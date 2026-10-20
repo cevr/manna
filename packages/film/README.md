@@ -2112,7 +2112,12 @@ recorded with its sha256). `film board` makes and keeps it from the terminal
 and writes a pick, an approval or a withdrawal through the same store
 (`BoardStore`), so neither writes over the other. A note on a panel is a lab
 note (`POST /api/films/<film>/notes`) carrying its `panel` and its `sketch`
-(an agent's `request_tweak`, the terminal's `film board`).
+(an agent's `request_tweak`, the terminal's `film board`). A panel's call sends
+the style's reference, then the beat's first panel or a tweak's try and its
+sketch, then the library record of each member the beat's `cast` names
+(`tools/cast-library.ts`, a film's own role before the library's): its kept
+sheets, else its record's references, which the prompt says win over every
+other image and the brief.
 
 | Route                                      | What it does                                                                                        |
 | ------------------------------------------ | --------------------------------------------------------------------------------------------------- |

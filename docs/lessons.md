@@ -3396,3 +3396,14 @@ The form of an entry, each field on its own line:
 - **Wrong:** The match measured no boundary between the hair and the beard, so a render that ran them together passed where the concept parts them by a dark band.
 - **Cause:** The measure read the hair and the face, never the edge between the hair and the beard.
 - **Guard:** code: `packages/film/src/core/match.ts` `hairBeardRows` (the `hair/beard: parted` row), `packages/film/src/core/match.test.ts` `flags a scene that runs together what its concept parts`, `packages/film/src/tools/figure-artifacts.slow.test.ts` `Christ at court 16.51 s, his beard run into his hair where his concept parts them by a dark band: flagged (owner, 2026-10-18)`
+||||||| parent of fbddd2651 (feat(film): a beat names its cast, and the board sends each member's library record as the reference that wins)
+
+### locked-cast-reference-wins
+
+- **Date:** 2026-10-20
+- **Kind:** owner
+- **Said:** "ensure Jesus uses the library not the concept when its incorrect"
+- **Source:** ask a26a8a83f89 (in-its-order production)
+- **Wrong:** The priest and name concept frames drew Christ from concept images and came out 3.44 heads against His locked 3.07 and 13–24% too large beside the guests.
+- **Cause:** No brief path sent the library's record of a locked member, so each drawing took whatever reference it was handed.
+- **Guard:** code: `packages/film/src/tools/board-make.test.ts` `a beat whose cast names a locked member sends its kept turnaround from the library, and the prompt says the library wins`

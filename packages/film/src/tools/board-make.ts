@@ -6,7 +6,11 @@
 // within a beat the panels go in line order, the first panel's shown try
 // riding along as the later ones' second reference, so a beat keeps its
 // place and its people. A tweak (`tweakPanel`) makes a panel again from a
-// lab note: the try it was written on, the note's words, its sketch.
+// lab note: the try it was written on, the note's words, its sketch. After
+// those references come the library records of the cast the beat names
+// (`cast-library.ts`), read before anything is drawn: they win over every
+// other image and the brief, so a locked member is drawn as the library has
+// it, never as a concept drew it.
 
 import {
   Array as Arr,
@@ -37,9 +41,11 @@ import {
   tryOf,
 } from '../core/board.ts';
 import { BoardRefused } from '../core/refusals.ts';
+import type { CastLock } from '../core/cast-lock.ts';
 import type { Act, Note } from '../core/schema.ts';
 import { type BoardBeat, actOf, panelPrompt } from './board-prompt.ts';
 import { BoardStore } from './board-store.ts';
+import { castReference } from './cast-library.ts';
 import type { FilmName } from './film-repo.ts';
 import { ImageRoute, PANEL_SIZE } from './image-route.ts';
 
@@ -278,12 +284,15 @@ export const makeBoard = Effect.fn('Board.make')(function* (
     });
   const chosen = beats.filter((b) => options.beats.length === 0 || options.beats.includes(b.id));
   const ctx: TryContext = { film, style, folder: store.paths(film).folder, beats };
+  const path = yield* Path.Path;
+  const locks = yield* castOf(film, chosen);
   const ids = beats.map((b) => b.id);
   const failedInRow = yield* Ref.make(0);
   const down = () => Effect.map(Ref.get(failedInRow), (n) => n >= 3);
 
   const drawBeat = (beat: BoardBeat) =>
     Effect.gen(function* () {
+      const cast = beatCast(locks, beat, ctx.folder, path);
       for (const { at, count } of toDraw(board, beat, options.tries)) {
         if (yield* down()) return;
         // The first panel of the beat, once it has a try, rides along as the second reference.
@@ -293,7 +302,7 @@ export const makeBoard = Effect.fn('Board.make')(function* (
           (p) => Predicate.isUndefined(p.text) && p.at !== at && p.tries.length > 0,
         );
         const shot = Option.flatMap(first, shownTry);
-        const refs = [style.ref, ...Option.toArray(Option.map(shot, (t) => t.file))];
+        const refs = [style.ref, ...Option.toArray(Option.map(shot, (t) => t.file)), ...cast.refs];
         const prompt = panelPrompt({
           style,
           act: actOf(acts, ids, beat.id),
@@ -301,6 +310,7 @@ export const makeBoard = Effect.fn('Board.make')(function* (
           at,
           shot: Option.isSome(shot),
           tweak: Option.none(),
+          cast: cast.cast,
         });
         const start = Option.match(panelById(now, panelId(beat.id, at)), {
           onNone: () => 1,
@@ -392,6 +402,7 @@ export const tweakPanel = Effect.fn('Board.tweak')(function* (
     Effect.mapError(() => refuse(`the script has no beat ${panel.beat}`)),
   );
   const ctx: TryContext = { film, style, folder: store.paths(film).folder, beats };
+  const cast = beatCast(yield* castOf(film, [beat]), beat, ctx.folder, yield* Path.Path);
   const sketched = Option.exists(Option.fromUndefinedOr(note.sketch), (s) => s.length > 0);
   // The sketch rides along as a board file of its own, so the try's refs name only board files.
   const sketchFile = `${panel.id}.${note.id}.sketch.png`;
@@ -403,6 +414,7 @@ export const tweakPanel = Effect.fn('Board.tweak')(function* (
     style.ref,
     base.file,
     ...Bool.match(sketched, { onTrue: () => [sketchFile], onFalse: () => [] }),
+    ...cast.refs,
   ];
   const prompt = panelPrompt({
     style,
@@ -415,6 +427,7 @@ export const tweakPanel = Effect.fn('Board.tweak')(function* (
     at: panel.at,
     shot: false,
     tweak: Option.some({ text: note.text, sketch: sketched }),
+    cast: cast.cast,
   });
   const made = yield* drawTries(
     ctx,
@@ -430,6 +443,30 @@ export const tweakPanel = Effect.fn('Board.tweak')(function* (
   if (made.length === 0) return yield* refuse(`the tweak of ${panel.id} drew nothing`);
   return { panel: panel.id, tries: made } satisfies Tweaked;
 });
+
+/**
+ * The library reference of each member `beats` draw, read once by member:
+ * a member with no record, or a reference not on disk, refuses the run
+ * before any panel is drawn.
+ */
+const castOf = Effect.fn('Board.cast')(function* (film: FilmName, beats: ReadonlyArray<BoardBeat>) {
+  const members = Arr.dedupe(beats.flatMap((b) => b.cast));
+  const locks = yield* Effect.forEach(members, (member) =>
+    Effect.map(castReference(film, member), (lock) => [member, lock] as const),
+  );
+  return new Map(locks);
+});
+
+/** A beat's library references in its cast's order, and their files as the board folder reaches them. */
+const beatCast = (
+  locks: ReadonlyMap<string, CastLock>,
+  beat: BoardBeat,
+  folder: string,
+  path: Path.Path,
+) => {
+  const cast = beat.cast.flatMap((m) => Option.toArray(Option.fromUndefinedOr(locks.get(m))));
+  return { cast, refs: cast.flatMap((lock) => lock.files.map((f) => path.relative(folder, f))) };
+};
 
 /** A refusal of a step on the board, raised for `film`. */
 export const refusedIn =

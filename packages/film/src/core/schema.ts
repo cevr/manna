@@ -6,6 +6,7 @@
 
 import { Array as Arr, Option, Predicate, Schema, SchemaTransformation, Struct } from 'effect';
 import { ActName, Address, PartId } from './address-schema.ts';
+import { Segment } from './segment.ts';
 import { SketchItem } from './sketch.ts';
 import type { ease } from './time.ts';
 
@@ -585,6 +586,13 @@ export const Beat = Schema.Struct({
   cite: Schema.optionalKey(Schema.Array(Schema.String)),
   /** What the picture does: the brief for the scene's drawing. */
   picture: Schema.String,
+  /**
+   * The cast members the picture draws, each by its cast-sheet folder's id
+   * (`['christ', 'paul']`): the board sends each one's record in the cast
+   * library (a film's own role first) as a reference that wins over any
+   * concept image or brief that draws the member otherwise.
+   */
+  cast: Schema.optionalKey(Schema.Array(Segment)),
 });
 export type Beat = typeof Beat.Type;
 

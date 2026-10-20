@@ -54,7 +54,7 @@ export const BoardTry = Schema.Struct({
   made: TryMade,
   /** The prompt the image route was sent, exactly; an import made elsewhere carries the one it was made with. */
   prompt: Schema.optionalKey(Schema.String),
-  /** The board files the call carried as references, in order: the style's ref, a panel's try, a sketch. */
+  /** The references the call carried, in order, as the board's folder reaches them: the style's ref, a panel's try, a sketch, then each cast member's library record. */
   refs: Schema.Array(Schema.String),
   /** The note a tweak answers (`n12`). */
   note: Schema.optionalKey(Schema.String),

@@ -17,12 +17,15 @@ import {
   Path,
   Ref,
   Result,
+  Schema,
   Sink,
   Stream,
 } from 'effect';
 import { ChildProcessSpawner } from 'effect/process';
 import { type BoardFile, BoardName } from '../core/board.ts';
 import { ActName } from '../core/address-schema.ts';
+import { CastSheetJson, type CastSheetRecord } from '../core/cast-record.ts';
+import type { SheetKind } from '../core/cast-sheet.ts';
 import type { Act, Note } from '../core/schema.ts';
 import { Segment } from '../core/segment.ts';
 import { makeBoard, type makeLine, tweakPanel } from './board-make.ts';
@@ -49,8 +52,9 @@ const beats: ReadonlyArray<BoardBeat> = [
     id: COLD,
     say: Option.some('A {room}court. The {judge}judge says {righteous}righteous.'),
     picture: Option.some('A court (`room`); the gavel falls on `righteous`.'),
+    cast: [],
   },
-  { id: TITLE, say: Option.none(), picture: Option.some('A sky over a city.') },
+  { id: TITLE, say: Option.none(), picture: Option.some('A sky over a city.'), cast: [] },
 ];
 const acts: ReadonlyArray<Act> = [
   { from: 'cold', name: ActName.make('cold open'), luma: [140, 165], saturation: [0.15, 0.25] },
@@ -229,6 +233,247 @@ describe('a run of the board', () => {
   });
 });
 
+/** A cast record as `cast-sheet.json` holds it. */
+const recordJson = Schema.encodeSync(CastSheetJson);
+
+/** The library's folder for `member`, as the board of `f` (under `/films`) finds it. */
+const libraryOf = (member: string) => `/library/cast/${member}/cast-sheet`;
+
+/** A cast record of `member` in the library, nothing kept unless `kept` names kinds, its every file on disk. */
+const castIn = (
+  files: Map<string, Uint8Array>,
+  member: string,
+  kept: ReadonlyArray<'turnaround' | 'heads' | 'poses'>,
+) => {
+  const folder = libraryOf(member);
+  const keptOf = { try: 1, why: 'the owner kept it', views: [] };
+  const record: CastSheetRecord = {
+    member: Segment.make(member),
+    scope: 'library',
+    who: 'Him',
+    refs: [{ file: `rig-${member}-front.png`, why: 'the rig as it stands' }],
+    sheets: {},
+    kept: Object.fromEntries(kept.map((k) => [k, keptOf])),
+  };
+  files.set(`${folder}/cast-sheet.json`, text(recordJson(record)));
+  files.set(`${folder}/rig-${member}-front.png`, text('rig'));
+  for (const k of kept) files.set(`${folder}/kept/${k}.png`, text(`kept ${k}`));
+};
+
+/** A beat that draws `cast`. */
+const drawing = (cast: ReadonlyArray<string>): BoardBeat => ({
+  id: BoardName.make('supper'),
+  say: Option.none(),
+  picture: Option.some('He breaks the bread at the table.'),
+  cast,
+});
+
+/** The library reference `castIn` writes, as `castLock` reads it. */
+const lockOf = (member: string, files: ReadonlyArray<string>, kept: ReadonlyArray<SheetKind>) => ({
+  member,
+  who: 'Him',
+  kept,
+  files: files.map((f) => `${libraryOf(member)}/${f}`),
+});
+
+describe("a locked cast member's library reference", () => {
+  it.effect(
+    'a beat whose cast names a locked member sends its kept turnaround from the library, and the prompt says the library wins',
+    () => {
+      const files = new Map<string, Uint8Array>();
+      const calls: Array<ImageRequest> = [];
+      castIn(files, 'christ', ['turnaround']);
+      return Effect.gen(function* () {
+        yield* styled;
+        yield* makeBoard(
+          film,
+          [drawing(['christ'])],
+          acts,
+          { beats: [], tries: 1, lanes: 1, dryRun: false },
+          quiet,
+        );
+        expect(calls[0]?.refs).toEqual([
+          '/films/f/board/style.9005.png',
+          '/library/cast/christ/cast-sheet/kept/turnaround.png',
+        ]);
+        expect(calls[0]?.prompt).toContain(
+          "Reference image 2 is Christ's record in the cast library (its kept cast sheet: turnaround): draw Christ exactly as it draws Him",
+        );
+        expect(calls[0]?.prompt).toContain(
+          'Where any other reference image or the brief draws Him otherwise, this one wins.',
+        );
+        const recorded = (yield* (yield* BoardStore).read(film)).panels[0]?.tries[0]?.refs;
+        expect(recorded).toEqual([
+          'style.9005.png',
+          '../../../library/cast/christ/cast-sheet/kept/turnaround.png',
+        ]);
+      }).pipe(Effect.provide(boardOver(files, calls)));
+    },
+  );
+
+  it.effect('a member with nothing kept is sent the references its record names', () => {
+    const files = new Map<string, Uint8Array>();
+    const calls: Array<ImageRequest> = [];
+    castIn(files, 'paul', []);
+    return Effect.gen(function* () {
+      yield* styled;
+      yield* makeBoard(
+        film,
+        [drawing(['paul'])],
+        acts,
+        { beats: [], tries: 1, lanes: 1, dryRun: false },
+        quiet,
+      );
+      expect(calls[0]?.refs).toEqual([
+        '/films/f/board/style.9005.png',
+        '/library/cast/paul/cast-sheet/rig-paul-front.png',
+      ]);
+      expect(calls[0]?.prompt).toContain(
+        "Reference image 2 is Paul's record in the cast library (the references it is drawn from until its cast sheet is kept)",
+      );
+    }).pipe(Effect.provide(boardOver(files, calls)));
+  });
+
+  it.effect("a film's own role wins over the library's record", () => {
+    const files = new Map<string, Uint8Array>();
+    const calls: Array<ImageRequest> = [];
+    castIn(files, 'christ', ['turnaround']);
+    const own = '/films/f/cast/christ/cast-sheet';
+    files.set(
+      `${own}/cast-sheet.json`,
+      text(
+        recordJson({
+          member: Segment.make('christ'),
+          scope: 'film',
+          who: 'Him',
+          refs: [{ file: 'role.png', why: "the film's own role" }],
+          sheets: {},
+        }),
+      ),
+    );
+    files.set(`${own}/role.png`, text('role'));
+    return Effect.gen(function* () {
+      yield* styled;
+      yield* makeBoard(
+        film,
+        [drawing(['christ'])],
+        acts,
+        { beats: [], tries: 1, lanes: 1, dryRun: false },
+        quiet,
+      );
+      expect(calls[0]?.refs.at(-1)).toBe('/films/f/cast/christ/cast-sheet/role.png');
+    }).pipe(Effect.provide(boardOver(files, calls)));
+  });
+
+  it.effect(
+    'a member with no record, or a reference not on disk, refuses the run before anything is drawn',
+    () => {
+      const files = new Map<string, Uint8Array>();
+      const calls: Array<ImageRequest> = [];
+      castIn(files, 'christ', ['turnaround']);
+      return Effect.gen(function* () {
+        yield* styled;
+        const run = (cast: ReadonlyArray<string>) =>
+          Effect.flip(
+            makeBoard(
+              film,
+              [drawing(cast)],
+              acts,
+              { beats: [], tries: 1, lanes: 1, dryRun: false },
+              quiet,
+            ),
+          );
+        const unfound = yield* run(['christ', 'peter']);
+        expect(unfound._tag).toBe('CastUnfound');
+        expect(unfound.message).toContain('peter has no cast-sheet.json');
+        files.delete('/library/cast/christ/cast-sheet/kept/turnaround.png');
+        const missing = yield* run(['christ']);
+        expect(missing._tag).toBe('CastReferenceMissing');
+        expect(missing.message).toContain('/library/cast/christ/cast-sheet/kept/turnaround.png');
+        expect(calls).toEqual([]);
+      }).pipe(Effect.provide(boardOver(files, calls)));
+    },
+  );
+
+  it.effect('a tweak sends the cast after the try and its sketch, numbered on from them', () => {
+    const files = new Map<string, Uint8Array>();
+    const calls: Array<ImageRequest> = [];
+    castIn(files, 'christ', ['turnaround', 'heads']);
+    return Effect.gen(function* () {
+      yield* styled;
+      const beat = drawing(['christ']);
+      yield* makeBoard(film, [beat], acts, { beats: [], tries: 1, lanes: 1, dryRun: false }, quiet);
+      files.set('/lab/f/stills/n5.png', text('sketched'));
+      const note: Note = {
+        id: 'n5',
+        scene: 'supper',
+        T: 0,
+        frame: 0,
+        text: 'raise the bread',
+        panel: { id: 'supper.start', try: 1, ask: 'tweak' },
+        sketch: [
+          { _tag: 'Arrow', id: 'a', ink: 'red', from: { x: 0.5, y: 0.7 }, to: { x: 0.5, y: 0.4 } },
+        ],
+        still: 'n5.png',
+        status: 'open',
+        thread: [],
+        film: 'f',
+        seq: 5,
+        createdAt: '2026-10-20T00:00:00.000Z',
+        changed: 5,
+      };
+      yield* tweakPanel(film, [beat], acts, note, '/lab/f/stills/n5.png', 1, quiet);
+      expect(calls.at(-1)?.refs).toEqual([
+        '/films/f/board/style.9005.png',
+        '/films/f/board/supper.start.1.png',
+        '/films/f/board/supper.start.n5.sketch.png',
+        '/library/cast/christ/cast-sheet/kept/turnaround.png',
+        '/library/cast/christ/cast-sheet/kept/heads.png',
+      ]);
+      expect(calls.at(-1)?.prompt).toContain(
+        "Reference images 4–5 are Christ's record in the cast library (its kept cast sheet: turnaround, heads)",
+      );
+    }).pipe(Effect.provide(boardOver(files, calls)));
+  });
+
+  describe('numbers every cast image on from the references before it', () => {
+    const christ = lockOf(
+      'christ',
+      ['kept/turnaround.png', 'kept/heads.png'],
+      ['turnaround', 'heads'],
+    );
+    const paul = lockOf('paul', ['rig-paul-front.png'], []);
+    const promptWith = (
+      shot: boolean,
+      tweak: Option.Option<{ readonly text: string; readonly sketch: boolean }>,
+    ) =>
+      panelPrompt({
+        style,
+        act: Option.none(),
+        beat: drawing(['christ', 'paul']),
+        at: 'start',
+        shot,
+        tweak,
+        cast: [christ, paul],
+      });
+    test.each([
+      ['no shot and no tweak', false, Option.none(), 2],
+      ['a shot', true, Option.none(), 3],
+      ['a tweak with no sketch', false, Option.some({ text: 'closer', sketch: false }), 3],
+      ['a tweak with its sketch', false, Option.some({ text: 'closer', sketch: true }), 4],
+    ] as const)('after %s', (_, shot, tweak, first) => {
+      const prompt = promptWith(shot, tweak);
+      expect(prompt).toContain(
+        `Reference images ${first}–${first + 1} are Christ's record in the cast library`,
+      );
+      expect(prompt).toContain(`Reference image ${first + 2} is Paul's record in the cast library`);
+      expect(prompt.indexOf("Christ's record")).toBeGreaterThan(
+        prompt.indexOf('The first reference image'),
+      );
+    });
+  });
+});
+
 describe("a beat's panels to draw", () => {
   /** What a run of beat `cold`, `tries` tries a panel, draws over `panels`: the files of the tries it adds. */
   const drawnOver = (panels: BoardFile['panels'], tries = 1) =>
@@ -355,6 +600,7 @@ describe('the scene prompt', () => {
     at: 'righteous',
     shot: true,
     tweak: Option.none(),
+    cast: [],
   });
   test('opens on the style block and reads each mark as the words said there', () => {
     expect(prompt.startsWith('A paper-cut frame.')).toBe(true);
@@ -372,6 +618,7 @@ describe('the scene prompt', () => {
       at: 'start',
       shot: false,
       tweak: Option.none(),
+      cast: [],
     });
   test("takes the style image's look but not its floating hands: every hand is at the end of a sleeved arm", () => {
     expect(prompt).toContain(
@@ -394,11 +641,17 @@ describe('the scene prompt', () => {
       id: BoardName.make('x'),
       say: Option.some('Nothing marked.'),
       picture: Option.some('on `nope`'),
+      cast: [],
     };
     expect(promptOf(lacking, { from: 'x', name: ActName.make('x') })).toContain('on nope');
   });
   test("says an act's light from its measures", () => {
-    const lit = { id: BoardName.make('a'), say: Option.none(), picture: Option.some('A field.') };
+    const lit = {
+      id: BoardName.make('a'),
+      say: Option.none(),
+      picture: Option.some('A field.'),
+      cast: [],
+    };
     expect(
       promptOf(lit, {
         from: 'a',
