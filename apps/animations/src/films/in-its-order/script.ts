@@ -81,12 +81,12 @@
 // The cast (the draft's `## Cast`; character-design 2.3, casting.md). Every
 // figure wears sleeves, a circle hand at each sleeve's end and no thumbs, and
 // is shaded with colour, never grey or black (CRAFT rule 12).
-// - The grown man at the feast is the series' plain lead, never named, in a
-//   festive dress new to the library (the plain lead's sheet, his garment
-//   changed by the story alone). The mother and the baby at the cup, and the
-//   IDEA figures (the drinkers, the child at the slate, the toddler who runs,
-//   the one who skips the stones, the eater and the watcher), are plain
-//   figures from the same sheet.
+// - The grown man at the feast is the series lead, never named: the human
+//   man the owner picked (RBF's lead), in a festive dress kept in the library
+//   as `lead-feast`, about 3.36 of his heads tall like every figure (the cast
+//   canon). The mother and the baby at the cup, and the IDEA figures (the
+//   drinkers, the child at the slate, the toddler who runs, the one who skips
+//   the stones, the eater and the watcher), are plain figures.
 // - Jesus Christ is the locked figure (`src/library/cast/christ`), at the top
 //   of the court canon's height band, never short: as Priest in `priest` (a
 //   white robe, the golden girdle and the breastplate, seen from behind
@@ -118,7 +118,8 @@ export const script = defineScript([
     id: 'cold',
     say: '{baby}A baby drinks milk, and nobody minds. {/} {grown}But picture a grown man at a wedding feast, {bottle}still asking for his {*}bottle. {/} {letter}Now picture a letter to believers that says nearly the {*}same. {/} {quote}They “are become such as have need of milk, and not of strong {*}meat.” {//} {ouch}And that letter is in our {*}Bible. {/} {what}So what is milk, and what is meat? {/} {why}And why would the Bible care which one we eat?',
     cite: ['Hebrews 5:12'],
-    picture: `STORY: a cardboard courtyard at a village wedding, teal day, lanterns strung, a long table of bread, fruit and dishes. On \`baby\` a mother lifts a cup to a baby's lips, close on the baby's glad face. On \`grown\` the camera trucks down the table to a tall grey grown man in festive clothes; on \`bottle\` he holds up a baby's bottle, hopeful, and the guests either side turn and stare (a light moment). On \`letter\` a rolled scroll drops onto the table in front of him and unrolls; on \`quote\` its words are not shown (CRAFT rule 1), only the gold seal. On \`ouch\` he winces. On \`what\` the camera lifts to a cup of milk and a platter of bread side by side, the only props lit. ${CARDS}`,
+    cast: ['lead-feast'],
+    picture: `STORY: a cardboard courtyard at a village wedding, teal day, lanterns strung, a long table of bread, fruit and dishes. On \`baby\` a mother lifts a cup to a baby's lips, close on the baby's glad face. On \`grown\` the camera trucks down the table to a tall grown man in festive clothes, the series lead; on \`bottle\` he holds up a baby's bottle, hopeful, and the guests either side turn and stare (a light moment). On \`letter\` a rolled scroll drops onto the table in front of him and unrolls; on \`quote\` its words are not shown (CRAFT rule 1), only the gold seal. On \`ouch\` he winces. On \`what\` the camera lifts to a cup of milk and a platter of bread side by side, the only props lit. ${CARDS}`,
   },
   {
     id: 'title',
@@ -148,7 +149,8 @@ export const script = defineScript([
       '1 Corinthians 3:1–3',
       'Ellen G. White, Medical Ministry, 124',
     ],
-    picture: `STORY: on \`easy\` a quick comic beat on the parchment: the grey grown man from \`cold\` lifts a plate and tips the whole meal into his mouth unchewed. On \`paul\` push through into a Corinthian house at dusk (the film's short valley), a room of grey figures in two knots, arguing, fingers pointing. Paul (grey, travel cloak, a face at a third of the frame) sits writing by a lamp; on \`fed\` close on his face as he writes, tired and fond. On \`quarrel\` the two knots turn their backs on each other. On \`like\` the lamp's light warms and one figure from each knot turns back and offers the other a hand. ${CARDS}`,
+    cast: ['paul'],
+    picture: `STORY: on \`easy\` a quick comic beat on the parchment: the grown man from \`cold\` lifts a plate and tips the whole meal into his mouth unchewed. On \`paul\` push through into a Corinthian house at dusk (the film's short valley), a room of grey figures in two knots, arguing, fingers pointing. Paul (grey, travel cloak, a face at a third of the frame) sits writing by a lamp; on \`fed\` close on his face as he writes, tired and fond. On \`quarrel\` the two knots turn their backs on each other. On \`like\` the lamp's light warms and one figure from each knot turns back and offers the other a hand. ${CARDS}`,
   },
   {
     id: 'teeth',
@@ -186,6 +188,7 @@ export const script = defineScript([
       'Hebrews 8:1–2',
       'Ellen G. White, Gospel Workers, 315',
     ],
+    cast: ['christ'],
     picture: `IDEA, then STORY. The parchment: the six stones from \`stones\`; on \`right\` a gold path runs on from the last stone up the page. On \`christ\` push through into STORY: a tall woven veil glowing gold from behind, and a figure in a priest's white robe and breastplate (Christ) seen from behind as he passes in through it (never a face of the Father, never a throne in this film). On \`once\` a small cardboard hill with an empty cross at dawn appears in a round panel; on \`now\` the panel slides to sit beside the veil, both lit. On \`light\` pull back to IDEA: a small gold cross at the centre of the page, its light widening in rings across the six stones and up the path. ${CARDS}`,
   },
   {
@@ -198,12 +201,14 @@ export const script = defineScript([
       'Mark 4:33',
       'E. J. Waggoner, The Present Truth, May 4, 1899, 277',
     ],
+    cast: ['sower'],
     picture: `STORY: a cardboard field on a hillside, peach morning, 3–5 planes (the far hills, the field, a low stone wall near). On \`sow\` a farmer (grey, a face at a third of the frame) scatters seed and walks off; quick sun arcs on \`sleeps\`/\`knoweth\` (day, night, day). On \`first\` a single blade tears up out of the soil, then the green ear, then the full gold ear, one per phrase, each a paper layer folding up. On \`blade\` the camera returns to the young blade alone, upright and bright green, whole for what it is. On \`quiet\` the camera holds low by the stalk while a snail crosses the wall: nothing seems to move, but the stalk is visibly taller at the end of the hold. On \`isaiah\` the field dissolves to the parchment: one line of gold writing drawn, then another under it; on \`bear\` the next line waits, unwritten, until the one above it has filled with light; on \`bottom\` the camera drops through one line of the writing as if it were a well, and finds more light below. ${CARDS}`,
   },
   {
     id: 'eat',
     say: '{nobody}And nobody can eat your food for you. {/} {jer}The prophet Jeremiah said, {found}“Thy words were found, and I did eat them; and thy word was unto me the {joy}joy and rejoicing of mine heart.” {//} {body}Your body lives on the food you eat yourself. {/} {soul}And your soul lives on the {*}word you take in yourself.',
     cite: ['Jeremiah 15:16', 'Ellen G. White, The Signs of the Times, June 25, 1902'],
+    cast: ['jeremiah'],
     picture: `STORY: a small cardboard room in Jerusalem, warm lamplight; Jeremiah (grey, a scroll on his knees, a face at a third of the frame) reads, and on \`found\` his face lifts and softens; on \`joy\` he laughs out loud, alone. On \`body\` cut to the parchment: two grey figures at one table, one eating, the other only watching; the eater glows faintly from the chest (\`soul\`), the watcher does not; the watcher picks up a spoon. ${CARDS}`,
   },
   {
@@ -220,7 +225,8 @@ export const script = defineScript([
       'Ephesians 4:13–15',
       'E. J. Waggoner, The Medical Missionary, September 1904, 286',
     ],
-    picture: `IDEA and STORY merged, the landing: the wedding courtyard from \`cold\` in the same layout and framing, now under the teal-to-yellow landing sky. The grey grown man stands where he stood; on \`sets\` he sets the baby's bottle down. On \`table\` the host's hand (the host is Christ, in the seamless linen coat and the walnut mantle, at the head of the table) gestures to the place set for him: bread from the field in \`grain\`, and on \`cup\` the cup of milk from \`milk\` beside the plate. On \`taste\` he tastes, close on his face, delight. On \`leaving\` the six stones show for a breath as the courtyard's paving under the table. On \`into\` he stands taller beside the host; the gold cross's light from \`priest\` warms the whole courtyard. The held pause comes after \`into\`. ${CARDS}`,
+    cast: ['lead-feast', 'christ'],
+    picture: `IDEA and STORY merged, the landing: the wedding courtyard from \`cold\` in the same layout and framing, now under the teal-to-yellow landing sky. The grown man stands where he stood; on \`sets\` he sets the baby's bottle down. On \`table\` the host's hand (the host is Christ, in the seamless linen coat and the walnut mantle, at the head of the table) gestures to the place set for him: bread from the field in \`grain\`, and on \`cup\` the cup of milk from \`milk\` beside the plate. On \`taste\` he tastes, close on his face, delight. On \`leaving\` the six stones show for a breath as the courtyard's paving under the table. On \`into\` he stands taller beside the host; the gold cross's light from \`priest\` warms the whole courtyard. The held pause comes after \`into\`. ${CARDS}`,
   },
   {
     id: 'thesis',
@@ -228,6 +234,7 @@ export const script = defineScript([
     lead: 1,
     min: 30,
     cite: ['2 Peter 3:18'],
+    cast: ['lead-feast', 'christ'],
     picture: `STORY: The answer comes as the only text, the take's own first clause on the full-screen card: "Grow in grace", "Grow" large in gold, the answer to \`cold\`'s question. The music rises alone for about thirty seconds while the camera eases back and lifts over the courtyard, the grown man still at the host's side at the set table. Past the courtyard wall, the field from \`grain\` moves in the wind, full corn, and the hill of \`path\` rises beyond it. ${CARDS}`,
   },
   {
