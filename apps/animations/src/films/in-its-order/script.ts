@@ -249,7 +249,7 @@ export const script = defineScript([
     min: 30,
     cite: ['2 Peter 3:18'],
     cast: ['lead-feast', 'christ'],
-    picture: `STORY: The answer comes as the only text, the take's own first clause on the full-screen card: "Grow in grace", "Grow" large in gold, the answer to \`cold\`'s question. The music rises alone for about thirty seconds while the camera eases back and lifts over the courtyard, the young man still at the host's side at the set table. Past the courtyard wall, the field from \`grain\` moves in the wind, full corn, and the hill of \`path\` rises beyond it. ${CARDS}`,
+    picture: `STORY: The answer comes as the only text, the take's own first clause on the full-screen card: "Grow in grace", "Grow" large in gold, the answer to \`cold\`'s question. The music rises alone for about thirty seconds while the camera eases back and lifts over the courtyard, the young man still at the host's side at the set table (the host is Christ, in the seamless linen coat and the walnut mantle, as in \`name\`). Past the courtyard wall, the field from \`grain\` moves in the wind, full corn, and the hill of \`path\` rises beyond it. ${CARDS}`,
   },
   {
     id: 'end',
