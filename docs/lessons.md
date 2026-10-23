@@ -3396,7 +3396,6 @@ The form of an entry, each field on its own line:
 - **Wrong:** The match measured no boundary between the hair and the beard, so a render that ran them together passed where the concept parts them by a dark band.
 - **Cause:** The measure read the hair and the face, never the edge between the hair and the beard.
 - **Guard:** code: `packages/film/src/core/match.ts` `hairBeardRows` (the `hair/beard: parted` row), `packages/film/src/core/match.test.ts` `flags a scene that runs together what its concept parts`, `packages/film/src/tools/figure-artifacts.slow.test.ts` `Christ at court 16.51 s, his beard run into his hair where his concept parts them by a dark band: flagged (owner, 2026-10-18)`
-||||||| parent of fbddd2651 (feat(film): a beat names its cast, and the board sends each member's library record as the reference that wins)
 
 ### locked-cast-reference-wins
 
