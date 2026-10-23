@@ -1,14 +1,14 @@
 // Every file a film's board sends as a cast member's library reference
 // travels with the repository: a board run reads it in any checkout, so none
-// may lie where `.gitignore` keeps it out (a fresh checkout's `film board`
+// may be left untracked, as `.gitignore` would keep it (a fresh checkout's `film board`
 // would refuse with `CastReferenceMissing`). The members are those the beats
 // of every film's script name; each is found as the board finds it, the
 // film's own role first, then the library's.
 
 import { BunServices } from '@effect/platform-bun';
-import { castLock, CastSheetJson } from '@bible/film/core';
+import { castReference, FilmFolder } from '@bible/film/tools';
 import { describe, expect, it } from 'effect-bun-test';
-import { Array as Arr, Boolean as Bool, Effect, FileSystem, Schema, Stream } from 'effect';
+import { Array as Arr, Effect, FileSystem, Stream } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { script as coldStudies } from './src/films/cold-studies/script.ts';
 import { script as inItsOrder } from './src/films/in-its-order/script.ts';
@@ -23,35 +23,27 @@ const scripts = {
 
 /** The files `member`'s library reference sends for `film`, as paths from this folder. */
 const lockFiles = (film: string, member: string) =>
-  Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
-    const own = `src/films/${film}/cast/${member}/cast-sheet`;
-    const folder = Bool.match(yield* fs.exists(`${own}/cast-sheet.json`), {
-      onTrue: () => own,
-      onFalse: () => `src/library/cast/${member}/cast-sheet`,
-    });
-    const record = Schema.decodeUnknownSync(CastSheetJson)(
-      yield* fs.readFileString(`${folder}/cast-sheet.json`),
-    );
-    return castLock(record, folder).files;
-  });
+  Effect.map(castReference(film, member), (lock) => lock.files).pipe(
+    Effect.provide(FilmFolder.layer('src/films')),
+  );
 
-/** Of `files`, those git ignores (a tracked file is never ignored). */
-const ignored = (files: ReadonlyArray<string>) =>
+/** Of `files`, those git does not track, after git's own exit code is checked. */
+const untracked = (files: ReadonlyArray<string>) =>
   Effect.scoped(
     Effect.gen(function* () {
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
       const handle = yield* spawner.spawn(
-        ChildProcess.make('git', ['check-ignore', ...files], { forceKillAfter: '5 seconds' }),
+        ChildProcess.make('git', ['ls-files', '--', ...files], { forceKillAfter: '5 seconds' }),
       );
       const out = yield* Stream.mkString(Stream.decodeText(handle.stdout));
-      yield* handle.exitCode;
-      return out.split('\n').filter((line) => line !== '');
+      expect(yield* handle.exitCode).toBe(0);
+      const tracked = new Set(out.split('\n'));
+      return files.filter((file) => !tracked.has(file));
     }),
   );
 
 describe("the cast's library references", () => {
-  it.effect('that a beat sends are never ignored by git, so every checkout has them', () =>
+  it.effect('that a beat sends are tracked by git, so every checkout has them', () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const films = Arr.filter(yield* fs.readDirectory('src/films'), (name) => !name.includes('.'));
@@ -66,7 +58,7 @@ describe("the cast's library references", () => {
           files.push(...(yield* lockFiles(film, member)));
       }
       expect(files.length).toBeGreaterThan(0);
-      expect(yield* ignored(files)).toEqual([]);
+      expect(yield* untracked(files)).toEqual([]);
     }).pipe(Effect.provide(BunServices.layer)),
   );
 });

@@ -31,5 +31,3 @@ export {
 } from './synth/graph/presets.ts';
 export { defineStore } from './store.ts';
 export { stagingVoice } from './staging-voice.ts';
-export { castLock } from './cast-lock.ts';
-export { CastSheetJson } from './cast-record.ts';
