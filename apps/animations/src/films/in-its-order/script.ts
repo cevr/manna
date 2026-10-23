@@ -81,12 +81,15 @@
 // The cast (the draft's `## Cast`; character-design 2.3, casting.md). Every
 // figure wears sleeves, a circle hand at each sleeve's end and no thumbs, and
 // is shaded with colour, never grey or black (CRAFT rule 12).
-// - The grown man at the feast is the series lead, never named: the human
-//   man the owner picked (RBF's lead), in a festive dress kept in the library
-//   as `lead-feast`, about 3.36 of his heads tall like every figure (the cast
-//   canon). The mother and the baby at the cup, and the IDEA figures (the
+// - Every figure is dressed in the Bible's own time (the owner's direction A;
+//   the cast lineup is each record's reference).
+// - The grown man at the feast is the series lead, never named: a man of about
+//   forty with a short beard and grey at the temples (the owner's answer),
+//   in one solid teal robe, recorded in the library as `lead-feast`, about
+//   3.36 of his heads tall like every figure (the cast canon). The mother and
+//   the baby at the cup are this film's `feast-mother`; the IDEA figures (the
 //   drinkers, the child at the slate, the toddler who runs, the one who skips
-//   the stones, the eater and the watcher), are plain figures.
+//   the stones, the eater and the watcher) are this film's `idea-villagers`.
 // - Jesus Christ is the locked figure (`src/library/cast/christ`), at the top
 //   of the court canon's height band, never short: as Priest in `priest` (a
 //   white robe, the golden girdle and the breastplate, seen from behind
@@ -118,7 +121,7 @@ export const script = defineScript([
     id: 'cold',
     say: '{baby}A baby drinks milk, and nobody minds. {/} {grown}But picture a grown man at a wedding feast, {bottle}still asking for his {*}bottle. {/} {letter}Now picture a letter to believers that says nearly the {*}same. {/} {quote}They “are become such as have need of milk, and not of strong {*}meat.” {//} {ouch}And that letter is in our {*}Bible. {/} {what}So what is milk, and what is meat? {/} {why}And why would the Bible care which one we eat?',
     cite: ['Hebrews 5:12'],
-    cast: ['lead-feast'],
+    cast: ['lead-feast', 'feast-mother'],
     picture: `STORY: a cardboard courtyard at a village wedding, teal day, lanterns strung, a long table of bread, fruit and dishes. On \`baby\` a mother lifts a cup to a baby's lips, close on the baby's glad face. On \`grown\` the camera trucks down the table to a tall grown man in festive clothes, the series lead; on \`bottle\` he holds up a baby's bottle, hopeful, and the guests either side turn and stare (a light moment). On \`letter\` a rolled scroll drops onto the table in front of him and unrolls; on \`quote\` its words are not shown (CRAFT rule 1), only the gold seal. On \`ouch\` he winces. On \`what\` the camera lifts to a cup of milk and a platter of bread side by side, the only props lit. ${CARDS}`,
   },
   {

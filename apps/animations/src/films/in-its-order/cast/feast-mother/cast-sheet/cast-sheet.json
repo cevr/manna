@@ -1,0 +1,124 @@
+{
+  "member": "feast-mother",
+  "scope": "film",
+  "who": "her",
+  "headgear": true,
+  "refs": [
+    {
+      "file": "iio-lineup.png",
+      "why": "the cast lineup the owner chose for In Its Order (direction A, the Bible period, ask ade763eff4d): she is third in the top row, the baby on her hip; her height (nine tenths of a man's), her head the size of the other women's, her dusty-blue dress and cream veil, and every figure's line, paper and proportion"
+    },
+    {
+      "file": "mother-lineup.png",
+      "why": "her and the baby cut from that lineup at three times its size: her face, her veil over her brown hair, her blue sleeves to her round hands, the baby's cream wrap and tuft of brown hair"
+    }
+  ],
+  "sheets": {
+    "turnaround": {
+      "anchor": 1,
+      "concepts": [
+        {
+          "file": "iio-lineup.png",
+          "box": [405, 123, 571, 514],
+          "views": [1]
+        }
+      ],
+      "tries": [
+        {
+          "n": 1,
+          "file": "turnaround-1.png",
+          "prompt": "A character model sheet for a narrated animated film, drawn in this art style: our own K1 paper-cut look made minimal, the house look, as the reference image shows it. Every figure and prop is a few flat cut-paper shapes. Every figure and prop has a thick warm dark-brown ink outline and a thin light inner edge just inside it, and is creased once by a single straight diagonal line at the light's angle, its far side a deeper hue of its own colour turned toward violet, never grey and never black. A head is ONE simple shape inside one single thick outline, and the light inner edge runs round that one outline. Garments are flat planes: no pockets, no buttons, no stitching, no seams, no cuffs, no fabric texture. Hands are plain round paper circles at the end of each arm in its sleeve, the sleeve running from the shoulder to the hand: never a hand floating free of the body, never a bare arm, no thumbs, no fingers. Faces are three marks only: two small dark ink oval eyes, short brows and a one-line mouth. One muted hue per piece. The light: a warm, soft key light from the upper left; a soft paper grain on every piece and every plane; a small soft violet contact shadow under each figure, never a darker brown; a muted, warm palette in which only the film's accents are loud. Keep it K1: no white sticker border round the figures, no felt or stitching style, no big glossy eyes, no realistic anatomy. The look is stylised, attractive, expressive and minimal.\n\nImage 1 is the house look: take its paper, its line and its light from it; its hands float free beside the body, which no figure on this sheet does. Image 2 is the cast lineup the owner chose for In Its Order (direction A, the Bible period, ask ade763eff4d): she is third in the top row, the baby on her hip; her height (nine tenths of a man's), her head the size of the other women's, her dusty-blue dress and cream veil, and every figure's line, paper and proportion. Image 3 is her and the baby cut from that lineup at three times its size: her face, her veil over her brown hair, her blue sleeves to her round hands, the baby's cream wrap and tuft of brown hair.\n\nThe people are the young mother at the wedding feast and the baby she holds, never named. She is a young woman of slender build, about three and a third heads tall and nine tenths of a man's height, dressed in the Bible's own time: a long dusty-blue dress (#5f7fa8, its far side turned toward a deeper blue-violet #4c5687) to her ankles with long sleeves to the wrist, the same blue from each shoulder to each round warm-peach hand, never a cream or white sleeve; a cream veil (#eadcc2, its shade turned toward lavender #c8bdd6) over her brown hair, falling to her shoulders; brown sandals. Her skin warm peach (#f2b27c, its shade a rosy violet #c9877e); a face of three marks: two short brows, two small dark oval eyes and a one-line mouth. The baby is about two heads tall, wrapped in a cream wrap (#eadcc2) to its feet, a round warm-peach face with the same three marks and a small tuft of brown hair; its round hands at the ends of the wrap's folds. Standing alone on a turnaround, she stands at rest with both arms hanging in their sleeves; with the baby, she holds it on her hip with exactly two hands, both on the baby: one under it, one at its back, unless a pose gives one hand a cup. Each hand at the end of its sleeve, no thumbs, no fingers. No pattern, trim or embroidery. What they hold, and only where a pose names it: a small plain clay cup.\n\nDraw her six times in one row, evenly spaced across the sheet, standing at rest with both arms hanging in their sleeves at the sides, each hand at its sleeve's end, left to right: one, facing the viewer straight on; two, turned three-quarters toward the viewer's left; three, in full profile facing the viewer's left; four, seen from directly behind; five, in full profile facing the viewer's right; six, turned three-quarters toward the viewer's right. In profile one eye shows; from behind no face shows, only the back of the hair or headcloth and the garment's back.\n\nThis is a model sheet for the animators, not a scene: a plain warm cream paper ground with a soft paper grain and no place behind, one thin flat ground line in a slightly deeper cream under every figure, and a small soft violet contact shadow under each one. Every figure on the sheet is the same person at the same size: the same height, the same head size, the same garment length and the same hand size, their soles on the one ground line. The person stands about three and a third heads tall. One thick warm dark-brown outline runs round the whole silhouette of each figure, and the head's outline is the one line inside it: none on the nose, the ear or the hairline, and the hair, the ear and the garments meet as flat colour, never as their own outlined pieces. The hair and the beard are one brown, yet never one shape: the hair is its own shape behind the head, the face and its beard one shape in front of it, and a narrow dark band, the deep shade of that brown, nearly as dark as the outline, runs between the beard and each lock of hair beside it, as the kept concepts paint it, so the beard never runs into the hair. The key light comes from the upper left on every figure, whichever way it faces, so its lit side is always on the left and its far side turns a deeper hue of its own colour toward violet, never grey and never black. Each turn is its own drawing, never a mirror of another. Each arm is in its sleeve to the wrist, and each hand is a plain round paper circle of the skin's colour at its sleeve's end: no thumb, no fingers. The sleeve runs from the shoulder to the hand wherever the hand is, hanging at rest along the side or raised with it; a hand never floats free beside the body. No skin shows below the neck except the hands: never a bare arm, a forearm or a bare shoulder. No lettering anywhere: no labels, no names, no numbers, no arrows, no text, no grid, no boxes or frames round the figures.",
+          "refs": [
+            "../../../../../../docs/ref/house-look.png",
+            "iio-lineup.png",
+            "mother-lineup.png"
+          ],
+          "underlay": false,
+          "flags": [],
+          "at": "2026-10-23T03:45:40.518Z"
+        }
+      ]
+    },
+    "poses": {
+      "anchor": 3,
+      "layout": "Draw her three times in one row, evenly spaced, each a pose the film gives her, the baby always with her, left to right: one, standing turned three-quarters toward the viewer's left, the baby on her near hip in its cream wrap with her far arm in its sleeve round it, her near arm in its own dusty-blue sleeve lifting a small plain clay cup to the baby's lips, the baby glad; two, seated on a low bench turned three-quarters toward the viewer's left, the baby on her lap, both her sleeved hands on the baby, smiling down at it; three, standing at rest facing the viewer, the baby on her hip held with both sleeved hands.",
+      "slots": ["left", "left", "front"],
+      "standing": [1, 3],
+      "concepts": [
+        {
+          "file": "iio-lineup.png",
+          "box": [405, 123, 571, 514],
+          "views": [3]
+        }
+      ],
+      "tries": [
+        {
+          "n": 1,
+          "file": "poses-1.png",
+          "prompt": "A character model sheet for a narrated animated film, drawn in this art style: our own K1 paper-cut look made minimal, the house look, as the reference image shows it. Every figure and prop is a few flat cut-paper shapes. Every figure and prop has a thick warm dark-brown ink outline and a thin light inner edge just inside it, and is creased once by a single straight diagonal line at the light's angle, its far side a deeper hue of its own colour turned toward violet, never grey and never black. A head is ONE simple shape inside one single thick outline, and the light inner edge runs round that one outline. Garments are flat planes: no pockets, no buttons, no stitching, no seams, no cuffs, no fabric texture. Hands are plain round paper circles at the end of each arm in its sleeve, the sleeve running from the shoulder to the hand: never a hand floating free of the body, never a bare arm, no thumbs, no fingers. Faces are three marks only: two small dark ink oval eyes, short brows and a one-line mouth. One muted hue per piece. The light: a warm, soft key light from the upper left; a soft paper grain on every piece and every plane; a small soft violet contact shadow under each figure, never a darker brown; a muted, warm palette in which only the film's accents are loud. Keep it K1: no white sticker border round the figures, no felt or stitching style, no big glossy eyes, no realistic anatomy. The look is stylised, attractive, expressive and minimal.\n\nImage 1 is the house look: take its paper, its line and its light from it; its hands float free beside the body, which no figure on this sheet does. Image 2 is the cast lineup the owner chose for In Its Order (direction A, the Bible period, ask ade763eff4d): she is third in the top row, the baby on her hip; her height (nine tenths of a man's), her head the size of the other women's, her dusty-blue dress and cream veil, and every figure's line, paper and proportion. Image 3 is her and the baby cut from that lineup at three times its size: her face, her veil over her brown hair, her blue sleeves to her round hands, the baby's cream wrap and tuft of brown hair.\n\nThe people are the young mother at the wedding feast and the baby she holds, never named. She is a young woman of slender build, about three and a third heads tall and nine tenths of a man's height, dressed in the Bible's own time: a long dusty-blue dress (#5f7fa8, its far side turned toward a deeper blue-violet #4c5687) to her ankles with long sleeves to the wrist, the same blue from each shoulder to each round warm-peach hand, never a cream or white sleeve; a cream veil (#eadcc2, its shade turned toward lavender #c8bdd6) over her brown hair, falling to her shoulders; brown sandals. Her skin warm peach (#f2b27c, its shade a rosy violet #c9877e); a face of three marks: two short brows, two small dark oval eyes and a one-line mouth. The baby is about two heads tall, wrapped in a cream wrap (#eadcc2) to its feet, a round warm-peach face with the same three marks and a small tuft of brown hair; its round hands at the ends of the wrap's folds. Standing alone on a turnaround, she stands at rest with both arms hanging in their sleeves; with the baby, she holds it on her hip with exactly two hands, both on the baby: one under it, one at its back, unless a pose gives one hand a cup. Each hand at the end of its sleeve, no thumbs, no fingers. No pattern, trim or embroidery. What they hold, and only where a pose names it: a small plain clay cup.\n\nDraw her three times in one row, evenly spaced, each a pose the film gives her, the baby always with her, left to right: one, standing turned three-quarters toward the viewer's left, the baby on her near hip in its cream wrap with her far arm in its sleeve round it, her near arm in its own dusty-blue sleeve lifting a small plain clay cup to the baby's lips, the baby glad; two, seated on a low bench turned three-quarters toward the viewer's left, the baby on her lap, both her sleeved hands on the baby, smiling down at it; three, standing at rest facing the viewer, the baby on her hip held with both sleeved hands.\n\nThis is a model sheet for the animators, not a scene: a plain warm cream paper ground with a soft paper grain and no place behind, one thin flat ground line in a slightly deeper cream under the figures that stand, and a small soft violet contact shadow under each one. Every figure on the sheet is the same person: the same head size, the same garment and the same hand size; each pose takes the height its pose gives it, and a standing figure stands about three and a third heads tall. One thick warm dark-brown outline runs round the whole silhouette of each figure, and the head's outline is the one line inside it: none on the nose, the ear or the hairline, and the hair, the ear and the garments meet as flat colour, never as their own outlined pieces. The hair and the beard are one brown, yet never one shape: the hair is its own shape behind the head, the face and its beard one shape in front of it, and a narrow dark band, the deep shade of that brown, nearly as dark as the outline, runs between the beard and each lock of hair beside it, as the kept concepts paint it, so the beard never runs into the hair. The key light comes from the upper left on every figure, whichever way it faces, so its lit side is always on the left and its far side turns a deeper hue of its own colour toward violet, never grey and never black. Each turn is its own drawing, never a mirror of another. Each arm is in its sleeve to the wrist, and each hand is a plain round paper circle of the skin's colour at its sleeve's end: no thumb, no fingers. The sleeve runs from the shoulder to the hand wherever the hand is, hanging at rest along the side or raised with it; a hand never floats free beside the body. No skin shows below the neck except the hands: never a bare arm, a forearm or a bare shoulder. A walking figure glides: both soles flat on the ground line, the feet close together, the body leaning a little into the travel, the hem swung back, never a stride. No lettering anywhere: no labels, no names, no numbers, no arrows, no text, no grid, no boxes or frames round the figures.",
+          "refs": [
+            "../../../../../../docs/ref/house-look.png",
+            "iio-lineup.png",
+            "mother-lineup.png"
+          ],
+          "underlay": false,
+          "flags": [
+            {
+              "check": "facing",
+              "views": [1]
+            },
+            {
+              "check": "facing",
+              "views": [2]
+            },
+            {
+              "check": "head",
+              "views": [2, 3]
+            },
+            {
+              "check": "hand",
+              "views": [1, 3]
+            },
+            {
+              "check": "hand",
+              "views": [2, 3]
+            }
+          ],
+          "at": "2026-10-23T03:46:38.120Z"
+        },
+        {
+          "n": 2,
+          "file": "poses-2.png",
+          "prompt": "A character model sheet for a narrated animated film, drawn in this art style: our own K1 paper-cut look made minimal, the house look, as the reference image shows it. Every figure and prop is a few flat cut-paper shapes. Every figure and prop has a thick warm dark-brown ink outline and a thin light inner edge just inside it, and is creased once by a single straight diagonal line at the light's angle, its far side a deeper hue of its own colour turned toward violet, never grey and never black. A head is ONE simple shape inside one single thick outline, and the light inner edge runs round that one outline. Garments are flat planes: no pockets, no buttons, no stitching, no seams, no cuffs, no fabric texture. Hands are plain round paper circles at the end of each arm in its sleeve, the sleeve running from the shoulder to the hand: never a hand floating free of the body, never a bare arm, no thumbs, no fingers. Faces are three marks only: two small dark ink oval eyes, short brows and a one-line mouth. One muted hue per piece. The light: a warm, soft key light from the upper left; a soft paper grain on every piece and every plane; a small soft violet contact shadow under each figure, never a darker brown; a muted, warm palette in which only the film's accents are loud. Keep it K1: no white sticker border round the figures, no felt or stitching style, no big glossy eyes, no realistic anatomy. The look is stylised, attractive, expressive and minimal.\n\nImage 1 is the house look: take its paper, its line and its light from it; its hands float free beside the body, which no figure on this sheet does. Image 2 is the cast lineup the owner chose for In Its Order (direction A, the Bible period, ask ade763eff4d): she is third in the top row, the baby on her hip; her height (nine tenths of a man's), her head the size of the other women's, her dusty-blue dress and cream veil, and every figure's line, paper and proportion. Image 3 is her and the baby cut from that lineup at three times its size: her face, her veil over her brown hair, her blue sleeves to her round hands, the baby's cream wrap and tuft of brown hair. Image 4 is a layout, never a look: blank figures standing level, each turned the way its figure on this sheet faces and each about three and a third of its own heads tall. Take each figure's facing, place and size from it, and nothing else.\n\nThe people are the young mother at the wedding feast and the baby she holds, never named. She is a young woman of slender build, about three and a third heads tall and nine tenths of a man's height, dressed in the Bible's own time: a long dusty-blue dress (#5f7fa8, its far side turned toward a deeper blue-violet #4c5687) to her ankles with long sleeves to the wrist, the same blue from each shoulder to each round warm-peach hand, never a cream or white sleeve; a cream veil (#eadcc2, its shade turned toward lavender #c8bdd6) over her brown hair, falling to her shoulders; brown sandals. Her skin warm peach (#f2b27c, its shade a rosy violet #c9877e); a face of three marks: two short brows, two small dark oval eyes and a one-line mouth. The baby is about two heads tall, wrapped in a cream wrap (#eadcc2) to its feet, a round warm-peach face with the same three marks and a small tuft of brown hair; its round hands at the ends of the wrap's folds. Standing alone on a turnaround, she stands at rest with both arms hanging in their sleeves; with the baby, she holds it on her hip with exactly two hands, both on the baby: one under it, one at its back, unless a pose gives one hand a cup. Each hand at the end of its sleeve, no thumbs, no fingers. No pattern, trim or embroidery. What they hold, and only where a pose names it: a small plain clay cup.\n\nDraw her three times in one row, evenly spaced, each a pose the film gives her, the baby always with her, left to right: one, standing turned three-quarters toward the viewer's left, the baby on her near hip in its cream wrap with her far arm in its sleeve round it, her near arm in its own dusty-blue sleeve lifting a small plain clay cup to the baby's lips, the baby glad; two, seated on a low bench turned three-quarters toward the viewer's left, the baby on her lap, both her sleeved hands on the baby, smiling down at it; three, standing at rest facing the viewer, the baby on her hip held with both sleeved hands.\n\nThis is a model sheet for the animators, not a scene: a plain warm cream paper ground with a soft paper grain and no place behind, one thin flat ground line in a slightly deeper cream under the figures that stand, and a small soft violet contact shadow under each one. Every figure on the sheet is the same person: the same head size, the same garment and the same hand size; each pose takes the height its pose gives it, and a standing figure stands about three and a third heads tall. One thick warm dark-brown outline runs round the whole silhouette of each figure, and the head's outline is the one line inside it: none on the nose, the ear or the hairline, and the hair, the ear and the garments meet as flat colour, never as their own outlined pieces. The hair and the beard are one brown, yet never one shape: the hair is its own shape behind the head, the face and its beard one shape in front of it, and a narrow dark band, the deep shade of that brown, nearly as dark as the outline, runs between the beard and each lock of hair beside it, as the kept concepts paint it, so the beard never runs into the hair. The key light comes from the upper left on every figure, whichever way it faces, so its lit side is always on the left and its far side turns a deeper hue of its own colour toward violet, never grey and never black. Each turn is its own drawing, never a mirror of another. Each arm is in its sleeve to the wrist, and each hand is a plain round paper circle of the skin's colour at its sleeve's end: no thumb, no fingers. The sleeve runs from the shoulder to the hand wherever the hand is, hanging at rest along the side or raised with it; a hand never floats free beside the body. No skin shows below the neck except the hands: never a bare arm, a forearm or a bare shoulder. A walking figure glides: both soles flat on the ground line, the feet close together, the body leaning a little into the travel, the hem swung back, never a stride. No lettering anywhere: no labels, no names, no numbers, no arrows, no text, no grid, no boxes or frames round the figures.\n\nThis sheet is drawn again: Figure 1 faces the viewer's left: its eyes, nose and feet point that way. Figure 2 faces the viewer's left: its eyes, nose and feet point that way. Figure 2's head is as big as figure 3's: 141 pixels tall on this sheet, under a quarter of the figure's whole height (17 %). Figure 1's round hands are as big as figure 3's: each about 76 pixels across, about half of the head's height (0.54), as the kept concept draws them. Figure 2's round hands are as big as figure 3's: each about 76 pixels across, about half of the head's height (0.54), as the kept concept draws them.",
+          "refs": [
+            "../../../../../../docs/ref/house-look.png",
+            "iio-lineup.png",
+            "mother-lineup.png",
+            "../../../../../../out/in-its-order/cast/feast-mother/underlay-poses.png"
+          ],
+          "underlay": true,
+          "retryOf": 1,
+          "flags": [
+            {
+              "check": "facing",
+              "views": [2]
+            },
+            {
+              "check": "head",
+              "views": [2, 3]
+            },
+            {
+              "check": "hand",
+              "views": [1, 3]
+            },
+            {
+              "check": "hand",
+              "views": [2, 3]
+            }
+          ],
+          "at": "2026-10-23T03:47:40.172Z"
+        }
+      ]
+    }
+  }
+}
