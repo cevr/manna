@@ -84,6 +84,28 @@ describe('the lessons ledger', () => {
     }),
   );
 
+  it.effect('refuses a conflict marker a merge left in it, by its line', () =>
+    Effect.gen(function* () {
+      expect(
+        yield* problemsOf(
+          entry('a-code', 'code: `src/thing.ts` `held` (the check)'),
+          '<<<<<<< HEAD',
+          '||||||| parent of fbddd2651 (feat(film): a beat names its cast)',
+          '=======',
+          '>>>>>>> fbddd2651',
+          entry('b-code', 'code: `src/thing.ts` `held` (the check)'),
+          'A line with ======= inside it, and a heading rule:',
+          '========',
+        ),
+      ).toEqual([
+        'docs/lessons.md:15: a conflict marker is left: <<<<<<< HEAD',
+        'docs/lessons.md:16: a conflict marker is left: ||||||| parent of fbddd2651 (feat(film): a beat names its cast)',
+        'docs/lessons.md:17: a conflict marker is left: =======',
+        'docs/lessons.md:18: a conflict marker is left: >>>>>>> fbddd2651',
+      ]);
+    }),
+  );
+
   it.effect('refuses each guard its file does not hold', () =>
     Effect.gen(function* () {
       expect(

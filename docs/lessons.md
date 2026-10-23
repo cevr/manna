@@ -1672,10 +1672,10 @@ The form of an entry, each field on its own line:
 - **Date:** 2026-10-20
 - **Kind:** review
 - **Said:** "Rebase leaves a conflict marker in the lessons ledger"
-- **Source:** ftb-mail/review-4.md F1
+- **Source:** ftb-mail/review-4.md F1; in-its-order-2/review-r1.md F4
 - **Wrong:** The rebase of ftb-mail onto origin/main kept both sides of each append to `docs/lessons.md` but left diff3's base line, `||||||| parent of …`, in three commits.
 - **Cause:** The resolver read only the two-way conflict form, and git rerere replayed its resolution on the second try.
-- **Guard:** none: the per-commit audit that ran each commit's gate is dropped (owner, ask abe573de390: "drop the per-commit audit"); the gate runs once, at the unit's head.
+- **Guard:** code: `packages/scripts/src/lessons/ledger.ts` `markersIn` (each line of the ledger that is a conflict marker, `<<<<<<<`, `|||||||`, `=======` or `>>>>>>>`, is a problem by its line); `packages/scripts/src/lessons/ledger.test.ts` `refuses a conflict marker a merge left in it, by its line`
 
 ### contact-rule-waits-for-verified-inbox
 
