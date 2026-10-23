@@ -57,7 +57,7 @@
 //
 // Tent poles (CRAFT rule 11), each with its act's light and the question that
 // opens the act (the chapters, `acts.ts`):
-// - `cold`: the feast table, a grown grey figure holding a baby's bottle,
+// - `cold`: the feast table, the series lead holding a baby's bottle,
 //   teal day. "What are milk and meat?"
 // - `stones`: six stones set in a row on parchment, peach. "Which truths are
 //   the milk?"
@@ -136,13 +136,15 @@ export const script = defineScript([
       'E. J. Waggoner, The Present Truth, August 17, 1893, 315',
       'E. J. Waggoner, The Medical Missionary, September 1904, 286',
     ],
-    picture: `IDEA: the parchment page, matched from the cup on the courtyard table in \`cold\`. A grey figure holds a small cup; on \`newborn\` a book opens beside it and a ribbon of white pours from its pages into the cup (\`word\`). On \`mixed\` a dropper of dark ink hovers over the cup and is waved away. On \`need\` the cup passes to a row of small figures of every height, each drinking in turn; on \`shame\` the grey figure from \`cold\` takes a cup too and smiles. ${CARDS}`,
+    cast: ['idea-villagers', 'lead-feast'],
+    picture: `IDEA: the parchment page, matched from the cup on the courtyard table in \`cold\`. A grown linen villager holds a small clay cup; on \`newborn\` a book opens beside it and a ribbon of white pours from its pages into the cup (\`word\`). On \`mixed\` a dropper of dark ink hovers over the cup and is waved away. On \`need\` the cup passes along a row of linen villagers of every height (the baby, the toddler, the child, the grown villager), each drinking in turn; on \`shame\` the series lead from \`cold\`, in his teal robe, takes a cup too and smiles. ${CARDS}`,
   },
   {
     id: 'stones',
     say: '{which}So which truths are the milk? {/} {lists}Hebrews lists them, {foundation}and calls them a {*}foundation. {/} {repent}Repentance from dead works. {/} {faith}Faith toward God. {/} {bapt}Baptisms. {/} {hands}The laying on of hands. {/} {resur}The resurrection of the dead. {/} {judg}And eternal judgment. {/} {six}Six stones. {/} {oracles}Hebrews calls them the first principles of the oracles of God. {/} {spoken}An oracle is a word God himself has spoken. {/} {begins}That is where this series {*}begins.',
     cite: ['Hebrews 6:1–2', 'Hebrews 5:12'],
-    picture: `IDEA: the parchment. On \`foundation\` a level line is drawn and six paper stones drop onto it one per name, each carrying a small gold icon: a figure turning round (\`repent\`), an open hand (\`faith\`), a wave of water (\`bapt\`), two hands over a head (\`hands\`), an empty tomb (\`resur\`), a balance scale (\`judg\`). On \`six\` the camera pulls back: six stones, a foundation with nothing yet built on it. On \`oracles\` a gold speech-ribbon unrolls from the top of the page and settles under the stones as their bed. On \`begins\` a small grey figure steps onto the first stone. ${CARDS}`,
+    cast: ['idea-villagers'],
+    picture: `IDEA: the parchment. On \`foundation\` a level line is drawn and six paper stones drop onto it one per name, each carrying a small gold icon: a figure turning round (\`repent\`), an open hand (\`faith\`), a wave of water (\`bapt\`), two hands over a head (\`hands\`), an empty tomb (\`resur\`), a balance scale (\`judg\`). On \`six\` the camera pulls back: six stones, a foundation with nothing yet built on it. On \`oracles\` a gold speech-ribbon unrolls from the top of the page and settles under the stones as their bed. On \`begins\` the linen child steps onto the first stone. ${CARDS}`,
   },
   {
     id: 'bottle',
@@ -152,14 +154,15 @@ export const script = defineScript([
       '1 Corinthians 3:1–3',
       'Ellen G. White, Medical Ministry, 124',
     ],
-    cast: ['paul'],
-    picture: `STORY: on \`easy\` a quick comic beat on the parchment: the grown man from \`cold\` lifts a plate and tips the whole meal into his mouth unchewed. On \`paul\` push through into a Corinthian house at dusk (the film's short valley), a room of grey figures in two knots, arguing, fingers pointing. Paul (grey, travel cloak, a face at a third of the frame) sits writing by a lamp; on \`fed\` close on his face as he writes, tired and fond. On \`quarrel\` the two knots turn their backs on each other. On \`like\` the lamp's light warms and one figure from each knot turns back and offers the other a hand. ${CARDS}`,
+    cast: ['lead-feast', 'paul'],
+    picture: `STORY: on \`easy\` a quick comic beat on the parchment: the series lead from \`cold\` lifts a plate and tips the whole meal into his mouth unchewed. On \`paul\` push through into a Corinthian house at dusk (the film's short valley), a room of Corinthian believers in the dress of their own time (the crowd kit), in two knots, arguing, hands raised. Paul (his kept sheet: the balding crown, the grey-brown beard, the slate-blue travel cloak over his linen tunic; a face at a third of the frame) sits writing by a lamp; on \`fed\` close on his face as he writes, tired and fond. On \`quarrel\` the two knots turn their backs on each other. On \`like\` the lamp's light warms and one figure from each knot turns back and offers the other a hand. ${CARDS}`,
   },
   {
     id: 'teeth',
     say: '{milk}Feed a baby on milk, and she grows {teeth}{*}teeth. {/} {sign}And teeth are a sign {time}that it is time for solid {*}food. {/} {hebrews}Hebrews says strong meat belongs to those {use}who “by reason of use have their senses exercised to discern both good and evil.” {/} {practice}Use. {/} Practice. {/} {*}Chewing.',
     cite: ['E. J. Waggoner, The Medical Missionary, September 1904, 286', 'Hebrews 5:14'],
-    picture: `IDEA: the parchment. A baby figure grins on \`teeth\` and shows one small white tooth (a light, warm moment). On \`sign\` a little paper signpost springs up beside it pointing right, toward a loaf. On \`use\` the grown grey figure sits at a small table and chews, thinking, a tiny lamp lit over his head; on \`practice\` a bowl of grain, a loaf and a plate come in, one per word. ${CARDS}`,
+    cast: ['idea-villagers', 'lead-feast'],
+    picture: `IDEA: the parchment. The linen baby grins on \`teeth\` and shows one small white tooth (a light, warm moment). On \`sign\` a little paper signpost springs up beside it pointing right, toward a loaf. On \`use\` the series lead from \`cold\`, in his teal robe, sits at a small table and chews, thinking, a tiny lamp lit over his head; on \`practice\` a bowl of grain, a loaf and a plate come in, one per word. ${CARDS}`,
   },
   {
     id: 'rush',
@@ -170,7 +173,8 @@ export const script = defineScript([
       'Ellen G. White, The Great Controversy, 520',
       'Ellen G. White, The Bible Echo, August 26, 1895',
     ],
-    picture: `IDEA: the parchment, the six stones from \`stones\` along the bottom. On \`skip\` a small grey figure hops over the stones without touching them and reaches for a heaped platter at the top of the page. On \`run\` a toddler figure sets off running, tips forward and sits down hard, unhurt, and gets up (a light moment). On \`peter\` a page of writing appears; on \`twist\` one line of it is wrung like a wet cloth, its letters bending. On \`own\` a small book opens beside the page, each word on the page linked to its entry in the book by a thin gold thread. On \`fill\` the figure who skipped writes over the empty entries in his own colour, and on \`want\` the page turns into a mirror and shows his face. On \`order\` the mirror clears to the page, and the figure steps back down onto the first stone. ${CARDS}`,
+    cast: ['idea-villagers'],
+    picture: `IDEA: the parchment, the six stones from \`stones\` along the bottom. On \`skip\` the linen child hops over the stones without touching them and reaches for a heaped platter at the top of the page. On \`run\` the linen toddler sets off running, tips forward and sits down hard, unhurt, and gets up (a light moment). On \`peter\` a page of writing appears; on \`twist\` one line of it is wrung like a wet cloth, its letters bending. On \`own\` a small book opens beside the page, each word on the page linked to its entry in the book by a thin gold thread. On \`fill\` the child who skipped writes over the empty entries in a colour of his own, and on \`want\` the page turns into a mirror and shows his face. On \`order\` the mirror clears to the page, and the child steps back down onto the first stone. ${CARDS}`,
   },
   {
     id: 'math',
@@ -180,7 +184,8 @@ export const script = defineScript([
       'E. J. Waggoner, The Present Truth, January 31, 1895, 65',
       'E. J. Waggoner, The Medical Missionary, September 1904, 286',
     ],
-    picture: `IDEA: dawn begins to come into the parchment. A child-sized grey figure at a slate writes 1 + 1 on \`adds\`; the sums multiply across the slate. On \`stay\` the figure grows taller across three quick dissolves, the slate growing with it. On \`hardest\` one enormous sum fills the slate, and as the camera pushes in every term in it is one of the first small sums from \`adds\`, picked out in gold. On \`meat\` match cut: the slate's frame becomes the edge of a plate; on \`nothing\` the cup of milk from \`milk\` is set down on the plate beside the bread, not taken away; on \`more\` dishes fill in around it. ${CARDS}`,
+    cast: ['idea-villagers'],
+    picture: `IDEA: dawn begins to come into the parchment. The linen child at a slate writes 1 + 1 with a stub of white chalk on \`adds\`; the sums multiply across the slate. On \`stay\` the child grows into the grown linen villager across three quick dissolves, the slate growing with it. On \`hardest\` one enormous sum fills the slate, and as the camera pushes in every term in it is one of the first small sums from \`adds\`, picked out in gold. On \`meat\` match cut: the slate's frame becomes the edge of a plate; on \`nothing\` the cup of milk from \`milk\` is set down on the plate beside the bread, not taken away; on \`more\` dishes fill in around it. ${CARDS}`,
   },
   {
     id: 'priest',
@@ -205,14 +210,14 @@ export const script = defineScript([
       'E. J. Waggoner, The Present Truth, May 4, 1899, 277',
     ],
     cast: ['sower'],
-    picture: `STORY: a cardboard field on a hillside, peach morning, 3–5 planes (the far hills, the field, a low stone wall near). On \`sow\` a farmer (grey, a face at a third of the frame) scatters seed and walks off; quick sun arcs on \`sleeps\`/\`knoweth\` (day, night, day). On \`first\` a single blade tears up out of the soil, then the green ear, then the full gold ear, one per phrase, each a paper layer folding up. On \`blade\` the camera returns to the young blade alone, upright and bright green, whole for what it is. On \`quiet\` the camera holds low by the stalk while a snail crosses the wall: nothing seems to move, but the stalk is visibly taller at the end of the hold. On \`isaiah\` the field dissolves to the parchment: one line of gold writing drawn, then another under it; on \`bear\` the next line waits, unwritten, until the one above it has filled with light; on \`bottom\` the camera drops through one line of the writing as if it were a well, and finds more light below. ${CARDS}`,
+    picture: `STORY: a cardboard field on a hillside, peach morning, 3–5 planes (the far hills, the field, a low stone wall near). On \`sow\` the sower (his kept sheet: the linen headcloth with its walnut band, the short green-olive mantle over his linen tunic; a face at a third of the frame) scatters seed and walks off; quick sun arcs on \`sleeps\`/\`knoweth\` (day, night, day). On \`first\` a single blade tears up out of the soil, then the green ear, then the full gold ear, one per phrase, each a paper layer folding up. On \`blade\` the camera returns to the young blade alone, upright and bright green, whole for what it is. On \`quiet\` the camera holds low by the stalk while a snail crosses the wall: nothing seems to move, but the stalk is visibly taller at the end of the hold. On \`isaiah\` the field dissolves to the parchment: one line of gold writing drawn, then another under it; on \`bear\` the next line waits, unwritten, until the one above it has filled with light; on \`bottom\` the camera drops through one line of the writing as if it were a well, and finds more light below. ${CARDS}`,
   },
   {
     id: 'eat',
     say: '{nobody}And nobody can eat your food for you. {/} {jer}The prophet Jeremiah said, {found}“Thy words were found, and I did eat them; and thy word was unto me the {joy}joy and rejoicing of mine heart.” {//} {body}Your body lives on the food you eat yourself. {/} {soul}And your soul lives on the {*}word you take in yourself.',
     cite: ['Jeremiah 15:16', 'Ellen G. White, The Signs of the Times, June 25, 1902'],
-    cast: ['jeremiah'],
-    picture: `STORY: a small cardboard room in Jerusalem, warm lamplight; Jeremiah (grey, a scroll on his knees, a face at a third of the frame) reads, and on \`found\` his face lifts and softens; on \`joy\` he laughs out loud, alone. On \`body\` cut to the parchment: two grey figures at one table, one eating, the other only watching; the eater glows faintly from the chest (\`soul\`), the watcher does not; the watcher picks up a spoon. ${CARDS}`,
+    cast: ['jeremiah', 'idea-villagers'],
+    picture: `STORY: a small cardboard room in Jerusalem, warm lamplight; Jeremiah (his kept sheet: the linen headcloth with its olive band, the close beard, the olive mantle over his linen tunic; a scroll on his knees, a face at a third of the frame) reads, and on \`found\` his face lifts and softens; on \`joy\` he laughs out loud, alone. On \`body\` cut to the parchment: two grown linen villagers at one table, one eating, the other only watching; the eater glows faintly from the chest (\`soul\`), the watcher does not; the watcher picks up a spoon. ${CARDS}`,
   },
   {
     id: 'path',
@@ -229,7 +234,7 @@ export const script = defineScript([
       'E. J. Waggoner, The Medical Missionary, September 1904, 286',
     ],
     cast: ['lead-feast', 'christ'],
-    picture: `IDEA and STORY merged, the landing: the wedding courtyard from \`cold\` in the same layout and framing, now under the teal-to-yellow landing sky. The grown man stands where he stood; on \`sets\` he sets the baby's bottle down. On \`table\` the host's hand (the host is Christ, in the seamless linen coat and the walnut mantle, at the head of the table) gestures to the place set for him: bread from the field in \`grain\`, and on \`cup\` the cup of milk from \`milk\` beside the plate. On \`taste\` he tastes, close on his face, delight. On \`leaving\` the six stones show for a breath as the courtyard's paving under the table. On \`into\` he stands taller beside the host; the gold cross's light from \`priest\` warms the whole courtyard. The held pause comes after \`into\`. ${CARDS}`,
+    picture: `IDEA and STORY merged, the landing: the wedding courtyard from \`cold\` in the same layout and framing, now under the teal-to-yellow landing sky. The series lead stands where he stood; on \`sets\` he sets the baby's bottle down. On \`table\` the host's hand (the host is Christ, in the seamless linen coat and the walnut mantle, at the head of the table) gestures to the place set for him: bread from the field in \`grain\`, and on \`cup\` the cup of milk from \`milk\` beside the plate. On \`taste\` he tastes, close on his face, delight. On \`leaving\` the six stones show for a breath as the courtyard's paving under the table. On \`into\` he stands taller beside the host; the gold cross's light from \`priest\` warms the whole courtyard. The held pause comes after \`into\`. ${CARDS}`,
   },
   {
     id: 'thesis',

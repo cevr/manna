@@ -517,5 +517,113 @@
         }
       ]
     }
+  },
+  "kept": {
+    "turnaround": {
+      "try": 5,
+      "why": "Keep them all",
+      "ask": "a4f75680c68",
+      "views": [
+        {
+          "view": 1,
+          "name": "front",
+          "box": [27, 217, 256, 805]
+        },
+        {
+          "view": 2,
+          "name": "threeQuarterLeft",
+          "box": [285, 217, 489, 808]
+        },
+        {
+          "view": 3,
+          "name": "profileLeft",
+          "box": [542, 219, 705, 807]
+        },
+        {
+          "view": 4,
+          "name": "back",
+          "box": [761, 215, 990, 807]
+        },
+        {
+          "view": 5,
+          "name": "profileRight",
+          "box": [1044, 218, 1206, 808]
+        },
+        {
+          "view": 6,
+          "name": "threeQuarterRight",
+          "box": [1273, 217, 1495, 808]
+        }
+      ]
+    },
+    "poses": {
+      "try": 5,
+      "why": "Keep them all",
+      "ask": "a4f75680c68",
+      "views": [
+        {
+          "view": 1,
+          "name": "poses-1",
+          "box": [33, 315, 278, 894]
+        },
+        {
+          "view": 2,
+          "name": "poses-2",
+          "box": [317, 319, 580, 895]
+        },
+        {
+          "view": 3,
+          "name": "poses-3",
+          "box": [602, 401, 891, 900]
+        },
+        {
+          "view": 4,
+          "name": "poses-4",
+          "box": [885, 318, 1207, 895]
+        },
+        {
+          "view": 5,
+          "name": "poses-5",
+          "box": [1257, 315, 1494, 894]
+        }
+      ]
+    },
+    "heads": {
+      "try": 3,
+      "why": "Keep them all",
+      "ask": "a4f75680c68",
+      "views": [
+        {
+          "view": 1,
+          "name": "heads-1",
+          "box": [32, 324, 265, 647]
+        },
+        {
+          "view": 2,
+          "name": "heads-2",
+          "box": [282, 324, 511, 647]
+        },
+        {
+          "view": 3,
+          "name": "heads-3",
+          "box": [523, 326, 755, 647]
+        },
+        {
+          "view": 4,
+          "name": "heads-4",
+          "box": [773, 323, 1001, 647]
+        },
+        {
+          "view": 5,
+          "name": "heads-5",
+          "box": [1022, 323, 1248, 647]
+        },
+        {
+          "view": 6,
+          "name": "heads-6",
+          "box": [1271, 323, 1506, 647]
+        }
+      ]
+    }
   }
 }

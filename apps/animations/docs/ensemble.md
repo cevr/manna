@@ -31,16 +31,16 @@ Everyone in the films' own world, outside the Bible's scenes, keeps these: the p
 
 Eight people: a family of five in a city flat, the grandmother in the hills, and two neighbours in the same building. Ages are their ages in every film (see Continuity). They are background figures (owner, 2026-10-15): never a film's lead, its accused, or the one whose need is the film's question. The one exception is a film's own "Picture a…" illustration when the owner casts a cast member as its figure (owner, 2026-10-16: "the grandmother should be one the background cast members, the old lady"): Rosa is the grandmother of RBF's `garden`.
 
-The hue slots sit inside the band of [CRAFT.md](../../../.claude/skills/film/CRAFT.md) rule 12: every garment at HSV saturation 0.20–0.35, with scarlet the only accent, gold only for God's word and gift, and white only for the robe. The slots spread round the wheel about 40° apart and skip the reds and oranges from 330° to 50°: scarlet (357°), the chipboard world (about 25°) and gold (41°) live there. Each ramp shades toward the cool side under a warm key and lights toward the warm side, as rimproto C2 did; the papercut look's ramp step governs the final numbers. Heads and hands are the shared figure paper (open choice 2), and hair is cut chipboard as today, so a person is told apart by garment hue, silhouette and hair.
+The hue slots sit inside the band of [CRAFT.md](../../../.claude/skills/film/CRAFT.md) rule 12: every garment at HSV saturation 0.20–0.35, with scarlet the only accent, gold only for God's word and gift, and white only for the robe. The slots spread round the wheel 18° to 42° apart and skip the reds and oranges from 330° to 50°: scarlet (357°), the chipboard world (about 25°) and gold (41°) live there. They also leave 68° open between mint and steel round the series lead's teal (`#658786`, 178°): no cast member wears teal, so the lead owns it (owner, 2026-10-23, ask a4f75680c68: "Move the recurring mother off teal"). Each ramp shades toward the cool side under a warm key and lights toward the warm side, as rimproto C2 did; the papercut look's ramp step governs the final numbers. Heads and hands are the shared figure paper (open choice 2), and hair is cut chipboard as today, so a person is told apart by garment hue, silhouette and hair.
 
 | Slot | Who   | Base (HSV)               | Base      | Shade     | Light     |
 | ---- | ----- | ------------------------ | --------- | --------- | --------- |
 | 1    | Leo   | khaki, 58° .33 .55       | `#8c8b5e` | `#5f6b46` | `#aba27d` |
 | 2    | Max   | sage, 100° .27 .68       | `#8ead7f` | `#5f8c61` | `#b7cca1` |
 | 3    | Mila  | mint, 140° .22 .86       | `#abdbbb` | `#88baab` | `#c7f2ce` |
-| 4    | Clara | teal, 168° .30 .62       | `#6f9e95` | `#51767d` | `#8fbdac` |
-| 5    | Hugo  | steel, 208° .30 .46      | `#526575` | `#373c54` | `#708994` |
-| 6    | Amara | periwinkle, 245° .28 .64 | `#7976a3` | `#6a5782` | `#a297c2` |
+| 4    | Hugo  | steel, 208° .30 .46      | `#526575` | `#373c54` | `#708994` |
+| 5    | Amara | periwinkle, 245° .28 .64 | `#7976a3` | `#6a5782` | `#a297c2` |
+| 6    | Clara | violet, 264° .30 .50     | `#695980` | `#403d5e` | `#8f789e` |
 | 7    | Nina  | lavender, 282° .24 .80   | `#bd9bcc` | `#8a79ab` | `#e5c0eb` |
 | 8    | Rosa  | plum, 316° .30 .48       | `#7a5671` | `#563a59` | `#997489` |
 
@@ -54,7 +54,7 @@ Heights are given against Hugo, with the head about ⅓ of an adult's height (th
 - **Temperament:** warm, loud, quick to laugh and quick to flare; just as quick to own it.
 - **Habit:** in the wrong, one hand circle goes to the back of his head and he takes half a step back. Glad, he lifts a child high, the child rising beside him with his hand circles under them.
 - **Silhouette:** the tallest (1.0) and broadest, square shoulders; short cropped hair and a short square beard, the only beard in the cast.
-- **Slot 5, steel blue,** the darkest garment: a work jacket over trousers.
+- **Slot 4, steel blue,** the darkest garment: a work jacket over trousers.
 - **Seen:** at his workbench, on the stair with a child on his shoulders, at the head of the family's table.
 
 ### Clara, the mother
@@ -63,7 +63,7 @@ Heights are given against Hugo, with the head about ⅓ of an adult's height (th
 - **Temperament:** steady, observant, a planner with a quiet wit.
 - **Habit:** she tilts her head and waits before she answers, "swift to hear, slow to speak" (Jas 1:19). Mila is often on her hip.
 - **Silhouette:** middle height (0.92), slender; one long plait over the near shoulder, which reads from the front and the side.
-- **Slot 4, teal:** a long dress or tunic to below the knee.
+- **Slot 6, violet,** dark: a long dress or tunic to below the knee.
 - **Seen:** at the table with a book open, Mila on her hip, at her mother's gate.
 
 ### Leo, the son
@@ -90,7 +90,7 @@ Heights are given against Hugo, with the head about ⅓ of an adult's height (th
 - **Temperament:** sunny, clinging, all reach.
 - **Habit:** both hand circles up, reaching for whoever comes in, with a little bounce.
 - **Silhouette:** the smallest (0.40), round, one curl on top; on Clara's hip the pair reads as one silhouette with two heads.
-- **Slot 3, mint,** the lightest garment, a near neighbour of her mother's teal.
+- **Slot 3, mint,** the lightest garment, against her mother's dark violet.
 - **Seen:** on Clara's hip, reaching; on the floor with a cup. She grows in no film; the ledger keeps her small.
 
 ### Rosa, the grandmother
@@ -117,7 +117,7 @@ Heights are given against Hugo, with the head about ⅓ of an adult's height (th
 - **Temperament:** brisk, warm, unflappable at work, worn out at home.
 - **Habit:** she lays a hand circle on a shoulder, or on a forehead to feel for fever.
 - **Silhouette:** middle height (0.90), sturdy; a round crown of hair larger than the head; a square tunic hem at the hip over trousers.
-- **Slot 6, periwinkle:** the tunic.
+- **Slot 5, periwinkle:** the tunic.
 - **Seen:** home from a night shift with her bag over her shoulder, a hand on a neighbour's shoulder, at her door on the ground floor.
 
 ## Where the cast appears

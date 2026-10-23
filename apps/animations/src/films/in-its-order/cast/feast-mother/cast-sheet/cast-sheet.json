@@ -120,5 +120,66 @@
         }
       ]
     }
+  },
+  "kept": {
+    "turnaround": {
+      "try": 1,
+      "why": "Keep them all",
+      "ask": "a4f75680c68",
+      "views": [
+        {
+          "view": 1,
+          "name": "front",
+          "box": [43, 194, 262, 794]
+        },
+        {
+          "view": 2,
+          "name": "threeQuarterLeft",
+          "box": [304, 192, 520, 794]
+        },
+        {
+          "view": 3,
+          "name": "profileLeft",
+          "box": [557, 191, 751, 794]
+        },
+        {
+          "view": 4,
+          "name": "back",
+          "box": [781, 191, 998, 794]
+        },
+        {
+          "view": 5,
+          "name": "profileRight",
+          "box": [1024, 191, 1223, 794]
+        },
+        {
+          "view": 6,
+          "name": "threeQuarterRight",
+          "box": [1267, 194, 1486, 794]
+        }
+      ]
+    },
+    "poses": {
+      "try": 2,
+      "why": "Keep them all",
+      "ask": "a4f75680c68",
+      "views": [
+        {
+          "view": 1,
+          "name": "poses-1",
+          "box": [80, 97, 456, 915]
+        },
+        {
+          "view": 2,
+          "name": "poses-2",
+          "box": [579, 176, 995, 911]
+        },
+        {
+          "view": 3,
+          "name": "poses-3",
+          "box": [1101, 96, 1436, 911]
+        }
+      ]
+    }
   }
 }
