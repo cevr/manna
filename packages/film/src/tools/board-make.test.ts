@@ -273,6 +273,7 @@ const lockOf = (member: string, files: ReadonlyArray<string>, kept: ReadonlyArra
   member,
   who: 'Him',
   scope: 'library' as const,
+  cut: [],
   kept,
   files: files.map((f) => `${libraryOf(member)}/${f}`),
 });
@@ -311,6 +312,26 @@ describe("a locked cast member's library reference", () => {
       }).pipe(Effect.provide(boardOver(files, calls)));
     },
   );
+
+  it.effect('a member a beat names twice is sent once', () => {
+    const files = new Map<string, Uint8Array>();
+    const calls: Array<ImageRequest> = [];
+    castIn(files, 'christ', ['turnaround']);
+    return Effect.gen(function* () {
+      yield* styled;
+      yield* makeBoard(
+        film,
+        [drawing(['christ', 'christ'])],
+        acts,
+        { beats: [], tries: 1, lanes: 1, dryRun: false },
+        quiet,
+      );
+      expect(calls[0]?.refs).toEqual([
+        '/films/f/board/style.9005.png',
+        '/library/cast/christ/cast-sheet/kept/turnaround.png',
+      ]);
+    }).pipe(Effect.provide(boardOver(files, calls)));
+  });
 
   it.effect('a member with nothing kept is sent the references its record names', () => {
     const files = new Map<string, Uint8Array>();

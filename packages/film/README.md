@@ -2115,8 +2115,9 @@ note (`POST /api/films/<film>/notes`) carrying its `panel` and its `sketch`
 (an agent's `request_tweak`, the terminal's `film board`). A panel's call sends
 the style's reference, then the beat's first panel or a tweak's try and its
 sketch, then the library record of each member the beat's `cast` names
-(`tools/cast-library.ts`, a film's own role before the library's): its kept
-sheets, else its record's references, which the prompt says win over every
+(`tools/cast-library.ts`, a film's own role before the library's), each once:
+its kept sheets (its own views of a sheet that draws other members too),
+else its record's references, which the prompt says win over every
 other image on the person (a sheet of heads, the face and hair alone), the
 brief saying what the member wears and does.
 

@@ -33,6 +33,32 @@ describe("a member's library reference", () => {
     ]);
     expect(lock.kept).toEqual(['turnaround', 'heads', 'poses']);
   });
+  test('is its own figures, cut from a kept sheet that draws other members too', () => {
+    // The villagers' poses sheet draws six figures; the child keeps only the fifth.
+    const box = [0, 0, 10, 10] as const;
+    const lock = castLock(
+      {
+        ...record,
+        sheets: {
+          poses: {
+            anchor: 5,
+            layout: 'six villagers in a row',
+            slots: ['left', 'front', 'right', 'front', 'right', 'front'],
+            tries: [],
+          },
+        },
+        kept: {
+          turnaround: kept,
+          poses: { ...kept, views: [{ view: 5, name: 'poses-5', box }] },
+        },
+      },
+      '/c',
+    );
+    expect(lock.files).toEqual(['/c/kept/turnaround.png', '/c/views/poses-5.png']);
+    expect(castLockNote(lock, 2)).toContain(
+      'its kept cast sheet: turnaround, poses (its own figures, cut from a sheet that draws others too)',
+    );
+  });
   test('is the references its record names while nothing is kept', () => {
     const lock = castLock(record, '/c/');
     expect(lock.files).toEqual(['/c/rig-christ-front.png', '/c/christ-court-12.png']);

@@ -457,14 +457,20 @@ const castOf = Effect.fn('Board.cast')(function* (film: FilmName, beats: Readonl
   return new Map(locks);
 });
 
-/** A beat's library references in its cast's order, and their files as the board folder reaches them. */
+/**
+ * A beat's library references in its cast's order, each member once, and
+ * their files as the board folder reaches them. Each member's files lie in
+ * its own folder, so no file is sent twice.
+ */
 const beatCast = (
   locks: ReadonlyMap<string, CastLock>,
   beat: BoardBeat,
   folder: string,
   path: Path.Path,
 ) => {
-  const cast = beat.cast.flatMap((m) => Option.toArray(Option.fromUndefinedOr(locks.get(m))));
+  const cast = Arr.dedupe(beat.cast).flatMap((m) =>
+    Option.toArray(Option.fromUndefinedOr(locks.get(m))),
+  );
   return { cast, refs: cast.flatMap((lock) => lock.files.map((f) => path.relative(folder, f))) };
 };
 

@@ -3,12 +3,13 @@
 // member's one truth (the owner, 2026-10-20: the library, not a concept, where
 // the concept is wrong), so these images win over any other reference that
 // draws the member otherwise, on the person; the brief dresses the member for
-// its scene. A member with a kept sheet is sent its kept sheets; one not kept
-// yet is sent the references its record names. Pure.
+// its scene. A member with a kept sheet is sent its kept sheets, or its own
+// views of a sheet that draws other members too; one not kept yet is sent the
+// references its record names. Pure.
 
 import { Array as Arr, Boolean as Bool, Option } from 'effect';
 import type { CastSheetRecord } from './cast-record.ts';
-import type { SheetKind } from './cast-sheet.ts';
+import { type SheetKind, TURNAROUND_SLOTS } from './cast-sheet.ts';
 
 /** The kinds a kept member's sheets are sent in: the whole figure first, then the face, then the acting. */
 const LOCK_ORDER: ReadonlyArray<SheetKind> = ['turnaround', 'heads', 'poses'];
@@ -22,6 +23,8 @@ export interface CastLock {
   readonly scope: CastSheetRecord['scope'];
   /** The kinds kept, in `LOCK_ORDER`: none when the files are the record's own references. */
   readonly kept: ReadonlyArray<SheetKind>;
+  /** The kept kinds sent as the member's own views, their sheet drawing other members too. */
+  readonly cut: ReadonlyArray<SheetKind>;
   readonly files: ReadonlyArray<string>;
 }
 
@@ -32,20 +35,48 @@ const joined = (folder: string, file: string): string =>
     onFalse: () => `${folder.replace(/\/+$/, '')}/${file}`,
   });
 
-/** The member's library reference: each kept sheet (`kept/<kind>.png`) when any is kept, else the record's refs. */
+/** How many views a kind's sheet draws: a turnaround its six, a poses or heads sheet its slots. */
+const viewsOn = (record: CastSheetRecord, kind: SheetKind): number =>
+  Bool.match(kind === 'turnaround', {
+    onTrue: () => TURNAROUND_SLOTS.length,
+    onFalse: () => record.sheets[kind]?.slots?.length ?? 0,
+  });
+
+/**
+ * Whether the member keeps only some of the views a kind's sheet draws: a
+ * sheet of several members (the villagers' six figures), of which the member
+ * is the views its record keeps.
+ */
+const cutFrom = (record: CastSheetRecord, kind: SheetKind): boolean => {
+  const views = record.kept?.[kind]?.views ?? [];
+  return views.length > 0 && views.length < viewsOn(record, kind);
+};
+
+/**
+ * The member's library reference: each kept sheet (`kept/<kind>.png`) when
+ * any is kept, or the member's own views of it (`views/<name>.png`) when the
+ * sheet draws other members too; else the record's refs.
+ */
 export const castLock = (record: CastSheetRecord, folder: string): CastLock => {
   const kept = LOCK_ORDER.filter((kind) =>
     Option.isSome(Option.fromUndefinedOr(record.kept?.[kind])),
   );
+  const cut = kept.filter((kind) => cutFrom(record, kind));
+  const filesOf = (kind: SheetKind): ReadonlyArray<string> =>
+    Bool.match(cut.includes(kind), {
+      onTrue: () => (record.kept?.[kind]?.views ?? []).map((v) => `views/${v.name}.png`),
+      onFalse: () => [`kept/${kind}.png`],
+    });
   const files = Arr.match(kept, {
     onEmpty: () => record.refs.map((ref) => ref.file),
-    onNonEmpty: (kinds) => kinds.map((kind) => `kept/${kind}.png`),
+    onNonEmpty: (kinds) => kinds.flatMap(filesOf),
   });
   return {
     member: record.member,
     who: record.who,
     scope: record.scope,
     kept,
+    cut,
     files: files.map((file) => joined(folder, file)),
   };
 };
@@ -81,7 +112,15 @@ export const castLockNote = (lock: CastLock, first: number): string => {
   });
   const what = Arr.match(lock.kept, {
     onEmpty: () => 'the references it is drawn from until its cast sheet is kept',
-    onNonEmpty: (kinds) => `its kept cast sheet: ${kinds.join(', ')}`,
+    onNonEmpty: (kinds) =>
+      `its kept cast sheet: ${kinds
+        .map((kind) =>
+          Bool.match(lock.cut.includes(kind), {
+            onTrue: () => `${kind} (its own figures, cut from a sheet that draws others too)`,
+            onFalse: () => kind,
+          }),
+        )
+        .join(', ')}`,
   });
   const record = `${which} ${possessive(name)} record in ${where} (${what})`;
   const draws = said('it draws', 'they draw');
