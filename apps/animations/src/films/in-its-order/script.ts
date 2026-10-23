@@ -83,13 +83,17 @@
 // is shaded with colour, never grey or black (CRAFT rule 12).
 // - Every figure is dressed in the Bible's own time (the owner's direction A;
 //   the cast lineup is each record's reference).
-// - The grown man at the feast is the series lead, never named: a man of about
-//   forty with a short beard and no grey in his hair (the owner's answers),
-//   in one solid teal robe, recorded in the library as `lead-feast`, about
-//   3.36 of his heads tall like every figure (the cast canon). The mother and
-//   the baby at the cup are this film's `feast-mother`; the IDEA figures (the
-//   drinkers, the child at the slate, the toddler who runs, the one who skips
-//   the stones, the eater and the watcher) are this film's `idea-villagers`.
+// - The grown man at the feast is the series lead, never named: the young
+//   lead of the lineup, beardless, in a cream tunic with a teal mantle over
+//   his left shoulder (the owner: "C: the young lead as he was"), recorded
+//   in the library as `lead-feast`, about 3.36 of his
+//   heads tall like every figure (the cast canon). The mother and the baby at
+//   the cup are this film's `feast-mother`. The IDEA figures are plain
+//   villagers in undyed linen: the child at the slate is the library's
+//   `villager-child` and the toddler who runs is `villager-toddler` (base
+//   sizes for filler cast); the grown villager (the one who skips the stones,
+//   the eater and the watcher) is a dress variant of `lead-feast`'s body, and
+//   he and the baby are drawn in this film's `idea-villagers`.
 // - Jesus Christ is the locked figure (`src/library/cast/christ`), at the top
 //   of the court canon's height band, never short: as Priest in `priest` (a
 //   white robe, the golden girdle and the breastplate, seen from behind
@@ -136,8 +140,8 @@ export const script = defineScript([
       'E. J. Waggoner, The Present Truth, August 17, 1893, 315',
       'E. J. Waggoner, The Medical Missionary, September 1904, 286',
     ],
-    cast: ['idea-villagers', 'lead-feast'],
-    picture: `IDEA: the parchment page, matched from the cup on the courtyard table in \`cold\`. A grown linen villager holds a small clay cup; on \`newborn\` a book opens beside it and a ribbon of white pours from its pages into the cup (\`word\`). On \`mixed\` a dropper of dark ink hovers over the cup and is waved away. On \`need\` the cup passes along a row of linen villagers of every height (the baby, the toddler, the child, the grown villager), each drinking in turn; on \`shame\` the series lead from \`cold\`, in his teal robe, takes a cup too and smiles. ${CARDS}`,
+    cast: ['idea-villagers', 'villager-child', 'villager-toddler', 'lead-feast'],
+    picture: `IDEA: the parchment page, matched from the cup on the courtyard table in \`cold\`. A grown linen villager holds a small clay cup; on \`newborn\` a book opens beside it and a ribbon of white pours from its pages into the cup (\`word\`). On \`mixed\` a dropper of dark ink hovers over the cup and is waved away. On \`need\` the cup passes along a row of linen villagers of every height (the baby, the toddler, the child, the grown villager), each drinking in turn; on \`shame\` the series lead from \`cold\`, in his cream tunic and teal mantle, takes a cup too and smiles. ${CARDS}`,
   },
   {
     id: 'stones',
@@ -162,7 +166,7 @@ export const script = defineScript([
     say: '{milk}Feed a baby on milk, and she grows {teeth}{*}teeth. {/} {sign}And teeth are a sign {time}that it is time for solid {*}food. {/} {hebrews}Hebrews says strong meat belongs to those {use}who “by reason of use have their senses exercised to discern both good and evil.” {/} {practice}Use. {/} Practice. {/} {*}Chewing.',
     cite: ['E. J. Waggoner, The Medical Missionary, September 1904, 286', 'Hebrews 5:14'],
     cast: ['idea-villagers', 'lead-feast'],
-    picture: `IDEA: the parchment. The linen baby grins on \`teeth\` and shows one small white tooth (a light, warm moment). On \`sign\` a little paper signpost springs up beside it pointing right, toward a loaf. On \`use\` the series lead from \`cold\`, in his teal robe, sits at a small table and chews, thinking, a tiny lamp lit over his head; on \`practice\` a bowl of grain, a loaf and a plate come in, one per word. ${CARDS}`,
+    picture: `IDEA: the parchment. The linen baby grins on \`teeth\` and shows one small white tooth (a light, warm moment). On \`sign\` a little paper signpost springs up beside it pointing right, toward a loaf. On \`use\` the series lead from \`cold\`, in his cream tunic and teal mantle, sits at a small table and chews, thinking, a tiny lamp lit over his head; on \`practice\` a bowl of grain, a loaf and a plate come in, one per word. ${CARDS}`,
   },
   {
     id: 'rush',
@@ -173,7 +177,7 @@ export const script = defineScript([
       'Ellen G. White, The Great Controversy, 520',
       'Ellen G. White, The Bible Echo, August 26, 1895',
     ],
-    cast: ['idea-villagers'],
+    cast: ['idea-villagers', 'villager-toddler'],
     picture: `IDEA: the parchment, the six stones from \`stones\` along the bottom. On \`skip\` the linen child hops over the stones without touching them and reaches for a heaped platter at the top of the page. On \`run\` the linen toddler sets off running, tips forward and sits down hard, unhurt, and gets up (a light moment). On \`peter\` a page of writing appears; on \`twist\` one line of it is wrung like a wet cloth, its letters bending. On \`own\` a small book opens beside the page, each word on the page linked to its entry in the book by a thin gold thread. On \`fill\` the child who skipped writes over the empty entries in a colour of his own, and on \`want\` the page turns into a mirror and shows his face. On \`order\` the mirror clears to the page, and the child steps back down onto the first stone. ${CARDS}`,
   },
   {
@@ -184,7 +188,7 @@ export const script = defineScript([
       'E. J. Waggoner, The Present Truth, January 31, 1895, 65',
       'E. J. Waggoner, The Medical Missionary, September 1904, 286',
     ],
-    cast: ['idea-villagers'],
+    cast: ['villager-child', 'idea-villagers'],
     picture: `IDEA: dawn begins to come into the parchment. The linen child at a slate writes 1 + 1 with a stub of white chalk on \`adds\`; the sums multiply across the slate. On \`stay\` the child grows into the grown linen villager across three quick dissolves, the slate growing with it. On \`hardest\` one enormous sum fills the slate, and as the camera pushes in every term in it is one of the first small sums from \`adds\`, picked out in gold. On \`meat\` match cut: the slate's frame becomes the edge of a plate; on \`nothing\` the cup of milk from \`milk\` is set down on the plate beside the bread, not taken away; on \`more\` dishes fill in around it. ${CARDS}`,
   },
   {
