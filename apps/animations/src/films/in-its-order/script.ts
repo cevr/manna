@@ -89,10 +89,11 @@
 //   in the library as `lead-feast`, about 3.36 of his
 //   heads tall like every figure (the cast canon). The mother and the baby at
 //   the cup are this film's `feast-mother`. The IDEA figures are plain
-//   villagers in undyed linen: the child at the slate is the library's
-//   `villager-child` and the toddler who runs is `villager-toddler` (base
-//   sizes for filler cast); the grown villager (the one who skips the stones,
-//   the eater and the watcher) is a dress variant of the library's `sower`
+//   villagers in undyed linen: the child (on the first stone, the one who
+//   skips the stones, at the slate) is the library's `villager-child` and the
+//   toddler who runs is `villager-toddler` (base sizes for filler cast); the
+//   grown villager (the eater and the watcher) is a dress variant of the
+//   library's `sower`
 //   (his face, beard and build, the headcloth and mantle off), and he and the
 //   baby are drawn in this film's `idea-villagers`.
 // - Jesus Christ is the locked figure (`src/library/cast/christ`), at the top
@@ -148,7 +149,7 @@ export const script = defineScript([
     id: 'stones',
     say: '{which}So which truths are the milk? {/} {lists}Hebrews lists them, {foundation}and calls them a {*}foundation. {/} {repent}Repentance from dead works. {/} {faith}Faith toward God. {/} {bapt}Baptisms. {/} {hands}The laying on of hands. {/} {resur}The resurrection of the dead. {/} {judg}And eternal judgment. {/} {six}Six stones. {/} {oracles}Hebrews calls them the first principles of the oracles of God. {/} {spoken}An oracle is a word God himself has spoken. {/} {begins}That is where this series {*}begins.',
     cite: ['Hebrews 6:1–2', 'Hebrews 5:12'],
-    cast: ['idea-villagers'],
+    cast: ['villager-child'],
     picture: `IDEA: the parchment. On \`foundation\` a level line is drawn and six paper stones drop onto it one per name, each carrying a small gold icon: a figure turning round (\`repent\`), an open hand (\`faith\`), a wave of water (\`bapt\`), two hands over a head (\`hands\`), an empty tomb (\`resur\`), a balance scale (\`judg\`). On \`six\` the camera pulls back: six stones, a foundation with nothing yet built on it. On \`oracles\` a gold speech-ribbon unrolls from the top of the page and settles under the stones as their bed. On \`begins\` the linen child steps onto the first stone. ${CARDS}`,
   },
   {
@@ -178,7 +179,7 @@ export const script = defineScript([
       'Ellen G. White, The Great Controversy, 520',
       'Ellen G. White, The Bible Echo, August 26, 1895',
     ],
-    cast: ['idea-villagers', 'villager-toddler'],
+    cast: ['villager-child', 'villager-toddler'],
     picture: `IDEA: the parchment, the six stones from \`stones\` along the bottom. On \`skip\` the linen child hops over the stones without touching them and reaches for a heaped platter at the top of the page. On \`run\` the linen toddler sets off running, tips forward and sits down hard, unhurt, and gets up (a light moment). On \`peter\` a page of writing appears; on \`twist\` one line of it is wrung like a wet cloth, its letters bending. On \`own\` a small book opens beside the page, each word on the page linked to its entry in the book by a thin gold thread. On \`fill\` the child who skipped writes over the empty entries in a colour of his own, and on \`want\` the page turns into a mirror and shows his face. On \`order\` the mirror clears to the page, and the child steps back down onto the first stone. ${CARDS}`,
   },
   {
