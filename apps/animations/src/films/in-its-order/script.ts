@@ -92,8 +92,9 @@
 //   villagers in undyed linen: the child at the slate is the library's
 //   `villager-child` and the toddler who runs is `villager-toddler` (base
 //   sizes for filler cast); the grown villager (the one who skips the stones,
-//   the eater and the watcher) is a dress variant of `lead-feast`'s body, and
-//   he and the baby are drawn in this film's `idea-villagers`.
+//   the eater and the watcher) is a dress variant of the library's `sower`
+//   (his face, beard and build, the headcloth and mantle off), and he and the
+//   baby are drawn in this film's `idea-villagers`.
 // - Jesus Christ is the locked figure (`src/library/cast/christ`), at the top
 //   of the court canon's height band, never short: as Priest in `priest` (a
 //   white robe, the golden girdle and the breastplate, seen from behind
