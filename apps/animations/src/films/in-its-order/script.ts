@@ -24,7 +24,7 @@
 // seconds it names) at an act's question, after a key quotation and at a
 // register switch. `{mark}` cues sit before the word a picture must hit.
 //
-// The order. The joke (`cold`: a grown man at a wedding feast still asking
+// The order. The joke (`cold`: a young man at a wedding feast still asking
 // for his bottle; Hebrews says that to its readers), the title, then what
 // milk is (`milk`: the plain word), which truths are the milk (`stones`: the
 // six first principles of Hebrews 6:1–2, the series' first tier), the
@@ -40,7 +40,7 @@
 //
 // Motifs (CRAFT rule 4), each introduced and paid off:
 // - The cup. A baby's cup of milk in `cold`; filled in `milk` from an open
-//   book (the milk is the word); in the landing the grown man sets the bottle
+//   book (the milk is the word); in the landing the young man sets the bottle
 //   down at a set table, and the cup stands among the bread and the dishes,
 //   still there (`math` paid off: nothing in the milk is left behind).
 // - The six stones. Laid as a foundation in `stones`, each with its small
@@ -83,7 +83,7 @@
 // is shaded with colour, never grey or black (CRAFT rule 12).
 // - Every figure is dressed in the Bible's own time (the owner's direction A;
 //   the cast lineup is each record's reference).
-// - The grown man at the feast is the series lead, never named: the young
+// - The young man at the feast is the series lead, never named: the young
 //   lead of the lineup, beardless, in a cream tunic with a teal mantle over
 //   his left shoulder (the owner: "C: the young lead as he was"), recorded
 //   in the library as `lead-feast`, about 3.36 of his
@@ -124,10 +124,10 @@ const CARDS =
 export const script = defineScript([
   {
     id: 'cold',
-    say: '{baby}A baby drinks milk, and nobody minds. {/} {grown}But picture a grown man at a wedding feast, {bottle}still asking for his {*}bottle. {/} {letter}Now picture a letter to believers that says nearly the {*}same. {/} {quote}They “are become such as have need of milk, and not of strong {*}meat.” {//} {ouch}And that letter is in our {*}Bible. {/} {what}So what is milk, and what is meat? {/} {why}And why would the Bible care which one we eat?',
+    say: '{baby}A baby drinks milk, and nobody minds. {/} {grown}But picture a young man at a wedding feast, {bottle}still asking for his {*}bottle. {/} {letter}Now picture a letter to believers that says nearly the {*}same. {/} {quote}They “are become such as have need of milk, and not of strong {*}meat.” {//} {ouch}And that letter is in our {*}Bible. {/} {what}So what is milk, and what is meat? {/} {why}And why would the Bible care which one we eat?',
     cite: ['Hebrews 5:12'],
     cast: ['lead-feast', 'feast-mother'],
-    picture: `STORY: a cardboard courtyard at a village wedding, teal day, lanterns strung, a long table of bread, fruit and dishes. On \`baby\` a mother lifts a cup to a baby's lips, close on the baby's glad face. On \`grown\` the camera trucks down the table to a tall grown man in festive clothes, the series lead; on \`bottle\` he holds up a baby's bottle, hopeful, and the guests either side turn and stare (a light moment). On \`letter\` a rolled scroll drops onto the table in front of him and unrolls; on \`quote\` its words are not shown (CRAFT rule 1), only the gold seal. On \`ouch\` he winces. On \`what\` the camera lifts to a cup of milk and a platter of bread side by side, the only props lit. ${CARDS}`,
+    picture: `STORY: a cardboard courtyard at a village wedding, teal day, lanterns strung, a long table of bread, fruit and dishes. On \`baby\` a mother lifts a cup to a baby's lips, close on the baby's glad face. On \`grown\` the camera trucks down the table to a tall young man in festive clothes, the series lead; on \`bottle\` he holds up a baby's bottle, hopeful, and the guests either side turn and stare (a light moment). On \`letter\` a rolled scroll drops onto the table in front of him and unrolls; on \`quote\` its words are not shown (CRAFT rule 1), only the gold seal. On \`ouch\` he winces. On \`what\` the camera lifts to a cup of milk and a platter of bread side by side, the only props lit. ${CARDS}`,
   },
   {
     id: 'title',
@@ -232,7 +232,7 @@ export const script = defineScript([
   },
   {
     id: 'name',
-    say: '{back}Back to the feast. {/} {sets}The grown man sets down his bottle. {/} {bad}Not because milk was {*}bad. {/} {table}But because the table was set for him all along, {cup}and the milk is on it {*}still. {/} {taste}“O taste and see that the LORD is good.” {/} {leaving}Going from milk to meat never leaves Christ {*}behind. {/} {into}It is growing up {//3} into {*}him.',
+    say: '{back}Back to the feast. {/} {sets}The young man sets down his bottle. {/} {bad}Not because milk was {*}bad. {/} {table}But because the table was set for him all along, {cup}and the milk is on it {*}still. {/} {taste}“O taste and see that the LORD is good.” {/} {leaving}Going from milk to meat never leaves Christ {*}behind. {/} {into}It is growing up {//3} into {*}him.',
     cite: [
       'Psalm 34:8',
       'Ephesians 4:13–15',
@@ -248,7 +248,7 @@ export const script = defineScript([
     min: 30,
     cite: ['2 Peter 3:18'],
     cast: ['lead-feast', 'christ'],
-    picture: `STORY: The answer comes as the only text, the take's own first clause on the full-screen card: "Grow in grace", "Grow" large in gold, the answer to \`cold\`'s question. The music rises alone for about thirty seconds while the camera eases back and lifts over the courtyard, the grown man still at the host's side at the set table. Past the courtyard wall, the field from \`grain\` moves in the wind, full corn, and the hill of \`path\` rises beyond it. ${CARDS}`,
+    picture: `STORY: The answer comes as the only text, the take's own first clause on the full-screen card: "Grow in grace", "Grow" large in gold, the answer to \`cold\`'s question. The music rises alone for about thirty seconds while the camera eases back and lifts over the courtyard, the young man still at the host's side at the set table. Past the courtyard wall, the field from \`grain\` moves in the wind, full corn, and the hill of \`path\` rises beyond it. ${CARDS}`,
   },
   {
     id: 'end',

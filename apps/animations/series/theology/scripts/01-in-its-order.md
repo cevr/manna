@@ -7,7 +7,7 @@ Status: draft for the owner. Nothing narrated. Every KJV line below was printed 
 
 ## Header (the `script.ts` comment, house style)
 
-The order: the joke (`cold`: a grown man at a feast with a baby's bottle; Hebrews says that to its readers), the title, then what milk is (`milk`: the plain word), which truths are the milk (`stones`: the six first principles of Heb 6:1–2, the series' first tier), the problem in one small dose (`bottle`, `teeth`: some never chew), its other side (`rush`: some skip the first steps and twist the rest, owner 2026-10-20), the turn (`math`: meat leaves out nothing that was in the milk), what the meat is (`priest`: more of Christ, his priesthood now), how growth happens (`grain`, `eat`), the series map (`path`), and the landing back at the feast.
+The order: the joke (`cold`: a young man at a feast with a baby's bottle; Hebrews says that to its readers), the title, then what milk is (`milk`: the plain word), which truths are the milk (`stones`: the six first principles of Heb 6:1–2, the series' first tier), the problem in one small dose (`bottle`, `teeth`: some never chew), its other side (`rush`: some skip the first steps and twist the rest, owner 2026-10-20), the turn (`math`: meat leaves out nothing that was in the milk), what the meat is (`priest`: more of Christ, his priesthood now), how growth happens (`grain`, `eat`), the series map (`path`), and the landing back at the feast.
 
 Motifs (CRAFT rule 4):
 
@@ -32,7 +32,7 @@ Quoted Scripture: 11 passages, 161 of 884 spoken words (18.2 %; recounted 2026-1
 
 | Figure | Kind | Scope | In the library? | Beats | The sheet must show |
 | --- | --- | --- | --- | --- | --- |
-| The grown man at the feast | plain lead (character-design 2.3; casting.md 2.2, the wedding feast): the young lead of the lineup as he was, a young grown man, beardless, short curly brown hair, a cream tunic with a teal mantle over his left shoulder and a knotted cream sash (ask ab7a4d8f60e: "C: the young lead as he was"; direction A, ask ade763eff4d) | series (the series' plain lead) | yes: `lead-feast` (turnaround, poses and heads re-kept as the young lead, ask ab7a4d8f60e; the base rig the grown villager's linen dress varies) | `cold`, `milk`, `bottle`, `teeth`, `name`, `thesis` | standing tall at the table holding up a baby's bottle (three-quarter), wincing (front, close), tipping a plate into his mouth (profile), seated chewing, thinking (three-quarter), tasting at the host's side, delight (front, close); festive clothes, sleeves |
+| The young man at the feast | plain lead (character-design 2.3; casting.md 2.2, the wedding feast): the young lead of the lineup as he was, a young man, beardless, short curly brown hair, a cream tunic with a teal mantle over his left shoulder and a knotted cream sash (ask ab7a4d8f60e: "C: the young lead as he was"; direction A, ask ade763eff4d) | series (the series' plain lead) | yes: `lead-feast` (turnaround, poses and heads re-kept as the young lead, ask ab7a4d8f60e, and kept by the owner, ask aaa11fd7adf; the base rig the grown villager's linen dress varies) | `cold`, `milk`, `bottle`, `teeth`, `name`, `thesis` | standing tall at the table holding up a baby's bottle (three-quarter), wincing (front, close), tipping a plate into his mouth (profile), seated chewing, thinking (three-quarter), tasting at the host's side, delight (front, close); festive clothes, sleeves |
 | The mother and the baby at the cup | plain figures (2.3; the baby differs by size), in a dusty-blue dress and a cream veil | film | yes: `feast-mother` (turnaround and poses kept, ask a4f75680c68) | `cold` | the mother lifting a cup to the baby's lips (three-quarter); the baby's glad face (close) |
 | The wedding guests | crowd from the crowd kit (casting.md 2.2; §5 if the courtyard is the parable's world) | shared | the crowd kit | `cold`, `name` | seated along a long table, turning to stare (three-quarter, back) |
 | The recurring cast | background only (ensemble.md) | shared | yes: ensemble.md | `cold`, `name` (among the guests, optional) | their sheets as they stand |
@@ -69,15 +69,15 @@ Props:
 | The slate (the arc's 07 and 10 reuse it) | series | `math` |
 | The scroll with a gold seal | film | `cold` |
 
-New to the library: the grown man's festive dress on the plain lead; the wedding courtyard; Christ's priestly robe and breastplate (back view); the sower; the series map hill; the villager child and the villager toddler, base sizes for filler cast (ask ab7a4d8f60e).
+New to the library: the young man's festive dress on the plain lead; the wedding courtyard; Christ's priestly robe and breastplate (back view); the sower; the series map hill; the villager child and the villager toddler, base sizes for filler cast (ask ab7a4d8f60e).
 
 ## Beats
 
 ### `cold` · STORY · ~33 s
 
-**say:** {baby}A baby drinks milk, and nobody minds. {/} {grown}But picture a grown man at a wedding feast, {bottle}still asking for his {*}bottle. {/} {letter}Now picture a letter to believers that says nearly the {*}same. {/} {quote}They “are become such as have need of milk, and not of strong {*}meat.” {//} {ouch}And that letter is in our {*}Bible. {/} {what}So what is milk, and what is meat? {/} {why}And why would the Bible care which one we eat?
+**say:** {baby}A baby drinks milk, and nobody minds. {/} {grown}But picture a young man at a wedding feast, {bottle}still asking for his {*}bottle. {/} {letter}Now picture a letter to believers that says nearly the {*}same. {/} {quote}They “are become such as have need of milk, and not of strong {*}meat.” {//} {ouch}And that letter is in our {*}Bible. {/} {what}So what is milk, and what is meat? {/} {why}And why would the Bible care which one we eat?
 **cite:** Hebrews 5:12
-**picture:** STORY: a cardboard courtyard at a village wedding, teal day, lanterns strung, a long table of bread, fruit and dishes. On `baby` a mother lifts a cup to a baby's lips, close on the baby's glad face. On `grown` the camera trucks down the table to a tall grown man in festive clothes, the series lead; on `bottle` he holds up a baby's bottle, hopeful, and the guests either side turn and stare (a light moment). On `letter` a rolled scroll drops onto the table in front of him and unrolls; on `quote` its words are not shown (CRAFT rule 1), only the gold seal. On `ouch` he winces. On `what` the camera lifts to a cup of milk and a platter of bread side by side, the only props lit.
+**picture:** STORY: a cardboard courtyard at a village wedding, teal day, lanterns strung, a long table of bread, fruit and dishes. On `baby` a mother lifts a cup to a baby's lips, close on the baby's glad face. On `grown` the camera trucks down the table to a tall young man in festive clothes, the series lead; on `bottle` he holds up a baby's bottle, hopeful, and the guests either side turn and stare (a light moment). On `letter` a rolled scroll drops onto the table in front of him and unrolls; on `quote` its words are not shown (CRAFT rule 1), only the gold seal. On `ouch` he winces. On `what` the camera lifts to a cup of milk and a platter of bread side by side, the only props lit.
 **paraphrase sources (not spoken):** none; Scripture only.
 
 ### `title` · ~6 s
@@ -179,7 +179,7 @@ New to the library: the grown man's festive dress on the plain lead; the wedding
 
 ### `name` · STORY (landing; IDEA and STORY merge) · ~30 s
 
-**say:** {back}Back to the feast. {/} {sets}The grown man sets down his bottle. {/} {bad}Not because milk was {*}bad. {/} {table}But because the table was set for him all along, {cup}and the milk is on it {*}still. {/} {taste}“O taste and see that the LORD is good.” {/} {leaving}Going from milk to meat never leaves Christ {*}behind. {/} {into}It is growing up {//3} into {*}him.
+**say:** {back}Back to the feast. {/} {sets}The young man sets down his bottle. {/} {bad}Not because milk was {*}bad. {/} {table}But because the table was set for him all along, {cup}and the milk is on it {*}still. {/} {taste}“O taste and see that the LORD is good.” {/} {leaving}Going from milk to meat never leaves Christ {*}behind. {/} {into}It is growing up {//3} into {*}him.
 **cite:** Psalm 34:8; Ephesians 4:13–15; E. J. Waggoner, The Medical Missionary, September 1904, 286
 **picture:** Landing: the wedding courtyard from `cold` in the same layout and framing, now under the teal-to-yellow landing sky. The series lead stands where he stood; on `sets` he sets the baby's bottle down. On `table` the host's hand (the host is Christ, in the seamless linen coat and the walnut mantle, at the head of the table) gestures to the place set for him: bread from the field in `grain`, and on `cup` the cup of milk from `milk` beside the plate. On `taste` he tastes, close on his face, delight. On `leaving` the six stones show for a breath as the courtyard's paving under the table. On `into` he stands taller beside the host; the gold cross's light from `priest` warms the whole courtyard. The held pause comes after `into`.
 **paraphrase sources (not spoken):** MEDM September 1904, page 286.6 (as in `math`) → `cup`.
@@ -188,7 +188,7 @@ New to the library: the grown man's festive dress on the plain lead; the wedding
 
 **say:** {grow}{*}“Grow in grace, and in the knowledge of our Lord and Saviour Jesus Christ.”
 **cite:** 2 Peter 3:18
-**picture:** The answer writes itself in the sky over the courtyard, the only text: GROW IN GRACE. The music rises alone for about thirty seconds while the camera eases back and lifts over the courtyard, the grown man still at the host's side at the set table. Past the courtyard wall, the field from `grain` moves in the wind, full corn, and the hill of `path` rises beyond it.
+**picture:** The answer writes itself in the sky over the courtyard, the only text: GROW IN GRACE. The music rises alone for about thirty seconds while the camera eases back and lifts over the courtyard, the young man still at the host's side at the set table. Past the courtyard wall, the field from `grain` moves in the wind, full corn, and the hill of `path` rises beyond it.
 
 ### `end` · ~28 s
 
