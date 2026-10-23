@@ -404,7 +404,7 @@ export const tweakPanel = Effect.fn('Board.tweak')(function* (
   const ctx: TryContext = { film, style, folder: store.paths(film).folder, beats };
   const cast = beatCast(yield* castOf(film, [beat]), beat, ctx.folder, yield* Path.Path);
   const sketched = Option.exists(Option.fromUndefinedOr(note.sketch), (s) => s.length > 0);
-  // The sketch rides along as a board file of its own, so the try's refs name only board files.
+  // The sketch is copied into the board folder, as a board file of its own.
   const sketchFile = `${panel.id}.${note.id}.sketch.png`;
   if (sketched) {
     const bytes = yield* fs.readFile(still);
