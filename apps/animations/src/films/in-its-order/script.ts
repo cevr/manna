@@ -84,7 +84,7 @@
 // - Every figure is dressed in the Bible's own time (the owner's direction A;
 //   the cast lineup is each record's reference).
 // - The grown man at the feast is the series lead, never named: a man of about
-//   forty with a short beard and grey at the temples (the owner's answer),
+//   forty with a short beard and no grey in his hair (the owner's answers),
 //   in one solid teal robe, recorded in the library as `lead-feast`, about
 //   3.36 of his heads tall like every figure (the cast canon). The mother and
 //   the baby at the cup are this film's `feast-mother`; the IDEA figures (the
