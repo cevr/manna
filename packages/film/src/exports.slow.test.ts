@@ -20,7 +20,8 @@
 //   stand-in  the framework's tests, and `check --draw`'s leg
 //             (tools/draw-check.ts), which draws every scene into it
 //   core      films, their kits, the app's sound library and the framework's
-//             tests: the clock, the script and sound schemas, the mix plan
+//             tests: the clock, the script and sound schemas, the mix plan,
+//             a cast record and its library reference (`castLock`)
 //   style     films' scenes, sets and rigs: the house look's acting, boil,
 //             key light and creases, the parts a figure is composed of,
 //             and the figures file a film lays and the house prints

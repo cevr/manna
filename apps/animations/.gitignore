@@ -45,6 +45,11 @@ src/films/*/board/
 # their record, `cast-sheet.json`, and the member's `look.md`.
 src/library/cast/*/cast-sheet/*.png
 src/films/*/cast/*/cast-sheet/*.png
+# A record with no sheet kept sends its own references as its library
+# reference (`castLock`), so every board run that names the member reads them
+# in any checkout: Christ's are committed (`cast.test.ts` holds every one a
+# beat sends to this).
+!src/library/cast/christ/cast-sheet/*.png
 # A version folder (`<film>/v<n>/`, an earlier version kept beside the film)
 # keeps the same files out: its board images, its mix and its takes' attempts.
 src/films/*/v*/board/

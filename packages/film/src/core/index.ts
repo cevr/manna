@@ -1,10 +1,11 @@
 // Pure film core: the clock, seeded randomness, narration timing, named cues,
 // sound cues, scene layout, the mix, the sound graph and the families code
-// sounds are built from. Nothing here touches the DOM at runtime, so the
-// Bun scripts and tests import it directly. The entry names what films, their
-// kits, the app's sound library and tests import from `@bible/film/core`
-// (guarded by exports.slow.test.ts); the framework's own code reads each module by
-// its path.
+// sounds are built from, and a cast member's record with the library
+// reference a picture of the member takes from it. Nothing here touches the
+// DOM at runtime, so the Bun scripts and tests import it directly. The entry
+// names what films, their kits, the app's sound library and tests import
+// from `@bible/film/core` (guarded by exports.slow.test.ts); the framework's
+// own code reads each module by its path.
 
 export { type Key, clamp, ease, gait, keys, lerp, staggered } from './time.ts';
 export { hash2, rng } from './random.ts';
@@ -30,3 +31,5 @@ export {
 } from './synth/graph/presets.ts';
 export { defineStore } from './store.ts';
 export { stagingVoice } from './staging-voice.ts';
+export { castLock } from './cast-lock.ts';
+export { CastSheetJson } from './cast-record.ts';
