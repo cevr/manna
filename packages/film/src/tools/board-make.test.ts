@@ -272,6 +272,7 @@ const drawing = (cast: ReadonlyArray<string>): BoardBeat => ({
 const lockOf = (member: string, files: ReadonlyArray<string>, kept: ReadonlyArray<SheetKind>) => ({
   member,
   who: 'Him',
+  scope: 'library' as const,
   kept,
   files: files.map((f) => `${libraryOf(member)}/${f}`),
 });
@@ -297,10 +298,10 @@ describe("a locked cast member's library reference", () => {
           '/library/cast/christ/cast-sheet/kept/turnaround.png',
         ]);
         expect(calls[0]?.prompt).toContain(
-          "Reference image 2 is Christ's record in the cast library (its kept cast sheet: turnaround): draw Christ exactly as it draws Him",
+          "Reference image 2 is Christ's record in the cast library (its kept cast sheet: turnaround): draw Christ as it draws Him",
         );
         expect(calls[0]?.prompt).toContain(
-          'Where any other reference image or the brief draws Him otherwise, this one wins.',
+          'Where any other reference image draws Him otherwise, this one wins.',
         );
         const recorded = (yield* (yield* BoardStore).read(film)).panels[0]?.tries[0]?.refs;
         expect(recorded).toEqual([
