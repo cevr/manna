@@ -3406,3 +3406,83 @@ The form of an entry, each field on its own line:
 - **Wrong:** The priest and name concept frames drew Christ from concept images and came out 3.44 heads against His locked 3.07 and 13–24% too large beside the guests.
 - **Cause:** No brief path sent the library's record of a locked member, so each drawing took whatever reference it was handed.
 - **Guard:** code: `packages/film/src/tools/board-make.test.ts` `a beat whose cast names a locked member sends its kept turnaround from the library, and the prompt says the library wins`
+
+### lead-no-grey-at-temples
+
+- **Date:** 2026-10-23
+- **Kind:** owner
+- **Said:** "lets remove the grey streaks form his hair"
+- **Source:** ask aadba1e394a (In Its Order cast, iio-cast round 7)
+- **Wrong:** The kept In Its Order lead had grey streaks at his temples in his kept sheets and in the lineup, cold and name frames.
+- **Cause:** The owner asked for "a short beard and an older face" (ask ade763eff4d), and the agent painted grey at the temples to make the face read older, though he named no grey.
+- **Guard:** skill: whether a face's marks of age are the ones the owner asked for is a judgment of the eye. Carried by `apps/animations/src/library/cast/lead-feast/cast-sheet/look.md`: "no grey anywhere in his hair"
+
+### lead-re-kept-young
+
+- **Date:** 2026-10-23
+- **Kind:** owner
+- **Said:** chose: "C: the young lead as he was"
+- **Source:** ask ab7a4d8f60e (In Its Order cast, iio-cast round 8)
+- **Wrong:** The kept lead was the older, bearded man of ask ade763eff4d; the owner took the young, beardless lead of `reconcept/a1r.lineup.png` instead.
+- **Cause:** The older face came from the owner's own pick (ask ade763eff4d: "Yes: a short beard and an older face"); he then judged that a youth too should not be on the bottle (ask aadba1e394a: "even thoug hhes not a grown adult he still shouldnt be drinking a bottle"), and, shown both leads side by side, took the young one back.
+- **Guard:** none: which drawn lead the film keeps is the owner's choice among the options shown, and no check can foresee it.
+
+### lead-called-a-young-man
+
+- **Date:** 2026-10-23
+- **Kind:** owner
+- **Said:** chose: "Change to "a young man""
+- **Source:** ask aaa11fd7adf (In Its Order cast, iio-cast round 9)
+- **Wrong:** The narration, pictures and bookends called the lead "a grown man" after he was re-kept as the young lead.
+- **Cause:** The lines were written for the older lead, and the re-keep changed his record and sheets but no line of the script.
+- **Guard:** none: whether a line's words fit a figure's look is a judgment of the words, which the owner's rule of 2026-10-09 keeps out of code.
+
+### cast-reference-tracked
+
+- **Date:** 2026-10-23
+- **Kind:** review
+- **Said:** "Christ's lock sends five files git ignores"
+- **Source:** in-its-order-2/review-r1.md F1
+- **Wrong:** Christ's record has no kept sheet, so the board sends its five references from `cast-sheet/`, and `apps/animations/.gitignore` ignored every PNG there: after a merge, `film board in-its-order` would refuse on main and in every new worktree.
+- **Cause:** The ignore rule was written for drawn tries, and a record's own references lie in the same folder.
+- **Guard:** code: `apps/animations/cast.test.ts` `that a beat sends are never ignored by git, so every checkout has them`
+
+### cast-lock-leaves-dress-to-brief
+
+- **Date:** 2026-10-23
+- **Kind:** review
+- **Said:** "The lock tells the model the record's dress wins over the brief"
+- **Source:** in-its-order-2/review-r1.md F2; in-its-order-2/review-r1.md F9
+- **Wrong:** The board's note said a member's library images win on face, build, dress and colours, so Christ would be drawn in the court robe at the feast where the beat dresses Him in a linen coat; a film's own role was called a record in the cast library, and "Idea villagers" got the possessive "villagers's".
+- **Cause:** The note claimed the whole figure for the record, where the record holds the person and each beat its dress and act.
+- **Guard:** code: `packages/film/src/core/cast-lock.test.ts` `leaves what the member wears and does to the brief, so a beat's own dress is drawn`; `packages/film/src/core/cast-lock.test.ts` `claims for a sheet of heads alone only the face and hair, the rest the brief's`; `packages/film/src/core/cast-lock.test.ts` `names a film's own role as this film's cast, its name's possessive as written`
+
+### beat-cast-names-drawn-figures
+
+- **Date:** 2026-10-23
+- **Kind:** review
+- **Said:** "Two beats' cast does not name the figure their picture draws"
+- **Source:** in-its-order-2/review-r1.md F3; in-its-order-2/review-r1.md F7
+- **Wrong:** The `stones` and `rush` beats draw the villager child, and the toddler in `rush`, but their `cast` named `idea-villagers`, whose kept sheet no longer draws the child; the lead's Cast row still said the grown villager varies `lead-feast` after he became a variant of `sower`.
+- **Cause:** The members moved between records, and the beats and Cast rows that named them were not re-read.
+- **Guard:** skill: a picture names its figures in words, so no test can match a beat's cast to what it draws. Carried by `.claude/skills/film/SKILL.md`: "after a member moves between records or a figure is renamed, re-read every beat whose picture draws him and set its `cast` and the Cast rows to match"
+
+### cast-lock-cuts-shared-sheet
+
+- **Date:** 2026-10-23
+- **Kind:** review
+- **Said:** "Three members share one six-figure kept sheet, and the lock sends it as each one's record"
+- **Source:** in-its-order-2/review-r1.md F5
+- **Wrong:** The villager child, the toddler and the idea villagers each sent the whole six-figure poses sheet as their record, so the model was shown other members as the one it should draw; a beat naming a member twice sent him twice.
+- **Cause:** The lock sent a kept sheet whole, though a member kept only some of its views.
+- **Guard:** code: `packages/film/src/core/cast-lock.test.ts` `is its own figures, cut from a kept sheet that draws other members too`; `packages/film/src/tools/board-make.test.ts` `a member a beat names twice is sent once`
+
+### owner-revise-gets-its-entry
+
+- **Date:** 2026-10-23
+- **Kind:** review
+- **Said:** "The unit's owner revises have no ledger entries"
+- **Source:** in-its-order-2/review-r1.md F6
+- **Wrong:** The in-its-order-2 range carried three owner revises (asks aadba1e394a, ab7a4d8f60e, aaa11fd7adf) and added no ledger entry for any of them.
+- **Cause:** No brief of the cast rounds (`tmp/orchestrate/p5/iio-cast/brief*.md`) named the ledger step, and each round followed its brief.
+- **Guard:** skill: whether an answer revises the work is a reading of the owner's words, which no check makes. Carried by `.claude/skills/film/SKILL.md`: "After any owner revise, add the entry and its guard before redrawing"
