@@ -225,35 +225,39 @@ const jobsIn = Effect.gen(function* () {
       starting,
       1,
     )(
+      // Kept in the running and forked as one step, so an interrupt between
+      // leaves no job without its fiber; the fiber itself stays interruptible.
       Effect.gen(function* () {
         if (MutableHashMap.has(running, handle)) return handle;
         const job: Job = { match, done: yield* Deferred.make<CritiqueTaken>() };
         MutableHashMap.set(running, handle, job);
         yield* Effect.forkIn(
-          Effect.exit(
-            Effect.tapCause(work, (cause) =>
-              Effect.logWarning(
-                `critique.skipped handle=${handle} reason=the critique died: ${Cause.pretty(cause)}`,
+          Effect.interruptible(
+            Effect.exit(
+              Effect.tapCause(work, (cause) =>
+                Effect.logWarning(
+                  `critique.skipped handle=${handle} reason=the critique died: ${Cause.pretty(cause)}`,
+                ),
               ),
-            ),
-          ).pipe(
-            Effect.flatMap((exit) =>
-              Deferred.succeed(
-                job.done,
-                Exit.match(exit, {
-                  onSuccess: (answer) => answer,
-                  onFailure: (cause) => diedAs(Cause.pretty(cause)),
-                }),
+            ).pipe(
+              Effect.flatMap((exit) =>
+                Deferred.succeed(
+                  job.done,
+                  Exit.match(exit, {
+                    onSuccess: (answer) => answer,
+                    onFailure: (cause) => diedAs(Cause.pretty(cause)),
+                  }),
+                ),
               ),
+              // Kept as finished before it leaves the running, so a read between finds it.
+              Effect.andThen(Cache.set(finished, handle, job)),
+              Effect.andThen(Effect.sync(() => MutableHashMap.remove(running, handle))),
             ),
-            // Kept as finished before it leaves the running, so a read between finds it.
-            Effect.andThen(Cache.set(finished, handle, job)),
-            Effect.andThen(Effect.sync(() => MutableHashMap.remove(running, handle))),
           ),
           scope,
         );
         return handle;
-      }),
+      }).pipe(Effect.uninterruptible),
     );
   const job = (handle: string, within: Duration.Duration) =>
     Effect.gen(function* () {
