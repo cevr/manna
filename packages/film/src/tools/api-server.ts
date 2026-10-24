@@ -691,8 +691,9 @@ export const serveApi = <
  * shorter, so the page stops waiting before the socket closes. `changes`
  * waits at most 120 s. A critique's counsel runs for minutes, but no request
  * holds it: the critique is a job, and a call answers by
- * `CRITIQUE_DEADLINE` (50 s from its start), inside the 60 s Claude Code's
- * MCP client gives a tool call (`easel-mcp.ts`).
+ * `CRITIQUE_DEADLINE` (50 s from its start) when its match and staging read
+ * end inside it, within the 60 s Claude Code's MCP client gives a tool call
+ * (`easel-mcp.ts`).
  */
 export const LAB_IDLE_SECONDS = 255;
 

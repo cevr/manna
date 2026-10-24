@@ -2841,7 +2841,8 @@ of a cast sheet's views, each beside the concept it faces as.
   cuts a tool call at 60 s, so the critique runs as a job in the lab
   (`Critic.start`, `Critic.job`) and a call answers by `CRITIQUE_DEADLINE`
   (50 s from its start: the match and the staging read come out of it, and
-  the job is waited on for what is left). Not done by then, the answer is
+  the job is waited on for what is left; a match and read that outrun it
+  answer as they end). Not done by then, the answer is
   the job's `handle` and no `critique`: call `critique` with `handle` alone
   (the CLI: `film lab critique wait <handle>`, which asks again until it is
   done) for its answer. A start of the same figures over the same packet
