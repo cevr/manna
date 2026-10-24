@@ -4,7 +4,6 @@
 export * from './errors.ts';
 export * from './content-store.ts';
 export * from './film-repo.ts';
-export { castReference } from './cast-library.ts';
 export * from './elevenlabs.ts';
 export * from './media.ts';
 export * from './narrator.ts';
