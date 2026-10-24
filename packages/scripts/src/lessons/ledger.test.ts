@@ -106,6 +106,32 @@ describe('the lessons ledger', () => {
     }),
   );
 
+  it.effect(
+    'reads a heading underlined in seven = as a heading, and a marker ending in CRLF as a marker',
+    () =>
+      Effect.gen(function* () {
+        expect(
+          yield* problemsOf(
+            entry('a-code', 'code: `src/thing.ts` `held` (the check)'),
+            'A heading',
+            '=======',
+          ),
+        ).toEqual([]);
+        expect(
+          yield* problemsOf(
+            entry('a-code', 'code: `src/thing.ts` `held` (the check)'),
+            '<<<<<<< HEAD\r',
+            '=======\r',
+            '>>>>>>> fbddd2651\r',
+          ),
+        ).toEqual([
+          'docs/lessons.md:15: a conflict marker is left: <<<<<<< HEAD',
+          'docs/lessons.md:16: a conflict marker is left: =======',
+          'docs/lessons.md:17: a conflict marker is left: >>>>>>> fbddd2651',
+        ]);
+      }),
+  );
+
   it.effect('refuses each guard its file does not hold', () =>
     Effect.gen(function* () {
       expect(

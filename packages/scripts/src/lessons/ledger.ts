@@ -199,16 +199,25 @@ const claimProblems = (
   );
 };
 
-/** A line a merge or rebase leaves where two sides of a conflict meet. */
-const CONFLICT_MARKER = /^(?:<{7}|\|{7}|>{7})(?: |$)|^={7}$/;
+/** A line a merge or rebase leaves to open, part or close two sides of a conflict. */
+const CONFLICT_MARKER = /^(?:<{7}|\|{7}|>{7})(?: |$)/;
+/** The line between a conflict's two sides; alone, a Markdown heading's underline. */
+const CONFLICT_MIDDLE = /^={7}$/;
 
-/** Each conflict marker left in the ledger's text, by its line, so a bad rebase cannot land one. */
-const markersIn = (text: string): ReadonlyArray<string> =>
-  text
-    .split('\n')
-    .flatMap((line, i) =>
-      unless(!CONFLICT_MARKER.test(line), `${LEDGER}:${i + 1}: a conflict marker is left: ${line}`),
-    );
+/**
+ * Each conflict marker left in the ledger's text, by its line, so a bad rebase
+ * cannot land one; a line of seven `=` counts only after a conflict opens.
+ */
+const markersIn = (text: string): ReadonlyArray<string> => {
+  const lines = text.split('\n').map((line) => line.replace(/\r$/, ''));
+  const opened = lines.findIndex((line) => line.startsWith('<<<<<<<'));
+  return lines.flatMap((line, i) =>
+    unless(
+      !CONFLICT_MARKER.test(line) && !(opened !== -1 && i > opened && CONFLICT_MIDDLE.test(line)),
+      `${LEDGER}:${i + 1}: a conflict marker is left: ${line}`,
+    ),
+  );
+};
 
 /** The ledger at `root`: how many entries it holds, and each problem with one (its fields, or a guard the repo does not hold). */
 export const ledgerProblems = Effect.fn('lessons.ledgerProblems')(function* (root: string) {
