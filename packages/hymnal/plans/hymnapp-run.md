@@ -5,48 +5,51 @@ The work, in the owner's words (2026-10-16/17): a hymnal app on One (onestack.de
 Host: claude (laptop) · Units at once: 1 agent (owner, 2026-10-21) · Gate: ~35 s warm (`bun run gate`, 31 tasks) · Reserved: publish, paid calls, force-push (the r2 deploy and copy are the orchestrator's after merge, owner 2026-10-18; the owner deleted S3 `cvr-hymns` 2026-10-18 after all 694 objects matched R2 by size) · Repo: ~/Developer/personal/bible-tools · Base: b27a9471b
 Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>` (rift fails on this repo), branch `hymnapp/<unit>`. Merge = rebase on origin/main, gate, `git push origin HEAD:main` (ff only).
 
-| Unit      | Depends on                     | Workspace                 | Agents            | Result              |
-| --------- | ------------------------------ | ------------------------- | ----------------- | ------------------- |
-| glass     | appbase                        | .rifts/bible-tools/glass  | impl ab2ba40 (r8) |                     |
-| manna     | testsplit, compile, glass      | .rifts/bible-tools/manna  |                   |                     |
-| reader1   | appbase                        | .rifts/manna/reader1      | impl a4ef6ed (r1) |                     |
-| palette   | reader1                        |                           |                   |                     |
-| playstall | playerfix                      | (removed)                 | (closed)          | merged 055a51bac    |
-| census2   | hymnrows                       | .rifts/manna/census2      |                   | merged 0de80174f    |
-| census3   | census2                        |                           |                   |                     |
-| pagerows  | census2                        | worktree                  | (closed)          | merged 63e310e82    |
-| one29     | playerfix, coldload            |                           |                   | merged 8e527c5db    |
-| topicdata | —                              |                           |                   | merged 3784ae17e    |
-| shell     | topicdata                      | .rifts/manna/shell        | a90e66e812e023e45 | merged 46263e5dd    |
-| sdkfx     | shell                          | .rifts/manna/sdkfx        | orchestrator      | merged 51b5e976f    |
-| sticky    | shell                          |                           |                   | folded into uibulk  |
-| uibulk    | chords, shell, playstall       |                           |                   | merged 2f7de2e1d    |
-| chordsimp | chords, uibulk                 | removed                   |                   | merged d34ce0021    |
-| h220      | pagerows                       | removed                   |                   | merged 5ffd09c2e    |
-| worship   | uibulk, render                 | removed                   | a454c54eeec07a736 | merged b7b060b8f    |
-| tuner     | chordbulk                      |                           |                   |                     |
-| tempo     | worship                        |                           |                   |                     |
-| follow2   | worship                        | .rifts/manna/follow2      | a6c9723295ba443cc | merged 622350708    |
-| appicon   | worship                        | .rifts/manna/appicon      | a4d3e2ed97ddb4ba8 | merged 9d31cb7a8    |
-| chordbulk | chordsimp, worship             |                           |                   |                     |
-| keys      | render                         |                           |                   | merged 8be940a53    |
-| hymnbar   | shell, playstall               |                           |                   | folded into uibulk  |
-| pager     | coldload, playstall            |                           |                   | folded into uibulk  |
-| offline   | playstall                      |                           |                   |                     |
-| search    | coldload                       |                           |                   |                     |
-| search2   | search                         |                           |                   |                     |
-| scripture | search, topicdata              |                           |                   |                     |
-| lists     | uibulk                         |                           |                   | folded into uibulk  |
-| topics    | search, topicdata              |                           |                   |                     |
-| readview  | pager                          |                           |                   | folded into uibulk  |
-| render    | hymnrows                       |                           |                   | merged 524e754ae    |
-| sync      | hymnrows                       |                           |                   | folded into worship |
-| follow    | sync, uibulk, playstall        |                           |                   | folded into worship |
-| rate      | follow                         |                           |                   | folded into worship |
-| reader    | appbase, compile, glass, manna | .rifts/bible-tools/reader |                   |                     |
-| chords    | reader                         | .rifts/manna/chords       |                   | merged 5e6a4b85f    |
-| listen    | chords                         | .rifts/manna/listen       |                   |                     |
-| selah     | reader                         | .rifts/manna/selah        |                   |                     |
+| Unit       | Depends on                     | Workspace                 | Agents            | Result              |
+| ---------- | ------------------------------ | ------------------------- | ----------------- | ------------------- |
+| glass      | appbase                        | .rifts/bible-tools/glass  | impl ab2ba40 (r8) |                     |
+| manna      | testsplit, compile, glass      | .rifts/bible-tools/manna  |                   |                     |
+| reader1    | appbase                        | .rifts/manna/reader1      | impl a4ef6ed (r1) |                     |
+| palette    | reader1                        |                           |                   |                     |
+| playstall  | playerfix                      | (removed)                 | (closed)          | merged 055a51bac    |
+| census2    | hymnrows                       | .rifts/manna/census2      |                   | merged 0de80174f    |
+| census3    | census2                        |                           |                   |                     |
+| pagerows   | census2                        | worktree                  | (closed)          | merged 63e310e82    |
+| one29      | playerfix, coldload            |                           |                   | merged 8e527c5db    |
+| topicdata  | —                              |                           |                   | merged 3784ae17e    |
+| shell      | topicdata                      | .rifts/manna/shell        | a90e66e812e023e45 | merged 46263e5dd    |
+| sdkfx      | shell                          | .rifts/manna/sdkfx        | orchestrator      | merged 51b5e976f    |
+| sticky     | shell                          |                           |                   | folded into uibulk  |
+| uibulk     | chords, shell, playstall       |                           |                   | merged 2f7de2e1d    |
+| chordsimp  | chords, uibulk                 | removed                   |                   | merged d34ce0021    |
+| h220       | pagerows                       | removed                   |                   | merged 5ffd09c2e    |
+| worship    | uibulk, render                 | removed                   | a454c54eeec07a736 | merged b7b060b8f    |
+| tuner      | chordbulk                      |                           |                   |                     |
+| tempo      | worship                        |                           |                   |                     |
+| follow2    | worship                        | .rifts/manna/follow2      | a6c9723295ba443cc | merged 622350708    |
+| appicon    | worship                        | .rifts/manna/appicon      | a4d3e2ed97ddb4ba8 | merged 9d31cb7a8    |
+| chordbulk  | chordsimp, worship             |                           |                   |                     |
+| playswap   | chordbulk                      |                           |                   |                     |
+| followsync | chordbulk                      |                           |                   |                     |
+| ftbbrand   | —                              |                           |                   |                     |
+| keys       | render                         |                           |                   | merged 8be940a53    |
+| hymnbar    | shell, playstall               |                           |                   | folded into uibulk  |
+| pager      | coldload, playstall            |                           |                   | folded into uibulk  |
+| offline    | playstall                      |                           |                   |                     |
+| search     | coldload                       |                           |                   |                     |
+| search2    | search                         |                           |                   |                     |
+| scripture  | search, topicdata              |                           |                   |                     |
+| lists      | uibulk                         |                           |                   | folded into uibulk  |
+| topics     | search, topicdata              |                           |                   |                     |
+| readview   | pager                          |                           |                   | folded into uibulk  |
+| render     | hymnrows                       |                           |                   | merged 524e754ae    |
+| sync       | hymnrows                       |                           |                   | folded into worship |
+| follow     | sync, uibulk, playstall        |                           |                   | folded into worship |
+| rate       | follow                         |                           |                   | folded into worship |
+| reader     | appbase, compile, glass, manna | .rifts/bible-tools/reader |                   |                     |
+| chords     | reader                         | .rifts/manna/chords       |                   | merged 5e6a4b85f    |
+| listen     | chords                         | .rifts/manna/listen       |                   |                     |
+| selah      | reader                         | .rifts/manna/selah        |                   |                     |
 
 Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `inexact` (the 7 MIDI files whose verses do not split: 126 225 262 292 403 453 580), `decks` (syllable splits into feat/hymn-decks, last by the owner's word), `selah` (planned: after reader, see Decisions; macOS stays SwiftUI until react-native-gpui ships a real package).
 
@@ -242,6 +245,8 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 - chordbulk part 4 builds bar J (owner, 2026-10-23 17:31: "I like everything at the thumb"; on Play the bar springs taller and shows a draggable seeker; 17:33: "progressive disclosure", "we could have some settings here for the reader", "you can long press this to turn it on and off. And otherwise, it always opens the key"). J: one key button (tap opens the key and capo dials; a long press turns chords on or off; turning the key with chords off turns them on, inferred from "it automatically turns the cord" and asked); Aa leaves the bar and the text size sits in the player sheet. Prototype: `keycapo/prototypes.html`, Sideshow http://localhost:8228/p/wz0epw8xpQQ. (orchestrator, 2026-10-23, chordbulk)
 
 - Two owner answers (2026-10-23 17:40: "Yeah, on is good, Yeah, we'll choose the bare wheat. I think it's fine"): in bar J, turning the key with chords off turns chords on (chordbulk); the Moonlit wheat watermark is the bare wheat, with no disc (ftbbrand). (orchestrator, 2026-10-23, chordbulk, ftbbrand)
+
+- Owner notes from the Sabbath (2026-10-24, planned at "lets begin now"): (1) unit `playswap`: "when you go to a different song, allow us to, like, press play and just override the current playing song": Play on another hymn stops the playing hymn and starts this one. (2) unit `followsync`: "when you're following along, it sometimes goes too fast, it goes too slow ... Some syllables have multiple notes, like, they go from high to a low note within the same syllable, and sometimes that causes it to kind of trip up": first measure 388 against its MIDI onsets, then count the melismas over all hymns, then fix with a property over every hymn. (3) "in 388 ... the cords don't seem to be where they should be": 388 joins chordbulk part 2 as a study hymn beside 373; followsync checks for a cause shared with it. (4) a prototype round `browse`, not a unit: "a more delightful way of scrolling through different hymns ... some feedback, some dials": grey bars, the Feel voice, one Sideshow ask. (5) sound sources for chordbulk part 5 and browse: https://reactbits.dev/tools/sound-lab and https://cuelume.dev/ (licence and output form checked first). (6) "the hymn list should have haptics when scrolling": joins chordbulk part 5. Order: chordbulk, then playswap and followsync, then tuner. (orchestrator, 2026-10-24, playswap, followsync, chordbulk)
 
 ## Owner questions
 
