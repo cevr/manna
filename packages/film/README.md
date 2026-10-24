@@ -2839,14 +2839,19 @@ of a cast sheet's views, each beside the concept it faces as.
 - **Batched.** One counsel run answers every figure at the place.
 - **A job.** The counsel's run takes minutes, and Claude Code's MCP client
   cuts a tool call at 60 s, so the critique runs as a job in the lab
-  (`Critic.start`, `Critic.job`) and a call waits on it at most
-  `CRITIQUE_WAIT` (40 s). Not done by then, the answer is the job's
-  `handle` and no `critique`: call `critique` with `handle` alone (the CLI:
-  `film lab critique wait <handle>`, which asks again until it is done) for
-  its answer. A start of the same figures over the same crops while one
-  runs answers that job's handle. The lab keeps the last 32 jobs for an
-  hour; a handle it no longer keeps is refused (`CritiqueJobUnknown`): start
-  it again with the scene and the place, and the cache answers it.
+  (`Critic.start`, `Critic.job`) and a call answers by `CRITIQUE_DEADLINE`
+  (50 s from its start: the match and the staging read come out of it, and
+  the job is waited on for what is left). Not done by then, the answer is
+  the job's `handle` and no `critique`: call `critique` with `handle` alone
+  (the CLI: `film lab critique wait <handle>`, which asks again until it is
+  done) for its answer. A start of the same figures over the same packet
+  while one runs answers that job's handle. At most 4 counsel runs go at
+  once (`COUNSEL_RUNS`); a job past them waits its turn, and its handle
+  answers meanwhile. A running job is kept until it ends; the lab keeps the
+  last 32 finished jobs for an hour after each ends. A handle it no longer
+  keeps is refused (`CritiqueJobUnknown`): start it again with the scene and
+  the place: an answer the counsel gave is kept on disk (below), and
+  answers it with no second run.
 - **Cached.** The answer is kept at `out/<film>/critique/<hash>.json`, the
   hash over the packet's words as sent (its place left out, which names the
   build), each crop's bytes and the Board panel's: the same prompt over the same crops is never
