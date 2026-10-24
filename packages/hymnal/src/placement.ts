@@ -1,9 +1,10 @@
 /**
- * Where a guitarist strikes each chord change of a sung line: candidate
- * rules for the chordfeel study, as pure functions over one line's sung
- * syllables (each its start, length and melody key in the file's ticks),
- * its chord changes as the compiler places them today, and the file's
- * meters.
+ * Where a guitarist strikes each chord change of a sung line, as pure
+ * functions over one line's sung syllables (each its start, length and
+ * melody key in the file's ticks), its chord changes as they come in the
+ * file, and the file's meters. The compiler places every guitar chord by
+ * `strong` (R1, the owner's pick, 2026-10-24: `compile.ts`); the other rules
+ * are the chordfeel study's candidates, kept for its page.
  *
  * Every rule keeps a line's chords in order and moves a change only later
  * in its line: never onto or past the next change's place today, never to
@@ -163,6 +164,10 @@ const beatsBetween = (grid: Grid, from: number, to: number, strong: boolean): nu
   return out;
 };
 
+/** The first strong beat's tick after `from` and before `to`, when one comes. */
+export const nextStrong = (grid: Grid, from: number, to: number): number | undefined =>
+  beatsBetween(grid, from, to, true)[0];
+
 /** A beat's length at a tick: a quarter in 4/4, a dotted quarter in 6/8, a half in 3/2. */
 const beatLengthAt = (grid: Grid, tick: number) => beatTicks(grid, meterAt(grid, tick).meter);
 
@@ -227,7 +232,7 @@ type Target = (
 ) => number | undefined;
 
 const strongTarget: Target = (_line, grid, _i, tick, limit) =>
-  beatAt(grid, tick).strong ? tick : beatsBetween(grid, tick, limit, true)[0];
+  beatAt(grid, tick).strong ? tick : nextStrong(grid, tick, limit);
 
 const beatTarget: Target = (_line, grid, _i, tick, limit) =>
   beatAt(grid, tick).on ? tick : beatsBetween(grid, tick, limit, false)[0];

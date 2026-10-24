@@ -26,6 +26,10 @@
  *   carries the chord sounding at its start when it differs from the last
  *   one shown (a short chord folded away that runs on into it).
  * - A syllable sharing the note before it carries none.
+ * - A guitar change then moves to where a guitarist strikes it, the next
+ *   strong beat (`strike`); the full harmony stays where the file plays it.
+ *   A line's opening guitar chord can so move later: the reader then shows
+ *   the chord held over from the line before over its first syllables.
  *
  * Each hymn carries its timing (`timing.ts`): the file's tempo map and when
  * each sung line and syllable starts, from the notes each stanza was laid on.
@@ -41,6 +45,7 @@ import * as Chord from './chord.js';
 import * as Harmony from './harmony.js';
 import type { Fit, Hymn, Order, Part, Plain, Reason, Syllable } from './hymn.js';
 import * as Midi from './midi.js';
+import * as Placement from './placement.js';
 import * as Score from './score.js';
 import * as Timing from './timing.js';
 
@@ -149,6 +154,67 @@ const place = (
   return out;
 };
 
+/**
+ * Moves each guitar change to where a guitarist strikes it (`placement.ts`,
+ * rule `strong`): the next strong beat, never onto or past the next change
+ * nor past the end of the line's last note. A line's opening chord moves
+ * only when a different chord ends the laying's line before it, so a
+ * stanza's first line never moves. Syllables sharing the note before them
+ * carry none, as before.
+ */
+const strike = (
+  score: Score.Score,
+  alignment: Align.Alignment,
+  placed: ReadonlyArray<ReadonlyArray<Placed[]>>,
+): Array<Array<Placed[]>> => {
+  const tpb = score.ticksPerBeat;
+  const grid: Placement.Grid = {
+    ticksPerBeat: tpb,
+    meters: score.meters,
+    tonic: Chord.pitchClass(score.key.tonic),
+  };
+  const firstStart = (line: ReadonlyArray<Align.Syllable>) => {
+    const s = line.find((s) => s.notes > 0);
+    return s === undefined ? undefined : alignment.melody[s.note]?.start;
+  };
+  let before: Chord.Chord | undefined;
+  return alignment.lines.map((line, l) => {
+    const chords = placed[l] ?? [];
+    const sungAt = line.flatMap((s, k) => (s.notes > 0 ? [k] : []));
+    const last = line.at(sungAt.at(-1) ?? -1);
+    const ends = [
+      last === undefined ? undefined : alignment.melody[last.note + last.notes - 1]?.end,
+      alignment.lines[l + 1] === undefined ? undefined : firstStart(alignment.lines[l + 1] ?? []),
+    ].filter((n) => n !== undefined);
+    const input: Placement.Line = {
+      syllables: sungAt.map((k) => {
+        const s = line[k];
+        const note = s === undefined ? undefined : alignment.melody[s.note];
+        const end = s === undefined ? undefined : alignment.melody[s.note + s.notes - 1]?.end;
+        const start = note?.start ?? 0;
+        return { start, length: (end ?? start) - start, key: note?.key };
+      }),
+      changes: sungAt.flatMap((k, j) =>
+        (chords[k] ?? []).map((c) => ({ syllable: j, at: Math.round(c.at * tpb), chord: c.chord })),
+      ),
+      until: Math.min(...ends),
+      before,
+    };
+    const originals = sungAt.flatMap((k) => chords[k] ?? []);
+    const out = line.map((): Placed[] => []);
+    Placement.apply('strong', input, grid).forEach((change, i) => {
+      const was = input.changes[i];
+      const original = originals[i];
+      const k = sungAt[change.syllable];
+      if (k === undefined || was === undefined || original === undefined) return;
+      const same = was.syllable === change.syllable && was.at === change.at;
+      out[k]?.push(same ? original : { chord: change.chord, at: round(change.at / tpb) });
+    });
+    before = originals.at(-1)?.chord ?? before;
+    return out;
+  });
+};
+
 interface Laid {
   readonly level: 'syllable' | 'line' | 'text';
   readonly why: Reason[];
@@ -227,7 +293,7 @@ const lay = (score: Score.Score, n: number, lines: readonly string[]): Laid => {
   const { level, why } = judge(fit, info);
   if (level === 'text') return { level, why, fit, lines: [], starts: undefined };
   const full = place(score, span, alignment, 'full');
-  const guitar = place(score, span, alignment, 'guitar');
+  const guitar = strike(score, alignment, place(score, span, alignment, 'guitar'));
   const tpb = score.ticksPerBeat;
   const out = alignment.lines.map((line, l) =>
     line.map((s, k): Syllable => {
