@@ -251,6 +251,36 @@ The form of an entry, each field on its own line:
 - **Cause:** It judged the set by the command's own review roots, and a worktree's roots leave out the main checkout the lab serves.
 - **Guard:** code: `packages/film/src/tools/lab-mcp.slow.test.ts` `says whether the running lab lists the set, as the lab answers it, and never claims what no lab said`
 
+### critique-deadline-from-the-call
+
+- **Date:** 2026-10-23
+- **Kind:** review
+- **Said:** "the 40 s wait starts after the match and the staging read, so a slow prefix still passes the 60 s cut"
+- **Source:** p6-critic-context/review-r2.md F1
+- **Wrong:** The MCP `critique` call waited 40 s on its job after the match and the staging read, so a staging read of 25 s answered at 65 s, past the 60 s at which the MCP client cuts a call.
+- **Cause:** The wait was set from the match's time alone, and the staging read added after it came out of no budget.
+- **Guard:** code: `packages/film/src/tools/easel-mcp.test.ts` `a critique whose staging takes 25 s answers its handle 50 s from the call's start`
+
+### critique-running-job-kept
+
+- **Date:** 2026-10-23
+- **Kind:** review
+- **Said:** "the store drops running jobs too, and nothing caps the counsel runs"
+- **Source:** p6-critic-context/review-r2.md F2
+- **Wrong:** The critic kept its jobs in one Cache of 32, which dropped the oldest running or not, so a running job's packet started a second counsel run after 32 later jobs; and no bound held how many max-effort counsel runs went at once.
+- **Cause:** The store was sized for finished jobs, and the Cache's capacity drops entries without regard to a fiber still running.
+- **Guard:** code: `packages/film/src/tools/critique.test.ts` `a running job is kept past 33 later jobs, and a start of its packet while it runs asks no second counsel`; `packages/film/src/tools/critique.test.ts` `at most 4 counsel runs go at once: a start past them answers its handle, and runs in its turn`
+
+### critique-changed-packet-new-job
+
+- **Date:** 2026-10-23
+- **Kind:** review
+- **Said:** "no test holds that a changed packet starts a new job"
+- **Source:** p6-critic-context/review-r2.md F4
+- **Wrong:** No test held that a job's handle names its packet's hash, so a handle made without it would answer a repainted figure with the old drawing's critique.
+- **Cause:** The job tests started one packet only.
+- **Guard:** code: `packages/film/src/tools/critique.test.ts` `two packets that differ in one byte of a crop are two jobs and two runs; the same packet again is one`
+
 ## The look
 
 ### floating-circle-hands-no-arms
