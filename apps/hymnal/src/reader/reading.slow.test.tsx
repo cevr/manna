@@ -136,7 +136,8 @@ const pageStyle = (reading: ReadonlyArray<readonly [string, string]>) => {
   );
   return {
     words: drawn(words.get('[data-testid="line"] [data-testid^="syllable-"]')),
-    chords: drawn(chords.get('[data-testid^="chord-"]')),
+    // A chord with a chord to show is a button over its text; the text is what is drawn.
+    chords: drawn(chords.get('[data-testid^="chord-"][role="button"] > *')),
   };
 };
 

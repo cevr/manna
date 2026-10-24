@@ -19,12 +19,17 @@
  * While the player plays this hymn, the page follows it (`follow/`): the
  * sung line and syllable are marked, and the page scrolls each line in
  * before it is sung.
+ *
+ * With chords on, a tap on a chord opens the sheet of how to play it
+ * (`ChordSheet.tsx`), over the page and apart from the follow: the page
+ * holds which chords are open, and the chords reach it through a context.
  */
 
+import type * as Chord from '@bible/hymnal/chord';
 import { useAtom, useAtomValue } from '@effect/atom-react';
 import { Option } from 'effect';
 import type * as Atom from 'effect/reactivity/Atom';
-import { memo, type ReactNode, useMemo } from 'react';
+import { memo, type ReactNode, useCallback, useMemo, useState } from 'react';
 import {
   ScrollView,
   type StyleProp,
@@ -55,6 +60,7 @@ import { FollowProvider, useFollow } from '~/follow/follow';
 import { ResumeFollow } from '~/follow/ResumeFollow';
 
 import { ChordControls, ChordLines, PlayedKeyProvider } from './Chords';
+import { ChordSheet, ChordTapProvider } from './ChordSheet';
 import { FavouriteButton } from './FavouriteButton';
 import { HangingLine } from './HangingLine';
 import { KeepAwake } from './KeepAwake';
@@ -105,6 +111,9 @@ export function HymnPage({
     onSome: (c) => playedKey(c.key, move),
   });
   const follow = useFollow(hymn.number);
+  const [tapped, setTapped] = useState<Option.Option<ReadonlyArray<Chord.Chord>>>(Option.none());
+  const tap = useCallback((shown: ReadonlyArray<Chord.Chord>) => setTapped(Option.some(shown)), []);
+  const close = useCallback(() => setTapped(Option.none()), []);
   return (
     <View style={styles.frame}>
       <ScrollView
@@ -141,12 +150,23 @@ export function HymnPage({
         <PageText reading={reader.reading}>
           <PlayedKeyProvider value={played}>
             <FollowProvider value={follow.follow}>
-              <Sections hymn={hymn} book={book} chords={chords} />
+              <ChordTapProvider value={tap}>
+                <Sections hymn={hymn} book={book} chords={chords} />
+              </ChordTapProvider>
             </FollowProvider>
           </PlayedKeyProvider>
         </PageText>
       </ScrollView>
       {follow.held && <ResumeFollow onPress={follow.resume} />}
+      {Option.match(
+        Option.filter(tapped, () => Option.isSome(chords)),
+        {
+          onNone: () => [],
+          onSome: (open) => (
+            <ChordSheet chords={open} playedKey={played} capo={move.capo} onClose={close} />
+          ),
+        },
+      )}
     </View>
   );
 }

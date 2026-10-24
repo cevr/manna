@@ -34,6 +34,7 @@ import {
 } from '~/hymns/chords';
 
 import { SyllableLine } from './SyllableWords';
+import { useChordTap } from './ChordSheet';
 import { usePageText } from './pageText';
 
 /** The key the chords are spelled in, as the hymn's move reaches it. */
@@ -244,7 +245,12 @@ function BoxChords({
   return <ChordText chords={chords} testID={id} />;
 }
 
-/** Chords in order, spelled in the played key. */
+/**
+ * Chords in order, spelled in the played key. Where there are chords, a tap
+ * opens the sheet of how to play them (`ChordSheet.tsx`): the text is a
+ * button with no padding of its own, its target grown to 44 points tall by
+ * its hit slop alone, so the row it sits in does not move.
+ */
 function ChordText({
   chords,
   testID,
@@ -255,16 +261,48 @@ function ChordText({
   const key = use(PlayedKey);
   const accent = useAccent();
   const text = usePageText();
-  return (
-    <Text
-      testID={testID}
-      style={[styles.chord, text.chords, { color: accent }]}
-      dynamicTypeRamp="subheadline"
-    >
-      {chords.map((chord) => Chord.format(chord, key)).join(' ') || '​'}
+  const tap = useChordTap();
+  const names = chords.map((chord) => Chord.format(chord, key)).join(' ');
+  const style = [styles.chord, text.chords, { color: accent }];
+  if (chords.length === 0)
+    return (
+      <Text testID={testID} style={style} dynamicTypeRamp="subheadline">
+        {'​'}
+      </Text>
+    );
+  const shown = (
+    <Text style={style} dynamicTypeRamp="subheadline">
+      {names}
     </Text>
   );
+  return (
+    <Pressable
+      testID={testID}
+      role="button"
+      aria-label={names}
+      accessibilityHint="Shows how to play it"
+      hitSlop={chordSlop(text.chords.lineHeight ?? CHORD_LINE)}
+      onPress={() => tap(chords)}
+    >
+      {shown}
+    </Pressable>
+  );
 }
+
+/** A chord row's line height before the reader's size is applied. */
+const CHORD_LINE = 20;
+
+/** The least height of a tap target, in points. */
+export const TAP_TARGET = 44;
+
+/**
+ * How far a chord's tap target reaches past its text: up and down, until it
+ * is `TAP_TARGET` tall over a row `lineHeight` tall, and a little to each side.
+ */
+export const chordSlop = (lineHeight: number) => {
+  const reach = Math.max(0, Math.ceil((TAP_TARGET - lineHeight) / 2));
+  return { top: reach, bottom: reach, left: 6, right: 6 };
+};
 
 const styles = StyleSheet.create({
   notice: { fontSize: 13, color: color.muted },
