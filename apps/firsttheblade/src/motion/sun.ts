@@ -54,16 +54,6 @@ export const LIGHT: readonly [number, number, number] = [1, 0.965, 0.88];
  */
 export const TURN = { swing: 0.05, period: 60 } as const;
 
-/**
- * The rays' turn `seconds` into the motion, in radians added to each ray's
- * angle (a positive turn swings the fan clockwise on the screen), as the
- * field's shader writes it. With a coarse pointer the shader multiplies it
- * by 0 (`u_turning`, from `raysTurn` in `./query.ts`); under less motion no
- * shader runs and the still shows.
- */
-export const turnAt = (seconds: number) =>
-  TURN.swing * Math.sin((seconds * 2 * Math.PI) / TURN.period);
-
 /** The distance from the sun's centre, in widths, and the direction to it. */
 export const fromTheSun = (u: number, v: number) => {
   const du = u - SUN.u;
