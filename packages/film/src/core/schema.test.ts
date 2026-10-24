@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import { it } from 'effect-bun-test';
 import { Array as Arr, Effect, FileSystem, Result, Schema } from 'effect';
 import {
+  Beat,
   CuePatch,
   Look,
   repoJson,
@@ -229,6 +230,19 @@ describe('CuePatch', () => {
     expect(decodes('{"untilOffset":-0.1}')).toBe(true);
     expect(decodes('{"until":"gift","untilOffset":0.2}')).toBe(true);
     expect(decodes('{"dur":1,"untilOffset":0.2}')).toBe(false);
+  });
+});
+
+describe('Beat', () => {
+  const casts = (cast: ReadonlyArray<string>) =>
+    Result.isSuccess(Schema.decodeResult(Beat)({ id: 'b', picture: 'p', cast }));
+
+  test('names each cast member by one path segment, so no name leaves the cast folder', () => {
+    expect(casts(['christ', 'lead-feast'])).toBe(true);
+    expect(casts(['../christ'])).toBe(false);
+    expect(casts(['library/christ'])).toBe(false);
+    expect(casts(['..'])).toBe(false);
+    expect(casts([''])).toBe(false);
   });
 });
 
