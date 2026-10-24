@@ -1672,10 +1672,10 @@ The form of an entry, each field on its own line:
 - **Date:** 2026-10-20
 - **Kind:** review
 - **Said:** "Rebase leaves a conflict marker in the lessons ledger"
-- **Source:** ftb-mail/review-4.md F1; in-its-order-2/review-r1.md F4
+- **Source:** ftb-mail/review-4.md F1; in-its-order-2/review-r1.md F4; in-its-order-2/review-r2.md F5
 - **Wrong:** The rebase of ftb-mail onto origin/main kept both sides of each append to `docs/lessons.md` but left diff3's base line, `||||||| parent of …`, in three commits.
 - **Cause:** The resolver read only the two-way conflict form, and git rerere replayed its resolution on the second try.
-- **Guard:** code: `packages/scripts/src/lessons/ledger.ts` `markersIn` (each line of the ledger that is a conflict marker, `<<<<<<<`, `|||||||`, `=======` or `>>>>>>>`, is a problem by its line); `packages/scripts/src/lessons/ledger.test.ts` `refuses a conflict marker a merge left in it, by its line`
+- **Guard:** code: `packages/scripts/src/lessons/ledger.ts` `markersIn` (each line of the ledger that is a conflict marker, `<<<<<<<`, `|||||||`, `=======` or `>>>>>>>`, is a problem by its line); `packages/scripts/src/lessons/ledger.test.ts` `refuses a conflict marker a merge left in it, by its line`; `packages/scripts/src/lessons/ledger.test.ts` `reads a heading underlined in seven = as a heading, and a marker ending in CRLF as a marker`
 
 ### contact-rule-waits-for-verified-inbox
 
@@ -3442,10 +3442,10 @@ The form of an entry, each field on its own line:
 - **Date:** 2026-10-23
 - **Kind:** review
 - **Said:** "Christ's lock sends five files git ignores"
-- **Source:** in-its-order-2/review-r1.md F1
+- **Source:** in-its-order-2/review-r1.md F1; in-its-order-2/review-r2.md F3; in-its-order-2/review-r3.md F2
 - **Wrong:** Christ's record has no kept sheet, so the board sends its five references from `cast-sheet/`, and `apps/animations/.gitignore` ignored every PNG there: after a merge, `film board in-its-order` would refuse on main and in every new worktree.
-- **Cause:** The ignore rule was written for drawn tries, and a record's own references lie in the same folder.
-- **Guard:** code: `apps/animations/cast.test.ts` `that a beat sends are never ignored by git, so every checkout has them`
+- **Cause:** The ignore rule was written for drawn tries, and a record's own references lie in the same folder. The first guard asked only that git not ignore the files, and the second listed what lay in the folders, so a file a record names but no commit holds passed both.
+- **Guard:** code: `apps/animations/cast.test.ts` `that a record names are tracked by git, so every checkout has them`
 
 ### cast-lock-leaves-dress-to-brief
 
@@ -3486,3 +3486,43 @@ The form of an entry, each field on its own line:
 - **Wrong:** The in-its-order-2 range carried three owner revises (asks aadba1e394a, ab7a4d8f60e, aaa11fd7adf) and added no ledger entry for any of them.
 - **Cause:** No brief of the cast rounds (`tmp/orchestrate/p5/iio-cast/brief*.md`) named the ledger step, and each round followed its brief.
 - **Guard:** skill: whether an answer revises the work is a reading of the owner's words, which no check makes. Carried by `.claude/skills/film/SKILL.md`: "After any owner revise, add the entry and its guard before redrawing"
+
+### beat-names-dress-out-of-record
+
+- **Date:** 2026-10-23
+- **Kind:** review
+- **Said:** "Christ still gets the court robe on `thesis`"
+- **Source:** in-its-order-2/review-r2.md F1; in-its-order-2/review-r2.md F7
+- **Wrong:** `thesis` drew Christ at the feast with no garment named, so the board would dress Him in His record's court robe one beat after `name` dressed Him in the linen coat; `cold` named only "festive clothes" for the lead.
+- **Cause:** The lock gives the dress to the brief only where the brief names a garment, and the pictures that drew a member out of his record's dress did not all name it.
+- **Guard:** skill: a picture's words are content, which the owner's rule of 2026-10-09 keeps out of code. Carried by `.claude/skills/film/SKILL.md`: "so a picture that draws a member out of his record's dress names the dress in every beat that draws him"
+
+### test-only-export-is-dead
+
+- **Date:** 2026-10-23
+- **Kind:** review
+- **Said:** "Two new dead exports."
+- **Source:** in-its-order-2/review-r2.md F2
+- **Wrong:** `packages/film/src/core/index.ts` re-exported `castLock` and `CastSheetJson` for the cast test alone, so `bun run dead-exports` failed on two new dead exports.
+- **Cause:** The fix round did not run `bun run dead-exports`, which the gate leaves to `test:slow`.
+- **Guard:** code: `packages/scripts/src/dead-exports/graph.ts` `deadExports`
+
+### renamed-test-renames-its-guard
+
+- **Date:** 2026-10-24
+- **Kind:** review
+- **Said:** "the ledger's slow test is red at the head"
+- **Source:** in-its-order-2/review-r3.md F1
+- **Wrong:** The cast test was renamed, and the ledger entry `cast-reference-tracked` still named its old title, so the ledger's slow test and `test:slow` were red.
+- **Cause:** The rename changed the test file but not the entry whose guard names it, and the gate does not run the ledger's slow test.
+- **Guard:** code: `packages/scripts/src/lessons/ledger.slow.test.ts` `of the repo holds every entry to its fields and every guard to what its file holds`
+
+### review-finding-gets-its-entry
+
+- **Date:** 2026-10-24
+- **Kind:** review
+- **Said:** "r2's guarded findings have no ledger entries"
+- **Source:** in-its-order-2/review-r3.md F3
+- **Wrong:** The fix of in-its-order-2's second review gave its findings guards but added no ledger entry for any of them.
+- **Cause:** The fix was made inline and closed on the gate, and the ledger rule is read at the merge, not by the gate.
+- **Guard:** skill: whether a finding was given a guard is read from its review, which no check of the ledger alone sees. Carried by `docs/lessons.md`: "A finding given a guard gets an entry, its Source citing the finding"
