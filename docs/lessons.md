@@ -3463,7 +3463,7 @@ The form of an entry, each field on its own line:
 - **Kind:** review
 - **Said:** "Two beats' cast does not name the figure their picture draws"
 - **Source:** in-its-order-2/review-r1.md F3; in-its-order-2/review-r1.md F7
-- **Wrong:** The `stones` and `rush` beats draw the villager child, and the toddler in `rush`, but their `cast` named `idea-villagers`, whose kept sheet no longer draws the child; the lead's Cast row still said the grown villager varies `lead-feast` after he became a variant of `sower`.
+- **Wrong:** The `stones` and `rush` beats draw the villager child, and the toddler in `rush`, but their `cast` named `idea-villagers`, whose record no longer keeps the child (its kept sheet still draws him); the lead's Cast row still said the grown villager varies `lead-feast` after he became a variant of `sower`.
 - **Cause:** The members moved between records, and the beats and Cast rows that named them were not re-read.
 - **Guard:** skill: a picture names its figures in words, so no test can match a beat's cast to what it draws. Carried by `.claude/skills/film/SKILL.md`: "after a member moves between records or a figure is renamed, re-read every beat whose picture draws him and set its `cast` and the Cast rows to match"
 
