@@ -2,7 +2,7 @@
  * The site's built files (`dist/`), as the one thing the Worker's policy
  * needs from its host: a request in, the file's response out. On Cloudflare
  * it is the Worker's static-assets binding (`./Site.ts`); on a laptop it is
- * the directory itself (`./preview.ts`); in the tests it is a map.
+ * the directory itself (`./local.ts`); in the tests it is a map.
  *
  * `serve` answers as Cloudflare's asset layer does under
  * `htmlHandling: 'auto-trailing-slash'`: `/about` serves `about.html`, `/`
