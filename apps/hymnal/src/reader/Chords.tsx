@@ -175,6 +175,10 @@ function Step({
  * A syllable-level line is its syllables, each under its chords; a
  * line-level line is a row of its chords over its syllables (`syllables`,
  * the same part's syllables without chords).
+ *
+ * A line whose first syllable carries no chord shows the chord held over
+ * from the line before (`shown.held`), muted: over its first syllable
+ * (`held-p-l-1`), or first in its row (`held-p-l`).
  */
 export const ChordLines = memo(function ChordLines({
   section,
@@ -196,7 +200,15 @@ export const ChordLines = memo(function ChordLines({
   if (shown._tag === 'Line') {
     return section.lines.map((line, l) => (
       <View key={l} style={styles.lineLevel}>
-        <ChordText chords={shown.lines[l] ?? []} testID={`chords-${p}-${l + 1}`} />
+        <View style={styles.row}>
+          {Option.match(Option.flatten(Option.fromUndefinedOr(shown.held[l])), {
+            onNone: () => [],
+            onSome: (chord) => (
+              <ChordText chords={[chord]} tone="held" testID={`held-${p}-${l + 1}`} />
+            ),
+          })}
+          <ChordText chords={shown.lines[l] ?? []} testID={`chords-${p}-${l + 1}`} />
+        </View>
         <SyllableLine
           words={syllables[l] ?? []}
           label={line}
@@ -216,7 +228,12 @@ export const ChordLines = memo(function ChordLines({
       at={`${p}-${l + 1}`}
       index={first + l}
       style={style}
-      over={Option.some(boxChords)}
+      over={Option.some(
+        Option.match(Option.flatten(Option.fromUndefinedOr(shown.held[l])), {
+          onNone: () => boxChords,
+          onSome: (chord) => heldOver(chord, `${p}-${l + 1}-1`),
+        }),
+      )}
     />
   ));
 });
@@ -225,6 +242,12 @@ export const ChordLines = memo(function ChordLines({
 const boxChords = (box: Box, place: string) => (
   <BoxChords chords={box.chords} id={`chord-${place}`} />
 );
+
+/** A box's chords, and `held` over the box at `first` (`held-p-l-1`), which carries none. */
+const heldOver = (held: Chord.Chord, first: string) => (box: Box, place: string) => {
+  if (place !== first || box.chords.length > 0) return boxChords(box, place);
+  return <ChordText chords={[held]} tone="held" testID={`held-${place}`} />;
+};
 
 /** A box's chords, or an empty row of the same height so the line keeps one baseline. */
 function BoxChords({
@@ -246,24 +269,27 @@ function BoxChords({
 }
 
 /**
- * Chords in order, spelled in the played key. Where there are chords, a tap
- * opens the sheet of how to play them (`ChordSheet.tsx`): the text is a
- * button with no padding of its own, its target grown to 44 points tall by
- * its hit slop alone, so the row it sits in does not move.
+ * Chords in order, spelled in the played key: a change in the accent, a
+ * chord held over from the line before (`tone` `held`) muted. Where there
+ * are chords, a tap opens the sheet of how to play them (`ChordSheet.tsx`):
+ * the text is a button with no padding of its own, its target grown to 44
+ * points tall by its hit slop alone, so the row it sits in does not move.
  */
 function ChordText({
   chords,
   testID,
+  tone = 'change',
 }: {
   readonly chords: ReadonlyArray<Chord.Chord>;
   readonly testID: string;
+  readonly tone?: 'change' | 'held';
 }) {
   const key = use(PlayedKey);
   const accent = useAccent();
   const text = usePageText();
   const tap = useChordTap();
   const names = chords.map((chord) => Chord.format(chord, key)).join(' ');
-  const style = [styles.chord, text.chords, { color: accent }];
+  const style = [styles.chord, text.chords, { color: { change: accent, held: color.muted }[tone] }];
   if (chords.length === 0)
     return (
       <Text testID={testID} style={style} dynamicTypeRamp="subheadline">
@@ -279,7 +305,7 @@ function ChordText({
     <Pressable
       testID={testID}
       role="button"
-      aria-label={names}
+      aria-label={{ change: names, held: `${names}, held over` }[tone]}
       accessibilityHint="Shows how to play it"
       hitSlop={chordSlop(text.chords.lineHeight ?? CHORD_LINE)}
       onPress={() => tap(chords)}
@@ -323,4 +349,5 @@ const styles = StyleSheet.create({
   reading: { fontSize: 15, color: color.ink, fontVariant: ['tabular-nums'] },
   chord: { fontSize: 15, lineHeight: 20, fontWeight: '600', paddingRight: 6 },
   lineLevel: { marginBottom: 8 },
+  row: { flexDirection: 'row' },
 });
