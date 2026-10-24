@@ -12,11 +12,18 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Boolean as Bool, Effect, FileSystem, Schema, Stream } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
-/** What of a `cast-sheet.json` says which files it sends. */
+/** What of a `cast-sheet.json` names the files it can send. */
 const SentBy = Schema.fromJsonString(
   Schema.Struct({
     refs: Schema.Array(Schema.Struct({ file: Schema.String })),
-    kept: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
+    kept: Schema.optional(
+      Schema.Record(
+        Schema.String,
+        Schema.Struct({
+          views: Schema.optional(Schema.Array(Schema.Struct({ name: Schema.String }))),
+        }),
+      ),
+    ),
   }),
 );
 
@@ -51,34 +58,35 @@ const sheetFolders = Effect.gen(function* () {
   return yield* Effect.filter(folders, (folder) => there(`${folder}/cast-sheet.json`));
 });
 
-/** The files `folder`'s record can send that lie on disk now. */
-const sendable = (folder: string) =>
+/**
+ * The files `folder`'s record names, whether on disk or not: each kept sheet
+ * (`kept/<kind>.png`) and each view it keeps (`views/<name>.png`), or its refs
+ * when it keeps none. A lock sends some of them, whichever it sends.
+ */
+const named = (folder: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const record = Schema.decodeUnknownSync(SentBy)(
       yield* fs.readFileString(`${folder}/cast-sheet.json`),
     );
-    const own = Bool.match(Object.keys(record.kept ?? {}).length === 0, {
-      onTrue: () => record.refs.map((ref) => `${folder}/${ref.file}`),
-      onFalse: () => [],
+    const kept = Object.entries(record.kept ?? {});
+    const files = Bool.match(kept.length === 0, {
+      onTrue: () => record.refs.map((ref) => ref.file),
+      onFalse: () =>
+        kept.flatMap(([kind, sheet]) => [
+          `kept/${kind}.png`,
+          ...(sheet.views ?? []).map((view) => `views/${view.name}.png`),
+        ]),
     });
-    const cut = yield* Effect.forEach(['kept', 'views'], (sub) =>
-      Effect.flatMap(there(`${folder}/${sub}`), (found) =>
-        Bool.match(found, {
-          onTrue: () => fs.readDirectory(`${folder}/${sub}`),
-          onFalse: () => Effect.succeed([]),
-        }),
-      ).pipe(Effect.map((names) => names.map((name) => `${folder}/${sub}/${name}`))),
-    );
-    return [...own, ...cut.flat()];
+    return files.map((file) => `${folder}/${file}`);
   });
 
 describe("the cast's library references", () => {
-  it.effect('that a record can send are tracked by git, so every checkout has them', () =>
+  it.effect('that a record names are tracked by git, so every checkout has them', () =>
     Effect.gen(function* () {
       const folders = yield* sheetFolders;
       expect(folders).toContain('src/library/cast/christ/cast-sheet');
-      const files = (yield* Effect.forEach(folders, sendable)).flat();
+      const files = (yield* Effect.forEach(folders, named)).flat();
       const tracked = new Set(yield* git(['--', ...files]));
       expect(files.filter((file) => !tracked.has(file))).toEqual([]);
     }).pipe(Effect.provide(BunServices.layer)),
