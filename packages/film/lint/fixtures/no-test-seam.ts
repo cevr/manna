@@ -2,8 +2,8 @@
 // nothing else does.
 import { routesOf } from '../../src/core/testing.ts'; // RED film/no-test-seam
 import type { Route } from '../../src/core/testing.ts'; // RED film/no-test-seam
-import { memoryLocation } from '@bible/url-state/testing'; // RED film/no-test-seam
-import * as wiki from '@bible/core/wiki/testing'; // RED film/no-test-seam
+import { memoryLocation } from '@manna/url-state/testing'; // RED film/no-test-seam
+import * as wiki from '@manna/core/wiki/testing'; // RED film/no-test-seam
 import { declares } from './testing'; // RED film/no-test-seam
 export { routesOf as routes } from '../../src/core/testing.ts'; // RED film/no-test-seam
 export * from '../../src/tools/host/testing.ts'; // RED film/no-test-seam
@@ -17,8 +17,8 @@ export { seam } from '../../src/core/testing.mjs'; // RED film/no-test-seam
 import { TestClock } from 'effect/testing';
 import { attest } from './attesting.ts';
 import { notes } from './testing-notes.ts';
-import { Location } from '@bible/url-state';
-export { Location } from '@bible/url-state';
+import { Location } from '@manna/url-state';
+export { Location } from '@manna/url-state';
 export const named = 'testing';
 export const dynamic = (path: string) => import(path);
 

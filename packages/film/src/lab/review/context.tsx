@@ -14,9 +14,9 @@ import {
   useAtomSet,
   useAtomValue,
   useRegistry,
-} from '@bible/atom-solid';
-import { Place, UrlState } from '@bible/url-state';
-import * as UrlAtom from '@bible/url-state/atom';
+} from '@manna/atom-solid';
+import { Place, UrlState } from '@manna/url-state';
+import * as UrlAtom from '@manna/url-state/atom';
 import { type JSX, isServer } from '@solidjs/web';
 import {
   Array as Arr,

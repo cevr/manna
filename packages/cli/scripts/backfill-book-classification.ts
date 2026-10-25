@@ -21,7 +21,7 @@
 
 import { Database } from 'bun:sqlite';
 
-import { SECTION_BY_ROOT_FOLDER, type CorpusSection } from '@bible/core/writings';
+import { SECTION_BY_ROOT_FOLDER, type CorpusSection } from '@manna/core/writings';
 
 interface FolderNode {
   readonly folder_id: number;

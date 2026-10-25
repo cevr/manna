@@ -9,8 +9,8 @@
  *  Nothing here embeds, reads a file, or fails.
  */
 
-import { paragraphIdentity } from '@bible/core/egw-db';
-import { VectorBookRange } from '@bible/core/search';
+import { paragraphIdentity } from '@manna/core/egw-db';
+import { VectorBookRange } from '@manna/core/search';
 import { Array as Arr, Option } from 'effect';
 
 /** One paragraph to embed, as the source reader yields it. */
@@ -52,7 +52,7 @@ export const bookRanges = (rows: readonly VectorSourceRow[]): readonly VectorBoo
 
 /** The join key §9.2 gives each vector, in buffer order.
  *
- *  `paragraphIdentity` from `@bible/core/egw-db` — the *same function* the
+ *  `paragraphIdentity` from `@manna/core/egw-db` — the *same function* the
  *  lexical leg's rows carry and the batch lookup composes in SQL, called rather
  *  than restated. The three must agree exactly: if they disagree the fusion
  *  never matches a single row, and every result silently loses the vector half

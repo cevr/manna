@@ -1,4 +1,4 @@
-import { layerHymnalBun } from '@bible/core/hymnal/bun';
+import { layerHymnalBun } from '@manna/core/hymnal/bun';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Config, ConfigProvider, Effect, FileSystem, Layer, Option, Result, Schema } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';

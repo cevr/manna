@@ -30,7 +30,7 @@
     "verify:stage": "bun --no-env-file scripts/verify/cli.ts stage"
   },
   "dependencies": {
-    "@bible/ui": "workspace:*",
+    "@manna/ui": "workspace:*",
     "@solidjs/web": "catalog:",
     "effect": "catalog:",
     "solid-js": "catalog:"

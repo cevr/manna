@@ -18,9 +18,9 @@
  * re-search keeps the old results on screen, dimmed, because there is.
  */
 
-import { useAtomValue, useRegistry } from '@bible/atom-solid';
-import { parseHref } from '@bible/url-state';
-import * as UrlAtom from '@bible/url-state/atom';
+import { useAtomValue, useRegistry } from '@manna/atom-solid';
+import { parseHref } from '@manna/url-state';
+import * as UrlAtom from '@manna/url-state/atom';
 import { Array as Arr, Effect, Option } from 'effect';
 import type { Accessor, Element } from 'solid-js';
 import {

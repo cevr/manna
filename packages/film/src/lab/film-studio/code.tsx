@@ -22,7 +22,7 @@
 // selectable and copyable. Every state is a pure function of the playhead,
 // so a link with `#t=` lights what its sender saw.
 
-import { useAtomValue } from '@bible/atom-solid';
+import { useAtomValue } from '@manna/atom-solid';
 import { For, Show } from '@solidjs/web';
 import { Boolean as Bool, Option, Result } from 'effect';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';

@@ -10,7 +10,7 @@
 import { For, Show } from '@solidjs/web';
 import { Boolean as Bool, Effect, Option, Schema } from 'effect';
 import * as ActorAtom from 'effect-machine/atom';
-import { useAtomSet, useAtomValue } from '@bible/atom-solid';
+import { useAtomSet, useAtomValue } from '@manna/atom-solid';
 import type { Accessor } from 'solid-js';
 import { createEffect, createSignal, untrack } from 'solid-js';
 import { Frames } from '../../browser/frames.ts';

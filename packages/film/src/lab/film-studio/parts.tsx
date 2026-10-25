@@ -4,8 +4,8 @@
 // phone's reading block, laid out by `Layout`, the one grid that places the
 // inspector (layout C: beside the viewer, the timeline full width).
 
-import { Menu } from '@bible/ui/menu';
-import { Place } from '@bible/url-state';
+import { Menu } from '@manna/ui/menu';
+import { Place } from '@manna/url-state';
 import type { JSX } from '@solidjs/web';
 import { Array as Arr, Boolean as Bool, Effect, Match, Option, Result } from 'effect';
 import { BOARD_PAPER, paintText } from '../../canvas/board.ts';

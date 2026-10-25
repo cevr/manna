@@ -9,8 +9,8 @@
  *  the socket path.
  */
 
-import { SearchQuery, SearchResultJson, SearchService } from '@bible/core/search';
-import { goldenSearchLayer } from '@bible/core/search/testing';
+import { SearchQuery, SearchResultJson, SearchService } from '@manna/core/search';
+import { goldenSearchLayer } from '@manna/core/search/testing';
 import { BunServices } from '@effect/platform-bun';
 import { expect, it } from 'effect-bun-test';
 import {

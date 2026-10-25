@@ -64,7 +64,7 @@ const parseVerseKey = (
 };
 
 export class BibleCorpus extends Context.Service<BibleCorpus, BibleCorpusService>()(
-  '@bible/core/bible-db/BibleCorpus',
+  '@manna/core/bible-db/BibleCorpus',
 ) {
   static layer: Layer.Layer<BibleCorpus, SqlError, SqlClient.SqlClient> = Layer.effect(
     BibleCorpus,

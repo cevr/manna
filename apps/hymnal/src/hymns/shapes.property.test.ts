@@ -17,7 +17,7 @@
  */
 
 import { describe, expect, it } from 'bun:test';
-import * as Chord from '@bible/hymnal/chord';
+import * as Chord from '@manna/hymnal/chord';
 import { Option } from 'effect';
 
 import { readChords } from '../../vite/chords';

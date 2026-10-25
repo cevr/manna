@@ -12,8 +12,8 @@
  * (`Chord.format`, `Chord.keyOnPitch`); this module only picks the key.
  */
 
-import * as Chord from '@bible/hymnal/chord';
-import type { Hymn, Part } from '@bible/hymnal/hymn';
+import * as Chord from '@manna/hymnal/chord';
+import type { Hymn, Part } from '@manna/hymnal/hymn';
 import { Array as Arr, Effect, Option, Schema } from 'effect';
 
 import type { HymnText, Section } from './text';

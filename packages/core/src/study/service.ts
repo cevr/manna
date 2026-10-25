@@ -502,7 +502,7 @@ const makeStrongs =
   };
 
 export class StudyService extends Context.Service<StudyService, StudyServiceApi>()(
-  '@bible/core/study/StudyService',
+  '@manna/core/study/StudyService',
 ) {
   /** Backed by the two corpora that already hold this data: `bible.db` through
    *  `BibleDatabase`, and the writings library through `EGWCommentaryService`.

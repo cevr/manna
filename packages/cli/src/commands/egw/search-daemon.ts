@@ -20,7 +20,7 @@
  *  warmup simply waits on the same in-flight loads.
  */
 
-import { SearchQuery, SearchService } from '@bible/core/search';
+import { SearchQuery, SearchService } from '@manna/core/search';
 import { BunServices, BunSocketServer } from '@effect/platform-bun';
 import {
   Clock,

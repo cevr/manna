@@ -25,7 +25,7 @@
 // in the group's `HttpApiBuilder.group` in tools, and call it on the page
 // through the derived client. packages/film/README.md has the steps.
 
-import { Codec, Field, Place, decodeComponent, parseHref } from '@bible/url-state';
+import { Codec, Field, Place, decodeComponent, parseHref } from '@manna/url-state';
 import {
   Array as Arr,
   Duration,
@@ -1235,7 +1235,7 @@ export const prefixesOf = <Id extends string, Groups extends HttpApiGroup.Constr
 };
 
 // ---------------------------------------------------------------------------
-// The pages: every place a page is at, declared once as `@bible/url-state`
+// The pages: every place a page is at, declared once as `@manna/url-state`
 // Places. The path says what a view is about (a film, its studio, a set),
 // the query how it is shown or what is selected in it (a clip, a note, a
 // set's view), the hash when (`#t=`, seconds). The server

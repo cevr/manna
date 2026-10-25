@@ -12,8 +12,8 @@
  *  index would simply contain paragraphs the scope filter never asks about.
  */
 
-import { vectorDocument } from '@bible/core/search';
-import { EGW_SCOPE_AUTHORS } from '@bible/core/writings';
+import { vectorDocument } from '@manna/core/search';
+import { EGW_SCOPE_AUTHORS } from '@manna/core/writings';
 import { Database } from 'bun:sqlite';
 
 import type { VectorSourceRow } from './emit.js';

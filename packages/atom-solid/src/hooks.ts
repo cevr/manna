@@ -201,7 +201,7 @@ const serverAware = <A>(
 };
 
 /** What a served atom's carrier holds where no server value came with the page. */
-const UNSERVED: unique symbol = Symbol('@bible/atom-solid/unserved');
+const UNSERVED: unique symbol = Symbol('@manna/atom-solid/unserved');
 
 /** A value the server is still reading: an `AsyncResult` not yet answered, or answered and reading again. */
 const isReading = (value: unknown): boolean =>

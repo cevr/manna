@@ -1,4 +1,4 @@
-import { TopicDetail, TopicId, TopicService } from '@bible/core/topics';
+import { TopicDetail, TopicId, TopicService } from '@manna/core/topics';
 import {
   BlocksJson,
   LookupInput,
@@ -15,8 +15,8 @@ import {
   WikiService,
   topicSlug,
   type WikiPage,
-} from '@bible/core/wiki';
-// The shared fixture is behind `@bible/core/wiki/testing`, not the production
+} from '@manna/core/wiki';
+// The shared fixture is behind `@manna/core/wiki/testing`, not the production
 // barrel: it is the *same* module the core suite imports relatively, so the
 // cross-host parity claim is still about one input, but a shipped import
 // cannot reach it.
@@ -38,7 +38,7 @@ import {
   WIKI_PAGE_FIXTURE_SOURCES,
   wikiSectionIdentities,
   layerBunOrAbsent as layerBun,
-} from '@bible/core/wiki/testing';
+} from '@manna/core/wiki/testing';
 import { BunFileSystem } from '@effect/platform-bun';
 import { Database } from 'bun:sqlite';
 import { Effect, Exit, FileSystem, Layer, Option, Schema, SchemaGetter } from 'effect';
@@ -293,7 +293,7 @@ describe('bible wiki --json stdout', () => {
 // bible wiki matches
 //
 // The Milestone 4 CLI JSON workflow, and the CLI half of its adapter check.
-// The shared fixture is `@bible/core/wiki`'s `PHRASE_FIXTURE_DICTIONARY` and
+// The shared fixture is `@manna/core/wiki`'s `PHRASE_FIXTURE_DICTIONARY` and
 // `DANIEL_8_9` — the *same* module the core suite and the host-parity test
 // import, so "identical output across hosts" is a claim about one input rather
 // than about three copies of a verse that have not diverged yet.
@@ -571,7 +571,7 @@ describe('bible wiki topic 2300-days --json', () => {
 // renders" is actually about — was never in the payload it checked.
 //
 // So this block runs the identical command over the shared non-empty fixture
-// (`@bible/core/wiki/testing`'s `wikiPageFixtureSources`, which is the
+// (`@manna/core/wiki/testing`'s `wikiPageFixtureSources`, which is the
 // production `WikiSectionSources.Live` over test corpora), and asserts the item
 // identities section by section, so the command is checked against one
 // populated page rather than an empty one.
@@ -684,7 +684,7 @@ describe('bible wiki topic --json over a populated page', () => {
 //
 //  1. **The portable input.** §10's adapter check is that every adapter builds
 //     the same `LookupInput`. The CLI asserts against
-//     `@bible/core/wiki/testing`'s `LOOKUP_ADAPTER_INPUT` here.
+//     `@manna/core/wiki/testing`'s `LOOKUP_ADAPTER_INPUT` here.
 //  2. **The stdout seam.** That the *command* still runs the `LookupResult`
 //     codec, and that its human output really carries all five groups in §7's
 //     order. These run the real command — argument parsing, layer resolution,

@@ -84,7 +84,7 @@ const FIELDS = new Set(['INPUT', 'TEXTAREA', 'SELECT', 'AUDIO', 'VIDEO']);
 
 /**
  * Open menus and dialogs: their own keys move through them and close them.
- * One closing (@bible/ui marks its exit `data-ending-style`, then
+ * One closing (@manna/ui marks its exit `data-ending-style`, then
  * `data-closed`) holds no keys: the focus it still has goes back to the page
  * as it leaves, so a key pressed then is the page's.
  */

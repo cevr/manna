@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'effect-bun-test';
 import { Console, Effect, FileSystem, Layer, Option, Path, Ref, Result, Schema } from 'effect';
 import * as PlatformError from 'effect/PlatformError';
-import { ManifestJson, type RecordingManifest } from '@bible/hymnal/recording-manifest';
+import { ManifestJson, type RecordingManifest } from '@manna/hymnal/recording-manifest';
 
 import { HashBun } from './hash-bun.ts';
 import { SDAH_HYMNS } from './plan.ts';

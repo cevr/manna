@@ -15,13 +15,13 @@ bible/
 │   ├── selah/          # Native macOS Scripture memorization (@bible/selah; SwiftUI, FSRS)
 │   └── triedgold/      # triedgold.com (@bible/triedgold, React Router 8 SSR on a Worker; brand tokens in src/brand.ts; Alchemy → Cloudflare)
 ├── packages/
-│   ├── core/           # Shared business logic: corpora, search, study data (@bible/core)
+│   ├── core/           # Shared business logic: corpora, search, study data (@manna/core)
 │   ├── cli/            # The `bible` CLI (@bible/cli)
 │   ├── film/           # The film engine, tools and lab (@bible/film)
-│   ├── hymnal/         # Hymn chords read from MIDI, and the compiled SDA Hymnal (1985) the app reads (@bible/hymnal; schema at @bible/hymnal/hymn)
-│   ├── atom-solid/     # Solid 2 bindings for Effect atoms (@bible/atom-solid, used by the film lab and egw-search)
-│   ├── url-state/      # Typed URL state: Effect Schema codecs, a Location service, an atom binding (@bible/url-state)
-│   ├── ui/             # Base UI's unstyled parts ported to Solid 2 (@bible/ui; browser tests via its test:browser)
+│   ├── hymnal/         # Hymn chords read from MIDI, and the compiled SDA Hymnal (1985) the app reads (@manna/hymnal; schema at @manna/hymnal/hymn)
+│   ├── atom-solid/     # Solid 2 bindings for Effect atoms (@manna/atom-solid, used by the film lab and egw-search)
+│   ├── url-state/      # Typed URL state: Effect Schema codecs, a Location service, an atom binding (@manna/url-state)
+│   ├── ui/             # Base UI's unstyled parts ported to Solid 2 (@manna/ui; browser tests via its test:browser)
 │   └── scripts/        # Corpus compilers and repo tooling (@bible/scripts)
 ```
 
@@ -96,7 +96,7 @@ is `.claude/skills/verify-hymnal`.
 
 ## Web UI
 
-New web UI loads the `ui`, `composition-patterns`, `react` (read as Solid), `effect` and `graphical-ui` skills, is built with Solid 2 and effect-machine, and reuses `@bible/atom-solid`, `@bible/url-state` and `@bible/ui` as egw-search does. The exception is `apps/hymnal`: it is React on One (React Native and web from one tree), with Effect atoms through `@effect/atom-react` (owner, 2026-10-17).
+New web UI loads the `ui`, `composition-patterns`, `react` (read as Solid), `effect` and `graphical-ui` skills, is built with Solid 2 and effect-machine, and reuses `@manna/atom-solid`, `@manna/url-state` and `@manna/ui` as egw-search does. The exception is `apps/hymnal`: it is React on One (React Native and web from one tree), with Effect atoms through `@effect/atom-react` (owner, 2026-10-17).
 
 ## Effect Best Practices
 
@@ -116,10 +116,10 @@ repository for real implementations when docs aren't enough.
 
 The project uses Effect's dependency injection pattern:
 
-- **Services** defined with `Context.Service` in `@bible/core`
+- **Services** defined with `Context.Service` in `@manna/core`
 - **Adapters** provide platform-specific implementations. Bun is the only
   host: core's adapters are the `*-bun.ts` files and `src/platform-bun/`, and
   oxlint keeps `bun:*` and platform imports out of every other core module
 - CLI provides `AppleScriptLive`, `ChimeLive` and `CliLoggerLive` over
   `BunServices` and `FetchHttpClient`
-- egw-search provides its own server layers over `@bible/core`
+- egw-search provides its own server layers over `@manna/core`

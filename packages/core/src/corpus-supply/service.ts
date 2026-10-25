@@ -140,7 +140,7 @@ const fileCorpora = {
 const BOOTSTRAP_CORPUS: CorpusFileName = 'bible';
 
 export class CorpusSupply extends Context.Service<CorpusSupply, CorpusSupplyService>()(
-  '@bible/core/corpus-supply/CorpusSupply',
+  '@manna/core/corpus-supply/CorpusSupply',
 ) {
   static layer: Layer.Layer<CorpusSupply> = Layer.effect(
     CorpusSupply,

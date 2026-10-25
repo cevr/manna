@@ -140,7 +140,7 @@ export const until = (page: Tab, check: string) => page.until(check);
 
 /**
  * Wait until every sheet stands: none is scrolling in or out (`data-entering`,
- * `data-exiting`, `@bible/ui/sheet`). A sheet's box is where it rests only
+ * `data-exiting`, `@manna/ui/sheet`). A sheet's box is where it rests only
  * then, and a scroll into view would stop one on its way.
  */
 export const sheetsStand = (page: Tab) =>

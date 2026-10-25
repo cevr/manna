@@ -11,8 +11,8 @@
 // (`useUrlSelecting`); an ask that shows the draft keeps its own
 // (`DraftReader`, whose `selecting` the page gives).
 
-import { useAtomRefresh, useAtomValue } from '@bible/atom-solid';
-import { Place } from '@bible/url-state';
+import { useAtomRefresh, useAtomValue } from '@manna/atom-solid';
+import { Place } from '@manna/url-state';
 import { Show } from '@solidjs/web';
 import { Effect, Option } from 'effect';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';

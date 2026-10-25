@@ -14,7 +14,7 @@
 // (a take kept, or refused with an attempt saved) reads the beats and the
 // attempts again.
 
-import { useAtomRefresh, useAtomSet, useAtomValue } from '@bible/atom-solid';
+import { useAtomRefresh, useAtomSet, useAtomValue } from '@manna/atom-solid';
 import { type JSX, Show } from '@solidjs/web';
 import { Cause, Effect, Equal, Layer, Option, Stream } from 'effect';
 import * as ActorAtom from 'effect-machine/atom';

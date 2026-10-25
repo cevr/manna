@@ -10,7 +10,7 @@ import type { SqlClient } from 'effect/sql';
 import { Etag, HttpPlatform, HttpRouter } from 'effect/http';
 import { HttpApiBuilder } from 'effect/http-api';
 
-import type { SearchService } from '@bible/core/search';
+import type { SearchService } from '@manna/core/search';
 
 import { SearchApi } from '../api.js';
 import { SearchGroupLive } from '../search-api.js';

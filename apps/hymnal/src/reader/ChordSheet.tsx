@@ -13,7 +13,7 @@
  * the same at every capo.
  */
 
-import * as Chord from '@bible/hymnal/chord';
+import * as Chord from '@manna/hymnal/chord';
 import { Option, Schema } from 'effect';
 import { createContext, use } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';

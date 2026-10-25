@@ -1,11 +1,11 @@
-import { nodesToText, type Schemas as EGWSchemas } from '@bible/core/egw';
+import { nodesToText, type Schemas as EGWSchemas } from '@manna/core/egw';
 import type {
   SearchParagraphHit,
   SearchResult,
   SearchTopicHit,
   VectorAbsenceReason,
-} from '@bible/core/search';
-import type { Paragraph, Publication, SearchHit } from '@bible/core/writings';
+} from '@manna/core/search';
+import type { Paragraph, Publication, SearchHit } from '@manna/core/writings';
 import { Option, Schema, SchemaGetter } from 'effect';
 
 const JsonString = Schema.Unknown.pipe(

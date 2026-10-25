@@ -4,7 +4,7 @@
  * The Bun server runs the ONNX graph in process; a Worker cannot hold the
  * model, so it asks Workers AI for `@cf/google/embeddinggemma-300m` and applies
  * the same contract to its answer: the same prefixes, the same 256-d MRL
- * truncation, the same int8 quantization (`@bible/core/search`'s
+ * truncation, the same int8 quantization (`@manna/core/search`'s
  * `embedding.ts`).
  *
  * **Measured, not assumed, to match the index.** Fifty corpus paragraphs
@@ -26,7 +26,7 @@ import {
   QueryEmbedderUnavailable,
   quantize,
   truncateToMrl,
-} from '@bible/core/search';
+} from '@manna/core/search';
 
 /** The Workers AI model the fingerprint names. */
 export const EMBEDDING_MODEL = '@cf/google/embeddinggemma-300m';

@@ -21,7 +21,7 @@ import { type Bindings, bindings, memberName } from './nodes.ts';
 const KEYS =
   'declare a command with its keys (packages/film/src/command/command.ts), registered with the page hub';
 const MENU =
-  'open a context menu through @bible/ui ContextMenu over the selection’s commands (packages/film/src/lab/command/)';
+  'open a context menu through @manna/ui ContextMenu over the selection’s commands (packages/film/src/lab/command/)';
 
 /** Each listener the rule refuses, by its event, and the way instead. */
 const EVENTS: ReadonlyMap<string, string> = new Map([

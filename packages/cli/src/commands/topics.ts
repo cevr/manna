@@ -25,7 +25,7 @@ import {
   ContentUpdateJson,
   type ContentDecision,
   type ContentStatus,
-} from '@bible/core/content-update';
+} from '@manna/core/content-update';
 import { Console, Effect, Match, Option, Schema } from 'effect';
 import { Command, Flag } from 'effect/cli';
 

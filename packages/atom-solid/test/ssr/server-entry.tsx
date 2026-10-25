@@ -1,7 +1,7 @@
 // The server half of the SSR proof: one registry per render, its `Location`
 // the request's URL, which never carries a hash.
-import { layerServer } from '@bible/url-state';
-import * as UrlAtom from '@bible/url-state/atom';
+import { layerServer } from '@manna/url-state';
+import * as UrlAtom from '@manna/url-state/atom';
 import { generateHydrationScript, renderToStream, renderToString } from '@solidjs/web';
 import { Effect, Option } from 'effect';
 import * as Atom from 'effect/reactivity/Atom';

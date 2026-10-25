@@ -1,5 +1,5 @@
 // `film/history-through-host`: a page never chooses a history move. Each
-// field of a place declares its own policy (`Place.history`, @bible/url-state),
+// field of a place declares its own policy (`Place.history`, @manna/url-state),
 // and the address bar is written in one module, `browser/host.ts`
 // (`addressOn`, `reloadAtAddress`), which reads that policy and owns the one
 // traversal a page makes, a dismissal's Back (`addressOn(host).dismiss`): a
@@ -21,10 +21,10 @@
 // `Effect.flatMap(<service>.asEffect(), …)` or to a `pipe` on the service,
 // or is an alias of one, under any type wrapper (`as`, `satisfies`, `!`).
 // Each name is read by its binding where it is written (`nodes.ts`):
-// `Location` is a name bound to `@bible/url-state`'s `Location` import, or
+// `Location` is a name bound to `@manna/url-state`'s `Location` import, or
 // `<ns>.Location` where `<ns>` is bound to a namespace import of
-// `@bible/url-state`; `UrlState.UrlState` is the `UrlState` namespace
-// `@bible/url-state` exports (imported, or `<ns>.UrlState`); `Context` is
+// `@manna/url-state`; `UrlState.UrlState` is the `UrlState` namespace
+// `@manna/url-state` exports (imported, or `<ns>.UrlState`); `Context` is
 // bound to `effect`'s; and the bar is a call of a name bound to
 // `browser/host.ts`'s `addressOn`, or an alias of one. A parameter or a local
 // of the same name is its own binding, and none of these; a `navigate` read
@@ -42,13 +42,13 @@ import {
 } from 'oxlint-plugin-effect/rule-bindings';
 import { definitionOf, importsAs, keyName, memberName, unwrapped } from './nodes.ts';
 
-const URL_STATE = '@bible/url-state';
+const URL_STATE = '@manna/url-state';
 
 /** The module that owns the address bar: `addressOn` is imported from a path ending here. */
 const HOST_MODULE = /(?:^|\/)browser\/host\.ts$/u;
 
 const MESSAGE =
-  "a history move chosen here: a place's field declares its policy (Place.history, @bible/url-state), and the address bar is written through addressOn (packages/film/src/browser/host.ts).";
+  "a history move chosen here: a place's field declares its policy (Place.history, @manna/url-state), and the address bar is written through addressOn (packages/film/src/browser/host.ts).";
 
 /** What a value is, of those this rule watches: the `Location` service, the bar `addressOn` gives, or `UrlState`. */
 type Held = 'location' | 'bar' | 'urlState';
@@ -83,10 +83,10 @@ const first = (answers: ReadonlyArray<Holds>): Holds =>
 const holds = (held: Held, yes: Reads<boolean>): Holds =>
   Effect.map(yes, (y) => Option.liftPredicate(held, () => y));
 
-/** Whether a module is `@bible/url-state`. */
+/** Whether a module is `@manna/url-state`. */
 const isUrlState = (from: string) => from === URL_STATE;
 
-/** Whether `node` reads `@bible/url-state`'s export `name`: imported, or `<url-state ns>.name`. */
+/** Whether `node` reads `@manna/url-state`'s export `name`: imported, or `<url-state ns>.name`. */
 const readsUrlState = (node: ESTree.Node, name: string): Reads<boolean> => {
   if (node.type === 'Identifier') return importsAs(node, isUrlState, name);
   if (node.type !== 'MemberExpression' || !Option.contains(memberName(node), name)) return no;

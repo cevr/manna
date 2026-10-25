@@ -10,8 +10,8 @@
  *  `~/.bible`, so a test provides its own layer without the command knowing.
  */
 
-import { EGWParagraphDatabase } from '@bible/core/egw-db';
-import * as EGWDbBun from '@bible/core/egw-db/bun';
+import { EGWParagraphDatabase } from '@manna/core/egw-db';
+import * as EGWDbBun from '@manna/core/egw-db/bun';
 import {
   layerFileVectorIndexBytes,
   loadVectorIndex,
@@ -19,8 +19,8 @@ import {
   SearchCorpusSources,
   SearchService,
   VectorIndexBytes,
-} from '@bible/core/search';
-import { layerBunEmbedder } from '@bible/core/search/bun';
+} from '@manna/core/search';
+import { layerBunEmbedder } from '@manna/core/search/bun';
 import { BunServices } from '@effect/platform-bun';
 import { Config, Context, Effect, Layer, Option, Path } from 'effect';
 

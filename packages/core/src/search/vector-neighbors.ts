@@ -68,5 +68,5 @@ export interface VectorNeighborsApi {
 }
 
 export class VectorNeighbors extends Context.Service<VectorNeighbors, VectorNeighborsApi>()(
-  '@bible/core/search/VectorNeighbors',
+  '@manna/core/search/VectorNeighbors',
 ) {}

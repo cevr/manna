@@ -1,5 +1,5 @@
 // The page's clipboard: where Copy link puts a link. The pages' hrefs are
-// paths (`@bible/url-state` keeps no origin), so the link is written whole,
+// paths (`@manna/url-state` keeps no origin), so the link is written whole,
 // resolved against the page's own origin, and pastes anywhere. A write the
 // browser refuses (no permission, the page not focused, an origin that is
 // not secure) fails with `ClipboardRefused`, in the browser's words, so the

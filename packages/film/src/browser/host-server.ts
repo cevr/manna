@@ -1,5 +1,5 @@
 // The host of a page the lab renders on the server (`host.ts`): the
-// request's URL as its address bar (`@bible/url-state`'s `layerServer`, read
+// request's URL as its address bar (`@manna/url-state`'s `layerServer`, read
 // only, with no hash: a browser never sends it), frames on the server's own
 // clock (`Frames.layerClock`, which no render waits on), and every other
 // service a page's code may reach while it renders, inert. A server render
@@ -10,7 +10,7 @@
 // (`Viewport.layerPhone`). The client takes over each service from its live
 // adapter (`host-browser.ts`) once the page is hydrated.
 
-import { UrlState, layerServer } from '@bible/url-state';
+import { UrlState, layerServer } from '@manna/url-state';
 import { Effect, Layer } from 'effect';
 import { Clipboard, ClipboardRefused } from './clipboard.ts';
 import { Footage } from './footage.ts';

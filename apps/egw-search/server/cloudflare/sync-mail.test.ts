@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { Option } from 'effect';
 
-import type { ParagraphChangeRow } from '@bible/core/egw-db';
+import type { ParagraphChangeRow } from '@manna/core/egw-db';
 
 import { MAIL_LIMIT, SyncOutcome, syncMail } from './sync-mail.ts';
 import { syncReport, type SyncRun, updateChanges } from './sync-report.ts';

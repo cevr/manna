@@ -303,7 +303,7 @@
     {
       // The address bar has one owner: `Location`'s browser adapter
       // (packages/url-state/src/location-browser.ts). Everything else reads
-      // and writes it through `@bible/url-state`, so a push or replace cannot
+      // and writes it through `@manna/url-state`, so a push or replace cannot
       // skip the batching, the entry keys or the history policy. A
       // `popstate` or `hashchange` listener on the window is the film's
       // `host-events-through-adapter` rule's to refuse; the key and drag
@@ -336,14 +336,14 @@
           "error",
           {
             "members": {
-              "history": { "use": "@bible/url-state's Location" },
-              "location": { "use": "@bible/url-state's Location" },
-              "onpopstate": { "use": "@bible/url-state's Location" },
-              "onhashchange": { "use": "@bible/url-state's Location" },
-              "navigation": { "use": "@bible/url-state's Location" },
+              "history": { "use": "@manna/url-state's Location" },
+              "location": { "use": "@manna/url-state's Location" },
+              "onpopstate": { "use": "@manna/url-state's Location" },
+              "onhashchange": { "use": "@manna/url-state's Location" },
+              "navigation": { "use": "@manna/url-state's Location" },
               "document": {
                 "properties": ["location", "URL", "documentURI"],
-                "use": "@bible/url-state's Location"
+                "use": "@manna/url-state's Location"
               }
             }
           }
@@ -405,14 +405,14 @@
           {
             "builtins": false,
             "members": {
-              "history": { "use": "@bible/url-state's Location" },
-              "location": { "use": "@bible/url-state's Location" },
-              "onpopstate": { "use": "@bible/url-state's Location" },
-              "onhashchange": { "use": "@bible/url-state's Location" },
-              "navigation": { "use": "@bible/url-state's Location" },
+              "history": { "use": "@manna/url-state's Location" },
+              "location": { "use": "@manna/url-state's Location" },
+              "onpopstate": { "use": "@manna/url-state's Location" },
+              "onhashchange": { "use": "@manna/url-state's Location" },
+              "navigation": { "use": "@manna/url-state's Location" },
               "document": {
                 "properties": ["location", "URL", "documentURI"],
-                "use": "@bible/url-state's Location"
+                "use": "@manna/url-state's Location"
               }
             }
           }
@@ -1777,15 +1777,15 @@
           "error",
           {
             "members": {
-              "history": { "use": "@bible/url-state's Location" },
-              "location": { "use": "@bible/url-state's Location" },
-              "onpopstate": { "use": "@bible/url-state's Location" },
-              "onhashchange": { "use": "@bible/url-state's Location" },
-              "navigation": { "use": "@bible/url-state's Location" },
+              "history": { "use": "@manna/url-state's Location" },
+              "location": { "use": "@manna/url-state's Location" },
+              "onpopstate": { "use": "@manna/url-state's Location" },
+              "onhashchange": { "use": "@manna/url-state's Location" },
+              "navigation": { "use": "@manna/url-state's Location" },
               "document": [
                 {
                   "properties": ["location", "URL", "documentURI"],
-                  "use": "@bible/url-state's Location"
+                  "use": "@manna/url-state's Location"
                 },
                 {
                   "properties": ["cookie"],
@@ -1935,7 +1935,7 @@
       }
     },
     {
-      // @bible/ui is a host boundary: Base UI's parts ported to Solid 2, plain
+      // @manna/ui is a host boundary: Base UI's parts ported to Solid 2, plain
       // DOM code with no Effect runtime. It keeps upstream's shape (nullable
       // elements, ternaries, `typeof` checks, DOM casts, long key handlers) so
       // a diff against Base UI stays readable; the Effect style rules would
@@ -1982,7 +1982,7 @@
                   "@bible/film/*",
                   "**/lab/**"
                 ],
-                "message": "@bible/ui is a leaf of plain DOM primitives: no Effect, no film engine, no lab."
+                "message": "@manna/ui is a leaf of plain DOM primitives: no Effect, no film engine, no lab."
               }
             ]
           }
@@ -2114,7 +2114,7 @@
       }
     },
     {
-      // A URL's escapes are decoded in one place, @bible/url-state's
+      // A URL's escapes are decoded in one place, @manna/url-state's
       // `decodeComponent` (packages/url-state/src/url-parts.ts), as a Result: a
       // broken escape (`%`, `%E0%A4%A`) names nothing instead of throwing in a
       // page. Tests and fixtures may decode by hand.
@@ -2124,11 +2124,11 @@
           "error",
           {
             "name": "decodeURIComponent",
-            "message": "Decode through @bible/url-state's decodeComponent (a Result)."
+            "message": "Decode through @manna/url-state's decodeComponent (a Result)."
           },
           {
             "name": "decodeURI",
-            "message": "Decode through @bible/url-state's decodeComponent (a Result)."
+            "message": "Decode through @manna/url-state's decodeComponent (a Result)."
           }
         ]
       }

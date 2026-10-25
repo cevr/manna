@@ -4,7 +4,7 @@
 // provider's body once, keyed, so the body never sees it change. The
 // editor, motion, notes, compare, a Set and the studio each mount theirs so.
 
-import { useAtomSuspense } from '@bible/atom-solid';
+import { useAtomSuspense } from '@manna/atom-solid';
 import { type JSX, Loading, Show } from '@solidjs/web';
 import type { Effect, Scope } from 'effect';
 import { Machine } from 'effect-machine';

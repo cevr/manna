@@ -10,8 +10,8 @@
  */
 
 import { describe, expect, it } from 'bun:test';
-import * as Chord from '@bible/hymnal/chord';
-import type { Hymn, Part } from '@bible/hymnal/hymn';
+import * as Chord from '@manna/hymnal/chord';
+import type { Hymn, Part } from '@manna/hymnal/hymn';
 import { Match, Option } from 'effect';
 
 import { readChords } from '../../vite/chords';

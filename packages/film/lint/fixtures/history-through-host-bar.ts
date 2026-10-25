@@ -4,7 +4,7 @@
 // through a host's context, is refused.
 
 import { Context, Effect } from 'effect';
-import { Location } from '@bible/url-state';
+import { Location } from '@manna/url-state';
 import { addressOn as barOf } from '../../src/browser/host.ts';
 
 declare const host: Context.Context<Location>;

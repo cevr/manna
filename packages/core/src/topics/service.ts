@@ -87,7 +87,7 @@ const unavailable =
     TopicUnavailableError.make({ operation, cause });
 
 export class TopicService extends Context.Service<TopicService, TopicServiceApi>()(
-  '@bible/core/topics/TopicService',
+  '@manna/core/topics/TopicService',
 ) {
   static Live: Layer.Layer<TopicService, never, SqlClient.SqlClient> = Layer.effect(
     TopicService,

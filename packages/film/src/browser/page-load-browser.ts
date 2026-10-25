@@ -1,6 +1,6 @@
 // Pages loaded by the browser itself (`page-load.ts`): a load is the
 // `location`'s to make, the one thing this adapter asks of it (the address
-// bar's entries are `Location`'s, `@bible/url-state`).
+// bar's entries are `Location`'s, `@manna/url-state`).
 
 import { Effect, Layer } from 'effect';
 import { PageLoad } from './page-load.ts';

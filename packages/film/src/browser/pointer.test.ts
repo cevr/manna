@@ -7,7 +7,7 @@
 // it follows one does nothing, and the next press after that one ends does.
 
 import { describe, expect, test } from 'bun:test';
-import { claimPress } from '@bible/ui/press';
+import { claimPress } from '@manna/ui/press';
 import { Effect, Fiber, Option } from 'effect';
 import { hostOf } from './host.ts';
 import { Pointer, Surface } from './pointer.ts';

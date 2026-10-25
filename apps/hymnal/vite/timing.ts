@@ -21,8 +21,8 @@
  * in a part aligned syllable by syllable. Any other line is marked whole.
  */
 
-import * as Timing from '@bible/hymnal/timing';
-import { type Hymn, sung } from '@bible/hymnal/hymn';
+import * as Timing from '@manna/hymnal/timing';
+import { type Hymn, sung } from '@manna/hymnal/hymn';
 import { Option } from 'effect';
 
 import { readHymns } from './words';

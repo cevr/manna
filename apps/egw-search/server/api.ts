@@ -25,12 +25,12 @@ import {
   SELECTABLE_SUBTYPES,
   Signed,
   SignedFromStrings,
-} from '@bible/core/writings';
+} from '@manna/core/writings';
 
 /** Re-exported through the API module so the browser bundle has one import for
  *  the whole wire vocabulary — the schemas it decodes with and the guards it
  *  parses URL parameters with come from the same place the endpoints below are
- *  declared, rather than the client reaching into `@bible/core` separately and
+ *  declared, rather than the client reaching into `@manna/core` separately and
  *  risking a second, divergent copy. */
 export {
   BookSubtype,

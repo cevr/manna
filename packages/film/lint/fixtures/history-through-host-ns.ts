@@ -2,7 +2,7 @@
 // package: the service is `US.Location`, and no name is imported for it.
 
 import { Effect } from 'effect';
-import * as US from '@bible/url-state';
+import * as US from '@manna/url-state';
 
 declare const href: string;
 

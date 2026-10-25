@@ -24,7 +24,7 @@ import {
   publicationCode,
   publicationId,
   publicationOrder,
-} from '@bible/core/writings';
+} from '@manna/core/writings';
 
 import { formatLocalSearchResult, SNIPPET_LIMIT } from '../../src/commands/egw/format.js';
 

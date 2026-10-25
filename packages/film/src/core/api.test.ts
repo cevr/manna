@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { Place } from '@bible/url-state';
+import { Place } from '@manna/url-state';
 import { Duration, Option, Schema } from 'effect';
 import {
   LabHttpApi,

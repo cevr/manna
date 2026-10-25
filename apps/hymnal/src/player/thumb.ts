@@ -15,7 +15,7 @@
  * dial, reset or hold reaches the sound.
  */
 
-import * as Chord from '@bible/hymnal/chord';
+import * as Chord from '@manna/hymnal/chord';
 import { Data } from 'effect';
 
 import { type Cue, plain } from '~/feel/cue';

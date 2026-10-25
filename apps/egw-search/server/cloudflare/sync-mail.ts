@@ -13,7 +13,7 @@
 
 import { Array as Arr, Data, Option } from 'effect';
 
-import { type EgwSyncBook, isKnownUnavailable } from '@bible/core/corpus-supply';
+import { type EgwSyncBook, isKnownUnavailable } from '@manna/core/corpus-supply';
 
 import {
   type BookChange,

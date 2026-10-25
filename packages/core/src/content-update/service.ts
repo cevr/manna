@@ -45,7 +45,7 @@ interface ContentManifestSourceService {
 export class ContentManifestSource extends Context.Service<
   ContentManifestSource,
   ContentManifestSourceService
->()('@bible/core/content-update/ContentManifestSource') {
+>()('@manna/core/content-update/ContentManifestSource') {
   /** The host that cannot reach a manifest at all — a build with the runtime
    *  path deliberately off, and the layer every suite that is not testing the
    *  update seam supplies. Reported as `offline`, which is the truth. */
@@ -133,7 +133,7 @@ interface ContentActivationService {
 export class ContentActivation extends Context.Service<
   ContentActivation,
   ContentActivationService
->()('@bible/core/content-update/ContentActivation') {
+>()('@manna/core/content-update/ContentActivation') {
   /** The host with nothing to reopen: the CLI, whose next command is a new
    *  process, and every suite not testing the reader seam. */
   static Inert: Layer.Layer<ContentActivation> = Layer.succeed(
@@ -159,7 +159,7 @@ interface ContentUpdateService {
 }
 
 export class ContentUpdate extends Context.Service<ContentUpdate, ContentUpdateService>()(
-  '@bible/core/content-update/ContentUpdate',
+  '@manna/core/content-update/ContentUpdate',
 ) {
   static Live: Layer.Layer<
     ContentUpdate,

@@ -1,6 +1,6 @@
 // `film/no-test-seam`: product code never imports a test seam. A package's
 // test-only doubles and fixtures live in its `testing.ts` (`core/testing.ts`,
-// `tools/<area>/testing.ts`, `@bible/url-state/testing`, `@bible/core/<area>/testing`),
+// `tools/<area>/testing.ts`, `@manna/url-state/testing`, `@manna/core/<area>/testing`),
 // so a shipped import cannot reach them. The dead-export check counts a seam
 // as test code, so a product import of one is a take it does not see.
 //
@@ -24,8 +24,8 @@ import {
   Visitor,
 } from 'oxlint-plugin-effect/rule-bindings';
 
-/** A test seam of the repo's own: a relative path or a `@bible/` export whose last piece is `testing`. */
-const SEAM = /^(?:\.{1,2}\/|@bible\/)(?:.*\/)?testing(?:\.[cm]?[jt]sx?)?$/u;
+/** A test seam of the repo's own: a relative path or a `@bible/` or `@manna/` export whose last piece is `testing`. */
+const SEAM = /^(?:\.{1,2}\/|@(?:bible|manna)\/)(?:.*\/)?testing(?:\.[cm]?[jt]sx?)?$/u;
 
 const MESSAGE =
   "a test seam imported by product code: a testing.ts module holds a package's test-only doubles and fixtures, so a shipped import never reaches one. Move what this file needs out of the seam, into the module it belongs to.";

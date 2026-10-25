@@ -4,8 +4,8 @@
 // would load the place before); and each move is named by its cause, the
 // place's declaration saying which is a step Back walks.
 
-import { Location, UrlState } from '@bible/url-state';
-import { layerMemory } from '@bible/url-state/testing';
+import { Location, UrlState } from '@manna/url-state';
+import { layerMemory } from '@manna/url-state/testing';
 import { Effect, Fiber, Layer, Option, Stream } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { PageLoad } from './page-load.ts';

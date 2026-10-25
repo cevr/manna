@@ -548,7 +548,7 @@ a {
   }
 }
 
-/* The phone menu: @bible/ui's Dialog, a sheet of the paper from the top. */
+/* The phone menu: @manna/ui's Dialog, a sheet of the paper from the top. */
 .menu-backdrop {
   position: fixed;
   inset: 0;

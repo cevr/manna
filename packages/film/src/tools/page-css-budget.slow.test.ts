@@ -14,7 +14,7 @@ import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Context, Effect, FileSystem, Layer, Option, Struct } from 'effect';
 import { HttpServerRequest, HttpServerResponse } from 'effect/http';
-import { Place } from '@bible/url-state';
+import { Place } from '@manna/url-state';
 import { LAB_PAGES, LAB_SERVERS } from '../../../../apps/animations/server.ts';
 import { Places, servedPlace } from '../core/api.ts';
 import { PLACE_HREFS } from '../lab/fixtures/places.ts';

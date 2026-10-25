@@ -10,14 +10,14 @@ import {
   type EGWParagraphRef,
   type EGWParsedRef,
   type EGWSearchQuery,
-} from '@bible/core/egw';
+} from '@manna/core/egw';
 import {
   Reference,
   type Paragraph,
   type Publication,
   type RefcodeMatch,
-} from '@bible/core/writings';
-import { WritingsService } from '@bible/core/writings/service';
+} from '@manna/core/writings';
+import { WritingsService } from '@manna/core/writings/service';
 import { Array as Arr, Console, Effect, Option } from 'effect';
 import { Argument, Command, Flag } from 'effect/cli';
 

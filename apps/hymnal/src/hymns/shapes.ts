@@ -23,7 +23,7 @@
  * never given a fingering of another chord.
  */
 
-import * as Chord from '@bible/hymnal/chord';
+import * as Chord from '@manna/hymnal/chord';
 import { Array as Arr, Match, Option } from 'effect';
 
 /** A fretting finger: 1 the index, 4 the little finger. */

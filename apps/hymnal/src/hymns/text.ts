@@ -9,7 +9,7 @@
  * module of their own (`virtual:hymnal-chords`, `chords.ts`).
  */
 
-import { type Hymn, sung } from '@bible/hymnal/hymn';
+import { type Hymn, sung } from '@manna/hymnal/hymn';
 import { Option } from 'effect';
 
 export type Section =

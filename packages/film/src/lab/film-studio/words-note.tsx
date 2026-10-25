@@ -11,7 +11,7 @@
 import { For, Show } from '@solidjs/web';
 import { Effect, Option, Schema } from 'effect';
 import * as ActorAtom from 'effect-machine/atom';
-import { useAtomSet, useAtomValue } from '@bible/atom-solid';
+import { useAtomSet, useAtomValue } from '@manna/atom-solid';
 import { createEffect, createSignal, createUniqueId, untrack } from 'solid-js';
 import { NoteKind, type NoteWords } from '../../core/schema.ts';
 import { Actor } from '../actor.tsx';

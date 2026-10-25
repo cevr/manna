@@ -13,7 +13,7 @@
 // The tab maps the first frame its bundle's inline source map reads back to
 // the file that wrote it. A call from a file of the film's own source outside
 // `src/browser/` (the adapters) fails the case, as `host reach: <api> from
-// <file>`. A call from anywhere else (a library, `@bible/url-state`, `@bible/ui`,
+// <file>`. A call from anywhere else (a library, `@manna/url-state`, `@manna/ui`,
 // the fixtures' pages, or a script with no source map) is told and not
 // refused: those are the owners, or no film code. A `Location` write is not
 // wrapped (the browser makes its methods and `href` unforgeable): the lint

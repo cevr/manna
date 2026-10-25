@@ -11,11 +11,11 @@
  */
 
 import { BunServices } from '@effect/platform-bun';
-import { parseBibleQuery } from '@bible/core/bible';
-import { BibleService } from '@bible/core/bible/service';
-import * as BibleDbBun from '@bible/core/bible-db/bun';
-import { nodesToText } from '@bible/core/egw';
-import { WritingsService } from '@bible/core/writings/service';
+import { parseBibleQuery } from '@manna/core/bible';
+import { BibleService } from '@manna/core/bible/service';
+import * as BibleDbBun from '@manna/core/bible-db/bun';
+import { nodesToText } from '@manna/core/egw';
+import { WritingsService } from '@manna/core/writings/service';
 import { Cause, Context, Effect, Layer, Option } from 'effect';
 
 import { versesForBibleQuery } from '~/src/lib/bible-query';

@@ -430,7 +430,7 @@ const declaresIn = (source: Source, symbol: string) => {
 const declares = (text: string, symbol: string, file = 'code.ts') =>
   declaresIn(sourceOf(text, file), symbol);
 
-/** A package's name (`@bible/url-state`), written as a path: no file of this tree. */
+/** A package's name (`@manna/url-state`), written as a path: no file of this tree. */
 const PACKAGE_NAME = /^@[\w-]+\/[\w.-]+/;
 
 /** The directories the repo's root `.gitignore` names (`tmp/`, `**\/test-results/`): output, never in the tree. */
@@ -473,7 +473,7 @@ const anchorDrift = (
 /**
  * Each anchor looked up under the doc's bases: the first base that has its
  * first directory (and it is not ignored output) reads it. Under none, it is another tree's path, unless the
- * doc is whole and it is neither a package's (`@bible/url-state`, an
+ * doc is whole and it is neither a package's (`@manna/url-state`, an
  * installed `effect/Schema`) nor ignored output (`tmp/logs`).
  */
 const findAnchors = Effect.fn('test.docs.findAnchors')(function* (root: string, doc: Doc) {
@@ -1587,7 +1587,7 @@ describe('the docs', () => {
         path: 'whole.md',
         bases: ['', FILM_SRC],
         whole: true,
-        text: 'Its time (`pacakges/film/src/core/time.ts` `frameAtOrAfter`), through `@bible/url-state`, `effect/Schema` and `tmp/logs/latest`.',
+        text: 'Its time (`pacakges/film/src/core/time.ts` `frameAtOrAfter`), through `@manna/url-state`, `effect/Schema` and `tmp/logs/latest`.',
       };
       expect(yield* anchorsDrift(root, [whole])).toEqual([
         'whole.md: path pacakges/film/src/core/time.ts does not exist',

@@ -7,8 +7,8 @@
 // quiet line; the browser then stages the film (`mount.tsx`) and the
 // studio takes their place.
 
-import { RegistryProvider } from '@bible/atom-solid';
-import * as UrlAtom from '@bible/url-state/atom';
+import { RegistryProvider } from '@manna/atom-solid';
+import * as UrlAtom from '@manna/url-state/atom';
 import { clientOnly } from '@solidjs/web';
 import type { Component } from 'solid-js';
 import { Option } from 'effect';

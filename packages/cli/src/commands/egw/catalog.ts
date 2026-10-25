@@ -1,4 +1,4 @@
-import { EGWApiClient, type Schemas as EGWSchemas } from '@bible/core/egw';
+import { EGWApiClient, type Schemas as EGWSchemas } from '@manna/core/egw';
 import { Console, Effect, Stream } from 'effect';
 import { Command, Flag } from 'effect/cli';
 

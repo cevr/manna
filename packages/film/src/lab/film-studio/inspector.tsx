@@ -21,10 +21,10 @@
 // version shown is the one they hold (`keptInFilm`); another version's
 // Board shows its panels and nothing to press.
 
-import { useAtomRefresh, useAtomSet, useAtomValue } from '@bible/atom-solid';
-import { Dialog } from '@bible/ui/dialog';
-import { Separator } from '@bible/ui/separator';
-import { Sheet as UiSheet } from '@bible/ui/sheet';
+import { useAtomRefresh, useAtomSet, useAtomValue } from '@manna/atom-solid';
+import { Dialog } from '@manna/ui/dialog';
+import { Separator } from '@manna/ui/separator';
+import { Sheet as UiSheet } from '@manna/ui/sheet';
 import { For, type JSX, Show } from '@solidjs/web';
 import { Array as Arr, Boolean as Bool, Effect, Layer, Match, Option, Result } from 'effect';
 import * as ActorAtom from 'effect-machine/atom';

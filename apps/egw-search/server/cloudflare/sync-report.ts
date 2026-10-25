@@ -19,8 +19,8 @@ import {
   type EgwSyncBook,
   type EgwSyncFailure,
   unavailableReason,
-} from '@bible/core/corpus-supply';
-import type { ParagraphChangeRow } from '@bible/core/egw-db';
+} from '@manna/core/corpus-supply';
+import type { ParagraphChangeRow } from '@manna/core/egw-db';
 
 import { wordDiff } from './word-diff.ts';
 

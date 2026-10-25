@@ -6,7 +6,7 @@
  * search routes and assembles the public command tree.
  */
 
-import { isSearchQuery, parseEGWRef } from '@bible/core/egw';
+import { isSearchQuery, parseEGWRef } from '@manna/core/egw';
 import { Console, Effect, Option } from 'effect';
 import { Argument, Command } from 'effect/cli';
 

@@ -20,20 +20,20 @@ import {
   ContentStatusJson,
   ContentUpdate,
   ContentUpdateJson,
-} from '@bible/core/content-update';
+} from '@manna/core/content-update';
 import {
   ADAPTER_EXPECTATIONS,
   OVERRUN_REVISION,
   refusingContentUpdate,
-} from '@bible/core/content-update/testing';
+} from '@manna/core/content-update/testing';
 import {
   corpusGeneration,
   corpusRevision,
   CorpusSupply,
   type CorpusProvenance,
   TOPICS_SCHEMA_MAJOR,
-} from '@bible/core/corpus-supply';
-import { layerNativeTopicsArtifacts } from '@bible/core/corpus-supply/bun';
+} from '@manna/core/corpus-supply';
+import { layerNativeTopicsArtifacts } from '@manna/core/corpus-supply/bun';
 import { BunFileSystem } from '@effect/platform-bun';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Layer, Option, Schema } from 'effect';

@@ -100,7 +100,7 @@ interface EGWAuthService {
  * EGW Authentication Service
  */
 export class EGWAuth extends Context.Service<EGWAuth, EGWAuthService>()(
-  '@bible/core/egw/auth/EGWAuth',
+  '@manna/core/egw/auth/EGWAuth',
 ) {
   /**
    * Live implementation using OAuth2 client credentials flow.

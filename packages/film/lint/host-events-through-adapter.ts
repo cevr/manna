@@ -25,7 +25,7 @@
 // restricted names cannot; a `resize` or `pagehide` listener stays
 // legitimate, and so do an element's own press (`pointerdown`), hover and
 // moves. The `allow` option names events a file may still hear directly
-// (the key and drag events in `@bible/url-state` and egw-search, which have
+// (the key and drag events in `@manna/url-state` and egw-search, which have
 // no film adapters). The adapters (`browser/*-browser.ts`) say at each of
 // their own lines that they are the one. A source pattern is an early
 // warning: the e2e harness checks the same in the browser, whatever the
@@ -41,7 +41,7 @@ import {
 } from 'oxlint-plugin-effect/rule-bindings';
 import { definitionOf, isGlobal, memberName, type Named } from './nodes.ts';
 
-const URL = "use @bible/url-state's Location";
+const URL = "use @manna/url-state's Location";
 const KEYS = 'use Keys.listen (packages/film/src/browser/keys.ts)';
 const DRAG = 'use Pointer.press (packages/film/src/browser/pointer.ts)';
 

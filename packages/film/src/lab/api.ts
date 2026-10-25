@@ -42,7 +42,7 @@ const LabFailure = Schema.Union([Refusal, LabUnreachable]);
 /**
  * A read of the lab the server renders a page with and sends along, for the
  * client to adopt rather than read again (`Atom.serializable`, adopted by
- * `@bible/atom-solid`'s hooks): the read's answer, or its failure, encoded
+ * `@manna/atom-solid`'s hooks): the read's answer, or its failure, encoded
  * by `success`'s schema and `LabFailure`'s, under `key`, which names it
  * among the page's reads.
  */

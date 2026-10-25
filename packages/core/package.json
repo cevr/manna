@@ -1,5 +1,5 @@
 {
-  "name": "@bible/core",
+  "name": "@manna/core",
   "private": true,
   "type": "module",
   "exports": {

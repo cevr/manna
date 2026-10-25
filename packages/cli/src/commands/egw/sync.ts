@@ -1,4 +1,4 @@
-import { syncEgwCorpus, type EgwSyncProgress } from '@bible/core/corpus-supply';
+import { syncEgwCorpus, type EgwSyncProgress } from '@manna/core/corpus-supply';
 import { Console, Effect } from 'effect';
 import { Command, Flag } from 'effect/cli';
 

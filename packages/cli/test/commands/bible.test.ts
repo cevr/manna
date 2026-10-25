@@ -7,8 +7,8 @@ import {
   Reference,
   Verse,
   getBibleBook,
-} from '@bible/core/bible';
-import { BibleService } from '@bible/core/bible/service';
+} from '@manna/core/bible';
+import { BibleService } from '@manna/core/bible/service';
 import { Effect, Option } from 'effect';
 
 import { isStrongsNumber } from '../../src/commands/bible.js';

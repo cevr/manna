@@ -1,4 +1,4 @@
-/** Test-only surface of `@bible/core/search`, behind its own subpath.
+/** Test-only surface of `@manna/core/search`, behind its own subpath.
  *
  *  §9.7's golden query set has to be *one* module, and the CLI's suite lives in
  *  another package, so

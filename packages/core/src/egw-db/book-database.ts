@@ -879,7 +879,7 @@ export interface EGWParagraphDatabaseService {
    * paragraphs. Skips when the table is non-empty (so a healthy install pays
    * a single COUNT(*) on boot, nothing more). When empty, streams every
    * paragraph through `extract` (extractor lives in the caller — typically
-   * `extractScriptureRefs` from `@bible/core/egw`) and inserts the produced
+   * `extractScriptureRefs` from `@manna/core/egw`) and inserts the produced
    * rows in per-book batches.
    *
    * Exists because `storeBibleRefsBatch` was added after `storeParagraphsBatch`
@@ -1405,7 +1405,7 @@ const layerParagraphSchema: Layer.Layer<never, SqlError, SqlClient.SqlClient> = 
 export class EGWParagraphDatabase extends Context.Service<
   EGWParagraphDatabase,
   EGWParagraphDatabaseService
->()('@bible/core/egw-db/book-database/EGWParagraphDatabase') {
+>()('@manna/core/egw-db/book-database/EGWParagraphDatabase') {
   /**
    * Driver-agnostic layer over a database whose schema is already in place:
    * requires `SqlClient.SqlClient` and `SqlAtomic`, and runs no DDL until a

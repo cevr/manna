@@ -55,7 +55,7 @@ interface EGWTokenStoreService {
 }
 
 export class EGWTokenStore extends Context.Service<EGWTokenStore, EGWTokenStoreService>()(
-  '@bible/core/egw/token-store/EGWTokenStore',
+  '@manna/core/egw/token-store/EGWTokenStore',
 ) {
   /**
    * Filesystem-backed token store. Writes JSON to `tokenFile` (resolved against

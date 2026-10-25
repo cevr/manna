@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { Effect, Option } from 'effect';
 
-import type { NeighborScope } from '@bible/core/search';
-import { NO_FILTER, NO_SELECTION } from '@bible/core/writings';
+import type { NeighborScope } from '@manna/core/search';
+import { NO_FILTER, NO_SELECTION } from '@manna/core/writings';
 
 import {
   MAX_TOP_K,

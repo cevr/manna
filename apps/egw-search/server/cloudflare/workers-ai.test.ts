@@ -8,7 +8,7 @@ import {
   QUERY_PREFIX,
   quantize,
   truncateToMrl,
-} from '@bible/core/search';
+} from '@manna/core/search';
 
 import { EMBEDDING_BATCH, workersAiDocuments, workersAiEmbedder } from './workers-ai.ts';
 

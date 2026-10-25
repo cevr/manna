@@ -24,9 +24,9 @@
 import { Array as Arr, Effect, Option, Schema } from 'effect';
 import * as SqlClient from 'effect/sql/SqlClient';
 
-import { paragraphIdentity } from '@bible/core/egw-db';
-import { type QueryEmbedderUnavailable, vectorDocument } from '@bible/core/search';
-import { APPARATUS_AUTHORS, APPARATUS_TYPES, EGW_SCOPE_AUTHORS } from '@bible/core/writings';
+import { paragraphIdentity } from '@manna/core/egw-db';
+import { type QueryEmbedderUnavailable, vectorDocument } from '@manna/core/search';
+import { APPARATUS_AUTHORS, APPARATUS_TYPES, EGW_SCOPE_AUTHORS } from '@manna/core/writings';
 
 import { vectorMetadata } from './vectorize.ts';
 

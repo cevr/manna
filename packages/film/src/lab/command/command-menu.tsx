@@ -8,9 +8,9 @@
 // runs once the menu has closed and focus is back on the page, so what it
 // focuses (a note's composer) keeps focus. Its rows are keyed by their
 // command (`rowKey`): made again each frame a film plays, a row keeps its
-// element under the pointer. Hosted in @bible/ui's Dialog.
+// element under the pointer. Hosted in @manna/ui's Dialog.
 
-import { Dialog } from '@bible/ui/dialog';
+import { Dialog } from '@manna/ui/dialog';
 import { For, Show } from '@solidjs/web';
 import { Option } from 'effect';
 import { createMemo, createSignal, onCleanup } from 'solid-js';

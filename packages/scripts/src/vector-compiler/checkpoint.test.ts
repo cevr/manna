@@ -13,7 +13,7 @@
  */
 
 import { describe, expect, it } from 'bun:test';
-import { DIMENSIONS, QueryEmbedder, QueryEmbedderUnavailable } from '@bible/core/search';
+import { DIMENSIONS, QueryEmbedder, QueryEmbedderUnavailable } from '@manna/core/search';
 import { BunServices } from '@effect/platform-bun';
 import { Console, Effect, FileSystem, Layer, Option } from 'effect';
 import { systemError } from 'effect/PlatformError';

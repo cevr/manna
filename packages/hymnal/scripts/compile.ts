@@ -20,8 +20,8 @@
  */
 
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { HymnalService, HymnId } from '@bible/core/hymnal';
-import { layerHymnalBun } from '@bible/core/hymnal/bun';
+import { HymnalService, HymnId } from '@manna/core/hymnal';
+import { layerHymnalBun } from '@manna/core/hymnal/bun';
 import { ConfigProvider, Data, Effect, Layer, Option, Result, Schema } from 'effect';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';

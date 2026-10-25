@@ -16,7 +16,7 @@
  *  only assert that the test can imitate them.
  */
 
-import { EGW_SCOPE_AUTHORS } from '@bible/core/writings';
+import { EGW_SCOPE_AUTHORS } from '@manna/core/writings';
 import { Database } from 'bun:sqlite';
 import { describe, expect, it } from 'bun:test';
 import { Effect, Option } from 'effect';

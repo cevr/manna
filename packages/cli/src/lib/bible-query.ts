@@ -1,5 +1,5 @@
-import { Reference, type BibleError, type ParsedBibleQuery, type Verse } from '@bible/core/bible';
-import { BibleService } from '@bible/core/bible/service';
+import { Reference, type BibleError, type ParsedBibleQuery, type Verse } from '@manna/core/bible';
+import { BibleService } from '@manna/core/bible/service';
 import { Effect, Match } from 'effect';
 
 const chapterVerses = (book: number, chapter: number) =>

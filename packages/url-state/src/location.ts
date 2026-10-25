@@ -6,7 +6,7 @@
  *
  * - `./location-browser.ts`: the tab's `window.history`, the only module
  *   allowed to touch `window.location`, `history` or `popstate`;
- * - `./testing.ts` (`@bible/url-state/testing`): a history stack in memory,
+ * - `./testing.ts` (`@manna/url-state/testing`): a history stack in memory,
  *   with Back and Forward, for tests;
  * - `./location-server.ts`: the request URL, read-only, for server rendering.
  *
@@ -49,7 +49,7 @@ interface LocationService {
 }
 
 export class Location extends Context.Service<Location, LocationService>()(
-  '@bible/url-state/Location',
+  '@manna/url-state/Location',
 ) {}
 
 /** The path-relative form of a URL: what an entry holds. */

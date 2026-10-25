@@ -15,12 +15,12 @@ import {
   ContentActivation,
   ContentUpdate,
   layerHttpContentManifest,
-} from '@bible/core/content-update';
-import { CorpusSupply, topicsReleaseSource } from '@bible/core/corpus-supply';
+} from '@manna/core/content-update';
+import { CorpusSupply, topicsReleaseSource } from '@manna/core/corpus-supply';
 import {
   layerNativeTopicsArtifacts,
   type NativeFileArtifactSource,
-} from '@bible/core/corpus-supply/bun';
+} from '@manna/core/corpus-supply/bun';
 import { BunServices } from '@effect/platform-bun';
 import { Config, Context, Effect, Layer, Path } from 'effect';
 import { FetchHttpClient } from 'effect/http';

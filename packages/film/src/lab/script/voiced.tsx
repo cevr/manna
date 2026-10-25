@@ -10,8 +10,8 @@
 // or a hold, its seconds picked from a few). Every edit is a tap on a
 // choice, written at once.
 
-import { Toggle } from '@bible/ui/toggle';
-import { ToggleGroup } from '@bible/ui/toggle-group';
+import { Toggle } from '@manna/ui/toggle';
+import { ToggleGroup } from '@manna/ui/toggle-group';
 import { For, Show } from '@solidjs/web';
 import type { Accessor } from 'solid-js';
 import { Array as Arr, Match, Option } from 'effect';

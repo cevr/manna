@@ -42,7 +42,7 @@ interface HymnalServiceApi {
 }
 
 export class HymnalService extends Context.Service<HymnalService, HymnalServiceApi>()(
-  '@bible/core/hymnal/HymnalService',
+  '@manna/core/hymnal/HymnalService',
 ) {
   static Test = (
     config: {

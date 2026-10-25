@@ -8,7 +8,7 @@ import {
   SearchResult,
   SearchService,
   VectorIndexUnavailable,
-} from '@bible/core/search';
+} from '@manna/core/search';
 
 import type { SearchRequest, SearchResponse, SearchSlot } from './api.js';
 import { surroundingParagraphs } from './context.js';

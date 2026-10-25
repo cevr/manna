@@ -350,7 +350,7 @@ const readSchemaMajor = (
   );
 
 export class WikiService extends Context.Service<WikiService, WikiServiceApi>()(
-  '@bible/core/wiki/WikiService',
+  '@manna/core/wiki/WikiService',
 ) {
   /** Backed by an installed topics artifact, plus the catalog `TopicService`
    *  reads out of `bible.db`. Composing over `TopicService` rather than

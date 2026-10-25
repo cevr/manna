@@ -65,8 +65,8 @@
  * Each run exits 1 on a problem.
  */
 
-import { HymnalService, HymnId } from '@bible/core/hymnal';
-import { layerHymnalBun } from '@bible/core/hymnal/bun';
+import { HymnalService, HymnId } from '@manna/core/hymnal';
+import { layerHymnalBun } from '@manna/core/hymnal/bun';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Database } from 'bun:sqlite';
 import {

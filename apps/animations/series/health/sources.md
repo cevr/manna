@@ -23,7 +23,7 @@ per-strand search logs, are in `research/`:
   is a stub (no books, a two-column `paragraphs` table), so every `egw` command dies with
   `no such column: book_id`. `--remote` needs `EGW_CLIENT_ID`/`EGW_CLIENT_SECRET`, and
   `packages/cli/.env` is absent. The searches therefore went to **egw.cvr.im**, the repo's
-  own egw-search server (`apps/egw-search`, same `@bible/core` search over the full corpus),
+  own egw-search server (`apps/egw-search`, same `@manna/core` search over the full corpus),
   through `GET /api/search?q=…&scope=egw|pioneer&context=N`. `research/q.ts` lists hits and
   `research/ctx.ts` prints a hit with its neighbouring paragraphs. The refcodes are the ones
   the corpus prints, the same as `bible egw lookup` would take. Nothing in `~/.bible` or the

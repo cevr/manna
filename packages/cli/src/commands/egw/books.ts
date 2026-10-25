@@ -1,4 +1,4 @@
-import { WritingsService } from '@bible/core/writings/service';
+import { WritingsService } from '@manna/core/writings/service';
 import { Console, Effect, Option } from 'effect';
 import { Command, Flag } from 'effect/cli';
 

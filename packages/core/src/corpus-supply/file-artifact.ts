@@ -167,14 +167,14 @@ export interface FileArtifactInstallerService {
 export class BibleArtifactRecipe extends Context.Service<
   BibleArtifactRecipe,
   FileArtifactRecipeService
->()('@bible/core/corpus-supply/BibleArtifactRecipe') {}
+>()('@manna/core/corpus-supply/BibleArtifactRecipe') {}
 
 /** The Installer key of one File Corpus: reading the active Provenance and
  *  performing the verified atomic swap. */
 export class BibleArtifactInstaller extends Context.Service<
   BibleArtifactInstaller,
   FileArtifactInstallerService
->()('@bible/core/corpus-supply/BibleArtifactInstaller') {}
+>()('@manna/core/corpus-supply/BibleArtifactInstaller') {}
 
 /** One File Corpus's whole identity: its name in receipts and errors, the
  *  label it uses in operator-facing causes, the storage names every host
@@ -317,12 +317,12 @@ export const readTopicsSchemaMajor: (raw: string) => Option.Option<number> =
 export class TopicsArtifactRecipe extends Context.Service<
   TopicsArtifactRecipe,
   FileArtifactRecipeService
->()('@bible/core/corpus-supply/TopicsArtifactRecipe') {}
+>()('@manna/core/corpus-supply/TopicsArtifactRecipe') {}
 
 export class TopicsArtifactInstaller extends Context.Service<
   TopicsArtifactInstaller,
   FileArtifactInstallerService
->()('@bible/core/corpus-supply/TopicsArtifactInstaller') {}
+>()('@manna/core/corpus-supply/TopicsArtifactInstaller') {}
 
 /** The Topics Artifact: the wiki's compiled authored cores. Unlike Bible it is
  *  best-effort — §3.5's degradation posture wraps its `ensure` in a catch, so a

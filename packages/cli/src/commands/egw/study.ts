@@ -1,7 +1,7 @@
-import { EGWApiClient, nodesToText, type Schemas as EGWSchemas } from '@bible/core/egw';
-import { CorpusSupply, Target } from '@bible/core/corpus-supply';
-import { publicationId, type SearchHit } from '@bible/core/writings';
-import { WritingsService } from '@bible/core/writings/service';
+import { EGWApiClient, nodesToText, type Schemas as EGWSchemas } from '@manna/core/egw';
+import { CorpusSupply, Target } from '@manna/core/corpus-supply';
+import { publicationId, type SearchHit } from '@manna/core/writings';
+import { WritingsService } from '@manna/core/writings/service';
 import { Console, Effect, FileSystem, Option, Result, Stream } from 'effect';
 import { Argument, Command, Flag } from 'effect/cli';
 

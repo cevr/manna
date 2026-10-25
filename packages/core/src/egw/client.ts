@@ -96,7 +96,7 @@ interface EGWApiClientService {
  * EGW API Client Service
  */
 export class EGWApiClient extends Context.Service<EGWApiClient, EGWApiClientService>()(
-  '@bible/core/egw/client/EGWApiClient',
+  '@manna/core/egw/client/EGWApiClient',
 ) {
   /**
    * Live implementation using HTTP client and EGW Auth.

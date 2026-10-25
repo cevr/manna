@@ -32,14 +32,14 @@ import { Stage } from 'alchemy/Stage';
 import * as D1Client from '@effect/sql-d1/D1Client';
 import { Effect, Layer, Option, Scope } from 'effect';
 
-import { EGWParagraphDatabase } from '@bible/core/egw-db';
+import { EGWParagraphDatabase } from '@manna/core/egw-db';
 import {
   MODEL_FINGERPRINT,
   QueryEmbedder,
   SearchCorpusSources,
   SearchService,
   VectorNeighbors,
-} from '@bible/core/search';
+} from '@manna/core/search';
 
 import { VectorIndexLoad } from '../vector-index.js';
 import { D1Atomic } from './d1-atomic.ts';

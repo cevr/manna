@@ -1,12 +1,12 @@
 /**
- * The phone menu: the header's links in @bible/ui's Dialog, opened by the
+ * The phone menu: the header's links in @manna/ui's Dialog, opened by the
  * menu button. Its one piece of state, whether it is open, is local to it;
  * nothing else on the page reads it and the address does not carry it.
  * Focus moves into the dialog when it opens and back to the button when it
  * closes, Escape and a press outside close it, and the page behind it does
  * not scroll.
  */
-import { Dialog } from '@bible/ui/dialog';
+import { Dialog } from '@manna/ui/dialog';
 import { For } from '@solidjs/web';
 import { createSignal } from 'solid-js';
 

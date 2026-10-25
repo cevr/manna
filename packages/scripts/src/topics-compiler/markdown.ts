@@ -13,7 +13,7 @@ import {
   TextInline,
   type Block,
   type Inline,
-} from '@bible/core/wiki';
+} from '@manna/core/wiki';
 
 /** The authored subset of markdown the wiki compiles. Deliberately small: the
  *  §2.2 node union is the contract clients render, and every construct

@@ -1,4 +1,4 @@
-# @bible/url-state
+# @manna/url-state
 
 URL state as Effect Schemas: a page declares the address it lives at once, as
 schemas, and reads and writes it through that one declaration. The model
@@ -6,8 +6,8 @@ follows [nuqs](https://nuqs.dev): each key has a codec and a default, a key
 at its default is left out of the link, and a broken key reads as its default
 rather than failing the page.
 
-The core depends on `effect` alone. `@bible/url-state/atom` binds it to Effect
-atoms, and `@bible/atom-solid` renders those atoms in Solid, on the server
+The core depends on `effect` alone. `@manna/url-state/atom` binds it to Effect
+atoms, and `@manna/atom-solid` renders those atoms in Solid, on the server
 and in the browser.
 
 ## The model
@@ -38,7 +38,7 @@ section with no keys, when left out). Its schema runs between an href
 and the place's value; `None` means the href is not this place.
 
 ```ts
-import { Codec, Field, Place } from '@bible/url-state';
+import { Codec, Field, Place } from '@manna/url-state';
 
 /** The film lab: a film's scene, the cue on screen, and the playhead. */
 export const Lab = Place.make({
@@ -94,7 +94,7 @@ every value a place's type admits (`effect/Arbitrary`).
 A codec for one key is a `Schema.Codec<A, string>`; a codec for a repeated
 key is a `Schema.Codec<A, ReadonlyArray<string>>`. Any schema of either shape
 works: egw-search reads its signed axes (`?type=book&type=-periodical`) with
-the API's own `SignedFromStrings` from `@bible/core/writings`, through
+the API's own `SignedFromStrings` from `@manna/core/writings`, through
 `Field.keys`, so the link and the endpoint share one codec.
 
 `Field` lifts codecs to keys:
@@ -141,7 +141,7 @@ Three layers fill it:
   `hashchange` listener on the window (however it is spelled, a bare
   `addEventListener` among them) out of every other module of this
   package, of egw-search, and of the film's lab, player and browser modules.
-- `layerMemory(href)` (`@bible/url-state/testing`): a history stack in memory;
+- `layerMemory(href)` (`@manna/url-state/testing`): a history stack in memory;
   `back` at its first entry stays there. `LocationHistory` adds `forward` and the stack (`entries`)
   for a test to drive and read.
 - `layerServer(href)`: the request URL without its hash, read-only. A write
@@ -169,11 +169,11 @@ whose writes end where the entry already is writes nothing.
 
 ## The atom binding
 
-`@bible/url-state/atom` is a thin binding: every atom reads and writes through
+`@manna/url-state/atom` is a thin binding: every atom reads and writes through
 the core's services and holds no URL state of its own.
 
 ```ts
-import * as UrlAtom from '@bible/url-state/atom';
+import * as UrlAtom from '@manna/url-state/atom';
 
 const lab = UrlAtom.place(Lab); // Writable<Option<Lab value>, Lab value>, one per place, at module level
 ```
@@ -243,7 +243,7 @@ renderToString(() => (
 Path and query read the same on the server and in the browser. A browser
 never sends the hash, so a place with hash keys carries a server value
 (`Atom.withServerValue`): the place read from its href without the hash,
-every hash key at its default. `@bible/atom-solid`'s hooks render that value
+every hash key at its default. `@manna/atom-solid`'s hooks render that value
 on the server and through the client's hydration pass, so the two produce the
 same markup, and then the real hash. `packages/atom-solid/test/ssr` proves it:
 `server.test.ts` renders the lab place (in the gate), and

@@ -15,7 +15,7 @@
 // marks); a series draft's reader its draft's
 // (`review/draft.tsx`). Either way the fill voices the beat again first.
 
-import { useAtomRefresh, useAtomSet, useAtomValue } from '@bible/atom-solid';
+import { useAtomRefresh, useAtomSet, useAtomValue } from '@manna/atom-solid';
 import { Array as Arr, Data, Effect, Exit, Fiber, Match, Option, Schedule, Stream } from 'effect';
 import { Machine } from 'effect-machine';
 import * as ActorAtom from 'effect-machine/atom';

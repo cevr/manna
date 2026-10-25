@@ -87,7 +87,7 @@ const MESSAGES = {
   'host-events-through-adapter.ts:10 film/host-events-through-adapter':
     "window.addEventListener('keydown') hears the host directly: use Keys.listen (packages/film/src/browser/keys.ts).",
   'host-events-through-adapter.ts:12 film/host-events-through-adapter':
-    "window.addEventListener('popstate') hears the host directly: use @bible/url-state's Location.",
+    "window.addEventListener('popstate') hears the host directly: use @manna/url-state's Location.",
   'host-events-through-adapter.ts:15 film/host-events-through-adapter':
     "self.addEventListener('pointercancel') hears the host directly: use Pointer.press (packages/film/src/browser/pointer.ts).",
   'host-events-through-adapter.ts:19 film/host-events-through-adapter':
@@ -95,7 +95,7 @@ const MESSAGES = {
   'host-events-through-adapter.ts:21 film/host-events-through-adapter':
     'el.setPointerCapture holds a press outside its owner: use Pointer.press (packages/film/src/browser/pointer.ts).',
   'host-events-through-adapter.ts:33 film/host-events-through-adapter':
-    "addEventListener('popstate') hears the host directly: use @bible/url-state's Location.",
+    "addEventListener('popstate') hears the host directly: use @manna/url-state's Location.",
   'host-events-through-adapter.ts:41 film/host-events-through-adapter':
     'document.onkeydown hears the host directly: use Keys.listen (packages/film/src/browser/keys.ts).',
   'host-events-through-adapter.ts:43 film/host-events-through-adapter':
@@ -111,13 +111,13 @@ const MESSAGES = {
   'keys-through-keymap.tsx:10 film/keys-through-keymap':
     'a JSX handler hears keydown on its own: declare a command with its keys (packages/film/src/command/command.ts), registered with the page hub.',
   'keys-through-keymap.tsx:18 film/keys-through-keymap':
-    'addEventListener hears contextmenu on its own: open a context menu through @bible/ui ContextMenu over the selection’s commands (packages/film/src/lab/command/).',
+    'addEventListener hears contextmenu on its own: open a context menu through @manna/ui ContextMenu over the selection’s commands (packages/film/src/lab/command/).',
   'focus-through-focus-for.ts:10 film/focus-through-focus-for':
     'a focus moved from script past focusFor: call focusFor(el, input) (packages/film/src/lab/focus.ts) with the input that asked, so the ring shows iff a key did.',
   'booleans-through-pressed.tsx:28 film/booleans-through-pressed':
     "a boolean written as a string by hand: pressed(on) (packages/film/src/lab/pressed.ts) types it 'true' | 'false'.",
   'history-through-host.ts:11 film/history-through-host':
-    "a history move chosen here: a place's field declares its policy (Place.history, @bible/url-state), and the address bar is written through addressOn (packages/film/src/browser/host.ts).",
+    "a history move chosen here: a place's field declares its policy (Place.history, @manna/url-state), and the address bar is written through addressOn (packages/film/src/browser/host.ts).",
   'one-clock-epsilon.ts:12 film/one-clock-epsilon':
     'a nudge written beside a time: put the time on its grid through packages/film/src/core/time.ts (frameAtOrAfter, frameAtOrBefore, onTheMs, heardAtOrAfter, justBefore), or judge two times one with CLOCK_EPSILON, so one owner rounds every time.',
   'lock-through-sqlite.ts:11 film/lock-through-sqlite':

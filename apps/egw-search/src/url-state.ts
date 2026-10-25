@@ -9,14 +9,14 @@
  * restores a previous URL, the workspace atom changes, and each pane's query
  * re-runs.
  *
- * This module declares the workspace as a `@bible/url-state` place: what each
+ * This module declares the workspace as a `@manna/url-state` place: what each
  * key means, its default, and how a change to it enters history. Reading and
  * writing are that one declaration run in either direction, so a link this app
  * writes is a link it reads, by construction. The operations on one pane's
  * state live here too. `./app.tsx` reads and writes the place through its atom.
  */
 
-import { Codec, Field, Place } from '@bible/url-state';
+import { Codec, Field, Place } from '@manna/url-state';
 import { Array as Arr, Option, Schema } from 'effect';
 
 import {

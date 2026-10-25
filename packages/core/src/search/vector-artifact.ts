@@ -32,12 +32,12 @@ import { parseVectorIndex, type VectorIndex } from './vector-index.js';
 class VectorsArtifactRecipe extends Context.Service<
   VectorsArtifactRecipe,
   FileArtifactRecipeService
->()('@bible/core/corpus-supply/VectorsArtifactRecipe') {}
+>()('@manna/core/corpus-supply/VectorsArtifactRecipe') {}
 
 class VectorsArtifactInstaller extends Context.Service<
   VectorsArtifactInstaller,
   FileArtifactInstallerService
->()('@bible/core/corpus-supply/VectorsArtifactInstaller') {}
+>()('@manna/core/corpus-supply/VectorsArtifactInstaller') {}
 
 /** The Vectors Artifact: §9.2's flat index as a File Corpus.
  *
@@ -74,7 +74,7 @@ interface VectorIndexBytesApi {
 }
 
 export class VectorIndexBytes extends Context.Service<VectorIndexBytes, VectorIndexBytesApi>()(
-  '@bible/core/search/VectorIndexBytes',
+  '@manna/core/search/VectorIndexBytes',
 ) {
   /** The layer a host provides when it deliberately ships no index — the web
    *  client before the artifact exists, and every test that is not about the
@@ -120,7 +120,7 @@ export type LoadedVectorIndex =
  *  inside the layer.
  */
 export class ResolvedVectorIndex extends Context.Service<ResolvedVectorIndex, LoadedVectorIndex>()(
-  '@bible/core/search/ResolvedVectorIndex',
+  '@manna/core/search/ResolvedVectorIndex',
 ) {
   static layerOf = (index: LoadedVectorIndex): Layer.Layer<ResolvedVectorIndex> =>
     Layer.succeed(ResolvedVectorIndex, index);

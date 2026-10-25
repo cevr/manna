@@ -1,10 +1,10 @@
 // The studio's one sheet (design language §7) and the one rule a sheet a URL
 // keeps open is dismissed by. Every sheet stands in `Sheet`: an inspector.
 
-import { useAtomValue } from '@bible/atom-solid';
-import { Sheet as UiSheet } from '@bible/ui/sheet';
-import { Location } from '@bible/url-state';
-import * as UrlAtom from '@bible/url-state/atom';
+import { useAtomValue } from '@manna/atom-solid';
+import { Sheet as UiSheet } from '@manna/ui/sheet';
+import { Location } from '@manna/url-state';
+import * as UrlAtom from '@manna/url-state/atom';
 import { type JSX, Show } from '@solidjs/web';
 import { Boolean as Bool, type Context, Effect, Match, Option } from 'effect';
 import { createEffect, createSignal, untrack } from 'solid-js';
@@ -78,7 +78,7 @@ export const useSheetDismissal = (
 
 /**
  * The sheet of the selected thing (design language §7), the one frame an
- * inspector stands in: hosted in @bible/ui's Sheet,
+ * inspector stands in: hosted in @manna/ui's Sheet,
  * not over the page (it stays live, a tap outside keeps it open, and only the
  * panel takes presses); beside the page on a laptop, swiped away to the right;
  * on a phone a bottom sheet standing on the shell's floor (and the dock), swiped

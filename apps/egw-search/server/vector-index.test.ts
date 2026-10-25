@@ -11,13 +11,13 @@ import {
   MODEL_FINGERPRINT,
   QueryEmbedder,
   VectorIndexBytes,
-} from '@bible/core/search';
+} from '@manna/core/search';
 import {
   GOLDEN_TOPIC_QUERY,
   goldenSearchSources,
   goldenVector,
   goldenVectorIndexBytes,
-} from '@bible/core/search/testing';
+} from '@manna/core/search/testing';
 
 import { SearchApi } from './api.js';
 import { SearchGroupLive } from './search-api.js';

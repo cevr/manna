@@ -39,7 +39,7 @@ import {
 import { HttpApiBuilder } from 'effect/http-api';
 import { SqlClient } from 'effect/sql';
 
-import { EGWParagraphDatabase } from '@bible/core/egw-db';
+import { EGWParagraphDatabase } from '@manna/core/egw-db';
 import {
   layerFileVectorIndexBytes,
   loadVectorIndex,
@@ -47,8 +47,8 @@ import {
   type LoadedVectorIndex,
   SearchCorpusSources,
   type VectorIndexBytes,
-} from '@bible/core/search';
-import { layerBunEmbedder } from '@bible/core/search/bun';
+} from '@manna/core/search';
+import { layerBunEmbedder } from '@manna/core/search/bun';
 
 import { SearchApi } from './api.js';
 import { SearchGroupLive } from './search-api.js';

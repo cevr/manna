@@ -1,5 +1,5 @@
-import { TOPICS_SCHEMA_MAJOR, TOPICS_SCHEMA_MINOR } from '@bible/core/corpus-supply';
-import { isBoundaryAt, normalizeAlias, type Block, type CitationInline } from '@bible/core/wiki';
+import { TOPICS_SCHEMA_MAJOR, TOPICS_SCHEMA_MINOR } from '@manna/core/corpus-supply';
+import { isBoundaryAt, normalizeAlias, type Block, type CitationInline } from '@manna/core/wiki';
 import { Effect, Option, Schema } from 'effect';
 
 import { blocksToText, collectCitations, parseBody, type ParsedBody } from './markdown.js';

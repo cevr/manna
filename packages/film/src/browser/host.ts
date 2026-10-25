@@ -8,7 +8,7 @@
 // instead of stubbing a global. Framework-free: the player,
 // which the render page loads, imports it.
 
-import { Location, UrlState } from '@bible/url-state';
+import { Location, UrlState } from '@manna/url-state';
 import { Clock, Duration, Effect, Layer, Option, Schedule, Scope, Stream } from 'effect';
 import type { Context } from 'effect';
 import { pageMove } from '../core/api.ts';
@@ -25,7 +25,7 @@ import type { Viewport } from './viewport.ts';
 /**
  * Every service the host gives a page: the address bar among them
  * (`Location`, written through `UrlState` so writes in one tick make one
- * history entry, `@bible/url-state`), and the window's media queries
+ * history entry, `@manna/url-state`), and the window's media queries
  * (`Viewport`). A server render's host is `host-server.ts`'s.
  */
 export type BrowserServices =

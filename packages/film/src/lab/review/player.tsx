@@ -3,7 +3,7 @@
 // plays on a clock of its own, and the ref that joins a media element to a
 // player's driver.
 
-import { useAtomSet, useAtomValue } from '@bible/atom-solid';
+import { useAtomSet, useAtomValue } from '@manna/atom-solid';
 import { Match, Option } from 'effect';
 import * as ActorAtom from 'effect-machine/atom';
 import { Show } from '@solidjs/web';

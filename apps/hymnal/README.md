@@ -14,7 +14,7 @@ over the list. A gear in the title row opens Settings (appearance, chord style) 
 sheet. A hymn opens pushed over the home screen. A hymn shows its words in the order they are sung: each stanza
 under its number, and the refrain written out each time it is sung.
 
-- The words come from the compiled 1985 set (`@bible/hymnal`). The
+- The words come from the compiled 1985 set (`@manna/hymnal`). The
   `virtual:hymnal` plugin (`vite/hymnal.ts`) derives them when the app is
   bundled, for the web and the native bundle alike, so the app opens offline
   and no derived file is committed.
@@ -107,7 +107,7 @@ hymn's move.
   decoded only when it is shown with chords on, once (`chordBook` in
   `src/hymns/chords.ts`).
 - The chords are degrees above the hymn's key, spelled with
-  `@bible/hymnal/chord` in the key the move reaches: the printed key at rest
+  `@manna/hymnal/chord` in the key the move reaches: the printed key at rest
   and after a whole octave, else the key a signature names on that pitch.
 - `src/hymns/chords.property.test.ts` walks every hymn, section and syllable
   at every transpose and capo; its Simple cases hold every hymn's Simple
@@ -308,7 +308,7 @@ no longer matches the script, so an edit to `wheat.svg` needs `bun run icon`.
 The 1985 SDA Hymnal's recordings are in the Cloudflare R2 bucket `cvr-hymns`,
 served publicly at `https://hymns.cvr.im`. The app builds each URL from
 `src/remote.ts` (`audioUrl(n)` is `https://hymns.cvr.im/audio/warm-1/sdah/<n>.mp3`).
-That module imports only `@bible/hymnal/recordings`, which imports nothing, so
+That module imports only `@manna/hymnal/recordings`, which imports nothing, so
 the app, Vite and the infra all read it.
 
 Key layout:

@@ -93,9 +93,9 @@ import {
   layerEgwWritingsAssetSource,
   planEgwSync,
   reportEgwSync,
-} from '@bible/core/corpus-supply';
-import { EGWApiClient, EGWAuth, EGWTokenStore } from '@bible/core/egw';
-import { EGWParagraphDatabase, type ParagraphChangeRow } from '@bible/core/egw-db';
+} from '@manna/core/corpus-supply';
+import { EGWApiClient, EGWAuth, EGWTokenStore } from '@manna/core/egw';
+import { EGWParagraphDatabase, type ParagraphChangeRow } from '@manna/core/egw-db';
 
 import {
   BOOK_VECTORS_PAGE,

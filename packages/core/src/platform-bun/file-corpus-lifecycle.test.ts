@@ -30,12 +30,12 @@ import {
 class FixtureArtifactRecipe extends Context.Service<
   FixtureArtifactRecipe,
   FileArtifactRecipeService
->()('@bible/core/corpus-supply/test/FixtureArtifactRecipe') {}
+>()('@manna/core/corpus-supply/test/FixtureArtifactRecipe') {}
 
 class FixtureArtifactInstaller extends Context.Service<
   FixtureArtifactInstaller,
   FileArtifactInstallerService
->()('@bible/core/corpus-supply/test/FixtureArtifactInstaller') {}
+>()('@manna/core/corpus-supply/test/FixtureArtifactInstaller') {}
 
 /** The wiring read at its own boundary: the layer under test is built per case
  *  from a temp directory, so the provide belongs to this helper rather than to a

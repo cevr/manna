@@ -36,7 +36,7 @@ secrets). To add vectors for books already installed, start an instance with
 `{"mode":"sync","reembed":[<book id>, ...]}`.
 
 The URL is the search state. `src/url-state.ts` declares the workspace as a
-`@bible/url-state` place — each pane's keys, their defaults, and which changes
+`@manna/url-state` place — each pane's keys, their defaults, and which changes
 push a history entry (a new query, a pane added or closed) or replace it (a
 filter, the limit) — and the page reads and writes it through the place atom.
 `src/scroll.ts` keeps each history entry's scroll position. Links keep the

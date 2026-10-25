@@ -10,7 +10,7 @@
 // page once it is open, then written as it changes. A landed send leaves the
 // draft only what the lab still asks, so a page sent to its end keeps none.
 
-import { useAtomSet, useAtomValue } from '@bible/atom-solid';
+import { useAtomSet, useAtomValue } from '@manna/atom-solid';
 import { Effect, Match, Option, Record } from 'effect';
 import * as ActorAtom from 'effect-machine/atom';
 import type { Accessor, ParentProps } from 'solid-js';

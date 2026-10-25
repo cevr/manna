@@ -61,7 +61,7 @@ interface BibleServiceApi {
 }
 
 export class BibleService extends Context.Service<BibleService, BibleServiceApi>()(
-  '@bible/core/bible/BibleService',
+  '@manna/core/bible/BibleService',
 ) {
   static Live: Layer.Layer<BibleService, BibleError, BibleDatabase> = Layer.effect(
     BibleService,

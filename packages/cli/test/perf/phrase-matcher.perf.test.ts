@@ -26,7 +26,7 @@ import {
   normalizeAlias,
   normalizeScan,
   topicSlug,
-} from '@bible/core/wiki';
+} from '@manna/core/wiki';
 import { Effect, Option } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 

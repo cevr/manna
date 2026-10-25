@@ -1,9 +1,9 @@
 import { BunServices } from '@effect/platform-bun';
 import { Argument, Command, Flag } from 'effect/cli';
-import { formatBibleReference, getBibleBook, parseBibleQuery, type Verse } from '@bible/core/bible';
-import { BibleService } from '@bible/core/bible/service';
-import { BibleDatabase, type ConcordanceHit, type StrongsEntry } from '@bible/core/bible-db';
-import * as BibleDbBun from '@bible/core/bible-db/bun';
+import { formatBibleReference, getBibleBook, parseBibleQuery, type Verse } from '@manna/core/bible';
+import { BibleService } from '@manna/core/bible/service';
+import { BibleDatabase, type ConcordanceHit, type StrongsEntry } from '@manna/core/bible-db';
+import * as BibleDbBun from '@manna/core/bible-db/bun';
 import { Console, Effect, Layer, Option, Schema, SchemaGetter } from 'effect';
 
 import { versesForBibleQuery } from '~/src/lib/bible-query';

@@ -8,8 +8,8 @@
  * no expected line.
  */
 
-import { HymnalService, HymnId } from '@bible/core/hymnal';
-import { layerHymnalBun } from '@bible/core/hymnal/bun';
+import { HymnalService, HymnId } from '@manna/core/hymnal';
+import { layerHymnalBun } from '@manna/core/hymnal/bun';
 import { BunWorkerRunner } from '@effect/platform-bun';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Cause, ConfigProvider, Effect, FileSystem, Layer, Result } from 'effect';

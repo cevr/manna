@@ -4,8 +4,8 @@ import { SqliteClient } from '@effect/sql-sqlite-bun';
 import { Effect, Layer, Logger, Schema as S, Scope } from 'effect';
 import { HttpServerRequest, HttpServerResponse } from 'effect/http';
 
-import { GOLDEN_TOPIC_QUERY, goldenSearchLayer } from '@bible/core/search/testing';
-import { NO_SELECTION } from '@bible/core/writings';
+import { GOLDEN_TOPIC_QUERY, goldenSearchLayer } from '@manna/core/search/testing';
+import { NO_SELECTION } from '@manna/core/writings';
 
 import { SearchRequest, type SearchSlot } from '../api.js';
 import { VectorIndexLoad } from '../vector-index.js';

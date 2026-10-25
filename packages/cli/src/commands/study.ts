@@ -16,7 +16,7 @@
  * missing from it.
  */
 
-import { parseBibleQuery } from '@bible/core/bible';
+import { parseBibleQuery } from '@manna/core/bible';
 import {
   StrongsNumber,
   StrongsStudyJson,
@@ -26,8 +26,8 @@ import {
   VerseStudyJson,
   type StrongsStudy,
   type VerseStudy,
-} from '@bible/core/study';
-import { layerBunStudy } from '@bible/core/study/bun';
+} from '@manna/core/study';
+import { layerBunStudy } from '@manna/core/study/bun';
 import { BunServices } from '@effect/platform-bun';
 import {
   Config,

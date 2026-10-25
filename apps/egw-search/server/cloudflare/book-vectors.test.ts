@@ -3,8 +3,8 @@ import { SqliteClient } from '@effect/sql-sqlite-bun';
 import { Effect, Layer, Option } from 'effect';
 import { SqlClient } from 'effect/sql';
 
-import { EGWParagraphDatabase } from '@bible/core/egw-db';
-import { DIMENSIONS, QueryEmbedderUnavailable } from '@bible/core/search';
+import { EGWParagraphDatabase } from '@manna/core/egw-db';
+import { DIMENSIONS, QueryEmbedderUnavailable } from '@manna/core/search';
 
 import {
   BOOK_VECTORS_PAGE,

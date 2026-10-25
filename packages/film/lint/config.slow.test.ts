@@ -9,7 +9,7 @@
 //   lints a probe of every such form, built from the bans themselves, with
 //   the block's own options: each line is red. The URL's names are among
 //   them, and no page file is let off them: every page reaches the address
-//   bar through `@bible/url-state`'s Location. `Reflect.get(window,
+//   bar through `@manna/url-state`'s Location. `Reflect.get(window,
 //   'history')`, a name no ban can see, is `effect/noReflectGet`'s, on in the
 //   same block.
 // - The purity rule: a block that keeps a layer's folder (`**/lab/**`) out
@@ -244,7 +244,7 @@ const urlEventsAllowed = (overrides: ReadonlyArray<Override>) =>
 
 /**
  * The film's host bans' block, every block that bans a URL name (the film's,
- * `@bible/url-state`'s and egw-search's, and egw-search's scroll adapter), and
+ * `@manna/url-state`'s and egw-search's, and egw-search's scroll adapter), and
  * the blocks that let files hear some host events themselves.
  */
 const hostBlocks = (config: typeof Config.Type) => {
@@ -261,7 +261,7 @@ const hostBlocks = (config: typeof Config.Type) => {
 };
 
 /** Whether a ban keeps the address bar out of a page. */
-const isUrl = (ban: Ban) => ban.use.includes("@bible/url-state's Location");
+const isUrl = (ban: Ban) => ban.use.includes("@manna/url-state's Location");
 
 /** The film block's URL bans a block lacks, as `global name` or `object.property`. */
 const urlBansMissing = (film: Override, block: Override): ReadonlyArray<string> => {
@@ -558,7 +558,7 @@ describe('the lint config', () => {
 
   it.effect('finds a URL ban the film block holds and another block lacks', () =>
     Effect.sync(() => {
-      const location = "@bible/url-state's Location";
+      const location = "@manna/url-state's Location";
       const film: Override = {
         files: ['film'],
         rules: {

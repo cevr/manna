@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Option } from 'effect';
-import type { RecordingManifest } from '@bible/hymnal/recording-manifest';
+import type { RecordingManifest } from '@manna/hymnal/recording-manifest';
 
 import { SDAH_HYMNS } from './plan.ts';
 import { UploadItem, manifestRefusals, planUpload, setKey, setPrefix } from './upload-plan.ts';

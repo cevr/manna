@@ -18,10 +18,10 @@
     "judged:quality": "bun --no-env-file src/judged/quality-run.ts"
   },
   "dependencies": {
-    "@bible/core": "workspace:*",
     "@bible/film": "workspace:*",
     "@effect/ai-typesafe": "catalog:",
     "@effect/platform-bun": "catalog:",
+    "@manna/core": "workspace:*",
     "effect": "catalog:",
     "minimatch": "10.2.5",
     "oxc-parser": "0.153.0",

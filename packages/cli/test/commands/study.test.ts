@@ -18,7 +18,7 @@ import {
   strongsNumber,
   type StrongsStudy,
   type VerseStudy,
-} from '@bible/core/study';
+} from '@manna/core/study';
 import {
   FIXTURE_BOOK,
   FIXTURE_CHAPTER,
@@ -26,7 +26,7 @@ import {
   FIXTURE_VERSE,
   malformedStudyFixtureLayer,
   studyFixtureLayer,
-} from '@bible/core/study/testing';
+} from '@manna/core/study/testing';
 import { describe, expect, it } from 'effect-bun-test';
 import type { Layer } from 'effect';
 import { Effect, Option, Schema, SchemaGetter } from 'effect';

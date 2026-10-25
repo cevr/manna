@@ -44,7 +44,7 @@ import {
 } from '../core/review-record.ts';
 import { type ReviewIndex, docAt, videoAt } from '../core/review.ts';
 import { Segment } from '../core/segment.ts';
-import { decodeComponent } from '@bible/url-state';
+import { decodeComponent } from '@manna/url-state';
 import { BoardStore } from './board-store.ts';
 import type { ContentStore } from './content-store.ts';
 import type { FilmFolder } from './film-repo.ts';

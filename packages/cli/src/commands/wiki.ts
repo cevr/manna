@@ -17,7 +17,7 @@
  * missing from it.
  */
 
-import { parseBibleQuery, type VerseReference } from '@bible/core/bible';
+import { parseBibleQuery, type VerseReference } from '@manna/core/bible';
 import {
   lookupInputOf,
   LookupResultJson,
@@ -36,8 +36,8 @@ import {
   type WikiPage,
   type WikiPageSummary,
   type WikiSection,
-} from '@bible/core/wiki';
-import { layerBunLookup, layerBunWithCatalog } from '@bible/core/wiki/bun';
+} from '@manna/core/wiki';
+import { layerBunLookup, layerBunWithCatalog } from '@manna/core/wiki/bun';
 import {
   Config,
   Console,

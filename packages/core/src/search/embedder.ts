@@ -76,5 +76,5 @@ export interface QueryEmbedderApi {
  *  must be a legal composition rather than a missing dependency.
  */
 export class QueryEmbedder extends Context.Service<QueryEmbedder, QueryEmbedderApi>()(
-  '@bible/core/search/QueryEmbedder',
+  '@manna/core/search/QueryEmbedder',
 ) {}

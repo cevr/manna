@@ -1,4 +1,4 @@
-import { BlocksJson } from '@bible/core/wiki';
+import { BlocksJson } from '@manna/core/wiki';
 import { Database } from 'bun:sqlite';
 import { Clock, DateTime, Effect, FileSystem, Schema } from 'effect';
 

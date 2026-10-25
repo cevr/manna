@@ -63,7 +63,7 @@ export const keptJson = <S extends Schema.ConstraintCodec<unknown, unknown>>(
  * What a viewer kept is in their browser, which a page rendered on the
  * server has not seen: its server value is none (`Atom.withServerValue`),
  * which the server renders and the client hydrates with before it reads
- * the store (`@bible/atom-solid`'s hooks).
+ * the store (`@manna/atom-solid`'s hooks).
  */
 export const keptText = (
   store: StoreRuntime,

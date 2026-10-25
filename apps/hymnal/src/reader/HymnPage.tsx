@@ -25,7 +25,7 @@
  * with the chords and the key they are played in.
  */
 
-import type * as Chord from '@bible/hymnal/chord';
+import type * as Chord from '@manna/hymnal/chord';
 import { useAtomValue } from '@effect/atom-react';
 import { Option } from 'effect';
 import type * as Atom from 'effect/reactivity/Atom';

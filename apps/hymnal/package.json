@@ -26,9 +26,9 @@
     "audio:upload": "bun infra/audio/upload.ts"
   },
   "dependencies": {
-    "@bible/hymnal": "workspace:*",
     "@effect/atom-react": "catalog:",
     "@legendapp/list": "3.6.0",
+    "@manna/hymnal": "workspace:*",
     "@react-navigation/native": "8.0.0-alpha.51",
     "effect": "catalog:",
     "one": "2.9.0",

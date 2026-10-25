@@ -11,7 +11,7 @@
 // loads no film code, and the studio reads the version kept in the film's
 // files.
 
-import { useAtomRefresh, useAtomValue } from '@bible/atom-solid';
+import { useAtomRefresh, useAtomValue } from '@manna/atom-solid';
 import { Show } from '@solidjs/web';
 import { Effect, Option } from 'effect';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';

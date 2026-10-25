@@ -1,6 +1,6 @@
-# @bible/ui
+# @manna/ui
 
-Base UI's unstyled parts, and React Aria's sheet (see Sheet), ported to Solid 2 (the `2.0.0-rc` line of `solid-js` and `@solidjs/web`). No part ships a style: each part shows its state as `data-*` attributes (and, where a value has to reach CSS, as CSS custom properties), and the consumer styles it through those attributes and its own `class`. Each part is imported from its subpath, for example `import { Menu } from '@bible/ui/menu'`; there is no root entry. The package keeps only the parts a page draws: a part upstream has and this list lacks returns with its first consumer, and the attribute names below are the styling contract (no `*DataAttributes` constants are exported). Unit tests run with `bun run test` and the browser tests with `bun run test:browser` (Playwright, `test/browser`), both from `packages/ui`. `UI_BROWSER_CPU_THROTTLE=<rate>` runs each browser test's page that many times slower (Chrome's CPU throttling, `test/browser/harness.ts`), as a loaded runner or a slow phone runs it: run one case with it (`-t`), never the suite.
+Base UI's unstyled parts, and React Aria's sheet (see Sheet), ported to Solid 2 (the `2.0.0-rc` line of `solid-js` and `@solidjs/web`). No part ships a style: each part shows its state as `data-*` attributes (and, where a value has to reach CSS, as CSS custom properties), and the consumer styles it through those attributes and its own `class`. Each part is imported from its subpath, for example `import { Menu } from '@manna/ui/menu'`; there is no root entry. The package keeps only the parts a page draws: a part upstream has and this list lacks returns with its first consumer, and the attribute names below are the styling contract (no `*DataAttributes` constants are exported). Unit tests run with `bun run test` and the browser tests with `bun run test:browser` (Playwright, `test/browser`), both from `packages/ui`. `UI_BROWSER_CPU_THROTTLE=<rate>` runs each browser test's page that many times slower (Chrome's CPU throttling, `test/browser/harness.ts`), as a loaded runner or a slow phone runs it: run one case with it (`-t`), never the suite.
 
 Every part takes `class` and `style` (a value or a function of the part's state) and `render` (a function of the merged props and the state that replaces the default element). A part's state becomes attributes by one rule unless the part maps it otherwise: `true` becomes a bare `data-<key>` attribute (the key lowercased), another truthy value its string, and a falsy value nothing. Attributes named `data-base-ui-*`, `data-rootownerid`, `data-tabindex`, `data-type="inside"` and `data-type="outside"` (the focus guards) are internal markers, not styling hooks. Every `Portal` takes `inline`: with it its `<div>` renders where it is written instead of at the end of `<body>`, the same in the server's render and the browser's, so a popup open at the first render is in the server's markup (for a `position: fixed` popup under no transform, filter or `contain`); without it, a server render leaves the portal out.
 
@@ -8,11 +8,11 @@ Every part takes `class` and `style` (a value or a function of the part's state)
 
 ### Press
 
-`@bible/ui/press` renders no element and sets no attributes. It holds `claimPress`, `liftHeldByOther` and `LONG_PRESS_MOVE_THRESHOLD`: one owner per press, shared with the context menu's long press. The parts read the text direction as `ltr`; upstream's `DirectionProvider`, `useRender` and the `mergeProps` subpath are left out.
+`@manna/ui/press` renders no element and sets no attributes. It holds `claimPress`, `liftHeldByOther` and `LONG_PRESS_MOVE_THRESHOLD`: one owner per press, shared with the context menu's long press. The parts read the text direction as `ltr`; upstream's `DirectionProvider`, `useRender` and the `mergeProps` subpath are left out.
 
 ### Menu
 
-`import { Menu } from '@bible/ui/menu'`
+`import { Menu } from '@manna/ui/menu'`
 
 - `Menu.Root`: no element; owns the menu's state (`onOpenChange`, `onOpenChangeComplete`). A menu is vertical and modal, wraps its arrow keys, and opens only from its trigger.
   - `Menu.Trigger`: `<button>` that opens the menu on press or with the arrow keys.
@@ -58,9 +58,9 @@ Upstream's `--positioner-width` and `--positioner-height` belong to its popup au
 
 ### Context menu
 
-`import { ContextMenu } from '@bible/ui/context-menu'`
+`import { ContextMenu } from '@manna/ui/context-menu'`
 
-- `ContextMenu.Root`: no element; a menu opened by a right click or by a touch held still for 500 ms (`LONG_PRESS_DELAY`; moving more than 10 px first cancels it). The lift of the touch that opened it is spent, so it never chooses the item that opened under the finger, and a press a drag has claimed (`@bible/ui/press`) opens nothing.
+- `ContextMenu.Root`: no element; a menu opened by a right click or by a touch held still for 500 ms (`LONG_PRESS_DELAY`; moving more than 10 px first cancels it). The lift of the touch that opened it is spent, so it never chooses the item that opened under the finger, and a press a drag has claimed (`@manna/ui/press`) opens nothing.
   - `ContextMenu.Trigger`: `<div>`, the area that opens the menu.
   - `ContextMenu.Portal > ContextMenu.Positioner > ContextMenu.Popup`, and every other member, are the menu's (`Item`, `Group`, `GroupLabel`, `Separator`); the positioner sits at the pointer, start-aligned and nudged so the first item is under it, and takes no `sideOffset` or `align`. The root's `disabled` is left out.
 
@@ -72,7 +72,7 @@ The other members set the menu's attributes and CSS variables (see Menu).
 
 ### Dialog
 
-`import { Dialog } from '@bible/ui/dialog'`
+`import { Dialog } from '@manna/ui/dialog'`
 
 - `Dialog.Root`: no element; owns the dialog's state. Its owner opens it through `open` (there is no trigger part); on close, focus returns to what had it before.
   - `Dialog.Portal`: `<div>` at the end of `<body>`, rendered while mounted.
@@ -95,7 +95,7 @@ Upstream's trigger, `Dialog.Viewport`, nested dialog stacks (`data-nested`, `dat
 
 ### Sheet
 
-`import { Sheet } from '@bible/ui/sheet'`
+`import { Sheet } from '@manna/ui/sheet'`
 
 React Aria's Sheet (`react-aria-components` 1.22.1, with `useViewportSize` from `react-aria` 3.53.1), in place of Base UI's Drawer, which is left out: Copyright 2020-2026 Adobe, under the Apache License 2.0 in `src/sheet/LICENSE`. Each file names its upstream path and says what changed. It is built on the dialog above (its root, store, portal, title and close), as upstream's is built on its Modal and Dialog.
 
@@ -138,7 +138,7 @@ CSS variables on `Sheet.Overlay`: `--visual-viewport-width` and `--visual-viewpo
 
 ### Toast
 
-`import { Toast } from '@bible/ui/toast'`
+`import { Toast } from '@manna/ui/toast'`
 
 - `Toast.Provider`: no element; owns the toasts, added and closed through a `Toast.createToastManager` made outside the tree and listed inside it with `Toast.useToastManager().toasts`.
   - `Toast.Portal`: `<div>` at the end of `<body>`.
@@ -168,7 +168,7 @@ CSS variables on `Toast.Root`: `--toast-swipe-movement-x`, `--toast-swipe-moveme
 
 ### Toggle
 
-`import { Toggle } from '@bible/ui/toggle'`
+`import { Toggle } from '@manna/ui/toggle'`
 
 - `Toggle`: `<button aria-pressed>`, a two-state button, pressed while its `value` is among its `ToggleGroup`'s; it joins the group's roving focus. It renders only inside a group.
 
@@ -180,7 +180,7 @@ Upstream's lone toggle (`pressed`, `defaultPressed`, `onPressedChange`) and `dis
 
 ### Toggle group
 
-`import { ToggleGroup } from '@bible/ui/toggle-group'`
+`import { ToggleGroup } from '@manna/ui/toggle-group'`
 
 - `ToggleGroup`: `<div role="group">`, one of its `Toggle`s pressed at a time. Its owner holds `value`; a press offers `onValueChange` the pressed toggle's value alone, or `[]` for the one already pressed. The left and right arrows (wrapping at the ends), Home and End move its one tab stop, which starts on the toggle drawn pressed (`aria-pressed`; the first when none is pressed). The server's markup has that tab stop too, on the toggle whose value is `value`'s first (the first toggle when `value` is empty), and the browser keeps it there; a `value` naming no toggle gives none until the browser has mounted the group, which then puts it on the first. Upstream's server markup has no tab stop. A value changed from outside the group later (Back, a key) leaves the tab stop where it was.
   - A mouse press from outside the group takes no focus. Focus goes where the platform sends it for a press on content that takes none: to the group's nearest focusable ancestor (a sheet's or dialog's popup, so Tab and the keys stay in it), else off every control (`body`, so the page keeps its keys: Space, the arrows). Either way a field that had focus commits on its own blur, before the press's `onValueChange`, and the pressed toggle takes the tab stop. When focus is already in the group, the press moves it to the pressed toggle. Upstream focuses the toggle on every press.
@@ -190,7 +190,7 @@ Upstream's uncontrolled mode (`defaultValue`), `multiple`, `disabled`, `orientat
 
 ### Separator
 
-`import { Separator } from '@bible/ui/separator'`
+`import { Separator } from '@manna/ui/separator'`
 
 - `Separator`: `<div role="separator">` between groups of items or controls, `aria-orientation` saying its `orientation` (`horizontal`, the default, or `vertical`). The menus' `Menu.Separator` is the same part.
 
@@ -200,7 +200,7 @@ Upstream's uncontrolled mode (`defaultValue`), `multiple`, `disabled`, `orientat
 
 ## Composing behaviour
 
-`import { listen, mix, onElement, type Mixin, type RefFactory } from '@bible/ui/mix'`
+`import { listen, mix, onElement, type Mixin, type RefFactory } from '@manna/ui/mix'`
 
 Solid 2 has no `mix` prop (Remix 3's `mix={[...]}`), so a behaviour comes in two halves:
 

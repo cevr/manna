@@ -30,7 +30,7 @@ import {
   type VectorAbsenceReason,
   VectorIndexBytes,
   vectorUnavailable,
-} from '@bible/core/search';
+} from '@manna/core/search';
 
 /** Which search service answers now. */
 type IndexState =

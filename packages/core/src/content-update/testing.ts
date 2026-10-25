@@ -6,7 +6,7 @@
  *  transport; what it is compared against is these bytes and these
  *  expectations.
  *
- *  Exported from `@bible/core/content-update/testing` rather than from the
+ *  Exported from `@manna/core/content-update/testing` rather than from the
  *  feature barrel, for the reason `wiki/index.ts` and `search/index.ts` draw the
  *  same seam: a shipped import must not be able to reach a fixture manifest
  *  through the barrel it reaches `ContentUpdate` through.

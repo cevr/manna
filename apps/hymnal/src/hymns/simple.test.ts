@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'bun:test';
-import * as Chord from '@bible/hymnal/chord';
+import * as Chord from '@manna/hymnal/chord';
 import { Option, Schema } from 'effect';
 
 import type { Box, HymnChords } from './chords';

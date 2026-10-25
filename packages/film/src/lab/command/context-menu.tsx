@@ -1,5 +1,5 @@
 // The page's context menu: a right-click, or a touch held still for half a
-// second (a drag moves past @bible/ui's threshold first, so a scrub never
+// second (a drag moves past @manna/ui's threshold first, so a scrub never
 // opens it), on a thing the page marks as a `Target` opens the commands
 // about that thing (`contextRows`): Copy link and the command menu on every
 // one, and each thing's own verbs. The thing is read from where the press
@@ -13,12 +13,12 @@
 // closed and focus is back on the page, as ⌘K's do.
 // Its groups and rows are keyed by name and command (`rowKey`): made again
 // each frame a film plays, a row keeps its element under the pointer, and a
-// press and its release are one click. Built on @bible/ui's ContextMenu: `TargetMenu` is the studio frame's one
+// press and its release are one click. Built on @manna/ui's ContextMenu: `TargetMenu` is the studio frame's one
 // root (`StudioFrame`, every page in the shell), `Target` a thing's trigger, rendered as
 // the thing's own element (a `div` unless `render` names another).
 
 import { For, Show } from '@solidjs/web';
-import { ContextMenu } from '@bible/ui/context-menu';
+import { ContextMenu } from '@manna/ui/context-menu';
 import { Option } from 'effect';
 import { type Accessor, type ComponentProps, type ParentProps, createMemo, omit } from 'solid-js';
 import { isField, withSelection } from '../../command/context.ts';

@@ -10,14 +10,14 @@
 // Info (its notes among it), its approve and unapprove, what was said of it
 // and the comment box, said over the set's route.
 
-import { useAtomValue } from '@bible/atom-solid';
+import { useAtomValue } from '@manna/atom-solid';
 import type { PhoneCopy } from '../../core/served.ts';
 import { unfiledOf } from '../../core/production.ts';
 import { counted } from '../../core/words.ts';
-import { Dialog } from '@bible/ui/dialog';
-import { Toggle } from '@bible/ui/toggle';
-import * as UrlAtom from '@bible/url-state/atom';
-import { ToggleGroup } from '@bible/ui/toggle-group';
+import { Dialog } from '@manna/ui/dialog';
+import { Toggle } from '@manna/ui/toggle';
+import * as UrlAtom from '@manna/url-state/atom';
+import { ToggleGroup } from '@manna/ui/toggle-group';
 import { For, type JSX, Show } from '@solidjs/web';
 import { Array as Arr, Effect, Exit, Match, Option, Scope, Struct } from 'effect';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';

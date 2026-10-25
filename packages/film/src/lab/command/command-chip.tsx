@@ -4,7 +4,7 @@
 // (`deferredRun`), as the context menu's do, so a sheet it opens keeps its
 // focus. Its rows are keyed by their command (`rowKey`): made again each
 // frame a film plays, a row keeps its element under the pointer. Built on
-// @bible/ui's Menu, styled as the context menu (`.lab-context-menu`,
+// @manna/ui's Menu, styled as the context menu (`.lab-context-menu`,
 // `style.ts`). Two buttons open one: a chip (`CommandChip`) and the header's
 // `⋯` (`view-menu.tsx`).
 //
@@ -16,7 +16,7 @@
 // at already is not offered: the chip says it.
 
 import { For, type JSX } from '@solidjs/web';
-import { Menu } from '@bible/ui/menu';
+import { Menu } from '@manna/ui/menu';
 import { createMemo } from 'solid-js';
 import type { Command } from '../../command/command.ts';
 import type { Context } from '../../command/context.ts';

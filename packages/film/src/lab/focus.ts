@@ -12,7 +12,7 @@
 // a click. Three exceptions stand:
 // - a text field rings whatever focused it, a click too: that is the
 //   browser's rule, and a field's caret is where the typing goes;
-// - the kit's menus (`@bible/ui`) move the focus to the item under the
+// - the kit's menus (`@manna/ui`) move the focus to the item under the
 //   pointer, so after a keyboard opens one, the ring follows the mouse;
 // - the kit's own initial focus (a sheet's, the lightbox's, ⌘K's) is a
 //   plain focus, so Chromium's heuristic draws its ring; its return focus

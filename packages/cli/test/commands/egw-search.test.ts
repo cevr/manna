@@ -19,7 +19,7 @@ import {
   SearchResultJson,
   SearchService,
   VectorIndexBytes,
-} from '@bible/core/search';
+} from '@manna/core/search';
 import {
   GOLDEN_QUERIES,
   GOLDEN_TOPIC_QUERY,
@@ -29,8 +29,8 @@ import {
   goldenTopicCatalog,
   goldenVector,
   goldenVectorIndexBytes,
-} from '@bible/core/search/testing';
-import { WikiService } from '@bible/core/wiki';
+} from '@manna/core/search/testing';
+import { WikiService } from '@manna/core/wiki';
 
 import { egwSearch } from '../../src/commands/egw/search.js';
 import { SearchLayer, verifiedVectorIndex } from '../../src/commands/egw/search-layer.js';

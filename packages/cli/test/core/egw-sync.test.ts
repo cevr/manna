@@ -1,5 +1,5 @@
-import { EGWApiClient, type Schemas as EGWSchemas } from '@bible/core/egw';
-import { EGWParagraphDatabase, type BookRow } from '@bible/core/egw-db';
+import { EGWApiClient, type Schemas as EGWSchemas } from '@manna/core/egw';
+import { EGWParagraphDatabase, type BookRow } from '@manna/core/egw-db';
 import {
   CorpusActivation,
   CorpusInstallationError,
@@ -12,8 +12,8 @@ import {
   installEgwBook,
   planEgwSync,
   syncEgwCorpus,
-} from '@bible/core/corpus-supply';
-import { publicationId } from '@bible/core/writings';
+} from '@manna/core/corpus-supply';
+import { publicationId } from '@manna/core/writings';
 import { Effect, Layer, Option, Stream } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 

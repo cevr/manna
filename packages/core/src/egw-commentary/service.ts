@@ -71,7 +71,7 @@ export interface EGWCommentaryServiceApi {
 export class EGWCommentaryService extends Context.Service<
   EGWCommentaryService,
   EGWCommentaryServiceApi
->()('@bible/core/egw-commentary/service/EGWCommentaryService') {
+>()('@manna/core/egw-commentary/service/EGWCommentaryService') {
   /**
    * Live implementation using EGWParagraphDatabase.
    */

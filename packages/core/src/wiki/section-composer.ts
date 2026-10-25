@@ -176,7 +176,7 @@ export type SectionSourcing =
  *  deliberate choice written at the composition site rather than an accident of
  *  what happened not to be in scope. */
 export class WikiSectionSources extends Context.Service<WikiSectionSources, SectionSourcing>()(
-  '@bible/core/wiki/WikiSectionSources',
+  '@manna/core/wiki/WikiSectionSources',
 ) {
   /** Assembles the bundle from the four services that already own these tables.
    *  Every host composes this rather than constructing the record by hand, so

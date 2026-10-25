@@ -18,7 +18,7 @@
  * the sound.
  */
 
-import * as Chord from '@bible/hymnal/chord';
+import * as Chord from '@manna/hymnal/chord';
 import { useAtom, useAtomValue } from '@effect/atom-react';
 import { Duration, Effect, Fiber, Option } from 'effect';
 import { createContext, use, useEffect, useMemo, useRef, useState } from 'react';

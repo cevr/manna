@@ -14,7 +14,7 @@
  * the sections.
  */
 
-import * as Chord from '@bible/hymnal/chord';
+import * as Chord from '@manna/hymnal/chord';
 import { Option } from 'effect';
 import { createContext, memo, use } from 'react';
 import { Pressable, type StyleProp, StyleSheet, Text, type TextStyle, View } from 'react-native';

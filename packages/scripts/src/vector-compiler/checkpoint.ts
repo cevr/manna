@@ -25,10 +25,10 @@
  *  turns that assumption into a verified precondition.
  */
 
-import { DIMENSIONS, MODEL_FINGERPRINT, QueryEmbedder } from '@bible/core/search';
+import { DIMENSIONS, MODEL_FINGERPRINT, QueryEmbedder } from '@manna/core/search';
 import { Clock, Console, Effect, FileSystem, Option, Schema } from 'effect';
 
-import { paragraphIdentity } from '@bible/core/egw-db';
+import { paragraphIdentity } from '@manna/core/egw-db';
 
 import type { VectorSourceRow } from './emit.js';
 

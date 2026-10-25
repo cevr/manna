@@ -7,7 +7,7 @@
  * 100's D-flat, a sharp key, and a minor one.
  */
 
-import * as Chord from '@bible/hymnal/chord';
+import * as Chord from '@manna/hymnal/chord';
 import { describe, expect, it } from 'bun:test';
 
 import { plain } from '~/feel/cue';

@@ -1,5 +1,5 @@
 {
-  "name": "@bible/atom-solid",
+  "name": "@manna/atom-solid",
   "private": true,
   "type": "module",
   "sideEffects": false,
@@ -18,7 +18,7 @@
     "solid-js": "catalog:"
   },
   "devDependencies": {
-    "@bible/url-state": "workspace:*",
+    "@manna/url-state": "workspace:*",
     "@playwright/test": "1.64.0",
     "@solidjs/compiler": "catalog:"
   }

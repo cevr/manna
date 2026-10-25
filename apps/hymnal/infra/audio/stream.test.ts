@@ -5,7 +5,7 @@
  * takes milliseconds and touches no network.
  */
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { KEY_TRANSPOSES } from '@bible/hymnal/recordings';
+import { KEY_TRANSPOSES } from '@manna/hymnal/recordings';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Console,

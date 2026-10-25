@@ -18,8 +18,8 @@
  * below hold the property to the defects it exists to catch.
  */
 
-import { HymnalService, HymnId } from '@bible/core/hymnal';
-import { layerHymnalBun } from '@bible/core/hymnal/bun';
+import { HymnalService, HymnId } from '@manna/core/hymnal';
+import { layerHymnalBun } from '@manna/core/hymnal/bun';
 import { BunWorker } from '@effect/platform-bun';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import {

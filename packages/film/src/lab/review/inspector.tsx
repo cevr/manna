@@ -17,9 +17,9 @@
 // (`useInspectorPlace`: Choices' and a Set's `?inspect=`): the URL then owns it, so a link, Back and Forward open and
 // close it, and its dismissal adds no entry to history.
 
-import { useAtomValue } from '@bible/atom-solid';
-import { Place, UrlState } from '@bible/url-state';
-import * as UrlAtom from '@bible/url-state/atom';
+import { useAtomValue } from '@manna/atom-solid';
+import { Place, UrlState } from '@manna/url-state';
+import * as UrlAtom from '@manna/url-state/atom';
 import { type JSX, Show, isServer } from '@solidjs/web';
 import { Effect, Option } from 'effect';
 import {

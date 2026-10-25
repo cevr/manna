@@ -136,7 +136,7 @@ Bible and EGW corpora remain separately versioned, downloadable databases. They 
 
 Use Drizzle `1.0.0-beta.x` for schema, migrations, relational queries, and typed SQL. The beta contains Effect schema generation and an Effect-native PostgreSQL adapter, but not an equivalent Effect-native SQLite query adapter.
 
-Create a narrow first-party bridge in `@bible/core` that adapts Drizzle SQLite operations into Effect with typed errors and transaction scoping. It should provide only the operations the application needs, such as `run`, `all`, `get`, and `transaction`; it must not grow into a second ORM.
+Create a narrow first-party bridge in `@manna/core` that adapts Drizzle SQLite operations into Effect with typed errors and transaction scoping. It should provide only the operations the application needs, such as `run`, `all`, `get`, and `transaction`; it must not grow into a second ORM.
 
 Platform implementations:
 

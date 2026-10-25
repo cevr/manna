@@ -566,7 +566,7 @@ export const makeTab = (
      * scrolled into view, still for two looks and on top at its middle (as a
      * click waits). Covered (by a sticky header, say), it is scrolled to
      * another place in the view on the next look. In a sheet, the sheet stands
-     * first, and stays where it stands (`@bible/ui/sheet`).
+     * first, and stays where it stands (`@manna/ui/sheet`).
      */
     const target = (selector: string) =>
       waitFor<{ readonly x: number; readonly y: number }>(
@@ -665,7 +665,7 @@ export const makeTab = (
      * the load on the machine sending them; any other report is stamped `now`, never before
      * the last. So a gesture sent faster than a frame a move is stamped ahead of the wall
      * clock, and the next `now` report follows it there. Chrome takes such stamps; the
-     * `@bible/ui` browser tests instead keep theirs never behind the wall clock.
+     * `@manna/ui` browser tests instead keep theirs never behind the wall clock.
      */
     let stamped = 0;
     const stamp = (pace: Pace) =>

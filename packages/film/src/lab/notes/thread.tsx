@@ -10,7 +10,7 @@
 // time line, the seek to it, a new note on the frame shown) the staged notes
 // lend the page once the film is staged (`NotesStaged`).
 
-import { useAtomSet, useAtomValue } from '@bible/atom-solid';
+import { useAtomSet, useAtomValue } from '@manna/atom-solid';
 import { For, Show } from '@solidjs/web';
 import { Boolean as Bool, Effect, Exit, Match, Option } from 'effect';
 import { Machine } from 'effect-machine';

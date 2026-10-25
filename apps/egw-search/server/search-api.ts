@@ -9,7 +9,7 @@ import { Effect } from 'effect';
 import { HttpApiBuilder } from 'effect/http-api';
 import type { SqlClient } from 'effect/sql';
 
-import type { SearchService } from '@bible/core/search';
+import type { SearchService } from '@manna/core/search';
 
 import { DEFAULT_LIMIT, NO_SELECTION, SearchApi } from './api.js';
 import { runSearch, runSearchBatch } from './search.js';

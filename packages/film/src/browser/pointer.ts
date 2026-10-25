@@ -15,7 +15,7 @@
 // it while it holds one (a second finger) is not the surface's: its work
 // never runs, and the first press goes on to its own end.
 //
-// One owner per press (`claimPress`, @bible/ui): a finger's press may be a
+// One owner per press (`claimPress`, @manna/ui): a finger's press may be a
 // long press (a context menu's) until it moves past `LONG_PRESS_MOVE_THRESHOLD`,
 // the number the long press gives way at. Only then does the drag claim the
 // press and start, and a long press can no longer open; a press the long
@@ -25,7 +25,7 @@
 // press no one claimed (a plain tap) is lifted as before. A mouse's drag
 // starts at its first move: a mouse has no long press.
 
-import { LONG_PRESS_MOVE_THRESHOLD, claimPress, liftHeldByOther } from '@bible/ui/press';
+import { LONG_PRESS_MOVE_THRESHOLD, claimPress, liftHeldByOther } from '@manna/ui/press';
 import { Context, Effect, Layer, Option, Result } from 'effect';
 
 /**

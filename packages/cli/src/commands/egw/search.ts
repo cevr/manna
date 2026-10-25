@@ -1,14 +1,14 @@
-import { EGWApiClient, type Schemas as EGWSchemas } from '@bible/core/egw';
+import { EGWApiClient, type Schemas as EGWSchemas } from '@manna/core/egw';
 import {
   SearchQuery,
   SearchResultJson,
   SearchService,
   SearchTopicHit,
   SEARCH_TOPIC_LIMIT,
-} from '@bible/core/search';
-import { WikiService } from '@bible/core/wiki';
-import { NO_FILTER, Reference } from '@bible/core/writings';
-import { WritingsService } from '@bible/core/writings/service';
+} from '@manna/core/search';
+import { WikiService } from '@manna/core/wiki';
+import { NO_FILTER, Reference } from '@manna/core/writings';
+import { WritingsService } from '@manna/core/writings/service';
 import { Cause, Console, Effect, Option, Schema } from 'effect';
 import { Argument, Command, Flag } from 'effect/cli';
 

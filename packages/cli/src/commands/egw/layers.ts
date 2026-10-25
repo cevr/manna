@@ -1,8 +1,8 @@
-import { EGWApiClient, EGWAuth } from '@bible/core/egw';
-import { EGWCommentaryService } from '@bible/core/egw-commentary';
-import * as EGWDbBun from '@bible/core/egw-db/bun';
-import { CorpusSupply, layerEgwWritingsAssetSource } from '@bible/core/corpus-supply';
-import { WritingsService } from '@bible/core/writings/service';
+import { EGWApiClient, EGWAuth } from '@manna/core/egw';
+import { EGWCommentaryService } from '@manna/core/egw-commentary';
+import * as EGWDbBun from '@manna/core/egw-db/bun';
+import { CorpusSupply, layerEgwWritingsAssetSource } from '@manna/core/corpus-supply';
+import { WritingsService } from '@manna/core/writings/service';
 import { BunServices } from '@effect/platform-bun';
 import { Layer } from 'effect';
 import { FetchHttpClient } from 'effect/http';

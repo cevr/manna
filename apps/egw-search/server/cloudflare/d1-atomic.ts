@@ -9,7 +9,7 @@
 import * as D1Client from '@effect/sql-d1/D1Client';
 import { Effect, Layer } from 'effect';
 
-import { SqlAtomic } from '@bible/core/egw-db';
+import { SqlAtomic } from '@manna/core/egw-db';
 
 export const D1Atomic: Layer.Layer<SqlAtomic, never, D1Client.D1Client> = Layer.effect(
   SqlAtomic,

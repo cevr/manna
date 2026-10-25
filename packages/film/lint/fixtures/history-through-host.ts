@@ -2,7 +2,7 @@
 // and nothing else does.
 
 import { Effect, Option } from 'effect';
-import { Location, UrlState } from '@bible/url-state';
+import { Location, UrlState } from '@manna/url-state';
 
 declare const href: string;
 declare const url: { readonly navigate: (to: string) => void };

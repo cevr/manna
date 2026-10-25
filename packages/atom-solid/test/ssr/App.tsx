@@ -2,8 +2,8 @@
 // atom through `useAtomValue`. The hash shows in a different element at its
 // default than off it, so a client whose hydration pass read the real hash
 // would not match the server's markup.
-import { Codec, Field, Place } from '@bible/url-state';
-import * as UrlAtom from '@bible/url-state/atom';
+import { Codec, Field, Place } from '@manna/url-state';
+import * as UrlAtom from '@manna/url-state/atom';
 import { Show } from '@solidjs/web';
 import { Option, Schema } from 'effect';
 

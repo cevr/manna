@@ -10,7 +10,7 @@
 // size (`?still=`: `stillIn`, `withStill`), and so does a page of asks (an
 // ask's Board), at an ask (`/asks/<ask>`) or at the page (`/asks/page/<page>`).
 
-import { Place } from '@bible/url-state';
+import { Place } from '@manna/url-state';
 import { Data, Match, Option } from 'effect';
 import { Places, pageHref } from '../../core/api.ts';
 import type { Destination } from '../../command/go.ts';

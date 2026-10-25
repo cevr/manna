@@ -211,7 +211,7 @@ type SearchSourcing =
   | { readonly _tag: 'not-wired' };
 
 export class SearchCorpusSources extends Context.Service<SearchCorpusSources, SearchSourcing>()(
-  '@bible/core/search/SearchCorpusSources',
+  '@manna/core/search/SearchCorpusSources',
 ) {
   /** A host that deliberately serves no searchable corpus. A written decision,
    *  not an omitted dependency — the distinction `WikiSectionSources` draws for
@@ -1141,7 +1141,7 @@ const layerFlatVectorNeighbors: Layer.Layer<
 );
 
 export class SearchService extends Context.Service<SearchService, SearchServiceApi>()(
-  '@bible/core/search/SearchService',
+  '@manna/core/search/SearchService',
 ) {
   /** Backed by the two corpora §9 reads and whatever answers the vector leg.
    *

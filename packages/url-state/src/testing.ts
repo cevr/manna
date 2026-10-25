@@ -16,7 +16,7 @@ export interface LocationHistoryService {
 }
 
 export class LocationHistory extends Context.Service<LocationHistory, LocationHistoryService>()(
-  '@bible/url-state/LocationHistory',
+  '@manna/url-state/LocationHistory',
 ) {}
 
 interface Stack {

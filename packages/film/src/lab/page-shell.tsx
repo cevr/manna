@@ -14,9 +14,9 @@
 // to here. The tab's title names what the page has selected (`subject`)
 // before the rest.
 
-import { Menu } from '@bible/ui/menu';
-import { Separator } from '@bible/ui/separator';
-import { useAtomSet, useAtomValue } from '@bible/atom-solid';
+import { Menu } from '@manna/ui/menu';
+import { Separator } from '@manna/ui/separator';
+import { useAtomSet, useAtomValue } from '@manna/atom-solid';
 import { For, type JSX, Show, isServer, useHead } from '@solidjs/web';
 import { Effect, Option } from 'effect';
 import {

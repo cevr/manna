@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 
-import * as Timing from '@bible/hymnal/timing';
-import { type Hymn, sung } from '@bible/hymnal/hymn';
+import * as Timing from '@manna/hymnal/timing';
+import { type Hymn, sung } from '@manna/hymnal/hymn';
 import { Array as Arr, Option } from 'effect';
 import bundled from 'virtual:hymnal-timing';
 

@@ -2,7 +2,7 @@
 // through a re-export the compiler kept only for this file. The claim these
 // assertions make is that the compiler's keys and the matcher's keys come from
 // one function, and importing the one function is how the test says so.
-import { normalizeAlias, type Block, type Inline } from '@bible/core/wiki';
+import { normalizeAlias, type Block, type Inline } from '@manna/core/wiki';
 import { Cause, Effect, Exit, Option, Schema, SchemaGetter } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 

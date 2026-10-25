@@ -10,7 +10,7 @@ describe("the tests' time budget, each workspace alone", () => {
   test('workspaces each under budget pass, printing each time with the load and the cores', () => {
     const judged = judge({
       workspaces: [
-        { name: '@bible/core', ms: Option.some(420), exitCode: 0 },
+        { name: '@manna/core', ms: Option.some(420), exitCode: 0 },
         { name: '@bible/film', ms: Option.some(610), exitCode: 0 },
       ],
       load: quiet,
@@ -22,7 +22,7 @@ describe("the tests' time budget, each workspace alone", () => {
       '',
       'test:budget: each workspace alone, under 1.00 s, @bible/film under 1.10 s (load average 3.2 over 1 min and 2.8 over 5 min before them, on 12 cores)',
       '   0.61 s  @bible/film',
-      '   0.42 s  @bible/core',
+      '   0.42 s  @manna/core',
     ]);
   });
 
@@ -31,13 +31,13 @@ describe("the tests' time budget, each workspace alone", () => {
       const judged = judge({
         workspaces: [
           { name: '@bible/film', ms: Option.some(420), exitCode: 0 },
-          { name: '@bible/core', ms: Option.some(1_230), exitCode: 0 },
+          { name: '@manna/core', ms: Option.some(1_230), exitCode: 0 },
         ],
         load,
         cores,
       });
       expect(judged.code).toBe(1);
-      expect(judged.failure[0]).toBe('test:budget: over budget: @bible/core 1.23 s.');
+      expect(judged.failure[0]).toBe('test:budget: over budget: @manna/core 1.23 s.');
     }
   });
 
@@ -45,13 +45,13 @@ describe("the tests' time budget, each workspace alone", () => {
     const judged = judge({
       workspaces: [
         { name: '@bible/film', ms: Option.some(999), exitCode: 0 },
-        { name: '@bible/core', ms: Option.some(1_000), exitCode: 0 },
+        { name: '@manna/core', ms: Option.some(1_000), exitCode: 0 },
       ],
       load: quiet,
       cores,
     });
     expect(judged.code).toBe(1);
-    expect(judged.failure[0]).toBe('test:budget: over budget: @bible/core 1.00 s.');
+    expect(judged.failure[0]).toBe('test:budget: over budget: @manna/core 1.00 s.');
   });
 
   test('the film workspace has 1.1 s: 1,099 ms passes and 1,100 ms is over', () => {
@@ -73,7 +73,7 @@ describe("the tests' time budget, each workspace alone", () => {
   test('workspaces whose times sum past the budget, each under it, pass: the run states no total', () => {
     const judged = judge({
       workspaces: [
-        { name: '@bible/core', ms: Option.some(600), exitCode: 0 },
+        { name: '@manna/core', ms: Option.some(600), exitCode: 0 },
         { name: '@bible/film', ms: Option.some(940), exitCode: 0 },
         { name: '@bible/scripts', ms: Option.some(880), exitCode: 0 },
       ],
@@ -117,7 +117,7 @@ describe("the tests' time budget, each workspace alone", () => {
     for (const load of [quiet, busy]) {
       const judged = judge({
         workspaces: [
-          { name: '@bible/core', ms: Option.some(420), exitCode: 0 },
+          { name: '@manna/core', ms: Option.some(420), exitCode: 0 },
           { name: '@bible/cli', ms: Option.some(240), exitCode: 1 },
         ],
         load,
@@ -133,7 +133,7 @@ describe("the tests' time budget, each workspace alone", () => {
       for (const exitCode of [0, 1]) {
         const judged = judge({
           workspaces: [
-            { name: '@bible/core', ms: Option.some(420), exitCode: 0 },
+            { name: '@manna/core', ms: Option.some(420), exitCode: 0 },
             { name: '@bible/cli', ms: Option.none(), exitCode },
           ],
           load,
@@ -141,7 +141,7 @@ describe("the tests' time budget, each workspace alone", () => {
         });
         expect(judged.code).toBe(1);
         expect(judged.report.slice(2, 4)).toEqual([
-          '   0.42 s  @bible/core',
+          '   0.42 s  @manna/core',
           `  no time  @bible/cli: exit ${exitCode}, its own summary did not read`,
         ]);
         expect(judged.failure.at(-1)).toBe(

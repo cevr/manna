@@ -19,7 +19,7 @@ import {
   scanVectorIndex,
   VectorBookRange,
   VectorManifest,
-} from '@bible/core/search';
+} from '@manna/core/search';
 
 import { bookRanges, paragraphIds, type VectorSourceRow } from './emit.js';
 

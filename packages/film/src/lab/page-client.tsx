@@ -9,7 +9,7 @@
 // Every studio page mounts in the one sequence `mountStudio` runs (a film's
 // studio and the review).
 
-import { Location } from '@bible/url-state';
+import { Location } from '@manna/url-state';
 import { type JSX, hydrate, render } from '@solidjs/web';
 import { Deferred, Effect, Fiber, type Layer, Option } from 'effect';
 import type { Frames } from '../browser/frames.ts';

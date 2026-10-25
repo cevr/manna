@@ -27,7 +27,7 @@ export interface WritingsAssetRecipeService {
 export class WritingsAssetRecipe extends Context.Service<
   WritingsAssetRecipe,
   WritingsAssetRecipeService
->()('@bible/core/corpus-supply/WritingsAssetRecipe') {}
+>()('@manna/core/corpus-supply/WritingsAssetRecipe') {}
 
 const sourcePriority = {
   packaged: 0,

@@ -3,7 +3,7 @@
 // discloses (`STATES`), and how a state opens and is read.
 
 import { Effect, Option, type Scope, Struct } from 'effect';
-import { Place } from '@bible/url-state';
+import { Place } from '@manna/url-state';
 import { Places, pageHref } from '../../src/core/api.ts';
 import { rightClick, touch } from '../../src/lab/fixtures/gestures.ts';
 import {

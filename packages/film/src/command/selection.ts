@@ -10,7 +10,7 @@
 // union; only its first item is citable (a batch is an action, not a place).
 // Pure.
 
-import { Place } from '@bible/url-state';
+import { Place } from '@manna/url-state';
 import { Option, Schema } from 'effect';
 import { ActName } from '../core/address-schema.ts';
 import {

@@ -12,7 +12,7 @@
 // (`PlaceStyle`), so it rides only on a page that shows it. Nothing here is
 // a copy of a view: a fix to the view is a fix here.
 
-import { useAtomValue } from '@bible/atom-solid';
+import { useAtomValue } from '@manna/atom-solid';
 import { For, type JSX, Show } from '@solidjs/web';
 import { Array as Arr, Boolean as Bool, Match, Option } from 'effect';
 import * as Atom from 'effect/reactivity/Atom';

@@ -16,7 +16,7 @@
  * button's frame and fill are the same with the dials open or closed.
  */
 
-import type * as Chord from '@bible/hymnal/chord';
+import type * as Chord from '@manna/hymnal/chord';
 import { Match, Option } from 'effect';
 import { useRef } from 'react';
 import {

@@ -12,7 +12,7 @@
  *  deliberately with `--limit 0`.
  *
  *  The writer under test is the shipped writer: `encodeVectorIndex` lives in
- *  `@bible/core/search` beside the parser that reads it, so the synthetic-vector
+ *  `@manna/core/search` beside the parser that reads it, so the synthetic-vector
  *  test in core exercises the same function this script calls.
  */
 
@@ -21,8 +21,8 @@ import {
   encodeVectorIndex,
   MODEL_FINGERPRINT,
   VectorManifest,
-} from '@bible/core/search';
-import { layerBunEmbedder } from '@bible/core/search/bun';
+} from '@manna/core/search';
+import { layerBunEmbedder } from '@manna/core/search/bun';
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import {
   Cause,

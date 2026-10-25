@@ -9,8 +9,8 @@
  * `immutable` cache header true: changed recordings are a new set.
  */
 import { Array as Arr, Data, Option } from 'effect';
-import { RECORDING_SET, recordingKey } from '@bible/hymnal/recordings';
-import type { ManifestHymn, RecordingManifest } from '@bible/hymnal/recording-manifest';
+import { RECORDING_SET, recordingKey } from '@manna/hymnal/recordings';
+import type { ManifestHymn, RecordingManifest } from '@manna/hymnal/recording-manifest';
 
 import { SDAH_HYMNS, holds } from './plan.ts';
 import type { TargetObject } from './stores.ts';

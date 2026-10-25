@@ -259,7 +259,7 @@ const marginNoteType = (value: string): MarginNote['type'] => {
 };
 
 export class BibleDatabase extends Context.Service<BibleDatabase, BibleDatabaseService>()(
-  '@bible/core/bible-db/BibleDatabase',
+  '@manna/core/bible-db/BibleDatabase',
 ) {
   static layer: Layer.Layer<BibleDatabase, never, SqlClient.SqlClient> = Layer.effect(
     BibleDatabase,

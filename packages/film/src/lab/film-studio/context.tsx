@@ -18,9 +18,9 @@
 // for the film, the review's, and the host; a write that changes what the
 // version shows reads the timeline again (`actions.refresh`).
 
-import { useAtomRefresh, useAtomSet, useAtomValue } from '@bible/atom-solid';
-import { Place } from '@bible/url-state';
-import * as UrlAtom from '@bible/url-state/atom';
+import { useAtomRefresh, useAtomSet, useAtomValue } from '@manna/atom-solid';
+import { Place } from '@manna/url-state';
+import * as UrlAtom from '@manna/url-state/atom';
 import { Array as Arr, Boolean as Bool, Effect, Layer, Match, Option, Result } from 'effect';
 import type { HttpClient } from 'effect/http';
 import * as ActorAtom from 'effect-machine/atom';

@@ -27,7 +27,7 @@ interface SqlAtomicService {
 }
 
 export class SqlAtomic extends Context.Service<SqlAtomic, SqlAtomicService>()(
-  '@bible/core/db/SqlAtomic',
+  '@manna/core/db/SqlAtomic',
 ) {
   /** The group as one interactive transaction, for a driver that has them. */
   static layerTransaction: Layer.Layer<SqlAtomic, never, SqlClient.SqlClient> = Layer.effect(

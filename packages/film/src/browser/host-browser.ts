@@ -1,6 +1,6 @@
 // The host's live adapters, merged: the one layer each page's root builds
 // its host from (`host.ts`). Each service's own live adapter is its
-// `*-browser.ts` beside it; the address bar's is `@bible/url-state`'s
+// `*-browser.ts` beside it; the address bar's is `@manna/url-state`'s
 // (`layerBrowser`, the only module that touches `history` and `location`),
 // with `UrlState` over it. A page whose media does more than the page's own
 // (the review's compares on WebCodecs panes, `panesMediaLayer`) builds
@@ -9,7 +9,7 @@
 // (the lab's, the phone's copy); the render page's from the mezzanine it
 // conforms from (`BrowserHost.render`).
 
-import { UrlState, layerBrowser } from '@bible/url-state';
+import { UrlState, layerBrowser } from '@manna/url-state';
 import { Layer } from 'effect';
 import { type FootageCopy, footageHref } from '../core/footage.ts';
 import type { BrowserServices } from './host.ts';

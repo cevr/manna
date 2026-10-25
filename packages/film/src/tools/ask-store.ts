@@ -56,7 +56,7 @@ import {
   Result,
   Semaphore,
 } from 'effect';
-import { decodeComponent } from '@bible/url-state';
+import { decodeComponent } from '@manna/url-state';
 import { Machine } from 'effect-machine';
 import {
   type Ask,

@@ -6,7 +6,7 @@
 // components; neither side's own adapters are imported here.
 
 import type { JSX } from '@solidjs/web';
-import { parseHref } from '@bible/url-state';
+import { parseHref } from '@manna/url-state';
 import { Equal, type Layer, Match, Option } from 'effect';
 import type { HttpClient } from 'effect/http';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';

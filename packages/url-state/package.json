@@ -1,5 +1,5 @@
 {
-  "name": "@bible/url-state",
+  "name": "@manna/url-state",
   "private": true,
   "type": "module",
   "sideEffects": false,

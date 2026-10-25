@@ -3,9 +3,9 @@
 // registry and the keymap (nothing here is written twice). It lists; it
 // changes no key: every viewer has the keys each command declares. Escape
 // closes it. Every command a key is bound to is listed (`sheetRows`). Hosted
-// in @bible/ui's Dialog.
+// in @manna/ui's Dialog.
 
-import { Dialog } from '@bible/ui/dialog';
+import { Dialog } from '@manna/ui/dialog';
 import { For, Show } from '@solidjs/web';
 import { createMemo, createSignal, onCleanup } from 'solid-js';
 import { type CommandId, quietly } from '../../command/command.ts';

@@ -7,7 +7,7 @@
 // on its timeline alone, its Board panels in the viewer and its clock
 // silent. The render page (`player/render.ts`) loads none of this.
 
-import { Place } from '@bible/url-state';
+import { Place } from '@manna/url-state';
 import { Effect, type Layer, Option } from 'effect';
 import type { HttpClient } from 'effect/http';
 import type { Host } from '../../browser/host.ts';

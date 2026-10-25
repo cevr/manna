@@ -150,12 +150,12 @@
       }
     ],
     "paths": {
-      "@bible/atom-solid": ["./packages/atom-solid/src/index.ts"],
-      "@bible/atom-solid/*": ["./packages/atom-solid/src/*"],
-      "@bible/core": ["./packages/core/src/index.ts"],
-      "@bible/core/*": ["./packages/core/src/*"],
-      "@bible/url-state": ["./packages/url-state/src/index.ts"],
-      "@bible/url-state/*": ["./packages/url-state/src/*"]
+      "@manna/atom-solid": ["./packages/atom-solid/src/index.ts"],
+      "@manna/atom-solid/*": ["./packages/atom-solid/src/*"],
+      "@manna/core": ["./packages/core/src/index.ts"],
+      "@manna/core/*": ["./packages/core/src/*"],
+      "@manna/url-state": ["./packages/url-state/src/index.ts"],
+      "@manna/url-state/*": ["./packages/url-state/src/*"]
     }
   },
   "include": [],

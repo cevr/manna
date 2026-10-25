@@ -11,7 +11,7 @@
 // review reads the page (`askPage`), each ask's provider holds its ask
 // (`context.tsx`), the parts draw it (`parts.tsx`, `material.tsx`).
 
-import { useAtomRefresh, useAtomValue } from '@bible/atom-solid';
+import { useAtomRefresh, useAtomValue } from '@manna/atom-solid';
 import { For, Show } from '@solidjs/web';
 import { Match, Option } from 'effect';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';

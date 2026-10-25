@@ -25,7 +25,7 @@
  * as it spells Advanced ones (`Chord.format` in the played key).
  */
 
-import type * as Chord from '@bible/hymnal/chord';
+import type * as Chord from '@manna/hymnal/chord';
 import { Array as Arr, Option, Schema } from 'effect';
 
 import type { Box, HymnChords, Word } from './chords';

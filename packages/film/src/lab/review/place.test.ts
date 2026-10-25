@@ -3,7 +3,7 @@
 // shown) kept in the set's query; and every place ⌘K's Go to reaches.
 
 import { describe, expect, test } from 'bun:test';
-import { Place } from '@bible/url-state';
+import { Place } from '@manna/url-state';
 import { Equal, Option, Schema } from 'effect';
 import { Places, pageMove } from '../../core/api.ts';
 import { ReviewIndex } from '../../core/review.ts';

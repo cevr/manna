@@ -13,7 +13,7 @@
  * the reads the entry started have settled (`trackRead`), or after
  * {@link TRAVERSAL_READ_LIMIT} if they have not.
  *
- * Entries are told apart by the key `@bible/url-state` gives each one
+ * Entries are told apart by the key `@manna/url-state` gives each one
  * (`UrlAtom.entry`): a push makes a new key, a replace keeps it. The position
  * of the entry on screen is kept as the reader scrolls, once more at the
  * moment the page writes the URL (a search, a filter), and once more at the
@@ -22,8 +22,8 @@
  * still finds the older entries' positions.
  */
 
-import { useRegistry } from '@bible/atom-solid';
-import * as UrlAtom from '@bible/url-state/atom';
+import { useRegistry } from '@manna/atom-solid';
+import * as UrlAtom from '@manna/url-state/atom';
 import { Option, Result, Schema as S } from 'effect';
 import { onCleanup } from 'solid-js';
 

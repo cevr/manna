@@ -1014,7 +1014,7 @@ film's studio (**The film's studio**, below); and the render page
 (`index.html`, `mountRender(pages)`) at a film's export place, which the
 easel opens (`film lab look`). Its API is under
 `/api/` (The HTTP API, below), and every other path a page serves is one of
-the framework's places (`Places` in `core/api.ts`, each a `@bible/url-state`
+the framework's places (`Places` in `core/api.ts`, each a `@manna/url-state`
 Place; the app gives each page's HTML entry, `LabPageSpec.pages`, and its
 server entry, `LabPageSpec.servers`), as
 **Pages and links** (below) lists them. A link the lab does not serve as
@@ -1058,7 +1058,7 @@ lab started on a port another holds is refused, never served beside it.
 pasted link opens what the sender saw and Back walks the views: the path
 says what the view is about, the query what is selected in it or how it is
 shown, the hash when (`#t=`, seconds). Each page reads and writes its place
-through `@bible/url-state`, and every link is printed by `pageHref` over the
+through `@manna/url-state`, and every link is printed by `pageHref` over the
 same places. Whether a move is a step Back walks is the place's declaration
 alone (`pageMove`, `core/api.ts`): a new path or a cited key (a selection,
 a view, a moment chosen, the compare's mode) is a history entry; a
@@ -1756,7 +1756,7 @@ has. The page itself is a target too: a press on no thing opens the page's
 commands (`about: ['Page']`: Undo, Redo, Note on this frame, the transport's
 frame and scene steps). A stepped command also has a
 `×10` row, a finger's Shift (`steppedRows`); ⌘K and the keys keep the one
-row. A touch that moves past @bible/ui's threshold first (a scrub, a drag) never
+row. A touch that moves past @manna/ui's threshold first (a scrub, a drag) never
 opens it, and starts the drag instead (one owner per press, `claimPress`);
 a touch the menu took first is the menu's to its end: no drag starts
 under it, and its release completes none (`liftHeldByOther`), so a finger
@@ -1821,7 +1821,7 @@ offers no Undo, and an Undo whose approval was withdrawn since says
 nothing was left to undo.
 
 A **receipt** is one toast (`Receipts`, `src/lab/command/receipts.tsx`, on
-@bible/ui's Toast) over every page in the shell, in place of a status
+@manna/ui's Toast) over every page in the shell, in place of a status
 line (the studio's edits and notes, the choices' writes, a version's says,
 the sound check while it runs). The hub hears every
 receipt (`hub.receipts`) in its slot: a command's own id when it runs
@@ -4127,7 +4127,7 @@ file's name (`.catalogue.json.lock`) written, nowhere else; closing any other
 handle on the file lets go of the process's lock.
 `film/no-test-seam` (`lint/no-test-seam.ts`) holds every package's `src`: a
 package's test-only doubles live in its `testing.ts` seam (`core/testing.ts`,
-`tools/<area>/testing.ts`, `@bible/url-state/testing`, `@bible/core/<area>/testing`),
+`tools/<area>/testing.ts`, `@manna/url-state/testing`, `@manna/core/<area>/testing`),
 and product code imports none, by a relative path, a package export, a type
 import, a re-export or a dynamic `import('…')`. The tests, the fixtures, the
 seams and the type tests are let off.
@@ -4596,7 +4596,7 @@ adapts says so (`oxlint-disable-next-line`, with why), so an adapter that
 reaches another's API is red as a page is. No page imports a live adapter's
 module (`no-restricted-imports`): only a page's mount builds the host
 (`BrowserHost`), the two stores are `storage-browser.ts`'s, and the review's
-and the studio's mounts build theirs with an adapter of their own. The address bar is `Location`'s alone (`@bible/url-state`'s
+and the studio's mounts build theirs with an adapter of their own. The address bar is `Location`'s alone (`@manna/url-state`'s
 `location-browser.ts`): no film file reads or writes the URL directly.
 
 Frames stay pure: no `Math.random`, no wall clock, no state carried between

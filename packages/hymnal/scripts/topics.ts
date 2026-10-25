@@ -9,7 +9,7 @@
  * refused, never repaired.
  */
 
-import { HymnalService, HymnId } from '@bible/core/hymnal';
+import { HymnalService, HymnId } from '@manna/core/hymnal';
 import { Effect, Schema } from 'effect';
 
 import { type Topic, Topics } from '../src/hymn.js';

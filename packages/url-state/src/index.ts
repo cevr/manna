@@ -1,7 +1,7 @@
 /**
  * URL state as Effect Schemas: the address a page is on (`Location`), what
  * its parts mean (`Codec`, `Field`, `Place`), and the writes to it
- * (`UrlState`). Depends on `effect` alone; `@bible/url-state/atom` binds it to
+ * (`UrlState`). Depends on `effect` alone; `@manna/url-state/atom` binds it to
  * Effect atoms.
  */
 

@@ -12,7 +12,7 @@
 // refused (with the command its words offer past the refusal: Accept
 // anyway), for the newest asked of those landed (`writeStatus`).
 
-import { useAtomSet, useAtomValue } from '@bible/atom-solid';
+import { useAtomSet, useAtomValue } from '@manna/atom-solid';
 import { type JSX, Show } from '@solidjs/web';
 import { Effect, Exit, Match, Option } from 'effect';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';

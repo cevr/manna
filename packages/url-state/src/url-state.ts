@@ -57,7 +57,7 @@ export interface UrlStateService {
 }
 
 export class UrlState extends Context.Service<UrlState, UrlStateService>()(
-  '@bible/url-state/UrlState',
+  '@manna/url-state/UrlState',
 ) {}
 
 /** Writes waiting for the flush, folded into one move. */

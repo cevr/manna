@@ -9,7 +9,7 @@ import type { ClockReads, Film, RenderOptions } from '../canvas/film.ts';
 import type { FilmUnloadable } from './narrated.ts';
 import { Cause, Effect, Option, Scope } from 'effect';
 import type { Fiber } from 'effect';
-import { parseHref } from '@bible/url-state';
+import { parseHref } from '@manna/url-state';
 import { TIME_EVERY_MS, filmOfPage } from '../core/api.ts';
 import { type Ask, newestAsked } from '../core/asked.ts';
 import { addressOn, monotonicMs, onTraverse } from '../browser/host.ts';

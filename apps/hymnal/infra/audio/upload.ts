@@ -26,7 +26,7 @@
  */
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { ManifestJson, type RecordingManifest } from '@bible/hymnal/recording-manifest';
+import { ManifestJson, type RecordingManifest } from '@manna/hymnal/recording-manifest';
 import { Console, Data, Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
 import { Command } from 'effect/cli';
 

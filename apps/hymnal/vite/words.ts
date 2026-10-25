@@ -10,14 +10,14 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-import { Hymn, Topics, topicOf } from '@bible/hymnal/hymn';
+import { Hymn, Topics, topicOf } from '@manna/hymnal/hymn';
 import { Option, Schema } from 'effect';
 
 import { type HymnText, textOf } from '../src/hymns/text';
 
 /** The compiled set's folder, found through the package so no path climbs the repo. */
 const folder = join(
-  dirname(Bun.resolveSync('@bible/hymnal/hymn', import.meta.dir)),
+  dirname(Bun.resolveSync('@manna/hymnal/hymn', import.meta.dir)),
   '../data/sdah-1985',
 );
 

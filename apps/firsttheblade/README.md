@@ -10,10 +10,10 @@ not-found page, and the email list's notices.
 - **Pages** are Solid 2 components (`src/views.tsx`, `src/ui/`) drawn to whole
   HTML files at build time (`src/prerender.tsx`). Nothing hydrates.
 - **The phone menu** is the one part that runs in the browser
-  (`src/client.tsx`, `src/ui/phone-menu.tsx`): @bible/ui's Dialog, mounted in
+  (`src/client.tsx`, `src/ui/phone-menu.tsx`): @manna/ui's Dialog, mounted in
   place of a link to the footer's links, so the menu works without script too.
   Its open state is a local signal; no state is shared or kept in the address,
-  so @bible/atom-solid and @bible/url-state are not used.
+  so @manna/atom-solid and @manna/url-state are not used.
 - **The Worker** (`src/worker/Site.ts`) serves `dist/` from Cloudflare's static
   assets. Every request passes through `src/worker/respond.ts` first: the
   email list's routes, then GET and HEAD only, the not-found page as a 404,
@@ -285,7 +285,7 @@ a3e589137f5, 2026-10-21), so a review reads for each:
 - Bidi controls are folded away: a word written backwards between U+202E and U+202C, or under `unicode-bidi: bidi-override`, reads as no word, though a reader sees it (`email-promise-bidi-controls`).
 - The browser's scripts are not read: words only `src/ui/phone-menu.tsx` or `src/confirm.ts` draw reach a reader through `dist/assets/client.js` or `confirm.js` alone, which the check skips (`email-promise-browser-script-prose`).
 - Runs are joined in the page's order: a positioned box or a reordered flex item that a stylesheet lays beside other words is not read joined with them (`email-promise-joins-in-document-order`).
-- The stamp hashes turbo's `build` inputs only: a run of `bun scripts/promise.ts` after an edit of the root tsconfig, the lock or `@bible/ui` reads the old `dist/`; `bun run test:slow` builds through turbo, whose hash holds them (`email-promise-stamp-inputs`).
+- The stamp hashes turbo's `build` inputs only: a run of `bun scripts/promise.ts` after an edit of the root tsconfig, the lock or `@manna/ui` reads the old `dist/`; `bun run test:slow` builds through turbo, whose hash holds them (`email-promise-stamp-inputs`).
 
 ## The art and the fonts
 

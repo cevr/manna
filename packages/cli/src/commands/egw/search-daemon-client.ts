@@ -8,7 +8,7 @@
  *  this file may surface as an error — only as the slower path.
  */
 
-import { SearchService, type SearchQuery } from '@bible/core/search';
+import { SearchService, type SearchQuery } from '@manna/core/search';
 import { BunSocket } from '@effect/platform-bun';
 import type { Option } from 'effect';
 import { Effect, Layer, Schema } from 'effect';

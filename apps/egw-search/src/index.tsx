@@ -5,9 +5,9 @@
  * restores positions once an entry's results are drawn.
  */
 
-import { RegistryProvider } from '@bible/atom-solid';
-import { layerBrowser } from '@bible/url-state';
-import * as UrlAtom from '@bible/url-state/atom';
+import { RegistryProvider } from '@manna/atom-solid';
+import { layerBrowser } from '@manna/url-state';
+import * as UrlAtom from '@manna/url-state/atom';
 import { render } from '@solidjs/web';
 import { Option } from 'effect';
 

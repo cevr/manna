@@ -15,12 +15,12 @@ import {
   type CorpusSupplyReceipt,
   Target,
   topicsReleaseSource,
-} from '@bible/core/corpus-supply';
+} from '@manna/core/corpus-supply';
 import {
   layerNativeBibleArtifacts,
   layerNativeTopicsArtifacts,
   type NativeFileArtifactSource,
-} from '@bible/core/corpus-supply/bun';
+} from '@manna/core/corpus-supply/bun';
 import { Config, Console, Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
 import { Command, Flag } from 'effect/cli';
 import { HttpClient, HttpClientResponse } from 'effect/http';

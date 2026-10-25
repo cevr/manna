@@ -5,7 +5,7 @@
  * `bible sync --force` - Recreate database even if it exists
  */
 
-import { defaultBibleSyncPaths, syncBible } from '@bible/core/sync';
+import { defaultBibleSyncPaths, syncBible } from '@manna/core/sync';
 import { Flag, Command } from 'effect/cli';
 import { Effect, Schema } from 'effect';
 

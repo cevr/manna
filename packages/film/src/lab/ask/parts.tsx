@@ -17,8 +17,8 @@
 // is.
 
 import { For, type JSX, Show } from '@solidjs/web';
-import { Toggle } from '@bible/ui/toggle';
-import { ToggleGroup } from '@bible/ui/toggle-group';
+import { Toggle } from '@manna/ui/toggle';
+import { ToggleGroup } from '@manna/ui/toggle-group';
 import { Array as Arr, Match, Option, Predicate, Record } from 'effect';
 import { type Accessor, createEffect, createMemo, onSettled } from 'solid-js';
 import {

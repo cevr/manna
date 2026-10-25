@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'bun:test';
-import { type Hymn, sung } from '@bible/hymnal/hymn';
+import { type Hymn, sung } from '@manna/hymnal/hymn';
 import { RegistryProvider, useAtomSet } from '@effect/atom-react';
 import { Option } from 'effect';
 import type * as Atom from 'effect/reactivity/Atom';

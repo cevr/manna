@@ -1,12 +1,12 @@
-# @bible/atom-solid
+# @manna/atom-solid
 
 Effect atoms (`effect/reactivity/Atom`) in Solid 2 components: the hooks this
 repo uses from `@effect/atom-solid` (MIT), ported to Solid 2. Delete the
 package when upstream supports Solid 2. The film's lab and egw-search use it,
-among other atoms for `@bible/url-state/atom`'s places.
+among other atoms for `@manna/url-state/atom`'s places.
 
 ```ts
-import { RegistryProvider, useAtomSet, useAtomValue } from '@bible/atom-solid';
+import { RegistryProvider, useAtomSet, useAtomValue } from '@manna/atom-solid';
 ```
 
 ## The registry

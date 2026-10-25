@@ -1,5 +1,5 @@
 /**
- * `@bible/url-state` as Effect atoms.
+ * `@manna/url-state` as Effect atoms.
  *
  * A thin binding: every atom reads and writes through the core's services,
  * and holds no URL state of its own.
@@ -20,7 +20,7 @@
  * **Server rendering.** A browser never sends the hash, so a place with hash
  * keys carries a server value (`Atom.withServerValue`): the place decoded
  * from the href without its hash, where every hash key is its default. A
- * binding that honours server values (`@bible/atom-solid`) renders it on the
+ * binding that honours server values (`@manna/atom-solid`) renders it on the
  * server and on the client's hydration pass, then the real hash.
  */
 

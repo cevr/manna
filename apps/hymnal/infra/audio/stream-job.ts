@@ -27,7 +27,7 @@
  * (`render.ts --manifest-only`). Every line goes to the console and to
  * `<cache>/stream.log`.
  */
-import { KEY_TRANSPOSES, keySet } from '@bible/hymnal/recordings';
+import { KEY_TRANSPOSES, keySet } from '@manna/hymnal/recordings';
 import { Console, Context, Effect, FileSystem, Option, Path, Ref, Result, Schema } from 'effect';
 
 import { holds, unquote } from './plan.ts';

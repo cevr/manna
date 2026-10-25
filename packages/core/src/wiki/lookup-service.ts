@@ -678,7 +678,7 @@ const resolveCorpusGroups = (
 };
 
 export class LookupService extends Context.Service<LookupService, LookupServiceApi>()(
-  '@bible/core/wiki/LookupService',
+  '@manna/core/wiki/LookupService',
 ) {
   /** Backed by the wiki artifact for group 1 and the four §6 section sources
    *  for groups 2-5 — the same two dependencies `WikiService.Live` itself takes,

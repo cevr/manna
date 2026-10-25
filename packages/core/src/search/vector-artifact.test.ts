@@ -47,7 +47,7 @@ const query = (text: string) =>
  *  Its own service, so the layer that counts and the test that asserts share
  *  one `Ref` while the whole graph is still built once, at the test boundary. */
 class ReadCount extends Context.Service<ReadCount, Ref.Ref<number>>()(
-  '@bible/core/search/test/ReadCount',
+  '@manna/core/search/test/ReadCount',
 ) {
   static readonly Live: Layer.Layer<ReadCount> = Layer.effect(ReadCount, Ref.make(0));
 }

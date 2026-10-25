@@ -11,7 +11,7 @@
  *  It ships in `src/` rather than in a test file for exactly that reason — a
  *  `*.test.ts` is not importable from another package, and the CLI's test suite
  *  lives in `packages/cli`. It is reached from another package through
- *  `@bible/core/wiki/testing` (`testing.ts`), not through `@bible/core/wiki`:
+ *  `@manna/core/wiki/testing` (`testing.ts`), not through `@manna/core/wiki`:
  *  importable across packages is not the same as part of the product, and a
  *  production import must not be able to find a test dictionary.
  */

@@ -428,7 +428,7 @@ construction.
 
 **The segment pipeline is not wired up yet.** `segmentVerseText`,
 `applyItalicSegments`, `applyRedLetterSegments`, and `applySearchHighlights` are
-implemented, exported from `@bible/core/bible-rendering`, and have **zero
+implemented, exported from `@manna/core/bible-rendering`, and have **zero
 consumers** outside their own directory. `packages/app/src/reading/bible-reader.tsx`
 renders `{verse.text}` as a raw string — no italics, no red letter, no margin
 anchors. Milestone 6 therefore carries the cost of wiring the segment renderer

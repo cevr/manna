@@ -26,13 +26,13 @@ import {
   type NeighborScope,
   type VectorNeighborsApi,
   VectorNeighborsUnavailable,
-} from '@bible/core/search';
+} from '@manna/core/search';
 import {
   EXCLUDED_SUBTYPES,
   isBookSubtype,
   isBookType,
   isCorpusSection,
-} from '@bible/core/writings';
+} from '@manna/core/writings';
 
 /** The metadata value a vector carries where its book has no classification,
  *  or one outside the search's vocabulary (`no pagebreaks`). An include

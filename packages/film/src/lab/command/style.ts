@@ -13,7 +13,7 @@
 // no wider than the screen less its gutters, scrolling inside itself. A
 // field is the kit's (`.sh-field`), styled where the kit is, never here. A phone's width is the studio's one breakpoint
 // (`PHONE`, `WIDE`), asked through its owner. Focus is the shell's ring; a
-// sheet (@bible/ui's Sheet) and the phone sheet's grip, whose edge its
+// sheet (@manna/ui's Sheet) and the phone sheet's grip, whose edge its
 // scroller clips, draw it inside (`--focus-ring-inset`; this sheet comes after
 // the review's, whose ring it overrides). A sheet takes presses on its panel
 // alone, which stands off the page's scrollbar at the window's edge: its

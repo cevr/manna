@@ -6,8 +6,8 @@
  *  several fixtures whose agreement is a coincidence waiting to end, which is
  *  the argument `wiki/testing.ts` already makes for the Daniel 8 phrase fixture.
  *
- *  Exported through `@bible/core/search/testing`, never through
- *  `@bible/core/search`: a synthetic ten-paragraph corpus sitting in the
+ *  Exported through `@manna/core/search/testing`, never through
+ *  `@manna/core/search`: a synthetic ten-paragraph corpus sitting in the
  *  namespace an app imports `SearchService` from is a corpus a shipped code path
  *  can reach for. Core's own suites import this file relatively.
  *

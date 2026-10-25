@@ -15,7 +15,7 @@
  *  composer over actual rows rather than being handed a page. The identities
  *  below are what the suites assert, and they are stated once.
  *
- *  Test-only, and reached through `@bible/core/wiki/testing` for the reason
+ *  Test-only, and reached through `@manna/core/wiki/testing` for the reason
  *  `phrase-fixture.ts` is: importable across packages is not part of the
  *  product.
  */

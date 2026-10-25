@@ -1,4 +1,4 @@
-import { formatEGWRef, isSearchQuery, parseEGWRef } from '@bible/core/egw';
+import { formatEGWRef, isSearchQuery, parseEGWRef } from '@manna/core/egw';
 import { describe, expect, it } from 'bun:test';
 
 describe('EGW reference parser', () => {

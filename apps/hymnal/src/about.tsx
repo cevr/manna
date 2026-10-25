@@ -5,7 +5,7 @@
  * a licence with an address opens it when pressed.
  */
 
-import { RECORDING_CREDITS, type CreditLine } from '@bible/hymnal/recordings';
+import { RECORDING_CREDITS, type CreditLine } from '@manna/hymnal/recordings';
 import { Option } from 'effect';
 import { Linking, StyleSheet, Text, View, type ColorValue } from 'react-native';
 

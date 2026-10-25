@@ -1,6 +1,6 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { BibleDatabase } from '@bible/core/bible-db';
-import * as BibleDbBun from '@bible/core/bible-db/bun';
+import { BibleDatabase } from '@manna/core/bible-db';
+import * as BibleDbBun from '@manna/core/bible-db/bun';
 import { describe, expect, it } from 'effect-bun-test';
 import { Database, type SQLQueryBindings } from 'bun:sqlite';
 import { Array, Effect, FileSystem, Layer, Option, Schema } from 'effect';

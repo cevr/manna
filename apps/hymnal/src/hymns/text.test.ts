@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'bun:test';
-import { topicOf } from '@bible/hymnal/hymn';
+import { topicOf } from '@manna/hymnal/hymn';
 import { Option } from 'effect';
 
 import { readTopics } from '../../vite/words';

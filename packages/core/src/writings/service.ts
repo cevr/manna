@@ -175,7 +175,7 @@ export interface WritingsServiceApi {
 }
 
 export class WritingsService extends Context.Service<WritingsService, WritingsServiceApi>()(
-  '@bible/core/writings/WritingsService',
+  '@manna/core/writings/WritingsService',
 ) {
   static Live: Layer.Layer<WritingsService, never, EGWParagraphDatabase> = Layer.effect(
     WritingsService,

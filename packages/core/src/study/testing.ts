@@ -1,6 +1,6 @@
 /** Shared fixtures for the study seam's host tests.
  *
- *  Behind `@bible/core/study/testing` rather than the production barrel, for
+ *  Behind `@manna/core/study/testing` rather than the production barrel, for
  *  the reason `wiki/testing.ts` is: these are test doubles, and a shipped import
  *  must not be able to reach them through the same path it reaches
  *  `StudyService` through.

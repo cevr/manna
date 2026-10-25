@@ -2,7 +2,7 @@
  * Where the hymn recordings are served: the R2 bucket `cvr-hymns` behind its
  * custom domain (`infra/bucket.ts`). The app builds each recording's URL from
  * here, and the stack reads its domain from here, so the address is declared
- * once. It imports only `@bible/hymnal/recordings`, which imports nothing, so
+ * once. It imports only `@manna/hymnal/recordings`, which imports nothing, so
  * Metro, Vite and the infra read it unchanged.
  *
  * Key layout in the bucket:
@@ -15,7 +15,7 @@
  * - `data/`: reserved for the compiled hymn data.
  */
 
-import { RECORDING_SET, recordingKey } from '@bible/hymnal/recordings';
+import { RECORDING_SET, recordingKey } from '@manna/hymnal/recordings';
 
 export const HYMNS_HOST = 'hymns.cvr.im';
 

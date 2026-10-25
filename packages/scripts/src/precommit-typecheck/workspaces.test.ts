@@ -3,10 +3,10 @@ import { describe, expect, test } from 'bun:test';
 import { typecheckedBy } from './workspaces.js';
 
 const workspaces = [
-  { dir: 'packages/core', name: '@bible/core' },
-  { dir: 'packages/film', name: '@bible/film' },
-  { dir: 'packages/filmstrip', name: '@bible/filmstrip' },
-  { dir: 'apps/selah', name: '@bible/selah' },
+  { dir: 'packages/core', name: '@manna/core' },
+  { dir: 'packages/film', name: '@manna/film' },
+  { dir: 'packages/filmstrip', name: '@manna/filmstrip' },
+  { dir: 'apps/selah', name: '@manna/selah' },
 ];
 
 describe("a commit's typecheck", () => {
@@ -16,7 +16,7 @@ describe("a commit's typecheck", () => {
         ['packages/film/src/a.ts', 'packages/film/tsconfig.json', 'packages/core/src/b.tsx'],
         workspaces,
       ),
-    ).toEqual(['@bible/core', '@bible/film']);
+    ).toEqual(['@manna/core', '@manna/film']);
   });
 
   test('leaves out a workspace whose staged files no typecheck reads, and a folder named like another', () => {
@@ -29,9 +29,9 @@ describe("a commit's typecheck", () => {
   test('covers every workspace but Selah when a root file every workspace reads is staged', () => {
     for (const root of ['tsconfig.json', 'package.json', 'bun.lock', 'bunfig.toml', 'turbo.json']) {
       expect(typecheckedBy([root], workspaces)).toEqual([
-        '@bible/core',
-        '@bible/film',
-        '@bible/filmstrip',
+        '@manna/core',
+        '@manna/film',
+        '@manna/filmstrip',
       ]);
     }
   });

@@ -22,8 +22,8 @@
 // commands on its hub, so a key, the context menu, ⌘K and a receipt's
 // button run the same ones.
 
-import { useAtomSet, useAtomValue } from '@bible/atom-solid';
-import { Dialog } from '@bible/ui/dialog';
+import { useAtomSet, useAtomValue } from '@manna/atom-solid';
+import { Dialog } from '@manna/ui/dialog';
 import { For } from '@solidjs/web';
 import { Array as Arr, Boolean as Bool, Effect, Fiber, Match, Option } from 'effect';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';

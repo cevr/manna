@@ -1,4 +1,4 @@
-# @bible/hymnal
+# @manna/hymnal
 
 Chords for the hymnal, read from each hymn's MIDI file: the harmony its four
 voices sound, named and placed on the melody note where it changes.
@@ -48,7 +48,7 @@ notes, a melisma marked with the notes it holds (`is_2`).
 
 `bun run compile` compiles every hymn of the SDA Hymnal (1985), 1 to 695,
 from its text (`packages/core/data/hymnal.db`, read through
-`@bible/core/hymnal`) and its MIDI file (`data/midi/NNN.mid`) into
+`@manna/core/hymnal`) and its MIDI file (`data/midi/NNN.mid`) into
 `data/sdah-1985/NNN.json`, one hymn each, and `data/sdah-1985/index.json`
 (each hymn's number, title and lowest level). It decodes every file it wrote
 back through the schema and writes a report beside the folder,
@@ -57,8 +57,8 @@ by level, the reasons, the inexact verse splits, the held hymns and the
 alignment key's result. The same inputs give the same bytes. Flags, each
 relative to the repository root: `--db`, `--midi`, `--out`, `--key`.
 
-The app reads a hymn through `@bible/hymnal/hymn`, which imports only
-`effect` and `@bible/hymnal/chord` (no Bun, Node or dictionary). A hymn holds
+The app reads a hymn through `@manna/hymnal/hymn`, which imports only
+`effect` and `@manna/hymnal/chord` (no Bun, Node or dictionary). A hymn holds
 its key, its meter, each stanza in order and its refrain once, with the
 order the hymnal sings it in, one of five:
 
@@ -94,7 +94,7 @@ that one.
 
 The compile also writes `data/sdah-1985/topics.json`: the hymnal's 62
 sections as each page prints them at its foot, as ranges of hymn numbers
-(`Topics` in `@bible/hymnal/hymn`, `{ id, name, first, last }`, ordered).
+(`Topics` in `@manna/hymnal/hymn`, `{ id, name, first, last }`, ordered).
 The schema refuses a table that is not a partition of 1–695, so every hymn
 has exactly one topic, and `topicOf(topics, n)` gives it. `scripts/topics.ts`
 builds it from hymnal.db's sections and `data/fixes/topics.json`, where the

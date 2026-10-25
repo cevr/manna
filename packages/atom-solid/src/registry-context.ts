@@ -32,7 +32,7 @@ export const useRegistry = (): AtomRegistry.AtomRegistry =>
     useContext(RegistryContext),
     () =>
       new Error(
-        '@bible/atom-solid: an atom hook ran outside a RegistryProvider. Wrap each page (and each server render) in its own RegistryProvider.',
+        '@manna/atom-solid: an atom hook ran outside a RegistryProvider. Wrap each page (and each server render) in its own RegistryProvider.',
       ),
   );
 

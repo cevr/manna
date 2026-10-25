@@ -19,12 +19,12 @@
     "test:slow": "bun test .slow.test. && playwright test --config=test/browser/playwright.config.ts"
   },
   "dependencies": {
-    "@bible/atom-solid": "workspace:*",
-    "@bible/core": "workspace:*",
-    "@bible/url-state": "workspace:*",
     "@effect/platform-bun": "catalog:",
     "@effect/sql-d1": "catalog:",
     "@effect/sql-sqlite-bun": "catalog:",
+    "@manna/atom-solid": "workspace:*",
+    "@manna/core": "workspace:*",
+    "@manna/url-state": "workspace:*",
     "@solidjs/web": "catalog:",
     "effect": "catalog:",
     "marked": "18.0.14",

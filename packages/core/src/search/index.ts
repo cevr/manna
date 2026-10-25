@@ -1,5 +1,5 @@
 // The golden query set is deliberately absent: it is exported from
-// `@bible/core/search/testing` (`testing.ts`) so a shipped import cannot reach
+// `@manna/core/search/testing` (`testing.ts`) so a shipped import cannot reach
 // a ten-paragraph fixture corpus through the same barrel it reaches
 // `SearchService` through — the seam `wiki/index.ts` draws for the same reason.
 export * from './embedder.js';

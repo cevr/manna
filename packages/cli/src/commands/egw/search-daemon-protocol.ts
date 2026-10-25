@@ -23,7 +23,7 @@
  *    survivor after an upgrade, or `bible egw daemon stop`.
  */
 
-import { MODEL_FINGERPRINT, SearchQuery, SearchResult } from '@bible/core/search';
+import { MODEL_FINGERPRINT, SearchQuery, SearchResult } from '@manna/core/search';
 import { Schema } from 'effect';
 import { Rpc, RpcGroup } from 'effect/rpc';
 

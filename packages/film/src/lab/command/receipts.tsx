@@ -2,7 +2,7 @@
 // words its command or its write gave (`command/command.ts`: before → after
 // where something moved), with its Undo when it has one (the button runs
 // the undoing command through the hub, as its key would, labelled as that
-// command is; a refusal's is its way past, Accept anyway), on @bible/ui's
+// command is; a refusal's is its way past, Accept anyway), on @manna/ui's
 // Toast. One toast per slot (`Hub.announce`): a slot's next receipt replaces
 // its last, so `undoing…` becomes what was undone and a run of nudges reads
 // as one. Done goes after a few seconds, a refusal stays longer, a write on
@@ -21,7 +21,7 @@
 // One whose command says it never can (`Unfit.Never`: the lab no longer has
 // the change) is retired: it says why, loses its Undo, and goes as a refusal.
 
-import { Toast } from '@bible/ui/toast';
+import { Toast } from '@manna/ui/toast';
 import { For } from '@solidjs/web';
 import { Equal, Option, Schema } from 'effect';
 import { createEffect, createSignal, onCleanup, onSettled, untrack } from 'solid-js';
