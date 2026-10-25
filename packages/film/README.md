@@ -2128,6 +2128,8 @@ that, from a kept sheet its member's `replaced` history says was replaced
 since) is stale (`tools/board-stale.ts`): a run draws it new tries, numbered
 on, until it has `--tries` drawn from the cast as it stands, printing
 `stale <panel> why="…"`, and the keep stays until the owner keeps a new try;
+the beat's later panels ride along by the first try the run drew of its
+first panel, not by the keep it draws again over;
 the board read (`film lab board`, the lab MCP's `board`) gives the panel a
 `stale` naming whose sheet changed.
 

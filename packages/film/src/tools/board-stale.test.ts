@@ -18,6 +18,7 @@ import {
 } from 'effect';
 import { BoardName } from '../core/board.ts';
 import { CastSheetJson, type CastSheetRecord } from '../core/cast-record.ts';
+import type { SheetKind } from '../core/cast-sheet.ts';
 import { Segment } from '../core/segment.ts';
 import { makeBoard } from './board-make.ts';
 import type { BoardBeat } from './board-prompt.ts';
@@ -51,10 +52,18 @@ const style = {
   sha256: 'x',
 };
 
-/** A keep replaced on `at`: the turnaround kept as try 1, try 2 in its place. */
-const replacedAt = (at: string) => ({
-  kind: 'turnaround' as const,
-  kept: { try: 1, why: 'the first', views: [] },
+/** A keep of `kind` replaced on `at`: try 1 kept (the views it cut, `views`), try 2 in its place. */
+const replacedAt = (
+  at: string,
+  kind: SheetKind = 'turnaround',
+  views: ReadonlyArray<string> = [],
+) => ({
+  kind,
+  kept: {
+    try: 1,
+    why: 'the first',
+    views: views.map((name, i) => ({ view: i + 1, name, box: [0, 0, 1, 1] as const })),
+  },
   by: 2,
   folder: 'kept/replaced/turnaround-1',
   ask: 'a1',
@@ -62,13 +71,15 @@ const replacedAt = (at: string) => ({
   at,
 });
 
-/** Christ's record in the library, his turnaround kept, with the keeps `replaced` named. */
+/** A member's record in the library (Christ's unless named), its turnaround kept, with the keeps `replaced` named. */
 const christ = (
   files: Map<string, Uint8Array>,
   replaced: ReadonlyArray<ReturnType<typeof replacedAt>> = [],
+  member = 'christ',
 ) => {
+  const sheet = `/library/cast/${member}/cast-sheet`;
   const record: CastSheetRecord = {
-    member: Segment.make('christ'),
+    member: Segment.make(member),
     scope: 'library',
     who: 'Him',
     refs: [],
@@ -76,8 +87,8 @@ const christ = (
     kept: { turnaround: { try: 2, why: 'the owner kept it', views: [] } },
     ...Bool.match(replaced.length > 0, { onTrue: () => ({ replaced }), onFalse: () => ({}) }),
   };
-  files.set(`${SHEET}/cast-sheet.json`, text(Schema.encodeSync(CastSheetJson)(record)));
-  files.set(TURNAROUND, text('kept turnaround'));
+  files.set(`${sheet}/cast-sheet.json`, text(Schema.encodeSync(CastSheetJson)(record)));
+  files.set(`${sheet}/kept/turnaround.png`, text('kept turnaround'));
 };
 
 /** A board over memory, the film `f` under `/films`, with the lab's reads beside it. */
@@ -233,6 +244,106 @@ describe('a kept panel whose cast sheet changed', () => {
         expect(before.stale).toEqual([]);
         expect(before.lines).toEqual([]);
       });
+    },
+  );
+
+  /** The board's stale panels over `panels`, each one kept try from before tries recorded their cast, drawn from `ref`. */
+  const staleOver = (files: Map<string, Uint8Array>, panels: ReadonlyArray<[string, string]>) =>
+    Effect.gen(function* () {
+      const store = yield* BoardStore;
+      yield* store.modify(film, (b) =>
+        Result.succeed({
+          ...b,
+          panels: panels.map(([at, ref]) => ({
+            id: `supper.${at}`,
+            beat: SUPPER,
+            at: BoardName.make(at),
+            kept: 1,
+            tries: [
+              {
+                n: 1,
+                file: Segment.make(`supper.${at}.1.png`),
+                sha256: 's',
+                made: 'generate' as const,
+                refs: ['style.9005.png', `../../../library/cast/${ref}`],
+                at: '2026-10-25T11:00:00.000Z',
+              },
+            ],
+          })),
+        }),
+      );
+      return (yield* store.stale(film)).map((s) => [s.panel, s.members]);
+    }).pipe(Effect.provide(boardOver(files)));
+
+  it.effect(
+    'a try from before is stale on a view cut from a sheet replaced since, which named that view',
+    () => {
+      const files = new Map<string, Uint8Array>();
+      christ(files, [replacedAt('2026-10-25T15:00:00.000Z', 'poses', ['kneel'])]);
+      return Effect.gen(function* () {
+        expect(
+          yield* staleOver(files, [
+            ['one', 'christ/cast-sheet/views/kneel.png'],
+            ['two', 'christ/cast-sheet/views/stand.png'],
+          ]),
+        ).toEqual([['supper.one', ['christ']]]);
+      });
+    },
+  );
+
+  it.effect(
+    "a try from before is not stale on another member's sheet, nor on a kind of its own sheet not replaced",
+    () => {
+      const files = new Map<string, Uint8Array>();
+      christ(files, [replacedAt('2026-10-25T15:00:00.000Z')]);
+      christ(files, [replacedAt('2026-10-25T15:00:00.000Z', 'heads')], 'paul');
+      return Effect.gen(function* () {
+        expect(
+          yield* staleOver(files, [
+            ['one', 'christ/cast-sheet/kept/turnaround.png'],
+            ['two', 'paul/cast-sheet/kept/turnaround.png'],
+          ]),
+        ).toEqual([['supper.one', ['christ']]]);
+      });
+    },
+  );
+});
+
+describe("a stale beat's ride-along", () => {
+  const two: BoardBeat = {
+    id: SUPPER,
+    say: Option.some('He {breaks}breaks the {bread}bread.'),
+    picture: Option.some('He breaks it (`breaks`); the bread in His hands (`bread`).'),
+    cast: ['christ'],
+  };
+
+  it.effect(
+    "takes the first panel's first try drawn in this run, never its keep from the sheet replaced",
+    () => {
+      const files = new Map<string, Uint8Array>();
+      christ(files);
+      const draw = makeBoard(
+        film,
+        [two],
+        [],
+        { beats: [], tries: 1, lanes: 1, dryRun: false },
+        () => Effect.void,
+      );
+      return Effect.gen(function* () {
+        yield* styled;
+        const store = yield* BoardStore;
+        yield* draw;
+        yield* store.modify(film, (b) =>
+          Result.succeed({ ...b, panels: b.panels.map((p) => ({ ...p, kept: 1 })) }),
+        );
+        files.set(TURNAROUND, text('the turnaround kept in its place'));
+        yield* draw;
+        const bread = (yield* store.read(film)).panels.find((p) => p.id === 'supper.bread');
+        expect(bread?.tries.map((t) => t.refs[1])).toEqual([
+          'supper.breaks.1.png',
+          'supper.breaks.2.png',
+        ]);
+      }).pipe(Effect.provide(boardOver(files)));
     },
   );
 });

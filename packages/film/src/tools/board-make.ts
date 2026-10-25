@@ -315,18 +315,26 @@ export const makeBoard = Effect.fn('Board.make')(function* (
   const drawBeat = (beat: BoardBeat) =>
     Effect.gen(function* () {
       const cast = beatCast(locks, beat, ctx.folder, path);
+      // The first try this run drew of each panel: the first panel rides along by it, not by a keep it is drawn again over.
+      const drawnHere = new Map<string, number>();
       for (const s of stale.values())
         if (panelsOf(board, beat.id).some((p) => p.id === s.panel))
           yield* emit({ _tag: 'Stale', panel: s.panel, why: staleWhy(film, s) });
       for (const { at, count } of toDraw(board, beat, options.tries, stale)) {
         if (yield* down()) return;
-        // The first panel of the beat, once it has a try, rides along as the second reference.
+        // The first panel of the beat, once it has a try, rides along as the second reference: the first try this run
+        // drew of it when it drew one, else its shown try.
         const now = yield* store.read(film);
         const first = Arr.findFirst(
           panelsOf(now, beat.id),
           (p) => Predicate.isUndefined(p.text) && p.at !== at && p.tries.length > 0,
         );
-        const shot = Option.flatMap(first, shownTry);
+        const shot = Option.flatMap(first, (p) =>
+          Option.match(Option.fromUndefinedOr(drawnHere.get(p.id)), {
+            onNone: () => shownTry(p),
+            onSome: (n) => tryOf(p, n),
+          }),
+        );
         const refs = [style.ref, ...Option.toArray(Option.map(shot, (t) => t.file)), ...cast.refs];
         const prompt = panelPrompt({
           style,
@@ -358,6 +366,7 @@ export const makeBoard = Effect.fn('Board.make')(function* (
           Option.none(),
           emit,
         );
+        for (const n of made.slice(0, 1)) drawnHere.set(panelId(beat.id, at), n);
         yield* Ref.update(failedInRow, (k) =>
           Bool.match(made.length === 0, { onTrue: () => k + 1, onFalse: () => 0 }),
         );
