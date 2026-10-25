@@ -9,6 +9,7 @@ import { Effect, Exit, Fiber, Latch, Layer, Option } from 'effect';
 import { PageCrashed } from './errors.ts';
 import { type ExportPages, Pages, type PagesOptions, exportUrl } from './pages.ts';
 import { type FakeRenderHost, emptyLedger, fakeRenderHost } from './browser/testing.ts';
+import { Picture } from '../core/board-render.ts';
 
 const setup = (host: FakeRenderHost = {}) => {
   const ledger = emptyLedger();
@@ -31,6 +32,14 @@ describe('exportUrl', () => {
   test('names the film page, export mode, and captions only when they are off', () => {
     expect(exportUrl('http://x/', 'a b', true)).toBe('http://x/?film=a%20b&export');
     expect(exportUrl('http://x/', 'f', false)).toBe('http://x/?film=f&export&captions=0');
+  });
+  test('asks for the Board, and its burn-in, by name', () => {
+    expect(exportUrl('http://x/', 'f', true, Picture.Board({ review: false }))).toBe(
+      'http://x/?film=f&export&board',
+    );
+    expect(exportUrl('http://x/', 'f', false, Picture.Board({ review: true }))).toBe(
+      'http://x/?film=f&export&captions=0&board&review',
+    );
   });
 });
 

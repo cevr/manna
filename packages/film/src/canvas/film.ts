@@ -559,6 +559,13 @@ export interface Film {
   readonly look: FilmLook;
   sceneAt(T: number): Placed<SceneSpec>;
   /**
+   * Whether a full-screen card its scenes declare (`SceneSpec.cards`) is the
+   * frame at `T`: what a Board render (`boardFilm`) sets through the film's
+   * own card code over its panels. A page cut from the film (a short) has
+   * none of its own.
+   */
+  readonly cardAt?: (T: number) => boolean;
+  /**
    * The footage frame `T` reads, a pure function of the film (a talk's
    * camera take at the source second its edit puts at `T`): what the host
    * decodes before it draws `T` (`RenderOptions.footage`). A drawn film reads
@@ -1488,6 +1495,7 @@ export const createFilm = (spec: FilmSpec): Film => {
     allRecorded,
     look: { paper: spec.paper, shade: spec.shade, finish, short, card: spec.card },
     sceneAt,
+    cardAt: (T) => carded(sceneAt(T), T) !== undefined,
     render,
     rigs,
   };

@@ -27,6 +27,7 @@ import {
 import { CHECK_RULES } from './film-check.ts';
 import { IMPORT_RULES } from './library.ts';
 import { testExportInfo } from './browser/testing.ts';
+import { Picture } from '../core/board-render.ts';
 
 /** A film of three scenes, 4, 5 and 6 s, and one short over its first. */
 const cutShort = {
@@ -67,6 +68,8 @@ const flags = {
   share: Option.none(),
   encoder: Option.none(),
   server: Option.none(),
+  board: false,
+  review: false,
 } as const;
 
 const conflict = (over: Partial<Parameters<typeof jobOf>[0]>) =>
@@ -151,6 +154,20 @@ describe('jobOf', () => {
       from: Option.none(),
     });
     expect(Result.getOrThrow(jobOf(flags))).toMatchObject({ cut: Cut.Whole() });
+  });
+
+  test('--board draws the Board, --review with its burn-in; the burn-in needs the Board, a short its own page', () => {
+    expect(Result.getOrThrow(jobOf(flags))).toMatchObject({ picture: Picture.Scenes() });
+    expect(Result.getOrThrow(jobOf({ ...flags, board: true }))).toMatchObject({
+      picture: Picture.Board({ review: false }),
+    });
+    expect(
+      Result.getOrThrow(jobOf({ ...flags, board: true, review: true, stills: Option.some([3]) })),
+    ).toMatchObject({ _tag: 'Stills', picture: Picture.Board({ review: true }) });
+    expect(conflict({ review: true })).toBe('review needs board');
+    expect(conflict({ board: true, scope: scoped({ _tag: 'Short', id: 'cut' }) })).toBe(
+      'board excludes short',
+    );
   });
 
   test('a short draws on its own page', () => {
@@ -316,15 +333,15 @@ describe('encoder budget', () => {
 
   test('the hardware encoder (the Mac): two a page with a share copy; past 14 fails, whatever the cores', () => {
     expect(MAX_HARDWARE_ENCODERS).toBe(14);
-    expect(HARDWARE_WORKERS).toBe(6);
-    expect(encoderLimits(hardware, 10)).toEqual({ max: 14, workers: 6 });
-    expect(encoderLimits(hardware, 64)).toEqual({ max: 14, workers: 6 });
+    expect(HARDWARE_WORKERS).toBe(4);
+    expect(encoderLimits(hardware, 10)).toEqual({ max: 14, workers: 4 });
+    expect(encoderLimits(hardware, 64)).toEqual({ max: 14, workers: 4 });
     expect(tag(videoEncoders(7, true, hardware, 64))).toBe('14');
     expect(tag(videoEncoders(8, true, hardware, 64))).toBe('TooManyEncoders');
     expect(tag(videoEncoders(14, false, hardware, 64))).toBe('14');
     expect(tag(videoEncoders(15, false, hardware, 64))).toBe('TooManyEncoders');
     // The default render, with its share copy, fits.
-    expect(tag(videoEncoders(HARDWARE_WORKERS, true, hardware, 10))).toBe('12');
+    expect(tag(videoEncoders(HARDWARE_WORKERS, true, hardware, 10))).toBe('8');
   });
 
   test('a software encoder is bounded by the cores, one encoder a page: its share is made after the join', () => {

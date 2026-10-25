@@ -488,6 +488,17 @@ export type CodeError =
   | FitUnmatched
   | FitUnreadable;
 
+/** A Board render's page could not fetch or read its film's board record or an image it keeps. */
+export class BoardUnreadable extends Schema.TaggedError<BoardUnreadable>()('BoardUnreadable', {
+  film: Schema.String,
+  url: Schema.String,
+  reason: Schema.String,
+}) {
+  override get message() {
+    return `film "${this.film}": its Board at ${this.url} cannot be read (${this.reason}); a Board render draws every kept try or none`;
+  }
+}
+
 /** A film's timings file is there, but the page could not fetch or read it. */
 export class NarrationUnreadable extends Schema.TaggedError<NarrationUnreadable>()(
   'NarrationUnreadable',

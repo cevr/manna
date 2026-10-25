@@ -618,6 +618,33 @@ its span. Every file a render leaves (the clip, its share copy, captions,
 chapters, stills, a sheet) is written beside itself and renamed into place
 once whole, so a failed or interrupted render leaves the last good file.
 
+**Board render.** `film render <film> --board` (with `--act`, `--scene`,
+`--stills` or `--contact` as any render) draws the film as its Board
+(`core/board.ts`) through the same pages, encoder, join and catalogue,
+recorded as variant `board` unless `--variant` names another. Each frame
+shows the shot the animatic holds there (`shotsOf`, `core/animatic.ts`),
+on the film's clock: a beat's takes, or the estimate a beat with none is
+laid out on, so a film with no takes renders silent. `core/board-render.ts`
+decides the frame, pure: a picture panel is its kept try covering the
+1920 × 1080 frame from its middle, pushing in 6 % or panning 4 % of the
+frame's width (held 4.2 % larger, so no edge shows at its ends) over the
+span it is seen, which of the three picked by a hash of the panel's id (`motionOf`), so a panel moves the
+same way on every render; a cut dissolves over 0.5 s centred on it, at most
+half of the hold on either side (`boardFrameAt`). A card or verse panel is
+set by the film's card code (`paintText`); a beat with no panel, a picture
+panel with no try and a full-screen card the film's scenes declare
+(`Film.cardAt`) are the film's own frame (its storyboard card, its card).
+Nothing else moves, and no captions are burnt in (the `.vtt` beside it
+keeps the line). `--review` (variant `board-review`) burns in, small in the
+bottom-left corner, the film time, the beat and the panel with its try
+(`0:41.3 · name · name.sets · try 5`, `burnIn`), so a frame of the owner's
+screen capture names where he is. The page (`player/board.ts`) reads the
+board and every kept try from its server (`boardFile`,
+`/films/<film>/board.json`, `/films/<film>/board/<file>`) and decodes them
+before the first frame; one it cannot read fails the render
+(`BoardUnreadable`). A short has its own page: `--board` with `--short` is
+a `FlagsConflict`, as is `--review` without `--board`.
+
 **The catalogue** (`core/catalogue.ts`, kept by `tools/catalogue.ts`) records
 each render's address, variant, kind (video, stills, contact, look-book),
 settings (scale, captions), files and **stamp**: the git commit (none outside
@@ -713,22 +740,25 @@ view names the same launcher and profile, so a Chrome Bun spawns again after
 the first one died runs its GPU too, in the same profile. The renderer asks
 for it (`launchArgs`), so `render`, `doctor` and the lab's `look` and
 look-book draw in one such Chrome; the browser tests do not, and no other
-platform does. Both platforms ask for SwiftShader by name
-(`--enable-unsafe-swiftshader`); the 2D canvas stays software
-(`--disable-accelerated-2d-canvas`) and on macOS WebGL stays on SwiftShader
-(`--use-angle=swiftshader`), so the GPU changes no pixel: RBF's `cold` and
-`title` stills are byte-identical with and without it.
+platform does. On macOS that Chrome draws on the GPU: WebGL on Metal
+(`--use-angle=metal`) and the 2D canvas accelerated, which renders RBF's
+`cold` and `title` at 101 fps against 84 in software, with pixels the owner
+judged the same (2026-10-25; under 1 level on average, most on the
+anti-aliased edges of ink and text). Films render on the owner's Macs only.
+Elsewhere the 2D canvas stays software (`--disable-accelerated-2d-canvas`)
+and WebGL runs on SwiftShader, asked for by name
+(`--enable-unsafe-swiftshader`).
 `e2e/tools/renderer-chrome.dom.test.ts` reads the renderer's Chrome from `ps`
 on macOS: no `--disable-gpu`, exec'd by the launcher, and spawned again the
 same way.
 
-|                  | Hardware (macOS)                                                 | Software (Linux, any box without a GPU encoder)                         |
-| ---------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| Chromium flags   | `--enable-gpu --use-angle=swiftshader`, through the GPU launcher | neither: Bun's `--disable-gpu` stays (`launchArgs`, `tools/browser.ts`) |
-| master           | quantizer 16 (~37 Mbps)                                          | 37 Mbps variable, 2-frame pre-roll (13.4 Mbps, 765 MB for 7.6 min)      |
-| share            | quantizer 26, in the page (~160 MB)                              | x264 CRF 22 from the joined master (2.2 Mbps, 126 MB)                   |
-| encoders at once | 14 (past it the encoder hangs)                                   | one per core                                                            |
-| default pages    | 6                                                                | 8, or half the cores below 16                                           |
+|                  | Hardware (macOS)                                           | Software (Linux, any box without a GPU encoder)                         |
+| ---------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Chromium flags   | `--enable-gpu --use-angle=metal`, through the GPU launcher | neither: Bun's `--disable-gpu` stays (`launchArgs`, `tools/browser.ts`) |
+| master           | quantizer 16 (~37 Mbps)                                    | 37 Mbps variable, 2-frame pre-roll (13.4 Mbps, 765 MB for 7.6 min)      |
+| share            | quantizer 26, in the page (~160 MB)                        | x264 CRF 22 from the joined master (2.2 Mbps, 126 MB)                   |
+| encoders at once | 14 (past it the encoder hangs)                             | one per core                                                            |
+| default pages    | 6                                                          | 8, or half the cores below 16                                           |
 
 `SETTINGS` (`player/encode.ts`) holds both columns; the hardware one
 (quantizer 16/26, prefer-hardware, a key frame every 2 s, latency mode
@@ -4424,11 +4454,10 @@ the checks stay ours.
   composites its box in: a 512 px tile where the box fits, else the frame's
   size, each primed with the rig at rest before its first real frame, so no
   buffer is sized by the frames before. A page with no WebGL 2 fails the
-  `webgl2` load, naming why. Every Chrome draws WebGL 2 on SwiftShader: the
-  browser tests' (`--enable-unsafe-swiftshader`, `lab/fixtures/browsers.ts`),
-  which Bun spawns with `--disable-gpu`, and the renderer's, whose GPU runs on
-  macOS for the encoder while `--use-angle=swiftshader` keeps WebGL off it
-  ("Encoders").
+  `webgl2` load, naming why. The browser tests draw WebGL 2 on SwiftShader
+  (`--enable-unsafe-swiftshader`, `lab/fixtures/browsers.ts`), which Bun
+  spawns with `--disable-gpu`; the renderer's Chrome on macOS draws it on
+  Metal (`--use-angle=metal`, "Encoders").
 - **In Bun** nothing is drawn (`paints: false`): the rig is posed for real and
   its face node declared to the probe (`probeFace`), so `check --draw` finds
   ink over a rig's face and a frame that is not pure.

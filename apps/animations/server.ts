@@ -1,10 +1,16 @@
-// The app's render page (`index.html`), with each film's recorded narration,
-// on loopback for as long as `render` or `check` runs (the film CLI's
-// PreviewServer, cli.ts, at `/?film=<name>&export`), and the pages the lab builds
-// (`LAB_PAGES`). The lab's own server is the framework's (`labServer`):
-// `bun run lab`.
+// The app's render page (`index.html`), with each film's recorded narration
+// and its Board (what `film render --board` draws), on loopback for as long
+// as `render` or `check` runs (the film CLI's PreviewServer, cli.ts, at
+// `/?film=<name>&export`), and the pages the lab builds (`LAB_PAGES`). The
+// lab's own server is the framework's (`labServer`): `bun run lab`.
 
-import { CACHE, type FootageRoot, footageHandler, narrationFile } from '@manna/film/tools';
+import {
+  CACHE,
+  type FootageRoot,
+  boardFile,
+  footageHandler,
+  narrationFile,
+} from '@manna/film/tools';
 import { BunServices } from '@effect/platform-bun';
 import { Effect, Option } from 'effect';
 import { join } from 'node:path';
@@ -63,13 +69,17 @@ export const serve = (port: number, films: string, footage: FootageRoot) => {
 
 /**
  * The narration route, `/films/<film>/narration/<file>`, for the player: the file the framework's `narrationFile`
- * names, else a 404. The studio rewrites these files in place (a take kept,
- * the track remixed), so the browser asks again on every load rather than
- * play a take it cached.
+ * names, else the board file its `boardFile` names (`/films/<film>/board.json`,
+ * `/films/<film>/board/<image>`), else a 404. The studio rewrites these files
+ * in place (a take kept, the track remixed, a try kept), so the browser asks
+ * again on every load rather than play a take it cached.
  */
 export const narration = (films: string) => (pathname: string) =>
   Effect.runPromise(
-    narrationFile(films, pathname).pipe(
+    Effect.map(
+      Effect.all([narrationFile(films, pathname), boardFile(films, pathname)]),
+      ([spoken, board]) => Option.orElse(spoken, () => board),
+    ).pipe(
       Effect.map(
         Option.match({
           onNone: () => new Response('not found', { status: 404 }),

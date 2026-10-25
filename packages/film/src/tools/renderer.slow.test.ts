@@ -13,6 +13,7 @@ import { type LoadedFilm, type MeasuredFilm, masterFile, placeFilm } from './fil
 import { MasterStampJson, planOf, stampFile } from './mixer.ts';
 import { mixKey } from '../core/mix.ts';
 import { Cut, HARDWARE_WORKERS, RenderJob, SOFTWARE_WORKERS } from './render-plan.ts';
+import { Picture } from '../core/board-render.ts';
 import { Cores, Platform, type Remuxed, Renderer, remuxer } from './renderer.ts';
 import { SoundRender } from './sound-render.ts';
 import {
@@ -58,6 +59,7 @@ const video = RenderJob.Video({
   share: false,
   encoder: Option.none(),
   server: Option.none(),
+  picture: Picture.Scenes(),
   cut: Cut.Whole(),
 });
 
@@ -479,6 +481,7 @@ describe.concurrent('Renderer', () => {
           variant: G,
           captions: true,
           server: Option.none(),
+          picture: Picture.Scenes(),
           workers: 4,
           times: [2.5, 1],
           cut: Cut.Whole(),
@@ -501,6 +504,7 @@ describe.concurrent('Renderer', () => {
           variant: G,
           captions: false,
           server: Option.none(),
+          picture: Picture.Scenes(),
           every: 5,
           from: Option.none(),
           to: Option.none(),
@@ -523,6 +527,7 @@ describe.concurrent('Renderer', () => {
             variant: G,
             captions: false,
             server: Option.none(),
+            picture: Picture.Scenes(),
             every: 1,
             from: Option.some(from),
             to: Option.some(to),
@@ -555,6 +560,7 @@ describe.concurrent('Renderer', () => {
           variant: MAIN_VARIANT,
           captions: false,
           server: Option.none(),
+          picture: Picture.Scenes(),
         }),
       );
       expect(files.has('/out/test/film/main/lookbook.jpg')).toBe(true);
@@ -794,6 +800,7 @@ describe.concurrent('Renderer', () => {
             variant: G,
             captions: true,
             server: Option.none(),
+            picture: Picture.Scenes(),
             workers: 1,
             times: [1],
             cut: short,

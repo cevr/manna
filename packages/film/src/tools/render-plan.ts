@@ -2,7 +2,7 @@
 // covers, how they split into chunks, and where each output lands. Pure, so
 // the scheduling is checked without Chromium; `Renderer` only runs it.
 
-import { Array as Arr, Data, Match, Option, Result } from 'effect';
+import { Array as Arr, Boolean as Bool, Data, Match, Option, Result } from 'effect';
 import type { Address, Scope } from '../core/address.ts';
 import type { RenderKind, RenderSound, RenderVariantName } from '../core/catalogue.ts';
 import { Encoder, encoderName, sharesInPage } from '../core/encoder.ts';
@@ -11,6 +11,7 @@ import type { Short } from '../core/schema.ts';
 import { type SoundCredit, creditLink } from '../core/sfx.ts';
 import { frameAtOrAfter } from '../core/time.ts';
 import type { ExportInfo } from '../core/export-handle.ts';
+import { Picture } from '../core/board-render.ts';
 import { type FilmPiece, shortKey } from '../core/shorts.ts';
 
 interface JobBase {
@@ -26,6 +27,8 @@ interface JobBase {
    * on the PreviewServer, the sources as written.
    */
   readonly server: Option.Option<string>;
+  /** What its frames picture: the film's scenes, or its Board (`--board`, `--review`). */
+  readonly picture: Picture;
 }
 
 /** A job drawn on pages that encode nothing: how many draw at once. */
@@ -241,6 +244,8 @@ const RENDER_RULES: ReadonlyArray<FlagRule> = [
   ['contact', 'excludes', 'workers', 'one page composes the whole sheet'],
   ['stills', 'excludes', 'encoder', VIDEO],
   ['contact', 'excludes', 'encoder', VIDEO],
+  ['review', 'needs', 'board', "the burn-in is the Board render's (--board)"],
+  ['board', 'excludes', 'short', 'a short draws its own page, not the Board'],
 ];
 
 const STRETCH = "a stretch is not the film's render: write it with --out";
@@ -281,6 +286,10 @@ interface RenderFlags {
   readonly encoder: Option.Option<Encoder>;
   /** The wedge server `--level` started (`serveWedge`); none for no `--level`. */
   readonly server: Option.Option<string>;
+  /** `--board`: draw the film's Board, not its scenes. */
+  readonly board: boolean;
+  /** `--review`: the Board with its burn-in (`burnIn`). */
+  readonly review: boolean;
 }
 
 /**
@@ -302,6 +311,8 @@ export const jobOf = (flags: RenderFlags): Result.Result<RenderJob, FlagsConflic
       encoder: flags.encoder,
     }),
     ...Option.toArray(addressFlag(flags.scope.address)),
+    ...Arr.filter(['board'], () => flags.board),
+    ...Arr.filter(['review'], () => flags.review),
   ]);
   const workers = Option.map(flags.workers, (n) => Math.max(1, n));
   const base = {
@@ -309,6 +320,10 @@ export const jobOf = (flags: RenderFlags): Result.Result<RenderJob, FlagsConflic
     variant: flags.variant,
     captions: flags.captions,
     server: flags.server,
+    picture: Bool.match(flags.board, {
+      onTrue: () => Picture.Board({ review: flags.review }),
+      onFalse: () => Picture.Scenes(),
+    }),
     cut: Option.match(flags.scope.short, {
       onNone: () => Cut.Whole(),
       onSome: (short) => Cut.Short({ short }),
@@ -356,12 +371,13 @@ export const jobOf = (flags: RenderFlags): Result.Result<RenderJob, FlagsConflic
 export const DRAW_WORKERS = 6;
 
 /**
- * Pages a render on the hardware encoder runs by default. Renders of frames
- * 0–3600 with the share copy, timed at each page count on the M-series Mac: 4
- * pages 69 fps, 5 79, 6 81, 7 81. Six is the knee, and its 12 encoders stay
- * under `MAX_HARDWARE_ENCODERS`.
+ * Pages a render on the hardware encoder runs by default. With the page
+ * drawing on the GPU, RBF's `cold` and `title` with the share copy, timed at
+ * each page count on the M4 Pro (2026-10-25, 3 runs each): 3 pages 100.8 fps,
+ * 4 101.3, 6 99.6, 7 97.5. The encoder is the limit, so four is the knee, and
+ * its 8 encoders stay under `MAX_HARDWARE_ENCODERS`.
  */
-export const HARDWARE_WORKERS = 6;
+export const HARDWARE_WORKERS = 4;
 
 /**
  * Hardware encoders a render may run at once. Measured on the M-series Mac the

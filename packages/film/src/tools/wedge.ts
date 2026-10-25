@@ -18,7 +18,7 @@ import { LookFailed, LookLevelUnknown, PagesBroken } from '../core/easel.ts';
 import type { SourceRefused } from '../core/refusals.ts';
 import { editPick, lookLevels, lookPlay } from './choice-source.ts';
 import { PageBundler } from './lab-page.ts';
-import { isNarrationUrl, narrationFile } from './narration-route.ts';
+import { boardFile, isBoardUrl, isNarrationUrl, narrationFile } from './narration-route.ts';
 import { CACHE, urlPath } from './review-file.ts';
 
 /** The module a film declares its looks in (`export const looks`), in its folder. */
@@ -85,12 +85,16 @@ export const paletteSwaps = Effect.fn('wedge.paletteSwaps')(function* (
   return new Map([[real, text]]);
 });
 
-/** A narration file's media type, by its extension. */
-const AUDIO = new Map([
+/** A narration or board file's media type, by its extension. */
+const MEDIA = new Map([
   ['.flac', 'audio/flac'],
   ['.wav', 'audio/wav'],
   ['.mp3', 'audio/mpeg'],
   ['.json', 'application/json'],
+  ['.png', 'image/png'],
+  ['.jpg', 'image/jpeg'],
+  ['.jpeg', 'image/jpeg'],
+  ['.webp', 'image/webp'],
 ]);
 
 const NOT_FOUND = HttpServerResponse.text('not found', { status: 404 });
@@ -125,10 +129,11 @@ const serveWedge = Effect.fn('wedge.serve')(function* (
   const answer = Effect.gen(function* () {
     const request = yield* HttpServerRequest.HttpServerRequest;
     const pathname = urlPath(request.url);
-    if (isNarrationUrl(pathname)) {
-      const found = yield* narrationFile(films, pathname).pipe(
-        Effect.orElseSucceed(() => Option.none<string>()),
-      );
+    if (isNarrationUrl(pathname) || isBoardUrl(pathname)) {
+      const found = yield* Effect.map(
+        Effect.all([narrationFile(films, pathname), boardFile(films, pathname)]),
+        ([narration, board]) => Option.orElse(narration, () => board),
+      ).pipe(Effect.orElseSucceed(() => Option.none<string>()));
       if (Option.isNone(found)) return NOT_FOUND;
       const bytes = yield* fs.readFile(found.value).pipe(Effect.option);
       return Option.match(bytes, {
@@ -136,7 +141,7 @@ const serveWedge = Effect.fn('wedge.serve')(function* (
         onSome: (b) =>
           HttpServerResponse.uint8Array(b, {
             contentType: Option.getOrElse(
-              Option.fromUndefinedOr(AUDIO.get(path.extname(found.value))),
+              Option.fromUndefinedOr(MEDIA.get(path.extname(found.value))),
               () => 'application/octet-stream',
             ),
             headers: { 'cache-control': CACHE.fresh },
