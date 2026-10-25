@@ -12,7 +12,8 @@ import { Pressable, StyleSheet, Switch, Text, type TextStyle, View } from 'react
 import type { ReadingSettings } from '~/settings';
 import { color, useAccent } from '~/color';
 import { plain, useCue } from '~/feel/cue';
-import { DialView } from '~/player/DialView';
+import { DialPanel } from '~/player/DialPanel';
+import { DialView, MOST_SCALE } from '~/player/DialView';
 
 import { pageTextOf } from './pageText';
 import {
@@ -65,18 +66,20 @@ const shareOf = (size: number) =>
 function TextSize({ size }: { readonly size: Atom.Writable<number> }) {
   const [step, setStep] = useAtom(size);
   return (
-    <DialView
-      dial="size"
-      testID="dial-size"
-      label="Text size"
-      title="SIZE"
-      stops={SIZES}
-      index={step}
-      wrap={false}
-      said={shareOf(step)}
-      drawStop={(points, current) => <SizeMark points={points} current={current} />}
-      onTurn={(to) => setStep(Math.min(Math.max(to, 0), SIZES.length - 1))}
-    />
+    <DialPanel>
+      <DialView
+        dial="size"
+        testID="dial-size"
+        label="Text size"
+        title="SIZE"
+        stops={SIZES}
+        index={step}
+        wrap={false}
+        said={shareOf(step)}
+        drawStop={(points, current) => <SizeMark points={points} current={current} />}
+        onTurn={(to) => setStep(Math.min(Math.max(to, 0), SIZES.length - 1))}
+      />
+    </DialPanel>
   );
 }
 
@@ -86,6 +89,7 @@ function SizeMark({ points, current }: { readonly points: number; readonly curre
     <Text
       aria-hidden
       style={[styles.size, { fontSize: Math.min(points, 26) }, current && { color: accent }]}
+      maxFontSizeMultiplier={MOST_SCALE}
     >
       A
     </Text>

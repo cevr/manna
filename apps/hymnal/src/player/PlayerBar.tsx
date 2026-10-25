@@ -27,7 +27,14 @@ import { useAtom, useAtomSet, useAtomValue } from '@effect/atom-react';
 import { Match, Option } from 'effect';
 import { type Href, Link, useLinkTo, useRouter, useSafeAreaInsets } from 'one';
 import { useEffect } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  type LayoutChangeEvent,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import {
   GestureDetector,
   GestureHandlerRootView,
@@ -45,6 +52,7 @@ import { useShownPage } from './page';
 import { Command, type HymnPlayer, Player, type Track } from './player';
 import { BarMark } from './BarMark';
 import { buttonsOf } from './button';
+import { DialPopover } from './DialPanel';
 import { type BoundThumb, Dials, useThumb } from './Dials';
 import { KeyButton } from './KeyButton';
 import { Seeker } from './Seeker';
@@ -145,11 +153,20 @@ function Drawn({
 /** The hymn number the key model is held on off a hymn page: no hymn has it, so it has no chords and no dials. */
 const NO_PAGE = 0;
 
+/** The dials' panel's inset from the screen's sides, and its gap over the bar's top, in points. */
+const SIDE = 12;
+const PANEL_GAP = 10;
+
+/** The lit key button's centre from the panel's left edge, before the button has laid out. */
+const KEY_CENTRE = 35;
+
 /**
  * The overlay: the bar, and the key button and dials of the page shown. One
  * overlay draws every page and none, so a page turn, or a move to a screen
  * with no page, keeps the bar's frame, its spring and its seeker as they
- * are; only the key button and the dials follow the page.
+ * are; only the key button and the dials follow the page. The dials stand
+ * on their panel (`DialPopover`), which opens out of the key button and
+ * closes back into it.
  */
 function Overlay({ drawing }: { readonly drawing: Drawing }) {
   const model = useThumb(
@@ -157,6 +174,12 @@ function Overlay({ drawing }: { readonly drawing: Drawing }) {
   );
   const thumb = Option.map(drawing.shown, () => model);
   const open = Option.filter(thumb, (bound) => bound.state.open);
+  // The key button's centre from the panel's left edge, as the button lays out: the dials open out of it.
+  const keyAt = useSharedValue(KEY_CENTRE);
+  const keyLaidOut = (event: LayoutChangeEvent) => {
+    const { x, width } = event.nativeEvent.layout;
+    keyAt.value = x + width / 2 - SIDE;
+  };
   return (
     <>
       {Option.match(open, {
@@ -173,19 +196,21 @@ function Overlay({ drawing }: { readonly drawing: Drawing }) {
       })}
       <View pointerEvents="box-none" style={styles.dock}>
         {Option.match(
-          Option.flatMap(open, (bound) =>
+          Option.flatMap(thumb, (bound) =>
             Option.map(bound.printed, (printed) => ({ bound, printed })),
           ),
           {
             onNone: () => <></>,
             onSome: ({ bound, printed }) => (
               <View pointerEvents="box-none" style={styles.dials}>
-                <Dials thumb={bound} printed={printed} />
+                <DialPopover open={bound.state.open} keyAt={keyAt} below={PANEL_GAP + REST / 2}>
+                  <Dials thumb={bound} printed={printed} />
+                </DialPopover>
               </View>
             ),
           },
         )}
-        <Frame drawing={drawing} thumb={thumb} />
+        <Frame drawing={drawing} thumb={thumb} onKeyLayout={keyLaidOut} />
       </View>
     </>
   );
@@ -195,9 +220,11 @@ function Overlay({ drawing }: { readonly drawing: Drawing }) {
 function Frame({
   drawing,
   thumb,
+  onKeyLayout,
 }: {
   readonly drawing: Drawing;
   readonly thumb: Option.Option<BoundThumb>;
+  readonly onKeyLayout: (event: LayoutChangeEvent) => void;
 }) {
   const { track, state, page, shown, send, inset } = drawing;
   const cue = useCue();
@@ -236,7 +263,7 @@ function Frame({
               <View style={styles.bar}>
                 {Option.match(thumb, {
                   onNone: () => <></>,
-                  onSome: (bound) => <KeyButton thumb={bound} />,
+                  onSome: (bound) => <KeyButton thumb={bound} onLayout={onKeyLayout} />,
                 })}
                 <Opener
                   track={track}
@@ -419,7 +446,7 @@ const pressedSoft = ({ pressed }: { readonly pressed: boolean }) => [
 
 const styles = StyleSheet.create({
   dock: { position: 'absolute', left: 0, right: 0, bottom: 0 },
-  dials: { paddingHorizontal: 12, paddingBottom: 10 },
+  dials: { paddingHorizontal: SIDE, paddingBottom: PANEL_GAP },
   frame: {
     backgroundColor: color.ground,
     borderTopWidth: StyleSheet.hairlineWidth,

@@ -172,6 +172,14 @@ describe('the detents passed between two detents', () => {
   });
 });
 
+it('spaces its detents 52 points apart, card J’s 44 a little bigger (owner, 2026-10-25)', () => {
+  expect(DETENT).toBe(52);
+  // A fling at the cap still carries the capo from its first fret past its last, to the wall.
+  const capo: Detents = { name: 'capo', count: 12, wrap: false };
+  expect(glide(capo, 0, FLING_CAP).index).toBe(11);
+  expect(tagged(glide(capo, 0, FLING_CAP), 'wall')).toHaveLength(1);
+});
+
 it('wraps the key dial past its last key to its first', () => {
   const keys: Detents = { name: 'key', count: 12, wrap: true };
   expect(glide(keys, 11 * DETENT, 0).index).toBe(11);

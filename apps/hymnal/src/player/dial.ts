@@ -16,8 +16,8 @@
 
 import type { Cue, DialName } from '~/feel/cue';
 
-/** The space between two detents, in points: one tap target. */
-export const DETENT = 44;
+/** The space between two detents, in points: a tap target and more, card J's 44 a little bigger. */
+export const DETENT = 52;
 
 /** How much of its speed a glide keeps each frame. */
 export const DECAY = 0.955;

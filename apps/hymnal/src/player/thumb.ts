@@ -6,7 +6,9 @@
  * chords on or off. The key dial turns the sounding key, and turning it
  * turns chords on, keeping the key turned to. The capo dial sets the fret,
  * held to 0 to 11: a turn past an end stays at the end and cues a wall.
- * Reset is the hymn as printed: its key, no capo, and the dials closed.
+ * Reset is the hymn as printed: its key and no capo. Over the bar the dials
+ * stay open while the rows turn home, and close once the reader has seen
+ * them go (`ResetShown`, which the bar tells when its wait is over).
  *
  * Each step gives the next state and the cues it makes (`~/feel/cue`). A
  * step gives nothing else: no player command has a place in it, so no
@@ -41,6 +43,8 @@ export type ThumbEvent = Data.TaggedEnum<{
   TurnCapo: { readonly capo: number };
   /** Reset, or a double tap on a dial. */
   Reset: {};
+  /** A reset's turn home has been seen: the dials close. */
+  ResetShown: {};
 }>;
 export const ThumbEvent = Data.taggedEnum<ThumbEvent>();
 
@@ -84,7 +88,8 @@ export const step = (printed: Chord.Key, state: Thumb, event: ThumbEvent): Step 
         cues: (held !== capo && [plain('wall')]) || [],
       };
     },
-    Reset: () => ({ state: { ...state, move: still, open: false }, cues: [plain('reset')] }),
+    Reset: () => ({ state: { ...state, move: still }, cues: [plain('reset')] }),
+    ResetShown: () => ({ state: { ...state, open: false }, cues: [] }),
   });
 
 export type Shown = 'reset' | 'capo' | 'key';

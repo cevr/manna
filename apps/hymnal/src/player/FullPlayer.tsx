@@ -36,6 +36,7 @@ import { ReadingControls } from '~/reader/ReadingSheet';
 
 import { Bar, barFor, placeOf } from './bar';
 import { usePlayer } from './context';
+import { DialPanel } from './DialPanel';
 import { ChordReaderContext, Dials, useThumb } from './Dials';
 import { useShownPage } from './page';
 import { Command, type HymnPlayer, Player, type Track } from './player';
@@ -210,7 +211,9 @@ function ChordSection({ number }: { readonly number: number }) {
             onValueChange={() => thumb.send(ThumbEvent.Hold())}
           />
         </View>
-        <Dials thumb={thumb} printed={printed} />
+        <DialPanel>
+          <Dials thumb={thumb} printed={printed} />
+        </DialPanel>
       </View>
     ),
   });

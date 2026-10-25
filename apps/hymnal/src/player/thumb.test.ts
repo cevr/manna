@@ -3,7 +3,7 @@
  * (transpose -5 to 6, capo 0 to 11) and the dials closed or open, 576
  * states, against every event: a tap, a hold, a tap on the page, the key
  * dial turned to each of the twelve sounding keys, the capo dial turned to
- * each fret and one past each end, and reset. Three printed keys: hymn
+ * each fret and one past each end, reset, and the end of a reset's wait. Three printed keys: hymn
  * 100's D-flat, a sharp key, and a minor one.
  */
 
@@ -45,6 +45,7 @@ const events: ReadonlyArray<ThumbEvent> = [
   ...Array.from({ length: 12 }, (_, pitch) => ThumbEvent.TurnKey({ pitch })),
   ...Array.from({ length: 14 }, (_, k) => ThumbEvent.TurnCapo({ capo: k - 1 })),
   ThumbEvent.Reset(),
+  ThumbEvent.ResetShown(),
 ];
 
 const each = (check: (printed: Chord.Key, state: Thumb, event: ThumbEvent) => void) => {
@@ -53,17 +54,25 @@ const each = (check: (printed: Chord.Key, state: Thumb, event: ThumbEvent) => vo
 };
 
 describe('the key model', () => {
-  it('walks 576 states against 30 events', () => {
+  it('walks 576 states against 31 events', () => {
     expect(states).toHaveLength(576);
-    expect(events).toHaveLength(30);
+    expect(events).toHaveLength(31);
   });
 
-  it('resets to the printed key, no capo and the dials closed, chords as they were, with one cue', () =>
+  it('resets to the printed key and no capo, the dials and chords as they were, with one cue', () =>
     each((printed, state, event) => {
       if (event._tag !== 'Reset') return;
       const next = step(printed, state, event);
-      expect(next.state).toEqual({ chords: state.chords, move: still, open: false });
+      expect(next.state).toEqual({ chords: state.chords, move: still, open: state.open });
       expect(next.cues).toEqual([plain('reset')]);
+    }));
+
+  it('closes the dials once a reset’s turn home has been seen, the move and chords as they were, with no cue', () =>
+    each((printed, state, event) => {
+      if (event._tag !== 'ResetShown') return;
+      const next = step(printed, state, event);
+      expect(next.state).toEqual({ ...state, open: false });
+      expect(next.cues).toEqual([]);
     }));
 
   it('turns the key to the key turned to, keeps the capo, and turns chords on', () =>

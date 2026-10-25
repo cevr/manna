@@ -34,7 +34,7 @@ import { actionsOf, perform, propsWith } from '../test/props';
 import { readerOn } from '../test/reader';
 import { PlayerContext } from './context';
 import { DETENT } from './dial';
-import { ChordReaderContext } from './Dials';
+import { ChordReaderContext, RESET_WAIT } from './Dials';
 import { FullPlayer } from './FullPlayer';
 import { Player, playerOn } from './player';
 import { REST, RISE, SOUNDING } from './bar';
@@ -199,6 +199,10 @@ const mount = (
 
 type Page = ReturnType<typeof mount>;
 
+/** Real time passing, `ms` of it, with React told of what was set in it. */
+const waitFor = (ms: number) =>
+  Effect.promise(() => act(() => Effect.runPromise(Effect.sleep(Duration.millis(ms)))));
+
 const keyButton = (page: Page) => page.get('[role="button"][aria-label="Key"]');
 const dial = (page: Page, label: string) => page.find(`[role="slider"][aria-label="${label}"]`);
 const valueOf = (page: Page, label: string) =>
@@ -312,28 +316,86 @@ describe('bar J on a hymn page', () => {
     }),
   );
 
-  it.live('resets to the printed key and no capo, and closes the dials', () =>
-    Effect.sync(() => {
-      const device = chordsOn();
-      using page = mount(route(100), device);
-      tapKey(page);
-      expect(Option.isNone(page.find('[aria-label="Reset"]'))).toBe(true);
-      turn(page, 'Key');
-      turn(page, 'Capo');
-      expect(valueOf(page, 'Capo')).toEqual(Option.some('Capo 1, Db shapes'));
-      expect(page.get('[aria-label="Reset"]').textContent).toBe('↺ Db, no capo');
-      page.press('Reset');
-      expect(Option.isNone(dial(page, 'Key'))).toBe(true);
-      expect(device.get('move.100')).toBe('{"transpose":0,"capo":0}');
-      tapKey(page);
-      expect(valueOf(page, 'Key')).toEqual(Option.some('Db'));
-      expect(valueOf(page, 'Capo')).toEqual(Option.some('No capo'));
+  it.live(
+    'resets to the printed key and no capo where the reader sees it, and closes the dials after its wait',
+    () =>
+      Effect.gen(function* () {
+        const device = chordsOn();
+        using page = mount(route(100), device);
+        tapKey(page);
+        expect(Option.isNone(page.find('[aria-label="Reset"]'))).toBe(true);
+        turn(page, 'Key');
+        turn(page, 'Capo');
+        expect(valueOf(page, 'Capo')).toEqual(Option.some('Capo 1, Db shapes'));
+        expect(page.get('[aria-label="Reset"]').textContent).toBe('↺ Db, no capo');
+        page.press('Reset');
+        // The rows turn home with the dials still open, and the chip leaves.
+        expect(device.get('move.100')).toBe('{"transpose":0,"capo":0}');
+        expect(valueOf(page, 'Key')).toEqual(Option.some('Db'));
+        expect(valueOf(page, 'Capo')).toEqual(Option.some('No capo'));
+        expect(Option.isNone(page.find('[aria-label="Reset"]'))).toBe(true);
+        yield* waitFor(RESET_WAIT / 2);
+        expect(Option.isSome(dial(page, 'Key'))).toBe(true);
+        yield* waitFor(RESET_WAIT / 2 + 100);
+        expect(Option.isNone(dial(page, 'Key'))).toBe(true);
 
-      // A double tap on a dial does the same.
+        // A double tap on a dial does the same.
+        tapKey(page);
+        turn(page, 'Capo');
+        act(() => gestureOf('dial-capo-twice').onActivate?.({ x: 0 }));
+        expect(device.get('move.100')).toBe('{"transpose":0,"capo":0}');
+        expect(Option.isSome(dial(page, 'Key'))).toBe(true);
+        yield* waitFor(RESET_WAIT + 100);
+        expect(Option.isNone(dial(page, 'Key'))).toBe(true);
+      }),
+  );
+
+  it.live('keeps the dials open after a reset when a dial is touched in its wait', () =>
+    Effect.gen(function* () {
+      using page = mount(route(100));
+      tapKey(page);
       turn(page, 'Capo');
-      act(() => gestureOf('dial-capo-twice').onActivate?.({ x: 0 }));
-      expect(Option.isNone(dial(page, 'Key'))).toBe(true);
-      expect(device.get('move.100')).toBe('{"transpose":0,"capo":0}');
+      page.press('Reset');
+      act(() => gestureOf('dial-key-pan').onBegin?.({ x: 0 }));
+      yield* waitFor(RESET_WAIT + 100);
+      expect(Option.isSome(dial(page, 'Key'))).toBe(true);
+    }),
+  );
+
+  it.live(
+    'closes the dials at once on a tap of the key button in a reset’s wait, and opens them again',
+    () =>
+      Effect.gen(function* () {
+        using page = mount(route(100));
+        tapKey(page);
+        turn(page, 'Capo');
+        page.press('Reset');
+        tapKey(page);
+        expect(Option.isNone(dial(page, 'Key'))).toBe(true);
+        tapKey(page);
+        yield* waitFor(RESET_WAIT + 100);
+        // The wait ended with the tap: the dials opened after it stay open.
+        expect(Option.isSome(dial(page, 'Key'))).toBe(true);
+      }),
+  );
+
+  it.live('keeps the player sheet’s dials after a reset there', () =>
+    Effect.gen(function* () {
+      using page = mount(route(100, true));
+      const sheet = page.get('[role="group"][aria-label="Chord settings"]');
+      perform(
+        Option.getOrThrow(Option.fromNullishOr(sheet.querySelector('[aria-label="Capo"]'))),
+        'increment',
+      );
+      act(() => {
+        Option.getOrThrow(
+          Option.fromNullishOr(sheet.querySelector('[aria-label="Reset"]')),
+        ).dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+      });
+      yield* waitFor(RESET_WAIT + 100);
+      expect(sheet.querySelector('[aria-label="Capo"]')?.getAttribute('aria-valuetext')).toBe(
+        'No capo',
+      );
     }),
   );
 

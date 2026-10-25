@@ -5,8 +5,14 @@
  * key dial turns through the twelve sounding keys and wraps, the printed
  * key marked; the capo dial runs from 0 to 11 and stops at each end, each
  * fret over the key played there, the open keys marked. While the move is
- * not the hymn as printed, a chip resets it: the printed key, no capo, and
- * the dials closed. A double tap on either dial does the same.
+ * not the hymn as printed, a chip resets it: the printed key and no capo. A
+ * double tap on either dial does the same.
+ *
+ * Over the bar a reset turns both rows home where the reader sees them,
+ * and the dials close `RESET_WAIT` ms after it. Any touch of the reader's
+ * in that wait (a dial, the key button, the page) ends it: a dial touched
+ * keeps the dials open, a tap on the key button closes them at once. A page
+ * turn and the page's going end it too. In the player sheet the dials stay.
  *
  * Nothing here holds the player: a turn, a reset or a hold never reaches
  * the sound.
@@ -14,8 +20,8 @@
 
 import * as Chord from '@bible/hymnal/chord';
 import { useAtom, useAtomValue } from '@effect/atom-react';
-import { Option } from 'effect';
-import { createContext, use, useMemo, useRef, useState } from 'react';
+import { Duration, Effect, Fiber, Option } from 'effect';
+import { createContext, use, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { color, useAccent } from '~/color';
@@ -25,7 +31,8 @@ import { styled } from '~/hymns/simple';
 import type { ChordReader } from '~/reader/HymnPage';
 import { reader } from '~/reader/screen';
 
-import { DialView } from './DialView';
+import { PanelRow, ROW_GAP } from './DialPanel';
+import { DialView, MOST_SCALE } from './DialView';
 import {
   capoSaid,
   type CapoStop,
@@ -41,6 +48,9 @@ import {
 
 /** What the dials read and set: the app's own stores, or a test's. */
 export const ChordReaderContext = createContext<ChordReader>(reader);
+
+/** How long the dials stay open over the bar after a reset: the turn home (300 ms), then the reader sees it rest. */
+export const RESET_WAIT = 600;
 
 /** The key model of hymn `number`'s page, bound to the stores, and its printed key if it has chords. */
 export const useThumb = (number: number) => {
@@ -58,17 +68,23 @@ export const useThumb = (number: number) => {
     [book, style],
   );
   const [open, setOpen] = useState(false);
-  // The dials open on one hymn: another hymn's page (a page turn) finds them closed.
+  // How many resets were told here: a dial turns home on the reset's curve when the count moves.
+  const [resets, setResets] = useState(0);
+  // The reset whose close waits, while one does.
+  const [waiting, setWaiting] = useState(Option.none<number>());
+  // The dials open on one hymn: another hymn's page (a page turn) finds them closed, and no close waits.
   const [openOn, setOpenOn] = useState(number);
   if (openOn !== number) {
     setOpenOn(number);
     setOpen(false);
+    setWaiting(Option.none());
   }
   const cue = useCue();
   // Events that come before the page draws again (a fling's detents) each step from the last.
   const now = useRef<Thumb>({ chords, move, open });
   now.current = { chords, move, open };
-  const send = (event: ThumbEvent) => {
+  const told = useRef(resets);
+  const apply = (event: ThumbEvent) => {
     // A hymn with no chords opens no dials: a hold still turns chords on or off.
     const key = Option.orElse(printed, () => Option.liftPredicate(noKey, () => keyless(event)));
     for (const printedKey of Option.toArray(key)) {
@@ -78,10 +94,36 @@ export const useThumb = (number: number) => {
       if (next.state.chords !== was.chords) setChords(next.state.chords);
       if (!sameMove(next.state.move, was.move)) setMove(next.state.move);
       if (next.state.open !== was.open) setOpen(next.state.open);
-      for (const told of next.cues) cue(told);
+      for (const cued of next.cues) cue(cued);
+      if (!ThumbEvent.$is('Reset')(event)) continue;
+      told.current += 1;
+      setResets(told.current);
+      if (next.state.open) setWaiting(Option.some(told.current));
     }
   };
-  return { printed, state: { chords, move, open }, send };
+  /** A touch of the reader's: it ends any wait for a reset's close. */
+  const keep = () => setWaiting(Option.none());
+  const send = (event: ThumbEvent) => {
+    keep();
+    apply(event);
+  };
+  useEffect(() => {
+    if (Option.isNone(waiting)) return;
+    const closing = Effect.runFork(
+      Effect.sleep(Duration.millis(RESET_WAIT)).pipe(
+        Effect.andThen(
+          Effect.sync(() => {
+            setWaiting(Option.none());
+            apply(ThumbEvent.ResetShown());
+          }),
+        ),
+      ),
+    );
+    return () => {
+      Effect.runFork(Fiber.interrupt(closing));
+    };
+  }, [waiting]);
+  return { printed, state: { chords, move, open }, send, keep, resets };
 };
 
 export type BoundThumb = ReturnType<typeof useThumb>;
@@ -95,7 +137,10 @@ const keyless = (event: ThumbEvent) =>
 
 const sameMove = (a: Move, b: Move) => a.transpose === b.transpose && a.capo === b.capo;
 
-/** The dials `thumb` shows (`shownOf`), top to bottom, for a hymn printed in `printed`. */
+/**
+ * The dials `thumb` shows (`shownOf`), top to bottom, for a hymn printed in
+ * `printed`, each a row of the panel they stand on (`DialPanel`).
+ */
 export function Dials({
   thumb,
   printed,
@@ -103,46 +148,59 @@ export function Dials({
   readonly thumb: BoundThumb;
   readonly printed: Chord.Key;
 }) {
-  const { state, send } = thumb;
+  const { state, send, keep, resets } = thumb;
   const keys = useMemo(() => keyStops(printed), [printed]);
   const frets = useMemo(() => capoStops(printed, state.move), [printed, state.move]);
   const reset = () => send(ThumbEvent.Reset());
+  const shown = shownOf(state);
   return (
     <View testID="dials" style={styles.dials} pointerEvents="box-none">
-      {shownOf(state).map((shown) => {
-        if (shown === 'reset') return <ResetChip key="reset" printed={printed} onPress={reset} />;
-        if (shown === 'capo')
+      {shown.map((row, k) => {
+        const fromBottom = shown.length - 1 - k;
+        if (row === 'reset')
           return (
-            <DialView
-              key="capo"
-              dial="capo"
-              testID="dial-capo"
-              label="Capo"
-              title="CAPO"
-              stops={frets}
-              index={state.move.capo}
-              wrap={false}
-              said={capoSaid(printed, state.move)}
-              drawStop={(stop, current) => <Fret stop={stop} current={current} />}
-              onTurn={(capo) => send(ThumbEvent.TurnCapo({ capo }))}
-              onReset={reset}
-            />
+            <PanelRow key="reset" fromBottom={fromBottom}>
+              <ResetChip printed={printed} onPress={reset} />
+            </PanelRow>
+          );
+        if (row === 'capo')
+          return (
+            <PanelRow key="capo" fromBottom={fromBottom}>
+              <DialView
+                dial="capo"
+                testID="dial-capo"
+                label="Capo"
+                title="CAPO"
+                stops={frets}
+                index={state.move.capo}
+                wrap={false}
+                said={capoSaid(printed, state.move)}
+                drawStop={(stop, current) => <Fret stop={stop} current={current} />}
+                onTurn={(capo) => send(ThumbEvent.TurnCapo({ capo }))}
+                onReset={reset}
+                onTouch={keep}
+                resets={resets}
+              />
+            </PanelRow>
           );
         return (
-          <DialView
-            key="key"
-            dial="key"
-            testID="dial-key"
-            label="Key"
-            title="KEY"
-            stops={keys}
-            index={Chord.pitchClass(soundingKey(printed, state.move).tonic)}
-            wrap
-            said={keySaid(printed, state.move)}
-            drawStop={(stop, current) => <KeyName stop={stop} current={current} />}
-            onTurn={(pitch) => send(ThumbEvent.TurnKey({ pitch }))}
-            onReset={reset}
-          />
+          <PanelRow key="key" fromBottom={fromBottom}>
+            <DialView
+              dial="key"
+              testID="dial-key"
+              label="Key"
+              title="KEY"
+              stops={keys}
+              index={Chord.pitchClass(soundingKey(printed, state.move).tonic)}
+              wrap
+              said={keySaid(printed, state.move)}
+              drawStop={(stop, current) => <KeyName stop={stop} current={current} />}
+              onTurn={(pitch) => send(ThumbEvent.TurnKey({ pitch }))}
+              onReset={reset}
+              onTouch={keep}
+              resets={resets}
+            />
+          </PanelRow>
         );
       })}
     </View>
@@ -166,17 +224,25 @@ function ResetChip({
       onPress={onPress}
       style={({ pressed }) => [styles.chip, pressed && styles.pressed]}
     >
-      <Text style={styles.chipText}>{label}</Text>
+      <Text style={styles.chipText} numberOfLines={1} maxFontSizeMultiplier={MOST_SCALE}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
 
-/** A key on the key dial: the printed key marked with a dot under it. */
+/** A key on the key dial, the current one in the accent: the printed key marked with a dot under it. */
 function KeyName({ stop, current }: { readonly stop: KeyStop; readonly current: boolean }) {
   const accent = useAccent();
   return (
     <>
-      <Text style={[styles.key, current && { color: accent }]}>{stop.name}</Text>
+      <Text
+        style={[styles.key, stop.name.length > 1 && styles.longKey, current && { color: accent }]}
+        numberOfLines={1}
+        maxFontSizeMultiplier={MOST_SCALE}
+      >
+        {stop.name}
+      </Text>
       {stop.printed && <View style={[styles.home, { backgroundColor: accent }]} />}
     </>
   );
@@ -187,8 +253,18 @@ function Fret({ stop, current }: { readonly stop: CapoStop; readonly current: bo
   const accent = useAccent();
   return (
     <>
-      <Text style={[styles.fret, current && { color: accent }]}>{stop.capo}</Text>
-      <Text style={[styles.played, stop.open && [styles.open, { color: accent }]]}>
+      <Text
+        style={[styles.fret, current && { color: accent }]}
+        numberOfLines={1}
+        maxFontSizeMultiplier={MOST_SCALE}
+      >
+        {stop.capo}
+      </Text>
+      <Text
+        style={[styles.played, stop.open && [styles.open, { color: accent }]]}
+        numberOfLines={1}
+        maxFontSizeMultiplier={MOST_SCALE}
+      >
         {stop.played}
       </Text>
     </>
@@ -196,7 +272,7 @@ function Fret({ stop, current }: { readonly stop: CapoStop; readonly current: bo
 }
 
 const styles = StyleSheet.create({
-  dials: { gap: 8, alignItems: 'stretch' },
+  dials: { gap: ROW_GAP, alignItems: 'stretch' },
   chip: {
     alignSelf: 'center',
     minHeight: 32,
@@ -204,14 +280,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     backgroundColor: color.soft,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.line,
   },
   pressed: { opacity: 0.6 },
   chipText: { fontSize: 13, fontWeight: '600', color: color.ink },
-  key: { fontSize: 15, fontWeight: '600', color: color.ink },
+  key: { fontSize: 17, fontWeight: '600', color: color.muted },
+  longKey: { fontSize: 14 },
   home: { position: 'absolute', bottom: 5, width: 4, height: 4, borderRadius: 2, opacity: 0.7 },
-  fret: { fontSize: 15, lineHeight: 16, fontWeight: '700', color: color.ink },
+  fret: { fontSize: 15, lineHeight: 17, fontWeight: '700', color: color.muted },
   played: { fontSize: 10, lineHeight: 12, color: color.muted },
   open: { fontWeight: '700' },
 });

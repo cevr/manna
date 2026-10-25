@@ -1,19 +1,31 @@
 /**
- * A dial: a pill with its name at the left and a row of detents, `DETENT`
+ * A dial: a row with its name at the left and a row of detents, `DETENT`
  * points apart, that slides past a notch at the row's middle. The detent at
  * the notch is the dial's value. A finger drags the row sideways and flings
  * it; let go, the row glides on and snaps to a detent (`dial.ts`). A dial
  * of any finite, ordered list of stops either wraps (the keys) or stops at
  * its ends (the capo, the text size), where a drag stops and cues a wall.
  *
- * The drag and the glide run as worklets on the UI thread; JavaScript is
- * called only when the row reaches a new detent, not once per frame: it is
- * told a `detent` cue for each detent passed since the last, in order, and
- * `onTurn` once with the latest. A value set from outside (a reset, the
- * twin dial in the player sheet) turns the row the short way to it, and
- * tells nothing back.
+ * A dial draws no surface of its own: it lies on the panel the open dials
+ * stand on (`DialPanel`). Each stop is drawn by its distance from the notch,
+ * as card J draws it: the stop at the notch 1.3 times the size of its
+ * neighbours, and the stops fading toward the row's ends. The notch
+ * stretches and settles on each detent the row reaches.
+ *
+ * The drag, the glide and every stop's size run as worklets on the UI
+ * thread; JavaScript is called only when the row reaches a new detent, not
+ * once per frame: it is told a `detent` cue for each detent passed since the
+ * last, in order, and `onTurn` once with the latest. A value set from
+ * outside (the twin dial in the player sheet) turns the row the short way to
+ * it, and tells nothing back; a reset (`resets`) turns it home on a slower
+ * curve, so the reader sees it go home.
  * A double tap asks for a reset. VoiceOver reads the dial as adjustable:
  * a swipe up or down turns it one detent.
+ *
+ * The name keeps one line at every text size: its column is `TITLE` points
+ * times the text's scale, so the notches of every dial line up, and every
+ * text in the row grows with Dynamic Type at most `MOST_SCALE` times, as a
+ * fixed-height control's text does.
  *
  * The drag is a gesture handler's pan that needs a sideways move to begin,
  * so a vertical scroll under the dial still scrolls, and the dial lies over
@@ -27,6 +39,7 @@ import {
   type LayoutChangeEvent,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import {
@@ -39,9 +52,12 @@ import {
 import Animated, {
   cancelAnimation,
   Easing,
+  type SharedValue,
   useAnimatedReaction,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
+  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -73,16 +89,43 @@ export interface DialProps<A> {
   readonly onTurn: (n: number) => void;
   /** A double tap. */
   readonly onReset?: () => void;
+  /** A finger came down on the dial. */
+  readonly onTouch?: () => void;
+  /**
+   * How many resets the dial's owner has told: an index that comes with a
+   * new count is a reset, and the row turns home on the reset's curve.
+   */
+  readonly resets?: number;
   readonly testID: string;
 }
 
-/** The width of the dial's name at its left, in points. */
+/** The width of the dial's name at its left, in points, at the system's default text size. */
 const TITLE = 58;
 
+/** The most a dial's texts grow with the system's text size: the row's height is fixed. */
+export const MOST_SCALE = 1.3;
+
+/** How long a reset turns the row home, on the strong ease-in-out: slow enough to see. */
+export const RESET_TURN = 300;
+
+/** How long a value set from outside turns the row to it. */
+const FOLLOW_TURN = 240;
+
+/** How far a stop is drawn from the notch, in detents, before it is at its faintest. */
+const FADE = 3.6;
+
+/** How long the notch stretches and settles on each detent, in milliseconds. */
+const NOTCH = 140;
+
+/** The column of every dial's name at system text size `fontScale`: one width, so the notches line up. */
+export const titleWidth = (fontScale: number) => TITLE * Math.min(fontScale, MOST_SCALE);
+
 function Dial<A>(props: DialProps<A>) {
-  const { dial, label, title, stops, index, wrap, said, drawStop, testID } = props;
+  const { dial, label, title, stops, index, wrap, said, drawStop, testID, resets = 0 } = props;
   const cue = useCue();
   const accent = useAccent();
+  const { fontScale } = useWindowDimensions();
+  const reduced = useReducedMotion();
   const detents = { name: dial, count: stops.length, wrap };
   const place = useSharedValue(index * DETENT);
   const start = useSharedValue(0);
@@ -91,17 +134,27 @@ function Dial<A>(props: DialProps<A>) {
   const walled = useSharedValue(false);
   // Whether the touch under way has dragged the row.
   const dragged = useSharedValue(false);
+  const stretch = useSharedValue(1);
   const [width, setWidth] = useState(0);
   const live = useRef(props);
   live.current = props;
+  const homed = useRef(resets);
 
   useEffect(() => {
+    const byReset = homed.current !== resets;
+    homed.current = resets;
     if (driven.value || ownDetent(detents, detentAt(place.value)) === index) return;
-    place.value = withTiming(placeOf(detents, place.value, index), {
-      duration: 240,
-      easing: Easing.out(Easing.cubic),
-    });
-  }, [index]);
+    place.value = withTiming(
+      placeOf(detents, place.value, index),
+      Match.value(byReset).pipe(
+        Match.when(true, () => ({
+          duration: RESET_TURN,
+          easing: Easing.bezier(0.77, 0, 0.175, 1),
+        })),
+        Match.orElse(() => ({ duration: FOLLOW_TURN, easing: Easing.out(Easing.cubic) })),
+      ),
+    );
+  }, [index, resets]);
 
   /** The row passed `crossed` (own detents, in order): a cue for each, one turn to the last. */
   const turned = (crossed: ReadonlyArray<number>) => {
@@ -110,14 +163,20 @@ function Dial<A>(props: DialProps<A>) {
   };
   const wall = () => cue({ _tag: 'wall' });
   const reset = () => live.current.onReset?.();
+  const touch = () => live.current.onTouch?.();
 
   useAnimatedReaction(
     () => detentAt(place.value),
     (now, before) => {
       // The first call (before none) comes as the dial mounts, when nothing drives it.
       // oxlint-disable-next-line effect/noNullish -- Reanimated gives a reaction's first call its previous value as null.
-      if (before !== null && now !== before && driven.value)
-        scheduleOnRN(turned, passed(detents, before, now));
+      if (before === null || now === before) return;
+      if (!reduced)
+        stretch.value = withSequence(
+          withTiming(2.2, { duration: NOTCH / 2 }),
+          withTiming(1, { duration: NOTCH / 2 }),
+        );
+      if (driven.value) scheduleOnRN(turned, passed(detents, before, now));
     },
   );
 
@@ -149,6 +208,7 @@ function Dial<A>(props: DialProps<A>) {
       start.value = place.value;
       walled.value = false;
       dragged.value = false;
+      scheduleOnRN(touch);
     },
     onActivate: () => {
       'worklet';
@@ -186,6 +246,7 @@ function Dial<A>(props: DialProps<A>) {
   const row = useAnimatedStyle(() => ({
     transform: [{ translateX: width / 2 - DETENT / 2 - place.value }],
   }));
+  const notch = useAnimatedStyle(() => ({ transform: [{ scaleY: stretch.value }] }));
 
   const act = ({ nativeEvent }: AccessibilityActionEvent) => {
     const by = (nativeEvent.actionName === 'increment' && 1) || -1;
@@ -219,7 +280,12 @@ function Dial<A>(props: DialProps<A>) {
           testID={testID}
           style={styles.dial}
         >
-          <Text style={styles.title} aria-hidden>
+          <Text
+            style={[styles.title, { width: titleWidth(fontScale) }]}
+            numberOfLines={1}
+            maxFontSizeMultiplier={MOST_SCALE}
+            aria-hidden
+          >
             {title}
           </Text>
           <View
@@ -228,15 +294,18 @@ function Dial<A>(props: DialProps<A>) {
           >
             <Animated.View testID={`${testID}-row`} pointerEvents="none" style={[styles.row, row]}>
               {drawn.map(({ n, stop }) => (
-                <View key={n} style={[styles.stop, { left: n * DETENT }]}>
+                <Stop key={n} n={n} place={place}>
                   {Option.match(stop, {
                     onNone: () => [],
                     onSome: (shown) => drawStop(shown, ownDetent(detents, n) === index),
                   })}
-                </View>
+                </Stop>
               ))}
             </Animated.View>
-            <View pointerEvents="none" style={[styles.notch, { backgroundColor: accent }]} />
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.notch, { backgroundColor: accent }, notch]}
+            />
           </View>
         </View>
       </GestureDetector>
@@ -245,10 +314,40 @@ function Dial<A>(props: DialProps<A>) {
 }
 
 /**
+ * Stop `n` in its detent, drawn by its distance `d` from the notch, in
+ * detents (card J): scale `1 + 0.3·max(0, 1 − |d|)`, opacity
+ * `0.2 + 0.8·max(0, 1 − |d|/3.6)`, worked out on the UI thread each frame.
+ */
+function Stop({
+  n,
+  place,
+  children,
+}: {
+  readonly n: number;
+  readonly place: SharedValue<number>;
+  readonly children: ReactNode;
+}) {
+  const drawn = useAnimatedStyle(() => {
+    const d = Math.abs(n - place.value / DETENT);
+    return {
+      opacity: 0.2 + 0.8 * Math.max(0, 1 - d / FADE),
+      transform: [{ scale: 1 + 0.3 * Math.max(0, 1 - d) }],
+    };
+  });
+  return (
+    <Animated.View style={[styles.stop, { left: n * DETENT }, drawn]}>
+      <View style={styles.tick} />
+      {children}
+    </Animated.View>
+  );
+}
+
+/**
  * Whether a dial draws as it did: its handlers are read through `live`, and
  * a stop is drawn from the stop and whether it is current alone, so a
  * handler's new identity draws nothing again. A dial redraws when its stops,
- * its value or its words change, not each time the player's place does.
+ * its value, its words or its resets change, not each time the player's
+ * place does.
  */
 const same = <A,>(a: DialProps<A>, b: DialProps<A>) =>
   a.dial === b.dial &&
@@ -258,6 +357,7 @@ const same = <A,>(a: DialProps<A>, b: DialProps<A>) =>
   a.index === b.index &&
   a.wrap === b.wrap &&
   a.said === b.said &&
+  a.resets === b.resets &&
   a.testID === b.testID;
 
 // oxlint-disable-next-line effect/noAs -- memo erases a generic component's type parameter; this restores it.
@@ -271,20 +371,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     overflow: 'hidden',
-    backgroundColor: color.ground,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.line,
-    shadowColor: '#000',
-    shadowOpacity: 0.14,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
   },
   title: {
-    width: TITLE,
     paddingLeft: 16,
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: '600',
-    letterSpacing: 1,
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
     color: color.muted,
   },
   window: { flex: 1, height: DETENT, overflow: 'hidden' },
@@ -297,6 +390,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  tick: {
+    position: 'absolute',
+    top: 3,
+    width: 1,
+    height: 5,
+    backgroundColor: color.line,
+  },
   notch: {
     position: 'absolute',
     top: 0,
@@ -304,5 +404,6 @@ const styles = StyleSheet.create({
     marginLeft: -1,
     width: 2,
     height: 9,
+    transformOrigin: 'top',
   },
 });

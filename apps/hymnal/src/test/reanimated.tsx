@@ -134,6 +134,18 @@ const animate =
 export const withSpring = animate('spring');
 export const withTiming = animate('timing');
 
+/** A delayed animation is the animation: it lands at once with the rest. */
+export const withDelay = <T,>(_ms: number, next: T): T => next;
+
+/** A sequence lands where its last step goes, and calls that step's callback. */
+export const withSequence = <T,>(...steps: ReadonlyArray<T>): T => steps.at(-1) as T;
+
+/** Whether the device asks for reduced motion: a test's device does not. */
+export const useReducedMotion = () => false;
+
+/** How an animation answers the device's reduced-motion setting. */
+export const ReduceMotion = { System: 'system', Always: 'always', Never: 'never' } as const;
+
 /** A waiting animation stops half way along, as a touch stops one under way. */
 export const cancelAnimation = (value: SharedValue<unknown>) => {
   const under = waiting.get(value);
