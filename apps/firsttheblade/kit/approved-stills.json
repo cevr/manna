@@ -1,12 +1,26 @@
 {
   "approval": {
     "status": "approved",
-    "ask": "aa434d8c292",
+    "ask": "afdb1438271",
     "lab": "http://127.0.0.1:8229/",
-    "answered": "2026-10-22T11:10:34.961Z",
-    "answer": "Approve it",
+    "answered": "2026-10-25T11:46:52.026Z",
+    "answer": "Approve them",
     "answers": {
       "look": {
+        "kind": "choose",
+        "value": "revise",
+        "label": "Revise it"
+      },
+      "look_note": {
+        "kind": "free_text",
+        "text": "i'm not sure i like the blue on the bottom of the wheat field, a lot least as it looks now, maybe we need some dirt or something to give it more space"
+      },
+      "marks": {
+        "kind": "choose",
+        "value": "fine",
+        "label": "Fine lines"
+      },
+      "kit": {
         "kind": "choose",
         "value": "keep",
         "label": "Keep it"
@@ -14,15 +28,52 @@
       "stills": {
         "kind": "choose",
         "value": "approve",
-        "label": "Approve it"
+        "label": "Approve them"
+      },
+      "stills_note": {
+        "kind": "free_text",
+        "text": "let's try to make the fine lines more like the logo for the series"
       }
     },
     "shown": {
-      "/api/review/files/manna/ftb-remedies-emblem-2026-10-22-r1/01-desktop-rest.png": "496b45d3e9fdd15e0a014081516ff2c8bcb10eb2e4a63bd63862dcc1ed4800de",
-      "/api/review/files/manna/ftb-remedies-emblem-2026-10-22-r1/09-phone-rest.png": "752e002b11500ff9e370afd7d3b3eb22fff4bdbb7da9bcbad7e089a19415e388",
-      "/api/review/files/manna/ftb-remedies-emblem-2026-10-22-r1/06-leaf-rest-x4.png": "f8932004752bb3efb4cb458bb64f85dbbc4d4536cd92fa92051865136bdf0866",
-      "/api/review/files/manna/ftb-remedies-emblem-2026-10-22-r1/07-leaf-hover-x4.png": "d4a739a83956a5dc51b5c9e0ca13cc8307e7bf03e12a3caa0e6f44f1be948939",
-      "/api/review/files/manna/ftb-remedies-emblem-2026-10-22-r1/ship/remedies.jpg": "0a3f51b8b44f9dbc1fc003be912f7bcd012053c225939e4a2295fc4b760cfce6"
+      "/api/asks/afdb1438271/shown/996e180f791e6de2d7a8e8ea9e954ecf75561ac9f0607efefd5039f092f9c3ad.png": "996e180f791e6de2d7a8e8ea9e954ecf75561ac9f0607efefd5039f092f9c3ad",
+      "/api/asks/afdb1438271/shown/ebc6d0e0e4d5a2f8ece1429b25b08b5e00137b3d7107ee21acd1e04556a7c077.png": "ebc6d0e0e4d5a2f8ece1429b25b08b5e00137b3d7107ee21acd1e04556a7c077",
+      "/api/asks/afdb1438271/shown/f51a6ed4563295c37c47c56d66a34f9d9b10f5d1f3309c677c347ff9d25b7a86.png": "f51a6ed4563295c37c47c56d66a34f9d9b10f5d1f3309c677c347ff9d25b7a86",
+      "/api/asks/afdb1438271/shown/98df6d11e90c97f5fcd2c3dc2deb3198b6cd749b4987f1e55a160141b371fabc.png": "98df6d11e90c97f5fcd2c3dc2deb3198b6cd749b4987f1e55a160141b371fabc",
+      "/api/asks/afdb1438271/shown/3f16d611b2b27ea563058d09e1c14410b8f1b3f67dec7e5edc7dafa874fa5f8b.png": "3f16d611b2b27ea563058d09e1c14410b8f1b3f67dec7e5edc7dafa874fa5f8b",
+      "/api/asks/afdb1438271/shown/696b133e5f6f1b7b1224e7fd47fbf8f826d7291eec5a2af9a9cf032732fa2149.png": "696b133e5f6f1b7b1224e7fd47fbf8f826d7291eec5a2af9a9cf032732fa2149",
+      "/api/asks/afdb1438271/shown/2a89c72f753b7b3f90d36962b0e9f5aa2c8ed671afc5e3897f7d8fc9da267333.png": "2a89c72f753b7b3f90d36962b0e9f5aa2c8ed671afc5e3897f7d8fc9da267333",
+      "/api/asks/afdb1438271/shown/6315ec3dee8ef053146473c53d0ce25a2e2cd648311fcf8409409b513a0c358e.png": "6315ec3dee8ef053146473c53d0ce25a2e2cd648311fcf8409409b513a0c358e",
+      "/api/asks/afdb1438271/shown/06dd9b7e0dccf8675be1ac30fbf606c9218da41d479ea4f35548074b0d06d82e.png": "06dd9b7e0dccf8675be1ac30fbf606c9218da41d479ea4f35548074b0d06d82e",
+      "/api/asks/afdb1438271/shown/a789e7264c3ab8e80ed5c939ffc2d6f88b72810ff30d5cdee8f2356dd85222c6.png": "a789e7264c3ab8e80ed5c939ffc2d6f88b72810ff30d5cdee8f2356dd85222c6",
+      "/api/asks/afdb1438271/shown/2b3dcf9566f6c2bf65e0a5525662efcd18edb185613fa626d688c0a8f5c42468.png": "2b3dcf9566f6c2bf65e0a5525662efcd18edb185613fa626d688c0a8f5c42468",
+      "/api/asks/afdb1438271/shown/5a307ac10d77e554e3584d3b4e22048ff9f8d5ce5d3f9839a2dcb3dd63f9afef.svg": "5a307ac10d77e554e3584d3b4e22048ff9f8d5ce5d3f9839a2dcb3dd63f9afef",
+      "/api/asks/afdb1438271/shown/8c5c0f9380f8aa8c4b41de331a3be70d55e4d0baf1bc4b3d2c03cfb2a1da73f8.svg": "8c5c0f9380f8aa8c4b41de331a3be70d55e4d0baf1bc4b3d2c03cfb2a1da73f8",
+      "/api/asks/afdb1438271/shown/2be82dc0a801ff6e8c4d73259d27f3cc743dd686fe9e555b547a1840a65782ca.svg": "2be82dc0a801ff6e8c4d73259d27f3cc743dd686fe9e555b547a1840a65782ca",
+      "/api/asks/afdb1438271/shown/f1f0de91d5d4358091dce1712089e68ae9d4c30d8ba5531b4d3c98c8cd6cebb9.svg": "f1f0de91d5d4358091dce1712089e68ae9d4c30d8ba5531b4d3c98c8cd6cebb9",
+      "/api/asks/afdb1438271/shown/450dbdc6e0d582e9accfc22f6593022a8b8d01919f875f65a43ab38e6fcf70bf.svg": "450dbdc6e0d582e9accfc22f6593022a8b8d01919f875f65a43ab38e6fcf70bf",
+      "/api/asks/afdb1438271/shown/611eb385c421fe903a08b57de8b7f27c6a0499255c96652ce9c1964f8f8794da.svg": "611eb385c421fe903a08b57de8b7f27c6a0499255c96652ce9c1964f8f8794da",
+      "/api/asks/afdb1438271/shown/11e5710f29c8188c2d0733518e6aa7b26f9ae4a3c9ac908e5d212d79d81912bf.svg": "11e5710f29c8188c2d0733518e6aa7b26f9ae4a3c9ac908e5d212d79d81912bf",
+      "/api/asks/afdb1438271/shown/ea5974b01e7fa518095c7001a4c4be9fe24592b92b3a43d751db183b8e756485.svg": "ea5974b01e7fa518095c7001a4c4be9fe24592b92b3a43d751db183b8e756485",
+      "/api/asks/afdb1438271/shown/edc4dd5b4ce5108d0143f14c1222d60a604aa8d3fe324491e2cd0784de22dc59.png": "edc4dd5b4ce5108d0143f14c1222d60a604aa8d3fe324491e2cd0784de22dc59",
+      "/api/asks/afdb1438271/shown/e33b43558fb3ae7d37fefdeb1ae70bd581c605c0455b990322a2534dccbf9f85.png": "e33b43558fb3ae7d37fefdeb1ae70bd581c605c0455b990322a2534dccbf9f85",
+      "/api/asks/afdb1438271/shown/9813903d316431c86cb353545a1b7f8f000332a492bb527598aa43df33534fc1.png": "9813903d316431c86cb353545a1b7f8f000332a492bb527598aa43df33534fc1",
+      "/api/asks/afdb1438271/shown/0851e484d0b7d219abd6624d714116fb598e250a348e0f9881af17103c477103.png": "0851e484d0b7d219abd6624d714116fb598e250a348e0f9881af17103c477103",
+      "/api/asks/afdb1438271/shown/4f904afcef1af0bdbc969f5f0c42fe59c818f8ade89e81041a0bb5d23c156c76.png": "4f904afcef1af0bdbc969f5f0c42fe59c818f8ade89e81041a0bb5d23c156c76",
+      "/api/asks/afdb1438271/shown/8c549c3d7df0f3a77a73a8f05a4bdecf19fedd6cbed8b883adb177cf5891dc94.png": "8c549c3d7df0f3a77a73a8f05a4bdecf19fedd6cbed8b883adb177cf5891dc94",
+      "/api/asks/afdb1438271/shown/53c41dd48033473046c0177da14a598ad460afdf225a98189c2a87a2ff7fc1ee.png": "53c41dd48033473046c0177da14a598ad460afdf225a98189c2a87a2ff7fc1ee",
+      "/api/asks/afdb1438271/shown/5d4e9e8afe0be76e0e559d60282ddf9e32b7524539e44dc998030ea7124279ed.png": "5d4e9e8afe0be76e0e559d60282ddf9e32b7524539e44dc998030ea7124279ed",
+      "/api/asks/afdb1438271/shown/b59ee7770422fa849e974e96694c199887a879c17321fad85e1a3bf450b3e344.png": "b59ee7770422fa849e974e96694c199887a879c17321fad85e1a3bf450b3e344",
+      "/api/asks/afdb1438271/shown/a853017cb7839a8807400b7da9966e64a1c3176d7dd1f5cc3b566e2643980fcb.png": "a853017cb7839a8807400b7da9966e64a1c3176d7dd1f5cc3b566e2643980fcb",
+      "/api/asks/afdb1438271/shown/e3fdde541b5cb4ab083968e62fef0f6d3bc6e3b4ef90b1340b0c7310034e3879.png": "e3fdde541b5cb4ab083968e62fef0f6d3bc6e3b4ef90b1340b0c7310034e3879",
+      "/api/asks/afdb1438271/shown/5b56f20b0d44c786eb31c33600646eebf275d6f093424d058bcb0dc5e4d649e8.png": "5b56f20b0d44c786eb31c33600646eebf275d6f093424d058bcb0dc5e4d649e8",
+      "/api/asks/afdb1438271/shown/ddfae113bd59be1920ef18dc11f1f97116deca6658a586ecf162d85c9bf0dffb.jpg": "ddfae113bd59be1920ef18dc11f1f97116deca6658a586ecf162d85c9bf0dffb",
+      "/api/asks/afdb1438271/shown/fcaa0227f9cdaa0b7c17587b3e3bd450712bc6250a636556ee3a2bed4512dcdd.jpg": "fcaa0227f9cdaa0b7c17587b3e3bd450712bc6250a636556ee3a2bed4512dcdd",
+      "/api/asks/afdb1438271/shown/9f96cc03133043d9488ff6481cf730546cf6eb7b7fc7a0e3eed635858da88275.jpg": "9f96cc03133043d9488ff6481cf730546cf6eb7b7fc7a0e3eed635858da88275",
+      "/api/asks/afdb1438271/shown/ca8a18173c88182e18af01eae8311d065468348a3a0c7aa41f56713f2511671c.jpg": "ca8a18173c88182e18af01eae8311d065468348a3a0c7aa41f56713f2511671c",
+      "/api/asks/afdb1438271/shown/bfbe25f58a51ac75272603f7fad70265167876579d3c370e9786c6308bb4fc26.jpg": "bfbe25f58a51ac75272603f7fad70265167876579d3c370e9786c6308bb4fc26",
+      "/api/asks/afdb1438271/shown/bf76fc7018f726f3db5bc67dc1f5f616fbcdd1427cbb8b9e477d4894b6c02aa9.webp": "bf76fc7018f726f3db5bc67dc1f5f616fbcdd1427cbb8b9e477d4894b6c02aa9",
+      "/api/asks/afdb1438271/shown/607b609661e0be38bae2c29d974185e5c87e6c1d7d8c74b31be65697b314e24a.webp": "607b609661e0be38bae2c29d974185e5c87e6c1d7d8c74b31be65697b314e24a"
     }
   },
   "earlier": [
@@ -54,14 +105,16 @@
     }
   ],
   "stills": {
-    "public/og/home.jpg": "db796a4b4b83625df7e493c6129f72cbf140c077635d4690ece124c16178200f",
-    "public/og/land.jpg": "cc52deb87938fe0d6820cc50c966f5c5f821a6a4f6e895ac6cb462c70695a06e",
-    "public/og/path.jpg": "0fa3a2017cfc460f516f9d5d31bd58cbcb284624e36556be82f83f1198698603",
-    "public/og/remedies.jpg": "0a3f51b8b44f9dbc1fc003be912f7bcd012053c225939e4a2295fc4b760cfce6",
-    "public/og/taught.jpg": "81469127137ffcfd023a2ea21687e07bbeca288598c3c66bd6bec2e3807c2d50",
+    "public/og/home.jpg": "ddfae113bd59be1920ef18dc11f1f97116deca6658a586ecf162d85c9bf0dffb",
+    "public/og/land.jpg": "9f96cc03133043d9488ff6481cf730546cf6eb7b7fc7a0e3eed635858da88275",
+    "public/og/path.jpg": "fcaa0227f9cdaa0b7c17587b3e3bd450712bc6250a636556ee3a2bed4512dcdd",
+    "public/og/remedies.jpg": "bfbe25f58a51ac75272603f7fad70265167876579d3c370e9786c6308bb4fc26",
+    "public/og/taught.jpg": "ca8a18173c88182e18af01eae8311d065468348a3a0c7aa41f56713f2511671c",
     "src/art/field-1536.webp": "71b5243077661a3628fa08ae58d57fd6bc7c25ec2491600d79980237001bdd1b",
     "src/art/field-3072.webp": "b41312abd7c23a702dc334c26720ca26bab5801b59d87c52ddf38211666302fb",
     "src/art/field-768.webp": "5d107d3e787ab878e28798c969542ccf0a35ee4cc04092bf236e06fc446b7a03",
-    "src/art/field-wind.png": "79bb99bfa00f2dfe690c6d646625dcd19dfb13e5c86656e126dfceebfebd6f5b"
+    "src/art/field-wind.png": "79bb99bfa00f2dfe690c6d646625dcd19dfb13e5c86656e126dfceebfebd6f5b",
+    "src/art/night-1536.webp": "bf76fc7018f726f3db5bc67dc1f5f616fbcdd1427cbb8b9e477d4894b6c02aa9",
+    "src/art/night-768.webp": "607b609661e0be38bae2c29d974185e5c87e6c1d7d8c74b31be65697b314e24a"
   }
 }
