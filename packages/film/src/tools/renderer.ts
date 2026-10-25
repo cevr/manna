@@ -5,8 +5,9 @@
 // (copied, not re-encoded) with the audio cut from the lossless master and
 // encoded to AAC. A video of the film, an act or a scene keeps each beat's
 // chunks under the film's project folder by what its frames read
-// (`segments.ts`) and draws only the beats it has not kept. The server, the browser and every page (a pool of
-// `Pages`) live in one scope: a failure, or Ctrl-C, closes them all.
+// (`segments.ts`) and draws only the beats it has not kept. The server, the
+// browser and every page (a pool of `Pages`) live in one scope: a failure, or
+// Ctrl-C, closes them all.
 
 import { availableParallelism } from 'node:os';
 import {
