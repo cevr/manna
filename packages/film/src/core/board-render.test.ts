@@ -72,18 +72,18 @@ const alone = (p: Panel, from: number, T: number): Layer =>
 /** Forty picture panels by id. */
 const ids = Array.from({ length: 40 }, (_, k) => panel('b', `m${k}`, 1));
 
-/** Where a motion starts and ends, as the spec sets them: a push 6 % larger, a pan 4 % of the width, held 4 % larger. */
+/** Where a motion starts and ends, as the spec sets them: a push 6 % larger, a pan 4 % of the width, held 4.2 % larger. */
 const startOf = (m: Layer['motion']): Framing =>
   Match.valueTags(m, {
     Still: () => ({ scale: 1, dx: 0 }),
     PushIn: () => ({ scale: 1, dx: 0 }),
-    Pan: ({ dir }) => ({ scale: 1.04, dx: -dir * 0.02 }),
+    Pan: ({ dir }) => ({ scale: 1.042, dx: -dir * 0.02 }),
   });
 const endOf = (m: Layer['motion']): Framing =>
   Match.valueTags(m, {
     Still: () => ({ scale: 1, dx: 0 }),
     PushIn: () => ({ scale: 1.06, dx: 0 }),
-    Pan: ({ dir }) => ({ scale: 1.04, dx: dir * 0.02 }),
+    Pan: ({ dir }) => ({ scale: 1.042, dx: dir * 0.02 }),
   });
 const close = (got: Framing, want: Framing) => {
   expect(got.scale).toBeCloseTo(want.scale, 6);

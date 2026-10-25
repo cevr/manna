@@ -627,8 +627,8 @@ on the film's clock: a beat's takes, or the estimate a beat with none is
 laid out on, so a film with no takes renders silent. `core/board-render.ts`
 decides the frame, pure: a picture panel is its kept try covering the
 1920 × 1080 frame from its middle, pushing in 6 % or panning 4 % of the
-frame's width (held 4 % larger) over the span it is seen, which of the
-three picked by a hash of the panel's id (`motionOf`), so a panel moves the
+frame's width (held 4.2 % larger, so no edge shows at its ends) over the
+span it is seen, which of the three picked by a hash of the panel's id (`motionOf`), so a panel moves the
 same way on every render; a cut dissolves over 0.5 s centred on it, at most
 half of the hold on either side (`boardFrameAt`). A card or verse panel is
 set by the film's card code (`paintText`); a beat with no panel, a picture

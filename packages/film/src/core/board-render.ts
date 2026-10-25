@@ -62,6 +62,12 @@ const Motion = Data.taggedEnum<Motion>();
 const PUSH = 0.06;
 /** How far a pan travels, as a share of the frame's width. */
 const PAN = 0.04;
+/**
+ * How much larger a pan holds its image: more than the `PAN` its travel
+ * needs, so at either end of it the image still runs past the frame's edge
+ * and no edge pixel, smoothed half clear, shows.
+ */
+const PAN_HOLD = 0.042;
 /** How long a dissolve between two shots takes, centred on their cut (less for a short hold). */
 const DISSOLVE_S = 0.5;
 
@@ -94,13 +100,13 @@ export interface Framing {
   readonly dx: number;
 }
 
-/** `motion`'s framing `p` (0 to 1) through its hold. A pan holds `PAN` larger so its travel never shows an edge. */
+/** `motion`'s framing `p` (0 to 1) through its hold. A pan holds `PAN_HOLD` larger so its travel never shows an edge. */
 const framingAt = (motion: Motion, p: number): Framing => {
   const k = Math.max(0, Math.min(1, p));
   return Motion.$match(motion, {
     Still: () => ({ scale: 1, dx: 0 }),
     PushIn: () => ({ scale: 1 + PUSH * k, dx: 0 }),
-    Pan: ({ dir }) => ({ scale: 1 + PAN, dx: dir * PAN * (k - 0.5) }),
+    Pan: ({ dir }) => ({ scale: 1 + PAN_HOLD, dx: dir * PAN * (k - 0.5) }),
   });
 };
 
