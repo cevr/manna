@@ -176,6 +176,7 @@ export const boardFilm = (
   const filmFrame = (ctx: CanvasRenderingContext2D, T: number, opts: RenderOptions) =>
     film.render(ctx, T, { ...opts, captions: false });
   /** Where a dissolve's incoming shot is drawn before it is laid over the outgoing one. */
+  // Scratch only, made once and painted over whole each use: a frame's output depends on T alone.
   let over = Option.none<HTMLCanvasElement>();
   const overlay = (): HTMLCanvasElement =>
     Option.getOrElse(over, () => {

@@ -6,11 +6,13 @@
 // review copy burns in where it is.
 
 import { describe, expect, test } from 'bun:test';
-import { Result, Schema } from 'effect';
+import { Match, Option, Result, Schema } from 'effect';
 import { type BoardImage, boardFilm, paintText } from './board.ts';
 import type { CardStyle } from './card.ts';
 import type { Film } from './film.ts';
-import { recorder, withDom } from './fixtures/stand-in.ts';
+import { applyAffine, recorder, withDom } from './fixtures/stand-in.ts';
+import { Shot } from '../core/animatic.ts';
+import { boardFrameAt } from '../core/board-render.ts';
 import { type BoardFile, BoardName, type Panel, emptyBoard } from '../core/board.ts';
 import { Segment } from '../core/segment.ts';
 import { type Placed, layout } from '../core/layout.ts';
@@ -171,6 +173,104 @@ describe('a Board render', () => {
     withDom(() => boardFilm(f, board, tries().images, false).render(r.ctx, 2));
     expect(drew).toEqual([2]);
     expect(r.images).toEqual([]);
+  });
+
+  test('covers the whole frame at either end of a push and a pan, a pan with a pixel to spare', () => {
+    const one = Result.getOrThrow(
+      layout([{ id: 'one', say: 'A baby drinks milk.', min: 5 }], { voice: '', scenes: {} }),
+    );
+    const f: Film = Schema.decodeSync(Schema.Any)({
+      width: 1920,
+      height: 1080,
+      duration: 5,
+      title: 'probe',
+      look: { card: { style: STYLE } },
+      placed: one,
+      render: () => {},
+    });
+    /** The motion panel `id` moves by, alone over a 5 s hold. */
+    const motionOf = (p: Panel) =>
+      Option.getOrThrow(
+        boardFrameAt([Shot.Boarded({ beat: p.beat, panel: p, at: 0, from: 0 })], 5, 0),
+      ).layers[0]!.motion;
+    const candidates = Array.from({ length: 40 }, (_, k) => ({
+      ...panel('one', { kept: 2 }),
+      id: `one.m${k}`,
+    }));
+    const first = (tag: string, dir?: number) =>
+      candidates.find((p) => {
+        const m = motionOf(p);
+        return m._tag === tag && (dir === undefined || ('dir' in m && m.dir === dir));
+      })!;
+    /** Where the frame at `T` laid panel `p`'s kept try: its left, top, right and bottom. */
+    const rectAt = (p: Panel, T: number) => {
+      const calls: Array<ReadonlyArray<unknown>> = [];
+      const r = recorder(1920, 1080, {
+        onCall: (key, args) => {
+          if (key === 'drawImage') calls.push(args);
+        },
+      });
+      withDom(() => {
+        const { images } = tries();
+        boardFilm(f, { ...board, panels: [p] }, images, false).render(r.ctx, T);
+      });
+      expect(calls).toHaveLength(1);
+      const [image, ...at] = calls[0]! as [{ width: number; height: number }, ...Array<number>];
+      // drawImage(image, x, y), (…, x, y, w, h) or (…, sx, sy, sw, sh, x, y, w, h).
+      const [x, y, dw, dh] = Match.value(at.length).pipe(
+        Match.when(2, () => [at[0]!, at[1]!, image.width, image.height]),
+        Match.when(4, () => at),
+        Match.orElse(() => at.slice(4)),
+      );
+      const m = r.images[0]!.m;
+      const [left, top] = applyAffine(m, [x!, y!]);
+      const [right, bottom] = applyAffine(m, [x! + dw!, y! + dh!]);
+      return { left, top, right, bottom };
+    };
+    const covers = (rect: ReturnType<typeof rectAt>, spare: number) => {
+      expect(rect.left).toBeLessThanOrEqual(-spare + 1e-6);
+      expect(rect.right).toBeGreaterThanOrEqual(1920 + spare - 1e-6);
+      expect(rect.top).toBeLessThanOrEqual(1e-6);
+      expect(rect.bottom).toBeGreaterThanOrEqual(1080 - 1e-6);
+    };
+    const push = first('PushIn');
+    covers(rectAt(push, 0), 0);
+    covers(rectAt(push, 5), 0);
+    for (const dir of [1, -1]) {
+      const pan = first('Pan', dir);
+      const [start, end] = [rectAt(pan, 0), rectAt(pan, 5)];
+      covers(start, 1);
+      covers(end, 1);
+      // It travels 4 % of the width, the way it is said to.
+      expect(end.left - start.left).toBeCloseTo(dir * 0.04 * 1920, 6);
+    }
+  });
+
+  test('lays the incoming shot over the outgoing one inside a cut, at the share of the dissolve passed', () => {
+    const { film: f } = filmOf(() => false);
+    const both: BoardFile = {
+      ...emptyBoard('probe'),
+      panels: [panel('one', { kept: 2 }), panel('two', { kept: 1 })],
+    };
+    const r = recorder(1920, 1080);
+    const { kept, second } = withDom(() => {
+      const { kept, images } = tries();
+      const second = document.createElement('canvas');
+      second.width = 1536;
+      second.height = 1024;
+      const all = new Map([...images, ['two.start.1.png', second]]);
+      // The cut at 5 s dissolves from 4.75 s to 5.25 s: at 5.1 s the incoming is 0.7 in.
+      boardFilm(f, both, all, false).render(r.ctx, 5.1);
+      return { kept, second };
+    });
+    expect(r.images).toHaveLength(2);
+    const [under, over] = r.images;
+    expect(under!.image).toBe(kept as never);
+    expect(under!.alpha).toBe(1);
+    // The incoming shot is laid as its own canvas, not the try itself, at 0.7.
+    expect(over!.image).not.toBe(kept as never);
+    expect(over!.image).not.toBe(second as never);
+    expect(over!.alpha).toBeCloseTo(0.7, 9);
   });
 
   test('burns in the time, the beat and the panel with its try on the review copy alone', () => {
