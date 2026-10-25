@@ -1,0 +1,307 @@
+{
+  "id": "af69e890d21",
+  "title": "First the Blade, round 2: the field's ground and the marks",
+  "why": "You asked for ground under the wheat field and for marks drawn more like the series logo. These answers decide whether the site goes to review and merge, or to round 3. The site deploy stays yours.",
+  "by": "orchestrator (hymnapp ftbbrand)",
+  "created": "2026-10-25T12:54:54.971Z",
+  "ask": {
+    "start": "field",
+    "steps": {
+      "field": {
+        "title": "The field's ground",
+        "blocks": [
+          {
+            "kind": "prose",
+            "text": "The wheat now stands on the painting's own soil. The field is drawn down to its foot and is taller, so the ground has room. Only the soil fades into the page, through warm earth, so no blue or grey band shows. No pixel of the painting was repainted. Each pair is before, then after."
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/af69e890d21/shown/696b133e5f6f1b7b1224e7fd47fbf8f826d7291eec5a2af9a9cf032732fa2149.png",
+              "caption": "Phone, home: before"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/af69e890d21/shown/ae09b87f5501e76e95e3b13983409f7009bf7fb73fc94291dafb5c74afdda3d7.png",
+              "caption": "Phone, home: after"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/af69e890d21/shown/996e180f791e6de2d7a8e8ea9e954ecf75561ac9f0607efefd5039f092f9c3ad.png",
+              "caption": "Computer, home: before"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/af69e890d21/shown/0a757e66793da8025400e27e2081d5cee54582cf89b855b6777ef6d65cd7aac5.png",
+              "caption": "Computer, home: after"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/af69e890d21/shown/2b3dcf9566f6c2bf65e0a5525662efcd18edb185613fa626d688c0a8f5c42468.png",
+              "caption": "Phone, a series page: before"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/af69e890d21/shown/361920f3aefff699ed0c15ba0cde214d58dfc126ae2761c3014859b4ae2677c5.png",
+              "caption": "Phone, a series page: after"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/af69e890d21/shown/a789e7264c3ab8e80ed5c939ffc2d6f88b72810ff30d5cdee8f2356dd85222c6.png",
+              "caption": "Computer, a series page: before"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/af69e890d21/shown/78a9e48dc9f17f0b0ae3cdcddc63e7e653220f7c5e49603a9322b0dc68db4c25.png",
+              "caption": "Computer, a series page: after"
+            }
+          },
+          {
+            "kind": "choose",
+            "id": "field",
+            "label": "Keep the field on its ground?",
+            "options": [
+              {
+                "value": "keep",
+                "label": "Keep it",
+                "recommended": true,
+                "why": "The wheat stands on soil with room under it, the blue band is gone, and every contrast check passes at phone and computer widths."
+              },
+              {
+                "value": "revise",
+                "label": "Revise it"
+              }
+            ]
+          },
+          {
+            "kind": "free_text",
+            "id": "field_note",
+            "label": "What to change"
+          }
+        ],
+        "next": [
+          {
+            "to": "marks"
+          }
+        ]
+      },
+      "marks": {
+        "title": "The marks in the wheat's hand",
+        "blocks": [
+          {
+            "kind": "prose",
+            "text": "The four marks keep their fine lines, their pictures and their stirs. Each stroke now swells in its body and comes to a point, as the wheat's do. The first image shows the wheat, then each mark before and after, at four sizes. My one doubt: the land mark's small plant now reads a little like a tick."
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/af69e890d21/shown/bb593c514447be6d623598d7cfc33dd00085e69365b2133be1e60cd432f19b83.png",
+              "caption": "The wheat, then each mark before and after, at 44, 64, 104 and 200 px"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/af69e890d21/shown/ebc6d0e0e4d5a2f8ece1429b25b08b5e00137b3d7107ee21acd1e04556a7c077.png",
+              "caption": "The series rows: before"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/af69e890d21/shown/941fb98692bd8ea0b0487a116e2bf57cabe6f1c33e26b2db161b70a5f7e25ab4.png",
+              "caption": "The series rows at a computer's width: after"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/af69e890d21/shown/f85274412c9744f888f0947b27540d0728248558f2ef4ea029d84e536bda22e7.png",
+              "caption": "The series rows at a phone's width: after"
+            }
+          },
+          {
+            "kind": "choose",
+            "id": "marks",
+            "label": "Keep the marks as drawn now?",
+            "options": [
+              {
+                "value": "keep",
+                "label": "Keep them",
+                "recommended": true,
+                "why": "They are the fine lines you picked, drawn in the logo's hand, and they keep every stir."
+              },
+              {
+                "value": "revise",
+                "label": "Revise them"
+              }
+            ]
+          },
+          {
+            "kind": "free_text",
+            "id": "marks_note",
+            "label": "Which mark, and what to change"
+          }
+        ],
+        "next": [
+          {
+            "to": "stills"
+          }
+        ]
+      },
+      "stills": {
+        "title": "The four series link cards",
+        "blocks": [
+          {
+            "kind": "prose",
+            "text": "These four link cards changed only by their mark. Each is shown whole. Your approval lets the site ship them. The home card, the night and the field stills did not change."
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/af69e890d21/shown/16c466d5eb9871f0c74a8c8acf271df7f5282f7c434c96c94034110735808c9c.jpg",
+              "caption": "The Path of the Just"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/af69e890d21/shown/01c09519a326f18abc7d7eda216c66940d993472c2ef9f227ac6e920cf9d3ac7.jpg",
+              "caption": "Land"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/af69e890d21/shown/e6ca34d667ebfc3a5247ae134efc08d8e3b445641764b25ca3f4e633cd5b0778.jpg",
+              "caption": "Taught"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/af69e890d21/shown/9dd7ba22fc78e3a54ce38dec7a22a3212ededa2288bfa58eb7e3f7a2417a5df0.jpg",
+              "caption": "Remedies"
+            }
+          },
+          {
+            "kind": "choose",
+            "id": "stills",
+            "label": "Approve these four link cards?",
+            "options": [
+              {
+                "value": "approve",
+                "label": "Approve them",
+                "recommended": true,
+                "why": "Each is the card you approved, with only its mark redrawn as above."
+              },
+              {
+                "value": "not-yet",
+                "label": "Not yet"
+              }
+            ]
+          },
+          {
+            "kind": "free_text",
+            "id": "stills_note",
+            "label": "Anything else"
+          }
+        ],
+        "next": [
+          {
+            "to": "end"
+          }
+        ]
+      },
+      "end": {
+        "end": true,
+        "text": "Thank you. If you keep both and approve the cards, the site goes to review and merge. Any revise starts round 3."
+      }
+    }
+  },
+  "shown": {
+    "/api/asks/af69e890d21/shown/696b133e5f6f1b7b1224e7fd47fbf8f826d7291eec5a2af9a9cf032732fa2149.png": "696b133e5f6f1b7b1224e7fd47fbf8f826d7291eec5a2af9a9cf032732fa2149",
+    "/api/asks/af69e890d21/shown/ae09b87f5501e76e95e3b13983409f7009bf7fb73fc94291dafb5c74afdda3d7.png": "ae09b87f5501e76e95e3b13983409f7009bf7fb73fc94291dafb5c74afdda3d7",
+    "/api/asks/af69e890d21/shown/996e180f791e6de2d7a8e8ea9e954ecf75561ac9f0607efefd5039f092f9c3ad.png": "996e180f791e6de2d7a8e8ea9e954ecf75561ac9f0607efefd5039f092f9c3ad",
+    "/api/asks/af69e890d21/shown/0a757e66793da8025400e27e2081d5cee54582cf89b855b6777ef6d65cd7aac5.png": "0a757e66793da8025400e27e2081d5cee54582cf89b855b6777ef6d65cd7aac5",
+    "/api/asks/af69e890d21/shown/2b3dcf9566f6c2bf65e0a5525662efcd18edb185613fa626d688c0a8f5c42468.png": "2b3dcf9566f6c2bf65e0a5525662efcd18edb185613fa626d688c0a8f5c42468",
+    "/api/asks/af69e890d21/shown/361920f3aefff699ed0c15ba0cde214d58dfc126ae2761c3014859b4ae2677c5.png": "361920f3aefff699ed0c15ba0cde214d58dfc126ae2761c3014859b4ae2677c5",
+    "/api/asks/af69e890d21/shown/a789e7264c3ab8e80ed5c939ffc2d6f88b72810ff30d5cdee8f2356dd85222c6.png": "a789e7264c3ab8e80ed5c939ffc2d6f88b72810ff30d5cdee8f2356dd85222c6",
+    "/api/asks/af69e890d21/shown/78a9e48dc9f17f0b0ae3cdcddc63e7e653220f7c5e49603a9322b0dc68db4c25.png": "78a9e48dc9f17f0b0ae3cdcddc63e7e653220f7c5e49603a9322b0dc68db4c25",
+    "/api/asks/af69e890d21/shown/bb593c514447be6d623598d7cfc33dd00085e69365b2133be1e60cd432f19b83.png": "bb593c514447be6d623598d7cfc33dd00085e69365b2133be1e60cd432f19b83",
+    "/api/asks/af69e890d21/shown/ebc6d0e0e4d5a2f8ece1429b25b08b5e00137b3d7107ee21acd1e04556a7c077.png": "ebc6d0e0e4d5a2f8ece1429b25b08b5e00137b3d7107ee21acd1e04556a7c077",
+    "/api/asks/af69e890d21/shown/941fb98692bd8ea0b0487a116e2bf57cabe6f1c33e26b2db161b70a5f7e25ab4.png": "941fb98692bd8ea0b0487a116e2bf57cabe6f1c33e26b2db161b70a5f7e25ab4",
+    "/api/asks/af69e890d21/shown/f85274412c9744f888f0947b27540d0728248558f2ef4ea029d84e536bda22e7.png": "f85274412c9744f888f0947b27540d0728248558f2ef4ea029d84e536bda22e7",
+    "/api/asks/af69e890d21/shown/16c466d5eb9871f0c74a8c8acf271df7f5282f7c434c96c94034110735808c9c.jpg": "16c466d5eb9871f0c74a8c8acf271df7f5282f7c434c96c94034110735808c9c",
+    "/api/asks/af69e890d21/shown/01c09519a326f18abc7d7eda216c66940d993472c2ef9f227ac6e920cf9d3ac7.jpg": "01c09519a326f18abc7d7eda216c66940d993472c2ef9f227ac6e920cf9d3ac7",
+    "/api/asks/af69e890d21/shown/e6ca34d667ebfc3a5247ae134efc08d8e3b445641764b25ca3f4e633cd5b0778.jpg": "e6ca34d667ebfc3a5247ae134efc08d8e3b445641764b25ca3f4e633cd5b0778",
+    "/api/asks/af69e890d21/shown/9dd7ba22fc78e3a54ce38dec7a22a3212ededa2288bfa58eb7e3f7a2417a5df0.jpg": "9dd7ba22fc78e3a54ce38dec7a22a3212ededa2288bfa58eb7e3f7a2417a5df0"
+  },
+  "state": {
+    "_tag": "Answered",
+    "step": "end",
+    "answers": {
+      "field": {
+        "kind": "choose",
+        "value": "keep",
+        "label": "Keep it"
+      },
+      "field_note": {
+        "kind": "skipped"
+      },
+      "marks": {
+        "kind": "choose",
+        "value": "keep",
+        "label": "Keep them"
+      },
+      "marks_note": {
+        "kind": "skipped"
+      },
+      "stills": {
+        "kind": "choose",
+        "value": "approve",
+        "label": "Approve them"
+      },
+      "stills_note": {
+        "kind": "skipped"
+      }
+    }
+  },
+  "answered": [
+    {
+      "step": "field",
+      "values": {
+        "field": "keep"
+      },
+      "at": "2026-10-25T13:22:29.495Z"
+    },
+    {
+      "step": "marks",
+      "values": {
+        "marks": "keep"
+      },
+      "at": "2026-10-25T13:22:29.495Z"
+    },
+    {
+      "step": "stills",
+      "values": {
+        "stills": "approve"
+      },
+      "at": "2026-10-25T13:22:29.495Z"
+    }
+  ]
+}
