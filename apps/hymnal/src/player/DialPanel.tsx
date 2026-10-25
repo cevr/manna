@@ -9,8 +9,10 @@
  * Over the bar the panel is a popover of the key button (`DialPopover`): it
  * springs open out of the key button, its rows fading in 40 ms apart from
  * the bottom one up, and closes back into it. A close keeps the panel on
- * screen, drawn as it was last open, until it has gone, and the panel takes
- * no touch once its close has started. With Reduce Motion on, open and
+ * screen, drawn as it was last open, until it has gone. While open the panel
+ * takes every touch on it, so a tap on its padding or between its rows never
+ * reaches the page under it; it takes none once its close has started. With
+ * Reduce Motion on, open and
  * close are a fade alone.
  *
  * Every frame of it runs on the UI thread: React is told only as the close
@@ -174,7 +176,7 @@ export function DialPopover({
   return (
     <Animated.View
       testID="dials-panel"
-      pointerEvents={(open && 'box-none') || 'none'}
+      pointerEvents={(open && 'auto') || 'none'}
       onLayout={measured}
       style={[styles.panel, drawn]}
     >

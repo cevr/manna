@@ -278,6 +278,40 @@ describe('bar J on a hymn page', () => {
     }),
   );
 
+  it.live(
+    'takes a touch on the panel between its rows, so it never reaches the page under it',
+    () =>
+      Effect.sync(() => {
+        using page = mount(route(100));
+        tapKey(page);
+        const panel = page.get('[data-testid="dials-panel"]');
+        // The panel itself is a touch target while open: its padding and gaps do not pass a tap to the backdrop.
+        expect(getComputedStyle(panel).pointerEvents).toBe('auto');
+        holdAnimations();
+        using _held = { [Symbol.dispose]: landAnimations };
+        tapKey(page);
+        // Once its close has started it takes no touch.
+        expect(getComputedStyle(page.get('[data-testid="dials-panel"]')).pointerEvents).toBe(
+          'none',
+        );
+      }),
+  );
+
+  it.live('fades the dials out on a page turn to a hymn with no chords, as on any page turn', () =>
+    Effect.sync(() => {
+      using page = mount(turning(100));
+      tapKey(page);
+      holdAnimations();
+      using _held = { [Symbol.dispose]: landAnimations };
+      // Hymn 126 has no chords yet: the panel still closes along its path, drawn as it was.
+      act(() => turned.to(126));
+      expect(page.find('[aria-label="Play hymn 126"]').pipe(Option.isSome)).toBe(true);
+      expect(page.find('[data-testid="dials-panel"]').pipe(Option.isSome)).toBe(true);
+      act(() => landAnimations());
+      expect(page.find('[data-testid="dials-panel"]').pipe(Option.isNone)).toBe(true);
+    }),
+  );
+
   it.live('turns chords off on a hold with no tap after it, and the dials show the key alone', () =>
     Effect.gen(function* () {
       const device = chordsOn();

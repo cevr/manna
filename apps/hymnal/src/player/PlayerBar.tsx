@@ -174,6 +174,9 @@ function Overlay({ drawing }: { readonly drawing: Drawing }) {
   );
   const thumb = Option.map(drawing.shown, () => model);
   const open = Option.filter(thumb, (bound) => bound.state.open);
+  const dials = Option.flatMap(thumb, (bound) =>
+    Option.map(bound.printed, (printed) => ({ bound, printed })),
+  );
   // The key button's centre from the panel's left edge, as the button lays out: the dials open out of it.
   const keyAt = useSharedValue(KEY_CENTRE);
   const keyLaidOut = (event: LayoutChangeEvent) => {
@@ -195,21 +198,19 @@ function Overlay({ drawing }: { readonly drawing: Drawing }) {
         ),
       })}
       <View pointerEvents="box-none" style={styles.dock}>
-        {Option.match(
-          Option.flatMap(thumb, (bound) =>
-            Option.map(bound.printed, (printed) => ({ bound, printed })),
-          ),
-          {
-            onNone: () => <></>,
-            onSome: ({ bound, printed }) => (
-              <View pointerEvents="box-none" style={styles.dials}>
-                <DialPopover open={bound.state.open} keyAt={keyAt} below={PANEL_GAP + REST / 2}>
-                  <Dials thumb={bound} printed={printed} />
-                </DialPopover>
-              </View>
-            ),
-          },
-        )}
+        {/* The popover stays while it closes, on a turn to a page with no chords or to no page too. */}
+        <View pointerEvents="box-none" style={styles.dials}>
+          <DialPopover
+            open={Option.isSome(Option.filter(dials, ({ bound }) => bound.state.open))}
+            keyAt={keyAt}
+            below={PANEL_GAP + REST / 2}
+          >
+            {Option.match(dials, {
+              onNone: () => <></>,
+              onSome: ({ bound, printed }) => <Dials thumb={bound} printed={printed} />,
+            })}
+          </DialPopover>
+        </View>
         <Frame drawing={drawing} thumb={thumb} onKeyLayout={keyLaidOut} />
       </View>
     </>
