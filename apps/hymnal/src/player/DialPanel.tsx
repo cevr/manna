@@ -58,20 +58,27 @@ export function DialPanel({
 /**
  * The open: a spring of 0.4 s and bounce 0.3 (the `ui` skill's largest
  * release bounce, for the owner's "springy"), so the panel overshoots its
- * size a little and settles. The close: 0.25 s and no bounce, shorter than
- * the open, with no overshoot. Stiffness `(2π/d)²`, damping `4π(1 − b)/d`.
+ * size a little and settles. The close: 0.35 s and no bounce, shorter than
+ * the open, with no overshoot; with the fade over the whole way back, the
+ * panel is out of sight about a quarter second after the touch.
+ * Stiffness `(2π/d)²`, damping `4π(1 − b)/d`.
  */
 const OPEN = { stiffness: 247, damping: 22, mass: 1 };
-const CLOSE = { stiffness: 632, damping: 50.3, mass: 1 };
+const CLOSE = { stiffness: 322, damping: 35.9, mass: 1 };
 
 /** Where the open starts: this much of its size, this far below its rest, in points. */
 const FROM_SCALE = 0.55;
 const FROM_LOW = 10;
 
-/** The share of the open under which the panel fades: below it, it is see-through in step. */
+/**
+ * The share of the open under which the panel fades as it opens: below it,
+ * it is see-through in step, so it is solid before the spring overshoots. As
+ * it closes it fades over the whole way back, so it stays in sight while it
+ * shrinks into the key button.
+ */
 const FADE_UNDER = 0.4;
 
-/** Reduce Motion's fade, in milliseconds, on the keyword ease-out. */
+/** Reduce Motion's fade, in milliseconds, at an even pace, so the whole of it shows. */
 const REDUCED_FADE = 150;
 
 /** How far apart the rows start, from the bottom one up, in milliseconds. */
@@ -123,7 +130,7 @@ export function DialPopover({
         to,
         {
           duration: REDUCED_FADE,
-          easing: Easing.bezier(0, 0, 0.58, 1),
+          easing: Easing.linear,
           reduceMotion: ReduceMotion.Never,
         },
         ended,
@@ -144,7 +151,7 @@ export function DialPopover({
     const ox = keyAt.value - size.value.width / 2;
     const oy = size.value.height / 2 + below;
     return {
-      opacity: Math.min(Math.max(p / FADE_UNDER, 0), 1),
+      opacity: Math.min(Math.max(p / ((open && FADE_UNDER) || 1), 0), 1),
       transform: [
         { translateY: FROM_LOW * (1 - p) },
         { translateX: ox },
