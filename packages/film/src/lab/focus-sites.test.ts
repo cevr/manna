@@ -78,6 +78,12 @@ const POPUP_FOCUS = /\b(initialFocus|finalFocus)=\{\s*\(\)\s*=>(?!\s*false\s*\})
 /** The file that owns the lab's focus moves: it moves the focus for every site. */
 const HELPER = 'focus.ts';
 
+/**
+ * The files read at once: four read the sources as fast as 32 do, in about
+ * half the CPU time, which the unit tests' workers share.
+ */
+const READS = 4;
+
 /** Every place in the lab's sources (tests and fixtures aside) that moves the focus, as `file call`. */
 const focusSites = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
@@ -97,7 +103,7 @@ const focusSites = Effect.gen(function* () {
           ([, attr, first]) => `${file} ${attr}={() => ${first}`,
         ),
       ]),
-    { concurrency: 32 },
+    { concurrency: READS },
   );
   return sites.flat().toSorted();
 });
