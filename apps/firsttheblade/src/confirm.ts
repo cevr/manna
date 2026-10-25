@@ -2,7 +2,7 @@
  * Confirming in place: the confirm page's form posted from the page, which
  * opens on a skeleton of the notice to come (`./ui/mail.tsx`), and the page
  * the answer leads to (confirmed, or an expired link's notice) drawn over the
- * skeleton, keeping the mark every notice shows, its words arriving in the
+ * skeleton, keeping the wheat every notice shows, its words arriving in the
  * staged entrance `.confirm-arrived` plays. The skeleton holds for at least
  * `HOLD`, so a fast answer reads as a step and not a flicker. The address bar takes
  * the drawn page's canonical path, so a reload shows that page and never
@@ -14,6 +14,8 @@ import { Clock, Duration, Effect, Option } from 'effect';
 import { FetchHttpClient, HttpClient, HttpClientRequest } from 'effect/http';
 
 const LOST = '.lost';
+/** The wheat every notice shows, kept in place as the words around it change. */
+const WHEAT = '.wheat';
 
 /** The least time the skeleton shows before the answer's words arrive. */
 const HOLD = Duration.millis(600);
@@ -28,12 +30,12 @@ const draw = (shown: Element, next: Document) =>
     const path = new URL(canonical.getAttribute('href') ?? '', location.origin).pathname;
     Option.match(
       Option.all([
-        Option.fromNullishOr(shown.querySelector('img')),
-        Option.fromNullishOr(drawn.querySelector('img')),
+        Option.fromNullishOr(shown.querySelector(WHEAT)),
+        Option.fromNullishOr(drawn.querySelector(WHEAT)),
       ]),
       {
         onNone: () => {},
-        onSome: ([mark, nextMark]) => nextMark.replaceWith(mark),
+        onSome: ([wheat, nextWheat]) => nextWheat.replaceWith(wheat),
       },
     );
     shown.replaceChildren(...drawn.childNodes);

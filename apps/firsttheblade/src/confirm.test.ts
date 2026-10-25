@@ -44,7 +44,7 @@ describe('confirming from the letter', () => {
         '@media (scripting: none) {\n  .confirm-pending {\n    display: none;',
       );
       expect(styles).toContain(
-        '.confirm-arrived > :not(img) {\n  animation: confirm-arrive 300ms ease-out both;',
+        '.confirm-arrived > :not(.wheat) {\n  animation: confirm-arrive 300ms ease-out both;',
       );
     }));
 });

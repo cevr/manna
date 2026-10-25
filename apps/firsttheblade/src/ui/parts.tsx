@@ -1,14 +1,16 @@
 /**
  * The parts the pages share, in the order a page meets them: the field at
- * morning (the home page's, tall, and a page's own, shorter), a verse, the
- * series on torn paper, the dusk, the night close and the footer.
+ * morning (the home page's, tall, and a page's own, shorter), fading into the
+ * paper; a verse; the series as rows; the dusk with Mark 4:27; the night
+ * close, rising out of the dusk; and the footer.
  */
 import { For } from '@solidjs/web';
 import type { JSX } from '@solidjs/web';
 
 import { MARK_4_27, type Series, UNITS, type Verse } from '../content.ts';
 import { CHANNEL, PROFILES } from '../site.ts';
-import { EMBLEM_DRAWINGS, FIELD, MARK, NIGHT } from './art.ts';
+import { EMBLEM_DRAWINGS, FIELD, NIGHT } from './art.ts';
+import { StackedLockup } from './brand.tsx';
 import { PRIVACY_PATH } from '../pages.ts';
 import { SignUp } from './mail.tsx';
 import { FOOTER_NAV_ID, NAV, SUBSCRIBE } from './nav.ts';
@@ -53,21 +55,30 @@ const FieldArt = (props: FieldArtProps) => (
 );
 
 /**
- * The home page's field: tall, with the verse on a torn strip in its sky and
- * the soil darkened under the words laid on it.
+ * The painting and its canvas (`../motion/scene.ts` lays the canvas beside
+ * the picture), held together so one mask fades both into the paper.
+ */
+const FieldPaint = (props: FieldArtProps) => (
+  <div class="field-paint">
+    <FieldArt sizes={props.sizes} />
+  </div>
+);
+
+/**
+ * The home page's field: tall, with the verse in its sky, fading into the
+ * paper the page's first words stand on.
  */
 export const HomeField = (props: FieldProps) => (
   <div class="field field-home">
-    <FieldArt sizes="(min-width: 77rem) 100vw, 77rem" />
-    <div class="field-scrim" />
+    <FieldPaint sizes="(min-width: 77rem) 100vw, 77rem" />
     {props.children}
   </div>
 );
 
-/** A page's own field: shorter, with the page's title on a torn strip. */
+/** A page's own field: shorter, with the page's title in its sky. */
 export const PageField = (props: FieldProps) => (
   <div class="field field-page">
-    <FieldArt sizes="(min-width: 42rem) 100vw, 42rem" />
+    <FieldPaint sizes="(min-width: 42rem) 100vw, 42rem" />
     {props.children}
   </div>
 );
@@ -90,13 +101,19 @@ interface SeriesCardProps {
   readonly series: Series;
 }
 
-/** A series on its strip of paper: its emblem, subject and form, name, line, and how far it has come. */
+/** A series as a row: its mark on its tile, subject and form, name, line, and how far it has come. */
 export const SeriesCard = (props: SeriesCardProps) => {
   const s = props.series;
   return (
     <li class="card">
-      <span class={`emblem emblem-${s.id}`} aria-hidden="true" innerHTML={EMBLEM_DRAWINGS[s.id]} />
-      <div>
+      <span class="tile">
+        <span
+          class={`emblem emblem-${s.id}`}
+          aria-hidden="true"
+          innerHTML={EMBLEM_DRAWINGS[s.id]}
+        />
+      </span>
+      <div class="card-words">
         <p class="label">
           <span class="nowrap">{s.subject}</span> · <span class="nowrap">{s.form}</span>
         </p>
@@ -104,8 +121,8 @@ export const SeriesCard = (props: SeriesCardProps) => {
           <a href={seriesHref(s)}>{s.name}</a>
         </h3>
         <p class="line">{s.line}</p>
-        <p class="status">{statusOf(s)}</p>
       </div>
+      <p class="status">{statusOf(s)}</p>
     </li>
   );
 };
@@ -114,36 +131,45 @@ interface CardsProps {
   readonly series: ReadonlyArray<Series>;
 }
 
+/** The series, one row each, a hairline between them. */
 export const Cards = (props: CardsProps) => (
-  <ul class="cards" data-count={props.series.length}>
+  <ul class="cards">
     <For each={props.series}>{(s) => <SeriesCard series={s} />}</For>
   </ul>
 );
 
-/** The day turning to night between the last band and the close. */
-export const Dusk = () => <div class="dusk" aria-hidden="true" />;
+/**
+ * The day turning to night between the last band and the close: from the
+ * wheat through the dusk's warm stops into the night, with Mark 4:27 (the
+ * sower sleeps and rises, and the seed grows) where it is still light.
+ */
+export const Dusk = () => (
+  <div class="dusk">
+    <Quote verse={MARK_4_27} />
+  </div>
+);
 
 /**
- * The close, at night: the mark, Mark 4:27 (the sower sleeps and rises, and
- * the seed grows), and the two ways to hear of each new film: the YouTube
- * channel, and the email list.
+ * The close, at night, rising out of the dusk: the lockup, and the two ways
+ * to hear of each new film: the YouTube channel, and the email list.
  */
 export const NightClose = () => (
   <section class="night" aria-labelledby="night-title">
-    <img
-      class="night-art"
-      src={NIGHT.src}
-      srcset={NIGHT.srcset}
-      sizes="(min-width: 65rem) 100vw, 65rem"
-      alt=""
-      width="1536"
-      height="1024"
-      loading="lazy"
-    />
-    <div class="night-veil" />
+    <div class="night-paint">
+      <img
+        class="night-art"
+        src={NIGHT.src}
+        srcset={NIGHT.srcset}
+        sizes="(min-width: 65rem) 100vw, 65rem"
+        alt=""
+        width="1536"
+        height="1024"
+        loading="lazy"
+      />
+      <div class="night-veil" />
+    </div>
     <div class="night-words">
-      <img class="mark" src={MARK.large} alt="" width="320" height="320" loading="lazy" />
-      <Quote verse={MARK_4_27} />
+      <StackedLockup />
       <h2 id="night-title">See each new film</h2>
       <p>
         Subscribe to the channel on YouTube: <span class="nowrap">{CHANNEL.handle}</span>

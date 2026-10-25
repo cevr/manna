@@ -21,6 +21,7 @@ import {
   Given,
   RECORD,
   ShipUnapproved,
+  hashedStills,
   readRecord,
   savedAsk,
   shippable,
@@ -35,6 +36,8 @@ const APP = `${import.meta.dir}/..`;
 const ASK = 'a1b2c3d4e5f';
 const EARLIER = 'b1c2d3e4f5a';
 const FIELD = 'src/art/field-768.webp';
+/** The images outside the rule the page reads as text (`?raw`) into its markup, so the build writes no file of them. */
+const INLINE = ['src/art/wheat.svg'];
 
 /** What a copy of the app needs to build, beside its record, a link to the app's `node_modules` and the repo's `tsconfig.json` its own extends. */
 const COPIED = [
@@ -76,7 +79,7 @@ const savedFor = (root: string, given: Given) =>
     );
   });
 
-/** The record at `root` with its stills, the approval `of` gives for them, and the earlier approvals `before` gives, each approval's ask saved beside it. */
+/** The record at `root` over its stills as they stand, the approval `of` gives for them, and the earlier approvals `before` gives, each approval's ask saved beside it. */
 const recordWith = (
   root: string,
   of: (stills: Approved['stills']) => Approved['approval'],
@@ -84,7 +87,7 @@ const recordWith = (
 ) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
-    const { stills } = yield* readRecord(root);
+    const stills = Object.fromEntries(yield* hashedStills(root));
     const record: Approved = { approval: of(stills), earlier: before(stills), stills };
     const json = yield* Schema.encodeEffect(Schema.fromJsonString(Approved, { space: 2 }))(record);
     yield* fs.writeFileString(`${root}/${RECORD}`, `${json}\n`);
@@ -237,6 +240,7 @@ describe('kit:shippable', () => {
       );
       const { stills } = yield* readRecord(root);
       const built = yield* builtImages(path.join(root, 'dist'));
-      expect(built.length).toBe(Object.keys(stills).length + OUTSIDE.length + 4);
+      const outside = OUTSIDE.filter(({ image }) => !INLINE.includes(image));
+      expect(built.length).toBe(Object.keys(stills).length + outside.length + 4);
     }).pipe(Effect.scoped));
 });

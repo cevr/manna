@@ -3,8 +3,9 @@
  * cannot keep: no film is out yet, so no page lists one, counts one or plays
  * one. Each series lists its films once they are in `./content.ts`.
  *
- * Every page reads from morning to night: the field, then paper and the
- * reasons band, then the dusk and the night close.
+ * Every page reads as the sky turns from morning to night: the field fading
+ * into the paper, the bands warming toward the wheat, then the dusk and the
+ * night close rising out of it.
  */
 import { For, Show } from '@solidjs/web';
 import type { JSX } from '@solidjs/web';
@@ -14,7 +15,8 @@ import { MARK_4_27, MARK_4_28, SERIES, type Series, type Verse } from './content
 import { PROMISE } from './mail/promise.ts';
 import type { Page, PageView } from './pages.ts';
 import { CHANNEL, CONTACT } from './site.ts';
-import { EMBLEMS, MARK } from './ui/art.ts';
+import { EMBLEMS } from './ui/art.ts';
+import { Wheat } from './ui/brand.tsx';
 import { Header } from './ui/header.tsx';
 import { Confirm, Leave, Notice } from './ui/mail.tsx';
 import {
@@ -42,7 +44,7 @@ const Home = () => (
   <main id="main">
     <h1 class="visually-hidden">{CHANNEL.name}</h1>
     <HomeField>
-      <figure class="strip">
+      <figure class="field-verse">
         <blockquote>
           <p>“{MARK_4_28.text}”</p>
         </blockquote>
@@ -63,8 +65,8 @@ const Home = () => (
       </div>
     </section>
 
-    <section class="section-band" aria-labelledby="about-title">
-      <div class="wrap split">
+    <section class="section-why" aria-labelledby="about-title">
+      <div class="wrap why">
         <h2 id="about-title">Why we make these</h2>
         <div class="reading">
           <p>
@@ -91,7 +93,7 @@ const Home = () => (
 const About = () => (
   <main id="main">
     <PageField>
-      <div class="strip">
+      <div class="field-title">
         <h1>About the channel</h1>
       </div>
     </PageField>
@@ -168,7 +170,7 @@ const SeriesPage = (props: SeriesProps) => {
   return (
     <main id="main">
       <PageField>
-        <div class="strip">
+        <div class="field-title">
           <h1>{s.name}</h1>
           <p class="label">
             <span class="nowrap">{s.subject}</span> · <span class="nowrap">{s.form}</span>
@@ -178,7 +180,9 @@ const SeriesPage = (props: SeriesProps) => {
 
       <section class="section" aria-label="About the series">
         <div class="wrap split">
-          <img class="emblem-large" src={EMBLEMS[s.id]} alt="" width="140" height="140" />
+          <span class="tile tile-large">
+            <img class="emblem-large" src={EMBLEMS[s.id]} alt="" width="140" height="140" />
+          </span>
           <div class="reading">
             <Quote verse={s.verse} />
             <For each={s.about}>{(paragraph) => <p>{paragraph}</p>}</For>
@@ -300,7 +304,7 @@ const PRIVACY: ReadonlyArray<PrivacySection> = [
 const Privacy = () => (
   <main id="main">
     <PageField>
-      <div class="strip">
+      <div class="field-title">
         <h1>Privacy</h1>
       </div>
     </PageField>
@@ -332,7 +336,7 @@ const NotFound = () => (
   <main id="main">
     <section class="section-band">
       <div class="wrap lost">
-        <img src={MARK.large} alt="" width="320" height="320" />
+        <Wheat />
         <h1>Page not found</h1>
         <p>There is no page here. The link may have a typo in it, or the page may have moved.</p>
         <a class="button" href="/">

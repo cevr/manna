@@ -10,7 +10,7 @@
  * browser parses it), every letter the list sends (its sender, subject, text
  * and HTML, built as the Worker builds them), and the channel kit
  * (`kit/channel.md`, and the words drawn on each picture a viewer sees,
- * `kit/draw.ts` `SEEN`).
+ * `kit/draw.ts` `seen`).
  *
  * The check fails closed: every source of words a reader can see or hear is
  * one it reads whole, or the run fails naming it (`unread:`). A page's
@@ -38,7 +38,7 @@ import { BunRuntime, BunServices } from '@effect/platform-bun';
 import { Console, Data, Effect, FileSystem, Match, Option, Path, Schema } from 'effect';
 import { parse, type DefaultTreeAdapterTypes } from 'parse5';
 
-import { SEEN } from '../kit/draw.ts';
+import { kitPictures } from '../kit/draw.ts';
 import { SERIES } from '../src/content.ts';
 import { Address } from '../src/mail/address.ts';
 import type { Film } from '../src/mail/films.ts';
@@ -91,31 +91,32 @@ const NET = new RegExp(
 
 /** The runs a join is named by: a `|` at each break where a stylesheet can lay two runs side by side. */
 const joined = (...runs: ReadonlyArray<string>) => runs.join('|');
+/** The joins a drawing parts with a space (the wheat, between the runs either side of it): a ` | ` at each. */
+const spaced = (...joins: ReadonlyArray<string>) => joins.join(' | ');
 
-/** The skip link and the header's links, between a page's title and its first words. */
+/** The skip link and the header's links, between a page's title and its first words; the lockup's wheat parts the skip link from the name. */
 const HEADER = [
-  ...['Skip to content', 'First the Blade', 'Main', 'Series', 'About', 'Subscribe on YouTube'],
-  'Menu',
+  spaced('Skip to content', 'First the Blade'),
+  ...['Main', 'Series', 'About', 'Subscribe on YouTube', 'Menu'],
 ];
 /** A page's title (its tab's words), run on through its header into its first words. */
 const opening = (tab: string, ...runs: ReadonlyArray<string>) => joined(tab, ...HEADER, ...runs);
 /** A page's tab's words, from its title. */
 const titled = (title: string) => `${title} · First the Blade`;
-/** The footer's words, after a page's last ones. */
-const FOOTER = [
-  ...['Site', 'Home', 'Series', 'About', 'YouTube', 'Instagram', 'Facebook', 'Privacy'],
-  ...['Scripture quotations from the King James Version', '© 2026'],
-];
-/** A page's last words, run on into its footer. */
-const closing = (...runs: ReadonlyArray<string>) => joined(...runs, ...FOOTER);
-/** The night close's verse, which the net takes ("night and day"). */
+/** A notice's title run on through the header, past the wheat it shows, into its first words. */
+const noticeOpening = (title: string, ...runs: ReadonlyArray<string>) =>
+  spaced(joined(titled(title), ...HEADER), joined(title, ...runs));
+/** The dusk's verse, on every page, which the net takes ("night and day"). */
 const NIGHT_VERSE =
   '“And should sleep, and rise night and day, and the seed should spring and grow up, he knoweth not how.”';
 
 /** The header's link, on every page. */
 const PAGE: ReadonlyArray<string> = ['Subscribe on YouTube'];
 
-/** The sign-up form in the night close, on every page that carries it. */
+/** A notice's action, run on into the dusk's verse. */
+const intoDusk = (action: string) => joined(action, NIGHT_VERSE);
+
+/** The sign-up form in the night close, on every page that carries it, after the dusk's verse and the stacked lockup. */
 const SIGNUP: ReadonlyArray<string> = [
   'Email me new films',
   'Or get them by email',
@@ -124,7 +125,8 @@ const SIGNUP: ReadonlyArray<string> = [
   'Your email address',
   NIGHT_VERSE,
   joined(
-    ...['Mark 4:27', 'See each new film', 'Subscribe to the channel on YouTube: @firsttheblade'],
+    spaced('Mark 4:27', 'First the Blade'),
+    ...['See each new film', 'Subscribe to the channel on YouTube: @firsttheblade'],
     ...['Subscribe on YouTube', 'Or get them by email', 'Your email address', 'Email me new films'],
     ...['Leave this empty', `We send you ${PROMISE}.`],
   ),
@@ -141,7 +143,9 @@ const HELD = new Map<string, ReadonlyArray<string>>(
   Object.entries({
     'dist/404.html': [
       ...PAGE,
-      opening(titled('Page not found'), 'Page not found', 'There is no page here.'),
+      NIGHT_VERSE,
+      noticeOpening('Page not found', 'There is no page here.'),
+      intoDusk('Go to the home page'),
     ],
     'dist/about.html': [
       ...PAGE,
@@ -269,24 +273,18 @@ const HELD = new Map<string, ReadonlyArray<string>>(
       'Please check it and try again.',
       'Sign up again',
       'That does not look like an email address.',
-      opening(
-        titled('Check your email address'),
-        'Check your email address',
-        'That does not look like an email address.',
-      ),
-      closing('Sign up again'),
+      NIGHT_VERSE,
+      noticeOpening('Check your email address', 'That does not look like an email address.'),
+      intoDusk('Sign up again'),
     ],
     'dist/subscribe/busy.html': [
       ...PAGE,
       'Sign up again',
       'Too many sign-ups came from your connection just now.',
       'Wait a minute, then try again.',
-      opening(
-        titled('Too many tries'),
-        'Too many tries',
-        'Too many sign-ups came from your connection just now.',
-      ),
-      closing('Sign up again'),
+      NIGHT_VERSE,
+      noticeOpening('Too many tries', 'Too many sign-ups came from your connection just now.'),
+      intoDusk('Sign up again'),
     ],
     'dist/subscribe/check.html': [
       ...PAGE,
@@ -296,11 +294,12 @@ const HELD = new Map<string, ReadonlyArray<string>>(
       'If this address is not on the list yet, we are sending it an email now.',
       'Open the link inside to join.',
       'We will not send another one for an hour.',
-      opening(
-        titled('Check your inbox'),
+      NIGHT_VERSE,
+      noticeOpening(
         'Check your inbox',
         'If this address is not on the list yet, we are sending it an email now.',
       ),
+      intoDusk('Go to the home page'),
     ],
     'dist/subscribe/confirm.html': [
       ...PAGE,
@@ -309,32 +308,34 @@ const HELD = new Map<string, ReadonlyArray<string>>(
       'Confirm your email · First the Blade',
       'Confirming your email',
       'Press the button to join.',
-      opening(
-        titled('Confirm your email'),
+      NIGHT_VERSE,
+      spaced(
+        joined(titled('Confirm your email'), ...HEADER),
         'Confirming your email',
-        'Confirm your email',
-        'Press the button to join.',
+        joined('Confirm your email', 'Press the button to join.'),
       ),
-      closing('Confirm my email'),
+      intoDusk('Confirm my email'),
     ],
     'dist/subscribe/confirmed.html': [
       ...PAGE,
       'You are on the list',
       'You are on the list · First the Blade',
       'You can leave at any time, from the link in any of our emails.',
-      opening(titled('You are on the list'), 'You are on the list', 'Thank you.'),
+      NIGHT_VERSE,
+      noticeOpening('You are on the list', 'Thank you.'),
+      intoDusk('Go to the home page'),
     ],
     'dist/subscribe/expired.html': [
       ...PAGE,
       'A confirm link works for seven days, and only the newest one works.',
       'Sign up again',
       'Sign up again and we will send you a new link.',
-      opening(
-        titled('This link has run out'),
+      NIGHT_VERSE,
+      noticeOpening(
         'This link has run out',
         'A confirm link works for seven days, and only the newest one works.',
       ),
-      closing('Sign up again'),
+      intoDusk('Sign up again'),
     ],
     'dist/unsubscribe.html': [
       ...PAGE,
@@ -342,8 +343,9 @@ const HELD = new Map<string, ReadonlyArray<string>>(
       'Leave the list · First the Blade',
       'Leave the list?',
       'Press the button and we will stop emailing you.',
-      opening(titled('Leave the list'), 'Leave the list?'),
-      closing('Leave the list'),
+      NIGHT_VERSE,
+      spaced(joined(titled('Leave the list'), ...HEADER), 'Leave the list?'),
+      intoDusk('Leave the list'),
     ],
     'dist/unsubscribe/done.html': [
       ...PAGE,
@@ -351,20 +353,16 @@ const HELD = new Map<string, ReadonlyArray<string>>(
       'We will not email you again.',
       'You have left the list',
       'You have left the list · First the Blade',
-      opening(
-        titled('You have left the list'),
-        'You have left the list',
-        'We will not email you again.',
-      ),
+      NIGHT_VERSE,
+      noticeOpening('You have left the list', 'We will not email you again.'),
+      intoDusk('Go to the home page'),
     ],
     'dist/unsubscribe/invalid.html': [
       ...PAGE,
       'To leave the list, use the link at the bottom of any of our emails, or your mail app’s unsubscribe button.',
-      opening(
-        titled('This link does not work'),
-        'This link does not work',
-        'Part of it may have been lost when it was copied.',
-      ),
+      NIGHT_VERSE,
+      noticeOpening('This link does not work', 'Part of it may have been lost when it was copied.'),
+      intoDusk('Go to the home page'),
     ],
     'letter confirm html': [
       'Confirm my email',
@@ -687,7 +685,7 @@ const UNSEEN_ATTRIBUTES = new Set([
   ...['data-count', 'data-logo', 'style'],
   // SVG drawing
   ...['viewbox', 'd', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin'],
-  ...['clip-path', 'opacity'],
+  ...['clip-path', 'opacity', 'fill-rule', 'cx', 'cy', 'r'],
 ]);
 
 /** The meta tags a page's link card, tab or search result shows, by their name or property: their words are read. */
@@ -972,14 +970,13 @@ const DIST_READERS = new Map<string, Reader>([
  * listed here, and a review reads the reason.
  */
 const WORDLESS = new Set([
-  // The kit draws these from HTML whose words it reads (`kit/draw.ts` `SEEN`).
+  // The kit draws these from HTML whose words it reads (`kit/draw.ts` `seen`).
   ...['dist/og/home.jpg', 'dist/og/land.jpg', 'dist/og/path.jpg', 'dist/og/remedies.jpg'],
   ...['dist/og/taught.jpg', 'dist/apple-touch-icon.png', 'dist/favicon.ico'],
   ...['dist/icon-192.png', 'dist/icon-512.png'],
   // Paintings, with no words in them (`email-promise-painted-words`).
   ...['dist/assets/field-768.webp', 'dist/assets/field-1536.webp', 'dist/assets/field-3072.webp'],
   ...['dist/assets/night-768.webp', 'dist/assets/night-1536.webp'],
-  ...['dist/assets/mark-112.webp', 'dist/assets/mark-320.webp'],
   // The field's wind, a map of how far each pixel sways, read by the motion's shader (`kit/field.ts`).
   'dist/assets/field-wind.png',
   // The font's glyphs.
@@ -1108,7 +1105,7 @@ const kitArtefacts = Effect.fn('Promise.kit')(function* (app: string) {
   const path = yield* Path.Path;
   const channel = yield* fs.readFileString(path.join(app, 'kit', 'channel.md'));
   const pasted = Option.fromNullishOr(PASTED.exec(channel)?.[1]);
-  const pictures = SEEN.map((picture) =>
+  const pictures = (yield* kitPictures).map((picture) =>
     artefactOf(path.relative(app, picture.out), 'kit picture', htmlWords(picture.html)),
   );
   return Option.match(pasted, {

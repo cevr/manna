@@ -20,7 +20,7 @@ const roleOf = (token: string) =>
   token.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
 
 describe('the colours', () => {
-  test('every colour the stylesheet names is palette 09’s, at its value', () =>
+  test('every colour the stylesheet names is a role of the palette, at its value', () =>
     Effect.gen(function* () {
       const { root } = yield* stylesheet;
       const tokens = [...root.matchAll(/--color-([a-z-]+):\s*(#[0-9a-f]{6});/g)];

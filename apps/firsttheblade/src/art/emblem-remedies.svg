@@ -1,6 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g><clipPath id="r100"><path d="M50 88C50 88 18 70 22 40C25 20 44 12 50 10C56 12 75 20 78 40C82 70 50 88 50 88Z"/></clipPath>
-<path d="M50 88C50 88 18 70 22 40C25 20 44 12 50 10C56 12 75 20 78 40C82 70 50 88 50 88Z" fill="#437742"/>
-<path d="M50 10C56 12 75 20 78 40C82 70 50 88 50 88Z" fill="#365b43" clip-path="url(#r100)"/>
-<path d="M50 88C50 88 18 70 22 40C25 20 44 12 50 10C56 12 75 20 78 40C82 70 50 88 50 88Z" fill="none" stroke="#fcfbf0" stroke-width="3.84" clip-path="url(#r100)" opacity=".85"/>
-<path d="M50 88C50 88 18 70 22 40C25 20 44 12 50 10C56 12 75 20 78 40C82 70 50 88 50 88Z" fill="none" stroke="#2c4542" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></g>
-<path d="M50 92L50 22M50 40L36 30M50 40L64 30M50 56L32 46M50 56L68 46M50 72L38 64M50 72L62 64" fill="none" stroke="#2c4542" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="#7a6813" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+<g><path d="M9 39C9 21 21 9 40 9c0 19-11 31-31 30z"/></g>
+<path d="M9 39L31 17M19 29h7M24 24v-6"/>
+</svg>

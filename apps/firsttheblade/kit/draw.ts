@@ -1,6 +1,6 @@
 /**
- * `bun run kit`: draws the channel's pictures from the brand (logo 10,
- * YouTube set 6, palette 09) in a browser with the site's own fonts.
+ * `bun run kit`: draws the channel's pictures from the brand (lockup D, the
+ * bare wheat, Moonlit wheat) in a browser with the site's own fonts.
  *
  * - The YouTube kit, into `kit/out/`: the avatar, the banner and what each
  *   screen shows of it, the watermark, two thumbnails in the house style,
@@ -12,9 +12,10 @@
  *
  * The field is the site's own hero, round 5's repaint at 3072 px
  * (`src/art/field-3072.webp`), so the banner and a shared link look like the
- * page they lead to. The mark and the thumbnails' paintings are in `kit/art/`
- * at full size; the emblems are from `src/art/`. The colours are
- * `src/palette.ts`. The link cards are stills of the field the owner
+ * page they lead to. The wheat is the site's (`src/art/wheat.svg`), the
+ * series marks are from `src/art/`, and the thumbnails' paintings are in
+ * `kit/art/` at full size. The colours are `src/palette.ts`. No picture has
+ * a paper strip or a disc. The link cards are stills of the field the owner
  * approves by name, so each run ends by naming those that differ from his
  * approval (`./approval.ts`); it never writes the record.
  */
@@ -31,36 +32,37 @@ const APP = `${KIT}/..`;
 const OUT = `${KIT}/out`;
 const PUBLIC = `${APP}/public`;
 const WORK = `${OUT}/.html`;
+/** The bare wheat, the one shape of the lockup and the icons. */
+const WHEAT = `${APP}/src/art/wheat.svg`;
 
 const url = (file: string) => `file://${encodeURI(file)}`;
 const kitArt = (name: string) => url(`${KIT}/art/${name}`);
 const emblem = (id: SeriesId) => url(`${APP}/src/art/emblem-${id}.svg`);
 const font = (face: string) => url(`${APP}/src/fonts/Newsreader-${face}.woff2`);
 
-/** The torn edge of a strip of paper, cut a little deeper for a thumbnail's scale. */
-const TORN =
-  'polygon(0 6%,5% 0,12% 4%,20% 1%,29% 5%,38% 0,49% 4%,58% 1%,68% 5%,78% 0,88% 4%,100% 1%,100% 94%,93% 100%,84% 96%,74% 100%,63% 95%,52% 99%,41% 95%,31% 100%,20% 96%,9% 100%,0 95%)';
-
 const htmlPage = (body: string) => `<!doctype html><html><head><meta charset="utf-8"><style>
 @font-face{font-family:Newsreader;font-style:normal;font-weight:200 800;src:url(${font('normal-latin')}) format('woff2')}
 @font-face{font-family:Newsreader;font-style:italic;font-weight:200 800;src:url(${font('italic-latin')}) format('woff2')}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Newsreader,serif;-webkit-font-smoothing:antialiased;text-rendering:geometricPrecision;font-synthesis:none}
+.wheat svg{display:block;width:auto;height:100%}
 </style></head><body>${body}</body></html>`;
 
-/** The mark in its disc, the painting a little larger than the disc so its ring sits at the edge. */
-const disc = (size: number) =>
-  `<div style="width:${size}px;height:${size}px;flex:none;border-radius:50%;background:url(${kitArt('mark.webp')}) center/117% no-repeat"></div>`;
+/** The bare wheat, `height` px tall, in `color`. */
+const wheatOf = (wheat: string, height: number, color: string) =>
+  `<span class="wheat" style="display:block;flex:none;height:${height}px;color:${color}">${wheat}</span>`;
 
-const wordmark = (px: number) =>
-  `<span style="font:500 ${px}px Newsreader;font-variation-settings:'opsz' 72;letter-spacing:-0.015em;color:${PALETTE.ink};white-space:nowrap;line-height:1">First <i style="font-weight:400;color:${PALETTE.accent}">the</i> Blade</span>`;
+/**
+ * Lockup D's wordmark: Newsreader 500 in small capitals, which the browser
+ * draws from the capitals (Newsreader has none of its own), and “the” in
+ * italic 400.
+ */
+const wordmark = (px: number, ink: string, accent: string) =>
+  `<span style="font:500 ${px}px Newsreader;font-variation-settings:'opsz' 72;font-variant-caps:all-small-caps;font-synthesis-small-caps:auto;letter-spacing:.06em;color:${ink};white-space:nowrap;line-height:1">First <i style="font-variant-caps:normal;font-weight:400;letter-spacing:0;color:${accent}">the</i> Blade</span>`;
 
-/** Logo 10: the disc beside the wordmark. */
-const lockup = (px: number) =>
-  `<div style="display:inline-flex;align-items:center;gap:${px * 0.42}px">${disc(px * 1.55)}${wordmark(px)}</div>`;
-
-const strip = (inner: string, padding: string) =>
-  `<div style="display:inline-block;background:${PALETTE.strip};clip-path:${TORN};padding:${padding}">${inner}</div>`;
+/** Lockup D by day: the wheat and “the” in the deep wheat, the words in the ink. */
+const lockup = (wheat: string, px: number) =>
+  `<div style="display:inline-flex;align-items:center;gap:${px * 0.34}px">${wheatOf(wheat, px * 1.6, PALETTE.accent)}${wordmark(px, PALETTE.ink, PALETTE.accent)}</div>`;
 
 /** The field as the site's hero shows it. */
 const FIELD = url(`${APP}/src/art/field-3072.webp`);
@@ -68,19 +70,19 @@ const FIELD = url(`${APP}/src/art/field-3072.webp`);
 const field = (position: string) =>
   `<div style="position:absolute;inset:0;background:url(${FIELD}) ${position}/cover"></div>`;
 
+/** The field fading into the paper over its top `share`, as the site's hero does. */
+const fadedField = (position: string, share: number) =>
+  `<div style="position:absolute;inset:0;background:${PALETTE.paper}"></div><div style="position:absolute;inset:0 0 auto;height:${share * 100}%;background:url(${FIELD}) ${position}/cover;mask-image:linear-gradient(#000 50%,transparent 86%)"></div>`;
+
 const frame = (width: number, height: number, inner: string) =>
   `<div style="position:relative;width:${width}px;height:${height}px;overflow:hidden">${inner}</div>`;
 
-/**
- * The avatar: the painting on the ink at 116% of the square, as round 4 drew
- * it. YouTube's circle crop meets the painted ring at the sides; at the top
- * and bottom a hairline of the painting's cream shows inside the crop.
- */
-const avatar = (size: number) =>
+/** The wheat in the wheat on a night square `size` px wide, its corners rounded by `radius`. */
+const nightSquare = (wheat: string, size: number, share: number, radius = 0) =>
   frame(
     size,
     size,
-    `<div style="position:absolute;inset:0;background:${PALETTE.ink} url(${kitArt('mark.webp')}) center/116% no-repeat"></div>`,
+    `<div style="position:absolute;inset:0;display:grid;place-items:center;background:${PALETTE.night};border-radius:${radius}px">${wheatOf(wheat, size * share, PALETTE.wheat)}</div>`,
   );
 
 class BrowserError extends Data.TaggedError('BrowserError')<{
@@ -168,11 +170,13 @@ const ico = (images: ReadonlyArray<{ readonly size: number; readonly png: Uint8A
 const SAFE = { x: 507, y: 508.5, width: 1546, height: 423 } as const;
 const DESKTOP = { y: 508.5, height: 423 } as const;
 
-const banner = frame(
-  2560,
-  1440,
-  `${field('50% 58%')}<div style="position:absolute;left:50%;top:720px;transform:translate(-50%,-50%) rotate(-1deg)">${strip(lockup(110), '40px 80px')}</div>`,
-);
+/** The banner: the lockup in the field's morning sky, over the middle every screen shows. */
+const banner = (wheat: string) =>
+  frame(
+    2560,
+    1440,
+    `${field('50% 0%')}<div style="position:absolute;left:50%;top:720px;transform:translate(-50%,-50%)">${lockup(wheat, 110)}</div>`,
+  );
 
 /** What a TV, a computer and a phone show of the banner. */
 const cropsBoard = (src: string) => {
@@ -182,7 +186,7 @@ const cropsBoard = (src: string) => {
   const desk = 760 / 2560;
   const phone = 460 / SAFE.width;
   return `<div style="width:1400px;height:400px;padding:20px;background:${PALETTE.band};display:grid;grid-template-columns:600px 1fr;gap:20px;align-items:start">
-<div>${label('TV · ALL 2560 × 1440')}<div style="position:relative;width:600px;height:${1440 * tv}px;background:url(${src}) 0 0/600px ${1440 * tv}px"><div style="position:absolute;left:0;right:0;top:${DESKTOP.y * tv}px;height:${DESKTOP.height * tv}px;box-shadow:0 0 0 2px ${PALETTE.strip}"></div><div style="position:absolute;left:${SAFE.x * tv}px;width:${SAFE.width * tv}px;top:${SAFE.y * tv}px;height:${SAFE.height * tv}px;outline:2px dashed ${PALETTE.gold}"></div></div></div>
+<div>${label('TV · ALL 2560 × 1440')}<div style="position:relative;width:600px;height:${1440 * tv}px;background:url(${src}) 0 0/600px ${1440 * tv}px"><div style="position:absolute;left:0;right:0;top:${DESKTOP.y * tv}px;height:${DESKTOP.height * tv}px;outline:2px solid ${PALETTE.paper}"></div><div style="position:absolute;left:${SAFE.x * tv}px;width:${SAFE.width * tv}px;top:${SAFE.y * tv}px;height:${SAFE.height * tv}px;outline:2px dashed ${PALETTE.accent}"></div></div></div>
 <div style="display:flex;flex-direction:column;gap:14px"><div>${label('DESKTOP · 2560 × 423')}<div style="width:760px;height:${DESKTOP.height * desk}px;background:url(${src}) 0 ${-DESKTOP.y * desk}px/760px ${1440 * desk}px"></div></div>
 <div>${label('PHONE AND SAFE AREA · 1546 × 423')}<div style="width:460px;height:${SAFE.height * phone}px;background:url(${src}) ${-SAFE.x * phone}px ${-SAFE.y * phone}px/${2560 * phone}px ${1440 * phone}px"></div></div></div></div>`;
 };
@@ -201,32 +205,33 @@ const THUMBS: Record<'robe' | 'court', Thumb> = {
   court: { art: 'court.webp', position: '50% 40%', lines: ['You did it.'], px: 106 },
 };
 
-/** A thumbnail: the film's painting, its question on a torn strip at the left. */
+/**
+ * A thumbnail: the film's painting, the night drawn in from the left under
+ * its question, which stands in the wheat.
+ */
 const thumb = (film: Thumb) =>
   frame(
     1280,
     720,
-    `<div style="position:absolute;inset:0;background:url(${kitArt(film.art)}) ${film.position}/cover"></div><div style="position:absolute;left:40px;top:50%;transform:translateY(-50%) rotate(-1.5deg)">${strip(
-      `<div style="font:500 ${film.px}px/1.04 Newsreader;font-variation-settings:'opsz' 72;letter-spacing:-.015em;color:${PALETTE.ink}">${film.lines.join('<br>')}</div>`,
-      '28px 40px',
-    )}</div>`,
+    `<div style="position:absolute;inset:0;background:url(${kitArt(film.art)}) ${film.position}/cover"></div><div style="position:absolute;inset:0;background:linear-gradient(90deg in oklab,color-mix(in srgb,${PALETTE.night} 88%,transparent),color-mix(in srgb,${PALETTE.night} 62%,transparent) 36%,transparent 62%)"></div><div style="position:absolute;left:64px;top:50%;transform:translateY(-50%)"><div style="font:500 ${film.px}px/1.04 Newsreader;font-variation-settings:'opsz' 72;letter-spacing:-.015em;color:${PALETTE.wheat}">${film.lines.join('<br>')}</div></div>`,
   );
 
 // ── The Facebook Page ────────────────────────────────────────────────────
 
 /**
  * The cover at twice the phone's 640 × 360: a phone shows all of it, a
- * computer the band 1640 × 624 across its middle. The Page's profile picture
- * is the disc, so the cover carries the wordmark alone.
+ * computer the band 1640 × 624 across its middle. The lockup stands in the
+ * field's morning sky at the middle.
  */
 const COVER = { width: 1640, height: 924 } as const;
 const COVER_DESKTOP = { y: 150, height: 624 } as const;
 
-const cover = frame(
-  COVER.width,
-  COVER.height,
-  `${field('50% 58%')}<div style="position:absolute;left:50%;top:${COVER.height / 2}px;transform:translate(-50%,-50%) rotate(-1deg)">${strip(wordmark(104), '36px 72px')}</div>`,
-);
+const cover = (wheat: string) =>
+  frame(
+    COVER.width,
+    COVER.height,
+    `${field('50% 0%')}<div style="position:absolute;left:50%;top:${COVER.height / 2}px;transform:translate(-50%,-50%)">${lockup(wheat, 92)}</div>`,
+  );
 
 /** What a computer and a phone show of the cover. */
 const coverCropsBoard = (src: string) => {
@@ -243,20 +248,20 @@ const coverCropsBoard = (src: string) => {
 
 const OG = { width: 1200, height: 630 } as const;
 
-const homeCard = frame(
-  OG.width,
-  OG.height,
-  `${field('50% 58%')}<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-1deg)">${strip(lockup(64), '30px 54px')}</div>`,
-);
-
-const seriesCard = (series: Series) =>
+/** The home page's card: the field fading into the paper, the lockup on the paper. */
+const homeCard = (wheat: string) =>
   frame(
     OG.width,
     OG.height,
-    `${field('50% 58%')}<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-1deg)">${strip(
-      `<div style="display:flex;align-items:center;gap:32px"><img src="${emblem(series.id)}" width="132" height="132" alt=""><div><div style="font:500 17px Newsreader;letter-spacing:.16em;text-transform:uppercase;color:${PALETTE.accent};white-space:nowrap">${series.subject} · ${series.form}</div><div style="margin-top:6px;font:500 64px/1.05 Newsreader;font-variation-settings:'opsz' 72;letter-spacing:-.015em;color:${PALETTE.ink};white-space:nowrap">${series.name}</div><div style="margin-top:14px">${lockup(26)}</div></div></div>`,
-      '34px 56px',
-    )}</div>`,
+    `${fadedField('50% 45%', 0.7)}<div style="position:absolute;left:0;right:0;bottom:72px;display:flex;justify-content:center">${lockup(wheat, 64)}</div>`,
+  );
+
+/** A series' card: the field fading into the paper, and on the paper its mark on its tile, its subject and form, its name and the lockup. */
+const seriesCard = (wheat: string, series: Series) =>
+  frame(
+    OG.width,
+    OG.height,
+    `${fadedField('50% 45%', 0.56)}<div style="position:absolute;left:72px;right:72px;bottom:60px;display:flex;align-items:center;gap:40px"><div style="flex:none;display:grid;place-items:center;width:240px;height:160px;border-radius:16px;background:${PALETTE.band}"><img src="${emblem(series.id)}" width="104" height="104" alt=""></div><div><div style="font:500 22px Newsreader;font-variant-caps:all-small-caps;font-synthesis-small-caps:auto;letter-spacing:.1em;color:${PALETTE.accent};white-space:nowrap">${series.subject} · ${series.form}</div><div style="margin-top:4px;font:500 60px/1.05 Newsreader;font-variation-settings:'opsz' 72;letter-spacing:-.015em;color:${PALETTE.ink};white-space:nowrap">${series.name}</div><div style="margin-top:16px">${lockup(wheat, 24)}</div></div></div>`,
   );
 
 /** A picture the kit draws: what it is drawn from, the file it goes to, its size and its format. */
@@ -268,26 +273,33 @@ interface Picture {
 }
 
 /**
- * Every picture a viewer or a reader sees, in the order the kit draws them:
- * the channel's avatar, watermark, banner and thumbnails, the Page's cover,
- * and the site's link cards and icons. The email list's promise check reads
- * the words drawn on each (`../scripts/promise.ts`).
+ * Every picture a viewer or a reader sees, in the order the kit draws them,
+ * from the wheat's markup: the channel's avatar, watermark, banner and
+ * thumbnails, the Page's cover, and the site's link cards and icons. The
+ * email list's promise check reads the words drawn on each
+ * (`../scripts/promise.ts`).
  */
-export const SEEN: ReadonlyArray<Picture> = [
+export const seen = (wheat: string): ReadonlyArray<Picture> => [
+  // The avatar: the bare wheat on the night; YouTube's circle crop leaves it whole.
   {
-    html: avatar(800),
+    html: nightSquare(wheat, 800, 0.58),
     out: `${OUT}/avatar-800.png`,
     size: { width: 800, height: 800 },
     format: 'png',
   },
+  // The watermark: the bare wheat with nothing behind it (owner, decisions.log line 69).
   {
-    html: disc(150),
+    html: frame(
+      150,
+      150,
+      `<div style="display:grid;place-items:center;height:100%">${wheatOf(wheat, 138, PALETTE.wheat)}</div>`,
+    ),
     out: `${OUT}/watermark-150.png`,
     size: { width: 150, height: 150 },
     format: 'transparent',
   },
   {
-    html: banner,
+    html: banner(wheat),
     out: `${OUT}/banner-2560x1440.png`,
     size: { width: 2560, height: 1440 },
     format: 'png',
@@ -298,43 +310,44 @@ export const SEEN: ReadonlyArray<Picture> = [
     size: { width: 1280, height: 720 },
     format: 'png',
   })),
-  { html: cover, out: `${OUT}/facebook-cover-1640x924.png`, size: COVER, format: 'png' },
-  { html: homeCard, out: `${PUBLIC}/og/home.jpg`, size: OG, format: 'jpeg' },
+  { html: cover(wheat), out: `${OUT}/facebook-cover-1640x924.png`, size: COVER, format: 'png' },
+  { html: homeCard(wheat), out: `${PUBLIC}/og/home.jpg`, size: OG, format: 'jpeg' },
   ...SERIES.map((series): Picture => ({
-    html: seriesCard(series),
+    html: seriesCard(wheat, series),
     out: `${PUBLIC}/og/${series.id}.jpg`,
     size: OG,
     format: 'jpeg',
   })),
-  // The manifest's icons are the disc on nothing, so a dark launcher shows no
-  // square; iOS fills a clear corner black, so its touch icon is the avatar's square.
+  // The manifest's icons and the touch icon are the wheat on a night square; each launcher rounds it as it does.
   ...(
     [
       ['icon-512.png', 512],
       ['icon-192.png', 192],
+      ['apple-touch-icon.png', 180],
     ] as const
   ).map(([file, size]): Picture => ({
-    html: disc(size),
+    html: nightSquare(wheat, size, 0.62),
     out: `${PUBLIC}/${file}`,
     size: { width: size, height: size },
-    format: 'transparent',
-  })),
-  {
-    html: avatar(180),
-    out: `${PUBLIC}/apple-touch-icon.png`,
-    size: { width: 180, height: 180 },
     format: 'png',
-  },
+  })),
 ];
+
+/** The pictures, from the wheat as the site serves it. */
+export const kitPictures = Effect.gen(function* () {
+  const fs = yield* FileSystem.FileSystem;
+  return seen(yield* fs.readFileString(WHEAT));
+});
 
 const kit = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
+  const wheat = yield* fs.readFileString(WHEAT);
   const browser = yield* Effect.acquireRelease(
     step('launch', () => chromium.launch({ channel: 'chrome' })),
     (opened) => Effect.promise(() => opened.close()),
   );
 
-  yield* Effect.forEach(SEEN, (picture) =>
+  yield* Effect.forEach(seen(wheat), (picture) =>
     draw(browser, picture.html, picture.out, picture.size, picture.format),
   );
   yield* fs.copyFile(`${KIT}/channel.md`, `${OUT}/channel.md`);
@@ -351,12 +364,12 @@ const kit = Effect.gen(function* () {
     { width: 1360, height: 340 },
   );
 
-  // The favicon is the disc on nothing, so a dark tab strip shows no square.
+  // The favicon is the wheat on a night square with rounded corners, so it reads at 16 px in a light tab strip and a dark one.
   const icons = [];
   for (const size of [16, 32, 48]) {
     const png = yield* draw(
       browser,
-      disc(size),
+      nightSquare(wheat, size, 0.8, size * 0.22),
       `${WORK}/favicon-${size}.png`,
       { width: size, height: size },
       'transparent',

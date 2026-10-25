@@ -11,7 +11,7 @@ import type { JSX } from '@solidjs/web';
 import { CONFIRM_FORM_ID, MAIL_ROUTES, SIGNUP_FIELDS } from '../mail/paths.ts';
 import { PROMISE } from '../mail/promise.ts';
 import { NOTICE_TITLES, type NoticeId, PRIVACY_PATH } from '../pages.ts';
-import { MARK } from './art.ts';
+import { Wheat } from './brand.tsx';
 
 /** Where the sign-up form sits on every page that closes at night. */
 export const SIGNUP_ID = 'signup';
@@ -124,7 +124,7 @@ interface LostProps {
 const Lost = (props: LostProps) => (
   <section class="section-band">
     <div class="wrap lost">
-      <img src={MARK.large} alt="" width="320" height="320" />
+      <Wheat />
       <h1>{props.title}</h1>
       {props.children}
     </div>
@@ -161,7 +161,7 @@ export const Confirm = () => (
   <>
     <section class="section-band confirm-pending">
       <div class="wrap lost" role="status" aria-busy="true">
-        <img src={MARK.large} alt="" width="320" height="320" />
+        <Wheat />
         <span class="visually-hidden">Confirming your email</span>
         <span class="skeleton skeleton-heading" aria-hidden="true" />
         <span class="skeleton-lines" aria-hidden="true">

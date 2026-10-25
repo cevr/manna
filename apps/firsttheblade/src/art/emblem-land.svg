@@ -1,29 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g><clipPath id="k6"><path d="M4 82C20 58 52 54 96 70L96 90L4 90Z"/></clipPath>
-<path d="M4 82C20 58 52 54 96 70L96 90L4 90Z" fill="#437742"/>
-<path d="M50 58C70 58 84 64 96 70L96 90L50 90Z" fill="#365b43" clip-path="url(#k6)"/>
-<path d="M4 82C20 58 52 54 96 70L96 90L4 90Z" fill="none" stroke="#fcfbf0" stroke-width="3.84" clip-path="url(#k6)" opacity=".85"/>
-<path d="M4 82C20 58 52 54 96 70L96 90L4 90Z" fill="none" stroke="#2c4542" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></g>
-<g><clipPath id="k7"><path d="M44 46L58 36L72 46L72 62L44 62Z"/></clipPath>
-<path d="M44 46L58 36L72 46L72 62L44 62Z" fill="#fcfbf0"/>
-<path d="M58 36L72 46L72 62L58 62Z" fill="#bac9db" clip-path="url(#k7)"/>
-<path d="M44 46L58 36L72 46L72 62L44 62Z" fill="none" stroke="#fcfbf0" stroke-width="3.84" clip-path="url(#k7)" opacity=".85"/>
-<path d="M44 46L58 36L72 46L72 62L44 62Z" fill="none" stroke="#2c4542" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></g>
-<g><clipPath id="k8"><path d="M41 47L58 33L75 47"/></clipPath>
-<path d="M41 47L58 33L75 47" fill="#427542"/>
-
-<path d="M41 47L58 33L75 47" fill="none" stroke="#fcfbf0" stroke-width="3.84" clip-path="url(#k8)" opacity=".85"/>
-<path d="M41 47L58 33L75 47" fill="none" stroke="#2c4542" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></g>
-<g><clipPath id="k9"><path d="M55 52L61 52L61 62L55 62Z"/></clipPath>
-<path d="M55 52L61 52L61 62L55 62Z" fill="#776357"/>
-
-<path d="M55 52L61 52L61 62L55 62Z" fill="none" stroke="#fcfbf0" stroke-width="3.84" clip-path="url(#k9)" opacity=".85"/>
-<path d="M55 52L61 52L61 62L55 62Z" fill="none" stroke="#2c4542" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></g>
-<g><clipPath id="k10"><path d="M24 64L24 50"/></clipPath>
-<path d="M24 64L24 50" fill="#776357"/>
-
-<path d="M24 64L24 50" fill="none" stroke="#fcfbf0" stroke-width="3.84" clip-path="url(#k10)" opacity=".85"/>
-<path d="M24 64L24 50" fill="none" stroke="#2c4542" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></g><g><clipPath id="k11"><path d="M24 52C12 52 12 32 24 30C36 32 36 52 24 52Z"/></clipPath>
-<path d="M24 52C12 52 12 32 24 30C36 32 36 52 24 52Z" fill="#437742"/>
-<path d="M24 30C36 32 36 52 24 52Z" fill="#365b43" clip-path="url(#k11)"/>
-<path d="M24 52C12 52 12 32 24 30C36 32 36 52 24 52Z" fill="none" stroke="#fcfbf0" stroke-width="3.84" clip-path="url(#k11)" opacity=".85"/>
-<path d="M24 52C12 52 12 32 24 30C36 32 36 52 24 52Z" fill="none" stroke="#2c4542" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="#7a6813" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+<path d="M4 40c10-10 25-12 40-6"/>
+<path d="M27 31.5V24l6-4.5 6 4.5v8"/>
+<path d="M31.5 31v-4h3v4"/>
+<path d="M12 33v-7M12 26c-3 0-4-3-4-5 2 0 4 1 4 5zM12 26c3 0 4-3 4-5-2 0-4 1-4 5z"/>
+<path d="M4 44h40"/>
+</svg>
