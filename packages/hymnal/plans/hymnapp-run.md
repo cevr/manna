@@ -7,8 +7,8 @@ Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>`
 
 | Unit       | Depends on                     | Workspace                 | Agents            | Result                 |
 | ---------- | ------------------------------ | ------------------------- | ----------------- | ---------------------- |
-| glass      | appbase                        | .rifts/bible-tools/glass  | impl ab2ba40 (r8) |                        |
-| manna      | testsplit, compile, glass      | .rifts/bible-tools/manna  |                   |                        |
+| glass      | appbase                        | .rifts/bible-tools/glass  | impl ab2ba40 (r8) | dropped                |
+| manna      | testsplit, compile, glass      | .rifts/bible-tools/manna  |                   | dropped                |
 | reader1    | appbase                        | .rifts/manna/reader1      | impl a4ef6ed (r1) | merged 5d339030e       |
 | palette    | reader1                        |                           |                   | merged 6cb76a3c4       |
 | playstall  | playerfix                      | (removed)                 | (closed)          | merged 055a51bac       |
@@ -51,7 +51,7 @@ Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>`
 | pager      | coldload, playstall            |                           |                   | folded into uibulk     |
 | offline    | playstall                      |                           |                   | folded into playbulk   |
 | search     | coldload                       |                           |                   | folded into findbulk   |
-| search2    | search                         |                           |                   |                        |
+| search2    | search                         |                           |                   | folded into findbulk   |
 | scripture  | search, topicdata              |                           |                   | folded into findbulk   |
 | lists      | uibulk                         |                           |                   | folded into uibulk     |
 | topics     | search, topicdata              |                           |                   | folded into findbulk   |
@@ -312,6 +312,8 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
   - `tuner` and `tempo` stay single units (a native mic module; the player's timing).
   - `checkbulk` (no owner-facing change, fills a free slot): chordtests, census3, feel-android.
     Order: barfix, polishbulk, playbulk, findbulk, tuner, tempo; checkbulk where it fits. Older rows closed as superseded: `reader` (by reader1, merged 5d339030e) and `listen` (by player). Not hymnal-app work and left out of the bulks: `manna` (repo rename), `selah`, `search2` (meaning search, later), `glass` (worktree trashed 2026-10-22, branch kept). (orchestrator, bulks)
+
+- Owner, 2026-10-25: "let's just remove the glass one and mana" / "search to let's put that in find bulk as well". `glass` and `manna` are dropped from this run. The repo and the folder are already `manna` (cevr/manna, `~/Developer/personal/manna`); the workspace scope `@bible/*` (14 packages) and the `bible` CLI keep their names, measured on main 2026-10-25. `search2` (meaning search: a word table distilled from EmbeddingGemma, about 6 MB, "Hymns about this" and "More like this") joins `findbulk` after `search`, before browse-app. (orchestrator, bulks)
 
 ## Owner questions
 
