@@ -33,6 +33,7 @@ Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>`
 | chordbar   | chordbulk                      | removed                   | (closed)          | merged 0647d1c1e    |
 | barfix     | chordbar, feel                 |                           |                   |                     |
 | barmisc    | barfix                         |                           |                   |                     |
+| hymnbrand  | barfix, ftbbrand               |                           |                   |                     |
 | clickrate  | feel, barfix                   |                           |                   |                     |
 | listsearch | feel                           |                           |                   |                     |
 | feel       | chordbar                       | removed                   | (closed)          | merged cfe6d5f87    |
@@ -297,6 +298,8 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 - Clicks in silent mode: the owner phone was in silent mode in every frame of the 10:55 look (slashed bell), so the system-sound clicks were muted by design (feel Decided 2 and 4). Owner question below. (feel)
 
 - Unit `clickrate` (owner, 2026-10-25, scrawl `scrawl-1792940279216-1060f-61`, a fast dial fling on bar J): "if you scroll really fast, it it sounds kind of, um, It just sounds scratchy. It doesn't sound right." / "we need to find a way to make it so that fast scrolls doesn't cause the sound to overlap." The invariant: two tick clicks never sound at once, and a fast fling reads as an even ratchet, not noise, while a slow turn still clicks once per detent. Feel keeps a 30 ms floor between ticks (`src/feel/feel.ts` `FLOOR`); a click that lasts longer than the floor still overlaps the next (inferred, not measured). The implementor picks the mechanism (a floor tied to the sound length, thinning by speed, or a shorter tick) and proves it by a unit test over the cue stream; the haptic follows the same rule. It runs after barfix (which changes `DialView.tsx`, where the dial cues fire) and before listsearch. Clicks stay muted in silent mode. (orchestrator, clickrate)
+
+- Unit `hymnbrand` (owner, 2026-10-25): "let's change the hymnal app colors to match our new brand colors" / "As well as the icon". The new brand is Moonlit wheat, the wheat `#ffefae` on the night `#12354e` (`apps/firsttheblade/src/palette.ts`, ftbbrand 160e59b48). The hymnal today draws its nine roles from Wada No. 167 (`apps/hymnal/src/theme.ts` `wada167`). The invariant: every hymnal colour, light and dark, comes from the brand's colours through one source the First the Blade site reads too (no second copy of a hex value), and every text role keeps WCAG AA on what it sits on (`theme.test.ts`). In scope: the theme roles (with barfix's new `panel` and `edge`), the app icon (light, dark and tinted, `scripts/icon.ts` and its test), the splash and the native background (`vite/app.ts`), the favicon and the web manifest, and the README line. Selah keeps palette A. The owner looks at the colours and the icon on his iPhone before the merge, by an ask. It runs after barfix (which adds roles to `theme.ts`) and before clickrate; the merge needs `prebuild:native` and a phone install. (orchestrator, hymnbrand)
 
 ## Owner questions
 
