@@ -46,6 +46,10 @@ const pairs: ReadonlyArray<readonly [text: keyof Roles, on: keyof Roles]> = [
   ['accent', 'soft'],
   ['onAccent', 'accent'],
   ['onPressed', 'pressed'],
+  // The open dials' panel: its labels and keys in muted, its current key and notch in accent, the reset chip's ink on soft.
+  ['ink', 'panel'],
+  ['muted', 'panel'],
+  ['accent', 'panel'],
 ];
 
 describe('the palette meets WCAG AA', () => {
@@ -56,6 +60,24 @@ describe('the palette meets WCAG AA', () => {
         expect(contrast(roles[text], roles[on])).toBeGreaterThanOrEqual(4.5);
       });
     }
+  }
+});
+
+/**
+ * The panel the open dials stand on reads against the page under it: its
+ * edge is a control's boundary (WCAG 1.4.11, 3:1 on the ground), and its
+ * fill lifts off the ground (1.08:1 at the least), in both schemes.
+ */
+describe('the dials’ panel stands off the page', () => {
+  for (const scheme of ['light', 'dark'] as const) {
+    test(`${scheme}: the edge is at least 3:1 on the ground`, () => {
+      const roles = theme[scheme];
+      expect(contrast(roles.edge, roles.ground)).toBeGreaterThanOrEqual(3);
+    });
+    test(`${scheme}: the fill lifts at least 1.08:1 off the ground`, () => {
+      const roles = theme[scheme];
+      expect(contrast(roles.panel, roles.ground)).toBeGreaterThanOrEqual(1.08);
+    });
   }
 });
 
@@ -110,6 +132,8 @@ test('the roles are palette A', () => {
       onAccent: '#ffffff',
       pressed: '#346e85',
       onPressed: '#ffffff',
+      panel: '#f8f6f3',
+      edge: '#5e899a',
     },
     dark: {
       ground: '#032431',
@@ -121,6 +145,8 @@ test('the roles are palette A', () => {
       onAccent: '#111314',
       pressed: '#86b1c0',
       onPressed: '#111314',
+      panel: '#0a2b38',
+      edge: '#4d7382',
     },
   });
 });

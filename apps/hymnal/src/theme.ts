@@ -1,5 +1,5 @@
 /**
- * The app's colours: nine roles in light and dark, all drawn from Sanzo Wada's
+ * The app's colours: eleven roles in light and dark, all drawn from Sanzo Wada's
  * combination No. 167 (Ecru, Pale King's Blue, Vandar Poel's Blue), the
  * palette A the owner chose for Selah and the hymnal. A screen reads a role
  * (`color.ts` on the web, `color.native.ts` on a phone), never a hex value.
@@ -13,7 +13,11 @@
  * near-black where it meets AA on the fill, else white, else black
  * (`onColor`), so any accent a palette gives has AA text on it. A pressed
  * accent is a fill of its own (`pressed`), with its own text (`onPressed`),
- * so the pressed state keeps AA too.
+ * so the pressed state keeps AA too. The open dials stand on a raised,
+ * opaque panel (`panel`): the ground mixed toward white in light and toward
+ * Pale King's Blue in dark, a lift of about 1.1:1, so no page word shows
+ * through it. Its edge (`edge`) is the ground mixed toward the accent, at
+ * least 3:1 on the ground (WCAG 1.4.11, a control's boundary).
  */
 
 export const wada167 = {
@@ -41,6 +45,10 @@ export interface Roles {
   readonly pressed: string;
   /** Text drawn on the pressed fill, picked for it as `onAccent` is for the accent. */
   readonly onPressed: string;
+  /** A raised surface over the page, the open dials' panel: the ground lifted a little. */
+  readonly panel: string;
+  /** The panel's edge: a control's boundary, at least 3:1 on the ground. */
+  readonly edge: string;
 }
 
 type Rgb = readonly [number, number, number];
@@ -111,6 +119,8 @@ export const theme = {
     onAccent: onColor(wada167.vandarPoelsBlue),
     pressed: lightPressed,
     onPressed: onColor(lightPressed),
+    panel: mix(lightGround, '#ffffff', 0.6),
+    edge: mix(lightGround, wada167.vandarPoelsBlue, 0.62),
   },
   dark: {
     ground: darkGround,
@@ -122,5 +132,7 @@ export const theme = {
     onAccent: onColor(wada167.paleKingsBlue),
     pressed: darkPressed,
     onPressed: onColor(darkPressed),
+    panel: mix(darkGround, wada167.paleKingsBlue, 0.04),
+    edge: mix(darkGround, wada167.paleKingsBlue, 0.45),
   },
 } as const satisfies { readonly light: Roles; readonly dark: Roles };

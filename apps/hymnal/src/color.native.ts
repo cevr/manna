@@ -30,6 +30,8 @@ export const color = Platform.select({
     muted: dynamic('muted'),
     line: dynamic('line'),
     soft: dynamic('soft'),
+    panel: dynamic('panel'),
+    edge: dynamic('edge'),
   }),
   // Each a theme attribute that resolves to one colour: React Native reads a
   // resolved attribute's value as the colour, so an attribute that resolves
@@ -42,6 +44,8 @@ export const color = Platform.select({
     muted: PlatformColor('?android:attr/colorForeground'),
     line: PlatformColor('?android:attr/colorControlHighlight'),
     soft: PlatformColor('?android:attr/colorControlHighlight'),
+    panel: PlatformColor('?android:attr/colorBackground'),
+    edge: PlatformColor('?android:attr/colorForeground'),
   }),
 })() satisfies Record<Exclude<keyof Roles, Fill>, ColorValue>;
 
