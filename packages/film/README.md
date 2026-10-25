@@ -2129,7 +2129,8 @@ words of its own picture its prompt carried (`words`, `pictureWords` in
 words, and the words the panel holds from). A try changed when the words a
 run would send for its picture now differ (a try from before `words`: its
 prompt no longer carries each of them verbatim; the style, the house rules
-and other beats are not its words), when a cast file it recorded holds
+and other beats are not its words; an imported try is never judged on its
+words), when a cast file it recorded holds
 other bytes now (a try from before `cast`: a kept sheet its member's
 `replaced` history says was replaced since), or when the cast a run would
 send now names a file it did not carry (a member first kept a sheet
@@ -2144,7 +2145,8 @@ of its first panel, not by the keep it draws again over; the board read
 (`film lab board`, the lab MCP's `board`) gives the panel a `stale` naming
 which (`members`, `words`, `why`), and the studio's Board section shows its
 `why` under the panel (`GET …/board/stale`), the lab reading the script
-fresh (`tools/board-stale-read.ts`).
+fresh (`tools/board-stale-read.ts`): a script it cannot read names no panel
+stale and logs `board.stale … unread=`.
 
 | Route                                      | What it does                                                                                        |
 | ------------------------------------------ | --------------------------------------------------------------------------------------------------- |

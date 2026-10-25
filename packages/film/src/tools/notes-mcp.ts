@@ -248,12 +248,11 @@ export const notesReads = Effect.fn('LabMcp.notesReads')(function* () {
     const film = yield* named(name);
     const board: BoardFile = yield* refused(boards.read(film));
     const images = boards.paths(film).folder;
-    // A script that cannot be read now leaves the board read whole, with no panel named stale.
-    const judged = yield* staleInLab(film).pipe(
-      Effect.provideService(FreshFilm, fresh),
-      Effect.provideService(BoardStore, boards),
-      Effect.catch((e) =>
-        Effect.as(Effect.logWarning(`board.stale film=${film} unread="${e.message}"`), []),
+    // A script that cannot be read now names no panel stale (`staleInLab`), so the board read stays whole.
+    const judged = yield* refused(
+      staleInLab(film).pipe(
+        Effect.provideService(FreshFilm, fresh),
+        Effect.provideService(BoardStore, boards),
       ),
     );
     const stale = new Map(judged.map((s) => [s.panel, s] as const));

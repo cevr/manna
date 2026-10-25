@@ -5,9 +5,10 @@
 
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Schema } from 'effect';
-import { labUrls } from '../core/api.ts';
+import { ServerFailed, labUrls } from '../core/api.ts';
 import { type BoardFile, BoardFileJson, BoardName } from '../core/board.ts';
 import { Segment } from '../core/segment.ts';
+import { echoPages, freshFilm } from './film-services/testing.ts';
 import { labHandler } from './lab.ts';
 import { text } from './host/testing.ts';
 import { labInMemory } from './lab/testing.ts';
@@ -137,5 +138,28 @@ describe('the board routes', () => {
       });
       expect([unknown.status, unknown.body._tag]).toEqual([422, 'BoardRefused']);
     }).pipe(Effect.scoped, Effect.provide(labInMemory(files()))),
+  );
+
+  it.effect('name no panel stale, and answer, when the script cannot be read now', () =>
+    Effect.gen(function* () {
+      const lab = yield* labHandler();
+      const read = yield* Effect.promise(() =>
+        lab(get(labUrls.board.stale({ params: { film: 'f' } })), bound),
+      );
+      expect([read.status, yield* Effect.promise(() => read.json())]).toEqual([
+        200,
+        { panels: [] },
+      ]);
+    }).pipe(
+      Effect.scoped,
+      Effect.provide(
+        labInMemory(files(), echoPages, {
+          film: freshFilm({
+            script: () =>
+              Effect.fail(ServerFailed.make({ tag: 'ScriptBroken', reason: 'script.ts throws' })),
+          }),
+        }),
+      ),
+    ),
   );
 });

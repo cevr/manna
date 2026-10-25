@@ -331,6 +331,26 @@ The form of an entry, each field on its own line:
 - **Cause:** The `idea-villagers` record drew the grown villager as the sower with his headcloth and mantle off, so nothing set him apart from Christ's beard and robe.
 - **Guard:** skill: whether a figure reads as Christ is a judgment of the eye. Carried by `.claude/skills/film/SKILL.md`: "no other grown figure is drawn bearded and bareheaded in a plain light robe, which reads as Christ"
 
+### board-stale-words-of-an-import
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "a run on RBF would draw 13 panels × `--tries` of paid images over the owner's imported picks, which he did not ask for."
+- **Source:** board-stale-2/review-r1.md F1, the review's first minor, headed M1
+- **Wrong:** Righteousness by Faith's dry run named 13 kept panels stale by their words. Each keeps an imported try whose prompt was copied from an older script.
+- **Cause:** The prompt fallback judged every try with a prompt, and an import carries the prompt it was made with elsewhere. Words are now judged only on tries the board drew itself (`generate`, `tweak`).
+- **Guard:** code: `packages/film/src/tools/board-stale.test.ts` `an imported try is never stale by its words, though the prompt it came with lacks them`
+
+### board-stale-route-refused-on-a-broken-script
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "`GET board/stale` refuses when the script cannot be read, unlike the MCP read"
+- **Source:** board-stale-2/review-r1.md F2, the review's second minor, headed M2
+- **Wrong:** When the film's script could not be read, the studio's stale read answered a refusal, while the MCP board read answered with no panel stale.
+- **Cause:** Only the MCP read caught the script read's failure. `staleInLab` now catches it for both: it logs `board.stale … unread=` and names no panel stale.
+- **Guard:** code: `packages/film/src/tools/board-http.test.ts` `name no panel stale, and answer, when the script cannot be read now`
+
 ## The look
 
 ### floating-circle-hands-no-arms

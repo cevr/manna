@@ -462,6 +462,42 @@ describe("a panel whose picture's words changed in the script", () => {
       }).pipe(Effect.provide(boardOver(files)));
     },
   );
+
+  it.effect(
+    'an imported try is never stale by its words, though the prompt it came with lacks them',
+    () => {
+      const files = new Map<string, Uint8Array>();
+      return Effect.gen(function* () {
+        yield* styled;
+        const store = yield* BoardStore;
+        yield* store.modify(film, (b) =>
+          Result.succeed({
+            ...b,
+            panels: [
+              {
+                id: PANEL,
+                beat: SUPPER,
+                at: BoardName.make('start'),
+                kept: 1,
+                tries: [
+                  {
+                    n: 1,
+                    file: Segment.make('supper.start.1.png'),
+                    sha256: 's',
+                    made: 'import' as const,
+                    prompt: 'An older script.\n\nTHE BRIEF: He breaks the loaf.',
+                    refs: [],
+                    at: '2026-10-25T11:00:00.000Z',
+                  },
+                ],
+              },
+            ],
+          }),
+        );
+        expect(yield* store.stale(film, [{ ...beat, cast: [] }])).toEqual([]);
+      }).pipe(Effect.provide(boardOver(files)));
+    },
+  );
 });
 
 describe('a panel with tries and none kept', () => {

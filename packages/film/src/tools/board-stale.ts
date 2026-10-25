@@ -74,8 +74,14 @@ interface Changed {
 
 const unchanged = (c: Changed) => c.members.length === 0 && !c.words;
 
-/** Whether `t`'s words differ from `now`: by its record when it has one, else by its prompt; a try with neither is not judged. Pure. */
+/**
+ * Whether `t`'s words differ from `now`: by its record when it has one, else
+ * by its prompt; a try with neither is not judged, nor is one the board did
+ * not draw itself (an import keeps the prompt it was made with elsewhere, and
+ * the owner picked it as it is). Pure.
+ */
 const wordsChanged = (t: BoardTry, now: ReadonlyArray<string>): boolean =>
+  (t.made === 'generate' || t.made === 'tweak') &&
   Option.match(Option.fromUndefinedOr(t.words), {
     onSome: (was) => was.length !== now.length || was.some((w, i) => w !== now[i]),
     onNone: () =>
