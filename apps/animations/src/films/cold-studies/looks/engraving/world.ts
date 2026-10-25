@@ -16,7 +16,7 @@ import {
   type Object3D,
   TorusGeometry,
 } from 'three';
-import { rng } from '@bible/film/core';
+import { rng } from '@manna/film/core';
 import { type HallLight, burin } from './burin.ts';
 import {
   type Profile,

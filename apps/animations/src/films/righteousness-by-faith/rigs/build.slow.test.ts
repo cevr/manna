@@ -28,8 +28,8 @@ import {
   figuresFile,
   figuresRml,
   lockedPrints,
-} from '@bible/film/style';
-import { unbuilt, unlocked, unsaid } from '@bible/film/style/build';
+} from '@manna/film/style';
+import { unbuilt, unlocked, unsaid } from '@manna/film/style/build';
 import { LEDGER } from './build.ts';
 import { christ, christFront } from './christ-rig.ts';
 import { ARTBOARDS, FIGURES } from './figures.ts';

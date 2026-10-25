@@ -30,9 +30,9 @@ import {
   sub,
   unprobed,
   wash,
-} from '@bible/film/canvas';
-import { clamp, lerp } from '@bible/film/core';
-import { type Crease, boxOf, creaseOf, keyLight, shading, smooth } from '@bible/film/style';
+} from '@manna/film/canvas';
+import { clamp, lerp } from '@manna/film/core';
+import { type Crease, boxOf, creaseOf, keyLight, shading, smooth } from '@manna/film/style';
 import { box, cut } from './court-set.ts';
 import { C, piece } from './kit.ts';
 import { type CamperName, type CamperPose, bodyOf, stand } from './look-props.ts';

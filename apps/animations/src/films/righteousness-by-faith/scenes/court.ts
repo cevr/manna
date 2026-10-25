@@ -15,9 +15,9 @@
 // the floor to the dock, held through the breath after the last word. The
 // words on screen are the verse's card alone (CRAFT rule 1).
 
-import { type Box, drawing, fullCard, knobCamera, multiplane, shotPath } from '@bible/film/canvas';
-import { lerp } from '@bible/film/core';
-import { EASE, type Expression, type Pt, acted, reachAbout } from '@bible/film/style';
+import { type Box, drawing, fullCard, knobCamera, multiplane, shotPath } from '@manna/film/canvas';
+import { lerp } from '@manna/film/core';
+import { EASE, type Expression, type Pt, acted, reachAbout } from '@manna/film/style';
 import { CARD_STYLE } from '../card.ts';
 import { HANDS, LANDING_RIGS, courtFigures, courtShadows, restPose } from '../court-cast.ts';
 import { BLADE_AT, PLACE, REST, REST_POINT, backWall, benchWarm, floor } from '../court-set.ts';

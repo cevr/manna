@@ -69,7 +69,7 @@ const framesOver = (ask: Ask): FramesOps => ({
 /** How long a frame is on a test's clock, in ms. */
 const FRAME_MS = 16;
 
-export class Frames extends Context.Service<Frames, FramesOps>()('@bible/film/browser/Frames') {
+export class Frames extends Context.Service<Frames, FramesOps>()('@manna/film/browser/Frames') {
   /** The frames `ask` gives (the live adapter's: the browser's animation frames). */
   static readonly layerOver = (ask: Ask): Layer.Layer<Frames> =>
     Layer.succeed(Frames, framesOver(ask));

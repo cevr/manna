@@ -48,7 +48,7 @@ import { encodeWav } from './wav.ts';
 export class RecordStage extends Context.Service<
   RecordStage,
   { readonly pause: Effect.Effect<void>; readonly reload: Effect.Effect<void> }
->()('@bible/film/lab/studio/RecordStage') {}
+>()('@manna/film/lab/studio/RecordStage') {}
 
 /** The count-in: this many seconds, one shown each second, before the recording starts. */
 export const COUNT_IN = 3;

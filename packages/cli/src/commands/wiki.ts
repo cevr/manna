@@ -133,7 +133,7 @@ const installedWikiLayer = Layer.unwrap(
  *  helper works. The seam a helper-level test leaves open is precisely the one
  *  where a hand-mapped rename could reappear between the page and stdout. */
 export class WikiLayer extends Context.Reference<Layer.Layer<WikiService>>(
-  '@bible/cli/wiki/WikiLayer',
+  '@manna/cli/wiki/WikiLayer',
   { defaultValue: () => installedWikiLayer },
 ) {}
 
@@ -324,7 +324,7 @@ const installedLookupLayer = Layer.unwrap(
  *  same reason: a test points the command at fixtures and still runs the real
  *  command, argument parsing and encoder and `Console.log` and all. */
 export class LookupLayer extends Context.Reference<Layer.Layer<LookupService>>(
-  '@bible/cli/wiki/LookupLayer',
+  '@manna/cli/wiki/LookupLayer',
   { defaultValue: () => installedLookupLayer },
 ) {}
 

@@ -738,7 +738,7 @@ const refsIn = (folder: ReviewFolder): ReadonlyArray<string> => [
   ),
 ];
 
-export class Review extends Context.Service<Review, ReviewService>()('@bible/film/tools/Review') {
+export class Review extends Context.Service<Review, ReviewService>()('@manna/film/tools/Review') {
   static readonly layer = (config: ReviewConfig) =>
     Layer.effect(
       Review,

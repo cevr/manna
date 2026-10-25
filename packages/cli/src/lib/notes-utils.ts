@@ -4,7 +4,7 @@ import { AppleScript } from '~/src/services/apple-script';
 
 // --- Helper Function: Execute AppleScript Command ---
 class AppleScriptExecError extends Data.TaggedError(
-  '@bible/cli/lib/notes-utils/AppleScriptExecError',
+  '@manna/cli/lib/notes-utils/AppleScriptExecError',
 )<{
   message: string;
   cause?: unknown;
@@ -33,7 +33,7 @@ interface NoteListItem {
 }
 
 export class NoteOperationError extends Data.TaggedError(
-  '@bible/cli/lib/notes-utils/NoteOperationError',
+  '@manna/cli/lib/notes-utils/NoteOperationError',
 )<{
   message: string;
   cause?: unknown;

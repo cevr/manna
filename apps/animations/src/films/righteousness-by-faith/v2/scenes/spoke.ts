@@ -27,8 +27,8 @@ import {
   sky,
   wash,
   UNMOVED,
-} from '@bible/film/canvas';
-import { clamp, lerp } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { clamp, lerp } from '@manna/film/core';
 import {
   type GestureAt,
   C,

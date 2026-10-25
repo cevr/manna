@@ -6,9 +6,9 @@
 // is named (`glow`). Each is drawn about its own place, so a scene puts it in
 // a hand, at a crack, on the floor or in the air.
 
-import { mix, spline, unprobed } from '@bible/film/canvas';
-import { clamp, lerp } from '@bible/film/core';
-import type { Pt } from '@bible/film/style';
+import { mix, spline, unprobed } from '@manna/film/canvas';
+import { clamp, lerp } from '@manna/film/core';
+import type { Pt } from '@manna/film/style';
 import { cut } from './court-set.ts';
 import { C } from './kit.ts';
 import { GOLD_GLOW, type Paper, paper } from './page-set.ts';

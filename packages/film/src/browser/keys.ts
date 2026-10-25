@@ -89,7 +89,7 @@ export interface Heard {
 export const appleAgent = (userAgent: string): boolean =>
   /\((?:Macintosh|iPhone|iPad|iPod)\b/.test(userAgent);
 
-export class Keys extends Context.Service<Keys, KeysOps>()('@bible/film/browser/Keys') {
+export class Keys extends Context.Service<Keys, KeysOps>()('@manna/film/browser/Keys') {
   /** Presses heard on `page` (the window live, a test's `EventTarget` in a test), from a Mac's keyboard or not. */
   static readonly layerOn = (page: EventTarget, mac = false): Layer.Layer<Keys> =>
     Layer.succeed(Keys, keysOn(page, mac));

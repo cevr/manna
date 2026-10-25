@@ -17,8 +17,8 @@ import {
   type VerseStyle,
   fullCard,
   verse,
-} from '@bible/film/canvas';
-import { clamp, lerp } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { clamp, lerp } from '@manna/film/core';
 import {
   CanvasTexture,
   Group,

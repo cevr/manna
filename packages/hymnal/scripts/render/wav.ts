@@ -3,7 +3,7 @@
  * reads: planar samples in, planar samples out. Pure.
  */
 
-import type { Pcm } from '@bible/film/measure';
+import type { Pcm } from '@manna/film/measure';
 import { Schema } from 'effect';
 
 /** A file that is not a 32-bit float WAV, and why. */

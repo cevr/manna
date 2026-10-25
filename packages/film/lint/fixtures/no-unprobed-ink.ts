@@ -1,7 +1,7 @@
 // Fixture for film/no-unprobed-ink: each line marked RED fires the rule, and
 // nothing else does.
-import * as Canvas from '@bible/film/canvas';
-import { stroke, unprobed, unprobed as texture } from '@bible/film/canvas';
+import * as Canvas from '@manna/film/canvas';
+import { stroke, unprobed, unprobed as texture } from '@manna/film/canvas';
 import * as other from '../../src/lab/pressed.ts';
 import { unprobed as notKit } from '../../src/lab/pressed.ts';
 

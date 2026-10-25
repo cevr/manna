@@ -8,7 +8,7 @@
 // them (`burst`, `thump`, `knock`, `scatter`, `whoosh`, `hiss`, `sizzle`,
 // `breeze`, and `rain` with its roof) are the shapes the library's other
 // code sounds are built from: a few settings each, and the variation their
-// seeds draw. `@bible/film/core` exports them all to the app.
+// seeds draw. `@manna/film/core` exports them all to the app.
 
 import { dbToGain, exp, exp2, log } from './math.ts';
 import type { Node, Pitch, Ramp, Value } from './nodes.ts';

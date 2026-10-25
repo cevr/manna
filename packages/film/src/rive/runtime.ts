@@ -30,4 +30,4 @@ export class RiveRuntime extends Context.Service<
     /** Whether rigs are drawn (a page), or only posed and their faces declared (Bun). */
     readonly paints: boolean;
   }
->()('@bible/film/rive/RiveRuntime') {}
+>()('@manna/film/rive/RiveRuntime') {}

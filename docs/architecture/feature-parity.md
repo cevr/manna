@@ -1,6 +1,6 @@
 # Shared application feature-parity matrix
 
-Every applicable row must use the same `@bible/app` route, component, domain cache, procedure definition, repository, and sync semantics in web and Electron. A host-specific difference is valid only when expressed as an optional capability adapter.
+Every applicable row must use the same `@manna/app` route, component, domain cache, procedure definition, repository, and sync semantics in web and Electron. A host-specific difference is valid only when expressed as an optional capability adapter.
 
 | Surface                                    | Web                     | Electron               | Shared acceptance evidence                                                                            |
 | ------------------------------------------ | ----------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------- |

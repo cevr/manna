@@ -9,15 +9,15 @@
 // accused's face, his head held still (`follow` 0: the eyes do the looking);
 // on the verdict his face softens (`acted`).
 
-import { at, rectShape, rounded } from '@bible/film/canvas';
-import { lerp } from '@bible/film/core';
-import type { PoseOf } from '@bible/film/rive';
+import { at, rectShape, rounded } from '@manna/film/canvas';
+import { lerp } from '@manna/film/core';
+import type { PoseOf } from '@manna/film/rive';
 import { ACCUSED, JUDGE } from '../../../righteousness-by-faith/court.ts';
 import { C, piece } from '../../../righteousness-by-faith/kit.ts';
 import { ramps } from '../../palette.ts';
 import type { CourtFrame } from '../../scenes/court.ts';
 import type { Bench, Props } from '../cutpaper/court.ts';
-import { EASE, type Expression, type Pt, acted, reachAbout } from '@bible/film/style';
+import { EASE, type Expression, type Pt, acted, reachAbout } from '@manna/film/style';
 import { ACCUSED_HEAD, JUDGE_KNOBS, JUDGE_TIMELINES, boilTime } from './figures.ts';
 import type { judgeProp } from './rigs.ts';
 

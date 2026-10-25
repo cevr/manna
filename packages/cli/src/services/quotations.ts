@@ -59,7 +59,7 @@ interface QuotationsService {
 }
 
 export class Quotations extends Context.Service<Quotations, QuotationsService>()(
-  '@bible/cli/services/quotations/Quotations',
+  '@manna/cli/services/quotations/Quotations',
 ) {}
 
 /** One problem per line, the shape `bible check` and `bible export` print. */

@@ -15,8 +15,8 @@ import {
   shotPath,
   type Posed,
   knobCamera,
-} from '@bible/film/canvas';
-import { lerp } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { lerp } from '@manna/film/core';
 
 import { JOSHUA, TUNIC_STAINS, ZECH_REST as REST, courtWall, zechCourt } from '../../court.ts';
 

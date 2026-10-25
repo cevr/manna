@@ -80,7 +80,7 @@ interface ComposerService {
 }
 
 export class Composer extends Context.Service<Composer, ComposerService>()(
-  '@bible/film/tools/Composer',
+  '@manna/film/tools/Composer',
 ) {
   static readonly layer = Layer.effect(
     Composer,

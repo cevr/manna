@@ -257,7 +257,7 @@ const recordAt = (file: string, empty = MISSING): Manifest<AskRecord> => ({
 });
 
 export class AskStore extends Context.Service<AskStore, AskStoreService>()(
-  '@bible/film/tools/AskStore',
+  '@manna/film/tools/AskStore',
 ) {
   /** Asks under `FILMS_LAB/asks` (the app's `lab/` under `runFilmCli`, else `<cwd>/lab`). */
   static readonly layer = Layer.effect(

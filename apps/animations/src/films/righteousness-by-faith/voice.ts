@@ -4,6 +4,6 @@
 // one every film is staged in) until the owner records the final
 // read.
 
-import { stagingVoice } from '@bible/film/core';
+import { stagingVoice } from '@manna/film/core';
 
 export const voice = stagingVoice;

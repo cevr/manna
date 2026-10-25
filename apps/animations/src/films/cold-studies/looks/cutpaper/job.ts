@@ -4,8 +4,8 @@
 // card.ts`: flush left, cream on near-black, cased as said), "just" in the
 // colour script's gold for the Word, underlined.
 
-import { type Box, type CardWord, at, fullCard, rounded, verse, write } from '@bible/film/canvas';
-import { lerp } from '@bible/film/core';
+import { type Box, type CardWord, at, fullCard, rounded, verse, write } from '@manna/film/canvas';
+import { lerp } from '@manna/film/core';
 import { CARD_STYLE, VERSE_STYLE } from '../../../righteousness-by-faith/card.ts';
 import { C, F, piece } from '../../../righteousness-by-faith/kit.ts';
 import { VERSE } from '../../look.ts';

@@ -3,7 +3,7 @@
 // righteous." The cues are Righteousness by Faith's `cold` cues on the same
 // marks; the look in play draws the frame (`look.ts`).
 
-import { drawing } from '@bible/film/canvas';
+import { drawing } from '@manna/film/canvas';
 import { lookOf } from '../looks/index.ts';
 
 export const court = drawing({

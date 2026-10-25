@@ -4,7 +4,7 @@
  * Stems come one at a time, so the mix holds one stem beside the sum. Pure.
  */
 
-import { addInto, loudness, type Pcm } from '@bible/film/measure';
+import { addInto, loudness, type Pcm } from '@manna/film/measure';
 
 /** The pan law: each side's gain at `pan` (−1 left, 1 right), the centre at unity, never above it. */
 export const panGains = (pan: number): readonly [number, number] => {

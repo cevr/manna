@@ -5,8 +5,8 @@
 // the ground is the verse's gold wash spreading over the sheet and drying
 // back to the cream, so the card grows out of the highlight.
 
-import type { Box, CardStyle, CardWord } from '@bible/film/canvas';
-import { fullCard } from '@bible/film/canvas';
+import type { Box, CardStyle, CardWord } from '@manna/film/canvas';
+import { fullCard } from '@manna/film/canvas';
 import type { JobFrame } from '../../scenes/job.ts';
 import { FACE } from './page.ts';
 import { GOLD_INK, GOLD_WASH, INK, layPaper, ruledBox } from './print.ts';

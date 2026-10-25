@@ -2,4 +2,4 @@
 // (`LAB_SERVERS`), and `review.ts` hydrates it. It imports none of the app's
 // films: a film's Project draws its stills in the browser.
 
-export { reviewRender as default } from '@bible/film/review-server';
+export { reviewRender as default } from '@manna/film/review-server';

@@ -29,8 +29,8 @@ import {
   knobCamera,
   shotPath,
   UNMOVED,
-} from '@bible/film/canvas';
-import { clamp, hash2, lerp } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { clamp, hash2, lerp } from '@manna/film/core';
 import { C, F, person, piece } from '../../kit.ts';
 import { planet, ring, star, tablets } from '../../law.ts';
 import { NAME } from './title.ts';

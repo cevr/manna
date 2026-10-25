@@ -1,7 +1,7 @@
 // The package's browser and test entries carry only what their users use:
 // every name an entry exports is imported by name from it somewhere, by a
 // film's code under apps/, by a test (or a test's fixture, a lint rule's
-// among them), through the package specifier (`@bible/film/canvas`) or a
+// among them), through the package specifier (`@manna/film/canvas`) or a
 // path to the entry's file. An export nobody reads is deleted from the
 // entry, not kept "in case", and an entry names its exports (`export *`
 // publishes a module whole). The engine's own parts stay exported from their
@@ -84,7 +84,7 @@ const PackageExports = Schema.fromJsonString(
   Schema.Struct({ exports: Schema.Record(Schema.String, Schema.String) }),
 );
 
-/** Each guarded entry: its specifier under `@bible/film/` and its file under packages/film. */
+/** Each guarded entry: its specifier under `@manna/film/` and its file under packages/film. */
 const ENTRIES = [
   { entry: 'canvas', file: 'src/canvas/index.ts' },
   { entry: 'player', file: 'src/player/index.ts' },
@@ -284,7 +284,7 @@ describe('the package entries', () => {
           if (path.join(root, user) === at) continue;
           for (const take of record.takes) {
             const fromEntry =
-              take.from === `@bible/film/${entry}` ||
+              take.from === `@manna/film/${entry}` ||
               (take.from.startsWith('.') &&
                 path.resolve(path.dirname(path.join(root, user)), take.from) === at);
             if (fromEntry)
@@ -315,9 +315,9 @@ describe('the package entries', () => {
       const resolved = (user: string, from: string): Option.Option<string> => {
         if (from.startsWith('.'))
           return Option.some(path.relative(root, path.resolve(root, path.dirname(user), from)));
-        if (from !== '@bible/film' && !from.startsWith('@bible/film/')) return Option.none();
+        if (from !== '@manna/film' && !from.startsWith('@manna/film/')) return Option.none();
         return Option.map(
-          Option.fromUndefinedOr(specifiers.exports[`.${from.slice('@bible/film'.length)}`]),
+          Option.fromUndefinedOr(specifiers.exports[`.${from.slice('@manna/film'.length)}`]),
           (file) => path.join('packages/film', file),
         );
       };

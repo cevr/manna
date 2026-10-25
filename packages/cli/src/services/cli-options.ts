@@ -6,7 +6,7 @@ interface CliOptionsService {
 }
 
 export class CliOptions extends Context.Service<CliOptions, CliOptionsService>()(
-  '@bible/cli/services/cli-options/CliOptions',
+  '@manna/cli/services/cli-options/CliOptions',
 ) {}
 
 const verbose = Flag.Boolean('verbose').pipe(

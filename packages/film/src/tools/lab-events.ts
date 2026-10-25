@@ -161,7 +161,7 @@ export const cursorAfter = (cursor: string, change: { readonly seq: number }): s
   });
 
 export class LabEvents extends Context.Service<LabEvents, LabEventsService>()(
-  '@bible/film/tools/LabEvents',
+  '@manna/film/tools/LabEvents',
 ) {
   /** The feed over the lab's stores, its baseline not yet read: `look` reads it. */
   static readonly make = Effect.fn('LabEvents.make')(function* (options: FeedOptions) {

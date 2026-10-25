@@ -5,7 +5,7 @@
 // 7). Imports nothing that touches the DOM at module load: the narrate script
 // reads this to lay out the audio track.
 
-import { type SceneSpec, scenesOf } from '@bible/film/canvas';
+import { type SceneSpec, scenesOf } from '@manna/film/canvas';
 import { fonts } from '../palette.ts';
 import { script } from '../script.ts';
 

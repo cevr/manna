@@ -101,7 +101,7 @@ const installedStudyLayer = Layer.unwrap(
  *  open is precisely the one where a hand-mapped projection could reappear
  *  between the bundle and stdout. */
 export class StudyLayer extends Context.Reference<Layer.Layer<StudyService>>(
-  '@bible/cli/study/StudyLayer',
+  '@manna/cli/study/StudyLayer',
   { defaultValue: () => installedStudyLayer },
 ) {}
 

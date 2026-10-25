@@ -6,7 +6,7 @@
 // The picture reaches the film's frame scaled up nearest-neighbour, each
 // low-res pixel a hard block (`present`).
 
-import { glCanvas } from '@bible/film/canvas';
+import { glCanvas } from '@manna/film/canvas';
 import { WebGLRenderer } from 'three';
 import { type World, world } from './shade.ts';
 import { type Textures, textures } from './textures.ts';

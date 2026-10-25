@@ -5,14 +5,14 @@
 // its line when the file binds its ink; baked, it follows none). Canvas 2D is
 // the engine, and every scene draws them the same way.
 
-import type { RivePropSpec } from '@bible/film/rive';
+import type { RivePropSpec } from '@manna/film/rive';
 import {
   FIGURE_TIMELINES,
   type FigureTimeline,
   HAND_ART,
   HAND_TIMELINES,
   type HandTimeline,
-} from '@bible/film/style';
+} from '@manna/film/style';
 import { Record as Rec } from 'effect';
 import { ARTBOARDS, FIGURES } from './figures.ts';
 import figuresRiv from './figures.riv' with { type: 'file' };

@@ -91,7 +91,7 @@ export interface CaptureOps {
   readonly lost: Effect.Effect<void>;
 }
 
-export class Capture extends Context.Service<Capture, CaptureOps>()('@bible/film/lab/Capture') {}
+export class Capture extends Context.Service<Capture, CaptureOps>()('@manna/film/lab/Capture') {}
 
 /** A level in dBFS; −∞ for silence. */
 export const dbfs = (linear: number): number => 20 * Math.log10(linear);

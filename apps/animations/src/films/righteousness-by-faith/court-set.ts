@@ -16,9 +16,9 @@
 // is drawn `unprobed`. The v2 canvas court (`court.ts`) stays for v2 and
 // cold-studies. Pure: the same frame draws the same set.
 
-import { type Camera, type Hex, mix, ramp, unprobed } from '@bible/film/canvas';
-import { lerp, rng } from '@bible/film/core';
-import { type Pt, boxOf, creaseOf, keyLight, shading } from '@bible/film/style';
+import { type Camera, type Hex, mix, ramp, unprobed } from '@manna/film/canvas';
+import { lerp, rng } from '@manna/film/core';
+import { type Pt, boxOf, creaseOf, keyLight, shading } from '@manna/film/style';
 import { C } from './kit.ts';
 
 /** The evidence panel's framing: the Board's 1536 wide at the film's 1920, its top trimmed. */

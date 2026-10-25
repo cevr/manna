@@ -37,8 +37,8 @@ import {
   glow,
   rounded,
   sky,
-} from '@bible/film/canvas';
-import { clamp, ease, lerp, gait } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { clamp, ease, lerp, gait } from '@manna/film/core';
 import {
   C,
   ICON_KEPT,

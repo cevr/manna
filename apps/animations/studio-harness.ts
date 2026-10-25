@@ -28,7 +28,7 @@ import {
   labPages,
   pageHref,
   startLab,
-} from '@bible/film/tools';
+} from '@manna/film/tools';
 import { Config, Deferred, Effect, Exit, FileSystem, Layer, Option, Path, Schema } from 'effect';
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from 'effect/http';
 import { FOLDERS, FOOTAGE, SOUNDS } from './cli.ts';

@@ -222,7 +222,7 @@ const aloneRml = (file: LaidFile, board: FigureBoard): string => {
 /**
  * Each locked figure of `file`, by the artboard it is laid as, with its lock
  * and its print alone: what a film's build and its test hold to its lock
- * (`unlocked`, `@bible/film/style/build`).
+ * (`unlocked`, `@manna/film/style/build`).
  */
 export const lockedPrints = (file: LaidFile) =>
   Object.entries(file.boards).flatMap(([item, b]) =>
@@ -235,7 +235,7 @@ export const lockedPrints = (file: LaidFile) =>
  * Every override the figures of `file` carry, with the artboard each is laid
  * as: its lock's, with the time the ledger filed the lock, then every other
  * its parts carry (`overridesIn`). What a film's build and its test hold to
- * the owner's decisions on its ledger (`unsaid`, `@bible/film/style/build`).
+ * the owner's decisions on its ledger (`unsaid`, `@manna/film/style/build`).
  */
 export const figureOverrides = (file: LaidFile): ReadonlyArray<Laid> =>
   Object.entries(file.boards).flatMap(([item, b]) => {

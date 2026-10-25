@@ -12,7 +12,7 @@ import {
   type VerseStyle,
   verse,
   write,
-} from '@bible/film/canvas';
+} from '@manna/film/canvas';
 import { fonts } from '../../palette.ts';
 import { VERSE } from '../../look.ts';
 

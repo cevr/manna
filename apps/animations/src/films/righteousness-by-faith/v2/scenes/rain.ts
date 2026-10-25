@@ -21,8 +21,8 @@ import {
   sky,
   mix,
   UNMOVED,
-} from '@bible/film/canvas';
-import { type Key, keys, lerp, rng } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { type Key, keys, lerp, rng } from '@manna/film/core';
 import { type GestureAt, C, person, piece } from '../../kit.ts';
 import { CITY_FRONT, cityBack, cityFront } from '../../city.ts';
 import { herald, ministry } from '../../heaven.ts';

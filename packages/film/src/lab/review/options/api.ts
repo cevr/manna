@@ -16,7 +16,7 @@ interface OptionsCalls {
 }
 
 export class OptionsApi extends Context.Service<OptionsApi, OptionsCalls>()(
-  '@bible/film/lab/OptionsApi',
+  '@manna/film/lab/OptionsApi',
 ) {}
 
 /** The films and project routes, over the page's one client. */

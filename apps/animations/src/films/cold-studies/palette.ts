@@ -8,8 +8,8 @@
 // The film's own colours are the frame's around the looks (its paper, the
 // caption plate); each look brings its own palette.
 
-import { type Hex, type Ramp, type Shading, ramp } from '@bible/film/canvas';
-import type { Looks } from '@bible/film/core';
+import { type Hex, type Ramp, type Shading, ramp } from '@manna/film/canvas';
+import type { Looks } from '@manna/film/core';
 import { palette as court } from '../righteousness-by-faith/palette.ts';
 
 export const looks = {

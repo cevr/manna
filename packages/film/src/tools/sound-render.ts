@@ -38,7 +38,7 @@ interface SoundRenderService {
 }
 
 export class SoundRender extends Context.Service<SoundRender, SoundRenderService>()(
-  '@bible/film/tools/SoundRender',
+  '@manna/film/tools/SoundRender',
 ) {
   /** Its caches, one for the process: provided once, in `filmServices`. */
   static readonly layer = Layer.effect(

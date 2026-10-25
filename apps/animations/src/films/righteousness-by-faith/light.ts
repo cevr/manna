@@ -22,8 +22,8 @@
 // valley rises by about as much as the acts round it and stays as far below
 // them. Every act gets lighter and their order and gaps hold.
 
-import { type Hex, type Light, mix } from '@bible/film/canvas';
-import { membersOf } from '@bible/film/core';
+import { type Hex, type Light, mix } from '@manna/film/canvas';
+import { membersOf } from '@manna/film/core';
 import { Result } from 'effect';
 import { type ActName, look } from './acts.ts';
 import { LIFT } from './palette.ts';

@@ -14,8 +14,8 @@ import {
   write,
   glow,
   knobCamera,
-} from '@bible/film/canvas';
-import { lerp } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { lerp } from '@manna/film/core';
 import { C, F, piece } from '../../kit.ts';
 import { ROOF, landingSky, rooftop } from '../../city.ts';
 import {

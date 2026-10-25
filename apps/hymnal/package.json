@@ -1,5 +1,5 @@
 {
-  "name": "@bible/hymnal-app",
+  "name": "@manna/hymnal-app",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -20,7 +20,7 @@
     "sim": "bun scripts/sim.ts",
     "follow": "bun scripts/follow.ts",
     "plan": "alchemy plan alchemy.run.ts --stage prod",
-    "deploy": "turbo run test:slow --filter=@bible/hymnal-app && alchemy deploy alchemy.run.ts --stage prod",
+    "deploy": "turbo run test:slow --filter=@manna/hymnal-app && alchemy deploy alchemy.run.ts --stage prod",
     "audio:copy": "bun infra/audio/copy.ts",
     "audio:stream": "bun infra/audio/stream.ts",
     "audio:upload": "bun infra/audio/upload.ts"

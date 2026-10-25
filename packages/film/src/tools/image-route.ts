@@ -71,7 +71,7 @@ interface ImageRouteService {
 }
 
 export class ImageRoute extends Context.Service<ImageRoute, ImageRouteService>()(
-  '@bible/film/tools/ImageRoute',
+  '@manna/film/tools/ImageRoute',
 ) {
   /** `okra image` on its Codex route. */
   static readonly layer = Layer.effect(

@@ -3,8 +3,8 @@
 // under `<film>/shorts/<id>`, and each talk (`talkFilms`: the speaker's own
 // take, cut on his words), a film of its own under its folder's name.
 
-import { shortPages } from '@bible/film/canvas';
-import { type Films, narratedFilms, talkFilms } from '@bible/film/player';
+import { shortPages } from '@manna/film/canvas';
+import { type Films, narratedFilms, talkFilms } from '@manna/film/player';
 import { faces } from './faces.ts';
 import { shorts as righteousnessByFaithShorts } from './righteousness-by-faith/shorts.ts';
 

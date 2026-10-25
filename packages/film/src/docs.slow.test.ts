@@ -1518,7 +1518,7 @@ describe('the docs', () => {
           '`bun run --cwd . lint` lints the repo.',
           'A film check run with --frob is not a command here.',
           'film check reads `--static` from its flags.',
-          '`bun run lint -- --fix` fixes what it can; run `bun run --filter @bible/film test` first.',
+          '`bun run lint -- --fix` fixes what it can; run `bun run --filter @manna/film test` first.',
           '',
           // A sentence in a list item that starts with the bin and holds a `;`, code in a quote's
           // or a list item's block, a command in a table, and a link GitHub shows as no link (in

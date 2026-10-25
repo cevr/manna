@@ -28,8 +28,8 @@ import {
   trim,
   unprobed,
   wash,
-} from '@bible/film/canvas';
-import { clamp, lerp } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { clamp, lerp } from '@manna/film/core';
 import { cut } from './court-set.ts';
 import { C } from './kit.ts';
 import { GOLD_GLOW, type Paper, paper } from './page-set.ts';

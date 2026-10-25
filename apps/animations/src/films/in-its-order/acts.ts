@@ -6,7 +6,7 @@
 // at its `now` ground for the same lights; the film's lookbook measures them
 // once its scenes are drawn. Imports nothing that touches the DOM.
 
-import type { Look } from '@bible/film/core';
+import type { Look } from '@manna/film/core';
 
 /** The film's shape and colour script: its acts, in film order. */
 export const look = {

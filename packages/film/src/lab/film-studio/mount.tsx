@@ -1,4 +1,4 @@
-// The studio page's browser entry (`@bible/film/play`, `mountFilmStudio`):
+// The studio page's browser entry (`@manna/film/play`, `mountFilmStudio`):
 // the page mounted as every studio page is (`mountStudio`), hydrated over
 // the server's markup or rendered anew, then the studio in its body once
 // the film is staged. A film the registry holds is staged and its preview

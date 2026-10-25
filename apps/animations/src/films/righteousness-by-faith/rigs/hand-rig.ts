@@ -2,7 +2,7 @@
 // the film lays it in artboards of its own (`figures.ts`): how far it grows
 // (`HAND_OUT`), and the steps it grows in (`HAND_OUT_STEPS`), each an
 // artboard the house draws its circle hand on at that size in the house
-// line (a hand's `size` in its figures file, `@bible/film/style`
+// line (a hand's `size` in its figures file, `@manna/film/style`
 // `figuresFile`), so its ink stays its figure's.
 // Every other hand is the house's at its own size. Pure.
 

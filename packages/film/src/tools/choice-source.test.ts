@@ -6,7 +6,7 @@ import { describe, expect, test } from 'bun:test';
 import { Result } from 'effect';
 import { SCORE_PLAY, editPick, lookLevels, lookPlay, readPick } from './choice-source.ts';
 
-const SOUND = `import type { Sound } from '@bible/film/core';
+const SOUND = `import type { Sound } from '@manna/film/core';
 
 export const sound: Sound = {
   score: { play: 'piano', under: -18, options: { piano: {}, strings: {} } },

@@ -19,7 +19,7 @@ interface ClipboardOps {
 }
 
 export class Clipboard extends Context.Service<Clipboard, ClipboardOps>()(
-  '@bible/film/browser/Clipboard',
+  '@manna/film/browser/Clipboard',
 ) {
   /** A clipboard in memory at `origin`: each link written is pushed onto `written`. */
   static readonly memory = (written: Array<string>, origin: string): Layer.Layer<Clipboard> =>

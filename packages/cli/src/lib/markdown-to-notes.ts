@@ -9,7 +9,7 @@ import {
 } from './apple-notes-utils.js';
 
 export class MarkdownParseError extends Data.TaggedError(
-  '@bible/cli/lib/markdown-to-notes/MarkdownParseError',
+  '@manna/cli/lib/markdown-to-notes/MarkdownParseError',
 )<{
   message: string;
   cause: unknown;

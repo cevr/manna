@@ -6,7 +6,7 @@
 // its card and verse panels in them; the cold-studies control look sets its
 // card in the same.
 
-import type { CardStyle, VerseStyle } from '@bible/film/canvas';
+import type { CardStyle, VerseStyle } from '@manna/film/canvas';
 import { C, F } from './kit.ts';
 
 /** The card's ground: the highlight's colour too. */

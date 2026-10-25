@@ -202,7 +202,7 @@ const nameOf = (lock: FootageLock, sha256: string): Option.Option<string> =>
   );
 
 export class FootageLibrary extends Context.Service<FootageLibrary, FootageLibraryService>()(
-  '@bible/film/tools/FootageLibrary',
+  '@manna/film/tools/FootageLibrary',
 ) {
   /** The library in `dir`. */
   static readonly layer = (dir: string) =>

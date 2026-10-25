@@ -7,8 +7,8 @@
 // with no rise; "just" three times their size in the colour script's gold,
 // with a slate block of the same word knocked behind it, a printed offset.
 
-import { type Box, type CardWord, type TextStyle, measure, verse, write } from '@bible/film/canvas';
-import { lerp } from '@bible/film/core';
+import { type Box, type CardWord, type TextStyle, measure, verse, write } from '@manna/film/canvas';
+import { lerp } from '@manna/film/core';
 import { VERSE } from '../../look.ts';
 import type { JobFrame } from '../../scenes/job.ts';
 import { FACE, INK, rect } from './flat.ts';

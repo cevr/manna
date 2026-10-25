@@ -48,7 +48,7 @@ export interface StudioCalls {
 }
 
 export class StudioApi extends Context.Service<StudioApi, StudioCalls>()(
-  '@bible/film/lab/StudioApi',
+  '@manna/film/lab/StudioApi',
 ) {}
 
 /** The type a take is posted as. */

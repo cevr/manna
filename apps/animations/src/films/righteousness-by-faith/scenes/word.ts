@@ -31,9 +31,9 @@ import {
   rounded,
   shotPath,
   write,
-} from '@bible/film/canvas';
-import { type Key, lerp } from '@bible/film/core';
-import { EASE, type Expression, type Pt, acted, boilTime, reachAbout } from '@bible/film/style';
+} from '@manna/film/canvas';
+import { type Key, lerp } from '@manna/film/core';
+import { EASE, type Expression, type Pt, acted, boilTime, reachAbout } from '@manna/film/style';
 import {
   COURT_RIGS,
   type CourtFrame,

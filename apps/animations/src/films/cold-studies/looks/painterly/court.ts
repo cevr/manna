@@ -16,7 +16,7 @@
 // The camera frames the stage in world units (the wide's 1920 × 1080); the
 // oil pass paints the frame over once it is drawn (`oil.ts`).
 
-import { type Key, clamp, lerp } from '@bible/film/core';
+import { type Key, clamp, lerp } from '@manna/film/core';
 import type { CourtFrame } from '../../scenes/court.ts';
 import { BRUSH_PX, type Easel } from './brush.ts';
 import { accused, accusedHands, judge, judgeHands } from './figures.ts';

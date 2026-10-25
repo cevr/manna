@@ -1,7 +1,7 @@
 // Vertical shorts cut from the film: each one spans of its scenes, by marks
 // and cues, played back to back at 1080×1920 (`film render <film> --short <id>`).
 
-import type { Shorts } from '@bible/film/core';
+import type { Shorts } from '@manna/film/core';
 
 export const shorts = [
   {

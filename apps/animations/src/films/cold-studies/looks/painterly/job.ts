@@ -17,8 +17,8 @@ import {
   fullCard,
   verse,
   write,
-} from '@bible/film/canvas';
-import { clamp, hash2, lerp } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { clamp, hash2, lerp } from '@manna/film/core';
 import { VERSE } from '../../look.ts';
 import type { JobFrame } from '../../scenes/job.ts';
 import { BRUSH_PX, type Easel, curve, glow, oval, paint, pool, rect, shade } from './brush.ts';

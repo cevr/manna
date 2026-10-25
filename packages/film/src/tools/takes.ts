@@ -246,7 +246,7 @@ const onlyIn = (
   return from.filter(([, file]) => !kept.has(file));
 };
 
-export class Takes extends Context.Service<Takes, TakesService>()('@bible/film/tools/Takes') {
+export class Takes extends Context.Service<Takes, TakesService>()('@manna/film/tools/Takes') {
   static readonly layer = Layer.effect(
     Takes,
     Effect.gen(function* () {

@@ -103,7 +103,7 @@ const invalid = (error: FileInvalid) =>
   CatalogueInvalid.make({ file: error.file, reason: error.reason });
 
 export class RenderCatalogue extends Context.Service<RenderCatalogue, CatalogueService>()(
-  '@bible/film/tools/RenderCatalogue',
+  '@manna/film/tools/RenderCatalogue',
 ) {
   static readonly layer = Layer.effect(
     RenderCatalogue,

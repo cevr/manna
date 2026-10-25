@@ -126,7 +126,7 @@ const CLOSE_SHOT = { from: 0.2, full: 0.3, ink: 0.75 } as const;
 
 /**
  * The figures' ink at a shot's scale (frame heights per unit, as the
- * engine reads the shot, `@bible/film/rive`): 1 in a wide shot,
+ * engine reads the shot, `@manna/film/rive`): 1 in a wide shot,
  * `CLOSE_SHOT.ink` in a close one. A figures file's rigs follow the shot
  * with it (`RivePropSpec.ink`) unless the file bakes its ink. Pure.
  */

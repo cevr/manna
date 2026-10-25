@@ -10,7 +10,7 @@
 //   imports (a package from the registry is not followed);
 // - the film's frame: `film.ts`, the scene registry and all they import
 //   (the lights, the script, the kit, the engine), the player
-//   (`@bible/film/player`) and the export page's engine (`@bible/film/render`),
+//   (`@manna/film/player`) and the export page's engine (`@manna/film/render`),
 //   with the registry's imports of the
 //   other scenes' modules cut, so an edit to one scene leaves the others'
 //   keys alone;
@@ -22,7 +22,7 @@
 // Files are hashed by content and named relative to the films folder, so two
 // checkouts of the same sources agree when the films folder sits at the same
 // depth in each (a worktree or a rift of the repo does): a workspace module
-// such as `@bible/film/player` is named by its path from there. Anything else a frame reads at run
+// such as `@manna/film/player` is named by its path from there. Anything else a frame reads at run
 // time (a font or image fetched by URL) is not in the key.
 
 import { createRequire } from 'node:module';
@@ -169,7 +169,7 @@ interface Read {
   readonly imports: ReadonlyArray<string>;
 }
 
-export class Stamps extends Context.Service<Stamps, StampsService>()('@bible/film/tools/Stamps') {
+export class Stamps extends Context.Service<Stamps, StampsService>()('@manna/film/tools/Stamps') {
   static readonly layer = Layer.effect(
     Stamps,
     Effect.gen(function* () {
@@ -280,7 +280,7 @@ export class Stamps extends Context.Service<Stamps, StampsService>()('@bible/fil
         const sceneFiles = new Set([...located.sites.values()].map((s) => s.file));
         const registry = path.join(dir, 'scenes', 'index.ts');
         const engines = yield* Effect.forEach(
-          ['@bible/film/player', '@bible/film/render'],
+          ['@manna/film/player', '@manna/film/render'],
           (spec) => workspace(spec, path.join(dir, 'film.ts')),
         );
         const frame = yield* closure(

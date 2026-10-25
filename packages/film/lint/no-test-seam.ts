@@ -8,7 +8,7 @@
 // any JS or TS one (`.ts`, `.tsx`, `.js`, `.jsx`, `.mts`, `.cts`, `.mjs`,
 // `.cjs`: `packages/core` writes `.js`, which resolves to the `.ts` file), or
 // a package's `…/testing` export, reached by a relative
-// path or a `@bible/` package, from an import, a re-export (`export … from`,
+// path or a `@manna/` package, from an import, a re-export (`export … from`,
 // `export * from`), a type import, or a dynamic `import('…')` of a literal.
 // Another package's `testing` (`effect/testing`) is no seam of the repo's.
 // The config turns the rule on over every package's `src` and off where a
@@ -24,8 +24,8 @@ import {
   Visitor,
 } from 'oxlint-plugin-effect/rule-bindings';
 
-/** A test seam of the repo's own: a relative path or a `@bible/` or `@manna/` export whose last piece is `testing`. */
-const SEAM = /^(?:\.{1,2}\/|@(?:bible|manna)\/)(?:.*\/)?testing(?:\.[cm]?[jt]sx?)?$/u;
+/** A test seam of the repo's own: a relative path or a `@manna/` export whose last piece is `testing`. */
+const SEAM = /^(?:\.{1,2}\/|@manna\/)(?:.*\/)?testing(?:\.[cm]?[jt]sx?)?$/u;
 
 const MESSAGE =
   "a test seam imported by product code: a testing.ts module holds a package's test-only doubles and fixtures, so a shipped import never reaches one. Move what this file needs out of the seam, into the module it belongs to.";

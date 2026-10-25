@@ -58,7 +58,7 @@ export class Source extends Context.Service<
     readonly head: (hymn: number) => Effect.Effect<Option.Option<SourceHead>, StoreFailed>;
     readonly get: (hymn: number) => Effect.Effect<Uint8Array, StoreFailed>;
   }
->()('@bible/hymnal-app/infra/audio/Source') {}
+>()('@manna/hymnal-app/infra/audio/Source') {}
 
 export class Fill extends Context.Service<
   Fill,
@@ -67,7 +67,7 @@ export class Fill extends Context.Service<
     readonly tree: Effect.Effect<ReadonlyMap<number, FillEntry>, StoreFailed>;
     readonly get: (entry: FillEntry) => Effect.Effect<Uint8Array, StoreFailed>;
   }
->()('@bible/hymnal-app/infra/audio/Fill') {}
+>()('@manna/hymnal-app/infra/audio/Fill') {}
 
 export class Target extends Context.Service<
   Target,
@@ -83,7 +83,7 @@ export class Target extends Context.Service<
       metadata: PutMetadata,
     ) => Effect.Effect<TargetObject, StoreFailed>;
   }
->()('@bible/hymnal-app/infra/audio/Target') {}
+>()('@manna/hymnal-app/infra/audio/Target') {}
 
 export class Hash extends Context.Service<
   Hash,
@@ -93,4 +93,4 @@ export class Hash extends Context.Service<
     /** Git's blob id, lowercase hex: `sha1("blob <length>\0" + bytes)`. */
     readonly gitBlobSha1: (bytes: Uint8Array) => string;
   }
->()('@bible/hymnal-app/infra/audio/Hash') {}
+>()('@manna/hymnal-app/infra/audio/Hash') {}

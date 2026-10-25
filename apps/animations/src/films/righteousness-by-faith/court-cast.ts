@@ -7,8 +7,8 @@
 // Back to front: the bench and the judge, the table and the prosecutor, the
 // dock and the lead, so each group stands in front of the one behind it.
 
-import { at, unprobed } from '@bible/film/canvas';
-import { type Pt, boilTime } from '@bible/film/style';
+import { at, unprobed } from '@manna/film/canvas';
+import { type Pt, boilTime } from '@manna/film/style';
 import {
   BENCH_TOP,
   LAID_SHEETS,

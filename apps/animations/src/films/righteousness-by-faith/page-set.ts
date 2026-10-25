@@ -10,9 +10,9 @@
 // lobed, cut from one paper, its veins its own shade. Pure: the same pose
 // draws the same page.
 
-import { type Hex, clearOf, mix, ramp, rounded, unprobed } from '@bible/film/canvas';
-import { clamp } from '@bible/film/core';
-import { type Pt, keyLight, shading } from '@bible/film/style';
+import { type Hex, clearOf, mix, ramp, rounded, unprobed } from '@manna/film/canvas';
+import { clamp } from '@manna/film/core';
+import { type Pt, keyLight, shading } from '@manna/film/style';
 import { contact, cut } from './court-set.ts';
 import { C } from './kit.ts';
 

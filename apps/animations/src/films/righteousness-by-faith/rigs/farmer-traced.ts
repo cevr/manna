@@ -11,7 +11,7 @@
 // the band; the rig tucks each a little further (`tucked`). `farmer-rig.ts`
 // takes them to the cast's canon (`PANEL`). Pure.
 
-import type { Pt } from '@bible/film/style';
+import type { Pt } from '@manna/film/style';
 
 /**
  * The panel's pixels to the cast's canon: 0.555 units a pixel, about his

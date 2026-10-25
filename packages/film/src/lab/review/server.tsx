@@ -1,4 +1,4 @@
-// The review page's server entry (`@bible/film/review-server`, the default
+// The review page's server entry (`@manna/film/review-server`, the default
 // export of an app's `review.server.tsx`): the review (`page.tsx`) rendered
 // by the lab for one request (`core/page-render.ts`), over a host of the
 // request (`ServerHosted`: its URL, no window) and a client of the lab that

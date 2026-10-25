@@ -126,7 +126,7 @@ const unknownOf = (
   });
 
 export class AskMaterials extends Context.Service<AskMaterials, AskMaterialsService>()(
-  '@bible/film/tools/AskMaterials',
+  '@manna/film/tools/AskMaterials',
 ) {
   static readonly layer = Layer.effect(
     AskMaterials,

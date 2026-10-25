@@ -7,7 +7,7 @@
 // head, the hair, ears and beard laid over it, the beard over the hair.
 // `christ-rig.ts` takes them to the cast's canon (`FRONT_PANEL`). Pure.
 
-import type { Pt } from '@bible/film/style';
+import type { Pt } from '@manna/film/style';
 
 /**
  * The panel's pixels to the cast's canon: 0.35 units a pixel, which makes

@@ -112,7 +112,7 @@ export interface RivePropSpec<Tl extends string = string, N extends string = str
    * the shot's scale where the rig stands (`shotScale`, read before the
    * pose's `size`), set each frame
    * before the pose's numbers, so a pose that names `ink` sets it itself
-   * (`inkAt`, `@bible/film/style`). Left out, the ink stays at the model's
+   * (`inkAt`, `@manna/film/style`). Left out, the ink stays at the model's
    * default. A rig whose view model has no number `ink` is refused at load.
    */
   readonly ink?: (scale: number) => number;

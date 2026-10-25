@@ -47,7 +47,7 @@ interface HighlightsOps {
 }
 
 export class Highlights extends Context.Service<Highlights, HighlightsOps>()(
-  '@bible/film/browser/Highlights',
+  '@manna/film/browser/Highlights',
 ) {
   /** Highlights that paint nothing: a server render's. */
   static readonly none: Layer.Layer<Highlights> = Layer.succeed(

@@ -1,8 +1,8 @@
 // Fixture for film/no-cue-remap: each line marked RED fires the rule, and
 // nothing else does.
-import { type Frame, drawing } from '@bible/film/canvas';
-import * as Core from '@bible/film/core';
-import { clamp, clamp as cap } from '@bible/film/core';
+import { type Frame, drawing } from '@manna/film/canvas';
+import * as Core from '@manna/film/core';
+import { clamp, clamp as cap } from '@manna/film/core';
 
 /** A share of a cue, in a module const. */
 const SHARE = 0.6;

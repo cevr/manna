@@ -73,7 +73,7 @@ const filesOf = (version: { readonly n: number; readonly files: string }) =>
   );
 
 export class FilmTimelines extends Context.Service<FilmTimelines, FilmTimelinesService>()(
-  '@bible/film/tools/FilmTimelines',
+  '@manna/film/tools/FilmTimelines',
 ) {
   static readonly layer = Layer.effect(
     FilmTimelines,

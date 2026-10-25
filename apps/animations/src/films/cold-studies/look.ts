@@ -11,7 +11,7 @@
 // material value and camera from `f` before it renders, then composites the
 // WebGL canvas into `f.ctx` with `drawImage` (`glCanvas`, `looks/ps1/`).
 
-import type { Box, CardWord, Light, Verse } from '@bible/film/canvas';
+import type { Box, CardWord, Light, Verse } from '@manna/film/canvas';
 import type { accusedProp, handProp, judgeProp } from './looks/rive/rigs.ts';
 import type { CourtFrame } from './scenes/court.ts';
 import type { JobFrame } from './scenes/job.ts';

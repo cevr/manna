@@ -79,7 +79,7 @@ interface ConnectionService {
 }
 
 class Connection extends Context.Service<Connection, ConnectionService>()(
-  '@bible/film/tools/Connection',
+  '@manna/film/tools/Connection',
 ) {}
 
 /** The connection a request came on, as the server it reached is bound. */
@@ -290,7 +290,7 @@ const decodedOrRefused = <E, R>(
  * it again and hands it to the routes as it is.
  */
 class BodyRead extends Context.Service<BodyRead, { readonly limit: number }>()(
-  '@bible/film/tools/BodyRead',
+  '@manna/film/tools/BodyRead',
 ) {}
 
 /**
@@ -380,7 +380,7 @@ export const answered = <A, E extends { readonly _tag: string; readonly message:
 export class PageReads extends Context.Service<
   PageReads,
   { readonly read: (path: string) => Effect.Effect<Response> }
->()('@bible/film/tools/PageReads') {}
+>()('@manna/film/tools/PageReads') {}
 
 /**
  * The app's pages as a route answers them: the response for the request,

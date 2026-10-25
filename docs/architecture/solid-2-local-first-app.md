@@ -16,7 +16,7 @@ The target is one aesthetic, minimal reading application implemented once in Sol
 - Migrate every interactive application surface to Solid 2 beta.
 - Replace the React web app rather than maintaining React compatibility.
 - Remove the CLI TUI completely, including routes, services, tests, and dependencies used only by it.
-- Build one shared `@bible/app` for web and desktop.
+- Build one shared `@manna/app` for web and desktop.
 - Keep platform quirks behind capability and transport adapters.
 - Use SQLite locally on both platforms with one Drizzle schema and migration history.
 - Run the database and sync runtime in Effect beside SQLite, outside the renderer thread.
@@ -265,13 +265,13 @@ A production server, account identity, authentication, authorization, retention 
 
 A committed mutation returns typed structural scopes rather than raw SQL tables or serialized cache keys. Example scopes might include a verse location, chapter markers, collection identity, reading plan identity, or global preferences.
 
-The sync runtime publishes `ChangeSet` only after commit. `@bible/app` matches active cache entries by structural scope and calls their canonical `.refresh(input)` path. The sync engine does not import Solid and the cache does not inspect the mutation journal.
+The sync runtime publishes `ChangeSet` only after commit. `@manna/app` matches active cache entries by structural scope and calls their canonical `.refresh(input)` path. The sync engine does not import Solid and the cache does not inspect the mutation journal.
 
 Initial implementation should prefer explicit domain scope mapping over SQL parsing or broad “refresh everything” invalidation.
 
 ## Shared routing and application composition
 
-`@bible/app` owns one canonical route tree for:
+`@manna/app` owns one canonical route tree for:
 
 - Bible reading and verse study
 - EGW library and chapter reading
@@ -372,11 +372,11 @@ Layer later if production operations require one.
 
 ### CLI TUI
 
-Delete the TUI implementation, reader routes/services, TUI-only tests, and OpenTUI/Solid dependencies from `@bible/cli`. Bare `bible` renders help. Non-interactive data, study, sync, and export commands remain.
+Delete the TUI implementation, reader routes/services, TUI-only tests, and OpenTUI/Solid dependencies from `@manna/cli`. Bare `bible` renders help. Non-interactive data, study, sync, and export commands remain.
 
 ### React
 
-Delete React, React DOM, React Router, Base UI React, cmdk, lucide-react, react-resizable-panels, React cache/provider adapters, and React-specific tests/configuration after all callers use `@bible/app`. Do not retain direct-call cache aliases.
+Delete React, React DOM, React Router, Base UI React, cmdk, lucide-react, react-resizable-panels, React cache/provider adapters, and React-specific tests/configuration after all callers use `@manna/app`. Do not retain direct-call cache aliases.
 
 ## Implementation sequence and gates
 
@@ -389,7 +389,7 @@ This is high-blast-radius work and should land as reviewable conventional subcom
    - Add Drizzle schema/migrations, Effect bridge, sync model, simulated transport, and protocol tests.
    - Gate core typecheck, lint, unit tests, migration tests, and convergence tests.
 3. `feat(app): add solid async and synced cache`
-   - Create `@bible/app`, prove the cache and procedure boundary with one or two domains, and add cache lifecycle/error/refresh tests.
+   - Create `@manna/app`, prove the cache and procedure boundary with one or two domains, and add cache lifecycle/error/refresh tests.
    - Gate package typecheck and focused tests.
 4. `refactor(app): unify web and desktop on solid 2`
    - Migrate shared routes/UI, platform entries, remaining cache callers, and runtime adapters; remove React and legacy desktop cache code.
@@ -405,7 +405,7 @@ Commit boundaries may move slightly to preserve a green tree, but must not intro
 ## Acceptance criteria
 
 - No React or CLI TUI runtime remains.
-- Web and desktop render the same `@bible/app` route tree on Solid 2.
+- Web and desktop render the same `@manna/app` route tree on Solid 2.
 - Both platforms use the same Drizzle schema, migrations, repositories, sync engine, procedure definitions, and cache API.
 - Database/sync work is outside the renderer and platform transport is replaceable.
 - Cache keys use structural equality and owner disposal interrupts owned work.

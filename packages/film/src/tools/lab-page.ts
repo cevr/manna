@@ -419,7 +419,7 @@ const typeOf = (file: string): string => {
 
 /** The bundler the pages are built with. */
 export class PageBundler extends Context.Service<PageBundler, PageBundlerService>()(
-  '@bible/film/tools/PageBundler',
+  '@manna/film/tools/PageBundler',
 ) {
   /** Bun's bundler with the framework's Solid plugin. */
   static readonly layer = Layer.effect(
@@ -649,7 +649,7 @@ interface WedgeBuilt {
 const STATS_AT_ONCE = 32;
 
 export class LabPage extends Context.Service<LabPage, LabPageService>()(
-  '@bible/film/tools/LabPage',
+  '@manna/film/tools/LabPage',
 ) {
   /** The app's pages over `spec`, watched while the scope is open, each with a server entry rendered by `PageRenderer`. */
   static layer(

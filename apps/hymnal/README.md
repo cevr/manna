@@ -1,4 +1,4 @@
-# @bible/hymnal-app
+# @manna/hymnal-app
 
 The hymnal app (One). This README covers how the app reads the hymns, how it
 plays their recordings, and where the recordings live and how they got there.

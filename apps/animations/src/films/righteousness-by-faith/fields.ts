@@ -11,9 +11,9 @@
 // gold falling a little to the left. Pure: the same numbers draw the same
 // field.
 
-import { type Hex, mix, unprobed } from '@bible/film/canvas';
-import { clamp, lerp, rng } from '@bible/film/core';
-import type { Pt } from '@bible/film/style';
+import { type Hex, mix, unprobed } from '@manna/film/canvas';
+import { clamp, lerp, rng } from '@manna/film/core';
+import type { Pt } from '@manna/film/style';
 import { C } from './kit.ts';
 
 /** The panel's framing: the Board's 1536 wide at the film's 1920. */

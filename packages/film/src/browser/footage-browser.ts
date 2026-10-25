@@ -45,7 +45,7 @@ const loadMediabunny = (): Promise<Mediabunny> => import('mediabunny');
 export class FootageDecoders extends Context.Service<
   FootageDecoders,
   { readonly load: () => Promise<Mediabunny> }
->()('@bible/film/browser/FootageDecoders') {
+>()('@manna/film/browser/FootageDecoders') {
   static readonly layer = Layer.succeed(
     FootageDecoders,
     FootageDecoders.of({ load: loadMediabunny }),

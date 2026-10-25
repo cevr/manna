@@ -82,7 +82,7 @@ const installedContentLayer: Layer.Layer<ContentUpdate> = ContentUpdate.Live.pip
  *  command a fixture manifest and a fixture corpus without the command taking a
  *  layer parameter it would otherwise never vary. */
 export class ContentLayer extends Context.Reference<Layer.Layer<ContentUpdate>>(
-  '@bible/cli/ContentLayer',
+  '@manna/cli/ContentLayer',
   { defaultValue: () => installedContentLayer },
 ) {}
 

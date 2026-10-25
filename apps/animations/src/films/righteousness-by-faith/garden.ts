@@ -15,8 +15,8 @@ import {
   glow,
   rounded,
   sky,
-} from '@bible/film/canvas';
-import { type Key, clamp, hash2, keys, lerp } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { type Key, clamp, hash2, keys, lerp } from '@manna/film/core';
 import { C, CHEST, type Person, person, piece, type Hands } from './kit.ts';
 
 /** A fig leaf, stem at (0, 0), pointing up, about 60 units long at size 1. */

@@ -149,7 +149,7 @@ const LOCK_TRIES = 250;
 const LOCK_SPACING = Duration.millis(20);
 
 /** The manifests whose locks the running change holds, in its fiber and those it forks. */
-const Held = Context.Reference<ReadonlySet<string>>('@bible/film/tools/ContentStore/Held', {
+const Held = Context.Reference<ReadonlySet<string>>('@manna/film/tools/ContentStore/Held', {
   defaultValue: () => new Set(),
 });
 
@@ -174,7 +174,7 @@ interface ProcessesService {
  * This host's processes (`process.kill(pid, 0)`, `os.hostname()`): what
  * says whether a partial's writer is gone. Tests set it.
  */
-export const Processes = Context.Reference<ProcessesService>('@bible/film/tools/Processes', {
+export const Processes = Context.Reference<ProcessesService>('@manna/film/tools/Processes', {
   defaultValue: () => ({ host: hostname(), alive: (pid) => Effect.sync(() => isAlive(pid)) }),
 });
 
@@ -246,7 +246,7 @@ interface ContentStoreService {
 }
 
 export class ContentStore extends Context.Service<ContentStore, ContentStoreService>()(
-  '@bible/film/tools/ContentStore',
+  '@manna/film/tools/ContentStore',
 ) {
   static readonly layer = Layer.effect(
     ContentStore,

@@ -12,8 +12,8 @@
 // A head is drawn facing right in its own units, its origin where the neck
 // meets the skull; `flip` turns it to face left.
 
-import { type Hand, stroke, sub } from '@bible/film/canvas';
-import { clamp, lerp } from '@bible/film/core';
+import { type Hand, stroke, sub } from '@manna/film/canvas';
+import { clamp, lerp } from '@manna/film/core';
 import {
   type Easel,
   type Shape,

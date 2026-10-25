@@ -22,7 +22,7 @@ export interface AppleScriptService {
 }
 
 export class AppleScript extends Context.Service<AppleScript, AppleScriptService>()(
-  '@bible/cli/services/apple-script/AppleScript',
+  '@manna/cli/services/apple-script/AppleScript',
 ) {}
 
 /**

@@ -3,8 +3,8 @@
 // round the picture. Made once for each size from a fixed seed and kept, so
 // every frame lays the same sheet.
 
-import { type Hex, mix } from '@bible/film/canvas';
-import { rng } from '@bible/film/core';
+import { type Hex, mix } from '@manna/film/canvas';
+import { rng } from '@manna/film/core';
 
 /** The paper and the inks. */
 export const INK: Hex = '#1b1612';

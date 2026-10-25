@@ -12,5 +12,5 @@ interface PreviewServerService {
 }
 
 export class PreviewServer extends Context.Service<PreviewServer, PreviewServerService>()(
-  '@bible/film/tools/PreviewServer',
+  '@manna/film/tools/PreviewServer',
 ) {}

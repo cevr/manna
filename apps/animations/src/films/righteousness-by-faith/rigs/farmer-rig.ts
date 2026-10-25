@@ -41,7 +41,7 @@ import {
   figure,
   armHand,
   tracedKit,
-} from '@bible/film/style';
+} from '@manna/film/style';
 import {
   ARM_PIVOT,
   BAND,

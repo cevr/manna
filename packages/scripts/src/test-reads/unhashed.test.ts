@@ -4,25 +4,25 @@ import { hashedBy, unhashed } from './unhashed.js';
 
 const tasks: Parameters<typeof hashedBy>[0] = [
   {
-    taskId: '@bible/app#test',
+    taskId: '@manna/app#test',
     directory: 'apps/app',
     inputs: { 'a.test.ts': 'h', '../../docs/page.md': 'h' },
-    dependencies: ['@bible/lib#transit'],
+    dependencies: ['@manna/lib#transit'],
   },
   {
-    taskId: '@bible/lib#transit',
+    taskId: '@manna/lib#transit',
     directory: 'packages/lib',
     inputs: { 'src/lib.ts': 'h' },
-    dependencies: ['@bible/base#transit'],
+    dependencies: ['@manna/base#transit'],
   },
   {
-    taskId: '@bible/base#transit',
+    taskId: '@manna/base#transit',
     directory: 'packages/base',
     inputs: { 'src/base.ts': 'h' },
     dependencies: [],
   },
   {
-    taskId: '@bible/other#test',
+    taskId: '@manna/other#test',
     directory: 'packages/other',
     inputs: { 'x.ts': 'h' },
     dependencies: [],
@@ -31,7 +31,7 @@ const tasks: Parameters<typeof hashedBy>[0] = [
 
 describe("the files a workspace's tests read that its test task does not hash", () => {
   test("a test task hashes its own inputs and its dependencies' transit inputs, transitively", () => {
-    expect([...hashedBy(tasks, '@bible/app#test')].toSorted()).toEqual([
+    expect([...hashedBy(tasks, '@manna/app#test')].toSorted()).toEqual([
       'apps/app/a.test.ts',
       'docs/page.md',
       'packages/base/src/base.ts',
@@ -40,7 +40,7 @@ describe("the files a workspace's tests read that its test task does not hash", 
   });
 
   test('names each read under the root that no input holds, once, and leaves out node_modules, .git and other roots', () => {
-    const hashed = hashedBy(tasks, '@bible/app#test');
+    const hashed = hashedBy(tasks, '@manna/app#test');
     expect(
       unhashed(
         '/repo',

@@ -88,7 +88,7 @@ interface EarshotService {
 }
 
 export class Earshot extends Context.Service<Earshot, EarshotService>()(
-  '@bible/film/tools/Earshot',
+  '@manna/film/tools/Earshot',
 ) {
   /** The earshot commit every fit is made with. */
   static readonly pin = EARSHOT_PIN;

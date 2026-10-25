@@ -1,4 +1,4 @@
-// A film's studio page's server entry (`@bible/film/play-server`, the
+// A film's studio page's server entry (`@manna/film/play-server`, the
 // default export of an app's `play.server.tsx`): the studio's frame
 // (`page.tsx`) rendered by the lab for one request over a host of its URL
 // (`ServerHosted`). The studio itself is the browser's: the server reads no

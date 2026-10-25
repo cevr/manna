@@ -212,7 +212,7 @@ interface McpEventsService {
 }
 
 export class McpEvents extends Context.Service<McpEvents, McpEventsService>()(
-  '@bible/film/tools/McpEvents',
+  '@manna/film/tools/McpEvents',
 ) {
   /**
    * The lab's subscriptions over its change feed, kept under `FILMS_LAB`,

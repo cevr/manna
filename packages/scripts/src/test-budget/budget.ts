@@ -1,5 +1,5 @@
 // The tests' time budget, judged: each workspace's `test`, run alone, under
-// 1 second wall: 1,000 ms or more is over. `@bible/film`, with about 2,450
+// 1 second wall: 1,000 ms or more is over. `@manna/film`, with about 2,450
 // unit tests that each of its workers loads most of its module graph for, has
 // 1.1 s (owner, 2026-10-25, the pipeline retro). There is no budget on the sum:
 // the workspaces are separate projects, and one's verdict never depends on
@@ -24,7 +24,7 @@ import { Option } from 'effect';
 const BUDGET_MS = 1_000;
 
 /** A workspace's own budget, in milliseconds, where it is not `BUDGET_MS`. */
-const OWN_BUDGET_MS = new Map([['@bible/film', 1_100]]);
+const OWN_BUDGET_MS = new Map([['@manna/film', 1_100]]);
 
 const budgetOf = (name: string): number => OWN_BUDGET_MS.get(name) ?? BUDGET_MS;
 

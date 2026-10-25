@@ -518,7 +518,7 @@ interface NarratorService {
 }
 
 export class Narrator extends Context.Service<Narrator, NarratorService>()(
-  '@bible/film/tools/Narrator',
+  '@manna/film/tools/Narrator',
 ) {
   static readonly layer = Layer.effect(
     Narrator,

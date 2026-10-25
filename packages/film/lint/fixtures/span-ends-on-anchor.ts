@@ -1,6 +1,6 @@
 // Fixture for film/span-ends-on-anchor: each line marked RED fires the rule,
 // and nothing else does.
-import { drawing } from '@bible/film/canvas';
+import { drawing } from '@manna/film/canvas';
 
 /** A landing's length, in a module const. */
 const LAND = 0.4;

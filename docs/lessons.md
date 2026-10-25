@@ -89,7 +89,7 @@ The form of an entry, each field on its own line:
 - **Source:** memory feedback_art_direction_over_performance.md; apps/animations/plans/film-flow-audit.md #14
 - **Wrong:** Speed work was aimed at single films (scene-local simplification or cache).
 - **Cause:** Not recorded.
-- **Guard:** skill: where a speed-up lives is a design choice a reviewer reads in the diff. Carried by `.claude/skills/film/SKILL.md`: "Speed lives in the framework (`@bible/film`), never in one film's scenes."
+- **Guard:** skill: where a speed-up lives is a design choice a reviewer reads in the diff. Carried by `.claude/skills/film/SKILL.md`: "Speed lives in the framework (`@manna/film`), never in one film's scenes."
 
 ### content-rules-not-in-code
 

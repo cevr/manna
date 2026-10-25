@@ -20,7 +20,7 @@
 // stills folder, from the repo root).
 
 import { BunRuntime, BunServices } from '@effect/platform-bun';
-import { LabHttpApi, type ProjectView } from '@bible/film/api';
+import { LabHttpApi, type ProjectView } from '@manna/film/api';
 import { Array as Arr, Console, Effect, FileSystem, Layer, Option, Record } from 'effect';
 import { Command, Flag } from 'effect/cli';
 import { FetchHttpClient } from 'effect/http';

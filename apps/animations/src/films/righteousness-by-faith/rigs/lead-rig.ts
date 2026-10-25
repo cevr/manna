@@ -16,7 +16,7 @@
 // drawn is the house's (`drawFigure`). The owner locked him (ask
 // `a92f276635e`, 2026-10-17): `lead.lock.json` holds his print, and only an
 // override citing the owner's decision on him, filed after the lock, frees
-// a change to it (FigureLock, `@bible/film/style`'s `lock.ts`).
+// a change to it (FigureLock, `@manna/film/style`'s `lock.ts`).
 //
 // Units are the cast's canon, the sheet's pixels times 0.693 (`PANEL`): he
 // stands 440 tall from his hair to his soles, 3.36 times his head's height,
@@ -51,7 +51,7 @@ import {
   armReach,
   figure,
   tracedKit,
-} from '@bible/film/style';
+} from '@manna/film/style';
 import LEAD_LOCK from './lead.lock.json' with { type: 'json' };
 import {
   CHIN,

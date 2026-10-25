@@ -5,10 +5,10 @@
 // paper turns is the concept's too (`crease`): a face turns gently and late,
 // a robe sharply. The plain lead keeps the shade his sheet names
 // (character-design 2.3). What a paper is, its ramp and the rim's width are
-// the house's (`@bible/film/style`). Pure.
+// the house's (`@manna/film/style`). Pure.
 
-import type { Hex } from '@bible/film/canvas';
-import { type Crease, RIM, papers, rampedPaper } from '@bible/film/style';
+import type { Hex } from '@manna/film/canvas';
+import { type Crease, RIM, papers, rampedPaper } from '@manna/film/style';
 
 /**
  * The concept's turns, sampled on its pieces: a face shades only its far

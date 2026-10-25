@@ -2,7 +2,7 @@
 // four inks, hard edges, no line, no shadow, no grain of its own. Every shape
 // is a filled rectangle, disc or polygon; nothing is stroked.
 
-import type { Hex } from '@bible/film/canvas';
+import type { Hex } from '@manna/film/canvas';
 
 /**
  * Four flat inks and the colour script's two accents. The bone ground and the

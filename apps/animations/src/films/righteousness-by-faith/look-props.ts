@@ -31,9 +31,9 @@ import {
   trim,
   unprobed,
   wash,
-} from '@bible/film/canvas';
-import { clamp, lerp } from '@bible/film/core';
-import { type Crease, boxOf, creaseOf, keyLight, shading } from '@bible/film/style';
+} from '@manna/film/canvas';
+import { clamp, lerp } from '@manna/film/core';
+import { type Crease, boxOf, creaseOf, keyLight, shading } from '@manna/film/style';
 import { contact, cut } from './court-set.ts';
 import { C } from './kit.ts';
 import { GOLD_GLOW, type Paper, cast, paper } from './page-set.ts';

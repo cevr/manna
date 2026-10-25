@@ -204,7 +204,7 @@ interface ScriptVoicesService {
 }
 
 export class ScriptVoices extends Context.Service<ScriptVoices, ScriptVoicesService>()(
-  '@bible/film/tools/ScriptVoices',
+  '@manna/film/tools/ScriptVoices',
 ) {
   /** Over the staging cache and the narrator. */
   static readonly layer = Layer.effect(

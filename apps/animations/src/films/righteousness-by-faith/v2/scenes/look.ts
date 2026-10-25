@@ -28,8 +28,8 @@ import {
   rounded,
   sky,
   UNMOVED,
-} from '@bible/film/canvas';
-import { clamp, lerp } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { clamp, lerp } from '@manna/film/core';
 import { AT_THE_HOLE, type House, RECALL_RISE, house, recall } from '../../gospel.ts';
 import { roof } from './roof.ts';
 import {

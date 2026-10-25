@@ -58,14 +58,14 @@ const reached = (entry: string) => {
       const names = valueNames(clause);
       if (names.length === 0) continue;
       if (spec.startsWith('.')) walk(fileOf(file, spec));
-      else if (spec === '@bible/film/measure')
+      else if (spec === '@manna/film/measure')
         for (const name of names) {
           const target = film.get(name);
           if (target === undefined)
             throw new Error(`${name} is not re-exported by the measure entry`);
           walk(target);
         }
-      else if (spec.startsWith('@bible/')) throw new Error(`${file} imports ${spec}: name it here`);
+      else if (spec.startsWith('@manna/')) throw new Error(`${file} imports ${spec}: name it here`);
     }
   };
   walk(entry);

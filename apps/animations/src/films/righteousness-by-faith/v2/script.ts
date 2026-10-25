@@ -82,7 +82,7 @@
 // at the open and the landing, peach to explain, one black moment at the cross,
 // dawn at the answer.
 
-import { defineScript } from '@bible/film/core';
+import { defineScript } from '@manna/film/core';
 
 /** The film's name: the film, its title card and its credits all read it here. */
 export const TITLE = 'Righteousness by Faith';

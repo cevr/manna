@@ -22,6 +22,6 @@ export interface ManifestLockService {
 
 /** This host's manifest locks: SQLite's, on Bun. Tests set it. */
 export const ManifestLock = Context.Reference<ManifestLockService>(
-  '@bible/film/tools/ManifestLock',
+  '@manna/film/tools/ManifestLock',
   { defaultValue: () => bunManifestLock },
 );

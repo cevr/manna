@@ -89,7 +89,7 @@ interface ReviewCalls {
 }
 
 export class ReviewApi extends Context.Service<ReviewApi, ReviewCalls>()(
-  '@bible/film/lab/ReviewApi',
+  '@manna/film/lab/ReviewApi',
 ) {}
 
 /** A file's text when it is served; the server's refusal (JSON, by the contract) when not. */

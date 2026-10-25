@@ -17,8 +17,8 @@ import {
   blob,
   glow,
   sky,
-} from '@bible/film/canvas';
-import { clamp, ease, lerp, staggered } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { clamp, ease, lerp, staggered } from '@manna/film/core';
 import { C, bubble, piece, type Hands } from './kit.ts';
 import { tree } from './garden.ts';
 

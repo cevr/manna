@@ -34,8 +34,8 @@ import {
   rounded,
   sky,
   UNMOVED,
-} from '@bible/film/canvas';
-import { clamp, lerp, gait } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { clamp, lerp, gait } from '@manna/film/core';
 import {
   type GestureAt,
   C,

@@ -37,7 +37,7 @@ const lineOf = (held: Held): WorkingLine => ({
 const same = (film: string, by: string) => (held: Held) => held.film === film && held.by === by;
 
 export class Working extends Context.Service<Working, WorkingService>()(
-  '@bible/film/tools/Working',
+  '@manna/film/tools/Working',
 ) {
   static readonly layer = Layer.effect(
     Working,

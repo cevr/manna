@@ -176,7 +176,7 @@ interface ProductionStoreService {
 }
 
 export class ProductionStore extends Context.Service<ProductionStore, ProductionStoreService>()(
-  '@bible/film/tools/ProductionStore',
+  '@manna/film/tools/ProductionStore',
 ) {
   static readonly layer = Layer.effect(
     ProductionStore,

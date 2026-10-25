@@ -204,7 +204,7 @@ export const elsewhereOf = (
     return Option.some(LabElsewhere.make({ lab, here }));
   });
 
-export class Easel extends Context.Service<Easel, EaselService>()('@bible/film/tools/Easel') {
+export class Easel extends Context.Service<Easel, EaselService>()('@manna/film/tools/Easel') {
   /** Pages in this process's Chrome, held until the layer's scope closes. */
   static readonly layer: Layer.Layer<
     Easel,

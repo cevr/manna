@@ -142,7 +142,7 @@ describe('no ffmpeg CLI', () => {
       // SKILL.md step 0 and the tools row of packages/film/README.md, as a merge restored them.
       const stale = [
         "0. **Tools.** `bun run doctor` says whether headless Chromium, the logged-in `elevenlabs` CLI and `ffmpeg` (x264 for a software render's share copy; takes load and encode in-process) are there, and how to fix each that is not.",
-        "| `@bible/film/tools` | Media (mediabunny, joining a film; the ffmpeg CLI for a software share copy, and the review's stills and phone copies), Narrator |",
+        "| `@manna/film/tools` | Media (mediabunny, joining a film; the ffmpeg CLI for a software share copy, and the review's stills and phone copies), Narrator |",
       ];
       expect(stale.map((text) => cliUsesIn(text).length)).toEqual([1, 1]);
       expect(

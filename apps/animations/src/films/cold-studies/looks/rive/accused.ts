@@ -9,12 +9,12 @@
 // "you did it", fear as the judge leans in, astonishment on "righteous" (the
 // verdict's stamp), then relief as the lift settles.
 
-import { ground } from '@bible/film/canvas';
-import { lerp } from '@bible/film/core';
-import type { PoseOf } from '@bible/film/rive';
+import { ground } from '@manna/film/canvas';
+import { lerp } from '@manna/film/core';
+import type { PoseOf } from '@manna/film/rive';
 import { ACCUSED, JUDGE } from '../../../righteousness-by-faith/court.ts';
 import type { CourtFrame } from '../../scenes/court.ts';
-import { EASE, type Expression, acted, smooth } from '@bible/film/style';
+import { EASE, type Expression, acted, smooth } from '@manna/film/style';
 import { ACCUSED_KNOBS, ACCUSED_TIMELINES, type AccusedTimeline, boilTime } from './figures.ts';
 import type { accusedProp } from './rigs.ts';
 

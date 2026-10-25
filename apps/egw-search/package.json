@@ -1,5 +1,5 @@
 {
-  "name": "@bible/egw-search",
+  "name": "@manna/egw-search",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "start": "NODE_ENV=production bun server/main.ts",
     "plan": "vite build && alchemy plan alchemy.run.ts --stage prod",
-    "deploy": "turbo run test:slow --filter=@bible/egw-search && alchemy deploy alchemy.run.ts --stage prod",
+    "deploy": "turbo run test:slow --filter=@manna/egw-search && alchemy deploy alchemy.run.ts --stage prod",
     "test:deploy": "vite build && bun test ./tests/deploy.integration.ts",
     "test:browser": "bun run build && playwright test --config=test/browser/playwright.config.ts",
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",

@@ -159,10 +159,10 @@ describe('the slow suite', () => {
     'the deploy rule refuses a script whose test:slow may be skipped, or that starts alchemy before it',
     () =>
       Effect.sync(() => {
-        const slow = 'turbo run test:slow --filter=@bible/site';
+        const slow = 'turbo run test:slow --filter=@manna/site';
         const deploy = 'alchemy deploy alchemy.run.ts --stage prod';
         expect(
-          slowBeforeAlchemy('@bible/site', `bun scripts/check.ts && ${slow} && ${deploy}`),
+          slowBeforeAlchemy('@manna/site', `bun scripts/check.ts && ${slow} && ${deploy}`),
         ).toBe(true);
         for (const script of [
           `true || ${slow} && ${deploy}`,
@@ -174,7 +174,7 @@ describe('the slow suite', () => {
           deploy,
           `${deploy} && ${slow}`,
         ]) {
-          expect([script, slowBeforeAlchemy('@bible/site', script)]).toEqual([script, false]);
+          expect([script, slowBeforeAlchemy('@manna/site', script)]).toEqual([script, false]);
         }
       }),
   );
@@ -183,11 +183,11 @@ describe('the slow suite', () => {
     Effect.gen(function* () {
       const { packages } = yield* laid;
       const site = packages.flatMap(({ manifest }) =>
-        Option.toArray(manifest).filter(({ name }) => name === '@bible/firsttheblade'),
+        Option.toArray(manifest).filter(({ name }) => name === '@manna/firsttheblade'),
       );
       const commands = commandsOf(site[0]?.scripts['deploy'] ?? '');
       expect(commands[0]).toEqual(['bun', 'scripts/prod-state.ts']);
-      expect(commands[1]).toEqual(['turbo', 'run', 'test:slow', '--filter=@bible/firsttheblade']);
+      expect(commands[1]).toEqual(['turbo', 'run', 'test:slow', '--filter=@manna/firsttheblade']);
     }),
   );
 

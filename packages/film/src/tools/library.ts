@@ -744,7 +744,7 @@ const byHash = (
 const emptyEntry: LockEntry = { variants: [], candidates: [], rejected: [] };
 
 export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryService>()(
-  '@bible/film/tools/SoundLibrary',
+  '@manna/film/tools/SoundLibrary',
 ) {
   /** The library in `dir` (an app's `sounds/`). */
   static readonly layer = (dir: string) =>

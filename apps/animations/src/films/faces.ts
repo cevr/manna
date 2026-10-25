@@ -6,7 +6,7 @@
 // only what draws the film waits for them (`pictureFacesWait`): none holds a
 // page's first paint or the film's bar.
 
-import { type Face, SUBSETS, pictureFaces } from '@bible/film/player';
+import { type Face, SUBSETS, pictureFaces } from '@manna/film/player';
 import ebGaramondItalicGreek from '../../assets/fonts/EBGaramond-italic-greek.woff2';
 import ebGaramondItalicLatinExt from '../../assets/fonts/EBGaramond-italic-latin-ext.woff2';
 import ebGaramondItalicLatin from '../../assets/fonts/EBGaramond-italic-latin.woff2';

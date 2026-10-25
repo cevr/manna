@@ -103,7 +103,7 @@ const POLL = Duration.millis(200);
 const STILL_NAME = /^n\d+(\.r\d+)?\.png$/;
 
 export class NotesStore extends Context.Service<NotesStore, NotesStoreService>()(
-  '@bible/film/tools/NotesStore',
+  '@manna/film/tools/NotesStore',
 ) {
   /** Notes under `FILMS_LAB` (the app's `lab/` under `runFilmCli`, else `<cwd>/lab`), one folder per film. */
   static readonly layer = Layer.effect(

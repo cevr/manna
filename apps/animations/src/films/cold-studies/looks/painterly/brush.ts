@@ -10,8 +10,8 @@
 // cells the camera sees are painted. Every dab is a hash of its cell: the
 // same frame paints the same strokes, whenever and wherever it is drawn.
 
-import { type Box, type Hex, mix } from '@bible/film/canvas';
-import { clamp, hash2 } from '@bible/film/core';
+import { type Box, type Hex, mix } from '@manna/film/canvas';
+import { clamp, hash2 } from '@manna/film/core';
 import type { Ramp } from './palette.ts';
 
 /** What the camera sees: the world rectangle on the canvas, and the world's units per device pixel. */

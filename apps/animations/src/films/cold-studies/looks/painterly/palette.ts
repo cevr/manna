@@ -8,7 +8,7 @@
 // paint (`GOLD`), which the oil pass finds and lays as leaf (`oil.ts`); no
 // other paint comes near it.
 
-import type { Hex } from '@bible/film/canvas';
+import type { Hex } from '@manna/film/canvas';
 
 /** Five paints from a material's deepest shadow to its full light. */
 export type Ramp = readonly [Hex, Hex, Hex, Hex, Hex];

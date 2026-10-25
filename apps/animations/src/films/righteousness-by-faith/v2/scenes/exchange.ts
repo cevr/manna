@@ -37,8 +37,8 @@ import {
   rounded,
   sky,
   UNMOVED,
-} from '@bible/film/canvas';
-import { gait, lerp } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { gait, lerp } from '@manna/film/core';
 import { type GestureAt, C, type Hands, type Person, christ, person, piece } from '../../kit.ts';
 import { FIGURE_STAINS } from '../../court.ts';
 import { HOLY_PLACE, IN_SANCTUARY, ministry, priestAt, sanctuary } from '../../heaven.ts';

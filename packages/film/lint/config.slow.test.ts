@@ -14,7 +14,7 @@
 //   same block.
 // - The purity rule: a block that keeps a layer's folder (`**/lab/**`) out
 //   also keeps out every package export that resolves into it
-//   (`@bible/film/review` is the lab's).
+//   (`@manna/film/review` is the lab's).
 // - The film's rules: `Visitor.accumulate`, which copies its list on every
 //   node it keeps, is refused to them, and `nodes.ts`'s `collect` is not.
 // - The First the Blade site's sources: oxlint lints a probe with the
@@ -606,14 +606,14 @@ describe('the lint config', () => {
         const config = yield* readJson('.oxlintrc.json', Config);
         const pkg = yield* readJson('packages/film/package.json', Package);
         const aliases = Object.entries(pkg.exports).map(([key, target]) => ({
-          alias: `@bible/film/${key.replace(/^\.\//, '')}`,
+          alias: `@manna/film/${key.replace(/^\.\//, '')}`,
           folder: Option.fromNullishOr(/^\.\/src\/([\w-]+)\//.exec(target)?.[1]),
         }));
-        expect(aliases.map((a) => a.alias)).toContain('@bible/film/review');
+        expect(aliases.map((a) => a.alias)).toContain('@manna/film/review');
         const missing = config.overrides.flatMap((o) =>
           optionsIn(o, 'no-restricted-imports', Imports).flatMap((options) =>
             (options.patterns ?? []).flatMap(({ group }) => {
-              if (group.includes('@bible/film/*')) return [];
+              if (group.includes('@manna/film/*')) return [];
               const kept = group.flatMap((g) =>
                 Option.toArray(Option.fromNullishOr(/^\*\*\/([\w-]+)\/\*\*$/.exec(g)?.[1])),
               );

@@ -12,9 +12,9 @@
 // lighter than the figures while the floors and dark props stay under them,
 // so a figure reads against both.
 
-import { type Hex, mix } from '@bible/film/canvas';
-import type { Looks } from '@bible/film/core';
-import { parchment, peoplePaper } from '@bible/film/style';
+import { type Hex, mix } from '@manna/film/canvas';
+import type { Looks } from '@manna/film/core';
+import { parchment, peoplePaper } from '@manna/film/style';
 
 /**
  * The looks the film chooses between, at named levels. `ground`: how far the

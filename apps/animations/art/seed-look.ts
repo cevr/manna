@@ -11,12 +11,12 @@
  * earlier draws, half of it 2D and half 3D; the seeds it passes over are
  * listed after it, with why.
  *
- * The draw is the film framework's (`@bible/film/tools`' `drawBatch`); the
+ * The draw is the film framework's (`@manna/film/tools`' `drawBatch`); the
  * deck is this app's, which is why the command is an app script and not a
  * `film` CLI command: the film CLI serves any film and has no deck.
  */
 import { BunRuntime, BunServices } from '@effect/platform-bun';
-import { artBrief, conflicts, drawBatch } from '@bible/film/tools';
+import { artBrief, conflicts, drawBatch } from '@manna/film/tools';
 import { Console, Effect, FileSystem, Option, Path, Random, Schema } from 'effect';
 import { Command, Flag } from 'effect/cli';
 import { DECK } from './deck.ts';

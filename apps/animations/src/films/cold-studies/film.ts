@@ -1,8 +1,8 @@
 // The looks study: Righteousness by Faith's cold open, its first sentences
 // and Job's question, drawn in the look `palette.ts` plays.
 
-import { createFilm } from '@bible/film/canvas';
-import type { Narrated } from '@bible/film/player';
+import { createFilm } from '@manna/film/canvas';
+import type { Narrated } from '@manna/film/player';
 import { fonts, palette } from './palette.ts';
 import { scenes } from './scenes/index.ts';
 import { TITLE } from './script.ts';

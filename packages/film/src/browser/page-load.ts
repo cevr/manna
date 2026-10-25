@@ -16,5 +16,5 @@ interface PageLoadOps {
 }
 
 export class PageLoad extends Context.Service<PageLoad, PageLoadOps>()(
-  '@bible/film/browser/PageLoad',
+  '@manna/film/browser/PageLoad',
 ) {}

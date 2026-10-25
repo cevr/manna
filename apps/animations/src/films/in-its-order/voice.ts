@@ -3,6 +3,6 @@
 // (`stagingVoice`, the one every film is staged in) until the owner records
 // the final read; nothing is narrated before the Board.
 
-import { stagingVoice } from '@bible/film/core';
+import { stagingVoice } from '@manna/film/core';
 
 export const voice = stagingVoice;

@@ -2,7 +2,7 @@
 // `cite`, grouped under the film's authors in the order given here, after
 // scripture.
 
-import { type Author, type Credit, creditRoll } from '@bible/film/canvas';
+import { type Author, type Credit, creditRoll } from '@manna/film/canvas';
 import { TITLE, script } from './script.ts';
 
 /** The authors the sources are grouped under, in the order the credits give them, after scripture. */

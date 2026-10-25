@@ -1,7 +1,7 @@
 /**
  * `bun run store:keys [--stage s]`: the film store's S3 key pair, from the
  * deployed stack, into this app's git-ignored `.env`, where the film tools
- * read it (`FILM_STORE_*`, `@bible/film/tools` `PrivateStore`).
+ * read it (`FILM_STORE_*`, `@manna/film/tools` `PrivateStore`).
  *
  * The deploy keeps the token's value in the stack's local state
  * (`.alchemy/`, git-ignored). R2's S3 API takes the token's id as the access

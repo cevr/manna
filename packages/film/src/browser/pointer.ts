@@ -81,7 +81,7 @@ interface PointerOps {
   ) => Effect.Effect<void>;
 }
 
-export class Pointer extends Context.Service<Pointer, PointerOps>()('@bible/film/browser/Pointer') {
+export class Pointer extends Context.Service<Pointer, PointerOps>()('@manna/film/browser/Pointer') {
   /** Drags heard on `page`: the window live, a test's `EventTarget` in a test. */
   static readonly layerOn = (page: EventTarget): Layer.Layer<Pointer> =>
     Layer.succeed(Pointer, pointerOn(page));

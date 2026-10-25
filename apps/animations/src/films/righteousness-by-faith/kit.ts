@@ -33,8 +33,8 @@ import {
   spline,
   stroke,
   sub,
-} from '@bible/film/canvas';
-import { clamp, lerp } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { clamp, lerp } from '@manna/film/core';
 import { fonts, palette } from './palette.ts';
 
 export const C = palette;

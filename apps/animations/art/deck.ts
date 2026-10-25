@@ -1,5 +1,5 @@
 // The art-direction deck the seeder draws new looks from (`bun run
-// seed-look`, `art/seed-look.ts`; the draw is `@bible/film/tools`'
+// seed-look`, `art/seed-look.ts`; the draw is `@manna/film/tools`'
 // `drawLook`). Data, not prose: each axis is an independent choice, each
 // option says what it looks like, what it asks of the engine and its
 // implementor, whether it is drawn on the Canvas 2D kit or with WebGL, and
@@ -11,7 +11,7 @@
 // every seed that it does not win draws as before. Removing an option or
 // changing an id raises `version`, which a brief cites beside its seed.
 
-import type { ArtAxis, ArtDeck } from '@bible/film/tools';
+import type { ArtAxis, ArtDeck } from '@manna/film/tools';
 
 /** An option drawn only in 2D: the Canvas 2D kit. */
 const ONLY_2D = ['dimension/3d'];

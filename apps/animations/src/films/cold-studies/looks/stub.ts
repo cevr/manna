@@ -3,7 +3,7 @@
 // the switch, the flood and the card work for every level before the look
 // does. A look's folder drops it once it draws its own.
 
-import { type Hex, type TextStyle, fullCard, verse, write } from '@bible/film/canvas';
+import { type Hex, type TextStyle, fullCard, verse, write } from '@manna/film/canvas';
 import { fonts } from '../palette.ts';
 import { type Look, VERSE } from '../look.ts';
 import type { CourtFrame } from '../scenes/court.ts';

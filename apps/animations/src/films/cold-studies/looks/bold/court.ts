@@ -18,8 +18,8 @@
 //
 // The camera never holds: each shot pushes in at its own slow rate.
 
-import { type TextStyle, measure, write } from '@bible/film/canvas';
-import { type Key, clamp, keys, lerp, rng } from '@bible/film/core';
+import { type TextStyle, measure, write } from '@manna/film/canvas';
+import { type Key, clamp, keys, lerp, rng } from '@manna/film/core';
 import type { CourtFrame } from '../../scenes/court.ts';
 import { FACE, INK, bar, disc, frame, poly, rect } from './flat.ts';
 

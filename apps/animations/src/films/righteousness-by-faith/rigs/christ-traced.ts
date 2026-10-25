@@ -5,7 +5,7 @@
 // in units (the Board's pixels, court-12 at scale 1) about the head's
 // centre. Front-facing as court-12 turns Him, a little toward screen left.
 
-import type { Pt } from '@bible/film/style';
+import type { Pt } from '@manna/film/style';
 
 export const CHRIST_REGION: Pt[] = [
   [-15.6, -69.1],

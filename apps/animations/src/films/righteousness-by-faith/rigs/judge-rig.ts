@@ -15,7 +15,7 @@
 // is drawn to RBF's Board. The owner locked him (ask `a92f276635e`,
 // 2026-10-17): `judge.lock.json` holds his print, and only an override
 // citing the owner's decision on him, filed after the lock, frees a change
-// to it (FigureLock, `@bible/film/style`'s `lock.ts`).
+// to it (FigureLock, `@manna/film/style`'s `lock.ts`).
 //
 // Units are the Board's pixels: in `cold.evidence` his head is 150 tall with
 // its hair. The artboard's origin is his robe's middle at his head's height,
@@ -39,7 +39,7 @@ import {
   ellipse,
   figure,
   shifted,
-} from '@bible/film/style';
+} from '@manna/film/style';
 import JUDGE_LOCK from './judge.lock.json' with { type: 'json' };
 import { PAPERS } from './papers.ts';
 import { JUDGE_HAIR, JUDGE_HEAD } from './traced.ts';

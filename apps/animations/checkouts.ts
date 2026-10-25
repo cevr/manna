@@ -12,7 +12,7 @@
 // made from (git's main worktree, another checkout's work). A folder's name
 // says nothing.
 
-import type { ReviewRoot } from '@bible/film/tools';
+import type { ReviewRoot } from '@manna/film/tools';
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
 
 /**

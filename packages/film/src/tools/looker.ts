@@ -47,7 +47,7 @@ interface LookerService {
   ) => Effect.Effect<Looked, LookError>;
 }
 
-export class Looker extends Context.Service<Looker, LookerService>()('@bible/film/tools/Looker') {
+export class Looker extends Context.Service<Looker, LookerService>()('@manna/film/tools/Looker') {
   static readonly layer = Layer.effect(
     Looker,
     Effect.gen(function* () {

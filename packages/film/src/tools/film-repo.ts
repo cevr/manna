@@ -394,7 +394,7 @@ export const filmsOut = Effect.gen(function* () {
 });
 
 export class FilmFolder extends Context.Service<FilmFolder, FilmFolderService>()(
-  '@bible/film/tools/FilmFolder',
+  '@manna/film/tools/FilmFolder',
 ) {
   /**
    * The films in `films`: the app's films folder, which its player imports;
@@ -493,7 +493,7 @@ export class FilmFolder extends Context.Service<FilmFolder, FilmFolderService>()
 }
 
 export class FilmRepo extends Context.Service<FilmRepo, FilmRepoService>()(
-  '@bible/film/tools/FilmRepo',
+  '@manna/film/tools/FilmRepo',
 ) {
   /**
    * The repo over the films in `films` (`FilmFolder.layer`, which it

@@ -70,7 +70,7 @@ const sameKnob = (a: Knob, b: Knob): boolean => {
 const fieldsOf = (patch: CuePatch) => CUE_PATCH_KEYS.filter((k) => Predicate.hasProperty(patch, k));
 
 export class SceneWriter extends Context.Service<SceneWriter, SceneWriterService>()(
-  '@bible/film/tools/SceneWriter',
+  '@manna/film/tools/SceneWriter',
 ) {
   static readonly layer = Layer.effect(
     SceneWriter,

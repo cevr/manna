@@ -104,7 +104,7 @@ interface SeriesDraftsService {
 }
 
 export class SeriesDrafts extends Context.Service<SeriesDrafts, SeriesDraftsService>()(
-  '@bible/film/tools/SeriesDrafts',
+  '@manna/film/tools/SeriesDrafts',
 ) {
   /** The drafts under `root` (the app's `series` folder); none when the app has no series. */
   static readonly layer = (root: Option.Option<string>) =>

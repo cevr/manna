@@ -11,7 +11,7 @@
 // a thick outline with a light core, warm ink, a hue per garment, the head
 // about ⅓. The props match them (`PROPS`).
 
-import type { RiveEngine } from '@bible/film/rive';
+import type { RiveEngine } from '@manna/film/rive';
 import { LIGHT } from '../../../righteousness-by-faith/light.ts';
 import type { Look } from '../../look.ts';
 import { hues, ramps } from '../../palette.ts';

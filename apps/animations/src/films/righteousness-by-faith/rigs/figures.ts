@@ -1,6 +1,6 @@
 // RBF's Rive project: every figure rig of the film in one file
 // (`figures.riv`, built by `build.ts`), laid by one table (`FIGURES`), which
-// the house prints (`@bible/film/style` `figuresRml`). Each artboard has its
+// the house prints (`@manna/film/style` `figuresRml`). Each artboard has its
 // own view model, its name, the seed its paper's boil crawls by and its place
 // on the stage. It draws a composed figure, with the artboard its hands are
 // drawn on: the lead, the judge, the prosecutor, Christ in each of His two
@@ -12,9 +12,9 @@
 // its lock holds (`lockedPrints`), as the file draws it, and lists every
 // override the figures carry with the artboard it is laid on
 // (`figureOverrides`), to be held to the owner's decisions on that figure
-// (`unsaid`, `@bible/film/style/build`). Pure.
+// (`unsaid`, `@manna/film/style/build`). Pure.
 
-import { figuresFile } from '@bible/film/style';
+import { figuresFile } from '@manna/film/style';
 import { christ, christFront } from './christ-rig.ts';
 import { farmer } from './farmer-rig.ts';
 import { HAND_OUT_STEPS } from './hand-rig.ts';

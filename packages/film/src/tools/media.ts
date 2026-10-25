@@ -176,7 +176,7 @@ export interface AacTrack {
   readonly meta: EncodedAudioChunkMetadata;
 }
 
-export class Media extends Context.Service<Media, MediaService>()('@bible/film/tools/Media') {
+export class Media extends Context.Service<Media, MediaService>()('@manna/film/tools/Media') {
   /** The live media, its module loaded when the layer is built. */
   static readonly layer = Layer.unwrap(
     Effect.promise(() => import('./media-bun.ts')).pipe(Effect.map((live) => live.layer)),

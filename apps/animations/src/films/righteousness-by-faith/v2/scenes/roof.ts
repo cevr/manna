@@ -38,8 +38,8 @@ import {
   glow,
   reset,
   UNMOVED,
-} from '@bible/film/canvas';
-import { clamp, lerp, gait } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { clamp, lerp, gait } from '@manna/film/core';
 import { type House, WENT, house } from '../../gospel.ts';
 import { C, type Hands, ICON_KEPT, ICON_LEAD, ICON_X, type Three, iconScratch } from '../../kit.ts';
 import { GIFTS_AT, GIFTS_S, TAKEN, giftHand, giftRow, message } from './message.ts';

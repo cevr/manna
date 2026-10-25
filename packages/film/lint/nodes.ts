@@ -106,7 +106,7 @@ export type Named = ESTree.Node & { readonly name: string };
 
 /**
  * A module a rule reads names from, told by what an import names: a package's
- * specifier as written (`@bible/film/core`, `effect/process`), or a relative
+ * specifier as written (`@manna/film/core`, `effect/process`), or a relative
  * one resolved against the file that writes it (`./time.ts` in
  * `src/core/x.ts` is `…/src/core/time.ts`), so a module is the same however
  * the importing file reaches it.
@@ -258,7 +258,7 @@ export type NumberOf = (n: ESTree.Node) => Option.Option<number>;
 
 /** The module film's `Frame` and `drawing` are exported from. */
 export const isCanvas: Module = (from) =>
-  from === '@bible/film/canvas' || /(?:^|\/)canvas\/(?:index|film)(?:\.[jt]s)?$/u.test(from);
+  from === '@manna/film/canvas' || /(?:^|\/)canvas\/(?:index|film)(?:\.[jt]s)?$/u.test(from);
 
 /** The callbacks of a drawing's spec that film hands the frame (`canvas/film.ts`: `draw`, and `light` when a function). */
 const FRAME_TAKERS: ReadonlyArray<string> = ['draw', 'light'];
@@ -559,7 +559,7 @@ export const isGlobal = (node: ESTree.Node, name: string) =>
 
 /** The module of film's clock and easing helpers: `lerp`, `clamp`, `ease`, `CLOCK_EPSILON` (`core/time.ts`). */
 export const isFilmTime: Module = (from) =>
-  from === '@bible/film/core' || /(?:^|\/)core\/(?:time|index)(?:\.[jt]s)?$/u.test(from);
+  from === '@manna/film/core' || /(?:^|\/)core\/(?:time|index)(?:\.[jt]s)?$/u.test(from);
 
 /** The property `key` of an object literal, by plain name. */
 export const property = (

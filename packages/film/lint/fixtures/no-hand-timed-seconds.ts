@@ -1,8 +1,8 @@
 // Fixture for film/no-hand-timed-seconds: each line marked RED fires the rule,
 // and nothing else does.
-import { type Frame, drawing } from '@bible/film/canvas';
-import * as Core from '@bible/film/core';
-import { clamp, clamp as cap, keys, progress } from '@bible/film/core';
+import { type Frame, drawing } from '@manna/film/canvas';
+import * as Core from '@manna/film/core';
+import { clamp, clamp as cap, keys, progress } from '@manna/film/core';
 
 const RISE = [
   [0, 0],

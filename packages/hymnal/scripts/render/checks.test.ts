@@ -1,4 +1,4 @@
-import type { Pcm } from '@bible/film/measure';
+import type { Pcm } from '@manna/film/measure';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 

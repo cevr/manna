@@ -16,8 +16,8 @@
 // from inside the figure. On "jer" the bench itself goes gold, and the word
 // gives way to the name in `thesis`.
 
-import { type Pt, drawing, shotPath, type Posed, knobCamera } from '@bible/film/canvas';
-import { type Key, lerp } from '@bible/film/core';
+import { type Pt, drawing, shotPath, type Posed, knobCamera } from '@manna/film/canvas';
+import { type Key, lerp } from '@manna/film/core';
 import { landingSky } from '../../city.ts';
 import { type GestureAt } from '../../kit.ts';
 import {

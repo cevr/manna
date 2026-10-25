@@ -385,7 +385,7 @@ const sceneLog = (c: Change) =>
   Option.match(c.scene, { onNone: () => '', onSome: (scene) => ` scene=${scene}` });
 
 export class SourceWriter extends Context.Service<SourceWriter, SourceWriterService>()(
-  '@bible/film/tools/SourceWriter',
+  '@manna/film/tools/SourceWriter',
 ) {
   static readonly layer = Layer.effect(
     SourceWriter,

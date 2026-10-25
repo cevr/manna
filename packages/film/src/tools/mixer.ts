@@ -398,7 +398,7 @@ const db = (value: number) =>
     onSome: (finite) => finite.toFixed(1),
   });
 
-export class Mixer extends Context.Service<Mixer, MixerService>()('@bible/film/tools/Mixer') {
+export class Mixer extends Context.Service<Mixer, MixerService>()('@manna/film/tools/Mixer') {
   static readonly layer = Layer.effect(
     Mixer,
     Effect.gen(function* () {

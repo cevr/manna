@@ -13,8 +13,8 @@ import {
   glow,
   sky,
   UNMOVED,
-} from '@bible/film/canvas';
-import { lerp } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { lerp } from '@manna/film/core';
 import { ROOF, cityBack, cityFront } from '../../city.ts';
 import { C, F, person } from '../../kit.ts';
 import { TITLE } from '../script.ts';

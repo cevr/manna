@@ -147,7 +147,7 @@ interface LabCalls {
   ) => Effect.Effect<BoardFile, LabFailure>;
 }
 
-export class LabApi extends Context.Service<LabApi, LabCalls>()('@bible/film/lab/LabApi') {}
+export class LabApi extends Context.Service<LabApi, LabCalls>()('@manna/film/lab/LabApi') {}
 
 /** A new note as the page posts it: the draft and the frame's still, as bytes. */
 type NotePost = typeof NotePostSchema.Type;
@@ -167,7 +167,7 @@ export interface NotesCalls {
   readonly withdraw: (id: string) => Effect.Effect<Note, LabFailure>;
 }
 
-export class NotesApi extends Context.Service<NotesApi, NotesCalls>()('@bible/film/lab/NotesApi') {}
+export class NotesApi extends Context.Service<NotesApi, NotesCalls>()('@manna/film/lab/NotesApi') {}
 
 /** How long one wait for the notes holds on the server, in seconds. */
 const WAIT_S = 55;
@@ -188,7 +188,7 @@ const clientAt = (origin: string) => HttpApiClient.make(LabHttpApi, { baseUrl: o
  * beside it, for a file read by its URL (a review doc's text).
  */
 export class LabClient extends Context.Service<LabClient, Effect.Success<typeof pageClient>>()(
-  '@bible/film/lab/Client',
+  '@manna/film/lab/Client',
 ) {
   /** The client of the lab that served the page. */
   static readonly layer = Layer.effect(LabClient, pageClient).pipe(

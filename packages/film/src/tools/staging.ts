@@ -315,7 +315,7 @@ interface StagingCacheService {
 }
 
 export class StagingCache extends Context.Service<StagingCache, StagingCacheService>()(
-  '@bible/film/tools/StagingCache',
+  '@manna/film/tools/StagingCache',
 ) {
   /** The cache in `dir`, its days capped at `cap` characters. */
   static readonly layer = (dir: string, cap: number = STAGING_DAILY_CAP) =>

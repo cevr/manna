@@ -6,8 +6,8 @@
 // figures wear the story cloth. Gold is the word and the light from the
 // cross; white is the milk and the priest's robe.
 
-import type { Hex } from '@bible/film/canvas';
-import { parchment, peoplePaper } from '@bible/film/style';
+import type { Hex } from '@manna/film/canvas';
+import { parchment, peoplePaper } from '@manna/film/style';
 
 export const palette = {
   // IDEA: the parchment page (the house's) and its ink.

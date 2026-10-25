@@ -5,8 +5,8 @@
 // scripture; then the line each CC BY recording its sound places owes
 // (`soundCredits`), which `film check` holds the roll to.
 
-import { type Author, type Credit, creditRoll } from '@bible/film/canvas';
-import { soundCredits } from '@bible/film/core';
+import { type Author, type Credit, creditRoll } from '@manna/film/canvas';
+import { soundCredits } from '@manna/film/core';
 import { library } from '../../../../sounds/library.ts';
 import { TITLE, script } from './script.ts';
 import { sound } from './sound.ts';

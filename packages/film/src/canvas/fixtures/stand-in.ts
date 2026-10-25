@@ -1,4 +1,4 @@
-// The one stand-in 2D context, because bun has no canvas (`@bible/film/stand-in`,
+// The one stand-in 2D context, because bun has no canvas (`@manna/film/stand-in`,
 // for the framework's tests and a film's). It holds the drawing state a canvas
 // holds, starting from a canvas's defaults and saved and restored whole: the
 // transform (`setTransform` takes six numbers, a matrix or nothing), an alpha

@@ -61,7 +61,7 @@ const r2Access = (
 };
 
 export class PrivateStore extends Context.Service<PrivateStore, PrivateStoreService>()(
-  '@bible/film/tools/PrivateStore',
+  '@manna/film/tools/PrivateStore',
 ) {
   /** The store `sounds/library.ts` in `dir` declares. */
   static readonly layer = (dir: string) =>

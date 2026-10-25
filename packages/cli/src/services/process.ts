@@ -8,7 +8,7 @@ interface CliProcessService {
 }
 
 export class CliProcess extends Context.Service<CliProcess, CliProcessService>()(
-  '@bible/cli/services/process/CliProcess',
+  '@manna/cli/services/process/CliProcess',
 ) {}
 
 export const CliProcessLive = Layer.succeed(

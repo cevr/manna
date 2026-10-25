@@ -13,8 +13,8 @@
 // the accused screen-left, the bench centre-high; every camera stays on one
 // side of the line between them.
 
-import type { Hex } from '@bible/film/canvas';
-import { type Key, clamp, ease, lerp, rng } from '@bible/film/core';
+import type { Hex } from '@manna/film/canvas';
+import { type Key, clamp, ease, lerp, rng } from '@manna/film/core';
 import { CanvasTexture, Group, NearestFilter, PerspectiveCamera, Scene, Vector3 } from 'three';
 import type { CourtFrame } from '../../scenes/court.ts';
 import { box, post, put, sheet, slab } from './build.ts';

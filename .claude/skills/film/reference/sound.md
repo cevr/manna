@@ -98,7 +98,7 @@ A field fixed for a render takes a value: a number, a range drawn once per seed 
 
 ### The families
 
-Most sounds are made of a few shapes. `core/synth/graph/presets.ts` builds each as a function of a few settings that returns a node, and `@bible/film/core` exports them to the app. A sound layers them (`Layer`, each child at its `at` and `db`), and its seeds vary each as the table says.
+Most sounds are made of a few shapes. `core/synth/graph/presets.ts` builds each as a function of a few settings that returns a node, and `@manna/film/core` exports them to the app. A sound layers them (`Layer`, each child at its `at` and `db`), and its seeds vary each as the table says.
 
 | Family    | Settings                                                    | What it makes                                                                                               | Each seed draws                                    |
 | --------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |

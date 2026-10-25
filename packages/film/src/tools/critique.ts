@@ -394,7 +394,7 @@ export const stagingAt = Effect.fn('Critic.stagingAt')(function* (name: string, 
   return { panel, picture } satisfies CritiqueStaging;
 });
 
-export class Critic extends Context.Service<Critic, CriticService>()('@bible/film/tools/Critic') {
+export class Critic extends Context.Service<Critic, CriticService>()('@manna/film/tools/Critic') {
   /** The critic over the app's rule sections `rules` (`FilmApp.critique`), asking the counsel; refused when a section is missing. */
   static readonly layer = (rules: ReadonlyArray<CritiqueRule>) =>
     Layer.effect(

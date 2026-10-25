@@ -4,7 +4,7 @@
 // the engine; the film loads the rigs the look in play declares before its
 // first frame, and the look's drawing poses each by name (`f.rive`).
 
-import type { RiveEngine, RivePropSpec } from '@bible/film/rive';
+import type { RiveEngine, RivePropSpec } from '@manna/film/rive';
 import { Record as Rec } from 'effect';
 import {
   ACCUSED_ART,

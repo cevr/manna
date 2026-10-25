@@ -14,7 +14,7 @@ export interface ChimeService {
   readonly play: Effect.Effect<void, PlatformError.PlatformError>;
 }
 
-export class Chime extends Context.Service<Chime, ChimeService>()('@bible/cli/services/chime') {}
+export class Chime extends Context.Service<Chime, ChimeService>()('@manna/cli/services/chime') {}
 
 /**
  * Live implementation using the Effect child-process service.

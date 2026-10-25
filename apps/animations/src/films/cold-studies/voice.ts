@@ -4,6 +4,6 @@
 // changed voice marks both cuts stale until they are cut again from that
 // film's take in the new voice.
 
-import { stagingVoice } from '@bible/film/core';
+import { stagingVoice } from '@manna/film/core';
 
 export const voice = stagingVoice;

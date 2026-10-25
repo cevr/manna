@@ -32,8 +32,8 @@ import {
   sky,
   mix,
   UNMOVED,
-} from '@bible/film/canvas';
-import { type Key, clamp, lerp } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { type Key, clamp, lerp } from '@manna/film/core';
 import {
   C,
   F,

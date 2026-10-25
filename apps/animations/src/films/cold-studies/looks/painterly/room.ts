@@ -8,8 +8,8 @@
 // (`court.ts`). Light is cool from the windows, warm from the lamps, and the
 // shadow between them is teal.
 
-import { type Box, write } from '@bible/film/canvas';
-import { clamp, hash2, lerp } from '@bible/film/core';
+import { type Box, write } from '@manna/film/canvas';
+import { clamp, hash2, lerp } from '@manna/film/core';
 import { type Easel, along, curve, glow, oval, paint, poly, pool, rect, shade } from './brush.ts';
 import { P, R, SERIF } from './palette.ts';
 

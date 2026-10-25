@@ -19,7 +19,7 @@ import {
 
 const FILE = 'scenes/hand.ts';
 
-const scene = `import { drawing as draw } from '@bible/film/canvas';
+const scene = `import { drawing as draw } from '@manna/film/canvas';
 
 const GAP = 0.2;
 
@@ -441,7 +441,7 @@ describe('scene source', () => {
   });
 
   it('follows a timeline or knobs name to its module-level const literal', () => {
-    const lifted = `import { drawing } from '@bible/film/canvas';
+    const lifted = `import { drawing } from '@manna/film/canvas';
 
 const timeline = {
   topple: { mark: 'earns', offset: 0.1, dur: 1.8 },
@@ -520,7 +520,7 @@ export const bare = { timeline: a, draw: () => {} };
 });
 
 describe('a scene’s code', () => {
-  const reading = `import { drawing } from '@bible/film/canvas';
+  const reading = `import { drawing } from '@manna/film/canvas';
 
 const timeline = {
   /** The robe lifts. */

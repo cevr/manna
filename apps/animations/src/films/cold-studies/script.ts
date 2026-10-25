@@ -14,7 +14,7 @@
 //
 // Scripture quoted verbatim KJV, checked with `bible verse` (Job 9:2).
 
-import { defineScript } from '@bible/film/core';
+import { defineScript } from '@manna/film/core';
 
 /** The study's name. */
 export const TITLE = 'Cold open: the looks';

@@ -331,7 +331,7 @@ export const browserReady: Effect.Effect<
 > = Effect.scoped(Effect.asVoid(frameView)).pipe(Effect.withSpan('Browser.ready'));
 
 export class Browser extends Context.Service<Browser, BrowserService>()(
-  '@bible/film/tools/Browser',
+  '@manna/film/tools/Browser',
 ) {
   /**
    * Pages in this process's Chrome (`tools/chrome.ts`), spawned when the first

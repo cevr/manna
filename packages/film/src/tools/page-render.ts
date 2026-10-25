@@ -99,7 +99,7 @@ interface PageRendererService {
 }
 
 export class PageRenderer extends Context.Service<PageRenderer, PageRendererService>()(
-  '@bible/film/tools/PageRenderer',
+  '@manna/film/tools/PageRenderer',
 ) {
   /** Each build's pages rendered in a Bun worker of the build's. */
   static readonly layer: Layer.Layer<PageRenderer, never, FileSystem.FileSystem | Path.Path> =

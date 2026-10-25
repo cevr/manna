@@ -61,7 +61,7 @@ export const exportUrl = (server: string, film: string, captions: boolean): stri
     ...Arr.filter(['captions=0'], () => !captions),
   ].join('&')}`;
 
-export class Pages extends Context.Service<Pages, PagesService>()('@bible/film/tools/Pages') {
+export class Pages extends Context.Service<Pages, PagesService>()('@manna/film/tools/Pages') {
   /** Export pages in the `Browser`, on the app's `PreviewServer`. */
   static readonly layer = Layer.effect(
     Pages,

@@ -1,5 +1,5 @@
 {
-  "name": "@bible/animations",
+  "name": "@manna/animations",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -30,7 +30,7 @@
     "notes": "bun cli.ts lab notes",
     "media": "bun cli.ts media",
     "plan": "alchemy plan alchemy.run.ts --stage prod",
-    "deploy": "turbo run test:slow --filter=@bible/animations && alchemy deploy alchemy.run.ts --stage prod",
+    "deploy": "turbo run test:slow --filter=@manna/animations && alchemy deploy alchemy.run.ts --stage prod",
     "store:keys": "bun infra/keys.ts --stage prod",
     "seed-look": "bun art/seed-look.ts",
     "fill-picks": "bun productions/fill-picks.ts",
@@ -39,8 +39,8 @@
     "test:slow": "bun test .slow.test."
   },
   "dependencies": {
-    "@bible/film": "workspace:*",
     "@effect/platform-bun": "catalog:",
+    "@manna/film": "workspace:*",
     "effect": "catalog:",
     "three": "0.186.1"
   },

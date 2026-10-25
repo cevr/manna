@@ -1,8 +1,8 @@
 // Fixture for film/no-ease-on-cue: each line marked RED fires the rule, and
 // nothing else does.
-import { drawing } from '@bible/film/canvas';
-import * as Core from '@bible/film/core';
-import { clamp, ease, ease as curve, lerp } from '@bible/film/core';
+import { drawing } from '@manna/film/canvas';
+import * as Core from '@manna/film/core';
+import { clamp, ease, ease as curve, lerp } from '@manna/film/core';
 
 export const scene = drawing({
   timeline: { plunge: { mark: 'dark', dur: 1.1, ease: 'inCubic' } },

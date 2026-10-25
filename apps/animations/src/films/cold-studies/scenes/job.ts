@@ -8,7 +8,7 @@
 // draw returns on the same frame; the look in play draws the page and sets
 // the card (`look.ts`).
 
-import { type Box, drawing } from '@bible/film/canvas';
+import { type Box, drawing } from '@manna/film/canvas';
 import { lookOf } from '../looks/index.ts';
 
 export const job = drawing({

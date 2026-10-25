@@ -4,7 +4,7 @@
 // grain, cut stone, floor planks, cloth, the accused's stained tunic, paper
 // and card. Made once per WebGL context (`rig.ts`); nothing here reads time.
 
-import { hash2, lerp } from '@bible/film/core';
+import { hash2, lerp } from '@manna/film/core';
 import { DataTexture, NearestFilter, RepeatWrapping, RGBAFormat, UnsignedByteType } from 'three';
 
 type Rgb = readonly [number, number, number];

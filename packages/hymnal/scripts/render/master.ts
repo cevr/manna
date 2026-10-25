@@ -16,7 +16,7 @@
  * ear. Every filter and the encoder run on one thread.
  */
 
-import type { Pcm } from '@bible/film/measure';
+import type { Pcm } from '@manna/film/measure';
 import { Effect } from 'effect';
 import { Decoder, Demuxer, Encoder, FilterAPI, Muxer } from 'node-av/api';
 import {

@@ -37,7 +37,7 @@
 // courts (`woman`'s temple court, and `accuser` into `robe`'s heavenly one),
 // the town's under `centurion` until its row.
 
-import type { Movement, Music, Sound } from '@bible/film/core';
+import type { Movement, Music, Sound } from '@manna/film/core';
 
 /**
  * The score's movements, one per turn of the music (each 3–120 s, from its

@@ -16,8 +16,8 @@ import {
   glow,
   plate,
   rounded,
-} from '@bible/film/canvas';
-import { lerp } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { lerp } from '@manna/film/core';
 import { type GestureAt, C, F, type Person, christ, person, piece, type Hands } from './kit.ts';
 
 /** Christ as high priest: the white robe and sash, and the breastplate over them. */

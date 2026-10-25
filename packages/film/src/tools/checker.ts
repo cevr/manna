@@ -203,7 +203,7 @@ interface CheckerService {
 }
 
 export class Checker extends Context.Service<Checker, CheckerService>()(
-  '@bible/film/tools/Checker',
+  '@manna/film/tools/Checker',
 ) {
   /** On pages of its own (`Pages`), in the `Browser`, on the app's `PreviewServer`. */
   static readonly layer = Layer.effect(

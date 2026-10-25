@@ -116,7 +116,7 @@ describe('a wedge', () => {
         const path = yield* Path.Path;
         const palette = yield* paletteFile;
         const dir = path.dirname(palette);
-        // A package only the film's folder resolves, as the app's `@bible/film` is.
+        // A package only the film's folder resolves, as the app's `@manna/film` is.
         const pkg = path.join(dir, 'node_modules', 'film-engine');
         yield* fs.makeDirectory(pkg, { recursive: true });
         yield* fs.writeFileString(

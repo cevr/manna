@@ -1,5 +1,5 @@
 // The workspace the dead-export check reads: every TypeScript file of the
-// packages and apps, how a specifier (a relative path, `@bible/film/canvas`)
+// packages and apps, how a specifier (a relative path, `@manna/film/canvas`)
 // points at one of them, which files something outside the module graph runs
 // (the roots: apps, bins, scripts a `package.json` runs), and which are tests
 // or their support (which use an export for real no more than its own file
@@ -57,7 +57,7 @@ const candidates = (base: string): ReadonlyArray<string> => [
   `${base}/index.tsx`,
 ];
 
-/** A package specifier: its name (`@bible/film`, `effect`) and the entry after it (`/canvas`). */
+/** A package specifier: its name (`@manna/film`, `effect`) and the entry after it (`/canvas`). */
 const SPECIFIER = /^(@[^/]+\/[^/]+|[^/@][^/]*)(\/.*)?$/;
 
 /** A tsconfig's `"~/*": ["./app/*"]`: the directory `~/` stands for, captured as `app/`. */

@@ -234,12 +234,12 @@ describe.concurrent('the stamp’s reads', () => {
 describe.concurrent('importsOf', () => {
   test('lists imports and re-exports, each once', () => {
     const source = `import { a } from './a.ts';
-import type { B } from '@bible/film/core';
+import type { B } from '@manna/film/core';
 export { c } from './c.ts';
 export * from './a.ts';
 const x = 1;
 export { x };
 `;
-    expectPlain(importsOf('m.ts', source)).toEqual(['./a.ts', '@bible/film/core', './c.ts']);
+    expectPlain(importsOf('m.ts', source)).toEqual(['./a.ts', '@manna/film/core', './c.ts']);
   });
 });

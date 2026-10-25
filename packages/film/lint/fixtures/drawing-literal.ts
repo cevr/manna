@@ -1,8 +1,8 @@
 // Fixture for film/drawing-literal: each line marked RED fires the rule, and
 // nothing else does. Greek before the scenes (δικαιόω, πίστις) pins that a
 // report lands on its line when offsets pass non-ASCII text.
-import * as Film from '@bible/film/canvas';
-import { drawing, drawing as d } from '@bible/film/canvas';
+import * as Film from '@manna/film/canvas';
+import { drawing, drawing as d } from '@manna/film/canvas';
 
 declare const makeTimeline: () => Record<string, unknown>;
 declare const shared: object;

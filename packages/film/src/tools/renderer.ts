@@ -101,7 +101,7 @@ import { soundCredits } from '../core/sfx.ts';
  * The cores this machine has: a software encoder takes one each, so they
  * bound a software render's encoders (`encoderLimits`). Tests set it.
  */
-export const Cores = Context.Reference<number>('@bible/film/tools/Cores', {
+export const Cores = Context.Reference<number>('@manna/film/tools/Cores', {
   defaultValue: () => availableParallelism(),
 });
 
@@ -109,7 +109,7 @@ export const Cores = Context.Reference<number>('@bible/film/tools/Cores', {
  * The platform the render runs on (`process.platform`): it decides which
  * encoders a render may use (`encoderCandidates`). Tests set it.
  */
-export const Platform = Context.Reference<string>('@bible/film/tools/Platform', {
+export const Platform = Context.Reference<string>('@manna/film/tools/Platform', {
   defaultValue: () => process.platform,
 });
 
@@ -351,7 +351,7 @@ export const remuxer = Effect.fn('film.remuxer')(function* (film: LoadedFilm) {
 export type Remux = Effect.Success<ReturnType<typeof remuxer>>;
 
 export class Renderer extends Context.Service<Renderer, RendererService>()(
-  '@bible/film/tools/Renderer',
+  '@manna/film/tools/Renderer',
 ) {
   static readonly layer = Layer.effect(
     Renderer,

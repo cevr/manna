@@ -12,7 +12,7 @@ import {
   sub,
   glow,
   rounded,
-} from '@bible/film/canvas';
+} from '@manna/film/canvas';
 import { C, piece, type Hands } from './kit.ts';
 
 /** A tablet with an arched top, centred on (0, 0), `w` by `h`. */

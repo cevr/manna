@@ -1,7 +1,7 @@
 // The browser player, framework-free. A page with a film on it stages it
 // here (`stageFilm`): the render page (`render.ts`, `mountRender`), and the
 // studio's pages, which mount the scrubbable preview (`mountPreview`) in
-// their Solid shell: the lab (`@bible/film/lab`), and a film's studio
+// their Solid shell: the lab (`@manna/film/lab`), and a film's studio
 // (`mountFilmStudio`, lab/film-studio/mount.tsx). So the render page never
 // loads Solid, and the studio's pages never load the encoder.
 

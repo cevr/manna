@@ -11,8 +11,8 @@
 // while the film's name settles on a torn paper strip on the empty upper
 // back wall: the only text (`CARDS`).
 
-import { at, drawing, rounded, write } from '@bible/film/canvas';
-import { lerp } from '@bible/film/core';
+import { at, drawing, rounded, write } from '@manna/film/canvas';
+import { lerp } from '@manna/film/core';
 import { COURT_RIGS, courtFigures, courtShadows, restPose } from '../court-cast.ts';
 import { widePews, wideRoom } from '../court-set.ts';
 import { C, F, piece } from '../kit.ts';

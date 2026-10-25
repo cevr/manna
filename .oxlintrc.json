@@ -746,7 +746,7 @@
                   "**/browser",
                   "**/style/**",
                   "**/style",
-                  "@bible/film/*"
+                  "@manna/film/*"
                 ],
                 "message": "core never imports canvas, rive, the house look (style), player, tools, lab or the host's adapters (browser): they import it (packages/film/README.md, the purity rule)."
               }
@@ -790,16 +790,16 @@
                   "**/lab",
                   "**/browser/**",
                   "**/browser",
-                  "@bible/film/player",
-                  "@bible/film/render",
-                  "@bible/film/player.css",
-                  "@bible/film/tokens.css",
-                  "@bible/film/tools",
-                  "@bible/film/solid-plugin",
-                  "@bible/film/play",
-                  "@bible/film/review",
-                  "@bible/film/review-server",
-                  "@bible/film/play-server"
+                  "@manna/film/player",
+                  "@manna/film/render",
+                  "@manna/film/player.css",
+                  "@manna/film/tokens.css",
+                  "@manna/film/tools",
+                  "@manna/film/solid-plugin",
+                  "@manna/film/play",
+                  "@manna/film/review",
+                  "@manna/film/review-server",
+                  "@manna/film/play-server"
                 ],
                 "message": "the engine never imports the player, tools, lab or the host's adapters (browser): they import it (packages/film/README.md, the purity rule)."
               },
@@ -811,8 +811,8 @@
                 "group": [
                   "**/style/**",
                   "**/style",
-                  "@bible/film/style",
-                  "@bible/film/style/build"
+                  "@manna/film/style",
+                  "@manna/film/style/build"
                 ],
                 "message": "the engine never imports the house look (src/style/): the look draws with the engine (packages/film/README.md, the purity rule)."
               }
@@ -861,16 +861,16 @@
                   "**/lab",
                   "**/browser/**",
                   "**/browser",
-                  "@bible/film/player",
-                  "@bible/film/render",
-                  "@bible/film/player.css",
-                  "@bible/film/tokens.css",
-                  "@bible/film/tools",
-                  "@bible/film/solid-plugin",
-                  "@bible/film/play",
-                  "@bible/film/review",
-                  "@bible/film/review-server",
-                  "@bible/film/play-server"
+                  "@manna/film/player",
+                  "@manna/film/render",
+                  "@manna/film/player.css",
+                  "@manna/film/tokens.css",
+                  "@manna/film/tools",
+                  "@manna/film/solid-plugin",
+                  "@manna/film/play",
+                  "@manna/film/review",
+                  "@manna/film/review-server",
+                  "@manna/film/play-server"
                 ],
                 "message": "the engine never imports the player, tools, lab or the host's adapters (browser): they import it (packages/film/README.md, the purity rule)."
               },
@@ -878,8 +878,8 @@
                 "group": [
                   "**/style/**",
                   "**/style",
-                  "@bible/film/style",
-                  "@bible/film/style/build"
+                  "@manna/film/style",
+                  "@manna/film/style/build"
                 ],
                 "message": "the engine never imports the house look (src/style/): the look draws with the engine (packages/film/README.md, the purity rule)."
               }
@@ -929,16 +929,16 @@
                   "**/browser",
                   "**/command/**",
                   "**/command",
-                  "@bible/film/player",
-                  "@bible/film/render",
-                  "@bible/film/player.css",
-                  "@bible/film/tokens.css",
-                  "@bible/film/tools",
-                  "@bible/film/solid-plugin",
-                  "@bible/film/play",
-                  "@bible/film/review",
-                  "@bible/film/review-server",
-                  "@bible/film/play-server"
+                  "@manna/film/player",
+                  "@manna/film/render",
+                  "@manna/film/player.css",
+                  "@manna/film/tokens.css",
+                  "@manna/film/tools",
+                  "@manna/film/solid-plugin",
+                  "@manna/film/play",
+                  "@manna/film/review",
+                  "@manna/film/review-server",
+                  "@manna/film/play-server"
                 ],
                 "message": "the Rive loader and its runtimes never import the player, tools, lab, the pages' commands or the host's adapters (browser): the player and the tools import them (packages/film/README.md, the purity rule)."
               },
@@ -946,8 +946,8 @@
                 "group": [
                   "**/style/**",
                   "**/style",
-                  "@bible/film/style",
-                  "@bible/film/style/build"
+                  "@manna/film/style",
+                  "@manna/film/style/build"
                 ],
                 "message": "the Rive loader and its runtimes never import the house look (src/style/): a film's rigs are built from it ahead of time, and the loader loads the built file (packages/film/README.md, the purity rule)."
               }
@@ -997,16 +997,16 @@
                   "**/command",
                   "**/rive/**",
                   "**/rive",
-                  "@bible/film/player",
-                  "@bible/film/render",
-                  "@bible/film/player.css",
-                  "@bible/film/tokens.css",
-                  "@bible/film/tools",
-                  "@bible/film/solid-plugin",
-                  "@bible/film/play",
-                  "@bible/film/review",
-                  "@bible/film/review-server",
-                  "@bible/film/play-server"
+                  "@manna/film/player",
+                  "@manna/film/render",
+                  "@manna/film/player.css",
+                  "@manna/film/tokens.css",
+                  "@manna/film/tools",
+                  "@manna/film/solid-plugin",
+                  "@manna/film/play",
+                  "@manna/film/review",
+                  "@manna/film/review-server",
+                  "@manna/film/play-server"
                 ],
                 "message": "the house look never imports the player, tools, lab, the pages' commands, the Rive loader (src/rive/) or the host's adapters (browser): they may import it (packages/film/README.md, the purity rule)."
               }
@@ -1051,16 +1051,16 @@
                   "**/lab/**",
                   "**/lab",
                   "!**/lab/fixtures/browsers.ts",
-                  "@bible/film/player",
-                  "@bible/film/render",
-                  "@bible/film/player.css",
-                  "@bible/film/tokens.css",
-                  "@bible/film/tools",
-                  "@bible/film/solid-plugin",
-                  "@bible/film/play",
-                  "@bible/film/review",
-                  "@bible/film/review-server",
-                  "@bible/film/play-server"
+                  "@manna/film/player",
+                  "@manna/film/render",
+                  "@manna/film/player.css",
+                  "@manna/film/tokens.css",
+                  "@manna/film/tools",
+                  "@manna/film/solid-plugin",
+                  "@manna/film/play",
+                  "@manna/film/review",
+                  "@manna/film/review-server",
+                  "@manna/film/play-server"
                 ],
                 "message": "the engine never imports the player, tools or lab: they import it (packages/film/README.md, the purity rule)."
               }
@@ -1100,12 +1100,12 @@
                   "**/tools",
                   "**/lab/**",
                   "**/lab",
-                  "@bible/film/tools",
-                  "@bible/film/solid-plugin",
-                  "@bible/film/play",
-                  "@bible/film/review",
-                  "@bible/film/review-server",
-                  "@bible/film/play-server"
+                  "@manna/film/tools",
+                  "@manna/film/solid-plugin",
+                  "@manna/film/play",
+                  "@manna/film/review",
+                  "@manna/film/review-server",
+                  "@manna/film/play-server"
                 ],
                 "message": "the player never imports the tools or the lab: the lab mounts the player (packages/film/README.md, the purity rule)."
               },
@@ -1169,7 +1169,7 @@
               },
               {
                 "group": ["**/packages/film/src/**"],
-                "message": "an app reaches the film through its package exports (`@bible/film/rive`, `@bible/film/canvas`), never a path into its source: the exports are the film's public modules (packages/film/README.md, the purity rule)."
+                "message": "an app reaches the film through its package exports (`@manna/film/rive`, `@manna/film/canvas`), never a path into its source: the exports are the film's public modules (packages/film/README.md, the purity rule)."
               }
             ]
           }
@@ -1247,16 +1247,16 @@
                   "**/tools",
                   "**/lab/**",
                   "**/lab",
-                  "@bible/film/player",
-                  "@bible/film/render",
-                  "@bible/film/player.css",
-                  "@bible/film/tokens.css",
-                  "@bible/film/tools",
-                  "@bible/film/solid-plugin",
-                  "@bible/film/play",
-                  "@bible/film/review",
-                  "@bible/film/review-server",
-                  "@bible/film/play-server"
+                  "@manna/film/player",
+                  "@manna/film/render",
+                  "@manna/film/player.css",
+                  "@manna/film/tokens.css",
+                  "@manna/film/tools",
+                  "@manna/film/solid-plugin",
+                  "@manna/film/play",
+                  "@manna/film/review",
+                  "@manna/film/review-server",
+                  "@manna/film/play-server"
                 ],
                 "message": "the pages' commands never import the player, the tools or the lab: they register their commands with it (packages/film/README.md, the purity rule)."
               }
@@ -1615,16 +1615,16 @@
                   "**/tools",
                   "**/lab/**",
                   "**/lab",
-                  "@bible/film/player",
-                  "@bible/film/render",
-                  "@bible/film/player.css",
-                  "@bible/film/tokens.css",
-                  "@bible/film/tools",
-                  "@bible/film/solid-plugin",
-                  "@bible/film/play",
-                  "@bible/film/review",
-                  "@bible/film/review-server",
-                  "@bible/film/play-server"
+                  "@manna/film/player",
+                  "@manna/film/render",
+                  "@manna/film/player.css",
+                  "@manna/film/tokens.css",
+                  "@manna/film/tools",
+                  "@manna/film/solid-plugin",
+                  "@manna/film/play",
+                  "@manna/film/review",
+                  "@manna/film/review-server",
+                  "@manna/film/play-server"
                 ],
                 "message": "the host's adapters never import the player, the tools or the lab: the pages import them (packages/film/README.md, the purity rule)."
               }
@@ -1978,8 +1978,8 @@
                   "effect",
                   "effect/*",
                   "@effect/*",
-                  "@bible/film",
-                  "@bible/film/*",
+                  "@manna/film",
+                  "@manna/film/*",
                   "**/lab/**"
                 ],
                 "message": "@manna/ui is a leaf of plain DOM primitives: no Effect, no film engine, no lab."

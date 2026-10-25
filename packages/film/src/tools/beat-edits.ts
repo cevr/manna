@@ -161,7 +161,7 @@ const wordsKept = (all: Words, film: string, id: string, said: string): Words =>
 const setBy = (target: string) => target.replace(/^(undo|redo) /, '');
 
 export class BeatEdits extends Context.Service<BeatEdits, BeatEditsService>()(
-  '@bible/film/tools/BeatEdits',
+  '@manna/film/tools/BeatEdits',
 ) {
   static readonly layer = Layer.effect(
     BeatEdits,

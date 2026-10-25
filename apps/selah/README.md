@@ -4,7 +4,7 @@ An offline SwiftUI menu bar app for memorizing Scripture on macOS 26+. Learn who
 
 ## Run
 
-From the Bible Tools root, use `bun run --filter @bible/selah gate` or `bun run --filter @bible/selah build`. The commands below run from `apps/selah`. Native tasks explicitly skip other operating systems; `.github/workflows/selah.yml` validates SwiftUI on macOS. Native builds bypass Turbo artifact caching because SDK and code-signing state belong to the local machine.
+From the Bible Tools root, use `bun run --filter @manna/selah gate` or `bun run --filter @manna/selah build`. The commands below run from `apps/selah`. Native tasks explicitly skip other operating systems; `.github/workflows/selah.yml` validates SwiftUI on macOS. Native builds bypass Turbo artifact caching because SDK and code-signing state belong to the local machine.
 
 ```sh
 ./scripts/gate.sh

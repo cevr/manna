@@ -9,8 +9,8 @@
 //   - power: early gold morning, warm cream;
 //   - landing: teal day, the lightest touch.
 
-import type { Light } from '@bible/film/canvas';
-import { membersOf } from '@bible/film/core';
+import type { Light } from '@manna/film/canvas';
+import { membersOf } from '@manna/film/core';
 import { Result } from 'effect';
 import { LIGHT } from '../light.ts';
 import { type ActName, look } from './acts.ts';

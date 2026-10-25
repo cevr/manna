@@ -32,8 +32,8 @@ import {
   mix,
   rounded,
   sky,
-} from '@bible/film/canvas';
-import { clamp, lerp } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { clamp, lerp } from '@manna/film/core';
 import { FIGURE_STAINS } from '../../court.ts';
 import { PATH_AHEAD, PATH_HILL, alongPath, restingField } from '../../garden.ts';
 import {

@@ -1,7 +1,7 @@
 /**
  * The Tried Gold brand: the Sanctuary Blue palette (the owner's pick,
  * 2026-09-30) and its type, in the one place both the site and the films'
- * title and credits cards read it from (`@bible/triedgold/brand`).
+ * title and credits cards read it from (`@manna/triedgold/brand`).
  *
  * The swatches are the palette. A scheme assigns them roles for one ground,
  * light or dark; the site paints with the roles, never with a swatch. The two

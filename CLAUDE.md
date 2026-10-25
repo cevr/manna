@@ -8,21 +8,21 @@ explainer films.
 ```
 bible/
 ├── apps/
-│   ├── animations/     # Narrated cut-paper explainer films (@bible/animations, built on @bible/film)
-│   ├── egw-search/     # EGW search: Solid 2 page over an Effect HttpApi server (@bible/egw-search; Alchemy → Cloudflare, egw.cvr.im)
-│   ├── firsttheblade/  # The First the Blade site: Solid 2 prerender behind an Effect Worker (@bible/firsttheblade; Alchemy → Cloudflare)
-│   ├── hymnal/         # The hymnal app: One 2.9 (React 19.3, React Native 0.88) for iOS, Android and web (@bible/hymnal-app)
-│   ├── selah/          # Native macOS Scripture memorization (@bible/selah; SwiftUI, FSRS)
-│   └── triedgold/      # triedgold.com (@bible/triedgold, React Router 8 SSR on a Worker; brand tokens in src/brand.ts; Alchemy → Cloudflare)
+│   ├── animations/     # Narrated cut-paper explainer films (@manna/animations, built on @manna/film)
+│   ├── egw-search/     # EGW search: Solid 2 page over an Effect HttpApi server (@manna/egw-search; Alchemy → Cloudflare, egw.cvr.im)
+│   ├── firsttheblade/  # The First the Blade site: Solid 2 prerender behind an Effect Worker (@manna/firsttheblade; Alchemy → Cloudflare)
+│   ├── hymnal/         # The hymnal app: One 2.9 (React 19.3, React Native 0.88) for iOS, Android and web (@manna/hymnal-app)
+│   ├── selah/          # Native macOS Scripture memorization (@manna/selah; SwiftUI, FSRS)
+│   └── triedgold/      # triedgold.com (@manna/triedgold, React Router 8 SSR on a Worker; brand tokens in src/brand.ts; Alchemy → Cloudflare)
 ├── packages/
 │   ├── core/           # Shared business logic: corpora, search, study data (@manna/core)
-│   ├── cli/            # The `bible` CLI (@bible/cli)
-│   ├── film/           # The film engine, tools and lab (@bible/film)
+│   ├── cli/            # The `bible` CLI (@manna/cli)
+│   ├── film/           # The film engine, tools and lab (@manna/film)
 │   ├── hymnal/         # Hymn chords read from MIDI, and the compiled SDA Hymnal (1985) the app reads (@manna/hymnal; schema at @manna/hymnal/hymn)
 │   ├── atom-solid/     # Solid 2 bindings for Effect atoms (@manna/atom-solid, used by the film lab and egw-search)
 │   ├── url-state/      # Typed URL state: Effect Schema codecs, a Location service, an atom binding (@manna/url-state)
 │   ├── ui/             # Base UI's unstyled parts ported to Solid 2 (@manna/ui; browser tests via its test:browser)
-│   └── scripts/        # Corpus compilers and repo tooling (@bible/scripts)
+│   └── scripts/        # Corpus compilers and repo tooling (@manna/scripts)
 ```
 
 ## Package Manager
@@ -38,16 +38,16 @@ bun run fmt                    # Format code with oxfmt
 bun run gate                   # The feedback cycle: oxlint (deterministic rules) + every workspace's unit tests, turbo-cached
 bun run test:slow              # Typecheck, builds, slow tests, browser and built-page checks, full lint, e2e; by hand and before deploys
 bun run test:perf              # The CLI's performance budgets (local only; reads packages/core/data/bible.db)
-bun run test:budget [<ws>…]    # Each workspace's unit tests alone under 1 s (@bible/film 1.1 s), no total (local only)
+bun run test:budget [<ws>…]    # Each workspace's unit tests alone under 1 s (@manna/film 1.1 s), no total (local only)
 bun run test:reads             # Each file, module and native library a unit test's bun processes open is one its cached test task hashes (in test:slow)
-bun run --filter @bible/selah gate  # Native Swift gate on macOS (also in test:slow)
+bun run --filter @manna/selah gate  # Native Swift gate on macOS (also in test:slow)
 ```
 
 ## The gate is the feedback cycle
 
 The local gate verifies a change; CI does not (owner, 2026-10-19: "CI is not a verification tool for us"). Agents never check or wait on CI, and never fix a test only CI sees red; this overrides the global "CI red: fix til green".
 
-- **`bun run gate`** asks one thing: did the change break something plain? It runs oxlint's deterministic rules and every workspace's unit tests (`*.test.*`, not `*.slow.test.*`), turbo-cached on each workspace's inputs, and prints its wall time. Warm, it takes about a second. Each workspace's unit tests stay under 1 s alone, `@bible/film` under 1.1 s (`bun run test:budget`). Run it between units and once at a unit's merge.
+- **`bun run gate`** asks one thing: did the change break something plain? It runs oxlint's deterministic rules and every workspace's unit tests (`*.test.*`, not `*.slow.test.*`), turbo-cached on each workspace's inputs, and prints its wall time. Warm, it takes about a second. Each workspace's unit tests stay under 1 s alone, `@manna/film` under 1.1 s (`bun run test:budget`). Run it between units and once at a unit's merge.
 - **Pre-commit** (`lefthook.yml`) runs `oxlint --fix` and `oxfmt` on the staged files, then an incremental typecheck of the workspaces the staged files lie in.
 - **`bun run test:slow`** runs the rest: every typecheck and build, each workspace's `*.slow.test.*` files, browser and built-page checks, Selah's native gate, the full lint with the judged rules, the format check and the dead exports. Run it by hand, and before a deploy: each workspace's deploy runs its own `test:slow` first.
 

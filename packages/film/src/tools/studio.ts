@@ -132,7 +132,7 @@ interface StudioReadingsService {
  * not kept.
  */
 export class StudioReadings extends Context.Service<StudioReadings, StudioReadingsService>()(
-  '@bible/film/tools/StudioReadings',
+  '@manna/film/tools/StudioReadings',
 ) {
   static readonly layer = Layer.effect(
     StudioReadings,

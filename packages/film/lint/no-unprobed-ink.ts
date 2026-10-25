@@ -10,7 +10,7 @@
 // `ctx.stroke`, `ctx['stroke']`, `ctx.fillText.call(…)`, or destructured
 // (`const { fillText } = ctx`). A namespace import (`Canvas.stroke(ctx)`) is the
 // kit, not a context. The exemption is the kit's `unprobed`
-// (`@bible/film/canvas`), by its binding (`nodes.ts`): imported by name,
+// (`@manna/film/canvas`), by its binding (`nodes.ts`): imported by name,
 // under an alias, or read off the kit imported whole. A local function, or
 // another module's export, that happens to be called `unprobed` exempts
 // nothing.

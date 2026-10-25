@@ -30,9 +30,9 @@ import {
   shotPath,
   verse,
   write,
-} from '@bible/film/canvas';
-import { lerp } from '@bible/film/core';
-import { EASE, type Expression, type Pt, acted, reachAbout } from '@bible/film/style';
+} from '@manna/film/canvas';
+import { lerp } from '@manna/film/core';
+import { EASE, type Expression, type Pt, acted, reachAbout } from '@manna/film/style';
 import { CARD_STYLE, VERSE_STYLE } from '../card.ts';
 import { LIGHT } from '../light.ts';
 import {

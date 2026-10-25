@@ -20,7 +20,7 @@
  *   which goes once the hymn passes.
  */
 
-import { encodePng, loudness, sheetOf } from '@bible/film/measure';
+import { encodePng, loudness, sheetOf } from '@manna/film/measure';
 import { Effect, FileSystem, Path, Schema } from 'effect';
 import * as Midi from '../../src/midi.js';
 import { recordingKey } from '../../src/recordings.js';

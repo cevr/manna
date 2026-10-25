@@ -1,5 +1,5 @@
 {
-  "name": "@bible/firsttheblade",
+  "name": "@manna/firsttheblade",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -20,7 +20,7 @@
     "kit:approve": "bun kit/approve.ts",
     "kit:shippable": "bun kit/shippable.ts",
     "plan": "alchemy plan alchemy.run.ts --stage prod",
-    "deploy": "bun scripts/prod-state.ts && turbo run test:slow --filter=@bible/firsttheblade && alchemy deploy alchemy.run.ts --stage prod",
+    "deploy": "bun scripts/prod-state.ts && turbo run test:slow --filter=@manna/firsttheblade && alchemy deploy alchemy.run.ts --stage prod",
     "mail:send": "bun scripts/mail-send.ts",
     "verify:launch": "bun --no-env-file scripts/verify/cli.ts launch",
     "verify:stop": "bun --no-env-file scripts/verify/cli.ts stop",

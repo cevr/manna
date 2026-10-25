@@ -89,7 +89,7 @@ interface SceneSourcesService {
 const SITES_KEPT = 8;
 
 export class SceneSources extends Context.Service<SceneSources, SceneSourcesService>()(
-  '@bible/film/tools/SceneSources',
+  '@manna/film/tools/SceneSources',
 ) {
   /** The service over a way to locate a film's scenes: each scene's site, and what of it is writable. */
   static readonly over = Effect.fn('SceneSources.over')(function* (

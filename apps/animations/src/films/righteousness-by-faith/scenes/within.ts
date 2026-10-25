@@ -41,9 +41,9 @@ import {
   unprobed,
   verse,
   write,
-} from '@bible/film/canvas';
-import { type Key, clamp, lerp } from '@bible/film/core';
-import { EASE, type Expression, type Pt, acted, boilTime } from '@bible/film/style';
+} from '@manna/film/canvas';
+import { type Key, clamp, lerp } from '@manna/film/core';
+import { EASE, type Expression, type Pt, acted, boilTime } from '@manna/film/style';
 import { CARD_STYLE, VERSE_STYLE } from '../card.ts';
 import { LANDING_RIGS, living } from '../court-cast.ts';
 import { contact } from '../court-set.ts';

@@ -208,7 +208,7 @@ const failed = (op: string) => (error: Schema.SchemaError | PlatformError) =>
   ElevenLabsFailed.make({ op, exitCode: -1, reason: error.message });
 
 export class ElevenLabs extends Context.Service<ElevenLabs, ElevenLabsService>()(
-  '@bible/film/tools/ElevenLabs',
+  '@manna/film/tools/ElevenLabs',
 ) {
   /** Through the `elevenlabs` CLI. */
   static readonly layer = Layer.effect(

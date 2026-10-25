@@ -25,8 +25,8 @@ import {
   rounded,
   knobCamera,
   sky,
-} from '@bible/film/canvas';
-import { clamp, lerp, rng } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { clamp, lerp, rng } from '@manna/film/core';
 import {
   type GestureAt,
   type Hands,

@@ -247,7 +247,7 @@ const hearing = Effect.map(Ref.make(Option.none<Heard>()), (slot) => {
 /** A host whose compares play on `<video>`: a server render's, a test's, a page with no panes. */
 const NO_PANES = () => Effect.succeed(onVideo('this page has no WebCodecs panes'));
 
-export class Media extends Context.Service<Media, MediaOps>()('@bible/film/browser/Media') {
+export class Media extends Context.Service<Media, MediaOps>()('@manna/film/browser/Media') {
   /**
    * The host's media, its audio made by `audio` (live an `Audio` element, a
    * fake in a test), its compares chosen by `compare` (live the review

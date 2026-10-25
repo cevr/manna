@@ -23,8 +23,8 @@ import {
   ground,
   knobCamera,
   rounded,
-} from '@bible/film/canvas';
-import { type Key, lerp, rng } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { type Key, lerp, rng } from '@manna/film/core';
 import { C, person, piece } from '../../kit.ts';
 import {
   type Stamp,

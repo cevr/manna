@@ -2,7 +2,7 @@
 // the PreviewServer's `/?film=<name>&export`): the film with no chrome, for the
 // renderer and the easel, over this app's pages (its films and their shorts).
 
-import { mountRender } from '@bible/film/render';
+import { mountRender } from '@manna/film/render';
 import { pages } from './films/index.ts';
 
 mountRender(pages);

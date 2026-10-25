@@ -369,7 +369,7 @@ const disk = await Effect.runPromise(
         }),
       packages: new Map(
         Object.entries(exports).map(([entry, file]) => [
-          `@bible/film${entry.slice(1)}`,
+          `@manna/film${entry.slice(1)}`,
           path.resolve(film, file),
         ]),
       ),

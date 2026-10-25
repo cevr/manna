@@ -11,9 +11,9 @@
 // fields, the grain standing full and gold in the ear. No words are drawn
 // (CRAFT rule 1).
 
-import { type Box, at, drawing, knobCamera, multiplane, shotPath } from '@bible/film/canvas';
-import { lerp } from '@bible/film/core';
-import { EASE, type Expression, type Pt, acted, boilTime } from '@bible/film/style';
+import { type Box, at, drawing, knobCamera, multiplane, shotPath } from '@manna/film/canvas';
+import { lerp } from '@manna/film/core';
+import { EASE, type Expression, type Pt, acted, boilTime } from '@manna/film/style';
 import { LANDING_RIGS, courtFigures, courtShadows, living, restPose } from '../court-cast.ts';
 import { BENCH_BEAM, REST_POINT, backWall, benchWarm, floor } from '../court-set.ts';
 import { FIELD_REST, farField, nearField, nearPlants, rain as rainFlecks } from '../fields.ts';

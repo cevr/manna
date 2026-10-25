@@ -8,8 +8,8 @@
 // his head ("righteous"). The camera breathes as a dolly in the hall, never
 // as a zoom on the print, so the lines stay on the forms.
 
-import { glCanvas, camera as shot, UNMOVED } from '@bible/film/canvas';
-import { type Key, clamp, lerp } from '@bible/film/core';
+import { glCanvas, camera as shot, UNMOVED } from '@manna/film/canvas';
+import { type Key, clamp, lerp } from '@manna/film/core';
 import {
   DepthTexture,
   MeshBasicMaterial,

@@ -30,9 +30,9 @@
     "syllable": "5.0.1"
   },
   "devDependencies": {
-    "@bible/film": "workspace:*",
     "@effect/platform-bun": "catalog:",
     "@manna/core": "workspace:*",
+    "@manna/film": "workspace:*",
     "effect-bun-test": "catalog:",
     "node-av": "6.1.1"
   }

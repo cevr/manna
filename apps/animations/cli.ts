@@ -4,7 +4,7 @@
 // (`bun cli.ts --help`). A server starts with its command and stops when it
 // ends, fails or is interrupted.
 
-import { PreviewServer, runFilmCli } from '@bible/film/tools';
+import { PreviewServer, runFilmCli } from '@manna/film/tools';
 import { Config, Effect, Layer, Path } from 'effect';
 import { checkoutRootsOf } from './checkouts.ts';
 import { CRITIQUE_RULES, JUDGE_RULES } from './rules.ts';

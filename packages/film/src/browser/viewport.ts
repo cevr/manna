@@ -42,7 +42,7 @@ const phoneMatches = (query: string): boolean =>
   });
 
 export class Viewport extends Context.Service<Viewport, ViewportOps>()(
-  '@bible/film/browser/Viewport',
+  '@manna/film/browser/Viewport',
 ) {
   /** What a server render answers for `query`: a client's hydration shows the same first. */
   static readonly served = phoneMatches;

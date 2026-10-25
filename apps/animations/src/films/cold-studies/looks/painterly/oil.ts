@@ -20,7 +20,7 @@
 // function of the painted frame and T. Where no WebGL 2 canvas can be made
 // (`check --draw`'s stand-in) the frame stays as the brush left it.
 
-import { glCanvas } from '@bible/film/canvas';
+import { glCanvas } from '@manna/film/canvas';
 import { P } from './palette.ts';
 
 /** How strongly a frame is painted over. */

@@ -442,7 +442,7 @@ const answerIn = (stdout: string): Option.Option<FreshLine> =>
 const tailOf = (done: Finished) => done.stderr.trim().split('\n').slice(-3).join(' | ');
 
 export class FreshFilm extends Context.Service<FreshFilm, FreshFilmService>()(
-  '@bible/film/tools/FreshFilm',
+  '@manna/film/tools/FreshFilm',
 ) {
   /** Each read run as `command` (the film CLI, e.g. `['bun', '/app/cli.ts']`) with its arguments. */
   static readonly layer = (command: ReadonlyArray<string>) =>

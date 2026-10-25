@@ -6,7 +6,7 @@
 // (`film chapters`) and the lights (`light.ts`) all read these acts. Imports
 // nothing that touches the DOM, so the scenes can light themselves from it.
 
-import type { Look } from '@bible/film/core';
+import type { Look } from '@manna/film/core';
 import { GROUND, type Ground } from './palette.ts';
 
 /**

@@ -1,5 +1,5 @@
 {
-  "name": "@bible/scripts",
+  "name": "@manna/scripts",
   "version": "1.0.0",
   "description": "",
   "keywords": [],
@@ -18,10 +18,10 @@
     "judged:quality": "bun --no-env-file src/judged/quality-run.ts"
   },
   "dependencies": {
-    "@bible/film": "workspace:*",
     "@effect/ai-typesafe": "catalog:",
     "@effect/platform-bun": "catalog:",
     "@manna/core": "workspace:*",
+    "@manna/film": "workspace:*",
     "effect": "catalog:",
     "minimatch": "10.2.5",
     "oxc-parser": "0.153.0",

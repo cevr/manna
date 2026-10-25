@@ -24,7 +24,7 @@ import type { LabLinks } from '../core/lab-events.ts';
 
 /** The lab's own links, where every link a command answers points: on this machine, and from the owner's phone. */
 export class LabAddress extends Context.Service<LabAddress, LabLinks>()(
-  '@bible/film/tools/LabAddress',
+  '@manna/film/tools/LabAddress',
 ) {}
 
 /** A command's input that does not read as its parameters, in the schema's words (as a toolkit says it). */

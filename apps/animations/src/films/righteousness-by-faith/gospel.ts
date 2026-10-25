@@ -27,8 +27,8 @@ import {
   mix,
   rounded,
   sky,
-} from '@bible/film/canvas';
-import { clamp, lerp, staggered } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { clamp, lerp, staggered } from '@manna/film/core';
 import {
   type GestureAt,
   C,

@@ -218,7 +218,7 @@ the listening pilot. The code is `scripts/render/`; its numbers are data in
 - The instruments are fetched into the cache from `instruments.lock.json`
   (made by `--lock` from GitHub's trees at pinned commits): each file by its
   raw URL, size and sha256.
-- The mix levels each stem by the film's meter (`@bible/film/measure`), pans
+- The mix levels each stem by the film's meter (`@manna/film/measure`), pans
   it and sums it. The master runs in-process through NodeAV's FFmpeg: the
   room (the listening pilot's impulse response, `scripts/render/room-C.wav`),
   a compressor, the fade, then −16 LUFS limited at −2 dBFS, LAME 192 kb/s

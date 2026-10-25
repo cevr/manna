@@ -180,7 +180,7 @@ const daemonPreferredSearchLayer: Layer.Layer<SearchService> = Layer.unwrap(
  *  command a fixture corpus without the command taking a layer parameter it
  *  would otherwise never vary. */
 export class SearchLayer extends Context.Reference<Layer.Layer<SearchService>>(
-  '@bible/cli/egw/SearchLayer',
+  '@manna/cli/egw/SearchLayer',
   { defaultValue: () => daemonPreferredSearchLayer },
 ) {}
 

@@ -15,8 +15,8 @@ import {
   rounded,
   stroke,
   sub,
-} from '@bible/film/canvas';
-import { type Key, lerp, rng } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { type Key, lerp, rng } from '@manna/film/core';
 import {
   type Stamp,
   ACCUSED,

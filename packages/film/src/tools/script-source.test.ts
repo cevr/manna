@@ -10,7 +10,7 @@ import {
   sayMissed,
 } from './script-source.ts';
 
-const SCRIPT = `import { defineScript } from '@bible/film/core';
+const SCRIPT = `import { defineScript } from '@manna/film/core';
 
 export const script = defineScript([
   {

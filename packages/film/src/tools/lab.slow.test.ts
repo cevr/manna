@@ -356,7 +356,7 @@ interface DrivenService {
 }
 
 class Driven extends Context.Service<Driven, DrivenService>()(
-  '@bible/film/tools/lab.test/Driven',
+  '@manna/film/tools/lab.test/Driven',
 ) {}
 
 /**
@@ -739,7 +739,7 @@ describe('lab routes', () => {
   );
 
   it.live("a global middleware that needs a service runs on the caller's services", () => {
-    class Label extends Context.Service<Label, string>()('@bible/film/tools/lab.test/Label') {}
+    class Label extends Context.Service<Label, string>()('@manna/film/tools/lab.test/Label') {}
     const labelled = HttpRouter.middleware(
       (served) =>
         Effect.gen(function* () {

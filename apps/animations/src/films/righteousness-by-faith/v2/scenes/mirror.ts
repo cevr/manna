@@ -27,8 +27,8 @@ import {
   knobCamera,
   sky,
   UNMOVED,
-} from '@bible/film/canvas';
-import { clamp, lerp } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { clamp, lerp } from '@manna/film/core';
 import { type GestureAt, C, type Person, handOf, person, piece } from '../../kit.ts';
 import { apron, tree } from '../../garden.ts';
 import { ring, tabletShape, tablets } from '../../law.ts';

@@ -4,7 +4,7 @@
 // its phrase highlighted in the card's own ground. The film declares them
 // (`film.ts`), so the storyboard sets its card and verse panels in them.
 
-import type { CardStyle, VerseStyle } from '@bible/film/canvas';
+import type { CardStyle, VerseStyle } from '@manna/film/canvas';
 import { fonts, palette } from './palette.ts';
 
 /** The card's ground: the highlight's colour too. */

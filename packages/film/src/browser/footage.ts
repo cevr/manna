@@ -64,7 +64,7 @@ const framesOf = (
     onSome: (missing) => Effect.fail(new FootageFrameMissing({ ...missing, why: 'no such frame' })),
   });
 
-export class Footage extends Context.Service<Footage, FootageOps>()('@bible/film/browser/Footage') {
+export class Footage extends Context.Service<Footage, FootageOps>()('@manna/film/browser/Footage') {
   /**
    * Footage from `frameOf`, a picture per read or none: a test's frames, or
    * the draw check's stand-ins. A read it has none for fails as missing.

@@ -12,7 +12,7 @@
 // (`drawFigure`). The owner locked him (ask `a92f276635e`, 2026-10-17, the
 // shoe's sole fixed in passing): `prosecutor.lock.json` holds his print, and
 // only an override citing the owner's decision on him, filed after the lock,
-// frees a change to it (FigureLock, `@bible/film/style`'s `lock.ts`).
+// frees a change to it (FigureLock, `@manna/film/style`'s `lock.ts`).
 //
 // Units are the Board's pixels: in `cold.evidence` he stands 540 tall behind
 // the table. His feet are the artboard's origin.
@@ -38,7 +38,7 @@ import {
   ellipse,
   figure,
   shifted,
-} from '@bible/film/style';
+} from '@manna/film/style';
 import PROSECUTOR_LOCK from './prosecutor.lock.json' with { type: 'json' };
 import { PAPERS } from './papers.ts';
 import { PROSECUTOR_HAIR, PROSECUTOR_HEAD } from './traced.ts';

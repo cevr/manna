@@ -316,7 +316,7 @@ const trackOf = Effect.fn('trackOf')(function* (film: FilmName) {
 });
 
 export class Choices extends Context.Service<Choices, ChoicesService>()(
-  '@bible/film/tools/Choices',
+  '@manna/film/tools/Choices',
 ) {
   static readonly layer: Layer.Layer<Choices, never, ChoicesNeeds> = Layer.effect(
     Choices,

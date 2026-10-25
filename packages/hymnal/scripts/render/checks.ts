@@ -4,7 +4,7 @@
  * record keeps each one's value beside its limit. Pure.
  */
 
-import { momentaryBlocks, type Pcm } from '@bible/film/measure';
+import { momentaryBlocks, type Pcm } from '@manna/film/measure';
 
 export const LIMITS = {
   /** The decoded length is the MIDI's plus the tail within this, in seconds. */

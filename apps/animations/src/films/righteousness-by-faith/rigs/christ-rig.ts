@@ -39,7 +39,7 @@ import {
   figure,
   roundedPolygon,
   tracedKit,
-} from '@bible/film/style';
+} from '@manna/film/style';
 import {
   FRONT_BEARD,
   FRONT_BEARD_LIT,

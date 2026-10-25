@@ -7,8 +7,8 @@
 // brush drawn along it word by word; the wash is the card's colour, so the
 // card floods out of it.
 
-import { type Box, type TextStyle, measure, write } from '@bible/film/canvas';
-import { lerp, rng } from '@bible/film/core';
+import { type Box, type TextStyle, measure, write } from '@manna/film/canvas';
+import { lerp, rng } from '@manna/film/core';
 import { VERSE } from '../../look.ts';
 import type { JobFrame } from '../../scenes/job.ts';
 import { GOLD_WASH, INK, paper } from './print.ts';

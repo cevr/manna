@@ -2,7 +2,7 @@
 // this app's pages (its films and their shorts). The render page
 // (`main.ts`) never loads it.
 
-import { mountFilmStudio } from '@bible/film/play';
+import { mountFilmStudio } from '@manna/film/play';
 import { pages } from './films/index.ts';
 
 mountFilmStudio(pages);

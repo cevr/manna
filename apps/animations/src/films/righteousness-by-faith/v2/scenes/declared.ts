@@ -32,8 +32,8 @@ import {
   mix,
   sky,
   UNMOVED,
-} from '@bible/film/canvas';
-import { type Key, clamp, ease, lerp, staggered } from '@bible/film/core';
+} from '@manna/film/canvas';
+import { type Key, clamp, ease, lerp, staggered } from '@manna/film/core';
 import {
   type Hands,
   type Person,

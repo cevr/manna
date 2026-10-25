@@ -1,6 +1,6 @@
 // The lab's watch on the workspace's package exports. The lab rebuilds its
 // pages when a source changes, but the bundler resolves a package's
-// subpaths (`@bible/film/style`) by the `exports` map the process read at
+// subpaths (`@manna/film/style`) by the `exports` map the process read at
 // start: one a merge adds while the lab runs would fail every page ("Could
 // not resolve"). So the lab reads each workspace `package.json`'s `exports`
 // map as it starts, and again every few seconds, and when one changes it ends
@@ -194,7 +194,7 @@ interface RelaunchService {
 
 /** The lab started again in its own process (`relaunch-bun.ts` makes it). */
 export class Relaunch extends Context.Service<Relaunch, RelaunchService>()(
-  '@bible/film/tools/Relaunch',
+  '@manna/film/tools/Relaunch',
 ) {}
 
 /** Whether a failure is the exports watch ending the lab. */

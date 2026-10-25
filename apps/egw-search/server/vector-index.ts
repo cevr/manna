@@ -66,7 +66,7 @@ const searchOver = (index: LoadedVectorIndex) =>
 export class VectorIndexLoad extends Context.Service<
   VectorIndexLoad,
   { readonly readiness: Effect.Effect<VectorReadiness> }
->()('@bible/egw-search/VectorIndexLoad') {}
+>()('@manna/egw-search/VectorIndexLoad') {}
 
 /**
  * Serve search at once, and read the index in the background.

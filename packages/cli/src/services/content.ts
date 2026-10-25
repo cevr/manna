@@ -62,7 +62,7 @@ export class ContentService extends Context.Service<
       filePaths: readonly string[],
     ) => Effect.Effect<void, ContentDeleteError, AppleScript>;
   }
->()('@bible/cli/services/content/ContentService') {
+>()('@manna/cli/services/content/ContentService') {
   static make = <F extends Schema.Top>(config: ContentTypeConfig<F>) =>
     Layer.effect(
       ContentService,

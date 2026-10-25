@@ -72,7 +72,7 @@ export class Renderer extends Context.Service<
       job: Dirs & { readonly transpose: number },
     ) => Effect.Effect<Rendered, StreamFailed>;
   }
->()('@bible/hymnal-app/infra/audio/Renderer') {}
+>()('@manna/hymnal-app/infra/audio/Renderer') {}
 
 /** A key set's folders under the render cache, as `render.ts` names them. */
 export const setDirs = (cache: string, set: string): Dirs => ({

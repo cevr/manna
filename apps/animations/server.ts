@@ -4,7 +4,7 @@
 // (`LAB_PAGES`). The lab's own server is the framework's (`labServer`):
 // `bun run lab`.
 
-import { CACHE, type FootageRoot, footageHandler, narrationFile } from '@bible/film/tools';
+import { CACHE, type FootageRoot, footageHandler, narrationFile } from '@manna/film/tools';
 import { BunServices } from '@effect/platform-bun';
 import { Effect, Option } from 'effect';
 import { join } from 'node:path';

@@ -74,7 +74,7 @@ function toAISchema<A>(schema: Schema.Decoder<A>) {
   });
 }
 
-export class AI extends Context.Service<AI, AIService>()('@bible/cli/services/ai') {
+export class AI extends Context.Service<AI, AIService>()('@manna/cli/services/ai') {
   /**
    * Create AI layer from models, deferring to existing AI if present.
    * This allows tests to provide mock AI that takes precedence.

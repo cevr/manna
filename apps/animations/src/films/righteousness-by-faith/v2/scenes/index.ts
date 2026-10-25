@@ -7,7 +7,7 @@
 // is lit by its act's light (`light.ts`, the colour script). Imports nothing that touches the DOM
 // at module load: the narrate script reads this to lay out the audio track.
 
-import { type SceneSpec, scenesOf } from '@bible/film/canvas';
+import { type SceneSpec, scenesOf } from '@manna/film/canvas';
 import { lightOf } from '../light.ts';
 import { fonts } from '../../palette.ts';
 import { script } from '../script.ts';

@@ -12,7 +12,7 @@
 // placed by no film until the owner chooses it in an ask (`sfx audit`,
 // `sfx render --trial --sheet`, `sfx compare`, `sfx ab`: the loop in the
 // film skill's reference/sound.md). A trial is layered from the families
-// `@bible/film/core` exports (a burst, a thump, a knock, a whoosh, …), each a
+// `@manna/film/core` exports (a burst, a thump, a knock, a whoosh, …), each a
 // shape with a few settings, so a shape is tuned in one place. A recorded
 // sound is CC0 or CC BY, under `public/` (`sfx import`), its licence naming
 // its title, author and page: a CC BY one owes a credit line on the roll of
@@ -52,7 +52,7 @@ import {
   sizzle,
   thump,
   whoosh,
-} from '@bible/film/core';
+} from '@manna/film/core';
 import dawnFit from './fits/amb.dawn.json' with { type: 'json' };
 import hallFit from './fits/amb.hall.json' with { type: 'json' };
 import houseFit from './fits/amb.house.json' with { type: 'json' };

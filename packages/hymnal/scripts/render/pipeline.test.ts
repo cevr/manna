@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 
-import { loudness, type Pcm } from '@bible/film/measure';
+import { loudness, type Pcm } from '@manna/film/measure';
 import { Effect, Option, Schema } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 

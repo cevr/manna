@@ -189,7 +189,7 @@ const claudeProgram = Effect.gen(function* () {
 });
 
 export class Counsel extends Context.Service<Counsel, CounselService>()(
-  '@bible/film/tools/Counsel',
+  '@manna/film/tools/Counsel',
 ) {
   /**
    * The counsel `run` (its folders given) in the sandbox

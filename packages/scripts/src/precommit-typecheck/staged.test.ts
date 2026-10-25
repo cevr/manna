@@ -8,8 +8,8 @@ import { TEST_GIT } from '../testing.js';
 import { STAGED_FILES, typecheckedBy } from './workspaces.js';
 
 const workspaces = [
-  { dir: 'packages/a', name: '@bible/a' },
-  { dir: 'packages/b', name: '@bible/b' },
+  { dir: 'packages/a', name: '@manna/a' },
+  { dir: 'packages/b', name: '@manna/b' },
 ];
 
 describe("a commit's staged files", () => {
@@ -40,7 +40,7 @@ describe("a commit's staged files", () => {
         yield* git(['mv', 'packages/a/src/moved.ts', 'packages/b/src/moved.ts']);
         const staged = (yield* git(STAGED_FILES)).split('\n').filter((line) => line.length > 0);
         expect(staged.toSorted()).toEqual(['packages/a/src/moved.ts', 'packages/b/src/moved.ts']);
-        expect(typecheckedBy(staged, workspaces)).toEqual(['@bible/a', '@bible/b']);
+        expect(typecheckedBy(staged, workspaces)).toEqual(['@manna/a', '@manna/b']);
       }).pipe(Effect.scoped),
   );
 });

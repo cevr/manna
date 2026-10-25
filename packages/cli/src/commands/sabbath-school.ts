@@ -29,18 +29,18 @@ const JsonString = Schema.Unknown.pipe(
 );
 const encodeJson = Schema.encodeUnknownEffect(JsonString);
 
-class DownloadError extends Data.TaggedError('@bible/cli/commands/sabbath-school/DownloadError')<{
+class DownloadError extends Data.TaggedError('@manna/cli/commands/sabbath-school/DownloadError')<{
   week: number;
   cause: unknown;
 }> {}
 
-class CheerioError extends Data.TaggedError('@bible/cli/commands/sabbath-school/CheerioError')<{
+class CheerioError extends Data.TaggedError('@manna/cli/commands/sabbath-school/CheerioError')<{
   week: number;
   cause: unknown;
 }> {}
 
 class MissingPdfError extends Data.TaggedError(
-  '@bible/cli/commands/sabbath-school/MissingPdfError',
+  '@manna/cli/commands/sabbath-school/MissingPdfError',
 )<{
   quarter: number;
 }> {}

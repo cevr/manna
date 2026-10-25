@@ -1,8 +1,8 @@
 // Build RBF's figures file (`FIGURES`, `figures.ts`) into `figures.riv`
 // beside this file, where `rigs.ts` imports it, with the stamp of what it was
 // built from (`figures.stamp.json`): the project the house prints from the
-// file (`figuresRml`, `@bible/film/style`), generated (`project/`) and
-// compiled by the house's `compile` (`@bible/film/style/build`: the Rive CLI,
+// file (`figuresRml`, `@manna/film/style`), generated (`project/`) and
+// compiled by the house's `compile` (`@manna/film/style/build`: the Rive CLI,
 // offline and unsigned). It builds nothing while an override on a figure
 // cites a word that is not the owner's on that figure (`unsaid`): a decision
 // on RBF's ledger (`LEDGER`) filed at the point `item:<item>`, after the lock
@@ -21,8 +21,8 @@
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Console, Effect, FileSystem, Schema } from 'effect';
-import { citedBy, figureOverrides, figuresRml, lockedPrints } from '@bible/film/style';
-import { compile, unbuilt, unlocked, unsaid } from '@bible/film/style/build';
+import { citedBy, figureOverrides, figuresRml, lockedPrints } from '@manna/film/style';
+import { compile, unbuilt, unlocked, unsaid } from '@manna/film/style/build';
 import { ARTBOARDS, FIGURES } from './figures.ts';
 
 const here = import.meta.dir;

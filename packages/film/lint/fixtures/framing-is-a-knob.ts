@@ -1,8 +1,8 @@
 // Fixture for film/framing-is-a-knob: each line marked RED fires the rule, and
 // nothing else does.
-import { type Camera, drawing, knobCamera, pushOn, shotPath } from '@bible/film/canvas';
-import * as Core from '@bible/film/core';
-import { lerp, lerp as mix } from '@bible/film/core';
+import { type Camera, drawing, knobCamera, pushOn, shotPath } from '@manna/film/canvas';
+import * as Core from '@manna/film/core';
+import { lerp, lerp as mix } from '@manna/film/core';
 
 /** The unmoved frame. */
 const REST: Camera = { x: 960, y: 540, zoom: 1 };

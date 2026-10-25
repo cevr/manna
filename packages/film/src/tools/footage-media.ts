@@ -34,7 +34,7 @@ interface FootageMediaService {
 }
 
 export class FootageMedia extends Context.Service<FootageMedia, FootageMediaService>()(
-  '@bible/film/tools/FootageMedia',
+  '@manna/film/tools/FootageMedia',
 ) {
   /** Over the media service's coders, and the files on disk, its module loaded when the layer is built. */
   static readonly layer = Layer.unwrap(

@@ -124,7 +124,7 @@ interface BoardStoreService {
 }
 
 export class BoardStore extends Context.Service<BoardStore, BoardStoreService>()(
-  '@bible/film/tools/BoardStore',
+  '@manna/film/tools/BoardStore',
 ) {
   static readonly layer = Layer.effect(
     BoardStore,
