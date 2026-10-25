@@ -13,7 +13,7 @@ import { BoardUnreadable } from '../core/errors.ts';
 import type { BoardImage } from '../canvas/board.ts';
 
 /** A film's Board as the page draws it: the record, and each shown try's image by its file. */
-export interface LoadedBoard {
+interface LoadedBoard {
   readonly board: BoardFile;
   readonly images: ReadonlyMap<string, BoardImage>;
 }

@@ -47,7 +47,7 @@ export const boardUrls = (id: string) => ({
 });
 
 /** Placed beats as the animatic times them: marks said at the speech's start plus the take's (or the estimate's) offset. */
-export const placedBeats = (placed: ReadonlyArray<Placed>): ReadonlyArray<TimedBeat> =>
+const placedBeats = (placed: ReadonlyArray<Placed>): ReadonlyArray<TimedBeat> =>
   placed.map((p) => ({
     id: p.spec.id,
     start: p.start,
@@ -60,7 +60,7 @@ export const placedBeats = (placed: ReadonlyArray<Placed>): ReadonlyArray<TimedB
   }));
 
 /** How a shot moves across its hold. */
-export type Motion = Data.TaggedEnum<{
+type Motion = Data.TaggedEnum<{
   /** A card: no motion. */
   Still: {};
   /** A slow push in, from the frame to `PUSH` larger. */
@@ -68,14 +68,14 @@ export type Motion = Data.TaggedEnum<{
   /** A gentle pan, `PAN` of the frame's width, rightward (`dir` 1) or leftward (-1). */
   Pan: { readonly dir: 1 | -1 };
 }>;
-export const Motion = Data.taggedEnum<Motion>();
+const Motion = Data.taggedEnum<Motion>();
 
 /** How much larger a push in ends than it starts. */
-export const PUSH = 0.06;
+const PUSH = 0.06;
 /** How far a pan travels, as a share of the frame's width. */
-export const PAN = 0.04;
+const PAN = 0.04;
 /** How long a dissolve between two shots takes, centred on their cut (less for a short hold). */
-export const DISSOLVE_S = 0.5;
+const DISSOLVE_S = 0.5;
 
 /** `id`'s FNV-1a hash: the same id, the same number, on every render. */
 const hashOf = (id: string): number =>
@@ -89,7 +89,7 @@ const MOVES: ReadonlyArray<Motion> = [
 ];
 
 /** How `shot` moves: a picture panel by its id's hash, a card (a text panel, a beat with no panel) not at all. */
-export const motionOf = (shot: Shot): Motion =>
+const motionOf = (shot: Shot): Motion =>
   Shot.$match(shot, {
     Unboarded: () => Motion.Still(),
     Boarded: ({ panel }) =>
@@ -107,7 +107,7 @@ export interface Framing {
 }
 
 /** `motion`'s framing `p` (0 to 1) through its hold. A pan holds `PAN` larger so its travel never shows an edge. */
-export const framingAt = (motion: Motion, p: number): Framing => {
+const framingAt = (motion: Motion, p: number): Framing => {
   const k = Math.max(0, Math.min(1, p));
   return Motion.$match(motion, {
     Still: () => ({ scale: 1, dx: 0 }),
@@ -116,15 +116,16 @@ export const framingAt = (motion: Motion, p: number): Framing => {
   });
 };
 
-/** One shot as a frame draws it: how opaque, framed how. */
+/** One shot as a frame draws it: how opaque, how it moves and where that has it now. */
 export interface Layer {
   readonly shot: Shot;
   readonly alpha: number;
+  readonly motion: Motion;
   readonly framing: Framing;
 }
 
 /** A Board render's frame: the shot held there (`shown`), and its layers bottom first (two inside a dissolve). */
-export interface BoardFrame {
+interface BoardFrame {
   readonly shown: Shot;
   readonly layers: ReadonlyArray<Layer>;
 }
@@ -162,7 +163,8 @@ const layerOf = (
         onTrue: () => (T - seen) / (gone - seen),
         onFalse: () => 0,
       });
-      return [{ shot, alpha, framing: framingAt(motionOf(shot), p) }];
+      const motion = motionOf(shot);
+      return [{ shot, alpha, motion, framing: framingAt(motion, p) }];
     },
   });
 
@@ -211,7 +213,7 @@ export const boardShots = (placed: ReadonlyArray<Placed>, board: BoardFile): Rea
   shotsOf(placedBeats(placed), board);
 
 /** Film seconds as the burn-in says them: `m:ss.f`, the tenth cut down, never rounded up into the next second. */
-export const tenths = (T: number): string => {
+const tenths = (T: number): string => {
   const t = frameAtOrBefore(Math.max(0, T), 10);
   const m = Math.floor(t / 600);
   const s = (t % 600) / 10;

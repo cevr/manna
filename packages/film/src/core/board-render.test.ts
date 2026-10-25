@@ -4,24 +4,22 @@
 // query read back as the picture it asked for.
 
 import { describe, expect, test } from 'bun:test';
-import { Option } from 'effect';
+import { Match, Option } from 'effect';
 import { type BoardFile, BoardName, type Panel, emptyBoard } from './board.ts';
 import { Segment } from './segment.ts';
 import { Shot, type TimedBeat, shotsOf } from './animatic.ts';
 import {
-  DISSOLVE_S,
-  Motion,
-  PAN,
-  PUSH,
+  type Framing,
+  type Layer,
   Picture,
   boardFrameAt,
   burnIn,
-  framingAt,
-  motionOf,
   pictureOn,
   pictureParams,
-  tenths,
 } from './board-render.ts';
+
+/** The dissolve's length at a cut with long holds on both sides. */
+const DISSOLVE_S = 0.5;
 
 const marks = (start: number, at: Record<string, number>) => (name: string) =>
   Option.map(Option.fromUndefinedOr(at[name]), (t) => start + t);
@@ -57,6 +55,36 @@ const DURATION = 20;
 
 const frameAt = (T: number) => Option.getOrThrow(boardFrameAt(shots, DURATION, T));
 
+/** How long a panel shown alone holds. */
+const HOLD = 10;
+
+/** Panel `p` held alone from `from`, as the frame `T` seconds in draws it. */
+const alone = (p: Panel, from: number, T: number): Layer =>
+  Option.getOrThrow(
+    boardFrameAt([Shot.Boarded({ beat: p.beat, panel: p, at: from, from })], from + HOLD, from + T),
+  ).layers[0]!;
+
+/** Forty picture panels by id. */
+const ids = Array.from({ length: 40 }, (_, k) => panel('b', `m${k}`, 1));
+
+/** Where a motion starts and ends, as the spec sets them: a push 6 % larger, a pan 4 % of the width, held 4 % larger. */
+const startOf = (m: Layer['motion']): Framing =>
+  Match.valueTags(m, {
+    Still: () => ({ scale: 1, dx: 0 }),
+    PushIn: () => ({ scale: 1, dx: 0 }),
+    Pan: ({ dir }) => ({ scale: 1.04, dx: -dir * 0.02 }),
+  });
+const endOf = (m: Layer['motion']): Framing =>
+  Match.valueTags(m, {
+    Still: () => ({ scale: 1, dx: 0 }),
+    PushIn: () => ({ scale: 1.06, dx: 0 }),
+    Pan: ({ dir }) => ({ scale: 1.04, dx: dir * 0.02 }),
+  });
+const close = (got: Framing, want: Framing) => {
+  expect(got.scale).toBeCloseTo(want.scale, 6);
+  expect(got.dx).toBeCloseTo(want.dx, 6);
+};
+
 /** The panel id a layer shows, or `card` for a beat's storyboard card. */
 const named = (shot: Shot) =>
   Shot.$match(shot, { Boarded: ({ panel: p }) => p.id, Unboarded: ({ beat }) => `${beat} card` });
@@ -75,37 +103,31 @@ describe('the frame at a film second', () => {
   });
 
   test('moves a picture panel by its id alone, and holds a card still', () => {
-    const held = (p: Panel, from: number) =>
-      Shot.Boarded({ beat: p.beat, panel: p, at: from, from });
     const p = panel('cold', 'room', 3);
-    expect(motionOf(held(p, 4))).toEqual(motionOf(held(p, 99)));
-    expect(motionOf(Shot.Unboarded({ beat: 'title', from: 10 }))).toEqual(Motion.Still());
+    expect(alone(p, 4, 4).motion).toEqual(alone(p, 99, 99).motion);
     const card: Panel = { ...p, text: { _tag: 'Card', payoff: 'milk' } };
-    expect(motionOf(held(card, 4))).toEqual(Motion.Still());
+    expect(alone(card, 0, 5).motion).toMatchObject({ _tag: 'Still' });
+    expect(frameAt(12).layers[0]!.motion).toMatchObject({ _tag: 'Still' });
     // Across many ids, each motion is picked: a push in and both pans.
-    const move = (m: Motion) =>
-      Motion.$match(m, {
-        Still: () => 'still',
-        PushIn: () => 'push',
-        Pan: ({ dir }) => `pan ${dir}`,
-      });
     const picked = new Set(
-      Array.from({ length: 40 }, (_, k) => move(motionOf(held(panel('b', `m${k}`, 1), 0)))),
+      ids.map((p) =>
+        Match.valueTags(alone(p, 0, 0).motion, {
+          Still: () => 'still',
+          PushIn: () => 'push',
+          Pan: ({ dir }) => `pan ${dir}`,
+        }),
+      ),
     );
     expect(picked).toEqual(new Set(['push', 'pan 1', 'pan -1']));
   });
 
-  test('moves at most the push or the pan over the hold, and never past it', () => {
-    expect(framingAt(Motion.PushIn(), 0)).toEqual({ scale: 1, dx: 0 });
-    expect(framingAt(Motion.PushIn(), 1).scale).toBeCloseTo(1 + PUSH, 9);
-    expect(framingAt(Motion.PushIn(), 2).scale).toBeCloseTo(1 + PUSH, 9);
-    expect(
-      framingAt(Motion.Pan({ dir: 1 }), 1).dx - framingAt(Motion.Pan({ dir: 1 }), 0).dx,
-    ).toBeCloseTo(PAN, 9);
-    expect(framingAt(Motion.Pan({ dir: -1 }), 0).dx).toBeCloseTo(PAN / 2, 9);
-    expect(framingAt(Motion.Still(), 0.5)).toEqual({ scale: 1, dx: 0 });
-    expect(PUSH).toBeLessThanOrEqual(0.06);
-    expect(PAN).toBeLessThanOrEqual(0.04);
+  test('moves at most 6 % larger or 4 % of the width over the span seen, and never past it', () => {
+    for (const p of ids) {
+      const motion = alone(p, 0, 0).motion;
+      close(alone(p, 0, 0).framing, startOf(motion));
+      close(alone(p, 0, HOLD).framing, endOf(motion));
+      close(alone(p, 0, HOLD * 3).framing, endOf(motion));
+    }
   });
 });
 
@@ -155,12 +177,8 @@ describe('the dissolve at a cut', () => {
     const half = DISSOLVE_S / 2;
     const out = frameAt(4 + half - 1e-9).layers[0]!;
     const inn = frameAt(4 - half + 1e-9).layers[1]!;
-    const close = (got: { scale: number; dx: number }, want: { scale: number; dx: number }) => {
-      expect(got.scale).toBeCloseTo(want.scale, 6);
-      expect(got.dx).toBeCloseTo(want.dx, 6);
-    };
-    close(out.framing, framingAt(motionOf(out.shot), 1));
-    close(inn.framing, framingAt(motionOf(inn.shot), 0));
+    close(out.framing, endOf(out.motion));
+    close(inn.framing, startOf(inn.motion));
   });
 });
 
@@ -172,10 +190,11 @@ describe('the burn-in', () => {
   });
 
   test('says minutes and tenths, the tenth cut down', () => {
-    expect(tenths(0)).toBe('0:00.0');
-    expect(tenths(59.99)).toBe('0:59.9');
-    expect(tenths(62.37)).toBe('1:02.3');
-    expect(tenths(600.1)).toBe('10:00.1');
+    const time = (T: number) => burnIn(T, frameAt(2).shown, false).split(' · ')[0];
+    expect(time(0)).toBe('0:00.0');
+    expect(time(59.99)).toBe('0:59.9');
+    expect(time(62.37)).toBe('1:02.3');
+    expect(time(600.1)).toBe('10:00.1');
   });
 });
 
