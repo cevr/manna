@@ -820,7 +820,7 @@ The form of an entry, each field on its own line:
 - **Date:** 2026-10-24
 - **Kind:** review
 - **Said:** "A beardless figure told of its beard can be drawn with one."
-- **Source:** film-beard/brief.md F1 (the coordinator found it in `cast-sheet-brief.ts`)
+- **Source:** film-beard/brief.md, its Defect (the coordinator found it at `cast-sheet-brief.ts:186`)
 - **Wrong:** Every member whose hair shows got the rule that parts the beard from the hair, the series lead (look: "No beard, no moustache and no stubble"), the village children and the feast mother among them.
 - **Cause:** The brief gated the rule on the hair alone; the record named no beard.
 - **Guard:** code: `packages/film/src/tools/cast-sheet-brief.ts` `hairBeard` (said only when the record's `hair` and `beard` both show), `packages/film/src/tools/cast-sheet-brief.test.ts` `is told of only a member whose record has one`

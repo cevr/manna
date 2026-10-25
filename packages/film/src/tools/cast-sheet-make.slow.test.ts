@@ -42,6 +42,7 @@ const record: CastSheetRecord = {
   member: Segment.make('christ'),
   scope: 'library',
   who: 'Him',
+  beard: 'shown',
   refs: [{ file: 'court-12.png', why: 'His kept concept' }],
   sheets: {
     poses: {
