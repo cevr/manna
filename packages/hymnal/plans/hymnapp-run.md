@@ -33,6 +33,7 @@ Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>`
 | chordbar   | chordbulk                      | removed                   | (closed)          | merged 0647d1c1e    |
 | barfix     | chordbar, feel                 |                           |                   |                     |
 | barmisc    | barfix                         |                           |                   |                     |
+| clickrate  | feel, barfix                   |                           |                   |                     |
 | listsearch | feel                           |                           |                   |                     |
 | feel       | chordbar                       | removed                   | (closed)          | merged cfe6d5f87    |
 | chordplace | chordbar, feel                 |                           |                   |                     |
@@ -294,6 +295,8 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 
 - Unit `listsearch` (owner, 2026-10-25, scrawl `scrawl-1792940193873-1060f-58`, the home Hymns list): "when you scroll up, I'd actually want," "I want to see the search bar on the top," "not just here when you're at the top of the page." "So as soon as you scroll up, I'd like the search bar," "because usually that means I'm looking for something else." Any upward scroll of the list brings the search field back on top, pinned over the list, until the reader scrolls down again (the Safari toolbar manner); at the top it sits where it does now. It runs after barfix and before chordplace; `browse-app` keeps it. The search field taps through to the same search. (orchestrator, listsearch)
 - Clicks in silent mode: the owner phone was in silent mode in every frame of the 10:55 look (slashed bell), so the system-sound clicks were muted by design (feel Decided 2 and 4). Owner question below. (feel)
+
+- Unit `clickrate` (owner, 2026-10-25, scrawl `scrawl-1792940279216-1060f-61`, a fast dial fling on bar J): "if you scroll really fast, it it sounds kind of, um, It just sounds scratchy. It doesn't sound right." / "we need to find a way to make it so that fast scrolls doesn't cause the sound to overlap." The invariant: two tick clicks never sound at once, and a fast fling reads as an even ratchet, not noise, while a slow turn still clicks once per detent. Feel keeps a 30 ms floor between ticks (`src/feel/feel.ts` `FLOOR`); a click that lasts longer than the floor still overlaps the next (inferred, not measured). The implementor picks the mechanism (a floor tied to the sound length, thinning by speed, or a shorter tick) and proves it by a unit test over the cue stream; the haptic follows the same rule. It runs after barfix (which changes `DialView.tsx`, where the dial cues fire) and before listsearch. Clicks stay muted in silent mode. (orchestrator, clickrate)
 
 ## Owner questions
 
