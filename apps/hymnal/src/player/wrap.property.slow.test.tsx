@@ -107,10 +107,10 @@ interface Fiber {
 
 /** The `onLayout` the view drawn as `element` was handed: react-native-web keeps it off the DOM. */
 const layoutOf = (element: Element): Option.Option<(event: Laid) => void> => {
+  // React keeps an element's fiber under a key it names at run time.
   const own = Option.fromNullishOr(
     Object.entries(element).find(([name]) => name.startsWith('__reactFiber$')),
-    // oxlint-disable-next-line effect/noAs -- React keeps an element's fiber under a key it names at run time.
-  ).pipe(Option.map(([, fiber]) => fiber as Fiber));
+  ).pipe(Option.map(([, fiber]): Fiber => fiber));
   for (let fiber = own; Option.isSome(fiber); fiber = Option.fromNullishOr(fiber.value.return)) {
     const { stateNode, memoizedProps } = fiber.value;
     if (stateNode instanceof Element && stateNode !== element) return Option.none();
