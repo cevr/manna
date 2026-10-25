@@ -82,10 +82,11 @@ const PanelRead = Schema.Struct({
   tries: Schema.Array(TryRead),
   /** Its beat's board approval: approved as it stands, stale (a pick since), or none. */
   approval: Schema.Literals(['approved', 'stale', 'none']),
-  /** Drawn from what has changed since (its kept try, or every try when none is kept): the members whose cast changed, whether its picture's words did, and what to do. */
+  /** Drawn from what has changed since (its kept try, or every try when none is kept): the members whose sheet changed, those it was drawn before the library sheet of, whether its picture's words changed, and what to do. */
   stale: Schema.optionalKey(
     Schema.Struct({
       members: Schema.Array(Schema.String),
+      added: Schema.Array(Schema.String),
       words: Schema.Boolean,
       why: Schema.String,
     }),
@@ -284,7 +285,7 @@ export const notesReads = Effect.fn('LabMcp.notesReads')(function* () {
           ...Option.match(Option.fromUndefinedOr(stale.get(panel.id)), {
             onNone: () => ({}),
             onSome: (s) => ({
-              stale: { members: s.members, words: s.words, why: staleWhy(film, s) },
+              stale: { members: s.members, added: s.added, words: s.words, why: staleWhy(film, s) },
             }),
           }),
           links: linksOf(boardPath(film, panel.beat, Option.some(panel.at))),

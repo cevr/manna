@@ -351,6 +351,16 @@ The form of an entry, each field on its own line:
 - **Cause:** Only the MCP read caught the script read's failure. `staleInLab` now catches it for both: it logs `board.stale … unread=` and names no panel stale.
 - **Guard:** code: `packages/film/src/tools/board-http.test.ts` `name no panel stale, and answer, when the script cannot be read now`
 
+### board-stale-import-against-the-cast-sent-now
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "an import the owner kept, in a beat that names a library member, is called stale and drawn over (reference-set rule)"
+- **Source:** board-stale-2/review-r2.md F1
+- **Wrong:** An import kept in a beat that names a library member was called stale, and a run drew new tries over the owner's pick. An import records no references, so every file the member sends now looked new to it.
+- **Cause:** The fix for imports covered the words rule only; the reference-set rule still judged every try. One predicate (`drawnByBoard`: `generate`, `tweak`) now gates both rules.
+- **Guard:** code: `packages/film/src/tools/board-stale.test.ts` `in a beat whose member has a kept library sheet is not stale, and a run draws nothing for it`
+
 ## The look
 
 ### floating-circle-hands-no-arms

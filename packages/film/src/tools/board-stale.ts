@@ -9,7 +9,9 @@
 // member's record, whose `replaced` history says which kept sheet was
 // replaced when (`replacedSince`); and a file a run would send now that the
 // try did not carry (a member first kept a sheet since) changed its member's
-// references too. A kept panel is stale when its kept try changed; a panel
+// references too. Words and the files sent are held only against tries the
+// board drew itself (`drawnByBoard`): an imported keep is never stale on
+// them. A kept panel is stale when its kept try changed; a panel
 // with tries and no keep, when none of its generated tries is fresh. A run
 // draws a stale panel again and its keep stays recorded until the owner
 // keeps a new try; the board read and the lab's Board name it.
@@ -32,11 +34,16 @@ import { type BoardBeat, pictureWords } from './board-prompt.ts';
 import { castReference } from './cast-library.ts';
 import { sha256Hex } from './digest.ts';
 
-/** A stale panel: its kept try (none when it keeps none), the members whose references changed, whether its picture's words did. */
+/**
+ * A stale panel: its kept try (none when it keeps none), the members whose
+ * sheet it was drawn from has changed, the members a run sends now whose
+ * library sheet it was drawn before, whether its picture's words changed.
+ */
 interface StalePanel {
   readonly panel: string;
   readonly kept: Option.Option<number>;
   readonly members: ReadonlyArray<string>;
+  readonly added: ReadonlyArray<string>;
   readonly words: boolean;
 }
 
@@ -69,19 +76,27 @@ interface DrawnNow {
 /** How a try differs from what a run would draw it from now. */
 interface Changed {
   readonly members: ReadonlyArray<string>;
+  readonly added: ReadonlyArray<string>;
   readonly words: boolean;
 }
 
-const unchanged = (c: Changed) => c.members.length === 0 && !c.words;
+const unchanged = (c: Changed) => c.members.length === 0 && c.added.length === 0 && !c.words;
+
+/**
+ * Whether the board drew `t` itself (`generate`, `tweak`): only such a try is
+ * held against what a run would send now (its words, its cast's files). An
+ * import was made elsewhere, from a prompt and references of its own, and the
+ * owner picked it as it is.
+ */
+const drawnByBoard = (t: BoardTry): boolean => t.made === 'generate' || t.made === 'tweak';
 
 /**
  * Whether `t`'s words differ from `now`: by its record when it has one, else
  * by its prompt; a try with neither is not judged, nor is one the board did
- * not draw itself (an import keeps the prompt it was made with elsewhere, and
- * the owner picked it as it is). Pure.
+ * not draw itself (`drawnByBoard`). Pure.
  */
 const wordsChanged = (t: BoardTry, now: ReadonlyArray<string>): boolean =>
-  (t.made === 'generate' || t.made === 'tweak') &&
+  drawnByBoard(t) &&
   Option.match(Option.fromUndefinedOr(t.words), {
     onSome: (was) => was.length !== now.length || was.some((w, i) => w !== now[i]),
     onNone: () =>
@@ -127,10 +142,11 @@ const changedIn = (
   });
   const carried = new Set(t.refs);
   const added = (now.cast.get(p.beat) ?? [])
-    .filter((c) => !carried.has(c.file))
+    .filter((c) => drawnByBoard(t) && !carried.has(c.file))
     .map((c) => c.member);
   return {
-    members: Arr.dedupe([...byRecord, ...added]),
+    members: Arr.dedupe(byRecord),
+    added: Arr.dedupe(added),
     words: Option.exists(beat, (b) => wordsChanged(t, pictureWords(b, p.at))),
   };
 };
@@ -250,6 +266,7 @@ export const stalenessOf = Effect.fn('Board.staleness')(function* (
         Option.liftPredicate(
           {
             members: Arr.dedupe(generated.flatMap((c) => c.members)),
+            added: Arr.dedupe(generated.flatMap((c) => c.added)),
             words: generated.some((c) => c.words),
           },
           () => generated.length > 0 && fresh === 0,
@@ -259,24 +276,45 @@ export const stalenessOf = Effect.fn('Board.staleness')(function* (
       Option.filter(changed, (c) => !unchanged(c)),
       {
         onNone: () => [],
-        onSome: (c) => [{ panel: p.id, kept, members: c.members, words: c.words, fresh }],
+        onSome: (c) => [
+          { panel: p.id, kept, members: c.members, added: c.added, words: c.words, fresh },
+        ],
       },
     );
   });
 });
 
-/** What changed under a stale panel, in words: its picture's words, a member's cast sheet, or both. */
-const changedWhat = (stale: StalePanel): string =>
-  [
-    ...Bool.match(stale.words, { onTrue: () => ["the picture's words"], onFalse: () => [] }),
-    ...stale.members.map((m) => `${m}'s cast sheet`),
-  ].join(' and ');
+/** What changed under a stale panel, in words: its picture's words, a member's cast sheet, or both; none when neither did. */
+const changedWhat = (stale: StalePanel): Option.Option<string> =>
+  Arr.match(
+    [
+      ...Bool.match(stale.words, { onTrue: () => ["the picture's words"], onFalse: () => [] }),
+      ...stale.members.map((m) => `${m}'s cast sheet`),
+    ],
+    { onEmpty: () => Option.none(), onNonEmpty: (what) => Option.some(what.join(' and ')) },
+  );
+
+/** The library sheets a run sends now that a stale panel was drawn before, in words; none when there are none. */
+const addedWhat = (stale: StalePanel): Option.Option<string> =>
+  Arr.match(stale.added, {
+    onEmpty: () => Option.none(),
+    onNonEmpty: (members) =>
+      Option.some(`${members.map((m) => `${m}'s library sheet`).join(' and ')} was sent`),
+  });
 
 /** Why a stale panel is drawn again, in a sentence. */
 export const staleWhy = (film: string, stale: StalePanel): string =>
   Option.match(stale.kept, {
     onSome: (n) =>
-      `kept try ${n} was drawn from ${changedWhat(stale)} as it was; it has changed since: \`film board ${film}\` draws new tries, and the keep stays until one is kept`,
+      `kept try ${n} was drawn ${Arr.getSomes([
+        Option.map(changedWhat(stale), (what) => `from ${what} as it was, which has changed since`),
+        Option.map(addedWhat(stale), (what) => `before ${what}`),
+      ]).join(
+        ', and ',
+      )}: \`film board ${film}\` draws new tries, and the keep stays until one is kept`,
     onNone: () =>
-      `no try is kept, and none was drawn from ${changedWhat(stale)} as it is now: \`film board ${film}\` draws new tries`,
+      `no try is kept, and none was drawn ${Arr.getSomes([
+        Option.map(changedWhat(stale), (what) => `from ${what} as it is now`),
+        Option.map(addedWhat(stale), (what) => `after ${what}`),
+      ]).join(', or ')}: \`film board ${film}\` draws new tries`,
   });

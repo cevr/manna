@@ -262,7 +262,14 @@ describe('a kept panel whose cast sheet changed', () => {
       return Effect.gen(function* () {
         const since = yield* old([replacedAt('2026-10-25T15:00:00.000Z')]);
         expect(since.stale).toEqual([
-          { panel: PANEL, kept: Option.some(1), members: ['christ'], words: false, fresh: 0 },
+          {
+            panel: PANEL,
+            kept: Option.some(1),
+            members: ['christ'],
+            added: [],
+            words: false,
+            fresh: 0,
+          },
         ]);
         expect(since.lines).toEqual(['Stale supper.start', 'Made supper.start']);
         const before = yield* old([replacedAt('2026-10-25T09:00:00.000Z')]);
@@ -410,6 +417,7 @@ describe("a panel whose picture's words changed in the script", () => {
           panel: PANEL,
           kept: Option.some(1),
           members: [],
+          added: [],
           words: true,
           fresh: 2,
         });
@@ -555,12 +563,54 @@ describe("a kept try and the cast's references as a run sends them now", () => {
       expect(yield* run(1)).toEqual([]);
       files.set(`${SHEET}/cast-sheet.json`, text(keptSince));
       files.set(TURNAROUND, text('kept turnaround'));
+      const [why] = (yield* (yield* BoardStore).stale(film, [beat])).map((s) => staleWhy('f', s));
+      expect(why).toContain("kept try 1 was drawn before christ's library sheet was sent");
       expect(yield* run(1)).toEqual(['Stale supper.start', 'Made supper.start']);
       expect((yield* panel)?.tries[1]?.refs.at(-1)).toBe(
         '../../../library/cast/christ/cast-sheet/kept/turnaround.png',
       );
     }).pipe(Effect.provide(boardOver(files)));
   });
+});
+
+describe('an imported keep', () => {
+  it.effect(
+    'in a beat whose member has a kept library sheet is not stale, and a run draws nothing for it',
+    () => {
+      const files = new Map<string, Uint8Array>();
+      christ(files);
+      return Effect.gen(function* () {
+        yield* styled;
+        const store = yield* BoardStore;
+        yield* store.modify(film, (b) =>
+          Result.succeed({
+            ...b,
+            panels: [
+              {
+                id: PANEL,
+                beat: SUPPER,
+                at: BoardName.make('start'),
+                kept: 1,
+                tries: [
+                  {
+                    n: 1,
+                    file: Segment.make('supper.start.1.png'),
+                    sha256: 's',
+                    made: 'import' as const,
+                    refs: [],
+                    from: 'rbfconcepts 9005-court-a',
+                    at: '2026-10-25T11:00:00.000Z',
+                  },
+                ],
+              },
+            ],
+          }),
+        );
+        expect(yield* store.stale(film, [beat])).toEqual([]);
+        expect(yield* run(2)).toEqual([]);
+      }).pipe(Effect.provide(boardOver(files)));
+    },
+  );
 });
 
 describe("a try's record of its cast", () => {

@@ -2129,22 +2129,24 @@ words of its own picture its prompt carried (`words`, `pictureWords` in
 words, and the words the panel holds from). A try changed when the words a
 run would send for its picture now differ (a try from before `words`: its
 prompt no longer carries each of them verbatim; the style, the house rules
-and other beats are not its words; an imported try is never judged on its
-words), when a cast file it recorded holds
+and other beats are not its words), when a cast file it recorded holds
 other bytes now (a try from before `cast`: a kept sheet its member's
 `replaced` history says was replaced since), or when the cast a run would
 send now names a file it did not carry (a member first kept a sheet
-since). A kept panel whose kept try changed, or a picture panel that keeps
-none and none of whose generated tries is unchanged, is stale
-(`tools/board-stale.ts`, `stalenessOf`, judged against the script as it
-stands): a run draws it new tries, numbered on, until it has `--tries`
-unchanged, printing `stale <panel> why="…"` (its picture's words, a
-member's cast sheet, or both), and the keep stays until the owner keeps a
-new try; the beat's later panels ride along by the first try the run drew
-of its first panel, not by the keep it draws again over; the board read
-(`film lab board`, the lab MCP's `board`) gives the panel a `stale` naming
-which (`members`, `words`, `why`), and the studio's Board section shows its
-`why` under the panel (`GET …/board/stale`), the lab reading the script
+since, or a beat names a member it did not). Words and the files sent are
+held only against tries the board drew itself (`generate`, `tweak`): an
+imported keep is never stale. A kept panel whose kept try changed, or a
+picture panel that keeps none and none of whose generated tries is
+unchanged, is stale (`tools/board-stale.ts`, `stalenessOf`, judged against
+the script as it stands): a run draws it new tries, numbered on, until it
+has `--tries` unchanged, printing `stale <panel> why="…"` (its picture's
+words, a member's cast sheet, or a library sheet it was drawn before), and
+the keep stays until the owner keeps a new try; the beat's later panels
+ride along by the first try the run drew of its first panel, not by the
+keep it draws again over; the board read (`film lab board`, the lab MCP's
+`board`) gives the panel a `stale` naming which (`members`, `added`,
+`words`, `why`), and the studio's Board section shows its `why` under the
+panel (`GET …/board/stale`), the lab reading the script
 fresh (`tools/board-stale-read.ts`): a script it cannot read names no panel
 stale and logs `board.stale … unread=`.
 
