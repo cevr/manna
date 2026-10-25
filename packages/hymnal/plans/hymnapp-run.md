@@ -9,8 +9,8 @@ Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>`
 | ---------- | ------------------------------ | ------------------------- | ----------------- | ------------------- |
 | glass      | appbase                        | .rifts/bible-tools/glass  | impl ab2ba40 (r8) |                     |
 | manna      | testsplit, compile, glass      | .rifts/bible-tools/manna  |                   |                     |
-| reader1    | appbase                        | .rifts/manna/reader1      | impl a4ef6ed (r1) |                     |
-| palette    | reader1                        |                           |                   |                     |
+| reader1    | appbase                        | .rifts/manna/reader1      | impl a4ef6ed (r1) | merged 5d339030e    |
+| palette    | reader1                        |                           |                   | merged 6cb76a3c4    |
 | playstall  | playerfix                      | (removed)                 | (closed)          | merged 055a51bac    |
 | census2    | hymnrows                       | .rifts/manna/census2      |                   | merged 0de80174f    |
 | census3    | census2                        |                           |                   |                     |
