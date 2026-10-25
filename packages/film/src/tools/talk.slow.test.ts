@@ -27,7 +27,7 @@ import {
   Result,
   Schema,
 } from 'effect';
-import { Command } from 'effect/cli';
+import * as Command from 'effect/cli/Command';
 import { HttpClient, HttpClientRequest, HttpClientResponse } from 'effect/http';
 import { syntheticTake } from '../core/fixtures/talk-take.ts';
 import {

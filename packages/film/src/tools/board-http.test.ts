@@ -5,9 +5,10 @@
 
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Schema } from 'effect';
-import { labUrls } from '../core/api.ts';
+import { ServerFailed, labUrls } from '../core/api.ts';
 import { type BoardFile, BoardFileJson, BoardName } from '../core/board.ts';
 import { Segment } from '../core/segment.ts';
+import { echoPages, freshFilm } from './film-services/testing.ts';
 import { labHandler } from './lab.ts';
 import { text } from './host/testing.ts';
 import { labInMemory } from './lab/testing.ts';
@@ -29,6 +30,30 @@ const board: BoardFile = {
       beat: BoardName.make('cold'),
       at: BoardName.make('righteous'),
       tries: [tried(1), tried(2)],
+    },
+    // A keep the board drew from a cast file that is gone now: stale under any script read.
+    {
+      id: 'title.start',
+      beat: BoardName.make('title'),
+      at: BoardName.make('start'),
+      kept: 1,
+      tries: [
+        {
+          n: 1,
+          file: Segment.make('title.start.1.png'),
+          sha256: 't1',
+          made: 'generate',
+          refs: ['style.png', '../cast/christ/cast-sheet/kept/turnaround.png'],
+          cast: [
+            {
+              member: 'christ',
+              file: '../cast/christ/cast-sheet/kept/turnaround.png',
+              sha256: 'gone',
+            },
+          ],
+          at: '2026-10-14T00:00:00.000Z',
+        },
+      ],
     },
   ],
   approvals: [],
@@ -137,5 +162,48 @@ describe('the board routes', () => {
       });
       expect([unknown.status, unknown.body._tag]).toEqual([422, 'BoardRefused']);
     }).pipe(Effect.scoped, Effect.provide(labInMemory(files()))),
+  );
+
+  it.effect('name a keep drawn from a cast file gone since, with why', () =>
+    Effect.gen(function* () {
+      const lab = yield* labHandler();
+      const read = yield* Effect.promise(() =>
+        lab(get(labUrls.board.stale({ params: { film: 'f' } })), bound),
+      );
+      const got = yield* Effect.promise(() => read.json());
+      expect([read.status, got.panels.map((p: { panel: string }) => p.panel)]).toEqual([
+        200,
+        ['title.start'],
+      ]);
+      expect(got.panels[0].why).toContain("christ's cast sheet");
+    }).pipe(
+      Effect.scoped,
+      Effect.provide(
+        labInMemory(files(), echoPages, { film: freshFilm({ script: () => Effect.succeed([]) }) }),
+      ),
+    ),
+  );
+
+  it.effect('name no panel stale, and answer, when the script cannot be read now', () =>
+    Effect.gen(function* () {
+      const lab = yield* labHandler();
+      const read = yield* Effect.promise(() =>
+        lab(get(labUrls.board.stale({ params: { film: 'f' } })), bound),
+      );
+      expect([read.status, yield* Effect.promise(() => read.json())]).toEqual([
+        200,
+        { panels: [] },
+      ]);
+    }).pipe(
+      Effect.scoped,
+      Effect.provide(
+        labInMemory(files(), echoPages, {
+          film: freshFilm({
+            script: () =>
+              Effect.fail(ServerFailed.make({ tag: 'ScriptBroken', reason: 'script.ts throws' })),
+          }),
+        }),
+      ),
+    ),
   );
 });

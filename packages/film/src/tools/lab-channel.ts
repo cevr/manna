@@ -28,7 +28,7 @@ import {
   Stdio,
   Stream,
 } from 'effect';
-import { Command } from 'effect/cli';
+import * as Command from 'effect/cli/Command';
 import type { HeardChange } from '../core/lab-events.ts';
 import { isLostLab, labClient, labUrl } from './lab-client.ts';
 import { type Heard, STREAM_PACE, followLab, labFeed } from './lab-stream.ts';

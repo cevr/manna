@@ -19,7 +19,7 @@
 //   terminal calls it on the lab at `FILM_LAB_URL` (`lab-client.ts`).
 
 import { Duration, Effect, type FileSystem, Option, type Path, Record, Schema } from 'effect';
-import { Tool } from 'effect/ai';
+import * as Tool from 'effect/ai/Tool';
 import { pageHref } from '../core/api.ts';
 import { LAB_EVENTS, LabLinks, linksAt, namesMatch } from '../core/lab-events.ts';
 import { unresolved } from '../core/notes.ts';

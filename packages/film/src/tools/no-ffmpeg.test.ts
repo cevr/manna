@@ -8,7 +8,7 @@
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, FileSystem } from 'effect';
+import { Boolean as Bool, Effect, FileSystem } from 'effect';
 
 const repo = `${import.meta.dir}/../../../..`;
 
@@ -29,11 +29,42 @@ const COMMAND = /(['"`])[^'"`]*\b(ffmpeg|ffprobe)\b/;
 /** A comment line, which may name the CLI freely. */
 const COMMENT = /^\s*(\/\/|\/?\*).*$/;
 
+/**
+ * The files read at once: four read the sources as fast as 32 do, in about
+ * half the CPU time, which the unit tests' workers share.
+ */
+const READS = 4;
+
+/**
+ * Every file under `root`, its installed packages left unlisted: a recursive
+ * listing follows their links into the store, over 14,000 entries.
+ */
+const filesIn = (root: string) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const top = yield* fs.readDirectory(`${repo}/${root}`);
+    const listed = yield* Effect.forEach(
+      top.filter((entry) => entry !== 'node_modules'),
+      (entry) =>
+        Effect.flatMap(fs.stat(`${repo}/${root}/${entry}`), (info) =>
+          Bool.match(info.type === 'Directory', {
+            onFalse: () => Effect.succeed([entry]),
+            onTrue: () =>
+              Effect.map(
+                fs.readDirectory(`${repo}/${root}/${entry}`, { recursive: true }),
+                (files) => files.map((file) => `${entry}/${file}`),
+              ),
+          }),
+        ),
+    );
+    return listed.flat();
+  });
+
 /** Every `file:line` under `root` naming a CLI as a string. */
 const commandsIn = (root: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
-    const files = yield* fs.readDirectory(`${repo}/${root}`, { recursive: true });
+    const files = yield* filesIn(root);
     const sources = files.filter(
       (file) => SOURCE.test(file) && !SKIPPED.test(file) && `${root}/${file}` !== SELF,
     );
@@ -41,15 +72,20 @@ const commandsIn = (root: string) =>
       sources,
       (file) =>
         fs.readFileString(`${repo}/${root}/${file}`).pipe(
+          // A file that names neither CLI has no line `COMMAND` matches, so only the rest are split.
           Effect.map((text) =>
-            text
-              .split('\n')
-              .map((line, index) => ({ code: line.replace(COMMENT, ''), at: index + 1 }))
-              .filter(({ code }) => COMMAND.test(code))
-              .map(({ at }) => `${root}/${file}:${at}`),
+            Bool.match(text.includes('ffmpeg') || text.includes('ffprobe'), {
+              onFalse: () => [],
+              onTrue: () =>
+                text
+                  .split('\n')
+                  .map((line, index) => ({ code: line.replace(COMMENT, ''), at: index + 1 }))
+                  .filter(({ code }) => COMMAND.test(code))
+                  .map(({ at }) => `${root}/${file}:${at}`),
+            }),
           ),
         ),
-      { concurrency: 32 },
+      { concurrency: READS },
     );
     return found.flat();
   });

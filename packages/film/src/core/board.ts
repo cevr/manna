@@ -43,6 +43,14 @@ const BoardFileName = Segment.check(
 );
 type BoardFileName = typeof BoardFileName.Type;
 
+/** A cast reference a try was drawn from, and what it held then. */
+const TryCast = Schema.Struct({
+  member: Schema.String,
+  file: Schema.String,
+  sha256: Schema.String,
+});
+export type TryCast = typeof TryCast.Type;
+
 /** One image tried for a panel. */
 export const BoardTry = Schema.Struct({
   /** Its number in the panel's history, from 1. */
@@ -56,6 +64,10 @@ export const BoardTry = Schema.Struct({
   prompt: Schema.optionalKey(Schema.String),
   /** The references the call carried, in order, as the board's folder reaches them: the style's ref, a panel's try, a sketch, then each cast member's library record. */
   refs: Schema.Array(Schema.String),
+  /** What each cast reference among `refs` held when the try was drawn: its member, its path as in `refs`, its sha256. A try drawn before tries recorded it has none. */
+  cast: Schema.optionalKey(Schema.Array(TryCast)),
+  /** The words of the panel's own picture the prompt carried (`pictureWords`: the beat's brief, the words it holds from). A try drawn before tries recorded them has none. */
+  words: Schema.optionalKey(Schema.Array(Schema.String)),
   /** The note a tweak answers (`n12`). */
   note: Schema.optionalKey(Schema.String),
   /** Where an import came from, said plainly (`rbfconcepts 9005-court-a`). */

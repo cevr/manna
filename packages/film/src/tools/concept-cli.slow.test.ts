@@ -19,7 +19,7 @@ import {
   Queue,
   Schema,
 } from 'effect';
-import { Command } from 'effect/cli';
+import * as Command from 'effect/cli/Command';
 import { CastSheetJson } from '../core/cast-record.ts';
 import { drawFigure, drawSheet, PLAIN } from '../core/fixtures/figure.ts';
 import { scaleRaster } from '../core/raster.ts';

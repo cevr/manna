@@ -4,7 +4,7 @@
 // so the owner's page and an agent read one model.
 
 import { Effect, Option } from 'effect';
-import { HttpApiBuilder } from 'effect/http-api';
+import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder';
 import { LabHttpApi } from '../core/api.ts';
 import { answered } from './api-server.ts';
 import { FilmTimelines } from './film-timeline.ts';

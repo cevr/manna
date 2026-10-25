@@ -60,4 +60,8 @@ exactly these H2s in order:
   methods refused, the mail routes' 303s and the hosts' redirects.
 - [The outbox](outbox.md): the letters the preview writes instead of sending.
 - [Motion](motion.md): the field's wind, shimmer and turning rays, the night's
-  stars, the series cards' hover, and the stills kept still for less motion.
+  stars, the series rows' stirred marks, and the stills kept still for less
+  motion.
+- [Brand](brand.md): the Moonlit wheat palette, lockup D in small capitals,
+  the fine-line marks, no cut paper, the sky that turns from day to night
+  down the home page, and the moonlit night.

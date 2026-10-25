@@ -19,8 +19,8 @@ import {
   Stdio,
 } from 'effect';
 import * as BunTerminal from '@effect/platform-bun/BunTerminal';
-import { Tool } from 'effect/ai';
-import { Command } from 'effect/cli';
+import * as Tool from 'effect/ai/Tool';
+import * as Command from 'effect/cli/Command';
 import { labSubcommands } from './events-cli.ts';
 import { fieldsOf } from './lab-fields.ts';
 import { labCommand } from './lab-command.ts';

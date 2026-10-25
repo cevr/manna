@@ -19,7 +19,7 @@ import {
   Schema,
   Struct,
 } from 'effect';
-import { Tool } from 'effect/ai';
+import * as Tool from 'effect/ai/Tool';
 import {
   type BoardFile,
   BoardName,
@@ -38,8 +38,11 @@ import {
 import { LabLinks, boardPath, linksAt, notePath } from '../core/lab-events.ts';
 import { unresolved } from '../core/notes.ts';
 import { Note, type NoteDraft, NoteStatus } from '../core/schema.ts';
+import { staleWhy } from './board-stale.ts';
+import { staleInLab } from './board-stale-read.ts';
 import { BoardStore } from './board-store.ts';
 import { type FilmFolder, type FilmName, filmNamed } from './film-repo.ts';
+import { FreshFilm } from './fresh-film.ts';
 import { LabAddress, labCommand } from './lab-command.ts';
 import { FilmParam, LabRefused, refused } from './lab-mcp-parts.ts';
 import { noteLine } from './notes-lines.ts';
@@ -79,6 +82,15 @@ const PanelRead = Schema.Struct({
   tries: Schema.Array(TryRead),
   /** Its beat's board approval: approved as it stands, stale (a pick since), or none. */
   approval: Schema.Literals(['approved', 'stale', 'none']),
+  /** Drawn from what has changed since (its kept try, or every try when none is kept): the members whose sheet changed, those it was drawn before the library sheet of, whether its picture's words changed, and what to do. */
+  stale: Schema.optionalKey(
+    Schema.Struct({
+      members: Schema.Array(Schema.String),
+      added: Schema.Array(Schema.String),
+      words: Schema.Boolean,
+      why: Schema.String,
+    }),
+  ),
   links: LabLinks,
 });
 
@@ -117,7 +129,7 @@ const Notes = Tool.make('notes', {
 
 const Board = Tool.make('board', {
   description:
-    "A film's storyboard: each panel (`<beat>.<mark>`), its tries (the image on disk, how it was made, the note a tweak answers), the try kept and why, and the beats approved. `beat` narrows it to one beat. Prompts are left out.",
+    "A film's storyboard: each panel (`<beat>.<mark>`), its tries (the image on disk, how it was made, the note a tweak answers), the try kept and why (and `stale` when it was drawn from what has changed since, its picture's words in the script or a cast sheet: which, and that `film board <film>` draws it again), and the beats approved. `beat` narrows it to one beat. Prompts are left out.",
   parameters: Schema.Struct({ ...FilmParam.fields, beat: Schema.optionalKey(Schema.String) }),
   success: BoardRead,
   failure: LabRefused,
@@ -207,6 +219,7 @@ export const notesReads = Effect.fn('LabMcp.notesReads')(function* () {
   const path = yield* Path.Path;
   const notes = yield* NotesStore;
   const boards = yield* BoardStore;
+  const fresh = yield* FreshFilm;
   const films = yield* Effect.context<FilmFolder>();
 
   const linksOf = (at: string) => linksAt(links, at);
@@ -236,6 +249,14 @@ export const notesReads = Effect.fn('LabMcp.notesReads')(function* () {
     const film = yield* named(name);
     const board: BoardFile = yield* refused(boards.read(film));
     const images = boards.paths(film).folder;
+    // A script that cannot be read now names no panel stale (`staleInLab`), so the board read stays whole.
+    const judged = yield* refused(
+      staleInLab(film).pipe(
+        Effect.provideService(FreshFilm, fresh),
+        Effect.provideService(BoardStore, boards),
+      ),
+    );
+    const stale = new Map(judged.map((s) => [s.panel, s] as const));
     return {
       film,
       ...Option.match(Option.fromUndefinedOr(board.style), {
@@ -261,6 +282,12 @@ export const notesReads = Effect.fn('LabMcp.notesReads')(function* () {
             at: t.at,
           })),
           approval: approvalOf(board, panel.beat),
+          ...Option.match(Option.fromUndefinedOr(stale.get(panel.id)), {
+            onNone: () => ({}),
+            onSome: (s) => ({
+              stale: { members: s.members, added: s.added, words: s.words, why: staleWhy(film, s) },
+            }),
+          }),
           links: linksOf(boardPath(film, panel.beat, Option.some(panel.at))),
         })),
       approvals: board.approvals.filter((a) =>

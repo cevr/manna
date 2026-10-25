@@ -1,0 +1,570 @@
+{
+  "id": "afdb1438271",
+  "title": "First the Blade in Moonlit wheat: the site, the kit and the stills",
+  "why": "Decides whether the Moonlit wheat site, its series marks, the brand kit and the seven changed stills ship as built (branch hymnapp/ftbbrand at 3015ed9ea, set manna/ftbbrand-r1). A keep on all four lets the orchestrator run kit:approve; any revise starts round 2 with a new ask showing only what changed.",
+  "by": "orchestrator (hymnapp ftbbrand)",
+  "created": "2026-10-25T03:20:11.930Z",
+  "ask": {
+    "start": "site",
+    "steps": {
+      "site": {
+        "title": "The site at a computer's width",
+        "blocks": [
+          {
+            "kind": "prose",
+            "text": "The Moonlit wheat palette (wheat #ffefae on night #12354e), lockup D (the bare wheat beside \"First the Blade\" in small capitals), the series marks in fine lines on wheat tiles, and N2 \"The sky turns\": the field fades into the paper, series rows parted by hairlines, \"Why we make these\" warms into the wheat, the dusk holds Mark 4:27, and the moonlit night rises with the stacked lockup and the sign-up. No torn paper, tilted card, shadow or disc. The copy is unchanged.\n\nWhere it differs from the round 2 prototype: Mark 4:28's reference and the page labels on the painted sky are in the night ink (the deep wheat fails contrast there); the darker wheat for labels and \"the\" is #7a6813 (the prototype's #a3842a fails contrast on the paper); The Path of the Just's row shows its fine-line mark, not the robe still (the still would claim a film that is not out); the moonlit night's sky is repainted from violet to the night's blue."
+          },
+          {
+            "kind": "video",
+            "ref": "manna/ftbbrand-r1/site/home-scroll-1280.mp4",
+            "caption": "The home page at a computer's width, top to footer"
+          },
+          {
+            "kind": "video",
+            "ref": "manna/ftbbrand-r1/site/home-scroll-390.mp4",
+            "caption": "The same at a phone's width"
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/996e180f791e6de2d7a8e8ea9e954ecf75561ac9f0607efefd5039f092f9c3ad.png",
+              "caption": "1280 px, top"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/ebc6d0e0e4d5a2f8ece1429b25b08b5e00137b3d7107ee21acd1e04556a7c077.png"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/f51a6ed4563295c37c47c56d66a34f9d9b10f5d1f3309c677c347ff9d25b7a86.png"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/98df6d11e90c97f5fcd2c3dc2deb3198b6cd749b4987f1e55a160141b371fabc.png"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/3f16d611b2b27ea563058d09e1c14410b8f1b3f67dec7e5edc7dafa874fa5f8b.png",
+              "caption": "1280 px, footer"
+            }
+          }
+        ],
+        "next": [
+          {
+            "to": "site2"
+          }
+        ]
+      },
+      "site2": {
+        "title": "The site at a phone's width, and a series page",
+        "blocks": [
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/696b133e5f6f1b7b1224e7fd47fbf8f826d7291eec5a2af9a9cf032732fa2149.png",
+              "caption": "390 px, top"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/2a89c72f753b7b3f90d36962b0e9f5aa2c8ed671afc5e3897f7d8fc9da267333.png"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/6315ec3dee8ef053146473c53d0ce25a2e2cd648311fcf8409409b513a0c358e.png"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/06dd9b7e0dccf8675be1ac30fbf606c9218da41d479ea4f35548074b0d06d82e.png",
+              "caption": "390 px, footer"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/a789e7264c3ab8e80ed5c939ffc2d6f88b72810ff30d5cdee8f2356dd85222c6.png",
+              "caption": "A series page, 1280 px"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/2b3dcf9566f6c2bf65e0a5525662efcd18edb185613fa626d688c0a8f5c42468.png",
+              "caption": "A series page, 390 px"
+            }
+          },
+          {
+            "kind": "choose",
+            "id": "look",
+            "label": "Keep this look for the site?",
+            "options": [
+              {
+                "value": "keep",
+                "label": "Keep it",
+                "recommended": true,
+                "why": "It is N2 as you picked it, with the contrast fixes, and passes the palette, lockup, no-cut-paper and WCAG AA checks at 390 and 1440 px.",
+                "outcome": "keep"
+              },
+              {
+                "value": "revise",
+                "label": "Revise it",
+                "outcome": "revise"
+              }
+            ]
+          },
+          {
+            "kind": "free_text",
+            "id": "look_note",
+            "label": "What to change on the site"
+          }
+        ],
+        "next": [
+          {
+            "to": "marks"
+          }
+        ]
+      },
+      "marks": {
+        "title": "The series marks",
+        "blocks": [
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/5a307ac10d77e554e3584d3b4e22048ff9f8d5ce5d3f9839a2dcb3dd63f9afef.svg",
+              "caption": "Fine lines: The Path of the Just"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/8c5c0f9380f8aa8c4b41de331a3be70d55e4d0baf1bc4b3d2c03cfb2a1da73f8.svg",
+              "caption": "Fine lines: land"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/2be82dc0a801ff6e8c4d73259d27f3cc743dd686fe9e555b547a1840a65782ca.svg",
+              "caption": "Fine lines: taught"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/f1f0de91d5d4358091dce1712089e68ae9d4c30d8ba5531b4d3c98c8cd6cebb9.svg",
+              "caption": "Fine lines: remedies"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/450dbdc6e0d582e9accfc22f6593022a8b8d01919f875f65a43ab38e6fcf70bf.svg",
+              "caption": "Round 3 emblem: The Path of the Just"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/611eb385c421fe903a08b57de8b7f27c6a0499255c96652ce9c1964f8f8794da.svg",
+              "caption": "Round 3 emblem: land"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/11e5710f29c8188c2d0733518e6aa7b26f9ae4a3c9ac908e5d212d79d81912bf.svg",
+              "caption": "Round 3 emblem: taught"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/ea5974b01e7fa518095c7001a4c4be9fe24592b92b3a43d751db183b8e756485.svg",
+              "caption": "Round 3 emblem: remedies"
+            }
+          },
+          {
+            "kind": "choose",
+            "id": "marks",
+            "label": "Which series marks?",
+            "options": [
+              {
+                "value": "fine",
+                "label": "Fine lines",
+                "recommended": true,
+                "why": "They match the wheat's single line, read as one family, and keep every stir you approved.",
+                "outcome": "keep"
+              },
+              {
+                "value": "round3",
+                "label": "The round 3 emblems, recoloured",
+                "outcome": "revise"
+              }
+            ]
+          }
+        ],
+        "next": [
+          {
+            "to": "kit"
+          }
+        ]
+      },
+      "kit": {
+        "title": "The kit: profile, watermark, banner, cover",
+        "blocks": [
+          {
+            "kind": "prose",
+            "text": "The avatar and the watermark are the bare wheat; the app icons, the Apple touch icon and the favicon are the wheat on a night square (the favicon's corners rounded so it reads at 16 px in light and dark tab strips); the YouTube banner and the Facebook cover put the lockup on the field with no strip; the thumbnails keep their film paintings with the question in wheat on a night wash."
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/edc4dd5b4ce5108d0143f14c1222d60a604aa8d3fe324491e2cd0784de22dc59.png",
+              "caption": "YouTube profile picture"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/e33b43558fb3ae7d37fefdeb1ae70bd581c605c0455b990322a2534dccbf9f85.png",
+              "caption": "Video watermark (transparent)"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/9813903d316431c86cb353545a1b7f8f000332a492bb527598aa43df33534fc1.png",
+              "caption": "YouTube banner"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/0851e484d0b7d219abd6624d714116fb598e250a348e0f9881af17103c477103.png",
+              "caption": "What a TV, a computer and a phone show of it"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/4f904afcef1af0bdbc969f5f0c42fe59c818f8ade89e81041a0bb5d23c156c76.png",
+              "caption": "Facebook cover"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/8c549c3d7df0f3a77a73a8f05a4bdecf19fedd6cbed8b883adb177cf5891dc94.png",
+              "caption": "Its crops"
+            }
+          }
+        ],
+        "next": [
+          {
+            "to": "kit2"
+          }
+        ]
+      },
+      "kit2": {
+        "title": "The kit: icons and thumbnails",
+        "blocks": [
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/53c41dd48033473046c0177da14a598ad460afdf225a98189c2a87a2ff7fc1ee.png",
+              "caption": "App icon 512"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/5d4e9e8afe0be76e0e559d60282ddf9e32b7524539e44dc998030ea7124279ed.png",
+              "caption": "App icon 192"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/b59ee7770422fa849e974e96694c199887a879c17321fad85e1a3bf450b3e344.png",
+              "caption": "Apple touch icon"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/a853017cb7839a8807400b7da9966e64a1c3176d7dd1f5cc3b566e2643980fcb.png",
+              "caption": "Favicon at 32 px"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/e3fdde541b5cb4ab083968e62fef0f6d3bc6e3b4ef90b1340b0c7310034e3879.png",
+              "caption": "Thumbnail: robe"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/5b56f20b0d44c786eb31c33600646eebf275d6f093424d058bcb0dc5e4d649e8.png",
+              "caption": "Thumbnail: court"
+            }
+          },
+          {
+            "kind": "choose",
+            "id": "kit",
+            "label": "Keep the kit?",
+            "options": [
+              {
+                "value": "keep",
+                "label": "Keep it",
+                "recommended": true,
+                "why": "Every picture uses the site's wheat and palette, with no disc and no paper strip; the avatar and watermark are the bare wheat you asked for.",
+                "outcome": "keep"
+              },
+              {
+                "value": "revise",
+                "label": "Revise it",
+                "outcome": "revise"
+              }
+            ]
+          },
+          {
+            "kind": "free_text",
+            "id": "kit_note",
+            "label": "Which picture, and what to change"
+          }
+        ],
+        "next": [
+          {
+            "to": "stills"
+          }
+        ]
+      },
+      "stills": {
+        "title": "The stills",
+        "blocks": [
+          {
+            "kind": "prose",
+            "text": "The seven stills the stills rule holds that changed, each shown whole. Your approval lets the site ship them; until then a prod deploy refuses. The field's three stills and its wind map did not change. The night's repaint moves only the sky's hue (measured: 0.8° from the night's hue); the moon, the stars, the land and the field are where they were."
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/ddfae113bd59be1920ef18dc11f1f97116deca6658a586ecf162d85c9bf0dffb.jpg",
+              "caption": "The home page's link card"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/fcaa0227f9cdaa0b7c17587b3e3bd450712bc6250a636556ee3a2bed4512dcdd.jpg",
+              "caption": "Link card: The Path of the Just"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/9f96cc03133043d9488ff6481cf730546cf6eb7b7fc7a0e3eed635858da88275.jpg",
+              "caption": "Link card: land"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/ca8a18173c88182e18af01eae8311d065468348a3a0c7aa41f56713f2511671c.jpg",
+              "caption": "Link card: taught"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/bfbe25f58a51ac75272603f7fad70265167876579d3c370e9786c6308bb4fc26.jpg",
+              "caption": "Link card: remedies"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/bf76fc7018f726f3db5bc67dc1f5f616fbcdd1427cbb8b9e477d4894b6c02aa9.webp",
+              "caption": "The moonlit night, 1536"
+            }
+          },
+          {
+            "kind": "image",
+            "image": {
+              "src": "/api/asks/afdb1438271/shown/607b609661e0be38bae2c29d974185e5c87e6c1d7d8c74b31be65697b314e24a.webp",
+              "caption": "The moonlit night, 768"
+            }
+          },
+          {
+            "kind": "choose",
+            "id": "stills",
+            "label": "Approve these seven stills?",
+            "options": [
+              {
+                "value": "approve",
+                "label": "Approve them",
+                "recommended": true,
+                "why": "They are the pictures the site and link cards show in the look above; the night's repaint moves only the sky's hue.",
+                "outcome": "keep"
+              },
+              {
+                "value": "not-yet",
+                "label": "Not yet",
+                "outcome": "revise"
+              }
+            ]
+          },
+          {
+            "kind": "free_text",
+            "id": "stills_note",
+            "label": "What to change"
+          }
+        ],
+        "next": [
+          {
+            "to": "end"
+          }
+        ]
+      },
+      "end": {
+        "end": true,
+        "text": "Thank you. A keep on all four runs kit:approve; any revise starts round 2 with a new ask that shows only what changed."
+      }
+    }
+  },
+  "shown": {
+    "/api/asks/afdb1438271/shown/996e180f791e6de2d7a8e8ea9e954ecf75561ac9f0607efefd5039f092f9c3ad.png": "996e180f791e6de2d7a8e8ea9e954ecf75561ac9f0607efefd5039f092f9c3ad",
+    "/api/asks/afdb1438271/shown/ebc6d0e0e4d5a2f8ece1429b25b08b5e00137b3d7107ee21acd1e04556a7c077.png": "ebc6d0e0e4d5a2f8ece1429b25b08b5e00137b3d7107ee21acd1e04556a7c077",
+    "/api/asks/afdb1438271/shown/f51a6ed4563295c37c47c56d66a34f9d9b10f5d1f3309c677c347ff9d25b7a86.png": "f51a6ed4563295c37c47c56d66a34f9d9b10f5d1f3309c677c347ff9d25b7a86",
+    "/api/asks/afdb1438271/shown/98df6d11e90c97f5fcd2c3dc2deb3198b6cd749b4987f1e55a160141b371fabc.png": "98df6d11e90c97f5fcd2c3dc2deb3198b6cd749b4987f1e55a160141b371fabc",
+    "/api/asks/afdb1438271/shown/3f16d611b2b27ea563058d09e1c14410b8f1b3f67dec7e5edc7dafa874fa5f8b.png": "3f16d611b2b27ea563058d09e1c14410b8f1b3f67dec7e5edc7dafa874fa5f8b",
+    "/api/asks/afdb1438271/shown/696b133e5f6f1b7b1224e7fd47fbf8f826d7291eec5a2af9a9cf032732fa2149.png": "696b133e5f6f1b7b1224e7fd47fbf8f826d7291eec5a2af9a9cf032732fa2149",
+    "/api/asks/afdb1438271/shown/2a89c72f753b7b3f90d36962b0e9f5aa2c8ed671afc5e3897f7d8fc9da267333.png": "2a89c72f753b7b3f90d36962b0e9f5aa2c8ed671afc5e3897f7d8fc9da267333",
+    "/api/asks/afdb1438271/shown/6315ec3dee8ef053146473c53d0ce25a2e2cd648311fcf8409409b513a0c358e.png": "6315ec3dee8ef053146473c53d0ce25a2e2cd648311fcf8409409b513a0c358e",
+    "/api/asks/afdb1438271/shown/06dd9b7e0dccf8675be1ac30fbf606c9218da41d479ea4f35548074b0d06d82e.png": "06dd9b7e0dccf8675be1ac30fbf606c9218da41d479ea4f35548074b0d06d82e",
+    "/api/asks/afdb1438271/shown/a789e7264c3ab8e80ed5c939ffc2d6f88b72810ff30d5cdee8f2356dd85222c6.png": "a789e7264c3ab8e80ed5c939ffc2d6f88b72810ff30d5cdee8f2356dd85222c6",
+    "/api/asks/afdb1438271/shown/2b3dcf9566f6c2bf65e0a5525662efcd18edb185613fa626d688c0a8f5c42468.png": "2b3dcf9566f6c2bf65e0a5525662efcd18edb185613fa626d688c0a8f5c42468",
+    "/api/asks/afdb1438271/shown/5a307ac10d77e554e3584d3b4e22048ff9f8d5ce5d3f9839a2dcb3dd63f9afef.svg": "5a307ac10d77e554e3584d3b4e22048ff9f8d5ce5d3f9839a2dcb3dd63f9afef",
+    "/api/asks/afdb1438271/shown/8c5c0f9380f8aa8c4b41de331a3be70d55e4d0baf1bc4b3d2c03cfb2a1da73f8.svg": "8c5c0f9380f8aa8c4b41de331a3be70d55e4d0baf1bc4b3d2c03cfb2a1da73f8",
+    "/api/asks/afdb1438271/shown/2be82dc0a801ff6e8c4d73259d27f3cc743dd686fe9e555b547a1840a65782ca.svg": "2be82dc0a801ff6e8c4d73259d27f3cc743dd686fe9e555b547a1840a65782ca",
+    "/api/asks/afdb1438271/shown/f1f0de91d5d4358091dce1712089e68ae9d4c30d8ba5531b4d3c98c8cd6cebb9.svg": "f1f0de91d5d4358091dce1712089e68ae9d4c30d8ba5531b4d3c98c8cd6cebb9",
+    "/api/asks/afdb1438271/shown/450dbdc6e0d582e9accfc22f6593022a8b8d01919f875f65a43ab38e6fcf70bf.svg": "450dbdc6e0d582e9accfc22f6593022a8b8d01919f875f65a43ab38e6fcf70bf",
+    "/api/asks/afdb1438271/shown/611eb385c421fe903a08b57de8b7f27c6a0499255c96652ce9c1964f8f8794da.svg": "611eb385c421fe903a08b57de8b7f27c6a0499255c96652ce9c1964f8f8794da",
+    "/api/asks/afdb1438271/shown/11e5710f29c8188c2d0733518e6aa7b26f9ae4a3c9ac908e5d212d79d81912bf.svg": "11e5710f29c8188c2d0733518e6aa7b26f9ae4a3c9ac908e5d212d79d81912bf",
+    "/api/asks/afdb1438271/shown/ea5974b01e7fa518095c7001a4c4be9fe24592b92b3a43d751db183b8e756485.svg": "ea5974b01e7fa518095c7001a4c4be9fe24592b92b3a43d751db183b8e756485",
+    "/api/asks/afdb1438271/shown/edc4dd5b4ce5108d0143f14c1222d60a604aa8d3fe324491e2cd0784de22dc59.png": "edc4dd5b4ce5108d0143f14c1222d60a604aa8d3fe324491e2cd0784de22dc59",
+    "/api/asks/afdb1438271/shown/e33b43558fb3ae7d37fefdeb1ae70bd581c605c0455b990322a2534dccbf9f85.png": "e33b43558fb3ae7d37fefdeb1ae70bd581c605c0455b990322a2534dccbf9f85",
+    "/api/asks/afdb1438271/shown/9813903d316431c86cb353545a1b7f8f000332a492bb527598aa43df33534fc1.png": "9813903d316431c86cb353545a1b7f8f000332a492bb527598aa43df33534fc1",
+    "/api/asks/afdb1438271/shown/0851e484d0b7d219abd6624d714116fb598e250a348e0f9881af17103c477103.png": "0851e484d0b7d219abd6624d714116fb598e250a348e0f9881af17103c477103",
+    "/api/asks/afdb1438271/shown/4f904afcef1af0bdbc969f5f0c42fe59c818f8ade89e81041a0bb5d23c156c76.png": "4f904afcef1af0bdbc969f5f0c42fe59c818f8ade89e81041a0bb5d23c156c76",
+    "/api/asks/afdb1438271/shown/8c549c3d7df0f3a77a73a8f05a4bdecf19fedd6cbed8b883adb177cf5891dc94.png": "8c549c3d7df0f3a77a73a8f05a4bdecf19fedd6cbed8b883adb177cf5891dc94",
+    "/api/asks/afdb1438271/shown/53c41dd48033473046c0177da14a598ad460afdf225a98189c2a87a2ff7fc1ee.png": "53c41dd48033473046c0177da14a598ad460afdf225a98189c2a87a2ff7fc1ee",
+    "/api/asks/afdb1438271/shown/5d4e9e8afe0be76e0e559d60282ddf9e32b7524539e44dc998030ea7124279ed.png": "5d4e9e8afe0be76e0e559d60282ddf9e32b7524539e44dc998030ea7124279ed",
+    "/api/asks/afdb1438271/shown/b59ee7770422fa849e974e96694c199887a879c17321fad85e1a3bf450b3e344.png": "b59ee7770422fa849e974e96694c199887a879c17321fad85e1a3bf450b3e344",
+    "/api/asks/afdb1438271/shown/a853017cb7839a8807400b7da9966e64a1c3176d7dd1f5cc3b566e2643980fcb.png": "a853017cb7839a8807400b7da9966e64a1c3176d7dd1f5cc3b566e2643980fcb",
+    "/api/asks/afdb1438271/shown/e3fdde541b5cb4ab083968e62fef0f6d3bc6e3b4ef90b1340b0c7310034e3879.png": "e3fdde541b5cb4ab083968e62fef0f6d3bc6e3b4ef90b1340b0c7310034e3879",
+    "/api/asks/afdb1438271/shown/5b56f20b0d44c786eb31c33600646eebf275d6f093424d058bcb0dc5e4d649e8.png": "5b56f20b0d44c786eb31c33600646eebf275d6f093424d058bcb0dc5e4d649e8",
+    "/api/asks/afdb1438271/shown/ddfae113bd59be1920ef18dc11f1f97116deca6658a586ecf162d85c9bf0dffb.jpg": "ddfae113bd59be1920ef18dc11f1f97116deca6658a586ecf162d85c9bf0dffb",
+    "/api/asks/afdb1438271/shown/fcaa0227f9cdaa0b7c17587b3e3bd450712bc6250a636556ee3a2bed4512dcdd.jpg": "fcaa0227f9cdaa0b7c17587b3e3bd450712bc6250a636556ee3a2bed4512dcdd",
+    "/api/asks/afdb1438271/shown/9f96cc03133043d9488ff6481cf730546cf6eb7b7fc7a0e3eed635858da88275.jpg": "9f96cc03133043d9488ff6481cf730546cf6eb7b7fc7a0e3eed635858da88275",
+    "/api/asks/afdb1438271/shown/ca8a18173c88182e18af01eae8311d065468348a3a0c7aa41f56713f2511671c.jpg": "ca8a18173c88182e18af01eae8311d065468348a3a0c7aa41f56713f2511671c",
+    "/api/asks/afdb1438271/shown/bfbe25f58a51ac75272603f7fad70265167876579d3c370e9786c6308bb4fc26.jpg": "bfbe25f58a51ac75272603f7fad70265167876579d3c370e9786c6308bb4fc26",
+    "/api/asks/afdb1438271/shown/bf76fc7018f726f3db5bc67dc1f5f616fbcdd1427cbb8b9e477d4894b6c02aa9.webp": "bf76fc7018f726f3db5bc67dc1f5f616fbcdd1427cbb8b9e477d4894b6c02aa9",
+    "/api/asks/afdb1438271/shown/607b609661e0be38bae2c29d974185e5c87e6c1d7d8c74b31be65697b314e24a.webp": "607b609661e0be38bae2c29d974185e5c87e6c1d7d8c74b31be65697b314e24a"
+  },
+  "state": {
+    "_tag": "Closed",
+    "answers": {
+      "look": {
+        "kind": "choose",
+        "value": "revise",
+        "label": "Revise it"
+      },
+      "look_note": {
+        "kind": "free_text",
+        "text": "i'm not sure i like the blue on the bottom of the wheat field, a lot least as it looks now, maybe we need some dirt or something to give it more space"
+      },
+      "marks": {
+        "kind": "choose",
+        "value": "fine",
+        "label": "Fine lines"
+      },
+      "kit": {
+        "kind": "choose",
+        "value": "keep",
+        "label": "Keep it"
+      },
+      "kit_note": {
+        "kind": "skipped"
+      },
+      "stills": {
+        "kind": "choose",
+        "value": "approve",
+        "label": "Approve them"
+      },
+      "stills_note": {
+        "kind": "free_text",
+        "text": "let's try to make the fine lines more like the logo for the series"
+      }
+    },
+    "why": "Acted on: ftbbrand round 2 started with these answers. It gives the field ground and space, draws the marks more like the series logo, and pins the approved stills. The look comes back to you in a new ask.",
+    "at": "2026-10-25T12:22:59.662Z"
+  },
+  "answered": [
+    {
+      "step": "site",
+      "values": {},
+      "at": "2026-10-25T11:46:52.026Z"
+    },
+    {
+      "step": "site2",
+      "values": {
+        "look": "revise",
+        "look_note": "i'm not sure i like the blue on the bottom of the wheat field, a lot least as it looks now, maybe we need some dirt or something to give it more space "
+      },
+      "at": "2026-10-25T11:46:52.026Z"
+    },
+    {
+      "step": "marks",
+      "values": {
+        "marks": "fine"
+      },
+      "at": "2026-10-25T11:46:52.026Z"
+    },
+    {
+      "step": "kit",
+      "values": {},
+      "at": "2026-10-25T11:46:52.026Z"
+    },
+    {
+      "step": "kit2",
+      "values": {
+        "kit": "keep"
+      },
+      "at": "2026-10-25T11:46:52.026Z"
+    },
+    {
+      "step": "stills",
+      "values": {
+        "stills": "approve",
+        "stills_note": "let's try to make the fine lines more like the logo for the series "
+      },
+      "at": "2026-10-25T11:46:52.026Z"
+    }
+  ]
+}

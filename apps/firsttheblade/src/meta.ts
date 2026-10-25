@@ -61,7 +61,7 @@ export const llmsTxt = (pages: ReadonlyArray<Page>) =>
 export const robots = () =>
   ['User-agent: *', 'Allow: /', '', `Sitemap: ${absolute('/sitemap.xml')}`, ''].join('\n');
 
-/** The morning sky the header sits on (`--color-sky`), for the browser's own chrome. */
+/** The painted morning sky the page opens on and the header sits on, for the browser's own chrome. */
 export const THEME_COLOR = PALETTE.sky;
 
 export const webManifest = () => ({

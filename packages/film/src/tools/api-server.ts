@@ -54,7 +54,9 @@ import {
   prefixesOf,
   statusOf,
 } from '../core/api.ts';
-import { type HttpApi, HttpApiError, type HttpApiGroup } from 'effect/http-api';
+import type * as HttpApi from 'effect/http-api/HttpApi';
+import * as HttpApiError from 'effect/http-api/HttpApiError';
+import type * as HttpApiGroup from 'effect/http-api/HttpApiGroup';
 import { NetAddress } from 'effect/net';
 import * as BunHttpServer from '@effect/platform-bun/BunHttpServer';
 import { BodyTooLarge } from '../core/refusals.ts';

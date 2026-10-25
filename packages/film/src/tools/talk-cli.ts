@@ -8,7 +8,9 @@
 //   film talk words <talk> [--take key]
 
 import { Console, Effect, Option, Record as Rec } from 'effect';
-import { Argument, Command, Flag } from 'effect/cli';
+import * as Argument from 'effect/cli/Argument';
+import * as Command from 'effect/cli/Command';
+import * as Flag from 'effect/cli/Flag';
 import { type CutSection, TALK_FORMATS, type TalkTake } from '../core/talk.ts';
 import { NotATalk } from './errors.ts';
 import { FilmRepo, type LoadedTalk } from './film-repo.ts';

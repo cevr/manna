@@ -16,6 +16,12 @@ const PACKAGE = `${import.meta.dir}/../..`;
 /** A Chrome spawned other than through `openView`. */
 const SPAWNS = /new Bun\.WebView\(/;
 
+/**
+ * The files read at once: four read the sources as fast as 32 do, in about
+ * half the CPU time, which the unit tests' workers share.
+ */
+const READS = 4;
+
 describe('the Chrome a tool or test spawns', () => {
   it.effect.layer(BunServices.layer)('is spawned only by chrome.ts, which silences it', () =>
     Effect.gen(function* () {
@@ -26,7 +32,7 @@ describe('the Chrome a tool or test spawns', () => {
             files.filter((file) => /\.tsx?$/.test(file)).map((file) => `${folder}/${file}`),
             (file) =>
               Effect.map(fs.readFileString(`${PACKAGE}/${file}`), (text) => SPAWNS.test(text)),
-            { concurrency: 32 },
+            { concurrency: READS },
           ),
         ),
       );

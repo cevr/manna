@@ -150,6 +150,8 @@ interface StudioState {
   readonly picked: Accessor<Option.Option<PickedWords>>;
   /** The film's Board as `board.json` holds it now, once read. */
   readonly board: Accessor<Option.Option<BoardFile>>;
+  /** Why a Board panel would be drawn again (`film board`), as the lab judges it now; none when it is not stale. */
+  readonly stale: (panel: string) => Option.Option<string>;
   /** Whether the recorder is over the page (its dialog, a phone's sheet). */
   readonly recording: Accessor<boolean>;
   /** Whether the Script pane shows: open (`?pane=script`), and no selection's inspector over it. */
@@ -433,6 +435,17 @@ const Body = (
   const boardFile = useAtomValue(() => boardRead);
   const boardAgain = useAtomRefresh(() => boardRead);
   const board = createMemo(() => AsyncResult.value(boardFile()));
+  // The Board panels a run would draw again: read beside the Board, and again with it.
+  const staleRead = props.runtime.atom(LabApi.use((api) => api.boardStale));
+  const staleFile = useAtomValue(() => staleRead);
+  const staleAgain = useAtomRefresh(() => staleRead);
+  const stale = (id: string) =>
+    Option.flatMap(AsyncResult.value(staleFile()), (s) =>
+      Option.map(
+        Arr.findFirst(s.panels, (p) => p.panel === id),
+        (p) => p.why,
+      ),
+    );
   const tried = createMemo(() =>
     Option.flatMap(place(), (v) =>
       Option.liftPredicate(v.query.try, (n) => n > 0 && Option.isSome(panel())),
@@ -617,7 +630,10 @@ const Body = (
             },
           ),
       }),
-    boardAgain,
+    boardAgain: () => {
+      boardAgain();
+      staleAgain();
+    },
     record: setRecording,
     pane: (open) =>
       Option.map(Place.decode(Places.studio, address.href()), (value: StudioValue) =>
@@ -829,6 +845,7 @@ const Body = (
       note,
       picked,
       board,
+      stale,
       recording,
       pane,
       zoom,

@@ -281,6 +281,86 @@ The form of an entry, each field on its own line:
 - **Cause:** The job tests started one packet only.
 - **Guard:** code: `packages/film/src/tools/critique.test.ts` `two packets that differ in one byte of a crop are two jobs and two runs; the same packet again is one`
 
+### deck-head-turned-past-the-neck
+
+- **Date:** 2026-10-25
+- **Kind:** owner
+- **Said:** "Okay, this slide here, the head is kind of strange here. It shouldn't be so fully turned back. at least the way his body's positioned. It's not possible for the head to turn this direction."
+- **Source:** scrawl capture scrawl-1792942843717-1060f-63 #1, on Reading 110's slide of Luke 19:12
+- **Wrong:** The painting of the nobleman (Reading 110, Luke 19:12) drew his back and cloak walking away from the viewer with his face turned fully round toward the viewer, a turn no neck makes.
+- **Cause:** The beat's concept asked for him "looking back toward the city" while setting out on the road, and the deck's prompt said nothing of how far a head turns; the painting was looked at in a contact sheet at 600 px, where the turn did not show.
+- **Guard:** skill: how far a painted head may turn is a judgment of the eye, so the bible skill's deck prompt asks it of every painting. Carried by `skills/bible/scripts/deck/series.ts`: "the head turns no further than the neck allows from the shoulders"
+
+### deck-pose-from-a-reference
+
+- **Date:** 2026-10-25
+- **Kind:** owner
+- **Said:** "Okay, this is even worse. Now there's 2 heads. The head should try to find a picture of someone turning so that you can better generate this because as it is right now, it doesn't make sense."
+- **Source:** scrawl capture scrawl-1792943164123-1060f-65 #1, on Reading 110's slide of Luke 19:12
+- **Wrong:** The redraw of the nobleman (Reading 110, Luke 19:12), side-on and walking right, drew a second face on the back of his head toward his stride beside the one turned back to the gate.
+- **Cause:** The concept asked for a stride one way and a look the other with no picture of the pose, and the redraw was checked at 900 px, where the second face did not show; a full-size crop of the next try showed the same second face.
+- **Guard:** skill: whether a painted head reads as one natural turn is a judgment of the eye; the bible skill's deck reference asks for a pose picture and a full-size check. Carried by `skills/bible/references/decks.md`: "rather than walk away while he looks back: a stride one way and a face the"
+
+### deck-edited-in-place
+
+- **Date:** 2026-10-25
+- **Kind:** owner
+- **Said:** "Let's update the presentation skills so that we don't constantly generate a new keynote every time we make an edit. I want to edit in place"
+- **Source:** chat, 2026-10-25, after two redraws of Reading 110's Luke 19:12 slide
+- **Wrong:** Each fix to one Reading 110 slide rebuilt the whole deck as a new document, and Keynote Creator Studio autosaved each new document into iCloud under its suggested name: three stray copies of 106 MB ("The Thief on the Cross", " 2", " 3"), the one open in Keynote not the repo's deck.
+- **Cause:** The deck pipeline had one way to make a deck, a fresh build (`gen_applescript.ts`), and it saved the new document to its path only after drawing every slide, so the app's autosave named and placed it first.
+- **Guard:** skill: the bible skill's deck reference makes `sync_deck.ts` the one command, editing an existing deck in place. Carried by `skills/bible/references/decks.md`: "changed since the last sync (a painting, a verse, a reference, a note, the"
+
+### board-christ-from-the-library
+
+- **Date:** 2026-10-25
+- **Kind:** owner
+- **Said:** "This all looks good. I think the only thing is that we should make Jesus consistent with our library. We don't have to draw it again, but just keep that in mind"
+- **Source:** ask a64a62dd4c5 (in-its-order production)
+- **Wrong:** The kept In Its Order panels `name.into` try 4 and `thesis.start` try 3 drew Christ in a brown mantle, where His library sheet draws the white robe and the gold sash.
+- **Cause:** The house dress rule (OQ5, 2026-10-19) put Christ in the linen coat and walnut mantle on earth, the script named that dress in `name` and `thesis`, and the board draws a beat's named dress over the record's; asked which wins, the owner chose the library's dress everywhere except as Priest (ask a8c0f607f34).
+- **Guard:** skill: a beat's dress is in a picture's words, which no code check reads. Carried by `.claude/skills/film/SKILL.md`: "Christ wears His record's dress, the white robe and the gold sash, in every beat but the Priest's"
+
+### board-villager-apart-from-christ
+
+- **Date:** 2026-10-25
+- **Kind:** owner
+- **Said:** chose: "Dress him apart from Christ (a coloured mantle or headcloth) at the next redraw"
+- **Source:** ask a8c0f607f34 (in-its-order production)
+- **Wrong:** The milk beat's grown villager (`milk.newborn` 3, `milk.word` 3, `milk.shame` 4) is bearded and bareheaded in a plain light robe, which reads as Christ in a beat Christ is not in.
+- **Cause:** The `idea-villagers` record drew the grown villager as the sower with his headcloth and mantle off, so nothing set him apart from Christ's beard and robe.
+- **Guard:** skill: whether a figure reads as Christ is a judgment of the eye. Carried by `.claude/skills/film/SKILL.md`: "no other grown figure is drawn bearded and bareheaded in a plain light robe, which reads as Christ"
+
+### board-stale-words-of-an-import
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "a run on RBF would draw 13 panels × `--tries` of paid images over the owner's imported picks, which he did not ask for."
+- **Source:** board-stale-2/review-r1.md F1, the review's first minor, headed M1
+- **Wrong:** Righteousness by Faith's dry run named 13 kept panels stale by their words. Each keeps an imported try whose prompt was copied from an older script.
+- **Cause:** The prompt fallback judged every try with a prompt, and an import carries the prompt it was made with elsewhere. Words are now judged only on tries the board drew itself (`generate`, `tweak`).
+- **Guard:** code: `packages/film/src/tools/board-stale.test.ts` `an imported try is never stale by its words, though the prompt it came with lacks them`
+
+### board-stale-route-refused-on-a-broken-script
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "`GET board/stale` refuses when the script cannot be read, unlike the MCP read"
+- **Source:** board-stale-2/review-r1.md F2, the review's second minor, headed M2
+- **Wrong:** When the film's script could not be read, the studio's stale read answered a refusal, while the MCP board read answered with no panel stale.
+- **Cause:** Only the MCP read caught the script read's failure. `staleInLab` now catches it for both: it logs `board.stale … unread=` and names no panel stale.
+- **Guard:** code: `packages/film/src/tools/board-http.test.ts` `name no panel stale, and answer, when the script cannot be read now`
+
+### board-stale-import-against-the-cast-sent-now
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "an import the owner kept, in a beat that names a library member, is called stale and drawn over (reference-set rule)"
+- **Source:** board-stale-2/review-r2.md F1
+- **Wrong:** An import kept in a beat that names a library member was called stale, and a run drew new tries over the owner's pick. An import records no references, so every file the member sends now looked new to it.
+- **Cause:** The fix for imports covered the words rule only; the reference-set rule still judged every try. One predicate (`drawnByBoard`: `generate`, `tweak`) now gates both rules.
+- **Guard:** code: `packages/film/src/tools/board-stale.test.ts` `in a beat whose member has a kept library sheet is not stale, and a run draws nothing for it`
+
 ## The look
 
 ### floating-circle-hands-no-arms
@@ -3697,6 +3777,16 @@ The form of an entry, each field on its own line:
 - **Cause:** A proof of a rule "in every film source" read a sample of paths, not the tracked files.
 - **Guard:** code: `packages/film/lint/config.slow.test.ts` `refuses @effect/platform-bun's index in every film source and passes a module by its own path`
 
+### test-worker-loads-an-effect-barrel
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "The barrels cost about 17 ms in each worker (HttpApiScalar 7.8 ms and HttpApiSwagger 4.5 ms, both unused; the AI providers)."
+- **Source:** film-budget/blocked.md F2 (option B there, the second of its options)
+- **Wrong:** 52 film files took effect's `http-api`, `ai` and `cli` modules from their barrels, so each test worker that loaded one of them loaded every module of the barrel: HttpApiScalar, HttpApiSwagger and the AI providers' structured output, which the film does not use.
+- **Cause:** The house import of an effect area was its barrel, and the subpath rule refused `@effect/platform-bun`'s index alone.
+- **Guard:** lint:no-restricted-imports, proof `packages/film/lint/config.slow.test.ts` `refuses @effect/platform-bun's index in every film source and passes a module by its own path`
+
 ### unit-temp-under-crowded-tmpdir
 
 - **Date:** 2026-10-24
@@ -3736,3 +3826,23 @@ The form of an entry, each field on its own line:
 - **Wrong:** While a hymn played, the sounding bar (88 pt) covered the lower 16.3 pt of the `Resume follow` pill, so its label was cut.
 - **Cause:** A screen reserves the resting bar's height alone (56 pt), so the sounding bar lies 32 pt over the page's foot, and the pill still docked 16 pt above that foot (`follow/ResumeFollow.tsx`). The page now docks the pill in a box that ends `RISE` (32 pt) above its foot.
 - **Guard:** code: `apps/hymnal/src/player/thumb.slow.test.tsx` `stands the Resume follow pill whole over the sounding bar`
+
+### board-stale-fallback-held-to-one-member
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "the fallback test covers only a `kept/` ref on a single member."
+- **Source:** board-stale/review-r1.md F1, the review's first minor, headed M1
+- **Wrong:** The test of a try from before tries recorded their cast read one `kept/` ref of one member. A fallback that judged a view cut from a replaced sheet wrong, or marked another member's panel stale, would still pass.
+- **Cause:** The test was written for the board's one live case, the feast lead's three kept sheets. Two cases now hold the other branches: a view, and a second member whose record has no newer keep of the kind drawn.
+- **Guard:** code: `packages/film/src/tools/board-stale.test.ts` `a try from before is not stale on another member's sheet, nor on a kind of its own sheet not replaced`
+
+### board-stale-ride-along-on-the-old-keep
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "the new tries of `cold.letter` and `cold.what` take `cold.baby`'s shown try, which is the old-sheet keep, as the second reference"
+- **Source:** board-stale/review-r1.md F2, the review's second minor, headed M2
+- **Wrong:** When a run drew a stale beat again, its later panels rode along by the first panel's keep, drawn from the sheet the owner replaced, so their new tries leaned on the old face.
+- **Cause:** The ride-along took the first panel's shown try, which is its keep while one is kept. A run now rides along by the first try it drew of the first panel, and by the shown try only when it drew none.
+- **Guard:** code: `packages/film/src/tools/board-stale.test.ts` `takes the first panel's first try drawn in this run, never its keep from the sheet replaced`

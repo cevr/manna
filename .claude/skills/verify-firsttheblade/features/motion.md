@@ -6,10 +6,11 @@ and a light shimmers out along the rays from the sun on the right horizon,
 while the rays turn slowly about the sun, a few degrees each way over a
 minute.
 At the foot of each page the night's painted stars twinkle and faint stars
-drift. Pointing at a series card, pressing it or focusing its link stirs its
-emblem: the path's sun rises and its rays reach out, the tree sways, the
-healing leaf sways on its stem, the book turns a leaf. A visitor who asks for less motion sees the stills and the
-emblems at rest.
+drift. Pointing at a series row, pressing it or focusing its link stirs its
+fine-line mark: the path's sun rises and its rays reach out, the land's plant
+sways, Health and Cure's leaf leans 5° about its stem's foot, and the book
+turns a leaf from right to left. A visitor who asks for less motion sees the
+stills and the marks at rest.
 
 ## Sub-features
 
@@ -25,25 +26,25 @@ emblems at rest.
   still itself, and its motion fades in over 2.5 s: the page never jumps.
 - `motion-pause`: a canvas draws only while it is on the screen and the tab
   is shown.
-- `motion-card`: a card's emblem stirred by a fine pointer's hover, a press,
-  or its link's keyboard focus; a tap on a touch screen leaves no card
+- `motion-card`: a series row's mark stirred by a fine pointer's hover, a
+  press, or its link's keyboard focus; a tap on a touch screen leaves no row
   stirred.
 - `motion-less`: with `prefers-reduced-motion: reduce`, the motion script is
-  never fetched, no canvas is laid and no card stirs.
+  never fetched, no canvas is laid and no row stirs.
 
 ## How to get to it (user POV)
 
 - The home page's field, as it opens; a page's own field is the same
   painting, shorter.
 - The night close at the foot of every page.
-- The series cards on the home page.
+- The series rows on the home page.
 - The system's "reduce motion" setting, for `motion-less`.
 
 ## Driving it with agent-browser
 
 - **Preconditions:** the baseline, and a Chrome with WebGL2 (headless Chrome
   has it through SwiftShader).
-- **States:** default, focus-visible (the card's link), and less motion; the
+- **States:** default, focus-visible (the row's link), and less motion; the
   rest are n/a.
 - **Regression:** `apps/firsttheblade/src/motion/sun.test.ts`,
   `apps/firsttheblade/src/motion/cover.test.ts`,
@@ -73,24 +74,26 @@ emblems at rest.
    as the page loads, then hide the canvas
    (`ab eval "document.querySelector('canvas.motion').style.visibility='hidden'"`)
    and `ab screenshot 2-still.png`: the field in the two shots is the same to
-   the eye.
+   the eye, its fade into the paper in place in both: the fade is on the
+   wrapper that holds the still and its canvas (`.field-paint`), so the
+   canvas never shows a hard edge.
 3. **Night.** `ab scroll down 4000`, wait 4 s: the painted stars twinkle and
    faint ones drift in the dark sky, and the moon and the words stay still.
-4. **Card hover.** `ab scroll up 4000`, then
+4. **Row hover.** `ab scroll up 4000`, then
    `ab hover "a[href='/series/the-path-of-the-just']"`: the path's sun swells
    up from its horizon and its rays reach out over 0.6 s, and fall back when
-   the pointer leaves. Hover each of the four; the book's leaf crosses from
-   right to left, and Health and Cure's leaf leans a few degrees to the
-   right about its stem's foot and does not turn.
-5. **Card focus.** `ab press Tab` until a card's link is focused: the card's
-   emblem stirs as on hover, and rests again when the focus moves on.
+   the pointer leaves. Hover each of the four; the land's plant sways, the
+   book's leaf crosses from right to left, and Health and Cure's leaf leans
+   5° to the right about its stem's foot and does not turn.
+5. **Row focus.** `ab press Tab` until a row's link is focused: the row's
+   mark stirs as on hover, and rests again when the focus moves on.
 6. **Phone.** `ab set viewport 390 844` and reload: the field and the night
    move as on the desktop (a viewport alone keeps the fine pointer, so the
-   rays turn; on a touch phone they rest); a tap on a card opens its series
-   and leaves no emblem stirred on the way back.
+   rays turn; on a touch phone they rest); a tap on a row's link opens its series
+   and leaves no mark stirred on the way back.
 7. **Less motion.** `ab set media light reduced-motion`, then `ab open $O/`:
    `ab eval "document.querySelectorAll('canvas.motion').length"` reads 0, and
-   a hovered card's emblem stays at rest. Then `ab record stop`.
+   a hovered row's mark stays at rest. Then `ab record stop`.
 8. **Proof.** `ab snapshot` and `ab screenshot` into `$EVIDENCE/motion/`.
 
 ## Gotchas
@@ -101,7 +104,10 @@ emblems at rest.
   drive is refused; set an element's `style` from `ab eval` instead.
 - Reading a WebGL canvas into a screenshot stalls the GPU, and Chrome logs a
   "GPU stall due to ReadPixels" warning: it is the drive's, not the site's.
-- The field's still is the kit's (`bun run --cwd apps/firsttheblade kit:field`).
+- The field's still is the kit's (`bun run --cwd apps/firsttheblade kit:field`),
+  and so is the night's (`bun run --cwd apps/firsttheblade kit:night`, the
+  sky's hue turned to the night's; the moon and the stars stay where the
+  shader finds them).
   Its rules: a still is approved only if its SHA-256 equals a file that an
   image block of the approving ask showed, on a step the owner's answer
   reached, by the receipt the lab kept as it made the ask, and that ask's

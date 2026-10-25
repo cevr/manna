@@ -14,7 +14,9 @@
 // `read` with a byte range), not through this command.
 
 import { Console, Effect, FileSystem, Option, Path } from 'effect';
-import { Argument, Command, Flag } from 'effect/cli';
+import * as Argument from 'effect/cli/Argument';
+import * as Command from 'effect/cli/Command';
+import * as Flag from 'effect/cli/Flag';
 import { StoreCopyFailed, StoreKeyTaken } from './errors.ts';
 import { sha256OfFile } from './digest.ts';
 import { filmsOut } from './film-repo.ts';

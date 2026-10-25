@@ -8,7 +8,7 @@
 // one history.
 
 import { Duration, Effect, Match, Option, Schema } from 'effect';
-import { Tool } from 'effect/ai';
+import * as Tool from 'effect/ai/Tool';
 import { ChangeId } from '../core/schema.ts';
 import { BeatEdits, type Edited } from './beat-edits.ts';
 import { onlyTracks } from '../core/film-timeline.ts';

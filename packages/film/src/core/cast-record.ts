@@ -17,7 +17,7 @@
 // and whether it has a beard, so a brief tells of a beard only on one who has it.
 // Pure.
 
-import { Array as Arr, Option, Predicate, Result, Schema } from 'effect';
+import { Array as Arr, Boolean as Bool, Option, Predicate, Result, Schema } from 'effect';
 import {
   SheetCheck,
   SheetKind,
@@ -293,3 +293,19 @@ export const withCastReplaced = (
   ...withCastKept(record, replaced.kind, kept),
   replaced: [...(record.replaced ?? []), replaced],
 });
+
+/**
+ * Whether a file of the member's kept sheets (`kept/<kind>.png`, or a view
+ * cut from one, `views/<name>.png`) held something else at `at` (ISO): a
+ * keep of its kind, or one that kept that view, was replaced after it. A
+ * file of no kept sheet never changes so.
+ */
+export const replacedSince = (record: CastSheetRecord, file: string, at: string): boolean => {
+  const since = (record.replaced ?? []).filter((r) => r.at > at);
+  const [folder, name] = file.split('/');
+  return Bool.match(folder === 'kept', {
+    onTrue: () => since.some((r) => `${r.kind}.png` === name),
+    onFalse: () =>
+      folder === 'views' && since.some((r) => r.kept.views.some((v) => `${v.name}.png` === name)),
+  });
+};

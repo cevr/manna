@@ -660,8 +660,8 @@ describe('the motion in the stylesheet', () => {
       const drawing = yield* fs.readFileString(
         path.join(import.meta.dir, '..', 'art', 'emblem-remedies.svg'),
       );
-      // The drawing is the blade's group, then its stem and veins as one path from the stem's foot.
-      const foot = /<\/g>\s*<path d="M(\d+) (\d+)L/.exec(drawing);
+      // The drawing is the blade's group (its edges, veins and the stem's broader passes), then the stem's path from its foot.
+      const foot = /<\/g>\s*<path d="M(\d+) (\d+)[A-Za-z]/.exec(drawing);
       expect(foot).not.toBeNull();
       const sheet = yield* stylesheet;
       const parts = '.emblem-remedies svg > *';

@@ -94,14 +94,14 @@
 //   toddler who runs is `villager-toddler` (base sizes for filler cast); the
 //   grown villager (the eater and the watcher) is a dress variant of the
 //   library's `sower`
-//   (his face, beard and build, the headcloth and mantle off), and he and the
+//   (his face, beard and build, and the sower's linen headcloth with its walnut band, the mantle off, so he is never read as Christ), and he and the
 //   baby are drawn in this film's `idea-villagers`.
 // - Jesus Christ is the locked figure (`src/library/cast/christ`), at the top
 //   of the court canon's height band, never short: as Priest in `priest` (a
 //   white robe, the golden girdle and the breastplate, seen from behind
-//   passing in through the veil), and in His earthly dress (the seamless
-//   linen coat and the walnut mantle) as the host in `name`. The Father is
-//   never pictured: the host is Christ.
+//   passing in through the veil), and in His library dress (the plain white
+//   robe and the gold sash; owner, 2026-10-25) as the host in `name`. The
+//   Father is never pictured: the host is Christ.
 // - Paul (`bottle`), the sower (`grain`) and Jeremiah (`eat`) are Bible
 //   figures in story cloth, each drawn once as shared cast.
 // - The wedding guests and the Corinthian church come from the crowd kit
@@ -143,7 +143,7 @@ export const script = defineScript([
       'E. J. Waggoner, The Medical Missionary, September 1904, 286',
     ],
     cast: ['idea-villagers', 'villager-child', 'villager-toddler', 'lead-feast'],
-    picture: `IDEA: the parchment page, matched from the cup on the courtyard table in \`cold\`. A grown linen villager holds a small clay cup; on \`newborn\` a book opens beside it and a ribbon of white pours from its pages into the cup (\`word\`). On \`mixed\` a dropper of dark ink hovers over the cup and is waved away. On \`need\` the cup passes along a row of linen villagers of every height (the baby, the toddler, the child, the grown villager), each drinking in turn; on \`shame\` the series lead from \`cold\`, in his cream tunic and teal mantle, takes a cup too and smiles. ${CARDS}`,
+    picture: `IDEA: the parchment page, matched from the cup on the courtyard table in \`cold\`. A grown linen villager in his linen headcloth holds a small clay cup; on \`newborn\` a book opens beside it and a ribbon of white pours from its pages into the cup (\`word\`). On \`mixed\` a dropper of dark ink hovers over the cup and is waved away. On \`need\` the cup passes along a row of linen villagers of every height (the baby, the toddler, the child, the grown villager), each drinking in turn; on \`shame\` the series lead from \`cold\`, in his cream tunic and teal mantle, takes a cup too and smiles. ${CARDS}`,
   },
   {
     id: 'stones',
@@ -240,7 +240,7 @@ export const script = defineScript([
       'E. J. Waggoner, The Medical Missionary, September 1904, 286',
     ],
     cast: ['lead-feast', 'christ'],
-    picture: `IDEA and STORY merged, the landing: the wedding courtyard from \`cold\` in the same layout and framing, now under the teal-to-yellow landing sky. The series lead stands where he stood; on \`sets\` he sets the baby's bottle down. On \`table\` the host's hand (the host is Christ, in the seamless linen coat and the walnut mantle, at the head of the table) gestures to the place set for him: bread from the field in \`grain\`, and on \`cup\` the cup of milk from \`milk\` beside the plate. On \`taste\` he tastes, close on his face, delight. On \`leaving\` the six stones show for a breath as the courtyard's paving under the table. On \`into\` he stands taller beside the host; the gold cross's light from \`priest\` warms the whole courtyard. The held pause comes after \`into\`. ${CARDS}`,
+    picture: `IDEA and STORY merged, the landing: the wedding courtyard from \`cold\` in the same layout and framing, now under the teal-to-yellow landing sky. The series lead stands where he stood; on \`sets\` he sets the baby's bottle down. On \`table\` the host's hand (the host is Christ, in His library dress, the plain white robe and the gold sash, at the head of the table) gestures to the place set for him: bread from the field in \`grain\`, and on \`cup\` the cup of milk from \`milk\` beside the plate. On \`taste\` he tastes, close on his face, delight. On \`leaving\` the six stones show for a breath as the courtyard's paving under the table. On \`into\` he stands taller beside the host; the gold cross's light from \`priest\` warms the whole courtyard. The held pause comes after \`into\`. ${CARDS}`,
   },
   {
     id: 'thesis',
@@ -249,7 +249,7 @@ export const script = defineScript([
     min: 30,
     cite: ['2 Peter 3:18'],
     cast: ['lead-feast', 'christ'],
-    picture: `STORY: The answer comes as the only text, the take's own first clause on the full-screen card: "Grow in grace", "Grow" large in gold, the answer to \`cold\`'s question. The music rises alone for about thirty seconds while the camera eases back and lifts over the courtyard, the young man still at the host's side at the set table (the host is Christ, in the seamless linen coat and the walnut mantle, as in \`name\`). Past the courtyard wall, the field from \`grain\` moves in the wind, full corn, and the hill of \`path\` rises beyond it. ${CARDS}`,
+    picture: `STORY: The answer comes as the only text, the take's own first clause on the full-screen card: "Grow in grace", "Grow" large in gold, the answer to \`cold\`'s question. The music rises alone for about thirty seconds while the camera eases back and lifts over the courtyard, the young man still at the host's side at the set table (the host is Christ, in His library dress, the plain white robe and the gold sash, as in \`name\`). Past the courtyard wall, the field from \`grain\` moves in the wind, full corn, and the hill of \`path\` rises beyond it. ${CARDS}`,
   },
   {
     id: 'end',

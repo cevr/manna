@@ -15,7 +15,9 @@
 //   film review <film> --set <name> --scene <id> --at <place> --at <place> [--figure <name>]
 //   film review <film> --set <name> --done <id> --did "<what was done>"
 
-import { Argument, Command, Flag } from 'effect/cli';
+import * as Argument from 'effect/cli/Argument';
+import * as Command from 'effect/cli/Command';
+import * as Flag from 'effect/cli/Flag';
 import {
   Array as Arr,
   Boolean as Bool,

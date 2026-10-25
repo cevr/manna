@@ -56,7 +56,9 @@ import {
   Result,
   Schema,
 } from 'effect';
-import { Argument, Command, Flag } from 'effect/cli';
+import * as Argument from 'effect/cli/Argument';
+import * as Command from 'effect/cli/Command';
+import * as Flag from 'effect/cli/Flag';
 import type { ScriptBeat } from '../core/api.ts';
 import type { LineError, UnknownVoice } from '../core/errors.ts';
 import { filmClock } from '../core/film-timeline.ts';
@@ -405,13 +407,19 @@ const voice = Command.make(
   ),
 );
 
-/** Each beat of a film's script as the words reader reads it: its id, its line, its picture's brief, its sources. Pure. */
+/** Each beat of a film's script as the words reader and the Board read it: its id, its line, its picture's brief and cast, its sources. Pure. */
 const scriptBeatsOf = (
-  script: Option.Option<ReadonlyArray<ScriptLine & { readonly picture?: string }>>,
+  script: Option.Option<
+    ReadonlyArray<ScriptLine & { readonly picture?: string; readonly cast?: ReadonlyArray<string> }>
+  >,
 ): ReadonlyArray<ScriptBeat> =>
-  Option.getOrElse(script, () => []).map(({ id, say, cite, picture }): ScriptBeat => ({
+  Option.getOrElse(script, () => []).map(({ id, say, cite, picture, cast }): ScriptBeat => ({
     id,
     cite,
+    ...Option.match(Option.fromUndefinedOr(cast), {
+      onNone: () => ({}),
+      onSome: (members) => ({ cast: members }),
+    }),
     ...Option.match(Option.fromUndefinedOr(say), {
       onNone: () => ({}),
       onSome: (line) => ({ say: line }),

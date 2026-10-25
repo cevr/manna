@@ -30,9 +30,11 @@ import {
   Given,
   approve,
   checkKept,
+  hashedStills,
   pin,
   readRecord,
   savedAsk,
+  servedStills,
   shippable,
   StillsMoved,
   StillsNotShown,
@@ -116,7 +118,7 @@ const recordAt = (root: string, record: Approved) =>
 /** A copy of the app whose record keeps no approval: pending on `OTHER`, over the stills as they stand. */
 const freshApp = Effect.gen(function* () {
   const root = yield* scratchApp(APP);
-  const { stills } = yield* readRecord(root);
+  const stills = Object.fromEntries(yield* hashedStills(root));
   yield* recordAt(root, { approval: { status: 'pending', ask: OTHER }, earlier: [], stills });
   return root;
 });
@@ -546,6 +548,9 @@ describe('kit:approve', () => {
           fs.writeFile(`${root}/${still}`, bytes),
         ),
       );
+      // The app as the ask found it: it serves no still the ask did not show.
+      const since = (yield* servedStills(root)).filter((still) => !kept.includes(still));
+      yield* Effect.forEach(since, (still) => fs.remove(`${root}/${still}`));
       yield* holdingReads([real.read]);
       expect((yield* pin(root, SHOWED).pipe(Effect.flip))._tag).toBe('AskUnreceipted');
       yield* rerecord(root, (record) => ({

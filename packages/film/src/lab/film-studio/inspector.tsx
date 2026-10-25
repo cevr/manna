@@ -490,6 +490,13 @@ const PanelRow = (props: {
               </For>
             </div>
             <Show when={p().why}>{(why) => <p class="st-why">{`Kept: ${why()}`}</p>}</Show>
+            <Show when={Option.getOrUndefined(state.stale(p().id))}>
+              {(why) => (
+                <p class="st-why" data-stale="true">
+                  {`Stale: ${why()}`}
+                </p>
+              )}
+            </Show>
             <Show when={noted().length > 0}>
               <ul class="st-panel-notes" aria-label={`Notes on ${props.clip.panel}`}>
                 <For each={noted()} keyed={(n) => n.id}>

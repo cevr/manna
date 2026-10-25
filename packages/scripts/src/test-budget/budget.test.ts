@@ -20,7 +20,7 @@ describe("the tests' time budget, each workspace alone", () => {
     expect(judged.failure).toEqual([]);
     expect(judged.report).toEqual([
       '',
-      'test:budget: each workspace alone, under 1.00 s (load average 3.2 over 1 min and 2.8 over 5 min before them, on 12 cores)',
+      'test:budget: each workspace alone, under 1.00 s, @bible/film under 1.10 s (load average 3.2 over 1 min and 2.8 over 5 min before them, on 12 cores)',
       '   0.61 s  @bible/film',
       '   0.42 s  @bible/core',
     ]);
@@ -30,28 +30,44 @@ describe("the tests' time budget, each workspace alone", () => {
     for (const load of [quiet, { one: cores, five: cores }]) {
       const judged = judge({
         workspaces: [
-          { name: '@bible/core', ms: Option.some(420), exitCode: 0 },
-          { name: '@bible/film', ms: Option.some(1_230), exitCode: 0 },
+          { name: '@bible/film', ms: Option.some(420), exitCode: 0 },
+          { name: '@bible/core', ms: Option.some(1_230), exitCode: 0 },
         ],
         load,
         cores,
       });
       expect(judged.code).toBe(1);
-      expect(judged.failure[0]).toBe('test:budget: over budget: @bible/film 1.23 s.');
+      expect(judged.failure[0]).toBe('test:budget: over budget: @bible/core 1.23 s.');
     }
   });
 
   test('a workspace at exactly 1,000 ms is over budget: the budget is under 1 s', () => {
     const judged = judge({
       workspaces: [
-        { name: '@bible/core', ms: Option.some(999), exitCode: 0 },
-        { name: '@bible/film', ms: Option.some(1_000), exitCode: 0 },
+        { name: '@bible/film', ms: Option.some(999), exitCode: 0 },
+        { name: '@bible/core', ms: Option.some(1_000), exitCode: 0 },
       ],
       load: quiet,
       cores,
     });
     expect(judged.code).toBe(1);
-    expect(judged.failure[0]).toBe('test:budget: over budget: @bible/film 1.00 s.');
+    expect(judged.failure[0]).toBe('test:budget: over budget: @bible/core 1.00 s.');
+  });
+
+  test('the film workspace has 1.1 s: 1,099 ms passes and 1,100 ms is over', () => {
+    const under = judge({
+      workspaces: [{ name: '@bible/film', ms: Option.some(1_099), exitCode: 0 }],
+      load: quiet,
+      cores,
+    });
+    expect(under.code).toBe(0);
+    const over = judge({
+      workspaces: [{ name: '@bible/film', ms: Option.some(1_100), exitCode: 0 }],
+      load: quiet,
+      cores,
+    });
+    expect(over.code).toBe(1);
+    expect(over.failure[0]).toBe('test:budget: over budget: @bible/film 1.10 s.');
   });
 
   test('workspaces whose times sum past the budget, each under it, pass: the run states no total', () => {

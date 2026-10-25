@@ -1,7 +1,7 @@
-// The page's media loads the WebCodecs decoders (mediabunny, most of the review
-// page's bytes) only where the panes are chosen: its entry chunk, bundled for
-// the browser with splitting as the lab's pages are, reaches none of it, and
-// the panes' module is a chunk of its own.
+// The page's media loads the panes' module (mediabunny's WebCodecs decoders)
+// only where the panes are chosen, and plays on <video> when that chunk will
+// not load. That the entry chunk reaches none of mediabunny is a bundle check:
+// media-browser.slow.test.ts.
 
 import { expect, it } from 'effect-bun-test';
 import { Effect, Layer, Stream } from 'effect';
@@ -36,28 +36,4 @@ it.effect('a panes module that will not load plays on <video>, saying so', () =>
     );
     expect(compare.engine).toEqual({ engine: 'video', why: PANES_NOT_LOADED });
   }).pipe(Effect.provide(media)),
-);
-
-const MEDIABUNNY = /node_modules\/(\.bun\/)?[^/]*mediabunny/;
-
-it.effect('mediabunny is a lazy chunk of the page media, not part of its entry', () =>
-  Effect.gen(function* () {
-    const out = yield* Effect.promise(() =>
-      Bun.build({
-        entrypoints: [new URL('./media-browser.ts', import.meta.url).pathname],
-        target: 'browser',
-        splitting: true,
-        metafile: true,
-        throw: true,
-      }),
-    );
-    const outputs = Object.entries(out.metafile?.outputs ?? {});
-    const holders = outputs.filter(([, o]) =>
-      Object.keys(o.inputs).some((input) => MEDIABUNNY.test(input)),
-    );
-    const entry = outputs.filter(([, o]) => o.entryPoint?.endsWith('browser/media-browser.ts'));
-    expect(holders.length).toBeGreaterThan(0);
-    expect(entry.length).toBe(1);
-    expect(holders.map(([name]) => name)).not.toContain(entry[0]?.[0]);
-  }),
 );

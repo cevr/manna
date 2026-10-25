@@ -8,7 +8,7 @@
 
 import { Array as Arr, Option, Predicate, Schema } from 'effect';
 import type { JsonSchema } from 'effect';
-import type { Tool } from 'effect/ai';
+import type * as Tool from 'effect/ai/Tool';
 
 /** What a field is, read from its JSON Schema: one value (a word, a number, a switch), a list of words or numbers, or JSON. */
 export type FieldKind = 'word' | 'number' | 'switch' | 'words' | 'numbers' | 'json';

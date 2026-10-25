@@ -11,11 +11,11 @@
 
 import { Cause, Context, Effect, Layer, Option, Predicate, Schema } from 'effect';
 import { FetchHttpClient, HttpClient, HttpClientRequest } from 'effect/http';
-import { HttpApiClient } from 'effect/http-api';
+import * as HttpApiClient from 'effect/http-api/HttpApiClient';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';
 import * as Atom from 'effect/reactivity/Atom';
 import { type Bound, Unfit, boundChange } from '../command/command.ts';
-import { LabHttpApi, Refusal, isRefusal } from '../core/api.ts';
+import { type BoardStale, LabHttpApi, Refusal, isRefusal } from '../core/api.ts';
 import type { BoardFile, BoardName } from '../core/board.ts';
 import type { PageRequest } from '../core/page-render.ts';
 import { newerFirst } from '../core/refusals.ts';
@@ -132,6 +132,8 @@ interface LabCalls {
   readonly code: (scene: string) => Effect.Effect<SceneCode, LabFailure>;
   /** The film's storyboard, as its record (`board.json`) stands now: empty before its first panel. */
   readonly board: Effect.Effect<BoardFile, LabFailure>;
+  /** Each Board panel a run would draw again, and why, as the lab judges it now. */
+  readonly boardStale: Effect.Effect<BoardStale, LabFailure>;
   /** Keep try `tried` of `panel`, and why: the board as it stands after. */
   readonly boardPick: (
     panel: string,
@@ -222,6 +224,7 @@ const makeLabApi = Effect.fn('lab.api.make')(function* (film: string) {
   const api: LabCalls = {
     code: (scene) => called(client.scenes.code({ params: { film, scene } })),
     board: called(client.board.read({ params: { film } })),
+    boardStale: called(client.board.stale({ params: { film } })),
     boardPick: (panel, tried, why) =>
       called(client.board.pick({ params: { film }, payload: { panel, try: tried, why } })),
     boardApproval: (verb, beat) =>

@@ -5,58 +5,66 @@ The work, in the owner's words (2026-10-16/17): a hymnal app on One (onestack.de
 Host: claude (laptop) · Units at once: 1 agent (owner, 2026-10-21) · Gate: ~35 s warm (`bun run gate`, 31 tasks) · Reserved: publish, paid calls, force-push (the r2 deploy and copy are the orchestrator's after merge, owner 2026-10-18; the owner deleted S3 `cvr-hymns` 2026-10-18 after all 694 objects matched R2 by size) · Repo: ~/Developer/personal/bible-tools · Base: b27a9471b
 Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>` (rift fails on this repo), branch `hymnapp/<unit>`. Merge = rebase on origin/main, gate, `git push origin HEAD:main` (ff only).
 
-| Unit       | Depends on                     | Workspace                 | Agents            | Result              |
-| ---------- | ------------------------------ | ------------------------- | ----------------- | ------------------- |
-| glass      | appbase                        | .rifts/bible-tools/glass  | impl ab2ba40 (r8) |                     |
-| manna      | testsplit, compile, glass      | .rifts/bible-tools/manna  |                   |                     |
-| reader1    | appbase                        | .rifts/manna/reader1      | impl a4ef6ed (r1) |                     |
-| palette    | reader1                        |                           |                   |                     |
-| playstall  | playerfix                      | (removed)                 | (closed)          | merged 055a51bac    |
-| census2    | hymnrows                       | .rifts/manna/census2      |                   | merged 0de80174f    |
-| census3    | census2                        |                           |                   |                     |
-| pagerows   | census2                        | worktree                  | (closed)          | merged 63e310e82    |
-| one29      | playerfix, coldload            |                           |                   | merged 8e527c5db    |
-| topicdata  | —                              |                           |                   | merged 3784ae17e    |
-| shell      | topicdata                      | .rifts/manna/shell        | a90e66e812e023e45 | merged 46263e5dd    |
-| sdkfx      | shell                          | .rifts/manna/sdkfx        | orchestrator      | merged 51b5e976f    |
-| sticky     | shell                          |                           |                   | folded into uibulk  |
-| uibulk     | chords, shell, playstall       |                           |                   | merged 2f7de2e1d    |
-| chordsimp  | chords, uibulk                 | removed                   |                   | merged d34ce0021    |
-| h220       | pagerows                       | removed                   |                   | merged 5ffd09c2e    |
-| worship    | uibulk, render                 | removed                   | a454c54eeec07a736 | merged b7b060b8f    |
-| tuner      | chordbulk                      |                           |                   |                     |
-| tempo      | worship                        |                           |                   |                     |
-| follow2    | worship                        | .rifts/manna/follow2      | a6c9723295ba443cc | merged 622350708    |
-| appicon    | worship                        | .rifts/manna/appicon      | a4d3e2ed97ddb4ba8 | merged 9d31cb7a8    |
-| chordbulk  | chordsimp, worship             | removed                   | (closed)          | merged a70cd91c9    |
-| pagerflick | chordbulk                      | removed                   | (closed)          | met on base         |
-| chordbar   | chordbulk                      | removed                   | (closed)          | merged 0647d1c1e    |
-| barfix     | chordbar, feel                 |                           |                   |                     |
-| barmisc    | barfix                         |                           |                   |                     |
-| feel       | chordbar                       | removed                   | (closed)          | merged cfe6d5f87    |
-| chordplace | chordbar, feel                 |                           |                   |                     |
-| browse-app | feel, playswap                 |                           |                   |                     |
-| playswap   | chordbulk                      |                           |                   |                     |
-| followsync | chordbulk                      |                           |                   |                     |
-| ftbbrand   | —                              |                           |                   |                     |
-| keys       | render                         |                           |                   | merged 8be940a53    |
-| hymnbar    | shell, playstall               |                           |                   | folded into uibulk  |
-| pager      | coldload, playstall            |                           |                   | folded into uibulk  |
-| offline    | playstall                      |                           |                   |                     |
-| search     | coldload                       |                           |                   |                     |
-| search2    | search                         |                           |                   |                     |
-| scripture  | search, topicdata              |                           |                   |                     |
-| lists      | uibulk                         |                           |                   | folded into uibulk  |
-| topics     | search, topicdata              |                           |                   |                     |
-| readview   | pager                          |                           |                   | folded into uibulk  |
-| render     | hymnrows                       |                           |                   | merged 524e754ae    |
-| sync       | hymnrows                       |                           |                   | folded into worship |
-| follow     | sync, uibulk, playstall        |                           |                   | folded into worship |
-| rate       | follow                         |                           |                   | folded into worship |
-| reader     | appbase, compile, glass, manna | .rifts/bible-tools/reader |                   |                     |
-| chords     | reader                         | .rifts/manna/chords       |                   | merged 5e6a4b85f    |
-| listen     | chords                         | .rifts/manna/listen       |                   |                     |
-| selah      | reader                         | .rifts/manna/selah        |                   |                     |
+| Unit       | Depends on                     | Workspace                 | Agents            | Result                 |
+| ---------- | ------------------------------ | ------------------------- | ----------------- | ---------------------- |
+| glass      | appbase                        | .rifts/bible-tools/glass  | impl ab2ba40 (r8) | dropped                |
+| manna      | barfix                         | .rifts/manna/manna        |                   |                        |
+| reader1    | appbase                        | .rifts/manna/reader1      | impl a4ef6ed (r1) | merged 5d339030e       |
+| palette    | reader1                        |                           |                   | merged 6cb76a3c4       |
+| playstall  | playerfix                      | (removed)                 | (closed)          | merged 055a51bac       |
+| census2    | hymnrows                       | .rifts/manna/census2      |                   | merged 0de80174f       |
+| census3    | census2                        |                           |                   | folded into checkbulk  |
+| pagerows   | census2                        | worktree                  | (closed)          | merged 63e310e82       |
+| one29      | playerfix, coldload            |                           |                   | merged 8e527c5db       |
+| topicdata  | —                              |                           |                   | merged 3784ae17e       |
+| shell      | topicdata                      | .rifts/manna/shell        | a90e66e812e023e45 | merged 46263e5dd       |
+| sdkfx      | shell                          | .rifts/manna/sdkfx        | orchestrator      | merged 51b5e976f       |
+| sticky     | shell                          |                           |                   | folded into uibulk     |
+| uibulk     | chords, shell, playstall       |                           |                   | merged 2f7de2e1d       |
+| chordsimp  | chords, uibulk                 | removed                   |                   | merged d34ce0021       |
+| h220       | pagerows                       | removed                   |                   | merged 5ffd09c2e       |
+| worship    | uibulk, render                 | removed                   | a454c54eeec07a736 | merged b7b060b8f       |
+| tuner      | chordbulk                      |                           |                   |                        |
+| tempo      | worship                        |                           |                   |                        |
+| follow2    | worship                        | .rifts/manna/follow2      | a6c9723295ba443cc | merged 622350708       |
+| appicon    | worship                        | .rifts/manna/appicon      | a4d3e2ed97ddb4ba8 | merged 9d31cb7a8       |
+| chordbulk  | chordsimp, worship             | removed                   | (closed)          | merged a70cd91c9       |
+| pagerflick | chordbulk                      | removed                   | (closed)          | met on base            |
+| chordbar   | chordbulk                      | removed                   | (closed)          | merged 0647d1c1e       |
+| barfix     | chordbar, feel                 |                           |                   |                        |
+| polishbulk | barfix, ftbbrand, feel         |                           |                   |                        |
+| playbulk   | chordbulk, feel                |                           |                   |                        |
+| findbulk   | feel, topicdata, playbulk      |                           |                   |                        |
+| checkbulk  | chordbulk, feel                |                           |                   |                        |
+| barmisc    | barfix                         |                           |                   | folded into polishbulk |
+| hymnbrand  | barfix, ftbbrand               |                           |                   | folded into polishbulk |
+| clickrate  | feel, barfix                   |                           |                   | folded into polishbulk |
+| listsearch | feel                           |                           |                   | folded into findbulk   |
+| feel       | chordbar                       | removed                   | (closed)          | merged cfe6d5f87       |
+| chordplace | chordbar, feel                 |                           |                   | folded into playbulk   |
+| browse-app | feel, playswap                 |                           |                   | folded into findbulk   |
+| keyplay    | keys, barfix                   |                           |                   | folded into playbulk   |
+| playswap   | chordbulk                      |                           |                   | folded into playbulk   |
+| followsync | chordbulk                      |                           |                   | folded into playbulk   |
+| ftbbrand   | —                              | removed                   | (closed)          | merged 160e59b48       |
+| keys       | render                         |                           |                   | merged 8be940a53       |
+| hymnbar    | shell, playstall               |                           |                   | folded into uibulk     |
+| pager      | coldload, playstall            |                           |                   | folded into uibulk     |
+| offline    | playstall                      |                           |                   | folded into playbulk   |
+| search     | coldload                       |                           |                   | folded into findbulk   |
+| search2    | search                         |                           |                   | folded into findbulk   |
+| scripture  | search, topicdata              |                           |                   | folded into findbulk   |
+| lists      | uibulk                         |                           |                   | folded into uibulk     |
+| topics     | search, topicdata              |                           |                   | folded into findbulk   |
+| readview   | pager                          |                           |                   | folded into uibulk     |
+| render     | hymnrows                       |                           |                   | merged 524e754ae       |
+| sync       | hymnrows                       |                           |                   | folded into worship    |
+| follow     | sync, uibulk, playstall        |                           |                   | folded into worship    |
+| rate       | follow                         |                           |                   | folded into worship    |
+| reader     | appbase, compile, glass, manna | .rifts/bible-tools/reader |                   | superseded by reader1  |
+| chords     | reader                         | .rifts/manna/chords       |                   | merged 5e6a4b85f       |
+| listen     | chords                         | .rifts/manna/listen       |                   | superseded by player   |
+| selah      | reader                         | .rifts/manna/selah        |                   |                        |
 
 Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `inexact` (the 7 MIDI files whose verses do not split: 126 225 262 292 403 453 580), `decks` (syllable splits into feat/hymn-decks, last by the owner's word), `selah` (planned: after reader, see Decisions; macOS stays SwiftUI until react-native-gpui ships a real package).
 
@@ -289,7 +297,42 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 - Every reviewer loads `composition-patterns`, `react` (read as Solid on Solid code) and `effect`, and its findings open with "Composition, state and Effect" (owner, 2026-10-25: "always make sure the reviewer uses the React and Composition skills that we have because these are really the things that I find most important: how the composition works, the state lifting, and all these kinds of things that make it fast, and effect, of course"). Units reviewed before the rule: feel got a composition leg before merge; chordbar code is reviewed so in barfix. (orchestrator)
 - barfix is the owner bar J look (the six points above: contrast, card J spacing, no label wrap, the hold spring, the dials opening and closing, a visible reset), plus chordbar O4 (stacked pages show the wrong hymn on the bar) and O5 (a tap just under a chord opens nothing), plus a composition review of the bar and dial code. The other chordbar follow-ups move to `barmisc`. (orchestrator)
 
+- ftbbrand merged 160e59b48 (the First the Blade site and kit in Moonlit wheat) after the owner kept the field on its soil, kept the marks drawn in the wheat hand, and approved the four link cards (ask af69e890d21), review accepted (with the composition skills), and the acceptance rerun green at decide (`accept-ftbbrand.log`: gate 0, unit, night sky, kit, stills, shippable and build 0, probe 44 lines 0 miss, doctor ok). The site deploy is the owner's: run it from the main checkout, where the prod Alchemy state lives. (ftbbrand)
+
+- Unit `listsearch` (owner, 2026-10-25, scrawl `scrawl-1792940193873-1060f-58`, the home Hymns list): "when you scroll up, I'd actually want," "I want to see the search bar on the top," "not just here when you're at the top of the page." "So as soon as you scroll up, I'd like the search bar," "because usually that means I'm looking for something else." Any upward scroll of the list brings the search field back on top, pinned over the list, until the reader scrolls down again (the Safari toolbar manner); at the top it sits where it does now. It runs after barfix and before chordplace; `browse-app` keeps it. The search field taps through to the same search. (orchestrator, listsearch)
+- Clicks in silent mode: the owner phone was in silent mode in every frame of the 10:55 look (slashed bell), so the system-sound clicks were muted by design (feel Decided 2 and 4). Owner question below. (feel)
+
+- Unit `clickrate` (owner, 2026-10-25, scrawl `scrawl-1792940279216-1060f-61`, a fast dial fling on bar J): "if you scroll really fast, it it sounds kind of, um, It just sounds scratchy. It doesn't sound right." / "we need to find a way to make it so that fast scrolls doesn't cause the sound to overlap." The invariant: two tick clicks never sound at once, and a fast fling reads as an even ratchet, not noise, while a slow turn still clicks once per detent. Feel keeps a 30 ms floor between ticks (`src/feel/feel.ts` `FLOOR`); a click that lasts longer than the floor still overlaps the next (inferred, not measured). The implementor picks the mechanism (a floor tied to the sound length, thinning by speed, or a shorter tick) and proves it by a unit test over the cue stream; the haptic follows the same rule. It runs after barfix (which changes `DialView.tsx`, where the dial cues fire) and before listsearch. Clicks stay muted in silent mode. (orchestrator, clickrate)
+
+- Unit `hymnbrand` (owner, 2026-10-25): "let's change the hymnal app colors to match our new brand colors" / "As well as the icon". The new brand is Moonlit wheat, the wheat `#ffefae` on the night `#12354e` (`apps/firsttheblade/src/palette.ts`, ftbbrand 160e59b48). The hymnal today draws its nine roles from Wada No. 167 (`apps/hymnal/src/theme.ts` `wada167`). The invariant: every hymnal colour, light and dark, comes from the brand's colours through one source the First the Blade site reads too (no second copy of a hex value), and every text role keeps WCAG AA on what it sits on (`theme.test.ts`). In scope: the theme roles (with barfix's new `panel` and `edge`), the app icon (light, dark and tinted, `scripts/icon.ts` and its test), the splash and the native background (`vite/app.ts`), the favicon and the web manifest, and the README line. Selah keeps palette A. The owner looks at the colours and the icon on his iPhone before the merge, by an ask. It runs after barfix (which adds roles to `theme.ts`) and before clickrate; the merge needs `prebuild:native` and a phone install. (orchestrator, hymnbrand)
+
+- Bulk units (owner, 2026-10-25: "let's try to make some of these in bulk"), on the chordbulk pattern: one spec, one branch, the parts in order, each part with its own acceptance rows and commits, a fresh implementor at each part boundary, one review and verify per part, one merge. Grouped by the code each part shares (orchestrator, reversible):
+  - `polishbulk` (after barfix): hymnbrand, clickrate, barmisc, pagerperf. One owner phone look at the end: colours, icon, clicks and the bar.
+  - `playbulk`: playswap, followsync, chordplace, offline (each recording saved on the device, local file first; it owns the `Playback` seam with playswap).
+  - `findbulk`: listsearch, search (slice 1, the research engine: full text, typos, `#100`), topics (the Topical index), scripture (the Scriptural index), metres (the Metrical index), then browse-app on that data.
+  - `tuner` and `tempo` stay single units (a native mic module; the player's timing).
+  - `checkbulk` (no owner-facing change, fills a free slot): chordtests, census3, feel-android.
+    Order: barfix, polishbulk, playbulk, findbulk, tuner, tempo; checkbulk where it fits. Older rows closed as superseded: `reader` (by reader1, merged 5d339030e) and `listen` (by player). Not hymnal-app work and left out of the bulks: `manna` (repo rename), `selah`, `search2` (meaning search, later), `glass` (worktree trashed 2026-10-22, branch kept). (orchestrator, bulks)
+
+- Owner, 2026-10-25: "let's just remove the glass one and mana" / "search to let's put that in find bulk as well". `glass` and `manna` are dropped from this run. The repo and the folder are already `manna` (cevr/manna, `~/Developer/personal/manna`); the workspace scope `@bible/*` (14 packages) and the `bible` CLI keep their names, measured on main 2026-10-25. `search2` (meaning search: a word table distilled from EmbeddingGemma, about 6 MB, "Hymns about this" and "More like this") joins `findbulk` after `search`, before browse-app. (orchestrator, bulks)
+
+- Owner, 2026-10-25: "let's put the rename back. I mean, I feel like we can knock that out pretty quickly". Unit `manna` is back: the root package `bible` → `manna`, the scope `@bible/*` → `@manna/*` (owner, 2026-10-18), the CLI `bible` → `manna` (owner, 2026-10-18), the live `bible-tools` paths and names in code, docs and skills (archives and outputs keep their history), the lab's old `bible-tools/` set refs still resolving, then the old-path symlinks removed once nothing names them. It touches every workspace's imports, so it runs with no other unit branch open: right after barfix merges, before polishbulk; its planner writes the spec while barfix builds. The mechanical sweep goes to an `orchestrate-worker` (global CLAUDE.md). (orchestrator, manna)
+
+- `keyplay` joins `playbulk` as its first part (owner, 2026-10-25: "if all 11 are uploaded, then incorporate that in our plan so that when keys change, also the running [hymn] changes as well"). All 11 key sets are on R2 (`warm-1-up1..6`, `warm-1-down1..5`, 695 of 695 each, `keys/stream-loop.log.out`, done 2026-10-25 08:49 EDT; a check rerun started after the restart). The invariant: the recording the player plays is always the set of the Key the reader has chosen for that hymn (the printed key plays `warm-1`); turning the Key while the hymn plays switches to that key's set at the same place in the hymn, with no restart and no audible gap beyond a short crossfade; the Capo never changes the sound (owner rule). The follow-along keeps its place, since a transposed render keeps the timing. A set that fails to load falls back to the printed key, logged. Order of playbulk: keyplay, playswap, followsync, chordplace, offline (offline saves the set of the chosen key). (orchestrator, keyplay, playbulk)
+
+- `offline` in `playbulk` saves recordings as they are used (owner, 2026-10-25: "Offline also should be able to download these hymns when they play once in the background when you get into a hymn In the back the background work will just be the default hymn and when you change keys and you press play then it can download that offline after it's done etc"). The rule: opening a hymn saves its printed-key recording (`warm-1`) in the background, with no tap; turning the Key and pressing Play streams that key's set and saves it once its download completes. Every later play of a saved set reads the local file first (R2 stays the source). Background saves never slow the page or the player, never run twice for one file, and resume after a failed or cut download. The "download all" with its progress, size and delete stays. (orchestrator, offline, playbulk)
+
+- `thock` (owner, 2026-10-25, part of polishbulk with clickrate): "The sounds for the dial, it feels a bit too high pitched. I think it needs a more like a thock ... like a deep key, like a mechanical keyboard key." Measured today (`apps/hymnal/src/feel/voice.ts`): the key dial rings a bell at 523–988 Hz over noise banded at 2800 Hz; the other dials click `wood`, noise banded at 1500 Hz for 16 ms. Each dial detent becomes a thock: a low body (about 150–400 Hz) under a short soft clack, still made in code by the voice. The key dial keeps one step of pitch per key, moved down into the thock, so a key change is still heard. The thock is longer than the 30 ms `FLOOR`, so it lands with clickrate in one change: a fast fling never stacks thocks (a new detent cuts or ducks the one still ringing). Two or three rendered candidates go to the owner as files to hear on the phone, and the owner picks before the merge; no sound plays through a speaker here. The tick, `land` and the other cues stay. (polishbulk, thock)
+
+- `dialwrap` (owner, 2026-10-25, part of polishbulk with thock and clickrate): "when ... scrolling through the key dial, if you scroll too fast, it all the keys disappear as though it were loading. ... the infinite scroll should allow just to infinitely scroll. without having a loading stage." Cause read from the code (inferred, not yet reproduced): `src/player/DialView.tsx` draws a wrapping row as its own turn plus two copies each side, and brings the row back to its own turn only when a glide finishes; a fling or drag past two turns runs off the copies and the row shows nothing. Invariant: on every frame of a drag or a glide on a wrapping dial, every slot in the dial's window shows its key, at any fling speed and length; the detent cues and the landing key stay as now. It is a pre-existing defect on main, not a barfix regression, so it does not hold barfix. The part's first deliverable is a property over fling speed and length that is red on main now. (polishbulk, dialwrap)
+
+- `quiet` (owner, 2026-10-25, part of polishbulk with thock, dialwrap and clickrate): "let's reduce the sound effects. Let's only have it when you're scrolling the dial. ... make sure each kind of sound effect in the key dial matches the key of the dial that we're scrolling too." Only a dial's detent makes a sound: every other cue (`src/feel/body.ts`: section, wall, reset, switches, chords on and off, play and pause, the favourite chimes, press, choose, sheet open, the seeker) keeps its haptic and plays no sound, and the voice stops rendering those sounds. Every dial (key, capo, text size) keeps its thock (orchestrator: "the dial" read as each dial; the owner can narrow it to the key dial). The key dial's thock is tuned to the key at its notch: measured today, the detent index is the sounding tonic's pitch class and `key-n` rings at C5 × 2^(n/12), so the match holds in pitch class but sits high under a 2800 Hz hiss. In the thock the tonic is the clear, low pitch. A property over all 12 keys, every printed key (major, minor and enharmonic spellings) and every capo shows that each detent sounds the pitch class of the key it names, and that the capo never changes it. (polishbulk, quiet)
+
+- `dialsound` (owner, 2026-10-25, answers the orchestrator's question in `quiet`; it replaces the key-dial parts of `thock` and `quiet`): "The capo and tech [text] size, also volume dial, should make like the thock, and then the key dial is makes the, the sounds of the key, the nice, kind of delightful tone." The capo, text-size and volume dials each play the thock (unpitched, deep). The key dial plays no thock: each detent plays a pleasant tone at the pitch class of the key it names (today's bell is the start; its harsh 2800 Hz noise goes, and its register and ring are chosen with the owner). The property in `quiet` holds for the key tone. The volume dial does not exist yet (it waits on unit `rate`/`tempo` for One's player volume); when it is built, it takes the thock. Rendered candidates for both the thock and the key tone go to the owner as files to hear on the phone before the merge. (polishbulk, dialsound)
+
 ## Owner questions
+
+- Clicks in silent mode (feel): keep them muted under the silent switch, as iOS keyboard clicks are (recommended: the phone stays quiet at worship), or play them even in silent mode (a new sound path, checked against the hymn audio session). Asked 2026-10-25. Answer (owner, 2026-10-25): "Yeah, the clicks, that's fine. Stay muted in silent mode". No change. (feel)
 
 - pagerows (2026-10-22): hymn 220. The database sings 7 places of 3 words in each stanza a second time; the re-engraved page prints them once, with no repeat sign. Two independent judges agree on the reading (`tmp/orchestrate/hymnapp/pagerows/owner-220.md`). Options: (1, recommended) the owner photographs 220 in his own 1985 hymnal, and that page decides; (2) keep the row, 220 stays unsettled; (3) follow the engraving now and remove the repeats. Answer: the owner sent photos of 220 from his 1985 hymnal (2026-10-22, `tmp/orchestrate/hymnapp/notes/owner/2026-10-22-hymn220-p1.HEIC`, `-p2.HEIC`). The 1985 page prints each repeated phrase as an echo in parentheses after the phrase, so the database is right and the re-engraving dropped the echoes. Unit `h220` settles 220 by the photos; the row keeps its words.
 - hymnrows (2026-10-20): the rewrite failed its 3 rounds (r6 changes: M1, repeat of r5 M1). The data at head `ebb5933da` is sound by every check: 0 census problems, 518 crops re-cut byte-identical, 584 matches its crop, and the gate is green. The defect is the census's reach: 115 hand-made layout mutants in 25 hymns pass it unseen. Options: (A, recommended) merge the data now and open unit `census2` with the 115 mutants as red fixtures first; (B) one more rewrite before anything merges; (C) merge the data and drop the census's layout check. Answer: pending.
@@ -413,5 +456,8 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 
 - From feel (`tmp/orchestrate/hymnapp/feel/state.md`, `round-1-findings.md`, `round-1-composition.md`): unit `feel-android` (Kotlin sounds, SoundPool); `.oxfmtrc.json` ignore for `apps/hymnal/native/*/*.d.swift.ts`; `Voice` as an Effect `Context.Service` with a `Layer` per platform, a tagged `VoiceRefused` error and `Option` ids (composition m2); measure `[feel] ready ms` and launch frame gaps on a Release build (m1; Debug read 284 to 452 ms); one seek tick per jump, not N (m5); `settings.sound` and `settings.feel` names (m6); the provider test seams (m4); the reanimated stand-in reads derived values one frame late; the wall-before-last-detent race on a very fast drag (r1 m1); `feel.test.ts` device test cannot fail, and the floor and unclipped tests miss defects (r1 test strength). (feel)
 - Unit `barmisc` (from chordbar, after barfix): D3 the web dev overlay, O2 a page swipe with the dials open, O3 the docked bar and the back-edge pan, r1 m5 stale comments and `features/settings.md:35`, the verifier tool notes. (chordbar)
+
+- From ftbbrand: the link cards keep the approved field fade, not the new soil (match them if the owner wants); move the marks generator (`marks-2/draw.ts`) into `apps/firsttheblade/kit/`; the phone night close crops the moon at 390 px. (ftbbrand)
+- `docs.slow.test.ts` fails on `.claude/skills/verify-hymnal/features/app-icon.md` and `follow.md` (hymnal units; found by ftbbrand review): into `barmisc`. (ftbbrand)
 
 ## Review later

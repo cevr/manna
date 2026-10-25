@@ -1,13 +1,16 @@
 /*
  * First the Blade: the brand's tokens, then the page.
  *
- * The page is brand round 4's site mix 1, “Day into night as you read”, in
- * palette 09 (`./palette.ts`, the colours' one source; the tests hold the
- * `--color-*` tokens to it). It opens on the painted field at morning, lays
- * the series out on torn paper, and closes at night with Mark 4:27. Every rule
- * below names a token; the only literals outside this block are structural
- * layout values and the breakpoints. Sizes run fluidly from the 390 px phone
- * board to the 1440 px desktop board, landing on each board's value.
+ * The page is site direction N2, “The sky turns”, in Moonlit wheat
+ * (`./palette.ts`, the colours' one source; the tests hold the `--color-*`
+ * tokens to it). It is one sky from morning to night: the painted field's
+ * wheat stands on its soil, which fades into the paper, the series stand in
+ * rows parted by hairlines, the paper warms to the wheat, the dusk carries Mark 4:27 into the night, and
+ * the moonlit field rises out of it. Nothing is torn, tilted or shadowed.
+ * Every rule below names a token; the only literals outside this block are
+ * structural layout values and the breakpoints. Sizes run fluidly from the
+ * 390 px phone board to the 1440 px desktop board, landing on each board's
+ * value.
  */
 
 @font-face {
@@ -56,25 +59,43 @@
 :root {
   color-scheme: light;
 
-  /* Colour: palette 09, Wada no. 294 (`./palette.ts`). */
-  --color-paper: #faf7e4;
-  --color-band: #f5ecc2;
-  --color-strip: #fcfbf0;
-  --color-ink: #2c4542;
-  --color-soft: #5a6d67;
-  --color-accent: #427542;
-  --color-gold: #fdbf68;
-  --color-sky: #bac9db;
-  --color-night: #3a415f;
-  --color-night-ink: #f5ecc2;
-  --color-night-accent: #fdbf68;
-  --color-night-soft: #c5c2ab;
-  --color-night-rule: #51576d;
-  --color-dusk-warm: #99837b;
-  --color-dusk-deep: #565062;
-  --color-scrim: #4b434c;
-  --color-glow: #3d3947;
-  --color-shadow: #46386e;
+  /* Colour: Moonlit wheat (`./palette.ts`). */
+  --color-paper: #fff9e0;
+  --color-band: #fff3c2;
+  --color-wheat: #ffefae;
+  --color-ink: #12354e;
+  --color-soft: #4d687a;
+  --color-accent: #7a6813;
+  --color-night: #12354e;
+  --color-night-ink: #ffefae;
+  --color-night-accent: #ffefae;
+  --color-night-soft: #b8b791;
+  --color-night-rule: #465e63;
+  --color-dusk-gold: #f6c98a;
+  --color-dusk-rose: #d99a86;
+  --color-dusk-late: #6e6683;
+
+  /* The hairline between rows by day: the ink, faint on the paper. */
+  --rule-day: color-mix(in srgb, var(--color-ink) 16%, transparent);
+
+  /*
+   * The paintings' fades: the field's soil into the paper over the field's
+   * last share, the night out of the dusk. The field stands whole down to
+   * its soil, so the wheat keeps its colour and stands on ground.
+   */
+  --fade-field: 18%;
+  --mask-field: linear-gradient(#000 calc(100% - var(--fade-field)), transparent);
+  /*
+   * What the soil fades through on its way to the paper: the dusk's gold,
+   * strongest halfway, so the fade is warm earth and never the grey a
+   * brown and the paper make alone.
+   */
+  --fade-field-earth: linear-gradient(
+    transparent calc(100% - var(--fade-field)),
+    color-mix(in srgb, var(--color-dusk-gold) 85%, transparent) calc(100% - var(--fade-field) / 2),
+    transparent
+  );
+  --mask-night: linear-gradient(transparent, #000 38%);
 
   /* Type: Newsreader, one family for the whole page. */
   --font-serif: 'Newsreader', Georgia, 'Times New Roman', serif;
@@ -83,7 +104,7 @@
   --weight-medium: 500;
 
   --size-wordmark: clamp(1.375rem, 1.1893rem + 0.7619vw, 1.875rem);
-  --size-strip: clamp(1.375rem, 1.1893rem + 0.7619vw, 1.875rem);
+  --size-wordmark-stack: clamp(1.5rem, 1.3607rem + 0.5714vw, 1.875rem);
   --size-hero: clamp(2rem, 1.7214rem + 1.1429vw, 2.75rem);
   --size-page-title: clamp(2.125rem, 1.7071rem + 1.7143vw, 3.25rem);
   --size-heading: clamp(2rem, 1.675rem + 1.3333vw, 2.875rem);
@@ -99,26 +120,24 @@
   --size-pill: 0.9375rem;
   --size-status: 0.9375rem;
   --size-fine: 0.875rem;
-  --size-ref: 0.8125rem;
-  --size-label: 0.75rem;
+  --size-ref: 0.9375rem;
+  --size-label: 0.875rem;
   --size-icon: 1.625rem;
   --size-target: 2.75rem;
-  --size-emblem: clamp(4.375rem, 3.8643rem + 2.0952vw, 5.75rem);
-  --size-emblem-large: clamp(6.25rem, 5.3214rem + 3.8095vw, 8.75rem);
-  --size-mark: clamp(6.875rem, 5.9464rem + 3.8095vw, 9.375rem);
+  --size-emblem: clamp(2.75rem, 2.2857rem + 1.9048vw, 4rem);
+  --size-emblem-large: clamp(4rem, 3.4429rem + 2.2857vw, 5.5rem);
+  --size-wheat-lost: 7.5rem;
 
   --line-tight: 1.1;
   --line-title: 1.15;
-  --line-strip: 1.35;
   --line-label: 1.4;
   --line-quote: 1.45;
   --line-body: 1.5;
   --line-reading: 1.6;
 
-  --letter-spacing-wordmark: -0.015em;
-  --letter-spacing-label: 0.16em;
-  --letter-spacing-ref: 0.2em;
-  --letter-spacing-ref-night: 0.24em;
+  /* The small capitals open a little, as engraved capitals do. */
+  --letter-spacing-wordmark: 0.06em;
+  --letter-spacing-label: 0.1em;
 
   /* Space. */
   --space-1: 0.25rem;
@@ -133,56 +152,33 @@
   --space-header: clamp(0.875rem, 0.6893rem + 0.7619vw, 1.375rem);
   --space-section: clamp(2.5rem, 1.5714rem + 3.8095vw, 5rem);
   --space-band: clamp(2.75rem, 1.9143rem + 3.4286vw, 5rem);
-  --space-grid: clamp(1.125rem, 0.8929rem + 0.9524vw, 1.75rem);
   --space-lead: clamp(1.5rem, 1.0357rem + 1.9048vw, 2.75rem);
   --space-close-top: clamp(4.375rem, 3.2143rem + 4.7619vw, 7.5rem);
   --space-close-bottom: clamp(3.75rem, 2.8214rem + 3.8095vw, 6.25rem);
   --space-close-title: clamp(2.125rem, 1.8929rem + 0.9524vw, 2.75rem);
-  --space-strip-top: clamp(6.875rem, 5.9464rem + 3.8095vw, 9.375rem);
-  --space-strip-block: clamp(1.625rem, 1.3rem + 1.3333vw, 2.5rem);
-  --space-strip-inline: clamp(1.375rem, 0.5857rem + 3.2381vw, 3.5rem);
+  /* Room under the header for what stands in the field's sky. */
+  --space-field-top: clamp(6rem, 5.2571rem + 3.0476vw, 8rem);
+  --space-field-bottom: clamp(1.375rem, 0.7857rem + 2.4167vw, 2.875rem);
+  --space-dusk-top: clamp(4rem, 3.2571rem + 3.0476vw, 6rem);
+  --space-dusk-bottom: clamp(13rem, 11.5143rem + 6.0952vw, 17rem);
+  --space-row: clamp(1.125rem, 0.8929rem + 0.9524vw, 1.75rem);
   --space-pill-inline: 1rem;
-  --space-card-block: 1.625rem;
-  --space-card-inline: 1.75rem;
 
   /* The painted bands' heights. */
-  --height-hero: clamp(40rem, 35.8214rem + 17.1429vw, 51.25rem);
-  --height-page-hero: clamp(25rem, 22.2143rem + 11.4286vw, 32.5rem);
-  --height-dusk: clamp(8.125rem, 6.5rem + 6.6667vw, 12.5rem);
+  /*
+   * The field paintings' heights. The painting is drawn to the field's foot,
+   * so the field always shows its soil; at a wide board it is as tall as the
+   * sky over the verse or title, the hills, the wheat and the soil need.
+   */
+  --height-field-home: max(31.25rem, 10rem + 44.65vw);
+  --height-field-page: max(25rem, 8.6rem + 44.65vw);
+  /* The paper under the home field that holds the page's first words. */
+  --space-field-words: clamp(11.25rem, 10.7857rem + 1.9048vw, 12.5rem);
 
-  /* Shape. Paper is torn, never rounded; controls are pills. */
+  /* Shape. Controls are pills; a mark's tile is gently rounded. */
   --radius-pill: 999px;
-  --torn: polygon(
-    0 4%,
-    6% 0,
-    14% 3%,
-    22% 1%,
-    31% 4%,
-    40% 0,
-    52% 3%,
-    61% 1%,
-    70% 4%,
-    80% 0,
-    90% 3%,
-    100% 1%,
-    100% 96%,
-    92% 100%,
-    83% 97%,
-    72% 100%,
-    62% 96%,
-    50% 99%,
-    40% 96%,
-    29% 100%,
-    18% 97%,
-    8% 100%,
-    0 97%
-  );
-  --tilt-strip: -1deg;
-  --tilt-odd: -0.5deg;
-  --tilt-even: 0.6deg;
+  --radius-tile: 0.75rem;
   --border-outline: 1.5px;
-  --shadow-popup: 0 18px 50px color-mix(in srgb, var(--color-shadow) 28%, transparent);
-  --shadow-glow: 0 1px 10px color-mix(in srgb, var(--color-glow) 53%, transparent);
 
   /* Motion. */
   --motion-fast: 150ms;
@@ -257,7 +253,7 @@ a {
 }
 
 ::selection {
-  background: var(--color-gold);
+  background: var(--color-wheat);
   color: var(--color-ink);
 }
 
@@ -303,34 +299,71 @@ a {
   margin-inline: auto;
 }
 
-/* ── The lockup: the painted mark in its disc beside the wordmark ──────── */
+/* ── The lockup: the bare wheat beside the wordmark ───────────────────── */
+
+/* The wheat is drawn in its own colour, the deep wheat by day. */
+.wheat {
+  display: block;
+  flex: none;
+  color: var(--color-accent);
+}
+.wheat svg {
+  width: auto;
+  height: 100%;
+}
 
 .lockup {
   display: inline-flex;
   align-items: center;
-  gap: calc(var(--size-wordmark) * 0.42);
+  gap: calc(var(--size-wordmark) * 0.34);
   text-decoration: none;
 }
-.lockup img {
-  width: calc(var(--size-wordmark) * 1.55);
-  height: calc(var(--size-wordmark) * 1.55);
-  flex: none;
-  border-radius: 50%;
+.lockup .wheat {
+  height: calc(var(--size-wordmark) * 1.6);
 }
 
-/* Logo 10's wordmark: Newsreader 500 at its display size, “the” in italic 400. */
+/* Stacked, the wheat over the words, for the night close. */
+.lockup-stack {
+  flex-direction: column;
+  gap: calc(var(--size-wordmark-stack) * 0.32);
+}
+.lockup-stack .wheat {
+  height: calc(var(--size-wordmark-stack) * 2.5);
+}
+
+/*
+ * Lockup D's wordmark: Newsreader 500 at its display size in small capitals,
+ * “the” in italic 400 in the deep wheat. Newsreader has no small capitals of
+ * its own, so the browser draws them from its capitals; the words stay
+ * “First the Blade” for every reader.
+ */
 .wordmark {
   font-size: var(--size-wordmark);
   font-weight: var(--weight-medium);
   font-variation-settings: var(--font-wordmark-settings);
+  font-variant-caps: all-small-caps;
+  font-synthesis-small-caps: auto;
   letter-spacing: var(--letter-spacing-wordmark);
   line-height: 1;
   white-space: nowrap;
   color: var(--color-ink);
 }
 .wordmark i {
+  font-variant-caps: normal;
   font-weight: var(--weight-regular);
+  letter-spacing: 0;
   color: var(--color-accent);
+}
+
+.lockup-stack .wordmark {
+  font-size: var(--size-wordmark-stack);
+}
+
+/* By night the wheat and the words are the wheat. */
+.night .wheat,
+.night .wordmark,
+.night .wordmark i {
+  color: var(--color-night-accent);
 }
 
 /* ── Buttons ──────────────────────────────────────────────────────────── */
@@ -365,19 +398,14 @@ a {
   text-box: trim-both cap alphabetic;
 }
 
-/* By night: an outline in the night's accent. */
+/* By night: the night on the wheat. */
 .button-night {
-  border: var(--border-outline) solid var(--color-night-accent);
-  background: transparent;
-  color: var(--color-night-accent);
-  /* Its fill and its words trade colours on hover, so they swap at once: a
-     fade would pass each through the other. */
-  transition: none;
+  background: var(--color-night-accent);
+  color: var(--color-night);
 }
 @media (hover: hover) {
   .button-night:hover {
-    background: var(--color-night-accent);
-    color: var(--color-night);
+    background: var(--color-night-soft);
   }
 }
 
@@ -389,23 +417,23 @@ a {
   text-underline-offset: 4px;
 }
 
+/* Labels in small capitals, as the wordmark is. */
 .label {
   font-size: var(--size-label);
   font-weight: var(--weight-medium);
   line-height: var(--line-label);
   letter-spacing: var(--letter-spacing-label);
-  text-transform: uppercase;
+  font-variant-caps: all-small-caps;
+  font-synthesis-small-caps: auto;
   color: var(--color-accent);
 }
 
 .ref {
   display: block;
-  margin-top: var(--space-4);
+  margin-top: var(--space-3);
   font-size: var(--size-ref);
   line-height: normal;
-  font-weight: var(--weight-medium);
-  letter-spacing: var(--letter-spacing-ref);
-  text-transform: uppercase;
+  font-style: italic;
   color: var(--color-accent);
 }
 
@@ -520,7 +548,7 @@ a {
   }
 }
 
-/* The phone menu: @bible/ui's Dialog, a sheet of paper from the top. */
+/* The phone menu: @bible/ui's Dialog, a sheet of the paper from the top. */
 .menu-backdrop {
   position: fixed;
   inset: 0;
@@ -542,8 +570,8 @@ a {
   overscroll-behavior: contain;
   padding: var(--space-header) var(--space-gutter) var(--space-8);
   padding-top: max(env(safe-area-inset-top), var(--space-header));
+  border-bottom: 1px solid var(--rule-day);
   background: var(--color-paper);
-  box-shadow: var(--shadow-popup);
   transition:
     transform var(--motion-popup) var(--motion-ease),
     opacity var(--motion-popup) var(--motion-ease);
@@ -579,19 +607,41 @@ a {
   margin-top: var(--space-5);
 }
 
-/* ── The field: morning, under its torn strip of paper ────────────────── */
+/* ── The field: morning, fading into the paper ────────────────────────── */
 
 .field {
   position: relative;
   overflow: hidden;
-  background: var(--color-sky);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-field-top) var(--space-gutter) var(--space-field-bottom);
+  /* Under the painting, the warm earth its soil fades through. */
+  background:
+    var(--fade-field-earth) top / 100% var(--height-field) no-repeat,
+    var(--color-paper);
 }
 .field-home {
-  height: var(--height-hero);
+  --height-field: var(--height-field-home);
+  justify-content: space-between;
+  gap: var(--space-8);
+  min-height: calc(var(--height-field) + var(--space-field-words));
 }
 .field-page {
-  height: var(--height-page-hero);
+  --height-field: var(--height-field-page);
+  min-height: var(--height-field);
 }
+
+/*
+ * The painting and the canvas its motion lays beside it, faded as one into
+ * the paper, so neither ends in an edge.
+ */
+.field-paint {
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--height-field);
+  mask-image: var(--mask-field);
+}
+/* The painting is drawn to its foot, so the wheat stands on its soil. */
 .field-art {
   position: absolute;
   inset: 0;
@@ -599,71 +649,54 @@ a {
   height: 100%;
   max-width: none;
   object-fit: cover;
-  object-position: 38% 60%;
+  object-position: 38% 100%;
 }
 @media (min-width: 48rem) {
   .field-art {
-    object-position: 50% 60%;
+    object-position: 50% 100%;
   }
 }
 
-/* The soil darkens under the words laid on it. */
-.field-scrim {
-  position: absolute;
-  inset: auto 0 0;
-  height: 40%;
-  background: linear-gradient(
-    180deg,
-    transparent,
-    color-mix(in srgb, var(--color-scrim) 80%, transparent)
-  );
-}
-
-.strip {
-  position: absolute;
-  z-index: 2;
-  inset: var(--space-strip-top) var(--space-5) auto;
-  padding: var(--space-strip-block) var(--space-strip-inline);
-  background: var(--color-strip);
-  clip-path: var(--torn);
-  text-align: center;
+/* The verse and a page's title stand in the painted sky, in the ink. */
+.field-verse,
+.field-title,
+.field-words {
+  position: relative;
   color: var(--color-ink);
 }
-@media (min-width: 48rem) {
-  .strip {
-    left: 50%;
-    right: auto;
-    width: min(51.25rem, 100% - 2 * var(--space-gutter));
-    transform: translateX(-50%) rotate(var(--tilt-strip));
-  }
+.field-verse {
+  max-width: 36rem;
 }
-.strip blockquote p {
-  font-size: var(--size-strip);
+.field-verse blockquote p {
+  font-size: var(--size-quote);
   font-style: italic;
-  line-height: var(--line-strip);
+  line-height: var(--line-quote);
 }
-.strip h1 {
+/* The deep wheat does not read on the sky's blue, so the reference is the ink. */
+.field-verse .ref {
+  color: var(--color-ink);
+}
+.field-title h1 {
   font-size: var(--size-page-title);
 }
-.strip .label {
+.field-title .label {
   margin-top: var(--space-3);
+  color: var(--color-ink);
 }
 
+/* The page's first words, on the paper the field fades into. */
 .field-words {
-  position: absolute;
-  z-index: 2;
-  inset: auto var(--space-gutter) clamp(1.375rem, 0.7857rem + 2.4167vw, 2.875rem);
   max-width: 50rem;
-  color: var(--color-paper);
-  text-shadow: var(--shadow-glow);
 }
 .field-words h2 {
   font-size: var(--size-hero);
   line-height: var(--line-tight);
 }
 .field-words p {
+  margin-top: var(--space-3);
   font-size: var(--size-lead);
   line-height: var(--line-label);
+  color: var(--color-soft);
   text-wrap: balance;
 }
 
@@ -675,6 +708,28 @@ a {
 .section-band {
   background: var(--color-band);
   padding-block: var(--space-band);
+}
+
+/* The band before the dusk warms into the wheat the dusk starts from, so the sky turns with no edge. */
+:is(.section, .section-band):has(+ .dusk) {
+  background-image: linear-gradient(transparent, var(--color-wheat));
+}
+
+/* The home page's reasons, on the paper warming into the wheat. */
+.section-why {
+  padding-block: var(--space-band);
+  background: linear-gradient(var(--color-paper), var(--color-wheat));
+}
+.why {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-5);
+  max-width: 40rem;
+  text-align: center;
+}
+.why > h2 {
+  font-size: var(--size-heading);
+  line-height: var(--line-tight);
 }
 
 .lead {
@@ -723,48 +778,44 @@ a {
   margin-top: var(--space-3);
 }
 
-/* ── The series, on torn paper ────────────────────────────────────────── */
+/* ── The series, in rows ──────────────────────────────────────────────── */
 
+/* Each series a row, a hairline over each: its mark on a tile, its words, how far it has come. */
 .cards {
   display: grid;
-  gap: var(--space-grid);
   padding: 0;
   list-style: none;
-}
-@media (min-width: 64rem) {
-  .cards {
-    grid-template-columns: 1fr 1fr;
-  }
-  /* Three series (a series' page lists the others) stand side by side, each emblem over its words. */
-  .cards[data-count='3'] {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .cards[data-count='3'] .card {
-    flex-direction: column;
-    gap: var(--space-4);
-  }
 }
 
 .card {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-4);
-  padding: var(--space-card-block) var(--space-card-inline);
-  background: var(--color-strip);
-  clip-path: var(--torn);
-  transform: rotate(var(--tilt-odd));
+  display: grid;
+  grid-template-columns: 6rem 1fr;
+  align-items: start;
+  gap: var(--space-2) var(--space-5);
+  padding-block: var(--space-row);
+  border-top: 1px solid var(--rule-day);
 }
-.card:nth-child(even) {
-  transform: rotate(var(--tilt-even));
-}
-@media (min-width: 40rem) {
+@media (min-width: 48rem) {
   .card {
-    flex-direction: row;
-    gap: var(--space-6);
+    grid-template-columns: 13.75rem 1fr auto;
+    align-items: center;
+    gap: var(--space-7);
   }
 }
+
+/* The mark's ground: the band on the paper, the wheat on a band. */
+.tile {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 3 / 2;
+  border-radius: var(--radius-tile);
+  background: var(--color-band);
+}
+.section-band .tile {
+  background: var(--color-wheat);
+}
+
 .emblem {
   display: block;
   width: var(--size-emblem);
@@ -775,15 +826,16 @@ a {
   display: block;
   width: 100%;
   height: 100%;
+  overflow: visible;
 }
 
 /*
- * A card pointed at, pressed or focused stirs its emblem (`./ui/emblems.ts`):
- * the path's sun rises from its horizon and its rays reach out, the tree and
- * the healing leaf sway, and the book turns a leaf, each eased with no spring
- * past its pose. `--stir`
- * is 0 at rest and 1 stirred; pointing stirs only where a pointer hovers, so
- * a tap does not leave a card stirred.
+ * A row pointed at, pressed or focused stirs its mark (`./ui/emblems.ts`):
+ * the path's sun rises and its rays reach out, the land's plant sways, the
+ * healing leaf leans about its stem's foot, and the book turns a leaf, each
+ * eased with no spring past its pose. `--stir` is 0 at rest and 1 stirred;
+ * pointing stirs only where a pointer hovers, so a tap does not leave a row
+ * stirred.
  */
 .card {
   --stir: 0;
@@ -797,51 +849,45 @@ a {
 .card:has(h3 a:focus-visible) {
   --stir: 1;
 }
-.emblem-path svg > g:nth-of-type(1) {
-  scale: calc(1 + 0.12 * var(--stir));
-  transition: scale var(--motion-emblem) var(--motion-ease);
+/* The sun and its rays rise together; the rays reach out from the sun. */
+.emblem-path svg > :nth-child(1),
+.emblem-path svg > :nth-child(2) {
+  translate: 0 calc(-1.5px * var(--stir));
+  transition: translate var(--motion-emblem) var(--motion-ease);
 }
-.emblem-path svg > g:nth-of-type(2) {
-  scale: calc(1 + 0.22 * var(--stir));
-  opacity: calc(1 - 0.15 * var(--stir));
+.emblem-path svg > :nth-child(2) {
+  transform-origin: 33px 12px;
+  scale: calc(1 + 0.16 * var(--stir));
   transition:
-    scale var(--motion-emblem) var(--motion-ease),
-    opacity var(--motion-emblem) var(--motion-ease);
+    translate var(--motion-emblem) var(--motion-ease),
+    scale var(--motion-emblem) var(--motion-ease);
 }
-.emblem-path svg > g:nth-of-type(1),
-.emblem-path svg > g:nth-of-type(2) {
-  transform-origin: 70px 50px;
+/* The plant sways about its foot. */
+.emblem-land svg > :nth-child(4) {
+  transform-origin: 12px 33px;
+  rotate: calc(-6deg * var(--stir));
+  transition: rotate var(--motion-emblem) var(--motion-ease);
 }
-/* The healing leaf and its stem sway as one about the stem's foot. */
+/* The healing leaf and its stem lean as one about the stem's foot. */
 .emblem-remedies svg > * {
-  transform-origin: 50px 92px;
+  transform-origin: 9px 39px;
   rotate: calc(5deg * var(--stir));
   transition: rotate var(--motion-emblem) var(--motion-ease);
 }
-.emblem-land svg > g:nth-of-type(5),
-.emblem-land svg > g:nth-of-type(6) {
-  transform-origin: 24px 64px;
-  rotate: calc(-5deg * var(--stir));
-  transition: rotate var(--motion-emblem) var(--motion-ease);
-}
+/* The leaf turns about the spine, from the right page to the left. */
 .emblem-taught .leaf {
-  transform-origin: 50px 50px;
+  transform-origin: 24px 27.5px;
   scale: calc(1 - 2 * var(--stir)) 1;
   transition: scale var(--motion-leaf) ease-in-out;
 }
-/* The leaf's shade is on its front: it goes as the leaf passes edge-on. */
-.emblem-taught .leaf-shade {
-  opacity: calc(1 - var(--stir));
-  transition: opacity 0s linear calc(var(--motion-leaf) / 2);
-}
 .card h3 {
-  margin: var(--space-1) 0 var(--space-2);
+  margin: var(--space-1) 0 var(--space-1);
   font-size: var(--size-card-title);
 }
 .card h3 a {
   text-decoration: none;
 }
-/* The whole card is the link to its series. */
+/* The whole row is the link to its series. */
 .card h3 a::after {
   content: '';
   position: absolute;
@@ -850,17 +896,11 @@ a {
 .card h3 a:focus-visible {
   outline: 0;
 }
-/*
- * The focus ring is drawn inside the torn edge: the tear reaches 4% of the
- * card's height into its top and bottom, and the ring's top and bottom sit
- * past that share, so a card of any height keeps it whole.
- */
-.card:has(h3 a:focus-visible)::before {
-  content: '';
-  position: absolute;
-  inset: calc(4% + var(--space-3)) var(--space-5);
-  border: 2px solid var(--color-accent);
-  pointer-events: none;
+/* The focus ring is drawn round the whole row. */
+.card:has(h3 a:focus-visible) {
+  outline: 2px solid var(--color-accent);
+  outline-offset: var(--space-1);
+  border-radius: var(--radius-tile);
 }
 @media (hover: hover) {
   .card:hover h3 a {
@@ -874,17 +914,25 @@ a {
   color: var(--color-soft);
 }
 .card .status {
-  margin-top: var(--space-3);
+  grid-column: 2;
   color: var(--color-soft);
   font-size: var(--size-status);
   font-style: italic;
   line-height: var(--line-label);
 }
+@media (min-width: 48rem) {
+  .card .status {
+    grid-column: auto;
+  }
+}
 
 /* ── A series' own page ───────────────────────────────────────────────── */
 
-.emblem-large {
+.tile-large {
   align-self: start;
+  width: min(100%, 17.5rem);
+}
+.emblem-large {
   width: var(--size-emblem-large);
   height: var(--size-emblem-large);
 }
@@ -919,19 +967,28 @@ a {
 /* ── Dusk, then night ─────────────────────────────────────────────────── */
 
 /*
- * From the reasons band through the sky and the soil's warmth into the night,
- * blended in oklab, so it passes through no hue the palette lacks.
+ * From the wheat through the dusk's warm stops into the night, blended in
+ * oklab. Mark 4:27 stands in its top, in the ink, where the dusk is still
+ * light; the long fall below it is the evening.
  */
 .dusk {
-  height: var(--height-dusk);
+  padding: var(--space-dusk-top) var(--space-gutter) var(--space-dusk-bottom);
   background: linear-gradient(
     180deg in oklab,
-    var(--color-band),
-    var(--color-sky) 22%,
-    var(--color-dusk-warm) 48%,
-    var(--color-dusk-deep) 74%,
+    var(--color-wheat),
+    var(--color-dusk-gold) 30%,
+    var(--color-dusk-rose) 52%,
+    var(--color-dusk-late) 74%,
     var(--color-night)
   );
+  text-align: center;
+}
+.dusk .verse {
+  max-width: 35rem;
+  margin-inline: auto;
+}
+.dusk .ref {
+  color: var(--color-ink);
 }
 
 .night {
@@ -944,6 +1001,12 @@ a {
 }
 .night :focus-visible {
   outline-color: var(--color-night-accent);
+}
+/* The painting, its canvas and its veil rise as one out of the night the dusk ends in. */
+.night-paint {
+  position: absolute;
+  inset: 0;
+  mask-image: var(--mask-night);
 }
 .night-art {
   position: absolute;
@@ -971,44 +1034,22 @@ a {
   opacity: 1;
 }
 
-/* The night field fades into the night under the words. */
+/* The night field darkens under the words laid on it. */
 .night-veil {
   position: absolute;
   inset: 0;
   background: linear-gradient(
     180deg,
-    var(--color-night) 0%,
-    transparent 22%,
-    color-mix(in srgb, var(--color-night) 63%, transparent) 40%,
-    color-mix(in srgb, var(--color-night) 90%, transparent) 58%,
-    color-mix(in srgb, var(--color-night) 96%, transparent) 100%
+    transparent 40%,
+    color-mix(in srgb, var(--color-night) 55%, transparent) 62%,
+    color-mix(in srgb, var(--color-night) 80%, transparent) 100%
   );
 }
 .night-words {
   position: relative;
 }
-.night-words .mark {
-  width: var(--size-mark);
-  height: var(--size-mark);
-  margin: 0 auto;
-  border-radius: 50%;
-}
-.night-words .verse {
-  max-width: 21.25rem;
-  margin: var(--space-6) auto 0;
-}
-@media (min-width: 48rem) {
-  .night-words .verse {
-    max-width: 47.5rem;
-  }
-}
-.night-words .verse blockquote p {
-  color: var(--color-night-ink);
-}
-.night-words .ref {
-  font-size: var(--size-label);
-  letter-spacing: var(--letter-spacing-ref-night);
-  color: var(--color-night-accent);
+.night-words .lockup {
+  margin-inline: auto;
 }
 .night-words h2 {
   margin-top: var(--space-close-title);
@@ -1049,7 +1090,8 @@ a {
 }
 @media (hover: hover) {
   .footer-links a:hover {
-    color: var(--color-night-accent);
+    text-decoration: underline;
+    text-underline-offset: 4px;
   }
 }
 .footer-fine {
@@ -1060,15 +1102,11 @@ a {
 
 /* ── The email list ───────────────────────────────────────────────────── */
 
-/* A form's button drawn as the pill: the browser's own button look taken
-   off, its outline put back by night. */
+/* A form's button drawn as the pill: the browser's own button look taken off. */
 button.button {
   border: 0;
   font-family: inherit;
   cursor: pointer;
-}
-button.button-night {
-  border: var(--border-outline) solid var(--color-night-accent);
 }
 
 .signup {
@@ -1197,10 +1235,10 @@ button.button-night {
       0 0;
   }
 }
-.confirm-arrived img {
+.confirm-arrived .wheat {
   animation: confirm-settle 300ms ease-out both;
 }
-.confirm-arrived > :not(img) {
+.confirm-arrived > :not(.wheat) {
   animation: confirm-arrive 300ms ease-out both;
 }
 .confirm-arrived > :nth-child(3) {
@@ -1228,7 +1266,7 @@ button.button-night {
   .skeleton {
     animation: none;
   }
-  .confirm-arrived img {
+  .confirm-arrived .wheat {
     animation: none;
   }
   /* The stills stay still and the emblems stay at rest. */
@@ -1259,10 +1297,8 @@ button.button-night {
   line-height: var(--line-reading);
   color: var(--color-soft);
 }
-.lost img {
-  width: 7.5rem;
-  height: 7.5rem;
-  border-radius: 50%;
+.lost .wheat {
+  height: var(--size-wheat-lost);
 }
 
 @media (prefers-reduced-motion: reduce) {

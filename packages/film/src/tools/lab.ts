@@ -29,7 +29,7 @@ import {
   Result,
 } from 'effect';
 import type { HttpPlatform, HttpServerRequest } from 'effect/http';
-import { HttpApiBuilder } from 'effect/http-api';
+import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder';
 import { LabHttpApi, type MarksPost, type TalkWordsPost } from '../core/api.ts';
 import { SourceRefused, StagingTakeUnknown, StillUnknown } from '../core/refusals.ts';
 import { SCRIPT_FILE, editMarks, marksTarget, sayMissed } from './script-source.ts';
@@ -58,6 +58,8 @@ import {
   masterFile,
 } from './film-repo.ts';
 import { NotesStore } from './notes-store.ts';
+import { staleWhy } from './board-stale.ts';
+import { staleInLab } from './board-stale-read.ts';
 import { BoardStore } from './board-store.ts';
 import { approveBeat, pickTry, withdrawBeat } from '../core/board.ts';
 import { SceneSources } from './scene-sources.ts';
@@ -436,6 +438,15 @@ const boardGroup = HttpApiBuilder.group(LabHttpApi, 'board', (handlers) =>
         Effect.gen(function* () {
           const film = yield* filmNamed(params.film);
           return yield* (yield* BoardStore).read(film);
+        }),
+      ),
+    )
+    .handle('stale', ({ params }) =>
+      answered(
+        Effect.gen(function* () {
+          const film = yield* filmNamed(params.film);
+          const stale = yield* staleInLab(film);
+          return { panels: stale.map((s) => ({ panel: s.panel, why: staleWhy(film, s) })) };
         }),
       ),
     )

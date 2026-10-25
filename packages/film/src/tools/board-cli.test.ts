@@ -5,7 +5,7 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Cause, ConfigProvider, Effect, Exit, Layer, Option, Path, Schema } from 'effect';
-import { Command } from 'effect/cli';
+import * as Command from 'effect/cli/Command';
 import { ChildProcessSpawner } from 'effect/process';
 import { board } from './board-cli.ts';
 import { BoardStore } from './board-store.ts';

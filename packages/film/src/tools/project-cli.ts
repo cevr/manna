@@ -40,7 +40,9 @@ import {
   Path,
   Result,
 } from 'effect';
-import { Argument, Command, Flag } from 'effect/cli';
+import * as Argument from 'effect/cli/Argument';
+import * as Command from 'effect/cli/Command';
+import * as Flag from 'effect/cli/Flag';
 import { type Scope, addressKey, resolveAddress, sceneAddress } from '../core/address.ts';
 import {
   type ActKey,

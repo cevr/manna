@@ -50,7 +50,9 @@
 //     the old kept sheet and views move into `kept/replaced/`, the record
 //     names both.
 
-import { Argument, Command, Flag } from 'effect/cli';
+import * as Argument from 'effect/cli/Argument';
+import * as Command from 'effect/cli/Command';
+import * as Flag from 'effect/cli/Flag';
 import {
   Array as Arr,
   Boolean as Bool,

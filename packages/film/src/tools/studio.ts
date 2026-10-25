@@ -31,7 +31,7 @@ import {
   String as Str,
 } from 'effect';
 import { Base64 } from 'effect/encoding';
-import { HttpApiBuilder } from 'effect/http-api';
+import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder';
 import { LabHttpApi } from '../core/api.ts';
 import { type TakeState, hashText, takeState, voiceKey } from '../core/narration.ts';
 import { type Timings, type Voice, type VoiceTiming } from '../core/schema.ts';

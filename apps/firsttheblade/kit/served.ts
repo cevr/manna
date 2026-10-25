@@ -33,11 +33,8 @@ export interface Outside {
   readonly why: string;
 }
 
-const NIGHT =
-  "the night: round 4's painting in palette 09, not drawn from the field, and no kit step writes it";
-const MARK = "the mark: round 4's painting, not drawn from the field, and no kit step writes it";
-const EMBLEM = "a series emblem: round 3's drawing, laid in the page as markup, not a painting";
-const ICON = 'an icon `bun run kit` draws from the mark, not from the field';
+const EMBLEM = 'a series mark: fine lines drawn as markup, not a painting';
+const ICON = 'an icon `bun run kit` draws from the wheat on the night, not from a painting';
 
 /** The images the site serves outside the stills rule, each with why. */
 export const OUTSIDE: ReadonlyArray<Outside> = [
@@ -49,13 +46,13 @@ export const OUTSIDE: ReadonlyArray<Outside> = [
   { image: 'src/art/emblem-path.svg', why: EMBLEM },
   {
     image: 'src/art/emblem-remedies.svg',
-    why: 'a series emblem: the healing leaf the owner picked on ask ab7bf68d1be, laid in the page as markup, not a painting',
+    why: 'a series mark: the healing leaf the owner picked on ask ab7bf68d1be, in fine lines drawn as markup, not a painting',
   },
   { image: 'src/art/emblem-taught.svg', why: EMBLEM },
-  { image: 'src/art/mark-112.webp', why: MARK },
-  { image: 'src/art/mark-320.webp', why: MARK },
-  { image: 'src/art/night-1536.webp', why: NIGHT },
-  { image: 'src/art/night-768.webp', why: NIGHT },
+  {
+    image: 'src/art/wheat.svg',
+    why: 'the bare wheat: the lockup’s one shape, a traced vector laid in the page as markup, not a painting',
+  },
 ];
 
 /** The scripts the build's parser reads, by extension. */

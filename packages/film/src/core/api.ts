@@ -37,13 +37,11 @@ import {
   SchemaAST,
   SchemaTransformation,
 } from 'effect';
-import {
-  HttpApi,
-  HttpApiClient,
-  HttpApiEndpoint,
-  HttpApiGroup,
-  HttpApiSchema,
-} from 'effect/http-api';
+import * as HttpApi from 'effect/http-api/HttpApi';
+import * as HttpApiClient from 'effect/http-api/HttpApiClient';
+import * as HttpApiEndpoint from 'effect/http-api/HttpApiEndpoint';
+import * as HttpApiGroup from 'effect/http-api/HttpApiGroup';
+import * as HttpApiSchema from 'effect/http-api/HttpApiSchema';
 import { PartAddress } from './address.ts';
 import { BoardFile, BoardName } from './board.ts';
 import { AskName, AskRecord, AsksPage, StepValues } from './ask.ts';
@@ -448,6 +446,8 @@ const ScriptBeat = Schema.Struct({
   say: Schema.optionalKey(Schema.String),
   /** What the picture does, as the script says it; none where it says nothing. */
   picture: Schema.optionalKey(Schema.String),
+  /** The cast members the picture draws, by their cast-sheet folder ids; none where it names none. */
+  cast: Schema.optionalKey(Schema.Array(Schema.String)),
   /** The beat's sources, as the script cites them. */
   cite: Schema.Array(Schema.String),
 });
@@ -833,6 +833,12 @@ const BoardPick = Schema.Struct({
 /** A beat's board approved or withdrawn. */
 const BoardBeatPost = Schema.Struct({ beat: BoardName });
 
+/** The panels of a film's Board drawn from what has changed since (its picture's words, a cast sheet), each with why in a sentence. */
+export const BoardStale = Schema.Struct({
+  panels: Schema.Array(Schema.Struct({ panel: Schema.String, why: Schema.String })),
+});
+export type BoardStale = typeof BoardStale.Type;
+
 /**
  * The film's storyboard (`core/board.ts`, `film board`): the record, an
  * image of it, a try kept, a beat's board approved or withdrawn. Notes on a
@@ -842,6 +848,12 @@ class BoardGroup extends HttpApiGroup.make('board').add(
   HttpApiEndpoint.get('read', `${FILM}/board`, {
     params: film,
     success: BoardFile,
+    error: Refusals,
+  }),
+  /** Each panel `film board` would draw again, and why: the board store's judgment, the script read fresh. */
+  HttpApiEndpoint.get('stale', `${FILM}/board/stale`, {
+    params: film,
+    success: BoardStale,
     error: Refusals,
   }),
   /** A board image, of version folder `?folder=v<n>`'s Board when given (`<film>/v<n>/board/`). */

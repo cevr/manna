@@ -1,7 +1,7 @@
 # Confirm
 
 A visitor opens the link in the confirm letter. In a browser with script the
-page opens on a quiet skeleton of the notice to come (the mark, grey lines,
+page opens on a quiet skeleton of the notice to come (the wheat, grey lines,
 a status "Confirming your email") while its script posts the page's form;
 after at least 600 ms the answer, "You are on the list", is drawn in the
 skeleton's place with a staged entrance, the page never reloads, and the
@@ -56,7 +56,7 @@ seven days, replaced, or cut short leads to "This link has run out".
      `reload`, `again`.
 
 2. **Read the proof.** `$EVIDENCE/confirm/03-skeleton.png` shows the grey
-   skeleton under the mark; `04-confirmed.png` the notice mid-entrance;
+   skeleton under the wheat; `04-confirmed.png` the notice mid-entrance;
    `confirm.webm` the whole journey. Check that the `confirmed` step's hold,
    read on the page's own clock from the skeleton's first busy frame to the
    answer, is at least the 600 ms hold (the drive fails it under 550 ms).

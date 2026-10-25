@@ -6,7 +6,7 @@
 
 import { Effect, Option, Path, Result } from 'effect';
 import type { HttpServerRequest } from 'effect/http';
-import { HttpApiBuilder } from 'effect/http-api';
+import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder';
 import { decodeComponent } from '@bible/url-state';
 import { REVIEW_FILES, REVIEW_PHONE, LabHttpApi } from '../core/api.ts';
 import type { Project } from '../core/catalogue.ts';

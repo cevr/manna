@@ -9,7 +9,9 @@
 //
 //   film judge <film> --scene <id> [--point <choice point>] [--captions] [--json]
 
-import { Argument, Command, Flag } from 'effect/cli';
+import * as Argument from 'effect/cli/Argument';
+import * as Command from 'effect/cli/Command';
+import * as Flag from 'effect/cli/Flag';
 import { Console, Effect, Layer, Option, Path, Schema } from 'effect';
 import { FetchHttpClient } from 'effect/http';
 import { type JudgeRule, pickOf, rankingLine } from '../core/judge.ts';

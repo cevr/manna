@@ -10,7 +10,7 @@
 // on his filed decision (`forward`), each through `ProductionStore`.
 
 import { Clock, Effect, Match, Option, Schema, Struct } from 'effect';
-import { Tool } from 'effect/ai';
+import * as Tool from 'effect/ai/Tool';
 import { pageHref } from '../core/api.ts';
 import {
   Ask,

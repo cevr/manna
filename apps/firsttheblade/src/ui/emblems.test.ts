@@ -3,6 +3,7 @@ import { test as plain } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Path } from 'effect';
 
+import { PALETTE } from '../palette.ts';
 import { withLeaf } from './emblems.ts';
 
 const test = it.effect.layer(BunServices.layer);
@@ -16,50 +17,54 @@ const read = (file: string) =>
 
 const EMBLEMS = ['path', 'land', 'taught', 'remedies'] as const;
 
-/** Every clip id a drawing names. */
-const clips = (svg: string) =>
-  Array.from(svg.matchAll(/<clipPath id="([^"]+)"/g), (found) => found[1]);
+/** Every `d` a drawing names, in order. */
+const ds = (svg: string) => Array.from(svg.matchAll(/ d="([^"]+)"/g), (found) => found[1]);
 
-describe('the emblems laid in the page', () => {
-  test('the book gains its leaf under the spine, after both its pages', () =>
+describe('the series marks laid in the page', () => {
+  test('the book gains its leaf under the spine, after its pages and before the spine', () =>
     Effect.gen(function* () {
       const book = yield* read('../art/emblem-taught.svg');
       const turned = withLeaf(book);
       const from = turned.indexOf('<g class="leaf">');
       const leaf = turned.slice(from, turned.indexOf('</g>', from) + '</g>'.length);
+      expect(from).toBeGreaterThan(-1);
       expect(turned.replace(leaf, '')).toBe(book);
-      expect(turned.indexOf('<clipPath id="k14">')).toBeLessThan(from);
-      expect(from).toBeLessThan(turned.indexOf('<clipPath id="k15">'));
-      expect(clips(leaf)).toEqual(['k20', 'k21']);
+      expect(turned.indexOf('<g class="book-page">')).toBeLessThan(from);
+      expect(from).toBeLessThan(turned.indexOf('<g class="book-spine">'));
     }));
 
-  test('the leaf is the right page and its lines, drawn as the book draws them, with a shade on its front', () =>
+  test('the leaf is the right page, its edges and its lines, the book’s own strokes', () =>
     Effect.gen(function* () {
       const book = yield* read('../art/emblem-taught.svg');
       const turned = withLeaf(book);
       const from = turned.indexOf('<g class="leaf">');
       const leaf = turned.slice(from, turned.indexOf('</g>', from));
-      const page = 'M50 36C60 30 74 30 86 34L86 74C74 70 60 70 50 76Z';
-      const lines = 'M56 45C62 42 70 42 78 44M56 53C62 50 70 50 78 52';
-      expect(book).toContain(`d="${page}"`);
-      // The book draws both pages' lines as one path; the right page's are its second half.
-      expect(book).toContain(`${lines}"`);
-      expect(new Set(Array.from(leaf.matchAll(/ d="([^"]+)"/g), (found) => found[1]))).toEqual(
-        new Set([page, lines]),
-      );
-      expect(
-        Array.from(leaf.matchAll(/class="leaf-shade" d="([^"]+)"/g), (found) => found[1]),
-      ).toEqual([page]);
+      const pageFrom = book.indexOf('<g class="book-page">');
+      const page = book.slice(pageFrom, book.indexOf('</g>', pageFrom));
+      // The right page: its top edge from the spine's head, its outer edge, its foot, and three lines.
+      const strokes = new Set(ds(page));
+      expect(strokes.size).toBe(6);
+      expect(ds(page)[0]).toStartWith('M24 15c5-3');
+      expect(ds(leaf)).toEqual(ds(page));
+      expect(leaf).not.toContain('fill');
     }));
+
+  plain('a drawing with a page but no spine is left as it is', () => {
+    const drawing = '<svg><g class="book-page"><path d="M0 0h1"/></g></svg>';
+    expect(withLeaf(drawing)).toBe(drawing);
+  });
 
   plain('a drawing with no spine is left as it is', () => {
     expect(withLeaf('<svg></svg>')).toBe('<svg></svg>');
   });
 
-  test('no two drawings on a page name the same clip, so one card’s clip cannot cut another’s', () =>
+  test('each mark is drawn in the deep wheat, so it keeps its colour in an img where currentColor is black', () =>
     Effect.gen(function* () {
-      const drawings = yield* Effect.forEach(EMBLEMS, (id) => read(`../art/emblem-${id}.svg`));
-      const ids = drawings.map(withLeaf).flatMap(clips);
-      expect(new Set(ids).size).toBe(ids.length);
+      for (const id of EMBLEMS) {
+        const svg = yield* read(`../art/emblem-${id}.svg`);
+        const strokes = Array.from(svg.matchAll(/stroke="([^"]+)"/g), (found) => found[1]);
+        expect({ id, strokes }).toEqual({ id, strokes: [PALETTE.accent] });
+        expect(svg).not.toContain('currentColor');
+      }
     }));
 });

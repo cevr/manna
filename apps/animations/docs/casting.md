@@ -178,7 +178,7 @@ Daniel ranks this high, among the talk-only figures, because the plans use him m
 
 All of this follows the guide's section 3 exactly. Christ, the angels and Satan are **draft, awaiting owner**, under owner questions 5–9. The Father's form is the exception: the owner decided it on 2026-10-13 (§3.3).
 
-#### Jesus Christ: draft, awaiting owner (OQ6; OQ5 answered 2026-10-19)
+#### Jesus Christ: draft, awaiting owner (OQ6; OQ5 answered 2026-10-25)
 
 **Appears**
 
@@ -227,11 +227,8 @@ At 0.97 He is never the tallest in a crowd.
 
 **Garments**
 
-- **Earthly:**
-  - the seamless coat in linen `#d1c6b4`;
-  - a walnut mantle `#ab8163`;
-  - a walnut headcloth outdoors.
-- **Priest, Advocate and glory:** the robe white with the golden girdle (§1.2's robe white and gold). There is no breastplate in Rev 1:13; see section 4, item 13.
+- **Earthly, Advocate and glory:** the white robe and the gold sash His library sheet draws, the golden girdle (§1.2's robe white and gold; owner, 2026-10-25, ask a8c0f607f34). There is no breastplate in Rev 1:13; see section 4, item 13.
+- **Priest:** the same robe and girdle with the breastplate.
 - **The cross:** the mocking robe in royal purple (John 19:2), or Matthew's "scarlet robe" (Matt 27:28) in cloth crimson (OQ2).
 
 **Props and identity**
@@ -242,7 +239,7 @@ At 0.97 He is never the tallest in a crowd.
   - a pillow in the stern (Mark 4:38);
   - the finger writing on the ground (John 8:6);
   - crown and sceptre on the throne only (T08).
-- **One identity feature:** none on His person. In a crowd the eye finds Him by staging: He moves toward people, and others turn to Him (§3.2, "known by what He does"). His rig's hook is the walnut mantle over a linen coat, which no one else in a frame wears together. Risen, His hands carry small ink cuts on the circle hands (John 20:20, 27). No halo.
+- **One identity feature:** none on His person. In a crowd the eye finds Him by staging: He moves toward people, and others turn to Him (§3.2, "known by what He does"). His rig's hook is the white robe with the gold sash, which no one else in a frame wears. Risen, His hands carry small ink cuts on the circle hands (John 20:20, 27). No halo.
 
 **Role:** main in T08; supporting or main by scene elsewhere. He never speaks on screen.
 
@@ -250,7 +247,7 @@ At 0.97 He is never the tallest in a crowd.
 
 - a halo or nimbus;
 - a glow in His earthly ministry outside the transfiguration;
-- the white robe in earthly scenes (OQ5; owner, 2026-10-19: the seamless linen coat and a brown mantle on earth, the white robe and gold girdle only as Priest, Advocate and in glory);
+- another grown figure bearded and bareheaded in a plain light robe in His frame, which reads as Christ;
 - a framed portrait (T08's `face` beat must be restaged);
 - scarlet on Him except the sins laid on Him at the cross;
 - wounds in close-up;
@@ -1187,17 +1184,17 @@ Three small scenes prove the range before the full list is drawn. Each is taken 
 
 ### Prototype 1: the house in Capernaum (Mark 2; RBF `roof`)
 
-| Who                                   | Role              | Rig                                      |
-| ------------------------------------- | ----------------- | ---------------------------------------- |
-| Jesus, in earthly dress               | main              | seamless linen coat, walnut mantle (OQ5) |
-| The paralytic on his bed              | main in the beat  | linen, scarlet specks                    |
-| The four friends at the roof's hole   | supporting        | four different mantles and heights       |
-| Two scribes on their bench (Mark 2:6) | human antagonists | flat brows                               |
-| 8–10 people packed into the room      | crowd             | the story crowd kit                      |
+| Who                                   | Role              | Rig                                |
+| ------------------------------------- | ----------------- | ---------------------------------- |
+| Jesus, in earthly dress               | main              | white robe, gold sash (OQ5)        |
+| The paralytic on his bed              | main in the beat  | linen, scarlet specks              |
+| The four friends at the roof's hole   | supporting        | four different mantles and heights |
+| Two scribes on their bench (Mark 2:6) | human antagonists | flat brows                         |
+| 8–10 people packed into the room      | crowd             | the story crowd kit                |
 
 **What it proves**
 
-- Christ is found by staging, not costume. It tests OQ5's earthly dress in the scene the built film already has.
+- Christ is found by staging, not costume. It tests His library dress in the scene the built film already has.
 - The ladder of roles is visible in one room: main, supporting, minor and human antagonist, and crowd.
 - The story crowd kit is never cloned.
 - Scarlet lifts to white on one figure.
@@ -1266,8 +1263,8 @@ Each item gives where the conflict is and what the guide says. A recommendation 
 
 1. **Christ's earthly dress.**
    - Where: RBF (`roof`, `woman`, `centurion`) dresses His earthly ministry in a "white robe, gold sash".
-   - The guide: §3.2 (OQ5) gives the earthly ministry the seamless undyed-linen coat (John 19:23), and keeps the white robe and golden girdle for Priest, Advocate and glory.
-   - The owner chose the guide (2026-10-19). The theology drafts are restaged to the linen coat; RBF's scenes wait until RBF resumes (owner, 2026-10-19: RBF is paused).
+   - The guide: §3.2 (OQ5) dresses Him in His library's white robe and gold sash in every scene but the Priest's.
+   - The owner chose the library's dress (owner, 2026-10-25, ask a8c0f607f34), so RBF's scenes stand as drawn.
 2. **The seraphim's colour.**
    - Where: T08 draws them "flame-red and gold paper".
    - The guide: §3.5 makes them gold and cream; flame-red would put the scarlet accent on them.

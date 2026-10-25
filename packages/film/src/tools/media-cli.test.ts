@@ -16,7 +16,7 @@ import {
   Path,
   Schema,
 } from 'effect';
-import { Command } from 'effect/cli';
+import * as Command from 'effect/cli/Command';
 import { StoreKeyTaken } from './errors.ts';
 import { media } from './media-cli.ts';
 import { folderStore } from './media-store.ts';
