@@ -306,7 +306,7 @@ const inMemory = (operation: Operation) =>
     return { outcome, tree: heldUnder(root, files, folders) };
   }).pipe(Effect.scoped);
 
-describe('one file-system contract, the in-memory one and Bun’s', () => {
+describe.concurrent('one file-system contract, the in-memory one and Bun’s', () => {
   for (const [name, operation] of CASES)
     it.live(name, () =>
       Effect.gen(function* () {
