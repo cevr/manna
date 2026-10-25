@@ -1096,7 +1096,7 @@ are history entries (Back undoes them). Back or Forward lands the player on the 
 (`onTraverse`, `browser/host.ts`; the review's players too), a time still
 waiting to be written for the entry left dropped. A bare `#<seconds>` (an old link's film time) opens on that frame.
 
-A folder ref is one path segment (`bible-tools%2Frighteousness-by-faith`), as
+A folder ref is one path segment (`manna%2Frighteousness-by-faith`), as
 is a short's name. The wipe's divider, the microphone and quality are this
 viewer's own settings and stay in the browser's storage, never in a link; a
 set's view (`?view=`) is the link's.
@@ -4222,7 +4222,7 @@ real server does not serve.
 
 `bun run test:e2e:check [--base <log>] [--log <log>]` runs the same suite
 and says what the change under test caused. It takes the host's e2e lock
-itself for the whole run (`flock /tmp/bible-tools-e2e.lock` on the workbox,
+itself for the whole run (`flock /tmp/manna-e2e.lock` on the workbox,
 `lockf -k` on a Mac, which has no `flock`), so two workspaces on one machine
 queue; it says so before it waits. Do not wrap it in `flock` or `lockf`: run
 inside an outer lock on that file, it sees the lock in its ancestors and runs
@@ -4278,11 +4278,11 @@ page's own work takes seconds, and a suite of them only times out. From
 `packages/film` on a Mac:
 
 ```sh
-FILM_E2E_CPU_THROTTLE=20 lockf -k /tmp/bible-tools-e2e.lock \
+FILM_E2E_CPU_THROTTLE=20 lockf -k /tmp/manna-e2e.lock \
   bun src/lab/fixtures/run-suite.ts --max-concurrency=3 --preload ./e2e/preload.ts --timeout 20000 <file> -t '<case>'
 ```
 
-On the workbox, `flock /tmp/bible-tools-e2e.lock` in place of `lockf -k …`.
+On the workbox, `flock /tmp/manna-e2e.lock` in place of `lockf -k …`.
 
 ## Knobs
 

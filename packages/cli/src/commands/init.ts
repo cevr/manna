@@ -31,7 +31,7 @@ class InitError extends Schema.TaggedError<InitError>()('InitError', {
   cause: Schema.Unknown,
 }) {}
 
-const GITHUB_RAW = 'https://raw.githubusercontent.com/cevr/bible/main';
+const GITHUB_RAW = 'https://raw.githubusercontent.com/cevr/manna/main';
 
 const DBS = {
   hymnal: {

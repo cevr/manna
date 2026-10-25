@@ -1,6 +1,6 @@
 // `bun run test:e2e:check [--base <log>] [--log <log>]`: the film e2e, read
 // for what the change under test caused. It takes the host's e2e lock
-// (`flock` where there is one, else `lockf -k`, on /tmp/bible-tools-e2e.lock)
+// (`flock` where there is one, else `lockf -k`, on /tmp/manna-e2e.lock)
 // for the whole run, so two workspaces on one machine queue rather than time
 // each other out; run inside an outer `flock`/`lockf` on that lock, it runs
 // in that hold instead of waiting on itself. Holding the lock, it waits (at
@@ -60,7 +60,7 @@ import {
 } from './e2e-verdict.ts';
 
 /** The host's e2e lock, the one the workspaces' docs name. */
-const LOCK = '/tmp/bible-tools-e2e.lock';
+const LOCK = '/tmp/manna-e2e.lock';
 
 /** Set on the run that holds the lock. */
 const HELD = 'FILM_E2E_CHECK_LOCKED';

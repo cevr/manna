@@ -605,41 +605,41 @@ Refresh a GitHub source with `okra repo fetch --json owner/repo[@ref]`; use `okr
 
 ## Current repository receipts
 
-These are the primary starting points in Bible Tools:
+These are the primary starting points in manna:
 
 - CLI TUI entry and wiring:
-  - `/Users/cvr/Developer/personal/bible-tools/packages/cli/src/commands/root.ts:23`
-  - `/Users/cvr/Developer/personal/bible-tools/packages/cli/src/commands/egw/open.ts:9`
-  - `/Users/cvr/Developer/personal/bible-tools/packages/cli/src/services/interactive-reader.ts:31`
-  - `/Users/cvr/Developer/personal/bible-tools/packages/cli/src/main.ts:16`
-  - `/Users/cvr/Developer/personal/bible-tools/packages/cli/package.json:20`
+  - `/Users/cvr/Developer/personal/manna/packages/cli/src/commands/root.ts:23`
+  - `/Users/cvr/Developer/personal/manna/packages/cli/src/commands/egw/open.ts:9`
+  - `/Users/cvr/Developer/personal/manna/packages/cli/src/services/interactive-reader.ts:31`
+  - `/Users/cvr/Developer/personal/manna/packages/cli/src/main.ts:16`
+  - `/Users/cvr/Developer/personal/manna/packages/cli/package.json:20`
 - Legacy desktop cache:
-  - `/Users/cvr/Developer/personal/bible-tools/apps/desktop/src/ipc-cache/types.ts:1`
-  - `/Users/cvr/Developer/personal/bible-tools/apps/desktop/src/ipc-cache/registry.ts:1`
-  - `/Users/cvr/Developer/personal/bible-tools/apps/desktop/src/ipc-cache/proxy.ts:1`
-  - `/Users/cvr/Developer/personal/bible-tools/apps/desktop/src/ipc-cache/key.ts:1`
+  - `/Users/cvr/Developer/personal/manna/apps/desktop/src/ipc-cache/types.ts:1`
+  - `/Users/cvr/Developer/personal/manna/apps/desktop/src/ipc-cache/registry.ts:1`
+  - `/Users/cvr/Developer/personal/manna/apps/desktop/src/ipc-cache/proxy.ts:1`
+  - `/Users/cvr/Developer/personal/manna/apps/desktop/src/ipc-cache/key.ts:1`
 - Current web cache and Effect-to-Promise bridge:
-  - `/Users/cvr/Developer/personal/bible-tools/apps/web/src/lib/cache.ts:1`
-  - `/Users/cvr/Developer/personal/bible-tools/apps/web/src/lib/cached-app.ts:1`
-  - `/Users/cvr/Developer/personal/bible-tools/apps/web/src/data/service-client.ts:1`
+  - `/Users/cvr/Developer/personal/manna/apps/web/src/lib/cache.ts:1`
+  - `/Users/cvr/Developer/personal/manna/apps/web/src/lib/cached-app.ts:1`
+  - `/Users/cvr/Developer/personal/manna/apps/web/src/data/service-client.ts:1`
 - Current web SQLite worker:
-  - `/Users/cvr/Developer/personal/bible-tools/apps/web/src/workers/sqlite-database.ts:1`
-  - `/Users/cvr/Developer/personal/bible-tools/apps/web/src/workers/state-database.ts:5`
-  - `/Users/cvr/Developer/personal/bible-tools/apps/web/src/workers/state-database.ts:205`
-  - `/Users/cvr/Developer/personal/bible-tools/apps/web/src/workers/db-client.ts:34`
+  - `/Users/cvr/Developer/personal/manna/apps/web/src/workers/sqlite-database.ts:1`
+  - `/Users/cvr/Developer/personal/manna/apps/web/src/workers/state-database.ts:5`
+  - `/Users/cvr/Developer/personal/manna/apps/web/src/workers/state-database.ts:205`
+  - `/Users/cvr/Developer/personal/manna/apps/web/src/workers/db-client.ts:34`
 - Current desktop Effect/SQLite runtime:
-  - `/Users/cvr/Developer/personal/bible-tools/apps/desktop/electron/runtime.ts:21`
-  - `/Users/cvr/Developer/personal/bible-tools/apps/desktop/electron/runtime.ts:31`
-  - `/Users/cvr/Developer/personal/bible-tools/apps/desktop/electron/main.ts:43`
+  - `/Users/cvr/Developer/personal/manna/apps/desktop/electron/runtime.ts:21`
+  - `/Users/cvr/Developer/personal/manna/apps/desktop/electron/runtime.ts:31`
+  - `/Users/cvr/Developer/personal/manna/apps/desktop/electron/main.ts:43`
 - Current React-only dependencies and wrappers:
-  - `/Users/cvr/Developer/personal/bible-tools/apps/web/package.json:19`
-  - `/Users/cvr/Developer/personal/bible-tools/apps/web/src/components/ui/dialog.tsx:1`
-  - `/Users/cvr/Developer/personal/bible-tools/apps/web/src/components/ui/context-menu.tsx:1`
-  - `/Users/cvr/Developer/personal/bible-tools/apps/web/src/components/ui/command.tsx:1`
-  - `/Users/cvr/Developer/personal/bible-tools/apps/web/src/components/ui/resizable.tsx:1`
+  - `/Users/cvr/Developer/personal/manna/apps/web/package.json:19`
+  - `/Users/cvr/Developer/personal/manna/apps/web/src/components/ui/dialog.tsx:1`
+  - `/Users/cvr/Developer/personal/manna/apps/web/src/components/ui/context-menu.tsx:1`
+  - `/Users/cvr/Developer/personal/manna/apps/web/src/components/ui/command.tsx:1`
+  - `/Users/cvr/Developer/personal/manna/apps/web/src/components/ui/resizable.tsx:1`
 - Existing visual baselines:
-  - `/Users/cvr/Developer/personal/bible-tools/apps/web/src/styles/app.css:1`
-  - `/Users/cvr/Developer/personal/bible-tools/apps/desktop/src/styles/tailwind.css:1`
-  - `/Users/cvr/Developer/personal/bible-tools/apps/desktop/src/app.tsx:1`
+  - `/Users/cvr/Developer/personal/manna/apps/web/src/styles/app.css:1`
+  - `/Users/cvr/Developer/personal/manna/apps/desktop/src/styles/tailwind.css:1`
+  - `/Users/cvr/Developer/personal/manna/apps/desktop/src/app.tsx:1`
 
 When source behavior and this document disagree, re-open the pinned source, verify whether the dependency has changed, and amend this document deliberately rather than silently drifting the implementation.

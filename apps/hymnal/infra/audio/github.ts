@@ -71,7 +71,7 @@ export const FillGitHub = Layer.effect(
   Fill,
   Effect.gen(function* () {
     const client = (yield* HttpClient.HttpClient).pipe(
-      HttpClient.mapRequest(HttpClientRequest.setHeader('user-agent', 'bible-tools-audio-copy')),
+      HttpClient.mapRequest(HttpClientRequest.setHeader('user-agent', 'manna-audio-copy')),
       HttpClient.filterStatusOk,
       HttpClient.retryTransient({ schedule: Schedule.exponential('250 millis'), times: 4 }),
     );

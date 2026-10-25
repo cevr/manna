@@ -123,8 +123,8 @@ export type ReviewFolder = typeof ReviewFolder.Type;
 /**
  * A root's other labels: each alias label, the label of the root it names.
  * A ref may start with an alias when it was written while its checkout's
- * folder had another name (`bible-tools`, the folder now named `manna`): it
- * names the same file as the ref with the root's label.
+ * folder had another name: it names the same file as the ref with the
+ * root's label.
  */
 export const RefAliases = Schema.Record(Schema.String, Schema.String);
 export type RefAliases = typeof RefAliases.Type;

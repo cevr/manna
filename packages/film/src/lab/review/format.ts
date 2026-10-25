@@ -128,7 +128,7 @@ export const videoSource = (video: ReviewVideo, quality: Quality): Option.Option
 
 /**
  * Whether the folder at `ref` holds `film`'s renders: its ref is the film's
- * name, or ends in it (`bible-tools/righteousness-by-faith`).
+ * name, or ends in it (`manna/righteousness-by-faith`).
  */
 export const isFilmsFolder = (ref: string, film: string): boolean =>
   ref === film || ref.endsWith(`/${film}`);

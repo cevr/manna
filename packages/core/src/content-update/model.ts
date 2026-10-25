@@ -252,7 +252,7 @@ export type ContentUpdateJson = typeof ContentUpdateJson.Encoded;
  *  URL"). One release per content version publishes its artifact; this file is
  *  the index over them. */
 export const CONTENT_MANIFEST_URL =
-  'https://github.com/cevr/bible/releases/download/content-manifest/manifest.json';
+  'https://github.com/cevr/manna/releases/download/content-manifest/manifest.json';
 
 /** The origins a manifest may be fetched from, in production.
  *

@@ -20,7 +20,7 @@ export interface FileArtifactRelease {
 }
 
 export const BIBLE_ARTIFACT_RELEASE: FileArtifactRelease = {
-  url: 'https://github.com/cevr/bible/releases/download/db-v2/bible.db',
+  url: 'https://github.com/cevr/manna/releases/download/db-v2/bible.db',
   revision: 'db-v2',
   digest: 'sha256:e72244f576be2bfa1b28c4816f60d3668338c1322d7cd329d73143ec43bf277c',
   size: 156_291_072,

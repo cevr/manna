@@ -29,24 +29,19 @@ const LINKS: ReadonlyArray<
   readonly [href: string, place: PlaceName, page: AppPage, written: string]
 > = [
   ['/', 'home', 'review', '/'],
-  ['/sets/bible-tools%2Frbf', 'folder', 'review', '/sets/bible-tools%2Frbf'],
+  ['/sets/manna%2Frbf', 'folder', 'review', '/sets/manna%2Frbf'],
+  ['/sets/manna%2Frbf/render:scenes:roof', 'set', 'review', '/sets/manna%2Frbf/render:scenes:roof'],
   [
-    '/sets/bible-tools%2Frbf/render:scenes:roof',
+    '/sets/manna%2Frbf/render:scenes:roof?view=pair&other=light',
     'set',
     'review',
-    '/sets/bible-tools%2Frbf/render:scenes:roof',
+    '/sets/manna%2Frbf/render:scenes:roof?view=pair&other=light',
   ],
   [
-    '/sets/bible-tools%2Frbf/render:scenes:roof?view=pair&other=light',
+    '/sets/manna%2Frbf/render:scenes:roof?view=moments&m=2#t=31.5',
     'set',
     'review',
-    '/sets/bible-tools%2Frbf/render:scenes:roof?view=pair&other=light',
-  ],
-  [
-    '/sets/bible-tools%2Frbf/render:scenes:roof?view=moments&m=2#t=31.5',
-    'set',
-    'review',
-    '/sets/bible-tools%2Frbf/render:scenes:roof?view=moments&m=2#t=31.5',
+    '/sets/manna%2Frbf/render:scenes:roof?view=moments&m=2#t=31.5',
   ],
   ['/sets/f/take:wood.gavel?view=all&m=0', 'set', 'review', '/sets/f/take:wood.gavel'],
   ['/sets/f/p?view=nonsense&m=-2', 'set', 'review', '/sets/f/p'],
@@ -129,9 +124,9 @@ describe('page places', () => {
 
   test('every link the app prints is its place', () => {
     expect(pageHref.home()).toBe('/');
-    expect(pageHref.folder('bible-tools/rbf')).toBe('/sets/bible-tools%2Frbf');
-    expect(pageHref.set('bible-tools/rbf', 'render:scenes:roof')).toBe(
-      '/sets/bible-tools%2Frbf/render:scenes:roof',
+    expect(pageHref.folder('manna/rbf')).toBe('/sets/manna%2Frbf');
+    expect(pageHref.set('manna/rbf', 'render:scenes:roof')).toBe(
+      '/sets/manna%2Frbf/render:scenes:roof',
     );
     expect(pageHref.studio('rbf/shorts/verdict')).toBe('/films/rbf%2Fshorts%2Fverdict/studio');
     expect(pageHref.studio('rbf', { v: 2, sel: 'beat:roof' }, Option.some(4.5))).toBe(
@@ -208,14 +203,11 @@ const OLD_LINKS: ReadonlyArray<readonly [old: string, now: string]> = [
   ['/?film=rbf&lookbook', '/films/rbf/studio'],
   ['/?film=rbf&lookbook#42.5', '/films/rbf/studio#t=42.5'],
   ['/?film=rbf&lab', '/films/rbf/studio'],
-  ['/?folder=bible-tools%2Frbf', '/sets/bible-tools%2Frbf'],
+  ['/?folder=manna%2Frbf', '/sets/manna%2Frbf'],
+  ['/?folder=manna%2Frbf&set=render%3Ascenes%3Aroof', '/sets/manna%2Frbf/render:scenes:roof'],
   [
-    '/?folder=bible-tools%2Frbf&set=render%3Ascenes%3Aroof',
-    '/sets/bible-tools%2Frbf/render:scenes:roof',
-  ],
-  [
-    '/?folder=bible-tools%2Frbf&set=render%3Ascenes%3Aroof&view=moments&m=2',
-    '/sets/bible-tools%2Frbf/render:scenes:roof?view=moments&m=2',
+    '/?folder=manna%2Frbf&set=render%3Ascenes%3Aroof&view=moments&m=2',
+    '/sets/manna%2Frbf/render:scenes:roof?view=moments&m=2',
   ],
   ['/?folder=f&set=p&view=pair&other=light', '/sets/f/p?view=pair&other=light'],
   ['/films/rbf/play#12.5', '/films/rbf/play#t=12.5'],

@@ -1,4 +1,4 @@
-RESEARCH BRIEF: "From Milk to Meat" theology film series (bible-tools, owner Cristian)
+RESEARCH BRIEF: "From Milk to Meat" theology film series (manna, owner Cristian)
 
 You research source material for a playlist of narrated cut-paper explainer films (BibleProject style)
 that moves every Christian from the first principles of the faith (milk, Heb 5:12-14; 6:1-2) to its deeper
@@ -7,18 +7,18 @@ per-episode research notes as your final message (text only; do not write files;
 do not commit; no paid APIs; never render/narrate/mix/check a film).
 
 TOOLS (absolute paths; run with Bash):
-- KJV:   /tmp/claude-1000/-home-exedev-Developer-personal-bible-tools/078fad2f-b3a9-4025-813b-23f987283860/scratchpad/bible verse "<ref>" --json
+- KJV:   /tmp/claude-1000/-home-exedev-Developer-personal-manna/078fad2f-b3a9-4025-813b-23f987283860/scratchpad/bible verse "<ref>" --json
          (the repo's `manna` CLI run through bun; `manna verse` works. Text search: manna verse "<words>" --json --limit 10)
 - EGW + pioneer corpus search (the deployed egw-search service, the same corpus the CLI indexes; the local
   `manna egw ...` commands FAIL on this box because ~/.bible/egw-paragraphs.db has no text, so do not use them):
-         python3 /tmp/claude-1000/-home-exedev-Developer-personal-bible-tools/078fad2f-b3a9-4025-813b-23f987283860/scratchpad/es.py <egw|pioneer|all> <limit> "<query>" [--full] [--ctx=N]
+         python3 /tmp/claude-1000/-home-exedev-Developer-personal-manna/078fad2f-b3a9-4025-813b-23f987283860/scratchpad/es.py <egw|pioneer|all> <limit> "<query>" [--full] [--ctx=N]
   Prints [refcode] (author | book) and the paragraph (first 260 chars, or whole with --full; --ctx=N adds N
   paragraphs either side). Search with distinctive phrases to land a known passage; use scope `pioneer`
   to reach Waggoner, Jones, Smith, Andrews, J. White, Haskell, Loughborough, Miller, Prescott etc.
   Skip modern compilations by the White Estate ("Ellen G. White Estate" author, e.g. 365N, JTL*, CWe) and
   non-KJV Bibles; prefer originals (letters, manuscripts, periodicals, the books she wrote) over later compilations.
 - The doctrinal frame (verified pioneer quotes, key texts, and a "Film direction" MUST SHOW / MUST NOT
-  SAY-OR-SHOW per topic): /home/exedev/Developer/personal/bible-tools/.claude/skills/film/frame/<topic>.md
+  SAY-OR-SHOW per topic): /home/exedev/Developer/personal/manna/.claude/skills/film/frame/<topic>.md
   (topics: god-christ, nature-of-christ, scripture, baptism, prophecy-chains, prophecy-2300-1844,
   sanctuary-judgment, law-sabbath, health, holy-spirit, righteousness-by-faith, gift-of-prophecy,
   three-angels, state-of-dead, second-coming-millennium, hell-destruction, new-earth; 1889.md has the

@@ -31,7 +31,7 @@ public struct ScriptureSegment: Hashable, Sendable {
   public let noteIndex: Int?
 }
 
-/// The Bible Tools reader's ordered interpretation: supplied words, red letters, margin anchors.
+/// The manna reader's ordered interpretation: supplied words, red letters, margin anchors.
 /// Notes anchor after the first matching phrase in visible text, even across italic boundaries.
 public struct Scripture: Sendable {
   public let segments: [ScriptureSegment]

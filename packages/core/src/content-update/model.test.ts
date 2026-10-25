@@ -31,7 +31,7 @@ const entry = (input: {
 }): ContentManifestEntry =>
   ContentManifestEntry.make({
     revision: corpusRevision(input.revision),
-    url: `https://github.com/cevr/bible/releases/download/${input.revision}/topics.db`,
+    url: `https://github.com/cevr/manna/releases/download/${input.revision}/topics.db`,
     sha256: `sha256:${'a'.repeat(64)}`,
     size: 4_096,
     schema_major: input.schemaMajor ?? TOPICS_SCHEMA_MAJOR,
@@ -308,7 +308,7 @@ describe('§3.6 the manifest wire model', () => {
   const manifestBody = (entry: string): string =>
     `{"revision":"manifest-2026-08","artifacts":{"topics":{${entry}}}}`;
 
-  const VALID_TOPICS_ENTRY = `"revision":"content-v4","url":"https://github.com/cevr/bible/releases/download/content-v4/topics.db","sha256":"sha256:${'b'.repeat(64)}","size":8192,"schema_major":1,"generation":4`;
+  const VALID_TOPICS_ENTRY = `"revision":"content-v4","url":"https://github.com/cevr/manna/releases/download/content-v4/topics.db","sha256":"sha256:${'b'.repeat(64)}","size":8192,"schema_major":1,"generation":4`;
 
   it.effect('decodes the published shape', () =>
     Effect.gen(function* () {

@@ -79,8 +79,8 @@ describe('what a card says', () => {
 
   test("a folder holds a film's renders when its ref is the film's name or ends in it", () => {
     expect(isFilmsFolder('roof', 'roof')).toBe(true);
-    expect(isFilmsFolder('bible-tools/roof', 'roof')).toBe(true);
-    expect(isFilmsFolder('bible-tools/roofs', 'roof')).toBe(false);
-    expect(isFilmsFolder('bible-tools/flat-roof', 'roof')).toBe(false);
+    expect(isFilmsFolder('manna/roof', 'roof')).toBe(true);
+    expect(isFilmsFolder('manna/roofs', 'roof')).toBe(false);
+    expect(isFilmsFolder('manna/flat-roof', 'roof')).toBe(false);
   });
 });

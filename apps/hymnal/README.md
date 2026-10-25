@@ -443,15 +443,15 @@ only, never to the GitHub copy of `warm-1`.
 
 The orchestrator of the run that made this app runs these steps after the
 change merges, from its detached main worktree
-`~/Developer/personal/.rifts/bible-tools/hymnapp-main` (never the main
+`~/Developer/personal/.rifts/manna/hymnapp-main` (never the main
 checkout, which another agent edits), in this order. It stops at the first
 result that differs from the expected one:
 
-1. `cd ~/Developer/personal/.rifts/bible-tools/hymnapp-main/apps/hymnal && bun run plan`.
+1. `cd ~/Developer/personal/.rifts/manna/hymnapp-main/apps/hymnal && bun run plan`.
    Expected result: one create, a `Cloudflare.R2.Bucket` named `cvr-hymns`
    with the domain `hymns.cvr.im` and the CORS rule. Nothing else.
-2. `cd ~/Developer/personal/.rifts/bible-tools/hymnapp-main/apps/hymnal && bun run deploy`.
-3. `cd ~/Developer/personal/.rifts/bible-tools/hymnapp-main/apps/hymnal && bun run audio:copy`.
+2. `cd ~/Developer/personal/.rifts/manna/hymnapp-main/apps/hymnal && bun run deploy`.
+3. `cd ~/Developer/personal/.rifts/manna/hymnapp-main/apps/hymnal && bun run audio:copy`.
    Expected last line: `… uploaded 695 failed 0 verified 695/695`. Run it
    again. Expected: `kept 695 uploaded 0`.
 4. Probe (read-only; anyone can run it after step 3):

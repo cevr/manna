@@ -4,7 +4,7 @@ An offline SwiftUI menu bar app for memorizing Scripture on macOS 26+. Learn who
 
 ## Run
 
-From the Bible Tools root, use `bun run --filter @manna/selah gate` or `bun run --filter @manna/selah build`. The commands below run from `apps/selah`. Native tasks explicitly skip other operating systems; `.github/workflows/selah.yml` validates SwiftUI on macOS. Native builds bypass Turbo artifact caching because SDK and code-signing state belong to the local machine.
+From the repo root, use `bun run --filter @manna/selah gate` or `bun run --filter @manna/selah build`. The commands below run from `apps/selah`. Native tasks explicitly skip other operating systems; `.github/workflows/selah.yml` validates SwiftUI on macOS. Native builds bypass Turbo artifact caching because SDK and code-signing state belong to the local machine.
 
 ```sh
 ./scripts/gate.sh
@@ -88,6 +88,6 @@ The full gate checks formatting, warning-free compilation, 30 behavior tests, an
 
 ## Text provenance
 
-The bundled KJV was exported read-only from `bible-tools/packages/core/data/bible.db`: 31,102 unique verses across 66 books and 7,320 margin notes. Raw source text and Psalm superscriptions are retained; printed markup is interpreted for display. The source metadata notes the KJV's public-domain status in most jurisdictions and perpetual Crown copyright in the United Kingdom. See `Sources/SelahApp/Resources/KJV-NOTICE.txt`.
+The bundled KJV was exported read-only from `packages/core/data/bible.db`: 31,102 unique verses across 66 books and 7,320 margin notes. Raw source text and Psalm superscriptions are retained; printed markup is interpreted for display. The source metadata notes the KJV's public-domain status in most jurisdictions and perpetual Crown copyright in the United Kingdom. See `Sources/SelahApp/Resources/KJV-NOTICE.txt`.
 
 This build is locally ad-hoc signed. Distribution signing, notarization, and cloud sync are not configured. Dictation has the required microphone and speech usage descriptions. Recorded takes were verified through `SelahTranscribe`; live microphone capture was not exercised during verification.

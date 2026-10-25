@@ -129,15 +129,15 @@ const settlesOnce = <A>(
 describe('UrlParts', () => {
   test('prints a folder as one segment and keeps colons, commas and slashes readable', () => {
     const href = printHref({
-      path: ['sets', 'bible-tools/righteousness-by-faith', 'render:scenes:roof'],
+      path: ['sets', 'manna/righteousness-by-faith', 'render:scenes:roof'],
       query: { q: ['latter rain'], type: ['book', '-periodical'] },
       hash: { t: ['1.5,4'], note: ['a/b'] },
     });
     expect(href).toBe(
-      '/sets/bible-tools%2Frighteousness-by-faith/render:scenes:roof?q=latter+rain&type=book&type=-periodical#t=1.5,4&note=a/b',
+      '/sets/manna%2Frighteousness-by-faith/render:scenes:roof?q=latter+rain&type=book&type=-periodical#t=1.5,4&note=a/b',
     );
     expect(readHref(href)).toEqual({
-      path: ['sets', 'bible-tools/righteousness-by-faith', 'render:scenes:roof'],
+      path: ['sets', 'manna/righteousness-by-faith', 'render:scenes:roof'],
       query: { q: ['latter rain'], type: ['book', '-periodical'] },
       hash: { t: ['1.5,4'], note: ['a/b'] },
     });
