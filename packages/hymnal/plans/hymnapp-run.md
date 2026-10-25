@@ -259,6 +259,8 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 
 - browse closed: the owner picked K2 and our clicks ("K2 looks good, yeah - Our clicks are fine too, yeah"). The app gets: # in the floating bar opens the three number drums alone, and Play swaps the dialled hymn in; the list, alive (ticks, section pops, the number rail on Sections), carries index tabs (Sections, Topics, Metres, Scripture, Lists); the grid button or a section header zooms the list out to a tile per group (count, a strip of where its hymns lie from 1 to 695, the playing group outlined), and a tile zooms back in there. Cues are our clicks. Prototype: `tmp/orchestrate/hymnapp/browse/src4.html`. (owner words; browse)
 
+- Chord placement becomes a setting: the owner asked "I wonder if we can make the chord placement a setting as well Both global and maybe per him" (per hymn). Two choices: "On the beat" (R1, the default chordbulk ships) and "As the file plays" (the MIDI file's own change points). A global choice in Settings, and a per-hymn override in the hymn's sheet beside key and capo, stored on the device like the capo. chordbulk merges unchanged, and the setting is its own unit, `chordplace`. Principle: scope never grows inside a running unit; reversible. (owner words; chordbulk)
+
 ## Owner questions
 
 - pagerows (2026-10-22): hymn 220. The database sings 7 places of 3 words in each stanza a second time; the re-engraved page prints them once, with no repeat sign. Two independent judges agree on the reading (`tmp/orchestrate/hymnapp/pagerows/owner-220.md`). Options: (1, recommended) the owner photographs 220 in his own 1985 hymnal, and that page decides; (2) keep the row, 220 stays unsettled; (3) follow the engraving now and remove the repeats. Answer: the owner sent photos of 220 from his 1985 hymnal (2026-10-22, `tmp/orchestrate/hymnapp/notes/owner/2026-10-22-hymn220-p1.HEIC`, `-p2.HEIC`). The 1985 page prints each repeated phrase as an echo in parentheses after the phrase, so the database is right and the re-engraving dropped the echoes. Unit `h220` settles 220 by the photos; the row keeps its words.
@@ -367,5 +369,7 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 - The hymnal app's unit tests take 1.58 s alone (measured in chordbulk r1), over the 1 s budget of `bun run test:budget`; a unit that cuts them (shared setup, the `ios/**` and `android/**` ignores of appicon F2) takes the next free hymnal slot after the chordbulk merge. (chordbulk)
 
 - Unit `browse-app` (hymnal): build the browse Decision (K2, our clicks) in apps/hymnal. Depends on chordbulk part 5 (Feel: haptics and cues) and playswap; Topics, Metres, Scripture and Lists tabs fill from units topics, metres, scripture and lists, and show only once their data lands. (browse)
+
+- Unit `chordplace` (hymnal): the chord placement setting (Decision above). The compiled data keeps both placements, or keeps the file's own and the beat grid so the reader applies R1 itself (the planner picks and proves it); the property test holds both choices over every sung line; the held chord follows the choice. Depends on chordbulk part 4 (the hymn's sheet). Runs before playswap. (chordbulk)
 
 ## Review later
