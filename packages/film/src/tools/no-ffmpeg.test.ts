@@ -37,7 +37,7 @@ const READS = 4;
 
 /**
  * Every file under `root`, its installed packages left unlisted: a recursive
- * listing follows their links into the store, about 13,000 entries.
+ * listing follows their links into the store, over 14,000 entries.
  */
 const filesIn = (root: string) =>
   Effect.gen(function* () {
