@@ -3756,3 +3756,23 @@ The form of an entry, each field on its own line:
 - **Wrong:** While a hymn played, the sounding bar (88 pt) covered the lower 16.3 pt of the `Resume follow` pill, so its label was cut.
 - **Cause:** A screen reserves the resting bar's height alone (56 pt), so the sounding bar lies 32 pt over the page's foot, and the pill still docked 16 pt above that foot (`follow/ResumeFollow.tsx`). The page now docks the pill in a box that ends `RISE` (32 pt) above its foot.
 - **Guard:** code: `apps/hymnal/src/player/thumb.slow.test.tsx` `stands the Resume follow pill whole over the sounding bar`
+
+### board-stale-fallback-held-to-one-member
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "the fallback test covers only a `kept/` ref on a single member."
+- **Source:** board-stale/review-r1.md F1, the review's first minor, headed M1
+- **Wrong:** The test of a try from before tries recorded their cast read one `kept/` ref of one member. A fallback that judged a view cut from a replaced sheet wrong, or marked another member's panel stale, would still pass.
+- **Cause:** The test was written for the board's one live case, the feast lead's three kept sheets. Two cases now hold the other branches: a view, and a second member whose record has no newer keep of the kind drawn.
+- **Guard:** code: `packages/film/src/tools/board-stale.test.ts` `a try from before is not stale on another member's sheet, nor on a kind of its own sheet not replaced`
+
+### board-stale-ride-along-on-the-old-keep
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "the new tries of `cold.letter` and `cold.what` take `cold.baby`'s shown try, which is the old-sheet keep, as the second reference"
+- **Source:** board-stale/review-r1.md F2, the review's second minor, headed M2
+- **Wrong:** When a run drew a stale beat again, its later panels rode along by the first panel's keep, drawn from the sheet the owner replaced, so their new tries leaned on the old face.
+- **Cause:** The ride-along took the first panel's shown try, which is its keep while one is kept. A run now rides along by the first try it drew of the first panel, and by the shown try only when it drew none.
+- **Guard:** code: `packages/film/src/tools/board-stale.test.ts` `takes the first panel's first try drawn in this run, never its keep from the sheet replaced`
