@@ -576,15 +576,16 @@ draw is timed apart from the encoder: each `render.progress` line and
 `render.done` say how many ms a frame went to drawing, encoding and carrying
 the chunk out of the page (`draw_ms=… encode_ms=… transfer_ms=…`), and a
 perf script times the draw alone with `drawTimes(frames)`. A video's
-frames split into chunks (`planChunks`: about four per page, at least a second
+frames to draw split into chunks (`segmentChunks`, never across a segment's
+edge, below: about four per page, at least a second
 and at most eight each, then a tail of `workers` chunks at half that size, a
 quarter, and so on down to a second, so the last chunk each page pulls is its
 smallest and the pages finish together) on a queue that idle pages pull from; each page draws
 its chunk and encodes it with the browser's H.264 encoder through mediabunny
-(`player/encode.ts`, a key frame every two seconds) into a segment of its own
+(`player/encode.ts`, a key frame every two seconds) into an MP4 of its own
 (and, unless `--no-share`, a share copy from a second encoder in the same
 pass), and a chunk whose page crashes is retried once on a new page. Which
-encoder is data, chosen once (below). `Media.join` joins the segments in order with the track cut from
+encoder is data, chosen once (below). `Media.join` joins the chunks in order with the track cut from
 `full.wav` under the range and encoded to AAC, and the captions (`main.vtt`) are written
 beside the MP4 from `captionCues`, the same line timing the burned-in captions
 use. A contact sheet is composed in one page (`player/contact.ts`). An
