@@ -2079,7 +2079,7 @@ The form of an entry, each field on its own line:
 
 ### repo-json-breaks-around-a-matrix
 
-- **Date:** 2026-10-22
+- **Date:** 2026-10-23
 - **Kind:** retraction
 - **Said:** "fmt:check: 3 cast-sheet.json written by `concept keep` + character-design.md unformatted"
 - **Source:** tmp/orchestrate/p5/iio-cast/state.md:63
