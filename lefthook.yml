@@ -8,7 +8,7 @@ pre-commit:
     # `bun run test:slow`.
     - name: lint
       glob: '*.{ts,tsx,js,jsx,mts,cts}'
-      run: bun x oxlint --fix {staged_files}
+      run: bun x oxlint --fix --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
 
     - name: fmt

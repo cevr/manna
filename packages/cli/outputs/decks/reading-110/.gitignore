@@ -1,0 +1,5 @@
+*.key
+review/
+gen*.log
+images/*-full.png
+images/*-panel.png

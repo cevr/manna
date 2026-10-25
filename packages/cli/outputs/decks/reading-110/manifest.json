@@ -1,0 +1,285 @@
+{
+  "title": "The Thief on the Cross",
+  "subtitle": "Bible Readings — Chapter 110 — A Scripture Narrative",
+  "deckName": "Reading 110 - The Thief on the Cross",
+  "titleConcept": "three crosses on the hill of Calvary seen from far off under a dark storm sky, a single bright shaft of living light breaking through the clouds onto the centre cross and the cross beside it, a faint dawn glow on the far horizon, no visible faces",
+  "app": "Keynote Creator Studio",
+  "canvas": {
+    "w": 1920,
+    "h": 1080
+  },
+  "layouts": {
+    "A_imageRight": {
+      "text": [
+        131,
+        408,
+        805,
+        264
+      ],
+      "image": [
+        1037,
+        75,
+        750,
+        903
+      ]
+    },
+    "B_imageLeft": {
+      "image": [
+        133,
+        75,
+        750,
+        903
+      ],
+      "text": [
+        984,
+        408,
+        805,
+        264
+      ]
+    }
+  },
+  "slides": [
+    {
+      "id": "s01-luke-23-32-33",
+      "ref": "Luke 23:32-33",
+      "section": "At Calvary",
+      "text": "And there were also two other, malefactors, led with him to be put to death. And when they were come to the place, which is called Calvary, there they crucified him, and the malefactors, one on the right hand, and the other on the left.",
+      "sourceImage": "images/s01-luke-23-32-33.png",
+      "concept": "three crosses raised on the bare skull-shaped hill of Calvary under a darkening sky, Jesus matching the reference character with long dark brown hair, short beard, white robe with gold-trimmed sleeves and golden sash on the middle cross, a malefactor on either side, a crowd of soldiers, priests and onlookers at the foot, seen from a little distance",
+      "character": "jesus",
+      "side": "right",
+      "note": "\"On either side one, and Jesus in the midst.\" DA 751.4: His place between the thieves was to indicate that He was the greatest criminal of the three. Isaiah 53:12 fulfilled: numbered with the transgressors."
+    },
+    {
+      "id": "s02-luke-23-39",
+      "ref": "Luke 23:39",
+      "section": "At Calvary",
+      "text": "And one of the malefactors which were hanged railed on him, saying, If thou be Christ, save thyself and us.",
+      "sourceImage": "images/s02-luke-23-39.png",
+      "concept": "a hardened dark-bearded criminal nailed to a rough wooden cross on a hilltop, twisting his head toward the centre cross and shouting with a bitter sneering face, storm clouds gathering behind, harsh low light",
+      "side": "left",
+      "note": "Both men at first railed on Him (Matt 27:44). DA 749.3: one under his suffering only became more desperate and defiant."
+    },
+    {
+      "id": "s03-luke-23-40-41",
+      "ref": "Luke 23:40-41",
+      "section": "At Calvary",
+      "text": "But the other answering rebuked him, saying, Dost not thou fear God, seeing thou art in the same condemnation? And we indeed justly; for we receive the due reward of our deeds: but this man hath done nothing amiss.",
+      "sourceImage": "images/s03-luke-23-40-41.png",
+      "concept": "a younger repentant criminal on a rough wooden cross in the foreground, his face turned in grief and rebuke toward the other condemned man on the far cross, Jesus matching the reference character with long dark brown hair, short beard, white robe with gold-trimmed sleeves and golden sash crowned with thorns on the centre cross between them, head bowed in silent suffering, dust and grey light",
+      "character": "jesus",
+      "side": "right",
+      "note": "\"We indeed justly ... but this man hath done nothing amiss.\" He owns his guilt and confesses Christ's innocence in one breath. DA 749.3: he had seen and heard Jesus, and had been convicted by His teaching."
+    },
+    {
+      "id": "s04-luke-23-42",
+      "ref": "Luke 23:42",
+      "section": "At Calvary",
+      "text": "And he said unto Jesus, Lord, remember me when thou comest into thy kingdom.",
+      "sourceImage": "images/s04-luke-23-42.png",
+      "concept": "close view of the penitent thief on his cross, his face lifted with hope mingled with anguish toward Jesus matching the reference character with long dark brown hair, short beard, white robe with gold-trimmed sleeves and golden sash crowned with thorns on the centre cross beside him, a single shaft of light breaking through the dark clouds onto them both",
+      "character": "jesus",
+      "side": "left",
+      "note": "He asks to be remembered when Christ comes into His kingdom, a day yet ahead. DA 750.1: the helpless, dying soul casts himself upon a dying Saviour."
+    },
+    {
+      "id": "s05-luke-23-43",
+      "ref": "Luke 23:43",
+      "section": "At Calvary",
+      "text": "And Jesus said unto him, Verily I say unto thee, To day shalt thou be with me in paradise.",
+      "sourceImage": "images/s05-luke-23-43.png",
+      "concept": "Jesus matching the reference character with long dark brown hair, short beard, white robe with gold-trimmed sleeves and golden sash on the cross crowned with thorns, turning his face with tender compassion toward the penitent thief beside him, the dark cloud over Calvary pierced by a bright living light falling on them both",
+      "character": "jesus",
+      "side": "right",
+      "note": "DA 750.2 renders it: \"Verily I say unto thee today, Thou shalt be with Me in paradise.\" DA 751.2: the dark cloud that seemed to enshroud the cross was pierced by a bright and living light."
+    },
+    {
+      "id": "s06-luke-19-12",
+      "ref": "Luke 19:12",
+      "section": "The King Mocked",
+      "text": "He said therefore, A certain nobleman went into a far country to receive for himself a kingdom, and to return.",
+      "sourceImage": "images/s06-luke-19-12.png",
+      "concept": "a nobleman in a travelling cloak setting out at dawn on a long road toward a far country, looking back toward the city he will return to rule, his servants watching from the gate",
+      "side": "left",
+      "note": "Christ's own parable: the kingdom is received far away, and the King returns with it. The thief asked for that day."
+    },
+    {
+      "id": "s07-matthew-27-29",
+      "ref": "Matthew 27:29",
+      "section": "The King Mocked",
+      "text": "And when they had platted a crown of thorns, they put it upon his head, and a reed in his right hand: and they bowed the knee before him, and mocked him, saying, Hail, King of the Jews!",
+      "sourceImage": "images/s07-matthew-27-29.png",
+      "concept": "Jesus matching the reference character with long dark brown hair, short beard, white robe with gold-trimmed sleeves and golden sash seated and bound in a torchlit stone guardroom, a crown of thorns on his head, a reed in his right hand, a faded scarlet robe on his shoulders, Roman soldiers bowing the knee in mockery around him, his face patient and silent",
+      "character": "jesus",
+      "side": "right",
+      "note": "The world crowned Him with thorns. Every sign said His kingdom had failed."
+    },
+    {
+      "id": "s08-matthew-27-42",
+      "ref": "Matthew 27:42",
+      "section": "The King Mocked",
+      "text": "He saved others; himself he cannot save. If he be the King of Israel, let him now come down from the cross, and we will believe him.",
+      "sourceImage": "images/s08-matthew-27-42.png",
+      "concept": "priests and rulers in rich robes standing at the foot of the crosses on Calvary, pointing upward and laughing in scorn, their faces lit harshly from below, the crosses dark against a heavy sky",
+      "side": "left",
+      "note": "\"Himself he cannot save.\" DA 750.3: while the leading Jews deny Him, and even the disciples doubt His divinity, the poor thief calls Jesus Lord."
+    },
+    {
+      "id": "s09-revelation-2-7",
+      "ref": "Revelation 2:7",
+      "section": "Where Is Paradise?",
+      "text": "He that hath an ear, let him hear what the Spirit saith unto the churches; To him that overcometh will I give to eat of the tree of life, which is in the midst of the paradise of God.",
+      "sourceImage": "images/s09-revelation-2-7.png",
+      "concept": "the tree of life standing in a radiant garden, laden with golden fruit, its great branches spreading over a glowing river, soft heavenly light, no figures",
+      "side": "right",
+      "note": "Scripture defines Paradise for us: where the tree of life grows."
+    },
+    {
+      "id": "s10-revelation-22-1-2",
+      "ref": "Revelation 22:1-2",
+      "section": "Where Is Paradise?",
+      "text": "And he shewed me a pure river of water of life, clear as crystal, proceeding out of the throne of God and of the Lamb. In the midst of the street of it, and on either side of the river, was there the tree of life, which bare twelve manner of fruits, and yielded her fruit every month: and the leaves of the tree were for the healing of the nations.",
+      "sourceImage": "images/s10-revelation-22-1-2.png",
+      "concept": "a pure river of water of life, clear as crystal, flowing from a distant radiant throne down the golden street of the holy city, the tree of life growing on either side of the river, glorious light, no figures",
+      "side": "left",
+      "note": "The tree of life grows by the river that proceeds from the throne of God. Paradise is where the Father's throne is."
+    },
+    {
+      "id": "s11-2-corinthians-12-2-4",
+      "ref": "2 Corinthians 12:2, 4",
+      "section": "Where Is Paradise?",
+      "text": "I knew a man in Christ above fourteen years ago, (whether in the body, I cannot tell; or whether out of the body, I cannot tell: God knoweth;) such an one caught up to the third heaven. ... How that he was caught up into paradise, and heard unspeakable words, which it is not lawful for a man to utter.",
+      "sourceImage": "images/s11-2-corinthians-12-2-4.png",
+      "concept": "the apostle Paul as an older bearded man kneeling in prayer in a dim room at night, his face lifted and lit by a vision of light opening far above him into the heavens",
+      "side": "right",
+      "note": "The third heaven and paradise are the same place in Paul's account: caught up, not down."
+    },
+    {
+      "id": "s12-1-corinthians-15-3-4",
+      "ref": "1 Corinthians 15:3-4",
+      "section": "Not Yet Ascended",
+      "text": "For I delivered unto you first of all that which I also received, how that Christ died for our sins according to the scriptures; And that he was buried, and that he rose again the third day according to the scriptures:",
+      "sourceImage": "images/s12-1-corinthians-15-3-4.png",
+      "concept": "a rock-hewn garden tomb at the first light of the third day, the great round stone rolled aside, the grave clothes lying folded in the empty tomb, dew on the garden",
+      "side": "left",
+      "note": "Died, buried, rose the third day. Friday night and the Sabbath He lay in Joseph's tomb."
+    },
+    {
+      "id": "s13-john-20-17",
+      "ref": "John 20:17",
+      "section": "Not Yet Ascended",
+      "text": "Jesus saith unto her, Touch me not; for I am not yet ascended to my Father: but go to my brethren, and say unto them, I ascend unto my Father, and your Father; and to my God, and your God.",
+      "sourceImage": "images/s13-john-20-17.png",
+      "concept": "the risen Jesus matching the reference character with long dark brown hair, short beard, white robe with gold-trimmed sleeves and golden sash in the garden at dawn beside the open tomb, one hand gently raised, speaking to Mary Magdalene who kneels before him in wonder, olive trees and early morning mist",
+      "character": "jesus",
+      "side": "right",
+      "note": "Sunday morning: \"I am not yet ascended to my Father.\" DA 751.3: He Himself did not go that day to Paradise. He slept in the tomb."
+    },
+    {
+      "id": "s14-titus-1-2",
+      "ref": "Titus 1:2",
+      "section": "Not Yet Ascended",
+      "text": "In hope of eternal life, which God, that cannot lie, promised before the world began;",
+      "sourceImage": "images/s14-titus-1-2.png",
+      "concept": "a great ancient scroll of promise lying open on a stone table in a shaft of steady golden light, an hourglass beside it, the dim sweep of ages suggested in the background",
+      "side": "left",
+      "note": "God cannot lie. Christ's words to the thief and to Mary stand together, once the comma stands where He put the emphasis."
+    },
+    {
+      "id": "s15-zechariah-9-12",
+      "ref": "Zechariah 9:12",
+      "section": "\"Today\"",
+      "text": "Turn you to the strong hold, ye prisoners of hope: even to day do I declare that I will render double unto thee;",
+      "sourceImage": "images/s15-zechariah-9-12.png",
+      "concept": "prisoners in ragged clothes turning from a dark dungeon toward a strong fortress on a hill lit by the morning sun, hope rising in their faces",
+      "side": "right",
+      "note": "\"Even to day do I declare\": the day the promise is spoken, not the day it is kept. DA 751.3: on the day of the crucifixion, the day of apparent defeat and darkness, the promise was given."
+    },
+    {
+      "id": "s16-deuteronomy-30-19",
+      "ref": "Deuteronomy 30:19",
+      "section": "\"Today\"",
+      "text": "I call heaven and earth to record this day against you, that I have set before you life and death, blessing and cursing: therefore choose life, that both thou and thy seed may live:",
+      "sourceImage": "images/s16-deuteronomy-30-19.png",
+      "concept": "Moses as an aged white-bearded leader standing on a rise before the vast camp of Israel, both arms raised toward the open sky and the distant hills, the people listening below, clear evening light",
+      "side": "left",
+      "note": "\"This day\" again marks the day of speaking. Moses calls heaven and earth to witness the words spoken now."
+    },
+    {
+      "id": "s17-john-14-3",
+      "ref": "John 14:3",
+      "section": "When With Christ?",
+      "text": "And if I go and prepare a place for you, I will come again, and receive you unto myself; that where I am, there ye may be also.",
+      "sourceImage": "images/s17-john-14-3.png",
+      "concept": "Jesus matching the reference character with long dark brown hair, short beard, white robe with gold-trimmed sleeves and golden sash seated at the supper table in a lamplit upper room, speaking tenderly to his troubled disciples, one hand open toward a window where a far light glows",
+      "character": "jesus",
+      "side": "right",
+      "note": "\"I will come again, and receive you.\" The meeting is fixed at His coming, not at our death."
+    },
+    {
+      "id": "s18-1-thessalonians-4-16-17",
+      "ref": "1 Thessalonians 4:16-17",
+      "section": "When With Christ?",
+      "text": "For the Lord himself shall descend from heaven with a shout, with the voice of the archangel, and with the trump of God: and the dead in Christ shall rise first: Then we which are alive and remain shall be caught up together with them in the clouds, to meet the Lord in the air: and so shall we ever be with the Lord.",
+      "sourceImage": "../reading-105/images/s34-1-thessalonians-4-16-17.png",
+      "side": "left",
+      "note": "The dead in Christ rise first. The thief is among them, and so shall he ever be with the Lord."
+    },
+    {
+      "id": "s19-revelation-22-12",
+      "ref": "Revelation 22:12",
+      "section": "When With Christ?",
+      "text": "And, behold, I come quickly; and my reward is with me, to give every man according as his work shall be.",
+      "sourceImage": "images/s19-revelation-22-12.png",
+      "concept": "the sky over the whole earth parting in a vast blaze of glory at the coming of the King, a radiant cloud descending with countless angels, the people below looking up, no single face of Christ shown",
+      "side": "right",
+      "note": "The reward comes with Him. The thief's paradise and ours arrive on the same day."
+    },
+    {
+      "id": "s20-ecclesiastes-9-5-6",
+      "ref": "Ecclesiastes 9:5-6",
+      "section": "The Sleep of the Dead",
+      "text": "For the living know that they shall die: but the dead know not any thing, neither have they any more a reward; for the memory of them is forgotten. Also their love, and their hatred, and their envy, is now perished; neither have they any more a portion for ever in any thing that is done under the sun.",
+      "sourceImage": "../reading-105/images/s06-ecclesiastes-9-5-6.png",
+      "side": "left",
+      "note": "The dead know not any thing. The thief has had no waiting to endure."
+    },
+    {
+      "id": "s21-psalm-146-4",
+      "ref": "Psalm 146:4",
+      "section": "The Sleep of the Dead",
+      "text": "His breath goeth forth, he returneth to his earth; in that very day his thoughts perish.",
+      "sourceImage": "../reading-105/images/s07-psalm-146-4.png",
+      "side": "right",
+      "note": "In that very day his thoughts perish. His next thought will be the voice of Christ calling him."
+    },
+    {
+      "id": "s22-john-11-11",
+      "ref": "John 11:11",
+      "section": "The Sleep of the Dead",
+      "text": "These things said he: and after that he saith unto them, Our friend Lazarus sleepeth; but I go, that I may awake him out of sleep.",
+      "sourceImage": "../reading-105/images/s09-john-11-11.png",
+      "side": "left",
+      "note": "Christ's own word for death is sleep, and His errand is to awake. To the thief, paradise will seem to come that very day."
+    },
+    {
+      "id": "s23-ephesians-2-8-9",
+      "ref": "Ephesians 2:8-9",
+      "section": "By Grace Through Faith",
+      "text": "For by grace are ye saved through faith; and that not of yourselves: it is the gift of God: Not of works, lest any man should boast.",
+      "sourceImage": "images/s23-ephesians-2-8-9.png",
+      "concept": "a pair of empty open hands, rough and wounded from labour, raised upward in a dark place to receive a single gift of light falling from above",
+      "side": "right",
+      "note": "No baptism, no works, no restitution possible. Only faith, and Christ received him fully. DA 751.2: it is His royal right to save unto the uttermost all who come unto God by Him."
+    },
+    {
+      "id": "s24-luke-23-42",
+      "ref": "Luke 23:42",
+      "section": "Appeal",
+      "text": "And he said unto Jesus, Lord, remember me when thou comest into thy kingdom.",
+      "sourceImage": "images/s04-luke-23-42.png",
+      "side": "left",
+      "note": "The same Saviour hears the same prayer today. \"Lord, remember me when thou comest into thy kingdom.\""
+    }
+  ]
+}
