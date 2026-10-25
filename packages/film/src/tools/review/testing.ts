@@ -166,6 +166,16 @@ const reviewFilmServices = (films: string, runs: Array<ReadonlyArray<string>>) =
   );
 };
 
+/**
+ * The lab's handler over the review fixture's services, built once with the
+ * fixture, as a server builds it once for its life: each of a case's requests
+ * is answered by the same handler.
+ */
+export class ReviewTestLab extends Context.Service<
+  ReviewTestLab,
+  Effect.Success<ReturnType<typeof labHandler>>
+>()('test/ReviewTestLab') {}
+
 export class ReviewTestRoot extends Context.Service<ReviewTestRoot, string>()('test/Root') {}
 
 /**
@@ -245,7 +255,10 @@ export const reviewHttpFixtureLasting = (seconds: number, phoneCopies = false) =
         withTimelines,
       );
     }),
-  ).pipe(Layer.provideMerge(Layer.mergeAll(BunServices.layer, BunHttpPlatform.layer)));
+  ).pipe(
+    (services) => Layer.provideMerge(Layer.effect(ReviewTestLab, labHandler()), services),
+    Layer.provideMerge(Layer.mergeAll(BunServices.layer, BunHttpPlatform.layer)),
+  );
 
 /** The review fixture, its videos 12.5 s long. */
 export const reviewHttpFixture = reviewHttpFixtureLasting(12.5);
@@ -259,9 +272,10 @@ export const REVIEW_TEST_HOST = '100.64.0.9:8229';
 export const reviewTestGet = (path: string, headers: Record<string, string> = {}) =>
   new Request(`http://127.0.0.1:8229${path}`, { method: 'GET', headers });
 
+/** `request` answered by the case's lab (`ReviewTestLab`), as the phone's listener hands it over. */
 export const reviewTestAsk = (request: Request) =>
   Effect.gen(function* () {
-    const review = yield* labHandler();
+    const review = yield* ReviewTestLab;
     return yield* Effect.promise(() => review(request, reviewTestBound));
   });
 
