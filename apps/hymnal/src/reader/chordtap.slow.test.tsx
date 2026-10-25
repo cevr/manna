@@ -1,10 +1,13 @@
 /**
- * A tap on a chord, as a reader taps it: hymn 373 with chords on, Simple,
- * the capo at 1. The tap opens the sheet of how to play the chord the page
- * shows, read as its name, each string and the capo, its dots carrying their
- * fingers; Advanced shows the Advanced chord. The tap is no hand scroll: the
- * page does not move and the follow hears nothing. The chord's target is 44
- * points tall by its hit slop alone, so its row keeps its height.
+ * A tap on a chord, as a reader taps it: chords on, Simple, the hymn under
+ * a capo. The tap pushes the chord route, a native form sheet with a
+ * grabber, and the route draws how to play the chord the page shows: read
+ * as its name and each string, its dots carrying their fingers, its neck in
+ * the sheet's middle, and no capo, so the same played chord draws the same
+ * sheet at every capo. Advanced shows the Advanced chord. The tap is no hand
+ * scroll: the page does not move and the follow hears nothing. The chord's
+ * target is 44 points tall by its hit slop alone, so its row keeps its
+ * height.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -19,7 +22,9 @@ import { Pressable } from 'react-native';
 import { hymnAt } from '~/hymns/hymns';
 import type { ChordStyle } from '~/hymns/simple';
 
+import { params, routed } from '../test/one';
 import { readerOn } from '../test/reader';
+import { ChordScreen, chordSheetOptions } from './ChordSheet';
 import { chordSlop, TAP_TARGET } from './Chords';
 import { HymnPage } from './HymnPage';
 import { pageTextOf } from './pageText';
@@ -52,6 +57,12 @@ function StylePicker({ style }: { readonly style: Atom.Writable<ChordStyle> }) {
   return <Pressable aria-label="Pick Advanced" onPress={() => set('advanced')} />;
 }
 
+/** The router as a test starts it: no step taken, no params. */
+const freshRouter = () => {
+  routed.splice(0);
+  for (const key of Object.keys(params)) delete params[key];
+};
+
 const STRINGS = ['low E', 'A', 'D', 'G', 'B', 'high E'];
 
 /** Each chord box the sheet shows: its label and the numbers its dots and barre carry. */
@@ -79,22 +90,54 @@ const firstChord = (host: HTMLElement) => {
   return { id: chord.dataset['testid'] ?? '', text: chord.textContent };
 };
 
-/** A reader with chords on and hymn 373 under capo 1, as the bar's capo dial keeps it. */
-const capoOne = () =>
-  new Map([
-    ['chords', 'true'],
-    ['move.373', '{"transpose":0,"capo":1}'],
-  ]);
+/** The chord routes the page pushed, oldest first. */
+const pushed = () =>
+  routed.flatMap((step) => (step.startsWith('push /chord?') && [step.slice('push '.length)]) || []);
+
+/** The chord route at `href`, drawn as the router draws it: its query as the route's params. */
+const sheetAt = (href: string) => {
+  for (const key of Object.keys(params)) delete params[key];
+  for (const [key, value] of new URLSearchParams(href.slice(href.indexOf('?') + 1)))
+    params[key] = value;
+  return mount(<ChordScreen />);
+};
+
+/** A reader with chords on and hymn `n` moved: the sounding key turned and the capo set, as the dials keep them. */
+const moved = (n: number, transpose: number, capo: number) =>
+  readerOn(
+    new Map([
+      ['chords', 'true'],
+      [`move.${n}`, `{"transpose":${transpose},"capo":${capo}}`],
+    ]),
+  );
+
+/** Every word the sheet shows or a screen reader reads in it. */
+const sheetWords = () => {
+  const sheet = Option.getOrThrow(find('[data-testid="chord-sheet"]'));
+  return [
+    sheet.textContent,
+    ...[...sheet.querySelectorAll('[aria-label]')].map((el) => el.getAttribute('aria-label')),
+  ].join(' ');
+};
+
+/** A pixel length read from a computed style. */
+const px = (length: string) => Number.parseFloat(length) || 0;
+
+/** The page's first chord tapped on hymn 3 at `transpose` and `capo`: the route it pushed. */
+const tapHymn3 = (transpose: number, capo: number) => {
+  freshRouter();
+  using app = mount(
+    <HymnPage hymn={Option.getOrThrow(hymnAt('3'))} reader={moved(3, transpose, capo)} />,
+  );
+  const chord = firstChord(app.host);
+  press(`[data-testid="${chord.id}"]`);
+  return { chord, href: pushed().at(-1) ?? '' };
+};
 
 describe('a tap on a chord', () => {
-  it('opens how to play the chord the page shows, under capo 1, by name, string and finger', () => {
-    const reader = readerOn(capoOne());
-    using app = mount(
-      <>
-        <StylePicker style={reader.style} />
-        <HymnPage hymn={Option.getOrThrow(hymnAt('373'))} reader={reader} />
-      </>,
-    );
+  it('pushes the chord sheet, a form sheet with a grabber, drawing the chord the page shows and no capo (hymn 3, capo 1)', () => {
+    freshRouter();
+    using app = mount(<HymnPage hymn={Option.getOrThrow(hymnAt('3'))} reader={moved(3, 1, 1)} />);
     const scroll = Option.getOrThrow(find('[data-testid="hymn-scroll"]'));
     const heard: Array<string> = [];
     for (const kind of ['wheel', 'touchmove', 'touchstart', 'scroll'])
@@ -102,14 +145,21 @@ describe('a tap on a chord', () => {
     const before = scroll.scrollTop;
 
     const simple = firstChord(app.host);
-    expect(find('[data-testid="chord-sheet"]')).toEqual(Option.none());
-    press(`[data-testid="${simple.id}"]`);
-    expect(Option.isSome(find('[data-testid="chord-sheet"]'))).toBe(true);
-    const shown = boxes();
     // The sounding A-flat under capo 1 is played in G: the stanza's first chord, I, is a G.
     expect(simple).toEqual({ id: 'chord-1-1-1', text: 'G' });
+    press(`[data-testid="${simple.id}"]`);
+    expect(pushed().length).toBe(1);
+    // The sheet is a route the stack presents, not a modal drawn over the page.
+    expect(Option.isSome(find('[aria-modal]'))).toBe(false);
+    expect(chordSheetOptions.presentation).toBe('formSheet');
+    expect(chordSheetOptions.sheetGrabberVisible).toBe(true);
+    expect(heard).toEqual([]);
+    expect(scroll.scrollTop).toBe(before);
+
+    using _sheet = sheetAt(pushed()[0] ?? '');
+    const shown = boxes();
     expect(shown.map((box) => box.label)).toEqual([
-      'G. low E fret 3, finger 2; A fret 2, finger 1; D open; G open; B open; high E fret 3, finger 3. capo 1',
+      'G. low E fret 3, finger 2; A fret 2, finger 1; D open; G open; B open; high E fret 3, finger 3',
     ]);
     expect(namesShown()).toBe(simple.text);
     for (const box of shown) {
@@ -117,26 +167,62 @@ describe('a tap on a chord', () => {
         expect(box.label).toMatch(
           new RegExp(`(^|; |\\. )${string} (muted|open|fret \\d+, finger [1-4])`),
         );
-      expect(box.label).toEndWith('capo 1');
       expect(box.fingers.length).toBeGreaterThan(0);
       for (const finger of box.fingers) expect(['1', '2', '3', '4']).toContain(finger);
     }
-    expect(heard).toEqual([]);
-    expect(scroll.scrollTop).toBe(before);
+    expect(/capo/i.test(sheetWords())).toBe(false);
 
     press('[aria-label="Done"]');
-    expect(find('[data-testid="chord-sheet"]')).toEqual(Option.none());
+    expect(routed.at(-1)).toBe('back');
+  });
 
-    // 373's Advanced chords are its Simple ones; the sheet shows Advanced's all the same.
-    press('[aria-label="Pick Advanced"]');
-    const advanced = firstChord(app.host);
-    press(`[data-testid="${advanced.id}"]`);
-    expect(namesShown()).toBe(advanced.text);
-    expect(heard).toEqual([]);
-    expect(scroll.scrollTop).toBe(before);
+  it('draws the neck in the middle of its box, and the box in the middle of the sheet', () => {
+    using _sheet = sheetAt(tapHymn3(1, 1).href);
+    const box = Option.getOrThrow(find('[data-testid="chord-box-0"]'));
+    const strings = [
+      ...Option.getOrThrow(Option.fromNullishOr(box.firstElementChild)).children,
+    ].slice(0, 6);
+    const middleOf = (string: Element) => {
+      const style = getComputedStyle(string);
+      return px(style.left) + px(style.width) / 2;
+    };
+    const [low, high] = [middleOf(strings[0] ?? box), middleOf(strings[5] ?? box)];
+    // Five gaps of 22 points lie between the low E and the high E.
+    expect(high - low).toBe(110);
+    const neck = (low + high) / 2;
+    expect(Math.abs(neck - px(getComputedStyle(box).width) / 2)).toBeLessThanOrEqual(1);
+    const row = Option.getOrThrow(find('[data-testid="chord-boxes"]'));
+    expect(getComputedStyle(row).justifyContent).toBe('center');
+    expect(
+      getComputedStyle(Option.getOrThrow(Option.fromNullishOr(box.parentElement))).alignItems,
+    ).toBe('center');
+  });
+
+  it('draws the same sheet for the same played chord at capo 0 and at capo 3', () => {
+    const open = tapHymn3(0, 0);
+    const third = tapHymn3(3, 3);
+    expect([open.chord.text, third.chord.text]).toEqual(['G', 'G']);
+    expect(third.href).toBe(open.href);
+    const drawn = (href: string) => {
+      using _sheet = sheetAt(href);
+      return {
+        labels: boxes().map((box) => box.label),
+        tree: Option.getOrThrow(find('[data-testid="chord-sheet"]')).outerHTML,
+      };
+    };
+    expect(drawn(third.href)).toEqual(drawn(open.href));
+  });
+
+  it('says it names no chord when its route names none', () => {
+    freshRouter();
+    params['chords'] = 'not chords';
+    using sheet = mount(<ChordScreen />);
+    expect(sheet.host.textContent).toContain('No chord');
+    expect(boxes()).toEqual([]);
   });
 
   it('shows each Advanced chord a place shows where Simple shows fewer (hymn 3, Dsus4 Dsus2)', () => {
+    freshRouter();
     const reader = readerOn(new Map([['chords', 'true']]));
     using app = mount(
       <>
@@ -145,16 +231,21 @@ describe('a tap on a chord', () => {
       </>,
     );
     press('[data-testid="chord-1-1-5"]');
-    expect(namesShown()).toBe('D');
-    press('[aria-label="Done"]');
+    {
+      using _sheet = sheetAt(pushed().at(-1) ?? '');
+      expect(namesShown()).toBe('D');
+    }
     press('[aria-label="Pick Advanced"]');
     press('[data-testid="chord-1-1-5"]');
-    expect(namesShown()).toBe('Dsus4 Dsus2');
+    {
+      using _sheet = sheetAt(pushed().at(-1) ?? '');
+      expect(namesShown()).toBe('Dsus4 Dsus2');
+    }
     expect(app.host.textContent).toContain('Dsus4 Dsus2');
   });
 
   it('shows the chord held over a moved line’s first syllable, muted, under capo 1, Simple and Advanced (hymn 373’s refrain)', () => {
-    const reader = readerOn(capoOne());
+    const reader = moved(373, 0, 1);
     using _app = mount(
       <>
         <StylePicker style={reader.style} />
@@ -169,13 +260,13 @@ describe('a tap on a chord', () => {
         muted: (
           chord.querySelector<HTMLElement>('div, span')?.getAttribute('style') ?? ''
         ).includes('var(--muted)'),
-        own: find('[data-testid="chord-2-1-1"]'),
+        own: Option.isSome(find('[data-testid="chord-2-1-1"]')),
       };
     };
     // R1 moves the refrain's first change to its third syllable: the stanza's last chord, I, is held there.
-    expect(held()).toEqual({ text: 'G', label: 'G, held over', muted: true, own: Option.none() });
+    expect(held()).toEqual({ text: 'G', label: 'G, held over', muted: true, own: false });
     press('[aria-label="Pick Advanced"]');
-    expect(held()).toEqual({ text: 'G', label: 'G, held over', muted: true, own: Option.none() });
+    expect(held()).toEqual({ text: 'G', label: 'G, held over', muted: true, own: false });
   });
 
   it('reads the chord as a button named by its symbol alone, as the page shows it', () => {

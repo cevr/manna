@@ -121,16 +121,16 @@ describe('the chord the page shows', () => {
 });
 
 describe('the words a screen reader reads', () => {
-  it('names the chord, each string from the low E, and the capo', () => {
+  it('names the chord and each string from the low E, and no capo', () => {
     const fingering = Option.getOrThrow(fingeringOf(named('C', ''), C_MAJOR));
-    expect(words(fingering, 'C', Option.none(), 1)).toBe(
-      'C. low E muted; A fret 3, finger 3; D fret 2, finger 2; G open; B fret 1, finger 1; high E open. capo 1',
+    expect(words(fingering, 'C', Option.none())).toBe(
+      'C. low E muted; A fret 3, finger 3; D fret 2, finger 2; G open; B fret 1, finger 1; high E open',
     );
   });
 
   it('names the barre', () => {
     const fingering = Option.getOrThrow(fingeringOf(named('F', ''), C_MAJOR));
-    expect(words(fingering, 'F', Option.none(), 0)).toContain(
+    expect(words(fingering, 'F', Option.none())).toContain(
       'finger 1 across low E to high E at fret 1',
     );
   });

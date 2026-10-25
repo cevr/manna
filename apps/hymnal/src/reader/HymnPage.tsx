@@ -19,16 +19,17 @@
  * sung line and syllable are marked, and the page scrolls each line in
  * before it is sung.
  *
- * With chords on, a tap on a chord opens the sheet of how to play it
- * (`ChordSheet.tsx`), over the page and apart from the follow: the page
- * holds which chords are open, and the chords reach it through a context.
+ * With chords on, a tap on a chord pushes the sheet of how to play it
+ * (`ChordSheet.tsx`), over the page and apart from the follow: the chords
+ * reach the page through a context, and the page pushes the sheet's route
+ * with the chords and the key they are played in.
  */
 
 import type * as Chord from '@bible/hymnal/chord';
 import { useAtomValue } from '@effect/atom-react';
 import { Option } from 'effect';
 import type * as Atom from 'effect/reactivity/Atom';
-import { memo, type ReactNode, useCallback, useMemo, useState } from 'react';
+import { memo, type ReactNode, useCallback, useMemo, useRef } from 'react';
 import {
   ScrollView,
   type StyleProp,
@@ -38,6 +39,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useRouter } from 'one';
 
 import {
   type ChordBook,
@@ -59,7 +61,7 @@ import { FollowProvider, useFollow } from '~/follow/follow';
 import { ResumeFollow } from '~/follow/ResumeFollow';
 
 import { ChordLines, ChordNotice, PlayedKeyProvider } from './Chords';
-import { ChordSheet, ChordTapProvider } from './ChordSheet';
+import { chordHref, ChordTapProvider } from './ChordSheet';
 import { FavouriteButton } from './FavouriteButton';
 import { HangingLine } from './HangingLine';
 import { KeepAwake } from './KeepAwake';
@@ -110,9 +112,15 @@ export function HymnPage({
     onSome: (c) => playedKey(c.key, move),
   });
   const follow = useFollow(hymn.number);
-  const [tapped, setTapped] = useState<Option.Option<ReadonlyArray<Chord.Chord>>>(Option.none());
-  const tap = useCallback((shown: ReadonlyArray<Chord.Chord>) => setTapped(Option.some(shown)), []);
-  const close = useCallback(() => setTapped(Option.none()), []);
+  const router = useRouter();
+  // The tap reads the key played at the tap, and stays one function so the chords do not draw again.
+  const now = useRef({ router, played });
+  now.current = { router, played };
+  const tap = useCallback(
+    (shown: ReadonlyArray<Chord.Chord>) =>
+      now.current.router.push(chordHref(shown, now.current.played)),
+    [],
+  );
   return (
     <View style={styles.frame}>
       <ScrollView
@@ -157,15 +165,6 @@ export function HymnPage({
         </PageText>
       </ScrollView>
       {follow.held && <ResumeFollow onPress={follow.resume} />}
-      {Option.match(
-        Option.filter(tapped, () => Option.isSome(chords)),
-        {
-          onNone: () => [],
-          onSome: (open) => (
-            <ChordSheet chords={open} playedKey={played} capo={move.capo} onClose={close} />
-          ),
-        },
-      )}
     </View>
   );
 }

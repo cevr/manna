@@ -12,7 +12,8 @@
  * root when the fingering says it plays the chord over its root; each dot is
  * one finger, 1 to 4; a barre lies at the lowest fret, every string it
  * crosses held at it or above; fingers rise with the frets, but the barre's;
- * no more than four fingers, four frets, and at least four strings sounding.
+ * no more than four fingers, four frets, and at least four strings sounding;
+ * the words a screen reader reads name no capo.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -21,7 +22,7 @@ import { Option } from 'effect';
 
 import { readChords } from '../../vite/chords';
 import { chordBook, type HymnChords, keyName, playedKey } from './chords';
-import { type Barre, type Fingering, fingeringOf } from './shapes';
+import { type Barre, describe as words, type Fingering, fingeringOf } from './shapes';
 import { simple } from './simple';
 
 const OPEN_STRINGS = [4, 9, 2, 7, 11, 4];
@@ -118,6 +119,10 @@ const barreFaults = (f: Fingering, b: Barre, low: number): ReadonlyArray<string>
   }),
 ];
 
+/** The words a screen reader reads name no capo: a shape is the same at any fret. */
+const labelFaults = (label: string): ReadonlyArray<string> =>
+  (/capo/i.test(label) && ['its label names a capo']) || [];
+
 /** The hand: fingers 1 to 4, one string each but the barre's, rising with the frets, within four frets; the box's first fret. */
 const handFaults = (f: Fingering): ReadonlyArray<string> => {
   const dots = dotsOf(f);
@@ -191,9 +196,17 @@ const check = (chords: ReadonlyArray<readonly [Chord.Chord, Chord.Key]>): Checke
     return Option.match(fingeringOf(c, key), {
       onNone: () => ({ faults: [], fallbacks: [], unfingered: [name] }),
       onSome: (f) => ({
-        faults: [...toneFaults(f, soundingOf(c, key)), ...handFaults(f)].map(
-          (fault) => `${name}: ${fault}`,
-        ),
+        faults: [
+          ...toneFaults(f, soundingOf(c, key)),
+          ...handFaults(f),
+          ...labelFaults(
+            words(
+              f,
+              name,
+              Option.map(f.playedAs, (as) => Chord.format(as, key)),
+            ),
+          ),
+        ].map((fault) => `${name}: ${fault}`),
         fallbacks: Option.toArray(
           Option.map(f.playedAs, (as) => `${name} played as ${Chord.format(as, key)}`),
         ),

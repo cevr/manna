@@ -21,11 +21,15 @@ import { type Fingering, FRETS_DRAWN, type Play } from '~/hymns/shapes';
 const STRING_GAP = 22;
 const FRET_GAP = 28;
 const DOT = 18;
-/** The space over the nut the open and muted marks take, and left of the neck the first fret's number takes. */
+/**
+ * The space over the nut the open and muted marks take, and left of the
+ * neck the first fret's number takes. The same space lies right of the neck,
+ * so the neck is the box's middle.
+ */
 const MARKS = 20;
 const LABEL = 30;
 
-const WIDTH = LABEL + STRING_GAP * 5 + DOT;
+const WIDTH = LABEL + STRING_GAP * 5 + DOT + LABEL;
 const HEIGHT = MARKS + FRET_GAP * FRETS_DRAWN + 4;
 
 /** A string's left edge in the box, the low E at 0. */

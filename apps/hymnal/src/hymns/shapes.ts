@@ -472,13 +472,13 @@ const playWords: (play: Play) => string = Match.type<Play>().pipe(
 
 /**
  * A fingering as a screen reader reads it: the chord's name, what it is
- * played as, each string from the low E, the barre, and the capo.
+ * played as, each string from the low E, and the barre. The capo is the
+ * capo dial's to say: the box is the shape the hand makes, the same at any fret.
  */
 export const describe = (
   fingering: Fingering,
   name: string,
   playedAs: Option.Option<string>,
-  capo: number,
 ): string =>
   [
     `${name}${Option.match(playedAs, { onNone: () => '', onSome: (as) => `, played as ${as}` })}`,
@@ -490,5 +490,4 @@ export const describe = (
           `finger ${b.finger} across ${STRING_NAMES[b.from]} to ${STRING_NAMES[b.to]} at fret ${b.fret}`,
       ),
     ),
-    ...((capo > 0 && [`capo ${capo}`]) || []),
   ].join('. ');
