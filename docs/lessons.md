@@ -3556,3 +3556,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** The fix of in-its-order-2's second review gave its findings guards but added no ledger entry for any of them.
 - **Cause:** The fix was made inline and closed on the gate, and the ledger rule is read at the merge, not by the gate.
 - **Guard:** skill: whether a finding was given a guard is read from its review, which no check of the ledger alone sees. Carried by `docs/lessons.md`: "A finding given a guard gets an entry, its Source citing the finding"
+
+### app-seam-outside-the-rule
+
+- **Date:** 2026-10-24
+- **Kind:** review
+- **Said:** "the new seam `apps/firsttheblade/src/motion/testing.ts` is outside the rule that keeps product code from a seam"
+- **Source:** ftb-tidy/review-r1.md F2
+- **Wrong:** ftb-tidy put `turnAt` in the first `testing.ts` under `apps/`, and `film/no-test-seam` was on for `packages/*/src` alone, so a product import of it would pass lint and the dead-export check.
+- **Cause:** The rule's override named the packages' sources only, written when every seam was a package's.
+- **Guard:** lint:film/no-test-seam, proof `packages/film/lint/fixtures/no-test-seam.ts` `RED film/no-test-seam`
