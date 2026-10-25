@@ -15,7 +15,7 @@ import { sceneTimesOf } from '../core/easel.ts';
 import { frameAtOrAfter } from '../core/time.ts';
 import { Effect, Option } from 'effect';
 import { FetchHttpClient } from 'effect/http';
-import { parseHref } from '@bible/url-state';
+import { parseHref } from '@manna/url-state';
 import { boardFilm } from '../canvas/board.ts';
 import { Picture, pictureOn } from '../core/board-render.ts';
 import { addressOn, hostOf, monotonicMs } from '../browser/host.ts';
