@@ -8,12 +8,13 @@ import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import * as BunPath from '@effect/platform-bun/BunPath';
 import {
+  ConfigProvider,
   Effect,
   type FileSystem,
   Layer,
   Match,
   Option,
-  type Path,
+  Path,
   Predicate,
   Result,
   Schema,
@@ -25,10 +26,12 @@ import { voiceKey } from '../core/narration.ts';
 import { defineLibrary } from '../core/sfx.ts';
 import { resolveCode } from '../core/synth/resolve.ts';
 import type { Timed, Timings } from '../core/schema.ts';
-import { laidOut, staticLeg } from './film-check.ts';
+import { castLeg, laidOut, staticLeg } from './film-check.ts';
+import { CastSheetJson, type CastSheetRecord } from '../core/cast-record.ts';
+import { Segment } from '../core/segment.ts';
 import { type ShortFinding, type StaticFinding, lineOf, report } from './findings.ts';
 import type { Media } from './media.ts';
-import { type LoadedFilm, masterFile } from './film-repo.ts';
+import { FilmFolder, type LoadedFilm, masterFile } from './film-repo.ts';
 import { MasterStampJson, planOf, stampFile } from './mixer.ts';
 import { SoundRender } from './sound-render.ts';
 import { spokenTake, testFilm, testVoice } from './film-repo/testing.ts';
@@ -222,4 +225,89 @@ describe('a film that does not lay out', () => {
     );
     expect(Result.isSuccess(laidOut(film, { _tag: 'Film' }))).toBe(true);
   });
+});
+
+describe('the cast leg', () => {
+  const recordJson = Schema.encodeSync(CastSheetJson);
+
+  /** A library record of `member` whose one reference file is on disk unless `missing`. */
+  const castIn = (files: Map<string, Uint8Array>, member: string, missing = false) => {
+    const folder = `/library/cast/${member}/cast-sheet`;
+    const record: CastSheetRecord = {
+      member: Segment.make(member),
+      scope: 'library',
+      who: 'Him',
+      refs: [{ file: `rig-${member}-front.png`, why: 'the rig as it stands' }],
+      sheets: {},
+      kept: {},
+    };
+    files.set(`${folder}/cast-sheet.json`, text(recordJson(record)));
+    if (!missing) files.set(`${folder}/rig-${member}-front.png`, text('rig'));
+  };
+
+  const beats = [
+    { id: 'supper', cast: ['christ', 'peter'] },
+    { id: 'garden', cast: ['christ'] },
+    { id: 'dawn' },
+  ];
+
+  /** The leg over `files`: the film `f` under `/films`, the library beside it. */
+  const castFindings = (files: Map<string, Uint8Array>) =>
+    castLeg('f', beats).pipe(
+      Effect.provide(
+        FilmFolder.layer('/films').pipe(
+          Layer.provideMerge([
+            memoryFileSystem(files),
+            Path.layer,
+            ConfigProvider.layer(ConfigProvider.fromUnknown({ FILMS_OUT: '/out' })),
+          ]),
+        ),
+      ),
+    );
+
+  it.effect('a film whose every member resolves has no finding', () =>
+    Effect.gen(function* () {
+      const files = new Map<string, Uint8Array>();
+      castIn(files, 'christ');
+      castIn(files, 'peter');
+      expect(yield* castFindings(files)).toEqual([]);
+    }),
+  );
+
+  it.effect('a member with no record is one error naming its beats', () =>
+    Effect.gen(function* () {
+      const files = new Map<string, Uint8Array>();
+      castIn(files, 'christ');
+      const found = yield* castFindings(files);
+      expect(found).toMatchObject([{ _tag: 'CastUnreadable', member: 'peter', beats: ['supper'] }]);
+      expect(found[0]?.message).toContain('peter has no cast-sheet.json');
+      expect(report(found, { allowStale: false }).errors).toBe(1);
+    }),
+  );
+
+  it.effect(
+    'a record whose reference file is missing is one error, however many beats name it',
+    () =>
+      Effect.gen(function* () {
+        const files = new Map<string, Uint8Array>();
+        castIn(files, 'christ', true);
+        castIn(files, 'peter');
+        const found = yield* castFindings(files);
+        expect(found).toMatchObject([
+          { _tag: 'CastUnreadable', member: 'christ', beats: ['supper', 'garden'] },
+        ]);
+        expect(found[0]?.message).toContain('/library/cast/christ/cast-sheet/rig-christ-front.png');
+      }),
+  );
+
+  it.effect('a record that does not decode is an error', () =>
+    Effect.gen(function* () {
+      const files = new Map<string, Uint8Array>();
+      castIn(files, 'christ');
+      castIn(files, 'peter');
+      files.set('/library/cast/peter/cast-sheet/cast-sheet.json', text('{"member":'));
+      const found = yield* castFindings(files);
+      expect(found).toMatchObject([{ _tag: 'CastUnreadable', member: 'peter' }]);
+    }),
+  );
 });

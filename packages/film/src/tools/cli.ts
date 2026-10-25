@@ -63,6 +63,7 @@ import {
   layoutLeg,
   shortLeg,
   soundLeg,
+  castLeg,
   staticLeg,
 } from './film-check.ts';
 import { type Finding, type Report, lineOf, report } from './findings.ts';
@@ -722,7 +723,17 @@ const check = <E, R>(
         const found = yield* onShort(loaded, declared, input);
         return yield* printReport(declared.id, 'short', report(found, options), input.json);
       }
-      const found: Array<Finding> = [...(yield* staticLeg(loaded, placed))];
+      const beats = yield* (yield* FilmRepo).script(
+        input.film,
+        Option.getOrUndefined(input.folder),
+      );
+      const found: Array<Finding> = [
+        ...(yield* staticLeg(loaded, placed)),
+        ...(yield* castLeg(
+          input.film,
+          Option.getOrElse(beats, () => []),
+        )),
+      ];
       if (input.draw) found.push(...(yield* drawLeg(loaded, scope, swaps)));
       if (!input.static && !input.draw) found.push(...(yield* soundLeg(loaded, placed)));
       if (!input.static && !input.sound && !input.draw)

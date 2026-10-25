@@ -409,6 +409,21 @@ export class EndShort extends Schema.TaggedError<EndShort>()('EndShort', {
 }
 
 /**
+ * A cast member that beats name and the board cannot draw from: no record, a
+ * record that does not decode, or reference files not on disk. `reason` is
+ * the library's own message (`castReference`).
+ */
+export class CastUnreadable extends Schema.TaggedError<CastUnreadable>()('CastUnreadable', {
+  member: Schema.String,
+  beats: Schema.Array(Schema.String),
+  reason: Schema.String,
+}) {
+  override get message() {
+    return `cast "${this.member}" (named by beat ${this.beats.join(', ')}): ${this.reason}`;
+  }
+}
+
+/**
  * A short that does not hook in its first moments: its first word comes
  * late, nothing moves, or it opens on the film's title card.
  */
@@ -737,7 +752,8 @@ export type StaticFinding =
   | CueTwin
   | Storyboard
   | KnobRepeated
-  | EndShort;
+  | EndShort
+  | CastUnreadable;
 /** What the sound leg hears in the mix the film makes now. */
 export type MixFinding = DeadAir | MasterLoudness | EffectHot;
 /** What one probed frame shows wrong. */
@@ -823,6 +839,7 @@ export const levelOf = (finding: Finding, options: CheckOptions): Level => {
       Storyboard: warning,
       KnobRepeated: warning,
       EndShort: warning,
+      CastUnreadable: error,
       DeadAir: error,
       MasterLoudness: warning,
       EffectHot: warning,
@@ -938,6 +955,8 @@ export const addressOf = (finding: Finding): FindingAddress => {
       Storyboard: scene,
       KnobRepeated: scene,
       EndShort: none,
+      // Several beats may name the member: no one scene is the place.
+      CastUnreadable: none,
       DeadAir: (f): FindingAddress => ({ part: film, time: f.from }),
       MasterLoudness: none,
       EffectHot: (f) => at(f.scene, f.at),

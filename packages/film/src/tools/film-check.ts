@@ -5,6 +5,7 @@
 // write. The sound leg renders the mix the film makes now (Mixer). The
 // layout leg draws frames (Checker, Looker). The draw leg draws every scene
 // in this process, into the stand-in context, at its moments (no browser).
+// The cast leg asks the cast library for each member the script's beats name.
 // The short leg checks one short (Checker). A talk is a vertical film of its
 // own: what its words tell (`talkWords`: its length against its format's,
 // its first word, its loop's silence) goes with the static leg, and the
@@ -12,7 +13,17 @@
 // open. Each hands back its findings; `report` levels and addresses them as
 // one Report.
 
-import { Effect, FileSystem, Match, Option, Path, Predicate, Result, Schema } from 'effect';
+import {
+  Array as Arr,
+  Effect,
+  FileSystem,
+  Match,
+  Option,
+  Path,
+  Predicate,
+  Result,
+  Schema,
+} from 'effect';
 import type { Film } from '../canvas/film.ts';
 import { createTalk } from '../canvas/talk.ts';
 import { type Narrated, narrationUrls } from '../player/narrated.ts';
@@ -31,8 +42,10 @@ import type { Short } from '../core/schema.ts';
 import type { SafeZoneName } from '../core/shorts.ts';
 import { talkPhrases } from '../core/talk.ts';
 import { mixFindings, staticFindings } from './check.ts';
+import { castReference } from './cast-library.ts';
 import { Checker } from './checker.ts';
 import {
+  CastUnreadable,
   type ShortFinding,
   ShortHook,
   ShortLength,
@@ -168,6 +181,38 @@ export const staticLeg = Effect.fn('check.static')(function* (
     ...talkWords(film, placed),
   ];
   return found;
+});
+
+/** A beat as the cast leg reads it: its id and the cast members its picture draws. */
+interface CastBeat {
+  readonly id: string;
+  readonly cast?: ReadonlyArray<string>;
+}
+
+/**
+ * Whether the board can draw each cast member the beats name: each distinct
+ * member resolves through `castReference` once, and one that does not is one
+ * finding naming every beat that names it. The board meets the same errors
+ * only when it sends a beat.
+ */
+export const castLeg = Effect.fn('check.cast')(function* (
+  film: string,
+  beats: ReadonlyArray<CastBeat>,
+) {
+  const members = Arr.dedupe(beats.flatMap((b) => b.cast ?? []));
+  const found = yield* Effect.forEach(members, (member) =>
+    Effect.match(castReference(film, member), {
+      onSuccess: () => [],
+      onFailure: (error) => [
+        CastUnreadable.make({
+          member,
+          beats: beats.filter((b) => b.cast?.includes(member) === true).map((b) => b.id),
+          reason: error.message,
+        }),
+      ],
+    }),
+  );
+  return Arr.flatten(found);
 });
 
 /**

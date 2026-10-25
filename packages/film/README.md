@@ -3575,6 +3575,7 @@ say fails stays in its box beside the failure.
 what a review used to find by eye. It runs in legs (`tools/film-check.ts`),
 each typed by what it needs: the static leg (`staticLeg`: the film's files,
 FileSystem and Media, and SoundRender for the derived sounds it places), the
+cast leg (`castLeg`: the cast library, FileSystem and FilmFolder), the
 sound leg (`soundLeg`: the mix, Mixer), and the
 layout and look legs (`layoutLeg`: the browser, Checker and Looker), and the
 draw leg (`drawLeg`, `tools/draw-check.ts`: the film's `film.ts` built from
@@ -3604,7 +3605,7 @@ the film second it starts at; a finding about the whole film has neither).
   sound whose request hash has moved (`AssetStale`); once every take is
   recorded, an audio master that is missing (`AudioMissing`), not the
   film's length or mixed for another plan than the film's now (`AudioStale`:
-  a score pick, a re-take or a moved effect since the last `mix`). `--allow-stale` reports stale takes, sounds
+  a score pick, a re-take or a moved effect since the last `mix`). A cast member a beat's `cast` names that the board cannot draw from (`CastUnreadable`, one per member, naming its beats: no `cast-sheet.json` in the film's cast or the library, a record that does not decode, or a reference file not on disk; the cast leg, `castLeg`, reads each member once through `castReference`). `--allow-stale` reports stale takes, sounds
   and master as warnings. `--scene id,id` or `--act name` limits the
   layout leg to that address's scenes. Every command that takes a part of
   the film (`render`, `check`, `cues --short`, the look pass) names it as
