@@ -11,6 +11,7 @@
 import { availableParallelism } from 'node:os';
 import {
   Array as Arr,
+  Boolean as Bool,
   Clock,
   Context,
   Effect,
@@ -73,6 +74,7 @@ import {
   type RenderRead,
   type Segment,
   beatSegments,
+  dropSegment,
   keepSegment,
   keptFolder,
   keptNames,
@@ -621,14 +623,16 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
             ),
         });
         const fresh = Option.exists(keeping, (k) => k.fresh);
+        // --fresh finds no kept copy, and drops each one's record before it draws it again.
         const kept = yield* Effect.forEach(segments, (segment) =>
-          Option.match(
-            Option.filter(segment.key, () => !fresh),
-            {
-              onNone: () => Effect.succeedNone,
-              onSome: (key) => keptSegment(fs, path, folder, key),
-            },
-          ),
+          Option.match(segment.key, {
+            onNone: () => Effect.succeedNone,
+            onSome: (key) =>
+              Bool.match(fresh, {
+                onTrue: () => Effect.as(dropSegment(fs, path, folder, key), Option.none()),
+                onFalse: () => keptSegment(fs, path, folder, key),
+              }),
+          }),
         );
         /** The segments to draw, each with its place among all of them. */
         const missing = segments.flatMap((segment, at) =>
@@ -650,7 +654,7 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
                 share: path.join(shareDir, segmentName(chunk)),
               }),
               onSome: (key) => {
-                const names = keptNames(chunk.from);
+                const names = keptNames(chunk.from, chunk.to);
                 const dir = keptFolder(folder, key);
                 return { master: path.join(dir, names.master), share: path.join(dir, names.share) };
               },

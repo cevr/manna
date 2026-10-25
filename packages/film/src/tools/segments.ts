@@ -252,14 +252,24 @@ type KeptChunk = typeof KeptChunk.Type;
 /** A kept segment's record, `<key>/segment.json`: its chunks in frame order. */
 const KeptSegmentJson = Schema.fromJsonString(Schema.Struct({ chunks: Schema.Array(KeptChunk) }));
 
-/** A chunk's files in a kept segment's folder: `<from>.mp4`, its share copy `<from>.share.mp4`. */
-export const keptNames = (from: number) => ({
-  master: `${from}.mp4`,
-  share: `${from}.share.mp4`,
+/**
+ * A chunk's files in a kept segment's folder, named by its frames:
+ * `<from>-<to>.mp4`, its share copy `<from>-<to>.share.mp4`. Two renders
+ * that cut a segment into other chunks write other files, so a file holds
+ * the frames its name says whichever render wrote it last, and a record
+ * never names a file another render drew other frames into.
+ */
+export const keptNames = (from: number, to: number) => ({
+  master: `${from}-${to}.mp4`,
+  share: `${from}-${to}.share.mp4`,
 });
 
 /** The folder segment `key` is kept in, under the film's `folder` (`segmentsFolder`). */
 export const keptFolder = (folder: string, key: string): string => `${folder}/${key}`;
+
+/** Segment `key`'s record under `folder`, `<key>/segment.json`. */
+const recordOf = (path: Path.Path, folder: string, key: string): string =>
+  path.join(keptFolder(folder, key), 'segment.json');
 
 /**
  * Segment `key`'s chunks as kept under `folder`, their files by path; none
@@ -273,7 +283,7 @@ export const keptSegment = (
 ): Effect.Effect<Option.Option<ReadonlyArray<KeptChunk>>, PlatformError> =>
   Effect.gen(function* () {
     const dir = keptFolder(folder, key);
-    const record = path.join(dir, 'segment.json');
+    const record = recordOf(path, folder, key);
     if (!(yield* fs.exists(record))) return Option.none();
     const read = Schema.decodeOption(KeptSegmentJson)(yield* fs.readFileString(record));
     if (Option.isNone(read)) return Option.none();
@@ -303,10 +313,26 @@ export const keepSegment = (
     chunks: chunks.map((c) => ({
       from: c.from,
       to: c.to,
-      master: keptNames(c.from).master,
-      share: Option.map(Option.liftPredicate(c.share, Boolean), () => keptNames(c.from).share),
+      master: keptNames(c.from, c.to).master,
+      share: Option.map(
+        Option.liftPredicate(c.share, Boolean),
+        () => keptNames(c.from, c.to).share,
+      ),
     })),
   });
-  const file = path.join(keptFolder(folder, key), 'segment.json');
+  const file = recordOf(path, folder, key);
   return writeWhole(fs, file, (partial) => fs.writeFileString(partial, record));
 };
+
+/**
+ * Segment `key` no longer kept under `folder`: its record gone, so no render
+ * finds it until one draws it whole again. A `--fresh` render drops each
+ * segment's record before it draws it, so one cut off leaves none of what it
+ * was told not to trust.
+ */
+export const dropSegment = (
+  fs: FileSystem.FileSystem,
+  path: Path.Path,
+  folder: string,
+  key: string,
+): Effect.Effect<void, PlatformError> => fs.remove(recordOf(path, folder, key), { force: true });

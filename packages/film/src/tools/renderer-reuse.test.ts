@@ -4,7 +4,20 @@
 // Fake pages and media; the project folder in memory.
 
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, Layer, Logger, Option, Path, Schema } from 'effect';
+import {
+  Boolean as Bool,
+  Deferred,
+  Effect,
+  Exit,
+  Fiber,
+  Layer,
+  Logger,
+  Match,
+  Option,
+  Path,
+  Schema,
+} from 'effect';
+import { PageError } from './errors.ts';
 import { MAIN_VARIANT } from '../core/catalogue.ts';
 import { type BoardFile, BoardFileJson, BoardName, type Panel, emptyBoard } from '../core/board.ts';
 import { Picture } from '../core/board-render.ts';
@@ -40,7 +53,7 @@ const video = (reuse: Reuse, picture: Picture = Picture.Scenes()) =>
     address: { _tag: 'Film' },
     variant: MAIN_VARIANT,
     captions: false,
-    workers: Option.some(2),
+    workers: Option.some(4),
     from: Option.none(),
     to: Option.none(),
     scale: 1,
@@ -56,10 +69,33 @@ const video = (reuse: Reuse, picture: Picture = Picture.Scenes()) =>
 const keyed = (scenes: ReadonlyMap<string, string> = keys, fresh = false) =>
   Reuse.Keyed({ scenes, fresh });
 
+/**
+ * Five beats at 2 fps: frames 0–11, 12–24, b's 25–34, 35–47 and 48–59.
+ * Drawn whole, b's frames are two chunks, 25–30 and 30–35 (a chunk is 30
+ * frames at least, then cut at the beats); drawn alone, one.
+ */
+const longer = {
+  film: testFilm(
+    [
+      { id: 'a', min: 6 },
+      { id: 'a2', min: 6.5 },
+      { id: 'b', min: 5 },
+      { id: 'c', min: 6.5 },
+      { id: 'c2', min: 6 },
+    ],
+    { voice: '', scenes: {} },
+  ),
+  info: { width: 1920, height: 1080, fps: 2, duration: 30, frames: 60 },
+};
+const longerKeys = new Map([...keys, ['a2', 'key-a2'], ['c2', 'key-c2']]);
+
+/** How a fake page draws frame `i` (`FakeRenderHost.frame`). */
+type Draw = (i: number) => Effect.Effect<void, PageError>;
+
 /** Renders into one project folder, kept in memory across them: what each drew and joined. */
-const project = (files = new Map<string, Uint8Array>()) => {
+const project = (files = new Map<string, Uint8Array>(), stage = { film, info }) => {
   const folders = new Set<string>();
-  const render = (job: RenderJob) => {
+  const render = (job: RenderJob, draw: Draw = () => Effect.void) => {
     const ledger = emptyLedger();
     const lines: Array<string> = [];
     // The render's reuse line kept, every other line dropped.
@@ -71,14 +107,14 @@ const project = (files = new Map<string, Uint8Array>()) => {
     ]);
     const layer = Renderer.layer.pipe(
       Layer.provide([
-        fakeRenderHost(ledger, { info }),
+        fakeRenderHost(ledger, { info: stage.info, frame: draw }),
         memoryFileSystem(files, folders),
         Path.layer,
         SoundRender.layer,
       ]),
     );
     return Effect.gen(function* () {
-      yield* (yield* Renderer).render(film, job);
+      yield* (yield* Renderer).render(stage.film, job);
       const [join, share] = ledger.joins;
       return {
         reuse: lines,
@@ -100,8 +136,30 @@ const project = (files = new Map<string, Uint8Array>()) => {
       for (const [file, bytes] of Object.entries(images))
         files.set(`/films/test/board/${file}`, text(bytes));
     });
-  return { render, boarded };
+  /** Once `n` chunk files of the folder hold `content` (a fake chunk's `mp4 <from>-<to>`). */
+  const holding = (content: string, n = 1): Effect.Effect<void> =>
+    Effect.suspend(() =>
+      Bool.match(
+        [...files].filter(([file, bytes]) => file.endsWith('.mp4') && read(bytes) === content)
+          .length >= n,
+        {
+          onTrue: () => Effect.void,
+          onFalse: () => Effect.andThen(Effect.sleep('1 millis'), holding(content, n)),
+        },
+      ),
+    );
+  /** What each file of `joined` holds, beside the frames its place says it holds. */
+  const held = (joined: ReadonlyArray<{ readonly file: string; readonly at: number }>) => ({
+    held: joined.map((s) => read(files.get(s.file) ?? new Uint8Array())),
+    placed: joined.map(
+      (s, k) =>
+        `mp4 ${s.at * stage.info.fps}-${(joined[k + 1]?.at ?? stage.info.duration) * stage.info.fps}`,
+    ),
+  });
+  return { render, boarded, holding, held };
 };
+
+const read = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
 
 /** Beat `beat`'s one picture panel, held from its start, showing try 1. */
 const panel = (beat: string): Panel => ({
@@ -189,6 +247,68 @@ describe.concurrent("a film render's segments", () => {
       // c's image is seen from 9.75 s, its dissolve in over b's last quarter second.
       yield* boarded(board, { 'c.png': 'c, one pixel changed' });
       expect((yield* render(job)).drawn).toEqual(frames(10, 40));
+    }),
+  );
+
+  it.live('draw again what a --fresh render cut off after a chunk drew over', () =>
+    Effect.gen(function* () {
+      const { render, holding, held } = project(new Map(), longer);
+      yield* render(video(keyed(new Map([...longerKeys, ['b', 'key-b0']]))));
+      // b drawn alone and kept: one chunk, 25–35.
+      yield* render(video(keyed(longerKeys)));
+      // b drawn whole: its first chunk, 25–30, written (the first render's
+      // b, key-b0, holds one too), then the render cut off.
+      const cut = yield* Effect.exit(
+        render(video(keyed(longerKeys, true)), (i) =>
+          Effect.when(
+            Effect.andThen(holding('mp4 25-30', 2), Effect.fail(PageError.make({ reason: 'cut' }))),
+            Effect.sync(() => i === 59),
+          ),
+        ),
+      );
+      expect(Exit.isFailure(cut)).toBe(true);
+      const next = yield* render(video(keyed(longerKeys)));
+      expect(next.drawn).toEqual(frames(0, 60));
+      const joined = held(next.master);
+      expect(joined.held).toEqual(joined.placed);
+    }),
+  );
+
+  it.live('keep what two renders of one segment at once draw, each file holding its frames', () =>
+    Effect.gen(function* () {
+      const { render, holding, held } = project(new Map(), longer);
+      yield* render(video(keyed(new Map([...longerKeys, ['b', 'key-b0']]))));
+      // One draws b alone, 25–35, and keeps it once the other has begun to
+      // draw; the other, --fresh, draws b whole, 25–30 and 30–35, over it.
+      const alone = yield* Deferred.make<void>();
+      const begun = yield* Deferred.make<void>();
+      const one = yield* Effect.forkChild(
+        render(video(keyed(longerKeys)), (i) =>
+          Effect.when(
+            Effect.andThen(Deferred.complete(alone, Effect.void), Deferred.await(begun)),
+            Effect.sync(() => i === 25),
+          ),
+        ),
+      );
+      yield* Deferred.await(alone);
+      const other = yield* Effect.forkChild(
+        render(video(keyed(longerKeys, true)), (i) =>
+          Match.value(i).pipe(
+            Match.when(0, () => Deferred.complete(begun, Effect.void)),
+            Match.when(25, () => holding('mp4 25-35')),
+            // Never done, so it never keeps b: the first's record alone names b's files.
+            Match.when(59, () => Effect.never),
+            Match.orElse(() => Effect.void),
+          ),
+        ),
+      );
+      yield* Fiber.join(one);
+      // The other's 25–30 written (the first render's b, key-b0, holds one too).
+      yield* holding('mp4 25-30', 2);
+      yield* Fiber.interrupt(other);
+      const next = yield* render(video(keyed(longerKeys)));
+      const joined = held(next.master);
+      expect(joined.held).toEqual(joined.placed);
     }),
   );
 });

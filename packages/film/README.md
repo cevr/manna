@@ -605,10 +605,13 @@ disk, its motion, the span that times its motion and its dissolves), so a
 neighbour seen across a dissolve at the segment's edge changes it and a panel
 elsewhere does not. A render draws only the segments it finds no record of
 (`<key>/segment.json`, written once all the segment's chunks are there), its
-chunks cut at segment edges (`segmentChunks`), opens no drawing page when it
-draws none, and joins every segment's chunks, kept or drawn, and their share
-copies, packets copied; `render.reuse segments=<n> drawn=<m>` says how many it
-drew. `--fresh` draws every segment again (`project render --force` too). A
+chunks cut at segment edges (`segmentChunks`) and each kept as
+`<from>-<to>.mp4`, named by its frames, so two renders that cut a segment
+otherwise never write one file. It opens no drawing page when it draws none,
+and joins every segment's chunks, kept or drawn, and their share copies,
+packets copied; `render.reuse segments=<n> drawn=<m>` says how many it drew.
+`--fresh` drops each segment's record and draws it again (`project render
+--force` too), so a fresh render cut off leaves its segments to be drawn. A
 short and a wedge's look (`--level`) draw every frame into a temp folder of
 the render's own, removed once joined.
 
