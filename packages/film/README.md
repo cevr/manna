@@ -2121,7 +2121,15 @@ sketch, then the library record of each member the beat's `cast` names
 its kept sheets (its own views of a sheet that draws other members too),
 else its record's references, which the prompt says win over every
 other image on the person (a sheet of heads, the face and hair alone), the
-brief saying what the member wears and does.
+brief saying what the member wears and does. Each try records what each
+cast reference held (`cast`: member, path, sha256). A kept panel whose kept
+try was drawn from a cast file that holds other bytes now (a try from before
+that, from a kept sheet its member's `replaced` history says was replaced
+since) is stale (`tools/board-stale.ts`): a run draws it new tries, numbered
+on, until it has `--tries` drawn from the cast as it stands, printing
+`stale <panel> why="…"`, and the keep stays until the owner keeps a new try;
+the board read (`film lab board`, the lab MCP's `board`) gives the panel a
+`stale` naming whose sheet changed.
 
 | Route                                      | What it does                                                                                        |
 | ------------------------------------------ | --------------------------------------------------------------------------------------------------- |

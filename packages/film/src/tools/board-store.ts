@@ -35,6 +35,7 @@ import {
 } from '../core/board.ts';
 import { BoardFileUnknown, BoardRefused } from '../core/refusals.ts';
 import type { Segment } from '../core/segment.ts';
+import { type Staleness, stalenessOf } from './board-stale.ts';
 import { ContentStore, type Manifest, type StoreError } from './content-store.ts';
 import { sha256Hex } from './digest.ts';
 import { FilmFolder, type FilmName } from './film-repo.ts';
@@ -114,6 +115,8 @@ interface BoardStoreService {
   ) => Effect.Effect<string, BoardFileUnknown | StoreError>;
   /** The images the record names that are missing or changed. */
   readonly problems: (film: FilmName) => Effect.Effect<ReadonlyArray<BoardFileProblem>, StoreError>;
+  /** Each kept panel drawn from a cast sheet that has changed since (`board-stale.ts`). */
+  readonly stale: (film: FilmName) => Effect.Effect<ReadonlyArray<Staleness>, StoreError>;
 }
 
 export class BoardStore extends Context.Service<BoardStore, BoardStoreService>()(
@@ -240,7 +243,24 @@ export class BoardStore extends Context.Service<BoardStore, BoardStoreService>()
         ).pipe(Effect.map(Arr.getSomes));
       });
 
-      return BoardStore.of({ paths, read, transact, modify, put, addTries, image, problems });
+      const stale = Effect.fn('BoardStore.stale')(function* (film: FilmName) {
+        return yield* stalenessOf(paths(film).folder, yield* read(film)).pipe(
+          Effect.provideService(FileSystem.FileSystem, fs),
+          Effect.provideService(Path.Path, path),
+        );
+      });
+
+      return BoardStore.of({
+        paths,
+        read,
+        transact,
+        modify,
+        put,
+        addTries,
+        image,
+        problems,
+        stale,
+      });
     }),
   );
 }

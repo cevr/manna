@@ -38,6 +38,7 @@ import {
 import { LabLinks, boardPath, linksAt, notePath } from '../core/lab-events.ts';
 import { unresolved } from '../core/notes.ts';
 import { Note, type NoteDraft, NoteStatus } from '../core/schema.ts';
+import { staleWhy } from './board-stale.ts';
 import { BoardStore } from './board-store.ts';
 import { type FilmFolder, type FilmName, filmNamed } from './film-repo.ts';
 import { LabAddress, labCommand } from './lab-command.ts';
@@ -79,6 +80,10 @@ const PanelRead = Schema.Struct({
   tries: Schema.Array(TryRead),
   /** Its beat's board approval: approved as it stands, stale (a pick since), or none. */
   approval: Schema.Literals(['approved', 'stale', 'none']),
+  /** Its kept try drawn from a cast sheet that has changed since: the members whose sheet changed, and what to do. */
+  stale: Schema.optionalKey(
+    Schema.Struct({ members: Schema.Array(Schema.String), why: Schema.String }),
+  ),
   links: LabLinks,
 });
 
@@ -117,7 +122,7 @@ const Notes = Tool.make('notes', {
 
 const Board = Tool.make('board', {
   description:
-    "A film's storyboard: each panel (`<beat>.<mark>`), its tries (the image on disk, how it was made, the note a tweak answers), the try kept and why, and the beats approved. `beat` narrows it to one beat. Prompts are left out.",
+    "A film's storyboard: each panel (`<beat>.<mark>`), its tries (the image on disk, how it was made, the note a tweak answers), the try kept and why (and `stale` when it was drawn from a cast sheet that has changed since: whose, and that `film board <film>` draws it again), and the beats approved. `beat` narrows it to one beat. Prompts are left out.",
   parameters: Schema.Struct({ ...FilmParam.fields, beat: Schema.optionalKey(Schema.String) }),
   success: BoardRead,
   failure: LabRefused,
@@ -236,6 +241,7 @@ export const notesReads = Effect.fn('LabMcp.notesReads')(function* () {
     const film = yield* named(name);
     const board: BoardFile = yield* refused(boards.read(film));
     const images = boards.paths(film).folder;
+    const stale = new Map((yield* refused(boards.stale(film))).map((s) => [s.panel, s] as const));
     return {
       film,
       ...Option.match(Option.fromUndefinedOr(board.style), {
@@ -261,6 +267,10 @@ export const notesReads = Effect.fn('LabMcp.notesReads')(function* () {
             at: t.at,
           })),
           approval: approvalOf(board, panel.beat),
+          ...Option.match(Option.fromUndefinedOr(stale.get(panel.id)), {
+            onNone: () => ({}),
+            onSome: (s) => ({ stale: { members: s.members, why: staleWhy(film, s) } }),
+          }),
           links: linksOf(boardPath(film, panel.beat, Option.some(panel.at))),
         })),
       approvals: board.approvals.filter((a) =>

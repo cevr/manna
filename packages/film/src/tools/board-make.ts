@@ -31,6 +31,7 @@ import {
   type BoardName,
   type BoardStyle,
   type BoardTry,
+  type TryCast,
   filmOrder,
   nextTry,
   panelById,
@@ -45,7 +46,9 @@ import type { CastLock } from '../core/cast-lock.ts';
 import type { Act, Note } from '../core/schema.ts';
 import { type BoardBeat, actOf, panelPrompt } from './board-prompt.ts';
 import { BoardStore } from './board-store.ts';
+import { type Staleness, staleWhy } from './board-stale.ts';
 import { castReference } from './cast-library.ts';
+import { sha256Hex } from './digest.ts';
 import type { FilmName } from './film-repo.ts';
 import { ImageRoute, PANEL_SIZE } from './image-route.ts';
 
@@ -82,6 +85,11 @@ type MakeLine =
       readonly reason: string;
     }
   | {
+      readonly _tag: 'Stale';
+      readonly panel: string;
+      readonly why: string;
+    }
+  | {
       readonly _tag: 'Planned';
       readonly panel: string;
       readonly n: number;
@@ -96,6 +104,7 @@ export const makeLine: (line: MakeLine) => string = Match.type<MakeLine>().pipe(
       `made ${line.panel} try=${line.n} secs=${line.seconds.toFixed(1)} file=${line.file}`,
     Failed: (line) =>
       `failed ${line.panel} attempt=${line.attempt} reason="${line.reason.replace(/\s+/g, ' ')}"`,
+    Stale: (line) => `stale ${line.panel} why="${line.why}"`,
     Planned: (line) =>
       `plan ${line.panel} try=${line.n} refs=${line.refs.join(',')}\n${line.prompt}\n`,
   }),
@@ -126,9 +135,16 @@ interface ToDraw {
  * boarded by hand (a picture panel held from a mark the plan does not pick,
  * imported or set) keeps its own panels: a run only finishes those it began.
  * A panel with a kept try, an import, a tweak or a text the engine sets is
- * left as it stands.
+ * left as it stands, but a kept panel drawn from a cast sheet that has
+ * changed (`stale`) gets new tries until `tries` of its own are drawn from
+ * the cast as it stands; its keep stays.
  */
-const toDraw = (board: BoardFile, beat: BoardBeat, tries: number): ReadonlyArray<ToDraw> => {
+const toDraw = (
+  board: BoardFile,
+  beat: BoardBeat,
+  tries: number,
+  stale: ReadonlyMap<string, Staleness>,
+): ReadonlyArray<ToDraw> => {
   const planned = plannedAts(beat.id, beat.say, beat.picture);
   const own = panelsOf(board, beat.id);
   const byHand = own.some((p) => Predicate.isUndefined(p.text) && !planned.includes(p.at));
@@ -140,6 +156,8 @@ const toDraw = (board: BoardFile, beat: BoardBeat, tries: number): ReadonlyArray
     const count = Option.match(panelById(board, panelId(beat.id, at)), {
       onNone: () => tries,
       onSome: (p) => {
+        const redrawn = Option.fromUndefinedOr(stale.get(p.id));
+        if (Option.isSome(redrawn)) return Math.max(0, tries - redrawn.value.fresh);
         const settled =
           Predicate.isNotUndefined(p.text) ||
           Predicate.isNotUndefined(p.kept) ||
@@ -174,6 +192,7 @@ const drawTry = Effect.fn('Board.drawTry')(function* (
   made: BoardTry['made'],
   prompt: string,
   refs: ReadonlyArray<string>,
+  cast: ReadonlyArray<TryCast>,
   note: Option.Option<string>,
 ) {
   const path = yield* Path.Path;
@@ -207,6 +226,7 @@ const drawTry = Effect.fn('Board.drawTry')(function* (
         made,
         prompt,
         refs,
+        ...Arr.match(cast, { onEmpty: () => ({}), onNonEmpty: (held) => ({ cast: held }) }),
         ...Option.match(note, { onNone: () => ({}), onSome: (n) => ({ note: n }) }),
         at: DateTime.formatIso(ended),
       },
@@ -232,6 +252,7 @@ const drawTries = (
   made: BoardTry['made'],
   prompt: string,
   refs: ReadonlyArray<string>,
+  cast: ReadonlyArray<TryCast>,
   note: Option.Option<string>,
   emit: (line: MakeLine) => Effect.Effect<void>,
 ) =>
@@ -240,7 +261,7 @@ const drawTries = (
     (): ReadonlyArray<number> => [],
     (done, attempt) => {
       const panel = panelId(beat, at);
-      return drawTry(ctx, beat, at, made, prompt, refs, note).pipe(
+      return drawTry(ctx, beat, at, made, prompt, refs, cast, note).pipe(
         Effect.flatMap(({ tries, seconds }) =>
           Effect.as(
             Effect.forEach(
@@ -286,6 +307,7 @@ export const makeBoard = Effect.fn('Board.make')(function* (
   const ctx: TryContext = { film, style, folder: store.paths(film).folder, beats };
   const path = yield* Path.Path;
   const locks = yield* castOf(film, chosen);
+  const stale = new Map((yield* store.stale(film)).map((s) => [s.panel, s] as const));
   const ids = beats.map((b) => b.id);
   const failedInRow = yield* Ref.make(0);
   const down = () => Effect.map(Ref.get(failedInRow), (n) => n >= 3);
@@ -293,7 +315,10 @@ export const makeBoard = Effect.fn('Board.make')(function* (
   const drawBeat = (beat: BoardBeat) =>
     Effect.gen(function* () {
       const cast = beatCast(locks, beat, ctx.folder, path);
-      for (const { at, count } of toDraw(board, beat, options.tries)) {
+      for (const s of stale.values())
+        if (panelsOf(board, beat.id).some((p) => p.id === s.panel))
+          yield* emit({ _tag: 'Stale', panel: s.panel, why: staleWhy(film, s) });
+      for (const { at, count } of toDraw(board, beat, options.tries, stale)) {
         if (yield* down()) return;
         // The first panel of the beat, once it has a try, rides along as the second reference.
         const now = yield* store.read(film);
@@ -329,6 +354,7 @@ export const makeBoard = Effect.fn('Board.make')(function* (
           'generate',
           prompt,
           refs,
+          cast.held,
           Option.none(),
           emit,
         );
@@ -437,6 +463,7 @@ export const tweakPanel = Effect.fn('Board.tweak')(function* (
     'tweak',
     prompt,
     refs,
+    cast.held,
     Option.some(note.id),
     emit,
   );
@@ -444,26 +471,40 @@ export const tweakPanel = Effect.fn('Board.tweak')(function* (
   return { panel: panel.id, tries: made } satisfies Tweaked;
 });
 
+/** A member's library reference and the sha256 of each of its files, in its order. */
+interface HeldLock {
+  readonly lock: CastLock;
+  readonly sha256: ReadonlyArray<string>;
+}
+
 /**
  * The library reference of each member `beats` draw, read once by member:
  * a member with no record, or a reference not on disk, refuses the run
- * before any panel is drawn.
+ * before any panel is drawn. Each file is read for its sha256, which each
+ * try records beside its path, so a sheet replaced since is known.
  */
 const castOf = Effect.fn('Board.cast')(function* (film: FilmName, beats: ReadonlyArray<BoardBeat>) {
   const members = Arr.dedupe(beats.flatMap((b) => b.cast));
+  const fs = yield* FileSystem.FileSystem;
   const locks = yield* Effect.forEach(members, (member) =>
-    Effect.map(castReference(film, member), (lock) => [member, lock] as const),
+    Effect.gen(function* () {
+      const lock = yield* castReference(film, member);
+      const sha256 = yield* Effect.forEach(lock.files, (f) =>
+        Effect.map(fs.readFile(f), sha256Hex),
+      );
+      return [member, { lock, sha256 }] as const;
+    }),
   );
   return new Map(locks);
 });
 
 /**
  * A beat's library references in its cast's order, each member once, and
- * their files as the board folder reaches them. Each member's files lie in
+ * their files as the board folder reaches them, each with what it holds. Each member's files lie in
  * its own folder, so no file is sent twice.
  */
 const beatCast = (
-  locks: ReadonlyMap<string, CastLock>,
+  locks: ReadonlyMap<string, HeldLock>,
   beat: BoardBeat,
   folder: string,
   path: Path.Path,
@@ -471,7 +512,14 @@ const beatCast = (
   const cast = Arr.dedupe(beat.cast).flatMap((m) =>
     Option.toArray(Option.fromUndefinedOr(locks.get(m))),
   );
-  return { cast, refs: cast.flatMap((lock) => lock.files.map((f) => path.relative(folder, f))) };
+  const held = cast.flatMap(({ lock, sha256 }) =>
+    Arr.zipWith(lock.files, sha256, (f, sha): TryCast => ({
+      member: lock.member,
+      file: path.relative(folder, f),
+      sha256: sha,
+    })),
+  );
+  return { cast: cast.map((c) => c.lock), refs: held.map((h) => h.file), held };
 };
 
 /** A refusal of a step on the board, raised for `film`. */
