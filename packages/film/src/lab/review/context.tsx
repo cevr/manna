@@ -56,6 +56,7 @@ import {
   ReviewFilms,
   type ReviewFolder,
   ReviewIndex,
+  folderAt,
 } from '../../core/review.ts';
 import type { PhoneCopy } from '../../core/served.ts';
 import { copyAwaited } from './phone.ts';
@@ -784,9 +785,7 @@ const versionCommands = (
     const version = (ctx: Context) =>
       Option.flatMap(selected(ctx, 'Set'), (s) =>
         index().pipe(
-          Option.flatMap((ix) =>
-            Option.fromUndefinedOr(ix.folders.find((f) => f.ref === s.folder)),
-          ),
+          Option.flatMap((ix) => folderAt(ix, s.folder)),
           Option.flatMap((f) => Option.fromUndefinedOr(f.sets.find((x) => x.id === s.point))),
           Option.flatMap((set) => Option.fromUndefinedOr(seenVariants(set)[i])),
           Option.map((v) => ({ set: s, version: v })),
@@ -1093,7 +1092,15 @@ const SetBody = (
         Option.map(
           Option.filter(
             Place.decode(Places.set, href),
-            (v) => v.path.folder === props.folder.ref && v.path.point === props.set.id,
+            (v) =>
+              v.path.point === props.set.id &&
+              // The address may name the folder under an alias label (`folderAt`).
+              Option.exists(
+                Option.flatMap(AsyncResult.value(page.index()), (ix) =>
+                  folderAt(ix, v.path.folder),
+                ),
+                (f) => f.ref === props.folder.ref,
+              ),
           ),
           (v) =>
             sendSync(SyncEvent.Landed({ t: Option.getOrElse(v.hash.t, () => props.set.start) })),

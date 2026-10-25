@@ -3,7 +3,7 @@
 // (render choice points, `choice.ts`) and the files in no set. Pure: the
 // review's server and its page share them.
 
-import { Array as Arr, Effect, Option, Schema } from 'effect';
+import { Array as Arr, Effect, Option, Record as Rec, Schema } from 'effect';
 import { ChoicePoint, seenVariants } from './choice.ts';
 import { Clip } from './point.ts';
 import { ProductionId, VersionNumber } from './production.ts';
@@ -120,26 +120,69 @@ export const ReviewFolder = Schema.Struct({
 });
 export type ReviewFolder = typeof ReviewFolder.Type;
 
+/**
+ * A root's other labels: each alias label, the label of the root it names.
+ * A ref may start with an alias when it was written while its checkout's
+ * folder had another name (`bible-tools`, the folder now named `manna`): it
+ * names the same file as the ref with the root's label.
+ */
+export const RefAliases = Schema.Record(Schema.String, Schema.String);
+export type RefAliases = typeof RefAliases.Type;
+
 /** `GET /api/review/index`: every folder under the roots with something to review, newest first. */
-export const ReviewIndex = Schema.Struct({ folders: Schema.Array(ReviewFolder) });
+export const ReviewIndex = Schema.Struct({
+  folders: Schema.Array(ReviewFolder),
+  /** The roots' alias labels; omitted when no root has one, and by older servers. */
+  aliases: Schema.optionalKey(RefAliases),
+});
 export type ReviewIndex = typeof ReviewIndex.Type;
 
-/** The document `ref` names, among the index's folders' documents (an ask's document is found as the set's page finds it). */
-export const docAt = (index: ReviewIndex, ref: string): Option.Option<ReviewFile> =>
-  Arr.findFirst(
-    index.folders.flatMap((f) => f.docs),
-    (d) => d.ref === ref,
+/**
+ * `ref` with its label read through `aliases`: a ref that starts with an
+ * alias, with its root's own label; any other ref as it is. Every lookup of
+ * a folder or a file by a ref it was handed goes through this.
+ */
+export const canonicalRef = (aliases: RefAliases, ref: string): string => {
+  const [label = '', ...rest] = ref.split('/');
+  return Option.match(Rec.get(aliases, label), {
+    onNone: () => ref,
+    onSome: (root) => [root, ...rest].join('/'),
+  });
+};
+
+/** `ref` as the index names it (`canonicalRef` through its aliases). */
+const indexRef = (index: ReviewIndex, ref: string): string =>
+  canonicalRef(
+    Option.getOrElse(Option.fromUndefinedOr(index.aliases), () => ({})),
+    ref,
   );
 
+/** The folder `ref` names in the index, by its canonical ref (`canonicalRef`). */
+export const folderAt = (index: ReviewIndex, ref: string): Option.Option<ReviewFolder> => {
+  const canonical = indexRef(index, ref);
+  return Arr.findFirst(index.folders, (f) => f.ref === canonical);
+};
+
+/** The document `ref` names, among the index's folders' documents (an ask's document is found as the set's page finds it). */
+export const docAt = (index: ReviewIndex, ref: string): Option.Option<ReviewFile> => {
+  const canonical = indexRef(index, ref);
+  return Arr.findFirst(
+    index.folders.flatMap((f) => f.docs),
+    (d) => d.ref === canonical,
+  );
+};
+
 /** The video `ref` names, among the index's folders' loose videos and their sets' seen ones. */
-export const videoAt = (index: ReviewIndex, ref: string): Option.Option<ReviewVideo> =>
-  Arr.findFirst(
+export const videoAt = (index: ReviewIndex, ref: string): Option.Option<ReviewVideo> => {
+  const canonical = indexRef(index, ref);
+  return Arr.findFirst(
     index.folders.flatMap((f) => [
       ...f.videos,
       ...f.sets.flatMap((point) => seenVariants(point).map((v) => v.video)),
     ]),
-    (v) => v.ref === ref,
+    (v) => v.ref === canonical,
   );
+};
 
 /**
  * `GET /api/review/duration`: a video's length, and its frames a second as

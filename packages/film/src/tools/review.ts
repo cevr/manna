@@ -80,10 +80,11 @@ import type {
   ReviewFile,
   ReviewFolder,
   ReviewIndex,
+  RefAliases,
   ReviewManifest,
   ReviewVideo,
 } from '../core/review.ts';
-import { ReviewManifestJson } from '../core/review.ts';
+import { ReviewManifestJson, canonicalRef } from '../core/review.ts';
 import {
   ChoiceUnknown,
   type MediaFailed,
@@ -105,6 +106,12 @@ import { Media, PHONE_COPY, PHONE_RATE } from './media.ts';
 export interface ReviewRoot {
   readonly label: string;
   readonly path: string;
+  /**
+   * Other labels a ref to it may start with (`RefAliases`): refs written
+   * while its checkout's folder had another name. A ref is written with
+   * `label` alone.
+   */
+  readonly aliases?: ReadonlyArray<string>;
 }
 
 interface ReviewConfig {
@@ -187,13 +194,34 @@ export const refOf = (
   });
 };
 
-/** The path `ref` names under `roots`, when it names one inside its root. */
+/**
+ * The alias labels of `roots`, each the label of the root it names: an alias
+ * that is a root's own label, or that two roots claim, names none, so a real
+ * root always wins.
+ */
+const aliasesOf = (roots: ReadonlyArray<ReviewRoot>): RefAliases => {
+  const labels = new Set(roots.map((root) => root.label));
+  const claims = roots.flatMap((root) =>
+    (root.aliases ?? [])
+      .filter((alias) => !labels.has(alias))
+      .map((alias) => [alias, root.label] as const),
+  );
+  return Object.fromEntries(
+    claims.filter(([alias]) => claims.filter(([other]) => other === alias).length === 1),
+  );
+};
+
+/** `ref` as `roots` write it: its alias label, if it starts with one, read as its root's label. */
+export const canonicalOf = (roots: ReadonlyArray<ReviewRoot>, ref: string): string =>
+  canonicalRef(aliasesOf(roots), ref);
+
+/** The path `ref` names under `roots`, when it names one inside its root (by its label or an alias). */
 export const pathOf = (
   roots: ReadonlyArray<ReviewRoot>,
   ref: string,
   path: Path.Path,
 ): Option.Option<string> => {
-  const [label = '', ...rest] = ref.split('/');
+  const [label = '', ...rest] = canonicalOf(roots, ref).split('/');
   if (ref.includes('\u0000')) return Option.none();
   return Option.flatMap(
     Arr.findFirst(roots, (root) => root.label === label),
@@ -782,7 +810,7 @@ export class Review extends Context.Service<Review, ReviewService>()('@bible/fil
           const inside = Option.exists(real, (r) => Option.isSome(refOf(realRoots, r, path)));
           const found = yield* foundAt(at.value);
           if (!inside || Option.isNone(found)) return yield* unknown;
-          if (!(yield* listed(ref))) return yield* unknown;
+          if (!(yield* listed(canonicalOf(roots, ref)))) return yield* unknown;
           return at.value;
         });
 
@@ -1081,7 +1109,12 @@ export class Review extends Context.Service<Review, ReviewService>()('@bible/fil
             ]),
           );
           yield* Effect.logDebug(`review.index.read folders=${folders.length}`);
-          return { index: { folders }, pictures } satisfies Read;
+          const aliases = aliasesOf(roots);
+          const named = Option.match(
+            Option.liftPredicate(aliases, (a) => !Rec.isEmptyRecord(a)),
+            { onNone: () => ({}), onSome: (a) => ({ aliases: a }) },
+          );
+          return { index: { folders, ...named }, pictures } satisfies Read;
         });
 
         const current = Effect.fn('Review.current')(function* (fresh: boolean) {
@@ -1117,12 +1150,13 @@ export class Review extends Context.Service<Review, ReviewService>()('@bible/fil
         });
 
         const say = Effect.fn('Review.say')(function* (
-          ref: string,
+          given: string,
           point: string,
           asked: SetSayPost,
           project: ProjectRead,
         ) {
-          const unknown = ReviewFileUnknown.make({ ref });
+          const unknown = ReviewFileUnknown.make({ ref: given });
+          const ref = canonicalOf(roots, given);
           const dir = pathOf(roots, ref, path);
           const listed = yield* folderListed(ref);
           if (Option.isNone(dir) || Option.isNone(listed)) return yield* unknown;

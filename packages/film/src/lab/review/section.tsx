@@ -43,12 +43,13 @@ import {
 } from '../../core/choice.ts';
 import { type Compare, type ComparePanes, Media } from '../../browser/media.ts';
 import { Pointer, Surface } from '../../browser/pointer.ts';
-import type {
-  ReviewFile,
-  ReviewFilms,
-  ReviewFolder,
-  ReviewIndex,
-  ReviewVideo,
+import {
+  type ReviewFile,
+  type ReviewFilms,
+  type ReviewFolder,
+  type ReviewIndex,
+  type ReviewVideo,
+  folderAt,
 } from '../../core/review.ts';
 import { timecode } from '../../core/time.ts';
 import {
@@ -662,9 +663,6 @@ const FolderBody = (props: { readonly folder: ReviewFolder }) => {
   );
 };
 
-const folderIn = (index: ReviewIndex, ref: string) =>
-  Option.fromUndefinedOr(index.folders.find((f) => f.ref === ref));
-
 const Missing = (props: { readonly what: string }) => (
   <p class="empty">
     No {props.what} here now. <Go place={Place.Home()}>Every folder</Go>
@@ -676,7 +674,7 @@ export const FolderPage = (props: { readonly folder: string }) => (
     {(index) => (
       // Not keyed: a new index value moves the folder under the page, it does not remake it.
       <Show
-        when={Option.getOrUndefined(folderIn(index(), props.folder))}
+        when={Option.getOrUndefined(folderAt(index(), props.folder))}
         fallback={<Missing what="folder" />}
       >
         {(folder) => <FolderBody folder={folder()} />}
@@ -1756,7 +1754,7 @@ export const SetPage = (props: { readonly folder: string; readonly point: string
   <WithIndex>
     {(index) => (
       <Show
-        when={Option.getOrUndefined(folderIn(index(), props.folder))}
+        when={Option.getOrUndefined(folderAt(index(), props.folder))}
         fallback={<Missing what="folder" />}
       >
         {(folder) => (

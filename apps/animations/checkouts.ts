@@ -1,6 +1,7 @@
 // The checkouts of this repository on this machine, so the lab's review sees
 // the renders of each (`checkoutRoots`, cli.ts). A checkout is a folder whose
-// root `package.json` names the same package as this one's: the folders
+// root `package.json` names the same package as this one's (or a name it
+// had, `FORMER_NAMES`): the folders
 // beside it (worktrees, or the Rifts beside a Rift), and the Rifts made from
 // it (`<p>/.rifts/<name>/<rift>` for `<p>/<name>`), when there are some. A
 // say on a set writes its catalogue, so two kinds of checkout are left out of
@@ -13,6 +14,30 @@
 
 import type { ReviewRoot } from '@bible/film/tools';
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
+
+/**
+ * The root package names a checkout of this repository has had, each with
+ * the ones before it: a checkout not yet brought up to date (a Rift on an
+ * older commit) still names its root package `bible`, and is still one.
+ */
+const FORMER_NAMES: ReadonlyMap<string, ReadonlyArray<string>> = new Map([['manna', ['bible']]]);
+
+/**
+ * The labels a checkout's refs were written under before its folder took
+ * its name (`ReviewRoot.aliases`): the lab's asks keep refs to the folder
+ * `manna` written while it was `bible-tools`.
+ */
+const FORMER_LABELS: ReadonlyMap<string, ReadonlyArray<string>> = new Map([
+  ['manna', ['bible-tools']],
+]);
+
+/** Whether root packages named `name` and `named` are checkouts of one repository, by its names now or before. */
+const sameRepository = (name: string, named: string) =>
+  named === name ||
+  [...FORMER_NAMES].some(([now, before]) => {
+    const names = [now, ...before];
+    return names.includes(name) && names.includes(named);
+  });
 
 /** The one field of a root `package.json` a checkout is known by. */
 const RootPackage = Schema.fromJsonString(Schema.Struct({ name: Schema.String }));
@@ -95,14 +120,19 @@ export const checkoutRootsOf = (repo: string) =>
       Effect.zipWith(
         packageName(dir),
         leftOut(dir),
-        (named, left) => !left && Option.exists(named, (n) => n === name.value),
+        (named, left) => !left && Option.exists(named, (n) => sameRepository(name.value, n)),
       ),
     );
+    // A root labelled as another's alias wins over it (`aliasesOf`).
     const roots = checkouts
-      .map((dir): ReviewRoot => ({
-        label: path.basename(dir),
-        path: path.join(dir, 'apps', 'animations', 'out'),
-      }))
+      .map((dir): ReviewRoot => {
+        const label = path.basename(dir);
+        return {
+          label,
+          path: path.join(dir, 'apps', 'animations', 'out'),
+          aliases: FORMER_LABELS.get(label) ?? [],
+        };
+      })
       .toSorted((a, b) => a.label.localeCompare(b.label));
     return yield* Effect.filter(roots, (root) =>
       fs.exists(root.path).pipe(Effect.orElseSucceed(() => false)),

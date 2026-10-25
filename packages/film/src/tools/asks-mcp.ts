@@ -245,7 +245,7 @@ const asksReads = Effect.fn('LabMcp.asksReads')(function* () {
   const asks = yield* AskStore;
   const productions = yield* ProductionStore;
   const links = yield* LabAddress;
-  const { sets, folderNamed } = yield* setsReads();
+  const { sets, folderNamed, setRef } = yield* setsReads();
 
   const linksOf = (at: string) => linksAt(links, at);
 
@@ -280,7 +280,7 @@ const asksReads = Effect.fn('LabMcp.asksReads')(function* () {
     if (Option.isNone(machine))
       return yield* LabRefused.make({ reason: 'give `blocks` (one page) or `machine`' });
     const production = Option.fromUndefinedOr(given.production);
-    const set = Option.fromUndefinedOr(given.set);
+    const set = Option.map(Option.fromUndefinedOr(given.set), setRef);
     if (Option.isSome(set) && Option.isNone(production))
       return yield* LabRefused.make({ reason: '`set` files the ask on a production: name it' });
     if (
@@ -294,20 +294,29 @@ const asksReads = Effect.fn('LabMcp.asksReads')(function* () {
       return yield* LabRefused.make({ reason: `no set ${set.value}: \`sets\` lists them by ref` });
     // Its timeline names the set by its folder: one two roots hold is refused.
     if (Option.isSome(set)) yield* folderNamed(set.value);
-    const record = yield* asks.make({ ...given, ask: machine.value }).pipe(
-      Effect.mapError((e) =>
-        LabRefused.make({
-          reason: Match.value(e).pipe(
-            Match.tag('AskInvalid', (i) => `the ask may not render:\n- ${i.problems.join('\n- ')}`),
-            Match.tag(
-              'AskUnknown',
-              (u) => `no ask ${u.id} whose page to join: \`asks\` lists them`,
+    const record = yield* asks
+      .make({
+        ...given,
+        ...Option.match(set, { onNone: () => ({}), onSome: (ref) => ({ set: ref }) }),
+        ask: machine.value,
+      })
+      .pipe(
+        Effect.mapError((e) =>
+          LabRefused.make({
+            reason: Match.value(e).pipe(
+              Match.tag(
+                'AskInvalid',
+                (i) => `the ask may not render:\n- ${i.problems.join('\n- ')}`,
+              ),
+              Match.tag(
+                'AskUnknown',
+                (u) => `no ask ${u.id} whose page to join: \`asks\` lists them`,
+              ),
+              Match.orElse((other) => other.message),
             ),
-            Match.orElse((other) => other.message),
-          ),
-        }),
-      ),
-    );
+          }),
+        ),
+      );
     const page = asksOnPage(yield* refused(asks.list), pageIdOf(record));
     return {
       ...askRead(record),

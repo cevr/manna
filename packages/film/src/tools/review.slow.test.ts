@@ -501,6 +501,7 @@ const fixture = (
     readonly unreadable?: string;
     readonly uncopyable?: string;
     readonly held?: boolean;
+    readonly aliases?: ReadonlyArray<string>;
   } = {},
 ) =>
   Layer.unwrap(
@@ -568,7 +569,7 @@ const fixture = (
         }),
       ).pipe(Layer.provide(reviewMedia(spawned, 12.5, fps)));
       return Review.layer({
-        roots: [{ label: 'out', path: out }],
+        roots: [{ label: 'out', path: out, aliases: tune.aliases ?? [] }],
         cache: path.join(dir, 'cache'),
         phoneOver: 100,
         phoneRate: tune.phoneRate,
@@ -893,6 +894,30 @@ describe('the review service', () => {
       const failed = yield* Effect.flip((yield* Review).resolve('out/art/leak.mp4'));
       expect(failed._tag).toBe('ReviewFileUnknown');
     }).pipe(Effect.provide(fixture(false))),
+  );
+
+  it.effect(
+    'a ref under a root’s alias resolves as its twin under the label, which the index lists',
+    () =>
+      Effect.gen(function* () {
+        const review = yield* Review;
+        const path = yield* Path.Path;
+        const twin = path.join(yield* Root, 'out', 'art', 'roof.A.mp4');
+        expect(yield* review.resolve('bible-tools/art/roof.A.mp4')).toBe(twin);
+        expect(yield* review.resolve('out/art/roof.A.mp4')).toBe(twin);
+        expect(yield* review.duration('bible-tools/art/roof.A.mp4')).toEqual(
+          yield* review.duration('out/art/roof.A.mp4'),
+        );
+        const index = yield* review.index(false);
+        expect(index.aliases).toEqual({ 'bible-tools': 'out' });
+        expect(index.folders.every((f) => f.ref.startsWith('out/'))).toBe(true);
+        const failed = yield* Effect.flip(review.resolve('bible-tools/art/stills/roof.C.mp4'));
+        expect(failed._tag).toBe('ReviewFileUnknown');
+      }).pipe(
+        Effect.provide(
+          fixture(false, Option.none(), Function.identity, { aliases: ['bible-tools'] }),
+        ),
+      ),
   );
 
   it.effect('measures once, and makes a frame once whoever asks, at 10% in by default', () =>

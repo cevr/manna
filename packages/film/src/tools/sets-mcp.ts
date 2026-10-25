@@ -21,7 +21,15 @@ import { FilmFolder, filmNamed, filmsOut } from './film-repo.ts';
 import { LabAddress, labCommand } from './lab-command.ts';
 import { LabRefused, inside, refused } from './lab-mcp-parts.ts';
 import { ProductionStore, type Stamp, stampedManifest } from './production-store.ts';
-import { Review, filesInMontage, namesInMontage, pathOf, recordsUnder, refOf } from './review.ts';
+import {
+  Review,
+  canonicalOf,
+  filesInMontage,
+  namesInMontage,
+  pathOf,
+  recordsUnder,
+  refOf,
+} from './review.ts';
 
 // ---------------------------------------------------------------------------
 // What the tools answer
@@ -223,7 +231,7 @@ export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
       const dir = yield* Effect.fromOption(pathOf(review.roots, set.value, path), () =>
         LabRefused.make({ reason: `no set ${set.value} under the lab's roots (see \`sets\`)` }),
       );
-      return { ref: set.value, dir, name: path.basename(dir) };
+      return { ref: canonicalOf(review.roots, set.value), dir, name: path.basename(dir) };
     }
     if (Option.isNone(film))
       return yield* LabRefused.make({ reason: 'name the folder: a `set` ref, or a `film`' });
@@ -431,7 +439,7 @@ export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
   const folderNamed = Effect.fn('LabMcp.folderNamed')(function* (given: string) {
     const named = setNamed(
       (yield* sets).map((listed) => listed.set),
-      given,
+      canonicalOf(review.roots, given),
     );
     if (Result.isFailure(named))
       return yield* LabRefused.make({
@@ -448,7 +456,10 @@ export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
     });
   });
 
-  return { sets, setOf, catalogueOf, publishSet, recordRender, folderNamed };
+  /** A set ref as the lab writes it (`canonicalOf`): one under an alias label, under its root's label. */
+  const setRef = (given: string) => canonicalOf(review.roots, given);
+
+  return { sets, setOf, catalogueOf, publishSet, recordRender, folderNamed, setRef };
 });
 
 /** The work of the sets' commands. */

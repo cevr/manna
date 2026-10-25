@@ -12,7 +12,7 @@ import type { HttpClient } from 'effect/http';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';
 import { createMemo } from 'solid-js';
 import type { ProductionHistory } from '../../core/production.ts';
-import type { ReviewIndex } from '../../core/review.ts';
+import { type ReviewIndex, folderAt } from '../../core/review.ts';
 import { type AskShown, Root, useReview } from './context.tsx';
 import { Inspecting } from './inspector.tsx';
 import { folderTitle, isFilmsFolder } from './format.ts';
@@ -36,7 +36,7 @@ import type { LabClient } from '../api.ts';
 const folderName = (index: Option.Option<ReviewIndex>, ref: string): string =>
   Option.getOrElse(
     Option.map(
-      Option.flatMap(index, (i) => Option.fromUndefinedOr(i.folders.find((f) => f.ref === ref))),
+      Option.flatMap(index, (i) => folderAt(i, ref)),
       folderTitle,
     ),
     () => ref,
@@ -57,7 +57,7 @@ const draftName = (list: Option.Option<SeriesList>, series: string, draft: strin
 const setName = (index: Option.Option<ReviewIndex>, ref: string, point: string): string =>
   Option.getOrElse(
     Option.flatMap(index, (i) =>
-      Option.flatMap(Option.fromUndefinedOr(i.folders.find((f) => f.ref === ref)), (f) =>
+      Option.flatMap(folderAt(i, ref), (f) =>
         Option.map(Option.fromUndefinedOr(f.sets.find((s) => s.id === point)), (s) => s.title),
       ),
     ),

@@ -89,6 +89,59 @@ describe('the checkouts', () => {
       }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
 
+  it.effect(
+    'a checkout whose root package is still `bible` is listed beside `manna`, and `manna` answers to `bible-tools`',
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const home = yield* fs.makeTempDirectoryScoped();
+        const rifts = path.join(home, '.rifts', 'manna');
+        yield* checkout(path.join(home, 'manna'), 'manna');
+        // Rifts made before their root package took the name `manna`, and one made since.
+        yield* checkout(path.join(rifts, 'rbf-arms-rig'), 'bible');
+        yield* checkout(path.join(rifts, 'film-motion-proto'), 'bible');
+        yield* checkout(path.join(rifts, 'hymnapp-main'), 'manna');
+        // A repository named nothing like it, and one that is another.
+        yield* checkout(path.join(rifts, 'bible-hymns'), 'hymns');
+        const roots = yield* checkoutRootsOf(path.join(home, 'manna'));
+        expect(roots.map((root) => root.label)).toEqual([
+          'film-motion-proto',
+          'hymnapp-main',
+          'manna',
+          'rbf-arms-rig',
+        ]);
+        // A lab in a Rift still on the old name lists the renamed ones too.
+        expect(
+          (yield* checkoutRootsOf(path.join(rifts, 'rbf-arms-rig'))).map((root) => root.label),
+        ).toEqual(['film-motion-proto', 'hymnapp-main', 'rbf-arms-rig']);
+        // `manna` answers to `bible-tools` (a ref under it names its twin: review-refs.test.ts in
+        // the film); its refs are written with its label, and no other root has an alias.
+        expect(roots.map((root) => [root.label, root.aliases])).toEqual([
+          ['film-motion-proto', []],
+          ['hymnapp-main', []],
+          ['manna', ['bible-tools']],
+          ['rbf-arms-rig', []],
+        ]);
+      }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+
+  it.effect('a real checkout labelled `bible-tools` is listed as its own root', () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const home = yield* fs.makeTempDirectoryScoped();
+      yield* checkout(path.join(home, 'manna'), 'manna');
+      yield* checkout(path.join(home, 'bible-tools'), 'bible');
+      const roots = yield* checkoutRootsOf(path.join(home, 'manna'));
+      // The real root wins over `manna`'s alias where a ref is read (`aliasesOf`, review-refs.test.ts).
+      expect(roots.map((root) => [root.label, root.path])).toEqual([
+        ['bible-tools', path.join(home, 'bible-tools', 'apps', 'animations', 'out')],
+        ['manna', path.join(home, 'manna', 'apps', 'animations', 'out')],
+      ]);
+    }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+
   it.effect('a Rift made from a Rift leaves its source a Rift, never a warm source', () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
