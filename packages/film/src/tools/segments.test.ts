@@ -147,6 +147,34 @@ describe("a render's segments", () => {
     expect(later[1]).not.toBe(was[1]);
   });
 
+  test("change a segment's key only where a card whose words change shows", () => {
+    /** The film's segments with c's panel a verse card of `text`. */
+    const carded = (text: string) => {
+      const card: Panel = {
+        id: 'c.start',
+        beat: BoardName.make('c'),
+        at: BoardName.make('start'),
+        tries: [],
+        text: { _tag: 'Verse', ref: 'Job 9:2', text, phrase: 'just with God' },
+      };
+      const cards: BoardFile = { ...board, panels: [panel('a'), panel('b'), card] };
+      return keys(
+        beatSegments({
+          placed,
+          start: 0,
+          end: 600,
+          render,
+          scenes,
+          board: Option.some({ shots: boardShots(placed, cards), duration: 20, images }),
+        }),
+      );
+    };
+    const was = carded('How should man be just with God?');
+    const now = carded('How then can man be just with God?');
+    // c's card is seen from 9.75 s, its dissolve in over b's last quarter second.
+    expect([now[0] === was[0], now[1] === was[1], now[2] === was[2]]).toEqual([true, false, false]);
+  });
+
   test('change every key when the render is drawn or encoded otherwise', () => {
     const was = keys(boardSegments());
     for (const other of [
