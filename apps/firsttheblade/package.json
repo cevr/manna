@@ -15,6 +15,7 @@
     "promise:census": "bun scripts/promise-census.ts",
     "kit": "bun kit/draw.ts",
     "kit:field": "bun kit/field.ts",
+    "kit:night": "bun kit/night.ts",
     "kit:pin": "bun kit/pin.ts",
     "kit:approve": "bun kit/approve.ts",
     "kit:shippable": "bun kit/shippable.ts",
