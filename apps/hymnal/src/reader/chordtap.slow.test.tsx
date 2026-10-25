@@ -79,17 +79,22 @@ const firstChord = (host: HTMLElement) => {
   return { id: chord.dataset['testid'] ?? '', text: chord.textContent };
 };
 
+/** A reader with chords on and hymn 373 under capo 1, as the bar's capo dial keeps it. */
+const capoOne = () =>
+  new Map([
+    ['chords', 'true'],
+    ['move.373', '{"transpose":0,"capo":1}'],
+  ]);
+
 describe('a tap on a chord', () => {
   it('opens how to play the chord the page shows, under capo 1, by name, string and finger', () => {
-    const reader = readerOn(new Map([['chords', 'true']]));
+    const reader = readerOn(capoOne());
     using app = mount(
       <>
         <StylePicker style={reader.style} />
         <HymnPage hymn={Option.getOrThrow(hymnAt('373'))} reader={reader} />
       </>,
     );
-    press('[aria-label="Capo up"]');
-    expect(app.host.textContent).toContain('Capo 1');
     const scroll = Option.getOrThrow(find('[data-testid="hymn-scroll"]'));
     const heard: Array<string> = [];
     for (const kind of ['wheel', 'touchmove', 'touchstart', 'scroll'])
@@ -149,14 +154,13 @@ describe('a tap on a chord', () => {
   });
 
   it('shows the chord held over a moved line’s first syllable, muted, under capo 1, Simple and Advanced (hymn 373’s refrain)', () => {
-    const reader = readerOn(new Map([['chords', 'true']]));
-    using app = mount(
+    const reader = readerOn(capoOne());
+    using _app = mount(
       <>
         <StylePicker style={reader.style} />
         <HymnPage hymn={Option.getOrThrow(hymnAt('373'))} reader={reader} />
       </>,
     );
-    press('[aria-label="Capo up"]');
     const held = () => {
       const chord = Option.getOrThrow(find('[data-testid="held-2-1-1"]'));
       return {
@@ -172,7 +176,6 @@ describe('a tap on a chord', () => {
     expect(held()).toEqual({ text: 'G', label: 'G, held over', muted: true, own: Option.none() });
     press('[aria-label="Pick Advanced"]');
     expect(held()).toEqual({ text: 'G', label: 'G, held over', muted: true, own: Option.none() });
-    expect(app.host.textContent).toContain('Capo 1');
   });
 
   it('reads the chord as a button named by its symbol alone, as the page shows it', () => {

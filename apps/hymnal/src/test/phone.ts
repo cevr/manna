@@ -5,7 +5,8 @@
  * it: `react-native` is react-native-web with iOS's rules (`Platform.select`
  * takes `ios`, a dynamic colour is its light value, the colour scheme and
  * the text size are the device's, which the script sets), a screen 390 by
- * 800 points that every element measures as, `one` is `src/test/one.tsx`
+ * 800 points that every element measures as, `one` is `src/test/one.tsx`,
+ * `react-native-gesture-handler` is `src/test/gesture.tsx`
  * and `~/color` is the phones' colour module. Each scroll view tells the
  * script the props it was last drawn with (`scrolls`), as the platform
  * would call its handlers. With `nativeList`, LegendList is its phones'
@@ -68,6 +69,7 @@ export const phone = ({ nativeList = false }: { readonly nativeList?: boolean } 
 
   const web = Bun.resolveSync('react-native-web', import.meta.dir);
   const one = Bun.resolveSync('./one.tsx', import.meta.dir);
+  const gesture = Bun.resolveSync('./gesture.tsx', import.meta.dir);
   const color = Bun.resolveSync('../color.native.ts', import.meta.dir);
   const phoneList = Bun.resolveSync('../reader/HymnList.native.tsx', import.meta.dir);
   const list = `${Bun.resolveSync('@legendapp/list/package.json', import.meta.dir).replace(/package\.json$/, '')}react-native.mjs`;
@@ -111,6 +113,10 @@ export const phone = ({ nativeList = false }: { readonly nativeList?: boolean } 
       }));
       build.module('one', () => ({
         contents: `export * from ${JSON.stringify(one)};`,
+        loader: 'js',
+      }));
+      build.module('react-native-gesture-handler', () => ({
+        contents: `export * from ${JSON.stringify(gesture)};`,
         loader: 'js',
       }));
       build.module('~/color', () => ({

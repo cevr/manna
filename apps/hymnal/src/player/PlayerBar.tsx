@@ -5,28 +5,54 @@
  * stack (`PlayerBar`, in the hymnal's layout), as the player plays on across
  * screens. While it holds none, the hymn page draws the bar as its own
  * (`PageBar`), so the bar comes in with the page's push and goes out with
- * its back, frame for frame. It holds the hymn's number and title, a button
- * that opens the full player on the bar's hymn (`/player?hymn=<n>`), the
- * Sound switch and the player's button, and, while
- * another hymn sounds over a page, a compact Play for the page's hymn. A thin
- * seek line along its top edge shows the part played; it takes no touch, as
- * seeking is the full player's.
+ * its back, frame for frame.
+ *
+ * Everything is at the thumb, left to right: on a hymn page, the key button
+ * (`KeyButton`) for the page's hymn; the opener, which opens the player
+ * sheet on the bar's hymn (`/player?hymn=<n>`), and holds the hymn's number
+ * and title only when the bar's hymn is not the page's own; the Sound
+ * switch; and the player's button. While another hymn sounds over a page,
+ * a compact Play for the page's hymn sits before Sound. A swipe up on the
+ * bar opens the sheet too.
+ *
+ * Play springs the bar taller, 56 to 88 points, and shows the seeker under
+ * the buttons (`Seeker`); Pause settles it back. The bar and the key dials
+ * above it lie in an overlay over the screen, its full width, that takes
+ * no touch of its own: the screen keeps only the bar's resting height under
+ * it (`room`), so the spring and the dials move no layout, and every touch
+ * on the bar, its dials and the page lands inside a view that holds it.
  */
 
 import { useAtom, useAtomSet, useAtomValue } from '@effect/atom-react';
 import { Match, Option } from 'effect';
-import { Link, useLinkTo, useSafeAreaInsets } from 'one';
+import { type Href, Link, useLinkTo, useRouter, useSafeAreaInsets } from 'one';
+import { useEffect } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  GestureDetector,
+  GestureHandlerRootView,
+  usePanGesture,
+} from 'react-native-gesture-handler';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { color, useAccent } from '~/color';
+import { useCue } from '~/feel/cue';
 import { settings } from '~/store';
 
-import { Bar, dockedBar, pageBar, playedShare, toldPlace } from './bar';
+import { Bar, dockedBar, pageBar, placeOf, toldPlace } from './bar';
 import { usePlayer } from './context';
 import { useShownPage } from './page';
-import { Command, type HymnPlayer, type Player, type Track } from './player';
+import { Command, type HymnPlayer, Player, type Track } from './player';
 import { BarMark } from './BarMark';
 import { buttonsOf } from './button';
+import { type BoundThumb, Dials, useThumb } from './Dials';
+import { KeyButton } from './KeyButton';
+import { Seeker } from './Seeker';
+import { ThumbEvent } from './thumb';
+
+/** The bar's height at rest and while a hymn sounds, over the home indicator, in points. */
+export const REST = 56;
+export const SOUNDING = 88;
 
 /** The bar docked under the stack, while the player holds a hymn. */
 export function PlayerBar() {
@@ -49,46 +75,209 @@ export const useDockedBar = (player: HymnPlayer) =>
   dockedBar(useAtomValue(player.state), useShownPage());
 
 function Docked({ player }: { readonly player: HymnPlayer }) {
-  return <Drawn bar={useDockedBar(player)} player={player} />;
+  return <Drawn bar={useDockedBar(player)} page={useShownPage()} player={player} />;
 }
 
 function OnPage({ player, track }: { readonly player: HymnPlayer; readonly track: Track }) {
-  return <Drawn bar={pageBar(useAtomValue(player.state), track)} player={player} />;
+  return (
+    <Drawn
+      bar={pageBar(useAtomValue(player.state), track)}
+      page={Option.some(track)}
+      player={player}
+    />
+  );
 }
 
-/** `bar` drawn: nothing, or the bar in its frame over the home indicator. */
-function Drawn({ bar, player }: { readonly bar: Bar; readonly player: HymnPlayer }) {
-  const send = useAtomSet(player.send);
-  const insets = useSafeAreaInsets();
-  return Bar.$match(bar, {
-    Hidden: () => <></>,
-    Shown: ({ track, state, page }) => (
-      <View
-        role="region"
-        aria-label="Player"
-        style={[styles.frame, { paddingBottom: Math.max(insets.bottom, 0) }]}
-      >
-        <SeekLine state={state} />
-        <View style={styles.bar}>
-          <Opener track={track} state={state} />
-          {Option.match(page, {
-            onNone: () => <></>,
-            onSome: (shown) => <PlayPage track={shown} send={send} />,
-          })}
-          <Sound />
-          <Buttons track={track} state={state} send={send} />
-        </View>
-      </View>
-    ),
-  });
+/** Whether the bar stands tall, with its seeker: while its hymn loads, plays or buffers. */
+const tall: (state: Player) => boolean = Player.$match({
+  Idle: () => false,
+  Loading: () => true,
+  Playing: () => true,
+  Buffering: () => true,
+  Paused: () => false,
+  Ended: () => false,
+  Stopped: () => false,
+  Failed: () => false,
+});
+
+/** The bar's height over the home indicator for the player's `state`. */
+export const heightOf = (state: Player): number => (tall(state) && SOUNDING) || REST;
+
+interface Drawing {
+  readonly track: Track;
+  readonly state: Player;
+  /** The page's hymn, when another hymn sounds over it. */
+  readonly page: Option.Option<Track>;
+  /** The hymn page shown, if one is. */
+  readonly shown: Option.Option<Track>;
+  readonly send: (command: Command) => void;
+  readonly inset: number;
 }
 
 /**
- * The bar's body: the hymn's number and title, a button that opens the full
- * player on the bar's hymn (`/player?hymn=<n>`), so the player shows what the
- * bar showed whether or not the page under it stays mounted.
+ * `bar` drawn: nothing, or the screen's room for the bar at rest, and over
+ * the screen the bar in its frame over the home indicator, with the key
+ * dials of the page shown (`page`), if one is.
  */
-function Opener({ track, state }: { readonly track: Track; readonly state: Player }) {
+function Drawn({
+  bar,
+  page,
+  player,
+}: {
+  readonly bar: Bar;
+  readonly page: Option.Option<Track>;
+  readonly player: HymnPlayer;
+}) {
+  const send = useAtomSet(player.send);
+  const inset = Math.max(useSafeAreaInsets().bottom, 0);
+  return Bar.$match(bar, {
+    Hidden: () => <></>,
+    Shown: ({ track, state, page: other }) => {
+      const drawing = { track, state, page: other, shown: page, send, inset };
+      return (
+        <>
+          <View testID="bar-room" aria-hidden style={{ height: REST + inset }} />
+          <View testID="bar-overlay" pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+            {Option.match(page, {
+              onNone: () => <Overlay drawing={drawing} thumb={Option.none()} />,
+              onSome: (shown) => <Keyed key={shown.number} hymn={shown} drawing={drawing} />,
+            })}
+          </View>
+        </>
+      );
+    },
+  });
+}
+
+/** The overlay with the key button and dials of `hymn`, the page shown. */
+function Keyed({ hymn, drawing }: { readonly hymn: Track; readonly drawing: Drawing }) {
+  return <Overlay drawing={drawing} thumb={Option.some(useThumb(hymn.number))} />;
+}
+
+function Overlay({
+  drawing,
+  thumb,
+}: {
+  readonly drawing: Drawing;
+  readonly thumb: Option.Option<BoundThumb>;
+}) {
+  const open = Option.filter(thumb, (bound) => bound.state.open);
+  return (
+    <>
+      {Option.match(open, {
+        onNone: () => <></>,
+        onSome: (bound) => (
+          <Pressable
+            testID="dials-backdrop"
+            accessible={false}
+            aria-hidden
+            style={StyleSheet.absoluteFill}
+            onPress={() => bound.send(ThumbEvent.TapPage())}
+          />
+        ),
+      })}
+      <View pointerEvents="box-none" style={styles.dock}>
+        {Option.match(
+          Option.flatMap(open, (bound) =>
+            Option.map(bound.printed, (printed) => ({ bound, printed })),
+          ),
+          {
+            onNone: () => <></>,
+            onSome: ({ bound, printed }) => (
+              <View pointerEvents="box-none" style={styles.dials}>
+                <Dials thumb={bound} printed={printed} />
+              </View>
+            ),
+          },
+        )}
+        <Frame drawing={drawing} thumb={thumb} />
+      </View>
+    </>
+  );
+}
+
+/** The bar in its frame: its row of buttons, the seeker under them while it stands tall. */
+function Frame({
+  drawing,
+  thumb,
+}: {
+  readonly drawing: Drawing;
+  readonly thumb: Option.Option<BoundThumb>;
+}) {
+  const { track, state, page, shown, send, inset } = drawing;
+  const cue = useCue();
+  const target = heightOf(state);
+  const height = useSharedValue(target);
+  useEffect(() => {
+    // A spring that overshoots a little and settles, as the owner's prototype does.
+    height.value = withSpring(target, { damping: 13, stiffness: 190, mass: 0.9 });
+  }, [target]);
+  const springing = useAnimatedStyle(() => ({ height: height.value }));
+  const router = useRouter();
+  const sheet: Href = `/player?hymn=${track.number}`;
+  const swipe = usePanGesture({
+    testID: 'bar-swipe',
+    runOnJS: true,
+    activeOffsetY: [-12, 12],
+    failOffsetX: [-24, 24],
+    onDeactivate: ({ translationY = 0, velocityY = 0 }) => {
+      if (translationY > -24 && velocityY > -400) return;
+      cue('sheet-open');
+      router.push(sheet);
+    },
+  });
+  const { at, length } = Option.getOrElse(placeOf(state), () => ({
+    at: 0,
+    length: Option.none<number>(),
+  }));
+  return (
+    <View role="region" aria-label="Player" style={[styles.frame, { paddingBottom: inset }]}>
+      <Animated.View testID="bar-spring" style={[styles.spring, springing]}>
+        <GestureHandlerRootView style={styles.root}>
+          <GestureDetector gesture={swipe}>
+            <View style={styles.bar}>
+              {Option.match(thumb, {
+                onNone: () => <></>,
+                onSome: (bound) => <KeyButton thumb={bound} />,
+              })}
+              <Opener
+                track={track}
+                state={state}
+                named={!Option.exists(shown, (hymn) => hymn.number === track.number)}
+              />
+              {Option.match(page, {
+                onNone: () => <></>,
+                onSome: (other) => <PlayPage track={other} send={send} />,
+              })}
+              <Sound />
+              <Buttons track={track} state={state} send={send} />
+            </View>
+          </GestureDetector>
+        </GestureHandlerRootView>
+        {tall(state) && (
+          <Seeker at={at} length={length} onSeek={(seconds) => send(Command.Seek({ seconds }))} />
+        )}
+      </Animated.View>
+    </View>
+  );
+}
+
+/**
+ * The bar's body: a button that opens the player sheet on the bar's hymn
+ * (`/player?hymn=<n>`), so the sheet shows what the bar showed whether or
+ * not the page under it stays mounted. It names the hymn (`named`) unless
+ * the bar's hymn is the page's own, which the page already names; then it
+ * shows a grabber, as the sheet it opens has.
+ */
+function Opener({
+  track,
+  state,
+  named,
+}: {
+  readonly track: Track;
+  readonly state: Player;
+  readonly named: boolean;
+}) {
   const accent = useAccent();
   const link = useLinkTo({
     href: Link.resolveHref({ pathname: '/player', params: { hymn: String(track.number) } }),
@@ -101,12 +290,19 @@ function Opener({ track, state }: { readonly track: Track; readonly state: Playe
       aria-valuetext={Option.getOrUndefined(toldPlace(state))}
       style={styles.open}
     >
-      <Text style={[styles.number, { color: accent }]} numberOfLines={1}>
-        {track.number}
-      </Text>
-      <Text style={styles.title} numberOfLines={1}>
-        {track.title}
-      </Text>
+      {Match.value(named).pipe(
+        Match.when(true, () => (
+          <>
+            <Text style={[styles.number, { color: accent }]} numberOfLines={1}>
+              {track.number}
+            </Text>
+            <Text style={styles.title} numberOfLines={1}>
+              {track.title}
+            </Text>
+          </>
+        )),
+        Match.orElse(() => <View testID="bar-grabber" style={styles.grabber} />),
+      )}
     </Pressable>
   );
 }
@@ -170,6 +366,7 @@ function Buttons({
   readonly send: (command: Command) => void;
 }) {
   const accent = useAccent();
+  const cue = useCue();
   return buttonsOf(state, track).map((button) =>
     Option.match(button.command, {
       onNone: () => (
@@ -182,7 +379,10 @@ function Buttons({
           key={button.kind}
           role="button"
           aria-label={button.label}
-          onPress={() => send(command)}
+          onPress={() => {
+            cue((button.kind === 'pause' && 'pause') || 'play');
+            send(command);
+          }}
           style={pressedSoft}
         >
           {Match.value(button.kind).pipe(
@@ -201,31 +401,32 @@ const pressedSoft = ({ pressed }: { readonly pressed: boolean }) => [
   pressed && styles.pressed,
 ];
 
-/** The part played, along the bar's top edge, over a hairline of the rest; it takes no touch. */
-function SeekLine({ state }: { readonly state: Player }) {
-  const accent = useAccent();
-  return (
-    <View aria-hidden pointerEvents="none" testID="seek-line" style={styles.line}>
-      <View
-        testID="seek-played"
-        style={[styles.played, { width: `${playedShare(state) * 100}%`, backgroundColor: accent }]}
-      />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  frame: { backgroundColor: color.ground },
-  line: { height: 2, backgroundColor: color.line },
-  played: { height: 2 },
+  dock: { position: 'absolute', left: 0, right: 0, bottom: 0 },
+  dials: { paddingHorizontal: 12, paddingBottom: 10 },
+  frame: {
+    backgroundColor: color.ground,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: color.line,
+  },
+  spring: { overflow: 'hidden' },
+  root: { flex: 0 },
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 16,
-    minHeight: 52,
+    paddingHorizontal: 12,
+    height: REST,
   },
-  open: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 },
+  open: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    minHeight: 44,
+  },
+  grabber: { width: 36, height: 5, borderRadius: 2.5, backgroundColor: color.line },
   number: { fontSize: 15, fontWeight: '600', fontVariant: ['tabular-nums'] },
   title: { flex: 1, fontSize: 15, color: color.ink },
   compact: { minHeight: 44, minWidth: 44, justifyContent: 'center', paddingHorizontal: 4 },

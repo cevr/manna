@@ -1,10 +1,9 @@
 /**
  * A hymn's words in the order it is sung: its topic as a quiet line, its
  * number and title in one row (the number first, the `Favourite` button
- * last), the key controls while
- * chords are on, then each stanza under its number and the refrain, marked,
+ * last), a notice while chords are on and the hymn has none, then each stanza under its number and the refrain, marked,
  * each time it is sung. The theme's ink on its ground, set as the reader
- * chose in the "Aa" sheet (`reading.ts`) and scaled by the system's text
+ * chose in the player sheet (`reading.ts`) and scaled by the system's text
  * size. A printed line that wraps hangs under its first word. While the page
  * is shown, the screen stays on if the reader asked for it (`KeepAwake`).
  *
@@ -26,7 +25,7 @@
  */
 
 import type * as Chord from '@bible/hymnal/chord';
-import { useAtom, useAtomValue } from '@effect/atom-react';
+import { useAtomValue } from '@effect/atom-react';
 import { Option } from 'effect';
 import type * as Atom from 'effect/reactivity/Atom';
 import { memo, type ReactNode, useCallback, useMemo, useState } from 'react';
@@ -59,7 +58,7 @@ import { color, useAccent } from '~/color';
 import { FollowProvider, useFollow } from '~/follow/follow';
 import { ResumeFollow } from '~/follow/ResumeFollow';
 
-import { ChordControls, ChordLines, PlayedKeyProvider } from './Chords';
+import { ChordLines, ChordNotice, PlayedKeyProvider } from './Chords';
 import { ChordSheet, ChordTapProvider } from './ChordSheet';
 import { FavouriteButton } from './FavouriteButton';
 import { HangingLine } from './HangingLine';
@@ -93,7 +92,7 @@ export function HymnPage({
   const accent = useAccent();
   const on = useAtomValue(reader.chords);
   const style = useAtomValue(reader.style);
-  const [move, setMove] = useAtom(reader.move(hymn.number));
+  const move = useAtomValue(reader.move(hymn.number));
   // The hymn's syllables are drawn with chords on or off, so its string is decoded once it is shown.
   const book = useMemo(() => reader.book.of(hymn.number), [reader.book, hymn.number]);
   const chords = useMemo(
@@ -146,7 +145,7 @@ export function HymnPage({
             <FavouriteButton number={hymn.number} favourites={reader.favourites} />
           </View>
         </View>
-        <ChordControls on={on} printed={printed} move={move} onMove={setMove} />
+        <ChordNotice on={on} printed={printed} />
         <PageText reading={reader.reading}>
           <PlayedKeyProvider value={played}>
             <FollowProvider value={follow.follow}>

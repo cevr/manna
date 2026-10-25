@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'bun:test';
-import { Option, Predicate } from 'effect';
+import { Option } from 'effect';
 
 import { color } from '~/color';
 import { hymnAt } from '~/hymns/hymns';
@@ -29,12 +29,12 @@ describe('the hymn route’s header', () => {
       expect(Bun.file(`${import.meta.dir}/../../app/(hymnal)/${name}.tsx`).size).toBeGreaterThan(0);
   });
 
-  it('names the route’s hymn, on the ground, with the page’s buttons', () => {
+  it('names the route’s hymn, on the ground, with no buttons: the reader’s controls are at the thumb', () => {
     for (const n of ['1', '3', '600', '601', '695']) {
       const options = optionsAt({ number: n });
       expect(options.title).toBe(titleOf(n));
       expect(options.headerStyle).toEqual({ backgroundColor: color.ground });
-      expect(Predicate.isFunction(options.headerRight)).toBe(true);
+      expect('headerRight' in options).toBe(false);
     }
   });
 

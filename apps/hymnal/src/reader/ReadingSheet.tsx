@@ -1,51 +1,39 @@
 /**
- * The reading sheet, opened by the hymn page's `Aa` button: the words' size
- * in steps, their font, the space between lines, and whether the screen
- * stays on while a hymn is shown. Each choice is kept under its `reading.*`
- * key and the page behind the sheet follows it at once.
+ * The reader's settings, in the player sheet: the words' size on a dial of
+ * steps, their font, the space between lines, and whether the screen stays
+ * on while a hymn is shown. Each choice is kept under its `reading.*` key
+ * and the page behind the sheet follows it at once.
  */
 
 import { useAtom } from '@effect/atom-react';
 import type * as Atom from 'effect/reactivity/Atom';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  type TextStyle,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, type TextStyle, View } from 'react-native';
 
 import type { ReadingSettings } from '~/settings';
 import { color, useAccent } from '~/color';
+import { DialView } from '~/player/DialView';
 
 import { pageTextOf } from './pageText';
 import {
   DEFAULT_SIZE,
   defaultReading,
   type Font,
-  larger,
   pointsAt,
   readingStyle,
   SIZES,
-  smaller,
   type Spacing,
 } from './reading';
 
-export function ReadingSheet({ reading }: { readonly reading: ReadingSettings }) {
+export function ReadingControls({ reading }: { readonly reading: ReadingSettings }) {
   return (
-    <ScrollView contentContainerStyle={styles.page}>
-      <Text role="heading" aria-level={1} style={styles.title}>
-        Reading
-      </Text>
+    <View role="group" aria-label="Reading" style={styles.page}>
       <TextSize size={reading.size} />
       <Heading>Font</Heading>
       <Choices label="Font" value={reading.font} choices={fonts} />
       <Heading>Line spacing</Heading>
       <Choices label="Line spacing" value={reading.spacing} choices={spacings} />
       <Awake awake={reading.awake} />
-    </ScrollView>
+    </View>
   );
 }
 
@@ -69,54 +57,36 @@ const spacings: ReadonlyArray<Choice<Spacing>> = [
 const shareOf = (size: number) =>
   `${Math.round((pointsAt(size) / (SIZES[DEFAULT_SIZE] ?? 17)) * 100)}%`;
 
+/**
+ * The words' size, a stopping dial over the steps, each drawn as an "A" of
+ * its size (held to the dial's height), the share read out.
+ */
 function TextSize({ size }: { readonly size: Atom.Writable<number> }) {
   const [step, setStep] = useAtom(size);
   return (
-    <View style={[styles.group, styles.sizes]}>
-      <Step
-        label="Smaller text"
-        glyphStyle={styles.smallGlyph}
-        disabled={step === smaller(step)}
-        onPress={() => setStep(smaller(step))}
-      />
-      <Text style={styles.share} aria-label={`Text size ${shareOf(step)}`}>
-        {shareOf(step)}
-      </Text>
-      <Step
-        label="Larger text"
-        glyphStyle={styles.largeGlyph}
-        disabled={step === larger(step)}
-        onPress={() => setStep(larger(step))}
-      />
-    </View>
+    <DialView<number>
+      testID="dial-size"
+      label="Text size"
+      title="SIZE"
+      stops={SIZES}
+      index={step}
+      wrap={false}
+      said={shareOf(step)}
+      drawStop={(points, current) => <SizeMark points={points} current={current} />}
+      onTurn={(to) => setStep(Math.min(Math.max(to, 0), SIZES.length - 1))}
+    />
   );
 }
 
-function Step({
-  label,
-  glyphStyle,
-  disabled,
-  onPress,
-}: {
-  readonly label: string;
-  readonly glyphStyle: TextStyle;
-  readonly disabled: boolean;
-  readonly onPress: () => void;
-}) {
+function SizeMark({ points, current }: { readonly points: number; readonly current: boolean }) {
   const accent = useAccent();
   return (
-    <Pressable
-      role="button"
-      aria-label={label}
-      aria-disabled={disabled}
-      disabled={disabled}
-      onPress={onPress}
-      style={({ pressed }) => [styles.step, pressed && styles.pressed, disabled && styles.off]}
+    <Text
+      aria-hidden
+      style={[styles.size, { fontSize: Math.min(points, 26) }, current && { color: accent }]}
     >
-      <Text aria-hidden style={[glyphStyle, { color: accent }]}>
-        A
-      </Text>
-    </Pressable>
+      A
+    </Text>
   );
 }
 
@@ -183,8 +153,7 @@ function Awake({ awake }: { readonly awake: Atom.Writable<boolean> }) {
 }
 
 const styles = StyleSheet.create({
-  page: { padding: 16, paddingTop: 24, gap: 8 },
-  title: { marginBottom: 8, fontSize: 28, fontWeight: '700', color: color.ink },
+  page: { gap: 8 },
   heading: {
     marginTop: 8,
     marginLeft: 16,
@@ -198,12 +167,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: color.line,
   },
-  sizes: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  step: { minWidth: 64, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
-  smallGlyph: { fontSize: 15, fontWeight: '600' },
-  largeGlyph: { fontSize: 24, fontWeight: '600' },
-  share: { fontSize: 15, color: color.muted, fontVariant: ['tabular-nums'] },
-  off: { opacity: 0.35 },
+  size: { fontWeight: '600', color: color.ink },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -17,7 +17,9 @@ import { hymnAt, hymns } from '~/hymns/hymns';
 import type { ChordStyle } from '~/hymns/simple';
 
 import { readerOn } from '../test/reader';
-import { ChordsButton } from './HeaderButtons';
+import { perform } from '../test/props';
+import { ChordReaderContext, Dials, useThumb } from '~/player/Dials';
+import { KeyButton } from '~/player/KeyButton';
 import { HymnList } from './HymnList';
 import { HymnPage } from './HymnPage';
 import { hymnsOffset } from './place';
@@ -270,78 +272,93 @@ const lineLevelHymn = () =>
     ),
   );
 
-/** The header's `Chords` button over `n`'s page, both over `reader`. */
-const withButton = (n: number, reader: ReturnType<typeof readerOn>) => (
-  <>
-    <ChordsButton chords={reader.chords} />
+/** The bar's key button and, while open, its dials, for `n`'s page, as the bar draws them. */
+function KeyAt({ n }: { readonly n: number }) {
+  const thumb = useThumb(n);
+  return (
+    <>
+      <KeyButton thumb={thumb} />
+      {Option.match(
+        Option.filter(thumb.printed, () => thumb.state.open),
+        {
+          onNone: () => <></>,
+          onSome: (printed) => <Dials thumb={thumb} printed={printed} />,
+        },
+      )}
+    </>
+  );
+}
+
+/** The bar's key button over `n`'s page, both over `reader`. */
+const withKey = (n: number, reader: ReturnType<typeof readerOn>) => (
+  <ChordReaderContext value={reader}>
+    <KeyAt n={n} />
     <HymnPage hymn={hymn(n)} reader={reader} />
-  </>
+  </ChordReaderContext>
 );
 
-/** The `Chords` button: a button, whether it is selected, and whether it draws the guitar's head. */
-const chordsButton = (host: HTMLElement) =>
-  Option.map(Option.fromNullishOr(host.querySelector('[aria-label="Chords"]')), (button) => ({
-    role: button.getAttribute('role'),
-    selected: button.getAttribute('aria-selected'),
-    head: Option.isSome(Option.fromNullishOr(button.querySelector('[data-testid="guitar-head"]'))),
-  }));
+const found = (host: HTMLElement, selector: string) =>
+  Option.getOrThrow(Option.fromNullishOr(host.querySelector(selector)));
+
+/** The key button: its value, and whether it draws the guitar's head. */
+const keyButton = (host: HTMLElement) =>
+  Option.map(
+    Option.fromNullishOr(host.querySelector('[role="button"][aria-label="Key"]')),
+    (button) => ({
+      value: button.getAttribute('aria-valuetext'),
+      head: Option.isSome(
+        Option.fromNullishOr(button.querySelector('[data-testid="guitar-head"]')),
+      ),
+    }),
+  );
+
+/** A hold of the key button, as VoiceOver's action makes it. */
+const hold = (host: HTMLElement) => perform(found(host, '[aria-label="Key"]'), 'chords');
+
+/** The dial named `label`, once open. */
+const dial = (host: HTMLElement, label: string) =>
+  found(host, `[role="slider"][aria-label="${label}"]`);
+
+/** The dial named `label` turned one detent, up or down, as VoiceOver turns it. */
+const turn = (host: HTMLElement, label: string, way: 'increment' | 'decrement' = 'increment') =>
+  perform(dial(host, label), way);
+
+const valueOf = (host: HTMLElement, label: string) =>
+  dial(host, label).getAttribute('aria-valuetext');
 
 const chordRows = (host: HTMLElement) => host.querySelectorAll('[data-testid^="chord-"]').length;
 
-describe('the header’s Chords button', () => {
-  it('turns chords on for every hymn: hymn 3 and hymn 5 both show their chord rows', () => {
+describe('the bar’s key button', () => {
+  it('turns chords on for every hymn by a hold: hymn 3 and hymn 5 both show their chord rows', () => {
     const device = new Map<string, string>();
     {
-      using app = mount(withButton(3, readerOn(device)));
-      expect(chordsButton(app.host)).toEqual(
-        Option.some({ role: 'button', selected: 'false', head: true }),
-      );
+      using app = mount(withKey(3, readerOn(device)));
+      expect(keyButton(app.host)).toEqual(Option.some({ value: 'Chords off', head: true }));
       expect(chordRows(app.host)).toBe(0);
-      press(app.host, 'Chords');
-      expect(chordsButton(app.host)).toEqual(
-        Option.some({ role: 'button', selected: 'true', head: true }),
-      );
+      hold(app.host);
+      expect(keyButton(app.host)).toEqual(Option.some({ value: 'G', head: true }));
       expect(chordRows(app.host)).toBeGreaterThan(0);
     }
-    using app = mount(withButton(5, readerOn(device)));
-    expect(chordsButton(app.host)).toEqual(
-      Option.some({ role: 'button', selected: 'true', head: true }),
-    );
+    using app = mount(withKey(5, readerOn(device)));
     expect(chordRows(app.host)).toBeGreaterThan(0);
   });
 
-  it('puts the key controls at the page’s top while chords are on, with no tap, and takes them away when off', () => {
-    using app = mount(withButton(3, readerOn()));
-    const text = () => textOf(app.host.innerHTML);
-    expect(text()).not.toContain('Transpose');
-    press(app.host, 'Chords');
-    for (const label of ['Transpose down', 'Transpose up', 'Capo down', 'Capo up']) {
-      const shown = Option.isSome(
-        Option.fromNullishOr(app.host.querySelector(`[aria-label="${label}"]`)),
-      );
-      expect({ label, shown }).toEqual({ label, shown: true });
-    }
-    // The controls come before the first section's words.
-    const controls = Option.getOrThrow(
-      Option.fromNullishOr(app.host.querySelector('[aria-label="Transpose up"]')),
-    );
-    const first = Option.getOrThrow(Option.fromNullishOr(app.host.querySelector('[role="group"]')));
-    expect(controls.compareDocumentPosition(first) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-
-    press(app.host, 'Chords');
-    expect(chordsButton(app.host)).toEqual(
-      Option.some({ role: 'button', selected: 'false', head: true }),
-    );
-    expect(text()).not.toContain('Transpose');
-    expect(text()).not.toContain('Capo');
+  it('opens the capo and key dials on a tap, and the key dial alone with chords off', () => {
+    using app = mount(withKey(3, readerOn(chordsOn())));
+    expect(textOf(app.host.innerHTML)).not.toContain('CAPO');
+    press(app.host, 'Key');
+    expect(valueOf(app.host, 'Key')).toBe('G');
+    expect(valueOf(app.host, 'Capo')).toBe('No capo');
+    hold(app.host);
+    expect(keyButton(app.host)).toEqual(Option.some({ value: 'Chords off', head: true }));
+    expect(app.host.querySelector('[role="slider"][aria-label="Capo"]')).toBeNull();
+    expect(valueOf(app.host, 'Key')).toBe('G');
     expect(chordRows(app.host)).toBe(0);
   });
 
-  it('opens selected, chords shown, over a store that kept chords on', () => {
-    using app = mount(withButton(3, readerOn(chordsOn())));
-    expect(chordsButton(app.host)).toEqual(
-      Option.some({ role: 'button', selected: 'true', head: true }),
-    );
+  it('opens with chords shown over a store that kept chords on', () => {
+    using app = mount(withKey(3, readerOn(chordsOn())));
+    expect(keyButton(app.host)).toEqual(Option.some({ value: 'G', head: true }));
     expect(chordRows(app.host)).toBeGreaterThan(0);
   });
 });
@@ -349,20 +366,21 @@ describe('the header’s Chords button', () => {
 describe('a hymn page with chords on', () => {
   it('puts the chords over their syllables in the printed key, and follows the transpose and capo', () => {
     const reader = readerOn(chordsOn());
-    using app = mount(<HymnPage hymn={hymn(100)} reader={reader} />);
+    using app = mount(withKey(100, reader));
     const { host } = app;
     expect(chordAt(host, 'chord-1-1-1')).toEqual(Option.some('Db'));
-    expect(textOf(host.innerHTML)).toContain('Key Db');
-    expect(textOf(host.innerHTML)).toContain('No capo');
+    press(host, 'Key');
+    expect(valueOf(host, 'Key')).toBe('Db');
+    expect(valueOf(host, 'Capo')).toBe('No capo');
 
-    press(host, 'Transpose up');
+    turn(host, 'Key');
     expect(chordAt(host, 'chord-1-1-1')).toEqual(Option.some('D'));
-    press(host, 'Capo up');
-    press(host, 'Capo up');
-    expect(textOf(host.innerHTML)).toContain('Capo 2, C shapes');
+    turn(host, 'Capo');
+    turn(host, 'Capo');
+    expect(valueOf(host, 'Capo')).toBe('Capo 2, C shapes');
     expect(chordAt(host, 'chord-1-1-1')).toEqual(Option.some('C'));
-    press(host, 'Transpose up');
-    expect(textOf(host.innerHTML)).toContain('Key Eb');
+    turn(host, 'Key');
+    expect(valueOf(host, 'Key')).toBe('Eb');
     expect(chordAt(host, 'chord-1-1-1')).toEqual(Option.some('Db'));
     expect(reader.book.decodes()).toBe(1);
   });
@@ -372,15 +390,11 @@ describe('a hymn page with chords on', () => {
       using app = mount(<HymnPage hymn={hymn(100)} reader={readerOn()} />);
       return sectionTexts(app.host);
     })();
-    using app = mount(withButton(100, readerOn(chordsOn())));
+    using app = mount(withKey(100, readerOn(chordsOn())));
     const { host } = app;
-    expect(chordsButton(host)).toEqual(
-      Option.some({ role: 'button', selected: 'true', head: true }),
-    );
-    press(host, 'Chords');
-    expect(chordsButton(host)).toEqual(
-      Option.some({ role: 'button', selected: 'false', head: true }),
-    );
+    expect(keyButton(host)).toEqual(Option.some({ value: 'Db', head: true }));
+    hold(host);
+    expect(keyButton(host)).toEqual(Option.some({ value: 'Chords off', head: true }));
     expect(host.querySelector('[data-testid^="chord-"]')).toBeNull();
     expect(textOf(host.innerHTML)).not.toContain('Transpose');
     expect(sectionTexts(host)).toEqual(words);
@@ -492,19 +506,20 @@ describe('the chord style', () => {
     using app = mount(
       <>
         <StylePicker style={reader.style} />
-        <HymnPage hymn={hymn(3)} reader={reader} />
+        {withKey(3, reader)}
       </>,
     );
     const { host } = app;
-    press(host, 'Transpose up');
-    expect(textOf(host.innerHTML)).toContain('Key Ab');
+    press(host, 'Key');
+    turn(host, 'Key');
+    expect(valueOf(host, 'Key')).toBe('Ab');
     expect(lineOne(host)).toEqual({
       first: Option.some('Ab'),
       fifth: Option.some('Eb'),
       sixth: Option.none(),
     });
     press(host, 'Pick Advanced');
-    expect(textOf(host.innerHTML)).toContain('Key Ab');
+    expect(valueOf(host, 'Key')).toBe('Ab');
     expect(lineOne(host)).toEqual({
       first: Option.some('Ab'),
       fifth: Option.some('Ebsus4 Ebsus2'),
@@ -520,21 +535,18 @@ describe('the chord style', () => {
   });
 
   for (const style of ['simple', 'advanced'] as const) {
-    it(`keeps the key controls in ${style}: transpose and capo move the chords shown`, () => {
+    it(`keeps the key dials in ${style}: the key and the capo move the chords shown`, () => {
       const device = new Map([['chords.style', `"${style}"`]]);
-      using app = mount(withButton(3, readerOn(device)));
+      using app = mount(withKey(3, readerOn(device)));
       const { host } = app;
-      press(host, 'Chords');
-      const controls = ['Transpose up', 'Transpose down', 'Capo up', 'Capo down'].map((label) => ({
-        label,
-        shown: hasControl(host, label),
-      }));
-      expect(controls.filter(({ shown }) => !shown)).toEqual([]);
-      expect(textOf(host.innerHTML)).toContain('Key G');
-      expect(textOf(host.innerHTML)).toContain('No capo');
-      press(host, 'Transpose up');
-      press(host, 'Capo up');
-      expect(textOf(host.innerHTML)).toContain('Capo 1, G shapes');
+      hold(host);
+      press(host, 'Key');
+      expect(['Key', 'Capo'].filter((label) => !hasControl(host, label))).toEqual([]);
+      expect(valueOf(host, 'Key')).toBe('G');
+      expect(valueOf(host, 'Capo')).toBe('No capo');
+      turn(host, 'Key');
+      turn(host, 'Capo');
+      expect(valueOf(host, 'Capo')).toBe('Capo 1, G shapes');
       const fifth = { simple: 'D', advanced: 'Dsus4 Dsus2' }[style];
       expect({
         style,

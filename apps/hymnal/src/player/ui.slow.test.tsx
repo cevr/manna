@@ -521,9 +521,8 @@ describe('the full player', () => {
         page.press('Play hymn 1');
         yield* page.until((player) => Player.$is('Loading')(player) && player.track.number === 1);
         expect(page.device.played).toEqual([audioUrl(100), audioUrl(1)]);
-        expect(Option.getOrThrow(page.find('[aria-label="Open player"]')).textContent).toBe(
-          `1${praise.title}`,
-        );
+        // The bar now plays the page's own hymn, which the page names: the bar does not.
+        expect(Option.getOrThrow(page.find('[aria-label="Open player"]')).textContent).toBe('');
       }),
   );
   it.live('draws Play and Pause in the text on the accent, on an accent fill, in each scheme', () =>
@@ -742,7 +741,11 @@ describe('the bottom bar', () => {
         page.device.now = { state: 'playing', positionMs: 5_000, durationMs: 151_000 };
         yield* page.until(Player.$is('Playing'));
         const bar = Option.getOrThrow(page.find('[aria-label="Player"]'));
-        expect(bar.textContent).toBe(`100${morning.title}`);
+        // Off a hymn page the bar names its hymn, and has no key button.
+        expect(bar.querySelector('[aria-label="Open player"]')?.textContent).toBe(
+          `100${morning.title}`,
+        );
+        expect(bar.querySelector('[aria-label="Key"]')).toBeNull();
         // Sound and Pause are marks with no text, read by their labels (F2b).
         expect(markOf(bar, 'Sound')).toEqual({
           text: '',
@@ -767,17 +770,17 @@ describe('the bottom bar', () => {
       page.send(Command.Start({ track: morning }));
       page.device.now = { state: 'playing', positionMs: 5_000, durationMs: 151_000 };
       yield* page.until(Player.$is('Playing'));
-      expect(Option.getOrThrow(page.find('[aria-label="Player"]')).textContent).toBe(
-        `100${morning.title}Play 1`,
-      );
+      const opener = () =>
+        page.find('[aria-label="Open player"]').pipe(Option.map((e) => e.textContent));
+      expect(opener()).toEqual(Option.some(`100${morning.title}`));
+      expect(Option.isSome(page.find('[aria-label="Play hymn 1"]'))).toBe(true);
 
       page.press('Pause hymn 100');
       yield* page.until(Player.$is('Paused'));
       expect(page.device.now.state).toBe('paused');
-      // A paused hymn is not sounding: the bar acts on the page's hymn again.
-      expect(Option.getOrThrow(page.find('[aria-label="Player"]')).textContent).toBe(
-        `1${praise.title}`,
-      );
+      // A paused hymn is not sounding: the bar acts on the page's hymn again, which the page names.
+      expect(opener()).toEqual(Option.some(''));
+      expect(Option.isSome(page.find('[aria-label="Play hymn 1"]'))).toBe(true);
     }),
   );
 });
@@ -818,7 +821,6 @@ describe('a list’s end over the bottom bar', () => {
 
 describe('the hymn page with the bottom bar', () => {
   const three = Option.getOrThrow(hymnAt('3'));
-  const four = Option.getOrThrow(hymnAt('4'));
   const inPage = (page: ReturnType<typeof mount>, selector: string) =>
     page.find(`[data-testid="page"] ${selector}`);
 
@@ -834,7 +836,13 @@ describe('the hymn page with the bottom bar', () => {
       ).toBe(true);
       const bar = Option.getOrThrow(page.find('[aria-label="Player"]'));
       expect(bar.querySelector('[aria-label="Play hymn 3"]')).not.toBeNull();
-      expect(bar.textContent).toBe(`3${three.title}`);
+      // Bar J: the key button, the opener, Sound and Play; the page names its own hymn, so the bar does not.
+      expect(
+        [...bar.querySelectorAll('[role="button"]')].map((button) =>
+          button.getAttribute('aria-label'),
+        ),
+      ).toEqual(['Key', 'Open player', 'Sound', 'Play hymn 3']);
+      expect(bar.querySelector('[aria-label="Open player"]')?.textContent).toBe('');
       expect(markOf(bar, 'Play hymn 3')).toEqual({
         text: '',
         mark: 'play',
@@ -867,36 +875,32 @@ describe('the hymn page with the bottom bar', () => {
   );
 
   it.live(
-    'fills the seek line to the share played; the line takes no touch, the bar says the place',
+    'fills the seeker to the share played while the hymn plays, and the bar says the place',
     () =>
       Effect.gen(function* () {
         using page = mount(route(3));
         page.press('Play hymn 3');
         page.device.now = { state: 'playing', positionMs: 30_000, durationMs: 120_000 };
         yield* page.until((player) => Player.$is('Playing')(player) && player.at === 30);
-        const line = Option.getOrThrow(page.find('[data-testid="seek-line"]'));
+        const seek = Option.getOrThrow(page.find('[role="slider"][aria-label="Seek"]'));
         const played = Option.getOrThrow(page.find('[data-testid="seek-played"]'));
         expect(getComputedStyle(played).width).toBe('25%');
-        expect(getComputedStyle(line).pointerEvents).toBe('none');
+        expect(seek.getAttribute('aria-valuetext')).toBe('0:30 of 2:00');
         expect(
           Option.getOrThrow(page.find('[aria-label="Open player"]')).getAttribute('aria-valuetext'),
         ).toBe('0:30 of 2:00');
       }),
   );
 
-  it.live('holds Chords in the header, as a button, and not in the page’s body', () =>
+  it.live('holds no button in the header: the key button is the bar’s, at the thumb', () =>
     Effect.sync(() => {
       using page = mount(route(3));
       const header = Option.getOrThrow(page.find('[data-testid="header"]'));
-      const chords = [
-        ...page
-          .find('[data-testid="page"]')
-          .pipe(Option.getOrThrow)
-          .querySelectorAll('[aria-label="Chords"]'),
-      ];
-      expect(chords).toHaveLength(1);
-      expect(chords.every((button) => header.contains(button))).toBe(true);
-      expect(chords.map((button) => button.getAttribute('role'))).toEqual(['button']);
+      expect(header.querySelectorAll('[role="button"]')).toHaveLength(0);
+      expect(Option.isNone(page.find('[aria-label="Aa"]'))).toBe(true);
+      expect(Option.isNone(page.find('[aria-label="Chords"]'))).toBe(true);
+      const key = Option.getOrThrow(page.find('[aria-label="Player"] [aria-label="Key"]'));
+      expect(key.getAttribute('role')).toBe('button');
       expect(Option.isNone(page.find('[role="switch"]'))).toBe(true);
     }),
   );
@@ -922,7 +926,9 @@ describe('the hymn page with the bottom bar', () => {
       page.press('Play hymn 4');
       yield* page.until((player) => Player.$is('Loading')(player) && player.track.number === 4);
       expect(page.device.played).toEqual([audioUrl(3), audioUrl(4)]);
-      expect(bar.querySelector('[aria-label="Open player"]')?.textContent).toBe(`4${four.title}`);
+      // The bar now plays the page's own hymn, which the page names.
+      expect(bar.querySelector('[aria-label="Open player"]')?.textContent).toBe('');
+      expect(bar.querySelector('[aria-label="Key"]')).not.toBeNull();
     }),
   );
 });

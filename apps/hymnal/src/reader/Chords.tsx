@@ -1,8 +1,8 @@
 /**
- * The chords on a hymn page: the key controls at the page's top while chords
- * are on (a transpose and a capo, kept for the hymn; chords are turned on and
- * off by the header's `ChordsButton`), and each section drawn under its
- * chords.
+ * The chords on a hymn page: each section drawn under its chords, in the key
+ * the hymn's move reaches (a transpose and a capo, kept for the hymn, which
+ * the bar's key button and dials set; `~/player/KeyButton.tsx`), and a
+ * notice while chords are on for a hymn that has none yet.
  *
  * A syllable-level line is its syllables (`SyllableWords.tsx`), each a box
  * with its chords over it, in the body's own font, so a chord sits over the
@@ -10,8 +10,8 @@
  * line's chords in one row above the line's syllables.
  *
  * The chords are spelled in the key the move reaches, read from a context by
- * each chord's text alone: a tap on a key control redraws the chord texts,
- * never the sections.
+ * each chord's text alone: a turn of a dial redraws the chord texts, never
+ * the sections.
  */
 
 import * as Chord from '@bible/hymnal/chord';
@@ -21,17 +21,7 @@ import { Pressable, type StyleProp, StyleSheet, Text, type TextStyle, View } fro
 
 import { color, useAccent } from '~/color';
 import type { Section } from '~/hymns/hymns';
-import {
-  type Box,
-  keyName,
-  type Move,
-  type SectionChords,
-  type Word,
-  capoed,
-  playedKey,
-  soundingKey,
-  transposed,
-} from '~/hymns/chords';
+import type { Box, SectionChords, Word } from '~/hymns/chords';
 
 import { SyllableLine } from './SyllableWords';
 import { useChordTap } from './ChordSheet';
@@ -42,131 +32,20 @@ const PlayedKey = createContext<Chord.Key>({ tonic: 'C', minor: false });
 
 export const PlayedKeyProvider = PlayedKey.Provider;
 
-/**
- * While chords are on: the key controls when the hymn has chords, else a
- * notice that it has none yet. Nothing while chords are off.
- */
-export function ChordControls({
+/** While chords are on and the hymn has none yet, a notice that says so. */
+export function ChordNotice({
   on,
   printed,
-  move,
-  onMove,
 }: {
   readonly on: boolean;
   /** The hymn's printed key; none while chords are off or the hymn has none. */
   readonly printed: Chord.Key | 'none';
-  readonly move: Move;
-  readonly onMove: (move: Move) => void;
 }) {
-  if (!on) return <></>;
-  if (printed === 'none') {
-    return (
-      <Text style={styles.notice} dynamicTypeRamp="footnote">
-        No chords for this hymn yet.
-      </Text>
-    );
-  }
-  return <KeyControls printed={printed} move={move} onMove={onMove} />;
-}
-
-/** Transpose, then capo: each a step down, its reading, a step up. */
-function KeyControls({
-  printed,
-  move,
-  onMove,
-}: {
-  readonly printed: Chord.Key;
-  readonly move: Move;
-  readonly onMove: (move: Move) => void;
-}) {
-  const capo = capoReading(printed, move);
+  if (!on || printed !== 'none') return <></>;
   return (
-    <View style={styles.keys}>
-      <Stepper
-        down="Transpose down"
-        up="Transpose up"
-        reading={`Key ${keyName(soundingKey(printed, move))}`}
-        onDown={() => onMove(transposed(move, -1))}
-        onUp={() => onMove(transposed(move, 1))}
-        atBottom={false}
-        atTop={false}
-      />
-      <Stepper
-        down="Capo down"
-        up="Capo up"
-        reading={capo}
-        onDown={() => onMove(capoed(move, -1))}
-        onUp={() => onMove(capoed(move, 1))}
-        atBottom={move.capo === 0}
-        atTop={move.capo === 11}
-      />
-    </View>
-  );
-}
-
-const capoReading = (printed: Chord.Key, move: Move): string => {
-  if (move.capo === 0) return 'No capo';
-  return `Capo ${move.capo}, ${keyName(playedKey(printed, move))} shapes`;
-};
-
-function Stepper({
-  down,
-  up,
-  reading,
-  onDown,
-  onUp,
-  atBottom,
-  atTop,
-}: {
-  readonly down: string;
-  readonly up: string;
-  readonly reading: string;
-  readonly onDown: () => void;
-  readonly onUp: () => void;
-  readonly atBottom: boolean;
-  readonly atTop: boolean;
-}) {
-  return (
-    <View style={styles.stepper}>
-      <Step label={down} glyph="−" onPress={onDown} disabled={atBottom} />
-      <Text style={styles.reading} dynamicTypeRamp="subheadline">
-        {reading}
-      </Text>
-      <Step label={up} glyph="+" onPress={onUp} disabled={atTop} />
-    </View>
-  );
-}
-
-function Step({
-  label,
-  glyph,
-  onPress,
-  disabled,
-}: {
-  readonly label: string;
-  readonly glyph: string;
-  readonly onPress: () => void;
-  readonly disabled: boolean;
-}) {
-  const accent = useAccent();
-  return (
-    <Pressable
-      role="button"
-      aria-label={label}
-      aria-disabled={disabled}
-      disabled={disabled}
-      onPress={onPress}
-      hitSlop={6}
-      style={({ pressed }) => [
-        styles.step,
-        pressed && styles.stepPressed,
-        disabled && styles.stepDisabled,
-      ]}
-    >
-      <Text style={[styles.glyph, { color: accent }]} dynamicTypeRamp="body" aria-hidden>
-        {glyph}
-      </Text>
-    </Pressable>
+    <Text style={styles.notice} dynamicTypeRamp="footnote">
+      No chords for this hymn yet.
+    </Text>
   );
 }
 
@@ -332,21 +211,6 @@ export const chordSlop = (lineHeight: number) => {
 
 const styles = StyleSheet.create({
   notice: { fontSize: 13, color: color.muted },
-  keys: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 20, rowGap: 8 },
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  step: {
-    minWidth: 36,
-    minHeight: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.line,
-  },
-  stepPressed: { backgroundColor: color.soft },
-  stepDisabled: { opacity: 0.35 },
-  glyph: { fontSize: 20, lineHeight: 22, fontWeight: '600' },
-  reading: { fontSize: 15, color: color.ink, fontVariant: ['tabular-nums'] },
   chord: { fontSize: 15, lineHeight: 20, fontWeight: '600', paddingRight: 6 },
   lineLevel: { marginBottom: 8 },
   row: { flexDirection: 'row' },

@@ -5,9 +5,10 @@ under it (the number first), and its words in the order they are sung: each stan
 written out each time it is sung. The words scroll; the header keeps the
 title and a back button to where the reader came from. On a phone a swipe
 turns to the next or the previous hymn of the list the reader opened it
-from, and a pan from the screen's left edge goes back. The header's `Aa`
-button opens the reading sheet: text size, font, line spacing and keep
-screen on, each kept across launches. A printed line that wraps hangs: its
+from, and a pan from the screen's left edge goes back. The header holds no
+button: the reader's settings are in the player sheet the bottom bar opens
+(`Open player`, or a swipe up on the bar): the text size dial, font, line
+spacing and keep screen on, each kept across launches. A printed line that wraps hangs: its
 later rows sit one indent right of its first.
 
 ## Sub-features
@@ -18,7 +19,7 @@ later rows sit one indent right of its first.
 - `reader-scroll`: the words scroll to the last stanza and back, inside a page as tall as the pager on every page, the open one and its neighbours.
 - `reader-back`: the header's back button returns to the list or the search it came from, in one press however many pages were swiped, and the list is at its place.
 - `reader-pager`: on a phone, a swipe left or right turns to the next or previous hymn of the list the hymn was opened from (the home list in number order, its Recent rows too; a search's results; the Recent screen's whole list; every hymn in number order for a link); the header and the page head name the hymn shown. A pan from the left edge goes back on any hymn, after a list press and after a swipe; a pan from mid-screen turns the page.
-- `reader-text`: `Aa` opens the reading sheet; `Larger text` and `Smaller text` step the size (each disabled at its end), `Font` and `Line spacing` are radio groups, and the page behind follows at once, chords included.
+- `reader-text`: the player sheet (`Open player`) holds the group `Reading`: the `Text size` dial (adjustable, its value the share, `100%`; it stops at each end), `Font` and `Line spacing` radio groups and `Keep screen on`; the page behind follows at once, chords included. The header holds no `Aa` and no `Chords` button.
 - `reader-indent`: a wrapped line's later rows start at least one indent (1.25 times the words' size) right of its first.
 - `reader-awake`: with `Keep screen on` on, the screen stays on while a hymn page is shown.
 
@@ -41,10 +42,10 @@ later rows sit one indent right of its first.
 4. **Scroll back.** `sim scroll screen up` twice. → `ok`; `Stanza 1` is on screen again.
 5. **Back.** `sim back`. → `ok`; the Hymns list.
 6. **Proof.** `sim snapshot` and `sim shot` after each step.
-7. **The reading sheet.** `sim open hymns/100 --expect "label=Stanza 1"`, then `sim tap label=Aa`. → `ok`; the sheet shows `Reading`, `Text size 100%`, `Font` (`System` checked), `Line spacing` (`Normal` checked) and `Keep screen on` off.
-8. **Largest text.** `sim tap "label=Larger text"` until it is disabled. → the reading shows `Text size 188%`; dismiss the sheet; the page's words and chords are larger.
+7. **The reading settings.** `sim open hymns/100 --expect "label=Stanza 1"`, then `sim tap "label=Open player"`. → `ok`; the sheet shows the group `Reading`: `Text size` reading `100%`, `Font` (`System` checked), `Line spacing` (`Normal` checked) and `Keep screen on` off.
+8. **Largest text.** Fling the `Text size` dial up (`agent-device gesture pan <x> <y> -300 0 200` from its middle). → it stops at `188%`; dismiss the sheet; the page's words and chords are larger.
 9. **Hanging indent.** At the largest size, `agent-device snapshot --json` on a hymn with a long line: the `rect` of the line's first word and of the first word of its next row. → the second row's x is at least one indent (40 pt at the largest size, before the system's text size) right of the first's. Read the frames only, then trash the snapshot.
-10. **Kept.** `sim tap Serif`, `sim tap Roomy`, then relaunch and open `Aa` again. → the same size, `Serif` and `Roomy` checked. Put each back (`Text size 100%`, `System`, `Normal`, `Keep screen on` off).
+10. **Kept.** `sim tap Serif`, `sim tap Roomy`, then relaunch and open the player sheet again. → the same size, `Serif` and `Roomy` checked. Put each back (`Text size 100%`, `System`, `Normal`, `Keep screen on` off).
 11. **Swipe** (iOS). From the list, `sim tap "role=link label=3, God Himself Is With Us"`, then `agent-device gesture pan 350 450 -300 0 250 --session verify-hymnal` (a swipe left, mid-screen). → the header title and the page head (`id=hymn-number`) read 4, and the bar reads `Play hymn 4`. Two swipes right (`gesture pan 50 450 300 0 250`). → 3, then 2.
 12. **Back after swipes** (`reader-back`). `sim back`. → one press shows the Hymns list at its place, not hymn 3 or 4.
 13. **A search's pager.** Search `3`, open the second result (30), swipe left. → 31, the third result. Two swipes right give 30, then 3 (not 29: the results are the list). `sim back` → the results, with `3` kept.
@@ -60,5 +61,5 @@ later rows sit one indent right of its first.
 - On iOS a line with chords over its syllables is not one element: its chords keep their `chord-<p>-<l>-<n>` ids. A line without chords over its syllables (chords off, or a line-level part) reads as one element named by the whole line.
 - `sim` has no swipe: pages turn by `agent-device gesture pan` on the drive's session. A pan that starts within 20 pt of the left edge is the back pan, so a swipe right starts mid-screen.
 - The web has no pager: one page per route, and a swipe does nothing there.
-- A hymn opened by link has no back button: `sim back` there taps a header button (`Aa` or `Chords`). Go back with the edge pan or a new `sim open /`.
+- A hymn opened by link has no back button and the header no other button: `sim back --in-app` there finds nothing to tap. Go back with the edge pan or a new `sim open /`.
 - On iOS a stanza's group is read as text named `Stanza <n>`; on the web it is a `group` with that `aria-label`. `label=` matches both.

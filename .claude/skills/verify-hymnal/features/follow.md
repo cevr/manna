@@ -51,7 +51,7 @@ brings the sung line back and follows again. The marked line is
 - In a dev build a LogBox toast at the foot can cover the player bar. A tap on the bar then opens the LogBox, the press never reaches the app, and the checker samples a hymn that never plays (`seen` 0, `ended` false). The snapshot still lists the bar's buttons under the toast, so take a `sim shot` before a run. `agent-device react-native dismiss-overlay --session verify-hymnal` clears it; run it again until it reports `No React Native overlay detected`. The pager sets `recycleItems`, so LegendList's warning no longer raises one on every launch.
 - On iOS the app's `[follow]` console lines reach neither `sim log` nor `agent-device logs`, so the iOS steps read the follow from the raw snapshot.
 - `sim scroll id=hymn-scroll` takes the first of the pager's four `hymn-scroll` nodes, a neighbour page off the screen, so its swipe never reaches the open page. Drag the open page with `agent-device gesture pan` at its own coordinates, mid-screen (a pan within 20 pt of the left edge goes back).
-- A tap on the iOS seek line in the bar does not seek; seek by a drag on the sheet's `Position` bar.
+- While a hymn sounds the bar holds `Seek`; a drag of it seeks, as the sheet's `Position` bar does (player.md, `player-seek-bar`).
 - Under load an iOS tap or `sim back` can take 15 s or more, longer than most intros, so step 6 pauses before its seek: a paused intro holds until Play.
 - The checker reads the tree without touching the app (`--observe-only`); any other driver acting on the simulator during its run counts as a touch it cannot see. Run nothing else until it prints.
 - A load above 12 delays the snapshots: read a run with `missed` lines under such load as no claim and run it again.

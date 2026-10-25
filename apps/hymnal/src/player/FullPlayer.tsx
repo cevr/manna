@@ -8,20 +8,26 @@
  * doing, its button, and a bar to drag to any place in the recording with
  * the time gone and the whole length. The bar shows in every state, still
  * while the length is not known. A recording that cannot play says why and
- * offers Retry.
+ * offers Retry. Under the player: over the hymn's own page, its key and
+ * capo dials with reset (`Dials`); then the reader's settings, the text
+ * size dial, the font, the line spacing and the screen kept on.
  */
 
 import { useAtomSet, useAtomValue } from '@effect/atom-react';
 import { Option } from 'effect';
 import { useNavigation, useParams, useRouter } from 'one';
+import { memo, use } from 'react';
 import { type ColorValue, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { color, useAccent } from '~/color';
 import { hymnHref } from '~/home/Browse';
 import { hymnAt } from '~/hymns/hymns';
+import { ReadingControls } from '~/reader/ReadingSheet';
 
 import { Bar, barFor, placeOf } from './bar';
 import { usePlayer } from './context';
+import { ChordReaderContext, Dials, useThumb } from './Dials';
+import { useShownPage } from './page';
 import { Command, type HymnPlayer, Player, type Track } from './player';
 import { Scrubber } from './Scrubber';
 import { clock } from './time';
@@ -100,6 +106,8 @@ function Held({
           <Toggle track={track} state={state} send={send} />
         </View>
       </View>
+      <PageChords track={track} />
+      <Reading />
     </ScrollView>
   );
 }
@@ -148,9 +156,46 @@ function Nothing() {
       <Text style={styles.caption} dynamicTypeRamp="subheadline">
         No hymn is playing.
       </Text>
+      <Reading />
     </ScrollView>
   );
 }
+
+/**
+ * The key and capo dials, and reset, while the sheet is over `track`'s own
+ * page and it has chords: the same dials as over the bar, in one chord
+ * section.
+ */
+const PageChords = memo(function PageChords({ track }: { readonly track: Track }) {
+  return Option.match(
+    Option.filter(useShownPage(), (shown) => shown.number === track.number),
+    {
+      onNone: () => <></>,
+      onSome: (shown) => <ChordSection number={shown.number} />,
+    },
+  );
+});
+
+function ChordSection({ number }: { readonly number: number }) {
+  const thumb = useThumb(number);
+  return Option.match(thumb.printed, {
+    onNone: () => <></>,
+    onSome: (printed) => (
+      <View role="group" aria-label="Chords" style={styles.section}>
+        <Dials thumb={thumb} printed={printed} />
+      </View>
+    ),
+  });
+}
+
+/** The reader's settings: the text size, the font, the line spacing, the screen kept on. */
+const Reading = memo(function Reading() {
+  return (
+    <View style={styles.section}>
+      <ReadingControls reading={use(ChordReaderContext).reading} />
+    </View>
+  );
+});
 
 const styles = StyleSheet.create({
   page: { padding: 24, gap: 16 },
@@ -164,4 +209,5 @@ const styles = StyleSheet.create({
   times: { flexDirection: 'row', justifyContent: 'space-between' },
   time: { fontSize: 13, color: color.muted, fontVariant: ['tabular-nums'] },
   row: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', minHeight: 44 },
+  section: { paddingTop: 8 },
 });

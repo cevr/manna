@@ -128,7 +128,7 @@ const seen = (shown: App) => {
       (header) =>
         hymns.find((hymn) => hymn.title === header.getAttribute('aria-label'))?.number ?? 0,
     ),
-    rightItems: headers.map((header) => header.querySelectorAll('[aria-label="Chords"]').length),
+    rightItems: headers.map((header) => header.querySelectorAll('[role="button"]').length),
     firstOffset: Option.getOrElse(
       Option.fromNullishOr(
         (scrolls.sideways[0]?.['contentOffset'] as { x?: number } | undefined)?.x,
