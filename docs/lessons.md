@@ -553,6 +553,16 @@ The form of an entry, each field on its own line:
 - **Cause:** The unbake changed one flag in `figures.ts`; the comment on the hand spec in `rigs.ts` reads that flag's effect and was not read back.
 - **Guard:** skill: whether a comment still says what its code does is judged by reading both, and the judged comment rule is off on its corpus. Carried by `CLAUDE.md`: "A comment says what the code does now and why"
 
+### veil-drawn-without-its-scarlet
+
+- **Date:** 2026-10-25
+- **Kind:** owner
+- **Said:** chose: "No: blue, purple and scarlet, as Exodus 26:31"
+- **Source:** ask a39bf790b72 (veil); tmp/orchestrate/p5/iio-priest/state.md
+- **Wrong:** In Its Order's priest frame and its Board world drew the veil in indigo and linen with no scarlet, and the ask recommended it.
+- **Cause:** The coordinator read the house palette's "scarlet is sin" over Scripture's colour, the higher layer, and missed the answered OWNER QUESTION 2, which gives the veil's thread the cloth crimson.
+- **Guard:** skill: which colour a cloth takes is read from the text it draws, a judgement no lint can make. Carried by `.claude/skills/film/reference/character-design.md`: "the veil is drawn in all three of its colours (Ex 26:31), never in blue and linen alone"
+
 ## Figures and the cast
 
 ### bookend-the-setting
