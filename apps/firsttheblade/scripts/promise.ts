@@ -686,6 +686,8 @@ const UNSEEN_ATTRIBUTES = new Set([
   // SVG drawing
   ...['viewbox', 'd', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin'],
   ...['clip-path', 'opacity', 'fill-rule', 'cx', 'cy', 'r'],
+  // the series marks' strokes, each laid in passes along its path
+  ...['pathlength', 'stroke-dasharray', 'stroke-dashoffset'],
 ]);
 
 /** The meta tags a page's link card, tab or search result shows, by their name or property: their words are read. */
