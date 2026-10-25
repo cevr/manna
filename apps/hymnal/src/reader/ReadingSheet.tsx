@@ -64,7 +64,7 @@ const shareOf = (size: number) =>
 function TextSize({ size }: { readonly size: Atom.Writable<number> }) {
   const [step, setStep] = useAtom(size);
   return (
-    <DialView<number>
+    <DialView
       testID="dial-size"
       label="Text size"
       title="SIZE"

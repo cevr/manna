@@ -113,7 +113,7 @@ export function Dials({
         if (shown === 'reset') return <ResetChip key="reset" printed={printed} onPress={reset} />;
         if (shown === 'capo')
           return (
-            <DialView<CapoStop>
+            <DialView
               key="capo"
               testID="dial-capo"
               label="Capo"
@@ -128,7 +128,7 @@ export function Dials({
             />
           );
         return (
-          <DialView<KeyStop>
+          <DialView
             key="key"
             testID="dial-key"
             label="Key"
