@@ -18,7 +18,9 @@
  * last, in order, and `onTurn` once with the latest. A value set from
  * outside (the twin dial in the player sheet) turns the row the short way to
  * it, and tells nothing back; a reset (`resets`) turns it home on a slower
- * curve, so the reader sees it go home.
+ * curve, so the reader sees it go home. A touch that stops such a turn and
+ * lifts with no drag lets it go on to the dial's value; only a row the
+ * finger or its glide moved snaps to the nearest detent.
  * A double tap asks for a reset. VoiceOver reads the dial as adjustable:
  * a swipe up or down turns it one detent.
  *
@@ -59,6 +61,7 @@ import Animated, {
   useReducedMotion,
   useSharedValue,
   withSequence,
+  type WithTimingConfig,
   withTiming,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -134,17 +137,33 @@ function Dial<A>(props: DialProps<A>) {
   const walled = useSharedValue(false);
   // Whether the touch under way has dragged the row.
   const dragged = useSharedValue(false);
+  // Whether a turn to a value set from outside (a reset, the twin dial) is under way, and where it goes.
+  const following = useSharedValue(false);
+  const aim = useSharedValue(index * DETENT);
+  // Whether the touch under way stopped such a turn: lifted with no drag, it lets the turn go on to its value.
+  const stoppedFollow = useSharedValue(false);
   const stretch = useSharedValue(1);
   const [width, setWidth] = useState(0);
   const live = useRef(props);
   live.current = props;
   const homed = useRef(resets);
 
+  /** The row turns to `to`, a value set from outside, on `timing`; a touch that stops it and never drags lets it go on. */
+  const follow = (to: number, timing: WithTimingConfig) => {
+    'worklet';
+    aim.value = to;
+    following.value = true;
+    place.value = withTiming(to, timing, (finished) => {
+      'worklet';
+      if (finished) following.value = false;
+    });
+  };
+
   useEffect(() => {
     const byReset = homed.current !== resets;
     homed.current = resets;
     if (driven.value || ownDetent(detents, detentAt(place.value)) === index) return;
-    place.value = withTiming(
+    follow(
       placeOf(detents, place.value, index),
       Match.value(byReset).pipe(
         Match.when(true, () => ({
@@ -204,6 +223,8 @@ function Dial<A>(props: DialProps<A>) {
     maxPointers: 1,
     onBegin: () => {
       'worklet';
+      stoppedFollow.value = following.value;
+      following.value = false;
       cancelAnimation(place);
       start.value = place.value;
       walled.value = false;
@@ -228,8 +249,11 @@ function Dial<A>(props: DialProps<A>) {
     },
     onFinalize: ({ canceled }) => {
       'worklet';
-      // A touch that stopped a glide and never dragged leaves the row between detents: it snaps.
-      if (!dragged.value) settle(0);
+      // A touch that stopped a turn from outside and never dragged lets the turn go on to the dial's value;
+      // one that stopped a glide leaves the row between detents: it snaps.
+      if (!dragged.value && stoppedFollow.value)
+        follow(aim.value, { duration: FOLLOW_TURN, easing: Easing.out(Easing.cubic) });
+      else if (!dragged.value) settle(0);
       else if (canceled) driven.value = false;
     },
   });
