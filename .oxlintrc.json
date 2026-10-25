@@ -490,10 +490,12 @@
     {
       // The engine's thrown Errors: a programming mistake (a film with no
       // scenes, a missing cue, knob or mark, no 2d context, a colour that is
-      // not hex, a verse phrase that is not in its verse) that must stop the
-      // render. They live in the engine, never in a film; the probe test
-      // throws inside a draw to prove the probe comes off.
+      // not hex, a verse phrase that is not in its verse, a Board card the
+      // engine cannot set) that must stop the render. They live in the
+      // engine, never in a film; the probe test throws inside a draw to prove
+      // the probe comes off.
       "files": [
+        "**/packages/film/src/canvas/board.ts",
         "**/packages/film/src/canvas/card.ts",
         "**/packages/film/src/canvas/colour.ts",
         "**/packages/film/src/canvas/film.ts",

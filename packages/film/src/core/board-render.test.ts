@@ -1,0 +1,191 @@
+// A Board render's frame at a film second: the panel the animatic holds
+// there and how it moves (the same answer on every call), the dissolve's
+// weights across a cut, the review copy's burn-in, and the export page's
+// query read back as the picture it asked for.
+
+import { describe, expect, test } from 'bun:test';
+import { Option } from 'effect';
+import { type BoardFile, BoardName, type Panel, emptyBoard } from './board.ts';
+import { Segment } from './segment.ts';
+import { Shot, type TimedBeat, shotsOf } from './animatic.ts';
+import {
+  DISSOLVE_S,
+  Motion,
+  PAN,
+  PUSH,
+  Picture,
+  boardFrameAt,
+  burnIn,
+  framingAt,
+  motionOf,
+  pictureOn,
+  pictureParams,
+  tenths,
+} from './board-render.ts';
+
+const marks = (start: number, at: Record<string, number>) => (name: string) =>
+  Option.map(Option.fromUndefinedOr(at[name]), (t) => start + t);
+
+const beats: ReadonlyArray<TimedBeat> = [
+  { id: 'cold', start: 0, end: 10, markAt: marks(0, { room: 4 }) },
+  { id: 'title', start: 10, end: 14, markAt: marks(10, {}) },
+  { id: 'name', start: 14, end: 20, markAt: marks(14, { sets: 0.2 }) },
+];
+
+const panel = (beat: string, at: string, kept: number): Panel => ({
+  id: `${beat}.${at}`,
+  beat: BoardName.make(beat),
+  at: BoardName.make(at),
+  kept,
+  tries: [1, 2, 3, 4, 5].map((n) => ({
+    n,
+    file: Segment.make(`${beat}.${at}.${n}.png`),
+    sha256: 's',
+    made: 'generate' as const,
+    refs: [],
+    at: 'x',
+  })),
+});
+
+const board: BoardFile = {
+  ...emptyBoard('f'),
+  panels: [panel('cold', 'start', 2), panel('cold', 'room', 3), panel('name', 'sets', 5)],
+};
+
+const shots = shotsOf(beats, board);
+const DURATION = 20;
+
+const frameAt = (T: number) => Option.getOrThrow(boardFrameAt(shots, DURATION, T));
+
+/** The panel id a layer shows, or `card` for a beat's storyboard card. */
+const named = (shot: Shot) =>
+  Shot.$match(shot, { Boarded: ({ panel: p }) => p.id, Unboarded: ({ beat }) => `${beat} card` });
+
+describe('the frame at a film second', () => {
+  test('holds the panel the animatic shows there, alone between dissolves', () => {
+    expect(named(frameAt(2).shown)).toBe('cold.start');
+    expect(frameAt(2).layers.map((l) => named(l.shot))).toEqual(['cold.start']);
+    expect(named(frameAt(6).shown)).toBe('cold.room');
+    expect(named(frameAt(12).shown)).toBe('title card');
+    expect(named(frameAt(17).shown)).toBe('name.sets');
+  });
+
+  test('is pure: two calls give the same frame', () => {
+    for (const T of [0, 3.9, 4, 9.8, 12, 14.1, 19.9]) expect(frameAt(T)).toEqual(frameAt(T));
+  });
+
+  test('moves a picture panel by its id alone, and holds a card still', () => {
+    const held = (p: Panel, from: number) =>
+      Shot.Boarded({ beat: p.beat, panel: p, at: from, from });
+    const p = panel('cold', 'room', 3);
+    expect(motionOf(held(p, 4))).toEqual(motionOf(held(p, 99)));
+    expect(motionOf(Shot.Unboarded({ beat: 'title', from: 10 }))).toEqual(Motion.Still());
+    const card: Panel = { ...p, text: { _tag: 'Card', payoff: 'milk' } };
+    expect(motionOf(held(card, 4))).toEqual(Motion.Still());
+    // Across many ids, each motion is picked: a push in and both pans.
+    const move = (m: Motion) =>
+      Motion.$match(m, {
+        Still: () => 'still',
+        PushIn: () => 'push',
+        Pan: ({ dir }) => `pan ${dir}`,
+      });
+    const picked = new Set(
+      Array.from({ length: 40 }, (_, k) => move(motionOf(held(panel('b', `m${k}`, 1), 0)))),
+    );
+    expect(picked).toEqual(new Set(['push', 'pan 1', 'pan -1']));
+  });
+
+  test('moves at most the push or the pan over the hold, and never past it', () => {
+    expect(framingAt(Motion.PushIn(), 0)).toEqual({ scale: 1, dx: 0 });
+    expect(framingAt(Motion.PushIn(), 1).scale).toBeCloseTo(1 + PUSH, 9);
+    expect(framingAt(Motion.PushIn(), 2).scale).toBeCloseTo(1 + PUSH, 9);
+    expect(
+      framingAt(Motion.Pan({ dir: 1 }), 1).dx - framingAt(Motion.Pan({ dir: 1 }), 0).dx,
+    ).toBeCloseTo(PAN, 9);
+    expect(framingAt(Motion.Pan({ dir: -1 }), 0).dx).toBeCloseTo(PAN / 2, 9);
+    expect(framingAt(Motion.Still(), 0.5)).toEqual({ scale: 1, dx: 0 });
+    expect(PUSH).toBeLessThanOrEqual(0.06);
+    expect(PAN).toBeLessThanOrEqual(0.04);
+  });
+});
+
+describe('the dissolve at a cut', () => {
+  test('is centred on the cut: the incoming shot at a quarter, a half and three quarters', () => {
+    const half = DISSOLVE_S / 2;
+    const at = (T: number) => frameAt(T).layers.map((l) => [named(l.shot), l.alpha]);
+    expect(at(4 - half / 2)).toEqual([
+      ['cold.start', 1],
+      ['cold.room', 0.25],
+    ]);
+    expect(at(4)).toEqual([
+      ['cold.start', 1],
+      ['cold.room', 0.5],
+    ]);
+    expect(at(4 + half / 2)).toEqual([
+      ['cold.start', 1],
+      ['cold.room', 0.75],
+    ]);
+    expect(at(4 + half)).toEqual([['cold.room', 1]]);
+    expect(at(4 - half - 0.01)).toEqual([['cold.start', 1]]);
+  });
+
+  test('is clamped to half of a short hold on either side', () => {
+    // `name.sets` takes over 0.2 s into its beat, so the cut from the beat's
+    // own start is held only 0.2 s: its dissolve is 0.1 s each side, not 0.25.
+    const tight: BoardFile = { ...board, panels: [...board.panels, panel('name', 'start', 1)] };
+    const s = shotsOf(beats, tight);
+    const layers = (T: number) =>
+      Option.getOrThrow(boardFrameAt(s, DURATION, T)).layers.map((l) => [
+        named(l.shot),
+        Math.round(l.alpha * 1000) / 1000,
+      ]);
+    // From 13.9 to 14.1 into `name.start`, from 14.1 to 14.3 into `name.sets`.
+    expect(layers(13.89)).toEqual([['title card', 1]]);
+    expect(layers(14.05)).toEqual([
+      ['title card', 1],
+      ['name.start', 0.75],
+    ]);
+    expect(layers(14.15)).toEqual([
+      ['name.start', 1],
+      ['name.sets', 0.25],
+    ]);
+  });
+
+  test('carries the motion through it: the outgoing shot ends as the incoming begins', () => {
+    const half = DISSOLVE_S / 2;
+    const out = frameAt(4 + half - 1e-9).layers[0]!;
+    const inn = frameAt(4 - half + 1e-9).layers[1]!;
+    const close = (got: { scale: number; dx: number }, want: { scale: number; dx: number }) => {
+      expect(got.scale).toBeCloseTo(want.scale, 6);
+      expect(got.dx).toBeCloseTo(want.dx, 6);
+    };
+    close(out.framing, framingAt(motionOf(out.shot), 1));
+    close(inn.framing, framingAt(motionOf(inn.shot), 0));
+  });
+});
+
+describe('the burn-in', () => {
+  test('names the time, the beat, and the panel with its try', () => {
+    expect(burnIn(41.37, frameAt(17).shown, false)).toBe('0:41.3 · name · name.sets · try 5');
+    expect(burnIn(12, frameAt(12).shown, false)).toBe('0:12.0 · title · card');
+    expect(burnIn(17, frameAt(17).shown, true)).toBe('0:17.0 · name · card');
+  });
+
+  test('says minutes and tenths, the tenth cut down', () => {
+    expect(tenths(0)).toBe('0:00.0');
+    expect(tenths(59.99)).toBe('0:59.9');
+    expect(tenths(62.37)).toBe('1:02.3');
+    expect(tenths(600.1)).toBe('10:00.1');
+  });
+});
+
+describe('the export page query', () => {
+  test('reads back the picture it was built for', () => {
+    for (const picture of [
+      Picture.Scenes(),
+      Picture.Board({ review: false }),
+      Picture.Board({ review: true }),
+    ])
+      expect(pictureOn(new URLSearchParams(pictureParams(picture).join('&')))).toEqual(picture);
+  });
+});
