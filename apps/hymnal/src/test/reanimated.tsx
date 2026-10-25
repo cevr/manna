@@ -203,6 +203,12 @@ const animated = <P extends object>(Plain: ComponentType<P>) =>
     return <Plain {...(props as P)} ref={ref} />;
   });
 
+/** An animated view's ref: a plain one. */
+export const useAnimatedRef = <T,>() => useRef<T | null>(null);
+
+/** A scroll view's offset written to a shared value: a test writes the value itself. */
+export const useScrollViewOffset = (_ref: unknown, _offset: SharedValue<number>) => {};
+
 const Animated = {
   View: animated(View),
   Text: animated(Text),
