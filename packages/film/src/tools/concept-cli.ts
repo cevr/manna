@@ -362,6 +362,8 @@ const brief = (house: HouseLook) =>
           heads: CANON_HEADS,
           figures: [],
           hair: true,
+          // Files, not a record: nothing names a beardless member, so the rule is said.
+          beard: true,
         }),
       );
       yield* Console.log(prompt);

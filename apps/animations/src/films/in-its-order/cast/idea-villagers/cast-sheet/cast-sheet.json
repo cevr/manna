@@ -2,6 +2,7 @@
   "member": "idea-villagers",
   "scope": "film",
   "who": "them",
+  "beard": "shown",
   "refs": [
     {
       "file": "iio-lineup.png",

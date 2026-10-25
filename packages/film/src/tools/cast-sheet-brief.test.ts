@@ -2,7 +2,7 @@
 // sheet's, a block whose phrase moved stops the brief, every brief carries
 // the sheet rules the owner set, a figure stands its own heads (the canon's
 // unless the member names its own, a smaller figure its share of the grown
-// height), the hair is spoken of only where it shows, and a layout or a look
+// height), the hair is spoken of only where it shows and the beard only on a member who has one, and a layout or a look
 // that floats a hand stops it: the library's and every film's records are
 // read here.
 
@@ -11,7 +11,13 @@ import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Result, Schema } from 'effect';
 import { CANON_HEADS, SheetKind, type ViewFigure } from '../core/cast-sheet.ts';
-import { CastSheetJson, castKindPlan, hairShows } from '../core/cast-record.ts';
+import {
+  CastSheetJson,
+  CastSheetRecord,
+  beardShows,
+  castKindPlan,
+  hairShows,
+} from '../core/cast-record.ts';
 import { castSheetBrief, headsWords, turnaroundLayout } from './cast-sheet-brief.ts';
 
 /** The house block as the app keeps it. */
@@ -22,15 +28,16 @@ const houseBlock = Effect.gen(function* () {
   );
 }).pipe(Effect.provide(BunServices.layer));
 
-/** How a member is drawn across its sheet: its heads, its smaller figures, whether its hair shows. */
+/** How a member is drawn across its sheet: its heads, its smaller figures, whether its hair shows and whether it has a beard. */
 interface Drawn {
   readonly heads: number;
   readonly figures: ReadonlyArray<ViewFigure>;
   readonly hair: boolean;
+  readonly beard: boolean;
 }
 
-/** How a canon member with hair is drawn: the default the tests vary. */
-const CANON_MEMBER: Drawn = { heads: CANON_HEADS, figures: [], hair: true };
+/** How a canon member with hair and a beard is drawn: the default the tests vary. */
+const CANON_MEMBER: Drawn = { heads: CANON_HEADS, figures: [], hair: true, beard: true };
 
 /** A sheet's brief over `house`, a turnaround's unless `kind` says, its figures the canon's unless `drawn` says. */
 const briefOver = (house: string, kind: SheetKind = 'turnaround', drawn: Partial<Drawn> = {}) =>
@@ -282,6 +289,40 @@ describe('the hair in the brief', () => {
   );
 });
 
+describe('the beard in the brief', () => {
+  const partsBeard = 'The hair and the beard are one brown';
+
+  it.effect('is told of only a member whose record has one', () =>
+    Effect.gen(function* () {
+      const house = yield* houseBlock;
+      for (const kind of SheetKind.literals) {
+        const shaven = Result.getOrThrow(briefOver(house, kind, { beard: false }));
+        expect(shaven).not.toContain(partsBeard);
+        expect(shaven).not.toContain('beard');
+        expect(Result.getOrThrow(briefOver(house, kind, { beard: true }))).toContain(partsBeard);
+      }
+    }),
+  );
+
+  it.effect('is left out of a member whose hair is covered, beard or not', () =>
+    Effect.gen(function* () {
+      const house = yield* houseBlock;
+      for (const kind of SheetKind.literals) {
+        const covered = Result.getOrThrow(briefOver(house, kind, { hair: false, beard: true }));
+        expect(covered).not.toContain(partsBeard);
+      }
+    }),
+  );
+
+  test('is read off the record: shown only when the record says so', () => {
+    const base = { member: 'm', scope: 'library', who: 'Him', refs: [], sheets: {} } as const;
+    const record = Schema.decodeSync(CastSheetRecord);
+    expect(beardShows(record({ ...base, beard: 'shown' }))).toBe(true);
+    expect(beardShows(record({ ...base, beard: 'none' }))).toBe(false);
+    expect(beardShows(record(base))).toBe(false);
+  });
+});
+
 describe('a hand that floats', () => {
   it.effect('stops a brief whose layout or look says a hand floats, naming the clause', () =>
     Effect.gen(function* () {
@@ -358,6 +399,7 @@ describe('a hand that floats', () => {
                   heads: plan.options.heads ?? CANON_HEADS,
                   figures: plan.options.figures ?? [],
                   hair: hairShows(record),
+                  beard: beardShows(record),
                 }),
               ),
               { onSuccess: () => [], onFailure: (e) => [`${folder} ${kind}: ${e.message}`] },

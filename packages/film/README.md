@@ -2901,7 +2901,7 @@ unless its record names its own `heads`, and each smaller figure a pose
 sheet draws at its share of the grown height and its own heads; one outline
 round each figure's silhouette with the head's outline
 the one line inside it, the hair a shape behind the head and
-the beard parted from it only when its record's `hair` shows, each circle hand at the end of its arm in its
+the beard parted from it only when its record's `hair` and `beard` show, each circle hand at the end of its arm in its
 sleeve and never a bare arm, the glide, no lettering). A layout or a look
 with a clause that names a hand and says it floats is refused as
 `HandFloats`, naming the clause, so a prompt never asks for a sleeved hand
@@ -2986,7 +2986,9 @@ on the image route. The member's folder is its film's own role's,
 `CastUnfound`. It holds `cast-sheet.json` (`CastSheetRecord`,
 `core/cast-record.ts`, pure: the member's pronoun, its scope, each reference
 image and what it is for, whether its hair shows (`hair`: `shown`, the
-default, `covered` under a headcloth, or `none`), its own height in heads
+default, `covered` under a headcloth, or `none`), whether it has a beard
+(`beard`: `shown`, or `none`, the default: the brief parts the beard from the
+hair only on a member whose hair and beard both show), its own height in heads
 when it is not the canon's (`heads`, a member of its own design such as the
 plain figures at 2.6), and per kind the anchor view and, for poses and
 heads, the layout in words and each view's slot, the standing views and
