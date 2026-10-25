@@ -15,7 +15,7 @@ export interface FootageProbed {
   readonly hdr: boolean;
 }
 
-export interface FootageMediaService {
+interface FootageMediaService {
   /** The original at `file`, read in place: its container, picture and sound. */
   readonly probe: (file: string) => Effect.Effect<FootageProbed, MediaFailed>;
   /** The original at `file`'s `copy`, made by its recipe (`FOOTAGE_RECIPES`) and written whole to `out`. */

@@ -208,7 +208,7 @@ Numbers, no verdict: a distance is a hint for the ear, never a target to make sm
 
 ## Put it to the owner
 
-1. Run `bun run sfx ab <name> --out <dir>` for each trial. It writes three clips and their sheets: `<name>.now.mp4` (what plays now: the kept takes), `<name>.code.mp4` (the trial's seeds), and `<name>.now-then-code.mp4` (both, 1 s apart). Each is the line-up levelled as the mix plays it, 0.5 s between renders; a bed plays 8 s of each render, faded at the ends. The picture is the line-up's sheet, held (`tools/media.ts` `Media.card`, a key frame a second), so a set's video player plays it on the phone.
+1. Run `bun run sfx ab <name> --out <dir>` for each trial. It writes three clips and their sheets: `<name>.now.mp4` (what plays now: the kept takes), `<name>.code.mp4` (the trial's seeds), and `<name>.now-then-code.mp4` (both, 1 s apart). Each is the line-up levelled as the mix plays it, 0.5 s between renders; a bed plays 8 s of each render, faded at the ends. The picture is the line-up's sheet, held (`tools/media.ts` `MediaService.card`, a key frame a second), so a set's video player plays it on the phone.
 2. Publish the clips as one set (the lab MCP's `publish_set`, or `bun cli.ts publish <folder> --production <production>`).
 3. Ask once (The flow, "Ask, don't chat" in [SKILL.md](../SKILL.md)): a section for each sound, video A (now) then video B (code), a choose of `code` (play the code sound), `keep` (keep the generated take) or `remake` (remake the code sound), one recommended with a why from the numbers, and an optional free text.
 4. Apply the answers:
