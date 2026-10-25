@@ -52,6 +52,7 @@ import { Array as Arr, Console, Effect, FileSystem, Layer, Option, Path, Schema 
 import type { CritiqueRule } from '../core/critique.ts';
 import { critiqueCastTry } from './cast-sheet-critique.ts';
 import { keepCastSheet } from './cast-sheet-keep.ts';
+import { castFolder } from './cast-library.ts';
 import { Counsel } from './counsel.ts';
 import { Critic } from './critique.ts';
 import { CAST_LANES, castLine, castPlanOf, castRequest, makeCastSheet } from './cast-sheet-make.ts';
@@ -370,33 +371,6 @@ const brief = (house: HouseLook) =>
       "Print a cast sheet's brief for the image route: the house block made a sheet's, the references, the look, the layout and its kind's rules (no lettering, each hand at its sleeve's end, the beard parted from the hair by a dark band)",
     ),
   );
-
-/** A member with no `cast-sheet.json` in the film's cast or the library's. */
-class CastUnfound extends Schema.TaggedError<CastUnfound>()('CastUnfound', {
-  member: Schema.String,
-  looked: Schema.Array(Schema.String),
-}) {
-  override get message() {
-    return `${this.member} has no cast-sheet.json: looked in ${this.looked.join(' and ')}`;
-  }
-}
-
-/** The member's sheet folder: the film's own role's when it has one, else the library's. */
-const castFolder = Effect.fn('film.concept.castFolder')(function* (film: string, member: string) {
-  const fs = yield* FileSystem.FileSystem;
-  const path = yield* Path.Path;
-  const dir = (yield* FilmFolder).paths(film).dir;
-  const looked = [
-    path.join(dir, 'cast', member, 'cast-sheet'),
-    path.join(dir, '..', '..', 'library', 'cast', member, 'cast-sheet'),
-  ];
-  const found = yield* Effect.findFirst(looked, (folder) =>
-    fs.exists(path.join(folder, 'cast-sheet.json')).pipe(Effect.orElseSucceed(() => false)),
-  );
-  return yield* Effect.fromOption(found).pipe(
-    Effect.mapError(() => CastUnfound.make({ member, looked })),
-  );
-});
 
 const cast = (house: HouseLook) =>
   Command.make(

@@ -11,9 +11,9 @@
 // - `critique`: the same match, then each figure's two crops shown at 1:1 to
 //   a fresh model (`Critic`): per figure its findings, a skip said and never
 //   a refusal. The counsel takes minutes and an MCP client cuts a call at
-//   60 s, so it runs as the critic's job: a call waits on it at most
-//   `CRITIQUE_WAIT`, then answers its handle, and a call with the handle
-//   waits on it again (`film lab critique wait <handle>` until it is done).
+//   60 s, so it runs as the critic's job: a call answers by
+//   `CRITIQUE_DEADLINE` from its start, with the job's handle when it is not
+//   done by then, and a call with the handle waits on it again (`film lab critique wait <handle>` until it is done).
 // - `cues`: each scene's placement, marks and named cues (`film read cues`).
 // - `check`: scenes checked as drawn (`film check --draw`).
 // - `journal`, `journal_note`: the film's journal read, and an observation
@@ -38,6 +38,7 @@
 import {
   Array as Arr,
   Boolean as Bool,
+  Clock,
   Duration,
   Effect,
   FileSystem,
@@ -90,11 +91,15 @@ const LOOK_MAX_BYTES = 15_000_000;
 const REFUSAL_CHARS = 4_000;
 
 /**
- * The longest a `critique` call waits on its job before it answers the
- * job's handle: Claude Code's MCP client cuts a tool call at 60 s, and the
- * match before the wait takes seconds of that.
+ * The longest a `critique` call takes from its start before it answers the
+ * job's handle: Claude Code's MCP client cuts a tool call at 60 s. The match
+ * and the staging read come first (the lab's logs: a match at most 7.7 s, a
+ * fresh read at most 1.7 s), and the job is waited on only for what is left,
+ * so a slow read shortens the wait. A match and read that themselves run past
+ * the deadline answer the handle as they end, and past 60 s the client has cut
+ * the call before any job starts. The 10 s left over carry the answer back.
  */
-const CRITIQUE_WAIT = Duration.seconds(40);
+const CRITIQUE_DEADLINE = Duration.seconds(50);
 
 /** How many entries `journal` reads at most. */
 const JOURNAL_MAX_LAST = 200;
@@ -235,7 +240,7 @@ const MatchParams = Schema.Struct({
 type MatchParams = typeof MatchParams.Type;
 
 /** The `critique` tool as the lab lists it: its answer is each figure's findings, as text. */
-const CRITIQUE_DESCRIPTION = `Match a scene's figures at one place (as \`match\` does), then show each figure's concept crop and scene crop at 1:1 to a fresh Opus (headless Claude at max effort, sandboxed, Read its one tool) beside the match's flagged rows, the app's figure rules (the K1 look, the grammar every figure shares, figures and faces, the look) and the place's staging (its Board panel and the script's picture: design is held to the concept, what a figure wears, holds and does to the staging): it names each difference in head angle and turn, face shape and features, pose, proportion (never height in heads: that is the cast's band), palette and artifacts. One counsel run answers every figure at the place, and takes minutes: the critique runs as a job in the lab, and a call waits on it at most ${Duration.format(CRITIQUE_WAIT)}. Not done by then, it answers the job's \`handle\` and no \`critique\`: keep painting, and call \`critique\` again with \`films\` and \`handle\` alone for its answer (each call waits ${Duration.format(CRITIQUE_WAIT)} more); a start of the same figures over the same crops while one runs answers that job. The answer is kept by the hash of the prompt and the crops, so the same prompt over the same crops is never asked twice. Answers per figure its findings, written beside the match's table (<stem>.critique.md under out/<film>/match/<scene>/), and each finding rejected (one that does not read, or names no figure asked about). It fails open: a counsel that fails or dies, or answers no json block, is a skip, said and logged, never a refusal. Before a figure is called done, and before an owner look, critique it; a finding is fixed or said why not (\`film review\`).`;
+const CRITIQUE_DESCRIPTION = `Match a scene's figures at one place (as \`match\` does), then show each figure's concept crop and scene crop at 1:1 to a fresh Opus (headless Claude at max effort, sandboxed, Read its one tool) beside the match's flagged rows, the app's figure rules (the K1 look, the grammar every figure shares, figures and faces, the look) and the place's staging (its Board panel and the script's picture: design is held to the concept, what a figure wears, holds and does to the staging): it names each difference in head angle and turn, face shape and features, pose, proportion (never height in heads: that is the cast's band), palette and artifacts. One counsel run answers every figure at the place, and takes minutes: the critique runs as a job in the lab, and a call answers within ${Duration.format(CRITIQUE_DEADLINE)} of its start when its match and staging read end inside it (they take seconds). Not done by then, it answers the job's \`handle\` and no \`critique\`: keep painting, and call \`critique\` again with \`films\` and \`handle\` alone for its answer (each call waits up to ${Duration.format(CRITIQUE_DEADLINE)} more); a start of the same figures over the same crops while one runs answers that job. The answer is kept by the hash of the prompt and the crops, so the same prompt over the same crops is never asked twice. Answers per figure its findings, written beside the match's table (<stem>.critique.md under out/<film>/match/<scene>/), and each finding rejected (one that does not read, or names no figure asked about). It fails open: a counsel that fails or dies, or answers no json block, is a skip, said and logged, never a refusal. Before a figure is called done, and before an owner look, critique it; a finding is fixed or said why not (\`film review\`).`;
 
 /** A critique's answer: its job's handle, the match it critiques, and the critique once the counsel has answered. */
 const Critiqued = Schema.Struct({
@@ -532,11 +537,18 @@ const started = Effect.fn('EaselMcp.critiqueStart')(function* (params: CritiqueP
 });
 
 const critiqued = Effect.fn('EaselMcp.critique')(function* (params: CritiqueParams) {
+  const from = yield* Clock.currentTimeMillis;
   const handle = yield* Option.match(Option.fromUndefinedOr(params.handle), {
     onSome: Effect.succeed,
     onNone: () => started(params),
   });
-  const job = yield* (yield* Critic).job(handle, CRITIQUE_WAIT);
+  const now = yield* Clock.currentTimeMillis;
+  // What is left of the deadline once the job has its handle: none past it.
+  const left = Duration.max(
+    Duration.subtract(CRITIQUE_DEADLINE, Duration.millis(now - from)),
+    Duration.zero,
+  );
+  const job = yield* (yield* Critic).job(handle, left);
   return {
     handle,
     match: job.match,

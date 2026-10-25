@@ -548,7 +548,7 @@ describe("the easel's tools on the MCP", () => {
   );
 
   it.effect(
-    'a critique the counsel has not answered in 40 s answers its handle; the same place again answers the same handle; the handle answers its findings once the counsel has',
+    "a critique the counsel has not answered 50 s from the call's start answers its handle; the same place again answers the same handle; the handle answers its findings once the counsel has",
     () => {
       const lines: Array<string> = [];
       const runs = { n: 0 };
@@ -564,7 +564,7 @@ describe("the easel's tools on the MCP", () => {
           });
         const first = yield* Effect.forkChild(critique({ scene: 'roof', at: 'mark:see' }));
         yield* Deferred.await(asked);
-        yield* TestClock.adjust('40 seconds');
+        yield* TestClock.adjust('50 seconds');
         const running = yield* Fiber.join(first);
         expect(running.isError).toBeUndefined();
         const head = running.content[0].text;
@@ -574,7 +574,7 @@ describe("the easel's tools on the MCP", () => {
           `critique scene=roof at=mark:see t=3.00 build=s.7 handle=${handle} running: keep painting, then call critique with handle=${handle} for its answer`,
         );
         const twice = yield* Effect.forkChild(critique({ scene: 'roof', at: 'mark:see' }));
-        yield* TestClock.adjust('40 seconds');
+        yield* TestClock.adjust('50 seconds');
         expect((yield* Fiber.join(twice)).content[0].text).toBe(head);
         yield* Deferred.succeed(answer, ROOF_ANSWER);
         const done = yield* critique({ handle });
@@ -586,6 +586,58 @@ describe("the easel's tools on the MCP", () => {
       }).pipe(
         Effect.scoped,
         Effect.provide(critiqueLab(critiqueFiles(), heldCounsel(asked, answer, runs), lines)),
+      );
+    },
+  );
+
+  it.effect(
+    "a critique whose staging takes 25 s answers its handle 50 s from the call's start",
+    () => {
+      const lines: Array<string> = [];
+      const runs = { n: 0 };
+      const asked = Deferred.makeUnsafe<boolean>();
+      const answer = Deferred.makeUnsafe<string, CounselFailed>();
+      const reading = Deferred.makeUnsafe<boolean>();
+      const slowScript: FreshFilmService['script'] = (film) =>
+        Deferred.succeed(reading, true).pipe(
+          Effect.andThen(Effect.sleep('25 seconds')),
+          Effect.andThen(critiqueScript(film)),
+        );
+      return Effect.gen(function* () {
+        const { lab } = yield* labWithMcp;
+        const { call } = yield* mcpSession(lab);
+        const first = yield* Effect.forkChild(
+          call('tools/call', {
+            name: 'critique',
+            arguments: { films: FILMS, film: 'f', scene: 'roof', at: 'mark:see' },
+          }),
+        );
+        yield* Deferred.await(reading);
+        yield* TestClock.adjust('25 seconds');
+        yield* Deferred.await(asked);
+        yield* TestClock.adjust('25 seconds');
+        const head = (yield* Fiber.join(first)).content[0].text;
+        expect(head).toMatch(/^critique scene=roof at=mark:see .* handle=[0-9a-f]{16} running: /);
+        expect(runs.n).toBe(1);
+      }).pipe(
+        Effect.scoped,
+        Effect.provide(
+          Layer.merge(
+            labOver(
+              critiqueFiles(),
+              [],
+              { script: slowScript },
+              [],
+              Option.some(
+                Critic.layer([{ file: '/rules.md', heading: '## The look' }]).pipe(
+                  Layer.provide(heldCounsel(asked, answer, runs)),
+                  Layer.orDie,
+                ),
+              ),
+            ),
+            mcpLinesIn(lines),
+          ),
+        ),
       );
     },
   );
@@ -607,7 +659,7 @@ describe("the easel's tools on the MCP", () => {
           });
         const first = yield* Effect.forkChild(critique({ scene: 'roof', at: 'mark:see' }));
         yield* Deferred.await(asked);
-        yield* TestClock.adjust('40 seconds');
+        yield* TestClock.adjust('50 seconds');
         const head = (yield* Fiber.join(first)).content[0].text;
         const handle = /handle=([0-9a-f]+) /.exec(head)?.[1] ?? '';
         yield* Deferred.fail(answer, CounselFailed.make({ reason: 'the run timed out' }));

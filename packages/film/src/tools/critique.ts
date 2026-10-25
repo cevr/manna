@@ -19,6 +19,7 @@
 
 import {
   Array as Arr,
+  Boolean as Bool,
   Cache,
   Cause,
   Clock,
@@ -29,6 +30,7 @@ import {
   Exit,
   FileSystem,
   Layer,
+  MutableHashMap,
   Option,
   Path,
   Result,
@@ -116,12 +118,12 @@ interface CritiqueJob {
   readonly critique: Option.Option<CritiqueTaken>;
 }
 
-/** A job the critic does not keep: never started, dropped past its time or count, or the lab restarted since. */
+/** A job the critic does not keep: never started, finished and dropped past its time or count, or the lab restarted since. */
 class CritiqueJobUnknown extends Schema.TaggedError<CritiqueJobUnknown>()('CritiqueJobUnknown', {
   handle: Schema.String,
 }) {
   override get message() {
-    return `no critique ${this.handle} is kept (one is kept ${Duration.format(JOB_KEPT_FOR)} after it starts, and a lab restarted keeps none): start it again with the scene and the place`;
+    return `no critique ${this.handle} is kept (a running one is kept until it ends, a finished one ${Duration.format(JOB_KEPT_FOR)} after, the last ${JOBS_KEPT} of them, and a lab restarted keeps none): start it again with the scene and the place`;
   }
 }
 
@@ -169,11 +171,18 @@ interface Prepared {
   readonly kept: string;
 }
 
-/** How many jobs the critic keeps, running or done: past it the one read least recently is dropped. */
+/** How many finished jobs the critic keeps: past it the one read least recently is dropped. A running job is kept until it ends. */
 const JOBS_KEPT = 32;
 
-/** How long a job is kept from its start: past the counsel's own limit (30 min), so the slowest is read for half an hour after. */
+/** How long a finished job is kept from its end. */
 const JOB_KEPT_FOR = Duration.hours(1);
+
+/**
+ * How many counsel runs the critic asks at once: as many as `film review`
+ * critiques places at once. A run past them waits its turn, its job's
+ * handle answered meanwhile.
+ */
+const COUNSEL_RUNS = 4;
 
 /** A job's handle: the first 16 hex of the hash of what names it. Pure. */
 const handleOf = (names: ReadonlyArray<string>): string => sha256Hex(names.join('\n')).slice(0, 16);
@@ -194,14 +203,16 @@ const diedAs = (why: string): CritiqueTaken => ({
 
 /**
  * The critic's jobs, in the scope of the layer that makes them: each a
- * critique running in its own fiber and the answer it gives, by handle, at
- * most `JOBS_KEPT` of them each for `JOB_KEPT_FOR`. A start whose handle
- * names a running job answers it; a done one is started again (its kept
+ * critique running in its own fiber and the answer it gives, by handle. A
+ * running job is kept until it ends, and a start whose handle names one
+ * answers it; a finished one is kept `JOB_KEPT_FOR` from its end, at most
+ * `JOBS_KEPT` of them, and a start of its handle starts it again (its kept
  * answer makes that quick).
  */
 const jobsIn = Effect.gen(function* () {
   const scope = yield* Effect.scope;
-  const kept = yield* Cache.makeWith<string, Job, CritiqueJobUnknown>(
+  const running = MutableHashMap.empty<string, Job>();
+  const finished = yield* Cache.makeWith<string, Job, CritiqueJobUnknown>(
     (handle) => Effect.fail(CritiqueJobUnknown.make({ handle })),
     {
       capacity: JOBS_KEPT,
@@ -214,30 +225,51 @@ const jobsIn = Effect.gen(function* () {
       starting,
       1,
     )(
+      // Kept in the running and forked as one step, so an interrupt between
+      // leaves no job without its fiber; the fiber itself stays interruptible.
       Effect.gen(function* () {
-        const before = yield* Cache.getSuccess(kept, handle);
-        if (Option.isSome(before) && !(yield* Deferred.isDone(before.value.done))) return handle;
-        const done = yield* Deferred.make<CritiqueTaken>();
+        if (MutableHashMap.has(running, handle)) return handle;
+        const job: Job = { match, done: yield* Deferred.make<CritiqueTaken>() };
+        MutableHashMap.set(running, handle, job);
         yield* Effect.forkIn(
-          Effect.flatMap(Effect.exit(work), (exit) =>
-            Deferred.succeed(
-              done,
-              Exit.match(exit, {
-                onSuccess: (answer) => answer,
-                onFailure: (cause) => diedAs(Cause.pretty(cause)),
-              }),
+          Effect.interruptible(
+            Effect.exit(
+              Effect.tapCause(work, (cause) =>
+                Effect.logWarning(
+                  `critique.skipped handle=${handle} reason=the critique died: ${Cause.pretty(cause)}`,
+                ),
+              ),
+            ).pipe(
+              Effect.flatMap((exit) =>
+                Deferred.succeed(
+                  job.done,
+                  Exit.match(exit, {
+                    onSuccess: (answer) => answer,
+                    onFailure: (cause) => diedAs(Cause.pretty(cause)),
+                  }),
+                ),
+              ),
+              // Kept as finished before it leaves the running, so a read between finds it.
+              Effect.andThen(Cache.set(finished, handle, job)),
+              Effect.andThen(Effect.sync(() => MutableHashMap.remove(running, handle))),
             ),
           ),
           scope,
         );
-        yield* Cache.set(kept, handle, { match, done });
         return handle;
-      }),
+      }).pipe(Effect.uninterruptible),
     );
   const job = (handle: string, within: Duration.Duration) =>
     Effect.gen(function* () {
-      const one = yield* Cache.get(kept, handle);
-      const critique = yield* Effect.timeoutOption(Deferred.await(one.done), within);
+      const one = yield* Option.match(MutableHashMap.get(running, handle), {
+        onSome: Effect.succeed,
+        onNone: () => Cache.get(finished, handle),
+      });
+      // No time to wait is the answer only when it is already given.
+      const critique = yield* Bool.match(Duration.isZero(within), {
+        onTrue: () => Effect.when(Deferred.await(one.done), Deferred.isDone(one.done)),
+        onFalse: () => Effect.timeoutOption(Deferred.await(one.done), within),
+      });
       return { match: one.match, critique } satisfies CritiqueJob;
     });
   return { start, job };
@@ -371,6 +403,7 @@ export class Critic extends Context.Service<Critic, CriticService>()('@bible/fil
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const counsel = yield* Counsel;
+        const counselRuns = yield* Semaphore.make(COUNSEL_RUNS);
 
         // The rule sections, quoted by file name, read once: a section its file lacks fails the build.
         const sections: ReadonlyArray<QuotedSection> = yield* Effect.forEach(rules, (rule) =>
@@ -422,9 +455,12 @@ export class Critic extends Context.Service<Critic, CriticService>()('@bible/fil
             }).pipe(
               Effect.mapError((error) => `the packet cannot be written: ${error.message}`),
               Effect.flatMap((packet) =>
-                counsel
-                  .ask(packet, path.join(path.dirname(kept), 'counsel'))
-                  .pipe(Effect.mapError((error) => error.message)),
+                Semaphore.withPermits(
+                  counselRuns,
+                  1,
+                )(counsel.ask(packet, path.join(path.dirname(kept), 'counsel'))).pipe(
+                  Effect.mapError((error) => error.message),
+                ),
               ),
               Effect.flatMap((answer) =>
                 Effect.fromResult(

@@ -1,5 +1,6 @@
 // The one scene prompt a storyboard panel is drawn from: the film's style
-// block, what each reference image is for, the film's world, the act's light,
+// block, what each reference image is for (the style's, a shot or a tweak's,
+// then each cast member's library record, which wins), the film's world, the act's light,
 // the beat's picture brief (each `{mark}` it names read as the words said
 // there), the moment the panel holds from, the text rule and the house rules.
 // Pure: the CLI sends it on the image route; the tests read it.
@@ -7,6 +8,7 @@
 import { Array as Arr, Boolean as Bool, Option, Result } from 'effect';
 import type { Act } from '../core/schema.ts';
 import { type BoardName, type BoardStyle, PANEL_START } from '../core/board.ts';
+import { type CastLock, castLockNote } from '../core/cast-lock.ts';
 import { parse } from '../core/narration.ts';
 
 /**
@@ -38,6 +40,8 @@ export interface BoardBeat {
   readonly id: BoardName;
   readonly say: Option.Option<string>;
   readonly picture: Option.Option<string>;
+  /** The cast members the picture draws, by their cast-sheet folder ids (`Beat`'s `cast`). */
+  readonly cast: ReadonlyArray<string>;
 }
 
 /** The words a line says from each of its marks to the next (at most `most`), by mark. */
@@ -107,7 +111,19 @@ interface PanelPrompt {
   readonly shot: boolean;
   /** A tweak: the note's words and whether its sketch rides along. */
   readonly tweak: Option.Option<{ readonly text: string; readonly sketch: boolean }>;
+  /** The library reference of each member the beat's `cast` names, in its order: sent after every other reference. */
+  readonly cast: ReadonlyArray<CastLock>;
 }
+
+/** Each cast member's note, its images numbered on from the `before` references sent ahead of them. */
+const castNotes = (cast: ReadonlyArray<CastLock>, before: number): ReadonlyArray<string> =>
+  cast.reduce<{ readonly next: number; readonly notes: ReadonlyArray<string> }>(
+    ({ next, notes }, lock) => ({
+      next: next + lock.files.length,
+      notes: [...notes, castLockNote(lock, next)],
+    }),
+    { next: before + 1, notes: [] },
+  ).notes;
 
 /** The prompt for one panel. */
 export const panelPrompt = (p: PanelPrompt): string => {
@@ -137,7 +153,7 @@ export const panelPrompt = (p: PanelPrompt): string => {
   });
   return [
     p.style.block,
-    refs.join(' '),
+    [...refs, ...castNotes(p.cast, refs.length)].join(' '),
     ...Option.toArray(
       Option.map(Option.fromUndefinedOr(p.style.world), (w) => `THE FILM'S WORLD: ${w}`),
     ),

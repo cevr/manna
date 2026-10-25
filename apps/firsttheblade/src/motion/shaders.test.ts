@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 
 import { FIELD_FRAGMENT, NIGHT_FRAGMENT } from './shaders.ts';
-import { TURN, turnAt } from './sun.ts';
+import { TURN } from './sun.ts';
+import { turnAt } from './testing.ts';
 
 /** The swing and period of each turn the field's shader writes: `float turn = u_turning * <swing> * sin(<2π> * t / <period>);`. */
 const turnsIn = (source: string) =>

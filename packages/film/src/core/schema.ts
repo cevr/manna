@@ -6,6 +6,7 @@
 
 import { Array as Arr, Option, Predicate, Schema, SchemaTransformation, Struct } from 'effect';
 import { ActName, Address, PartId } from './address-schema.ts';
+import { isSegment } from './segment.ts';
 import { SketchItem } from './sketch.ts';
 import type { ease } from './time.ts';
 
@@ -585,6 +586,22 @@ export const Beat = Schema.Struct({
   cite: Schema.optionalKey(Schema.Array(Schema.String)),
   /** What the picture does: the brief for the scene's drawing. */
   picture: Schema.String,
+  /**
+   * The cast members the picture draws, each by its cast-sheet folder's id
+   * (`['christ', 'paul']`): the board sends each one's record in the cast
+   * library (a film's own role first) as a reference that wins over any
+   * concept image that draws the member otherwise, on the person; the
+   * picture says what the member wears and does. Plain strings,
+   * so a script's literal array types; decoding still refuses a name that is
+   * not one path segment.
+   */
+  cast: Schema.optionalKey(
+    Schema.Array(
+      Schema.String.check(
+        Schema.makeFilter((name: string) => isSegment(name) || `${name} is not one path segment`),
+      ),
+    ),
+  ),
 });
 export type Beat = typeof Beat.Type;
 

@@ -51,24 +51,21 @@
  * does not run it (owner, 2026-10-22: the gate is unit tests and lint): run
  * it by hand after a build, before a deploy.
  */
-import { BunHttpServer, BunRuntime, BunServices } from '@effect/platform-bun';
+import { BunRuntime } from '@effect/platform-bun';
 import { chromium, type Browser, type BrowserContextOptions, type Page } from '@playwright/test';
-import { Data, Effect, FileSystem, Layer, Path } from 'effect';
-import { HttpServer, HttpServerRequest } from 'effect/http';
+import { Data, Effect, FileSystem, Path } from 'effect';
+import { HttpServer } from 'effect/http';
 import { transform, type MediaCondition, type MediaFeatureValue } from 'lightningcss';
 import sharp from 'sharp';
 
-import { layerPreview } from '../src/mail/local.ts';
-import { layerDirectory } from '../src/worker/assets.ts';
-import { respond } from '../src/worker/respond.ts';
+import { DIST, layerLocal } from '../src/worker/local.ts';
 
 const LEAF_HOLD =
   'on the home page (light scheme, 1x, script on), at heights 900 and 844 and the narrowest and widest px of each band the built stylesheets’ width media queries make, the healing leaf turns 5deg about its stem’s foot on the page when the Health and Cure card’s link is hovered or focused by Tab under a fine pointer, with no other move and no growth, on the root’s motion tokens, and rests for less motion at rest, when pointed at and focused by Tab, and under a coarse pointer at rest, when pointed at and after a tap, by each part’s computed turn, pivot, transition and page matrix, with no element from its drawing to its card or inside its parts changing its rotate, translate, scale, transform or animation-name';
 const IMAGE_HOLD =
   'a data URL in an img, a style and a stylesheet rule is refused by the content policy and paints nothing, where the same probe without the policy paints';
 
-/** The built site, and its page the leaf is on, and the card's link a keyboard reaches. */
-const DIST = 'dist';
+/** The page the leaf is on, and the card's link a keyboard reaches. */
 const HOME = '/';
 const CARD_LINK = '.card:has(.emblem-remedies) h3 a';
 const LEAF = '.emblem-remedies svg';
@@ -914,16 +911,6 @@ const computed = HttpServer.addressFormattedWith((base) =>
  * `dist/` through the Worker's policy, for as long as the check runs, on a
  * port the system picks, so two workspaces can check at once.
  */
-const app = Effect.gen(function* () {
-  const request = yield* HttpServerRequest.HttpServerRequest;
-  return yield* respond(request);
-});
-
-const Preview = HttpServer.serve(app).pipe(
-  Layer.provide(layerDirectory(DIST)),
-  Layer.provide(layerPreview('tmp/outbox')),
-  Layer.provideMerge(BunHttpServer.layer({ port: 0, hostname: '127.0.0.1' })),
-  Layer.provideMerge(BunServices.layer),
-);
+const Preview = layerLocal({ port: 0, hostname: '127.0.0.1' });
 
 computed.pipe(Effect.provide(Preview), BunRuntime.runMain);

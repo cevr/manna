@@ -10,12 +10,25 @@
 
 import { BunServices } from '@effect/platform-bun';
 import { describe, expect, it } from 'effect-bun-test';
-import { Cause, Context, Effect, Exit, FileSystem, Layer, Option, Path } from 'effect';
+import {
+  Array as Arr,
+  Cause,
+  Context,
+  Deferred,
+  Duration,
+  Effect,
+  Exit,
+  FileSystem,
+  Layer,
+  Option,
+  Path,
+} from 'effect';
 import { type CritiqueStaging, UNSTAGED, critiquePacket } from '../core/critique.ts';
 import { CounselFailed } from '../core/judge.ts';
 import type { MatchTaken } from '../core/match.ts';
 import { Counsel } from './counsel.ts';
 import { Critic } from './critique.ts';
+import { memoryFileSystem, text } from './testing.ts';
 
 const RULES = '# Rules\n\n## The look\n\nOne silhouette outline; hair has no ink of its own.\n';
 
@@ -396,5 +409,192 @@ describe("a cast sheet's critique", () => {
         ]);
         expect(yield* fs.readFileString(`${view}.critique.md`)).toContain('**face**');
       }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+});
+
+/** Where the jobs' match keeps its one figure's files, in memory. */
+const STEM = '/out/f/match/s/lead.t0001.00.bb.1';
+
+/** One figure, lead, matched in scene s, its crops in memory. */
+const LEAD: MatchTaken = {
+  build: 'b.1',
+  scene: 's',
+  at: 'mark:rain',
+  frame: 30,
+  time: 1,
+  marks: {},
+  figures: [
+    {
+      figure: 'lead',
+      key: 'f/lead',
+      concept: { image: { set: 'c', file: 'images/c.png' }, box: [0, 0, 10, 10] },
+      rows: [],
+      side: `${STEM}.png`,
+      table: `${STEM}.md`,
+      crops: { concept: `${STEM}.concept.png`, scene: `${STEM}.scene.png` },
+    },
+  ],
+  unmatched: [],
+};
+
+const LEAD_ANSWER = [
+  '```json',
+  '{"findings": [{"figure": "lead", "aspect": "pose", "what": "the hand low"}]}',
+  '```',
+].join('\n');
+
+/** A staging that names `picture` alone: each picture a packet of its own. */
+const pictured = (picture: string): CritiqueStaging => ({
+  panel: Option.none(),
+  picture: Option.some(picture),
+});
+
+/** How a counsel's runs went: how many were asked, how many at once now and at most, and how many it was told to reach. */
+interface Runs {
+  n: number;
+  now: number;
+  most: number;
+}
+
+/**
+ * A counsel whose run waits on `gate` when `held` says so of its packet,
+ * and answers `LEAD_ANSWER`; it counts its runs, and `reached` is done once
+ * `want` runs have been asked.
+ */
+const gatedCounsel = (
+  gate: Deferred.Deferred<boolean>,
+  held: (packet: string) => boolean,
+  runs: Runs,
+  reached: Deferred.Deferred<boolean>,
+  want: number,
+) =>
+  Layer.effect(
+    Counsel,
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      return Counsel.of({
+        ask: (prompt, dir) =>
+          Effect.gen(function* () {
+            const words = yield* Effect.orDie(fs.readFileString(prompt));
+            runs.n += 1;
+            runs.now += 1;
+            runs.most = Math.max(runs.most, runs.now);
+            if (runs.n >= want) yield* Deferred.succeed(reached, true);
+            if (held(words)) yield* Deferred.await(gate);
+            runs.now -= 1;
+            return { file: `${dir}/claude.md`, text: LEAD_ANSWER };
+          }),
+      });
+    }),
+  );
+
+/** The critic over `LEAD`'s crops in memory, asking `counsel`; `files` holds them. */
+const jobsCritic = (
+  files: Map<string, Uint8Array>,
+  counsel: Layer.Layer<Counsel, never, FileSystem.FileSystem | Path.Path>,
+) =>
+  Effect.map(
+    Layer.build(
+      Critic.layer([{ file: '/rules.md', heading: '## The look' }]).pipe(
+        Layer.provide(counsel),
+        Layer.provideMerge(
+          Layer.merge(memoryFileSystem(files, new Set(['/out/f/match/s'])), Path.layer),
+        ),
+      ),
+    ),
+    (built) => Context.get(built, Critic),
+  );
+
+/** `LEAD`'s rule file and crops, in memory. */
+const leadFiles = () =>
+  new Map<string, Uint8Array>([
+    ['/rules.md', text(RULES)],
+    [`${STEM}.concept.png`, new Uint8Array([1])],
+    [`${STEM}.scene.png`, new Uint8Array([2])],
+  ]);
+
+describe("the critique's jobs", () => {
+  it.effect(
+    'a running job is kept past 33 later jobs, and a start of its packet while it runs asks no second counsel',
+    () =>
+      Effect.gen(function* () {
+        const gate = yield* Deferred.make<boolean>();
+        const reached = yield* Deferred.make<boolean>();
+        const runs: Runs = { n: 0, now: 0, most: 0 };
+        const critic = yield* jobsCritic(
+          leadFiles(),
+          gatedCounsel(gate, (packet) => packet.includes('the held beat'), runs, reached, 1),
+        );
+        const held = yield* critic.start(LEAD, pictured('the held beat'));
+        yield* Deferred.await(reached);
+        yield* Effect.forEach(Arr.range(1, 33), (n) =>
+          Effect.flatMap(critic.start(LEAD, pictured(`quick ${n}`)), (handle) =>
+            critic.job(handle, Duration.infinity),
+          ),
+        );
+        expect(yield* critic.start(LEAD, pictured('the held beat'))).toBe(held);
+        // Time for a second run of its packet, were one started, to reach the counsel.
+        yield* Effect.repeat(Effect.yieldNow, { times: 50 });
+        expect(runs.n).toBe(34);
+        expect(Option.isNone((yield* critic.job(held, Duration.zero)).critique)).toBe(true);
+        yield* Deferred.succeed(gate, true);
+        const done = yield* critic.job(held, Duration.infinity);
+        expect(
+          Option.map(done.critique, (c) => c.figures.flatMap((f) => f.findings.map((x) => x.what))),
+        ).toEqual(Option.some(['the hand low']));
+        expect(runs.n).toBe(34);
+      }).pipe(Effect.scoped),
+  );
+
+  it.effect(
+    'at most 4 counsel runs go at once: a start past them answers its handle, and runs in its turn',
+    () =>
+      Effect.gen(function* () {
+        const gate = yield* Deferred.make<boolean>();
+        const reached = yield* Deferred.make<boolean>();
+        const runs: Runs = { n: 0, now: 0, most: 0 };
+        const critic = yield* jobsCritic(
+          leadFiles(),
+          gatedCounsel(gate, () => true, runs, reached, 4),
+        );
+        const handles = yield* Effect.forEach(Arr.range(1, 6), (n) =>
+          critic.start(LEAD, pictured(`beat ${n}`)),
+        );
+        yield* Deferred.await(reached);
+        // Time for the starts past 4, were they not held back, to reach the counsel.
+        yield* Effect.repeat(Effect.yieldNow, { times: 50 });
+        expect(runs.n).toBe(4);
+        const last = yield* critic.job(handles[5] ?? '', Duration.zero);
+        expect(Option.isNone(last.critique)).toBe(true);
+        yield* Deferred.succeed(gate, true);
+        yield* Effect.forEach(handles, (handle) => critic.job(handle, Duration.infinity));
+        expect(runs).toEqual({ n: 6, now: 0, most: 4 });
+      }).pipe(Effect.scoped),
+  );
+
+  it.effect(
+    'two packets that differ in one byte of a crop are two jobs and two runs; the same packet again is one',
+    () =>
+      Effect.gen(function* () {
+        const gate = yield* Deferred.make<boolean>();
+        const reached = yield* Deferred.make<boolean>();
+        const runs: Runs = { n: 0, now: 0, most: 0 };
+        const files = leadFiles();
+        const critic = yield* jobsCritic(
+          files,
+          gatedCounsel(gate, () => true, runs, reached, 2),
+        );
+        const first = yield* critic.start(LEAD, pictured('roof'));
+        expect(yield* critic.start(LEAD, pictured('roof'))).toBe(first);
+        files.set(`${STEM}.scene.png`, new Uint8Array([3]));
+        const repainted = yield* critic.start(LEAD, pictured('roof'));
+        expect(repainted).not.toBe(first);
+        yield* Deferred.await(reached);
+        yield* Deferred.succeed(gate, true);
+        yield* Effect.forEach([first, repainted], (handle) =>
+          critic.job(handle, Duration.infinity),
+        );
+        expect(runs.n).toBe(2);
+      }).pipe(Effect.scoped),
   );
 });

@@ -6,7 +6,7 @@
  *   name (`./films.ts`). Its mailer and its queue keep what they are given
  *   (`Mailbox`, `Queued`), a sign-up's work waits for `Held.settle`, and its
  *   admin token is `TEST_ADMIN_TOKEN`.
- * - `layerPreview`: `bun run preview` and the contrast check. Each letter is
+ * - `layerPreview`: the site on a laptop (`../worker/local.ts`). Each letter is
  *   written to a file in `outbox` instead of being sent, a sign-up's work and
  *   a film's send run at once; the admin token is `MAIL_ADMIN_TOKEN` when it
  *   is set.

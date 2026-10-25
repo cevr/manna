@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 
 import { COARSE_POINTER, LESS_MOTION, raysTurn } from './query.ts';
-import { ASPECT, SUN, sunLight, TURN, turnAt } from './sun.ts';
+import { ASPECT, SUN, sunLight, TURN } from './sun.ts';
+import { turnAt } from './testing.ts';
 
 /** A seeded draw in [0, 1). */
 const draws = (seed: number) => {
