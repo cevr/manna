@@ -1066,6 +1066,9 @@
       }
     },
     {
+      // The lab's mount, context, fixtures and tests reach across the lab's
+      // layers, so its layer bans are off there; they keep the platform
+      // package off its index.
       "files": [
         "**/packages/film/src/lab/review/mount.tsx",
         "**/packages/film/src/lab/studio/context.tsx",
@@ -1074,7 +1077,17 @@
         "**/packages/film/src/lab/**/*.test.tsx"
       ],
       "rules": {
-        "no-restricted-imports": "off"
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@effect/platform-bun",
+                "message": "import the module by its own path (`import * as BunServices from '@effect/platform-bun/BunServices'`): the package's index loads every module of it."
+              }
+            ]
+          }
+        ]
       }
     },
     {
@@ -1111,30 +1124,6 @@
                   "@bible/film/play-server"
                 ],
                 "message": "the pages' commands never import the player, the tools or the lab: they register their commands with it (packages/film/README.md, the purity rule)."
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      // The lab's mount, context, fixtures and tests, whose layer bans are
-      // off, keep the platform package off its index too.
-      "files": [
-        "**/packages/film/src/lab/review/mount.tsx",
-        "**/packages/film/src/lab/studio/context.tsx",
-        "**/packages/film/src/lab/**/fixtures/**",
-        "**/packages/film/src/lab/**/*.test.ts",
-        "**/packages/film/src/lab/**/*.test.tsx"
-      ],
-      "rules": {
-        "no-restricted-imports": [
-          "error",
-          {
-            "paths": [
-              {
-                "name": "@effect/platform-bun",
-                "message": "import the module by its own path (`import * as BunServices from '@effect/platform-bun/BunServices'`): the package's index loads every module of it."
               }
             ]
           }
