@@ -3586,3 +3586,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** Each of the film's 8 unit-test workers spent about 0.5 CPU-s on imports before its first case. It loaded `@effect/platform-bun`'s index (all 22 of its modules, about 16 ms more than the two it uses), the media stack through the module that names `Media`, and the doubles of every area through one `tools/testing.ts`.
 - **Cause:** The house import of the package was its index, and a service's tag module held its live implementation; the import cost of a module was not measured.
 - **Guard:** lint:no-restricted-imports, proof `packages/film/lint/config.slow.test.ts` `refuses @effect/platform-bun's index in the film's tools and passes a module by its own path`
+
+### config-proof-reads-one-block
+
+- **Date:** 2026-10-24
+- **Kind:** review
+- **Said:** "the rule's proof lints the rule alone, not the rule as the full config applies it to the tools' tests"
+- **Source:** film-budget/review-r1.md F3
+- **Wrong:** The proof of the subpath rule took the one block over two tools source paths and linted a probe with that block's options. A later block that turned the rule off for the tools' tests would have left it green.
+- **Cause:** The proof read a block, not the rule oxlint gives a path: the last block over it that sets the rule, less its `excludeFiles`.
+- **Guard:** code: `packages/film/lint/config.slow.test.ts` `refuses @effect/platform-bun's index in the film's tools and passes a module by its own path`

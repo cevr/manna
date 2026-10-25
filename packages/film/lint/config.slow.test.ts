@@ -20,9 +20,11 @@
 // - The First the Blade site's sources: oxlint lints a probe with the
 //   site's block's own options, and refuses each `?inline` import and data
 //   URL, an image the build walk would not read, and passes a URL import.
-// - The film's tools: one block over them refuses `@effect/platform-bun`'s
-//   index, which loads every module of the package in each test worker, and
-//   passes a module imported by its own path.
+// - The film's tools: the rule each of their files (a source, a test, a
+//   fixture) gets under the whole config, the last block over it that sets
+//   the rule and does not exclude it, refuses `@effect/platform-bun`'s index,
+//   which loads every module of the package in each test worker, and passes
+//   a module imported by its own path.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Glob, JSONC } from 'bun';
@@ -153,6 +155,7 @@ const Imports = Schema.Struct({
 
 const Override = Schema.Struct({
   files: Schema.Array(Schema.String),
+  excludeFiles: Schema.optionalKey(Schema.Array(Schema.String)),
   rules: Schema.optionalKey(Schema.Record(Schema.String, Schema.Unknown)),
 });
 type Override = typeof Override.Type;
@@ -626,26 +629,45 @@ describe('the lint config', () => {
     () =>
       Effect.gen(function* () {
         const config = yield* readJson('.oxlintrc.json', Config);
-        const TOOLS = ['packages/film/src/tools/a.ts', 'packages/film/src/tools/a/b.tsx'];
-        const covers = (o: Override, file: string) =>
-          o.files.some((glob) => new Glob(glob).match(file));
-        const rules = config.overrides
-          .filter((o) => TOOLS.every((file) => covers(o, file)))
-          .flatMap((o) => Option.toArray(ruleIn(o, 'no-restricted-imports')));
-        expect(rules).toHaveLength(1);
+        const matches = (globs: ReadonlyArray<string>, file: string) =>
+          globs.some((glob) => new Glob(glob).match(file));
+        // The rule oxlint gives `file`: the last block over it that sets the rule.
+        const effective = (file: string) =>
+          Option.firstSomeOf(
+            config.overrides
+              .filter((o) => matches(o.files, file) && !matches(o.excludeFiles ?? [], file))
+              .map((o) => ruleIn(o, 'no-restricted-imports'))
+              .toReversed(),
+          );
+        const FILES = [
+          'packages/film/src/tools/a.ts',
+          'packages/film/src/tools/a/b.tsx',
+          'packages/film/src/tools/a.test.ts',
+          'packages/film/src/tools/fixtures/a.ts',
+        ];
+        const rules = FILES.map((file) => ({ file, rule: effective(file) }));
+        expect(rules.filter(({ rule }) => Option.isNone(rule)).map(({ file }) => file)).toEqual([]);
         const probe = [
           "import { BunServices } from '@effect/platform-bun';",
           "import * as BunPath from '@effect/platform-bun/BunPath';",
           'export const used = [BunServices, BunPath];',
         ];
-        const out = yield* oxlintOver(
-          yield* Schema.encodeEffect(RulesConfig)({
-            jsPlugins: [],
-            rules: { 'no-restricted-imports': rules[0] },
-          }),
-          `${probe.join('\n')}\n`,
+        const refused = yield* Effect.forEach(
+          rules.flatMap(({ file, rule }) => Option.toArray(Option.map(rule, (r) => ({ file, r })))),
+          ({ file, r }) =>
+            Schema.encodeEffect(RulesConfig)({
+              jsPlugins: [],
+              rules: { 'no-restricted-imports': r },
+            }).pipe(
+              Effect.flatMap((rulesConfig) => oxlintOver(rulesConfig, `${probe.join('\n')}\n`)),
+              Effect.map((out) => ({
+                file,
+                lines: [...reportedLines(out, ['no-restricted-imports'])],
+              })),
+            ),
+          { concurrency: 8 },
         );
-        expect([...reportedLines(out, ['no-restricted-imports'])]).toEqual([1]);
+        expect(refused).toEqual(FILES.map((file) => ({ file, lines: [1] })));
       }),
     SPAWNS_MS,
   );
