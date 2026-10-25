@@ -8,7 +8,7 @@ Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>`
 | Unit       | Depends on                     | Workspace                 | Agents            | Result                 |
 | ---------- | ------------------------------ | ------------------------- | ----------------- | ---------------------- |
 | glass      | appbase                        | .rifts/bible-tools/glass  | impl ab2ba40 (r8) | dropped                |
-| manna      | barfix                         | .rifts/manna/manna        |                   |                        |
+| manna      | barfix                         | .rifts/manna/manna        |                   | merged 95dfe06aa       |
 | reader1    | appbase                        | .rifts/manna/reader1      | impl a4ef6ed (r1) | merged 5d339030e       |
 | palette    | reader1                        |                           |                   | merged 6cb76a3c4       |
 | playstall  | playerfix                      | (removed)                 | (closed)          | merged 055a51bac       |
@@ -461,5 +461,7 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 - `docs.slow.test.ts` fails on `.claude/skills/verify-hymnal/features/app-icon.md` and `follow.md` (hymnal units; found by ftbbrand review): into `barmisc`. (ftbbrand)
 
 - barfix follow-ups (merged e3ab39e14; `tmp/orchestrate/hymnapp/barfix/round-2-findings.md`, `round-2-verify.md`): in the player sheet, light mode, the text-size panel edge reads 2.88–2.95:1 against the shadowed ground (spec 3.0; 3.13 on the theme ground) → polishbulk hymnbrand contrast pass; an outside change landing during a held touch can send the row to a stale target (two fingers; Counsel rated Major) and a Reset started after touch-down is overridden by the snap (as on base) → polishbulk with dialwrap; `DialPanel` writes a ref in render, `useThumb` keeps two reset counters, and the reset wait runs on the real clock (a `TestClock` would make its slow tests 0 ms); 72 per-stop animated styles and `Dials` redrawn on each playback tick while open are unmeasured on a device → pagerperf; Android `panel`/`edge` roles → feel-android; the bar that once vanished on a three-page stack did not reproduce (0 of 5) and has no known cause; the verifier's skill-step fix F6 → verify-hymnal map.
+
+- manna follow-ups (merged 95dfe06aa; `tmp/orchestrate/hymnapp/manna/spec.md` After the merge, `round-1-findings.md` N1): a lab URL selection opened by a `bible-tools/…` ref keeps the alias label, so the palette hides "Hear this option" there (canonicalize the hub's URL selection; unit test); the owner's main checkout pull, `bun install`, stale `node_modules/@bible` links, lab restart and the `~/.bun/bin/manna` link; the `bible` skill reinstalled by `okra skills` from the main checkout once it is at 95dfe06aa; a `manna` trust entry in `dotfiles/codex/config.toml`; the old-path symlinks removed once nothing live names them (`~/.bun/bin/bible`, the codex trust entry, three live processes under `.rifts/bible-tools/`, the memory files); other rifts under `.rifts/manna/` stay on `bible` names until updated; the workbox warm source needs `workrift refresh` and `workrift deps`; 3 verify-hymnal docs-test failures and 2 hymnal dead exports were red before the rename (test:slow).
 
 ## Review later
