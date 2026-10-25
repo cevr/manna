@@ -3396,3 +3396,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** The match measured no boundary between the hair and the beard, so a render that ran them together passed where the concept parts them by a dark band.
 - **Cause:** The measure read the hair and the face, never the edge between the hair and the beard.
 - **Guard:** code: `packages/film/src/core/match.ts` `hairBeardRows` (the `hair/beard: parted` row), `packages/film/src/core/match.test.ts` `flags a scene that runs together what its concept parts`, `packages/film/src/tools/figure-artifacts.slow.test.ts` `Christ at court 16.51 s, his beard run into his hair where his concept parts them by a dark band: flagged (owner, 2026-10-18)`
+
+### hymnal-strike-on-unconfirmed-bars
+
+- **Date:** 2026-10-24
+- **Kind:** review
+- **Said:** "R1 counts bars from the file's tick 0. In some hymns the printed bars do not start there or have another length, so R1 moves chords off the printed strong beats."
+- **Source:** chordbulk/round-2-findings.md F1 (labelled M1 there)
+- **Wrong:** The compiler moved guitar chords to the file's strong beats in hymns whose files start a beat off the printed bars (474) or carry another meter than the page (51, 259), so their chords left the printed downbeats.
+- **Cause:** The strong beats came from the file's bars counted from its first tick, which the score takes as a downbeat, and nothing held them against the tune. The compiler now strikes a hymn's guitar chords only when its melody confirms the file's bars (`Placement.confirms`).
+- **Guard:** code: `packages/hymnal/src/compile.test.ts` `keeps every guitar change where the file plays it when the melody does not confirm the file's bars`, `packages/hymnal/src/placement.property.test.ts` `moves no guitar change of a hymn whose melody does not confirm its file's bars`
