@@ -20,11 +20,11 @@
 // - The First the Blade site's sources: oxlint lints a probe with the
 //   site's block's own options, and refuses each `?inline` import and data
 //   URL, an image the build walk would not read, and passes a URL import.
-// - The film's tools: the rule each of their files (a source, a test, a
-//   fixture) gets under the whole config, the last block over it that sets
-//   the rule and does not exclude it, refuses `@effect/platform-bun`'s index,
-//   which loads every module of the package in each test worker, and passes
-//   a module imported by its own path.
+// - The film's sources: the rule each file of the film's folders (a
+//   source, a test, a fixture) and of its films gets under the whole config,
+//   the last block over it that sets the rule and does not exclude it,
+//   refuses `@effect/platform-bun`'s index, which loads every module of the
+//   package in each test worker, and passes a module imported by its own path.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Glob, JSONC } from 'bun';
@@ -625,7 +625,7 @@ describe('the lint config', () => {
   );
 
   it.effect.layer(BunServices.layer)(
-    "refuses @effect/platform-bun's index in the film's tools and passes a module by its own path",
+    "refuses @effect/platform-bun's index in every film source and passes a module by its own path",
     () =>
       Effect.gen(function* () {
         const config = yield* readJson('.oxlintrc.json', Config);
@@ -640,10 +640,30 @@ describe('the lint config', () => {
               .toReversed(),
           );
         const FILES = [
+          'packages/film/src/a.ts',
+          'packages/film/src/fixtures/a.ts',
           'packages/film/src/tools/a.ts',
           'packages/film/src/tools/a/b.tsx',
           'packages/film/src/tools/a.test.ts',
           'packages/film/src/tools/fixtures/a.ts',
+          'packages/film/src/core/a.ts',
+          'packages/film/src/core/a.test.ts',
+          'packages/film/src/canvas/a.ts',
+          'packages/film/src/canvas/fixtures/a.ts',
+          'packages/film/src/rive/a.ts',
+          'packages/film/src/style/a.ts',
+          'packages/film/src/player/a.tsx',
+          'packages/film/src/command/a.ts',
+          'packages/film/src/browser/a.ts',
+          'packages/film/src/lab/a.tsx',
+          'packages/film/src/lab/a.test.ts',
+          'packages/film/src/lab/fixtures/a.ts',
+          'packages/film/src/lab/review/mount.tsx',
+          'packages/film/lint/a.ts',
+          'packages/film/lint/nodes.ts',
+          'packages/film/e2e/lab/a.test.ts',
+          'packages/film/e2e/canvas/a.pixel.test.ts',
+          'apps/animations/src/films/a/a.slow.test.ts',
         ];
         const rules = FILES.map((file) => ({ file, rule: effective(file) }));
         expect(rules.filter(({ rule }) => Option.isNone(rule)).map(({ file }) => file)).toEqual([]);
