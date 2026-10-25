@@ -38,7 +38,7 @@ Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>`
 | browse-app | feel, playswap                 |                           |                   |                     |
 | playswap   | chordbulk                      |                           |                   |                     |
 | followsync | chordbulk                      |                           |                   |                     |
-| ftbbrand   | —                              |                           |                   |                     |
+| ftbbrand   | —                              | removed                   | (closed)          | merged 160e59b48    |
 | keys       | render                         |                           |                   | merged 8be940a53    |
 | hymnbar    | shell, playstall               |                           |                   | folded into uibulk  |
 | pager      | coldload, playstall            |                           |                   | folded into uibulk  |
@@ -289,6 +289,8 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 - Every reviewer loads `composition-patterns`, `react` (read as Solid on Solid code) and `effect`, and its findings open with "Composition, state and Effect" (owner, 2026-10-25: "always make sure the reviewer uses the React and Composition skills that we have because these are really the things that I find most important: how the composition works, the state lifting, and all these kinds of things that make it fast, and effect, of course"). Units reviewed before the rule: feel got a composition leg before merge; chordbar code is reviewed so in barfix. (orchestrator)
 - barfix is the owner bar J look (the six points above: contrast, card J spacing, no label wrap, the hold spring, the dials opening and closing, a visible reset), plus chordbar O4 (stacked pages show the wrong hymn on the bar) and O5 (a tap just under a chord opens nothing), plus a composition review of the bar and dial code. The other chordbar follow-ups move to `barmisc`. (orchestrator)
 
+- ftbbrand merged 160e59b48 (the First the Blade site and kit in Moonlit wheat) after the owner kept the field on its soil, kept the marks drawn in the wheat hand, and approved the four link cards (ask af69e890d21), review accepted (with the composition skills), and the acceptance rerun green at decide (`accept-ftbbrand.log`: gate 0, unit, night sky, kit, stills, shippable and build 0, probe 44 lines 0 miss, doctor ok). The site deploy is the owner's: run it from the main checkout, where the prod Alchemy state lives. (ftbbrand)
+
 ## Owner questions
 
 - pagerows (2026-10-22): hymn 220. The database sings 7 places of 3 words in each stanza a second time; the re-engraved page prints them once, with no repeat sign. Two independent judges agree on the reading (`tmp/orchestrate/hymnapp/pagerows/owner-220.md`). Options: (1, recommended) the owner photographs 220 in his own 1985 hymnal, and that page decides; (2) keep the row, 220 stays unsettled; (3) follow the engraving now and remove the repeats. Answer: the owner sent photos of 220 from his 1985 hymnal (2026-10-22, `tmp/orchestrate/hymnapp/notes/owner/2026-10-22-hymn220-p1.HEIC`, `-p2.HEIC`). The 1985 page prints each repeated phrase as an echo in parentheses after the phrase, so the database is right and the re-engraving dropped the echoes. Unit `h220` settles 220 by the photos; the row keeps its words.
@@ -413,5 +415,8 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 
 - From feel (`tmp/orchestrate/hymnapp/feel/state.md`, `round-1-findings.md`, `round-1-composition.md`): unit `feel-android` (Kotlin sounds, SoundPool); `.oxfmtrc.json` ignore for `apps/hymnal/native/*/*.d.swift.ts`; `Voice` as an Effect `Context.Service` with a `Layer` per platform, a tagged `VoiceRefused` error and `Option` ids (composition m2); measure `[feel] ready ms` and launch frame gaps on a Release build (m1; Debug read 284 to 452 ms); one seek tick per jump, not N (m5); `settings.sound` and `settings.feel` names (m6); the provider test seams (m4); the reanimated stand-in reads derived values one frame late; the wall-before-last-detent race on a very fast drag (r1 m1); `feel.test.ts` device test cannot fail, and the floor and unclipped tests miss defects (r1 test strength). (feel)
 - Unit `barmisc` (from chordbar, after barfix): D3 the web dev overlay, O2 a page swipe with the dials open, O3 the docked bar and the back-edge pan, r1 m5 stale comments and `features/settings.md:35`, the verifier tool notes. (chordbar)
+
+- From ftbbrand: the link cards keep the approved field fade, not the new soil (match them if the owner wants); move the marks generator (`marks-2/draw.ts`) into `apps/firsttheblade/kit/`; the phone night close crops the moon at 390 px. (ftbbrand)
+- `docs.slow.test.ts` fails on `.claude/skills/verify-hymnal/features/app-icon.md` and `follow.md` (hymnal units; found by ftbbrand review): into `barmisc`. (ftbbrand)
 
 ## Review later
