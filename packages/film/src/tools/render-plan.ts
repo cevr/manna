@@ -556,7 +556,7 @@ const chunkSizes = (frames: number, size: number, pages: number): ReadonlyArray<
  * a queue: about four a page of `size` frames, then the halving tail
  * (`tailSizes`). A range too short for the tail splits evenly.
  */
-export const planChunks = (start: number, end: number, workers: number): ReadonlyArray<Chunk> => {
+const planChunks = (start: number, end: number, workers: number): ReadonlyArray<Chunk> => {
   const frames = end - start;
   if (frames <= 0) return [];
   const pages = Math.max(1, workers);

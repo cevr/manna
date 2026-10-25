@@ -1,9 +1,11 @@
 // Render a film frame by frame in headless Chromium. Every frame is a pure
 // function of time, so pages render any chunk in any order: a video splits
 // into chunks on a queue that idle pages pull from, each page drawing and
-// encoding its chunk to its own H.264 segment, then the segments join in
-// order (copied, not re-encoded) with the audio cut from the lossless master
-// and encoded to AAC. The server, the browser and every page (a pool of
+// encoding its chunk to its own H.264 MP4, then the chunks join in order
+// (copied, not re-encoded) with the audio cut from the lossless master and
+// encoded to AAC. A video of the film, an act or a scene keeps each beat's
+// chunks under the film's project folder by what its frames read
+// (`segments.ts`) and draws only the beats it has not kept. The server, the browser and every page (a pool of
 // `Pages`) live in one scope: a failure, or Ctrl-C, closes them all.
 
 import { availableParallelism } from 'node:os';
@@ -573,10 +575,10 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
           onSome: (cut) => Effect.asSome(trackOf(cut)),
         });
 
-        // The segments go in a folder of this render's own, made fresh by the
-        // system: never under out/<film>, so two renders at once never share
-        // one. It lives in the render's scope: joined, failed or interrupted,
-        // the render takes it with it.
+        // A chunk of no kept segment (a short's, a wedge's) goes in a folder
+        // of this render's own, made fresh by the system, so two renders at
+        // once never share one. It lives in the render's scope: joined,
+        // failed or interrupted, the render takes it with it.
         const work = yield* fs.makeTempDirectoryScoped({ prefix: 'film-segments-' });
         const segDir = path.join(work, 'segments');
         const shareDir = path.join(work, 'share');

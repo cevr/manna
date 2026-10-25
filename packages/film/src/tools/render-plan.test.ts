@@ -19,7 +19,6 @@ import {
   flagConflicts,
   jobOf,
   frameSpan,
-  planChunks,
   Reuse,
   segmentChunks,
   stillName,
@@ -232,9 +231,13 @@ describe('jobOf', () => {
   });
 });
 
-describe('planChunks', () => {
+describe('segmentChunks, one segment', () => {
+  /** One segment's frames `[from, to)`, chunked for `workers` pages. */
+  const oneSegment = (from: number, to: number, workers: number) =>
+    segmentChunks([{ from, to }], workers);
+
   test('covers the range once, in order, with no gaps', () => {
-    const chunks = planChunks(120, 10_499, 6);
+    const chunks = oneSegment(120, 10_499, 6);
     expect(chunks[0]?.from).toBe(120);
     expect(chunks.at(-1)?.to).toBe(10_499);
     for (const [k, c] of chunks.entries()) {
@@ -246,7 +249,7 @@ describe('planChunks', () => {
 
   /** The frames in each chunk, in order. */
   const sizes = (from: number, to: number, workers: number) =>
-    planChunks(from, to, workers).map((c) => c.to - c.from);
+    oneSegment(from, to, workers).map((c) => c.to - c.from);
 
   test('about four chunks per page, then a tail that halves', () => {
     // 150 frames a chunk for 4 pages, the last 448 frames as four of 75 and four of 37.
@@ -287,7 +290,7 @@ describe('planChunks', () => {
   });
 
   test('an empty range has no chunks', () => {
-    expect(planChunks(50, 50, 4)).toEqual([]);
+    expect(oneSegment(50, 50, 4)).toEqual([]);
   });
 });
 
@@ -308,17 +311,7 @@ describe('a video’s reuse', () => {
   });
 });
 
-describe('segmentChunks', () => {
-  test('chunks one segment as planChunks chunks its frames', () => {
-    expect(
-      segmentChunks([{ from: 120, to: 10_499 }], 6).map(({ index, from, to }) => ({
-        index,
-        from,
-        to,
-      })),
-    ).toEqual([...planChunks(120, 10_499, 6)]);
-  });
-
+describe('segmentChunks, many segments', () => {
   test("covers every segment's frames in order, each chunk within one segment", () => {
     // Three segments drawn of a render's five: the beats between them were kept.
     const segments = [
