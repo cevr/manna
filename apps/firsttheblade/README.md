@@ -195,20 +195,34 @@ subdomain; the canonical URL on the `workers.dev` host is built from it.
 
 ## The look
 
-The site is brand round 4's choice (2026-10-19): logo 10 (the painted shoot in
-its disc beside the Newsreader wordmark), site mix 1 “Day into night as you
-read” (the morning field, the series on torn paper, a dusk band, the night
-close with Mark 4:27), and palette 09, “Morning under a blue sky”, from Sanzo
-Wada's combination no. 294. The colours have one source, `src/palette.ts`;
-the stylesheet's `--color-*` tokens repeat them, and the tests hold the two
-together. Round 5 (2026-10-19) sharpened two pieces: the hero is a repaint
-of the field at 3072 px, and the dusk band blends in oklab.
+The brand is the Moonlit wheat palette (the wheat `#ffefae` on the night
+`#12354e`), lockup D “Small capitals” (the bare wheat, `src/art/wheat.svg`,
+beside “First _the_ Blade” in Newsreader's small capitals, “the” in italic),
+the series marks in fine lines, and site direction N2 “The sky turns”. The
+page is its own day into night: the hero field fades into the paper, the
+header and Mark 4:28 sit on the painted sky, the series are rows on the paper
+with a hairline between them, each mark on a band tile, “Why we make these”
+warms from the paper into the wheat, the dusk runs from the wheat through
+warm stops to the night and holds Mark 4:27, and the moonlit night rises out
+of it with the stacked lockup, the sign-up and the footer. The site has no
+cut paper: no torn strips, tilted cards or paper shadows (the films keep
+their cut-paper look). There is no dark theme: the page shows the same in
+either scheme. The colours have one source, `src/palette.ts`; the
+stylesheet's `--color-*` tokens repeat them, and the tests hold the two
+together (`src/brand.test.ts` holds every role to the wheat's or the night's
+hue). Newsreader has no small capitals of its own, so the wordmark lets the
+browser draw them (`font-synthesis-small-caps: auto`). The darker wheat
+(`accent`, `#7a6813`) carries the labels, “the” and the marks' lines on the
+paper at WCAG AA; the verse and the page titles on the painted sky are in the
+ink. The hero is a repaint of the field at 3072 px, and the dusk blends in
+oklab.
 
 ```bash
 bun run contrast   # every built page at 390 and 1440 px, and each link under the pointer, against WCAG AA (build first)
 bun run computed   # by hand, not in the gate: in Chrome, on the built home page, the healing leaf at the widths, heights and states its doc lists, and a data-URL picture refused by the content policy (build first)
 bun run kit        # the YouTube kit into kit/out/, and the link cards and icons into public/
 bun run kit:field  # the field's still (its rays from the sun) and its wind map into src/art/ from kit/art/field.webp; then bun run kit
+bun run kit:night  # the night's stills into src/art/ from kit/art/night.webp, the sky's hue turned to the night's
 bun run kit:pin --ask <id>      # the coordinator only: pins the stills as they stand in kit/approved-stills.json, pending on the lab ask whose image blocks show them, and saves the ask in kit/fixtures/
 bun run kit:approve --ask <id>  # the coordinator only: approves the pinned stills when the stills answer is approve and each still's SHA-256 is a file an image block of the ask or of a kept earlier approval showed; saves the ask again, answered
 bun run kit:shippable           # exits 0 only when the approvals' shown files hold every still and a fresh build's dist/ holds no image the record and OUTSIDE do not; the prod stack runs it first
@@ -275,12 +289,22 @@ a3e589137f5, 2026-10-21), so a review reads for each:
 ## The art and the fonts
 
 The field (`src/art/field-*.webp`, 768 to 3072 px) is brand round 5's repaint
-of round 4's field. The night and the mark (`src/art/`, and `kit/art/` at full
-size) are round 4's paintings. The series emblems are round 3's, in the same
-colours, except Health and Cure's healing leaf (Revelation 22:2, the owner's
-pick on ask ab7bf68d1be). The thumbnails' paintings (`kit/art/robe.webp`, `kit/art/court.webp`)
-are from Righteousness by Faith. `bun run kit` draws the YouTube banner and the
-link cards in `public/og/` from the site's field, and the icons from the mark.
+of round 4's field. The night (`src/art/night-*.webp`) is round 4's painting
+with its sky turned to the night's hue: `bun run kit:night` (`kit/night.ts`,
+`kit/night-paint.ts`) reads `kit/art/night.webp`, a copy of round 4's night
+at 1536 px (no larger night exists), turns each pixel near the sky's hue
+above the near field about the OKLab lightness axis, so the moon, the stars,
+the land and the field keep their place, light and chroma, and writes the
+two stills; it never reads its own output, so a second run writes the same
+bytes. The wheat (`src/art/wheat.svg`) is the hymnal's blade, the same path.
+The series marks (`src/art/emblem-*.svg`) are fine lines in a 48-unit box,
+stroked in the darker wheat; Health and Cure's is the healing leaf
+(Revelation 22:2, the owner's pick on ask ab7bf68d1be). The thumbnails'
+paintings (`kit/art/robe.webp`, `kit/art/court.webp`) are from Righteousness
+by Faith. `bun run kit` draws the YouTube banner and cover (the lockup on the
+field) and the link cards in `public/og/` (the field fading into the paper,
+with the series mark and the name) from the site's field, and the avatar,
+the watermark and the icons from the wheat on the night.
 
 The field's master is `kit/art/field.webp`. `bun run kit:field` (`kit/field.ts`)
 paints its sky's top-left rays out, lays the sun's own light over the sky
@@ -291,7 +315,7 @@ that an image block of the approving ask showed, and that ask's `stills`
 answer is `approve`. Every image file of the built site (`dist/` after
 `bun run build`) is in the approval record or in a named list of images
 outside the rule, each with its reason (`OUTSIDE`, `kit/served.ts`: the
-night, the mark, the emblems and the icons). A file is an image by its bytes,
+wheat, the series marks and the icons). A file is an image by its bytes,
 not its name (`kit/build-walk.ts`: JPEG, PNG and APNG, GIF, WebP, AVIF and
 HEIF, JPEG XL, BMP, ICO and CUR, TIFF, JPEG 2000, SVG by its root element
 in UTF-8, UTF-16 or any encoding that keeps ASCII as its bytes, a gzipped one
@@ -327,7 +351,7 @@ the record, each the record does not name and each it names with no file,
 and an image added under any served folder or named from any module. It
 also refuses each still with one byte changed, re-encoded, one pixel one level off,
 swapped or dropped, and the lights the earlier light guards let through.
-`bun run kit` and `bun run kit:field` print each still that differs from the
+`bun run kit`, `bun run kit:field` and `bun run kit:night` print each still that differs from the
 record and never write it. A repainted or re-encoded still goes to the owner
 as a lab ask that shows each still byte for byte as an image block (a crop or
 a render of it is not the still): `bun run kit:pin --ask <id>` pins the
@@ -353,7 +377,9 @@ screen. Over the field's sky the sun's rays turn slowly, a few degrees each
 way and back over a minute (`TURN` in `src/motion/sun.ts`): the shader takes
 the light the still bakes in off the sky and lays it on again turned, so the
 still itself stays as approved. With a coarse pointer the rays rest at the
-still's angles while the wheat still sways. The series cards' emblems are laid in the page as drawings
+still's angles while the wheat still sways. Each still and its canvas sit in
+one wrapper (`.field-paint`, `.night-paint`) that carries the fade, so the
+canvas fades with the painting. The series rows' marks are laid in the page as drawings
 (`src/ui/emblems.ts`) so the stylesheet can stir their parts.
 
 Newsreader (`src/fonts/`) is under the SIL Open Font License 1.1, subset to

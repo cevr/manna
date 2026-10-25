@@ -2,23 +2,24 @@
 
 You set the channel up by hand in YouTube Studio, because YouTube's API can't set the picture or the handle. It takes about five minutes. You need these files from this folder:
 
-| File                   | What it is                                                                  | YouTube's limit                    |
-| ---------------------- | --------------------------------------------------------------------------- | ---------------------------------- |
-| `avatar-800.png`       | The profile picture: logo 10, the painted shoot in its disc, 800 × 800      | at least 98 × 98, 4 MB or less     |
-| `banner-2560x1440.png` | The banner: the morning field, the name on a torn paper strip in the centre | at least 2048 × 1152, 6 MB or less |
-| `banner-crops.png`     | What a TV, a computer and a phone show of the banner                        |                                    |
-| `watermark-150.png`    | The video watermark: the disc, 150 × 150, transparent                       | 150 × 150, 1 MB or less            |
-| `thumb-robe.png`       | A thumbnail in the house style: the film's painting, its question on paper  | 1280 × 720, 2 MB or less           |
-| `thumb-court.png`      | A second thumbnail in the same style                                        | 1280 × 720, 2 MB or less           |
-| `channel.md`           | This page: the text to paste                                                |                                    |
+| File                   | What it is                                                                              | YouTube's limit                    |
+| ---------------------- | --------------------------------------------------------------------------------------- | ---------------------------------- |
+| `avatar-800.png`       | The profile picture: the bare wheat on the night, 800 × 800                             | at least 98 × 98, 4 MB or less     |
+| `banner-2560x1440.png` | The banner: the morning field, the wheat and the name in small capitals in the centre   | at least 2048 × 1152, 6 MB or less |
+| `banner-crops.png`     | What a TV, a computer and a phone show of the banner                                    |                                    |
+| `watermark-150.png`    | The video watermark: the bare wheat, 150 × 150, transparent                             | 150 × 150, 1 MB or less            |
+| `thumb-robe.png`       | A thumbnail in the house style: the film's painting, its question in wheat on the night | 1280 × 720, 2 MB or less           |
+| `thumb-court.png`      | A second thumbnail in the same style                                                    | 1280 × 720, 2 MB or less           |
+| `channel.md`           | This page: the text to paste                                                            |                                    |
 
-The kit is drawn by `bun run kit` in `apps/firsttheblade` (brand round 4: logo 10, YouTube set 6, palette 09; round 5: the banner's field is the site's repaint).
+The kit is drawn by `bun run kit` in `apps/firsttheblade` (the Moonlit wheat palette and lockup D “Small capitals”; the banner's field is the site's repaint). The same run draws the Facebook Page's cover, `facebook-cover-1640x924.png` (the lockup on the field), and what a computer and a phone show of it, `facebook-cover-crops.png`. The site's moonlit night comes from `kit/art/night.webp` by `bun run kit:night`; that source is 1536 px wide, because no larger night exists, so nothing in this kit is drawn from the night at a larger size.
 
 ## The house style
 
-- **Colours:** palette 09, “Morning under a blue sky”, from combination no. 294 of Sanzo Wada's _A Dictionary of Color Combinations_: Sulpher Yellow `#f5ecc2`, Cream Yellow `#fdbf68`, Cossack Green `#437742` and Salvia Blue `#97acc8`. Text is ink `#2c4542` on paper `#fcfbf0`; the accent is `#427542`.
-- **Type:** Newsreader, weight 500, for the name and every headline. In the name, “the” is italic weight 400 in the accent colour.
-- **Thumbnails:** the film's own painting fills the frame. Its question sits on a torn strip of paper at the left, tilted a little, in two short lines at most. Every figure keeps its arms in sleeves.
+- **Colours:** the Moonlit wheat palette: the wheat `#ffefae` on the night `#12354e`. By day the text is the night's ink `#12354e` on the paper `#fff9e0`, and the darker wheat `#7a6813` carries “the” and the wheat.
+- **Type:** Newsreader, weight 500, for the name and every headline. The name is in small capitals; “the” is italic weight 400, not in small capitals, in the darker wheat by day and in the wheat on the night.
+- **The mark:** the bare wheat, the same blade as the hymnal's. It stands alone: no disc, no paper behind it.
+- **Thumbnails:** the film's own painting fills the frame. The night washes in from the left, and the question sits on it in the wheat, in two short lines at most. Every figure keeps its arms in sleeves.
 
 ## The text to paste
 
@@ -87,7 +88,7 @@ Newer versions of Studio merge **Branding** and **Basic info** into one **Profil
 
 1. **Customisation → Branding**
    - **Picture:** choose **Upload**, then `avatar-800.png`. Leave the circle over the whole square, then choose **Done**.
-   - **Banner image:** choose **Upload**, then `banner-2560x1440.png`. In the preview, check that the name on its paper strip sits inside **Viewable on all devices**. Then choose **Done**.
+   - **Banner image:** choose **Upload**, then `banner-2560x1440.png`. In the preview, check that the wheat and the name sit inside **Viewable on all devices**. Then choose **Done**.
    - **Video watermark:** choose **Upload**, then `watermark-150.png`. Set **Display time** to **Entire video**, then choose **Done**.
 2. **Customisation → Basic info**
    - **Name:** `First the Blade`
@@ -107,6 +108,6 @@ Newer versions of Studio merge **Branding** and **Basic info** into one **Profil
 5. **Settings → Channel → Basic info → Keywords**
    - Paste the keywords, then choose **Save**.
 6. **Check the channel:** open youtube.com/@firsttheblade on your phone and on a computer.
-   - The picture reads as a shoot breaking the soil.
-   - On the phone, the banner shows the name strip whole.
+   - The picture reads as a blade of wheat on the night.
+   - On the phone, the banner shows the wheat and the name whole.
    - The watermark sits in the bottom-right corner of a video.

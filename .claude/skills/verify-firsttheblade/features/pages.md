@@ -1,7 +1,9 @@
 # Pages
 
-A visitor lands on the home page (the morning field, the four series on torn
-paper, the night close with Mark 4:27 and the sign-up), follows a series to
+A visitor lands on the home page (the morning field fading into the paper,
+the four series as rows on the paper, each with its fine-line mark, the dusk
+with Mark 4:27, and the moonlit night close with the sign-up; the look itself
+is the Brand feature), follows a series to
 its page (what it covers, its films, or "None are out yet"), reads About, and
 moves between them by the header, the footer's Site navigation, or on a phone
 the Menu dialog. Nothing on these pages needs script except the phone menu,
