@@ -118,6 +118,16 @@ describe('jobOf', () => {
     expect(Result.getOrThrow(jobOf(flags))).toMatchObject({ _tag: 'Video', share: true });
   });
 
+  test('a review render of the Board makes no share copy unless --share asks for one', () => {
+    const review = { ...flags, board: true, review: true };
+    expect(Result.getOrThrow(jobOf(review))).toMatchObject({ _tag: 'Video', share: false });
+    expect(Result.getOrThrow(jobOf({ ...review, share: Option.some(true) }))).toMatchObject({
+      _tag: 'Video',
+      share: true,
+    });
+    expect(Result.getOrThrow(jobOf({ ...flags, board: true }))).toMatchObject({ share: true });
+  });
+
   test('an address of scenes or an act sets the range of a contact sheet', () => {
     const job = Result.getOrThrow(jobOf({ ...flags, contact: Option.some(5), scope: bc }));
     expect(job).toMatchObject({

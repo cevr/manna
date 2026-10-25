@@ -660,7 +660,9 @@ Nothing else moves, and no captions are burnt in (the `.vtt` beside it
 keeps the line). `--review` (variant `board-review`) burns in, small in the
 bottom-left corner, the film time, the beat and the panel with its try
 (`0:41.3 · name · name.sets · try 5`, `burnIn`), so a frame of the owner's
-screen capture names where he is. The page (`player/board.ts`) reads the
+screen capture names where he is. A review copy is watched, not sent, so it
+makes no share copy unless `--share` asks for one, which doubles its speed
+(a share copy is a second hardware encode of every frame). The page (`player/board.ts`) reads the
 board and every kept try from its server (`boardFile`,
 `/films/<film>/board.json`, `/films/<film>/board/<file>`) and decodes them
 before the first frame; one it cannot read fails the render

@@ -378,7 +378,8 @@ export const jobOf = (flags: RenderFlags): Result.Result<RenderJob, FlagsConflic
             to,
             scale: Option.getOrElse(flags.scale, () => 1),
             out: flags.out,
-            share: Option.getOrElse(flags.share, () => true),
+            // A review render is watched, not sent: it makes its share copy only when asked.
+            share: Option.getOrElse(flags.share, () => !flags.review),
             encoder: flags.encoder,
             reuse: flags.reuse,
           }),

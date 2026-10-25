@@ -823,7 +823,7 @@ const render = <E, R>(
       share: Flag.Boolean('share').pipe(
         Flag.optional,
         Flag.withDescription(
-          'also write a smaller copy to send, <out>.share.mp4 (default; --no-share to skip it)',
+          'also write a smaller copy to send, <out>.share.mp4 (default, but not for --review; --no-share to skip it)',
         ),
       ),
       encoder: Flag.Literals('encoder', EncoderName.literals).pipe(
@@ -853,7 +853,7 @@ const render = <E, R>(
       review: Flag.Boolean('review').pipe(
         Flag.withDefault(false),
         Flag.withDescription(
-          'with --board: burn in, small in the bottom-left corner, the film time, the beat and the panel with its try (named board-review)',
+          'with --board: burn in, small in the bottom-left corner, the film time, the beat and the panel with its try (named board-review); no share copy unless --share',
         ),
       ),
       fresh: Flag.Boolean('fresh').pipe(
