@@ -395,8 +395,8 @@
           "at": "2026-10-25T18:10:19.152Z"
         }
       ],
-      "kept": 3,
-      "why": "Owner kept the coordinator's pick (ask a64a62dd4c5)."
+      "kept": 5,
+      "why": "Owner picked try 5: the villager in his headcloth (ask a2cc5fdbbdc)."
     },
     {
       "id": "milk.word",
@@ -530,8 +530,8 @@
           "at": "2026-10-25T18:12:19.631Z"
         }
       ],
-      "kept": 3,
-      "why": "Owner kept the coordinator's pick (ask a64a62dd4c5)."
+      "kept": 5,
+      "why": "Owner picked try 5: the villager in his headcloth (ask a2cc5fdbbdc)."
     },
     {
       "id": "milk.shame",
@@ -665,8 +665,8 @@
           "at": "2026-10-25T18:20:22.409Z"
         }
       ],
-      "kept": 4,
-      "why": "Owner kept the coordinator's pick (ask a64a62dd4c5)."
+      "kept": 6,
+      "why": "Owner picked try 6: the villager in his headcloth (ask a2cc5fdbbdc)."
     },
     {
       "id": "stones.foundation",
@@ -2154,8 +2154,8 @@
           "at": "2026-10-25T18:16:28.397Z"
         }
       ],
-      "kept": 2,
-      "why": "Owner kept the coordinator's pick (ask a188dc7ab01)."
+      "kept": 4,
+      "why": "Owner picked try 4: the villager in his headcloth (ask a2cc5fdbbdc)."
     },
     {
       "id": "eat.soul",
@@ -2227,8 +2227,8 @@
           "at": "2026-10-25T18:18:10.575Z"
         }
       ],
-      "kept": 1,
-      "why": "Owner kept the coordinator's pick (ask a188dc7ab01)."
+      "kept": 3,
+      "why": "Owner picked try 3: the villager in his headcloth (ask a2cc5fdbbdc)."
     },
     {
       "id": "path.just",
