@@ -29,7 +29,8 @@ Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>`
 | follow2    | worship                        | .rifts/manna/follow2      | a6c9723295ba443cc | merged 622350708    |
 | appicon    | worship                        | .rifts/manna/appicon      | a4d3e2ed97ddb4ba8 | merged 9d31cb7a8    |
 | chordbulk  | chordsimp, worship             | removed                   | (closed)          | merged a70cd91c9    |
-| chordbar   | chordbulk                      |                           |                   |                     |
+| pagerflick | chordbulk                      |                           |                   |                     |
+| chordbar   | chordbulk, pagerflick          |                           |                   |                     |
 | feel       | chordbar                       |                           |                   |                     |
 | chordplace | chordbar, feel                 |                           |                   |                     |
 | browse-app | feel, playswap                 |                           |                   |                     |
@@ -270,6 +271,8 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 - chordbulk merged a70cd91c9 with parts 1 to 3 (chordtap, the study, R1 struck only on bars the melody confirms: 102 of 695 hymns keep the file's placement), after 3 rounds, review accepted and verify pass. Parts 4 and 5 become their own units by one agent per deliverable: `chordbar` (part 4, bar J with the key and capo dials) and `feel` (part 5, the Feel service). Every "chordbulk part 4" in this plan now means `chordbar`, and every "chordbulk part 5" means `feel`. Order: chordbar → feel → chordplace → playswap. (orchestrator, 2026-10-25, chordbulk)
 
 - The owner's phone look at chordbulk (2026-10-25, hymn 1, scrawl capture `scrawl-1792892901558-1060f-50`; never transcribe its words): "you press one, but there's no sheet. It should be a sheet"; "we should probably try to centre this"; "Does Capo really matter for this when it's DMI? Like, it's just a positioning, right? So even if there's a capo, D minor will always look like D minor." He is right: a shape is drawn the same at any capo; the capo only moves where fret 1 sits. So in `chordbar`: a tapped chord opens its box in a real sheet (a grabber, drag down to close, the same sheet family as bar J), the diagram is centred in it, and the "No capo" / "Capo N" line leaves the box. Reversible. (owner words; chordbar)
+
+- Unit `pagerflick` (owner, 2026-10-25: "when swiping between hymns, when you're viewing a hymn, is that it doesn't take momentum into consideration, so you really have to swipe large amounts to get to the next or previous hymn, I think it should take momentum into account"): a quick short flick turns the page, as in Photos; a slow drag turns it only past half; a flick never skips more than one hymn. The pager is `apps/hymnal/src/reader/HymnScreen.native.tsx` (a horizontal `LegendList` with `pagingEnabled`, each page its own vertical scroll); the cause is not yet measured. It is a normal-path defect the owner meets on every swipe, and it is small, so it takes the next hymnal slot, before `chordbar`. Path: deep (the proof is a flick on the simulator). (owner words; pagerflick)
 
 ## Owner questions
 
