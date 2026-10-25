@@ -72,6 +72,28 @@ describe('the sound switch', () => {
   });
 });
 
+describe('Sounds and haptics', () => {
+  it('is on the first time', () => {
+    const { settings, registry } = launch(new Map());
+    expect(registry.get(settings.feel)).toBe(true);
+  });
+
+  it('stays off under its key when the app is opened again, and on once turned back', () => {
+    const device = new Map<string, string>();
+    const first = launch(device);
+    first.registry.set(first.settings.feel, false);
+    first.registry.dispose();
+    expect(device.get('feel')).toBe('false');
+
+    const again = launch(device);
+    expect(again.registry.get(again.settings.feel)).toBe(false);
+    again.registry.set(again.settings.feel, true);
+    again.registry.dispose();
+    const third = launch(device);
+    expect(third.registry.get(third.settings.feel)).toBe(true);
+  });
+});
+
 describe('the chord style', () => {
   it('is Simple until the reader picks Advanced', () => {
     const { settings, registry } = launch(new Map());

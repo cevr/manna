@@ -2,7 +2,7 @@
  * The bar's key button and its dials, as a model, pure: whether chords show
  * (for every hymn), the page's hymn's move (its transpose and its capo), and
  * whether the dials above the bar are open. A tap on the key button opens
- * the dials, or closes them; a tap on the page closes them; a hold turns
+ * the dials, or closes them (a press cue); a tap on the page closes them; a hold turns
  * chords on or off. The key dial turns the sounding key, and turning it
  * turns chords on, keeping the key turned to. The capo dial sets the fret,
  * held to 0 to 11: a turn past an end stays at the end and cues a wall.
@@ -16,7 +16,7 @@
 import * as Chord from '@bible/hymnal/chord';
 import { Data } from 'effect';
 
-import type { Cue } from '~/feel/cue';
+import { type Cue, plain } from '~/feel/cue';
 import { keyName, type Move, playedKey, soundingKey, still } from '~/hymns/chords';
 
 export interface Thumb {
@@ -58,12 +58,12 @@ export const transposeTo = (printed: Chord.Key, pitch: number): number =>
 /** Whether `move` is the hymn as printed. */
 export const isStill = (move: Move): boolean => move.transpose === 0 && move.capo === 0;
 
-const chordsCue = (on: boolean): Cue => (on && 'chords-on') || 'chords-off';
+const chordsCue = (on: boolean): Cue => plain((on && 'chords-on') || 'chords-off');
 
 /** The state after `event`, for a hymn printed in `printed`, and the cues it makes. */
 export const step = (printed: Chord.Key, state: Thumb, event: ThumbEvent): Step =>
   ThumbEvent.$match(event, {
-    Tap: () => ({ state: { ...state, open: !state.open }, cues: [] }),
+    Tap: () => ({ state: { ...state, open: !state.open }, cues: [plain('press')] }),
     TapPage: () => ({ state: { ...state, open: false }, cues: [] }),
     Hold: () => ({
       state: { ...state, chords: !state.chords },
@@ -75,16 +75,16 @@ export const step = (printed: Chord.Key, state: Thumb, event: ThumbEvent): Step 
         chords: true,
         move: { ...state.move, transpose: transposeTo(printed, pitch) },
       },
-      cues: (state.chords && []) || ['chords-on' as const],
+      cues: (state.chords && []) || [plain('chords-on')],
     }),
     TurnCapo: ({ capo }) => {
       const held = Math.min(Math.max(capo, 0), 11);
       return {
         state: { ...state, move: { ...state.move, capo: held } },
-        cues: (held !== capo && ['wall' as const]) || [],
+        cues: (held !== capo && [plain('wall')]) || [],
       };
     },
-    Reset: () => ({ state: { ...state, move: still, open: false }, cues: ['reset' as const] }),
+    Reset: () => ({ state: { ...state, move: still, open: false }, cues: [plain('reset')] }),
   });
 
 export type Shown = 'reset' | 'capo' | 'key';

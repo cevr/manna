@@ -2,7 +2,8 @@
 // folder, each view cut from it and filed by its name (a turnaround's by the
 // house's names), the keep recorded
 // with his why; a kind kept already, or a try the record does not hold, is
-// refused and writes nothing.
+// refused and writes nothing, and a kept kind replaced on his answer moves
+// its old files into the member's history and records both keeps.
 
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
@@ -20,6 +21,7 @@ const base: FigureSpec = { ...PLAIN, robeShade: [60, 78, 150], arm: 'sleeve' };
 const at = (eyeShift: number, extra: Partial<FigureSpec> = {}) =>
   drawFigure({ ...base, eyeShift, ...extra });
 const poses = encodePng(drawSheet([at(0), at(-14)]));
+const posesAgain = encodePng(drawSheet([at(0), at(-12)]));
 
 /** `sheet` as the route can answer it with its paper left out: every paper pixel transparent, its colour a dark grey no eye sees. */
 const bare = (sheet: Raster): Raster => {
@@ -51,6 +53,15 @@ const record: CastSheetRecord = {
           flags: [],
           at: '2026-10-18T00:00:00.000Z',
         },
+        {
+          n: 2,
+          file: 'poses-2.png',
+          prompt: 'p',
+          refs: [],
+          underlay: false,
+          flags: [],
+          at: '2026-10-25T00:00:00.000Z',
+        },
       ],
     },
   },
@@ -59,6 +70,7 @@ const record: CastSheetRecord = {
 const over = (files: Map<string, Uint8Array>) => {
   files.set(`${FOLDER}/cast-sheet.json`, text(Schema.encodeSync(CastSheetJson)(record)));
   files.set(`${OUT}/poses-1.png`, poses);
+  files.set(`${OUT}/poses-2.png`, posesAgain);
   return ContentStore.layer.pipe(
     Layer.provideMerge([
       memoryFileSystem(files),
@@ -72,7 +84,7 @@ const over = (files: Map<string, Uint8Array>) => {
 const keep = (n: number) =>
   keepCastSheet(
     { folder: FOLDER, out: OUT },
-    { kind: 'poses', n, why: 'He faces each way as asked', ask: Option.some('a1') },
+    { kind: 'poses', n, why: 'He faces each way as asked', ask: Option.some('a1'), replace: false },
   );
 
 describe('a sheet kept', () => {
@@ -123,12 +135,56 @@ describe('a sheet kept', () => {
     },
   );
 
+  it.effect(
+    "replaces a kept kind on the owner's answer: the new try kept, the old files in its history, the record naming both",
+    () => {
+      const files = new Map<string, Uint8Array>();
+      return Effect.gen(function* () {
+        yield* keep(1);
+        const oldView = files.get(`${FOLDER}/views/poses-2.png`);
+        const kept = yield* keepCastSheet(
+          { folder: FOLDER, out: OUT },
+          {
+            kind: 'poses',
+            n: 2,
+            why: "I'm liking the new sheet",
+            ask: Option.some('a2'),
+            replace: true,
+          },
+        );
+        expect(kept.try).toBe(2);
+        expect(files.get(`${FOLDER}/kept/poses.png`)).toEqual(posesAgain);
+        const after = yield* Schema.decodeEffect(CastSheetJson)(
+          new TextDecoder().decode(files.get(`${FOLDER}/cast-sheet.json`)),
+        );
+        expect(after.kept?.poses).toMatchObject({
+          try: 2,
+          why: "I'm liking the new sheet",
+          ask: 'a2',
+        });
+        const [replaced] = after.replaced ?? [];
+        expect(replaced).toMatchObject({
+          kind: 'poses',
+          by: 2,
+          ask: 'a2',
+          why: "I'm liking the new sheet",
+          kept: { try: 1, why: 'He faces each way as asked', ask: 'a1' },
+        });
+        expect(replaced?.folder).toMatch(/^kept\/replaced\/\d{4}-\d{2}-\d{2}-poses-1$/);
+        const history = `${FOLDER}/${replaced?.folder}`;
+        expect(files.get(`${history}/poses.png`)).toEqual(poses);
+        expect(files.get(`${history}/views/poses-2.png`)).toEqual(oldView);
+        expect(files.get(`${FOLDER}/views/poses-2.png`)).not.toEqual(oldView);
+      }).pipe(Effect.provide(over(files)));
+    },
+  );
+
   it.effect('refuses a kind kept already, and a try the record does not hold', () => {
     const files = new Map<string, Uint8Array>();
     return Effect.gen(function* () {
-      const missing = yield* Effect.exit(keep(2));
+      const missing = yield* Effect.exit(keep(3));
       expect(Exit.isFailure(missing) && String(missing.cause)).toContain(
-        'the record holds no try 2',
+        'the record holds no try 3',
       );
       yield* keep(1);
       const again = yield* Effect.exit(keep(1));

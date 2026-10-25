@@ -835,6 +835,46 @@ The form of an entry, each field on its own line:
 - **Cause:** The brief gated the rule on the hair alone; the record named no beard.
 - **Guard:** code: `packages/film/src/tools/cast-sheet-brief.ts` `hairBeard` (said only when the record's `hair` and `beard` both show), `packages/film/src/tools/cast-sheet-brief.test.ts` `is told of only a member whose record has one`
 
+### kept-sheet-replace-stops-half-done
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "the move runs before the record write, with no recovery"
+- **Source:** iio-lead-2/review-r1.md F1
+- **Wrong:** `film concept keep --replace` moved the old kept sheet and views into history before it wrote the new files and the record, so a failure between left `kept/<kind>.png` gone while the record named it, and every retry was refused on the history folder.
+- **Cause:** The old files were renamed away first, and the record, the commit point, was written last with no way back.
+- **Guard:** code: `packages/film/src/tools/cast-sheet-filing.test.ts` `a replace stopped at any write leaves the record's files in place, and a retry finishes it`
+
+### kept-sheet-replace-widens-a-shared-sheet
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "a replace widens a member that keeps only some views of a shared sheet"
+- **Source:** iio-lead-2/review-r1.md F2
+- **Wrong:** A replace kept every view the new try measured, so a member that keeps two of a shared sheet's six (villager-toddler) would lock the whole sheet, the other members with it.
+- **Cause:** The keep took the measure's views and never read which views the old keep held.
+- **Guard:** code: `packages/film/src/tools/cast-sheet-filing.test.ts` `a replace on a member that keeps some views of its sheet keeps the same views`
+
+### kept-sheet-replace-history-name-taken
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "a third same-day replace of the same old try is refused"
+- **Source:** iio-lead-2/review-r1.md F3
+- **Wrong:** The history folder was named by the day, the kind and the old try alone, so replacing try 1 a second time on one day was refused until the folder was moved by hand.
+- **Cause:** No suffix when the name was taken.
+- **Guard:** code: `packages/film/src/tools/cast-sheet-filing.test.ts` `three replaces on one day each set the old keep aside in a folder of its own`
+
+### kept-sheet-replace-bad-try-unheld
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "no test that a replace with a missing or bad new try leaves the old files in place"
+- **Source:** iio-lead-2/review-r1.md F4
+- **Wrong:** The order that reads and cuts the new try before any file moves was right but held by no test, so a reorder would pass.
+- **Cause:** The tests covered the refusals and the whole replace, not a replace whose try fails.
+- **Guard:** code: `packages/film/src/tools/cast-sheet-filing.test.ts` `leaves every file as it was when the new try is missing, or does not cut, or is not in the record`
+
 ## Gate and review
 
 ### gate-not-ci
@@ -3496,6 +3536,16 @@ The form of an entry, each field on its own line:
 - **Wrong:** The narration, pictures and bookends called the lead "a grown man" after he was re-kept as the young lead.
 - **Cause:** The lines were written for the older lead, and the re-keep changed his record and sheets but no line of the script.
 - **Guard:** none: whether a line's words fit a figure's look is a judgment of the words, which the owner's rule of 2026-10-09 keeps out of code.
+
+### lead-redrawn-a-grown-man
+
+- **Date:** 2026-10-25
+- **Kind:** owner
+- **Said:** chose: "Redraw his panels as a young grown man"
+- **Source:** ask a188dc7ab01 (lead)
+- **Wrong:** The kept sheet of the feast lead (`lead-feast`: turnaround 9, poses 8, heads 7) and the In Its Order Board drawn from it drew the young grown man of his record as a boy: a round, wide child's face on a short neck.
+- **Cause:** The record asked for the boy: its `look.md` said "His head is large on his body, as the lineup draws it, nearly a third of his whole height: one rounded shape on a short neck", beside "about three and a third heads", and its references were the a1r lead at three times his size, "as he was" (ask ab7a4d8f60e). The canon check passed the kept turnaround: `film concept measure` reads it 3.54 heads against the canon's 3.36 (a trace scales the body by 93 %, under the 10 % `squash` flag), since it reads a head's height alone, never its width, its roundness or the neck. The kept pose sheet (try 8) carried a `squash` flag, a head smaller than the canon's, not this defect. No critique of the kept tries is recorded.
+- **Guard:** skill: whether a drawn face reads as a man's or a boy's is a judgment of the eye, and the measure's head height cannot tell them. Carried by `.claude/skills/film/SKILL.md`: "The measure reads a head's height alone, never its width, its roundness or the neck, so a grown man drawn with a child's round face passes the canon"
 
 ### cast-reference-tracked
 

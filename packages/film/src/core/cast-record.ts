@@ -118,6 +118,19 @@ const CastKept = Schema.Struct({
 });
 export type CastKept = typeof CastKept.Type;
 
+/** A kept kind replaced on the owner's answer: the keep as it stood, the try kept in its place, where its files went, the ask, his why and when. */
+const CastReplaced = Schema.Struct({
+  kind: SheetKind,
+  kept: CastKept,
+  /** The try kept in its place. */
+  by: Schema.Int,
+  /** The folder its kept sheet and views were moved to, as the sheet's folder reaches it. */
+  folder: Schema.String,
+  ask: Schema.String,
+  why: Schema.String,
+  at: Schema.String,
+});
+
 export const CastSheetRecord = Schema.Struct({
   member: Segment,
   scope: CastScope,
@@ -137,7 +150,7 @@ export const CastSheetRecord = Schema.Struct({
     poses: Schema.optionalKey(CastSheetOf),
     heads: Schema.optionalKey(CastSheetOf),
   }),
-  /** Each kind the owner kept: never drawn again (an added view is drawn beside it). */
+  /** Each kind the owner kept: never drawn again (an added view is drawn beside it), and replaced only on his answer to an ask. */
   kept: Schema.optionalKey(
     Schema.Struct({
       turnaround: Schema.optionalKey(CastKept),
@@ -145,6 +158,8 @@ export const CastSheetRecord = Schema.Struct({
       heads: Schema.optionalKey(CastKept),
     }),
   ),
+  /** Each keep the owner replaced, oldest first. */
+  replaced: Schema.optionalKey(Schema.Array(CastReplaced)),
 });
 export type CastSheetRecord = typeof CastSheetRecord.Type;
 
@@ -267,4 +282,14 @@ export const withCastKept = (
 ): CastSheetRecord => ({
   ...record,
   kept: { ...record.kept, [kind]: kept },
+});
+
+/** The record with `replaced.kind` kept as `kept` and the keep it replaced added to the history. */
+export const withCastReplaced = (
+  record: CastSheetRecord,
+  kept: CastKept,
+  replaced: typeof CastReplaced.Type,
+): CastSheetRecord => ({
+  ...withCastKept(record, replaced.kind, kept),
+  replaced: [...(record.replaced ?? []), replaced],
 });

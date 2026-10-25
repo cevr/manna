@@ -27,7 +27,7 @@ when the reader opens a hymn and comes back, or switches tabs and returns.
 
 - **Preconditions:** none beyond the baseline.
 - **States:** default. Focus-visible, open, loading, empty and error are n/a (the hymns are compiled in).
-- **Regression:** `apps/hymnal/test/browser/list.slow.test.ts`, `apps/hymnal/src/reader/back.test.tsx`; the lists: `apps/hymnal/src/reader/pager.slow.test.ts` (the reader's lists, the Recent header and screen), `apps/hymnal/src/reader/lists.test.ts`, `apps/hymnal/src/reader/rows.test.ts`, `apps/hymnal/src/settings.test.ts`.
+- **Regression:** `apps/hymnal/test/browser/list.slow.test.ts`, `apps/hymnal/src/reader/back.test.tsx`; the lists: `apps/hymnal/src/reader/pager.slow.test.ts` (the reader's lists, the Recent header and screen), `apps/hymnal/src/reader/lists.test.ts`, `apps/hymnal/src/reader/rows.test.ts`, `apps/hymnal/src/settings.test.ts`, `apps/hymnal/src/feel/feel.slow.test.tsx` (the `section` cue as a topic takes the pin, and `Favourite`'s chimes).
 - **Steps 6 to 14 change the app's data:** the lists stay on the simulator until the app is reinstalled or erased.
 
 1. **First screen.** `sim open / --expect "role=link label=1, Praise to the Lord"`. → `ok`; the snapshot lists rows `1, Praise to the Lord`, `2, All Creatures of Our God and King`.

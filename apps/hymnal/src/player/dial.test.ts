@@ -9,13 +9,25 @@ import { describe, expect, it } from 'bun:test';
 
 import { SIZES } from '~/reader/reading';
 
-import { DETENT, type Detents, dragTo, FLING_CAP, glide, MOST_FRAMES, ownDetent } from './dial';
+import {
+  DETENT,
+  type Detents,
+  dragTo,
+  FLING_CAP,
+  glide,
+  MOST_FRAMES,
+  ownDetent,
+  passed,
+} from './dial';
 
 const dials: ReadonlyArray<readonly [string, Detents]> = [
-  ['the key dial', { count: 12, wrap: true }],
-  ['the capo dial', { count: 12, wrap: false }],
-  ['the text-size dial', { count: SIZES.length, wrap: false }],
+  ['the key dial', { name: 'key', count: 12, wrap: true }],
+  ['the capo dial', { name: 'capo', count: 12, wrap: false }],
+  ['the text-size dial', { name: 'size', count: SIZES.length, wrap: false }],
 ];
+
+const tagged = (rest: { readonly cues: ReadonlyArray<{ readonly _tag: string }> }, tag: string) =>
+  rest.cues.filter((cue) => cue._tag === tag);
 
 /** Places from two detents before the first to two past the last, a quarter detent apart. */
 const placesOf = (dial: Detents) =>
@@ -75,7 +87,9 @@ describe.each(dials)('%s', (_, dial) => {
         else expect([1, -1]).toContain(step);
       }
       expect(path.at(-1)).toBe(rest.index);
-      expect(rest.cues.filter((cue) => cue === 'detent')).toHaveLength(rest.crossed.length);
+      expect(tagged(rest, 'detent')).toEqual(
+        rest.crossed.map((at) => ({ _tag: 'detent', dial: dial.name, at })),
+      );
       // A glide keeps its way: it never comes back over a detent it passed.
       if (!dial.wrap) expect(new Set(path).size).toBe(path.length);
     }
@@ -94,12 +108,12 @@ describe.each(dials)('%s', (_, dial) => {
   it('cues a wall once, and rests at that end, when driven past an end', () => {
     for (const [place, speed] of grid(dial)) {
       const rest = glide(dial, place, speed);
-      const walls = rest.cues.filter((cue) => cue === 'wall');
+      const walls = tagged(rest, 'wall');
       expect(walls.length).toBeLessThanOrEqual(1);
       if (dial.wrap) expect(walls).toEqual([]);
       if (walls.length === 1) {
         expect([0, dial.count - 1]).toContain(rest.index);
-        expect(rest.cues.at(-1)).toBe('wall');
+        expect(rest.cues.at(-1)).toEqual({ _tag: 'wall' });
       }
       if (speed === 0) expect(walls).toEqual([]);
     }
@@ -107,15 +121,59 @@ describe.each(dials)('%s', (_, dial) => {
       const middle = Math.floor(dial.count / 2) * DETENT;
       // At the fling cap a glide runs about 24 detents: past either end of a stopping dial.
       expect(glide(dial, middle, FLING_CAP)).toMatchObject({ index: dial.count - 1 });
-      expect(glide(dial, middle, FLING_CAP).cues.at(-1)).toBe('wall');
+      expect(glide(dial, middle, FLING_CAP).cues.at(-1)).toEqual({ _tag: 'wall' });
       expect(glide(dial, middle, -FLING_CAP)).toMatchObject({ index: 0 });
-      expect(glide(dial, middle, -FLING_CAP).cues.at(-1)).toBe('wall');
+      expect(glide(dial, middle, -FLING_CAP).cues.at(-1)).toEqual({ _tag: 'wall' });
     }
   });
 });
 
+/**
+ * The detents a reaction passes between two detents it sees (m7): over
+ * every dial of 1 to 12 detents, wrapping and stopping, and every `before`
+ * and `now` from three turns below the row to three turns above it.
+ */
+describe('the detents passed between two detents', () => {
+  const every: ReadonlyArray<Detents> = Array.from({ length: 12 }, (_, k) => k + 1).flatMap(
+    (count) => [
+      { name: 'key', count, wrap: true },
+      { name: 'capo', count, wrap: false },
+    ],
+  );
+  const span = (dial: Detents) =>
+    Array.from({ length: 6 * dial.count + 1 }, (_, k) => k - 3 * dial.count);
+
+  it('steps one detent at a time toward `now`, each the dial’s own, ending on `now`’s', () => {
+    const wrong: Array<string> = [];
+    let pairs = 0;
+    for (const dial of every)
+      for (const before of span(dial))
+        for (const now of span(dial)) {
+          pairs += 1;
+          const way = passed(dial, before, now);
+          const step = Math.sign(now - before);
+          const holds =
+            way.length === Math.abs(now - before) &&
+            way.every(
+              (at, k) =>
+                at === ownDetent(dial, before + step * (k + 1)) &&
+                Number.isInteger(at) &&
+                at >= 0 &&
+                at < dial.count,
+            ) &&
+            (way.length === 0 || way.at(-1) === ownDetent(dial, now));
+          if (!holds) wrong.push(`${dial.count}/${dial.wrap} ${before}→${now}: ${way.join(',')}`);
+        }
+    expect(wrong).toEqual([]);
+    // Every dial's every pair was tried: Σ (6·count + 1)² over 1 to 12, both kinds.
+    expect(pairs).toBe(
+      2 * Array.from({ length: 12 }, (_, k) => (6 * (k + 1) + 1) ** 2).reduce((a, b) => a + b),
+    );
+  });
+});
+
 it('wraps the key dial past its last key to its first', () => {
-  const keys: Detents = { count: 12, wrap: true };
+  const keys: Detents = { name: 'key', count: 12, wrap: true };
   expect(glide(keys, 11 * DETENT, 0).index).toBe(11);
   expect(glide(keys, 12 * DETENT, 0).index).toBe(0);
   expect(glide(keys, -DETENT, 0).index).toBe(11);

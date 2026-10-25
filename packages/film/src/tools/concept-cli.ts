@@ -42,13 +42,26 @@
 //     measure's flags on it (`cast-sheet-critique.ts`); a line per finding.
 //
 //   film concept keep <film> <member> --kind turnaround|poses|heads --try <n>
-//       --why <the owner's words> [--ask <id>]
+//       --why <the owner's words> [--ask <id>] [--replace]
 //     on the owner's answer: the try into the member's folder as
 //     `kept/<kind>.png`, each view cut from it as `views/<name>.png`, the keep
-//     recorded with his why (`cast-sheet-keep.ts`); a kind kept is refused.
+//     recorded with his why (`cast-sheet-keep.ts`); a kind kept is refused,
+//     unless `--replace` with `--ask` replaces it on his answer to that ask:
+//     the old kept sheet and views move into `kept/replaced/`, the record
+//     names both.
 
 import { Argument, Command, Flag } from 'effect/cli';
-import { Array as Arr, Console, Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
+import {
+  Array as Arr,
+  Boolean as Bool,
+  Console,
+  Effect,
+  FileSystem,
+  Layer,
+  Option,
+  Path,
+  Schema,
+} from 'effect';
 import type { CritiqueRule } from '../core/critique.ts';
 import { critiqueCastTry } from './cast-sheet-critique.ts';
 import { keepCastSheet } from './cast-sheet-keep.ts';
@@ -492,6 +505,12 @@ const keep = Command.make(
       Flag.optional,
       Flag.withDescription('the ask he answered it on, by its id'),
     ),
+    replace: Flag.Boolean('replace').pipe(
+      Flag.withDefault(false),
+      Flag.withDescription(
+        "replace the kind's kept sheet on the owner's answer (needs --ask): the old one moves into the member's history",
+      ),
+    ),
   },
   Effect.fn('film.concept.keep')(function* (input) {
     const path = yield* Path.Path;
@@ -500,17 +519,17 @@ const keep = Command.make(
     const out = path.join((yield* FilmFolder).paths(film).out, 'cast', input.member);
     const kept = yield* keepCastSheet(
       { folder, out },
-      { kind: input.kind, n: input.try, why: input.why, ask: input.ask },
+      { kind: input.kind, n: input.try, why: input.why, ask: input.ask, replace: input.replace },
     );
     yield* Console.log(
-      `kept ${input.member}.${input.kind} try=${kept.try} views=${kept.views.length}`,
+      `kept ${input.member}.${input.kind} try=${kept.try} views=${kept.views.length}${Bool.match(input.replace, { onTrue: () => ' replaced', onFalse: () => '' })}`,
     );
     for (const v of kept.views)
       yield* Console.log(`  view-${v.view} ${path.join(folder, 'views', `${v.name}.png`)}`);
   }),
 ).pipe(
   Command.withDescription(
-    "Keep a cast sheet try on the owner's answer: the try into the member's folder, each view cut out by its name (the trace's source), the keep recorded with his why; a kind kept already is refused",
+    "Keep a cast sheet try on the owner's answer: the try into the member's folder, each view cut out by its name (the trace's source), the keep recorded with his why; a kind kept already is refused, unless --replace with --ask replaces it on his answer (the old kept sheet and views move into the member's history)",
   ),
 );
 

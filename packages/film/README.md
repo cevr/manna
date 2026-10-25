@@ -3055,12 +3055,25 @@ critiqued against another's. The crops and each view's `.critique.md` land
 in `out/<film>/cast/<member>/critique/<kind>-<n>/`.
 
 `film concept keep <film> <member> --kind <kind> --try <n> --why <words>
-[--ask <id>]` (`tools/cast-sheet-keep.ts`) files the owner's keep: the try
-as `kept/<kind>.png` in the member's folder, each view cut from it as
-`views/<name>.png` (a turnaround's by the house's names, `front` …
-`threeQuarterRight`; a poses or heads sheet's as `<kind>-<n>`), both
+[--ask <id>] [--replace]` (`tools/cast-sheet-keep.ts`) files the owner's
+keep: the try as `kept/<kind>.png` in the member's folder, each view cut
+from it as `views/<name>.png` (a turnaround's by the house's names, `front`
+… `threeQuarterRight`; a poses or heads sheet's as `<kind>-<n>`), both
 committed, and `kept.<kind>` in the record with his why and the ask. A kind
-kept already, or a try the record does not hold, is `SheetKept`.
+kept already, or a try the record does not hold, is `SheetKept`. The
+owner's answer on an ask is the one authority that replaces a kept kind:
+`--replace` with `--ask` (`tools/cast-sheet-filing.ts`) copies the kept
+sheet and its views into the member's history,
+`kept/replaced/<date>-<kind>-<try>/` (`<kind>.png` and `views/<name>.png`
+beneath; `-2`, `-3` … after it when the history names it already), writes
+the new try in their place, and last appends to the record's `replaced` the
+keep replaced, the try kept for it, the history folder, the ask, his why and
+when. A replace stopped at any write leaves the record and every file it
+names in place, and the same command run again finishes it. A member that
+keeps some views of a sheet it shares keeps the same view numbers of the new
+try. `--replace` with no `--ask`, or on a kind not kept, and a new try
+missing or unreadable, are `SheetKept`, and write nothing. The Board's lock
+reads the new `kept/` and `views/` as before.
 
 ### The review: `film review`, and keep needs evidence
 

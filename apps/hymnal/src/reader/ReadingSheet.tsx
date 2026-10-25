@@ -11,6 +11,7 @@ import { Pressable, StyleSheet, Switch, Text, type TextStyle, View } from 'react
 
 import type { ReadingSettings } from '~/settings';
 import { color, useAccent } from '~/color';
+import { plain, useCue } from '~/feel/cue';
 import { DialView } from '~/player/DialView';
 
 import { pageTextOf } from './pageText';
@@ -65,6 +66,7 @@ function TextSize({ size }: { readonly size: Atom.Writable<number> }) {
   const [step, setStep] = useAtom(size);
   return (
     <DialView
+      dial="size"
       testID="dial-size"
       label="Text size"
       title="SIZE"
@@ -116,6 +118,7 @@ function Choices<A extends string>({
 }) {
   const [chosen, choose] = useAtom(value);
   const accent = useAccent();
+  const cue = useCue();
   return (
     <View role="radiogroup" aria-label={label} style={styles.group}>
       {choices.map((choice, k) => (
@@ -124,7 +127,10 @@ function Choices<A extends string>({
           role="radio"
           aria-label={choice.label}
           aria-checked={chosen === choice.value}
-          onPress={() => choose(choice.value)}
+          onPress={() => {
+            cue(plain('choose'));
+            choose(choice.value);
+          }}
           style={({ pressed }) => [styles.row, k > 0 && styles.divided, pressed && styles.pressed]}
         >
           <Text style={[styles.label, choice.style, styles.labelSize]} dynamicTypeRamp="body">
@@ -141,13 +147,18 @@ function Choices<A extends string>({
 
 function Awake({ awake }: { readonly awake: Atom.Writable<boolean> }) {
   const [on, setOn] = useAtom(awake);
+  const cue = useCue();
+  const turn = (to: boolean) => {
+    cue(plain((to && 'switch-on') || 'switch-off'));
+    setOn(to);
+  };
   return (
     <View style={[styles.group, styles.row, styles.awake]}>
       <Text style={styles.label} dynamicTypeRamp="body" aria-hidden>
         Keep screen on
       </Text>
       {/* React Native's Switch hands iOS no `aria-label`; it reads `accessibilityLabel` on every platform. */}
-      <Switch accessibilityLabel="Keep screen on" value={on} onValueChange={setOn} />
+      <Switch accessibilityLabel="Keep screen on" value={on} onValueChange={turn} />
     </View>
   );
 }

@@ -1,8 +1,17 @@
 import { useAtom } from '@effect/atom-react';
 import type * as Atom from 'effect/reactivity/Atom';
-import { Pressable, ScrollView, StyleSheet, Text, type TextStyle, View } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  type TextStyle,
+  View,
+} from 'react-native';
 
 import { About } from '~/about';
+import { plain, useCue } from '~/feel/cue';
 import type { ChordStyle } from '~/hymns/simple';
 import type { Appearance } from '~/settings';
 import { settings } from '~/store';
@@ -35,6 +44,7 @@ export default function Settings() {
       <Choices label="Appearance" value={settings.appearance} choices={appearances} />
       <Heading style={styles.section}>Chords</Heading>
       <Choices label="Chord style" value={settings.chordStyle} choices={chordStyles} />
+      <FeelSwitch />
       <About />
     </ScrollView>
   );
@@ -61,6 +71,7 @@ function Choices<A extends string>({
 }) {
   const [chosen, choose] = useAtom(value);
   const accent = useAccent();
+  const cue = useCue();
   return (
     <View role="radiogroup" aria-label={label} style={styles.group}>
       {choices.map((choice, k) => (
@@ -69,7 +80,10 @@ function Choices<A extends string>({
           role="radio"
           aria-label={choice.label}
           aria-checked={chosen === choice.value}
-          onPress={() => choose(choice.value)}
+          onPress={() => {
+            cue(plain('choose'));
+            choose(choice.value);
+          }}
           style={({ pressed }) => [styles.row, k > 0 && styles.divided, pressed && styles.pressed]}
         >
           <Text style={styles.label} dynamicTypeRamp="body">
@@ -80,6 +94,29 @@ function Choices<A extends string>({
           </Text>
         </Pressable>
       ))}
+    </View>
+  );
+}
+
+/**
+ * `Sounds and haptics`: whether the controls are felt and heard. Turned on,
+ * it is felt at once (`switch-on`); turned off, it says nothing.
+ */
+function FeelSwitch() {
+  const [on, setOn] = useAtom(settings.feel);
+  const cue = useCue();
+  const turn = (to: boolean) => {
+    setOn(to);
+    // Told after the write: the Feel reads the switch as the cue comes.
+    if (to) cue(plain('switch-on'));
+  };
+  return (
+    <View style={[styles.group, styles.row, styles.section]}>
+      <Text style={styles.label} dynamicTypeRamp="body" aria-hidden>
+        Sounds and haptics
+      </Text>
+      {/* React Native's Switch hands iOS no `aria-label`; it reads `accessibilityLabel` on every platform. */}
+      <Switch accessibilityLabel="Sounds and haptics" value={on} onValueChange={turn} />
     </View>
   );
 }

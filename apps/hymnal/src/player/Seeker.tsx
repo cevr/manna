@@ -4,7 +4,8 @@
  * the finger and settles softly as it lets go. The drag is the full
  * player's own (`useScrub`): the place under the finger is the drag, sent
  * once the finger lifts, and the bar holds the place sent until the player
- * reaches it. VoiceOver adjusts it ten seconds a swipe.
+ * reaches it. The drag ticks at each five seconds of track the knob passes
+ * (`seek-tick`). VoiceOver adjusts it ten seconds a swipe.
  *
  * The touch is a gesture handler's pan that takes a sideways drag only, and
  * the seeker lies inside the bar's swipe up: a drag that goes sideways
@@ -23,7 +24,7 @@ import {
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { color, useAccent } from '~/color';
-import { useCue } from '~/feel/cue';
+import { plain, useCue } from '~/feel/cue';
 
 import { nudged, placeAt, type ScrubberProps, useScrub } from './scrub';
 import { clock } from './time';
@@ -40,6 +41,9 @@ const KNOB = 14;
 /** How much the knob grows under the finger. */
 const GROWN = 1.4;
 
+/** The track's stretch, in seconds, whose boundary a dragged knob ticks at. */
+const TICK = 5;
+
 export function Seeker(props: ScrubberProps) {
   const accent = useAccent();
   const cue = useCue();
@@ -52,9 +56,18 @@ export function Seeker(props: ScrubberProps) {
   const under = (x: number) => placeAt(x - KNOB / 2, width - KNOB, scrub.max);
   const live = useRef({ scrub, under });
   live.current = { scrub, under };
+  // The stretch of track (`TICK` seconds each) the knob was last dragged over.
+  const stretch = useRef(0);
+  /** Drags the knob to `seconds`: one tick for each stretch boundary it passes. */
+  const dragTo = (seconds: number) => {
+    const now = Math.floor(seconds / TICK);
+    for (let k = 0; k < Math.abs(now - stretch.current); k += 1) cue(plain('seek-tick'));
+    stretch.current = now;
+    live.current.scrub.move(seconds);
+  };
   const settle = () => {
     grown.value = withSpring(1, { damping: 18, stiffness: 180 });
-    cue('seek-release');
+    cue(plain('seek-release'));
   };
   const pan = usePanGesture({
     testID: 'seek-pan',
@@ -67,11 +80,13 @@ export function Seeker(props: ScrubberProps) {
     // Nothing is pressed until the drag is sideways: a swipe up fails the pan, and sends nothing.
     onActivate: ({ x }) => {
       grown.value = withSpring(GROWN, { damping: 12, stiffness: 260 });
-      cue('seek-grab');
+      cue(plain('seek-grab'));
       live.current.scrub.press(TOUCH);
-      live.current.scrub.move(live.current.under(x));
+      const grabbed = live.current.under(x);
+      stretch.current = Math.floor(grabbed / TICK);
+      live.current.scrub.move(grabbed);
     },
-    onUpdate: ({ x }) => live.current.scrub.move(live.current.under(x)),
+    onUpdate: ({ x }) => dragTo(live.current.under(x)),
     onDeactivate: ({ canceled }) => {
       settle();
       Match.value(canceled).pipe(

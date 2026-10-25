@@ -115,6 +115,7 @@ export function Dials({
           return (
             <DialView
               key="capo"
+              dial="capo"
               testID="dial-capo"
               label="Capo"
               title="CAPO"
@@ -130,6 +131,7 @@ export function Dials({
         return (
           <DialView
             key="key"
+            dial="key"
             testID="dial-key"
             label="Key"
             title="KEY"

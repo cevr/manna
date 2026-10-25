@@ -29,6 +29,7 @@ import {
 } from 'react-native';
 
 import { color, useAccent } from '~/color';
+import { plain, useCue } from '~/feel/cue';
 import { hymnHref } from '~/home/Browse';
 import { hymnAt } from '~/hymns/hymns';
 import { ReadingControls } from '~/reader/ReadingSheet';
@@ -90,10 +91,16 @@ function Held({
   readonly send: (command: Command) => void;
 }) {
   const accent = useAccent();
+  const cue = useCue();
   const { at, length } = Option.getOrElse(placeOf(state), () => ({
     at: 0,
     length: Option.none<number>(),
   }));
+  /** A press of the sheet's Play or Pause: its cue, then its command. */
+  const pressed = (command: Command) => {
+    cue(plain((Command.$is('Pause')(command) && 'pause') || 'play'));
+    send(command);
+  };
   return (
     <ScrollView contentContainerStyle={styles.page}>
       <View role="group" aria-label="Recording" style={styles.control}>
@@ -113,7 +120,7 @@ function Held({
           </View>
         </View>
         <View style={styles.row}>
-          <Toggle track={track} state={state} send={send} />
+          <Toggle track={track} state={state} send={pressed} />
         </View>
       </View>
       <PageChords track={track} />
