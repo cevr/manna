@@ -3062,12 +3062,17 @@ from it as `views/<name>.png` (a turnaround's by the house's names, `front`
 committed, and `kept.<kind>` in the record with his why and the ask. A kind
 kept already, or a try the record does not hold, is `SheetKept`. The
 owner's answer on an ask is the one authority that replaces a kept kind:
-`--replace` with `--ask` moves the kept sheet and its views into the
-member's history, `kept/replaced/<date>-<kind>-<try>/` (`<kind>.png` and
-`views/<name>.png` beneath), keeps the new try in their place, and appends
-to the record's `replaced` the keep replaced, the try kept for it, the
-history folder, the ask, his why and when. `--replace` with no `--ask`, or
-on a kind not kept, is `SheetKept`, and writes nothing. The Board's lock
+`--replace` with `--ask` (`tools/cast-sheet-filing.ts`) copies the kept
+sheet and its views into the member's history,
+`kept/replaced/<date>-<kind>-<try>/` (`<kind>.png` and `views/<name>.png`
+beneath; `-2`, `-3` … after it when the history names it already), writes
+the new try in their place, and last appends to the record's `replaced` the
+keep replaced, the try kept for it, the history folder, the ask, his why and
+when. A replace stopped at any write leaves the record and every file it
+names in place, and the same command run again finishes it. A member that
+keeps some views of a sheet it shares keeps the same view numbers of the new
+try. `--replace` with no `--ask`, or on a kind not kept, and a new try
+missing or unreadable, are `SheetKept`, and write nothing. The Board's lock
 reads the new `kept/` and `views/` as before.
 
 ### The review: `film review`, and keep needs evidence

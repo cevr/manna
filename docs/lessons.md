@@ -835,6 +835,46 @@ The form of an entry, each field on its own line:
 - **Cause:** The brief gated the rule on the hair alone; the record named no beard.
 - **Guard:** code: `packages/film/src/tools/cast-sheet-brief.ts` `hairBeard` (said only when the record's `hair` and `beard` both show), `packages/film/src/tools/cast-sheet-brief.test.ts` `is told of only a member whose record has one`
 
+### kept-sheet-replace-stops-half-done
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "the move runs before the record write, with no recovery"
+- **Source:** iio-lead-2/review-r1.md F1
+- **Wrong:** `film concept keep --replace` moved the old kept sheet and views into history before it wrote the new files and the record, so a failure between left `kept/<kind>.png` gone while the record named it, and every retry was refused on the history folder.
+- **Cause:** The old files were renamed away first, and the record, the commit point, was written last with no way back.
+- **Guard:** code: `packages/film/src/tools/cast-sheet-filing.test.ts` `a replace stopped at any write leaves the record's files in place, and a retry finishes it`
+
+### kept-sheet-replace-widens-a-shared-sheet
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "a replace widens a member that keeps only some views of a shared sheet"
+- **Source:** iio-lead-2/review-r1.md F2
+- **Wrong:** A replace kept every view the new try measured, so a member that keeps two of a shared sheet's six (villager-toddler) would lock the whole sheet, the other members with it.
+- **Cause:** The keep took the measure's views and never read which views the old keep held.
+- **Guard:** code: `packages/film/src/tools/cast-sheet-filing.test.ts` `a replace on a member that keeps some views of its sheet keeps the same views`
+
+### kept-sheet-replace-history-name-taken
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "a third same-day replace of the same old try is refused"
+- **Source:** iio-lead-2/review-r1.md F3
+- **Wrong:** The history folder was named by the day, the kind and the old try alone, so replacing try 1 a second time on one day was refused until the folder was moved by hand.
+- **Cause:** No suffix when the name was taken.
+- **Guard:** code: `packages/film/src/tools/cast-sheet-filing.test.ts` `three replaces on one day each set the old keep aside in a folder of its own`
+
+### kept-sheet-replace-bad-try-unheld
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "no test that a replace with a missing or bad new try leaves the old files in place"
+- **Source:** iio-lead-2/review-r1.md F4
+- **Wrong:** The order that reads and cuts the new try before any file moves was right but held by no test, so a reorder would pass.
+- **Cause:** The tests covered the refusals and the whole replace, not a replace whose try fails.
+- **Guard:** code: `packages/film/src/tools/cast-sheet-filing.test.ts` `leaves every file as it was when the new try is missing, or does not cut, or is not in the record`
+
 ## Gate and review
 
 ### gate-not-ci
