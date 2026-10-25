@@ -16,7 +16,7 @@ import { RegistryContext } from '@effect/atom-react';
 import { describe, expect, it } from 'effect-bun-test';
 import { Duration, Effect, Option, Stream } from 'effect';
 import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
-import { act, type ReactNode } from 'react';
+import { act, type ReactNode, useState } from 'react';
 import { View } from 'react-native';
 import { createRoot } from 'react-dom/client';
 
@@ -27,11 +27,13 @@ import { Shown } from '~/reader/screen';
 import { StackHeader } from '~/test/stack';
 
 import { fakeDevice } from '../test/device';
-import { gestureOf } from '../test/gesture';
+import { drag, gestureOf } from '../test/gesture';
+import { animations, holdAnimations, landAnimations } from '../test/reanimated';
 import { params, routed } from '../test/one';
 import { actionsOf, perform, propsWith } from '../test/props';
 import { readerOn } from '../test/reader';
 import { PlayerContext } from './context';
+import { DETENT } from './dial';
 import { ChordReaderContext } from './Dials';
 import { FullPlayer } from './FullPlayer';
 import { Player, playerOn } from './player';
@@ -66,6 +68,42 @@ const route =
       </>
     );
   };
+
+/** Turns the page of `turning`'s route to another hymn, as a settle of the pager does. */
+const turned = { to: (_n: number) => {} };
+
+function Turning({ first, reader }: { readonly first: number; readonly reader: ChordReader }) {
+  const [n, setN] = useState(first);
+  turned.to = setN;
+  params['number'] = String(n);
+  const hymn = Option.getOrThrow(hymnAt(String(n)));
+  return (
+    <>
+      <View testID="page">
+        <StackHeader />
+        <Shown hymn={hymn} />
+        <HymnPage hymn={hymn} reader={reader} />
+        <PageBar track={hymn} />
+      </View>
+      <PlayerBar />
+    </>
+  );
+}
+
+/** The hymn route at `/hymns/<first>`, whose page the test turns (`turned.to`). */
+const turning = (first: number) => (reader: ChordReader) => (
+  <Turning first={first} reader={reader} />
+);
+
+/** Where dial `testID`'s row is, in points along it, as its transform draws it. */
+const placeOfRow = (page: Page, testID: string) => {
+  const row = page.get(`[data-testid="${testID}-row"]`);
+  const shift = Option.fromNullishOr(
+    /translateX\((-?[\d.]+)px\)/.exec(getComputedStyle(row).transform)?.[1],
+  ).pipe(Option.map(Number.parseFloat), Option.getOrThrow);
+  // The row is shifted half its window less half a detent, less its place; no layout runs here, so the window is 0 wide.
+  return -DETENT / 2 - shift;
+};
 
 const clearParams = () => {
   for (const key of Object.keys(params)) delete params[key];
@@ -188,6 +226,13 @@ const tapKey = (page: Page) =>
       new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }),
     );
   });
+
+/** One straight drag that starts on the detector of gesture `testID`; the test id of the pan that took it, if one did. */
+const dragged = (testID: string, touch: Parameters<typeof drag>[1]) => {
+  let took = Option.none<string>();
+  act(() => void (took = drag(testID, touch)));
+  return took;
+};
 
 /** The frame's height over the home indicator, as its spring has set it. */
 const heightOf = (page: Page) =>
@@ -373,19 +418,89 @@ describe('bar J’s spring and seeker', () => {
           nativeEvent: { layout: { x: 0, y: 0, width: 300, height: 32 } },
         }),
       );
-      const pan = () => gestureOf('seek-pan');
-      act(() => pan().onBegin?.({ x: 150 }));
-      act(() => pan().onUpdate?.({ x: 150 }));
-      expect(page.device.sought).toEqual([]);
-      act(() => pan().onFinalize?.({ x: 150, canceled: false }));
+      // A sideways drag from a third of the way to the middle seeks, once the finger lifts.
+      expect(dragged('seek-pan', { x: 100, dx: 50, dy: 0 })).toEqual(Option.some('seek-pan'));
       expect(page.device.sought).toHaveLength(1);
       expect(Math.abs((page.device.sought[0] ?? 0) - 75_500)).toBeLessThan(1_000);
+      expect(routed).toEqual([]);
 
       page.press('Pause hymn 100');
       yield* page.until(Player.$is('Paused'));
       expect(heightOf(page)).toBe(REST);
       expect(Option.isNone(page.find('[aria-label="Seek"]'))).toBe(true);
       expect(room()).toEqual([`${REST}px`]);
+    }),
+  );
+
+  it.live('opens the sheet on a swipe up that starts on the seeker, and moves no place', () =>
+    Effect.gen(function* () {
+      using page = mount(route(100));
+      page.press('Play hymn 100');
+      page.device.now = { state: 'playing', positionMs: 20_000, durationMs: 151_000 };
+      yield* page.until((state) => Player.$is('Playing')(state) && state.at === 20);
+      const seek = page.get('[role="slider"][aria-label="Seek"]');
+      // The swipe starts on the seeker's middle, the strip nearest the thumb, and goes up.
+      expect(dragged('seek-pan', { x: 150, dx: 0, dy: -60 })).toEqual(Option.some('bar-swipe'));
+      expect(routed).toEqual(['push /player?hymn=100']);
+      expect(page.device.sought).toEqual([]);
+      expect(seek.getAttribute('aria-valuetext')).toBe('0:20 of 2:31');
+      // A swipe that wanders a little sideways on its way up is still the swipe.
+      expect(dragged('seek-pan', { x: 150, dx: 6, dy: -60 })).toEqual(Option.some('bar-swipe'));
+      expect(page.device.sought).toEqual([]);
+    }),
+  );
+
+  it.live('springs up from rest on the first Play, and a page turn keeps the frame as it is', () =>
+    Effect.gen(function* () {
+      using page = mount(turning(100));
+      const bar = (to: number) =>
+        animations.filter((a) => a.kind === 'spring' && a.to === to && a.from !== a.to);
+      animations.splice(0);
+      // The first Play of a session: the page's own bar gives way to the docked one.
+      page.press('Play hymn 100');
+      page.device.now = { state: 'playing', positionMs: 1_000, durationMs: 151_000 };
+      yield* page.until((state) => Player.$is('Playing')(state) && state.at === 1);
+      expect(bar(SOUNDING).map((a) => a.from)).toEqual([REST]);
+      expect(heightOf(page)).toBe(SOUNDING);
+
+      const frame = page.get('[data-testid="bar-spring"]');
+      const seek = page.get('[role="slider"][aria-label="Seek"]');
+      animations.splice(0);
+      act(() => turned.to(101));
+      expect(page.find('[aria-label="Play hymn 101"]').pipe(Option.isSome)).toBe(true);
+      // The same frame and seeker, and no spring started again.
+      expect(page.get('[data-testid="bar-spring"]')).toBe(frame);
+      expect(page.get('[role="slider"][aria-label="Seek"]')).toBe(seek);
+      expect(animations.filter((a) => a.to === REST || a.to === SOUNDING)).toEqual([]);
+      expect(heightOf(page)).toBe(SOUNDING);
+    }),
+  );
+});
+
+describe('a dial stopped by a touch', () => {
+  it.live('snaps to the nearest detent when the touch never drags', () =>
+    Effect.sync(() => {
+      const device = chordsOn();
+      using page = mount(route(100), device);
+      tapKey(page);
+      const pan = () => gestureOf('dial-capo-pan');
+      holdAnimations();
+      // Animations land at once again when the test ends, whatever it found.
+      using _held = { [Symbol.dispose]: landAnimations };
+      // A fling at the cap: the glide toward fret 11 is under way.
+      act(() => pan().onBegin?.({ x: 0 }));
+      act(() => pan().onActivate?.({ x: 0 }));
+      act(() => pan().onUpdate?.({ x: 0, translationX: 0 }));
+      act(() => pan().onDeactivate?.({ x: 0, translationX: 0, velocityX: -3000, canceled: false }));
+      act(() => pan().onFinalize?.({ x: 0, canceled: false }));
+      // A touch stops it half way, between frets 5 and 6, and lifts with no drag.
+      act(() => pan().onBegin?.({ x: 0 }));
+      act(() => pan().onFinalize?.({ x: 0, canceled: true }));
+      act(() => landAnimations());
+      expect(valueOf(page, 'Capo')).toEqual(Option.some('Capo 6, G shapes'));
+      expect(device.get('move.100')).toBe('{"transpose":0,"capo":6}');
+      // The row rests with fret 6 at the notch, not between two frets.
+      expect(placeOfRow(page, 'dial-capo')).toBe(6 * DETENT);
     }),
   );
 });
@@ -441,7 +556,7 @@ describe('the player sheet over a hymn page', () => {
         expect(sheet.querySelector('[aria-label="Font"]')).not.toBeNull();
         expect(sheet.querySelector('[aria-label="Line spacing"]')).not.toBeNull();
         expect(sheet.querySelector('[aria-label="Keep screen on"]')).not.toBeNull();
-        const chords = page.get('[aria-label="Chords"]');
+        const chords = page.get('[aria-label="Chord settings"]');
         expect(chords.querySelector('[role="slider"][aria-label="Key"]')).not.toBeNull();
         expect(chords.querySelector('[role="slider"][aria-label="Capo"]')).not.toBeNull();
 
@@ -462,6 +577,32 @@ describe('the player sheet over a hymn page', () => {
         expect(
           Option.isSome(Option.fromNullishOr(chords.querySelector('[aria-label="Reset"]'))),
         ).toBe(true);
+      }),
+  );
+
+  it.live(
+    'turns chords off and on by its Chords switch, with no hold, and sends the player nothing',
+    () =>
+      Effect.sync(() => {
+        const device = chordsOn();
+        using page = mount(route(100, true), device);
+        const sends = page.sends();
+        const toggle = () =>
+          page.get('[aria-label="Chord settings"] [aria-label="Chords"]') as HTMLInputElement;
+        const capo = () =>
+          page.find('[aria-label="Chord settings"] [role="slider"][aria-label="Capo"]');
+        expect(toggle().checked).toBe(true);
+        act(() => toggle().click());
+        expect(device.get('chords')).toBe('false');
+        expect(toggle().checked).toBe(false);
+        expect(page.all('[data-testid^="chord-"]')).toHaveLength(0);
+        // With chords off the section holds the key dial alone, as over the bar.
+        expect(Option.isNone(capo())).toBe(true);
+        expect(keyButton(page).getAttribute('aria-valuetext')).toBe('Chords off');
+        act(() => toggle().click());
+        expect(device.get('chords')).toBe('true');
+        expect(Option.isSome(capo())).toBe(true);
+        expect(page.sends()).toBe(sends);
       }),
   );
 });

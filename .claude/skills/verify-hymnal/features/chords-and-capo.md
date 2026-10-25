@@ -2,7 +2,8 @@
 
 A reader turns chords on and off at the thumb: a hold of the bottom bar's
 `Key` button (an acoustic guitar's head, then a small `KEY` over the
-sounding key, or `CAPO n` over the key the chords are played in). Each guitar
+sounding key, or `CAPO n` over the key the chords are played in), or the
+`Chords` switch in the player sheet over the hymn's page. Each guitar
 chord shows above the syllable where it changes, in the words' own font, the
 lines wrapping between words. A tap on `Key` opens two dials above the bar:
 the key dial turns the sounding key through the twelve keys and wraps, the
@@ -17,7 +18,7 @@ shows every chord as compiled. No dial, reset or hold reaches the sound.
 
 ## Sub-features
 
-- `chords`: a hold (450 ms) of the bar's `Key` shows and hides the chords on every hymn, and no tap follows the hold; VoiceOver's action on `Key` is `Turn chords off` or `Turn chords on`. The header holds no button.
+- `chords`: a hold (450 ms) of the bar's `Key` shows and hides the chords on every hymn, and no tap follows the hold; VoiceOver's action on `Key` is `Turn chords off` or `Turn chords on`. The player sheet's `Chords` switch, in its group `Chord settings` over the hymn's own page, does the same with a tap. The header holds no button.
 - `chords-key`: a tap on `Key` opens the `Capo` and `Key` dials above the bar, and a tap on `Key` or on the page closes them. With chords off it opens the `Key` dial alone, and one turn of it turns chords on and keeps the key turned to.
 - `transpose`: the `Key` dial (adjustable, its value the sounding key, `Db`) turns through the twelve keys and wraps.
 - `capo`: the `Capo` dial (adjustable, its value `No capo` or `Capo <n>, <key> shapes`) runs from 0 to 11 and stops at each end; the chords show that key's shapes, and `Key` reads `CAPO n` over them.
@@ -31,7 +32,7 @@ shows every chord as compiled. No dial, reset or hold reaches the sound.
 ## How to get to it (user POV)
 
 - The hymn reader, `hymnal://hymns/<n>` (iOS) or `/hymns/<n>` (web): the bottom bar's `Key` button at its left end, the only chord control.
-- A tap on `Key` opens the dials above the bar: `Capo`, then `Key`, and `Reset` above them while the hymn is moved. The player sheet (`Open player`) holds the same two dials and `Reset` while it is over the hymn's own page.
+- A tap on `Key` opens the dials above the bar: `Capo`, then `Key`, and `Reset` above them while the hymn is moved. The player sheet (`Open player`) holds the group `Chord settings` while it is over the hymn's own page: the `Chords` switch, then the same two dials and `Reset`.
 - Each chord's text is its symbol. The box over syllable s of line l of the page's section p (each from 1, in page order) has the id `chord-p-l-s`; a syllable with no chord has none. The syllable's text has the id `syllable-p-l-s`. A line-level row has the id `chords-p-l`.
 
 ## Driving it with sim
@@ -50,7 +51,7 @@ shows every chord as compiled. No dial, reset or hold reaches the sound.
 6. **Kept per hymn, on for every hymn (`chords-kept`).** Turn the key one detent and the capo two (→ `D`, `Capo 2, C shapes`), close the dials (`sim tap label=Key`). `sim open hymns/1 --expect "label=Stanza 1"` (no `sim back` here: on a hymn opened by deep link the header has no back button and no other button). → chords on with no tap, hymn 1's own key, no capo. `sim open hymns/100 --expect "label=Stanza 1"`. → `Key` reads `CAPO 2` over `C`.
 7. **Relaunch.** `xcrun simctl terminate verify-hymnal im.cvr.hymnal`, then `sim open hymns/100 --expect "label=Stanza 1"`. → chords on, `Key` reads `CAPO 2` over `C`.
 8. **Levels.** `sim open hymns/126 --expect "label=Stanza 1"`. → the words alone and "No chords for this hymn yet."; `sim tap label=Key` opens no dial. `sim open hymns/11 --expect "label=Stanza 1"`. → `id=chords-1-1` is a row of chords above the line (`sim shot`).
-9. **Chords off, back to the default.** On hymn 100: `sim tap label=Key`, `sim tap label=Reset`, then hold `Key`. → `Key` reads `Chords off`, the words alone, as in step 1. `sim tap label=Key`. → the `Key` dial alone. Turn it one detent. → chords on, `Key` reads `D`. Reset, then hold `Key` again (off).
+9. **Chords off, back to the default.** On hymn 100: `sim tap label=Key`, `sim tap label=Reset`, then hold `Key`. → `Key` reads `Chords off`, the words alone, as in step 1. `sim tap label=Key`. → the `Key` dial alone. Turn it one detent. → chords on, `Key` reads `D`. Reset, then hold `Key` again (off). Then the sheet's switch: `sim tap "label=Open player"`, `sim tap label=Chords`. → the switch reads on, the sheet's `Capo` dial shows, and `chord-1-1-1` reads `Db` behind the sheet. `sim tap label=Chords` again. → off, the `Key` dial alone; drag the sheet's grabber down to close it.
 10. **The largest page.** `sim open hymns/150 --expect "label=Stanza 1"`, hold `Key`, `sim snapshot` holds `chord-1-1-1`; three trials, chords turned off between them.
 11. **Simple (`chords-simple`).** `sim open hymns/3 --expect "label=Stanza 1"`, hold `Key`. → `chord-1-1-1` reads `G`, `chord-1-1-5` reads `D`, no `chord-1-1-6`.
 12. **Key and capo in Simple.** `sim tap label=Key`, turn the key one detent up. → `Ab`, `chord-1-1-1` `Ab`, `chord-1-1-5` `Eb`. Turn the capo one detent up. → `Capo 1, G shapes`, `chord-1-1-1` `G`, `chord-1-1-5` `D`.

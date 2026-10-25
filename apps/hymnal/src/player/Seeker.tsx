@@ -6,9 +6,10 @@
  * once the finger lifts, and the bar holds the place sent until the player
  * reaches it. VoiceOver adjusts it ten seconds a swipe.
  *
- * The touch is a gesture handler's pan that begins at the touch, so while
- * the finger holds the seeker no swipe up of the bar can begin: a seek
- * never opens the player sheet.
+ * The touch is a gesture handler's pan that takes a sideways drag only, and
+ * the seeker lies inside the bar's swipe up: a drag that goes sideways
+ * first seeks and never opens the player sheet, and a swipe that goes up
+ * first opens the sheet and moves no place.
  */
 
 import { Match, Option } from 'effect';
@@ -29,6 +30,10 @@ import { clock } from './time';
 
 /** The one touch the seeker follows. */
 const TOUCH = 1;
+
+/** How far a drag goes sideways before it seeks, and how far up or down before it is the bar's swipe, in points. */
+const SIDEWAYS = 8;
+const UPWARDS = 10;
 
 const KNOB = 14;
 
@@ -55,17 +60,19 @@ export function Seeker(props: ScrubberProps) {
     testID: 'seek-pan',
     runOnJS: true,
     enabled: !scrub.still,
-    minDistance: 0,
+    activeOffsetX: [-SIDEWAYS, SIDEWAYS],
+    failOffsetY: [-UPWARDS, UPWARDS],
     maxPointers: 1,
     shouldCancelWhenOutside: false,
-    onBegin: ({ x }) => {
+    // Nothing is pressed until the drag is sideways: a swipe up fails the pan, and sends nothing.
+    onActivate: ({ x }) => {
       grown.value = withSpring(GROWN, { damping: 12, stiffness: 260 });
       cue('seek-grab');
       live.current.scrub.press(TOUCH);
       live.current.scrub.move(live.current.under(x));
     },
     onUpdate: ({ x }) => live.current.scrub.move(live.current.under(x)),
-    onFinalize: ({ canceled }) => {
+    onDeactivate: ({ canceled }) => {
       settle();
       Match.value(canceled).pipe(
         Match.when(true, () => live.current.scrub.drop(TOUCH)),

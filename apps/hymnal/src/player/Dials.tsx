@@ -58,6 +58,12 @@ export const useThumb = (number: number) => {
     [book, style],
   );
   const [open, setOpen] = useState(false);
+  // The dials open on one hymn: another hymn's page (a page turn) finds them closed.
+  const [openOn, setOpenOn] = useState(number);
+  if (openOn !== number) {
+    setOpenOn(number);
+    setOpen(false);
+  }
   const cue = useCue();
   // Events that come before the page draws again (a fling's detents) each step from the last.
   const now = useRef<Thumb>({ chords, move, open });

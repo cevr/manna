@@ -9,6 +9,11 @@
  * again whenever any shared value is set. A worklet scheduled on React
  * Native's thread runs at once. A test reads each frame as it is once its
  * animations have settled.
+ *
+ * Each animation is kept in `animations`, with where its value began, so a
+ * test reads where a spring started. Between `holdAnimations` and
+ * `landAnimations` an animation waits, as one under way on a device, and
+ * `cancelAnimation` stops it half way.
  */
 
 import {
@@ -27,14 +32,42 @@ const tell = () => {
   for (const listener of [...listeners]) listener();
 };
 
+type Kind = 'spring' | 'timing';
+
 interface Animation<T> {
-  readonly animation: true;
+  readonly animation: Kind;
   readonly to: T;
   readonly done?: (finished: boolean) => void;
 }
 
 const isAnimation = <T,>(next: T | Animation<T>): next is Animation<T> =>
   typeof next === 'object' && next !== null && 'animation' in next;
+
+/** Each animation set on a shared value: its kind, where the value was as it began, and its target. */
+export const animations: Array<{
+  readonly kind: Kind;
+  readonly from: unknown;
+  readonly to: unknown;
+}> = [];
+
+/** While held, an animation set waits, unlanded, until `landAnimations`, or a `cancelAnimation` stops it. */
+let held = false;
+const waiting = new Map<
+  SharedValue<unknown>,
+  { readonly land: () => void; readonly stop: () => void }
+>();
+
+/** Animations set from now wait, as ones under way on a device. */
+export const holdAnimations = () => {
+  held = true;
+};
+
+/** Every waiting animation lands, and animations land at once again. */
+export const landAnimations = () => {
+  held = false;
+  for (const [, { land }] of [...waiting]) land();
+  waiting.clear();
+};
 
 export interface SharedValue<T> {
   value: T;
@@ -44,7 +77,7 @@ export interface SharedValue<T> {
 
 const shared = <T,>(initial: T): SharedValue<T> => {
   let now = initial;
-  const box = {
+  const box: SharedValue<T> = {
     get value() {
       return now;
     },
@@ -53,10 +86,29 @@ const shared = <T,>(initial: T): SharedValue<T> => {
     },
     get: () => now,
     set: (next: T | Animation<T>) => {
+      waiting.delete(box as SharedValue<unknown>);
       if (isAnimation(next)) {
-        now = next.to;
-        tell();
-        next.done?.(true);
+        animations.push({ kind: next.animation, from: now, to: next.to });
+        const land = () => {
+          waiting.delete(box as SharedValue<unknown>);
+          now = next.to;
+          tell();
+          next.done?.(true);
+        };
+        if (held) {
+          waiting.set(box as SharedValue<unknown>, {
+            land,
+            // A stopped animation stops half way, and says it did not finish.
+            stop: () => {
+              if (typeof now === 'number' && typeof next.to === 'number')
+                now = (now + (next.to - now) / 2) as T;
+              tell();
+              next.done?.(false);
+            },
+          });
+          return;
+        }
+        land();
         return;
       }
       now = next;
@@ -74,12 +126,21 @@ export const useSharedValue = <T,>(initial: T): SharedValue<T> => {
   return box.current;
 };
 
-const animate = <T,>(to: T, _config?: unknown, done?: (finished: boolean) => void): T =>
-  ({ animation: true, to, done }) as unknown as T;
+const animate =
+  (kind: Kind) =>
+  <T,>(to: T, _config?: unknown, done?: (finished: boolean) => void): T =>
+    ({ animation: kind, to, done }) as unknown as T;
 
-export const withSpring = animate;
-export const withTiming = animate;
-export const cancelAnimation = (_value: SharedValue<unknown>) => {};
+export const withSpring = animate('spring');
+export const withTiming = animate('timing');
+
+/** A waiting animation stops half way along, as a touch stops one under way. */
+export const cancelAnimation = (value: SharedValue<unknown>) => {
+  const under = waiting.get(value);
+  if (under === undefined) return;
+  waiting.delete(value);
+  under.stop();
+};
 
 /** Draws again whenever a shared value is set. */
 const useTold = () => {

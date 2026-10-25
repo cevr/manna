@@ -138,10 +138,7 @@ function Drawn({
         <>
           <View testID="bar-room" aria-hidden style={{ height: REST + inset }} />
           <View testID="bar-overlay" pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-            {Option.match(page, {
-              onNone: () => <Overlay drawing={drawing} thumb={Option.none()} />,
-              onSome: (shown) => <Keyed key={shown.number} hymn={shown} drawing={drawing} />,
-            })}
+            <Overlay drawing={drawing} />
           </View>
         </>
       );
@@ -149,18 +146,20 @@ function Drawn({
   });
 }
 
-/** The overlay with the key button and dials of `hymn`, the page shown. */
-function Keyed({ hymn, drawing }: { readonly hymn: Track; readonly drawing: Drawing }) {
-  return <Overlay drawing={drawing} thumb={Option.some(useThumb(hymn.number))} />;
-}
+/** The hymn number the key model is held on off a hymn page: no hymn has it, so it has no chords and no dials. */
+const NO_PAGE = 0;
 
-function Overlay({
-  drawing,
-  thumb,
-}: {
-  readonly drawing: Drawing;
-  readonly thumb: Option.Option<BoundThumb>;
-}) {
+/**
+ * The overlay: the bar, and the key button and dials of the page shown. One
+ * overlay draws every page and none, so a page turn, or a move to a screen
+ * with no page, keeps the bar's frame, its spring and its seeker as they
+ * are; only the key button and the dials follow the page.
+ */
+function Overlay({ drawing }: { readonly drawing: Drawing }) {
+  const model = useThumb(
+    Option.match(drawing.shown, { onNone: () => NO_PAGE, onSome: (hymn) => hymn.number }),
+  );
+  const thumb = Option.map(drawing.shown, () => model);
   const open = Option.filter(thumb, (bound) => bound.state.open);
   return (
     <>
@@ -207,7 +206,8 @@ function Frame({
   const { track, state, page, shown, send, inset } = drawing;
   const cue = useCue();
   const target = heightOf(state);
-  const height = useSharedValue(target);
+  // The frame comes in at rest, so the first Play springs it up from the page's own bar.
+  const height = useSharedValue(REST);
   useEffect(() => {
     // A spring that overshoots a little and settles, as the owner's prototype does.
     height.value = withSpring(target, { damping: 13, stiffness: 190, mass: 0.9 });
@@ -234,29 +234,36 @@ function Frame({
     <View role="region" aria-label="Player" style={[styles.frame, { paddingBottom: inset }]}>
       <Animated.View testID="bar-spring" style={[styles.spring, springing]}>
         <GestureHandlerRootView style={styles.root}>
+          {/* The swipe holds the seeker too: a swipe up from anywhere on the bar opens the sheet. */}
           <GestureDetector gesture={swipe}>
-            <View style={styles.bar}>
-              {Option.match(thumb, {
-                onNone: () => <></>,
-                onSome: (bound) => <KeyButton thumb={bound} />,
-              })}
-              <Opener
-                track={track}
-                state={state}
-                named={!Option.exists(shown, (hymn) => hymn.number === track.number)}
-              />
-              {Option.match(page, {
-                onNone: () => <></>,
-                onSome: (other) => <PlayPage track={other} send={send} />,
-              })}
-              <Sound />
-              <Buttons track={track} state={state} send={send} />
+            <View>
+              <View style={styles.bar}>
+                {Option.match(thumb, {
+                  onNone: () => <></>,
+                  onSome: (bound) => <KeyButton thumb={bound} />,
+                })}
+                <Opener
+                  track={track}
+                  state={state}
+                  named={!Option.exists(shown, (hymn) => hymn.number === track.number)}
+                />
+                {Option.match(page, {
+                  onNone: () => <></>,
+                  onSome: (other) => <PlayPage track={other} send={send} />,
+                })}
+                <Sound />
+                <Buttons track={track} state={state} send={send} />
+              </View>
+              {tall(state) && (
+                <Seeker
+                  at={at}
+                  length={length}
+                  onSeek={(seconds) => send(Command.Seek({ seconds }))}
+                />
+              )}
             </View>
           </GestureDetector>
         </GestureHandlerRootView>
-        {tall(state) && (
-          <Seeker at={at} length={length} onSeek={(seconds) => send(Command.Seek({ seconds }))} />
-        )}
       </Animated.View>
     </View>
   );

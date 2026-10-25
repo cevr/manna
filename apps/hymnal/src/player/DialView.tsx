@@ -85,6 +85,8 @@ function Dial<A>(props: DialProps<A>) {
   // Whether the finger, or the glide it let go, moves the row: only then is a detent told.
   const driven = useSharedValue(false);
   const walled = useSharedValue(false);
+  // Whether the touch under way has dragged the row.
+  const dragged = useSharedValue(false);
   const [width, setWidth] = useState(0);
   const live = useRef(props);
   live.current = props;
@@ -112,6 +114,23 @@ function Dial<A>(props: DialProps<A>) {
     },
   );
 
+  /** The row glides on from where it is at `speed` points a second, and snaps to a detent. */
+  const settle = (speed: number) => {
+    'worklet';
+    const rest = glide(detents, place.value, speed);
+    place.value = withTiming(
+      rest.at,
+      { duration: rest.frames * FRAME, easing: Easing.out(Easing.exp) },
+      (finished) => {
+        'worklet';
+        driven.value = false;
+        if (finished && rest.cues.includes('wall')) scheduleOnRN(wall);
+        // A wrapping row comes back to its first turn, so it never runs off its copies.
+        if (finished && detents.wrap) place.value = ownDetent(detents, detentAt(rest.at)) * DETENT;
+      },
+    );
+  };
+
   const pan = usePanGesture({
     testID: `${testID}-pan`,
     activeOffsetX: [-6, 6],
@@ -122,10 +141,12 @@ function Dial<A>(props: DialProps<A>) {
       cancelAnimation(place);
       start.value = place.value;
       walled.value = false;
+      dragged.value = false;
     },
     onActivate: () => {
       'worklet';
       driven.value = true;
+      dragged.value = true;
     },
     onUpdate: ({ translationX = 0 }) => {
       'worklet';
@@ -136,23 +157,13 @@ function Dial<A>(props: DialProps<A>) {
     },
     onDeactivate: ({ velocityX = 0 }) => {
       'worklet';
-      const rest = glide(detents, place.value, -velocityX);
-      place.value = withTiming(
-        rest.at,
-        { duration: rest.frames * FRAME, easing: Easing.out(Easing.exp) },
-        (finished) => {
-          'worklet';
-          driven.value = false;
-          if (finished && rest.cues.includes('wall')) scheduleOnRN(wall);
-          // A wrapping row comes back to its first turn, so it never runs off its copies.
-          if (finished && detents.wrap)
-            place.value = ownDetent(detents, detentAt(rest.at)) * DETENT;
-        },
-      );
+      settle(-velocityX);
     },
     onFinalize: ({ canceled }) => {
       'worklet';
-      if (canceled) driven.value = false;
+      // A touch that stopped a glide and never dragged leaves the row between detents: it snaps.
+      if (!dragged.value) settle(0);
+      else if (canceled) driven.value = false;
     },
   });
   const twice = useTapGesture({
@@ -208,7 +219,7 @@ function Dial<A>(props: DialProps<A>) {
             style={styles.window}
             onLayout={(event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width)}
           >
-            <Animated.View pointerEvents="none" style={[styles.row, row]}>
+            <Animated.View testID={`${testID}-row`} pointerEvents="none" style={[styles.row, row]}>
               {drawn.map(({ n, stop }) => (
                 <View key={n} style={[styles.stop, { left: n * DETENT }]}>
                   {Option.match(stop, {

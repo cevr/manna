@@ -8,16 +8,25 @@
  * doing, its button, and a bar to drag to any place in the recording with
  * the time gone and the whole length. The bar shows in every state, still
  * while the length is not known. A recording that cannot play says why and
- * offers Retry. Under the player: over the hymn's own page, its key and
- * capo dials with reset (`Dials`); then the reader's settings, the text
- * size dial, the font, the line spacing and the screen kept on.
+ * offers Retry. Under the player: over the hymn's own page, a `Chords`
+ * switch (the bar's hold, with no long press) and its key and capo dials
+ * with reset (`Dials`); then the reader's settings, the text size dial, the
+ * font, the line spacing and the screen kept on.
  */
 
 import { useAtomSet, useAtomValue } from '@effect/atom-react';
 import { Option } from 'effect';
 import { useNavigation, useParams, useRouter } from 'one';
 import { memo, use } from 'react';
-import { type ColorValue, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  type ColorValue,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+} from 'react-native';
 
 import { color, useAccent } from '~/color';
 import { hymnHref } from '~/home/Browse';
@@ -31,6 +40,7 @@ import { useShownPage } from './page';
 import { Command, type HymnPlayer, Player, type Track } from './player';
 import { Scrubber } from './Scrubber';
 import { clock } from './time';
+import { ThumbEvent } from './thumb';
 import { TitleGo, titleGoes } from './title';
 import { Toggle } from './Toggle';
 
@@ -181,7 +191,18 @@ function ChordSection({ number }: { readonly number: number }) {
   return Option.match(thumb.printed, {
     onNone: () => <></>,
     onSome: (printed) => (
-      <View role="group" aria-label="Chords" style={styles.section}>
+      <View role="group" aria-label="Chord settings" style={[styles.section, styles.control]}>
+        <View style={styles.switchRow}>
+          <Text style={styles.switchLabel} dynamicTypeRamp="body" aria-hidden>
+            Chords
+          </Text>
+          {/* The bar's hold, as a switch: no long press needed. React Native's Switch reads `accessibilityLabel` on every platform. */}
+          <Switch
+            accessibilityLabel="Chords"
+            value={thumb.state.chords}
+            onValueChange={() => thumb.send(ThumbEvent.Hold())}
+          />
+        </View>
         <Dials thumb={thumb} printed={printed} />
       </View>
     ),
@@ -210,4 +231,11 @@ const styles = StyleSheet.create({
   time: { fontSize: 13, color: color.muted, fontVariant: ['tabular-nums'] },
   row: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', minHeight: 44 },
   section: { paddingTop: 8 },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 44,
+  },
+  switchLabel: { fontSize: 17, color: color.ink },
 });
