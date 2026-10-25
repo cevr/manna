@@ -311,6 +311,26 @@ The form of an entry, each field on its own line:
 - **Cause:** The deck pipeline had one way to make a deck, a fresh build (`gen_applescript.ts`), and it saved the new document to its path only after drawing every slide, so the app's autosave named and placed it first.
 - **Guard:** skill: the bible skill's deck reference makes `sync_deck.ts` the one command, editing an existing deck in place. Carried by `skills/bible/references/decks.md`: "changed since the last sync (a painting, a verse, a reference, a note, the"
 
+### board-christ-from-the-library
+
+- **Date:** 2026-10-25
+- **Kind:** owner
+- **Said:** "This all looks good. I think the only thing is that we should make Jesus consistent with our library. We don't have to draw it again, but just keep that in mind"
+- **Source:** ask a64a62dd4c5 (in-its-order production)
+- **Wrong:** The kept In Its Order panels `name.into` try 4 and `thesis.start` try 3 drew Christ in a brown mantle, where His library sheet draws the white robe and the gold sash.
+- **Cause:** The house dress rule (OQ5, 2026-10-19) put Christ in the linen coat and walnut mantle on earth, the script named that dress in `name` and `thesis`, and the board draws a beat's named dress over the record's; asked which wins, the owner chose the library's dress everywhere except as Priest (ask a8c0f607f34).
+- **Guard:** skill: a beat's dress is in a picture's words, which no code check reads. Carried by `.claude/skills/film/SKILL.md`: "Christ wears His record's dress, the white robe and the gold sash, in every beat but the Priest's"
+
+### board-villager-apart-from-christ
+
+- **Date:** 2026-10-25
+- **Kind:** owner
+- **Said:** chose: "Dress him apart from Christ (a coloured mantle or headcloth) at the next redraw"
+- **Source:** ask a8c0f607f34 (in-its-order production)
+- **Wrong:** The milk beat's grown villager (`milk.newborn` 3, `milk.word` 3, `milk.shame` 4) is bearded and bareheaded in a plain light robe, which reads as Christ in a beat Christ is not in.
+- **Cause:** The `idea-villagers` record drew the grown villager as the sower with his headcloth and mantle off, so nothing set him apart from Christ's beard and robe.
+- **Guard:** skill: whether a figure reads as Christ is a judgment of the eye. Carried by `.claude/skills/film/SKILL.md`: "no other grown figure is drawn bearded and bareheaded in a plain light robe, which reads as Christ"
+
 ## The look
 
 ### floating-circle-hands-no-arms
