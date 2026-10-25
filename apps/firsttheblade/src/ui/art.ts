@@ -4,6 +4,7 @@
  * The field is brand round 5's repaint of round 4's field at 3072 px; the
  * night is round 4's painting with its sky moved to the brand's night
  * (`bun run kit:night`); the series marks are fine lines in the deep wheat,
+ * drawn in the wheat's hand (each stroke swelling and coming to a point),
  * Health and Cure's the healing leaf of Revelation 22:2, which the owner
  * picked on ask ab7bf68d1be.
  */

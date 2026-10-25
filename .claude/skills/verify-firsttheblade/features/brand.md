@@ -3,10 +3,12 @@
 A visitor sees the Moonlit wheat brand on every page: the wheat `#ffefae` and
 the night `#12354e`, the header's lockup (the bare wheat beside "First _the_
 Blade" in small capitals, "the" in italic and not in small capitals), and the
-series marks in fine lines, each on a band tile. Nothing on the site is cut
+series marks in fine lines drawn in the wheat's hand (each stroke swelling
+and coming to a point), each on a band tile. Nothing on the site is cut
 paper: no torn strip, no tilted card, no paper shadow, no disc. Down the home
-page the sky turns: the field fades into the paper, the paper warms to the
-wheat under "Why we make these", the dusk runs from the wheat through warm
+page the sky turns: the wheat stands on its soil, the soil fades into the
+paper through warm earth, the paper warms to the wheat under "Why we make
+these", the dusk runs from the wheat through warm
 stops to the night with Mark 4:27 in it, and the moonlit night rises out of it
 with the stacked lockup, the sign-up and the footer. There is no dark theme:
 a visitor whose system asks for dark sees the same page.
@@ -60,9 +62,10 @@ a visitor whose system asks for dark sees the same page.
 2. **Scroll the home page.** On `/`, `ab eval "window.scrollTo(0, <y>)"`,
    wait 0.7 s and `ab screenshot` at y = 0, 900, 1800, 2700, 3600, 4500 and
    9000, at each board and scheme (`sky-turns`). The shots show the header
-   and Mark 4:28 on the painted sky with no strip under them; the field
-   fading into the paper with no edge; the series as rows with a hairline
-   between them, each mark on a tile; the paper warming to the wheat under
+   and Mark 4:28 on the painted sky with no strip under them; the wheat
+   standing on its soil, and the soil fading into the paper through warm
+   earth with no edge and no grey or blue band; the series as rows with a
+   hairline between them, each mark on a tile; the paper warming to the wheat under
    "Why we make these"; the dusk from the wheat into the night with Mark 4:27
    in it where it is still light; the night rising out of it with the
    stacked lockup and the sign-up; then the footer on the night. The light

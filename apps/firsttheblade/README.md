@@ -199,7 +199,8 @@ The brand is the Moonlit wheat palette (the wheat `#ffefae` on the night
 `#12354e`), lockup D “Small capitals” (the bare wheat, `src/art/wheat.svg`,
 beside “First _the_ Blade” in Newsreader's small capitals, “the” in italic),
 the series marks in fine lines, and site direction N2 “The sky turns”. The
-page is its own day into night: the hero field fades into the paper, the
+page is its own day into night: the hero field's wheat stands on its soil,
+which fades into the paper through warm earth (the dusk's gold), the
 header and Mark 4:28 sit on the painted sky, the series are rows on the paper
 with a hairline between them, each mark on a band tile, “Why we make these”
 warms from the paper into the wheat, the dusk runs from the wheat through
@@ -298,7 +299,12 @@ the land and the field keep their place, light and chroma, and writes the
 two stills; it never reads its own output, so a second run writes the same
 bytes. The wheat (`src/art/wheat.svg`) is the hymnal's blade, the same path.
 The series marks (`src/art/emblem-*.svg`) are fine lines in a 48-unit box,
-stroked in the darker wheat; Health and Cure's is the healing leaf
+stroked in the darker wheat and drawn in the wheat's hand: each stroke
+swells in its body and comes to a point at its ends, as the wheat's blades
+do. A mark holds no fill, so each such stroke is a few passes of one path
+(`pathLength="100"`), the whole path at a hair's width and shorter runs of
+it (`stroke-dasharray`, `stroke-dashoffset`) at wider widths, which the
+round caps blend into one stroke. Health and Cure's is the healing leaf
 (Revelation 22:2, the owner's pick on ask ab7bf68d1be). The thumbnails'
 paintings (`kit/art/robe.webp`, `kit/art/court.webp`) are from Righteousness
 by Faith. `bun run kit` draws the YouTube banner and cover (the lockup on the

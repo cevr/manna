@@ -29,24 +29,30 @@ describe('the series marks laid in the page', () => {
       const leaf = turned.slice(from, turned.indexOf('</g>', from) + '</g>'.length);
       expect(from).toBeGreaterThan(-1);
       expect(turned.replace(leaf, '')).toBe(book);
-      expect(turned.indexOf('d="M24 15c-5-3')).toBeLessThan(from);
-      expect(from).toBeLessThan(turned.indexOf('<path d="M24 15v25"/>'));
+      expect(turned.indexOf('<g class="book-page">')).toBeLessThan(from);
+      expect(from).toBeLessThan(turned.indexOf('<g class="book-spine">'));
     }));
 
-  test('the leaf is the right page and its lines, the book’s own strokes', () =>
+  test('the leaf is the right page, its edges and its lines, the book’s own strokes', () =>
     Effect.gen(function* () {
       const book = yield* read('../art/emblem-taught.svg');
       const turned = withLeaf(book);
       const from = turned.indexOf('<g class="leaf">');
       const leaf = turned.slice(from, turned.indexOf('</g>', from));
-      // The right page, from the spine's head round to its foot: the book's outline's right half.
-      const page = 'M24 15c5-3 12-3.5 18-1.5v25c-6-2-13-1.5-18 1.5z';
-      const lines = 'M28 20.5c3-1.3 7-1.3 10-.5M28 25.5c3-1.3 7-1.3 10-.5';
-      // The book draws both pages' lines as one path; the right page's are its second half.
-      expect(book).toContain(`${lines}"`);
-      expect(ds(leaf)).toEqual([page, lines]);
+      const pageFrom = book.indexOf('<g class="book-page">');
+      const page = book.slice(pageFrom, book.indexOf('</g>', pageFrom));
+      // The right page: its top edge from the spine's head, its outer edge, its foot, and three lines.
+      const strokes = new Set(ds(page));
+      expect(strokes.size).toBe(6);
+      expect(ds(page)[0]).toStartWith('M24 15c5-3');
+      expect(ds(leaf)).toEqual(ds(page));
       expect(leaf).not.toContain('fill');
     }));
+
+  plain('a drawing with a page but no spine is left as it is', () => {
+    const drawing = '<svg><g class="book-page"><path d="M0 0h1"/></g></svg>';
+    expect(withLeaf(drawing)).toBe(drawing);
+  });
 
   plain('a drawing with no spine is left as it is', () => {
     expect(withLeaf('<svg></svg>')).toBe('<svg></svg>');
