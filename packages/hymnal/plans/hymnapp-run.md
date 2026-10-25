@@ -29,7 +29,7 @@ Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>`
 | follow2    | worship                        | .rifts/manna/follow2      | a6c9723295ba443cc | merged 622350708    |
 | appicon    | worship                        | .rifts/manna/appicon      | a4d3e2ed97ddb4ba8 | merged 9d31cb7a8    |
 | chordbulk  | chordsimp, worship             | removed                   | (closed)          | merged a70cd91c9    |
-| pagerflick | chordbulk                      |                           |                   |                     |
+| pagerflick | chordbulk                      | removed                   | (closed)          | met on base         |
 | chordbar   | chordbulk                      | removed                   | (closed)          | merged 0647d1c1e    |
 | barfix     | chordbar                       |                           |                   |                     |
 | feel       | chordbar                       |                           |                   |                     |
@@ -277,6 +277,9 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 
 - chordbar merged 0647d1c1e (chordbulk part 4, bar J, and the chord box in a real sheet) after 3 rounds: r1 review changes (a swipe up from the seeker sought; the first Play jumped), r2 verify fail (the web dev server PARSE_ERROR on JSX type arguments; the tall bar cut the Resume follow pill), r3 review accepted and verify pass. Merge gate 0 and the app test:slow 0 (`merge-chordbar.log`). The orchestrator added a `Chords` switch to the player sheet chord section so chords turn off without a long press (spec Risk 6; owner 17:33 "we could have some settings here for the reader"); the bar hold and the VoiceOver action stay. The web dev client still shows One "Route failed to load" overlay (Reanimated in the layout on the web, chordbar r3 verify D3): a follow-up, not a hold, by the owner 2026-10-20 "I really don't care about web". The page side of a dial detent redraws 120 chord texts and no section or line (redraw.slow). (chordbar)
 
+- pagerflick closed met on base, with no product change (owner, 2026-10-25, ask aeb1078096a: "None failed this time"). Device read 1 on the owner iPhone (Release probe, 00:41 to 00:43): 17 of 17 sideways drags turned exactly one page, at 0.54 to 3.41 pt/ms, lifting at 0.10 to 0.35 of a page; 7 caught a glide and turned one more each; the page vertical scroll never took a touch. UIKit paging already honours momentum. Probes and logs: `tmp/orchestrate/hymnapp/pagerflick/probe/` (numbers only). (pagerflick)
+- ftbbrand ask afdb1438271 (owner, 2026-10-25): the site look "Revise it", "i'm not sure i like the blue on the bottom of the wheat field, a lot least as it looks now, maybe we need some dirt or something to give it more space"; the series marks "Fine lines"; the kit "Keep it"; the stills "Approve them", "let's try to make the fine lines more like the logo for the series". Round 2 gives the field ground and space, and draws the marks more like the series logo. (ftbbrand)
+
 ## Owner questions
 
 - pagerows (2026-10-22): hymn 220. The database sings 7 places of 3 words in each stanza a second time; the re-engraved page prints them once, with no repeat sign. Two independent judges agree on the reading (`tmp/orchestrate/hymnapp/pagerows/owner-220.md`). Options: (1, recommended) the owner photographs 220 in his own 1985 hymnal, and that page decides; (2) keep the row, 220 stays unsettled; (3) follow the engraving now and remove the repeats. Answer: the owner sent photos of 220 from his 1985 hymnal (2026-10-22, `tmp/orchestrate/hymnapp/notes/owner/2026-10-22-hymn220-p1.HEIC`, `-p2.HEIC`). The 1985 page prints each repeated phrase as an echo in parentheses after the phrase, so the database is right and the re-engraving dropped the echoes. Unit `h220` settles 220 by the photos; the row keeps its words.
@@ -396,5 +399,7 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 - For `feel` (chordbar r1 m7): a fast dial move reports only its latest detent, so fewer `detent` cues than detents crossed; feel needs one cue per detent. For `chordplace` (r1 m8, m9): a Reset during a fling in the sheet can be overwritten by later detents; the key dial can run past its two drawn copies on a screen-wide drag plus a fling at the cap. (chordbar)
 - chordbar r2 verify O1: on a Debug iOS build the seeker knob froze 2.0 to 2.8 s after large dial moves. Measure the bar side per detent and the stored move write on a Release build before any change. (chordbar)
 - The volume dial of bar J needs One `createPlayer` volume (unit `rate`). (chordbar)
+
+- From pagerflick (`tmp/orchestrate/hymnapp/pagerflick/followups.md`), a pager speed unit `pagerperf`: each settle re-renders every mounted page (`extraData` is a new object each render and `HymnPage` is not memoized; check: 0 renders per settle for unchanged pages); about 600 native views per page (620 syllables, 276 chord targets, 94 lines over 4 mounted pages), mounted on the main thread during a turn (flatten chordless syllables, or draw neighbour pages light; measure frame gaps on a Release-sim build at load 12 or less). Frame gaps of 55 to 174 ms follow nearly every turn on the owner phone. (pagerflick)
 
 ## Review later
