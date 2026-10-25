@@ -1,6 +1,6 @@
 // The footage library's media work (`footage.ts`): an original probed in
 // place, its copies made, and a take's voice decoded. Its live layer
-// (`footage-media-live.ts`, which says how) loads with mediabunny only when
+// (`footage-media-bun.ts`, which says how) loads with mediabunny only when
 // `FootageMedia.layer` is built, so a module that names the service, or a
 // test that doubles it, loads none of it.
 
@@ -38,6 +38,6 @@ export class FootageMedia extends Context.Service<FootageMedia, FootageMediaServ
 ) {
   /** Over the media service's coders, and the files on disk, its module loaded when the layer is built. */
   static readonly layer = Layer.unwrap(
-    Effect.promise(() => import('./footage-media-live.ts')).pipe(Effect.map((live) => live.layer)),
+    Effect.promise(() => import('./footage-media-bun.ts')).pipe(Effect.map((live) => live.layer)),
   );
 }

@@ -1,7 +1,7 @@
 // The media service: what a media file is asked (how long it plays, its sound
 // as PCM, a still), and what is written from PCM, a raster or a render's
 // segments (WAV, AAC, FLAC, PNG, a joined film, its share and phone copies).
-// Its live layer (`media-live.ts`, which says how each is done) loads with
+// Its live layer (`media-bun.ts`, which says how each is done) loads with
 // the media stack it needs (mediabunny, its coders, NodeAV) only when
 // `Media.layer` is built, so a module that names the service, or a test that
 // doubles it, loads none of it.
@@ -57,7 +57,7 @@ export interface MediaService {
   readonly remux: (video: string, audio: AacTrack) => Effect.Effect<void, MediaFailed>;
   /**
    * The share copy of the film at `master`, written to `out`: its video
-   * encoded again by x264 at CRF `SHARE_CRF` (`media-live.ts`, `x264.ts`),
+   * encoded again by x264 at CRF `SHARE_CRF` (`media-bun.ts`, `x264.ts`),
    * its track copied. `out` appears only once whole.
    */
   readonly shareCopy: (master: string, out: string) => Effect.Effect<void, MediaFailed>;
@@ -75,7 +75,7 @@ export interface MediaService {
    * The copy of `video` a phone streams, written to `out` (an MP4 whatever
    * its name, the index at its head): 720 lines high at most (a shorter
    * video keeps its size, made even), H.264 at CRF 23 averaging `PHONE_RATE`
-   * at most (`media-live.ts` `phoneRateFor`), a key frame every second at
+   * at most (`media-bun.ts` `phoneRateFor`), a key frame every second at
    * its own frame rate (`PHONE_ENCODE`), its track copied. The review makes one of
    * every render too big or too dense to play as made, and names it by
    * `PHONE_COPY`.
@@ -179,6 +179,6 @@ export interface AacTrack {
 export class Media extends Context.Service<Media, MediaService>()('@bible/film/tools/Media') {
   /** The live media, its module loaded when the layer is built. */
   static readonly layer = Layer.unwrap(
-    Effect.promise(() => import('./media-live.ts')).pipe(Effect.map((live) => live.layer)),
+    Effect.promise(() => import('./media-bun.ts')).pipe(Effect.map((live) => live.layer)),
   );
 }
