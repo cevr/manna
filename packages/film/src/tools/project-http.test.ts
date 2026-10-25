@@ -17,7 +17,7 @@ import {
   reviewTestGet,
   reviewTestPost,
   reviewTestRefusalOf,
-} from './testing.ts';
+} from './review/testing.ts';
 
 describe("a film's project", () => {
   const decodeView = Schema.decodeEffect(Schema.fromJsonString(ProjectView));

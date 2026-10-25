@@ -21,7 +21,8 @@ import { FootageLibrary } from '../../src/tools/footage.ts';
 import { syncClip } from '../../src/tools/fixtures/sync-clip.ts';
 import { Mixer, planOf } from '../../src/tools/mixer.ts';
 import { measuredFilm } from '../../src/tools/sound-render.ts';
-import { emptyCalls, fakeElevenLabs, privateFolder } from '../../src/tools/testing.ts';
+import { emptyCalls, fakeElevenLabs } from '../../src/tools/elevenlabs/testing.ts';
+import { privateFolder } from '../../src/tools/host/testing.ts';
 
 /** What the speaker says, one word every half second from zero, as the fake hears it. */
 const SAID = 'The law was given to show us our need of a Saviour';

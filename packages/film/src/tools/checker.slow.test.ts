@@ -17,15 +17,17 @@ import {
   type RenderLedger,
   emptyLedger,
   fakeRenderHost,
+  inkMark,
+  testExportInfo,
+  textBox,
+} from './browser/testing.ts';
+import {
   holdScenes,
   holdTimings,
-  inkMark,
   longHoldScenes,
   longHoldTimings,
-  testExportInfo,
   testFilm,
-  textBox,
-} from './testing.ts';
+} from './film-repo/testing.ts';
 
 const scenes: ReadonlyArray<Timed> = [
   { id: 'a', min: 10, timeline: { hit: { at: 'start', offset: 2, dur: 1 } } },

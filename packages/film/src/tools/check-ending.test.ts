@@ -7,7 +7,7 @@ import { layout } from '../core/layout.ts';
 import type { Timed } from '../core/schema.ts';
 import { DEAD_MAX, deadAir, designedSilences, endShort, staticFindings } from './check.ts';
 import { report } from './findings.ts';
-import { holdScenes, holdTimings, testFilm } from './testing.ts';
+import { holdScenes, holdTimings, testFilm } from './film-repo/testing.ts';
 
 /** No track on disk, and no plan key: what a check before any mix sees. */
 const NO_MASTER = { master: Option.none(), key: Option.none(), file: 'narration/full.wav' };

@@ -21,7 +21,7 @@ import { ContentStore } from './content-store.ts';
 import { FilmName } from './film-repo.ts';
 import { ManifestLock } from './manifest-lock.ts';
 import { NotesStore } from './notes-store.ts';
-import { crashingFileSystem, memoryFileSystem, memoryManifestLock, text } from './testing.ts';
+import { crashingFileSystem, memoryFileSystem, memoryManifestLock, text } from './host/testing.ts';
 
 const film = FilmName.make('f');
 const draft = (text: string): NoteDraft => ({ scene: 'a', T: 1.5, frame: 45, text });

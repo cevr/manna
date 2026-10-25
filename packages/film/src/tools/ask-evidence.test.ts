@@ -18,15 +18,10 @@ import { type ReviewRecord, ReviewRecordJson, findingId } from '../core/review-r
 import { AskStore } from './ask-store.ts';
 import { ProductionStore } from './production-store.ts';
 import { Review } from './review.ts';
-import {
-  REVIEW_PROJECT,
-  echoPages,
-  freshFilm,
-  labInMemory,
-  noRenders,
-  noStudio,
-  text,
-} from './testing.ts';
+import { echoPages, freshFilm, noRenders, noStudio } from './film-services/testing.ts';
+import { text } from './host/testing.ts';
+import { labInMemory } from './lab/testing.ts';
+import { REVIEW_PROJECT } from './review/testing.ts';
 
 const HEAD_ANGLE = 'front and level, the concept three-quarter and tilted up';
 const FINDING = findingId('f', 'a', {

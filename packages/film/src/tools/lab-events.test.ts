@@ -17,7 +17,9 @@ import { ProductionStore } from './production-store.ts';
 import { BoardStore } from './board-store.ts';
 import { filmNamed } from './film-repo.ts';
 import { SourceWriter } from './source-writer.ts';
-import { NOTES_LAB, echoPages, labInMemory, text, writesInMemory } from './testing.ts';
+import { echoPages, writesInMemory } from './film-services/testing.ts';
+import { text } from './host/testing.ts';
+import { NOTES_LAB, labInMemory } from './lab/testing.ts';
 
 const board: BoardFile = {
   film: 'f',

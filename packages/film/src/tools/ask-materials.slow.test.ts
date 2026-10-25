@@ -41,21 +41,12 @@ import { Review } from './review.ts';
 import { SeriesDrafts } from './series-drafts.ts';
 import { StudioReadings } from './studio.ts';
 import { Attempt, Takes } from './takes.ts';
-import {
-  echoPages,
-  emptyCalls,
-  fakeElevenLabs,
-  fakeMedia,
-  freshFilm,
-  type LabFetch,
-  labInMemory,
-  mcpBound,
-  memoryFileSystem,
-  NOTES_LAB,
-  noRenders,
-  storeLayer,
-  text,
-} from './testing.ts';
+import { emptyCalls, fakeElevenLabs } from './elevenlabs/testing.ts';
+import { echoPages, freshFilm, noRenders } from './film-services/testing.ts';
+import { memoryFileSystem, storeLayer, text } from './host/testing.ts';
+import { labInMemory, NOTES_LAB } from './lab/testing.ts';
+import { type LabFetch, mcpBound } from './lab-mcp/testing.ts';
+import { fakeMedia } from './media/testing.ts';
 
 const TALK = [
   '# By Grace: script',

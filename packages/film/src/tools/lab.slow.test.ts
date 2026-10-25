@@ -64,15 +64,10 @@ import { startLab } from './film-services.ts';
 import { STUDIO_IMPORT_WAIT_S, STUDIO_MAX_BODY } from '../core/studio.ts';
 import { LabPage, type LabPageSpec, PageBundler } from './lab-page.ts';
 import { PageRenderer } from './page-render.ts';
-import {
-  echoPages,
-  freshFilm,
-  labInMemory,
-  labWithMcp,
-  memoryFileSystem,
-  routePath,
-  text,
-} from './testing.ts';
+import { echoPages, freshFilm, routePath } from './film-services/testing.ts';
+import { memoryFileSystem, text } from './host/testing.ts';
+import { labInMemory } from './lab/testing.ts';
+import { labWithMcp } from './lab-mcp/testing.ts';
 import { MCP_PATH } from './lab-mcp.ts';
 
 /** The films folder with one film, `f`: a folder with its scenes' index. */

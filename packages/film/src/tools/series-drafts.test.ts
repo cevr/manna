@@ -6,7 +6,7 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Boolean as Bool, Effect, FileSystem, Layer, Option, Path } from 'effect';
 import * as PlatformError from 'effect/PlatformError';
 import { SeriesDrafts } from './series-drafts.ts';
-import { memoryFileSystem, storeLayer } from './testing.ts';
+import { memoryFileSystem, storeLayer } from './host/testing.ts';
 
 const TALK = [
   '# By Grace: script',

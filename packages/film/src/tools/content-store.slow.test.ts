@@ -25,7 +25,7 @@ import { type SoundManifest, SoundManifestJson } from '../core/schema.ts';
 import { ContentStore, type Manifest } from './content-store.ts';
 import { ManifestLock, type ManifestLockService } from './manifest-lock.ts';
 import { bunManifestLock, lockFile } from './manifest-lock-bun.ts';
-import { memoryFileSystem, memoryManifestLock, storeLayer } from './testing.ts';
+import { memoryFileSystem, memoryManifestLock, storeLayer } from './host/testing.ts';
 
 const manifest: Manifest<SoundManifest> = {
   file: '/films/test/sound/manifest.json',

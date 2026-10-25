@@ -28,7 +28,7 @@ import { CounselFailed } from '../core/judge.ts';
 import type { MatchTaken } from '../core/match.ts';
 import { Counsel } from './counsel.ts';
 import { Critic } from './critique.ts';
-import { memoryFileSystem, text } from './testing.ts';
+import { memoryFileSystem, text } from './host/testing.ts';
 
 const RULES = '# Rules\n\n## The look\n\nOne silhouette outline; hair has no ink of its own.\n';
 

@@ -26,7 +26,7 @@ import {
 } from './render-plan.ts';
 import { CHECK_RULES } from './film-check.ts';
 import { IMPORT_RULES } from './library.ts';
-import { testExportInfo } from './testing.ts';
+import { testExportInfo } from './browser/testing.ts';
 
 /** A film of three scenes, 4, 5 and 6 s, and one short over its first. */
 const cutShort = {

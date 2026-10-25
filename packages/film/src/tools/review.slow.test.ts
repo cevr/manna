@@ -45,7 +45,7 @@ import { RenderCatalogue } from './catalogue.ts';
 import { ContentStore } from './content-store.ts';
 import { AtMtime, madeFromName } from './file-cache.ts';
 import { Media } from './media.ts';
-import { reviewMedia } from './testing.ts';
+import { reviewMedia } from './media/testing.ts';
 import {
   type Found,
   type ProjectRead,

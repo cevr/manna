@@ -33,7 +33,7 @@ import { PAGE_CUT_MARK } from '../core/page-render.ts';
 import { PageBundler, splice } from './lab-page.ts';
 import { serveApi } from './api-server.ts';
 import { PageRenderer, RenderFailed } from './page-render.ts';
-import { memoryFileSystem, text } from './testing.ts';
+import { memoryFileSystem, text } from './host/testing.ts';
 import { Platform, html, appFolder, served, app, buildOf, serverOf } from './fixtures/lab-app.ts';
 
 /** A Mac's Chrome, as its `User-Agent` names it. */

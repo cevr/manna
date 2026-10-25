@@ -31,7 +31,9 @@ import type { Media } from './media.ts';
 import { type LoadedFilm, masterFile } from './film-repo.ts';
 import { MasterStampJson, planOf, stampFile } from './mixer.ts';
 import { SoundRender } from './sound-render.ts';
-import { fakeMedia, memoryFileSystem, spokenTake, testFilm, testVoice, text } from './testing.ts';
+import { spokenTake, testFilm, testVoice } from './film-repo/testing.ts';
+import { memoryFileSystem, text } from './host/testing.ts';
+import { fakeMedia } from './media/testing.ts';
 
 const scenes: ReadonlyArray<Timed> = [
   { id: 'said', say: 'Hi there.' },

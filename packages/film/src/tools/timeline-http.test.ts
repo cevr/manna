@@ -10,7 +10,9 @@ import { labUrls } from '../core/api.ts';
 import { FilmTimeline } from '../core/timeline-schema.ts';
 import { labHandler } from './lab.ts';
 import { ProductionStore } from './production-store.ts';
-import { echoPages, freshFilm, labInMemory, text } from './testing.ts';
+import { echoPages, freshFilm } from './film-services/testing.ts';
+import { text } from './host/testing.ts';
+import { labInMemory } from './lab/testing.ts';
 
 const bound = { hostname: '127.0.0.1', port: 4401 } as const;
 const get = (path: string) => new Request(`http://127.0.0.1:4401${path}`, { method: 'GET' });

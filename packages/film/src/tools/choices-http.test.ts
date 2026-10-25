@@ -18,7 +18,7 @@ import {
   reviewTestGet,
   reviewTestPost,
   reviewTestRefusalOf,
-} from './testing.ts';
+} from './review/testing.ts';
 
 /** The pick's change (`reviewPickIn`), by the id the lab gave it. */
 const PICKED = ChangeId.make('pick-bright');

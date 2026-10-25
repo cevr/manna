@@ -11,7 +11,7 @@ import { ContentStore } from './content-store.ts';
 import { FilmRepo } from './film-repo.ts';
 import { scenesLocatedHere } from './read-cli.ts';
 import { type Keyed, Stamps, importsOf, stampOf } from './stamp.ts';
-import { sceneFixture } from './testing.ts';
+import { sceneFixture } from './scene-sources/testing.ts';
 import { resolveAddress } from '../core/address.ts';
 
 /** The fixture film's folder: a fresh one per test. */

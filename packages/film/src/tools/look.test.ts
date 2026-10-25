@@ -34,7 +34,7 @@ import {
   smallFaces,
 } from './look.ts';
 import { report } from './findings.ts';
-import { holdScenes, holdTimings } from './testing.ts';
+import { holdScenes, holdTimings } from './film-repo/testing.ts';
 
 const FPS = 30;
 const WIDTH = 1920;

@@ -33,14 +33,13 @@ import {
   echoPages,
   freshFilm,
   freshHere,
-  labWithMcp,
-  mcpSession,
   noRenders,
   noReview,
   noStudio,
-  sceneFixture,
-  withTimelines,
-} from './testing.ts';
+} from './film-services/testing.ts';
+import { withTimelines } from './lab/testing.ts';
+import { labWithMcp, mcpSession } from './lab-mcp/testing.ts';
+import { sceneFixture } from './scene-sources/testing.ts';
 
 /** The fixture's hand scene file. */
 class HandFile extends Context.Service<HandFile, string>()('test/HandFile') {}

@@ -71,7 +71,8 @@ tagged errors (`ApiKeyMissing`, `EncoderMissing`, ...) in `tools/errors.ts`,
 and the refusals a page shows in their own words (`TakeMismatch`, ...) in
 `core/refusals.ts`; `film check`'s findings, with their levels and addresses,
 are in `tools/findings.ts`. Logs are `Effect.log` lines `event key=value`.
-`tools/testing.ts` has the in-memory doubles the tool tests use.
+Each `tools/<area>/testing.ts` has the in-memory doubles the tool tests of
+that area use (`tools/host/testing.ts`, `tools/media/testing.ts`, ...).
 
 `film sfx` is the app's sound library (`SoundLibrary`, `tools/library.ts`).
 `make` is its one paid command: it prints each sound's candidates and
@@ -568,7 +569,7 @@ page, the browser and the server. The export page's handle is declared once
 (`core/export-handle.ts`: each call's arguments and the schema its answer
 crosses in): the player implements it (`player/render.ts`), the tools reach it
 through one typed call (`FramePage.call`, `tools/browser.ts`), and the test
-fake answers the same calls (`fakeRenderHost`, `tools/testing.ts`), so a new
+fake answers the same calls (`fakeRenderHost`, `tools/browser/testing.ts`), so a new
 call is a type error in each until it is written there. Every frame the
 page draws is rastered before its clock stops (a one-pixel read), so the
 draw is timed apart from the encoder: each `render.progress` line and
@@ -4082,7 +4083,7 @@ file's name (`.catalogue.json.lock`) written, nowhere else; closing any other
 handle on the file lets go of the process's lock.
 `film/no-test-seam` (`lint/no-test-seam.ts`) holds every package's `src`: a
 package's test-only doubles live in its `testing.ts` seam (`core/testing.ts`,
-`tools/testing.ts`, `@bible/url-state/testing`, `@bible/core/<area>/testing`),
+`tools/<area>/testing.ts`, `@bible/url-state/testing`, `@bible/core/<area>/testing`),
 and product code imports none, by a relative path, a package export, a type
 import, a re-export or a dynamic `import('…')`. The tests, the fixtures, the
 seams and the type tests are let off.

@@ -15,14 +15,9 @@ import { stagingVoice } from '../core/staging-voice.ts';
 import type { ReadBeat } from '../core/studio.ts';
 import { Narrator } from './narrator.ts';
 import { StagingCache, audioName, stagingRequest } from './staging.ts';
-import {
-  type ElevenLabsCalls,
-  emptyCalls,
-  fakeElevenLabs,
-  fakeMedia,
-  memoryFileSystem,
-  storeLayer,
-} from './testing.ts';
+import { type ElevenLabsCalls, emptyCalls, fakeElevenLabs } from './elevenlabs/testing.ts';
+import { memoryFileSystem, storeLayer } from './host/testing.ts';
+import { fakeMedia } from './media/testing.ts';
 
 const beat = (text: string, delivery: ReadonlyArray<Mark> = []): ReadBeat => ({
   id: 'b',

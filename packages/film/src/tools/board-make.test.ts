@@ -34,7 +34,7 @@ import { BoardStore } from './board-store.ts';
 import { ContentStore } from './content-store.ts';
 import { FilmFolder, FilmName } from './film-repo.ts';
 import { ImageRoute } from './image-route.ts';
-import { memoryFileSystem, memoryLocks, text } from './testing.ts';
+import { memoryFileSystem, memoryLocks, text } from './host/testing.ts';
 
 /** One image asked of the route. */
 type ImageRequest = Parameters<(typeof ImageRoute)['Service']['draw']>[0];

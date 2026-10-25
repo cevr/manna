@@ -12,7 +12,7 @@ import { measuredSounds } from '../core/testing.ts';
 import { staticFindings } from './check.ts';
 import { levelOf } from './findings.ts';
 import { videoDescription } from './render-plan.ts';
-import { testFilm } from './testing.ts';
+import { testFilm } from './film-repo/testing.ts';
 
 const library: Library = defineLibrary({
   'amb.hall': {

@@ -16,7 +16,9 @@ import {
 } from '../core/schema.ts';
 import { MUSIC_TAIL, musicKey, musicPlan } from '../core/sound.ts';
 import { Composer, type ScoreOptions, musicCredits } from './composer.ts';
-import { emptyCalls, fakeElevenLabs, memoryFileSystem, storeLayer, testFilm } from './testing.ts';
+import { emptyCalls, fakeElevenLabs } from './elevenlabs/testing.ts';
+import { testFilm } from './film-repo/testing.ts';
+import { memoryFileSystem, storeLayer } from './host/testing.ts';
 
 const scenes: ReadonlyArray<Timed> = [
   { id: 'open', min: 8 },

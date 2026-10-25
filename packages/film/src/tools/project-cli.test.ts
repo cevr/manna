@@ -19,7 +19,9 @@ import { project } from './project-cli.ts';
 import { Renderer } from './renderer.ts';
 import { SoundRender } from './sound-render.ts';
 import { Stamps, sceneStamps } from './stamp.ts';
-import { memoryFileSystem, memoryLocks, reviewMedia, testFilm } from './testing.ts';
+import { testFilm } from './film-repo/testing.ts';
+import { memoryFileSystem, memoryLocks } from './host/testing.ts';
+import { reviewMedia } from './media/testing.ts';
 
 const isVerbRefused = Schema.is(VerbRefused);
 

@@ -13,7 +13,7 @@ import { BoardRefused } from '../core/refusals.ts';
 import { ContentStore } from './content-store.ts';
 import { FilmFolder, FilmName, FilmRepo } from './film-repo.ts';
 import { NotesStore } from './notes-store.ts';
-import { memoryFileSystem, memoryLocks, text } from './testing.ts';
+import { memoryFileSystem, memoryLocks, text } from './host/testing.ts';
 
 const film = FilmName.make('f');
 

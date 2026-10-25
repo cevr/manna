@@ -34,7 +34,7 @@ import { FilmRepo, type FilmName } from './film-repo.ts';
 import { judge } from './judge.ts';
 import { collect } from './process.ts';
 import { sandboxArgs } from './sandbox.ts';
-import { reviewMedia } from './testing.ts';
+import { reviewMedia } from './media/testing.ts';
 
 const film = 'sample' as FilmName;
 

@@ -12,7 +12,7 @@ import { FilmFolder, FilmRepo } from './film-repo.ts';
 import { FreshFilm } from './fresh-film.ts';
 import { scenesLocatedHere } from './read-cli.ts';
 import { SceneSources } from './scene-sources.ts';
-import { sceneFixture } from './testing.ts';
+import { sceneFixture } from './scene-sources/testing.ts';
 
 /** The fixture film's folder: a fresh one per test. */
 class Films extends Context.Service<Films, string>()('test/Films') {}

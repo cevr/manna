@@ -41,7 +41,10 @@ import { Easel } from './easel.ts';
 import type { FreshFilmService } from './fresh-film.ts';
 import { CuesRead } from './fresh-film.ts';
 import { LabPage } from './lab-page.ts';
-import { echoPages, freshFilm, labInMemory, labWithMcp, mcpSession, text } from './testing.ts';
+import { echoPages, freshFilm } from './film-services/testing.ts';
+import { text } from './host/testing.ts';
+import { labInMemory } from './lab/testing.ts';
+import { labWithMcp, mcpSession } from './lab-mcp/testing.ts';
 
 /** The films folder the lab serves: the asker's, when it is the same checkout. */
 const FILMS = '/films';

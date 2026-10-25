@@ -20,7 +20,7 @@ import {
   reviewTestRefusalOf,
   REVIEW_TEST_HOME,
   REVIEW_TEST_HOST,
-} from './testing.ts';
+} from './review/testing.ts';
 
 describe('review routes', () => {
   test('reads a ref from a files URL, each segment decoded', () => {

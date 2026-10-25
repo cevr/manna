@@ -14,7 +14,7 @@ import { keepCastSheet } from './cast-sheet-keep.ts';
 import { ContentStore } from './content-store.ts';
 import type { Raster } from '../core/raster.ts';
 import { decodePng, encodePng } from './png.ts';
-import { memoryFileSystem, memoryLocks, text } from './testing.ts';
+import { memoryFileSystem, memoryLocks, text } from './host/testing.ts';
 
 const base: FigureSpec = { ...PLAIN, robeShade: [60, 78, 150], arm: 'sleeve' };
 const at = (eyeShift: number, extra: Partial<FigureSpec> = {}) =>

@@ -24,7 +24,7 @@ import { HttpPlatform, HttpServerRequest, HttpServerResponse } from 'effect/http
 import { LabPage, type LabPageSpec, PageBundler } from '../lab-page.ts';
 import { PageReads } from '../api-server.ts';
 import { PageRenderer } from '../page-render.ts';
-import { memoryFileSystem, text } from '../testing.ts';
+import { memoryFileSystem, text } from '../host/testing.ts';
 
 export const Platform = Layer.provideMerge(BunHttpPlatform.layer, BunServices.layer);
 

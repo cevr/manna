@@ -58,16 +58,10 @@ import { planNarration } from './narrator.ts';
 import { read } from './read-cli.ts';
 import { measuredFilm } from './sound-render.ts';
 import { talk } from './talk-cli.ts';
-import {
-  echoPages,
-  emptyCalls,
-  emptyLedger,
-  fakeElevenLabs,
-  fakeRenderHost,
-  freshFilm,
-  privateFolder,
-  textBox,
-} from './testing.ts';
+import { emptyLedger, fakeRenderHost, textBox } from './browser/testing.ts';
+import { emptyCalls, fakeElevenLabs } from './elevenlabs/testing.ts';
+import { echoPages, freshFilm } from './film-services/testing.ts';
+import { privateFolder } from './host/testing.ts';
 
 /** A vertical finding at a second of the talk: a line of text, or its hook. */
 const atASecond = Predicate.or(

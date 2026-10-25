@@ -6,7 +6,7 @@ import { memoryLocation } from '@bible/url-state/testing'; // RED film/no-test-s
 import * as wiki from '@bible/core/wiki/testing'; // RED film/no-test-seam
 import { declares } from './testing'; // RED film/no-test-seam
 export { routesOf as routes } from '../../src/core/testing.ts'; // RED film/no-test-seam
-export * from '../../src/tools/testing.ts'; // RED film/no-test-seam
+export * from '../../src/tools/host/testing.ts'; // RED film/no-test-seam
 
 export const later = () => import('../../src/core/testing.ts'); // RED film/no-test-seam
 // `packages/core` spells its relative imports `.js`, which resolve to the `.ts` file.

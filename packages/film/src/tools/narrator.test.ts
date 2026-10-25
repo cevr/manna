@@ -35,20 +35,16 @@ import {
   stateLine,
   sweepNarration,
 } from './narrator.ts';
+import { type ElevenLabsCalls, emptyCalls, fakeElevenLabs } from './elevenlabs/testing.ts';
+import { testFilm, testVoice } from './film-repo/testing.ts';
 import {
-  type ElevenLabsCalls,
   crashingFileSystem,
-  emptyCalls,
-  fakeElevenLabs,
-  fakeMedia,
-  fakeLength,
   memoryFileSystem,
   memoryManifestLock,
   storeLayer,
-  testFilm,
-  testVoice,
   text,
-} from './testing.ts';
+} from './host/testing.ts';
+import { fakeMedia, fakeLength } from './media/testing.ts';
 
 const scenes: ReadonlyArray<Timed> = [
   { id: 'a', say: 'Hello {wave} world.' },

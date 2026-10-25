@@ -1251,7 +1251,7 @@
         "**/packages/film/src/core/dsp.ts",
         "**/packages/film/src/core/synth/**",
         "**/packages/film/src/core/affine.ts",
-        "**/packages/film/src/tools/testing.ts",
+        "**/packages/film/src/tools/*/testing.ts",
         "**/packages/film/src/**/fixtures/**",
         "**/packages/film/src/**/*.test.ts",
         "**/packages/film/src/**/*.test.tsx"
@@ -1632,7 +1632,7 @@
     },
     {
       // The test doubles and the type tests write a known id by hand.
-      "files": ["**/packages/film/src/tools/testing.ts", "**/packages/film/src/**/*.types.ts"],
+      "files": ["**/packages/film/src/tools/*/testing.ts", "**/packages/film/src/**/*.types.ts"],
       "rules": {
         "no-restricted-properties": "off"
       }

@@ -28,7 +28,7 @@ import { concept } from './concept-cli.ts';
 import { ContentStore } from './content-store.ts';
 import { FilmFolder } from './film-repo.ts';
 import { encodePng } from './png.ts';
-import { memoryFileSystem, printingTo, text } from './testing.ts';
+import { memoryFileSystem, printingTo, text } from './host/testing.ts';
 
 const HOUSE = { text: '/app/docs/ref/house-look.txt', image: '/app/docs/ref/house-look.png' };
 

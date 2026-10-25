@@ -28,7 +28,8 @@ import { readSpans } from './scene-source.ts';
 import { SceneSources } from './scene-sources.ts';
 import { SceneWriter } from './scene-writer.ts';
 import { FORMAT_LIMIT, SourceWriter } from './source-writer.ts';
-import { freshHere, sceneFixture } from './testing.ts';
+import { freshHere } from './film-services/testing.ts';
+import { sceneFixture } from './scene-sources/testing.ts';
 
 /** The timeout of a test here that spawns (bunx oxfmt, sh, sleep): a cold start's time is the machine's (effect/requireSpawnBudget). */
 const SPAWNS_MS = 30_000;

@@ -6,7 +6,8 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer, Option, Path } from 'effect';
 import type { Timed } from '../core/schema.ts';
 import { writeSheet } from './script-sheet.ts';
-import { memoryFileSystem, testFilm, text } from './testing.ts';
+import { testFilm } from './film-repo/testing.ts';
+import { memoryFileSystem, text } from './host/testing.ts';
 
 const scenes: ReadonlyArray<Timed> = [
   { id: 'open', say: 'He said {x}“be still” and it was so.' },
