@@ -12,7 +12,7 @@ import { PageCrashed, PageError } from './errors.ts';
 import { type LoadedFilm, type MeasuredFilm, masterFile, placeFilm } from './film-repo.ts';
 import { MasterStampJson, planOf, stampFile } from './mixer.ts';
 import { mixKey } from '../core/mix.ts';
-import { Cut, HARDWARE_WORKERS, RenderJob, SOFTWARE_WORKERS } from './render-plan.ts';
+import { Cut, HARDWARE_WORKERS, RenderJob, Reuse, SOFTWARE_WORKERS } from './render-plan.ts';
 import { Picture } from '../core/board-render.ts';
 import { Cores, Platform, type Remuxed, Renderer, remuxer } from './renderer.ts';
 import { SoundRender } from './sound-render.ts';
@@ -61,6 +61,7 @@ const video = RenderJob.Video({
   server: Option.none(),
   picture: Picture.Scenes(),
   cut: Cut.Whole(),
+  reuse: Reuse.Off(),
 });
 
 const setup = (

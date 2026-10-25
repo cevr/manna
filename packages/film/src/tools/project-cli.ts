@@ -83,7 +83,7 @@ import { RenderCatalogue, renderRecord } from './catalogue.ts';
 import { ProjectRead, answering, printLine } from './fresh-film.ts';
 import { ApprovalUnnamed } from './errors.ts';
 import { FilmRepo, type LoadedFilm, placeFilm } from './film-repo.ts';
-import { type RenderJob, type RenderOutput, flagConflicts, jobOf } from './render-plan.ts';
+import { type RenderJob, type RenderOutput, Reuse, flagConflicts, jobOf } from './render-plan.ts';
 import { planKey } from './mixer.ts';
 import { type Remux, type Remuxed, Renderer, remuxer } from './renderer.ts';
 import { type SceneKeys, Stamps, sceneStamps, stampOf } from './stamp.ts';
@@ -469,6 +469,8 @@ const renderScenes = <E, R>(renderLayer: Layer.Layer<Renderer, E, R>) =>
               server: Option.none(),
               board: false,
               review: false,
+              // A scene's segments are kept by its key; `--force` draws them again.
+              reuse: Reuse.Keyed({ scenes: keys.keys, fresh: input.force }),
             }),
           );
           const output = yield* recordOutput(

@@ -20,6 +20,8 @@ import {
   jobOf,
   frameSpan,
   planChunks,
+  Reuse,
+  segmentChunks,
   stillName,
   videoEncoders,
   videoWorkers,
@@ -70,6 +72,7 @@ const flags = {
   server: Option.none(),
   board: false,
   review: false,
+  reuse: Reuse.Off() as Reuse,
 } as const;
 
 const conflict = (over: Partial<Parameters<typeof jobOf>[0]>) =>
@@ -285,6 +288,60 @@ describe('planChunks', () => {
 
   test('an empty range has no chunks', () => {
     expect(planChunks(50, 50, 4)).toEqual([]);
+  });
+});
+
+describe('a video’s reuse', () => {
+  const fresh = Reuse.Keyed({ scenes: new Map(), fresh: true });
+
+  test('is the job’s: keyed by its beats, or off', () => {
+    expect(Result.getOrThrow(jobOf({ ...flags, reuse: fresh }))).toMatchObject({ reuse: fresh });
+    expect(Result.getOrThrow(jobOf(flags))).toMatchObject({ reuse: Reuse.Off() });
+  });
+
+  test('refuses --fresh where nothing is kept', () => {
+    expect(conflict({ reuse: fresh, stills: Option.some([1]) })).toBe('stills excludes fresh');
+    expect(conflict({ reuse: fresh, contact: Option.some(5) })).toBe('contact excludes fresh');
+    expect(conflict({ reuse: fresh, scope: scoped({ _tag: 'Short', id: 'cut' }) })).toBe(
+      'short excludes fresh',
+    );
+  });
+});
+
+describe('segmentChunks', () => {
+  test('chunks one segment as planChunks chunks its frames', () => {
+    expect(
+      segmentChunks([{ from: 120, to: 10_499 }], 6).map(({ index, from, to }) => ({
+        index,
+        from,
+        to,
+      })),
+    ).toEqual([...planChunks(120, 10_499, 6)]);
+  });
+
+  test("covers every segment's frames in order, each chunk within one segment", () => {
+    // Three segments drawn of a render's five: the beats between them were kept.
+    const segments = [
+      { from: 0, to: 400 },
+      { from: 900, to: 925 },
+      { from: 2000, to: 3100 },
+    ];
+    const chunks = segmentChunks(segments, 4);
+    expect(chunks.map((c) => c.index)).toEqual(chunks.map((_, i) => i));
+    for (const c of chunks) {
+      const segment = segments[c.segment]!;
+      expect(c.from >= segment.from && c.to <= segment.to && c.to > c.from).toBe(true);
+    }
+    segments.forEach((segment, k) => {
+      const own = chunks.filter((c) => c.segment === k);
+      expect(own[0]?.from).toBe(segment.from);
+      expect(own.at(-1)?.to).toBe(segment.to);
+      own.slice(1).forEach((c, i) => expect(c.from).toBe(own[i]!.to));
+    });
+  });
+
+  test('has no chunk when no segment is drawn', () => {
+    expect(segmentChunks([], 4)).toEqual([]);
   });
 });
 

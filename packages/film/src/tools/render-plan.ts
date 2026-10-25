@@ -43,6 +43,17 @@ export type Cut = Data.TaggedEnum<{
 }>;
 export const Cut = Data.taggedEnum<Cut>();
 
+/**
+ * Whether a video reuses the segments earlier renders drew (`segments.ts`):
+ * not at all, or keyed by each beat's key (`SceneKeys.keys`), `fresh`
+ * drawing every segment again and keeping it in place of the one kept.
+ */
+export type Reuse = Data.TaggedEnum<{
+  Off: {};
+  Keyed: { readonly scenes: ReadonlyMap<string, string>; readonly fresh: boolean };
+}>;
+export const Reuse = Data.taggedEnum<Reuse>();
+
 /** The page a cut is drawn on: the film's, or its short's (`shortKey`). */
 export const cutPage = (film: string, cut: Cut): string =>
   Cut.$match(cut, {
@@ -173,6 +184,8 @@ export type RenderJob = Data.TaggedEnum<{
     readonly share: boolean;
     /** `--encoder`: the one encoder the render may use; none takes the platform's (`encoderCandidates`). */
     readonly encoder: Option.Option<Encoder>;
+    /** The segments it reuses (`Reuse`): a whole film's, an act's or a scene's, on the film's own page. */
+    readonly reuse: Reuse;
   };
   Stills: DrawJob & { readonly cut: Cut; readonly times: ReadonlyArray<number> };
   /** One page composes the whole sheet. */
@@ -246,6 +259,9 @@ const RENDER_RULES: ReadonlyArray<FlagRule> = [
   ['contact', 'excludes', 'encoder', VIDEO],
   ['review', 'needs', 'board', "the burn-in is the Board render's (--board)"],
   ['board', 'excludes', 'short', 'a short draws its own page, not the Board'],
+  ['stills', 'excludes', 'fresh', VIDEO],
+  ['contact', 'excludes', 'fresh', VIDEO],
+  ['short', 'excludes', 'fresh', 'a short draws every frame, keeping no segment'],
 ];
 
 const STRETCH = "a stretch is not the film's render: write it with --out";
@@ -290,7 +306,13 @@ interface RenderFlags {
   readonly board: boolean;
   /** `--review`: the Board with its burn-in (`burnIn`). */
   readonly review: boolean;
+  /** The segments a video reuses (`Reuse`); `--fresh` is its `Keyed.fresh`. */
+  readonly reuse: Reuse;
 }
+
+/** Whether `reuse` draws every segment again (`--fresh`). */
+const freshOf = (reuse: Reuse): boolean =>
+  Reuse.$match(reuse, { Off: () => false, Keyed: ({ fresh }) => fresh });
 
 /**
  * The render `flags` ask for: stills, a contact sheet or a video, of the
@@ -313,6 +335,7 @@ export const jobOf = (flags: RenderFlags): Result.Result<RenderJob, FlagsConflic
     ...Option.toArray(addressFlag(flags.scope.address)),
     ...Arr.filter(['board'], () => flags.board),
     ...Arr.filter(['review'], () => flags.review),
+    ...Arr.filter(['fresh'], () => freshOf(flags.reuse)),
   ]);
   const workers = Option.map(flags.workers, (n) => Math.max(1, n));
   const base = {
@@ -357,6 +380,7 @@ export const jobOf = (flags: RenderFlags): Result.Result<RenderJob, FlagsConflic
             out: flags.out,
             share: Option.getOrElse(flags.share, () => true),
             encoder: flags.encoder,
+            reuse: flags.reuse,
           }),
       }),
   });
@@ -547,6 +571,39 @@ export const planChunks = (start: number, end: number, workers: number): Readonl
     from: ends[index] ?? start,
     to: ends[index + 1] ?? end,
   }));
+};
+
+/** A chunk of one of a render's segments: `segment` is its place among them. */
+export interface SegmentChunk extends Chunk {
+  readonly segment: number;
+}
+
+/**
+ * `segments`' frames (each `[from, to)`, in order) as in-order chunks for
+ * `workers` pages: `planChunks` over their frames laid end to end, each chunk
+ * that crosses an edge between two segments cut there, so every chunk is one
+ * segment's. One segment is chunked as `planChunks` chunks its frames.
+ */
+export const segmentChunks = (
+  segments: ReadonlyArray<{ readonly from: number; readonly to: number }>,
+  workers: number,
+): ReadonlyArray<SegmentChunk> => {
+  const lengths = segments.map((s) => s.to - s.from);
+  const total = lengths.reduce((sum, n) => sum + n, 0);
+  // Where each segment starts among the frames laid end to end.
+  const starts = Arr.scan(lengths, 0, (at, n) => at + n);
+  const pieces = planChunks(0, total, workers).flatMap((chunk) =>
+    segments.flatMap((segment, k) => {
+      const base = starts[k] ?? 0;
+      const from = Math.max(chunk.from, base);
+      const to = Math.min(chunk.to, base + segment.to - segment.from);
+      return Arr.filter(
+        [{ segment: k, from: segment.from + from - base, to: segment.from + to - base }],
+        () => to > from,
+      );
+    }),
+  );
+  return pieces.map((piece, index) => ({ ...piece, index }));
 };
 
 /** The frame shown at `t` seconds. */

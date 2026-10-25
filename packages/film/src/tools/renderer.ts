@@ -17,11 +17,14 @@ import {
   Match,
   Option,
   Path,
+  Predicate,
   Ref,
   Result,
+  Schema,
   Scope,
   Semaphore,
 } from 'effect';
+import { BoardFileJson, shownTry } from '../core/board.ts';
 import type { PlatformError } from 'effect/PlatformError';
 import { type Pcm, splice } from '../core/audio.ts';
 import {
@@ -32,7 +35,7 @@ import {
   sharesInPage,
 } from '../core/encoder.ts';
 import { filmCaptions, shortCaptions, webVtt } from '../core/captions.ts';
-import { pictureParams } from '../core/board-render.ts';
+import { Picture, boardShots, pictureParams } from '../core/board-render.ts';
 import type { RenderSound } from '../core/catalogue.ts';
 import type { ChunkTiming, ExportInfo } from '../core/export-handle.ts';
 import type { ShortError } from '../core/errors.ts';
@@ -62,6 +65,18 @@ import {
   type TooManyEncoders,
 } from './errors.ts';
 import { writeWhole } from './content-store.ts';
+import { sha256OfFile } from './digest.ts';
+import {
+  type BoardRead,
+  type RenderRead,
+  type Segment,
+  beatSegments,
+  keepSegment,
+  keptFolder,
+  keptNames,
+  keptSegment,
+  segmentsFolder,
+} from './segments.ts';
 import { type LoadedFilm, type PlaceError, masterFile, placeFilm } from './film-repo.ts';
 import { filmChapters } from './look.ts';
 import { Media, type MediaService } from './media.ts';
@@ -76,6 +91,9 @@ import {
   JOIN_FADE,
   RenderJob,
   type RenderOutput,
+  Reuse,
+  type SegmentChunk,
+  segmentChunks,
   captionsName,
   chaptersName,
   contactSheetName,
@@ -86,7 +104,6 @@ import {
   contactTimes,
   frameAt,
   frameSpan,
-  planChunks,
   renderPaths,
   segmentName,
   shareName,
@@ -271,6 +288,21 @@ const probeKey = (
   return `${page}|captions=${job.captions}|scale=${job.scale}|share=${job.share}|encoder=${asked}|server=${server}|picture=${pictureParams(job.picture).join('+')}|${platform}`;
 };
 
+/**
+ * The beat keys a video's segments are kept by, and whether it draws them
+ * all again (`--fresh`): a film's, an act's or a scene's on the film's own
+ * page; none for a short (its own page and clock) or a wedge's look.
+ */
+const reuseOf = (job: Extract<RenderJob, { _tag: 'Video' }>) =>
+  Reuse.$match(job.reuse, {
+    Off: () => Option.none(),
+    Keyed: ({ scenes, fresh }) =>
+      Option.liftPredicate(
+        { scenes, fresh },
+        () => Cut.$is('Whole')(job.cut) && Option.isNone(job.server),
+      ),
+  });
+
 /** Each video its own probe and its own pages, closed with it. */
 const alone: Drawing = { probe: (_, make) => make, pool: (_, open) => open };
 
@@ -382,6 +414,51 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         );
       const trackOf = (cut: AudioCut) => trackCut(media, cut);
 
+      /**
+       * What a Board render reads of `film`'s Board, from the files its page
+       * is served (`boardFile`): its shots on `placed`'s clock, and the
+       * sha256 of each shown try's image as it is on disk. None for the scenes.
+       */
+      const boardOf = (
+        film: LoadedFilm,
+        picture: Picture,
+        placed: ReadonlyArray<Placed>,
+        duration: number,
+      ) =>
+        Picture.$match(picture, {
+          Scenes: () => Effect.succeed(Option.none<BoardRead>()),
+          Board: () =>
+            Effect.gen(function* () {
+              const text = yield* fs.readFileString(path.join(film.paths.dir, 'board.json'));
+              const board = yield* Schema.decodeEffect(BoardFileJson)(text);
+              const files = Arr.dedupe(
+                board.panels.flatMap((p) =>
+                  Option.toArray(
+                    Option.map(
+                      Option.filter(shownTry(p), () => Predicate.isUndefined(p.text)),
+                      (t) => t.file,
+                    ),
+                  ),
+                ),
+              );
+              const hashes = yield* Effect.forEach(
+                files,
+                (file) =>
+                  Effect.map(
+                    Effect.option(sha256OfFile(fs, path.join(film.paths.dir, 'board', file))),
+                    (hash) => Option.map(hash, (sha) => [file, sha] as const),
+                  ),
+                { concurrency: 8 },
+              );
+              const read: BoardRead = {
+                shots: boardShots(placed, board),
+                duration,
+                images: new Map(hashes.flatMap(Option.toArray)),
+              };
+              return Option.some(read);
+            }),
+        });
+
       /** The short on a page's clock: the same spans, on the same frames, it draws. */
       const shortOn = (placed: ReadonlyArray<Placed>, cut: Cut, fps: number) =>
         Cut.$match(cut, {
@@ -479,7 +556,8 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         yield* Effect.log(
           `render.encoder kind=${encoderName(encoder)} workers=${workers} encoders=${encoders} cores=${cores}`,
         );
-        const pool = yield* drawing.pool(
+        /** The pages the chunks are drawn on, opened only when there is a chunk to draw. */
+        const openPool = drawing.pool(
           `${made}|workers=${workers}`,
           pages.open(page, {
             workers,
@@ -506,7 +584,76 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         // The hardware encoder makes the share copy in the page, chunk by chunk.
         const shareInPage = job.share && sharesInPage(encoder);
         if (shareInPage) yield* fs.makeDirectory(shareDir);
-        const chunks = planChunks(start, end, workers);
+
+        // The frames split at the beats into segments, each kept by its key
+        // under the film's project folder: a render draws only the segments
+        // it finds no kept copy of. A short, or a wedge's look, draws all its
+        // frames as one segment and keeps none.
+        const keeping = reuseOf(job);
+        const folder = segmentsFolder(film.paths.out);
+        const whole: ReadonlyArray<Segment> = [{ from: start, to: end, key: Option.none() }];
+        /** How every frame is drawn and encoded: what each segment's key holds beside its beats. */
+        const read: RenderRead = {
+          width: info.width,
+          height: info.height,
+          fps: info.fps,
+          scale,
+          encoder: encoderName(encoder),
+          share: shareInPage,
+          captions: job.captions,
+          picture: pictureParams(job.picture),
+          agent: Option.getOrElse(Option.fromUndefinedOr(info.agent), () => ''),
+          platform,
+        };
+        const segments = yield* Option.match(keeping, {
+          onNone: () => Effect.succeed(whole),
+          onSome: ({ scenes }) =>
+            boardOf(film, job.picture, placed, info.duration).pipe(
+              Effect.map((board) =>
+                beatSegments({ placed, start, end, scenes, board, render: read }),
+              ),
+              // A Board it cannot read draws every frame: the page names what it cannot read.
+              Effect.catch((error) =>
+                Effect.as(Effect.logWarning(`render.reuse off reason="${error.message}"`), whole),
+              ),
+            ),
+        });
+        const fresh = Option.exists(keeping, (k) => k.fresh);
+        const kept = yield* Effect.forEach(segments, (segment) =>
+          Option.match(
+            Option.filter(segment.key, () => !fresh),
+            {
+              onNone: () => Effect.succeedNone,
+              onSome: (key) => keptSegment(fs, path, folder, key),
+            },
+          ),
+        );
+        /** The segments to draw, each with its place among all of them. */
+        const missing = segments.flatMap((segment, at) =>
+          Arr.filter([{ ...segment, at }], () => Option.isNone(kept[at] ?? Option.none())),
+        );
+        const chunks = segmentChunks(missing, workers);
+        const toDraw = chunks.reduce((sum, chunk) => sum + chunk.to - chunk.from, 0);
+        if (Option.isSome(keeping))
+          yield* Effect.log(
+            `render.reuse segments=${segments.length} drawn=${missing.length} frames_drawn=${toDraw} fresh=${fresh}`,
+          );
+        /** Where a chunk's files go: its segment's kept folder, else this render's own. */
+        const filesOf = (chunk: SegmentChunk) =>
+          Option.match(
+            Option.flatMap(Option.fromUndefinedOr(missing[chunk.segment]), (s) => s.key),
+            {
+              onNone: () => ({
+                master: path.join(segDir, segmentName(chunk)),
+                share: path.join(shareDir, segmentName(chunk)),
+              }),
+              onSome: (key) => {
+                const names = keptNames(chunk.from);
+                const dir = keptFolder(folder, key);
+                return { master: path.join(dir, names.master), share: path.join(dir, names.share) };
+              },
+            },
+          );
         const began = yield* Clock.currentTimeMillis;
         const done = yield* Ref.make(noTime);
         /** A chunk done: the render's progress, and where this chunk's time went a frame. */
@@ -516,16 +663,16 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
             const secs = ((yield* Clock.currentTimeMillis) - began) / 1000;
             const rate = sum.frames / secs;
             yield* Effect.log(
-              `render.progress frames=${sum.frames}/${total} fps=${rate.toFixed(1)} eta=${((total - sum.frames) / rate).toFixed(0)}s chunk=${chunk.index} ${perFrame(spent)}`,
+              `render.progress frames=${sum.frames}/${toDraw} fps=${rate.toFixed(1)} eta=${((toDraw - sum.frames) / rate).toFixed(0)}s chunk=${chunk.index} ${perFrame(spent)}`,
             );
           });
 
         /**
-         * One chunk drawn and encoded on whichever page is free, to its own
-         * segment (and its share copy's); a crashed page is dropped and the
-         * chunk retried once on a fresh one.
+         * One chunk drawn and encoded on whichever page of `pool` is free, to
+         * its own files (`filesOf`, each written whole); a crashed page is
+         * dropped and the chunk retried once on a fresh one.
          */
-        const encode = (chunk: Chunk) =>
+        const encode = (pool: ExportPages) => (chunk: SegmentChunk) =>
           pool
             .use((one) =>
               Effect.gen(function* () {
@@ -539,17 +686,16 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
                   encoder,
                 );
                 const wall = (yield* Clock.currentTimeMillis) - sent;
-                const at = (chunk.from - start) / info.fps;
-                const file = path.join(segDir, segmentName(chunk));
-                yield* fs.writeFile(file, encoded.master);
-                const copy = path.join(shareDir, segmentName(chunk));
+                const files = filesOf(chunk);
+                yield* fs.makeDirectory(path.dirname(files.master), { recursive: true });
+                yield* bytesWhole(files.master, encoded.master);
                 const share = yield* Option.match(encoded.share, {
                   onNone: () => Effect.succeedNone,
                   onSome: (bytes) =>
-                    Effect.as(fs.writeFile(copy, bytes), Option.some({ file: copy, at })),
+                    Effect.as(bytesWhole(files.share, bytes), Option.some(files.share)),
                 });
                 yield* progress(chunk, chunkTime(chunk, encoded.timing, wall));
-                return { master: { file, at }, share };
+                return { chunk, master: files.master, share };
               }),
             )
             .pipe(
@@ -559,14 +705,52 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
               Effect.retry({ times: 1, while: (error) => error._tag === 'PageCrashed' }),
             );
 
+        /** Every chunk drawn on the pool, opened for them; none drawn, no page opened. */
+        const drawAll = Arr.match(chunks, {
+          onEmpty: () => Effect.succeed([]),
+          onNonEmpty: (some) =>
+            Effect.flatMap(openPool, (pool) =>
+              Effect.forEach(some, encode(pool), { concurrency: workers }),
+            ),
+        });
+
         // One structured run: the first failure, a page's or the track's, stops the other.
-        const [encoded, track] = yield* Effect.all(
-          [Effect.forEach(chunks, encode, { concurrency: workers }), aac],
-          { concurrency: 'unbounded' },
+        const [encoded, track] = yield* Effect.all([drawAll, aac], { concurrency: 'unbounded' });
+        // Each segment drawn whole is kept: its record written once all its chunks are there.
+        yield* Effect.forEach(missing, (segment, k) =>
+          Option.match(segment.key, {
+            onNone: () => Effect.void,
+            onSome: (key) =>
+              keepSegment(
+                fs,
+                path,
+                folder,
+                key,
+                encoded
+                  .filter((e) => e.chunk.segment === k)
+                  .map((e) => ({
+                    from: e.chunk.from,
+                    to: e.chunk.to,
+                    share: Option.isSome(e.share),
+                  })),
+              ),
+          }),
         );
+        /** Every chunk of the render in frame order, kept or drawn: its files and its first frame. */
+        const all = segments.flatMap((_, at) =>
+          Option.match(kept[at] ?? Option.none(), {
+            onSome: (chunks) =>
+              chunks.map((c) => ({ from: c.from, master: c.master, share: c.share })),
+            onNone: () =>
+              encoded
+                .filter((e) => missing[e.chunk.segment]?.at === at)
+                .map((e) => ({ from: e.chunk.from, master: e.master, share: e.share })),
+          }),
+        );
+        const atOf = (from: number) => (from - start) / info.fps;
         yield* media.join({
           out: target,
-          segments: encoded.map((chunk) => chunk.master),
+          segments: all.map((c) => ({ file: c.master, at: atOf(c.from) })),
           frames: total,
           audio: track,
         });
@@ -574,7 +758,9 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         const joinedShare = (out: string) =>
           media.join({
             out,
-            segments: encoded.flatMap((chunk) => Option.toArray(chunk.share)),
+            segments: all.flatMap((c) =>
+              Option.toArray(Option.map(c.share, (file) => ({ file, at: atOf(c.from) }))),
+            ),
             frames: total,
             audio: track,
           });

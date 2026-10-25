@@ -125,6 +125,7 @@ import {
   DRAW_WORKERS,
   HARDWARE_WORKERS,
   RenderJob,
+  Reuse,
   SOFTWARE_WORKERS,
   flagConflicts,
   givenFlags,
@@ -855,6 +856,12 @@ const render = <E, R>(
           'with --board: burn in, small in the bottom-left corner, the film time, the beat and the panel with its try (named board-review)',
         ),
       ),
+      fresh: Flag.Boolean('fresh').pipe(
+        Flag.withDefault(false),
+        Flag.withDescription(
+          'draw every segment again: a video otherwise reuses each beat it drew before, kept by what its frames read under out/<film>/cache/segments',
+        ),
+      ),
     },
     Effect.fn('film.render')(
       function* (input) {
@@ -884,7 +891,8 @@ const render = <E, R>(
         );
         const server = yield* wedgeServer(renderPage, films, swaps);
         // What it draws, stamped before the first frame: the sources as they stand now, at its levels.
-        const stamp = stampOf(yield* (yield* Stamps).scenes(loaded, placed), scope, levels);
+        const keys = yield* (yield* Stamps).scenes(loaded, placed);
+        const stamp = stampOf(keys, scope, levels);
         const job = yield* Effect.fromResult(
           jobOf({
             variant,
@@ -902,6 +910,8 @@ const render = <E, R>(
             server,
             board: input.board,
             review: input.review,
+            // Its segments are kept by the keys it is stamped with.
+            reuse: Reuse.Keyed({ scenes: keys.keys, fresh: input.fresh }),
           }),
         );
         yield* renderAndRecord(loaded, scope, job, stamp);
