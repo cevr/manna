@@ -260,6 +260,25 @@ a press on it opens the hymn. Playing another hymn replaces the first.
   and the page's control and the bar, pressed in a document, in
   `src/player/ui.slow.test.tsx`.
 
+## Feel
+
+The controls are felt and heard (`src/feel/`): each touch that gives a cue
+(`cue.ts`: a dial's detent, a wall, Favourite, a switch, Play, a radio, the
+seeker's grab, its five-second ticks and its release, a topic taking the
+list's pin) gets a haptic through One's `Haptics` and a short code-made
+sound (`body.ts`), while Settings' `Sounds and haptics` (`settings.feel`, on
+at first) is on. The sounds are rendered in TypeScript with seeded noise
+(`voice.ts`) and played on iOS through System Sound Services, from the
+app's own Swift package `native/feel` (One's native source, a local pod at
+prebuild): the ring/silent switch mutes them, the haptics stay, and they
+never touch the audio session, so a click lies over a hymn's recording.
+`src/feel/guard.test.ts` holds the Feel and the package to that path. The
+voice loads after the first screen in one background pass and logs
+`[feel] ready sounds=<n> ms=<t> simulator=<bool>`; the simulator plays no
+sound and logs each `[feel] play sound=<name> skipped=simulator`. A tick
+plays no closer than 30 ms after the last; the web gets no body, and
+Android haptics only.
+
 ## App icon
 
 The app is named Hymnal, and its icon is one blade of wheat:
