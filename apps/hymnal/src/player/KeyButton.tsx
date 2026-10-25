@@ -28,6 +28,7 @@ import {
   View,
 } from 'react-native';
 import Animated, {
+  cancelAnimation,
   Easing,
   ReduceMotion,
   useAnimatedStyle,
@@ -91,6 +92,9 @@ export function KeyButton({
   const toggle = () => {
     held.current = true;
     send(ThumbEvent.Hold());
+    // A spring set over a running timing takes no speed from it (Reanimated adds the two speeds, and a
+    // timing has none): the press, or a release told first, stops where it is, and the spring leaves from there.
+    cancelAnimation(scale);
     scale.value = Match.value(reduced).pipe(
       Match.when(true, () => withTiming(1, { ...LET_GO, reduceMotion: ReduceMotion.Never })),
       Match.orElse(() => withSpring(1, { ...SPRING_OUT, reduceMotion: ReduceMotion.Never })),

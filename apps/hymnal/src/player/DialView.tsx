@@ -22,10 +22,12 @@
  * A double tap asks for a reset. VoiceOver reads the dial as adjustable:
  * a swipe up or down turns it one detent.
  *
- * The name keeps one line at every text size: its column is `TITLE` points
- * times the text's scale, so the notches of every dial line up, and every
- * text in the row grows with Dynamic Type at most `MOST_SCALE` times, as a
- * fixed-height control's text does.
+ * The name keeps one line at every text size, whole: its column is as wide
+ * as the widest dial name (`WIDEST`) drawn at the text size showing, and
+ * `TITLE` points at the least, so the notches of every dial line up and
+ * the column follows a change of the system's text size as the text does.
+ * Every text in the row grows with Dynamic Type at most `MOST_SCALE` times,
+ * as a fixed-height control's text does.
  *
  * The drag is a gesture handler's pan that needs a sideways move to begin,
  * so a vertical scroll under the dial still scrolls, and the dial lies over
@@ -39,7 +41,6 @@ import {
   type LayoutChangeEvent,
   StyleSheet,
   Text,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import {
@@ -117,14 +118,13 @@ const FADE = 3.6;
 /** How long the notch stretches and settles on each detent, in milliseconds. */
 const NOTCH = 140;
 
-/** The column of every dial's name at system text size `fontScale`: one width, so the notches line up. */
-export const titleWidth = (fontScale: number) => TITLE * Math.min(fontScale, MOST_SCALE);
+/** The widest dial name: the name column of every dial is as wide as it, drawn, so the notches line up. */
+const WIDEST = 'CAPO';
 
 function Dial<A>(props: DialProps<A>) {
   const { dial, label, title, stops, index, wrap, said, drawStop, testID, resets = 0 } = props;
   const cue = useCue();
   const accent = useAccent();
-  const { fontScale } = useWindowDimensions();
   const reduced = useReducedMotion();
   const detents = { name: dial, count: stops.length, wrap };
   const place = useSharedValue(index * DETENT);
@@ -280,14 +280,22 @@ function Dial<A>(props: DialProps<A>) {
           testID={testID}
           style={styles.dial}
         >
-          <Text
-            style={[styles.title, { width: titleWidth(fontScale) }]}
-            numberOfLines={1}
-            maxFontSizeMultiplier={MOST_SCALE}
-            aria-hidden
-          >
-            {title}
-          </Text>
+          <View style={styles.titleColumn} aria-hidden>
+            <Text
+              style={[styles.title, styles.sizer]}
+              numberOfLines={1}
+              maxFontSizeMultiplier={MOST_SCALE}
+            >
+              {WIDEST}
+            </Text>
+            <Text
+              style={[styles.title, styles.name]}
+              numberOfLines={1}
+              maxFontSizeMultiplier={MOST_SCALE}
+            >
+              {title}
+            </Text>
+          </View>
           <View
             style={styles.window}
             onLayout={(event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width)}
@@ -372,6 +380,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     overflow: 'hidden',
   },
+  titleColumn: { minWidth: TITLE, justifyContent: 'center' },
+  sizer: { opacity: 0 },
+  name: { position: 'absolute', left: 0 },
   title: {
     paddingLeft: 16,
     fontSize: 11,
