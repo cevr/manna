@@ -152,6 +152,9 @@ function Dial<A>(props: DialProps<A>) {
   const start = useSharedValue(0);
   // Whether the finger, or the glide it let go, moves the row: only then is a detent told.
   const driven = useSharedValue(false);
+  // The latest glide, counted: a glide stopped by a touch is told so a frame later, when the
+  // touch may already drive the row, so only the latest glide's end lets go of the row.
+  const glides = useSharedValue(0);
   const walled = useSharedValue(false);
   // Whether the touch under way has dragged the row.
   const dragged = useSharedValue(false);
@@ -225,11 +228,14 @@ function Dial<A>(props: DialProps<A>) {
   const settle = (speed: number) => {
     'worklet';
     const rest = glide(detents, place.value, speed);
+    const own = glides.value + 1;
+    glides.value = own;
     place.value = withTiming(
       rest.at,
       { duration: rest.frames * FRAME, easing: Easing.out(Easing.exp) },
       (finished) => {
         'worklet';
+        if (glides.value !== own) return;
         driven.value = false;
         if (finished && rest.cues.some((told) => told._tag === 'wall')) scheduleOnRN(wall);
       },
@@ -243,9 +249,12 @@ function Dial<A>(props: DialProps<A>) {
     maxPointers: 1,
     onBegin: () => {
       'worklet';
+      cancelAnimation(place);
+      // The touch stopped any glide where it stands: the row is the finger's now, and moves again only once it drags.
+      glides.value += 1;
+      driven.value = false;
       stoppedFollow.value = following.value;
       following.value = false;
-      cancelAnimation(place);
       start.value = place.value;
       walled.value = false;
       dragged.value = false;

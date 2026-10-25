@@ -18,7 +18,10 @@
  * A test that reads every frame steps the waiting timings instead
  * (`stepAnimations`): each moves along its own duration and curve (the
  * curves of `Easing` are Reanimated's own), a frame at a time, and lands at
- * its end; `cancelAnimation` stops a stepped one where it stands.
+ * its end; `cancelAnimation` stops a stepped one where it stands. A stepped
+ * timing that is stopped, or that a new value or animation replaces, is told
+ * it did not finish on the next frame, as Reanimated tells it: after a
+ * touch's next callbacks may have run.
  */
 
 import {
@@ -79,8 +82,16 @@ const waiting = new Map<
     readonly stop: () => void;
     /** Moves it on by `ms`; whether it still runs after (a spring waits until landed). */
     readonly step: (ms: number) => boolean;
+    /** A new value or animation takes its place. */
+    readonly replaced: () => void;
   }
 >();
+
+/** The callbacks owed to stepped timings that were stopped or replaced: told on the next frame. */
+const late: Array<() => void> = [];
+const tellLate = () => {
+  for (const owed of late.splice(0)) owed();
+};
 
 /** Animations set from now wait, as ones under way on a device. */
 export const holdAnimations = () => {
@@ -90,6 +101,7 @@ export const holdAnimations = () => {
 /** Every waiting animation lands, and animations land at once again. */
 export const landAnimations = () => {
   held = false;
+  tellLate();
   for (const [, { land }] of [...waiting]) land();
   waiting.clear();
 };
@@ -100,6 +112,7 @@ export const landAnimations = () => {
  * gives whether a timing still runs after it; a spring waits until landed.
  */
 export const stepAnimations = (ms = 16): boolean => {
+  tellLate();
   let running = false;
   for (const [, { step }] of [...waiting]) running = step(ms) || running;
   return running;
@@ -122,6 +135,7 @@ const shared = <T,>(initial: T): SharedValue<T> => {
     },
     get: () => now,
     set: (next: T | Animation<T>) => {
+      waiting.get(box as SharedValue<unknown>)?.replaced();
       waiting.delete(box as SharedValue<unknown>);
       if (isAnimation(next)) {
         const from = now;
@@ -137,12 +151,17 @@ const shared = <T,>(initial: T): SharedValue<T> => {
         if (held) {
           waiting.set(box as SharedValue<unknown>, {
             land,
-            // A stopped animation stops half way, or where a step left it, and says it did not finish.
+            // A stopped animation stops half way and says at once it did not finish; a stepped one
+            // stops where a step left it and says so on the next frame.
             stop: () => {
               if (ran === 0 && typeof now === 'number' && typeof next.to === 'number')
                 now = (now + (next.to - now) / 2) as T;
               tell();
-              next.done?.(false);
+              if (ran === 0) next.done?.(false);
+              else late.push(() => next.done?.(false));
+            },
+            replaced: () => {
+              if (ran > 0) late.push(() => next.done?.(false));
             },
             step: (ms) => {
               if (next.animation !== 'timing') return false;
