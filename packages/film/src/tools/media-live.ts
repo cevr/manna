@@ -17,7 +17,7 @@
 // (`jpeg.ts`); a phone copy is a mediabunny conversion to H.264 at 720p at
 // most (a smaller video keeps its size) through x264 at its own settings
 // (CRF 23 at preset medium, averaging `PHONE_RATE` at most, a key frame
-// every second, on two threads: `x264.ts` `PHONE_ENCODE`), its track copied.
+// every second, on two threads: `media.ts` `PHONE_ENCODE`), its track copied.
 // A card is a picture held over a sound, at those settings: a sound's sheet
 // over its line-up, the clip an ask plays (`sfx ab`). Its picture never
 // moves, so it runs at a frame a second, each frame a key frame (the phone
