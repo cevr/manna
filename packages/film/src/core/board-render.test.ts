@@ -4,7 +4,7 @@
 // query read back as the picture it asked for.
 
 import { describe, expect, test } from 'bun:test';
-import { Match, Option } from 'effect';
+import { Array as Arr, Match, Option, Result } from 'effect';
 import { type BoardFile, BoardName, type Panel, emptyBoard } from './board.ts';
 import { Segment } from './segment.ts';
 import { Shot, type TimedBeat, shotsOf } from './animatic.ts';
@@ -13,10 +13,15 @@ import {
   type Layer,
   Picture,
   boardFrameAt,
+  boardShots,
   burnIn,
   pictureOn,
   pictureParams,
 } from './board-render.ts';
+import { filmClock, timedBeat } from './film-timeline.ts';
+import { layout } from './layout.ts';
+import { estimate, hashText } from './narration.ts';
+import { unmeasured } from './voiced.ts';
 
 /** The dissolve's length at a cut with long holds on both sides. */
 const DISSOLVE_S = 0.5;
@@ -179,6 +184,42 @@ describe('the dissolve at a cut', () => {
     const inn = frameAt(4 - half + 1e-9).layers[1]!;
     close(out.framing, endOf(out.motion));
     close(inn.framing, startOf(inn.motion));
+  });
+});
+
+describe("a Board render's shots", () => {
+  test("are the studio Board lane's: the animatic over the film clock's beats, marks and takes", () => {
+    const said = 'A baby {room}drinks milk.';
+    const spoken = 'A baby drinks milk.';
+    // A take slower than the estimate, so its marks fall where the estimate's do not.
+    const take = {
+      hash: hashText(spoken),
+      file: 'cold.flac',
+      duration: 3,
+      words: unmeasured(
+        estimate(spoken).map((w) => ({ ...w, start: w.start * 1.5, end: w.end * 1.5 })),
+      ),
+      source: 'elevenlabs' as const,
+    };
+    const placed = Result.getOrThrow(
+      layout(
+        [
+          { id: 'cold', say: said, lead: 1.2 },
+          { id: 'title' },
+          { id: 'name', say: '{sets}Be just with God.' },
+        ],
+        { voice: 'v', scenes: { cold: take } },
+      ),
+    );
+    const clock = Result.getOrThrow(
+      filmClock(placed, { acts: [], movements: [], drawn: () => false }),
+    );
+    const studio = shotsOf(clock.beats.map(timedBeat), board);
+    expect(boardShots(placed, board)).toEqual(studio);
+    // The take's mark, not its beat's start: the shots say where the take says `room`.
+    expect(studio.map((s) => s.from)).toContain(
+      Option.getOrThrow(Arr.findFirst(clock.beats[0]!.marks, (m) => m.name === 'room')).at,
+    );
   });
 });
 

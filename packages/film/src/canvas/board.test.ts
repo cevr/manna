@@ -13,7 +13,7 @@ import type { Film } from './film.ts';
 import { recorder, withDom } from './fixtures/stand-in.ts';
 import { type BoardFile, BoardName, type Panel, emptyBoard } from '../core/board.ts';
 import { Segment } from '../core/segment.ts';
-import type { Placed } from '../core/layout.ts';
+import { type Placed, layout } from '../core/layout.ts';
 import { estimate } from '../core/narration.ts';
 import { voicedAt } from '../core/voiced.ts';
 
@@ -77,17 +77,17 @@ describe('a card panel', () => {
 });
 
 describe('a Board render', () => {
-  /** Beat `id` from `start` for 5 s, saying `line` on an estimate. */
-  const beat = (id: string, start: number, line: string): Placed => {
-    const words = estimate(line).map((w) => ({ ...w, voiced: voicedAt(w.start + 0.15, w.end) }));
-    return Schema.decodeSync(Schema.Any)({
-      spec: { id },
-      voice: { words, marks: new Map() },
-      speechStart: 0,
-      start,
-      dur: 5,
-    });
-  };
+  /** Beats `one`, `two` and `three`, 5 s each from 0, saying their lines on an estimate. */
+  const beats = Result.getOrThrow(
+    layout(
+      [
+        { id: 'one', say: 'A baby drinks milk.', min: 5 },
+        { id: 'two', say: 'Nobody minds.', min: 5 },
+        { id: 'three', say: 'Be just with God.', min: 5 },
+      ],
+      { voice: '', scenes: {} },
+    ),
+  );
   const panel = (id: string, extra: Partial<Panel>): Panel => ({
     id: `${id}.start`,
     beat: BoardName.make(id),
@@ -119,11 +119,7 @@ describe('a Board render', () => {
       duration: 15,
       title: 'probe',
       look: { card: { style: STYLE } },
-      placed: [
-        beat('one', 0, 'A baby drinks milk.'),
-        beat('two', 5, 'Nobody minds.'),
-        beat('three', 10, 'Be just with God.'),
-      ],
+      placed: beats,
       render: (_ctx: CanvasRenderingContext2D, T: number) => drew.push(T),
       cardAt: cards,
     });

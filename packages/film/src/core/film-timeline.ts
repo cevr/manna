@@ -122,10 +122,44 @@ const voiceOf = (p: Placed): BeatVoice => {
 };
 
 /**
- * The clock of placed beats: each beat's span, speech and marks in film
- * seconds, its voice, and whether `drawn` says a scene draws it; the acts and
- * the score's movements laid over them. Fails with the first part that names
- * no beat or is declared out of order. Pure.
+ * Placed beat `p` on the film's clock: its span, speech and marks in film
+ * seconds (a mark at the speech's start plus the take's, or the estimate's,
+ * offset), its voice, and `drawn`, whether a scene draws it. Pure.
+ */
+export const clockBeat = (p: Placed, drawn: boolean): ClockBeat => {
+  const speechStart = p.start + p.speechStart;
+  return {
+    id: p.spec.id,
+    start: p.start,
+    dur: p.dur,
+    hold: {
+      lead: p.speechStart,
+      tail: Math.max(0, p.dur - p.speechStart - p.voice.duration),
+      declared: (['lead', 'tail'] as const).filter((edge) =>
+        Predicate.isNotUndefined(p.spec[edge]),
+      ),
+      asked: p.tail,
+      min: p.min,
+    },
+    ...Option.match(
+      Option.liftPredicate(p.voice.duration, (d) => d > 0),
+      {
+        onNone: () => ({}),
+        onSome: (d) => ({ speech: { start: speechStart, end: speechStart + d } }),
+      },
+    ),
+    marks: [...p.voice.marks].map(([name, at]) => ({ name, at: speechStart + at })),
+    words: p.voice.words.map((w) => ({ text: w.text, start: speechStart + w.start })),
+    voice: voiceOf(p),
+    drawn,
+  };
+};
+
+/**
+ * The clock of placed beats: each beat on the film's clock (`clockBeat`),
+ * whether `drawn` says a scene draws it; the acts and the score's movements
+ * laid over them. Fails with the first part that names no beat or is
+ * declared out of order. Pure.
  */
 export const filmClock = (
   placed: ReadonlyArray<Placed>,
@@ -136,34 +170,7 @@ export const filmClock = (
   },
 ): Result.Result<FilmClock, PartError> =>
   Result.gen(function* () {
-    const beats = placed.map((p): ClockBeat => {
-      const speechStart = p.start + p.speechStart;
-      return {
-        id: p.spec.id,
-        start: p.start,
-        dur: p.dur,
-        hold: {
-          lead: p.speechStart,
-          tail: Math.max(0, p.dur - p.speechStart - p.voice.duration),
-          declared: (['lead', 'tail'] as const).filter((edge) =>
-            Predicate.isNotUndefined(p.spec[edge]),
-          ),
-          asked: p.tail,
-          min: p.min,
-        },
-        ...Option.match(
-          Option.liftPredicate(p.voice.duration, (d) => d > 0),
-          {
-            onNone: () => ({}),
-            onSome: (d) => ({ speech: { start: speechStart, end: speechStart + d } }),
-          },
-        ),
-        marks: [...p.voice.marks].map(([name, at]) => ({ name, at: speechStart + at })),
-        words: p.voice.words.map((w) => ({ text: w.text, start: speechStart + w.start })),
-        voice: voiceOf(p),
-        drawn: parts.drawn(p),
-      };
-    });
+    const beats = placed.map((p) => clockBeat(p, parts.drawn(p)));
     return {
       beats,
       acts: yield* partsOn(parts.acts, placed),
@@ -323,8 +330,8 @@ const scriptLane = (clock: FilmClock, kept: boolean): ReadonlyArray<ScriptClip> 
 /** Whether a panel is a card or a verse page the engine sets. */
 const isCard = (panel: Panel) => Option.isSome(Option.fromUndefinedOr(panel.text));
 
-/** A clock beat as the animatic times it (`core/animatic.ts`). */
-const timedBeat = (beat: ClockBeat): TimedBeat => ({
+/** A clock beat as the animatic times it (`core/animatic.ts`): the studio's Board lane and a Board render (`core/board-render.ts`) both. */
+export const timedBeat = (beat: ClockBeat): TimedBeat => ({
   id: beat.id,
   start: beat.start,
   end: end(beat),

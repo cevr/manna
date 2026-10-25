@@ -10,7 +10,8 @@ import { Array as Arr, Boolean as Bool, Data, Option, Predicate } from 'effect';
 import { type BoardFile, shownTry } from './board.ts';
 import { RenderVariantName } from './catalogue.ts';
 import type { Placed } from './layout.ts';
-import { Shot, type TimedBeat, shotsOf } from './animatic.ts';
+import { Shot, shotsOf } from './animatic.ts';
+import { clockBeat, timedBeat } from './film-timeline.ts';
 import { frameAtOrBefore } from './time.ts';
 
 /** What a render's frames picture: the film's scenes, or its Board (`review`: with the burn-in). */
@@ -45,19 +46,6 @@ export const boardUrls = (id: string) => ({
   record: `/films/${encodeURIComponent(id)}/board.json`,
   image: (file: string) => `/films/${encodeURIComponent(id)}/board/${encodeURIComponent(file)}`,
 });
-
-/** Placed beats as the animatic times them: marks said at the speech's start plus the take's (or the estimate's) offset. */
-const placedBeats = (placed: ReadonlyArray<Placed>): ReadonlyArray<TimedBeat> =>
-  placed.map((p) => ({
-    id: p.spec.id,
-    start: p.start,
-    end: p.start + p.dur,
-    markAt: (name) =>
-      Option.map(
-        Option.fromUndefinedOr(p.voice.marks.get(name)),
-        (at) => p.start + p.speechStart + at,
-      ),
-  }));
 
 /** How a shot moves across its hold. */
 type Motion = Data.TaggedEnum<{
@@ -208,9 +196,12 @@ export const boardFrameAt = (
   });
 };
 
-/** `board`'s shots on `placed`'s clock (`shotsOf`, the animatic's rule). */
+/** `board`'s shots on `placed`'s clock: the animatic's rule (`shotsOf`) over the beats as the studio's Board lane times them (`clockBeat`, `timedBeat`). */
 export const boardShots = (placed: ReadonlyArray<Placed>, board: BoardFile): ReadonlyArray<Shot> =>
-  shotsOf(placedBeats(placed), board);
+  shotsOf(
+    placed.map((p) => timedBeat(clockBeat(p, false))),
+    board,
+  );
 
 /** Film seconds as the burn-in says them: `m:ss.f`, the tenth cut down, never rounded up into the next second. */
 const tenths = (T: number): string => {
