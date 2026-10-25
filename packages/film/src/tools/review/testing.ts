@@ -15,7 +15,8 @@ import {
   Path,
   Schema,
 } from 'effect';
-import { BunHttpPlatform, BunServices } from '@effect/platform-bun';
+import * as BunHttpPlatform from '@effect/platform-bun/BunHttpPlatform';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { Refusal } from '../../core/api.ts';
 import { type Project, emptyCatalogue, projectOf } from '../../core/catalogue.ts';
 import { type FilmChoices, withSay } from '../../core/choice.ts';

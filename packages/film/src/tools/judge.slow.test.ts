@@ -6,7 +6,7 @@
 // a verdict in real names. A render set's variants are cut from their videos.
 // A sound choice, two choices unnamed, or one version alone, is refused.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Config,

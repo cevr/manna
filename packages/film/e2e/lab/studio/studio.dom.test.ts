@@ -13,7 +13,7 @@
 // ←/→ move between beats without moving the film. A mic too hot warns of
 // clipping; a mic refused says so.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, type FileSystem, Option, type Path, Result, Schedule, type Scope } from 'effect';
 import { Base64 } from 'effect/encoding';
 import { TakeMismatch } from '../../../src/core/refusals.ts';

@@ -6,7 +6,7 @@
 // measure's speed work, which must move no number. The real crops and the
 // drawn figures are two files, so they run side by side.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect } from 'effect';
 import { goldenFaults } from './figure-golden-fixture.ts';

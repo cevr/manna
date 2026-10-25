@@ -5,7 +5,8 @@
 // gone however it went (a timeout, a signal to the test's process group but not
 // to this one's, a SIGKILL): no holder outlives its test.
 
-import { BunRuntime, BunServices } from '@effect/platform-bun';
+import * as BunRuntime from '@effect/platform-bun/BunRuntime';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { Console, Effect, Layer, Schema, Stdio, Stream } from 'effect';
 import { ContentStore } from '../content-store.ts';
 

@@ -4,7 +4,7 @@
 // run's start and its write cannot leave some of them approved and the
 // answer saying all were.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Cause, Effect, Exit, Layer, Option, Path, Schema } from 'effect';
 import { Command } from 'effect/cli';

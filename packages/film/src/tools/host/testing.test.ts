@@ -4,7 +4,7 @@
 // and their outcomes must match: a test on the double then passes only where
 // the box would.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Context, Effect, FileSystem, Layer, Predicate, Stream } from 'effect';
 import type { PlatformError } from 'effect/PlatformError';

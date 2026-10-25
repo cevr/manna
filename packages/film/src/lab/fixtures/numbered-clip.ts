@@ -4,7 +4,7 @@
 // readout of the page, a decoded export) says which source frame it shows.
 // No real footage is ever used.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, Layer, Option } from 'effect';
 import {
   ALL_FORMATS,

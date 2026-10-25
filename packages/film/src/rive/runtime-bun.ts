@@ -7,7 +7,7 @@
 // and its face declared, and nothing is drawn (`paints: false`).
 
 import glWasm from '@rive-app/webgl2-advanced/rive.wasm' with { type: 'file' };
-import { BunFileSystem } from '@effect/platform-bun';
+import * as BunFileSystem from '@effect/platform-bun/BunFileSystem';
 import { Effect, FileSystem, Layer } from 'effect';
 import { standInDom } from '../canvas/fixtures/stand-in.ts';
 import { RigUnloadable } from '../core/errors.ts';

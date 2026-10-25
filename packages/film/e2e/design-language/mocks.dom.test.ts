@@ -4,7 +4,7 @@
 // more case reads every mock for the selectors of the sheets they share. A
 // planted page of each shape a length can take shows the check catches it.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, FileSystem } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { openTab, respond, servePaths } from '../../src/lab/fixtures/browsers.ts';

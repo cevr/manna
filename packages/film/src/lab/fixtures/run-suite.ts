@@ -6,7 +6,8 @@
 // `workersFor` gives the host.
 
 import { availableParallelism, loadavg } from 'node:os';
-import { BunRuntime, BunServices } from '@effect/platform-bun';
+import * as BunRuntime from '@effect/platform-bun/BunRuntime';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { Config, Console, Effect, FileSystem, Stdio } from 'effect';
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';

@@ -11,7 +11,7 @@
 // are fifteen frames of H.264 at 30 fps each, encoded in headless Chromium as
 // a render encodes a chunk: `a` and `b` 64 × 64, `wide` 96 × 64.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Array as Arr, Duration, Effect, FileSystem, Layer, Option, Order, Stream } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';

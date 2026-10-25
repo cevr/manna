@@ -8,7 +8,7 @@
 // the private store is a folder here. What needs no media (the words, the
 // cues, the page's cut, the narrator refused) is `src/tools/talk.slow.test.ts`'s.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Layer, Option, Path, Result, Schema } from 'effect';
 import { sourceFile } from '../../src/core/footage.ts';

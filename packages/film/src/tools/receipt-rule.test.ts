@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option } from 'effect';
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 
 /** The repo's root, from this file. */
 const ROOT = `${import.meta.dir}/../../../..`;

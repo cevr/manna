@@ -13,7 +13,7 @@
 import { Array as Arr, Context, Effect, FileSystem, Layer, Option, Path, Result } from 'effect';
 import { HttpServer, HttpServerRequest, HttpServerResponse } from 'effect/http';
 import { NetAddress } from 'effect/net';
-import { BunHttpServer } from '@effect/platform-bun';
+import * as BunHttpServer from '@effect/platform-bun/BunHttpServer';
 import { LookFailed, LookLevelUnknown, PagesBroken } from '../core/easel.ts';
 import type { SourceRefused } from '../core/refusals.ts';
 import { editPick, lookLevels, lookPlay } from './choice-source.ts';

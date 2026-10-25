@@ -10,7 +10,7 @@
 // and its table, and names the figures it cannot match and why. Live clock:
 // the fake page sleeps a millisecond a frame.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   ConfigProvider,

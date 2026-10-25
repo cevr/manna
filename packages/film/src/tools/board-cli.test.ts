@@ -2,7 +2,7 @@
 // a panel, and a `--keep` that names none of them is refused before the board
 // is touched (no panel, no try, no image left behind).
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Cause, ConfigProvider, Effect, Exit, Layer, Option, Path, Schema } from 'effect';
 import { Command } from 'effect/cli';

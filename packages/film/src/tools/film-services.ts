@@ -8,7 +8,8 @@
 
 import { AskMaterials } from './ask-materials.ts';
 import { AskStore } from './ask-store.ts';
-import { BunHttpPlatform, BunServices } from '@effect/platform-bun';
+import * as BunHttpPlatform from '@effect/platform-bun/BunHttpPlatform';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import {
   ConfigProvider,
   Context,

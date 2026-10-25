@@ -1,7 +1,7 @@
 // The e2e run's folder: its release ends the processes that name a path in
 // it and waits until none runs, then removes it (`run-folder.ts`).
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Exit, FileSystem, Path, Scope, Stream } from 'effect';
 import * as ChildProcess from 'effect/process/ChildProcess';

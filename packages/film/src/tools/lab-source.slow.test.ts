@@ -11,7 +11,7 @@
 
 import { AskMaterials } from './ask-materials.ts';
 import { AskStore } from './ask-store.ts';
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Context, Effect, FileSystem, Layer, Path, Schema } from 'effect';
 import { HttpPlatform } from 'effect/http';

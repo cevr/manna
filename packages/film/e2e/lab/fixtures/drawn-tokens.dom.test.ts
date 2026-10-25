@@ -6,7 +6,7 @@
 // scene's hue, a native range's colour, a named geometry, and a shadow and a
 // gradient in tokens pass.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, FileSystem } from 'effect';
 import { describe, it } from 'effect-bun-test';
 import { openTab, respond, servePaths } from '../../../src/lab/fixtures/browsers.ts';

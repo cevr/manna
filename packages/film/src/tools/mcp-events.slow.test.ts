@@ -25,7 +25,7 @@ import {
   Result,
   Schema,
 } from 'effect';
-import { BunHttpServer } from '@effect/platform-bun';
+import * as BunHttpServer from '@effect/platform-bun/BunHttpServer';
 import { Base64 } from 'effect/encoding';
 import { HttpServer, HttpServerRequest, HttpServerResponse } from 'effect/http';
 import { TestClock } from 'effect/testing';

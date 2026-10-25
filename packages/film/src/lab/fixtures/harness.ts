@@ -9,7 +9,7 @@
 // not. A link the lab's server sends on (`servedPlace`) is answered with the
 // same redirect.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import {
   Array as Arr,
   Boolean as Bool,

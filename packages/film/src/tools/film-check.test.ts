@@ -6,7 +6,7 @@
 
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
-import { BunPath } from '@effect/platform-bun';
+import * as BunPath from '@effect/platform-bun/BunPath';
 import {
   Effect,
   type FileSystem,

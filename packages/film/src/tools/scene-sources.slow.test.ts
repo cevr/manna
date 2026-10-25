@@ -4,7 +4,7 @@
 // builds in code is not located, and a scene with nothing to edit is skipped.
 // The lab locates in a fresh process, so a scene added while it runs is found.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Context, Effect, FileSystem, Layer, Path } from 'effect';
 import { ContentStore } from './content-store.ts';

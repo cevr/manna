@@ -3,7 +3,7 @@
 // opened. Only a held lock is "not taken yet" (`Option.none`, tried again;
 // `content-store.slow.test.ts` covers taking, contention and retaking).
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem } from 'effect';
 import { bunManifestLock, lockFile } from './manifest-lock-bun.ts';

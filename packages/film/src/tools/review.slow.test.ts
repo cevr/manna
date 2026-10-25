@@ -6,7 +6,7 @@
 // frames, phone copies) made once, whole, through a stand-in Media that
 // copies and counts instead (`reviewMedia`).
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import {

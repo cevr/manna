@@ -6,7 +6,7 @@
 // environment, and the names of the variables missing when it is not set.
 // Synthetic bytes only; nothing leaves the process.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   ConfigProvider,

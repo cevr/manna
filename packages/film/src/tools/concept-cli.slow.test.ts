@@ -5,7 +5,7 @@
 // is told of. Over a member's record both read its sizes: its own heads, its
 // hair, and a smaller figure at its share of the grown height.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Cause,

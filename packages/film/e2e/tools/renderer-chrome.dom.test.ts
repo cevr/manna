@@ -6,7 +6,7 @@
 // (`src/tools/fixtures/renderer-chrome.ts`). macOS only: no other platform
 // asks for the GPU.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Schema } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';

@@ -9,7 +9,7 @@
 // build answers; and a server entry that is no page's render fails its
 // render.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Deferred,

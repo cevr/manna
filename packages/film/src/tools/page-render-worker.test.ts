@@ -3,7 +3,7 @@
 // lab cancels while its server entry is still loading never starts, so once
 // the entry has loaded it sends no head and makes no read.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Deferred, Effect, Exit, FileSystem, Layer, Path, Queue, Random } from 'effect';
 import * as Worker from 'effect/workers/Worker';

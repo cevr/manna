@@ -12,7 +12,8 @@
 // lock (`/footage/library.lock.json`) and each transcript the lock names now
 // (`/footage/transcripts/<file>`), never another file under the library.
 
-import { BunHttpPlatform, BunServices } from '@effect/platform-bun';
+import * as BunHttpPlatform from '@effect/platform-bun/BunHttpPlatform';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, FileSystem, Layer, Option, Path, Record as Rec, Schema } from 'effect';
 import { HttpEffect, HttpServerRequest, HttpServerResponse } from 'effect/http';
 import {

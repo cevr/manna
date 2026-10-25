@@ -6,7 +6,7 @@
 // keeps every comment on the key it is about, which the sweep at the end
 // proves over many layouts as the repo's oxfmt prints them.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Array as Arr, Effect, FileSystem, Option, Result, Schema, Stream } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';

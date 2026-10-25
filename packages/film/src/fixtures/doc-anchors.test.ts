@@ -2,7 +2,7 @@
 // that names a changed file, read from the doc's bases (a link from its own
 // folder), and no line whose anchors name only unchanged files.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect } from 'effect';
 import { type Doc, docLines } from './doc-anchors.ts';

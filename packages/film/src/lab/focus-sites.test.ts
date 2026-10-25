@@ -11,7 +11,7 @@
 // neither prop takes the kit's default, which focuses it on open; the scan
 // cannot see that default, so those popups are the e2e walk's alone.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, FileSystem, Path } from 'effect';
 import { expect, it } from 'effect-bun-test';
 

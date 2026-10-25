@@ -4,7 +4,7 @@
 // reference, and a retry that still drifts is kept, flagged, never dropped.
 // A kind the record does not set up stops the run before any draw.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { ConfigProvider, Effect, Exit, FileSystem, Layer, Path, Result, Schema } from 'effect';
 import { CastSheetJson, type CastSheetRecord } from '../core/cast-record.ts';

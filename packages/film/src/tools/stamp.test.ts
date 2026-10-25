@@ -2,7 +2,7 @@
 // what that imports, the film's frame, and the scene it enters from; an edit
 // to another scene's module leaves it alone.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { expect as expectPlain, test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import { Context, Effect, FileSystem, Layer, Option, Path, Result } from 'effect';

@@ -2,7 +2,7 @@
 // one writer holding a manifest's lock at a time; a writer that dies lets it
 // go at once; and a current hash skips the work.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Array as Arr,

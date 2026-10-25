@@ -2,7 +2,7 @@
 // worked example, compiled on every model the page names, is on the page as
 // sent, so a change to either is made in both.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Path, Result } from 'effect';
 import { compileDelivery, sentText } from '../core/delivery.ts';

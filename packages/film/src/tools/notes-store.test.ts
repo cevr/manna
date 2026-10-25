@@ -2,7 +2,7 @@
 // mid-write leaves the last good file; a file that does not decode is refused,
 // never overwritten; a wait reports each change past its cursor once.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   ConfigProvider,

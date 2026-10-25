@@ -3,7 +3,7 @@
 // on stdout (a refusal as itself) and a failed run, whichever subcommand asks.
 // A verb it does not know is the command line's refusal, before any film is read.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Cause,

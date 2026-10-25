@@ -10,7 +10,7 @@
 // over (ended, failed or cancelled) aborts each read it still waits on and
 // says nothing more.
 
-import { BunWorkerRunner } from '@effect/platform-bun';
+import * as BunWorkerRunner from '@effect/platform-bun/BunWorkerRunner';
 import { Deferred, Effect, Exit, FiberMap } from 'effect';
 import * as WorkerRunner from 'effect/workers/WorkerRunner';
 import { type PageSink, isPageRender } from '../core/page-render.ts';

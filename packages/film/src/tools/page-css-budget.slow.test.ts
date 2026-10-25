@@ -9,7 +9,8 @@
 // film draws in are no stylesheet's: the films' loaders add them
 // (`player/face.ts`).
 
-import { BunHttpPlatform, BunServices } from '@effect/platform-bun';
+import * as BunHttpPlatform from '@effect/platform-bun/BunHttpPlatform';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Context, Effect, FileSystem, Layer, Option, Struct } from 'effect';
 import { HttpServerRequest, HttpServerResponse } from 'effect/http';

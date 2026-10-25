@@ -11,7 +11,7 @@
 // the rest say no state; the view lives in the URL through a reload; and a
 // phone's width folds the grid to one column without scrolling sideways.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { Deferred, Effect, Exit, FileSystem, Layer, Match, Option, Schedule, Schema } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { SetSayPost, pageHref } from '../../../src/core/api.ts';

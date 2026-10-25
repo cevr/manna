@@ -8,7 +8,7 @@
 // every paid path is counted by the fake.
 
 import { createHash } from 'node:crypto';
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import {

@@ -1,4 +1,4 @@
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, test } from 'bun:test';
 import { it } from 'effect-bun-test';
 import { Array as Arr, Effect, FileSystem, Result, Schema } from 'effect';

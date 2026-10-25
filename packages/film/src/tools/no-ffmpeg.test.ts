@@ -6,7 +6,7 @@
 // every clause of the READMEs and the film skill that names the CLI (`ffmpeg`,
 // `ffprobe`, "the ffmpeg CLI") says it is not used.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem } from 'effect';
 

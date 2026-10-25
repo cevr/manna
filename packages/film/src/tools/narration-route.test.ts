@@ -1,7 +1,7 @@
 // The narration route names only a film's own narration files, and reads the
 // films per request: on a films folder made here.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Path } from 'effect';
 import { narrationFile, narrationPath } from './narration-route.ts';

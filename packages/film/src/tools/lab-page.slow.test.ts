@@ -9,7 +9,7 @@
 // (`lab-page-mixes.slow.test.ts`) and a page that does not build
 // (`lab-page-failures.slow.test.ts`). The app they serve is `fixtures/lab-app.ts`.
 
-import { BunHttpPlatform } from '@effect/platform-bun';
+import * as BunHttpPlatform from '@effect/platform-bun/BunHttpPlatform';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   DateTime,

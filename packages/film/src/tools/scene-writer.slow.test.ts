@@ -3,7 +3,7 @@
 // literal is refused with the file untouched, and undo and redo walk a bounded
 // stack of writes byte for byte (but never over a change made since).
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Array as Arr,

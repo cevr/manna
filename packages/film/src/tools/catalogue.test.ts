@@ -2,7 +2,7 @@
 // a terminal's `project render` each write one film's catalogue from their own
 // process, and every write lands.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import { Array as Arr, Context, Effect, FileSystem, Layer, Option, Result } from 'effect';

@@ -1043,6 +1043,25 @@
       }
     },
     {
+      // The tools take each @effect/platform-bun module by its own path: the
+      // package's index loads all 22 of them, about 16 ms more in each test
+      // worker.
+      "files": ["**/packages/film/src/tools/**/*.ts", "**/packages/film/src/tools/**/*.tsx"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@effect/platform-bun",
+                "message": "import the module by its own path (`import * as BunServices from '@effect/platform-bun/BunServices'`): the package's index loads every module of it."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       // A page's keys and context menus are its commands', never a listener of
       // its own (packages/film/lint/keys-through-keymap.ts). The `Keys` adapter
       // and the command surfaces (src/lab/command/) are where they are made.

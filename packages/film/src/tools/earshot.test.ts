@@ -5,7 +5,7 @@
 // its virtualenv and the recording's folder and writing only its scratch
 // folder, Hugging Face offline, the model it wrote read back.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { ConfigProvider, Effect, FileSystem, Layer, Path, Result, Sink, Stream } from 'effect';
 import { ChildProcessSpawner } from 'effect/process';

@@ -38,7 +38,7 @@ import {
   Stream,
   SubscriptionRef,
 } from 'effect';
-import { BunTerminal } from '@effect/platform-bun';
+import * as BunTerminal from '@effect/platform-bun/BunTerminal';
 import { Command } from 'effect/cli';
 import {
   FetchHttpClient,

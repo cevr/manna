@@ -16,7 +16,7 @@
 // another name is a build, and a same-named thing of a module's own is not.
 // A name shadowed in an inner scope is read as the module's own binding.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Array as Arr, Effect, FileSystem, Option, Path, Predicate, Schema } from 'effect';
 import {

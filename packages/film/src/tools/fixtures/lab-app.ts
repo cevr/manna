@@ -4,7 +4,8 @@
 // rename, a folder made), or over films in memory (`filmsInMemory`) where
 // only what a film's pages hear of a mix is, their watches told by the test.
 
-import { BunHttpPlatform, BunServices } from '@effect/platform-bun';
+import * as BunHttpPlatform from '@effect/platform-bun/BunHttpPlatform';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import {
   Array as Arr,
   Context,

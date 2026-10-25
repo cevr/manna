@@ -2,7 +2,7 @@
 // player page imports; no environment variable can point the tools elsewhere.
 
 import { describe, expect, it } from 'effect-bun-test';
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { ConfigProvider, Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
 import { BoardFileJson, BoardName } from '../core/board.ts';
 import { BoardStore } from './board-store.ts';

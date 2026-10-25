@@ -7,7 +7,8 @@
 // (`run-folder.slow.test.ts`). Its stdin is a pipe from the test, so it ends with
 // the test however the test went.
 
-import { BunRuntime, BunServices } from '@effect/platform-bun';
+import * as BunRuntime from '@effect/platform-bun/BunRuntime';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { Console, Effect, FileSystem, Stdio, Stream } from 'effect';
 
 const FLAG = '--user-data-dir=';

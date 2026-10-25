@@ -20,8 +20,11 @@
 // - The First the Blade site's sources: oxlint lints a probe with the
 //   site's block's own options, and refuses each `?inline` import and data
 //   URL, an image the build walk would not read, and passes a URL import.
+// - The film's tools: one block over them refuses `@effect/platform-bun`'s
+//   index, which loads every module of the package in each test worker, and
+//   passes a module imported by its own path.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { Glob, JSONC } from 'bun';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Path, Schema, Stream } from 'effect';
@@ -616,5 +619,34 @@ describe('the lint config', () => {
         );
         expect(missing).toEqual([]);
       }),
+  );
+
+  it.effect.layer(BunServices.layer)(
+    "refuses @effect/platform-bun's index in the film's tools and passes a module by its own path",
+    () =>
+      Effect.gen(function* () {
+        const config = yield* readJson('.oxlintrc.json', Config);
+        const TOOLS = ['packages/film/src/tools/a.ts', 'packages/film/src/tools/a/b.tsx'];
+        const covers = (o: Override, file: string) =>
+          o.files.some((glob) => new Glob(glob).match(file));
+        const rules = config.overrides
+          .filter((o) => TOOLS.every((file) => covers(o, file)))
+          .flatMap((o) => Option.toArray(ruleIn(o, 'no-restricted-imports')));
+        expect(rules).toHaveLength(1);
+        const probe = [
+          "import { BunServices } from '@effect/platform-bun';",
+          "import * as BunPath from '@effect/platform-bun/BunPath';",
+          'export const used = [BunServices, BunPath];',
+        ];
+        const out = yield* oxlintOver(
+          yield* Schema.encodeEffect(RulesConfig)({
+            jsPlugins: [],
+            rules: { 'no-restricted-imports': rules[0] },
+          }),
+          `${probe.join('\n')}\n`,
+        );
+        expect([...reportedLines(out, ['no-restricted-imports'])]).toEqual([1]);
+      }),
+    SPAWNS_MS,
   );
 });

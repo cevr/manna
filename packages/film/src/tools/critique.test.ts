@@ -8,7 +8,7 @@
 // block is a skip, said in the file, never a failure. A rule section its
 // file lacks fails the critic's build.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Array as Arr,

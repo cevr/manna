@@ -25,7 +25,7 @@
 // narrate and score finish with a mix, so the track is always rebuilt from the
 // same inputs; mix alone never calls a paid API.
 
-import { BunRuntime } from '@effect/platform-bun';
+import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import {
   Array as Arr,
   Cause,

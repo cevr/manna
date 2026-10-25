@@ -9,7 +9,7 @@
 // system alone, built once for the plugin: the whole platform per load (a
 // terminal each) put a listener on stdin for every module of a bundle.
 
-import { BunFileSystem } from '@effect/platform-bun';
+import * as BunFileSystem from '@effect/platform-bun/BunFileSystem';
 import { transform } from '@solidjs/compiler';
 import type { BunPlugin } from 'bun';
 import { Effect, FileSystem, ManagedRuntime } from 'effect';

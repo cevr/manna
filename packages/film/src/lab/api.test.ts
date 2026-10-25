@@ -1,4 +1,4 @@
-import { BunHttpServer } from '@effect/platform-bun';
+import * as BunHttpServer from '@effect/platform-bun/BunHttpServer';
 import { HttpServer, HttpServerRequest, HttpServerResponse } from 'effect/http';
 import { test } from 'bun:test';
 import { Context, Effect, Exit, Layer, Option, Scope } from 'effect';

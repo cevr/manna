@@ -8,7 +8,7 @@
 // and at 24 or 30. Each copy is constant-rate at its recipe's rate, the way up
 // its original is, its key frames no further apart than its recipe allows.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, FileSystem, Layer, Option, Path, Stream } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import {

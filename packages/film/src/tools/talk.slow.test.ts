@@ -9,7 +9,7 @@
 // it shows the moment of the take the mix plays under it. The mix on real
 // media is `e2e/tools/talk.test.ts`'s.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Array as Arr,

@@ -1,7 +1,7 @@
 // Narrator with fakes: which beats are recorded, and what a take that says
 // something else does. No network, no media files.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import {

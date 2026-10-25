@@ -56,7 +56,7 @@ import {
 } from '../core/api.ts';
 import { type HttpApi, HttpApiError, type HttpApiGroup } from 'effect/http-api';
 import { NetAddress } from 'effect/net';
-import { BunHttpServer } from '@effect/platform-bun';
+import * as BunHttpServer from '@effect/platform-bun/BunHttpServer';
 import { BodyTooLarge } from '../core/refusals.ts';
 import { STUDIO_MAX_BODY } from '../core/studio.ts';
 import { urlPath } from './review-file.ts';

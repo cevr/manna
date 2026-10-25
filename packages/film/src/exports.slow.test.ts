@@ -32,7 +32,7 @@
 // tooling entries are read by the CLI, the app's build and the tests, and the
 // framework reads each core module by its path.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Array as Arr, Effect, FileSystem, Option, Path, Schema } from 'effect';
 import {

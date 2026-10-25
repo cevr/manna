@@ -2,7 +2,7 @@
 // the try and shown beside the concept's crop with the measure's flags on
 // it, in one counsel run; a view no concept faces is said, never critiqued.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Layer, Path, Schema } from 'effect';
 import { CastSheetJson, type CastSheetRecord } from '../core/cast-record.ts';

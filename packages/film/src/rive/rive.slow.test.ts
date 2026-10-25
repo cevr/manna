@@ -11,7 +11,7 @@
 // the rig follows the shot.
 
 import canvasWasm from '@rive-app/canvas-advanced/rive.wasm' with { type: 'file' };
-import { BunFileSystem } from '@effect/platform-bun';
+import * as BunFileSystem from '@effect/platform-bun/BunFileSystem';
 import { describe, expect, it } from 'effect-bun-test';
 import { Deferred, Effect, Exit, Fiber, FileSystem, Layer, Option, Schema, Scope } from 'effect';
 import type { Film } from '../canvas/film.ts';

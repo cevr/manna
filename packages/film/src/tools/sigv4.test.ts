@@ -2,7 +2,7 @@
 // ("Signature Calculations for the Authorization Header: Transferring Payload
 // in a Single Chunk"), and HMAC-SHA256 against RFC 4231.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import { Crypto, DateTime, Effect, Redacted } from 'effect';
