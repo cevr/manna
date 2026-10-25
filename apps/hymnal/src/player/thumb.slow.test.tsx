@@ -593,6 +593,36 @@ describe('a dial stopped by a touch', () => {
       expect(placeOfRow(page, 'dial-capo')).toBe(6 * DETENT);
     }),
   );
+
+  // The capo two up comes home to fret 0; the key three up (E) comes home to Db, pitch 1.
+  for (const { label, testID, said, home } of [
+    { label: 'Capo', testID: 'dial-capo', said: 'No capo', home: 0 },
+    { label: 'Key', testID: 'dial-key', said: 'Db', home: 1 },
+  ])
+    it.live(
+      `lets a reset’s turn home end at home when a touch on the ${label} dial never drags`,
+      () =>
+        Effect.sync(() => {
+          using page = mount(route(100), chordsOn());
+          tapKey(page);
+          turn(page, 'Key');
+          turn(page, 'Key');
+          turn(page, 'Key');
+          turn(page, 'Capo');
+          turn(page, 'Capo');
+          holdAnimations();
+          // Animations land at once again when the test ends, whatever it found.
+          using _held = { [Symbol.dispose]: landAnimations };
+          // The rows turn home, and a finger comes down on the moving dial and lifts with no drag.
+          page.press('Reset');
+          act(() => gestureOf(`${testID}-pan`).onBegin?.({ x: 0 }));
+          act(() => gestureOf(`${testID}-pan`).onFinalize?.({ x: 0, canceled: true }));
+          act(() => landAnimations());
+          expect(valueOf(page, label)).toEqual(Option.some(said));
+          // The row shows the value the dial holds, not the detent the touch stopped it nearest.
+          expect(placeOfRow(page, testID)).toBe(home * DETENT);
+        }),
+    );
 });
 
 describe('the capo and the key leave the sound alone', () => {
