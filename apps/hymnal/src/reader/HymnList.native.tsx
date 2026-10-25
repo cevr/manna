@@ -33,10 +33,12 @@ import { type Href, Link, useLinkTo } from 'one';
 import { useMemo } from 'react';
 import Animated, {
   type SharedValue,
+  useAnimatedReaction,
   useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import {
   type ColorValue,
   Pressable,
@@ -46,6 +48,7 @@ import {
   View,
 } from 'react-native';
 
+import { useCue } from '~/feel/cue';
 import type { HymnText } from '~/hymns/hymns';
 import { color, useAccent } from '~/color';
 
@@ -212,7 +215,8 @@ const names = (row: Row<HymnText>): ReadonlyArray<string> => {
  * strip one row tall, moved on the UI thread so the topic whose hymns pass
  * under the top shows, pushed up as the next topic's row meets it. Screen
  * readers read the list's own topic rows, so the copy is hidden from them,
- * and touches pass through it to the list.
+ * and touches pass through it to the list. A topic taking the pin gives a
+ * `section` cue with its place among the topics.
  */
 function PinnedTopic({
   names: topics,
@@ -226,6 +230,16 @@ function PinnedTopic({
   readonly scroll: SharedValue<number>;
 }) {
   const pinned = useDerivedValue(() => pinnedAt(starts, scroll.value, height));
+  const cue = useCue();
+  const section = (place: number) => cue({ _tag: 'section', place });
+  // A topic taking the pin is felt; the first call, as the list mounts, is not.
+  useAnimatedReaction(
+    () => pinned.value.index,
+    (now, before) => {
+      // oxlint-disable-next-line effect/noNullish -- Reanimated gives a reaction's first call its previous value as null.
+      if (before !== null && now !== before && now >= 0) scheduleOnRN(section, now);
+    },
+  );
   const place = useAnimatedStyle(() => ({
     opacity: Math.min(1, pinned.value.index + 1),
     transform: [{ translateY: pinned.value.y }],

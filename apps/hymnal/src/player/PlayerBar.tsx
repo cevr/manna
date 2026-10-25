@@ -36,7 +36,7 @@ import {
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { color, useAccent } from '~/color';
-import { useCue } from '~/feel/cue';
+import { plain, useCue } from '~/feel/cue';
 import { settings } from '~/store';
 
 import { Bar, dockedBar, pageBar, placeOf, REST, SOUNDING, toldPlace } from './bar';
@@ -218,7 +218,7 @@ function Frame({
     failOffsetX: [-24, 24],
     onDeactivate: ({ translationY = 0, velocityY = 0 }) => {
       if (translationY > -24 && velocityY > -400) return;
-      cue('sheet-open');
+      cue(plain('sheet-open'));
       router.push(sheet);
     },
   });
@@ -282,12 +282,17 @@ function Opener({
   readonly named: boolean;
 }) {
   const accent = useAccent();
+  const cue = useCue();
   const link = useLinkTo({
     href: Link.resolveHref({ pathname: '/player', params: { hymn: String(track.number) } }),
   });
   return (
     <Pressable
       {...link}
+      onPress={(event) => {
+        cue(plain('press'));
+        link.onPress(event);
+      }}
       role="button"
       aria-label="Open player"
       aria-valuetext={Option.getOrUndefined(toldPlace(state))}
@@ -319,11 +324,15 @@ function PlayPage({
   readonly send: (command: Command) => void;
 }) {
   const accent = useAccent();
+  const cue = useCue();
   return (
     <Pressable
       role="button"
       aria-label={`Play hymn ${track.number}`}
-      onPress={() => send(Command.Start({ track }))}
+      onPress={() => {
+        cue(plain('play'));
+        send(Command.Start({ track }));
+      }}
       style={styles.compact}
     >
       <Text style={[styles.compactText, { color: accent }]}>{`Play ${track.number}`}</Text>
@@ -340,13 +349,17 @@ function PlayPage({
 function Sound() {
   const [on, setOn] = useAtom(settings.sound);
   const accent = useAccent();
+  const cue = useCue();
   const tint = [color.muted, accent][Number(on)] ?? accent;
   return (
     <Pressable
       role="button"
       aria-label="Sound"
       aria-checked={on}
-      onPress={() => setOn(!on)}
+      onPress={() => {
+        cue(plain((on && 'switch-off') || 'switch-on'));
+        setOn(!on);
+      }}
       style={pressedSoft}
     >
       <BarMark mark={(['sound-off', 'sound-on'] as const)[Number(on)] ?? 'sound-on'} tint={tint} />
@@ -383,7 +396,7 @@ function Buttons({
           role="button"
           aria-label={button.label}
           onPress={() => {
-            cue((button.kind === 'pause' && 'pause') || 'play');
+            cue(plain((button.kind === 'pause' && 'pause') || 'play'));
             send(command);
           }}
           style={pressedSoft}

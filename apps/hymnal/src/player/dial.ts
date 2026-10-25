@@ -14,7 +14,7 @@
  * the UI thread as the finger lets go.
  */
 
-import type { Cue } from '~/feel/cue';
+import type { Cue, DialName } from '~/feel/cue';
 
 /** The space between two detents, in points: one tap target. */
 export const DETENT = 44;
@@ -35,6 +35,8 @@ const CREEP = 20;
 export const MOST_FRAMES = Math.ceil(Math.log(CREEP / FLING_CAP) / Math.log(DECAY)) + 1;
 
 export interface Detents {
+  /** Which dial it is: its detents' cues name it. */
+  readonly name: DialName;
   /** How many detents the dial has. */
   readonly count: number;
   /** Whether the dial wraps from its last detent to its first. */
@@ -83,6 +85,19 @@ export const dragTo = (dial: Detents, place: number) => {
 };
 
 /**
+ * The detents a row passes going from detent `before` to detent `now` (both
+ * unbounded places on the row), one step at a time, in order, each among
+ * the dial's own; the last is `now`'s. None when they are the same.
+ */
+export const passed = (dial: Detents, before: number, now: number): ReadonlyArray<number> => {
+  'worklet';
+  const step = Math.sign(now - before);
+  return Array.from({ length: Math.abs(now - before) }, (_, k) =>
+    ownDetent(dial, before + step * (k + 1)),
+  );
+};
+
+/**
  * Where a dial let go at `place`, moving `speed` points a second (toward
  * the higher detents when positive), comes to rest.
  */
@@ -102,12 +117,9 @@ export const glide = (dial: Detents, place: number, speed: number): Rest => {
   }
   // The snap to the nearest detent takes one frame more.
   const rest = detentAt(at);
-  const step = Math.sign(rest - from);
-  const crossed = Array.from({ length: Math.abs(rest - from) }, (_, k) =>
-    ownDetent(dial, from + step * (k + 1)),
-  );
-  const cues: Array<Cue> = crossed.map(() => 'detent' as const);
-  if (wall) cues.push('wall');
+  const crossed = passed(dial, from, rest);
+  const cues: Array<Cue> = crossed.map((n) => ({ _tag: 'detent', dial: dial.name, at: n }));
+  if (wall) cues.push({ _tag: 'wall' });
   return { at: rest * DETENT, index: ownDetent(dial, rest), frames: frames + 1, crossed, cues };
 };
 

@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { AppRegistry, Platform } from 'react-native';
 
 import { applyAppearance } from '~/appearance';
+import { FeelProvider } from '~/feel/FeelProvider';
 import { settings } from '~/store';
 import { webColors } from '~/color';
 
@@ -39,7 +40,9 @@ export default function Layout() {
         <body>
           <RegistryProvider>
             <AppearanceFollower />
-            <Slot />
+            <FeelProvider>
+              <Slot />
+            </FeelProvider>
           </RegistryProvider>
         </body>
       </html>
@@ -49,7 +52,9 @@ export default function Layout() {
   return (
     <RegistryProvider>
       <AppearanceFollower />
-      <Slot />
+      <FeelProvider>
+        <Slot />
+      </FeelProvider>
     </RegistryProvider>
   );
 }

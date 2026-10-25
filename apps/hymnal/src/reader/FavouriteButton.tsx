@@ -1,8 +1,9 @@
 /**
  * The hymn page head's `Favourite` button, at the end of the number's row:
  * a press keeps the hymn among the reader's Favourites (`lists.favourites`,
- * in number order), a second press takes it out. Selected while the hymn is
- * a favourite, drawn as a star, filled then.
+ * in number order), a second press takes it out, each with its chime
+ * (`favourite-on`, `favourite-off`). Selected while the hymn is a
+ * favourite, drawn as a star, filled then.
  */
 
 import { useAtom } from '@effect/atom-react';
@@ -10,6 +11,7 @@ import type * as Atom from 'effect/reactivity/Atom';
 import { Pressable, StyleSheet } from 'react-native';
 
 import { color } from '~/color';
+import { plain, useCue } from '~/feel/cue';
 
 import { toggleFavourite } from './lists';
 import { StarMark } from './StarMark';
@@ -22,13 +24,17 @@ export function FavouriteButton({
   readonly favourites: Atom.Writable<ReadonlyArray<number>>;
 }) {
   const [list, setList] = useAtom(favourites);
+  const cue = useCue();
   const on = list.includes(number);
   return (
     <Pressable
       role="button"
       aria-label="Favourite"
       aria-selected={on}
-      onPress={() => setList((now) => toggleFavourite(now, number))}
+      onPress={() => {
+        cue(plain((on && 'favourite-off') || 'favourite-on'));
+        setList((now) => toggleFavourite(now, number));
+      }}
       hitSlop={8}
       style={({ pressed }) => [styles.button, pressed && styles.pressed]}
     >

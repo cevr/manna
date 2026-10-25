@@ -48,6 +48,16 @@ describe('the Settings route', () => {
     });
   });
 
+  it('holds the switch Sounds and haptics, on at first, after the chord style and before About', () => {
+    const page = html();
+    const at = (text: string) => page.indexOf(text);
+    expect({
+      on: /<input (?=[^>]*aria-label="Sounds and haptics")(?=[^>]*checked)/.test(page),
+      after: at('aria-label="Sounds and haptics"') > at('aria-label="Advanced"'),
+      before: at('aria-label="Sounds and haptics"') < at('>About<'),
+    }).toEqual({ on: true, after: true, before: true });
+  });
+
   it('names each radio by its label, so a tap by label finds it on the web', () => {
     const page = html();
     expect(

@@ -7,9 +7,11 @@
  * its ends (the capo, the text size), where a drag stops and cues a wall.
  *
  * The drag and the glide run as worklets on the UI thread; JavaScript is
- * called once per detent the row passes (`onTurn`, and a `detent` cue), not
- * once per frame. A value set from outside (a reset, the twin dial in the
- * player sheet) turns the row the short way to it, and tells nothing back.
+ * called only when the row reaches a new detent, not once per frame: it is
+ * told a `detent` cue for each detent passed since the last, in order, and
+ * `onTurn` once with the latest. A value set from outside (a reset, the
+ * twin dial in the player sheet) turns the row the short way to it, and
+ * tells nothing back.
  * A double tap asks for a reset. VoiceOver reads the dial as adjustable:
  * a swipe up or down turns it one detent.
  *
@@ -45,11 +47,13 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { color, useAccent } from '~/color';
-import { useCue } from '~/feel/cue';
+import { type DialName, useCue } from '~/feel/cue';
 
-import { DETENT, detentAt, dragTo, FRAME, glide, ownDetent, placeOf } from './dial';
+import { DETENT, detentAt, dragTo, FRAME, glide, ownDetent, passed, placeOf } from './dial';
 
 export interface DialProps<A> {
+  /** Which dial it is: its detents' cues name it (`~/feel/cue`). */
+  readonly dial: DialName;
   /** What VoiceOver names the dial by, and a test finds it by. */
   readonly label: string;
   /** The small word at the dial's left. */
@@ -76,10 +80,10 @@ export interface DialProps<A> {
 const TITLE = 58;
 
 function Dial<A>(props: DialProps<A>) {
-  const { label, title, stops, index, wrap, said, drawStop, testID } = props;
+  const { dial, label, title, stops, index, wrap, said, drawStop, testID } = props;
   const cue = useCue();
   const accent = useAccent();
-  const detents = { count: stops.length, wrap };
+  const detents = { name: dial, count: stops.length, wrap };
   const place = useSharedValue(index * DETENT);
   const start = useSharedValue(0);
   // Whether the finger, or the glide it let go, moves the row: only then is a detent told.
@@ -99,18 +103,21 @@ function Dial<A>(props: DialProps<A>) {
     });
   }, [index]);
 
-  const turned = (n: number) => {
-    cue('detent');
-    live.current.onTurn(ownDetent(detents, n));
+  /** The row passed `crossed` (own detents, in order): a cue for each, one turn to the last. */
+  const turned = (crossed: ReadonlyArray<number>) => {
+    for (const at of crossed) cue({ _tag: 'detent', dial, at });
+    for (const last of crossed.slice(-1)) live.current.onTurn(last);
   };
-  const wall = () => cue('wall');
+  const wall = () => cue({ _tag: 'wall' });
   const reset = () => live.current.onReset?.();
 
   useAnimatedReaction(
     () => detentAt(place.value),
     (now, before) => {
       // The first call (before none) comes as the dial mounts, when nothing drives it.
-      if (now !== before && driven.value) scheduleOnRN(turned, now);
+      // oxlint-disable-next-line effect/noNullish -- Reanimated gives a reaction's first call its previous value as null.
+      if (before !== null && now !== before && driven.value)
+        scheduleOnRN(turned, passed(detents, before, now));
     },
   );
 
@@ -124,7 +131,7 @@ function Dial<A>(props: DialProps<A>) {
       (finished) => {
         'worklet';
         driven.value = false;
-        if (finished && rest.cues.includes('wall')) scheduleOnRN(wall);
+        if (finished && rest.cues.some((told) => told._tag === 'wall')) scheduleOnRN(wall);
         // A wrapping row comes back to its first turn, so it never runs off its copies.
         if (finished && detents.wrap) place.value = ownDetent(detents, detentAt(rest.at)) * DETENT;
       },
@@ -182,7 +189,7 @@ function Dial<A>(props: DialProps<A>) {
 
   const act = ({ nativeEvent }: AccessibilityActionEvent) => {
     const by = (nativeEvent.actionName === 'increment' && 1) || -1;
-    cue('detent');
+    cue({ _tag: 'detent', dial, at: ownDetent(detents, index + by) });
     // A stopping dial is told one past its end, which its owner holds there.
     live.current.onTurn(
       Match.value(wrap).pipe(
@@ -244,6 +251,7 @@ function Dial<A>(props: DialProps<A>) {
  * its value or its words change, not each time the player's place does.
  */
 const same = <A,>(a: DialProps<A>, b: DialProps<A>) =>
+  a.dial === b.dial &&
   a.label === b.label &&
   a.title === b.title &&
   a.stops === b.stops &&

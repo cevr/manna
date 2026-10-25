@@ -10,6 +10,7 @@
 import * as Chord from '@bible/hymnal/chord';
 import { describe, expect, it } from 'bun:test';
 
+import { plain } from '~/feel/cue';
 import { type Move, soundingKey, still } from '~/hymns/chords';
 
 import {
@@ -62,7 +63,7 @@ describe('the key model', () => {
       if (event._tag !== 'Reset') return;
       const next = step(printed, state, event);
       expect(next.state).toEqual({ chords: state.chords, move: still, open: false });
-      expect(next.cues).toEqual(['reset']);
+      expect(next.cues).toEqual([plain('reset')]);
     }));
 
   it('turns the key to the key turned to, keeps the capo, and turns chords on', () =>
@@ -75,7 +76,7 @@ describe('the key model', () => {
       expect(next.state.move.transpose).toBeLessThanOrEqual(6);
       expect(next.state.chords).toBe(true);
       expect(next.state.open).toBe(state.open);
-      expect(next.cues).toEqual((state.chords && []) || ['chords-on']);
+      expect(next.cues).toEqual((state.chords && []) || [plain('chords-on')]);
     }));
 
   it('flips chords on a hold, and leaves the move and the dials', () =>
@@ -83,15 +84,15 @@ describe('the key model', () => {
       if (event._tag !== 'Hold') return;
       const next = step(printed, state, event);
       expect(next.state).toEqual({ ...state, chords: !state.chords });
-      expect(next.cues).toEqual([(state.chords && 'chords-off') || 'chords-on']);
+      expect(next.cues).toEqual([plain((state.chords && 'chords-off') || 'chords-on')]);
     }));
 
-  it('opens closed dials on a tap and closes open ones; a tap on the page closes them', () =>
+  it('opens closed dials on a tap and closes open ones, with a press; a tap on the page closes them', () =>
     each((printed, state, event) => {
       if (event._tag === 'Tap')
         expect(step(printed, state, event)).toEqual({
           state: { ...state, open: !state.open },
-          cues: [],
+          cues: [plain('press')],
         });
       if (event._tag === 'TapPage')
         expect(step(printed, state, event)).toEqual({
@@ -106,7 +107,7 @@ describe('the key model', () => {
       const next = step(printed, state, event);
       const held = Math.min(Math.max(event.capo, 0), 11);
       expect(next.state).toEqual({ ...state, move: { ...state.move, capo: held } });
-      expect(next.cues).toEqual((held !== event.capo && ['wall']) || []);
+      expect(next.cues).toEqual((held !== event.capo && [plain('wall')]) || []);
     }));
 
   it('shows the capo and key dials with chords on, reset while moved, and the key alone with chords off', () =>

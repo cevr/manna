@@ -54,6 +54,12 @@ export const settingsOn = (store: Layer.Layer<KeyValueStore.KeyValueStore>) => {
      */
     sound: setting('sound', Schema.Boolean, true),
     /**
+     * Whether the controls are felt and heard (`src/feel/`): a haptic and a
+     * short sound for each touch that gives a cue. On until the reader turns
+     * it off in Settings; off, no cue has a body.
+     */
+    feel: setting('feel', Schema.Boolean, true),
+    /**
      * Each hymn's transpose and capo, by its number: a move fits one hymn's
      * key and the singers' range for it, so it never reaches another hymn.
      */
