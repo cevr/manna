@@ -17,7 +17,7 @@ class CastUnfound extends Schema.TaggedError<CastUnfound>()('CastUnfound', {
   looked: Schema.Array(Schema.String),
 }) {
   override get message() {
-    return `${this.member} has no cast-sheet.json: looked in ${this.looked.join(' and ')}`;
+    return `${this.member} has no cast-sheet.json: looked in ${this.looked.join(' and ')}; write the member's record (cast-sheet.json and look.md) in one of those folders, or name a member the cast has`;
   }
 }
 

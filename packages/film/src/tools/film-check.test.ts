@@ -281,6 +281,9 @@ describe('the cast leg', () => {
       const found = yield* castFindings(files);
       expect(found).toMatchObject([{ _tag: 'CastUnreadable', member: 'peter', beats: ['supper'] }]);
       expect(found[0]?.message).toContain('peter has no cast-sheet.json');
+      expect(found[0]?.message).toContain(
+        "write the member's record (cast-sheet.json and look.md)",
+      );
       expect(report(found, { allowStale: false }).errors).toBe(1);
     }),
   );
