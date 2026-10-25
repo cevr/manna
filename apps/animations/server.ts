@@ -29,6 +29,7 @@ export const FILMS = join(import.meta.dir, 'src/films');
 export const LAB_PAGES = {
   review: join(import.meta.dir, 'review.html'),
   player: join(import.meta.dir, 'play.html'),
+  ask: join(import.meta.dir, 'ask.html'),
   render: join(import.meta.dir, 'index.html'),
 };
 
@@ -43,6 +44,7 @@ export const LAB_PAGES = {
 export const LAB_SERVERS: Partial<Record<keyof typeof LAB_PAGES, string>> = {
   review: join(import.meta.dir, 'src/review.server.tsx'),
   player: join(import.meta.dir, 'src/play.server.tsx'),
+  ask: join(import.meta.dir, 'src/ask.server.tsx'),
 };
 
 /** The loopback interface: the only one the player listens on. */

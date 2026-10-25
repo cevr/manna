@@ -28,7 +28,7 @@ import { Effect, type Scope } from 'effect';
 import { expect, it } from 'effect-bun-test';
 import type { Input } from '../../src/browser/keys.ts';
 import { pageHref } from '../../src/core/api.ts';
-import { DESK, json, openPlayer, openReview, route } from '../../src/lab/fixtures/harness.ts';
+import { DESK, json, openAsk, openPlayer, route } from '../../src/lab/fixtures/harness.ts';
 import { PROBE } from '../../src/lab/fixtures/probe-film.ts';
 import {
   STUDIO_ASK,
@@ -410,7 +410,7 @@ for (const { path, ask, routes, press, lands } of ASK_GOES)
     alone(
       `on an ask, ${path} ${ASKED[input]} moves the focus where it goes, which rings iff the keyboard asked`,
       Effect.gen(function* () {
-        const { page, errors } = yield* openReview(routes, { href: pageHref.ask(ask) });
+        const { page, errors } = yield* openAsk(routes, { href: pageHref.ask(ask) });
         yield* waitFor(page, press);
         if (input === 'key') yield* page.focus(press);
         const seen = yield* watched(

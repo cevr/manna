@@ -376,6 +376,7 @@ const drivenPages = (
         text(`<!doctype html><html><head><title>${title}</title></head><body></body></html>`);
       const files = new Map<string, Uint8Array>([
         ['/app/review.html', page('review')],
+        ['/app/ask.html', page('ask')],
         ['/app/sub/player.html', page('player')],
         ['/app/index.html', page('render')],
         ...SOURCES.map((file) => [file, text('export {};\n')] as const),
@@ -387,6 +388,7 @@ const drivenPages = (
         pages: {
           review: '/app/review.html',
           player: '/app/sub/player.html',
+          ask: '/app/ask.html',
           render: '/app/index.html',
         },
         servers: Option.match(server, {
@@ -485,7 +487,7 @@ const trackPages = (
   armed: Deferred.Deferred<void>,
 ) => {
   const page = text('<!doctype html><html><head></head><body></body></html>');
-  for (const name of ['review', 'player', 'index']) files.set(`/app/${name}.html`, page);
+  for (const name of ['review', 'player', 'ask', 'index']) files.set(`/app/${name}.html`, page);
   files.set('/app/films/f/scenes/index.ts', text('export {};\n'));
   files.set(TRACK, text('mix one'));
   mtimes.set(TRACK, MIXED_AT);
@@ -508,6 +510,7 @@ const trackPages = (
     pages: {
       review: '/app/review.html',
       player: '/app/player.html',
+      ask: '/app/ask.html',
       render: '/app/index.html',
     },
     servers: {},

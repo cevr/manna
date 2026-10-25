@@ -60,7 +60,7 @@ import {
 import { type Row, type SectionRows, type WordAt, rangesOf, rowOf } from '../transcript/lit.ts';
 import { lineRows } from './line.ts';
 import { usePainted, wordsReleased } from '../transcript/words.ts';
-import type { ReviewApi } from '../review/api.ts';
+import type { AskApi } from '../ask/api.ts';
 
 /**
  * The reader's own look, over the Script's (`SCRIPT_READ_CSS`): a head that
@@ -391,7 +391,7 @@ type Noting = Option.Option<(words: NoteWords) => JSX.Element>;
 export interface ReaderPage {
   readonly host: Host;
   readonly hub: Hub;
-  readonly runtime: Atom.AtomRuntime<ReviewApi, never>;
+  readonly runtime: Atom.AtomRuntime<AskApi, never>;
   readonly playhead: Option.Option<Playhead>;
   readonly noting: Noting;
 }
@@ -554,8 +554,8 @@ const Beats = (props: {
  * script read again).
  */
 interface ScriptSource {
-  readonly voice: Effect.Effect<ScriptVoice, LabFailure, ReviewApi>;
-  readonly mark: (post: MarksPost) => Effect.Effect<unknown, LabFailure, ReviewApi>;
+  readonly voice: Effect.Effect<ScriptVoice, LabFailure, AskApi>;
+  readonly mark: (post: MarksPost) => Effect.Effect<unknown, LabFailure, AskApi>;
   /** A take's audio, by the name its `Ready` gives it. */
   readonly takeUrl: (file: string) => string;
   /** What a beat's head says once its marks are written. */

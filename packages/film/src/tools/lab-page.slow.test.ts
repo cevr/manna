@@ -526,12 +526,14 @@ const memoryApp = (
   const files = new Map<string, Uint8Array>([
     ['/app/review.html', text(html('review old', './src/p.ts'))],
     ['/app/sub/player.html', text(html('player', '../src/play.ts'))],
+    ['/app/ask.html', text(html('ask', './src/p.ts'))],
     ['/app/index.html', text(html('render', './src/render.ts'))],
   ]);
   const spec = {
     pages: {
       review: '/app/review.html',
       player: '/app/sub/player.html',
+      ask: '/app/ask.html',
       render: '/app/index.html',
     },
     servers: {},

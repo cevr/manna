@@ -68,6 +68,7 @@ import { wordsIn, wordsText } from '../../command/selection.ts';
 import { Actor } from '../actor.tsx';
 import { LabApi, LabClient, type LabFailure, NotesApi, called, labApiLayer } from '../api.ts';
 import { type ReviewApi, reviewApiLayer } from '../review/api.ts';
+import { type AskApi, askApiLayer } from '../ask/api.ts';
 import { type StudioClock, playerClock, silentClock } from './clock.ts';
 import {
   type ReadFailure,
@@ -100,6 +101,7 @@ type StudioServices =
   | LabApi
   | NotesApi
   | ReviewApi
+  | AskApi
   | BrowserServices;
 
 /** The film staged in the page: its preview's player and the stage its canvas stands in. */
@@ -899,9 +901,12 @@ export const Root = (
   }>,
 ) => {
   const runtime: Atom.AtomRuntime<StudioServices> = Atom.runtime(
-    Layer.mergeAll(labApiLayer(props.film), reviewApiLayer, hostLayer(props.host)).pipe(
-      Layer.provideMerge(props.client),
-    ),
+    Layer.mergeAll(
+      labApiLayer(props.film),
+      reviewApiLayer,
+      askApiLayer,
+      hostLayer(props.host),
+    ).pipe(Layer.provideMerge(props.client)),
   );
   const first = Option.getOrElse(
     Option.map(Place.decode(Places.studio, addressOn(props.host).href()), (v) => v.query.v),

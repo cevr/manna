@@ -2,7 +2,7 @@
 // `<video>` or an `<audio>` the page shows, `playableOf`; an `Audio` the
 // page makes, `media-browser.ts`; a compare's pane over decoded frames,
 // `frame-pane.ts`; a fake in a test). The drivers (the review's synced
-// player, `lab/review/sync.ts`; the preview's narration,
+// player, `lab/ask/sync.ts`; the preview's narration,
 // `player/narration.ts`) reach media only through it: time is read from it,
 // a seek is done once the frame at that time is shown, play and pause are
 // effects. `Media` owns what is the host's rule: what a refused play means

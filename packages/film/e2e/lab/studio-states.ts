@@ -10,6 +10,7 @@ import {
   type FakeRoute,
   type Viewport,
   openPlayer,
+  openAsk,
   openReview,
   tokensCss,
 } from '../../src/lab/fixtures/harness.ts';
@@ -166,6 +167,16 @@ export const review =
   (viewport: Viewport) =>
     Effect.gen(function* () {
       const { page } = yield* openReview(studioRoutes, { href, viewport });
+      for (const selector of ready) yield* waitFor(page, selector);
+      return page;
+    });
+
+/** The ask page at `href` (an ask's, or a page of asks'), once each of `ready` shows. */
+export const asked =
+  (href: string, ...ready: ReadonlyArray<string>) =>
+  (viewport: Viewport) =>
+    Effect.gen(function* () {
+      const { page } = yield* openAsk(studioRoutes, { href, viewport });
       for (const selector of ready) yield* waitFor(page, selector);
       return page;
     });
@@ -339,7 +350,7 @@ export const STATES: ByPlace<State, AtRest> = {
   ask: [
     {
       name: "an agent's ask, at its first step: a choice of three",
-      open: review(pageHref.ask(STUDIO_ASK), ASK_READY),
+      open: asked(pageHref.ask(STUDIO_ASK), ASK_READY),
       disclose: AT_REST,
       // An ask that names a film is a film's view: its switcher names the film and its Studio
       // link leads into it (taste-1 T2, where am I).
@@ -351,7 +362,7 @@ export const STATES: ByPlace<State, AtRest> = {
   askPage: [
     {
       name: 'a page of three asks: the first answered and folded, two still asking',
-      open: review(pageHref.askPage(STUDIO_PAGE), PAGE_READY),
+      open: asked(pageHref.askPage(STUDIO_PAGE), PAGE_READY),
       disclose: AT_REST,
       // The shell's, the page's head and count, the answered ask's one line, then each ask still
       // asking: its head, why, choice and Send (measured 26 on a phone, 27 on a laptop).

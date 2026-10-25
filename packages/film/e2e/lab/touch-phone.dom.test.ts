@@ -27,6 +27,7 @@ import {
   PHONE,
   byPlace,
   isAt,
+  asked,
   review,
   player,
   PRODUCTION_READY,
@@ -88,8 +89,8 @@ describe('every page fits a phone, 390 × 844 (G8)', () => {
     production: [
       ['a Production', review(pageHref.production(STUDIO_PRODUCTION), PRODUCTION_READY)],
     ],
-    ask: [['an ask', review(pageHref.ask(STUDIO_ASK), ASK_READY)]],
-    askPage: [['a page of asks', review(pageHref.askPage(STUDIO_PAGE), PAGE_READY)]],
+    ask: [['an ask', asked(pageHref.ask(STUDIO_ASK), ASK_READY)]],
+    askPage: [['a page of asks', asked(pageHref.askPage(STUDIO_PAGE), PAGE_READY)]],
     draft: [['a series draft', review(pageHref.draft(STUDIO_SERIES, STUDIO_DRAFT), DRAFT_READY)]],
     draftBeat: [
       [

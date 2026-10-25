@@ -310,10 +310,11 @@ const scriptAsset = (entry: string, name: string): Effect.Effect<Asset> =>
  * them (on a loaded runner the first cases spent 1-2 s waiting on them).
  */
 // oxlint-disable-next-line effect/noAsyncFunction -- the module's own load waits for its setup, so no case's timeout counts it
-const [reviewScript, playerScript, tokens, playerCss] = await Effect.runPromise(
+const [reviewScript, askScript, playerScript, tokens, playerCss] = await Effect.runPromise(
   Effect.all(
     [
       scriptAsset('review-page.ts', 'review.js'),
+      scriptAsset('ask-page.ts', 'ask.js'),
       scriptAsset('player-page.ts', 'player.js'),
       FileSystem.FileSystem.use((fs) =>
         fs.readFileString(`${import.meta.dir}/../../player/tokens.css`),
@@ -322,7 +323,7 @@ const [reviewScript, playerScript, tokens, playerCss] = await Effect.runPromise(
         fs.readFileString(`${import.meta.dir}/../../player/player.css`),
       ).pipe(Effect.orDie, Effect.provide(BunServices.layer)),
     ],
-    { concurrency: 4 },
+    { concurrency: 5 },
   ),
 );
 
@@ -763,8 +764,44 @@ export const openReview = Effect.fn('lab.fixture.review')(function* (
   return open;
 });
 
+/** What the ask page's material reads when no case says otherwise: a video's bytes, its tone. */
+const askDefaults: ReadonlyArray<FakeRoute> = [
+  route('GET', /^\/api\/review\/(files|phone)\/[^?]*\.mp4/, () => TONE),
+];
+
+/**
+ * Open the ask page (`fixtures/ask-page.ts`, the real `mountAsk`) at `href`
+ * (an ask's, or a page of asks'), served on every ask place as the lab
+ * serves it, with `routes` answering its requests by their whole path
+ * (`/api/asks/<id>/page`, `/api/review/files/…`): what none answers is a
+ * 404. The browser plays media without a gesture, its clock is the test's,
+ * and the tab goes back to the pool with the scope.
+ */
+export const openAsk = Effect.fn('lab.fixture.ask')(function* (
+  routes: ReadonlyArray<FakeRoute>,
+  at: ReviewAt & { readonly href: string },
+) {
+  const script = askScript;
+  const asked: Array<Asked> = [];
+  const page = yield* openTab({
+    ...(at.viewport ?? DESK),
+    microphone: false,
+    init: [CLOCK_SCRIPT],
+    assets: [script],
+    serve: fakeServer(
+      servedAs('ask', respond(reviewPage(script, Option.fromUndefinedOr(at.build)), 'text/html')),
+      '',
+      [...routes, ...askDefaults],
+      asked,
+    ),
+  });
+  yield* page.goto(at.href);
+  yield* page.waitFor('.rv-main');
+  const open: OpenPage = { page, asked, errors: page.errors };
+  return open;
+});
 /** A page the tests serve rendered on the server. */
-export type ServedName = 'review' | 'player';
+export type ServedName = 'review' | 'player' | 'ask';
 
 /**
  * A page as the tests serve it rendered: its server entry, bundled as the
@@ -794,6 +831,14 @@ const SERVED: Readonly<Record<ServedName, ServedPage>> = {
     prefix: '',
     defaults: reviewDefaults,
     home: '/',
+  },
+  ask: {
+    render: Effect.runSync(Effect.cached(served('../ask/server.tsx', 'askRender'))),
+    script: Effect.runSync(Effect.cached(scriptAsset('ask-hydrated-page.ts', 'ask-hydrated.js'))),
+    html: (script, build) => reviewPage(script, build),
+    prefix: '',
+    defaults: askDefaults,
+    home: pageHref.askPage('a0'),
   },
   player: {
     render: Effect.runSync(Effect.cached(served('../film-studio/server.tsx', 'studioRender'))),

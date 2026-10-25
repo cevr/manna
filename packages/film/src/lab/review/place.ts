@@ -17,7 +17,7 @@ import type { Destination } from '../../command/go.ts';
 import type { ReviewIndex } from '../../core/review.ts';
 import { onTheMs } from '../../core/time.ts';
 import { folderTitle } from './format.ts';
-import { type ViewEvent, ViewState, otherOf, viewNameOf } from './machine.ts';
+import { type ViewEvent, ViewState, otherOf, viewNameOf } from '../ask/sync-machine.ts';
 
 export type ReviewPlace = Data.TaggedEnum<{
   Home: {};

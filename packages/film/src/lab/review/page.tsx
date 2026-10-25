@@ -22,7 +22,7 @@ import { ProductionPage, useHistories } from './production.tsx';
 import { AsksPage } from '../ask/page.tsx';
 import { DraftPage } from './draft.tsx';
 import { COMMENTS_CSS } from './comments-style.ts';
-import { REVIEW_CSS } from './style.ts';
+import { PAGE_CSS } from '../ask/style.ts';
 import { type SeriesList, pageAt } from '../../core/api.ts';
 import type { Host } from '../../browser/host.ts';
 import type { Hub } from '../../command/hub.ts';
@@ -223,7 +223,7 @@ const ReviewPage = (props: ReviewWith) => (
 export const REVIEW_PAGE = {
   bodyClass: 'rv',
   rootClass: 'rv-root',
-  style: `${SHELL_CSS}${REVIEW_CSS}${COMMENTS_CSS}${COMMAND_CSS}`,
+  style: `${SHELL_CSS}${PAGE_CSS}${COMMENTS_CSS}${COMMAND_CSS}`,
 };
 
 /**

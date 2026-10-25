@@ -1,7 +1,6 @@
-// The review's players, shared by its pages (a Set, Choices and a sheet's
-// lone render): the synced player's transport row, the one video that
-// plays on a clock of its own, and the ref that joins a media element to a
-// player's driver.
+// The lab's players: the one video that plays on a clock of its own (an
+// ask's video), the synced player's transport row, the ref that joins a
+// media element to a player's driver, and the frame rate its clock counts.
 
 import { useAtomSet, useAtomValue } from '@manna/atom-solid';
 import { Match, Option } from 'effect';
@@ -17,8 +16,11 @@ import {
   onSettled,
   untrack,
 } from 'solid-js';
-import type { ReviewFile } from '../../core/review.ts';
-import { clock, timecode } from '../../core/time.ts';
+import type { ReviewDuration, ReviewFile } from '../../core/review.ts';
+import * as AsyncResult from 'effect/reactivity/AsyncResult';
+import * as Atom from 'effect/reactivity/Atom';
+import type { LabFailure } from '../api.ts';
+import { FILM_FPS, clock, timecode } from '../../core/time.ts';
 import { type Playable, playableOf } from '../../browser/media.ts';
 import { rateCommands, rateId, rateText, rateTitle } from '../../player/transport.ts';
 import { Actor } from '../actor.tsx';
@@ -26,7 +28,7 @@ import { hubKeys } from '../command/changes.ts';
 import { CommandChip } from '../command/command-chip.tsx';
 import { HearIcon, PlayIcon, useShellTime } from '../page-shell.tsx';
 import { pressed } from '../pressed.ts';
-import { useClockRate, useReview } from './context.tsx';
+import { useAskRoot } from './root.tsx';
 import {
   Rate,
   SyncEvent,
@@ -39,7 +41,7 @@ import {
   runningOf,
   spawnSync,
   syncAt,
-} from './machine.ts';
+} from './sync-machine.ts';
 import { type SyncDriver, makeSync } from './sync.ts';
 
 /**
@@ -79,7 +81,7 @@ export const Transport = (props: {
   readonly send: (event: SyncEvent) => void;
 }) => {
   const { sync } = props;
-  const { meta } = useReview();
+  const { meta } = useAskRoot();
   const keys = hubKeys(meta.hub);
   // The header's timecode is this transport's clock, at its rate.
   useShellTime(
@@ -276,7 +278,7 @@ export const PlayedAlone = (
     readonly quiet?: boolean;
   }>,
 ) => {
-  const { meta } = useReview();
+  const { meta } = useAskRoot();
   const [retried, setRetried] = createSignal<Option.Option<Try>>(Option.none());
   // The length at rest is the browser's measure, which the server's render has not: a video
   // whose metadata came before the page's script would draw it during hydration, over markup
@@ -403,5 +405,36 @@ export const PlayedAlone = (
         );
       }}
     </Actor>
+  );
+};
+
+/** No video to time, as a page-only read is (`timedHere`): the same kind of atom on either side. */
+const untimed = Atom.make(AsyncResult.initial<ReviewDuration, LabFailure>()).pipe(
+  Atom.withServerValue(() => AsyncResult.initial<ReviewDuration, LabFailure>()),
+);
+
+/**
+ * Tell a clock (`send`) the frame rate of its video (`video`, none when it
+ * has none): the rate the server reads from the video's own packets
+ * (`ReviewDuration.fps`, as measured), once it answers; the film rate (`FILM_FPS`) while the answer is pending, or when
+ * the video names none. Read in the page only (`timedHere`): nothing the
+ * server renders counts frames past the clock's start, so its render never
+ * waits on it.
+ */
+export const useClockRate = (
+  video: Accessor<Option.Option<Pick<ReviewFile, 'ref' | 'mtime'>>>,
+  send: (event: SyncEvent) => void,
+) => {
+  const { meta } = useAskRoot();
+  const timed = useAtomValue(() =>
+    Option.match(video(), { onNone: () => untimed, onSome: meta.timedHere }),
+  );
+  createEffect(
+    () =>
+      Option.getOrElse(
+        Option.flatMap(AsyncResult.value(timed()), (t) => t.fps),
+        () => FILM_FPS,
+      ),
+    (fps) => send(SyncEvent.Timed({ fps })),
   );
 };

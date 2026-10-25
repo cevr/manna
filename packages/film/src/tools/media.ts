@@ -106,7 +106,7 @@ export interface MediaService {
  * `keyEvery` seconds at the video's own frame rate (its first frame's
  * length), so a seek decodes a second of frames at most: the review's player
  * puts a video that drifts from its clock back on it by a seek
- * (`lab/review/sync.ts`), which must land before the clock has moved on
+ * (`lab/ask/sync.ts`), which must land before the clock has moved on
  * again. `recipe` counts the changes to how the copy is made in code (the
  * size rule, the rate and key-frame sums): a change to any of them bumps it.
  */

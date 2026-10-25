@@ -55,6 +55,7 @@ export const appFolderWith = (own: Readonly<Record<string, string>>) =>
       yield* fs.makeDirectory(path.join(making, folder), { recursive: true });
     const files = {
       'review.html': html('review', './src/p.ts'),
+      'ask.html': html('ask', './src/p.ts'),
       'sub/player.html': html('player', '../src/play.ts'),
       'index.html': html('render', './src/render.ts'),
       'src/p.ts': "import { shared } from '../lib/shared.ts';\nconsole.log('first', shared);\n",
@@ -77,6 +78,7 @@ export const appFolderWith = (own: Readonly<Record<string, string>>) =>
       pages: {
         review: path.join(dir, 'review.html'),
         player: path.join(dir, 'sub', 'player.html'),
+        ask: path.join(dir, 'ask.html'),
         render: path.join(dir, 'index.html'),
       },
       servers: { review: path.join(dir, 'src', 'review.server.tsx') },
@@ -232,6 +234,7 @@ export const filmsInMemory = Effect.gen(function* () {
     pages: {
       review: '/app/review.html',
       player: '/app/player.html',
+      ask: '/app/ask.html',
       render: '/app/index.html',
     },
     servers: {},

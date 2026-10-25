@@ -1,7 +1,7 @@
 // A transport's rates as commands (`command/command.ts`): the rate chip
 // lists them, K plays at 1× again, and J and L step a rate slower or faster
 // (an editor's shuttle keys). The review's player registers them with its
-// page's hub (`lab/review/player.tsx`), so the page's keys, ⌘K and the `?`
+// page's hub (`lab/ask/player.tsx`), so the page's keys, ⌘K and the `?`
 // sheet read them as they read the page's own.
 
 import { Option } from 'effect';

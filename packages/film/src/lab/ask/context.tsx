@@ -27,7 +27,7 @@ import { type KeptJson, keptJson } from '../../browser/storage.ts';
 import { TabStore } from '../../browser/storage-browser.ts';
 import { type AskRecord, type Question, questionsOf, type Section } from '../../core/ask.ts';
 import { Actor } from '../actor.tsx';
-import { useReview } from '../review/context.tsx';
+import { useAskRoot } from './root.tsx';
 import {
   type AskPageActor,
   AskPageEvent,
@@ -200,7 +200,7 @@ export const Provider = (
     readonly moved: () => void;
   }>,
 ) => {
-  const { meta } = useReview();
+  const { meta } = useAskRoot();
   // The ask as the page's read had it, taken once as the actor starts: later reads are the machine's own.
   return (
     <Actor

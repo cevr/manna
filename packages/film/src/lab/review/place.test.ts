@@ -7,7 +7,7 @@ import { Place } from '@manna/url-state';
 import { Equal, Option, Schema } from 'effect';
 import { Places, pageMove } from '../../core/api.ts';
 import { ReviewIndex } from '../../core/review.ts';
-import { ViewEvent, ViewState } from './machine.ts';
+import { ViewEvent, ViewState } from '../ask/sync-machine.ts';
 import {
   ReviewPlace,
   destinationsOf,

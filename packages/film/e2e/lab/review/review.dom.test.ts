@@ -21,7 +21,7 @@ import { ReviewDuration } from '../../../src/core/review.ts';
 import { Media } from '../../../src/tools/media.ts';
 import { ratedVideo } from '../../../src/lab/fixtures/rated-video.ts';
 import { tone } from '../../../src/lab/fixtures/tone.ts';
-import { spreadMoments } from '../../../src/lab/review/machine.ts';
+import { spreadMoments } from '../../../src/lab/ask/sync-machine.ts';
 import {
   type FakeRoute,
   type Json,

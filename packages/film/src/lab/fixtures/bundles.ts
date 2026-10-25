@@ -53,6 +53,8 @@ const classicScript: BunPlugin = {
 export const ENTRIES = [
   'review-page.ts',
   'review-hydrated-page.ts',
+  'ask-page.ts',
+  'ask-hydrated-page.ts',
   'player-page.ts',
   'player-hydrated-page.ts',
   'render-page.ts',
@@ -66,6 +68,7 @@ export const ENTRIES = [
  */
 const DEVELOPMENT: ReadonlySet<string> = new Set([
   'review-hydrated-page.ts',
+  'ask-hydrated-page.ts',
   'player-hydrated-page.ts',
 ]);
 

@@ -1,4 +1,4 @@
-// An agent's ask (`/asks/<id>`) on a phone, one page, over the toy's ask (a
+// An agent's ask (`/asks/<id>`, the ask page) on a phone, one page, over the toy's ask (a
 // choice of three takes; the slow one asks why): the choice of the slow one
 // brings its why section onto the same page, whose free text keeps every
 // keystroke, and one Send sends both sections, the end showing every
@@ -42,7 +42,7 @@ import {
   json,
   later,
   madeBy,
-  openReview,
+  openAsk,
   refused,
   route,
   told,
@@ -162,7 +162,7 @@ describe("an agent's ask on a phone", () => {
           }),
           ...studioRoutes,
         ];
-        const { page, errors } = yield* openReview(routes, {
+        const { page, errors } = yield* openAsk(routes, {
           href: pageHref.ask(STUDIO_ASK),
           viewport: PHONE,
         });
@@ -194,7 +194,7 @@ describe("an agent's ask on a phone", () => {
     () =>
       Effect.gen(function* () {
         const { film: _film, ...noFilm } = askRecordWith() as Record<string, Json>;
-        const { page, errors } = yield* openReview(
+        const { page, errors } = yield* openAsk(
           [
             route('GET', new RegExp(`^/api/asks/${STUDIO_ASK}$`), () => json(noFilm)),
             ...studioRoutes,
@@ -218,7 +218,7 @@ describe("an agent's ask on a phone", () => {
           route('POST', ANSWER, () => json(done)),
           ...studioRoutes,
         ];
-        const { page, errors } = yield* openReview(routes, {
+        const { page, errors } = yield* openAsk(routes, {
           href: pageHref.ask(STUDIO_ASK),
           viewport: PHONE,
         });
@@ -256,7 +256,7 @@ describe("an agent's ask on a phone", () => {
           }),
           ...studioRoutes,
         ];
-        const { page, errors } = yield* openReview(routes, {
+        const { page, errors } = yield* openAsk(routes, {
           href: pageHref.ask(STUDIO_ASK),
           viewport: PHONE,
         });
@@ -297,7 +297,7 @@ describe("an agent's ask on a phone", () => {
           }),
           ...studioRoutes,
         ];
-        const { page } = yield* openReview(routes, {
+        const { page } = yield* openAsk(routes, {
           href: pageHref.ask(STUDIO_ASK),
           viewport: PHONE,
         });
@@ -322,7 +322,7 @@ describe("an agent's ask on a phone", () => {
           }),
           ...studioRoutes,
         ];
-        const { page, errors } = yield* openReview(routes, {
+        const { page, errors } = yield* openAsk(routes, {
           href: pageHref.ask(STUDIO_ASK),
           viewport: PHONE,
         });
@@ -382,7 +382,7 @@ describe("an agent's ask on a phone", () => {
           }),
           ...studioRoutes,
         ];
-        const { page, errors } = yield* openReview(routes, {
+        const { page, errors } = yield* openAsk(routes, {
           href: pageHref.ask(SCRIPT_ASK),
           viewport: PHONE,
         });
@@ -438,7 +438,7 @@ describe("an agent's ask on a phone", () => {
           }),
           ...studioRoutes,
         ];
-        const { page, errors } = yield* openReview(routes, {
+        const { page, errors } = yield* openAsk(routes, {
           href: pageHref.ask(SCRIPT_ASK),
           viewport: PHONE,
         });
@@ -500,7 +500,7 @@ describe("an agent's ask on a phone", () => {
           }),
           ...studioRoutes,
         ];
-        const { page, errors } = yield* openReview(routes, {
+        const { page, errors } = yield* openAsk(routes, {
           href: pageHref.ask(SCRIPT_ASK),
           viewport: PHONE,
         });
@@ -569,7 +569,7 @@ describe("an agent's ask on a phone", () => {
           }),
           ...studioRoutes,
         ];
-        const { page, errors } = yield* openReview(routes, {
+        const { page, errors } = yield* openAsk(routes, {
           href: pageHref.ask(SCRIPT_ASK),
           viewport: PHONE,
         });
@@ -618,7 +618,7 @@ describe("an agent's ask on a phone", () => {
           }),
           ...studioRoutes,
         ];
-        const { page, errors } = yield* openReview(routes, {
+        const { page, errors } = yield* openAsk(routes, {
           href: pageHref.ask(SCRIPT_ASK),
           viewport: PHONE,
         });
@@ -650,7 +650,7 @@ describe("an agent's ask on a phone", () => {
           ...guidedRoutes,
           ...studioRoutes,
         ];
-        const { page, errors } = yield* openReview(routes, {
+        const { page, errors } = yield* openAsk(routes, {
           href: pageHref.ask(STUDIO_GUIDED),
           viewport: PHONE,
         });
@@ -808,7 +808,7 @@ describe("an agent's ask on a phone", () => {
     "on a laptop the script's words start on the column's edge with the band's, and the dock ends on the window's bottom",
     () =>
       Effect.gen(function* () {
-        const { page, errors } = yield* openReview([...guidedRoutes, ...studioRoutes], {
+        const { page, errors } = yield* openAsk([...guidedRoutes, ...studioRoutes], {
           href: pageHref.ask(STUDIO_GUIDED),
           viewport: DESK,
         });
@@ -856,7 +856,7 @@ describe("an agent's ask on a phone", () => {
           { length: 60 },
           (_, i) => `Paragraph ${i + 1}: the turn lands after the breath, and the page waits.`,
         ).join('\n\n');
-        const { page, errors } = yield* openReview(
+        const { page, errors } = yield* openAsk(
           [
             route('GET', /^\/api\/review\/files\/out\/toy\/notes\.md/, () =>
               textAnswer(`# Notes\n\n${long}\n`, 200),
@@ -943,7 +943,7 @@ describe("an agent's ask on a phone", () => {
     'a Board still opens full size on an ask, its place in the link, and Escape or a tap closes it',
     () =>
       Effect.gen(function* () {
-        const { page, errors } = yield* openReview([...guidedRoutes, ...studioRoutes], {
+        const { page, errors } = yield* openAsk([...guidedRoutes, ...studioRoutes], {
           href: pageHref.ask(STUDIO_GUIDED),
           viewport: PHONE,
         });
@@ -980,7 +980,7 @@ describe("an agent's ask on a phone", () => {
         const tall = route('GET', /^\/api\/films\/toy\/board\/files\/open\.breath\.1\.png$/, () =>
           file(STILL_1080),
         );
-        const { page, errors } = yield* openReview([tall, ...guidedRoutes, ...studioRoutes], {
+        const { page, errors } = yield* openAsk([tall, ...guidedRoutes, ...studioRoutes], {
           href: pageHref.ask(STUDIO_GUIDED),
           viewport: DESK,
         });
@@ -1024,7 +1024,7 @@ describe('a page of asks', () => {
       `on a ${width}: the asks in the order made under one count, the answered one folded, the first asking in view`,
       () =>
         Effect.gen(function* () {
-          const { page, errors } = yield* openReview(studioRoutes, {
+          const { page, errors } = yield* openAsk(studioRoutes, {
             href: pageHref.askPage(STUDIO_PAGE),
             viewport,
           });
@@ -1075,7 +1075,7 @@ describe('a page of asks', () => {
           ),
           ...studioRoutes,
         ];
-        const { page, errors } = yield* openReview(routes, {
+        const { page, errors } = yield* openAsk(routes, {
           href: pageHref.askPage(STUDIO_PAGE),
           viewport: PHONE,
         });
@@ -1101,7 +1101,7 @@ describe('a page of asks', () => {
     () =>
       Effect.gen(function* () {
         // A short window, so the last ask starts below what the page shows at its top.
-        const { page, errors } = yield* openReview(studioRoutes, {
+        const { page, errors } = yield* openAsk(studioRoutes, {
           href: pageHref.ask(STUDIO_PAGE_PACE),
           viewport: { ...PHONE, height: 560 },
         });

@@ -12,7 +12,7 @@ import { manualFrames } from '../../browser/fixtures/frames.ts';
 import { fakeMedia } from '../../browser/fixtures/media.ts';
 import { hostOf } from '../../browser/host.ts';
 import { Media } from '../../browser/media.ts';
-import { SyncEvent, SyncState, UNKNOWN_END } from './machine.ts';
+import { SyncEvent, SyncState, UNKNOWN_END } from './sync-machine.ts';
 import { makeSync } from './sync.ts';
 
 /** Let the forked plays settle: their answers heard, and what came of them told. */

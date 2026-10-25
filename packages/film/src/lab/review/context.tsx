@@ -59,7 +59,7 @@ import {
   folderAt,
 } from '../../core/review.ts';
 import type { PhoneCopy } from '../../core/served.ts';
-import { copyAwaited } from './phone.ts';
+import { copyAwaited } from '../ask/phone.ts';
 import { Viewport } from '../../browser/viewport.ts';
 import { plainClick } from '../../browser/pointer.ts';
 import { PHONE } from '../viewport.ts';
@@ -93,7 +93,6 @@ import {
   pageHref,
   reviewFileUrl,
 } from '../../core/api.ts';
-import { FILM_FPS } from '../../core/time.ts';
 import {
   type SyncActor,
   SyncEvent,
@@ -109,7 +108,7 @@ import {
   spreadMoments,
   stepView,
   viewNameOf,
-} from './machine.ts';
+} from '../ask/sync-machine.ts';
 import {
   ReviewPlace,
   causeOf,
@@ -121,9 +120,12 @@ import {
   shownQuery,
   viewOf,
 } from './place.ts';
-import { PlayerKey, type SyncDriver, playerCommands, makeSync, playerEvent } from './sync.ts';
+import { PlayerKey, type SyncDriver, playerCommands, makeSync, playerEvent } from '../ask/sync.ts';
 import { type Asks, newestAsked } from '../../core/asked.ts';
 import { useIndexOwner } from './index-owner.ts';
+import { type AskApi, askApiLayer } from '../ask/api.ts';
+import { useClockRate } from '../ask/player.tsx';
+import { AskRootContext, type AskRootValue } from '../ask/root.tsx';
 import { hearVersionCommands } from './hear.ts';
 
 type Loaded<A> = Atom.Atom<AsyncResult.AsyncResult<A, LabFailure>>;
@@ -311,7 +313,7 @@ interface ReviewMeta {
    * made or has failed.
    */
   readonly phoneCopy: (ref: string) => Atom.Atom<AsyncResult.AsyncResult<PhoneCopy, unknown>>;
-  readonly runtime: Atom.AtomRuntime<ReviewApi | OptionsApi | BrowserServices>;
+  readonly runtime: Atom.AtomRuntime<ReviewApi | AskApi | OptionsApi | BrowserServices>;
   /** The page's one client of the lab's API: what a read of its own (a feed) goes through. */
   readonly client: Layer.Layer<LabClient | HttpClient.HttpClient>;
   /** The page's host (`browser/host.ts`): what the page's own effects run with. */
@@ -430,7 +432,7 @@ export const Root = (
   // One client of the lab's API for the page: the review's and the choices'
   // routes both go through it.
   const runtime = Atom.runtime(
-    Layer.mergeAll(reviewApiLayer, optionsApiLayer, hostLayer(props.host)).pipe(
+    Layer.mergeAll(reviewApiLayer, askApiLayer, optionsApiLayer, hostLayer(props.host)).pipe(
       Layer.provide(props.client),
     ),
   );
@@ -715,7 +717,28 @@ export const Root = (
     registerWhile(props.hub, () =>
       goToCommands(destinationsOf(AsyncResult.value(index()), value.actions.go)),
     );
-    return <ReviewContext value={value}>{inner.children}</ReviewContext>;
+    // The ask page's parts this page draws (a lone video, a document, a still) read the page through the ask's root.
+    const askRoot: AskRootValue = {
+      state: { place: () => Option.none(), ask, index, series, quality },
+      actions: { quality: keepQuality, indexChanged: indexOwner.again },
+      meta: {
+        askPage: askPageOf,
+        board: value.meta.board,
+        script: value.meta.script,
+        draft: value.meta.draft,
+        text,
+        timedHere,
+        phoneCopy: phoneOf,
+        runtime,
+        host: props.host,
+        hub: props.hub,
+      },
+    };
+    return (
+      <AskRootContext value={askRoot}>
+        <ReviewContext value={value}>{inner.children}</ReviewContext>
+      </AskRootContext>
+    );
   };
 
   // The registry's URL atoms read and write through the host's own `UrlState`
@@ -929,37 +952,6 @@ const SetContext = createContext<SetContextValue>();
 export const useSet = (): SetContextValue => useContext(SetContext);
 
 const unmeasured = Atom.make(AsyncResult.initial<ReviewDuration, LabFailure>());
-
-/** No video to time, as a page-only read is (`timedHere`): the same kind of atom on either side. */
-const untimed = unmeasured.pipe(
-  Atom.withServerValue(() => AsyncResult.initial<ReviewDuration, LabFailure>()),
-);
-
-/**
- * Tell a clock (`send`) the frame rate of its video (`video`, none when it
- * has none): the rate the server reads from the video's own packets
- * (`ReviewDuration.fps`, as measured), once it answers; the film rate (`FILM_FPS`) while the answer is pending, or when
- * the video names none. Read in the page only (`timedHere`): nothing the
- * server renders counts frames past the clock's start, so its render never
- * waits on it.
- */
-export const useClockRate = (
-  video: Accessor<Option.Option<Written>>,
-  send: (event: SyncEvent) => void,
-) => {
-  const { meta } = useReview();
-  const timed = useAtomValue(() =>
-    Option.match(video(), { onNone: () => untimed, onSome: meta.timedHere }),
-  );
-  createEffect(
-    () =>
-      Option.getOrElse(
-        Option.flatMap(AsyncResult.value(timed()), (t) => t.fps),
-        () => FILM_FPS,
-      ),
-    (fps) => send(SyncEvent.Timed({ fps })),
-  );
-};
 
 /**
  * Tell a set's driver the frame rate of each version's video (`timed`), its

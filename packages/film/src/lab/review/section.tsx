@@ -11,12 +11,9 @@
 // and the comment box, said over the set's route.
 
 import { useAtomValue } from '@manna/atom-solid';
-import type { PhoneCopy } from '../../core/served.ts';
 import { unfiledOf } from '../../core/production.ts';
 import { counted } from '../../core/words.ts';
-import { Dialog } from '@manna/ui/dialog';
 import { Toggle } from '@manna/ui/toggle';
-import * as UrlAtom from '@manna/url-state/atom';
 import { ToggleGroup } from '@manna/ui/toggle-group';
 import { For, type JSX, Show } from '@solidjs/web';
 import { Array as Arr, Effect, Exit, Match, Option, Scope, Struct } from 'effect';
@@ -65,8 +62,6 @@ import {
 } from '../../core/api.ts';
 import type { LabFailure } from '../api.ts';
 import { pressed } from '../pressed.ts';
-import { useSheetDismissal } from '../sheet.tsx';
-import { addressOn } from '../../browser/host.ts';
 import { StateBand } from './state-band.tsx';
 import { filmCounts, filmLength } from '../scenes/marks.ts';
 import { ReviewApi } from './api.ts';
@@ -83,7 +78,6 @@ import {
   approvalText,
   captionsFor,
   countsText,
-  failedText,
   folderTitle,
   isFilmsFolder,
   isMarkdown,
@@ -105,12 +99,13 @@ import {
   modesOf,
   playsIn,
   viewNameOf,
-} from './machine.ts';
+} from '../ask/sync-machine.ts';
 import { Loaded, useWrite, writeStatus } from './loaded.tsx';
-import { escapeHtml, markdownHtml } from './markdown.ts';
-import { ReviewPlace as Place, stillIn, withStill } from './place.ts';
+import { markdownHtml } from '../ask/markdown.ts';
+import { Markdown, ProxyPending, Zoom } from '../ask/material.tsx';
+import { ReviewPlace as Place } from './place.ts';
 import { ProductionCards, producedFilms, useHistories } from './production.tsx';
-import { HearToggle, PlayedAlone, Transport, useClockMedia } from './player.tsx';
+import { HearToggle, PlayedAlone, Transport, useClockMedia } from '../ask/player.tsx';
 import { Selection } from '../../command/selection.ts';
 import { Target, type TargetElementProps } from '../command/context-menu.tsx';
 import { hubKeys, registerWhile } from '../command/changes.ts';
@@ -436,94 +431,6 @@ const Doc = (props: { readonly doc: ReviewFile }) => {
 };
 
 /**
- * A markdown file's text, shown as HTML (every character of it escaped
- * first): the file as the index names it, so a file written again is read again.
- */
-export const Markdown = (props: { readonly file: ReviewFile }) => {
-  const { meta } = useReview();
-  const read = useAtomValue(() => meta.text(props.file));
-  return (
-    <div
-      class="rv-note"
-      innerHTML={Option.getOrElse(Option.map(AsyncResult.value(read()), markdownHtml), () =>
-        Match.value(AsyncResult.isFailure(read())).pipe(
-          Match.when(true, () => `<p class="rv-hint">${escapeHtml(failedText(read()))}</p>`),
-          Match.orElse(() => '<p class="rv-hint">loading…</p>'),
-        ),
-      )}
-    />
-  );
-};
-
-/** An image the lightbox shows: its source, and the caption under it (what its card no longer says). */
-interface Shown {
-  readonly src: string;
-  readonly caption: string;
-}
-
-/**
- * A still that opens full size in the lightbox, with its caption (`shown`):
- * a button, so a tap, a click, Enter and Space all open it, and its name
- * says what opens. The URL keeps it open (`?still=` its `name`), so a link
- * opens it, and Back closes it as every sheet's opening is. The lightbox is
- * the kit's dialog over every other layer of the page (the header and the
- * dock too), titled by its caption: focus moves into it and back to the
- * still, and Escape or a tap anywhere closes it, by the sheets' one rule
- * (`useSheetDismissal`), adding no entry.
- */
-export const Zoom = (props: {
-  readonly still: string;
-  readonly alt: string;
-  readonly shown: Shown;
-  readonly name: string;
-}) => {
-  const { meta } = useReview();
-  const href = useAtomValue(() => UrlAtom.href);
-  const address = addressOn(meta.host);
-  const dismissal = useSheetDismissal(meta.host, (at, name) =>
-    Option.exists(stillIn(at), (open) => open === name),
-  );
-  const open = () => Option.exists(stillIn(href()), (name) => name === props.name);
-  const show = () =>
-    Option.map(withStill(untrack(href), props.name), (to) => {
-      dismissal.opening(props.name);
-      address.go(to);
-    });
-  const close = () => dismissal.dismiss(() => withStill(untrack(href), ''));
-  return (
-    <>
-      <button
-        type="button"
-        class="rv-zoom"
-        aria-label={`Open ${props.shown.caption}`}
-        onClick={show}
-      >
-        <img class="rv-media" loading="lazy" src={props.still} alt={props.alt} />
-      </button>
-      <Dialog.Root
-        open={open()}
-        onOpenChange={(next: boolean) => {
-          if (!next) close();
-        }}
-      >
-        <Dialog.Portal>
-          <Dialog.Backdrop class="rv-lightbox-backdrop" />
-          <Dialog.Popup
-            class="rv-lightbox"
-            data-role="lightbox"
-            data-still={props.name}
-            onClick={close}
-          >
-            <img src={props.shown.src} alt={props.shown.caption} />
-            <Dialog.Title class="rv-lightbox-caption">{props.shown.caption}</Dialog.Title>
-          </Dialog.Popup>
-        </Dialog.Portal>
-      </Dialog.Root>
-    </>
-  );
-};
-
-/**
  * A video in no set: its poster, its captions and its name, played on a
  * clock of its own (`PlayedAlone`). Its file (Open the file, Copy link,
  * Info: its size, age and proxy) is its long-press menu's.
@@ -685,82 +592,6 @@ export const FolderPage = (props: { readonly folder: string }) => (
 
 // ---------------------------------------------------------------------------
 // A set
-
-/** What a video with no phone copy to play says across its picture: on its way, or failed. */
-const COPY_SAID = {
-  pending: 'Phone copy on its way',
-  ready: 'Phone copy on its way',
-  failed: 'The phone copy could not be made',
-} as const;
-
-/** What a video with no phone copy to play says across its picture, as its copy stands (`copy`). */
-const CopySaid = (props: { readonly copy: PhoneCopy }) => (
-  <span class="rv-pending-hint" data-copy={props.copy}>
-    {COPY_SAID[props.copy]}
-  </span>
-);
-
-/**
- * In a video's place while it has no phone copy to play, on Proxy: its
- * still with what is happening across its foot (so the box says so before
- * the still has come), on its way or failed, and the way to play the
- * Original instead. The original is never streamed in its place unasked.
- * While the index has the copy on its way the page asks after it every few
- * seconds (`CopyAwaited`) and says what it hears; once the copy is made or
- * has failed, the page reads the index again, and the video plays in its
- * place, or says it failed (on a Set, Choices and an ask alike).
- */
-export const ProxyPending = (props: { readonly video: ReviewVideo }) => {
-  const { actions } = useReview();
-  const failed = () => props.video.phone === 'failed';
-  // Its still, while it can be drawn: one that cannot (a video no frame is read from) leaves the
-  // box empty at its 16:9, never a broken image. Kept by the still's address, so another video's
-  // is drawn afresh.
-  const still = () => reviewFrameUrl(props.video.ref, Option.none(), POSTER_W);
-  const [undrawn, setUndrawn] = createSignal(Option.none<string>(), { ownedWrite: true });
-  const drawn = () => !Option.contains(undrawn(), still());
-  return (
-    <div class="rv-pending" data-proxy={STATE_PROXY[`${failed()}`]}>
-      <div class="rv-pending-picture">
-        <Show when={drawn()} fallback={<div class="rv-media" aria-hidden="true" />}>
-          <img
-            class="rv-media"
-            loading="lazy"
-            alt=""
-            src={still()}
-            onError={(e) => setUndrawn(Option.some(e.currentTarget.getAttribute('src') ?? ''))}
-          />
-        </Show>
-        <Show when={!failed()} fallback={<CopySaid copy="failed" />}>
-          <CopyAwaited video={props.video} />
-        </Show>
-      </div>
-      <p class="rv-row">
-        <button type="button" class="sh-btn" onClick={() => actions.quality('full')}>
-          Play the original ({sizeText(props.video.size)})
-        </button>
-      </p>
-    </div>
-  );
-};
-
-/** A video's `data-proxy`, by whether its phone copy failed. */
-const STATE_PROXY = { true: 'failed', false: 'pending' } as const;
-
-/**
- * Asks after video `video`'s phone copy while it is on its way, and says
- * what it hears; once the copy is made or has failed, the index is read
- * again (it says so too, or the video plays).
- */
-const CopyAwaited = (props: { readonly video: ReviewVideo }) => {
-  const { actions, meta } = useReview();
-  const asked = useAtomValue(() => meta.phoneCopy(props.video.ref));
-  const copy = () => Option.getOrElse(AsyncResult.value(asked()), (): PhoneCopy => 'pending');
-  createEffect(copy, (now) => {
-    if (now !== 'pending') actions.indexChanged();
-  });
-  return <CopySaid copy={copy()} />;
-};
 
 const MODE_TITLES = {
   all: 'All',

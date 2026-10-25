@@ -1,5 +1,5 @@
-// A page of asks (`/asks/page/<page>`, and `/asks/<ask>` at one of them; the
-// review's): the asks an agent made in sequence, in the order made, each an
+// The ask page (`/asks/<ask>` and `/asks/page/<page>`, served by `film lab`):
+// the asks an agent made in sequence, in the order made, each an
 // agent's guided review for the owner, composed from the lab's primitives
 // and the material it is about, as the agent's machine says: its head, the
 // index of its sections, every section the owner's answers reach on one
@@ -7,13 +7,17 @@
 // ask is that ask's page alone; a page of more is headed by how many it
 // holds and how many are answered, each ask a part under it, folded to a
 // line of its answers once answered, and the page takes the owner to the
-// first still asking. The page is only which parts show and where; the
-// review reads the page (`askPage`), each ask's provider holds its ask
-// (`context.tsx`), the parts draw it (`parts.tsx`, `material.tsx`).
+// first still asking. The page is only which parts show and where; its root
+// reads the page (`root.tsx`), each ask's provider holds its ask
+// (`context.tsx`), the parts draw it (`parts.tsx`, `material.tsx`). The
+// browser mounts it (`mount.tsx`) and the lab renders it on the server first
+// (`server.tsx`), over the same components.
 
 import { useAtomRefresh, useAtomValue } from '@manna/atom-solid';
-import { For, Show } from '@solidjs/web';
-import { Match, Option } from 'effect';
+import { parseHref } from '@manna/url-state';
+import { For, type JSX, Show } from '@solidjs/web';
+import { Effect, type Layer, Match, Option } from 'effect';
+import type { HttpClient } from 'effect/http';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';
 import { type Accessor, createMemo } from 'solid-js';
 import {
@@ -23,12 +27,25 @@ import {
   pageCount,
   pageCountText,
 } from '../../core/ask.ts';
-import { useReview } from '../review/context.tsx';
-import { failureText } from '../review/format.ts';
-
+import { pageAt } from '../../core/api.ts';
+import { type Host, addressOn } from '../../browser/host.ts';
+import { TabStore } from '../../browser/storage-browser.ts';
+import { type Hub, makeHub } from '../../command/hub.ts';
+import type { LabClient } from '../api.ts';
+import { CommandMenu } from '../command/command-menu.tsx';
+import { TargetMenu } from '../command/context-menu.tsx';
+import { KeysSheet } from '../command/keys-sheet.tsx';
+import { Receipts } from '../command/receipts.tsx';
+import { COMMAND_CSS } from '../command/style.ts';
+import { PageShell } from '../page-shell.tsx';
+import { SHELL_CSS } from '../page-shell-style.ts';
 import { PlaceStyle } from '../place-style.tsx';
 import { PHONE, WIDE } from '../viewport.ts';
+import { failureText } from './format.ts';
 import * as Ask from './parts.tsx';
+import type { AskPlace } from './place.ts';
+import { AskRoot, useAskRoot } from './root.tsx';
+import { PAGE_CSS } from './style.ts';
 
 /**
  * An ask's look, read only through the studio's tokens: its own place's, so
@@ -197,7 +214,7 @@ const ManyAsks = (props: {
   readonly at: Option.Option<string>;
   readonly moved: () => void;
 }) => {
-  const { state } = useReview();
+  const { state } = useAskRoot();
   // Each part is drawn once by its ask's id: a read again of the page keeps every part (its draft, its send) where it is.
   const ids = createMemo(() => props.page().asks.map((a) => a.id));
   const recordOf = (id: string) =>
@@ -243,7 +260,7 @@ const ManyAsks = (props: {
  * the page again, so its count moves and an ask that joined it shows.
  */
 export const AsksPage = (props: { readonly of: string; readonly at: Option.Option<string> }) => {
-  const { meta } = useReview();
+  const { meta } = useAskRoot();
   const read = useAtomValue(() => meta.askPage(props.of));
   const again = useAtomRefresh(() => meta.askPage(props.of));
   const page = createMemo(() => AsyncResult.value(read()));
@@ -294,3 +311,108 @@ export const AsksPage = (props: { readonly of: string; readonly at: Option.Optio
     </>
   );
 };
+
+/** What the shell's crumb names a place by: its page's title once read, else what it is. */
+const crumbOf = (place: AskPlace, shown: Option.Option<string>): string =>
+  Option.getOrElse(shown, () =>
+    Match.value(place).pipe(
+      Match.tagsExhaustive({
+        Ask: () => 'ask',
+        AskPage: () => 'asks',
+      }),
+    ),
+  );
+
+/**
+ * The ask page in the lab's shell: its crumb the page of asks' title, the
+ * film its asks are of; a move to another ask stays on the page, any other
+ * page loads.
+ */
+const Shell = (props: { readonly children: JSX.Element }) => {
+  const { state, meta } = useAskRoot();
+  const address = addressOn(meta.host);
+  const film = () => Option.flatMap(state.ask(), (a) => a.film);
+  const crumb = () =>
+    Option.map(state.place(), (place) =>
+      crumbOf(
+        place,
+        Option.map(state.ask(), (a) => a.title),
+      ),
+    );
+  return (
+    <PageShell
+      film={film}
+      lastFilm={false}
+      crumb={crumb}
+      films={() => []}
+      hub={meta.hub}
+      host={meta.host}
+      follow={(href) => {
+        if (!Option.contains(pageAt(parseHref(href).pathname), 'ask')) return false;
+        address.go(href);
+        window.scrollTo(0, 0);
+        return true;
+      }}
+    >
+      {props.children}
+    </PageShell>
+  );
+};
+
+/** The page of asks the place names: taken to its ask, or to the first still asking. */
+const Body = () => {
+  const { state } = useAskRoot();
+  return (
+    <main class="rv-main">
+      <Show when={Option.getOrUndefined(state.place())} keyed>
+        {(place: AskPlace) =>
+          Match.value(place).pipe(
+            Match.tagsExhaustive({
+              Ask: (p) => <AsksPage of={p.ask} at={Option.some(p.ask)} />,
+              AskPage: (p) => <AsksPage of={p.page} at={Option.none()} />,
+            }),
+          )
+        }
+      </Show>
+    </main>
+  );
+};
+
+/** What the ask page is rendered with: its host, its commands and its client of the lab. */
+interface AskWith {
+  readonly host: Host;
+  readonly hub: Hub;
+  readonly client: Layer.Layer<LabClient | HttpClient.HttpClient>;
+}
+
+/** The ask page: its shell and its asks in the context menu, with ⌘K, the `?` sheet and the receipts over them. */
+const AskApp = (props: AskWith) => (
+  <AskRoot host={props.host} hub={props.hub} client={props.client}>
+    <TargetMenu hub={props.hub}>
+      <Shell>
+        <Body />
+      </Shell>
+      <CommandMenu hub={props.hub} />
+      <KeysSheet hub={props.hub} />
+      <Receipts hub={props.hub} tab={TabStore} scope="ask" />
+    </TargetMenu>
+  </AskRoot>
+);
+
+/** The ask page as the browser and the server both render it (`page-server.tsx`, `page-client.tsx`). */
+export const ASK_PAGE = {
+  bodyClass: 'rv',
+  rootClass: 'rv-root',
+  style: `${SHELL_CSS}${PAGE_CSS}${COMMAND_CSS}`,
+};
+
+/**
+ * The ask page over `host`, reading the lab through `client`: its commands
+ * (`command/hub.ts`, their keys not yet heard) and its app, for the browser
+ * to mount or hydrate and the server to render.
+ */
+export const askOn = (host: Host, client: Layer.Layer<LabClient | HttpClient.HttpClient>) =>
+  Effect.map(makeHub('ask', addressOn(host).href), (hub) => ({
+    hub,
+    app: () => <AskApp host={host} hub={hub} client={client} />,
+  })).pipe(Effect.provideContext(host));

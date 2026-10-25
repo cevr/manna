@@ -1245,8 +1245,8 @@ export const prefixesOf = <Id extends string, Groups extends HttpApiGroup.Constr
 // rewritten to their place by `legacyPlace`, on the server as a redirect and
 // on a page already loaded as a replace.
 
-/** The studio's pages, each one HTML entry: its review and its player (the film's studio). */
-export type PageName = 'review' | 'player';
+/** The lab's pages, each one HTML entry: its review, its player (the film's studio) and its asks. */
+export type PageName = 'review' | 'player' | 'ask';
 
 /**
  * The pages the lab serves, each one HTML entry: the studio's, and the
@@ -1517,8 +1517,8 @@ const PAGES: ReadonlyArray<readonly [Place.Place<unknown>, AppPage]> = [
   [Places.set, 'review'],
   [Places.export, 'render'],
   [Places.studio, 'player'],
-  [Places.ask, 'review'],
-  [Places.askPage, 'review'],
+  [Places.ask, 'ask'],
+  [Places.askPage, 'ask'],
   [Places.draft, 'review'],
   [Places.draftBeat, 'review'],
 ];

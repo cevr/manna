@@ -40,7 +40,7 @@ import {
 import type { Input } from '../../browser/keys.ts';
 import { focusFor } from '../focus.ts';
 import { pressed } from '../pressed.ts';
-import { useReview } from '../review/context.tsx';
+import { useAskRoot } from './root.tsx';
 import { useAsk } from './context.tsx';
 import { AudioPart, BoardPart, DocumentPart, ScriptPart, VideoPart } from './material.tsx';
 
@@ -183,7 +183,7 @@ const indexTitle = (step: Section['step'], n: number): string =>
  */
 export const Index = () => {
   const { state } = useAsk();
-  const { meta } = useReview();
+  const { meta } = useAskRoot();
   // Each entry is drawn once by its section's name, as the sections are: a keystroke redraws none.
   const names = createMemo(() => state.sections().map((s) => s.name));
   const titleOfStep = (name: string, n: number) =>
@@ -446,7 +446,7 @@ const answeredText = (questions: ReadonlyArray<{ readonly answered: boolean }>):
  */
 export const Submit = () => {
   const { state, actions } = useAsk();
-  const { meta } = useReview();
+  const { meta } = useAskRoot();
   const sending = () => state.phase() === 'Sending' || state.phase() === 'Rereading';
   // Only an open page sends: one send is out at a time, and a gone ask takes none.
   const shut = () => state.phase() !== 'Open';

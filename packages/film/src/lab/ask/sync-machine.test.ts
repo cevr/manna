@@ -29,7 +29,7 @@ import {
   syncMachine,
   viewMachine,
   wrapped,
-} from './machine.ts';
+} from './sync-machine.ts';
 import { FILM_FPS } from '../../core/time.ts';
 import { PlayerKey, drifted, playerEvent } from './sync.ts';
 

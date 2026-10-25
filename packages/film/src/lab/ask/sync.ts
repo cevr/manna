@@ -32,7 +32,7 @@ import {
   UNKNOWN_END,
   movingOf,
   runningOf,
-} from './machine.ts';
+} from './sync-machine.ts';
 
 /** How far a video may drift from the clock before it is put back on it, in seconds. */
 const DRIFT_S = 0.2;
