@@ -618,6 +618,33 @@ its span. Every file a render leaves (the clip, its share copy, captions,
 chapters, stills, a sheet) is written beside itself and renamed into place
 once whole, so a failed or interrupted render leaves the last good file.
 
+**Board render.** `film render <film> --board` (with `--act`, `--scene`,
+`--stills` or `--contact` as any render) draws the film as its Board
+(`core/board.ts`) through the same pages, encoder, join and catalogue,
+recorded as variant `board` unless `--variant` names another. Each frame
+shows the shot the animatic holds there (`shotsOf`, `core/animatic.ts`),
+on the film's clock: a beat's takes, or the estimate a beat with none is
+laid out on, so a film with no takes renders silent. `core/board-render.ts`
+decides the frame, pure: a picture panel is its kept try covering the
+1920 × 1080 frame from its middle, pushing in 6 % or panning 4 % of the
+frame's width (held 4 % larger) over the span it is seen, which of the
+three picked by a hash of the panel's id (`motionOf`), so a panel moves the
+same way on every render; a cut dissolves over 0.5 s centred on it, at most
+half of the hold on either side (`boardFrameAt`). A card or verse panel is
+set by the film's card code (`paintText`); a beat with no panel, a picture
+panel with no try and a full-screen card the film's scenes declare
+(`Film.cardAt`) are the film's own frame (its storyboard card, its card).
+Nothing else moves, and no captions are burnt in (the `.vtt` beside it
+keeps the line). `--review` (variant `board-review`) burns in, small in the
+bottom-left corner, the film time, the beat and the panel with its try
+(`0:41.3 · name · name.sets · try 5`, `burnIn`), so a frame of the owner's
+screen capture names where he is. The page (`player/board.ts`) reads the
+board and every kept try from its server (`boardFile`,
+`/films/<film>/board.json`, `/films/<film>/board/<file>`) and decodes them
+before the first frame; one it cannot read fails the render
+(`BoardUnreadable`). A short has its own page: `--board` with `--short` is
+a `FlagsConflict`, as is `--review` without `--board`.
+
 **The catalogue** (`core/catalogue.ts`, kept by `tools/catalogue.ts`) records
 each render's address, variant, kind (video, stills, contact, look-book),
 settings (scale, captions), files and **stamp**: the git commit (none outside
