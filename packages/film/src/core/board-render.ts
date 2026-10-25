@@ -202,6 +202,38 @@ export const boardFrameAt = (
   });
 };
 
+/**
+ * A shot as the frames of a span read it: the shot, where it is seen from
+ * and gone by (its dissolves in and out included), which time its motion
+ * and its alpha across each dissolve, and the motion itself.
+ */
+export interface ShotSeen {
+  readonly shot: Shot;
+  readonly seen: number;
+  readonly gone: number;
+  readonly motion: Motion;
+}
+
+/**
+ * The shots of `shots` (in play order, over a film `duration` long) a Board
+ * frame between film seconds `from` and `to` draws: each whose seen span
+ * meets `[from, to)`, the first held from the film's start. What a frame
+ * there paints of the Board (`boardFrameAt`) is a function of these and its
+ * time alone, so a key over them changes when such a frame would.
+ */
+export const shotsSeen = (
+  shots: ReadonlyArray<Shot>,
+  duration: number,
+  from: number,
+  to: number,
+): ReadonlyArray<ShotSeen> =>
+  shots.flatMap((shot, i) => {
+    const seen = fromOf(shots, i, duration) - halfAt(shots, i, duration);
+    const gone = fromOf(shots, i + 1, duration) + halfAt(shots, i + 1, duration);
+    const meets = (i === 0 || seen < to) && gone > from;
+    return Arr.filter([{ shot, seen, gone, motion: motionOf(shot) }], () => meets);
+  });
+
 /** `board`'s shots on `placed`'s clock: the animatic's rule (`shotsOf`) over the beats as the studio's Board lane times them (`clockBeat`, `timedBeat`). */
 export const boardShots = (placed: ReadonlyArray<Placed>, board: BoardFile): ReadonlyArray<Shot> =>
   shotsOf(

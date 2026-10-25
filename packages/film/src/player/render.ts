@@ -147,6 +147,7 @@ const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): Expo
       duration: film.duration,
       frames: frameAtOrAfter(film.duration, film.fps),
       audio: film.audio,
+      agent: navigator.userAgent,
     },
     frame: async (i, type) => {
       await draw(i);
