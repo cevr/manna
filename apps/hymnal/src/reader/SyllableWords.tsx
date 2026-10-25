@@ -17,6 +17,11 @@
  * line is sung (`follow/`), it is `selected`, its syllables take the muted
  * colour and the sung syllable the accent: a change of colour only, so
  * nothing moves.
+ *
+ * A syllable takes no touch, so a tap in the target of the chord over it
+ * (`chordSlop`, 44 points tall) opens that chord wherever the syllable's
+ * box lies under it; a drag that starts there still scrolls or turns the
+ * page.
  */
 
 import { Option } from 'effect';
@@ -85,7 +90,8 @@ export function SyllableLine({
               return (
                 <View key={k} style={styles.box}>
                   {Option.match(over, { onNone: () => [], onSome: (draw) => draw(box, place) })}
-                  <View style={styles.syllable}>
+                  {/* The syllable takes no touch: a tap in the chord's slop over it opens the chord. */}
+                  <View style={styles.syllable} pointerEvents="none">
                     <Text
                       testID={`syllable-${place}`}
                       style={[style, text.words, syllableStyle(s)]}

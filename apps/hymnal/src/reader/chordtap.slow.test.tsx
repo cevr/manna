@@ -300,6 +300,31 @@ describe('the chord’s tap target', () => {
     expect(short).toEqual([]);
   });
 
+  it('takes a press in its slop under the chord, over the syllable: the syllable takes no touch', () => {
+    freshRouter();
+    using app = mount(<HymnPage hymn={Option.getOrThrow(hymnAt('3'))} reader={moved(3, 0, 0)} />);
+    const chord = firstChord(app.host);
+    expect(chord.id).toBe('chord-1-1-1');
+    const syllable = Option.getOrThrow(find('[data-testid="syllable-1-1-1"]'));
+    // The syllable's box holds the chord over its syllable; nothing between the box and the syllable takes a touch.
+    const box = Option.getOrThrow(
+      Option.fromNullishOr(
+        app.host.querySelector<HTMLElement>(`[data-testid="${chord.id}"]`)?.parentElement,
+      ),
+    );
+    expect(box.contains(syllable)).toBe(true);
+    const between = [] as Array<HTMLElement>;
+    for (let at = syllable; at !== box; at = at.parentElement ?? box) between.push(at);
+    expect(between.some((element) => getComputedStyle(element).pointerEvents === 'none')).toBe(
+      true,
+    );
+    // The chord's target reaches 12 points under its 20-point row at the default size: a press there, over
+    // the syllable, lands on the chord and opens its sheet.
+    expect(chordSlop(20).bottom).toBe(12);
+    press(`[data-testid="${chord.id}"]`);
+    expect(pushed()).toHaveLength(1);
+  });
+
   it('adds no padding or margin to the chord’s row: the button draws as a bare one', () => {
     const bare = renderToStaticMarkup(<Pressable testID="x" />);
     const classOf = (html: string) => /class="([^"]*)"/.exec(html)?.[1] ?? '';
