@@ -35,11 +35,36 @@ const COMMENT = /^\s*(\/\/|\/?\*).*$/;
  */
 const READS = 4;
 
+/**
+ * Every file under `root`, its installed packages left unlisted: a recursive
+ * listing follows their links into the store, about 13,000 entries.
+ */
+const filesIn = (root: string) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const top = yield* fs.readDirectory(`${repo}/${root}`);
+    const listed = yield* Effect.forEach(
+      top.filter((entry) => entry !== 'node_modules'),
+      (entry) =>
+        Effect.flatMap(fs.stat(`${repo}/${root}/${entry}`), (info) =>
+          Bool.match(info.type === 'Directory', {
+            onFalse: () => Effect.succeed([entry]),
+            onTrue: () =>
+              Effect.map(
+                fs.readDirectory(`${repo}/${root}/${entry}`, { recursive: true }),
+                (files) => files.map((file) => `${entry}/${file}`),
+              ),
+          }),
+        ),
+    );
+    return listed.flat();
+  });
+
 /** Every `file:line` under `root` naming a CLI as a string. */
 const commandsIn = (root: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
-    const files = yield* fs.readDirectory(`${repo}/${root}`, { recursive: true });
+    const files = yield* filesIn(root);
     const sources = files.filter(
       (file) => SOURCE.test(file) && !SKIPPED.test(file) && `${root}/${file}` !== SELF,
     );
