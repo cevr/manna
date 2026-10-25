@@ -14,14 +14,41 @@
  */
 import { BunServices } from '@effect/platform-bun';
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, FileSystem, Option, Order, Path } from 'effect';
+import { Effect, FileSystem, Option, Order, Path, Schema } from 'effect';
 
-import { readRecord, unapprovedBuilt } from './approval.ts';
-import { type Format, formatOf } from './build-walk.ts';
+import { Approved, RECORD, readRecord, unapprovedBuilt } from './approval.ts';
+import { type Format, formatOf, sha256 } from './build-walk.ts';
 import viteConfig from '../vite.config.ts';
 import { OUTSIDE } from './served.ts';
 
 const APP = `${import.meta.dir}/..`;
+
+/**
+ * A scratch app holding the record, its stills hashed as they stand, and the
+ * images outside the rule: the walk is tested against a record that holds the
+ * stills on disk, so a still the owner has yet to approve does not turn it
+ * red (`./field-still.slow.test.ts` holds the stills to his approval).
+ */
+const appAsItStands = Effect.gen(function* () {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const app = yield* fs.makeTempDirectoryScoped({ prefix: 'app-' });
+  const record = yield* readRecord(APP);
+  const hashed = yield* Effect.forEach(Object.keys(record.stills), (still) =>
+    Effect.map(fs.readFile(path.join(APP, still)), (bytes) => [still, sha256(bytes)] as const),
+  );
+  for (const { image } of OUTSIDE) {
+    yield* fs.makeDirectory(path.dirname(path.join(app, image)), { recursive: true });
+    yield* fs.copyFile(path.join(APP, image), path.join(app, image));
+  }
+  yield* fs.makeDirectory(path.dirname(path.join(app, RECORD)), { recursive: true });
+  const json = yield* Schema.encodeEffect(Schema.fromJsonString(Approved))({
+    ...record,
+    stills: Object.fromEntries(hashed),
+  });
+  yield* fs.writeFileString(path.join(app, RECORD), json);
+  return app;
+});
 
 /** A seeded draw in [0, 1). */
 const draws = (seed: number) => {
@@ -324,7 +351,8 @@ describe('the build walk', () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const { stills } = yield* readRecord(APP);
+      const app = yield* appAsItStands;
+      const { stills } = yield* readRecord(app);
       const dist = yield* fs.makeTempDirectoryScoped({ prefix: 'dist-' });
       const next = draws(47);
       const put = (file: string, bytes: Uint8Array) =>
@@ -352,7 +380,7 @@ describe('the build walk', () => {
         yield* put(file, given);
         expected.push({ image: file, format: 'unknown' });
       }
-      const refused = yield* unapprovedBuilt(APP, dist);
+      const refused = yield* unapprovedBuilt(app, dist);
       expect(refused).toEqual(
         expected.toSorted(Order.mapInput(Order.String, ({ image }) => image)),
       );
