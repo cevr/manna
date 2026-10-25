@@ -17,7 +17,7 @@
  * measured against a shot of that region alone (a changed pseudo-element, or
  * a page that grew or shrank, is measured whole). The pages are measured seven
  * at a time. Build first (`bun run build`); the run fails when any text falls
- * short. The gate runs it after the build.
+ * short. The site's `test:slow` runs it after the build.
  */
 import { BunRuntime } from '@effect/platform-bun';
 import { chromium, type Browser, type Page } from '@playwright/test';

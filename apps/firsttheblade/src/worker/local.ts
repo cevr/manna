@@ -8,9 +8,10 @@
  * `bun run preview` (`./preview.ts`) runs it on a fixed port; the contrast and
  * computed checks run it on a port the system picks, for as long as they
  * measure. It gives what runs under it the server (`HttpServer`, for its
- * address) and the platform's services (`BunServices`).
+ * address) and the platform's services (`BunServices`, which the Bun server
+ * layer provides).
  */
-import { BunHttpServer, BunServices } from '@effect/platform-bun';
+import { BunHttpServer } from '@effect/platform-bun';
 import { Effect, Layer } from 'effect';
 import { HttpServer, HttpServerRequest } from 'effect/http';
 
@@ -32,5 +33,4 @@ export const layerLocal = (listen: { readonly port: number; readonly hostname?: 
     Layer.provide(layerDirectory(DIST)),
     Layer.provide(layerPreview('tmp/outbox')),
     Layer.provideMerge(BunHttpServer.layer(listen)),
-    Layer.provideMerge(BunServices.layer),
   );
