@@ -12,6 +12,11 @@
  * once and gives a `wall` cue. Each detent the glide passes gives a `detent`
  * cue, in order. Every function here is a worklet, so the dial runs it on
  * the UI thread as the finger lets go.
+ *
+ * A wrapping dial's place runs on without bound, however far it is turned;
+ * it draws its stops on a ring (`ringOf`, `slotOf`), each stop placed on
+ * every frame within half a ring of the notch, so every slot of its window
+ * shows a key at any place.
  */
 
 import type { Cue, DialName } from '~/feel/cue';
@@ -121,6 +126,33 @@ export const glide = (dial: Detents, place: number, speed: number): Rest => {
   const cues: Array<Cue> = crossed.map((n) => ({ _tag: 'detent', dial: dial.name, at: n }));
   if (wall) cues.push({ _tag: 'wall' });
   return { at: rest * DETENT, index: ownDetent(dial, rest), frames: frames + 1, crossed, cues };
+};
+
+/**
+ * How long a wrapping dial's ring of drawn stops is, in points, for a
+ * window `width` points wide: whole turns of its detents, the fewest that
+ * reach past the window by a detent at each side, so a stop that wraps from
+ * one end of the ring to the other is never in view. A stopping dial draws
+ * no ring: 0.
+ */
+export const ringOf = (dial: Detents, width: number): number => {
+  'worklet';
+  if (!dial.wrap) return 0;
+  const turn = dial.count * DETENT;
+  return Math.max(1, Math.ceil((Math.max(width, 0) + 2 * DETENT) / turn)) * turn;
+};
+
+/**
+ * Where drawn stop `n` stands from the notch, in points, with the row at
+ * `place` (unbounded): on a ring of `ring` points, the copy of it within
+ * half a ring of the notch, so at any place the ring's stops stand side by
+ * side over the whole window, in order; off a ring (0), where the row puts it.
+ */
+export const slotOf = (n: number, place: number, ring: number): number => {
+  'worklet';
+  const x = n * DETENT - place;
+  if (ring <= 0) return x;
+  return x - ring * Math.floor((x + ring / 2) / ring);
 };
 
 /**

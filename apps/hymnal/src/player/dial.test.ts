@@ -18,6 +18,8 @@ import {
   MOST_FRAMES,
   ownDetent,
   passed,
+  ringOf,
+  slotOf,
 } from './dial';
 
 const dials: ReadonlyArray<readonly [string, Detents]> = [
@@ -189,4 +191,65 @@ it('wraps the key dial past its last key to its first', () => {
     [0, 1, 2, 3, 4, 5].slice(0, glide(keys, 11 * DETENT, 500).crossed.length),
   );
   expect(glide(keys, 11 * DETENT, 500).crossed[0]).toBe(0);
+});
+
+/**
+ * The ring a wrapping dial draws its stops on: over windows 10 to 1,200
+ * points wide and places from a million points below the row to a million
+ * above it (whole detents, halves and odd fractions), the slots of the
+ * ring's stops, laid from the notch at the window's middle, cover the window
+ * side by side, each key the one before it plus one.
+ */
+describe('the ring of a wrapping dial', () => {
+  const keys: Detents = { name: 'key', count: 12, wrap: true };
+  const widths = Array.from({ length: 120 }, (_, k) => (k + 1) * 10);
+  const places = [-1e6, -123_456.7, -1_248, -1_000, -52, -26, -0.4, 0, 0.4, 25.9, 26, 51.99]
+    .flatMap((p) => [p, -p, p + 12 * DETENT * 20])
+    .concat(Array.from({ length: 80 }, (_, k) => (k - 40) * 37.3));
+
+  it('covers every window at every place with its keys in order, a detent apart', () => {
+    const wrong: Array<string> = [];
+    for (const width of widths)
+      for (const place of places) {
+        const ring = ringOf(keys, width);
+        const slots = Array.from({ length: ring / DETENT }, (_, n) => ({
+          key: ownDetent(keys, n),
+          x: width / 2 - DETENT / 2 + slotOf(n, place, ring),
+        }))
+          .filter((s) => s.x + DETENT > 0 && s.x < width)
+          .sort((a, b) => a.x - b.x);
+        const holds =
+          (slots[0]?.x ?? 1) <= 1e-6 &&
+          (slots.at(-1)?.x ?? -DETENT) + DETENT >= width - 1e-6 &&
+          slots.every(
+            (s, k) =>
+              k === 0 ||
+              (Math.abs(s.x - (slots[k - 1]?.x ?? 0) - DETENT) < 1e-6 &&
+                s.key === ((slots[k - 1]?.key ?? 0) + 1) % 12),
+          );
+        if (!holds) wrong.push(`width ${width} place ${place}`);
+      }
+    expect(wrong.slice(0, 5)).toEqual([]);
+  });
+
+  it('draws whole turns, the fewest that reach a detent past each side of the window', () => {
+    for (const width of widths) {
+      const ring = ringOf(keys, width);
+      expect(ring % (12 * DETENT)).toBe(0);
+      expect(ring).toBeGreaterThanOrEqual(width + 2 * DETENT);
+      expect(ring - 12 * DETENT).toBeLessThan(width + 2 * DETENT);
+    }
+    expect(ringOf(keys, 390)).toBe(12 * DETENT);
+    expect(ringOf(keys, 1000)).toBe(24 * DETENT);
+  });
+
+  it('puts the stop at the place on the notch, and draws a stopping dial where its row puts it', () => {
+    for (const place of places) {
+      const ring = ringOf(keys, 390);
+      const n = ownDetent(keys, Math.round(place / DETENT));
+      expect(Math.abs(slotOf(n, place, ring))).toBeLessThanOrEqual(DETENT / 2 + 1e-6);
+    }
+    expect(ringOf({ name: 'capo', count: 12, wrap: false }, 390)).toBe(0);
+    expect(slotOf(5, 2 * DETENT, 0)).toBe(3 * DETENT);
+  });
 });

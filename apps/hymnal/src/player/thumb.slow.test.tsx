@@ -96,15 +96,24 @@ const turning = (first: number) => (reader: ChordReader) => (
   <Turning first={first} reader={reader} />
 );
 
-/** Where dial `testID`'s row is, in points along it, as its transform draws it. */
-const placeOfRow = (page: Page, testID: string) => {
-  const row = page.get(`[data-testid="${testID}-row"]`);
-  const shift = Option.fromNullishOr(
-    /translateX\((-?[\d.]+)px\)/.exec(getComputedStyle(row).transform)?.[1],
-  ).pipe(Option.map(Number.parseFloat), Option.getOrThrow);
-  // The row is shifted half its window less half a detent, less its place; no layout runs here, so the window is 0 wide.
-  return -DETENT / 2 - shift;
-};
+/**
+ * The stops dial `testID` draws at its notch, as their transforms place
+ * them: each stop's own detent, its slot's distance from the notch under
+ * half a detent.
+ */
+const atNotch = (page: Page, testID: string) =>
+  page
+    .all(`[data-testid^="${testID}-stop-"]`)
+    .filter(
+      (stop) =>
+        Math.abs(
+          Number.parseFloat(
+            /translateX\((-?[\d.e+-]+)px\)/.exec(getComputedStyle(stop).transform)?.[1] ?? 'NaN',
+          ),
+        ) <
+        DETENT / 2,
+    )
+    .map((stop) => Number(stop.getAttribute('data-testid')?.slice(`${testID}-stop-`.length)));
 
 const clearParams = () => {
   for (const key of Object.keys(params)) delete params[key];
@@ -624,7 +633,7 @@ describe('a dial stopped by a touch', () => {
       expect(valueOf(page, 'Capo')).toEqual(Option.some('Capo 6, G shapes'));
       expect(device.get('move.100')).toBe('{"transpose":0,"capo":6}');
       // The row rests with fret 6 at the notch, not between two frets.
-      expect(placeOfRow(page, 'dial-capo')).toBe(6 * DETENT);
+      expect(atNotch(page, 'dial-capo')).toEqual([6]);
     }),
   );
 
@@ -654,7 +663,7 @@ describe('a dial stopped by a touch', () => {
           act(() => landAnimations());
           expect(valueOf(page, label)).toEqual(Option.some(said));
           // The row shows the value the dial holds, not the detent the touch stopped it nearest.
-          expect(placeOfRow(page, testID)).toBe(home * DETENT);
+          expect(atNotch(page, testID)).toEqual([home]);
         }),
     );
 });

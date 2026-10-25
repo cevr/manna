@@ -14,6 +14,11 @@
  * test reads where a spring started. Between `holdAnimations` and
  * `landAnimations` an animation waits, as one under way on a device, and
  * `cancelAnimation` stops it half way.
+ *
+ * A test that reads every frame steps the waiting timings instead
+ * (`stepAnimations`): each moves along its own duration and curve (the
+ * curves of `Easing` are Reanimated's own), a frame at a time, and lands at
+ * its end; `cancelAnimation` stops a stepped one where it stands.
  */
 
 import {
@@ -38,7 +43,22 @@ interface Animation<T> {
   readonly animation: Kind;
   readonly to: T;
   readonly done?: (finished: boolean) => void;
+  /** The config it was set with: a timing's duration and easing. */
+  readonly config?: unknown;
 }
+
+/** Reanimated's timing defaults: 300 ms, on a quadratic ease in and out. */
+const TIMING = 300;
+const curveOf = (config: unknown): ((t: number) => number) => {
+  if (typeof config === 'object' && config !== null && 'easing' in config)
+    if (typeof config.easing === 'function') return config.easing as (t: number) => number;
+  return Easing.inOut(Easing.quad);
+};
+const durationOf = (config: unknown): number => {
+  if (typeof config === 'object' && config !== null && 'duration' in config)
+    if (typeof config.duration === 'number') return config.duration;
+  return TIMING;
+};
 
 const isAnimation = <T,>(next: T | Animation<T>): next is Animation<T> =>
   typeof next === 'object' && next !== null && 'animation' in next;
@@ -54,7 +74,12 @@ export const animations: Array<{
 let held = false;
 const waiting = new Map<
   SharedValue<unknown>,
-  { readonly land: () => void; readonly stop: () => void }
+  {
+    readonly land: () => void;
+    readonly stop: () => void;
+    /** Moves it on by `ms`; whether it still runs after (a spring waits until landed). */
+    readonly step: (ms: number) => boolean;
+  }
 >();
 
 /** Animations set from now wait, as ones under way on a device. */
@@ -67,6 +92,17 @@ export const landAnimations = () => {
   held = false;
   for (const [, { land }] of [...waiting]) land();
   waiting.clear();
+};
+
+/**
+ * Every waiting timing moves on by `ms` (a frame, 16 ms, at most), as a
+ * device draws its next frame, and lands once its duration has passed. It
+ * gives whether a timing still runs after it; a spring waits until landed.
+ */
+export const stepAnimations = (ms = 16): boolean => {
+  let running = false;
+  for (const [, { step }] of [...waiting]) running = step(ms) || running;
+  return running;
 };
 
 export interface SharedValue<T> {
@@ -88,22 +124,37 @@ const shared = <T,>(initial: T): SharedValue<T> => {
     set: (next: T | Animation<T>) => {
       waiting.delete(box as SharedValue<unknown>);
       if (isAnimation(next)) {
-        animations.push({ kind: next.animation, from: now, to: next.to });
+        const from = now;
+        animations.push({ kind: next.animation, from, to: next.to });
         const land = () => {
           waiting.delete(box as SharedValue<unknown>);
           now = next.to;
           tell();
           next.done?.(true);
         };
+        // How long a stepped timing has run; 0 until a test steps it.
+        let ran = 0;
         if (held) {
           waiting.set(box as SharedValue<unknown>, {
             land,
-            // A stopped animation stops half way, and says it did not finish.
+            // A stopped animation stops half way, or where a step left it, and says it did not finish.
             stop: () => {
-              if (typeof now === 'number' && typeof next.to === 'number')
+              if (ran === 0 && typeof now === 'number' && typeof next.to === 'number')
                 now = (now + (next.to - now) / 2) as T;
               tell();
               next.done?.(false);
+            },
+            step: (ms) => {
+              if (next.animation !== 'timing') return false;
+              const duration = durationOf(next.config);
+              ran += ms;
+              if (ran >= duration || typeof from !== 'number' || typeof next.to !== 'number') {
+                land();
+                return false;
+              }
+              now = (from + (next.to - from) * curveOf(next.config)(ran / duration)) as T;
+              tell();
+              return true;
             },
           });
           return;
@@ -128,8 +179,8 @@ export const useSharedValue = <T,>(initial: T): SharedValue<T> => {
 
 const animate =
   (kind: Kind) =>
-  <T,>(to: T, _config?: unknown, done?: (finished: boolean) => void): T =>
-    ({ animation: kind, to, done }) as unknown as T;
+  <T,>(to: T, config?: unknown, done?: (finished: boolean) => void): T =>
+    ({ animation: kind, to, done, config }) as unknown as T;
 
 export const withSpring = animate('spring');
 export const withTiming = animate('timing');
@@ -194,16 +245,42 @@ export const useAnimatedReaction = <T,>(
   }, []);
 };
 
-const curve = (t: number) => t;
+type Curve = (t: number) => number;
+
+/** A cubic Bézier from (0, 0) to (1, 1) through (x1, y1) and (x2, y2), as CSS draws one: y at x, x found by halving. */
+const bezier = (x1: number, y1: number, x2: number, y2: number): Curve => {
+  const at = (a: number, b: number, s: number) =>
+    3 * a * s * (1 - s) ** 2 + 3 * b * s ** 2 * (1 - s) + s ** 3;
+  return (t) => {
+    let lo = 0;
+    let hi = 1;
+    for (let k = 0; k < 40; k += 1) {
+      const mid = (lo + hi) / 2;
+      if (at(x1, x2, mid) < t) lo = mid;
+      else hi = mid;
+    }
+    return at(y1, y2, (lo + hi) / 2);
+  };
+};
+
+/** Reanimated's curves, each from 0 at 0 to 1 at 1 (`exp`'s ends a thousandth off, as Reanimated's are). */
 export const Easing = {
-  linear: curve,
-  cubic: curve,
-  exp: curve,
-  quad: curve,
-  out: (_easing: unknown) => curve,
-  in: (_easing: unknown) => curve,
-  inOut: (_easing: unknown) => curve,
-  bezier: (..._points: ReadonlyArray<number>) => curve,
+  linear: (t: number) => t,
+  quad: (t: number) => t * t,
+  cubic: (t: number) => t * t * t,
+  exp: (t: number) => 2 ** (10 * (t - 1)),
+  in: (easing: Curve): Curve => easing,
+  out:
+    (easing: Curve): Curve =>
+    (t) =>
+      1 - easing(1 - t),
+  inOut:
+    (easing: Curve): Curve =>
+    (t) => {
+      if (t < 0.5) return easing(t * 2) / 2;
+      return 1 - easing((1 - t) * 2) / 2;
+    },
+  bezier,
 };
 
 /** A view that takes Reanimated's layout props and draws as a plain one. */

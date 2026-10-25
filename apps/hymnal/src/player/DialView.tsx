@@ -24,6 +24,11 @@
  * A double tap asks for a reset. VoiceOver reads the dial as adjustable:
  * a swipe up or down turns it one detent.
  *
+ * A wrapping row's stops stand on a ring (`ringOf`): each one is placed
+ * every frame, on the UI thread, at the copy of it nearest the notch
+ * (`slotOf`), so at any place, however far and fast the row is flung, every
+ * slot of the window shows a key, in order.
+ *
  * The name keeps one line at every text size, whole: its column is as wide
  * as the widest dial name (`WIDEST`) drawn at the text size showing, and
  * `TITLE` points at the least, so the notches of every dial line up and
@@ -69,7 +74,18 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { color, useAccent } from '~/color';
 import { type DialName, useCue } from '~/feel/cue';
 
-import { DETENT, detentAt, dragTo, FRAME, glide, ownDetent, passed, placeOf } from './dial';
+import {
+  DETENT,
+  detentAt,
+  dragTo,
+  FRAME,
+  glide,
+  ownDetent,
+  passed,
+  placeOf,
+  ringOf,
+  slotOf,
+} from './dial';
 
 export interface DialProps<A> {
   /** Which dial it is: its detents' cues name it (`~/feel/cue`). */
@@ -210,8 +226,6 @@ function Dial<A>(props: DialProps<A>) {
         'worklet';
         driven.value = false;
         if (finished && rest.cues.some((told) => told._tag === 'wall')) scheduleOnRN(wall);
-        // A wrapping row comes back to its first turn, so it never runs off its copies.
-        if (finished && detents.wrap) place.value = ownDetent(detents, detentAt(rest.at)) * DETENT;
       },
     );
   };
@@ -267,9 +281,6 @@ function Dial<A>(props: DialProps<A>) {
   });
   const gesture = useCompetingGestures(pan, twice);
 
-  const row = useAnimatedStyle(() => ({
-    transform: [{ translateX: width / 2 - DETENT / 2 - place.value }],
-  }));
   const notch = useAnimatedStyle(() => ({ transform: [{ scaleY: stretch.value }] }));
 
   const act = ({ nativeEvent }: AccessibilityActionEvent) => {
@@ -284,12 +295,12 @@ function Dial<A>(props: DialProps<A>) {
     );
   };
 
-  // A wrapping row draws two turns of copies each side of its own, so a glide never runs off them.
-  const copies = (wrap && 2) || 0;
-  const drawn = Array.from({ length: stops.length * (2 * copies + 1) }, (_, k) => {
-    const n = k - copies * stops.length;
-    return { n, stop: Arr.get(stops, ownDetent(detents, n)) };
-  });
+  // A wrapping row draws the whole turns of its ring once each; a stopping row, its stops.
+  const ring = ringOf(detents, width);
+  const drawn = Array.from({ length: Math.max(ring / DETENT, stops.length) }, (_, n) => ({
+    n,
+    stop: Arr.get(stops, ownDetent(detents, n)),
+  }));
 
   return (
     <GestureHandlerRootView style={styles.root}>
@@ -324,16 +335,27 @@ function Dial<A>(props: DialProps<A>) {
             style={styles.window}
             onLayout={(event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width)}
           >
-            <Animated.View testID={`${testID}-row`} pointerEvents="none" style={[styles.row, row]}>
+            <View
+              testID={`${testID}-row`}
+              pointerEvents="none"
+              style={[styles.row, { left: width / 2 - DETENT / 2 }]}
+            >
               {drawn.map(({ n, stop }) => (
-                <Stop key={n} n={n} place={place}>
+                <Stop
+                  key={n}
+                  n={n}
+                  own={ownDetent(detents, n)}
+                  place={place}
+                  ring={ring}
+                  testID={testID}
+                >
                   {Option.match(stop, {
                     onNone: () => [],
                     onSome: (shown) => drawStop(shown, ownDetent(detents, n) === index),
                   })}
                 </Stop>
               ))}
-            </Animated.View>
+            </View>
             <Animated.View
               pointerEvents="none"
               style={[styles.notch, { backgroundColor: accent }, notch]}
@@ -346,28 +368,37 @@ function Dial<A>(props: DialProps<A>) {
 }
 
 /**
- * Stop `n` in its detent, drawn by its distance `d` from the notch, in
- * detents (card J): scale `1 + 0.3·max(0, 1 − |d|)`, opacity
- * `0.2 + 0.8·max(0, 1 − |d|/3.6)`, worked out on the UI thread each frame.
+ * Drawn stop `n` in its slot (`slotOf`, on the row's ring), drawn by its
+ * distance `d` from the notch, in detents (card J): scale
+ * `1 + 0.3·max(0, 1 − |d|)`, opacity `0.2 + 0.8·max(0, 1 − |d|/3.6)`, all
+ * worked out on the UI thread each frame. Its test id names the stop it
+ * draws among the dial's own (`<dial>-stop-<own>`).
  */
 function Stop({
   n,
+  own,
   place,
+  ring,
+  testID,
   children,
 }: {
   readonly n: number;
+  readonly own: number;
   readonly place: SharedValue<number>;
+  readonly ring: number;
+  readonly testID: string;
   readonly children: ReactNode;
 }) {
   const drawn = useAnimatedStyle(() => {
-    const d = Math.abs(n - place.value / DETENT);
+    const x = slotOf(n, place.value, ring);
+    const d = Math.abs(x / DETENT);
     return {
       opacity: 0.2 + 0.8 * Math.max(0, 1 - d / FADE),
-      transform: [{ scale: 1 + 0.3 * Math.max(0, 1 - d) }],
+      transform: [{ translateX: x }, { scale: 1 + 0.3 * Math.max(0, 1 - d) }],
     };
   });
   return (
-    <Animated.View style={[styles.stop, { left: n * DETENT }, drawn]}>
+    <Animated.View testID={`${testID}-stop-${own}`} style={[styles.stop, drawn]}>
       <View style={styles.tick} />
       {children}
     </Animated.View>
