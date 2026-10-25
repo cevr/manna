@@ -7,7 +7,7 @@
 // footage copy by its content hint (`FOOTAGE_HINTS`, `core/footage.ts`),
 // and a film's by the quality a conversion asks for: a quantizer is a
 // render's share copy, a bitrate a review's phone copy (`SHARE_X264`,
-// `PHONE_ENCODE`). A film's two are level 4.1 (preset slow's reference
+// `media.ts` `PHONE_ENCODE`). A film's two are level 4.1 (preset slow's reference
 // frames would otherwise raise it to 5.0, which some phones refuse). x264
 // places every key frame by its own interval: NodeAV's encoder clears the
 // picture type a frame carries, so the key frames a conversion asks for
@@ -26,6 +26,7 @@ import {
   type FootageRecipe,
 } from '../core/footage.ts';
 import { FILM_FPS } from '../core/time.ts';
+import { PHONE_ENCODE } from './media.ts';
 
 /**
  * A share copy (a quantizer quality): x264's CRF at that value, preset slow,
@@ -36,34 +37,6 @@ const SHARE_X264 = {
   tune: 'grain',
   level: '4.1',
 };
-
-/**
- * A phone copy (a bitrate quality), everything it is made with: the review
- * names a copy by all of it (`media.ts` `PHONE_COPY`), so a copy made any
- * other way is never served. At most `height` lines high (a shorter video
- * keeps its size, `Media.phoneCopy`), made in the review's own process in
- * the background on `threads` threads, so the review answers while it
- * encodes: CRF 23 at preset medium, no tune, capped at the rate the
- * conversion asks over `bufferSeconds` of buffer (where the cap binds, x264
- * spreads the bits over every frame: each keeps its own picture, softer);
- * `Media.phoneCopy` asks under `rate` by as much as the buffer could add, so
- * even a short copy averages `rate` at most. A key frame comes every
- * `keyEvery` seconds at the video's own frame rate (its first frame's
- * length), so a seek decodes a second of frames at most: the review's player
- * puts a video that drifts from its clock back on it by a seek
- * (`lab/review/sync.ts`), which must land before the clock has moved on
- * again. `recipe` counts the changes to how the copy is made in code (the
- * size rule, the rate and key-frame sums): a change to any of them bumps it.
- */
-export const PHONE_ENCODE = {
-  recipe: 1,
-  height: 720,
-  rate: 8_000_000,
-  bufferSeconds: 2,
-  keyEvery: 1,
-  threads: 2,
-  x264: { preset: 'medium', level: '4.1', crf: 23 },
-} as const;
 
 /** Microseconds: the time base frames and packets carry. */
 const MICROS = 1_000_000;

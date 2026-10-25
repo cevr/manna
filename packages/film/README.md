@@ -345,7 +345,8 @@ otherwise, one OAuth call at a time (concurrent refreshes race and fail);
 and a video `render` asks a page which H.264 encoder it can encode the film's
 size with (`EncoderMissing` when none) before it draws a frame.
 
-Media files go through `Media` (`tools/media.ts`): mediabunny reads and writes
+Media files go through `Media` (`tools/media.ts`, its live layer
+`tools/media-live.ts`, loaded when the layer is built): mediabunny reads and writes
 the containers in-process, and MP3 decodes through mpg123 (WASM), gapless, so
 a take measures what it plays (`duration`). `join` writes a film: its H.264
 segments' packets copied in order (never re-encoded; segments encoded unlike
