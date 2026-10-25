@@ -26,6 +26,7 @@ describe('the Chrome a tool or test spawns', () => {
             files.filter((file) => /\.tsx?$/.test(file)).map((file) => `${folder}/${file}`),
             (file) =>
               Effect.map(fs.readFileString(`${PACKAGE}/${file}`), (text) => SPAWNS.test(text)),
+            { concurrency: 32 },
           ),
         ),
       );

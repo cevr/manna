@@ -37,16 +37,19 @@ const commandsIn = (root: string) =>
     const sources = files.filter(
       (file) => SOURCE.test(file) && !SKIPPED.test(file) && `${root}/${file}` !== SELF,
     );
-    const found = yield* Effect.forEach(sources, (file) =>
-      fs.readFileString(`${repo}/${root}/${file}`).pipe(
-        Effect.map((text) =>
-          text
-            .split('\n')
-            .map((line, index) => ({ code: line.replace(COMMENT, ''), at: index + 1 }))
-            .filter(({ code }) => COMMAND.test(code))
-            .map(({ at }) => `${root}/${file}:${at}`),
+    const found = yield* Effect.forEach(
+      sources,
+      (file) =>
+        fs.readFileString(`${repo}/${root}/${file}`).pipe(
+          Effect.map((text) =>
+            text
+              .split('\n')
+              .map((line, index) => ({ code: line.replace(COMMENT, ''), at: index + 1 }))
+              .filter(({ code }) => COMMAND.test(code))
+              .map(({ at }) => `${root}/${file}:${at}`),
+          ),
         ),
-      ),
+      { concurrency: 32 },
     );
     return found.flat();
   });

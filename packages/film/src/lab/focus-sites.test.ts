@@ -86,13 +86,18 @@ const focusSites = Effect.gen(function* () {
   const sources = (yield* fs.readDirectory(root, { recursive: true })).filter(
     (f) => /\.tsx?$/.test(f) && f !== HELPER && !/(^|\/)fixtures\/|\.test\.tsx?$/.test(f),
   );
-  const sites = yield* Effect.forEach(sources, (file) =>
-    Effect.map(fs.readFileString(path.join(root, file)), (source) => [
-      ...[...source.matchAll(FOCUS_CALL)].map(([, callee, first]) => `${file} ${callee}(${first}`),
-      ...[...source.matchAll(POPUP_FOCUS)].map(
-        ([, attr, first]) => `${file} ${attr}={() => ${first}`,
-      ),
-    ]),
+  const sites = yield* Effect.forEach(
+    sources,
+    (file) =>
+      Effect.map(fs.readFileString(path.join(root, file)), (source) => [
+        ...[...source.matchAll(FOCUS_CALL)].map(
+          ([, callee, first]) => `${file} ${callee}(${first}`,
+        ),
+        ...[...source.matchAll(POPUP_FOCUS)].map(
+          ([, attr, first]) => `${file} ${attr}={() => ${first}`,
+        ),
+      ]),
+    { concurrency: 32 },
   );
   return sites.flat().toSorted();
 });
