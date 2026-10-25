@@ -3365,7 +3365,7 @@ The form of an entry, each field on its own line:
 - **Source:** the owner's scrawl capture of 2026-10-22, tmp/orchestrate/hymnapp/notes/owner/2026-10-22-header-scrawl.png and decisions.log 2026-10-23T00:39Z (run hymnapp, unit uibulk)
 - **Wrong:** As a hymn page was pushed, its header title moved a little, and once the header showed the route's name, `hymns/[number]`, on the system's grey ground.
 - **Cause:** Each hymn screen set its own header with `Stack.Screen` options from its page's effect, so the push drew the stack's default header until that effect ran (inferred from the code). The stack now gives every screen its ground and the hymn route its title and buttons from the route's number (`stackOptions`, `hymnHeader`), before any page code runs.
-- **Guard:** code: `apps/hymnal/src/reader/header.test.ts` `names the route’s hymn, on the ground, with the page’s buttons`, `apps/hymnal/src/reader/header.test.ts` `is keyed by the name the stack gives the route file`
+- **Guard:** code: `apps/hymnal/src/reader/header.test.ts` `names the route’s hymn, on the ground, with no buttons: the reader’s controls are at the thumb`, `apps/hymnal/src/reader/header.test.ts` `is keyed by the name the stack gives the route file`
 
 ### hymn-page-scrolls-inside-the-pager
 
@@ -3385,7 +3385,7 @@ The form of an entry, each field on its own line:
 - **Source:** the owner's look on his iPhone at 5b65a158d, tmp/orchestrate/hymnapp/notes/owner/2026-10-22-uibulk-phone-scrawl.png and decisions.log 2026-10-23T01:35Z (run hymnapp, unit uibulk)
 - **Wrong:** The header's Chords button drew the SF Symbol `guitars`, which the owner found too busy for the header.
 - **Cause:** The spec named the SF Symbol; the owner had not seen it at header size. The button now draws one acoustic guitar head with its tuning pegs, the same on every platform.
-- **Guard:** skill: whether an icon reads as simple is a judgment of the eye, which no test can make. Carried by `.claude/skills/verify-hymnal/features/chords-and-capo.md`: "(an acoustic guitar's head with its tuning pegs, the same on every platform, filled while on), and"
+- **Guard:** skill: whether an icon reads as simple is a judgment of the eye, which no test can make. Carried by `.claude/skills/verify-hymnal/features/chords-and-capo.md`: "`Key` button (an acoustic guitar's head, then a small `KEY` over the"
 
 ### hymn-recent-five-and-stars-not-a-favourites-section
 
@@ -3656,3 +3656,23 @@ The form of an entry, each field on its own line:
 - **Wrong:** Eight of the film's tool test files ran their cases one after another, though each case built its own temp folder, lab or in-memory tree and waited on disk; in the parallel run their case spans summed about 1.6 s, and about 1.2 s once they ran at once.
 - **Cause:** A file's cases run in turn unless the file asks otherwise, and whether a case waits on the disk is not visible where it is written.
 - **Guard:** none: whether a file's cases wait on the disk, and share nothing, is a judgement on the file, measured by the traced run, not a rule a lint can read
+
+### hymn-jsx-type-arguments-break-the-web-dev-server
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "The web dev server renders no page at the head (`Error rendering /hymns/100 on server`)."
+- **Source:** chordbar/round-2-verify.md F1, the report's first defect, headed D1 (run hymnapp)
+- **Wrong:** `Dials.tsx` and `ReadingSheet.tsx` opened `DialView` with type arguments (`<DialView<CapoStop>`, `<DialView<KeyStop>`, `<DialView<number>`). On the web, One's dev server answered every route, `/` included, with its error page and `[PARSE_ERROR] Expected '>' but found '<'`. The iOS bundle and the web build worked.
+- **Cause:** One 2.9's dev-only source inspector (`one:source-inspector-transform`) writes its `data-one-source` attribute right after an element's name, which lies before the element's type arguments. The bar and its dials lie in the layout, so every route's render failed. The gate and the slow tests never run One's dev server. The elements now take their type from their props.
+- **Guard:** code: `apps/hymnal/src/jsx.test.ts` `opens no element with type arguments, in src or app`
+
+### hymn-resume-pill-under-the-sounding-bar
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "The `Resume follow` pill is cut by the tall bar every time it shows, on iOS."
+- **Source:** chordbar/round-2-verify.md F2, the report's second defect, headed D2 (run hymnapp)
+- **Wrong:** While a hymn played, the sounding bar (88 pt) covered the lower 16.3 pt of the `Resume follow` pill, so its label was cut.
+- **Cause:** A screen reserves the resting bar's height alone (56 pt), so the sounding bar lies 32 pt over the page's foot, and the pill still docked 16 pt above that foot (`follow/ResumeFollow.tsx`). The page now docks the pill in a box that ends `RISE` (32 pt) above its foot.
+- **Guard:** code: `apps/hymnal/src/player/thumb.slow.test.tsx` `stands the Resume follow pill whole over the sounding bar`
