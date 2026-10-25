@@ -28,7 +28,11 @@ Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>`
 | tempo      | worship                        |                           |                   |                     |
 | follow2    | worship                        | .rifts/manna/follow2      | a6c9723295ba443cc | merged 622350708    |
 | appicon    | worship                        | .rifts/manna/appicon      | a4d3e2ed97ddb4ba8 | merged 9d31cb7a8    |
-| chordbulk  | chordsimp, worship             |                           |                   |                     |
+| chordbulk  | chordsimp, worship             | removed                   | (closed)          | merged a70cd91c9    |
+| chordbar   | chordbulk                      |                           |                   |                     |
+| feel       | chordbar                       |                           |                   |                     |
+| chordplace | chordbar, feel                 |                           |                   |                     |
+| browse-app | feel, playswap                 |                           |                   |                     |
 | playswap   | chordbulk                      |                           |                   |                     |
 | followsync | chordbulk                      |                           |                   |                     |
 | ftbbrand   | —                              |                           |                   |                     |
@@ -263,6 +267,8 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 
 - Chord placement choices: the owner picked three ("Yeah, three choices above is good - Let's make sure the UI is that delightful ones that we have been kind of concocting so far"): **On the beat** (R1, the default), **Simpler** (R1 then R3: a chord lasting under a beat folds into the one before), and **As the file plays** (the file's own change points). The control is in the delightful style the run has built: a dial in the player sheet beside the key and capo dials (chordbulk part 4), with our clicks and haptics from the Feel service (chordbulk part 5) and the springy motion of the player bar. (owner words; chordplace)
 
+- chordbulk merged a70cd91c9 with parts 1 to 3 (chordtap, the study, R1 struck only on bars the melody confirms: 102 of 695 hymns keep the file's placement), after 3 rounds, review accepted and verify pass. Parts 4 and 5 become their own units by one agent per deliverable: `chordbar` (part 4, bar J with the key and capo dials) and `feel` (part 5, the Feel service). Every "chordbulk part 4" in this plan now means `chordbar`, and every "chordbulk part 5" means `feel`. Order: chordbar → feel → chordplace → playswap. (orchestrator, 2026-10-25, chordbulk)
+
 ## Owner questions
 
 - pagerows (2026-10-22): hymn 220. The database sings 7 places of 3 words in each stanza a second time; the re-engraved page prints them once, with no repeat sign. Two independent judges agree on the reading (`tmp/orchestrate/hymnapp/pagerows/owner-220.md`). Options: (1, recommended) the owner photographs 220 in his own 1985 hymnal, and that page decides; (2) keep the row, 220 stays unsettled; (3) follow the engraving now and remove the repeats. Answer: the owner sent photos of 220 from his 1985 hymnal (2026-10-22, `tmp/orchestrate/hymnapp/notes/owner/2026-10-22-hymn220-p1.HEIC`, `-p2.HEIC`). The 1985 page prints each repeated phrase as an echo in parentheses after the phrase, so the database is right and the re-engraving dropped the echoes. Unit `h220` settles 220 by the photos; the row keeps its words.
@@ -373,5 +379,9 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 - Unit `browse-app` (hymnal): build the browse Decision (K2, our clicks) in apps/hymnal. Depends on chordbulk part 5 (Feel: haptics and cues) and playswap; Topics, Metres, Scripture and Lists tabs fill from units topics, metres, scripture and lists, and show only once their data lands. (browse)
 
 - Unit `chordplace` (hymnal): the chord placement setting (Decision above). The compiled data keeps both placements, or keeps the file's own and the beat grid so the reader applies R1 itself (the planner picks and proves it); the property test holds both choices over every sung line; the held chord follows the choice; a change during play moves the chords in place, the playback position and the sound unchanged (proved on the player). Three choices: On the beat, Simpler, As the file plays (Decision above); the control is a dial in the player sheet with our clicks and haptics. Depends on chordbulk part 4 (the sheet and its dials) and part 5 (the Feel service). Runs before playswap. (chordbulk)
+
+- From chordbulk (round-2/3 findings and verify, one test-strength unit `chordtests`): m1 no held chord when the first change moves later inside syllable 0 (38 lines, 14 hymns); m2 the compiled walk does not compare with the placement before R1; m3 the drawn METERS lack 2/4, 9/4, 4/8, 3/8, 1/2; m4 the barre-finger dots are unchecked; m5 a tie confirms a grid on sparse accents (synthetic only, no hymn); m6 confirmation is judged on stanza 1 and the refrain, not per section; the drawn `confirms` property is too regular and the compiled-set test picks hymns with the production predicate. (chordbulk)
+- Web dev only (chordbulk verify F1): the first tap on a chord opens no sheet under React StrictMode, the second does; iOS and a production web build were not tried. Check it on the iPhone in chordbar; fix it there if it shows. (chordbulk)
+- Simple mode, hymn 3: 29 of 83 chord boxes are wider than their syllable, the same on base (chordbulk verify F2): a layout follow-up for chordbar's sheet work. (chordbulk)
 
 ## Review later
