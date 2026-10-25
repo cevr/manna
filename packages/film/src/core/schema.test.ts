@@ -330,6 +330,50 @@ describe('repoJson', () => {
     );
   });
 
+  test('breaks every array around a matrix, though it would fit a line', () => {
+    // oxfmt's own print of each: a break inside an item breaks the arrays that hold it.
+    expect(
+      printed([
+        ['a', true],
+        [1, 2],
+      ]),
+    ).toBe('[\n  ["a", true],\n  [1, 2]\n]\n');
+    expect(
+      printed({
+        k: [
+          'x',
+          true,
+          [
+            [-4.5, -7.5],
+            [true, 'a'],
+          ],
+        ],
+      }),
+    ).toBe(
+      [
+        '{',
+        '  "k": [',
+        '    "x",',
+        '    true,',
+        '    [',
+        '      [-4.5, -7.5],',
+        '      [true, "a"]',
+        '    ]',
+        '  ]',
+        '}',
+        '',
+      ].join('\n'),
+    );
+    expect(
+      printed([
+        [
+          [846, 1e-7],
+          [' ', false],
+        ],
+      ]),
+    ).toBe('[\n  [\n    [846, 1e-7],\n    [" ", false]\n  ]\n]\n');
+  });
+
   it.effect('writes back every committed record a tool writes through it byte for byte', () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
@@ -341,6 +385,7 @@ describe('repoJson', () => {
         ...(yield* under('src/library/cast', (name) =>
           name.endsWith('/cast-sheet/cast-sheet.json'),
         )),
+        ...(yield* under('src/films', (name) => name.endsWith('/cast-sheet/cast-sheet.json'))),
         ...(yield* under('productions', (name) => !name.includes('/') && name.endsWith('.json'))),
         // The figure goldens: thousands of filled number lines, written by `figure-golden-fixture.ts`.
         new URL('./fixtures/figure/golden.json', import.meta.url).pathname,

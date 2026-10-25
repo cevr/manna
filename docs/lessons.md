@@ -2077,6 +2077,16 @@ The form of an entry, each field on its own line:
 - **Cause:** The fill measured each number without the comma that follows it, and the scalars were written by `JSON.stringify`, which keeps an exponent's plus.
 - **Guard:** code: `packages/film/src/core/schema.test.ts` `breaks a filled line before a number its comma would carry past the line, and drops an exponent's plus`
 
+### repo-json-breaks-around-a-matrix
+
+- **Date:** 2026-10-22
+- **Kind:** retraction
+- **Said:** "fmt:check: 3 cast-sheet.json written by `concept keep` + character-design.md unformatted"
+- **Source:** tmp/orchestrate/p5/iio-cast/state.md:63
+- **Wrong:** `repoJson` wrote an array that holds a matrix (two or more arrays of two or more items) on one line when it fitted, where oxfmt breaks that array and every array around it.
+- **Cause:** The printer broke an array for a matrix only at the matrix's own level, and a break in an item reaches every array that holds it.
+- **Guard:** code: `packages/film/src/core/schema.test.ts` `breaks every array around a matrix, though it would fit a line`
+
 ### retry-holds-smaller-to-anchor
 
 - **Date:** 2026-10-21

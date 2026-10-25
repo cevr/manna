@@ -48,13 +48,13 @@ const flatJson = (value: Json): string => {
   return `{ ${entries.map(([k, v]) => `${jsonText(k)}: ${flatJson(v)}`).join(', ')} }`;
 };
 
-/** Whether the formatter breaks `value` whatever room it has: an object with a key (the tools write its first key on its own line, and the formatter keeps an object broken so), or an array holding one. */
-const breaksAlways = (value: Json): boolean =>
-  (isArray(value) && value.some(breaksAlways)) || entriesOf(value).length > 0;
-
 /** Two or more arrays or objects, each of two or more items: the formatter prints each on its own line. */
 const isMatrix = (items: ReadonlyArray<Json>): boolean =>
   items.length > 1 && items.every((v) => (isArray(v) && v.length > 1) || entriesOf(v).length > 1);
+
+/** Whether the formatter breaks `value` whatever room it has: an object with a key (the tools write its first key on its own line, and the formatter keeps an object broken so), a matrix, or an array holding either at any depth (a break in an item breaks every array around it). */
+const breaksAlways = (value: Json): boolean =>
+  (isArray(value) && (isMatrix(value) || value.some(breaksAlways))) || entriesOf(value).length > 0;
 
 /**
  * Numbers as the formatter fills them: as many to a line, after `indent`, as
@@ -87,8 +87,7 @@ const printJson = (value: Json, indent: string, column: number, tail: number): s
   if (isArray(value)) {
     if (value.length === 0) return '[]';
     const flat = flatJson(value);
-    if (!isMatrix(value) && !breaksAlways(value) && column + flat.length + tail <= PRINT_WIDTH)
-      return flat;
+    if (!breaksAlways(value) && column + flat.length + tail <= PRINT_WIDTH) return flat;
     const lines =
       (value.every(Predicate.isNumber) &&
         filled(
