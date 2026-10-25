@@ -19,7 +19,7 @@ import {
   reviewTestRefusalOf,
 } from './review/testing.ts';
 
-describe("a film's project", () => {
+describe.concurrent("a film's project", () => {
   const decodeView = Schema.decodeEffect(Schema.fromJsonString(ProjectView));
   const say = (payload: string) =>
     reviewTestPost(labUrls.project.say({ params: { film: 'f' } }), payload, REVIEW_TEST_HOME);

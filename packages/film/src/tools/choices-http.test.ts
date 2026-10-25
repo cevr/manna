@@ -29,7 +29,7 @@ const pick = (film: string, body: string, origin: string, type = 'application/js
 
 const PICK_BRIGHT = '{"point":"score","variant":"bright","verb":"pick"}';
 
-describe("a film's choices", () => {
+describe.concurrent("a film's choices", () => {
   it.effect('are listed for any film the app has; an unknown one is 404', () =>
     Effect.gen(function* () {
       const listed = yield* reviewTestAsk(

@@ -299,7 +299,7 @@ const declared = (env: Record<string, string>) =>
     }),
   ).pipe(Layer.provideMerge(BunServices.layer));
 
-describe('the private store', () => {
+describe.concurrent('the private store', () => {
   it.effect('a folder store keeps the contract', () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;

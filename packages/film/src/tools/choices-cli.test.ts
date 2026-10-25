@@ -78,7 +78,7 @@ const cli = (...args: ReadonlyArray<string>) =>
 
 const parsed = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Unknown));
 
-describe('film options', () => {
+describe.concurrent('film options', () => {
   for (const args of [
     ['list', 'f-typo'],
     ['list', 'f-typo', '--check'],

@@ -219,7 +219,7 @@ const mcpLinesIn = (lines: Array<string>) =>
 const look = (call: (method: string, params: Schema.Json) => Effect.Effect<any>, args: Args) =>
   call('tools/call', { name: 'look', arguments: { films: FILMS, film: 'f', ...args } });
 
-describe("the easel's tools on the MCP", () => {
+describe.concurrent("the easel's tools on the MCP", () => {
   it.effect('are listed: look takes its arguments as JSON Schema; the reads are read-only', () => {
     const files = filmFiles();
     return Effect.gen(function* () {

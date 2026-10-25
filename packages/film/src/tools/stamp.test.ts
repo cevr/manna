@@ -102,7 +102,7 @@ const touch = (name: string) =>
 const changed = (before: Record<string, string>, after: Record<string, string>) =>
   Object.keys(before).filter((id) => before[id] !== after[id]);
 
-describe('scene keys', () => {
+describe.concurrent('scene keys', () => {
   it.effect("an edit to one scene's module changes its key alone", () =>
     Effect.gen(function* () {
       const before = yield* keysNow;
@@ -220,7 +220,7 @@ const counting = Layer.unwrap(
   Layer.provideMerge(BunServices.layer),
 );
 
-describe('the stamp’s reads', () => {
+describe.concurrent('the stamp’s reads', () => {
   it.effect('read, hash and parse each file once per call, however many scenes import it', () =>
     Effect.gen(function* () {
       yield* keysNow;
@@ -231,7 +231,7 @@ describe('the stamp’s reads', () => {
   );
 });
 
-describe('importsOf', () => {
+describe.concurrent('importsOf', () => {
   test('lists imports and re-exports, each once', () => {
     const source = `import { a } from './a.ts';
 import type { B } from '@bible/film/core';

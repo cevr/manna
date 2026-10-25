@@ -124,7 +124,7 @@ const MIXED = [
   '```',
 ].join('\n');
 
-describe("the critique's packet", () => {
+describe.concurrent("the critique's packet", () => {
   it.effect(
     'calls a hand floating free of the body a finding: the house hand ends an arm in its sleeve',
     () =>
@@ -136,7 +136,7 @@ describe("the critique's packet", () => {
   );
 });
 
-describe("a scene's staging in the packet", () => {
+describe.concurrent("a scene's staging in the packet", () => {
   const staged = critiquePacket('scene', 's at 1', [], [], {
     panel: Option.some({ id: 'sower.scatter', image: '/films/f/board/sower.scatter.2.jpg' }),
     picture: Option.some('The sower, in his robe, holds the seed out over the field.'),
@@ -166,7 +166,7 @@ describe("a scene's staging in the packet", () => {
   );
 });
 
-describe("a cast sheet's packet", () => {
+describe.concurrent("a cast sheet's packet", () => {
   const packet = critiquePacket(
     'sheet',
     "christ's poses sheet, try 1",
@@ -199,7 +199,7 @@ describe("a cast sheet's packet", () => {
   );
 });
 
-describe('the critique', () => {
+describe.concurrent('the critique', () => {
   it.effect("a heading its rule file lacks fails the critic's build, as the judge's does", () =>
     Effect.gen(function* () {
       const { rules } = yield* written;
@@ -362,7 +362,7 @@ describe('the critique', () => {
   );
 });
 
-describe("a cast sheet's critique", () => {
+describe.concurrent("a cast sheet's critique", () => {
   it.effect(
     'asks of each view as a sheet the rigs are traced from, the hair and the beard named, its findings beside the try',
     () =>
@@ -513,7 +513,7 @@ const leadFiles = () =>
     [`${STEM}.scene.png`, new Uint8Array([2])],
   ]);
 
-describe("the critique's jobs", () => {
+describe.concurrent("the critique's jobs", () => {
   it.effect(
     'a running job is kept past 33 later jobs, and a start of its packet while it runs asks no second counsel',
     () =>
