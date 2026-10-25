@@ -587,11 +587,29 @@ pass), and a chunk whose page crashes is retried once on a new page. Which
 encoder is data, chosen once (below). `Media.join` joins the segments in order with the track cut from
 `full.wav` under the range and encoded to AAC, and the captions (`main.vtt`) are written
 beside the MP4 from `captionCues`, the same line timing the burned-in captions
-use. Segments are written to a temp folder of the render's own (`makeTempDirectory`), removed once joined;
-a video leaves no segments under `out/<film>/`, whatever its variant. A
-contact sheet is composed in one page (`player/contact.ts`). An
+use. A contact sheet is composed in one page (`player/contact.ts`). An
 uncaught error in the page is a `PageError`, never a log line. A missing
 browser is `BrowserMissing`, whose message is the install command.
+
+**Reuse.** A video of the film, an act or a scene, of its scenes or its
+Board, splits its frames at its beats into segments (`beatSegments`,
+`tools/segments.ts`) and keeps each under `out/<film>/cache/segments/<key>/`,
+a folder no catalogue lists. A segment's key (`segmentKey`) hashes the
+render's settings (size, fps, scale, encoder, the share copy made in the page,
+captions, picture, the browser's user agent, the platform), its frames, the
+`Stamps` key of each beat its frames fall in (its sources, the film's frame
+and the engine, its layout and its take), and for a Board render each shot its
+frames draw (`shotsSeen`: the try shown and its image's sha256 as it is on
+disk, its motion, the span that times its motion and its dissolves), so a
+neighbour seen across a dissolve at the segment's edge changes it and a panel
+elsewhere does not. A render draws only the segments it finds no record of
+(`<key>/segment.json`, written once all the segment's chunks are there), its
+chunks cut at segment edges (`segmentChunks`), opens no drawing page when it
+draws none, and joins every segment's chunks, kept or drawn, and their share
+copies, packets copied; `render.reuse segments=<n> drawn=<m>` says how many it
+drew. `--fresh` draws every segment again (`project render --force` too). A
+short and a wedge's look (`--level`) draw every frame into a temp folder of
+the render's own, removed once joined.
 
 ## Project folder
 
