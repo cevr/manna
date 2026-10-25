@@ -3497,6 +3497,16 @@ The form of an entry, each field on its own line:
 - **Cause:** The lines were written for the older lead, and the re-keep changed his record and sheets but no line of the script.
 - **Guard:** none: whether a line's words fit a figure's look is a judgment of the words, which the owner's rule of 2026-10-09 keeps out of code.
 
+### lead-redrawn-a-grown-man
+
+- **Date:** 2026-10-25
+- **Kind:** owner
+- **Said:** chose: "Redraw his panels as a young grown man"
+- **Source:** ask a188dc7ab01 (lead)
+- **Wrong:** The kept sheet of the feast lead (`lead-feast`: turnaround 9, poses 8, heads 7) and the In Its Order Board drawn from it drew the young grown man of his record as a boy: a round, wide child's face on a short neck.
+- **Cause:** The record asked for the boy: its `look.md` said "His head is large on his body, as the lineup draws it, nearly a third of his whole height: one rounded shape on a short neck", beside "about three and a third heads", and its references were the a1r lead at three times his size, "as he was" (ask ab7a4d8f60e). The canon check passed the kept turnaround: `film concept measure` reads it 3.54 heads against the canon's 3.36 (a trace scales the body by 93 %, under the 10 % `squash` flag), since it reads a head's height alone, never its width, its roundness or the neck. The kept pose sheet (try 8) carried a `squash` flag, a head smaller than the canon's, not this defect. No critique of the kept tries is recorded.
+- **Guard:** skill: whether a drawn face reads as a man's or a boy's is a judgment of the eye, and the measure's head height cannot tell them. Carried by `.claude/skills/film/SKILL.md`: "The measure reads a head's height alone, never its width, its roundness or the neck, so a grown man drawn with a child's round face passes the canon"
+
 ### cast-reference-tracked
 
 - **Date:** 2026-10-23
