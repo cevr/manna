@@ -3616,3 +3616,23 @@ The form of an entry, each field on its own line:
 - **Wrong:** The proof that every film source refuses `@effect/platform-bun`'s index held 24 synthetic paths, so a block added over a folder none of them sat in (`packages/film/src/tools/lab/**`, its rule without the entry) passed it while lint let the index in there.
 - **Cause:** A proof of a rule "in every film source" read a sample of paths, not the tracked files.
 - **Guard:** code: `packages/film/lint/config.slow.test.ts` `refuses @effect/platform-bun's index in every film source and passes a module by its own path`
+
+### unit-temp-under-crowded-tmpdir
+
+- **Date:** 2026-10-24
+- **Kind:** owner
+- **Said:** "And our unit test should be under a second for sure"
+- **Source:** memory feedback_gate_under_10s.md
+- **Wrong:** Ten of the film's unit test files wrote modules into their temp folders and imported them, each 20-52 ms slower alone than with a small `TMPDIR`: Bun read the laptop's `$TMPDIR`, about 30,000 entries, as an ancestor of each module it resolved.
+- **Cause:** Every temp folder came from `os.tmpdir()`, the system's shared folder, whose size no test controls.
+- **Guard:** code: `packages/film/src/lab/fixtures/unit-tmp.ts` `process.env['TMPDIR'] = root`
+
+### unit-cases-wait-in-turn
+
+- **Date:** 2026-10-24
+- **Kind:** owner
+- **Said:** "And our unit test should be under a second for sure"
+- **Source:** memory feedback_gate_under_10s.md
+- **Wrong:** Eight of the film's tool test files ran their cases one after another, though each case built its own temp folder, lab or in-memory tree and waited on disk; in the parallel run their case spans summed about 1.6 s, and about 1.2 s once they ran at once.
+- **Cause:** A file's cases run in turn unless the file asks otherwise, and whether a case waits on the disk is not visible where it is written.
+- **Guard:** none: whether a file's cases wait on the disk, and share nothing, is a judgement on the file, measured by the traced run, not a rule a lint can read
