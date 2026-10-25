@@ -1147,10 +1147,13 @@ export const runFilmCli = <E>({
       ),
     ),
   ).pipe(
+    Effect.provide(Services),
     // runMain would report a failure after these layers are gone, through the
     // default logger, onto stdout; it is reported here instead, under `Logs`.
+    // It sits outside `Services`, so a service layer that fails to build (the
+    // media stack's native binary that fails to load) is reported too.
     Effect.tapCause(reportFailure),
-    Effect.provide(Layer.mergeAll(Services, Logs)),
+    Effect.provide(Logs),
     BunRuntime.runMain({ disableErrorReporting: true }),
   );
 };
