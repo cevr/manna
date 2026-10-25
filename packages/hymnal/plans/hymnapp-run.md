@@ -33,6 +33,7 @@ Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>`
 | chordbar   | chordbulk                      | removed                   | (closed)          | merged 0647d1c1e    |
 | barfix     | chordbar, feel                 |                           |                   |                     |
 | barmisc    | barfix                         |                           |                   |                     |
+| listsearch | feel                           |                           |                   |                     |
 | feel       | chordbar                       | removed                   | (closed)          | merged cfe6d5f87    |
 | chordplace | chordbar, feel                 |                           |                   |                     |
 | browse-app | feel, playswap                 |                           |                   |                     |
@@ -291,7 +292,12 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 
 - ftbbrand merged 160e59b48 (the First the Blade site and kit in Moonlit wheat) after the owner kept the field on its soil, kept the marks drawn in the wheat hand, and approved the four link cards (ask af69e890d21), review accepted (with the composition skills), and the acceptance rerun green at decide (`accept-ftbbrand.log`: gate 0, unit, night sky, kit, stills, shippable and build 0, probe 44 lines 0 miss, doctor ok). The site deploy is the owner's: run it from the main checkout, where the prod Alchemy state lives. (ftbbrand)
 
+- Unit `listsearch` (owner, 2026-10-25, scrawl `scrawl-1792940193873-1060f-58`, the home Hymns list): "when you scroll up, I'd actually want," "I want to see the search bar on the top," "not just here when you're at the top of the page." "So as soon as you scroll up, I'd like the search bar," "because usually that means I'm looking for something else." Any upward scroll of the list brings the search field back on top, pinned over the list, until the reader scrolls down again (the Safari toolbar manner); at the top it sits where it does now. It runs after barfix and before chordplace; `browse-app` keeps it. The search field taps through to the same search. (orchestrator, listsearch)
+- Clicks in silent mode: the owner phone was in silent mode in every frame of the 10:55 look (slashed bell), so the system-sound clicks were muted by design (feel Decided 2 and 4). Owner question below. (feel)
+
 ## Owner questions
+
+- Clicks in silent mode (feel): keep them muted under the silent switch, as iOS keyboard clicks are (recommended: the phone stays quiet at worship), or play them even in silent mode (a new sound path, checked against the hymn audio session). Asked 2026-10-25. (feel)
 
 - pagerows (2026-10-22): hymn 220. The database sings 7 places of 3 words in each stanza a second time; the re-engraved page prints them once, with no repeat sign. Two independent judges agree on the reading (`tmp/orchestrate/hymnapp/pagerows/owner-220.md`). Options: (1, recommended) the owner photographs 220 in his own 1985 hymnal, and that page decides; (2) keep the row, 220 stays unsettled; (3) follow the engraving now and remove the repeats. Answer: the owner sent photos of 220 from his 1985 hymnal (2026-10-22, `tmp/orchestrate/hymnapp/notes/owner/2026-10-22-hymn220-p1.HEIC`, `-p2.HEIC`). The 1985 page prints each repeated phrase as an echo in parentheses after the phrase, so the database is right and the re-engraving dropped the echoes. Unit `h220` settles 220 by the photos; the row keeps its words.
 - hymnrows (2026-10-20): the rewrite failed its 3 rounds (r6 changes: M1, repeat of r5 M1). The data at head `ebb5933da` is sound by every check: 0 census problems, 518 crops re-cut byte-identical, 584 matches its crop, and the gate is green. The defect is the census's reach: 115 hand-made layout mutants in 25 hymns pass it unseen. Options: (A, recommended) merge the data now and open unit `census2` with the 115 mutants as red fixtures first; (B) one more rewrite before anything merges; (C) merge the data and drop the census's layout check. Answer: pending.
