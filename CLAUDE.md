@@ -38,7 +38,7 @@ bun run fmt                    # Format code with oxfmt
 bun run gate                   # The feedback cycle: oxlint (deterministic rules) + every workspace's unit tests, turbo-cached
 bun run test:slow              # Typecheck, builds, slow tests, browser and built-page checks, full lint, e2e; by hand and before deploys
 bun run test:perf              # The CLI's performance budgets (local only; reads packages/core/data/bible.db)
-bun run test:budget [<ws>…]    # Each workspace's unit tests alone under 1 s, no total (local only)
+bun run test:budget [<ws>…]    # Each workspace's unit tests alone under 1 s (@bible/film 1.1 s), no total (local only)
 bun run test:reads             # Each file, module and native library a unit test's bun processes open is one its cached test task hashes (in test:slow)
 bun run --filter @bible/selah gate  # Native Swift gate on macOS (also in test:slow)
 ```
@@ -47,7 +47,7 @@ bun run --filter @bible/selah gate  # Native Swift gate on macOS (also in test:s
 
 The local gate verifies a change; CI does not (owner, 2026-10-19: "CI is not a verification tool for us"). Agents never check or wait on CI, and never fix a test only CI sees red; this overrides the global "CI red: fix til green".
 
-- **`bun run gate`** asks one thing: did the change break something plain? It runs oxlint's deterministic rules and every workspace's unit tests (`*.test.*`, not `*.slow.test.*`), turbo-cached on each workspace's inputs, and prints its wall time. Warm, it takes about a second. Each workspace's unit tests stay under 1 s alone (`bun run test:budget`). Run it between units and once at a unit's merge.
+- **`bun run gate`** asks one thing: did the change break something plain? It runs oxlint's deterministic rules and every workspace's unit tests (`*.test.*`, not `*.slow.test.*`), turbo-cached on each workspace's inputs, and prints its wall time. Warm, it takes about a second. Each workspace's unit tests stay under 1 s alone, `@bible/film` under 1.1 s (`bun run test:budget`). Run it between units and once at a unit's merge.
 - **Pre-commit** (`lefthook.yml`) runs `oxlint --fix` and `oxfmt` on the staged files, then an incremental typecheck of the workspaces the staged files lie in.
 - **`bun run test:slow`** runs the rest: every typecheck and build, each workspace's `*.slow.test.*` files, browser and built-page checks, Selah's native gate, the full lint with the judged rules, the format check and the dead exports. Run it by hand, and before a deploy: each workspace's deploy runs its own `test:slow` first.
 

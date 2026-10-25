@@ -1,5 +1,7 @@
 // The tests' time budget, judged: each workspace's `test`, run alone, under
-// 1 second wall: 1,000 ms or more is over. There is no budget on the sum:
+// 1 second wall: 1,000 ms or more is over. `@bible/film`, with about 2,450
+// unit tests that each of its workers loads most of its module graph for, has
+// 1.1 s (owner, 2026-10-25, the pipeline retro). There is no budget on the sum:
 // the workspaces are separate projects, and one's verdict never depends on
 // another's (owner, 2026-10-18: "should not ahve their tests and budgets
 // entangled").
@@ -20,6 +22,11 @@ import { Option } from 'effect';
 
 /** The budget, in milliseconds, for each workspace's `test`. */
 const BUDGET_MS = 1_000;
+
+/** A workspace's own budget, in milliseconds, where it is not `BUDGET_MS`. */
+const OWN_BUDGET_MS = new Map([['@bible/film', 1_100]]);
+
+const budgetOf = (name: string): number => OWN_BUDGET_MS.get(name) ?? BUDGET_MS;
 
 /** One workspace's `test`, run alone: its time (none when its own summary did not read) and its exit code. */
 interface Workspace {
@@ -78,10 +85,10 @@ export const judge = (run: Run): Judged => {
     .toSorted((a, b) => a.name.localeCompare(b.name));
   const measured = quiet(run);
   const passed = timed.filter((workspace) => workspace.exitCode === 0);
-  const over = passed.filter((workspace) => measured && workspace.ms >= BUDGET_MS);
+  const over = passed.filter((workspace) => measured && workspace.ms >= budgetOf(workspace.name));
   const report = [
     '',
-    `test:budget: each workspace alone, under ${seconds(BUDGET_MS)} (load average ${averages(run.load)} before them, on ${run.cores} cores)`,
+    `test:budget: each workspace alone, under ${seconds(BUDGET_MS)}${ownBudgets()} (load average ${averages(run.load)} before them, on ${run.cores} cores)`,
     ...timed.map((workspace) => `  ${seconds(workspace.ms).padStart(7)}  ${workspace.name}`),
     ...untimed.map(
       (workspace) =>
@@ -97,6 +104,9 @@ export const judge = (run: Run): Judged => {
   if (failure.length > 0) return { report, failure, code: 1 };
   return { report, failure, code: 0 };
 };
+
+const ownBudgets = () =>
+  [...OWN_BUDGET_MS].map(([name, ms]) => `, ${name} under ${seconds(ms)}`).join('');
 
 const notMeasured = (run: Run): ReadonlyArray<string> => {
   if (quiet(run)) return [];
