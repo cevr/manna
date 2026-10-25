@@ -356,12 +356,13 @@ export const jobOf = (flags: RenderFlags): Result.Result<RenderJob, FlagsConflic
 export const DRAW_WORKERS = 6;
 
 /**
- * Pages a render on the hardware encoder runs by default. Renders of frames
- * 0–3600 with the share copy, timed at each page count on the M-series Mac: 4
- * pages 69 fps, 5 79, 6 81, 7 81. Six is the knee, and its 12 encoders stay
- * under `MAX_HARDWARE_ENCODERS`.
+ * Pages a render on the hardware encoder runs by default. With the page
+ * drawing on the GPU, RBF's `cold` and `title` with the share copy, timed at
+ * each page count on the M4 Pro (2026-10-25, 3 runs each): 3 pages 100.8 fps,
+ * 4 101.3, 6 99.6, 7 97.5. The encoder is the limit, so four is the knee, and
+ * its 8 encoders stay under `MAX_HARDWARE_ENCODERS`.
  */
-export const HARDWARE_WORKERS = 6;
+export const HARDWARE_WORKERS = 4;
 
 /**
  * Hardware encoders a render may run at once. Measured on the M-series Mac the

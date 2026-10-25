@@ -45,7 +45,7 @@ describe("the renderer's Chrome on macOS", () => {
           expect(chromes).toHaveLength(1);
           const flags = flagsOf(chromes[0] ?? '');
           expect(flags).not.toContain('--disable-gpu');
-          expect(flags).toContain('--use-angle=swiftshader');
+          expect(flags).toContain('--use-angle=metal');
         }
         /** The profile folder a Chrome was spawned with. */
         const dataDir = (chromes: ReadonlyArray<string>) =>

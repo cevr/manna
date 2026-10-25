@@ -145,7 +145,11 @@ export const stageFilm = async (films: Films, href: string): Promise<Staged> => 
   const canvas = document.createElement('canvas');
   canvas.width = film.width;
   canvas.height = film.height;
-  const ctx = canvas.getContext('2d');
+  // Not `willReadFrequently`: Chrome moves a context left unset back to
+  // software after its first read, and the one-pixel read after each frame
+  // (`drawn`) is one, so a page would draw its first frames on the GPU and the
+  // rest in software, and the segments' encodes would not join.
+  const ctx = canvas.getContext('2d', { willReadFrequently: false });
   if (ctx === null) throw new Error('2d context unavailable');
   const stage = document.createElement('div');
   stage.className = 'stage';

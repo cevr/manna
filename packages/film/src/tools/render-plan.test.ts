@@ -316,15 +316,15 @@ describe('encoder budget', () => {
 
   test('the hardware encoder (the Mac): two a page with a share copy; past 14 fails, whatever the cores', () => {
     expect(MAX_HARDWARE_ENCODERS).toBe(14);
-    expect(HARDWARE_WORKERS).toBe(6);
-    expect(encoderLimits(hardware, 10)).toEqual({ max: 14, workers: 6 });
-    expect(encoderLimits(hardware, 64)).toEqual({ max: 14, workers: 6 });
+    expect(HARDWARE_WORKERS).toBe(4);
+    expect(encoderLimits(hardware, 10)).toEqual({ max: 14, workers: 4 });
+    expect(encoderLimits(hardware, 64)).toEqual({ max: 14, workers: 4 });
     expect(tag(videoEncoders(7, true, hardware, 64))).toBe('14');
     expect(tag(videoEncoders(8, true, hardware, 64))).toBe('TooManyEncoders');
     expect(tag(videoEncoders(14, false, hardware, 64))).toBe('14');
     expect(tag(videoEncoders(15, false, hardware, 64))).toBe('TooManyEncoders');
     // The default render, with its share copy, fits.
-    expect(tag(videoEncoders(HARDWARE_WORKERS, true, hardware, 10))).toBe('12');
+    expect(tag(videoEncoders(HARDWARE_WORKERS, true, hardware, 10))).toBe('8');
   });
 
   test('a software encoder is bounded by the cores, one encoder a page: its share is made after the join', () => {

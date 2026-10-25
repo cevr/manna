@@ -713,22 +713,25 @@ view names the same launcher and profile, so a Chrome Bun spawns again after
 the first one died runs its GPU too, in the same profile. The renderer asks
 for it (`launchArgs`), so `render`, `doctor` and the lab's `look` and
 look-book draw in one such Chrome; the browser tests do not, and no other
-platform does. Both platforms ask for SwiftShader by name
-(`--enable-unsafe-swiftshader`); the 2D canvas stays software
-(`--disable-accelerated-2d-canvas`) and on macOS WebGL stays on SwiftShader
-(`--use-angle=swiftshader`), so the GPU changes no pixel: RBF's `cold` and
-`title` stills are byte-identical with and without it.
+platform does. On macOS that Chrome draws on the GPU: WebGL on Metal
+(`--use-angle=metal`) and the 2D canvas accelerated, which renders RBF's
+`cold` and `title` at 101 fps against 84 in software, with pixels the owner
+judged the same (2026-10-25; under 1 level on average, most on the
+anti-aliased edges of ink and text). Films render on the owner's Macs only.
+Elsewhere the 2D canvas stays software (`--disable-accelerated-2d-canvas`)
+and WebGL runs on SwiftShader, asked for by name
+(`--enable-unsafe-swiftshader`).
 `e2e/tools/renderer-chrome.dom.test.ts` reads the renderer's Chrome from `ps`
 on macOS: no `--disable-gpu`, exec'd by the launcher, and spawned again the
 same way.
 
-|                  | Hardware (macOS)                                                 | Software (Linux, any box without a GPU encoder)                         |
-| ---------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| Chromium flags   | `--enable-gpu --use-angle=swiftshader`, through the GPU launcher | neither: Bun's `--disable-gpu` stays (`launchArgs`, `tools/browser.ts`) |
-| master           | quantizer 16 (~37 Mbps)                                          | 37 Mbps variable, 2-frame pre-roll (13.4 Mbps, 765 MB for 7.6 min)      |
-| share            | quantizer 26, in the page (~160 MB)                              | x264 CRF 22 from the joined master (2.2 Mbps, 126 MB)                   |
-| encoders at once | 14 (past it the encoder hangs)                                   | one per core                                                            |
-| default pages    | 6                                                                | 8, or half the cores below 16                                           |
+|                  | Hardware (macOS)                                           | Software (Linux, any box without a GPU encoder)                         |
+| ---------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Chromium flags   | `--enable-gpu --use-angle=metal`, through the GPU launcher | neither: Bun's `--disable-gpu` stays (`launchArgs`, `tools/browser.ts`) |
+| master           | quantizer 16 (~37 Mbps)                                    | 37 Mbps variable, 2-frame pre-roll (13.4 Mbps, 765 MB for 7.6 min)      |
+| share            | quantizer 26, in the page (~160 MB)                        | x264 CRF 22 from the joined master (2.2 Mbps, 126 MB)                   |
+| encoders at once | 14 (past it the encoder hangs)                             | one per core                                                            |
+| default pages    | 6                                                          | 8, or half the cores below 16                                           |
 
 `SETTINGS` (`player/encode.ts`) holds both columns; the hardware one
 (quantizer 16/26, prefer-hardware, a key frame every 2 s, latency mode
@@ -4424,11 +4427,10 @@ the checks stay ours.
   composites its box in: a 512 px tile where the box fits, else the frame's
   size, each primed with the rig at rest before its first real frame, so no
   buffer is sized by the frames before. A page with no WebGL 2 fails the
-  `webgl2` load, naming why. Every Chrome draws WebGL 2 on SwiftShader: the
-  browser tests' (`--enable-unsafe-swiftshader`, `lab/fixtures/browsers.ts`),
-  which Bun spawns with `--disable-gpu`, and the renderer's, whose GPU runs on
-  macOS for the encoder while `--use-angle=swiftshader` keeps WebGL off it
-  ("Encoders").
+  `webgl2` load, naming why. The browser tests draw WebGL 2 on SwiftShader
+  (`--enable-unsafe-swiftshader`, `lab/fixtures/browsers.ts`), which Bun
+  spawns with `--disable-gpu`; the renderer's Chrome on macOS draws it on
+  Metal (`--use-angle=metal`, "Encoders").
 - **In Bun** nothing is drawn (`paints: false`): the rig is posed for real and
   its face node declared to the probe (`probeFace`), so `check --draw` finds
   ink over a rig's face and a frame that is not pure.
