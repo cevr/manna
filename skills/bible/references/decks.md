@@ -95,6 +95,14 @@ okra image "<prompt>" --ref <existing series painting> --size 1536x1024 \
     gold-trimmed sleeves and golden sash — ref
     `what-is-truth/images/day3/n20-father-and-son.png`.
   - **Satan fallen**: dark hooded/cloaked figure, face unseen.
+- **Poses** — every prompt carries the series pose line (a head turns no
+  further than the neck allows). A figure that looks back over a shoulder
+  takes a `poseRef` on its beat: a picture of that pose under
+  `outputs/decks/refs/` (named with its source in `refs/README.md`), sent
+  last with a note that only the pose is taken from it. Ask for him to pause
+  rather than walk away while he looks back: a stride one way and a face the
+  other draws a second face. Check every figure's head in a full-size crop,
+  never only on a contact sheet.
 - ~1-2 min per image. Run **3-4 background batches** in parallel with a
   skip-if-exists guard and one retry, logging failures — then rerun the
   batch script to sweep stragglers.

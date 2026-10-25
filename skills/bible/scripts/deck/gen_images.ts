@@ -8,7 +8,7 @@
  */
 import { dirname, resolve } from 'node:path';
 import { readManifest } from './manifest.ts';
-import { CHARACTERS, IMAGE_SIZE, PALETTE_REF, SCENE_REF, prompt } from './series.ts';
+import { CHARACTERS, IMAGE_SIZE, PALETTE_REF, POSE_REF_NOTE, SCENE_REF, prompt } from './series.ts';
 
 const [deckArg, ...ids] = Bun.argv.slice(2);
 if (deckArg === undefined) throw new Error('usage: gen_images.ts <deckDir> [id ...]');
@@ -17,11 +17,18 @@ const decksDir = dirname(deckDir);
 const manifest = await readManifest(deckDir);
 
 const jobs = [
-  { id: 'title', concept: manifest.titleConcept, character: undefined },
+  { id: 'title', concept: manifest.titleConcept, character: undefined, poseRef: undefined },
   ...manifest.slides.flatMap((slide) =>
     slide.concept === undefined
       ? []
-      : [{ id: slide.id, concept: slide.concept, character: slide.character }],
+      : [
+          {
+            id: slide.id,
+            concept: slide.concept,
+            character: slide.character,
+            poseRef: slide.poseRef,
+          },
+        ],
   ),
 ];
 
@@ -35,11 +42,12 @@ const run = async (job: (typeof jobs)[number]) => {
   const refs = [
     PALETTE_REF,
     job.character === undefined ? SCENE_REF : CHARACTERS[job.character].ref,
+    ...(job.poseRef === undefined ? [] : [job.poseRef]),
   ];
   const args = [
     'okra',
     'image',
-    prompt(job.concept),
+    job.poseRef === undefined ? prompt(job.concept) : `${prompt(job.concept)} ${POSE_REF_NOTE}`,
     ...refs.flatMap((ref) => ['--ref', resolve(decksDir, ref)]),
     '--size',
     IMAGE_SIZE,

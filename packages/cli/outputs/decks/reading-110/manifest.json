@@ -99,7 +99,8 @@
       "section": "The King Mocked",
       "text": "He said therefore, A certain nobleman went into a far country to receive for himself a kingdom, and to return.",
       "sourceImage": "images/s06-luke-19-12.png",
-      "concept": "a nobleman in a travelling cloak setting out at dawn on a long road toward a far country, seen from the side as he walks across the frame, body and feet toward the far road, glancing back over his shoulder with only a natural quarter turn of the head toward the city he will return to rule, his servants watching from the gate",
+      "concept": "a nobleman in a travelling cloak setting out at dawn on a long road toward a far country, seen from behind at three-quarters as he pauses on the road, his back and left shoulder toward the viewer, turning his head over that left shoulder so his one face shows in three-quarter view looking back at the city gate he will return to rule, the back of his head and hair on the far side with no second face or profile there, his servants watching from the gate",
+      "poseRef": "refs/pose-over-left-shoulder.jpg",
       "side": "left",
       "note": "Christ's own parable: the kingdom is received far away, and the King returns with it. The thief asked for that day."
     },

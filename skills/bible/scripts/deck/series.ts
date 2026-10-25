@@ -43,6 +43,10 @@ export type Character = keyof typeof CHARACTERS;
 
 export const describe = (character: Character) => CHARACTERS[character].descriptor;
 
+/** Said of a beat's pose reference, sent last: the pose is taken from it, nothing else. */
+export const POSE_REF_NOTE =
+  'The last reference image is a pose reference only: take from it how the head turns over the shoulder and how the shoulders and back sit, and nothing of its drawing, face, hair, dress or colour. The figure has one head.';
+
 export const prompt = (concept: string) => `${STYLE} Subject: ${concept}. ${POSE} ${NO_TEXT}`;
 
 export const CANVAS = { w: 1920, h: 1080 } as const;

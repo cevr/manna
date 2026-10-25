@@ -291,6 +291,16 @@ The form of an entry, each field on its own line:
 - **Cause:** The beat's concept asked for him "looking back toward the city" while setting out on the road, and the deck's prompt said nothing of how far a head turns; the painting was looked at in a contact sheet at 600 px, where the turn did not show.
 - **Guard:** skill: how far a painted head may turn is a judgment of the eye, so the bible skill's deck prompt asks it of every painting. Carried by `skills/bible/scripts/deck/series.ts`: "the head turns no further than the neck allows from the shoulders"
 
+### deck-pose-from-a-reference
+
+- **Date:** 2026-10-25
+- **Kind:** owner
+- **Said:** "Okay, this is even worse. Now there's 2 heads. The head should try to find a picture of someone turning so that you can better generate this because as it is right now, it doesn't make sense."
+- **Source:** scrawl capture scrawl-1792943164123-1060f-65 #1, on Reading 110's slide of Luke 19:12
+- **Wrong:** The redraw of the nobleman (Reading 110, Luke 19:12), side-on and walking right, drew a second face on the back of his head toward his stride beside the one turned back to the gate.
+- **Cause:** The concept asked for a stride one way and a look the other with no picture of the pose, and the redraw was checked at 900 px, where the second face did not show; a full-size crop of the next try showed the same second face.
+- **Guard:** skill: whether a painted head reads as one natural turn is a judgment of the eye; the bible skill's deck reference asks for a pose picture and a full-size check. Carried by `skills/bible/references/decks.md`: "rather than walk away while he looks back: a stride one way and a face the"
+
 ## The look
 
 ### floating-circle-hands-no-arms

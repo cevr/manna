@@ -23,6 +23,8 @@ export type Beat = {
   readonly concept?: string;
   /** Recurring person in the concept: swaps in the canonical character ref. */
   readonly character?: Character;
+  /** A picture of the pose a figure takes (path relative to the decks dir), sent as a reference for the pose alone. */
+  readonly poseRef?: string;
 };
 
 export type DeckSpec = {
@@ -44,6 +46,7 @@ export type Slide = {
   readonly sourceImage: string;
   readonly concept?: string;
   readonly character?: Character;
+  readonly poseRef?: string;
   readonly side: 'left' | 'right';
   readonly note: string;
 };
@@ -92,6 +95,7 @@ export const writeManifest = async (deckDir: string, spec: DeckSpec) => {
       sourceImage: beat.sourceImage ?? `images/${id}.png`,
       concept: beat.concept,
       character: beat.character,
+      poseRef: beat.poseRef,
       side: index % 2 === 0 ? 'right' : 'left',
       note: beat.note,
     };
