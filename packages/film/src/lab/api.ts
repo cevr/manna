@@ -11,7 +11,7 @@
 
 import { Cause, Context, Effect, Layer, Option, Predicate, Schema } from 'effect';
 import { FetchHttpClient, HttpClient, HttpClientRequest } from 'effect/http';
-import { HttpApiClient } from 'effect/http-api';
+import * as HttpApiClient from 'effect/http-api/HttpApiClient';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';
 import * as Atom from 'effect/reactivity/Atom';
 import { type Bound, Unfit, boundChange } from '../command/command.ts';

@@ -29,7 +29,7 @@ import {
   Result,
 } from 'effect';
 import type { HttpPlatform, HttpServerRequest } from 'effect/http';
-import { HttpApiBuilder } from 'effect/http-api';
+import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder';
 import { LabHttpApi, type MarksPost, type TalkWordsPost } from '../core/api.ts';
 import { SourceRefused, StagingTakeUnknown, StillUnknown } from '../core/refusals.ts';
 import { SCRIPT_FILE, editMarks, marksTarget, sayMissed } from './script-source.ts';

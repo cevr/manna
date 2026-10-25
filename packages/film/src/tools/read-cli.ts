@@ -56,7 +56,9 @@ import {
   Result,
   Schema,
 } from 'effect';
-import { Argument, Command, Flag } from 'effect/cli';
+import * as Argument from 'effect/cli/Argument';
+import * as Command from 'effect/cli/Command';
+import * as Flag from 'effect/cli/Flag';
 import type { ScriptBeat } from '../core/api.ts';
 import type { LineError, UnknownVoice } from '../core/errors.ts';
 import { filmClock } from '../core/film-timeline.ts';

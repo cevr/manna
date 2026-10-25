@@ -24,7 +24,10 @@
 // refuses a request with a foreign `Origin`.
 
 import { Array as Arr, Cause, Context, Effect, Layer, Option, Schema } from 'effect';
-import { McpProtocol, McpSchema, McpServer, Tool } from 'effect/ai';
+import * as McpProtocol from 'effect/ai/McpProtocol';
+import * as McpSchema from 'effect/ai/McpSchema';
+import * as McpServer from 'effect/ai/McpServer';
+import * as Tool from 'effect/ai/Tool';
 import { gist } from '../core/lab-events.ts';
 import { EASEL_INSTRUCTIONS } from './easel-mcp.ts';
 import { objectSchema } from './lab-fields.ts';

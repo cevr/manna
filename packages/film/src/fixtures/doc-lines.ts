@@ -16,7 +16,8 @@
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Console, Effect, Path } from 'effect';
-import { Argument, Command } from 'effect/cli';
+import * as Argument from 'effect/cli/Argument';
+import * as Command from 'effect/cli/Command';
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 import { docLines, readAllDocs } from './doc-anchors.ts';

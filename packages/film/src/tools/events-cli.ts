@@ -37,7 +37,8 @@ import {
   Ref,
   Schema,
 } from 'effect';
-import { Command, Flag } from 'effect/cli';
+import * as Command from 'effect/cli/Command';
+import * as Flag from 'effect/cli/Flag';
 import { FetchHttpClient } from 'effect/http';
 import { HeardChange, LAB_EVENTS, isKnownChange } from '../core/lab-events.ts';
 import { critiqueDone } from './easel-mcp.ts';

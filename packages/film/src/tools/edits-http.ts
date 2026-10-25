@@ -5,7 +5,7 @@
 // Undo and Redo would step now: no check runs, the agents re-check.
 
 import { Effect, Option } from 'effect';
-import { HttpApiBuilder } from 'effect/http-api';
+import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder';
 import { LabHttpApi, type StudioEdit } from '../core/api.ts';
 import { answered } from './api-server.ts';
 import { BeatEdits, type Edited, STUDIO_BY } from './beat-edits.ts';

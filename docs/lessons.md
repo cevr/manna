@@ -3777,6 +3777,16 @@ The form of an entry, each field on its own line:
 - **Cause:** A proof of a rule "in every film source" read a sample of paths, not the tracked files.
 - **Guard:** code: `packages/film/lint/config.slow.test.ts` `refuses @effect/platform-bun's index in every film source and passes a module by its own path`
 
+### test-worker-loads-an-effect-barrel
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "The barrels cost about 17 ms in each worker (HttpApiScalar 7.8 ms and HttpApiSwagger 4.5 ms, both unused; the AI providers)."
+- **Source:** film-budget/blocked.md F2 (option B there, the second of its options)
+- **Wrong:** 52 film files took effect's `http-api`, `ai` and `cli` modules from their barrels, so each test worker that loaded one of them loaded every module of the barrel: HttpApiScalar, HttpApiSwagger and the AI providers' structured output, which the film does not use.
+- **Cause:** The house import of an effect area was its barrel, and the subpath rule refused `@effect/platform-bun`'s index alone.
+- **Guard:** lint:no-restricted-imports, proof `packages/film/lint/config.slow.test.ts` `refuses @effect/platform-bun's index in every film source and passes a module by its own path`
+
 ### unit-temp-under-crowded-tmpdir
 
 - **Date:** 2026-10-24

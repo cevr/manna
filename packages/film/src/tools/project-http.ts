@@ -10,7 +10,7 @@
 // anything runs.
 
 import { Effect, Match, Option, Path } from 'effect';
-import { HttpApiBuilder } from 'effect/http-api';
+import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder';
 import type { PartAddress } from '../core/address.ts';
 import { type ProjectView, RequestInvalid, LabHttpApi, Say } from '../core/api.ts';
 import type { Project } from '../core/catalogue.ts';

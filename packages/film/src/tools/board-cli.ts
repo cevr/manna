@@ -18,7 +18,9 @@
 // lab's commands (`film lab keep_try|approve_beat|withdraw_beat|board`, the
 // same as the lab's MCP tools: `lab-commands.ts`).
 
-import { Argument, Command, Flag } from 'effect/cli';
+import * as Argument from 'effect/cli/Argument';
+import * as Command from 'effect/cli/Command';
+import * as Flag from 'effect/cli/Flag';
 import {
   Array as Arr,
   Boolean as Bool,

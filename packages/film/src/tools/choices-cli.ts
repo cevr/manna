@@ -25,7 +25,9 @@
 //       else only with --accept-mismatch), and the track remixed
 
 import { Effect, Match, Option, Result } from 'effect';
-import { Argument, Command, Flag } from 'effect/cli';
+import * as Argument from 'effect/cli/Argument';
+import * as Command from 'effect/cli/Command';
+import * as Flag from 'effect/cli/Flag';
 import { ChoiceVerb } from '../core/choice.ts';
 import { PointRef } from '../core/point.ts';
 import { hashText } from '../core/narration.ts';

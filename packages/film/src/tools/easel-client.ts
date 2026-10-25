@@ -9,7 +9,7 @@
 // `easel-mcp.ts`), asked of the lab through its MCP.
 
 import { Effect, Option, Schema } from 'effect';
-import { HttpApiClient } from 'effect/http-api';
+import * as HttpApiClient from 'effect/http-api/HttpApiClient';
 import { LabHttpApi, ToolFailure } from '../core/api.ts';
 import { LabDown, LookInvalid, LookPost, ToolFailed } from '../core/easel.ts';
 import { MatchPost } from '../core/match.ts';

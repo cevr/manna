@@ -14,7 +14,7 @@
 
 import { Effect, Option, Record } from 'effect';
 import { HttpServerResponse } from 'effect/http';
-import { HttpApiBuilder } from 'effect/http-api';
+import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder';
 import { LabHttpApi, sectionsPosted } from '../core/api.ts';
 import { answered } from './api-server.ts';
 import { AskStore } from './ask-store.ts';

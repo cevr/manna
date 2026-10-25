@@ -12,7 +12,9 @@
 //   film footage list
 
 import { Console, Effect, Option } from 'effect';
-import { Argument, Command, Flag } from 'effect/cli';
+import * as Argument from 'effect/cli/Argument';
+import * as Command from 'effect/cli/Command';
+import * as Flag from 'effect/cli/Flag';
 import { ElevenLabs } from './elevenlabs.ts';
 import { FootageLibrary, footageLine, printSynced } from './footage.ts';
 

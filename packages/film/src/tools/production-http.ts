@@ -6,7 +6,7 @@
 // written over.
 
 import { Clock, Effect } from 'effect';
-import { HttpApiBuilder } from 'effect/http-api';
+import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder';
 import { LabHttpApi } from '../core/api.ts';
 import { answered } from './api-server.ts';
 import { ProductionStore } from './production-store.ts';

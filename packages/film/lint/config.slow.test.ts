@@ -23,8 +23,9 @@
 // - The film's sources: the rule each file of the film's folders (a
 //   source, a test, a fixture) and of its films gets under the whole config,
 //   the last block over it that sets the rule and does not exclude it,
-//   refuses `@effect/platform-bun`'s index, which loads every module of the
-//   package in each test worker, and passes a module imported by its own path.
+//   refuses `@effect/platform-bun`'s index and effect's `http-api`, `ai` and
+//   `cli` barrels, each of which loads every module of it in each test
+//   worker, and passes a module imported by its own path.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Glob, JSONC } from 'bun';
@@ -687,8 +688,14 @@ describe('the lint config', () => {
         expect(rules.filter(({ rule }) => Option.isNone(rule)).map(({ file }) => file)).toEqual([]);
         const probe = [
           "import { BunServices } from '@effect/platform-bun';",
+          "import { HttpApiBuilder } from 'effect/http-api';",
+          "import { Tool } from 'effect/ai';",
+          "import { Command } from 'effect/cli';",
           "import * as BunPath from '@effect/platform-bun/BunPath';",
-          'export const used = [BunServices, BunPath];',
+          "import * as HttpApi from 'effect/http-api/HttpApi';",
+          "import * as McpSchema from 'effect/ai/McpSchema';",
+          "import * as Flag from 'effect/cli/Flag';",
+          'export const used = [BunServices, HttpApiBuilder, Tool, Command, BunPath, HttpApi, McpSchema, Flag];',
         ];
         // Each block's rule is linted once (a block's rule is one value, whichever path
         // reads it); a path reads the lines its own rule reported.
@@ -703,7 +710,11 @@ describe('the lint config', () => {
               }).pipe(
                 Effect.flatMap((rulesConfig) => oxlintOver(rulesConfig, `${probe.join('\n')}\n`)),
                 Effect.map(
-                  (out) => [r, [...reportedLines(out, ['no-restricted-imports'])]] as const,
+                  (out) =>
+                    [
+                      r,
+                      [...reportedLines(out, ['no-restricted-imports'])].toSorted((a, b) => a - b),
+                    ] as const,
                 ),
               ),
             { concurrency: 8 },
@@ -713,8 +724,8 @@ describe('the lint config', () => {
           file,
           lines: Option.match(rule, { onNone: () => [], onSome: (r) => reported.get(r) ?? [] }),
         }));
-        // Each path whose rule does not refuse the index on line 1 alone, and pass line 2.
-        expect(refused.filter(({ lines }) => lines.join(',') !== '1')).toEqual([]);
+        // Each path whose rule does not refuse the four barrels (lines 1-4) alone, and pass the modules by their own paths (lines 5-8).
+        expect(refused.filter(({ lines }) => lines.join(',') !== '1,2,3,4')).toEqual([]);
       }),
     SPAWNS_MS,
   );

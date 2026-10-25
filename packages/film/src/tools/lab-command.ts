@@ -18,7 +18,8 @@
 
 import { Array as Arr, Context, Effect, Match, Option, Predicate, Schema } from 'effect';
 import type { FileSystem } from 'effect';
-import type { McpSchema, Tool } from 'effect/ai';
+import type * as McpSchema from 'effect/ai/McpSchema';
+import type * as Tool from 'effect/ai/Tool';
 import type { LabLinks } from '../core/lab-events.ts';
 
 /** The lab's own links, where every link a command answers points: on this machine, and from the owner's phone. */

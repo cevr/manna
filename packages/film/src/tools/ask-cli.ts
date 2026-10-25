@@ -21,7 +21,9 @@
 // does not have is `AskUnknown`; `--timeout` elapsed is `AskWaitTimeout`
 // (`ask.wait.timeout`), each a non-zero exit.
 
-import { Argument, Command, Flag } from 'effect/cli';
+import * as Argument from 'effect/cli/Argument';
+import * as Command from 'effect/cli/Command';
+import * as Flag from 'effect/cli/Flag';
 import { Console, Effect, Option, Result, Schema } from 'effect';
 import { FetchHttpClient } from 'effect/http';
 import { AskRead, AsksTool } from './asks-mcp.ts';

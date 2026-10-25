@@ -39,7 +39,7 @@ import {
   SubscriptionRef,
 } from 'effect';
 import * as BunTerminal from '@effect/platform-bun/BunTerminal';
-import { Command } from 'effect/cli';
+import * as Command from 'effect/cli/Command';
 import {
   FetchHttpClient,
   HttpClient,

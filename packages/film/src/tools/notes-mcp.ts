@@ -19,7 +19,7 @@ import {
   Schema,
   Struct,
 } from 'effect';
-import { Tool } from 'effect/ai';
+import * as Tool from 'effect/ai/Tool';
 import {
   type BoardFile,
   BoardName,

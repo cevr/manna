@@ -12,7 +12,7 @@
 // never a path.
 
 import { Effect, Option } from 'effect';
-import { HttpApiBuilder } from 'effect/http-api';
+import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder';
 import { LabHttpApi } from '../core/api.ts';
 import type { ChoiceWrite } from '../core/choice.ts';
 import { answered } from './api-server.ts';

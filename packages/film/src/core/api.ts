@@ -37,13 +37,11 @@ import {
   SchemaAST,
   SchemaTransformation,
 } from 'effect';
-import {
-  HttpApi,
-  HttpApiClient,
-  HttpApiEndpoint,
-  HttpApiGroup,
-  HttpApiSchema,
-} from 'effect/http-api';
+import * as HttpApi from 'effect/http-api/HttpApi';
+import * as HttpApiClient from 'effect/http-api/HttpApiClient';
+import * as HttpApiEndpoint from 'effect/http-api/HttpApiEndpoint';
+import * as HttpApiGroup from 'effect/http-api/HttpApiGroup';
+import * as HttpApiSchema from 'effect/http-api/HttpApiSchema';
 import { PartAddress } from './address.ts';
 import { BoardFile, BoardName } from './board.ts';
 import { AskName, AskRecord, AsksPage, StepValues } from './ask.ts';

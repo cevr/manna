@@ -7,7 +7,7 @@
 // its next read sees what was written.
 
 import { Clock, Effect, FileSystem, Option, Path, Result, Schema, Struct } from 'effect';
-import { Tool } from 'effect/ai';
+import * as Tool from 'effect/ai/Tool';
 import { pageHref, reviewFileUrl } from '../core/api.ts';
 import { Catalogue, Render } from '../core/catalogue.ts';
 import { LabLinks, linksAt } from '../core/lab-events.ts';

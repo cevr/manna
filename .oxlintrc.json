@@ -668,7 +668,10 @@
     {
       // Every film source takes each @effect/platform-bun module by its own
       // path: the package's index loads all 22 of them, about 16 ms more in
-      // each test worker. oxlint gives a file the options of the last block
+      // each test worker. It takes each module of effect's http-api, ai and
+      // cli by its own path too: their barrels load HttpApiScalar,
+      // HttpApiSwagger and the AI providers' modules, about 17 ms more in
+      // each worker. oxlint gives a file the options of the last block
       // that sets a rule, so each folder's block below holds this entry too
       // (packages/film/lint/config.slow.test.ts).
       "files": ["**/packages/film/**/*.ts", "**/packages/film/**/*.tsx"],
@@ -680,6 +683,18 @@
               {
                 "name": "@effect/platform-bun",
                 "message": "import the module by its own path (`import * as BunServices from '@effect/platform-bun/BunServices'`): the package's index loads every module of it."
+              },
+              {
+                "name": "effect/http-api",
+                "message": "import the module by its own path (`import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder'`): the barrel loads all 13 of its modules, HttpApiScalar and HttpApiSwagger too."
+              },
+              {
+                "name": "effect/ai",
+                "message": "import the module by its own path (`import * as Tool from 'effect/ai/Tool'`): the barrel loads all 20 of its modules, each provider's structured output too."
+              },
+              {
+                "name": "effect/cli",
+                "message": "import the module by its own path (`import * as Command from 'effect/cli/Command'`): the barrel loads all 12 of its modules."
               }
             ]
           }
@@ -700,6 +715,18 @@
               {
                 "name": "@effect/platform-bun",
                 "message": "import the module by its own path (`import * as BunServices from '@effect/platform-bun/BunServices'`): the package's index loads every module of it."
+              },
+              {
+                "name": "effect/http-api",
+                "message": "import the module by its own path (`import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder'`): the barrel loads all 13 of its modules, HttpApiScalar and HttpApiSwagger too."
+              },
+              {
+                "name": "effect/ai",
+                "message": "import the module by its own path (`import * as Tool from 'effect/ai/Tool'`): the barrel loads all 20 of its modules, each provider's structured output too."
+              },
+              {
+                "name": "effect/cli",
+                "message": "import the module by its own path (`import * as Command from 'effect/cli/Command'`): the barrel loads all 12 of its modules."
               }
             ],
             "patterns": [
@@ -738,6 +765,18 @@
               {
                 "name": "@effect/platform-bun",
                 "message": "import the module by its own path (`import * as BunServices from '@effect/platform-bun/BunServices'`): the package's index loads every module of it."
+              },
+              {
+                "name": "effect/http-api",
+                "message": "import the module by its own path (`import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder'`): the barrel loads all 13 of its modules, HttpApiScalar and HttpApiSwagger too."
+              },
+              {
+                "name": "effect/ai",
+                "message": "import the module by its own path (`import * as Tool from 'effect/ai/Tool'`): the barrel loads all 20 of its modules, each provider's structured output too."
+              },
+              {
+                "name": "effect/cli",
+                "message": "import the module by its own path (`import * as Command from 'effect/cli/Command'`): the barrel loads all 12 of its modules."
               }
             ],
             "patterns": [
@@ -797,6 +836,18 @@
               {
                 "name": "@effect/platform-bun",
                 "message": "import the module by its own path (`import * as BunServices from '@effect/platform-bun/BunServices'`): the package's index loads every module of it."
+              },
+              {
+                "name": "effect/http-api",
+                "message": "import the module by its own path (`import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder'`): the barrel loads all 13 of its modules, HttpApiScalar and HttpApiSwagger too."
+              },
+              {
+                "name": "effect/ai",
+                "message": "import the module by its own path (`import * as Tool from 'effect/ai/Tool'`): the barrel loads all 20 of its modules, each provider's structured output too."
+              },
+              {
+                "name": "effect/cli",
+                "message": "import the module by its own path (`import * as Command from 'effect/cli/Command'`): the barrel loads all 12 of its modules."
               }
             ],
             "patterns": [
@@ -851,6 +902,18 @@
               {
                 "name": "@effect/platform-bun",
                 "message": "import the module by its own path (`import * as BunServices from '@effect/platform-bun/BunServices'`): the package's index loads every module of it."
+              },
+              {
+                "name": "effect/http-api",
+                "message": "import the module by its own path (`import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder'`): the barrel loads all 13 of its modules, HttpApiScalar and HttpApiSwagger too."
+              },
+              {
+                "name": "effect/ai",
+                "message": "import the module by its own path (`import * as Tool from 'effect/ai/Tool'`): the barrel loads all 20 of its modules, each provider's structured output too."
+              },
+              {
+                "name": "effect/cli",
+                "message": "import the module by its own path (`import * as Command from 'effect/cli/Command'`): the barrel loads all 12 of its modules."
               }
             ],
             "patterns": [
@@ -905,6 +968,18 @@
               {
                 "name": "@effect/platform-bun",
                 "message": "import the module by its own path (`import * as BunServices from '@effect/platform-bun/BunServices'`): the package's index loads every module of it."
+              },
+              {
+                "name": "effect/http-api",
+                "message": "import the module by its own path (`import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder'`): the barrel loads all 13 of its modules, HttpApiScalar and HttpApiSwagger too."
+              },
+              {
+                "name": "effect/ai",
+                "message": "import the module by its own path (`import * as Tool from 'effect/ai/Tool'`): the barrel loads all 20 of its modules, each provider's structured output too."
+              },
+              {
+                "name": "effect/cli",
+                "message": "import the module by its own path (`import * as Command from 'effect/cli/Command'`): the barrel loads all 12 of its modules."
               }
             ],
             "patterns": [
@@ -952,6 +1027,18 @@
               {
                 "name": "@effect/platform-bun",
                 "message": "import the module by its own path (`import * as BunServices from '@effect/platform-bun/BunServices'`): the package's index loads every module of it."
+              },
+              {
+                "name": "effect/http-api",
+                "message": "import the module by its own path (`import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder'`): the barrel loads all 13 of its modules, HttpApiScalar and HttpApiSwagger too."
+              },
+              {
+                "name": "effect/ai",
+                "message": "import the module by its own path (`import * as Tool from 'effect/ai/Tool'`): the barrel loads all 20 of its modules, each provider's structured output too."
+              },
+              {
+                "name": "effect/cli",
+                "message": "import the module by its own path (`import * as Command from 'effect/cli/Command'`): the barrel loads all 12 of its modules."
               }
             ],
             "patterns": [
@@ -992,6 +1079,18 @@
               {
                 "name": "@effect/platform-bun",
                 "message": "import the module by its own path (`import * as BunServices from '@effect/platform-bun/BunServices'`): the package's index loads every module of it."
+              },
+              {
+                "name": "effect/http-api",
+                "message": "import the module by its own path (`import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder'`): the barrel loads all 13 of its modules, HttpApiScalar and HttpApiSwagger too."
+              },
+              {
+                "name": "effect/ai",
+                "message": "import the module by its own path (`import * as Tool from 'effect/ai/Tool'`): the barrel loads all 20 of its modules, each provider's structured output too."
+              },
+              {
+                "name": "effect/cli",
+                "message": "import the module by its own path (`import * as Command from 'effect/cli/Command'`): the barrel loads all 12 of its modules."
               }
             ],
             "patterns": [
@@ -1045,6 +1144,18 @@
               {
                 "name": "@effect/platform-bun",
                 "message": "import the module by its own path (`import * as BunServices from '@effect/platform-bun/BunServices'`): the package's index loads every module of it."
+              },
+              {
+                "name": "effect/http-api",
+                "message": "import the module by its own path (`import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder'`): the barrel loads all 13 of its modules, HttpApiScalar and HttpApiSwagger too."
+              },
+              {
+                "name": "effect/ai",
+                "message": "import the module by its own path (`import * as Tool from 'effect/ai/Tool'`): the barrel loads all 20 of its modules, each provider's structured output too."
+              },
+              {
+                "name": "effect/cli",
+                "message": "import the module by its own path (`import * as Command from 'effect/cli/Command'`): the barrel loads all 12 of its modules."
               }
             ],
             "patterns": [
@@ -1084,6 +1195,18 @@
               {
                 "name": "@effect/platform-bun",
                 "message": "import the module by its own path (`import * as BunServices from '@effect/platform-bun/BunServices'`): the package's index loads every module of it."
+              },
+              {
+                "name": "effect/http-api",
+                "message": "import the module by its own path (`import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder'`): the barrel loads all 13 of its modules, HttpApiScalar and HttpApiSwagger too."
+              },
+              {
+                "name": "effect/ai",
+                "message": "import the module by its own path (`import * as Tool from 'effect/ai/Tool'`): the barrel loads all 20 of its modules, each provider's structured output too."
+              },
+              {
+                "name": "effect/cli",
+                "message": "import the module by its own path (`import * as Command from 'effect/cli/Command'`): the barrel loads all 12 of its modules."
               }
             ]
           }
@@ -1101,6 +1224,18 @@
               {
                 "name": "@effect/platform-bun",
                 "message": "import the module by its own path (`import * as BunServices from '@effect/platform-bun/BunServices'`): the package's index loads every module of it."
+              },
+              {
+                "name": "effect/http-api",
+                "message": "import the module by its own path (`import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder'`): the barrel loads all 13 of its modules, HttpApiScalar and HttpApiSwagger too."
+              },
+              {
+                "name": "effect/ai",
+                "message": "import the module by its own path (`import * as Tool from 'effect/ai/Tool'`): the barrel loads all 20 of its modules, each provider's structured output too."
+              },
+              {
+                "name": "effect/cli",
+                "message": "import the module by its own path (`import * as Command from 'effect/cli/Command'`): the barrel loads all 12 of its modules."
               }
             ],
             "patterns": [
@@ -1457,6 +1592,18 @@
               {
                 "name": "@effect/platform-bun",
                 "message": "import the module by its own path (`import * as BunServices from '@effect/platform-bun/BunServices'`): the package's index loads every module of it."
+              },
+              {
+                "name": "effect/http-api",
+                "message": "import the module by its own path (`import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder'`): the barrel loads all 13 of its modules, HttpApiScalar and HttpApiSwagger too."
+              },
+              {
+                "name": "effect/ai",
+                "message": "import the module by its own path (`import * as Tool from 'effect/ai/Tool'`): the barrel loads all 20 of its modules, each provider's structured output too."
+              },
+              {
+                "name": "effect/cli",
+                "message": "import the module by its own path (`import * as Command from 'effect/cli/Command'`): the barrel loads all 12 of its modules."
               }
             ],
             "patterns": [
@@ -1881,6 +2028,18 @@
               {
                 "name": "@effect/platform-bun",
                 "message": "import the module by its own path (`import * as BunServices from '@effect/platform-bun/BunServices'`): the package's index loads every module of it."
+              },
+              {
+                "name": "effect/http-api",
+                "message": "import the module by its own path (`import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder'`): the barrel loads all 13 of its modules, HttpApiScalar and HttpApiSwagger too."
+              },
+              {
+                "name": "effect/ai",
+                "message": "import the module by its own path (`import * as Tool from 'effect/ai/Tool'`): the barrel loads all 20 of its modules, each provider's structured output too."
+              },
+              {
+                "name": "effect/cli",
+                "message": "import the module by its own path (`import * as Command from 'effect/cli/Command'`): the barrel loads all 12 of its modules."
               },
               {
                 "name": "oxlint-plugin-effect/rule-bindings",

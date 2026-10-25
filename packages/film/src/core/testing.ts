@@ -6,7 +6,8 @@
 // tools/sound-render.ts).
 
 import { Option, Result } from 'effect';
-import { HttpApi, type HttpApiGroup } from 'effect/http-api';
+import * as HttpApi from 'effect/http-api/HttpApi';
+import type * as HttpApiGroup from 'effect/http-api/HttpApiGroup';
 import {
   type Library,
   type Lock,

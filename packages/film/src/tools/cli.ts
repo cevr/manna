@@ -43,7 +43,9 @@ import {
   Schema,
   Stdio,
 } from 'effect';
-import { Argument, Command, Flag } from 'effect/cli';
+import * as Argument from 'effect/cli/Argument';
+import * as Command from 'effect/cli/Command';
+import * as Flag from 'effect/cli/Flag';
 import { FetchHttpClient } from 'effect/http';
 import type { ChildProcessSpawner } from 'effect/process';
 import { type AddressFlags, type Scope, addressOf, resolveAddress } from '../core/address.ts';

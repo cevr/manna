@@ -22,7 +22,9 @@
 //       running lab (FILM_LAB_URL) lists the set, as that lab answers it: the
 //       lab's own review roots decide, never this checkout's
 
-import { Argument, Command, Flag } from 'effect/cli';
+import * as Argument from 'effect/cli/Argument';
+import * as Command from 'effect/cli/Command';
+import * as Flag from 'effect/cli/Flag';
 import {
   Array as Arr,
   Clock,

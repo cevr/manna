@@ -33,8 +33,10 @@ import {
   Predicate,
   Schema,
 } from 'effect';
-import { Tool } from 'effect/ai';
-import { Argument, Command, Flag } from 'effect/cli';
+import * as Tool from 'effect/ai/Tool';
+import * as Argument from 'effect/cli/Argument';
+import * as Command from 'effect/cli/Command';
+import * as Flag from 'effect/cli/Flag';
 import { FetchHttpClient } from 'effect/http';
 import { localLink } from './api-server.ts';
 import { labPhone } from './lab.ts';

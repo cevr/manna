@@ -6,7 +6,7 @@
 // process) for the film its route names.
 
 import { Effect, Option, Path } from 'effect';
-import { HttpApiBuilder } from 'effect/http-api';
+import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder';
 import { LabHttpApi, type Steps } from '../core/api.ts';
 import { type LabWrite } from '../core/schema.ts';
 import { answered } from './api-server.ts';

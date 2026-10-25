@@ -18,7 +18,7 @@ import {
   References,
   Schema,
 } from 'effect';
-import { Command } from 'effect/cli';
+import * as Command from 'effect/cli/Command';
 import { FilmUnknown } from '../core/refusals.ts';
 import { options } from './choices-cli.ts';
 import { ElevenLabs } from './elevenlabs.ts';

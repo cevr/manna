@@ -46,7 +46,8 @@ import {
   Path,
   Schema,
 } from 'effect';
-import { type McpSchema, Tool } from 'effect/ai';
+import type * as McpSchema from 'effect/ai/McpSchema';
+import * as Tool from 'effect/ai/Tool';
 import { PartId } from '../core/address-schema.ts';
 import { ServerFailed } from '../core/api.ts';
 import { LookMode, type LookPost, LookTaken, formatFor, lookLine } from '../core/easel.ts';

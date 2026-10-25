@@ -12,7 +12,7 @@
 // and draws none of these controls.
 
 import { Effect, Option, Predicate, Record, Result, Schema } from 'effect';
-import { Tool } from 'effect/ai';
+import * as Tool from 'effect/ai/Tool';
 import { CUE_PATCH_KEYS, CuePatchFields, Knob, LabWrite, spanEnds } from '../core/schema.ts';
 import { type FilmFolder, type FilmName, filmNamed } from './film-repo.ts';
 import { labCommand } from './lab-command.ts';
