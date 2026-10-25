@@ -171,7 +171,7 @@ const reviewFilmServices = (films: string, runs: Array<ReadonlyArray<string>>) =
  * fixture, as a server builds it once for its life: each of a case's requests
  * is answered by the same handler.
  */
-export class ReviewTestLab extends Context.Service<
+class ReviewTestLab extends Context.Service<
   ReviewTestLab,
   Effect.Success<ReturnType<typeof labHandler>>
 >()('test/ReviewTestLab') {}
