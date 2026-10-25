@@ -195,6 +195,9 @@ const mount = (
         );
       }),
     sends: () => sends,
+    /** Hymn `n`'s move written to the reader's store, as a dial elsewhere (the twin) writes it. */
+    setMove: (n: number, move: { readonly transpose: number; readonly capo: number }) =>
+      registry.set(reader.move(n), move),
     player: () => registry.get(player.state),
     [Symbol.dispose]: () => {
       unsubscribe();
@@ -666,6 +669,45 @@ describe('a dial stopped by a touch', () => {
           expect(atNotch(page, testID)).toEqual([home]);
         }),
     );
+
+  it.live('turns home on a Reset pressed while a finger rests on the Key dial (barfix m4)', () =>
+    Effect.sync(() => {
+      using page = mount(route(100), chordsOn());
+      tapKey(page);
+      for (let k = 0; k < 3; k += 1) turn(page, 'Key');
+      holdAnimations();
+      using _held = { [Symbol.dispose]: landAnimations };
+      // A finger comes down on the still Key dial; a second finger presses Reset; the first lifts with no drag.
+      act(() => gestureOf('dial-key-pan').onBegin?.({ x: 0 }));
+      page.press('Reset');
+      act(() => gestureOf('dial-key-pan').onFinalize?.({ x: 0, canceled: true }));
+      act(() => landAnimations());
+      expect(valueOf(page, 'Key')).toEqual(Option.some('Db'));
+      expect(atNotch(page, 'dial-key')).toEqual([1]);
+    }),
+  );
+
+  it.live(
+    'lands where a capo set from outside, as the twin dial sets it, put it while a finger held the dial (barfix m3)',
+    () =>
+      Effect.sync(() => {
+        using page = mount(route(100), chordsOn());
+        tapKey(page);
+        // The twin dial in the player sheet writes the hymn's move to the reader's store, as this does.
+        const twin = (capo: number) => act(() => page.setMove(100, { transpose: 0, capo }));
+        holdAnimations();
+        using _held = { [Symbol.dispose]: landAnimations };
+        // The twin dial turns the capo to 2: the row turns toward it.
+        twin(2);
+        // A finger on the dial stops that turn half way, at fret 1; the twin goes back to 1; the finger lifts.
+        act(() => gestureOf('dial-capo-pan').onBegin?.({ x: 0 }));
+        twin(1);
+        act(() => gestureOf('dial-capo-pan').onFinalize?.({ x: 0, canceled: true }));
+        act(() => landAnimations());
+        expect(valueOf(page, 'Capo')).toEqual(Option.some('Capo 1, C shapes'));
+        expect(atNotch(page, 'dial-capo')).toEqual([1]);
+      }),
+  );
 });
 
 describe('the capo and the key leave the sound alone', () => {

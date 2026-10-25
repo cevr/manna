@@ -19,8 +19,10 @@
  * outside (the twin dial in the player sheet) turns the row the short way to
  * it, and tells nothing back; a reset (`resets`) turns it home on a slower
  * curve, so the reader sees it go home. A touch that stops such a turn and
- * lifts with no drag lets it go on to the dial's value; only a row the
- * finger or its glide moved snaps to the nearest detent.
+ * lifts with no drag lets it go on to the dial's value, the value as it is
+ * at the lift: one set from outside while the finger is down (a second
+ * finger on the twin dial or on Reset) is where the row goes. Only a row
+ * the finger or its glide moved snaps to the nearest detent.
  * A double tap asks for a reset. VoiceOver reads the dial as adjustable:
  * a swipe up or down turns it one detent.
  *
@@ -178,9 +180,13 @@ function Dial<A>(props: DialProps<A>) {
   useEffect(() => {
     const byReset = homed.current !== resets;
     homed.current = resets;
-    if (driven.value || ownDetent(detents, detentAt(place.value)) === index) return;
+    // Where the row shows the value: a touch that stopped a turn there and lifts with no drag goes on to it.
+    aim.value = placeOf(detents, place.value, index);
+    if (driven.value) return;
+    // A row at rest on the value stays; one turning to another value turns to this one instead.
+    if (!following.value && ownDetent(detents, detentAt(place.value)) === index) return;
     follow(
-      placeOf(detents, place.value, index),
+      aim.value,
       Match.value(byReset).pipe(
         Match.when(true, () => ({
           duration: RESET_TURN,
@@ -245,8 +251,14 @@ function Dial<A>(props: DialProps<A>) {
       dragged.value = false;
       scheduleOnRN(touch);
     },
-    onActivate: () => {
+    onActivate: ({ translationX = 0 }) => {
       'worklet';
+      // A turn set from outside while the finger was down gives way to the drag, which starts where it stands.
+      if (following.value) {
+        cancelAnimation(place);
+        following.value = false;
+        start.value = place.value + translationX;
+      }
       driven.value = true;
       dragged.value = true;
     },
@@ -263,12 +275,17 @@ function Dial<A>(props: DialProps<A>) {
     },
     onFinalize: ({ canceled }) => {
       'worklet';
-      // A touch that stopped a turn from outside and never dragged lets the turn go on to the dial's value;
+      if (dragged.value) {
+        if (canceled) driven.value = false;
+        return;
+      }
+      // A turn set from outside after the finger came down (a reset, the twin dial) is under way: it goes on.
+      if (following.value) return;
+      // A touch that stopped a turn from outside lets it go on to the dial's value as it is now;
       // one that stopped a glide leaves the row between detents: it snaps.
-      if (!dragged.value && stoppedFollow.value)
+      if (stoppedFollow.value)
         follow(aim.value, { duration: FOLLOW_TURN, easing: Easing.out(Easing.cubic) });
-      else if (!dragged.value) settle(0);
-      else if (canceled) driven.value = false;
+      else settle(0);
     },
   });
   const twice = useTapGesture({
