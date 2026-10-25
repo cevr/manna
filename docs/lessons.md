@@ -281,6 +281,16 @@ The form of an entry, each field on its own line:
 - **Cause:** The job tests started one packet only.
 - **Guard:** code: `packages/film/src/tools/critique.test.ts` `two packets that differ in one byte of a crop are two jobs and two runs; the same packet again is one`
 
+### deck-head-turned-past-the-neck
+
+- **Date:** 2026-10-25
+- **Kind:** owner
+- **Said:** "Okay, this slide here, the head is kind of strange here. It shouldn't be so fully turned back. at least the way his body's positioned. It's not possible for the head to turn this direction."
+- **Source:** scrawl capture scrawl-1792942843717-1060f-63 #1, on Reading 110's slide of Luke 19:12
+- **Wrong:** The painting of the nobleman (Reading 110, Luke 19:12) drew his back and cloak walking away from the viewer with his face turned fully round toward the viewer, a turn no neck makes.
+- **Cause:** The beat's concept asked for him "looking back toward the city" while setting out on the road, and the deck's prompt said nothing of how far a head turns; the painting was looked at in a contact sheet at 600 px, where the turn did not show.
+- **Guard:** skill: how far a painted head may turn is a judgment of the eye, so the bible skill's deck prompt asks it of every painting. Carried by `skills/bible/scripts/deck/series.ts`: "the head turns no further than the neck allows from the shoulders"
+
 ## The look
 
 ### floating-circle-hands-no-arms

@@ -11,6 +11,10 @@ export const STYLE =
 
 export const NO_TEXT = 'NO text, NO lettering, NO numbers, NO words.';
 
+/** Every figure's pose: the head turns no further than a neck allows. */
+export const POSE =
+  'Every figure stands in a pose a body can take: the head turns no further than the neck allows from the shoulders, so a look back is a glance over the shoulder, never a face turned fully round over a back that faces away.';
+
 export const IMAGE_SIZE = '1536x1024';
 
 /** Every painting gets the palette ref; scene paintings add the scene ref. */
@@ -39,7 +43,7 @@ export type Character = keyof typeof CHARACTERS;
 
 export const describe = (character: Character) => CHARACTERS[character].descriptor;
 
-export const prompt = (concept: string) => `${STYLE} Subject: ${concept}. ${NO_TEXT}`;
+export const prompt = (concept: string) => `${STYLE} Subject: ${concept}. ${POSE} ${NO_TEXT}`;
 
 export const CANVAS = { w: 1920, h: 1080 } as const;
 
