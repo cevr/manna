@@ -3576,3 +3576,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** The compiler moved guitar chords to the file's strong beats in hymns whose files start a beat off the printed bars (474) or carry another meter than the page (51, 259), so their chords left the printed downbeats.
 - **Cause:** The strong beats came from the file's bars counted from its first tick, which the score takes as a downbeat, and nothing held them against the tune. The compiler now strikes a hymn's guitar chords only when its melody confirms the file's bars (`Placement.confirms`).
 - **Guard:** code: `packages/hymnal/src/compile.test.ts` `keeps every guitar change where the file plays it when the melody does not confirm the file's bars`, `packages/hymnal/src/placement.property.test.ts` `moves no guitar change of a hymn whose melody does not confirm its file's bars`
+
+### test-worker-loads-a-package-index
+
+- **Date:** 2026-10-22
+- **Kind:** owner
+- **Said:** "And our unit test should be under a second for sure"
+- **Source:** memory feedback_gate_under_10s.md
+- **Wrong:** Each of the film's 8 unit-test workers spent about 0.5 CPU-s on imports before its first case. It loaded `@effect/platform-bun`'s index (all 22 of its modules, about 16 ms more than the two it uses), the media stack through the module that names `Media`, and the doubles of every area through one `tools/testing.ts`.
+- **Cause:** The house import of the package was its index, and a service's tag module held its live implementation; the import cost of a module was not measured.
+- **Guard:** lint:no-restricted-imports, proof `packages/film/lint/config.slow.test.ts` `refuses @effect/platform-bun's index in the film's tools and passes a module by its own path`
