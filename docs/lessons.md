@@ -3606,3 +3606,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** The rule that refuses `@effect/platform-bun`'s index covered the film's tools alone, so a lab unit test that took the index again passed lint, about 16 ms more in each worker that loaded it.
 - **Cause:** oxlint gives a file the options of the last block that sets a rule, and each film folder's block sets `no-restricted-imports` for its layer bans, so the entry must sit in each of them; it sat in one block of its own over the tools.
 - **Guard:** lint:no-restricted-imports, proof `packages/film/lint/config.slow.test.ts` `refuses @effect/platform-bun's index in every film source and passes a module by its own path`
+
+### config-proof-samples-paths
+
+- **Date:** 2026-10-24
+- **Kind:** review
+- **Said:** "the subpath proof samples 24 paths, so a later block over an unsampled film folder passes it"
+- **Source:** film-budget/review-r2.md F2
+- **Wrong:** The proof that every film source refuses `@effect/platform-bun`'s index held 24 synthetic paths, so a block added over a folder none of them sat in (`packages/film/src/tools/lab/**`, its rule without the entry) passed it while lint let the index in there.
+- **Cause:** A proof of a rule "in every film source" read a sample of paths, not the tracked files.
+- **Guard:** code: `packages/film/lint/config.slow.test.ts` `refuses @effect/platform-bun's index in every film source and passes a module by its own path`

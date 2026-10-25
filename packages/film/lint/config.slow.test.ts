@@ -159,7 +159,10 @@ const Override = Schema.Struct({
   rules: Schema.optionalKey(Schema.Record(Schema.String, Schema.Unknown)),
 });
 type Override = typeof Override.Type;
-const Config = Schema.Struct({ overrides: Schema.Array(Override) });
+const Config = Schema.Struct({
+  ignorePatterns: Schema.optionalKey(Schema.Array(Schema.String)),
+  overrides: Schema.Array(Override),
+});
 const Package = Schema.Struct({ exports: Schema.Record(Schema.String, Schema.String) });
 
 /** The config oxlint runs a probe of a block's own rules with. */
@@ -639,7 +642,8 @@ describe('the lint config', () => {
               .map((o) => ruleIn(o, 'no-restricted-imports'))
               .toReversed(),
           );
-        const FILES = [
+        // A new file's path in each folder a block names, tracked or not.
+        const SAMPLED = [
           'packages/film/src/a.ts',
           'packages/film/src/fixtures/a.ts',
           'packages/film/src/tools/a.ts',
@@ -665,6 +669,20 @@ describe('the lint config', () => {
           'packages/film/e2e/canvas/a.pixel.test.ts',
           'apps/animations/src/films/a/a.slow.test.ts',
         ];
+        // Every tracked film source oxlint reads: its .ts and .tsx, less the config's ignorePatterns.
+        const tracked = yield* (yield* ChildProcessSpawner.ChildProcessSpawner).string(
+          ChildProcess.make('git', ['ls-files', '--', 'packages/film', 'apps/animations/src'], {
+            cwd: yield* ROOT,
+            forceKillAfter: '5 seconds',
+          }),
+        );
+        const FILES = [
+          ...SAMPLED,
+          ...tracked
+            .split('\n')
+            .filter((file) => /\.tsx?$/.test(file) && !file.endsWith('.d.ts'))
+            .filter((file) => !matches(config.ignorePatterns ?? [], file)),
+        ];
         const rules = FILES.map((file) => ({ file, rule: effective(file) }));
         expect(rules.filter(({ rule }) => Option.isNone(rule)).map(({ file }) => file)).toEqual([]);
         const probe = [
@@ -672,22 +690,31 @@ describe('the lint config', () => {
           "import * as BunPath from '@effect/platform-bun/BunPath';",
           'export const used = [BunServices, BunPath];',
         ];
-        const refused = yield* Effect.forEach(
-          rules.flatMap(({ file, rule }) => Option.toArray(Option.map(rule, (r) => ({ file, r })))),
-          ({ file, r }) =>
-            Schema.encodeEffect(RulesConfig)({
-              jsPlugins: [],
-              rules: { 'no-restricted-imports': r },
-            }).pipe(
-              Effect.flatMap((rulesConfig) => oxlintOver(rulesConfig, `${probe.join('\n')}\n`)),
-              Effect.map((out) => ({
-                file,
-                lines: [...reportedLines(out, ['no-restricted-imports'])],
-              })),
-            ),
-          { concurrency: 8 },
+        // Each block's rule is linted once (a block's rule is one value, whichever path
+        // reads it); a path reads the lines its own rule reported.
+        const distinct = [...new Set(rules.flatMap(({ rule }) => Option.toArray(rule)))];
+        const reported = new Map(
+          yield* Effect.forEach(
+            distinct,
+            (r) =>
+              Schema.encodeEffect(RulesConfig)({
+                jsPlugins: [],
+                rules: { 'no-restricted-imports': r },
+              }).pipe(
+                Effect.flatMap((rulesConfig) => oxlintOver(rulesConfig, `${probe.join('\n')}\n`)),
+                Effect.map(
+                  (out) => [r, [...reportedLines(out, ['no-restricted-imports'])]] as const,
+                ),
+              ),
+            { concurrency: 8 },
+          ),
         );
-        expect(refused).toEqual(FILES.map((file) => ({ file, lines: [1] })));
+        const refused = rules.map(({ file, rule }) => ({
+          file,
+          lines: Option.match(rule, { onNone: () => [], onSome: (r) => reported.get(r) ?? [] }),
+        }));
+        // Each path whose rule does not refuse the index on line 1 alone, and pass line 2.
+        expect(refused.filter(({ lines }) => lines.join(',') !== '1')).toEqual([]);
       }),
     SPAWNS_MS,
   );
