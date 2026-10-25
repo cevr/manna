@@ -38,7 +38,7 @@ export const egwDownload = Command.make(
         // not against the book code, so single-token codes like "DAR" don't
         // round-trip. We pull title-search candidates and pick exact code
         // matches. If that fails, the user should use --id (look up via
-        // `bible egw catalog --search <title>`).
+        // `manna egw catalog --search <title>`).
         const candidates = yield* client
           .getBooks({ lang: args.lang, search: code, limit: 50 })
           .pipe(Stream.take(50), Stream.runCollect);
@@ -50,8 +50,8 @@ export const egwDownload = Command.make(
           );
           yield* Console.log('');
           yield* Console.log('Find the book ID with the catalog command, then download by --id:');
-          yield* Console.log(`  bible egw catalog --search "<title>"`);
-          yield* Console.log(`  bible egw download --id <BOOK_ID>`);
+          yield* Console.log(`  manna egw catalog --search "<title>"`);
+          yield* Console.log(`  manna egw download --id <BOOK_ID>`);
           return;
         }
         if (exact.length > 1) {
@@ -59,16 +59,16 @@ export const egwDownload = Command.make(
           for (const c of exact) {
             yield* Console.log(`  id=${c.book_id} ${c.author} — ${c.title}`);
           }
-          yield* Console.log('Use `bible egw download --id <ID>` to disambiguate.');
+          yield* Console.log('Use `manna egw download --id <ID>` to disambiguate.');
           return;
         }
         book = Option.fromNullishOr(exact[0]);
       } else {
-        yield* Console.log('Usage: bible egw download <CODE>');
-        yield* Console.log('       bible egw download --id <BOOK_ID>');
+        yield* Console.log('Usage: manna egw download <CODE>');
+        yield* Console.log('       manna egw download --id <BOOK_ID>');
         yield* Console.log('');
         yield* Console.log(
-          'Browse the remote catalog with `bible egw catalog --search <term>` to find codes/ids.',
+          'Browse the remote catalog with `manna egw catalog --search <term>` to find codes/ids.',
         );
         return;
       }

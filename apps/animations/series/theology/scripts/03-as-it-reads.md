@@ -4,7 +4,7 @@ Series: The Path of the Just · Tier One (Milk) · 3 of 44
 Promise: the viewer sees that there are only two ways to read the Bible, as it reads or as you read it; that the second has no end of meanings; and that the Bible crosses every age and tongue because it explains its own words, so anyone can learn to use its dictionary, trying each meaning in its passage.
 Prerequisites: 01 (the milk is "the first principles of the oracles of God"), 02 (the Bereans, the one measuring rule; 02 hands off to this film in one line).
 Length: about 6:20 (726 spoken words: 4:41 at 155 wpm, 5:05 with the marked breaths and holds, 4:48–5:14 at 165–150 wpm with them; plus the title, beat leads and tails, about 30 s of music alone and 28 s of credits). Measured with `bun cli.ts drafts` and a word count of the `say` lines, 2026-10-19, after the review.
-Status: kept by the owner, 2026-10-19 (ask a6ec3ed29a1: keep the script, "Much error", the dictionary as a series motif, the 02 handoff), from his idea of that day (`../as-it-reads.md`); reviewed once (okra counsel, deep) and every finding folded or answered (Notes). Nothing narrated. Every KJV line printed by `bible verse` on 2026-10-19; every paraphrase source read with `bible egw lookup` the same day, verbatim in `../sources.md` ("03 · As It Reads") and `../quotes-03.jsonl`, and passed by the frame's verifier. Frame: scripture.md (Principle III). Written to Christ's manner of speaking (series README, Language) and marked for delivery: `{*}` stress, `{/}` breath, `{//}` hold.
+Status: kept by the owner, 2026-10-19 (ask a6ec3ed29a1: keep the script, "Much error", the dictionary as a series motif, the 02 handoff), from his idea of that day (`../as-it-reads.md`); reviewed once (okra counsel, deep) and every finding folded or answered (Notes). Nothing narrated. Every KJV line printed by `manna verse` on 2026-10-19; every paraphrase source read with `manna egw lookup` the same day, verbatim in `../sources.md` ("03 · As It Reads") and `../quotes-03.jsonl`, and passed by the frame's verifier. Frame: scripture.md (Principle III). Written to Christ's manner of speaking (series README, Language) and marked for delivery: `{*}` stress, `{/}` breath, `{//}` hold.
 
 ## Header
 
@@ -30,7 +30,7 @@ Registers: STORY for `cold`, `talitha`, `child` (a parable picture, "Picture a m
 
 Full-screen cards (CRAFT rule 1), proposed: `two` ("as it reads" against "as you read it", two cards in turn), `child` ("Read as you read it, and you only hear your own voice.", the payoff word "voice"), and the thesis. Every picture below asks for no lettering: the narration's words appear only as full-screen cards. Figures wear sleeves, the hand at the sleeve's end.
 
-Quoted Scripture: 13 passages, 118 of 726 spoken words (16.3 %; counted 2026-10-19 over the `say` lines' “…” spans, after the review). One quotation per beat. Every quotation is a verbatim run of the KJV as `bible verse` printed it, supplied-word brackets dropped; a run may start or stop inside its verse (Rev 17:15 from “are”, 1 Cor 2:14 from “are”).
+Quoted Scripture: 13 passages, 118 of 726 spoken words (16.3 %; counted 2026-10-19 over the `say` lines' “…” spans, after the review). One quotation per beat. Every quotation is a verbatim run of the KJV as `manna verse` printed it, supplied-word brackets dropped; a run may start or stop inside its verse (Rev 17:15 from “are”, 1 Cor 2:14 from “are”).
 
 ## Cast
 

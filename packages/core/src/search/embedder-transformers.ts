@@ -76,7 +76,7 @@ export const bibleHomeModelsFallback: Config.Config<Option.Option<string>> = Con
  *
  *  Declared structurally rather than imported as a type, because the import is
  *  dynamic: loading a 300M-parameter runtime at module scope would make every
- *  `bible` subcommand pay for it, including the ones that never search.
+ *  `manna` subcommand pay for it, including the ones that never search.
  *
  *  `sentence_embedding.data` is typed as `ArrayLike<number | bigint>` for the
  *  same reason the old code converted through `Number`: the library's

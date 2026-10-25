@@ -5,13 +5,13 @@ This is the core understanding behind the education series, in one place. It ans
 **What it is built from.** Everything the series already holds, organized by the parent's question rather than by speaker:
 
 - Ellen G. White's education counsel, read in the local corpus (`sources.md` §2, §6, §8);
-- the Bible, KJV, printed by `bible verse`;
+- the Bible, KJV, printed by `manna verse`;
 - the three old child-training books (Abbott, _Gentle Measures_, 1871; Kellogg, _Studies in Character Building_, 1905; Byrum, _Happy Hours at Home_) and the SonLight booklets (`sources.md` §1);
 - Scott Ritsema's seminar (`ritsema-review.md`, `transcripts/ritsema/`);
 - Joshua White's six playlists (`white-review.md`, `transcripts/white/`);
 - the 127 draft topics in `series.md`, which this guide groups into the episode sequence in `series-list.md`.
 
-**How to read the witnesses.** Every EGW reference below was printed by `bible egw lookup` from the local corpus; every KJV reference by `bible verse`. Short phrases in quotation marks are her exact words. A reference that is a reprint is given once with its first or trade-book form (for example CG 300.3, Pacific Health Journal 1897). Where a speaker's popular use of a passage goes beyond the passage, the section says so under "Beyond the source".
+**How to read the witnesses.** Every EGW reference below was printed by `manna egw lookup` from the local corpus; every KJV reference by `manna verse`. Short phrases in quotation marks are her exact words. A reference that is a reprint is given once with its first or trade-book form (for example CG 300.3, Pacific Health Journal 1897). Where a speaker's popular use of a passage goes beyond the passage, the section says so under "Beyond the source".
 
 **Series rules this guide keeps** (owner, 2026-10-13; `../README.md`, "Voice and audience"):
 

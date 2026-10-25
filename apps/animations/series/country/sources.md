@@ -1,6 +1,6 @@
 # Sources: Dwell in the Land
 
-Research base for `series.md` and `scripts/`. Written 2026-10-13. Every line below was printed by the `bible` CLI on this laptop (`bible verse --json`, `bible egw lookup --json`, `bible egw search`) and compared with a script (§5).
+Research base for `series.md` and `scripts/`. Written 2026-10-13. Every line below was printed by the `manna` CLI on this laptop (`manna verse --json`, `manna egw lookup --json`, `manna egw search`) and compared with a script (§5).
 
 ## How to use these sources
 
@@ -18,7 +18,7 @@ The owner asked who wrote "The garden of Eden was not only Adam's dwelling, but 
 
 **The evidence, in order:**
 
-1. **"P.C." is not a person.** The line is reprinted in _Home and Church School Manual_ (PH140, about 1900) at 7.3. That manual's key of abbreviations (printed page 4) reads: "T.—Testimonies; G. W.—Gospel Workers; C. E.—Christian Education; **P. C.—Private Collection**; Sp. T. on Ed.—Special Testimonies on Education". The manual signs many of her unpublished items the same way: 5.2, 6.2 ("—P.C. July 8, 1897"), 11.2, 8.2 ("—P.C., 'Need of Reform in Educational Work'") and 9.1 ("—P.C., 'The Tree of Life and the Tree of Knowledge'"). Those two titles are two of the testimonies read at the 1899 session (point 2). The key has no refcode in the corpus, so it was found by text search (`bible egw search "Private Collection"`), not by lookup.
+1. **"P.C." is not a person.** The line is reprinted in _Home and Church School Manual_ (PH140, about 1900) at 7.3. That manual's key of abbreviations (printed page 4) reads: "T.—Testimonies; G. W.—Gospel Workers; C. E.—Christian Education; **P. C.—Private Collection**; Sp. T. on Ed.—Special Testimonies on Education". The manual signs many of her unpublished items the same way: 5.2, 6.2 ("—P.C. July 8, 1897"), 11.2, 8.2 ("—P.C., 'Need of Reform in Educational Work'") and 9.1 ("—P.C., 'The Tree of Life and the Tree of Knowledge'"). Those two titles are two of the testimonies read at the 1899 session (point 2). The key has no refcode in the corpus, so it was found by text search (`manna egw search "Private Collection"`), not by lookup.
 2. **The Bulletin says whose testimony it was.** GCDB March 6, 1899 prints the section under the heading "SPECIAL TESTIMONIES". Page 157.34: "The afternoon service of Sabbath, March 4, was devoted to reading several Testimonies received since the opening of the session of the conference, Elder G. A. Irwin conducting the service." The readings follow: "The True Relation of God and Nature", "The Need of Reform in Our Educational Work", **"The Tree of Life and the Tree of Knowledge"** (from p. 158.18; the line is p. 158.22, par. 36), and "The Need of Church Schools". Page 160.3 adds that the reader also read from her _Review and Herald_ article of May 21, 1895. In 1899 "Testimonies" read to the session meant hers.
 3. **The same testimony recurs under her name.** 8T 288.2 (1904) repeats the sentences that follow the line: the heavenly Husbandman transplanted the tree of life to the Paradise above, and its branches hang over the wall to this world. Par. 38 of the same testimony comes from her 1896 manuscript (11LtMs, Ms 53, 1896, par. 3). The _Gospel Medical Messenger_ (GMM, October 15, 1913, par. 1) reprints the line, and the corpus files that article under her name.
 4. **The idea is hers in her own books.** Ed 20.1 (1903): the Garden of Eden was the schoolroom, nature the lesson book, the Creator the instructor. FE 314.1 (= SpTEd 89.1; 9LtMs, Ms 8, 1894, par. 12): Eden was the school for our first parents, and God was their instructor.
@@ -178,7 +178,7 @@ Totals: **138 references, 183 checks. 137 VERIFIED (one, PH140 4, by text search
 
 ## 3. Scripture (KJV)
 
-Every verse and range cited in `series.md` and in the 01 script was printed by `bible verse --json` and checked against the words used. Totals: **152 references, 153 checks, all VERIFIED.** Eight verses were checked for drafts and are not cited now; they are kept so a later script can use them without a new check.
+Every verse and range cited in `series.md` and in the 01 script was printed by `manna verse --json` and checked against the words used. Totals: **152 references, 153 checks, all VERIFIED.** Eight verses were checked for drafts and are not cited now; they are kept so a later script can use them without a new check.
 
 **Quoting conventions:**
 
@@ -370,6 +370,6 @@ Country living is often taught with more heat than the counsel carries. Each ite
 | KJV                          | 152        | 153    | 152      | 0       | 0         |
 | Ellen G. White and compilers | 138        | 183    | 137      | 1       | 0         |
 
-- **Commands.** `bible verse --json "<ref>"` for Scripture, `bible egw lookup --json "<refcode>"` for a paragraph, and `bible egw search "<words>"` for anything without a refcode (PH140 4) or to find a primary. Never run bare `bible`, which opens the TUI.
+- **Commands.** `manna verse --json "<ref>"` for Scripture, `manna egw lookup --json "<refcode>"` for a paragraph, and `manna egw search "<words>"` for anything without a refcode (PH140 4) or to find a primary. Never run bare `bible`, which opens the TUI.
 - **Checker.** A short Bun script read tab-separated lines (`kind`, `ref`, `words`), ran the CLI, normalized both texts (case, punctuation, brackets) and printed VERIFIED, DIFFERS or NOT FOUND for each. It and its output lived in the session scratchpad and are not committed; rerun it the same way when a script is drafted.
-- **Search.** `bible egw search` ran lexical only on this laptop ("the embedding model is not available on this machine"). Phrase searches were exact enough for every lookup here.
+- **Search.** `manna egw search` ran lexical only on this laptop ("the embedding model is not available on this machine"). Phrase searches were exact enough for every lookup here.

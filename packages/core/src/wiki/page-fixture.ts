@@ -1,7 +1,7 @@
 /** One **non-empty** topic page, shared by every seam that claims the UI renders
  *  what the wire carries (§10 Milestone 6).
  *
- *  The acceptance is "`bible wiki topic <slug> --json` matches, section for
+ *  The acceptance is "`manna wiki topic <slug> --json` matches, section for
  *  section and identity for identity, what the UI renders". Until this module
  *  `packages/cli/test/commands/wiki.test.ts` asserted it over pages whose
  *  sections were **empty**: it ran the real command against
@@ -112,7 +112,7 @@ const VERSES = [1, 5, 9].map((verse) => ({
   text: `John 11:${String(verse)} names the sanctuary and its service.`,
 }));
 
-/** §7's own command line, as fixture data: `bible wiki lookup "the daily"
+/** §7's own command line, as fixture data: `manna wiki lookup "the daily"
  *  --context "Dan 8:13"`.
  *
  *  Daniel 8:13 rather than an invented address, because it is the verse §7 and

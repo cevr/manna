@@ -27,7 +27,7 @@ import { FetchHttpClient } from 'effect/http';
 
 import { packagedDataCandidates } from '~/src/lib/paths';
 
-/** The topics corpus as `bible init` already wires it: the same destination and
+/** The topics corpus as `manna init` already wires it: the same destination and
  *  the same ordered sources.
  *
  *  Restated here rather than imported from `init.ts` because `init` builds it

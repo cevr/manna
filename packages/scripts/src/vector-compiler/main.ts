@@ -98,7 +98,7 @@ const buildVectors = Command.make('build:vectors', { out, writingsDb, limit, jso
 
     if (!(yield* fs.exists(writingsFile))) {
       return yield* CompilerInputError.make({
-        message: `writings database not found at ${writingsFile} — run 'bible egw sync' first`,
+        message: `writings database not found at ${writingsFile} — run 'manna egw sync' first`,
       });
     }
 

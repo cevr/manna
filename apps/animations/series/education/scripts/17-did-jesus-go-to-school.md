@@ -10,7 +10,7 @@
 | Outline                                | The charge: "never learned" · Not illiterate, not rabbinic · Four classrooms: mother and Scripture, work, nature, life · The payoff |
 | Set                                    | Seated. A carpenter's plane or a block of wood on the desk (the hook object), an open Bible.                                        |
 
-Every Scripture line was printed by `bible verse` on 2026-10-10, printed again on 2026-10-15, and is quoted word for word, without the KJV's italic brackets. Each quotation is a continuous run of its verse, and its source note says where it starts. Pioneers are paraphrased and unnamed in speech.
+Every Scripture line was printed by `manna verse` on 2026-10-10, printed again on 2026-10-15, and is quoted word for word, without the KJV's italic brackets. Each quotation is a continuous run of its verse, and its source note says where it starts. Pioneers are paraphrased and unnamed in speech.
 
 ## Cast
 

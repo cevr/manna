@@ -12,7 +12,7 @@ import { slidesSwap } from './slides/swap.js';
 
 export const slides = Command.make('slides', {}, () =>
   Effect.gen(function* () {
-    yield* Console.log('Usage: bible slides <build|swap|list> [options]');
+    yield* Console.log('Usage: manna slides <build|swap|list> [options]');
     yield* Console.log('');
     yield* Console.log(
       '  build      <beat-sheet.json> --out <deck.key> [--theme] [--master] [--open]',

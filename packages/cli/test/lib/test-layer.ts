@@ -35,7 +35,7 @@ export interface TestLayerConfig {
   http?: MockHttpConfig;
   /** Mock AppleScript configuration */
   appleScript?: MockAppleScriptConfig;
-  /** Quotation problems `bible check`/`bible export` should see */
+  /** Quotation problems `manna check`/`manna export` should see */
   quotations?: MockQuotationsConfig;
 }
 

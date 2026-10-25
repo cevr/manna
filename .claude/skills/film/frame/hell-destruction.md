@@ -58,7 +58,7 @@ The pioneers cite these texts in the quotes above and in 1889 XXVI–XXVII:
 - Rev 21:1 (GC 674.1)
 - Matt 10:28 (WDNP 1.3)
 
-KJV text of the five most important, from `bible verse`. Square brackets mark the KJV's supplied words.
+KJV text of the five most important, from `manna verse`. Square brackets mark the KJV's supplied words.
 
 - **Mal 4:1, 3** — (4:1) ¶ For, behold, the day cometh, that shall burn as an oven; and all the proud, yea, and all that do wickedly, shall be stubble: and the day that cometh shall burn them up, saith the LORD of hosts, that it shall leave them neither root nor branch. (4:3) And ye shall tread down the wicked; for they shall be ashes under the soles of your feet in the day that I shall do [this], saith the LORD of hosts.
 - **Obad 16** — For as ye have drunk upon my holy mountain, [so] shall all the heathen drink continually, yea, they shall drink, and they shall swallow down, and they shall be as though they had not been.

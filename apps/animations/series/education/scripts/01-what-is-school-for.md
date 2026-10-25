@@ -10,7 +10,7 @@
 | Outline (`talk.ts` `outline`)          | The usual answer: a job · Made in His image · Renewed in knowledge · The whole person, both lives · The payoff           |
 | Set                                    | Seated at the desk; an open Bible at Genesis 1 within reach; a framed old school slate or report card as the hook object |
 
-Every Scripture line below was printed by `bible verse` on 2026-10-10, printed again on 2026-10-15, and is copied word for word. The KJV's italic-supply brackets are dropped in speech and captions. Each quotation is a continuous run of its verse, and its source note says where it starts and stops. Pioneers are paraphrased and unnamed in speech. Their sources are listed in the right-hand column and in the description.
+Every Scripture line below was printed by `manna verse` on 2026-10-10, printed again on 2026-10-15, and is copied word for word. The KJV's italic-supply brackets are dropped in speech and captions. Each quotation is a continuous run of its verse, and its source note says where it starts and stops. Pioneers are paraphrased and unnamed in speech. Their sources are listed in the right-hand column and in the description.
 
 ## Cast
 

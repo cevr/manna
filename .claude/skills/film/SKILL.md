@@ -26,9 +26,9 @@ Every ElevenLabs call and every render needs `dangerouslyDisableSandbox: true` (
 
 ## Corpus, not memory (paramount)
 
-Generate against the corpus, never against training data. A film's doctrine, its argument's shape, every quote, reference, date and attribution, and every picture that teaches come from the frame ([frame/README.md](frame/README.md) and its topic files) and from what the `bible` CLI printed in this session (`bible egw study <subject> --pioneers --export <file> --full`, verse and EGW lookups). Training data carries mainstream framings (for example, justification as a verdict only, with change coming later) and misremembered wording; the corpus is the pioneer record.
+Generate against the corpus, never against training data. A film's doctrine, its argument's shape, every quote, reference, date and attribution, and every picture that teaches come from the frame ([frame/README.md](frame/README.md) and its topic files) and from what the `manna` CLI printed in this session (`manna egw study <subject> --pioneers --export <file> --full`, verse and EGW lookups). Training data carries mainstream framings (for example, justification as a verdict only, with change coming later) and misremembered wording; the corpus is the pioneer record.
 
-- **Fetch, then write.** A film quotes only Scripture and names no pioneer in speech ([CRAFT.md](CRAFT.md) rule 2): it is made for every Christian. Each verse a beat speaks or shows is checked with `bible verse` and cited in the beat. Each pioneer line a beat paraphrases is in `sources.md` and `quotes.jsonl`, verbatim with its refcode, and passes the frame's verifier, so the paraphrase stays inside its words; the credits name it.
+- **Fetch, then write.** A film quotes only Scripture and names no pioneer in speech ([CRAFT.md](CRAFT.md) rule 2): it is made for every Christian. Each verse a beat speaks or shows is checked with `manna verse` and cited in the beat. Each pioneer line a beat paraphrases is in `sources.md` and `quotes.jsonl`, verbatim with its refcode, and passes the frame's verifier, so the paraphrase stays inside its words; the credits name it.
 - **Frame from the corpus.** The spine of the script (what the doctrine is, what it includes, in what order) is read from the topic file and the pioneers in context, never from a familiar summary. Where they differ, follow the corpus and name the difference in the topic file.
 - **A gap stays a gap.** A claim the corpus does not support is cut or marked unverified; memory never fills it.
 
@@ -70,7 +70,7 @@ No scene is drawn on a member before his cast render is kept: the render, matche
 
 1. **Frame and sources.**
    - Find the film's topic in [frame/README.md](frame/README.md). Read its 1889 principle and the topic file whole.
-   - For anything the topic file lacks, build a corpus with `bible egw study <subject> --pioneers --export <file> --full`.
+   - For anything the topic file lacks, build a corpus with `manna egw study <subject> --pioneers --export <file> --full`.
    - Copy each pioneer line you will paraphrase into `src/films/<film>/sources.md`, verbatim and with its refcode. Add each one as a record to `src/films/<film>/quotes.jsonl`, and run the frame's verifier over that file (see **Verify** in the frame).
    - Done when every line the script will paraphrase verifies, and you can name, for the topic, what the film must show and what it must not say or show.
 

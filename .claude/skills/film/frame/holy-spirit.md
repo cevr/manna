@@ -63,7 +63,7 @@ Cited: Psalm 139:7 (Principle I; James White 1861; Smith 1898); Psalm 139:8-10 (
 - **John 15:26** — "But when the Comforter is come, whom I will send unto you from the Father, [even] the Spirit of truth, which proceedeth from the Father, he shall testify of me:"
 - **John 16:13** — "Howbeit when he, the Spirit of truth, is come, he will guide you into all truth: for he shall not speak of himself; but whatsoever he shall hear, [that] shall he speak: and he will shew you things to come."
 
-(KJV from `bible verse`; pilcrows and red-letter markers omitted, italic supplied words kept in [brackets].)
+(KJV from `manna verse`; pilcrows and red-letter markers omitted, italic supplied words kept in [brackets].)
 
 ## Film direction
 

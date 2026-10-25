@@ -206,7 +206,7 @@ export type ContentDecision = typeof ContentDecision.Type;
 /** What one host reports about topic content: what is installed, what the
  *  manifest offers, and what this build decided about the pair.
  *
- *  One value behind `bible topics status`, so adding a field reaches its text
+ *  One value behind `manna topics status`, so adding a field reaches its text
  *  and its JSON at once. */
 export class ContentStatus extends Schema.Class<ContentStatus>('ContentUpdate/Status')({
   corpus: UpdatableCorpus,
@@ -219,7 +219,7 @@ export class ContentStatus extends Schema.Class<ContentStatus>('ContentUpdate/St
    *  `None` for an artifact that came from a local source — a packaged copy, a
    *  workspace build — because none of those is a published content version.
    *  Carried on the wire rather than kept private to the decision because it is
-   *  what makes the decision *checkable*: an operator reading `bible topics
+   *  what makes the decision *checkable*: an operator reading `manna topics
    *  status --json` can see the number the offer was compared against. */
   installedGeneration: Schema.Option(CorpusGeneration),
   floor: ContentFloor,
@@ -227,8 +227,8 @@ export class ContentStatus extends Schema.Class<ContentStatus>('ContentUpdate/St
 }) {}
 
 /** What one `update` run did. `installed` is `None` when the decision was not
- *  an offer, which is the no-mutation path `bible topics status` guarantees and
- *  `bible topics update` reports honestly rather than pretending to install. */
+ *  an offer, which is the no-mutation path `manna topics status` guarantees and
+ *  `manna topics update` reports honestly rather than pretending to install. */
 export class ContentUpdateOutcome extends Schema.Class<ContentUpdateOutcome>(
   'ContentUpdate/Outcome',
 )({

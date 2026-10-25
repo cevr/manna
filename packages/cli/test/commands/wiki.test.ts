@@ -78,7 +78,7 @@ const listing = Effect.gen(function* () {
   return { topics: yield* wiki.list({}), unavailable: yield* wiki.availability };
 });
 
-describe('bible wiki topics --json', () => {
+describe('manna wiki topics --json', () => {
   it.effect('reports catalog entries and the absence reason with no artifact', () =>
     Effect.gen(function* () {
       // The Milestone 2 CLI JSON workflow: with the artifact removed the command
@@ -236,7 +236,7 @@ const composeTopicsEnvelope = (layer: Layer.Layer<WikiService>) =>
     };
   }).pipe(Effect.provide(layer));
 
-describe('bible wiki --json stdout', () => {
+describe('manna wiki --json stdout', () => {
   it.effect('prints exactly the core codec encoding of the service result', () =>
     Effect.gen(function* () {
       const result = yield* runWiki(['topic', 'sanctuary', '--json']);
@@ -290,7 +290,7 @@ describe('bible wiki --json stdout', () => {
 });
 
 // ---------------------------------------------------------------------------
-// bible wiki matches
+// manna wiki matches
 //
 // The Milestone 4 CLI JSON workflow, and the CLI half of its adapter check.
 // The shared fixture is `@manna/core/wiki`'s `PHRASE_FIXTURE_DICTIONARY` and
@@ -333,7 +333,7 @@ const dictionaryWiki = (file: string): Layer.Layer<WikiService> =>
     Layer.provide(BunFileSystem.layer),
   );
 
-describe('bible wiki matches', () => {
+describe('manna wiki matches', () => {
   const test = it.scopedLive.layer(BunFileSystem.layer);
 
   test('returns the fixture spans for the Daniel 8:9 acceptance workflow', () =>
@@ -344,7 +344,7 @@ describe('bible wiki matches', () => {
         .pipe(Effect.orDie);
       const file = writeDictionaryArtifact(`${directory}/topics.db`);
 
-      // `bible wiki matches "$(bible verse 'Dan 8:9')" --json`, with the verse
+      // `manna wiki matches "$(manna verse 'Dan 8:9')" --json`, with the verse
       // text inlined as the shared fixture rather than shelled out for — the
       // string is byte-identical to what the verse command prints, brackets
       // included.
@@ -397,9 +397,9 @@ describe('bible wiki matches', () => {
 });
 
 // ---------------------------------------------------------------------------
-// bible wiki topic 2300-days --json — the Milestone 6 CLI JSON workflow
+// manna wiki topic 2300-days --json — the Milestone 6 CLI JSON workflow
 //
-// §10's Milestone 6 names this exact command: "`bible wiki topic 2300-days
+// §10's Milestone 6 names this exact command: "`manna wiki topic 2300-days
 // --json` matches, section for section and identity for identity, what the UI
 // renders."
 //
@@ -479,7 +479,7 @@ const writeTopicArtifact = (file: string): string => {
   return file;
 };
 
-describe('bible wiki topic 2300-days --json', () => {
+describe('manna wiki topic 2300-days --json', () => {
   const test = it.scopedLive.layer(BunFileSystem.layer);
 
   test('prints the composed page through the core schema, section for section', () =>
@@ -564,7 +564,7 @@ describe('bible wiki topic 2300-days --json', () => {
 // ---------------------------------------------------------------------------
 // The same command over a page whose sections are **not empty**
 //
-// The suite above runs `bible wiki topic --json` against
+// The suite above runs `manna wiki topic --json` against
 // `WikiSectionSources.NotWired`, and everything it can therefore assert about
 // the sections is true of six empty lists: the tags, the order, the arrival
 // flags. Section *content* — the thing "identity for identity, what the UI
@@ -599,7 +599,7 @@ const populatedWiki = (file: string): Layer.Layer<WikiService> =>
     Layer.provide(BunFileSystem.layer),
   );
 
-describe('bible wiki topic --json over a populated page', () => {
+describe('manna wiki topic --json over a populated page', () => {
   const test = it.scopedLive.layer(BunFileSystem.layer);
 
   test('every section carries its items, and they are the identities the UI renders', () =>
@@ -678,7 +678,7 @@ describe('bible wiki topic --json over a populated page', () => {
 });
 
 // ---------------------------------------------------------------------------
-// bible wiki lookup (§7) — the Milestone 7 CLI JSON workflow and adapter check
+// manna wiki lookup (§7) — the Milestone 7 CLI JSON workflow and adapter check
 //
 // Two claims, and they are different claims:
 //
@@ -701,10 +701,10 @@ const lookupResult = (input: LookupInput) =>
     Effect.provide(WIKI_LOOKUP_FIXTURE_LAYER),
   );
 
-describe('bible wiki lookup', () => {
+describe('manna wiki lookup', () => {
   it.effect('builds the portable lookup input the DOM hosts build', () =>
     Effect.gen(function* () {
-      // §7's own command line: `bible wiki lookup "the daily" --context "Dan
+      // §7's own command line: `manna wiki lookup "the daily" --context "Dan
       // 8:13"`. The value it produces is the fixture the two DOM adapters are
       // asserted against, so the three builders agree about one value rather
       // than about three copies of it.
@@ -719,7 +719,7 @@ describe('bible wiki lookup', () => {
   it.effect('builds that input from every raw argument the fixture names', () =>
     Effect.gen(function* () {
       // The CLI half of the shared table. A shell argument carries whatever the
-      // caller quoted — `bible wiki lookup "  the   daily  "` is one keystroke
+      // caller quoted — `manna wiki lookup "  the   daily  "` is one keystroke
       // away from the clean form — and a DOM `Range` carries the markup's own
       // line breaks. Both adapters run one core builder over these rows, so the
       // two produce one `text` rather than two that agree on tidy input.
@@ -796,7 +796,7 @@ describe('bible wiki lookup', () => {
 
   it.effect('runs §10’s CLI JSON workflow, context and all', () =>
     Effect.gen(function* () {
-      // §10, Milestone 7, word for word: `bible wiki lookup "the daily"
+      // §10, Milestone 7, word for word: `manna wiki lookup "the daily"
       // --context "Dan 8:13" --json`. Through the real command, so the flag is
       // parsed, converted to a verse address and carried into the service — a
       // parser that dropped `--context` would print four groups and an empty

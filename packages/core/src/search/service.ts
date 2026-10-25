@@ -661,7 +661,7 @@ const flatVectorNeighbors = (
 /** §9.3's locate-jump: where a refcode query lands, when it lands anywhere.
  *
  *  `findByRefcodeShort` is the existing lookup the reader already reaches
- *  through `bible egw lookup`, so a refcode typed into the search box goes to
+ *  through `manna egw lookup`, so a refcode typed into the search box goes to
  *  the same paragraph it would have gone to before — which is what makes this a
  *  route rather than a feature.
  */

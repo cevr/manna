@@ -30,7 +30,7 @@ series decks (`outputs/decks/what-is-truth/`).
 
 ### 1. Manifest first
 
-Pull every verse via `bible verse "<ref>" --json` (never memory). Clean the
+Pull every verse via `manna verse "<ref>" --json` (never memory). Clean the
 KJV text for slides: strip `[...]` italics brackets (keep contents) and `¶`
 pilcrows, collapse whitespace. Multi-passage slides (e.g. Mal 4:1, 3) join
 with `" ... "`.
@@ -217,7 +217,7 @@ them again.
 - **Don't put outline/SOP text on slides** — images + Scripture only; the
   teaching doc and whiteboard carry everything else.
 - **Don't paraphrase or retype verses** — manifest text comes from
-  `bible verse --json`, cleaned mechanically.
+  `manna verse --json`, cleaned mechanically.
 - **Don't generate images without the style template + `--ref`** — decks
   must stay visually one family.
 - **Don't hand-write the AppleScript** — generate from the manifest so the

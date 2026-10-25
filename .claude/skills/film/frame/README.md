@@ -1,6 +1,6 @@
 # Pioneer frame
 
-The doctrinal frame for every film: the historic Seventh-day Adventist pioneer position. It is built only from primary texts: the 1889 _Year Book_ statement, read from the page scan, and the local `~/.bible` corpus, reached through the `bible` CLI. Doctrine comes from these texts and from nowhere else: not from memory, and not from a later statement of beliefs.
+The doctrinal frame for every film: the historic Seventh-day Adventist pioneer position. It is built only from primary texts: the 1889 _Year Book_ statement, read from the page scan, and the local `~/.bible` corpus, reached through the `manna` CLI. Doctrine comes from these texts and from nowhere else: not from memory, and not from a later statement of beliefs.
 
 ## Use it
 

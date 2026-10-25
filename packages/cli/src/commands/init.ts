@@ -1,7 +1,7 @@
 /**
  * Init CLI Command
  *
- * `bible init` - Initialize all databases in ~/.bible/
+ * `manna init` - Initialize all databases in ~/.bible/
  *
  * Downloads pre-built databases from GitHub:
  * - bible.db: KJV text, Strong's concordance, cross-references
@@ -166,7 +166,7 @@ export const init = Command.make('init', { force }, (args) =>
       yield* Console.log(`✓ egw-paragraphs.db (EGW writings)`);
     } else {
       yield* Console.log(`✗ egw-paragraphs.db — add publications with:`);
-      yield* Console.log(`  bible egw download <CODE>`);
+      yield* Console.log(`  manna egw download <CODE>`);
     }
 
     yield* Console.log(``);

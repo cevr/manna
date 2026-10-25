@@ -89,7 +89,7 @@ const buildTopics = Command.make(
       ] satisfies readonly (readonly [string, string])[]) {
         if (!(yield* fs.exists(file))) {
           return yield* CompilerInputError.make({
-            message: `${label} not found at ${file} — run 'bible init' first`,
+            message: `${label} not found at ${file} — run 'manna init' first`,
           });
         }
       }

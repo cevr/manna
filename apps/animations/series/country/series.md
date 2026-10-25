@@ -51,7 +51,7 @@ The audience is every Christian, of any church or none (the series README, "Voic
 
 House rules for every episode (binding):
 
-- **Speech quotes only Scripture,** in KJV, word for word, from the `bible` CLI. Ellen White and the pioneers are paraphrased without being named, and the credits name them. A plain idea needs no name on it.
+- **Speech quotes only Scripture,** in KJV, word for word, from the `manna` CLI. Ellen White and the pioneers are paraphrased without being named, and the credits name them. A plain idea needs no name on it.
 - **No denominational vocabulary:** no "Country Living" as a book title, no "outpost centers", "institutions", "Battle Creek", "trades unions" or "the Sunday law" as a phrase in speech. Episode 12 says what Scripture says (Rev 13:16–17; 14:12) in plain words.
 - **No fear-mongering and no date-setting.** Safety is a side effect, never the lead. Never a statistic without a primary source. Never "flee now".
 - **No verdict on city families.** Keep "unnecessarily" (CL 9.4 = 22LtMs, Ms 115, 1907, par. 6) and "many cannot have their surroundings what they would" (PP 169.1). Every episode that calls also comforts: duty may place a family in the city, and God keeps the watchful there.

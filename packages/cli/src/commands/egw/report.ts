@@ -1,5 +1,5 @@
 /**
- * `bible egw report`: the weekly corpus sync's report, read in the terminal.
+ * `manna egw report`: the weekly corpus sync's report, read in the terminal.
  *
  * The sync on Cloudflare keeps each run's report as Markdown and serves it at
  * `egw.cvr.im/sync/<name>` (apps/egw-search). This fetches the `.md` and

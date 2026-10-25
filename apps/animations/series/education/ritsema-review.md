@@ -88,7 +88,7 @@ Scripts 01 and 52 are unchanged. His material doesn't improve 01's argument, and
 | 86  | VI   | Q   | You learn to swim in the water     | Ed 268.3; CT 263.2; Mark 6:7; Luke 10:1, 17                                             |
 | 87  | IX   | Q   | What about socialization?          | Prov 13:20; 1 Cor 15:33; CT 332.1. The statistics need a primary source.                |
 
-The catalogue grows from 77 topics (56 Q, 21 E) to 87 (64 Q, 23 E). Every new KJV reference was printed by `bible verse` on 2026-10-12.
+The catalogue grows from 77 topics (56 Q, 21 E) to 87 (64 Q, 23 E). Every new KJV reference was printed by `manna verse` on 2026-10-12.
 
 **Not proposed, though he covers them:**
 

@@ -343,7 +343,7 @@ const verse = Command.make(
     panel: panelFlag,
     ref: Flag.String('ref').pipe(Flag.withDescription('the reference, e.g. Job 9:2')),
     text: Flag.String('text').pipe(
-      Flag.withDescription('the verse as printed, verbatim (bible verse)'),
+      Flag.withDescription('the verse as printed, verbatim (manna verse)'),
     ),
     phrase: Flag.String('phrase').pipe(
       Flag.withDescription('the phrase highlighted: a run of its words'),

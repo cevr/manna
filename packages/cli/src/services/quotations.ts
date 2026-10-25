@@ -1,12 +1,12 @@
 /**
  * Whether a teaching document's quotations are word for word what they cite.
  *
- * Scripture bullets are compared with the KJV `bible verse` returns; witness
+ * Scripture bullets are compared with the KJV `manna verse` returns; witness
  * lines with the paragraph their refcode cites, through the same corpus-wide
- * lookup as `bible egw lookup` (books, periodicals, letters). A witness must
+ * lookup as `manna egw lookup` (books, periodicals, letters). A witness must
  * also be one unspliced clause of at most 30 words.
  *
- * `bible check` reports what this finds; `bible export` refuses a document
+ * `manna check` reports what this finds; `manna export` refuses a document
  * with any problem, so nothing misquoted reaches Notes.
  */
 
@@ -62,7 +62,7 @@ export class Quotations extends Context.Service<Quotations, QuotationsService>()
   '@manna/cli/services/quotations/Quotations',
 ) {}
 
-/** One problem per line, the shape `bible check` and `bible export` print. */
+/** One problem per line, the shape `manna check` and `manna export` print. */
 export const formatProblem = (problem: Problem) =>
   `${problem.file}:${problem.line} ${problem.kind} ${problem.detail}`;
 

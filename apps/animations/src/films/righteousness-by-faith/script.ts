@@ -21,7 +21,7 @@
 // Scripture. `{mark}` cues sit before the word a picture must hit. The film
 // speaks to every Christian and the interested non-believer (CRAFT rule 2;
 // the series' Voice and audience): it quotes only Scripture, verbatim KJV
-// checked with `bible verse` (supplied-word brackets dropped for speech), one
+// checked with `manna verse` (supplied-word brackets dropped for speech), one
 // quotation a beat. Ellen White and the pioneers are never quoted nor named
 // in speech: their thought is said in the narrator's own words, inside their
 // words (sources.md, quotes.jsonl), and the credits name them. No

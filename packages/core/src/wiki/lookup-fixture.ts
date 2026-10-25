@@ -4,7 +4,7 @@
  *  portable lookup input. It is held the way Milestone 4's span parity is held:
  *  **one fixture in core**, and each adapter asserts its own output equals it.
  *
- *  The selection is §7's own example — `bible wiki lookup "the daily" --context
+ *  The selection is §7's own example — `manna wiki lookup "the daily" --context
  *  "Dan 8:13"` — so the fixture is the milestone's acceptance workflow rather
  *  than a phrase invented for a test.
  *
@@ -78,7 +78,7 @@ export const LOOKUP_ADAPTER_INPUT: LookupInput = LookupInput.make({
 });
 
 /** The same selection made where no verse locates it: a reader selecting inside
- *  a writings paragraph, and `bible wiki lookup "the daily"` with no `--context`.
+ *  a writings paragraph, and `manna wiki lookup "the daily"` with no `--context`.
  *
  *  §7 gives `context` one job — locating the selection inside a verse for the
  *  Strong's group — so its absence is a value every adapter must produce

@@ -2,7 +2,7 @@
  * Mirror the remote EGW catalog into the local corpus.
  *
  * Lives in core rather than beside the CLI command because it has two callers
- * with nothing else in common: `bible egw sync` at a terminal, and the weekly
+ * with nothing else in common: `manna egw sync` at a terminal, and the weekly
  * Workflow beside the deployed search Worker. Only the presentation differs —
  * the flags, the progress lines and the exit code are the CLI's; the
  * traversal, the failure classification and the report are the domain's.

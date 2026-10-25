@@ -1,6 +1,6 @@
 /** The select-to-lookup wire model (§7).
  *
- *  The classes here are `bible wiki lookup --json`'s codec — one shared codec
+ *  The classes here are `manna wiki lookup --json`'s codec — one shared codec
  *  per payload, exactly as `study/model.ts` and the `WikiPageJson` alias do,
  *  rather than a projection that drifts.
  *

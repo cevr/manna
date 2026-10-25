@@ -32,7 +32,7 @@ Principles XX–XXI (FP1889 150.8, 151.1) hold that the proclamation of the seco
 
 ## Key texts
 
-KJV as printed by `bible verse` (square brackets mark KJV supplied words; the ¶ paragraph mark before Revelation 14:6 is omitted).
+KJV as printed by `manna verse` (square brackets mark KJV supplied words; the ¶ paragraph mark before Revelation 14:6 is omitted).
 
 - **Revelation 14:6-7**: "And I saw another angel fly in the midst of heaven, having the everlasting gospel to preach unto them that dwell on the earth, and to every nation, and kindred, and tongue, and people, Saying with a loud voice, Fear God, and give glory to him; for the hour of his judgment is come: and worship him that made heaven, and earth, and the sea, and the fountains of waters."
 - **Revelation 14:8**: "And there followed another angel, saying, Babylon is fallen, is fallen, that great city, because she made all nations drink of the wine of the wrath of her fornication."

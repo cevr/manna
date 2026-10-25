@@ -34,7 +34,7 @@ Principle VII (FP1889 148.5) holds that "the rise and fall of empires, and the c
 
 Cited in the quotes: Daniel 2 (2:31-44), Daniel 7 (7:25), Daniel 8, Daniel 4:23, Ezekiel 4:6, Numbers 14:34, 2 Thessalonians 2:3, 2:4, 2:8, Revelation 13:3, 13:8, 13:11-16, Revelation 14:9. In the 1889 statement: Principle VI — 2 Timothy 3:16, Deuteronomy 29:29, Psalm 119:105, 2 Peter 1:19, Revelation 1:1-3; Principle XIII — Daniel 7:25, Isaiah 56:1, 2, 1 Peter 1:5, Revelation 14:12. Smith gathers Daniel 7:25; 12:7; Revelation 12:6, 14; 13:5 into one period, "the 1260 years of papal supremacy" (DAR 263.3), and matches Revelation 13:5's "forty-two months, or 1260 years" to the little horn's "time, times, and the dividing of time" (DAR 524.7).
 
-KJV as printed by `bible verse` (supplied words in [brackets]; ¶ is the KJV paragraph mark):
+KJV as printed by `manna verse` (supplied words in [brackets]; ¶ is the KJV paragraph mark):
 
 - **Daniel 2:44** — And in the days of these kings shall the God of heaven set up a kingdom, which shall never be destroyed: and the kingdom shall not be left to other people, [but] it shall break in pieces and consume all these kingdoms, and it shall stand for ever.
 - **Daniel 7:25** — And he shall speak [great] words against the most High, and shall wear out the saints of the most High, and think to change times and laws: and they shall be given into his hand until a time and times and the dividing of time.

@@ -21,11 +21,11 @@ its PDF-driven weekly mechanics).
 
 **Phase 1 — Gather the cloud of witnesses.** Before writing a word:
 
-1. Pull every Bible passage via `bible verse "<ref>" --json` — the source
+1. Pull every Bible passage via `manna verse "<ref>" --json` — the source
    verses (if regenerating from a source, **all** of them) plus the
    cross-references you intend to chain.
 2. Gather EGW + pioneer testimony on each movement of the argument:
-   `bible egw search` → `bible egw lookup` → quote `paragraphs[].text`
+   `manna egw search` → `manna egw lookup` → quote `paragraphs[].text`
    verbatim with refcode. Pioneers (Miller, Uriah Smith, Andrews, James
    White, Jones, …) cited by name.
 3. For large documents, fan the gathering out (one gatherer per theme);
@@ -205,7 +205,7 @@ Rules that make it work live:
 
 - **Regenerating from a source** → every source verse appears (anchor
   quotes, fragments, or chain hops — present, always).
-- KJV. Verse text verbatim from `bible verse` — never memory.
+- KJV. Verse text verbatim from `manna verse` — never memory.
 - Every doctrinal claim carries a ref on its own line or clause.
 - Strong's / Greek is auxiliary confirmation as a sub-bullet under its
   verse — a point that _needs_ the Greek isn't established yet.
@@ -231,13 +231,13 @@ New and regenerated documents go in the teachings tree.
 ## Export — folder per topic
 
 ```bash
-bible check outputs/teachings/great-controversy/<slug>.md   # must report 0 problems
-bible export -f outputs/teachings/great-controversy/<slug>.md --folder "Great Controversy"
+manna check outputs/teachings/great-controversy/<slug>.md   # must report 0 problems
+manna export -f outputs/teachings/great-controversy/<slug>.md --folder "Great Controversy"
 ```
 
 Folder = the topic, Title-Cased. A regenerated legacy document keeps its
-`apple_note_id` — `bible export -f <file>` then updates the existing note in
-place (`bible sync` is DB-only).
+`apple_note_id` — `manna export -f <file>` then updates the existing note in
+place (`manna sync` is DB-only).
 
 ## Anti-patterns
 

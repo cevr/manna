@@ -1697,7 +1697,7 @@ Transcript: `autumn-leaves-nz/07-battle-over-true-education.txt` (ytt --json)
 - **New: "Homeschool isn't the point"** — moving false education into the kitchen changes nothing; method matters more than location. KJV Deut 6:6–7; Prov 22:6. EGW CE 8.4, Ed 17.2, 3T 150.1.
 - **New: "An army of children"** — children trained at home as missionaries. KJV Ps 8:2; 1 Sam 3:19; 2 Tim 3:15. EGW ST Aug 13, 1896 par. 3; HS 284.4 (drop its denominational frame).
 
-KJV references proposed for new topics in this file were all printed by `bible verse` on 2026-10-12 (Luke 1:80, Gal 1:17, Acts 7:30, Prov 9:10, Prov 28:26, 1 John 4:19, Luke 6:48, John 15:5, 2 Cor 12:9, Mark 3:14, John 13:1, Luke 10:33–34, Mark 6:34, Prov 22:6, Ps 8:2, 1 Sam 3:19, 2 Tim 3:15, Acts 18:3, Gen 4:17).
+KJV references proposed for new topics in this file were all printed by `manna verse` on 2026-10-12 (Luke 1:80, Gal 1:17, Acts 7:30, Prov 9:10, Prov 28:26, 1 John 4:19, Luke 6:48, John 15:5, 2 Cor 12:9, Mark 3:14, John 13:1, Luke 10:33–34, Mark 6:34, Prov 22:6, Ps 8:2, 1 Sam 3:19, 2 Tim 3:15, Acts 18:3, Gen 4:17).
 
 ---
 

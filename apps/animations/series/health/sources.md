@@ -13,11 +13,11 @@ per-strand search logs, are in `research/`:
 ## 1. How the material was gathered
 
 - **KJV:** every verse quoted in a script and every KJV ref in `series.md` was printed
-  in this session by `bun packages/cli/src/main.ts verse "<ref>"` (the `bible` CLI run
-  from source; the checked-in `packages/cli/bin/bible` is a macOS binary). In this CLI,
+  in this session by `bun packages/cli/src/main.ts verse "<ref>"` (the `manna` CLI run
+  from source; the built `packages/cli/bin/manna` is a macOS binary). In this CLI,
   `3 John 2` fails and `3 John 1:2` works. The CLI's `[ ]` marks KJV italics and `‹ ›`
   marks red letter; the scripts drop the marks and keep the words.
-- **Strong's:** `bible concordance H2235` (pulse, "something sown") and `G5331`
+- **Strong's:** `manna concordance H2235` (pulse, "something sown") and `G5331`
   (_pharmakeia_, sorcery). G5331 was looked up by the Medicine research agent.
 - **EGW and pioneers:** the CLI's `egw` commands fail on this box. `~/.bible/egw-paragraphs.db`
   is a stub (no books, a two-column `paragraphs` table), so every `egw` command dies with
@@ -26,7 +26,7 @@ per-strand search logs, are in `research/`:
   own egw-search server (`apps/egw-search`, same `@manna/core` search over the full corpus),
   through `GET /api/search?q=…&scope=egw|pioneer&context=N`. `research/q.ts` lists hits and
   `research/ctx.ts` prints a hit with its neighbouring paragraphs. The refcodes are the ones
-  the corpus prints, the same as `bible egw lookup` would take. Nothing in `~/.bible` or the
+  the corpus prints, the same as `manna egw lookup` would take. Nothing in `~/.bible` or the
   repo was changed.
   - To use the CLI's own `egw` path again: restore a full `egw-paragraphs.db` to `~/.bible/`
     (or point `EGW_PARAGRAPH_DB` at one), or supply the EGW API credentials.

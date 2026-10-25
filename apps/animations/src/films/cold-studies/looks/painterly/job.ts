@@ -28,7 +28,7 @@ import { P, R, SERIF } from './palette.ts';
 /** The page's printed ink: a warm brown-black, worn. */
 const PRINT = '#2b2119';
 
-/** The verses either side of Job 9:2, as the page prints them (KJV, `bible verse "Job 9:1-3"`). */
+/** The verses either side of Job 9:2, as the page prints them (KJV, `manna verse "Job 9:1-3"`). */
 const BEFORE = 'Then Job answered and said,';
 const AFTER = 'If he will contend with him, he cannot answer him one of a thousand.';
 

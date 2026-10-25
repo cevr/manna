@@ -1,6 +1,6 @@
 /** The one Strong's decoder (should-fix 5).
  *
- *  `StrongsNumber` is the whole argument of `bible study strongs`.
+ *  `StrongsNumber` is the whole argument of `manna study strongs`.
  *
  *  The assertions below are the contract itself rather than a sample of it, and
  *  `packages/cli/test/commands/study.test.ts` runs the real command against the

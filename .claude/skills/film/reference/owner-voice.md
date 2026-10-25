@@ -159,7 +159,7 @@ Nine more of his sermons (November 2025 to July 2026, a four-part series among t
 | In church he…                                                                | In a film…                                                                                                              |
 | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | gives the reference: "Let's go to Leviticus chapter four."                   | names the speaker or the setting, never chapter and verse: "In the law Moses gave, a man who sinned brought…" (CRAFT 2) |
-| reads NKJV or a modern version                                               | quotes KJV verbatim, checked with `bible verse`                                                                         |
+| reads NKJV or a modern version                                               | quotes KJV verbatim, checked with `manna verse`                                                                         |
 | reads whole passages                                                         | quotes one line a beat at most and tells the rest; quoted words stay under 20% (CRAFT 2)                                |
 | says "The Bible says" or "The Bible tells us" (58 sentences)                 | keeps it: the authority is the text's ("The psalm says", "Jesus says")                                                  |
 | reads Ellen White by name, with her book                                     | says her thought as a plain claim, inside her words, unnamed; the credits name the work                                 |

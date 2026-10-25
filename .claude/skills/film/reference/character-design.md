@@ -6,7 +6,7 @@ Owner, 2026-10-13: "make a doc that describes what colors should convey and also
 
 **Where this sits.** The frame ([frame/README.md](../frame/README.md)) outranks everything. Then [CRAFT.md](../CRAFT.md) (rule 12 is the look), then [director-vision.md](director-vision.md) (palette, colour script, figures). This file applies them to figures. The recurring cast's identity (who they are, their slots, arcs and continuity) lives in the cast bible, [ensemble.md](../../../../apps/animations/docs/ensemble.md); this file adds the colour reasoning and the sheets. The figure construction comes from [rimworld-study.md](rimworld-study.md).
 
-This doc is internal, so it cites Ellen White and the pioneers by name. On screen, speech quotes only Scripture (KJV); their thought is paraphrased unnamed and credited in the roll ([CRAFT.md](../CRAFT.md) rule 2). Every verse below was checked with `bible verse` on 2026-10-13; every Ellen White line with `bible egw lookup` or `bible egw search`.
+This doc is internal, so it cites Ellen White and the pioneers by name. On screen, speech quotes only Scripture (KJV); their thought is paraphrased unnamed and credited in the roll ([CRAFT.md](../CRAFT.md) rule 2). Every verse below was checked with `manna verse` on 2026-10-13; every Ellen White line with `manna egw lookup` or `manna egw search`.
 
 ## The look these rules assume (K1)
 

@@ -56,7 +56,7 @@ Cited by these writers in or around the quotes above:
 - Acts 3:19-21; Dan 9:24; Eph 4:7-13; Gal 3:13-14 (CWCP ch. XVI)
 - From the 1889 statement's Principle II: Acts 3:19; Lev 16; Heb 8:4-5; 9:6-7
 
-KJV (brackets as printed by `bible verse`):
+KJV (brackets as printed by `manna verse`):
 
 - **Revelation 14:12** — Here is the patience of the saints: here [are] they that keep the commandments of God, and the faith of Jesus.
 - **Romans 3:22** — Even the righteousness of God [which is] by faith of Jesus Christ unto all and upon all them that believe: for there is no difference:

@@ -3,7 +3,7 @@
 Series: The Path of the Just · Tier One (Milk) · 1 of 44 · the opener
 Promise: by the end the viewer knows what the Bible means by milk and meat, why growing is normal and glad, why its truths come in order (skip the first steps and we twist the rest), and the path the series will walk.
 Length: about 7:45 (884 spoken words: 5:42 at 155 wpm, about 6:16 with the marked breaths and holds, 5:21–5:54 at 165–150 wpm before the holds; plus title, beat leads and tails, about 30 s of music alone and 28 s of credits).
-Status: draft for the owner. Nothing narrated. Every KJV line below was printed by `bible verse` on 2026-10-10 and checked again on 2026-10-15 (supplied-word brackets dropped for speech); every paraphrase source was printed by the corpus search (sources.md). Wording revised 2026-10-15 to Christ's manner of speaking (series README, Language) and marked for delivery: `{*}` stress, `{/}` breath, `{//}` hold.
+Status: draft for the owner. Nothing narrated. Every KJV line below was printed by `manna verse` on 2026-10-10 and checked again on 2026-10-15 (supplied-word brackets dropped for speech); every paraphrase source was printed by the corpus search (sources.md). Wording revised 2026-10-15 to Christ's manner of speaking (series README, Language) and marked for delivery: `{*}` stress, `{/}` breath, `{//}` hold.
 
 ## Header (the `script.ts` comment, house style)
 

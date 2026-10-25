@@ -1,13 +1,13 @@
 /** §3.6's two operator commands.
  *
- * `bible topics status [--json]` reports what is installed, what the manifest
+ * `manna topics status [--json]` reports what is installed, what the manifest
  * offers, and the decision — with **no mutation of any kind**. That is the
  * whole contract: an operator asking what state a machine is in must not change
  * the state by asking. `ContentUpdate.status` reads the installer's activated
  * generation rather than running the install pipeline, which is what makes the
  * guarantee structural rather than a promise in this docstring.
  *
- * `bible topics update [--json]` runs the same decision and, only on an offer,
+ * `manna topics update [--json]` runs the same decision and, only on an offer,
  * installs through the File Corpus lifecycle. A digest or size mismatch leaves
  * the installed generation active and is reported as an update that activated
  * nothing — not as an error the caller has to catch to learn that its working
@@ -127,5 +127,5 @@ export const topicsUpdate = Command.make('update', { json }, (args) =>
 );
 
 export const topics = Command.make('topics', {}, () =>
-  Console.log(`Usage: bible topics status [--json]\n       bible topics update [--json]`),
+  Console.log(`Usage: manna topics status [--json]\n       manna topics update [--json]`),
 ).pipe(Command.withSubcommands([topicsStatus, topicsUpdate]));

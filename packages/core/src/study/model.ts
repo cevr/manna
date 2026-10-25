@@ -56,7 +56,7 @@ export const strongsNumber = Schema.decodeSync(StrongsNumber);
 /** How many concordance occurrences a caller asks for.
  *
  *  **The one limit rule.** Two seams take this number — the
- *  `bible study strongs --limit` flag, and the `StrongsStudy.limit` field that
+ *  `manna study strongs --limit` flag, and the `StrongsStudy.limit` field that
  *  reports which cap a result was built under — and each used to restate
  *  `Schema.Int.check(isGreaterThan(0))` in its own words. Copies of one rule
  *  are places for it to drift: a flag

@@ -77,7 +77,7 @@ interface CitedVerse extends Verse {
   readonly ref: string;
 }
 
-/** Job 9:2, KJV, verbatim (`bible verse "Job 9:2"`, its supplied word unbracketed), and the phrase the card lifts. */
+/** Job 9:2, KJV, verbatim (`manna verse "Job 9:2"`, its supplied word unbracketed), and the phrase the card lifts. */
 export const VERSE: CitedVerse = {
   ref: 'Job 9:2',
   text: 'I know it is so of a truth: but how should man be just with God?',

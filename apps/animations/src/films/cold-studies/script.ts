@@ -12,7 +12,7 @@
 //   the phrase highlighted, the highlight flooding into the full-screen card
 //   (CRAFT rule 1) whose words land as they are spoken, "just" the payoff.
 //
-// Scripture quoted verbatim KJV, checked with `bible verse` (Job 9:2).
+// Scripture quoted verbatim KJV, checked with `manna verse` (Job 9:2).
 
 import { defineScript } from '@manna/film/core';
 

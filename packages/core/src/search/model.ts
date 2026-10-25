@@ -1,7 +1,7 @@
 /** The hybrid-search wire model (§9).
  *
  *  Every type here crosses the search daemon's `search.query`, and the same
- *  classes are `bible egw search --json`'s codec — one shared codec per
+ *  classes are `manna egw search --json`'s codec — one shared codec per
  *  payload, exactly as `LookupResultJson` and `WikiPageJson` are, so the daemon
  *  response and the CLI's JSON are one value encoded by one schema rather than
  *  two projections that drift.
@@ -269,7 +269,7 @@ export class SearchResult extends Schema.Class<SearchResult>('Search/Result')({
 }) {}
 
 /** The one wire encoding of a search result, shared by the search daemon's
- *  `search.query` and `bible egw search --json`, named for the same reason
+ *  `search.query` and `manna egw search --json`, named for the same reason
  *  `LookupResultJson` is: neither surface enumerates fields, and a field added
  *  to `SearchResult` reaches both at once. */
 export const SearchResultJson = SearchResult;

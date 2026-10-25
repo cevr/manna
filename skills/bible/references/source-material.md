@@ -1,4 +1,4 @@
-# Source Material — the `bible` CLI
+# Source Material — the `manna` CLI
 
 Pull verses, EGW writings, hymns, commentary, and Sabbath School PDFs into your
 generation pipeline. Every read-side command supports `--json` for machine
@@ -13,21 +13,21 @@ pull, then generate, citing the actual data.
 
 | Goal                                  | Command                                               |
 | ------------------------------------- | ----------------------------------------------------- |
-| Fetch a verse / chapter / book        | `bible verse <ref> --json`                            |
-| Text-search the Bible                 | `bible verse "<query>" --json [--limit N]`            |
-| Strong's lookup (definition + verses) | `bible concordance H<n> --json [--limit N]`           |
-| Search Strong's by English word       | `bible concordance <word> --json [--limit N]`         |
-| **Find an EGW reference (FTS)**       | `bible egw search "<query>" --json`                   |
-| Find an EGW reference (whole corpus)  | `bible egw search "<query>" --remote --json`          |
-| EGW lookup by refcode (any)           | `bible egw lookup "<refcode>" --json`                 |
-| EGW commentary on a verse             | `bible egw commentary "<book ch:vv>" --json`          |
-| EGW catalog (remote)                  | `bible egw catalog --search "<term>" --json`          |
-| List installed EGW books              | `bible egw books --json`                              |
-| Download an EGW/pioneer book          | `bible egw download <CODE>` / `--id <ID>`             |
-| Hymn full text                        | `bible hymns get <number> --json`                     |
-| Hymn search                           | `bible hymns search "<query>" --json [--limit N]`     |
-| Hymn categories                       | `bible hymns categories`                              |
-| Sabbath School PDFs                   | `bible sabbath-school fetch -y 2026 -q 2 -w 5 --json` |
+| Fetch a verse / chapter / book        | `manna verse <ref> --json`                            |
+| Text-search the Bible                 | `manna verse "<query>" --json [--limit N]`            |
+| Strong's lookup (definition + verses) | `manna concordance H<n> --json [--limit N]`           |
+| Search Strong's by English word       | `manna concordance <word> --json [--limit N]`         |
+| **Find an EGW reference (FTS)**       | `manna egw search "<query>" --json`                   |
+| Find an EGW reference (whole corpus)  | `manna egw search "<query>" --remote --json`          |
+| EGW lookup by refcode (any)           | `manna egw lookup "<refcode>" --json`                 |
+| EGW commentary on a verse             | `manna egw commentary "<book ch:vv>" --json`          |
+| EGW catalog (remote)                  | `manna egw catalog --search "<term>" --json`          |
+| List installed EGW books              | `manna egw books --json`                              |
+| Download an EGW/pioneer book          | `manna egw download <CODE>` / `--id <ID>`             |
+| Hymn full text                        | `manna hymns get <number> --json`                     |
+| Hymn search                           | `manna hymns search "<query>" --json [--limit N]`     |
+| Hymn categories                       | `manna hymns categories`                              |
+| Sabbath School PDFs                   | `manna sabbath-school fetch -y 2026 -q 2 -w 5 --json` |
 
 ## Typical agent flow
 
@@ -35,28 +35,28 @@ You're building a study/message/reading. Pull source material in this order:
 
 1. **Pull the Bible passage** in JSON:
    ```bash
-   bible verse "daniel 9:24-27" --json
+   manna verse "daniel 9:24-27" --json
    ```
 2. **Find + pull EGW** on the topic. You rarely know the refcode up front —
    **search to find it, then look it up to quote it**:
    ```bash
-   bible egw search "seventy weeks" --book GC --json   # discover the refcode
-   bible egw lookup "GC 326.1" --json                  # quote the exact text
-   bible egw commentary "daniel 9:24" --json           # verse-keyed commentary
+   manna egw search "seventy weeks" --book GC --json   # discover the refcode
+   manna egw lookup "GC 326.1" --json                  # quote the exact text
+   manna egw commentary "daniel 9:24" --json           # verse-keyed commentary
    ```
 3. **Pull Strong's** for keywords you're studying:
    ```bash
-   bible concordance H2451 --json    # ḥākmâ — wisdom
-   bible concordance G26 --json       # agapē — love
+   manna concordance H2451 --json    # ḥākmâ — wisdom
+   manna concordance G26 --json       # agapē — love
    ```
 4. **Pull a hymn** for a closing call/altar moment:
    ```bash
-   bible hymns search "amazing grace" --json
-   bible hymns get 108 --json
+   manna hymns search "amazing grace" --json
+   manna hymns get 108 --json
    ```
 5. **For Sabbath School week prep**, fetch the Teachers + EGW Notes PDFs:
    ```bash
-   bible sabbath-school fetch -y 2026 -q 2 -w 5 --json
+   manna sabbath-school fetch -y 2026 -q 2 -w 5 --json
    ```
    Then feed `lessonPdf` and `egwPdf` paths to the pipeline.
 
@@ -69,16 +69,16 @@ The discovery flow is **search → lookup → quote**:
 
 ```bash
 # 1. SEARCH to discover the right passage (refcode unknown)
-bible egw search "investigative judgment" --json        # local FTS5 index
-bible egw search "1844" --book GC --json                # scope to one book
-bible egw search "sanctuary cleansed" --remote --json   # whole EGW corpus via API
+manna egw search "investigative judgment" --json        # local FTS5 index
+manna egw search "1844" --book GC --json                # scope to one book
+manna egw search "sanctuary cleansed" --remote --json   # whole EGW corpus via API
 #   --remote searches ~17K+ paragraphs (all books, letters, periodicals,
 #   Froom's Prophetic Faith, SDA Bible Commentary). Use when the local DB
 #   (GC, PK, DA, AA, EW, SR, DAR) doesn't surface what you need.
 
 # 2. LOOK UP the refcode the search returned, for exact quotable text
-bible egw lookup "GC 423.1" --json                      # single paragraph
-bible egw lookup "GC 423-425" --json                    # page range
+manna egw lookup "GC 423.1" --json                      # single paragraph
+manna egw lookup "GC 423-425" --json                    # page range
 
 # 3. QUOTE paragraphs[].text verbatim, with the refcode.
 ```
@@ -88,14 +88,14 @@ yet in the local DB: find the book's code/ID with `catalog`, `download` it, then
 `search` / `lookup`:
 
 ```bash
-bible egw catalog --search "uriah smith" --json   # find CODE / book_id
-bible egw download DAR                             # or: --id <BOOK_ID>
-bible egw search "little horn" --book DAR --json   # now searchable locally
+manna egw catalog --search "uriah smith" --json   # find CODE / book_id
+manna egw download DAR                             # or: --id <BOOK_ID>
+manna egw search "little horn" --book DAR --json   # now searchable locally
 ```
 
 ## Command details
 
-### `bible verse <ref|query> [--json] [--limit N]`
+### `manna verse <ref|query> [--json] [--limit N]`
 
 Reference forms (parsed by `parseBibleQuery`):
 
@@ -119,7 +119,7 @@ JSON shape:
 }
 ```
 
-### `bible concordance <Strong's|word> [--json] [--limit N]`
+### `manna concordance <Strong's|word> [--json] [--limit N]`
 
 Detection: matches `^[HhGg]\d+$` → direct Strong's lookup; else definition
 search. `--limit N` defaults to `50`. Caps the verse list (Strong's mode) or
@@ -146,14 +146,14 @@ Strong's is **auxiliary confirmation** of a meaning already plain from the text
 (see the Hermeneutic & Sources stance in `SKILL.md`) — never the route to a
 non-obvious reading.
 
-### `bible egw search <query> [--remote] [--limit N] [--book CODE] [--lang en] [--json]`
+### `manna egw search <query> [--remote] [--limit N] [--book CODE] [--lang en] [--json]`
 
 The find-references command. Local FTS5 by default; `--remote` hits the EGW API
 (whole corpus). `--book` scopes local search to a single book code (e.g.
 `--book DA`). `--limit` defaults to `20`. `--lang` only applies to `--remote`.
 Avoid bare commas/operators in the query — they hit the FTS5 parser literally.
 
-### `bible egw lookup <ref> [--json]`
+### `manna egw lookup <ref> [--json]`
 
 Explicit refcode lookup — no FTS fallback. Any refcode in the corpus resolves
 as `search` prints it (spacing and case aside), and so does any refcode above
@@ -189,12 +189,12 @@ JSON shape (single page):
 ```
 
 For invalid refcodes (e.g. `"great controversy"`), exits non-zero with a stderr
-hint to use `bible egw search` instead.
+hint to use `manna egw search` instead.
 
-### `bible egw commentary <book ch:verse> [--json]`
+### `manna egw commentary <book ch:verse> [--json]`
 
 EGW Bible Commentary (BC1-BC7) entries for a **single** Bible verse. Refuses
-chapter/range/full-book queries (use `bible egw lookup` for ranges).
+chapter/range/full-book queries (use `manna egw lookup` for ranges).
 
 JSON shape:
 
@@ -208,37 +208,37 @@ JSON shape:
 `content` may carry HTML (`egwlink_bible` spans) — strip with a simple regex if
 you need plain text.
 
-### `bible egw books [--author <substr>] [--json]`
+### `manna egw books [--author <substr>] [--json]`
 
 Lists books installed in the local EGW DB. Use `--json` to feed downstream
 filters.
 
-### `bible egw catalog [--search <q>] [--author <substr>] [--lang en] [--limit 50] [--json]`
+### `manna egw catalog [--search <q>] [--author <substr>] [--lang en] [--limit 50] [--json]`
 
 Browses the remote EGW API catalog. Use to find a `CODE`/`book_id` before
-`bible egw download`.
+`manna egw download`.
 
-### `bible egw download <CODE> | --id <BOOK_ID> [--lang en] [--concurrency N]`
+### `manna egw download <CODE> | --id <BOOK_ID> [--lang en] [--concurrency N]`
 
 Fetches a book from the API into the local DB and rebuilds the FTS index, so it
-becomes searchable via `bible egw search`. The remote catalog matches on
+becomes searchable via `manna egw search`. The remote catalog matches on
 **title**, not code — single-token codes (e.g. `DAR`) may not round-trip; if a
 code doesn't resolve, find the `book_id` via `catalog --search "<title>"` and
 download by `--id`.
 
-### `bible hymns get <number> [--json]`
+### `manna hymns get <number> [--json]`
 
 Returns the full hymn (`verses[]`). JSON: `{ id, name, category, verses }`.
 Range: 1-920. Verse `id`s count stanzas up from 0 and refrains down from -1
 (`-1` the refrain, `-2` a second one); the text output prints the refrain after
 stanza 1, as the hymnal does.
 
-### `bible hymns search <query> [--json] [--limit N]`
+### `manna hymns search <query> [--json] [--limit N]`
 
 Returns up to `--limit N` matches (default `20`). JSON:
 `{ query, matches: [{ id, name, category, firstLine }] }`.
 
-### `bible check <file...> [--json]`
+### `manna check <file...> [--json]`
 
 Verifies a written document before export. Finds every Scripture bullet
 (`- _Ref._ "text"`) and witness line (`[SOP REF] "text"`,
@@ -252,11 +252,11 @@ exits 1 on any problem. Kinds: `verse-unresolved`, `verse-mismatch`,
 `witness-too-long`. Only those two line shapes are checked — keep every
 quotation on them.
 
-### `bible hymns categories` / `bible hymns category <id>`
+### `manna hymns categories` / `manna hymns category <id>`
 
 Browse categories. (No `--json` yet — these are typically interactive.)
 
-### `bible sabbath-school fetch [-y YEAR] [-q QUARTER] [-w WEEK] [--json]`
+### `manna sabbath-school fetch [-y YEAR] [-q QUARTER] [-w WEEK] [--json]`
 
 Downloads (or returns from cache) the Teachers PDF + EGW Notes PDF for the
 requested week(s). No AI involvement. Defaults: current year, current quarter,
@@ -284,17 +284,17 @@ Files cache to `outputs/sabbath-school/pdfs/`; re-runs are idempotent.
 
 ## Anti-patterns
 
-- **Don't paraphrase verses from memory.** Always pull via `bible verse` and
+- **Don't paraphrase verses from memory.** Always pull via `manna verse` and
   cite the JSON.
-- **Don't invent Strong's numbers.** `bible concordance H<n>` returns a null
+- **Don't invent Strong's numbers.** `manna concordance H<n>` returns a null
   entry on a miss — check before citing.
-- **Don't paraphrase EGW.** Use `bible egw search` to find it and `bible egw
+- **Don't paraphrase EGW.** Use `manna egw search` to find it and `manna egw
   lookup` to quote the `paragraphs[].text` field with the refcode.
 - **Don't recall EGW refcodes from memory** — `search` first; a wrong refcode
   silently returns the wrong (or no) paragraph.
-- **Don't use bare `bible egw <ref>` (no `lookup`) in agent flows.** That
+- **Don't use bare `manna egw <ref>` (no `lookup`) in agent flows.** That
   subcommand is human-facing and falls through to FTS on a parse failure —
-  ambiguous for programmatic use. Use `bible egw lookup`; failures are explicit.
+  ambiguous for programmatic use. Use `manna egw lookup`; failures are explicit.
 
 ## Source code
 

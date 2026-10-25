@@ -11,7 +11,7 @@
 
 const unavailable = (): never => {
   // A bundler stub outside any Effect: if the unreachable image path is ever taken, crash loudly with a named reason.
-  throw new Error('sharp is not bundled into the compiled bible CLI (text-only build)');
+  throw new Error('sharp is not bundled into the compiled manna CLI (text-only build)');
 };
 
 export default unavailable;

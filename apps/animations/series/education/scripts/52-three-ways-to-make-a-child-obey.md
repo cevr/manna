@@ -10,7 +10,7 @@
 | Outline                       | Hook · Series line · The setup · Mother 1: tricks · Mother 2: persuasion · Turn: Abraham "will command" · Mother 3: kind, settled authority · Psalm 18 · Payoff   |
 | Set                           | Seated. A toy horse-and-carriage or a child's small wooden chair on the desk (the hook object), an open Bible.                                                    |
 
-Every Scripture line was printed by `bible verse` (2026-10-10/11, checked again 2026-10-15) and is quoted word for word, without the KJV's italic brackets. Where only part of a verse is quoted, the words are continuous and the caption shows only those words. The story is retold in my own words from a public-domain book, and it is told openly as a picture ("Picture a mother…"), the way the book itself supposes the case, never as something that happened. The book and its author are credited in the description and not named in speech. The Say column carries the delivery marks (`{*}` stress, `{/}` breath, `{//}` hold).
+Every Scripture line was printed by `manna verse` (2026-10-10/11, checked again 2026-10-15) and is quoted word for word, without the KJV's italic brackets. Where only part of a verse is quoted, the words are continuous and the caption shows only those words. The story is retold in my own words from a public-domain book, and it is told openly as a picture ("Picture a mother…"), the way the book itself supposes the case, never as something that happened. The book and its author are credited in the description and not named in speech. The Say column carries the delivery marks (`{*}` stress, `{/}` breath, `{//}` hold).
 
 ## Cast
 

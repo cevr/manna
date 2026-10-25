@@ -30,7 +30,7 @@ Research, plans and draft scripts for four content series. Nothing here is narra
 - **Fiction (owner, 2026-10-13: "Fiction as a rule should be avoided, but it can be used allegorically"):** no invented story told as true. A story may carry a Bible truth only as an allegory, framed openly as one, as a parable is (_The Pilgrim's Progress_, GC 252.2). The plain leads and the cast are parable figures ("Picture a father…"), never real people. The sources are in [`education/series.md`](education/series.md).
 - See also the owner's rules in [`theology/series.md`](theology/series.md) (Audience).
 
-Each folder holds `series.md` (the plan and episode list), `sources.md` (every citation and how it was verified against the local corpus with the `bible` CLI) and `scripts/` (drafts).
+Each folder holds `series.md` (the plan and episode list), `sources.md` (every citation and how it was verified against the local corpus with the `manna` CLI) and `scripts/` (drafts).
 
 A plan numbers its episodes 01 to its count, in order, with no letter and no empty slot, and each script's heading and its `N of M` follow it (`scripts.test.ts`). A renumber reads every reference against its old-to-new map, possessives and prose included ("05's landing", "theology 05's heaven"), not the file names alone.
 

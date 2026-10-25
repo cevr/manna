@@ -7,7 +7,7 @@ Sabbath School", or "process Q2 W5 2026". Output is a guided teaching session: o
 present-truth theme for the week, reached by a fixed sequence of movements.
 The official lesson PDF + EGW Notes PDF supply the subject and readings.
 
-There is no `bible sabbath-school process` AI command anymore — the agent
+There is no `manna sabbath-school process` AI command anymore — the agent
 fetches the PDFs and generates the outline directly.
 
 ## Quarter / week calculation
@@ -29,7 +29,7 @@ date.
 
 ```bash
 # Fetch the Teachers PDF + EGW Notes PDF (cached locally)
-bible sabbath-school fetch -y 2026 -q 2 -w 5 --json
+manna sabbath-school fetch -y 2026 -q 2 -w 5 --json
 ```
 
 JSON shape:
@@ -55,8 +55,8 @@ content + EGW supporting passages.
 
 ```bash
 # Pull related verses + EGW commentary as you build the outline
-bible verse "<key verse from the lesson>" --json
-bible egw lookup "<refcode cited by the lesson>" --json
+manna verse "<key verse from the lesson>" --json
+manna egw lookup "<refcode cited by the lesson>" --json
 ```
 
 ## Output shape — a guided session, not a day-by-day survey
@@ -87,8 +87,8 @@ Where the quarterly's reading and the pioneer reading diverge, teach the
 pioneer position from Scripture, charitably, with the verses on the table.
 
 Gather before writing (Phase 1 of `references/teachings.md`): pull every
-verse via `bible verse`, and hunt EGW + pioneer witnesses for each movement
-via `bible egw search`/`lookup` — the 1888 periodicals (1893 Bulletin,
+verse via `manna verse`, and hunt EGW + pioneer witnesses for each movement
+via `manna egw search`/`lookup` — the 1888 periodicals (1893 Bulletin,
 Present Truth, Signs, Review) as well as the books.
 
 ```markdown
@@ -207,15 +207,15 @@ Example: `2026-Q2-W5.md`.
 ## Export
 
 ```bash
-bible check outputs/sabbath-school/2026-Q2-W5.md     # must report 0 problems
-bible export -f outputs/sabbath-school/2026-Q2-W5.md --folder "sabbath school"   # the existing Notes folder; never create another
+manna check outputs/sabbath-school/2026-Q2-W5.md     # must report 0 problems
+manna export -f outputs/sabbath-school/2026-Q2-W5.md --folder "sabbath school"   # the existing Notes folder; never create another
 ```
 
 ## Updates
 
 ```bash
 # edit file in place, then re-export: it re-checks and updates the linked note
-bible export -f outputs/sabbath-school/2026-Q2-W5.md
+manna export -f outputs/sabbath-school/2026-Q2-W5.md
 ```
 
 ## Anti-patterns

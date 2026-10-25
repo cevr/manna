@@ -10,7 +10,7 @@
 | Outline                                | The gold star · Two disciples ask for the top seats · Jesus' answer: great = servant · Measuring against each other is not wise · What rivalry breeds · Work for an Audience of One · Payoff |
 | Set                                    | Seated. A sheet of gold-star stickers (the hook object) on the desk, an open Bible.                                                                                                          |
 
-Every Scripture line was printed by `bible verse` on 2026-10-10, checked again on 2026-10-15, and is quoted word for word, without the KJV's italic brackets or the CLI's ‹ › red-letter marks. Where only part of a verse is quoted, the words are continuous and the caption shows only those words. Pioneers are paraphrased and unnamed in speech. The Say column carries the delivery marks (`{*}` stress, `{/}` breath, `{//}` hold).
+Every Scripture line was printed by `manna verse` on 2026-10-10, checked again on 2026-10-15, and is quoted word for word, without the KJV's italic brackets or the CLI's ‹ › red-letter marks. Where only part of a verse is quoted, the words are continuous and the caption shows only those words. Pioneers are paraphrased and unnamed in speech. The Say column carries the delivery marks (`{*}` stress, `{/}` breath, `{//}` hold).
 
 ## Cast
 

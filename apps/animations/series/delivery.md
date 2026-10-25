@@ -11,7 +11,7 @@ The owner's rule (2026-10-14): "id like to change my own manner of speakign to m
 
 Where the counsel and the owner's habit differ, the counsel wins: his habits are in [owner-voice.md](../../../.claude/skills/film/reference/owner-voice.md).
 
-Audited 2026-10-15: the 15 draft scripts in `series/*/scripts/`. Every KJV line was printed again by `bible verse` that day. Every draft reads in the lab (`packages/film/src/core/draft.ts`), which refuses Markdown emphasis (`_if_`) and a pause written as a direction (`(0.6 s)`); seven drafts were refused before. Open one in the lab under **Series** to read it with its marks and hear the staging take.
+Audited 2026-10-15: the 15 draft scripts in `series/*/scripts/`. Every KJV line was printed again by `manna verse` that day. Every draft reads in the lab (`packages/film/src/core/draft.ts`), which refuses Markdown emphasis (`_if_`) and a pause written as a direction (`(0.6 s)`); seven drafts were refused before. Open one in the lab under **Series** to read it with its marks and hear the staging take.
 
 Nothing formats a draft: oxfmt reads two `{*}` on one line as Markdown emphasis and rewrote them, so the scripts are in its ignore list and a mark stays as written.
 

@@ -372,7 +372,7 @@ Layer later if production operations require one.
 
 ### CLI TUI
 
-Delete the TUI implementation, reader routes/services, TUI-only tests, and OpenTUI/Solid dependencies from `@manna/cli`. Bare `bible` renders help. Non-interactive data, study, sync, and export commands remain.
+Delete the TUI implementation, reader routes/services, TUI-only tests, and OpenTUI/Solid dependencies from `@manna/cli`. Bare `manna` renders help. Non-interactive data, study, sync, and export commands remain.
 
 ### React
 

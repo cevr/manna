@@ -158,7 +158,7 @@ export const lookupReference = (parsed: LookupReference) =>
     );
     if (Option.isNone(book)) {
       yield* Console.log(`Book "${parsed.bookCode}" not found in local database.`);
-      yield* Console.log(`Try \`bible egw download ${parsed.bookCode}\` to fetch it from the API.`);
+      yield* Console.log(`Try \`manna egw download ${parsed.bookCode}\` to fetch it from the API.`);
       return;
     }
 
@@ -277,15 +277,15 @@ export const egwLookup = Command.make('lookup', { ref, json }, (args) =>
   Effect.gen(function* () {
     const refStr = args.ref.join(' ').trim();
     if (refStr.length === 0) {
-      yield* Console.log('Usage: bible egw lookup <refcode> [--json]');
+      yield* Console.log('Usage: manna egw lookup <refcode> [--json]');
       yield* Console.log('');
       yield* Console.log('Examples:');
-      yield* Console.log('  bible egw lookup "PP 351.1"     # Single paragraph');
-      yield* Console.log('  bible egw lookup "PP 351"       # Full page');
-      yield* Console.log('  bible egw lookup "PP 351-355"   # Page range');
-      yield* Console.log('  bible egw lookup "PP"           # Book info + TOC');
-      yield* Console.log('  bible egw lookup "PTUK February 4, 1897, page 70.2"  # Periodical');
-      yield* Console.log('  bible egw lookup "11LtMs, Lt 1a, 1896"               # Whole letter');
+      yield* Console.log('  manna egw lookup "PP 351.1"     # Single paragraph');
+      yield* Console.log('  manna egw lookup "PP 351"       # Full page');
+      yield* Console.log('  manna egw lookup "PP 351-355"   # Page range');
+      yield* Console.log('  manna egw lookup "PP"           # Book info + TOC');
+      yield* Console.log('  manna egw lookup "PTUK February 4, 1897, page 70.2"  # Periodical');
+      yield* Console.log('  manna egw lookup "11LtMs, Lt 1a, 1896"               # Whole letter');
       return;
     }
 
@@ -310,7 +310,7 @@ export const egwLookup = Command.make('lookup', { ref, json }, (args) =>
 
     if (isSearchQuery(parsed)) {
       yield* Console.error(`No paragraph in the corpus is cited as "${refStr}".`);
-      yield* Console.error('Use `bible egw search <query>` to find a passage by its words.');
+      yield* Console.error('Use `manna egw search <query>` to find a passage by its words.');
       const cliProcess = yield* CliProcess;
       return yield* cliProcess.exitFailure;
     }

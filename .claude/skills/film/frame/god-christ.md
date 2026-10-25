@@ -59,7 +59,7 @@ Cited by the statement and the quoted writers: Psalm 139:7 (Principle I); John 1
 - **Micah 5:2** — "But thou, Bethlehem Ephratah, [though] thou be little among the thousands of Judah, [yet] out of thee shall he come forth unto me [that is] to be ruler in Israel; whose goings forth [have been] from of old, from everlasting."
 - **John 8:42** — "Jesus said unto them, If God were your Father, ye would love me: for I proceeded forth and came from God; neither came I of myself, but he sent me."
 
-(KJV from `bible verse`; pilcrows and red-letter markers omitted, italic supplied words kept in [brackets].)
+(KJV from `manna verse`; pilcrows and red-letter markers omitted, italic supplied words kept in [brackets].)
 
 ## Film direction
 

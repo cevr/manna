@@ -50,7 +50,7 @@ Files:
 
 ### Existing episodes (`series.md`, marked **+W** in the Sources column)
 
-52 rows gained material. Every EGW ref was checked in the corpus, and every new KJV ref was printed by `bible verse` on 2026-10-13.
+52 rows gained material. Every EGW ref was checked in the corpus, and every new KJV ref was printed by `manna verse` on 2026-10-13.
 
 | #    | Topic                                                | Addition                                                                                                                                                                                                                                                                                                                                                                         |
 | ---- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

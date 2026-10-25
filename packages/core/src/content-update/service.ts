@@ -1,6 +1,6 @@
 /** §3.6's update policy as one portable service.
  *
- *  `status` answers `bible topics status` with one value and **no mutation**.
+ *  `status` answers `manna topics status` with one value and **no mutation**.
  *  `update` runs the decision and, only on an offer, installs through the File
  *  Corpus lifecycle every host already has.
  *
@@ -178,7 +178,7 @@ export class ContentUpdate extends Context.Service<ContentUpdate, ContentUpdateS
        *  `CorpusSupply.installed` rather than `ensure`: `ensure` is the
        *  install operation, and asking it "what do you have?" installs from
        *  the first local source whenever the answer is "nothing" — so a
-       *  `status` built on it would have made `bible topics status --json`
+       *  `status` built on it would have made `manna topics status --json`
        *  provision the artifact as a side effect of reporting on it, which is
        *  exactly the hidden mutation §3.6 rules out.
        *

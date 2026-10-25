@@ -79,15 +79,15 @@ export const verse = Command.make('verse', { query, json: jsonFlag, limit: limit
     const queryStr = args.query.join(' ').trim();
     const limit = Option.getOrElse(args.limit, () => 10);
     if (queryStr.length === 0) {
-      yield* Console.log('Usage: bible verse <reference or search query> [--json]');
+      yield* Console.log('Usage: manna verse <reference or search query> [--json]');
       yield* Console.log('');
       yield* Console.log('Examples:');
-      yield* Console.log('  bible verse john 3:16       # Single verse');
-      yield* Console.log('  bible verse john 3          # Full chapter');
-      yield* Console.log('  bible verse john 3:16-18    # Verse range');
-      yield* Console.log('  bible verse john 3-5        # Chapter range');
-      yield* Console.log('  bible verse ruth            # Full book');
-      yield* Console.log('  bible verse "faith"         # Text search');
+      yield* Console.log('  manna verse john 3:16       # Single verse');
+      yield* Console.log('  manna verse john 3          # Full chapter');
+      yield* Console.log('  manna verse john 3:16-18    # Verse range');
+      yield* Console.log('  manna verse john 3-5        # Chapter range');
+      yield* Console.log('  manna verse ruth            # Full book');
+      yield* Console.log('  manna verse "faith"         # Text search');
       return;
     }
 
@@ -268,12 +268,12 @@ export const concordance = Command.make(
       const limit = Option.getOrElse(args.limit, () => 50);
 
       if (queryStr.length === 0) {
-        yield* Console.log("Usage: bible concordance <Strong's number or English word> [--json]");
+        yield* Console.log("Usage: manna concordance <Strong's number or English word> [--json]");
         yield* Console.log('');
         yield* Console.log('Examples:');
-        yield* Console.log("  bible concordance H157      # Hebrew word by Strong's number");
-        yield* Console.log("  bible concordance G26       # Greek word by Strong's number");
-        yield* Console.log('  bible concordance love      # Search definitions for "love"');
+        yield* Console.log("  manna concordance H157      # Hebrew word by Strong's number");
+        yield* Console.log("  manna concordance G26       # Greek word by Strong's number");
+        yield* Console.log('  manna concordance love      # Search definitions for "love"');
         return;
       }
 

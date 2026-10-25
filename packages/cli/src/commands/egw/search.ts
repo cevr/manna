@@ -57,7 +57,7 @@ const encodeSearchResult = Schema.encodeEffect(
  *  The scope is exactly this fetch. The search already ran, in its own effect,
  *  and its defects still reach the caller.
  *
- *  Resolved through `WikiLayer`, the same `Context.Reference` the `bible wiki`
+ *  Resolved through `WikiLayer`, the same `Context.Reference` the `manna wiki`
  *  commands use: its default opens the installed artifact, and a test points it
  *  at a fixture without this command taking a layer parameter. */
 const searchTopics = (text: string): Effect.Effect<readonly SearchTopicHit[]> =>
@@ -104,7 +104,7 @@ export const localSearch = (
 
     if (results.length === 0) {
       yield* Console.log(`No local results found for "${query}".`);
-      yield* Console.log('Try `bible egw search <query> --remote` to query the EGW API.');
+      yield* Console.log('Try `manna egw search <query> --remote` to query the EGW API.');
       return;
     }
 
@@ -221,7 +221,7 @@ export const egwSearch = Command.make(
       const queryStr = args.query.join(' ').trim();
       if (queryStr.length === 0) {
         yield* Console.log(
-          'Usage: bible egw search <query> [--book CODE] [--remote] [--limit N] [--full]',
+          'Usage: manna egw search <query> [--book CODE] [--remote] [--limit N] [--full]',
         );
         return;
       }
@@ -254,7 +254,7 @@ export const egwSearch = Command.make(
       if (args.json) {
         // `--json` is the wire codec and nothing else: `SearchResultJson` is
         // the one wire encoding, and adding a group to it here would fork that
-        // contract. A script that wants topics asks `bible wiki topics` for them.
+        // contract. A script that wants topics asks `manna wiki topics` for them.
         yield* Console.log(yield* encodeSearchResult(result));
         return;
       }

@@ -34,7 +34,7 @@ Christ returns once, literally, visibly and audibly, with "no secret coming, no 
 
 Cited in the quotes: John 14:1-3, Acts 1:11, Revelation 1:7, Matthew 24:27, 24:31, 1 Thessalonians 4:16, 17, 1 Corinthians 15:52, Revelation 20:1-3, Genesis 1:2, Jeremiah 4:23-27, Revelation 20:4-9, Revelation 21:1-2, Daniel 2:44. In the 1889 statement: Principle V — John 3:3, 5; Luke 20:36; 1 Corinthians 15:51, 52. Principle VIII — 1 Thessalonians 5:3; 2 Thessalonians 2:8; Matthew 13:29, 30, 39; 2 Timothy 3:1, 13. Principle XXIV — Revelation 20:4-6. Principle XXV — 1 Thessalonians 4:16, 17; 1 Corinthians 15:51, 52. Principle XXVI — John 14:1-3; Revelation 20:4; 1 Corinthians 6:2, 3; Jeremiah 4:23-27; Genesis 1:2 (Septuagint "abussos"); Revelation 20:1, 2, 10; Malachi 4:1. Principle XXVII — Revelation 21:2; 20:9; Malachi 4:1; Obadiah 15, 16; 2 Thessalonians 1:9; Matthew 25:46; Romans 6:23; Revelation 20:14, 15; 2 Peter 3:7-12.
 
-KJV as printed by `bible verse` (supplied words in [brackets]):
+KJV as printed by `manna verse` (supplied words in [brackets]):
 
 - **Acts 1:11** — Which also said, Ye men of Galilee, why stand ye gazing up into heaven? this same Jesus, which is taken up from you into heaven, shall so come in like manner as ye have seen him go into heaven.
 - **Revelation 1:7** — Behold, he cometh with clouds; and every eye shall see him, and they [also] which pierced him: and all kindreds of the earth shall wail because of him. Even so, Amen.

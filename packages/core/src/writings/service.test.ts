@@ -209,7 +209,7 @@ describe('WritingsService', () => {
 
   /** Reader text reaches FTS5 as terms, not as a query expression.
    *
-   *  `bible egw ref "PP 45.3"` parses `ref` as a query word and searched for
+   *  `manna egw ref "PP 45.3"` parses `ref` as a query word and searched for
    *  `ref PP 45.3`; FTS5 read the `.` as syntax and the whole command died with
    *  `fts5: syntax error near "."`. The CLI, `egw study`, the wiki lookup panel
    *  and the web API's search handler all hand this method raw reader text, so

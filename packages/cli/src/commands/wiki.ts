@@ -1,12 +1,12 @@
 /**
  * Wiki CLI command graph.
  *
- * `bible wiki topics [--query <q>] [--json]` lists the authored flagship pages
+ * `manna wiki topics [--query <q>] [--json]` lists the authored flagship pages
  * the installed topics artifact carries. With no artifact the command still
  * succeeds and reports the typed absence — §3.5's degradation posture is a
  * domain value, not an error path.
  *
- * `bible wiki topic <slug> [--json]` prints the composed page: the authored
+ * `manna wiki topic <slug> [--json]` prints the composed page: the authored
  * core plus the §6.1 section lineup. It calls `WikiService` directly — the same
  * composer, the same caps, the same result identities, with no second
  * rendering path.
@@ -247,7 +247,7 @@ const wikiTopic = Command.make('topic', { slug, json }, (args) =>
 );
 
 // ---------------------------------------------------------------------------
-// bible wiki matches
+// manna wiki matches
 // ---------------------------------------------------------------------------
 
 /** The `--json` payload for one matched run: `PhraseSpansJson`, the same codec
@@ -300,7 +300,7 @@ const wikiMatches = Command.make('matches', { text, json }, (args) =>
 );
 
 // ---------------------------------------------------------------------------
-// bible wiki lookup (§7)
+// manna wiki lookup (§7)
 // ---------------------------------------------------------------------------
 
 /** The three corpora select-to-lookup reads, resolved as one `LookupService`.
@@ -354,7 +354,7 @@ class NotOneVerseContextError extends Schema.TaggedError<NotOneVerseContextError
 /** `--context "Dan 8:13"`, parsed by the same `parseBibleQuery` the study
  *  command uses.
  *
- *  Only a single verse is accepted, for the reason `bible study verse` accepts
+ *  Only a single verse is accepted, for the reason `manna study verse` accepts
  *  only one: §7's context exists to locate the selection *inside a verse*, and
  *  `getVerseWords` takes three numbers. A chapter or a range would silently
  *  resolve against its first verse and report Strong's entries for words the
@@ -464,9 +464,9 @@ const wikiLookup = Command.make(
 
 export const wiki = Command.make('wiki', {}, () =>
   Console.log(
-    `Usage: bible wiki topics [--query <q>] [--json]\n` +
-      `       bible wiki topic <slug> [--json]\n` +
-      `       bible wiki matches "<text>" [--json]\n` +
-      `       bible wiki lookup "<text>" [--context "<reference>"] [--json]`,
+    `Usage: manna wiki topics [--query <q>] [--json]\n` +
+      `       manna wiki topic <slug> [--json]\n` +
+      `       manna wiki matches "<text>" [--json]\n` +
+      `       manna wiki lookup "<text>" [--context "<reference>"] [--json]`,
   ),
 ).pipe(Command.withSubcommands([wikiTopics, wikiTopic, wikiMatches, wikiLookup]));

@@ -1,6 +1,6 @@
 # Joshua White playlists: EGW quotation check
 
-Checked 2026-10-13 against the local corpus with `bible egw lookup` and `bible egw search`. The index is lexical FTS; the embedding model is not on this laptop. Each quotation he reads or closely paraphrases has one row; bare allusions are listed separately.
+Checked 2026-10-13 against the local corpus with `manna egw lookup` and `manna egw search`. The index is lexical FTS; the embedding model is not on this laptop. Each quotation he reads or closely paraphrases has one row; bare allusions are listed separately.
 
 **Statuses**
 
@@ -89,7 +89,7 @@ The batch tables follow, as checked.
 
 ## Joshua White, Bogenhofen 2026 (playlist A, sessions 1–4): EGW quotation check
 
-Checked 2026-10-12 against the local corpus with `bible egw search` (lexical FTS; no embedding model on this machine) and `bible egw lookup`. Videos: A1 nLgQNHK18Og, A2 OSev4eaaSo8, A3 02y2jYTt9Ec, A4 riVziw3ah4M.
+Checked 2026-10-12 against the local corpus with `manna egw search` (lexical FTS; no embedding model on this machine) and `manna egw lookup`. Videos: A1 nLgQNHK18Og, A2 OSev4eaaSo8, A3 02y2jYTt9Ec, A4 riVziw3ah4M.
 
 Statuses:
 
@@ -240,7 +240,7 @@ Nothing reached DIFFERS. He reads from slides, and the wording is close througho
 
 ## Joshua White, Bogenhofen 2026, sessions 5–8 (A5–A8): EGW quotation check
 
-Checked 2026-10-12 against the local corpus with `bible egw search` (lexical FTS; the embedding model is not on this laptop) and `bible egw lookup`. Statuses: **VERIFIED** (wording matches apart from caption noise or trivial omissions; "paraphrase" marks a close paraphrase he presents as the source's), **DIFFERS** (misquote, splice, added words, or wrong reference; the real text or ref is given), **NOT FOUND** (searches listed). Times are the transcript's ~30 s line stamps. Repeats are listed as `dup` rows and not counted.
+Checked 2026-10-12 against the local corpus with `manna egw search` (lexical FTS; the embedding model is not on this laptop) and `manna egw lookup`. Statuses: **VERIFIED** (wording matches apart from caption noise or trivial omissions; "paraphrase" marks a close paraphrase he presents as the source's), **DIFFERS** (misquote, splice, added words, or wrong reference; the real text or ref is given), **NOT FOUND** (searches listed). Times are the transcript's ~30 s line stamps. Repeats are listed as `dup` rows and not counted.
 
 | Video | Time            | Ref as spoken                                                         | Words (fragment)                                                                                                                                                                                                                                       | Corpus ref                                                  | Status    | Note                                                                                                                                                                                                                                                                                                                                        |
 | ----- | --------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -363,7 +363,7 @@ VERIFIED 75 · DIFFERS 5 · NOT FOUND 1
 
 ## Joshua White, Autumn Leaves NZ (B1, B3, B5, B6, B7): EGW quotation check
 
-Checked 2026-10-12 against the local corpus with `bible egw search` (lexical FTS; the embedding model is not on this laptop) and `bible egw lookup`. One row per distinct quotation he reads or closely paraphrases; bare allusions are left out (listed at the end). Repeats inside the batch are marked "dup" and not counted.
+Checked 2026-10-12 against the local corpus with `manna egw search` (lexical FTS; the embedding model is not on this laptop) and `manna egw lookup`. One row per distinct quotation he reads or closely paraphrases; bare allusions are left out (listed at the end). Repeats inside the batch are marked "dup" and not counted.
 
 | Video | Time            | Ref as spoken                                                             | Words (fragment)                                                                                                                                                                                                                                            | Corpus ref                                                                                         | Status   | Note                                                                                                                                                                                                                                                                                                                              |
 | ----- | --------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -498,7 +498,7 @@ Per video: B1 16 (14 V, 2 D) · B3 21 (20 V, 1 D) · B5 7 (7 V) · B6 36 (35 V, 
 
 ## Joshua White, batch 4: EGW verification
 
-Checked 2026-10-12 against the local corpus with `bible egw search` and `bible egw lookup`. The videos are B2/C10 (Daniel Chapter Zero), C13/B4 (Not Recognizing Jesus), B8/C12 (Called / Time to Leave) and C11 (Studying the Bible). Each quotation has one row, with repeats noted as "dup". Bare allusions are not listed.
+Checked 2026-10-12 against the local corpus with `manna egw search` and `manna egw lookup`. The videos are B2/C10 (Daniel Chapter Zero), C13/B4 (Not Recognizing Jesus), B8/C12 (Called / Time to Leave) and C11 (Studying the Bible). Each quotation has one row, with repeats noted as "dup". Bare allusions are not listed.
 
 | Video | Time    | Ref as spoken                           | Words (fragment)                                                                                                                        | Corpus ref                                                         | Status    | Note                                                                                                                                                                                                                                                                                                                         |
 | ----- | ------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -624,7 +624,7 @@ All of these readings were verified in the corpus (pioneer scope):
 
 ## Joshua White, Trinidad seminar (C1, C2, C4, C5, C6): EGW quotation check
 
-Checked 2026-10-12 against the local corpus with `bible egw lookup` and `bible egw search` (lexical FTS only; the embedding model is not on this laptop). Statuses: **VERIFIED** (wording matches apart from caption noise or trivial omissions), **DIFFERS** (misquote, splice, added words, or wrong reference; the real text or ref is given), **NOT FOUND** (searches listed). One row per distinct quotation; repeats are listed in the Note as "dup".
+Checked 2026-10-12 against the local corpus with `manna egw lookup` and `manna egw search` (lexical FTS only; the embedding model is not on this laptop). Statuses: **VERIFIED** (wording matches apart from caption noise or trivial omissions), **DIFFERS** (misquote, splice, added words, or wrong reference; the real text or ref is given), **NOT FOUND** (searches listed). One row per distinct quotation; repeats are listed in the Note as "dup".
 
 | Video   | Rows   | VERIFIED | DIFFERS | NOT FOUND |
 | ------- | ------ | -------- | ------- | --------- |
@@ -715,7 +715,7 @@ Checked 2026-10-12 against the local corpus with `bible egw lookup` and `bible e
 
 ### Non-EGW quotations and named sources (what could be checked)
 
-Local checks used `bible egw search --scope all`. Nothing below is in the local corpora, so each item is a lead to check in the named source.
+Local checks used `manna egw search --scope all`. Nothing below is in the local corpora, so each item is a lead to check in the named source.
 
 - **E. A. Sutherland, _Studies in Christian Education_** (C1 1:18:13; C2 0:52:35): "the memory was cultivated as a means of keeping down…", "showy results", "content to repeat set lessons", "endless treadmill". Not in the corpus (`--scope all`, four phrasings). The book is named, so it can be checked in print. Denominational author.
 - **Raymond Moore** (C1 1:03:51): early-childhood goal of "a sense of their own worth". Not in the corpus (`--scope all`). No book named.
@@ -737,7 +737,7 @@ Local checks used `bible egw search --scope all`. Nothing below is in the local 
 
 ## Joshua White, _Trinidad True Education Seminar_ (playlist C, batch 6): EGW quotation check
 
-Checked 2026-10-12 against the local corpus with `bible egw search` (lexical FTS; no embedding model on this machine) and `bible egw lookup`. Videos: C8 mn6M9ID_bLU, C9 pAjI6IkO66k, C14 QqRhQfMn1Xw, C15 WH3QrmDHQlg. Other speakers (C3 B5rEw1e1Z5M, C7 shBd2jDoNz4) are in a separate sub-table and are not counted with White.
+Checked 2026-10-12 against the local corpus with `manna egw search` (lexical FTS; no embedding model on this machine) and `manna egw lookup`. Videos: C8 mn6M9ID_bLU, C9 pAjI6IkO66k, C14 QqRhQfMn1Xw, C15 WH3QrmDHQlg. Other speakers (C3 B5rEw1e1Z5M, C7 shBd2jDoNz4) are in a separate sub-table and are not counted with White.
 
 Statuses:
 
@@ -879,7 +879,7 @@ Fragments in parentheses are this table's summary; those passages were checked b
 
 ## Joshua White, True Education 3 Part Series (D1–D3): EGW quotation check
 
-Checked 2026-10-13 against the local corpus with `bible egw lookup` and `bible egw search` (lexical FTS only; the embedding model is not on this laptop). Videos: D1 BxXUUqt7hNw, D2 a8qrE2KB1Co, D3 KeU3-w8iFw4 (Autumn Leaves NZ, January 2018). One row per distinct quotation in this batch; repeats inside the batch are marked "dup" and not counted. He rarely gives a page. Where he names a book, it is shown under "Ref as spoken".
+Checked 2026-10-13 against the local corpus with `manna egw lookup` and `manna egw search` (lexical FTS only; the embedding model is not on this laptop). Videos: D1 BxXUUqt7hNw, D2 a8qrE2KB1Co, D3 KeU3-w8iFw4 (Autumn Leaves NZ, January 2018). One row per distinct quotation in this batch; repeats inside the batch are marked "dup" and not counted. He rarely gives a page. Where he names a book, it is shown under "Ref as spoken".
 
 | Video   | Rows   | VERIFIED | DIFFERS | NOT FOUND |
 | ------- | ------ | -------- | ------- | --------- |
@@ -1028,7 +1028,7 @@ Repeats inside this batch, not counted: D2 0:15:49 "the true object of education
 
 ## Joshua White, True Education playlist (E1–E8): EGW quotation check
 
-Checked 2026-10-13 against the local corpus with `bible egw lookup` and `bible egw search` (lexical FTS only; the embedding model is not on this laptop). Each quotation he reads or closely paraphrases has one row. Repeats inside this batch (E1–E8) are marked "dup" and not counted. The batch is checked in video order, so a quotation counts where it first appears; E1, E5 and E6 are one core talk, so most of E5 and E6 are dups of E1. Haskell (_Story of Daniel the Prophet_, SDP) readings are in their own table below and not counted, as in the B batch.
+Checked 2026-10-13 against the local corpus with `manna egw lookup` and `manna egw search` (lexical FTS only; the embedding model is not on this laptop). Each quotation he reads or closely paraphrases has one row. Repeats inside this batch (E1–E8) are marked "dup" and not counted. The batch is checked in video order, so a quotation counts where it first appears; E1, E5 and E6 are one core talk, so most of E5 and E6 are dups of E1. Haskell (_Story of Daniel the Prophet_, SDP) readings are in their own table below and not counted, as in the B batch.
 
 | Video   | Rows   | VERIFIED | DIFFERS | NOT FOUND |
 | ------- | ------ | -------- | ------- | --------- |
@@ -1270,7 +1270,7 @@ Checked 2026-10-13 against the local corpus with `bible egw lookup` and `bible e
 
 ## Joshua White, Uchee Pines Education Seminars (F1–F7): EGW quotation check
 
-Checked 2026-10-13 against the local EGW corpus (`bible egw lookup` / `bible egw search`, lexical FTS); repeats inside this batch are marked "dup" and not counted.
+Checked 2026-10-13 against the local EGW corpus (`manna egw lookup` / `manna egw search`, lexical FTS); repeats inside this batch are marked "dup" and not counted.
 
 | Video | Time            | Ref as spoken                                                                | Words (fragment)                                                                                                                                                                                                                                                                                                                                                                          | Corpus ref                                                    | Status    | Note                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | ----- | --------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

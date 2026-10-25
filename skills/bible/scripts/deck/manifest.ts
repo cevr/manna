@@ -3,7 +3,7 @@
  * which a deck's own `build_manifest.ts` calls with its beats.
  *
  * Verse text is never typed by hand: each beat's reference is pulled through
- * `bible verse --json` and cleaned mechanically.
+ * `manna verse --json` and cleaned mechanically.
  */
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -12,7 +12,7 @@ import { CANVAS, LAYOUTS, type Character } from './series.ts';
 export type Beat = {
   /** Reference as shown on the slide ("Malachi 4:1, 3"). */
   readonly ref: string;
-  /** Lookup references when `ref` is not one `bible verse` query; parts join with " ... ". */
+  /** Lookup references when `ref` is not one `manna verse` query; parts join with " ... ". */
   readonly lookupRefs?: ReadonlyArray<string>;
   readonly section: string;
   /** Presenter note for both slides of the pair. */

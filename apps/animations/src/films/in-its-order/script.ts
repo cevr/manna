@@ -12,7 +12,7 @@
 // to Ellen White's account of Christ's manner of speaking
 // (`.claude/skills/film/reference/voice-counsel.md`), timed at 150–165 wpm.
 // It speaks to every Christian (CRAFT rule 2): it quotes only Scripture,
-// verbatim KJV checked with `bible verse` (supplied-word brackets dropped for
+// verbatim KJV checked with `manna verse` (supplied-word brackets dropped for
 // speech), one quotation a beat. Ellen White and the pioneers are never
 // quoted nor named in speech: their thought is said in the narrator's own
 // words, inside their words (sources.md, quotes.jsonl), and the credits name

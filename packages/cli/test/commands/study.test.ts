@@ -1,6 +1,6 @@
 /** Milestone 5's CLI JSON workflow (§8.2, §10).
  *
- *  `bible study verse "Dan 8:13" --json` and `bible study strongs H8548 --json`
+ *  `manna study verse "Dan 8:13" --json` and `manna study strongs H8548 --json`
  *  must print the study service's own result through the core codecs
  *  (`VerseStudyJson`, `StrongsStudyJson`).
  *
@@ -69,7 +69,7 @@ const strongsWireText = (result: StrongsStudy): Effect.Effect<string, Schema.Sch
 const askStudy = <A, E>(use: Effect.Effect<A, E, StudyService>): Effect.Effect<A, E> =>
   use.pipe(Effect.provide(fixture));
 
-describe('bible study verse --json', () => {
+describe('manna study verse --json', () => {
   it.effect("prints the study service's bundle through the core codec", () =>
     Effect.gen(function* () {
       const result = yield* runStudy(['verse', 'Dan 8:13', '--json']);
@@ -127,7 +127,7 @@ describe('bible study verse --json', () => {
   );
 });
 
-describe('bible study strongs --json', () => {
+describe('manna study strongs --json', () => {
   it.effect("prints the study service's Strong's result through the core codec", () =>
     Effect.gen(function* () {
       const result = yield* runStudy(['strongs', 'H8548', '--json']);
@@ -254,7 +254,7 @@ describe('the CLI encoders are the core schemas', () => {
  *  operator was told a row was malformed and given no way to find it. The three
  *  fields exist for exactly that, and reaching stderr is the only place they do
  *  the reader any good. */
-describe('bible study verse against a malformed corpus row', () => {
+describe('manna study verse against a malformed corpus row', () => {
   const runMalformed = (args: readonly string[]) =>
     runCli(study, [...args], {}).pipe(
       Effect.provideService(StudyLayer, malformedStudyFixtureLayer),

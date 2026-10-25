@@ -160,15 +160,15 @@ in `BibleProcedureGroup` (`:211`):
 
 CLI commands calling `WikiService` directly, `--json` via `Flag.boolean('json')`:
 
-- `bible wiki topic <slug> [--json]`
-- `bible wiki topics [--query <q>] [--json]`
-- `bible wiki matches "<text>" [--json]`
+- `manna wiki topic <slug> [--json]`
+- `manna wiki topics [--query <q>] [--json]`
+- `manna wiki matches "<text>" [--json]`
 
 A shared `--json` flag already exists at
 `packages/cli/src/lib/content/options.ts` but only `commands/notes.ts` imports
 it; `bible.ts:22`, `hymns.ts:22`, and `egw/search.ts:51` each redefine it
-locally, and `encodeJson` is re-declared in five places. The `bible wiki *` and
-`bible study *` commands use the shared flag and one shared encoder; §12 leaves
+locally, and `encodeJson` is re-declared in five places. The `manna wiki *` and
+`manna study *` commands use the shared flag and one shared encoder; §12 leaves
 whether to retrofit the existing commands as an implementation choice.
 
 **Relationship to the existing topics surface.** `v1.topics.list` /
@@ -215,7 +215,7 @@ composer appends them at view time.
 ### 3.2 Generation
 
 A Claude workflow mass-produces drafts. Per topic, the corpus comes from
-`bible egw study <subject> --pioneers --export`. Fan-out is batched at ~8-10
+`manna egw study <subject> --pioneers --export`. Fan-out is batched at ~8-10
 agents per run and the workflow is args-subsettable. Every EGW or pioneer quote
 carries a refcode citation. The universal teachings format is not the page
 format; its sourcing discipline — reference-first, capped witnesses — is.
@@ -321,8 +321,8 @@ path: an app never installs an artifact whose `schema_major` exceeds what it
 compiled against.
 
 **Update affordances.** Web and desktop: a non-blocking toast plus a settings
-entry reading "Topic content: v3 installed, v4 available". CLI: `bible topics
-status` and `bible topics update` — stable JSON, explicit invocation, no hidden
+entry reading "Topic content: v3 installed, v4 available". CLI: `manna topics
+status` and `manna topics update` — stable JSON, explicit invocation, no hidden
 mutation.
 
 **Activation reaches the reader.** An install ends in an atomic rename over the
@@ -366,7 +366,7 @@ export interface PhraseSpan {
 ```
 
 Solid renders spans as links; the CLI prints the same matches via
-`bible wiki matches "<text>" --json`. The matcher imports no host runtime.
+`manna wiki matches "<text>" --json`. The matcher imports no host runtime.
 
 ### 4.3 Normalization
 
@@ -522,7 +522,7 @@ tapped crumb, cleared on leaving the wiki surface.
 contents. The thesis carries the arrival.
 
 This is a UI-only decision and applies to web and desktop alike. The equivalent
-CLI domain operation is `bible wiki topic <slug>`, which returns the same
+CLI domain operation is `manna wiki topic <slug>`, which returns the same
 composed page as text or JSON; hover, panes, and touch have no CLI form.
 
 ---
@@ -572,7 +572,7 @@ Tap fires the existing `v1.reading.writingsPublication.download`
 (`packages/app/src/cache/reactivity-keys.ts:74`) already invalidates the writings
 library on download, so the section refreshes itself with no bespoke wiring.
 
-CLI parity: `bible wiki topic <slug>` prints the same sections with the same caps
+CLI parity: `manna wiki topic <slug>` prints the same sections with the same caps
 and the same "get this book" marker in its JSON.
 
 ### 6.4 Known implementation gap: corpus scope on FTS
@@ -661,7 +661,7 @@ Selection is a **portable lookup input**. Web and desktop build it from the DOM
 selection plus reading context; the CLI accepts the same text as an argument:
 
 ```
-bible wiki lookup "the daily" [--context "Dan 8:13"] [--json]
+manna wiki lookup "the daily" [--context "Dan 8:13"] [--json]
 ```
 
 and returns the same groups in stable JSON.
@@ -708,7 +708,7 @@ and, for the word-tap path: `getStrongsEntry(number)`,
 - `v1.study.strongs.get(number)` serves the word-tap lexicon entry plus reverse
   concordance.
 
-CLI: `bible study verse "Dan 8:13" --json` and `bible study strongs H8548 --json`
+CLI: `manna study verse "Dan 8:13" --json` and `manna study strongs H8548 --json`
 call `StudyService` directly with stable JSON.
 
 ### 8.3 Scope
@@ -872,7 +872,7 @@ copy-paste, and because Milestones 2 and 8 both add file artifacts.
   non-bible prefix; Electron main installs and swaps a synthetic artifact; Bun
   CLI `init` still ensures Bible with identical provenance.
 - **Builds:** web, desktop, CLI.
-- **CLI JSON workflow:** `bible init --force` reinstalls `bible.db` and reports
+- **CLI JSON workflow:** `manna init --force` reinstalls `bible.db` and reports
   unchanged activation identity.
 - **UI parity:** none — no UI surface changes.
 
@@ -897,7 +897,7 @@ sections yet.
   generation and rolls back a failed candidate; Electron main atomically swaps
   `userData/topics.db`; Bun CLI `init` installs both artifacts.
 - **Builds:** web, desktop, CLI.
-- **CLI JSON workflow:** `bible wiki topics --json` lists approved flagship
+- **CLI JSON workflow:** `manna wiki topics --json` lists approved flagship
   slugs; with the artifact removed, the same command returns catalog entries and
   the typed topics-unavailable reason.
 - **UI parity:** none.
@@ -923,7 +923,7 @@ resolved against `books.book_author`, and add `ORDER BY rank`. Add
   round trip; Electron main returns the identical composed page; CLI composes
   the same page calling `WikiService` directly.
 - **Builds:** web, desktop, CLI.
-- **CLI JSON workflow:** `bible wiki topic sanctuary --json` emits all six
+- **CLI JSON workflow:** `manna wiki topic sanctuary --json` emits all six
   sections with identical caps and identical result identities to the RPC
   response.
 - **UI parity:** none.
@@ -936,7 +936,7 @@ resolved against `books.book_author`, and add `ORDER BY rank`. Add
 
 Implement the Aho-Corasick matcher, normalization, longest-match overlap, the
 per-phrase first-occurrence-per-section rule, and the segment/AST boundary rules.
-Add `bible wiki matches`.
+Add `manna wiki matches`.
 
 - **Core tests:** longest-match-wins at equal start; a span suppressed inside
   another span is eligible at its next clean occurrence; per-phrase (not
@@ -970,7 +970,7 @@ Add `bible wiki matches`.
   the web worker, Electron main, and Bun CLI — one shared fixture, byte-identical
   offsets.
 - **Builds:** web, desktop, CLI.
-- **CLI JSON workflow:** `bible wiki matches "$(bible bible verse 'Dan 8:9')"
+- **CLI JSON workflow:** `manna wiki matches "$(manna verse 'Dan 8:9')"
   --json` returns the fixture's exact spans.
 - **UI parity:** none.
 
@@ -996,7 +996,7 @@ exists first.
 - **Adapter checks:** one MessagePort round trip per verse in the worker and in
   Electron main (asserted, not assumed); CLI calls `StudyService` directly.
 - **Builds:** web, desktop, CLI.
-- **CLI JSON workflow:** `bible study verse "Dan 8:13" --json` and `bible study
+- **CLI JSON workflow:** `manna study verse "Dan 8:13" --json` and `manna study
   strongs H8548 --json` produce the same result identities as the RPC responses.
 - **UI parity:** web and desktop render the same pane, same route state, same
   Loading/Errored/retained-stale behavior; narrow and wide; keyboard, pointer,
@@ -1021,7 +1021,7 @@ trail, and the topic page with key verses default-open.
 - **Adapter checks:** dictionary loads and the automaton builds in the worker, in
   Electron main, and in the CLI without host imports crossing the boundary.
 - **Builds:** web, desktop, CLI.
-- **CLI JSON workflow:** `bible wiki topic 2300-days --json` matches, section for
+- **CLI JSON workflow:** `manna wiki topic 2300-days --json` matches, section for
   section and identity for identity, what the UI renders.
 - **UI parity:** web and desktop share one route in
   `packages/app/src/application/routes.tsx`, one peek component, one breadcrumb;
@@ -1037,7 +1037,7 @@ trail, and the topic page with key verses default-open.
 **Ships:** any selection is lookup-able.
 
 Add `LookupService.resolve` with its five resolver groups, render the combined
-panel in the Milestone 5 pane surface, and add `bible wiki lookup`.
+panel in the Milestone 5 pane surface, and add `manna wiki lookup`.
 
 - **Core tests:** each resolver group populates independently; an empty group is
   present-and-empty, not absent; `context` inside a verse produces the Strong's
@@ -1046,7 +1046,7 @@ panel in the Milestone 5 pane surface, and add `bible wiki lookup`.
 - **Adapter checks:** DOM selection on web and desktop produces the same portable
   lookup input the CLI builds from its argument.
 - **Builds:** web, desktop, CLI.
-- **CLI JSON workflow:** `bible wiki lookup "the daily" --context "Dan 8:13"
+- **CLI JSON workflow:** `manna wiki lookup "the daily" --context "Dan 8:13"
   --json` returns the same five groups in the same order as the panel.
 - **UI parity:** one panel, all groups, empty groups collapsed, no action menu,
   identical on web and desktop.
@@ -1073,7 +1073,7 @@ vector artifact riding the Milestone 1 lifecycle.
   the same pinned fingerprint that agree within the declared numeric tolerance;
   no-WebGPU web falls back to lexical-only with the typed absence.
 - **Builds:** web, desktop, CLI.
-- **CLI JSON workflow:** the **golden query set** runs via `bible egw search
+- **CLI JSON workflow:** the **golden query set** runs via `manna egw search
   --json`; ordered result identities and fallback behavior match the web and
   desktop runs within tolerance.
 - **UI parity:** one search surface, shared query/scope/book URL state, identical
@@ -1086,7 +1086,7 @@ vector artifact riding the Milestone 1 lifecycle.
 **Ships:** content-only topic updates without an app release.
 
 Add the runtime manifest fetch, the schema-major gate, the toast plus settings
-entry on visual hosts, and `bible topics status` / `bible topics update`.
+entry on visual hosts, and `manna topics status` / `manna topics update`.
 
 - **Core tests:** the update policy is one portable policy — the compiled pin is
   the floor, a newer runtime revision is offered, an artifact whose
@@ -1097,8 +1097,8 @@ entry on visual hosts, and `bible topics status` / `bible topics update`.
   Electron main fetches directly; CLI fetches under Bun. All three refuse the
   same schema-major overrun.
 - **Builds:** web, desktop, CLI.
-- **CLI JSON workflow:** `bible topics status --json` reports installed and
-  available revisions with no mutation; `bible topics update --json` installs and
+- **CLI JSON workflow:** `manna topics status --json` reports installed and
+  available revisions with no mutation; `manna topics update --json` installs and
   reports the new activation.
 - **UI parity:** identical non-blocking toast and identical settings entry on web
   and desktop.

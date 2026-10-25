@@ -53,7 +53,7 @@ These are the texts the pioneers themselves cite for this topic:
 - Revelation 14:9-10: 1889 XXI.
 - Daniel 7:9-10: LUJ 243.1; JEO 15.1 cites Dan 7:10.
 
-The KJV text below comes from `bible verse`. Words in square brackets are the KJV's supplied words and are kept. The ¶ mark and the red-letter marks ‹ › are omitted.
+The KJV text below comes from `manna verse`. Words in square brackets are the KJV's supplied words and are kept. The ¶ mark and the red-letter marks ‹ › are omitted.
 
 - **Hebrews 8:5**: "Who serve unto the example and shadow of heavenly things, as Moses was admonished of God when he was about to make the tabernacle: for, See, saith he, [that] thou make all things according to the pattern shewed to thee in the mount."
 - **Hebrews 9:23**: "[It was] therefore necessary that the patterns of things in the heavens should be purified with these; but the heavenly things themselves with better sacrifices than these."

@@ -4,7 +4,7 @@ Research base for `series.md` and `scripts/`. Written 2026-10-11; §6 (Ritsema s
 
 ## How to use these sources
 
-- **Speech.** Scripture (KJV) is quoted word for word, from what the `bible` CLI printed. Everything else is paraphrased in my own words and not named on camera.
+- **Speech.** Scripture (KJV) is quoted word for word, from what the `manna` CLI printed. Everything else is paraphrased in my own words and not named on camera.
 - **Credits.** The video description credits each book. Each script's right-hand column gives book and page.
 - **Never read a long passage aloud** from any of these books. Short story dialogue is retold, not recited.
 - **OCR text** of every PDF is in `ocr/` (tesseract 5, 200–300 dpi). Each file marks scan pages as `===== [pdf page N] =====`. The two booklet scans were rotated 90° and were OCR'd after rotation detection.
@@ -287,7 +287,7 @@ It closes with a recommended reading list, mostly SonLight titles and Christian 
 
 ## 2. Ellen G. White (paraphrased, unnamed in speech; credited in descriptions)
 
-**Access.** The local `bible egw` commands fail on this box: `~/.bible/egw-paragraphs.db` is a stub that errors with "no such column: book_id," and there are no EGW API credentials. All lookups therefore went through the owner's own search API, `https://egw.cvr.im/api/search?q=…&scope=egw|pioneer|all&limit=N&context=N`, which is free and has the full corpus. **Update 2026-10-12:** on the laptop, the local `bible egw lookup` and `bible egw search` work (lexical index). The Ritsema check (§6) used them.
+**Access.** The local `manna egw` commands fail on this box: `~/.bible/egw-paragraphs.db` is a stub that errors with "no such column: book_id," and there are no EGW API credentials. All lookups therefore went through the owner's own search API, `https://egw.cvr.im/api/search?q=…&scope=egw|pioneer|all&limit=N&context=N`, which is free and has the full corpus. **Update 2026-10-12:** on the laptop, the local `manna egw lookup` and `manna egw search` work (lexical index). The Ritsema check (§6) used them.
 
 **Copyright note.** These are public domain: books published in her lifetime, such as _Education_ (1903), _Ministry of Healing_ (1905), _Desire of Ages_ (1898), _Patriarchs and Prophets_ (1890), _Prophets and Kings_ (1917), _Counsels to Teachers_ (1913) and _Christian Education_ (1894). Posthumous compilations are generally still under the White Estate's copyright, including _Child Guidance_ (1954), _Adventist Home_ (1952), _Mind, Character, and Personality_ (1977) and _Selected Messages_ 2–3. Where a compilation reprints an earlier book, credit the earlier book; the right-hand columns do this (for example CG 50.2 = MH 400). We paraphrase in every case anyway.
 
@@ -314,7 +314,7 @@ It closes with a recommended reading list, mostly SonLight titles and Christian 
 | Mind                  | **ML 23.3**: as an educating power the Bible is without rival. **CT 185.1**: nature is next to the Bible. **Ed 120.2**: search nature for Bible lessons. **MH 446.1**: fiction breeds distaste for practical duty.                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | Teacher and hereafter | **Ed 57.3**: the greatest want of the world is the want of men. **Ed 278.5**. **AH 547.4 (Ed 301)**: heaven is a school.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
-**Allegory: _The Pilgrim's Progress_** (looked up 2026-10-13 with `bible egw search "Pilgrim's Progress"` and `"Bunyan"`, then `bible egw lookup`; every line below is VERIFIED word for word). This is the ground of the owner's fiction rule in `series.md` §5: fiction is avoided, allegory is allowed.
+**Allegory: _The Pilgrim's Progress_** (looked up 2026-10-13 with `manna egw search "Pilgrim's Progress"` and `"Bunyan"`, then `manna egw lookup`; every line below is VERIFIED word for word). This is the ground of the owner's fiction rule in `series.md` §5: fiction is avoided, allegory is allowed.
 
 | Ref (year)                                                           | Her words                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -341,7 +341,7 @@ How to use it: the allegory is commended for what it pictures (the Christian lif
 
 ## 4. Scripture
 
-About 255 KJV references (single verses and ranges) were printed by the `bible verse` CLI during research. The CLI runs from source: `bun packages/cli/src/main.ts verse "<ref>"`, because the committed binary is Mach-O. The lists are in the session scratchpad (`kjv.txt` to `kjv4.txt`).
+About 255 KJV references (single verses and ranges) were printed by the `manna verse` CLI during research. The CLI runs from source: `bun packages/cli/src/main.ts verse "<ref>"`, because the committed binary is Mach-O. The lists are in the session scratchpad (`kjv.txt` to `kjv4.txt`).
 
 **Quoting conventions:**
 

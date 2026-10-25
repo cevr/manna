@@ -56,7 +56,7 @@ Principle III itself cites no text.
 - **1 Peter 3:15** — "But sanctify the Lord God in your hearts: and [be] ready always to [give] an answer to every man that asketh you a reason of the hope that is in you with meekness and fear:"
 - **Revelation 11:3** — "And I will give [power] unto my two witnesses, and they shall prophesy a thousand two hundred [and] threescore days, clothed in sackcloth."
 
-(KJV from `bible verse`; pilcrows omitted, italic supplied words kept in [brackets].)
+(KJV from `manna verse`; pilcrows omitted, italic supplied words kept in [brackets].)
 
 ## Film direction
 

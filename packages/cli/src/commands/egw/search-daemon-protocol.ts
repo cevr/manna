@@ -1,6 +1,6 @@
 /** The search daemon's wire surface: the one search query plus daemon control.
  *
- *  A cold `bible egw search` pays ~10 seconds of model load before the first
+ *  A cold `manna egw search` pays ~10 seconds of model load before the first
  *  vector-leg answer. The daemon is that cost paid once: a detached process
  *  holds the loaded embedder and the parsed index, and every subsequent CLI
  *  invocation asks it over a unix socket instead of loading its own copy.
@@ -20,7 +20,7 @@
  *    daemon left running by a build that spoke an older wire is therefore
  *    retired and respawned rather than asked a question it cannot decode.
  *  - `daemon.shutdown` retires a daemon deliberately — a stale-fingerprint
- *    survivor after an upgrade, or `bible egw daemon stop`.
+ *    survivor after an upgrade, or `manna egw daemon stop`.
  */
 
 import { MODEL_FINGERPRINT, SearchQuery, SearchResult } from '@manna/core/search';
@@ -40,7 +40,7 @@ export const DAEMON_FINGERPRINT = `${MODEL_FINGERPRINT}+wire.${String(SEARCH_DAE
 export class SearchDaemonStatus extends Schema.Class<SearchDaemonStatus>(
   'cli/egw/SearchDaemonStatus',
 )({
-  /** The daemon process id — what `bible egw daemon stop` reports. */
+  /** The daemon process id — what `manna egw daemon stop` reports. */
   pid: Schema.Int,
   /** The embedding-model fingerprint compiled into the daemon. A client with a
    *  different fingerprint treats the daemon as absent and retires it. */

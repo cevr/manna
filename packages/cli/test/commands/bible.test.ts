@@ -85,7 +85,7 @@ describe('canonical Bible query integration', () => {
   );
 });
 
-describe('bible concordance', () => {
+describe('manna concordance', () => {
   it.effect("detects Hebrew and Greek Strong's numbers", () =>
     Effect.sync(() => {
       expect(isStrongsNumber('H1234')).toBe(true);

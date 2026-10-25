@@ -17,7 +17,7 @@ export type Citation =
   | {
       readonly _tag: 'scripture';
       readonly line: number;
-      /** The reference as written, normalized to one `bible verse` parses. */
+      /** The reference as written, normalized to one `manna verse` parses. */
       readonly reference: string;
       readonly quote: string;
     }
@@ -39,7 +39,7 @@ export const WITNESS_WORD_LIMIT = 30;
 const SCRIPTURE_LINE = /^\s*-\s+_([^_]+?)\._\s+"(.+?)"\s*(?:—|$)/;
 const WITNESS_LINE = /^\s*\[(SOP|PIONEER)\s+([^\]]+)\]\s*"(.+?)"\s*(?:—|$)/;
 
-/** `Heb 1:1, 2` is how a document writes what `bible verse` reads as `Heb 1:1-2`. */
+/** `Heb 1:1, 2` is how a document writes what `manna verse` reads as `Heb 1:1-2`. */
 const scriptureReference = (written: string): string =>
   written.trim().replace(/:(\d+),\s*(\d+)$/, ':$1-$2');
 

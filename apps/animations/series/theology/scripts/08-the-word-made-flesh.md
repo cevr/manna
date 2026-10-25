@@ -4,7 +4,7 @@ Series: The Path of the Just · Tier One (Milk) · 8 of 44
 Promise: the viewer meets the One Isaiah saw on the throne and learns that He is Jesus. He is the divine Son, with God before the world and bearing His Father's name. He laid His glory down to become one of us, so that God would be "with us" and we could see what God is like.
 Prerequisites: 02 (Scripture explains itself; here John explains Isaiah), 04 (to see Jesus is to see the Father), 06 (a world lost, which is why He came).
 Length: about 6:00 (671 spoken words: 4:20 at 155 wpm, 4:40 with the 20 s of marked breaths and holds; plus the title, about 1 s between beats, about 30 s of music alone and 28 s of credits).
-Status: draft for the owner. Nothing narrated. Revised 2026-10-15 to the voice counsel and marked for delivery (`{*}` stress, `{/}` breath, `{//}` hold). Every KJV line was printed by `bible verse` on 2026-10-12 and again on 2026-10-15 (supplied-word brackets dropped for speech). Every paraphrase source was printed by `bible egw lookup` on 2026-10-12 (`asitreads-jesus-lord-god-almighty.md`, sources.md). Frame: god-christ.md (Principles I–II).
+Status: draft for the owner. Nothing narrated. Revised 2026-10-15 to the voice counsel and marked for delivery (`{*}` stress, `{/}` breath, `{//}` hold). Every KJV line was printed by `manna verse` on 2026-10-12 and again on 2026-10-15 (supplied-word brackets dropped for speech). Every paraphrase source was printed by `manna egw lookup` on 2026-10-12 (`asitreads-jesus-lord-god-almighty.md`, sources.md). Frame: god-christ.md (Principles I–II).
 
 ## Header
 

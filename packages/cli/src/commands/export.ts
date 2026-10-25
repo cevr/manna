@@ -14,12 +14,12 @@ import {
 import { splitMarkdownIntoSections } from '~/src/lib/split-markdown';
 import { formatProblem, Quotations } from '~/src/services/quotations';
 
-/** A document that misquotes its sources is never exported; see `bible check`. */
+/** A document that misquotes its sources is never exported; see `manna check`. */
 class ExportRefusedError extends Schema.TaggedError<ExportRefusedError>()('ExportRefusedError', {
   problems: Schema.Finite,
 }) {
   override get message() {
-    return `Export refused: ${this.problems} quotation problem(s). Fix them until \`bible check\` reports 0 problems.`;
+    return `Export refused: ${this.problems} quotation problem(s). Fix them until \`manna check\` reports 0 problems.`;
   }
 }
 

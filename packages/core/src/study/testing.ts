@@ -8,7 +8,7 @@
  *  What lives here is **study fixtures and nothing else**: `studyFixtureLayer`,
  *  a `StudyService` over a Daniel 8:13 whose five sections are all populated, so
  *  a bundle that arrived whole is distinguishable from one that arrived empty.
- *  The CLI's `bible study` suite and core's own study tests read this one
+ *  The CLI's `manna study` suite and core's own study tests read this one
  *  input, so a fixture change reaches both at once.
  */
 

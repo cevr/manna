@@ -4,7 +4,7 @@
  * The run's mail says what a week brought and shows its first changes
  * (`./sync-mail.ts`); this is the rest, kept in R2 (`SyncReports`) and served
  * at `egw.cvr.im/sync/<name>` (`./sync-pages.ts`), or read in a terminal with
- * `bible egw report`. It lists every book added, every paragraph a library
+ * `manna egw report`. It lists every book added, every paragraph a library
  * update changed (edits word by word), what checking an older book against
  * the library corrected, and what failed.
  *

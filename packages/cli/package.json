@@ -1,12 +1,12 @@
 {
   "name": "@manna/cli",
   "version": "1.0.0",
-  "description": "Bible Tools CLI",
+  "description": "The manna CLI: Bible study tools",
   "keywords": [],
   "license": "ISC",
   "author": "",
   "bin": {
-    "bible": "bin/bible"
+    "manna": "bin/manna"
   },
   "type": "module",
   "scripts": {

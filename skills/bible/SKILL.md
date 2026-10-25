@@ -5,7 +5,7 @@ description: >
   readings, structural analyses — one universal scannable format) and Sabbath
   School outlines from a historic SDA pioneer perspective — and pull the
   source material (KJV verses, EGW writings, EGW Bible Commentary, Strong's
-  concordance, SDA Hymnal, Sabbath School lesson PDFs) via the `bible` CLI to
+  concordance, SDA Hymnal, Sabbath School lesson PDFs) via the `manna` CLI to
   feed generation. `references/teachings.md` is the canonical format;
   `references/source-material.md` documents the CLI command surface. Use when
   the user asks for new preaching/teaching content, when revising existing
@@ -22,7 +22,7 @@ description: >
 # bible — Content Generation
 
 Generate teaching content in **one universal format** (organized by topic,
-not output type) and keep an Apple-Notes copy in sync via the `bible` CLI.
+not output type) and keep an Apple-Notes copy in sync via the `manna` CLI.
 
 ## Pick the reference
 
@@ -48,9 +48,9 @@ historic pioneer Adventism, not modern Adventism.
 
 ## Corpus, not memory (paramount)
 
-Generate against the corpus, never against training data. Every verse, quote, refcode, date, attribution and every doctrinal framing in an output comes from what the `bible` CLI printed in this session (KJV, EGW, pioneers, commentary, Strong's). Training data carries mainstream and modern framings, misremembered wording and wrong references; the corpus is the pioneer record.
+Generate against the corpus, never against training data. Every verse, quote, refcode, date, attribution and every doctrinal framing in an output comes from what the `manna` CLI printed in this session (KJV, EGW, pioneers, commentary, Strong's). Training data carries mainstream and modern framings, misremembered wording and wrong references; the corpus is the pioneer record.
 
-- **Fetch, then write.** Each quote and reference in the output was printed by a `bible` command in this session and is copied verbatim with its refcode.
+- **Fetch, then write.** Each quote and reference in the output was printed by a `manna` command in this session and is copied verbatim with its refcode.
 - **Frame from the corpus.** What a doctrine is and what it includes (for example, whether justification only declares or also makes righteous) comes from the pioneers read in context, never from a familiar summary. Where the familiar summary and the corpus differ, follow the corpus and say so.
 - **A gap stays a gap.** What the corpus does not hold is marked unsupported in the output; memory never fills it.
 - **Name the speaker the page names.** A periodical or Bulletin hit is tagged with its volume's editor, not its speaker (1893 Bulletin sermons tag "General Conference"; Review hits tag the editor). Look up the issue page and name the speaker only from the sermon heading or signature.
@@ -64,37 +64,37 @@ Generate against the corpus, never against training data. Every verse, quote, re
 | `references/sabbath-school.md` | SS week outline   | `outputs/sabbath-school/`         | `YYYY-QX-WY.md`   |
 
 Not an output type, but used by both:
-`references/source-material.md` — the `bible` CLI command surface for pulling
+`references/source-material.md` — the `manna` CLI command surface for pulling
 verses, EGW, commentary, Strong's, hymns, and SS PDFs (Phase 1 of the workflow).
 
 Legacy trees (`outputs/{messages,studies,readings,analyses}/`) are frozen —
 files stay for their live note IDs; new/regenerated content
 goes to `outputs/teachings/`.
 
-`bible` resolves `outputs/` against a build-time-baked CLI root, so commands
+`manna` resolves `outputs/` against a build-time-baked CLI root, so commands
 work from any cwd.
 
 ## Universal workflow (every reference follows this)
 
-1. **Gather the cloud of witnesses** via the `bible` CLI (verses, EGW,
+1. **Gather the cloud of witnesses** via the `manna` CLI (verses, EGW,
    pioneers, hymns, commentary, Strong's) — see
    [`references/source-material.md`](references/source-material.md).
    Don't paraphrase from memory.
 2. **Generate the content yourself** using the format from the reference
-   file — `bible` no longer has any AI generation commands.
+   file — `manna` no longer has any AI generation commands.
 3. **Write the file** to the reference's output dir with frontmatter
    (`created_at`, `topic`, `kind`, …).
-4. **Check every quotation**: `bible check <file>` compares each
+4. **Check every quotation**: `manna check <file>` compares each
    `_Ref._ "…"` bullet with the KJV and each `[SOP]`/`[PIONEER]` line with
    the paragraph its refcode cites, and enforces the witness rules (no
    ellipsis, ≤30 words). It must print `0 problems` (exit 0) before export;
-   fix each `file:line` it reports from a fresh `bible verse` / `egw lookup`.
-5. **Export to Apple Notes**: `bible export -f <file> --folder "<Topic>"`
+   fix each `file:line` it reports from a fresh `manna verse` / `egw lookup`.
+5. **Export to Apple Notes**: `manna export -f <file> --folder "<Topic>"`
    (folder per topic, Title-Cased; reuse an existing folder when one fits —
    Sabbath School goes to `"sabbath school"`). Writes `apple_note_id` back
    into the frontmatter. Export runs the same check first and refuses
    (exit 1, nothing written to Notes) while any problem remains.
-6. **Updates**: edit the file in place, then `bible export -f <file>` again
+6. **Updates**: edit the file in place, then `manna export -f <file>` again
    (it re-checks, then updates the note `apple_note_id` names).
 
 ## Hermeneutic & Sources (canonical — every reference inherits this)
@@ -196,10 +196,10 @@ every type, every prophetic figure must pass them:
 ### Source corpus (in authority order)
 
 - **Scripture (KJV)** — supreme, self-interpreting authority. Quote, don't
-  paraphrase. Pull via `bible verse "<ref>" --json`.
+  paraphrase. Pull via `manna verse "<ref>" --json`.
 - **Spirit of Prophecy (Ellen G. White)** — prophetic voice; a confirming
   witness _in harmony with_ Scripture (Isaiah 8:20), never an independent
-  authority. Quote `paragraphs[].text` from `bible egw lookup` / `egw
+  authority. Quote `paragraphs[].text` from `manna egw lookup` / `egw
   commentary`.
 - **SDA pioneers — including William Miller**, plus Uriah Smith, J.N. Andrews,
   James White, J.N. Loughborough, and the broader Millerite/early-Advent
@@ -215,10 +215,10 @@ You rarely start with the exact refcode. **Search to find it, then look it up to
 quote it** — never recall EGW from memory:
 
 ```bash
-bible egw search "investigative judgment" --json     # 1. find the refcode (local FTS5)
-bible egw search "1844" --remote --json              #    --remote = whole ~17K-para corpus
-bible egw lookup "GC 423.1" --json                   # 2. quote the exact paragraph text
-bible egw commentary "daniel 8:14" --json            #    verse-keyed commentary
+manna egw search "investigative judgment" --json     # 1. find the refcode (local FTS5)
+manna egw search "1844" --remote --json              #    --remote = whole ~17K-para corpus
+manna egw lookup "GC 423.1" --json                   # 2. quote the exact paragraph text
+manna egw commentary "daniel 8:14" --json            #    verse-keyed commentary
 ```
 
 `lookup` takes any refcode a search printed, exactly as printed: books
@@ -228,7 +228,7 @@ letters (`11LtMs, Lt 1a, 1896, par. 14`). Most of the 1888 Jones/Waggoner
 material is periodical — quote it, don't drop it.
 
 For pioneer voices not in the local DB (Miller, Smith, Andrews, …), find the
-book with `bible egw catalog --search "<title>"`, `bible egw download <CODE>`,
+book with `manna egw catalog --search "<title>"`, `manna egw download <CODE>`,
 then `search` / `lookup` as above.
 
 **Full command surface — flags, JSON shapes, every command — lives in
@@ -237,18 +237,18 @@ before pulling source material.
 
 | Step               | Command                                                                             |
 | ------------------ | ----------------------------------------------------------------------------------- |
-| Fetch verses       | `bible verse "<ref>" --json`                                                        |
-| Find EGW reference | `bible egw search "<query>" [--book CODE] [--remote] --json`                        |
-| Fetch EGW          | `bible egw lookup "<refcode>" --json` / `bible egw commentary "<verse>" --json`     |
-| Fetch hymn         | `bible hymns search "<query>" --json` / `bible hymns get <n> --json`                |
-| Fetch Strong's     | `bible concordance H1234 --json`                                                    |
-| Fetch SS PDFs      | `bible sabbath-school fetch -y 2026 -q 2 -w 5 --json`                               |
+| Fetch verses       | `manna verse "<ref>" --json`                                                        |
+| Find EGW reference | `manna egw search "<query>" [--book CODE] [--remote] --json`                        |
+| Fetch EGW          | `manna egw lookup "<refcode>" --json` / `manna egw commentary "<verse>" --json`     |
+| Fetch hymn         | `manna hymns search "<query>" --json` / `manna hymns get <n> --json`                |
+| Fetch Strong's     | `manna concordance H1234 --json`                                                    |
+| Fetch SS PDFs      | `manna sabbath-school fetch -y 2026 -q 2 -w 5 --json`                               |
 | Write file         | `Write` tool to `outputs/teachings/<topic-slug>/<slug>.md`                          |
-| Check quotations   | `bible check <file>` (must report `0 problems` before export)                       |
-| Initial export     | `bible export -f outputs/teachings/<topic>/<slug>.md --folder "<Topic>"`            |
-| Update note        | `bible export -f outputs/teachings/<topic>/<slug>.md` (re-checks, updates in place) |
-| List existing      | `bible <type> list [--json]`                                                        |
-| Delete linked note | `bible <type> delete -f <file>`                                                     |
+| Check quotations   | `manna check <file>` (must report `0 problems` before export)                       |
+| Initial export     | `manna export -f outputs/teachings/<topic>/<slug>.md --folder "<Topic>"`            |
+| Update note        | `manna export -f outputs/teachings/<topic>/<slug>.md` (re-checks, updates in place) |
+| List existing      | `manna <type> list [--json]`                                                        |
+| Delete linked note | `manna <type> delete -f <file>`                                                     |
 
 ## Apple Notes idempotency contract
 
@@ -259,33 +259,33 @@ what makes export/sync idempotent:
 ---
 created_at: '2026-05-08T14:00:00Z'
 topic: 'Choose Ye This Day'
-apple_note_id: 'x-coredata://.../ICNote/p1234' # ← written by `bible export`
+apple_note_id: 'x-coredata://.../ICNote/p1234' # ← written by `manna export`
 ---
 ```
 
-- **No `apple_note_id`** → `bible export` creates the note, writes the ID back.
-- **Has `apple_note_id`** → `bible export` updates that exact note.
-- **Has `apple_note_id` + you want a fresh note** → `bible export -f <file> --force-create`.
+- **No `apple_note_id`** → `manna export` creates the note, writes the ID back.
+- **Has `apple_note_id`** → `manna export` updates that exact note.
+- **Has `apple_note_id` + you want a fresh note** → `manna export -f <file> --force-create`.
 
 ## Anti-patterns
 
-- **Don't generate without first pulling source material** through the `bible`
+- **Don't generate without first pulling source material** through the `manna`
   CLI. The whole point of the toolchain is verse accuracy.
-- **Don't paraphrase verses from memory** — quote what `bible verse` returns.
-- **Don't paraphrase EGW** — quote `paragraphs[].text` from `bible egw lookup`.
+- **Don't paraphrase verses from memory** — quote what `manna verse` returns.
+- **Don't paraphrase EGW** — quote `paragraphs[].text` from `manna egw lookup`.
 - **Don't invent Strong's numbers or hymn numbers** — look them up.
 - **Don't write to disk without frontmatter** — export needs `created_at`
   and uses `apple_note_id` for idempotency.
-- **Don't export what `bible check` hasn't passed** — a mismatched or spliced
+- **Don't export what `manna check` hasn't passed** — a mismatched or spliced
   quotation in Notes is the error the whole toolchain exists to prevent.
-  `bible export` enforces this and refuses; fix the quotation, never work around it.
+  `manna export` enforces this and refuses; fix the quotation, never work around it.
 - **Don't skip the export step** — Cristian uses Apple Notes as the active
   surface. A file on disk that isn't in Notes is invisible.
 
 ## Source material commands
 
 For raw text (verses, EGW pages/commentary, Strong's, hymns, SS PDFs), use the
-`bible` CLI. The full command surface — Quick Reference table, typical agent
+`manna` CLI. The full command surface — Quick Reference table, typical agent
 flow, per-command flags, `--json` shapes, and anti-patterns — lives in
 [`references/source-material.md`](references/source-material.md). The command
 table above is the short version; that reference is the source of truth.

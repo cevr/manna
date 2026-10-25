@@ -32,7 +32,7 @@ Principles XI–XIII (FP1889 149.2, 149.3, 150.1) hold that God's law "is immuta
 
 ## Key texts
 
-KJV as printed by `bible verse` (square brackets mark KJV supplied words).
+KJV as printed by `manna verse` (square brackets mark KJV supplied words).
 
 - **Genesis 2:2-3**: "And on the seventh day God ended his work which he had made; and he rested on the seventh day from all his work which he had made. And God blessed the seventh day, and sanctified it: because that in it he had rested from all his work which God created and made."
 - **Exodus 31:13, 16-17**: "Speak thou also unto the children of Israel, saying, Verily my sabbaths ye shall keep: for it [is] a sign between me and you throughout your generations; that [ye] may know that I [am] the LORD that doth sanctify you. … Wherefore the children of Israel shall keep the sabbath, to observe the sabbath throughout their generations, [for] a perpetual covenant. It [is] a sign between me and the children of Israel for ever: for [in] six days the LORD made heaven and earth, and on the seventh day he rested, and was refreshed."

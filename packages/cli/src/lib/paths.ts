@@ -1,10 +1,10 @@
 import { Option } from 'effect';
 
-/** Populated at build time via a `globalThis.__BIBLE_CLI_ROOT__` define; absent in dev. */
-type CliBuildGlobals = { readonly __BIBLE_CLI_ROOT__?: string };
+/** Populated at build time via a `globalThis.__MANNA_CLI_ROOT__` define; absent in dev. */
+type CliBuildGlobals = { readonly __MANNA_CLI_ROOT__?: string };
 
 const buildRoot = (): Option.Option<string> =>
-  Option.fromNullishOr((globalThis as CliBuildGlobals).__BIBLE_CLI_ROOT__);
+  Option.fromNullishOr((globalThis as CliBuildGlobals).__MANNA_CLI_ROOT__);
 
 const sourceRoot = (): string => {
   const sourceSuffix = '/src/lib';
@@ -30,7 +30,7 @@ export const getDataPath = (cliRoot: string, ...segments: string[]): string =>
 
 /** Where a compiled binary's bundled assets are: beside the executable.
  *
- *  `__BIBLE_CLI_ROOT__` is baked in at build time, so it names the *build
+ *  `__MANNA_CLI_ROOT__` is baked in at build time, so it names the *build
  *  machine's* checkout. That path is right only while the binary stays where it
  *  was compiled — copy it to another machine, install it into a prefix, or
  *  delete the checkout, and the define points at a directory that no longer
@@ -95,7 +95,7 @@ export const packagedDataCandidates = (...segments: string[]): readonly string[]
  *  a compiled binary IS the CLI, so it re-invokes itself; in the workspace the
  *  running executable is Bun, and the entrypoint travels as the first
  *  argument. Derived from `process.execPath` because that is the one path
- *  guaranteed to name the currently running executable — a `bible` found on
+ *  guaranteed to name the currently running executable — a `manna` found on
  *  `PATH` could be a different install than the one the user just ran. */
 interface SelfInvocation {
   readonly command: string;

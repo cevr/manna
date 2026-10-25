@@ -142,7 +142,7 @@ const program = Effect.gen(function* () {
   const rootDir = path.join(import.meta.dir, '..');
   const envDefines = yield* loadEnvDefines(rootDir);
   yield* Effect.log(`Embedding ${Object.keys(envDefines).length} environment variables from .env`);
-  yield* Effect.log('Building Bible CLI...');
+  yield* Effect.log('Building the manna CLI...');
 
   const binDir = path.join(rootDir, 'bin');
   yield* fs.makeDirectory(binDir, { recursive: true });
@@ -150,9 +150,9 @@ const program = Effect.gen(function* () {
 
   const cliDefines = {
     ...envDefines,
-    'globalThis.__BIBLE_CLI_ROOT__': yield* encodeJson(rootDir),
+    'globalThis.__MANNA_CLI_ROOT__': yield* encodeJson(rootDir),
   };
-  const binaryPath = path.join(binDir, 'bible');
+  const binaryPath = path.join(binDir, 'manna');
   const buildResult = yield* Effect.tryPromise({
     try: () =>
       build({
@@ -198,7 +198,7 @@ const program = Effect.gen(function* () {
   yield* Effect.log(`✅ Binary built: ${binaryPath}`);
   yield* stageDataAssets({ fs, path, rootDir, binDir });
   yield* stageOnnxDylibs({ fs, path, rootDir, binDir });
-  const nodeModulesBin = path.join(rootDir, 'node_modules/.bin/bible');
+  const nodeModulesBin = path.join(rootDir, 'node_modules/.bin/manna');
   yield* fs.copyFile(binaryPath, nodeModulesBin);
   yield* Effect.log(`✅ Copied to: ${nodeModulesBin}`);
 });

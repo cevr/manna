@@ -91,7 +91,7 @@ That covers every law plus Medicine in the first twelve.
 
 ## 4. The topics (72)
 
-Format: **Q** One Question, **E** Episode. KJV refs are verified with the `bible` CLI.
+Format: **Q** One Question, **E** Episode. KJV refs are verified with the `manna` CLI.
 Source refs are book + page.paragraph as the corpus prints them (MH = _The Ministry of
 Healing_; full key in `sources.md`).
 
@@ -255,6 +255,6 @@ and say which one you meant so the strand can lead with it:
 
 **Count:** 72 topics. 50 Q, 22 E. Pilots: 1 (E), 6 (Q), 20 (Q), 33 (E), 50 (Q).
 
-Every KJV ref in the tables was printed by the `bible` CLI in this session. Source refs come
+Every KJV ref in the tables was printed by the `manna` CLI in this session. Source refs come
 from corpus searches in this session; before a non-pilot is scripted, re-read its passages in
 context (the `research/ctx.ts` helper prints the paragraphs around a hit), as the pilots did.

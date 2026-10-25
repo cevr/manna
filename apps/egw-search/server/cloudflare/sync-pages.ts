@@ -18,7 +18,7 @@
  * were stored is rendered from its Markdown instead. A report never changes
  * once published, so its answers are cached for a day.
  *
- * `bible egw report` reads the `.md` and renders it in a terminal.
+ * `manna egw report` reads the `.md` and renders it in a terminal.
  *
  * The report escapes every paragraph's text, so its Markdown carries no HTML
  * of its own; the renderer escapes any that appears anyway.

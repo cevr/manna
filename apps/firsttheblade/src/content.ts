@@ -1,6 +1,6 @@
 /**
  * The channel's words: the verse it is named for, and its four series. Every
- * quotation is the King James Version, word for word (`bible verse`), and a
+ * quotation is the King James Version, word for word (`manna verse`), and a
  * partial verse is one continuous run of its words. The copy follows the
  * series' voice rules (apps/animations/series/README.md): for all
  * Christians, warm, no insider terms, and no claim about films that are not

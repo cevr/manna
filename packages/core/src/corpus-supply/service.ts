@@ -43,7 +43,7 @@ interface CorpusSupplyService {
    *  `ensure` cannot answer this question. It is the *install* operation, and
    *  asking it "what do you have?" installs from the first local source when
    *  the answer is "nothing" — which is right for startup and wrong for
-   *  §3.6's `bible topics status`, whose whole contract is "no mutation".
+   *  §3.6's `manna topics status`, whose whole contract is "no mutation".
    *  Reading the installer's own `current` is the same fact `ensure` consults
    *  before deciding, without the decision.
    *

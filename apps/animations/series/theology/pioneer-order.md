@@ -6,7 +6,7 @@ The owner asked how the Advent pioneers ordered Bible teaching, "teaching one fr
 
 How it was read (2026-10-19; the PDFs on 2026-10-20):
 
-- **The corpus.** `bible egw lookup` printed each passage. Read-only SQLite over `~/.bible/egw-paragraphs.db` printed each book's headings in publication order.
+- **The corpus.** `manna egw lookup` printed each passage. Read-only SQLite over `~/.bible/egw-paragraphs.db` printed each book's headings in publication order.
 - **The web.** archive.org OCR text, egwwritings.org book pages, preparingforeternity.com and thoughtlines.org. Header requests gave the PDF sizes. Nothing was downloaded that day.
 - **Raw exports** (git-ignored) are in `tmp/pioneer-order/`: `toc/` (the headings of 17 books), `lookups.txt` (94 passages as the CLI printed them) and `web-captures.txt` (the web reads and the sizes).
 - **Two PDFs (2026-10-20).** The owner chose two (ask a31833ec347): the Bible-Reading Gazette for 1884 and Bible Readings for the Home Circle, 1914. Each was downloaded with `curl -fL -o` into its own directory under `tmp/pioneer-order/pdf/` (git-ignored), and each size matched the header size (6,553,884 and 4,575,385 bytes). They were read only as page images, at most 20 pages a call; the Gazette's 288 pages were read whole, in four ranges. Facts from them are marked **[M PDF]**. Page numbers are the printed pages: the Gazette's PDF page is its printed page, and the 1914 reprint marks each original page in braces.

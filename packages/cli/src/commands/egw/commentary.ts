@@ -17,11 +17,11 @@ export const egwCommentary = Command.make('commentary', { verse, json }, (args) 
   Effect.gen(function* () {
     const verseStr = args.verse.join(' ').trim();
     if (verseStr.length === 0) {
-      yield* Console.log('Usage: bible egw commentary <book chapter:verse> [--json]');
+      yield* Console.log('Usage: manna egw commentary <book chapter:verse> [--json]');
       yield* Console.log('');
       yield* Console.log('Examples:');
-      yield* Console.log('  bible egw commentary "john 3:16"');
-      yield* Console.log('  bible egw commentary "daniel 9:24" --json');
+      yield* Console.log('  manna egw commentary "john 3:16"');
+      yield* Console.log('  manna egw commentary "daniel 9:24" --json');
       return;
     }
 

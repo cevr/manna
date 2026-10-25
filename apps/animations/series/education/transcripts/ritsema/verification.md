@@ -1,6 +1,6 @@
 # Ritsema seminar: EGW quotation check (all episodes)
 
-Checked 2026-10-12 against the local corpus with `bible egw lookup` and `bible egw search` (lexical FTS; the embedding model is not on this laptop). Statuses: **VERIFIED** (wording matches apart from caption noise or trivial omissions), **DIFFERS** (misquote, splice, added words, or wrong reference; the real text or ref is given), **NOT FOUND** (searches listed). Ep 7 rows mostly repeat Ep 3–4 quotations ("dup").
+Checked 2026-10-12 against the local corpus with `manna egw lookup` and `manna egw search` (lexical FTS; the embedding model is not on this laptop). Statuses: **VERIFIED** (wording matches apart from caption noise or trivial omissions), **DIFFERS** (misquote, splice, added words, or wrong reference; the real text or ref is given), **NOT FOUND** (searches listed). Ep 7 rows mostly repeat Ep 3–4 quotations ("dup").
 
 | Episodes          | Rows    | VERIFIED | DIFFERS | NOT FOUND |
 | ----------------- | ------- | -------- | ------- | --------- |
@@ -16,7 +16,7 @@ The Ep 3 Emmaus row was first NOT FOUND and was traced on re-check to HB 30.2 (=
 
 ## Ritsema "Schooled" Ep 1–2 — EGW quotation check
 
-Checked against the local corpus with `bible egw search` / `bible egw lookup` (lexical FTS only; the embedding model is not on this machine).
+Checked against the local corpus with `manna egw search` / `manna egw lookup` (lexical FTS only; the embedding model is not on this machine).
 
 | Ep  | Time            | Ref as spoken                                                                                                                 | Words (fragment)                                                                                                                                                                                                                                                        | Corpus ref                                                           | Status   | Note                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | --- | --------------- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -44,7 +44,7 @@ Checked against the local corpus with `bible egw search` / `bible egw lookup` (l
 
 ## EGW quotation check: Ritsema, "Undoctrinated", Ep 3–4
 
-I checked every quotation against the local corpus with `bible egw lookup` and `bible egw search`. A "=" in the Corpus ref column marks a reprint of the same paragraph in another book. "Abridged" means he leaves words out of the passage without changing its sense. A "splice" joins passages from different pages, read as if they were one passage.
+I checked every quotation against the local corpus with `manna egw lookup` and `manna egw search`. A "=" in the Corpus ref column marks a reprint of the same paragraph in another book. "Abridged" means he leaves words out of the passage without changing its sense. A "splice" joins passages from different pages, read as if they were one passage.
 
 Totals: **108 quotations checked**. **VERIFIED 100 · DIFFERS 7 · NOT FOUND 1** (the Emmaus row was moved from NOT FOUND to DIFFERS on re-check).
 
@@ -166,7 +166,7 @@ Totals: **108 quotations checked**. **VERIFIED 100 · DIFFERS 7 · NOT FOUND 1**
 
 ## Ritsema Ep 5–6: quote verification
 
-Checked against the local EGW corpus using `bible egw` search and lookup. When several passages are read back to back, they are grouped into one row only if they share the same verdict. The status means what follows:
+Checked against the local EGW corpus using `manna egw` search and lookup. When several passages are read back to back, they are grouped into one row only if they share the same verdict. The status means what follows:
 
 - **VERIFIED**: the wording matches, allowing for caption noise and light paraphrase.
 - **DIFFERS**: the wording, the reference or the attribution is materially off.
@@ -427,7 +427,7 @@ Checked against the local EGW corpus using `bible egw` search and lookup. When s
 
 ## Ep 7 · Highlights (Tfn1jGYNgoU): EGW verification
 
-Checked against the local corpus with `bible egw search` / `bible egw lookup`. "dup Ep N" means the same quote appears in that episode. The status is given regardless.
+Checked against the local corpus with `manna egw search` / `manna egw lookup`. "dup Ep N" means the same quote appears in that episode. The status is given regardless.
 
 | Ep  | Time             | Ref as spoken                          | Words (fragment)                                                                                                                                                              | Corpus ref                                    | Status   | Note                                                                                                                                                                                                                                                                                                                             |
 | --- | ---------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

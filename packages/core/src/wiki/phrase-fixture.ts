@@ -21,7 +21,7 @@ import { Option } from 'effect';
 import { PhraseDictionary, PhraseDictionaryEntry, topicSlug } from './model.js';
 import { normalizeAlias } from './normalize.js';
 
-/** Daniel 8:9, KJV, byte for byte as `bible verse "Dan 8:9"` prints it —
+/** Daniel 8:9, KJV, byte for byte as `manna verse "Dan 8:9"` prints it —
  *  including the `[land]` brackets the KJV source carries around a
  *  translator-supplied word.
  *

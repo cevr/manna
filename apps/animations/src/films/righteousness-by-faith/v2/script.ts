@@ -7,7 +7,7 @@
 // the word a picture must hit.
 //
 // The film speaks to every Christian (CRAFT rule 2): it quotes only
-// Scripture, verbatim KJV checked with `bible verse` (supplied-word brackets
+// Scripture, verbatim KJV checked with `manna verse` (supplied-word brackets
 // dropped for speech). Ellen White and the pioneers are never quoted nor named
 // in speech: their thought is said in the narrator's own words, inside their
 // words (sources.md, quotes.jsonl), and the credits name them.

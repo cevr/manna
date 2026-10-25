@@ -82,7 +82,7 @@ export const egwCatalog = Command.make(
         yield* Console.log(`${code} | ${id} | ${author} | ${b.title}`);
       }
       yield* Console.log(
-        '\nUse `bible egw download <CODE>` to fetch one of these into the local DB.',
+        '\nUse `manna egw download <CODE>` to fetch one of these into the local DB.',
       );
     }),
 ).pipe(Command.provide(() => FullLayer));

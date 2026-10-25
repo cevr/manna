@@ -29,26 +29,26 @@ export const egwWithSubcommands = Command.make('egw', { query }, (args) =>
     const queryStr = args.query.join(' ').trim();
 
     if (queryStr.length === 0) {
-      yield* Console.log('Usage: bible egw <refcode>');
-      yield* Console.log('       bible egw books');
-      yield* Console.log('       bible egw catalog --search <term>');
-      yield* Console.log('       bible egw download <code>');
-      yield* Console.log('       bible egw study <subject>');
-      yield* Console.log('       bible egw search <query> [--remote]');
-      yield* Console.log('       bible egw sync [--json]');
-      yield* Console.log('       bible egw report [name] [--web]');
+      yield* Console.log('Usage: manna egw <refcode>');
+      yield* Console.log('       manna egw books');
+      yield* Console.log('       manna egw catalog --search <term>');
+      yield* Console.log('       manna egw download <code>');
+      yield* Console.log('       manna egw study <subject>');
+      yield* Console.log('       manna egw search <query> [--remote]');
+      yield* Console.log('       manna egw sync [--json]');
+      yield* Console.log('       manna egw report [name] [--web]');
       yield* Console.log('');
       yield* Console.log('Examples:');
-      yield* Console.log('  bible egw "PP 351.1"          # Single paragraph');
-      yield* Console.log('  bible egw "PP 351.1-5"        # Paragraph range');
-      yield* Console.log('  bible egw "PP 351"            # Full page');
-      yield* Console.log('  bible egw "PP 351-355"        # Page range');
-      yield* Console.log('  bible egw "PP"                # Book info + TOC');
-      yield* Console.log('  bible egw search "great controversy"');
-      yield* Console.log('  bible egw search "daniel" --remote');
-      yield* Console.log('  bible egw catalog --search "uriah smith"');
-      yield* Console.log('  bible egw download DAR');
-      yield* Console.log('  bible egw study "seven last plagues"');
+      yield* Console.log('  manna egw "PP 351.1"          # Single paragraph');
+      yield* Console.log('  manna egw "PP 351.1-5"        # Paragraph range');
+      yield* Console.log('  manna egw "PP 351"            # Full page');
+      yield* Console.log('  manna egw "PP 351-355"        # Page range');
+      yield* Console.log('  manna egw "PP"                # Book info + TOC');
+      yield* Console.log('  manna egw search "great controversy"');
+      yield* Console.log('  manna egw search "daniel" --remote');
+      yield* Console.log('  manna egw catalog --search "uriah smith"');
+      yield* Console.log('  manna egw download DAR');
+      yield* Console.log('  manna egw study "seven last plagues"');
       return;
     }
 

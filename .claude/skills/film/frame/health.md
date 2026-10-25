@@ -32,7 +32,7 @@ The 1889 statement has no health principle: Principles XIV–XV (FP1889 150.2, 1
 
 ## Key texts
 
-KJV as printed by `bible verse` (square brackets mark KJV supplied words; the ¶ paragraph mark before 2 Corinthians 7:1 is omitted).
+KJV as printed by `manna verse` (square brackets mark KJV supplied words; the ¶ paragraph mark before 2 Corinthians 7:1 is omitted).
 
 - **1 Corinthians 6:19-20**: "What? know ye not that your body is the temple of the Holy Ghost [which is] in you, which ye have of God, and ye are not your own? For ye are bought with a price: therefore glorify God in your body, and in your spirit, which are God's."
 - **1 Corinthians 10:31**: "Whether therefore ye eat, or drink, or whatsoever ye do, do all to the glory of God."

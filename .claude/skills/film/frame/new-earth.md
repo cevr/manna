@@ -57,7 +57,7 @@ The pioneers cite these texts in the quotes above and in 1889 XXVI–XXVIII:
 - Gen 1:31 and Job 38:7 (SAIN 3.1)
 - John 14:1–3 and Jer 4:23–27 (1889 XXVI)
 
-KJV text of the five most important, from `bible verse`. Square brackets mark the KJV's supplied words.
+KJV text of the five most important, from `manna verse`. Square brackets mark the KJV's supplied words.
 
 - **2 Pet 3:13** — Nevertheless we, according to his promise, look for new heavens and a new earth, wherein dwelleth righteousness.
 - **Ps 37:11, 29** — (37:11) But the meek shall inherit the earth; and shall delight themselves in the abundance of peace. (37:29) The righteous shall inherit the land, and dwell therein for ever.

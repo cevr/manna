@@ -1,4 +1,4 @@
-/** `bible topics status --json` and `bible topics update --json` print the
+/** `manna topics status --json` and `manna topics update --json` print the
  *  `ContentUpdate` service's own result through the core codecs.
  *
  *  `packages/core/src/content-update/*.test.ts` already proves the policy. What
@@ -142,7 +142,7 @@ const makeOfferingHost = (destination: string) => {
   };
 };
 
-describe('bible topics', () => {
+describe('manna topics', () => {
   /** The two host-wired cases need a real filesystem: they write a real
    *  artifact through the real atomic swap. The other cases do not, and
    *  providing it to all of them costs nothing. */

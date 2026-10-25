@@ -4,7 +4,7 @@ Series: The Path of the Just · Tier One (Milk) · 4 of 44
 Promise: the viewer sees why so many people are afraid of God, how God has shown his own character (in creation, in his own name, in Jesus, and above all at the cross), and that the cross did not buy God's love but came from it.
 Prerequisites: 01, 02 (the Bible explains itself; here it explains God).
 Length: about 5:30 (602 spoken words: 3:53 at 155 wpm, 4:15 with the 22 s of marked breaths and holds; plus the title, about 1 s between beats, the black moment, about 30 s of music alone and 28 s of credits).
-Status: draft for the owner, revised 2026-10-15 to the voice counsel and marked for delivery (`{*}` stress, `{/}` breath, `{//}` hold). Every KJV line printed by `bible verse` on 2026-10-10 and again on 2026-10-15; every paraphrase source printed by the corpus search (sources.md). Frame: god-christ.md (Principles I–II).
+Status: draft for the owner, revised 2026-10-15 to the voice counsel and marked for delivery (`{*}` stress, `{/}` breath, `{//}` hold). Every KJV line printed by `manna verse` on 2026-10-10 and again on 2026-10-15; every paraphrase source printed by the corpus search (sources.md). Frame: god-christ.md (Principles I–II).
 
 ## Header
 

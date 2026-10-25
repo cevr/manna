@@ -1,7 +1,7 @@
 /**
- * `bible check` — verify every quotation in a teaching document against the
+ * `manna check` — verify every quotation in a teaching document against the
  * corpus it claims to quote, before the document is exported. Any problem
- * exits 1; `bible export` runs the same check and refuses on a problem.
+ * exits 1; `manna export` runs the same check and refuses on a problem.
  */
 
 import { Argument, Command, Flag } from 'effect/cli';

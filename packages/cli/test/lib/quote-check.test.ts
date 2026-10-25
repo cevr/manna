@@ -24,7 +24,7 @@ describe('citationsIn', () => {
     ]);
   });
 
-  it('reads "Heb 1:1, 2" as the range bible verse understands', () => {
+  it('reads "Heb 1:1, 2" as the range manna verse understands', () => {
     const [citation] = citationsIn('- _Heb 1:1, 2._ "God, who at sundry times" — one Speaker');
     expect(citation).toMatchObject({ reference: 'Heb 1:1-2' });
   });

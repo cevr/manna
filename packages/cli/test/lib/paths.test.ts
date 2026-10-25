@@ -21,7 +21,7 @@ describe('CLI install-owned data paths', () => {
   });
 });
 
-/** `__BIBLE_CLI_ROOT__` is baked into the binary at build time, so it names the
+/** `__MANNA_CLI_ROOT__` is baked into the binary at build time, so it names the
  *  build machine's checkout. A binary that is copied, installed into a prefix,
  *  or shipped to another machine must not follow that path — it points at a
  *  directory that need not exist. These assert the resolution order that makes

@@ -23,7 +23,7 @@ import { CliProcessLive } from '../services/process.js';
 
 const rootHelp = `Bible study tools
 
-Usage: bible <command> [options]
+Usage: manna <command> [options]
 
 Commands:
   verse             Read or search Bible text
@@ -45,10 +45,10 @@ Commands:
   topics            Report or install runtime topic content
   wiki              Browse compiled topic pages
 
-Run 'bible <command> --help' for command-specific help.`;
+Run 'manna <command> --help' for command-specific help.`;
 
 /** The single production graph for non-interactive CLI commands. */
-export const rootCommand = Command.make('bible', cliOptions, () => Console.log(rootHelp)).pipe(
+export const rootCommand = Command.make('manna', cliOptions, () => Console.log(rootHelp)).pipe(
   Command.withSubcommands([
     concordance,
     verse,

@@ -375,7 +375,7 @@ describe('§10 M9 update over the shipped File Corpus lifecycle', () => {
       );
 
       expect(status.decision._tag).toBe('offer');
-      // `bible topics status` promises "no mutation". The install the offer
+      // `manna topics status` promises "no mutation". The install the offer
       // describes has not run, and this is the observable that says so.
       expect(yield* fs.exists(destination)).toBe(false);
     }));

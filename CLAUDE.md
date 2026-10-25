@@ -1,6 +1,6 @@
 # Bible
 
-A monorepo for Bible study tools: the `bible` CLI, EGW search, and narrated
+A monorepo for Bible study tools: the `manna` CLI, EGW search, and narrated
 explainer films.
 
 ## Project Structure
@@ -16,7 +16,7 @@ bible/
 │   └── triedgold/      # triedgold.com (@manna/triedgold, React Router 8 SSR on a Worker; brand tokens in src/brand.ts; Alchemy → Cloudflare)
 ├── packages/
 │   ├── core/           # Shared business logic: corpora, search, study data (@manna/core)
-│   ├── cli/            # The `bible` CLI (@manna/cli)
+│   ├── cli/            # The `manna` CLI (@manna/cli)
 │   ├── film/           # The film engine, tools and lab (@manna/film)
 │   ├── hymnal/         # Hymn chords read from MIDI, and the compiled SDA Hymnal (1985) the app reads (@manna/hymnal; schema at @manna/hymnal/hymn)
 │   ├── atom-solid/     # Solid 2 bindings for Effect atoms (@manna/atom-solid, used by the film lab and egw-search)

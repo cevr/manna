@@ -1,5 +1,5 @@
 /**
- * Bible Tools CLI Entry Point
+ * The manna CLI entry point
  *
  * The Effect command graph owns the non-interactive command surface.
  */

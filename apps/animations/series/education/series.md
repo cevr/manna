@@ -7,7 +7,7 @@ These are talk shorts. The owner speaks on camera, cut with B-roll; they are not
 
 The audience is every Christian:
 
-- **Scripture** is quoted in KJV, word for word, from the `bible` CLI.
+- **Scripture** is quoted in KJV, word for word, from the `manna` CLI.
 - **Ellen G. White and the pioneers** are paraphrased and never named in speech; they are credited in the description.
 - **Old child-training books** (Abbott, Kellogg, Byrum) are retold and credited the same way.
 - **No denominational history**: no church history and no denomination names.
@@ -72,7 +72,7 @@ The numbering below is a catalogue, not a schedule.
 
 ## 3. Topics
 
-The KJV column lists only references printed by the `bible verse` CLI in this research. Source references give the short code and page or paragraph; full titles are in `sources.md`. "Abbott", "Kellogg" and "Byrum" refer to the printed pages of the SonLight reprints. ✔ marks a pilot script in `scripts/`.
+The KJV column lists only references printed by the `manna verse` CLI in this research. Source references give the short code and page or paragraph; full titles are in `sources.md`. "Abbott", "Kellogg" and "Byrum" refer to the printed pages of the SonLight reprints. ✔ marks a pilot script in `scripts/`.
 
 ### Part I · Why
 
@@ -251,11 +251,11 @@ The KJV column lists only references printed by the `bible verse` CLI in this re
 | 114 | Should the teacher do all the talking? _(new, from J. White)_ | Q   | What if the best class is the one where the students tell what they found?                        | Luke 2:46; Matt 16:13–15; Acts 17:11              | CSW 115.2 (draw out the class to tell what they know). Facilitator model credited to White (_Gather the Children_).                                                                                                                                                                                                                                             |
 | 122 | Will it ever be easy? _(new, from J. White, D–F)_             | E   | Standing alone as a family: Noah, Jonathan, Elijah, and the seven thousand he didn't know about   | Heb 11:7; Josh 24:15; 1 Sam 14:6; 1 Kgs 19:10, 18 | PP 95.1; PP 126.3–126.4; PK 175.2 ("Trials will come, but go forward"). Leave out his speculation (Enoch and the 144,000) and reading setbacks as direct attacks.                                                                                                                                                                                               |
 
-Every KJV reference in the tables was printed by the CLI during this research. The references added with Ritsema's material (Ex 13:14; Mark 3:14; Matt 4:18, 21; Mark 6:7; Luke 10:1, 17; 2 Kgs 2:3; Titus 2:3–4; Ps 145:4; Luke 14:28; Prov 27:23; Heb 11:33; Dan 12:3; Prov 22:29; Dan 1:4) were printed by `bible verse` on 2026-10-12.
+Every KJV reference in the tables was printed by the CLI during this research. The references added with Ritsema's material (Ex 13:14; Mark 3:14; Matt 4:18, 21; Mark 6:7; Luke 10:1, 17; 2 Kgs 2:3; Titus 2:3–4; Ps 145:4; Luke 14:28; Prov 27:23; Heb 11:33; Dan 12:3; Prov 22:29; Dan 1:4) were printed by `manna verse` on 2026-10-12.
 
-The references added with J. White's material, in the new rows and in **+W** additions, were printed by `bible verse` on 2026-10-13 (90 references, all found): Gen 2:17; Isa 7:15; Rom 16:19; James 1:22; Matt 7:26; Rom 8:16–17; 1 Pet 2:9; Gal 4:7; Deut 4:9; Ps 119:11; 1 John 4:19; Mal 4:6; Mark 6:30; Heb 11:7; Gen 6:22; Gen 7:1; Gen 13:12; Gen 4:17; Luke 1:80; Gal 1:17; Acts 7:30; 2 Kgs 5:2–3; 2 Kgs 20:17–18; 2 Kgs 22:8; 2 Kgs 22:11; 2 Kgs 23:1–2; Dan 1:3–6; Ezra 1:3; Ezra 1:5; Ezra 2:64; Ezra 8:15; Jer 29:10; Hag 1:4; John 1:11; Luke 19:42; Luke 19:44; Luke 10:25–26; John 5:39; Gen 15:7–8; Ps 37:11; Matt 5:5; Rev 21:7; Eph 5:16; Ps 119:97; Ps 78:4–6; Josh 24:15; Luke 3:23; Luke 2:51–52; Gen 41:46; 2 Kgs 3:11; Prov 3:5–7; John 15:5; Jer 17:5; Jer 17:7; Luke 10:33–34; Mark 6:34; 1 Sam 2:12; 1 Sam 2:22–25; 1 Sam 2:29; 1 Sam 3:13; Gen 18:19; Luke 6:48–49; Job 1:8–11; Job 2:3; 1 Cor 4:9; Ps 5:3; Mark 1:35; Eccl 12:12; Luke 10:41–42; Luke 2:46–47; Neh 8:8; Deut 6:20; Matt 16:13–15; Acts 17:11; Deut 31:12–13; Josh 8:35; 2 Chr 20:13; Ezra 10:1; Joel 2:16; Neh 8:2; 1 Chr 23:24; 1 Sam 2:18; Titus 2:2; Titus 2:6–7; 2 Chr 15:7; Ps 90:12; Gen 22:7–10; Prov 20:29; Deut 6:6–7; Prov 22:6.
+The references added with J. White's material, in the new rows and in **+W** additions, were printed by `manna verse` on 2026-10-13 (90 references, all found): Gen 2:17; Isa 7:15; Rom 16:19; James 1:22; Matt 7:26; Rom 8:16–17; 1 Pet 2:9; Gal 4:7; Deut 4:9; Ps 119:11; 1 John 4:19; Mal 4:6; Mark 6:30; Heb 11:7; Gen 6:22; Gen 7:1; Gen 13:12; Gen 4:17; Luke 1:80; Gal 1:17; Acts 7:30; 2 Kgs 5:2–3; 2 Kgs 20:17–18; 2 Kgs 22:8; 2 Kgs 22:11; 2 Kgs 23:1–2; Dan 1:3–6; Ezra 1:3; Ezra 1:5; Ezra 2:64; Ezra 8:15; Jer 29:10; Hag 1:4; John 1:11; Luke 19:42; Luke 19:44; Luke 10:25–26; John 5:39; Gen 15:7–8; Ps 37:11; Matt 5:5; Rev 21:7; Eph 5:16; Ps 119:97; Ps 78:4–6; Josh 24:15; Luke 3:23; Luke 2:51–52; Gen 41:46; 2 Kgs 3:11; Prov 3:5–7; John 15:5; Jer 17:5; Jer 17:7; Luke 10:33–34; Mark 6:34; 1 Sam 2:12; 1 Sam 2:22–25; 1 Sam 2:29; 1 Sam 3:13; Gen 18:19; Luke 6:48–49; Job 1:8–11; Job 2:3; 1 Cor 4:9; Ps 5:3; Mark 1:35; Eccl 12:12; Luke 10:41–42; Luke 2:46–47; Neh 8:8; Deut 6:20; Matt 16:13–15; Acts 17:11; Deut 31:12–13; Josh 8:35; 2 Chr 20:13; Ezra 10:1; Joel 2:16; Neh 8:2; 1 Chr 23:24; 1 Sam 2:18; Titus 2:2; Titus 2:6–7; 2 Chr 15:7; Ps 90:12; Gen 22:7–10; Prov 20:29; Deut 6:6–7; Prov 22:6.
 
-The references in nos. 120–127 (from White's playlists D–F) were printed by `bible verse` on 2026-10-13: Deut 6:6–7; Eph 6:4; Mark 16:15; Esth 4:14; Matt 9:37–38; Heb 11:7; Josh 24:15; 1 Sam 14:6; 1 Kgs 19:10, 18; Prov 4:1–4; Rom 8:16–17; 1 Pet 2:9; Col 3:10; 1 Tim 4:12; Mark 5:19; Gen 3:4–5; Col 2:8; Mal 4:5–6; Luke 1:17. Every EGW ref in those rows was printed by `bible egw lookup`.
+The references in nos. 120–127 (from White's playlists D–F) were printed by `manna verse` on 2026-10-13: Deut 6:6–7; Eph 6:4; Mark 16:15; Esth 4:14; Matt 9:37–38; Heb 11:7; Josh 24:15; 1 Sam 14:6; 1 Kgs 19:10, 18; Prov 4:1–4; Rom 8:16–17; 1 Pet 2:9; Col 3:10; 1 Tim 4:12; Mark 5:19; Gen 3:4–5; Col 2:8; Mal 4:5–6; Luke 1:17. Every EGW ref in those rows was printed by `manna egw lookup`.
 
 ## 4. Rules for writing the remaining 72
 
@@ -263,7 +263,7 @@ The references in nos. 120–127 (from White's playlists D–F) were printed by 
 - **Question structure:** hook, then the common belief, then 2–3 evidence beats, the turn, and a payoff line that restores the hook's object.
 - **Episode structure:** hook, series line, story 1, turn, story 2, payoff.
 - **Ending:** no spoken call to action. Cut no more than 0.6 s after the last word.
-- **Scripture:** quote only from fresh `bible verse` output, and drop `[ ]` and `‹ ›`. A partial verse is a continuous run of words, and the caption shows only those words. Say the book name in speech and leave chapter and verse on screen.
+- **Scripture:** quote only from fresh `manna verse` output, and drop `[ ]` and `‹ ›`. A partial verse is a continuous run of words, and the caption shows only those words. Say the book name in speech and leave chapter and verse on screen.
 - **Other sources:** EGW, the pioneers and the old child-training books are paraphrased and never named in speech. List them in the description as "Ideas paraphrased from: …" with page numbers. Retell stories in fresh words; don't read the book's dialogue aloud.
 - **Generated images:** any image of a historical scene is labeled "Illustration".
 - **Mapping into `talk.ts`:**

@@ -1,6 +1,6 @@
-/** `bible egw daemon` — the warm search process.
+/** `manna egw daemon` — the warm search process.
  *
- *  A cold `bible egw search` pays the whole §9 stack per invocation: open the
+ *  A cold `manna egw search` pays the whole §9 stack per invocation: open the
  *  writings database, load the ~1.2 GB embedding model, parse the 264 MB
  *  vector index — ~10 seconds before the first answer. The daemon pays that
  *  once and then answers `search.query` over a unix socket in the time the
@@ -11,7 +11,7 @@
  *  exits zero; a dead socket file is removed and the bind proceeds. Two
  *  racing starts are settled by the bind itself — the loser's listen fails
  *  and it exits. The daemon retires itself after `--idle-minutes` without a
- *  request, or immediately on `daemon.shutdown` (`bible egw daemon --stop`).
+ *  request, or immediately on `daemon.shutdown` (`manna egw daemon --stop`).
  *  Either way the socket file is removed on the way out.
  *
  *  **Warmth.** The expensive layers load lazily on first use, so binding the

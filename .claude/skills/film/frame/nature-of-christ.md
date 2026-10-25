@@ -78,7 +78,7 @@ Cited by these writers in or around the quotes above:
 - Heb 4:15 (alluded to in Lt 8, 1895, par. 14)
 - From the Principle II note: Acts 3:19; Lev 16; Heb 8:4-5; 9:6-7; John 1:29; 1 Pet 2:24; 2 Cor 5:14-15
 
-KJV (brackets as printed by `bible verse`):
+KJV (brackets as printed by `manna verse`):
 
 - **Hebrews 2:16** — For verily he took not on [him the nature of] angels; but he took on [him] the seed of Abraham. KJV supplies "[him the nature of]" only in the angels clause. Principle II's "the nature of the seed of Abraham" carries that supplied phrase across to Abraham.
 - **Romans 8:3** — For what the law could not do, in that it was weak through the flesh, God sending his own Son in the likeness of sinful flesh, and for sin, condemned sin in the flesh:

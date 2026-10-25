@@ -100,7 +100,7 @@ Within a tier, more talk appearances and then more planned appearances rank high
 
 **"Text silent."** Where Scripture does not describe a figure's look, the entry says "text silent" and gives the plain period default from §3.1. The default is a tunic, a mantle, a girdle, a headcloth outdoors and sandals, in two or three flat pieces.
 
-**Scripture** is quoted from the KJV and checked against the local corpus with `bible verse`. The KJV's bracketed words, which the translators supplied, are printed without brackets.
+**Scripture** is quoted from the KJV and checked against the local corpus with `manna verse`. The KJV's bracketed words, which the translators supplied, are printed without brackets.
 
 **The scripts' "grey" figures.** Many scripts describe "grey" figures (grey Paul, grey Philip, grey travellers). That wording predates K1, which retires grey (§1.2). Read every "grey" as "in story cloth" for Bible figures and "in their slot" for the cast. For a plain lead it stays: the plain lead is the one figure K1 keeps in a pale cool grey paper with a lilac cast (§2.3; owner, 2026-10-15).
 

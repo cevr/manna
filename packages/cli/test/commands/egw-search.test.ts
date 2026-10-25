@@ -121,7 +121,7 @@ const withCliLimit = (query: SearchQuery): SearchQuery =>
     limit: Option.some(20),
   });
 
-describe('bible egw search — §9.7 golden query set', () => {
+describe('manna egw search — §9.7 golden query set', () => {
   for (const golden of GOLDEN_QUERIES) {
     it.scopedLive(`emits the service's bytes for "${golden.query.text}"`, () =>
       Effect.gen(function* () {
@@ -222,7 +222,7 @@ describe('bible egw search — §9.7 golden query set', () => {
   );
 });
 
-describe('bible egw search — §9.6 typed absence', () => {
+describe('manna egw search — §9.6 typed absence', () => {
   it.scopedLive('reports lexical-only rather than pretending the vector leg ran', () =>
     Effect.gen(function* () {
       // A *wordy* query, so §9.3 routes it to the vector leg and the absence
@@ -274,7 +274,7 @@ describe('bible egw search — §9.6 typed absence', () => {
   );
 });
 
-describe('bible egw search — narrowings reach the service', () => {
+describe('manna egw search — narrowings reach the service', () => {
   it.scopedLive('passes --scope through to the corpus scope', () =>
     Effect.gen(function* () {
       const cli = yield* cliJson(['the king of the north', '--scope', 'pioneer']);
@@ -298,13 +298,13 @@ describe('bible egw search — narrowings reach the service', () => {
  *  §9.2's index is ~246 MB. The CLI has to parse it to decide whether it is one
  *  this build may scan, and the earlier shape then handed the *byte source* to
  *  `SearchService.Live`, which read and parsed the whole file again — two full
- *  reads and two copies of the vector region on every `bible egw search`
+ *  reads and two copies of the vector region on every `manna egw search`
  *  invocation, for one decision. No result assertion can see that: both shapes
  *  return identical rows. Counting the reads is the only observable, and
  *  `core/src/search/vector-artifact.test.ts` already counts the per-query case,
  *  which this pair of startup reads slipped past.
  */
-describe('bible egw search — the index is read once at startup (F8)', () => {
+describe('manna egw search — the index is read once at startup (F8)', () => {
   // The counter the assertion reads, and the composition that increments it,
   // both live beside the test rather than inside it: the layer is provided once
   // at the test's own boundary, so it cannot be built from a value that only

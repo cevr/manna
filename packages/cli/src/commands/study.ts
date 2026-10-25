@@ -1,10 +1,10 @@
 /**
  * Study CLI command graph (§8.2).
  *
- * `bible study verse "Dan 8:13" [--json]` prints the whole study bundle — the
+ * `manna study verse "Dan 8:13" [--json]` prints the whole study bundle — the
  * verse's words with their Strong's numbers, its cross-references, its margin
  * notes, the EGW Bible Commentary on it, and the parallel writings that cite
- * it. `bible study strongs H8548 [--json]` prints one lexicon entry plus the
+ * it. `manna study strongs H8548 [--json]` prints one lexicon entry plus the
  * reverse concordance.
  *
  * Both call `StudyService` **directly** — the same service, the same caps, the
@@ -146,7 +146,7 @@ const reportCorpusRow = <A, E>(effect: Effect.Effect<A, E>): Effect.Effect<A, E>
   });
 
 // ---------------------------------------------------------------------------
-// bible study verse
+// manna study verse
 // ---------------------------------------------------------------------------
 
 /** The `--json` payload for one bundle: the core schema's own encoding rather
@@ -235,7 +235,7 @@ const studyVerse = Command.make('verse', { reference, json }, (args) =>
 );
 
 // ---------------------------------------------------------------------------
-// bible study strongs
+// manna study strongs
 // ---------------------------------------------------------------------------
 
 export const strongsStudyJson = (
@@ -288,7 +288,7 @@ const studyStrongs = Command.make('strongs', { number, limit, json }, (args) =>
 
 export const study = Command.make('study', {}, () =>
   Console.log(
-    `Usage: bible study verse "<reference>" [--json]\n` +
-      `       bible study strongs <number> [--limit <n>] [--json]`,
+    `Usage: manna study verse "<reference>" [--json]\n` +
+      `       manna study strongs <number> [--limit <n>] [--json]`,
   ),
 ).pipe(Command.withSubcommands([studyVerse, studyStrongs]));

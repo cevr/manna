@@ -55,7 +55,7 @@ The pioneers cite these texts in the quotes above and in 1889 V and XXII–XXV:
 - Rev 20:4–6 (1889 XXIV)
 - Matt 15:14 (SITI September 8, 1881, page 403.7)
 
-KJV text of the five most important, from `bible verse`. Square brackets mark the KJV's supplied words.
+KJV text of the five most important, from `manna verse`. Square brackets mark the KJV's supplied words.
 
 - **Gen 2:7** — And the LORD God formed man [of] the dust of the ground, and breathed into his nostrils the breath of life; and man became a living soul.
 - **Eccl 9:5–6, 10** — (9:5) For the living know that they shall die: but the dead know not any thing, neither have they any more a reward; for the memory of them is forgotten. (9:6) Also their love, and their hatred, and their envy, is now perished; neither have they any more a portion for ever in any [thing] that is done under the sun. (9:10) Whatsoever thy hand findeth to do, do [it] with thy might; for [there is] no work, nor device, nor knowledge, nor wisdom, in the grave, whither thou goest.

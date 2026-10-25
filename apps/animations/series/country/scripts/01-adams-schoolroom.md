@@ -4,7 +4,7 @@ Series: Dwell in the Land · Arc I (What) · 1 of 19
 Promise: the viewer sees that God's first home was also His first school (a garden for a room, nature for a book, work for a lesson, and God for the teacher), that the deepest lesson in it was trust, and that any home can begin to be a little of both.
 Prerequisites: none.
 Length: about 5:15 (589 spoken words: 3:48 at 155 wpm, and 4:10 with the marks' 22 s of breaths and holds, 3:56–4:18 at 165–150 wpm; plus the title, about 30 s of music alone and 25 s of credits).
-Status: draft for the owner, 2026-10-13. Every KJV line was printed by `bible verse`, and every paraphrase source by `bible egw lookup`, on 2026-10-13 (`../sources.md` §2–§3). The spoken lines were revised and marked for delivery on 2026-10-15, and every KJV line was printed again that day. Nothing narrated or rendered.
+Status: draft for the owner, 2026-10-13. Every KJV line was printed by `manna verse`, and every paraphrase source by `manna egw lookup`, on 2026-10-13 (`../sources.md` §2–§3). The spoken lines were revised and marked for delivery on 2026-10-15, and every KJV line was printed again that day. Nothing narrated or rendered.
 
 ## Header
 

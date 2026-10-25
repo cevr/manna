@@ -51,7 +51,7 @@ Named by the statement and the writers:
 - **Revelation 12:17** — "And the dragon was wroth with the woman, and went to make war with the remnant of her seed, which keep the commandments of God, and have the testimony of Jesus Christ."
 - **Revelation 19:10** — "And I fell at his feet to worship him. And he said unto me, See [thou do it] not: I am thy fellowservant, and of thy brethren that have the testimony of Jesus: worship God: for the testimony of Jesus is the spirit of prophecy."
 
-(KJV from `bible verse`; pilcrows omitted, italic supplied words kept in [brackets].)
+(KJV from `manna verse`; pilcrows omitted, italic supplied words kept in [brackets].)
 
 ## Film direction
 

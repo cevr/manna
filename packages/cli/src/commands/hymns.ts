@@ -133,12 +133,12 @@ const searchCommand = Command.make(
       const limit = Option.getOrElse(args.limit, () => 20);
 
       if (query.length === 0) {
-        yield* Console.log('Usage: bible hymns search <query> [--json]');
+        yield* Console.log('Usage: manna hymns search <query> [--json]');
         yield* Console.log('');
         yield* Console.log('Examples:');
-        yield* Console.log('  bible hymns search "amazing grace"');
-        yield* Console.log('  bible hymns search faith');
-        yield* Console.log('  bible hymns search "turn your eyes"');
+        yield* Console.log('  manna hymns search "amazing grace"');
+        yield* Console.log('  manna hymns search faith');
+        yield* Console.log('  manna hymns search "turn your eyes"');
         return;
       }
 
@@ -187,7 +187,7 @@ const categoryCommand = Command.make('category', { categoryIdArg }, (args) =>
 
     if (results.length === 0) {
       yield* Console.log(`No hymns found in category ${args.categoryIdArg}.`);
-      yield* Console.log('Use "bible hymns categories" to see available categories.');
+      yield* Console.log('Use "manna hymns categories" to see available categories.');
       return;
     }
 

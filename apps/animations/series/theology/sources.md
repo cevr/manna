@@ -4,8 +4,8 @@ How the material was gathered (2026-10-10/11), what was found per topic, and the
 
 ## Tools and one caveat
 
-- **KJV:** the repo's `bible` CLI (`bun packages/cli/src/main.ts verse "<ref>" --json`, wrapped as `scratchpad/bible`). Every Scripture line in `scripts/` came from it.
-- **EGW and pioneers:** on this box `bible egw search|lookup|books` fail (`SQLiteError: no such column: book_id`): `~/.bible/egw-paragraphs.db` holds only a `(refcode_short, para_id)` table of 3,011,990 rows and an empty `books` table, no paragraph text. I did not repair it (outside the allowed write area). Instead every EGW and pioneer search went to the owner's deployed egw-search service, `https://egw.cvr.im/api/search?q=…&scope=egw|pioneer&context=N&noref=1`, which serves the same corpus the CLI indexes (refcodes in the corpus's own form). Helper: `scratchpad/es.py`. Worth fixing on the box before scripts move into `apps/animations` (the film skill's "Fetch, then write" step and the frame verifier, `verify-quotes.py`, both read `~/.bible/egw-paragraphs.db`).
+- **KJV:** the repo's `manna` CLI (`bun packages/cli/src/main.ts verse "<ref>" --json`, wrapped as `scratchpad/bible`). Every Scripture line in `scripts/` came from it.
+- **EGW and pioneers:** on this box `manna egw search|lookup|books` fail (`SQLiteError: no such column: book_id`): `~/.bible/egw-paragraphs.db` holds only a `(refcode_short, para_id)` table of 3,011,990 rows and an empty `books` table, no paragraph text. I did not repair it (outside the allowed write area). Instead every EGW and pioneer search went to the owner's deployed egw-search service, `https://egw.cvr.im/api/search?q=…&scope=egw|pioneer&context=N&noref=1`, which serves the same corpus the CLI indexes (refcodes in the corpus's own form). Helper: `scratchpad/es.py`. Worth fixing on the box before scripts move into `apps/animations` (the film skill's "Fetch, then write" step and the frame verifier, `verify-quotes.py`, both read `~/.bible/egw-paragraphs.db`).
 - **The frame:** `.claude/skills/film/frame/<topic>.md` (verified pioneer quotes per doctrine, with Film direction). Used first wherever a topic file exists; marked (frame) below.
 - **Verifier:** `scratchpad/verify.py` checks each “…” in a script's `say` against the KJV text of that beat's Scripture `cite`s, each paraphrase-source snippet against the corpus by refcode, and counts the quoted share. Results for 01, 02 and 04 are at the end. It is a scratch tool for this draft only, not a proposed repo check (owner: content is never checked by code).
 - **Full search log:** `searches.log` beside this file (every query, its scope and hit count, including the research agents' queries for 06–44).
@@ -48,7 +48,7 @@ Found, not used: AWLF 13.4 (1847, visions "given to lead us to God, and his writ
 
 ## 03 · As It Reads
 
-Gathered 2026-10-19 for `scripts/03-as-it-reads.md`. Every KJV line in the script was printed by `bible verse` that day; every pioneer line below was printed by `bible egw lookup` (or `bible egw search`) that day and is copied verbatim. The excerpts the script paraphrases are in `quotes-03.jsonl`, and the frame's verifier passes all 15 (`python3 .claude/skills/film/frame/verify-quotes.py apps/animations/series/theology/quotes-03.jsonl`: 15 EXACT, 0 failing; rerun after the review, 2026-10-19).
+Gathered 2026-10-19 for `scripts/03-as-it-reads.md`. Every KJV line in the script was printed by `manna verse` that day; every pioneer line below was printed by `manna egw lookup` (or `manna egw search`) that day and is copied verbatim. The excerpts the script paraphrases are in `quotes-03.jsonl`, and the frame's verifier passes all 15 (`python3 .claude/skills/film/frame/verify-quotes.py apps/animations/series/theology/quotes-03.jsonl`: 15 EXACT, 0 failing; rerun after the review, 2026-10-19).
 
 Searches (scope: query; lexical index, no vector index on the laptop):
 
@@ -107,12 +107,12 @@ Found, not used: COL 415.3 ("It is the darkness of misapprehension of God that i
 
 # Sources and searches · the salvation arc (05, 07, 10)
 
-Written 2026-10-19 beside `sources.md`, to be folded into it (the coordinator's rule: another writer edits `sources.md` today). Same form as `sources.md`: the searches, what the credits name, what was found and not used, what was not found. Every snippet below was printed in this session by `bible egw lookup` or `bible egw search` and copied verbatim; every KJV line in the three scripts was printed by `bible verse` the same day.
+Written 2026-10-19 beside `sources.md`, to be folded into it (the coordinator's rule: another writer edits `sources.md` today). Same form as `sources.md`: the searches, what the credits name, what was found and not used, what was not found. Every snippet below was printed in this session by `manna egw lookup` or `manna egw search` and copied verbatim; every KJV line in the three scripts was printed by `manna verse` the same day.
 
 ## Tools
 
-- **KJV:** `bible verse "<ref>"`. A check run over every “…” span in the three scripts' `say` lines found each one inside its verse as printed, with the supplied-word brackets dropped (21 spans, 21 found).
-- **EGW and pioneers:** `bible egw search "<query>" --scope egw|pioneer --limit N` and `bible egw lookup "<refcode>"`, over `~/.bible/egw-paragraphs.db`. The search is lexical only on this machine ("the embedding model is not available"), so a long query of exact words can return 0 hits where a shorter one finds the passage; the 0-hit queries below are listed with that in mind.
+- **KJV:** `manna verse "<ref>"`. A check run over every “…” span in the three scripts' `say` lines found each one inside its verse as printed, with the supplied-word brackets dropped (21 spans, 21 found).
+- **EGW and pioneers:** `manna egw search "<query>" --scope egw|pioneer --limit N` and `manna egw lookup "<refcode>"`, over `~/.bible/egw-paragraphs.db`. The search is lexical only on this machine ("the embedding model is not available"), so a long query of exact words can return 0 hits where a shorter one finds the passage; the 0-hit queries below are listed with that in mind.
 - **Verifier:** `.claude/skills/film/frame/verify-quotes.py`, run on two record sets per film: the quotes files made for each episode (`quotes-05.jsonl`, `quotes-07.jsonl` and `quotes-10.jsonl` beside this file, with topic, ref, author, work and year), and every paraphrase-source snippet pulled straight out of the scripts. Results are at the end of each section.
 
 ## 05 · In Our Image
@@ -243,11 +243,11 @@ One review, by okra counsel (deep; codex, read-only). Verdict: ship after fixes.
 
 Counsel's one item for the owner, 07 as the arc's problem episode, is in the writer's report.
 
-After the fixes: `bun cli.ts drafts` passes all three; the verifier passes every record (05 13 and 13, 07 15 and 14, 10 15 and 15); the 21 spoken KJV spans match `bible verse`.
+After the fixes: `bun cli.ts drafts` passes all three; the verifier passes every record (05 13 and 13, 07 15 and 14, 10 15 and 15); the 21 spoken KJV spans match `manna verse`.
 
 ## 12 · Faith Toward God
 
-Gathered 2026-10-19 for `scripts/12-faith-toward-god.md`. Every KJV line in the script was printed by `bible verse` that day; every pioneer line below was printed by `bible egw lookup` (or `bible egw search`) that day and is copied verbatim. The excerpts the script paraphrases are in `quotes-12.jsonl`, and the frame's verifier passes all 12 (`python3 .claude/skills/film/frame/verify-quotes.py apps/animations/series/theology/quotes-12.jsonl`: 12 EXACT, 0 failing; rerun after the review, 2026-10-19).
+Gathered 2026-10-19 for `scripts/12-faith-toward-god.md`. Every KJV line in the script was printed by `manna verse` that day; every pioneer line below was printed by `manna egw lookup` (or `manna egw search`) that day and is copied verbatim. The excerpts the script paraphrases are in `quotes-12.jsonl`, and the frame's verifier passes all 12 (`python3 .claude/skills/film/frame/verify-quotes.py apps/animations/series/theology/quotes-12.jsonl`: 12 EXACT, 0 failing; rerun after the review, 2026-10-19).
 
 Searches (scope: query; lexical index, no vector index on the laptop):
 
@@ -293,7 +293,7 @@ Not found:
 
 Three research agents gathered 06–44 with the same brief (`brief-for-research-agents.txt`) and the same two tools. Their rules:
 
-- Every refcode and snippet they report was printed by `es.py`, `bible verse` or a frame file during this session.
+- Every refcode and snippet they report was printed by `es.py`, `manna verse` or a frame file during this session.
 - A gap stays a gap.
 
 Below, each episode gets its key refs with the thought each supplies, its shape, its pictures, its must-not list, and the searches (scope: query). The credit lines are collected in `series.md`.
@@ -723,7 +723,7 @@ Split on 2026-10-20: 17 keeps the resurrection hope, and the case on man's natur
 
 ### 35 · A Living Soul (new on 2026-10-20: the case on man's nature, split from 17)
 
-- **Key refs** (all from 17's round; each read again with `bible egw lookup` on 2026-10-20):
+- **Key refs** (all from 17's round; each read again with `manna egw lookup` on 2026-10-20):
   - HHMLD 42.1 (frame): "a lifeless man; afterward, a living one".
   - BQACM 4.3 (frame): "Man, being mortal, has it not; God has it".
   - BQACM 7.3: "Death is wholly an unconscious sleep".
@@ -939,7 +939,7 @@ Split on 2026-10-20: 17 keeps the resurrection hope, and the case on man's natur
   - SITI March 18, 1889;
   - ARSH September 2, 1851 (unsigned).
 - Credited by the corpus to Jones as editor but written by Waggoner, per the frame: GCDB March 8, 1897, pages 297–303.
-- `bible verse` does not print KJV margins, so the Joel 2:23 "teacher of righteousness" margin cannot be quoted as KJV text.
+- `manna verse` does not print KJV margins, so the Joel 2:23 "teacher of righteousness" margin cannot be quoted as KJV text.
 
 ## Verifier results for 01, 02 and 04
 
@@ -969,9 +969,9 @@ Every beat has at most one quotation, and every script is under the 20 % cap. Ea
 
 **Tools this round.** These ran on the laptop, where the local corpus works:
 
-- `bible egw lookup <refcode>` and `bible egw search --scope egw|pioneer|all [--full]`, which are lexical (no vector index on this machine);
-- `bible egw search --remote`, once;
-- `bible verse`.
+- `manna egw lookup <refcode>` and `manna egw search --scope egw|pioneer|all [--full]`, which are lexical (no vector index on this machine);
+- `manna egw search --remote`, once;
+- `manna verse`.
 
 Every snippet below was printed by the CLI on 2026-10-12. Scratch checks (not repo tools) did two things:
 
@@ -998,11 +998,11 @@ Every snippet below was printed by the CLI on 2026-10-12. Scratch checks (not re
 
 Tally: 13 quotations, 11 VERIFIED, 0 DIFFER, 2 NOT FOUND.
 
-The article's KJV quotations match `bible verse` except for typos in 1 Tim 6:14–16 ("unrebukable", "to hom"), a dropped comma in Matt 2:11, and "Her 1:6" for Heb 1:6.
+The article's KJV quotations match `manna verse` except for typos in 1 Tim 6:14–16 ("unrebukable", "to hom"), a dropped comma in Matt 2:11, and "Her 1:6" for Heb 1:6.
 
 Unsupported claim: that the speaker of Gen 17:1 is the pre-incarnate Son. No corpus witness was found; PP 370.3 quotes the verse without naming Him.
 
-### Witnesses gathered (all VERIFIED by `bible egw lookup` on 2026-10-12)
+### Witnesses gathered (all VERIFIED by `manna egw lookup` on 2026-10-12)
 
 - **Statements:** FP1872 4.3; FP1889 147.3 (frame).
 - **J. H. Waggoner, The Atonement (1884):** AERS 152.1, 153.1 (the Son "should bear the name and title of his Father", "in a sense subordinate"), 154.1, 155.1, 164.3, 170.1 (John 12:41 = "Adonai, the Son, and not … Jehovah"; = ARSH November 3, 1863, page 182.15), 173.1.

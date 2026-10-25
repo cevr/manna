@@ -24,7 +24,7 @@ Principle IV (FP1889 148.2) makes baptism an ordinance "to follow faith and repe
 
 ## Key texts
 
-KJV as printed by `bible verse` (square brackets mark KJV supplied words).
+KJV as printed by `manna verse` (square brackets mark KJV supplied words).
 
 - **Romans 6:3-5**: "Know ye not, that so many of us as were baptized into Jesus Christ were baptized into his death? Therefore we are buried with him by baptism into death: that like as Christ was raised up from the dead by the glory of the Father, even so we also should walk in newness of life. For if we have been planted together in the likeness of his death, we shall be also [in the likeness] of [his] resurrection:"
 - **Colossians 2:12**: "Buried with him in baptism, wherein also ye are risen with [him] through the faith of the operation of God, who hath raised him from the dead."

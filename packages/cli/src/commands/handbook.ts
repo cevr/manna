@@ -5,9 +5,9 @@
  * one deterministic call — the job the handbook-factory workflow's aggregator/save
  * agents do, but as a single fast CLI step (no LLM, no flakiness).
  *
- *   bible handbook save <dir>            - assemble <dir>/handbook.json + sections → outPath
- *   bible handbook save <dir> --out X    - write to X instead of the manifest's outPath
- *   bible handbook save <dir> --dry-run  - print the assembled handbook, write nothing
+ *   manna handbook save <dir>            - assemble <dir>/handbook.json + sections → outPath
+ *   manna handbook save <dir> --out X    - write to X instead of the manifest's outPath
+ *   manna handbook save <dir> --dry-run  - print the assembled handbook, write nothing
  *
  * The sections directory must contain:
  *   - the per-section files (e.g. 01-foo.md, 02-bar.md), each starting with "## Title"
@@ -355,7 +355,7 @@ const handbookSave = Command.make(
 
 export const handbook = Command.make('handbook', {}, () =>
   Effect.gen(function* () {
-    yield* Console.log('Usage: bible handbook save <dir> [--out PATH] [--dry-run]');
+    yield* Console.log('Usage: manna handbook save <dir> [--out PATH] [--dry-run]');
     yield* Console.log('');
     yield* Console.log(
       'Assemble a finished handbook from <dir>/handbook.json + its per-section .md files',
@@ -364,7 +364,7 @@ export const handbook = Command.make('handbook', {}, () =>
     yield* Console.log('sections, and the Symbol Dictionary appendix).');
     yield* Console.log('');
     yield* Console.log('Examples:');
-    yield* Console.log('  bible handbook save outputs/studies/why-he-tarries/sections');
-    yield* Console.log('  bible handbook save ./sections --out /tmp/draft.md --dry-run');
+    yield* Console.log('  manna handbook save outputs/studies/why-he-tarries/sections');
+    yield* Console.log('  manna handbook save ./sections --out /tmp/draft.md --dry-run');
   }),
 ).pipe(Command.withSubcommands([handbookSave]));

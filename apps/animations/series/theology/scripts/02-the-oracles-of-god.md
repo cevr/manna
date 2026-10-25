@@ -4,7 +4,7 @@ Series: The Path of the Just · Tier One (Milk) · 2 of 44
 Promise: the viewer knows where the Bible came from, why it is the one rule every other voice is measured by, and one plain habit for letting it explain itself (the next film, 03, gives the Bible's own dictionary), so they can check every later film against it.
 Prerequisites: 01 (the milk is "the first principles of the oracles of God").
 Length: about 5:25 (573 spoken words: 3:42 at 155 wpm, 4:02 with the marked breaths and holds, 3:48–4:09 at 165–150 wpm with them; plus title, beat leads and tails, about 30 s of music alone and 28 s of credits). Recounted 2026-10-19 after `plain` and `figure` moved to 03.
-Status: draft for the owner. Every KJV line printed by `bible verse` on 2026-10-10 and checked again on 2026-10-15; every paraphrase source printed by the corpus search (sources.md). Frame: scripture.md (Principle III). Wording revised 2026-10-15 to Christ's manner of speaking (series README, Language) and marked for delivery: `{*}` stress, `{/}` breath, `{//}` hold.
+Status: draft for the owner. Every KJV line printed by `manna verse` on 2026-10-10 and checked again on 2026-10-15; every paraphrase source printed by the corpus search (sources.md). Frame: scripture.md (Principle III). Wording revised 2026-10-15 to Christ's manner of speaking (series README, Language) and marked for delivery: `{*}` stress, `{/}` breath, `{//}` hold.
 
 ## Header
 
