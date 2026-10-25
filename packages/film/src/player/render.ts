@@ -1,6 +1,7 @@
 // The render page, framework-free: an app's `index.html` (the lab's export
 // place `/films/<name>/export`, or the PreviewServer's `/?film=<name>&export`) calls
-// `mountRender(films)`: the film with no chrome, and `window.__film` for the
+// `mountRender(films)`: the film with no chrome (its scenes, or its Board when
+// the address says `board`, `pictureOn`), and `window.__film` for the
 // renderer and the easel. Its own module, so the encoder
 // (`encode.ts`, mediabunny) is the render page's alone: the studio's pages,
 // which mount the preview (`main.ts`), never load it.
@@ -13,6 +14,10 @@ import type { FigureMark } from '../core/match.ts';
 import { sceneTimesOf } from '../core/easel.ts';
 import { frameAtOrAfter } from '../core/time.ts';
 import { Effect, Option } from 'effect';
+import { FetchHttpClient } from 'effect/http';
+import { parseHref } from '@bible/url-state';
+import { boardFilm } from '../canvas/board.ts';
+import { Picture, pictureOn } from '../core/board-render.ts';
 import { addressOn, hostOf, monotonicMs } from '../browser/host.ts';
 import type { Host } from '../browser/host.ts';
 import { BrowserHost } from '../browser/host-browser.ts';
@@ -23,6 +28,7 @@ import { encodeChunk, encoderChoice } from './encode.ts';
 import { pictureFacesWait } from './face.ts';
 import { composeLookbook } from './lookbook-sheet.ts';
 import { lookFrames } from './look-frames.ts';
+import { loadBoard } from './board.ts';
 import { type Films, type Staged, stageFilm } from './main.ts';
 
 declare global {
@@ -39,7 +45,9 @@ declare global {
  */
 export const mountRender = (films: Films): void => {
   const host = hostOf(BrowserHost.render);
-  stageFilm(films, addressOn(host).href())
+  const href = addressOn(host).href();
+  stageFilm(films, href)
+    .then((staged) => onPicture(staged, pictureOn(parseHref(href).searchParams)))
     .then((staged) =>
       Effect.runPromise(
         Option.getOrElse(pictureFacesWait(document.fonts), () => Effect.void).pipe(
@@ -56,6 +64,25 @@ export const mountRender = (films: Films): void => {
       throw e;
     });
 };
+
+/**
+ * `staged` drawing `picture`: its scenes as staged, or its Board
+ * (`boardFilm`), the board and its kept tries read and decoded first.
+ */
+const onPicture = (staged: Staged, picture: Picture): Promise<Staged> =>
+  Picture.$match(picture, {
+    Scenes: () => Promise.resolve(staged),
+    Board: ({ review }) =>
+      Effect.runPromise(
+        loadBoard(staged.name).pipe(
+          Effect.map(({ board, images }) => ({
+            ...staged,
+            film: boardFilm(staged.film, board, images, review),
+          })),
+          Effect.provide(FetchHttpClient.layer),
+        ),
+      ),
+  });
 
 /**
  * `use` given each of `times`' footage in turn (`next`, once per time, in

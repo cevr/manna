@@ -11,6 +11,7 @@ import type { CallAnswers, CallArgs, ExportCall, ExportInfo } from '../core/expo
 import { Browser, type CallErrors, type FramePage, type PageOpenError } from './browser.ts';
 import type { PageCrashed, PageError } from './errors.ts';
 import { PreviewServer } from './preview-server.ts';
+import { Picture, pictureParams } from '../core/board-render.ts';
 
 /** How a pool of export pages draws. */
 export interface PagesOptions {
@@ -24,6 +25,8 @@ export interface PagesOptions {
    * plays; none opens the PreviewServer's, the sources as written.
    */
   readonly server: Option.Option<string>;
+  /** What they draw: the film's scenes (none), or its Board (`film render --board`, `pictureParams`). */
+  readonly picture?: Picture;
 }
 
 /** A film page open in `workers` export pages. */
@@ -53,12 +56,18 @@ interface PagesService {
   ) => Effect.Effect<ExportPages, PageOpenError, Scope.Scope>;
 }
 
-/** The player's export page for `film` on the app's server at `server`. */
-export const exportUrl = (server: string, film: string, captions: boolean): string =>
+/** The player's export page for `film` on the app's server at `server`, drawing `picture` (its scenes unless given). */
+export const exportUrl = (
+  server: string,
+  film: string,
+  captions: boolean,
+  picture: Picture = Picture.Scenes(),
+): string =>
   `${server}?${[
     `film=${encodeURIComponent(film)}`,
     'export',
     ...Arr.filter(['captions=0'], () => !captions),
+    ...pictureParams(picture),
   ].join('&')}`;
 
 export class Pages extends Context.Service<Pages, PagesService>()('@bible/film/tools/Pages') {
@@ -76,6 +85,7 @@ export class Pages extends Context.Service<Pages, PagesService>()('@bible/film/t
               Option.getOrElse(options.server, () => server.url),
               film,
               options.captions,
+              options.picture,
             ),
           ),
           size: Math.max(1, options.workers),

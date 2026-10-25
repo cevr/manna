@@ -27,6 +27,7 @@ import {
 import { CHECK_RULES } from './film-check.ts';
 import { IMPORT_RULES } from './library.ts';
 import { testExportInfo } from './browser/testing.ts';
+import { Picture } from '../core/board-render.ts';
 
 /** A film of three scenes, 4, 5 and 6 s, and one short over its first. */
 const cutShort = {
@@ -67,6 +68,8 @@ const flags = {
   share: Option.none(),
   encoder: Option.none(),
   server: Option.none(),
+  board: false,
+  review: false,
 } as const;
 
 const conflict = (over: Partial<Parameters<typeof jobOf>[0]>) =>
@@ -151,6 +154,20 @@ describe('jobOf', () => {
       from: Option.none(),
     });
     expect(Result.getOrThrow(jobOf(flags))).toMatchObject({ cut: Cut.Whole() });
+  });
+
+  test('--board draws the Board, --review with its burn-in; the burn-in needs the Board, a short its own page', () => {
+    expect(Result.getOrThrow(jobOf(flags))).toMatchObject({ picture: Picture.Scenes() });
+    expect(Result.getOrThrow(jobOf({ ...flags, board: true }))).toMatchObject({
+      picture: Picture.Board({ review: false }),
+    });
+    expect(
+      Result.getOrThrow(jobOf({ ...flags, board: true, review: true, stills: Option.some([3]) })),
+    ).toMatchObject({ _tag: 'Stills', picture: Picture.Board({ review: true }) });
+    expect(conflict({ review: true })).toBe('review needs board');
+    expect(conflict({ board: true, scope: scoped({ _tag: 'Short', id: 'cut' }) })).toBe(
+      'board excludes short',
+    );
   });
 
   test('a short draws on its own page', () => {

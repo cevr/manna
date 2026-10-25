@@ -1,10 +1,13 @@
 // The narration route names only a film's own narration files, and reads the
-// films per request: on a films folder made here.
+// films per request; the board route names a film's board record and the
+// images in its folder at the URLs a render page reads: on a films folder
+// made here.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Path } from 'effect';
-import { narrationFile, narrationPath } from './narration-route.ts';
+import { boardFile, narrationFile, narrationPath } from './narration-route.ts';
+import { boardUrls } from '../core/board-render.ts';
 
 /** A films folder with one film, `f`, its narration and an attempt; and `loose`, no film. */
 const films = Effect.gen(function* () {
@@ -75,6 +78,42 @@ describe('the narration route', () => {
       expect(Option.isSome(yield* narrationFile(root, '/films/late/narration/timings.json'))).toBe(
         true,
       );
+    }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+});
+
+describe('the board route', () => {
+  it.effect("names a film's board record and its images at the page's URLs, and nothing else", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const root = yield* films;
+      yield* fs.makeDirectory(path.join(root, 'f/board'));
+      yield* fs.writeFileString(path.join(root, 'f/board.json'), '{}');
+      yield* fs.writeFileString(path.join(root, 'f/board/a.start.1.png'), 'png');
+      yield* fs.writeFileString(path.join(root, 'f/board/.hidden.png'), 'png');
+      yield* fs.writeFileString(path.join(root, 'f/board/notes.txt'), 'txt');
+      const at = boardUrls('f');
+      const served = (url: string) => Effect.map(boardFile(root, url), (file) => [url, file]);
+      expect(
+        yield* Effect.all([
+          served(at.record),
+          served(at.image('a.start.1.png')),
+          served(at.image('a.start.2.png')),
+          served(at.image('.hidden.png')),
+          served(at.image('notes.txt')),
+          served('/films/f/board/../board.json'),
+          served(boardUrls('loose').record),
+        ]),
+      ).toEqual([
+        [at.record, Option.some(`${root}/f/board.json`)],
+        [at.image('a.start.1.png'), Option.some(`${root}/f/board/a.start.1.png`)],
+        [at.image('a.start.2.png'), Option.none()],
+        [at.image('.hidden.png'), Option.none()],
+        [at.image('notes.txt'), Option.none()],
+        ['/films/f/board/../board.json', Option.none()],
+        [boardUrls('loose').record, Option.none()],
+      ]);
     }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
 });

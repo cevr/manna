@@ -32,6 +32,7 @@ import {
   sharesInPage,
 } from '../core/encoder.ts';
 import { filmCaptions, shortCaptions, webVtt } from '../core/captions.ts';
+import { pictureParams } from '../core/board-render.ts';
 import type { RenderSound } from '../core/catalogue.ts';
 import type { ChunkTiming, ExportInfo } from '../core/export-handle.ts';
 import type { ShortError } from '../core/errors.ts';
@@ -267,7 +268,7 @@ const probeKey = (
 ): string => {
   const asked = Option.match(job.encoder, { onNone: () => 'any', onSome: (e) => e._tag });
   const server = Option.getOrElse(job.server, () => 'preview');
-  return `${page}|captions=${job.captions}|scale=${job.scale}|share=${job.share}|encoder=${asked}|server=${server}|${platform}`;
+  return `${page}|captions=${job.captions}|scale=${job.scale}|share=${job.share}|encoder=${asked}|server=${server}|picture=${pictureParams(job.picture).join('+')}|${platform}`;
 };
 
 /** Each video its own probe and its own pages, closed with it. */
@@ -409,6 +410,7 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
                 workers: 1,
                 captions: job.captions,
                 server: job.server,
+                picture: job.picture,
               });
               const found = yield* shortOn(placed, job.cut, first.info.fps);
               // A short's page is 9:16 at the film's density: it encodes down to 1080 × 1920.
@@ -479,7 +481,12 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         );
         const pool = yield* drawing.pool(
           `${made}|workers=${workers}`,
-          pages.open(page, { workers, captions: job.captions, server: job.server }),
+          pages.open(page, {
+            workers,
+            captions: job.captions,
+            server: job.server,
+            picture: job.picture,
+          }),
         );
 
         // The track, cut and encoded once beside the pages; both joins copy its packets.
@@ -752,6 +759,7 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
                   workers,
                   captions: job.captions,
                   server: job.server,
+                  picture: job.picture,
                 });
                 // A short's spans must resolve on the page's frames, as a video's do.
                 yield* shortOn(placed, cut, pool.info.fps);

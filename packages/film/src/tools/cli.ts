@@ -103,6 +103,7 @@ import type { LabAt } from './api-server.ts';
 import { type LabPageSpec, PageBundler } from './lab-page.ts';
 import { PALETTE_FILE, paletteSwaps, wedgeServer } from './wedge.ts';
 import { levelsOf, wedgeVariant } from '../core/easel.ts';
+import { Picture, boardVariant } from '../core/board-render.ts';
 import { filmServices, labPages, startLab } from './film-services.ts';
 import { fillBeside, ScriptVoices, stagingFill } from './script-voice.ts';
 import { SeriesDrafts, draftKey } from './series-drafts.ts';
@@ -842,6 +843,18 @@ const render = <E, R>(
           "look=level: render that look (palette.ts's looks) at that level, not the one it plays, the pick unwritten (a wedge); repeat for more looks; the file is named for the levels (style-ps1) unless --variant names it",
         ),
       ),
+      board: Flag.Boolean('board').pipe(
+        Flag.withDefault(false),
+        Flag.withDescription(
+          "draw the film's Board, not its scenes: each kept try moving slowly across its hold, dissolving into the next, its cards set as the film sets them, on the narration's clock (estimated where a beat has no take), no captions burnt in; named board unless --variant names it",
+        ),
+      ),
+      review: Flag.Boolean('review').pipe(
+        Flag.withDefault(false),
+        Flag.withDescription(
+          'with --board: burn in, small in the bottom-left corner, the film time, the beat and the panel with its try (named board-review)',
+        ),
+      ),
     },
     Effect.fn('film.render')(
       function* (input) {
@@ -855,7 +868,14 @@ const render = <E, R>(
         });
         // `--level`: the palette as the picks would write it, built and served for this render alone.
         const levels = yield* Effect.fromResult(levelsOf(input.level));
-        const variant = yield* Effect.fromResult(wedgeVariant(input.variant, levels));
+        // `--board` names its render `board` (`board-review` with `--review`) unless `--variant` does.
+        const asked = Option.orElse(input.variant, () =>
+          Option.map(
+            Option.liftPredicate(input.board, (b) => b),
+            () => boardVariant(input.review),
+          ),
+        );
+        const variant = yield* Effect.fromResult(wedgeVariant(asked, levels));
         const path = yield* Path.Path;
         const swaps = yield* paletteSwaps(
           yield* FileSystem.FileSystem,
@@ -880,6 +900,8 @@ const render = <E, R>(
             share: input.share,
             encoder: input.encoder,
             server,
+            board: input.board,
+            review: input.review,
           }),
         );
         yield* renderAndRecord(loaded, scope, job, stamp);
@@ -889,7 +911,7 @@ const render = <E, R>(
     ),
   ).pipe(
     Command.withDescription(
-      "Render a film, an act or scenes to its project folder, out/<film>/<address>/<variant>.mp4 (+ .vtt captions), stills, or a contact sheet; or one of its shorts (--short); each recorded in the folder's catalogue.json",
+      "Render a film, an act or scenes to its project folder, out/<film>/<address>/<variant>.mp4 (+ .vtt captions), stills, or a contact sheet, of its scenes or its Board (--board); or one of its shorts (--short); each recorded in the folder's catalogue.json",
     ),
   );
 
@@ -921,6 +943,7 @@ const lookbook = <E, R>(lookLayer: Layer.Layer<Renderer | Looker, E, R>) =>
           variant: input.variant,
           captions: input.captions,
           server: Option.none(),
+          picture: Picture.Scenes(),
         }),
         stamp,
       );

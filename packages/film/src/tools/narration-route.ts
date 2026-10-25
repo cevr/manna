@@ -5,7 +5,9 @@
 // `narration/` (never `attempts/`, never a path, never a dotfile) and on
 // disk. Any other URL names none, a 404. The app's server answers the file;
 // the studio rewrites these files in place (a take kept, the track remixed),
-// so it serves them uncached.
+// so it serves them uncached. The Board a render page draws (`film render
+// --board`) is served the same way: `/films/<film>/board.json` and an image
+// directly in its `board/` (`boardFile`, the page's `boardUrls`).
 
 import { Effect, FileSystem, Option, Path } from 'effect';
 import { filmMarks } from './film-repo.ts';
@@ -56,5 +58,28 @@ export const narrationFile = Effect.fn('narrationFile')(function* (
 ) {
   for (const file of Option.toArray(yield* narrationPath(films, pathname)))
     if (yield* exists(file)) return Option.some(file);
+  return Option.none<string>();
+});
+
+/** A board URL: `/films/<film>/board.json`, or `/films/<film>/board/<image>`, the image directly in the folder. */
+const BOARD_URL =
+  /^\/films\/([^/]+)\/board(?:\.json|\/([A-Za-z0-9_][A-Za-z0-9_.-]*\.(?:png|jpe?g|webp)))$/;
+
+/** Whether `pathname` is a board URL: `/films/<film>/board.json` or an image of its `board/`. */
+export const isBoardUrl = (pathname: string): boolean => BOARD_URL.test(pathname);
+
+/** The file a board URL names under the films folder `films`, of one of the films now and on disk. */
+export const boardFile = Effect.fn('boardFile')(function* (films: string, pathname: string) {
+  const path = yield* Path.Path;
+  for (const [, film, image] of Option.toArray(Option.fromNullishOr(BOARD_URL.exec(pathname))))
+    for (const name of Option.toArray(Option.fromUndefinedOr(film)))
+      for (const mark of filmMarks(films, name))
+        if (yield* exists(mark)) {
+          const file = Option.match(Option.fromUndefinedOr(image), {
+            onNone: () => path.join(films, name, 'board.json'),
+            onSome: (img) => path.join(films, name, 'board', img),
+          });
+          if (yield* exists(file)) return Option.some(file);
+        }
   return Option.none<string>();
 });
