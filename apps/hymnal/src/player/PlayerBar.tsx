@@ -39,7 +39,7 @@ import { color, useAccent } from '~/color';
 import { useCue } from '~/feel/cue';
 import { settings } from '~/store';
 
-import { Bar, dockedBar, pageBar, placeOf, toldPlace } from './bar';
+import { Bar, dockedBar, pageBar, placeOf, REST, SOUNDING, toldPlace } from './bar';
 import { usePlayer } from './context';
 import { useShownPage } from './page';
 import { Command, type HymnPlayer, Player, type Track } from './player';
@@ -49,10 +49,6 @@ import { type BoundThumb, Dials, useThumb } from './Dials';
 import { KeyButton } from './KeyButton';
 import { Seeker } from './Seeker';
 import { ThumbEvent } from './thumb';
-
-/** The bar's height at rest and while a hymn sounds, over the home indicator, in points. */
-export const REST = 56;
-export const SOUNDING = 88;
 
 /** The bar docked under the stack, while the player holds a hymn. */
 export function PlayerBar() {

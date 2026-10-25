@@ -59,6 +59,7 @@ import { color, useAccent } from '~/color';
 
 import { FollowProvider, useFollow } from '~/follow/follow';
 import { ResumeFollow } from '~/follow/ResumeFollow';
+import { RISE } from '~/player/bar';
 
 import { ChordLines, ChordNotice, PlayedKeyProvider } from './Chords';
 import { chordHref, ChordTapProvider } from './ChordSheet';
@@ -164,7 +165,11 @@ export function HymnPage({
           </PlayedKeyProvider>
         </PageText>
       </ScrollView>
-      {follow.held && <ResumeFollow onPress={follow.resume} />}
+      {follow.held && (
+        <View testID="resume-follow-dock" pointerEvents="box-none" style={styles.overBar}>
+          <ResumeFollow onPress={follow.resume} />
+        </View>
+      )}
     </View>
   );
 }
@@ -360,6 +365,8 @@ const styles = StyleSheet.create({
   // the words' height unless it is bounded by its page, and a frame as tall as
   // its words has nothing to scroll.
   frame: { flex: 1, maxHeight: '100%' },
+  // The pill a hand scroll shows stands over the sounding bar, which lies over the page's foot.
+  overBar: { position: 'absolute', left: 0, right: 0, top: 0, bottom: RISE },
   page: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 48, gap: 24 },
   head: { gap: 4 },
   topic: { fontSize: 13, color: color.muted },

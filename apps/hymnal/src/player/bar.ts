@@ -17,6 +17,15 @@ import { Data, Option, Predicate } from 'effect';
 import { Player, type Track, trackOf } from './player';
 import { clock } from './time';
 
+/** The bar's height at rest and while a hymn sounds, over the home indicator, in points. */
+export const REST = 56;
+export const SOUNDING = 88;
+/**
+ * How far the sounding bar stands over the page's foot: a screen reserves
+ * the resting bar's height alone, so the taller bar lies over the page.
+ */
+export const RISE = SOUNDING - REST;
+
 /** The player as `track` sees it: its own state, or idle when it holds another hymn. */
 export const playerFor = (state: Player, track: Track): Player =>
   trackOf(state).pipe(

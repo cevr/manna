@@ -37,7 +37,8 @@ import { DETENT } from './dial';
 import { ChordReaderContext } from './Dials';
 import { FullPlayer } from './FullPlayer';
 import { Player, playerOn } from './player';
-import { PageBar, PlayerBar, REST, SOUNDING } from './PlayerBar';
+import { REST, RISE, SOUNDING } from './bar';
+import { PageBar, PlayerBar } from './PlayerBar';
 
 const morning = Option.getOrThrow(hymnAt('100'));
 
@@ -429,6 +430,33 @@ describe('bar J’s spring and seeker', () => {
       expect(heightOf(page)).toBe(REST);
       expect(Option.isNone(page.find('[aria-label="Seek"]'))).toBe(true);
       expect(room()).toEqual([`${REST}px`]);
+    }),
+  );
+
+  it.live('stands the Resume follow pill whole over the sounding bar', () =>
+    Effect.gen(function* () {
+      using page = mount(route(100));
+      page.press('Play hymn 100');
+      page.device.now = { state: 'playing', positionMs: 20_000, durationMs: 151_000 };
+      yield* page.until((state) => Player.$is('Playing')(state) && state.at === 20);
+      expect(heightOf(page)).toBe(SOUNDING);
+      // A hand scroll, as the web sees it, holds the follow and shows the pill.
+      act(() => {
+        page
+          .get('[data-testid="hymn-scroll"]')
+          .dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: -120 }));
+      });
+      const pill = page.get('[aria-label="Resume follow"]');
+      // The page ends on the resting bar's top (its room is REST), so the sounding bar stands RISE over the page's foot.
+      const frame = Option.getOrThrow(
+        Option.fromNullishOr(page.get('[data-testid="hymn-scroll"]').parentElement),
+      );
+      let over = 0;
+      for (let at = pill.parentElement; at && at !== frame; at = at.parentElement) {
+        const style = getComputedStyle(at);
+        if (style.position === 'absolute') over += Number.parseFloat(style.bottom) || 0;
+      }
+      expect(over).toBeGreaterThanOrEqual(RISE);
     }),
   );
 
