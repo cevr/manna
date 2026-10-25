@@ -2121,21 +2121,35 @@ sketch, then the library record of each member the beat's `cast` names
 its kept sheets (its own views of a sheet that draws other members too),
 else its record's references, which the prompt says win over every
 other image on the person (a sheet of heads, the face and hair alone), the
-brief saying what the member wears and does. Each try records what each
-cast reference held (`cast`: member, path, sha256). A kept panel whose kept
-try was drawn from a cast file that holds other bytes now (a try from before
-that, from a kept sheet its member's `replaced` history says was replaced
-since) is stale (`tools/board-stale.ts`): a run draws it new tries, numbered
-on, until it has `--tries` drawn from the cast as it stands, printing
-`stale <panel> why="…"`, and the keep stays until the owner keeps a new try;
-the beat's later panels ride along by the first try the run drew of its
-first panel, not by the keep it draws again over;
-the board read (`film lab board`, the lab MCP's `board`) gives the panel a
-`stale` naming whose sheet changed.
+brief saying what the member wears and does. Each cast file is read once
+and its bytes copied beside the image for the call, and the try records
+what each held (`cast`: member, path, sha256 of the bytes sent) and the
+words of its own picture its prompt carried (`words`, `pictureWords` in
+`tools/board-prompt.ts`: the beat's brief with its marks read as their
+words, and the words the panel holds from). A try changed when the words a
+run would send for its picture now differ (a try from before `words`: its
+prompt no longer carries each of them verbatim; the style, the house rules
+and other beats are not its words), when a cast file it recorded holds
+other bytes now (a try from before `cast`: a kept sheet its member's
+`replaced` history says was replaced since), or when the cast a run would
+send now names a file it did not carry (a member first kept a sheet
+since). A kept panel whose kept try changed, or a picture panel that keeps
+none and none of whose generated tries is unchanged, is stale
+(`tools/board-stale.ts`, `stalenessOf`, judged against the script as it
+stands): a run draws it new tries, numbered on, until it has `--tries`
+unchanged, printing `stale <panel> why="…"` (its picture's words, a
+member's cast sheet, or both), and the keep stays until the owner keeps a
+new try; the beat's later panels ride along by the first try the run drew
+of its first panel, not by the keep it draws again over; the board read
+(`film lab board`, the lab MCP's `board`) gives the panel a `stale` naming
+which (`members`, `words`, `why`), and the studio's Board section shows its
+`why` under the panel (`GET …/board/stale`), the lab reading the script
+fresh (`tools/board-stale-read.ts`).
 
 | Route                                      | What it does                                                                                        |
 | ------------------------------------------ | --------------------------------------------------------------------------------------------------- |
 | `GET /api/films/<film>/board`              | `BoardFile`: the style, every panel in film order with its tries and the one kept, the approvals    |
+| `GET /api/films/<film>/board/stale`        | `BoardStale`: each panel `film board` would draw again, and why                                     |
 | `GET /api/films/<film>/board/files/<file>` | A board image the record names; 404 `BoardFileUnknown` for one it does not, or not in this checkout |
 | `POST /api/films/<film>/board/pick`        | `BoardPick` (panel, try, why): keep that try; 422 `BoardRefused` for a panel or try it lacks        |
 | `POST /api/films/<film>/board/approve`     | `{ beat }`: approve the beat's board as it stands; 422 while a picture panel keeps no try           |

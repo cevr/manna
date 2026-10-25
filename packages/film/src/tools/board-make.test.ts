@@ -8,6 +8,7 @@
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import {
+  Boolean as Bool,
   ConfigProvider,
   Deferred,
   Effect,
@@ -69,11 +70,22 @@ const style = {
   world: 'A parchment world.',
 };
 
-/** A board over memory: the film `f` under `/films`, its record and images there; every call the route took. */
+/**
+ * A board over memory: the film `f` under `/films`, its record and images there; every call the route took, each
+ * cast file the run copied to send (under the board's `.drawing`) named by what it held (`sent: kept turnaround`).
+ */
 const boardOver = (files: Map<string, Uint8Array>, calls: Array<ImageRequest>) => {
   files.set('/films/f/scenes/index.ts', text('export default []'));
   const route = ImageRoute.fake((request) => {
-    calls.push(request);
+    calls.push({
+      ...request,
+      refs: request.refs.map((r) =>
+        Bool.match(r.startsWith('/films/f/board/.drawing/'), {
+          onTrue: () => `sent: ${new TextDecoder().decode(files.get(r))}`,
+          onFalse: () => r,
+        }),
+      ),
+    });
     return text(`image ${calls.length}`);
   });
   return Layer.mergeAll(BoardStore.layer, route).pipe(
@@ -294,10 +306,7 @@ describe("a locked cast member's library reference", () => {
           { beats: [], tries: 1, lanes: 1, dryRun: false },
           quiet,
         );
-        expect(calls[0]?.refs).toEqual([
-          '/films/f/board/style.9005.png',
-          '/library/cast/christ/cast-sheet/kept/turnaround.png',
-        ]);
+        expect(calls[0]?.refs).toEqual(['/films/f/board/style.9005.png', 'sent: kept turnaround']);
         expect(calls[0]?.prompt).toContain(
           "Reference image 2 is Christ's record in the cast library (its kept cast sheet: turnaround): draw Christ as it draws Him",
         );
@@ -326,10 +335,7 @@ describe("a locked cast member's library reference", () => {
         { beats: [], tries: 1, lanes: 1, dryRun: false },
         quiet,
       );
-      expect(calls[0]?.refs).toEqual([
-        '/films/f/board/style.9005.png',
-        '/library/cast/christ/cast-sheet/kept/turnaround.png',
-      ]);
+      expect(calls[0]?.refs).toEqual(['/films/f/board/style.9005.png', 'sent: kept turnaround']);
     }).pipe(Effect.provide(boardOver(files, calls)));
   });
 
@@ -346,10 +352,7 @@ describe("a locked cast member's library reference", () => {
         { beats: [], tries: 1, lanes: 1, dryRun: false },
         quiet,
       );
-      expect(calls[0]?.refs).toEqual([
-        '/films/f/board/style.9005.png',
-        '/library/cast/paul/cast-sheet/rig-paul-front.png',
-      ]);
+      expect(calls[0]?.refs).toEqual(['/films/f/board/style.9005.png', 'sent: rig']);
       expect(calls[0]?.prompt).toContain(
         "Reference image 2 is Paul's record in the cast library (the references it is drawn from until its cast sheet is kept)",
       );
@@ -383,7 +386,7 @@ describe("a locked cast member's library reference", () => {
         { beats: [], tries: 1, lanes: 1, dryRun: false },
         quiet,
       );
-      expect(calls[0]?.refs.at(-1)).toBe('/films/f/cast/christ/cast-sheet/role.png');
+      expect(calls[0]?.refs.at(-1)).toBe('sent: role');
     }).pipe(Effect.provide(boardOver(files, calls)));
   });
 
@@ -449,8 +452,8 @@ describe("a locked cast member's library reference", () => {
         '/films/f/board/style.9005.png',
         '/films/f/board/supper.start.1.png',
         '/films/f/board/supper.start.n5.sketch.png',
-        '/library/cast/christ/cast-sheet/kept/turnaround.png',
-        '/library/cast/christ/cast-sheet/kept/heads.png',
+        'sent: kept turnaround',
+        'sent: kept heads',
       ]);
       expect(calls.at(-1)?.prompt).toContain(
         "Reference images 4–5 are Christ's record in the cast library (its kept cast sheet: turnaround, heads)",

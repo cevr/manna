@@ -7,7 +7,7 @@
 
 import { Array as Arr, Boolean as Bool, Option, Result } from 'effect';
 import type { Act } from '../core/schema.ts';
-import { type BoardName, type BoardStyle, PANEL_START } from '../core/board.ts';
+import { type BoardName, type BoardStyle, PANEL_START, boardNamed } from '../core/board.ts';
 import { type CastLock, castLockNote } from '../core/cast-lock.ts';
 import { parse } from '../core/narration.ts';
 
@@ -125,10 +125,46 @@ const castNotes = (cast: ReadonlyArray<CastLock>, before: number): ReadonlyArray
     { next: before + 1, notes: [] },
   ).notes;
 
+/** A panel's own picture as the prompt reads it: the beat's brief, its marks read as their words; the words the panel holds from (none at `start`). */
+const pictureOf = (beat: BoardBeat, at: string) => {
+  const words = markWords(beat);
+  return {
+    brief: Option.map(beat.picture, (picture) => briefOf(picture, words)),
+    said: Option.map(
+      Option.liftPredicate(at, (a) => a !== PANEL_START),
+      (a) => (words.get(a) ?? a).replace(/[“”"]/g, ''),
+    ),
+  };
+};
+
+/**
+ * The words of panel `at`'s own picture, each exactly as its prompt carries
+ * it: the beat's brief, then the narrator's words the panel holds from (none
+ * at `start`). The style, the house rules and other beats are not among
+ * them. Pure.
+ */
+export const pictureWords = (beat: BoardBeat, at: string): ReadonlyArray<string> => {
+  const { brief, said } = pictureOf(beat, at);
+  return Arr.getSomes([brief, said]);
+};
+
+/** A script beat as the board reads it, or none when its id names no board panel. Pure. */
+export const boardBeatOf = (beat: {
+  readonly id: string;
+  readonly say?: string;
+  readonly picture?: string;
+  readonly cast?: ReadonlyArray<string>;
+}): Option.Option<BoardBeat> =>
+  Option.map(boardNamed(beat.id), (id) => ({
+    id,
+    say: Option.fromUndefinedOr(beat.say),
+    picture: Option.fromUndefinedOr(beat.picture),
+    cast: beat.cast ?? [],
+  }));
+
 /** The prompt for one panel. */
 export const panelPrompt = (p: PanelPrompt): string => {
-  const words = markWords(p.beat);
-  const brief = Option.map(p.beat.picture, (picture) => briefOf(picture, words));
+  const { brief, said } = pictureOf(p.beat, p.at);
   const refs = Option.match(p.tweak, {
     onNone: () => [
       STYLE_REF,
@@ -145,11 +181,11 @@ export const panelPrompt = (p: PanelPrompt): string => {
       }),
     ],
   });
-  const moment = Bool.match(p.at === PANEL_START, {
-    onTrue: () =>
+  const moment = Option.match(said, {
+    onNone: () =>
       'THE MOMENT: this frame opens the beat, before its first turn: what the brief has on screen as the beat begins.',
-    onFalse: () =>
-      `THE MOMENT: this frame holds from the narrator's words «${(words.get(p.at) ?? p.at).replace(/[“”"]/g, '')}»: draw what the brief has on screen at that moment, and nothing the brief brings in later.`,
+    onSome: (w) =>
+      `THE MOMENT: this frame holds from the narrator's words «${w}»: draw what the brief has on screen at that moment, and nothing the brief brings in later.`,
   });
   return [
     p.style.block,

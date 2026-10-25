@@ -1,14 +1,17 @@
-// A kept panel drawn from a cast sheet that has changed since: a run draws it
-// again (new tries, numbered on) and its keep stays recorded; a kept panel
-// whose cast holds what it was drawn from is left alone; the board read names
-// the stale panel and whose sheet changed. A try records what each cast
-// reference held (its sha256); a try from before that is judged by the
-// member's `replaced` history.
+// A panel drawn from what has changed since (its picture's words in the
+// script, a cast sheet, a member who first kept a sheet): a run draws it again
+// (new tries, numbered on) and its keep stays recorded; a panel drawn from
+// what still stands is left alone, and so is a change to the style; a panel
+// that keeps none is drawn again once none of its tries is fresh; the board
+// read names the stale panel and why. A try records the words of its picture
+// and what each cast reference held (the sha256 of the bytes sent); a try from
+// before is judged by its prompt and the member's `replaced` history.
 
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Boolean as Bool,
   ConfigProvider,
+  type FileSystem,
   Effect,
   Layer,
   Option,
@@ -21,12 +24,15 @@ import { CastSheetJson, type CastSheetRecord } from '../core/cast-record.ts';
 import type { SheetKind } from '../core/cast-sheet.ts';
 import { Segment } from '../core/segment.ts';
 import { makeBoard } from './board-make.ts';
+import { staleWhy } from './board-stale.ts';
 import type { BoardBeat } from './board-prompt.ts';
 import { BoardStore } from './board-store.ts';
+import { sha256Hex } from './digest.ts';
 import { ContentStore } from './content-store.ts';
 import { FilmFolder, FilmName } from './film-repo.ts';
 import { memoryFileSystem, memoryLocks, text } from './host/testing.ts';
 import { ImageRoute } from './image-route.ts';
+import { freshFilm } from './film-services/testing.ts';
 import { LabAddress } from './lab-command.ts';
 import { notesReads } from './notes-mcp.ts';
 import { NotesStore } from './notes-store.ts';
@@ -92,13 +98,30 @@ const christ = (
 };
 
 /** A board over memory, the film `f` under `/films`, with the lab's reads beside it. */
-const boardOver = (files: Map<string, Uint8Array>) => {
+const boardOver = (
+  files: Map<string, Uint8Array>,
+  route: Layer.Layer<ImageRoute, never, FileSystem.FileSystem> = ImageRoute.fake(() =>
+    text('image'),
+  ),
+) => {
   files.set('/films/f/scenes/index.ts', text('export default []'));
   return Layer.mergeAll(
     BoardStore.layer,
     NotesStore.layer,
-    ImageRoute.fake(() => text('image')),
+    route,
     Layer.succeed(LabAddress, LabAddress.of({ local: 'http://lab' })),
+    // The lab reads the script fresh: the supper beat as `beat` has it.
+    freshFilm({
+      script: () =>
+        Effect.succeed([
+          {
+            id: SUPPER,
+            picture: Option.getOrElse(beat.picture, () => ''),
+            cast: beat.cast,
+            cite: [],
+          },
+        ]),
+    }),
   ).pipe(
     Layer.provide(ContentStore.layer),
     Layer.provideMerge(FilmFolder.layer('/films')),
@@ -117,11 +140,11 @@ const styled = Effect.gen(function* () {
   yield* store.modify(film, (b) => Result.succeed({ ...b, style: { ...style, sha256 } }));
 });
 
-/** A run of the supper beat, `tries` tries a panel; the lines it printed. */
-const run = (tries: number) =>
+/** A run of the supper beat (as `drawn` has it, `beat` unless given), `tries` tries a panel; the lines it printed. */
+const run = (tries: number, drawn: BoardBeat = beat) =>
   Effect.gen(function* () {
     const lines: Array<string> = [];
-    yield* makeBoard(film, [beat], [], { beats: [], tries, lanes: 1, dryRun: false }, (l) =>
+    yield* makeBoard(film, [drawn], [], { beats: [], tries, lanes: 1, dryRun: false }, (l) =>
       Effect.sync(() => {
         lines.push(`${l._tag} ${l.panel}`);
       }),
@@ -232,13 +255,15 @@ describe('a kept panel whose cast sheet changed', () => {
               ],
             }),
           );
-          const stale = yield* store.stale(film);
+          const stale = yield* store.stale(film, [beat]);
           return { stale, lines: yield* run(1) };
         }).pipe(Effect.provide(boardOver(files)));
       };
       return Effect.gen(function* () {
         const since = yield* old([replacedAt('2026-10-25T15:00:00.000Z')]);
-        expect(since.stale).toEqual([{ panel: PANEL, kept: 1, members: ['christ'], fresh: 0 }]);
+        expect(since.stale).toEqual([
+          { panel: PANEL, kept: Option.some(1), members: ['christ'], words: false, fresh: 0 },
+        ]);
         expect(since.lines).toEqual(['Stale supper.start', 'Made supper.start']);
         const before = yield* old([replacedAt('2026-10-25T09:00:00.000Z')]);
         expect(before.stale).toEqual([]);
@@ -272,7 +297,8 @@ describe('a kept panel whose cast sheet changed', () => {
           })),
         }),
       );
-      return (yield* store.stale(film)).map((s) => [s.panel, s.members]);
+      // The beat names no cast now, so only the try's own record of its sheets is judged.
+      return (yield* store.stale(film, [{ ...beat, cast: [] }])).map((s) => [s.panel, s.members]);
     }).pipe(Effect.provide(boardOver(files)));
 
   it.effect(
@@ -344,6 +370,184 @@ describe("a stale beat's ride-along", () => {
           'supper.breaks.2.png',
         ]);
       }).pipe(Effect.provide(boardOver(files)));
+    },
+  );
+});
+
+describe("a panel whose picture's words changed in the script", () => {
+  const robed: BoardBeat = {
+    ...beat,
+    picture: Option.some('He breaks the bread at the table, in His white robe and gold sash.'),
+  };
+
+  it.effect(
+    'is drawn again with its keep held; a change to the style is not its words; once drawn, it is not drawn again',
+    () => {
+      const files = new Map<string, Uint8Array>();
+      christ(files);
+      return Effect.gen(function* () {
+        yield* styled;
+        const store = yield* BoardStore;
+        yield* run(1);
+        yield* keep(1);
+        expect((yield* panel)?.tries[0]?.words).toEqual(['He breaks the bread at the table.']);
+        yield* store.modify(film, (b) =>
+          Result.succeed({
+            ...b,
+            style: { ...style, sha256: b.style?.sha256 ?? '', block: 'A painted frame.' },
+          }),
+        );
+        expect(yield* run(2)).toEqual([]);
+        expect(yield* run(2, robed)).toEqual([
+          'Stale supper.start',
+          'Made supper.start',
+          'Made supper.start',
+        ]);
+        const stale = Option.getOrThrow(
+          Option.fromUndefinedOr((yield* store.stale(film, [robed]))[0]),
+        );
+        expect(stale).toEqual({
+          panel: PANEL,
+          kept: Option.some(1),
+          members: [],
+          words: true,
+          fresh: 2,
+        });
+        expect(staleWhy('f', stale)).toContain("drawn from the picture's words");
+        expect((yield* panel)?.kept).toBe(1);
+        expect(yield* run(2, robed)).toEqual(['Stale supper.start']);
+        expect((yield* panel)?.tries).toHaveLength(3);
+      }).pipe(Effect.provide(boardOver(files)));
+    },
+  );
+
+  it.effect(
+    'a try from before tries recorded their words is stale when its prompt does not carry them verbatim',
+    () => {
+      const files = new Map<string, Uint8Array>();
+      return Effect.gen(function* () {
+        yield* styled;
+        const store = yield* BoardStore;
+        const kept = (at: string, prompt: string) => ({
+          id: `supper.${at}`,
+          beat: SUPPER,
+          at: BoardName.make(at),
+          kept: 1,
+          tries: [
+            {
+              n: 1,
+              file: Segment.make(`supper.${at}.1.png`),
+              sha256: 's',
+              made: 'generate' as const,
+              prompt,
+              refs: ['style.9005.png'],
+              at: '2026-10-25T11:00:00.000Z',
+            },
+          ],
+        });
+        yield* store.modify(film, (b) =>
+          Result.succeed({
+            ...b,
+            panels: [
+              kept(
+                'start',
+                `An older style.\n\nTHE BRIEF: ${Option.getOrThrow(beat.picture)}\n\nRULES`,
+              ),
+              kept('other', 'An older style.\n\nTHE BRIEF: He breaks the loaf.\n\nRULES'),
+            ],
+          }),
+        );
+        const stale = yield* store.stale(film, [{ ...beat, cast: [] }]);
+        expect(stale.map((s) => [s.panel, s.words])).toEqual([['supper.other', true]]);
+      }).pipe(Effect.provide(boardOver(files)));
+    },
+  );
+});
+
+describe('a panel with tries and none kept', () => {
+  it.effect(
+    'is drawn again, `--tries` new tries, when none of its tries is drawn from the cast as it stands',
+    () => {
+      const files = new Map<string, Uint8Array>();
+      christ(files);
+      return Effect.gen(function* () {
+        yield* styled;
+        yield* run(1);
+        files.set(TURNAROUND, text('the turnaround kept in its place'));
+        expect(yield* run(2)).toEqual([
+          'Stale supper.start',
+          'Made supper.start',
+          'Made supper.start',
+        ]);
+        expect((yield* panel)?.tries.map((t) => t.n)).toEqual([1, 2, 3]);
+        expect((yield* panel)?.kept).toBeUndefined();
+        // Two of its tries are drawn from the sheet as it is now: it is not stale.
+        expect(yield* run(2)).toEqual([]);
+      }).pipe(Effect.provide(boardOver(files)));
+    },
+  );
+});
+
+describe("a kept try and the cast's references as a run sends them now", () => {
+  it.effect('is stale once its member first kept a sheet after it was drawn', () => {
+    const files = new Map<string, Uint8Array>();
+    const record = (
+      kept: Option.Option<NonNullable<CastSheetRecord['kept']>>,
+    ): CastSheetRecord => ({
+      member: Segment.make('christ'),
+      scope: 'library',
+      who: 'Him',
+      refs: [{ file: 'rig.png', why: 'the rig as it stands' }],
+      sheets: {},
+      ...Option.match(kept, {
+        onNone: () => ({}),
+        onSome: (k) => ({ kept: k }),
+      }),
+    });
+    files.set(
+      `${SHEET}/cast-sheet.json`,
+      text(Schema.encodeSync(CastSheetJson)(record(Option.none()))),
+    );
+    files.set(`${SHEET}/rig.png`, text('rig'));
+    const keptSince = Schema.encodeSync(CastSheetJson)(
+      record(Option.some({ turnaround: { try: 1, why: 'the owner kept it', views: [] } })),
+    );
+    return Effect.gen(function* () {
+      yield* styled;
+      yield* run(1);
+      yield* keep(1);
+      expect(yield* run(1)).toEqual([]);
+      files.set(`${SHEET}/cast-sheet.json`, text(keptSince));
+      files.set(TURNAROUND, text('kept turnaround'));
+      expect(yield* run(1)).toEqual(['Stale supper.start', 'Made supper.start']);
+      expect((yield* panel)?.tries[1]?.refs.at(-1)).toBe(
+        '../../../library/cast/christ/cast-sheet/kept/turnaround.png',
+      );
+    }).pipe(Effect.provide(boardOver(files)));
+  });
+});
+
+describe("a try's record of its cast", () => {
+  it.effect(
+    'holds the sha256 of the very bytes the route was sent, though the sheet is replaced while the run draws',
+    () => {
+      const files = new Map<string, Uint8Array>();
+      christ(files);
+      const sent: Array<string> = [];
+      // The route takes each try's last reference as it is sent, then the sheet is replaced before the next try.
+      const route = ImageRoute.fake((request) => {
+        sent.push(sha256Hex(files.get(request.refs.at(-1) ?? '') ?? new Uint8Array()));
+        files.set(TURNAROUND, text(`turnaround ${sent.length + 1}`));
+        return text('image');
+      });
+      return Effect.gen(function* () {
+        yield* styled;
+        yield* run(2);
+        expect(sent).toHaveLength(2);
+        expect(sent[0]).not.toBe(sent[1]);
+        expect((yield* panel)?.tries.map((t) => t.cast?.[0]?.sha256)).toEqual(sent);
+        expect([...files.keys()].filter((f) => f.includes('/.drawing/'))).toEqual([]);
+      }).pipe(Effect.provide(boardOver(files, route)));
     },
   );
 });

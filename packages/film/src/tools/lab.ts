@@ -58,6 +58,8 @@ import {
   masterFile,
 } from './film-repo.ts';
 import { NotesStore } from './notes-store.ts';
+import { staleWhy } from './board-stale.ts';
+import { staleInLab } from './board-stale-read.ts';
 import { BoardStore } from './board-store.ts';
 import { approveBeat, pickTry, withdrawBeat } from '../core/board.ts';
 import { SceneSources } from './scene-sources.ts';
@@ -436,6 +438,15 @@ const boardGroup = HttpApiBuilder.group(LabHttpApi, 'board', (handlers) =>
         Effect.gen(function* () {
           const film = yield* filmNamed(params.film);
           return yield* (yield* BoardStore).read(film);
+        }),
+      ),
+    )
+    .handle('stale', ({ params }) =>
+      answered(
+        Effect.gen(function* () {
+          const film = yield* filmNamed(params.film);
+          const stale = yield* staleInLab(film);
+          return { panels: stale.map((s) => ({ panel: s.panel, why: staleWhy(film, s) })) };
         }),
       ),
     )

@@ -66,6 +66,8 @@ export const BoardTry = Schema.Struct({
   refs: Schema.Array(Schema.String),
   /** What each cast reference among `refs` held when the try was drawn: its member, its path as in `refs`, its sha256. A try drawn before tries recorded it has none. */
   cast: Schema.optionalKey(Schema.Array(TryCast)),
+  /** The words of the panel's own picture the prompt carried (`pictureWords`: the beat's brief, the words it holds from). A try drawn before tries recorded them has none. */
+  words: Schema.optionalKey(Schema.Array(Schema.String)),
   /** The note a tweak answers (`n12`). */
   note: Schema.optionalKey(Schema.String),
   /** Where an import came from, said plainly (`rbfconcepts 9005-court-a`). */

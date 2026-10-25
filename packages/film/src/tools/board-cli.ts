@@ -49,7 +49,7 @@ import {
 } from '../core/board.ts';
 import { BoardRefused, NoteNotFound } from '../core/refusals.ts';
 import { noteById } from '../core/notes.ts';
-import type { BoardBeat } from './board-prompt.ts';
+import { type BoardBeat, boardBeatOf } from './board-prompt.ts';
 import { MOST_LANES, TRIES, makeBoard, makeLine, refusedIn, tweakPanel } from './board-make.ts';
 import { BoardStore } from './board-store.ts';
 import { FilmRepo, type FilmName, filmNamed } from './film-repo.ts';
@@ -71,22 +71,14 @@ const beatsOf = Effect.fn('Board.beats')(function* (name: FilmName) {
       Effect.fail(BoardRefused.make({ film: name, reason: 'the film has no script.ts to board' })),
     onSome: (beats) =>
       Effect.forEach(beats, (b) =>
-        Option.match(boardNamed(b.id), {
-          onNone: () =>
-            Effect.fail(
-              BoardRefused.make({
-                film: name,
-                reason: `beat ${b.id} names no board panel: letters, digits, _ and -`,
-              }),
-            ),
-          onSome: (id) =>
-            Effect.succeed<BoardBeat>({
-              id,
-              say: Option.fromUndefinedOr(b.say),
-              picture: Option.fromUndefinedOr(b.picture),
-              cast: b.cast ?? [],
+        Effect.fromOption(boardBeatOf(b)).pipe(
+          Effect.mapError(() =>
+            BoardRefused.make({
+              film: name,
+              reason: `beat ${b.id} names no board panel: letters, digits, _ and -`,
             }),
-        }),
+          ),
+        ),
       ),
   });
 });
