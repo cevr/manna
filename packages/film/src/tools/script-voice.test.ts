@@ -16,15 +16,10 @@ import { fillBeside, ScriptVoices, stagingFill } from './script-voice.ts';
 import { SeriesDrafts } from './series-drafts.ts';
 import { StagingCache } from './staging.ts';
 import { StudioReadings } from './studio.ts';
-import {
-  type ElevenLabsCalls,
-  emptyCalls,
-  fakeElevenLabs,
-  fakeMedia,
-  memoryFileSystem,
-  storeLayer,
-  testFilm,
-} from './testing.ts';
+import { type ElevenLabsCalls, emptyCalls, fakeElevenLabs } from './elevenlabs/testing.ts';
+import { testFilm } from './film-repo/testing.ts';
+import { memoryFileSystem, storeLayer } from './host/testing.ts';
+import { fakeMedia } from './media/testing.ts';
 
 const beat = (id: string, text: string): ReadBeat => ({
   id,

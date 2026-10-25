@@ -22,21 +22,17 @@ import { voicedOf } from './narrator.ts';
 import { Review } from './review.ts';
 import { SourceWriter } from './source-writer.ts';
 import { Takes } from './takes.ts';
+import { emptyCalls, fakeElevenLabs } from './elevenlabs/testing.ts';
+import { testFilm, testVoice } from './film-repo/testing.ts';
 import {
-  emptyCalls,
-  fakeElevenLabs,
-  fakeMedia,
   formatAsIs,
   freshFilm,
   keepVoiceHere,
-  memoryFileSystem,
   noRenders,
-  storeLayer,
-  testFilm,
-  testVoice,
-  text,
   voicesHere,
-} from './testing.ts';
+} from './film-services/testing.ts';
+import { memoryFileSystem, storeLayer, text } from './host/testing.ts';
+import { fakeMedia } from './media/testing.ts';
 
 const scenes: ReadonlyArray<Timed> = [{ id: 'a', say: 'Hello {wave} world.' }];
 

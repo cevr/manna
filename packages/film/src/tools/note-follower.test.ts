@@ -3,7 +3,7 @@
 // event the old `film notes --watch` printed (a note made, a tweak asked of a
 // panel among them, and the owner's reply).
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Path } from 'effect';
 import { namesMatch, noteChanges } from '../core/lab-events.ts';

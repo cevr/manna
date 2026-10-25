@@ -15,7 +15,7 @@
 // gesture, and one fake microphone every case shares (`FAKE_MIC`).
 
 import type { SourceMap } from 'node:module';
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import {
   Boolean as Bool,
   Config,

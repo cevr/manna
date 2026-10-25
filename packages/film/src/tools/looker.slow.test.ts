@@ -9,14 +9,8 @@ import { layout } from '../core/layout.ts';
 import type { HandMark } from '../core/export-handle.ts';
 import { LOOK_STEP } from './look.ts';
 import { Looker } from './looker.ts';
-import {
-  emptyLedger,
-  fakeRenderHost,
-  holdScenes,
-  holdTimings,
-  testExportInfo,
-  testFilm,
-} from './testing.ts';
+import { emptyLedger, fakeRenderHost, testExportInfo } from './browser/testing.ts';
+import { holdScenes, holdTimings, testFilm } from './film-repo/testing.ts';
 
 const film = testFilm(holdScenes, holdTimings);
 // Each 2 fps sample flips between two greys.

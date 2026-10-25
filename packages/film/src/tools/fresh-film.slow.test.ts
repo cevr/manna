@@ -8,7 +8,7 @@
 // is asked of `film options sound`, which writes it where it is told.
 
 import { test } from 'bun:test';
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer, Option, Schema, Sink, Stream } from 'effect';
 import { ChildProcessSpawner } from 'effect/process';

@@ -5,7 +5,7 @@
 // broken one named with the rule's words and the hash an override would name
 // to free it.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { test } from 'bun:test';
 import { Effect, FileSystem, Schema } from 'effect';

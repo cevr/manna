@@ -7,7 +7,8 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer } from 'effect';
 import { HttpEffect, HttpRouter, HttpServerRequest, HttpServerResponse } from 'effect/http';
 import { labHandler } from './lab.ts';
-import { labInMemory, text } from './testing.ts';
+import { text } from './host/testing.ts';
+import { labInMemory } from './lab/testing.ts';
 
 const bound = { hostname: '127.0.0.1', port: 4401 } as const;
 

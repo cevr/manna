@@ -1,0 +1,115 @@
+{
+  "member": "idea-villagers",
+  "scope": "film",
+  "who": "them",
+  "beard": "shown",
+  "refs": [
+    {
+      "file": "iio-lineup.png",
+      "why": "the cast lineup the owner chose for In Its Order (direction A, the Bible period, ask ade763eff4d): the IDEA villagers are the last three of the bottom row, a grown man, a child and a toddler in undyed linen; their heights against the grown figures, and every figure's line, paper and proportion"
+    },
+    {
+      "file": "villagers-lineup.png",
+      "why": "the three villagers cut from that lineup at twice its size: the grown man's short straight dark hair and short beard, the child's straight black fringe, the toddler's few light-brown wisps, their linen tunics with sleeves to the round hands"
+    }
+  ],
+  "sheets": {
+    "poses": {
+      "anchor": 6,
+      "layout": "Draw the plain villagers of the film's IDEA pages six times in one row, evenly spaced, each in an undyed linen tunic with its arms in sleeves to the wrist and brown sandals, each with its own hair as the lineup draws it, left to right: one, the toddler, about two thirds of a grown figure's height, with a few light-brown wisps, running toward the viewer's left, three-quarters, leaning far forward, both sleeved arms out behind; two, the same toddler sat down hard on the ground facing the viewer, legs out in front, surprised but unhurt; three, a grown villager with short straight dark hair and a short dark beard in mid-hop toward the viewer's right, three-quarters, both feet tucked up off the ground, reaching ahead with one sleeved arm; four, a baby about half a grown figure's height in a linen wrap with a small tuft of hair, sitting facing the viewer, grinning, one small white tooth showing in the one-line mouth; five, the child, about three quarters of a grown figure's height, with straight black hair cut in a short fringe, standing three-quarters toward the viewer's right, one sleeved arm raised as if writing on a board at shoulder height, a stub of white chalk in the round hand; six, the grown villager standing at rest facing the viewer, both hands low, the height every other figure is measured against.",
+      "slots": ["left", "front", "right", "front", "right", "front"],
+      "standing": [5, 6],
+      "concepts": [
+        {
+          "file": "iio-lineup.png",
+          "box": [996, 570, 1155, 962],
+          "views": [6]
+        }
+      ],
+      "tries": [
+        {
+          "n": 1,
+          "file": "poses-1.png",
+          "prompt": "A character model sheet for a narrated animated film, drawn in this art style: our own K1 paper-cut look made minimal, the house look, as the reference image shows it. Every figure and prop is a few flat cut-paper shapes. Every figure and prop has a thick warm dark-brown ink outline and a thin light inner edge just inside it, and is creased once by a single straight diagonal line at the light's angle, its far side a deeper hue of its own colour turned toward violet, never grey and never black. A head is ONE simple shape inside one single thick outline, and the light inner edge runs round that one outline. Garments are flat planes: no pockets, no buttons, no stitching, no seams, no cuffs, no fabric texture. Hands are plain round paper circles at the end of each arm in its sleeve, the sleeve running from the shoulder to the hand: never a hand floating free of the body, never a bare arm, no thumbs, no fingers. Faces are three marks only: two small dark ink oval eyes, short brows and a one-line mouth. One muted hue per piece. The light: a warm, soft key light from the upper left; a soft paper grain on every piece and every plane; a small soft violet contact shadow under each figure, never a darker brown; a muted, warm palette in which only the film's accents are loud. Keep it K1: no white sticker border round the figures, no felt or stitching style, no big glossy eyes, no realistic anatomy. The look is stylised, attractive, expressive and minimal.\n\nImage 1 is the house look: take its paper, its line and its light from it; its hands float free beside the body, which no figure on this sheet does. Image 2 is the cast lineup the owner chose for In Its Order (direction A, the Bible period, ask ade763eff4d): the IDEA villagers are the last three of the bottom row, a grown man, a child and a toddler in undyed linen; their heights against the grown figures, and every figure's line, paper and proportion. Image 3 is the three villagers cut from that lineup at twice its size: the grown man's short straight dark hair and short beard, the child's straight black fringe, the toddler's few light-brown wisps, their linen tunics with sleeves to the round hands.\n\nThe people are the plain villagers of the film's IDEA pages, never named, ordinary people of the Bible's own time drawn in one plain dress: an undyed linen tunic (#d9cdb8, its far side turned toward a lavender-violet #b4a8c4) to the shins for a grown figure and to the ankles for a child, with long sleeves to the wrist, and brown sandals (#7a5236); no pattern, belt, trim or colour of their own, so the page's one accent stays the cup or the stone. Warm peach skin (#f2b27c, its shade a rosy violet #c9877e); a face of three marks: two short brows, two small dark oval eyes and a one-line mouth; feeling is in the brows' tilt, the mouth's bend and the head's tilt. Each has hair of their own and never the series lead's waves: the grown villager short straight dark hair (#3b2a24) cropped close and a short dark beard; the child straight black hair (#2a2026) cut in a short fringe across the brow; the toddler a few straight light-brown wisps (#8a6648) on a round head; the baby a small tuft. A grown villager stands three and a third heads tall; the child three quarters of a grown figure's height, the toddler two thirds, the baby about half, each's head a larger share of its height. Arms in sleeves to the wrist, each round hand at the end of its sleeve, no thumbs. What they hold, and only where a pose names it: a small clay cup; a stub of white chalk.\n\nDraw the plain villagers of the film's IDEA pages six times in one row, evenly spaced, each in an undyed linen tunic with its arms in sleeves to the wrist and brown sandals, each with its own hair as the lineup draws it, left to right: one, the toddler, about two thirds of a grown figure's height, with a few light-brown wisps, running toward the viewer's left, three-quarters, leaning far forward, both sleeved arms out behind; two, the same toddler sat down hard on the ground facing the viewer, legs out in front, surprised but unhurt; three, a grown villager with short straight dark hair and a short dark beard in mid-hop toward the viewer's right, three-quarters, both feet tucked up off the ground, reaching ahead with one sleeved arm; four, a baby about half a grown figure's height in a linen wrap with a small tuft of hair, sitting facing the viewer, grinning, one small white tooth showing in the one-line mouth; five, the child, about three quarters of a grown figure's height, with straight black hair cut in a short fringe, standing three-quarters toward the viewer's right, one sleeved arm raised as if writing on a board at shoulder height, a stub of white chalk in the round hand; six, the grown villager standing at rest facing the viewer, both hands low, the height every other figure is measured against.\n\nThis is a model sheet for the animators, not a scene: a plain warm cream paper ground with a soft paper grain and no place behind, one thin flat ground line in a slightly deeper cream under the figures that stand, and a small soft violet contact shadow under each one. Every figure on the sheet is the same person: the same head size, the same garment and the same hand size; each pose takes the height its pose gives it, and a standing figure stands about three and a third heads tall. One thick warm dark-brown outline runs round the whole silhouette of each figure, and the head's outline is the one line inside it: none on the nose, the ear or the hairline, and the hair, the ear and the garments meet as flat colour, never as their own outlined pieces. The hair and the beard are one brown, yet never one shape: the hair is its own shape behind the head, the face and its beard one shape in front of it, and a narrow dark band, the deep shade of that brown, nearly as dark as the outline, runs between the beard and each lock of hair beside it, as the kept concepts paint it, so the beard never runs into the hair. The key light comes from the upper left on every figure, whichever way it faces, so its lit side is always on the left and its far side turns a deeper hue of its own colour toward violet, never grey and never black. Each turn is its own drawing, never a mirror of another. Each arm is in its sleeve to the wrist, and each hand is a plain round paper circle of the skin's colour at its sleeve's end: no thumb, no fingers. The sleeve runs from the shoulder to the hand wherever the hand is, hanging at rest along the side or raised with it; a hand never floats free beside the body. No skin shows below the neck except the hands: never a bare arm, a forearm or a bare shoulder. A walking figure glides: both soles flat on the ground line, the feet close together, the body leaning a little into the travel, the hem swung back, never a stride. No lettering anywhere: no labels, no names, no numbers, no arrows, no text, no grid, no boxes or frames round the figures.",
+          "refs": [
+            "../../../../../../docs/ref/house-look.png",
+            "iio-lineup.png",
+            "villagers-lineup.png"
+          ],
+          "underlay": false,
+          "flags": [],
+          "unread": "5 figures found, the sheet names 6",
+          "at": "2026-10-23T03:45:26.014Z"
+        },
+        {
+          "n": 2,
+          "file": "poses-2.png",
+          "prompt": "A character model sheet for a narrated animated film, drawn in this art style: our own K1 paper-cut look made minimal, the house look, as the reference image shows it. Every figure and prop is a few flat cut-paper shapes. Every figure and prop has a thick warm dark-brown ink outline and a thin light inner edge just inside it, and is creased once by a single straight diagonal line at the light's angle, its far side a deeper hue of its own colour turned toward violet, never grey and never black. A head is ONE simple shape inside one single thick outline, and the light inner edge runs round that one outline. Garments are flat planes: no pockets, no buttons, no stitching, no seams, no cuffs, no fabric texture. Hands are plain round paper circles at the end of each arm in its sleeve, the sleeve running from the shoulder to the hand: never a hand floating free of the body, never a bare arm, no thumbs, no fingers. Faces are three marks only: two small dark ink oval eyes, short brows and a one-line mouth. One muted hue per piece. The light: a warm, soft key light from the upper left; a soft paper grain on every piece and every plane; a small soft violet contact shadow under each figure, never a darker brown; a muted, warm palette in which only the film's accents are loud. Keep it K1: no white sticker border round the figures, no felt or stitching style, no big glossy eyes, no realistic anatomy. The look is stylised, attractive, expressive and minimal.\n\nImage 1 is the house look: take its paper, its line and its light from it; its hands float free beside the body, which no figure on this sheet does. Image 2 is the cast lineup the owner chose for In Its Order (direction A, the Bible period, ask ade763eff4d): the IDEA villagers are the last three of the bottom row, a grown man, a child and a toddler in undyed linen; their heights against the grown figures, and every figure's line, paper and proportion. Image 3 is the three villagers cut from that lineup at twice its size: the grown man's short straight dark hair and short beard, the child's straight black fringe, the toddler's few light-brown wisps, their linen tunics with sleeves to the round hands.\n\nThe people are the plain villagers of the film's IDEA pages, never named, ordinary people of the Bible's own time drawn in one plain dress: an undyed linen tunic (#d9cdb8, its far side turned toward a lavender-violet #b4a8c4) to the shins for a grown figure and to the ankles for a child, with long sleeves to the wrist, and brown sandals (#7a5236); no pattern, belt, trim or colour of their own, so the page's one accent stays the cup or the stone. Warm peach skin (#f2b27c, its shade a rosy violet #c9877e); a face of three marks: two short brows, two small dark oval eyes and a one-line mouth; feeling is in the brows' tilt, the mouth's bend and the head's tilt. Each has hair of their own and never the series lead's waves: the grown villager short straight dark hair (#3b2a24) cropped close and a short dark beard; the child straight black hair (#2a2026) cut in a short fringe across the brow; the toddler a few straight light-brown wisps (#8a6648) on a round head; the baby a small tuft. A grown villager stands three and a third heads tall; the child three quarters of a grown figure's height, the toddler two thirds, the baby about half, each's head a larger share of its height. Arms in sleeves to the wrist, each round hand at the end of its sleeve, no thumbs. What they hold, and only where a pose names it: a small clay cup; a stub of white chalk.\n\nDraw the plain villagers of the film's IDEA pages six times in one row, evenly spaced, each in an undyed linen tunic with its arms in sleeves to the wrist and brown sandals, each with its own hair as the lineup draws it, left to right: one, the toddler, about two thirds of a grown figure's height, with a few light-brown wisps, running toward the viewer's left, three-quarters, leaning far forward, both sleeved arms out behind; two, the same toddler sat down hard on the ground facing the viewer, legs out in front, surprised but unhurt; three, a grown villager with short straight dark hair and a short dark beard in mid-hop toward the viewer's right, three-quarters, both feet tucked up off the ground, reaching ahead with one sleeved arm; four, a baby about half a grown figure's height in a linen wrap with a small tuft of hair, sitting facing the viewer, grinning, one small white tooth showing in the one-line mouth; five, the child, about three quarters of a grown figure's height, with straight black hair cut in a short fringe, standing three-quarters toward the viewer's right, one sleeved arm raised as if writing on a board at shoulder height, a stub of white chalk in the round hand; six, the grown villager standing at rest facing the viewer, both hands low, the height every other figure is measured against.\n\nThis is a model sheet for the animators, not a scene: a plain warm cream paper ground with a soft paper grain and no place behind, one thin flat ground line in a slightly deeper cream under the figures that stand, and a small soft violet contact shadow under each one. Every figure on the sheet is the same person: the same head size, the same garment and the same hand size; each pose takes the height its pose gives it, and a standing figure stands about three and a third heads tall. One thick warm dark-brown outline runs round the whole silhouette of each figure, and the head's outline is the one line inside it: none on the nose, the ear or the hairline, and the hair, the ear and the garments meet as flat colour, never as their own outlined pieces. The hair and the beard are one brown, yet never one shape: the hair is its own shape behind the head, the face and its beard one shape in front of it, and a narrow dark band, the deep shade of that brown, nearly as dark as the outline, runs between the beard and each lock of hair beside it, as the kept concepts paint it, so the beard never runs into the hair. The key light comes from the upper left on every figure, whichever way it faces, so its lit side is always on the left and its far side turns a deeper hue of its own colour toward violet, never grey and never black. Each turn is its own drawing, never a mirror of another. Each arm is in its sleeve to the wrist, and each hand is a plain round paper circle of the skin's colour at its sleeve's end: no thumb, no fingers. The sleeve runs from the shoulder to the hand wherever the hand is, hanging at rest along the side or raised with it; a hand never floats free beside the body. No skin shows below the neck except the hands: never a bare arm, a forearm or a bare shoulder. A walking figure glides: both soles flat on the ground line, the feet close together, the body leaning a little into the travel, the hem swung back, never a stride. No lettering anywhere: no labels, no names, no numbers, no arrows, no text, no grid, no boxes or frames round the figures.",
+          "refs": [
+            "../../../../../../docs/ref/house-look.png",
+            "iio-lineup.png",
+            "villagers-lineup.png"
+          ],
+          "underlay": false,
+          "retryOf": 1,
+          "flags": [
+            {
+              "check": "squash",
+              "views": [6]
+            },
+            {
+              "check": "height",
+              "views": [5, 6]
+            },
+            {
+              "check": "ground",
+              "views": [1]
+            },
+            {
+              "check": "ground",
+              "views": [3]
+            },
+            {
+              "check": "papers",
+              "views": [1, 6]
+            },
+            {
+              "check": "hairBeard",
+              "views": [3]
+            },
+            {
+              "check": "hairBeard",
+              "views": [6]
+            }
+          ],
+          "squash": 10.395721925133694,
+          "at": "2026-10-23T03:46:16.557Z"
+        }
+      ]
+    }
+  },
+  "kept": {
+    "poses": {
+      "try": 2,
+      "why": "Keep them all",
+      "ask": "a4f75680c68",
+      "views": [
+        {
+          "view": 3,
+          "name": "poses-3",
+          "box": [520, 257, 857, 694]
+        },
+        {
+          "view": 4,
+          "name": "poses-4",
+          "box": [824, 525, 979, 768]
+        },
+        {
+          "view": 6,
+          "name": "poses-6",
+          "box": [1282, 250, 1494, 766]
+        }
+      ]
+    }
+  }
+}

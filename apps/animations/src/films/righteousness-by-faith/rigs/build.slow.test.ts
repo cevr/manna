@@ -18,7 +18,7 @@
 // (`packages/film/src/style/override.test.ts`), and how a figures file is
 // laid and printed (`packages/film/src/style/figures-file.slow.test.ts`).
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Array as Arr, Effect, Option } from 'effect';
 import {

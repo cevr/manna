@@ -33,7 +33,7 @@
 // toast, the lab's failed page, a drag under way, a look-book's page,
 // an error a fixture never answers), whose literals it reads from source.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem } from 'effect';
 

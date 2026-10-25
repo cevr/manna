@@ -4,7 +4,7 @@
 // server entry is bundled as the lab bundles it (Solid's server output, for
 // Bun) by the test process that renders it, and loaded there.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { Array as Arr, Config, Effect, FileSystem, Option, Predicate } from 'effect';
 import type { BunPlugin } from 'bun';
 import { type PageRender, isPageRender } from '../../core/page-render.ts';

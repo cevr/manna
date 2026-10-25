@@ -149,7 +149,7 @@ describe('a settle', () => {
     expect(seen.settle300.headerNames).toEqual([300]);
   });
 
-  it('names the settled hymn in the one header, with its buttons; the neighbour pages set none', () => {
+  it('names the settled hymn in the one header, with no buttons; the neighbour pages set none', () => {
     for (const [shown, hymn] of [
       [seen.open3, 3],
       [seen.settle4, 4],
@@ -158,7 +158,7 @@ describe('a settle', () => {
     ] as const) {
       expect(shown.headers).toBe(1);
       expect(shown.headerNames).toEqual([hymn]);
-      expect(shown.rightItems).toEqual([1]);
+      expect(shown.rightItems).toEqual([0]);
     }
   });
 });

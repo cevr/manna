@@ -4,6 +4,7 @@
   "who": "him",
   "headgear": true,
   "hair": "covered",
+  "beard": "shown",
   "refs": [
     {
       "file": "farmer-robe-5-middle.png",
@@ -556,6 +557,109 @@
             }
           ],
           "at": "2026-10-20T18:18:13.676Z"
+        }
+      ]
+    }
+  },
+  "kept": {
+    "turnaround": {
+      "try": 10,
+      "why": "Go on: lock the sheets offered, and redraw Paul's and Jeremiah's turnarounds and poses",
+      "ask": "a26a8a83f89",
+      "views": [
+        {
+          "view": 1,
+          "name": "front",
+          "box": [28, 227, 283, 776]
+        },
+        {
+          "view": 2,
+          "name": "threeQuarterLeft",
+          "box": [308, 227, 538, 776]
+        },
+        {
+          "view": 3,
+          "name": "profileLeft",
+          "box": [568, 227, 743, 776]
+        },
+        {
+          "view": 4,
+          "name": "back",
+          "box": [775, 226, 1028, 776]
+        },
+        {
+          "view": 5,
+          "name": "profileRight",
+          "box": [1057, 226, 1221, 776]
+        },
+        {
+          "view": 6,
+          "name": "threeQuarterRight",
+          "box": [1264, 227, 1492, 776]
+        }
+      ]
+    },
+    "poses": {
+      "try": 4,
+      "why": "Go on: lock the sheets offered, and redraw Paul's and Jeremiah's turnarounds and poses",
+      "ask": "a26a8a83f89",
+      "views": [
+        {
+          "view": 1,
+          "name": "poses-1",
+          "box": [52, 249, 450, 834]
+        },
+        {
+          "view": 2,
+          "name": "poses-2",
+          "box": [488, 249, 784, 838]
+        },
+        {
+          "view": 3,
+          "name": "poses-3",
+          "box": [853, 250, 1125, 835]
+        },
+        {
+          "view": 4,
+          "name": "poses-4",
+          "box": [1178, 249, 1488, 835]
+        }
+      ]
+    },
+    "heads": {
+      "try": 3,
+      "why": "Go on: lock the sheets offered, and redraw Paul's and Jeremiah's turnarounds and poses",
+      "ask": "a26a8a83f89",
+      "views": [
+        {
+          "view": 1,
+          "name": "heads-1",
+          "box": [32, 332, 280, 620]
+        },
+        {
+          "view": 2,
+          "name": "heads-2",
+          "box": [289, 332, 529, 620]
+        },
+        {
+          "view": 3,
+          "name": "heads-3",
+          "box": [537, 331, 766, 620]
+        },
+        {
+          "view": 4,
+          "name": "heads-4",
+          "box": [774, 331, 1013, 594]
+        },
+        {
+          "view": 5,
+          "name": "heads-5",
+          "box": [1021, 331, 1260, 620]
+        },
+        {
+          "view": 6,
+          "name": "heads-6",
+          "box": [1269, 331, 1510, 620]
         }
       ]
     }

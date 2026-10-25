@@ -26,6 +26,15 @@
  *   carries the chord sounding at its start when it differs from the last
  *   one shown (a short chord folded away that runs on into it).
  * - A syllable sharing the note before it carries none.
+ * - A guitar change then moves to where a guitarist strikes it, the next
+ *   strong beat (`strike`); the full harmony stays where the file plays it.
+ *   A line's opening guitar chord can so move later: the reader then shows
+ *   the chord held over from the line before over its first syllables. The
+ *   strong beats are the file's bars counted from its first tick, so the
+ *   chords move only when the hymn's melody confirms those bars
+ *   (`Placement.confirms`, judged on stanza 1 and the refrain after it): a
+ *   file whose first tick is not the printed downbeat, or whose meter is not
+ *   the printed one, keeps every guitar chord where it plays it.
  *
  * Each hymn carries its timing (`timing.ts`): the file's tempo map and when
  * each sung line and syllable starts, from the notes each stanza was laid on.
@@ -39,8 +48,18 @@ import type { Mutable } from 'effect/Types';
 import * as Align from './align.js';
 import * as Chord from './chord.js';
 import * as Harmony from './harmony.js';
-import type { Fit, Hymn, Order, Part, Plain, Reason, Syllable } from './hymn.js';
+import {
+  type Fit,
+  type Hymn,
+  type Order,
+  PER_BEAT,
+  type Part,
+  type Plain,
+  type Reason,
+  type Syllable,
+} from './hymn.js';
 import * as Midi from './midi.js';
+import * as Placement from './placement.js';
 import * as Score from './score.js';
 import * as Timing from './timing.js';
 
@@ -149,12 +168,76 @@ const place = (
   return out;
 };
 
+/**
+ * Moves each guitar change to where a guitarist strikes it (`placement.ts`,
+ * rule `strong`): the next strong beat, never onto or past the next change
+ * nor past the end of the line's last note. A line's opening chord moves
+ * only when a different chord ends the laying's line before it, so a
+ * stanza's first line never moves. Syllables sharing the note before them
+ * carry none, as before. The compiler keeps these lines only for a hymn whose
+ * melody confirms the file's bars.
+ */
+const strike = (
+  score: Score.Score,
+  alignment: Align.Alignment,
+  placed: ReadonlyArray<ReadonlyArray<Placed[]>>,
+): Array<Array<Placed[]>> => {
+  const tpb = score.ticksPerBeat;
+  const grid: Placement.Grid = {
+    ticksPerBeat: tpb,
+    meters: score.meters,
+    tonic: Chord.pitchClass(score.key.tonic),
+  };
+  const firstStart = (line: ReadonlyArray<Align.Syllable>) => {
+    const s = line.find((s) => s.notes > 0);
+    return s === undefined ? undefined : alignment.melody[s.note]?.start;
+  };
+  let before: Chord.Chord | undefined;
+  return alignment.lines.map((line, l) => {
+    const chords = placed[l] ?? [];
+    const sungAt = line.flatMap((s, k) => (s.notes > 0 ? [k] : []));
+    const last = line.at(sungAt.at(-1) ?? -1);
+    const ends = [
+      last === undefined ? undefined : alignment.melody[last.note + last.notes - 1]?.end,
+      alignment.lines[l + 1] === undefined ? undefined : firstStart(alignment.lines[l + 1] ?? []),
+    ].filter((n) => n !== undefined);
+    const input: Placement.Line = {
+      syllables: sungAt.map((k) => {
+        const s = line[k];
+        const note = s === undefined ? undefined : alignment.melody[s.note];
+        const end = s === undefined ? undefined : alignment.melody[s.note + s.notes - 1]?.end;
+        const start = note?.start ?? 0;
+        return { start, length: (end ?? start) - start, key: note?.key };
+      }),
+      changes: sungAt.flatMap((k, j) =>
+        (chords[k] ?? []).map((c) => ({ syllable: j, at: Math.round(c.at * tpb), chord: c.chord })),
+      ),
+      until: Math.min(...ends),
+      before,
+    };
+    const originals = sungAt.flatMap((k) => chords[k] ?? []);
+    const out = line.map((): Placed[] => []);
+    Placement.apply('strong', input, grid).forEach((change, i) => {
+      const was = input.changes[i];
+      const original = originals[i];
+      const k = sungAt[change.syllable];
+      if (k === undefined || was === undefined || original === undefined) return;
+      const same = was.syllable === change.syllable && was.at === change.at;
+      out[k]?.push(same ? original : { chord: change.chord, at: round(change.at / tpb) });
+    });
+    before = originals.at(-1)?.chord ?? before;
+    return out;
+  });
+};
+
 interface Laid {
   readonly level: 'syllable' | 'line' | 'text';
   readonly why: Reason[];
   readonly fit: Fit | undefined;
-  /** Each line of syllables, the stanza's and then the refrain's. */
+  /** Each line of syllables, the stanza's and then the refrain's, the guitar chords where the file plays them. */
   readonly lines: Syllable[][];
+  /** The same lines with each guitar chord where a guitarist strikes it (`strike`). */
+  readonly struck: Syllable[][];
   /** Each line's syllable starts in ticks, as `lines`; absent when laid as words alone. */
   readonly starts: number[][] | undefined;
 }
@@ -225,27 +308,35 @@ const lay = (score: Score.Score, n: number, lines: readonly string[]): Laid => {
       }
     : undefined;
   const { level, why } = judge(fit, info);
-  if (level === 'text') return { level, why, fit, lines: [], starts: undefined };
+  if (level === 'text') return { level, why, fit, lines: [], struck: [], starts: undefined };
   const full = place(score, span, alignment, 'full');
   const guitar = place(score, span, alignment, 'guitar');
   const tpb = score.ticksPerBeat;
-  const out = alignment.lines.map((line, l) =>
-    line.map((s, k): Syllable => {
-      const first = alignment.melody[s.note];
-      const last = alignment.melody[s.note + s.notes - 1];
-      const beats =
-        s.notes === 0 || first === undefined || last === undefined
-          ? 0
-          : round((last.end - first.start) / tpb);
-      const f = full[l]?.[k] ?? [];
-      const g = guitar[l]?.[k] ?? [];
-      const syllable: Mutable<Syllable> = { text: s.text, word: s.word, notes: s.notes, beats };
-      if (Arr.isArrayNonEmpty(f)) syllable.full = f;
-      if (Arr.isArrayNonEmpty(g)) syllable.guitar = g;
-      return syllable;
-    }),
-  );
-  return { level, why, fit, lines: out, starts: startsOf(alignment, span) };
+  const linesWith = (guitar: ReadonlyArray<ReadonlyArray<Placed[]>>) =>
+    alignment.lines.map((line, l) =>
+      line.map((s, k): Syllable => {
+        const first = alignment.melody[s.note];
+        const last = alignment.melody[s.note + s.notes - 1];
+        const beats =
+          s.notes === 0 || first === undefined || last === undefined
+            ? 0
+            : round((last.end - first.start) / tpb);
+        const f = full[l]?.[k] ?? [];
+        const g = guitar[l]?.[k] ?? [];
+        const syllable: Mutable<Syllable> = { text: s.text, word: s.word, notes: s.notes, beats };
+        if (Arr.isArrayNonEmpty(f)) syllable.full = f;
+        if (Arr.isArrayNonEmpty(g)) syllable.guitar = g;
+        return syllable;
+      }),
+    );
+  return {
+    level,
+    why,
+    fit,
+    lines: linesWith(guitar),
+    struck: linesWith(strike(score, alignment, guitar)),
+    starts: startsOf(alignment, span),
+  };
 };
 
 /** A part from a placement's lines in [from, to), or the text's own lines when it is plain. */
@@ -360,16 +451,33 @@ export const compile = (
       return timed(plain, () => undefined);
     }
     const laid = Arr.map(stanzas, (lines, n) => lay(score, n, [...lines, ...tail(n)]));
-    const parts = Arr.map(laid, (one, n) => {
-      const lines = stanzas[n] ?? [];
-      return partOf(one, lines, 0, lines.length);
-    });
-    const hymn: Mutable<Hymn> = { ...head, stanzas: parts };
-    const stored = laid[from];
-    const start = stanzas[from]?.length ?? 0;
-    if (refrain !== undefined && stored !== undefined) {
-      const part = partOf(stored, refrain.lines, start, start + refrain.lines.length);
-      hymn.refrain = { order: refrain.order, part };
-    }
-    return timed(hymn, (n) => laid[n]?.starts);
+    /** The hymn with each laying's lines `pick` chooses. */
+    const built = (pick: (one: Laid) => Syllable[][]): Hymn => {
+      const chosen = Arr.map(laid, (one): Laid => ({ ...one, lines: pick(one) }));
+      const parts = Arr.map(chosen, (one, n) => {
+        const lines = stanzas[n] ?? [];
+        return partOf(one, lines, 0, lines.length);
+      });
+      const hymn: Mutable<Hymn> = { ...head, stanzas: parts };
+      const stored = chosen[from];
+      const start = stanzas[from]?.length ?? 0;
+      if (refrain !== undefined && stored !== undefined) {
+        const part = partOf(stored, refrain.lines, start, start + refrain.lines.length);
+        hymn.refrain = { order: refrain.order, part };
+      }
+      return timed(hymn, (n) => laid[n]?.starts);
+    };
+    // The guitar chords are struck on the file's strong beats only when the melody confirms its bars.
+    const asPlayed = built((one) => one.lines);
+    const grid: Placement.Grid = {
+      ticksPerBeat: PER_BEAT,
+      meters: score.meters.map((meter) => ({
+        ...meter,
+        tick: (meter.tick * PER_BEAT) / score.ticksPerBeat,
+      })),
+      tonic: Chord.pitchClass(score.key.tonic),
+    };
+    return Placement.confirms(grid, Placement.judgedLines(asPlayed))
+      ? built((one) => one.struck)
+      : asPlayed;
   });

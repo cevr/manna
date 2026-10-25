@@ -4,7 +4,7 @@
 // orphan every committed take and score, so each is pinned to the value it
 // was committed with, on a three-beat fixture (`fixtures/tiny-timings.json`).
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Path, Result, Schema } from 'effect';
 import { layout } from './layout.ts';

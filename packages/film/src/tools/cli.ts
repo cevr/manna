@@ -25,7 +25,7 @@
 // narrate and score finish with a mix, so the track is always rebuilt from the
 // same inputs; mix alone never calls a paid API.
 
-import { BunRuntime } from '@effect/platform-bun';
+import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import {
   Array as Arr,
   Cause,
@@ -63,6 +63,7 @@ import {
   layoutLeg,
   shortLeg,
   soundLeg,
+  castLeg,
   staticLeg,
 } from './film-check.ts';
 import { type Finding, type Report, lineOf, report } from './findings.ts';
@@ -722,7 +723,17 @@ const check = <E, R>(
         const found = yield* onShort(loaded, declared, input);
         return yield* printReport(declared.id, 'short', report(found, options), input.json);
       }
-      const found: Array<Finding> = [...(yield* staticLeg(loaded, placed))];
+      const beats = yield* (yield* FilmRepo).script(
+        input.film,
+        Option.getOrUndefined(input.folder),
+      );
+      const found: Array<Finding> = [
+        ...(yield* staticLeg(loaded, placed)),
+        ...(yield* castLeg(
+          input.film,
+          Option.getOrElse(beats, () => []),
+        )),
+      ];
       if (input.draw) found.push(...(yield* drawLeg(loaded, scope, swaps)));
       if (!input.static && !input.draw) found.push(...(yield* soundLeg(loaded, placed)));
       if (!input.static && !input.sound && !input.draw)
@@ -1147,10 +1158,13 @@ export const runFilmCli = <E>({
       ),
     ),
   ).pipe(
+    Effect.provide(Services),
     // runMain would report a failure after these layers are gone, through the
     // default logger, onto stdout; it is reported here instead, under `Logs`.
+    // It sits outside `Services`, so a service layer that fails to build (the
+    // media stack's native binary that fails to load) is reported too.
     Effect.tapCause(reportFailure),
-    Effect.provide(Layer.mergeAll(Services, Logs)),
+    Effect.provide(Logs),
     BunRuntime.runMain({ disableErrorReporting: true }),
   );
 };

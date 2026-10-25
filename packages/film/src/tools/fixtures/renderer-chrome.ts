@@ -6,7 +6,8 @@
 // process of its own: Bun spawns one Chrome per process, with the first
 // view's flags.
 
-import { BunRuntime, BunServices } from '@effect/platform-bun';
+import * as BunRuntime from '@effect/platform-bun/BunRuntime';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { Console, Duration, Effect, Schedule, Schema } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { launchArgs } from '../browser.ts';

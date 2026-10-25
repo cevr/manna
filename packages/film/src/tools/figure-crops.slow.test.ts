@@ -5,7 +5,7 @@
 // his dark hair) against his head's outline, and a round-3 scene still of
 // the judge whose hair carried its own line. The crops are PNGs, so they are decoded here, past core.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Result } from 'effect';
 import { type FigureMeasure, measureFigure, type Ratio } from '../core/figure.ts';

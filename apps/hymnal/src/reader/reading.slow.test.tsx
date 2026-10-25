@@ -1,7 +1,6 @@
 /**
- * The reading settings as a reader meets them: the `Aa` button in a hymn
- * page's header, the reading sheet it opens, the page set as the sheet
- * says, the screen kept on while a page is shown, and each printed line
+ * The reading settings as a reader meets them: in the player sheet (no
+ * button in the hymn page's header), the page set as they say, the screen kept on while a page is shown, and each printed line
  * hanging under its first word when it wraps.
  */
 
@@ -13,12 +12,13 @@ import { createRoot } from 'react-dom/client';
 
 import { hymnAt } from '~/hymns/hymns';
 
-import { awake, opened, params } from '../test/one';
+import { awake, params } from '../test/one';
 import { readerOn } from '../test/reader';
 import { StackHeader } from '../test/stack';
 import { HymnPage } from './HymnPage';
 import { HymnScreen } from './HymnScreen';
-import { ReadingSheet } from './ReadingSheet';
+import { ReadingControls } from './ReadingSheet';
+import { perform } from '../test/props';
 import { DEFAULT_SIZE, pointsAt, SIZES } from './reading';
 
 const hymn = (n: number) => Option.getOrThrow(hymnAt(String(n)));
@@ -50,12 +50,16 @@ const checked = (app: ReturnType<typeof mount>, group: string) =>
     .filter((radio) => radio.getAttribute('aria-checked') === 'true')
     .map((radio) => radio.getAttribute('aria-label'));
 
-const disabled = (app: ReturnType<typeof mount>, label: string) =>
-  app.get(`[aria-label="${label}"]`).getAttribute('aria-disabled') === 'true';
+/** The text-size dial, and its value as VoiceOver reads it. */
+const sizeDial = (app: ReturnType<typeof mount>) =>
+  app.get('[role="slider"][aria-label="Text size"]');
+const share = (app: ReturnType<typeof mount>) => sizeDial(app).getAttribute('aria-valuetext');
+/** The text-size dial turned one step, as VoiceOver turns it. */
+const step = (app: ReturnType<typeof mount>, way: 'increment' | 'decrement') =>
+  perform(sizeDial(app), way);
 
-describe('the hymn page’s Aa button', () => {
-  it('sits in the header before Chords, as a button, and opens the reading sheet', () => {
-    opened.splice(0);
+describe('the hymn page’s header', () => {
+  it('holds no Aa button: the reading settings are in the player sheet', () => {
     params['number'] = '3';
     using app = mount(
       <>
@@ -64,33 +68,25 @@ describe('the hymn page’s Aa button', () => {
       </>,
     );
     const header = app.get('[data-testid="header"]');
-    const buttons = [...header.querySelectorAll('[role="button"]')].map((b) =>
-      b.getAttribute('aria-label'),
-    );
-    expect(buttons).toEqual(['Aa', 'Chords']);
-    app.press('Aa');
-    expect(opened).toEqual(['/reading']);
+    expect(header.querySelectorAll('[role="button"]')).toHaveLength(0);
+    expect(app.find('[aria-label="Aa"]')).toEqual(Option.none());
   });
 });
 
-describe('the reading sheet', () => {
-  it('steps the text size within its ends, and shows the size it is at', () => {
-    using app = mount(<ReadingSheet reading={readerOn().reading} />);
-    const share = () => app.get('[aria-label^="Text size"]').textContent;
-    expect(share()).toBe('100%');
-    expect(disabled(app, 'Smaller text')).toBe(false);
-    for (let k = DEFAULT_SIZE; k < SIZES.length - 1; k++) app.press('Larger text');
-    expect(disabled(app, 'Larger text')).toBe(true);
-    expect(share()).toBe(`${Math.round((pointsAt(SIZES.length - 1) / 17) * 100)}%`);
-    for (let k = SIZES.length - 1; k > 0; k--) app.press('Smaller text');
-    expect(disabled(app, 'Smaller text')).toBe(true);
-    expect(disabled(app, 'Larger text')).toBe(false);
+describe('the reading settings', () => {
+  it('turn the text size on a dial held to its ends, and show the size it is at', () => {
+    using app = mount(<ReadingControls reading={readerOn().reading} />);
+    expect(share(app)).toBe('100%');
+    for (let k = DEFAULT_SIZE; k < SIZES.length + 1; k++) step(app, 'increment');
+    expect(share(app)).toBe(`${Math.round((pointsAt(SIZES.length - 1) / 17) * 100)}%`);
+    for (let k = SIZES.length + 1; k > 0; k--) step(app, 'decrement');
+    expect(share(app)).toBe(`${Math.round((pointsAt(0) / 17) * 100)}%`);
   });
 
   it('writes each choice under its reading key, and a fresh launch reads them back', () => {
     const device = new Map<string, string>();
     {
-      using app = mount(<ReadingSheet reading={readerOn(device).reading} />);
+      using app = mount(<ReadingControls reading={readerOn(device).reading} />);
       expect(checked(app, 'Font')).toEqual(['System']);
       expect(checked(app, 'Line spacing')).toEqual(['Normal']);
       const radios = (group: string) =>
@@ -101,7 +97,7 @@ describe('the reading sheet', () => {
         ].map((radio) => radio.getAttribute('aria-label'));
       expect(radios('Font')).toEqual(['System', 'Serif']);
       expect(radios('Line spacing')).toEqual(['Compact', 'Normal', 'Roomy']);
-      app.press('Larger text');
+      step(app, 'increment');
       app.press('Serif');
       app.press('Roomy');
       act(() => app.get('[aria-label="Keep screen on"]').click());
@@ -112,10 +108,8 @@ describe('the reading sheet', () => {
         'reading.awake': 'true',
       });
     }
-    using again = mount(<ReadingSheet reading={readerOn(device).reading} />);
-    expect(again.get('[aria-label^="Text size"]').textContent).toBe(
-      `${Math.round((pointsAt(DEFAULT_SIZE + 1) / 17) * 100)}%`,
-    );
+    using again = mount(<ReadingControls reading={readerOn(device).reading} />);
+    expect(share(again)).toBe(`${Math.round((pointsAt(DEFAULT_SIZE + 1) / 17) * 100)}%`);
     expect(checked(again, 'Font')).toEqual(['Serif']);
     expect(checked(again, 'Line spacing')).toEqual(['Roomy']);
     expect((again.get('[aria-label="Keep screen on"]') as HTMLInputElement).checked).toBe(true);
@@ -136,11 +130,12 @@ const pageStyle = (reading: ReadonlyArray<readonly [string, string]>) => {
   );
   return {
     words: drawn(words.get('[data-testid="line"] [data-testid^="syllable-"]')),
-    chords: drawn(chords.get('[data-testid^="chord-"]')),
+    // A chord with a chord to show is a button over its text; the text is what is drawn.
+    chords: drawn(chords.get('[data-testid^="chord-"][role="button"] > *')),
   };
 };
 
-describe('a hymn page as the reading sheet sets it', () => {
+describe('a hymn page as the reading settings set it', () => {
   it('renders the default as the page has always been: words 17 on 24, chords 15 on 20, the system face', () => {
     const style = pageStyle([]);
     expect(style.words).toMatchObject({ size: '17px', height: '24px' });
@@ -174,7 +169,7 @@ describe('keeping the screen on', () => {
     const reader = readerOn();
     const app = mount(
       <>
-        <ReadingSheet reading={reader.reading} />
+        <ReadingControls reading={reader.reading} />
         <HymnPage hymn={hymn(1)} reader={reader} />
       </>,
     );

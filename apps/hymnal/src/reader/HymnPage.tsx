@@ -1,10 +1,9 @@
 /**
  * A hymn's words in the order it is sung: its topic as a quiet line, its
  * number and title in one row (the number first, the `Favourite` button
- * last), the key controls while
- * chords are on, then each stanza under its number and the refrain, marked,
+ * last), a notice while chords are on and the hymn has none, then each stanza under its number and the refrain, marked,
  * each time it is sung. The theme's ink on its ground, set as the reader
- * chose in the "Aa" sheet (`reading.ts`) and scaled by the system's text
+ * chose in the player sheet (`reading.ts`) and scaled by the system's text
  * size. A printed line that wraps hangs under its first word. While the page
  * is shown, the screen stays on if the reader asked for it (`KeepAwake`).
  *
@@ -19,12 +18,18 @@
  * While the player plays this hymn, the page follows it (`follow/`): the
  * sung line and syllable are marked, and the page scrolls each line in
  * before it is sung.
+ *
+ * With chords on, a tap on a chord pushes the sheet of how to play it
+ * (`ChordSheet.tsx`), over the page and apart from the follow: the chords
+ * reach the page through a context, and the page pushes the sheet's route
+ * with the chords and the key they are played in.
  */
 
-import { useAtom, useAtomValue } from '@effect/atom-react';
+import type * as Chord from '@bible/hymnal/chord';
+import { useAtomValue } from '@effect/atom-react';
 import { Option } from 'effect';
 import type * as Atom from 'effect/reactivity/Atom';
-import { memo, type ReactNode, useMemo } from 'react';
+import { memo, type ReactNode, useCallback, useMemo, useRef } from 'react';
 import {
   ScrollView,
   type StyleProp,
@@ -34,6 +39,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useRouter } from 'one';
 
 import {
   type ChordBook,
@@ -53,8 +59,10 @@ import { color, useAccent } from '~/color';
 
 import { FollowProvider, useFollow } from '~/follow/follow';
 import { ResumeFollow } from '~/follow/ResumeFollow';
+import { RISE } from '~/player/bar';
 
-import { ChordControls, ChordLines, PlayedKeyProvider } from './Chords';
+import { ChordLines, ChordNotice, PlayedKeyProvider } from './Chords';
+import { chordHref, ChordTapProvider } from './ChordSheet';
 import { FavouriteButton } from './FavouriteButton';
 import { HangingLine } from './HangingLine';
 import { KeepAwake } from './KeepAwake';
@@ -87,7 +95,7 @@ export function HymnPage({
   const accent = useAccent();
   const on = useAtomValue(reader.chords);
   const style = useAtomValue(reader.style);
-  const [move, setMove] = useAtom(reader.move(hymn.number));
+  const move = useAtomValue(reader.move(hymn.number));
   // The hymn's syllables are drawn with chords on or off, so its string is decoded once it is shown.
   const book = useMemo(() => reader.book.of(hymn.number), [reader.book, hymn.number]);
   const chords = useMemo(
@@ -105,6 +113,15 @@ export function HymnPage({
     onSome: (c) => playedKey(c.key, move),
   });
   const follow = useFollow(hymn.number);
+  const router = useRouter();
+  // The tap reads the key played at the tap, and stays one function so the chords do not draw again.
+  const now = useRef({ router, played });
+  now.current = { router, played };
+  const tap = useCallback(
+    (shown: ReadonlyArray<Chord.Chord>) =>
+      now.current.router.push(chordHref(shown, now.current.played)),
+    [],
+  );
   return (
     <View style={styles.frame}>
       <ScrollView
@@ -137,16 +154,22 @@ export function HymnPage({
             <FavouriteButton number={hymn.number} favourites={reader.favourites} />
           </View>
         </View>
-        <ChordControls on={on} printed={printed} move={move} onMove={setMove} />
+        <ChordNotice on={on} printed={printed} />
         <PageText reading={reader.reading}>
           <PlayedKeyProvider value={played}>
             <FollowProvider value={follow.follow}>
-              <Sections hymn={hymn} book={book} chords={chords} />
+              <ChordTapProvider value={tap}>
+                <Sections hymn={hymn} book={book} chords={chords} />
+              </ChordTapProvider>
             </FollowProvider>
           </PlayedKeyProvider>
         </PageText>
       </ScrollView>
-      {follow.held && <ResumeFollow onPress={follow.resume} />}
+      {follow.held && (
+        <View testID="resume-follow-dock" pointerEvents="box-none" style={styles.overBar}>
+          <ResumeFollow onPress={follow.resume} />
+        </View>
+      )}
     </View>
   );
 }
@@ -342,6 +365,8 @@ const styles = StyleSheet.create({
   // the words' height unless it is bounded by its page, and a frame as tall as
   // its words has nothing to scroll.
   frame: { flex: 1, maxHeight: '100%' },
+  // The pill a hand scroll shows stands over the sounding bar, which lies over the page's foot.
+  overBar: { position: 'absolute', left: 0, right: 0, top: 0, bottom: RISE },
   page: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 48, gap: 24 },
   head: { gap: 4 },
   topic: { fontSize: 13, color: color.muted },

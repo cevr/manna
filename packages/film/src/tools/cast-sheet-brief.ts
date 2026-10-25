@@ -14,7 +14,8 @@
 // the member's (`statureOf`: the cast's canon unless its record names its
 // own), and a smaller figure a pose sheet draws (a child) is said with its
 // share of the grown height; the hair's paragraph is said only of a member
-// whose hair shows.
+// whose hair shows, and the beard's parting from it only of one who has a beard
+// too.
 
 import { Array as Arr, Option, Result, Schema } from 'effect';
 import type { SheetKind, ViewFigure } from '../core/cast-sheet.ts';
@@ -171,19 +172,21 @@ const HANDS =
 const NO_LETTERING =
   'No lettering anywhere: no labels, no names, no numbers, no arrows, no text, no grid, no boxes or frames round the figures.';
 
-/** How the member is drawn across its sheet: its grown height in its own heads, the smaller figures a pose sheet draws, and whether its hair shows. */
+/** How the member is drawn across its sheet: its grown height in its own heads, the smaller figures a pose sheet draws, whether its hair shows, and whether it has a beard. */
 interface SheetFigures {
   readonly heads: number;
   readonly figures: ReadonlyArray<ViewFigure>;
   readonly hair: boolean;
+  readonly beard: boolean;
 }
 
 /** Each kind's rules, in the order the brief says them. */
 const sheetRules = (
   kind: SheetKind,
-  { heads, figures, hair }: SheetFigures,
+  { heads, figures, hair, beard }: SheetFigures,
 ): ReadonlyArray<string> => {
-  const hairBeard = (hair && [HAIR_BEARD]) || [];
+  // The parting of the beard from the hair is said only of a member who has both.
+  const hairBeard = (hair && beard && [HAIR_BEARD]) || [];
   const tall = headsWords(heads);
   const smaller = figures.length > 0;
   return {

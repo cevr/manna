@@ -19,7 +19,6 @@ import type { Track } from '~/player/player';
 import type { Header, Headers, RouteParams } from '~/stack';
 import { settings } from '~/store';
 
-import { ChordsButton, HeaderButtons, ReadingButton } from './HeaderButtons';
 import type { ChordReader } from './HymnPage';
 import { visited } from './lists';
 
@@ -33,17 +32,10 @@ export const reader: ChordReader = {
   favourites: settings.lists.favourites,
 };
 
-/** The header's buttons on every hymn's page. */
-const headerRight = () => (
-  <HeaderButtons>
-    <ReadingButton />
-    <ChordsButton chords={reader.chords} />
-  </HeaderButtons>
-);
-
 /**
- * The hymn route's header, from the route's number alone: the hymn's title
- * and the page's buttons, or `No hymn <n>` for a number with no hymn. The
+ * The hymn route's header, from the route's number alone: the hymn's title,
+ * or `No hymn <n>` for a number with no hymn. It holds no buttons: the
+ * reader's controls are at the thumb, in the bottom bar and its sheet. The
  * stack reads it as it lays the screen out (`useStackOptions`), so it is
  * right on the first frame of every way in: a list's row, a search's result,
  * a link, a cold start, a pager's settle and an unknown number.
@@ -52,7 +44,7 @@ export const hymnHeader = (params: RouteParams): Header => {
   const asked = Option.getOrElse(Record.get(params, 'number'), () => '');
   return Option.match(hymnAt(asked), {
     onNone: () => ({ title: `No hymn ${asked}`.trim() }),
-    onSome: (hymn) => ({ title: hymn.title, headerRight }),
+    onSome: (hymn) => ({ title: hymn.title }),
   });
 };
 

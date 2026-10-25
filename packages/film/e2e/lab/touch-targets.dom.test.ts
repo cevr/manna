@@ -23,7 +23,7 @@
 // - Spacing (WCAG 2.5.8, at `--hit`): a target 24 px each way or more whose
 //   `--hit` circle reaches no other target cannot be missed for a neighbour.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, FileSystem, Option } from 'effect';
 import { describe, expect, it, test } from 'effect-bun-test';
 import {

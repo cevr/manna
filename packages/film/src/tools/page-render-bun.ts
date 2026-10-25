@@ -3,7 +3,7 @@
 // constructor. The one place the render reaches that global, so the one file
 // `effect/noGlobals` exempts as an adapter (`.oxlintrc.json`).
 
-import { BunWorker } from '@effect/platform-bun';
+import * as BunWorker from '@effect/platform-bun/BunWorker';
 
 /** The workers a build's renders run in: each a Bun worker of `page-render-worker.ts`. */
 export const renderWorkers = BunWorker.layer(

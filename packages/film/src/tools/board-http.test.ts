@@ -9,7 +9,8 @@ import { labUrls } from '../core/api.ts';
 import { type BoardFile, BoardFileJson, BoardName } from '../core/board.ts';
 import { Segment } from '../core/segment.ts';
 import { labHandler } from './lab.ts';
-import { labInMemory, text } from './testing.ts';
+import { text } from './host/testing.ts';
+import { labInMemory } from './lab/testing.ts';
 
 const tried = (n: number) => ({
   n,

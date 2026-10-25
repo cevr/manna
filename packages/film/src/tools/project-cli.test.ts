@@ -4,7 +4,7 @@
 // run's start and its write cannot leave some of them approved and the
 // answer saying all were.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Cause, Effect, Exit, Layer, Option, Path, Schema } from 'effect';
 import { Command } from 'effect/cli';
@@ -19,7 +19,9 @@ import { project } from './project-cli.ts';
 import { Renderer } from './renderer.ts';
 import { SoundRender } from './sound-render.ts';
 import { Stamps, sceneStamps } from './stamp.ts';
-import { memoryFileSystem, memoryLocks, reviewMedia, testFilm } from './testing.ts';
+import { testFilm } from './film-repo/testing.ts';
+import { memoryFileSystem, memoryLocks } from './host/testing.ts';
+import { reviewMedia } from './media/testing.ts';
 
 const isVerbRefused = Schema.is(VerbRefused);
 

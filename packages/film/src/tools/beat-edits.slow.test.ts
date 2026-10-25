@@ -16,18 +16,10 @@ import { filmClock } from '../core/film-timeline.ts';
 import { layout } from '../core/layout.ts';
 import { RenderCatalogue } from './catalogue.ts';
 import { ProductionStore } from './production-store.ts';
-import {
-  type LabFetch,
-  MCP_BASE,
-  echoPages,
-  freshFilm,
-  labInMemory,
-  labWithMcp,
-  mcpBound,
-  mcpSession,
-  text,
-  writesInMemory,
-} from './testing.ts';
+import { echoPages, freshFilm, writesInMemory } from './film-services/testing.ts';
+import { text } from './host/testing.ts';
+import { labInMemory } from './lab/testing.ts';
+import { type LabFetch, MCP_BASE, labWithMcp, mcpBound, mcpSession } from './lab-mcp/testing.ts';
 
 const SCRIPT = '/films/f/script.ts';
 

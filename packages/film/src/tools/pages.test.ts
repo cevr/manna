@@ -8,7 +8,7 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Exit, Fiber, Latch, Layer, Option } from 'effect';
 import { PageCrashed } from './errors.ts';
 import { type ExportPages, Pages, type PagesOptions, exportUrl } from './pages.ts';
-import { type FakeRenderHost, emptyLedger, fakeRenderHost } from './testing.ts';
+import { type FakeRenderHost, emptyLedger, fakeRenderHost } from './browser/testing.ts';
 
 const setup = (host: FakeRenderHost = {}) => {
   const ledger = emptyLedger();

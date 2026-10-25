@@ -4,7 +4,7 @@
 // entries of a scene or all, oldest first, within its count and its
 // character cap, saying how many it left out.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Deferred, Effect, Fiber, FileSystem, Layer, Option, Path, Ref } from 'effect';
 import { TestClock } from 'effect/testing';

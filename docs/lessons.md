@@ -251,6 +251,36 @@ The form of an entry, each field on its own line:
 - **Cause:** It judged the set by the command's own review roots, and a worktree's roots leave out the main checkout the lab serves.
 - **Guard:** code: `packages/film/src/tools/lab-mcp.slow.test.ts` `says whether the running lab lists the set, as the lab answers it, and never claims what no lab said`
 
+### critique-deadline-from-the-call
+
+- **Date:** 2026-10-23
+- **Kind:** review
+- **Said:** "the 40 s wait starts after the match and the staging read, so a slow prefix still passes the 60 s cut"
+- **Source:** p6-critic-context/review-r2.md F1
+- **Wrong:** The MCP `critique` call waited 40 s on its job after the match and the staging read, so a staging read of 25 s answered at 65 s, past the 60 s at which the MCP client cuts a call.
+- **Cause:** The wait was set from the match's time alone, and the staging read added after it came out of no budget.
+- **Guard:** code: `packages/film/src/tools/easel-mcp.test.ts` `a critique whose staging takes 25 s answers its handle 50 s from the call's start`
+
+### critique-running-job-kept
+
+- **Date:** 2026-10-23
+- **Kind:** review
+- **Said:** "the store drops running jobs too, and nothing caps the counsel runs"
+- **Source:** p6-critic-context/review-r2.md F2
+- **Wrong:** The critic kept its jobs in one Cache of 32, which dropped the oldest running or not, so a running job's packet started a second counsel run after 32 later jobs; and no bound held how many max-effort counsel runs went at once.
+- **Cause:** The store was sized for finished jobs, and the Cache's capacity drops entries without regard to a fiber still running.
+- **Guard:** code: `packages/film/src/tools/critique.test.ts` `a running job is kept past 33 later jobs, and a start of its packet while it runs asks no second counsel`; `packages/film/src/tools/critique.test.ts` `at most 4 counsel runs go at once: a start past them answers its handle, and runs in its turn`
+
+### critique-changed-packet-new-job
+
+- **Date:** 2026-10-23
+- **Kind:** review
+- **Said:** "no test holds that a changed packet starts a new job"
+- **Source:** p6-critic-context/review-r2.md F4
+- **Wrong:** No test held that a job's handle names its packet's hash, so a handle made without it would answer a repainted figure with the old drawing's critique.
+- **Cause:** The job tests started one packet only.
+- **Guard:** code: `packages/film/src/tools/critique.test.ts` `two packets that differ in one byte of a crop are two jobs and two runs; the same packet again is one`
+
 ## The look
 
 ### floating-circle-hands-no-arms
@@ -523,6 +553,16 @@ The form of an entry, each field on its own line:
 - **Cause:** The unbake changed one flag in `figures.ts`; the comment on the hand spec in `rigs.ts` reads that flag's effect and was not read back.
 - **Guard:** skill: whether a comment still says what its code does is judged by reading both, and the judged comment rule is off on its corpus. Carried by `CLAUDE.md`: "A comment says what the code does now and why"
 
+### veil-drawn-without-its-scarlet
+
+- **Date:** 2026-10-25
+- **Kind:** owner
+- **Said:** chose: "No: blue, purple and scarlet, as Exodus 26:31"
+- **Source:** ask a39bf790b72 (veil); tmp/orchestrate/p5/iio-priest/state.md
+- **Wrong:** In Its Order's priest frame and its Board world drew the veil in indigo and linen with no scarlet, and the ask recommended it.
+- **Cause:** The coordinator read the house palette's "scarlet is sin" over Scripture's colour, the higher layer, and missed the answered OWNER QUESTION 2, which gives the veil's thread the cloth crimson.
+- **Guard:** skill: which colour a cloth takes is read from the text it draws, a judgement no lint can make. Carried by `.claude/skills/film/reference/character-design.md`: "the veil is drawn in all three of its colours (Ex 26:31), never in blue and linen alone"
+
 ## Figures and the cast
 
 ### bookend-the-setting
@@ -784,6 +824,16 @@ The form of an entry, each field on its own line:
 - **Wrong:** On RBF's Christ at court 20.01 s the match read the head's width from the lit band's box, h/w 1.078 against the concept's 1.336, and the dark hair between the band and the face as ink on the hair/skin edge (0.352, flagged); without the band, 1.245 and 0.000.
 - **Cause:** The dark brown hair lay within reach of the ink's colour, so it read as a line's streak, never a fill; the lit band was the only hair, and the head's sides were the hair parts' boxes.
 - **Guard:** code: `packages/film/src/core/figure.ts` `outerSides` (the head's sides on the silhouette ink, dark hair a mass by its paper), `packages/film/src/core/figure.slow.test.ts` `reads the head to its outline's outer edge, the band moving neither side`, `packages/film/src/tools/figure-crops.slow.test.ts` `RBF court's Christ at 20.01 s, a lit band on his dark hair, reads his head to the outline and no line on his hair`
+
+### beardless-member-told-of-a-beard
+
+- **Date:** 2026-10-24
+- **Kind:** retraction
+- **Said:** "A beardless figure told of its beard can be drawn with one."
+- **Source:** tmp/orchestrate/p5/film-beard/brief.md, its Defect (the coordinator found it at `cast-sheet-brief.ts:186`)
+- **Wrong:** Every member whose hair shows got the rule that parts the beard from the hair, the series lead (look: "No beard, no moustache and no stubble"), the village children and the feast mother among them.
+- **Cause:** The brief gated the rule on the hair alone; the record named no beard.
+- **Guard:** code: `packages/film/src/tools/cast-sheet-brief.ts` `hairBeard` (said only when the record's `hair` and `beard` both show), `packages/film/src/tools/cast-sheet-brief.test.ts` `is told of only a member whose record has one`
 
 ## Gate and review
 
@@ -1672,10 +1722,10 @@ The form of an entry, each field on its own line:
 - **Date:** 2026-10-20
 - **Kind:** review
 - **Said:** "Rebase leaves a conflict marker in the lessons ledger"
-- **Source:** ftb-mail/review-4.md F1
+- **Source:** ftb-mail/review-4.md F1; in-its-order-2/review-r1.md F4; in-its-order-2/review-r2.md F5
 - **Wrong:** The rebase of ftb-mail onto origin/main kept both sides of each append to `docs/lessons.md` but left diff3's base line, `||||||| parent of …`, in three commits.
 - **Cause:** The resolver read only the two-way conflict form, and git rerere replayed its resolution on the second try.
-- **Guard:** none: the per-commit audit that ran each commit's gate is dropped (owner, ask abe573de390: "drop the per-commit audit"); the gate runs once, at the unit's head.
+- **Guard:** code: `packages/scripts/src/lessons/ledger.ts` `markersIn` (each line of the ledger that is a conflict marker, `<<<<<<<`, `|||||||`, `=======` or `>>>>>>>`, is a problem by its line); `packages/scripts/src/lessons/ledger.test.ts` `refuses a conflict marker a merge left in it, by its line`; `packages/scripts/src/lessons/ledger.test.ts` `reads a heading underlined in seven = as a heading, and a marker ending in CRLF as a marker`
 
 ### contact-rule-waits-for-verified-inbox
 
@@ -2046,6 +2096,16 @@ The form of an entry, each field on its own line:
 - **Wrong:** `repoJson` wrote a filled number line one column past oxfmt's width, and wrote `1e+30` where oxfmt writes `1e30`.
 - **Cause:** The fill measured each number without the comma that follows it, and the scalars were written by `JSON.stringify`, which keeps an exponent's plus.
 - **Guard:** code: `packages/film/src/core/schema.test.ts` `breaks a filled line before a number its comma would carry past the line, and drops an exponent's plus`
+
+### repo-json-breaks-around-a-matrix
+
+- **Date:** 2026-10-23
+- **Kind:** retraction
+- **Said:** "fmt:check: 3 cast-sheet.json written by `concept keep` + character-design.md unformatted"
+- **Source:** tmp/orchestrate/p5/iio-cast/state.md:63
+- **Wrong:** `repoJson` wrote an array that holds a matrix (two or more arrays of two or more items) on one line when it fitted, where oxfmt breaks that array and every array around it.
+- **Cause:** The printer broke an array for a matrix only at the matrix's own level, and a break in an item reaches every array that holds it.
+- **Guard:** code: `packages/film/src/core/schema.test.ts` `breaks every array around a matrix, though it would fit a line`
 
 ### retry-holds-smaller-to-anchor
 
@@ -3315,7 +3375,7 @@ The form of an entry, each field on its own line:
 - **Source:** the owner's scrawl capture of 2026-10-22, tmp/orchestrate/hymnapp/notes/owner/2026-10-22-header-scrawl.png and decisions.log 2026-10-23T00:39Z (run hymnapp, unit uibulk)
 - **Wrong:** As a hymn page was pushed, its header title moved a little, and once the header showed the route's name, `hymns/[number]`, on the system's grey ground.
 - **Cause:** Each hymn screen set its own header with `Stack.Screen` options from its page's effect, so the push drew the stack's default header until that effect ran (inferred from the code). The stack now gives every screen its ground and the hymn route its title and buttons from the route's number (`stackOptions`, `hymnHeader`), before any page code runs.
-- **Guard:** code: `apps/hymnal/src/reader/header.test.ts` `names the route’s hymn, on the ground, with the page’s buttons`, `apps/hymnal/src/reader/header.test.ts` `is keyed by the name the stack gives the route file`
+- **Guard:** code: `apps/hymnal/src/reader/header.test.ts` `names the route’s hymn, on the ground, with no buttons: the reader’s controls are at the thumb`, `apps/hymnal/src/reader/header.test.ts` `is keyed by the name the stack gives the route file`
 
 ### hymn-page-scrolls-inside-the-pager
 
@@ -3335,7 +3395,7 @@ The form of an entry, each field on its own line:
 - **Source:** the owner's look on his iPhone at 5b65a158d, tmp/orchestrate/hymnapp/notes/owner/2026-10-22-uibulk-phone-scrawl.png and decisions.log 2026-10-23T01:35Z (run hymnapp, unit uibulk)
 - **Wrong:** The header's Chords button drew the SF Symbol `guitars`, which the owner found too busy for the header.
 - **Cause:** The spec named the SF Symbol; the owner had not seen it at header size. The button now draws one acoustic guitar head with its tuning pegs, the same on every platform.
-- **Guard:** skill: whether an icon reads as simple is a judgment of the eye, which no test can make. Carried by `.claude/skills/verify-hymnal/features/chords-and-capo.md`: "(an acoustic guitar's head with its tuning pegs, the same on every platform, filled while on), and"
+- **Guard:** skill: whether an icon reads as simple is a judgment of the eye, which no test can make. Carried by `.claude/skills/verify-hymnal/features/chords-and-capo.md`: "`Key` button (an acoustic guitar's head, then a small `KEY` over the"
 
 ### hymn-recent-five-and-stars-not-a-favourites-section
 
@@ -3396,3 +3456,233 @@ The form of an entry, each field on its own line:
 - **Wrong:** The match measured no boundary between the hair and the beard, so a render that ran them together passed where the concept parts them by a dark band.
 - **Cause:** The measure read the hair and the face, never the edge between the hair and the beard.
 - **Guard:** code: `packages/film/src/core/match.ts` `hairBeardRows` (the `hair/beard: parted` row), `packages/film/src/core/match.test.ts` `flags a scene that runs together what its concept parts`, `packages/film/src/tools/figure-artifacts.slow.test.ts` `Christ at court 16.51 s, his beard run into his hair where his concept parts them by a dark band: flagged (owner, 2026-10-18)`
+
+### locked-cast-reference-wins
+
+- **Date:** 2026-10-20
+- **Kind:** owner
+- **Said:** "ensure Jesus uses the library not the concept when its incorrect"
+- **Source:** ask a26a8a83f89 (in-its-order production)
+- **Wrong:** The priest and name concept frames drew Christ from concept images and came out 3.44 heads against His locked 3.07 and 13–24% too large beside the guests.
+- **Cause:** No brief path sent the library's record of a locked member, so each drawing took whatever reference it was handed.
+- **Guard:** code: `packages/film/src/tools/board-make.test.ts` `a beat whose cast names a locked member sends its kept turnaround from the library, and the prompt says the library wins`
+
+### lead-no-grey-at-temples
+
+- **Date:** 2026-10-23
+- **Kind:** owner
+- **Said:** "lets remove the grey streaks form his hair"
+- **Source:** ask aadba1e394a (In Its Order cast, iio-cast round 7)
+- **Wrong:** The kept In Its Order lead had grey streaks at his temples in his kept sheets and in the lineup, cold and name frames.
+- **Cause:** The owner asked for "a short beard and an older face" (ask ade763eff4d), and the agent painted grey at the temples to make the face read older, though he named no grey.
+- **Guard:** skill: whether a face's marks of age are the ones the owner asked for is a judgment of the eye. Carried by `apps/animations/src/library/cast/lead-feast/cast-sheet/look.md`: "no grey anywhere in his hair"
+
+### lead-re-kept-young
+
+- **Date:** 2026-10-23
+- **Kind:** owner
+- **Said:** chose: "C: the young lead as he was"
+- **Source:** ask ab7a4d8f60e (In Its Order cast, iio-cast round 8)
+- **Wrong:** The kept lead was the older, bearded man of ask ade763eff4d; the owner took the young, beardless lead of `reconcept/a1r.lineup.png` instead.
+- **Cause:** The older face came from the owner's own pick (ask ade763eff4d: "Yes: a short beard and an older face"); he then judged that a youth too should not be on the bottle (ask aadba1e394a: "even thoug hhes not a grown adult he still shouldnt be drinking a bottle"), and, shown both leads side by side, took the young one back.
+- **Guard:** none: which drawn lead the film keeps is the owner's choice among the options shown, and no check can foresee it.
+
+### lead-called-a-young-man
+
+- **Date:** 2026-10-23
+- **Kind:** owner
+- **Said:** chose: "Change to "a young man""
+- **Source:** ask aaa11fd7adf (In Its Order cast, iio-cast round 9)
+- **Wrong:** The narration, pictures and bookends called the lead "a grown man" after he was re-kept as the young lead.
+- **Cause:** The lines were written for the older lead, and the re-keep changed his record and sheets but no line of the script.
+- **Guard:** none: whether a line's words fit a figure's look is a judgment of the words, which the owner's rule of 2026-10-09 keeps out of code.
+
+### cast-reference-tracked
+
+- **Date:** 2026-10-23
+- **Kind:** review
+- **Said:** "Christ's lock sends five files git ignores"
+- **Source:** in-its-order-2/review-r1.md F1; in-its-order-2/review-r2.md F3; in-its-order-2/review-r3.md F2
+- **Wrong:** Christ's record has no kept sheet, so the board sends its five references from `cast-sheet/`, and `apps/animations/.gitignore` ignored every PNG there: after a merge, `film board in-its-order` would refuse on main and in every new worktree.
+- **Cause:** The ignore rule was written for drawn tries, and a record's own references lie in the same folder. The first guard asked only that git not ignore the files, and the second listed what lay in the folders, so a file a record names but no commit holds passed both.
+- **Guard:** code: `apps/animations/cast.test.ts` `that a record names are tracked by git, so every checkout has them`
+
+### cast-lock-leaves-dress-to-brief
+
+- **Date:** 2026-10-23
+- **Kind:** review
+- **Said:** "The lock tells the model the record's dress wins over the brief"
+- **Source:** in-its-order-2/review-r1.md F2; in-its-order-2/review-r1.md F9
+- **Wrong:** The board's note said a member's library images win on face, build, dress and colours, so Christ would be drawn in the court robe at the feast where the beat dresses Him in a linen coat; a film's own role was called a record in the cast library, and "Idea villagers" got the possessive "villagers's".
+- **Cause:** The note claimed the whole figure for the record, where the record holds the person and each beat its dress and act.
+- **Guard:** code: `packages/film/src/core/cast-lock.test.ts` `leaves what the member wears and does to the brief, so a beat's own dress is drawn`; `packages/film/src/core/cast-lock.test.ts` `claims for a sheet of heads alone only the face and hair, the rest the brief's`; `packages/film/src/core/cast-lock.test.ts` `names a film's own role as this film's cast, its name's possessive as written`
+
+### beat-cast-names-drawn-figures
+
+- **Date:** 2026-10-23
+- **Kind:** review
+- **Said:** "Two beats' cast does not name the figure their picture draws"
+- **Source:** in-its-order-2/review-r1.md F3; in-its-order-2/review-r1.md F7
+- **Wrong:** The `stones` and `rush` beats draw the villager child, and the toddler in `rush`, but their `cast` named `idea-villagers`, whose record no longer keeps the child (its kept sheet still draws him); the lead's Cast row still said the grown villager varies `lead-feast` after he became a variant of `sower`.
+- **Cause:** The members moved between records, and the beats and Cast rows that named them were not re-read.
+- **Guard:** skill: a picture names its figures in words, so no test can match a beat's cast to what it draws. Carried by `.claude/skills/film/SKILL.md`: "after a member moves between records or a figure is renamed, re-read every beat whose picture draws him and set its `cast` and the Cast rows to match"
+
+### cast-lock-cuts-shared-sheet
+
+- **Date:** 2026-10-23
+- **Kind:** review
+- **Said:** "Three members share one six-figure kept sheet, and the lock sends it as each one's record"
+- **Source:** in-its-order-2/review-r1.md F5
+- **Wrong:** The villager child, the toddler and the idea villagers each sent the whole six-figure poses sheet as their record, so the model was shown other members as the one it should draw; a beat naming a member twice sent him twice.
+- **Cause:** The lock sent a kept sheet whole, though a member kept only some of its views.
+- **Guard:** code: `packages/film/src/core/cast-lock.test.ts` `is its own figures, cut from a kept sheet that draws other members too`; `packages/film/src/tools/board-make.test.ts` `a member a beat names twice is sent once`
+
+### owner-revise-gets-its-entry
+
+- **Date:** 2026-10-23
+- **Kind:** review
+- **Said:** "The unit's owner revises have no ledger entries"
+- **Source:** in-its-order-2/review-r1.md F6
+- **Wrong:** The in-its-order-2 range carried three owner revises (asks aadba1e394a, ab7a4d8f60e, aaa11fd7adf) and added no ledger entry for any of them.
+- **Cause:** No brief of the cast rounds (`tmp/orchestrate/p5/iio-cast/brief*.md`) named the ledger step, and each round followed its brief.
+- **Guard:** skill: whether an answer revises the work is a reading of the owner's words, which no check makes. Carried by `.claude/skills/film/SKILL.md`: "After any owner revise, add the entry and its guard before redrawing"
+
+### beat-names-dress-out-of-record
+
+- **Date:** 2026-10-23
+- **Kind:** review
+- **Said:** "Christ still gets the court robe on `thesis`"
+- **Source:** in-its-order-2/review-r2.md F1; in-its-order-2/review-r2.md F7
+- **Wrong:** `thesis` drew Christ at the feast with no garment named, so the board would dress Him in His record's court robe one beat after `name` dressed Him in the linen coat; `cold` named only "festive clothes" for the lead.
+- **Cause:** The lock gives the dress to the brief only where the brief names a garment, and the pictures that drew a member out of his record's dress did not all name it.
+- **Guard:** skill: a picture's words are content, which the owner's rule of 2026-10-09 keeps out of code. Carried by `.claude/skills/film/SKILL.md`: "so a picture that draws a member out of his record's dress names the dress in every beat that draws him"
+
+### test-only-export-is-dead
+
+- **Date:** 2026-10-23
+- **Kind:** review
+- **Said:** "Two new dead exports."
+- **Source:** in-its-order-2/review-r2.md F2
+- **Wrong:** `packages/film/src/core/index.ts` re-exported `castLock` and `CastSheetJson` for the cast test alone, so `bun run dead-exports` failed on two new dead exports.
+- **Cause:** The fix round did not run `bun run dead-exports`, which the gate leaves to `test:slow`.
+- **Guard:** code: `packages/scripts/src/dead-exports/graph.ts` `deadExports`
+
+### renamed-test-renames-its-guard
+
+- **Date:** 2026-10-24
+- **Kind:** review
+- **Said:** "the ledger's slow test is red at the head"
+- **Source:** in-its-order-2/review-r3.md F1
+- **Wrong:** The cast test was renamed, and the ledger entry `cast-reference-tracked` still named its old title, so the ledger's slow test and `test:slow` were red.
+- **Cause:** The rename changed the test file but not the entry whose guard names it, and the gate does not run the ledger's slow test.
+- **Guard:** code: `packages/scripts/src/lessons/ledger.slow.test.ts` `of the repo holds every entry to its fields and every guard to what its file holds`
+
+### review-finding-gets-its-entry
+
+- **Date:** 2026-10-24
+- **Kind:** review
+- **Said:** "r2's guarded findings have no ledger entries"
+- **Source:** in-its-order-2/review-r3.md F3
+- **Wrong:** The fix of in-its-order-2's second review gave its findings guards but added no ledger entry for any of them.
+- **Cause:** The fix was made inline and closed on the gate, and the ledger rule is read at the merge, not by the gate.
+- **Guard:** skill: whether a finding was given a guard is read from its review, which no check of the ledger alone sees. Carried by `docs/lessons.md`: "A finding given a guard gets an entry, its Source citing the finding"
+
+### app-seam-outside-the-rule
+
+- **Date:** 2026-10-24
+- **Kind:** review
+- **Said:** "the new seam `apps/firsttheblade/src/motion/testing.ts` is outside the rule that keeps product code from a seam"
+- **Source:** ftb-tidy/review-r1.md F2
+- **Wrong:** ftb-tidy put `turnAt` in the first `testing.ts` under `apps/`, and `film/no-test-seam` was on for `packages/*/src` alone, so a product import of it would pass lint and the dead-export check.
+- **Cause:** The rule's override named the packages' sources only, written when every seam was a package's.
+- **Guard:** lint:film/no-test-seam, proof `packages/film/lint/fixtures/no-test-seam.ts` `RED film/no-test-seam`
+
+### hymnal-strike-on-unconfirmed-bars
+
+- **Date:** 2026-10-24
+- **Kind:** review
+- **Said:** "R1 counts bars from the file's tick 0. In some hymns the printed bars do not start there or have another length, so R1 moves chords off the printed strong beats."
+- **Source:** chordbulk/round-2-findings.md F1 (labelled M1 there)
+- **Wrong:** The compiler moved guitar chords to the file's strong beats in hymns whose files start a beat off the printed bars (474) or carry another meter than the page (51, 259), so their chords left the printed downbeats.
+- **Cause:** The strong beats came from the file's bars counted from its first tick, which the score takes as a downbeat, and nothing held them against the tune. The compiler now strikes a hymn's guitar chords only when its melody confirms the file's bars (`Placement.confirms`).
+- **Guard:** code: `packages/hymnal/src/compile.test.ts` `keeps every guitar change where the file plays it when the melody does not confirm the file's bars`, `packages/hymnal/src/placement.property.test.ts` `moves no guitar change of a hymn whose melody does not confirm its file's bars`
+
+### test-worker-loads-a-package-index
+
+- **Date:** 2026-10-22
+- **Kind:** owner
+- **Said:** "And our unit test should be under a second for sure"
+- **Source:** memory feedback_gate_under_10s.md
+- **Wrong:** Each of the film's 8 unit-test workers spent about 0.5 CPU-s on imports before its first case. It loaded `@effect/platform-bun`'s index (all 22 of its modules, about 16 ms more than the two it uses), the media stack through the module that names `Media`, and the doubles of every area through one `tools/testing.ts`.
+- **Cause:** The house import of the package was its index, and a service's tag module held its live implementation; the import cost of a module was not measured.
+- **Guard:** lint:no-restricted-imports, proof `packages/film/lint/config.slow.test.ts` `refuses @effect/platform-bun's index in every film source and passes a module by its own path`
+
+### config-proof-reads-one-block
+
+- **Date:** 2026-10-24
+- **Kind:** review
+- **Said:** "the rule's proof lints the rule alone, not the rule as the full config applies it to the tools' tests"
+- **Source:** film-budget/review-r1.md F3
+- **Wrong:** The proof of the subpath rule took the one block over two tools source paths and linted a probe with that block's options. A later block that turned the rule off for the tools' tests would have left it green.
+- **Cause:** The proof read a block, not the rule oxlint gives a path: the last block over it that sets the rule, less its `excludeFiles`.
+- **Guard:** code: `packages/film/lint/config.slow.test.ts` `refuses @effect/platform-bun's index in every film source and passes a module by its own path`
+
+### subpath-rule-over-one-folder
+
+- **Date:** 2026-10-24
+- **Kind:** review
+- **Said:** "the subpath rule covers `src/tools` only, but 16569e434 converts the whole film"
+- **Source:** film-budget/review-r1.md F4
+- **Wrong:** The rule that refuses `@effect/platform-bun`'s index covered the film's tools alone, so a lab unit test that took the index again passed lint, about 16 ms more in each worker that loaded it.
+- **Cause:** oxlint gives a file the options of the last block that sets a rule, and each film folder's block sets `no-restricted-imports` for its layer bans, so the entry must sit in each of them; it sat in one block of its own over the tools.
+- **Guard:** lint:no-restricted-imports, proof `packages/film/lint/config.slow.test.ts` `refuses @effect/platform-bun's index in every film source and passes a module by its own path`
+
+### config-proof-samples-paths
+
+- **Date:** 2026-10-24
+- **Kind:** review
+- **Said:** "the subpath proof samples 24 paths, so a later block over an unsampled film folder passes it"
+- **Source:** film-budget/review-r2.md F2
+- **Wrong:** The proof that every film source refuses `@effect/platform-bun`'s index held 24 synthetic paths, so a block added over a folder none of them sat in (`packages/film/src/tools/lab/**`, its rule without the entry) passed it while lint let the index in there.
+- **Cause:** A proof of a rule "in every film source" read a sample of paths, not the tracked files.
+- **Guard:** code: `packages/film/lint/config.slow.test.ts` `refuses @effect/platform-bun's index in every film source and passes a module by its own path`
+
+### unit-temp-under-crowded-tmpdir
+
+- **Date:** 2026-10-24
+- **Kind:** owner
+- **Said:** "And our unit test should be under a second for sure"
+- **Source:** memory feedback_gate_under_10s.md
+- **Wrong:** Ten of the film's unit test files wrote modules into their temp folders and imported them, each 20-52 ms slower alone than with a small `TMPDIR`: Bun read the laptop's `$TMPDIR`, about 30,000 entries, as an ancestor of each module it resolved.
+- **Cause:** Every temp folder came from `os.tmpdir()`, the system's shared folder, whose size no test controls.
+- **Guard:** code: `packages/film/src/lab/fixtures/unit-tmp.ts` `process.env['TMPDIR'] = root`
+
+### unit-cases-wait-in-turn
+
+- **Date:** 2026-10-24
+- **Kind:** owner
+- **Said:** "And our unit test should be under a second for sure"
+- **Source:** memory feedback_gate_under_10s.md
+- **Wrong:** Eight of the film's tool test files ran their cases one after another, though each case built its own temp folder, lab or in-memory tree and waited on disk; in the parallel run their case spans summed about 1.6 s, and about 1.2 s once they ran at once.
+- **Cause:** A file's cases run in turn unless the file asks otherwise, and whether a case waits on the disk is not visible where it is written.
+- **Guard:** none: whether a file's cases wait on the disk, and share nothing, is a judgement on the file, measured by the traced run, not a rule a lint can read
+
+### hymn-jsx-type-arguments-break-the-web-dev-server
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "The web dev server renders no page at the head (`Error rendering /hymns/100 on server`)."
+- **Source:** chordbar/round-2-verify.md F1, the report's first defect, headed D1 (run hymnapp)
+- **Wrong:** `Dials.tsx` and `ReadingSheet.tsx` opened `DialView` with type arguments (`<DialView<CapoStop>`, `<DialView<KeyStop>`, `<DialView<number>`). On the web, One's dev server answered every route, `/` included, with its error page and `[PARSE_ERROR] Expected '>' but found '<'`. The iOS bundle and the web build worked.
+- **Cause:** One 2.9's dev-only source inspector (`one:source-inspector-transform`) writes its `data-one-source` attribute right after an element's name, which lies before the element's type arguments. The bar and its dials lie in the layout, so every route's render failed. The gate and the slow tests never run One's dev server. The elements now take their type from their props.
+- **Guard:** code: `apps/hymnal/src/jsx.test.ts` `opens no element with type arguments, in src or app`
+
+### hymn-resume-pill-under-the-sounding-bar
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "The `Resume follow` pill is cut by the tall bar every time it shows, on iOS."
+- **Source:** chordbar/round-2-verify.md F2, the report's second defect, headed D2 (run hymnapp)
+- **Wrong:** While a hymn played, the sounding bar (88 pt) covered the lower 16.3 pt of the `Resume follow` pill, so its label was cut.
+- **Cause:** A screen reserves the resting bar's height alone (56 pt), so the sounding bar lies 32 pt over the page's foot, and the pill still docked 16 pt above that foot (`follow/ResumeFollow.tsx`). The page now docks the pill in a box that ends `RISE` (32 pt) above its foot.
+- **Guard:** code: `apps/hymnal/src/player/thumb.slow.test.tsx` `stands the Resume follow pill whole over the sounding bar`

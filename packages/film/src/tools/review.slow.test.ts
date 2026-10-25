@@ -6,7 +6,7 @@
 // frames, phone copies) made once, whole, through a stand-in Media that
 // copies and counts instead (`reviewMedia`).
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import {
@@ -45,7 +45,7 @@ import { RenderCatalogue } from './catalogue.ts';
 import { ContentStore } from './content-store.ts';
 import { AtMtime, madeFromName } from './file-cache.ts';
 import { Media } from './media.ts';
-import { reviewMedia } from './testing.ts';
+import { reviewMedia } from './media/testing.ts';
 import {
   type Found,
   type ProjectRead,

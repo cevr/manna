@@ -5,7 +5,7 @@
 // is told of. Over a member's record both read its sizes: its own heads, its
 // hair, and a smaller figure at its share of the grown height.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Cause,
@@ -28,7 +28,7 @@ import { concept } from './concept-cli.ts';
 import { ContentStore } from './content-store.ts';
 import { FilmFolder } from './film-repo.ts';
 import { encodePng } from './png.ts';
-import { memoryFileSystem, printingTo, text } from './testing.ts';
+import { memoryFileSystem, printingTo, text } from './host/testing.ts';
 
 const HOUSE = { text: '/app/docs/ref/house-look.txt', image: '/app/docs/ref/house-look.png' };
 

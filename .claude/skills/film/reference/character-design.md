@@ -112,7 +112,7 @@ Grey is no colour of Scripture. A grey or dimmed copy of a colour "reads dead an
 
 #### Teal: a light, not a sin
 
-BibleProject's Holiness film paints "gold/warm = God's presence, life; cold teal = impurity, death" ([style-research.md](style-research.md), Palette). The owner's earlier summary was teal = sin, gold = grace, white = the robe. Our own rules have since given teal to the opening and the landing, the brightest and most saturated act ([CRAFT.md](../CRAFT.md) rule 11), and Clara wears teal. So teal cannot mean sin here.
+BibleProject's Holiness film paints "gold/warm = God's presence, life; cold teal = impurity, death" ([style-research.md](style-research.md), Palette). The owner's earlier summary was teal = sin, gold = grace, white = the robe. Our own rules have since given teal to the opening and the landing, the brightest and most saturated act ([CRAFT.md](../CRAFT.md) rule 11), and the series lead wears teal. So teal cannot mean sin here.
 
 Recommendation: sin's **mark** is scarlet; sin's **state** is a light, not a hue: cold, flat and desaturated (BibleProject's slate `#486868`), worn by the problem act's light and lifted by the answer. Gold stays grace, white the robe. **OWNER QUESTION 1** (1.6).
 
@@ -120,7 +120,7 @@ Recommendation: sin's **mark** is scarlet; sin's **state** is a light, not a hue
 
 - **Scripture.** The curtains and the veil: "fine twined linen, and blue, and purple, and scarlet: with cherubims of cunning work" (Ex 26:1, 31). The high priest's ephod: "gold, of blue, and of purple, of scarlet, and fine twined linen" (Ex 28:6). The pomegranates of "blue, and … purple, and … scarlet" on his robe's hem, "and bells of gold between them" (Ex 28:33). The gold plate, "HOLINESS TO THE LORD" (Ex 28:36). On the day of atonement the high priest wears only "the holy linen coat … these are holy garments" (Lev 16:4).
 - **Ellen White.** The walls "were overlaid with gold, giving to the building the appearance of solid gold"; the innermost roof curtain was "fine twined linen, and blue, and purple, and scarlet" (PP 347.1).
-- **Under K1.** The sanctuary is the one set where every colour of the key appears together. Linen takes robe white (the text calls fine linen righteousness, Rev 19:8). The gold glows. Blue and purple sit at the band's top (`#5b708c` priest blue, `#745380` sanctuary purple). The threads' scarlet waits on OWNER QUESTION 2; the blood on the mercy seat (Lev 16:14) is the accent.
+- **Under K1.** The sanctuary is the one set where every colour of the key appears together. Linen takes robe white (the text calls fine linen righteousness, Rev 19:8). The gold glows. Blue and purple sit at the band's top (`#5b708c` priest blue, `#745380` sanctuary purple). The threads' scarlet is the cloth crimson (`#8d4a52`, OWNER QUESTION 2): the veil is drawn in all three of its colours (Ex 26:31), never in blue and linen alone; the blood on the mercy seat (Lev 16:14) is the accent.
 - **Draw, don't decode.** Exodus lists the colours and gives them no meanings. A film may draw every thread. It may not narrate a doctrine for each one unless a source does (1.5). The day-of-atonement linen is a literal change the text makes, so a film may show it.
 
 ### 1.3 Colour psychology: the third layer
@@ -170,7 +170,7 @@ Owner rule: typology, a text-authorized reading from literal to literal, is fine
 
 - A doctrine named for each curtain thread (Ex 26:1). Draw the threads; don't decode them.
 - An altar or a slain lamb at Gen 3:21. The text says God made coats of skins, and no more.
-- A cast member's hue as a spiritual type. Max's sage is not "less saved" than Clara's teal.
+- A cast member's hue as a spiritual type. Max's sage is not "less saved" than Clara's violet.
 - A garment changing hue to show growth. The robe given is the only garment change that means a change of standing, and it is shown given (Zech 3:4), never grown.
 - Gold on a believer to show faith, or a glow the text does not give.
 - A cast scene darkened to say someone is lost.
@@ -179,7 +179,7 @@ Owner rule: typology, a text-authorized reading from literal to literal, is fine
 
 **Answered (owner, 2026-10-13: "lets go with your recs"):** every question below is settled as recommended.
 
-- **OWNER QUESTION 1. Teal.** Retire "teal = sin" as a hue meaning: scarlet is sin's mark and a cold, desaturated light is sin's state, so teal stays free for the landing's day and Clara's slot. Why: CRAFT 11 already makes teal the most saturated, most hopeful act, and a hue that means both hope and sin teaches nothing.
+- **OWNER QUESTION 1. Teal.** Retire "teal = sin" as a hue meaning: scarlet is sin's mark and a cold, desaturated light is sin's state, so teal stays free for the landing's day and the series lead's robe. Why: CRAFT 11 already makes teal the most saturated, most hopeful act, and a hue that means both hope and sin teaches nothing.
 - **OWNER QUESTION 2. Cloth crimson.** Add one muted swatch for scarlet cloth the text names that is neither sin nor blood: proposed `#8d4a52` (353° .48 .55, the band's crimson end), never glowing, never on the cast. Why: Prov 31:21, Dan 5:29 and Ex 26:1 name scarlet cloth, and drawing them in the accent would put sin's colour on the woman of strength, on Daniel and on the veil. The alternative draws them in the accent and lets context explain.
 
 ---
@@ -520,8 +520,8 @@ Who they are and where they are seen: [ensemble.md](../../../../apps/animations/
 
 - **Age and height:** 38; 0.92, slender.
 - **Silhouette:** the long plait over the near shoulder. Front and side: the plait's line down to her waist. Three-quarter: the plait crossing the body. Back: the plait down the back (the rig swaps it to the back view).
-- **Garments:** long dress, teal `#6f9e95` / `#51767d` / `#8fbdac` (identity only).
-- **Why teal:** calm and clear; a near neighbour of Mila's mint, so mother and baby read as one shape. Teal means nothing here: sin's state is a light, not a hue (1.2, OWNER QUESTION 1).
+- **Garments:** long dress, violet `#695980` / `#403d5e` / `#8f789e` (identity only).
+- **Why violet:** the series lead owns teal (owner, 2026-10-23, ask a4f75680c68: "Move the recurring mother off teal"), and no other figure of the house wears violet: 86° from the lead's teal `#658786`, 64° from the dusty blue of In Its Order's mother at the cup, and darker than both. Against Mila's mint, the lightest garment, mother and baby read as one shape in two values.
 - **Hands:** a cup, a book open on the table, Mila on her hip (one hand circle under the baby). Habit: she tilts her head and waits.
 - **Key expressions:** listening (head tilt, still); the quiet joke (one side of the mouth); anxious (shoulders up, hand to her chest); settled; teaching.
 - **Motion:** unhurried, economical; she pauses before she answers.
@@ -560,7 +560,7 @@ Who they are and where they are seen: [ensemble.md](../../../../apps/animations/
 - **Age and height:** about 18 months; 0.40.
 - **Silhouette:** one curl on top of a round head; round body.
 - **Garments:** mint `#abdbbb` / `#88baab` / `#c7f2ce` (identity only), the lightest garment.
-- **Why mint:** the lightest and youngest; a neighbour of Clara's teal, so on her hip they read as one.
+- **Why mint:** the lightest and youngest; light against Clara's dark violet, so on her hip they read as one shape in two values.
 - **Hands:** both circles up, reaching. A cup.
 - **Key expressions:** sunny; reaching; wobbly first steps; sleepy.
 - **Motion:** a little bounce; unsteady steps with a parent's hands under her (Hos 11:3).
@@ -655,7 +655,7 @@ The owner: "for minor characters just pick what makes sense". These are the pick
 | Who              | Text                         | Age, height (Hugo = 1.0) | Silhouette hook                                                      | Base / shade / light                                                                                      | Why                                                                                                                                                                                                       |
 | ---------------- | ---------------------------- | ------------------------ | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | The neighbour    | Luke 10:36–37                | 62, 0.90                 | broad and short-legged; a flat cap and a cardigan; a covered dish    | moss `#646b54` / `#3d4a36` / `#868a74` (79° .22 .42)                                                      | Earthy, dark and steady: help with no sermon. Darker than both Leo's khaki and Max's sage, so he reads as neither. The flat cap is a shape no cast member has.                                            |
-| The teacher      | Luke 6:40                    | 44, 0.95                 | tall and straight; a short bob; a long cardigan; a book to her chest | pale blue-green `#9bc1c7` / `#7990a6` / `#c1e6e4` (188° .22 .78)                                          | Light and cool reads calm and clear. Lighter than Clara's teal and Hugo's steel on either side. She is the classroom's face (education 21–22) and judged by her method, not her building.                 |
+| The teacher      | Luke 6:40                    | 44, 0.95                 | tall and straight; a short bob; a long cardigan; a book to her chest | pale blue-green `#9bc1c7` / `#7990a6` / `#c1e6e4` (188° .22 .78)                                          | Light and cool reads calm and clear. Lighter than the series lead's teal and Hugo's steel on either side. She is the classroom's face (education 21–22) and judged by her method, not her building.       |
 | The shopkeeper   | Prov 11:1; 16:11             | 54, 0.90                 | stout; a long apron (a trapezoid); a paper cap; a balance            | shirt green `#5b755b` / `#3d5445` / `#80947c` (120° .22 .46); apron oat `#ccbba3` / `#8d89a3` / `#ebe2ca` | The green of produce. A dark shirt under a light apron is a two-value block that reads at quarter size. "A just weight is his delight": the balance is his prop.                                          |
 | The elder        | Lev 19:32; Prov 16:31; 20:29 | 80, 0.85                 | stooped and slight; a cane; a ring of pale hair round a bald crown   | dusky violet `#595266` / `#343445` / `#7c7285` (263° .20 .40)                                             | Quiet dignity, "the beauty of old men is the gray head". A man, so he never competes with Rosa, the cast's elder. Far darker than Amara and Nina on either side of his hue. Honoured, never a joke.       |
 | The child friend | Matt 18:3; Mark 10:14        | 8, 0.64                  | a round knit hat with a pompom; a big backpack                       | light blue `#a3aed1` / `#8080b0` / `#c9d9f0` (226° .22 .82)                                               | Nina's friend. A clear light blue 56° from Nina's lavender, so two small girls read as two at quarter size. The pompom and the backpack hump are shapes no cast child has.                                |

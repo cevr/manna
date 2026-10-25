@@ -27,7 +27,7 @@ import { ContentStore } from './content-store.ts';
 import { FileInvalid } from './errors.ts';
 import { ManifestLock } from './manifest-lock.ts';
 import { ProductionStore } from './production-store.ts';
-import { memoryFileSystem, memoryManifestLock } from './testing.ts';
+import { memoryFileSystem, memoryManifestLock } from './host/testing.ts';
 
 const HOUR = 3_600_000;
 

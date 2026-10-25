@@ -2,14 +2,15 @@
 // player page imports; no environment variable can point the tools elsewhere.
 
 import { describe, expect, it } from 'effect-bun-test';
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { ConfigProvider, Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
 import { BoardFileJson, BoardName } from '../core/board.ts';
 import { BoardStore } from './board-store.ts';
 import { ContentStore } from './content-store.ts';
 import { Segment } from '../core/segment.ts';
 import { FilmFolder, FilmName, FilmRepo, placeFilm } from './film-repo.ts';
-import { memoryFileSystem, storeLayer, testFilm, text } from './testing.ts';
+import { testFilm } from './film-repo/testing.ts';
+import { memoryFileSystem, storeLayer, text } from './host/testing.ts';
 
 const files = new Map<string, Uint8Array>();
 const env = ConfigProvider.layer(ConfigProvider.fromUnknown({ FILMS_DIR: '/elsewhere' }));

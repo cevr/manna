@@ -3,7 +3,7 @@
 // TypeScript say it through the two (`film/one-breakpoint` refuses a width
 // written out there); the stylesheets that cannot are held to it here.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem } from 'effect';
 import { COMMAND_CSS } from './command/style.ts';

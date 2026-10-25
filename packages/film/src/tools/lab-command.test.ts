@@ -18,7 +18,7 @@ import {
   Schema,
   Stdio,
 } from 'effect';
-import { BunTerminal } from '@effect/platform-bun';
+import * as BunTerminal from '@effect/platform-bun/BunTerminal';
 import { Tool } from 'effect/ai';
 import { Command } from 'effect/cli';
 import { labSubcommands } from './events-cli.ts';
@@ -27,7 +27,10 @@ import { labCommand } from './lab-command.ts';
 import { allCommands, hereCommands, inLabCommands } from './lab-commands.ts';
 import { LabRefused } from './lab-mcp-parts.ts';
 import { RenderCatalogue } from './catalogue.ts';
-import { formatAsIs, labInMemory, labWithMcp, mcpSession, printingTo } from './testing.ts';
+import { formatAsIs } from './film-services/testing.ts';
+import { printingTo } from './host/testing.ts';
+import { labInMemory } from './lab/testing.ts';
+import { labWithMcp, mcpSession } from './lab-mcp/testing.ts';
 
 /** A command over a word, a count, a switch, a list and a record. */
 const Sample = Tool.make('sample', {

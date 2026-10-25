@@ -3,7 +3,7 @@
 // `::marker` and a modal's `::backdrop`. A field with no rule of its own
 // draws the tokens' placeholder colour; a rule that sets another is named.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, FileSystem } from 'effect';
 import { describe, it } from 'effect-bun-test';
 import { openTab, respond, servePaths } from '../../../src/lab/fixtures/browsers.ts';

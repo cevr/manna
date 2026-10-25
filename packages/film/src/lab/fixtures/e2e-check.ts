@@ -18,7 +18,8 @@
 // never finished or failed naming nothing), else 0.
 
 import { availableParallelism, loadavg } from 'node:os';
-import { BunRuntime, BunServices } from '@effect/platform-bun';
+import * as BunRuntime from '@effect/platform-bun/BunRuntime';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import {
   Array as Arr,
   Clock,

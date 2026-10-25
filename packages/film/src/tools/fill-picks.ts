@@ -6,7 +6,8 @@
 // as it does for the `film` CLI (`runFilmCli`); FILMS_PRODUCTIONS and
 // FILMS_LAB, when set, win.
 
-import { BunRuntime, BunServices } from '@effect/platform-bun';
+import * as BunRuntime from '@effect/platform-bun/BunRuntime';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { ConfigProvider, Console, Effect, Layer, Match } from 'effect';
 import { type PicksFound, fillPicks } from './ask-store.ts';
 import { ContentStore } from './content-store.ts';

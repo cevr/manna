@@ -3,14 +3,16 @@
 /**
  * The app's tests run its screens under Bun, rendered to HTML as the web
  * build renders them, or mounted in a browser's document (happy-dom) where a
- * test presses and types. Four boundaries stand in, as the bundler and the
+ * test presses and types. Five boundaries stand in, as the bundler and the
  * router would provide them:
  * - `react-native` is react-native-web, as on the web;
  * - `virtual:hymnal` is the same words the bundler plugin derives (`vite/words.ts`),
  *   `virtual:hymnal-chords` the same chords (`vite/chords.ts`), and
  *   `virtual:hymnal-timing` the same timing (`vite/timing.ts`);
  * - `one` is `src/test/one.tsx`: a link opens its href in the app, a screen's options are dropped;
- * - `react-native-gesture-handler` is `src/test/gesture.tsx`: a test plays a gesture's touch.
+ * - `react-native-gesture-handler` is `src/test/gesture.tsx`: a test plays a gesture's touch;
+ * - `react-native-reanimated` and `react-native-worklets` are `src/test/reanimated.tsx`:
+ *   an animation lands at once, and a worklet runs on the JavaScript thread.
  */
 
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
@@ -43,6 +45,15 @@ plugin({
     const gesture = Bun.resolveSync('./gesture.tsx', import.meta.dir);
     build.module('react-native-gesture-handler', () => ({
       contents: `export * from ${JSON.stringify(gesture)};`,
+      loader: 'js',
+    }));
+    const reanimated = Bun.resolveSync('./reanimated.tsx', import.meta.dir);
+    build.module('react-native-reanimated', () => ({
+      contents: `export * from ${JSON.stringify(reanimated)}; export { default } from ${JSON.stringify(reanimated)};`,
+      loader: 'js',
+    }));
+    build.module('react-native-worklets', () => ({
+      contents: `export { scheduleOnRN, runOnJS } from ${JSON.stringify(reanimated)};`,
       loader: 'js',
     }));
     build.module('virtual:hymnal', () => ({

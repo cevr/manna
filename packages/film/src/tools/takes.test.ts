@@ -11,17 +11,10 @@ import { ContentStore } from './content-store.ts';
 import type { LoadedFilm } from './film-repo.ts';
 import { contentHash, putAwayTake, voicedOf } from './narrator.ts';
 import { type ImportOptions, Takes } from './takes.ts';
-import {
-  type ElevenLabsCalls,
-  emptyCalls,
-  fakeElevenLabs,
-  fakeMedia,
-  memoryFileSystem,
-  storeLayer,
-  testFilm,
-  testVoice,
-  text,
-} from './testing.ts';
+import { type ElevenLabsCalls, emptyCalls, fakeElevenLabs } from './elevenlabs/testing.ts';
+import { testFilm, testVoice } from './film-repo/testing.ts';
+import { memoryFileSystem, storeLayer, text } from './host/testing.ts';
+import { fakeMedia } from './media/testing.ts';
 
 const scenes: ReadonlyArray<Timed> = [
   { id: 'a', say: 'Hello {wave} world.' },

@@ -1,6 +1,6 @@
 // `film/no-test-seam`: product code never imports a test seam. A package's
 // test-only doubles and fixtures live in its `testing.ts` (`core/testing.ts`,
-// `tools/testing.ts`, `@bible/url-state/testing`, `@bible/core/<area>/testing`),
+// `tools/<area>/testing.ts`, `@bible/url-state/testing`, `@bible/core/<area>/testing`),
 // so a shipped import cannot reach them. The dead-export check counts a seam
 // as test code, so a product import of one is a take it does not see.
 //

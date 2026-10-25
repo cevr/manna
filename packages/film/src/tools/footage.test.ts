@@ -31,17 +31,9 @@ import { ContentStore } from './content-store.ts';
 import { ElevenLabs } from './elevenlabs.ts';
 import { FootageHdr, FootageNameTaken, FootageOriginalMissing, FootageSilent } from './errors.ts';
 import { FootageLibrary } from './footage.ts';
-import {
-  type ElevenLabsCalls,
-  emptyCalls,
-  fakeElevenLabs,
-  fakeFootageMedia,
-  fakeMedia,
-  memoryFileSystem,
-  memoryLocks,
-  privateFolder,
-  text,
-} from './testing.ts';
+import { type ElevenLabsCalls, emptyCalls, fakeElevenLabs } from './elevenlabs/testing.ts';
+import { memoryFileSystem, memoryLocks, privateFolder, text } from './host/testing.ts';
+import { fakeFootageMedia, fakeMedia } from './media/testing.ts';
 
 const DIR = '/app/footage';
 const OUT = '/app/out';

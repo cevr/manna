@@ -2,7 +2,7 @@
 // and on disk, and answers it by range; and the lock, and a transcript it
 // names, for a talk's page: on a library and outputs folder made here.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
 import {

@@ -13,7 +13,7 @@
 // studio's states in `studio-states.ts`); the replaced pages' redirects are
 // the lab server's (`servedPlace`, `tools/lab-page.slow.test.ts`).
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { Boolean as Bool, Effect, FileSystem, Match, Option, Path } from 'effect';
 import { Base64 } from 'effect/encoding';
 import { describe, expect, it } from 'effect-bun-test';

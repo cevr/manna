@@ -8,7 +8,8 @@
 // (`bun src/tools/figure-golden-fixture.ts`, then `bun run fmt`) and its diff shows
 // each number moved.
 
-import { BunRuntime, BunServices } from '@effect/platform-bun';
+import * as BunRuntime from '@effect/platform-bun/BunRuntime';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { Console, Effect, Equal, FileSystem, Option, Result, Schema } from 'effect';
 import { FigureMeasure, type FigureRead, measureFigure, readFigure } from '../core/figure.ts';
 import { drawFigure, type FigureSpec, PLAIN } from '../core/fixtures/figure.ts';

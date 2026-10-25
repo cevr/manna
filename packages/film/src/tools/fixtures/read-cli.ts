@@ -3,7 +3,8 @@
 // test reads a film the way the lab does, in a process that imports the
 // film's files as they stand.
 
-import { BunRuntime, BunServices } from '@effect/platform-bun';
+import * as BunRuntime from '@effect/platform-bun/BunRuntime';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, Layer, Stdio } from 'effect';
 import { Command } from 'effect/cli';
 import { ContentStore } from '../content-store.ts';

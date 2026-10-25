@@ -25,23 +25,16 @@ import {
   Result,
   Schema,
 } from 'effect';
-import { BunHttpServer } from '@effect/platform-bun';
+import * as BunHttpServer from '@effect/platform-bun/BunHttpServer';
 import { Base64 } from 'effect/encoding';
 import { HttpServer, HttpServerRequest, HttpServerResponse } from 'effect/http';
 import { TestClock } from 'effect/testing';
 import { labUrls } from '../core/api.ts';
 import { LAB_EVENTS } from '../core/lab-events.ts';
 import { RenderCatalogue } from './catalogue.ts';
-import {
-  type LabFetch,
-  MCP_BASE,
-  NOTES_LAB,
-  labInMemory,
-  labWithMcp,
-  mcpBound,
-  mcpPost,
-  text,
-} from './testing.ts';
+import { text } from './host/testing.ts';
+import { NOTES_LAB, labInMemory } from './lab/testing.ts';
+import { type LabFetch, MCP_BASE, labWithMcp, mcpBound, mcpPost } from './lab-mcp/testing.ts';
 
 /** A secret of 32 bytes, as a subscriber makes one. */
 const SECRET = `whsec_${Base64.encode(new Uint8Array(32).fill(7))}`;

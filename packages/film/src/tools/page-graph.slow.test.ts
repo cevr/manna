@@ -7,7 +7,8 @@
 // the render page's module (an entry that re-exports it beside what the films
 // import) downloads the encoder on every load, a phone's too.
 
-import { BunHttpPlatform, BunServices } from '@effect/platform-bun';
+import * as BunHttpPlatform from '@effect/platform-bun/BunHttpPlatform';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Context, Effect, FileSystem, Layer } from 'effect';
 import { HttpServerRequest, HttpServerResponse } from 'effect/http';

@@ -21,11 +21,10 @@ import {
   emptyLedger,
   fakeRenderHost,
   fakeRenderMedia,
-  memoryFileSystem,
   testExportInfo,
-  testFilm,
-  text,
-} from './testing.ts';
+} from './browser/testing.ts';
+import { testFilm } from './film-repo/testing.ts';
+import { memoryFileSystem, text } from './host/testing.ts';
 
 const film = testFilm([{ id: 'a', min: 20 }], { voice: '', scenes: {} });
 

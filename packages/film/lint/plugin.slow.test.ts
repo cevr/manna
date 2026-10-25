@@ -6,7 +6,7 @@
 // test. drawing-literal has its fixture here too, and the lab locator it runs
 // (`unlocatable`) is tested on source in src/tools/scene-source.test.ts.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Path, Stream } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';

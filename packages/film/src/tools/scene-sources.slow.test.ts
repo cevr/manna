@@ -4,7 +4,7 @@
 // builds in code is not located, and a scene with nothing to edit is skipped.
 // The lab locates in a fresh process, so a scene added while it runs is found.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Context, Effect, FileSystem, Layer, Path } from 'effect';
 import { ContentStore } from './content-store.ts';
@@ -12,7 +12,7 @@ import { FilmFolder, FilmRepo } from './film-repo.ts';
 import { FreshFilm } from './fresh-film.ts';
 import { scenesLocatedHere } from './read-cli.ts';
 import { SceneSources } from './scene-sources.ts';
-import { sceneFixture } from './testing.ts';
+import { sceneFixture } from './scene-sources/testing.ts';
 
 /** The fixture film's folder: a fresh one per test. */
 class Films extends Context.Service<Films, string>()('test/Films') {}

@@ -4,7 +4,7 @@
 // opened it; Chrome lives as long as the process. A call names one of the
 // handle's calls (`ExportCalls`, core/export-handle.ts), its answer is
 // decoded by that call's schema, and its failure is that call's own error
-// (`CALLS`). The tab and the test fake (tools/testing.ts) are the two ways a
+// (`CALLS`). The tab and the test fake (tools/browser/testing.ts) are the two ways a
 // call reaches a page (`Invoke`). Everything the film does wrong in a page
 // arrives as a typed failure: an uncaught error (`Runtime.exceptionThrown`)
 // is `PageError`, a dead renderer process is `PageCrashed`.

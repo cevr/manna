@@ -70,7 +70,9 @@
 //
 // What a sentence claims about the code stays with the sweep's reading.
 
-import { BunFileSystem, BunPath, BunServices } from '@effect/platform-bun';
+import * as BunFileSystem from '@effect/platform-bun/BunFileSystem';
+import * as BunPath from '@effect/platform-bun/BunPath';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Layer, Option, Path, Predicate, Schema } from 'effect';
 import type { PlatformError } from 'effect/PlatformError';

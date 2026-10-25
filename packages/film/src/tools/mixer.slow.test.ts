@@ -44,14 +44,9 @@ import { Media } from './media.ts';
 import { MasterStampJson, Mixer, planKey, planOf, stampManifest } from './mixer.ts';
 import { NO_SCORES } from './media-store.ts';
 import { SoundRender } from './sound-render.ts';
-import {
-  memoryFileSystem,
-  memoryLocks,
-  noRecording,
-  testFilm,
-  testVoice,
-  text,
-} from './testing.ts';
+import { testFilm, testVoice } from './film-repo/testing.ts';
+import { memoryFileSystem, memoryLocks, text } from './host/testing.ts';
+import { noRecording } from './media/testing.ts';
 
 const scenes: ReadonlyArray<Timed> = [{ id: 'a', say: 'Hello.', min: 5 }];
 const timings: Timings = {

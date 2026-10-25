@@ -84,6 +84,7 @@ const beatsOf = Effect.fn('Board.beats')(function* (name: FilmName) {
               id,
               say: Option.fromUndefinedOr(b.say),
               picture: Option.fromUndefinedOr(b.picture),
+              cast: b.cast ?? [],
             }),
         }),
       ),

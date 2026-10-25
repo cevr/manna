@@ -56,6 +56,7 @@ import {
 import { resolveCode } from '../core/synth/resolve.ts';
 import { StoreConfig } from '../core/store.ts';
 import {
+  Beat,
   HeardAs,
   Look,
   Looks,
@@ -250,6 +251,8 @@ const ScriptModule = Schema.Struct({
       cite: Schema.Array(Schema.String).pipe(Schema.withDecodingDefaultKey(Effect.succeed([]))),
       /** What the picture does (the judge quotes it, `tools/judge.ts`). */
       picture: Schema.optionalKey(Schema.String),
+      /** The cast members the picture draws (`Beat`'s `cast`): the board's library references. */
+      cast: Beat.fields.cast,
     }),
   ),
   heardAs: HeardAs.pipe(Schema.withDecodingDefaultKey(Effect.succeed({}))),

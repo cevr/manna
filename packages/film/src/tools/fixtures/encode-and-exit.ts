@@ -3,7 +3,7 @@
 // in its own process, since a worker that never hears its messages, or never
 // closes, holds a process open rather than failing a test.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { Console, Effect, Layer } from 'effect';
 import { Media } from '../media.ts';
 

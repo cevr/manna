@@ -38,7 +38,7 @@ import {
   Stream,
   SubscriptionRef,
 } from 'effect';
-import { BunTerminal } from '@effect/platform-bun';
+import * as BunTerminal from '@effect/platform-bun/BunTerminal';
 import { Command } from 'effect/cli';
 import {
   FetchHttpClient,
@@ -66,22 +66,19 @@ import { channel } from './lab-channel.ts';
 import { labClient } from './lab-client.ts';
 import { Changes } from './lab-commands.ts';
 import { Review } from './review.ts';
+import { echoPages, formatAsIs, noStudio } from './film-services/testing.ts';
+import { printingTo, text } from './host/testing.ts';
+import { labInMemory } from './lab/testing.ts';
 import {
   type LabFetch,
   MCP_BASE,
   MCP_PHONE,
-  echoPages,
-  formatAsIs,
-  labInMemory,
   labWithMcp,
   mcpBound,
   mcpPost,
   mcpSession,
-  noStudio,
-  printingTo,
-  reviewMedia,
-  text,
-} from './testing.ts';
+} from './lab-mcp/testing.ts';
+import { reviewMedia } from './media/testing.ts';
 
 const STRANGER = 'x.example.net';
 

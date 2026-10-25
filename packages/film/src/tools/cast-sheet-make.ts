@@ -37,6 +37,7 @@ import {
   CastSheetJson,
   type CastSheetRecord,
   type CastTry,
+  beardShows,
   hairShows,
   nextCastTry,
   withCastTry,
@@ -436,6 +437,7 @@ const requestOf = (ctx: TryContext, drifts: ReadonlyArray<string>, underlay: boo
         heads: grownHeadsOf(ctx.options),
         figures: ctx.options.figures ?? [],
         hair: hairShows(ctx.record),
+        beard: beardShows(ctx.record),
       }),
     );
     const prompt = [

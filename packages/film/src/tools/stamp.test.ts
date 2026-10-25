@@ -2,33 +2,66 @@
 // what that imports, the film's frame, and the scene it enters from; an edit
 // to another scene's module leaves it alone.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { expect as expectPlain, test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
-import { Context, Effect, FileSystem, Layer, Option, Path, Result } from 'effect';
+import { Context, Effect, FileSystem, Layer, Option, Path, Result, Sink, Stream } from 'effect';
+import { ChildProcessSpawner } from 'effect/process';
 import { layout } from '../core/layout.ts';
 import { ContentStore } from './content-store.ts';
 import { FilmRepo } from './film-repo.ts';
 import { scenesLocatedHere } from './read-cli.ts';
 import { type Keyed, Stamps, importsOf, stampOf } from './stamp.ts';
-import { sceneFixture } from './testing.ts';
+import { sceneFixture } from './scene-sources/testing.ts';
 import { resolveAddress } from '../core/address.ts';
 
 /** The fixture film's folder: a fresh one per test. */
 class Films extends Context.Service<Films, string>()('test/Films') {}
 
-const fixture = Layer.unwrap(
-  Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
-    const films = yield* sceneFixture(yield* fs.makeTempDirectoryScoped());
-    return Stamps.layer.pipe(
-      Layer.provideMerge(scenesLocatedHere),
-      Layer.provide(FilmRepo.layer(films)),
-      Layer.provide(ContentStore.layer),
-      Layer.merge(Layer.succeed(Films, films)),
-    );
-  }),
-).pipe(Layer.provideMerge(BunServices.layer));
+/** The fixture film's Stamps, asking `git` for the commit through `spawner`. */
+const fixtureOver = <E, R>(spawner: Layer.Layer<never, E, R>) =>
+  Layer.unwrap(
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const films = yield* sceneFixture(yield* fs.makeTempDirectoryScoped());
+      return Stamps.layer.pipe(
+        Layer.provide(spawner),
+        Layer.provideMerge(scenesLocatedHere),
+        Layer.provide(FilmRepo.layer(films)),
+        Layer.provide(ContentStore.layer),
+        Layer.merge(Layer.succeed(Films, films)),
+      );
+    }),
+  ).pipe(Layer.provideMerge(BunServices.layer));
+
+/**
+ * `git` as it answers outside a checkout (exit 128, no commit), with no
+ * process: the keys' cases read the keys, and the commit case asks real git.
+ */
+const outsideACheckout = Layer.succeed(
+  ChildProcessSpawner.ChildProcessSpawner,
+  ChildProcessSpawner.make(() =>
+    Effect.succeed(
+      ChildProcessSpawner.makeHandle({
+        pid: ChildProcessSpawner.ProcessId(0),
+        exitCode: Effect.succeed(ChildProcessSpawner.ExitCode(128)),
+        isRunning: Effect.succeed(false),
+        kill: () => Effect.void,
+        stdin: Sink.drain,
+        stdout: Stream.empty,
+        stderr: Stream.empty,
+        all: Stream.empty,
+        getInputFd: () => Sink.drain,
+        getOutputFd: () => Stream.empty,
+        unref: Effect.succeed(Effect.void),
+      }),
+    ),
+  ),
+);
+
+const fixture = fixtureOver(outsideACheckout);
+/** The fixture's Stamps over the real `git`, run in the fixture's folder. */
+const gitFixture = fixtureOver(Layer.empty);
 
 // The registry's scenes in order; `plain` enters on a transition from `built`, `beta` on a cut.
 const placed = Result.getOrThrow(
@@ -69,7 +102,7 @@ const touch = (name: string) =>
 const changed = (before: Record<string, string>, after: Record<string, string>) =>
   Object.keys(before).filter((id) => before[id] !== after[id]);
 
-describe('scene keys', () => {
+describe.concurrent('scene keys', () => {
   it.effect("an edit to one scene's module changes its key alone", () =>
     Effect.gen(function* () {
       const before = yield* keysNow;
@@ -148,7 +181,7 @@ describe('scene keys', () => {
       const wedged = stampOf(keys, scope, { style: 'ps1', ground: 'light' }).key;
       expect(wedged).not.toEqual(stamp.key);
       expect(stampOf(keys, scope, { ground: 'light', style: 'ps1' }).key).toEqual(wedged);
-    }).pipe(Effect.provide(fixture)),
+    }).pipe(Effect.provide(gitFixture)),
   );
 });
 
@@ -187,7 +220,7 @@ const counting = Layer.unwrap(
   Layer.provideMerge(BunServices.layer),
 );
 
-describe('the stamp’s reads', () => {
+describe.concurrent('the stamp’s reads', () => {
   it.effect('read, hash and parse each file once per call, however many scenes import it', () =>
     Effect.gen(function* () {
       yield* keysNow;
@@ -198,7 +231,7 @@ describe('the stamp’s reads', () => {
   );
 });
 
-describe('importsOf', () => {
+describe.concurrent('importsOf', () => {
   test('lists imports and re-exports, each once', () => {
     const source = `import { a } from './a.ts';
 import type { B } from '@bible/film/core';

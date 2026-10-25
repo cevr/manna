@@ -66,15 +66,8 @@ import {
   requestKey,
 } from '../core/sfx.ts';
 import { measuredSounds } from '../core/testing.ts';
-import {
-  holdScenes,
-  holdTimings,
-  inkMark,
-  spokenTake,
-  testFilm,
-  testVoice,
-  textBox,
-} from './testing.ts';
+import { inkMark, textBox } from './browser/testing.ts';
+import { holdScenes, holdTimings, spokenTake, testFilm, testVoice } from './film-repo/testing.ts';
 
 const frame = { width: 1920, height: 1080 };
 const noTakes: Timings = { voice: '', scenes: {} };

@@ -5,7 +5,7 @@
 // a mark's chip that seeks in the page's face, not the code's
 // (`docs/lessons.md`, `code-chip-font-under-button-reset`).
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem } from 'effect';
 import { COMMAND_CSS } from './command/style.ts';

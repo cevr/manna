@@ -3,7 +3,7 @@
 // on stdout (a refusal as itself) and a failed run, whichever subcommand asks.
 // A verb it does not know is the command line's refusal, before any film is read.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Cause,
@@ -23,7 +23,7 @@ import { FilmUnknown } from '../core/refusals.ts';
 import { options } from './choices-cli.ts';
 import { ElevenLabs } from './elevenlabs.ts';
 import { filmServices } from './film-services.ts';
-import { privateFolder } from './testing.ts';
+import { privateFolder } from './host/testing.ts';
 
 /** The console a run prints to: each line it logs, offered to `lines`. */
 const printingTo = (lines: Queue.Queue<string>): Console.Console => ({
@@ -78,7 +78,7 @@ const cli = (...args: ReadonlyArray<string>) =>
 
 const parsed = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Unknown));
 
-describe('film options', () => {
+describe.concurrent('film options', () => {
   for (const args of [
     ['list', 'f-typo'],
     ['list', 'f-typo', '--check'],

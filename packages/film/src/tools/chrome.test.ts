@@ -5,7 +5,7 @@
 // own command line by the browser tests (`e2e/lab/fixtures/browsers.dom.test.ts`).
 // No Chromium.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem } from 'effect';
 import { profileFolder } from './chrome-profile.ts';
@@ -26,6 +26,7 @@ describe('the Chrome a tool or test spawns', () => {
             files.filter((file) => /\.tsx?$/.test(file)).map((file) => `${folder}/${file}`),
             (file) =>
               Effect.map(fs.readFileString(`${PACKAGE}/${file}`), (text) => SPAWNS.test(text)),
+            { concurrency: 32 },
           ),
         ),
       );

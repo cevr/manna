@@ -10,7 +10,7 @@ import { Effect, Result, Schema } from 'effect';
 import type { LumaArea } from '../core/export-handle.ts';
 import { CallRefused, type Invoke, framePage, launchArgs, lumaGrid } from './browser.ts';
 import { EncodeFailed, FrameFailed } from './errors.ts';
-import { testExportInfo } from './testing.ts';
+import { testExportInfo } from './browser/testing.ts';
 
 /** A page whose every call hands back `answer`, or is refused with `refused`. */
 const pageAnswering = (answer: Effect.Effect<unknown, CallRefused>) => {

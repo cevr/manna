@@ -1,8 +1,9 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { Effect, FileSystem, Schema } from 'effect';
+import { Effect } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
-import { type Hymn, Hymn as HymnSchema, type Order, type Part, sung } from './hymn.js';
+import { compiled } from './compiled-fixture.js';
+import { type Hymn, type Order, type Part, sung } from './hymn.js';
 import { type Clock, type Laying, secondsAt, timingOf } from './timing.js';
 
 const fit = { notes: 2, syllables: 2, melismas: 0, shared: { inWord: 0, acrossWords: 0 }, cost: 0 };
@@ -279,9 +280,6 @@ describe('secondsAt', () => {
   );
 });
 
-const FOLDER = new URL('../data/sdah-1985/', import.meta.url).pathname;
-const decodeHymn = Schema.decodeUnknownEffect(Schema.fromJsonString(HymnSchema));
-
 /** Why a committed hymn's timing breaks the rules, or nothing. */
 const faults = (hymn: Hymn): string[] => {
   const timing = hymn.timing;
@@ -327,14 +325,8 @@ const faults = (hymn: Hymn): string[] => {
 describe('the committed timing', () => {
   it.effect('times every sung line of every hymn by the rules', () =>
     Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const names = (yield* fs.readDirectory(FOLDER)).filter((name) => /^\d{3}\.json$/.test(name));
-      expect(names).toHaveLength(695);
-      const hymns = yield* Effect.forEach(
-        names,
-        (name) => fs.readFileString(`${FOLDER}${name}`).pipe(Effect.flatMap(decodeHymn)),
-        { concurrency: 16 },
-      );
+      const hymns = yield* compiled;
+      expect(hymns).toHaveLength(695);
       const found = hymns.flatMap((hymn) =>
         faults(hymn).map((fault) => `${hymn.number}: ${fault}`),
       );

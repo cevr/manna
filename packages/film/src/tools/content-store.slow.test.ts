@@ -2,7 +2,7 @@
 // one writer holding a manifest's lock at a time; a writer that dies lets it
 // go at once; and a current hash skips the work.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Array as Arr,
@@ -25,7 +25,7 @@ import { type SoundManifest, SoundManifestJson } from '../core/schema.ts';
 import { ContentStore, type Manifest } from './content-store.ts';
 import { ManifestLock, type ManifestLockService } from './manifest-lock.ts';
 import { bunManifestLock, lockFile } from './manifest-lock-bun.ts';
-import { memoryFileSystem, memoryManifestLock, storeLayer } from './testing.ts';
+import { memoryFileSystem, memoryManifestLock, storeLayer } from './host/testing.ts';
 
 const manifest: Manifest<SoundManifest> = {
   file: '/films/test/sound/manifest.json',

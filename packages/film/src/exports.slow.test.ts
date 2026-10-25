@@ -20,7 +20,8 @@
 //   stand-in  the framework's tests, and `check --draw`'s leg
 //             (tools/draw-check.ts), which draws every scene into it
 //   core      films, their kits, the app's sound library and the framework's
-//             tests: the clock, the script and sound schemas, the mix plan
+//             tests: the clock, the script and sound schemas, the mix plan,
+//             a cast record and its library reference (`castLock`)
 //   style     films' scenes, sets and rigs: the house look's acting, boil,
 //             key light and creases, the parts a figure is composed of,
 //             and the figures file a film lays and the house prints
@@ -31,7 +32,7 @@
 // tooling entries are read by the CLI, the app's build and the tests, and the
 // framework reads each core module by its path.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Array as Arr, Effect, FileSystem, Option, Path, Schema } from 'effect';
 import {

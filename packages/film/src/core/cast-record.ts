@@ -13,7 +13,8 @@
 // one (a child, a baby), that figure's share of the grown height as the
 // band gives it and its own heads; the brief, the underlay and the measure
 // read each figure's size from there. It says too whether the member's hair
-// shows, so a brief speaks of the hair only on a member whose hair is seen.
+// shows, so a brief speaks of the hair only on a member whose hair is seen,
+// and whether it has a beard, so a brief tells of a beard only on one who has it.
 // Pure.
 
 import { Array as Arr, Option, Predicate, Result, Schema } from 'effect';
@@ -126,6 +127,8 @@ export const CastSheetRecord = Schema.Struct({
   headgear: Schema.optionalKey(Schema.Boolean),
   /** Whether the member's hair shows: `covered` under a headcloth, `none` on a figure drawn with no hair; shown when left out. */
   hair: Schema.optionalKey(Schema.Literals(['shown', 'covered', 'none'])),
+  /** Whether the member has a beard: `shown` on a figure whose look draws one; none when left out, so a brief tells of a beard only where the record names it. */
+  beard: Schema.optionalKey(Schema.Literals(['shown', 'none'])),
   /** How many of its own heads the grown member stands: the cast's canon (3.36) when left out. */
   heads: Schema.optionalKey(Heads),
   refs: Schema.Array(CastRef),
@@ -224,6 +227,9 @@ export const castKindPlan = (
 
 /** Whether the member's hair shows: a brief speaks of the hair and its parting from the beard only then. */
 export const hairShows = (record: CastSheetRecord): boolean => (record.hair ?? 'shown') === 'shown';
+
+/** Whether the member has a beard: a brief parts the beard from the hair only then (and only where the hair shows). */
+export const beardShows = (record: CastSheetRecord): boolean => record.beard === 'shown';
 
 /** The number the kind's next try takes. */
 export const nextCastTry = (record: CastSheetRecord, kind: SheetKind): number =>

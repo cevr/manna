@@ -4,7 +4,7 @@
 // reference, and a retry that still drifts is kept, flagged, never dropped.
 // A kind the record does not set up stops the run before any draw.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { ConfigProvider, Effect, Exit, FileSystem, Layer, Path, Result, Schema } from 'effect';
 import { CastSheetJson, type CastSheetRecord } from '../core/cast-record.ts';
@@ -20,7 +20,7 @@ import { castLine, makeCastSheet } from './cast-sheet-make.ts';
 import { ContentStore } from './content-store.ts';
 import { ImageRoute } from './image-route.ts';
 import { decodePng, encodePng } from './png.ts';
-import { memoryFileSystem, memoryLocks, text } from './testing.ts';
+import { memoryFileSystem, memoryLocks, text } from './host/testing.ts';
 
 /** One image asked of the route. */
 type ImageRequest = Parameters<(typeof ImageRoute)['Service']['draw']>[0];
@@ -42,6 +42,7 @@ const record: CastSheetRecord = {
   member: Segment.make('christ'),
   scope: 'library',
   who: 'Him',
+  beard: 'shown',
   refs: [{ file: 'court-12.png', why: 'His kept concept' }],
   sheets: {
     poses: {

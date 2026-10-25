@@ -4,7 +4,7 @@
 // so Bun's kill reaches Chrome. Only macOS's renderer flags ask for it. No
 // Chromium.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Path } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';

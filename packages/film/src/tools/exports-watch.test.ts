@@ -17,7 +17,7 @@ import {
   watchExports,
   workspaceRoot,
 } from './exports-watch.ts';
-import { memoryFileSystem, text } from './testing.ts';
+import { memoryFileSystem, text } from './host/testing.ts';
 
 /** How often the test's watch reads. */
 const EVERY = '3 seconds';

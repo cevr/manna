@@ -240,7 +240,6 @@ packages/film/src/tools/look.ts heldShares
 packages/film/src/tools/look.ts smallFaces
 packages/film/src/tools/manifest-lock-bun.ts lockFile
 packages/film/src/tools/media-store.ts NO_SCORES
-packages/film/src/tools/media.ts JoinedFilm
 packages/film/src/tools/mixer.ts MasterStampJson
 packages/film/src/tools/mixer.ts planOf
 packages/film/src/tools/mixer.ts stampFile

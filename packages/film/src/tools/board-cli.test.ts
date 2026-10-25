@@ -2,7 +2,7 @@
 // a panel, and a `--keep` that names none of them is refused before the board
 // is touched (no panel, no try, no image left behind).
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Cause, ConfigProvider, Effect, Exit, Layer, Option, Path, Schema } from 'effect';
 import { Command } from 'effect/cli';
@@ -13,7 +13,7 @@ import { BoardRefused } from '../core/refusals.ts';
 import { ContentStore } from './content-store.ts';
 import { FilmFolder, FilmName, FilmRepo } from './film-repo.ts';
 import { NotesStore } from './notes-store.ts';
-import { memoryFileSystem, memoryLocks, text } from './testing.ts';
+import { memoryFileSystem, memoryLocks, text } from './host/testing.ts';
 
 const film = FilmName.make('f');
 

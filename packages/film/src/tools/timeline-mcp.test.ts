@@ -17,7 +17,10 @@ import type { FilmClock } from '../core/timeline-schema.ts';
 import { Segment } from '../core/segment.ts';
 import { RenderCatalogue } from './catalogue.ts';
 import { ProductionStore } from './production-store.ts';
-import { echoPages, freshFilm, labInMemory, labWithMcp, mcpSession, text } from './testing.ts';
+import { echoPages, freshFilm } from './film-services/testing.ts';
+import { text } from './host/testing.ts';
+import { labInMemory } from './lab/testing.ts';
+import { labWithMcp, mcpSession } from './lab-mcp/testing.ts';
 import { WORKING_HELD, Working } from './working.ts';
 
 /** Film `f`'s v1, kept in its folder (`v1/`): a voiced beat with a mark, its take staged, and a silent one. */

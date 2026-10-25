@@ -2,7 +2,7 @@
 // mid-write leaves the last good file; a file that does not decode is refused,
 // never overwritten; a wait reports each change past its cursor once.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   ConfigProvider,
@@ -21,7 +21,7 @@ import { ContentStore } from './content-store.ts';
 import { FilmName } from './film-repo.ts';
 import { ManifestLock } from './manifest-lock.ts';
 import { NotesStore } from './notes-store.ts';
-import { crashingFileSystem, memoryFileSystem, memoryManifestLock, text } from './testing.ts';
+import { crashingFileSystem, memoryFileSystem, memoryManifestLock, text } from './host/testing.ts';
 
 const film = FilmName.make('f');
 const draft = (text: string): NoteDraft => ({ scene: 'a', T: 1.5, frame: 45, text });

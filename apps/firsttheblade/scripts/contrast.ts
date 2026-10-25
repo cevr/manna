@@ -17,17 +17,15 @@
  * measured against a shot of that region alone (a changed pseudo-element, or
  * a page that grew or shrank, is measured whole). The pages are measured seven
  * at a time. Build first (`bun run build`); the run fails when any text falls
- * short. The gate runs it after the build.
+ * short. The site's `test:slow` runs it after the build.
  */
-import { BunHttpServer, BunRuntime, BunServices } from '@effect/platform-bun';
+import { BunRuntime } from '@effect/platform-bun';
 import { chromium, type Browser, type Page } from '@playwright/test';
-import { Array as Arr, Data, Effect, Layer, Option, Order } from 'effect';
-import { HttpServer, HttpServerRequest } from 'effect/http';
+import { Array as Arr, Data, Effect, Option, Order } from 'effect';
+import { HttpServer } from 'effect/http';
 
 import { PAGES } from '../src/pages.ts';
-import { layerPreview } from '../src/mail/local.ts';
-import { layerDirectory } from '../src/worker/assets.ts';
-import { respond } from '../src/worker/respond.ts';
+import { layerLocal } from '../src/worker/local.ts';
 
 const WIDTHS = [1440, 390] as const;
 /** The board measured under the pointer. */
@@ -489,16 +487,6 @@ const contrast = HttpServer.addressFormattedWith((base) =>
  * `dist/` through the Worker's policy, for as long as the measure runs, on a
  * port the system picks, so two workspaces can measure at once.
  */
-const app = Effect.gen(function* () {
-  const request = yield* HttpServerRequest.HttpServerRequest;
-  return yield* respond(request);
-});
-
-const Preview = HttpServer.serve(app).pipe(
-  Layer.provide(layerDirectory('dist')),
-  Layer.provide(layerPreview('tmp/outbox')),
-  Layer.provideMerge(BunHttpServer.layer({ port: 0, hostname: '127.0.0.1' })),
-  Layer.provide(BunServices.layer),
-);
+const Preview = layerLocal({ port: 0, hostname: '127.0.0.1' });
 
 contrast.pipe(Effect.provide(Preview), BunRuntime.runMain);

@@ -10,7 +10,7 @@
 // and its table, and names the figures it cannot match and why. Live clock:
 // the fake page sleeps a millisecond a frame.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   ConfigProvider,
@@ -32,7 +32,9 @@ import { Easel, elsewhereOf } from './easel.ts';
 import { FilmFolder, type FilmName } from './film-repo.ts';
 import { LabPage, type PagesNow } from './lab-page.ts';
 import { encodePng } from './png.ts';
-import { echoPages, emptyLedger, fakeRenderHost, memoryFileSystem } from './testing.ts';
+import { emptyLedger, fakeRenderHost } from './browser/testing.ts';
+import { echoPages } from './film-services/testing.ts';
+import { memoryFileSystem } from './host/testing.ts';
 
 const roof: SceneTimes = {
   id: 'roof',

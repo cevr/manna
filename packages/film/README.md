@@ -71,7 +71,8 @@ tagged errors (`ApiKeyMissing`, `EncoderMissing`, ...) in `tools/errors.ts`,
 and the refusals a page shows in their own words (`TakeMismatch`, ...) in
 `core/refusals.ts`; `film check`'s findings, with their levels and addresses,
 are in `tools/findings.ts`. Logs are `Effect.log` lines `event key=value`.
-`tools/testing.ts` has the in-memory doubles the tool tests use.
+Each `tools/<area>/testing.ts` has the in-memory doubles the tool tests of
+that area use (`tools/host/testing.ts`, `tools/media/testing.ts`, ...).
 
 `film sfx` is the app's sound library (`SoundLibrary`, `tools/library.ts`).
 `make` is its one paid command: it prints each sound's candidates and
@@ -345,7 +346,8 @@ otherwise, one OAuth call at a time (concurrent refreshes race and fail);
 and a video `render` asks a page which H.264 encoder it can encode the film's
 size with (`EncoderMissing` when none) before it draws a frame.
 
-Media files go through `Media` (`tools/media.ts`): mediabunny reads and writes
+Media files go through `Media` (`tools/media.ts`, its live layer
+`tools/media-bun.ts`, loaded when the layer is built): mediabunny reads and writes
 the containers in-process, and MP3 decodes through mpg123 (WASM), gapless, so
 a take measures what it plays (`duration`). `join` writes a film: its H.264
 segments' packets copied in order (never re-encoded; segments encoded unlike
@@ -567,7 +569,7 @@ page, the browser and the server. The export page's handle is declared once
 (`core/export-handle.ts`: each call's arguments and the schema its answer
 crosses in): the player implements it (`player/render.ts`), the tools reach it
 through one typed call (`FramePage.call`, `tools/browser.ts`), and the test
-fake answers the same calls (`fakeRenderHost`, `tools/testing.ts`), so a new
+fake answers the same calls (`fakeRenderHost`, `tools/browser/testing.ts`), so a new
 call is a type error in each until it is written there. Every frame the
 page draws is rastered before its clock stops (a one-pixel read), so the
 draw is timed apart from the encoder: each `render.progress` line and
@@ -2112,7 +2114,14 @@ recorded with its sha256). `film board` makes and keeps it from the terminal
 and writes a pick, an approval or a withdrawal through the same store
 (`BoardStore`), so neither writes over the other. A note on a panel is a lab
 note (`POST /api/films/<film>/notes`) carrying its `panel` and its `sketch`
-(an agent's `request_tweak`, the terminal's `film board`).
+(an agent's `request_tweak`, the terminal's `film board`). A panel's call sends
+the style's reference, then the beat's first panel or a tweak's try and its
+sketch, then the library record of each member the beat's `cast` names
+(`tools/cast-library.ts`, a film's own role before the library's), each once:
+its kept sheets (its own views of a sheet that draws other members too),
+else its record's references, which the prompt says win over every
+other image on the person (a sheet of heads, the face and hair alone), the
+brief saying what the member wears and does.
 
 | Route                                      | What it does                                                                                        |
 | ------------------------------------------ | --------------------------------------------------------------------------------------------------- |
@@ -2832,14 +2841,20 @@ of a cast sheet's views, each beside the concept it faces as.
 - **Batched.** One counsel run answers every figure at the place.
 - **A job.** The counsel's run takes minutes, and Claude Code's MCP client
   cuts a tool call at 60 s, so the critique runs as a job in the lab
-  (`Critic.start`, `Critic.job`) and a call waits on it at most
-  `CRITIQUE_WAIT` (40 s). Not done by then, the answer is the job's
-  `handle` and no `critique`: call `critique` with `handle` alone (the CLI:
-  `film lab critique wait <handle>`, which asks again until it is done) for
-  its answer. A start of the same figures over the same crops while one
-  runs answers that job's handle. The lab keeps the last 32 jobs for an
-  hour; a handle it no longer keeps is refused (`CritiqueJobUnknown`): start
-  it again with the scene and the place, and the cache answers it.
+  (`Critic.start`, `Critic.job`) and a call answers by `CRITIQUE_DEADLINE`
+  (50 s from its start: the match and the staging read come out of it, and
+  the job is waited on for what is left; a match and read that outrun it
+  answer as they end). Not done by then, the answer is
+  the job's `handle` and no `critique`: call `critique` with `handle` alone
+  (the CLI: `film lab critique wait <handle>`, which asks again until it is
+  done) for its answer. A start of the same figures over the same packet
+  while one runs answers that job's handle. At most 4 counsel runs go at
+  once (`COUNSEL_RUNS`); a job past them waits its turn, and its handle
+  answers meanwhile. A running job is kept until it ends; the lab keeps the
+  last 32 finished jobs for an hour after each ends. A handle it no longer
+  keeps is refused (`CritiqueJobUnknown`): start it again with the scene and
+  the place: an answer the counsel gave is kept on disk (below), and
+  answers it with no second run.
 - **Cached.** The answer is kept at `out/<film>/critique/<hash>.json`, the
   hash over the packet's words as sent (its place left out, which names the
   build), each crop's bytes and the Board panel's: the same prompt over the same crops is never
@@ -2886,7 +2901,7 @@ unless its record names its own `heads`, and each smaller figure a pose
 sheet draws at its share of the grown height and its own heads; one outline
 round each figure's silhouette with the head's outline
 the one line inside it, the hair a shape behind the head and
-the beard parted from it only when its record's `hair` shows, each circle hand at the end of its arm in its
+the beard parted from it only when its record's `hair` and `beard` show, each circle hand at the end of its arm in its
 sleeve and never a bare arm, the glide, no lettering). A layout or a look
 with a clause that names a hand and says it floats is refused as
 `HandFloats`, naming the clause, so a prompt never asks for a sleeved hand
@@ -2971,7 +2986,9 @@ on the image route. The member's folder is its film's own role's,
 `CastUnfound`. It holds `cast-sheet.json` (`CastSheetRecord`,
 `core/cast-record.ts`, pure: the member's pronoun, its scope, each reference
 image and what it is for, whether its hair shows (`hair`: `shown`, the
-default, `covered` under a headcloth, or `none`), its own height in heads
+default, `covered` under a headcloth, or `none`), whether it has a beard
+(`beard`: `shown`, or `none`, the default: the brief parts the beard from the
+hair only on a member whose hair and beard both show), its own height in heads
 when it is not the canon's (`heads`, a member of its own design such as the
 plain figures at 2.6), and per kind the anchor view and, for poses and
 heads, the layout in words and each view's slot, the standing views and
@@ -3560,6 +3577,7 @@ say fails stays in its box beside the failure.
 what a review used to find by eye. It runs in legs (`tools/film-check.ts`),
 each typed by what it needs: the static leg (`staticLeg`: the film's files,
 FileSystem and Media, and SoundRender for the derived sounds it places), the
+cast leg (`castLeg`: the cast library, FileSystem and FilmFolder), the
 sound leg (`soundLeg`: the mix, Mixer), and the
 layout and look legs (`layoutLeg`: the browser, Checker and Looker), and the
 draw leg (`drawLeg`, `tools/draw-check.ts`: the film's `film.ts` built from
@@ -3589,7 +3607,7 @@ the film second it starts at; a finding about the whole film has neither).
   sound whose request hash has moved (`AssetStale`); once every take is
   recorded, an audio master that is missing (`AudioMissing`), not the
   film's length or mixed for another plan than the film's now (`AudioStale`:
-  a score pick, a re-take or a moved effect since the last `mix`). `--allow-stale` reports stale takes, sounds
+  a score pick, a re-take or a moved effect since the last `mix`). A cast member a beat's `cast` names that the board cannot draw from (`CastUnreadable`, one per member, naming its beats: no `cast-sheet.json` in the film's cast or the library, a record that does not decode, or a reference file not on disk; the cast leg, `castLeg`, reads each member once through `castReference`). `--allow-stale` reports stale takes, sounds
   and master as warnings. `--scene id,id` or `--act name` limits the
   layout leg to that address's scenes. Every command that takes a part of
   the film (`render`, `check`, `cues --short`, the look pass) names it as
@@ -4068,7 +4086,7 @@ file's name (`.catalogue.json.lock`) written, nowhere else; closing any other
 handle on the file lets go of the process's lock.
 `film/no-test-seam` (`lint/no-test-seam.ts`) holds every package's `src`: a
 package's test-only doubles live in its `testing.ts` seam (`core/testing.ts`,
-`tools/testing.ts`, `@bible/url-state/testing`, `@bible/core/<area>/testing`),
+`tools/<area>/testing.ts`, `@bible/url-state/testing`, `@bible/core/<area>/testing`),
 and product code imports none, by a relative path, a package export, a type
 import, a re-export or a dynamic `import('…')`. The tests, the fixtures, the
 seams and the type tests are let off.

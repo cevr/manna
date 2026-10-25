@@ -24,7 +24,7 @@ import {
   voicePoints,
 } from './choice-points.ts';
 import type { MeasuredFilm } from './film-repo.ts';
-import { holdScenes, holdTimings, spokenTake, testFilm } from './testing.ts';
+import { holdScenes, holdTimings, spokenTake, testFilm } from './film-repo/testing.ts';
 
 const music = (style: string) => ({
   model: 'music_v2_5' as const,

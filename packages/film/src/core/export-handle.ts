@@ -3,7 +3,7 @@
 // boundary for each call. The page implements `ExportHandle`
 // (player/render.ts); the tools call it through one typed path that decodes
 // every answer with its schema here (`FramePage.call`, tools/browser.ts), and
-// the test fake answers the same calls in memory (tools/testing.ts). A new
+// the test fake answers the same calls in memory (tools/browser/testing.ts). A new
 // capability is a row in `CallArgs` and in `Answers`, and a type error in
 // each of those three places until it is written there.
 

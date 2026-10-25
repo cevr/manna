@@ -6,7 +6,7 @@
 // environment, and the names of the variables missing when it is not set.
 // Synthetic bytes only; nothing leaves the process.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   ConfigProvider,
@@ -299,7 +299,7 @@ const declared = (env: Record<string, string>) =>
     }),
   ).pipe(Layer.provideMerge(BunServices.layer));
 
-describe('the private store', () => {
+describe.concurrent('the private store', () => {
   it.effect('a folder store keeps the contract', () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;

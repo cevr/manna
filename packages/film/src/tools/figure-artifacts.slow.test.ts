@@ -7,7 +7,7 @@
 // face proportions and angles are off". The crops are PNGs, so they are
 // decoded here, past core.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Result } from 'effect';
 import { measureFigure } from '../core/figure.ts';

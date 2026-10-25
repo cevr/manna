@@ -53,7 +53,8 @@ import { AskStore, type PicksFound, fillPicks } from './ask-store.ts';
 import { sha256Hex } from './digest.ts';
 import type { ContentStore } from './content-store.ts';
 import { ProductionStore } from './production-store.ts';
-import { labInMemory, NOTES_LAB, text } from './testing.ts';
+import { text } from './host/testing.ts';
+import { labInMemory, NOTES_LAB } from './lab/testing.ts';
 
 const tried = (n: number) => ({
   n,

@@ -3,7 +3,7 @@
 // FILMS_OUT, and a key the store holds with other bytes is refused, not
 // replaced. Synthetic files only; nothing leaves the machine.
 
-import { BunServices } from '@effect/platform-bun';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Cause,

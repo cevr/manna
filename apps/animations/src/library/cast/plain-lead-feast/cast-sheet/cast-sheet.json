@@ -352,5 +352,44 @@
         }
       ]
     }
+  },
+  "kept": {
+    "heads": {
+      "try": 3,
+      "why": "Go on: lock the sheets offered, and redraw Paul's and Jeremiah's turnarounds and poses",
+      "ask": "a26a8a83f89",
+      "views": [
+        {
+          "view": 1,
+          "name": "heads-1",
+          "box": [50, 384, 240, 613]
+        },
+        {
+          "view": 2,
+          "name": "heads-2",
+          "box": [296, 384, 487, 613]
+        },
+        {
+          "view": 3,
+          "name": "heads-3",
+          "box": [547, 384, 737, 613]
+        },
+        {
+          "view": 4,
+          "name": "heads-4",
+          "box": [792, 384, 983, 613]
+        },
+        {
+          "view": 5,
+          "name": "heads-5",
+          "box": [1040, 384, 1233, 613]
+        },
+        {
+          "view": 6,
+          "name": "heads-6",
+          "box": [1297, 384, 1488, 613]
+        }
+      ]
+    }
   }
 }
