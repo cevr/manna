@@ -517,6 +517,28 @@ describe('compile: where a chord goes', () => {
   );
 });
 
+describe('compile: where a guitarist strikes', () => {
+  // The tune is in 3/4, and its intro is two of its bars: a file that says 4/4 counts its bars from
+  // the intro's first tick, so its strong beats fall where the tune does not lean.
+  const misread = compile(
+    source(file(praise, { verses: 2, intro: 6, meter: [4, 4], fifths: -1 }), praiseText),
+  );
+
+  it.effect(
+    "keeps every guitar change where the file plays it when the melody does not confirm the file's bars",
+    () =>
+      Effect.gen(function* () {
+        const [hymn, read] = [yield* misread, yield* praiseHymn];
+        expect(hymn.meter).toEqual({ numerator: 4, denominator: 4 });
+        const stanzas = [hymn, read].map((h) => sung(h.stanzas[0]));
+        const [misreadLines, readLines] = stanzas.map((stanza, i) =>
+          chordLines(i === 0 ? hymn : read, stanza, 'guitar'),
+        );
+        expect(misreadLines).toEqual(readLines);
+      }),
+  );
+});
+
 describe('compile: trust', () => {
   it.effect('keeps words alone when the text has far more syllables than the tune has notes', () =>
     Effect.gen(function* () {

@@ -22,6 +22,7 @@
  */
 
 import * as Chord from './chord.js';
+import { type Hymn, PER_BEAT, sung } from './hymn.js';
 import type { TimeSignature } from './midi.js';
 
 export interface Syllable {
@@ -170,6 +171,106 @@ export const nextStrong = (grid: Grid, from: number, to: number): number | undef
 
 /** A beat's length at a tick: a quarter in 4/4, a dotted quarter in 6/8, a half in 3/2. */
 const beatLengthAt = (grid: Grid, tick: number) => beatTicks(grid, meterAt(grid, tick).meter);
+
+// --- The bar grid the melody confirms ---
+
+/** The meters the hymnal's files carry: their strong beats are the grids a melody is held against. */
+const METERS: readonly TimeSignature[] = (
+  [
+    [1, 2],
+    [2, 2],
+    [3, 2],
+    [4, 2],
+    [2, 4],
+    [3, 4],
+    [4, 4],
+    [6, 4],
+    [9, 4],
+    [3, 8],
+    [4, 8],
+    [6, 8],
+    [9, 8],
+    [12, 8],
+  ] satisfies ReadonlyArray<readonly [number, number]>
+).map(([numerator, denominator]) => ({ tick: 0, numerator, denominator }));
+
+/** The ticks from one strong beat to the next in a meter: a bar, or half a bar of four beats. */
+const strongEvery = (grid: Grid, meter: TimeSignature) =>
+  beatTicks(grid, meter) * (beatsInBar(meter) === 4 ? 2 : beatsInBar(meter));
+
+/**
+ * The ticks a line's melody leans on: each syllable held two beats or more
+ * (one dotted beat in a compound meter), and the line's last, where its
+ * phrase comes to rest.
+ */
+const accentsOf = (grid: Grid, lines: readonly (readonly Syllable[])[]): number[] =>
+  lines.flatMap((line) =>
+    line.flatMap((s, k) => {
+      const meter = meterAt(grid, s.start).meter;
+      const long = beatTicks(grid, meter) * (isCompound(meter) ? 1 : 2);
+      return k === line.length - 1 || s.length >= long - slackOf(grid) ? [s.start] : [];
+    }),
+  );
+
+/**
+ * Whether a melody confirms the grid's bars: its accents (`accentsOf`) fall
+ * on the grid's strong beats at least as often as on the strong beats of any
+ * other bar, shifted by any eighth: every meter's whose strong beats are as
+ * far apart as the grid's or further, so a denser grid never wins by
+ * density alone. A file whose tick 0 is not a printed downbeat, or whose
+ * meter is not the printed one, puts its strong beats where the tune does
+ * not lean, and some other bar fits the tune better. A melody with no
+ * accent confirms nothing.
+ */
+export const confirms = (grid: Grid, lines: readonly (readonly Syllable[])[]): boolean => {
+  const accents = accentsOf(grid, lines);
+  if (accents.length === 0) return false;
+  const slack = slackOf(grid);
+  const onGrid = accents.filter((tick) => beatAt(grid, tick).strong).length;
+  const least = Math.min(...grid.meters.map((meter) => strongEvery(grid, meter)));
+  const periods = [...new Set(METERS.map((meter) => strongEvery(grid, meter)))].filter(
+    (period) => period >= least - slack,
+  );
+  const step = grid.ticksPerBeat / 2;
+  return periods.every((period) => {
+    for (let phase = 0; phase < period - slack; phase += step) {
+      const on = accents.filter((tick) => {
+        const r = (((tick - phase) % period) + period) % period;
+        return r <= slack || period - r <= slack;
+      }).length;
+      if (on > onGrid) return false;
+    }
+    return true;
+  });
+};
+
+/**
+ * The lines a compiled hymn's bar grid is judged on, each its sung
+ * syllables in the timing's units: stanza 1's played lines, and the
+ * refrain's when it is sung right after stanza 1.
+ */
+export const judgedLines = (hymn: Hymn): Syllable[][] => {
+  const timing = hymn.timing;
+  if (timing === undefined) return [];
+  const all = sung(hymn);
+  const end = all.findIndex((line) => line.verse !== 1 && line.verse !== 'refrain');
+  const order = hymn.refrain?.order;
+  const after = order === 'after-each' || order === 'first-and-after-each';
+  return all.slice(0, end === -1 ? all.length : end).flatMap((line, i) => {
+    const time = timing.lines[i];
+    const refrainFirst = line.verse === 'refrain' && !all.slice(0, i).some((l) => l.verse === 1);
+    if (line.part._tag !== 'Sung' || time === undefined || !time.played || time.even) return [];
+    if (line.verse === 'refrain' && (!after || refrainFirst)) return [];
+    const syllables = line.part.lines[line.line] ?? [];
+    if (syllables.length !== time.syllables.length) return [];
+    const out = syllables.flatMap((s, k): Syllable[] => {
+      const start = time.syllables[k];
+      if (s.notes === 0 || start === undefined) return [];
+      return [{ start, length: Math.round(s.beats * PER_BEAT), key: undefined }];
+    });
+    return out.length === 0 ? [] : [out];
+  });
+};
 
 // --- Chord tones ---
 
