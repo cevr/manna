@@ -301,6 +301,16 @@ The form of an entry, each field on its own line:
 - **Cause:** The concept asked for a stride one way and a look the other with no picture of the pose, and the redraw was checked at 900 px, where the second face did not show; a full-size crop of the next try showed the same second face.
 - **Guard:** skill: whether a painted head reads as one natural turn is a judgment of the eye; the bible skill's deck reference asks for a pose picture and a full-size check. Carried by `skills/bible/references/decks.md`: "rather than walk away while he looks back: a stride one way and a face the"
 
+### deck-edited-in-place
+
+- **Date:** 2026-10-25
+- **Kind:** owner
+- **Said:** "Let's update the presentation skills so that we don't constantly generate a new keynote every time we make an edit. I want to edit in place"
+- **Source:** chat, 2026-10-25, after two redraws of Reading 110's Luke 19:12 slide
+- **Wrong:** Each fix to one Reading 110 slide rebuilt the whole deck as a new document, and Keynote Creator Studio autosaved each new document into iCloud under its suggested name: three stray copies of 106 MB ("The Thief on the Cross", " 2", " 3"), the one open in Keynote not the repo's deck.
+- **Cause:** The deck pipeline had one way to make a deck, a fresh build (`gen_applescript.ts`), and it saved the new document to its path only after drawing every slide, so the app's autosave named and placed it first.
+- **Guard:** skill: the bible skill's deck reference makes `sync_deck.ts` the one command, editing an existing deck in place. Carried by `skills/bible/references/decks.md`: "changed since the last sync (a painting, a verse, a reference, a note, the"
+
 ## The look
 
 ### floating-circle-hands-no-arms

@@ -1,5 +1,5 @@
 set rootPath to "/Users/cvr/Developer/personal/manna/packages/cli/outputs/decks/reading-110"
-set savePath to rootPath & "/Reading 110 - The Thief on the Cross.key"
+set savePath to "/Users/cvr/Developer/personal/manna/packages/cli/outputs/decks/reading-110/Reading 110 - The Thief on the Cross.key"
 tell application "Keynote Creator Studio"
   activate
   set theDoc to make new document with properties {document theme:theme "Basic Black", width:1920, height:1080}

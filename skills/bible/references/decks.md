@@ -129,40 +129,38 @@ system .ttc, all white on black). In the manifest they are
 `{"type": "diagram", "id": "..."}` entries — one slide, no full-bleed
 pair, no crops.
 
-### 4. Build the .key (stock Keynote AppleScript)
+### 4. Build or sync the .key (one command, edits in place)
 
-Generate `build-deck.applescript` from the manifest (script it — don't
-hand-write 77 slides). Proven primitives:
-
-```applescript
-tell application "Keynote"
-  set theDoc to make new document with properties ¬
-    {document theme:theme "Basic Black", width:1920, height:1080}
-  tell theDoc
-    -- slide 1 arrives with the doc: reuse it for the title
-    set the base slide of slide 1 to master slide "Blank"
-    tell slide 1
-      make new image with properties {file:(POSIX file "/abs/title-full.png"), ¬
-        position:{0, 0}, width:1920, height:1080}
-      set tx to make new text item with properties {object text:"..."}
-      set the font of the object text of tx to "Helvetica Neue Light"
-      set the size of the object text of tx to 66
-      set the color of the object text of tx to {65535, 65535, 65535}
-      set the width of tx to 1600
-      set the position of tx to {160, 850}
-    end tell
-    set fb to make new slide with properties {base slide:master slide "Blank"}
-    -- full-bleed: image at {0,0} 1920×1080 inside `tell fb`
-    -- split: panel image at {1037,75} (or {133,75}) 750×903 + two text items
-    save theDoc in POSIX file "/abs/<Deck Name>.key"
-  end tell
-end tell
+```bash
+bun skills/bible/scripts/deck/sync_deck.ts outputs/decks/<slug> [--prune]
 ```
+
+`sync_deck.ts` crops the paintings (`prepare_images.ts`), then makes the
+deck match the manifest:
+
+- **No `.key` yet** — builds it fresh (`keynote.ts`, the same AppleScript
+  `gen_applescript.ts` writes to `build-deck.applescript` for reading).
+- **A `.key` already** — edits it **in place**, never a new deck: only what
+  changed since the last sync (a painting, a verse, a reference, a note, the
+  title) is touched. A new beat is inserted after the beat before it; a beat
+  gone from the manifest stays in the deck unless `--prune`. Words or notes
+  the owner changed in Keynote are kept and named in the report.
+- `built.json` (committed) records what the deck was last synced to. A deck
+  built before sync existed: run `--baseline` once; it tags each painting and
+  records the manifest, changing nothing that shows.
+- Each slide is found by its painting's **description** (`deck:<id> full`,
+  `deck:<id> panel`, `deck:title`), so the owner's reordering does not lose
+  it. Never by file name: Keynote keeps one file name for paintings of the
+  same bytes, so a painting reused within a deck shows the first one's name.
+- The deck of record is `<slug>/<Deck Name>.key` in the repo. A new
+  document is saved there **before** any slide is drawn: Keynote Creator
+  Studio autosaves an unsaved new document into iCloud under its suggested
+  name (the title), a stray copy per build.
 
 Text styling that works: verse in "Helvetica Neue Light" white, size by
 length (≤180 chars → 48pt, ≤300 → 40pt, ≤430 → 34pt, else 30pt), width 805,
-x=131 (image right) / x=984 (image left), y vertically centered by estimated
-wrapped height; reference line "Helvetica Neue" 30pt gray
+x=131 (image right) / x=984 (image left), y centered by the verse box's
+measured height; reference line "Helvetica Neue" 30pt gray
 (`{39321, 39321, 39321}`) below the verse.
 
 ### 5. Verify visually — always
@@ -188,9 +186,14 @@ alternation correct.
   deck grammar you only need **Blank**.
 - Unfilled placeholders don't render in playback/export — harmless.
 - Compile-check with `osacompile -o /dev/null <script>` before running.
-- If editing an **existing** deck later: anchor-check slide content before
-  touching it (Cristian reorders slides), and note the What-is-Truth decks
-  live in the "Keynote Creator Studio" app, not stock Keynote.
+- If editing an **existing** deck later: use `sync_deck.ts`, which finds
+  slides by their painting's description (Cristian reorders slides); the
+  What-is-Truth decks live in the "Keynote Creator Studio" app, not stock
+  Keynote.
+- Slide references are by index: after a `move`, find a slide again by its
+  painting's description, never by a reference held from before.
+- An open document answers for its file: Keynote reads a deck already open
+  from memory, not from disk.
 
 ## Output location
 
@@ -199,14 +202,15 @@ outputs/decks/<slug>/
 ├── .gitignore               # *.key + images/*-full.png + images/*-panel.png
 ├── <Deck Name>.key          # the deck (NOT committed — regenerable)
 ├── manifest.json            # verses + concepts + layout — the source of truth
+├── built.json               # what the .key was last synced to (sync_deck.ts)
 ├── build-deck.applescript   # regenerable from manifest
 └── images/                  # <id>.png sources (committed) + crops (not)
 ```
 
 `<slug>` matches the teaching doc's series prefix (`reading-102`). **Commit
 manifest, build script, and the source paintings** (the irreplaceable okra
-outputs); the crops and the `.key` are derived — regenerate with the crop
-script + `osascript build-deck.applescript`.
+outputs); the crops and the `.key` are derived — `sync_deck.ts` makes
+them again.
 
 ## Anti-patterns
 
