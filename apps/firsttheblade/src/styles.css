@@ -3,9 +3,9 @@
  *
  * The page is site direction N2, “The sky turns”, in Moonlit wheat
  * (`./palette.ts`, the colours' one source; the tests hold the `--color-*`
- * tokens to it). It is one sky from morning to night: the painted field
- * fades into the paper, the series stand in rows parted by hairlines, the
- * paper warms to the wheat, the dusk carries Mark 4:27 into the night, and
+ * tokens to it). It is one sky from morning to night: the painted field's
+ * wheat stands on its soil, which fades into the paper, the series stand in
+ * rows parted by hairlines, the paper warms to the wheat, the dusk carries Mark 4:27 into the night, and
  * the moonlit field rises out of it. Nothing is torn, tilted or shadowed.
  * Every rule below names a token; the only literals outside this block are
  * structural layout values and the breakpoints. Sizes run fluidly from the
@@ -78,8 +78,23 @@
   /* The hairline between rows by day: the ink, faint on the paper. */
   --rule-day: color-mix(in srgb, var(--color-ink) 16%, transparent);
 
-  /* The paintings' fades: the field into the paper, the night out of the dusk. */
-  --mask-field: linear-gradient(#000 50%, transparent 86%);
+  /*
+   * The paintings' fades: the field's soil into the paper over the field's
+   * last share, the night out of the dusk. The field stands whole down to
+   * its soil, so the wheat keeps its colour and stands on ground.
+   */
+  --fade-field: 18%;
+  --mask-field: linear-gradient(#000 calc(100% - var(--fade-field)), transparent);
+  /*
+   * What the soil fades through on its way to the paper: the dusk's gold,
+   * strongest halfway, so the fade is warm earth and never the grey a
+   * brown and the paper make alone.
+   */
+  --fade-field-earth: linear-gradient(
+    transparent calc(100% - var(--fade-field)),
+    color-mix(in srgb, var(--color-dusk-gold) 85%, transparent) calc(100% - var(--fade-field) / 2),
+    transparent
+  );
   --mask-night: linear-gradient(transparent, #000 38%);
 
   /* Type: Newsreader, one family for the whole page. */
@@ -150,8 +165,15 @@
   --space-pill-inline: 1rem;
 
   /* The painted bands' heights. */
-  --height-hero: clamp(40rem, 35.8214rem + 17.1429vw, 51.25rem);
-  --height-page-hero: clamp(25rem, 22.2143rem + 11.4286vw, 32.5rem);
+  /*
+   * The field paintings' heights. The painting is drawn to the field's foot,
+   * so the field always shows its soil; at a wide board it is as tall as the
+   * sky over the verse or title, the hills, the wheat and the soil need.
+   */
+  --height-field-home: max(31.25rem, 10rem + 44.65vw);
+  --height-field-page: max(25rem, 8.6rem + 44.65vw);
+  /* The paper under the home field that holds the page's first words. */
+  --space-field-words: clamp(11.25rem, 10.7857rem + 1.9048vw, 12.5rem);
 
   /* Shape. Controls are pills; a mark's tile is gently rounded. */
   --radius-pill: 999px;
@@ -593,15 +615,20 @@ a {
   display: flex;
   flex-direction: column;
   padding: var(--space-field-top) var(--space-gutter) var(--space-field-bottom);
-  background: var(--color-paper);
+  /* Under the painting, the warm earth its soil fades through. */
+  background:
+    var(--fade-field-earth) top / 100% var(--height-field) no-repeat,
+    var(--color-paper);
 }
 .field-home {
+  --height-field: var(--height-field-home);
   justify-content: space-between;
   gap: var(--space-8);
-  min-height: var(--height-hero);
+  min-height: calc(var(--height-field) + var(--space-field-words));
 }
 .field-page {
-  min-height: var(--height-page-hero);
+  --height-field: var(--height-field-page);
+  min-height: var(--height-field);
 }
 
 /*
@@ -611,12 +638,10 @@ a {
 .field-paint {
   position: absolute;
   inset: 0 0 auto;
-  height: 100%;
+  height: var(--height-field);
   mask-image: var(--mask-field);
 }
-.field-home .field-paint {
-  height: 78%;
-}
+/* The painting is drawn to its foot, so the wheat stands on its soil. */
 .field-art {
   position: absolute;
   inset: 0;
@@ -624,15 +649,11 @@ a {
   height: 100%;
   max-width: none;
   object-fit: cover;
-  object-position: 38% 60%;
+  object-position: 38% 100%;
 }
 @media (min-width: 48rem) {
   .field-art {
-    object-position: 50% 60%;
-  }
-  /* A page's shorter field shows more of the sky, so its title stands clear of the hills. */
-  .field-page .field-art {
-    object-position: 50% 35%;
+    object-position: 50% 100%;
   }
 }
 

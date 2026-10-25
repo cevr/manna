@@ -1,7 +1,8 @@
 # Pages
 
-A visitor lands on the home page (the morning field fading into the paper,
-the four series as rows on the paper, each with its fine-line mark, the dusk
+A visitor lands on the home page (the morning field, its wheat standing on
+its soil, fading into the paper, the four series as rows on the paper, each
+with its fine-line mark, the dusk
 with Mark 4:27, and the moonlit night close with the sign-up; the look itself
 is the Brand feature), follows a series to
 its page (what it covers, its films, or "None are out yet"), reads About, and
