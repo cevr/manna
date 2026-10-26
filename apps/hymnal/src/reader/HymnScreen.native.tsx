@@ -35,7 +35,7 @@ import { useAtomSet, useAtomValue } from '@effect/atom-react';
 import { LegendList } from '@legendapp/list/react-native';
 import { Option } from 'effect';
 import { useParams, useRouter } from 'one';
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import {
   type LayoutChangeEvent,
   type NativeScrollEvent,
@@ -77,8 +77,13 @@ function Pager({ shown }: { readonly shown: HymnText }) {
   useEffect(() => taken(Option.none()), [taken]);
   const { width } = useWindowDimensions();
   const [height, setHeight] = useState(Option.none<number>());
-  const onLayout = (event: LayoutChangeEvent) =>
-    setHeight(Option.some(event.nativeEvent.layout.height));
+  // A layout of the same height keeps the height as it was, so no page draws again for it.
+  const onLayout = (event: LayoutChangeEvent) => {
+    const measured = event.nativeEvent.layout.height;
+    setHeight((was) => (Option.exists(was, (h) => h === measured) && was) || Option.some(measured));
+  };
+  // The pages draw again only when the screen's size changes: a settle sets the route, and every page keeps its frame.
+  const extraData = useMemo(() => ({ width, height }), [width, height]);
   const router = useRouter();
   const settle = (offset: number) =>
     Option.match(
@@ -112,7 +117,7 @@ function Pager({ shown }: { readonly shown: HymnText }) {
           // A page holds its own scroll and follow, so no page's view is reused for another hymn.
           recycleItems={false}
           drawDistance={width}
-          extraData={{ width, height }}
+          extraData={extraData}
           onMomentumScrollEnd={onMomentumScrollEnd}
           onScrollEndDrag={onScrollEndDrag}
           renderItem={drawPage}
@@ -132,21 +137,34 @@ const drawPage = ({
 }: {
   readonly item: number;
   readonly extraData: { readonly width: number; readonly height: Option.Option<number> };
-}) => (
-  <View
-    testID="pager-page"
-    style={[
-      styles.page,
-      { width: extraData.width },
-      Option.match(extraData.height, { onNone: () => ({}), onSome: (height) => ({ height }) }),
-    ]}
-  >
-    {Option.match(hymnAt(String(item)), {
-      onNone: () => <NoHymn number={String(item)} />,
-      onSome: (hymn) => <HymnPage hymn={hymn} reader={reader} />,
-    })}
-  </View>
-);
+}) => <PagerPage number={item} width={extraData.width} height={extraData.height} />;
+
+/** Hymn `number`'s page in the pager: drawn again only when its hymn or the pager's size changes. */
+const PagerPage = memo(function PagerPage({
+  number,
+  width,
+  height,
+}: {
+  readonly number: number;
+  readonly width: number;
+  readonly height: Option.Option<number>;
+}) {
+  return (
+    <View
+      testID="pager-page"
+      style={[
+        styles.page,
+        { width },
+        Option.match(height, { onNone: () => ({}), onSome: (tall) => ({ height: tall }) }),
+      ]}
+    >
+      {Option.match(hymnAt(String(number)), {
+        onNone: () => <NoHymn number={String(number)} />,
+        onSome: (hymn) => <HymnPage hymn={hymn} reader={reader} />,
+      })}
+    </View>
+  );
+});
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },

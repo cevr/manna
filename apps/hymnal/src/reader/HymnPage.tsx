@@ -84,8 +84,8 @@ export interface ChordReader {
   readonly favourites: Atom.Writable<ReadonlyArray<number>>;
 }
 
-/** The hymn's words under its number and title. */
-export function HymnPage({
+/** The hymn's words under its number and title: drawn again by its own stores, never by a page beside it. */
+export const HymnPage = memo(function HymnPage({
   hymn,
   reader,
 }: {
@@ -172,7 +172,7 @@ export function HymnPage({
       )}
     </View>
   );
-}
+});
 
 /** Hands the lines the reader's size, font and spacing, under the system's text size. */
 function PageText({

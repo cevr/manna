@@ -87,6 +87,20 @@ interface Run {
     readonly header: ReadonlyArray<number>;
     readonly place: BarPlace;
   };
+  readonly settleDraws: {
+    readonly mounted: ReadonlyArray<number>;
+    readonly first: ReadonlyArray<{ readonly number: number; readonly draws: number }>;
+    readonly after: ReadonlyArray<number>;
+    readonly draws: ReadonlyArray<{ readonly number: number; readonly draws: number }>;
+  };
+  readonly swipeWithDials: {
+    readonly opened: boolean;
+    readonly over: boolean;
+    readonly takesTouch: boolean;
+    readonly closed: boolean;
+    readonly paramsSet: ReadonlyArray<Record<string, string>>;
+    readonly route: string;
+  };
 }
 
 const run = Bun.spawnSync(['bun', Bun.resolveSync('../test/phone-pager.tsx', import.meta.dir)], {
@@ -273,5 +287,30 @@ describe('the reader’s lists', () => {
 
   it('a list with no hymn shows no section: the first topic comes first', () => {
     expect(seen.emptyHeadings).toEqual([seen.shelfFirstTopic]);
+  });
+});
+
+describe('a settle of the pager (pagerperf P1)', () => {
+  it('draws no page it found mounted again: only a page it brings in draws', () => {
+    const { mounted, first, after, draws } = seen.settleDraws;
+    // The counter saw every page's first draw, so a draw again would show.
+    for (const page of mounted)
+      expect(first.some((d) => d.number === page && d.draws > 0)).toBe(true);
+    expect(draws.filter((d) => mounted.includes(d.number))).toEqual([]);
+    expect(draws.every((d) => after.includes(d.number) && d.draws === 1)).toBe(true);
+  });
+});
+
+describe('a swipe on the page with the dials open (O2)', () => {
+  it('only closes the dials: the backdrop over the pager takes the touch, and the page does not turn', () => {
+    const swipe = seen.swipeWithDials;
+    expect(swipe).toEqual({
+      opened: true,
+      over: true,
+      takesTouch: true,
+      closed: true,
+      paramsSet: [],
+      route: '3',
+    });
   });
 });

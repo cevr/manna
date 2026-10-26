@@ -21,6 +21,8 @@ import { soundOn } from './sound';
 /** Whether the recording sounds, as the score clock reads it: the Sound setting, set at mount. */
 const sound = Effect.runSync(SubscriptionRef.make(true));
 const player = playerOn(counted(soundOn(playbackLive, book.of, sound)), statusEvery);
+/** The context's one value: a draw again (the Sound switch) hands every reader the same player, so no page draws again for it. */
+const provided = Option.some(player);
 
 export function LivePlayer({ children }: { readonly children: ReactNode }) {
   // The commands run for as long as the app does, whichever screen shows.
@@ -29,5 +31,5 @@ export function LivePlayer({ children }: { readonly children: ReactNode }) {
   const on = useAtomValue(settings.sound);
   // The setting is the app's; the score clock is outside React, so it is told each change.
   useEffect(() => Effect.runSync(SubscriptionRef.set(sound, on)), [on]);
-  return <PlayerContext value={Option.some(player)}>{children}</PlayerContext>;
+  return <PlayerContext value={provided}>{children}</PlayerContext>;
 }

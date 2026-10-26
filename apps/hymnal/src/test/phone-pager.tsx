@@ -13,6 +13,42 @@ import { phone } from './phone';
 
 const { scrolls } = phone({ nativeList: true });
 
+/**
+ * Each hymn page's draws, by its hymn's number: the page's module is loaded
+ * with its `HymnPage` renamed and a wrapper exported in its place, which
+ * counts a draw and draws the real page, memoized as the real one is, so a
+ * page that is skipped is not counted.
+ */
+const pageDraws = new Map<number, number>();
+Object.assign(globalThis, { hymnalPageDraws: pageDraws });
+{
+  const { plugin } = await import('bun');
+  plugin({
+    name: 'hymnal-page-draws',
+    setup(build) {
+      build.onLoad({ filter: /\/reader\/HymnPage\.tsx$/ }, async (args) => {
+        const source = await Bun.file(args.path).text();
+        const renamed = source
+          .replace('export const HymnPage = memo(', 'const RealHymnPage = memo(')
+          .replace('export function HymnPage(', 'function RealHymnPage(');
+        return {
+          contents: [
+            renamed,
+            `const countedDraw = (props: Parameters<typeof HymnPageInner>[0]) => {`,
+            `  const draws = (globalThis as unknown as { hymnalPageDraws: Map<number, number> }).hymnalPageDraws;`,
+            `  draws.set(props.hymn.number, (draws.get(props.hymn.number) ?? 0) + 1);`,
+            `  return HymnPageInner(props);`,
+            `};`,
+            `const HymnPageInner = ((RealHymnPage as unknown as { type?: typeof RealHymnPage }).type ?? RealHymnPage) as (props: { readonly hymn: HymnText; readonly reader: ChordReader }) => ReturnType<typeof NoHymn>;`,
+            `export const HymnPage = ((RealHymnPage as unknown as { type?: unknown }).type === undefined ? countedDraw : memo(countedDraw)) as unknown as typeof RealHymnPage;`,
+          ].join('\n'),
+          loader: 'tsx',
+        };
+      });
+    },
+  });
+}
+
 const { act, createElement: h } = await import('react');
 const { createRoot } = await import('react-dom/client');
 const { RegistryContext } = await import('@effect/atom-react');
@@ -64,6 +100,8 @@ const app = () => {
   scrolls.sideways.splice(0);
   const { device, layer } = fakeDevice();
   const player = playerOn(layer, Duration.millis(1));
+  // One value for the app's life, as the app's own provider gives it, so a draw again of the route keeps it.
+  const provided = Option.some(player);
   const registry = AtomRegistry.make();
   const host = document.createElement('div');
   document.body.append(host);
@@ -72,11 +110,7 @@ const app = () => {
   const show = async (node: ReturnType<typeof h>, ready: (host: HTMLElement) => boolean) => {
     await act(async () => {
       root.render(
-        h(
-          RegistryContext,
-          { value: registry },
-          h(PlayerContext, { value: Option.some(player) }, node),
-        ),
+        h(RegistryContext, { value: registry }, h(PlayerContext, { value: provided }, node)),
       );
     });
     await waitFor(() => ready(host));
@@ -402,6 +436,74 @@ const starPlaces = (host: HTMLElement) =>
     route: params['number'],
     header: seen(shown).headerNames,
     place: barPlace(shown),
+  };
+  shown.close();
+}
+
+// One settle on 4: the pages drawn before it are not drawn again, only a page it brings in.
+{
+  const shown = app();
+  await route(shown, 3);
+  await tick();
+  const mounted = seen(shown).pages;
+  // The counter sees the pages' first draws, so a draw again would be counted too.
+  const first = [...pageDraws].map(([number, draws]) => ({ number, draws }));
+  pageDraws.clear();
+  await settle(shown, 3);
+  await tick();
+  out['settleDraws'] = {
+    mounted,
+    first,
+    after: seen(shown).pages,
+    draws: [...pageDraws].map(([number, draws]) => ({ number, draws })),
+  };
+  shown.close();
+}
+
+// The dials open over hymn 3's page, then a swipe on the page: the backdrop over the pager takes it,
+// so the dials close and the page stays.
+{
+  const shown = app();
+  await route(shown, 3);
+  paramsSet.splice(0);
+  const click = (element: Element | null) =>
+    act(async () => {
+      element?.dispatchEvent(
+        new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }),
+      );
+    });
+  await click(shown.host.querySelector('[data-testid="key-button"]'));
+  await tick();
+  const backdrop = shown.host.querySelector('[data-testid="dials-backdrop"]');
+  const pager = shown.host.querySelector('[data-testid="pager-page"]');
+  const opened = shown.host.querySelector('[data-testid="dials-panel"]') !== null;
+  const takesTouch = backdrop !== null && getComputedStyle(backdrop).pointerEvents !== 'none';
+  const over =
+    backdrop !== null &&
+    pager !== null &&
+    (pager.compareDocumentPosition(backdrop) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+  await act(async () => {
+    for (const [type, x] of [
+      ['pointerdown', 300],
+      ['pointermove', 200],
+      ['pointermove', 60],
+      ['pointerup', 60],
+    ] as const)
+      backdrop?.dispatchEvent(
+        new PointerEvent(type, { bubbles: true, clientX: x, clientY: 400, pointerId: 1 }),
+      );
+  });
+  await click(backdrop);
+  await tick();
+  out['swipeWithDials'] = {
+    opened,
+    over,
+    takesTouch,
+    closed:
+      shown.host.querySelector('[data-testid="key-button"]')?.getAttribute('aria-expanded') ===
+      'false',
+    paramsSet: [...paramsSet],
+    route: params['number'],
   };
   shown.close();
 }
