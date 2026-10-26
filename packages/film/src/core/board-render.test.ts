@@ -12,6 +12,7 @@ import {
   type Framing,
   type Layer,
   Picture,
+  boardClock,
   boardFrameAt,
   boardShots,
   burnIn,
@@ -21,6 +22,7 @@ import {
 import { filmClock, timedBeat } from './film-timeline.ts';
 import { layout } from './layout.ts';
 import { estimate, hashText } from './narration.ts';
+import { TICKS_PER_FRAME, ticksAt } from './time.ts';
 import { unmeasured } from './voiced.ts';
 
 /** The dissolve's length at a cut with long holds on both sides. */
@@ -58,7 +60,16 @@ const board: BoardFile = {
 const shots = shotsOf(beats, board);
 const DURATION = 20;
 
-const frameAt = (T: number) => Option.getOrThrow(boardFrameAt(shots, DURATION, T));
+/** The Board's rate in these cases. */
+const FPS = 30;
+/** One tick of the Board's clock, in seconds. */
+const ONE_TICK = 1 / (FPS * TICKS_PER_FRAME);
+
+/** Shots `s` of a film `duration` long at film second `T`. */
+const frameOf = (s: ReadonlyArray<Shot>, duration: number, T: number) =>
+  boardFrameAt(boardClock(s, duration, FPS), ticksAt(T, FPS));
+
+const frameAt = (T: number) => Option.getOrThrow(frameOf(shots, DURATION, T));
 
 /** How long a panel shown alone holds. */
 const HOLD = 10;
@@ -66,7 +77,7 @@ const HOLD = 10;
 /** Panel `p` held alone from `from`, as the frame `T` seconds in draws it. */
 const alone = (p: Panel, from: number, T: number): Layer =>
   Option.getOrThrow(
-    boardFrameAt([Shot.Boarded({ beat: p.beat, panel: p, at: from, from })], from + HOLD, from + T),
+    frameOf([Shot.Boarded({ beat: p.beat, panel: p, at: from, from })], from + HOLD, from + T),
   ).layers[0]!;
 
 /** Forty picture panels by id. */
@@ -162,7 +173,7 @@ describe('the dissolve at a cut', () => {
     const tight: BoardFile = { ...board, panels: [...board.panels, panel('name', 'start', 1)] };
     const s = shotsOf(beats, tight);
     const layers = (T: number) =>
-      Option.getOrThrow(boardFrameAt(s, DURATION, T)).layers.map((l) => [
+      Option.getOrThrow(frameOf(s, DURATION, T)).layers.map((l) => [
         named(l.shot),
         Math.round(l.alpha * 1000) / 1000,
       ]);
@@ -180,8 +191,8 @@ describe('the dissolve at a cut', () => {
 
   test('carries the motion through it: the outgoing shot ends as the incoming begins', () => {
     const half = DISSOLVE_S / 2;
-    const out = frameAt(4 + half - 1e-9).layers[0]!;
-    const inn = frameAt(4 - half + 1e-9).layers[1]!;
+    const out = frameAt(4 + half - ONE_TICK).layers[0]!;
+    const inn = frameAt(4 - half + ONE_TICK).layers[1]!;
     close(out.framing, endOf(out.motion));
     close(inn.framing, startOf(inn.motion));
   });

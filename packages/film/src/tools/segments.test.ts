@@ -3,7 +3,11 @@
 // segment would.
 
 import { describe, expect, test } from 'bun:test';
-import { Option, Result } from 'effect';
+import { Option, Result, Schema } from 'effect';
+import { boardFilm } from '../canvas/board.ts';
+import type { CardStyle } from '../canvas/card.ts';
+import type { Film } from '../canvas/film.ts';
+import { recorder, withDom } from '../canvas/fixtures/stand-in.ts';
 import { type BoardFile, BoardName, type Panel, emptyBoard } from '../core/board.ts';
 import { boardShots } from '../core/board-render.ts';
 import { layout } from '../core/layout.ts';
@@ -238,6 +242,31 @@ const laid = (seconds: number, timed: (i: number) => boolean, aKey = 'key-a') =>
   });
 };
 
+/** A card style whose payoff is underlined once heard. */
+const CARD: CardStyle = {
+  ground: '#0e1010',
+  type: { family: 'x', size: 60, color: '#f2e9d7' },
+  payoffScale: 2.5,
+  payoffColor: '#e6b347',
+  treatment: {
+    draw: (ctx, box, since) => ctx.fillRect(box.x, box.y + box.h, box.w * Math.min(1, since), 4),
+  },
+};
+
+/** c's one panel a card whose payoff is its line's `Hi`; a and b have none. */
+const carded: BoardFile = {
+  ...emptyBoard('f'),
+  panels: [
+    {
+      id: 'c.start',
+      beat: BoardName.make('c'),
+      at: BoardName.make('start'),
+      tries: [],
+      text: { _tag: 'Card', payoff: 'Hi' },
+    },
+  ],
+};
+
 /** Frames that read only their beats' and shots' times: a Board's panels. */
 const panels = () => false;
 /** Frames that read the film's seconds: every frame the film draws. */
@@ -281,6 +310,63 @@ describe('a segment moved by an earlier beat', () => {
       [160, 300, false],
       [300, 600, false],
     ]);
+  });
+
+  test('paints each frame of a moved card as its key says: the same key, the same calls', () => {
+    // a lasts 3 s, then 3.5 s: 15 frames later, c's card falls where its words are heard at
+    // seconds that differ in their last bits when worked out as a film second less a start.
+    const filmOf = (aSeconds: number) => {
+      const placed = Result.getOrThrow(
+        layout(
+          [
+            { id: 'a', say: 'Hi.', min: aSeconds },
+            { id: 'b', say: 'Hi.', min: 12.4 },
+            { id: 'c', say: 'Hi.', min: 10 },
+          ],
+          { voice: '', scenes: {} },
+        ),
+      );
+      const duration = aSeconds + 22.4;
+      const film: Film = Schema.decodeSync(Schema.Any)({
+        width: 1920,
+        height: 1080,
+        fps: 30,
+        duration,
+        title: 'probe',
+        look: { card: { style: CARD } },
+        placed,
+        render: () => {},
+      });
+      const board = boardFilm(film, carded, new Map(), false);
+      const segments = beatSegments({
+        placed,
+        start: 0,
+        end: Math.ceil(duration * 30 - 1e-6),
+        render,
+        beats: new Map([...beats, ['a', `key-a-${aSeconds}`]]),
+        board: Option.some({ shots: boardShots(placed, carded), duration, images }),
+        filmTimed: (i) => board.filmTimed?.(i / 30) ?? true,
+      });
+      return { board, card: segments.filter((s) => !s.pinned) };
+    };
+    /** Every call frame `i` of `board` makes on its canvas, in order. */
+    const callsAt = (board: Film, i: number) => {
+      const calls: Array<readonly [PropertyKey, ReadonlyArray<unknown>]> = [];
+      const r = recorder(1920, 1080, {
+        record: false,
+        onCall: (key, args) => calls.push([key, args]),
+      });
+      withDom(() => board.render(r.ctx, i / 30));
+      return calls;
+    };
+    const was = filmOf(3);
+    const now = filmOf(3.5);
+    expect(was.card).toHaveLength(1);
+    const [before, after] = [was.card[0]!, now.card[0]!];
+    expect(after.from - before.from).toBe(15);
+    expect(Option.getOrThrow(after.key)).toBe(Option.getOrThrow(before.key));
+    for (let k = 0; k < before.to - before.from; k++)
+      expect(callsAt(now.board, after.from + k)).toEqual(callsAt(was.board, before.from + k));
   });
 
   test('reads the beat of a shot it shows: a change to that beat alone draws it again', () => {

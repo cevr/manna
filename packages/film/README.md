@@ -611,8 +611,10 @@ is read whole, since any module may derive a value from a beat's `lead`,
 take re-voiced moves the later beats without re-keying them) and where it
 starts; and for a Board render each shot its frames draw (`shotsSeen`: the
 try shown and its image's sha256 as it is on disk, its motion, the span that
-times its motion and its dissolves). Every time is keyed from the segment's
-first frame in millionths of a frame. So a neighbour seen across a dissolve
+times its motion and its dissolves). Every time is keyed in whole ticks of
+the Board's clock (`ticksAt`: millionths of a frame) from the segment's first
+frame, and a Board frame paints from those very ticks (`BoardClock`), so one
+key paints the same frames wherever its segment starts. So a neighbour seen across a dissolve
 at the segment's edge changes it and a panel elsewhere does not, and a
 segment of panels moved by whole frames when an earlier beat changes its
 length keeps its key: its kept chunks join at its new place

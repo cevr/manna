@@ -116,6 +116,21 @@ export const frameAtOrAfter = (t: number, fps: number): number => Math.ceil(t * 
 /** The last frame at or before `t` seconds, at `fps`. */
 export const frameAtOrBefore = (t: number, fps: number): number => Math.floor(t * fps + GRID_NUDGE);
 
+/** How many ticks a frame holds on a Board's clock (`ticksAt`). */
+export const TICKS_PER_FRAME = 1_000_000;
+
+/**
+ * Film second `t` on a Board's clock at `fps`: a whole number of millionths
+ * of a frame. Two times moved by the same whole frames lie the same whole
+ * number of ticks apart, and an integer difference is exact, so a frame
+ * moved with its beat reads the very same numbers (`secondsOfTicks`) where a
+ * difference of seconds would differ in its last bits.
+ */
+export const ticksAt = (t: number, fps: number): number => Math.round(t * fps * TICKS_PER_FRAME);
+
+/** `n` ticks of a Board's clock at `fps` as seconds: the same `n`, the same seconds. */
+export const secondsOfTicks = (n: number, fps: number): number => n / (fps * TICKS_PER_FRAME);
+
 /** The frames that start inside `span` at `fps`: the first at or after its start, the last before its end. */
 export const framesOf = (span: Interval, fps: number) => ({
   first: frameAtOrAfter(span.from, fps),

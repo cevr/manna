@@ -17,11 +17,13 @@ import { Shot } from '../core/animatic.ts';
 import {
   type Framing,
   type Layer,
+  boardClock,
   boardFrameAt,
   boardShots,
   burnIn,
 } from '../core/board-render.ts';
 import type { Placed } from '../core/layout.ts';
+import { secondsOfTicks, ticksAt } from '../core/time.ts';
 
 /** A seed for a card's hands: the board's cards never boil, so one hand is all they need. */
 const STILL_HAND = (key: string | number): Hand => ({
@@ -33,10 +35,12 @@ const STILL_HAND = (key: string | number): Hand => ({
 const SWEEP_S = 1.2;
 
 /**
- * Text panel `text` of beat `p` at film second `T` (shown from its mark said
- * at film second `at`), in the film's card style: a card's words rising in
- * as they are heard, a verse with its phrase swept. Why not, when the film
- * declares no card style or its words do not read (a mark its line lacks).
+ * Text panel `text` of beat `p` (shown from its mark said at film second
+ * `at`), in the film's card style, at a frame whose seconds since a film
+ * second are `since` (on the Board's clock, `secondsOfTicks`): a card's
+ * words rising in as they are heard, a verse with its phrase swept. Why not,
+ * when the film declares no card style or its words do not read (a mark its
+ * line lacks).
  */
 const paintText = (
   ctx: CanvasRenderingContext2D,
@@ -45,7 +49,7 @@ const paintText = (
   text: PanelText,
   mark: string,
   at: number,
-  T: number,
+  since: (t: number) => number,
 ): Result.Result<void, string> => {
   const { width: w, height: h } = film;
   return Option.match(Option.fromUndefinedOr(film.look.card), {
@@ -71,7 +75,7 @@ const paintText = (
             }),
           }),
           (words: ReadonlyArray<CardWord>) =>
-            fullCard({ ctx, w, h, t: T - p.start, hand: STILL_HAND }, words, look.style),
+            fullCard({ ctx, w, h, t: since(p.start), hand: STILL_HAND }, words, look.style),
         );
       return Option.match(Option.fromUndefinedOr(look.verse), {
         onNone: () => Result.fail(`${film.title} sets no verse style (FilmSpec.card.verse)`),
@@ -85,7 +89,7 @@ const paintText = (
             ctx,
             { text: text.text, phrase: text.phrase },
             style,
-            { x: w * 0.14, y: h * 0.36, highlight: Math.max(0, Math.min(1, (T - at) / SWEEP_S)) },
+            { x: w * 0.14, y: h * 0.36, highlight: Math.max(0, Math.min(1, since(at) / SWEEP_S)) },
             STILL_HAND('verse'),
           );
           ctx.restore();
@@ -178,8 +182,10 @@ export const boardFilm = (
   images: ReadonlyMap<string, BoardImage>,
   review: boolean,
 ): Film => {
-  const shots = boardShots(film.placed, board);
-  const { width: w, height: h } = film;
+  const clock = boardClock(boardShots(film.placed, board), film.duration, film.fps);
+  const { width: w, height: h, fps } = film;
+  /** Frame `T` on the Board's clock: whole ticks, so a frame moved by whole frames reads the same numbers. */
+  const tickOf = (T: number) => ticksAt(T, fps);
   /** The film's own frame at `T`, its captions off. */
   const filmFrame = (ctx: CanvasRenderingContext2D, T: number, opts: RenderOptions) =>
     film.render(ctx, T, { ...opts, captions: false });
@@ -230,7 +236,10 @@ export const boardFilm = (
             Arr.findFirst(film.placed, (p) => p.spec.id === beat),
             {
               onNone: () => Result.fail(`${film.title} has no beat ${beat}`),
-              onSome: (p) => paintText(ctx, film, p, text, mark, at, T),
+              onSome: (p) =>
+                paintText(ctx, film, p, text, mark, at, (t) =>
+                  secondsOfTicks(tickOf(T) - ticksAt(t, fps), fps),
+                ),
             },
           );
           // A card the engine cannot set fails the frame, and the render with it: never a card left blank.
@@ -253,7 +262,7 @@ export const boardFilm = (
    */
   const filmTimed = (T: number): boolean => {
     if (review || film.cardAt?.(T) === true) return true;
-    return Option.match(boardFrameAt(shots, film.duration, T), {
+    return Option.match(boardFrameAt(clock, tickOf(T)), {
       onNone: () => true,
       onSome: (f) => f.layers.some((layer) => Option.isNone(paintedOf(layer))),
     });
@@ -261,7 +270,7 @@ export const boardFilm = (
 
   const render = (ctx: CanvasRenderingContext2D, T: number, opts: RenderOptions = {}) => {
     const card = film.cardAt?.(T) === true;
-    const frame = boardFrameAt(shots, film.duration, T);
+    const frame = boardFrameAt(clock, tickOf(T));
     Bool.match(card || Option.isNone(frame), {
       onTrue: () => filmFrame(ctx, T, opts),
       onFalse: () => {

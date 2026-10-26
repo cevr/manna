@@ -29,9 +29,11 @@
 //   dissolves, and its panel as drawn: its card, or the try it shows with
 //   the sha256 of that image as it is on disk.
 //
-// Every time is keyed from the segment's first frame, in millionths of a
-// frame (`atFrames`): the float noise of a sum of seconds lies far under
-// it, and a frame drawn a millionth of a frame off draws the same.
+// Every time is keyed in whole ticks of the Board's clock (`ticksAt`,
+// core/time.ts: millionths of a frame) from the segment's first frame
+// (`atFrames`). A Board frame paints from those same ticks (`BoardClock`,
+// canvas/board.ts), so two segments with one key paint each frame from the
+// very same numbers, wherever each starts.
 //
 // So a panel or a beat elsewhere leaves a segment's key alone, and a
 // neighbour seen across a dissolve at its edge changes it.
@@ -58,9 +60,9 @@ import type { PlatformError } from 'effect/PlatformError';
 import { PanelText, shownTry } from '../core/board.ts';
 import { type Copies, hasMaster, hasShare } from '../core/encoder.ts';
 import { Shot } from '../core/animatic.ts';
-import { type ShotSeen, shotsSeen } from '../core/board-render.ts';
+import { type ShotSeen, boardClock, shotsSeen } from '../core/board-render.ts';
 import type { Placed } from '../core/layout.ts';
-import { frameAtOrAfter } from '../core/time.ts';
+import { TICKS_PER_FRAME, frameAtOrAfter, ticksAt } from '../core/time.ts';
 import { writeWhole } from './content-store.ts';
 import { sha256Hex } from './digest.ts';
 
@@ -152,31 +154,30 @@ const SegmentKeyInput = Schema.fromJsonString(
   }),
 );
 
-/** How finely a segment's key tells times apart: a millionth of a frame, the frame grid's own nudge (`core/time.ts`). */
-const PARTS = 1e6;
+/** Tick `tick` of the Board's clock as a segment's key reads it: from its first frame, `from`. */
+const fromFirst = (tick: number, from: number): number => tick - from * TICKS_PER_FRAME;
 
-/** Film second `t` as a segment's key reads it: in millionths of a frame at `fps` from its first frame, `from`. */
-const atFrames = (t: number, fps: number, from: number): number =>
-  Math.round((t * fps - from) * PARTS);
+/** Film second `t` as a segment's key reads it: in ticks at `fps` (`ticksAt`) from its first frame, `from`. */
+const atFrames = (t: number, fps: number, from: number): number => fromFirst(ticksAt(t, fps), from);
 
-/** `seen` as its key reads it: its times from frame `from` at `fps`, its panel reduced to what its frames draw, its image's sha256 from `images`. */
+/** `seen` as its key reads it: its ticks from frame `from`, its panel reduced to what its frames draw, its image's sha256 from `images`. */
 const shotRead = (seen: ShotSeen, images: ReadonlyMap<string, string>, fps: number, from: number) =>
   Shot.$match(seen.shot, {
-    Unboarded: ({ beat, from: shown }) => ({
+    Unboarded: ({ beat }) => ({
       beat,
-      from: atFrames(shown, fps, from),
+      from: fromFirst(seen.shown, from),
       at: Option.none<number>(),
-      seen: atFrames(seen.seen, fps, from),
-      gone: atFrames(seen.gone, fps, from),
+      seen: fromFirst(seen.seen, from),
+      gone: fromFirst(seen.gone, from),
       motion: seen.motion,
       panel: Option.none(),
     }),
-    Boarded: ({ beat, from: shown, at, panel }) => ({
+    Boarded: ({ beat, at, panel }) => ({
       beat,
-      from: atFrames(shown, fps, from),
+      from: fromFirst(seen.shown, from),
       at: Option.some(atFrames(at, fps, from)),
-      seen: atFrames(seen.seen, fps, from),
-      gone: atFrames(seen.gone, fps, from),
+      seen: fromFirst(seen.seen, from),
+      gone: fromFirst(seen.gone, from),
       motion: seen.motion,
       panel: Option.some({
         id: panel.id,
@@ -236,7 +237,11 @@ const segmentKey = (
   const seen = Option.match(input.board, {
     onNone: () => [],
     onSome: (board) =>
-      shotsSeen(board.shots, board.duration, from / fps, to / fps).map((s) => ({
+      shotsSeen(
+        boardClock(board.shots, board.duration, fps),
+        from * TICKS_PER_FRAME,
+        to * TICKS_PER_FRAME,
+      ).map((s) => ({
         seen: s,
         read: shotRead(s, board.images, fps, from),
       })),

@@ -4,7 +4,9 @@
 // over its hold, and the line a review copy burns in. A picture panel's
 // motion is a pure function of its id, so the same panel moves the same way
 // on every render; a card (a text panel, a beat with no panel) holds still.
-// Pure: the page paints what this decides (`canvas/board.ts`, `boardFilm`).
+// Its times are whole ticks of the Board's clock (`BoardClock`), so a frame
+// moved by whole frames with its shots works out the same numbers.
+// Pure:the page paints what this decides (`canvas/board.ts`, `boardFilm`).
 
 import { Array as Arr, Boolean as Bool, Data, Option, Predicate } from 'effect';
 import { type BoardFile, shownTry } from './board.ts';
@@ -12,7 +14,7 @@ import { RenderVariantName } from './catalogue.ts';
 import type { Placed } from './layout.ts';
 import { Shot, shotsOf } from './animatic.ts';
 import { clockBeat, timedBeat } from './film-timeline.ts';
-import { frameAtOrBefore } from './time.ts';
+import { frameAtOrBefore, ticksAt } from './time.ts';
 
 /** What a render's frames picture: the film's scenes, or its Board (`review`: with the burn-in). */
 export type Picture = Data.TaggedEnum<{
@@ -124,37 +126,59 @@ interface BoardFrame {
   readonly layers: ReadonlyArray<Layer>;
 }
 
-/** Where shot `i` starts on the film's clock. */
-const fromOf = (shots: ReadonlyArray<Shot>, i: number, duration: number): number =>
-  Option.match(Arr.get(shots, i), { onNone: () => duration, onSome: (s) => s.from });
+/**
+ * A Board's shots (in play order) on its clock (`ticksAt`, core/time.ts): the
+ * tick each starts at and the tick the film ends at, at `fps`. Every time a
+ * Board frame paints from is worked out here in whole ticks, so a frame moved
+ * with its shots by whole frames reads the very numbers it read before, and
+ * paints what a segment key over those numbers (`shotsSeen`) says it paints.
+ */
+interface BoardClock {
+  readonly fps: number;
+  readonly shots: ReadonlyArray<Shot>;
+  /** Each shot's start, by index, in ticks. */
+  readonly from: ReadonlyArray<number>;
+  /** The film's end, in ticks. */
+  readonly end: number;
+}
 
-/** Half the dissolve at the cut into shot `i`: at most half of either hold beside it, none before the first. */
-const halfAt = (shots: ReadonlyArray<Shot>, i: number, duration: number): number =>
-  Bool.match(i <= 0 || i >= shots.length, {
+/** `shots` (in play order) of a film `duration` seconds long on a Board's clock at `fps`. */
+export const boardClock = (
+  shots: ReadonlyArray<Shot>,
+  duration: number,
+  fps: number,
+): BoardClock => ({
+  fps,
+  shots,
+  from: shots.map((s) => ticksAt(s.from, fps)),
+  end: ticksAt(duration, fps),
+});
+
+/** Where shot `i` starts, in ticks: the film's end after the last. */
+const fromOf = (clock: BoardClock, i: number): number =>
+  Option.getOrElse(Arr.get(clock.from, i), () => clock.end);
+
+/** Half the dissolve at the cut into shot `i`, in ticks: at most half of either hold beside it, none before the first. */
+const halfAt = (clock: BoardClock, i: number): number =>
+  Bool.match(i <= 0 || i >= clock.shots.length, {
     onTrue: () => 0,
     onFalse: () => {
-      const cut = fromOf(shots, i, duration);
-      const before = cut - fromOf(shots, i - 1, duration);
-      const after = fromOf(shots, i + 1, duration) - cut;
-      return Math.max(0, Math.min(DISSOLVE_S / 2, before / 2, after / 2));
+      const cut = fromOf(clock, i);
+      const before = cut - fromOf(clock, i - 1);
+      const after = fromOf(clock, i + 1) - cut;
+      return Math.max(0, Math.min(ticksAt(DISSOLVE_S, clock.fps) / 2, before / 2, after / 2));
     },
   });
 
-/** Shot `i` as a layer at `T`: its motion through the span it is seen, its dissolves in and out within it. */
-const layerOf = (
-  shots: ReadonlyArray<Shot>,
-  i: number,
-  duration: number,
-  T: number,
-  alpha: number,
-): ReadonlyArray<Layer> =>
-  Option.match(Arr.get(shots, i), {
+/** Shot `i` as a layer at tick `tick`: its motion through the span it is seen, its dissolves in and out within it. */
+const layerOf = (clock: BoardClock, i: number, tick: number, alpha: number): ReadonlyArray<Layer> =>
+  Option.match(Arr.get(clock.shots, i), {
     onNone: () => [],
     onSome: (shot) => {
-      const seen = fromOf(shots, i, duration) - halfAt(shots, i, duration);
-      const gone = fromOf(shots, i + 1, duration) + halfAt(shots, i + 1, duration);
+      const seen = fromOf(clock, i) - halfAt(clock, i);
+      const gone = fromOf(clock, i + 1) + halfAt(clock, i + 1);
       const p = Bool.match(gone > seen, {
-        onTrue: () => (T - seen) / (gone - seen),
+        onTrue: () => (tick - seen) / (gone - seen),
         onFalse: () => 0,
       });
       const motion = motionOf(shot);
@@ -163,75 +187,70 @@ const layerOf = (
   });
 
 /**
- * The frame at film second `T` of `shots` (in play order) over a film
- * `duration` long: the shot held there, alone, or dissolving across the cut
- * nearest it (the outgoing one under, the incoming over it at the share of
- * the dissolve passed). None for a film with no shot.
+ * The frame at tick `tick` of `clock`: the shot held there, alone, or
+ * dissolving across the cut nearest it (the outgoing one under, the incoming
+ * over it at the share of the dissolve passed). None for a film with no shot.
  */
-export const boardFrameAt = (
-  shots: ReadonlyArray<Shot>,
-  duration: number,
-  T: number,
-): Option.Option<BoardFrame> => {
+export const boardFrameAt = (clock: BoardClock, tick: number): Option.Option<BoardFrame> => {
   const i = Option.getOrElse(
-    Arr.findLastIndex(shots, (s) => s.from <= T),
+    Arr.findLastIndex(clock.from, (from) => from <= tick),
     () => 0,
   );
-  return Option.map(Arr.get(shots, i), (shown): BoardFrame => {
-    const next = halfAt(shots, i + 1, duration);
-    const cutNext = fromOf(shots, i + 1, duration);
-    const last = halfAt(shots, i, duration);
-    const cutLast = fromOf(shots, i, duration);
-    if (next > 0 && T >= cutNext - next)
+  return Option.map(Arr.get(clock.shots, i), (shown): BoardFrame => {
+    const next = halfAt(clock, i + 1);
+    const cutNext = fromOf(clock, i + 1);
+    const last = halfAt(clock, i);
+    const cutLast = fromOf(clock, i);
+    if (next > 0 && tick >= cutNext - next)
       return {
         shown,
         layers: [
-          ...layerOf(shots, i, duration, T, 1),
-          ...layerOf(shots, i + 1, duration, T, (T - (cutNext - next)) / (2 * next)),
+          ...layerOf(clock, i, tick, 1),
+          ...layerOf(clock, i + 1, tick, (tick - (cutNext - next)) / (2 * next)),
         ],
       };
-    if (last > 0 && T < cutLast + last)
+    if (last > 0 && tick < cutLast + last)
       return {
         shown,
         layers: [
-          ...layerOf(shots, i - 1, duration, T, 1),
-          ...layerOf(shots, i, duration, T, (T - (cutLast - last)) / (2 * last)),
+          ...layerOf(clock, i - 1, tick, 1),
+          ...layerOf(clock, i, tick, (tick - (cutLast - last)) / (2 * last)),
         ],
       };
-    return { shown, layers: layerOf(shots, i, duration, T, 1) };
+    return { shown, layers: layerOf(clock, i, tick, 1) };
   });
 };
 
 /**
- * A shot as the frames of a span read it: the shot, where it is seen from
- * and gone by (its dissolves in and out included), which time its motion
- * and its alpha across each dissolve, and the motion itself.
+ * A shot as the frames of a span read it, in ticks: the shot, where it is
+ * held from, where it is seen from and gone by (its dissolves in and out
+ * included), which time its motion and its alpha across each dissolve, and
+ * the motion itself.
  */
 export interface ShotSeen {
   readonly shot: Shot;
+  readonly shown: number;
   readonly seen: number;
   readonly gone: number;
   readonly motion: Motion;
 }
 
 /**
- * The shots of `shots` (in play order, over a film `duration` long) a Board
- * frame between film seconds `from` and `to` draws: each whose seen span
- * meets `[from, to)`, the first held from the film's start. What a frame
- * there paints of the Board (`boardFrameAt`) is a function of these and its
- * time alone, so a key over them changes when such a frame would.
+ * The shots of `clock` a Board frame between ticks `from` and `to` draws:
+ * each whose seen span meets `[from, to)`, the first held from the film's
+ * start. What a frame there paints of the Board (`boardFrameAt`) is a
+ * function of these and its tick alone, so a key over them changes when such
+ * a frame would.
  */
-export const shotsSeen = (
-  shots: ReadonlyArray<Shot>,
-  duration: number,
-  from: number,
-  to: number,
-): ReadonlyArray<ShotSeen> =>
-  shots.flatMap((shot, i) => {
-    const seen = fromOf(shots, i, duration) - halfAt(shots, i, duration);
-    const gone = fromOf(shots, i + 1, duration) + halfAt(shots, i + 1, duration);
+export const shotsSeen = (clock: BoardClock, from: number, to: number): ReadonlyArray<ShotSeen> =>
+  clock.shots.flatMap((shot, i) => {
+    const seen = fromOf(clock, i) - halfAt(clock, i);
+    const gone = fromOf(clock, i + 1) + halfAt(clock, i + 1);
     const meets = (i === 0 || seen < to) && gone > from;
-    return Arr.filter([{ shot, seen, gone, motion: motionOf(shot) }], () => meets);
+    return Arr.filter(
+      [{ shot, shown: fromOf(clock, i), seen, gone, motion: motionOf(shot) }],
+      () => meets,
+    );
   });
 
 /** `board`'s shots on `placed`'s clock: the animatic's rule (`shotsOf`) over the beats as the studio's Board lane times them (`clockBeat`, `timedBeat`). */
