@@ -4,9 +4,8 @@
  * Objects (`../mail/model.ts`): one object a subscriber, and one for each of
  * the model's policies and projections.
  *
- * - `MailDatabase`: D1, the address book and the roster (and the D1 list
- *   the model replaced, until it is imported). Alchemy applies `migrations/`
- *   on deploy.
+ * - `MailDatabase`: D1, the address book and the roster. Alchemy applies
+ *   `migrations/` on deploy.
  * - `MailSender`: the Email Sending binding, allowed to send only as `FROM`
  *   (`../mail/mailer.ts`).
  * - `MailQueue`: the queue a film's send is put on, delivered one batch at a

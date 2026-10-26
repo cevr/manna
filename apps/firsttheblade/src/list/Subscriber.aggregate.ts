@@ -11,8 +11,9 @@
  * - `Left`: off the list. Its letters are kept, so coming back never sends a
  *   film twice.
  *
- * `Import` brings a subscriber over from the D1 list the model replaced, as
- * it stood there (`./Import.command.ts`).
+ * `Import` brought a subscriber over from the D1 list the model replaced, as
+ * it stood there; it ran once, and stays for the `Imported` events it wrote
+ * (`./Import.command.ts`).
  */
 import * as Domain from '@alchemy.run/domain';
 import { Array as Arr, DateTime, Duration, Match, Option, Predicate, Schema } from 'effect';

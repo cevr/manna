@@ -21,9 +21,6 @@
  * - `POST /mail/send`, with `Authorization: Bearer <MAIL_ADMIN_TOKEN>`: puts
  *   a film's send on the queue (`./deliver.ts`), for each subscriber the
  *   roster says still waits for it, or with `dryRun` counts it.
- * - `POST /mail/import`, with the same token: brings the D1 list's
- *   subscribers into the model (`./legacy.ts`); running it again changes
- *   nothing.
  *
  * Every answer is a redirect, a page or a short text, and the logs name
  * ids, counts and codes, never an address or a token.
@@ -41,10 +38,9 @@ import { CONFIRM_FOR } from '../list/timing.ts';
 import { Assets, pageRequest } from '../worker/assets.ts';
 import { type Address, addressOf } from './address.ts';
 import { Addresses } from './addresses.ts';
-import { type ImportAnswer, type SendAnswer, SendRequest } from './admin.ts';
+import { type SendAnswer, SendRequest } from './admin.ts';
 import { Background } from './background.ts';
 import { Films } from './films.ts';
-import { legacySubscribers } from './legacy.ts';
 import { logMail, reasonOf, warnMail } from './log.ts';
 import { MAIL_PAGES, MAIL_ROUTES, SIGNUP_FIELDS } from './paths.ts';
 import { BATCH, FilmQueue, type QueueError } from './queue.ts';
@@ -77,8 +73,7 @@ const see = (path: string) => HttpServerResponse.redirect(path, { status: 303 })
 
 const text = (body: string, status: number) => HttpServerResponse.text(body, { status });
 
-const json = (body: SendAnswer | ImportAnswer, status: number) =>
-  HttpServerResponse.jsonUnsafe(body, { status });
+const json = (body: SendAnswer, status: number) => HttpServerResponse.jsonUnsafe(body, { status });
 
 /** A page the prerender wrote, as this route's answer. */
 const page = Effect.fn('Mail.page')(function* (
@@ -323,31 +318,6 @@ const send = Effect.fn('Mail.send')(function* (request: HttpServerRequest.HttpSe
   return json({ film: ref, ...counts, queued }, 202);
 });
 
-/**
- * The import: each subscriber of the D1 list, its address kept and its
- * standing brought into the model, under a command id of its row's, so a
- * second run sends nothing new.
- */
-const importList = Effect.fn('Mail.import')(function* (
-  request: HttpServerRequest.HttpServerRequest,
-) {
-  if (!(yield* isAdmin(request))) {
-    yield* warnMail('import.unauthorized');
-    return json({ error: 'unauthorized' }, 401);
-  }
-  const tokens = yield* Tokens;
-  const addresses = yield* Addresses;
-  const subscribers = yield* Subscriber;
-  const legacy = yield* legacySubscribers();
-  for (const one of legacy) {
-    const subscriber = yield* tokens.idOf(one.address);
-    yield* addresses.keep(subscriber, one.address, yield* Clock.currentTimeMillis);
-    yield* subscribers.send(subscriber, one.command, { commandId: `import/${one.id}` });
-  }
-  yield* logMail('import.done', { imported: legacy.length });
-  return json({ imported: legacy.length }, 200);
-});
-
 type Handler = (
   request: HttpServerRequest.HttpServerRequest,
 ) => Effect.Effect<HttpServerResponse.HttpServerResponse, SqlError | QueueError, MailServices>;
@@ -370,7 +340,6 @@ const ROUTES = new Map<string, ReadonlyMap<string, Handler>>([
     ]),
   ],
   [MAIL_ROUTES.send, new Map([['POST', send]])],
-  [MAIL_ROUTES.import, new Map([['POST', importList]])],
 ]);
 
 /**

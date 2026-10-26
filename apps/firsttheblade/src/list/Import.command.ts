@@ -1,9 +1,14 @@
 /**
- * A subscriber brought over from the D1 list the model replaced
- * (`../mail/legacy.ts`), as that list kept it: when it last signed up, its
- * newest confirm link, where it stood, and its film letters. The model takes
- * it only into a subscriber it has never seen, so importing twice, or after
- * the address signed up here, changes nothing.
+ * A subscriber brought over from the D1 list the model replaced, as that
+ * list kept it: when it last signed up, its newest confirm link, where it
+ * stood, and its film letters. The model takes it only into a subscriber it
+ * has never seen, so importing twice, or after the address signed up here,
+ * changes nothing.
+ *
+ * The import ran once, on 2026-10-26, and that list's tables are dropped
+ * (`migrations/0004_drop_d1_list.sql`); nothing sends `Import` now. It stays
+ * because an aggregate knows only the events its commands declare, and the
+ * subscribers it brought over begin with `Imported`.
  */
 import * as Domain from '@alchemy.run/domain';
 import { Schema } from 'effect';

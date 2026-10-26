@@ -22,7 +22,6 @@
     "plan": "alchemy plan alchemy.run.ts --stage prod",
     "deploy": "bun scripts/prod-state.ts && turbo run test:slow --filter=@manna/firsttheblade && alchemy deploy alchemy.run.ts --stage prod",
     "mail:send": "bun scripts/mail-send.ts",
-    "mail:import": "bun scripts/mail-import.ts",
     "verify:launch": "bun --no-env-file scripts/verify/cli.ts launch",
     "verify:stop": "bun --no-env-file scripts/verify/cli.ts stop",
     "verify:doctor": "bun --no-env-file scripts/verify/cli.ts doctor",

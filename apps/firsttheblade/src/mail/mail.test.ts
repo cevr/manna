@@ -19,7 +19,6 @@ import { Mailbox, Mailer, MailRefused, MailUnavailable } from './mailer.ts';
 import { MAIL_PAGES, SIGNUP_FIELDS } from './paths.ts';
 import { Queued } from './queue.ts';
 import { RosterTable } from './roster.ts';
-import { Sql } from './sql.ts';
 import { SIGNUPS } from './throttle.ts';
 import { Tokens } from './tokens.ts';
 
@@ -643,63 +642,6 @@ describe('a sign-up never confirmed', () => {
       yield* settle;
       yield* joined(ANN);
       expect((yield* counts).confirmed).toBe(1);
-    }));
-});
-
-describe('importing the D1 list', () => {
-  /** What `bun run mail:import` posts. */
-  const importList = (token = TEST_ADMIN_TOKEN) =>
-    call('/mail/import', { method: 'POST', headers: { authorization: `Bearer ${token}` } });
-
-  /** A row of the D1 list, as the list wrote it. */
-  const row = Effect.fn('Test.row')(function* (
-    id: number,
-    address: string,
-    status: string,
-    at: { readonly signedUp: number; readonly confirmed?: number; readonly left?: number },
-  ) {
-    const sql = yield* Sql;
-    yield* sql.run(
-      {
-        name: 'test.row',
-        text: `INSERT INTO subscribers
-                 (id, address, status, created_at, signed_up_at, confirm_sent_at, confirmed_at, unsubscribed_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      },
-      [id, address, status, at.signedUp, at.signedUp, at.signedUp, at.confirmed ?? 0, at.left ?? 0],
-    );
-  });
-
-  test('brings each subscriber over as it stood, with its film letters, once', () =>
-    Effect.gen(function* () {
-      yield* row(1, 'ann@example.com', 'confirmed', { signedUp: 1, confirmed: 2 });
-      yield* row(2, 'ben@example.com', 'unsubscribed', { signedUp: 1, confirmed: 2, left: 3 });
-      const sql = yield* Sql;
-      yield* sql.run(
-        {
-          name: 'test.send',
-          text: `INSERT INTO sends (film, subscriber_id, outcome, at) VALUES (?, 1, 'sent', 4)`,
-        },
-        [FILM],
-      );
-      expect((yield* importList('wrong')).status).toBe(401);
-      for (let run = 0; run < 2; run += 1) {
-        const imported = yield* importList();
-        expect(imported.status).toBe(200);
-        expect(yield* Effect.promise(() => answerOf(imported))).toEqual({ imported: 2 });
-      }
-      expect(yield* counts).toEqual({ confirmed: 1, sent: 1, refused: 0, waiting: 0, unsure: 0 });
-      const ann = yield* (yield* Tokens).idOf(Address.make('ann@example.com'));
-      expect(yield* (yield* Addresses).find(ann)).toEqual(
-        Option.some(Address.make('ann@example.com')),
-      );
-      // Ann was sent the film there, so she is not sent it here.
-      yield* admin(`{"film":"${FILM}"}`);
-      expect(yield* (yield* Queued).deliveries).toHaveLength(0);
-      // Ben left there, and may come back here, once his last link is an hour old.
-      yield* TestClock.adjust(Duration.hours(2));
-      yield* joined('ben@example.com');
-      expect((yield* counts).confirmed).toBe(2);
     }));
 });
 

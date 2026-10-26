@@ -15,8 +15,6 @@ export const MAIL_ROUTES = {
   unsubscribe: '/unsubscribe',
   /** POST, with the admin token: send a film to the list (`bun run mail:send`). */
   send: '/mail/send',
-  /** POST, with the admin token: bring the D1 list's subscribers into the model once (`bun run mail:import`). */
-  import: '/mail/import',
 } as const;
 
 /** The pages the routes answer with, each written by the prerender. */

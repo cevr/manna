@@ -154,7 +154,6 @@ bun run typecheck
 bun run plan       # the prod state check, the stills gate (build, walk dist/), then show what `prod` would change
 bun run deploy     # the prod state check, test:slow, then the stills gate (build, walk dist/) and deploy `prod`; the stack runs both checks first on stage prod
 bun run mail:send <series>/<no> [--dry-run] [--origin <url>]   # send a film to the email list
-bun run mail:import [--origin <url>]   # once, after the deploy that brings the model: the D1 list's subscribers into it
 bun run verify:drive confirm --root <dir> --port <p> --evidence <dir>   # drive the site as a visitor (verify:launch, :doctor, :outbox, :stop, :stage too)
 ```
 
