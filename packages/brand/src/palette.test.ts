@@ -60,6 +60,15 @@ describe('Moonlit wheat', () => {
     });
   });
 
+  test('the deep dusk reads at 4.5:1 on the sky’s page and panel, and the night’s panel lifts off the night', () => {
+    const white = '#ffffff';
+    const page = mix(PALETTE.sky, white, 0.88);
+    const panel = mix(PALETTE.sky, white, 0.709);
+    expect([page, panel].filter((ground) => contrast(PALETTE.duskDeep, ground) < 4.5)).toEqual([]);
+    expect(luminance(PALETTE.nightPanel)).toBeGreaterThan(luminance(PALETTE.night));
+    expect(contrast(PALETTE.nightPanel, PALETTE.night)).toBeLessThan(1.5);
+  });
+
   test('the accent reads at 4.5:1 on the paper, the bands and the wheat', () => {
     const under = [PALETTE.paper, PALETTE.band, PALETTE.wheat].filter(
       (ground) => contrast(PALETTE.accent, ground) < 4.5,

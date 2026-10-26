@@ -49,6 +49,17 @@ export const PALETTE = {
   duskRose: '#d99a86',
   /** The dusk's last light, before the night. */
   duskLate: '#6e6683',
+  /**
+   * The dusk's gold deepened at its own hue until it reads at 4.5:1 on the
+   * sky's page and panel (the sky tinted toward white): the hymnal's chords
+   * by day.
+   */
+  duskDeep: '#93620f',
+  /**
+   * The night raised a step and a little bluer, a surface over the night's
+   * page: the hymnal's panels and pressed rows by night.
+   */
+  nightPanel: '#1b4262',
 } as const;
 
 export type Role = keyof typeof PALETTE;
