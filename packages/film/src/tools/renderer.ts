@@ -69,6 +69,7 @@ import {
   type TooManyEncoders,
 } from './errors.ts';
 import { writeWhole } from './content-store.ts';
+import { PRUNE_DAYS, holdCache, pruneHeld, recordRender } from './segment-cache.ts';
 import { sha256OfFile } from './digest.ts';
 import {
   type BoardRead,
@@ -79,8 +80,6 @@ import {
   keepSegment,
   keptFolder,
   keptNames,
-  PRUNE_DAYS,
-  pruneSegments,
   reuseSegment,
   segmentsFolder,
 } from './segments.ts';
@@ -626,6 +625,16 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
             ),
         });
         const fresh = Option.exists(keeping, (k) => k.fresh);
+        /** The services the film's cache is read, held and pruned through. */
+        const onDisk = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+          effect.pipe(
+            Effect.provideService(FileSystem.FileSystem, fs),
+            Effect.provideService(Path.Path, path),
+          );
+        // A render that keeps segments holds the film's cache from before it
+        // picks them until it is done, its prune included: no prune deletes
+        // what it reads or draws, and another render of the film waits its turn.
+        if (Option.isSome(keeping)) yield* onDisk(holdCache(film.paths.out));
         /** This render's mark: each segment it reuses or keeps is recorded as used at it. */
         const used = yield* Clock.currentTimeMillis;
         // --fresh finds no kept copy, and drops each one's record before it draws it again.
@@ -848,13 +857,20 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         yield* Effect.log(
           `render.done frames=${total} chunks=${chunks.length} audio=${Option.isSome(audio)} secs=${secs.toFixed(1)} fps=${(total / secs).toFixed(1)} ${perFrame(spent)} file=${target} share=${Option.getOrElse(shared, () => 'none')} captions=${captions}`,
         );
-        // A render that keeps segments, once done, prunes the film's: each no
-        // render has used for PRUNE_DAYS goes, never one this render used. A
-        // prune that fails leaves the render done.
+        // A render that keeps segments, once done and still holding the cache,
+        // records the keys it used for the file it wrote, then prunes the
+        // film's: each no render used for PRUNE_DAYS and no record names goes.
+        // A record or prune that fails leaves the render done.
         if (Option.isSome(keeping)) {
-          const keep = new Set(segments.flatMap((s) => Option.toArray(s.key)));
+          const keys = segments.flatMap((s) => Option.toArray(s.key));
           const now = yield* Clock.currentTimeMillis;
-          yield* pruneSegments(fs, path, folder, { now, days: PRUNE_DAYS, keep }, false).pipe(
+          yield* onDisk(
+            recordRender(film.paths.out, target, used, keys).pipe(
+              Effect.andThen(
+                pruneHeld(film.paths.out, { now, days: PRUNE_DAYS, keep: new Set(keys) }, false),
+              ),
+            ),
+          ).pipe(
             Effect.flatMap((pruned) =>
               Effect.log(
                 `render.cache.pruned count=${pruned.removed.length} freed=${pruned.freed}`,

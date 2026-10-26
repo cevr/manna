@@ -22,8 +22,8 @@
 // neighbour seen across a dissolve at its edge changes it.
 //
 // Each render marks the segments it reuses or keeps as used at its start
-// (`used` in the record), and a prune (`pruneSegments`, after each render
-// and `film cache --prune`) deletes those no render used for some days.
+// (`used` in the record, never moved back); the cache as a whole, its lock,
+// the renders' records and the prune, is `segment-cache.ts`.
 
 import {
   Array as Arr,
@@ -39,7 +39,6 @@ import { PanelText, shownTry } from '../core/board.ts';
 import { Shot } from '../core/animatic.ts';
 import { type ShotSeen, shotsSeen } from '../core/board-render.ts';
 import type { Placed } from '../core/layout.ts';
-import { isSegment } from '../core/segment.ts';
 import { frameAtOrAfter } from '../core/time.ts';
 import { writeWhole } from './content-store.ts';
 import { sha256Hex } from './digest.ts';
@@ -302,10 +301,10 @@ const writeRecord = (
 
 /**
  * Segment `key`'s chunks as kept under `folder`, their files by path, its
- * record marked used at `used`; none when it was never kept whole (no
- * record), or a file it lists is gone. The mark is written as the render
- * finds it, before it joins the files, so a prune that runs meanwhile sees
- * it in use.
+ * record marked used at `used`, or at the mark it holds when that is later
+ * (a mark never goes back); none when it was never kept whole (no record),
+ * or a file it lists is gone. The render calls it holding the film's cache
+ * (`holdCache`), so no prune runs between the mark and the join.
  */
 export const reuseSegment = (
   fs: FileSystem.FileSystem,
@@ -328,7 +327,11 @@ export const reuseSegment = (
     const files = chunks.flatMap((c) => [c.master, ...Option.toArray(c.share)]);
     const there = yield* Effect.forEach(files, (file) => fs.exists(file));
     if (!there.every(Boolean)) return Option.none();
-    yield* writeRecord(fs, path, folder, key, read.value.chunks, used);
+    const later = Math.max(
+      used,
+      Option.getOrElse(read.value.used, () => used),
+    );
+    yield* writeRecord(fs, path, folder, key, read.value.chunks, later);
     return Option.some(chunks);
   });
 
@@ -377,44 +380,17 @@ export const dropSegment = (
   key: string,
 ): Effect.Effect<void, PlatformError> => fs.remove(recordOf(path, folder, key), { force: true });
 
-/** A day, in ms: `--days` counts in them. */
-const DAY_MS = 86_400_000;
-
-/** How many days a segment no render has used is kept, after each render and by default in `film cache --prune`. */
-export const PRUNE_DAYS = 7;
-
-/** A segment kept whole (its record written): its key, the bytes of its folder, and when a render last used it (ms). */
-export interface CachedSegment {
-  readonly key: string;
-  readonly bytes: number;
-  readonly used: number;
-}
-
-/** What a film's segments folder holds: each segment kept whole, and each folder with no record (a render drawing it). */
-export interface SegmentCache {
-  readonly segments: ReadonlyArray<CachedSegment>;
-  readonly drawing: ReadonlyArray<{ readonly key: string; readonly bytes: number }>;
-}
-
-/** Every byte the cache holds, its kept segments and the folders still drawn. */
-export const cacheBytes = (cache: SegmentCache): number =>
-  [...cache.segments, ...cache.drawing].reduce((sum, s) => sum + s.bytes, 0);
-
-/** The bytes of every file at or under `dir`. */
-const bytesUnder = (fs: FileSystem.FileSystem, path: Path.Path, dir: string) =>
-  Effect.gen(function* () {
-    const names = yield* fs.readDirectory(dir, { recursive: true });
-    const sizes = yield* Effect.forEach(names, (name) =>
-      Effect.map(fs.stat(path.join(dir, name)), (info) => {
-        if (info.type !== 'File') return 0;
-        return Number(info.size);
-      }),
-    );
-    return sizes.reduce((sum, n) => sum + n, 0);
-  });
-
-/** When segment `key`'s record says a render last used it: its `used`, else the record's mtime, else never (0). */
-const lastUsed = (fs: FileSystem.FileSystem, path: Path.Path, folder: string, key: string) =>
+/**
+ * When segment `key`'s record under `folder` says a render last used it: its
+ * `used`; for a record with none, or one that does not read, its file's
+ * mtime, else never (0).
+ */
+export const lastUsed = (
+  fs: FileSystem.FileSystem,
+  path: Path.Path,
+  folder: string,
+  key: string,
+): Effect.Effect<number, PlatformError> =>
   Effect.gen(function* () {
     const record = recordOf(path, folder, key);
     const read = Schema.decodeOption(KeptSegmentJson)(yield* fs.readFileString(record));
@@ -427,96 +403,10 @@ const lastUsed = (fs: FileSystem.FileSystem, path: Path.Path, folder: string, ke
     );
   });
 
-/**
- * What `folder` (`segmentsFolder`) holds: each folder in it by its name, a
- * segment when its record is there, else one a render is drawing. Nothing
- * else in it (a file, a name no key could be) is read; an absent folder
- * holds nothing.
- */
-export const readCache = (
+/** Whether segment `key` under `folder` has its record: kept whole, not a folder a render is drawing. */
+export const isKept = (
   fs: FileSystem.FileSystem,
   path: Path.Path,
   folder: string,
-): Effect.Effect<SegmentCache, PlatformError> =>
-  Effect.gen(function* () {
-    if (!(yield* fs.exists(folder))) return { segments: [], drawing: [] };
-    const names = (yield* fs.readDirectory(folder)).filter(isSegment).toSorted();
-    const read = yield* Effect.forEach(names, (key) =>
-      Effect.gen(function* () {
-        const dir = keptFolder(folder, key);
-        if ((yield* fs.stat(dir)).type !== 'Directory') return [];
-        const bytes = yield* bytesUnder(fs, path, dir);
-        if (!(yield* fs.exists(recordOf(path, folder, key))))
-          return [{ key, bytes, used: Option.none<number>() }];
-        return [{ key, bytes, used: Option.some(yield* lastUsed(fs, path, folder, key)) }];
-      }),
-    );
-    const all = read.flat();
-    return {
-      segments: all.flatMap((s) => Option.toArray(Option.map(s.used, (used) => ({ ...s, used })))),
-      drawing: all
-        .filter((s) => Option.isNone(s.used))
-        .map((s) => ({ key: s.key, bytes: s.bytes })),
-    };
-  });
-
-/** What a prune keeps and removes by. */
-interface PruneRule {
-  /** Now, in ms. */
-  readonly now: number;
-  /** A segment last used more than this many days before `now` goes. */
-  readonly days: number;
-  /** Keys never removed: the segments the render that prunes has just used. */
-  readonly keep: ReadonlySet<string>;
-}
-
-/**
- * The segments of `segments` a prune removes: each last used more than
- * `days` before `now`, none in `keep`, and none the newest render used (those
- * marked at the newest mark), so `days` 0 keeps exactly the newest render's.
- */
-const staleSegments = (
-  segments: ReadonlyArray<CachedSegment>,
-  rule: PruneRule,
-): ReadonlyArray<CachedSegment> => {
-  const newest = Math.max(...segments.map((s) => s.used));
-  const before = rule.now - rule.days * DAY_MS;
-  return segments.filter((s) => s.used < before && s.used < newest && !rule.keep.has(s.key));
-};
-
-/** A prune's work: the cache as it found it, and the segments it removed (or, dry, would remove). */
-export interface Pruned {
-  readonly found: SegmentCache;
-  readonly removed: ReadonlyArray<CachedSegment>;
-  readonly freed: number;
-}
-
-/**
- * The film's segments under `folder` pruned by `rule` (`staleSegments`):
- * each stale one's folder deleted for good, as build output is. Each is read
- * again just before it goes, and stays when a render has since used it
- * (another mark) or is drawing it again (no record). `dry` removes nothing
- * and answers what it would remove.
- */
-export const pruneSegments = (
-  fs: FileSystem.FileSystem,
-  path: Path.Path,
-  folder: string,
-  rule: PruneRule,
-  dry: boolean,
-): Effect.Effect<Pruned, PlatformError> =>
-  Effect.gen(function* () {
-    const found = yield* readCache(fs, path, folder);
-    const stale = staleSegments(found.segments, rule);
-    if (dry) return { found, removed: stale, freed: stale.reduce((sum, s) => sum + s.bytes, 0) };
-    const removed = yield* Effect.forEach(stale, (segment) =>
-      Effect.gen(function* () {
-        if (!(yield* fs.exists(recordOf(path, folder, segment.key)))) return [];
-        if ((yield* lastUsed(fs, path, folder, segment.key)) !== segment.used) return [];
-        yield* fs.remove(keptFolder(folder, segment.key), { recursive: true });
-        return [segment];
-      }),
-    );
-    const gone = removed.flat();
-    return { found, removed: gone, freed: gone.reduce((sum, s) => sum + s.bytes, 0) };
-  });
+  key: string,
+): Effect.Effect<boolean, PlatformError> => fs.exists(recordOf(path, folder, key));

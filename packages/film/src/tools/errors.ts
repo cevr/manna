@@ -817,3 +817,34 @@ export class NotATalk extends Schema.TaggedError<NotATalk>()('NotATalk', {
     return `${this.film} is not a talk: it has no talk.ts`;
   }
 }
+
+// ---------------------------------------------------------------------------
+// A film's render cache (`out/<film>/cache`, `segment-cache.ts`).
+
+/** A prune asked for while a render of the film holds its cache. */
+export class CacheBusy extends Schema.TaggedError<CacheBusy>()('CacheBusy', {
+  folder: Schema.String,
+}) {
+  override get message() {
+    return `a render of the film holds its cache (${this.folder}): prune again once it is done`;
+  }
+}
+
+/** A cache folder, or a segment in it, that is a link: its real place is not the film's. */
+export class CacheEscapes extends Schema.TaggedError<CacheEscapes>()('CacheEscapes', {
+  folder: Schema.String,
+  real: Schema.String,
+}) {
+  override get message() {
+    return `${this.folder} resolves to ${this.real}, outside the film's cache: nothing is read or deleted through a link`;
+  }
+}
+
+/** `--days 0` on a cache no render has recorded its segments in: which are the newest render's is unknown. */
+export class CacheUnrecorded extends Schema.TaggedError<CacheUnrecorded>()('CacheUnrecorded', {
+  folder: Schema.String,
+}) {
+  override get message() {
+    return `no render has recorded the segments it used in ${this.folder}: render the film once, then prune with --days 0`;
+  }
+}

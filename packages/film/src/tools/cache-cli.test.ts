@@ -1,7 +1,9 @@
 // `film cache <film>` over a project folder in memory: it prints the cache's
 // size and segment count; `--prune` deletes the segments no render used for
 // `--days` (7), `--dry-run` only names them, `--json` prints one line, and a
-// flag that means something only with `--prune` is refused without it.
+// flag that means something only with `--prune` is refused without it. A
+// prune while a render holds the cache, or with `--days 0` on a cache no
+// render has recorded, is refused and deletes nothing.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
@@ -22,9 +24,10 @@ import {
 import * as Command from 'effect/cli/Command';
 import { TestClock } from 'effect/testing';
 import { cache } from './cache-cli.ts';
-import { FlagsConflict } from './errors.ts';
+import { CacheBusy, CacheUnrecorded, FlagsConflict } from './errors.ts';
 import { FilmFolder } from './film-repo.ts';
-import { memoryFileSystem, printingTo, text } from './host/testing.ts';
+import { memoryFileSystem, memoryLocks, printingTo, text } from './host/testing.ts';
+import { recordRender, tryHoldCache } from './segment-cache.ts';
 import { keepSegment } from './segments.ts';
 
 const DAY = 86_400_000;
@@ -37,6 +40,7 @@ const over = (files: Map<string, Uint8Array>) => {
   return FilmFolder.layer('/films').pipe(
     Layer.provideMerge([
       memoryFileSystem(files),
+      memoryLocks,
       Path.layer,
       ConfigProvider.layer(ConfigProvider.fromUnknown({ FILMS_OUT: '/out' })),
     ]),
@@ -66,6 +70,7 @@ const stocked = Effect.gen(function* () {
   yield* kept('old', 10, 1000);
   yield* kept('week', 3, 2000);
   yield* kept('newest', 0, 4000);
+  yield* recordRender('/out/f', '/out/f/film/main.mp4', NOW, ['newest']);
 });
 
 /** `film cache …args` run to its end: its exit, and the lines it printed. */
@@ -169,4 +174,48 @@ describe('film cache', () => {
         expect(left(files)).toEqual(['newest', 'old', 'week']);
       }).pipe(Effect.provide(Layer.merge(BunServices.layer, over(files))));
     });
+
+  it.effect(
+    '--prune while a render holds the cache fails with CacheBusy, and deletes nothing',
+    () => {
+      const files = new Map<string, Uint8Array>();
+      return Effect.gen(function* () {
+        yield* stocked;
+        const { exit, lines } = yield* Effect.scoped(
+          Effect.andThen(tryHoldCache('/out/f'), cli('f', '--prune', '--days', '0')),
+        );
+        const failed = Exit.match(exit, {
+          onSuccess: Option.none,
+          onFailure: Cause.findErrorOption,
+        });
+        expect(failed).toEqual(Option.some(CacheBusy.make({ folder: '/out/f/cache' })));
+        expect(String(Option.getOrUndefined(failed))).toContain(
+          'a render of the film holds its cache',
+        );
+        expect(lines).toEqual([]);
+        expect(left(files)).toEqual(['newest', 'old', 'week']);
+      }).pipe(Effect.provide(Layer.merge(BunServices.layer, over(files))));
+    },
+  );
+
+  it.effect(
+    '--prune --days 0 on a cache no render recorded is refused, and deletes nothing',
+    () => {
+      const files = new Map<string, Uint8Array>();
+      return Effect.gen(function* () {
+        yield* TestClock.setTime(NOW);
+        yield* kept('a', 0, 10);
+        yield* kept('b', 1, 10);
+        const { exit } = yield* cli('f', '--prune', '--days', '0');
+        const failed = Exit.match(exit, {
+          onSuccess: Option.none,
+          onFailure: Cause.findErrorOption,
+        });
+        expect(Option.filter(failed, Schema.is(CacheUnrecorded))).toEqual(
+          Option.some(CacheUnrecorded.make({ folder })),
+        );
+        expect(left(files)).toEqual(['a', 'b']);
+      }).pipe(Effect.provide(Layer.merge(BunServices.layer, over(files))));
+    },
+  );
 });

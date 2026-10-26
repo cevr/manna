@@ -1,11 +1,14 @@
 // A film render reuses the segments it drew before: each beat's frames kept
 // under the film's project folder by their key, so a render with every key
 // kept draws nothing, and one with a beat changed draws that beat alone.
-// Fake pages and media; the project folder in memory.
+// Each marks what it reuses; renders of the film take turns at its cache,
+// and once done each prunes it; a prune by hand waits for none of them.
+// Fake pages and media; the project folder in memory; a stopped clock.
 
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Boolean as Bool,
+  Cause,
   Clock,
   Deferred,
   Effect,
@@ -13,12 +16,11 @@ import {
   Fiber,
   Layer,
   Logger,
-  Match,
   Option,
   Path,
   Schema,
 } from 'effect';
-import { PageError } from './errors.ts';
+import { CacheBusy, PageError } from './errors.ts';
 import { MAIN_VARIANT } from '../core/catalogue.ts';
 import { type BoardFile, BoardFileJson, BoardName, type Panel, emptyBoard } from '../core/board.ts';
 import { Picture } from '../core/board-render.ts';
@@ -29,7 +31,9 @@ import { Cores, Platform, Renderer } from './renderer.ts';
 import { SoundRender } from './sound-render.ts';
 import { emptyLedger, fakeRenderHost } from './browser/testing.ts';
 import { testFilm } from './film-repo/testing.ts';
-import { memoryFileSystem, text } from './host/testing.ts';
+import { memoryFileSystem, memoryManifestLock, text } from './host/testing.ts';
+import { ManifestLock } from './manifest-lock.ts';
+import { pruneIdle } from './segment-cache.ts';
 
 /** Three beats, 5, 5 and 10 seconds, at 2 fps: frames 0–9, 10–19 and 20–39. */
 const film = testFilm(
@@ -96,6 +100,10 @@ type Draw = (i: number) => Effect.Effect<void, PageError>;
 /** Renders into one project folder, kept in memory across them: what each drew and joined. */
 const project = (files = new Map<string, Uint8Array>(), stage = { film, info }) => {
   const folders = new Set<string>();
+  /** The host's cache locks: every render of the project, and a prune by hand, take the same. */
+  const lock = memoryManifestLock();
+  /** Every render's cache lines, as they are logged. */
+  const cacheLines: Array<string> = [];
   const render = (job: RenderJob, draw: Draw = () => Effect.void) => {
     const ledger = emptyLedger();
     const lines: Array<string> = [];
@@ -105,7 +113,8 @@ const project = (files = new Map<string, Uint8Array>(), stage = { film, info }) 
       Logger.make(({ message }) => {
         const line = [message].flat().join(' ');
         if (line.startsWith('render.reuse')) lines.push(line);
-        if (line.startsWith('render.cache')) pruned.push(line);
+        if (line.startsWith('render.cache.pruned')) pruned.push(line);
+        if (line.startsWith('render.cache')) cacheLines.push(line);
       }),
     ]);
     const layer = Renderer.layer.pipe(
@@ -130,9 +139,16 @@ const project = (files = new Map<string, Uint8Array>(), stage = { film, info }) 
     }).pipe(
       Effect.provideService(Platform, 'darwin'),
       Effect.provideService(Cores, 16),
+      Effect.provideService(ManifestLock, lock),
       Effect.provide([layer, logged]),
     );
   };
+  /** `film cache --prune` on the project, by `rule`, at `now`, taking the cache as a render does. */
+  const pruneByHand = (now: number, days: number) =>
+    pruneIdle(film.paths.out, { now, days, keep: new Set() }, false).pipe(
+      Effect.provideService(ManifestLock, lock),
+      Effect.provide([memoryFileSystem(files, folders), Path.layer]),
+    );
   /** The film's Board written where its page reads it, and each of its images. */
   const boarded = (record: BoardFile, images: Readonly<Record<string, string>>) =>
     Effect.gen(function* () {
@@ -160,24 +176,40 @@ const project = (files = new Map<string, Uint8Array>(), stage = { film, info }) 
         `mp4 ${s.at * stage.info.fps}-${(joined[k + 1]?.at ?? stage.info.duration) * stage.info.fps}`,
     ),
   });
-  return { render, boarded, holding, held };
+  return { render, boarded, holding, held, pruneByHand, cacheLines };
 };
 
 const read = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
 
-/** `live`, its wall time `days` days later: what a render marks and prunes by, its waits still real. */
-const later = (live: Clock.Clock, days: number): Clock.Clock => {
-  const shift = days * 86_400_000;
+const DAY = 86_400_000;
+
+/**
+ * A clock stopped at day `days`: what a render marks and prunes by. A wait
+ * on it (a fake page's frame, a render waiting its turn at the cache) only
+ * yields, so no test waits in real time.
+ */
+const onDay = (days: number): Clock.Clock => {
+  const ms = days * DAY;
+  const ns = BigInt(ms) * 1_000_000n;
   return {
-    currentTimeMillisUnsafe: () => live.currentTimeMillisUnsafe() + shift,
-    currentTimeMillis: Effect.map(live.currentTimeMillis, (ms) => ms + shift),
-    currentTimeNanosUnsafe: () => live.currentTimeNanosUnsafe() + BigInt(shift) * 1_000_000n,
-    currentTimeNanos: Effect.map(live.currentTimeNanos, (ns) => ns + BigInt(shift) * 1_000_000n),
-    monotonicTimeNanosUnsafe: () => live.monotonicTimeNanosUnsafe(),
-    monotonicTimeNanos: live.monotonicTimeNanos,
-    sleep: (duration) => live.sleep(duration),
+    currentTimeMillisUnsafe: () => ms,
+    currentTimeMillis: Effect.succeed(ms),
+    currentTimeNanosUnsafe: () => ns,
+    currentTimeNanos: Effect.succeed(ns),
+    monotonicTimeNanosUnsafe: () => ns,
+    monotonicTimeNanos: Effect.succeed(ns),
+    sleep: () => Effect.yieldNow,
   };
 };
+
+/** Once `ready` holds, yielding between looks. */
+const until = (ready: () => boolean): Effect.Effect<void> =>
+  Effect.suspend(() =>
+    Bool.match(ready(), {
+      onTrue: () => Effect.void,
+      onFalse: () => Effect.andThen(Effect.yieldNow, until(ready)),
+    }),
+  );
 
 /** Beat `beat`'s one picture panel, held from its start, showing try 1. */
 const panel = (beat: string): Panel => ({
@@ -255,15 +287,14 @@ describe.concurrent("a film render's segments", () => {
     }),
   );
 
-  it.live(
+  it.effect(
     'mark each segment they reuse, and once done delete those no render used for a week',
     () =>
       Effect.gen(function* () {
         const { render } = project();
-        const live = yield* Clock.Clock;
-        /** A render that reads the time `days` days from now (its pages still wait in real time). */
+        /** A render on day `days`. */
         const on = (days: number, job: RenderJob) =>
-          render(job).pipe(Effect.provideService(Clock.Clock, later(live, days)));
+          render(job).pipe(Effect.provideService(Clock.Clock, onDay(days)));
         yield* on(0, video(keyed()));
         // Six days on, c changes: a's and b's segments are reused, so used now.
         const sixth = yield* on(6, video(keyed(new Map([...keys, ['c', 'key-c2']]))));
@@ -286,6 +317,83 @@ describe.concurrent("a film render's segments", () => {
         expect(tenth.pruned[0]).toMatch(/^render\.cache\.pruned count=1 freed=[1-9]\d*$/);
         const back = yield* on(10, video(keyed()));
         expect(back.drawn).toEqual(frames(20, 40));
+      }),
+  );
+
+  it.effect(
+    'take turns: a second render of the film waits until the first is done, then reuses all it kept',
+    () =>
+      Effect.gen(function* () {
+        const { render, cacheLines } = project();
+        const reached = yield* Deferred.make<void>();
+        const release = yield* Deferred.make<void>();
+        const on = (job: RenderJob, draw?: Draw) =>
+          render(job, draw).pipe(Effect.provideService(Clock.Clock, onDay(0)));
+        // The first stops in b's frames, its a drawn and its b and c not yet kept.
+        const one = yield* Effect.forkChild(
+          on(video(keyed()), (i) =>
+            Effect.when(
+              Effect.andThen(Deferred.complete(reached, Effect.void), Deferred.await(release)),
+              Effect.sync(() => i === 15),
+            ),
+          ),
+        );
+        yield* Deferred.await(reached);
+        const two = yield* Effect.forkChild(on(video(keyed())));
+        yield* Effect.raceFirst(
+          until(() => cacheLines.some((line) => line.startsWith('render.cache.waiting'))),
+          Effect.asVoid(Fiber.await(two)),
+        );
+        yield* Deferred.complete(release, Effect.void);
+        yield* Fiber.join(one);
+        const second = yield* Fiber.join(two);
+        expect(cacheLines.filter((line) => line.startsWith('render.cache.waiting'))).toHaveLength(
+          1,
+        );
+        expect(second.drawn).toEqual([]);
+        expect(second.reuse).toEqual([
+          'render.reuse segments=3 drawn=0 frames_drawn=0 fresh=false',
+        ]);
+      }),
+  );
+
+  it.effect(
+    'are never pruned by hand while a render holds them: the prune is refused, the render joins what it reused',
+    () =>
+      Effect.gen(function* () {
+        const { render, pruneByHand, held } = project();
+        const reached = yield* Deferred.make<void>();
+        const release = yield* Deferred.make<void>();
+        yield* render(video(keyed(new Map([...keys, ['b', 'key-b0']])))).pipe(
+          Effect.provideService(Clock.Clock, onDay(0)),
+        );
+        // Thirty days on, b changes: a's and c's segments, a month old, are
+        // reused, and the render stops while it draws b.
+        const later = yield* Effect.forkChild(
+          render(video(keyed()), (i) =>
+            Effect.when(
+              Effect.andThen(Deferred.complete(reached, Effect.void), Deferred.await(release)),
+              Effect.sync(() => i === 15),
+            ),
+          ).pipe(Effect.provideService(Clock.Clock, onDay(30))),
+        );
+        yield* Deferred.await(reached);
+        const busy = yield* Effect.exit(pruneByHand(30 * DAY, 0));
+        expect(
+          Exit.match(busy, { onSuccess: () => 'pruned', onFailure: Cause.squash }),
+        ).toBeInstanceOf(CacheBusy);
+        yield* Deferred.complete(release, Effect.void);
+        const done = yield* Fiber.join(later);
+        expect(done.drawn).toEqual(frames(10, 20));
+        const joined = held(done.master);
+        expect(joined.held).toEqual(joined.placed);
+        // Done, it prunes the first b, a month unused and in no record.
+        expect(done.pruned).toHaveLength(1);
+        expect(done.pruned[0]).toMatch(/^render\.cache\.pruned count=1 /);
+        // What is left is exactly what it used.
+        const pruned = yield* pruneByHand(30 * DAY, 0);
+        expect(pruned.removed).toEqual([]);
+        expect(pruned.found.segments).toHaveLength(3);
       }),
   );
 
@@ -321,44 +429,6 @@ describe.concurrent("a film render's segments", () => {
       expect(Exit.isFailure(cut)).toBe(true);
       const next = yield* render(video(keyed(longerKeys)));
       expect(next.drawn).toEqual(frames(0, 60));
-      const joined = held(next.master);
-      expect(joined.held).toEqual(joined.placed);
-    }),
-  );
-
-  it.live('keep what two renders of one segment at once draw, each file holding its frames', () =>
-    Effect.gen(function* () {
-      const { render, holding, held } = project(new Map(), longer);
-      yield* render(video(keyed(new Map([...longerKeys, ['b', 'key-b0']]))));
-      // One draws b alone, 25–35, and keeps it once the other has begun to
-      // draw; the other, --fresh, draws b whole, 25–30 and 30–35, over it.
-      const alone = yield* Deferred.make<void>();
-      const begun = yield* Deferred.make<void>();
-      const one = yield* Effect.forkChild(
-        render(video(keyed(longerKeys)), (i) =>
-          Effect.when(
-            Effect.andThen(Deferred.complete(alone, Effect.void), Deferred.await(begun)),
-            Effect.sync(() => i === 25),
-          ),
-        ),
-      );
-      yield* Deferred.await(alone);
-      const other = yield* Effect.forkChild(
-        render(video(keyed(longerKeys, true)), (i) =>
-          Match.value(i).pipe(
-            Match.when(0, () => Deferred.complete(begun, Effect.void)),
-            Match.when(25, () => holding('mp4 25-35')),
-            // Never done, so it never keeps b: the first's record alone names b's files.
-            Match.when(59, () => Effect.never),
-            Match.orElse(() => Effect.void),
-          ),
-        ),
-      );
-      yield* Fiber.join(one);
-      // The other's 25–30 written (the first render's b, key-b0, holds one too).
-      yield* holding('mp4 25-30', 2);
-      yield* Fiber.interrupt(other);
-      const next = yield* render(video(keyed(longerKeys)));
       const joined = held(next.master);
       expect(joined.held).toEqual(joined.placed);
     }),
