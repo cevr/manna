@@ -168,6 +168,8 @@ function Dial<A>(props: DialProps<A>) {
   const live = useRef(props);
   live.current = props;
   const homed = useRef(resets);
+  // The detents the finger or its glide told (`onTurn`) that have not come back as the value yet, in order.
+  const told = useRef<Array<number>>([]);
 
   /** The row turns to `to`, a value set from outside, on `timing`; a touch that stops it and never drags lets it go on. */
   const follow = (to: number, timing: WithTimingConfig) => {
@@ -183,13 +185,19 @@ function Dial<A>(props: DialProps<A>) {
   useEffect(() => {
     const byReset = homed.current !== resets;
     homed.current = resets;
+    // A value the dial told coming back, in the order told, is its own turn, which the row has shown
+    // already, however far it has turned on since; any other value is set from outside.
+    const back = told.current.indexOf(index);
+    const echo = !byReset && back >= 0;
+    told.current = (echo && told.current.slice(back + 1)) || [];
     // Where the row shows the value: a touch that stopped a turn there and lifts with no drag goes on to it.
-    aim.value = placeOf(detents, place.value, index);
-    if (driven.value) return;
-    // A row at rest on the value stays; one turning to another value turns to this one instead.
-    if (!following.value && ownDetent(detents, detentAt(place.value)) === index) return;
+    // It is handed on as computed: a write here reaches the UI thread later than a read of it would.
+    const to = placeOf(detents, place.value, index);
+    aim.value = to;
+    // A row driven by the finger, or standing on the value, stays; any other turns to it.
+    if (echo || driven.value || place.value === to) return;
     follow(
-      aim.value,
+      to,
       Match.value(byReset).pipe(
         Match.when(true, () => ({
           duration: RESET_TURN,
@@ -203,7 +211,10 @@ function Dial<A>(props: DialProps<A>) {
   /** The row passed `crossed` (own detents, in order): a cue for each, one turn to the last. */
   const turned = (crossed: ReadonlyArray<number>) => {
     for (const at of crossed) cue({ _tag: 'detent', dial, at });
-    for (const last of crossed.slice(-1)) live.current.onTurn(last);
+    for (const last of crossed.slice(-1)) {
+      told.current.push(last);
+      live.current.onTurn(last);
+    }
   };
   const wall = () => cue({ _tag: 'wall' });
   const reset = () => live.current.onReset?.();

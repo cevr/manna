@@ -64,6 +64,11 @@ interface Case {
   readonly width: number;
   readonly first: number;
   readonly flings: ReadonlyArray<Fling>;
+  /**
+   * Whether the dial's owner takes each turn the dial tells late, in order, as a busy
+   * JavaScript thread does on a device: the turns wait, and some are taken at the reads.
+   */
+  readonly lag: boolean;
 }
 
 const FIXED = [320, 390, 430];
@@ -86,11 +91,11 @@ const caseOf = (seed: number): Case => {
       stopAt: (stops && Math.floor(r() * 60)) || 'lands',
     };
   });
-  return { seed, width, first, flings };
+  return { seed, width, first, flings, lag: seed % 2 === 1 };
 };
 
 const caseText = (c: Case) =>
-  `seed ${c.seed}, window ${c.width}, first key ${c.first}, flings ${c.flings
+  `seed ${c.seed}, window ${c.width}, first key ${c.first}, ${(c.lag && 'late turns') || 'turns at once'}, flings ${c.flings
     .map((f) => `${f.drag} pt (every ${f.every}) at ${f.speed} pt/s, touched at ${f.stopAt}`)
     .join('; ')}`;
 
@@ -130,11 +135,15 @@ const shiftOf = (element: HTMLElement) =>
 const mounted = (c: Case) => {
   const told: Array<number> = [];
   const cued: Array<number> = [];
+  // The turns told and not yet taken, on a case with late turns.
+  const waiting: Array<number> = [];
+  const owner = { take: (_n: number) => {} };
   const tell = (cue: Cue) => {
     if (cue._tag === 'detent') cued.push(cue.at);
   };
   function Harness() {
     const [index, setIndex] = useState(c.first);
+    owner.take = setIndex;
     return (
       <CueProvider value={tell}>
         <DialView
@@ -148,7 +157,8 @@ const mounted = (c: Case) => {
           drawStop={(n) => <Text testID={`k-${n}`}>{String(n)}</Text>}
           onTurn={(n) => {
             told.push(n);
-            setIndex(n);
+            if (c.lag) waiting.push(n);
+            else setIndex(n);
           }}
           testID="dial-key"
         />
@@ -167,7 +177,10 @@ const mounted = (c: Case) => {
   return {
     told,
     cued,
+    waiting,
     windowEl,
+    /** The owner takes the next late turn, as its value. */
+    takeOne: () => Arr.head(waiting.splice(0, 1)).pipe(Option.map((n) => act(() => owner.take(n)))),
     [Symbol.dispose]: () => {
       act(() => landAnimations());
       act(() => root.unmount());
@@ -176,9 +189,9 @@ const mounted = (c: Case) => {
   };
 };
 
-/** The problems at one read of the dial: its window not covered, its keys out of order, or, still, the notch off its value. */
-const readOf = (c: Case, dial: ReturnType<typeof mounted>, still: boolean) => {
-  const slots = [...dial.windowEl.querySelectorAll<HTMLElement>('[data-testid^="k-"]')]
+/** The keys' slots in the window, left to right: each key and its left edge. */
+const slotsOf = (c: Case, dial: ReturnType<typeof mounted>) =>
+  [...dial.windowEl.querySelectorAll<HTMLElement>('[data-testid^="k-"]')]
     .map((key) => {
       let x = 0;
       for (
@@ -191,6 +204,10 @@ const readOf = (c: Case, dial: ReturnType<typeof mounted>, still: boolean) => {
     })
     .filter((s) => s.x + DETENT > 0.5 && s.x < c.width - 0.5)
     .sort((a, b) => a.x - b.x);
+
+/** The problems at one read of the dial: its window not covered, its keys out of order, or, still, the notch off its value. */
+const readOf = (c: Case, dial: ReturnType<typeof mounted>, still: boolean) => {
+  const slots = slotsOf(c, dial);
   const from = Arr.head(slots).pipe(Option.match({ onNone: () => c.width, onSome: (s) => s.x }));
   const to = Arr.last(slots).pipe(Option.match({ onNone: () => 0, onSome: (s) => s.x + DETENT }));
   if (from > 0.5 || to < c.width - 0.5)
@@ -217,8 +234,32 @@ const readOf = (c: Case, dial: ReturnType<typeof mounted>, still: boolean) => {
 const run = (c: Case): ReadonlyArray<string> => {
   using dial = mounted(c);
   const problems: Array<string> = [];
+  const late = seeded(c.seed * 31 + 7);
+  const rowText = () =>
+    slotsOf(c, dial)
+      .map((s) => `${s.n}@${s.x.toFixed(1)}`)
+      .join(' ');
+  /**
+   * The owner takes every late turn, one at a time, with the row still: each is the dial's own
+   * turn come back, and leaves the row where it stands once every animation it starts has run.
+   */
+  const takeAll = (where: string) => {
+    for (const _ of [...dial.waiting]) {
+      const before = rowText();
+      dial.takeOne();
+      act(() => {
+        while (stepAnimations(FRAME));
+      });
+      if (problems.length === 0 && rowText() !== before)
+        problems.push(`${caseText(c)}: ${where}: a late turn of its own moved the still row`);
+    }
+  };
   const read = (where: string, still: boolean) => {
     if (problems.length > 0) return;
+    if (still) takeAll(where);
+    // A busy owner takes a turn or two at a moment of its own.
+    else if (late() < 0.2)
+      for (const _ of [0, 1].slice(0, 1 + Math.floor(late() * 2))) dial.takeOne();
     for (const p of readOf(c, dial, still)) problems.push(`${caseText(c)}: ${where}: ${p}`);
   };
   holdAnimations();
