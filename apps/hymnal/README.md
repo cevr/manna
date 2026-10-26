@@ -18,13 +18,19 @@ under its number, and the refrain written out each time it is sung.
   `virtual:hymnal` plugin (`vite/hymnal.ts`) derives them when the app is
   bundled, for the web and the native bundle alike, so the app opens offline
   and no derived file is committed.
-- The colours are palette A, Wada No. 167, as nine roles (ground, ink,
-  muted, line, accent, soft, onAccent, the text on an accent fill, and
-  pressed and onPressed, a held accent fill and its text) in
-  light and dark in `src/theme.ts`; a screen reads a role, never a hex value. On iOS each role is a `DynamicColorIOS`
-  (`src/color.native.ts`), on the web a CSS `light-dark()` property
-  (`src/color.ts`). Android keeps the system's colours. `src/theme.test.ts`
-  holds every text role to WCAG AA on what it sits on.
+- The colours are the brand's, Moonlit wheat (the wheat on the night), from
+  its one source, `@manna/brand` (`packages/brand`), which the First the
+  Blade site reads too. `src/theme.ts` draws eleven roles from it in light
+  and dark: ground, ink, muted, line, accent, soft, onAccent (the text on an
+  accent fill), pressed and onPressed (a held accent fill and its text), and
+  panel and edge (the open dials' raised panel and its border). Light is the
+  site's day (the night's ink on the paper), dark the site's night (the
+  wheat on the night). A screen reads a role, never a hex value. On iOS each
+  role is a `DynamicColorIOS` (`src/color.native.ts`), on the web a CSS
+  `light-dark()` property (`src/color.ts`). Android keeps the system's
+  colours. `src/theme.test.ts` holds every text role to WCAG AA on what it
+  sits on, and the panel's edge to 3.5:1 on the ground. Selah keeps its own
+  palette.
 - The phone's list is a Legend List (`src/reader/HymnList.native.tsx`):
   each row of a kind has one height from the text size, the topic rows
   stick under the status bar, and the search field sits above the first
@@ -283,20 +289,22 @@ Android haptics only.
 
 The app is named Hymnal, and its icon is one blade of wheat:
 `assets/icon/wheat.svg` is the one shape. `bun run icon`
-(`scripts/icon.ts`) redraws every icon from it in the app's colours
-(`wada167` in `src/theme.ts`):
+(`scripts/icon.ts`) redraws every icon from it in the brand's colours
+(`PALETTE` in `@manna/brand`):
 
-- iOS: light (blue wheat on ecru), dark (ecru on blue) and tinted (white on
-  black), in `assets/icon/`.
-- Android: the adaptive icon's foreground (blue) and monochrome (white)
-  layers, on an ecru ground the launcher draws.
-- Web: `public/favicon.svg` (ecru on blue in dark mode), `favicon-32.png`,
-  `apple-touch-icon.png`, and the manifest's icons, one of them maskable.
-- The launch screen: `public/splash.png` (blue wheat) and `splash-dark.png`
-  (ecru wheat), each on a transparent square the launch screen centres
-  200 points wide on its ground (ecru, and blue in dark mode). One's
-  prebuild trims an opaque ground away, so the ground is the config's
-  `backgroundColor`, not the PNG's.
+- iOS: light (the night's blade on the wheat), dark (the wheat's blade on
+  the night) and tinted (white on black), in `assets/icon/`.
+- Android: the adaptive icon's foreground (the night) and monochrome
+  (white) layers, on a wheat ground the launcher draws.
+- Web: `public/favicon.svg` (the wheat's blade on the night in dark mode),
+  `favicon-32.png`, `apple-touch-icon.png`, and the manifest's icons, one of
+  them maskable. The manifest's ground is the app's light ground, the paper.
+- The launch screen: `public/splash.png` (the night's blade) and
+  `splash-dark.png` (the wheat's), each on a transparent square the launch
+  screen centres 200 points wide on the app's own ground (the paper, and
+  the night in dark mode), so the first screen follows with no change of
+  colour. One's prebuild trims an opaque ground away, so the ground is the
+  config's `backgroundColor`, not the PNG's.
 
 `vite/app.ts` holds the native app's name, icons and launch screen; `vite.config.ts` passes
 it to One. A native build reads new icons only after
