@@ -147,7 +147,7 @@ export const ProductionFile = Schema.Struct({
 });
 export type ProductionFile = typeof ProductionFile.Type;
 
-/** `POST /api/productions/<production>/versions`: move forward from version `after`. */
+/** A move forward from version `after` (`forward`). */
 export const MoveForward = Schema.Struct({
   /** The version the mover saw as current: refused when the production has moved since. */
   after: VersionNumber,

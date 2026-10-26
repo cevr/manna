@@ -1735,7 +1735,7 @@ The form of an entry, each field on its own line:
 - **Source:** p6-studio-steps/review-4.md F1
 - **Wrong:** A mark's chip that seeks was set in Geist on an 18 px line while a plain chip was set in the code's mono face, so the band's chips differed by whether they could be pressed.
 - **Cause:** The chip's font sat on one class (0,1,0), and the studio's button reset `.st-app button:where(…) { font: inherit }` (0,1,1) outranked it on a button.
-- **Guard:** code: `packages/film/e2e/lab/studio/code.dom.test.ts` `chip.fontFamily === code.fontFamily`
+- **Guard:** none: the studio's code view is deleted (studio-subtract).
 
 ### mail-send-claimed-before-it-goes
 

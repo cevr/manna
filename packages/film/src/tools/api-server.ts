@@ -688,9 +688,7 @@ export const serveApi = <
 
 /**
  * How long a connection stays open with nothing sent: Bun's longest. A
- * film's first mix renders the whole film before it answers; a take's import
- * answers within the studio's wait (`STUDIO_IMPORT_WAIT_S`, 210 s), which is
- * shorter, so the page stops waiting before the socket closes. `changes`
+ * film's first mix renders the whole film before it answers. `changes`
  * waits at most 120 s. A critique's counsel runs for minutes, but no request
  * holds it: the critique is a job, and a call answers by
  * `CRITIQUE_DEADLINE` (50 s from its start) when its match and staging read

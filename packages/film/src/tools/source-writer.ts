@@ -208,7 +208,7 @@ interface History {
   readonly landed: ReadonlyArray<LandedStep>;
 }
 
-/** The history as a page asks for it (`GET /api/films/<film>/check`). */
+/** The history as `history` answers it. */
 interface WriteHistory {
   /** The change Undo would put back. */
   readonly undo: Option.Option<Change>;

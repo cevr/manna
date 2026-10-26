@@ -285,9 +285,9 @@ export const seenVariants = (point: ChoicePoint): ReadonlyArray<SeenVariant> =>
   );
 
 // ---------------------------------------------------------------------------
-// On the wire: the review's `choices` routes (`api.ts`).
+// What `film options` reads and writes.
 
-/** `GET /api/films/<film>/choices`: the film's choice points, and the renders they are heard against. */
+/** The film's choice points, and the renders they are heard against. */
 export const FilmChoices = Schema.Struct({
   film: Schema.String,
   /**
@@ -301,7 +301,7 @@ export const FilmChoices = Schema.Struct({
 });
 export type FilmChoices = typeof FilmChoices.Type;
 
-/** `POST /api/films/<film>/choices/pick`: a verb on one variant of one point. */
+/** A verb on one variant of one point. */
 export const PickPost = Schema.Struct({
   point: Schema.String,
   variant: Schema.String,

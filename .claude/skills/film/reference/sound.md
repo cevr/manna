@@ -147,7 +147,7 @@ A trial is heard beside what plays:
 - `bun run sfx audition <name> --trial` writes its seeds in one WAV, levelled as the mix plays them, 0.5 s apart.
 - `bun run sfx compare <name>` prints its numbers beside what plays (below).
 - `bun run sfx check` hears a trial bed's loop seams, named `<name> (trial)` (`LoopSeam`, by seed).
-- A film's choices (`GET /api/films/<film>/choices`) list a trial's seeds after the sound's takes, as `code trial n`, each heard alone (`…/choices/alone`) and in place (`…/choices/mix`). No verb picks one: a trial is tuned by editing its data, and chosen in an ask.
+- A film's choices (`film options list <film>`) list a trial's seeds after the sound's takes, as `code trial n`, each heard in place through `film options mix`. No verb picks one: a trial is tuned by editing its data, and chosen in an ask.
 - `bun run sfx ab <name> --out <dir>` writes the clips for the ask (see Put it to the owner, below).
 
 ## The loop

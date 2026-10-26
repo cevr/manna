@@ -6,22 +6,20 @@ recorded words, and every frame is a pure function of that film and a time.
 
 ## Entry points
 
-| Import                      | What it holds                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@manna/film/core`          | The clock: easing and `progress` (`time`), seeded noise (`random`), `{mark}` narration timing, named cues (`timeline`), the sound plan, scene `layout`, a person's takes (`recording`, `align`, the reading `sheet`, the studio's wire `studio`), and the mix: `mixPlan` (what plays where) and `renderMix` over planar PCM (`audio`, `dsp`: the ffmpeg filters it replaced, ported), and the synth (`synth/`: a code sound is a graph of nodes, `synth/graph/nodes.ts` `CodeSound`, that `renderCode(sound, seed)` renders to the same samples on every host with its own transcendental maths, `synth/graph/math.ts`; `synth/graph/presets.ts` holds the families the app's code sounds are built from, the tones (`room`, `chime`, `drone`, `drain`, `bloom`, `notes`) and the shapes (`burst`, `thump`, `knock`, `scatter`, `whoosh`, `hiss`, `sizzle`, `breeze`, `rain`); `loudness` is an ITU-R BS.1770-4 meter, integrated, momentary max and peak; `sheet` draws a sound's spectrogram, waveform and loudness as one picture; `compare` sets a sound's numbers beside another's), the audit of which generated sounds code can make (`sfx-audit`), and the sound library's pure half (`sfx`: `family.thing` names, generated (each with its `why` and an optional code trial), code and recorded declarations, the lock's variants and the request hash that says a sound is current, which variant each placement plays and its seeded jitter, levels in dB relative to the voice). The entry names only what films, their kits, the app's sound library and tests import (the clock, `hash2`/`rng`, `defineScript` and the film schemas, `defineLibrary` and the sound families, `defineStore`); the framework reads every other module by its path.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `@manna/film/canvas`        | The Canvas 2D draw kit (ink, cutout, paper by meaning (`piece`: a figure cut and outlined, its line crawling, scenery torn with no ink and held still; `stroke`'s `boil`: tick, crawl or none), the `ground` contact shadow, paper fibre fixed to the backdrop plane (`planeFibre`), paper under a faint film grain, type, the one floating mitten hand with no arm (`hand.ts`: `floatingHand(ctx, root, { to, reach, grip }, style, hand)`, at rest beside its figure bobbing with the breath (`breathOf`), travelling toward its target on a soft arc about the shoulder, eased, with a settle, its grip forming from the open rest as it arrives; a hand at work that changes grip names the grip it `was` and morphs into the new one by `change`, point for point, never swapping in a frame (`handShape` its outline, for tests); `handAt` where it is, pure and allocation-free; `closeHand` the same hand close up, an open hand held out palm up seen from above, the palm the biggest shape, its middle on the origin, whose round finger block bends up toward the eye and back over the palm to cup (`closeShape` its outline at any `open`, continuous), with a lifeline and two soft joint lines; `CLOSE_SPAN` its length, no forearm; a gesture's `turn` turns its mitten palm up into the same shape at the mitten's size (`palmUpFrame`), so a push from the figure's hand into the close-up is one shape at two scales), figure, multiplane camera; every drawn scene breathes once by `DRIFT` (a scene's own `drawing({ drift })` in its place, `0` held still): through its outermost `camera` or `multiplane` when it frames one (a shot's `drift` is its share, `0` held still, `driftHeld`), as the outermost transform over its whole draw when it frames none, `shotPath`/`lerpCamera` shots (a deep push by `pushInto`, its target held in frame), `inset` for a picture in picture whose shots never take the scene's breath and `knobCamera` framings from knobs, storyboard), `createFilm`, which composites any `T` (a scene's full-screen cards, `drawing({ cards })` and `SceneSpec.cards`, more than one where a scene needs them, each the whole frame over its own cue on the film's paper, hard cut in, no caption over it; two whose cues hold at one instant stop the film and refuse the edit that would make them, `CardsOverlap`; the card that holds to the scene's end leaves as the card into a transition; a card's `flood` grows from the `Box` the scene's draw returns on the same frame (`floodBox`), within the look's own edge where its `mask` paints one, and a flood inside a transition stops the film and refuses the edit that would move it there, `FloodInTransition`), the card kit (`fullCard` with `CardStyle` and the take's `CardWord`s, `verse` with `Verse` and `VerseStyle`, whose `pad` joins a line's highlight into one bar, a phrase not in its verse stopping the frame; `TextStyle`; `floodBox`, where a flood stands at its eased progress), `glCanvas` (a WebGL 2 canvas for a look drawn in 3D: kept per key, a page-wide namespace a look names for its film, remade when its context is lost, 8 contexts kept live on the page, the keys' and the webgl2 rigs' together, so a frame asks for at most 8 and a look composites a canvas before asking for another key or size; none where WebGL 2 cannot be made, the look's fallback drawn), and the text probe (`probe.ts`) `film check` reads. The entry names only what films, their kits and their tests use, the credits roll (`creditRoll`), `glow`, `sky`, `wash`, `mix`, `clearOf`, `ramp` (a base colour's shade and light under a key light, CRAFT 12 as one function: the shade darker and turned toward the light's complement, the light lighter and leaning to the light's hue, neither ever grey; a look tunes it by its `Shading` knobs, a near-neutral's turn among them, and reads the result as a `Ramp`; `ramp` refuses knobs under CRAFT 12's floors, a chroma of 6 and a 10° turn, so no tuning shades grey), the `Hex` a colour is written as (a palette `satisfies Record<string, Hex>`, `Light`'s colours) and `reset` among them; the engine's own parts (`handShape`, `closeShape`, `palmUpFrame`, `lerpCamera`, `planeFibre`, the paper's sheets) are exported from their files for the framework and its tests. |
-| `@manna/film/render`        | `mountRender(films)` (`player/render.ts`, the encoder's one importer; the only studio page that loads mediabunny is the review, and only where its compares play on WebCodecs panes: `browser/media-browser.ts` `panesMediaLayer` imports them when the browser allows, so a phone downloads none of it): the render page (a film's export page: the lab's `/films/<film>/export`, the PreviewServer's `/?film=<film>&export`), whose handle (`ExportHandle`, on `window.__film`) a renderer and the easel drive. Its own entry, never re-exported by `player`: every page imports its films through `player`, so a studio page built beside the render page would load the encoder too (`tools/page-graph.slow.test.ts`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `@manna/film/player`        | In `main.ts` the scrubbable preview (`mountPreview`) a film's studio mounts (`mountFilmStudio` in `@manna/film/play`), its canvas drawn once the faces its film draws in have loaded (its loader asks for them and gives the film without waiting, `narratedFilms`; the preview, the stills and the render handle wait, `pictureFacesWait`; the engine names no family), a click on its picture playing or pausing it, the narration as a typed state (`narration.ts`: `None`, `Loading` (a play asked then starts once it can, from the clock's time then), `Ready`, `Blocked` until a click, `Missing` when the master will not load or play, which the preview then never asks to play), the one source of stills (`stills.ts`: drawn a frame apart, the last asked for first, none when a face the film draws in will not load, its `ready` and waiting `all` then rejecting; the look-book sheet draws through it), and the look-book sheet `film lookbook` writes (`lookbook-sheet.ts`), set in the film's own type (its shorts' hook and caption families). Framework-free, so the renderer's page never loads Solid. `player.css` styles it and the lab, over the studio's tokens (`tokens.css`, `@manna/film/tokens.css`). The entry exports only `narratedFilms`, the `Narrated` type, and the films’ faces (`pictureFaces`, `Face`, `SUBSETS`); the lab reaches the rest of `main.ts` by path. `src/exports.slow.test.ts` guards this entry, `render`, `canvas`, `stand-in`, `core`, `@manna/film/style` and `@manna/film/style/build`: each names its exports, and each name has a user; and every module under `core/`, `lab/`, `tools/`, `canvas/`, `player/`, `browser/`, `command/`, `style/` and `lint/` exports only names another file imports (read by the parser, so a comment hides nothing; a `.types.ts` check, a fixture film and a lint fixture are not swept).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `@manna/film/play`          | `mountFilmStudio(pages)` (`lab/film-studio/mount.tsx`): a film's studio (`/films/<film>/studio?v=&sel=#t=`, `lab/film-studio/`), the one page a film is reviewed and edited on, under its own header (Films ⇧1, the film, the version chip, the stage, what waits), where the shell (`lab/page-shell.tsx`) heads Films and the review's pages. Its parts are compound components (`Studio.Root` in `context.tsx`, `Editing.Root` in `editing.tsx`), their state held by effect-machine machines: the timeline and the transport (`machine.ts`), the edit in flight (`edit.ts`), the note being filed (`note-save.ts`) and the Board's writes (`board-writes.ts`); the notes (`lab/notes/`: `<NotesFeed>` in `thread.tsx`, its feed in `feed.ts`) hold the feed. Every part is Solid; none mounts plain DOM into the page.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `@manna/film/review`        | `mountReview`: the review page (`film lab`'s `/`, `/sets/<folder>[/<point>]`, `/productions/<production>`), hydrating what `@manna/film/review-server` rendered, `<Root>`, `<SetProvider>` and its pages mounted: renders compared in sync, and a production's timeline.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `@manna/film/review-server` | `reviewRender`, the review's server entry (the default export of an app's `review.server.tsx`): the review rendered for one request over `ServerHosted`, each read through the render's own reads (`LabClient.layerRendering`) and sent with the page; it draws no film.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `@manna/film/play-server`   | `studioRender`, the server entry of an app's `play.server.tsx` (`lab/film-studio/server.tsx`): a film's studio (`lab/film-studio/page.tsx`), its frame and the film's name; the body is the browser's (`SERVER_BODY`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `@manna/film/solid-plugin`  | The Bun plugin that compiles `.tsx` with Solid's compiler (`@solidjs/compiler`): the lab's pages (`LabPage`: `solidPlugin` for each browser bundle, `solidPluginFor('ssr')` for each server entry) and the lab's browser tests bundle with it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `@manna/film/stand-in`      | The one stand-in 2D context for tests (bun has no canvas): `recorder` holds a canvas's drawing state from a canvas's defaults, saved and restored whole (the transform, which `setTransform` takes as six numbers, a matrix or nothing; an alpha kept within 0..1; the shadow, font, line width and every other property set), records each fill and image, answers a pixel read with the last hex fill over it (so a face's opacity read takes the canvas's branch and `cutout` draws pre-blended faces as a render does), and with `onCall` tells a test of every call and property set (how `check --draw`'s leg, `tools/draw-check.ts`, logs a frame to check it is pure); with `measure` it sets text with a test's own advances in the context's font; each canvas it makes carries its number (`isStandInCanvas`, `made`); `withDom`/`standInDom` put up a document whose canvases are stand-ins; it refuses what a real canvas refuses (a negative radius, a colour stop off 0..1, a stop colour made of NaN or undefined, a non-finite gradient coordinate). The framework's canvas tests and `check --draw` draw into it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `@manna/film/rive`          | A Rive rig as a drawing declares it (`RivePropSpec`, `RiveEngine`, `PoseOf`; its `ink`, how it follows the shot, sets the number `INK_NUMBER` from the shot's scale) and the draw that poses it from rest (`drawRig`, `canvas/rive.ts`); its loader, `RiveRuntime` service and host layers are `src/rive/` (see Rive).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `@manna/film/style`         | The house look as a scene reads it: a face acted from `EASE` toward an `Expression` (`acted`), the paper's boil (`boilTime`), a hand reached about a point (`reachAbout`), an arm's hand at its sleeve's end at a turn of the arm (`armHand`), a jointed arm's turns that reach its hand to a point, its elbow kept on the side its hand hangs from (`armReach`), `smooth`, and the house's key light and shading knobs (`keyLight`, `shading`: K1), which a film ramps its own papers under (`rampedPaper`). A film's papers are checked as its module loads (`papers`), each rimmed as its concept lays it (the house's `RIM`, or a width of its own) or not at all; a film's canvas people and page read the house's two papers (`peoplePaper`, `parchment`). A figure is composed of parts (`figure`, its parts' kinds from `src/style/parts/`: an arm that swings whole behind its garment, `Arm`, or one bent at its elbow on it, `JointedArm`; trousers with a shoe under each leg, `Trousers`; a traced head whose chin meets its garment by a shade step and no line, `chin: 'open'`, its line drawn just behind the garment), cut from the house's outlines (`ellipse`, `roundedPolygon`, `shifted`), each checked under the house's rules (`src/style/rules.ts`) as it is made; one the owner locked carries its lock (`src/style/lock.ts`). A set creases its pieces under the same light (`boxOf`, `creaseOf`; a turn's `Crease`). A film lays its figures in one file (`figuresFile`, `src/style/figures-file.ts`): each artboard its name, its boil's seed and its place on the stage, drawing a composed figure, with the artboard its hands are drawn on, or a circle hand at its size (`HAND_ART` times it); a name laid twice, a figure's hands laid on a hand of another paper, or a figure `figure` did not return (a copy of one with a part changed, its parts never checked) is refused as the module loads, and the house draws no such figure. The house prints the file in its line at the file's weight (`figuresRml`: `src/style/rig/draw.ts` `drawFigure` and `drawHand`, in `DIRECTION`: K1, A3 in B1), each locked figure's print alone (`lockedPrints`), and every override its figures carry, whatever rule it frees, by the artboard it is laid on (`figureOverrides`, found by `src/style/override.ts` `overridesIn`), each saying what it cites, the owner's words or his pick on an ask (`citedBy`). Every ink stroke of a figure and its hands (the silhouette, each piece's line, and the face's brows and mouth line) binds its width to the artboard's number `ink` through a range mapper, 1 the line as cut, 0.75 three quarters of the ink that shows past its paper and light core; the file's rigs follow the shot (`shot`, spread into each spec), the line thinning from a head a fifth of the frame's height to 0.75 at three tenths (`src/style/house.ts` `CLOSE_SHOT`, `inkAt`); a file that bakes its ink (`baked`, its widths written into the print as cut) binds none and follows no shot. A film writes no RML: the rig (`src/style/rig/`) is the house's alone. Its source is `src/style/` (see Rive).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `@manna/film/style/build`   | `compile`: a figure project compiled by the Rive CLI, offline and unsigned, into its `.riv`, with the CLI's warnings and problems and the stamp of what it was built from; `unbuilt`: why a committed `.riv` is not the build of its rigs, read through that stamp with no CLI; `unlocked`: which locked figures' prints are not the ones their lock files hold, or whose locks name no decision on the production's ledger, and which an override backed by the owner's decision on that figure frees; `unsaid`: which overrides on a film's figures cite a word that is not the owner's on that figure: no decision on his production's ledger filed at the point `item:<item>` (after the lock, for a lock's override) says its quote, verbatim, or filed the pick its answer cites; a question or a note is never his word (see Rive).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `@manna/film/tools`         | The `film` CLI (`runFilmCli`) and its Effect services: FilmFolder and FilmRepo (`film-repo.ts`: a film's paths, and its modules loaded), ContentStore, ElevenLabs, Media (mediabunny + mpg123 + WASM AAC and FLAC + FFmpeg in-process through NodeAV: durations, decode, WAV, a person's recordings loaded and their FLAC masters, joining a film; x264 in-process for a software share copy and the review's phone copies (`x264.ts`), `jpeg.ts` for its stills, `png.ts` for a sound's sheet, and `card`, a picture held over a sound as an MP4), Narrator, Takes (a person's recordings), Composer, Mixer, SoundLibrary (`library.ts`: an app's `sounds/`, its candidates made, kept, rejected, imported, auditioned, checked, its code sounds and trials rendered, compared and clipped for an ask, and its private `files/` synced through the app's private store), SoundRender (`sound-render.ts`: each code sound's seed rendered once and measured once), `MediaStoreService` (`media-store.ts`: the store interface, `put`/`get`/`hashOf`/`list`/`read` with a byte range, and the folder store), `r2-store.ts` (the R2 store, SigV4 in `sigv4.ts` through `HttpClient`), PrivateStore (`private-store.ts`: the store `library.ts` declares, reached with the `FILM_STORE_*` key read as `Config.Redacted`), Browser, Pages (`pages.ts`: the export page pool check, look and render share), PreviewServer, Renderer (`render-plan.ts` is its pure plan), RenderCatalogue (`catalogue.ts`: a film's `catalogue.json`; the domain is `core/catalogue.ts`), Stamps (`stamp.ts`: each scene's content key), `film project` (`project-cli.ts`), Checker (`check.ts` holds its pure detectors), NotesStore, the composition root (`film-services.ts`: `filmServices`, `labPages`, `startLab`, the one graph `runFilmCli` and `apps/animations/studio-harness.ts` run on; `film-services.slow.test.ts` names the two and sweeps for a third), LabPage (`lab-page.ts`: each page's browser bundle and server entry, `PageBundler`) and PageRenderer (`page-render.ts`: a worker per build, its reads through the lab's own handler, `PageReads`), the lab's routes (`lab.ts`), its studio (`studio.ts`, StudioReadings) and its source editing: SceneSources, SourceWriter (every write, its undo and redo), SceneWriter, and BeatEdits (`beat-edits.ts`: the studio's edits of a script); FreshFilm (`fresh-film.ts`: the film CLI run again in a new process, its answer or refusal read back: options, takes, the project, the check, the studio's reading, a cue, the mix; `film read`, `read-cli.ts`); and the review (`review.ts`, `review-http.ts`): Review, and Choices (`choices.ts`, a film's options: listed, heard, picked, each read in a fresh process through `FreshFilm` and `film options`, `choices-cli.ts`); and the art-direction seeder (`core/art-seed.ts`: `drawBatch` draws looks from an app's `ArtDeck` of `ArtAxis` options by seed, the same seed the same look forever, keeping off incompatible picks and a distance from the existing looks and each other; `artBrief` writes one as a style brief; `conflicts` names the picks of a look that cannot stand together; `apps/animations`' `bun run seed-look`). The picks fill (`fill-picks.ts`: `runFillPicks`, over `ask-store.ts`' `fillPicks`) files the owner's picks onto each ledger decision that names its ask and carries none, from the ask's record in the lab's asks, and leaves one whose record is not there (`apps/animations`' `bun run fill-picks`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Import                     | What it holds                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@manna/film/core`         | The clock: easing and `progress` (`time`), seeded noise (`random`), `{mark}` narration timing, named cues (`timeline`), the sound plan, scene `layout`, a person's takes (`recording`, `align`, the reading `sheet`, the studio's wire `studio`), and the mix: `mixPlan` (what plays where) and `renderMix` over planar PCM (`audio`, `dsp`: the ffmpeg filters it replaced, ported), and the synth (`synth/`: a code sound is a graph of nodes, `synth/graph/nodes.ts` `CodeSound`, that `renderCode(sound, seed)` renders to the same samples on every host with its own transcendental maths, `synth/graph/math.ts`; `synth/graph/presets.ts` holds the families the app's code sounds are built from, the tones (`room`, `chime`, `drone`, `drain`, `bloom`, `notes`) and the shapes (`burst`, `thump`, `knock`, `scatter`, `whoosh`, `hiss`, `sizzle`, `breeze`, `rain`); `loudness` is an ITU-R BS.1770-4 meter, integrated, momentary max and peak; `sheet` draws a sound's spectrogram, waveform and loudness as one picture; `compare` sets a sound's numbers beside another's), the audit of which generated sounds code can make (`sfx-audit`), and the sound library's pure half (`sfx`: `family.thing` names, generated (each with its `why` and an optional code trial), code and recorded declarations, the lock's variants and the request hash that says a sound is current, which variant each placement plays and its seeded jitter, levels in dB relative to the voice). The entry names only what films, their kits, the app's sound library and tests import (the clock, `hash2`/`rng`, `defineScript` and the film schemas, `defineLibrary` and the sound families, `defineStore`); the framework reads every other module by its path.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `@manna/film/canvas`       | The Canvas 2D draw kit (ink, cutout, paper by meaning (`piece`: a figure cut and outlined, its line crawling, scenery torn with no ink and held still; `stroke`'s `boil`: tick, crawl or none), the `ground` contact shadow, paper fibre fixed to the backdrop plane (`planeFibre`), paper under a faint film grain, type, the one floating mitten hand with no arm (`hand.ts`: `floatingHand(ctx, root, { to, reach, grip }, style, hand)`, at rest beside its figure bobbing with the breath (`breathOf`), travelling toward its target on a soft arc about the shoulder, eased, with a settle, its grip forming from the open rest as it arrives; a hand at work that changes grip names the grip it `was` and morphs into the new one by `change`, point for point, never swapping in a frame (`handShape` its outline, for tests); `handAt` where it is, pure and allocation-free; `closeHand` the same hand close up, an open hand held out palm up seen from above, the palm the biggest shape, its middle on the origin, whose round finger block bends up toward the eye and back over the palm to cup (`closeShape` its outline at any `open`, continuous), with a lifeline and two soft joint lines; `CLOSE_SPAN` its length, no forearm; a gesture's `turn` turns its mitten palm up into the same shape at the mitten's size (`palmUpFrame`), so a push from the figure's hand into the close-up is one shape at two scales), figure, multiplane camera; every drawn scene breathes once by `DRIFT` (a scene's own `drawing({ drift })` in its place, `0` held still): through its outermost `camera` or `multiplane` when it frames one (a shot's `drift` is its share, `0` held still, `driftHeld`), as the outermost transform over its whole draw when it frames none, `shotPath`/`lerpCamera` shots (a deep push by `pushInto`, its target held in frame), `inset` for a picture in picture whose shots never take the scene's breath and `knobCamera` framings from knobs, storyboard), `createFilm`, which composites any `T` (a scene's full-screen cards, `drawing({ cards })` and `SceneSpec.cards`, more than one where a scene needs them, each the whole frame over its own cue on the film's paper, hard cut in, no caption over it; two whose cues hold at one instant stop the film and refuse the edit that would make them, `CardsOverlap`; the card that holds to the scene's end leaves as the card into a transition; a card's `flood` grows from the `Box` the scene's draw returns on the same frame (`floodBox`), within the look's own edge where its `mask` paints one, and a flood inside a transition stops the film and refuses the edit that would move it there, `FloodInTransition`), the card kit (`fullCard` with `CardStyle` and the take's `CardWord`s, `verse` with `Verse` and `VerseStyle`, whose `pad` joins a line's highlight into one bar, a phrase not in its verse stopping the frame; `TextStyle`; `floodBox`, where a flood stands at its eased progress), `glCanvas` (a WebGL 2 canvas for a look drawn in 3D: kept per key, a page-wide namespace a look names for its film, remade when its context is lost, 8 contexts kept live on the page, the keys' and the webgl2 rigs' together, so a frame asks for at most 8 and a look composites a canvas before asking for another key or size; none where WebGL 2 cannot be made, the look's fallback drawn), and the text probe (`probe.ts`) `film check` reads. The entry names only what films, their kits and their tests use, the credits roll (`creditRoll`), `glow`, `sky`, `wash`, `mix`, `clearOf`, `ramp` (a base colour's shade and light under a key light, CRAFT 12 as one function: the shade darker and turned toward the light's complement, the light lighter and leaning to the light's hue, neither ever grey; a look tunes it by its `Shading` knobs, a near-neutral's turn among them, and reads the result as a `Ramp`; `ramp` refuses knobs under CRAFT 12's floors, a chroma of 6 and a 10° turn, so no tuning shades grey), the `Hex` a colour is written as (a palette `satisfies Record<string, Hex>`, `Light`'s colours) and `reset` among them; the engine's own parts (`handShape`, `closeShape`, `palmUpFrame`, `lerpCamera`, `planeFibre`, the paper's sheets) are exported from their files for the framework and its tests. |
+| `@manna/film/render`       | `mountRender(films)` (`player/render.ts`, the encoder's one importer; no other lab page loads mediabunny): the render page (a film's export page: the lab's `/films/<film>/export`, the PreviewServer's `/?film=<film>&export`), whose handle (`ExportHandle`, on `window.__film`) a renderer and the easel drive. Its own entry, never re-exported by `player`: every page imports its films through `player`, so a studio page built beside the render page would load the encoder too (`tools/page-graph.slow.test.ts`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `@manna/film/player`       | In `main.ts` the film a page stages (`stageFilm`), its canvas drawn once the faces its film draws in have loaded (its loader asks for them and gives the film without waiting, `narratedFilms`; the stills and the render handle wait, `pictureFacesWait`; the engine names no family), the one source of stills (`stills.ts`: drawn a frame apart, the last asked for first, none when a face the film draws in will not load, its `ready` and waiting `all` then rejecting; the look-book sheet draws through it), and the look-book sheet `film lookbook` writes (`lookbook-sheet.ts`), set in the film's own type (its shorts' hook and caption families). Framework-free, so the renderer's page never loads Solid. `player.css` styles it and the lab, over the studio's tokens (`tokens.css`, `@manna/film/tokens.css`). The entry exports only `narratedFilms`, the `Narrated` type, and the films’ faces (`pictureFaces`, `Face`, `SUBSETS`); the lab reaches the rest of `main.ts` by path. `src/exports.slow.test.ts` guards this entry, `render`, `canvas`, `stand-in`, `core`, `@manna/film/style` and `@manna/film/style/build`: each names its exports, and each name has a user; and every module under `core/`, `lab/`, `tools/`, `canvas/`, `player/`, `browser/`, `command/`, `style/` and `lint/` exports only names another file imports (read by the parser, so a comment hides nothing; a `.types.ts` check, a fixture film and a lint fixture are not swept).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `@manna/film/ask`          | `mountAsk` (`lab/ask/mount.tsx`): the ask page (`/asks/<ask>`, `/asks/page/<page>`), the owner's guided review, hydrating what `@manna/film/ask-server` rendered, mounted as every lab page is (`mountStudio`, `lab/page-client.tsx`) under the shell (`lab/page-shell.tsx`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `@manna/film/ask-server`   | `askRender`, the ask page's server entry (the default export of an app's `ask.server.tsx`, `lab/ask/server.tsx`): the page of asks rendered for one request, each read through the render's own reads, and sent with the page.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `@manna/film/solid-plugin` | The Bun plugin that compiles `.tsx` with Solid's compiler (`@solidjs/compiler`): the lab's pages (`LabPage`: `solidPlugin` for each browser bundle, `solidPluginFor('ssr')` for each server entry) and the lab's browser tests bundle with it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `@manna/film/stand-in`     | The one stand-in 2D context for tests (bun has no canvas): `recorder` holds a canvas's drawing state from a canvas's defaults, saved and restored whole (the transform, which `setTransform` takes as six numbers, a matrix or nothing; an alpha kept within 0..1; the shadow, font, line width and every other property set), records each fill and image, answers a pixel read with the last hex fill over it (so a face's opacity read takes the canvas's branch and `cutout` draws pre-blended faces as a render does), and with `onCall` tells a test of every call and property set (how `check --draw`'s leg, `tools/draw-check.ts`, logs a frame to check it is pure); with `measure` it sets text with a test's own advances in the context's font; each canvas it makes carries its number (`isStandInCanvas`, `made`); `withDom`/`standInDom` put up a document whose canvases are stand-ins; it refuses what a real canvas refuses (a negative radius, a colour stop off 0..1, a stop colour made of NaN or undefined, a non-finite gradient coordinate). The framework's canvas tests and `check --draw` draw into it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `@manna/film/rive`         | A Rive rig as a drawing declares it (`RivePropSpec`, `RiveEngine`, `PoseOf`; its `ink`, how it follows the shot, sets the number `INK_NUMBER` from the shot's scale) and the draw that poses it from rest (`drawRig`, `canvas/rive.ts`); its loader, `RiveRuntime` service and host layers are `src/rive/` (see Rive).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `@manna/film/style`        | The house look as a scene reads it: a face acted from `EASE` toward an `Expression` (`acted`), the paper's boil (`boilTime`), a hand reached about a point (`reachAbout`), an arm's hand at its sleeve's end at a turn of the arm (`armHand`), a jointed arm's turns that reach its hand to a point, its elbow kept on the side its hand hangs from (`armReach`), `smooth`, and the house's key light and shading knobs (`keyLight`, `shading`: K1), which a film ramps its own papers under (`rampedPaper`). A film's papers are checked as its module loads (`papers`), each rimmed as its concept lays it (the house's `RIM`, or a width of its own) or not at all; a film's canvas people and page read the house's two papers (`peoplePaper`, `parchment`). A figure is composed of parts (`figure`, its parts' kinds from `src/style/parts/`: an arm that swings whole behind its garment, `Arm`, or one bent at its elbow on it, `JointedArm`; trousers with a shoe under each leg, `Trousers`; a traced head whose chin meets its garment by a shade step and no line, `chin: 'open'`, its line drawn just behind the garment), cut from the house's outlines (`ellipse`, `roundedPolygon`, `shifted`), each checked under the house's rules (`src/style/rules.ts`) as it is made; one the owner locked carries its lock (`src/style/lock.ts`). A set creases its pieces under the same light (`boxOf`, `creaseOf`; a turn's `Crease`). A film lays its figures in one file (`figuresFile`, `src/style/figures-file.ts`): each artboard its name, its boil's seed and its place on the stage, drawing a composed figure, with the artboard its hands are drawn on, or a circle hand at its size (`HAND_ART` times it); a name laid twice, a figure's hands laid on a hand of another paper, or a figure `figure` did not return (a copy of one with a part changed, its parts never checked) is refused as the module loads, and the house draws no such figure. The house prints the file in its line at the file's weight (`figuresRml`: `src/style/rig/draw.ts` `drawFigure` and `drawHand`, in `DIRECTION`: K1, A3 in B1), each locked figure's print alone (`lockedPrints`), and every override its figures carry, whatever rule it frees, by the artboard it is laid on (`figureOverrides`, found by `src/style/override.ts` `overridesIn`), each saying what it cites, the owner's words or his pick on an ask (`citedBy`). Every ink stroke of a figure and its hands (the silhouette, each piece's line, and the face's brows and mouth line) binds its width to the artboard's number `ink` through a range mapper, 1 the line as cut, 0.75 three quarters of the ink that shows past its paper and light core; the file's rigs follow the shot (`shot`, spread into each spec), the line thinning from a head a fifth of the frame's height to 0.75 at three tenths (`src/style/house.ts` `CLOSE_SHOT`, `inkAt`); a file that bakes its ink (`baked`, its widths written into the print as cut) binds none and follows no shot. A film writes no RML: the rig (`src/style/rig/`) is the house's alone. Its source is `src/style/` (see Rive).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `@manna/film/style/build`  | `compile`: a figure project compiled by the Rive CLI, offline and unsigned, into its `.riv`, with the CLI's warnings and problems and the stamp of what it was built from; `unbuilt`: why a committed `.riv` is not the build of its rigs, read through that stamp with no CLI; `unlocked`: which locked figures' prints are not the ones their lock files hold, or whose locks name no decision on the production's ledger, and which an override backed by the owner's decision on that figure frees; `unsaid`: which overrides on a film's figures cite a word that is not the owner's on that figure: no decision on his production's ledger filed at the point `item:<item>` (after the lock, for a lock's override) says its quote, verbatim, or filed the pick its answer cites; a question or a note is never his word (see Rive).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `@manna/film/tools`        | The `film` CLI (`runFilmCli`) and its Effect services: FilmFolder and FilmRepo (`film-repo.ts`: a film's paths, and its modules loaded), ContentStore, ElevenLabs, Media (mediabunny + mpg123 + WASM AAC and FLAC + FFmpeg in-process through NodeAV: durations, decode, WAV, a person's recordings loaded and their FLAC masters, joining a film; x264 in-process for a software share copy and the review's phone copies (`x264.ts`), `jpeg.ts` for its stills, `png.ts` for a sound's sheet, and `card`, a picture held over a sound as an MP4), Narrator, Takes (a person's recordings), Composer, Mixer, SoundLibrary (`library.ts`: an app's `sounds/`, its candidates made, kept, rejected, imported, auditioned, checked, its code sounds and trials rendered, compared and clipped for an ask, and its private `files/` synced through the app's private store), SoundRender (`sound-render.ts`: each code sound's seed rendered once and measured once), `MediaStoreService` (`media-store.ts`: the store interface, `put`/`get`/`hashOf`/`list`/`read` with a byte range, and the folder store), `r2-store.ts` (the R2 store, SigV4 in `sigv4.ts` through `HttpClient`), PrivateStore (`private-store.ts`: the store `library.ts` declares, reached with the `FILM_STORE_*` key read as `Config.Redacted`), Browser, Pages (`pages.ts`: the export page pool check, look and render share), PreviewServer, Renderer (`render-plan.ts` is its pure plan), RenderCatalogue (`catalogue.ts`: a film's `catalogue.json`; the domain is `core/catalogue.ts`), Stamps (`stamp.ts`: each scene's content key), `film project` (`project-cli.ts`), Checker (`check.ts` holds its pure detectors), NotesStore, the composition root (`film-services.ts`: `filmServices`, `labPages`, `startLab`, the one graph `runFilmCli` runs on; `film-services.slow.test.ts` sweeps for a second), LabPage (`lab-page.ts`: each page's browser bundle and server entry, `PageBundler`) and PageRenderer (`page-render.ts`: a worker per build, its reads through the lab's own handler, `PageReads`), the lab's routes (`lab.ts`), its studio (`studio.ts`, StudioReadings) and its source editing: SceneSources, SourceWriter (every write, its undo and redo), SceneWriter, and BeatEdits (`beat-edits.ts`: the studio's edits of a script); FreshFilm (`fresh-film.ts`: the film CLI run again in a new process, its answer or refusal read back: options, takes, the project, the check, the studio's reading, a cue, the mix; `film read`, `read-cli.ts`); and the review (`review.ts`, `review-http.ts`): Review, and Choices (`choices.ts`, a film's options: listed, heard, picked, each read in a fresh process through `FreshFilm` and `film options`, `choices-cli.ts`); and the art-direction seeder (`core/art-seed.ts`: `drawBatch` draws looks from an app's `ArtDeck` of `ArtAxis` options by seed, the same seed the same look forever, keeping off incompatible picks and a distance from the existing looks and each other; `artBrief` writes one as a style brief; `conflicts` names the picks of a look that cannot stand together; `apps/animations`' `bun run seed-look`). The picks fill (`fill-picks.ts`: `runFillPicks`, over `ask-store.ts`' `fillPicks`) files the owner's picks onto each ledger decision that names its ask and carries none, from the ask's record in the lab's asks, and leaves one whose record is not there (`apps/animations`' `bun run fill-picks`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
 ## Data
 
@@ -1015,50 +1013,24 @@ same frames as a 16:9 render, measured against one contiguous range): the
 
 ## Lab
 
-`film lab` is the one place a film is tweaked and reviewed: one server for
-every film of the app, meant to run for days (on the laptop, port 8229). It
-prints its links (`LabLinks`: the local one, `localhost` where it is bound,
-and the phone's when it listens there; logged `lab.ready`) and runs until
-stopped, which stops the server and the routes with the command's scope. The
-server is Effect's over `Bun.serve` (`labServer` and `serveLab`,
+`film lab` is where the owner answers what an agent asks of a film: one
+server for every film of the app, meant to run for days (on the laptop, port
+8229). It prints its links (`LabLinks`: the local one, `localhost` where it
+is bound, and the phone's when it listens there; logged `lab.ready`) and runs
+until stopped, which stops the server and the routes with the command's
+scope. The server is Effect's over `Bun.serve` (`labServer` and `serveLab`,
 `tools/api-server.ts`): no route or development server of Bun's, so every
-request reaches the gate. It knows three pages, the
-app's: the review (below); the player (`play.html`, `mountFilmStudio(pages)`), a
-film's studio (**The film's studio**, below); and the render page
+request reaches the gate. It knows two pages, the app's: the ask page
+(`ask.html`, `mountAsk`), an agent's guided review; and the render page
 (`index.html`, `mountRender(pages)`) at a film's export place, which the
-easel opens (`film lab look`). Its API is under
+easel opens (`film lab look`). Home (`/`) has no page of its own: it sends
+the owner on to the newest ask still asking (a 302), and with none answers
+one line, "Nothing waits on you" (`tools/lab-home.ts`). Its API is under
 `/api/` (The HTTP API, below), and every other path a page serves is one of
 the framework's places (`Places` in `core/api.ts`, each a `@manna/url-state`
 Place; the app gives each page's HTML entry, `LabPageSpec.pages`, and its
-server entry, `LabPageSpec.servers`), as
-**Pages and links** (below) lists them. A link the lab does not serve as
-asked answers a 302 (`servedPlace`, logged `lab.page.moved`), and the
-browser keeps its `#…` across, unless the Location names a fragment of its
-own (a beat's Script, Board or Lab names an empty one, below). A path with a
-trailing slash answers with the path without it, and a parent path with
-its nearest page: `/films/<film>` the film's studio, any other (`/films`,
-`/series[/<series>]`, `/sets`, `/asks`, `/productions`) home. An old link answers with its place
-(`legacyPlace`): `/?film=<film>` lands on the film's studio, `/?folder=…[&set=…]` on
-the folder or the set, a render link (`/films/<film>/play?export` or
-`/?film=<film>&export`, its build or wedge kept) on the export place, and
-`/?project=<film>` and `/player?film=<film>[&lookbook]` on the film's
-studio, and `/lab?film=<film>[&sel=…]` on the film's studio too, the
-scene's beat selected when `sel` names a cue or a knob of it
-(`sel=cue:<scene>:<name>`).
-A film page the studio stands for answers with the film's studio
-(`studioPlace`): `/films/<film>/play`, `/films/<film>/scenes[/<scene>]`,
-`/films/<film>/project`, `/films/<film>/choices`, `/films/<film>/script[/<beat>]`,
-`/films/<film>/board[/<beat>]` and `/films/<film>/lab[/<scene>]` go to
-`/films/<film>/studio`, with
-`?sel=beat:<id>` when the path names a beat or a scene (`?sel=panel:<beat>.<mark>`
-for a Board link's `?panel=`, with its `?try=<n>`), or a scene render's
-card (`?point=render:scenes:<scene>` on the project or the choices) names
-one, the note open (`?note=<id>`) kept, and the film time kept (a scene of
-the tape's `#t=` is film time, as the studio's is, and so is a film's
-Lab's). A beat's Script, Board or Lab held time in the beat on its hash:
-its Location ends in an empty fragment (`…#`, `NO_TIME`), so the browser
-drops that hash and the studio opens at the beat's start, or at the
-panel's mark. A path no place declares is a 404, never a page.
+server entry, `LabPageSpec.servers`), as **Pages and links** (below) lists
+them. A path no place declares is a 404, never a page.
 `LAB_HOST` (loopback by default) and `LAB_PORT` (8229) say where it
 listens; `FILM_LAB_PHONE_URL` (a plain `http://` address by its IP, the
 laptop's on the tailnet: the gate admits the bound IP, so a MagicDNS name
@@ -1068,52 +1040,33 @@ cannot bind ends `film lab` with `LabUnbound`, whose message names the
 address and Bun's words. A port is one lab's (`reusePort: false`): a second
 lab started on a port another holds is refused, never served beside it.
 
-**Pages and links.** Every view a reviewer would talk about is a URL, so a
+**Pages and links.** Every view the owner would talk about is a URL, so a
 pasted link opens what the sender saw and Back walks the views: the path
-says what the view is about, the query what is selected in it or how it is
-shown, the hash when (`#t=`, seconds). Each page reads and writes its place
-through `@manna/url-state`, and every link is printed by `pageHref` over the
-same places. Whether a move is a step Back walks is the place's declaration
-alone (`pageMove`, `core/api.ts`): a new path or a cited key (a selection,
-a view, a moment chosen, the compare's mode) is a history entry; a
-refinement and the playhead replace the entry. Every write enters history
-by that declaration (`Place.history`), through either of two doors. A page
-that moves for a reason names only the reason (`addressOn`,
-`browser/host.ts`): the viewer went somewhere (`go`, entered as the place
-declares), or the URL follows what the page did on its own (`follow`: play,
-a drag, a ←/→ step through the moments, a correction, a note gone from the
-feed, an old link's redirect), which always rewrites the entry. The one
-traversal a page makes is the bar's too (`dismiss`, a sheet's Close, Escape
-or swipe): it goes Back over the entry the opening pushed only when that
-entry is on screen and Back lands exactly where the Close writes (the same
-path, query and hash), else it rewrites the entry; no page goes Back or
-Forward itself (`film/history-through-host`). The review pages also set a place's value directly (`UrlState.set` and `update`,
-`UrlAtom.place`'s setter: a sheet opened, the synced players' time).
+says what the view is about, the query how it is shown. Each page reads and
+writes its place through `@manna/url-state`, and every link is printed by
+`pageHref` over the same places. Whether a move is a step Back walks is the
+place's declaration alone (`pageMove`, `core/api.ts`): a new path or a cited
+key (a still opened full size) is a history entry; a refinement replaces the
+entry. Every write enters history by that declaration (`Place.history`),
+through either of two doors. A page that moves for a reason names only the
+reason (`addressOn`, `browser/host.ts`): the viewer went somewhere (`go`,
+entered as the place declares), or the URL follows what the page did on its
+own (`follow`), which always rewrites the entry. The one traversal a page
+makes is the bar's too (`dismiss`, a sheet's Close, Escape or swipe): it goes
+Back over the entry the opening pushed only when that entry is on screen and
+Back lands exactly where the Close writes (the same path, query and hash),
+else it rewrites the entry; no page goes Back or Forward itself
+(`film/history-through-host`).
 
-| Place                    | Page   | Query                                                                                                                   | Hash                  |
-| ------------------------ | ------ | ----------------------------------------------------------------------------------------------------------------------- | --------------------- |
-| `/`                      | review |                                                                                                                         |                       |
-| `/sets/<folder>`         | review | `still` (the sheet or still open full size)                                                                             |                       |
-| `/sets/<folder>/<point>` | review | `view`, `other`, `m`, `inspect` (the version whose sheet is open), `still` (the version whose moment is open full size) | `t` (the set's video) |
-| `/films/<film>/studio`   | player | `v` (the version; 0 or none: the production's open one), `sel` (`beat:<id>`, the beat selected)                         | `t` (film time)       |
-| `/films/<film>/export`   | render |                                                                                                                         |                       |
+| Place                  | Page   | Query                                    |
+| ---------------------- | ------ | ---------------------------------------- |
+| `/`                    | none   | (sent on to the newest ask still asking) |
+| `/asks/<ask>`          | ask    | `still` (the Board panel open full size) |
+| `/asks/page/<page>`    | ask    | `still` (the Board panel open full size) |
+| `/films/<film>/export` | render |                                          |
 
-The lab serves no page at a film's `/play`, `/scenes[/<scene>]`,
-`/project`, `/choices`, `/script[/<beat>]`, `/board[/<beat>]` or
-`/lab[/<scene>]`: it sends each to the film's studio (`studioPlace`,
-above).
-
-A film's studio writes its own time (`tInUrl`, `player/t-in-url.ts`, from
-`lab/film-studio/context.tsx`): `#t=` follows the playhead at most every
-`TIME_EVERY_MS` and never makes a history entry; a selection and a note open
-are history entries (Back undoes them). Back or Forward lands the player on the time the entry keeps
-(`onTraverse`, `browser/host.ts`; the review's players too), a time still
-waiting to be written for the entry left dropped. A bare `#<seconds>` (an old link's film time) opens on that frame.
-
-A folder ref is one path segment (`manna%2Frighteousness-by-faith`), as
-is a short's name. The wipe's divider, the microphone and quality are this
-viewer's own settings and stay in the browser's storage, never in a link; a
-set's view (`?view=`) is the link's.
+A folder ref is one path segment (`manna%2Frighteousness-by-faith`), as is a
+short's name.
 
 **The pages are built in the lab's process** (`LabPage`, `tools/lab-page.ts`):
 `Bun.build` with `@manna/film/solid-plugin` (the `PageBundler` service, with a
@@ -1130,40 +1083,31 @@ folder still read keeps its watch; a file read in a newly watched folder
 or new to what it read, that changed from a second before the build began
 counts as a change. Each change to a
 file a build read is one more build (a render or a note is none). A film's
-mixed track (`narration/full.wav`) is no source, but the page plays the one
-it loaded: once a page asks for one, there or not (a film before its first
-mix gets a 404), its folder is watched too, or the nearest folder there on
-the way to it until the mix makes it, and a mix landing it (last and whole,
-by a rename, so the mix has finished) is one more change, with no new build,
-that the film's open studio hears and no other film's (it waits with `&film=`),
-so a score or level written on the review, a take kept, a first mix, or a
-`film mix` run by hand loads that studio again once onto the new track; a take's
-timings, saved before its mix, wake nothing. A page that never plays the
-track arms the watch with its first wait on `&film=` (`filmWaited`). A write
-that mixed answers the build its film's pages hear that very mix by
+mixed track (`narration/full.wav`) is no source: once a page asks for one,
+there or not (a film before its first mix gets a 404), its folder is watched
+too, or the nearest folder there on the way to it until the mix makes it, and
+a mix landing it (last and whole, by a rename, so the mix has finished) is one
+more change, with no new build, that a wait with that film (`&film=`) hears
+and no other film's; a take's timings, saved before its mix, wake nothing. A
+wait arms the watch with its first ask on `&film=` (`filmWaited`). A write
+that mixed answers the build its film's waits hear that very mix by
 (`mixed`, `LabPage.heardAt`, from the track's mtime read under the writer's
 lock). A page links its scripts and styles from the root (`/chunk-….js`,
-`publicPath: '/'`), so a page served under a film's path finds them; a
+`publicPath: '/'`), so a page served under a deeper path finds them; a
 request is answered as a narration file when it is one
 (`/films/<film>/narration/<file>`), then as a built file, then as the page
 its path serves. Every page is stamped with its build and the server that
 built it (`<meta name="lab-build">`, `<meta name="lab-server">`, an id made at
-start) and waits on `GET /api/review/build?since=&server=&film=` (`PageBuild`,
-long-polled, at most 60 s; another server answers at once, so a page outlives
-a restart); a film's studio loads again at its place when a later build or
-another server answers (`reloadOnRebuild`, `lab/rebuilt.ts`), once no edit
-is in hand, no frame is drawn on and the recorder is not over the page, so a
-scene edited by hand or by an agent is on screen with no hand on the page.
-The bundler resolves a workspace package's subpaths by the `exports` maps the
+start), which `GET /api/review/build?since=&server=&film=` answers past
+(`PageBuild`, long-polled, at most 60 s; another server answers at once). The
+bundler resolves a workspace package's subpaths by the `exports` maps the
 process read at start, so the lab reads every workspace `package.json`'s
 `exports` as it starts and every 3 s after (`tools/exports-watch.ts`): once
 one changes (a merge adds a subpath), the lab closes its servers and its
 pages, ends their Chrome (`Bun.WebView.closeAll()`), and starts itself again
 in the same process with the same command line (`relaunchOnExportsChange`,
-`tools/relaunch-bun.ts`); an open
-page sees another server answer and loads again at its place.
-The review does not reload itself (a playing set
-is not interrupted); its next load is the new code. A page that does not
+`tools/relaunch-bun.ts`). An ask page does not reload itself (an answer in
+hand is not lost); its next load is the new code. A page that does not
 build answers 500 with the bundler's words and reloads once a later build
 or another server answers, pausing 2 s after every other answer; a
 failed build is tried again on each request and, while a page waits, by its
@@ -1183,13 +1127,9 @@ handler (`PageReads`), so they pass `admit` and the same handlers; they are
 sent with the page and adopted (`ssrSource: 'server'`), never read twice,
 and a value only the browser knows (the viewport, quality, the viewer's
 keys) is `ssrSource: 'client'` with a server value (the server answers as a
-phone). The server draws no film: the studio's viewer, the scene code and
-the stills are `clientOnly` (`lab/film-studio/page.tsx`); a film page whose
-film does not start, or whose faces do not load, ends its page (`PageEnd`,
-`lab/page-client.tsx`: the tree disposed, the notes feed and the keys with
-it) and says why in its place, once. A film's studio whose film does not
-stage shows its timeline alone, its viewer the Board panels and its clock
-silent (`lab/film-studio/mount.tsx`). A build whose server entry reads
+phone). The server draws no film; a page whose faces do not load ends
+(`PageEnd`, `lab/page-client.tsx`: the tree disposed and the keys with it)
+and says why in its place, once. A build whose server entry reads
 a film's or a scene's module or `player/stills.ts` fails, naming them
 (`filmCode`). A render that fails before its head answers the page as built,
 which the browser then renders. One that fails after its head, or still runs
@@ -1213,417 +1153,86 @@ the lab answers it, to 64 KiB. Only the lab's server bundles Solid; the
 render's server (`film render`, `check`) serves the player alone.
 
 The framework owns the routes (the lab API, below: `labHandler` in `lab.ts`,
-one web handler over NotesStore, the scene source, the studio, the review,
-the choices and the project, with the pages behind the same gate):
+one web handler over the script, the Board, a beat's attempts, the review's
+files, the asks and the easel, with the pages behind the same gate). Notes
+have no route: an agent reads and answers them through the lab's MCP
+(`notes`, `resolve`) over NotesStore.
 
-| Route                                                 | What it does                                                           |
-| ----------------------------------------------------- | ---------------------------------------------------------------------- |
-| `GET /api/films/<film>/notes`                         | the film's notes file; its `seq` is the cursor                         |
-| `POST /api/films/<film>/notes`                        | a new note: `NotePost`, a `NoteDraft` plus the frame as a base64 PNG   |
-| `POST /api/films/<film>/notes/:id/reply`              | the user replies (`ReplyPost`); the note opens again                   |
-| `POST /api/films/<film>/notes/:id/resolve`            | resolves it (`{}`)                                                     |
-| `POST /api/films/<film>/notes/:id/withdraw`           | takes it back while it is unanswered (`{}`); else a 409 `NoteAnswered` |
-| `GET /api/films/<film>/notes/wait?since=<n>&timeout=` | the changes past cursor `n`, long-polled (at most 60 s)                |
-| `GET /api/films/<film>/stills/:name`                  | a still (`n3.png`, `n3.r5.png`); any other name is a 404               |
+**A beat's attempts** (`tools/studio.ts`, over `Takes` and `FreshFilm`) are
+listed and played for an ask's take block. The lab runs for hours and keeps
+each film module as it first imported it, so it never loads the film in its
+own process: it reads the script and each beat's line fresh (`film read
+voice <film>`, `StudioReading` in `core/studio.ts`), kept under the film's
+source stamp (`FilmFolder.stamp`: one fresh process after any file under the
+film changed, none before), so a line fixed while the lab is open reaches the
+list at once. A take is recorded and kept through the CLI (`takes import`,
+`film options keep-voice <film> <beat> <file> [--accept-mismatch]`): every
+keep is `keepVoice` (`choices.ts`), recorded by `SourceWriter.around` with the
+take files the timings name and the track mixed from them (`Follows`), so it
+holds the writer's lock and the lab MCP's `undo` walks it back: it brings back
+the take it lands from `attempts/` and remixes (`film mix <film>`, fresh; a
+failed mix is logged `lab.remake.failed` and the step stands). A step is
+taken back only with the timings' takes brought back as the very files they
+name: a take's copy is picked by the hash of its audio its name carries, and
+a name from before takes were named by their audio, whose copies differ, is
+refused (`TakeAmbiguous`) rather than guessed at. The routes are the lab
+API's `studio` group, under `/api/films/<film>/studio/`, behind the same gate
+and for any of the app's films (another name is a 404 `FilmUnknown`):
 
-A bad body is a 400, an unknown note a 404 `NoteNotFound`, an unknown still
-a 404 `StillUnknown`, and every failure is logged.
+| Route                                                     | Answer                                                                                                                                     |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET /api/films/<film>/studio/takes/:beat/attempts`       | `StudioAttempts`, newest first: each `transcript`, its word error, when, whether it is the take and whether it reads the line as it is now |
+| `GET /api/films/<film>/studio/takes/:beat/attempts/:file` | the attempt's FLAC (`audio/flac`), to hear it again; a name the ledger does not hold is a 404 `AttemptUnknown`                             |
 
-**The studio** (`tools/studio.ts`, over `Takes`, `StudioReadings` and
-`FreshFilm`) records takes from the lab through the same import as `takes
-import`. The lab runs for hours and keeps each film module as it first
-imported it, so the studio never loads the film in its own process: it reads
-the voice, the script's `heardAs`, each beat's line and the reading sheet
-fresh (`film read voice <film>`, `StudioReading` in `core/studio.ts`), kept
-by `StudioReadings` under the film's source stamp (`FilmFolder.stamp`: one
-fresh process after any file under the film changed, none before). A posted
-recording is made an attempt here (`Takes.recordAttempt`); every keep, of
-that attempt or an earlier one, is `keepVoice` (`choices.ts`), the one keep
-a voice pick through the choices routes makes too: `film options keep-voice <film>
-<beat> <file> [--accept-mismatch]` in a fresh process (it keeps the take and
-remixes), recorded by `SourceWriter.around` with the take files the timings
-name and the track mixed from them (`Follows`), so it holds the writer's
-lock and the film's Undo and Redo walk it back and forth: each brings back
-the take it lands from `attempts/`, remixes (`film mix <film>`, fresh; a
-failed mix is logged `lab.remake.failed` and the step stands), and the
-studio loads again at its place to play it (the timings and the
-track are read at load, so no rebuild would). A step's request may carry an
-id, under which the lab records the step in `GET …/check`'s `landed` before
-it remixes, so an answer lost on the way back is read from there; Choices
-sends its Undo and Redo with one. Undo and Redo are stepped back and on only with the
-timings' takes brought back as the very files they name: a take's copy is
-picked by the hash of its audio its name carries, and a name from before
-takes were named by their audio, whose copies differ, is refused
-(`TakeAmbiguous`) rather than guessed at. A keep answered by
-an older film CLI (`{"_tag":"OptionsKept","mixed":true}`, no take) is still
-recorded and answered from the timings. A reload onto a newer build never
-takes work only the page holds: it waits while an edit is in hand, a frame
-is drawn on or the recorder is over the page (**The film's studio**,
-below). A take is kept against that reading
-(`VoicedFilm`, `narrator.ts`: the film's paths, voice, `heardAs` and beats,
-which `takes import` makes with `voicedOf`), so a line fixed while the lab
-is open is on the sheet, and a take of it current, at the next read. Its
-routes are the lab API's `studio` group, under `/api/films/<film>/studio/`, behind
-the same gate and for any of the app's films (another name is a 404
-`FilmUnknown`). Every body and answer is a Schema in `core/studio.ts`,
-over the one reading the tools use too: a beat's `Line`s
-(`core/narration.ts`) and the sheet's `Part` and `SheetBeat`
-(`core/sheet.ts`):
+`:beat` is decoded and must be one of the film's beats before a route reads
+a thing: any other name (an encoded `/` or `..` included) is a 404
+`UnknownScene`. A body over `STUDIO_MAX_BODY` (64 MiB) is a 413
+`BodyTooLarge`, counted as it streams (a Content-Length over it is refused
+unread; one under it is not believed). The server keeps a connection open
+with nothing sent for `LAB_IDLE_SECONDS` (255 s, Bun's longest). A critique
+holds no request through its counsel's run (**The critique**, below). An
+attempt plays back through `serveFile`, by byte ranges, as a phone's Safari
+asks.
 
-| Route                                                     | Body → answer                                                                                                                                                              |
-| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /api/films/<film>/studio/beats`                      | `StudioBeats`: per beat with a line, its sheet `parts`, the file name to record it as, `state` (`recorded`, `staging`, `stale`), its take, how many attempts               |
-| `POST /api/films/<film>/studio/takes/:beat`               | `TakePost` (`audio` base64, `type` `audio/wav` or `audio/flac`, `acceptMismatch?`) → `StudioTake` (the take, its `transcript`, the word error, the new `timings`, `mixed`) |
-| `GET /api/films/<film>/studio/takes/:beat/attempts`       | `StudioAttempts`, newest first: each `transcript`, its word error, when, whether it is the take and whether it reads the line as it is now                                 |
-| `GET /api/films/<film>/studio/takes/:beat/attempts/:file` | the attempt's FLAC (`audio/flac`), to hear it again; a name the ledger does not hold is a 404 `AttemptUnknown`                                                             |
-| `POST /api/films/<film>/studio/takes/:beat/keep`          | `KeepPost` (`file`, `acceptMismatch?`): an earlier attempt made the take → `StudioTake`                                                                                    |
+### Edits through the lab
 
-A take not kept answers its failure as the whole API does (below): a
-`TakeMismatch` carries the beat (`id`), the `script`, what was `heard`, the
-`wer` and the `attempt` it saved, which `keep` with `acceptMismatch` makes
-the take ("accept anyway"); the recorder holds the failure itself
-and reads the attempt off the `TakeMismatch`.
-A body that is not a recording, or of a media type the studio is not told how to
-read (`AudioInvalid`), is a 400; a lossy one (`audio/webm`, `ogg`, `mp4`,
-`aac`, `mpeg`: what MediaRecorder makes) a 415 `RecordingLossy`, since the
-take is the film's master; the recorder records PCM (an AudioWorklet) and posts
-WAV. `TakeMismatch`, `RecordingInvalid` (a beat
-with no line, silence, an attempt never recorded) a 422; a failed
-speech-to-text (or `SttUntimed`) or a recording the media tools could not
-read (`MediaFailed`) a 502. `:beat` is decoded and must be one of the film's
-beats before a route reads a body or writes a thing: any other name (an
-encoded `/` or `..` included) is a 404 `UnknownScene`. A body over
-`STUDIO_MAX_BODY` (64 MiB) is a 413 `BodyTooLarge`, counted as it streams (a
-Content-Length over it is refused unread; one under it is not believed). The
-upload is written to a scoped temp file (`recording.wav` or `.flac`), removed
-when the request ends. Takes are kept one at a time with every other lab
-write (the writer's lock): the keep, the timings write and the mix after it
-finish before the next keep, pick or edit begins, and the keep is undoable
-(Undo names `voice <beat> keep <file>`). After a take is kept the film remixes; `mixed: false` says the mix
-failed (logged) and the take stands. The server keeps a connection open
-with nothing sent for `LAB_IDLE_SECONDS` (255 s, Bun's longest), past the
-page's wait for a take (`STUDIO_IMPORT_WAIT_S`), so the page stops waiting
-before the socket closes. A critique holds no request through its counsel's
-run (**The critique**, below). An attempt plays back through `serveFile`, by byte
-ranges, as a phone's Safari asks. The recorder (**Studio**, below) records
-through these routes.
+No page edits a film: an agent edits it through the lab's MCP
+(`tools/timeline-mcp.ts`), on a version whose files the lab holds (its own
+folder, or the film's registered files), judged by `core/beat-edit.ts`
+(pure):
 
-### The film's studio
-
-A film's studio page (`/films/<film>/studio`, `Places.studio`,
-`pageHref.studio(film, {v, sel}, t)`) is the film on one timeline: the one
-page a film is reviewed and edited on. Its recorder is the voice-recording
-Studio (**Studio**, below), which it opens over itself. The player page
-(`play.html`) mounts it in the browser (`mountFilmStudio(pages)`,
-`lab/film-studio/mount.tsx`), and the lab renders its frame on the server
-(`studioRender`, `lab/film-studio/server.tsx`). Its query `v` names the version (0
-or none: the production's open one); `sel` names the beat selected
-(`beat:<id>`: `beatSelection`, `selectedBeat` in `core/api.ts`), and a new
-selection is a step Back walks; `pane=script` keeps the Script pane open
-(below), a step Back walks too. Its hash `t` is film time.
-
-The page reads its data from `GET /api/films/<film>/timeline[?v=<n>]`
-(`FilmTimeline`, `core/timeline-schema.ts`; **Timeline**, below). A version
-the ledger does not have is refused with `FilmVersionUnknown`, and an older
-one kept in no folder with `FilmVersionUnkept`.
-
-Its layout is layout C (the owner's pick, 2026-10-16): the inspector beside the viewer, the
-timeline full width under them. The inspector's place is one grid template
-(`lab/film-studio/style.ts`) and one part (`Inspector`).
-
-- **The header**: the film, the version chip (`v2 ▾`, a menu of the
-  versions), the stage, and `N wait on you` with a menu of what waits.
-- **The viewer**: the scene drawn at the playhead when the staged film is
-  this version, else the Board panel held there, else the beat's empty
-  frame (`pictureAt`). A tag names what it shows (`Scene · two`,
-  `Board · two`).
-- **The transport**: the timecode in Geist Mono (`M:SS.t`, `timecode`),
-  five keys (to the start, the previous beat, play, the next beat, to the
-  end), Note on this frame, the line spoken at the playhead, and the Script
-  key at its right end (a laptop's: a phone hides it, so the timecode keeps
-  its room, and opens the pane from its reading block's head).
-- **The Script pane** (S, the Script key; `?pane=script`): closed at rest.
-  Open, it stands in the inspector's column and shows the studio's code view
-  (`code.tsx` `ScriptPane`; the Code section's, below) of the beat at the
-  playhead, the next beat's scene as the playhead crosses into it: the
-  scene's code, lit as the playhead plays it, with the script's line and its
-  marks over it. It follows the line the frame reads by the one Follow rule
-  (`lab/follow.ts`): a reader's scroll takes the box, and Play or Follow
-  gives it back. A selection's inspector covers it, and closing that shows
-  it again; S under a selection shows it, the selection let go, a step Back
-  walks. On a phone the reading block is its closed face: a tap on the
-  block's head, the Script glyph at its end, opens it in the block's place.
-- **The timeline**: a flag strip of the open asks and notes, a ruler that
-  scrubs, the act bands, a lane for each stage with material, the Next row
-  and the red playhead. Zoom −, Fit and + set its scale; ⇧Z fits the film.
-
-The keys: Space plays or pauses, K pauses, L plays, J or ↑ goes to the
-previous beat, ↓ to the next beat, Home to the start and End to the end.
-← and → step a frame (⇧ a second). N draws on the frame (below). ⌘Z undoes
-the film's newest change and ⇧⌘Z redoes it (while drawing, they are the
-ink's). S shows or closes the Script pane. Escape lets an edit in hand go
-(a clip carried, an edge pulled, a frame drawn on), else closes the
-inspector, else the Script pane.
-
-A click on any clip of a beat selects that beat (`?sel=beat:<id>`), and a
-click on a Board clip selects its panel (`?sel=panel:<beat>.<mark>`:
-`panelSelection`, `selectedPanel` in `core/api.ts`). Every clip of the beat
-is outlined, and the inspector (`inspector.tsx`) opens beside the viewer:
-its head (the beat, its span, Approve) and a section for each stage, in the
-flow's order, each a disclosure with its count when shut
-(`inspector-state.ts`: `95 words`, `3 of 3 kept`). The section of the kind
-clicked opens with the selection (Words for a beat, Board for a panel); one
-the owner opens or shuts stays so while the selection stands.
-
-- **Words**: the beat's line as the one words reader reads a script
-  (`lab/words/reader.tsx`, `film-script.tsx`), its delivery marks set by a
-  tap and its staging take playable, following the playhead by the one
-  Follow rule (`follow-rule.ts`). The words selected are the address's
-  (`?words=<a>-<b>`), and under them stands the note on them
-  (`words-note.tsx`): Note, Correct (the words to say instead) or Remove,
-  saved through the inspector's note machine (`note-save.ts`) with the
-  frame at the playhead while it is in the beat (else the beat's first) and
-  its still. Only the film's own version takes one.
-- **Board**: each panel at its mark with its tries, the kept one ringed; a
-  try pressed shows in the viewer (`?try=<n>`, its tag `try n`), a second
-  press shows the kept one again, and Keep keeps it. Mark up
-  (`panel-markup.tsx`, on a picture panel of the film's own version) draws
-  a pen over the try (`lab/sketch/surface.tsx`) and takes words, saved as a
-  Tweak (what `film board tweak` acts on) or a Note, its still the try with
-  the marks over it (`panel-still.ts`); the panel then lists its notes, each
-  a link that opens it in Notes and asks. Approve and Withdraw act on the
-  beat. The writes are one machine (`board-writes.ts`: Idle, Sending, Done,
-  Failed; a write asked while one is on its way is not sent) over the lab's
-  board routes (`POST /board/pick`, `/board/approve`, `/board/withdraw`); a
-  version not the film's shows its board read only.
-- **Voice**: the beat's take (`lab/take.ts` `takeHeard`: the take the
-  beat's timings name, its kept attempt or its staging take), its facts and Hear, the page's one
-  voice (`Media.hear`: the film's Play hushes it). Record shows the record
-  studio (`lab/studio/`) over the page, a Dialog on a laptop and a Sheet on
-  a phone (`RecordOver`); the recorder is the inspector's, so a beat selected or the
-  recorder hidden never ends a take. Close, Escape or a swipe while it holds
-  a take only this page has first asks to discard it (Discard, Keep).
-- **Code**: the scene's file read only (`GET …/scenes/<scene>/code`), only
-  when the beat has a scene: the studio's code view (`code.tsx`, the Script
-  pane's too), a row to a
-  line, lit while the playhead is in the beat (`code-lit.ts`): each of the
-  scene's rows (`core/scene-steps.ts`: a draw's are its cues, each on its
-  literal) by its state, live on the playhead's tint with a meter under its
-  line and its percent at the line's right, held brighter than the code
-  around it, waiting or released dim, the next to start saying when at its
-  line's right; and each call that reads the clock while the frame read it
-  and the clock plays it (`Player.hearClock`), its line glowing and fading
-  after. The band over the code names the beat, how many rows are live and
-  the next to start (`1 live · next: 'fall', in 0.3 s`), and sets the beat's
-  line as the script says it now (the
-  reader's words, `lab/words/line.ts`) with a chip at each `{mark}`, the
-  mark last said lit, three whole rows of it in sight (each as tall as a
-  chip, the scroll on a row's top); a chip puts the playhead on
-  its mark's word. The band says what plays, or that nothing does: a field
-  the parse refuses lights nothing, and why is `film check`'s and the lab
-  MCP's to say. A tap on a line, its number or its text (Enter on its
-  number too), puts the playhead where the line next plays, once
-  (`nextFiring`, over the scene's `firingsOf`, built once for the scene as
-  staged, never per frame), and selects nothing. The number seeks whatever
-  the page holds selected; a drag that selects a line's text seeks nothing.
-  With no staged film (a version kept
-  in its own folder) the code is the film's as it stands, unlit (`Lit for
-  the open version`). A note cannot cite one of its lines.
-- **Notes and asks**: the beat's open notes, each with its thread and a
-  reply (`lab/notes/thread.tsx`), and the open asks at its time, each a link
-  to its page. The note open is the address's (`?note=<id>`): a note's link
-  selects its panel or beat and opens it here. Choices' picks are asks: no
-  Choices page remains.
-
-A section with nothing to show is a quiet row with no body: Board on a
-beat with no panel and Code on a beat with no scene (`–`), Words on a
-version kept in its own folder (`not read for past versions`: the reader
-is the film's as it stands), and Concept (`to come`).
-
-A film's script is read in the one words reader (`lab/words/reader.tsx`,
-the film's in `film-script.tsx`): in the studio's inspector (its Words
-section, the beat selected) and in an ask's script block. Each beat stands
-under its id and label with its staging take (▶ and its pace once ready),
-its line at the reading size with its delivery marks, what its picture does
-(the script's brief, `GET …/script`) and its sources. A tap on a word
-selects it (shift extends; a text selection across words selects them, and
-a word held or right-clicked opens the page's menu, whose Select to here,
-`lab/script/commands.ts`, extends it) and opens the box under its line:
-Hear, Clear and the words' delivery, each written at once into `script.ts`
-(`POST …/script/marks`); in the studio the box also holds the note on the
-words (`words-note.tsx`: Note, Correct or Remove). A page with a playhead names the beat it is in,
-which the reader marks and keeps in sight by the lab's one Follow rule
-(`lab/follow.ts`) until a hand scrolls it.
-
-The pages the inspector holds are links that land on the studio
-(`Replaced` in `core/api.ts`): `/films/<film>/script`, `/films/<film>/board`
-and `/films/<film>/lab` on the studio, `/films/<film>/script/<beat>`,
-`/films/<film>/board/<beat>` and `/films/<film>/lab/<scene>` with the beat
-selected, a Board link's
-`?panel=<mark>` with that panel and its `?try=<n>` as the studio's `?try=`,
-and `/films/<film>/choices` on the studio, its `?point=` a beat when it
-names a scene render. A note open (`?note=<id>`) is kept as the studio's
-`?note=`. A beat's scene time (`#t=`) is dropped (an empty fragment on the
-Location, `NO_TIME`): the studio opens at the beat's start. A film's Lab's
-`#t=` is film time, and kept.
-
-The clock is the staged film's preview with its narration (`playerClock`,
-`clock.ts`) when the version shown is the one the film registry holds. A
-version kept in its own folder plays on a silent clock (`silentClock`).
-
-On a phone (390 × 844) the timeline keeps three lanes (`lanesShown`: the
-script, the newest picture lane and the voice), each target is 44 px, and
-the words show below.
-
-**Edits.** The studio writes two edits into a version's script itself
-(`core/beat-edit.ts`, pure, which the lab's routes and the MCP tools judge
-by too), on a version whose files the lab holds (its own folder, or the
-film's registered files):
-
-- **Reorder.** On a laptop a Script clip dragged past a drag's first pixels
-  is lifted (at 60% opacity, its grips hidden) and carried over the gaps
-  between the beats; the playhead steps aside, and a drop line in the
-  accent runs through the lanes where it would land, its tag on the band
-  saying what lands where (`three before one`). A drop on a gap that moves it
-  moves its beat there; any other drop, or Escape, moves nothing. A move
+- **`beat_move`** moves a beat before another (to the end when none). A move
   keeps every act and score movement on the beat it begins on, and one that
   would put a part before the part declared ahead of it is refused in words
-  (`movedOrder`). On a phone a long-press on a clip opens its menu, whose
-  Move before… lists a row for each beat it can go before (`Before two`), and
-  To the end. The page
-  posts `POST /api/films/<film>/beats/move`.
-- **Trim.** On a laptop each edge of a Script clip with words is a grip
-  (a beat with none has no hold to pull): pulled, it sets that beat's hold (`lead`, the time before its words, at the left
-  edge; `tail`, the time after them, at the right), with a live readout
-  over that edge (`hold +3.0 s · 7.7 s long`: the change and the beat's length after it,
-  `trimReadout`, sized by the layout's own rule, `beatLength`, so a beat its
-  `min` holds keeps its length). The hold snaps to 0.1 s and stays between its floor
-  (`MIN_LEAD`, `DEFAULT_TAIL`, or the beat's own when it already holds
+  (`movedOrder`).
+- **`beat_hold`** sets a beat's hold (`lead`, the time before its words, or
+  `tail`, the time after them). The hold snaps to 0.1 s and stays between its
+  floor (`MIN_LEAD`, `DEFAULT_TAIL`, or the beat's own when it already holds
   less, kept as it is) and 30 s (`heldWithin`); a tail on `DEFAULT_TAIL` is
-  written as none. The grip follows only once pulled past a tap's reach
-  (`DRAG_PX`), from the hold as it stood on the 0.1 s grid; let go there,
-  it writes nothing. The page posts
-  `POST /api/films/<film>/beats/hold`; a hold that would change nothing the
-  film plays (a beat with no words, a tail its `min` absorbs) is refused
-  with `HoldUnchanged`, said in words (`holdUnchanged`). The phone has no
-  trim.
+  written as none. A hold that would change nothing the film plays (a beat
+  with no words, a tail its `min` absorbs) is refused with `HoldUnchanged`,
+  said in words (`holdUnchanged`). It answers the seams into and out of its
+  beat as the version reads after it (`seamsAround`: from the end of a beat's
+  take to the next beat's words).
+- **`undo`** takes back the film's newest change (or, given `change`, that
+  change alone, refused while another stands before it).
 
 Each edit is one write of the version's `script.ts` through the
 SourceWriter (`tools/source-writer.ts`), made by `BeatEdits`
 (`tools/beat-edits.ts`): formatted, read back, and written only over the
-text it read. No persisted format changes. The timeline ripples at once
-(`lab/film-studio/ripple.ts`: every later beat follows, with the panels,
-takes, scenes and notes of each beat, and the movements and acts that
-begin on it; a render stays) until the lab's read of the version holds the
-edit, and the playhead comes back to the same moment of the same beat
-(`anchorOf`, `anchoredT`). A version the staged film draws then loads again
-at its place, its new order drawn. One edit is in flight at a time
-(`lab/film-studio/edit.ts`: `Idle`, `Dragging`, `Trimming`, `Sending`,
-`Landed`, `Done`, `Failed`): a write that changed the script is `Landed`
-until the version's read holds it, and an ask, a carry or a trim while one
-is on its way or unread is not taken (its grips say so,
-`data-waiting`); a read that fails then keeps the timeline shown, and the
-receipt says so. Its receipt
-says what it did in the owner's words (`Moved two before one.`, `Held two
-+3.0 s before its words.`), its Undo bound to the change it made. An edit
-of a film with a production files the agents' work on its ledger while it
-stands (`Re-time, re-check seams, re-render.`): once it lands, and again by
-its redo; its undo withdraws it.
-
-**One history.** ⌘Z and ⇧⌘Z, and a receipt's Undo or Redo, step the film's
-one history through `POST /api/films/<film>/edits/undo` and `/edits/redo`
-(`tools/edits-http.ts`), answered at once with the owner's words and the
-steps, no check. It is the history the steps' `POST …/undo` and `/redo`
-step too: the owner's edits and the agents' (a scene written, a voice kept,
-an edit through the MCP tools) on one stack, each step its own. A
-receipt's Undo steps only the change it names, while it is the newest
-(`StepNotNewest` otherwise); a refused step reads the steps again, so the
-next ⌘Z steps the newest change the page now knows. A ⌘Z or ⇧⌘Z pressed
-while they are read waits for them (`Reading the film’s history…`).
-
-**Notes for an agent.** What the page cannot write exactly it files as a
-note, through the inspector's note machine (`note-save.ts`); none of them
-writes the film:
-
-- **Draw on a frame.** N, the transport's Note on this frame, or that row
-  on a clip's or the page's context menu pauses the film and lays red ink
-  over the viewer (`Editing.Ink`, on the markup surface
-  `lab/sketch/surface.tsx`), the frame ringed in the note's colour under a
-  crosshair and its tag saying `Draw here`. The note bar takes the transport's place: one
-  line (`Say what to change`), File note and Cancel. File note files the line with the frame drawn
-  on as its still (`frameStill`, `panel-still.ts`).
-- **Split at the playhead**, on a beat's context menu while the playhead is
-  inside it, files a note asking for the beat to be split there.
-- **Move…**, on a Board panel's context menu, picks the beat the panel goes
-  to and files that as a note.
-
-A filed note's receipt has Withdraw, which takes the note back while no one
-has answered it (`POST /api/films/<film>/notes/:id/withdraw`).
-
-**The MCP tools.** The lab MCP serves the same edits to agents
-(`tools/timeline-mcp.ts`): `beat_move`, `beat_hold`, and `undo` of the
-film's newest change (or, given `change`, that change alone, refused while
-another stands before it); `beat_hold` answers the seams into and out of
-its beat as the version reads after it (`seamsAround`: from the end of a
-beat's take to the next beat's words). `tweak` (`tools/tweak-mcp.ts`)
-writes a scene's cue timing or knob value into the same history (The
-tweak, below). `BeatEdits` makes them as the page makes them,
-so the owner and the agents step one history, and the lab's change feed tells
-each change, its undo and its redo as it lands (`source.written`,
-`source.undone`, `source.redone`; The lab's events, below).
-
-**A newer build.** The studio loads again at its place onto new code when
-the lab answers a newer build of the pages (`reloadOnRebuild`,
-`lab/rebuilt.ts`, wired in `lab/film-studio/editing.tsx`), once no edit is
-in hand, no frame is drawn on and the recorder is not over the page.
-
-Its modules are in `lab/film-studio/`:
-
-- `view-state.ts`: pure derived state (the beat at the playhead,
-  `pictureAt`, `lanesShown`, the zoom steps, the ruler's ticks,
-  `timecode`).
-- `machine.ts`: the effect-machine machines. The timeline machine reads
-  version `v`, and reads again on a version change. The transport machine
-  is Paused, Playing or Scrubbing.
-- `edit.ts` (the edit in flight), `ripple.ts` (an edit laid on the
-  timeline, and the playhead's place through it) and `editing.tsx` (the
-  edits' provider, `Editing.Root`, and its parts: the ink, the note bar and
-  the Move picker).
-- `inspector.tsx` (the beat's pane), `inspector-state.ts`, `note-save.ts`,
-  `board-writes.ts`, `words-note.tsx`, `panel-markup.tsx` and
-  `panel-still.ts`.
-- `clock.ts`: `playerClock` and `silentClock`.
-- `context.tsx` (the provider and the keys), `parts.tsx` (the parts),
-  `geometry.ts` (the sizes), `style.ts` (the styles), `page.tsx` (the page
-  on both sides), `server.tsx` (the server entry) and `mount.tsx` (the
-  browser entry).
-
-**The lab's source routes.** Beside the edits' routes the lab keeps
-the steps' undo, redo and check, a scene's code as the studio reads it, and a
-talk's words read, cut, restored and marked. A scene's cue timing and knob
-values are the agents' to set, by the lab's `tweak` command (below); no
-page draws a control for them.
-
-| Route                                         | What it does                                                                                                                                                                                                                                                    |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /api/films/<film>/scenes/:scene/code`    | the scene file's text now and, as `[start, end)` ranges of it, where each cue and knob is written and every call that reads a cue, a knob or a mark by name, and why a field lists none (`SceneCode`; read-only: the studio's Code section reads its text)      |
-| `POST /api/films/<film>/undo`, `/redo`        | puts the newest write's file back, byte for byte, or makes the newest undone write again (`{request?}`: an id the step is recorded under; `{change?}`: that change only, while it is the newest, else a 409 `StepNotNewest`)                                    |
-| `POST /api/films/<film>/beats/move`           | `{ version?, beat, before? }`: the beat moved before `before` (to the end when none) in the version's `script.ts`, one write through the history; a move that breaks the acts or the movements a 422 (`StudioEdit`: the change, its words, the steps, no check) |
-| `POST /api/films/<film>/beats/hold`           | `{ version?, beat, edge, seconds }`: the beat's `lead` or `tail` held, snapped to 0.1 s and kept at its floor, one write through the history (`StudioEdit`)                                                                                                     |
-| `POST /api/films/<film>/edits/undo`, `/redo`  | Undo and Redo as `/undo` and `/redo` do them, answered at once with the owner's words and the steps (`StudioEdit`), no check                                                                                                                                    |
-| `GET /api/films/<film>/check`                 | `film check --static` now, the latest change, what Undo and Redo would do (each with its `change` id), and the steps `landed` by request id                                                                                                                     |
-| `GET /api/films/<film>/talk`                  | a talk's words (`TalkWords`): each section in play order, its take, every word from its first to its last with its text, whether the cut strikes it, when it is heard, and the section's marks; a film with no `talk.ts` a 422                                  |
-| `POST /api/films/<film>/talk/cut`, `/restore` | `{ section, from, to }`: strike those words from the section's cut, or play them again, as one write of `talk.ts` judged by the cut (`LabWrite`; an edit the cut refuses a 422)                                                                                 |
-| `POST /api/films/<film>/talk/mark`            | `{ section, word, name }`: mark that played word, as one write of `talk.ts` judged by the cut (`LabWrite`); a name the talk's decode would drop (`MarkName`) a 422, the mark read back from the talk decoded                                                    |
-
-An undo with nothing to undo (or a file changed since) is a 409.
+text it read. No persisted format changes. Every write is on the film's one
+history: the agents' edits, a scene written, a voice kept, each step its own,
+and the lab's change feed tells each change and its undo as it lands
+(`source.written`, `source.undone`; The lab's events, below). An edit of a
+film with a production files the agents' work on its ledger while it stands
+(`Re-time, re-check seams, re-render.`); its undo withdraws it.
 
 **The tweak.** The lab's `tweak` command (`tools/tweak-mcp.ts`; MCP, and
 `bun run lab tweak` from a terminal) sets one value of a scene's
 `drawing({...})` literal: a `cue`'s timing (`offset`, `dur` or `until`,
 `untilOffset`, `ease`, `stagger`, the fields of `CuePatch`) or a `knob`'s
 `value` (a number or `[x, y]`), by SceneWriter, through the film's one
-history (the owner's Undo and the `undo` command step it). It answers
+history (the `undo` command steps it). It answers
 `LabWrite`: the change, the file, the cue's span and where it resolves (or
 why it does not), or the knob read back, and `film check --static` run after
 it. A scene that is not located, a value the lab will not rewrite (computed,
@@ -1642,28 +1251,6 @@ with `LabContext` (`lab.ts`), which holds no `FilmRepo`, `SoundLibrary` or
 none (`lab-context.types.ts`). No module the lab runs imports a film's module
 by a function either (`importFilmModule`, `libraryModule`, a computed
 `import()`): `lab.slow.test.ts` follows `lab.ts`'s imports and fails on one.
-
-A talk's write is judged by the cut before the file is touched (a section
-left playing nothing, a strike over a marked word, a mark on a struck word,
-a mark name the talk would drop: refused in the server's words, nothing
-written). A write splices the one literal and
-keeps the author's layout and comments, each by the key it is about, by the
-formatter's own rule of whose a comment is: a key's comments are those above
-it and those after it on its line. A write moves keys whole: a key added goes
-between two keys and their comments, never inside (on a line of its own in a
-section written over lines), and a key taken away goes with its own comments
-and leaves every other (a Restore that empties a cut takes the comment about
-the cut). A cut whose runs hold a comment is refused a rewrite of them, and
-the server refuses any write that would move a comment off its key, so a
-Restore gives back the text its Cut found, as a property over generated
-sections, oxfmt-formatted, proves. Three layouts come back as the formatter
-lays them out, and only Undo gives back their text: the break after a
-section's `{` that oxfmt keeps once a cut of two runs broke it is let go by
-the write that leaves the cut one run (a section its author broke there alone
-comes back on one line), a one-line section a Cut pushes past the print width
-stays broken, and a cut a Restore emptied comes back after `to`, without the
-comments it had (`tools/talk-source.ts`). A mark is named from its word as the talk
-keeps it (`MarkName`: `Café` is `cafe`).
 
 **SceneSources** (`scene-sources.ts`) finds each scene's drawing by identity,
 not by name: the parser (oxc) lists every exported `drawing({...})` call in
@@ -1701,8 +1288,7 @@ does not resolve on the clock the film's files give now (the fresh `film read
 cue --spans` above): an `until` cue's offset typed past its point, or a point
 moved since, would end it before it starts. A film that does not load in that run is not the write's to judge:
 it lands, and answers why the cue could not be resolved. Writes run one at a time and are
-uninterruptible (the reload a write causes drops its request); their undo and
-redo are `SourceWriter`'s (below, "How a pick lands").
+uninterruptible; their undo is `SourceWriter`'s (below, "How a pick lands").
 
 **The check after a write** is `FreshFilm.check(film, 'static')`
 (`fresh-film.ts`): `film check <film> --static --allow-stale --json` in a new
@@ -1731,168 +1317,67 @@ rows. Each command names its keys (`keys`, `keysIn` the focus scopes it
 answers in: `page`, `field`, `studio`, `slider`; a focused button or link,
 `control`, hears the page's), whether a key is `stepped` (Shift
 coarse, Alt fine), and its `touch` path, so every key has a way in on a
-phone. The context (`src/command/context.ts`) is the page, its URL's
-selection (`selectionOf`: one `Selection` union over the places' query keys,
-`src/command/selection.ts`), what has focus, and what each section adds
-(`refine`: the player's `playing`).
+phone. The context (`src/command/context.ts`, `contextAt`) is the page, its
+selection (one `Selection` union, `src/command/selection.ts`), what has focus,
+and what each section adds (`refine`).
 
-One **hub** per page (`makeHub`, `src/command/hub.ts`, built at each page's
-root: a film's studio, `lab/studio-frame.tsx`, and the review) holds the
-registry, the context and the **keymap**, and listens once through `Keys`
-(`browser/keys.ts`). A press already handled, or inside an IME composition,
-is never read. The press's focus picks the scopes: a field (an input, a
-select, a player, an open dialog or menu) reads only commands that answer
-there, the recorder reads its own keys first and owns them (a recorder key
-never reaches the page; the page's others still run from it), a slider (a
-wipe's grip, `role="slider"`) reads its own arrows, Home and End first and
-owns them, then the page's, and anywhere else is the page. A part that
-stands where the page's listener does not hear (the recorder's dialog,
-which stops the arrows) hears its own presses (`Hub.listenWithin`). The
-last available command bound to a chord runs; a key with no available
-command passes to the browser (⌘Z with nothing to undo). Chords are written
-`mod+shift+z` (`mod` is ⌘ on a Mac, Ctrl elsewhere); a letter is read by its
-key in any case, Alt+letter by its physical key, and a symbol by the
-character it types, so `?` and `]` work on any layout. A command's keys are
-the ones it declares, the same for every viewer: nothing rebinds them.
+One **hub** per page (`makeHub`, `src/command/hub.ts`, built at the page's
+root: the ask page's, `lab/ask/page.tsx`) holds the registry, the context and
+the **keymap**, and listens once through `Keys` (`browser/keys.ts`). A press
+already handled, or inside an IME composition, is never read. The press's
+focus picks the scopes: a field (an input, a select, a player, an open dialog
+or menu) reads only commands that answer there, a slider (`role="slider"`)
+reads its own arrows, Home and End first and owns them, then the page's, and
+anywhere else is the page. A part that stands where the page's listener does
+not hear hears its own presses (`Hub.listenWithin`). The last available
+command bound to a chord runs; a key with no available command passes to the
+browser. Chords are written `mod+shift+z` (`mod` is ⌘ on a Mac, Ctrl
+elsewhere); a letter is read by its key in any case, Alt+letter by its
+physical key, and a symbol by the character it types, so `?` and `]` work on
+any layout. A command's keys are the ones it declares, the same for every
+viewer: nothing rebinds them.
 
-Every page in the studio's shell (a film's studio through
-`lab/studio-frame.tsx`, and the review) hosts three generated surfaces
-(`src/lab/command/`): the **command menu** (⌘K) lists the commands
-available here, filtered by every word typed, with their keys; the keys
-**sheet** (`?`) lists every command by group with its keys and its touch
-path; the **context menu** (`TargetMenu`, one per page) opens
-on a right-click, or a touch held still for half a second, on a thing the
-page marks as a `Target` (a beat's clip, a Board panel's, a note, a folder's,
-set's, version's or film's card, a film's links, a choice, a variant): its commands about that thing (a command's `about`, in
-`src/command/target.ts`: the kinds of thing whose menu shows it), the
-thing's own first, then Copy link and the command menu, which every menu
-has. The page itself is a target too: a press on no thing opens the page's
-commands (`about: ['Page']`: Undo, Redo, Note on this frame, the transport's
-frame and scene steps). A stepped command also has a
-`×10` row, a finger's Shift (`steppedRows`); ⌘K and the keys keep the one
-row. A touch that moves past @manna/ui's threshold first (a scrub, a drag) never
-opens it, and starts the drag instead (one owner per press, `claimPress`);
-a touch the menu took first is the menu's to its end: no drag starts
-under it, and its release completes none (`liftHeldByOther`), so a finger
-that slides after the menu opens draws no ink and carries no clip;
-a field keeps the browser's own menu. The menus' rows
-(and a chip's) are keyed by their command (`rowKey`, `src/command/menu.ts`):
-they are made again whenever what they read moves (a command's `when` and
-its label read the player, so each frame a film plays), and a row keeps its
-element, so a press and its release on it are one click. Every page has
-**Copy link** (⇧⌘C, `src/command/link.ts`): the page's URL (its place,
-its selection, its time), or from a thing's menu that thing's citation
-(`citeOf`), written whole through the host's `Clipboard`. A choice's card
-cites its Choices link (`?point=`); an act and the film cite the film's
-studio, and a scene the studio with its beat selected (`?sel=beat:<id>`),
-read back by the one reader the page reads them with too (`selectionOf`); a
-thing cited from its own page (another version of the set, the film's
-studio) keeps how the page shows it and when. Their rules
-(`src/lab/command/style.ts`) read the studio's tokens (`player/tokens.css`)
-directly; `COMMAND_TOKENS` names only what no studio token holds: the
-paddings and heights the surfaces compose, and their own widths, heights and
-layer. The film's studio is the shell's too (`lab/studio-frame.tsx`), so
-`?` is the keys sheet on every page, the one place the keys are listed: every command a key is bound to, one
-found only by typing too. No page keeps a
-line of key hints at rest: the keys are the `?` sheet's, each with its
-touch path.
-
-**Go to** (`src/command/go.ts`): every place a page can go to by its
-name is a command found only by typing (`typed`): ⌘K lists it once a word
-is typed, the `?` sheet never, and a context menu only when the command is
-`about` the thing it opened on (a point's marks, below). `/` opens ⌘K from the
-page (a field keeps it for typing). On the review the places are the
-folders (by title and ref), the sets (`Onset in Roofs at dusk`) and each
-film's choices. A page registers its places while they
-hold (`registerWhile`, `src/lab/command/changes.ts`).
-
-On the review's pages the **inspector** is a sheet beside the page
-(`src/lab/review/inspector.tsx`, on /ui's Sheet: the page stays live
-under it, making room on a wide screen; swiped away, a swipe being the
-sheet's own scroll (a finger, a trackpad), or closed with Escape)
-for the selected variant, set version, act or film, one at a time: its Info
-(every line of what it is; a version's file and notes), Approve and
-Unapprove, what was said of it and the one comment box, whose unsent text
-is kept per thing while the page lives. A page keeps the open one in its URL
-(`useInspectorPlace`: Choices' and a set's `?inspect=`), so a link, Back
-and Forward open and close it; on a phone it is a bottom sheet, its grip
-lowering it to a peek. A row keeps at rest only what most
-visits use: a variant's name, state, first line, Pick and the speaker, Approve on the
-picked one (and on a scene's render, the project's goal), and a dot counting
-its comments; the rest is one step away. Each thing registers itself while
-it is shown (`src/lab/review/things.ts`), and its verbs are the page's
-commands: Inspect (`i`) and Comment on (`m`) open the inspector, Approve
-(`a`), Unapprove, Reject (`x`) and Unkeep (`u`) say what its buttons say,
-and an act's or the film's approve of its current scenes is in its menu and
-⌘K with no key. A tap on a thing's name or its comment dot opens it too. A
-key reads the thing the keyboard's focus is in (`withFocused`, after the
-URL's selection of its kind). On a stack (`src/lab/review/hear.ts`) `1`…`9` hear
-option n, as its speaker does, while the view can play it. A stack's option says over
-`POST /api/review/sets/<folder>/<point>/say`, its answer shown in
-place. Its receipt says what the catalogue answers it gave or took
-(`SetSaid`): an approve of a version approved already since says so and
-offers no Undo, and an Undo whose approval was withdrawn since says
-nothing was left to undo.
+The ask page hosts the generated surfaces (`src/lab/command/`): the **command
+menu** (⌘K) lists the commands available here, filtered by every word typed,
+with their keys; the keys **sheet** (`?`) lists every command by group with
+its keys and its touch path; the **context menu** (`TargetMenu`, one per page)
+opens on a right-click, or a touch held still for half a second, on a thing
+the page marks as a `Target`: its commands about that thing (a command's
+`about`, in `src/command/target.ts`: the kinds of thing whose menu shows it),
+the thing's own first, then Copy link and the command menu, which every menu
+has; the **view menu** (the shell's `⋯`, `lab/command/view-menu.tsx`). A
+stepped command also has a `×10` row, a finger's Shift (`steppedRows`); ⌘K and
+the keys keep the one row. A touch that moves past @manna/ui's threshold first
+never opens it (one owner per press, `claimPress`); a touch the menu took
+first is the menu's to its end (`liftHeldByOther`); a field keeps the
+browser's own menu. The menus' rows (and a chip's) are keyed by their command
+(`rowKey`, `src/command/menu.ts`): a row keeps its element, so a press and its
+release on it are one click. Every page has **Copy link** (⇧⌘C,
+`src/command/link.ts`): the page's URL, or from a thing's menu that thing's
+citation (`citeOf`), written whole through the host's `Clipboard`. Their rules
+(`src/lab/command/style.ts`) read the house tokens (`player/tokens.css`)
+directly; `COMMAND_TOKENS` names only what no token holds: the paddings and
+heights the surfaces compose, and their own widths, heights and layer. `?` is
+the keys sheet, the one place the keys are listed. No page keeps a line of key
+hints at rest.
 
 A **receipt** is one toast (`Receipts`, `src/lab/command/receipts.tsx`, on
-@manna/ui's Toast) over every page in the shell, in place of a status
-line (the studio's edits and notes, the choices' writes, a version's says,
-the sound check while it runs). The hub hears every
-receipt (`hub.receipts`) in its slot: a command's own id when it runs
-(`hub.invoke`), or a page's slot when a write says one (`hub.announce`:
-`studio-edit` and `studio-note` on a film's studio, `film`, `set`,
-`production` and `sound-check` on the review). A slot shows one toast,
-replaced in place: `busy` (`Moving two…`, `Filing the note…`) while its
-write is out, then what it did, said once the write lands and never before
-(`Moved two before one.`, `Picked piano · Score: strings → piano`,
-`Rain: -12 → -6 dB`), or why it was refused. A receipt that can be undone
-carries the command that undoes it as its button: Undo for a write, Redo
-for an Undo, Undo for a Redo, bound to the change its write made (`Bound`:
-the film, and the change by the id the lab's history gives it,
-`HistoryStep.change`; an approve's, by its run's op and the scenes it gave
-one to, `Project.gave`); a filed note's receipt carries Withdraw, bound to
-the note. Each kind of id is its own
+@manna/ui's Toast) over the page, in place of a status line. The hub hears
+every receipt (`hub.receipts`) in its slot: a command's own id when it runs
+(`hub.invoke`), or a page's slot when a write says one (`hub.announce`). A
+slot shows one toast, replaced in place: `busy` while its write is out, then
+what it did, said once the write lands and never before, or why it was
+refused. A receipt that can be undone carries the command that undoes it as
+its button, bound to the change its write made (`Bound`: the film, and the
+change by the id the lab's history gives it). Each kind of id is its own
 brand (`ChangeId`, `RequestId`, `OpId`), made by `uniqueId(<brand>)` or
-decoded where it arrives, so a target's words, a time or another kind's id
-in its place is a type error (`lab/identity.types.ts`). A bound receipt's button acts
-on that change alone: its command says whether it can (`Command.fits`;
-Undo and Redo through `stepWhyNot`) and sends the change's id with the step
-(`{change}`), which the lab steps only while it is the newest that way,
-else refuses (`StepNotNewest`, 409). A command with no `fits` acts on no
-single change, so a bound receipt never runs it. There is no unbound Undo
-(`said` takes an `Undoing`, the command with its change): a write that
-made no change (a value already so, whose answer names no change) says so
-and offers none, since a step that names no change steps whatever is
-newest, an earlier write's or another film's. Undo and Redo by key name
-the change at the top of the history the page last read, so a change
-another client made since (a voice pick, an agent's edit) is refused
-(`StepNotNewest`) rather than stepped in its place. A done receipt
-shows 5 s, a refusal 10 s, a busy one until replaced. The receipts showing
-as a page hides are kept in the tab (`film-receipts` in `TabStore`, for
-the same page: the studio's film, or the review, whose receipts follow it
-from film to film) and shown again once it has loaded. A receipt's Undo
-pressed when it cannot act says why and is held: its command not available
-(`Undo is not available now`), another film's change (`that was a change to
-toy: open toy to undo it`), a newer change before it (undo that first), or
-the change undone already and nothing else to undo (`it is undone
-already`). Still offered and never expiring, it says again what it did once
-it can act, unless a receipt in its slot supersedes it. One that never can
-act is retired instead (`Command.fits` answers `Unfit.Never`, where a held
-one is `Unfit.Now`): when the history the page has read has nothing to step
-that way and the change is not the other way's newest, the lab no longer
-has it (its history is in memory, so a lab restart loses it). The receipt
-then says `the lab no longer has that change to undo: it was undone
-already, or the lab restarted since`, loses its Undo and goes as a refusal
-goes; a held receipt is retired the same way once the page reads such a
-history. On the choices page, Undo and Redo are commands
-(`review.undo` ⌘Z, `review.redo` ⇧⌘Z, in ⌘K, the `?` sheet and the page's
-long-press menu, named for what they would undo: `Undo score play brass`),
-shown only while there is a step to take. A say's receipt has no Undo (it
-writes the catalogue, not the source), except an approve of a set's
-version: its Undo (`project.undo-approve`, one
-owner, `lab/review/options/receipt.ts` `undoApprove`) withdraws exactly the approvals it gave
-(`Project.gave`, `Withdraw { given }`) and says what it took
-(`Project.took`).
+decoded where it arrives, so a target's words, a time or another kind's id in
+its place is a type error (`lab/identity.types.ts`). A bound receipt's button
+acts on that change alone: its command says whether it can (`Command.fits`),
+and one that never can is retired (`Unfit.Never`, where a held one is
+`Unfit.Now`). A done receipt shows 5 s, a refusal 10 s, a busy one until
+replaced. The receipts showing as a page hides are kept in the tab
+(`film-receipts` in `TabStore`) and shown again once it has loaded.
 
 `.oxlintrc.json` refuses a raw `keydown`, `keyup`, `keypress` or
 `contextmenu` listener (`film/keys-through-keymap`) outside the adapters and
@@ -1905,72 +1390,42 @@ viewer's keyboard writes it.
 
 **Terms**, as editing software uses them:
 
-- **Header**: on Films and the review's pages, the
-  shell's one row (`lab/page-shell.tsx`): the Films link (⇧1), the film
-  switcher (a pick opens that film's studio), the Studio link (⇧2, the
-  film's studio, `.sh-studio`; on a phone the film menu's Open the studio,
-  the header having no room), the page's name (`.sh-page`; none
-  on Films), the drill-down crumb, the tools, the timecode, Go to and the
-  view menu. On a film's studio, the studio's own (44 px,
-  `lab/film-studio/parts.tsx`): the Films link (⇧1, `.st-home`), the film,
-  the version chip, the stage and, on the right, what waits and what the
-  agents do now; its timecode is the transport's. Every move between pages
-  is a header link, the film switcher, an inspector row or a command that
-  lands on a page.
-- **Project manager**: the studio's home, Films (`/`), named for Resolve's:
-  a card per film (the stills of its renders' folder, its name; a tap opens
-  its studio, a long press Open in the Studio, `filmCommands`), then the
-  review's folders (Sets, Renders). A film a production makes shows once, as
-  its production's card (**Production** below).
+- **Header**: the shell's one row (`lab/page-shell.tsx`): the page's name, its
+  tools and the view menu.
 - **Timecode**: a time written `HH:MM:SS:FF`, hours, minutes, seconds and
   frames (`timecode`, `core/time.ts`; 30 fps, or a video's own rate: a
   1000/1001 rate such as 29.97 counts its whole rate's frames a second,
   non-drop-frame (NDF), and a rate that is neither, such as 12.5, counts
   the frame within its wall second), in a monospaced face so the
-  digits never shift. The review shows its times this way: the header's
-  (a tap copies the link to that frame), a note's or a finding's time. The
-  film's studio writes its transport's `M:SS.t` (**The film's studio**,
-  above). A `#t=` in a link stays in seconds, as does
+  digits never shift. A `#t=` in a link stays in seconds, as does
   a finding's message, the sentence `film check` prints too.
-- **Transport**: the play, pause, frame and beat controls, and their keys
-  (Space, ←/→ a frame: the studio's in `lab/film-studio/context.tsx`; J, K
-  and L the review's rates, `player/transport.ts`). It belongs to the picture it drives,
-  never to the header; on a phone the review's docks over the safe area
-  (`.sh-dock`), where the thumb is.
-- **Inspector**: the panel that shows the selected thing and what can be
-  done with it: in a film's studio the beat's pane beside the viewer, a
-  section a stage; on the review a sheet beside the page with its Info, its
-  approval and its comments.
 - **Command menu**: the searchable list of every available command (⌘K).
-- **View menu**: the header's `⋯`, after Go to… on every page: the page's
-  `View` commands available now (captions, quality, findings, a filter,
-  Refresh), then Keyboard shortcuts (`lab/command/view-menu.tsx`).
+- **View menu**: the header's `⋯`: the page's `View` commands available now,
+  then Keyboard shortcuts (`lab/command/view-menu.tsx`).
 - **Context menu**: the commands for what is under the pointer, opened by a
   right-click or a touch long-press.
 - **Sheet**: a panel over the page that holds a surface, not one fixed in
-  the layout: the review's inspector and a phone's recorder, on /ui's
-  Sheet, swiped away or closed with Escape; the keys sheet, a Dialog,
-  closed with Escape.
+  the layout: on /ui's Sheet, swiped away or closed with Escape; the keys
+  sheet, a Dialog, closed with Escape.
 - **Receipt**: what a command answers when it runs: what moved, before →
   after, and Undo where it can be undone.
 
 ### The HTTP API
 
-The lab's routes (the review's among them) are declared once, as one Effect
+The lab's routes are declared once, as one Effect
 `HttpApi`, in `core/api.ts`: every path, its params, query, body and answer, and every
 failure with its status. Both ends derive from that declaration: the
 server's handlers (`HttpApiBuilder.group` in `tools/lab.ts`, `studio.ts`,
-`steps-http.ts`, `edits-http.ts`, `review-http.ts`, `choices-http.ts`, `project-http.ts`)
+`review-http.ts`, `asks-http.ts`)
 and the pages' one client (`LabClient`, an `HttpApiClient` of `LabHttpApi`
-in `lab/api.ts`, which `lab/studio/api.ts`, `lab/review/api.ts` and
-`lab/review/options/api.ts` call through) with the URLs a page puts
-in an `<img>` or `<audio>` (`stillUrl`, `attemptUrl`, `reviewFileUrl`,
+in `lab/api.ts`, which `lab/ask/api.ts` calls through) with the URLs a page puts
+in an `<img>` or `<audio>` (`attemptUrl`, `reviewFileUrl`,
 `reviewPhoneUrl`, `reviewFrameUrl`, from
 `urlBuilder`).
 
-| API          | Served by                 | Groups                                                                                                                                                                                                                                                                                      |
-| ------------ | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `LabHttpApi` | `film lab` (`labHandler`) | `notes`, `scenes` (code), `steps` (undo, redo, check, steps), `edits` (move, hold, undo, redo), `talk` (words, cut, restore, mark), `script` (beats), `studio`, `review` (index, file, phone, frame, duration, say), `choices`, `project`, `looks` (take), `page` (wait: the build counter) |
+| API          | Served by                 | Groups                                                                                                                                                                                                                                                            |
+| ------------ | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LabHttpApi` | `film lab` (`labHandler`) | `script` (beats, voice, take, marks), `series`, `board` (read, stale, file), `studio` (attempts, attempt), `review` (index, file, phone, frame, duration), `asks` (read, page, answer, shown), `looks` (take), `matches` (take), `page` (wait: the build counter) |
 
 **A HEAD of a GET route** answers as the GET does, with its status and
 headers and no body.
@@ -2019,8 +1474,8 @@ every path outside the API's own prefix (`/api/`), behind the same gate, to a
 GET or HEAD only (any other method is a 405, `Allow: GET, HEAD`). One
 cross-site request passes: a link opened on another site (a GET or HEAD with
 `Sec-Fetch-Mode: navigate` and `Sec-Fetch-Dest: document`) to a path of the
-page table or an old link to one (`legacyPlace`); never the API, a script or a file. A fixture's own routes beside the API's
-(`labHandler`'s `beside`: the studio harness's control) sit behind the same
+page table; never the API, a script or a file. A fixture's own routes beside the API's
+(`labHandler`'s `beside`) sit behind the same
 gate. A page rendered on the server (`PageRenderer`, a worker per build)
 reads the API through the server's own handler on the page's connection
 (`PageReads`), so the gate admits its reads as it admitted the page.
@@ -2029,7 +1484,7 @@ reads the API through the server's own handler on the page's connection
 
 1. Declare it in its group in `core/api.ts` with `HttpApiEndpoint.get` or
    `.post(name, path, { params, query, payload, success, error: Refusals })`.
-   A write takes a JSON `payload` (`NoBody` when it says nothing). A new
+   A write takes a JSON `payload`. A new
    failure class goes in `core/refusals.ts` and into `Refusals` with its
    status. A new group is `HttpApiGroup.make(name).add(…)`, added to
    `LabHttpApi`.
@@ -2040,35 +1495,22 @@ reads the API through the server's own handler on the page's connection
    `HttpServerResponse` for a file (`serveFile` answers byte ranges). A new
    group's layer joins `labHandler`, and a service its handlers need joins
    `LabContext` (`tools/lab.ts`), its layer built in the composition root
-   (`tools/film-services.ts`), which the CLI and the studio harness share.
+   (`tools/film-services.ts`), which the CLI runs on.
 3. Call it from the page through the derived client
    (`client.<group>.<name>({ params, payload })`, wrapped in `called` for
    `LabFailure`), or put its URL in an element through `urlBuilder`.
 4. The foreign-Host test covers it by itself; add a test of what it answers.
 
-For example, the review's project routes (`GET /api/films/<film>/project?variant=`
-and `POST /api/films/<film>/project/say` `{address, say, variant?}`, each
-answering a `ProjectView`: the fresh `Project`, the project folder's ref and
-the video this checkout's catalogue records for each rendered scene) are one
-group: `ProjectGroup`
-in `core/api.ts`, added to `LabHttpApi` (its paths, under a film's
-`/api/films/<film>/`, fall under the API's prefix by themselves). The address is a `PartAddress` (the
-film, an act, scenes: a short is no branch of the tree, so it does not
-decode, 400). `projectGroup` (`tools/project-http.ts`) runs `film project …
---json` in a fresh process (`FreshFilm.project`) and decodes its `Project`,
-or its refusal into the refusal's own class and status; any other failure
-the run names (a film that does not load) it prints as `ServerFailed`, its
-tag and words, which the page shows as one sentence (`answering`, as
-`film options` does). A say (`Say`:
-`Approve`, `Withdraw`, `Comment {text}`) runs `project approve`, `withdraw`
-or `comment` once; a comment's text goes after `--`, so one starting with a
-dash is never a flag. Its layer
-joins the `Layer.mergeAll` in `labHandler`, and the page calls
-`client.project.<name>` (`lab/review/options/api.ts`).
+For example, the asks' routes (`GET /api/asks/:ask`, `GET /api/asks/:ask/page`,
+`POST /api/asks/:ask/answer` and `GET /api/asks/:ask/shown/:file`) are one
+group: `AsksGroup` in `core/api.ts`, added to `LabHttpApi` (its paths fall
+under the API's prefix by themselves). Its handlers (`tools/asks-http.ts`)
+read and answer through `AskStore`; its layer joins the `Layer.mergeAll` in
+`labHandler`, and the ask page calls `client.asks.<name>` (`lab/ask/api.ts`).
 
 ### Script
 
-The studio's Words section, and an ask's script block, read a film's script
+An ask's script block reads a film's script
 as its `script.ts` stands: each beat's line as it says it (its `{mark}`s and
 cues in braces), its picture and its sources, through a fresh process (`film
 read script <film>`, `FreshFilm.script`) kept under the film's source stamp,
@@ -2076,8 +1518,7 @@ so a line or a brief fixed while the lab is open is read again once. The
 reader shows each line's spoken words with their delivery marks (`lineRows`,
 `lab/words/line.ts`): its `{mark}`s are kept by the word each stands before
 and drawn as no chip, and its cues are not shown. A word's time is its
-staging take's (`Ready`), lit while the take plays. The code view's band
-sets the same line with a chip at each `{mark}` (`piecesOf`).
+staging take's (`Ready`), lit while the take plays.
 
 | Route                                      | What it does                                                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -2094,9 +1535,9 @@ The app's series drafts (`series/<series>/scripts/<draft>.md`, the folder
 `FilmApp.series` names) are read in the same reader beside the films:
 `core/draft.ts` reads a draft's beats out of its Markdown (a talk's table, a
 film's beat list) and writes a mark back byte for byte, `tools/series-drafts.ts`
-(`SeriesDrafts`) lists, reads and marks them, and the review's
-`/series/<series>/<draft>` (`lab/review/draft.tsx`) shows one, its staging
-voice the film reader's (`lab/script/voice.tsx`, `VoiceOver`).
+(`SeriesDrafts`) lists, reads and marks them, and an ask's `script` block
+shows one, its staging voice the film reader's (`lab/script/voice.tsx`,
+`VoiceOver`).
 
 A new script that is no film's yet goes into an ask the same way: write it
 as a series draft first (a Markdown file in the series' `scripts/` folder),
@@ -2124,11 +1565,12 @@ that stresses a word the Markdown way fails before the lab says so.
 A film's storyboard (`core/board.ts`): the record, `src/films/<film>/board.json`
 (committed), and its images in `src/films/<film>/board/` (git-ignored, each
 recorded with its sha256). `film board` makes and keeps it from the terminal
-(`tools/board-cli.ts`); the studio's inspector (its Board section) reads it
-and writes a pick, an approval or a withdrawal through the same store
-(`BoardStore`), so neither writes over the other. A note on a panel is a lab
-note (`POST /api/films/<film>/notes`) carrying its `panel` and its `sketch`
-(an agent's `request_tweak`, the terminal's `film board`). A panel's call sends
+(`tools/board-cli.ts`); the lab's MCP reads it and writes a keep, an
+approval or a withdrawal through the same store (`BoardStore`: `keep_try`,
+`approve_beat`, `withdraw_beat`), so neither writes over the other, and an
+ask's `board` block shows it. A note on a panel is a lab note carrying its
+`panel` and its `sketch` (an agent's `request_tweak`, the terminal's `film
+board`). A panel's call sends
 the style's reference, then the beat's first panel or a tweak's try and its
 sketch, then the library record of each member the beat's `cast` names
 (`tools/cast-library.ts`, a film's own role before the library's), each once:
@@ -2159,7 +1601,7 @@ the keep stays until the owner keeps a new try; the beat's later panels
 ride along by the first try the run drew of its first panel, not by the
 keep it draws again over; the board read (`film lab board`, the lab MCP's
 `board`) gives the panel a `stale` naming which (`members`, `added`,
-`words`, `why`), and the studio's Board section shows its `why` under the
+`words`, `why`), and an ask's board block shows its `why` under the
 panel (`GET …/board/stale`), the lab reading the script
 fresh (`tools/board-stale-read.ts`): a script it cannot read names no panel
 stale and logs `board.stale … unread=`.
@@ -2169,15 +1611,11 @@ stale and logs `board.stale … unread=`.
 | `GET /api/films/<film>/board`              | `BoardFile`: the style, every panel in film order with its tries and the one kept, the approvals    |
 | `GET /api/films/<film>/board/stale`        | `BoardStale`: each panel `film board` would draw again, and why                                     |
 | `GET /api/films/<film>/board/files/<file>` | A board image the record names; 404 `BoardFileUnknown` for one it does not, or not in this checkout |
-| `POST /api/films/<film>/board/pick`        | `BoardPick` (panel, try, why): keep that try; 422 `BoardRefused` for a panel or try it lacks        |
-| `POST /api/films/<film>/board/approve`     | `{ beat }`: approve the beat's board as it stands; 422 while a picture panel keeps no try           |
-| `POST /api/films/<film>/board/withdraw`    | `{ beat }`: withdraw the beat's approval                                                            |
 
 ### Timeline
 
 A film's timeline is one read model (`core/film-timeline.ts`, pure:
-`timelineOf`), the one the studio page draws and the lab's MCP answers
-(`timeline`). It reads one version of the film: the production's open one,
+`timelineOf`), the one the lab's MCP answers (`timeline`). It reads one version of the film: the production's open one,
 or one asked by number. A version kept in its own folder
 (`<film>/v<n>/`, a `script.ts` in it) is read wholly from that folder with
 the film's own loaders: its scenes, takes, acts (`acts.ts`), score, shorts
@@ -2216,104 +1654,16 @@ while the lab is open is read once after the change.
   the sound once a later stage has material; the scenes when every beat is
   drawn and approved; the render when a render of the film is approved.
 - **Bands and markers.** The version's acts are `bands` over the clock. A
-  marker (a flag on the page) is something that waits on the owner, at its
+  marker is something that waits on the owner, at its
   time: an open ask at the first beat its material names, and a note of his
   not yet done.
 - **The header.** The stage; what waits on the owner, counted: the asks
   open about the film or its production (less one whose set and choice a
   decision filed since has answered), the notes an agent replied to, and
   the beats the open version's Board holds ready (every picture kept, not
-  approved as it stands), whichever version is shown; and the agents'
-  "doing now" lines.
+  approved as it stands), whichever version is read.
 
-The `working` tool says an agent's line (`tools/working.ts`, `Working`): one
-line per agent (`by`, which the tool needs) per film, replaced by its next,
-cleared when the agent says `done` (no words needed) or after
-`WORKING_HELD` (half an hour) of silence. The lab holds the lines in memory
-only, so a restart clears them.
-
-The studio page reads the same model over HTTP (`tools/timeline-http.ts`):
-
-| Route                                  | Answers                                                                                                                            |
-| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /api/films/<film>/timeline?v=<n>` | `FilmTimeline` at version `n`, else at the production's open version; 404 `FilmVersionUnknown`, `FilmVersionUnkept`, `FilmUnknown` |
-
-### Studio
-
-**The Studio** (`lab/studio/`, Solid 2 + effect-machine) is the film
-studio's recorder for the final voiceover, beat by beat. The inspector's
-Voice section's Record opens it over the page, a Dialog on a laptop and a
-Sheet on a phone (`RecordOver`, `lab/film-studio/inspector.tsx`). It lists
-every beat with a
-line, each with a dot in its take's state colour and shape (filled, a ring,
-half filled; `recorded`, `scratch` for
-a staging take, `stale: <why>`: the word in the beat's name and title, the
-counts in the list's, the selected beat's under the list), then Record and
-the meter over the teleprompter, so R is on a phone's first screen; it
-reads the selected beat as a teleprompter (the sheet's lines, a
-quotation set apart with who said it, marks stripped), and records it:
-
-- **Capture** (`capture-browser.ts`, behind the `Capture` service in
-  `capture.ts`): `getUserMedia` with echo cancelling, noise suppression and
-  gain control off, one channel, the microphone picked from ⌘K (`Choose
-  microphone: …`, `micCommands`; named in the recorder when it is not the
-  default; `enumerateDevices`;
-  the choice is remembered in this browser as `film-lab-mic`, a `keptText` in
-  `ViewerStore`, `browser/storage.ts`), into an
-  [`AudioWorklet`](https://developer.mozilla.org/en-US/docs/Web/API/AudioWorklet) (`worklet.ts`) on an `AudioContext` at the device's own
-  rate. The worklet hands each block of float PCM over untouched with its
-  peak and RMS (the meter: dBFS, a clip warning at −1 dBFS); the page keeps
-  the blocks from the count-in's end and joins them on stop. Nothing is
-  resampled or compressed, and there is no MediaRecorder: `wav.ts` encodes
-  the PCM as a 24-bit mono WAV at that rate, which is what is posted
-  (`audio/wav`). A microphone refused is `MicDenied`, shown in the recorder in
-  the owner's words.
-- **The recorder** (`machine.ts`) is one machine: `Idle | CountIn | Recording
-  | Review | Importing | Checking | Failed` on `SelectBeat | Arm | Tick | CountDone |
-  Cancel | Stop | MicLost | Submit | Discard | Imported | Refused |
-  ImportUnanswered | AcceptAnyway | KeepAttempt | Retry`. Arm pauses the film and opens the
-  microphone; the 3 s count-in is a state timeout; Stop encodes the WAV to
-  review (play it back before submitting); Submit posts it as the state's
-  task; the answer is the take kept (what was heard, its word error) or the
-  server's refusal in its own words. A `TakeMismatch` with the attempt it
-  saved offers **Accept anyway** (a guarded transition: `keep` with
-  `acceptMismatch`). The status line says how to act on a refusal (Accept
-  anyway or Record again after a mismatch, Back to hear what a lost
-  microphone kept), each control with its key as bound now (`statusOf`). Each beat's attempts (newest first: heard, word error,
-  length, kept, recorded for an earlier line) play from their audio route
-  and **Keep** makes one the take.
-- **After a take is kept and mixed** the machine asks its page to load
-  again (`RecordStage`: the studio's `reloadHere`, `lab/stage.ts`, at the
-  frame it shows): the player reads
-  the timings and the track once, at load, so the film then plays the new
-  take at the same T, back on the same beat (the link keeps it). A mix that
-  failed reloads nothing and the status says so. The app serves the
-  narration with `Cache-Control: no-cache`, so a reload never plays a take
-  the browser cached.
-- **Keys**, only while focus is in the recorder's section: R record (and
-  retake), Space stop, K submit (or accept anyway), ←/→ the previous or next
-  beat (at rest or after a refusal, never mid-take): the `studio.*` commands
-  (`studio/commands.ts`), bound in the `studio` scope (Commands and keys,
-  above). There those keys are the recorder's own, even with nothing to do
-  now: Space never plays and ←/→ never step a frame. The section hears its
-  presses itself (`Hub.listenWithin`, `lab/studio/section.tsx`), since the
-  dialog it stands in stops the arrow keys before the page would hear them.
-  Escape is the dialog's: it asks before it drops a take only this page has
-  (Discard, Keep), else hides the recorder. A key with a modifier is another
-  chord and passes through, and a focused picker or player keeps its own
-  keys.
-
-The provider (`context.tsx`) builds the recorder's own runtime (its stage,
-the studio's routes, the capture), so the page knows nothing of it, and
-hands the section derived values and actions (`view.ts`: the controls each
-state offers with their keys, the status line, the meter, the badges),
-never the machine's states. The page it stands on (`RecordPage`) gives it
-the beat selected: the recorder's beat follows the studio's selection while
-it rests (`Idle`, `Failed`), never mid-take, and a beat it picks (←/→, a tap
-in its list) selects that beat in the studio. The recorder is the
-inspector's, not the dialog's, so a beat selected or the recorder hidden
-never ends a take. `e2e/lab/studio/studio.dom.test.ts` drives the whole
-recorder over the real studio page in Chrome with a fake microphone.
+### Notes and the browser tests
 
 **Notes** live in `lab/<film>/notes.json` (`NotesFileJson`) with their stills
 in `lab/<film>/stills/` (`FILMS_LAB` moves the root; the app ignores it in
@@ -2344,7 +1694,7 @@ Every change takes the file's next `seq`, so `eventsSince(file, n)`
 (`core/notes.ts`) returns each new note, reply and resolve past a cursor,
 once each (a file reset below the cursor, trashed or restored, replays its
 log at its own `seq` and a wait over it answers at once, even when the log is
-empty, so an open page and an events follower keep hearing); `wait` polls the file for them (every 200 ms), so it sees a reply
+empty, so an events follower keeps hearing); `wait` polls the file for them (every 200 ms), so it sees a reply
 the CLI wrote while the server was waiting. Each change is one
 `ContentStore.transact`, as every manifest's is: written whole, one writer at
 a time across processes (the operating system's lock on `.notes.json.lock`,
@@ -2354,10 +1704,6 @@ waits past about 5 s fails with `StoreLocked`, and the log says so,
 `store.lock.held`). A
 note's still is written under the same lock, before the note that names it.
 
-`nearestMoment(placed, T)` (`core/notes.ts`) names the scene at `T` and, in
-it, the nearest named-cue edge and `{mark}`; the page computes it from the
-layout it draws, so a note carries the cue the viewer saw.
-
 **The browser tests** (`e2e/lab/**/*.dom.test.ts`, and
 `e2e/player/` for the render page) open the real
 page over a probe film in headless Chrome with the lab API faked
@@ -2365,7 +1711,7 @@ page over a probe film in headless Chrome with the lab API faked
 entry rendered, failing any render that writes a signal or a store, then
 hydrated with no mismatch; `e2e/lab/fixtures/served.test.ts` proves a
 writing render fails), and the page's clock the test's
-(`lab/fixtures/clock.ts`): a count-in, a retry or a loop's playback is moved
+(`lab/fixtures/clock.ts`): a retry or a loop's playback is moved
 on with `page.clock`, not waited out, and `canvas.toBlob` encodes at once
 (Chromium's waits for idle time a busy page may not leave, up to 5 s). The
 page is a tab (`lab/fixtures/tab.ts`) of the one Chrome Bun.WebView spawns
@@ -2389,14 +1735,10 @@ takes none. A view two fingers were down on at once is retired and closed
 when given back: Chrome hears no touch on it after. Every other tab has a mouse's pointer (Blink's fine pointer and
 hover, set as Chrome starts: headless Chrome has none, and `(pointer: none)`
 would give a desk the phone's density). The
-touch-target guard (`e2e/lab/touch-targets.dom.test.ts`, its states in `e2e/lab/studio-states.ts`) opens every studio page
-(the Folder with its loose videos among them),
-at rest and with what it discloses open (a film's studio, a beat selected,
-a panel selected, the inspector's sections, Record over the studio, the
-version menu, the context menu, the keys dialog and a receipt with Undo;
-Films with its view menu and the command menu's Go to…, a set's comment
-counts, rate chip, wipe and diff, an ask, a series draft and a production's
-timeline), over a synthetic film (`lab/fixtures/studio-film.ts`), on a phone
+touch-target guard (`e2e/lab/touch-targets.dom.test.ts`, its states in `studio-states.ts` beside it) opens every lab page
+at rest and with what it discloses open (an ask with its view menu, its
+command menu, its context menu, its keys dialog and a receipt; a page of
+asks, the first answered and folded), over a synthetic film (`lab/fixtures/studio-film.ts`), on a phone
 (390 × 844, a finger, `--hit` 44 px) and on a laptop (1440 × 900, a mouse,
 `--hit` 28 px), and fails naming each control whose usable hit area holds
 no `--hit` square. The area is what a tap reaches (`lab/fixtures/touch-targets.ts`:
@@ -2438,23 +1780,6 @@ siblings'). The E2E runner compiles and minifies each page's script once
 per invocation, then workers read those immutable temporary files. The files
 are removed after the workers exit; a direct `bun test` builds its own scripts.
 
-**Notes** (`lab/notes/`, Solid 2): the studio files a note through its
-inspector's note machine (`lab/film-studio/note-save.ts`: `Idle | Saving |
-Saved | Failed`; one save at a time, a refusal coming back in the server's
-words), on a beat's words, on a Board panel's try under its marks, or on a
-frame drawn on (**The film's studio**, above), its still the frame or the
-try with the marks over it. Every mark the studio draws lives on an SVG
-layer over the canvas, never on the canvas, so a still, an export frame and
-a probe are the film's pixels alone. The feed
-(`lab/notes/feed.ts`), the page's live connection to its server:
-`Connecting | Live | Lost` on `Synced | Waited | Dropped | Retry | Refresh`;
-it reads the notes, then long-polls `/api/films/<film>/notes/wait` past the
-cursor, so the list changes the moment the agent replies; a failed read or
-wait says so on the page and connects again after 2 s (a state timeout);
-a note, reply or resolve made on the page reads the notes at once. (A
-scene edited on disk loads the studio again at its place through the lab's
-own build counter, `lab/rebuilt.ts`; there is no HMR client.)
-
 `film lab notes --film <film>` (the `notes` command, `notes-mcp.ts`; its
 line is `notes-lines.ts`) prints each unresolved note as one line (`--status
 all` every note), then `seq=<N>`, the note log's last change:
@@ -2476,14 +1801,12 @@ text as it stood, so the line is found after the file moves.
 and last index in the line, the words as they read, what the note asks of
 them, and a correction's words to say instead.
 
-A note made, replied to, done or withdrawn arrives as an event (`note.added`,
-`tweak.requested` for a note on a Board panel that asks for a new try,
-`note.replied`, `note.resolved`, `note.withdrawn`) on `film lab events --follow --film <film> --name notes`: run it under a Claude Code Monitor and each arrives as a
-notification ("The lab's events", below). `film lab reply --film <film> --note <id>
---text "…" [--still file.png]` answers as the agent (the still is copied to
-`stills/<id>.r<seq>.png` and the note becomes `replied`); `film lab resolve
---film <film> --note <id>` closes it. An unknown id fails with `NoteNotFound`,
-listing the film's notes.
+A note replied to or done arrives as an event (`tweak.requested` for a
+note on a Board panel that asks for a new try, `note.replied`,
+`note.resolved`) on `film lab events --follow --film <film> --name notes`:
+run it under a Claude Code Monitor and each arrives as a notification ("The
+lab's events", below). `film lab resolve --film <film> --note <id>` closes
+a note. An unknown id fails with `NoteNotFound`, listing the film's notes.
 
 ### The look-book, light and chapters
 
@@ -2572,23 +1895,21 @@ and the same required ones.
 ### The lab's events: `film lab events` and MCP Events
 
 What happens in the lab is one catalogue of events (`LAB_EVENTS`,
-`core/lab-events.ts`: 25 names, `note.added` to `source.redone`), each
+`core/lab-events.ts`: 22 names, `note.replied` to `source.undone`), each
 with one payload (`LabChange`: what it is about, its words, a one-line
 summary, its links, and `read`, the lab command that reads its whole record),
 read off the lab's files by its change feed (`tools/lab-events.ts`). A change
-to a film's source (`source.written`, `source.undone`, `source.redone`: a beat
-moved, a hold trimmed, a cue or a knob set, a pick written or a take kept, in
-the studio or by an agent, and each undo and redo)
-is read off the lab's writer (`SourceWriter.landings`), which the page and the
-agents write through alike. `changes` reads the feed by the catalogue (`name`,
+to a film's source (`source.written`, `source.undone`: a beat
+moved, a hold trimmed, a cue or a knob set, a pick written or a take kept,
+and each undo)
+is read off the lab's writer (`SourceWriter.landings`), which every writer
+writes through. `changes` reads the feed by the catalogue (`name`,
 globs over its names or the name of a record, which names every event that
 record tells: `notes`, `board`, `catalogue`, `set`, `ask`, `production`,
 `source`; `film`). The records tell: `notes` the `note.*` events and
 `tweak.requested`; `board` `board.tried`, `board.kept`, `beat.approved` and
 `beat.withdrawn`; `catalogue` the `render.*` events; `set`, `ask`,
-`production` and `source` the events named for them. A note the owner
-withdraws is told as `note.withdrawn`, read as a note the file held at the
-last read and holds no more.
+`production` and `source` the events named for them.
 
 `film lab events` (`tools/events-cli.ts`) prints them from the running lab.
 With `--follow` it keeps running and prints one line per event as the lab sees
@@ -3240,104 +2561,46 @@ packet by path. The judge writes no choice. It logs `judge.drawn label= stills=`
 
 ## Review
 
-The review is the lab's home page (`/`, served by `film lab`): every render
-under the review's roots, compared in sync, and each film's options, picked
-where they are heard. Each film on it is a card that opens its studio (Open in the
-Studio in its menu, `filmCommands`), its state the band and
-`0/20 approved · 20 out of date` (`filmCounts`), from the film's project
-read with the page; every move between pages is the shell header's (Films,
-the film switcher, Studio) or a command, never a link in a page's text. It is the lab's
-server's (`tools/review.ts`, `review-http.ts`, `choices.ts`,
-`choices-http.ts`, `project-http.ts`) and one Solid 2 page (`lab/review/`,
-its project's client in `lab/review/options/`), rendered on the server first
-(`lab/review/server.tsx`) and hydrated in the browser (`lab/review/mount.tsx`),
-dark and made for a phone first.
+The review is what the owner judges, shown to him in an ask: every render
+under the review's roots as sets of variants, each film's options, and each
+production's ledger. No page lists them: an agent publishes a set
+(`publish_set`), shows its renders in an ask's section, and writes the
+owner's pick through `film options`. It is the lab's server's
+(`tools/review.ts`, `review-http.ts`, `choices.ts`).
 
-**Terms.** The page uses the words of a film review room; the code keeps its
-own names, and the stored and wire words stay as they are.
+**Terms.** The code keeps its own names, and the stored and wire words stay
+as they are.
 
 - **Production** (Kitsu's word, a film's or a track's): what the owner
-  follows from start to finish, a film or a track such as the house look. Its
-  page is its **timeline** (`/productions/<production>`, `?v=<n>` opens a
-  past version): its **versions** (v1, v2, …) newest first, each with what
-  it is for and the decision that opened it, and in each, newest first, the
-  sets published into it, the owner's words given outside the lab, and the
-  sets filed there that no root holds now. The current version is open, says
-  what waits on the owner (each question asked of them about a set, a lab
-  ask made by the lab's `ask` (`film lab ask`, or its MCP), that no pick in its
-  choice, no later decision on it and no close of the ask has answered; an
-  open one stays open across a move), and holds the
-  page's one verb, Move forward: the decision, one of the owner's filed in the
-  version (the newest pressed) or his own words in a line, and what the next
-  version is for (`v<n>` when left out). Only the versions, the owner's words and the questions are
-  kept (an ask on the production files its question as it is made and,
-  closed, his decision: his answers in a line, his words as its quote and
-  each choice's value as his picks, which an override may cite;
-  `ProductionStore`: a ledger a production,
+  follows from start to finish, a film or a track such as the house look. It
+  has **versions** (v1, v2, …), each with what it is for and the decision
+  that opened it, and in each the sets published into it, the owner's words
+  given outside the lab, and the questions asked of him (an ask made by the
+  lab's `ask`, `film lab ask` or its MCP, that no pick in its choice, no later
+  decision on it and no close of the ask has answered). Only the versions,
+  the owner's words and the questions are kept (an ask on the production
+  files its question as it is made and, closed, his decision: his answers in
+  a line, his words as its quote and each choice's value as his picks, which
+  an override may cite; `ProductionStore`: a ledger a production,
   `apps/animations/productions/<production>.json`, committed text, every
-  image and render it reaches named by path, never copied; `FILMS_PRODUCTIONS`
-  moves the folder); the rest is read from the sets (`core/production.ts`
-  `historyOf`). On a production that names its film, the current version
-  leads with the film's board as a stage, one line linked to the Board
-  (`Board · 24 panels, 20 kept · 5 of 8 beats approved ›`, `boardStageOf`,
-  read from `GET /api/films/<film>/board`). A set lands on a
-  timeline when its `review.json` names the production (`film publish`, or
+  image and render it reaches named by path, never copied;
+  `FILMS_PRODUCTIONS` moves the folder); the rest is read from the sets. `forward` moves a production to its
+  next version on a decision of the owner's filed in the version. A set lands
+  on a production when its `review.json` names it (`film publish`, or
   `publish_set` given `production` and `version`, both stamped by
   `ProductionStore.stamp`, which refuses a production with no ledger as
   `ProductionUnkept` and a version it has not opened as `VersionUnknown`); an
-  older set is filed by hand (`film production file`). The front door lists
-  the productions first (a production that makes one of the app's films is
-  that film's only card: under its head, the film's state and its **Studio**
-  and **Board** links), then the films no production makes, then the
-  **Sets** and **Renders** no production holds; [the design](../../apps/animations/plans/lab-timeline.md).
-- **Stack** (Frame.io's version stack; the page's heading **Stacks**): the
-  renders of one address side by side on one clock, each an **option**
-  (`Open option n`, `Hear option n`). The code calls it a set (`ChoicePoint`
-  of kind `render`), each option a variant. "Version" on the page means only a
-  production's v1, v2, … (**Production** above).
-- **Side by side**: the first option against one other (the view `pair`),
-  offered only on a stack of two or more.
-- **Wipe**: the same two stacked full width on the one clock, the first left
-  of a divider and the other right of it (`?view=wipe&other=<id>`). The
-  divider is dragged by its grip, or moved from the focused grip as a
-  slider is (`lab/wipe-keys.ts`: ←/→ and ↓/↑ a hundredth of the frame, ⇧ ten, ⌥ a thousandth,
-  Home and End its edges, through the keymap's `slider` focus, which owns
-  those keys); where it sits is the page's, not the
-  link's, since a different split shows the same comparison. Where the
-  browser can, the two play as **WebCodecs panes** (`browser/frame-pane.ts`
-  over mediabunny in `browser/webcodecs-browser.ts`, reached through
-  `Media.compare`; only this page's host is built with them,
-  `BrowserHost.withMedia(panesMediaLayer)`, so no other page loads the
-  decoders): each master decoded to
-  a canvas, both read from one monotonic clock (`media-clock.ts`) and drawn
-  in lockstep (each frame, both show the frame their time asks for or
-  neither moves on, so a slow decoder holds the pair), so they are frame
-  for frame together rather than within the sync's 0.2 s, and a scrub shows
-  the key frame at once and then the exact frame. The player is chosen by
-  capability (`media-choice.ts`): `VideoDecoder`, the picture decodable, and
-  the sound decodable (`AudioDecoder`), PCM, or absent. A phone, a browser without WebCodecs, or a
-  master that will not open plays on `<video>`, which keeps every action;
-  the frame says which in `data-engine` (`asking`, `webcodecs`, `video`) and,
-  on `<video>`, why in its tooltip. The panes' sound plays through the page's
-  one sound context (`media-browser.ts` `pageSound`, set to `playback` on Safari so it plays
-  through the silent switch), only at 1× (another rate would change its
-  pitch). A hidden page stands the panes (clock and sound stopped, decoders
-  and frames still decoding let go) and, shown again, they draw afresh and
-  play on as they were; the masters' inputs are the wipe's from the moment
-  they open, so an opening that fails or is cut short lets every one go.
-- **Difference** (a _difference matte_): the other's still laid over the
-  first's at one moment in the `difference` blend, black where the two are
-  the same and lit where they differ (`?view=diff&other=<id>&m=<n>`, ←/→
-  between moments). It stands on stills the server cuts at the same instant,
-  never on the playing videos, which the sync keeps only within 0.2 s.
+  older set is filed by hand (`film production file`).
+- **Set**: the renders of one address, each a **variant** (`ChoicePoint` of
+  kind `render`).
 - **Comment**: a note on a version, kept in the catalogue (a `say`).
 - **Out of date**: a version made for earlier sources or an earlier mix (the
   state `stale`).
 - **Proxy / Original**: what a video plays. The proxy is a light copy (720p at most)
   of a video too big or too dense for a phone to play as made (over 40 MiB, or
   over 8 Mbps, a drawn 2D render too: the quality `phone`); the original is the file itself
-  (`full`). While a proxy is still being made the page says so and offers
-  the original; it never streams the original unasked.
+  (`full`). An ask plays the proxy on a phone while it is made, and the
+  original once asked.
 - **Needs review / Approved**: a version's approval (`none` / `approved`);
   "needs review: an earlier version was approved" is `stale`. There is no
   "Needs changes" status yet: a comment carries it.
@@ -3368,7 +2631,7 @@ at 0 drawing today's film); a render of another level is a render variant
 (`--variant light`).
 A score's pick changes what `full.wav` is mixed from, so
 once the write of `sound.ts` lands the track is mixed again (`film mix
-<film>`, fresh), and again on its Undo and Redo, as a kept voice's is (the
+<film>`, fresh), and again on its undo, as a kept voice's is (the
 rewrite's `follows`, `Follows.remake` in `tools/source-writer.ts`, which
 answers when its track landed, `Remade`); a failed mix is logged
 `lab.remake.failed` and the write stands, naming no mix.
@@ -3381,39 +2644,16 @@ master), each with its stamp, the owner's approval, and its state as the
 record says it (`recordedNow`): stale by its `sources` when a newer render at
 its address drew other sources, by its `sound` when a newer video carries
 another mix (`ChoiceVariant.staleBy`; whether the newest is current against
-the sources now is `film project`'s). The set page (Stacks) judges each
-option again as an approve's write does: in the checkout's own folder for
+the sources now is `film project`'s). An approve's write judges each
+option again: in the checkout's own folder for
 the film (the project's `folder`, the server's ref of its out folder, names
 the set's; that alone decides, never the folder's name, so the film's own
-folder under a root of another label is judged by it too), once the film's
-project answers, against the film's sources now (`projectNow`,
-`versionState`, the rule `renderState` keeps), so Approve is offered for
-just the options the write would take. Anywhere else, a copy of the film's
-folder under another root among them, and until the project answers, it
-judges as the record says; the Set's tools say which judges (`data-sources`:
-`reading`, `project`, `record`). The page reads the project itself, once it
-runs and only for a folder whose title is one of the app's films (a
-montage's title is none, so its Set asks for no project; Refresh reads the
-films again, so a film added while the page is open is one from then on);
-the server's render never waits on it. The page has one owner of each film's project
-(`FilmProject`, `meta.project` in `lab/review/context.tsx`), kept for the
-page's life, which every page that shows it reads (`useProject`: a Films
-card, a Set's judgement): a Films card and then a Set read it once. A say's answer lands on it in the
-order asked (`asked.ts`); a Set's say, a source write and Refresh read it
-again, now while a page shows it, else when one next does. A version's
-approval and comments are the index's (`useIndexOwner`,
-`lab/review/index-owner.ts`): a video's phone copy made or failed reads
-the index again (`indexChanged`), and a Set's say puts its folder into the index's newest
-answer, so a read again and a say landing together both stand. After any
-project say (`Review.written`), as after a set's, the
-server drops its cached index, and a walk that began before the say keeps
-nothing, so its next read walks every root again and a Set opened after a
-say shows it. A change made elsewhere shows at once
-after a Refresh. A reload shows another tab's say at once; the CLI writes
-without telling the server, so a reload shows a CLI change once the
-server's last index read is older than its 15 s cache (`INDEX_FRESH`). It says it in every view, beside the
-variant's label: why a variant is stale (`staleText`), and no state word
-otherwise, never "current". A montage folder (say a
+folder under a root of another label is judged by it too), against the
+film's sources now (the rule `renderState` keeps). Anywhere else, a copy of the film's
+folder under another root among them, it judges as the record says. The CLI
+writes without telling the server, so the index shows a CLI change once the
+server's last index read is older than its 15 s cache (`INDEX_FRESH`;
+`?fresh` walks every root again). A montage folder (say a
 look explored by hand) holds `review.json` (`ReviewManifest`), which names its
 files: `videos` and `images` (loose files to show), `docs`, and per set a title,
 order, start, moments, and each variant's label, tag, verdict, notes and
@@ -3430,7 +2670,6 @@ inline video declarations retain the existing video and phone-copy limits.
 Missing downloads are skipped, duplicate paths appear once, and links retain
 the review's root and symlink checks.
 A file neither record names is not listed; nothing reads a file name back.
-A film's page plays its newest whole-film render as the catalogue records it.
 
 **The roots.** `FILM_REVIEW_ROOTS` (comma-separated, each `label=path` or a
 bare path) replaces the app's own roots (every checkout's `out/`);
@@ -3440,28 +2679,16 @@ Cached files (frames, phone copies, option mixes) are
 kept in `FILM_REVIEW_CACHE` (`~/.cache/film-review`); `FILM_REVIEW_PHONE=off`
 makes no phone copies.
 
-| Route                                                                           | What it answers                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `GET /api/review/index[?fresh]`                                                 | `ReviewIndex`: every folder with something to review, newest first                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `GET /api/review/files/<ref>`, `/api/review/phone/<ref>`                        | the file, or its phone copy, byte ranges answered 206                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `GET /api/review/frame?ref=&t=&w=`, `/api/review/duration?ref=`                 | a JPEG of a video at `t` s, `w` px wide; its length and its frames a second as its packets give them (`fps`, never rounded; none for a file with no video)                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `POST /api/review/sets/<folder>/<point>/say`                                    | `SetSayPost` `{variant, say, op?}` → `SetSaid` (the `ReviewFolder`, with `gave?` and `took?` as a project say answers them), written to the folder's `catalogue.json` (a montage refused; a version made again since it was shown is `VersionChanged`, 409)                                                                                                                                                                                                                                                                                                                          |
-| `GET /api/productions`                                                          | `Productions`: every production's ledger (`ProductionStore`), one that does not decode, or is kept in a file not named for its production, left out with a warning                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `POST /api/productions/<production>/versions`                                   | `MoveForward` `{after, title, because?}` → the ledger with version `after + 1` opened now; `VersionMoved` (409) when the production is past `after`                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `GET /api/asks/<ask>`                                                           | `AskRecord`: an agent's ask (`AskStore`, `FILMS_LAB/asks/`): its machine, where its run is and every answer; `AskUnknown` (404)                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `GET /api/asks/<ask>/page`                                                      | `AsksPage` `{page, asks}`: the page of asks that ask is on (`AskStore.page`), its asks in the order made; an ask kept before pages is a page of one; `AskUnknown` (404)                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `GET /api/asks/<ask>/shown/<file>`                                              | the copy of an image the ask's page shows (`AskStore.shownFile`), by the receipt rule: an image whose src the receipt names is served only as its copy. Each file-served image of an image block or an option is copied as the ask is made, or the make is refused (`AskRefused`, naming the src). A board block's panels and a video's poster or frame show live and bind nothing. Each copy is kept in `FILMS_LAB/asks/shown/`, named by its bytes' SHA-256 and extension, and served only while it holds its hash (else `AskRefused`, 409); a name no image of the ask holds, 404 |
-| `POST /api/asks/<ask>/answer`                                                   | `{sections: [{step, values}, …]}` (the page's every section, in order, kept all or none; an older page's one `{step, values}` is one section; an empty `sections`, 400) → the `AskRecord` its machine leaves: each step's answers, typed; the same answers again answer it as it is; another answer to a step answered, one to a step the ask has left, past its deadline or closed, `AskRefused` (409)                                                                                                                                                                              |
-| `GET /api/films`                                                                | `ReviewFilms`: the app's films                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `GET /api/films/<film>/choices`                                                 | `FilmChoices`: the film's renders (the pictures) and its points                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `POST /api/films/<film>/choices/pick`                                           | `PickPost` `{point, variant, verb, acceptMismatch?}` → `ChoiceWrite`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `POST /api/films/<film>/choices/say`                                            | `SayPost` `{point, variant, say}` → `FilmChoices`, the say recorded                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `GET /api/films/<film>/choices/alone?point=&variant=`                           | the variant's own file (a take, a voice attempt)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `GET /api/films/<film>/choices/mix?point=&variant=`                             | the film's whole mix with that variant in place (m4a)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `GET /api/films/<film>/choices/check`                                           | `SoundCheck`: `film check --sound` as the film now stands                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `GET /api/films/<film>/project`; `POST …/say`                                   | `ProjectView`, read or written by a fresh `film project` (above)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `GET /api/review/build?since=&server=&film=&timeout=`                           | `PageBuild`: the pages' build, once past `since`, a mix of `film` among the changes (at most 60 s)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `POST /api/films/<film>/undo`, `/redo`; `GET /api/films/<film>/check`, `/steps` | the lab's own, for the film named; `steps` its undo and redo alone                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Route                                                           | What it answers                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET /api/review/index[?fresh]`                                 | `ReviewIndex`: every folder with something to review, newest first                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `GET /api/review/files/<ref>`, `/api/review/phone/<ref>`        | the file, or its phone copy, byte ranges answered 206                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `GET /api/review/frame?ref=&t=&w=`, `/api/review/duration?ref=` | a JPEG of a video at `t` s, `w` px wide; its length and its frames a second as its packets give them (`fps`, never rounded; none for a file with no video)                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `GET /api/asks/<ask>`                                           | `AskRecord`: an agent's ask (`AskStore`, `FILMS_LAB/asks/`): its machine, where its run is and every answer; `AskUnknown` (404)                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `GET /api/asks/<ask>/page`                                      | `AsksPage` `{page, asks}`: the page of asks that ask is on (`AskStore.page`), its asks in the order made; an ask kept before pages is a page of one; `AskUnknown` (404)                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `GET /api/asks/<ask>/shown/<file>`                              | the copy of an image the ask's page shows (`AskStore.shownFile`), by the receipt rule: an image whose src the receipt names is served only as its copy. Each file-served image of an image block or an option is copied as the ask is made, or the make is refused (`AskRefused`, naming the src). A board block's panels and a video's poster or frame show live and bind nothing. Each copy is kept in `FILMS_LAB/asks/shown/`, named by its bytes' SHA-256 and extension, and served only while it holds its hash (else `AskRefused`, 409); a name no image of the ask holds, 404 |
+| `POST /api/asks/<ask>/answer`                                   | `{sections: [{step, values}, …]}` (the page's every section, in order, kept all or none; an older page's one `{step, values}` is one section; an empty `sections`, 400) → the `AskRecord` its machine leaves: each step's answers, typed; the same answers again answer it as it is; another answer to a step answered, one to a step the ask has left, past its deadline or closed, `AskRefused` (409)                                                                                                                                                                              |
+| `GET /api/review/build?since=&server=&film=&timeout=`           | `PageBuild`: the pages' build, once past `since`, a mix of `film` among the changes (at most 60 s)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 **How a pick lands.** Every write goes through the one `SourceWriter`
 (`source-writer.ts`), the lab's knob and cue writes included: it reads the
@@ -3480,10 +2707,10 @@ formatter keeps on one line), so the diff is only the pick; when another
 writer changed the lock after the act, its write stays and the lock is left
 unformatted. A write that
 changes nothing answers `(already so)` and records nothing. Each film keeps
-its own undo and redo stacks (50 deep): Undo puts the newest change back byte
+its own undo stack (50 deep): Undo puts the newest change back byte
 for byte, only while the file is exactly as that change left it (else
 `UndoUnavailable`, a 409, touching nothing: the check, the takes brought
-back, the write and the takes put away all hold the file's store lock); a new change drops what could be redone. The file a change
+back, the write and the takes put away all hold the file's store lock). The file a change
 touched is named relative to the film's folder (`sound.ts`,
 `../../../sounds/library.lock.json` in the app).
 
@@ -3500,12 +2727,7 @@ that option playing (a score) or only that take at every placement of its
 sound (`RenderOptions.take`), encoded AAC and cached under a key of the film,
 the option, the take and the film's source stamp (the newest file under its
 folder, the library's module and its lock). A mix renders the whole film (45–55 s for
-righteousness-by-faith on the box under load), so mixes are made one at a time in the
-service's scope, not the request's: a page that stops waiting leaves one
-running, the next ask joins it or finds it made, and the page's `<audio>`
-asks again when its load fails. Their URLs name the option, not the source, so they
-are served `no-cache` and revalidated; the page asks again after each write
-(`?v=`). The review imports no film itself: a process keeps the modules it
+righteousness-by-faith on the box under load), so mixes are made one at a time. The review imports no film itself: a process keeps the modules it
 imported as they were, so each read of a film's options or checks, each mix,
 and each keep, unkeep or reject of a take runs the film CLI again (`film
 options list [--check]|mix|take|keep-voice`, `film check --json`, `film
@@ -3518,7 +2740,7 @@ one joins). The film's folder (`FilmFolder`: its paths, the
 app's films, the sounds folder) is all the review reads of a film in
 process. The points a film read at its source stamp are kept (`Choices`,
 a cache keyed by film and stamp), so a pick checks its point against them
-and a pick costs one fresh run, `options list --check` for the page's answer,
+and a pick costs one fresh run, `options list --check` for its answer,
 not three. A film is named in a route as one of the
 app's films (`filmNamed`): any other name is a 404 listing the films, never
 a path. `/api/review/files/<ref>` answers only what the index lists (a video, an
@@ -3540,91 +2762,9 @@ must also carry an `Origin` of one of those hosts (`http://`)
 and, when it carries a body (a POST always), a JSON one: another origin is a
 403, a text/plain body a 415 (so a form on another site cannot post), a bad
 body a 400. A DELETE, PUT, PATCH or OPTIONS with no body is the one write
-with no JSON body, as an MCP client's session end is. The studio's edits, the notes and the recorder are behind the
-same gate: a write from the phone at its address is the lab's write. The
-studio's microphone needs a secure context, and the phone's plain `http://`
-link is not one, so a recording is made on the local link (`localhost`); on
-the phone the recorder says so (`MicDenied`).
-
-**The page** (`lab/review/`): `<Root>` holds the runtime (the review's
-routes and the options'), where the page is (its place, read from the URL
-through the host's `UrlState`, so a link, Back and a reload work; see Pages
-and links), the index, the films and the quality (Proxy or Original). A
-still opens full size in a lightbox, the kit's Dialog over every layer of
-the page, titled by its caption; the URL keeps it open (`?still=`), so a
-link opens it, Back closes it, and Escape or a tap closes it by the
-sheets' one rule, the address bar's dismissal (`addressOn(host).dismiss`;
-`useSheetDismissal` tracks the opening). The header is the studio's shell (`PageShell`,
-`lab/page-shell.tsx`): Films, the film switcher, the Studio link, a
-drill-down crumb and Go to… (⌘K: Go to finds a folder or a set by name,
-`destinationsOf`; home lists every folder, with no filter field). The
-sheet open on a set is its `?inspect=` (`useInspectorPlace`), so a link
-opens it and Back closes it.
-Refresh (`review.refresh`) and the copy played (`review.quality`: Play the
-proxies, Play the originals) are the page's commands, in ⌘K and the page's
-long-press menu; a proxy still being made still offers its original in
-place. A Folder's loose video shows its picture and name; its file is its
-long-press menu's (`review.file-open` Open the file, Copy link to the file,
-`review.file-info` Info: its size, age and proxy). A set's page holds one effect-machine actor, the synced player
-(`machine.ts`: `Paused`, `Playing`, `Scrubbing`, `Buffering`; one clock, the
-leading version's video (the first shown whose video plays here), whose ←/→
-step is one frame of that video's own (its timecode counts them; Shift ten):
-the rate `GET /api/review/duration` reads from the video's own packets
-(`fps`, `Media.timing`: read from the start times of its first 120 frames,
-on the clock those times sit on (the coarsest step each is a whole count
-of, so a millisecond clock's times copied onto a finer timescale tell no
-more than before); when that clock is half the frame of the whole or
-1000/1001 rate near them or coarser (the frames' own spacing, as an exactly
-timed 0.5 or 1.25 fps file's, or one's with frames dropped), it cannot tell
-that rate from its neighbours and no rate is claimed: as measured, below;
-else the whole or 1000/1001 rate whose frame grid alone holds
-every start within one step of its time, with some two consecutive starts on
-adjacent lines of it (a grid that holds them by skipping lines, as 1 fps's
-holds 0.5 fps's, is none of theirs) (strictly within first; a whole step
-apart, as halfway times rounded either way leave them, only when no grid
-holds them strictly; a millisecond clock tells 30 from
-29.97 over a second, not over a third of one; a last frame's own duration
-names no rate), else as measured, frames over their span, never rounded to a
-whole rate, so a 29.97 video steps on its own grid),
-the film rate (`FILM_FPS`) only while that answer is pending or the video
-names none; a seek (a step, a scrub, a `#t=`), or the clock's rate read
-while the player is still (the clock's rate read while it plays or waits on
-a video puts none back: they play on; the leading version's own rate read,
-below, still lands the leader), lands every video at the
-frame the clock's timecode reads, each a quarter of one of its own frames
-into its own frame that holds that frame's start (`landing`, by the
-rate each version's video as it is now is read at, the clock's while that
-read is pending or names none, so a file written again with no rate forgets
-its old one; that version's own rate read, or forgotten, lands its video
-again in any state; Chrome
-keeps some frames' starts a microsecond short, which shows the frame
-before), so each shows its own frame's picture at the clock's time, at any
-rate of either, and the picture is the timecode's (on a laptop the
-header's, read at the clock's rate, `useShellTime`); a drifter is put back
-on the clock's time itself; one sound heard;
-opened at the URL's `#t=`, which follows it), and shows the view its URL keeps (`All`, `Pair` shown as Side by side,
-`Wipe`, `Moments`, `Diff` shown as Difference, `Notes`; a set of one version has
-no pair, wipe or difference, and a link asking for one opens All; the pair,
-its wipe and its difference share the other chosen, and the moments and the
-difference share the moment): a view chosen runs through the view machine (`stepView`)
-and is written back, a new history entry for a view or a moment chosen,
-the same entry for a pair's other cycled or a ←/→ step. `sync.ts` is the driver
-that makes every `Playable` on the set's clock (a `<video>`, an `<audio>`,
-or a wipe's WebCodecs pane) follow the player: it puts drifters back on the clock, holds all while one stalls, and
-unmutes only the one heard.
-
-A review page's write (a production's move, a comment box's say) runs on a
-run of its own (`useWrite` in `lab/review/loaded.tsx`): it waits, disabled,
-until its own answer lands, while every other control stays free, and a
-write sent meanwhile neither cancels it nor hands it its answer. A write's
-answer reaches the page only as `Landed` (`core/asked.ts`): what it says
-shows only where no write asked after it has shown its own. The page's
-receipt (`writeStatus`) says each write busy as it is sent, in the words its
-control gave then (what it moves, before → after), and once answered says
-the newest asked of those answered, so an older success never hides a newer
-failure. A say box empties only once its own say is said (`SayBox` in
-`lab/review/comments.tsx`: each say answers whether it was): a comment whose
-say fails stays in its box beside the failure.
+with no JSON body, as an MCP client's session end is. An ask's answers are
+behind the same gate: a write from the phone at its address is the lab's
+write.
 
 ## Check
 
@@ -4482,10 +3622,10 @@ tests and the browser all read it; `tools` is Bun-only. `canvas` may import `cor
 
 **The host** (`src/browser/`): every browser API a page reaches goes through
 an Effect service there, each with its live adapter (`*-browser.ts`) and a
-test layer beside it. A page's root (`mountRender`, `mountFilmStudio`, `mountReview`) builds the
+test layer beside it. A page's root (`mountRender`, `mountAsk`) builds the
 page's host once from `BrowserHost.layer` (`browser/host-browser.ts`,
-`hostOf` in `browser/host.ts`) and hands it on: the studio's and
-the review's runtimes take it as a layer (`hostLayer`). A page the lab
+`hostOf` in `browser/host.ts`) and hands it on: the ask page's runtime
+takes it as a layer (`hostLayer`). A page the lab
 renders on the server gets `ServerHost.layer(url)` instead
 (`browser/host-server.ts`, through `ServerHosted` in `lab/page-server.tsx`):
 the request's URL, read only and with no hash, and every other service
@@ -4493,52 +3633,44 @@ inert, answering as a phone held upright (`Viewport.layerPhone`). `browser/` is
 framework-free, so the player may import it. Per-viewer settings go through
 Effect's `KeyValueStore` (`browser/storage.ts`): `TabStore` over the tab's
 session (the receipts, `film-receipts`, a `keptJson`) and `ViewerStore` over
-local storage (`film-lab-mic`,
-`film-review.quality` and the `film-studio.*` conveniences, each a
+local storage (`film-review.quality`, a
 `keptText` stored as plain text), each a store
-in memory when the page may not use its storage. Every drag (the
-player's track, the studio's ruler, a Script clip carried or its edge
-pulled, the ink on a frame, the wipe's divider) follows its press through `Pointer`
+in memory when the page may not use its storage. Every drag follows its press through `Pointer`
 (`browser/pointer.ts`), which ends it once: lifted, or ended by the browser
 (`pointercancel`, `lostpointercapture`, or the page left mid-press: the
-window's `blur`, the tab hidden). A surface (a clip carried, an edge
-pulled, the ink, a divider, the studio's ruler) follows one press at a
+window's `blur`, the tab hidden). A surface follows one press at a
 time (`Pointer.press`): a second finger's press on it does nothing. The
 lint refuses a press's end heard, or its capture taken, anywhere else
 (`film/host-events-through-adapter`). Every key goes through one listener
 per page, the hub's (Commands and keys, above), over `Keys.listen`
 (`browser/keys.ts`), which hands each press with its key, its physical code
 and its target, and drops one already handled or still composing. Every
-animation frame (the player's play loop, the review's synced loop)
+animation frame (the export page's draw, an ask's synced players)
 goes through `Frames` (`browser/frames.ts`):
 `loop` steps inside each frame's own callback, `coalesce` paints once a
 frame. Every time read goes through Effect's `Clock` on the host
-(`monotonicMs`, `timersOn` in `player/throttle.ts`), so a test's clock
+(`monotonicMs`), so a test's clock
 reaches it. Every media element is driven through a `Playable` (`browser/media.ts`;
 `playableOf` makes one of a `<video>` or an
 `<audio>`): time is read from it, a seek is done once its frame is shown,
 play and pause are effects. `Media` says what a refused play means
 (`Blocked`, `Aborted`, `Failed`), plays muted when the browser refuses
-sound (`playOrMute`, the review's players), keeps the page's one voice
-heard (`hear`: a take or a reader's Hear pauses the one before it; `hush`:
-the film's Play pauses it), makes the narration's audio,
+sound (`playOrMute`, an ask's players), keeps the page's one voice
+heard (`hear`: a take or a reader's Hear pauses the one before it), makes the narration's audio,
 and says which engine a compare plays on (`compare`: WebCodecs panes, or
 `<video>` and why), its clock the host's `monotonicMs`.
 Every copy goes through `Clipboard` (`browser/clipboard.ts`; the browser's in
 `clipboard-browser.ts`): a link written whole, against the page's origin, and
 a refusal (`ClipboardRefused`) in the browser's words.
-A page's media queries go through `Viewport` (`browser/viewport.ts`;
-`useMatches` in a component), whose live adapter is the window's
+A page's media queries go through `Viewport` (`browser/viewport.ts`), whose live adapter is the window's
 `matchMedia`, and the only reader of it: the WebCodecs player's
 `(pointer: coarse)` probe asks the host's `Viewport` too.
 Every request goes through Effect's `HttpClient`: a page's calls through its
-one `LabClient`, built once at its root (the review's routes and its
-choices' share it; on the server, `LabClient.layerRendering`, whose reads
+one `LabClient`, built once at its root (on the server, `LabClient.layerRendering`, whose reads
 come back to the lab's own handler, `PageReads`, and go with the page for
 the browser to adopt), and a film's timings through `loadNarrated`
 (`narratedFilms` takes the client's layer, the page's `fetch` client unless
-given). Every link to a review place is the one `Go` (`review/context.tsx`):
-a plain click goes there in the page, a modified click is the browser's.
+given).
 
 **Footage** (`browser/footage.ts`): a film that reads camera frames (a talk)
 says, for each frame, which source frames it reads (`Film.footageAt(T)`,
@@ -4550,12 +3682,7 @@ a seek, a probe, a look or a contact sheet decodes one frame's reads
 (`Footage.ready`), and an export chunk decodes its frames as one run
 (`Footage.run`, each source's packets at most once while its times rise).
 A frame the host cannot decode fails as `FootageFrameMissing`, never drawn
-black. The player's `renderShown` (the frame a still reads) resolves only
-once that frame is painted, so nothing reads the canvas before its footage
-is on it. The preview asks for frames faster than it may decode; it paints
-a frame only while it is the newest it asked for (an `Ask` of
-`newestAsked`, `paintedIfNewest`), so a decode that lands late neither
-paints over a newer frame nor says it failed. A drawn film has no
+black. A drawn film has no
 `footageAt` and is drawn at once, as it always was, and its page never
 loads the decoder. The live adapter (`footage-browser.ts`) opens each
 source with mediabunny over a ranged `UrlSource` at

@@ -5,8 +5,8 @@
 //
 // - the route tables in packages/film/README.md: each row is a route the lab's
 //   API declares (`routesOf`), and each declared route has a
-//   row. A cell may list more than one: `POST /api/films/<film>/undo`, `/redo` (a
-//   sibling of the path before), `GET /api/films/<film>/project`; `POST …/say`
+//   row. A cell may list more than one: `GET /api/films/<film>/script`, `/board`
+//   (a sibling of the path before), `GET /api/films/<film>/board`; `GET …/stale`
 //   (below it);
 // - each route in running text, here and in NORTH_STAR.md and the app's
 //   README: a `GET /api/…` span is a declared route, and a bare API path
@@ -140,14 +140,14 @@ interface Code {
   readonly written: ReadonlySet<string>;
 }
 
-/** `/api/films/<film>/choices/mix?point=&variant=` as declared: `/api/films/:film/choices/mix`; a `<ref>` is the rest of the path. */
+/** `/api/films/<film>/board/stale?beat=` as declared: `/api/films/:film/board/stale`; a `<ref>` is the rest of the path. */
 const declaredPath = (written: string) =>
   written
     .replace(/\[?\?.*$/, '')
     .replaceAll('<ref>', '*')
     .replace(/<(\w+)>/g, ':$1');
 
-/** The path a span writes, read against the path before it: `…/say` below it, `/redo` beside it. */
+/** The path a span writes, read against the path before it: `…/stale` below it, `/board` beside it. */
 const pathAfter = (before: string, written: string) => {
   if (written.startsWith('…/')) return `${before}${written.slice(1)}`;
   if (/^\/[^/]+$/.test(written) && before !== '')
@@ -1270,16 +1270,16 @@ describe('the docs', () => {
               '/**',
               ' * GET /api/review/gone',
               ' */',
-              '// POST /api/films/<film>/choices/pick and GET /api/review/index',
+              '// POST /api/films/<film>/script/marks and GET /api/review/index',
               "const url = 'GET /api/nowhere';",
               'const a = 1; // POST /api/films/:film/choices/level after code',
               '/*',
               '  GET /api/review/also-gone',
               '*/',
               '// HEAD /api/review/index, OPTIONS /api/films/<film>/notes',
-              '// GET /api/films/${encodeURIComponent(film)}/notes/wait, POST /api/films/:film/notes/:id/reply.',
-              '// GET /api/films/${encodeURIComponent({ name: film }.name)}/notes/wait (GET /api/review/index).',
-              '// `POST /api/films/<film>/choices/pick(extra)` takes no pick',
+              '// GET /api/films/${encodeURIComponent(film)}/board/stale, GET /api/films/:film/board/files/:file.',
+              '// GET /api/films/${encodeURIComponent({ name: film }.name)}/board/stale (GET /api/review/index).',
+              '// `POST /api/films/<film>/script/marks(extra)` takes no mark',
               '// polls `/api/review/gone?since=` for a build, and /api/films/<film>/gone/too.',
               '// reads /api/review/index?fresh, under /api/films/probe, every route under /api/ and its own /api/own',
               "const own = new URL('/api/own', 'http://lab');",
@@ -1297,7 +1297,7 @@ describe('the docs', () => {
           'red.ts:9: GET /api/review/also-gone is declared by no API',
           'red.ts:11: HEAD /api/review/index is declared by no API',
           'red.ts:11: OPTIONS /api/films/<film>/notes is declared by no API',
-          'red.ts:14: POST /api/films/<film>/choices/pick(extra) is declared by no API',
+          'red.ts:14: POST /api/films/<film>/script/marks(extra) is declared by no API',
           // A bare path is any method's route, or a prefix of some, or the file's own.
           'red.ts:15: /api/review/gone?since= is declared by no API',
           'red.ts:15: /api/films/<film>/gone/too is declared by no API',

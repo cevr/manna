@@ -1276,9 +1276,8 @@ const MarkSite = Schema.Struct({
 });
 
 /**
- * `GET /api/films/<film>/scenes/<scene>/code`: the scene file as it stands, and
- * where in it each cue and knob is written and read, and each mark read, for
- * the studio's Scene section to light what plays. The ranges come from the parse the
+ * A scene file as it stands, and where in it each cue and knob is written
+ * and read, and each mark read. The ranges come from the parse the
  * writes use (`tools/scene-source.ts`). A read is matched by name: a call of
  * a frame's reader (`at`, `cue`, `keys`, `stagger`, `staggerAt`, `knob`,
  * `mark`, `spoken`) whose first argument is a string naming a cue or knob the

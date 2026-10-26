@@ -419,7 +419,7 @@ export const Say = Schema.Union([
 ]).pipe(Schema.toTaggedUnion('_tag'));
 export type Say = typeof Say.Type;
 
-/** `POST /api/films/<film>/choices/say`: a say on one variant of one point, as it is now. */
+/** A say on one variant of one point, as it is now. */
 export const SayPost = Schema.Struct({ point: Schema.String, variant: Schema.String, say: Say });
 export type SayPost = typeof SayPost.Type;
 

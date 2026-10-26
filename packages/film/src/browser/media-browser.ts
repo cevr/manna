@@ -59,7 +59,7 @@ export const isPhone = (host: Context.Context<Viewport>): Effect.Effect<boolean>
   Context.get(host, Viewport).matches(COARSE);
 
 /**
- * `panesMediaLayer` with the panes' module loaded by `load`. A module that
+ * The page's media, its compares on panes from the module `load` loads. A module that
  * will not load (offline, or gone after a rebuild) plays the compare on
  * `<video>`, with the reason, as every other fallback does.
  */

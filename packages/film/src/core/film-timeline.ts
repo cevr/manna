@@ -19,13 +19,13 @@
 // the concept is reached by a decision that keeps them and is otherwise a
 // named gap, never a lane. Each clip carries its state (made, kept,
 // approved) and its clock (`estimated`: its length is read from its words at
-// the reading pace, no take measures it; the page hatches it). The header's
+// the reading pace, no take measures it). The header's
 // stage is the first, in the flow's order, that is not done.
 //
 // The markers are what waits on the owner and has a time: open asks and his
 // notes not yet done. The header counts what waits on him (open asks, notes
-// an agent answered, beats the open version's Board holds ready to approve)
-// and carries the agents' "doing now" lines. Pure: the lab's service reads
+// an agent answered, beats the open version's Board holds ready to approve).
+// Pure: the lab's service reads
 // the sources and calls `timelineOf`.
 
 import {

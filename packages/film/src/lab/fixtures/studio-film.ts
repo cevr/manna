@@ -240,7 +240,7 @@ const indexOf = (versions: ReadonlyArray<string>, docs: ReadonlyArray<Json> = []
 export const STUDIO_PRODUCTION = 'toy-cut';
 
 /**
- * The toy production's ledger, as `GET /api/productions` sends it, with
+ * The toy production's ledger, as the production store reads it, with
  * `later` versions after its two; `film` names the film it makes (none: a
  * track, so the toy keeps its Films card).
  */
