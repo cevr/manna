@@ -60,10 +60,13 @@ const memoryPlatform = (manual: boolean) =>
   );
 
 /**
- * One turn of the event loop, on the live clock (a test's clock never moves
- * by itself): a promise a policy waits on, as WebCrypto's, settles in it.
+ * The live clock (a test's clock never moves by itself): a promise a policy
+ * waits on, as WebCrypto's, settles in its own time, not the test's.
  */
-const nextTurn = Clock.Clock.defaultValue().sleep(Duration.zero);
+const live = Clock.Clock.defaultValue();
+
+/** How long the model may take to go idle: real time, as a busy machine runs the tests. */
+const SETTLE_WITHIN = Duration.seconds(5);
 
 /**
  * Delivers until nothing is left: a policy's run is forked, and may commit
@@ -73,9 +76,10 @@ const nextTurn = Clock.Clock.defaultValue().sleep(Duration.zero);
  */
 const drained = (control: InMemory.Control) =>
   Effect.gen(function* () {
-    for (let round = 0; round < 1_000; round += 1) {
+    const until = live.currentTimeMillisUnsafe() + Duration.toMillis(SETTLE_WITHIN);
+    while (live.currentTimeMillisUnsafe() < until) {
       yield* control.drain;
-      yield* nextTurn;
+      yield* live.sleep(Duration.zero);
       if (yield* control.idle) {
         if (control.failures.length > 0) {
           return yield* Effect.die(new Error(`the model failed: ${String(control.failures[0])}`));
