@@ -185,7 +185,9 @@ const ROOTS_RINGED = `(() => {
     if (document.activeElement !== root) return [name(root), 'takes no focus'];
     const s = getComputedStyle(root);
     const box = root.getBoundingClientRect();
-    const fills = box.left <= 0 && box.top <= 0 && box.right >= innerWidth && box.bottom >= innerHeight;
+    // The page's own box: a scroll lock's gutter on a desk is no part of what a root can cover.
+    const page = document.documentElement.getBoundingClientRect();
+    const fills = box.left <= 0 && box.top <= 0 && box.right >= Math.min(innerWidth, page.right) && box.bottom >= innerHeight;
     const clipped = root.closest('[data-sheet-scroll]') !== null;
     const want = fills || clipped ? inset : rest === 'none' ? ring : ring + ', ' + rest;
     return [name(root), s.outlineStyle === 'none' && s.boxShadow === want ? 'exact' : 'outline ' + s.outlineStyle + ', shadow ' + s.boxShadow + ', not ' + want];
@@ -201,8 +203,11 @@ const FRAMES = `new Promise((done) => requestAnimationFrame(() => requestAnimati
 const markTrigger = (i: number) =>
   `(() => { document.querySelectorAll('[data-guard]').forEach((e) => e.removeAttribute('data-guard')); const t = [...document.querySelectorAll('[aria-haspopup]:not([aria-haspopup=false]):not(:disabled)')].filter((e) => e.checkVisibility() && e.closest('${FLOATING}') === null)[${i}]; if (t === undefined) return false; t.dataset.guard = 'trigger'; return true; })()`;
 
-/** Mark the first visible thing the page's context menu is about (`data-target`). */
-const MARK_TARGET = `(() => { const t = [...document.querySelectorAll('[data-target]')].find((e) => e.checkVisibility()); if (t === undefined) return false; t.dataset.guard = 'target'; return true; })()`;
+/**
+ * Mark the first visible thing the page's context menu is about (`data-target`), else the
+ * page's own sections, where a press on no thing opens the page's commands.
+ */
+const MARK_TARGET = `(() => { const t = [...document.querySelectorAll('[data-target]')].find((e) => e.checkVisibility()) ?? document.querySelector('.ak-sections'); if (t === null) return false; t.dataset.guard = 'target'; return true; })()`;
 
 /** A page the guard walks, by its name, and the roots it opens, by their `data-role`. */
 interface Walked {

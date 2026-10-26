@@ -388,8 +388,8 @@ describe("the shell guard's own probe", () => {
           'header columnGap',
           'crumb fontStyle',
           'crumb borderBottomRightRadius',
-          'crumb child fontStyle',
           'crumb child backgroundColor',
+          'crumb child fontStyle',
           'goto 2 backgroundColor',
         ]);
       }).pipe(Effect.scoped),
