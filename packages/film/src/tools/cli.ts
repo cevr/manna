@@ -11,6 +11,7 @@
 //   film cues | check | doctor                                 read and check a film
 //   film drafts                                                read every series draft as the lab does
 //   film render | lookbook | chapters                          pictures and video
+//   film cache …      (cache-cli.ts)   a film's render cache: its size, its unused segments pruned
 //   film project …    (project-cli.ts) a film's scenes rendered, approved, commented
 //   film options …    (choices-cli.ts) a film's choice points, read fresh for the lab
 //   film read …       (read-cli.ts)    the studio's reading, a cue, the scenes' sites, read fresh for the lab
@@ -131,6 +132,7 @@ import {
   givenFlags,
   jobOf,
 } from './render-plan.ts';
+import { cache } from './cache-cli.ts';
 import { media } from './media-cli.ts';
 import { footage } from './footage-cli.ts';
 import { talk } from './talk-cli.ts';
@@ -1165,6 +1167,7 @@ export const runFilmCli = <E>({
       check(checkLayer, labApp.pages.pages.render, films),
       render(renderLayer, labApp.pages.pages.render, films),
       project(renderLayer),
+      cache,
       lookbook(lookLayer),
       chaptersCommand,
       doctor(previewServer),

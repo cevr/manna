@@ -608,6 +608,13 @@ chunks cut at segment edges (`segmentChunks`) and each kept as
 otherwise never write one file. It opens no drawing page when it draws none,
 and joins every segment's chunks, kept or drawn, and their share copies,
 packets copied; `render.reuse segments=<n> drawn=<m>` says how many it drew.
+Each segment it reuses or keeps is marked used (`used` in its record, the
+render's start time; a record without one reads its mtime), and once done it
+deletes for good the film's segments no render used for `PRUNE_DAYS` (7),
+never one it or the newest render used nor a folder still drawn (no record):
+`render.cache.pruned count=<n> freed=<bytes>`; `film cache <film> [--prune
+[--days n] [--dry-run]] [--json]` (`tools/cache-cli.ts`) prints the cache's
+size and prunes it by hand, `--days 0` keeping only the newest render's.
 `--fresh` drops each segment's record and draws it again (`project render
 --force` too), so a fresh render cut off leaves its segments to be drawn. A
 short and a wedge's look (`--level`) draw every frame into a temp folder of
