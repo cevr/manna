@@ -58,7 +58,7 @@ later rows sit one indent right of its first.
 - Hymn 100 has three stanzas, so `label=Stanza 4` is a `TargetMissing`, not a defect.
 - A deep link opened while an earlier iOS prompt is unanswered stacks prompts; `sim open` answers up to three. A snapshot that shows only the alert means a prompt is still up.
 - The sheet opens at 0.7 of the screen, which shows every row at the default system text size; at a larger one, drag its grabber up for the rest.
-- On iOS a line with chords over its syllables is not one element: its chords keep their `chord-<p>-<l>-<n>` ids. A line without chords over its syllables (chords off, or a line-level part) reads as one element named by the whole line.
+- On iOS a line with chords over its syllables is not one element: its chords keep their `chord-<p>-<l>-<n>` ids. Each boxed run reads its syllables' text without visual join or trailing hyphens, after its separately accessible chords. `apps/hymnal/src/reader/SyllableWords.test.tsx` holds that paragraph label and reading order, including iOS's fallback to all inline text. A line without chords over its syllables (chords off, or a line-level part) reads as one element named by the whole line.
 - `sim` has no swipe: pages turn by `agent-device gesture pan` on the drive's session. A pan that starts within 20 pt of the left edge is the back pan, so a swipe right starts mid-screen.
 - The web has no pager: one page per route, and a swipe does nothing there.
 - A hymn opened by link has no back button and the header no other button: `sim back --in-app` there finds nothing to tap. Go back with the edge pan or a new `sim open /`.

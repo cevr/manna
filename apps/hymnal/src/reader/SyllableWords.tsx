@@ -25,7 +25,8 @@
  * Unboxed, the row is one accessible element that reads the whole line as
  * words (`label`); the syllables and hyphens are not read on their own.
  * Boxed, the row is not one element, so each chord keeps its own id on iOS
- * (`chord-p-l-s`) and each box's syllables are read under its chords. While
+ * (`chord-p-l-s`) and each box's label reads its syllables under its chords,
+ * without the visual join or trailing hyphens. While
  * the line is sung (`follow/`), it is `selected`, its syllables take the
  * muted colour and the sung syllable the accent: a change of colour only, so
  * nothing moves.
@@ -101,6 +102,8 @@ export function SyllableLine({
         style={[textStyle, syllableStyle(first.s)]}
         dynamicTypeRamp="body"
         pointerEvents="none"
+        // iOS includes hidden inline spans in a paragraph's fallback label.
+        {...(boxed && { 'aria-label': syllables.map(({ box }) => box.text).join('') })}
       >
         {first.box.text}
         {Arr.tailNonEmpty(syllables).map(({ box, s }) => (

@@ -51,6 +51,16 @@ The form of an entry, each field on its own line:
 
 ## Process and tooling
 
+### hymn-boxed-paragraph-spoken-label
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "visual hyphens enter the boxed text's native accessibility label"
+- **Source:** polishbulk/round-1-findings.md F1
+- **Wrong:** A boxed run's paragraph had no explicit label, so iOS included visual join and trailing hyphens in its spoken text.
+- **Cause:** Hiding an inline Text span does not remove its characters from the containing paragraph's attributed string.
+- **Guard:** code: `apps/hymnal/src/reader/SyllableWords.test.tsx` `boxed syllable paragraph labels`
+
 ### open-renders-after-render
 
 - **Date:** 2026-09-25
