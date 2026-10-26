@@ -125,4 +125,14 @@ describe("every place's server render", () => {
       }),
     BUNDLING,
   );
+
+  it.effect("serves no page at a film's studio or a set, which the lab answers 404", () =>
+    Effect.sync(() => {
+      expect(
+        ['/films/f/studio', '/sets/out%2Ff/render:scenes:a'].map((path) =>
+          Option.isNone(pageAt(path)),
+        ),
+      ).toEqual([true, true]);
+    }),
+  );
 });
