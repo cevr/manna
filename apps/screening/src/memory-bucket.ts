@@ -100,6 +100,13 @@ export const memoryBucket = (maxBody: number) => {
         uploads.delete(uploadId);
         return Effect.void;
       }),
+    abort: (key, uploadId) =>
+      Effect.suspend(() => {
+        const upload = uploads.get(uploadId);
+        if (!upload || upload.key !== key) return Effect.die(`no upload ${uploadId} of ${key}`);
+        uploads.delete(uploadId);
+        return Effect.void;
+      }),
   };
 
   const shelf: Shelf = {
@@ -122,5 +129,8 @@ export const memoryBucket = (maxBody: number) => {
       ),
   };
 
-  return { objects, store, shelf };
+  /** The multipart writes begun and neither finished nor aborted. */
+  const openUploads = () => uploads.size;
+
+  return { objects, store, shelf, openUploads };
 };

@@ -102,6 +102,12 @@ export default class Desk extends Cloudflare.Worker<Desk>()(
             .resumeMultipartUpload(key, uploadId)
             .pipe(Effect.flatMap((upload) => upload.complete([...parts]))),
         ).pipe(Effect.asVoid),
+      abort: (key, uploadId) =>
+        run(
+          bucket
+            .resumeMultipartUpload(key, uploadId)
+            .pipe(Effect.flatMap((upload) => upload.abort())),
+        ),
     };
     return {
       fetch: Effect.gen(function* () {

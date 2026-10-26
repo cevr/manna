@@ -5,15 +5,24 @@
  * `publishTo` runs a publication (`./publish.ts`) through it: it reads every
  * film's manifest the bucket holds, plans the version, uploads each file the
  * bucket does not already hold by its bytes (a file larger than a part in
- * parts), writes the version's page, the film's folder, its manifest and the
- * index in that order, then deletes the files of the version's folder the
- * new version no longer names. `--dry-run` stops before the first write.
+ * parts, aborted when one fails), writes the version's page, the film's
+ * folder and its manifest, then the index from the manifests read again,
+ * then deletes the files of the version's folder that neither the new
+ * version nor the one it replaced names. `--dry-run` stops before the first
+ * write.
  */
 import { Array as Arr, Effect, FileSystem, Option, Redacted, Schema, Stream } from 'effect';
 import { HttpClient, HttpClientRequest, type HttpClientResponse } from 'effect/http';
 
 import { Begun, Listing, keyPath, PART_BYTES, SHA256_HEADER, UploadedPart } from './desk.ts';
-import { type FilmManifest, FilmManifestJson, isManifestKey, manifestKey } from './manifest.ts';
+import {
+  type FilmManifest,
+  FilmManifestJson,
+  isManifestKey,
+  manifestKey,
+  PAGE_KEYS,
+} from './manifest.ts';
+import { indexPage } from './pages.tsx';
 import { type Material, type Publication, publication, type Upload } from './publish.ts';
 
 export class DeskFailed extends Schema.TaggedError<DeskFailed>()('DeskFailed', {
@@ -37,7 +46,7 @@ export interface Published {
   readonly plan: Publication;
   /** The uploads the bucket already held, by key. */
   readonly held: ReadonlySet<string>;
-  /** The files of the version's folder deleted once the new version was written. */
+  /** The files of the version's folder deleted once the new version was written: those of the versions before the one it replaced. */
   readonly pruned: ReadonlyArray<string>;
 }
 
@@ -182,7 +191,7 @@ export const deskClient = Effect.fn('desk.client')(function* (
       Effect.flatMap((text) => decodeBegun(text).pipe(Effect.mapError(failed('begin', each.key)))),
     );
     const count = Math.ceil(each.bytes / partBytes);
-    const parts = yield* Effect.forEach(
+    const parts = Effect.forEach(
       Arr.range(1, count),
       (partNumber) =>
         Effect.gen(function* () {
@@ -201,13 +210,26 @@ export const deskClient = Effect.fn('desk.client')(function* (
         }),
       { concurrency: 2 },
     );
-    yield* send(
-      'finish',
+    const finish = (written: ReadonlyArray<UploadedPart>) =>
+      send(
+        'finish',
+        each.key,
+        HttpClientRequest.post(uploadUrl).pipe(
+          HttpClientRequest.setUrlParams({ upload: uploadId, complete: '' }),
+          HttpClientRequest.bodyText(encodeParts({ parts: written }), 'application/json'),
+        ),
+      );
+    // A write that fails or is interrupted part way is aborted, so its parts do not stay in the bucket.
+    const abort = send(
+      'abort',
       each.key,
-      HttpClientRequest.post(uploadUrl).pipe(
-        HttpClientRequest.setUrlParams({ upload: uploadId, complete: '' }),
-        HttpClientRequest.bodyText(encodeParts({ parts }), 'application/json'),
+      HttpClientRequest.delete(uploadUrl).pipe(
+        HttpClientRequest.setUrlParams({ upload: uploadId }),
       ),
+    ).pipe(Effect.ignore);
+    yield* parts.pipe(
+      Effect.flatMap(finish),
+      Effect.onError(() => abort),
     );
   });
 
@@ -249,10 +271,17 @@ export const publishTo = Effect.fn('desk.publish')(function* (
     (each) => desk.upload(each),
     { concurrency: 2 },
   );
-  for (const text of plan.texts) yield* desk.write(text.key, text.text);
-  // The version's folder keeps its page and the files the new version names; any other is the replaced one's.
+  for (const text of plan.texts)
+    if (text.key !== PAGE_KEYS.index) yield* desk.write(text.key, text.text);
+  // Another film's publish may have written its manifest since this one read them, so the index is drawn from the manifests as they are now, this film's new one among them.
+  yield* desk.write(PAGE_KEYS.index, indexPage(yield* desk.manifests));
+  // The version's folder keeps its page, the files the new version names and those of the version it replaced (a viewer may be playing it); any other is older.
   const folder = `${material.film}/${material.version}/`;
-  const kept = new Set([...plan.uploads.map((each) => each.key), `${folder}index.html`]);
+  const kept = new Set([
+    ...plan.uploads.map((each) => each.key),
+    ...plan.replaced,
+    `${folder}index.html`,
+  ]);
   const { keys } = yield* desk.list(folder, Option.none());
   const pruned = keys.filter((key) => !kept.has(key));
   yield* Effect.forEach(pruned, desk.remove, { concurrency: 4 });

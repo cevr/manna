@@ -92,6 +92,7 @@ const keys = Command.make(
       ['SCREENING_DESK_URL', bare(outputs.desk)],
       ['SCREENING_DESK_TOKEN', Redacted.value(outputs.token)],
     ]);
+    // Written beside it and renamed over it, so `.env` is never half written; `.env.*` is git-ignored too.
     const partial = `${file}.partial`;
     yield* fs.writeFileString(partial, next, { mode: 0o600 });
     yield* fs.chmod(partial, 0o600);

@@ -7,7 +7,7 @@
  */
 import { BunServices } from '@effect/platform-bun';
 import { describe, expect, it, test } from 'effect-bun-test';
-import { Effect, FileSystem, Option, Path, Redacted, Schema, type Scope } from 'effect';
+import { Effect, Exit, FileSystem, Option, Path, Redacted, Schema, type Scope } from 'effect';
 import {
   HttpClient,
   type HttpClientRequest,
@@ -16,7 +16,7 @@ import {
   HttpServerResponse,
 } from 'effect/http';
 
-import { respondDesk } from './desk.ts';
+import { respondDesk, type Store } from './desk.ts';
 import { deskClient, publishTo } from './desk-client.ts';
 import { FilmManifestJson, type VersionName } from './manifest.ts';
 import { memoryBucket } from './memory-bucket.ts';
@@ -34,16 +34,17 @@ const toWeb = (request: HttpClientRequest.HttpClientRequest, url: URL) => {
   return new Request(url, init);
 };
 
-/** A bucket, the desk over it reached in process, and publishing through it. */
-const world = (partBytes = 1024 * 1024) =>
+/** A bucket, the desk over it reached in process (its store as `storeOf` makes it), and publishing through it. */
+const world = (partBytes = 1024 * 1024, storeOf: (store: Store) => Store = (store) => store) =>
   Effect.gen(function* () {
     // A request body may be twice a part, so a page goes whole and a larger video only in parts.
     const bucket = memoryBucket(2 * partBytes);
+    const store = storeOf(bucket.store);
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const dir = yield* fs.makeTempDirectoryScoped();
     const http = HttpClient.make((request, url) =>
-      respondDesk(bucket.store, SECRET, HttpServerRequest.fromWeb(toWeb(request, url))).pipe(
+      respondDesk(store, SECRET, HttpServerRequest.fromWeb(toWeb(request, url))).pipe(
         Effect.map((response) =>
           HttpClientResponse.fromWeb(request, HttpServerResponse.toWeb(response)),
         ),
@@ -99,7 +100,7 @@ const world = (partBytes = 1024 * 1024) =>
 
     const publish = (each: Material, dryRun = false) => publishTo(desk, each, dryRun);
 
-    return { bucket, http, material, publish };
+    return { bucket, desk, http, material, publish };
   });
 
 const ask = (
@@ -160,6 +161,29 @@ describe('the index', () => {
       expect(index.text).toContain('21 Oct 2026');
     }),
   );
+
+  local("written by a publish another film's publish overlaps, lists both films", () =>
+    Effect.gen(function* () {
+      const { bucket, desk, material } = yield* world();
+      const one = yield* material('one', 'board', '2026-10-20T10:00:00.000Z', 'a');
+      const two = yield* material('two', 'board', '2026-10-21T10:00:00.000Z', 'a');
+      // The other film is published once this publish has read the manifests to plan.
+      let reads = 0;
+      const overlapped = {
+        ...desk,
+        manifests: Effect.tap(desk.manifests, () =>
+          Effect.suspend(() => {
+            reads += 1;
+            if (reads === 1) return publishTo(desk, one, false);
+            return Effect.void;
+          }),
+        ),
+      };
+      yield* publishTo(overlapped, two, false);
+      const index = yield* ask(bucket.shelf, '/');
+      expect(links(index.text, /^\/[a-z-]+\/$/)).toEqual(['/two/', '/one/']);
+    }),
+  );
 });
 
 describe("a film's folder", () => {
@@ -192,30 +216,38 @@ describe("a film's folder", () => {
 });
 
 describe('a re-published version', () => {
-  local('replaces the one before it, with its new date and files, and the old files go', () =>
-    Effect.gen(function* () {
-      const { bucket, material, publish } = yield* world();
-      const first = yield* publish(
-        yield* material('film', 'board', '2026-10-20T10:00:00.000Z', 'a', ['cold']),
-      );
-      const again = yield* publish(
-        yield* material('film', 'board', '2026-10-25T10:00:00.000Z', 'b', ['cold']),
-      );
-      expect(again.plan.manifest.versions.map((version) => version.name)).toEqual(['board']);
-      const oldFiles = first.plan.uploads.map((upload) => upload.key);
-      const newFiles = again.plan.uploads.map((upload) => upload.key);
-      const page = yield* ask(bucket.shelf, '/film/board/');
-      for (const key of newFiles) expect(page.text).toContain(`/${key}`);
-      for (const key of oldFiles) {
-        expect(page.text).not.toContain(`/${key}`);
-        expect((yield* ask(bucket.shelf, `/${key}`)).status).toBe(404);
-      }
-      expect([...again.pruned].sort()).toEqual([...oldFiles].sort());
-      expect(page.text).toContain('25 Oct 2026');
-      const folder = yield* ask(bucket.shelf, '/film/');
-      expect(links(folder.text, /^\/film\/[a-z]+\/$/)).toEqual(['/film/board/']);
-      expect(folder.text).not.toContain('20 Oct 2026');
-    }),
+  local(
+    'replaces the one before it, with its new date and files; its files stay one publish longer for a viewer playing it',
+    () =>
+      Effect.gen(function* () {
+        const { bucket, material, publish } = yield* world();
+        const first = yield* publish(
+          yield* material('film', 'board', '2026-10-20T10:00:00.000Z', 'a', ['cold']),
+        );
+        const again = yield* publish(
+          yield* material('film', 'board', '2026-10-25T10:00:00.000Z', 'b', ['cold']),
+        );
+        expect(again.plan.manifest.versions.map((version) => version.name)).toEqual(['board']);
+        const oldFiles = first.plan.uploads.map((upload) => upload.key);
+        const newFiles = again.plan.uploads.map((upload) => upload.key);
+        const page = yield* ask(bucket.shelf, '/film/board/');
+        for (const key of newFiles) expect(page.text).toContain(`/${key}`);
+        for (const key of oldFiles) {
+          expect(page.text).not.toContain(`/${key}`);
+          expect((yield* ask(bucket.shelf, `/${key}`)).status).toBe(200);
+        }
+        expect(again.pruned).toEqual([]);
+        expect(page.text).toContain('25 Oct 2026');
+        const third = yield* publish(
+          yield* material('film', 'board', '2026-10-26T10:00:00.000Z', 'c', ['cold']),
+        );
+        for (const key of oldFiles) expect((yield* ask(bucket.shelf, `/${key}`)).status).toBe(404);
+        for (const key of newFiles) expect((yield* ask(bucket.shelf, `/${key}`)).status).toBe(200);
+        expect([...third.pruned].sort()).toEqual([...oldFiles].sort());
+        const folder = yield* ask(bucket.shelf, '/film/');
+        expect(links(folder.text, /^\/film\/[a-z]+\/$/)).toEqual(['/film/board/']);
+        expect(folder.text).not.toContain('20 Oct 2026');
+      }),
   );
 
   local('uploads only the files the bucket does not hold already', () =>
@@ -375,6 +407,27 @@ describe('a video', () => {
       );
       const key = published.plan.manifest.versions.map((each) => each.video.key).join('');
       expect((yield* ask(bucket.shelf, `/${key}`)).text).toBe(text);
+      expect(bucket.openUploads()).toBe(0);
+    }),
+  );
+
+  local('whose part fails, is aborted: no upload stays open and nothing is published', () =>
+    Effect.gen(function* () {
+      const { bucket, material, publish } = yield* world(16 * 1024, (store) => ({
+        ...store,
+        part: (key, uploadId, partNumber, bytes) => {
+          if (partNumber === 2) return Effect.die('the connection dropped');
+          return store.part(key, uploadId, partNumber, bytes);
+        },
+      }));
+      const text = 'video bytes '.repeat(6 * 1024);
+      const exit = yield* Effect.exit(
+        publish(yield* material('film', 'final', '2026-10-20T10:00:00.000Z', 'a', [], text)),
+      );
+      expect(Exit.isFailure(exit)).toBe(true);
+      expect(bucket.openUploads()).toBe(0);
+      expect([...bucket.objects.keys()].filter((key) => key.endsWith('.mp4'))).toEqual([]);
+      expect(bucket.objects.has('index.html')).toBe(false);
     }),
   );
 });

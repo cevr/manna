@@ -8,13 +8,14 @@
  * pages are drawn from these manifests alone (`./pages.tsx`), so a manifest
  * read back draws the same pages it was written with.
  *
- * Every file a version shows is named by its bytes' sha256
- * (`<film>/<version>/<hash>.<ext>`): a re-published file gets a new name,
- * so a browser or the edge never serves a stale copy under an old one.
+ * Every file a version shows is named by the first 16 hex digits of its
+ * bytes' sha256 (`<film>/<version>/<hash>.<ext>`): a re-published file gets a
+ * new name, so a browser or the edge never serves a stale copy under an old
+ * one.
  */
 import { Array as Arr, Option, Order, Schema } from 'effect';
 
-/** The versions a film is published as, in the order its folder would list them on one day. */
+/** The versions a film is published as. */
 export const VERSION_NAMES = ['final', 'render', 'board'] as const;
 
 export const VersionName = Schema.Literals(VERSION_NAMES);

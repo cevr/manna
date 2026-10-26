@@ -2,15 +2,18 @@
  * Publishing a version, as a plan: what the bucket must hold once a film's
  * version is published, from the films' manifests as the bucket holds them
  * now and the version's material as the publisher gathered it
- * (`apps/animations/screening.ts`). Pure: the publisher writes what it says.
+ * (`apps/animations/screening.ts`). Pure: the publisher (`./desk-client.ts`)
+ * writes what it says.
  *
  * The plan names each file to upload under its content-addressed key
  * (`assetKey`), then the pages that change (the version's page, the film's
- * folder, the index) and the film's manifest. The publisher writes the files
- * first and the index last, so no page links a file the bucket does not hold
- * yet.
+ * folder, the index) and the film's manifest, and the files of the version
+ * it replaces. The publisher writes the files first and the index last, so
+ * no page links a file the bucket does not hold yet; it draws the index
+ * again from the manifests as they are then, which another film's publish
+ * may have changed.
  */
-import { Array as Arr, Schema } from 'effect';
+import { Array as Arr, Option, Schema } from 'effect';
 
 import {
   type AssetExt,
@@ -76,6 +79,8 @@ export interface Publication {
   readonly uploads: ReadonlyArray<Upload>;
   /** The version's page, the film's folder, the film's manifest, then the index. */
   readonly texts: ReadonlyArray<Written>;
+  /** The keys of the files of the version this one replaces; none on its first publish. */
+  readonly replaced: ReadonlyArray<string>;
   /** The version's path on the site. */
   readonly path: string;
 }
@@ -99,6 +104,17 @@ export const publication = (site: ReadonlyArray<FilmManifest>, material: Materia
     panels: material.panels.map((panel) => ({ beat: panel.beat, image: asset(panel.image) })),
   };
   const current = Arr.findFirst(site, (each) => each.film === film);
+  const replaced = Option.match(
+    Option.flatMap(current, (each) => Arr.findFirst(each.versions, (one) => one.name === version)),
+    {
+      onNone: () => [],
+      onSome: (before) => [
+        before.video.key,
+        before.poster.key,
+        ...before.panels.map((panel) => panel.image.key),
+      ],
+    },
+  );
   const manifest = withVersion(current, film, material.title, published);
   const others = site.filter((each) => each.film !== film);
   const files = [material.video, material.poster, ...material.panels.map((panel) => panel.image)];
@@ -120,6 +136,7 @@ export const publication = (site: ReadonlyArray<FilmManifest>, material: Materia
       { key: manifestKey(film), text: manifestText(manifest) },
       { key: PAGE_KEYS.index, text: indexPage([...others, manifest]) },
     ],
+    replaced,
     path: PATHS.version(film, version),
   };
 };

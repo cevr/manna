@@ -14,6 +14,7 @@
  *   POST   /uploads/<key>                     begin a multipart write (`x-sha256`): its id
  *   PUT    /uploads/<key>?upload=<id>&part=<n>   one part
  *   POST   /uploads/<key>?upload=<id>&complete   finish it, the parts in the body
+ *   DELETE /uploads/<key>?upload=<id>            abort it: its parts go
  *
  * A Worker takes a request body of 100 MB at most, so a file larger than a
  * part (`PART_BYTES`) goes up in parts; R2 needs every part but the last of
@@ -73,6 +74,8 @@ export interface Store {
     uploadId: string,
     parts: ReadonlyArray<UploadedPart>,
   ) => Effect.Effect<void>;
+  /** End a multipart write unfinished: its parts are deleted and the key is not written. */
+  readonly abort: (key: string, uploadId: string) => Effect.Effect<void>;
 }
 
 /** The header naming an object's sha256. */
@@ -174,7 +177,7 @@ const objectRoute = Effect.fnUntraced(function* (
   return status(405);
 });
 
-/** `/uploads/<key>`: begin, add a part to, or finish a multipart write. */
+/** `/uploads/<key>`: begin, add a part to, finish or abort a multipart write. */
 const uploadRoute = Effect.fnUntraced(function* (
   store: Store,
   key: string,
@@ -194,6 +197,10 @@ const uploadRoute = Effect.fnUntraced(function* (
     const finished = decodeFinished(yield* request.text.pipe(Effect.orDie));
     if (Option.isNone(finished)) return status(400);
     yield* store.finish(key, uploadId.value, finished.value.parts);
+    return status(204);
+  }
+  if (request.method === 'DELETE') {
+    yield* store.abort(key, uploadId.value);
     return status(204);
   }
   return status(400);

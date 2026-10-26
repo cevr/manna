@@ -15,7 +15,7 @@ Two Cloudflare Workers over one private R2 bucket, declared in `alchemy.run.ts`:
 - the site (`src/worker/Site.ts`) answers every request with `src/respond.ts`: it reads one object at a time by key and never lists the bucket, answers a `Range` with 206 so a phone can seek, keeps a version's files a year (each is named by its bytes) and has the browser ask for a page again each time. Any other path is 404.
 - the desk (`src/worker/Desk.ts`, its `workers.dev` host alone) is the publisher's way in (`src/desk.ts`): it reads, writes, lists and deletes objects, and answers only to the stack's secret. A file over 32 MiB goes up in parts, since a Worker takes a body of 100 MB at most.
 
-The pages are Solid 2 components (`src/pages.tsx`) drawn to whole HTML files when a version is published, from the films' manifests (`src/manifest.ts`, one `<film>/manifest.json` each); nothing hydrates. Publishing (`src/publish.ts` plans it, `src/desk-client.ts` `publishTo` writes it) uploads each file the bucket lacks under `<film>/<version>/<sha256>.<ext>`, writes the version's page, the film's folder, its manifest and the index, then deletes the replaced version's files.
+The pages are Solid 2 components (`src/pages.tsx`) drawn to whole HTML files when a version is published, from the films' manifests (`src/manifest.ts`, one `<film>/manifest.json` each); nothing hydrates. Publishing (`src/publish.ts` plans it, `src/desk-client.ts` `publishTo` writes it) uploads each file the bucket lacks under `<film>/<version>/<hash>.<ext>` (the first 16 hex digits of its sha256; a file over 32 MiB in parts, aborted when one fails), writes the version's page, the film's folder and its manifest, then the index from every film's manifest read again. It keeps the files of the version it replaced, so a viewer playing that one plays on, and deletes those of the versions before it.
 
 ## Publish
 
@@ -29,7 +29,7 @@ bun run screening publish <film> board --dry-run  # gathers it and prints what i
 bun run screening list                            # every film's versions and their links
 ```
 
-It prints the version's link, `https://films.cvr.im/<film>/<version>/`. Publishing a version again replaces it, with the new date.
+It prints the version's link, `https://films.cvr.im/<film>/<version>/`. Publishing a version again replaces it, with the new date. A `render` is the newest full render of the film: its `main` variant at full scale, never a look wedge, a Board or a proof (`../animations/screening-renders.ts`); `final --from <video>` publishes any other. Run one publish at a time: two at once may leave the index without one of their films until the next publish.
 
 The publisher reads the site's URL, the desk's URL and the desk's secret from the animations app's .env file (`SCREENING_URL`, `SCREENING_DESK_URL`, `SCREENING_DESK_TOKEN`), written there from the stack's state by `bun run keys` here (`--stage <stage>`, prod by default).
 
@@ -46,3 +46,5 @@ A throwaway stage for a test: `bunx alchemy deploy alchemy.run.ts --stage agent-
 ## Tests
 
 `bun run test` runs the site end to end in one process (`src/site.test.ts`): a publish through the desk's policy over a bucket in memory, then a reader's requests to the site's policy over the same bucket.
+
+`bun run test:slow`, which `bun run deploy` runs first, typechecks the workspace, runs those tests, then any `*.slow.test.*` file it holds (none yet).
