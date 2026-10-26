@@ -74,7 +74,14 @@ import {
   type TooManyEncoders,
 } from './errors.ts';
 import { writeWhole } from './content-store.ts';
-import { PRUNE_DAYS, forgetRender, holdCache, pruneHeld, recordRender } from './segment-cache.ts';
+import {
+  PRUNE_DAYS,
+  forgetRender,
+  holdCache,
+  pruneHeld,
+  recordRender,
+  widenRecord,
+} from './segment-cache.ts';
 import { sha256OfFile } from './digest.ts';
 import {
   type BoardRead,
@@ -207,6 +214,7 @@ type RenderError =
   | PlaceError
   | ShortError
   | CacheEscapes
+  | Schema.SchemaError
   | PlatformError;
 
 /**
@@ -845,13 +853,20 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
           onTrue: () => target,
           onFalse: () => shareName(target),
         });
-        // The records of the files it replaces go before they are replaced
-        // (under the cache's lock when the render keeps segments), so no
-        // prune keeps by what an older render of them used; its own is
-        // written once done.
-        yield* Effect.forEach([target, shareName(target)], (file) =>
-          onDisk(forgetRender(film.paths.out, file)),
-        );
+        /** The other file a render of `target` records: its share copy when it leads with its master, else its master. */
+        const other = Bool.match(hasMaster(copies), {
+          onTrue: () => shareName(target),
+          onFalse: () => target,
+        });
+        /** The key of every segment the render used. */
+        const keys = segments.flatMap((s) => Option.toArray(s.key));
+        // Before it replaces its files (under the cache's lock when it keeps
+        // segments), the render widens its lead file's record to name its
+        // keys beside the keys the records of both its files name: stopped
+        // or failed from here on, it leaves no segment of its own or of the
+        // renders before it unnamed. A widen that fails fails the render
+        // before any file is replaced.
+        yield* onDisk(widenRecord(film.paths.out, lead, [other], used, keys));
         /** One copy's chunks, picked by `copy`, joined in order with the track into `out`. */
         const joined =
           (copy: (c: (typeof all)[number]) => Option.Option<string>) => (out: string) =>
@@ -932,13 +947,17 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         );
         // Once done (still holding the cache when it keeps segments), the
         // render records the keys it used for its lead file (its master, else
-        // its share copy), none when it keeps none. One that keeps segments
-        // then prunes the film's: each no render used for PRUNE_DAYS and no
-        // record names goes. A record or a
-        // prune that fails leaves the render done; a file left with no record
-        // has `--days 0` refused until it is rendered again.
-        const keys = segments.flatMap((s) => Option.toArray(s.key));
-        yield* onDisk(recordRender(film.paths.out, lead, used, keys)).pipe(
+        // its share copy), none when it keeps none, then removes the other
+        // file's record. One that keeps segments then prunes the film's: each
+        // no render used for PRUNE_DAYS and no record names goes. A record or
+        // a prune that fails leaves the render done, its widened record
+        // standing.
+        yield* onDisk(
+          Effect.andThen(
+            recordRender(film.paths.out, lead, used, keys),
+            forgetRender(film.paths.out, other),
+          ),
+        ).pipe(
           Effect.catch((error) =>
             Effect.logWarning(`render.cache.record failed file=${lead} reason="${error.message}"`),
           ),

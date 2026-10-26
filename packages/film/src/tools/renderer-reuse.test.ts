@@ -7,6 +7,7 @@
 
 import { describe, expect, it } from 'effect-bun-test';
 import {
+  Array as Arr,
   Boolean as Bool,
   Cause,
   Clock,
@@ -22,7 +23,9 @@ import {
   Schema,
 } from 'effect';
 import { systemError } from 'effect/PlatformError';
-import { CacheBusy, CacheOutputUnrecorded, PageError } from './errors.ts';
+import { CacheBusy, PageError } from './errors.ts';
+import { MediaFailed } from '../core/refusals.ts';
+import type { JoinedFilm } from './media.ts';
 import { CatalogueJson, MAIN_VARIANT, type Render, emptyCatalogue } from '../core/catalogue.ts';
 import { type BoardFile, BoardFileJson, BoardName, type Panel, emptyBoard } from '../core/board.ts';
 import { Picture } from '../core/board-render.ts';
@@ -66,6 +69,7 @@ const video = (
   reuse: Reuse,
   picture: Picture = Picture.Scenes(),
   copies: Copies = 'master+share',
+  out: Option.Option<string> = Option.none(),
 ) =>
   RenderJob.Video({
     address: { _tag: 'Film' },
@@ -75,7 +79,7 @@ const video = (
     from: Option.none(),
     to: Option.none(),
     scale: 1,
-    out: Option.none(),
+    out,
     copies,
     encoder: Option.none(),
     server: Option.none(),
@@ -121,6 +125,8 @@ interface Stage {
   readonly film: typeof film;
   readonly info: ExportInfo;
   readonly filmTimed?: (i: number) => boolean;
+  /** What its media does once a join is recorded (nothing by default). */
+  readonly join?: (film: JoinedFilm) => Effect.Effect<void, MediaFailed>;
 }
 
 /** Renders into one project folder, kept in memory across them: what each drew and joined. */
@@ -169,7 +175,12 @@ const project = (files = new Map<string, Uint8Array>(), stage: Stage = { film, i
     ]);
     const layer = Renderer.layer.pipe(
       Layer.provide([
-        fakeRenderHost(ledger, { info: on.info, frame: draw, filmTimed: on.filmTimed }),
+        fakeRenderHost(ledger, {
+          info: on.info,
+          frame: draw,
+          filmTimed: on.filmTimed,
+          join: on.join,
+        }),
         disk,
         Path.layer,
         SoundRender.layer,
@@ -537,32 +548,59 @@ describe.concurrent("a film render's segments", () => {
       }),
   );
 
-  it.effect(
-    'whose record fails to write leave the render done, and a prune with 0 days refuses, naming its file, while another output is recorded',
-    () =>
-      Effect.gen(function* () {
-        const { render, pruneByHand, cacheLines, refusing, onFiles, catalogued } = project();
-        const on = (job: RenderJob) =>
-          render(job).pipe(Effect.provideService(Clock.Clock, onDay(0)));
-        const scene = `${film.paths.out}/scenes/a/main.mp4`;
-        const first = yield* on(video(keyed()));
-        yield* onFiles(recordRender(film.paths.out, scene, 0, ['key-a']));
-        yield* catalogued([first.target, scene]);
-        // b changes, and its render's record cannot be written.
-        refusing.records = true;
-        const changed = new Map([...keys, ['b', 'key-b2']]);
-        const second = yield* on(video(keyed(changed)));
-        refusing.records = false;
-        expect(second.drawn).toEqual(frames(10, 20));
-        expect(cacheLines.some((line) => line.startsWith('render.cache.record failed'))).toBe(true);
-        const refused = yield* Effect.exit(pruneByHand(0, 0));
-        expect(Exit.match(refused, { onSuccess: () => 'pruned', onFailure: Cause.squash })).toEqual(
-          CacheOutputUnrecorded.make({ output: first.target }),
-        );
-        // Nothing went: the second render's b is reused.
-        expect((yield* on(video(keyed(changed)))).drawn).toEqual([]);
-      }),
-  );
+  // Every file a video render writes (a catalogued slot, an `--out` file) ×
+  // every way its record update stops short once its file is replaced: its
+  // record's write refused, or its join failed.
+  for (const written of ['catalogued', 'out'] as const)
+    for (const stop of ['record', 'join'] as const)
+      it.effect(
+        `stopped once it replaces its file (${written}, its ${stop} failing) leave the render's segments and the last render's named: a prune with 0 days keeps both`,
+        () =>
+          Effect.gen(function* () {
+            const { render, pruneByHand, cacheLines, refusing, onFiles, catalogued } = project();
+            const out = Option.filter(
+              Option.some('/elsewhere/stretch.mp4'),
+              () => written === 'out',
+            );
+            const job = (beats: ReadonlyMap<string, string>) =>
+              video(keyed(beats), Picture.Scenes(), 'master+share', out);
+            const on = (job: RenderJob, stage: Stage = { film, info }) =>
+              render(job, () => Effect.void, stage).pipe(
+                Effect.provideService(Clock.Clock, onDay(0)),
+              );
+            const first = yield* on(job(keys));
+            // Another output, a scene, is rendered and recorded, so the cache has a record whatever this file's says.
+            const scene = `${film.paths.out}/scenes/a/main.mp4`;
+            yield* onFiles(recordRender(film.paths.out, scene, 0, ['key-a']));
+            yield* catalogued([
+              scene,
+              ...Arr.filter([first.target], () => written === 'catalogued'),
+            ]);
+            /** Once a join is recorded: the record's write refused from then on, or the join failed. */
+            const stopping: Stage = {
+              film,
+              info,
+              join: () =>
+                Effect.suspend(() => {
+                  if (stop === 'join')
+                    return Effect.fail(MediaFailed.make({ op: 'join', file: 'x', reason: 'no' }));
+                  refusing.records = true;
+                  return Effect.void;
+                }),
+            };
+            const changed = new Map([...keys, ['b', 'key-b2']]);
+            const second = yield* Effect.exit(on(job(changed), stopping));
+            refusing.records = false;
+            expect(Exit.isSuccess(second)).toBe(stop === 'record');
+            expect(cacheLines.some((line) => line.startsWith('render.cache.record failed'))).toBe(
+              stop === 'record',
+            );
+            const pruned = yield* pruneByHand(0, 0);
+            expect(pruned.removed).toEqual([]);
+            // a, c and both b's.
+            expect(pruned.found.segments).toHaveLength(4);
+          }),
+      );
 
   it.effect('drawn again with --fresh never move their mark back', () =>
     Effect.gen(function* () {

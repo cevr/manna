@@ -648,10 +648,14 @@ from before it picks them until it is done, so renders of one film take turns
 (`render.cache.waiting`). Each segment it reuses or keeps is marked used
 (`used` in its record, the render's start time, never moved back, a
 `--fresh` redraw included; a record without one reads its mtime). Each video
-render removes the records of its master's and its share copy's files before
-it replaces them (`cache/renders/<id>.json`), and once done writes its own,
-of its lead file (its master, else its share copy), with the keys it used
-(none when it keeps no segments); a record that fails to write leaves the
+render records its lead file (its master, else its share copy) in
+`cache/renders/<id>.json`: before it replaces its files it widens that record
+to name the keys it uses beside the keys the records of both its files name
+(`widenRecord`), and once done writes the keys it used alone (none when it
+keeps no segments) and removes the other file's record. A render stopped
+between the two, by a failed join, a record that fails to write or an
+interrupt, leaves the widened record, so no prune removes its segments or
+those of the render before it; a record that fails to write leaves the
 render done. A render that keeps segments then deletes for good the
 segments no render used for `PRUNE_DAYS` (7) that no record names, never a
 folder still drawn (no record): `render.cache.pruned count=<n> freed=<bytes>`.
