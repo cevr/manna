@@ -189,6 +189,33 @@ describe("a render's segments", () => {
     expect([now[0] === was[0], now[1] === was[1], now[2] === was[2]]).toEqual([true, false, false]);
   });
 
+  test('are keyed at 30000/1001 fps, where a dissolve is an odd number of ticks', () => {
+    // Half a second at 29.97 fps is 14,985,015 ticks: each half of a dissolve is a whole tick under half.
+    const ntsc = 30000 / 1001;
+    const laid = Result.getOrThrow(
+      layout(
+        [
+          { id: 'a', min: 5 },
+          { id: 'b', min: 5 },
+          { id: 'c', min: 10 },
+        ],
+        { voice: '', scenes: {} },
+        ntsc,
+      ),
+    );
+    const segments = beatSegments({
+      placed: laid,
+      start: 0,
+      end: Math.ceil(20 * ntsc - 1e-6),
+      render: { ...render, fps: ntsc },
+      beats,
+      filmTimed: () => false,
+      board: Option.some({ shots: boardShots(laid, board), duration: 20, images }),
+    });
+    expect(segments.map(({ from }) => from)).toEqual([0, 150, 300]);
+    expect(segments.every((s) => Option.isSome(s.key))).toBe(true);
+  });
+
   test('change every key when the render is drawn or encoded otherwise', () => {
     const was = keys(boardSegments());
     for (const other of [

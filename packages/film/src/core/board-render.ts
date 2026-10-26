@@ -183,7 +183,11 @@ export const boardClock = (
 const fromOf = (clock: BoardClock, i: number): number =>
   Option.getOrElse(Arr.get(clock.from, i), () => clock.end);
 
-/** Half the dissolve at the cut into shot `i`, in ticks: at most half of either hold beside it, none before the first. */
+/**
+ * Half the dissolve at the cut into shot `i`, in whole ticks: at most half of
+ * either hold beside it (an odd hold's half a tick under), none before the
+ * first.
+ */
 const halfAt = (clock: BoardClock, i: number): number =>
   Bool.match(i <= 0 || i >= clock.shots.length, {
     onTrue: () => 0,
@@ -191,7 +195,7 @@ const halfAt = (clock: BoardClock, i: number): number =>
       const cut = fromOf(clock, i);
       const before = cut - fromOf(clock, i - 1);
       const after = fromOf(clock, i + 1) - cut;
-      return Math.max(0, Math.min(ticksAt(DISSOLVE_S, clock.fps) / 2, before / 2, after / 2));
+      return Math.max(0, Math.floor(Math.min(ticksAt(DISSOLVE_S, clock.fps), before, after) / 2));
     },
   });
 
