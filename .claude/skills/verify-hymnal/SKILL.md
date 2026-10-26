@@ -113,6 +113,48 @@ Each step is one `sim` command. The feature files write
 
 The journeys, one file per feature: [features/README.md](features/README.md).
 
+## Tool notes
+
+What the drivers do that a step does not show:
+
+- **A clean checkout's dev server needs the pod hermesc.** With no
+  `apps/hymnal/ios/Pods` (no prebuild yet), the iOS app shows the red box
+  "native iOS dev bytecode needs the pod hermesc". Boot with `HERMESC_PATH`
+  set to the hermesc of the checkout's own `hermes-compiler` package
+  (`find node_modules/.bun -path '*hermesc/osx-bin/hermesc'`):
+  `HERMESC_PATH=<that path> bun run --cwd apps/hymnal sim boot --platform ios --port $PORT --out "$EVIDENCE"`.
+- **The first `sim open` after `xcrun simctl terminate` fails its `--expect`:**
+  the home list lands first. Run the same `sim open` again.
+- **`agent-device longpress` returns before the touch lands.** Its effect
+  comes 5 to 9 s later. Read the state about 10 s after a hold, and leave
+  10 s between two holds, or two holds read as one.
+- **A one-detent pan.** `agent-device gesture pan <x> <y> -52 0 900` from a
+  dial's middle turns it one detent; a pan of 300 ms glides on past two or
+  more. For a turn that must stop at one detent, take 1500 ms or VoiceOver's
+  action.
+- **`sim tap label=Key` matches two elements** while chords are on (the
+  bar's button and the word inside it): use `sim tap id=key-button`.
+- **The back pan.** `agent-device gesture swipe left-edge` is a leftward
+  swipe that turns the pager on to the next hymn. Go back with the edge pan
+  `agent-device gesture pan 3 437 200 0 300 --session verify-hymnal`.
+- **The follow checker's `TIMING`** (`apps/hymnal/scripts/follow/samples.ts`)
+  lets a mark sit 1500 ms from its line's span, and assumes a snapshot of
+  about 1 s. When a snapshot takes 2 s (a loaded host), `adrift` is a coin
+  toss: read the snapshot's time in the JSON, and claim `adrift` only from a
+  run whose snapshots take about 1 s.
+- **The web dev client** (D3): `sim open hymns/100 --expect "label=Stanza 1"`
+  on `--platform web` must answer `ok`, and its `sim snapshot` must hold no
+  `one-route-error-overlay` and no "Route failed to load". Run it once
+  after `sim boot --platform web`, before any web step.
+- **Frame readers.** Two readers of a screen recording, from the repo
+  root, print one line per frame and read no words:
+  `bun .claude/skills/verify-hymnal/scripts/bartop.ts <video.mp4> [from] [to]`
+  prints the bar's height in points (its top hairline, the 3x screen of an
+  iPhone 17 Pro); `bun .claude/skills/verify-hymnal/scripts/knob.ts <video.mp4> [from] [to]`
+  prints the seeker knob's centre `x` in points while the bar stands tall.
+  Fit the knob's `x` to the clock to prove the seeker moves on time
+  (`player-spring`, `chords-sound`).
+
 ## Evidence
 
 All of it goes under `$EVIDENCE`, outside the checkout's tracked files:
