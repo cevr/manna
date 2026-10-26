@@ -43,13 +43,40 @@ export const encoderName = (encoder: Encoder): EncoderName =>
   });
 
 /**
- * Whether `encoder` makes the share copy in the page, beside the master: the
- * hardware encoder does (quantizer 26). The software one makes none: it keeps
- * the grain in the page only at 24 Mbps, so `--share` with `--encoder
+ * Whether `encoder` makes the share copy in the page: the hardware encoder
+ * does (quantizer 26). The software one makes none: it keeps the grain in
+ * the page only at 24 Mbps, so `--share` or `--share-only` with `--encoder
  * software` is refused (`jobOf`, tools/render-plan.ts).
  */
 export const sharesInPage = (encoder: Encoder): boolean =>
   Encoder.match(encoder, { Hardware: () => true, Software: () => false });
+
+/**
+ * What a video render encodes of each frame in the page: the master, the
+ * master and its share copy beside it, or the share copy alone
+ * (`--share-only`, what a publish sends). Each copy is encoded alike in each,
+ * so a copy one render kept is the copy another would encode.
+ */
+export type Copies = 'master' | 'master+share' | 'share';
+
+/** Whether `copies` holds the master. */
+export const hasMaster = (copies: Copies): boolean => copies !== 'share';
+
+/** Whether `copies` holds the share copy. */
+export const hasShare = (copies: Copies): boolean => copies !== 'master';
+
+/**
+ * The copies `encoder` encodes in the page of those `asked` for: all of them
+ * on the hardware encoder; on one that makes no share copy there
+ * (`sharesInPage`), the master, the fallback for any share copy asked. A
+ * render's own flags never ask one of it: `jobOf` refuses `--share` and
+ * `--share-only` with `--encoder software`, and leaves a software render's
+ * default at the master.
+ */
+export const copiesInPage = (asked: Copies, encoder: Encoder): Copies => {
+  if (sharesInPage(encoder)) return asked;
+  return 'master';
+};
 
 /** The encoder `--encoder <name>` asks for. */
 export const encoderNamed = (name: EncoderName): Encoder => BY_NAME[name];

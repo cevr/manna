@@ -8,11 +8,12 @@
 //   (`holdCache`, waiting its turn), and by `film cache --prune`
 //   (`pruneIdle`, refused while a render holds it). So no prune deletes a
 //   segment a render reads or draws, and two renders of one film take turns.
-// - Each video render records the keys it used for the file it writes, none
-//   when it keeps no segments (`renders/<id>.json`, `recordRender`). It
-//   removes that file's record before it replaces the file
-//   (`forgetRender`) and writes the new one once done, so a record names
-//   what the newest render of its file used, or the file has none.
+// - Each video render records the keys it used for its lead file (its
+//   master, else its share copy), none when it keeps no segments
+//   (`renders/<id>.json`, `recordRender`). It removes the records of its
+//   master's and its share copy's files before it replaces them
+//   (`forgetRender`) and writes its own once done, so a record names what
+//   the newest render of its file used, or the file has none.
 // - A segment goes when no render used it for the days given and no record
 //   names it, so a segment the newest render of an output used is kept at
 //   every `--days`, past the age prune too, while that render's record names
@@ -326,7 +327,11 @@ const recorded = (out: string) =>
     return found;
   });
 
-/** Each video the film's catalogue (`<out>/catalogue.json`, proven not a link) holds, by its file's path; none without one. */
+/**
+ * Each video the film's catalogue (`<out>/catalogue.json`, proven not a link)
+ * holds, by the path of its lead file (its master, else its share copy: the
+ * file its render's record is of); none without one.
+ */
 const cataloguedVideos = (out: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -337,7 +342,9 @@ const cataloguedVideos = (out: string) =>
     const catalogue = yield* Schema.decodeEffect(CatalogueJson)(yield* fs.readFileString(file));
     const clips = catalogue.renders
       .filter((render) => render.kind === 'video')
-      .flatMap((render) => Option.toArray(render.files.clip));
+      .flatMap((render) =>
+        Option.toArray(Option.orElse(render.files.clip, () => render.files.share)),
+      );
     return Arr.dedupe(clips.map((clip) => path.resolve(out, clip)));
   });
 

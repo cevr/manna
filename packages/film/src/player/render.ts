@@ -167,9 +167,9 @@ const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): Expo
         (await composeLookbook(film, { captions: captions.on, footage: host })).canvas,
         type,
       ),
-    encoder: (scale, share, candidates) =>
-      encoderChoice(canvas, film.fps, scale, share, candidates),
-    encode: async (from, to, scale, share, encoder) => {
+    encoder: (scale, copies, candidates) =>
+      encoderChoice(canvas, film.fps, scale, copies, candidates),
+    encode: async (from, to, scale, copies, encoder) => {
       const began = nowMs();
       let drawing = 0;
       // The chunk's frames' footage is decoded as one run, each packet at most once.
@@ -184,13 +184,19 @@ const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): Expo
           from,
           to,
           scale,
-          share,
+          copies,
           encoder,
         ),
       );
-      const master = bytesBase64(chunk.master);
-      const copy = chunk.share === undefined ? {} : { share: bytesBase64(chunk.share) };
-      return { master, ...copy, timing: { draw: drawing, page: nowMs() - began } };
+      // Each copy the page made, as base64; one it did not make is left out.
+      const made = Object.fromEntries(
+        (['master', 'share'] as const).flatMap((copy) => {
+          const bytes = chunk[copy];
+          if (bytes === undefined) return [];
+          return [[copy, bytesBase64(bytes)]];
+        }),
+      );
+      return { ...made, timing: { draw: drawing, page: nowMs() - began } };
     },
     contact: async (frames) =>
       canvasBase64(await composeContact(draw, canvas, frames), 'image/jpeg'),

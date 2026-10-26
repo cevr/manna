@@ -59,7 +59,7 @@ const kept = (key: string, daysAgo: number, bytes: number) =>
       path,
       folder,
       key,
-      [{ from: 0, to: 10, share: false }],
+      [{ from: 0, to: 10, master: true, share: false }],
       NOW - daysAgo * DAY,
     );
   });

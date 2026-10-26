@@ -828,6 +828,12 @@ const render = <E, R>(
           'also write a smaller copy to send, <out>.share.mp4 (default, but not for --review; --no-share to skip it)',
         ),
       ),
+      shareOnly: Flag.Boolean('share-only').pipe(
+        Flag.withDefault(false),
+        Flag.withDescription(
+          'write only the copy to send, <out>.share.mp4, and no master: one encode a frame, about twice as fast (what a publish sends)',
+        ),
+      ),
       encoder: Flag.Literals('encoder', EncoderName.literals).pipe(
         Flag.optional,
         Flag.map(Option.map(encoderNamed)),
@@ -908,6 +914,7 @@ const render = <E, R>(
             scale: input.scale,
             out: input.out,
             share: input.share,
+            shareOnly: input.shareOnly,
             encoder: input.encoder,
             server,
             board: input.board,

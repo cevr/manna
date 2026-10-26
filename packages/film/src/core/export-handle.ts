@@ -9,7 +9,7 @@
 
 import { Schema } from 'effect';
 import { SceneTimes, type StillView } from './easel.ts';
-import { type Encoder, EncoderChoice } from './encoder.ts';
+import { type Copies, type Encoder, EncoderChoice } from './encoder.ts';
 import { FigureMark } from './match.ts';
 import { Point } from './schema.ts';
 
@@ -224,9 +224,9 @@ export const ChunkTiming = Schema.Struct({
 });
 export type ChunkTiming = typeof ChunkTiming.Type;
 
-/** A chunk from the page (player/encode.ts): the master, the share copy if asked for, and its timing. */
+/** A chunk from the page (player/encode.ts): each copy it made (the master, the share copy), and its timing. */
 const EncodedChunk = Schema.Struct({
-  master: Schema.Uint8ArrayFromBase64,
+  master: Schema.OptionFromOptionalKey(Schema.Uint8ArrayFromBase64),
   share: Schema.OptionFromOptionalKey(Schema.Uint8ArrayFromBase64),
   timing: ChunkTiming,
 });
@@ -245,19 +245,19 @@ export interface CallArgs {
   readonly lookbook: readonly [format: FrameFormat];
   /**
    * The first of `candidates` the film can be encoded with here at `scale`
-   * (with its share copy when `share`), or none (`encoderChoice`).
+   * into each of `copies`, or none (`encoderChoice`).
    */
-  readonly encoder: readonly [scale: number, share: boolean, candidates: ReadonlyArray<Encoder>];
+  readonly encoder: readonly [scale: number, copies: Copies, candidates: ReadonlyArray<Encoder>];
   /**
-   * Frames `[from, to)` encoded by `encoder` as an H.264 MP4 at `scale`
-   * (`encodeChunk`), with `share` a small copy beside it, and where the
+   * Frames `[from, to)` encoded by `encoder` at `scale` into each of `copies`
+   * it makes in the page, an H.264 MP4 each (`encodeChunk`), and where the
    * page's time went.
    */
   readonly encode: readonly [
     from: number,
     to: number,
     scale: number,
-    share: boolean,
+    copies: Copies,
     encoder: Encoder,
   ];
   /** `frames` tiled into the contact sheet (`composeContact`), as a JPEG. */

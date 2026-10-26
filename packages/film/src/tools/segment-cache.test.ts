@@ -35,7 +35,7 @@ const kept = (key: string, daysAgo: number, bytes = 100, segments = folder) =>
       path,
       segments,
       key,
-      [{ from: 0, to: 10, share: false }],
+      [{ from: 0, to: 10, master: true, share: false }],
       NOW - daysAgo * DAY,
     );
   });
@@ -284,8 +284,8 @@ describe('pruning a film’s render cache', () => {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         yield* kept('shared', 0);
-        yield* reuseSegment(fs, path, folder, 'shared', NOW + 5);
-        yield* reuseSegment(fs, path, folder, 'shared', NOW + 1);
+        yield* reuseSegment(fs, path, folder, 'shared', 'master', NOW + 5);
+        yield* reuseSegment(fs, path, folder, 'shared', 'master', NOW + 1);
         expect((yield* readCache(out)).segments.map((s) => s.used)).toEqual([NOW + 5]);
       }).pipe(over(files));
     },

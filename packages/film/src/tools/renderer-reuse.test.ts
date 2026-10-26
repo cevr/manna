@@ -26,6 +26,7 @@ import { CacheBusy, CacheOutputUnrecorded, PageError } from './errors.ts';
 import { CatalogueJson, MAIN_VARIANT, type Render, emptyCatalogue } from '../core/catalogue.ts';
 import { type BoardFile, BoardFileJson, BoardName, type Panel, emptyBoard } from '../core/board.ts';
 import { Picture } from '../core/board-render.ts';
+import type { Copies } from '../core/encoder.ts';
 import type { ExportInfo } from '../core/export-handle.ts';
 import { Segment as FileName } from '../core/segment.ts';
 import { Cut, RenderJob, Reuse } from './render-plan.ts';
@@ -55,7 +56,11 @@ const keys = new Map([
   ['c', 'key-c'],
 ]);
 
-const video = (reuse: Reuse, picture: Picture = Picture.Scenes()) =>
+const video = (
+  reuse: Reuse,
+  picture: Picture = Picture.Scenes(),
+  copies: Copies = 'master+share',
+) =>
   RenderJob.Video({
     address: { _tag: 'Film' },
     variant: MAIN_VARIANT,
@@ -65,7 +70,7 @@ const video = (reuse: Reuse, picture: Picture = Picture.Scenes()) =>
     to: Option.none(),
     scale: 1,
     out: Option.none(),
-    share: true,
+    copies,
     encoder: Option.none(),
     server: Option.none(),
     picture,
@@ -151,16 +156,20 @@ const project = (files = new Map<string, Uint8Array>(), stage = { film, info }) 
       ]),
     );
     return Effect.gen(function* () {
-      yield* (yield* Renderer).render(stage.film, job);
-      const [join, share] = ledger.joins;
+      const output = yield* (yield* Renderer).render(stage.film, job);
+      const isShare = (out: string) => out.endsWith('.share.mp4');
+      const master = ledger.joins.filter((j) => !isShare(j.out));
+      const share = ledger.joins.filter((j) => isShare(j.out));
       return {
-        target: Option.getOrThrow(Option.fromUndefinedOr(join)).out,
+        output,
+        // The file its cache record is of: its master, else its share copy.
+        target: Option.getOrThrow(Option.fromUndefinedOr([...master, ...share][0])).out,
         reuse: lines,
         pruned,
         drawn: ledger.frames.toSorted((x, y) => x - y),
         pages: ledger.pages.opened,
-        master: Option.getOrThrow(Option.fromUndefinedOr(join)).segments,
-        share: Option.getOrThrow(Option.fromUndefinedOr(share)).segments,
+        master: master.flatMap((j) => j.segments),
+        share: share.flatMap((j) => j.segments),
       };
     }).pipe(
       Effect.provideService(Platform, 'darwin'),
@@ -178,10 +187,18 @@ const project = (files = new Map<string, Uint8Array>(), stage = { film, info }) 
   /** Over the project folder: the cache as `film cache` reads it, a render recorded by hand, the catalogue written. */
   const onFiles = <A, E>(effect: Effect.Effect<A, E, FileSystem.FileSystem | Path.Path>) =>
     effect.pipe(Effect.provide([memoryFileSystem(files, folders), Path.layer]));
-  /** The film's catalogue holding a video at each of `clips`, as a render's caller records it. */
-  const catalogued = (clips: ReadonlyArray<string>) =>
+  /**
+   * The film's catalogue holding a video at each of `clips`, as a render's
+   * caller records it, and a share copy alone at each of `shares`.
+   */
+  const catalogued = (clips: ReadonlyArray<string>, shares: ReadonlyArray<string> = []) =>
     Effect.gen(function* () {
-      const renders = clips.map((clip): Render => ({
+      const rel = (file: string) => Option.some(file.slice(`${film.paths.out}/`.length));
+      const videos = [
+        ...clips.map((clip) => ({ clip: rel(clip), share: Option.none<string>() })),
+        ...shares.map((share) => ({ clip: Option.none<string>(), share: rel(share) })),
+      ];
+      const renders = videos.map(({ clip, share }): Render => ({
         address: { _tag: 'Film' },
         variant: MAIN_VARIANT,
         kind: 'video',
@@ -189,8 +206,8 @@ const project = (files = new Map<string, Uint8Array>(), stage = { film, info }) 
         stamp: { commit: Option.none(), key: 'k' },
         span: Option.none(),
         files: {
-          clip: Option.some(clip.slice(`${film.paths.out}/`.length)),
-          share: Option.none(),
+          clip,
+          share,
           captions: Option.none(),
           chapters: Option.none(),
           description: Option.none(),
@@ -341,6 +358,41 @@ describe.concurrent("a film render's segments", () => {
       const fresh = yield* render(video(keyed(keys, true)));
       expect(fresh.drawn).toEqual(frames(0, 40));
     }),
+  );
+
+  it.live(
+    'a share-only render writes the share copy alone, and reuses the share copies a render with the master kept',
+    () =>
+      Effect.gen(function* () {
+        const { render } = project();
+        const both = yield* render(video(keyed()));
+        const shareOnly = yield* render(video(keyed(), Picture.Scenes(), 'share'));
+        expect(shareOnly.drawn).toEqual([]);
+        expect(shareOnly.master).toEqual([]);
+        expect(shareOnly.share).toEqual(both.share);
+        expect(shareOnly.output.clip).toEqual(Option.none());
+        expect(shareOnly.output.share).toEqual(Option.some('/out/test/film/main.share.mp4'));
+      }),
+  );
+
+  it.live(
+    'a share-only render keeps no master: the next render with one draws every segment again',
+    () =>
+      Effect.gen(function* () {
+        const { render } = project();
+        const shareOnly = yield* render(video(keyed(), Picture.Scenes(), 'share'));
+        expect(shareOnly.drawn).toEqual(frames(0, 40));
+        expect(shareOnly.master).toEqual([]);
+        const again = yield* render(video(keyed(), Picture.Scenes(), 'share'));
+        expect(again.drawn).toEqual([]);
+        const both = yield* render(video(keyed()));
+        expect(both.drawn).toEqual(frames(0, 40));
+        expect(both.master.map((s) => s.at)).toEqual(both.share.map((s) => s.at));
+        // Its segments now hold both copies: a render of the master alone draws nothing.
+        const master = yield* render(video(keyed(), Picture.Scenes(), 'master'));
+        expect(master.drawn).toEqual([]);
+        expect(master.master).toEqual(both.master);
+      }),
   );
 
   it.live('keep nothing when the render reuses none', () =>
@@ -536,5 +588,26 @@ describe.concurrent("a film render's segments", () => {
       const joined = held(next.master);
       expect(joined.held).toEqual(joined.placed);
     }),
+  );
+
+  it.effect(
+    "a share-only render's record is of its share copy, in place of the master's: a prune with 0 days keeps what it used",
+    () =>
+      Effect.gen(function* () {
+        const { render, pruneByHand, catalogued } = project();
+        const on = (job: RenderJob) =>
+          render(job).pipe(Effect.provideService(Clock.Clock, onDay(0)));
+        yield* on(video(keyed()));
+        // b changes, and the film is rendered again with its share copy alone.
+        const changed = new Map([...keys, ['b', 'key-b2']]);
+        const shareOnly = yield* on(video(keyed(changed), Picture.Scenes(), 'share'));
+        expect(shareOnly.drawn).toEqual(frames(10, 20));
+        expect(shareOnly.target).toBe(`${film.paths.out}/film/main.share.mp4`);
+        yield* catalogued([], [shareOnly.target]);
+        // The first b, which only the master's record named, goes; a, c and the new b stay.
+        const pruned = yield* pruneByHand(0, 0);
+        expect(pruned.removed).toHaveLength(1);
+        expect(pruned.found.segments).toHaveLength(4);
+      }),
   );
 });

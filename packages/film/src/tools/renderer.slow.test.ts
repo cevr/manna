@@ -56,7 +56,7 @@ const video = RenderJob.Video({
   to: Option.none(),
   scale: 1,
   out: Option.none(),
-  share: false,
+  copies: 'master',
   encoder: Option.none(),
   server: Option.none(),
   picture: Picture.Scenes(),
@@ -180,7 +180,7 @@ describe.concurrent('Renderer', () => {
   it.live('a share copy encodes in the same pass and joins beside the film', () =>
     Effect.gen(function* () {
       const { ledger, joined, render } = joinedBytes();
-      yield* render({ ...video, share: true });
+      yield* render({ ...video, copies: 'master+share' });
       expect(ledger.encoders.spawned).toBe(16);
       expect(ledger.joins.map((j) => j.out)).toEqual([
         '/out/test/film/main.mp4',
@@ -200,14 +200,14 @@ describe.concurrent('Renderer', () => {
       }) =>
         [...run.folders, ...run.files.keys()].filter((f) => f.startsWith('/tmp/film-segments-'));
       const done = setup();
-      yield* done.render({ ...video, share: true });
+      yield* done.render({ ...video, copies: 'master+share' });
       expect(done.ledger.joins.length).toBe(2);
       expect(left(done)).toEqual([]);
 
       const failed = setup({
         join: () => Effect.fail(MediaFailed.make({ op: 'join', file: 'x', reason: 'no' })),
       });
-      const exit = yield* Effect.exit(failed.render({ ...video, share: true }));
+      const exit = yield* Effect.exit(failed.render({ ...video, copies: 'master+share' }));
       expect(Exit.isFailure(exit)).toBe(true);
       expect(left(failed)).toEqual([]);
 
@@ -230,7 +230,7 @@ describe.concurrent('Renderer', () => {
         const output = yield* bare.render({
           ...video,
           variant: RenderVariantName.make('trial'),
-          share: true,
+          copies: 'master+share',
         });
         // The joins land the clip and its share copy; the renderer writes the captions itself.
         expect(bare.ledger.joins.map((j) => j.out)).toEqual([
@@ -302,7 +302,7 @@ describe.concurrent('Renderer', () => {
       const { ledger, render } = setup();
       // Eight pages with a share copy are sixteen encoders: the hardware encoder hangs at sixteen.
       const exit = yield* Effect.exit(
-        render({ ...video, workers: Option.some(8), share: true }, 'darwin', 64),
+        render({ ...video, workers: Option.some(8), copies: 'master+share' }, 'darwin', 64),
       );
       expect(Exit.findErrorOption(exit).pipe(Option.map((e) => e.message))).toEqual(
         Option.some(
@@ -321,7 +321,7 @@ describe.concurrent('Renderer', () => {
     () =>
       Effect.gen(function* () {
         const { ledger, render } = setup();
-        yield* render({ ...video, workers: Option.none(), share: true });
+        yield* render({ ...video, workers: Option.none(), copies: 'master+share' });
         expect(ledger.encoderAsked).toEqual([['Hardware']]);
         expect(ledger.pages.opened).toBe(1 + HARDWARE_WORKERS);
         expect(new Set(ledger.encodedBy)).toEqual(new Set(['Hardware']));
@@ -360,7 +360,7 @@ describe.concurrent('Renderer', () => {
       Effect.gen(function* () {
         const software = Option.some({ _tag: 'Software' } as const);
         const { ledger, render } = setup({ encoders: ['Software'] });
-        yield* render({ ...video, workers: Option.none(), share: false, encoder: software });
+        yield* render({ ...video, workers: Option.none(), copies: 'master', encoder: software });
         expect(ledger.encoderAsked).toEqual([['Software']]);
         expect(ledger.pages.opened).toBe(1 + SOFTWARE_WORKERS);
         expect(ledger.encodedBy.length).toBe(ledger.encoders.spawned);
@@ -372,7 +372,7 @@ describe.concurrent('Renderer', () => {
         // One encoder a page, one a core: seventeen pages are too many for 16 cores.
         const over = setup({ encoders: ['Software'] });
         const error = yield* Effect.flip(
-          over.render({ ...video, workers: Option.some(17), share: false, encoder: software }),
+          over.render({ ...video, workers: Option.some(17), copies: 'master', encoder: software }),
         );
         expect(error.message).toBe(
           '17 pages need 17 encoders at once, over the 16 software encoders a render may run; use --workers 16 or fewer',
@@ -702,7 +702,7 @@ describe.concurrent('Renderer', () => {
       Effect.gen(function* () {
         const { ledger, files, render } = setup({ info });
         yield* mixed(files);
-        yield* render({ ...video, share: true });
+        yield* render({ ...video, copies: 'master+share' });
         expect(ledger.aac).toEqual([20 * 44100]);
         const [master, share] = ledger.joins.map((j) => Option.getOrThrow(j.audio));
         expect(share).toBe(master);

@@ -8,7 +8,7 @@
 // order, back and forth) and an export chunk (a run decoded in order),
 // starting mid-way between key frames and running over the seam.
 
-import { Effect, Schema } from 'effect';
+import { Effect, Option, Schema } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { ExportAnswers } from '../../src/core/export-handle.ts';
 import { footageHref } from '../../src/core/footage.ts';
@@ -57,16 +57,16 @@ describe('footage is frame-exact', () => {
       Effect.scoped(
         Effect.gen(function* () {
           const page = yield* opened;
-          const choice = yield* page.call('encoder', 1, false, [
+          const choice = yield* page.call('encoder', 1, 'master', [
             { _tag: 'Hardware' },
             { _tag: 'Software' },
           ]);
           if (choice._tag === 'Missing') return yield* Effect.die(choice.reason);
           const [from, to] = [45, 75];
           const chunk = yield* Schema.decodeEffect(ExportAnswers.encode)(
-            yield* page.call('encode', from, to, 1, false, choice),
+            yield* page.call('encode', from, to, 1, 'master', choice),
           ).pipe(Effect.orDie);
-          const shown = yield* numbersIn(chunk.master);
+          const shown = yield* numbersIn(Option.getOrThrow(chunk.master));
           expect(shown).toEqual(
             Array.from({ length: to - from }, (_, k) => sourceFrameOf(from + k)),
           );

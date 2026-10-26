@@ -22,7 +22,13 @@ import {
 import { type SceneTimes, type StillView } from '../../core/easel.ts';
 import type { FigureMark } from '../../core/match.ts';
 import { Browser, CallRefused, type Invoke, framePage } from '../browser.ts';
-import { type Encoder, type EncoderChoice, sharesInPage } from '../../core/encoder.ts';
+import {
+  type Encoder,
+  type EncoderChoice,
+  copiesInPage,
+  hasMaster,
+  hasShare,
+} from '../../core/encoder.ts';
 import type { MediaFailed } from '../../core/refusals.ts';
 import {
   type EncodeFailed,
@@ -243,8 +249,8 @@ export const fakeRenderHost = (ledger: RenderLedger, host: FakeRenderHost = {}) 
           ledger.lookbooks.composed += 1;
           return new Uint8Array([0xff, 0xd8]);
         }),
-      encoder: (_scale, _share, candidates) => encoder(candidates),
-      encode: (from, to, _scale, share, by) =>
+      encoder: (_scale, _copies, candidates) => encoder(candidates),
+      encode: (from, to, _scale, copies, by) =>
         Effect.acquireUseRelease(
           Effect.sync(() => {
             ledger.encoders.spawned += 1;
@@ -265,11 +271,12 @@ export const fakeRenderHost = (ledger: RenderLedger, host: FakeRenderHost = {}) 
             ),
         ).pipe(
           Effect.as({
-            master: text(`mp4 ${from}-${to}`),
-            // As the page: only the hardware encoder makes the share copy beside the master.
-            share: Option.filter(
-              Option.some(text(`share ${from}-${to}`)),
-              () => share && sharesInPage(by),
+            // As the page: each copy asked for that the encoder makes there.
+            master: Option.filter(Option.some(text(`mp4 ${from}-${to}`)), () =>
+              hasMaster(copiesInPage(copies, by)),
+            ),
+            share: Option.filter(Option.some(text(`share ${from}-${to}`)), () =>
+              hasShare(copiesInPage(copies, by)),
             ),
             timing: { draw: to - from, page: 2 * (to - from) },
           }),

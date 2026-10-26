@@ -8,7 +8,7 @@
 // export chunk (a run decoded in order) over every seam, a frame drawn alone
 // (a still or a seek, back and forth), and the probe.
 
-import { Effect, Exit, Result, Schema } from 'effect';
+import { Effect, Exit, Option, Result, Schema } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { ExportAnswers } from '../../src/core/export-handle.ts';
 import { footageHref } from '../../src/core/footage.ts';
@@ -87,15 +87,15 @@ describe('a talk renders frame-exact', () => {
       Effect.scoped(
         Effect.gen(function* () {
           const page = yield* opened;
-          const choice = yield* page.call('encoder', 1, false, [
+          const choice = yield* page.call('encoder', 1, 'master', [
             { _tag: 'Hardware' },
             { _tag: 'Software' },
           ]);
           if (choice._tag === 'Missing') return yield* Effect.die(choice.reason);
           const chunk = yield* Schema.decodeEffect(ExportAnswers.encode)(
-            yield* page.call('encode', 0, SHOWN.length, 1, false, choice),
+            yield* page.call('encode', 0, SHOWN.length, 1, 'master', choice),
           ).pipe(Effect.orDie);
-          expect(yield* numbersIn(chunk.master)).toEqual(SHOWN);
+          expect(yield* numbersIn(Option.getOrThrow(chunk.master))).toEqual(SHOWN);
           expect(page.errors).toEqual([]);
         }),
       ),
@@ -165,12 +165,12 @@ describe('a talk renders frame-exact', () => {
         Effect.gen(function* () {
           // The page with its library and no mezzanine served: every read of the take is a 404.
           const page = yield* openRender(TALK, yield* TALK_LIBRARY);
-          const choice = yield* page.call('encoder', 1, false, [
+          const choice = yield* page.call('encoder', 1, 'master', [
             { _tag: 'Hardware' },
             { _tag: 'Software' },
           ]);
           if (choice._tag === 'Missing') return yield* Effect.die(choice.reason);
-          const exit = yield* Effect.exit(page.call('encode', 0, 10, 1, false, choice));
+          const exit = yield* Effect.exit(page.call('encode', 0, 10, 1, 'master', choice));
           expect(Exit.isFailure(exit)).toBe(true);
           // FootageFrameMissing, as the page throws it: the source and the time it has no frame at.
           expect(String(Exit.isFailure(exit) && exit.cause)).toContain(

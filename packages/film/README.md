@@ -582,7 +582,8 @@ smallest and the pages finish together) on a queue that idle pages pull from; ea
 its chunk and encodes it with the browser's H.264 encoder through mediabunny
 (`player/encode.ts`, a key frame every two seconds) into an MP4 of its own
 (and, unless `--no-share`, a share copy from a second encoder in the same
-pass), and a chunk whose page crashes is retried once on a new page. Which
+pass; with `--share-only`, the share copy alone and no master, `Copies`
+in `core/encoder.ts`), and a chunk whose page crashes is retried once on a new page. Which
 encoder is data, chosen once (below). `Media.join` joins the chunks in order with the track cut from
 `full.wav` under the range and encoded to AAC, and the captions (`main.vtt`) are written
 beside the MP4 from `captionCues`, the same line timing the burned-in captions
@@ -594,30 +595,39 @@ browser is `BrowserMissing`, whose message is the install command.
 Board, splits its frames at its beats into segments (`beatSegments`,
 `tools/segments.ts`) and keeps each under `out/<film>/cache/segments/<key>/`,
 a folder no catalogue lists. A segment's key (`segmentKey`) hashes the
-render's settings (size, fps, scale, encoder, the share copy made in the page,
-captions, picture, the browser's user agent, the platform), its frames, the
+render's settings (size, fps, scale, encoder, captions, picture, the
+browser's user agent, the platform), its frames, the
 `Stamps` key of each beat its frames fall in (its sources, the film's frame
 and the engine, its layout and its take), and for a Board render each shot its
 frames draw (`shotsSeen`: the try shown and its image's sha256 as it is on
 disk, its motion, the span that times its motion and its dissolves), so a
 neighbour seen across a dissolve at the segment's edge changes it and a panel
-elsewhere does not. A render draws only the segments it finds no record of
-(`<key>/segment.json`, written once all the segment's chunks are there), its
-chunks cut at segment edges (`segmentChunks`) and each kept as
-`<from>-<to>.mp4`, named by its frames, so two renders that cut a segment
-otherwise never write one file. It opens no drawing page when it draws none,
-and joins every segment's chunks, kept or drawn, and their share copies,
-packets copied; `render.reuse segments=<n> drawn=<m>` says how many it drew.
+elsewhere does not. The key leaves out which copies a render encodes (the
+master, its share copy, or both): each copy is encoded alike whatever is
+encoded beside it (a share copy made alone is byte for byte the one made
+beside the master, measured on In Its Order's Board), so the record says
+which each chunk holds, and a render reuses a segment only when every chunk
+holds each copy it writes. A `--share-only` render (the publish's) reuses
+the share copies any Board render kept; a render with the master draws a
+segment a share-only render kept again, both copies. A render draws only
+the segments it finds no such record of (`<key>/segment.json`, written once
+all the segment's chunks are there), its chunks cut at segment edges
+(`segmentChunks`) and each kept as `<from>-<to>.mp4` (its share copy
+`<from>-<to>.share.mp4`), named by its frames, so two renders that cut a
+segment otherwise never write one file. It opens no drawing page when it
+draws none, and joins every segment's chunks of each copy it writes, kept or
+drawn, packets copied; `render.reuse segments=<n> drawn=<m>` says how many it drew.
 The film's cache as a whole is `tools/segment-cache.ts`. A render that keeps
 segments holds the cache's lock (`cache/.segments.lock`, a `ManifestLock`)
 from before it picks them until it is done, so renders of one film take turns
 (`render.cache.waiting`). Each segment it reuses or keeps is marked used
 (`used` in its record, the render's start time, never moved back, a
 `--fresh` redraw included; a record without one reads its mtime). Each video
-render removes the record of the file it writes before it replaces that file
-(`cache/renders/<id>.json`), and once done writes it again with the keys it
-used (none when it keeps no segments); a record that fails to write leaves
-the render done. A render that keeps segments then deletes for good the
+render removes the records of its master's and its share copy's files before
+it replaces them (`cache/renders/<id>.json`), and once done writes its own,
+of its lead file (its master, else its share copy), with the keys it used
+(none when it keeps no segments); a record that fails to write leaves the
+render done. A render that keeps segments then deletes for good the
 segments no render used for `PRUNE_DAYS` (7) that no record names, never a
 folder still drawn (no record): `render.cache.pruned count=<n> freed=<bytes>`.
 A segment the newest render of an output (the film, an act, a scene, the
@@ -627,7 +637,8 @@ record names it. `film cache <film> [--prune [--days n] [--dry-run]] [--json]`
 (`CacheBusy`) while a render holds the cache, `--days 0` keeping exactly what
 the newest render of each output used. `--days 0` is refused before any
 render has recorded (`CacheUnrecorded`), and while a video the catalogue
-holds has no record (`CacheOutputUnrecorded`, naming it: render it again).
+holds has no record of its lead file (`CacheOutputUnrecorded`, naming it:
+render it again).
 A cache folder, its lock file, the segments folder, a segment, a file in
 one, or a record that is a link is refused (`CacheEscapes`) before the lock
 is taken or anything is read or deleted through it.
@@ -682,8 +693,15 @@ keeps the line). `--review` (variant `board-review`) burns in, small in the
 bottom-left corner, the film time, the beat and the panel with its try
 (`0:41.3 · name · name.sets · try 5`, `burnIn`), so a frame of the owner's
 screen capture names where he is. A review copy is watched, not sent, so it
-makes no share copy unless `--share` asks for one, which doubles its speed
-(a share copy is a second hardware encode of every frame). The page (`player/board.ts`) reads the
+makes no share copy unless `--share` asks for one, which doubles its time:
+a share copy is a second hardware encode of every frame, and the encoder is
+the limit (In Its Order's Board, 13197 frames drawn fresh on the M4 Pro,
+2026-10-26: 59.6 s without the share copy, 117.3 s with it). `--share-only`
+writes the share copy alone, no master: one encode a frame, so the time of
+a render without the share copy (59.2 s), and the share copy a render with
+the master makes, its video packets byte for byte. `screening publish
+<film> board` renders it.
+The page (`player/board.ts`) reads the
 board and every kept try from its server (`boardFile`,
 `/films/<film>/board.json`, `/films/<film>/board/<file>`) and decodes them
 before the first frame; one it cannot read fails the render
@@ -794,17 +812,25 @@ anti-aliased edges of ink and text). Films render on the owner's Macs only.
 on macOS: no `--disable-gpu`, exec'd by the launcher, and spawned again the
 same way.
 
-|                  | Hardware (the default)                                     | Software (`--encoder software`)                                    |
-| ---------------- | ---------------------------------------------------------- | ------------------------------------------------------------------ |
-| Chromium flags   | `--enable-gpu --use-angle=metal`, through the GPU launcher | the same (`launchArgs`, `tools/browser.ts`)                        |
-| master           | quantizer 16 (~37 Mbps)                                    | 37 Mbps variable, 2-frame pre-roll (13.4 Mbps, 765 MB for 7.6 min) |
-| share            | quantizer 26, in the page (~160 MB)                        | none (`--share` is refused)                                        |
-| encoders at once | 14 (past it the encoder hangs)                             | one per core                                                       |
-| default pages    | 6                                                          | 8, or half the cores below 16                                      |
+|                  | Hardware (the default)                                         | Software (`--encoder software`)                                    |
+| ---------------- | -------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Chromium flags   | `--enable-gpu --use-angle=metal`, through the GPU launcher     | the same (`launchArgs`, `tools/browser.ts`)                        |
+| master           | quantizer 16 (~37 Mbps)                                        | 37 Mbps variable, 2-frame pre-roll (13.4 Mbps, 765 MB for 7.6 min) |
+| share            | quantizer 26, in the page (~160 MB); alone with `--share-only` | none (`--share`, `--share-only` refused)                           |
+| encoders at once | 14 (past it the encoder hangs)                                 | one per core                                                       |
+| default pages    | 4                                                              | 8, or half the cores below 16                                      |
 
 `SETTINGS` (`player/encode.ts`) holds both columns; the hardware one
 (quantizer 16/26, prefer-hardware, a key frame every 2 s, latency mode
 quality) is the look the films were made in.
+
+The hardware encoder is one engine, whatever the sessions: on the M4 Pro it
+encodes about 222 frames a second of 1080p in all of them together. In Its
+Order's Board (13197 frames drawn fresh, draw about 4 ms a frame, 2026-10-26)
+rendered with its share copy at 112.5, 111.5 and 111.2 fps on 4, 2 and 6
+pages, and without it at 221.5 fps; so more pages buy a cheap draw nothing,
+and a render's time is about its frames times the copies it encodes over 222. HEVC was no faster (206 fps for the share copy alone); a 720p share
+copy was (346 fps), but changes the copy's pixels.
 
 ### Software master: the pre-roll
 

@@ -6,9 +6,11 @@
 // A segment's key hashes:
 //
 // - the render's settings: the picture's size, its fps, the scale, the
-//   encoder, whether the page makes the share copy, the captions, the
-//   picture (scenes, Board, Board with its burn-in), the browser and the
-//   platform;
+//   encoder, the captions, the picture (scenes, Board, Board with its
+//   burn-in), the browser and the platform; not the copies it encodes
+//   (`Copies`): each copy is encoded alike whatever is encoded beside it, so
+//   a segment's record says which it holds, and a render reuses one that
+//   holds every copy it writes;
 // - its frames, first and past-last;
 // - the key of each beat its frames fall in (`Stamps`, tools/stamp.ts): the
 //   beat's sources, the film's frame and the engine (the player and the
@@ -36,6 +38,7 @@ import {
 } from 'effect';
 import type { PlatformError } from 'effect/PlatformError';
 import { PanelText, shownTry } from '../core/board.ts';
+import { type Copies, hasMaster, hasShare } from '../core/encoder.ts';
 import { Shot } from '../core/animatic.ts';
 import { type ShotSeen, shotsSeen } from '../core/board-render.ts';
 import type { Placed } from '../core/layout.ts';
@@ -50,8 +53,6 @@ export interface RenderRead {
   readonly fps: number;
   readonly scale: number;
   readonly encoder: string;
-  /** The page makes the share copy beside the master (`sharesInPage`). */
-  readonly share: boolean;
   readonly captions: boolean;
   /** The export page's picture words (`pictureParams`). */
   readonly picture: ReadonlyArray<string>;
@@ -109,7 +110,6 @@ const SegmentKeyInput = Schema.fromJsonString(
       fps: Schema.Finite,
       scale: Schema.Finite,
       encoder: Schema.String,
-      share: Schema.Boolean,
       captions: Schema.Boolean,
       picture: Schema.Array(Schema.String),
       agent: Schema.String,
@@ -244,11 +244,11 @@ export const beatSegments = (input: SegmentsInput): ReadonlyArray<Segment> => {
 /** Where a film's segments are kept: `out/<film>/cache/segments`, a folder its catalogue never lists. */
 export const segmentsFolder = (project: string): string => `${project}/cache/segments`;
 
-/** A chunk of a kept segment: its frames, and its files' names in the segment's folder. */
+/** A chunk of a kept segment: its frames, and the names of the copies it holds in the segment's folder. */
 const KeptChunk = Schema.Struct({
   from: Schema.Int,
   to: Schema.Int,
-  master: Schema.String,
+  master: Schema.OptionFromOptionalKey(Schema.String),
   share: Schema.OptionFromOptionalKey(Schema.String),
 });
 type KeptChunk = typeof KeptChunk.Type;
@@ -299,11 +299,20 @@ const writeRecord = (
   return writeWhole(fs, file, (partial) => fs.writeFileString(partial, record));
 };
 
+/** Whether every chunk of a segment holds each of `copies`. */
+const holdsAll = (chunks: ReadonlyArray<KeptChunk>, copies: Copies): boolean =>
+  chunks.every(
+    (c) =>
+      (!hasMaster(copies) || Option.isSome(c.master)) &&
+      (!hasShare(copies) || Option.isSome(c.share)),
+  );
+
 /**
  * Segment `key`'s chunks as kept under `folder`, their files by path, its
  * record marked used at `used`, or at the mark it holds when that is later
  * (a mark never goes back); none when it was never kept whole (no record),
- * or a file it lists is gone. The render calls it holding the film's cache
+ * a chunk of it lacks one of `copies` (the copies the render writes), or a
+ * file it lists is gone. The render calls it holding the film's cache
  * (`holdCache`), so no prune runs between the mark and the join.
  */
 export const reuseSegment = (
@@ -311,6 +320,7 @@ export const reuseSegment = (
   path: Path.Path,
   folder: string,
   key: string,
+  copies: Copies,
   used: number,
 ): Effect.Effect<Option.Option<ReadonlyArray<KeptChunk>>, PlatformError> =>
   Effect.gen(function* () {
@@ -319,12 +329,13 @@ export const reuseSegment = (
     if (!(yield* fs.exists(record))) return Option.none();
     const read = Schema.decodeOption(KeptSegmentJson)(yield* fs.readFileString(record));
     if (Option.isNone(read)) return Option.none();
+    if (!holdsAll(read.value.chunks, copies)) return Option.none();
     const chunks = read.value.chunks.map((c) => ({
       ...c,
-      master: path.join(dir, c.master),
+      master: Option.map(c.master, (m) => path.join(dir, m)),
       share: Option.map(c.share, (s) => path.join(dir, s)),
     }));
-    const files = chunks.flatMap((c) => [c.master, ...Option.toArray(c.share)]);
+    const files = chunks.flatMap((c) => [...Option.toArray(c.master), ...Option.toArray(c.share)]);
     const there = yield* Effect.forEach(files, (file) => fs.exists(file));
     if (!there.every(Boolean)) return Option.none();
     const later = Math.max(
@@ -337,16 +348,21 @@ export const reuseSegment = (
 
 /**
  * Segment `key` recorded as kept under `folder`, its `chunks` (files named
- * by `keptNames`, already in its folder) in frame order, used at `used`.
- * Written last and whole, so a segment is found only once every chunk of it
- * is there.
+ * by `keptNames`, already in its folder: its master and its share copy where
+ * each says it holds one) in frame order, used at `used`. Written last and
+ * whole, so a segment is found only once every chunk of it is there.
  */
 export const keepSegment = (
   fs: FileSystem.FileSystem,
   path: Path.Path,
   folder: string,
   key: string,
-  chunks: ReadonlyArray<{ readonly from: number; readonly to: number; readonly share: boolean }>,
+  chunks: ReadonlyArray<{
+    readonly from: number;
+    readonly to: number;
+    readonly master: boolean;
+    readonly share: boolean;
+  }>,
   used: number,
 ): Effect.Effect<void, PlatformError> =>
   writeRecord(
@@ -354,15 +370,15 @@ export const keepSegment = (
     path,
     folder,
     key,
-    chunks.map((c) => ({
-      from: c.from,
-      to: c.to,
-      master: keptNames(c.from, c.to).master,
-      share: Option.map(
-        Option.liftPredicate(c.share, Boolean),
-        () => keptNames(c.from, c.to).share,
-      ),
-    })),
+    chunks.map((c) => {
+      const names = keptNames(c.from, c.to);
+      return {
+        from: c.from,
+        to: c.to,
+        master: Option.map(Option.liftPredicate(c.master, Boolean), () => names.master),
+        share: Option.map(Option.liftPredicate(c.share, Boolean), () => names.share),
+      };
+    }),
     used,
   );
 

@@ -465,6 +465,7 @@ const renderScenes = <E, R>(renderLayer: Layer.Layer<Renderer, E, R>) =>
               scale: Option.some(input.scale),
               out: Option.none(),
               share: Option.some(input.share),
+              shareOnly: false,
               encoder: input.encoder,
               server: Option.none(),
               board: false,

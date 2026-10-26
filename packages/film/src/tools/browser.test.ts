@@ -34,7 +34,7 @@ describe('framePage', () => {
 
   test("a refused call is the call's own error, from its arguments", () => {
     const page = pageAnswering(Effect.fail(CallRefused.make({ reason: 'timed out' })));
-    const call = page.call('encode', 240, 480, 1, false, { _tag: 'Software' });
+    const call = page.call('encode', 240, 480, 1, 'master', { _tag: 'Software' });
     expect(Effect.runSync(Effect.flip(call))).toEqual(
       EncodeFailed.make({ from: 240, to: 480, reason: 'timed out' }),
     );
