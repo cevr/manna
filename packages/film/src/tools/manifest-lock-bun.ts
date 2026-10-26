@@ -18,17 +18,30 @@
 // `out/` and the lab's `lab/`); and the lab's watch hears only the files a
 // build read and the mixes' tracks, so its making is heard as nothing. No
 // code of this process may open it but through SQLite: closing any other
-// handle on the file would let go of the process's locks on it.
+// handle on the file would let go of the process's locks on it. A lock file
+// that is a link is refused, so no lock is made or taken on a file
+// elsewhere; its folder may be reached through one.
 
-import { Database } from 'bun:sqlite';
+import { Database, constants } from 'bun:sqlite';
 import { Effect, Option, Result, Schema } from 'effect';
 import { type PlatformError, systemError } from 'effect/PlatformError';
+// oxlint-disable-next-line effect/noNodeBuiltinImport -- ManifestLock's Bun adapter: resolves its folder outside any Effect
+import { realpathSync } from 'node:fs';
 // oxlint-disable-next-line effect/noNodeBuiltinImport -- ManifestLock's Bun adapter: names its file outside any Effect
 import { basename, dirname, join } from 'node:path';
 import type { ManifestLockService } from './manifest-lock.ts';
 
 /** The lock file of the manifest at `file`: `.<name>.lock` beside it. */
 export const lockFile = (file: string): string => join(dirname(file), `.${basename(file)}.lock`);
+
+/**
+ * How the lock file is opened: read and written, made when it is not there,
+ * and refused when it is a link (`NOFOLLOW`), so no lock is made or taken on
+ * a file elsewhere. NOFOLLOW refuses a link anywhere in the name, so the
+ * file is opened by its folder's real path.
+ */
+const OPEN =
+  constants.SQLITE_OPEN_READWRITE | constants.SQLITE_OPEN_CREATE | constants.SQLITE_OPEN_NOFOLLOW;
 
 /** Whether SQLite refused because another connection holds the lock. */
 const isBusy = Schema.is(Schema.Struct({ code: Schema.Literal('SQLITE_BUSY') }));
@@ -48,7 +61,7 @@ export const bunManifestLock: ManifestLockService = {
     Effect.gen(function* () {
       const lock = lockFile(file);
       const db = yield* Effect.try({
-        try: () => new Database(lock, { create: true }),
+        try: () => new Database(join(realpathSync(dirname(lock)), basename(lock)), OPEN),
         catch: (cause) => refused(lock, cause),
       });
       const taken = Result.try(() => {
