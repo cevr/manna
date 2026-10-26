@@ -9,6 +9,7 @@ import { type CaptionStyle, type FilmSpec, type FinishStyle, createFilm, drawing
 import { recorder, withDom } from './fixtures/stand-in.ts';
 
 const spec = (finish: FinishStyle = {}, plate?: Partial<CaptionStyle>): FilmSpec => ({
+  fps: 30,
   title: 'probe',
   paper: { base: '#fff', tone: '#000', seed: 1 },
   shade: '#000',

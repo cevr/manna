@@ -9,6 +9,7 @@
 
 import { Effect, Result, Schema, type Scope } from 'effect';
 import { type Placed, sceneOf } from '../core/layout.ts';
+import { movedFrames, secondsAt } from '../core/time.ts';
 import { Short } from '../core/schema.ts';
 import {
   type ResolvedShort,
@@ -37,11 +38,16 @@ import {
 import type { Probe, ProbeSink } from './probe.ts';
 import { verticalHook } from './vertical.ts';
 
-/** A scene of the film on the short's clock: its start moved so its own clock reads the same. */
+/**
+ * A scene of the film on the short's clock: its first frame moved back by the
+ * whole frames its span lies later in the film (`shift`, `resolveShort`), so
+ * its own clock reads the same.
+ */
 const retimed = (film: Film, short: ResolvedShort): ReadonlyArray<Placed<SceneSpec>> =>
   short.spans.map((span, index) => {
     const p = Result.getOrThrow(sceneOf(film.placed, span.scene));
-    return { ...p, index, start: span.at - (span.from - p.start) };
+    const frame = p.frame - span.shift;
+    return { ...p, index, frame, start: secondsAt(frame, p.fps) };
   });
 
 /** Records the band's probe took, moved `dy` down onto the page, into `sink`. */
@@ -74,7 +80,7 @@ const onPage = (from: ProbeSink, sink: ProbeSink, dy: number) => {
  */
 export const createShort = (film: Film, declared: Short): Film => {
   const decoded = Schema.decodeSync(Short)(declared);
-  const short = Result.getOrThrow(resolveShort(film.placed, decoded, film.fps));
+  const short = Result.getOrThrow(resolveShort(film.placed, decoded));
   const page = shortPage(film.width);
   const band = bandOf(film);
   const k = pageScale(film.width);
@@ -133,7 +139,8 @@ export const createShort = (film: Film, declared: Short): Film => {
     const { sheet, grain, band: frame } = getAssets();
     const index = shortSpanAt(short, T);
     const span = short.spans[index] ?? short.spans[0];
-    const at = span.from + (T - span.at);
+    // A frame of the short is the frame of the film `shift` frames on, at the time `secondsAt` writes for it.
+    const at = movedFrames(T, span.shift, film.fps);
     const sink = opts.probe;
     // A probed frame (a check, never the export's draw) collects the band's records apart.
     const probed: ProbeSink | undefined = sink === undefined ? undefined : { texts: [], inks: [] };

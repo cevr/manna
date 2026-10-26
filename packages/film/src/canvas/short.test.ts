@@ -4,13 +4,16 @@
 // Making the page needs no DOM, so bun can make one.
 
 import { describe, expect, test } from 'bun:test';
-import { Effect } from 'effect';
-import { type FilmSpec, createFilm } from './film.ts';
+import { Array as Arr, Effect, Option } from 'effect';
+import { recorder, withDom } from './fixtures/stand-in.ts';
+import { type Film, type FilmSpec, type Frame, createFilm } from './film.ts';
+import { secondsAt } from '../core/time.ts';
 import { SHORT_LAYOUT, bandOf } from '../core/shorts.ts';
 import { createShort, shortPages } from './short.ts';
 
 const draw = () => {};
 const spec: FilmSpec = {
+  fps: 30,
   title: 'probe',
   paper: { base: '#fff', tone: '#000', seed: 1 },
   shade: '#000',
@@ -75,6 +78,72 @@ describe('createShort', () => {
     );
     expect(createFilm({ ...spec }).look.short.caption.highlight).toBe('#e6b347');
   });
+
+  test.each([24, 30, 30000 / 1001])(
+    "hands each band frame the very time the film's own frame under it reads, at %p fps",
+    (fps) => {
+      // b opens the film; its cue `turn` starts on its frame 23, where at 30000/1001 a
+      // frame's seconds worked out another way differ in their last bit.
+      const turn = secondsAt(23, fps);
+      /** What each painter was handed: its scene, its time, and whether `turn` had begun. */
+      const seen = new Set<string>();
+      const noting = (id: string) => (f: Frame) => {
+        seen.add(`${id} ${f.t} ${f.at('turn') > 0}`);
+      };
+      const film = createFilm({
+        ...spec,
+        fps,
+        scenes: [
+          {
+            id: 'b',
+            min: 2,
+            timeline: { turn: { at: 'start', offset: turn, dur: 1 } },
+            draw: noting('b'),
+          },
+          {
+            id: 'a',
+            say: 'One two {three}three four {five}five six.',
+            timeline: { turn: { at: 'start', dur: 1 } },
+            draw: noting('a'),
+          },
+        ],
+      });
+      const short = createShort(film, {
+        id: 'cut',
+        title: 'A cut',
+        spans: [
+          { scene: 'a', from: { mark: 'three' }, to: { mark: 'five' } },
+          { scene: 'b', from: { at: 'start' }, to: { at: 'end' } },
+        ],
+      });
+      /** What frame `i` of `page`, at `fps`, hands its painters (a camera may draw a scene more than once). */
+      const handed = (page: Film, i: number) => {
+        seen.clear();
+        withDom(() => page.render(recorder(page.width, page.height).ctx, secondsAt(i, fps)));
+        return [...seen];
+      };
+      const frames = Math.round(short.duration * fps);
+      // The frames where two clocks part: each span's first and last two, and b's cue frame and its neighbours.
+      const b = Option.getOrThrow(Arr.findFirst(short.placed, (q) => q.spec.id === 'b'));
+      const edges = short.placed.flatMap((q) => [q.frame, q.frame + 1, q.frame - 1, q.frame - 2]);
+      const sampled = Arr.dedupe([
+        0,
+        ...edges,
+        ...[21, 22, 23, 24, 25].map((n) => b.frame + n),
+        frames - 1,
+      ]).filter((i) => i >= 0 && i < frames);
+      for (const i of sampled) {
+        // The film's frame under it: as far into the same beat as the short's frame is into its span's.
+        const p = short.sceneAt(secondsAt(i, fps));
+        const under = Arr.findFirst(film.placed, (q) => q.spec.id === p.spec.id);
+        const frame = i - p.frame + Option.getOrThrow(under).frame;
+        expect(handed(short, i)).toEqual(handed(film, frame));
+      }
+      // b's frame 23 is in the short, and draws `turn` not yet begun, as the film's does.
+      expect(handed(short, b.frame + 23)).toEqual([`b ${turn} false`]);
+      expect(handed(film, 23)).toEqual([`b ${turn} false`]);
+    },
+  );
 
   test('each short is a page under <film>/shorts/<id>', () => {
     const pages = shortPages('probe', Effect.succeed(film), [

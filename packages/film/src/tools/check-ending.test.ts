@@ -19,7 +19,7 @@ const level = (db: number, secs: number) =>
 
 describe('EndShort', () => {
   test('a film that ends on its last word has no tail and no end card', () => {
-    const found = endShort(Result.getOrThrow(layout(holdScenes, holdTimings)));
+    const found = endShort(Result.getOrThrow(layout(holdScenes, holdTimings, 30)));
     expect(found.map((f) => [f.part, f.secs])).toEqual([
       ['after the last word', expect.any(Number)],
       ['end card', 0],
@@ -29,12 +29,12 @@ describe('EndShort', () => {
 
   test('a silent last scene of 25 s is both the tail and the card', () => {
     const scenes: ReadonlyArray<Timed> = [...holdScenes, { id: 'end', min: 25 }];
-    expect(endShort(Result.getOrThrow(layout(scenes, holdTimings)))).toEqual([]);
+    expect(endShort(Result.getOrThrow(layout(scenes, holdTimings, 30)))).toEqual([]);
   });
 
   test('the check warns of it', () => {
     const film = testFilm(holdScenes, holdTimings);
-    const placed = Result.getOrThrow(layout(holdScenes, holdTimings));
+    const placed = Result.getOrThrow(layout(holdScenes, holdTimings, 30));
     const found = report(staticFindings(film, placed, NO_MASTER), { allowStale: false }).findings;
     expect(found.filter((r) => r.finding._tag === 'EndShort').map((r) => r.level)).toEqual([
       'warning',
@@ -56,9 +56,9 @@ describe('DeadAir', () => {
   ];
 
   test('a cue marked silence: true declares its span, and only it', () => {
-    expect(designedSilences(Result.getOrThrow(layout(scenes, { voice: '', scenes: {} })))).toEqual([
-      { from: 1, to: 3 },
-    ]);
+    expect(
+      designedSilences(Result.getOrThrow(layout(scenes, { voice: '', scenes: {} }, 30))),
+    ).toEqual([{ from: 1, to: 3 }]);
   });
 
   test('a quiet run over the limit is dead air, from its first quiet window', () => {

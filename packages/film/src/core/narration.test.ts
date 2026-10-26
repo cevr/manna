@@ -105,13 +105,18 @@ describe('narration', () => {
           { id: 'b', min: 4, draw },
         ],
         noTakes,
+        30,
       ),
     );
     const a = placed[0];
     const b = placed[1];
     expect(a?.start).toBe(0);
-    expect(a?.dur).toBeCloseTo(0.5 + (a?.voice.duration ?? 0) + 1);
-    expect(b?.start).toBeCloseTo(a?.dur ?? 0);
+    // a lasts its lead, words and tail to the nearest frame, and b starts on that frame.
+    const exact = 0.5 + (a?.voice.duration ?? 0) + 1;
+    expect(b?.frame).toBe(Math.round(exact * 30));
+    expect(a?.dur).toBe((b?.frame ?? 0) / 30);
+    expect(Math.abs((a?.dur ?? 0) - exact)).toBeLessThanOrEqual(1 / 60);
+    expect(b?.start).toBe((b?.frame ?? 0) / 30);
     expect(b?.dur).toBe(4);
   });
 });

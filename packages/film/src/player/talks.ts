@@ -18,6 +18,7 @@ import {
   transcriptHref,
 } from '../core/footage.ts';
 import {
+  TALK_FPS,
   Talk,
   type TalkCut,
   type TalkTake,
@@ -86,8 +87,9 @@ const loadTalk = (
     return { talk, takes, cut };
   });
 
-/** A talk's module as the films index loads it: the talk built, playing its mixed narration. */
+/** A talk's module as the films index loads it: its rate (`TALK_FPS`, as the tools lay a talk), and the talk built, playing its mixed narration. */
 interface TalkFilmModule {
+  readonly fps: number;
   readonly film: (narrated: { readonly audio: string }) => Film;
 }
 
@@ -110,6 +112,7 @@ export const talkFilms = <K extends string>(
         Effect.promise(load).pipe(
           Effect.flatMap((module) => loadTalk(id, module)),
           Effect.map((page): TalkFilmModule => ({
+            fps: TALK_FPS,
             film: (narrated) => ({
               ...createTalk(page.talk, page.takes, page.cut),
               audio: narrated.audio,

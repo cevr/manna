@@ -17,7 +17,7 @@ import type {
   NotesWait,
   Reply,
 } from './schema.ts';
-import { framesOf } from './time.ts';
+import { framesOf, secondsAt } from './time.ts';
 
 /**
  * Film seconds `local` into placed scene `p`: as it is while inside the scene;
@@ -27,7 +27,10 @@ import { framesOf } from './time.ts';
  */
 const inScene = (p: Pick<Placed, 'start' | 'dur'>, fps: number, local: number) => {
   if (local < p.dur) return p.start + local;
-  return Math.max(p.start, framesOf({ from: p.start, to: p.start + p.dur }, fps).last / fps);
+  return Math.max(
+    p.start,
+    secondsAt(framesOf({ from: p.start, to: p.start + p.dur }, fps).last, fps),
+  );
 };
 
 /**

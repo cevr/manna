@@ -27,6 +27,7 @@ export const testFilm = (
   timings: Timings,
   voice: Voice = testVoice,
 ): MeasuredFilm => ({
+  fps: 30,
   paths: {
     name: 'test',
     dir: '/films/test',

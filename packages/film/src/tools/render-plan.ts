@@ -53,12 +53,13 @@ export const Cut = Data.taggedEnum<Cut>();
 
 /**
  * Whether a video reuses the segments earlier renders drew (`segments.ts`):
- * not at all, or keyed by each beat's key (`SceneKeys.keys`), `fresh`
- * drawing every segment again and keeping it in place of the one kept.
+ * not at all, or keyed by each beat's key wherever it sits
+ * (`SceneKeys.beats`), `fresh` drawing every segment again and keeping it
+ * in place of the one kept.
  */
 export type Reuse = Data.TaggedEnum<{
   Off: {};
-  Keyed: { readonly scenes: ReadonlyMap<string, string>; readonly fresh: boolean };
+  Keyed: { readonly beats: ReadonlyMap<string, string>; readonly fresh: boolean };
 }>;
 export const Reuse = Data.taggedEnum<Reuse>();
 

@@ -8,7 +8,7 @@
 
 import { Array as Arr, Option, Order, Result } from 'effect';
 import { type Placed, filmEnd } from '../core/layout.ts';
-import { CLOCK_EPSILON, frameAtOrAfter } from '../core/time.ts';
+import { CLOCK_EPSILON, frameAtOrAfter, secondsAt } from '../core/time.ts';
 import type { Stretch } from '../core/acts.ts';
 import { type AddressError, resolveAddress } from '../core/address.ts';
 import type { Act } from '../core/schema.ts';
@@ -314,7 +314,7 @@ export const handSpans = (
   for (const [a, b] of pairs(frames)) {
     if (a.scene !== b.scene || !handsTravel(ownHands(a), ownHands(b))) continue;
     for (let frame = a.frame; frame <= b.frame; frame++)
-      if (!drawn.has(frame)) drawn.set(frame, { scene: a.scene, frame, T: frame / fps });
+      if (!drawn.has(frame)) drawn.set(frame, { scene: a.scene, frame, T: secondsAt(frame, fps) });
   }
   return Arr.sort(
     [...drawn.values()],

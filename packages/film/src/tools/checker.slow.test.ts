@@ -34,7 +34,10 @@ const scenes: ReadonlyArray<Timed> = [
   { id: 'b', min: 10, enter: { kind: 'fade', dur: 0.5 } },
 ];
 const film = testFilm(scenes, { voice: '', scenes: {} });
-const samples = layoutSamples(Result.getOrThrow(layout(scenes, film.timings)), testExportInfo.fps);
+const samples = layoutSamples(
+  Result.getOrThrow(layout(scenes, film.timings, 30)),
+  testExportInfo.fps,
+);
 
 const setup = (host: FakeRenderHost = {}, checked: LoadedFilm = film) => {
   const ledger = emptyLedger();
@@ -45,7 +48,7 @@ const setup = (host: FakeRenderHost = {}, checked: LoadedFilm = film) => {
         resolveAddress(
           {
             name: checked.paths.name,
-            placed: Result.getOrThrow(layout(checked.scenes, checked.timings)),
+            placed: Result.getOrThrow(layout(checked.scenes, checked.timings, 30)),
             look: Option.none(),
             shorts: [],
           },
@@ -98,7 +101,7 @@ describe('Checker', () => {
     'warns StaticHold on 5 s of speech with nothing moving; 3 s, or ambient motion, is fine',
     () =>
       Effect.gen(function* () {
-        const placed = Result.getOrThrow(layout(holdScenes, holdTimings));
+        const placed = Result.getOrThrow(layout(holdScenes, holdTimings, 30));
         const ambient = Option.getOrThrow(Arr.findFirst(placed, (p) => p.spec.id === 'ambient'));
         const fps = testExportInfo.fps;
         const inAmbient = (i: number) =>
@@ -196,11 +199,16 @@ describe('Checker.short', () => {
   };
   const info = { width: 1080, height: 1920, fps: 30, duration: 2, frames: 60 };
 
-  const setupShort = (host: FakeRenderHost, declared: Short = short, only = false) => {
+  const setupShort = (
+    host: FakeRenderHost,
+    declared: Short = short,
+    only = false,
+    loaded: typeof film = film,
+  ) => {
     const ledger = emptyLedger();
     const layer = Checker.layer.pipe(Layer.provide(fakeRenderHost(ledger, host)));
     const check = Effect.gen(function* () {
-      return yield* (yield* Checker).short(film, declared, {
+      return yield* (yield* Checker).short(loaded, declared, {
         workers: 2,
         zone: 'default',
         static: only,
@@ -209,21 +217,21 @@ describe('Checker.short', () => {
     return { ledger, check };
   };
 
-  it.live("resolves the short on its page's frame rate, as the renderer does", () =>
+  it.live("resolves the short on its film's declared rate, the one its page draws at", () =>
     Effect.gen(function* () {
-      // Scene a whole, on a 24 fps page: 10 s is 240 frames, not 300.
+      // Scene a whole, of a film declared at 24 fps: 10 s is 240 frames, not 300.
       const whole: Short = {
         id: 'cut',
         title: 'Cut',
         spans: [{ scene: 'a', from: { at: 'start' }, to: { at: 'end' } }],
       };
       const page = { width: 1080, height: 1920, fps: 24, duration: 10, frames: 240 };
-      const { ledger, check } = setupShort({ info: page }, whole);
+      const { ledger, check } = setupShort({ info: page }, whole, false, { ...film, fps: 24 });
       const findings = yield* check;
       expect(Math.max(...ledger.frames)).toBe(239);
       expect(findings).toContainEqual(expect.objectContaining({ _tag: 'ShortLength', length: 10 }));
-      // --static probes no frame, but reads the page's rate all the same.
-      const words = setupShort({ info: page }, whole, true);
+      // --static probes no frame, and resolves the short on the same rate.
+      const words = setupShort({ info: page }, whole, true, { ...film, fps: 24 });
       const only = yield* words.check;
       expect(words.ledger.frames).toEqual([]);
       expect(only.map((f) => f._tag)).toEqual(['ShortLength', 'ShortHook', 'ShortLoop']);

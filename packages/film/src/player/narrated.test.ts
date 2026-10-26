@@ -13,7 +13,7 @@ import { HttpClient, HttpClientError, HttpClientRequest, HttpClientResponse } fr
 import { createFilm } from '../canvas/film.ts';
 import { armFilm, armRig, armScene } from '../canvas/fixtures/arm.ts';
 import { countedRive } from '../canvas/fixtures/rive-counted.ts';
-import { NO_TAKES, loadNarrated, narratedFilms, narrationUrls } from './narrated.ts';
+import { NO_TAKES, type Narrated, loadNarrated, narratedFilms, narrationUrls } from './narrated.ts';
 
 const TIMINGS = '{"voice":"v","scenes":{}}';
 
@@ -93,6 +93,7 @@ describe('narratedFilms', () => {
       const moduleAsked = yield* Deferred.make<boolean>();
       const facesAsked = yield* Deferred.make<boolean>();
       const toy = createFilm({
+        fps: 30,
         title: 'toy',
         paper: { base: '#fff', tone: '#000', seed: 1 },
         shade: '#000',
@@ -101,7 +102,9 @@ describe('narratedFilms', () => {
       const films = narratedFilms(
         {
           rbf: () =>
-            Effect.runPromise(Effect.as(Deferred.succeed(moduleAsked, true), { film: () => toy })),
+            Effect.runPromise(
+              Effect.as(Deferred.succeed(moduleAsked, true), { fps: 30, film: () => toy }),
+            ),
         },
         Effect.andThen(
           Deferred.await(facesAsked),
@@ -123,13 +126,46 @@ describe('narratedFilms', () => {
     }),
   );
 
+  it.live("a film's page is made at the rate its module declares, or its load dies", () =>
+    Effect.gen(function* () {
+      const toy = { title: 'toy', paper: { base: '#fff', tone: '#000', seed: 1 }, shade: '#000' };
+      const scenes = [{ id: 'one', say: 'A line.', draw: () => undefined }];
+      const films = narratedFilms(
+        {
+          // Handed its rate with its narration, as a film's `film.ts` spreads it.
+          told: () =>
+            Promise.resolve({
+              fps: 24,
+              film: (n: Narrated) => createFilm({ ...n, ...toy, scenes }),
+            }),
+          // A page made at a rate of its own.
+          own: () =>
+            Promise.resolve({
+              fps: 24,
+              film: (n: Narrated) => createFilm({ ...n, ...toy, scenes, fps: 30 }),
+            }),
+        },
+        Effect.void,
+        answering(404).layer,
+      );
+      const told = yield* Effect.scoped(films.told);
+      expect([told.fps, told.placed[0]?.fps]).toEqual([24, 24]);
+      const own = yield* Effect.exit(Effect.scoped(films.own));
+      expect(Exit.hasDies(own)).toBe(true);
+      expect(String(Exit.isFailure(own) && own.cause)).toContain(
+        "own's film.ts makes its page at 30 fps, but declares 24 fps",
+      );
+    }),
+  );
+
   /** A registry of the arm's film (its one rig loaded by `rive`) and a film whose second rig cannot load. */
   const armFilms = (rive: ReturnType<typeof countedRive>['layer']) =>
     narratedFilms(
       {
-        arm: () => Promise.resolve({ film: () => armFilm([armScene('arm', 'webgl2')]) }),
+        arm: () => Promise.resolve({ fps: 30, film: () => armFilm([armScene('arm', 'webgl2')]) }),
         broken: () =>
           Promise.resolve({
+            fps: 30,
             film: () => {
               const arm = armRig('webgl2');
               const leg = { ...arm, key: 'leg', source: { ...arm.source, artboard: 'Leg' } };

@@ -280,6 +280,12 @@ export interface CallArgs {
   readonly still: readonly [i: number, view: StillView];
   /** Frame `i` drawn with the figure probe on: each rig it draws, its box on screen and its concept (`match`). */
   readonly figures: readonly [i: number];
+  /**
+   * Whether each of frames `[from, to)` reads the film's own seconds
+   * (`Film.filmTimed`), in order: a kept segment of frames that do not is
+   * found wherever its beat sits (tools/segments.ts).
+   */
+  readonly filmTimed: readonly [from: number, to: number];
 }
 
 /** A call's name. */
@@ -299,6 +305,7 @@ const Answers = {
   scenes: Schema.Array(SceneTimes),
   still: Schema.Uint8ArrayFromBase64,
   figures: Schema.Array(FigureMark),
+  filmTimed: Schema.Array(Schema.Boolean),
 } satisfies { readonly [K in ExportCall]: Schema.Top };
 
 /** Each call's answer as the page hands it back (bytes as base64). */

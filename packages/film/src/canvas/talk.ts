@@ -21,6 +21,7 @@ import {
   type TalkTake,
   talkPhrases,
 } from '../core/talk.ts';
+import { beatTime } from '../core/layout.ts';
 import { clamp, frameAtOrBefore } from '../core/time.ts';
 import { type Film, type FootageRead, type RenderOptions, createFilm } from './film.ts';
 import type { Probe } from './probe.ts';
@@ -158,7 +159,7 @@ export const createTalk = (
     return Option.map(Option.fromUndefinedOr(sections.get(p.spec.id)), (s) => ({
       ...s,
       p,
-      t: T - p.start,
+      t: beatTime(p, T),
     }));
   };
 

@@ -11,7 +11,7 @@ const scenes: ReadonlyArray<Timed> = [
   { id: 'd', min: 7 },
 ];
 const ids = scenes.map((s) => s.id);
-const placed = Result.getOrThrow(layout(scenes, { voice: '', scenes: {} }));
+const placed = Result.getOrThrow(layout(scenes, { voice: '', scenes: {} }, 30));
 
 const part = (from: string, name = from) => ({ from, name });
 

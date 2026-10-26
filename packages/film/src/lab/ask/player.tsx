@@ -21,7 +21,7 @@ import type { ReviewDuration, ReviewFile } from '../../core/review.ts';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';
 import * as Atom from 'effect/reactivity/Atom';
 import type { LabFailure } from '../api.ts';
-import { FILM_FPS, clock, timecode } from '../../core/time.ts';
+import { clock, timecode } from '../../core/time.ts';
 import { type Playable, playableOf } from '../../browser/media.ts';
 import { Actor } from '../actor.tsx';
 import { PlayIcon } from '../page-shell.tsx';
@@ -35,6 +35,7 @@ import {
   failureOf,
   reachOf,
   runningOf,
+  UNTIMED_FPS,
   syncMachine,
   syncAt,
 } from './sync-machine.ts';
@@ -337,7 +338,7 @@ const untimed = Atom.make(AsyncResult.initial<ReviewDuration, LabFailure>()).pip
 /**
  * Tell a clock (`send`) the frame rate of its video (`video`, none when it
  * has none): the rate the server reads from the video's own packets
- * (`ReviewDuration.fps`, as measured), once it answers; the film rate (`FILM_FPS`) while the answer is pending, or when
+ * (`ReviewDuration.fps`, as measured), once it answers; the guess (`UNTIMED_FPS`) while the answer is pending, or when
  * the video names none. Read in the page only (`timedHere`): nothing the
  * server renders counts frames past the clock's start, so its render never
  * waits on it.
@@ -354,7 +355,7 @@ const useClockRate = (
     () =>
       Option.getOrElse(
         Option.flatMap(AsyncResult.value(timed()), (t) => t.fps),
-        () => FILM_FPS,
+        () => UNTIMED_FPS,
       ),
     (fps) => send(SyncEvent.Timed({ fps })),
   );

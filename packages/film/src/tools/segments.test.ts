@@ -3,10 +3,15 @@
 // segment would.
 
 import { describe, expect, test } from 'bun:test';
-import { Option, Result } from 'effect';
+import { Option, Result, Schema } from 'effect';
+import { boardFilm } from '../canvas/board.ts';
+import type { CardStyle } from '../canvas/card.ts';
+import type { Film } from '../canvas/film.ts';
+import { recorder, withDom } from '../canvas/fixtures/stand-in.ts';
 import { type BoardFile, BoardName, type Panel, emptyBoard } from '../core/board.ts';
 import { boardShots } from '../core/board-render.ts';
-import { layout } from '../core/layout.ts';
+import { filmEnd, layout } from '../core/layout.ts';
+import { secondsAt } from '../core/time.ts';
 import { Segment as FileName } from '../core/segment.ts';
 import { type RenderRead, type Segment, beatSegments } from './segments.ts';
 
@@ -19,6 +24,7 @@ const placed = Result.getOrThrow(
       { id: 'c', min: 10 },
     ],
     { voice: '', scenes: {} },
+    30,
   ),
 );
 
@@ -34,7 +40,7 @@ const render: RenderRead = {
   platform: 'darwin',
 };
 
-const scenes = new Map([
+const beats = new Map([
   ['a', 'key-a'],
   ['b', 'key-b'],
   ['c', 'key-c'],
@@ -77,7 +83,8 @@ const boardSegments = (
     start: 0,
     end: 600,
     render: { ...render, ...more },
-    scenes,
+    beats,
+    filmTimed: () => true,
     board: Option.some({
       shots: boardShots(placed, board),
       duration: 20,
@@ -100,8 +107,9 @@ describe("a render's segments", () => {
       start: 100,
       end: 400,
       render,
-      scenes,
+      beats,
       board: Option.none(),
+      filmTimed: () => true,
     });
     expect(stretch.map(({ from, to }) => [from, to])).toEqual([
       [100, 150],
@@ -117,10 +125,18 @@ describe("a render's segments", () => {
   test("change a scene render's key only where the changed beat's frames are", () => {
     const of = (changed: ReadonlyMap<string, string>) =>
       keys(
-        beatSegments({ placed, start: 0, end: 600, render, scenes: changed, board: Option.none() }),
+        beatSegments({
+          placed,
+          start: 0,
+          end: 600,
+          render,
+          beats: changed,
+          board: Option.none(),
+          filmTimed: () => true,
+        }),
       );
-    const was = of(scenes);
-    const now = of(new Map([...scenes, ['b', 'key-b2']]));
+    const was = of(beats);
+    const now = of(new Map([...beats, ['b', 'key-b2']]));
     expect([now[0] === was[0], now[1] === was[1], now[2] === was[2]]).toEqual([true, false, true]);
   });
 
@@ -163,8 +179,9 @@ describe("a render's segments", () => {
           start: 0,
           end: 600,
           render,
-          scenes,
+          beats,
           board: Option.some({ shots: boardShots(placed, cards), duration: 20, images }),
+          filmTimed: () => true,
         }),
       );
     };
@@ -172,6 +189,33 @@ describe("a render's segments", () => {
     const now = carded('How then can man be just with God?');
     // c's card is seen from 9.75 s, its dissolve in over b's last quarter second.
     expect([now[0] === was[0], now[1] === was[1], now[2] === was[2]]).toEqual([true, false, false]);
+  });
+
+  test('are keyed at 30000/1001 fps, where a dissolve is an odd number of ticks', () => {
+    // Half a second at 29.97 fps is 14,985,015 ticks: each half of a dissolve is a whole tick under half.
+    const ntsc = 30000 / 1001;
+    const laid = Result.getOrThrow(
+      layout(
+        [
+          { id: 'a', min: 5 },
+          { id: 'b', min: 5 },
+          { id: 'c', min: 10 },
+        ],
+        { voice: '', scenes: {} },
+        ntsc,
+      ),
+    );
+    const segments = beatSegments({
+      placed: laid,
+      start: 0,
+      end: Math.ceil(20 * ntsc - 1e-6),
+      render: { ...render, fps: ntsc },
+      beats,
+      filmTimed: () => false,
+      board: Option.some({ shots: boardShots(laid, board), duration: 20, images }),
+    });
+    expect(segments.map(({ from }) => from)).toEqual([0, 150, 300]);
+    expect(segments.every((s) => Option.isSome(s.key))).toBe(true);
   });
 
   test('change every key when the render is drawn or encoded otherwise', () => {
@@ -193,9 +237,194 @@ describe("a render's segments", () => {
       start: 0,
       end: 600,
       render,
-      scenes: new Map([['a', 'key-a']]),
+      beats: new Map([['a', 'key-a']]),
       board: Option.none(),
+      filmTimed: () => true,
     });
     expect(segments.map((s) => Option.isSome(s.key))).toEqual([true, false, false]);
+  });
+});
+
+/**
+ * The film's whole Board with `a` lasting `seconds` (its key `aKey`), b and c
+ * after it as before, each frame reading the film's seconds where `timed`.
+ */
+const laid = (seconds: number, timed: (i: number) => boolean, aKey = 'key-a') => {
+  const film = Result.getOrThrow(
+    layout(
+      [
+        { id: 'a', min: seconds },
+        { id: 'b', min: 5 },
+        { id: 'c', min: 10 },
+      ],
+      { voice: '', scenes: {} },
+      30,
+    ),
+  );
+  return beatSegments({
+    placed: film,
+    start: 0,
+    end: Math.ceil((seconds + 15) * 30 - 1e-6),
+    render,
+    beats: new Map([...beats, ['a', aKey]]),
+    board: Option.some({ shots: boardShots(film, board), duration: seconds + 15, images }),
+    filmTimed: timed,
+  });
+};
+
+/** A card style whose payoff is underlined once heard. */
+const CARD: CardStyle = {
+  ground: '#0e1010',
+  type: { family: 'x', size: 60, color: '#f2e9d7' },
+  payoffScale: 2.5,
+  payoffColor: '#e6b347',
+  treatment: {
+    draw: (ctx, box, since) => ctx.fillRect(box.x, box.y + box.h, box.w * Math.min(1, since), 4),
+  },
+};
+
+/** c's one panel a card whose payoff is its line's `Hi`; a and b have none. */
+const carded: BoardFile = {
+  ...emptyBoard('f'),
+  panels: [
+    {
+      id: 'c.start',
+      beat: BoardName.make('c'),
+      at: BoardName.make('start'),
+      tries: [],
+      text: { _tag: 'Card', payoff: 'Hi' },
+    },
+  ],
+};
+
+/** Frames that read only their beats' and shots' times: a Board's panels. */
+const panels = () => false;
+/** Frames that read the film's seconds: every frame the film draws. */
+const drawn = () => true;
+
+describe('a segment moved by an earlier beat', () => {
+  test('is found again when its frames read only their beats, moved by whole frames', () => {
+    // a lasts half a second longer: 15 frames at 30 fps, so b and c start 15 frames later.
+    const was = laid(5, panels);
+    const now = laid(5.5, panels, 'key-a2');
+    expect(now.map(({ from, to }) => [from, to])).toEqual([
+      [0, 165],
+      [165, 315],
+      [315, 615],
+    ]);
+    // a changed; b's first quarter second dissolves in from a's shot, whose motion spans a's
+    // whole hold; c reads only b's shot and its own, each where it was from c's first frame.
+    expect(keys(now).map((k, i) => k === keys(was)[i])).toEqual([false, false, true]);
+    expect(now.map((s) => s.pinned)).toEqual([false, false, false]);
+  });
+
+  test('keeps its place in its key when its frames read the film’s seconds', () => {
+    const was = laid(5, drawn);
+    const now = laid(5.5, drawn, 'key-a2');
+    expect(keys(now).map((k, i) => k === keys(was)[i])).toEqual([false, false, false]);
+    expect(now.map((s) => s.pinned)).toEqual([true, true, true]);
+  });
+
+  test('is drawn again when the move is part of a frame: its frames fall elsewhere in its shots', () => {
+    const was = laid(5, panels);
+    const now = laid(5.01, panels, 'key-a2');
+    expect(keys(now)[2]).not.toBe(keys(was)[2]);
+  });
+
+  test('is cut where its frames start or stop reading the film’s seconds', () => {
+    const segments = laid(5, (i) => i >= 140 && i < 160);
+    expect(segments.map(({ from, to, pinned }) => [from, to, pinned])).toEqual([
+      [0, 140, false],
+      [140, 150, true],
+      [150, 160, true],
+      [160, 300, false],
+      [300, 600, false],
+    ]);
+  });
+
+  test.each([
+    [24, 12],
+    [30, 15],
+    [30000 / 1001, 15],
+  ])(
+    'paints each frame of a moved card as its key says at %p fps: the same key, the same calls',
+    (fps, moved) => {
+      // a lasts 3 s, then 3.5 s: c starts `moved` frames later (at 30000/1001, 14.985 frames
+      // of exact time, snapped to whole frames), and its card falls where its words are heard
+      // at seconds that differ in their last bits when worked out as a film second less a start.
+      const filmOf = (aSeconds: number) => {
+        const placed = Result.getOrThrow(
+          layout(
+            [
+              { id: 'a', say: 'Hi.', min: aSeconds },
+              { id: 'b', say: 'Hi.', min: 12.4 },
+              { id: 'c', say: 'Hi.', min: 10 },
+            ],
+            { voice: '', scenes: {} },
+            fps,
+          ),
+        );
+        const duration = filmEnd(placed);
+        const film: Film = Schema.decodeSync(Schema.Any)({
+          width: 1920,
+          height: 1080,
+          fps,
+          duration,
+          title: 'probe',
+          look: { card: { style: CARD } },
+          placed,
+          render: () => {},
+        });
+        const board = boardFilm(film, carded, new Map(), false);
+        const segments = beatSegments({
+          placed,
+          start: 0,
+          end: Math.round(duration * fps),
+          render: { ...render, fps },
+          beats: new Map([...beats, ['a', `key-a-${aSeconds}`]]),
+          board: Option.some({ shots: boardShots(placed, carded), duration, images }),
+          filmTimed: (i) => board.filmTimed?.(secondsAt(i, fps)) ?? true,
+        });
+        return { placed, board, card: segments.filter((s) => !s.pinned) };
+      };
+      /** Every call frame `i` of `board` makes on its canvas, in order. */
+      const callsAt = (board: Film, i: number) => {
+        const calls: Array<readonly [PropertyKey, ReadonlyArray<unknown>]> = [];
+        const r = recorder(1920, 1080, {
+          record: false,
+          onCall: (key, args) => calls.push([key, args]),
+        });
+        withDom(() => board.render(r.ctx, secondsAt(i, fps)));
+        return calls;
+      };
+      const was = filmOf(3);
+      const now = filmOf(3.5);
+      expect(now.placed.map((p) => p.frame - (was.placed[p.index]?.frame ?? 0))).toEqual([
+        0,
+        moved,
+        moved,
+      ]);
+      expect(was.card).toHaveLength(1);
+      const [before, after] = [was.card[0]!, now.card[0]!];
+      expect(after.from - before.from).toBe(moved);
+      expect(Option.getOrThrow(after.key)).toBe(Option.getOrThrow(before.key));
+      for (let k = 0; k < before.to - before.from; k++)
+        expect(callsAt(now.board, after.from + k)).toEqual(callsAt(was.board, before.from + k));
+    },
+  );
+
+  test('reads the beat of a shot it shows: a change to that beat alone draws it again', () => {
+    const was = laid(5, panels);
+    // b's shot dissolves into c's first quarter second: c's frames read b's beat (its line sets a card).
+    const now = beatSegments({
+      placed,
+      start: 0,
+      end: 600,
+      render,
+      beats: new Map([...beats, ['b', 'key-b2']]),
+      board: Option.some({ shots: boardShots(placed, board), duration: 20, images }),
+      filmTimed: panels,
+    });
+    expect(keys(now).map((k, i) => k === keys(was)[i])).toEqual([false, false, false]);
   });
 });

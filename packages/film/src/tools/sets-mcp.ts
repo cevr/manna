@@ -30,6 +30,7 @@ import {
   recordsUnder,
   refOf,
 } from './review.ts';
+import { widenRecord } from './segment-cache.ts';
 
 // ---------------------------------------------------------------------------
 // What the tools answer
@@ -425,6 +426,23 @@ export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
         reason: `the render names files its project folder ${at.dir} lacks: ${missing.join(', ')}`,
       });
     const render: Render = { ...given, at: yield* Clock.currentTimeMillis };
+    // A video made another way used none of the film's cache: its lead file
+    // (its master, else its share copy) keeps the render record it has, or
+    // gets an empty one, so `--days 0` is not refused for want of one.
+    const lead = Option.filter(
+      Option.orElse(render.files.clip, () => render.files.share),
+      () => render.kind === 'video',
+    );
+    yield* Option.match(lead, {
+      onNone: () => Effect.void,
+      onSome: (file) =>
+        refused(
+          widenRecord(at.dir, path.resolve(at.dir, file), [], render.at, []).pipe(
+            Effect.provideService(FileSystem.FileSystem, fs),
+            Effect.provideService(Path.Path, path),
+          ),
+        ),
+    });
     yield* refused(catalogues.record({ name: at.name, out: at.dir }, render));
     return { set: at.ref };
   }, Effect.ensuring(review.written));

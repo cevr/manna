@@ -7,7 +7,7 @@
 import { Array as Arr, Match, Option, Order, Result, Schema } from 'effect';
 import { MAIN_VARIANT, RenderVariantName } from './catalogue.ts';
 import type { Placed } from './layout.ts';
-import { framesOf } from './time.ts';
+import { framesOf, secondsAt } from './time.ts';
 
 /** A scene's clock as a look reads it: where it sits in the film, and its marks and cues in scene-local seconds. */
 export const SceneTimes = Schema.Struct({
@@ -229,7 +229,7 @@ export const momentOf = (
       const held = framesOf({ from: scene.start, to: scene.start + scene.dur }, fps);
       const [first, last] = [held.first, Math.max(held.first, held.last)];
       const frame = Math.min(last, Math.max(first, Math.round((scene.start + second) * fps)));
-      return { at: text, frame, time: frame / fps - scene.start };
+      return { at: text, frame, time: secondsAt(frame, fps) - scene.start };
     }),
   );
 

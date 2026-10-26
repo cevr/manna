@@ -10,10 +10,12 @@
 //   segment a render reads or draws, and two renders of one film take turns.
 // - Each video render records the keys it used for its lead file (its
 //   master, else its share copy), none when it keeps no segments
-//   (`renders/<id>.json`, `recordRender`). It removes the records of its
-//   master's and its share copy's files before it replaces them
-//   (`forgetRender`) and writes its own once done, so a record names what
-//   the newest render of its file used, or the file has none.
+//   (`renders/<id>.json`). Before it replaces its files it widens that
+//   record to name its keys beside the keys the records of both its files
+//   name (`widenRecord`); once done it writes its own keys alone
+//   (`recordRender`) and removes the other file's record (`forgetRender`).
+//   So a record names what the newest render of its file used, or, when
+//   that render stopped short, what it and the renders before it used.
 // - A segment goes when no render used it for the days given and no record
 //   names it, so a segment the newest render of an output used is kept at
 //   every `--days`, past the age prune too, while that render's record names
@@ -246,6 +248,39 @@ const RenderRecordJson = Schema.fromJsonString(
 const recordFile = (path: Path.Path, dir: string, target: string) =>
   path.join(dir, `${sha256Hex(path.resolve(target)).slice(0, 16)}.json`);
 
+/** The renders' records folder, made when it is not there, proven to be `<out>/cache/renders` itself. */
+const ownRenders = (fs: FileSystem.FileSystem, path: Path.Path, out: string) =>
+  Effect.gen(function* () {
+    const renders = path.join(yield* ownCache(fs, path, out), 'renders');
+    yield* fs.makeDirectory(renders, { recursive: true });
+    return yield* ownPath(fs, renders, renders);
+  });
+
+/** The record of the render of `target` in the renders' folder `dir`, written whole. */
+const writeRecord = (
+  fs: FileSystem.FileSystem,
+  path: Path.Path,
+  dir: string,
+  record: { readonly target: string; readonly at: number; readonly keys: ReadonlyArray<string> },
+) =>
+  Effect.gen(function* () {
+    const json = yield* Schema.encodeEffect(RenderRecordJson)(record);
+    const file = recordFile(path, dir, record.target);
+    yield* writeWhole(fs, file, (partial) => fs.writeFileString(partial, json));
+  });
+
+/** The keys the record of the render of `target` names, proven not a link; none when it has none or it does not read. */
+const keysOf = (fs: FileSystem.FileSystem, path: Path.Path, dir: string, target: string) =>
+  Effect.gen(function* () {
+    const file = recordFile(path, dir, target);
+    yield* notLink(fs, file);
+    if (!(yield* fs.exists(file))) return [];
+    return Option.match(Schema.decodeOption(RenderRecordJson)(yield* fs.readFileString(file)), {
+      onNone: () => [],
+      onSome: (record) => record.keys,
+    });
+  });
+
 /**
  * The render that wrote `target`, begun at `at`, recorded as having used
  * `keys` (none for a render that keeps no segments): `renders/<id>.json`,
@@ -264,18 +299,46 @@ export const recordRender = (
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const renders = path.join(yield* ownCache(fs, path, out), 'renders');
-    yield* fs.makeDirectory(renders, { recursive: true });
-    const dir = yield* ownPath(fs, renders, renders);
-    const record = yield* Schema.encodeEffect(RenderRecordJson)({ target, at, keys });
-    const file = recordFile(path, dir, target);
-    yield* writeWhole(fs, file, (partial) => fs.writeFileString(partial, record));
+    yield* writeRecord(fs, path, yield* ownRenders(fs, path, out), { target, at, keys });
   });
 
 /**
- * The record of the render of `target` removed, before a render replaces
- * that file: until its new one is written, no prune keeps by what an older
- * render of it used, and `--days 0` is refused (`CacheOutputUnrecorded`).
+ * The record of the render of `target` widened to name `keys` beside every
+ * key the records of `target` and of each of `others` name, begun at `at`:
+ * written before a render replaces those files, so a render stopped before
+ * its own record (`recordRender`) is written leaves both its segments and
+ * those of the renders before it named, and no prune removes either. With
+ * no `keys` and no `others`, a file with no record gets an empty one.
+ */
+export const widenRecord = (
+  out: string,
+  target: string,
+  others: ReadonlyArray<string>,
+  at: number,
+  keys: ReadonlyArray<string>,
+): Effect.Effect<
+  void,
+  PlatformError | CacheEscapes | Schema.SchemaError,
+  FileSystem.FileSystem | Path.Path
+> =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const dir = yield* ownRenders(fs, path, out);
+    const before = yield* Effect.forEach([target, ...others], (file) =>
+      keysOf(fs, path, dir, file),
+    );
+    yield* writeRecord(fs, path, dir, {
+      target,
+      at,
+      keys: Arr.dedupe([...before.flat(), ...keys]),
+    });
+  });
+
+/**
+ * The record of the render of `target` removed, once a render that replaced
+ * that file has recorded its lead file (`recordRender`): no prune keeps by
+ * what an older render of it used.
  */
 export const forgetRender = (
   out: string,
@@ -395,8 +458,8 @@ export const pruneHeld = (
     if (rule.days === 0 && cache.segments.length > 0) {
       if (!named.any) return yield* CacheUnrecorded.make({ folder: segmentsFolder(out) });
       const unrecorded = (yield* cataloguedVideos(out)).filter((clip) => !named.targets.has(clip));
-      const first = Arr.head(unrecorded);
-      if (Option.isSome(first)) return yield* CacheOutputUnrecorded.make({ output: first.value });
+      if (Arr.isArrayNonEmpty(unrecorded))
+        return yield* CacheOutputUnrecorded.make({ outputs: unrecorded });
     }
     const before = rule.now - rule.days * DAY_MS;
     // With 0 days a segment's age does not count: the records alone keep.

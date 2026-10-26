@@ -55,7 +55,10 @@ const run: ScoreOptions = {
 };
 
 const keyOf = (music: Music) =>
-  musicKey(music, Result.getOrThrow(musicPlan(music, Result.getOrThrow(layout(scenes, timings)))));
+  musicKey(
+    music,
+    Result.getOrThrow(musicPlan(music, Result.getOrThrow(layout(scenes, timings, 30)))),
+  );
 
 describe('Composer', () => {
   const setup = () => {
@@ -120,7 +123,7 @@ describe('Composer', () => {
       yield* composer.score(film, { ...run, dryRun: true });
       expect(calls.music).toEqual([]);
       const each = musicCredits(
-        Result.getOrThrow(musicPlan(piano, Result.getOrThrow(layout(scenes, timings)))),
+        Result.getOrThrow(musicPlan(piano, Result.getOrThrow(layout(scenes, timings, 30)))),
       );
       // Room for one option: the first is composed and tallied, the second refused.
       const over = yield* Effect.flip(

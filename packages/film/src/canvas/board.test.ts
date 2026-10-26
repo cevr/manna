@@ -12,7 +12,7 @@ import type { CardStyle } from './card.ts';
 import type { Film } from './film.ts';
 import { applyAffine, recorder, withDom } from './fixtures/stand-in.ts';
 import { Shot } from '../core/animatic.ts';
-import { boardFrameAt } from '../core/board-render.ts';
+import { boardClock, boardFrameAt } from '../core/board-render.ts';
 import { type BoardFile, BoardName, type Panel, emptyBoard } from '../core/board.ts';
 import { Segment } from '../core/segment.ts';
 import { layout } from '../core/layout.ts';
@@ -34,6 +34,7 @@ describe('a Board render', () => {
         { id: 'three', say: 'Be just with God.', min: 5 },
       ],
       { voice: '', scenes: {} },
+      30,
     ),
   );
   const panel = (id: string, extra: Partial<Panel>): Panel => ({
@@ -64,6 +65,7 @@ describe('a Board render', () => {
     const f: Film = Schema.decodeSync(Schema.Any)({
       width: 1920,
       height: 1080,
+      fps: 30,
       duration: 15,
       title: 'probe',
       look: { card: { style: STYLE } },
@@ -138,11 +140,12 @@ describe('a Board render', () => {
 
   test('covers the whole frame at either end of a push and a pan, a pan with a pixel to spare', () => {
     const one = Result.getOrThrow(
-      layout([{ id: 'one', say: 'A baby drinks milk.', min: 5 }], { voice: '', scenes: {} }),
+      layout([{ id: 'one', say: 'A baby drinks milk.', min: 5 }], { voice: '', scenes: {} }, 30),
     );
     const f: Film = Schema.decodeSync(Schema.Any)({
       width: 1920,
       height: 1080,
+      fps: 30,
       duration: 5,
       title: 'probe',
       look: { card: { style: STYLE } },
@@ -152,7 +155,10 @@ describe('a Board render', () => {
     /** The motion panel `id` moves by, alone over a 5 s hold. */
     const motionOf = (p: Panel) =>
       Option.getOrThrow(
-        boardFrameAt([Shot.Boarded({ beat: p.beat, panel: p, at: 0, from: 0 })], 5, 0),
+        boardFrameAt(
+          boardClock([Shot.Boarded({ beat: p.beat, panel: p, at: 0, from: 0 })], [], 5, 30),
+          0,
+        ),
       ).layers[0]!.motion;
     const candidates = Array.from({ length: 40 }, (_, k) => ({
       ...panel('one', { kept: 2 }),

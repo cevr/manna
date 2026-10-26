@@ -34,6 +34,7 @@ test('a scene drawn in 3D falls back in the stand-in, every frame drawn', () => 
     },
   });
   const film = createFilm({
+    fps: 30,
     title: 'gl',
     paper: { base: '#fff', tone: '#000', seed: 1 },
     shade: '#000',

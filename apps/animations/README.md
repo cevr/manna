@@ -213,9 +213,11 @@ cores only thrash. So a render that would need more fails with
 `TooManyEncoders` before it draws (hardware: at most 7 pages with the share
 copy, 14 without; software: one page a core). The count is per render: on the
 Mac two renders at once (say two `--variant`s) share the hardware, so keep their
-pages together within the same 14 or they can hang with no error. Each chunk lands in a folder of the render's own in the system's temp folder (`film-segments-*`, with `share/` on the hardware encoder)
-until the film is joined, then it goes: a video leaves no segments under `out/<film>/`, whatever its `--variant`
-(so two renders at once never share segments); a failed join leaves them. A video's audio
+pages together within the same 14 or they can hang with no error. A video of the film, an act, a scene or its Board keeps
+each segment it draws under `out/<film>/cache/segments/<key>/` and reuses one it finds kept
+(`packages/film/README.md`, "Reuse"). A short's or a wedge's chunks keep no segment: they land in a folder of the
+render's own in the system's temp folder (`film-segments-*`, with `share/` on the hardware encoder), which goes with
+the render, joined, failed or interrupted. A video's audio
 is encoded to AAC once, beside the pages, and the video and its share copy
 take the same packets. It comes from the film's track `narration/full.wav`, which must cover the
 whole film to within a frame before a frame is drawn (`AudioMissing` or
@@ -730,7 +732,9 @@ the framework loads each film's `narration/timings.json` and names its
 (`src/films/faces.ts`: each subset a woff2 under `assets/fonts`, imported
 from the script, `pictureFaces`), waiting for none of them, so no face holds
 a page's first paint or the film's bar (what draws the film, its canvas and
-its stills, waits for them), then calls the film's `film({ timings, audio })`; a
+its stills, waits for them), then calls the film's `film({ timings, audio, fps })`
+with the `fps` its `film.ts` exports (required: the tools lay the film at
+that rate too, and a render refuses a page drawn at another, `PageRateDiffers`); a
 film with no timings file yet is laid out on estimates, as the tools lay it
 out, and a timings file the page cannot read fails with
 `NarrationUnreadable`) apart from `pages`, what the player mounts: the films plus each short's page

@@ -1,16 +1,10 @@
 // Time is the only input to a frame. These helpers turn "seconds since the
 // scene began" into eased 0→1 progress values and keyframed numbers.
 
+import { Option } from 'effect';
 import type { EaseName } from './schema.ts';
 
 type Ease = (t: number) => number;
-
-/**
- * Frames a second a film draws at when its spec names no rate (`createFilm`).
- * The tools, which never load the film's page, resolve a short on it before
- * a render; the render resolves it again on the page's own rate.
- */
-export const FILM_FPS = 30;
 
 /** A timecode's fields: hours, minutes, seconds and the frame within the second, and its sign. */
 interface TimecodeParts {
@@ -47,7 +41,7 @@ export const frameRead = (seconds: number, fps: number): number => Math.round(se
  * second's first frame the first to start in it, so its timecode keeps to
  * the clock.
  */
-const timecodeParts = (seconds: number, fps: number = FILM_FPS): TimecodeParts => {
+const timecodeParts = (seconds: number, fps: number): TimecodeParts => {
   const frames = frameRead(Math.abs(seconds), fps);
   const perSecond = Math.max(1, Math.round(fps));
   const counted = countedWhole(fps);
@@ -68,7 +62,7 @@ const timecodeParts = (seconds: number, fps: number = FILM_FPS): TimecodeParts =
 };
 
 /** Seconds as every time the studio shows them: `HH:MM:SS:FF` at `fps` (`00:01:05:12`), `−` before zero. */
-export const timecode = (seconds: number, fps: number = FILM_FPS): string => {
+export const timecode = (seconds: number, fps: number): string => {
   const p = timecodeParts(seconds, fps);
   const sign = ['−'].filter(() => p.negative).join('');
   return `${sign}${p.hh}:${p.mm}:${p.ss}:${p.ff}`;
@@ -115,6 +109,52 @@ export const frameAtOrAfter = (t: number, fps: number): number => Math.ceil(t * 
 
 /** The last frame at or before `t` seconds, at `fps`. */
 export const frameAtOrBefore = (t: number, fps: number): number => Math.floor(t * fps + GRID_NUDGE);
+
+/**
+ * The film second frame `frame` is drawn at, at `fps`: the one conversion of
+ * a frame's index to seconds. A beat's start (`layout`), a render's and the
+ * player's frame, a still's and a short's frame on its film are each written
+ * by it, so `frameOn` reads every one of them back as its frame.
+ */
+export const secondsAt = (frame: number, fps: number): number => frame / fps;
+
+/**
+ * The frame whose time `t` seconds is at `fps`: a frame's time as
+ * `secondsAt` writes it, exactly; none for any other time (a preview's
+ * clock between frames, a cue's start sought).
+ */
+const frameOn = (t: number, fps: number): Option.Option<number> => {
+  const frame = frameRead(t, fps);
+  return Option.liftPredicate(frame, () => secondsAt(frame, fps) === t);
+};
+
+/**
+ * Second `t` moved by `frames` whole frames at `fps`. A frame's time
+ * (`frameOn`) moves to the time of the frame `frames` on, as `secondsAt`
+ * writes it, so it stays a frame's time; any other time moves by those
+ * frames' seconds. A beat's own clock (`beatTime`) and a short's film clock
+ * read a frame so.
+ */
+export const movedFrames = (t: number, frames: number, fps: number): number =>
+  Option.match(frameOn(t, fps), {
+    onSome: (frame) => secondsAt(frame + frames, fps),
+    onNone: () => t + secondsAt(frames, fps),
+  });
+
+/** How many ticks a frame holds on a Board's clock (`ticksAt`). */
+export const TICKS_PER_FRAME = 1_000_000;
+
+/**
+ * Film second `t` on a Board's clock at `fps`: a whole number of millionths
+ * of a frame. Two times moved by the same whole frames lie the same whole
+ * number of ticks apart, and an integer difference is exact, so a frame
+ * moved with its beat reads the very same numbers (`secondsOfTicks`) where a
+ * difference of seconds would differ in its last bits.
+ */
+export const ticksAt = (t: number, fps: number): number => Math.round(t * fps * TICKS_PER_FRAME);
+
+/** `n` ticks of a Board's clock at `fps` as seconds: the same `n`, the same seconds. */
+export const secondsOfTicks = (n: number, fps: number): number => n / (fps * TICKS_PER_FRAME);
 
 /** The frames that start inside `span` at `fps`: the first at or after its start, the last before its end. */
 export const framesOf = (span: Interval, fps: number) => ({

@@ -404,7 +404,7 @@ export const judge = Effect.fn('judge')(function* <TE, TR>(ask: JudgeAsk<TE, TR>
   );
 
   const now = yield* DateTime.now;
-  const moments = judgeMoments(scene);
+  const moments = judgeMoments(scene, loaded.fps);
   const atLeastOne = yield* Effect.fromOption(
     Option.liftPredicate(moments, Arr.isReadonlyArrayNonEmpty),
   ).pipe(

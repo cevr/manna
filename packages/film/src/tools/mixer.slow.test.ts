@@ -145,7 +145,7 @@ const setup = (
 };
 
 /** The film's length in frames: every track is exactly that long. */
-const frames = Math.round(filmEnd(Result.getOrThrow(layout(scenes, timings))) * MIX_RATE);
+const frames = Math.round(filmEnd(Result.getOrThrow(layout(scenes, timings, 30))) * MIX_RATE);
 
 describe('Mixer', () => {
   it.effect('a finished mix replaces the track with one the film’s length', () =>
@@ -164,7 +164,7 @@ describe('Mixer', () => {
       yield* mix();
       const stamp = yield* Schema.decodeEffect(MasterStampJson)(read(STAMP));
       // The film has no score or library sound to be missing: its plan is the one `mix` played.
-      const now = planOf(film, Result.getOrThrow(layout(scenes, timings)), {
+      const now = planOf(film, Result.getOrThrow(layout(scenes, timings, 30)), {
         score: Option.none(),
         inPlace: Option.none(),
       });
@@ -303,7 +303,7 @@ describe('Mixer: one variant in its sound’s place', () => {
     }),
     sounds,
   };
-  const placed = Result.getOrThrow(layout(scenes, timings));
+  const placed = Result.getOrThrow(layout(scenes, timings, 30));
   /** The key of the film's plan with `playable` at every placement of `sound`, none for its own. */
   const keyWith = (inPlace: Option.Option<{ sound: string; playable: Playable }>) =>
     mixKey(Result.getOrThrow(planOf(placing, placed, { score: Option.none(), inPlace })));

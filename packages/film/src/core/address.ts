@@ -20,7 +20,7 @@ import {
 import { type Placed, scenesOf } from './layout.ts';
 import type { Act, Look, Short } from './schema.ts';
 import { resolveShort } from './shorts.ts';
-import { FILM_FPS, type Interval } from './time.ts';
+import type { Interval } from './time.ts';
 
 export { Address, addressKey, addressOfKey, sceneAddress } from './address-schema.ts';
 
@@ -99,9 +99,9 @@ const inFilmOrder = (film: Addressable, ids: ReadonlySet<string>) =>
 
 /**
  * `address` resolved against `film`: its scenes, its span, the acts it
- * covers whole and its short. A short's spans are checked on the film's own
- * clock (`FILM_FPS`), so a misspelt scene, mark or cue fails before a page
- * opens; its page resolves it again on its own frame rate.
+ * covers whole and its short. A short's spans are checked on the frames the
+ * film was laid on (its declared rate), so a misspelt scene, mark or cue
+ * fails before a page opens, on the very frames its page draws.
  */
 export const resolveAddress = (
   film: Addressable,
@@ -174,7 +174,7 @@ export const resolveAddress = (
             }),
         ),
         (short) =>
-          Result.map(resolveShort(film.placed, short, FILM_FPS), (): Scope => ({
+          Result.map(resolveShort(film.placed, short), (): Scope => ({
             address: named,
             scenes: inFilmOrder(film, new Set(short.spans.map((s) => s.scene))),
             span: Option.none(),

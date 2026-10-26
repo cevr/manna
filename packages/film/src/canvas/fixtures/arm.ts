@@ -60,6 +60,7 @@ export type ArmPose = PoseOf<ReturnType<typeof armRig>>;
 /** A fixture film of `scenes`, four seconds each, at 1920 × 1080. */
 export const armFilm = (scenes: ReadonlyArray<SceneSpec>) =>
   createFilm({
+    fps: 30,
     title: 'arm',
     paper: { base: '#ffffff', tone: '#000000', seed: 1 },
     shade: '#000000',

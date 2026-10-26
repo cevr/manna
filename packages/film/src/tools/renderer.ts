@@ -54,7 +54,7 @@ import {
   shortPage,
   shortPieces,
 } from '../core/shorts.ts';
-import { FILM_FPS } from '../core/time.ts';
+import { secondsAt } from '../core/time.ts';
 import { type FramePage, type PageOpenError, makeBrowser } from './browser.ts';
 import { type MediaFailed } from '../core/refusals.ts';
 import {
@@ -68,12 +68,20 @@ import {
   type LookbookFailed,
   type PageCrashed,
   type PageError,
+  PageRateDiffers,
   RangeEmpty,
   type CacheEscapes,
   type TooManyEncoders,
 } from './errors.ts';
 import { writeWhole } from './content-store.ts';
-import { PRUNE_DAYS, forgetRender, holdCache, pruneHeld, recordRender } from './segment-cache.ts';
+import {
+  PRUNE_DAYS,
+  forgetRender,
+  holdCache,
+  pruneHeld,
+  recordRender,
+  widenRecord,
+} from './segment-cache.ts';
 import { sha256OfFile } from './digest.ts';
 import {
   type BoardRead,
@@ -201,10 +209,12 @@ type RenderError =
   | AudioMissing
   | AudioStale
   | RangeEmpty
+  | PageRateDiffers
   | TooManyEncoders
   | PlaceError
   | ShortError
   | CacheEscapes
+  | Schema.SchemaError
   | PlatformError;
 
 /**
@@ -268,12 +278,17 @@ interface RenderSession {
   readonly render: (film: LoadedFilm, job: RenderJob) => Effect.Effect<RenderOutput, RenderError>;
 }
 
-/** What one page says of a video before its pool opens: what it draws, and the encoder every page uses. */
+/**
+ * What one page says of a video before its pool opens: what it draws, which
+ * of its frames read the film's own seconds (`filmTimed`, from its first),
+ * and the encoder every page uses.
+ */
 interface Probed {
   readonly info: ExportInfo;
   readonly short: Option.Option<ResolvedShort>;
   readonly scale: number;
   readonly encoder: Encoder;
+  readonly filmTimed: ReadonlyArray<boolean>;
 }
 
 /**
@@ -307,9 +322,9 @@ const probeKey = (
 const reuseOf = (job: Extract<RenderJob, { _tag: 'Video' }>) =>
   Reuse.$match(job.reuse, {
     Off: () => Option.none(),
-    Keyed: ({ scenes, fresh }) =>
+    Keyed: ({ beats, fresh }) =>
       Option.liftPredicate(
-        { scenes, fresh },
+        { beats, fresh },
         () => Cut.$is('Whole')(job.cut) && Option.isNone(job.server),
       ),
   });
@@ -326,7 +341,7 @@ export interface Remuxed {
 
 /**
  * The film's master checked, before anything is drawn or cut, against the
- * film it must cover (`seconds`, to within `tolerance`) and the plan the film
+ * film it must cover (`seconds`, to within one of its frames) and the plan the film
  * mixes to now, its placed code sounds measured through the sound renderer:
  * that plan's key (none when it does not build).
  */
@@ -336,15 +351,27 @@ const masterChecked = (
   film: LoadedFilm,
   placed: ReadonlyArray<Placed>,
   seconds: number,
-  tolerance: number,
 ) =>
   Effect.gen(function* () {
     const master = yield* readMaster(fs, media, film.paths);
+    const tolerance = secondsAt(1, film.fps);
     const key = yield* planKey(film, placed).pipe(Effect.provideService(FileSystem.FileSystem, fs));
     const finding = masterFinding(masterFile(film.paths), master, { seconds, key }, tolerance);
     if (Option.isSome(finding)) return yield* finding.value;
     return key;
   });
+
+/**
+ * A page of `film` that draws at the rate the film declares, the one the
+ * tools laid it at (`LoadedFilm.fps`): else `PageRateDiffers`, before a frame
+ * is drawn, since its beats would start on frames the segment keys and the
+ * mix do not place them on.
+ */
+const declaredRate = (film: LoadedFilm, page: number) =>
+  Effect.when(
+    Effect.fail(PageRateDiffers.make({ film: film.paths.name, page, declared: film.fps })),
+    Effect.succeed(page !== film.fps),
+  );
 
 /** `pcm` cut at `pieces`, each join faded, and encoded to AAC once. */
 const cutTrack = (media: MediaService, pcm: Pcm, pieces: ReadonlyArray<FilmPiece>) =>
@@ -375,7 +402,7 @@ export const remuxer = Effect.fn('film.remuxer')(function* (film: LoadedFilm) {
   const fs = yield* FileSystem.FileSystem;
   const media = yield* Media;
   const placed = yield* placeFilm(film);
-  const mix = yield* masterChecked(fs, media, film, placed, filmEnd(placed), 1 / FILM_FPS);
+  const mix = yield* masterChecked(fs, media, film, placed, filmEnd(placed));
   const pcm = yield* media.decode(masterFile(film.paths));
   return Effect.fn('film.remux')(function* (video: Remuxed) {
     const track = yield* cutTrack(media, pcm, video.pieces);
@@ -414,13 +441,8 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
       const bytesWhole = (file: string, bytes: Uint8Array) =>
         writeWhole(fs, file, (partial) => fs.writeFile(partial, bytes));
 
-      const checkedMaster = (
-        film: LoadedFilm,
-        placed: ReadonlyArray<Placed>,
-        seconds: number,
-        tolerance: number,
-      ) =>
-        masterChecked(fs, media, film, placed, seconds, tolerance).pipe(
+      const checkedMaster = (film: LoadedFilm, placed: ReadonlyArray<Placed>, seconds: number) =>
+        masterChecked(fs, media, film, placed, seconds).pipe(
           Effect.provideService(SoundRender, sounds),
         );
       const trackOf = (cut: AudioCut) => trackCut(media, cut);
@@ -471,10 +493,10 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         });
 
       /** The short on a page's clock: the same spans, on the same frames, it draws. */
-      const shortOn = (placed: ReadonlyArray<Placed>, cut: Cut, fps: number) =>
+      const shortOn = (placed: ReadonlyArray<Placed>, cut: Cut) =>
         Cut.$match(cut, {
           Whole: () => Effect.succeedNone,
-          Short: ({ short }) => Effect.asSome(Effect.fromResult(resolveShort(placed, short, fps))),
+          Short: ({ short }) => Effect.asSome(Effect.fromResult(resolveShort(placed, short))),
         });
 
       const video = Effect.fnUntraced(function* (
@@ -490,7 +512,7 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         // sized from that choice before the pool opens.
         const platform = yield* Platform;
         const made = probeKey(page, job, platform);
-        const { info, short, scale, encoder } = yield* drawing.probe(
+        const { info, short, scale, encoder, filmTimed } = yield* drawing.probe(
           made,
           Effect.scoped(
             Effect.gen(function* () {
@@ -500,7 +522,8 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
                 server: job.server,
                 picture: job.picture,
               });
-              const found = yield* shortOn(placed, job.cut, first.info.fps);
+              yield* declaredRate(film, first.info.fps);
+              const found = yield* shortOn(placed, job.cut);
               // A short's page is 9:16 at the film's density: it encodes down to 1080 × 1920.
               const k = Option.match(found, {
                 onNone: () => job.scale,
@@ -510,7 +533,14 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
               // one of the encoders the render allows fails here.
               const candidates = encoderCandidates(job.encoder);
               const by = yield* first.use((one) => pageEncoder(one, k, job.copies, candidates));
-              const probed: Probed = { info: first.info, short: found, scale: k, encoder: by };
+              const timed = yield* first.use((one) => one.call('filmTimed', 0, first.info.frames));
+              const probed: Probed = {
+                info: first.info,
+                short: found,
+                scale: k,
+                encoder: by,
+                filmTimed: timed,
+              };
               return probed;
             }),
           ),
@@ -518,11 +548,14 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         const where: Where = { placed, short };
         const { start, end } = frameSpan(info, job.from, job.to);
         if (end <= start)
-          return yield* RangeEmpty.make({ from: start / info.fps, to: end / info.fps });
+          return yield* RangeEmpty.make({
+            from: secondsAt(start, info.fps),
+            to: secondsAt(end, info.fps),
+          });
         const total = end - start;
         const target = Option.getOrElse(job.out, () => clip);
         yield* fs.makeDirectory(path.dirname(target), { recursive: true });
-        const range = { from: start / info.fps, to: end / info.fps };
+        const range = { from: secondsAt(start, info.fps), to: secondsAt(end, info.fps) };
 
         // The film declares its track only once every take is recorded (a
         // short's page declares none: it plays the film's under its spans).
@@ -551,7 +584,7 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         const sound = yield* Option.match(audio, {
           onNone: () => Effect.succeedNone,
           onSome: (cut) =>
-            checkedMaster(film, where.placed, seconds, 1 / info.fps).pipe(
+            checkedMaster(film, where.placed, seconds).pipe(
               Effect.map((mix): RenderSound => ({ mix, pieces: cut.pieces })),
               Effect.asSome,
             ),
@@ -600,7 +633,9 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         // frames as one segment and keeps none.
         const keeping = reuseOf(job);
         const folder = segmentsFolder(film.paths.out);
-        const whole: ReadonlyArray<Segment> = [{ from: start, to: end, key: Option.none() }];
+        const whole: ReadonlyArray<Segment> = [
+          { from: start, to: end, key: Option.none(), pinned: true },
+        ];
         /** How every frame is drawn and encoded: what each segment's key holds beside its beats. */
         const read: RenderRead = {
           width: info.width,
@@ -615,10 +650,19 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         };
         const segments = yield* Option.match(keeping, {
           onNone: () => Effect.succeed(whole),
-          onSome: ({ scenes }) =>
+          onSome: ({ beats }) =>
             boardOf(film, job.picture, placed, info.duration).pipe(
               Effect.map((board) =>
-                beatSegments({ placed, start, end, scenes, board, render: read }),
+                beatSegments({
+                  placed,
+                  start,
+                  end,
+                  beats,
+                  board,
+                  render: read,
+                  // A frame the page did not answer for is taken to read the film's seconds: its key holds its place.
+                  filmTimed: (i) => filmTimed[i] ?? true,
+                }),
               ),
               // A Board it cannot read draws every frame: the page names what it cannot read.
               Effect.catch((error) =>
@@ -673,19 +717,21 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         const toDraw = chunks.reduce((sum, chunk) => sum + chunk.to - chunk.from, 0);
         if (Option.isSome(keeping))
           yield* Effect.log(
-            `render.reuse segments=${segments.length} drawn=${missing.length} frames_drawn=${toDraw} fresh=${fresh}`,
+            `render.reuse segments=${segments.length} unpinned=${segments.filter((s) => !s.pinned).length} drawn=${missing.length} frames_drawn=${toDraw} fresh=${fresh}`,
           );
-        /** Where a chunk's files go: its segment's kept folder, else this render's own. */
+        /** Where a chunk's files go: its segment's kept folder, named by its frames from the segment's first, else this render's own. */
         const filesOf = (chunk: SegmentChunk) =>
           Option.match(
-            Option.flatMap(Option.fromUndefinedOr(missing[chunk.segment]), (s) => s.key),
+            Option.flatMap(Option.fromUndefinedOr(missing[chunk.segment]), (s) =>
+              Option.map(s.key, (key) => ({ key, from: s.from })),
+            ),
             {
               onNone: () => ({
                 master: path.join(segDir, segmentName(chunk)),
                 share: path.join(shareDir, segmentName(chunk)),
               }),
-              onSome: (key) => {
-                const names = keptNames(chunk.from, chunk.to);
+              onSome: ({ key, from }) => {
+                const names = keptNames(chunk.from - from, chunk.to - from);
                 const dir = keptFolder(folder, key);
                 return { master: path.join(dir, names.master), share: path.join(dir, names.share) };
               },
@@ -758,7 +804,8 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
 
         // One structured run: the first failure, a page's or the track's, stops the other.
         const [encoded, track] = yield* Effect.all([drawAll, aac], { concurrency: 'unbounded' });
-        // Each segment drawn whole is kept: its record written once all its chunks are there.
+        // Each segment drawn whole is kept: its record written once all its chunks are there, their
+        // frames counted from its first so it joins wherever it sits next.
         yield* Effect.forEach(missing, (segment, k) =>
           Option.match(segment.key, {
             onNone: () => Effect.void,
@@ -771,8 +818,8 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
                 encoded
                   .filter((e) => e.chunk.segment === k)
                   .map((e) => ({
-                    from: e.chunk.from,
-                    to: e.chunk.to,
+                    from: e.chunk.from - segment.from,
+                    to: e.chunk.to - segment.from,
                     master: Option.isSome(e.master),
                     share: Option.isSome(e.share),
                   })),
@@ -780,18 +827,23 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
               ),
           }),
         );
-        /** Every chunk of the render in frame order, kept or drawn: its files and its first frame. */
-        const all = segments.flatMap((_, at) =>
+        /** Every chunk of the render in frame order, kept or drawn: its files and its first frame in the film. */
+        const all = segments.flatMap((segment, at) =>
           Option.match(kept[at] ?? Option.none(), {
+            // A kept chunk's frames count from its segment's first: it plays where the segment now starts.
             onSome: (chunks) =>
-              chunks.map((c) => ({ from: c.from, master: c.master, share: c.share })),
+              chunks.map((c) => ({
+                from: segment.from + c.from,
+                master: c.master,
+                share: c.share,
+              })),
             onNone: () =>
               encoded
                 .filter((e) => missing[e.chunk.segment]?.at === at)
                 .map((e) => ({ from: e.chunk.from, master: e.master, share: e.share })),
           }),
         );
-        const atOf = (from: number) => (from - start) / info.fps;
+        const atOf = (from: number) => secondsAt(from - start, info.fps);
         /** The master at `target`, when the render writes one. */
         const masterAt = Option.filter(Option.some(target), () => hasMaster(copies));
         /** The share copy beside it, when the render writes one (the hardware encoder's, made in the page). */
@@ -801,13 +853,20 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
           onTrue: () => target,
           onFalse: () => shareName(target),
         });
-        // The records of the files it replaces go before they are replaced
-        // (under the cache's lock when the render keeps segments), so no
-        // prune keeps by what an older render of them used; its own is
-        // written once done.
-        yield* Effect.forEach([target, shareName(target)], (file) =>
-          onDisk(forgetRender(film.paths.out, file)),
-        );
+        /** The other file a render of `target` records: its share copy when it leads with its master, else its master. */
+        const other = Bool.match(hasMaster(copies), {
+          onTrue: () => shareName(target),
+          onFalse: () => target,
+        });
+        /** The key of every segment the render used. */
+        const keys = segments.flatMap((s) => Option.toArray(s.key));
+        // Before it replaces its files (under the cache's lock when it keeps
+        // segments), the render widens its lead file's record to name its
+        // keys beside the keys the records of both its files name: stopped
+        // or failed from here on, it leaves no segment of its own or of the
+        // renders before it unnamed. A widen that fails fails the render
+        // before any file is replaced.
+        yield* onDisk(widenRecord(film.paths.out, lead, [other], used, keys));
         /** One copy's chunks, picked by `copy`, joined in order with the track into `out`. */
         const joined =
           (copy: (c: (typeof all)[number]) => Option.Option<string>) => (out: string) =>
@@ -888,13 +947,17 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         );
         // Once done (still holding the cache when it keeps segments), the
         // render records the keys it used for its lead file (its master, else
-        // its share copy), none when it keeps none. One that keeps segments
-        // then prunes the film's: each no render used for PRUNE_DAYS and no
-        // record names goes. A record or a
-        // prune that fails leaves the render done; a file left with no record
-        // has `--days 0` refused until it is rendered again.
-        const keys = segments.flatMap((s) => Option.toArray(s.key));
-        yield* onDisk(recordRender(film.paths.out, lead, used, keys)).pipe(
+        // its share copy), none when it keeps none, then removes the other
+        // file's record. One that keeps segments then prunes the film's: each
+        // no render used for PRUNE_DAYS and no record names goes. A record or
+        // a prune that fails leaves the render done, its widened record
+        // standing.
+        yield* onDisk(
+          Effect.andThen(
+            recordRender(film.paths.out, lead, used, keys),
+            forgetRender(film.paths.out, other),
+          ),
+        ).pipe(
           Effect.catch((error) =>
             Effect.logWarning(`render.cache.record failed file=${lead} reason="${error.message}"`),
           ),
@@ -962,8 +1025,11 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         // Clipped to the film as a video's range is, so no frame repeats at either end.
         const { start, end } = frameSpan(info, job.from, job.to);
         if (end <= start)
-          return yield* RangeEmpty.make({ from: start / info.fps, to: end / info.fps });
-        const times = contactTimes(start / info.fps, end / info.fps, job.every);
+          return yield* RangeEmpty.make({
+            from: secondsAt(start, info.fps),
+            to: secondsAt(end, info.fps),
+          });
+        const times = contactTimes(secondsAt(start, info.fps), secondsAt(end, info.fps), job.every);
         const sheet = path.join(dir, contactSheetName);
         yield* bytesWhole(
           sheet,
@@ -979,7 +1045,10 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         return imagesOutput(
           'contact',
           [sheet],
-          Option.liftPredicate({ from: start / info.fps, to: end / info.fps }, () => ranged),
+          Option.liftPredicate(
+            { from: secondsAt(start, info.fps), to: secondsAt(end, info.fps) },
+            () => ranged,
+          ),
         );
       });
 
@@ -1018,8 +1087,9 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
                   server: job.server,
                   picture: job.picture,
                 });
+                yield* declaredRate(film, pool.info.fps);
                 // A short's spans must resolve on the page's frames, as a video's do.
-                yield* shortOn(placed, cut, pool.info.fps);
+                yield* shortOn(placed, cut);
                 return yield* run(pool);
               }),
             );

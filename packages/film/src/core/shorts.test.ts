@@ -34,6 +34,7 @@ const placed = Result.getOrThrow(
       { id: 'b', say: 'Seven {eight}eight nine ten.', draw },
     ],
     noTakes,
+    30,
   ),
 );
 const a = Option.getOrThrow(Arr.get(placed, 0));
@@ -51,8 +52,7 @@ const spanOf = (cut: ResolvedShort, i: number) => Option.getOrThrow(Arr.get(cut.
 const lengthOf = (span: { readonly from: number; readonly to: number }) => span.to - span.from;
 
 const short = (spans: Short['spans']): Short => ({ id: 'cut', title: 'A cut', spans });
-const resolved = (spans: Short['spans']) =>
-  Result.getOrThrow(resolveShort(placed, short(spans), fps));
+const resolved = (spans: Short['spans']) => Result.getOrThrow(resolveShort(placed, short(spans)));
 
 /** The failure's tag, or `ok`. */
 const outcome = <A, E extends { readonly _tag: string }>(r: Result.Result<A, E>) =>
@@ -104,10 +104,10 @@ describe('shorts', () => {
       source: 'elevenlabs' as const,
     };
     const film = Result.getOrThrow(
-      layout([{ id: 'a', say, lead: 0.5, draw }], { voice: 'v', scenes: { a: take } }),
+      layout([{ id: 'a', say, lead: 0.5, draw }], { voice: 'v', scenes: { a: take } }, 30),
     );
     const p = Option.getOrThrow(Arr.get(film, 0));
-    const at = (spans: Short['spans']) => Result.getOrThrow(resolveShort(film, short(spans), fps));
+    const at = (spans: Short['spans']) => Result.getOrThrow(resolveShort(film, short(spans)));
     const voice = p.start + p.speechStart;
     // From the mark: the word's voice less the preroll, not its aligned 0.9.
     const marked = spanOf(at([{ scene: 'a', from: { mark: 'back' }, to: { at: 'speechEnd' } }]), 0);
@@ -130,7 +130,7 @@ describe('shorts', () => {
   });
 
   test('an unknown scene, mark or cue, or an empty span, fails naming what the film has', () => {
-    const tag = (spans: Short['spans']) => outcome(resolveShort(placed, short(spans), fps));
+    const tag = (spans: Short['spans']) => outcome(resolveShort(placed, short(spans)));
     expect(tag([{ scene: 'z', from: { at: 'start' }, to: { at: 'end' } }])).toBe('UnknownScene');
     expect(tag([{ scene: 'a', from: { mark: 'nope' }, to: { at: 'end' } }])).toBe('UnknownMark');
     expect(tag([{ scene: 'a', from: { at: 'start' }, to: { cue: 'nope' } }])).toBe('UnknownCue');
@@ -138,12 +138,12 @@ describe('shorts', () => {
       'ShortSpanEmpty',
     );
     const error = Result.match(
-      resolveShort(placed, short([{ scene: 'a', from: { mark: 'nope' }, to: { at: 'end' } }]), fps),
+      resolveShort(placed, short([{ scene: 'a', from: { mark: 'nope' }, to: { at: 'end' } }])),
       { onSuccess: () => '', onFailure: (e) => e.message },
     );
     expect(error).toBe('short "cut": scene "a" has no mark {nope}; its marks are {three} {five}');
     const scene = Result.match(
-      resolveShort(placed, short([{ scene: 'z', from: { at: 'start' }, to: { at: 'end' } }]), fps),
+      resolveShort(placed, short([{ scene: 'z', from: { at: 'start' }, to: { at: 'end' } }])),
       { onSuccess: () => '', onFailure: (e) => e.message },
     );
     expect(scene).toBe('short "cut": the film has no scene "z"; its scenes are a, b');

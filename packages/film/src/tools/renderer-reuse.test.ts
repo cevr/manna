@@ -7,6 +7,7 @@
 
 import { describe, expect, it } from 'effect-bun-test';
 import {
+  Array as Arr,
   Boolean as Bool,
   Cause,
   Clock,
@@ -22,7 +23,9 @@ import {
   Schema,
 } from 'effect';
 import { systemError } from 'effect/PlatformError';
-import { CacheBusy, CacheOutputUnrecorded, PageError } from './errors.ts';
+import { CacheBusy, PageError } from './errors.ts';
+import { MediaFailed } from '../core/refusals.ts';
+import type { JoinedFilm } from './media.ts';
 import { CatalogueJson, MAIN_VARIANT, type Render, emptyCatalogue } from '../core/catalogue.ts';
 import { type BoardFile, BoardFileJson, BoardName, type Panel, emptyBoard } from '../core/board.ts';
 import { Picture } from '../core/board-render.ts';
@@ -38,16 +41,22 @@ import { memoryFileSystem, memoryManifestLock, text } from './host/testing.ts';
 import { ManifestLock } from './manifest-lock.ts';
 import { pruneIdle, readCache, recordRender } from './segment-cache.ts';
 
+/** The rate the films here declare, and their pages draw at. */
+const FPS = 2;
+
 /** Three beats, 5, 5 and 10 seconds, at 2 fps: frames 0–9, 10–19 and 20–39. */
-const film = testFilm(
-  [
-    { id: 'a', min: 5 },
-    { id: 'b', min: 5 },
-    { id: 'c', min: 10 },
-  ],
-  { voice: '', scenes: {} },
-);
-const info: ExportInfo = { width: 1920, height: 1080, fps: 2, duration: 20, frames: 40 };
+const film = {
+  ...testFilm(
+    [
+      { id: 'a', min: 5 },
+      { id: 'b', min: 5 },
+      { id: 'c', min: 10 },
+    ],
+    { voice: '', scenes: {} },
+  ),
+  fps: FPS,
+};
+const info: ExportInfo = { width: 1920, height: 1080, fps: FPS, duration: 20, frames: 40 };
 const frames = (from: number, to: number) => Array.from({ length: to - from }, (_, k) => from + k);
 
 const keys = new Map([
@@ -60,6 +69,7 @@ const video = (
   reuse: Reuse,
   picture: Picture = Picture.Scenes(),
   copies: Copies = 'master+share',
+  out: Option.Option<string> = Option.none(),
 ) =>
   RenderJob.Video({
     address: { _tag: 'Film' },
@@ -69,7 +79,7 @@ const video = (
     from: Option.none(),
     to: Option.none(),
     scale: 1,
-    out: Option.none(),
+    out,
     copies,
     encoder: Option.none(),
     server: Option.none(),
@@ -79,7 +89,7 @@ const video = (
   });
 
 const keyed = (scenes: ReadonlyMap<string, string> = keys, fresh = false) =>
-  Reuse.Keyed({ scenes, fresh });
+  Reuse.Keyed({ beats: scenes, fresh });
 
 /**
  * Five beats at 2 fps: frames 0–11, 12–24, b's 25–34, 35–47 and 48–59.
@@ -87,25 +97,40 @@ const keyed = (scenes: ReadonlyMap<string, string> = keys, fresh = false) =>
  * frames at least, then cut at the beats); drawn alone, one.
  */
 const longer = {
-  film: testFilm(
-    [
-      { id: 'a', min: 6 },
-      { id: 'a2', min: 6.5 },
-      { id: 'b', min: 5 },
-      { id: 'c', min: 6.5 },
-      { id: 'c2', min: 6 },
-    ],
-    { voice: '', scenes: {} },
-  ),
-  info: { width: 1920, height: 1080, fps: 2, duration: 30, frames: 60 },
+  film: {
+    ...testFilm(
+      [
+        { id: 'a', min: 6 },
+        { id: 'a2', min: 6.5 },
+        { id: 'b', min: 5 },
+        { id: 'c', min: 6.5 },
+        { id: 'c2', min: 6 },
+      ],
+      { voice: '', scenes: {} },
+    ),
+    fps: FPS,
+  },
+  info: { width: 1920, height: 1080, fps: FPS, duration: 30, frames: 60 },
 };
 const longerKeys = new Map([...keys, ['a2', 'key-a2'], ['c2', 'key-c2']]);
 
 /** How a fake page draws frame `i` (`FakeRenderHost.frame`). */
 type Draw = (i: number) => Effect.Effect<void, PageError>;
 
+/**
+ * A film and its page: what it lays out, what its page says of it, and
+ * which of its frames read the film's seconds (every one by default).
+ */
+interface Stage {
+  readonly film: typeof film;
+  readonly info: ExportInfo;
+  readonly filmTimed?: (i: number) => boolean;
+  /** What its media does once a join is recorded (nothing by default). */
+  readonly join?: (film: JoinedFilm) => Effect.Effect<void, MediaFailed>;
+}
+
 /** Renders into one project folder, kept in memory across them: what each drew and joined. */
-const project = (files = new Map<string, Uint8Array>(), stage = { film, info }) => {
+const project = (files = new Map<string, Uint8Array>(), stage: Stage = { film, info }) => {
   const folders = new Set<string>();
   /** The host's cache locks: every render of the project, and a prune by hand, take the same. */
   const lock = memoryManifestLock();
@@ -134,7 +159,8 @@ const project = (files = new Map<string, Uint8Array>(), stage = { film, info }) 
         ),
     })),
   ).pipe(Layer.provide(memoryFileSystem(files, folders)));
-  const render = (job: RenderJob, draw: Draw = () => Effect.void) => {
+  /** `job` rendered into the project, its film laid out and paged as `on` (the project's by default). */
+  const render = (job: RenderJob, draw: Draw = () => Effect.void, on: Stage = stage) => {
     const ledger = emptyLedger();
     const lines: Array<string> = [];
     const pruned: Array<string> = [];
@@ -149,14 +175,19 @@ const project = (files = new Map<string, Uint8Array>(), stage = { film, info }) 
     ]);
     const layer = Renderer.layer.pipe(
       Layer.provide([
-        fakeRenderHost(ledger, { info: stage.info, frame: draw }),
+        fakeRenderHost(ledger, {
+          info: on.info,
+          frame: draw,
+          filmTimed: on.filmTimed,
+          join: on.join,
+        }),
         disk,
         Path.layer,
         SoundRender.layer,
       ]),
     );
     return Effect.gen(function* () {
-      const output = yield* (yield* Renderer).render(stage.film, job);
+      const output = yield* (yield* Renderer).render(on.film, job);
       const isShare = (out: string) => out.endsWith('.share.mp4');
       const master = ledger.joins.filter((j) => !isShare(j.out));
       const share = ledger.joins.filter((j) => isShare(j.out));
@@ -322,7 +353,9 @@ describe.concurrent("a film render's segments", () => {
       expect(first.drawn).toEqual(frames(0, 40));
       const again = yield* render(video(keyed()));
       expect(again.drawn).toEqual([]);
-      expect(again.reuse).toEqual(['render.reuse segments=3 drawn=0 frames_drawn=0 fresh=false']);
+      expect(again.reuse).toEqual([
+        'render.reuse segments=3 unpinned=0 drawn=0 frames_drawn=0 fresh=false',
+      ]);
       // Only the page that chose the encoder: no page opened to draw.
       expect(again.pages).toBe(1);
       expect(again.master).toEqual(first.master);
@@ -340,7 +373,7 @@ describe.concurrent("a film render's segments", () => {
       const changed = yield* render(video(keyed(new Map([...keys, ['b', 'key-b2']]))));
       expect(changed.drawn).toEqual(frames(10, 20));
       expect(changed.reuse).toEqual([
-        'render.reuse segments=3 drawn=1 frames_drawn=10 fresh=false',
+        'render.reuse segments=3 unpinned=0 drawn=1 frames_drawn=10 fresh=false',
       ]);
       const beat = (from: number, to: number) => (segments: typeof first.master) =>
         segments.filter((s) => s.at >= from && s.at < to);
@@ -470,7 +503,7 @@ describe.concurrent("a film render's segments", () => {
         );
         expect(second.drawn).toEqual([]);
         expect(second.reuse).toEqual([
-          'render.reuse segments=3 drawn=0 frames_drawn=0 fresh=false',
+          'render.reuse segments=3 unpinned=0 drawn=0 frames_drawn=0 fresh=false',
         ]);
       }),
   );
@@ -515,32 +548,59 @@ describe.concurrent("a film render's segments", () => {
       }),
   );
 
-  it.effect(
-    'whose record fails to write leave the render done, and a prune with 0 days refuses, naming its file, while another output is recorded',
-    () =>
-      Effect.gen(function* () {
-        const { render, pruneByHand, cacheLines, refusing, onFiles, catalogued } = project();
-        const on = (job: RenderJob) =>
-          render(job).pipe(Effect.provideService(Clock.Clock, onDay(0)));
-        const scene = `${film.paths.out}/scenes/a/main.mp4`;
-        const first = yield* on(video(keyed()));
-        yield* onFiles(recordRender(film.paths.out, scene, 0, ['key-a']));
-        yield* catalogued([first.target, scene]);
-        // b changes, and its render's record cannot be written.
-        refusing.records = true;
-        const changed = new Map([...keys, ['b', 'key-b2']]);
-        const second = yield* on(video(keyed(changed)));
-        refusing.records = false;
-        expect(second.drawn).toEqual(frames(10, 20));
-        expect(cacheLines.some((line) => line.startsWith('render.cache.record failed'))).toBe(true);
-        const refused = yield* Effect.exit(pruneByHand(0, 0));
-        expect(Exit.match(refused, { onSuccess: () => 'pruned', onFailure: Cause.squash })).toEqual(
-          CacheOutputUnrecorded.make({ output: first.target }),
-        );
-        // Nothing went: the second render's b is reused.
-        expect((yield* on(video(keyed(changed)))).drawn).toEqual([]);
-      }),
-  );
+  // Every file a video render writes (a catalogued slot, an `--out` file) ×
+  // every way its record update stops short once its file is replaced: its
+  // record's write refused, or its join failed.
+  for (const written of ['catalogued', 'out'] as const)
+    for (const stop of ['record', 'join'] as const)
+      it.effect(
+        `stopped once it replaces its file (${written}, its ${stop} failing) leave the render's segments and the last render's named: a prune with 0 days keeps both`,
+        () =>
+          Effect.gen(function* () {
+            const { render, pruneByHand, cacheLines, refusing, onFiles, catalogued } = project();
+            const out = Option.filter(
+              Option.some('/elsewhere/stretch.mp4'),
+              () => written === 'out',
+            );
+            const job = (beats: ReadonlyMap<string, string>) =>
+              video(keyed(beats), Picture.Scenes(), 'master+share', out);
+            const on = (job: RenderJob, stage: Stage = { film, info }) =>
+              render(job, () => Effect.void, stage).pipe(
+                Effect.provideService(Clock.Clock, onDay(0)),
+              );
+            const first = yield* on(job(keys));
+            // Another output, a scene, is rendered and recorded, so the cache has a record whatever this file's says.
+            const scene = `${film.paths.out}/scenes/a/main.mp4`;
+            yield* onFiles(recordRender(film.paths.out, scene, 0, ['key-a']));
+            yield* catalogued([
+              scene,
+              ...Arr.filter([first.target], () => written === 'catalogued'),
+            ]);
+            /** Once a join is recorded: the record's write refused from then on, or the join failed. */
+            const stopping: Stage = {
+              film,
+              info,
+              join: () =>
+                Effect.suspend(() => {
+                  if (stop === 'join')
+                    return Effect.fail(MediaFailed.make({ op: 'join', file: 'x', reason: 'no' }));
+                  refusing.records = true;
+                  return Effect.void;
+                }),
+            };
+            const changed = new Map([...keys, ['b', 'key-b2']]);
+            const second = yield* Effect.exit(on(job(changed), stopping));
+            refusing.records = false;
+            expect(Exit.isSuccess(second)).toBe(stop === 'record');
+            expect(cacheLines.some((line) => line.startsWith('render.cache.record failed'))).toBe(
+              stop === 'record',
+            );
+            const pruned = yield* pruneByHand(0, 0);
+            expect(pruned.removed).toEqual([]);
+            // a, c and both b's.
+            expect(pruned.found.segments).toHaveLength(4);
+          }),
+      );
 
   it.effect('drawn again with --fresh never move their mark back', () =>
     Effect.gen(function* () {
@@ -564,6 +624,73 @@ describe.concurrent("a film render's segments", () => {
       yield* boarded(board, { 'c.png': 'c, one pixel changed' });
       expect((yield* render(job)).drawn).toEqual(frames(10, 40));
     }),
+  );
+
+  /** The film with a a second longer, two frames at 2 fps: b at frames 12–21, c at 22–41. */
+  const lengthened = (filmTimed?: (i: number) => boolean): Stage => ({
+    film: {
+      ...testFilm(
+        [
+          { id: 'a', min: 6 },
+          { id: 'b', min: 5 },
+          { id: 'c', min: 10 },
+        ],
+        { voice: '', scenes: {} },
+      ),
+      fps: FPS,
+    },
+    info: { ...info, duration: 21, frames: 42 },
+    ...Option.match(Option.fromUndefinedOr(filmTimed), {
+      onNone: () => ({}),
+      onSome: (timed) => ({ filmTimed: timed }),
+    }),
+  });
+  const panelsOnly = () => false;
+
+  it.live(
+    "of the Board's panels: an earlier beat a second longer, a later beat's kept chunks join at its new place",
+    () =>
+      Effect.gen(function* () {
+        const { render, boarded } = project(new Map(), { film, info, filmTimed: panelsOnly });
+        yield* boarded(board, { 'a.png': 'a', 'b.png': 'b', 'c.png': 'c' });
+        const job = (beats: ReadonlyMap<string, string>) =>
+          video(keyed(beats), Picture.Board({ review: false }));
+        const first = yield* render(job(keys));
+        const moved = yield* render(
+          job(new Map([...keys, ['a', 'key-a2']])),
+          () => Effect.void,
+          lengthened(panelsOnly),
+        );
+        // a is new; b's first quarter second dissolves in from a's shot, which moved with a.
+        expect(moved.drawn).toEqual(frames(0, 22));
+        expect(moved.reuse).toEqual([
+          'render.reuse segments=3 unpinned=3 drawn=2 frames_drawn=22 fresh=false',
+        ]);
+        // c's chunks, as the first render drew them, play from 11 s now in place of 10 s.
+        const c = (from: number, segments: typeof first.master) =>
+          segments.filter((s) => s.at >= from).map((s) => ({ file: s.file, at: s.at - from }));
+        expect(c(11, moved.master)).toEqual(c(10, first.master));
+        expect(c(11, moved.share)).toEqual(c(10, first.share));
+        expect(c(10, first.master).length).toBeGreaterThan(0);
+      }),
+  );
+
+  it.live(
+    'of frames that read the film’s seconds: an earlier beat a second longer draws every later one again',
+    () =>
+      Effect.gen(function* () {
+        const { render, boarded } = project();
+        yield* boarded(board, { 'a.png': 'a', 'b.png': 'b', 'c.png': 'c' });
+        const job = (beats: ReadonlyMap<string, string>) =>
+          video(keyed(beats), Picture.Board({ review: true }));
+        yield* render(job(keys));
+        const moved = yield* render(
+          job(new Map([...keys, ['a', 'key-a2']])),
+          () => Effect.void,
+          lengthened(),
+        );
+        expect(moved.drawn).toEqual(frames(0, 42));
+      }),
   );
 
   it.live('draw again what a --fresh render cut off after a chunk drew over', () =>

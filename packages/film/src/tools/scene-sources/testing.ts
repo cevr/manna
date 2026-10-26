@@ -13,8 +13,8 @@ import { Effect, FileSystem, Path } from 'effect';
  * `node_modules/.bin/oxfmt` is the repo's: the source writer's `bunx oxfmt`
  * runs it, as it does in the repo, never fetching one from the registry
  * (which, in a folder with none, it did on every write, parallel workers
- * racing on its one install). `f/voice.ts` lets FilmRepo load it. Returns
- * the films folder.
+ * racing on its one install). `f/voice.ts` and `f/film.ts` (its rate) let
+ * FilmRepo load it. Returns the films folder.
  */
 export const sceneFixture = Effect.fn('test.sceneFixture')(function* (root: string) {
   const fs = yield* FileSystem.FileSystem;
@@ -29,6 +29,7 @@ export const sceneFixture = Effect.fn('test.sceneFixture')(function* (root: stri
   const files = {
     'drawing.ts': 'export const drawing = <T>(d: T): T => d;\n',
     '../voice.ts': "export const voice = { voiceId: 'v', model: 'eleven_v3', settings: {} };\n",
+    '../film.ts': 'export const fps = 30;\n',
     'hand.ts': `import { drawing } from './drawing.ts';
 
 const GAP = 0.2;

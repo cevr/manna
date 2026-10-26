@@ -10,6 +10,7 @@ import type { Affine } from '../core/affine.ts';
 import { type CaptionCue, sceneCaptions } from '../core/captions.ts';
 import {
   type Placed,
+  beatTime,
   everyTakeRecorded,
   filmEnd,
   layout,
@@ -66,15 +67,7 @@ import {
 } from './card.ts';
 import { type LoadedRig, type PoseOf, type RivePropSpec, drawRig } from './rive.ts';
 import { seedOf } from '../core/random.ts';
-import {
-  CLOCK_EPSILON,
-  FILM_FPS,
-  type Key,
-  clamp,
-  ease,
-  heardAtOrAfter,
-  justBefore,
-} from '../core/time.ts';
+import { CLOCK_EPSILON, type Key, clamp, ease, heardAtOrAfter, justBefore } from '../core/time.ts';
 
 /** What `f.knob` returns for a knob declared as `V`: a number stays a number, a point a point. */
 type KnobValue<V extends Knob> = V extends number ? number : Point;
@@ -392,7 +385,13 @@ export interface FilmSpec {
   readonly title: string;
   readonly width?: number;
   readonly height?: number;
-  readonly fps?: number;
+  /**
+   * The frames a second it is laid and drawn at: the film's declared rate (its
+   * `film.ts`'s `fps`, handed in with its narration, `Narrated`), the one the
+   * tools lay it at too. No default: a page and its tools at two rates would
+   * place a beat on two frames.
+   */
+  readonly fps: number;
   readonly paper: PaperStyle;
   /** The vignette's colour, and an ink transition's when it names none. */
   readonly shade: string;
@@ -572,6 +571,17 @@ export interface Film {
    * none and has no `footageAt`, so it is drawn as it always was.
    */
   readonly footageAt?: (T: number) => ReadonlyArray<FootageRead>;
+  /**
+   * Whether frame `T` reads the film's own seconds, not only the times of the
+   * beats and shots it draws: every frame the film draws does (its boil tick,
+   * `boilTick(T)`, wobbles its lines and moves its grain), and a page that
+   * draws over the film (a talk's hook, a review copy's burn-in) does. Absent,
+   * every frame does. A frame that does not draws the same wherever its beat
+   * sits in the film, so a kept segment of such frames is found again after
+   * an earlier beat changes length (tools/segments.ts); a Board's panels are
+   * such frames (`boardFilm`).
+   */
+  readonly filmTimed?: (T: number) => boolean;
   render(ctx: CanvasRenderingContext2D, T: number, opts?: RenderOptions): void;
   /** The Rive rigs its scenes' drawings declare, and the loaded ones it draws with. */
   readonly rigs: FilmRigs;
@@ -781,8 +791,8 @@ const cardsHold = (
 export const createFilm = (spec: FilmSpec): Film => {
   const width = spec.width ?? 1920;
   const height = spec.height ?? 1080;
-  const fps = spec.fps ?? FILM_FPS;
-  const placed = Result.getOrThrow(layout(spec.scenes, spec.timings));
+  const fps = spec.fps;
+  const placed = Result.getOrThrow(layout(spec.scenes, spec.timings, fps));
   const duration = filmEnd(placed);
   const allRecorded = everyTakeRecorded(placed);
   const finish = finishOf(spec.finish);
@@ -1014,7 +1024,7 @@ export const createFilm = (spec: FilmSpec): Film => {
     reads: Reads | undefined,
     unframed: number[],
   ): Frame => {
-    const t = T - p.start;
+    const t = beatTime(p, T);
     const words = localWords.get(p) ?? [];
     const hears = hearing === undefined ? undefined : hearsOf(hearing, p.spec.id);
     const frame: Frame = {
@@ -1153,7 +1163,7 @@ export const createFilm = (spec: FilmSpec): Film => {
   /** Whether cue `name` of scene `p` holds at film time `T`: from its start, up to its end. */
   const holds = (p: Placed<SceneSpec>, name: string, T: number) => {
     const c = cueOf(p, name);
-    const t = T - p.start;
+    const t = beatTime(p, T);
     return t >= c.start && t < c.end;
   };
 
@@ -1262,7 +1272,7 @@ export const createFilm = (spec: FilmSpec): Film => {
     // transform it drew under), so the clip is laid with none, whatever scale
     // the frame is drawn at, and the card drawn under the frame's.
     const frame = ctx.getTransform();
-    const at = cueProgress(cueOf(p, flood.cue), T - p.start);
+    const at = cueProgress(cueOf(p, flood.cue), beatTime(p, T));
     const box = floodBox(from, ctx.canvas.width, ctx.canvas.height, at);
     const mask = flood.mask;
     if (mask !== undefined) {
@@ -1320,7 +1330,7 @@ export const createFilm = (spec: FilmSpec): Film => {
   ) => {
     const { paper } = getAssets();
     const id = p.spec.id;
-    breath.through = p.dur > 0 ? (T - p.start) / p.dur : 0;
+    breath.through = p.dur > 0 ? beatTime(p, T) / p.dur : 0;
     breath.drift = drifts.get(id) ?? DRIFT;
     const moving = p.spec.storyboard !== true && breathes(breath);
     breath.outer = moving && unshot.has(id);
@@ -1424,7 +1434,7 @@ export const createFilm = (spec: FilmSpec): Film => {
     const prev = placed[cur.index - 1];
     const enter = cur.spec.enter;
     const tr = transitionDur(enter);
-    const local = T - cur.start;
+    const local = beatTime(cur, T);
     const sink = opts.probe;
     const knobs = opts.knobs;
     hearing = opts.clock;

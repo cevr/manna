@@ -592,17 +592,39 @@ uncaught error in the page is a `PageError`, never a log line. A missing
 browser is `BrowserMissing`, whose message is the install command.
 
 **Reuse.** A video of the film, an act or a scene, of its scenes or its
-Board, splits its frames at its beats into segments (`beatSegments`,
-`tools/segments.ts`) and keeps each under `out/<film>/cache/segments/<key>/`,
-a folder no catalogue lists. A segment's key (`segmentKey`) hashes the
+Board, splits its frames into segments at its beats and wherever its frames
+start or stop reading the film's own seconds (`beatSegments`,
+`tools/segments.ts`), and keeps each under `out/<film>/cache/segments/<key>/`,
+a folder no catalogue lists. Every frame the film draws reads its seconds
+(its boil tick wobbles its lines and moves its grain), as does a review
+copy's burn-in; a Board's panels read only their shots' times. The page
+says which frames do (`Film.filmTimed`, its `filmTimed` call, asked once
+by the render's first page). A segment's key (`segmentKey`) hashes the
 render's settings (size, fps, scale, encoder, captions, picture, the
-browser's user agent, the platform), its frames, the
-`Stamps` key of each beat its frames fall in (its sources, the film's frame
-and the engine, its layout and its take), and for a Board render each shot its
-frames draw (`shotsSeen`: the try shown and its image's sha256 as it is on
-disk, its motion, the span that times its motion and its dissolves), so a
-neighbour seen across a dissolve at the segment's edge changes it and a panel
-elsewhere does not. The key leaves out which copies a render encodes (the
+browser's user agent, the platform), how many frames it has and, where they
+read the film's seconds, its first frame in the film; each beat its frames
+read (the one they fall in, and each Board shot's) by its key wherever it
+sits (`SceneKeys.beats`: its sources, the film's frame and the engine, its
+layout and its take, and the beat a transition into it draws; the script
+is read whole, since any module may derive a value from a beat's `lead`,
+`tail` or `min`, so a length edited in the script re-keys every beat, and a
+take re-voiced moves the later beats without re-keying them) and where it
+starts; and for a Board render each shot its frames draw (`shotsSeen`: the
+try shown and its image's sha256 as it is on disk, its motion, the span that
+times its motion and its dissolves). Every beat starts and ends on a whole
+frame (`layout`: the frame nearest its exact place, owner's "Snap"), and
+every time is keyed as an integer from the segment's first frame: a beat's
+start in frames, a shot's times in whole ticks of the Board's clock
+(`ticksAt`: millionths of a frame). Every painter reads its beat's time from
+those integers (`beatTime`, `BoardClock`), so one key paints the same frames
+wherever its segment starts, and a take re-voiced by part of a frame moves
+the later beats by whole frames. A beat entered on a transition over the
+segment's frames reads the beat before it too. So a neighbour seen across a dissolve
+at the segment's edge changes it and a panel elsewhere does not, and a
+segment of panels moved by whole frames when an earlier beat changes its
+length keeps its key: its kept chunks join at its new place
+(`render.reuse segments=<n> unpinned=<k> drawn=<m>`, `unpinned` counting the
+segments keyed wherever they sit). The key leaves out which copies a render encodes (the
 master, its share copy, or both): each copy is encoded alike whatever is
 encoded beside it (a share copy made alone is byte for byte the one made
 beside the master, measured on In Its Order's Board), so the record says
@@ -613,20 +635,27 @@ segment a share-only render kept again, both copies. A render draws only
 the segments it finds no such record of (`<key>/segment.json`, written once
 all the segment's chunks are there), its chunks cut at segment edges
 (`segmentChunks`) and each kept as `<from>-<to>.mp4` (its share copy
-`<from>-<to>.share.mp4`), named by its frames, so two renders that cut a
-segment otherwise never write one file. It opens no drawing page when it
-draws none, and joins every segment's chunks of each copy it writes, kept or
-drawn, packets copied; `render.reuse segments=<n> drawn=<m>` says how many it drew.
+`<from>-<to>.share.mp4`), named and recorded by its frames from the
+segment's first, so two renders that cut a segment otherwise never write
+one file, and a segment found at another place joins whole. It opens no
+drawing page when it draws none, and joins every segment's chunks of each
+copy it writes, kept or drawn, packets copied, each chunk's packets moved to
+where its first frame plays (`Media.join`); `render.reuse` says how many it
+drew.
 The film's cache as a whole is `tools/segment-cache.ts`. A render that keeps
 segments holds the cache's lock (`cache/.segments.lock`, a `ManifestLock`)
 from before it picks them until it is done, so renders of one film take turns
 (`render.cache.waiting`). Each segment it reuses or keeps is marked used
 (`used` in its record, the render's start time, never moved back, a
 `--fresh` redraw included; a record without one reads its mtime). Each video
-render removes the records of its master's and its share copy's files before
-it replaces them (`cache/renders/<id>.json`), and once done writes its own,
-of its lead file (its master, else its share copy), with the keys it used
-(none when it keeps no segments); a record that fails to write leaves the
+render records its lead file (its master, else its share copy) in
+`cache/renders/<id>.json`: before it replaces its files it widens that record
+to name the keys it uses beside the keys the records of both its files name
+(`widenRecord`), and once done writes the keys it used alone (none when it
+keeps no segments) and removes the other file's record. A render stopped
+between the two, by a failed join, a record that fails to write or an
+interrupt, leaves the widened record, so no prune removes its segments or
+those of the render before it; a record that fails to write leaves the
 render done. A render that keeps segments then deletes for good the
 segments no render used for `PRUNE_DAYS` (7) that no record names, never a
 folder still drawn (no record): `render.cache.pruned count=<n> freed=<bytes>`.
@@ -636,12 +665,15 @@ record names it. `film cache <film> [--prune [--days n] [--dry-run]] [--json]`
 (`tools/cache-cli.ts`) prints the cache's size and prunes it by hand: refused
 (`CacheBusy`) while a render holds the cache, `--days 0` keeping exactly what
 the newest render of each output used. `--days 0` is refused before any
-render has recorded (`CacheUnrecorded`), and while a video the catalogue
-holds has no record of its lead file (`CacheOutputUnrecorded`, naming it:
-render it again).
-A cache folder, its lock file, the segments folder, a segment, a file in
-one, or a record that is a link is refused (`CacheEscapes`) before the lock
-is taken or anything is read or deleted through it.
+render has recorded (`CacheUnrecorded`), and while videos the catalogue
+holds have no record of their lead files (`CacheOutputUnrecorded`, naming
+each: render each again). `record_render` gives a video it catalogues an
+empty record, unless a render of its lead file left one.
+A cache folder, the segments folder, a segment, a file in one, or a record
+that is a link is refused (`CacheEscapes`) before anything is read or
+deleted through it, the cache folder before the lock is taken. A lock file
+that is a link is refused by the lock itself as it opens it (a
+`PlatformError` from `ManifestLock.take`, `manifest-lock-bun.ts`).
 `--fresh` drops each segment's record and draws it again (`project render
 --force` too), so a fresh render cut off leaves its segments to be drawn. A
 short and a wedge's look (`--level`) draw every frame into a temp folder of
@@ -981,7 +1013,7 @@ the film's grain laid over the paper only (`grainRect`), so nothing touches
 the band. `Film.look` carries the film's paper, shade, finish and `short`
 style (`ShortStyle` on `FilmSpec.short`: the hook's and captions' fonts and
 colours, sizes in 1080×1920 px, checked by `createFilm`). The
-renderer resolves the short again on the page's fps, cuts `full.wav` to its
+renderer resolves the short on the film's layout, at its declared rate, cuts `full.wav` to its
 pieces (`splice`, a `JOIN_FADE` of 10 ms each side of a join only), and
 writes `out/<film>/shorts/<id>/main.mp4` and `main.vtt` (`shortCaptions`: the
 phrases the page burns in, as it shows them).
@@ -1051,11 +1083,11 @@ warning), and its open is still only while the take's frame holds too (the
 probe records each footage frame a frame draws, `FootageMark`, so a talking
 head is motion read from the edit, not the pixels).
 
-A short resolves on its page's frame rate (`Checker.cut`: the rate the film
-declares, read from the page's `info.fps`, as the renderer does), so
+A short resolves on the film's layout, at the rate the film declares (its
+`film.ts`'s `fps`, `LoadedFilm.fps`, the rate its page draws at), so
 `check --short`, `cues --short` and the render cut the same frames.
 `--static` runs only what the words tell (length, first word, the loop's
-silence), probing no frames: it opens the page once, for its rate.
+silence), probing no frames.
 `film cues --short` prints `shortReport` at that rate. A short draws at about parity with the film per frame (~0.92× of the
 same frames as a 16:9 render, measured against one contiguous range): the
 9:16 page costs nothing extra, and saves nothing either.

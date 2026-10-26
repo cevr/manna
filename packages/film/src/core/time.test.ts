@@ -12,8 +12,10 @@ import {
   justBefore,
   keys,
   lerp,
+  movedFrames,
   onTheMs,
   progress,
+  secondsAt,
   staggered,
   timecode,
 } from './time.ts';
@@ -28,6 +30,21 @@ describe('a word heard at or after a mark', () => {
 
   test('the last instant before an end is a millisecond short of it', () => {
     expect(justBefore(10)).toBeCloseTo(9.999, 9);
+  });
+});
+
+describe('a frame moved by whole frames', () => {
+  test.each([24, 30, 30000 / 1001])(
+    'is the time secondsAt writes for the frame it lands on, at %p fps',
+    (fps) => {
+      for (let frame = 0; frame < 600; frame++)
+        for (const by of [-frame, -7, 0, 1, 23, 211])
+          expect(movedFrames(secondsAt(frame, fps), by, fps)).toBe(secondsAt(frame + by, fps));
+    },
+  );
+
+  test('a time between frames moves by those frames’ seconds', () => {
+    expect(movedFrames(1.2000000000000002, -30, 30)).toBe(1.2000000000000002 - secondsAt(30, 30));
   });
 });
 
@@ -67,16 +84,16 @@ describe('time', () => {
   });
 
   test('a time reads as the timecode of its nearest frame: HH:MM:SS:FF', () => {
-    expect(timecode(0)).toBe('00:00:00:00');
-    expect(timecode(65.4)).toBe('00:01:05:12');
-    expect(timecode(525.9)).toBe('00:08:45:27');
-    expect(timecode(3600 + 1 / 30)).toBe('01:00:00:01');
+    expect(timecode(0, 30)).toBe('00:00:00:00');
+    expect(timecode(65.4, 30)).toBe('00:01:05:12');
+    expect(timecode(525.9, 30)).toBe('00:08:45:27');
+    expect(timecode(3600 + 1 / 30, 30)).toBe('01:00:00:01');
     // Between frames, the nearest: a video's clock a hair short of 4 s says 4 s; at 24 fps, frames count to 23.
-    expect(timecode(3.99999)).toBe('00:00:04:00');
-    expect(timecode(0.4 / 30)).toBe('00:00:00:00');
+    expect(timecode(3.99999, 30)).toBe('00:00:04:00');
+    expect(timecode(0.4 / 30, 30)).toBe('00:00:00:00');
     expect(timecode(1.97, 24)).toBe('00:00:01:23');
     // Before a scene's start, signed.
-    expect(timecode(-0.5)).toBe('−00:00:00:15');
+    expect(timecode(-0.5, 30)).toBe('−00:00:00:15');
   });
 
   test('a timecode is right at any rate a video keeps: whole, 1000/1001 counted non-drop-frame, or neither', () => {

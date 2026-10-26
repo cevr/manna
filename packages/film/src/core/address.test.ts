@@ -21,6 +21,7 @@ const film: Addressable = {
         { id: 'd', min: 7 },
       ],
       { voice: '', scenes: {} },
+      30,
     ),
   ),
   look: Option.some({

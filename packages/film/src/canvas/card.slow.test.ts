@@ -271,6 +271,7 @@ describe('a scene with a card', () => {
       ],
     });
     const film = createFilm({
+      fps: 30,
       title: 'card',
       paper: { base: '#fff', tone: '#000', seed: 1 },
       shade: '#000',
@@ -326,6 +327,7 @@ describe('a scene with a card', () => {
       ],
     });
     const film = createFilm({
+      fps: 30,
       title: 'card',
       paper: { base: '#fff', tone: '#000', seed: 1 },
       shade: '#000',
@@ -372,6 +374,7 @@ describe('a scene with a card', () => {
       ],
     });
     const film = createFilm({
+      fps: 30,
       title: 'card',
       paper: { base: '#fff', tone: '#000', seed: 1 },
       shade: '#000',
@@ -398,6 +401,7 @@ describe('a scene with a card', () => {
       ],
     });
     return createFilm({
+      fps: 30,
       title: 'card',
       paper: { base: '#fff', tone: '#000', seed: 1 },
       shade: '#000',
@@ -458,6 +462,7 @@ describe('a scene with a card', () => {
     });
     const next = drawing({ timeline: {}, draw: () => void ran.push('next') });
     const film = createFilm({
+      fps: 30,
       title: 'card',
       paper: { base: '#fff', tone: '#000', seed: 1 },
       shade: '#000',
@@ -491,6 +496,7 @@ describe('a scene with a card', () => {
     const first = drawing({ timeline: {}, draw: () => undefined });
     expect(() =>
       createFilm({
+        fps: 30,
         title: 'card',
         paper: { base: '#fff', tone: '#000', seed: 1 },
         shade: '#000',
@@ -517,6 +523,7 @@ describe('a scene with a card', () => {
     });
     const next = drawing({ timeline: {}, draw: () => undefined });
     const film = createFilm({
+      fps: 30,
       title: 'card',
       paper: { base: '#fff', tone: '#000', seed: 1 },
       shade: '#000',
@@ -568,6 +575,7 @@ describe('a scene with a card', () => {
       ],
     });
     const film = createFilm({
+      fps: 30,
       title: 'card',
       paper: { base: '#fff', tone: '#000', seed: 1 },
       shade: '#000',
@@ -593,6 +601,7 @@ describe('a scene with a card', () => {
     });
     expect(() =>
       createFilm({
+        fps: 30,
         title: 'card',
         paper: { base: '#fff', tone: '#000', seed: 1 },
         shade: '#000',

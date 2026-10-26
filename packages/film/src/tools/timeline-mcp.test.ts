@@ -20,6 +20,7 @@ import { labWithMcp, mcpSession } from './lab-mcp/testing.ts';
 
 /** Film `f`'s v1, kept in its folder (`v1/`): a voiced beat with a mark, its take staged, and a silent one. */
 const older: FilmClock = {
+  fps: 30,
   beats: [
     {
       id: 'cold',
@@ -47,6 +48,7 @@ const older: FilmClock = {
 
 /** Its registered files' clock (v2, open): the script rewritten, no take yet. */
 const registered: FilmClock = {
+  fps: 30,
   beats: [
     {
       id: 'seed',

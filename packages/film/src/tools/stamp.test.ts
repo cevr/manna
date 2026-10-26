@@ -7,10 +7,14 @@ import { expect as expectPlain, test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import { Context, Effect, FileSystem, Layer, Option, Path, Result, Sink, Stream } from 'effect';
 import { ChildProcessSpawner } from 'effect/process';
-import { layout } from '../core/layout.ts';
+import { beatTime, layout } from '../core/layout.ts';
+import { secondsAt } from '../core/time.ts';
 import { ContentStore } from './content-store.ts';
 import { FilmRepo } from './film-repo.ts';
+import { spokenTake } from './film-repo/testing.ts';
+import { memoryFileSystem, text } from './host/testing.ts';
 import { scenesLocatedHere } from './read-cli.ts';
+import { SceneSources } from './scene-sources.ts';
 import { type Keyed, Stamps, importsOf, stampOf } from './stamp.ts';
 import { sceneFixture } from './scene-sources/testing.ts';
 import { resolveAddress } from '../core/address.ts';
@@ -73,6 +77,7 @@ const placed = Result.getOrThrow(
       { id: 'plain', min: 2, enter: { kind: 'fade', dur: 0.5 } },
     ],
     { voice: '', scenes: {} },
+    30,
   ),
 );
 
@@ -146,6 +151,7 @@ describe.concurrent('scene keys', () => {
             { id: 'beta', min: 2, enter: { kind: 'fade', dur: 0.5 } },
           ],
           { voice: '', scenes: {} },
+          30,
         ),
       );
       const stamps = yield* Stamps;
@@ -228,6 +234,117 @@ describe.concurrent('the stamp’s reads', () => {
       expect(reads.size).toBeGreaterThan(3);
       expect([...reads].filter(([, n]) => n > 1)).toEqual([]);
     }).pipe(Effect.provide(counting)),
+  );
+});
+
+/**
+ * Film `f` in memory: its frame, a registry that reads the script, and the
+ * script with `hand`'s tail `tail`. No scene has a module of its own.
+ */
+const inMemory = (tail: number) => {
+  const files = new Map([
+    [
+      '/films/f/film.ts',
+      text("import { scenes } from './scenes/index.ts';\nexport const fps = 30;\n"),
+    ],
+    [
+      '/films/f/scenes/index.ts',
+      text("import { script } from '../script.ts';\nexport const scenes = script;\n"),
+    ],
+    ['/films/f/script.ts', scriptOf(tail)],
+  ]);
+  const layer = Stamps.layer.pipe(
+    Layer.provide(
+      Layer.effect(
+        SceneSources,
+        SceneSources.over(() => Effect.succeed({ sites: new Map(), unlocated: [] })),
+      ),
+    ),
+    Layer.provide([outsideACheckout, memoryFileSystem(files), Path.layer]),
+  );
+  return { files, layer };
+};
+
+/** The script of film `f` in memory, with `hand`'s tail `tail`. */
+const scriptOf = (tail: number) =>
+  text(`export const script = [
+  { id: 'hand', say: 'Hi.', tail: ${tail} },
+  { id: 'beta', say: 'Hi.' },
+  { id: 'built', say: 'Hi.' },
+  { id: 'plain', say: 'Hi.' },
+];
+`);
+
+const inMemoryFilm: Keyed = {
+  paths: { name: 'f', dir: '/films/f' },
+  timings: { voice: '', scenes: {} },
+};
+
+describe.concurrent('beat keys in memory', () => {
+  it.effect('a script edited re-keys every beat: the script is hashed whole', () => {
+    const { files, layer } = inMemory(0);
+    return Effect.gen(function* () {
+      const stamps = yield* Stamps;
+      const was = Object.fromEntries((yield* stamps.scenes(inMemoryFilm, placed)).beats);
+      files.set('/films/f/script.ts', scriptOf(1));
+      const now = Object.fromEntries((yield* stamps.scenes(inMemoryFilm, placed)).beats);
+      expect(changed(was, now)).toEqual(['hand', 'beta', 'built', 'plain']);
+    }).pipe(Effect.provide(layer));
+  });
+
+  /**
+   * At each rate: each beat's first frame after takes of 3.6 s and 3.2 s,
+   * then 4.1 s and 2.7 s (3.6 + 3.2 is 6.800000000000001 and 4.1 + 2.7 is
+   * 6.8), and how many frames into `built` its half second falls.
+   */
+  const RATES = [
+    { fps: 24, was: [0, 86, 163], now: [0, 98, 163], half: 12 },
+    { fps: 30, was: [0, 108, 204], now: [0, 123, 204], half: 15 },
+    { fps: 30000 / 1001, was: [0, 108, 204], now: [0, 123, 204], half: 15 },
+  ];
+
+  it.effect(
+    'a beat after takes that change but end where they did keeps its first frame and its key, and reads the same time on each frame',
+    () =>
+      Effect.gen(function* () {
+        const stamps = yield* Stamps;
+        const scenes = [
+          { id: 'hand', say: 'Hi.', lead: 0, tail: 0 },
+          { id: 'beta', say: 'Hi.', lead: 0, tail: 0 },
+          { id: 'built', min: 10 },
+        ];
+        for (const at of RATES) {
+          /** Each beat's first frame, `built`'s key, and the time it hands its painter on its frames around its half second. */
+          const laidWith = (durations: readonly [number, number]) =>
+            Effect.gen(function* () {
+              const timings = {
+                voice: 'v',
+                scenes: {
+                  hand: { ...spokenTake('Hi.'), duration: durations[0] },
+                  beta: { ...spokenTake('Hi.'), duration: durations[1] },
+                },
+              };
+              const laid = Result.getOrThrow(layout(scenes, timings, at.fps));
+              const built = laid[2]!;
+              const keys = yield* stamps.scenes({ ...inMemoryFilm, timings }, laid);
+              return {
+                frames: laid.map((p) => p.frame),
+                key: keys.beats.get('built'),
+                clock: [0, at.half - 1, at.half, at.half + 1].map((k) =>
+                  beatTime(built, secondsAt(built.frame + k, at.fps)),
+                ),
+              };
+            });
+          const was = yield* laidWith([3.6, 3.2]);
+          const now = yield* laidWith([4.1, 2.7]);
+          expect([was.frames, now.frames]).toEqual([at.was, at.now]);
+          expect(now.key).toEqual(was.key);
+          expect(now.clock).toEqual(was.clock);
+          // The frame at its half second reads half a second in, the one before it less.
+          expect(was.clock[1]).toBeLessThan(0.5);
+          expect(was.clock[2]).toBeGreaterThanOrEqual(0.5);
+        }
+      }).pipe(Effect.provide(inMemory(0).layer)),
   );
 });
 

@@ -8,7 +8,7 @@
 // shots `core/board-render.ts` decides, a picture moving across its hold, a
 // card set by the film's own code.
 
-import { Array as Arr, Boolean as Bool, Option, Predicate, Result } from 'effect';
+import { Array as Arr, Boolean as Bool, Data, Option, Predicate, Result } from 'effect';
 import { type CardWord, cardWords, fullCard, verse } from './card.ts';
 import type { Film, RenderOptions } from './film.ts';
 import type { Hand } from './ink.ts';
@@ -17,11 +17,13 @@ import { Shot } from '../core/animatic.ts';
 import {
   type Framing,
   type Layer,
+  boardClock,
   boardFrameAt,
   boardShots,
   burnIn,
 } from '../core/board-render.ts';
-import type { Placed } from '../core/layout.ts';
+import { type Placed, beatTime } from '../core/layout.ts';
+import { secondsOfTicks, ticksAt } from '../core/time.ts';
 
 /** A seed for a card's hands: the board's cards never boil, so one hand is all they need. */
 const STILL_HAND = (key: string | number): Hand => ({
@@ -33,9 +35,10 @@ const STILL_HAND = (key: string | number): Hand => ({
 const SWEEP_S = 1.2;
 
 /**
- * Text panel `text` of beat `p` at film second `T` (shown from its mark said
- * at film second `at`), in the film's card style: a card's words rising in
- * as they are heard, a verse with its phrase swept. Why not, when the film
+ * Text panel `text` of beat `p`, in the film's card style, at a frame `t`
+ * seconds into the beat and `since` seconds after its mark is said (each
+ * from whole ticks, `beatTime`, `BoardClock`): a card's words rising in as
+ * they are heard, a verse with its phrase swept. Why not, when the film
  * declares no card style or its words do not read (a mark its line lacks).
  */
 const paintText = (
@@ -44,8 +47,8 @@ const paintText = (
   p: Placed,
   text: PanelText,
   mark: string,
-  at: number,
-  T: number,
+  t: number,
+  since: number,
 ): Result.Result<void, string> => {
   const { width: w, height: h } = film;
   return Option.match(Option.fromUndefinedOr(film.look.card), {
@@ -71,7 +74,7 @@ const paintText = (
             }),
           }),
           (words: ReadonlyArray<CardWord>) =>
-            fullCard({ ctx, w, h, t: T - p.start, hand: STILL_HAND }, words, look.style),
+            fullCard({ ctx, w, h, t, hand: STILL_HAND }, words, look.style),
         );
       return Option.match(Option.fromUndefinedOr(look.verse), {
         onNone: () => Result.fail(`${film.title} sets no verse style (FilmSpec.card.verse)`),
@@ -85,7 +88,7 @@ const paintText = (
             ctx,
             { text: text.text, phrase: text.phrase },
             style,
-            { x: w * 0.14, y: h * 0.36, highlight: Math.max(0, Math.min(1, (T - at) / SWEEP_S)) },
+            { x: w * 0.14, y: h * 0.36, highlight: Math.max(0, Math.min(1, since / SWEEP_S)) },
             STILL_HAND('verse'),
           );
           ctx.restore();
@@ -139,6 +142,25 @@ const paintBurnIn = (ctx: CanvasRenderingContext2D, text: string, h: number) => 
 };
 
 /**
+ * What a Board layer paints of its own (`boardFilm`): its text panel's card,
+ * set from its beat's line, or its picture panel's try. A layer that paints
+ * neither (a beat with no panel, a picture panel with no try yet) is the
+ * film's own frame.
+ */
+type Painted = Data.TaggedEnum<{
+  Text: {
+    readonly id: string;
+    readonly beat: string;
+    readonly text: PanelText;
+    readonly mark: string;
+    /** The tick its mark is said at (`Layer.mark`). */
+    readonly said: number;
+  };
+  Picture: { readonly image: BoardImage };
+}>;
+const Painted = Data.taggedEnum<Painted>();
+
+/**
  * `film` drawn as its Board (`film render --board`): each frame the shot
  * the animatic holds there (`boardFrameAt`), dissolving into the next across
  * its cut. A picture panel is its kept try (of `images`, by file) covering
@@ -149,6 +171,10 @@ const paintBurnIn = (ctx: CanvasRenderingContext2D, text: string, h: number) => 
  * captions: the narration's words are on its cards (CRAFT rule 1), the line
  * in the captions file beside the video. `review` burns in the time, the
  * beat and the panel with its try (`burnIn`).
+ *
+ * A frame whose layers are all panels painted here reads only its shots'
+ * times, so it is not `filmTimed`; one the film draws, or a review copy's
+ * (its burn-in says the film's seconds), is.
  */
 export const boardFilm = (
   film: Film,
@@ -156,8 +182,10 @@ export const boardFilm = (
   images: ReadonlyMap<string, BoardImage>,
   review: boolean,
 ): Film => {
-  const shots = boardShots(film.placed, board);
-  const { width: w, height: h } = film;
+  const clock = boardClock(boardShots(film.placed, board), film.placed, film.duration, film.fps);
+  const { width: w, height: h, fps } = film;
+  /** Frame `T` on the Board's clock: whole ticks, so a frame moved by whole frames reads the same numbers. */
+  const tickOf = (T: number) => ticksAt(T, fps);
   /** The film's own frame at `T`, its captions off. */
   const filmFrame = (ctx: CanvasRenderingContext2D, T: number, opts: RenderOptions) =>
     film.render(ctx, T, { ...opts, captions: false });
@@ -173,51 +201,84 @@ export const boardFilm = (
       return c;
     });
 
+  /** What `layer` paints of its own (`Painted`); none where the film draws it. */
+  const paintedOf = (layer: Layer): Option.Option<Painted> =>
+    Shot.$match(layer.shot, {
+      Unboarded: () => Option.none(),
+      Boarded: ({ beat, panel }) =>
+        Option.match(Option.fromUndefinedOr(panel.text), {
+          onSome: (text) =>
+            Option.some(
+              Painted.Text({ id: panel.id, beat, text, mark: panel.at, said: layer.mark }),
+            ),
+          onNone: () =>
+            Option.map(
+              Option.flatMap(shownTry(panel), (t) => Option.fromUndefinedOr(images.get(t.file))),
+              (image) => Painted.Picture({ image }),
+            ),
+        }),
+    });
+
   const paintLayer = (
     ctx: CanvasRenderingContext2D,
     layer: Layer,
     T: number,
     opts: RenderOptions,
   ): void =>
-    Shot.$match(layer.shot, {
-      Unboarded: () => filmFrame(ctx, T, opts),
-      Boarded: ({ beat, panel, at }) =>
-        Option.match(Option.fromUndefinedOr(panel.text), {
-          onSome: (text) => {
-            ctx.save();
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
-            ctx.fillStyle = BOARD_PAPER;
-            ctx.fillRect(0, 0, w, h);
-            ctx.restore();
-            const set = Option.match(
-              Arr.findFirst(film.placed, (p) => p.spec.id === beat),
-              {
-                onNone: () => Result.fail(`${film.title} has no beat ${beat}`),
-                onSome: (p) => paintText(ctx, film, p, text, panel.at, at, T),
-              },
-            );
-            // A card the engine cannot set fails the frame, and the render with it: never a card left blank.
-            Result.match(set, {
-              onFailure: (why) => {
-                throw new Error(`board panel ${panel.id}: ${why}`);
-              },
-              onSuccess: () => undefined,
-            });
-          },
-          onNone: () =>
-            Option.match(
-              Option.flatMap(shownTry(panel), (t) => Option.fromUndefinedOr(images.get(t.file))),
-              {
-                onNone: () => filmFrame(ctx, T, opts),
-                onSome: (image) => paintFramed(ctx, image, w, h, layer.framing),
-              },
-            ),
-        }),
+    Option.match(paintedOf(layer), {
+      onNone: () => filmFrame(ctx, T, opts),
+      onSome: Painted.$match({
+        Text: ({ id, beat, text, mark, said }) => {
+          ctx.save();
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.fillStyle = BOARD_PAPER;
+          ctx.fillRect(0, 0, w, h);
+          ctx.restore();
+          const set = Option.match(
+            Arr.findFirst(film.placed, (p) => p.spec.id === beat),
+            {
+              onNone: () => Result.fail(`${film.title} has no beat ${beat}`),
+              onSome: (p) =>
+                paintText(
+                  ctx,
+                  film,
+                  p,
+                  text,
+                  mark,
+                  beatTime(p, T),
+                  secondsOfTicks(tickOf(T) - said, fps),
+                ),
+            },
+          );
+          // A card the engine cannot set fails the frame, and the render with it: never a card left blank.
+          Result.match(set, {
+            onFailure: (why) => {
+              throw new Error(`board panel ${id}: ${why}`);
+            },
+            onSuccess: () => undefined,
+          });
+        },
+        Picture: ({ image }) => paintFramed(ctx, image, w, h, layer.framing),
+      }),
     });
+
+  /**
+   * Whether frame `T` reads the film's seconds (`Film.filmTimed`): the
+   * burn-in says them, or the film draws the frame or a layer of it (a card
+   * its scenes set there, no shot, a layer with nothing of its own to paint),
+   * as `render` decides.
+   */
+  const filmTimed = (T: number): boolean => {
+    if (review || film.cardAt?.(T) === true) return true;
+    return Option.match(boardFrameAt(clock, tickOf(T)), {
+      onNone: () => true,
+      onSome: (f) => f.layers.some((layer) => Option.isNone(paintedOf(layer))),
+    });
+  };
 
   const render = (ctx: CanvasRenderingContext2D, T: number, opts: RenderOptions = {}) => {
     const card = film.cardAt?.(T) === true;
-    const frame = boardFrameAt(shots, film.duration, T);
+    const frame = boardFrameAt(clock, tickOf(T));
     Bool.match(card || Option.isNone(frame), {
       onTrue: () => filmFrame(ctx, T, opts),
       onFalse: () => {
@@ -243,5 +304,5 @@ export const boardFilm = (
       for (const f of Option.toArray(frame)) paintBurnIn(ctx, burnIn(T, f.shown, card), h);
   };
 
-  return { ...film, render };
+  return { ...film, render, filmTimed };
 };

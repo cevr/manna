@@ -254,7 +254,7 @@ describe('renderMix', () => {
 });
 
 describe('mixPlan', () => {
-  const placed = Result.getOrThrow(layout([{ id: 'a', min: 8 }], { voice: '', scenes: {} }));
+  const placed = Result.getOrThrow(layout([{ id: 'a', min: 8 }], { voice: '', scenes: {} }, 30));
   const option = (styles: ReadonlyArray<string>): Music => ({
     model: 'music_v2',
     styles,
@@ -357,7 +357,7 @@ describe('mixPlan', () => {
       },
       { id: 'b', min: 8 },
     ];
-    const film = Result.getOrThrow(layout(scenes, { voice: '', scenes: {} }));
+    const film = Result.getOrThrow(layout(scenes, { voice: '', scenes: {} }, 30));
     const library = defineLibrary({
       'paper.tap': {
         kind: 'generated',
@@ -725,13 +725,17 @@ describe('mixKey', () => {
       source: 'recorded' as const,
     });
     const placed = Result.getOrThrow(
-      layout(scenes, {
-        voice: 'v',
-        scenes: {
-          open: recorded(open, 'open.1f33612e28ca.flac', ['In', 'the', 'beginning.']),
-          word: recorded(word, 'word.0a1b2c3d4e5f.flac', ['Was', 'the', 'Word.']),
+      layout(
+        scenes,
+        {
+          voice: 'v',
+          scenes: {
+            open: recorded(open, 'open.1f33612e28ca.flac', ['In', 'the', 'beginning.']),
+            word: recorded(word, 'word.0a1b2c3d4e5f.flac', ['Was', 'the', 'Word.']),
+          },
         },
-      }),
+        30,
+      ),
     );
     const plan = Result.getOrThrow(
       mixPlan({
@@ -762,7 +766,7 @@ describe("a talk's voice, played in pieces", () => {
     sections: [{ id: 'claim', take: 'a', from: 0, to: 6, cut: [[2, 2]] }],
   };
   const cut = Result.getOrThrow(talkCut(talk, { a: take }));
-  const placed = Result.getOrThrow(layout(cut.scenes, cut.timings));
+  const placed = Result.getOrThrow(layout(cut.scenes, cut.timings, 30));
   const pieces = cut.sections[0]?.pieces ?? [];
   /** The plan with the section's voice at `file`, known by `content`. */
   const planOf = (file: string, content: string) =>

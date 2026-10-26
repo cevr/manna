@@ -44,6 +44,7 @@ describe('f.handsOf', () => {
     };
     withDom(() => {
       const film = createFilm({
+        fps: 30,
         title: 'hands',
         width: W,
         height: H,

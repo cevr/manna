@@ -10,6 +10,7 @@ const placed = Result.getOrThrow(
       { id: 'b', min: 5 },
     ],
     { voice: '', scenes: {} },
+    30,
   ),
 );
 const id = (T: number) => Option.map(sceneAt(placed, T), (p) => p.spec.id);

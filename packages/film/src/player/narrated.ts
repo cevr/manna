@@ -20,14 +20,24 @@ import { loadRigs } from '../rive/load.ts';
 import type { RiveRuntime } from '../rive/runtime.ts';
 import { RiveRuntimeBrowser } from '../rive/runtime-browser.ts';
 
-/** What a film's page is built from: its takes' timings and its master's URL. */
+/**
+ * What a film's page is built from: its takes' timings, its master's URL and
+ * the rate it declares (its module's `fps`, the one the tools lay it at), all
+ * handed to `createFilm` as they are.
+ */
 export interface Narrated {
   readonly timings: Timings;
   readonly audio: string;
+  readonly fps: number;
 }
 
-/** A film's module as the registry loads it: the film, built from its narration. */
+/**
+ * A film's module as the registry loads it: the frames a second it declares
+ * (`fps`: the one place a film's rate is written; the tools read it from the
+ * same module), and the film, built from its narration.
+ */
 interface FilmModule {
+  readonly fps: number;
   readonly film: (narrated: Narrated) => Film;
 }
 
@@ -47,7 +57,7 @@ export const narrationFileUrl = (id: string, file: string): string =>
 /** Film `id`'s narration: its timings (none yet on a 404) and its master's URL. */
 export const loadNarrated = (
   id: string,
-): Effect.Effect<Narrated, NarrationUnreadable, HttpClient.HttpClient> =>
+): Effect.Effect<Omit<Narrated, 'fps'>, NarrationUnreadable, HttpClient.HttpClient> =>
   Effect.gen(function* () {
     const at = narrationUrls(id);
     const unreadable = (reason: string) =>
@@ -62,6 +72,23 @@ export const loadNarrated = (
     );
     return { timings, audio: at.audio };
   });
+
+/**
+ * `film`, film `id`'s page, made at the rate its module declares (`fps`, the
+ * one the tools lay it at): a `film.ts` that makes its page at any other
+ * would place its beats on frames no tool places them on, so its load dies
+ * naming both rates.
+ */
+const declared = (id: string, m: FilmModule, film: Film): Effect.Effect<Film> =>
+  Effect.as(
+    Effect.when(
+      Effect.die(
+        new Error(`${id}'s film.ts makes its page at ${film.fps} fps, but declares ${m.fps} fps`),
+      ),
+      Effect.succeed(film.fps !== m.fps),
+    ),
+    film,
+  );
 
 /** Why a film's load failed: its narration unreadable, or a rig it declares not loadable. */
 export type FilmUnloadable = NarrationUnreadable | RigUnloadable | RigNameMissing;
@@ -91,7 +118,7 @@ export const narratedFilms = <K extends string>(
   return Rec.map(modules, (load, id) =>
     Effect.flatMap(page.contextEffect, (services) =>
       Effect.all([Effect.promise(load), loadNarrated(id), faces], { concurrency: 3 }).pipe(
-        Effect.map(([m, narrated]) => m.film(narrated)),
+        Effect.flatMap(([m, narrated]) => declared(id, m, m.film({ ...narrated, fps: m.fps }))),
         Effect.flatMap(loadRigs),
         Effect.provideContext(services),
       ),

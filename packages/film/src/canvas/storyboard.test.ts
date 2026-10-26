@@ -17,6 +17,7 @@ describe('storyboard', () => {
   test("a card sets its brief and its label in the film's type, naming no family of its own", () => {
     const fonts: string[] = [];
     const film = createFilm({
+      fps: 30,
       title: 't',
       paper: { base: '#fff', tone: '#000', seed: 1 },
       shade: '#000',

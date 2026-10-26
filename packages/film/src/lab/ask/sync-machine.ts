@@ -19,7 +19,15 @@
 
 import { Match, Option, Predicate, Schema } from 'effect';
 import { Event, Machine, State } from 'effect-machine';
-import { FILM_FPS, clock, frameRead, timecode } from '../../core/time.ts';
+import { clock, frameRead, timecode } from '../../core/time.ts';
+
+/**
+ * The rate a review video's clock counts at until its own is read (the rate
+ * every film declares today): a guess for the timecode and a ←/→ step, set
+ * right once the server answers with the video's own (`Timed`). No film is
+ * laid at it.
+ */
+export const UNTIMED_FPS = 30;
 
 /** An end not known yet: the clock's video's metadata has not loaded. */
 export const UNKNOWN_END = Number.MAX_SAFE_INTEGER;
@@ -38,7 +46,7 @@ const Clock = {
   /**
    * The frames a second the clock counts, its timecode's and a ←/→ step's:
    * its video's own (`Timed`, as the server reads it from the file), the
-   * film rate (`FILM_FPS`) only while that is not known yet or the video
+   * guess (`UNTIMED_FPS`) only while that is not known yet or the video
    * names none.
    */
   fps: Schema.Finite,
@@ -77,7 +85,7 @@ export const SyncEvent = Event({
   Stalled: {},
   Resumed: {},
   Ended: {},
-  /** The clock's video's frame rate, once known (`FILM_FPS` until it is, or when it names none). */
+  /** The clock's video's frame rate, once known (`UNTIMED_FPS` until it is, or when it names none). */
   Timed: { fps: Schema.Finite },
   /** The clock's video's length, once its metadata loads. */
   Measured: { end: Schema.Finite },
@@ -173,7 +181,7 @@ export const syncAt = (audible: string, start: number, at: number = start): Sync
     t: Math.max(start, at),
     start,
     end: UNKNOWN_END,
-    fps: FILM_FPS,
+    fps: UNTIMED_FPS,
     rate: 1,
     audible,
     seek: 0,

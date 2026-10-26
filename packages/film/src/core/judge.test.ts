@@ -30,6 +30,7 @@ describe('the moments a judge shows', () => {
   test('each mark and each cue middle, in time order, one per frame', () => {
     const moments = judgeMoments(
       scene({ late: 6, early: 1, twin: 1.01 }, { slide: { start: 2, end: 4 } }),
+      30,
     );
     expect(moments).toEqual([
       { at: 'mark:early', second: 1 },
@@ -41,19 +42,19 @@ describe('the moments a judge shows', () => {
   test("one per frame as the look draws them: the film's frames, counted from its start", () => {
     // At 30 fps from 4.01 s, 1 s and 1.01 s in are frames 150 and 151: two stills.
     const off = (marks: Record<string, number>): SceneTimes => ({ ...scene(marks), start: 4.01 });
-    expect(judgeMoments(off({ a: 1, b: 1.01 })).map((m) => m.at)).toEqual(['mark:a', 'mark:b']);
+    expect(judgeMoments(off({ a: 1, b: 1.01 }), 30).map((m) => m.at)).toEqual(['mark:a', 'mark:b']);
     // 1.01 s and 1.02 s in are both frame 151: one still.
-    expect(judgeMoments(off({ a: 1.01, b: 1.02 })).map((m) => m.at)).toEqual(['mark:a']);
+    expect(judgeMoments(off({ a: 1.01, b: 1.02 }), 30).map((m) => m.at)).toEqual(['mark:a']);
   });
 
   test('past the cap, spread from the first to the last', () => {
     const marks = Object.fromEntries(Array.from({ length: 30 }, (_, i) => [`m${i}`, i * 0.25]));
-    const moments = judgeMoments(scene(marks), 4);
+    const moments = judgeMoments(scene(marks), 30, 4);
     expect(moments.map((m) => m.at)).toEqual(['mark:m0', 'mark:m10', 'mark:m19', 'mark:m29']);
   });
 
   test('a scene with no mark or cue shows its middle; a mark past its end is left out', () => {
-    expect(judgeMoments(scene({ after: 9 }))).toEqual([{ at: '4.00', second: 4 }]);
+    expect(judgeMoments(scene({ after: 9 }), 30)).toEqual([{ at: '4.00', second: 4 }]);
   });
 });
 

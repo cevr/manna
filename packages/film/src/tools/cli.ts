@@ -546,8 +546,8 @@ const drafts = Command.make(
 );
 
 const cues = <E, R>(checkLayer: Layer.Layer<Checker, E, R>) => {
-  /** The short on its page's frames: the rate the film declares, read from its page. */
-  const onPage = Effect.fn('film.cues.short')(function* (loaded: LoadedFilm, declared: Short) {
+  /** The short on the film's frames, at the rate the film declares: the frames its page draws. */
+  const shortCut = Effect.fn('film.cues.short')(function* (loaded: LoadedFilm, declared: Short) {
     return yield* (yield* Checker).cut(loaded, declared);
   }, Effect.provide(checkLayer));
   return Command.make(
@@ -585,7 +585,7 @@ const cues = <E, R>(checkLayer: Layer.Layer<Checker, E, R>) => {
         short: input.short,
       });
       if (Option.isSome(scope.short)) {
-        for (const line of shortReport(yield* onPage(loaded, scope.short.value)))
+        for (const line of shortReport(yield* shortCut(loaded, scope.short.value)))
           yield* Console.log(line);
         return;
       }
@@ -920,7 +920,7 @@ const render = <E, R>(
             board: input.board,
             review: input.review,
             // Its segments are kept by the keys it is stamped with.
-            reuse: Reuse.Keyed({ scenes: keys.keys, fresh: input.fresh }),
+            reuse: Reuse.Keyed({ beats: keys.beats, fresh: input.fresh }),
           }),
         );
         yield* renderAndRecord(loaded, scope, job, stamp);

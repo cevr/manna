@@ -67,7 +67,6 @@ import { noteT, unresolved } from './notes.ts';
 import { type ProductionFile, decidedSince, decisionsIn } from './production.ts';
 import { FilmVersionUnkept, FilmVersionUnknown } from './refusals.ts';
 import type { NotesFile } from './schema.ts';
-import { FILM_FPS } from './time.ts';
 import {
   type BeatVoice,
   type ClockBeat,
@@ -154,13 +153,14 @@ export const clockBeat = (p: Placed, drawn: boolean): ClockBeat => {
 };
 
 /**
- * The clock of placed beats: each beat on the film's clock (`clockBeat`),
+ * The clock of beats `placed` at `fps`: each beat on the film's clock (`clockBeat`),
  * whether `drawn` says a scene draws it; the acts and the score's movements
  * laid over them. Fails with the first part that names no beat or is
  * declared out of order. Pure.
  */
 export const filmClock = (
   placed: ReadonlyArray<Placed>,
+  fps: number,
   parts: {
     readonly acts: ReadonlyArray<PartOf>;
     readonly movements: ReadonlyArray<PartOf>;
@@ -170,6 +170,7 @@ export const filmClock = (
   Result.gen(function* () {
     const beats = placed.map((p) => clockBeat(p, parts.drawn(p)));
     return {
+      fps,
       beats,
       acts: yield* partsOn(parts.acts, placed),
       movements: yield* partsOn(parts.movements, placed),
@@ -814,7 +815,7 @@ const markersOf = (
         id: note.id,
         text: gist(note.text),
         beat: note.scene,
-        at: noteT(placed, FILM_FPS, note),
+        at: noteT(placed, clock.fps, note),
         status: Bool.match(note.status === 'replied', {
           onTrue: () => 'replied' as const,
           onFalse: () => 'open' as const,

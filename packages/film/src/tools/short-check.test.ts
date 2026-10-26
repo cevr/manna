@@ -31,7 +31,7 @@ const level = (finding: ShortFinding) => levelOf(finding, { allowStale: false })
 const resolved = (duration: number): ResolvedShort => ({
   id: 'probe',
   title: 'Probe',
-  spans: [{ scene: 'a', from: 0, to: duration, at: 0 }],
+  spans: [{ scene: 'a', from: 0, to: duration, at: 0, shift: 0 }],
   duration,
   fps: 30,
 });
@@ -123,22 +123,22 @@ describe('the hook and the loop read when words are heard', () => {
     source: 'elevenlabs' as const,
   };
   const film = Result.getOrThrow(
-    layout([{ id: 'a', say, lead: 0, draw: () => {} }], {
-      voice: 'v',
-      scenes: { a: take },
-    }),
-  );
-  const short = Result.getOrThrow(
-    resolveShort(
-      film,
+    layout(
+      [{ id: 'a', say, lead: 0, draw: () => {} }],
       {
-        id: 'cut',
-        title: 'Cut',
-        // From the scene's start, which is no word: a span opening on the voice would hide the late word.
-        spans: [{ scene: 'a', from: { at: 'start' }, to: { at: 'speechEnd' } }],
+        voice: 'v',
+        scenes: { a: take },
       },
       30,
     ),
+  );
+  const short = Result.getOrThrow(
+    resolveShort(film, {
+      id: 'cut',
+      title: 'Cut',
+      // From the scene's start, which is no word: a span opening on the voice would hide the late word.
+      spans: [{ scene: 'a', from: { at: 'start' }, to: { at: 'speechEnd' } }],
+    }),
   );
   const phrases = shortPhrases(film, short);
 

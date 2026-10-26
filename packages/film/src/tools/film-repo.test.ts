@@ -8,8 +8,9 @@ import { BoardFileJson, BoardName } from '../core/board.ts';
 import { BoardStore } from './board-store.ts';
 import { ContentStore } from './content-store.ts';
 import { Segment } from '../core/segment.ts';
+import { createFilm } from '../canvas/film.ts';
 import { FilmFolder, FilmName, FilmRepo, placeFilm } from './film-repo.ts';
-import { testFilm } from './film-repo/testing.ts';
+import { spokenTake, testFilm } from './film-repo/testing.ts';
 import { memoryFileSystem, storeLayer, text } from './host/testing.ts';
 
 const files = new Map<string, Uint8Array>();
@@ -66,6 +67,8 @@ describe('FilmRepo', () => {
       // Its film.ts declares the look: two acts, the first from the opening.
       const look = Option.getOrThrow(loaded.look);
       expect(look.acts.map((act) => act.from)).toEqual(['open', 'title']);
+      // And its rate, the one its page is made at.
+      expect(loaded.fps).toBe(24);
     }),
   );
 
@@ -78,6 +81,8 @@ describe('FilmRepo', () => {
       Effect.gen(function* () {
         const loaded = yield* (yield* FilmRepo).load('sample', Segment.make('v3'));
         expect(loaded.scenes.map((s) => s.id)).toEqual(['seed', 'end']);
+        // It keeps no film.ts: it is laid at the rate the film declares.
+        expect(loaded.fps).toBe(24);
         expect(Object.keys(loaded.timings.scenes)).toEqual(['seed']);
         expect(Option.getOrThrow(loaded.look).acts.map((act) => String(act.name))).toEqual([
           'sowing',
@@ -241,5 +246,36 @@ describe('placeFilm', () => {
         by: 'cue "x"',
       });
     }),
+  );
+
+  it.effect(
+    "lays a film declared at 24 fps on the frames its page does: a take of 3.03 s in place of 3.02 s moves the next beat's start a frame on both",
+    () =>
+      Effect.gen(function* () {
+        const scenes = [
+          { id: 'a', say: 'Hi.', lead: 0, tail: 0 },
+          { id: 'b', min: 5 },
+        ];
+        /** Each beat's first frame with `a`'s take `seconds` long, as the tools and the page lay it. */
+        const framesWith = (seconds: number) =>
+          Effect.gen(function* () {
+            const timings = {
+              voice: 'v',
+              scenes: { a: { ...spokenTake('Hi.'), duration: seconds } },
+            };
+            const tools = yield* placeFilm({ ...testFilm(scenes, timings), fps: 24 });
+            const page = createFilm({
+              fps: 24,
+              title: 'rate',
+              paper: { base: '#fff', tone: '#000', seed: 1 },
+              shade: '#000',
+              timings,
+              scenes: scenes.map((s) => ({ ...s, draw: () => {} })),
+            });
+            return { tools: tools.map((p) => p.frame), page: page.placed.map((p) => p.frame) };
+          });
+        expect(yield* framesWith(3.02)).toEqual({ tools: [0, 72], page: [0, 72] });
+        expect(yield* framesWith(3.03)).toEqual({ tools: [0, 73], page: [0, 73] });
+      }),
   );
 });

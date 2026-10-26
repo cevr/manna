@@ -9,13 +9,13 @@
 // exactly the segments the newest render of each output (the film, an act, a
 // scene, the Board, `board-review`, …) used. It is refused on a cache no
 // render has recorded, and while a video the catalogue holds has no record
-// (one whose render could not write it, or rendered before renders recorded
-// them). A prune while a render of the film holds its cache is refused
-// (`CacheBusy`), not waited on: the render prunes once it is done, and a
-// prune by hand never hangs. A folder a render is still drawing (no record
-// yet) is counted and never removed, and nothing outside the segments folder
-// is deleted, nor anything through a link. Deletes are for good: the cache
-// is build output. `--json` prints one line of JSON in place of the lines.
+// (one rendered before renders recorded them). A prune while a render of the
+// film holds its cache is refused (`CacheBusy`), not waited on: the render
+// prunes once it is done, and a prune by hand never hangs. A folder a render
+// is still drawing (no record yet) is counted and never removed, and nothing
+// outside the segments folder is deleted, nor anything through a link.
+// Deletes are for good: the cache is build output. `--json` prints one line
+// of JSON in place of the lines.
 
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';

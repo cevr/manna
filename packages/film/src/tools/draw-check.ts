@@ -48,7 +48,7 @@ import { sceneMoments } from '../core/moments.ts';
 import { loadRigs } from '../rive/load.ts';
 import { RiveRuntimeBun } from '../rive/runtime-bun.ts';
 import { FNV_START, fnvStep, fnvText } from '../core/random.ts';
-import { framesOf } from '../core/time.ts';
+import { framesOf, secondsAt } from '../core/time.ts';
 import { inkOverFace } from './check.ts';
 import { type DrawFinding, DrawThrew, FrameImpure, InkOverFace } from './findings.ts';
 
@@ -210,7 +210,7 @@ const bothWays = <A>(
   at: (film: Film, T: number, probe: ProbeSink) => A,
   probe: ProbeSink,
 ) => {
-  const T = (f: number) => f / film.fps;
+  const T = (f: number) => secondsAt(f, film.fps);
   film.render(blank(), T(frame + 1), { captions: true });
   const afterNext = at(film, T(frame), sinkOf());
   film.render(blank(), T(Math.max(0, frame - 1)), { captions: true });
@@ -274,7 +274,7 @@ const drawMoments = (film: Film): ReadonlyArray<DrawMoment> => {
       scene: p.spec.id,
       at: label,
       frame,
-      time: frame / fps,
+      time: secondsAt(frame, fps),
       pure: false,
     });
     // Mid-span, where a branch on `0 < f.at(cue) < 1` draws and neither edge does.

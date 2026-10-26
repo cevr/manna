@@ -9,7 +9,7 @@ import { Array as Arr, Option, Result, Schema } from 'effect';
 import { type ShortError, ShortSpanEmpty, UnknownScene } from './errors.ts';
 import { type Placed, pointIn } from './layout.ts';
 import type { ScenePoint, Short, ShortSpan } from './schema.ts';
-import { CLOCK_EPSILON } from './time.ts';
+import { CLOCK_EPSILON, frameRead, secondsAt } from './time.ts';
 
 /** A short as it plays: 1080 × 1920, vertical. */
 export const SHORT_WIDTH = 1080;
@@ -21,6 +21,8 @@ interface ShortCut {
   readonly from: number;
   readonly to: number;
   readonly at: number;
+  /** The whole frames a frame of the span lies later in the film than in the short: its first frame's in the film less its first frame's in the short. */
+  readonly shift: number;
 }
 
 /** A short resolved against its film: its spans on whole frames, and its length. */
@@ -281,14 +283,13 @@ const pointAt = (
     ),
   );
 
-/** A span on the film's frames: `[from, to)`. */
+/** A span on the film's frames, `[from, to)`, at the rate its scene was laid at. */
 const spanFrames = (
   short: string,
   placed: ReadonlyArray<Placed>,
   span: ShortSpan,
-  fps: number,
 ): Result.Result<
-  { readonly scene: string; readonly from: number; readonly to: number },
+  { readonly scene: string; readonly from: number; readonly to: number; readonly fps: number },
   ShortError
 > =>
   Result.gen(function* () {
@@ -301,33 +302,45 @@ const spanFrames = (
           by: `short "${short}"`,
         }),
     );
-    const from = Math.round((p.start + (yield* pointAt(short, p, span.from, 'start'))) * fps);
-    const to = Math.round((p.start + (yield* pointAt(short, p, span.to, 'end'))) * fps);
+    const fps = p.fps;
+    const from = p.frame + frameRead(yield* pointAt(short, p, span.from, 'start'), fps);
+    const to = p.frame + frameRead(yield* pointAt(short, p, span.to, 'end'), fps);
     if (to <= from)
       return yield* Result.fail(
-        ShortSpanEmpty.make({ short, scene: span.scene, from: from / fps, to: to / fps }),
+        ShortSpanEmpty.make({
+          short,
+          scene: span.scene,
+          from: secondsAt(from, fps),
+          to: secondsAt(to, fps),
+        }),
       );
-    return { scene: span.scene, from, to };
+    return { scene: span.scene, from, to, fps };
   });
 
 /**
- * `short` on the film laid out as `placed`: each span on whole frames at
- * `fps`, back to back. A scene, mark or cue the film lacks, or a span that
- * holds no frame, fails naming it.
+ * `short` on the film laid out as `placed`: each span on whole frames at the
+ * rate the film was laid at, back to back. A scene, mark or cue the film
+ * lacks, or a span that holds no frame, fails naming it.
  */
 export const resolveShort = (
   placed: ReadonlyArray<Placed>,
   short: Short,
-  fps: number,
 ): Result.Result<ResolvedShort, ShortError> =>
   Result.map(
-    Result.all(Arr.map(short.spans, (span) => spanFrames(short.id, placed, span, fps))),
+    Result.all(Arr.map(short.spans, (span) => spanFrames(short.id, placed, span))),
     (frames) => {
+      const fps = frames[0].fps;
       const [length, spans] = Arr.mapAccum(frames, 0, (at, f): [number, ShortCut] => [
         at + f.to - f.from,
-        { scene: f.scene, from: f.from / fps, to: f.to / fps, at: at / fps },
+        {
+          scene: f.scene,
+          from: secondsAt(f.from, fps),
+          to: secondsAt(f.to, fps),
+          at: secondsAt(at, fps),
+          shift: f.from - at,
+        },
       ]);
-      return { id: short.id, title: short.title, spans, duration: length / fps, fps };
+      return { id: short.id, title: short.title, spans, duration: secondsAt(length, fps), fps };
     },
   );
 
