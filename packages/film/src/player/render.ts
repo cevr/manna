@@ -12,7 +12,7 @@ import { Footage, type FootageShown, footageAt, footageReads } from '../browser/
 import type { ExportHandle } from '../core/export-handle.ts';
 import type { FigureMark } from '../core/match.ts';
 import { sceneTimesOf } from '../core/easel.ts';
-import { frameAtOrAfter } from '../core/time.ts';
+import { frameAtOrAfter, secondsAt } from '../core/time.ts';
 import { Effect, Option } from 'effect';
 import { FetchHttpClient } from 'effect/http';
 import { parseHref } from '@manna/url-state';
@@ -126,10 +126,11 @@ const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): Expo
   /** The page clock in ms (`monotonicMs`): what every draw and encode is timed by. */
   const nowMs = monotonicMs(host);
   /** Frame `i`'s footage, decoded (nothing, at once, for a film that reads none). */
-  const footageOf = (i: number) => Effect.runPromiseWith(host)(footageAt(film, i / film.fps));
+  const footageOf = (i: number) =>
+    Effect.runPromiseWith(host)(footageAt(film, secondsAt(i, film.fps)));
   /** Frame `i` drawn with its footage and `extra` options. */
   const drawWith = (i: number, shown: FootageShown, extra: RenderOptions = {}) =>
-    film.render(ctx, i / film.fps, { captions: captions.on, ...shown, ...extra });
+    film.render(ctx, secondsAt(i, film.fps), { captions: captions.on, ...shown, ...extra });
   /** Frame `i` drawn, once its footage is decoded. */
   const draw = async (i: number) => drawWith(i, await footageOf(i));
   /** Draw frame `i` with its decoded footage and raster it: the ms it took, the decoding not in it. */
@@ -173,7 +174,7 @@ const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): Expo
       const began = nowMs();
       let drawing = 0;
       // The chunk's frames' footage is decoded as one run, each packet at most once.
-      const times = Array.from({ length: to - from }, (_, k) => (from + k) / film.fps);
+      const times = Array.from({ length: to - from }, (_, k) => secondsAt(from + k, film.fps));
       const chunk = await withFootageRun(host, film, times, (next) =>
         encodeChunk(
           async (i) => {
@@ -236,7 +237,7 @@ const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): Expo
       Array.from({ length: Math.max(0, to - from) }, (_, k) =>
         Option.match(Option.fromUndefinedOr(film.filmTimed), {
           onNone: () => true,
-          onSome: (timed) => timed((from + k) / film.fps),
+          onSome: (timed) => timed(secondsAt(from + k, film.fps)),
         }),
       ),
   };

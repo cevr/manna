@@ -72,6 +72,7 @@ import {
   type Interval,
   framesOf,
   heardAtOrAfter,
+  secondsAt,
 } from '../core/time.ts';
 import { endsLate } from '../core/timeline.ts';
 import type { PartError } from '../core/acts.ts';
@@ -1660,7 +1661,7 @@ export const stillSpan = (
 ): Interval => {
   const edge = (end: Option.Option<number>, tick: number, whole: number) => {
     if (Option.exists(end, (f) => f === tick)) return whole;
-    return tick / fps;
+    return secondsAt(tick, fps);
   };
   return { from: edge(Arr.head(ticks), lo, hold.from), to: edge(Arr.last(ticks), hi, hold.to) };
 };

@@ -59,7 +59,7 @@ import {
   type Timings,
   type VoiceTiming,
 } from './schema.ts';
-import { frameAtOrAfter, frameAtOrBefore } from './time.ts';
+import { frameAtOrAfter, frameAtOrBefore, secondsAt } from './time.ts';
 import { heard, voicedAt } from './voiced.ts';
 
 /** The two formats a talk is cut to, by the study's benchmarks. */
@@ -453,9 +453,8 @@ const quietestIn = (
   const first = frameAtOrAfter(from, TALK_FPS);
   const last = frameAtOrBefore(to, TALK_FPS);
   // `Array.from`, not `Arr.makeBy`: that makes at least one, and an empty silence has none.
-  const boundaries = Array.from(
-    { length: Math.max(0, last - first + 1) },
-    (_, k) => (first + k) / TALK_FPS,
+  const boundaries = Array.from({ length: Math.max(0, last - first + 1) }, (_, k) =>
+    secondsAt(first + k, TALK_FPS),
   );
   return Arr.head(
     Arr.sort(
@@ -510,7 +509,7 @@ const runsOf = (take: TalkTake, kept: ReadonlyArray<KeptWord>, gaps: number): Ar
         word.voiced.start,
         word.voiced.start,
       ),
-      () => frameAtOrBefore(word.voiced.start, TALK_FPS) / TALK_FPS,
+      () => secondsAt(frameAtOrBefore(word.voiced.start, TALK_FPS), TALK_FPS),
     );
   const outAfter = ({ index, word }: KeptWord) =>
     Option.getOrElse(
@@ -520,7 +519,7 @@ const runsOf = (take: TalkTake, kept: ReadonlyArray<KeptWord>, gaps: number): Ar
         Math.min(word.voiced.end + gaps / 2, voicedStartOf(words, index + 1, end)),
         word.voiced.end,
       ),
-      () => frameAtOrAfter(word.voiced.end, TALK_FPS) / TALK_FPS,
+      () => secondsAt(frameAtOrAfter(word.voiced.end, TALK_FPS), TALK_FPS),
     );
   const grouped: Array<Arr.NonEmptyArray<KeptWord>> = [];
   for (const next of kept) {

@@ -5,7 +5,7 @@
 
 import { Array as Arr, Option, Order } from 'effect';
 import { type Placed, transitionDur } from './layout.ts';
-import { framesOf } from './time.ts';
+import { framesOf, secondsAt } from './time.ts';
 
 /** A frame in a scene, and why it was picked (`mark name`, `cue name start`, `60%`). */
 export interface SceneMoment {
@@ -57,7 +57,7 @@ export const sceneMoments = (
       [...byFrame].map(([frame, at]) => ({
         scene: p.spec.id,
         frame,
-        time: frame / fps,
+        time: secondsAt(frame, fps),
         at: at.join(', '),
       })),
       Order.mapInput(Order.Number, (s: SceneMoment) => s.frame),

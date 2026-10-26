@@ -17,6 +17,7 @@ import {
   canEncodeVideo,
 } from 'mediabunny';
 import type { Copies, Encoder, EncoderChoice } from '../core/encoder.ts';
+import { secondsAt } from '../core/time.ts';
 
 /** How one encoder encodes the master, and the share copy when it makes one in the page. */
 interface Settings {
@@ -219,7 +220,7 @@ const direct = (canvas: HTMLCanvasElement, fps: number, video: VideoEncodingConf
   return {
     start: () => output.start(),
     warm: () => Promise.resolve(),
-    add: (t) => source.add(t, 1 / fps),
+    add: (t) => source.add(t, secondsAt(1, fps)),
     finalize: () => output.finalize(),
     cancel: () => output.cancel(),
     bytes: written(target),
@@ -264,11 +265,14 @@ const prerolled = (
   return {
     start: () => Promise.all([session.start(), output.start()]),
     warm: () =>
-      Array.from({ length: preroll }, (_, k) => (k - preroll) / fps).reduce(async (before, t) => {
-        await before;
-        await source.add(t, 1 / fps);
-      }, Promise.resolve()),
-    add: (t, first) => source.add(t, 1 / fps, first ? { keyFrame: true } : undefined),
+      Array.from({ length: preroll }, (_, k) => secondsAt(k - preroll, fps)).reduce(
+        async (before, t) => {
+          await before;
+          await source.add(t, secondsAt(1, fps));
+        },
+        Promise.resolve(),
+      ),
+    add: (t, first) => source.add(t, secondsAt(1, fps), first ? { keyFrame: true } : undefined),
     finalize: async () => {
       await session.finalize();
       await copying;
@@ -321,7 +325,7 @@ export const encodeChunk = async (
       await before;
       await draw(i);
       if (i === from) await Promise.all(all.map((r) => r.warm()));
-      await Promise.all(all.map((r) => r.add((i - from) / fps, i === from)));
+      await Promise.all(all.map((r) => r.add(secondsAt(i - from, fps), i === from)));
     }, Promise.resolve());
     await Promise.all(all.map((r) => r.finalize()));
   };
