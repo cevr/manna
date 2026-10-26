@@ -16,6 +16,8 @@
     "server.ts",
     "cli.ts",
     "screening.ts",
+    "screening-renders.ts",
+    "screening-renders.test.ts",
     "checkouts.ts",
     "checkouts.test.ts",
     "lessons.test.ts",

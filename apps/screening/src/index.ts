@@ -5,6 +5,6 @@
  * Solid JSX: call `registerSolidSsr` (`@manna/screening/solid-ssr`) before
  * importing this module.
  */
-export { type FilmManifest, PATHS, VERSION_NAMES, versionsOf } from './manifest.ts';
+export { FilmId, type FilmManifest, PATHS, VERSION_NAMES, versionsOf } from './manifest.ts';
 export { type Material, type MaterialFile } from './publish.ts';
 export { deskClient, publishTo } from './desk-client.ts';

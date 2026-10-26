@@ -12,8 +12,10 @@
  *   --share`; a render reuses each unchanged segment), takes that render's
  *   share copy, a poster still from it, and each kept panel of `board.json`
  *   in the film's order, made 960 px wide for a phone;
- * - `render`: the film's latest full render's share copy (the catalogue's
- *   newest whole-film video that is not the Board) and a poster still;
+ * - `render`: the share copy of the film's latest full render (the
+ *   catalogue's newest `main` render of the whole film at full scale, never
+ *   a look wedge, a Board or a proof: `./screening-renders.ts`) and a poster
+ *   still;
  * - `final`: the video `--from` names, else the latest full render, the same.
  *
  * It names every file by its bytes, uploads those the bucket lacks, writes
@@ -41,7 +43,6 @@ import {
   FileSystem,
   Layer,
   Option,
-  Order,
   Path,
   Redacted,
   Schema,
@@ -51,6 +52,14 @@ import { Argument, Command, Flag } from 'effect/cli';
 import { FetchHttpClient } from 'effect/http';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import sharp from 'sharp';
+
+import {
+  Catalogue,
+  type CatalogueRender,
+  isBoardRender,
+  isFullRender,
+  newestOf,
+} from './screening-renders.ts';
 
 /** The site's pages are Solid JSX: the plugin that compiles them is registered before they load. */
 const loadSite = Effect.sync(registerSolidSsr).pipe(
@@ -63,9 +72,6 @@ const POSTER_AT = 0.2;
 const POSTER_WIDTH = 1280;
 const PANEL_WIDTH = 960;
 
-/** The variants a Board render is catalogued as (`film render --board`, `--review`). */
-const BOARD_VARIANTS = new Set(['board', 'board-review']);
-
 class ScreeningFailed extends Schema.TaggedError<ScreeningFailed>()('ScreeningFailed', {
   reason: Schema.String,
 }) {
@@ -75,19 +81,6 @@ class ScreeningFailed extends Schema.TaggedError<ScreeningFailed>()('ScreeningFa
 }
 
 const fail = (reason: string) => Effect.fail(ScreeningFailed.make({ reason }));
-
-/** What the catalogue says of a render, as far as publishing reads it (`@manna/film`'s `catalogue.json`). */
-const CatalogueRender = Schema.Struct({
-  address: Schema.Struct({ _tag: Schema.String }),
-  variant: Schema.String,
-  kind: Schema.String,
-  /** Set for a stretch of the film (an act, scenes); a whole-film render has none. */
-  span: Schema.OptionFromOptionalKey(Schema.Unknown),
-  files: Schema.Struct({ share: Schema.OptionFromOptionalKey(Schema.String) }),
-  at: Schema.Finite,
-});
-type CatalogueRender = typeof CatalogueRender.Type;
-const Catalogue = Schema.fromJsonString(Schema.Struct({ renders: Schema.Array(CatalogueRender) }));
 
 /** A Board panel, as far as publishing reads it (`@manna/film`'s `board.json`). */
 const BoardPanel = Schema.Struct({
@@ -154,7 +147,7 @@ const materialFile = Effect.fn('screening.file')(function* (
   return { file, sha256: hash.digest('hex'), bytes: Number(info.size), ext } satisfies MaterialFile;
 });
 
-/** The catalogue's newest whole-film video that `wanted` admits, with a share copy. */
+/** The share copy of the catalogue's newest render that `wanted` admits (`./screening-renders.ts`). */
 const latestShare = Effect.fn('screening.latest')(function* (
   out: string,
   wanted: (render: CatalogueRender) => boolean,
@@ -166,19 +159,7 @@ const latestShare = Effect.fn('screening.latest')(function* (
   if (!(yield* fs.exists(file)))
     return yield* fail(`${file} does not exist: render the film first`);
   const catalogue = yield* Schema.decodeEffect(Catalogue)(yield* fs.readFileString(file));
-  const found = Arr.head(
-    Arr.sort(
-      catalogue.renders.filter(
-        (render) =>
-          render.address._tag === 'Film' &&
-          render.kind === 'video' &&
-          Option.isNone(render.span) &&
-          Option.isSome(render.files.share) &&
-          wanted(render),
-      ),
-      Order.flip(Order.mapInput(Order.Number, (render: CatalogueRender) => render.at)),
-    ),
-  );
+  const found = newestOf(catalogue.renders, wanted);
   return yield* Option.match(
     Option.flatMap(found, (render) => render.files.share),
     {
@@ -267,16 +248,19 @@ const gather = Effect.fn('screening.gather')(function* (
   if (!(yield* fs.exists(path.join(paths.dir, 'script.ts'))))
     return yield* fail(`no film ${film} under ${path.dirname(paths.dir)}`);
   yield* fs.makeDirectory(paths.work, { recursive: true });
-  const notBoard = (render: CatalogueRender) => !BOARD_VARIANTS.has(render.variant);
   let video: string;
   if (version === 'board') {
     yield* renderBoard(film);
-    video = yield* latestShare(paths.out, (render) => render.variant === 'board', 'Board render');
+    video = yield* latestShare(paths.out, isBoardRender, 'Board render');
   } else if (version === 'final' && Option.isSome(from)) {
     video = path.resolve(from.value);
     if (!(yield* fs.exists(video))) return yield* fail(`${video} does not exist`);
   } else {
-    video = yield* latestShare(paths.out, notBoard, 'full render');
+    video = yield* latestShare(
+      paths.out,
+      isFullRender,
+      'full render (the main variant at full scale)',
+    );
   }
   const now = yield* DateTime.now;
   const panels = yield* Effect.suspend(() => {
@@ -321,7 +305,9 @@ const publish = Command.make(
     if (Option.isSome(input.from) && input.version !== 'final')
       return yield* fail('--from names the video of a final; a board or render is gathered here');
     const { site, url, desk } = yield* openSite;
-    const material = yield* gather(input.film, input.version, input.from);
+    // A film's folder name is a path segment here and a key prefix in the bucket.
+    const film = yield* Schema.decodeEffect(site.FilmId)(input.film);
+    const material = yield* gather(film, input.version, input.from);
     const { plan, held, pruned } = yield* site.publishTo(desk, material, input.dryRun);
     for (const upload of plan.uploads) {
       let state = 'upload';
@@ -337,7 +323,7 @@ const publish = Command.make(
       );
       return;
     }
-    yield* Console.log(`published ${input.film} ${input.version}: ${url}${plan.path}`);
+    yield* Console.log(`published ${film} ${input.version}: ${url}${plan.path}`);
   }),
 ).pipe(Command.withDescription("Publish a film's board, render or final to the screening site"));
 
