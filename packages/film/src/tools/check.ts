@@ -428,11 +428,13 @@ export const MAX_SEAM = MIN_LEAD + DEFAULT_TAIL;
 /**
  * The pause from `p`'s last word to `q`'s voice, when both speak and `q`
  * follows `p`: from where `p`'s last word is heard (`lastVoiced`), so the
- * silence a take trails counts as the pause it is.
+ * silence a take trails counts as the pause it is. It is the pause the beats
+ * declare (`p`'s exact `length`): the frames each beat starts on move it by
+ * under a frame.
  */
 export const seamAfter = (p: Placed, q: Placed): Option.Option<number> => {
   if (p.voice.duration <= 0 || q.voice.duration <= 0) return Option.none();
-  return Option.some(p.dur - (p.speechStart + lastVoiced(p.voice)) + q.speechStart);
+  return Option.some(p.length - (p.speechStart + lastVoiced(p.voice)) + q.speechStart);
 };
 
 /**

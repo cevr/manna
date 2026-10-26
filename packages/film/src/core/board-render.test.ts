@@ -67,7 +67,7 @@ const ONE_TICK = 1 / (FPS * TICKS_PER_FRAME);
 
 /** Shots `s` of a film `duration` long at film second `T`. */
 const frameOf = (s: ReadonlyArray<Shot>, duration: number, T: number) =>
-  boardFrameAt(boardClock(s, duration, FPS), ticksAt(T, FPS));
+  boardFrameAt(boardClock(s, [], duration, FPS), ticksAt(T, FPS));
 
 const frameAt = (T: number) => Option.getOrThrow(frameOf(shots, DURATION, T));
 

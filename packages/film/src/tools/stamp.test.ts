@@ -6,6 +6,7 @@ import * as BunServices from '@effect/platform-bun/BunServices';
 import { expect as expectPlain, test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import {
+  Boolean as Bool,
   Context,
   Effect,
   FileSystem,
@@ -19,10 +20,14 @@ import {
 } from 'effect';
 import { ChildProcessSpawner } from 'effect/process';
 import { boardFilm } from '../canvas/board.ts';
-import type { Film } from '../canvas/film.ts';
+import { type Film, type Frame, createFilm } from '../canvas/film.ts';
 import { recorder, withDom } from '../canvas/fixtures/stand-in.ts';
 import { type BoardFile, BoardName, emptyBoard } from '../core/board.ts';
 import { layout } from '../core/layout.ts';
+import { estimate, hashText } from '../core/narration.ts';
+import type { VoiceTiming } from '../core/schema.ts';
+import { unmeasured } from '../core/voiced.ts';
+import { beatSegments } from './segments.ts';
 import { ContentStore } from './content-store.ts';
 import { FilmRepo } from './film-repo.ts';
 import { scenesLocatedHere } from './read-cli.ts';
@@ -348,6 +353,106 @@ export const ground = ['#112233', '#445566'][script[0]!.tail]!;
           });
         // `plain`'s card as a Board frame paints it differs, so the key of the beat it falls in must.
         expect(cardFills(yield* groundOf(1))).not.toEqual(cardFills(yield* groundOf(0)));
+      }).pipe(Effect.provide(fixture)),
+  );
+});
+
+/** A take of `spoken` lasting `duration` seconds, its words estimated. */
+const takeOf = (spoken: string, duration: number): VoiceTiming => ({
+  hash: hashText(spoken),
+  file: 'take.flac',
+  duration,
+  words: unmeasured(estimate(spoken)),
+  source: 'elevenlabs',
+});
+
+/**
+ * A film of `hand` and `beta` saying `Hi.` with no lead or tail, on takes
+ * `durations` long, then `built` (10 s) whose scene draws a colour by its
+ * own time: one before half a second in, another from it.
+ */
+const compensated = (durations: readonly [number, number]) => {
+  const scenes = [
+    { id: 'hand', say: 'Hi.', lead: 0, tail: 0 },
+    { id: 'beta', say: 'Hi.', lead: 0, tail: 0 },
+    { id: 'built', min: 10 },
+  ];
+  const timings = {
+    voice: 'v',
+    scenes: { hand: takeOf('Hi.', durations[0]), beta: takeOf('Hi.', durations[1]) },
+  };
+  const placed = Result.getOrThrow(layout(scenes, timings));
+  const film = createFilm({
+    title: 'probe',
+    paper: { base: '#fff', tone: '#000', seed: 1 },
+    shade: '#000',
+    timings,
+    scenes: scenes.map((s) => ({
+      ...s,
+      draw: (f: Frame) => {
+        f.ctx.fillStyle = Bool.match(f.t >= 0.5, {
+          onTrue: () => '#445566',
+          onFalse: () => '#112233',
+        });
+        f.ctx.fillRect(0, 0, 10, 10);
+      },
+    })),
+  });
+  return { placed, film };
+};
+
+describe.concurrent('a beat after takes that change but end where they did', () => {
+  it.effect(
+    'keeps its key and paints the same: it starts on the same whole frame, and reads its time from it',
+    () =>
+      Effect.gen(function* () {
+        const films = yield* Films;
+        const path = yield* Path.Path;
+        const stamps = yield* Stamps;
+        // 3.6 + 3.2 is 6.800000000000001 and 4.1 + 2.7 is 6.8: built starts on frame 204 both ways.
+        const laid = yield* Effect.forEach(
+          [[3.6, 3.2] as const, [4.1, 2.7] as const],
+          (durations) =>
+            Effect.gen(function* () {
+              const { placed: beats, film: drawn } = compensated(durations);
+              const keys = yield* stamps.scenes(film(films, path), beats);
+              const segments = beatSegments({
+                placed: beats,
+                start: 0,
+                end: 504,
+                render: {
+                  width: 1920,
+                  height: 1080,
+                  fps: 30,
+                  scale: 1,
+                  encoder: 'hardware',
+                  captions: false,
+                  picture: [],
+                  agent: 'HeadlessChrome/141',
+                  platform: 'darwin',
+                },
+                beats: keys.beats,
+                board: Option.none(),
+                filmTimed: () => true,
+              });
+              return { beats, drawn, built: segments.at(-1)! };
+            }),
+        );
+        const [was, now] = [laid[0]!, laid[1]!];
+        expect(was.beats.map((p) => p.frame)).toEqual([0, 108, 204]);
+        expect(now.beats.map((p) => p.frame)).toEqual([0, 123, 204]);
+        expect([was.built.from, was.built.to, was.built.pinned]).toEqual([204, 504, true]);
+        expect(now.built.key).toEqual(was.built.key);
+        /** The fills frame `i` of `drawn` makes. */
+        const fillsAt = (drawn: Film, i: number) => {
+          const r = recorder(1920, 1080);
+          withDom(() => drawn.render(r.ctx, i / 30));
+          return r.fills.map((fill) => fill.style);
+        };
+        // Frame 219 is half a second into built.
+        for (const i of [218, 219, 220])
+          expect(fillsAt(now.drawn, i)).toEqual(fillsAt(was.drawn, i));
+        expect(fillsAt(now.drawn, 219)).toContain('#445566');
       }).pipe(Effect.provide(fixture)),
   );
 });

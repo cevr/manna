@@ -112,12 +112,13 @@ const framingAt = (motion: Motion, p: number): Framing => {
   });
 };
 
-/** One shot as a frame draws it: how opaque, how it moves and where that has it now. */
+/** One shot as a frame draws it: how opaque, how it moves and where that has it now, and the tick its mark is said at. */
 export interface Layer {
   readonly shot: Shot;
   readonly alpha: number;
   readonly motion: Motion;
   readonly framing: Framing;
+  readonly mark: number;
 }
 
 /** A Board render's frame: the shot held there (`shown`), and its layers bottom first (two inside a dissolve). */
@@ -127,32 +128,56 @@ interface BoardFrame {
 }
 
 /**
- * A Board's shots (in play order) on its clock (`ticksAt`, core/time.ts): the
- * tick each starts at and the tick the film ends at, at `fps`. Every time a
- * Board frame paints from is worked out here in whole ticks, so a frame moved
- * with its shots by whole frames reads the very numbers it read before, and
- * paints what a segment key over those numbers (`shotsSeen`) says it paints.
+ * A Board's shots (in play order) on its clock (`ticksAt`, core/time.ts) at
+ * `fps`: the tick each starts at and its mark is said at, and the tick the
+ * film ends at. Each is its beat's first frame in ticks plus its time into
+ * the beat (`tickIn`), so a shot moved with its beat by whole frames moves by
+ * exactly those frames' ticks. Every time a Board frame paints from is worked
+ * out here in whole ticks, so a moved frame reads the very numbers it read
+ * before, and paints what a segment key over those numbers (`shotsSeen`)
+ * says it paints.
  */
 interface BoardClock {
   readonly fps: number;
   readonly shots: ReadonlyArray<Shot>;
   /** Each shot's start, by index, in ticks. */
   readonly from: ReadonlyArray<number>;
+  /** Each shot's mark (a beat's card, its start), by index, in ticks. */
+  readonly mark: ReadonlyArray<number>;
   /** The film's end, in ticks. */
   readonly end: number;
 }
 
-/** `shots` (in play order) of a film `duration` seconds long on a Board's clock at `fps`. */
+/**
+ * `shots` (in play order) of the beats `placed` (laid at `fps`), a film
+ * `duration` seconds long, on a Board's clock.
+ */
 export const boardClock = (
   shots: ReadonlyArray<Shot>,
+  placed: ReadonlyArray<Placed>,
   duration: number,
   fps: number,
-): BoardClock => ({
-  fps,
-  shots,
-  from: shots.map((s) => ticksAt(s.from, fps)),
-  end: ticksAt(duration, fps),
-});
+): BoardClock => {
+  const beats = new Map(placed.map((p) => [p.spec.id, p]));
+  /** Film second `t` of beat `p` in ticks: its start's (its first frame's, laid at `fps`), plus its time into the beat. */
+  const tickIn = (p: Option.Option<Placed>, t: number): number =>
+    Option.match(p, {
+      onNone: () => ticksAt(t, fps),
+      onSome: (beat) => ticksAt(beat.start, fps) + ticksAt(t - beat.start, fps),
+    });
+  return {
+    fps,
+    shots,
+    from: shots.map((s) => tickIn(Option.fromUndefinedOr(beats.get(s.beat)), s.from)),
+    mark: shots.map((s) =>
+      tickIn(
+        Option.fromUndefinedOr(beats.get(s.beat)),
+        Shot.$match(s, { Unboarded: ({ from }) => from, Boarded: ({ at }) => at }),
+      ),
+    ),
+    end: tickIn(Arr.last(placed), duration),
+  };
+};
 
 /** Where shot `i` starts, in ticks: the film's end after the last. */
 const fromOf = (clock: BoardClock, i: number): number =>
@@ -182,7 +207,8 @@ const layerOf = (clock: BoardClock, i: number, tick: number, alpha: number): Rea
         onFalse: () => 0,
       });
       const motion = motionOf(shot);
-      return [{ shot, alpha, motion, framing: framingAt(motion, p) }];
+      const mark = Option.getOrElse(Arr.get(clock.mark, i), () => seen);
+      return [{ shot, alpha, motion, framing: framingAt(motion, p), mark }];
     },
   });
 
@@ -230,6 +256,7 @@ export const boardFrameAt = (clock: BoardClock, tick: number): Option.Option<Boa
 export interface ShotSeen {
   readonly shot: Shot;
   readonly shown: number;
+  readonly mark: number;
   readonly seen: number;
   readonly gone: number;
   readonly motion: Motion;
@@ -248,7 +275,16 @@ export const shotsSeen = (clock: BoardClock, from: number, to: number): Readonly
     const gone = fromOf(clock, i + 1) + halfAt(clock, i + 1);
     const meets = (i === 0 || seen < to) && gone > from;
     return Arr.filter(
-      [{ shot, shown: fromOf(clock, i), seen, gone, motion: motionOf(shot) }],
+      [
+        {
+          shot,
+          shown: fromOf(clock, i),
+          mark: Option.getOrElse(Arr.get(clock.mark, i), () => seen),
+          seen,
+          gone,
+          motion: motionOf(shot),
+        },
+      ],
       () => meets,
     );
   });

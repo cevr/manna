@@ -17,13 +17,13 @@ const at = '2026-09-25T00:00:00.000Z';
 
 describe('where a note shows', () => {
   const FPS = 30;
-  /** Scene a lasts `aSeconds`, then scene `next` (6 s). */
-  const film = (aSeconds: number, next = 'b') =>
+  /** Scene a lasts `aSeconds`, then scene `next` (`nextSeconds`, 6 s unless given). */
+  const film = (aSeconds: number, next = 'b', nextSeconds = 6) =>
     Result.getOrThrow(
       layout(
         [
           { id: 'a', min: aSeconds },
-          { id: next, min: 6 },
+          { id: next, min: nextSeconds },
         ],
         { voice: '', scenes: {} },
       ),
@@ -45,16 +45,16 @@ describe('where a note shows', () => {
     expect(noteT(film(7, 'c'), FPS, made)).toBe(6.5);
   });
 
-  test('a note on a scene’s last frame stays there when the scene ends between frames', () => {
-    // Scene a lasts 3.04 s: frame 91 (3.0333 s) is its last.
-    const onLast: NoteDraft = { scene: 'a', T: 91 / FPS, local: 91 / FPS, frame: 91, text: 'x' };
-    expect(noteT(film(3.04), FPS, onLast)).toBe(91 / FPS);
+  test('a note on a scene’s last frame stays there when its exact length ends between frames', () => {
+    // Scene a holds 3.04 s, laid to the nearest frame, 91 (`layout`): frame 90 (3 s) is its last.
+    const onLast: NoteDraft = { scene: 'a', T: 90 / FPS, local: 90 / FPS, frame: 90, text: 'x' };
+    expect(noteT(film(3.04), FPS, onLast)).toBe(90 / FPS);
   });
 
-  test('a note past a scene that ends between frames holds on that scene’s last frame', () => {
-    // b runs from 3.04 s to 9.04 s: its last frame is 271 (9.0333 s).
-    const T = noteT(film(3.04), FPS, { ...made, local: 9 });
-    expect(T).toBeCloseTo(271 / FPS, 9);
+  test('a note past a scene whose exact length ends between frames holds on that scene’s last frame', () => {
+    // b holds 6.04 s from 3 s, laid to frame 271 (9.0333 s): its last frame is 270 (9 s).
+    const T = noteT(film(3, 'b', 6.04), FPS, { ...made, local: 9 });
+    expect(T).toBeCloseTo(270 / FPS, 9);
   });
 
   test('a scene re-taken shorter than the note holds it on its last frame', () => {

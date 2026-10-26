@@ -29,11 +29,14 @@
 //   dissolves, and its panel as drawn: its card, or the try it shows with
 //   the sha256 of that image as it is on disk.
 //
-// Every time is keyed in whole ticks of the Board's clock (`ticksAt`,
-// core/time.ts: millionths of a frame) from the segment's first frame
-// (`atFrames`). A Board frame paints from those same ticks (`BoardClock`,
-// canvas/board.ts), so two segments with one key paint each frame from the
-// very same numbers, wherever each starts.
+// Every time is keyed as an integer from the segment's first frame: a beat's
+// start in whole frames (each beat starts on one, `layout`), a shot's times
+// in whole ticks of the Board's clock (`BoardClock`: millionths of a frame).
+// Every painter reads its beat's time from those same integers (`beatTime`,
+// core/layout.ts; `BoardClock`), so two segments with one key paint each
+// frame from the very same numbers, wherever each starts. A beat that
+// enters on a transition over the segment's frames reads the beat before it
+// too, which the transition draws from that beat's own first frame.
 //
 // So a panel or a beat elsewhere leaves a segment's key alone, and a
 // neighbour seen across a dissolve at its edge changes it.
@@ -61,8 +64,8 @@ import { PanelText, shownTry } from '../core/board.ts';
 import { type Copies, hasMaster, hasShare } from '../core/encoder.ts';
 import { Shot } from '../core/animatic.ts';
 import { type ShotSeen, boardClock, shotsSeen } from '../core/board-render.ts';
-import type { Placed } from '../core/layout.ts';
-import { TICKS_PER_FRAME, frameAtOrAfter, ticksAt } from '../core/time.ts';
+import { type Placed, transitionDur } from '../core/layout.ts';
+import { TICKS_PER_FRAME, frameAtOrAfter } from '../core/time.ts';
 import { writeWhole } from './content-store.ts';
 import { sha256Hex } from './digest.ts';
 
@@ -116,8 +119,8 @@ const PanelRead = Schema.Struct({
 });
 
 /**
- * A shot as a Board frame reads it (`ShotSeen`), its times in millionths of
- * a frame from the segment's first frame (`atFrames`).
+ * A shot as a Board frame reads it (`ShotSeen`), its times in ticks of the
+ * Board's clock from the segment's first frame (`fromFirst`).
  */
 const ShotRead = Schema.Struct({
   beat: Schema.String,
@@ -129,7 +132,7 @@ const ShotRead = Schema.Struct({
   panel: Schema.OptionFromOptionalKey(PanelRead),
 });
 
-/** A beat a segment's frames read: its key wherever it sits, and its start from the segment's first frame (`atFrames`). */
+/** A beat a segment's frames read: its key wherever it sits, and its first frame from the segment's first. */
 const BeatAt = Schema.Struct({ key: Schema.String, start: Schema.Int });
 
 /** What a segment's key is the hash of, as JSON. */
@@ -157,11 +160,8 @@ const SegmentKeyInput = Schema.fromJsonString(
 /** Tick `tick` of the Board's clock as a segment's key reads it: from its first frame, `from`. */
 const fromFirst = (tick: number, from: number): number => tick - from * TICKS_PER_FRAME;
 
-/** Film second `t` as a segment's key reads it: in ticks at `fps` (`ticksAt`) from its first frame, `from`. */
-const atFrames = (t: number, fps: number, from: number): number => fromFirst(ticksAt(t, fps), from);
-
 /** `seen` as its key reads it: its ticks from frame `from`, its panel reduced to what its frames draw, its image's sha256 from `images`. */
-const shotRead = (seen: ShotSeen, images: ReadonlyMap<string, string>, fps: number, from: number) =>
+const shotRead = (seen: ShotSeen, images: ReadonlyMap<string, string>, from: number) =>
   Shot.$match(seen.shot, {
     Unboarded: ({ beat }) => ({
       beat,
@@ -172,10 +172,10 @@ const shotRead = (seen: ShotSeen, images: ReadonlyMap<string, string>, fps: numb
       motion: seen.motion,
       panel: Option.none(),
     }),
-    Boarded: ({ beat, at, panel }) => ({
+    Boarded: ({ beat, panel }) => ({
       beat,
       from: fromFirst(seen.shown, from),
-      at: Option.some(atFrames(at, fps, from)),
+      at: Option.some(fromFirst(seen.mark, from)),
       seen: fromFirst(seen.seen, from),
       gone: fromFirst(seen.gone, from),
       motion: seen.motion,
@@ -196,13 +196,34 @@ const shotRead = (seen: ShotSeen, images: ReadonlyMap<string, string>, fps: numb
   });
 
 /**
- * The frames of beat `p` at `fps`: from the first at or after its start to
- * the first at or after its end, as the film's own frames are counted.
+ * The first frame of beat `p` at the render's `fps`: its own (`frame`, a
+ * whole frame as laid) where the film is laid at that rate.
  */
-const beatFrames = (p: Placed, fps: number) => ({
-  from: frameAtOrAfter(p.start, fps),
-  to: frameAtOrAfter(p.start + p.dur, fps),
+const firstFrame = (p: Placed, fps: number): number => frameAtOrAfter(p.start, fps);
+
+/**
+ * The frames of beat `p` of `placed` at `fps`: from its first to the next
+ * beat's first, or for the last, the first frame at or after its end.
+ */
+const beatFrames = (placed: ReadonlyArray<Placed>, p: Placed, fps: number) => ({
+  from: firstFrame(p, fps),
+  to: Option.match(Arr.get(placed, p.index + 1), {
+    onNone: () => frameAtOrAfter(p.start + p.dur, fps),
+    onSome: (next) => firstFrame(next, fps),
+  }),
 });
+
+/**
+ * Whether beat `p` draws the beat before it in frames `[from, to)`: it
+ * enters on a transition (not a cut) whose frames meet them. The transition
+ * draws the earlier beat on that beat's own clock, from its own first frame.
+ */
+const entersOver = (p: Placed, fps: number, from: number, to: number): boolean => {
+  const tr = transitionDur(p.spec.enter);
+  return (
+    p.index > 0 && tr > 0 && firstFrame(p, fps) < to && frameAtOrAfter(p.start + tr, fps) > from
+  );
+};
 
 /** What a render's segments are cut and keyed from. */
 interface SegmentsInput {
@@ -238,25 +259,34 @@ const segmentKey = (
     onNone: () => [],
     onSome: (board) =>
       shotsSeen(
-        boardClock(board.shots, board.duration, fps),
+        boardClock(board.shots, input.placed, board.duration, fps),
         from * TICKS_PER_FRAME,
         to * TICKS_PER_FRAME,
       ).map((s) => ({
         seen: s,
-        read: shotRead(s, board.images, fps, from),
+        read: shotRead(s, board.images, from),
       })),
   });
   const shotBeats = new Set(seen.map((s) => s.seen.shot.beat));
-  const read = input.placed.filter((p) => {
-    const frames = beatFrames(p, fps);
-    return (frames.from < to && frames.to > from) || shotBeats.has(p.spec.id);
+  const placed = input.placed;
+  const inside = placed.filter((p) => {
+    const frames = beatFrames(placed, p, fps);
+    return frames.from < to && frames.to > from;
   });
+  const entered = new Set(
+    inside
+      .filter((p) => entersOver(p, fps, from, to))
+      .flatMap((p) => Option.toArray(Arr.get(placed, p.index - 1)).map((q) => q.spec.id)),
+  );
+  const read = placed.filter(
+    (p) => inside.includes(p) || shotBeats.has(p.spec.id) || entered.has(p.spec.id),
+  );
   return Option.map(
     Option.all(
       read.map((p) =>
         Option.map(Option.fromUndefinedOr(input.beats.get(p.spec.id)), (key) => ({
           key,
-          start: atFrames(p.start, fps, from),
+          start: firstFrame(p, fps) - from,
         })),
       ),
     ),
@@ -288,7 +318,7 @@ export const beatSegments = (input: SegmentsInput): ReadonlyArray<Segment> => {
   const edges = Arr.dedupe(
     [
       start,
-      ...placed.map((p) => beatFrames(p, fps).from).filter((f) => f > start && f < end),
+      ...placed.map((p) => firstFrame(p, fps)).filter((f) => f > start && f < end),
       ...turns,
       end,
     ].toSorted((a, b) => a - b),

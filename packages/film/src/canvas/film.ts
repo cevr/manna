@@ -10,6 +10,7 @@ import type { Affine } from '../core/affine.ts';
 import { type CaptionCue, sceneCaptions } from '../core/captions.ts';
 import {
   type Placed,
+  beatTime,
   everyTakeRecorded,
   filmEnd,
   layout,
@@ -793,7 +794,7 @@ export const createFilm = (spec: FilmSpec): Film => {
   const width = spec.width ?? 1920;
   const height = spec.height ?? 1080;
   const fps = spec.fps ?? FILM_FPS;
-  const placed = Result.getOrThrow(layout(spec.scenes, spec.timings));
+  const placed = Result.getOrThrow(layout(spec.scenes, spec.timings, fps));
   const duration = filmEnd(placed);
   const allRecorded = everyTakeRecorded(placed);
   const finish = finishOf(spec.finish);
@@ -1025,7 +1026,7 @@ export const createFilm = (spec: FilmSpec): Film => {
     reads: Reads | undefined,
     unframed: number[],
   ): Frame => {
-    const t = T - p.start;
+    const t = beatTime(p, T, fps);
     const words = localWords.get(p) ?? [];
     const hears = hearing === undefined ? undefined : hearsOf(hearing, p.spec.id);
     const frame: Frame = {
@@ -1164,7 +1165,7 @@ export const createFilm = (spec: FilmSpec): Film => {
   /** Whether cue `name` of scene `p` holds at film time `T`: from its start, up to its end. */
   const holds = (p: Placed<SceneSpec>, name: string, T: number) => {
     const c = cueOf(p, name);
-    const t = T - p.start;
+    const t = beatTime(p, T, fps);
     return t >= c.start && t < c.end;
   };
 
@@ -1273,7 +1274,7 @@ export const createFilm = (spec: FilmSpec): Film => {
     // transform it drew under), so the clip is laid with none, whatever scale
     // the frame is drawn at, and the card drawn under the frame's.
     const frame = ctx.getTransform();
-    const at = cueProgress(cueOf(p, flood.cue), T - p.start);
+    const at = cueProgress(cueOf(p, flood.cue), beatTime(p, T, fps));
     const box = floodBox(from, ctx.canvas.width, ctx.canvas.height, at);
     const mask = flood.mask;
     if (mask !== undefined) {
@@ -1331,7 +1332,7 @@ export const createFilm = (spec: FilmSpec): Film => {
   ) => {
     const { paper } = getAssets();
     const id = p.spec.id;
-    breath.through = p.dur > 0 ? (T - p.start) / p.dur : 0;
+    breath.through = p.dur > 0 ? beatTime(p, T, fps) / p.dur : 0;
     breath.drift = drifts.get(id) ?? DRIFT;
     const moving = p.spec.storyboard !== true && breathes(breath);
     breath.outer = moving && unshot.has(id);
@@ -1435,7 +1436,7 @@ export const createFilm = (spec: FilmSpec): Film => {
     const prev = placed[cur.index - 1];
     const enter = cur.spec.enter;
     const tr = transitionDur(enter);
-    const local = T - cur.start;
+    const local = beatTime(cur, T, fps);
     const sink = opts.probe;
     const knobs = opts.knobs;
     hearing = opts.clock;

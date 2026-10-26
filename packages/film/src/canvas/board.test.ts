@@ -155,7 +155,7 @@ describe('a Board render', () => {
     const motionOf = (p: Panel) =>
       Option.getOrThrow(
         boardFrameAt(
-          boardClock([Shot.Boarded({ beat: p.beat, panel: p, at: 0, from: 0 })], 5, 30),
+          boardClock([Shot.Boarded({ beat: p.beat, panel: p, at: 0, from: 0 })], [], 5, 30),
           0,
         ),
       ).layers[0]!.motion;

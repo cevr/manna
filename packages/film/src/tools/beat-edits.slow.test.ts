@@ -224,11 +224,16 @@ describe('beat_hold', () => {
           by: 'painter',
         });
         expect(held.said).toBe('Held look +2.9 s after its words. Agents re-time and re-check.');
-        // The seams it moved, as the version reads after it: into look, and out of it.
-        expect(held.seams).toEqual([
-          { from: 'cold', to: 'look', seconds: 0.6 },
-          { from: 'look', to: 'title', seconds: 3.5 },
+        // The seams it moved, as the version reads after it: into look, and out of it, each
+        // as heard, its beats on whole frames (`layout`), so within a frame of 0.6 s and 3.5 s.
+        const seams: ReadonlyArray<{ from: string; to: string; seconds: number }> = held.seams;
+        expect(seams.map(({ from, to }) => [from, to])).toEqual([
+          ['cold', 'look'],
+          ['look', 'title'],
         ]);
+        seams.forEach((seam, i) =>
+          expect(Math.abs(seam.seconds - [0.6, 3.5][i]!)).toBeLessThanOrEqual(1 / 30),
+        );
         expect(beatsOf(scriptNow(files)).find((b) => b.id === 'look')).toMatchObject({ tail: 3 });
         // Below its floor: the default, written as none.
         yield* tool('beat_hold', { film: 'f', beat: 'look', edge: 'tail', seconds: 0, by: 'p' });
@@ -326,7 +331,8 @@ describe('beat_hold on a beat a hold cannot change', () => {
             });
             expect(tail.target).toBe('hold thesis tail');
             const words = led.speech.end - led.speech.start;
-            expect((yield* thesis()).dur).toBeCloseTo(2 + words + 27, 3);
+            // Its lead, words and tail, laid on whole frames (`layout`).
+            expect(Math.abs((yield* thesis()).dur - (2 + words + 27))).toBeLessThanOrEqual(1 / 30);
             // Back to 1 s, its min takes some of the change: the receipt says what plays.
             const back = yield* tool('beat_hold', {
               film: 'f',

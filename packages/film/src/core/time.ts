@@ -1,6 +1,7 @@
 // Time is the only input to a frame. These helpers turn "seconds since the
 // scene began" into eased 0→1 progress values and keyframed numbers.
 
+import { Option } from 'effect';
 import type { EaseName } from './schema.ts';
 
 type Ease = (t: number) => number;
@@ -115,6 +116,15 @@ export const frameAtOrAfter = (t: number, fps: number): number => Math.ceil(t * 
 
 /** The last frame at or before `t` seconds, at `fps`. */
 export const frameAtOrBefore = (t: number, fps: number): number => Math.floor(t * fps + GRID_NUDGE);
+
+/**
+ * The frame whose time `t` seconds is at `fps`: a frame's time as a render
+ * and the player write it (`frame / fps`), exactly; none for any other time.
+ */
+export const frameOn = (t: number, fps: number): Option.Option<number> => {
+  const frame = frameRead(t, fps);
+  return Option.liftPredicate(frame, () => frame / fps === t);
+};
 
 /** How many ticks a frame holds on a Board's clock (`ticksAt`). */
 export const TICKS_PER_FRAME = 1_000_000;

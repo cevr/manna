@@ -9,6 +9,7 @@
 
 import { Effect, Result, Schema, type Scope } from 'effect';
 import { type Placed, sceneOf } from '../core/layout.ts';
+import { frameRead, secondsOfTicks, ticksAt } from '../core/time.ts';
 import { Short } from '../core/schema.ts';
 import {
   type ResolvedShort,
@@ -37,11 +38,16 @@ import {
 import type { Probe, ProbeSink } from './probe.ts';
 import { verticalHook } from './vertical.ts';
 
-/** A scene of the film on the short's clock: its start moved so its own clock reads the same. */
+/**
+ * A scene of the film on the short's clock: its first frame moved by the
+ * whole frames its span moves (a span's ends are frames, `resolveShort`), so
+ * its own clock reads the same.
+ */
 const retimed = (film: Film, short: ResolvedShort): ReadonlyArray<Placed<SceneSpec>> =>
   short.spans.map((span, index) => {
     const p = Result.getOrThrow(sceneOf(film.placed, span.scene));
-    return { ...p, index, start: span.at - (span.from - p.start) };
+    const frame = p.frame + frameRead(span.at - span.from, film.fps);
+    return { ...p, index, frame, start: frame / film.fps };
   });
 
 /** Records the band's probe took, moved `dy` down onto the page, into `sink`. */
@@ -133,7 +139,12 @@ export const createShort = (film: Film, declared: Short): Film => {
     const { sheet, grain, band: frame } = getAssets();
     const index = shortSpanAt(short, T);
     const span = short.spans[index] ?? short.spans[0];
-    const at = span.from + (T - span.at);
+    // The film's second on its clock's whole ticks: the span's ends are frames, so a frame of the short is a frame of the film.
+    const fps = film.fps;
+    const at = secondsOfTicks(
+      ticksAt(span.from, fps) + ticksAt(T, fps) - ticksAt(span.at, fps),
+      fps,
+    );
     const sink = opts.probe;
     // A probed frame (a check, never the export's draw) collects the band's records apart.
     const probed: ProbeSink | undefined = sink === undefined ? undefined : { texts: [], inks: [] };
