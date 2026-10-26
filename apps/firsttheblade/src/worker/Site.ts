@@ -29,6 +29,7 @@ import { HttpServerRequest } from 'effect/http';
 
 import { deliver } from '../mail/deliver.ts';
 import { warnMail } from '../mail/log.ts';
+import type { Mailer } from '../mail/mailer.ts';
 import { Delivery } from '../mail/queue.ts';
 import type { MailServices } from '../mail/routes.ts';
 
@@ -39,12 +40,23 @@ import { respond } from './respond.ts';
 
 const readDelivery = Schema.decodeUnknownOption(Delivery);
 
+/**
+ * `effect` with the services built as the Worker started, under the event's
+ * own: the event's execution context and runtime win. The services were
+ * captured with the start's placeholders for both, which only an event's
+ * replace (a `waitUntil` through the placeholder dies).
+ */
+const withServices =
+  <S, Event = never>(services: Context.Context<S>) =>
+  <A, E>(effect: Effect.Effect<A, E, S | Event>) =>
+    Effect.updateContext(effect, (event: Context.Context<Event>) => Context.merge(services, event));
+
 /** The Worker's answer to a request: the policy, over the site's services. */
 const serve = (services: Context.Context<MailServices>) =>
   Effect.gen(function* () {
     const request = yield* HttpServerRequest.HttpServerRequest;
     return yield* respond(request);
-  }).pipe(Effect.provideContext(services));
+  }).pipe(withServices<MailServices, HttpServerRequest.HttpServerRequest>(services));
 
 const ASSETS = {
   directory: 'dist',
@@ -90,7 +102,7 @@ export default class Site extends Cloudflare.Worker<Site>()(
         Cloudflare.fromCloudflareFetcher(env['ASSETS']).fetch(request).pipe(Effect.orDie),
     });
     const queue = yield* MailQueue;
-    const mail = yield* Effect.context<Exclude<MailServices, Assets>>();
+    const mail = yield* Effect.context<Exclude<MailServices, Assets> | Mailer>();
 
     // A batch fails only when a letter could not be sent now; the queue
     // then tries the whole batch again, and what was sent is passed over.
@@ -103,7 +115,7 @@ export default class Site extends Cloudflare.Worker<Site>()(
           else yield* warnMail('film.unreadable', { message: message.id });
         }
         yield* deliver(deliveries);
-      }).pipe(Effect.provideContext(mail)),
+      }).pipe(withServices(mail)),
     );
 
     return { fetch: serve(Context.add(mail, Assets, assets)) };

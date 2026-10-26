@@ -19,7 +19,7 @@
  */
 import * as InMemory from '@alchemy.run/domain/InMemory';
 import { BunCrypto } from '@effect/platform-bun';
-import { Clock, Config, Context, Crypto, Effect, Layer, Redacted } from 'effect';
+import { Clock, Config, Context, Crypto, Duration, Effect, Layer, Redacted } from 'effect';
 import { Hex } from 'effect/encoding';
 import { TestClock } from 'effect/testing';
 
@@ -60,15 +60,22 @@ const memoryPlatform = (manual: boolean) =>
   );
 
 /**
+ * One turn of the event loop, on the live clock (a test's clock never moves
+ * by itself): a promise a policy waits on, as WebCrypto's, settles in it.
+ */
+const nextTurn = Clock.Clock.defaultValue().sleep(Duration.zero);
+
+/**
  * Delivers until nothing is left: a policy's run is forked, and may commit
- * more to deliver, so the platform is drained until it stays idle. A policy
- * or projection that failed is a defect of the test.
+ * more to deliver or wait on a promise, so the platform is drained, a turn of
+ * the event loop at a time, until it stays idle. A policy or projection that
+ * failed is a defect of the test.
  */
 const drained = (control: InMemory.Control) =>
   Effect.gen(function* () {
     for (let round = 0; round < 1_000; round += 1) {
       yield* control.drain;
-      yield* Effect.yieldNow;
+      yield* nextTurn;
       if (yield* control.idle) {
         if (control.failures.length > 0) {
           return yield* Effect.die(new Error(`the model failed: ${String(control.failures[0])}`));
