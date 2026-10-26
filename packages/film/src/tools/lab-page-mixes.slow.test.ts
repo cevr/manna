@@ -117,7 +117,7 @@ describe("a film's mixes", () => {
       const { page, ask, mix, armed } = yield* filmsInMemory;
       // Films `f` and `g`, each played by a page.
       for (const name of ['f', 'g']) {
-        yield* ask(`/films/${name}/studio`);
+        yield* ask(`/films/${name}/export`);
         expect((yield* ask(`/films/${name}/narration/full.wav`)).text).toBe(`${name} one`);
         yield* armed(name);
       }

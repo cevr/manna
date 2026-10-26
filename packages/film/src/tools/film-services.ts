@@ -1,10 +1,8 @@
 // The film's composition root: the services every `film` command and the lab
 // run with, the lab's pages, and the lab's start, built in one place. Its
-// consumers are the CLI (`runFilmCli`, `cli.ts`) and the app's studio
-// harness (`apps/animations/studio-harness.ts`), which drives this same lab
-// over a copy of a film with a fake ElevenLabs. A consumer that built these
-// layers itself would drift from the lab it means to be
-// (`film-services.slow.test.ts` names the two and sweeps for a third).
+// one consumer is the CLI (`runFilmCli`, `cli.ts`). A consumer that built
+// these layers itself would drift from the lab it means to be
+// (`film-services.slow.test.ts` names the CLI and sweeps for another).
 
 import { AskMaterials } from './ask-materials.ts';
 import { AskStore } from './ask-store.ts';
@@ -97,8 +95,7 @@ interface FilmServicesSpec {
   >;
   /**
    * ElevenLabs: the real one (`ElevenLabs.layer`), or a fixture's fake, which
-   * may read the film and its media (the studio harness hears each take as
-   * its line).
+   * may read the film and its media.
    */
   readonly elevenLabs: Layer.Layer<ElevenLabs, never, FilmRepo | Media | BunServices.BunServices>;
   /**

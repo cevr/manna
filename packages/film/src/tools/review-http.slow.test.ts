@@ -241,7 +241,7 @@ describe('review routes', () => {
 
   it.effect("passes the app's page the rest, behind the same hosts", () =>
     Effect.gen(function* () {
-      for (const path of ['/', '/chunk-a1.js', '/films/tiny/narration/s1.mp3']) {
+      for (const path of ['/asks/a1', '/chunk-a1.js', '/films/tiny/narration/s1.mp3']) {
         const own = yield* reviewTestAsk(reviewTestGet(path, { host: REVIEW_TEST_HOST }));
         expect([path, own.status, yield* reviewTestBody(own)]).toEqual([path, 200, `page ${path}`]);
         const rebound = yield* reviewTestAsk(reviewTestGet(path, { host: 'evil.example:8229' }));

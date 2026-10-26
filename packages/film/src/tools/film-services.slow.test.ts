@@ -1,12 +1,10 @@
 // The film's composition root is built once (`film-services.ts`): the
 // services every `film` command and the lab run with, the lab's pages, and
 // the lab's start. Its deletion test: delete it, and each of its consumers
-// would build the graph again, as the CLI and the studio harness did before,
-// and drifted (the harness's pages lacked the assets, the CLI's source had
-// stamps the harness's had not). So no module but the root builds these
-// layers, and its consumers are named: the CLI (`runFilmCli`) and the app's
-// studio harness, which drives the same lab over a copy of a film with a
-// fake ElevenLabs. A test's own graph (`testing.ts`, `fixtures/`, a
+// would build the graph again, as two once did, and drifted (one's pages
+// lacked the assets, the other's source had stamps the first's had not). So
+// no module but the root builds these layers, and its one consumer is named:
+// the CLI (`runFilmCli`). A test's own graph (`testing.ts`, `fixtures/`, a
 // `*.test.ts`) is a fake's, not the app's, and is not swept.
 //
 // The guard reads bindings, not spellings (oxc-parser, as `lab.slow.test.ts`'s
@@ -421,11 +419,11 @@ describe("the film's composition root", () => {
     }).pipe(Effect.provide(BunServices.layer)),
   );
 
-  it.effect('its consumers are the CLI and the studio harness', () =>
+  it.effect('its one consumer is the CLI', () =>
     Effect.gen(function* () {
       const { world, files, repo, root } = disk;
       expect((yield* consumersIn(world, root, files)).map((f) => f.slice(repo.length + 1))).toEqual(
-        ['apps/animations/studio-harness.ts', 'packages/film/src/tools/cli.ts'],
+        ['packages/film/src/tools/cli.ts'],
       );
     }).pipe(Effect.provide(BunServices.layer)),
   );

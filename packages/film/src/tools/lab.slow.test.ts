@@ -31,7 +31,6 @@ import {
   Scope,
   Stream,
 } from 'effect';
-import { Base64 } from 'effect/encoding';
 import {
   Etag,
   FetchHttpClient,
@@ -46,7 +45,6 @@ import { brotliDecompressSync } from 'node:zlib';
 import { parseSync } from 'oxc-parser';
 import { LabHttpApi, Places, Refusal, ScriptBeats, ToolFailure, labUrls } from '../core/api.ts';
 import { routesOf } from '../core/testing.ts';
-import { NotesFile } from '../core/schema.ts';
 import { labHandler } from './lab.ts';
 import {
   type BesideRoutes,
@@ -211,8 +209,6 @@ const readTo = (
     },
   );
 };
-
-const png = text('frame');
 
 /** Where the lab server listens: the only host the routes answer to. */
 const bound = { hostname: '127.0.0.1', port: 4401 } as const;
@@ -536,7 +532,8 @@ const heardOf = <E, R>(change: Effect.Effect<void, E, R>) =>
       .build;
   });
 
-const draft = `{"scene":"hand","T":230.38,"frame":6911,"cue":{"name":"topple","edge":"end"},"box":{"x":860,"y":640,"w":200,"h":120},"text":"too low","still":"${Base64.encode(png)}"}`;
+/** A beat's delivery marks as a page writes them (`MarksPost`): none, on beat `hand`. */
+const marks = '{"beat":"hand","marks":[]}';
 
 describe('the lab loads no film', () => {
   // The lab runs for days and Bun keeps a module as it first imported it: a
@@ -558,12 +555,8 @@ describe('lab routes', () => {
     () =>
       Effect.gen(function* () {
         const lab = yield* labHandler();
-        yield* Effect.promise(() =>
-          lab(post(labUrls.script.marks({ params: { film: 'f' } }), draft), bound),
-        );
         const page = yield* Effect.promise(() => lab(get('/asks/a1'), bound).then((r) => r.text()));
-        expect(page).toMatch(/^200 \{/);
-        expect(page).toContain('"id":"n1"');
+        expect(page).toBe('200 {"film":"f","panels":[],"approvals":[]}');
       }).pipe(Effect.scoped, Effect.provide(labInMemory(files(), readingPages))),
   );
 
@@ -578,13 +571,13 @@ describe('lab routes', () => {
           '/films/f/narration/s1.mp3',
           '/footage/take.why/0123456789ab/proxy.mp4',
         ]) {
-          const asked = `/?read=${encodeURIComponent(path)}`;
+          const asked = `/asks/a1?read=${encodeURIComponent(path)}`;
           const page = yield* Effect.promise(() => lab(get(asked), bound).then((r) => r.text()));
           expect([path, page]).toEqual([path, `404 {"_tag":"RouteUnknown","path":"${path}"}`]);
         }
         // An API path is read as ever.
         const notes = labUrls.board.read({ params: { film: 'f' } });
-        const read = `/?read=${encodeURIComponent(notes)}`;
+        const read = `/asks/a1?read=${encodeURIComponent(notes)}`;
         expect(yield* Effect.promise(() => lab(get(read), bound).then((r) => r.text()))).toMatch(
           /^200 \{/,
         );
@@ -602,7 +595,10 @@ describe('lab routes', () => {
           ['*', '*'],
         ] as const) {
           const page = yield* Effect.promise(() =>
-            lab(get(`/?vary=${encodeURIComponent(vary)}`, { 'accept-encoding': 'br' }), bound),
+            lab(
+              get(`/asks/a1?vary=${encodeURIComponent(vary)}`, { 'accept-encoding': 'br' }),
+              bound,
+            ),
           );
           expect([vary, page.headers.get('content-encoding'), page.headers.get('vary')]).toEqual([
             vary,
@@ -834,7 +830,7 @@ describe('lab routes', () => {
             return { status: res.status, body: yield* Effect.promise(() => res.text()) };
           });
         // A page for film g, which the app does not have.
-        const other = yield* answer(post(labUrls.script.marks({ params: { film: 'g' } }), draft));
+        const other = yield* answer(post(labUrls.script.marks({ params: { film: 'g' } }), marks));
         expect(other.status).toBe(404);
         expect(
           yield* Schema.decodeEffect(Schema.fromJsonString(Refusal))(other.body),
@@ -846,9 +842,6 @@ describe('lab routes', () => {
         expect((yield* answer(get(labUrls.script.beats({ params: { film: 'g' } })))).status).toBe(
           404,
         );
-        expect(
-          (yield* answer(post(labUrls.script.marks({ params: { film: 'g' } }), '{}'))).status,
-        ).toBe(404);
         expect((yield* answer(get(labUrls.board.stale({ params: { film: 'g' } })))).status).toBe(
           404,
         );
@@ -862,7 +855,7 @@ describe('lab routes', () => {
         const listed = yield* Effect.promise(() =>
           lab(get(labUrls.board.read({ params: { film: 'f' } })), bound).then((r) => r.json()),
         );
-        expect((yield* Schema.decodeUnknownEffect(NotesFile)(listed)).notes).toEqual([]);
+        expect(listed).toEqual({ film: 'f', panels: [], approvals: [] });
       }).pipe(Effect.scoped, Effect.provide(labInMemory(files()))),
   );
 
@@ -1002,15 +995,13 @@ describe('lab routes', () => {
         expect(yield* bare('OPTIONS')).toBe(405);
         // The pages: a foreign Host never; a link opened on another site, yes (GET or
         // HEAD), but none of a page's files; a page is read, never written.
-        // Every place's path (its film `f`, each other part `x`), and old links
-        // the pages answer with a redirect to their place.
+        // Every place's path (its film `f`, each other part `x`), and the home
+        // with an old link's query.
         const pages = [
           ...Object.values(Places).map((place) =>
             place.pattern.replace(':film', 'f').replaceAll(/:\w+/g, 'x'),
           ),
-          '/lab?film=f',
-          '/films/f/lab/x',
-          '/player?film=f&lookbook',
+          '/',
           '/?project=f',
         ];
         const files = [
@@ -1069,20 +1060,21 @@ describe('lab routes', () => {
         // DNS rebinding: the page's own origin, but a Host that is not the bound host:port.
         const rebound = { host: 'evil.example:4401', origin: 'http://evil.example:4401' };
         expect(
-          (yield* row(post(labUrls.script.marks({ params: { film: 'f' } }), draft, rebound)))[1],
+          (yield* row(post(labUrls.script.marks({ params: { film: 'f' } }), marks, rebound)))[1],
         ).toBe(403);
         // Nothing was written.
         const listed = yield* Effect.promise(() =>
           lab(get(labUrls.board.read({ params: { film: 'f' } })), bound).then((r) => r.json()),
         );
-        expect((yield* Schema.decodeUnknownEffect(NotesFile)(listed)).notes).toEqual([]);
-        // The lab's own page, by either name for the loopback host, still writes and reads.
+        expect(listed).toEqual({ film: 'f', panels: [], approvals: [] });
+        // The lab's own page, by either name for the loopback host, is let in to
+        // write: the route answers it (film `f` has no script to mark), never the gate.
         for (const origin of ['http://127.0.0.1:4401', 'http://localhost:4401'])
           expect(
             (yield* row(
-              post(labUrls.script.marks({ params: { film: 'f' } }), draft, { origin }),
-            ))[1],
-          ).toBe(200);
+              post(labUrls.script.marks({ params: { film: 'f' } }), marks, { origin }),
+            ))[2],
+          ).not.toBe('RequestRefused');
         expect(
           (yield* row(
             get(labUrls.board.read({ params: { film: 'f' } }), {
@@ -1096,7 +1088,7 @@ describe('lab routes', () => {
         const lines = eventLines(written.stderr, 'api.request.refused').map(
           (line) => line.split(' reason=')[0] ?? '',
         );
-        expect(refusals.length).toBeGreaterThan(600);
+        expect(refusals.length).toBeGreaterThan(450);
         expect(Arr.sort(lines, Order.String)).toEqual(Arr.sort(refusals, Order.String));
         expect(eventLines(written.stdout, 'api.request.refused')).toEqual([]);
       }).pipe(
@@ -1341,7 +1333,7 @@ describe('a client that goes away', () => {
         const driven = yield* Driven;
         const { url, gone } = yield* served();
         const client = yield* HttpClient.HttpClient;
-        const ask = Effect.orDie(client.get(url));
+        const ask = Effect.orDie(client.get(new URL('/asks/a1', url)));
         const all = ['/app', '/app/a', DROPPED, '/app/sub'];
         /** The folders watched once the watches just started run. */
         const watchedSettled = (want: ReadonlyArray<string>) =>
@@ -1394,7 +1386,9 @@ describe('a client that goes away', () => {
         // A browser's GET of the page, br accepted: it reads the shell and stays, until it leaves.
         const reading = yield* Effect.forkChild(
           Effect.flatMap(
-            Effect.orDie(client.get(url, { headers: { 'accept-encoding': 'br' } })),
+            Effect.orDie(
+              client.get(new URL('/asks/a1', url), { headers: { 'accept-encoding': 'br' } }),
+            ),
             (response) =>
               response.stream.pipe(
                 Stream.decodeText(),

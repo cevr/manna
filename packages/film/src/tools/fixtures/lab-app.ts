@@ -143,7 +143,7 @@ export const app = Effect.gen(function* () {
       const src = /src="\.?(\/[^"]+\.js)"/.exec(text)?.[1] ?? '';
       return (yield* ask(src)).text;
     });
-  const script = scriptOf('/');
+  const script = scriptOf('/asks/a1');
   /**
    * A wait past `since`, while `name` is written as `text` until it answers:
    * the watch may start after the first write, and the same bytes again are

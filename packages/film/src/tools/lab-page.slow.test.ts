@@ -48,7 +48,7 @@ describe('lab pages', () => {
         const { spec, write } = yield* appFolder;
         const path = yield* Path.Path;
         // A page whose script is a Solid one, so the build holds Solid itself.
-        const solid = path.join(import.meta.dir, '../lab/fixtures/index-owner-page.ts');
+        const solid = path.join(import.meta.dir, '../lab/fixtures/ask-page.ts');
         yield* write('ask.html', html('ask', path.relative(path.dirname(spec.pages.ask), solid)));
         const { ask } = yield* served(spec, PageBundler.layer);
         const page = (yield* ask('/asks/a1')).text;
@@ -136,7 +136,7 @@ describe('lab pages', () => {
           'br,',
         ];
         // Cold: no best brotli yet, every coding the compression's (the page's own answer is never kept compressed).
-        const cold = yield* Effect.forEach(headers, (accept) => codingOf('/', accept));
+        const cold = yield* Effect.forEach(headers, (accept) => codingOf('/asks/a1', accept));
         expect(cold.slice(0, 6)).toEqual(['br', 'br', 'gzip', 'br', 'br', '']);
         expect(cold.slice(6)).toEqual(['', '', '', '']);
         // Ready: the script's best brotli made (the page's own answer sends it compressed only
@@ -179,7 +179,7 @@ describe('lab pages', () => {
         );
         expect(exported.text).not.toContain('rendered');
         // A HEAD is the page's headers: nothing is rendered for it.
-        const head = yield* ask('/', 'HEAD');
+        const head = yield* ask('/asks/a1', 'HEAD');
         expect([head.status, head.text.includes('<main>')]).toEqual([200, false]);
       }).pipe(Effect.scoped, Effect.provide(Platform)),
   );
@@ -442,9 +442,9 @@ describe('lab pages', () => {
         const wedged = yield* page.wedge(swapped);
         expect(wedged.failed).toEqual(Option.none());
         expect(wedged.wedge).not.toBe('');
-        const html = (yield* ask(`/?wedge=${wedged.wedge}`)).text;
+        const html = (yield* ask(`/asks/a1?wedge=${wedged.wedge}`)).text;
         expect(html).toContain(`src="/wedge/${wedged.wedge}/`);
-        expect(yield* scriptOf(`/?wedge=${wedged.wedge}`)).toContain('shared swapped');
+        expect(yield* scriptOf(`/asks/a1?wedge=${wedged.wedge}`)).toContain('shared swapped');
         // Only the easel's browser on the box asks for a wedge's files: each is sent as
         // it is, for the server to compress per request, never squeezed at the best.
         const src = /src="\.?(\/[^"]+\.js)"/.exec(html)?.[1] ?? '';
@@ -461,7 +461,7 @@ describe('lab pages', () => {
         expect(yield* fs.readFileString(shared)).toContain('shared one');
         // The same swap again is the same wedge; one never built is no page.
         expect((yield* page.wedge(swapped)).wedge).toBe(wedged.wedge);
-        expect((yield* ask('/?wedge=nope')).status).toBe(404);
+        expect((yield* ask('/asks/a1?wedge=nope')).status).toBe(404);
         // A swap no build reads is refused, not drawn as the source it was to replace.
         const unread = yield* page.wedge(new Map([['/nonexistent/loop-probe-x.ts', '']]));
         expect(unread.wedge).toBe('');
@@ -580,7 +580,7 @@ describe("a look's build, against saves no watch hears", () => {
         expect(now.text).toContain('ask new');
         expect(buildOf(now.text)).toBe(receipt.build.build);
         // The look's page is the build it was answered, by its own number, whatever is built after.
-        const pinned = `/?build=${receipt.kept}`;
+        const pinned = `/asks/a1?build=${receipt.kept}`;
         expect((yield* ask(pinned)).text).toContain('ask new');
         landing.files.set('/app/ask.html', text(html('ask newer', './src/p.ts')));
         const after = yield* page.built;
@@ -590,7 +590,7 @@ describe("a look's build, against saves no watch hears", () => {
         expect(still.text).toContain('ask new<');
         // Served as made: it waits on no build, so it never reloads itself off the look's build.
         expect(still.text).not.toContain('lab-build');
-        expect((yield* ask('/?build=999')).status).toBe(404);
+        expect((yield* ask('/asks/a1?build=999')).status).toBe(404);
       }).pipe(Effect.scoped, Effect.provide(landing.layer)),
   );
 

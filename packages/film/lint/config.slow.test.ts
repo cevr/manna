@@ -609,7 +609,7 @@ describe('the lint config', () => {
           alias: `@manna/film/${key.replace(/^\.\//, '')}`,
           folder: Option.fromNullishOr(/^\.\/src\/([\w-]+)\//.exec(target)?.[1]),
         }));
-        expect(aliases.map((a) => a.alias)).toContain('@manna/film/review');
+        expect(aliases.map((a) => a.alias)).toContain('@manna/film/ask');
         const missing = config.overrides.flatMap((o) =>
           optionsIn(o, 'no-restricted-imports', Imports).flatMap((options) =>
             (options.patterns ?? []).flatMap(({ group }) => {
