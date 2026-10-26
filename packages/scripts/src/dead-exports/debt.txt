@@ -71,7 +71,6 @@ packages/core/src/wiki/service.ts WikiUnavailableError
 packages/core/src/writings/corpus-class.ts isUnfiltered
 packages/core/src/writings/model.ts paragraphId
 packages/film/src/browser/frames.ts Ask
-packages/film/src/browser/media-browser.ts panesMediaLayerWith
 packages/film/src/browser/media.ts MediaElement
 packages/film/src/canvas/camera.ts PLANE_LIFT_MAX
 packages/film/src/canvas/camera.ts PLANE_LIFT_MIN

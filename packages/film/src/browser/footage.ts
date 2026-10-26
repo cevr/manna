@@ -2,8 +2,7 @@
 // frame reads (`Film.footageAt`, pure), and the host decodes those frames
 // before the frame is drawn, handing them over as `RenderOptions.footage`,
 // so the draw stays synchronous and the film keeps nothing between frames:
-// any reuse of a decoded frame lives here, in the host, as `frame-pane.ts`
-// holds the frames it has decoded. A drawn film reads no footage: every
+// any reuse of a decoded frame lives here, in the host. A drawn film reads no footage: every
 // caller draws it at once, as it always has (`readsFootage`).
 //
 // Two ways in. `ready` decodes the frames one frame reads: a still, a seek,

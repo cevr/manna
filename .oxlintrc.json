@@ -1805,7 +1805,7 @@
               ],
               "Audio": { "use": "Media and a Playable (packages/film/src/browser/media.ts)" },
               "AudioContext": {
-                "use": "no lab page records audio; to play, Media and a Playable (packages/film/src/browser/media.ts), through Media's live adapter's one sound context (pageSound, packages/film/src/browser/media-browser.ts)"
+                "use": "no lab page records audio; to play, Media and a Playable (packages/film/src/browser/media.ts)"
               },
               "AudioWorkletNode": { "use": "no lab page records audio" },
               "MediaRecorder": { "use": "no lab page records audio" },

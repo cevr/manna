@@ -2,10 +2,7 @@
 // its host from (`host.ts`). Each service's own live adapter is its
 // `*-browser.ts` beside it; the address bar's is `@manna/url-state`'s
 // (`layerBrowser`, the only module that touches `history` and `location`),
-// with `UrlState` over it. A page whose media does more than the page's own
-// (the review's compares on WebCodecs panes, `panesMediaLayer`) builds
-// its host `withMedia` that layer, over the host's frames and viewport, so
-// no other page loads what it needs. A page's footage is read from the proxy
+// with `UrlState` over it. A page's footage is read from the proxy
 // (the lab's, the phone's copy); the render page's from the mezzanine it
 // conforms from (`BrowserHost.render`).
 
@@ -52,6 +49,4 @@ export const BrowserHost = {
   layer: hostWith(mediaLayer),
   /** The render page's host: its footage read from the mezzanine, which the render conforms from. */
   render: hostWith(mediaLayer, 'mezzanine'),
-  /** The host with `media` for the page's own (`media-browser.ts` `panesMediaLayer`). */
-  withMedia: (media: Layer.Layer<Media, never, Frames | Viewport>) => hostWith(media),
 };

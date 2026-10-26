@@ -3656,15 +3656,12 @@ reaches it. Every media element is driven through a `Playable` (`browser/media.t
 play and pause are effects. `Media` says what a refused play means
 (`Blocked`, `Aborted`, `Failed`), plays muted when the browser refuses
 sound (`playOrMute`, an ask's players), keeps the page's one voice
-heard (`hear`: a take or a reader's Hear pauses the one before it), makes the narration's audio,
-and says which engine a compare plays on (`compare`: WebCodecs panes, or
-`<video>` and why), its clock the host's `monotonicMs`.
+heard (`hear`: a take or a reader's Hear pauses the one before it), and makes the narration's audio.
 Every copy goes through `Clipboard` (`browser/clipboard.ts`; the browser's in
 `clipboard-browser.ts`): a link written whole, against the page's origin, and
 a refusal (`ClipboardRefused`) in the browser's words.
 A page's media queries go through `Viewport` (`browser/viewport.ts`), whose live adapter is the window's
-`matchMedia`, and the only reader of it: the WebCodecs player's
-`(pointer: coarse)` probe asks the host's `Viewport` too.
+`matchMedia`, and the only reader of it.
 Every request goes through Effect's `HttpClient`: a page's calls through its
 one `LabClient`, built once at its root (on the server, `LabClient.layerRendering`, whose reads
 come back to the lab's own handler, `PageReads`, and go with the page for
