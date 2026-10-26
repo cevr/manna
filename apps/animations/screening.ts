@@ -20,7 +20,7 @@
  *
  * It names every file by its bytes, uploads those the bucket lacks, writes
  * the version's page, the film's folder, its manifest and the index, deletes
- * the replaced version's files, and prints the version's link. `--dry-run`
+ * the files older than the version it replaced, and prints the version's link. `--dry-run`
  * gathers the same (the Board render included) and prints what it would
  * upload, writing nothing to the bucket.
  *

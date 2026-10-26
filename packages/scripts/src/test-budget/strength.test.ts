@@ -134,21 +134,24 @@ describe("a workspace's test script", () => {
                 () => '',
               );
               // `bun test` exits 1 when its filters match no file, so the deploy that runs it first never deploys.
-              const filtering = bunTests(script).some(
-                (words) =>
-                  words.some((word) => word.includes('.slow.test.')) &&
-                  !words.includes('--pass-with-no-tests'),
-              );
-              if (!filtering) return [];
+              // Each filter is a path substring, so `.slow.test.` and a named file are checked alike.
+              const filters = bunTests(script)
+                .filter((words) => !words.includes('--pass-with-no-tests'))
+                .flatMap((words) => words.filter((word) => word.includes('.slow.test.')));
+              if (filters.length === 0) return [];
               const held = [
                 ...new Glob('**/*.slow.test.*').scanSync({
                   cwd: path.join(root, path.dirname(manifest)),
                 }),
               ].filter((file) => !file.split('/').includes('node_modules'));
-              if (held.length > 0) return [];
-              return [
-                `${manifest}: test:slow runs bun test on .slow.test. and the workspace has none`,
-              ];
+              return filters
+                .filter(
+                  (filter) => !held.some((file) => file.includes(filter.replace(/^\.\//, ''))),
+                )
+                .map(
+                  (filter) =>
+                    `${manifest}: test:slow runs bun test on ${filter} and no file matches it`,
+                );
             },
           ),
         );
