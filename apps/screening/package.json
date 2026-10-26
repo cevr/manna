@@ -10,7 +10,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
     "test": "bun test --path-ignore-patterns='**/*.slow.test.*' src scripts",
-    "test:slow": "bun test .slow.test.",
+    "test:slow": "bun run typecheck && bun run test && bun test --pass-with-no-tests .slow.test.",
     "keys": "bun scripts/keys.ts",
     "plan": "alchemy plan alchemy.run.ts --stage prod",
     "deploy": "turbo run test:slow --filter=@manna/screening && alchemy deploy alchemy.run.ts --stage prod"
