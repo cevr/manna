@@ -54,6 +54,8 @@ export interface TracePart {
   readonly as?: TraceAs;
   /** A tone's smallest piece, square pixels (`TONE_MIN` unless given). */
   readonly min?: number;
+  /** How many edge pixels each way its edge is averaged over before it is taken every `STEP` (`SMOOTH` unless given): more rounds a curled edge into waves. */
+  readonly smooth?: number;
   /** What the table says of it, one line. */
   readonly doc?: string;
 }
@@ -62,7 +64,12 @@ export interface TracePart {
 export interface TraceMarkSeeds {
   readonly eyes: readonly [TracePt] | readonly [TracePt, TracePt];
   readonly brows: readonly [TracePt] | readonly [TracePt, TracePt];
-  readonly mouth: TracePt;
+  /**
+   * The mouth's seed; or, where its ink runs into the silhouette's (a
+   * profile's mouth at the face's edge) and no piece of its own reads, its
+   * two ends and its line's width as read off the sheet.
+   */
+  readonly mouth: TracePt | { readonly ends: readonly [TracePt, TracePt]; readonly line: number };
 }
 
 /** One view of a sheet, as its spec asks for it. */
@@ -510,9 +517,20 @@ const resampled = (pts: ReadonlyArray<TracePt>, step: number): TracePt[] => {
 /** A half pixel: how a table writes a point. */
 const half = (v: number) => Math.round(v * 2) / 2;
 
+/** The area a closed line encloses, square pixels (the shoelace sum): a piece whose points lie on one line encloses none. */
+const areaOf = (pts: ReadonlyArray<TracePt>) => {
+  let twice = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const [ax, ay] = pts[i] ?? [0, 0];
+    const [bx, by] = pts[(i + 1) % pts.length] ?? [0, 0];
+    twice += ax * by - bx * ay;
+  }
+  return Math.abs(twice) / 2;
+};
+
 /** The outline of `pixels` (one piece) in sheet pixels: its edge smoothed and taken every `STEP`. */
-const outlineOf = (g: Grid, pixels: ReadonlyArray<number>): TracePt[] =>
-  resampled(smoothed(edgeOf(g, filled(g, maskOf(g, pixels))), SMOOTH), STEP).map(
+const outlineOf = (g: Grid, pixels: ReadonlyArray<number>, smooth = SMOOTH): TracePt[] =>
+  resampled(smoothed(edgeOf(g, filled(g, maskOf(g, pixels))), smooth), STEP).map(
     ([x, y]): TracePt => [half(g.x0 + x + 0.5), half(g.y0 + y + 0.5)],
   );
 
@@ -717,7 +735,12 @@ const circleOf = (g: Grid, piece: ReadonlyArray<number>) => {
   };
 };
 
-/** The face's marks, each the ink piece nearest its seed: none when the view names none. */
+/** Whether a mouth is given by its ends, as read off the sheet, rather than by a seed. */
+const isReadMouth = (
+  m: TraceMarkSeeds['mouth'],
+): m is { readonly ends: readonly [TracePt, TracePt]; readonly line: number } => 'ends' in m;
+
+/** The face's marks, each the ink piece nearest its seed (a mouth given by its ends as given): none when the view names none. */
 const marksOf = (
   rd: Read,
   figure: (k: number) => boolean,
@@ -732,7 +755,9 @@ const marksOf = (
   const mark = (p: TracePt) => markOf(g, nearestPiece(g, near, p));
   const eyes = seeds.eyes.map(mark);
   const brows = seeds.brows.map(mark);
-  const mouth = mark(seeds.mouth);
+  const mouth = isReadMouth(seeds.mouth)
+    ? { ends: seeds.mouth.ends, stroke: seeds.mouth.line }
+    : mark(seeds.mouth);
   const [e0, e1] = [eyes[0], eyes[1] ?? eyes[0]];
   const [b0, b1] = [brows[0], brows[1] ?? brows[0]];
   if (e0 === undefined || e1 === undefined || b0 === undefined || b1 === undefined)
@@ -812,13 +837,13 @@ export const traceView = (sheet: Raster, view: TraceView): Result.Result<Traced,
     const pieces = piecesOf(g, of(name));
     const largest = pieces[0] ?? [];
     if (as !== 'tones' && largest.length === 0) rd.refused.push(`the part ${name} is empty`);
-    else if (as === 'outline') outlines[name] = outlineOf(g, largest);
+    else if (as === 'outline') outlines[name] = outlineOf(g, largest, part.smooth);
     else if (as === 'circle') circles[name] = circleOf(g, largest);
     else
       tones[name] = pieces
         .filter((p) => p.length >= (part.min ?? TONE_MIN))
-        .map((p) => outlineOf(g, p))
-        .filter((pts) => pts.length >= 3);
+        .map((p) => outlineOf(g, p, part.smooth))
+        .filter((pts) => pts.length >= 3 && areaOf(pts) > 0);
   }
   let traced: Traced = { outlines, tones, circles, regions };
   const marks = view.marks === undefined ? undefined : marksOf(rd, figure, view.marks);

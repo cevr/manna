@@ -48,4 +48,4 @@ export * from './lab-page.ts';
 export * from './easel.ts';
 export { CACHE } from './review-file.ts';
 export { runFillPicks } from './fill-picks.ts';
-export type { TraceSheet, TraceSheetView } from '../core/trace.ts';
+export type { TracePart, TracePt, TraceSheet, TraceSheetView } from '../core/trace.ts';

@@ -59,6 +59,8 @@ export interface TracedFigureSpec {
     readonly outline: ReadonlyArray<Pt>;
     readonly paper: Paper;
     readonly tones?: ReadonlyArray<TracedTone>;
+    /** `open` where the sheet draws no line under the chin: the head is traced down into the garment's neck, its ink running behind the garment. */
+    readonly chin?: 'open';
   };
   readonly hair?: {
     readonly outline: ReadonlyArray<Pt>;
@@ -265,20 +267,23 @@ export const tracedFigure = (spec: TracedFigureSpec) => {
   const art = { width: Math.ceil(2 * reach), height: Math.ceil(-top + 30), feet };
   const kit = tracedKit(spec.face.marks, { scale: s, head: spec.headAt }, spec.face.turn);
   const ears = spec.ears;
+  const tracedHead = {
+    view: spec.head.view,
+    outline: headOutline,
+    y: headY,
+    neck: hundredth(headY + chin),
+    set: { x: hundredth((spec.headAt[0] - spec.feet[0]) * s) },
+    paper: spec.head.paper,
+    tones: toned(head, spec.head.tones),
+  };
   const f = figure({
     concept: spec.concept,
     art,
     stature: Stature.Canon(),
     stance: Stance.Standing({ breath: spec.breath ?? { period: 4, trunk: 1.01, neck: -2 } }),
-    head: Head.Traced({
-      view: spec.head.view,
-      outline: headOutline,
-      y: headY,
-      neck: hundredth(headY + chin),
-      set: { x: hundredth((spec.headAt[0] - spec.feet[0]) * s) },
-      paper: spec.head.paper,
-      tones: toned(head, spec.head.tones),
-    }),
+    head: Head.Traced(
+      spec.head.chin === undefined ? tracedHead : { ...tracedHead, chin: spec.head.chin },
+    ),
     hair:
       spec.hair === undefined
         ? undefined
@@ -328,7 +333,9 @@ export const tracedFigure = (spec: TracedFigureSpec) => {
   });
   const knobs: Readonly<Record<TracedKnob, number>> = f.knobs;
   return {
-    figure: { ...f, knobs },
+    figure: f,
+    /** Its view model's numbers, every traced figure's (`TracedKnob`). */
+    knobs,
     /** Its arms, for the host that draws its hands: each reaches its hand to a point (`armReach`), its hand at rest, its shoulder. */
     arms: { near, far },
     /** Its hands' circle across, units. */

@@ -79,6 +79,58 @@ describe('traceView', () => {
     expect(Math.abs((t.feet?.[1] ?? 0) - 198)).toBeLessThanOrEqual(3);
   });
 
+  test("takes a mouth given by its ends as given, where its ink runs into the line's and reads as no piece of its own", () => {
+    const base = sheet();
+    const rgba = new Uint8Array(base.rgba);
+    // Two eyes and two brows, small ink pieces inside the head.
+    for (let y = 26; y <= 44; y++)
+      for (let x = 46; x <= 74; x++) {
+        const eye =
+          Math.hypot((x - 53) / 2, (y - 40) / 4) <= 1 ||
+          Math.hypot((x - 67) / 2, (y - 40) / 4) <= 1;
+        const brow = y >= 30 && y <= 31 && ((x >= 49 && x <= 56) || (x >= 64 && x <= 71));
+        if (eye || brow) rgba.set([20, 16, 14], (y * base.width + x) * 4);
+      }
+    const view: TraceView = {
+      ...VIEW,
+      marks: {
+        eyes: [
+          [53, 40],
+          [67, 40],
+        ],
+        brows: [
+          [52, 30],
+          [68, 30],
+        ],
+        mouth: {
+          ends: [
+            [54, 50],
+            [66, 51],
+          ],
+          line: 3,
+        },
+      },
+    };
+    const marks = Result.getOrThrow(traceView({ ...base, rgba }, view)).marks;
+    expect(marks?.mouth).toEqual([
+      [54, 50],
+      [66, 51],
+    ]);
+    expect(marks?.mouthLine).toBe(3);
+    expect(Math.abs((marks?.eyes[0][0] ?? 0) - 53.5)).toBeLessThanOrEqual(1);
+  });
+
+  test("smooths a part's edge as far each way as the part asks", () => {
+    const corners = (body: TraceView['parts'][string]) => {
+      const view: TraceView = { ...VIEW, parts: { ...VIEW.parts, body } };
+      const outline = Result.getOrThrow(traceView(sheet(), view)).outlines['body'] ?? [];
+      // How near the outline comes to the body's top-left corner.
+      return Math.min(...outline.map(([x, y]) => Math.hypot(x - 32, y - 64)));
+    };
+    const body = { seeds: [[50, 100]], plus: ['shade'] } as const;
+    expect(corners({ ...body, smooth: 12 })).toBeGreaterThan(corners(body) + 2);
+  });
+
   test('writes a table that names what it was traced from, with no colour in it', () => {
     const source = tracedModule(
       ['Traced from a test sheet by `film concept trace`.'],
