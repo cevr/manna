@@ -3,7 +3,7 @@
 // and a beat's hold set, each one write of the version's `script.ts`
 // through the SourceWriter (formatted, read back, only over the text it
 // read), so the owner's edits and the agents' share one history; and Undo
-// and Redo of the film's newest change, any writer's.
+// of the film's newest change, any writer's.
 //
 // A move is judged on the script as the writer's lock holds it (`editOrder`
 // over `movedOrder`): its beats in order, the acts and the score's movements
@@ -15,8 +15,8 @@
 // that start on it play where the new order and holds lay them.
 //
 // An edit of a film with a production files the agents' work on its ledger
-// ("re-time, re-check seams, re-render") while it stands: once it lands, and
-// again by its redo; its undo withdraws it (`Files`). What each edit says to
+// ("re-time, re-check seams, re-render") while it stands: once it lands; its
+// undo withdraws it (`Files`). What each edit says to
 // the owner (`Edited.said`) is in his words, never a file's name.
 
 import { Boolean as Bool, Clock, Context, Effect, Layer, Option, Path, Ref, Result } from 'effect';
@@ -31,7 +31,7 @@ import {
   holdUnchanged,
   holdWritten,
   movedWords,
-  stepped,
+  undone,
   workFiled,
 } from '../core/beat-edit.ts';
 import type { Said } from '../core/production.ts';
@@ -93,12 +93,8 @@ type EditError = TimelineError | RewriteError | SourceRefused | HoldUnchanged;
 interface BeatEditsService {
   readonly move: (ask: MoveAsk) => Effect.Effect<Edited, EditError>;
   readonly hold: (ask: HoldAsk) => Effect.Effect<Edited, EditError>;
-  /** Undo the film's newest change (or Redo its newest undone one), any writer's; asked for one change, only that one (`StepAsk`). */
-  readonly step: (
-    verb: 'undo' | 'redo',
-    film: string,
-    ask: StepAsk,
-  ) => Effect.Effect<Edited, StepError | EditError>;
+  /** Undo the film's newest change, any writer's; asked for one change, only that one (`StepAsk`). */
+  readonly undo: (film: string, ask: StepAsk) => Effect.Effect<Edited, StepError | EditError>;
 }
 
 /** The script of `version`: its own folder's (`v<n>/script.ts`), else the film's own; refused for a version a later one replaced in place. */
@@ -154,8 +150,8 @@ const wordsKept = (all: Words, film: string, id: string, said: string): Words =>
   return new Map([...all, [film, new Map([...own, [id, said] as const].slice(-UNDO_DEPTH))]]);
 };
 
-/** What a step's change set, without the step's own `undo `/`redo `. */
-const setBy = (target: string) => target.replace(/^(undo|redo) /, '');
+/** What an undo's change set, without the undo's own `undo `. */
+const setBy = (target: string) => target.replace(/^undo /, '');
 
 export class BeatEdits extends Context.Service<BeatEdits, BeatEditsService>()(
   '@manna/film/tools/BeatEdits',
@@ -169,7 +165,7 @@ export class BeatEdits extends Context.Service<BeatEdits, BeatEditsService>()(
       const writer = yield* SourceWriter;
       const productions = yield* ProductionStore;
       const films = yield* Effect.context<FilmFolder>();
-      // What each change of the studio's said, by its film and its id: what its Undo and Redo say.
+      // What each change of the studio's said, by its film and its id: what its Undo says.
       const words = yield* Ref.make<Words>(new Map());
 
       /**
@@ -343,27 +339,23 @@ export class BeatEdits extends Context.Service<BeatEdits, BeatEditsService>()(
         );
       });
 
-      const step = Effect.fn('BeatEdits.step')(function* (
-        verb: 'undo' | 'redo',
-        name: string,
-        ask: StepAsk,
-      ) {
+      const undo = Effect.fn('BeatEdits.undo')(function* (name: string, ask: StepAsk) {
         const film = yield* filmNamed(name).pipe(Effect.provideContext(films));
-        const [change] = yield* writer.step(verb, film, ask);
+        const [change] = yield* writer.undo(film, ask);
         const kept = Option.flatMap(
           Option.fromUndefinedOr((yield* Ref.get(words)).get(film)),
           (own) => Option.fromUndefinedOr(own.get(change.id)),
         );
         const said = Option.getOrElse(kept, () => `${setBy(change.target)}.`);
-        yield* Effect.logInfo(`[studio] ${verb} film=${film} target="${change.target}"`);
+        yield* Effect.logInfo(`[studio] undo film=${film} target="${change.target}"`);
         return {
           change: Option.some(change),
           target: change.target,
-          said: stepped(verb, said),
+          said: undone(said),
         } satisfies Edited;
       });
 
-      return BeatEdits.of({ move, hold, step });
+      return BeatEdits.of({ move, hold, undo });
     }),
   );
 }

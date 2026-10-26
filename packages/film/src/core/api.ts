@@ -74,7 +74,6 @@ import {
   FilmVersionUnknown,
   FreshProcessFailed,
   MediaFailed,
-  NoteAnswered,
   NoteNotFound,
   AskRefused,
   AskUnknown,
@@ -82,7 +81,6 @@ import {
   PhoneCopyUnmade,
   RecordingInvalid,
   RecordingLossy,
-  RedoUnavailable,
   ReviewFileUnknown,
   ReviewToolFailed,
   SceneNotLocated,
@@ -186,7 +184,6 @@ const status = HttpApiSchema.status;
  */
 const Refusals = [
   NoteNotFound.pipe(status(404)),
-  NoteAnswered.pipe(status(409)),
   AskUnknown.pipe(status(404)),
   SceneNotLocated.pipe(status(404)),
   FilmUnknown.pipe(status(404)),
@@ -214,7 +211,6 @@ const Refusals = [
   LookInvalid.pipe(status(400)),
   RequestRefused.pipe(status(403)),
   UndoUnavailable.pipe(status(409)),
-  RedoUnavailable.pipe(status(409)),
   StepNotNewest.pipe(status(409)),
   SourceChanged.pipe(status(409)),
   VerbRefused.pipe(status(409)),

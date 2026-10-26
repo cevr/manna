@@ -167,17 +167,6 @@ export class MediaFailed extends Schema.TaggedError<MediaFailed>()('MediaFailed'
   }
 }
 
-/** A withdrawal of a note someone has answered (a reply in its thread) or done: it stands as the record of what was asked. */
-export class NoteAnswered extends Schema.TaggedError<NoteAnswered>()('NoteAnswered', {
-  film: Schema.String,
-  id: Schema.String,
-  status: Schema.String,
-}) {
-  override get message() {
-    return `film "${this.film}": note "${this.id}" is ${this.status}, so it stands; only an unanswered note is withdrawn`;
-  }
-}
-
 /** `reply` or `resolve` named a note the film's lab does not have. */
 export class NoteNotFound extends Schema.TaggedError<NoteNotFound>()('NoteNotFound', {
   film: Schema.String,
@@ -444,36 +433,24 @@ export class UndoUnavailable extends Schema.TaggedError<UndoUnavailable>()('Undo
   }
 }
 
-/** The lab's Redo has no undone write to write again, or its file changed since the undo. */
-export class RedoUnavailable extends Schema.TaggedError<RedoUnavailable>()('RedoUnavailable', {
-  reason: Schema.String,
-}) {
-  override get message() {
-    return `nothing to redo: ${this.reason}`;
-  }
-}
-
 /**
- * An Undo or a Redo asked for one change (a receipt's: `StepRequest.change`)
- * that is not the one it would step now: another change came after it, or it
- * is no longer in the film's history. Nothing is written.
+ * An Undo asked for one change (a receipt's: `StepAsk.change`) that is not
+ * the one it would undo now: another change came after it, or it is no
+ * longer in the film's history. Nothing is written.
  */
 export class StepNotNewest extends Schema.TaggedError<StepNotNewest>()('StepNotNewest', {
-  verb: Schema.Literals(['undo', 'redo']),
   reason: Schema.String,
 }) {
   override get message() {
-    return `cannot ${this.verb} that change: ${this.reason}`;
+    return `cannot undo that change: ${this.reason}`;
   }
 }
 
 /**
- * Why a step of `verb` cannot take a change while `top` (the change it
- * would take, by its target) stands before it: the lab's refusal
- * (`StepNotNewest`) and a page that knows the stack say it in these words.
+ * Why an undo cannot take a change while `top` (the change it would take,
+ * by its target) stands before it, in the lab's refusal (`StepNotNewest`).
  */
-export const newerFirst = (verb: 'undo' | 'redo', top: string): string =>
-  `${top} ${{ undo: 'came after it', redo: 'was undone after it' }[verb]}: ${verb} that first`;
+export const newerFirst = (top: string): string => `${top} came after it: undo that first`;
 
 /**
  * A hold the studio will not write, because the film would play no

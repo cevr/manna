@@ -147,15 +147,14 @@ const reviewFilmServices = (films: string, runs: Array<ReadonlyArray<string>>) =
       SourceWriter.of({
         write: () => reviewUnused,
         around: () => reviewUnused,
-        step: (verb) =>
+        undo: () =>
           Effect.succeed([
-            { ...PICK, target: `${verb} ${PICK.target}` },
+            { ...PICK, target: `undo ${PICK.target}` },
             Option.none<number>(),
           ] as const),
         history: () =>
           Effect.succeed({
             undo: Option.none(),
-            redo: Option.some(PICK),
             latest: Option.none(),
             landed: [],
           }),

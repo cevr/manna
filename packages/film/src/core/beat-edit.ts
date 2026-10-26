@@ -233,12 +233,8 @@ export const heldWords = (beat: string, edge: HoldEdge, from: number, to: number
 export const heldAlready = (beat: string, edge: HoldEdge, value: number): string =>
   `${beat} already holds ${value.toFixed(1)} s ${SIDE[edge]} its words.`;
 
-/** How a step's words begin. */
-const STEPPED = { undo: 'Undone', redo: 'Redone' } as const;
-
-/** A step's change as the owner's words name it (`Undone: Moved look to the end.`): the words its edit said, or what it set. */
-export const stepped = (verb: 'undo' | 'redo', words: string): string =>
-  `${STEPPED[verb]}: ${words}`;
+/** An undone change as the owner's words name it (`Undone: Moved look to the end.`): the words its edit said, or what it set. */
+export const undone = (words: string): string => `Undone: ${words}`;
 
 /** What every edit of the script tells the owner comes next: the agents' part. */
 export const AGENTS_AFTER = 'Agents re-time and re-check.';

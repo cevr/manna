@@ -149,17 +149,8 @@ interface LabEventDefinition {
  * fields it is about, its link and its read.
  */
 export const LAB_EVENTS = {
-  'note.added': {
-    description: "A note written on a frame, a line's words or a panel.",
-    record: 'notes',
-  },
   'note.replied': { description: "A reply in a note's thread.", record: 'notes' },
   'note.resolved': { description: 'A note marked done.', record: 'notes' },
-  'note.withdrawn': {
-    description:
-      'A note taken back by the owner while it was unanswered: it is gone from the notes.',
-    record: 'notes',
-  },
   'tweak.requested': {
     description: 'A note on a panel that asks for it to be made again (`film board tweak`).',
     record: 'notes',
@@ -209,14 +200,10 @@ export const LAB_EVENTS = {
   },
   'source.written': {
     description:
-      "A film's source changed through the lab's writer, from the studio or an agent: a beat moved or a hold trimmed, a cue or a knob set, a pick written, a take kept, a delivery mark.",
+      "A film's source changed through the lab's writer, by an ask's script or an agent's tool: a beat moved or a hold trimmed, a delivery mark, a pick written.",
     record: 'source',
   },
   'source.undone': { description: "A change to a film's source undone.", record: 'source' },
-  'source.redone': {
-    description: "An undone change to a film's source made again.",
-    record: 'source',
-  },
 } satisfies Record<string, LabEventDefinition>;
 
 /** An event's name: one of the catalogue's. */
@@ -425,20 +412,14 @@ const noteOrigin = (note: Note, seq: number) =>
 /** One change of a film's note log, as the feed says it. */
 const noteChange = Match.type<NoteEvent>().pipe(
   Match.tagsExhaustive({
-    NoteAdded: ({ note, seq }): LabChangeDraft => {
-      const tweak = note.panel?.ask === 'tweak';
-      return {
-        ...noteFields(note),
-        origin: noteOrigin(note, seq),
-        kind: Bool.match(tweak, { onTrue: () => 'tweak.requested', onFalse: () => 'note.added' }),
-        by: 'owner',
-        text: note.text,
-        summary: `${note.film} ${note.id}: ${Bool.match(tweak, {
-          onTrue: () => 'tweak asked of',
-          onFalse: () => 'note on',
-        })} ${aboutNote(note)}: ${gist(note.text)}`,
-      };
-    },
+    NoteAdded: ({ note, seq }): LabChangeDraft => ({
+      ...noteFields(note),
+      origin: noteOrigin(note, seq),
+      kind: 'tweak.requested',
+      by: 'owner',
+      text: note.text,
+      summary: `${note.film} ${note.id}: tweak asked of ${aboutNote(note)}: ${gist(note.text)}`,
+    }),
     NoteReplied: ({ note, reply, seq }): LabChangeDraft => {
       const by = actorOf(reply.by);
       return {
@@ -460,9 +441,13 @@ const noteChange = Match.type<NoteEvent>().pipe(
   }),
 );
 
+/** Whether a note event is one the feed tells: a note is added only as a tweak (`request_tweak`), so an older file's other notes are told only as they are replied to or resolved. */
+const toldNote = (event: NoteEvent): boolean =>
+  event._tag !== 'NoteAdded' || event.note.panel?.ask === 'tweak';
+
 /** The changes a film's note log made past a cursor (`eventsSince`), as the feed says them. */
 export const noteChanges = (events: ReadonlyArray<NoteEvent>): ReadonlyArray<LabChangeDraft> =>
-  events.map(noteChange);
+  events.filter(toldNote).map(noteChange);
 
 /** What a film's notes log is, as two reads of it compare: its count and its notes. */
 interface NotesRead {
@@ -486,35 +471,15 @@ const notesReset = (before: NotesRead, after: NotesRead): boolean => {
   );
 };
 
-/** The notes `before` held that `after` does not, each told withdrawn by the owner. Pure. */
-const noteWithdrawals = (before: NotesRead, after: NotesRead): ReadonlyArray<LabChangeDraft> => {
-  const still = new Set(after.notes.map(noteKey));
-  return before.notes
-    .filter((n) => !still.has(noteKey(n)))
-    .map((note): LabChangeDraft => ({
-      ...noteFields(note),
-      origin: `${noteOrigin(note, note.seq)}/withdrawn`,
-      kind: 'note.withdrawn',
-      by: 'owner',
-      text: note.text,
-      summary: `${note.film} ${note.id} withdrawn: ${gist(note.text)}`,
-    }));
-};
-
 /**
  * What a film's notes tell between two reads: each change past the earlier
- * read, and each note gone while the log went on (a withdrawal is a change of
- * the log that names no note). A log reset between them is told whole and
- * withdraws nothing: its ids are its own (`noteOrigin`), so a change told
- * before comes again with the id it had. Pure.
+ * read. A log reset between them is told whole: its ids are its own
+ * (`noteOrigin`), so a change told before comes again with the id it had. Pure.
  */
 export const notesNews = (before: NotesRead, after: NotesFile): ReadonlyArray<LabChangeDraft> =>
   Bool.match(notesReset(before, after), {
     onTrue: () => noteChanges(eventsSince(after, 0).events),
-    onFalse: () => [
-      ...noteChanges(eventsSince(after, before.seq).events),
-      ...noteWithdrawals(before, after),
-    ],
+    onFalse: () => noteChanges(eventsSince(after, before.seq).events),
   });
 
 /** The panel `id` in `board`, if it has it. */
@@ -891,11 +856,11 @@ export const changeOf = (
 /**
  * One change to a film's source that landed, as the lab's writer tells it
  * (`tools/source-writer.ts`): its number in the writer's order, the step
- * (a write, an undo, a redo), and what the change is.
+ * (a write or an undo), and what the change is.
  */
 interface SourceLanding {
   readonly n: number;
-  readonly verb: 'write' | 'undo' | 'redo';
+  readonly verb: 'write' | 'undo';
   readonly change: {
     readonly id: string;
     readonly film: string;
@@ -908,7 +873,6 @@ interface SourceLanding {
 const SOURCE_STEPS = {
   write: { kind: 'source.written', says: 'changed' },
   undo: { kind: 'source.undone', says: 'undid' },
-  redo: { kind: 'source.redone', says: 'redid' },
 } as const;
 
 /** Each landing as the change it tells: its film, its scene's beat, what it set, and the studio on that beat. Pure. */

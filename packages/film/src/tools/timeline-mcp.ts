@@ -158,8 +158,7 @@ export const timelineCommands = [
       Effect.gen(function* () {
         const edits = yield* BeatEdits;
         const undone = yield* refused(
-          edits.step(
-            'undo',
+          edits.undo(
             film,
             Option.match(Option.fromUndefinedOr(change), {
               onNone: () => ({}),

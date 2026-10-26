@@ -136,13 +136,19 @@ const rpc = (lab: LabFetch, method: string, params: Schema.JsonObject = {}) =>
       ),
   );
 
-/** The owner's note on film `f`'s frame, written to its notes through the store. */
+/** A tweak the owner asked of film `f`'s panel `cold.judge`, written to its notes through the store. */
 const ownerNote = (words: string) =>
   Effect.gen(function* () {
     const notes = yield* NotesStore;
     return yield* notes.add(
       yield* Schema.decodeEffect(FilmName)('f'),
-      { scene: 'cold', T: 1, frame: 30, text: words },
+      {
+        scene: 'cold',
+        T: 1,
+        frame: 30,
+        panel: { id: 'cold.judge', try: 1, ask: 'tweak' },
+        text: words,
+      },
       text('frame'),
     );
   });
@@ -151,7 +157,7 @@ const ownerNote = (words: string) =>
 const subscribeAt = (
   url: string,
   { secret = SECRET, ...more }: { readonly secret?: string } & Schema.JsonObject = {},
-  name = 'note.added',
+  name = 'tweak.requested',
   args: Schema.JsonObject = { film: 'f' },
 ): Schema.JsonObject => ({
   name,
@@ -242,8 +248,8 @@ describe('MCP Events on the lab', () => {
           const first = yield* Queue.take(hook.heard);
           const one = readDelivered(first.body);
           expect(one).toMatchObject({
-            name: 'note.added',
-            data: { kind: 'note.added', note: 'n1', text: 'the judge looks away too soon' },
+            name: 'tweak.requested',
+            data: { kind: 'tweak.requested', note: 'n1', text: 'the judge looks away too soon' },
           });
           expect(one.cursor).toBe(`${cursor.split('.')[0]}.1`);
           expect(first.headers['webhook-id']).toBe(one.eventId);
@@ -278,7 +284,7 @@ describe('MCP Events on the lab', () => {
           // Unsubscribed, it hears nothing more; a second subscription hears the next note alone.
           expect(
             yield* rpc(lab, 'events/unsubscribe', {
-              name: 'note.added',
+              name: 'tweak.requested',
               arguments: { film: 'f' },
               delivery: { mode: 'webhook', url: `${hook.url}/a` },
             }),
@@ -292,7 +298,11 @@ describe('MCP Events on the lab', () => {
               },
             },
           });
-          yield* rpc(lab, 'events/subscribe', subscribeAt(`${hook.url}/b`, {}, 'note.added', {}));
+          yield* rpc(
+            lab,
+            'events/subscribe',
+            subscribeAt(`${hook.url}/b`, {}, 'tweak.requested', {}),
+          );
           expect((yield* Queue.take(hook.heard)).path).toBe('/b');
           yield* ownerNote('the third');
           yield* events.look;
@@ -312,7 +322,7 @@ describe('MCP Events on the lab', () => {
           expect(kept).toMatchObject({
             subscriptions: [
               {
-                name: 'note.added',
+                name: 'tweak.requested',
                 url: `${hook.url}/b`,
                 cursor: delivered,
               },

@@ -1247,7 +1247,7 @@ const LabStep = Schema.Struct({
 export const ChangeId = Schema.String.pipe(Schema.brand('ChangeId'));
 export type ChangeId = typeof ChangeId.Type;
 
-/** The id a page gives one Undo or Redo request (`uniqueId`), by which the lab records it once it lands. */
+/** The id one Undo request is given (`uniqueId`), by which the lab records it once it lands. */
 export const RequestId = Schema.String.pipe(Schema.brand('RequestId'));
 export type RequestId = typeof RequestId.Type;
 
@@ -1326,8 +1326,8 @@ export const LabWrite = Schema.Struct({
   /** The scene it changed (none for a film's own file: its score's pick, the library's lock), its file, and what changed: `cue topple offset`, `knob palm`, `undo cue topple offset`. */
   ...LabStep.fields,
   /**
-   * The change it made, by its id (`HistoryStep.change`): an undo's or a
-   * redo's is the change it stepped. None when the write changed nothing (the
+   * The change it made, by its id (`HistoryStep.change`): an undo's is the
+   * change it undid. None when the write changed nothing (the
    * file already said so), so there is nothing to undo.
    */
   change: Schema.optionalKey(ChangeId),
