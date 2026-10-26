@@ -34,6 +34,7 @@ Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>`
 | barfix     | chordbar, feel                 |                           |                   | merged e3ab39e14       |
 | polishbulk | barfix, ftbbrand, feel         |                           |                   | merged f2d7480b3       |
 | oneup      | polishbulk                     |                           |                   |                        |
+| heldhide   | oneup                          |                           |                   |                        |
 | selahone   | oneup                          |                           |                   |                        |
 | playbulk   | chordbulk, feel                |                           |                   |                        |
 | findbulk   | feel, topicdata, playbulk      |                           |                   |                        |
@@ -337,6 +338,8 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 - Owner, 2026-10-26, after the phone look of the polishbulk Release build (Sky light and dark, icon, dark launch, the tactile and tine dial sounds, a fast key-dial fling, the bar): "good". polishbulk merged f2d7480b3 (gate green; r2 accepted, verify r2 pass). (owner, polishbulk)
 
 - Owner, 2026-10-26: "With this new update to the framework, we can also probably make Sela using the one framework, the desktop macOS app". This replaces the 2026-10-19 rule that the macOS app stays SwiftUI until `react-native-gpui` ships: One 2.11 adds native macOS inside the default install (oneup `release-notes.md`). Unit `selahone` moves Selah to One, one tree for macOS first (the app the owner uses now) and iOS/Android from the same code, after oneup merges (it needs One 2.11.1 in the lockfile). Its planner first proves the macOS lane on a throwaway route (prebuild, a Release build, a window that opens), then specs the port: parity with the SwiftUI app's screens and its FSRS review loop, the stored progress carried over from the SwiftUI app's store, Wada 167 palette, glass, Effect atoms, and the dictation module as a Nitro module. The SwiftUI app stays until the One app reaches parity and the owner says to retire it. Hymn and Selah share one agent slot, so `selahone` planning runs after oneup and before playbulk's implement. (owner, selahone)
+
+- Owner, 2026-10-26, on the pale held chords (`apps/hymnal/src/reader/Chords.tsx:66`, `tone: 'held'`: a line whose first syllable has no chord shows the chord held over from the line before, muted): "Okay, that makes sense. Yeah, we don't really need to Yeah, I don't think we really need it". Unit `heldhide` removes the held chord: a line with no new chord starts with no chord over it, and only the changes (gold) show. It runs after oneup merges (oneup r2 works in the same reader files), before selahone planning. (owner, heldhide)
 
 ## Owner questions
 
