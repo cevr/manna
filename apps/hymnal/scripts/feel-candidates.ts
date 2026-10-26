@@ -1,7 +1,9 @@
 /**
  * `bun scripts/feel-candidates.ts --out <dir>`: the dials' sound candidates
- * as WAV files, for the owner to pick by ear (`src/feel/voice.ts`, `THOCKS`
- * and `TONES`), and a `README.txt` that names each file.
+ * as WAV files, for the owner to hear by ear (`src/feel/voice.ts`, `THOCKS`
+ * and `TONES`), and a `README.txt` that names each file. The tables hold
+ * the owner's pick alone now; a later pick adds its candidates to them and
+ * renders them here beside it.
  *
  * Each candidate gets three takes, each a 16-bit mono WAV at the voice's
  * rate:
@@ -13,13 +15,13 @@
  *   the sounds the app would play: a sound that would start over the last
  *   one is dropped.
  *
- * The README marks the candidates the app plays now (`PICKED`). Nothing here
+ * The README marks the candidates the app plays (`PICKED`). Nothing here
  * plays a sound.
  */
 
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { Console, Effect, FileSystem, Path } from 'effect';
+import { Console, Effect, FileSystem, Option, Path } from 'effect';
 import { Command, Flag } from 'effect/cli';
 
 import type { SoundName } from '../src/feel/body.ts';
@@ -61,11 +63,13 @@ export interface CandidateFile {
   readonly wav: Uint8Array;
 }
 
-/** A sound that holds nothing, for a name a candidate's voice holds none of. */
-const SILENT: Recipe = { level: 0, layers: [] };
-
+/** A sound's recipe in a candidate's voice: none for a name the voice holds none of. */
 const recipeOf = (recipes: ReadonlyMap<SoundName, Recipe>, sound: SoundName) =>
-  recipes.get(sound) ?? SILENT;
+  Option.fromNullishOr(recipes.get(sound));
+
+/** How long a sound plays in a candidate's voice, in milliseconds: 0 for one it holds none of. */
+const lengthIn = (recipes: ReadonlyMap<SoundName, Recipe>, sound: SoundName) =>
+  Option.match(recipeOf(recipes, sound), { onNone: () => 0, onSome: lengthMs });
 
 /** The detents of a take: `count` of them on `dial`, `gap` ms apart, told to a Feel over these sounds. */
 const told = (
@@ -80,7 +84,7 @@ const told = (
     haptics: { play: () => {} },
     sound: {
       play: (sound) => void heard.push([clock, sound]),
-      length: (sound) => lengthMs(recipeOf(recipes, sound)),
+      length: (sound) => lengthIn(recipes, sound),
     },
     on: () => true,
     now: () => clock,
@@ -97,10 +101,13 @@ const mix = (
   heard: ReadonlyArray<readonly [number, SoundName]>,
   recipes: ReadonlyMap<SoundName, Recipe>,
 ) => {
-  const rendered = heard.map(([at, sound]) => {
-    const recipe = recipeOf(recipes, sound);
-    return { start: Math.round((at / 1000) * RATE), samples: samplesOf(sound, recipe) };
-  });
+  const rendered = heard.map(([at, sound]) => ({
+    start: Math.round((at / 1000) * RATE),
+    samples: Option.match(recipeOf(recipes, sound), {
+      onNone: () => new Float64Array(),
+      onSome: samplesOf,
+    }),
+  }));
   const out = new Float64Array(Math.max(0, ...rendered.map((r) => r.start + r.samples.length)));
   for (const { start, samples } of rendered)
     samples.forEach((s, i) => {
@@ -141,7 +148,7 @@ export const candidateFiles = (): ReadonlyArray<CandidateFile> => {
         picked,
         take,
         told: count,
-        sounded: heard.map(([at, sound]) => ({ at, ms: lengthMs(recipeOf(recipes, sound)) })),
+        sounded: heard.map(([at, sound]) => ({ at, ms: lengthIn(recipes, sound) })),
         ms: Math.round((samples.length / RATE) * 1000),
         wav: wavOf(samples),
       };
@@ -158,8 +165,8 @@ const TAKE_LINES: Record<(typeof TAKES)[number]['take'], string> = {
 /** The README that names each file. */
 export const readmeOf = (files: ReadonlyArray<CandidateFile>): string => {
   const kinds: ReadonlyArray<readonly [Kind, string]> = [
-    ['thock', 'The thock: the capo and text-size dials. Pick one.'],
-    ['tone', 'The key tone: the key dial, at each key. Pick one.'],
+    ['thock', 'The thock: the capo and text-size dials.'],
+    ['tone', 'The key tone: the key dial, at each key.'],
   ];
   const sections = kinds.map(([kind, title]) => {
     const ofKind = files.filter((f) => f.kind === kind);
@@ -167,7 +174,7 @@ export const readmeOf = (files: ReadonlyArray<CandidateFile>): string => {
     const blocks = names.map((name) => {
       const takes = ofKind.filter((f) => f.candidate === name);
       const first = takes[0];
-      const head = `${name}${(first?.picked && ' (recommended: the app plays it now)') || ''}: ${first?.about ?? ''}`;
+      const head = `${name}${(first?.picked && ' (picked: the app plays it)') || ''}: ${first?.about ?? ''}`;
       const lines = takes.map(
         (f) =>
           `  ${f.file}  ${TAKE_LINES[f.take]} (${f.sounded.length} of ${f.told} sounded, ${f.ms} ms)`,

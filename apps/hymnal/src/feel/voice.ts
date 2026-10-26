@@ -4,19 +4,24 @@
  * dial sounds a tone at each key's pitch class, and the capo and text-size
  * dials share one thock, deep and unpitched, like a mechanical key.
  *
- * A sound is layers, scaled together to the sound's own peak `level`:
- * - a struck tone: sine partials over one pitch, each rising over `attack`
- *   and dying away exponentially (60 dB over its `ring`), the pitch held or
- *   falling (`fall`, in octaves a second);
- * - a burst of noise through a band-pass filter, its envelope (1 − t)^4.
+ * A sound is one of two recipes:
+ * - a thock (`Thock`): two short contacts of seeded noise, the second turned
+ *   over (a key pressed and let back up), drive a bank of damped resonators,
+ *   a low case cavity;
+ * - a tine (`Tine`): a held pitch under a brief inharmonic flex, and the
+ *   pitch's octave a few milliseconds later (a tine thumbed and let go).
+ * Each sound then eases in and out, runs through a 6-pole Butterworth
+ * low-pass, closes over its last 5 ms (the last 1 ms silent) and is scaled
+ * to its peak `level`. Every number is in its recipe or named here.
  *
- * Each kind has candidates (`THOCKS`, `TONES`), rendered side by side by
- * `scripts/feel-candidates.ts` so the owner picks them by ear; `PICKED`
- * names the ones the app plays.
+ * `THOCKS` and `TONES` hold the candidates, which `scripts/feel-candidates.ts`
+ * renders as takes for the owner's ear; `PICKED` names the ones the app
+ * plays, the owner's pick of 2026-10-25 (`tactile`, `tine`). The bytes equal
+ * the takes the owner heard, sample for sample.
  *
- * The noise is seeded per sound, so a sound renders the same bytes every
- * time and its content hash (`hashOf`) names its file: an unchanged recipe
- * writes nothing new.
+ * A sound renders the same bytes every time (its noise is seeded by its
+ * recipe), and its content hash (`hashOf`) names its file: an unchanged
+ * recipe writes nothing new.
  */
 
 import type { SoundName } from './body';
@@ -24,85 +29,61 @@ import type { SoundName } from './body';
 /** The voice's sample rate, in hertz. */
 export const RATE = 24000;
 
-/** One sine of a struck tone, at `ratio` times the tone's pitch. */
-export interface Partial {
-  readonly ratio: number;
+const TAU = 2 * Math.PI;
+
+/** One resonator of a thock's bank: its pitch, its gain and how fast it dies (amplitude e-folding, in milliseconds). */
+export interface Mode {
+  readonly hz: number;
   readonly gain: number;
-  /** How long it takes to fall 60 dB, in seconds. */
-  readonly ring: number;
+  readonly decayMs: number;
 }
 
-/** A struck tone: its partials over one pitch. */
-export interface Tone {
-  readonly _tag: 'Tone';
-  /** When the tone starts in its sound, in seconds. */
-  readonly at: number;
-  /** Its pitch as it is struck, in hertz. */
-  readonly pitch: number;
-  /** How fast its pitch falls, in octaves a second: 0 holds it. */
-  readonly fall: number;
-  /** How long it rises to full, in seconds. */
-  readonly attack: number;
-  /**
-   * How much of its fall comes late, from 0 to 1. At 0 each partial falls
-   * exponentially, as a struck bar does; toward 1 it holds and then fades
-   * (a Gaussian), which keeps a low tone's energy at its own pitch.
-   */
-  readonly hold: number;
-  readonly partials: ReadonlyArray<Partial>;
-}
-
-/** A burst of noise through a band-pass filter. */
-export interface Noise {
-  readonly _tag: 'Noise';
-  /** When the burst starts in its sound, in seconds. */
-  readonly at: number;
-  /** The band-pass filter's centre, in hertz. */
-  readonly band: number;
-  /** The filter's Q: lower is wider. */
-  readonly q: number;
-  readonly gain: number;
-  /** How long the burst lasts, in seconds. */
-  readonly burst: number;
-}
-
-export type Layer = Tone | Noise;
-
-/** A sound's recipe: its layers, and the peak it is scaled to. */
-export interface Recipe {
+/** A thock: two contacts of noise striking a bank of resonators. */
+export interface Thock {
+  readonly _tag: 'Thock';
+  /** The whole file, in milliseconds. */
+  readonly ms: number;
   /** The sound's peak, from 0 to 1. */
   readonly level: number;
-  readonly layers: ReadonlyArray<Layer>;
+  /** The low-pass filter's corner, in hertz. */
+  readonly lowpass: number;
+  /** The noise's seed. */
+  readonly seed: number;
+  /** How long each contact lasts (a sine-squared pulse), in milliseconds. */
+  readonly contactMs: number;
+  /** When the second contact comes, in milliseconds. */
+  readonly returnAtMs: number;
+  /** The second contact's gain: negative turns it over. */
+  readonly returnGain: number;
+  readonly modes: ReadonlyArray<Mode>;
 }
 
-/** How a tone is struck: its rise, its fall of pitch and its hold (`Tone`); each is optional. */
-interface Strike {
-  readonly attack?: number;
-  readonly fall?: number;
-  readonly hold?: number;
+/** A partial that dies away exponentially: its gain and its amplitude e-folding, in milliseconds. */
+export interface Ring {
+  readonly gain: number;
+  readonly decayMs: number;
 }
 
-const tone = (pitch: number, partials: ReadonlyArray<Partial>, strike: Strike = {}): Tone => ({
-  _tag: 'Tone',
-  at: 0,
-  pitch,
-  fall: strike.fall ?? 0,
-  attack: strike.attack ?? 0.002,
-  hold: strike.hold ?? 0,
-  partials,
-});
+/** A tine: a held pitch, a brief flex over it, and its octave a moment later. */
+export interface Tine {
+  readonly _tag: 'Tine';
+  readonly ms: number;
+  readonly level: number;
+  readonly lowpass: number;
+  /** Its pitch, in hertz. */
+  readonly pitch: number;
+  /** How long the tone rises to full, in milliseconds. */
+  readonly attackMs: number;
+  /** The held pitch falls as exp(−(t / decayMs) ^ fallPower): over 1 it holds, then fades. */
+  readonly decayMs: number;
+  readonly fallPower: number;
+  /** An inharmonic partial at `ratio` times the pitch, the tine's flex. */
+  readonly flex: Ring & { readonly ratio: number };
+  /** The octave that comes at `atMs`, rising over `attackMs`, the tine's recoil. */
+  readonly recoil: Ring & { readonly atMs: number; readonly attackMs: number };
+}
 
-const noise = (band: number, q: number, gain: number, burst: number): Noise => ({
-  _tag: 'Noise',
-  at: 0,
-  band,
-  q,
-  gain,
-  burst,
-});
-
-/** A partial at `ratio` times its tone's pitch. */
-const partial = (ratio: number, gain: number, ring: number): Partial => ({ ratio, gain, ring });
+export type Recipe = Thock | Tine;
 
 /** A candidate sound: a line that says what it is, and its recipe. */
 export interface Candidate<A> {
@@ -110,88 +91,59 @@ export interface Candidate<A> {
   readonly recipe: A;
 }
 
-/**
- * The thock's candidates. Two are a low struck body whose pitch falls fast
- * (so no pitch class holds it) under a burst of low noise, the key's felt
- * bottoming out, with a faint click for its edge; one is the low noise alone.
- */
+/** The thock's candidates. */
 export const THOCKS = {
-  deep: {
-    about: 'deep and round: a low body falling from 320 Hz under a felt burst',
+  tactile: {
+    about: 'a lubed switch: two cushioned contacts and a low case cavity',
     recipe: {
-      level: 0.8,
-      layers: [
-        tone(320, [partial(1, 1, 0.08), partial(2.3, 0.25, 0.03)], { attack: 0.001, fall: 7 }),
-        noise(420, 1.2, 1.4, 0.01),
-        noise(2000, 2, 0.15, 0.002),
+      _tag: 'Thock',
+      ms: 42,
+      level: 0.74,
+      lowpass: 1050,
+      seed: 1837,
+      contactMs: 1.4,
+      returnAtMs: 8,
+      returnGain: -0.38,
+      modes: [
+        { hz: 168, gain: 1, decayMs: 7 },
+        { hz: 307, gain: 0.65, decayMs: 4.5 },
+        { hz: 563, gain: 0.4, decayMs: 3 },
+        { hz: 827, gain: 0.15, decayMs: 2 },
       ],
     },
   },
-  tight: {
-    about: 'tighter and shorter: a body falling from 400 Hz, a touch more click',
-    recipe: {
-      level: 0.8,
-      layers: [
-        tone(400, [partial(1, 1, 0.05), partial(2.4, 0.2, 0.02)], { attack: 0.001, fall: 10 }),
-        noise(520, 1.3, 1.3, 0.007),
-        noise(2200, 2, 0.25, 0.002),
-      ],
-    },
-  },
-  muted: {
-    about: 'muted: a low felt burst with no body',
-    recipe: {
-      level: 0.75,
-      layers: [noise(260, 1, 1, 0.016), noise(560, 1.4, 0.3, 0.01)],
-    },
-  },
-} as const satisfies Record<string, Candidate<Recipe>>;
+} as const satisfies Record<string, Candidate<Thock>>;
 
 /**
- * The key tone's candidates, each a recipe at a pitch. Every partial sits
- * at an octave of the pitch (a third harmonic is heard a fifth up), and
- * none rings over 2.5 kHz, so the tone is heard at its key and carries no
- * hiss.
+ * The key tone's candidates, each a recipe at a pitch. The flex's partial
+ * is quiet and gone in a few milliseconds, and the low-pass keeps the tone
+ * under 2.5 kHz, so the tone is heard at its key and carries no hiss.
  */
 export const TONES = {
-  marimba: {
-    about: 'a warm marimba, C4 to B4: the pitch and its double octave, a soft mallet',
-    recipe: (pitch: number): Recipe => ({
-      level: 0.7,
-      layers: [
-        tone(pitch, [partial(1, 1, 0.22), partial(4, 0.4, 0.09)], { hold: 0.5 }),
-        noise(pitch * 4, 3, 0.3, 0.003),
-      ],
+  tine: {
+    about: 'a kalimba tine, C4 to B4: a firm pitch, a brief flex and a soft thumb return',
+    recipe: (pitch: number): Tine => ({
+      _tag: 'Tine',
+      ms: 112,
+      level: 0.62,
+      lowpass: 2100,
+      pitch,
+      attackMs: 2.4,
+      decayMs: 54,
+      fallPower: 1.65,
+      flex: { ratio: 2.76, gain: 0.24, decayMs: 5 },
+      recoil: { atMs: 8, attackMs: 1.5, gain: 0.18, decayMs: 12 },
     }),
   },
-  felt: {
-    about: 'a felt piano, C4 to B4: the pitch, its octave and double octave, a soft start',
-    recipe: (pitch: number): Recipe => ({
-      level: 0.7,
-      layers: [
-        tone(pitch, [partial(1, 1, 0.24), partial(2, 0.4, 0.14), partial(4, 0.08, 0.06)], {
-          attack: 0.006,
-          hold: 0.5,
-        }),
-      ],
-    }),
-  },
-  glass: {
-    about: 'a small glass bell, C5 to B5 (the old register): the pitch and a faint octave',
-    recipe: (pitch: number): Recipe => ({
-      level: 0.6,
-      layers: [tone(pitch * 2, [partial(1, 1, 0.16), partial(2, 0.12, 0.06)])],
-    }),
-  },
-} as const satisfies Record<string, Candidate<(pitch: number) => Recipe>>;
+} as const satisfies Record<string, Candidate<(pitch: number) => Tine>>;
 
 export type ThockName = keyof typeof THOCKS;
 export type ToneName = keyof typeof TONES;
 
-/** The candidates the app plays: the recommended ones until the owner picks. */
+/** The candidates the app plays: the owner's pick. */
 export const PICKED = {
-  thock: 'deep',
-  tone: 'marimba',
+  thock: 'tactile',
+  tone: 'tine',
 } as const satisfies { readonly thock: ThockName; readonly tone: ToneName };
 
 /** Middle C, in hertz: the key dial's C. */
@@ -212,14 +164,20 @@ export const recipesOf = (
 /** Every sound the voice holds, by name, as its recipe. */
 export const RECIPES = recipesOf(THOCKS[PICKED.thock].recipe, TONES[PICKED.tone].recipe);
 
-/** How long a noise burst's filter rings on after the burst, in seconds. */
-const TAIL = 0.02;
+/** How long the drive eases in at a sound's start, in milliseconds. */
+const EASE_IN = 0.6;
 
-/** The last stretch of each sound, faded to silence, in seconds. */
-const FADE = 0.005;
+/** How long the drive eases out, ending `SETTLE` before the file ends, in milliseconds. */
+const EASE_OUT = 6;
 
-/** The level a partial dies away to over its ring: 60 dB down. */
-const RING_FLOOR = 0.001;
+/** How long the filters are left to ring down after the drive ends, in milliseconds. */
+const SETTLE = 5;
+
+/** How long the output closes over, ending 1 ms before the file ends, in milliseconds. */
+const CLOSE = 4;
+
+/** The low-pass's three sections: the Q of each, a 6-pole Butterworth. */
+const BUTTERWORTH = [0.5176380902, 0.7071067812, 1.931851653];
 
 /** A seeded generator of numbers in [0, 1) (mulberry32). */
 const seeded = (seed: number) => {
@@ -233,70 +191,30 @@ const seeded = (seed: number) => {
   };
 };
 
-/** A seed from a sound's name. */
-const seedOf = (name: string) => {
-  let h = 2166136261;
-  for (let i = 0; i < name.length; i += 1) h = Math.imul(h ^ name.charCodeAt(i), 16777619);
-  return h >>> 0;
-};
-
-/** How long a layer sounds, in seconds, from its own start. */
-const lengthOf = (layer: Layer) => {
-  switch (layer._tag) {
-    case 'Tone':
-      return Math.max(0, ...layer.partials.map((p) => p.ring));
-    case 'Noise':
-      return layer.burst + TAIL;
-  }
-};
-
-/** How many turns a pitch of `hz` falling `fall` octaves a second has made by `t` seconds. */
-const turnsAt = (hz: number, fall: number, t: number) => {
-  if (fall === 0) return hz * t;
-  return (hz * (1 - 2 ** (-fall * t))) / (fall * Math.LN2);
-};
+/** A sine-squared rise from 0 at `ms` 0 to 1 at `attack`, held at 0 before and 1 after. */
+const rise = (ms: number, attack: number) =>
+  Math.sin((Math.min(1, Math.max(0, ms / attack)) * Math.PI) / 2) ** 2;
 
 /** How many samples a sound of `recipe` holds. */
-const countOf = (recipe: Recipe) =>
-  Math.ceil((Math.max(0, ...recipe.layers.map((l) => l.at + lengthOf(l))) + FADE) * RATE);
+const countOf = (recipe: Recipe) => Math.round((recipe.ms * RATE) / 1000);
 
 /** How long a sound of `recipe` plays, in milliseconds: its whole file. */
 export const lengthMs = (recipe: Recipe) => (countOf(recipe) / RATE) * 1000;
 
-/** Adds a struck tone into `out`. */
-const addTone = (out: Float64Array, layer: Tone) => {
-  const start = Math.round(layer.at * RATE);
-  for (const p of layer.partials) {
-    const span = Math.min(Math.ceil(p.ring * RATE), out.length - start);
-    const floor = Math.log(RING_FLOOR);
-    const base = layer.pitch * p.ratio;
-    for (let i = 0; i < span; i += 1) {
-      const t = i / RATE;
-      const u = t / p.ring;
-      const turns = turnsAt(base, layer.fall, t);
-      const rise = (t < layer.attack && Math.sin((Math.PI / 2) * (t / layer.attack)) ** 2) || 1;
-      const fall = Math.exp(floor * ((1 - layer.hold) * u + layer.hold * u * u));
-      const sample = p.gain * rise * fall * Math.sin(2 * Math.PI * turns);
-      out[start + i] = (out[start + i] ?? 0) + sample;
-    }
-  }
-};
-
-/** A band-pass filter (RBJ, a constant 0 dB peak) at `band` hertz: each call takes a sample in and gives one out. */
-const bandPass = (band: number, q: number) => {
-  const w = (2 * Math.PI * band) / RATE;
-  const alpha = Math.sin(w) / (2 * q);
-  const a0 = 1 + alpha;
-  const b0 = alpha / a0;
-  const b2 = -alpha / a0;
-  const a1 = (-2 * Math.cos(w)) / a0;
-  const a2 = (1 - alpha) / a0;
+/** A low-pass section (RBJ) at `cut` hertz with this `q`: each call takes a sample in and gives one out. */
+const lowpass = (cut: number, q: number) => {
+  const w = (TAU * cut) / RATE;
+  const co = Math.cos(w);
+  const a = Math.sin(w) / (2 * q);
+  const b0 = (1 - co) / (2 * (1 + a));
+  const a1 = (-2 * co) / (1 + a);
+  const a2 = (1 - a) / (1 + a);
   let x1 = 0;
   let x2 = 0;
   let y1 = 0;
   let y2 = 0;
   return (x: number) => {
-    const y = b0 * x + b2 * x2 - a1 * y1 - a2 * y2;
+    const y = b0 * (x + 2 * x1 + x2) - a1 * y1 - a2 * y2;
     x2 = x1;
     x1 = x;
     y2 = y1;
@@ -305,39 +223,79 @@ const bandPass = (band: number, q: number) => {
   };
 };
 
-/**
- * Adds a burst of band-passed noise into `out`. The filter runs twice over
- * the noise, so its skirts fall 12 dB an octave and a low burst keeps no
- * hiss above it.
- */
-const addNoise = (out: Float64Array, layer: Noise, random: () => number) => {
-  const start = Math.round(layer.at * RATE);
-  const burst = Math.floor(layer.burst * RATE);
-  const span = Math.min(Math.ceil(lengthOf(layer) * RATE), out.length - start);
-  const first = bandPass(layer.band, layer.q);
-  const second = bandPass(layer.band, layer.q);
-  for (let i = 0; i < span; i += 1) {
-    const x = (i < burst && (random() * 2 - 1) * (1 - i / burst) ** 4) || 0;
-    out[start + i] = (out[start + i] ?? 0) + second(first(x)) * layer.gain;
+/** A damped resonator, driven by each sample: the same gain to an impulse at any pitch. */
+const resonator = (mode: Mode) => {
+  const r = Math.exp(-1 / ((RATE * mode.decayMs) / 1000));
+  const w = (TAU * mode.hz) / RATE;
+  const a = 2 * r * Math.cos(w);
+  const b = r * r;
+  let y1 = 0;
+  let y2 = 0;
+  return (x: number) => {
+    const y = Math.sin(w) * x + a * y1 - b * y2;
+    y2 = y1;
+    y1 = y;
+    return y * mode.gain;
+  };
+};
+
+/** A thock's drive, sample by sample: each call takes the time in milliseconds. */
+const thockDrive = (recipe: Thock) => {
+  const random = seeded(recipe.seed);
+  const bank = recipe.modes.map(resonator);
+  const contact = (at: number) =>
+    (at >= 0 && at < recipe.contactMs && Math.sin((Math.PI * at) / recipe.contactMs) ** 2) || 0;
+  return (ms: number) => {
+    const force =
+      (random() * 2 - 1) * (contact(ms) + recipe.returnGain * contact(ms - recipe.returnAtMs));
+    return bank.reduce((sum, mode) => sum + mode(force), 0);
+  };
+};
+
+/** A tine's drive at `ms` (and `t`, the same time in seconds). */
+const tineAt = (recipe: Tine, ms: number, t: number) => {
+  const f = recipe.pitch;
+  const { flex, recoil } = recipe;
+  const held =
+    Math.sin(TAU * f * t) * Math.exp(-((ms / recipe.decayMs) ** recipe.fallPower)) +
+    flex.gain * Math.sin(TAU * f * flex.ratio * t) * Math.exp(-ms / flex.decayMs);
+  const since = ms - recoil.atMs;
+  const octave =
+    (since > 0 &&
+      recoil.gain *
+        rise(since, recoil.attackMs) *
+        Math.sin((TAU * 2 * f * since) / 1000) *
+        Math.exp(-since / recoil.decayMs)) ||
+    0;
+  return rise(ms, recipe.attackMs) * held + octave;
+};
+
+/** A sound's drive, sample by sample. */
+const driveOf = (recipe: Recipe): ((ms: number, t: number) => number) => {
+  switch (recipe._tag) {
+    case 'Thock':
+      return thockDrive(recipe);
+    case 'Tine':
+      return (ms, t) => tineAt(recipe, ms, t);
   }
 };
 
 /** A sound's samples, from -1 to 1, at `RATE`, its peak at its recipe's level. */
-export const samplesOf = (name: string, recipe: Recipe): Float64Array => {
+export const samplesOf = (recipe: Recipe): Float64Array => {
   const out = new Float64Array(countOf(recipe));
-  const random = seeded(seedOf(name));
-  for (const layer of recipe.layers)
-    switch (layer._tag) {
-      case 'Tone':
-        addTone(out, layer);
-        break;
-      case 'Noise':
-        addNoise(out, layer, random);
-        break;
-    }
-  const fade = Math.round(FADE * RATE);
-  for (let i = 0; i < out.length; i += 1)
-    out[i] = (out[i] ?? 0) * Math.min(1, (out.length - 1 - i) / fade);
+  const drive = driveOf(recipe);
+  const filters = BUTTERWORTH.map((q) => lowpass(recipe.lowpass, q));
+  for (let i = 0; i < out.length; i += 1) {
+    const t = i / RATE;
+    const ms = t * 1000;
+    let x = drive(ms, t) * (rise(ms, EASE_IN) * rise(recipe.ms - SETTLE - ms, EASE_OUT));
+    for (const filter of filters) x = filter(x);
+    out[i] = x;
+  }
+  for (let i = 0; i < out.length; i += 1) {
+    const remaining = ((out.length - 1 - i) / RATE) * 1000;
+    out[i] = (out[i] ?? 0) * rise(remaining - 1, CLOSE);
+  }
   const peak = out.reduce((most, s) => Math.max(most, Math.abs(s)), 0);
   const scale = (peak > 0 && recipe.level / peak) || 0;
   for (let i = 0; i < out.length; i += 1) out[i] = (out[i] ?? 0) * scale;
@@ -389,7 +347,7 @@ export interface Voiced {
 
 /** Renders the sound `name` from its recipe. */
 export const voiced = (name: SoundName, recipe: Recipe): Voiced => {
-  const wav = wavOf(samplesOf(name, recipe));
+  const wav = wavOf(samplesOf(recipe));
   return { name, wav, hash: hashOf(wav) };
 };
 

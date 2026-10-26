@@ -5,18 +5,29 @@
  * bytes when rendered again, and as long as `soundLength` says. Each key's
  * tone rings at its key's pitch, within 1 %, by a Goertzel scan.
  *
- * Every candidate, not only the picked one, holds the bars its kind is
- * held to, read from its rendered bytes: a thock is deep (centroid at most
- * 600 Hz, half its energy or more under 500 Hz), unpitched (no pitch class
- * over half its chroma) and at most 150 ms; a key tone is heard at its
- * key's pitch class (60 % or more of its chroma) with at most 0.5 % of its
- * energy over 2.5 kHz.
+ * The voice plays the owner's pick, byte for byte the takes he heard
+ * (`HEARD`). Every candidate holds the bars its kind is held to, read from
+ * its rendered bytes: a thock is deep (centroid at most 600 Hz, half its
+ * energy or more under 500 Hz), unpitched (no pitch class over half its
+ * chroma) and at most 150 ms; a key tone is heard at its key's pitch class
+ * (60 % or more of its chroma) with at most 0.5 % of its energy over
+ * 2.5 kHz.
  */
 
 import { describe, expect, it } from 'bun:test';
 
 import type { SoundName } from './body';
-import { keyPitch, RATE, RECIPES, type Recipe, soundLength, THOCKS, TONES, voiced } from './voice';
+import {
+  keyPitch,
+  PICKED,
+  RATE,
+  RECIPES,
+  type Recipe,
+  soundLength,
+  THOCKS,
+  TONES,
+  voiced,
+} from './voice';
 
 const NAMES: ReadonlyArray<string> = [...Array.from({ length: 12 }, (_, n) => `key-${n}`), 'thock'];
 
@@ -204,12 +215,33 @@ describe('the voice', () => {
   });
 });
 
+/**
+ * The hashes of the sounds the owner picked by ear (2026-10-25: `tactile`,
+ * `tine`), each a WAV byte for byte the same as the take he heard (its
+ * sha256 equal to the take's in the unit's `sounds-2/measurements.json`).
+ * A change to a recipe, or to how a sound is rendered, changes what he
+ * hears: it needs his ear again before this list changes.
+ */
+const HEARD: ReadonlyArray<readonly [string, string]> = [
+  ['key-0', '2b642262'],
+  ['key-1', '178732a2'],
+  ['key-2', 'b5ea445e'],
+  ['key-3', 'd6bd9d17'],
+  ['key-4', '18aaf59c'],
+  ['key-5', 'c97d6bbf'],
+  ['key-6', 'd030cdc8'],
+  ['key-7', 'f878f0ab'],
+  ['key-8', '4962c634'],
+  ['key-9', '394d9929'],
+  ['key-10', '372badf2'],
+  ['key-11', '18f8907e'],
+  ['thock', '360e56e0'],
+];
+
 describe('the candidates', () => {
-  it('are two or three of each kind', () => {
-    for (const kind of [THOCKS, TONES]) {
-      const count = Object.keys(kind).length;
-      expect(count >= 2 && count <= 3).toBe(true);
-    }
+  it('play the owner’s pick: the bytes of the takes he heard', () => {
+    expect(PICKED).toEqual({ thock: 'tactile', tone: 'tine' });
+    expect(sounds.map((s): readonly [string, string] => [s.name, s.hash])).toEqual([...HEARD]);
   });
 
   it('each thock is deep, unpitched and short', () => {

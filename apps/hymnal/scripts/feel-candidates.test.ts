@@ -1,6 +1,6 @@
 /**
- * The sound candidates' files, rendered in memory: two or three candidates
- * of each kind, three takes each, every one a 16-bit mono WAV at the
+ * The sound candidates' files, rendered in memory: every candidate of each
+ * kind, three takes each, every one a 16-bit mono WAV at the
  * voice's rate; the one detent sounds once and the slow turn every detent;
  * the fling holds only the sounds the Feel lets start, none over the one
  * before; and the README names every file and marks the picked candidates.
@@ -16,13 +16,13 @@ const files = candidateFiles();
 const text = (bytes: Uint8Array, at: number) => String.fromCharCode(...bytes.slice(at, at + 4));
 
 describe('the sound candidates', () => {
-  it('are two or three of each kind, with a one, a slow and a fling take each', () => {
+  it('are every candidate of each kind, with a one, a slow and a fling take each', () => {
     for (const [kind, of] of [
       ['thock', THOCKS],
       ['tone', TONES],
     ] as const) {
       const names = Object.keys(of);
-      expect(names.length >= 2 && names.length <= 3).toBe(true);
+      expect(names.length >= 1).toBe(true);
       expect(files.filter((f) => f.kind === kind).map((f) => `${f.candidate} ${f.take}`)).toEqual(
         names.flatMap((name) => [`${name} one`, `${name} slow`, `${name} fling`]),
       );
@@ -82,7 +82,7 @@ describe('the sound candidates', () => {
     expect(files.filter((f) => !readme.includes(f.file)).map((f) => f.file)).toEqual([]);
     const marked = readme
       .split('\n')
-      .filter((line) => line.includes('(recommended'))
+      .filter((line) => line.includes('(picked'))
       .map((line) => line.split(' ')[0]);
     expect(marked).toEqual([PICKED.thock, PICKED.tone]);
   });
