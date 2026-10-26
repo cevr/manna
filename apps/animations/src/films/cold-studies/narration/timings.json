@@ -1,166 +1,227 @@
 {
-  "voice": "lead=iP95p4xoKVk53GoZ742B/eleven_v4/{\"stability\":0.5,\"similarity\":0.75}",
+  "voice": "lead=uklw0mSGyyFcEsdp2z45/eleven_v4/{\"stability\":0.5,\"similarity\":0.75}",
   "scenes": {
+    "job": {
+      "hash": "83b89991",
+      "file": "job.8a8079271605.flac",
+      "duration": 3.89,
+      "words": [
+        {
+          "text": "Job",
+          "start": 0,
+          "end": 0.32,
+          "voiced": {
+            "start": 0.04,
+            "end": 0.32
+          }
+        },
+        {
+          "text": "asked",
+          "start": 0.4,
+          "end": 0.72,
+          "voiced": {
+            "start": 0.4,
+            "end": 0.67
+          }
+        },
+        {
+          "text": "it:",
+          "start": 0.8,
+          "end": 0.96,
+          "voiced": {
+            "start": 0.8,
+            "end": 0.92
+          }
+        },
+        {
+          "text": "“How",
+          "start": 1.6,
+          "end": 1.84,
+          "voiced": {
+            "start": 1.66,
+            "end": 1.84
+          }
+        },
+        {
+          "text": "should",
+          "start": 1.92,
+          "end": 2.08,
+          "voiced": {
+            "start": 1.92,
+            "end": 2.08
+          }
+        },
+        {
+          "text": "man",
+          "start": 2.16,
+          "end": 2.4,
+          "voiced": {
+            "start": 2.16,
+            "end": 2.4
+          }
+        },
+        {
+          "text": "be",
+          "start": 2.48,
+          "end": 2.56,
+          "voiced": {
+            "start": 2.49,
+            "end": 2.56
+          }
+        },
+        {
+          "text": "just",
+          "start": 2.8,
+          "end": 3.12,
+          "voiced": {
+            "start": 2.8,
+            "end": 3.12
+          }
+        },
+        {
+          "text": "with",
+          "start": 3.2,
+          "end": 3.36,
+          "voiced": {
+            "start": 3.24,
+            "end": 3.36
+          }
+        },
+        {
+          "text": "God?”",
+          "start": 3.44,
+          "end": 3.89,
+          "voiced": {
+            "start": 3.45,
+            "end": 3.84
+          }
+        }
+      ]
+    },
     "court": {
       "hash": "e109f0d1",
-      "file": "court.39c3172a9af6.flac",
-      "duration": 8.56,
+      "file": "court.d63ab8c24949.flac",
+      "duration": 9.26,
       "words": [
         {
           "text": "Imagine",
           "start": 0,
-          "end": 0.48,
+          "end": 0.56,
           "voiced": {
-            "start": 0.09,
-            "end": 0.48
+            "start": 0.03,
+            "end": 0.56
           }
         },
         {
           "text": "standing",
-          "start": 0.56,
+          "start": 0.64,
           "end": 0.96,
           "voiced": {
-            "start": 0.56,
+            "start": 0.64,
             "end": 0.96
           }
         },
         {
           "text": "in",
-          "start": 1,
-          "end": 1.04,
+          "start": 1.04,
+          "end": 1.08,
           "voiced": {
-            "start": 1,
-            "end": 1.04
+            "start": 1.04,
+            "end": 1.08
           }
         },
         {
           "text": "a",
-          "start": 1.08,
-          "end": 1.12,
+          "start": 1.12,
+          "end": 1.2,
           "voiced": {
-            "start": 1.08,
-            "end": 1.11
+            "start": 1.12,
+            "end": 1.18
           }
         },
         {
           "text": "courtroom.",
-          "start": 1.2,
-          "end": 2,
+          "start": 1.28,
+          "end": 2.12,
           "voiced": {
-            "start": 1.2,
-            "end": 1.57
+            "start": 1.28,
+            "end": 1.81
           }
         },
         {
           "text": "The",
-          "start": 2.24,
-          "end": 2.4,
+          "start": 2.4,
+          "end": 2.56,
           "voiced": {
-            "start": 2.3,
-            "end": 2.37
+            "start": 2.41,
+            "end": 2.5
           }
         },
         {
           "text": "evidence",
-          "start": 2.48,
-          "end": 2.8,
+          "start": 2.64,
+          "end": 3.04,
           "voiced": {
-            "start": 2.48,
-            "end": 2.8
+            "start": 2.64,
+            "end": 3.04
           }
         },
         {
           "text": "is",
-          "start": 2.88,
-          "end": 3.12,
+          "start": 3.12,
+          "end": 3.36,
           "voiced": {
-            "start": 2.88,
-            "end": 3
+            "start": 3.12,
+            "end": 3.26
           }
         },
         {
           "text": "overwhelming.",
-          "start": 3.2,
-          "end": 4.24,
+          "start": 3.44,
+          "end": 4.56,
           "voiced": {
-            "start": 3.2,
-            "end": 3.77
+            "start": 3.44,
+            "end": 4.21
           }
         },
         {
           "text": "You",
-          "start": 4.32,
-          "end": 4.56,
+          "start": 4.88,
+          "end": 5.12,
           "voiced": {
-            "start": 4.32,
-            "end": 4.5
+            "start": 4.88,
+            "end": 5.09
           }
         },
         {
           "text": "did",
-          "start": 4.64,
-          "end": 4.72,
+          "start": 5.2,
+          "end": 5.36,
           "voiced": {
-            "start": 4.64,
-            "end": 4.72
+            "start": 5.2,
+            "end": 5.36
           }
         },
         {
           "text": "it.",
-          "start": 4.8,
-          "end": 5.44,
+          "start": 5.48,
+          "end": 5.92,
           "voiced": {
-            "start": 4.8,
-            "end": 4.97
+            "start": 5.52,
+            "end": 5.61
           }
         },
         {
           "text": "And",
-          "start": 5.52,
-          "end": 5.6,
-          "voiced": {
-            "start": 5.52,
-            "end": 5.6
-          }
-        },
-        {
-          "text": "the",
-          "start": 5.68,
-          "end": 5.76,
-          "voiced": {
-            "start": 5.68,
-            "end": 5.76
-          }
-        },
-        {
-          "text": "judge",
-          "start": 5.88,
-          "end": 6,
-          "voiced": {
-            "start": 5.88,
-            "end": 6
-          }
-        },
-        {
-          "text": "looks",
-          "start": 6.08,
-          "end": 6.24,
-          "voiced": {
-            "start": 6.08,
-            "end": 6.24
-          }
-        },
-        {
-          "text": "at",
-          "start": 6.28,
+          "start": 6.24,
           "end": 6.32,
           "voiced": {
-            "start": 6.28,
+            "start": 6.27,
             "end": 6.32
           }
         },
         {
-          "text": "you",
+          "text": "the",
           "start": 6.4,
           "end": 6.48,
           "voiced": {
@@ -169,127 +230,66 @@
           }
         },
         {
-          "text": "and",
-          "start": 6.56,
-          "end": 6.64,
+          "text": "judge",
+          "start": 6.6,
+          "end": 6.72,
           "voiced": {
-            "start": 6.56,
-            "end": 6.64
+            "start": 6.6,
+            "end": 6.72
+          }
+        },
+        {
+          "text": "looks",
+          "start": 6.8,
+          "end": 7.04,
+          "voiced": {
+            "start": 6.8,
+            "end": 7.04
+          }
+        },
+        {
+          "text": "at",
+          "start": 7.12,
+          "end": 7.2,
+          "voiced": {
+            "start": 7.12,
+            "end": 7.2
+          }
+        },
+        {
+          "text": "you",
+          "start": 7.28,
+          "end": 7.36,
+          "voiced": {
+            "start": 7.28,
+            "end": 7.36
+          }
+        },
+        {
+          "text": "and",
+          "start": 7.44,
+          "end": 7.52,
+          "voiced": {
+            "start": 7.44,
+            "end": 7.52
           }
         },
         {
           "text": "says,",
-          "start": 6.8,
-          "end": 7.2,
+          "start": 7.6,
+          "end": 8.24,
           "voiced": {
-            "start": 6.8,
-            "end": 7
+            "start": 7.6,
+            "end": 7.96
           }
         },
         {
           "text": "righteous.",
-          "start": 7.44,
-          "end": 8.48,
+          "start": 8.56,
+          "end": 9.26,
           "voiced": {
-            "start": 7.44,
-            "end": 8.04
-          }
-        }
-      ]
-    },
-    "job": {
-      "hash": "83b89991",
-      "file": "job.1bf9de710b35.flac",
-      "duration": 3.47,
-      "words": [
-        {
-          "text": "Job",
-          "start": 0.08,
-          "end": 0.4,
-          "voiced": {
-            "start": 0.08,
-            "end": 0.4
-          }
-        },
-        {
-          "text": "asked",
-          "start": 0.52,
-          "end": 0.72,
-          "voiced": {
-            "start": 0.55,
-            "end": 0.63
-          }
-        },
-        {
-          "text": "it:",
-          "start": 0.8,
-          "end": 1.28,
-          "voiced": {
-            "start": 1.28,
-            "end": 1.28
-          }
-        },
-        {
-          "text": "“How",
-          "start": 1.4,
-          "end": 1.52,
-          "voiced": {
-            "start": 1.4,
-            "end": 1.52
-          }
-        },
-        {
-          "text": "should",
-          "start": 1.6,
-          "end": 1.76,
-          "voiced": {
-            "start": 1.6,
-            "end": 1.76
-          }
-        },
-        {
-          "text": "man",
-          "start": 1.84,
-          "end": 2.08,
-          "voiced": {
-            "start": 1.84,
-            "end": 2.08
-          }
-        },
-        {
-          "text": "be",
-          "start": 2.16,
-          "end": 2.24,
-          "voiced": {
-            "start": 2.16,
-            "end": 2.24
-          }
-        },
-        {
-          "text": "just",
-          "start": 2.48,
-          "end": 2.8,
-          "voiced": {
-            "start": 2.48,
-            "end": 2.77
-          }
-        },
-        {
-          "text": "with",
-          "start": 2.88,
-          "end": 2.96,
-          "voiced": {
-            "start": 2.88,
-            "end": 2.96
-          }
-        },
-        {
-          "text": "God?”",
-          "start": 3.04,
-          "end": 3.47,
-          "voiced": {
-            "start": 3.05,
-            "end": 3.37
+            "start": 8.56,
+            "end": 9.25
           }
         }
       ]
