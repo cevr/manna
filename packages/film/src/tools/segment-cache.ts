@@ -8,24 +8,42 @@
 //   (`holdCache`, waiting its turn), and by `film cache --prune`
 //   (`pruneIdle`, refused while a render holds it). So no prune deletes a
 //   segment a render reads or draws, and two renders of one film take turns.
-// - A render, once done, records the keys it used, one record for each file
-//   it writes (`renders/<id>.json`, `recordRender`), so the newest render of
-//   each file is known by what it wrote, never guessed from times.
+// - Each video render records the keys it used for the file it writes, none
+//   when it keeps no segments (`renders/<id>.json`, `recordRender`). It
+//   removes that file's record before it replaces the file
+//   (`forgetRender`) and writes the new one once done, so a record names
+//   what the newest render of its file used, or the file has none.
 // - A segment goes when no render used it for the days given and no record
-//   names it; `--days 0` keeps exactly what the records name, and is refused
-//   on a cache no render has recorded (`CacheUnrecorded`).
-// - Every read and delete goes through the segments folder's real path,
-//   proven to be `<out>/cache/segments` itself, and each segment's, proven
-//   to be its own folder in it: a link is refused (`CacheEscapes`), never
-//   followed. A folder is deleted whole, and a link inside it is deleted as
-//   a link, never through.
+//   names it, so a segment the newest render of an output used is kept at
+//   every `--days`, past the age prune too, while that render's record names
+//   it. `--days 0` keeps exactly what the records name. It is refused on a
+//   cache no render has recorded (`CacheUnrecorded`), and while a video the
+//   film's catalogue holds has no record (`CacheOutputUnrecorded`): which
+//   segments its newest render used is then unknown.
+// - The cache folder, the segments folder, each segment, each file in a
+//   segment, each segment's record, the renders' records and the catalogue
+//   are proven to be themselves, not links, before any is opened, read or
+//   deleted, the cache folder before its lock is taken: a link is refused
+//   (`CacheEscapes`), never followed. The lock refuses a lock file that is a
+//   link itself (`manifest-lock-bun.ts`).
 
-import { Boolean as Bool, Effect, FileSystem, Option, Path, Schema, type Scope } from 'effect';
+import {
+  Array as Arr,
+  Boolean as Bool,
+  Effect,
+  FileSystem,
+  Option,
+  Path,
+  Schema,
+  type Scope,
+} from 'effect';
 import type { PlatformError } from 'effect/PlatformError';
+import { CatalogueJson } from '../core/catalogue.ts';
 import { isSegment } from '../core/segment.ts';
+import { CATALOGUE_FILE } from './catalogue.ts';
 import { writeWhole } from './content-store.ts';
 import { sha256Hex } from './digest.ts';
-import { CacheBusy, CacheEscapes, CacheUnrecorded } from './errors.ts';
+import { CacheBusy, CacheEscapes, CacheOutputUnrecorded, CacheUnrecorded } from './errors.ts';
 import { ManifestLock } from './manifest-lock.ts';
 import { isKept, lastUsed, segmentsFolder } from './segments.ts';
 
@@ -41,26 +59,58 @@ const CACHE_WAIT = '500 millis';
 /** The film's cache folder under its outputs `out`. */
 const cacheOf = (path: Path.Path, out: string) => path.join(out, 'cache');
 
-/** The film's cache lock file: `.segments.lock` in its cache folder (`lockFile`). */
-const lockOf = (path: Path.Path, out: string) => path.join(cacheOf(path, out), 'segments');
+/** `file` refused when it is a link (`CacheEscapes`, naming where it leads): nothing is opened through one. */
+const notLink = (fs: FileSystem.FileSystem, file: string) =>
+  Effect.flatMap(Effect.option(fs.readLink(file)), (to) =>
+    Option.match(to, {
+      onNone: () => Effect.void,
+      onSome: (real) => Effect.fail(CacheEscapes.make({ folder: file, real })),
+    }),
+  );
 
-/** Where the renders' records are kept: `cache/renders/`. */
-const rendersOf = (path: Path.Path, out: string) => path.join(cacheOf(path, out), 'renders');
+/** `dir` as it is on disk, refused when its real path is another (a link, or a folder through one). */
+const ownPath = (fs: FileSystem.FileSystem, dir: string, own: string) =>
+  Effect.gen(function* () {
+    const real = yield* fs.realPath(dir);
+    if (real !== own) return yield* CacheEscapes.make({ folder: dir, real });
+    return real;
+  });
+
+/** `<out>/cache/<names>` as it must be on disk: under the real path of the film's outputs. */
+const ownedPath = (fs: FileSystem.FileSystem, path: Path.Path, out: string, names: string) =>
+  Effect.map(fs.realPath(out), (real) => path.join(real, 'cache', names));
+
+/**
+ * The film's cache folder, made when it is not there, proven to be
+ * `<out>/cache` itself (no link, nor under one), and its real path.
+ */
+const ownCache = (fs: FileSystem.FileSystem, path: Path.Path, out: string) =>
+  Effect.gen(function* () {
+    yield* fs.makeDirectory(cacheOf(path, out), { recursive: true });
+    const real = path.join(yield* fs.realPath(out), 'cache');
+    return yield* ownPath(fs, cacheOf(path, out), real);
+  });
 
 /**
  * Whether the film's cache is now held, let go when the scope closes (the
  * render's or the prune's: done, failed or interrupted): false, tried once,
- * while another holder (of this process or any other) has it.
+ * while another holder (of this process or any other) has it. The cache
+ * folder is proven not a link before the lock is taken in it, and the lock
+ * refuses a lock file that is one (`manifest-lock-bun.ts`).
  */
 const tryHoldCache = (
   out: string,
-): Effect.Effect<boolean, PlatformError, Scope.Scope | FileSystem.FileSystem | Path.Path> =>
+): Effect.Effect<
+  boolean,
+  PlatformError | CacheEscapes,
+  Scope.Scope | FileSystem.FileSystem | Path.Path
+> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    yield* fs.makeDirectory(cacheOf(path, out), { recursive: true });
+    const cache = yield* ownCache(fs, path, out);
     const lock = yield* ManifestLock;
-    const held = yield* Effect.acquireRelease(lock.take(lockOf(path, out)), (release) =>
+    const held = yield* Effect.acquireRelease(lock.take(path.join(cache, 'segments')), (release) =>
       Option.getOrElse(release, () => Effect.void),
     );
     return Option.isSome(held);
@@ -69,7 +119,11 @@ const tryHoldCache = (
 /** The film's cache held as `tryHoldCache` holds it, tried every CACHE_WAIT until it is free. */
 const waitForCache = (
   out: string,
-): Effect.Effect<void, PlatformError, Scope.Scope | FileSystem.FileSystem | Path.Path> =>
+): Effect.Effect<
+  void,
+  PlatformError | CacheEscapes,
+  Scope.Scope | FileSystem.FileSystem | Path.Path
+> =>
   Effect.flatMap(tryHoldCache(out), (held) =>
     Bool.match(held, {
       onTrue: () => Effect.void,
@@ -80,7 +134,11 @@ const waitForCache = (
 /** The film's cache held for the scope, waiting while another render holds it (`render.cache.waiting`, once). */
 export const holdCache = (
   out: string,
-): Effect.Effect<void, PlatformError, Scope.Scope | FileSystem.FileSystem | Path.Path> =>
+): Effect.Effect<
+  void,
+  PlatformError | CacheEscapes,
+  Scope.Scope | FileSystem.FileSystem | Path.Path
+> =>
   Effect.gen(function* () {
     if (yield* tryHoldCache(out)) return;
     yield* Effect.log(`render.cache.waiting folder=${out}`);
@@ -104,25 +162,25 @@ export interface SegmentCache {
 export const cacheBytes = (cache: SegmentCache): number =>
   [...cache.segments, ...cache.drawing].reduce((sum, s) => sum + s.bytes, 0);
 
-/** The bytes of every file at or under `dir`. */
-const bytesUnder = (fs: FileSystem.FileSystem, path: Path.Path, dir: string) =>
+/** The bytes of every file under the folder `dir`, a folder at a time: a link in it is refused, never followed. */
+const bytesUnder = (
+  fs: FileSystem.FileSystem,
+  path: Path.Path,
+  dir: string,
+): Effect.Effect<number, PlatformError | CacheEscapes> =>
   Effect.gen(function* () {
-    const names = yield* fs.readDirectory(dir, { recursive: true });
+    const names = yield* fs.readDirectory(dir);
     const sizes = yield* Effect.forEach(names, (name) =>
-      Effect.map(fs.stat(path.join(dir, name)), (info) => {
+      Effect.gen(function* () {
+        const entry = path.join(dir, name);
+        yield* notLink(fs, entry);
+        const info = yield* fs.stat(entry);
+        if (info.type === 'Directory') return yield* bytesUnder(fs, path, entry);
         if (info.type !== 'File') return 0;
         return Number(info.size);
       }),
     );
     return sizes.reduce((sum, n) => sum + n, 0);
-  });
-
-/** `dir` as it is on disk, refused when its real path is another (a link, or a folder through one). */
-const ownPath = (fs: FileSystem.FileSystem, dir: string, own: string) =>
-  Effect.gen(function* () {
-    const real = yield* fs.realPath(dir);
-    if (real !== own) return yield* CacheEscapes.make({ folder: dir, real });
-    return real;
   });
 
 /** The cache as read from its real root: none when the film has no segments folder. */
@@ -140,16 +198,13 @@ const scan = (
     const folder = segmentsFolder(out);
     if (!(yield* fs.exists(folder)))
       return { root: Option.none(), cache: { segments: [], drawing: [] } };
-    const root = yield* ownPath(
-      fs,
-      folder,
-      path.join(yield* fs.realPath(out), 'cache', 'segments'),
-    );
+    const root = yield* ownPath(fs, folder, yield* ownedPath(fs, path, out, 'segments'));
     const names = (yield* fs.readDirectory(root)).filter(isSegment).toSorted();
     const read = yield* Effect.forEach(names, (key) =>
       Effect.gen(function* () {
         const dir = yield* ownPath(fs, path.join(root, key), path.join(root, key));
         if ((yield* fs.stat(dir)).type !== 'Directory') return [];
+        // Counted first: each file in the folder, its record too, is proven not a link before one is read.
         const bytes = yield* bytesUnder(fs, path, dir);
         if (!(yield* isKept(fs, path, root, key)))
           return [{ key, bytes, used: Option.none<number>() }];
@@ -186,42 +241,104 @@ const RenderRecordJson = Schema.fromJsonString(
   Schema.Struct({ target: Schema.String, at: Schema.Finite, keys: Schema.Array(Schema.String) }),
 );
 
+/** The record of the render of `target` in the renders' folder `dir`: its id the hash of `target`. */
+const recordFile = (path: Path.Path, dir: string, target: string) =>
+  path.join(dir, `${sha256Hex(path.resolve(target)).slice(0, 16)}.json`);
+
 /**
  * The render that wrote `target`, begun at `at`, recorded as having used
- * `keys`: `renders/<id>.json`, its id the hash of `target`, written whole
- * over the record of the render of that file before it.
+ * `keys` (none for a render that keeps no segments): `renders/<id>.json`,
+ * written whole over the record of the render of that file before it.
  */
 export const recordRender = (
   out: string,
   target: string,
   at: number,
   keys: ReadonlyArray<string>,
-): Effect.Effect<void, PlatformError | Schema.SchemaError, FileSystem.FileSystem | Path.Path> =>
+): Effect.Effect<
+  void,
+  PlatformError | CacheEscapes | Schema.SchemaError,
+  FileSystem.FileSystem | Path.Path
+> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const dir = rendersOf(path, out);
-    yield* fs.makeDirectory(dir, { recursive: true });
-    const file = path.join(dir, `${sha256Hex(target).slice(0, 16)}.json`);
+    const renders = path.join(yield* ownCache(fs, path, out), 'renders');
+    yield* fs.makeDirectory(renders, { recursive: true });
+    const dir = yield* ownPath(fs, renders, renders);
     const record = yield* Schema.encodeEffect(RenderRecordJson)({ target, at, keys });
+    const file = recordFile(path, dir, target);
     yield* writeWhole(fs, file, (partial) => fs.writeFileString(partial, record));
   });
 
-/** The keys the renders' records name, and whether there is any record; one that does not read names none. */
+/**
+ * The record of the render of `target` removed, before a render replaces
+ * that file: until its new one is written, no prune keeps by what an older
+ * render of it used, and `--days 0` is refused (`CacheOutputUnrecorded`).
+ */
+export const forgetRender = (
+  out: string,
+  target: string,
+): Effect.Effect<void, PlatformError | CacheEscapes, FileSystem.FileSystem | Path.Path> =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const renders = path.join(cacheOf(path, out), 'renders');
+    if (!(yield* fs.exists(renders))) return;
+    const dir = yield* ownPath(fs, renders, yield* ownedPath(fs, path, out, 'renders'));
+    yield* fs.remove(recordFile(path, dir, target), { force: true });
+  });
+
+/** What the renders' records say: whether there is any, the keys they name, and the files they are of. */
+interface Recorded {
+  readonly any: boolean;
+  readonly keys: ReadonlySet<string>;
+  readonly targets: ReadonlySet<string>;
+}
+
+/** The renders' records, each proven not a link; one that does not read names nothing. */
 const recorded = (out: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const dir = rendersOf(path, out);
-    if (!(yield* fs.exists(dir))) return { any: false, keys: new Set<string>() };
+    const renders = path.join(cacheOf(path, out), 'renders');
+    if (!(yield* fs.exists(renders))) {
+      const none: Recorded = { any: false, keys: new Set(), targets: new Set() };
+      return none;
+    }
+    const dir = yield* ownPath(fs, renders, yield* ownedPath(fs, path, out, 'renders'));
     const names = (yield* fs.readDirectory(dir)).filter((name) => name.endsWith('.json'));
     const records = yield* Effect.forEach(names, (name) =>
-      Effect.map(fs.readFileString(path.join(dir, name)), (text) =>
-        Option.toArray(Schema.decodeOption(RenderRecordJson)(text)),
-      ),
+      Effect.gen(function* () {
+        const file = path.join(dir, name);
+        yield* notLink(fs, file);
+        return Option.toArray(
+          Schema.decodeOption(RenderRecordJson)(yield* fs.readFileString(file)),
+        );
+      }),
     );
     const read = records.flat();
-    return { any: read.length > 0, keys: new Set(read.flatMap((r) => r.keys)) };
+    const found: Recorded = {
+      any: read.length > 0,
+      keys: new Set(read.flatMap((r) => r.keys)),
+      targets: new Set(read.map((r) => path.resolve(r.target))),
+    };
+    return found;
+  });
+
+/** Each video the film's catalogue (`<out>/catalogue.json`, proven not a link) holds, by its file's path; none without one. */
+const cataloguedVideos = (out: string) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const file = path.join(out, CATALOGUE_FILE);
+    yield* notLink(fs, file);
+    if (!(yield* fs.exists(file))) return [];
+    const catalogue = yield* Schema.decodeEffect(CatalogueJson)(yield* fs.readFileString(file));
+    const clips = catalogue.renders
+      .filter((render) => render.kind === 'video')
+      .flatMap((render) => Option.toArray(render.files.clip));
+    return Arr.dedupe(clips.map((clip) => path.resolve(out, clip)));
   });
 
 /** What a prune keeps and removes by. */
@@ -241,30 +358,39 @@ export interface Pruned {
   readonly freed: number;
 }
 
+/** Why a prune refuses: a link, a cache with no record, a video with none. */
+type PruneError =
+  | PlatformError
+  | Schema.SchemaError
+  | CacheEscapes
+  | CacheUnrecorded
+  | CacheOutputUnrecorded;
+
 /**
  * The film's segments pruned by `rule`, the caller holding its cache
  * (`holdCache`, or `pruneIdle`): each last used more than `days` before
  * `now`, in no render's record and not in `keep`, deleted for good, its
  * folder whole, as build output is. `days` 0 keeps exactly what the records
- * name, so it is refused on a cache with none (`CacheUnrecorded`). `dry`
+ * name, so it is refused on a cache with none (`CacheUnrecorded`) and while
+ * a video the catalogue holds has none (`CacheOutputUnrecorded`). `dry`
  * removes nothing and answers what it would remove.
  */
 export const pruneHeld = (
   out: string,
   rule: PruneRule,
   dry: boolean,
-): Effect.Effect<
-  Pruned,
-  PlatformError | CacheEscapes | CacheUnrecorded,
-  FileSystem.FileSystem | Path.Path
-> =>
+): Effect.Effect<Pruned, PruneError, FileSystem.FileSystem | Path.Path> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const { root, cache } = yield* scan(out);
     const named = yield* recorded(out);
-    if (rule.days === 0 && !named.any && cache.segments.length > 0)
-      return yield* CacheUnrecorded.make({ folder: segmentsFolder(out) });
+    if (rule.days === 0 && cache.segments.length > 0) {
+      if (!named.any) return yield* CacheUnrecorded.make({ folder: segmentsFolder(out) });
+      const unrecorded = (yield* cataloguedVideos(out)).filter((clip) => !named.targets.has(clip));
+      const first = Arr.head(unrecorded);
+      if (Option.isSome(first)) return yield* CacheOutputUnrecorded.make({ output: first.value });
+    }
     const before = rule.now - rule.days * DAY_MS;
     // With 0 days a segment's age does not count: the records alone keep.
     const unused = (s: CachedSegment) => rule.days === 0 || s.used < before;
@@ -288,11 +414,7 @@ export const pruneIdle = (
   out: string,
   rule: PruneRule,
   dry: boolean,
-): Effect.Effect<
-  Pruned,
-  PlatformError | CacheEscapes | CacheUnrecorded | CacheBusy,
-  FileSystem.FileSystem | Path.Path
-> =>
+): Effect.Effect<Pruned, PruneError | CacheBusy, FileSystem.FileSystem | Path.Path> =>
   Effect.scoped(
     Effect.gen(function* () {
       const path = yield* Path.Path;

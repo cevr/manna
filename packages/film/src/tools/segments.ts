@@ -371,14 +371,26 @@ export const keepSegment = (
  * finds it until one draws it whole again. A render drops the record of each
  * segment it draws before it draws it (a `--fresh` render, of every one), so
  * one cut off leaves none of what it was told not to trust, and a folder a
- * render is drawing into has no record: a prune never takes it.
+ * render is drawing into has no record: a prune never takes it. Answers the
+ * last use the record held (`used`), so the render that draws the segment
+ * again keeps it when it is later than its own; none when there was no
+ * record, or none that reads.
  */
 export const dropSegment = (
   fs: FileSystem.FileSystem,
   path: Path.Path,
   folder: string,
   key: string,
-): Effect.Effect<void, PlatformError> => fs.remove(recordOf(path, folder, key), { force: true });
+): Effect.Effect<Option.Option<number>, PlatformError> =>
+  Effect.gen(function* () {
+    const record = recordOf(path, folder, key);
+    const text = yield* Effect.option(fs.readFileString(record));
+    yield* fs.remove(record, { force: true });
+    return Option.flatMap(
+      Option.flatMap(text, Schema.decodeOption(KeptSegmentJson)),
+      (read) => read.used,
+    );
+  });
 
 /**
  * When segment `key`'s record under `folder` says a render last used it: its

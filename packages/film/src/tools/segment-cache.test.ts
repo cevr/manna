@@ -2,15 +2,17 @@
 // given and no render's record names goes, for good; one the pruning render
 // used, one a record names, a folder a render is still drawing (no record)
 // and everything outside the segments folder stay. `--days 0` keeps exactly
-// what the records name, and is refused on a cache with none. A prune by
-// hand is refused while a render holds the cache, and nothing is read or
-// deleted through a link. Explicit times, over a project folder in memory,
+// what the records name, and is refused on a cache with none or while a
+// video the catalogue holds has none. A prune by hand is refused while a
+// render holds the cache, and nothing is read or deleted through a link, nor
+// a lock file made through one. Explicit times, over a project folder in memory,
 // and on disk where a link must be real.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Cause, Effect, Exit, FileSystem, Option, Path, Schema, type Scope } from 'effect';
-import { CacheBusy, CacheEscapes, CacheUnrecorded } from './errors.ts';
+import { CatalogueJson, MAIN_VARIANT, type Render, emptyCatalogue } from '../core/catalogue.ts';
+import { CacheBusy, CacheEscapes, CacheOutputUnrecorded, CacheUnrecorded } from './errors.ts';
 import { memoryFileSystem, memoryManifestLock, text } from './host/testing.ts';
 import { ManifestLock } from './manifest-lock.ts';
 import { pruneHeld, pruneIdle, readCache, recordRender, holdCache } from './segment-cache.ts';
@@ -38,7 +40,35 @@ const kept = (key: string, daysAgo: number, bytes = 100, segments = folder) =>
     );
   });
 
-/** The rule at NOW: unused past 7 days, keeping none, unless `rule` says otherwise. */
+/** The film's catalogue holding a video at each of `clips` (relative to `/out/f`), as a render's caller records it. */
+const catalogued = (clips: ReadonlyArray<string>) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const renders = clips.map((clip): Render => ({
+      address: { _tag: 'Film' },
+      variant: MAIN_VARIANT,
+      kind: 'video',
+      settings: { scale: 1, captions: false },
+      stamp: { commit: Option.none(), key: 'k' },
+      span: Option.none(),
+      files: {
+        clip: Option.some(clip),
+        share: Option.none(),
+        captions: Option.none(),
+        chapters: Option.none(),
+        description: Option.none(),
+        images: [],
+      },
+      sound: Option.none(),
+      at: NOW,
+    }));
+    const catalogue = { ...emptyCatalogue('f'), renders };
+    yield* fs.writeFileString(
+      `${out}/catalogue.json`,
+      yield* Schema.encodeEffect(CatalogueJson)(catalogue),
+    );
+  });
+
 /** What a prune is told: when, how many days, which keys to keep. */
 type PruneRule = Parameters<typeof pruneIdle>[1];
 
@@ -114,7 +144,7 @@ describe('pruning a film’s render cache', () => {
     }).pipe(over(files));
   });
 
-  it.effect('with 0 days keeps exactly what the newest render of each file used', () => {
+  it.effect('with 0 days keeps exactly what the newest render of each output used', () => {
     const files = new Map<string, Uint8Array>();
     const record = (key: string) => `${folder}/${key}/segment.json`;
     // a and b written before renders marked them, a millisecond apart.
@@ -155,6 +185,27 @@ describe('pruning a film’s render cache', () => {
       expect(left(files)).toEqual(['a', 'b']);
     }).pipe(over(files, mtimes));
   });
+
+  it.effect(
+    'with 0 days refuses while an output the catalogue holds has no record, naming it, and deletes nothing',
+    () => {
+      const files = new Map<string, Uint8Array>();
+      return Effect.gen(function* () {
+        yield* kept('scene', 0);
+        yield* kept('film', 0);
+        yield* recordRender(out, '/out/f/scenes/a/main.mp4', NOW, ['scene']);
+        yield* catalogued(['scenes/a/main.mp4', 'film/main.mp4']);
+        const failed = failure(yield* Effect.exit(prune({ days: 0 })));
+        expect(Option.filter(failed, Schema.is(CacheOutputUnrecorded))).toEqual(
+          Option.some(CacheOutputUnrecorded.make({ output: '/out/f/film/main.mp4' })),
+        );
+        expect(left(files)).toEqual(['film', 'scene']);
+        // Its render recorded, the prune runs.
+        yield* recordRender(out, '/out/f/film/main.mp4', NOW, ['film']);
+        expect((yield* prune({ days: 0 })).removed).toEqual([]);
+      }).pipe(over(files));
+    },
+  );
 
   it.effect('leaves a folder with no record, one a render is drawing, and counts it', () => {
     const files = new Map<string, Uint8Array>([[`${folder}/drawing/0-10.mp4`, new Uint8Array(50)]]);
@@ -331,6 +382,66 @@ describe('pruning a film’s render cache through a link', () => {
         old: true,
         sentinel: true,
       });
+    }).pipe(onDisk),
+  );
+
+  it.live(
+    'refuses a cache folder that is a link before it takes the lock: no lock file is made where it leads',
+    () =>
+      Effect.gen(function* () {
+        const { fs, path, film, elsewhere } = yield* linked;
+        const cache = path.join(path.dirname(elsewhere), 'cache-elsewhere');
+        yield* fs.makeDirectory(cache);
+        yield* fs.symlink(cache, `${film}/cache`);
+        const exit = yield* Effect.exit(prune({ days: 7 }, false, film));
+        expect(Option.isSome(Option.filter(failure(exit), Schema.is(CacheEscapes)))).toBe(true);
+        expect(yield* fs.readDirectory(cache)).toEqual([]);
+      }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+
+  it.live('refuses a segment whose record is a link, and reads nothing it leads to', () =>
+    Effect.gen(function* () {
+      const { fs, film, elsewhere } = yield* linked;
+      const segments = `${film}/cache/segments`;
+      yield* fs.makeDirectory(`${segments}/a`, { recursive: true });
+      yield* fs.writeFile(`${segments}/a/0-10.mp4`, new Uint8Array(10));
+      yield* fs.symlink(`${elsewhere}/old/segment.json`, `${segments}/a/segment.json`);
+      const read = yield* Effect.exit(readCache(film));
+      expect(Option.isSome(Option.filter(failure(read), Schema.is(CacheEscapes)))).toBe(true);
+      const pruned = yield* pruneThrough(film, elsewhere);
+      expect(pruned).toEqual({ escaped: true, old: true, sentinel: true });
+      expect(yield* fs.exists(`${segments}/a/0-10.mp4`)).toBe(true);
+    }).pipe(onDisk),
+  );
+
+  it.live('refuses a file in a segment that is a link, never counting through it', () =>
+    Effect.gen(function* () {
+      const { fs, film, elsewhere } = yield* linked;
+      const segments = `${film}/cache/segments`;
+      yield* kept('a', 30, 100, segments);
+      yield* fs.symlink(`${elsewhere}/sentinel.txt`, `${segments}/a/10-20.mp4`);
+      expect(yield* pruneThrough(film, elsewhere)).toEqual({
+        escaped: true,
+        old: true,
+        sentinel: true,
+      });
+      expect(yield* fs.exists(`${segments}/a/segment.json`)).toBe(true);
+    }).pipe(onDisk),
+  );
+
+  it.live('refuses a render record that is a link', () =>
+    Effect.gen(function* () {
+      const { fs, film, elsewhere } = yield* linked;
+      yield* kept('a', 30, 100, `${film}/cache/segments`);
+      yield* fs.makeDirectory(`${film}/cache/renders`, { recursive: true });
+      yield* fs.writeFileString(
+        `${elsewhere}/record.json`,
+        '{"target":"/x/main.mp4","at":0,"keys":["a"]}',
+      );
+      yield* fs.symlink(`${elsewhere}/record.json`, `${film}/cache/renders/x.json`);
+      const exit = yield* Effect.exit(prune({ days: 0 }, false, film));
+      expect(Option.isSome(Option.filter(failure(exit), Schema.is(CacheEscapes)))).toBe(true);
+      expect(yield* fs.exists(`${film}/cache/segments/a/segment.json`)).toBe(true);
     }).pipe(onDisk),
   );
 

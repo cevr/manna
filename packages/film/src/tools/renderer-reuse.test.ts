@@ -14,14 +14,16 @@ import {
   Effect,
   Exit,
   Fiber,
+  FileSystem,
   Layer,
   Logger,
   Option,
   Path,
   Schema,
 } from 'effect';
-import { CacheBusy, PageError } from './errors.ts';
-import { MAIN_VARIANT } from '../core/catalogue.ts';
+import { systemError } from 'effect/PlatformError';
+import { CacheBusy, CacheOutputUnrecorded, PageError } from './errors.ts';
+import { CatalogueJson, MAIN_VARIANT, type Render, emptyCatalogue } from '../core/catalogue.ts';
 import { type BoardFile, BoardFileJson, BoardName, type Panel, emptyBoard } from '../core/board.ts';
 import { Picture } from '../core/board-render.ts';
 import type { ExportInfo } from '../core/export-handle.ts';
@@ -33,7 +35,7 @@ import { emptyLedger, fakeRenderHost } from './browser/testing.ts';
 import { testFilm } from './film-repo/testing.ts';
 import { memoryFileSystem, memoryManifestLock, text } from './host/testing.ts';
 import { ManifestLock } from './manifest-lock.ts';
-import { pruneIdle } from './segment-cache.ts';
+import { pruneIdle, readCache, recordRender } from './segment-cache.ts';
 
 /** Three beats, 5, 5 and 10 seconds, at 2 fps: frames 0–9, 10–19 and 20–39. */
 const film = testFilm(
@@ -104,6 +106,29 @@ const project = (files = new Map<string, Uint8Array>(), stage = { film, info }) 
   const lock = memoryManifestLock();
   /** Every render's cache lines, as they are logged. */
   const cacheLines: Array<string> = [];
+  /** Whether a write of a render's record (`cache/renders/`) is refused, as a full disk refuses it. */
+  const refusing = { records: false };
+  const disk = Layer.effect(
+    FileSystem.FileSystem,
+    Effect.map(FileSystem.FileSystem, (fs) => ({
+      ...fs,
+      writeFileString: (file: string, data: string) =>
+        Effect.andThen(
+          Effect.when(
+            Effect.fail(
+              systemError({
+                _tag: 'PermissionDenied',
+                module: 'FileSystem',
+                method: 'writeFileString',
+                pathOrDescriptor: file,
+              }),
+            ),
+            Effect.sync(() => refusing.records && file.includes('/cache/renders/')),
+          ),
+          fs.writeFileString(file, data),
+        ),
+    })),
+  ).pipe(Layer.provide(memoryFileSystem(files, folders)));
   const render = (job: RenderJob, draw: Draw = () => Effect.void) => {
     const ledger = emptyLedger();
     const lines: Array<string> = [];
@@ -120,7 +145,7 @@ const project = (files = new Map<string, Uint8Array>(), stage = { film, info }) 
     const layer = Renderer.layer.pipe(
       Layer.provide([
         fakeRenderHost(ledger, { info: stage.info, frame: draw }),
-        memoryFileSystem(files, folders),
+        disk,
         Path.layer,
         SoundRender.layer,
       ]),
@@ -129,6 +154,7 @@ const project = (files = new Map<string, Uint8Array>(), stage = { film, info }) 
       yield* (yield* Renderer).render(stage.film, job);
       const [join, share] = ledger.joins;
       return {
+        target: Option.getOrThrow(Option.fromUndefinedOr(join)).out,
         reuse: lines,
         pruned,
         drawn: ledger.frames.toSorted((x, y) => x - y),
@@ -149,6 +175,36 @@ const project = (files = new Map<string, Uint8Array>(), stage = { film, info }) 
       Effect.provideService(ManifestLock, lock),
       Effect.provide([memoryFileSystem(files, folders), Path.layer]),
     );
+  /** Over the project folder: the cache as `film cache` reads it, a render recorded by hand, the catalogue written. */
+  const onFiles = <A, E>(effect: Effect.Effect<A, E, FileSystem.FileSystem | Path.Path>) =>
+    effect.pipe(Effect.provide([memoryFileSystem(files, folders), Path.layer]));
+  /** The film's catalogue holding a video at each of `clips`, as a render's caller records it. */
+  const catalogued = (clips: ReadonlyArray<string>) =>
+    Effect.gen(function* () {
+      const renders = clips.map((clip): Render => ({
+        address: { _tag: 'Film' },
+        variant: MAIN_VARIANT,
+        kind: 'video',
+        settings: { scale: 1, captions: false },
+        stamp: { commit: Option.none(), key: 'k' },
+        span: Option.none(),
+        files: {
+          clip: Option.some(clip.slice(`${film.paths.out}/`.length)),
+          share: Option.none(),
+          captions: Option.none(),
+          chapters: Option.none(),
+          description: Option.none(),
+          images: [],
+        },
+        sound: Option.none(),
+        at: 0,
+      }));
+      const catalogue = { ...emptyCatalogue('test'), renders };
+      files.set(
+        `${film.paths.out}/catalogue.json`,
+        text(yield* Schema.encodeEffect(CatalogueJson)(catalogue)),
+      );
+    });
   /** The film's Board written where its page reads it, and each of its images. */
   const boarded = (record: BoardFile, images: Readonly<Record<string, string>>) =>
     Effect.gen(function* () {
@@ -176,7 +232,17 @@ const project = (files = new Map<string, Uint8Array>(), stage = { film, info }) 
         `mp4 ${s.at * stage.info.fps}-${(joined[k + 1]?.at ?? stage.info.duration) * stage.info.fps}`,
     ),
   });
-  return { render, boarded, holding, held, pruneByHand, cacheLines };
+  return {
+    render,
+    boarded,
+    holding,
+    held,
+    pruneByHand,
+    cacheLines,
+    refusing,
+    onFiles,
+    catalogued,
+  };
 };
 
 const read = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
@@ -395,6 +461,44 @@ describe.concurrent("a film render's segments", () => {
         expect(pruned.removed).toEqual([]);
         expect(pruned.found.segments).toHaveLength(3);
       }),
+  );
+
+  it.effect(
+    'whose record fails to write leave the render done, and a prune with 0 days refuses, naming its file, while another output is recorded',
+    () =>
+      Effect.gen(function* () {
+        const { render, pruneByHand, cacheLines, refusing, onFiles, catalogued } = project();
+        const on = (job: RenderJob) =>
+          render(job).pipe(Effect.provideService(Clock.Clock, onDay(0)));
+        const scene = `${film.paths.out}/scenes/a/main.mp4`;
+        const first = yield* on(video(keyed()));
+        yield* onFiles(recordRender(film.paths.out, scene, 0, ['key-a']));
+        yield* catalogued([first.target, scene]);
+        // b changes, and its render's record cannot be written.
+        refusing.records = true;
+        const changed = new Map([...keys, ['b', 'key-b2']]);
+        const second = yield* on(video(keyed(changed)));
+        refusing.records = false;
+        expect(second.drawn).toEqual(frames(10, 20));
+        expect(cacheLines.some((line) => line.startsWith('render.cache.record failed'))).toBe(true);
+        const refused = yield* Effect.exit(pruneByHand(0, 0));
+        expect(Exit.match(refused, { onSuccess: () => 'pruned', onFailure: Cause.squash })).toEqual(
+          CacheOutputUnrecorded.make({ output: first.target }),
+        );
+        // Nothing went: the second render's b is reused.
+        expect((yield* on(video(keyed(changed)))).drawn).toEqual([]);
+      }),
+  );
+
+  it.effect('drawn again with --fresh never move their mark back', () =>
+    Effect.gen(function* () {
+      const { render, onFiles } = project();
+      yield* render(video(keyed())).pipe(Effect.provideService(Clock.Clock, onDay(10)));
+      // A clock behind the first render's: the fresh render's own mark is earlier.
+      yield* render(video(keyed(keys, true))).pipe(Effect.provideService(Clock.Clock, onDay(9)));
+      const found = yield* onFiles(readCache(film.paths.out));
+      expect(found.segments.map((s) => s.used)).toEqual([10 * DAY, 10 * DAY, 10 * DAY]);
+    }),
   );
 
   it.live('of the Board: a changed image draws only the segments that show it', () =>

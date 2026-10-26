@@ -13,7 +13,6 @@
 import { availableParallelism } from 'node:os';
 import {
   Array as Arr,
-  Boolean as Bool,
   Clock,
   Context,
   Effect,
@@ -66,10 +65,11 @@ import {
   type PageCrashed,
   type PageError,
   RangeEmpty,
+  type CacheEscapes,
   type TooManyEncoders,
 } from './errors.ts';
 import { writeWhole } from './content-store.ts';
-import { PRUNE_DAYS, holdCache, pruneHeld, recordRender } from './segment-cache.ts';
+import { PRUNE_DAYS, forgetRender, holdCache, pruneHeld, recordRender } from './segment-cache.ts';
 import { sha256OfFile } from './digest.ts';
 import {
   type BoardRead,
@@ -200,6 +200,7 @@ type RenderError =
   | TooManyEncoders
   | PlaceError
   | ShortError
+  | CacheEscapes
   | PlatformError;
 
 /**
@@ -637,27 +638,34 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         if (Option.isSome(keeping)) yield* onDisk(holdCache(film.paths.out));
         /** This render's mark: each segment it reuses or keeps is recorded as used at it. */
         const used = yield* Clock.currentTimeMillis;
-        // --fresh finds no kept copy, and drops each one's record before it draws it again.
+        // --fresh finds no kept copy: it draws every segment again.
         const kept = yield* Effect.forEach(segments, (segment) =>
-          Option.match(segment.key, {
-            onNone: () => Effect.succeedNone,
-            onSome: (key) =>
-              Bool.match(fresh, {
-                onTrue: () => Effect.as(dropSegment(fs, path, folder, key), Option.none()),
-                onFalse: () => reuseSegment(fs, path, folder, key, used),
-              }),
-          }),
+          Option.match(
+            Option.filter(segment.key, () => !fresh),
+            {
+              onNone: () => Effect.succeedNone,
+              onSome: (key) => reuseSegment(fs, path, folder, key, used),
+            },
+          ),
         );
         /** The segments to draw, each with its place among all of them. */
         const missing = segments.flatMap((segment, at) =>
           Arr.filter([{ ...segment, at }], () => Option.isNone(kept[at] ?? Option.none())),
         );
         // A segment to draw has no record while it is drawn (one whose files
-        // are gone loses its own), so a prune leaves its folder alone.
-        yield* Effect.forEach(missing, (segment) =>
+        // are gone, or a --fresh render's, loses its own), so a prune leaves
+        // its folder alone; its mark, kept as it is drawn again, is the
+        // later of the record's and this render's, so it never goes back.
+        const marks = yield* Effect.forEach(missing, (segment) =>
           Option.match(segment.key, {
-            onNone: () => Effect.void,
-            onSome: (key) => dropSegment(fs, path, folder, key),
+            onNone: () => Effect.succeed(used),
+            onSome: (key) =>
+              Effect.map(dropSegment(fs, path, folder, key), (was) =>
+                Math.max(
+                  used,
+                  Option.getOrElse(was, () => used),
+                ),
+              ),
           }),
         );
         const chunks = segmentChunks(missing, workers);
@@ -761,7 +769,7 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
                     to: e.chunk.to,
                     share: Option.isSome(e.share),
                   })),
-                used,
+                marks[k] ?? used,
               ),
           }),
         );
@@ -777,6 +785,11 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
           }),
         );
         const atOf = (from: number) => (from - start) / info.fps;
+        // The file's render record goes before the file is replaced (under
+        // the cache's lock when the render keeps segments), so no prune
+        // keeps by what an older render of it used; the new one is written
+        // once done.
+        yield* onDisk(forgetRender(film.paths.out, target));
         yield* media.join({
           out: target,
           segments: all.map((c) => ({ file: c.master, at: atOf(c.from) })),
@@ -857,19 +870,24 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         yield* Effect.log(
           `render.done frames=${total} chunks=${chunks.length} audio=${Option.isSome(audio)} secs=${secs.toFixed(1)} fps=${(total / secs).toFixed(1)} ${perFrame(spent)} file=${target} share=${Option.getOrElse(shared, () => 'none')} captions=${captions}`,
         );
-        // A render that keeps segments, once done and still holding the cache,
-        // records the keys it used for the file it wrote, then prunes the
-        // film's: each no render used for PRUNE_DAYS and no record names goes.
-        // A record or prune that fails leaves the render done.
+        // Once done (still holding the cache when it keeps segments), the
+        // render records the keys it used for the file it wrote, none when it
+        // keeps none. One that keeps segments then prunes the film's: each no
+        // render used for PRUNE_DAYS and no record names goes. A record or a
+        // prune that fails leaves the render done; a file left with no record
+        // has `--days 0` refused until it is rendered again.
+        const keys = segments.flatMap((s) => Option.toArray(s.key));
+        yield* onDisk(recordRender(film.paths.out, target, used, keys)).pipe(
+          Effect.catch((error) =>
+            Effect.logWarning(
+              `render.cache.record failed file=${target} reason="${error.message}"`,
+            ),
+          ),
+        );
         if (Option.isSome(keeping)) {
-          const keys = segments.flatMap((s) => Option.toArray(s.key));
           const now = yield* Clock.currentTimeMillis;
           yield* onDisk(
-            recordRender(film.paths.out, target, used, keys).pipe(
-              Effect.andThen(
-                pruneHeld(film.paths.out, { now, days: PRUNE_DAYS, keep: new Set(keys) }, false),
-              ),
-            ),
+            pruneHeld(film.paths.out, { now, days: PRUNE_DAYS, keep: new Set(keys) }, false),
           ).pipe(
             Effect.flatMap((pruned) =>
               Effect.log(
