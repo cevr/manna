@@ -138,9 +138,8 @@ const mount = () => {
     play: () => act(() => registry.set(player.send, Command.Start({ track: hymn }))),
     /** The sections the page draws, each a stanza or the refrain. */
     sections: () => host.querySelectorAll('[role="group"][aria-label]').length,
-    /** The chord texts the page draws: each change and each chord held over. */
-    chordTexts: () =>
-      host.querySelectorAll('[data-testid^="chord-"], [data-testid^="held-"]').length,
+    /** The chord texts the page draws: each change. */
+    chordTexts: () => host.querySelectorAll('[data-testid^="chord-"]').length,
     /** What one detent of dial `label`, as VoiceOver turns it, drew again on the page. */
     detent: (label: string) => {
       Object.assign(drawn, { sections: 0, lines: 0, chords: 0, dials: 0 });

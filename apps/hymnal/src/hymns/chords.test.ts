@@ -11,8 +11,6 @@ import { Option } from 'effect';
 import {
   capoed,
   chordBook,
-  type SectionChords,
-  sectionsOf,
   keyName,
   playedKey,
   soundingKey,
@@ -20,7 +18,6 @@ import {
   syllablesOf,
   transposed,
 } from './chords';
-import { styled } from './simple';
 import type { HymnText } from './text';
 
 describe('a move', () => {
@@ -80,53 +77,6 @@ describe('a hymn’s syllables', () => {
       chords,
     );
     expect(shown.map((s) => s._tag)).toEqual(['Words', 'Words']);
-  });
-});
-
-describe('a held chord', () => {
-  const F = { root: 5, quality: '' } as const;
-  const G7 = { root: 7, quality: '7' } as const;
-  // Stanza 1: line 1 "Ab c d" (C on Ab, Fmaj7 on d), line 2 "e f" (G7 on f, none on e).
-  // Stanza 2 is words alone. The refrain, "g h" at the line level, starts with no chord.
-  const book = chordBook([
-    [1, '[1,"C",false,[["syllable",["Ab~0|+c|d~5maj7","e|+f~77"]],0],["line",["g|h~0"]]]'],
-  ]);
-  const chords = Option.getOrThrow(book.of(1));
-  const text = (sections: HymnText['sections']): HymnText => ({
-    number: 1,
-    title: 'T',
-    firstLine: '',
-    topic: '',
-    sections,
-  });
-  const stanza = (n: number, lines: ReadonlyArray<string>) =>
-    ({ kind: 'stanza', n, lines }) as const;
-  const refrain = { kind: 'refrain', lines: ['gh'] } as const;
-  const heldOf = (shown: ReadonlyArray<SectionChords>) =>
-    shown.map((s) => {
-      if (s._tag === 'Words') return 'words';
-      return s.held;
-    });
-
-  it('holds the chord sounding before a line over its first syllable when that syllable carries none', () => {
-    const shown = sectionsOf(text([stanza(1, ['Abc d', 'ef']), refrain]), chords);
-    expect(heldOf(shown)).toEqual([
-      [Option.none(), Option.some({ root: 5, quality: 'maj7' })],
-      [Option.some(G7)],
-    ]);
-  });
-
-  it('holds the chord the shown style sounds: Simple holds the plain chord', () => {
-    const shown = sectionsOf(text([stanza(1, ['Abc d', 'ef'])]), styled(chords, 'simple'));
-    expect(heldOf(shown)).toEqual([[Option.none(), Option.some(F)]]);
-  });
-
-  it('holds nothing after words alone, nor before the hymn’s first chord', () => {
-    const shown = sectionsOf(text([stanza(2, ['x']), refrain]), chords);
-    expect(heldOf(shown)).toEqual(['words', [Option.none()]]);
-    const opening = chordBook([[2, '[2,"C",false,[["syllable",["a|b~0","c~5"]]],0]']]);
-    const first = sectionsOf(text([stanza(1, ['ab', 'c'])]), Option.getOrThrow(opening.of(2)));
-    expect(heldOf(first)).toEqual([[Option.none(), Option.none()]]);
   });
 });
 

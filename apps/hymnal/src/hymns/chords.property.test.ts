@@ -75,7 +75,6 @@ const chordsIn: (section: SectionChords) => ReadonlyArray<Chord.Chord> =
     Match.tagsExhaustive({
       Words: () => [],
       Syllables: (section) => section.lines.flat(2).flatMap((box) => box.chords),
-      Line: (section) => section.lines.flat(),
     }),
   );
 
@@ -221,15 +220,15 @@ describe('the chords over every compiled hymn', () => {
     expect(book.decodes()).toBe(695);
   });
 
-  it('puts each syllable-level chord over its syllable, and the boxes make the plain line (P1)', () => {
+  it('puts every Sung part’s chords over their compiled syllables, and the boxes make the plain line (P1)', () => {
     const faults: Array<string> = [];
     for (const { hymn, text, sections } of cases) {
       text.sections.forEach((section, p) => {
         const part = partOf(hymn, section);
         const shown = sections[p];
-        if (part._tag !== 'Sung' || part.level !== 'syllable') return;
+        if (part._tag !== 'Sung') return;
         if (shown?._tag !== 'Syllables') {
-          faults.push(`${hymn.number} section ${p + 1}: ${shown?._tag} for a syllable part`);
+          faults.push(`${hymn.number} section ${p + 1}: ${shown?._tag} for a ${part.level} part`);
           return;
         }
         if (shown.lines.length !== section.lines.length)
@@ -292,7 +291,7 @@ describe('the chords over every compiled hymn', () => {
     expect(faults).toEqual([]);
   });
 
-  it('shows plain parts as words, line parts under a row of their chords (P5)', () => {
+  it('shows plain parts as words, including mixed and chordless hymns (P5)', () => {
     const faults: Array<string> = [];
     for (const { hymn, text, sections } of cases) {
       text.sections.forEach((section, p) => {
@@ -300,17 +299,6 @@ describe('the chords over every compiled hymn', () => {
         const shown = sections[p];
         if (part._tag === 'Plain' && shown?._tag !== 'Words')
           faults.push(`${hymn.number} section ${p + 1}: ${shown?._tag} for a plain part`);
-        if (part._tag === 'Sung' && part.level === 'line') {
-          if (shown?._tag !== 'Line') {
-            faults.push(`${hymn.number} section ${p + 1}: ${shown?._tag} for a line part`);
-            return;
-          }
-          part.lines.forEach((syllables, l) => {
-            const expected = syllables.flatMap((s) => guitarOf(s, hymn.key)).join(' ');
-            const row = (shown.lines[l] ?? []).map((c) => Chord.format(c, hymn.key)).join(' ');
-            if (row !== expected) faults.push(`${hymn.number} ${p + 1}.${l + 1}: ${row}`);
-          });
-        }
       });
     }
     expect(faults).toEqual([]);

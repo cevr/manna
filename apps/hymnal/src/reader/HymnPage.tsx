@@ -220,18 +220,14 @@ const Sections = memo(function Sections({
       }),
     [hymn, chords],
   );
-  // The line-level renderer needs the styled anchors as well as their names.
   // With chords off, only the bundled syllable text is used.
   const syllables = useMemo(
     () =>
-      Option.match(
-        Option.orElse(chords, () => book),
-        {
-          onNone: () => hymn.sections.map(() => noSyllables),
-          onSome: (c) => syllablesOf(hymn, c),
-        },
-      ),
-    [hymn, book, chords],
+      Option.match(book, {
+        onNone: () => hymn.sections.map(() => noSyllables),
+        onSome: (c) => syllablesOf(hymn, c),
+      }),
+    [hymn, book],
   );
   const firsts = useMemo(() => firstLines(hymn.sections), [hymn.sections]);
   return hymn.sections.map((section, k) => (
@@ -293,16 +289,7 @@ function Body({
   if (syllables._tag === 'Words')
     return <Lines lines={section.lines} first={first} style={style} />;
   if (shown._tag !== 'Words')
-    return (
-      <ChordLines
-        section={section}
-        shown={shown}
-        syllables={syllables.lines}
-        p={p}
-        first={first}
-        style={style}
-      />
-    );
+    return <ChordLines section={section} shown={shown} p={p} first={first} style={style} />;
   return syllables.lines.map((words, l) => (
     <SyllableLine
       key={l}

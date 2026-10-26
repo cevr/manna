@@ -50,29 +50,15 @@ export interface HymnChords {
 
 /**
  * A section of the page as it is drawn with chords on: its words alone
- * (`Words`), each syllable a box under its chords (`Syllables`), or each
- * line under a row of its chords in order (`Line`).
- *
- * `held[l]` is the chord still sounding as line `l` starts, shown (muted)
- * over its first syllable: the last chord shown before the line, when the
- * line's first syllable carries none. The compiler moves a change to the
- * next strong beat (R1), so a line's first chord can fall after its first
- * syllable; the chord held over from the line before sounds there. It is
- * none for a line whose first syllable carries a chord, and for a line with
- * no chord shown before it on the page (a section of words alone shows
- * none, so the next section starts afresh).
+ * (`Words`), or each syllable a box under its chord changes (`Syllables`).
+ * Both alignment levels keep the compiled syllable anchors. A syllable
+ * with no change shows no chord, including at the start of a line.
  */
 export type SectionChords =
   | { readonly _tag: 'Words' }
   | {
       readonly _tag: 'Syllables';
       readonly lines: ReadonlyArray<ReadonlyArray<Word>>;
-      readonly held: ReadonlyArray<Option.Option<Chord.Chord>>;
-    }
-  | {
-      readonly _tag: 'Line';
-      readonly lines: ReadonlyArray<ReadonlyArray<Chord.Chord>>;
-      readonly held: ReadonlyArray<Option.Option<Chord.Chord>>;
     };
 
 const words: SectionChords = { _tag: 'Words' };
@@ -91,43 +77,14 @@ const sungOf = (chords: HymnChords, section: Section): Option.Option<SungPart> =
     (part): part is SungPart => part._tag === 'Sung' && part.lines.length === section.lines.length,
   );
 
-/**
- * Each line's held chord (`SectionChords.held`), given the chord sounding
- * before the part, and the chord sounding after it.
- */
-const heldOf = (lines: ReadonlyArray<ReadonlyArray<Word>>, before: Option.Option<Chord.Chord>) => {
-  let sounding = before;
-  const held = lines.map((line) => {
-    const boxes = line.flat();
-    const shown = Option.filter(sounding, () => boxes.at(0)?.chords.length === 0);
-    sounding = Option.orElse(Arr.last(boxes.flatMap((box) => box.chords)), () => sounding);
-    return shown;
-  });
-  return { held, after: sounding };
-};
-
 /** Each section of `text`, in page order, as it is drawn with `chords` on. */
-export const sectionsOf = (text: HymnText, chords: HymnChords): ReadonlyArray<SectionChords> => {
-  let sounding = Option.none<Chord.Chord>();
-  return text.sections.map((section) =>
+export const sectionsOf = (text: HymnText, chords: HymnChords): ReadonlyArray<SectionChords> =>
+  text.sections.map((section) =>
     Option.match(sungOf(chords, section), {
-      onNone: () => {
-        sounding = Option.none();
-        return words;
-      },
-      onSome: (part): SectionChords => {
-        const { held, after } = heldOf(part.lines, sounding);
-        sounding = after;
-        if (part.level === 'syllable') return { _tag: 'Syllables', lines: part.lines, held };
-        return {
-          _tag: 'Line',
-          lines: part.lines.map((line) => line.flat().flatMap((box) => box.chords)),
-          held,
-        };
-      },
+      onNone: () => words,
+      onSome: (part): SectionChords => ({ _tag: 'Syllables', lines: part.lines }),
     }),
   );
-};
 
 /**
  * A section as its words are drawn, chords on or off: its words alone
