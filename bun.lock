@@ -64,6 +64,7 @@
       "name": "@manna/firsttheblade",
       "version": "0.1.0",
       "dependencies": {
+        "@manna/brand": "workspace:*",
         "@manna/ui": "workspace:*",
         "@solidjs/web": "catalog:",
         "effect": "catalog:",
@@ -88,6 +89,7 @@
       "dependencies": {
         "@effect/atom-react": "catalog:",
         "@legendapp/list": "3.6.0",
+        "@manna/brand": "workspace:*",
         "@manna/hymnal": "workspace:*",
         "@react-navigation/native": "8.0.0-alpha.51",
         "effect": "catalog:",
@@ -158,6 +160,9 @@
         "@playwright/test": "1.64.0",
         "@solidjs/compiler": "catalog:",
       },
+    },
+    "packages/brand": {
+      "name": "@manna/brand",
     },
     "packages/cli": {
       "name": "@manna/cli",
@@ -764,6 +769,8 @@
     "@manna/animations": ["@manna/animations@workspace:apps/animations"],
 
     "@manna/atom-solid": ["@manna/atom-solid@workspace:packages/atom-solid"],
+
+    "@manna/brand": ["@manna/brand@workspace:packages/brand"],
 
     "@manna/cli": ["@manna/cli@workspace:packages/cli"],
 

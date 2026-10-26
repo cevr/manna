@@ -208,8 +208,9 @@ warm stops to the night and holds Mark 4:27, and the moonlit night rises out
 of it with the stacked lockup, the sign-up and the footer. The site has no
 cut paper: no torn strips, tilted cards or paper shadows (the films keep
 their cut-paper look). There is no dark theme: the page shows the same in
-either scheme. The colours have one source, `src/palette.ts`; the
-stylesheet's `--color-*` tokens repeat them, and the tests hold the two
+either scheme. The colours have one source, `@manna/brand`
+(`packages/brand`), which the hymnal reads too and `src/palette.ts`
+re-exports; the stylesheet's `--color-*` tokens repeat them, and the tests hold the two
 together (`src/brand.test.ts` holds every role to the wheat's or the night's
 hue). Newsreader has no small capitals of its own, so the wordmark lets the
 browser draw them (`font-synthesis-small-caps: auto`). The darker wheat
