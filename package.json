@@ -82,5 +82,8 @@
     "effect-machine": "0.29.0",
     "solid-js": "2.0.0-rc.15",
     "vite-plugin-solid": "3.0.0-next.27"
+  },
+  "patchedDependencies": {
+    "@alchemy.run/domain@2.0.0-beta.84": "patches/@alchemy.run%2Fdomain@2.0.0-beta.84.patch"
   }
 }
