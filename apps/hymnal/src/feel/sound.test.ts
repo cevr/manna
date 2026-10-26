@@ -48,7 +48,7 @@ describe('the iOS sound adapter', () => {
     Effect.sync(() => {
       const fake = fakeNative('');
       const voice = voiceOver(fake.native, () => 0);
-      voice.port.play('press');
+      voice.port.play('thock');
       expect(fake.calls).toEqual([]);
     }),
   );
@@ -57,7 +57,7 @@ describe('the iOS sound adapter', () => {
     'loads every sound once, then plays exactly the id load gave each, and nothing else',
     () =>
       Effect.gen(function* () {
-        const fake = fakeNative('wood');
+        const fake = fakeNative('thock');
         const voice = voiceOver(fake.native, () => 0);
         yield* voice.load;
         yield* voice.load;
@@ -72,7 +72,7 @@ describe('the iOS sound adapter', () => {
         const ids = new Map(loads.map((call, k) => [call[1], 100 + k]));
         expect(fake.calls.slice(before)).toEqual(
           names
-            .filter((name) => name !== 'wood')
+            .filter((name) => name !== 'thock')
             .map((name): Call => ['play', ids.get(name) ?? 0, name]),
         );
       }),
@@ -83,7 +83,7 @@ describe('the iOS sound adapter', () => {
       const fake = fakeNative('', true);
       const voice = voiceOver(fake.native, () => 0);
       yield* voice.load;
-      const sound: SoundName = 'press';
+      const sound: SoundName = 'thock';
       voice.port.play(sound);
       voice.port.play(sound);
       yield* Effect.promise(() => Promise.resolve());

@@ -10,7 +10,7 @@
  * player's device but what the control itself sends.
  *
  * The Feel's clock moves a second each read, so no tick is held back by
- * the floor: the floor itself is `feel.test.ts`'s.
+ * the floor and no sound by the sounds' gap: both are `feel.test.ts`'s.
  */
 
 import { RegistryContext } from '@effect/atom-react';
@@ -81,7 +81,7 @@ type Recorder = ReturnType<typeof recorder>;
 const expected = (cues: ReadonlyArray<Cue>): Taken => ({
   cues,
   felt: cues.map((cue) => bodyOf(cue).haptic),
-  heard: cues.map((cue) => bodyOf(cue).sound),
+  heard: cues.flatMap((cue) => Option.toArray(bodyOf(cue).sound)),
 });
 
 /** Records each cue told under it, then hands it on to the Feel above. */
@@ -440,7 +440,7 @@ describe('the phone’s hymn list under the Feel', () => {
           mounted: [],
           scrolled: [{ _tag: 'section', place: 1 }],
           felt: 1,
-          heard: ['section-1'],
+          heard: [],
         });
       }),
   );

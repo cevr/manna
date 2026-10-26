@@ -1,30 +1,26 @@
 /**
- * The voice's 31 sounds, each rendered once: a valid WAV (RIFF, PCM 16-bit
+ * The voice's 13 sounds, each rendered once: a valid WAV (RIFF, PCM 16-bit
  * mono at the voice's rate), no longer than 0.4 s, peaking above 0.05 and
- * at most full scale, silent (under -60 dB) in its last millisecond, and
- * the same bytes when rendered again. Each key's bell rings at its key's
- * pitch, within 1 %, by a Goertzel scan of the bell's range.
+ * under full scale, silent (under -60 dB) in its last millisecond, the same
+ * bytes when rendered again, and as long as `soundLength` says. Each key's
+ * tone rings at its key's pitch, within 1 %, by a Goertzel scan.
+ *
+ * Every candidate, not only the picked one, holds the bars its kind is
+ * held to, read from its rendered bytes: a thock is deep (centroid at most
+ * 600 Hz, half its energy or more under 500 Hz), unpitched (no pitch class
+ * over half its chroma) and at most 150 ms; a key tone is heard at its
+ * key's pitch class (60 % or more of its chroma) with at most 0.5 % of its
+ * energy over 2.5 kHz.
  */
 
 import { describe, expect, it } from 'bun:test';
 
-import { RATE, RECIPES, voiced } from './voice';
+import type { SoundName } from './body';
+import { keyPitch, RATE, RECIPES, type Recipe, soundLength, THOCKS, TONES, voiced } from './voice';
 
-const NAMES: ReadonlyArray<string> = [
-  ...Array.from({ length: 12 }, (_, n) => `key-${n}`),
-  'wood',
-  'thud',
-  'switch-on',
-  'switch-off',
-  'press',
-  'chime-up',
-  'chime-down',
-  'land',
-  ...Array.from({ length: 10 }, (_, n) => `section-${n}`),
-  'tick',
-];
+const NAMES: ReadonlyArray<string> = [...Array.from({ length: 12 }, (_, n) => `key-${n}`), 'thock'];
 
-const sounds = RECIPES.map(([name, clicks]) => voiced(name, clicks));
+const sounds = RECIPES.map(([name, recipe]) => voiced(name, recipe));
 
 const text = (bytes: Uint8Array, at: number) => String.fromCharCode(...bytes.slice(at, at + 4));
 
@@ -61,8 +57,76 @@ const strongest = (samples: ReadonlyArray<number>, low: number, high: number) =>
   return best(coarse - 10, coarse + 10, 0.5);
 };
 
+/** Puts `re` and `im` in bit-reversed order, in place: the radix-2 FFT's first step. */
+const bitReverse = (re: Float64Array, im: Float64Array) => {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i += 1) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) {
+      [re[i], re[j]] = [re[j] ?? 0, re[i] ?? 0];
+      [im[i], im[j]] = [im[j] ?? 0, im[i] ?? 0];
+    }
+  }
+};
+
+/** The power spectrum of `samples`, zero-padded to a power of two: each bin's power and frequency. */
+const spectrumOf = (samples: ReadonlyArray<number>) => {
+  let n = 1;
+  while (n < samples.length) n *= 2;
+  const re = new Float64Array(n);
+  const im = new Float64Array(n);
+  re.set(samples);
+  bitReverse(re, im);
+  for (let len = 2; len <= n; len <<= 1) {
+    const a = (-2 * Math.PI) / len;
+    for (let i = 0; i < n; i += len)
+      for (let k = 0; k < len / 2; k += 1) {
+        const wr = Math.cos(a * k);
+        const wi = Math.sin(a * k);
+        const at = i + k + len / 2;
+        const xr = (re[at] ?? 0) * wr - (im[at] ?? 0) * wi;
+        const xi = (re[at] ?? 0) * wi + (im[at] ?? 0) * wr;
+        re[at] = (re[i + k] ?? 0) - xr;
+        im[at] = (im[i + k] ?? 0) - xi;
+        re[i + k] = (re[i + k] ?? 0) + xr;
+        im[i + k] = (im[i + k] ?? 0) + xi;
+      }
+  }
+  return Array.from({ length: n / 2 + 1 }, (_, k) => ({
+    e: (re[k] ?? 0) ** 2 + (im[k] ?? 0) ** 2,
+    hz: (k * RATE) / n,
+  }));
+};
+
+/** A sound's measures: its length, its centroid, its energy under 500 Hz and over 2.5 kHz, its pitch class and that class's chroma share. */
+const measure = (name: SoundName, recipe: Recipe) => {
+  const samples = samplesOf(voiced(name, recipe).wav);
+  const bins = spectrumOf(samples);
+  const total = bins.reduce((sum, b) => sum + b.e, 0);
+  const share = (keep: (hz: number) => boolean) =>
+    bins.reduce((sum, b) => sum + ((keep(b.hz) && b.e) || 0), 0) / total;
+  const chroma = Array.from({ length: 12 }, () => 0);
+  for (const b of bins)
+    if (b.hz >= 50 && b.hz <= 4000) {
+      const pc = (((Math.round(69 + 12 * Math.log2(b.hz / 440)) % 12) + 12) % 12) as number;
+      chroma[pc] = (chroma[pc] ?? 0) + b.e;
+    }
+  const strongestClass = chroma.indexOf(Math.max(...chroma));
+  const chromaTotal = chroma.reduce((a, b) => a + b, 0);
+  return {
+    ms: (samples.length / RATE) * 1000,
+    centroid: bins.reduce((sum, b) => sum + b.e * b.hz, 0) / total,
+    under500: share((hz) => hz < 500),
+    over2500: share((hz) => hz >= 2500),
+    pc: strongestClass,
+    chroma: (chroma[strongestClass] ?? 0) / chromaTotal,
+  };
+};
+
 describe('the voice', () => {
-  it('holds the 31 sounds of the table, by name', () => {
+  it('holds the 13 sounds of the table, by name', () => {
     expect(sounds.map((sound): string => sound.name)).toEqual([...NAMES]);
   });
 
@@ -97,7 +161,7 @@ describe('the voice', () => {
     }
   });
 
-  it('keeps each sound short, audible, unclipped, and silent at its end', () => {
+  it('keeps each sound short, audible, unclipped, silent at its end, and as long as soundLength says', () => {
     for (const { name, wav } of sounds) {
       const samples = samplesOf(wav);
       const peak = Math.max(...samples.map(Math.abs));
@@ -106,21 +170,23 @@ describe('the voice', () => {
         name,
         short: samples.length / RATE <= 0.4,
         loud: peak > 0.05,
-        unclipped: peak <= 1,
+        unclipped: peak < 0.999,
         quiet: Math.max(...last) < 0.001,
+        length: (samples.length / RATE) * 1000,
       }).toEqual({
         name,
         short: true,
         loud: true,
         unclipped: true,
         quiet: true,
+        length: soundLength(name),
       });
     }
   });
 
   it('renders the same bytes again, and names them by the same hash', () => {
-    for (const [name, clicks] of RECIPES) {
-      const again = voiced(name, clicks);
+    for (const [name, recipe] of RECIPES) {
+      const again = voiced(name, recipe);
       const first = sounds.find((sound) => sound.name === name);
       expect(Buffer.from(again.wav).equals(Buffer.from(first?.wav ?? []))).toBe(true);
       expect(again.hash).toBe(first?.hash ?? '');
@@ -131,9 +197,49 @@ describe('the voice', () => {
   it('rings each key at its own pitch, within 1 %', () => {
     for (let n = 0; n < 12; n += 1) {
       const wav = sounds[n]?.wav ?? new Uint8Array();
-      const pitch = 523.25 * 2 ** (n / 12);
-      const heard = strongest(samplesOf(wav), 400, 1100);
+      const pitch = keyPitch(n);
+      const heard = strongest(samplesOf(wav), pitch * 0.85, pitch * 1.15);
       expect({ n, near: Math.abs(heard - pitch) / pitch <= 0.01 }).toEqual({ n, near: true });
     }
+  });
+});
+
+describe('the candidates', () => {
+  it('are two or three of each kind', () => {
+    for (const kind of [THOCKS, TONES]) {
+      const count = Object.keys(kind).length;
+      expect(count >= 2 && count <= 3).toBe(true);
+    }
+  });
+
+  it('each thock is deep, unpitched and short', () => {
+    const faults = Object.entries(THOCKS).flatMap(([name, { recipe }]) => {
+      const m = measure('thock', recipe);
+      return [
+        ...((m.centroid > 600 && [`${name}: centroid ${m.centroid.toFixed(0)} Hz`]) || []),
+        ...((m.under500 < 0.5 && [`${name}: ${m.under500.toFixed(2)} under 500 Hz`]) || []),
+        ...((m.chroma > 0.5 && [`${name}: pitched, ${m.chroma.toFixed(2)} at class ${m.pc}`]) ||
+          []),
+        ...((m.ms > 150 && [`${name}: ${m.ms} ms`]) || []),
+      ];
+    });
+    expect(faults).toEqual([]);
+  });
+
+  it('each key tone is heard at its key, with no hiss, at every key', () => {
+    const faults = Object.entries(TONES).flatMap(([name, { recipe }]) =>
+      Array.from({ length: 12 }, (_, n) => {
+        const m = measure(`key-${n}`, recipe(keyPitch(n)));
+        return [
+          ...(((m.pc !== n || m.chroma < 0.6) && [
+            `${name} key-${n}: class ${m.pc} at ${m.chroma.toFixed(2)}`,
+          ]) ||
+            []),
+          ...((m.over2500 > 0.005 && [`${name} key-${n}: ${m.over2500.toFixed(4)} over 2.5 kHz`]) ||
+            []),
+        ];
+      }).flat(),
+    );
+    expect(faults).toEqual([]);
   });
 });

@@ -1,10 +1,12 @@
 /**
  * Each cue's body: the haptic it is felt by and the sound it is heard by.
  * The haptics carry Apple's names (One's `Haptics`); the sounds are the
- * voice's (`voice.ts`). The key dial rings each key at its own pitch, the
- * other dials click wood, and a topic taking the list's pin sounds its
- * place on a pentatonic scale.
+ * voice's (`voice.ts`). Only a dial's detent is heard: the key dial sounds
+ * each key at its own pitch class, and the capo and text-size dials thock.
+ * Every other cue is felt only.
  */
+
+import { Option, Predicate } from 'effect';
 
 import type { Cue } from './cue';
 
@@ -14,22 +16,12 @@ export type Haptic =
   | { readonly _tag: 'notification'; readonly type: 'success' };
 
 /** The voice's sounds by name (`voice.ts`, `RECIPES`). */
-export type SoundName =
-  | `key-${number}`
-  | `section-${number}`
-  | 'wood'
-  | 'thud'
-  | 'switch-on'
-  | 'switch-off'
-  | 'press'
-  | 'chime-up'
-  | 'chime-down'
-  | 'land'
-  | 'tick';
+export type SoundName = `key-${number}` | 'thock';
 
 export interface Body {
   readonly haptic: Haptic;
-  readonly sound: SoundName;
+  /** The sound it is heard by: none for every cue but a dial's detent. */
+  readonly sound: Option.Option<SoundName>;
 }
 
 const selection: Haptic = { _tag: 'selection' };
@@ -39,48 +31,53 @@ const impact = (style: 'light' | 'medium' | 'soft' | 'rigid'): Haptic => ({
 });
 const light = impact('light');
 
+/** A body felt only. */
+const felt = (haptic: Haptic): Body => ({ haptic, sound: Option.none() });
+
 const mod = (n: number, by: number) => ((n % by) + by) % by;
 
 /** The body cue `cue` is given. */
 export const bodyOf = (cue: Cue): Body => {
   switch (cue._tag) {
     case 'detent':
-      if (cue.dial === 'key') return { haptic: selection, sound: `key-${mod(cue.at, 12)}` };
-      return { haptic: selection, sound: 'wood' };
+      if (cue.dial === 'key')
+        return { haptic: selection, sound: Option.some<SoundName>(`key-${mod(cue.at, 12)}`) };
+      return { haptic: selection, sound: Option.some('thock') };
     case 'section':
-      return { haptic: light, sound: `section-${mod(cue.place, 10)}` };
+      return felt(light);
     case 'wall':
-      return { haptic: impact('rigid'), sound: 'thud' };
+      return felt(impact('rigid'));
     case 'reset':
-      return { haptic: impact('medium'), sound: 'land' };
+      return felt(impact('medium'));
     case 'chords-on':
     case 'play':
     case 'switch-on':
-      return { haptic: light, sound: 'switch-on' };
     case 'chords-off':
     case 'pause':
     case 'switch-off':
-      return { haptic: light, sound: 'switch-off' };
+      return felt(light);
     case 'favourite-on':
-      return { haptic: { _tag: 'notification', type: 'success' }, sound: 'chime-up' };
+      return felt({ _tag: 'notification', type: 'success' });
     case 'favourite-off':
-      return { haptic: light, sound: 'chime-down' };
+      return felt(light);
     case 'press':
     case 'choose':
-      return { haptic: selection, sound: 'press' };
+      return felt(selection);
     case 'sheet-open':
-      return { haptic: light, sound: 'press' };
+      return felt(light);
     case 'seek-grab':
-      return { haptic: selection, sound: 'press' };
     case 'seek-tick':
-      return { haptic: selection, sound: 'tick' };
+      return felt(selection);
     case 'seek-release':
-      return { haptic: impact('soft'), sound: 'wood' };
+      return felt(impact('soft'));
   }
 };
 
-/** Whether a cue is a tick: its body keeps the floor (`FLOOR`) from the last tick's. */
-export const isTick = (cue: Cue): boolean => cue._tag === 'detent' || cue._tag === 'seek-tick';
+/** Whether a cue is a tick: its haptic keeps the floor (`FLOOR`) from the last tick's. */
+export const isTick: (cue: Cue) => boolean = Predicate.or(
+  Predicate.isTagged('detent'),
+  Predicate.isTagged('seek-tick'),
+);
 
-/** The least time between two ticks' bodies, in milliseconds (the prototype's rule). */
+/** The least time between two ticks' haptics, in milliseconds, so a fast fling is still felt as a ratchet. */
 export const FLOOR = 30;

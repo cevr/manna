@@ -37,9 +37,9 @@ export const voiceOver = (native: VoiceNative, now: () => number): Voice => {
   const failed = { told: false };
   const loadOne = Effect.fn('Feel.loadSound')(function* (
     name: SoundName,
-    clicks: (typeof RECIPES)[number][1],
+    recipe: (typeof RECIPES)[number][1],
   ) {
-    const sound = voiced(name, clicks);
+    const sound = voiced(name, recipe);
     const id = yield* Effect.tryPromise(() => native.load(sound.name, sound.hash, sound.wav)).pipe(
       Effect.tapError((error) =>
         Effect.logWarning(`[feel] voice.failed sound=${name} status=${String(error.cause)}`),
@@ -54,7 +54,7 @@ export const voiceOver = (native: VoiceNative, now: () => number): Voice => {
     if (pass.started) return;
     pass.started = true;
     const start = now();
-    for (const [name, clicks] of RECIPES) yield* loadOne(name, clicks);
+    for (const [name, recipe] of RECIPES) yield* loadOne(name, recipe);
     yield* Effect.tryPromise(() => native.ready(ids.size, Math.round(now() - start))).pipe(
       Effect.tapError((error) => Effect.logWarning(`[feel] ready.failed ${String(error.cause)}`)),
       Effect.ignore,

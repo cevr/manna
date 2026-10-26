@@ -21,7 +21,7 @@ import { liveHaptics } from './haptics';
 import { voiceNative } from './native';
 import { silentVoice, type Voice, voiceOver } from './sound';
 
-// oxlint-disable-next-line effect/noGlobals -- the touch path's clock: a sync read for the ticks' floor, with no Effect run per cue.
+// oxlint-disable-next-line effect/noGlobals -- the touch path's clock: a sync read for the ticks' floor and the sounds' gap, with no Effect run per cue.
 const now = () => performance.now();
 
 /** The app's voice: System Sound Services on iOS, none elsewhere. */
@@ -42,7 +42,7 @@ export function FeelProvider({
   readonly voice?: Voice;
   /** The switch the Feel reads. */
   readonly on?: Atom.Atom<boolean>;
-  /** The time, in milliseconds, the ticks' floor reads. */
+  /** The time, in milliseconds, the ticks' floor and the sounds' gap read. */
   readonly clock?: () => number;
 }) {
   const registry = use(RegistryContext);
