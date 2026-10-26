@@ -15,6 +15,7 @@
     "productions/*.ts",
     "server.ts",
     "cli.ts",
+    "screening.ts",
     "checkouts.ts",
     "checkouts.test.ts",
     "lessons.test.ts",
