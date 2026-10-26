@@ -7,8 +7,7 @@
  * `pause`): the screen's effects are cleaned up, and run again when it
  * shows. A sheet opened over a page pauses the page under that one, and
  * the sheet's close runs the lower page's effects again, as a mount with
- * no focus. So a page
- * that mounts while its screen is focused (a push, a page turn, a back to
+ * no focus. So a page that mounts while its screen is focused (a push, a page turn, a back to
  * it) goes on top, and a page that mounts unfocused goes under every page
  * shown. A phone's sheet over a page (Settings, the player, a chord) leaves
  * the page under it on top, so the docked bar keeps acting on it there.

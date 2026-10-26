@@ -65,9 +65,10 @@ export const settingsOn = (store: Layer.Layer<KeyValueStore.KeyValueStore>) => {
      */
     move: Atom.family((number: number) => setting(`move.${number}`, Move, still)),
     /**
-     * How a hymn page is set (`src/reader/reading.ts`), chosen in the "Aa"
-     * sheet: the same for every hymn. The defaults set the page as it has
-     * always been, with the screen left to sleep as the system sets it.
+     * How a hymn page is set (`src/reader/reading.ts`), chosen in the player
+     * sheet's reading section: the same for every hymn. The defaults set
+     * the page as it has always been, with the screen left to sleep as the
+     * system sets it.
      */
     reading: {
       size: setting('reading.size', Size, DEFAULT_SIZE),

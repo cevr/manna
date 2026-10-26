@@ -1,8 +1,8 @@
 /**
  * How a hymn page is set: the words' size in steps, their font, the space
  * between lines, and whether the screen stays on while a hymn is shown. The
- * reader picks them in the "Aa" sheet; each is a `reading.*` setting
- * (`src/settings.ts`).
+ * reader picks them in the player sheet's reading section (`Reading`,
+ * `FullPlayer.tsx`); each is a `reading.*` setting (`src/settings.ts`).
  *
  * The default step and spacing set the page as it has always been: words of
  * 17 pt on lines of 24 pt, chords of 15 pt on rows of 20 pt. Every size

@@ -1,7 +1,7 @@
 /**
  * Keeps the screen on while a hymn page is shown, when the reader has asked
- * for it in the "Aa" sheet: held from the page's first frame and let go when
- * the page leaves or the switch is turned off.
+ * for it in the player sheet's reading section: held from the page's first
+ * frame and let go when the page leaves or the switch is turned off.
  */
 
 import { useAtomValue } from '@effect/atom-react';
