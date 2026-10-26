@@ -192,18 +192,19 @@ page composes the sheet);
 replaces the film's clip or its catalogue record).
 
 Render flags: `--from/--to` seconds, `--scene id,id` or `--act name`, `--workers n`
-(pages; the measured knee on each encoder: 6 on the Mac's
+(pages; the measured knee on each encoder: 4 on the Mac's
 hardware encoder, 8 in software, or half the cores on a software machine with
 fewer than 16), `--scale 0.5`, `--no-captions`, `--variant name` (the render
 beside `main` at the same address, so parallel renders don't collide), `--out file` (a file outside the
-project folder, not catalogued), `--no-share` (skip the smaller copy to send, `<clip>.share.mp4`), `--encoder
-hardware|software`.
+project folder, not catalogued), `--no-share` (skip the smaller copy to send, `<clip>.share.mp4`), `--share-only`
+(that copy alone, no master: one encode a frame, so about twice as fast; what
+`screening publish <film> board` renders), `--encoder hardware|software`.
 A first page chooses the H.264 encoder once and every page uses it; the
 render logs `render.encoder kind=…` and `bun run doctor` prints the same
 choice on its `encoder` line. The Mac renders on its hardware encoder only:
 if the GPU encoder fails the render stops with `EncoderMissing` rather than
 changing the film's look (`--encoder software` renders there in software on
-purpose, with no share copy: `--share` with it is refused, as the share copy
+purpose, with no share copy: `--share` or `--share-only` with it is refused, as the share copy
 is the hardware encoder's, made in the page; `packages/film/README.md`,
 "Encoders"). Each page runs one encoder, two on the hardware encoder with the
 share copy.
