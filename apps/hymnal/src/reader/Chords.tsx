@@ -6,8 +6,9 @@
  *
  * A syllable-level line is its syllables (`SyllableWords.tsx`), each a box
  * with its chords over it, in the body's own font, so a chord sits over the
- * syllable it changes on with no padded spaces. A line-level part shows each
- * line's chords in one row above the line's syllables.
+ * syllable it changes on with no padded spaces. Both alignment levels keep
+ * these compiled anchors, so a wrapped word takes its chords with it.
+ * Line-level timing still marks the line whole.
  *
  * The chords are spelled in the key the move reaches, read from a context by
  * each chord's text alone: a turn of a dial redraws the chord texts, never
@@ -15,7 +16,7 @@
  */
 
 import * as Chord from '@manna/hymnal/chord';
-import { Option } from 'effect';
+import { Match, Option } from 'effect';
 import { createContext, memo, use } from 'react';
 import {
   Pressable,
@@ -59,13 +60,13 @@ export function ChordNotice({
 
 /**
  * A section's lines under their chords; `p` is its place on the page, from 1.
- * A syllable-level line is its syllables, each under its chords; a
- * line-level line is a row of its chords over its syllables (`syllables`,
- * the same part's syllables without chords).
+ * Both alignment levels draw the compiled anchors as boxes. `syllables`
+ * carries the shown chord style's anchors for a line-level section, whose
+ * `shown.lines` contains only the flattened chord sequence.
  *
  * A line whose first syllable carries no chord shows the chord held over
  * from the line before (`shown.held`), muted: over its first syllable
- * (`held-p-l-1`), or first in its row (`held-p-l`).
+ * (`held-p-l-1`).
  */
 export const ChordLines = memo(function ChordLines({
   section,
@@ -84,30 +85,10 @@ export const ChordLines = memo(function ChordLines({
   readonly first: number;
   readonly style: StyleProp<TextStyle>;
 }) {
-  if (shown._tag === 'Line') {
-    return section.lines.map((line, l) => (
-      <View key={l} style={styles.lineLevel}>
-        <View style={styles.row}>
-          {Option.match(Option.flatten(Option.fromUndefinedOr(shown.held[l])), {
-            onNone: () => [],
-            onSome: (chord) => (
-              <ChordText chords={[chord]} tone="held" testID={`held-${p}-${l + 1}`} />
-            ),
-          })}
-          <ChordText chords={shown.lines[l] ?? []} testID={`chords-${p}-${l + 1}`} />
-        </View>
-        <SyllableLine
-          words={syllables[l] ?? []}
-          label={line}
-          at={`${p}-${l + 1}`}
-          index={first + l}
-          style={style}
-          over={Option.none()}
-        />
-      </View>
-    ));
-  }
-  return shown.lines.map((words, l) => (
+  const lines = Match.value(shown).pipe(
+    Match.tagsExhaustive({ Syllables: (part) => part.lines, Line: () => syllables }),
+  );
+  return lines.map((words, l) => (
     <SyllableLine
       key={l}
       words={words}
@@ -231,6 +212,4 @@ const styles = StyleSheet.create({
   chord: { fontSize: 15, lineHeight: 20, fontWeight: '600', paddingRight: 6 },
   // As wide as a chord's own space after it, so a chordless box is never narrower than one.
   noChord: { width: 6 },
-  lineLevel: { marginBottom: 8 },
-  row: { flexDirection: 'row' },
 });

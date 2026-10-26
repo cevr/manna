@@ -51,6 +51,26 @@ The form of an entry, each field on its own line:
 
 ## Process and tooling
 
+### hymn-line-level-chord-anchors
+
+- **Date:** 2026-10-26
+- **Kind:** owner
+- **Said:** "the chords are not really at the syllables"
+- **Source:** oneup/owner-r1-look.md 1
+- **Wrong:** Line-level parts flattened their compiled chord anchors into a separate paragraph, so chords packed left and wrapped independently of syllables.
+- **Cause:** The reader treated lower timing confidence as a reason to discard available layout anchors.
+- **Guard:** code: `apps/hymnal/src/reader/line-level.test.tsx` `line-level chord anchors`
+
+### hymn-visible-untimed-follow
+
+- **Date:** 2026-10-26
+- **Kind:** owner
+- **Said:** "It's not highlighting here."
+- **Source:** oneup/owner-r1-look.md 2
+- **Wrong:** The follow selected an untimed line in accessibility but coloured all its syllables muted, with no visible highlight.
+- **Cause:** The no-syllable-time state had no distinct highlight treatment.
+- **Guard:** code: `apps/hymnal/src/follow/whole-line.test.tsx` `visible whole-line follow`
+
 ### hymn-boxed-paragraph-spoken-label
 
 - **Date:** 2026-10-26

@@ -220,13 +220,18 @@ const Sections = memo(function Sections({
       }),
     [hymn, chords],
   );
+  // The line-level renderer needs the styled anchors as well as their names.
+  // With chords off, only the bundled syllable text is used.
   const syllables = useMemo(
     () =>
-      Option.match(book, {
-        onNone: () => hymn.sections.map(() => noSyllables),
-        onSome: (c) => syllablesOf(hymn, c),
-      }),
-    [hymn, book],
+      Option.match(
+        Option.orElse(chords, () => book),
+        {
+          onNone: () => hymn.sections.map(() => noSyllables),
+          onSome: (c) => syllablesOf(hymn, c),
+        },
+      ),
+    [hymn, book, chords],
   );
   const firsts = useMemo(() => firstLines(hymn.sections), [hymn.sections]);
   return hymn.sections.map((section, k) => (
