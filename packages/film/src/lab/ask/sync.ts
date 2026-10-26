@@ -62,7 +62,7 @@ const landing = (t: number, fps: number, own: number): number =>
  * needs no quarter in), so a video put back is never found drifted again by
  * where it landed, at any rate.
  */
-export const drifted = (video: number, t: number): boolean => Math.abs(video - t) > DRIFT_S;
+const drifted = (video: number, t: number): boolean => Math.abs(video - t) > DRIFT_S;
 
 export interface SyncDriver {
   /**

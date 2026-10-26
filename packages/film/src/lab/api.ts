@@ -16,7 +16,7 @@ import { LabHttpApi, Refusal, isRefusal } from '../core/api.ts';
 import type { PageRequest } from '../core/page-render.ts';
 
 /** The request did not reach the server, or its answer did not decode. */
-export class LabUnreachable extends Schema.TaggedError<LabUnreachable>()('LabUnreachable', {
+class LabUnreachable extends Schema.TaggedError<LabUnreachable>()('LabUnreachable', {
   message: Schema.String,
 }) {}
 

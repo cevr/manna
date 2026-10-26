@@ -17,7 +17,7 @@
 // scrub, a step, Back landing on an entry's time, a play from the end) bumps `seek`, so the driver moves the
 // videos only then, never for the clock's own ticks.
 
-import { Effect, Match, Option, Predicate, Schema } from 'effect';
+import { Match, Option, Predicate, Schema } from 'effect';
 import { Event, Machine, State } from 'effect-machine';
 import { FILM_FPS, clock, frameRead, timecode } from '../../core/time.ts';
 
@@ -245,10 +245,6 @@ export const syncMachine = (audible: string, start: number, at: number = start) 
     .on(SyncState.Failed, SyncEvent.ClockMoved, ({ state, event }) =>
       SyncState.Paused(endingAt(state, event.end)),
     );
-
-/** The synced player's actor, started. */
-export const spawnSync = (audible: string, start: number, at: number = start) =>
-  Machine.spawn(syncMachine(audible, start, at)).pipe(Effect.tap((actor) => actor.start));
 
 /** Whether the videos should be running: only while playing (a stall holds them all). */
 export const runningOf = (state: SyncState): boolean => state._tag === 'Playing';

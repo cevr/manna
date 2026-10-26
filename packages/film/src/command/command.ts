@@ -95,7 +95,7 @@ export const Unfit = Data.taggedEnum<Unfit>();
 type Tone = 'done' | 'refused' | 'busy';
 
 /** A receipt that says nothing. */
-export const quiet: Receipt = Receipt.Quiet();
+const quiet: Receipt = Receipt.Quiet();
 
 /** A command's `run` that does `act` and says nothing (`quiet`): the page shows what changed. */
 export const quietly =

@@ -3,7 +3,8 @@
 // media element to a player's driver, and the frame rate its clock counts.
 
 import { useAtomSet, useAtomValue } from '@manna/atom-solid';
-import { Match, Option } from 'effect';
+import { Effect, Match, Option } from 'effect';
+import { Machine } from 'effect-machine';
 import * as ActorAtom from 'effect-machine/atom';
 import { Show } from '@solidjs/web';
 import {
@@ -34,7 +35,7 @@ import {
   failureOf,
   reachOf,
   runningOf,
-  spawnSync,
+  syncMachine,
   syncAt,
 } from './sync-machine.ts';
 import { type SyncDriver, makeSync } from './sync.ts';
@@ -228,11 +229,13 @@ export const PlayedAlone = (
   return (
     <Actor
       runtime={meta.runtime}
-      spawn={spawnSync(
-        ALONE,
-        0,
-        untrack(() => Option.getOrElse(Option.fromUndefinedOr(props.at), () => 0)),
-      )}
+      spawn={Machine.spawn(
+        syncMachine(
+          ALONE,
+          0,
+          untrack(() => Option.getOrElse(Option.fromUndefinedOr(props.at), () => 0)),
+        ),
+      ).pipe(Effect.tap((actor) => actor.start))}
     >
       {(actor) => {
         const syncAtom = ActorAtom.make(actor);

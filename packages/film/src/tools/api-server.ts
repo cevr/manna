@@ -695,7 +695,7 @@ export const serveApi = <
  * end inside it, within the 60 s Claude Code's MCP client gives a tool call
  * (`easel-mcp.ts`).
  */
-export const LAB_IDLE_SECONDS = 255;
+const LAB_IDLE_SECONDS = 255;
 
 /**
  * The largest body Bun reads before the gate: the gate's own limit and a

@@ -17,7 +17,6 @@ import {
   syncMachine,
 } from './sync-machine.ts';
 import { FILM_FPS } from '../../core/time.ts';
-import { drifted } from './sync.ts';
 
 const player = syncMachine('A', 1);
 
@@ -346,12 +345,5 @@ describe('the synced player', () => {
     });
     expect(reachOf(SyncState.Paused({ ...clock, end: UNKNOWN_END }))).toBe(1);
     expect(reachOf(SyncState.Paused(clock))).toBe(10);
-  });
-
-  test('puts back a video more than 0.2 s off the clock, and only then', () => {
-    expect(drifted(5.1, 5)).toBe(false);
-    expect(drifted(4.85, 5)).toBe(false);
-    expect(drifted(5.25, 5)).toBe(true);
-    expect(drifted(4.7, 5)).toBe(true);
   });
 });

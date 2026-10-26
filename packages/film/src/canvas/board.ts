@@ -38,7 +38,7 @@ const SWEEP_S = 1.2;
  * as they are heard, a verse with its phrase swept. Why not, when the film
  * declares no card style or its words do not read (a mark its line lacks).
  */
-export const paintText = (
+const paintText = (
   ctx: CanvasRenderingContext2D,
   film: Film,
   p: Placed,

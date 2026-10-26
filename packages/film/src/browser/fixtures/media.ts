@@ -8,9 +8,7 @@
 // answer is in.
 
 import { Effect, Option } from 'effect';
-import type { Context } from 'effect';
-import { hostOf } from '../host.ts';
-import { Media, type MediaElement, type Playable, playableOf } from '../media.ts';
+import { type MediaElement, type Playable, playableOf } from '../media.ts';
 
 /** `HAVE_ENOUGH_DATA`. */
 const LOADED = 4;
@@ -120,7 +118,3 @@ export const fakeMedia = (refuse?: string) => {
   const answered = Effect.promise(() => Promise.allSettled(el.plays));
   return { el, media, asked: el.asked, answered };
 };
-
-/** A host whose `Media` makes its audio with `audio`. */
-export const mediaHost = (audio: (src: string) => Playable): Context.Context<Media> =>
-  hostOf(Media.layerOver(audio));

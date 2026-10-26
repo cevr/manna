@@ -1,6 +1,6 @@
 // The review's HTTP for the tool tests (`review.ts`; review-http,
-// choices-http, project-http): a review of one film served in memory, and
-// requests to it as a phone sends them.
+// ask-evidence): a review of one film served in memory, and requests to it
+// as a phone sends them.
 
 import { AskMaterials } from '../ask-materials.ts';
 import { AskStore } from '../ask-store.ts';
@@ -13,11 +13,9 @@ import {
   Layer,
   Option,
   Path,
-  Schema,
 } from 'effect';
 import * as BunHttpPlatform from '@effect/platform-bun/BunHttpPlatform';
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { Refusal } from '../../core/api.ts';
 import { type Project, emptyCatalogue, projectOf } from '../../core/catalogue.ts';
 import { type FilmChoices, withSay } from '../../core/choice.ts';
 import { ChangeId } from '../../core/schema.ts';
@@ -49,7 +47,7 @@ const reviewOption = (id: string, picked: boolean) => ({
 });
 
 /** Film `f`'s choices: one score of two options, `warm` playing. */
-export const REVIEW_CHOICES: FilmChoices = {
+const REVIEW_CHOICES: FilmChoices = {
   film: 'f',
   pictures: [],
   points: [
@@ -71,7 +69,7 @@ export const REVIEW_PROJECT: Project = projectOf(
 );
 
 /** The `film project` args each fresh run of one review fixture was asked for, in order. */
-export class ReviewProjectRuns extends Context.Service<
+class ReviewProjectRuns extends Context.Service<
   ReviewProjectRuns,
   ReadonlyArray<ReadonlyArray<string>>
 >()('test/ReviewProjectRuns') {}
@@ -279,20 +277,5 @@ export const reviewTestAsk = (request: Request) =>
   });
 
 export const reviewTestBody = (response: Response) => Effect.promise(() => response.text());
-
-/** A refusal's JSON, decoded as the page decodes it. */
-export const reviewTestRefusalOf = Schema.decodeSync(Schema.fromJsonString(Refusal));
-
-export const reviewTestPost = (
-  route: string,
-  body: string,
-  origin: string,
-  type = 'application/json',
-) =>
-  new Request(`http://127.0.0.1:8229${route}`, {
-    method: 'POST',
-    headers: { host: REVIEW_TEST_HOST, origin, 'content-type': type },
-    body,
-  });
 
 export const REVIEW_TEST_HOME = `http://${REVIEW_TEST_HOST}`;

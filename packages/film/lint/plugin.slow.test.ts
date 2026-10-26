@@ -79,7 +79,7 @@ const MESSAGES = {
   'no-test-seam.ts:3 film/no-test-seam':
     "a test seam imported by product code: a testing.ts module holds a package's test-only doubles and fixtures, so a shipped import never reaches one. Move what this file needs out of the seam, into the module it belongs to.",
   'no-read-once.ts:23 film/no-read-once':
-    'evaluate reads the page once, whatever it had drawn at that instant: wait for the value instead (textIs, textHas, valueIs, attributeIs, countIs, evaluates or until in lab/fixtures/settled.ts).',
+    'evaluate reads the page once, whatever it had drawn at that instant: wait for the value instead (textIs, textHas, countIs, evaluates or until in lab/fixtures/settled.ts).',
   'told-after-answer.ts:18 film/told-after-answer':
     'a fake route completes a Deferred itself: the case waiting on it runs on at once, inside the call, and an answer made after reads what the case changed then. Tell through the harness: told(Deferred.done(asked, Exit.void), json(…)) runs the tell once its answer is made.',
   'drawing-literal.ts:18 film/drawing-literal':

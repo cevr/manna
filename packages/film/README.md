@@ -3065,9 +3065,8 @@ prints the index after each line, so a reader of `film lab events --follow` gets
 field that is not there. Write `(line) => Console.log(line)`.
 `film/no-read-once` (`lint/no-read-once.ts`) holds the lab's browser tests
 (`*.dom.test.ts`): a test waits for the value it asserts through
-`src/lab/fixtures/settled.ts` (`textIs`, `textHas`, `textsAre`,
-`attributeIs`, `attributesAre`, `countIs`, `evaluates` for a
-script's answer, `waitFor`, `attached`, `until`), and a read that times out
+`src/lab/fixtures/settled.ts` (`textIs`, `textHas`, `countIs`, `evaluates`
+for a script's answer, `waitFor`, `until`), and a read that times out
 fails naming what it wanted and what the page last showed. A one-shot read
 (`textContent()`, `$eval`, `$$eval`,
 [`isVisible()`](https://playwright.dev/docs/api/class-locator#locator-is-visible),

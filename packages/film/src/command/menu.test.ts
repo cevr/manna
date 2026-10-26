@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { Effect } from 'effect';
-import { type Command, quiet } from './command.ts';
+import { type Command, Receipt } from './command.ts';
 import { contextAt } from './context.ts';
 import { byGroup, contextRows, menuRows, rowChord, rowKey, sheetRows, viewRows } from './menu.ts';
 
@@ -10,7 +10,7 @@ const command = (id: string, group: string, label: string): Command => ({
   group,
   touch: 'a test command',
   when: () => true,
-  run: () => Effect.succeed(quiet),
+  run: () => Effect.succeed(Receipt.Quiet()),
 });
 
 /** A command found only by typing in ⌘K (`Command.typed`). */

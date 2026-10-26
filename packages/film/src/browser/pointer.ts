@@ -37,14 +37,12 @@ interface DragSteps {
 }
 
 /**
- * What follows one press at a time (`Pointer.press`): a view makes one for
- * each part of the page a press drags on, named as the page names it.
+ * What follows one press at a time (`Pointer.press`): a view makes one object
+ * for each part of the page a press drags on, named as the page names it, and
+ * passes that same object with each press on it.
  */
-export class Surface {
+interface Surface {
   readonly name: string;
-  constructor(name: string) {
-    this.name = name;
-  }
 }
 
 interface PointerOps {

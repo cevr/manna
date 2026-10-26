@@ -9,10 +9,10 @@ import { type AskRecord, askStatus } from '../core/ask.ts';
 import { AskStore } from './ask-store.ts';
 
 /** What `/` says when no ask waits on the owner. */
-export const NOTHING_WAITS = 'Nothing waits on you';
+const NOTHING_WAITS = 'Nothing waits on you';
 
 /** `/` for the asks as the store lists them (the newest first). */
-export const homeAnswer = (
+const homeAnswer = (
   asks: ReadonlyArray<Pick<AskRecord, 'id' | 'state'>>,
 ): HttpServerResponse.HttpServerResponse =>
   Option.match(
