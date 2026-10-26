@@ -1,8 +1,7 @@
 // The studio's read model: a film's timeline, one version at a time, every
 // stage of the flow laid on the film's clock (script → concept → Board →
 // voice → animatic → scenes → sound → render → shorts). The lab's `timeline`
-// tool answers it and the studio page draws it, so an agent and the owner
-// read one model.
+// tool answers it, so every agent reads one model.
 //
 // It is built from what the lab already reads, never a file parsed a second
 // way: the version's clock (`FilmClock`, made by `film read clock` from

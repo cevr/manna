@@ -17,7 +17,7 @@
 // The owner's approvals and comments are the catalogue's records
 // (`catalogue.ts`), each on one variant as it was when given (its `key`).
 // Pure: the tools' adapters (`tools/choices.ts`, `tools/review.ts`) build
-// the points, and the review page shows them.
+// the points, and an ask shows them.
 
 import { Array as Arr, Effect, Option, Schema, SchemaTransformation } from 'effect';
 import { Address } from './address.ts';

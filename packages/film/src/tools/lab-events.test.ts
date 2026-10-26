@@ -76,7 +76,6 @@ describe('the change feed', () => {
         [1, 'tweak.requested', 'after it'],
         [2, 'board.tried', 1],
       ]);
-      // A note opens in the studio's inspector on its beat, a try in its viewer on its panel.
       expect(seen.changes.map((c) => c.links)).toEqual([
         { local: 'http://localhost:8229/' },
         { local: 'http://localhost:8229/' },

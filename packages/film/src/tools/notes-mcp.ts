@@ -119,7 +119,7 @@ const NoteWritten = Schema.Struct({ note: NoteRead });
 
 const Notes = Tool.make('notes', {
   description:
-    "A film's notes: what the owner wrote on its frames, a line's words or a board panel, each with its thread, its status (open, replied, resolved), its lab link and its still on disk. `status: unresolved` (the default) lists what waits; `all` lists every note.",
+    "A film's notes: the tweaks asked of its board panels, each with its thread, its status (open, replied, resolved), its lab link and its still on disk. `status: unresolved` (the default) lists what waits; `all` lists every note.",
   parameters: Schema.Struct({
     ...FilmParam.fields,
     status: Schema.optionalKey(Schema.Literals(['unresolved', 'all', ...NoteStatus.literals])),
@@ -145,7 +145,7 @@ const Resolve = Tool.make('resolve', {
 
 const RequestTweak = Tool.make('request_tweak', {
   description:
-    "Ask for a board panel to be made again, as a tweak note on it (what `film board tweak <film> <note>` acts on), its still the try it starts from: `try`, else the kept one, else the first. Use it to put the owner's word from chat onto the board. The note sits on its panel in the studio's inspector (its Board section), and its link opens the studio there.",
+    "Ask for a board panel to be made again, as a tweak note on it (what `film board tweak <film> <note>` acts on), its still the try it starts from: `try`, else the kept one, else the first. Use it to put the owner's word from chat onto the board.",
   parameters: Schema.Struct({
     ...FilmParam.fields,
     panel: Schema.String.annotate({ description: 'The panel (`<beat>.<mark>`).' }),

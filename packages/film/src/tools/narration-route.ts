@@ -1,5 +1,5 @@
-// The narration route, `/films/<film>/narration/<file>`, for the player, the
-// lab and the review page alike: which file a URL names. The film is one of
+// The narration route, `/films/<film>/narration/<file>`, for the player and
+// the lab alike: which file a URL names. The film is one of
 // the films now (one of its `filmMarks` exists, read per request, so a film made
 // while the server runs is served), the file one directly in its
 // `narration/` (never `attempts/`, never a path, never a dotfile) and on

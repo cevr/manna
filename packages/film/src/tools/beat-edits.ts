@@ -134,7 +134,7 @@ const partsOf = (timeline: FilmTimeline) => [
     .map((c) => ({ from: c.from, name: c.movement })),
 ];
 
-/** What each film's studio changes said, by the change's id, oldest first. */
+/** What each film's beat edits said, by the change's id, oldest first. */
 type Words = ReadonlyMap<string, ReadonlyMap<string, string>>;
 
 /**

@@ -10,7 +10,7 @@
 //   film media pull <key…> [--to dir]        each into <FILMS_OUT>/renders (or dir), whole
 //   film media list [prefix]                 size, when written and key, under renders/
 //
-// A review page reads the same store through `PrivateStore` (`list`, and
+// A page reads the same store through `PrivateStore` (`list`, and
 // `read` with a byte range), not through this command.
 
 import { Console, Effect, FileSystem, Option, Path } from 'effect';

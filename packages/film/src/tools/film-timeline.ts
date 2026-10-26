@@ -4,8 +4,7 @@
 // is read once after the change) and its Board, each from the version's own
 // files (its folder, `<film>/v<n>/`, or the film's registered files); the
 // open version's Board; and the film's catalogue, notes, the lab's asks, the
-// production's ledger and the agents' "doing now" lines. The `timeline` tool
-// answers it; the studio page reads the same service.
+// production's ledger. The `timeline` tool answers it.
 
 import {
   Array as Arr,

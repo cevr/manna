@@ -1,4 +1,4 @@
-// A synthetic film over every review page of the studio, for the tests that
+// A synthetic film over every lab page, for the tests that
 // walk them all (the touch-target guard): one film, `toy`, of an act (open,
 // close) and two loose scenes (coda, end), open rendered so its row links
 // its Stack; its choices are a score of three options, a look of two, a

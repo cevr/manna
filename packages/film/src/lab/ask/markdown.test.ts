@@ -1,4 +1,4 @@
-// The markdown the review page shows: escaped first, so a doc can put no
+// The markdown an ask shows: escaped first, so a doc can put no
 // HTML of its own in the page. The fences, quotes, numbered lists and items'
 // paragraphs are the owner's own docs' (the sets' docs he reads:
 // lab-timeline.md, rbf-concepts.md, brand.md, bible-cast.md, illustration.md,

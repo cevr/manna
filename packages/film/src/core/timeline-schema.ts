@@ -1,8 +1,7 @@
 // The shape of a film's timeline (`film-timeline.ts` builds it): the clock a
-// version plays on, its versions, and the timeline the studio page draws and
-// the `timeline` tool answers, each a Schema. Kept apart from the model's
-// functions so the lab's API (`api.ts`) declares the studio's route over it
-// without importing what the model imports (its links are `api.ts`'s own).
+// version plays on, its versions, and the timeline the `timeline` tool
+// answers, each a Schema. Kept apart from the model's functions so a reader
+// of the shape imports nothing the model imports.
 
 import { Schema } from 'effect';
 import { PanelText } from './board.ts';

@@ -14,8 +14,8 @@
 // that fails or is cut short lets them all go. Hidden, the panes stand and
 // let their decoders go (the spike's memory was 2.5–4× `<video>`'s); shown,
 // they draw afresh and play on. The page reaches all of it through `Media`
-// (`compare`): the review page's host is built with `panesMediaLayer`
-// (`media-browser.ts`), which loads this module only where the browser
+// (`compare`): a host built with `panesMediaLayerWith`
+// (`media-browser.ts`) loads this module only where the browser
 // allows the panes, and every other page's compares play on `<video>`, so
 // no other page loads the decoders.
 
