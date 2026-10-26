@@ -117,8 +117,8 @@ The journeys, one file per feature: [features/README.md](features/README.md).
 
 What the drivers do that a step does not show:
 
-- **A clean checkout's dev server needs the pod hermesc.** With no
-  `apps/hymnal/ios/Pods` (no prebuild yet), the iOS app shows the red box
+- **A clean checkout's dev server needs the pod hermesc.** With no Pods
+  folder in the app's generated ios folder (no prebuild yet), the iOS app shows the red box
   "native iOS dev bytecode needs the pod hermesc". Boot with `HERMESC_PATH`
   set to the hermesc of the checkout's own `hermes-compiler` package
   (`find node_modules/.bun -path '*hermesc/osx-bin/hermesc'`):
