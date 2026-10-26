@@ -346,7 +346,8 @@ export const recordedNow = (catalogue: Catalogue, address: Address): Option.Opti
  * What a slot needs to be current: nothing; a `remux` (its video drew its
  * sources as they are, at these settings, and only the film's sound changed:
  * the sound is cut again at the pieces it recorded); or a `draw` (no render,
- * other sources or settings, or a video that recorded no sound to re-cut).
+ * other sources or settings, a video that recorded no sound to re-cut, or a
+ * share-only video, which has no master for the slot to show).
  */
 type RenderNeed = 'current' | 'remux' | 'draw';
 
@@ -363,6 +364,7 @@ export const renderNeed = (
       const same = r.settings.scale === settings.scale && r.settings.captions === settings.captions;
       const why = staleBy(r, now);
       if (!same || Option.contains(why, 'sources')) return 'draw';
+      if (Option.isNone(r.files.clip)) return 'draw';
       if (Option.isNone(why)) return 'current';
       if (Option.isSome(r.sound)) return 'remux';
       return 'draw';
