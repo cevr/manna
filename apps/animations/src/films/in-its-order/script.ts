@@ -127,10 +127,10 @@ const CARDS =
 export const script = defineScript([
   {
     id: 'cold',
-    say: '{baby}A baby drinks milk, and nobody minds. {/} {grown}But picture a young man at a wedding feast, {bottle}still asking for his {*}bottle. {/} {letter}Now picture a letter to believers that says nearly the {*}same. {/} {quote}They “are become such as have need of milk, and not of strong {*}meat.” {//} {ouch}And that letter is in our {*}Bible. {/} {what}So what is milk, and what is meat? {/} {why}And why would the Bible care which one we eat?',
+    say: '{baby}A baby drinks milk, and nobody minds. {/} {grown}But picture a young man at a wedding feast, {bottle}still asking for his {*}bottle. {/} {smile}We would {*}smile. {/} {letter}And yet one of the letters in our Bible says nearly that to its {*}readers. {/} {quote}They “are become such as have need of milk, and not of strong {*}meat.” {//} {ouch}Grown believers, {/} still on {*}milk. {/} {what}So what is milk, and what is meat? {/} {why}And why would the Bible care which one we eat?',
     cite: ['Hebrews 5:12'],
     cast: ['lead-feast', 'feast-mother'],
-    picture: `STORY: a cardboard courtyard at a village wedding, teal day, lanterns strung, a long table of bread, fruit and dishes. On \`baby\` a mother lifts a cup to a baby's lips, close on the baby's glad face. On \`grown\` the camera trucks down the table to a tall young man in his festive long cream tunic and teal mantle, the series lead; on \`bottle\` he holds up a baby's bottle, hopeful, and the guests either side turn and stare (a light moment). On \`letter\` a rolled scroll drops onto the table in front of him and unrolls; on \`quote\` its words are not shown (CRAFT rule 1), only the gold seal. On \`ouch\` he winces. On \`what\` the camera lifts to a cup of milk and a platter of bread side by side, the only props lit. ${CARDS}`,
+    picture: `STORY: a cardboard courtyard at a village wedding, teal day, lanterns strung, a long table of bread, fruit and dishes. On \`baby\` a mother lifts a cup to a baby's lips, close on the baby's glad face. On \`grown\` the camera trucks down the table to a tall young man in his festive long cream tunic and teal mantle, the series lead; on \`bottle\` he holds up a baby's bottle, hopeful, and the guests either side turn and stare (a light moment); on \`smile\` they smile kindly at him. On \`letter\` a rolled scroll drops onto the table in front of him and unrolls; on \`quote\` its words are not shown (CRAFT rule 1), only the gold seal. On \`ouch\` he winces. On \`what\` the camera lifts to a cup of milk and a platter of bread side by side, the only props lit. ${CARDS}`,
   },
   {
     id: 'title',
@@ -186,14 +186,15 @@ export const script = defineScript([
   },
   {
     id: 'math',
-    say: '{leave}So do we leave the milk {*}behind? {/} {go}Hebrews does say, leaving the principles, let us go on. {/} {but}But leaving them never means throwing them {*}away. {//} {student}Think of a student of mathematics. {/} {adds}First he learns to add and subtract and multiply. {/} {stay}He must not stay there forever. {/} {never}But he never stops {*}using them. {/} {hardest}His hardest problems are those first steps, {*}combined. {/} {meat}So it is with meat. {/} {nothing}Solid food leaves out nothing that was in the milk. {/} {more}It has all of it, and {*}more.',
+    say: '{leave}So do we leave the milk {*}behind? {/} {go}Hebrews does say, leaving the principles, let us go on. {/} {but}But leaving them never means throwing them {*}away. {//} {student}Think of a student of mathematics. {/} {adds}First he learns to add and subtract and multiply. {/} {stay}He must not stay there forever. {/} {never}But he never stops {*}using them. {/} {hardest}His hardest problems are those first steps, {*}combined. {/} {unlearned}A student who never learned to add {/} cannot solve them at {*}all. {/} {guess}He can only {*}guess, {/} {wrested}and that is how the hard places of Scripture get {*}wrested. {//} {meat}So it is with meat. {/} {nothing}Solid food leaves out nothing that was in the milk. {/} {more}It has all of it, and {*}more.',
     cite: [
       'Hebrews 6:1',
       'E. J. Waggoner, The Present Truth, January 31, 1895, 65',
       'E. J. Waggoner, The Medical Missionary, September 1904, 286',
+      'Ellen G. White, Manuscript Releases, vol. 7, 236',
     ],
     cast: ['villager-child', 'idea-villagers'],
-    picture: `IDEA: dawn begins to come into the parchment. The linen child at a slate writes 1 + 1 with a stub of white chalk on \`adds\`; the sums multiply across the slate. On \`stay\` the child grows into the grown linen villager across three quick dissolves, the slate growing with it. On \`hardest\` one enormous sum fills the slate, and as the camera pushes in every term in it is one of the first small sums from \`adds\`, picked out in gold. On \`meat\` match cut: the slate's frame becomes the edge of a plate; on \`nothing\` the cup of milk from \`milk\` is set down on the plate beside the bread, not taken away; on \`more\` dishes fill in around it. ${CARDS}`,
+    picture: `IDEA: dawn begins to come into the parchment. The linen child at a slate writes 1 + 1 with a stub of white chalk on \`adds\`; the sums multiply across the slate. On \`stay\` the child grows into the grown linen villager across three quick dissolves, the slate growing with it. On \`hardest\` one enormous sum fills the slate, and as the camera pushes in every term in it is one of the first small sums from \`adds\`, picked out in gold. On \`unlearned\` a second child, who skipped the small sums, stands before the same great sum with his chalk raised and nothing to write; on \`guess\` he scrawls a wrong answer; on \`wrested\` the sum on his slate bends and twists like the wrung line in \`rush\`. On \`meat\` match cut: the slate's frame becomes the edge of a plate; on \`nothing\` the cup of milk from \`milk\` is set down on the plate beside the bread, not taken away; on \`more\` dishes fill in around it. ${CARDS}`,
   },
   {
     id: 'priest',
@@ -222,10 +223,14 @@ export const script = defineScript([
   },
   {
     id: 'eat',
-    say: '{nobody}And nobody can eat your food for you. {/} {jer}The prophet Jeremiah said, {found}“Thy words were found, and I did eat them; and thy word was unto me the {joy}joy and rejoicing of mine heart.” {//} {body}Your body lives on the food you eat yourself. {/} {soul}And your soul lives on the {*}word you take in yourself.',
-    cite: ['Jeremiah 15:16', 'Ellen G. White, The Signs of the Times, June 25, 1902'],
+    say: '{nobody}And nobody can eat your food for you. {/} {jer}The prophet Jeremiah said, {found}“Thy words were found, and I did eat them; and thy word was unto me the {joy}joy and rejoicing of mine heart.” {//} {body}Your body lives on the food you eat yourself, {/} {digested}once it is {*}digested {/} and becomes part of {*}you. {/} {soul}And your soul lives on the {*}word you take in yourself, {/} {part}until it becomes part of you, {/} {live}and you {*}live it.',
+    cite: [
+      'Jeremiah 15:16',
+      'Ellen G. White, The Signs of the Times, June 25, 1902',
+      'Ellen G. White, The Review and Herald, November 27, 1900',
+    ],
     cast: ['jeremiah', 'idea-villagers'],
-    picture: `STORY: a small cardboard room in Jerusalem, warm lamplight; Jeremiah (his kept sheet: the linen headcloth with its olive band, the close beard, the olive mantle over his linen tunic; a scroll on his knees, a face at a third of the frame) reads, and on \`found\` his face lifts and softens; on \`joy\` he laughs out loud, alone. On \`body\` cut to the parchment: two grown linen villagers at one table, one eating, the other only watching; the eater glows faintly from the chest (\`soul\`), the watcher does not; the watcher picks up a spoon. ${CARDS}`,
+    picture: `STORY: a small cardboard room in Jerusalem, warm lamplight; Jeremiah (his kept sheet: the linen headcloth with its olive band, the close beard, the olive mantle over his linen tunic; a scroll on his knees, a face at a third of the frame) reads, and on \`found\` his face lifts and softens; on \`joy\` he laughs out loud, alone. On \`body\` cut to the parchment: two grown linen villagers at one table, one eating, the other only watching; on \`digested\` a warm glow spreads from the eater's middle through his whole body; on \`soul\` an open page on the table glows the same way, and on \`part\` its light settles into the eater's chest; on \`live\` he stands and walks off, still glowing, and the watcher picks up a spoon. ${CARDS}`,
   },
   {
     id: 'path',
@@ -243,6 +248,13 @@ export const script = defineScript([
     ],
     cast: ['lead-feast', 'christ'],
     picture: `IDEA and STORY merged, the landing: the wedding courtyard from \`cold\` in the same layout and framing, now under the teal-to-yellow landing sky. The series lead stands where he stood; on \`sets\` he sets the baby's bottle down. On \`table\` the host's hand (the host is Christ, in His library dress, the plain white robe and the gold sash, at the head of the table) gestures to the place set for him: bread from the field in \`grain\`, and on \`cup\` the cup of milk from \`milk\` beside the plate. On \`taste\` he tastes, close on his face, delight. On \`leaving\` the plain stones of the foundation show for a breath as the courtyard's paving under the table. On \`into\` he stands taller beside the host; the gold cross's light from \`priest\` warms the whole courtyard. The held pause comes after \`into\`. ${CARDS}`,
+  },
+  {
+    id: 'appeal',
+    say: '{you}So wherever you are on the path, {/} this is for {*}you. {/} {fast}If you ran ahead, come back to the {*}milk. {/} {shame}There is no shame in a cup of milk. {/} {slow}If you have stayed on milk too long, {/} {chew}it is time to start {*}chewing. {/} {open}Open the word {*}today, {/} {one}and take one plain truth. {/} {set}The table is set, {/} {place}and there is a place for {*}you.',
+    cite: ['1 Peter 2:2', 'Hebrews 5:14', 'Isaiah 28:10'],
+    cast: ['christ', 'lead-feast'],
+    picture: `STORY, the landing's courtyard under the same teal-to-yellow sky. On \`you\` Christ, the host, in His library dress (the plain white robe and the gold sash), turns from the head of the table toward the viewer, the series lead seated beside Him. On \`fast\` He holds out the small clay cup of milk from \`milk\`; on \`slow\` the bread from \`grain\`; on \`open\` an open book lies on the table, and on \`one\` a single line of it glows gold. On \`set\` the camera settles on the table; on \`place\` an empty place, set with a cup and bread, is lit at the front of the table, facing the viewer. ${CARDS}`,
   },
   {
     id: 'thesis',

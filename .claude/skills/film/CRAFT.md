@@ -93,6 +93,7 @@ The shape as a share of the runtime:
 | Coda                     | credits and sources roll for 20–30 s over the final pull-back; the last 5–20 s stay clear for end screens |
 
 - The landing ends on the thesis line, with a held pause of about 3 s before its last word.
+- **Every film ends with an appeal** (owner, 2026-10-26, from his wife: "the end of every video should be an invitation, kind of an appeal"). Between the landing and the thesis line, one short beat (`appeal`, 15–25 s) speaks to the viewer as "you" and invites one step that the film's truth asks for today. It speaks to each kind of viewer the film names, gently, with no shame (In Its Order: those who ran ahead, back to the milk; those who stayed too long, to start chewing). It quotes nothing new and calls back the film's own lines and images.
 - The coda is a scene that speaks nothing and does not breathe (`drawing({ drift: 0, … })`): the credits strip arrives with its first line and leaves with its last, never showing empty, and the camera settles before the clear end.
 - **Check:** each scene's `start` from `cues`, divided by the film's length. `bun run check` warns `EndShort` under 20 s after the last word or a 5 s end card.
 

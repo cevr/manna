@@ -3908,6 +3908,427 @@
       "why": "Owner picked try 5: Christ in His library dress (ask af9e0ca7e26)."
     },
     {
+      "id": "appeal.you",
+      "beat": "appeal",
+      "at": "you",
+      "tries": [
+        {
+          "n": 1,
+          "file": "appeal.you.1.png",
+          "sha256": "f02228d92be2d4aa7fa2e02614caa7b6abcd6261f61509f0b96997242ed5172b",
+          "made": "generate",
+          "prompt": "A 2D key frame from a narrated animated film, drawn in this art style: our own K1 paper-cut look made minimal, the house look, as the reference image shows it. Every figure and prop is a few flat cut-paper shapes. Every figure and prop has a thick warm dark-brown ink outline and a thin light inner edge just inside it, and is creased once by a single straight diagonal line at the light's angle, its far side a deeper hue of its own colour turned toward violet, never grey and never black. A head is ONE simple shape inside one single thick outline, and the light inner edge runs round that one outline. Garments are flat planes: no pockets, no buttons, no stitching, no seams, no cuffs, no fabric texture. Hands are plain round paper circles at the end of each arm in its sleeve, the sleeve running from the shoulder to the hand: never a hand floating free of the body, never a bare arm, no thumbs, no fingers. Faces are three marks only: two small dark ink oval eyes, short brows and a one-line mouth. One muted hue per piece. The light and the place: a warm, soft key light from the upper left that falls in soft, hazy beams; a real place behind the figures, built of simple flat paper planes with no ink outline, each plane further back paler and softer in a warm haze, so depth comes from haze and never from blur; a soft paper grain on every piece and every plane; soft violet cast shadows on the walls and the floor, never a darker brown; a muted, warm palette in which only the film's accents are loud. Keep it K1: no white sticker border round the figures, no felt or stitching style, no big glossy eyes, no realistic anatomy. The look is stylised, attractive, expressive and minimal.\n\nThe first reference image shows the art style only: take its line, shapes, colour handling, faces, paper texture and light, but none of its people, its room or its layout. Its hands float free beside the body, which this film no longer draws: every hand here is at the end of an arm in its sleeve. Reference images 2–6 are Christ's record in the cast library (the references it is drawn from until its cast sheet is kept): draw Christ as they draw Him: face, hair, skin, build and height in heads, and the colours of each. Where any other reference image draws Him otherwise, these win. What Christ wears and does is the brief's: where the brief names a garment or an act, draw that; where it names none, dress Him as these images do. Reference images 7–9 are Lead feast's record in the cast library (its kept cast sheet: turnaround, heads, poses): draw Lead feast as they draw him: face, hair, skin, build and height in heads, and the colours of each. Where any other reference image draws him otherwise, these win. What Lead feast wears and does is the brief's: where the brief names a garment or an act, draw that; where it names none, dress him as these images do.\n\nTHE FILM'S WORLD: In Its Order, episode 01 of The Path of the Just, a narrated explainer film about growing in Christ in God's order: milk first, then meat, and the meat is more of Christ. It has two registers: an IDEA beat is a light parchment page with figures and props cut from paper laid on it; a STORY beat is a cardboard diorama of three to five layered paper planes under a simple two- or three-stop gradient sky, a real place in a soft haze. Its places: a village wedding feast in a chipboard courtyard under a teal day sky, lanterns strung over a long table of bread, fruit, cups and dishes, guests seated along it; the six paper stones of the foundation on the parchment, each with a small gold icon, and a gold path running on from the last of them; the holy place, where a tall veil of fine linen woven with blue, purple and scarlet (Exodus 26:31: a muted priest blue, a sanctuary purple and the muted cloth crimson) glows gold from behind; a field on a hillside under a peach morning, a low stone wall near; a Corinthian room at dusk, the film's one short valley; a small lamplit room in Jerusalem; and a small cardboard hill with an empty cross at dawn. The landing returns to the same courtyard, in the same layout, under a sky going from teal to yellow. Everyone in the film is drawn on the cast canon, about 3.36 heads tall, and each named person exactly as their references draw them. The plain figures of the IDEA page are grey paper or undyed linen, of every height. The Bible's people wear the story cloth: linen, walnut, indigo, olive and camel, of varied heights, builds and headcloths, never clones. Jesus is an ordinary Jewish man with no halo: on earth in a seamless linen coat and a walnut mantle; as Priest in a white robe with a golden girdle and the breastplate. The colour script is bright, with no black moment: teal day at the feast, peach on the parchment, dawn coming in on the page, dawn gold behind the veil, teal going to yellow at the landing. White only for the milk and the priest's robe; gold only for God's word and the light from the cross, and only gold glows; no bright scarlet anywhere: the veil's red is the muted cloth crimson of its thread, never glowing; everything else calm creams, chipboard browns, taupes, teals and peaches. No lettering in any picture: the narration's words are full-screen cards.\n\nTHE ACT: \"growing\": a bright, high-key frame, with rich, warm colour.\n\nTHE BEAT'S BRIEF (the words in «» are what the narrator says as each change lands): STORY, the landing's courtyard under the same teal-to-yellow sky. On «So wherever you are on the…» Christ, the host, in His library dress (the plain white robe and the gold sash), turns from the head of the table toward the viewer, the series lead seated beside Him. On «If you ran ahead, come back…» He holds out the small clay cup of milk from milk; on «If you have stayed on milk…» the bread from grain; on «Open the word today,» an open book lies on the table, and on «and take one plain truth.» a single line of it glows gold. On «The table is set,» the camera settles on the table; on «and there is a place for…» an empty place, set with a cup and bread, is lit at the front of the table, facing the viewer. The narration's words appear only as full-screen cards: nothing in the picture carries lettering.\n\nTHE MOMENT: this frame holds from the narrator's words «So wherever you are on the…»: draw what the brief has on screen at that moment, and nothing the brief brings in later.\n\nTEXT: no captions, no subtitles, no narration, no titles, no speech bubbles, no signatures and no labels anywhere. Where the brief names a word card, a title, a question or a verse being written or shown, leave it out: the film sets every spoken word as a full-screen card of its own. The only letters allowed are one short word the brief puts on a prop in this moment (a stamp, a sign), spelled exactly; otherwise no letters or numbers at all, and any paper, book or tablet in the frame is blank or shows only soft unreadable lines.\n\nRULES: Shade with colour: every shaded side and every cast shadow turns its hue toward the complement of the light (violet-blue under a warm light), never black and never plain grey; outlines may be dark. Hands are plain round circles at the end of an arm in its sleeve: no thumbs, no fingers, and never a hand floating free beside the body. No crosses on buildings, church buildings, religious symbols, logos or emblems anywhere, unless the brief names one. One clean, calm, finished 16:9 animated-film frame: not a photograph, not a comic page, not a character sheet, no panels or borders.",
+          "refs": [
+            "style.9005.png",
+            "../../../library/cast/christ/cast-sheet/christ-court-12.png",
+            "../../../library/cast/christ/cast-sheet/christ-court-you-2.png",
+            "../../../library/cast/christ/cast-sheet/christ-robe-5-dress.png",
+            "../../../library/cast/christ/cast-sheet/rig-christ-threequarter.png",
+            "../../../library/cast/christ/cast-sheet/rig-christ-front.png",
+            "../../../library/cast/lead-feast/cast-sheet/kept/turnaround.png",
+            "../../../library/cast/lead-feast/cast-sheet/kept/heads.png",
+            "../../../library/cast/lead-feast/cast-sheet/kept/poses.png"
+          ],
+          "cast": [
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/christ-court-12.png",
+              "sha256": "2318c2d8810bf4e9cf18d02a489b29d296ccebebb20509f8c5a054a7aa1e56d2"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/christ-court-you-2.png",
+              "sha256": "0f3cc74f68eb32f4ebd29938594f772b4a44ba14f48c325ee5fad13f7a14206e"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/christ-robe-5-dress.png",
+              "sha256": "70a630e1d637912619978bcfa6e68399ea95af5041361d77e6883e8a4264750b"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/rig-christ-threequarter.png",
+              "sha256": "98c71a032ec9f2dae4f31331bc4c0eb7eaef22ea54b9aeffd913e17df7c4574c"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/rig-christ-front.png",
+              "sha256": "8c86baf1c259c8a0e70c9ad17d659e6cbfcc25f6e43a6f87bca4f8342c9492d5"
+            },
+            {
+              "member": "lead-feast",
+              "file": "../../../library/cast/lead-feast/cast-sheet/kept/turnaround.png",
+              "sha256": "fa26c7e6608fe52b9df87273daabd38bccdd4e7071a2fd80b67024208dec3ecb"
+            },
+            {
+              "member": "lead-feast",
+              "file": "../../../library/cast/lead-feast/cast-sheet/kept/heads.png",
+              "sha256": "8462a48e144ee540276db1355425e0fe577a2f54bfe2a860bdeee28f95524e95"
+            },
+            {
+              "member": "lead-feast",
+              "file": "../../../library/cast/lead-feast/cast-sheet/kept/poses.png",
+              "sha256": "41262e175186e075b74d9ca71fd81690d9ec104e5a55cde736d9a6e6d4f5b497"
+            }
+          ],
+          "words": [
+            "STORY, the landing's courtyard under the same teal-to-yellow sky. On «So wherever you are on the…» Christ, the host, in His library dress (the plain white robe and the gold sash), turns from the head of the table toward the viewer, the series lead seated beside Him. On «If you ran ahead, come back…» He holds out the small clay cup of milk from milk; on «If you have stayed on milk…» the bread from grain; on «Open the word today,» an open book lies on the table, and on «and take one plain truth.» a single line of it glows gold. On «The table is set,» the camera settles on the table; on «and there is a place for…» an empty place, set with a cup and bread, is lit at the front of the table, facing the viewer. The narration's words appear only as full-screen cards: nothing in the picture carries lettering.",
+            "So wherever you are on the…"
+          ],
+          "at": "2026-10-26T15:05:10.435Z"
+        },
+        {
+          "n": 2,
+          "file": "appeal.you.2.png",
+          "sha256": "e1303c8fe079c05aeda8e9b07541dca13e8f0a3673c4239c771f212271993b06",
+          "made": "generate",
+          "prompt": "A 2D key frame from a narrated animated film, drawn in this art style: our own K1 paper-cut look made minimal, the house look, as the reference image shows it. Every figure and prop is a few flat cut-paper shapes. Every figure and prop has a thick warm dark-brown ink outline and a thin light inner edge just inside it, and is creased once by a single straight diagonal line at the light's angle, its far side a deeper hue of its own colour turned toward violet, never grey and never black. A head is ONE simple shape inside one single thick outline, and the light inner edge runs round that one outline. Garments are flat planes: no pockets, no buttons, no stitching, no seams, no cuffs, no fabric texture. Hands are plain round paper circles at the end of each arm in its sleeve, the sleeve running from the shoulder to the hand: never a hand floating free of the body, never a bare arm, no thumbs, no fingers. Faces are three marks only: two small dark ink oval eyes, short brows and a one-line mouth. One muted hue per piece. The light and the place: a warm, soft key light from the upper left that falls in soft, hazy beams; a real place behind the figures, built of simple flat paper planes with no ink outline, each plane further back paler and softer in a warm haze, so depth comes from haze and never from blur; a soft paper grain on every piece and every plane; soft violet cast shadows on the walls and the floor, never a darker brown; a muted, warm palette in which only the film's accents are loud. Keep it K1: no white sticker border round the figures, no felt or stitching style, no big glossy eyes, no realistic anatomy. The look is stylised, attractive, expressive and minimal.\n\nThe first reference image shows the art style only: take its line, shapes, colour handling, faces, paper texture and light, but none of its people, its room or its layout. Its hands float free beside the body, which this film no longer draws: every hand here is at the end of an arm in its sleeve. Reference images 2–6 are Christ's record in the cast library (the references it is drawn from until its cast sheet is kept): draw Christ as they draw Him: face, hair, skin, build and height in heads, and the colours of each. Where any other reference image draws Him otherwise, these win. What Christ wears and does is the brief's: where the brief names a garment or an act, draw that; where it names none, dress Him as these images do. Reference images 7–9 are Lead feast's record in the cast library (its kept cast sheet: turnaround, heads, poses): draw Lead feast as they draw him: face, hair, skin, build and height in heads, and the colours of each. Where any other reference image draws him otherwise, these win. What Lead feast wears and does is the brief's: where the brief names a garment or an act, draw that; where it names none, dress him as these images do.\n\nTHE FILM'S WORLD: In Its Order, episode 01 of The Path of the Just, a narrated explainer film about growing in Christ in God's order: milk first, then meat, and the meat is more of Christ. It has two registers: an IDEA beat is a light parchment page with figures and props cut from paper laid on it; a STORY beat is a cardboard diorama of three to five layered paper planes under a simple two- or three-stop gradient sky, a real place in a soft haze. Its places: a village wedding feast in a chipboard courtyard under a teal day sky, lanterns strung over a long table of bread, fruit, cups and dishes, guests seated along it; the six paper stones of the foundation on the parchment, each with a small gold icon, and a gold path running on from the last of them; the holy place, where a tall veil of fine linen woven with blue, purple and scarlet (Exodus 26:31: a muted priest blue, a sanctuary purple and the muted cloth crimson) glows gold from behind; a field on a hillside under a peach morning, a low stone wall near; a Corinthian room at dusk, the film's one short valley; a small lamplit room in Jerusalem; and a small cardboard hill with an empty cross at dawn. The landing returns to the same courtyard, in the same layout, under a sky going from teal to yellow. Everyone in the film is drawn on the cast canon, about 3.36 heads tall, and each named person exactly as their references draw them. The plain figures of the IDEA page are grey paper or undyed linen, of every height. The Bible's people wear the story cloth: linen, walnut, indigo, olive and camel, of varied heights, builds and headcloths, never clones. Jesus is an ordinary Jewish man with no halo: on earth in a seamless linen coat and a walnut mantle; as Priest in a white robe with a golden girdle and the breastplate. The colour script is bright, with no black moment: teal day at the feast, peach on the parchment, dawn coming in on the page, dawn gold behind the veil, teal going to yellow at the landing. White only for the milk and the priest's robe; gold only for God's word and the light from the cross, and only gold glows; no bright scarlet anywhere: the veil's red is the muted cloth crimson of its thread, never glowing; everything else calm creams, chipboard browns, taupes, teals and peaches. No lettering in any picture: the narration's words are full-screen cards.\n\nTHE ACT: \"growing\": a bright, high-key frame, with rich, warm colour.\n\nTHE BEAT'S BRIEF (the words in «» are what the narrator says as each change lands): STORY, the landing's courtyard under the same teal-to-yellow sky. On «So wherever you are on the…» Christ, the host, in His library dress (the plain white robe and the gold sash), turns from the head of the table toward the viewer, the series lead seated beside Him. On «If you ran ahead, come back…» He holds out the small clay cup of milk from milk; on «If you have stayed on milk…» the bread from grain; on «Open the word today,» an open book lies on the table, and on «and take one plain truth.» a single line of it glows gold. On «The table is set,» the camera settles on the table; on «and there is a place for…» an empty place, set with a cup and bread, is lit at the front of the table, facing the viewer. The narration's words appear only as full-screen cards: nothing in the picture carries lettering.\n\nTHE MOMENT: this frame holds from the narrator's words «So wherever you are on the…»: draw what the brief has on screen at that moment, and nothing the brief brings in later.\n\nTEXT: no captions, no subtitles, no narration, no titles, no speech bubbles, no signatures and no labels anywhere. Where the brief names a word card, a title, a question or a verse being written or shown, leave it out: the film sets every spoken word as a full-screen card of its own. The only letters allowed are one short word the brief puts on a prop in this moment (a stamp, a sign), spelled exactly; otherwise no letters or numbers at all, and any paper, book or tablet in the frame is blank or shows only soft unreadable lines.\n\nRULES: Shade with colour: every shaded side and every cast shadow turns its hue toward the complement of the light (violet-blue under a warm light), never black and never plain grey; outlines may be dark. Hands are plain round circles at the end of an arm in its sleeve: no thumbs, no fingers, and never a hand floating free beside the body. No crosses on buildings, church buildings, religious symbols, logos or emblems anywhere, unless the brief names one. One clean, calm, finished 16:9 animated-film frame: not a photograph, not a comic page, not a character sheet, no panels or borders.",
+          "refs": [
+            "style.9005.png",
+            "../../../library/cast/christ/cast-sheet/christ-court-12.png",
+            "../../../library/cast/christ/cast-sheet/christ-court-you-2.png",
+            "../../../library/cast/christ/cast-sheet/christ-robe-5-dress.png",
+            "../../../library/cast/christ/cast-sheet/rig-christ-threequarter.png",
+            "../../../library/cast/christ/cast-sheet/rig-christ-front.png",
+            "../../../library/cast/lead-feast/cast-sheet/kept/turnaround.png",
+            "../../../library/cast/lead-feast/cast-sheet/kept/heads.png",
+            "../../../library/cast/lead-feast/cast-sheet/kept/poses.png"
+          ],
+          "cast": [
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/christ-court-12.png",
+              "sha256": "2318c2d8810bf4e9cf18d02a489b29d296ccebebb20509f8c5a054a7aa1e56d2"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/christ-court-you-2.png",
+              "sha256": "0f3cc74f68eb32f4ebd29938594f772b4a44ba14f48c325ee5fad13f7a14206e"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/christ-robe-5-dress.png",
+              "sha256": "70a630e1d637912619978bcfa6e68399ea95af5041361d77e6883e8a4264750b"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/rig-christ-threequarter.png",
+              "sha256": "98c71a032ec9f2dae4f31331bc4c0eb7eaef22ea54b9aeffd913e17df7c4574c"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/rig-christ-front.png",
+              "sha256": "8c86baf1c259c8a0e70c9ad17d659e6cbfcc25f6e43a6f87bca4f8342c9492d5"
+            },
+            {
+              "member": "lead-feast",
+              "file": "../../../library/cast/lead-feast/cast-sheet/kept/turnaround.png",
+              "sha256": "fa26c7e6608fe52b9df87273daabd38bccdd4e7071a2fd80b67024208dec3ecb"
+            },
+            {
+              "member": "lead-feast",
+              "file": "../../../library/cast/lead-feast/cast-sheet/kept/heads.png",
+              "sha256": "8462a48e144ee540276db1355425e0fe577a2f54bfe2a860bdeee28f95524e95"
+            },
+            {
+              "member": "lead-feast",
+              "file": "../../../library/cast/lead-feast/cast-sheet/kept/poses.png",
+              "sha256": "41262e175186e075b74d9ca71fd81690d9ec104e5a55cde736d9a6e6d4f5b497"
+            }
+          ],
+          "words": [
+            "STORY, the landing's courtyard under the same teal-to-yellow sky. On «So wherever you are on the…» Christ, the host, in His library dress (the plain white robe and the gold sash), turns from the head of the table toward the viewer, the series lead seated beside Him. On «If you ran ahead, come back…» He holds out the small clay cup of milk from milk; on «If you have stayed on milk…» the bread from grain; on «Open the word today,» an open book lies on the table, and on «and take one plain truth.» a single line of it glows gold. On «The table is set,» the camera settles on the table; on «and there is a place for…» an empty place, set with a cup and bread, is lit at the front of the table, facing the viewer. The narration's words appear only as full-screen cards: nothing in the picture carries lettering.",
+            "So wherever you are on the…"
+          ],
+          "at": "2026-10-26T15:06:21.712Z"
+        }
+      ],
+      "kept": 1,
+      "why": "Christ the host turns to the viewer at the feast table, one layout with the next two (owner, chat 2026-10-26: My picks)"
+    },
+    {
+      "id": "appeal.open",
+      "beat": "appeal",
+      "at": "open",
+      "tries": [
+        {
+          "n": 1,
+          "file": "appeal.open.1.png",
+          "sha256": "76921bdb8dd33a08ae32b51b7d90cacb4dd76143247bc315ac69abf5db669798",
+          "made": "generate",
+          "prompt": "A 2D key frame from a narrated animated film, drawn in this art style: our own K1 paper-cut look made minimal, the house look, as the reference image shows it. Every figure and prop is a few flat cut-paper shapes. Every figure and prop has a thick warm dark-brown ink outline and a thin light inner edge just inside it, and is creased once by a single straight diagonal line at the light's angle, its far side a deeper hue of its own colour turned toward violet, never grey and never black. A head is ONE simple shape inside one single thick outline, and the light inner edge runs round that one outline. Garments are flat planes: no pockets, no buttons, no stitching, no seams, no cuffs, no fabric texture. Hands are plain round paper circles at the end of each arm in its sleeve, the sleeve running from the shoulder to the hand: never a hand floating free of the body, never a bare arm, no thumbs, no fingers. Faces are three marks only: two small dark ink oval eyes, short brows and a one-line mouth. One muted hue per piece. The light and the place: a warm, soft key light from the upper left that falls in soft, hazy beams; a real place behind the figures, built of simple flat paper planes with no ink outline, each plane further back paler and softer in a warm haze, so depth comes from haze and never from blur; a soft paper grain on every piece and every plane; soft violet cast shadows on the walls and the floor, never a darker brown; a muted, warm palette in which only the film's accents are loud. Keep it K1: no white sticker border round the figures, no felt or stitching style, no big glossy eyes, no realistic anatomy. The look is stylised, attractive, expressive and minimal.\n\nThe first reference image shows the art style only: take its line, shapes, colour handling, faces, paper texture and light, but none of its people, its room or its layout. Its hands float free beside the body, which this film no longer draws: every hand here is at the end of an arm in its sleeve. The second reference image is an earlier shot of this same beat in this same style: keep its place, its people, their colours and the paper as they are, and change only what this moment describes. Reference images 3–7 are Christ's record in the cast library (the references it is drawn from until its cast sheet is kept): draw Christ as they draw Him: face, hair, skin, build and height in heads, and the colours of each. Where any other reference image draws Him otherwise, these win. What Christ wears and does is the brief's: where the brief names a garment or an act, draw that; where it names none, dress Him as these images do. Reference images 8–10 are Lead feast's record in the cast library (its kept cast sheet: turnaround, heads, poses): draw Lead feast as they draw him: face, hair, skin, build and height in heads, and the colours of each. Where any other reference image draws him otherwise, these win. What Lead feast wears and does is the brief's: where the brief names a garment or an act, draw that; where it names none, dress him as these images do.\n\nTHE FILM'S WORLD: In Its Order, episode 01 of The Path of the Just, a narrated explainer film about growing in Christ in God's order: milk first, then meat, and the meat is more of Christ. It has two registers: an IDEA beat is a light parchment page with figures and props cut from paper laid on it; a STORY beat is a cardboard diorama of three to five layered paper planes under a simple two- or three-stop gradient sky, a real place in a soft haze. Its places: a village wedding feast in a chipboard courtyard under a teal day sky, lanterns strung over a long table of bread, fruit, cups and dishes, guests seated along it; the six paper stones of the foundation on the parchment, each with a small gold icon, and a gold path running on from the last of them; the holy place, where a tall veil of fine linen woven with blue, purple and scarlet (Exodus 26:31: a muted priest blue, a sanctuary purple and the muted cloth crimson) glows gold from behind; a field on a hillside under a peach morning, a low stone wall near; a Corinthian room at dusk, the film's one short valley; a small lamplit room in Jerusalem; and a small cardboard hill with an empty cross at dawn. The landing returns to the same courtyard, in the same layout, under a sky going from teal to yellow. Everyone in the film is drawn on the cast canon, about 3.36 heads tall, and each named person exactly as their references draw them. The plain figures of the IDEA page are grey paper or undyed linen, of every height. The Bible's people wear the story cloth: linen, walnut, indigo, olive and camel, of varied heights, builds and headcloths, never clones. Jesus is an ordinary Jewish man with no halo: on earth in a seamless linen coat and a walnut mantle; as Priest in a white robe with a golden girdle and the breastplate. The colour script is bright, with no black moment: teal day at the feast, peach on the parchment, dawn coming in on the page, dawn gold behind the veil, teal going to yellow at the landing. White only for the milk and the priest's robe; gold only for God's word and the light from the cross, and only gold glows; no bright scarlet anywhere: the veil's red is the muted cloth crimson of its thread, never glowing; everything else calm creams, chipboard browns, taupes, teals and peaches. No lettering in any picture: the narration's words are full-screen cards.\n\nTHE ACT: \"growing\": a bright, high-key frame, with rich, warm colour.\n\nTHE BEAT'S BRIEF (the words in «» are what the narrator says as each change lands): STORY, the landing's courtyard under the same teal-to-yellow sky. On «So wherever you are on the…» Christ, the host, in His library dress (the plain white robe and the gold sash), turns from the head of the table toward the viewer, the series lead seated beside Him. On «If you ran ahead, come back…» He holds out the small clay cup of milk from milk; on «If you have stayed on milk…» the bread from grain; on «Open the word today,» an open book lies on the table, and on «and take one plain truth.» a single line of it glows gold. On «The table is set,» the camera settles on the table; on «and there is a place for…» an empty place, set with a cup and bread, is lit at the front of the table, facing the viewer. The narration's words appear only as full-screen cards: nothing in the picture carries lettering.\n\nTHE MOMENT: this frame holds from the narrator's words «Open the word today,»: draw what the brief has on screen at that moment, and nothing the brief brings in later.\n\nTEXT: no captions, no subtitles, no narration, no titles, no speech bubbles, no signatures and no labels anywhere. Where the brief names a word card, a title, a question or a verse being written or shown, leave it out: the film sets every spoken word as a full-screen card of its own. The only letters allowed are one short word the brief puts on a prop in this moment (a stamp, a sign), spelled exactly; otherwise no letters or numbers at all, and any paper, book or tablet in the frame is blank or shows only soft unreadable lines.\n\nRULES: Shade with colour: every shaded side and every cast shadow turns its hue toward the complement of the light (violet-blue under a warm light), never black and never plain grey; outlines may be dark. Hands are plain round circles at the end of an arm in its sleeve: no thumbs, no fingers, and never a hand floating free beside the body. No crosses on buildings, church buildings, religious symbols, logos or emblems anywhere, unless the brief names one. One clean, calm, finished 16:9 animated-film frame: not a photograph, not a comic page, not a character sheet, no panels or borders.",
+          "refs": [
+            "style.9005.png",
+            "appeal.you.1.png",
+            "../../../library/cast/christ/cast-sheet/christ-court-12.png",
+            "../../../library/cast/christ/cast-sheet/christ-court-you-2.png",
+            "../../../library/cast/christ/cast-sheet/christ-robe-5-dress.png",
+            "../../../library/cast/christ/cast-sheet/rig-christ-threequarter.png",
+            "../../../library/cast/christ/cast-sheet/rig-christ-front.png",
+            "../../../library/cast/lead-feast/cast-sheet/kept/turnaround.png",
+            "../../../library/cast/lead-feast/cast-sheet/kept/heads.png",
+            "../../../library/cast/lead-feast/cast-sheet/kept/poses.png"
+          ],
+          "cast": [
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/christ-court-12.png",
+              "sha256": "2318c2d8810bf4e9cf18d02a489b29d296ccebebb20509f8c5a054a7aa1e56d2"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/christ-court-you-2.png",
+              "sha256": "0f3cc74f68eb32f4ebd29938594f772b4a44ba14f48c325ee5fad13f7a14206e"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/christ-robe-5-dress.png",
+              "sha256": "70a630e1d637912619978bcfa6e68399ea95af5041361d77e6883e8a4264750b"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/rig-christ-threequarter.png",
+              "sha256": "98c71a032ec9f2dae4f31331bc4c0eb7eaef22ea54b9aeffd913e17df7c4574c"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/rig-christ-front.png",
+              "sha256": "8c86baf1c259c8a0e70c9ad17d659e6cbfcc25f6e43a6f87bca4f8342c9492d5"
+            },
+            {
+              "member": "lead-feast",
+              "file": "../../../library/cast/lead-feast/cast-sheet/kept/turnaround.png",
+              "sha256": "fa26c7e6608fe52b9df87273daabd38bccdd4e7071a2fd80b67024208dec3ecb"
+            },
+            {
+              "member": "lead-feast",
+              "file": "../../../library/cast/lead-feast/cast-sheet/kept/heads.png",
+              "sha256": "8462a48e144ee540276db1355425e0fe577a2f54bfe2a860bdeee28f95524e95"
+            },
+            {
+              "member": "lead-feast",
+              "file": "../../../library/cast/lead-feast/cast-sheet/kept/poses.png",
+              "sha256": "41262e175186e075b74d9ca71fd81690d9ec104e5a55cde736d9a6e6d4f5b497"
+            }
+          ],
+          "words": [
+            "STORY, the landing's courtyard under the same teal-to-yellow sky. On «So wherever you are on the…» Christ, the host, in His library dress (the plain white robe and the gold sash), turns from the head of the table toward the viewer, the series lead seated beside Him. On «If you ran ahead, come back…» He holds out the small clay cup of milk from milk; on «If you have stayed on milk…» the bread from grain; on «Open the word today,» an open book lies on the table, and on «and take one plain truth.» a single line of it glows gold. On «The table is set,» the camera settles on the table; on «and there is a place for…» an empty place, set with a cup and bread, is lit at the front of the table, facing the viewer. The narration's words appear only as full-screen cards: nothing in the picture carries lettering.",
+            "Open the word today,"
+          ],
+          "at": "2026-10-26T15:07:45.555Z"
+        },
+        {
+          "n": 2,
+          "file": "appeal.open.2.png",
+          "sha256": "353a7a413a98215141819b8442b2f0f4247bab598e1a1686a4f0d848eb7ea33a",
+          "made": "generate",
+          "prompt": "A 2D key frame from a narrated animated film, drawn in this art style: our own K1 paper-cut look made minimal, the house look, as the reference image shows it. Every figure and prop is a few flat cut-paper shapes. Every figure and prop has a thick warm dark-brown ink outline and a thin light inner edge just inside it, and is creased once by a single straight diagonal line at the light's angle, its far side a deeper hue of its own colour turned toward violet, never grey and never black. A head is ONE simple shape inside one single thick outline, and the light inner edge runs round that one outline. Garments are flat planes: no pockets, no buttons, no stitching, no seams, no cuffs, no fabric texture. Hands are plain round paper circles at the end of each arm in its sleeve, the sleeve running from the shoulder to the hand: never a hand floating free of the body, never a bare arm, no thumbs, no fingers. Faces are three marks only: two small dark ink oval eyes, short brows and a one-line mouth. One muted hue per piece. The light and the place: a warm, soft key light from the upper left that falls in soft, hazy beams; a real place behind the figures, built of simple flat paper planes with no ink outline, each plane further back paler and softer in a warm haze, so depth comes from haze and never from blur; a soft paper grain on every piece and every plane; soft violet cast shadows on the walls and the floor, never a darker brown; a muted, warm palette in which only the film's accents are loud. Keep it K1: no white sticker border round the figures, no felt or stitching style, no big glossy eyes, no realistic anatomy. The look is stylised, attractive, expressive and minimal.\n\nThe first reference image shows the art style only: take its line, shapes, colour handling, faces, paper texture and light, but none of its people, its room or its layout. Its hands float free beside the body, which this film no longer draws: every hand here is at the end of an arm in its sleeve. The second reference image is an earlier shot of this same beat in this same style: keep its place, its people, their colours and the paper as they are, and change only what this moment describes. Reference images 3–7 are Christ's record in the cast library (the references it is drawn from until its cast sheet is kept): draw Christ as they draw Him: face, hair, skin, build and height in heads, and the colours of each. Where any other reference image draws Him otherwise, these win. What Christ wears and does is the brief's: where the brief names a garment or an act, draw that; where it names none, dress Him as these images do. Reference images 8–10 are Lead feast's record in the cast library (its kept cast sheet: turnaround, heads, poses): draw Lead feast as they draw him: face, hair, skin, build and height in heads, and the colours of each. Where any other reference image draws him otherwise, these win. What Lead feast wears and does is the brief's: where the brief names a garment or an act, draw that; where it names none, dress him as these images do.\n\nTHE FILM'S WORLD: In Its Order, episode 01 of The Path of the Just, a narrated explainer film about growing in Christ in God's order: milk first, then meat, and the meat is more of Christ. It has two registers: an IDEA beat is a light parchment page with figures and props cut from paper laid on it; a STORY beat is a cardboard diorama of three to five layered paper planes under a simple two- or three-stop gradient sky, a real place in a soft haze. Its places: a village wedding feast in a chipboard courtyard under a teal day sky, lanterns strung over a long table of bread, fruit, cups and dishes, guests seated along it; the six paper stones of the foundation on the parchment, each with a small gold icon, and a gold path running on from the last of them; the holy place, where a tall veil of fine linen woven with blue, purple and scarlet (Exodus 26:31: a muted priest blue, a sanctuary purple and the muted cloth crimson) glows gold from behind; a field on a hillside under a peach morning, a low stone wall near; a Corinthian room at dusk, the film's one short valley; a small lamplit room in Jerusalem; and a small cardboard hill with an empty cross at dawn. The landing returns to the same courtyard, in the same layout, under a sky going from teal to yellow. Everyone in the film is drawn on the cast canon, about 3.36 heads tall, and each named person exactly as their references draw them. The plain figures of the IDEA page are grey paper or undyed linen, of every height. The Bible's people wear the story cloth: linen, walnut, indigo, olive and camel, of varied heights, builds and headcloths, never clones. Jesus is an ordinary Jewish man with no halo: on earth in a seamless linen coat and a walnut mantle; as Priest in a white robe with a golden girdle and the breastplate. The colour script is bright, with no black moment: teal day at the feast, peach on the parchment, dawn coming in on the page, dawn gold behind the veil, teal going to yellow at the landing. White only for the milk and the priest's robe; gold only for God's word and the light from the cross, and only gold glows; no bright scarlet anywhere: the veil's red is the muted cloth crimson of its thread, never glowing; everything else calm creams, chipboard browns, taupes, teals and peaches. No lettering in any picture: the narration's words are full-screen cards.\n\nTHE ACT: \"growing\": a bright, high-key frame, with rich, warm colour.\n\nTHE BEAT'S BRIEF (the words in «» are what the narrator says as each change lands): STORY, the landing's courtyard under the same teal-to-yellow sky. On «So wherever you are on the…» Christ, the host, in His library dress (the plain white robe and the gold sash), turns from the head of the table toward the viewer, the series lead seated beside Him. On «If you ran ahead, come back…» He holds out the small clay cup of milk from milk; on «If you have stayed on milk…» the bread from grain; on «Open the word today,» an open book lies on the table, and on «and take one plain truth.» a single line of it glows gold. On «The table is set,» the camera settles on the table; on «and there is a place for…» an empty place, set with a cup and bread, is lit at the front of the table, facing the viewer. The narration's words appear only as full-screen cards: nothing in the picture carries lettering.\n\nTHE MOMENT: this frame holds from the narrator's words «Open the word today,»: draw what the brief has on screen at that moment, and nothing the brief brings in later.\n\nTEXT: no captions, no subtitles, no narration, no titles, no speech bubbles, no signatures and no labels anywhere. Where the brief names a word card, a title, a question or a verse being written or shown, leave it out: the film sets every spoken word as a full-screen card of its own. The only letters allowed are one short word the brief puts on a prop in this moment (a stamp, a sign), spelled exactly; otherwise no letters or numbers at all, and any paper, book or tablet in the frame is blank or shows only soft unreadable lines.\n\nRULES: Shade with colour: every shaded side and every cast shadow turns its hue toward the complement of the light (violet-blue under a warm light), never black and never plain grey; outlines may be dark. Hands are plain round circles at the end of an arm in its sleeve: no thumbs, no fingers, and never a hand floating free beside the body. No crosses on buildings, church buildings, religious symbols, logos or emblems anywhere, unless the brief names one. One clean, calm, finished 16:9 animated-film frame: not a photograph, not a comic page, not a character sheet, no panels or borders.",
+          "refs": [
+            "style.9005.png",
+            "appeal.you.1.png",
+            "../../../library/cast/christ/cast-sheet/christ-court-12.png",
+            "../../../library/cast/christ/cast-sheet/christ-court-you-2.png",
+            "../../../library/cast/christ/cast-sheet/christ-robe-5-dress.png",
+            "../../../library/cast/christ/cast-sheet/rig-christ-threequarter.png",
+            "../../../library/cast/christ/cast-sheet/rig-christ-front.png",
+            "../../../library/cast/lead-feast/cast-sheet/kept/turnaround.png",
+            "../../../library/cast/lead-feast/cast-sheet/kept/heads.png",
+            "../../../library/cast/lead-feast/cast-sheet/kept/poses.png"
+          ],
+          "cast": [
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/christ-court-12.png",
+              "sha256": "2318c2d8810bf4e9cf18d02a489b29d296ccebebb20509f8c5a054a7aa1e56d2"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/christ-court-you-2.png",
+              "sha256": "0f3cc74f68eb32f4ebd29938594f772b4a44ba14f48c325ee5fad13f7a14206e"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/christ-robe-5-dress.png",
+              "sha256": "70a630e1d637912619978bcfa6e68399ea95af5041361d77e6883e8a4264750b"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/rig-christ-threequarter.png",
+              "sha256": "98c71a032ec9f2dae4f31331bc4c0eb7eaef22ea54b9aeffd913e17df7c4574c"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/rig-christ-front.png",
+              "sha256": "8c86baf1c259c8a0e70c9ad17d659e6cbfcc25f6e43a6f87bca4f8342c9492d5"
+            },
+            {
+              "member": "lead-feast",
+              "file": "../../../library/cast/lead-feast/cast-sheet/kept/turnaround.png",
+              "sha256": "fa26c7e6608fe52b9df87273daabd38bccdd4e7071a2fd80b67024208dec3ecb"
+            },
+            {
+              "member": "lead-feast",
+              "file": "../../../library/cast/lead-feast/cast-sheet/kept/heads.png",
+              "sha256": "8462a48e144ee540276db1355425e0fe577a2f54bfe2a860bdeee28f95524e95"
+            },
+            {
+              "member": "lead-feast",
+              "file": "../../../library/cast/lead-feast/cast-sheet/kept/poses.png",
+              "sha256": "41262e175186e075b74d9ca71fd81690d9ec104e5a55cde736d9a6e6d4f5b497"
+            }
+          ],
+          "words": [
+            "STORY, the landing's courtyard under the same teal-to-yellow sky. On «So wherever you are on the…» Christ, the host, in His library dress (the plain white robe and the gold sash), turns from the head of the table toward the viewer, the series lead seated beside Him. On «If you ran ahead, come back…» He holds out the small clay cup of milk from milk; on «If you have stayed on milk…» the bread from grain; on «Open the word today,» an open book lies on the table, and on «and take one plain truth.» a single line of it glows gold. On «The table is set,» the camera settles on the table; on «and there is a place for…» an empty place, set with a cup and bread, is lit at the front of the table, facing the viewer. The narration's words appear only as full-screen cards: nothing in the picture carries lettering.",
+            "Open the word today,"
+          ],
+          "at": "2026-10-26T15:09:02.313Z"
+        }
+      ],
+      "kept": 2,
+      "why": "Christ's hand on the open book (owner, chat 2026-10-26: My picks)"
+    },
+    {
+      "id": "appeal.place",
+      "beat": "appeal",
+      "at": "place",
+      "tries": [
+        {
+          "n": 1,
+          "file": "appeal.place.1.png",
+          "sha256": "b69774d3ab6745259fb16dbe8d972df4801d6be2a24ed0ccfdf9ea1c26768132",
+          "made": "generate",
+          "prompt": "A 2D key frame from a narrated animated film, drawn in this art style: our own K1 paper-cut look made minimal, the house look, as the reference image shows it. Every figure and prop is a few flat cut-paper shapes. Every figure and prop has a thick warm dark-brown ink outline and a thin light inner edge just inside it, and is creased once by a single straight diagonal line at the light's angle, its far side a deeper hue of its own colour turned toward violet, never grey and never black. A head is ONE simple shape inside one single thick outline, and the light inner edge runs round that one outline. Garments are flat planes: no pockets, no buttons, no stitching, no seams, no cuffs, no fabric texture. Hands are plain round paper circles at the end of each arm in its sleeve, the sleeve running from the shoulder to the hand: never a hand floating free of the body, never a bare arm, no thumbs, no fingers. Faces are three marks only: two small dark ink oval eyes, short brows and a one-line mouth. One muted hue per piece. The light and the place: a warm, soft key light from the upper left that falls in soft, hazy beams; a real place behind the figures, built of simple flat paper planes with no ink outline, each plane further back paler and softer in a warm haze, so depth comes from haze and never from blur; a soft paper grain on every piece and every plane; soft violet cast shadows on the walls and the floor, never a darker brown; a muted, warm palette in which only the film's accents are loud. Keep it K1: no white sticker border round the figures, no felt or stitching style, no big glossy eyes, no realistic anatomy. The look is stylised, attractive, expressive and minimal.\n\nThe first reference image shows the art style only: take its line, shapes, colour handling, faces, paper texture and light, but none of its people, its room or its layout. Its hands float free beside the body, which this film no longer draws: every hand here is at the end of an arm in its sleeve. The second reference image is an earlier shot of this same beat in this same style: keep its place, its people, their colours and the paper as they are, and change only what this moment describes. Reference images 3–7 are Christ's record in the cast library (the references it is drawn from until its cast sheet is kept): draw Christ as they draw Him: face, hair, skin, build and height in heads, and the colours of each. Where any other reference image draws Him otherwise, these win. What Christ wears and does is the brief's: where the brief names a garment or an act, draw that; where it names none, dress Him as these images do. Reference images 8–10 are Lead feast's record in the cast library (its kept cast sheet: turnaround, heads, poses): draw Lead feast as they draw him: face, hair, skin, build and height in heads, and the colours of each. Where any other reference image draws him otherwise, these win. What Lead feast wears and does is the brief's: where the brief names a garment or an act, draw that; where it names none, dress him as these images do.\n\nTHE FILM'S WORLD: In Its Order, episode 01 of The Path of the Just, a narrated explainer film about growing in Christ in God's order: milk first, then meat, and the meat is more of Christ. It has two registers: an IDEA beat is a light parchment page with figures and props cut from paper laid on it; a STORY beat is a cardboard diorama of three to five layered paper planes under a simple two- or three-stop gradient sky, a real place in a soft haze. Its places: a village wedding feast in a chipboard courtyard under a teal day sky, lanterns strung over a long table of bread, fruit, cups and dishes, guests seated along it; the six paper stones of the foundation on the parchment, each with a small gold icon, and a gold path running on from the last of them; the holy place, where a tall veil of fine linen woven with blue, purple and scarlet (Exodus 26:31: a muted priest blue, a sanctuary purple and the muted cloth crimson) glows gold from behind; a field on a hillside under a peach morning, a low stone wall near; a Corinthian room at dusk, the film's one short valley; a small lamplit room in Jerusalem; and a small cardboard hill with an empty cross at dawn. The landing returns to the same courtyard, in the same layout, under a sky going from teal to yellow. Everyone in the film is drawn on the cast canon, about 3.36 heads tall, and each named person exactly as their references draw them. The plain figures of the IDEA page are grey paper or undyed linen, of every height. The Bible's people wear the story cloth: linen, walnut, indigo, olive and camel, of varied heights, builds and headcloths, never clones. Jesus is an ordinary Jewish man with no halo: on earth in a seamless linen coat and a walnut mantle; as Priest in a white robe with a golden girdle and the breastplate. The colour script is bright, with no black moment: teal day at the feast, peach on the parchment, dawn coming in on the page, dawn gold behind the veil, teal going to yellow at the landing. White only for the milk and the priest's robe; gold only for God's word and the light from the cross, and only gold glows; no bright scarlet anywhere: the veil's red is the muted cloth crimson of its thread, never glowing; everything else calm creams, chipboard browns, taupes, teals and peaches. No lettering in any picture: the narration's words are full-screen cards.\n\nTHE ACT: \"growing\": a bright, high-key frame, with rich, warm colour.\n\nTHE BEAT'S BRIEF (the words in «» are what the narrator says as each change lands): STORY, the landing's courtyard under the same teal-to-yellow sky. On «So wherever you are on the…» Christ, the host, in His library dress (the plain white robe and the gold sash), turns from the head of the table toward the viewer, the series lead seated beside Him. On «If you ran ahead, come back…» He holds out the small clay cup of milk from milk; on «If you have stayed on milk…» the bread from grain; on «Open the word today,» an open book lies on the table, and on «and take one plain truth.» a single line of it glows gold. On «The table is set,» the camera settles on the table; on «and there is a place for…» an empty place, set with a cup and bread, is lit at the front of the table, facing the viewer. The narration's words appear only as full-screen cards: nothing in the picture carries lettering.\n\nTHE MOMENT: this frame holds from the narrator's words «and there is a place for…»: draw what the brief has on screen at that moment, and nothing the brief brings in later.\n\nTEXT: no captions, no subtitles, no narration, no titles, no speech bubbles, no signatures and no labels anywhere. Where the brief names a word card, a title, a question or a verse being written or shown, leave it out: the film sets every spoken word as a full-screen card of its own. The only letters allowed are one short word the brief puts on a prop in this moment (a stamp, a sign), spelled exactly; otherwise no letters or numbers at all, and any paper, book or tablet in the frame is blank or shows only soft unreadable lines.\n\nRULES: Shade with colour: every shaded side and every cast shadow turns its hue toward the complement of the light (violet-blue under a warm light), never black and never plain grey; outlines may be dark. Hands are plain round circles at the end of an arm in its sleeve: no thumbs, no fingers, and never a hand floating free beside the body. No crosses on buildings, church buildings, religious symbols, logos or emblems anywhere, unless the brief names one. One clean, calm, finished 16:9 animated-film frame: not a photograph, not a comic page, not a character sheet, no panels or borders.",
+          "refs": [
+            "style.9005.png",
+            "appeal.you.1.png",
+            "../../../library/cast/christ/cast-sheet/christ-court-12.png",
+            "../../../library/cast/christ/cast-sheet/christ-court-you-2.png",
+            "../../../library/cast/christ/cast-sheet/christ-robe-5-dress.png",
+            "../../../library/cast/christ/cast-sheet/rig-christ-threequarter.png",
+            "../../../library/cast/christ/cast-sheet/rig-christ-front.png",
+            "../../../library/cast/lead-feast/cast-sheet/kept/turnaround.png",
+            "../../../library/cast/lead-feast/cast-sheet/kept/heads.png",
+            "../../../library/cast/lead-feast/cast-sheet/kept/poses.png"
+          ],
+          "cast": [
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/christ-court-12.png",
+              "sha256": "2318c2d8810bf4e9cf18d02a489b29d296ccebebb20509f8c5a054a7aa1e56d2"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/christ-court-you-2.png",
+              "sha256": "0f3cc74f68eb32f4ebd29938594f772b4a44ba14f48c325ee5fad13f7a14206e"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/christ-robe-5-dress.png",
+              "sha256": "70a630e1d637912619978bcfa6e68399ea95af5041361d77e6883e8a4264750b"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/rig-christ-threequarter.png",
+              "sha256": "98c71a032ec9f2dae4f31331bc4c0eb7eaef22ea54b9aeffd913e17df7c4574c"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/rig-christ-front.png",
+              "sha256": "8c86baf1c259c8a0e70c9ad17d659e6cbfcc25f6e43a6f87bca4f8342c9492d5"
+            },
+            {
+              "member": "lead-feast",
+              "file": "../../../library/cast/lead-feast/cast-sheet/kept/turnaround.png",
+              "sha256": "fa26c7e6608fe52b9df87273daabd38bccdd4e7071a2fd80b67024208dec3ecb"
+            },
+            {
+              "member": "lead-feast",
+              "file": "../../../library/cast/lead-feast/cast-sheet/kept/heads.png",
+              "sha256": "8462a48e144ee540276db1355425e0fe577a2f54bfe2a860bdeee28f95524e95"
+            },
+            {
+              "member": "lead-feast",
+              "file": "../../../library/cast/lead-feast/cast-sheet/kept/poses.png",
+              "sha256": "41262e175186e075b74d9ca71fd81690d9ec104e5a55cde736d9a6e6d4f5b497"
+            }
+          ],
+          "words": [
+            "STORY, the landing's courtyard under the same teal-to-yellow sky. On «So wherever you are on the…» Christ, the host, in His library dress (the plain white robe and the gold sash), turns from the head of the table toward the viewer, the series lead seated beside Him. On «If you ran ahead, come back…» He holds out the small clay cup of milk from milk; on «If you have stayed on milk…» the bread from grain; on «Open the word today,» an open book lies on the table, and on «and take one plain truth.» a single line of it glows gold. On «The table is set,» the camera settles on the table; on «and there is a place for…» an empty place, set with a cup and bread, is lit at the front of the table, facing the viewer. The narration's words appear only as full-screen cards: nothing in the picture carries lettering.",
+            "and there is a place for…"
+          ],
+          "at": "2026-10-26T15:10:28.143Z"
+        },
+        {
+          "n": 2,
+          "file": "appeal.place.2.png",
+          "sha256": "01f039c7f0006c6c4afd8e31557e6c47473385b16e98654bcb728f36bb68360e",
+          "made": "generate",
+          "prompt": "A 2D key frame from a narrated animated film, drawn in this art style: our own K1 paper-cut look made minimal, the house look, as the reference image shows it. Every figure and prop is a few flat cut-paper shapes. Every figure and prop has a thick warm dark-brown ink outline and a thin light inner edge just inside it, and is creased once by a single straight diagonal line at the light's angle, its far side a deeper hue of its own colour turned toward violet, never grey and never black. A head is ONE simple shape inside one single thick outline, and the light inner edge runs round that one outline. Garments are flat planes: no pockets, no buttons, no stitching, no seams, no cuffs, no fabric texture. Hands are plain round paper circles at the end of each arm in its sleeve, the sleeve running from the shoulder to the hand: never a hand floating free of the body, never a bare arm, no thumbs, no fingers. Faces are three marks only: two small dark ink oval eyes, short brows and a one-line mouth. One muted hue per piece. The light and the place: a warm, soft key light from the upper left that falls in soft, hazy beams; a real place behind the figures, built of simple flat paper planes with no ink outline, each plane further back paler and softer in a warm haze, so depth comes from haze and never from blur; a soft paper grain on every piece and every plane; soft violet cast shadows on the walls and the floor, never a darker brown; a muted, warm palette in which only the film's accents are loud. Keep it K1: no white sticker border round the figures, no felt or stitching style, no big glossy eyes, no realistic anatomy. The look is stylised, attractive, expressive and minimal.\n\nThe first reference image shows the art style only: take its line, shapes, colour handling, faces, paper texture and light, but none of its people, its room or its layout. Its hands float free beside the body, which this film no longer draws: every hand here is at the end of an arm in its sleeve. The second reference image is an earlier shot of this same beat in this same style: keep its place, its people, their colours and the paper as they are, and change only what this moment describes. Reference images 3–7 are Christ's record in the cast library (the references it is drawn from until its cast sheet is kept): draw Christ as they draw Him: face, hair, skin, build and height in heads, and the colours of each. Where any other reference image draws Him otherwise, these win. What Christ wears and does is the brief's: where the brief names a garment or an act, draw that; where it names none, dress Him as these images do. Reference images 8–10 are Lead feast's record in the cast library (its kept cast sheet: turnaround, heads, poses): draw Lead feast as they draw him: face, hair, skin, build and height in heads, and the colours of each. Where any other reference image draws him otherwise, these win. What Lead feast wears and does is the brief's: where the brief names a garment or an act, draw that; where it names none, dress him as these images do.\n\nTHE FILM'S WORLD: In Its Order, episode 01 of The Path of the Just, a narrated explainer film about growing in Christ in God's order: milk first, then meat, and the meat is more of Christ. It has two registers: an IDEA beat is a light parchment page with figures and props cut from paper laid on it; a STORY beat is a cardboard diorama of three to five layered paper planes under a simple two- or three-stop gradient sky, a real place in a soft haze. Its places: a village wedding feast in a chipboard courtyard under a teal day sky, lanterns strung over a long table of bread, fruit, cups and dishes, guests seated along it; the six paper stones of the foundation on the parchment, each with a small gold icon, and a gold path running on from the last of them; the holy place, where a tall veil of fine linen woven with blue, purple and scarlet (Exodus 26:31: a muted priest blue, a sanctuary purple and the muted cloth crimson) glows gold from behind; a field on a hillside under a peach morning, a low stone wall near; a Corinthian room at dusk, the film's one short valley; a small lamplit room in Jerusalem; and a small cardboard hill with an empty cross at dawn. The landing returns to the same courtyard, in the same layout, under a sky going from teal to yellow. Everyone in the film is drawn on the cast canon, about 3.36 heads tall, and each named person exactly as their references draw them. The plain figures of the IDEA page are grey paper or undyed linen, of every height. The Bible's people wear the story cloth: linen, walnut, indigo, olive and camel, of varied heights, builds and headcloths, never clones. Jesus is an ordinary Jewish man with no halo: on earth in a seamless linen coat and a walnut mantle; as Priest in a white robe with a golden girdle and the breastplate. The colour script is bright, with no black moment: teal day at the feast, peach on the parchment, dawn coming in on the page, dawn gold behind the veil, teal going to yellow at the landing. White only for the milk and the priest's robe; gold only for God's word and the light from the cross, and only gold glows; no bright scarlet anywhere: the veil's red is the muted cloth crimson of its thread, never glowing; everything else calm creams, chipboard browns, taupes, teals and peaches. No lettering in any picture: the narration's words are full-screen cards.\n\nTHE ACT: \"growing\": a bright, high-key frame, with rich, warm colour.\n\nTHE BEAT'S BRIEF (the words in «» are what the narrator says as each change lands): STORY, the landing's courtyard under the same teal-to-yellow sky. On «So wherever you are on the…» Christ, the host, in His library dress (the plain white robe and the gold sash), turns from the head of the table toward the viewer, the series lead seated beside Him. On «If you ran ahead, come back…» He holds out the small clay cup of milk from milk; on «If you have stayed on milk…» the bread from grain; on «Open the word today,» an open book lies on the table, and on «and take one plain truth.» a single line of it glows gold. On «The table is set,» the camera settles on the table; on «and there is a place for…» an empty place, set with a cup and bread, is lit at the front of the table, facing the viewer. The narration's words appear only as full-screen cards: nothing in the picture carries lettering.\n\nTHE MOMENT: this frame holds from the narrator's words «and there is a place for…»: draw what the brief has on screen at that moment, and nothing the brief brings in later.\n\nTEXT: no captions, no subtitles, no narration, no titles, no speech bubbles, no signatures and no labels anywhere. Where the brief names a word card, a title, a question or a verse being written or shown, leave it out: the film sets every spoken word as a full-screen card of its own. The only letters allowed are one short word the brief puts on a prop in this moment (a stamp, a sign), spelled exactly; otherwise no letters or numbers at all, and any paper, book or tablet in the frame is blank or shows only soft unreadable lines.\n\nRULES: Shade with colour: every shaded side and every cast shadow turns its hue toward the complement of the light (violet-blue under a warm light), never black and never plain grey; outlines may be dark. Hands are plain round circles at the end of an arm in its sleeve: no thumbs, no fingers, and never a hand floating free beside the body. No crosses on buildings, church buildings, religious symbols, logos or emblems anywhere, unless the brief names one. One clean, calm, finished 16:9 animated-film frame: not a photograph, not a comic page, not a character sheet, no panels or borders.",
+          "refs": [
+            "style.9005.png",
+            "appeal.you.1.png",
+            "../../../library/cast/christ/cast-sheet/christ-court-12.png",
+            "../../../library/cast/christ/cast-sheet/christ-court-you-2.png",
+            "../../../library/cast/christ/cast-sheet/christ-robe-5-dress.png",
+            "../../../library/cast/christ/cast-sheet/rig-christ-threequarter.png",
+            "../../../library/cast/christ/cast-sheet/rig-christ-front.png",
+            "../../../library/cast/lead-feast/cast-sheet/kept/turnaround.png",
+            "../../../library/cast/lead-feast/cast-sheet/kept/heads.png",
+            "../../../library/cast/lead-feast/cast-sheet/kept/poses.png"
+          ],
+          "cast": [
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/christ-court-12.png",
+              "sha256": "2318c2d8810bf4e9cf18d02a489b29d296ccebebb20509f8c5a054a7aa1e56d2"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/christ-court-you-2.png",
+              "sha256": "0f3cc74f68eb32f4ebd29938594f772b4a44ba14f48c325ee5fad13f7a14206e"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/christ-robe-5-dress.png",
+              "sha256": "70a630e1d637912619978bcfa6e68399ea95af5041361d77e6883e8a4264750b"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/rig-christ-threequarter.png",
+              "sha256": "98c71a032ec9f2dae4f31331bc4c0eb7eaef22ea54b9aeffd913e17df7c4574c"
+            },
+            {
+              "member": "christ",
+              "file": "../../../library/cast/christ/cast-sheet/rig-christ-front.png",
+              "sha256": "8c86baf1c259c8a0e70c9ad17d659e6cbfcc25f6e43a6f87bca4f8342c9492d5"
+            },
+            {
+              "member": "lead-feast",
+              "file": "../../../library/cast/lead-feast/cast-sheet/kept/turnaround.png",
+              "sha256": "fa26c7e6608fe52b9df87273daabd38bccdd4e7071a2fd80b67024208dec3ecb"
+            },
+            {
+              "member": "lead-feast",
+              "file": "../../../library/cast/lead-feast/cast-sheet/kept/heads.png",
+              "sha256": "8462a48e144ee540276db1355425e0fe577a2f54bfe2a860bdeee28f95524e95"
+            },
+            {
+              "member": "lead-feast",
+              "file": "../../../library/cast/lead-feast/cast-sheet/kept/poses.png",
+              "sha256": "41262e175186e075b74d9ca71fd81690d9ec104e5a55cde736d9a6e6d4f5b497"
+            }
+          ],
+          "words": [
+            "STORY, the landing's courtyard under the same teal-to-yellow sky. On «So wherever you are on the…» Christ, the host, in His library dress (the plain white robe and the gold sash), turns from the head of the table toward the viewer, the series lead seated beside Him. On «If you ran ahead, come back…» He holds out the small clay cup of milk from milk; on «If you have stayed on milk…» the bread from grain; on «Open the word today,» an open book lies on the table, and on «and take one plain truth.» a single line of it glows gold. On «The table is set,» the camera settles on the table; on «and there is a place for…» an empty place, set with a cup and bread, is lit at the front of the table, facing the viewer. The narration's words appear only as full-screen cards: nothing in the picture carries lettering.",
+            "and there is a place for…"
+          ],
+          "at": "2026-10-26T15:11:53.722Z"
+        }
+      ],
+      "kept": 2,
+      "why": "An empty place set with a cup of milk and bread, facing the viewer (owner, chat 2026-10-26: My picks)"
+    },
+    {
       "id": "thesis.start",
       "beat": "thesis",
       "at": "start",
