@@ -669,9 +669,11 @@ render has recorded (`CacheUnrecorded`), and while videos the catalogue
 holds have no record of their lead files (`CacheOutputUnrecorded`, naming
 each: render each again). `record_render` gives a video it catalogues an
 empty record, unless a render of its lead file left one.
-A cache folder, its lock file, the segments folder, a segment, a file in
-one, or a record that is a link is refused (`CacheEscapes`) before the lock
-is taken or anything is read or deleted through it.
+A cache folder, the segments folder, a segment, a file in one, or a record
+that is a link is refused (`CacheEscapes`) before anything is read or
+deleted through it, the cache folder before the lock is taken. A lock file
+that is a link is refused by the lock itself as it opens it (a
+`PlatformError` from `ManifestLock.take`, `manifest-lock-bun.ts`).
 `--fresh` drops each segment's record and draws it again (`project render
 --force` too), so a fresh render cut off leaves its segments to be drawn. A
 short and a wedge's look (`--level`) draw every frame into a temp folder of
