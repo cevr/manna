@@ -10,7 +10,8 @@
  * words sit a space apart, as the page's words do. Under syllable-level
  * chords, each syllable with a chord over it is a box with its chords over
  * it (`over`), the words a fixed gap apart; a box widened by a long chord
- * stretches the hyphen after it. The chordless syllables that follow a
+ * stretches the hyphen after it; a box that can hold no chord keeps its
+ * hyphen as a span of its text. The chordless syllables that follow a
  * chordless syllable of the same word join its box as spans of its text, so
  * they keep the places they had as boxes of their own. A box with no chord
  * has an empty view as tall as a chord row in its chord's place, and every
@@ -85,8 +86,14 @@ export function SyllableLine({
   const starts = wordStarts(words);
   const boxed = Option.isSome(over);
   const textStyle = [style, text.words];
+  /** The muted hyphen between two syllables of one word, as a span of the text before it. */
+  const hyphen = (
+    <Text style={styles.muted} aria-hidden>
+      -
+    </Text>
+  );
   /** A run of syllables as one text: the first its own colour, each later one a span after a muted hyphen. */
-  const run = (syllables: Arr.NonEmptyReadonlyArray<Placed>, after: string) => {
+  const run = (syllables: Arr.NonEmptyReadonlyArray<Placed>, after: ReactNode) => {
     const first = Arr.headNonEmpty(syllables);
     return (
       <Text
@@ -98,9 +105,7 @@ export function SyllableLine({
         {first.box.text}
         {Arr.tailNonEmpty(syllables).map(({ box, s }) => (
           <Fragment key={s}>
-            <Text style={styles.muted} aria-hidden>
-              -
-            </Text>
+            {hyphen}
             <Text testID={`syllable-${at}-${s + 1}`} style={syllableStyle(s)}>
               {box.text}
             </Text>
@@ -139,12 +144,15 @@ export function SyllableLine({
               <View key={w} style={[styles.word, styles.onFoot, pulled]}>
                 {boxesOf(placed).map((joined, b, all) => {
                   const head = Arr.headNonEmpty(joined);
+                  const more = b < all.length - 1;
+                  // A box that can hold no chord is never wider than its text, so its hyphen never stretches: a span.
+                  const bare = head.s > 0 && head.box.chords.length === 0;
                   return (
                     <View key={head.s} style={styles.box}>
                       {draw(head.box, `${at}-${head.s + 1}`)}
                       <View style={styles.syllable}>
-                        {run(joined, '')}
-                        {b < all.length - 1 && (
+                        {run(joined, more && bare && hyphen)}
+                        {more && !bare && (
                           <Text
                             style={[textStyle, styles.muted, styles.hyphen]}
                             dynamicTypeRamp="body"
