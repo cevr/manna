@@ -36,25 +36,11 @@ function stopCompositeKeys(event: KeyboardEvent) {
 
 interface DialogPopupFocusProps {
   store: DialogStore;
-  /**
-   * What takes focus on open, read as the popup opens: an element, `false`
-   * for nothing, `true` for the first tabbable element. Without it,
-   * the first tabbable element.
-   */
-  initialFocus?: (() => HTMLElement | boolean) | undefined;
-  /**
-   * Whether focus moving in, its trap and a modal's hiding of the page wait: a
-   * sheet's while it scrolls in. Once it turns false, focus moves in. Where
-   * focus returns on close is recorded at open regardless.
-   */
-  deferred?: boolean | undefined;
-  /** Whether a modal one makes the page `inert`, not `aria-hidden`: a sheet's, as React Aria's. */
-  inertOutside?: boolean | undefined;
   children: JSX.Element;
 }
 
-/** The focus manager a dialog or sheet popup renders in. */
-export function DialogPopupFocus(props: DialogPopupFocusProps): JSX.Element {
+/** The focus manager the popup renders in. */
+function DialogPopupFocus(props: DialogPopupFocusProps): JSX.Element {
   const store = props.store;
   return (
     <FloatingFocusManager
@@ -62,10 +48,7 @@ export function DialogPopupFocus(props: DialogPopupFocusProps): JSX.Element {
       // The owner's `open` opens it: a programmatic open, so focus returns to what had it.
       openInteractionType={null}
       disabled={!store.mounted()}
-      deferred={props.deferred ?? false}
-      inertOutside={props.inertOutside ?? false}
       closeOnFocusOut={!store.disablePointerDismissal()}
-      initialFocus={props.initialFocus}
       modal={store.modal()}
       restoreFocus="popup"
     >
@@ -74,8 +57,8 @@ export function DialogPopupFocus(props: DialogPopupFocusProps): JSX.Element {
   );
 }
 
-/** The element props a dialog or sheet popup shares: its id, labels, role and keys. */
-export function dialogPopupProps(store: DialogStore, componentProps: Pick<DialogPopupProps, 'id'>) {
+/** The popup's element props: its id, labels, role and keys. */
+function dialogPopupProps(store: DialogStore, componentProps: Pick<DialogPopupProps, 'id'>) {
   return {
     get id() {
       return componentProps.id || store.floatingId;
@@ -93,7 +76,7 @@ export function dialogPopupProps(store: DialogStore, componentProps: Pick<Dialog
 }
 
 /** Calls the root's `onOpenChangeComplete(true)` once the popup's enter animations finish. */
-export function useDialogOpenChangeComplete(store: DialogStore) {
+function useDialogOpenChangeComplete(store: DialogStore) {
   useOpenChangeComplete({
     open: store.open,
     element: store.popupElement,

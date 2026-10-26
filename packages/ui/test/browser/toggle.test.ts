@@ -159,7 +159,7 @@ describe('ToggleGroup', () => {
   });
 
   it('moves focus to the popup around the group after a pointer press, so Tab stays in it', async () => {
-    // A press on content that takes no focus focuses its nearest focusable ancestor: a sheet keeps the keyboard.
+    // A press on content that takes no focus focuses its nearest focusable ancestor: a dialog keeps the keyboard.
     const page = await h.open('in-dialog');
     await page.focus('#before');
     await page.click('#two');

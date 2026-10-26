@@ -11,7 +11,8 @@
 import type { JSX } from '@solidjs/web';
 import { createSignal, Show } from 'solid-js';
 
-import { listen, mix, type Mixin, onElement } from '../../../src/mix/mix.ts';
+import { onElement } from '../../../src/mix/element.ts';
+import { listen, mix, type Mixin } from '../../../src/mix/mix.ts';
 import { log } from './log.ts';
 import { Parity } from './mix-parity.tsx';
 

@@ -210,7 +210,7 @@ export function FloatingPortal(props: FloatingPortalProps): JSX.Element {
       </PortalContext>
       {/* Always rendered (hidden while not guarding): were the guards on both sides of the
           portal node to appear at once, Solid would move the node, and a move resets every
-          scroll position inside it (an inline sheet's swipe). */}
+          scroll position inside it. */}
       <FocusGuard
         data-type="outside"
         hidden={!shouldRenderGuards()}

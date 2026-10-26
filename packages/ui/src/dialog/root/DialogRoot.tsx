@@ -2,10 +2,10 @@
 // packages/react/src/dialog/root/useRenderDialogRoot.tsx,
 // packages/react/src/dialog/root/useDialogRoot.ts
 //
-// Groups a dialog's parts and owns its state. The same root serves dialogs
-// and sheets, each opened by its owner's `open` (upstream's trigger is left
-// out). It wires what the parts share: Escape and outside presses close the
-// dialog, and page scroll locks while a modal dialog is open. Upstream's
+// Groups a dialog's parts and owns its state. The dialog is opened by its
+// owner's `open` (upstream's trigger is left out). It wires what the parts
+// share: Escape and outside presses close the dialog, and page scroll locks
+// while a modal dialog is open. Upstream's
 // nested dialog stacks are left out: no page opens a dialog inside another.
 //
 // An outside press on a modal dialog closes it only on its own backdrop (or
@@ -19,8 +19,6 @@ import { contains, getTarget } from '../../utils/dom.ts';
 import { useScrollLock } from '../../utils/useScrollLock.ts';
 import { createDialogStore, type DialogChangeEventDetails } from '../store/DialogStore.ts';
 import { DialogRootContext } from './DialogRootContext.ts';
-
-export type { DialogChangeEventDetails };
 
 interface DialogRootProps {
   open?: boolean | undefined;

@@ -17,13 +17,7 @@ import {
   resolve,
 } from 'solid-js';
 
-import {
-  useAtomMount,
-  useAtomRefresh,
-  useAtomSet,
-  useAtomSuspense,
-  useAtomValue,
-} from './hooks.js';
+import { useAtomRefresh, useAtomSet, useAtomSuspense, useAtomValue } from './hooks.js';
 import { RegistryProvider, useRegistry } from './registry-context.js';
 
 const settle = Effect.gen(function* () {
@@ -113,13 +107,13 @@ describe('useAtomSet', () => {
     }));
 });
 
-describe('useAtomMount', () => {
+describe("useAtomSet's mount", () => {
   const test = it.scoped;
 
   test('mounts for the owner lifetime and releases on disposal', () =>
     Effect.gen(function* () {
       const counter = Atom.make(0).pipe(Atom.keepAlive);
-      const owned = mount(() => useAtomMount(() => counter));
+      const owned = mount(() => useAtomSet(() => counter));
       yield* Effect.addFinalizer(() => Effect.sync(owned.dispose));
       yield* settle;
 
@@ -292,13 +286,13 @@ describe('atom thunk changes', () => {
       expect(owned.registry.getNodes().get(second)?.listeners.size).toBe(0);
     }));
 
-  test('useAtomMount moves its mount to the newly selected atom', () =>
+  test('useAtomSet moves its mount to the newly selected atom', () =>
     Effect.gen(function* () {
       const first = Atom.make(0).pipe(Atom.keepAlive);
       const second = Atom.make(0).pipe(Atom.keepAlive);
-      const [selected, select] = createSignal<Atom.Atom<number>>(first);
+      const [selected, select] = createSignal<Atom.Writable<number>>(first);
       const owned = mount(() => {
-        useAtomMount(() => selected());
+        useAtomSet(() => selected());
       });
       yield* Effect.addFinalizer(() => Effect.sync(owned.dispose));
 

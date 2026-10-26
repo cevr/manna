@@ -356,12 +356,7 @@ export const undersizedTargets = (hit: number, within = ':root'): string => `(()
     if (inline(el)) continue;
     const set = setOf(el);
     const lead = set.reduce((a, b) => (boxOf(b).width * boxOf(b).height > boxOf(a).width * boxOf(a).height ? b : a));
-    // A sheet's swipe container (\`[data-sheet-scroll]\`) is where the sheet stands, not a scroll
-    // that reaches a target: scrolled along with the target, it is put back, and the sheet stays.
-    const sheets = [...document.querySelectorAll('[data-sheet-scroll]')].map((s) => [s, s.scrollLeft, s.scrollTop]);
     lead.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
-    for (const [s, x, y] of sheets)
-      if (s.scrollLeft !== x || s.scrollTop !== y) s.scrollTo({ left: x, top: y, behavior: 'instant' });
     const reached = over(el, set);
     if (reached === 'loose') out.push(named(el) + ' hit-slop is not anchored to its target');
     else for (const other of reached) out.push(named(el) + ' reaches over ' + named(other));

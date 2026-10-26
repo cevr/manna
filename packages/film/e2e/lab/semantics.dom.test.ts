@@ -165,8 +165,7 @@ const alone = <A, E>(name: string, body: Effect.Effect<A, E, Scope.Scope>, timeo
  * Every floating root open now, outermost only (⌘K's listbox sits in its dialog), each focused
  * from the keyboard in turn: `exact` when it draws no outline and its shadow is exactly
  * `--focus-ring` over the shadow it rests with, unfocused; else what it drew. A root whose box
- * fills the view (the lightbox) has no edge on screen for a ring outside it, nor has a sheet's,
- * whose container clips it to its panel's box (`[data-sheet-scroll]`), so either shows
+ * fills the view (the lightbox) has no edge on screen for a ring outside it, so it shows
  * `--focus-ring-inset` inside its edge, and nothing outside. The focus goes back where it
  * was, with the look it had. Answers `[root, how]` pairs.
  */
@@ -188,8 +187,7 @@ const ROOTS_RINGED = `(() => {
     // The page's own box: a scroll lock's gutter on a desk is no part of what a root can cover.
     const page = document.documentElement.getBoundingClientRect();
     const fills = box.left <= 0 && box.top <= 0 && box.right >= Math.min(innerWidth, page.right) && box.bottom >= innerHeight;
-    const clipped = root.closest('[data-sheet-scroll]') !== null;
-    const want = fills || clipped ? inset : rest === 'none' ? ring : ring + ', ' + rest;
+    const want = fills ? inset : rest === 'none' ? ring : ring + ', ' + rest;
     return [name(root), s.outlineStyle === 'none' && s.boxShadow === want ? 'exact' : 'outline ' + s.outlineStyle + ', shadow ' + s.boxShadow + ', not ' + want];
   });
   if (had instanceof HTMLElement) had.focus({ focusVisible: hadRing, preventScroll: true });

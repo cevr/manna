@@ -13,7 +13,7 @@ export interface ToggleGroupContextValue<Value> {
   holdsFocus: () => boolean;
   /**
    * Moves focus where a press on content that takes no focus moves it: to
-   * the group's nearest focusable ancestor (a sheet's popup), else off every
+   * the group's nearest focusable ancestor (a dialog's popup), else off every
    * control (to `body`).
    */
   releaseFocus: () => void;

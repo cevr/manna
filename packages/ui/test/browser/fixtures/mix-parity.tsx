@@ -10,7 +10,8 @@
 import type { JSX } from '@solidjs/web';
 import { createSignal } from 'solid-js';
 
-import { mix, type Mixin, onElement, type RefFactory } from '../../../src/mix/mix.ts';
+import { type RefFactory, onElement } from '../../../src/mix/element.ts';
+import { mix, type Mixin } from '../../../src/mix/mix.ts';
 import { Toggle } from '../../../src/toggle/index.ts';
 import { ToggleGroup } from '../../../src/toggle-group/index.ts';
 

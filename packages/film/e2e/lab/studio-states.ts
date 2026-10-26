@@ -8,7 +8,7 @@ import { Places, pageHref } from '../../src/core/api.ts';
 import { rightClick } from '../../src/lab/fixtures/gestures.ts';
 import { type Viewport, openAsk, tokensCss } from '../../src/lab/fixtures/harness.ts';
 import { untokened } from '../../src/lab/fixtures/drawn-tokens.ts';
-import { evaluates, sheetsStand, until, waitFor } from '../../src/lab/fixtures/settled.ts';
+import { evaluates, until, waitFor } from '../../src/lab/fixtures/settled.ts';
 import {
   STUDIO_ASK,
   STUDIO_PAGE,
@@ -268,7 +268,6 @@ export const disclosed = (place: PlaceName, state: State, device: Device) =>
     // The page has the device's pointer, so its density tokens are the device's.
     yield* page.until(`matchMedia('${device.pointer}').matches`);
     yield* state.disclose(page);
-    yield* sheetsStand(page);
     return page;
   });
 

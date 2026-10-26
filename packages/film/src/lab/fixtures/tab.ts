@@ -565,8 +565,7 @@ export const makeTab = (
      * The middle of the element at `selector` once it is shown, enabled,
      * scrolled into view, still for two looks and on top at its middle (as a
      * click waits). Covered (by a sticky header, say), it is scrolled to
-     * another place in the view on the next look. In a sheet, the sheet stands
-     * first, and stays where it stands (`@manna/ui/sheet`).
+     * another place in the view on the next look.
      */
     const target = (selector: string) =>
       waitFor<{ readonly x: number; readonly y: number }>(
@@ -578,16 +577,8 @@ export const makeTab = (
           return () => {
             const el = (${shownAt(selector)})();
             if (el === undefined || el.disabled === true) return undefined;
-            // In a sheet still scrolling in or out, it waits for the sheet to stand: a scroll
-            // into view would stop the sheet where it is, and its snapping take it on.
-            if (el.closest('[data-entering], [data-exiting]') !== null) return undefined;
             const place = places[tries % places.length];
-            // A sheet's swipe container is where the sheet stands, not a scroll that reaches
-            // a control: scrolled along with the target, it is put back.
-            const sheets = [...document.querySelectorAll('[data-sheet-scroll]')].map((s) => [s, s.scrollLeft, s.scrollTop]);
             el.scrollIntoView({ block: place, inline: place });
-            for (const [s, x, y] of sheets)
-              if (s.scrollLeft !== x || s.scrollTop !== y) s.scrollTo({ left: x, top: y, behavior: 'instant' });
             const r = el.getBoundingClientRect();
             const at = { x: r.x + r.width / 2, y: r.y + r.height / 2 };
             const key = [r.x, r.y, r.width, r.height].join();
