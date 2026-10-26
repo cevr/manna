@@ -8,6 +8,9 @@
 import {
   BibleArtifact,
   TopicsArtifact,
+  WebsterArtifact,
+  type WebsterArtifactInstaller,
+  type WebsterArtifactRecipe,
   type BibleArtifactInstaller,
   type BibleArtifactRecipe,
   type TopicsArtifactInstaller,
@@ -15,7 +18,11 @@ import {
 } from '../corpus-supply/file-artifact.js';
 import type { Effect, Layer } from 'effect';
 
-import { verifyBibleDatabase, verifyTopicsDatabase } from './corpus-verify.js';
+import {
+  verifyBibleDatabase,
+  verifyTopicsDatabase,
+  verifyWebsterDatabase,
+} from './corpus-verify.js';
 import {
   layerNativeFileArtifacts,
   type NativeFileArtifactProvenanceStore,
@@ -59,4 +66,15 @@ export const layerNativeTopicsArtifacts = (input: {
     fetch: input.fetch,
     provenanceStore: input.provenanceStore,
     verify: input.verify ?? verifyTopicsDatabase,
+  });
+
+export const layerNativeWebsterArtifacts = (input: {
+  readonly destination: string;
+  readonly sources: readonly NativeFileArtifactSource[];
+}): Layer.Layer<WebsterArtifactInstaller | WebsterArtifactRecipe> =>
+  layerNativeFileArtifacts({
+    artifact: WebsterArtifact,
+    destination: input.destination,
+    sources: input.sources,
+    verify: verifyWebsterDatabase,
   });
