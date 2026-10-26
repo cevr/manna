@@ -27,7 +27,7 @@
  * shared corpus (`./resources.ts`).
  */
 import { RuntimeContext } from 'alchemy';
-import * as Cloudflare from 'alchemy/Cloudflare';
+import * as Cloudflare from '@alchemy.run/cloudflare';
 import { Stage } from 'alchemy/Stage';
 import * as D1Client from '@effect/sql-d1/D1Client';
 import { Effect, Layer, Option, Scope } from 'effect';

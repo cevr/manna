@@ -209,7 +209,7 @@ const infoOf = (
   mtime: Option.map(mtime, (at) => DateTime.toDate(DateTime.makeUnsafe(at))),
   atime: Option.none(),
   birthtime: Option.none(),
-  dev: 0,
+  dev: 0n,
   ino: Option.none(),
   mode: 0o644,
   nlink: Option.none(),

@@ -48,9 +48,10 @@
     "three": "0.186.1"
   },
   "devDependencies": {
+    "@alchemy.run/cloudflare": "2.0.0-beta.84",
     "@effect/platform-node": "catalog:",
     "@types/three": "0.186.0",
-    "alchemy": "2.0.0-beta.83",
+    "alchemy": "2.0.0-beta.84",
     "effect-bun-test": "catalog:"
   }
 }

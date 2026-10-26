@@ -13,7 +13,7 @@
  * replace the index and lose every vector in it.
  */
 import * as Alchemy from 'alchemy';
-import * as Cloudflare from 'alchemy/Cloudflare';
+import * as Cloudflare from '@alchemy.run/cloudflare';
 import { Effect } from 'effect';
 
 /** The four properties the vector leg filters on (`./vectorize.ts`). */

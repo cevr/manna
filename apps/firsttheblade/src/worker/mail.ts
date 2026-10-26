@@ -16,7 +16,7 @@
  * that need nothing more.
  */
 import { RuntimeContext } from 'alchemy';
-import * as Cloudflare from 'alchemy/Cloudflare';
+import * as Cloudflare from '@alchemy.run/cloudflare';
 import { Effect, Layer, Option, type Redacted, Schema } from 'effect';
 
 import { Background } from '../mail/background.ts';
