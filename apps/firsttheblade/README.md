@@ -52,12 +52,24 @@ The list is the site's own, on Cloudflare (owner, ask a8b77b61c99): a sign-up,
 a confirm, one-click leave, and one email per film. There is no tracking, no
 template editor and no analytics.
 
+Its rules are an `@alchemy.run/domain` model (`src/list/`, owner,
+2026-10-26): one `Subscriber` aggregate per address, which every rule about
+that address goes through, its letters sent by policies, and what lives
+outside it kept by projections. `src/list/List.story.test.ts` holds the
+rules as stories. The model names a subscriber by an id, a keyed hash of
+the address (`src/mail/tokens.ts`), never by the address: its event log keeps
+what it is given for good, so addresses live only in D1's `addresses` table,
+where they can be deleted.
+
 - **Sign-up** is the form in the night close (`src/ui/mail.tsx`). It posts to
   `POST /subscribe` with no script; a honeypot field and a limit of five tries
   a minute from one connection keep bots out. Every address gets the same
   answer, and the answer does not wait for the work on the address, so neither
-  the page nor its timing tells who is on the list. A new or pending address is sent one
-  email to confirm, at most once an hour, even across leaving and joining again.
+  the page nor its timing tells who is on the list. That work keeps the
+  address and signs its subscriber up in the model; a new or pending address
+  is sent one email to confirm (`ConfirmLetter`), at most once an hour, even
+  across leaving and joining again. The policy runs at least once, so a
+  letter whose send failed in transit may go twice.
 - **Confirm** is the link in that email, `GET /subscribe/confirm?token=`.
   Opening it only shows a page with one button, "Confirm my email", since
   mail scanners open links; the button's `POST` to the same address confirms.
@@ -66,23 +78,29 @@ template editor and no analytics.
   to press. A GET never changes the list. A link works for seven days, and only the
   newest one, sent since the address last left, works.
 - **Sign-ups never confirmed** are undone 30 days after the address last
-  signed up, by the Worker's daily cron trigger (`src/mail/purge.ts`, 04:17
-  UTC): an address that never confirmed is deleted with every row it owns,
-  and one that left and signed up again is marked as left again. Its log
-  line carries counts only (`purge.done deleted= sends= left=`).
+  signed up: each sign-up schedules its own deadline in the model
+  (`SignUpExpiry`). A subscriber that never confirmed is forgotten, its
+  address deleted from `addresses` (`Forgetting`); one that left and signed
+  up again is off the list again, as it was. Its pseudonymous id stays in the
+  event log.
 - **Leave** is the link at the foot of every film's email, `GET /unsubscribe`
   (one button), and its `POST`, which a mail app's one-click unsubscribe also
   sends (`List-Unsubscribe`, RFC 8058); it answers 200, never a redirect.
 - **A film's email** goes out through `bun run mail:send` (`scripts/mail-send.ts`),
   which calls `POST /mail/send` with the admin secret. The Worker puts one
-  delivery per confirmed subscriber on a Cloudflare Queue and sends them a
-  batch at a time; the `sends` table claims each before it goes, so no one gets
-  a film twice. A send that stops between its claim and its outcome is counted
-  `unsure` and not sent again, since its email may have gone.
+  delivery per subscriber the roster says still waits for the film on a
+  Cloudflare Queue and sends them a batch at a time; each letter is claimed in
+  the subscriber's aggregate before it goes, so no one gets a film twice. A
+  send that stops between its claim and its outcome is counted `unsure` and
+  not sent again, since its email may have gone. The roster (D1's `roster`
+  tables, written by the `Roster` projection) follows the model a moment
+  behind.
   The email is built from the film's entry in `src/content.ts` (`src/mail/letters.ts`).
-- **Where it lives:** the list is D1 (`migrations/`, applied on deploy), the
-  emails go through Cloudflare Email Sending from `films@firsttheblade.com`,
-  and the Worker binds both with the Queue and a Rate Limit (`src/worker/mail.ts`).
+- **Where it lives:** the model runs on Durable Objects, one a subscriber
+  and one for each policy and projection; the addresses and the roster are
+  D1 (`migrations/`, applied on deploy); the emails go through Cloudflare
+  Email Sending from `films@firsttheblade.com`; and the Worker binds them all
+  with the Queue and a Rate Limit (`src/worker/mail.ts`).
   The routes are `src/mail/routes.ts`; the logs name ids and counts only
   (`[mail] <action> key=value`), never an address or a token.
   The stack owns the sending domain (`src/worker/domain.ts`): it onboards
@@ -116,7 +134,8 @@ MAIL_FORWARD_TO=<the owner's inbox, prod only>
 MAIL_FORWARD_VERIFIED=true   # once the inbox's verification link is opened
 ```
 
-Changing `MAIL_TOKEN_KEY` breaks every link already sent. The first prod
+Changing `MAIL_TOKEN_KEY` breaks every link already sent, and gives every
+address a new subscriber id, so the list would start empty. The first prod
 deploy adds `MAIL_FORWARD_TO` as an Email Routing destination, and
 Cloudflare sends it a verification email. Once the owner opens its link,
 `MAIL_FORWARD_VERIFIED=true` and one more prod deploy add the rule that

@@ -68,6 +68,7 @@ const flags = {
   scale: Option.none(),
   out: Option.none(),
   share: Option.none(),
+  shareOnly: false,
   encoder: Option.none(),
   server: Option.none(),
   board: false,
@@ -115,30 +116,57 @@ describe('jobOf', () => {
       }),
     );
     expect(job._tag).toBe('Video');
-    expect(job).toMatchObject({ scale: 1, share: false, from: Option.some(2) });
-    expect(Result.getOrThrow(jobOf(flags))).toMatchObject({ _tag: 'Video', share: true });
+    expect(job).toMatchObject({ scale: 1, copies: 'master', from: Option.some(2) });
+    expect(Result.getOrThrow(jobOf(flags))).toMatchObject({
+      _tag: 'Video',
+      copies: 'master+share',
+    });
   });
 
   test('a software render makes no share copy, and --share with --encoder software is refused', () => {
     const software = { ...flags, encoder: Option.some(encoderNamed('software')) };
-    expect(Result.getOrThrow(jobOf(software))).toMatchObject({ _tag: 'Video', share: false });
+    expect(Result.getOrThrow(jobOf(software))).toMatchObject({ _tag: 'Video', copies: 'master' });
     expect(Result.getOrThrow(jobOf({ ...software, share: Option.some(false) }))).toMatchObject({
-      share: false,
+      copies: 'master',
     });
     const refused = Result.flip(jobOf({ ...software, share: Option.some(true) }));
     expect(Result.getOrThrow(refused).message).toBe(
-      "--share does not go with --encoder software: the share copy is the hardware encoder's, made in the page beside the master",
+      "--share does not go with --encoder software: the share copy is the hardware encoder's, made in the page",
     );
   });
 
   test('a review render of the Board makes no share copy unless --share asks for one', () => {
     const review = { ...flags, board: true, review: true };
-    expect(Result.getOrThrow(jobOf(review))).toMatchObject({ _tag: 'Video', share: false });
+    expect(Result.getOrThrow(jobOf(review))).toMatchObject({ _tag: 'Video', copies: 'master' });
     expect(Result.getOrThrow(jobOf({ ...review, share: Option.some(true) }))).toMatchObject({
       _tag: 'Video',
-      share: true,
+      copies: 'master+share',
     });
-    expect(Result.getOrThrow(jobOf({ ...flags, board: true }))).toMatchObject({ share: true });
+    expect(Result.getOrThrow(jobOf({ ...flags, board: true }))).toMatchObject({
+      copies: 'master+share',
+    });
+  });
+
+  test('--share-only writes the share copy alone, of a review render too; never with --share or --no-share', () => {
+    expect(Result.getOrThrow(jobOf({ ...flags, board: true, shareOnly: true }))).toMatchObject({
+      _tag: 'Video',
+      copies: 'share',
+    });
+    expect(
+      Result.getOrThrow(jobOf({ ...flags, board: true, review: true, shareOnly: true })),
+    ).toMatchObject({ copies: 'share' });
+    expect(conflict({ shareOnly: true, share: Option.some(true) })).toBe(
+      'share-only excludes share',
+    );
+    expect(conflict({ shareOnly: true, share: Option.some(false) })).toBe(
+      'share-only excludes share',
+    );
+    expect(conflict({ shareOnly: true, contact: Option.some(5) })).toBe(
+      'contact excludes share-only',
+    );
+    expect(conflict({ shareOnly: true, encoder: Option.some(encoderNamed('software')) })).toBe(
+      'share-only excludes encoder software',
+    );
   });
 
   test('an address of scenes or an act sets the range of a contact sheet', () => {
@@ -409,25 +437,29 @@ describe('encoder budget', () => {
     expect(HARDWARE_WORKERS).toBe(4);
     expect(encoderLimits(hardware, 10)).toEqual({ max: 14, workers: 4 });
     expect(encoderLimits(hardware, 64)).toEqual({ max: 14, workers: 4 });
-    expect(tag(videoEncoders(7, true, hardware, 64))).toBe('14');
-    expect(tag(videoEncoders(8, true, hardware, 64))).toBe('TooManyEncoders');
-    expect(tag(videoEncoders(14, false, hardware, 64))).toBe('14');
-    expect(tag(videoEncoders(15, false, hardware, 64))).toBe('TooManyEncoders');
+    expect(tag(videoEncoders(7, 'master+share', hardware, 64))).toBe('14');
+    expect(tag(videoEncoders(8, 'master+share', hardware, 64))).toBe('TooManyEncoders');
+    expect(tag(videoEncoders(14, 'master', hardware, 64))).toBe('14');
+    expect(tag(videoEncoders(15, 'master', hardware, 64))).toBe('TooManyEncoders');
+    // A share-only page runs the share copy's encoder alone.
+    expect(tag(videoEncoders(14, 'share', hardware, 64))).toBe('14');
     // The default render, with its share copy, fits.
-    expect(tag(videoEncoders(HARDWARE_WORKERS, true, hardware, 10))).toBe('8');
+    expect(tag(videoEncoders(HARDWARE_WORKERS, 'master+share', hardware, 10))).toBe('8');
   });
 
   test('a software encoder is bounded by the cores, one encoder a page: its share is made after the join', () => {
     expect(encoderLimits(software, 16).max).toBe(16);
-    expect(tag(videoEncoders(16, true, software, 16))).toBe('16');
-    expect(tag(videoEncoders(17, true, software, 16))).toBe('TooManyEncoders');
-    expect(tag(videoEncoders(16, false, software, 16))).toBe('16');
-    expect(tag(videoEncoders(5, true, software, 4))).toBe('TooManyEncoders');
+    expect(tag(videoEncoders(16, 'master+share', software, 16))).toBe('16');
+    expect(tag(videoEncoders(17, 'master+share', software, 16))).toBe('TooManyEncoders');
+    expect(tag(videoEncoders(16, 'master', software, 16))).toBe('16');
+    expect(tag(videoEncoders(5, 'master+share', software, 4))).toBe('TooManyEncoders');
   });
 
   test('the software default is the measured knee, and fits a smaller machine', () => {
     expect(encoderLimits(software, 16).workers).toBe(SOFTWARE_WORKERS);
-    expect(tag(videoEncoders(SOFTWARE_WORKERS, true, software, 16))).toBe(String(SOFTWARE_WORKERS));
+    expect(tag(videoEncoders(SOFTWARE_WORKERS, 'master+share', software, 16))).toBe(
+      String(SOFTWARE_WORKERS),
+    );
     expect(encoderLimits(software, 4).workers).toBe(2);
     expect(encoderLimits(software, 1).workers).toBe(1);
   });
@@ -435,10 +467,10 @@ describe('encoder budget', () => {
   test('TooManyEncoders names the encoder, and counts a share copy only where the page makes it', () => {
     const over = (r: ReturnType<typeof videoEncoders>) =>
       Result.match(r, { onSuccess: () => '', onFailure: (e) => e.message });
-    expect(over(videoEncoders(8, true, hardware, 64))).toBe(
+    expect(over(videoEncoders(8, 'master+share', hardware, 64))).toBe(
       '8 pages with a share copy need 16 encoders at once, over the 14 hardware encoders a render may run; use --workers 7 or fewer, or --no-share',
     );
-    expect(over(videoEncoders(17, true, software, 16))).toBe(
+    expect(over(videoEncoders(17, 'master+share', software, 16))).toBe(
       '17 pages need 17 encoders at once, over the 16 software encoders a render may run; use --workers 16 or fewer',
     );
   });

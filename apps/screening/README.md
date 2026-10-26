@@ -22,7 +22,7 @@ The pages are Solid 2 components (`src/pages.tsx`) drawn to whole HTML files whe
 From `apps/animations`, after a milestone:
 
 ```bash
-bun run screening publish <film> board            # renders the Board (film render --board --share), its poster and panels
+bun run screening publish <film> board            # renders the Board's share copy alone (film render --board --share-only), its poster and panels
 bun run screening publish <film> render           # the latest full render's share copy
 bun run screening publish <film> final [--from <video>]
 bun run screening publish <film> board --dry-run  # gathers it and prints what it would upload

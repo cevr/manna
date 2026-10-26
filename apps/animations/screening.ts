@@ -8,10 +8,12 @@
  * `publish` gathers the version's material here and writes it to the site's
  * bucket through its desk (`@manna/screening` `publishTo`):
  *
- * - `board`: renders the Board with its voice (`film render <film> --board
- *   --share`; a render reuses each unchanged segment), takes that render's
- *   share copy, a poster still from it, and each kept panel of `board.json`
- *   in the film's order, made 960 px wide for a phone;
+ * - `board`: renders the Board with its voice, its share copy alone (`film
+ *   render <film> --board --share-only`: one encode a frame, no master; a
+ *   render reuses each unchanged segment, a share copy any Board render of
+ *   the same picture kept included), takes that share copy, a poster still
+ *   from it, and each kept panel of `board.json` in the film's order, made
+ *   960 px wide for a phone;
  * - `render`: the share copy of the film's latest full render (the
  *   catalogue's newest `main` render of the whole film at full scale, never
  *   a look wedge, a Board or a proof: `./screening-renders.ts`) and a poster
@@ -169,12 +171,12 @@ const latestShare = Effect.fn('screening.latest')(function* (
   );
 });
 
-/** `film render <film> --board --share`, its output on this terminal. */
+/** `film render <film> --board --share-only` (the share copy alone, the file the site serves), its output on this terminal. */
 const renderBoard = Effect.fn('screening.renderBoard')(function* (film: string) {
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
   yield* Console.log(`screening.render film=${film} board`);
   const code = yield* spawner.exitCode(
-    ChildProcess.make('bun', ['cli.ts', 'render', film, '--board', '--share'], {
+    ChildProcess.make('bun', ['cli.ts', 'render', film, '--board', '--share-only'], {
       cwd: import.meta.dir,
       stdin: 'inherit',
       stdout: 'inherit',

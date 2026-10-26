@@ -28,7 +28,6 @@ const render: RenderRead = {
   fps: 30,
   scale: 1,
   encoder: 'hardware',
-  share: true,
   captions: false,
   picture: ['board'],
   agent: 'HeadlessChrome/141',
@@ -180,7 +179,6 @@ describe("a render's segments", () => {
     for (const other of [
       { scale: 0.5 },
       { encoder: 'software' },
-      { share: false },
       { picture: ['board', 'review'] },
       { agent: 'HeadlessChrome/142' },
     ]) {

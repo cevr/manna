@@ -1,5 +1,5 @@
-// The film's acts, declared once: each from its first scene, the narrator's
-// question that names its chapter (`film chapters`), and the light it should
+// The film's acts, declared once: each from its first scene, the short phrase
+// from the narration that names its chapter (`film chapters`), and the light it should
 // measure (CRAFT rule 11). An act runs from its scene until the next act's
 // (`membersOf` in the film core). The tent poles (script.ts) are each act's
 // one frame. The bands are the first targets, taken from RBF's measured acts
@@ -15,7 +15,7 @@ export const look = {
       // The feast: the bright teal day of the courtyard.
       from: 'cold',
       name: 'feast',
-      chapter: 'What are milk and meat?',
+      chapter: 'a bottle at the feast',
       luma: [150, 165],
       saturation: [0.3, 0.4],
     },
@@ -23,7 +23,7 @@ export const look = {
       // The foundation: the parchment page in peach, with Corinth's short dusk.
       from: 'stones',
       name: 'foundation',
-      chapter: 'Which truths are the milk?',
+      chapter: 'the first principles',
       luma: [135, 150],
       saturation: [0.2, 0.3],
     },
@@ -31,7 +31,7 @@ export const look = {
       // The sum: peach going to dawn on the slate.
       from: 'math',
       name: 'sum',
-      chapter: 'Do we leave the milk behind?',
+      chapter: 'the hardest sum',
       luma: [140, 155],
       saturation: [0.2, 0.3],
     },
@@ -39,7 +39,7 @@ export const look = {
       // The meat: dawn gold behind the veil.
       from: 'priest',
       name: 'meat',
-      chapter: 'So what is the meat?',
+      chapter: 'more of him',
       luma: [150, 160],
       saturation: [0.25, 0.35],
     },
@@ -47,7 +47,7 @@ export const look = {
       // Growing: the field's peach morning to the landing's teal and yellow.
       from: 'grain',
       name: 'growing',
-      chapter: 'How does anyone grow?',
+      chapter: 'a place at the table',
       luma: [150, 165],
       saturation: [0.3, 0.4],
     },

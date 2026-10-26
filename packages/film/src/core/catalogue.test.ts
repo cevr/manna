@@ -108,6 +108,21 @@ describe('a scene render against its sources', () => {
     expect(renderNeed(catalogue, slot, now('k1'), { scale: 1, captions: true })).toBe('draw');
     expect(renderNeed(catalogue, sceneSlot('b', 'main'), now('k1'), SETTINGS)).toBe('draw');
   });
+
+  test('needs a draw when its current render is the share copy alone: the slot has no master', () => {
+    const render = sceneRender('a', 'k1');
+    const shareOnly: Render = {
+      ...render,
+      files: {
+        ...render.files,
+        clip: Option.none(),
+        share: Option.some('scenes/a/main.share.mp4'),
+      },
+    };
+    const now = { key: 'k1', sound: Option.none() };
+    expect(renderNeed(withRenders(shareOnly), sceneSlot('a', 'main'), now, SETTINGS)).toBe('draw');
+    expect(renderNeed(withRenders(render), sceneSlot('a', 'main'), now, SETTINGS)).toBe('current');
+  });
 });
 
 /** `render` carrying the film's master as mixed from plan `mix`, cut at its span. */

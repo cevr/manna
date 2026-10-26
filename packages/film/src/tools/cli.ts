@@ -11,6 +11,7 @@
 //   film cues | check | doctor                                 read and check a film
 //   film drafts                                                read every series draft as the lab does
 //   film render | lookbook | chapters                          pictures and video
+//   film cache …      (cache-cli.ts)   a film's render cache: its size, its unused segments pruned
 //   film project …    (project-cli.ts) a film's scenes rendered, approved, commented
 //   film options …    (choices-cli.ts) a film's choice points, read fresh for the lab
 //   film read …       (read-cli.ts)    the studio's reading, a cue, the scenes' sites, read fresh for the lab
@@ -131,6 +132,7 @@ import {
   givenFlags,
   jobOf,
 } from './render-plan.ts';
+import { cache } from './cache-cli.ts';
 import { media } from './media-cli.ts';
 import { footage } from './footage-cli.ts';
 import { talk } from './talk-cli.ts';
@@ -826,6 +828,12 @@ const render = <E, R>(
           'also write a smaller copy to send, <out>.share.mp4 (default, but not for --review; --no-share to skip it)',
         ),
       ),
+      shareOnly: Flag.Boolean('share-only').pipe(
+        Flag.withDefault(false),
+        Flag.withDescription(
+          'write only the copy to send, <out>.share.mp4, and no master: one encode a frame, about twice as fast (what a publish sends)',
+        ),
+      ),
       encoder: Flag.Literals('encoder', EncoderName.literals).pipe(
         Flag.optional,
         Flag.map(Option.map(encoderNamed)),
@@ -906,6 +914,7 @@ const render = <E, R>(
             scale: input.scale,
             out: input.out,
             share: input.share,
+            shareOnly: input.shareOnly,
             encoder: input.encoder,
             server,
             board: input.board,
@@ -1165,6 +1174,7 @@ export const runFilmCli = <E>({
       check(checkLayer, labApp.pages.pages.render, films),
       render(renderLayer, labApp.pages.pages.render, films),
       project(renderLayer),
+      cache,
       lookbook(lookLayer),
       chaptersCommand,
       doctor(previewServer),

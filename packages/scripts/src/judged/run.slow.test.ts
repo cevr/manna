@@ -1,7 +1,7 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Database } from 'bun:sqlite';
 import { Clock, Console, Deferred, Effect, Fiber, FileSystem, Layer, Path, Ref } from 'effect';
-import { DecisionModel } from 'effect/ai';
+import { type Decision, DecisionModel } from 'effect/ai';
 import { describe, expect, it } from 'effect-bun-test';
 import { TestClock } from 'effect/testing';
 
@@ -39,7 +39,7 @@ const countingModel = (pOf: (text: string) => number) => {
   const requests: Array<{
     keys: Array<string>;
     texts: Array<string>;
-    instructions: Array<string>;
+    instructions: Array<Decision.Description>;
   }> = [];
   const layer = Layer.effect(DecisionModel.DecisionModel)(
     DecisionModel.make({

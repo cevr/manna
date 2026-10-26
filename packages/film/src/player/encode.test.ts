@@ -69,12 +69,21 @@ describe('the encoder config', () => {
 });
 
 describe('what the page encodes', () => {
+  const master = { copy: 'master', quality: SETTINGS.Hardware.master } as const;
+  const share = { copy: 'share', quality: SETTINGS.Hardware.share } as const;
+
   test('the share copy is checked and encoded only when one is made', () => {
-    expect(qualities(hardware, true)).toEqual([SETTINGS.Hardware.master, SETTINGS.Hardware.share]);
-    expect(qualities(hardware, false)).toEqual([SETTINGS.Hardware.master]);
+    expect(qualities(hardware, 'master+share')).toEqual([master, share]);
+    expect(qualities(hardware, 'master')).toEqual([master]);
+  });
+
+  test('a share-only render encodes the share copy at its own quality, and no master', () => {
+    expect(qualities(hardware, 'share')).toEqual([share]);
   });
 
   test('the software encoder makes no share copy in the page: x264 makes it from the master', () => {
-    expect(qualities(software, true)).toEqual([SETTINGS.Software.master]);
+    expect(qualities(software, 'master+share')).toEqual([
+      { copy: 'master', quality: SETTINGS.Software.master } as const,
+    ]);
   });
 });

@@ -4,7 +4,7 @@
  * leaves the process. Retries run on the test clock.
  */
 import * as CloudflareCredentials from '@distilled.cloud/cloudflare/Credentials';
-import * as Cloudflare from 'alchemy/Cloudflare';
+import * as Cloudflare from '@alchemy.run/cloudflare';
 import { describe, expect, it } from 'effect-bun-test';
 import { Console, Effect, Fiber, Layer, Option, Redacted, Result } from 'effect';
 import type { Duration } from 'effect';

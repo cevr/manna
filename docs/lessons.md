@@ -3926,3 +3926,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** The film skill's Render step, its delivery reference and the architecture loop's lab line named pages the lab no longer serves, and the Render step still promised the Linux x264 share pass.
 - **Cause:** The docs test checked API paths in running text but no page path. It now holds each page path a framework doc writes to a page the lab serves.
 - **Guard:** code: `packages/film/src/docs.slow.test.ts` `pageDrift`
+
+### board-food-is-plant-food
+
+- **Date:** 2026-10-26
+- **Kind:** owner
+- **Said:** "let's make it so this is um, plan-based"
+- **Source:** owner scrawl on the Board film of In Its Order, 2026-10-26, circling the platter in `rush.skip`
+- **Wrong:** The `rush` panels drew "a heaped platter" as roast fowl and joints of meat with bones, because the script calls solid food "strong meat" and the picture named no food.
+- **Cause:** A picture that names food without saying what it is leaves the image model to draw meat as flesh.
+- **Guard:** skill: what food looks like is a judgement on a drawn picture, not a rule a lint can read in a script. Carried by `.claude/skills/film/CRAFT.md`: "Food is plant food"

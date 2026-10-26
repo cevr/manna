@@ -6,9 +6,11 @@
 // A segment's key hashes:
 //
 // - the render's settings: the picture's size, its fps, the scale, the
-//   encoder, whether the page makes the share copy, the captions, the
-//   picture (scenes, Board, Board with its burn-in), the browser and the
-//   platform;
+//   encoder, the captions, the picture (scenes, Board, Board with its
+//   burn-in), the browser and the platform; not the copies it encodes
+//   (`Copies`): each copy is encoded alike whatever is encoded beside it, so
+//   a segment's record says which it holds, and a render reuses one that
+//   holds every copy it writes;
 // - its frames, first and past-last;
 // - the key of each beat its frames fall in (`Stamps`, tools/stamp.ts): the
 //   beat's sources, the film's frame and the engine (the player and the
@@ -20,6 +22,10 @@
 //
 // So a panel or a beat elsewhere leaves a segment's key alone, and a
 // neighbour seen across a dissolve at its edge changes it.
+//
+// Each render marks the segments it reuses or keeps as used at its start
+// (`used` in the record, never moved back); the cache as a whole, its lock,
+// the renders' records and the prune, is `segment-cache.ts`.
 
 import {
   Array as Arr,
@@ -32,6 +38,7 @@ import {
 } from 'effect';
 import type { PlatformError } from 'effect/PlatformError';
 import { PanelText, shownTry } from '../core/board.ts';
+import { type Copies, hasMaster, hasShare } from '../core/encoder.ts';
 import { Shot } from '../core/animatic.ts';
 import { type ShotSeen, shotsSeen } from '../core/board-render.ts';
 import type { Placed } from '../core/layout.ts';
@@ -46,8 +53,6 @@ export interface RenderRead {
   readonly fps: number;
   readonly scale: number;
   readonly encoder: string;
-  /** The page makes the share copy beside the master (`sharesInPage`). */
-  readonly share: boolean;
   readonly captions: boolean;
   /** The export page's picture words (`pictureParams`). */
   readonly picture: ReadonlyArray<string>;
@@ -105,7 +110,6 @@ const SegmentKeyInput = Schema.fromJsonString(
       fps: Schema.Finite,
       scale: Schema.Finite,
       encoder: Schema.String,
-      share: Schema.Boolean,
       captions: Schema.Boolean,
       picture: Schema.Array(Schema.String),
       agent: Schema.String,
@@ -240,17 +244,27 @@ export const beatSegments = (input: SegmentsInput): ReadonlyArray<Segment> => {
 /** Where a film's segments are kept: `out/<film>/cache/segments`, a folder its catalogue never lists. */
 export const segmentsFolder = (project: string): string => `${project}/cache/segments`;
 
-/** A chunk of a kept segment: its frames, and its files' names in the segment's folder. */
+/** A chunk of a kept segment: its frames, and the names of the copies it holds in the segment's folder. */
 const KeptChunk = Schema.Struct({
   from: Schema.Int,
   to: Schema.Int,
-  master: Schema.String,
+  master: Schema.OptionFromOptionalKey(Schema.String),
   share: Schema.OptionFromOptionalKey(Schema.String),
 });
 type KeptChunk = typeof KeptChunk.Type;
 
-/** A kept segment's record, `<key>/segment.json`: its chunks in frame order. */
-const KeptSegmentJson = Schema.fromJsonString(Schema.Struct({ chunks: Schema.Array(KeptChunk) }));
+/**
+ * A kept segment's record, `<key>/segment.json`: its chunks in frame order,
+ * and `used`, when a render last drew or reused it (ms since the epoch). A
+ * record written before renders marked it has no `used`: its file's mtime
+ * stands in (`lastUsed`).
+ */
+const KeptSegmentJson = Schema.fromJsonString(
+  Schema.Struct({
+    chunks: Schema.Array(KeptChunk),
+    used: Schema.OptionFromOptionalKey(Schema.Finite),
+  }),
+);
 
 /**
  * A chunk's files in a kept segment's folder, named by its frames:
@@ -271,15 +285,43 @@ export const keptFolder = (folder: string, key: string): string => `${folder}/${
 const recordOf = (path: Path.Path, folder: string, key: string): string =>
   path.join(keptFolder(folder, key), 'segment.json');
 
-/**
- * Segment `key`'s chunks as kept under `folder`, their files by path; none
- * when it was never kept whole (no record), or a file it lists is gone.
- */
-export const keptSegment = (
+/** Segment `key`'s record under `folder`, its chunks named as kept, written whole with `used` as its last use. */
+const writeRecord = (
   fs: FileSystem.FileSystem,
   path: Path.Path,
   folder: string,
   key: string,
+  chunks: ReadonlyArray<KeptChunk>,
+  used: number,
+): Effect.Effect<void, PlatformError> => {
+  const record = Schema.encodeSync(KeptSegmentJson)({ chunks, used: Option.some(used) });
+  const file = recordOf(path, folder, key);
+  return writeWhole(fs, file, (partial) => fs.writeFileString(partial, record));
+};
+
+/** Whether every chunk of a segment holds each of `copies`. */
+const holdsAll = (chunks: ReadonlyArray<KeptChunk>, copies: Copies): boolean =>
+  chunks.every(
+    (c) =>
+      (!hasMaster(copies) || Option.isSome(c.master)) &&
+      (!hasShare(copies) || Option.isSome(c.share)),
+  );
+
+/**
+ * Segment `key`'s chunks as kept under `folder`, their files by path, its
+ * record marked used at `used`, or at the mark it holds when that is later
+ * (a mark never goes back); none when it was never kept whole (no record),
+ * a chunk of it lacks one of `copies` (the copies the render writes), or a
+ * file it lists is gone. The render calls it holding the film's cache
+ * (`holdCache`), so no prune runs between the mark and the join.
+ */
+export const reuseSegment = (
+  fs: FileSystem.FileSystem,
+  path: Path.Path,
+  folder: string,
+  key: string,
+  copies: Copies,
+  used: number,
 ): Effect.Effect<Option.Option<ReadonlyArray<KeptChunk>>, PlatformError> =>
   Effect.gen(function* () {
     const dir = keptFolder(folder, key);
@@ -287,19 +329,27 @@ export const keptSegment = (
     if (!(yield* fs.exists(record))) return Option.none();
     const read = Schema.decodeOption(KeptSegmentJson)(yield* fs.readFileString(record));
     if (Option.isNone(read)) return Option.none();
+    if (!holdsAll(read.value.chunks, copies)) return Option.none();
     const chunks = read.value.chunks.map((c) => ({
       ...c,
-      master: path.join(dir, c.master),
+      master: Option.map(c.master, (m) => path.join(dir, m)),
       share: Option.map(c.share, (s) => path.join(dir, s)),
     }));
-    const files = chunks.flatMap((c) => [c.master, ...Option.toArray(c.share)]);
+    const files = chunks.flatMap((c) => [...Option.toArray(c.master), ...Option.toArray(c.share)]);
     const there = yield* Effect.forEach(files, (file) => fs.exists(file));
-    return Option.liftPredicate(chunks, () => there.every(Boolean));
+    if (!there.every(Boolean)) return Option.none();
+    const later = Math.max(
+      used,
+      Option.getOrElse(read.value.used, () => used),
+    );
+    yield* writeRecord(fs, path, folder, key, read.value.chunks, later);
+    return Option.some(chunks);
   });
 
 /**
  * Segment `key` recorded as kept under `folder`, its `chunks` (files named
- * by `keptNames`, already in its folder) in frame order. Written last and
+ * by `keptNames`, already in its folder: its master and its share copy where
+ * each says it holds one) in frame order, used at `used`. Written last and
  * whole, so a segment is found only once every chunk of it is there.
  */
 export const keepSegment = (
@@ -307,32 +357,84 @@ export const keepSegment = (
   path: Path.Path,
   folder: string,
   key: string,
-  chunks: ReadonlyArray<{ readonly from: number; readonly to: number; readonly share: boolean }>,
-): Effect.Effect<void, PlatformError> => {
-  const record = Schema.encodeSync(KeptSegmentJson)({
-    chunks: chunks.map((c) => ({
-      from: c.from,
-      to: c.to,
-      master: keptNames(c.from, c.to).master,
-      share: Option.map(
-        Option.liftPredicate(c.share, Boolean),
-        () => keptNames(c.from, c.to).share,
-      ),
-    })),
-  });
-  const file = recordOf(path, folder, key);
-  return writeWhole(fs, file, (partial) => fs.writeFileString(partial, record));
-};
+  chunks: ReadonlyArray<{
+    readonly from: number;
+    readonly to: number;
+    readonly master: boolean;
+    readonly share: boolean;
+  }>,
+  used: number,
+): Effect.Effect<void, PlatformError> =>
+  writeRecord(
+    fs,
+    path,
+    folder,
+    key,
+    chunks.map((c) => {
+      const names = keptNames(c.from, c.to);
+      return {
+        from: c.from,
+        to: c.to,
+        master: Option.map(Option.liftPredicate(c.master, Boolean), () => names.master),
+        share: Option.map(Option.liftPredicate(c.share, Boolean), () => names.share),
+      };
+    }),
+    used,
+  );
 
 /**
  * Segment `key` no longer kept under `folder`: its record gone, so no render
- * finds it until one draws it whole again. A `--fresh` render drops each
- * segment's record before it draws it, so one cut off leaves none of what it
- * was told not to trust.
+ * finds it until one draws it whole again. A render drops the record of each
+ * segment it draws before it draws it (a `--fresh` render, of every one), so
+ * one cut off leaves none of what it was told not to trust, and a folder a
+ * render is drawing into has no record: a prune never takes it. Answers the
+ * last use the record held (`used`), so the render that draws the segment
+ * again keeps it when it is later than its own; none when there was no
+ * record, or none that reads.
  */
 export const dropSegment = (
   fs: FileSystem.FileSystem,
   path: Path.Path,
   folder: string,
   key: string,
-): Effect.Effect<void, PlatformError> => fs.remove(recordOf(path, folder, key), { force: true });
+): Effect.Effect<Option.Option<number>, PlatformError> =>
+  Effect.gen(function* () {
+    const record = recordOf(path, folder, key);
+    const text = yield* Effect.option(fs.readFileString(record));
+    yield* fs.remove(record, { force: true });
+    return Option.flatMap(
+      Option.flatMap(text, Schema.decodeOption(KeptSegmentJson)),
+      (read) => read.used,
+    );
+  });
+
+/**
+ * When segment `key`'s record under `folder` says a render last used it: its
+ * `used`; for a record with none, or one that does not read, its file's
+ * mtime, else never (0).
+ */
+export const lastUsed = (
+  fs: FileSystem.FileSystem,
+  path: Path.Path,
+  folder: string,
+  key: string,
+): Effect.Effect<number, PlatformError> =>
+  Effect.gen(function* () {
+    const record = recordOf(path, folder, key);
+    const read = Schema.decodeOption(KeptSegmentJson)(yield* fs.readFileString(record));
+    const marked = Option.flatMap(read, (r) => r.used);
+    if (Option.isSome(marked)) return marked.value;
+    const info = yield* fs.stat(record);
+    return Option.getOrElse(
+      Option.map(info.mtime, (at) => at.getTime()),
+      () => 0,
+    );
+  });
+
+/** Whether segment `key` under `folder` has its record: kept whole, not a folder a render is drawing. */
+export const isKept = (
+  fs: FileSystem.FileSystem,
+  path: Path.Path,
+  folder: string,
+  key: string,
+): Effect.Effect<boolean, PlatformError> => fs.exists(recordOf(path, folder, key));

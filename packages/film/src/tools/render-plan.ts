@@ -5,7 +5,15 @@
 import { Array as Arr, Boolean as Bool, Data, Match, Option, Result } from 'effect';
 import type { Address, Scope } from '../core/address.ts';
 import type { RenderKind, RenderSound, RenderVariantName } from '../core/catalogue.ts';
-import { Encoder, encoderName, sharesInPage } from '../core/encoder.ts';
+import {
+  type Copies,
+  Encoder,
+  copiesInPage,
+  encoderName,
+  hasMaster,
+  hasShare,
+  sharesInPage,
+} from '../core/encoder.ts';
 import { FlagsConflict, TooManyEncoders } from './errors.ts';
 import type { Short } from '../core/schema.ts';
 import { type SoundCredit, creditLink } from '../core/sfx.ts';
@@ -177,10 +185,11 @@ export type RenderJob = Data.TaggedEnum<{
      */
     readonly out: Option.Option<string>;
     /**
-     * Also a small copy to send, `shareName(out)`: encoded in the same pass
-     * on the hardware encoder. A software render makes none (`jobOf`).
+     * The copies it writes: the master at `out`, the small copy to send at
+     * `shareName(out)`, or both, encoded in the same pass on the hardware
+     * encoder. A software render makes no share copy (`jobOf`).
      */
-    readonly share: boolean;
+    readonly copies: Copies;
     /** `--encoder`: the one encoder the render may use; none takes the platform's (`encoderCandidates`). */
     readonly encoder: Option.Option<Encoder>;
     /** The segments it reuses (`Reuse`): a whole film's, an act's or a scene's, on the film's own page. */
@@ -253,6 +262,9 @@ const RENDER_RULES: ReadonlyArray<FlagRule> = [
   ['contact', 'excludes', 'scale', VIDEO],
   ['contact', 'excludes', 'out', VIDEO],
   ['contact', 'excludes', 'share', VIDEO],
+  ['stills', 'excludes', 'share-only', VIDEO],
+  ['contact', 'excludes', 'share-only', VIDEO],
+  ['share-only', 'excludes', 'share', '--share-only writes the share copy and nothing else'],
   ['contact', 'excludes', 'workers', 'one page composes the whole sheet'],
   ['stills', 'excludes', 'encoder', VIDEO],
   ['contact', 'excludes', 'encoder', VIDEO],
@@ -297,6 +309,8 @@ interface RenderFlags {
   readonly scale: Option.Option<number>;
   readonly out: Option.Option<string>;
   readonly share: Option.Option<boolean>;
+  /** `--share-only`: the share copy, and no master. */
+  readonly shareOnly: boolean;
   /** `--encoder hardware|software`. */
   readonly encoder: Option.Option<Encoder>;
   /** The wedge server `--level` started (`serveWedge`); none for no `--level`. */
@@ -335,19 +349,35 @@ export const jobOf = (flags: RenderFlags): Result.Result<RenderJob, FlagsConflic
     ...Arr.filter(['board'], () => flags.board),
     ...Arr.filter(['review'], () => flags.review),
     ...Arr.filter(['fresh'], () => freshOf(flags.reuse)),
+    ...Arr.filter(['share-only'], () => flags.shareOnly),
   ]);
   const workers = Option.map(flags.workers, (n) => Math.max(1, n));
   const software = Option.exists(flags.encoder, (e) => !sharesInPage(e));
-  // The share copy is the hardware encoder's, made in the page beside the master.
-  if (software && Option.getOrElse(flags.share, () => false))
+  // The share copy is the hardware encoder's, made in the page.
+  const askedShare = Arr.findFirst(
+    [
+      ['share-only', flags.shareOnly],
+      ['share', Option.getOrElse(flags.share, () => false)],
+    ] as const,
+    ([, asked]) => asked,
+  );
+  if (software && Option.isSome(askedShare))
     return Result.fail(
       FlagsConflict.make({
-        flag: 'share',
+        flag: askedShare.value[0],
         rule: 'excludes',
         other: 'encoder software',
-        reason: "the share copy is the hardware encoder's, made in the page beside the master",
+        reason: "the share copy is the hardware encoder's, made in the page",
       }),
     );
+  // A review render is watched, not sent: it makes its share copy only when
+  // asked. A software render makes none.
+  const share = Option.getOrElse(flags.share, () => !flags.review && !software);
+  const copies = Bool.match(flags.shareOnly, {
+    onTrue: (): Copies => 'share',
+    onFalse: (): Copies =>
+      Bool.match(share, { onTrue: () => 'master+share', onFalse: () => 'master' }),
+  });
   const base = {
     address: flags.scope.address,
     variant: flags.variant,
@@ -388,9 +418,7 @@ export const jobOf = (flags: RenderFlags): Result.Result<RenderJob, FlagsConflic
             to,
             scale: Option.getOrElse(flags.scale, () => 1),
             out: flags.out,
-            // A review render is watched, not sent: it makes its share copy only when
-            // asked. A software render makes none.
-            share: Option.getOrElse(flags.share, () => !flags.review && !software),
+            copies,
             encoder: flags.encoder,
             reuse: flags.reuse,
           }),
@@ -461,21 +489,23 @@ export const videoWorkers = (
 ): number => Option.getOrElse(workers, () => encoderLimits(encoder, cores).workers);
 
 /**
- * The encoders `workers` pages run, within `encoder`'s limit: one each, two
- * with a share copy the encoder makes in the page (`sharesInPage`).
+ * The encoders `workers` pages run, within `encoder`'s limit: one for each
+ * of `copies` the encoder makes in the page (`copiesInPage`), so two with the
+ * master and its share copy, one with either alone.
  */
 export const videoEncoders = (
   workers: number,
-  share: boolean,
+  copies: Copies,
   encoder: Encoder,
   cores: number,
 ): Result.Result<number, TooManyEncoders> => {
   const { max } = encoderLimits(encoder, cores);
-  const inPage = share && sharesInPage(encoder);
+  const inPage = copiesInPage(copies, encoder);
+  const both = hasMaster(inPage) && hasShare(inPage);
   return Result.liftPredicate(
-    workers * (1 + Number(inPage)),
+    workers * (1 + Number(both)),
     (n) => n <= max,
-    () => TooManyEncoders.make({ workers, share: inPage, max, encoder: encoderName(encoder) }),
+    () => TooManyEncoders.make({ workers, share: both, max, encoder: encoderName(encoder) }),
   );
 };
 

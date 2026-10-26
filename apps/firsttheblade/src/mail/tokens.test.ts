@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'effect-bun-test';
 import { Context, Effect, Exit, Layer, Option, Redacted } from 'effect';
 
+import { SubscriberId } from '../list/Subscriber.id.ts';
+import { Address } from './address.ts';
 import { layer, type Token, Tokens, type TokensService } from './tokens.ts';
 
 const KEY = Redacted.make('11'.repeat(32));
 const OTHER_KEY = Redacted.make('22'.repeat(32));
 
-const CONFIRM: Token = { _tag: 'Confirm', subscriber: 7, issued: 1_760_000_000_000 };
-const LEAVE: Token = { _tag: 'Unsubscribe', subscriber: 7 };
+const SUBSCRIBER = SubscriberId.make('AAAAAAAAAAAAAAAAAAAAAA');
+const CONFIRM: Token = { _tag: 'Confirm', subscriber: SUBSCRIBER, issued: 1_760_000_000_000 };
+const LEAVE: Token = { _tag: 'Unsubscribe', subscriber: SUBSCRIBER };
 
 /** Tokens signed under another key. */
 class OtherTokens extends Context.Service<OtherTokens, TokensService>()('test/OtherTokens') {}
@@ -49,9 +52,26 @@ describe('the list tokens', () => {
       const tokens = yield* Tokens;
       const other = yield* (yield* OtherTokens).sign(LEAVE);
       expect(yield* tokens.read(other)).toEqual(Option.none());
-      for (const text of ['', '.', 'u.7', 'u.7.', 'u.0.abc', 'x.7.abc', 'c.7.abc', 'u.7.1.abc']) {
+      const id = SUBSCRIBER;
+      const texts = ['', '.', `u.${id}`, `u.${id}.`, 'u.7.abc', `x.${id}.abc`, `c.${id}.abc`];
+      for (const text of [...texts, `u.${id}.1.abc`, `u.${id}A.abc`]) {
         expect(yield* tokens.read(text)).toEqual(Option.none());
       }
+    }));
+
+  test("name a subscriber by its address's hash: the same address, the same id", () =>
+    Effect.gen(function* () {
+      const tokens = yield* Tokens;
+      const ann = yield* tokens.idOf(Address.make('ann@example.com'));
+      expect(ann).toMatch(/^[A-Za-z0-9_-]{22}$/);
+      expect(ann).not.toContain('ann');
+      expect(yield* tokens.idOf(Address.make('ann@example.com'))).toBe(ann);
+      expect(yield* tokens.idOf(Address.make('ben@example.com'))).not.toBe(ann);
+      expect(yield* (yield* OtherTokens).idOf(Address.make('ann@example.com'))).not.toBe(ann);
+      const leave = yield* tokens.sign({ _tag: 'Unsubscribe', subscriber: ann });
+      expect(yield* tokens.read(leave)).toEqual(
+        Option.some({ _tag: 'Unsubscribe', subscriber: ann }),
+      );
     }));
 
   test('are refused a key shorter than 32 bytes', () =>

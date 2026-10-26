@@ -20,7 +20,7 @@ import * as Retry from '@distilled.cloud/cloudflare/Retry';
 import * as T from '@distilled.cloud/cloudflare/Traits';
 import * as API from '@distilled.cloud/core/api';
 import { AuthProviders } from 'alchemy/Auth';
-import * as Cloudflare from 'alchemy/Cloudflare';
+import * as Cloudflare from '@alchemy.run/cloudflare';
 import { Effect, Layer, Option, Predicate, Schema, Stream } from 'effect';
 import { FetchHttpClient, HttpClientError } from 'effect/http';
 

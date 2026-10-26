@@ -3,7 +3,8 @@
  * (`./screening.ts`), read off `out/<film>/catalogue.json`:
  *
  * - `board`: the newest whole-film video of the `board` variant
- *   (`film render <film> --board --share`);
+ *   (`film render <film> --board --share-only`, or any `--board` render
+ *   with its share copy);
  * - `render`, and a `final` with no `--from`: the newest full render of the
  *   film, the `main` variant at full scale. A look wedge (a `--level`
  *   render, its own variant), a Board render under any variant name, a

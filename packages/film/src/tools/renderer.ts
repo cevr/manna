@@ -5,7 +5,8 @@
 // (copied, not re-encoded) with the audio cut from the lossless master and
 // encoded to AAC. A video of the film, an act or a scene keeps each beat's
 // chunks under the film's project folder by what its frames read
-// (`segments.ts`) and draws only the beats it has not kept. The server, the
+// (`segments.ts`) and draws only the beats it has not kept; once done, it
+// deletes the film's segments no render has used for a week. The server, the
 // browser and every page (a pool of `Pages`) live in one scope: a failure, or
 // Ctrl-C, closes them all.
 
@@ -35,7 +36,10 @@ import {
   EncoderChoice,
   encoderCandidates,
   encoderName,
-  sharesInPage,
+  type Copies,
+  copiesInPage,
+  hasMaster,
+  hasShare,
 } from '../core/encoder.ts';
 import { filmCaptions, shortCaptions, webVtt } from '../core/captions.ts';
 import { Picture, boardShots, pictureParams } from '../core/board-render.ts';
@@ -65,9 +69,11 @@ import {
   type PageCrashed,
   type PageError,
   RangeEmpty,
+  type CacheEscapes,
   type TooManyEncoders,
 } from './errors.ts';
 import { writeWhole } from './content-store.ts';
+import { PRUNE_DAYS, forgetRender, holdCache, pruneHeld, recordRender } from './segment-cache.ts';
 import { sha256OfFile } from './digest.ts';
 import {
   type BoardRead,
@@ -78,7 +84,7 @@ import {
   keepSegment,
   keptFolder,
   keptNames,
-  keptSegment,
+  reuseSegment,
   segmentsFolder,
 } from './segments.ts';
 import { type LoadedFilm, type PlaceError, masterFile, placeFilm } from './film-repo.ts';
@@ -136,16 +142,16 @@ export const Platform = Context.Reference<string>('@manna/film/tools/Platform', 
 });
 
 /**
- * The first of `candidates` `page` can encode the film with at `scale`, its
- * share copy included when `share`; `EncoderMissing` when none can.
+ * The first of `candidates` `page` can encode the film with at `scale` into
+ * each of `copies`; `EncoderMissing` when none can.
  */
 const pageEncoder = (
   page: FramePage,
   scale: number,
-  share: boolean,
+  copies: Copies,
   candidates: ReadonlyArray<Encoder>,
 ) =>
-  page.call('encoder', scale, share, candidates).pipe(
+  page.call('encoder', scale, copies, candidates).pipe(
     Effect.flatMap((choice) =>
       EncoderChoice.match(choice, {
         Hardware: (found) => Effect.succeed<Encoder>(found),
@@ -175,7 +181,7 @@ export const encoderReady: Effect.Effect<
     const browser = yield* makeBrowser;
     const page = yield* browser.open(`${server.url}?export`);
     const candidates = encoderCandidates(Option.none());
-    const encoder = yield* pageEncoder(page, 1, true, candidates);
+    const encoder = yield* pageEncoder(page, 1, 'master+share', candidates);
     const cores = yield* Cores;
     const { workers, max } = encoderLimits(encoder, cores);
     return `${encoderName(encoder)} H.264, ${workers} pages by default, at most ${max} encoders at once (${cores} cores)`;
@@ -198,6 +204,7 @@ type RenderError =
   | TooManyEncoders
   | PlaceError
   | ShortError
+  | CacheEscapes
   | PlatformError;
 
 /**
@@ -289,7 +296,7 @@ const probeKey = (
 ): string => {
   const asked = Option.match(job.encoder, { onNone: () => 'any', onSome: (e) => e._tag });
   const server = Option.getOrElse(job.server, () => 'preview');
-  return `${page}|captions=${job.captions}|scale=${job.scale}|share=${job.share}|encoder=${asked}|server=${server}|picture=${pictureParams(job.picture).join('+')}|${platform}`;
+  return `${page}|captions=${job.captions}|scale=${job.scale}|copies=${job.copies}|encoder=${asked}|server=${server}|picture=${pictureParams(job.picture).join('+')}|${platform}`;
 };
 
 /**
@@ -502,7 +509,7 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
               // Before a frame is drawn: a browser that cannot encode the film with
               // one of the encoders the render allows fails here.
               const candidates = encoderCandidates(job.encoder);
-              const by = yield* first.use((one) => pageEncoder(one, k, job.share, candidates));
+              const by = yield* first.use((one) => pageEncoder(one, k, job.copies, candidates));
               const probed: Probed = { info: first.info, short: found, scale: k, encoder: by };
               return probed;
             }),
@@ -555,7 +562,7 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         const cores = yield* Cores;
         const workers = videoWorkers(job.workers, encoder, cores);
         const encoders = yield* Effect.fromResult(
-          videoEncoders(workers, job.share, encoder, cores),
+          videoEncoders(workers, job.copies, encoder, cores),
         );
         yield* Effect.log(
           `render.encoder kind=${encoderName(encoder)} workers=${workers} encoders=${encoders} cores=${cores}`,
@@ -584,10 +591,8 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         const work = yield* fs.makeTempDirectoryScoped({ prefix: 'film-segments-' });
         const segDir = path.join(work, 'segments');
         const shareDir = path.join(work, 'share');
-        yield* fs.makeDirectory(segDir);
-        // The hardware encoder makes the share copy in the page, chunk by chunk.
-        const shareInPage = job.share && sharesInPage(encoder);
-        if (shareInPage) yield* fs.makeDirectory(shareDir);
+        // The copies the page encodes, chunk by chunk: the hardware encoder makes the share copy there.
+        const copies = copiesInPage(job.copies, encoder);
 
         // The frames split at the beats into segments, each kept by its key
         // under the film's project folder: a render draws only the segments
@@ -603,7 +608,6 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
           fps: info.fps,
           scale,
           encoder: encoderName(encoder),
-          share: shareInPage,
           captions: job.captions,
           picture: pictureParams(job.picture),
           agent: Option.getOrElse(Option.fromUndefinedOr(info.agent), () => ''),
@@ -623,20 +627,47 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
             ),
         });
         const fresh = Option.exists(keeping, (k) => k.fresh);
-        // --fresh finds no kept copy, and drops each one's record before it draws it again.
+        /** The services the film's cache is read, held and pruned through. */
+        const onDisk = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+          effect.pipe(
+            Effect.provideService(FileSystem.FileSystem, fs),
+            Effect.provideService(Path.Path, path),
+          );
+        // A render that keeps segments holds the film's cache from before it
+        // picks them until it is done, its prune included: no prune deletes
+        // what it reads or draws, and another render of the film waits its turn.
+        if (Option.isSome(keeping)) yield* onDisk(holdCache(film.paths.out));
+        /** This render's mark: each segment it reuses or keeps is recorded as used at it. */
+        const used = yield* Clock.currentTimeMillis;
+        // --fresh finds no kept copy: it draws every segment again.
         const kept = yield* Effect.forEach(segments, (segment) =>
-          Option.match(segment.key, {
-            onNone: () => Effect.succeedNone,
-            onSome: (key) =>
-              Bool.match(fresh, {
-                onTrue: () => Effect.as(dropSegment(fs, path, folder, key), Option.none()),
-                onFalse: () => keptSegment(fs, path, folder, key),
-              }),
-          }),
+          Option.match(
+            Option.filter(segment.key, () => !fresh),
+            {
+              onNone: () => Effect.succeedNone,
+              onSome: (key) => reuseSegment(fs, path, folder, key, copies, used),
+            },
+          ),
         );
         /** The segments to draw, each with its place among all of them. */
         const missing = segments.flatMap((segment, at) =>
           Arr.filter([{ ...segment, at }], () => Option.isNone(kept[at] ?? Option.none())),
+        );
+        // A segment to draw has no record while it is drawn (one whose files
+        // are gone, or a --fresh render's, loses its own), so a prune leaves
+        // its folder alone; its mark, kept as it is drawn again, is the
+        // later of the record's and this render's, so it never goes back.
+        const marks = yield* Effect.forEach(missing, (segment) =>
+          Option.match(segment.key, {
+            onNone: () => Effect.succeed(used),
+            onSome: (key) =>
+              Effect.map(dropSegment(fs, path, folder, key), (was) =>
+                Math.max(
+                  used,
+                  Option.getOrElse(was, () => used),
+                ),
+              ),
+          }),
         );
         const chunks = segmentChunks(missing, workers);
         const toDraw = chunks.reduce((sum, chunk) => sum + chunk.to - chunk.from, 0);
@@ -673,6 +704,16 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
             );
           });
 
+        /** A copy the page made, written whole to `file` in its folder: the file; none for a copy it did not make. */
+        const writeCopy = (bytes: Option.Option<Uint8Array>, file: string) =>
+          Option.match(bytes, {
+            onNone: () => Effect.succeedNone,
+            onSome: (made) =>
+              fs
+                .makeDirectory(path.dirname(file), { recursive: true })
+                .pipe(Effect.andThen(bytesWhole(file, made)), Effect.as(Option.some(file))),
+          });
+
         /**
          * One chunk drawn and encoded on whichever page of `pool` is free, to
          * its own files (`filesOf`, each written whole); a crashed page is
@@ -688,20 +729,15 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
                   chunk.from,
                   chunk.to,
                   scale,
-                  job.share,
+                  copies,
                   encoder,
                 );
                 const wall = (yield* Clock.currentTimeMillis) - sent;
                 const files = filesOf(chunk);
-                yield* fs.makeDirectory(path.dirname(files.master), { recursive: true });
-                yield* bytesWhole(files.master, encoded.master);
-                const share = yield* Option.match(encoded.share, {
-                  onNone: () => Effect.succeedNone,
-                  onSome: (bytes) =>
-                    Effect.as(bytesWhole(files.share, bytes), Option.some(files.share)),
-                });
+                const master = yield* writeCopy(encoded.master, files.master);
+                const share = yield* writeCopy(encoded.share, files.share);
                 yield* progress(chunk, chunkTime(chunk, encoded.timing, wall));
-                return { chunk, master: files.master, share };
+                return { chunk, master, share };
               }),
             )
             .pipe(
@@ -737,8 +773,10 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
                   .map((e) => ({
                     from: e.chunk.from,
                     to: e.chunk.to,
+                    master: Option.isSome(e.master),
                     share: Option.isSome(e.share),
                   })),
+                marks[k] ?? used,
               ),
           }),
         );
@@ -754,24 +792,38 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
           }),
         );
         const atOf = (from: number) => (from - start) / info.fps;
-        yield* media.join({
-          out: target,
-          segments: all.map((c) => ({ file: c.master, at: atOf(c.from) })),
-          frames: total,
-          audio: track,
+        /** The master at `target`, when the render writes one. */
+        const masterAt = Option.filter(Option.some(target), () => hasMaster(copies));
+        /** The share copy beside it, when the render writes one (the hardware encoder's, made in the page). */
+        const shared = Option.filter(Option.some(shareName(target)), () => hasShare(copies));
+        /** The file the render's cache record is of: its master, else its share copy. */
+        const lead = Bool.match(hasMaster(copies), {
+          onTrue: () => target,
+          onFalse: () => shareName(target),
         });
-        /** The hardware encoder's share: its copies from the page, joined as the master is. */
-        const joinedShare = (out: string) =>
-          media.join({
-            out,
-            segments: all.flatMap((c) =>
-              Option.toArray(Option.map(c.share, (file) => ({ file, at: atOf(c.from) }))),
-            ),
-            frames: total,
-            audio: track,
-          });
-        const shared = Option.filter(Option.some(shareName(target)), () => shareInPage);
-        yield* Option.match(shared, { onNone: () => Effect.void, onSome: joinedShare });
+        // The records of the files it replaces go before they are replaced
+        // (under the cache's lock when the render keeps segments), so no
+        // prune keeps by what an older render of them used; its own is
+        // written once done.
+        yield* Effect.forEach([target, shareName(target)], (file) =>
+          onDisk(forgetRender(film.paths.out, file)),
+        );
+        /** One copy's chunks, picked by `copy`, joined in order with the track into `out`. */
+        const joined =
+          (copy: (c: (typeof all)[number]) => Option.Option<string>) => (out: string) =>
+            media.join({
+              out,
+              segments: all.flatMap((c) =>
+                Option.toArray(Option.map(copy(c), (file) => ({ file, at: atOf(c.from) }))),
+              ),
+              frames: total,
+              audio: track,
+            });
+        yield* Option.match(masterAt, {
+          onNone: () => Effect.void,
+          onSome: joined((c) => c.master),
+        });
+        yield* Option.match(shared, { onNone: () => Effect.void, onSome: joined((c) => c.share) });
 
         const captions = captionsName(target);
         const cues = Option.match(where.short, {
@@ -832,11 +884,39 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         const secs = ((yield* Clock.currentTimeMillis) - began) / 1000;
         const spent = yield* Ref.get(done);
         yield* Effect.log(
-          `render.done frames=${total} chunks=${chunks.length} audio=${Option.isSome(audio)} secs=${secs.toFixed(1)} fps=${(total / secs).toFixed(1)} ${perFrame(spent)} file=${target} share=${Option.getOrElse(shared, () => 'none')} captions=${captions}`,
+          `render.done frames=${total} chunks=${chunks.length} audio=${Option.isSome(audio)} secs=${secs.toFixed(1)} fps=${(total / secs).toFixed(1)} ${perFrame(spent)} file=${Option.getOrElse(masterAt, () => 'none')} share=${Option.getOrElse(shared, () => 'none')} captions=${captions}`,
         );
+        // Once done (still holding the cache when it keeps segments), the
+        // render records the keys it used for its lead file (its master, else
+        // its share copy), none when it keeps none. One that keeps segments
+        // then prunes the film's: each no render used for PRUNE_DAYS and no
+        // record names goes. A record or a
+        // prune that fails leaves the render done; a file left with no record
+        // has `--days 0` refused until it is rendered again.
+        const keys = segments.flatMap((s) => Option.toArray(s.key));
+        yield* onDisk(recordRender(film.paths.out, lead, used, keys)).pipe(
+          Effect.catch((error) =>
+            Effect.logWarning(`render.cache.record failed file=${lead} reason="${error.message}"`),
+          ),
+        );
+        if (Option.isSome(keeping)) {
+          const now = yield* Clock.currentTimeMillis;
+          yield* onDisk(
+            pruneHeld(film.paths.out, { now, days: PRUNE_DAYS, keep: new Set(keys) }, false),
+          ).pipe(
+            Effect.flatMap((pruned) =>
+              Effect.log(
+                `render.cache.pruned count=${pruned.removed.length} freed=${pruned.freed}`,
+              ),
+            ),
+            Effect.catch((error) =>
+              Effect.logWarning(`render.cache.prune failed reason="${error.message}"`),
+            ),
+          );
+        }
         const written: RenderOutput = {
           kind: 'video',
-          clip: Option.some(target),
+          clip: masterAt,
           share: shared,
           captions: Option.some(captions),
           chapters,

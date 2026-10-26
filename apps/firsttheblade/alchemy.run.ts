@@ -18,7 +18,7 @@
  * `bunx alchemy destroy alchemy.run.ts --stage <name>`.
  */
 import * as Alchemy from 'alchemy';
-import * as Cloudflare from 'alchemy/Cloudflare';
+import * as Cloudflare from '@alchemy.run/cloudflare';
 import { Effect } from 'effect';
 
 import { prodGate } from './kit/shippable.ts';

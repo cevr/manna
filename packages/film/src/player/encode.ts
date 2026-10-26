@@ -16,7 +16,7 @@ import {
   type VideoEncodingConfig,
   canEncodeVideo,
 } from 'mediabunny';
-import type { Encoder, EncoderChoice } from '../core/encoder.ts';
+import type { Copies, Encoder, EncoderChoice } from '../core/encoder.ts';
 
 /** How one encoder encodes the master, and the share copy when it makes one in the page. */
 interface Settings {
@@ -125,29 +125,51 @@ export const config = (
   return { ...base, transform: { ...encodedSize(width, height, scale), fit: 'fill' } };
 };
 
-/** The qualities `encoder` encodes in the page: the master's, then the share copy's when `share` and it makes one there. */
-export const qualities = (encoder: Encoder, share: boolean): ReadonlyArray<Quality> => {
+/** One copy the page encodes, and the quality it is encoded at. */
+interface Copy {
+  readonly copy: 'master' | 'share';
+  readonly quality: Quality;
+}
+
+/** The copies each choice of `Copies` holds. */
+const HOLDS = {
+  master: ['master'],
+  'master+share': ['master', 'share'],
+  share: ['share'],
+} as const satisfies Readonly<Record<Copies, ReadonlyArray<Copy['copy']>>>;
+
+/**
+ * The copies `encoder` encodes in the page of `copies`, each at its quality:
+ * the master's, then the share copy's where it makes one there.
+ */
+export const qualities = (encoder: Encoder, copies: Copies): ReadonlyArray<Copy> => {
   const settings = SETTINGS[encoder._tag];
-  return [settings.master, ...(share && settings.share !== null ? [settings.share] : [])];
+  const share = [settings.share].flatMap((quality): ReadonlyArray<Copy> => {
+    if (quality === null) return [];
+    return [{ copy: 'share', quality }];
+  });
+  const held: ReadonlyArray<Copy['copy']> = HOLDS[copies];
+  return [{ copy: 'master', quality: settings.master } satisfies Copy, ...share].filter((c) =>
+    held.includes(c.copy),
+  );
 };
 
 /**
  * The encoder this browser encodes the film with at `scale`: the first of
- * `candidates` that takes the master's settings, and the share copy's when
- * `share` and that encoder makes it in the page. The renderer asks once,
- * before drawing a frame.
+ * `candidates` that takes the settings of each of `copies` it encodes in the
+ * page. The renderer asks once, before drawing a frame.
  */
 export const encoderChoice = (
   canvas: HTMLCanvasElement,
   fps: number,
   scale: number,
-  share: boolean,
+  copies: Copies,
   candidates: ReadonlyArray<Encoder>,
 ): Promise<EncoderChoice> => {
   const size = encodedSize(canvas.width, canvas.height, scale);
   const can = (encoder: Encoder) =>
     Promise.all(
-      qualities(encoder, share).map((quality) =>
+      qualities(encoder, copies).map(({ quality }) =>
         canEncodeVideo('avc', {
           ...size,
           quality,
@@ -165,9 +187,9 @@ export const encoderChoice = (
   );
 };
 
-/** A chunk encoded: the master, and the share copy when one was made in the page. */
+/** A chunk encoded: each copy made in the page, the master and the share copy. */
 interface EncodedChunk {
-  readonly master: Uint8Array;
+  readonly master: Uint8Array | undefined;
   readonly share: Uint8Array | undefined;
 }
 
@@ -272,8 +294,8 @@ const rendition = (
 
 /**
  * Frames `[from, to)` drawn by `draw` onto `canvas` and encoded by `encoder`
- * as an MP4 whose first frame plays at 0, and with `share`, when `encoder`
- * makes one in the page, a small copy encoded in the same pass.
+ * into each of `copies` it makes in the page (the master, the small share
+ * copy, or both in the same pass), each an MP4 whose first frame plays at 0.
  */
 export const encodeChunk = async (
   draw: (i: number) => Promise<void>,
@@ -282,14 +304,16 @@ export const encodeChunk = async (
   from: number,
   to: number,
   scale: number,
-  share: boolean,
+  copies: Copies,
   encoder: Encoder,
 ): Promise<EncodedChunk> => {
-  const [master, ...copies] = qualities(encoder, share).map((quality) =>
-    rendition(canvas, fps, scale, encoder, quality),
-  );
-  if (master === undefined) throw new Error('no master to encode');
-  const all = [master, ...copies];
+  const made = qualities(encoder, copies).map(({ copy, quality }) => ({
+    copy,
+    rendition: rendition(canvas, fps, scale, encoder, quality),
+  }));
+  if (made.length === 0) throw new Error(`${encoder._tag} makes none of ${copies} in the page`);
+  const all = made.map((m) => m.rendition);
+  const bytesOf = (copy: Copy['copy']) => made.find((m) => m.copy === copy)?.rendition.bytes();
   // One frame at a time: the canvas is drawn again only once every encoder has taken it.
   const frames = async () => {
     await Promise.all(all.map((r) => r.start()));
@@ -305,5 +329,5 @@ export const encodeChunk = async (
     await Promise.all(all.map((r) => r.cancel()));
     throw e;
   });
-  return { master: master.bytes(), share: copies[0]?.bytes() };
+  return { master: bytesOf('master'), share: bytesOf('share') };
 };
