@@ -1,7 +1,7 @@
 /**
  * The hymnal's topics, built one way for the compile script and for the test
- * that holds the committed file to it: hymnal.db's sections (`categories`)
- * and each hymn's section (`category_id`), with the print's corrections
+ * that holds the committed file to it: source-text.json's sections (`categories`)
+ * and each hymn's section (`categoryId`), with the print's corrections
  * from `data/fixes/topics.json` applied (a range the print files under
  * another section, a name the print gives otherwise). The result must be a
  * partition of 1–695, one range per section: a section split in two, a
@@ -112,7 +112,7 @@ export const buildTopics = (rows: Rows, fixes: Fixes): Effect.Effect<Topics, Top
     );
   });
 
-/** The rows of hymns 1–695 and the sections, read through `HymnalService`. */
+/** Source rows 1–695 and sections, through the independent source-text layer. */
 export const readRows = Effect.gen(function* () {
   const hymnal = yield* HymnalService;
   const categories = yield* hymnal.getCategories;

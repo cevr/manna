@@ -1,6 +1,6 @@
 /**
  * Text fidelity, the class property: every hymn 1-695, compiled fresh from
- * its hymnal.db row and its MIDI file (the source the compile script builds,
+ * its source-text row and its MIDI file (the source the compile script builds,
  * compiled in `fidelity-worker.ts` off this thread), sings exactly its printed text in the order the hymnal sings it, line for
  * line: nothing missing, nothing extra, nothing moved. A line is compared as
  * the golden compares a syllable: case and punctuation ignored (each word's
@@ -19,20 +19,10 @@
  */
 
 import { HymnalService, HymnId } from '@manna/core/hymnal';
-import { layerHymnalBun } from '@manna/core/hymnal/bun';
+import { layerSourceText } from '../scripts/source-text.js';
 import { BunWorker } from '@effect/platform-bun';
 import * as BunServices from '@effect/platform-bun/BunServices';
-import {
-  Array as Arr,
-  Cause,
-  ConfigProvider,
-  Deferred,
-  Effect,
-  FileSystem,
-  Layer,
-  Result,
-  Schema,
-} from 'effect';
+import { Array as Arr, Cause, Deferred, Effect, FileSystem, Layer, Result, Schema } from 'effect';
 import * as Worker from 'effect/workers/Worker';
 import { describe, expect, it } from 'effect-bun-test';
 
@@ -41,16 +31,7 @@ import { type Hymn, type Part, sung } from './hymn.js';
 const data = (file: string) => new URL(`../data/${file}`, import.meta.url).pathname;
 
 const layer = Layer.merge(
-  layerHymnalBun.pipe(
-    Layer.provide(BunServices.layer),
-    Layer.provide(
-      ConfigProvider.layer(
-        ConfigProvider.fromEnv({
-          env: { HOME: '/', HYMNAL_DB_PATH: data('../../core/data/hymnal.db') },
-        }),
-      ),
-    ),
-  ),
+  layerSourceText.pipe(Layer.provide(BunServices.layer)),
   BunServices.layer,
 );
 

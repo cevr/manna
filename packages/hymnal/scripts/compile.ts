@@ -1,8 +1,8 @@
 /**
  * Compiles every hymn of the 1985 SDA Hymnal (1–695) from its text in
- * hymnal.db and its MIDI file into the files the app reads:
+ * data/source-text.json and its MIDI file into the files the app reads:
  *
- *   bun run compile [--db <hymnal.db>] [--midi <dir>] [--out <dir>] [--key <dir>]
+ *   bun run compile [--midi <dir>] [--out <dir>] [--key <dir>]
  *
  * It writes `<out>/NNN.json` (one hymn each) and `<out>/index.json`, decodes
  * each file back through the schema, and writes the report beside the
@@ -11,9 +11,9 @@
  * order (each sung otherwise than after each stanza in its sung order), the
  * topics with their witnesses, the alignment key's comparison and the time
  * taken. It writes `<out>/topics.json`, the hymnal's sections as hymn ranges
- * (`./topics.ts`, from hymnal.db and `data/fixes/topics.json`), and decodes
+ * (`./topics.ts`, from source text and `data/fixes/topics.json`), and decodes
  * it back. Paths default to the
- * repository's (`packages/core/data/hymnal.db`, `packages/hymnal/data/midi`,
+ * repository's (`packages/hymnal/data/source-text.json`, `packages/hymnal/data/midi`,
  * `packages/hymnal/data/sdah-1985`, `packages/hymnal/data/key`); where a
  * refrain is sung comes from `data/fixes/refrains.json` (`./sources.ts`).
  * The same inputs give byte-identical hymn files.
@@ -21,8 +21,7 @@
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { HymnalService, HymnId } from '@manna/core/hymnal';
-import { layerHymnalBun } from '@manna/core/hymnal/bun';
-import { ConfigProvider, Data, Effect, Layer, Option, Result, Schema } from 'effect';
+import { Data, Effect, Layer, Option, Result, Schema } from 'effect';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -39,6 +38,7 @@ import {
   Topics,
 } from '../src/hymn.js';
 import { decodeOrders, HELD, sourceOf } from './sources.js';
+import { layerSourceText } from './source-text.js';
 import { buildTopics, decodeFixes, type Fixes, readRows } from './topics.js';
 
 const ROOT = path.resolve(import.meta.dir, '../../..');
@@ -50,7 +50,6 @@ const flag = (name: string, fallback: string) => {
   const at = args.indexOf(name);
   return path.resolve(ROOT, at < 0 ? fallback : (args[at + 1] ?? fallback));
 };
-const db = flag('--db', 'packages/core/data/hymnal.db');
 const midiDir = flag('--midi', 'packages/hymnal/data/midi');
 const out = flag('--out', 'packages/hymnal/data/sdah-1985');
 const keyDir = flag('--key', 'packages/hymnal/data/key');
@@ -403,13 +402,6 @@ const program = Effect.gen(function* () {
   if (failed.length > 0 || decoded !== compiled.length) process.exitCode = 1;
 });
 
-const layer = layerHymnalBun.pipe(
-  Layer.provide(BunServices.layer),
-  Layer.provide(
-    ConfigProvider.layer(
-      ConfigProvider.fromEnv({ env: { HOME: process.env['HOME'] ?? '', HYMNAL_DB_PATH: db } }),
-    ),
-  ),
-);
+const layer = layerSourceText.pipe(Layer.provide(BunServices.layer));
 
 await Effect.runPromise(program.pipe(Effect.provide(layer)));

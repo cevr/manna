@@ -1,7 +1,7 @@
 import { HymnalService, HymnId } from '@manna/core/hymnal';
-import { layerHymnalBun } from '@manna/core/hymnal/bun';
+import { layerSourceText } from '../scripts/source-text.js';
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { ConfigProvider, Effect, Layer } from 'effect';
+import { Effect, Layer } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
 import { sourceOf } from '../scripts/sources.js';
@@ -709,20 +709,8 @@ describe('compile: trust', () => {
   );
 });
 
-/** The tracked hymnal.db, read as the compile script reads it. */
-const hymnal = layerHymnalBun.pipe(
-  Layer.provide(BunServices.layer),
-  Layer.provide(
-    ConfigProvider.layer(
-      ConfigProvider.fromEnv({
-        env: {
-          HOME: '/',
-          HYMNAL_DB_PATH: new URL('../../core/data/hymnal.db', import.meta.url).pathname,
-        },
-      }),
-    ),
-  ),
-);
+/** The independent captured source, read as the compile script reads it. */
+const hymnal = layerSourceText.pipe(Layer.provide(BunServices.layer));
 
 /** A part's first line as sung or printed. */
 const firstLine = (part: Part | undefined) =>
@@ -787,7 +775,7 @@ describe('compile: verse layout', () => {
   );
 
   it.effect(
-    'reads hymn 593 from hymnal.db as three stanzas, each with the refrain ending the print sings after it',
+    'reads hymn 593 from source text as three stanzas, each with the refrain ending the print sings after it',
     () =>
       Effect.gen(function* () {
         const text = yield* (yield* HymnalService).getHymn(HymnId.make(593));
@@ -808,7 +796,7 @@ describe('compile: verse layout', () => {
   );
 
   it.effect(
-    'reads hymn 220 from hymnal.db as three stanzas, each with the refrain lines its own row prints',
+    'reads hymn 220 from source text as three stanzas, each with the refrain lines its own row prints',
     () =>
       Effect.gen(function* () {
         const text = yield* (yield* HymnalService).getHymn(HymnId.make(220));
@@ -823,7 +811,7 @@ describe('compile: verse layout', () => {
       }).pipe(Effect.provide(hymnal)),
   );
 
-  it.effect("reads hymn 628 from hymnal.db with stanza 2's four printed lines", () =>
+  it.effect("reads hymn 628 from source text with stanza 2's four printed lines", () =>
     Effect.gen(function* () {
       const text = yield* (yield* HymnalService).getHymn(HymnId.make(628));
       const hymn = yield* compile({

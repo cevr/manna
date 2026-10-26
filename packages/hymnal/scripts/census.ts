@@ -66,19 +66,10 @@
  */
 
 import { HymnalService, HymnId } from '@manna/core/hymnal';
-import { layerHymnalBun } from '@manna/core/hymnal/bun';
+import { layerSourceText } from './source-text.js';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Database } from 'bun:sqlite';
-import {
-  ConfigProvider,
-  Effect,
-  FileSystem,
-  Layer,
-  Option,
-  Predicate,
-  Schema,
-  Struct,
-} from 'effect';
+import { Effect, FileSystem, Layer, Option, Predicate, Schema, Struct } from 'effect';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 
@@ -3517,21 +3508,9 @@ export const censusLines = (
   ];
 };
 
-/** The hymnal over the committed hymnal.db, and Bun's services: what `loadSources` reads through. */
+/** Independent captured source and Bun services; historical Git rows stay a separate oracle. */
 export const censusLayer = Layer.merge(
-  layerHymnalBun.pipe(
-    Layer.provide(BunServices.layer),
-    Layer.provide(
-      ConfigProvider.layer(
-        ConfigProvider.fromEnv({
-          env: {
-            HOME: process.env['HOME'] ?? '',
-            HYMNAL_DB_PATH: path.resolve(DATA, '../../core/data/hymnal.db'),
-          },
-        }),
-      ),
-    ),
-  ),
+  layerSourceText.pipe(Layer.provide(BunServices.layer)),
   BunServices.layer,
 );
 

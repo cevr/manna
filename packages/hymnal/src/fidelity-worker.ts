@@ -2,17 +2,17 @@
  * The fidelity test's compiler, run off the test's thread so the 695 fresh
  * compiles share the machine's cores (Effect's `BunWorkerRunner`; the test
  * spawns it through `BunWorker`). Given hymn numbers, it compiles each from
- * its hymnal.db row and its MIDI file, through `sourceOf` and `compile` as
+ * its source-text row and its MIDI file, through `sourceOf` and `compile` as
  * the compile script does, and sends each hymn back as soon as it is done:
  * the hymn, or why it failed. The oracle stays in the test: this file builds
  * no expected line.
  */
 
 import { HymnalService, HymnId } from '@manna/core/hymnal';
-import { layerHymnalBun } from '@manna/core/hymnal/bun';
+import { layerSourceText } from '../scripts/source-text.js';
 import { BunWorkerRunner } from '@effect/platform-bun';
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { Cause, ConfigProvider, Effect, FileSystem, Layer, Result } from 'effect';
+import { Cause, Effect, FileSystem, Layer, Result } from 'effect';
 import * as WorkerRunner from 'effect/workers/WorkerRunner';
 
 import { decodeOrders, sourceOf } from '../scripts/sources.js';
@@ -27,16 +27,7 @@ type Done =
 const data = (file: string) => new URL(`../data/${file}`, import.meta.url).pathname;
 
 const layer = Layer.merge(
-  layerHymnalBun.pipe(
-    Layer.provide(BunServices.layer),
-    Layer.provide(
-      ConfigProvider.layer(
-        ConfigProvider.fromEnv({
-          env: { HOME: '/', HYMNAL_DB_PATH: data('../../core/data/hymnal.db') },
-        }),
-      ),
-    ),
-  ),
+  layerSourceText.pipe(Layer.provide(BunServices.layer)),
   BunServices.layer,
 );
 
