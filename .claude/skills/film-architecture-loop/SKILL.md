@@ -36,7 +36,7 @@ The ledger is `apps/animations/plans/architecture-loop-<date>.md`: the single so
 
 11. **Live check.** After each merge, or a small group of merges, drive what the batch changed:
     - Films: none is checked, rendered, mixed or reviewed, and no still, clip or montage is made for the owner, until he asks for scene review (owner, 2026-10-01). The batch's diff is the review of what it draws.
-    - Lab: `bun run lab` in the background (`FILM_STAGING_FILL=false LAB_PORT=<free port>` so it does not meet the owner's lab on 8229 or spend ElevenLabs characters), open `/films/<film>/lab`, then drive the changed controls with `agent-browser` (load the `agent-browser` skill); a write-back must leave a clean `git diff` after undo.
+    - Lab: `bun run lab` in the background (`FILM_STAGING_FILL=false LAB_PORT=<free port>` so it does not meet the owner's lab on 8229 or spend ElevenLabs characters), open an ask that shows the changed material (`/asks/<ask>`), then drive the changed controls with `agent-browser` (load the `agent-browser` skill); a write-back must leave a clean `git diff` after undo.
     - Performance: rerun the rows in [`performance.md`](performance.md) the batch claimed to move. Note `uptime` before and after; a number taken at a load average over 4 claims neither a regression nor a win.
 
     A defect found here becomes a live-fix batch (step 8). Done when the results match intent, the ledger has a live-check row, and every process you started is stopped.

@@ -78,7 +78,7 @@ import { Effect, FileSystem, Layer, Option, Path, Predicate, Schema } from 'effe
 import type { PlatformError } from 'effect/PlatformError';
 import { JSONC, TOML } from 'bun';
 import { type Node, type Program, Visitor, parseSync } from 'oxc-parser';
-import { LabHttpApi } from './core/api.ts';
+import { LabHttpApi, pageAt } from './core/api.ts';
 import { declares as declaresRoute, routesOf } from './core/testing.ts';
 import { fieldsOf } from './tools/lab-fields.ts';
 import { allCommands } from './tools/lab-commands.ts';
@@ -213,6 +213,25 @@ const spanDrift = (markdown: Markdown, code: Code) => {
     }),
   );
 };
+
+/** A path under one of the lab's page roots: a page, or a file route served beside the pages. */
+const PAGE_PATH = /^\/(?:films|sets|series|folders|productions|asks|studio)\/\S*$/;
+/** The lab's file routes beside its pages, each word of the path written `x`: a film's narration and its Board's files. */
+const SERVED_BESIDE = /^\/films\/x\/(?:narration\/x|board\.json|board\/x)$/;
+
+/**
+ * Each lab page a text writes in a span (`/asks/<ask>`, `/films/<film>/export?build=<kept>`),
+ * its words (`<film>`, `:film`) any: a page `pageAt` serves, or a file route beside them.
+ * A framework doc's only: the prior arts record each page as it landed.
+ */
+const pageDrift = (markdown: Markdown) =>
+  matches(proseOf(markdown), SPAN).flatMap((m) => {
+    const span = group(m, 2).trim();
+    if (!PAGE_PATH.test(span)) return [];
+    const path = span.replace(/[?#].*$/, '').replace(/<[^>]+>|:[a-z]+/g, 'x');
+    if (Option.isSome(pageAt(path)) || SERVED_BESIDE.test(path)) return [];
+    return [`page ${span} is no page of the lab`];
+  });
 
 /**
  * Each rule a doc names, in the form the plugin registers (`film/no-read-once`,
@@ -672,6 +691,7 @@ const drift = (doc: Doc, code: Code): ReadonlyArray<string> => {
   return [
     ...routeDrift(markdown, code),
     ...spanDrift(markdown, code),
+    ...pageDrift(markdown),
     ...ruleDrift(markdown, code),
     ...scriptDrift(markdown, code),
     ...markdown.lines.flatMap((line) => [
@@ -1366,6 +1386,7 @@ describe('the docs', () => {
           'bun run render <film> --tag p7   # render a tagged variant',
           'bun run check <film>             # warns VoiceLevel, SeamLong',
           'Its frame is `/review/frame`; say it with `POST /review/project/<film>/say`.',
+          'Hand him `/films/<film>/project` or `/sets/<folder>`, never `/asks/<ask>` nor `/films/<film>/export?build=<kept>` nor `/films/<film>/narration/<file>`.',
           'Every page a Place (`packages/film/src/core/api.ts` `Places`, `pageHrefs`).',
           'The review is read by `tools/review.ts` `Review.write`, the bar at `lab/page-shell.tsx:346`.',
           'A request is made in `lab/api.ts` `uniqueId`, which it imports and calls.',
@@ -1450,6 +1471,8 @@ describe('the docs', () => {
         'stale.md: route GET /index.json is declared by no API',
         'stale.md: path /review/frame is no route of the API',
         'stale.md: route POST /review/project/:film/say is declared by no API',
+        'stale.md: page /films/<film>/project is no page of the lab',
+        'stale.md: page /sets/<folder> is no page of the lab',
         'stale.md: rule film/no-such-rule is not registered',
         'stale.md: rule film/frobnicate is not registered',
         'stale.md: bun run nothing: no such script',
