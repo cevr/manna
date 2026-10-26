@@ -35,6 +35,8 @@ Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>`
 | polishbulk | barfix, ftbbrand, feel         |                           |                   | merged f2d7480b3       |
 | oneup      | polishbulk                     |                           |                   | merged 90c924002       |
 | heldhide   | oneup                          |                           |                   |                        |
+| hymndb     | heldhide                       |                           |                   |                        |
+| webster    | —                              |                           |                   |                        |
 | selahone   | oneup                          |                           |                   |                        |
 | playbulk   | chordbulk, feel                |                           |                   |                        |
 | findbulk   | feel, topicdata, playbulk      |                           |                   |                        |
@@ -344,6 +346,10 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 - Owner, 2026-10-26, on the order after heldhide: "lets do selah after we're done current queue". The hymnal queue runs first: heldhide, then playbulk (keyplay, playswap, followsync, chordplace, offline), findbulk, tuner, tempo, with checkbulk in a free slot. `selahone` planning starts after that queue. (owner, selahone)
 
 - Owner, 2026-10-26, Selah planning (in the orchestrator session): Selah becomes **Heartseed** (Luke 8:11–15), a voice-first app to memorize the whole Bible, "delightful … fun and simple and easy to use". Free: KJV, 3 passages of up to 20 verses, the Fear promises, sync. Pro: $2.99 a month, $14.99 a year, $39.99 lifetime (replaces the $3.99 unlock); licensed texts sold one by one. iPhone first, then Mac, then Android; no import from the SwiftUI app. Every decision with its quote: `apps/selah/plans/heartseed-brief.md`. (owner, selahone)
+
+- Owner, 2026-10-26: "let's also make a SQLite for Webster's 1828 dictionary and put it in this app alongside our hymnal and Bible and Ellen White Corpus". Unit `webster`: Webster's 1828 (public-domain text; the planner names a source whose transcription licence allows reuse) as a SQLite in the manna corpus beside `bible.db`, `hymnal.db` and the EGW database, read through `@manna/core` and the `manna` CLI. It also gives Heartseed its KJV word glosses (the owner's "understand it first" choice A). Corpus work, so it runs beside the hymnal app lane. (owner, webster)
+- Owner, 2026-10-26: "a lot of work has gone in the hymn though in kind of adding different indexes and whatnot. Let's see, can we improve the Hymnal SQLite that we have with all these new additions". `packages/core/data/hymnal.db` still has the old shape (920 rows of `hymns` with a `verses` text blob, 68 categories, no syllables, chords, keys, metres or indexes). Unit `hymndb` rebuilds it from the compiled SDA Hymnal (1985) in `@manna/hymnal` as a generated file, so later index work (findbulk's topics, scripture and metres) flows into it. It takes the hymnal slot after heldhide, before playbulk. (owner, hymndb)
+- Owner, 2026-10-26: "I have heartseed now. I've bought it. It's available" — the domain heartseed.app is bought (Cloudflare Registrar recommended). The Heartseed site deploys there when selahone builds it. (owner, selahone)
 
 ## Owner questions
 
