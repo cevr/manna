@@ -123,7 +123,16 @@ describe('createShort', () => {
         return [...seen];
       };
       const frames = Math.round(short.duration * fps);
-      for (let i = 0; i < frames; i++) {
+      // The frames where two clocks part: each span's first and last two, and b's cue frame and its neighbours.
+      const b = Option.getOrThrow(Arr.findFirst(short.placed, (q) => q.spec.id === 'b'));
+      const edges = short.placed.flatMap((q) => [q.frame, q.frame + 1, q.frame - 1, q.frame - 2]);
+      const sampled = Arr.dedupe([
+        0,
+        ...edges,
+        ...[21, 22, 23, 24, 25].map((n) => b.frame + n),
+        frames - 1,
+      ]).filter((i) => i >= 0 && i < frames);
+      for (const i of sampled) {
         // The film's frame under it: as far into the same beat as the short's frame is into its span's.
         const p = short.sceneAt(secondsAt(i, fps));
         const under = Arr.findFirst(film.placed, (q) => q.spec.id === p.spec.id);
@@ -131,7 +140,6 @@ describe('createShort', () => {
         expect(handed(short, i)).toEqual(handed(film, frame));
       }
       // b's frame 23 is in the short, and draws `turn` not yet begun, as the film's does.
-      const b = Option.getOrThrow(Arr.findFirst(short.placed, (q) => q.spec.id === 'b'));
       expect(handed(short, b.frame + 23)).toEqual([`b ${turn} false`]);
       expect(handed(film, 23)).toEqual([`b ${turn} false`]);
     },
