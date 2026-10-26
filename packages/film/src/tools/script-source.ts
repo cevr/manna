@@ -33,7 +33,6 @@ import { parse, withDelivery } from '../core/narration.ts';
 import { SourceRefused } from '../core/refusals.ts';
 import {
   commaBetween,
-  keyName,
   numberOf,
   numberText,
   objectOf,
@@ -488,47 +487,3 @@ export const holdMissed = (
       () => said(read) !== said(value),
     );
   });
-
-/** A beat's fields that only lay it out: the parts of its length (`beatLength`). */
-const LENGTHS: ReadonlySet<string> = new Set(['lead', 'tail', 'min']);
-
-/** Whether `p` is one of its beat's lengths written as a number (`tail: 0.6`). */
-const numberLength = (p: ObjectExpression['properties'][number]): boolean =>
-  p.type !== 'SpreadElement' &&
-  Option.exists(keyName(p), (name) => LENGTHS.has(name)) &&
-  Option.isSome(Option.flatMap(valueOf(p), numberOf));
-
-/** Beat `beat` as its fields' texts, in order, but each length it writes as a number. */
-const beatUnlaid = (source: string, beat: ObjectExpression): string =>
-  beat.properties
-    .filter((p) => !numberLength(p))
-    .map((p) => source.slice(p.start, p.end))
-    .join('\u0000');
-
-/**
- * `source`, a film's script (`file` named `script.ts`), with its `script`
- * array written as each beat's fields but the lengths it writes as numbers
- * (`lead`, `tail`, `min`: `numberLength`), so a script that differs from
- * another only in those numbers, a length added or taken away included, or
- * in the spacing and comments between the beats' fields, reads the same;
- * none for any other file, or one that exports no `script` array. What a
- * beat's key wherever it sits reads of the script (`SceneKeys.beats`,
- * tools/stamp.ts): a beat's length reaches a frame only as the beats are
- * laid out, its own in its declaration and the others' as where each beat a
- * segment reads starts and how long it lasts (tools/segments.ts). A length
- * the script computes (a name, a sum) is kept as written.
- */
-export const unlaidScript = (file: string, source: string): Option.Option<string> => {
-  if (file.split('/').at(-1) !== SCRIPT_FILE) return Option.none();
-  return Option.map(Result.getSuccess(scriptArray(source)), (beats) => {
-    const elements = beats.elements.map((e) => {
-      if (!Predicate.isNotNullish(e)) return '';
-      if (e.type === 'SpreadElement') return source.slice(e.start, e.end);
-      return Option.match(objectOf(e), {
-        onNone: () => source.slice(e.start, e.end),
-        onSome: (beat) => beatUnlaid(source, beat),
-      });
-    });
-    return `${source.slice(0, beats.start)}[${elements.join('\u0001')}]${source.slice(beats.end)}`;
-  });
-};

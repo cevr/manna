@@ -5,8 +5,23 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { expect as expectPlain, test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
-import { Context, Effect, FileSystem, Layer, Option, Path, Result, Sink, Stream } from 'effect';
+import {
+  Context,
+  Effect,
+  FileSystem,
+  Layer,
+  Option,
+  Path,
+  Result,
+  Schema,
+  Sink,
+  Stream,
+} from 'effect';
 import { ChildProcessSpawner } from 'effect/process';
+import { boardFilm } from '../canvas/board.ts';
+import type { Film } from '../canvas/film.ts';
+import { recorder, withDom } from '../canvas/fixtures/stand-in.ts';
+import { type BoardFile, BoardName, emptyBoard } from '../core/board.ts';
 import { layout } from '../core/layout.ts';
 import { ContentStore } from './content-store.ts';
 import { FilmRepo } from './film-repo.ts';
@@ -185,6 +200,50 @@ describe.concurrent('scene keys', () => {
   );
 });
 
+/** A film script module run from `file`: the ground it derives. */
+const loadScript = (file: string): Promise<{ readonly ground: string }> => import(file);
+
+/** The fills of a Board frame 1 s into a beat `plain` whose card (payoff `Hi`) is set on `ground`. */
+const cardFills = (ground: string): ReadonlyArray<unknown> => {
+  const one = Result.getOrThrow(
+    layout([{ id: 'plain', say: 'Hi.', min: 2 }], { voice: '', scenes: {} }),
+  );
+  const f: Film = Schema.decodeSync(Schema.Any)({
+    width: 1920,
+    height: 1080,
+    fps: 30,
+    duration: 2,
+    title: 'probe',
+    look: {
+      card: {
+        style: {
+          ground,
+          type: { family: 'x', size: 60, color: '#f2e9d7' },
+          payoffScale: 2.5,
+          payoffColor: '#e6b347',
+        },
+      },
+    },
+    placed: one,
+    render: () => {},
+  });
+  const board: BoardFile = {
+    ...emptyBoard('f'),
+    panels: [
+      {
+        id: 'plain.start',
+        beat: BoardName.make('plain'),
+        at: BoardName.make('start'),
+        tries: [],
+        text: { _tag: 'Card', payoff: 'Hi' },
+      },
+    ],
+  };
+  const r = recorder(1920, 1080);
+  withDom(() => boardFilm(f, board, new Map(), false).render(r.ctx, 1));
+  return r.fills.map((fill) => fill.style);
+};
+
 describe.concurrent('beat keys wherever the beat sits', () => {
   /** Every beat's key wherever it sits, and every scene's key, with `hand` held `seconds` at least (a silent beat lasts 3). */
   const laidWith = (seconds: number) =>
@@ -242,6 +301,54 @@ describe.concurrent('beat keys wherever the beat sits', () => {
         'plain',
       ]);
     }).pipe(Effect.provide(fixture)),
+  );
+
+  it.effect(
+    "a length edited in the script re-keys every beat: a value the script derives from it sets another beat's card",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const films = yield* Films;
+        /** The film's script with `hand`'s tail `tail`, and the cards' ground picked by it. */
+        const scriptOf = (tail: number) => `export const script = [
+  { id: 'hand', say: 'Hi.', tail: ${tail} },
+  { id: 'beta', say: 'Hi.' },
+  { id: 'built', say: 'Hi.' },
+  { id: 'plain', say: 'Hi.' },
+];
+
+/** The cards' ground, picked by the first beat's tail. */
+export const ground = ['#112233', '#445566'][script[0]!.tail]!;
+`;
+        // The registry, the film's frame, reads the script's ground.
+        const index = path.join(films, 'f', 'scenes', 'index.ts');
+        yield* fs.writeFileString(
+          index,
+          `import { ground } from '../script.ts';\n${yield* fs.readFileString(index)}export const look = { ground };\n`,
+        );
+        /** Every beat's key wherever it sits with the script's tail `tail`, the layout held (each beat's `min` outlasts it). */
+        const beatsWith = (tail: number) =>
+          Effect.gen(function* () {
+            yield* fs.writeFileString(path.join(films, 'f', 'script.ts'), scriptOf(tail));
+            return Object.fromEntries(
+              (yield* (yield* Stamps).scenes(film(films, path), placed)).beats,
+            );
+          });
+        const was = yield* beatsWith(0);
+        const now = yield* beatsWith(1);
+        expect(changed(was, now)).toEqual(['hand', 'beta', 'built', 'plain']);
+
+        /** The ground the script with `hand`'s tail `tail` derives, read by running it. */
+        const groundOf = (tail: number) =>
+          Effect.gen(function* () {
+            const file = path.join(films, `script-${tail}.ts`);
+            yield* fs.writeFileString(file, scriptOf(tail));
+            return (yield* Effect.promise(() => loadScript(file))).ground;
+          });
+        // `plain`'s card as a Board frame paints it differs, so the key of the beat it falls in must.
+        expect(cardFills(yield* groundOf(1))).not.toEqual(cardFills(yield* groundOf(0)));
+      }).pipe(Effect.provide(fixture)),
   );
 });
 
