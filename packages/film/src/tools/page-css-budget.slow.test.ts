@@ -16,7 +16,7 @@ import { Context, Effect, FileSystem, Layer, Option, Struct } from 'effect';
 import { HttpServerRequest, HttpServerResponse } from 'effect/http';
 import { Place } from '@manna/url-state';
 import { LAB_PAGES, LAB_SERVERS } from '../../../../apps/animations/server.ts';
-import { Places, servedPlace } from '../core/api.ts';
+import { Places } from '../core/api.ts';
 import { PLACE_HREFS } from '../lab/fixtures/places.ts';
 import { LabPage, PageBundler } from './lab-page.ts';
 import { PageReads } from './api-server.ts';
@@ -44,12 +44,7 @@ const BUDGET = 64 * 1024;
  * The places that carry their own styles (`PlaceStyle`): each holds them
  * ahead of its reads, so they are weighed with none answered.
  */
-const OWN_STYLES: ReadonlyArray<keyof typeof PLACE_HREFS> = [
-  'production',
-  'ask',
-  'draft',
-  'draftBeat',
-];
+const OWN_STYLES: ReadonlyArray<keyof typeof PLACE_HREFS> = ['ask'];
 
 /** A tag's attribute, as the bundler writes it (quoted or not). */
 const attribute = (tag: string, name: string): string =>
@@ -129,20 +124,12 @@ describe("a page's render-blocking CSS", () => {
           });
         // Each link is at the place it is keyed by.
         expect(
-          Struct.keys(PLACE_HREFS).filter((place) =>
-            Option.isNone(Place.decode(Places[place], PLACE_HREFS[place])),
-          ),
+          Struct.keys(PLACE_HREFS).filter((place) => {
+            const at: Place.Place<unknown> = Places[place];
+            return Option.isNone(Place.decode(at, PLACE_HREFS[place]));
+          }),
         ).toEqual([]);
-        // A place the studio replaced is sent on to the studio, never served: the studio is weighed.
-        const sentOnward = (place: keyof typeof PLACE_HREFS) =>
-          Option.isSome(servedPlace(PLACE_HREFS[place]));
-        const sentOn = Struct.keys(PLACE_HREFS).filter(sentOnward);
-        const kept = Struct.keys(PLACE_HREFS).filter((place) => !sentOnward(place));
-        const answered = yield* Effect.forEach(sentOn, (place) =>
-          Effect.map(ask(PLACE_HREFS[place]), ({ status }) => ({ place, status })),
-        );
-        expect(answered.filter(({ status }) => status !== 302)).toEqual([]);
-        const weighed = yield* Effect.forEach(kept, (place) =>
+        const weighed = yield* Effect.forEach(Struct.keys(PLACE_HREFS), (place) =>
           Effect.gen(function* () {
             const { status, body } = yield* ask(PLACE_HREFS[place]);
             // The server rendered it: its head holds the page's own styles.

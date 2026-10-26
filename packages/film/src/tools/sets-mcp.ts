@@ -8,7 +8,7 @@
 
 import { Clock, Effect, FileSystem, Option, Path, Result, Schema, Struct } from 'effect';
 import * as Tool from 'effect/ai/Tool';
-import { pageHref, reviewFileUrl } from '../core/api.ts';
+import { reviewFileUrl } from '../core/api.ts';
 import { Catalogue, Render } from '../core/catalogue.ts';
 import { LabLinks, linksAt } from '../core/lab-events.ts';
 import { ProductionId, VersionNumber, setNamed } from '../core/production.ts';
@@ -35,18 +35,16 @@ import {
 // What the tools answer
 
 export const SetRead = Schema.Struct({
-  /** Its ref: what `set`, `catalogue` and the lab's `/sets/<ref>` name it by. */
+  /** Its ref: what `set` and `catalogue` name it by. */
   set: Schema.String,
   kind: Schema.Literals(['montage', 'project']),
   title: Schema.optionalKey(Schema.String),
-  links: LabLinks,
   /** Where it is on this machine. */
   dir: Schema.String,
 });
 
 const CatalogueRead = Schema.Struct({
   set: Schema.String,
-  links: LabLinks,
   catalogue: Catalogue,
 });
 
@@ -62,7 +60,6 @@ const SetFileRead = Schema.Struct({
 
 const SetManifestRead = Schema.Struct({
   set: Schema.String,
-  links: LabLinks,
   dir: Schema.String,
   manifest: ReviewManifest,
   /** Each file the manifest names that is in the folder, where the lab serves it. */
@@ -150,7 +147,7 @@ export const SetsTool = Tool.make('sets', {
 
 const SetTool = Tool.make('set', {
   description:
-    "A montage set's `review.json`, its lab link and its folder, and each file it shows where the lab serves it (`files`: its `ref` for a `video` or `document` block, its `src` for an ask's image, its links): copy them, never build them.",
+    "A montage set's `review.json` and its folder, and each file it shows where the lab serves it (`files`: its `ref` for a `video` or `document` block, its `src` for an ask's image, its links): copy them, never build them.",
   parameters: Schema.Struct({ set: Schema.String }),
   success: SetManifestRead,
   failure: LabRefused,
@@ -158,7 +155,7 @@ const SetTool = Tool.make('set', {
 
 const PublishSet = Tool.make('publish_set', {
   description:
-    "Publish a set into the lab, or update one: its folder `name` in the lab's own `out/` (never a project folder, a film's or one a catalogue keeps: a render is recorded there with `record_render`), the files copied in (each `from` an absolute path, `to` its place in the folder), and its `review.json` written with the keys given (each replaces the one there; a key left out is kept). List each file the set shows under `images`, `videos`, `docs`, `downloads` or a comparison set's variants (and their `notes`), by its path in the folder: each must be there once the files are in, a variant with no `file` as its share copy or its master. Answers the set's ref and link (the owner sees it at once), and each file it shows where the lab serves it (`files`: its `ref`, its `src` for an ask's image, its links).",
+    "Publish a set into the lab, or update one: its folder `name` in the lab's own `out/` (never a project folder, a film's or one a catalogue keeps: a render is recorded there with `record_render`), the files copied in (each `from` an absolute path, `to` its place in the folder), and its `review.json` written with the keys given (each replaces the one there; a key left out is kept). List each file the set shows under `images`, `videos`, `docs`, `downloads` or a comparison set's variants (and their `notes`), by its path in the folder: each must be there once the files are in, a variant with no `file` as its share copy or its master. Answers the set's ref, and each file it shows where the lab serves it (`files`: its `ref`, its `src` for an ask's image, its links).",
   parameters: Schema.Struct({
     name: SetName,
     files: Schema.optionalKey(Schema.Array(SetFile)),
@@ -175,7 +172,7 @@ const RecordRender = Tool.make('record_render', {
     film: Schema.String,
     render: Schema.Struct(Struct.omit(Render.fields, ['at'])),
   }),
-  success: Schema.Struct({ set: Schema.String, links: LabLinks }),
+  success: Schema.Struct({ set: Schema.String }),
   failure: LabRefused,
 });
 
@@ -215,7 +212,6 @@ export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
           set: listed.ref,
           kind: record.kind,
           ...Option.match(listed.title, { onNone: () => ({}), onSome: (title) => ({ title }) }),
-          links: linksOf(pageHref.folder(listed.ref)),
           dir: record.dir,
         }),
       ),
@@ -250,7 +246,7 @@ export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
   ) {
     const at = yield* folderOf(film, set);
     const catalogue = yield* refused(catalogues.read({ name: at.name, out: at.dir }));
-    return { set: at.ref, links: linksOf(pageHref.folder(at.ref)), catalogue };
+    return { set: at.ref, catalogue };
   });
 
   /** A montage's manifest file, as the publish writes it. */
@@ -289,7 +285,6 @@ export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
     );
     return {
       set: ref,
-      links: linksOf(pageHref.folder(ref)),
       dir: at.dir,
       manifest,
       files: yield* filesOf(ref, at.dir, manifest),
@@ -398,7 +393,6 @@ export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
     yield* Effect.log(`lab.mcp.publish set=${ref} files=${copies.length}`);
     return {
       set: ref,
-      links: linksOf(pageHref.folder(ref)),
       dir,
       manifest: written,
       files: yield* filesOf(ref, dir, written),
@@ -432,7 +426,7 @@ export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
       });
     const render: Render = { ...given, at: yield* Clock.currentTimeMillis };
     yield* refused(catalogues.record({ name: at.name, out: at.dir }, render));
-    return { set: at.ref, links: linksOf(pageHref.folder(at.ref)) };
+    return { set: at.ref };
   }, Effect.ensuring(review.written));
 
   /** The folder a timeline names the set `given` by (`setNamed`): by its ref or by its folder, held by one root. */

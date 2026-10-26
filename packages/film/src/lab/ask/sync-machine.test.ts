@@ -1,34 +1,20 @@
-// The review's machines, with no DOM. The synced player plays and pauses,
-// plays again from the start once at the end, holds while a video stalls,
-// scrubs (playing on after if it was), steps inside the set, and keeps its
-// rate and the sound it plays through all of it; a seek counts, a tick does
-// not. The view moves between all, the pair, the moments and the difference, a
-// pair keeping its other and the moments wrapping round.
+// The player's clock machine, with no DOM: it plays and pauses, plays again
+// from the start once at the end, holds while a video stalls, scrubs
+// (playing on after if it was), steps, and keeps its rate and the sound it
+// plays through all of it; a seek counts, a tick does not.
 
-import { Effect, Match, Option } from 'effect';
+import { Effect } from 'effect';
 import { describe, expect, it, test } from 'effect-bun-test';
 import { assertPath, simulate } from 'effect-machine';
 import {
   SyncEvent,
   SyncState,
   UNKNOWN_END,
-  ViewEvent,
   atRest,
-  ViewState,
   clockParts,
-  modeOf,
-  modeView,
-  modesOf,
-  nextLayout,
-  nextModeView,
-  playsIn,
   reachOf,
   runningOf,
-  spreadMoments,
-  stepView,
   syncMachine,
-  viewMachine,
-  wrapped,
 } from './sync-machine.ts';
 import { FILM_FPS } from '../../core/time.ts';
 import { PlayerKey, drifted, playerEvent } from './sync.ts';
@@ -367,193 +353,5 @@ describe('the synced player', () => {
     expect(drifted(4.85, 5)).toBe(false);
     expect(drifted(5.25, 5)).toBe(true);
     expect(drifted(4.7, 5)).toBe(true);
-  });
-});
-
-const views = viewMachine(ViewState.All, Option.some('B'));
-
-describe('the view', () => {
-  it.effect('moves between all, the pair, the moments and the difference', () =>
-    Effect.gen(function* () {
-      yield* assertPath(
-        views,
-        [
-          ViewEvent.ViewChosen({ view: 'pair' }),
-          ViewEvent.ViewChosen({ view: 'moments' }),
-          ViewEvent.ViewChosen({ view: 'diff' }),
-          ViewEvent.ViewChosen({ view: 'all' }),
-        ],
-        ['All', 'Pair', 'Moments', 'Diff', 'All'],
-      );
-    }),
-  );
-
-  it.effect('a pair starts on the second variant and keeps the other chosen', () =>
-    Effect.gen(function* () {
-      const result = yield* simulate(views, [
-        ViewEvent.ViewChosen({ view: 'pair' }),
-        ViewEvent.OtherChosen({ id: 'D' }),
-        ViewEvent.ViewChosen({ view: 'pair' }),
-        ViewEvent.OtherChosen({ id: 'C' }),
-      ]);
-      expect(result.states.slice(1)).toEqual([
-        ViewState.Pair({ other: 'B' }),
-        ViewState.Pair({ other: 'D' }),
-        ViewState.Pair({ other: 'D' }),
-        ViewState.Pair({ other: 'C' }),
-      ]);
-    }),
-  );
-
-  it.effect('the moments start on the first, and ←/→ wrap round them', () =>
-    Effect.gen(function* () {
-      const result = yield* simulate(views, [
-        ViewEvent.ViewChosen({ view: 'moments' }),
-        ViewEvent.MomentStepped({ by: -1, count: 5 }),
-        ViewEvent.MomentStepped({ by: 1, count: 5 }),
-        ViewEvent.MomentStepped({ by: 1, count: 5 }),
-        ViewEvent.MomentChosen({ index: 3 }),
-      ]);
-      const index = (s: ViewState) =>
-        Match.value(s).pipe(
-          Match.tag('Moments', (m) => m.index),
-          Match.orElse(() => -1),
-        );
-      expect(result.states.slice(1).map(index)).toEqual([0, 4, 0, 1, 3]);
-    }),
-  );
-
-  it.effect('a set of one version has no side by side: a link to it opens All', () =>
-    Effect.gen(function* () {
-      const one = viewMachine(ViewState.Pair({ other: '' }), Option.none());
-      yield* assertPath(
-        one,
-        [
-          ViewEvent.ViewChosen({ view: 'pair' }),
-          ViewEvent.ViewChosen({ view: 'moments' }),
-          ViewEvent.ViewChosen({ view: 'pair' }),
-        ],
-        ['All', 'All', 'Moments', 'Moments'],
-      );
-    }),
-  );
-
-  it.effect('an other or a moment means nothing outside its view', () =>
-    Effect.gen(function* () {
-      yield* assertPath(
-        views,
-        [ViewEvent.OtherChosen({ id: 'C' }), ViewEvent.MomentChosen({ index: 2 })],
-        ['All'],
-      );
-    }),
-  );
-
-  test('one event steps the view the URL holds to the next', () => {
-    const b = Option.some('B');
-    expect(stepView(ViewState.All, b, ViewEvent.ViewChosen({ view: 'pair' }))).toEqual(
-      ViewState.Pair({ other: 'B' }),
-    );
-    expect(
-      stepView(ViewState.Moments({ index: 4 }), b, ViewEvent.MomentStepped({ by: 1, count: 5 })),
-    ).toEqual(ViewState.Moments({ index: 0 }));
-    expect(stepView(ViewState.All, Option.none(), ViewEvent.ViewChosen({ view: 'pair' }))).toEqual(
-      ViewState.All,
-    );
-  });
-
-  test("a set's modes: All, Compare (its layouts the pair, the wipe and the difference) and Moments (UR-21)", () => {
-    expect([
-      modeOf('all'),
-      modeOf('pair'),
-      modeOf('wipe'),
-      modeOf('diff'),
-      modeOf('moments'),
-    ]).toEqual(['all', 'compare', 'compare', 'compare', 'moments']);
-    expect(modesOf(1)).toEqual(['all', 'moments']);
-    expect(modesOf(3)).toEqual(['all', 'compare', 'moments']);
-    // `v` steps the modes round, each opening on its first view; a set of one skips Compare.
-    expect(nextModeView('all', modesOf(3))).toBe('pair');
-    expect(nextModeView('wipe', modesOf(3))).toBe('moments');
-    expect(nextModeView('moments', modesOf(3))).toBe('all');
-    expect(nextModeView('all', modesOf(1))).toBe('moments');
-    // A mode tapped again keeps its layout.
-    expect(modeView('compare', 'diff')).toBe('diff');
-    expect(modeView('compare', 'all')).toBe('pair');
-    // `⇧V` steps Compare's layouts round, and nothing outside it.
-    expect([nextLayout('pair'), nextLayout('wipe'), nextLayout('diff')]).toEqual([
-      Option.some('wipe'),
-      Option.some('diff'),
-      Option.some('pair'),
-    ]);
-    expect(nextLayout('all')).toEqual(Option.none());
-  });
-
-  test('plays videos in all, the pair and its wipe; the moments and the difference stand still', () => {
-    expect([
-      playsIn('all'),
-      playsIn('pair'),
-      playsIn('wipe'),
-      playsIn('moments'),
-      playsIn('diff'),
-    ]).toEqual([true, true, true, false, false]);
-  });
-});
-
-describe('the wipe and the difference (PA-8)', () => {
-  it.effect('the pair, its wipe and its difference share the other chosen', () =>
-    Effect.gen(function* () {
-      const result = yield* simulate(views, [
-        ViewEvent.ViewChosen({ view: 'wipe' }),
-        ViewEvent.OtherChosen({ id: 'C' }),
-        ViewEvent.ViewChosen({ view: 'diff' }),
-        ViewEvent.OtherChosen({ id: 'D' }),
-        ViewEvent.ViewChosen({ view: 'pair' }),
-      ]);
-      expect(result.states.slice(1)).toEqual([
-        ViewState.Wipe({ other: 'B' }),
-        ViewState.Wipe({ other: 'C' }),
-        ViewState.Diff({ other: 'C', index: 0 }),
-        ViewState.Diff({ other: 'D', index: 0 }),
-        ViewState.Pair({ other: 'D' }),
-      ]);
-    }),
-  );
-
-  it.effect(
-    'the difference is of the moments: ←/→ and a moment chosen move it, keeping the other',
-    () =>
-      Effect.gen(function* () {
-        const result = yield* simulate(views, [
-          ViewEvent.ViewChosen({ view: 'diff' }),
-          ViewEvent.MomentStepped({ by: -1, count: 5 }),
-          ViewEvent.MomentChosen({ index: 2 }),
-          ViewEvent.OtherChosen({ id: 'C' }),
-        ]);
-        expect(result.states.slice(2)).toEqual([
-          ViewState.Diff({ other: 'B', index: 4 }),
-          ViewState.Diff({ other: 'B', index: 2 }),
-          ViewState.Diff({ other: 'C', index: 2 }),
-        ]);
-      }),
-  );
-
-  it.effect('a set of one version has neither: a link to either opens All', () =>
-    Effect.gen(function* () {
-      for (const initial of [
-        ViewState.Wipe({ other: '' }),
-        ViewState.Diff({ other: '', index: 1 }),
-      ])
-        yield* assertPath(
-          viewMachine(initial, Option.none()),
-          [ViewEvent.ViewChosen({ view: 'wipe' }), ViewEvent.ViewChosen({ view: 'diff' })],
-          ['All', 'All', 'All'],
-        );
-    }),
-  );
-
-  test('five moments spread over the first video, none before the start', () => {
-    expect(spreadMoments(20, 0)).toEqual([1, 5, 10, 15, 19]);
-    expect(spreadMoments(20, 3)).toEqual([3, 5, 10, 15, 19]);
-    expect(wrapped(0, -1, 0)).toBe(0);
   });
 });

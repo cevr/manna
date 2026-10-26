@@ -49,7 +49,7 @@ import {
   ServerFailed,
   WriteNotJson,
   isRefusal,
-  servedPlace,
+  pageHref,
   pageAt,
   prefixesOf,
   statusOf,
@@ -121,7 +121,7 @@ const refused = (reason: string) => Option.some<Refusal>(RequestRefused.make({ r
 /**
  * A link opened from another site (a chat, a mail): a GET or HEAD the
  * browser makes for a new document (`Sec-Fetch-Mode: navigate`,
- * `Sec-Fetch-Dest: document`) of one of the app's pages (`pageAt`) or a link the lab sends on to one (`servedPlace`). The site
+ * `Sec-Fetch-Dest: document`) of one of the app's pages (`pageAt`) or its home, which the lab sends on to one. The site
  * cannot read what it answers, and a page runs nothing; the API, a script, a
  * file and a write stay the server's own.
  */
@@ -129,7 +129,7 @@ const isNavigation = (request: HttpServerRequest.HttpServerRequest) =>
   SAFE_METHODS.includes(request.method) &&
   Option.contains(header(request, 'sec-fetch-mode'), 'navigate') &&
   Option.contains(header(request, 'sec-fetch-dest'), 'document') &&
-  (Option.isSome(pageAt(urlPath(request.url))) || Option.isSome(servedPlace(request.url)));
+  (Option.isSome(pageAt(urlPath(request.url))) || urlPath(request.url) === pageHref.home());
 
 /**
  * Whether a write carries a body the JSON rule judges: a POST always (a

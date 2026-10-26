@@ -23,7 +23,6 @@ import {
   gist,
   namesMatch,
   noteChanges,
-  notePath,
   notesNews,
   productionChanges,
   setChanges,
@@ -59,7 +58,7 @@ describe('boardChanges', () => {
       panels: [{ id: 'cold.judge', beat: COLD, at: JUDGE, tries: [tried(1), tried(2)] }],
     });
     expect(boardChanges(before, added, 'r1').map((c) => [c.kind, c.panel, c.try, c.path])).toEqual([
-      ['board.tried', 'cold.judge', 2, '/films/f/studio?sel=panel%3Acold.judge&try=2'],
+      ['board.tried', 'cold.judge', 2, '/'],
     ]);
     const kept = board({
       panels: [
@@ -79,7 +78,7 @@ describe('boardChanges', () => {
       try: 2,
       text: 'calmer',
       beat: 'cold',
-      path: '/films/f/studio?sel=panel%3Acold.judge&try=2',
+      path: '/',
     });
     expect(keep?.summary).toBe('f cold.judge: try 2 kept: calmer');
     const approval = {
@@ -89,7 +88,7 @@ describe('boardChanges', () => {
     };
     const approved = { ...kept, approvals: [approval] };
     expect(boardChanges(kept, approved, 'r1').map((c) => [c.kind, c.beat, c.path])).toEqual([
-      ['beat.approved', 'cold', '/films/f/studio?sel=beat%3Acold'],
+      ['beat.approved', 'cold', '/'],
     ]);
     // Approved again (new tries) is an approval, not a withdrawal.
     const again = { ...kept, approvals: [{ ...approval, at: '2026-10-14T02:00:00.000Z' }] };
@@ -130,21 +129,8 @@ const note = (more: Partial<Note> = {}): Note => ({
   ...more,
 });
 
-describe('notePath', () => {
-  it('opens the studio on the note, its beat selected, for a note on a frame or on words', () => {
-    expect(notePath(note())).toBe('/films/f/studio?sel=beat%3Acold&note=n7');
-    expect(
-      notePath(note({ words: { beat: 'cold', from: 0, to: 1, text: 'the law' }, kind: 'note' })),
-    ).toBe('/films/f/studio?sel=beat%3Acold&note=n7');
-  });
-
-  it('opens the studio on the note, its panel selected, for a note on a panel', () => {
-    expect(notePath(note({ panel: { id: 'cold.judge', try: 2, ask: 'tweak' } }))).toBe(
-      '/films/f/studio?sel=panel%3Acold.judge&note=n7',
-    );
-  });
-
-  it('is the link of every change on the note', () => {
+describe("a note's link", () => {
+  it("is the lab's home on every change of the note: no page shows notes", () => {
     const n = note({ panel: { id: 'cold.judge' } });
     const reply = {
       seq: 2,
@@ -157,9 +143,7 @@ describe('notePath', () => {
       { _tag: 'NoteReplied', seq: 2, note: n, reply },
       { _tag: 'NoteResolved', seq: 3, note: n },
     ]);
-    expect(changes.map((c) => c.path)).toEqual(
-      Array.from({ length: 3 }, () => '/films/f/studio?sel=panel%3Acold.judge&note=n7'),
-    );
+    expect(changes.map((c) => c.path)).toEqual(Array.from({ length: 3 }, () => '/'));
   });
 });
 
@@ -196,7 +180,7 @@ describe('catalogueChanges', () => {
       ['render.recorded', 'spare/f', 'main'],
     ]);
     expect(changes[0]).toMatchObject({ note: 'c1', text: 'too dark', by: 'owner' });
-    expect(changes.every((c) => c.path.startsWith('/sets/spare%2Ff'))).toBe(true);
+    expect(changes.every((c) => c.path === '/')).toBe(true);
     expect(
       catalogueChanges('spare/f', said, { ...said, approvals: [] }).map((c) => c.kind),
     ).toEqual(['render.withdrawn']);
@@ -207,7 +191,7 @@ describe('setChanges', () => {
   it('says a set published once, then updated only when its manifest changed', () => {
     const one = new Map([['spare/a', { title: Option.some('Faces'), stamp: 'x' }]]);
     expect(setChanges(new Map(), one).map((c) => [c.kind, c.set, c.summary, c.path])).toEqual([
-      ['set.published', 'spare/a', 'set spare/a (Faces) published', '/sets/spare%2Fa'],
+      ['set.published', 'spare/a', 'set spare/a (Faces) published', '/'],
     ]);
     expect(setChanges(one, one)).toEqual([]);
     const changed = new Map([['spare/a', { title: Option.none<string>(), stamp: 'y' }]]);
@@ -371,7 +355,7 @@ describe('the catalogue', () => {
   ): LabChangeDraft => ({
     kind,
     summary: `${kind} said`,
-    path: '/films/f/studio',
+    path: '/asks/a1',
     origin: 'test/1',
     ...more,
   });
@@ -445,7 +429,7 @@ describe('the catalogue', () => {
     ).toBeLessThanOrEqual(256 * 1024);
     const small = changeOf(draft('note.added', { text: 'short' }), 1, 'T', links);
     expect(small.trimmed).toBeUndefined();
-    expect(small.links.local).toBe('http://localhost:8229/films/f/studio');
+    expect(small.links.local).toBe('http://localhost:8229/asks/a1');
   });
 
   it('matches names by globs: none is every one', () => {
@@ -594,7 +578,7 @@ describe('productionChanges', () => {
         version: 2,
         text: 'One Line',
         summary: 'rbf v2: One Line',
-        path: '/productions/rbf?v=2',
+        path: '/',
       },
     ]);
   });

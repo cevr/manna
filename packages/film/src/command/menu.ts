@@ -4,8 +4,7 @@
 // context menu, the commands available about the thing it opened on
 // (`target.ts`), a stepped one also at ×10, a finger's Shift; the sheet,
 // every command registered, by group, with its
-// keys and how a phone reaches it; a chip, the commands it names that are
-// available (`chipRows`); the view menu, the `View` commands available and
+// keys and how a phone reaches it; the view menu, the `View` commands available and
 // the keys sheet (`viewRows`). Pure.
 
 import { Array as Arr, Option } from 'effect';
@@ -86,20 +85,6 @@ export const sheetRows = (
   bound: (id: CommandId) => ReadonlyArray<unknown>,
 ): ReadonlyArray<readonly [string, ReadonlyArray<Command>]> =>
   byGroup(all.filter((command) => !isTyped(command) || bound(command.id).length > 0));
-
-/**
- * A chip's menu rows (the rate chip, the loop chip): the commands named by
- * `ids` that are available in `ctx`, in the order `ids` gives (the rate the
- * transport plays at now is not one of them: the chip says it).
- */
-export const chipRows = (
-  available: ReadonlyArray<Command>,
-  ctx: Context,
-  ids: ReadonlyArray<string>,
-): ReadonlyArray<MenuRow> =>
-  ids.flatMap((id) =>
-    available.filter((command) => command.id === id).map((command) => rowOf(command, ctx)),
-  );
 
 /** The group of the commands the view menu (`⋯`) lists. */
 const VIEW = 'View';

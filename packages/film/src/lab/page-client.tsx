@@ -13,12 +13,11 @@ import { Location } from '@manna/url-state';
 import { type JSX, hydrate, render } from '@solidjs/web';
 import { Deferred, Effect, Fiber, type Layer, Option } from 'effect';
 import type { Frames } from '../browser/frames.ts';
-import { type BrowserServices, type Host, addressOn, hostOf } from '../browser/host.ts';
+import { type BrowserServices, type Host, hostOf } from '../browser/host.ts';
 import { BrowserHost } from '../browser/host-browser.ts';
 import type { Media } from '../browser/media.ts';
 import type { Viewport } from '../browser/viewport.ts';
 import type { Hub } from '../command/hub.ts';
-import { legacyPlace } from '../core/api.ts';
 import { PAGE_CUT, PAGE_MOUNTED, PAGE_ROOT, PAGE_STYLE } from '../core/page-render.ts';
 import { showFailure } from '../player/dom.ts';
 import { registerFace } from '../player/face.ts';
@@ -151,8 +150,6 @@ export const mountStudio = (studio: StudioPage): void => {
   );
   Effect.runSyncWith(host)(
     Effect.gen(function* () {
-      const address = addressOn(host);
-      Option.map(legacyPlace(address.href()), address.follow);
       registerFace(document.fonts);
       const ending = yield* makePageEnd;
       const { hub, app } = yield* studio.on(host, ending.fail);

@@ -10,7 +10,7 @@ import { type Context, contextAt, withSelection } from '../../command/context.ts
 import { Selection, type WordsSelection } from '../../command/selection.ts';
 import { selectedTo } from './commands.ts';
 
-const here = contextAt('player', '/films/talk/studio?sel=beat:ask#t=1');
+const here = contextAt('ask', '/films/talk/studio?sel=beat:ask#t=1');
 
 const words = (scene: string, from: number, to: number): WordsSelection =>
   Selection.cases.Words.make({ scene, from, to });

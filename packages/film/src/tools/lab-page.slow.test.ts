@@ -49,12 +49,9 @@ describe('lab pages', () => {
         const path = yield* Path.Path;
         // A page whose script is a Solid one, so the build holds Solid itself.
         const solid = path.join(import.meta.dir, '../lab/fixtures/index-owner-page.ts');
-        yield* write(
-          'review.html',
-          html('review', path.relative(path.dirname(spec.pages.review), solid)),
-        );
+        yield* write('ask.html', html('ask', path.relative(path.dirname(spec.pages.ask), solid)));
         const { ask } = yield* served(spec, PageBundler.layer);
-        const page = (yield* ask('/')).text;
+        const page = (yield* ask('/asks/a1')).text;
         const src = /src="\.?(\/[^"]+\.js)"/.exec(page)?.[1] ?? '';
         expect((yield* ask(src)).text).toContain('STRICT_READ_UNTRACKED');
       }).pipe(Effect.scoped, Effect.provide(Platform)),
@@ -65,7 +62,7 @@ describe('lab pages', () => {
     () =>
       Effect.gen(function* () {
         const { ask, script } = yield* app;
-        const page = yield* ask('/');
+        const page = yield* ask('/asks/a1');
         expect([page.status, buildOf(page.text)]).toEqual([200, 0]);
         expect(serverOf(page.text)).not.toBe('');
         expect(yield* script).toContain('first');
@@ -78,8 +75,8 @@ describe('lab pages', () => {
     () =>
       Effect.gen(function* () {
         const { ask, write } = yield* app;
-        yield* write('src/play.ts', `console.log('${'the player '.repeat(400)}');\n`);
-        const src = /src="\.?(\/[^"]+\.js)"/.exec((yield* ask('/films/f/studio')).text)?.[1] ?? '';
+        yield* write('src/render.ts', `console.log('${'the render page '.repeat(400)}');\n`);
+        const src = /src="\.?(\/[^"]+\.js)"/.exec((yield* ask('/films/f/export')).text)?.[1] ?? '';
         const brotli = yield* ask(src, 'GET', { 'accept-encoding': 'gzip, br' }).pipe(
           Effect.repeat({
             until: (sent) => sent.encoding === 'br',
@@ -89,7 +86,7 @@ describe('lab pages', () => {
         );
         const plain = yield* ask(src, 'GET', { 'accept-encoding': 'gzip;q=1, br;q=0' });
         expect(plain.encoding).toBe('');
-        expect(plain.text).toContain('the player the player');
+        expect(plain.text).toContain('the render page the render page');
         expect(new Uint8Array(brotliDecompressSync(brotli.bytes))).toEqual(plain.bytes);
         const best = brotliCompressSync(plain.bytes, {
           params: { [zlib.BROTLI_PARAM_QUALITY]: 11 },
@@ -103,7 +100,7 @@ describe('lab pages', () => {
     () =>
       Effect.gen(function* () {
         const { ask, page, write } = yield* app;
-        yield* write('src/play.ts', `console.log('${'the player '.repeat(400)}');\n`);
+        yield* write('src/render.ts', `console.log('${'the render page '.repeat(400)}');\n`);
         const handler = yield* serveApi(LabHttpApi, Layer.empty, {
           page: page.answer,
           beside: Layer.empty,
@@ -124,8 +121,8 @@ describe('lab pages', () => {
           });
         const codingOf = (pathname: string, accept: string) =>
           Effect.map(sent(pathname, accept), (answer) => answer.coding);
-        const studio = (yield* sent('/films/f/studio', 'identity')).body;
-        const src = /src="\.?(\/[^"]+\.js)"/.exec(studio)?.[1] ?? '';
+        const exported = (yield* sent('/films/f/export', 'identity')).body;
+        const src = /src="\.?(\/[^"]+\.js)"/.exec(exported)?.[1] ?? '';
         const headers = [
           'br',
           'gzip, br',
@@ -163,22 +160,24 @@ describe('lab pages', () => {
       Effect.gen(function* () {
         const { spec } = yield* appFolder;
         const { ask } = yield* served(spec, PageBundler.layerTest);
-        const page = yield* ask('/sets/root/folder?view=all');
+        const page = yield* ask('/asks/a1?still=x');
         expect(page.status).toBe(200);
         expect(buildOf(page.text)).toBe(0);
-        expect(page.text).toContain('<meta name="rendered" content="review"></head>');
+        expect(page.text).toContain('<meta name="rendered" content="ask"></head>');
         expect(page.text).toContain(
-          '<body class="rendered"><main>review at http://127.0.0.1:8229/sets/root/folder?view=all</main><script type="module" src="./src/p.ts"></script></body>',
+          '<body class="rendered"><main>ask at http://127.0.0.1:8229/asks/a1?still=x</main><script type="module" src="./src/p.ts"></script></body>',
         );
         // Asked by a Mac's browser, it is rendered for a Mac (its chords labelled as a Mac labels them).
-        const asMac = yield* ask('/sets/root/folder?view=all', 'GET', { 'user-agent': MAC_AGENT });
+        const asMac = yield* ask('/asks/a1?still=x', 'GET', { 'user-agent': MAC_AGENT });
         expect(asMac.text).toContain(
-          '<main>review at http://127.0.0.1:8229/sets/root/folder?view=all for a Mac</main>',
+          '<main>ask at http://127.0.0.1:8229/asks/a1?still=x for a Mac</main>',
         );
-        // The player has no server entry here: its page is as built.
-        const studio = yield* ask('/films/f/studio');
-        expect(studio.text).toContain('<body><script type="module" src="../src/play.ts"></script>');
-        expect(studio.text).not.toContain('rendered');
+        // The render page has no server entry here: its page is as built.
+        const exported = yield* ask('/films/f/export');
+        expect(exported.text).toContain(
+          '<body><script type="module" src="../src/render.ts"></script>',
+        );
+        expect(exported.text).not.toContain('rendered');
         // A HEAD is the page's headers: nothing is rendered for it.
         const head = yield* ask('/', 'HEAD');
         expect([head.status, head.text.includes('<main>')]).toEqual([200, false]);
@@ -196,8 +195,9 @@ describe('lab pages', () => {
             render: () => Effect.fail(RenderFailed.make({ reason: 'no worker' })),
           }),
         );
-        const unrendered = (yield* (yield* served(spec, PageBundler.layerTest, failing)).ask('/'))
-          .text;
+        const unrendered = (yield* (yield* served(spec, PageBundler.layerTest, failing)).ask(
+          '/asks/a1',
+        )).text;
         expect(unrendered).toContain('</head><body><script type="module" src="./src/p.ts">');
         const cut = Layer.succeed(
           PageRenderer,
@@ -213,7 +213,8 @@ describe('lab pages', () => {
               }),
           }),
         );
-        const half = (yield* (yield* served(spec, PageBundler.layerTest, cut)).ask('/')).text;
+        const half = (yield* (yield* served(spec, PageBundler.layerTest, cut)).ask('/asks/a1'))
+          .text;
         // Marked as cut, so the browser renders the page anew (`mountPage`).
         expect(half).toContain(
           `<body class="rv"><main>half${PAGE_CUT_MARK}<script type="module" src="./src/p.ts"></script></body></html>`,
@@ -239,7 +240,7 @@ describe('lab pages', () => {
     () =>
       Effect.gen(function* () {
         const { ask, script, write } = yield* app;
-        // The review imports the framework's faces, as every page with chrome does.
+        // The ask page imports the framework's faces, as every page with chrome does.
         yield* write(
           'src/p.ts',
           `import { registerFace } from '${import.meta.dir}/../player/face.ts';\nconsole.log(registerFace);\n`,
@@ -274,84 +275,40 @@ describe('lab pages', () => {
             (r) => [r.status, /<title>(\w+)</.exec(r.text)?.[1] ?? ''] as const,
           );
         const places = {
-          '/': 'review',
-          '/sets/root/folder': 'review',
-          '/films/f/studio': 'player',
+          '/asks/a1': 'ask',
+          '/asks/page/a1': 'ask',
           '/films/f/export': 'render',
         };
         for (const [pathname, page] of Object.entries(places))
           expect([pathname, ...(yield* titleOf(pathname))]).toEqual([pathname, 200, page]);
-        // A film's export page runs the render page's script (its handle), never the studio's.
+        // A film's export page runs the render page's script (its handle).
         expect(yield* scriptOf('/films/f/export')).toContain('the render page');
-        expect(yield* scriptOf('/films/f/export')).not.toContain('the player');
         // A page under a film's path finds its script: the HTML links it from the root.
-        const page = (yield* ask('/films/f/studio')).text;
+        const page = (yield* ask('/films/f/export')).text;
         expect(page).toMatch(/src="\/[^"]+\.js"/);
-        expect(yield* scriptOf('/films/f/studio')).toContain('the player');
         // No page at a path no place declares, nor a narration file of a film that has none.
         for (const pathname of ['/films/f/narration/full.wav', '/films/f/narration', '/p', '/p/'])
           expect([pathname, (yield* ask(pathname)).status]).toEqual([pathname, 404]);
       }).pipe(Effect.scoped, Effect.provide(Platform)),
   );
 
-  it.live('an old link, and each page the studio replaced, is sent on to its place', () =>
-    Effect.gen(function* () {
-      const { ask } = yield* app;
-      const old = {
-        '/lab?film=f': '/films/f/studio',
-        '/lab?film=f&sel=cue:hand:rise': '/films/f/studio?sel=beat%3Ahand',
-        '/lab': '/',
-        '/player?film=f&lookbook': '/films/f/studio',
-        '/player?film=f': '/films/f/studio',
-        '/?project=f': '/films/f/studio',
-        '/?film=f': '/films/f/studio',
-        // Each film page the studio replaced lands on the studio, its beat selected (the browser
-        // keeps the link's `#t=`, film time on both).
-        '/films/f/play': '/films/f/studio',
-        '/films/f/scenes': '/films/f/studio',
-        '/films/f/scenes/hand': '/films/f/studio?sel=beat%3Ahand',
-        '/films/f/project': '/films/f/studio',
-        // The film's Lab lands on the studio (the browser keeps the link's `#t=`, film time on
-        // both); a scene's Lab lands on its beat, at the beat's start, its note kept.
-        '/films/f/lab': '/films/f/studio',
-        '/films/f/lab?note=n1': '/films/f/studio?note=n1',
-        '/films/f/lab/hand': '/films/f/studio?sel=beat%3Ahand#',
-        '/films/f/lab/hand?note=n2': '/films/f/studio?sel=beat%3Ahand&note=n2#',
-        // The choices, the Script and the Board are the studio's inspector now: a scene render's
-        // card lands on its beat; a beat's page on the studio with its beat selected, a panel's
-        // with its panel and the try shown; the note open is kept.
-        '/films/f/choices': '/films/f/studio',
-        '/films/f/choices?point=score&variant=piano': '/films/f/studio',
-        '/films/f/choices?point=render%3Ascenes%3Ahand': '/films/f/studio?sel=beat%3Ahand',
-        '/films/f/script': '/films/f/studio',
-        '/films/f/script?note=n2': '/films/f/studio?note=n2',
-        '/films/f/board': '/films/f/studio',
-        // A beat's page held time in the beat on its hash, which the studio would read as film
-        // time: the Location's empty fragment keeps the browser from carrying it across, and the
-        // studio opens at the beat's start (the panel's mark).
-        '/films/f/script/hand': '/films/f/studio?sel=beat%3Ahand#',
-        '/films/f/script/hand?note=n2': '/films/f/studio?sel=beat%3Ahand&note=n2#',
-        '/films/f/board/hand': '/films/f/studio?sel=beat%3Ahand#',
-        '/films/f/board/hand?panel=rise&try=2&note=n1':
-          '/films/f/studio?sel=panel%3Ahand.rise&note=n1&try=2#',
-        // A trailing slash is dropped; a parent path opens its nearest page.
-        '/films/f/studio/': '/films/f/studio',
-        '/films/f/lab/?note=n1': '/films/f/studio?note=n1',
-        '/films/f/board/': '/films/f/studio',
-        '/films/f': '/films/f/studio',
-        '/films': '/',
-        '/series/education': '/',
-        // A render link lands on the film's export page, the build it pins kept.
-        '/films/f/play?export&build=3': '/films/f/export?build=3',
-        '/?film=f&export': '/films/f/export',
-        '/?folder=root%2Fout&set=render%3Ascenes%3Ahand&view=moments&m=1':
-          '/sets/root%2Fout/render:scenes:hand?view=moments&m=1',
-      };
-      for (const [from, to] of Object.entries(old)) {
-        const answer = yield* ask(from);
-        expect([from, answer.status, answer.location]).toEqual([from, 302, to]);
-      }
-    }).pipe(Effect.scoped, Effect.provide(Platform)),
+  it.live(
+    "a gone page's link is no page: the studio's, a set's, a folder's, a draft's, an old link",
+    () =>
+      Effect.gen(function* () {
+        const { ask } = yield* app;
+        for (const pathname of [
+          '/films/f/studio',
+          '/sets/root/folder',
+          '/sets/root',
+          '/productions/p',
+          '/series/s/d',
+          '/films/f/play',
+          '/films/f/lab',
+          '/lab?film=f',
+        ])
+          expect([pathname, (yield* ask(pathname)).status]).toEqual([pathname, 404]);
+      }).pipe(Effect.scoped, Effect.provide(Platform)),
   );
 
   it.live(
@@ -416,7 +373,7 @@ describe('lab pages', () => {
         const { spec } = yield* appFolder;
         // The lab that served the page, then the lab after a restart, over the same folder.
         const before = yield* Effect.scoped(
-          Effect.flatMap(served(spec, PageBundler.layerTest), ({ ask }) => ask('/')),
+          Effect.flatMap(served(spec, PageBundler.layerTest), ({ ask }) => ask('/asks/a1')),
         );
         const after = yield* served(spec, PageBundler.layerTest);
         const page = {
@@ -443,7 +400,7 @@ describe('lab pages', () => {
     () =>
       Effect.gen(function* () {
         const { ask, page, script, write } = yield* app;
-        yield* ask('/');
+        yield* ask('/asks/a1');
         // Asked at once after the save, before any watch need have heard it.
         yield* write('src/p.ts', "console.log('saved just now');\n");
         const now = yield* page.built;
@@ -451,7 +408,7 @@ describe('lab pages', () => {
         expect(Option.isNone(now.failed)).toBe(true);
         // The build the look was answered is the one the page serves, and it holds the save:
         // the watch hearing the save later builds nothing new.
-        const served = yield* ask('/');
+        const served = yield* ask('/asks/a1');
         expect(buildOf(served.text)).toBe(now.build.build);
         expect(yield* script).toContain('saved just now');
         // A page on the receipt waits on: no watch, nor the first build's check, counts the save.
@@ -460,7 +417,7 @@ describe('lab pages', () => {
           '600 millis',
         );
         expect(after.build).toBe(now.build.build);
-        expect(buildOf((yield* ask('/')).text)).toBe(now.build.build);
+        expect(buildOf((yield* ask('/asks/a1')).text)).toBe(now.build.build);
         // Asked again with nothing saved: the same build (once past a save in the build's own
         // millisecond, which is built again rather than risked).
         const settled = (yield* page.built).build.build;
@@ -476,7 +433,7 @@ describe('lab pages', () => {
         const path = yield* Path.Path;
         const { ask, page, script, scriptOf, spec } = yield* app;
         const shared = yield* fs.realPath(
-          path.join(path.dirname(spec.pages.review), 'lib', 'shared.ts'),
+          path.join(path.dirname(spec.pages.ask), 'lib', 'shared.ts'),
         );
         // Long enough to be worth compressing, as a build's script is kept.
         const swapped = new Map([
@@ -524,17 +481,13 @@ const memoryApp = (
   afterRead: (file: string) => Effect.Effect<void> = () => Effect.void,
 ) => {
   const files = new Map<string, Uint8Array>([
-    ['/app/review.html', text(html('review old', './src/p.ts'))],
-    ['/app/sub/player.html', text(html('player', '../src/play.ts'))],
-    ['/app/ask.html', text(html('ask', './src/p.ts'))],
-    ['/app/index.html', text(html('render', './src/render.ts'))],
+    ['/app/ask.html', text(html('ask old', './src/p.ts'))],
+    ['/app/sub/index.html', text(html('render', '../src/render.ts'))],
   ]);
   const spec = {
     pages: {
-      review: '/app/review.html',
-      player: '/app/sub/player.html',
       ask: '/app/ask.html',
-      render: '/app/index.html',
+      render: '/app/sub/index.html',
     },
     servers: {},
     films: '/app/src/films',
@@ -606,10 +559,10 @@ describe("a look's build, against saves no watch hears", () => {
   const bundled = Ref.makeUnsafe(false);
   const landing = memoryApp(new Map(), (file) =>
     Effect.gen(function* () {
-      if (file !== '/app/review.html' || !(yield* Ref.get(bundled))) return;
+      if (file !== '/app/ask.html' || !(yield* Ref.get(bundled))) return;
       yield* Ref.set(bundled, false);
       yield* Ref.set(armed, false);
-      landing.files.set(file, text(html('review new', './src/p.ts')));
+      landing.files.set(file, text(html('ask new', './src/p.ts')));
     }),
   );
   it.effect(
@@ -618,23 +571,23 @@ describe("a look's build, against saves no watch hears", () => {
       Effect.gen(function* () {
         const { page, ask } = yield* served(landing.spec, noting(armed, bundled));
         yield* page.built;
-        landing.files.set('/app/review.html', text(html('review middle', './src/p.ts')));
+        landing.files.set('/app/ask.html', text(html('ask middle', './src/p.ts')));
         yield* Ref.set(armed, true);
         // The look's build reads the middle save; the new one lands as soon as it has printed it.
         const receipt = yield* page.built;
         expect(yield* Ref.get(armed)).toBe(false);
-        const now = yield* ask('/');
-        expect(now.text).toContain('review new');
+        const now = yield* ask('/asks/a1');
+        expect(now.text).toContain('ask new');
         expect(buildOf(now.text)).toBe(receipt.build.build);
         // The look's page is the build it was answered, by its own number, whatever is built after.
         const pinned = `/?build=${receipt.kept}`;
-        expect((yield* ask(pinned)).text).toContain('review new');
-        landing.files.set('/app/review.html', text(html('review newer', './src/p.ts')));
+        expect((yield* ask(pinned)).text).toContain('ask new');
+        landing.files.set('/app/ask.html', text(html('ask newer', './src/p.ts')));
         const after = yield* page.built;
         expect(after.kept).toBeGreaterThan(receipt.kept);
-        expect((yield* ask('/')).text).toContain('review newer');
+        expect((yield* ask('/asks/a1')).text).toContain('ask newer');
         const still = yield* ask(pinned);
-        expect(still.text).toContain('review new<');
+        expect(still.text).toContain('ask new<');
         // Served as made: it waits on no build, so it never reloads itself off the look's build.
         expect(still.text).not.toContain('lab-build');
         expect((yield* ask('/?build=999')).status).toBe(404);
@@ -651,13 +604,13 @@ describe("a look's build, against saves no watch hears", () => {
       // The build has read the page; it is saved anew while the build is under way, and a
       // look asks then.
       yield* Deferred.await(reading);
-      app.files.set('/app/review.html', text(html('review new', './src/p.ts')));
+      app.files.set('/app/ask.html', text(html('ask new', './src/p.ts')));
       const second = yield* Effect.forkChild(page.built);
       yield* Deferred.succeed(release, true);
       yield* Fiber.join(first);
       const receipt = yield* Fiber.join(second);
-      const now = yield* ask('/');
-      expect(now.text).toContain('review new');
+      const now = yield* ask('/asks/a1');
+      expect(now.text).toContain('ask new');
       expect(buildOf(now.text)).toBe(receipt.build.build);
     }).pipe(Effect.scoped, Effect.provide(app.layer)),
   );
@@ -671,12 +624,12 @@ describe("a look's build, against saves no watch hears", () => {
       yield* TestClock.setTime(1500);
       const { page, ask } = yield* served(later.spec, PageBundler.layerTest);
       const before = yield* page.built;
-      expect((yield* ask('/')).text).toContain('review old');
-      later.files.set('/app/review.html', text(html('review new', './src/p.ts')));
-      coarse.set('/app/review.html', 1000);
+      expect((yield* ask('/asks/a1')).text).toContain('ask old');
+      later.files.set('/app/ask.html', text(html('ask new', './src/p.ts')));
+      coarse.set('/app/ask.html', 1000);
       const receipt = yield* page.built;
-      const now = yield* ask('/');
-      expect(now.text).toContain('review new');
+      const now = yield* ask('/asks/a1');
+      expect(now.text).toContain('ask new');
       expect(buildOf(now.text)).toBe(receipt.build.build);
       expect(receipt.build.build).toBeGreaterThan(before.build.build);
     }).pipe(Effect.scoped, Effect.provide(later.layer)),

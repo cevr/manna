@@ -362,7 +362,7 @@ class Driven extends Context.Service<Driven, DrivenService>()(
 /**
  * The app's pages (`LabPage`, beside `echoPages`' easel) over files in
  * memory, built by the test bundler with the sources `Driven.reads` names
- * beside their entries (a server entry, `server`, for the review when
+ * beside their entries (a server entry, `server`, for the ask page when
  * given), rendered by `renderer`, and watched by watches the test drives
  * (`Driven`).
  */
@@ -375,25 +375,23 @@ const drivenPages = (
       const page = (title: string) =>
         text(`<!doctype html><html><head><title>${title}</title></head><body></body></html>`);
       const files = new Map<string, Uint8Array>([
-        ['/app/review.html', page('review')],
         ['/app/ask.html', page('ask')],
-        ['/app/sub/player.html', page('player')],
+        ['/app/ask.html', page('ask')],
+        ['/app/sub/index.html', page('render')],
         ['/app/index.html', page('render')],
         ...SOURCES.map((file) => [file, text('export {};\n')] as const),
         ...Option.toArray(
-          Option.map(server, (code) => ['/app/review.server.js', text(code)] as const),
+          Option.map(server, (code) => ['/app/ask.server.js', text(code)] as const),
         ),
       ]);
       const spec: LabPageSpec = {
         pages: {
-          review: '/app/review.html',
-          player: '/app/sub/player.html',
           ask: '/app/ask.html',
-          render: '/app/index.html',
+          render: '/app/sub/index.html',
         },
         servers: Option.match(server, {
           onNone: () => ({}),
-          onSome: () => ({ review: '/app/review.server.js' }),
+          onSome: () => ({ ask: '/app/ask.server.js' }),
         }),
         films: '/app/films',
         footage: { dir: '/app/footage', out: '/app/out' },
@@ -487,7 +485,7 @@ const trackPages = (
   armed: Deferred.Deferred<void>,
 ) => {
   const page = text('<!doctype html><html><head></head><body></body></html>');
-  for (const name of ['review', 'player', 'ask', 'index']) files.set(`/app/${name}.html`, page);
+  for (const name of ['ask', 'index']) files.set(`/app/${name}.html`, page);
   files.set('/app/films/f/scenes/index.ts', text('export {};\n'));
   files.set(TRACK, text('mix one'));
   mtimes.set(TRACK, MIXED_AT);
@@ -508,8 +506,6 @@ const trackPages = (
   ).pipe(Layer.provide(memoryFileSystem(files, new Set(), mtimes)));
   const spec: LabPageSpec = {
     pages: {
-      review: '/app/review.html',
-      player: '/app/player.html',
       ask: '/app/ask.html',
       render: '/app/index.html',
     },
@@ -570,7 +566,7 @@ describe('lab routes', () => {
         yield* Effect.promise(() =>
           lab(post(labUrls.notes.add({ params: { film: 'f' } }), draft), bound),
         );
-        const page = yield* Effect.promise(() => lab(get('/'), bound).then((r) => r.text()));
+        const page = yield* Effect.promise(() => lab(get('/asks/a1'), bound).then((r) => r.text()));
         expect(page).toMatch(/^200 \{/);
         expect(page).toContain('"id":"n1"');
       }).pipe(Effect.scoped, Effect.provide(labInMemory(files(), readingPages))),
@@ -626,7 +622,7 @@ describe('lab routes', () => {
     Effect.gen(function* () {
       const ended = yield* Deferred.make<void>();
       const lab = yield* labHandler(heldRoute(ended));
-      const page = yield* Effect.promise(() => lab(get('/'), bound).then((r) => r.text()));
+      const page = yield* Effect.promise(() => lab(get('/asks/a1'), bound).then((r) => r.text()));
       expect(page).toBe('gave up');
       const stopped = yield* Deferred.await(ended).pipe(Effect.timeoutOption('2 seconds'));
       expect(Option.isSome(stopped)).toBe(true);
@@ -761,7 +757,7 @@ describe('lab routes', () => {
     expect(names).toBe(true);
     return Effect.gen(function* () {
       const lab = yield* served;
-      const answered = yield* Effect.promise(() => lab(get('/'), bound));
+      const answered = yield* Effect.promise(() => lab(get('/asks/a1'), bound));
       expect([answered.status, answered.headers.get('x-label')]).toEqual([200, 'caller']);
     }).pipe(
       Effect.scoped,
@@ -781,7 +777,7 @@ describe('lab routes', () => {
       return Effect.gen(function* () {
         const lab = yield* labHandler();
         const zipped = yield* Effect.promise(() =>
-          lab(get('/', { 'accept-encoding': 'gzip' }), bound),
+          lab(get('/asks/a1', { 'accept-encoding': 'gzip' }), bound),
         );
         expect([zipped.headers.get('content-encoding'), zipped.headers.get('vary')]).toEqual([
           'gzip',
@@ -795,13 +791,13 @@ describe('lab routes', () => {
         expect(yield* readTo(reader, Infinity)).toBe(REST);
 
         const brotli = yield* Effect.promise(() =>
-          lab(get('/', { 'accept-encoding': 'gzip, br' }), bound),
+          lab(get('/asks/a1', { 'accept-encoding': 'gzip, br' }), bound),
         );
         expect(brotli.headers.get('content-encoding')).toBe('br');
         const bytes = yield* Effect.promise(() => brotli.arrayBuffer());
         expect(new TextDecoder().decode(brotliDecompressSync(bytes))).toBe(SHELL + REST);
 
-        const plain = yield* Effect.promise(() => lab(get('/'), bound));
+        const plain = yield* Effect.promise(() => lab(get('/asks/a1'), bound));
         expect(plain.headers.get('content-encoding')).toBeNull();
         expect(yield* Effect.promise(() => plain.text())).toBe(SHELL + REST);
       }).pipe(Effect.scoped, Effect.provide(labInMemory(files(), streamingPages(ended))));

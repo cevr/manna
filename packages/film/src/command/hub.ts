@@ -30,7 +30,6 @@ import {
 import { type Context, type Focus, contextAt, focusOf, withFocused } from './context.ts';
 import { Resolved, bindingsOf, keysOf, resolve } from './keymap.ts';
 import { linkCommands } from './link.ts';
-import { selectionOf } from './selection.ts';
 import { targetAt } from './target.ts';
 
 /** A page's commands, its keymap, its context and its receipts. */
@@ -118,7 +117,7 @@ const hubOf = (page: PageName, href: () => string, mac: boolean): Hub => {
   const context = (focus: Focus = 'page'): Context =>
     parts.reduce<Context>((ctx, p) => p.part(ctx), {
       ...contextAt(page, href()),
-      selection: Option.toArray(selectionOf(href())),
+      selection: [],
       focus,
     });
 

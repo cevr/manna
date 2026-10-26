@@ -54,12 +54,7 @@ const stilled = <A extends { readonly query: { readonly still: string } }>(
  * `Zoom` keeps `?still=` in its place and is listed here; the type admits
  * only a place whose query has one.
  */
-const STILLED: ReadonlyArray<Stilled> = [
-  stilled(Places.folder),
-  stilled(Places.set),
-  stilled(Places.ask),
-  stilled(Places.askPage),
-];
+const STILLED: ReadonlyArray<Stilled> = [stilled(Places.ask), stilled(Places.askPage)];
 
 /** The still `href` opens full size (`?still=`): its key, or none. */
 export const stillIn = (href: string): Option.Option<string> =>

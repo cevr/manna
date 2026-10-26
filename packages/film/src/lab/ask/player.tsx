@@ -22,15 +22,11 @@ import * as Atom from 'effect/reactivity/Atom';
 import type { LabFailure } from '../api.ts';
 import { FILM_FPS, clock, timecode } from '../../core/time.ts';
 import { type Playable, playableOf } from '../../browser/media.ts';
-import { rateCommands, rateId, rateText, rateTitle } from '../../player/transport.ts';
 import { Actor } from '../actor.tsx';
-import { hubKeys } from '../command/changes.ts';
-import { CommandChip } from '../command/command-chip.tsx';
-import { HearIcon, PlayIcon, useShellTime } from '../page-shell.tsx';
+import { HearIcon, PlayIcon } from '../page-shell.tsx';
 import { pressed } from '../pressed.ts';
 import { useAskRoot } from './root.tsx';
 import {
-  Rate,
   SyncEvent,
   type SyncState,
   atRest,
@@ -68,54 +64,6 @@ export const HearToggle = (props: {
     <HearIcon />
   </button>
 );
-
-/**
- * The synced player's controls, one row: play, the clock, a scrub over every
- * track, and the one rate chip, whose rates are the page's commands
- * while the transport is shown (J, K, L; ⌘K). Its keys are in the `?` sheet.
- * A page docks it (`.sh-dock`: on the shell's floor on a phone, held under the
- * header on a laptop, design language §4), Choices and a Set alike.
- */
-export const Transport = (props: {
-  readonly sync: Accessor<SyncState>;
-  readonly send: (event: SyncEvent) => void;
-}) => {
-  const { sync } = props;
-  const { meta } = useAskRoot();
-  const keys = hubKeys(meta.hub);
-  // The header's timecode is this transport's clock, at its rate.
-  useShellTime(
-    () => sync().t,
-    () => sync().fps,
-  );
-  onCleanup(
-    meta.hub.commands.register(
-      ...rateCommands({
-        all: Rate.literals,
-        now: () => sync().rate,
-        choose: (rate) => props.send(SyncEvent.RateChosen({ rate })),
-      }),
-    ),
-  );
-  return (
-    <TransportRow
-      sync={sync}
-      send={props.send}
-      scrubs="Scrub every video"
-      title="Play / pause (space)"
-    >
-      <CommandChip
-        hub={meta.hub}
-        ids={Rate.literals.map(rateId)}
-        act="rate"
-        class="sh-btn"
-        title={rateTitle(keys.titled)}
-      >
-        <span data-rate={String(sync().rate)}>{rateText(sync().rate)}</span>
-      </CommandChip>
-    </TransportRow>
-  );
-};
 
 /** What a page's player whose clock cannot play says, in its row, in place of the scrub. */
 const CANNOT_PLAY_CLOCK = 'Can’t play this video';
@@ -182,7 +130,7 @@ const TransportRow = (
         </span>
       </button>
       <span class="rv-time" data-state={sync()._tag}>
-        {/* The time: a laptop's header shows the docked one's already (`useShellTime`), so its row leaves it out. */}
+        {/* The time where the video is. */}
         <span class="rv-time-at">{time().at}</span>
         {/* The end, and a wait: a phone's row leaves them out (the scrub shows the end). */}
         <span class="rv-time-rest">{time().rest}</span>

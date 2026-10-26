@@ -1,6 +1,6 @@
 // The shell's styles (`page-shell.tsx`, design language §4), read only
 // through the tokens (`player/tokens.css`): the header on `--surface-1`,
-// its Studio link and the page's name (`--shell-floor` is what the chrome
+// the page's name (`--shell-floor` is what the chrome
 // holds under the page: the safe area), and the dock a page's transport
 // takes above it (`.sh-dock`); and
 // the kit (§5), each control styled once: the quiet and primary buttons
@@ -29,32 +29,11 @@ body { --shell-floor: env(safe-area-inset-bottom); }
 .sh-header { position: sticky; top: 0; z-index: 20; height: var(--header-h); flex: none; display: flex;
   align-items: center; gap: var(--s-1); padding: 0 calc(var(--gutter) - var(--s-1)); background: var(--surface-1);
   border-bottom: var(--border); min-width: 0; }
-.sh-films { display: inline-grid; place-items: center; width: var(--hit); height: var(--hit); flex: none;
-  color: var(--accent); text-decoration: none; border-radius: var(--r-2); }
-.sh-films > span { display: none; }
-.sh-vsep { display: none; width: 1px; height: var(--s-4); background: var(--line); flex: none; margin: 0 var(--s-1); }
-.sh-switcher { display: inline-flex; align-items: center; gap: var(--s-1); min-width: var(--hit); height: var(--control-h);
-  padding: 0 var(--s-2); border: 0; border-radius: var(--r-2); background: none; color: var(--text-1);
-  font-size: var(--fs-3); font-weight: var(--w-2); cursor: pointer; }
-.sh-switcher > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sh-switcher .sh-icon { width: 12px; height: 12px; color: var(--text-3); }
-.sh-switcher:hover, .sh-switcher[data-popup-open] { background: var(--surface-3); }
-.sh-studio { display: inline-flex; align-items: center; min-height: var(--hit); padding: 0 var(--s-3); flex: none;
-  color: var(--accent); text-decoration: none; font-size: var(--fs-2); font-weight: var(--w-2); white-space: nowrap;
-  border-radius: var(--r-2); }
-.sh-studio:hover { background: var(--surface-3); }
 .sh-crumb { display: inline-flex; align-items: center; gap: var(--s-2); min-width: 0; color: var(--text-2);
   font-size: var(--fs-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sh-crumb i { font-style: normal; color: var(--text-3); }
 .sh-crumb-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sh-spacer { flex: 1; min-width: 0; align-self: stretch; }
-.sh-tc { display: none; border: 0; background: none; color: var(--text-1); cursor: pointer; padding: 0 var(--s-2);
-  font-size: var(--fs-5); line-height: var(--lh-5); font-weight: var(--w-2); white-space: nowrap; border-radius: var(--r-2); }
-.sh-tc:hover { background: var(--surface-3); }
-/* A timecode is a number: the mono face, its zero slashed. */
-.sh-timecode { font-family: var(--font-mono); }
-.sh-timecode i { font-style: normal; color: var(--text-3); }
-.sh-timecode .sh-ff { color: var(--text-2); }
 .sh-goto { display: inline-grid; place-items: center; width: var(--hit); height: var(--hit); flex: none; padding: 0;
   border: 0; border-radius: var(--r-2); background: none; color: var(--text-2); cursor: pointer; }
 .sh-goto > span, .sh-goto > kbd { display: none; }
@@ -73,9 +52,7 @@ body { --shell-floor: env(safe-area-inset-bottom); }
 /* The phone: the transport docked above the safe area. */
 @media ${PHONE} {
   .sh[data-film="true"] { padding-bottom: var(--shell-floor); }
-  /* The phone's header holds the film: the studio is the film menu's Open the studio. */
-  .sh-studio { display: none; }
-  /* The crumb names the subject on a phone too (a Set's scene, a Folder's), shortened first. */
+  /* The crumb names the page on a phone too (an ask's title), shortened first. */
   .sh-crumb { flex: 0 1 auto; font-size: var(--fs-1); }
   /* The phone's dock, the one docked row (\`.sh-dock\`). */
   .sh-dock { position: fixed; left: 0; right: 0; z-index: 25; height: var(--dock-h);
@@ -90,16 +67,8 @@ body { --shell-floor: env(safe-area-inset-bottom); }
   .sh-dock { position: sticky; top: var(--header-h); z-index: 15; min-height: var(--dock-h); border-bottom: var(--border); }
 }
 
-/* The laptop: Films in words, the timecode and Go to… in full. */
+/* The laptop: Go to… in full. */
 @media ${WIDE} {
-  .sh-films { display: flex; width: auto; height: auto; align-self: stretch; padding: 0 var(--s-3);
-    font-size: var(--fs-2); font-weight: var(--w-2); color: var(--text-1); position: relative; }
-  .sh-films .sh-icon { display: none; }
-  .sh-films > span { display: inline; }
-  .sh-films::after { content: ""; position: absolute; left: var(--s-3); right: var(--s-3);
-    bottom: -1px; height: 2px; background: var(--accent); }
-  .sh-vsep { display: block; }
-  .sh-tc { display: inline-flex; align-items: center; min-height: var(--hit); }
   .sh-goto { display: inline-flex; gap: var(--s-2); width: auto; height: var(--control-h); padding: 0 var(--s-2);
     border: var(--border); background: var(--surface-2); color: var(--text-3); font-size: var(--fs-2); }
   .sh-goto .sh-icon { width: 14px; height: 14px; }

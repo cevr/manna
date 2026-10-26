@@ -122,7 +122,7 @@ export const overviewRead = Effect.gen(function* () {
       const waiting = unresolved(log);
       return {
         film,
-        links: linksOf(pageHref.studio(film)),
+        links: linksOf(pageHref.home()),
         notes: {
           open: waiting.filter((n) => n.status === 'open').length,
           replied: waiting.filter((n) => n.status === 'replied').length,

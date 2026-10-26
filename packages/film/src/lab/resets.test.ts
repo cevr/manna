@@ -9,7 +9,6 @@ import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem } from 'effect';
 import { COMMAND_CSS } from './command/style.ts';
-import { CODE_CSS, INSPECTOR_CSS, STUDIO_CSS } from './film-studio/style.ts';
 import { SHELL_CSS } from './page-shell-style.ts';
 import { PAGE_CSS } from './ask/style.ts';
 
@@ -87,10 +86,7 @@ describe("a bare button's reset", () => {
       const player = yield* fs.readFileString(`${import.meta.dir}/../player/player.css`);
       const sheets = {
         shell: SHELL_CSS,
-        review: PAGE_CSS,
-        studio: STUDIO_CSS,
-        inspector: INSPECTOR_CSS,
-        code: CODE_CSS,
+        ask: PAGE_CSS,
         command: COMMAND_CSS,
         player,
       };

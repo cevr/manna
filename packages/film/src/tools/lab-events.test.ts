@@ -70,8 +70,8 @@ describe('the change feed', () => {
       ]);
       // A note opens in the studio's inspector on its beat, a try in its viewer on its panel.
       expect(seen.changes.map((c) => c.links)).toEqual([
-        { local: 'http://localhost:8229/films/f/studio?sel=beat%3Acold&note=n2' },
-        { local: 'http://localhost:8229/films/f/studio?sel=panel%3Acold.judge&try=1' },
+        { local: 'http://localhost:8229/' },
+        { local: 'http://localhost:8229/' },
       ]);
       expect(seen.reset).toBe(false);
       // Read again with nothing new: nothing said twice.
@@ -234,18 +234,8 @@ describe('the change feed', () => {
       expect(
         filmWide.changes.map((c) => [c.kind, c.beat ?? 'the film', c.summary, c.links.local]),
       ).toEqual([
-        [
-          'source.written',
-          'cold',
-          'f changed: knob palm (cold)',
-          'http://localhost:8229/films/f/studio?sel=beat%3Acold',
-        ],
-        [
-          'source.written',
-          'the film',
-          'f changed: score play piano',
-          'http://localhost:8229/films/f/studio',
-        ],
+        ['source.written', 'cold', 'f changed: knob palm (cold)', 'http://localhost:8229/'],
+        ['source.written', 'the film', 'f changed: score play piano', 'http://localhost:8229/'],
       ]);
       yield* writer.step('undo', 'f');
       yield* writer.step('undo', 'f');

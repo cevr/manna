@@ -6,8 +6,8 @@
 //
 // The paths are generated, not listed by hand:
 // - every command each page's registry holds, read from ⌘K with a query
-//   every id matches (`.`), so the Go to entries found only by typing are
-//   in it too (one per kind of thing: they share one `go`), on each page as it
+//   every id matches (`.`), so a command found only by typing is
+//   in it too, on each page as it
 //   opens and with the thing selected that a command is about (a scene, a
 //   point). Each runs from ⌘K by its keys (Control+k, then the row chosen
 //   with the arrows and Enter) and by the pointer (the header's Go to…
@@ -17,8 +17,7 @@
 //   (`FOCUS_SITES` in `src/lab/focus-sites.test.ts`, by file and call, the
 //   lab's wrappers' callers and the kit popups' `initialFocus` too): that
 //   unit test's source scan fails on a place not named there, and each site's
-//   paths that no command reaches (a recorder button or its prompter, a
-//   recorder control pressed away, an ask's index entry and its Send with a
+//   paths that no command reaches (an ask's index entry and its Send with a
 //   question open), run below, by the keyboard and by the
 //   pointer, and a key pressed in the middle of a click.
 // `:focus-visible` matches only in the window that has the focus, so every
@@ -28,8 +27,7 @@ import { Effect, type Scope } from 'effect';
 import { expect, it } from 'effect-bun-test';
 import type { Input } from '../../src/browser/keys.ts';
 import { pageHref } from '../../src/core/api.ts';
-import { DESK, json, openAsk, openPlayer, route } from '../../src/lab/fixtures/harness.ts';
-import { PROBE } from '../../src/lab/fixtures/probe-film.ts';
+import { DESK, openAsk } from '../../src/lab/fixtures/harness.ts';
 import {
   STUDIO_ASK,
   STUDIO_GUIDED,
@@ -228,73 +226,18 @@ const everyCommand = (opened: Opened) =>
     expect(unrun).toEqual([]);
   });
 
-/** The beat the studio selects, to record, with one earlier attempt that can be kept. */
-const STUDIO_ROUTES = [
-  route('GET', /^\/studio\/beats$/, () =>
-    json({
-      film: PROBE,
-      beats: [
-        {
-          id: 'one',
-          file: 'one.wav',
-          parts: [{ kind: 'line', text: 'The ball climbs.' }],
-          sources: [],
-          state: 'staging',
-          recorded: false,
-          attempts: 1,
-        },
-      ],
-    }),
-  ),
-  route('GET', /^\/studio\/takes\/one\/attempts$/, () =>
-    json({
-      beat: 'one',
-      attempts: [
-        {
-          file: 'one.new.flac',
-          transcript: 'the ball climbs',
-          wer: 0,
-          at: 0,
-          duration: 2.5,
-          kept: false,
-          current: true,
-        },
-      ],
-    }),
-  ),
-];
-
-/** The studio at rest: its timeline drawn. */
-const READY = '.st-timeline .st-clip';
-/** The recorder over the studio, a beat in it, its prompter, and an earlier attempt's Keep. */
-const RECORD = '[data-role="record"]';
-const STUDIO = `${RECORD} [data-role="studio"]`;
-const BEAT = `${RECORD} [data-beat="one"]`;
-const PROMPTER = `${RECORD} [data-role="prompter"]`;
-
-/** The studio at a desk. */
-const atRest = () => openPlayer({ href: pageHref.studio(PROBE), viewport: DESK }, READY);
-
-/** The studio's recorder over `STUDIO_ROUTES`, opened from beat one's Voice section. */
-const inRecord = () =>
-  Effect.gen(function* () {
-    const opened = yield* openPlayer(
-      { href: pageHref.studio(PROBE, { sel: 'beat:one' }), viewport: DESK, microphone: true },
-      READY,
-      STUDIO_ROUTES,
-    );
-    const { page } = opened;
-    const voice = '.st-pane .st-sec[data-section="Voice"]';
-    yield* page.click(`${voice} > summary`);
-    yield* page.click(`${voice} [data-act="record"]`);
-    yield* waitFor(page, BEAT);
-    return opened;
-  });
-
 /** The pages whose registries the property runs, each at a desk. */
 const PAGES: ReadonlyArray<Opened> = [
-  { name: 'the studio', open: atRest, moves: [], runs: ['studio.note'] },
-  { name: 'Record', open: inRecord, moves: [], runs: [] },
+  {
+    name: "an agent's ask",
+    open: () =>
+      Effect.tap(
+        openAsk(studioRoutes, { href: pageHref.ask(STUDIO_ASK), viewport: DESK }),
+        ({ page }) => waitFor(page, ASK_READY),
+      ),
+    moves: [],
+    runs: [],
+  },
 ];
 
 /**
@@ -315,74 +258,9 @@ for (const opened of PAGES)
 /** How each input asks, as a case's name says it. */
 const ASKED = { key: 'pressed', pointer: 'clicked' } as const;
 
-/** A command whose field ⌘K's closing takes the focus back from, run by its key instead. */
-const BY_THEIR_KEYS = [
-  {
-    command: "the studio's studio.note",
-    open: atRest,
-    key: 'n',
-    field: '.st-notebar [data-role="note-text"]',
-  },
-] as const;
-
-for (const { command, open, key, field } of BY_THEIR_KEYS)
-  alone(
-    `${command} by its key puts the focus in its field, which rings as a text field does`,
-    Effect.gen(function* () {
-      const { page } = yield* open();
-      const seen = yield* watched(
-        page,
-        Effect.andThen(
-          page.press(key),
-          until(page, `document.activeElement?.matches('${field}') === true`),
-        ),
-      );
-      yield* holds(command, 'key', seen);
-      expect(page.errors).toEqual([]);
-    }),
-  );
-
 /** Fail naming each stop `seen` holds whose ring is not `input`'s. */
 const holds = (path: string, input: Input, seen: Seen) =>
   Effect.sync(() => expect(wrong(path, input, seen)).toEqual([]));
-
-for (const [part, at] of [
-  ['a studio button', BEAT],
-  ['the prompter', PROMPTER],
-] as const)
-  alone(
-    `in Record, the keyboard on the studio, then ${part} pressed with the mouse: the ring goes`,
-    Effect.gen(function* () {
-      const { page, errors } = yield* inRecord();
-      yield* waitFor(page, at);
-      yield* page.focus(STUDIO);
-      yield* page.press('ArrowRight');
-      const seen = yield* watched(page, page.click(at));
-      yield* holds(`${part} after the keyboard`, 'pointer', seen);
-      expect(errors).toEqual([]);
-    }),
-  );
-
-alone(
-  'in Record, a studio control the keyboard pressed away hands the focus to the studio, with the ring',
-  Effect.gen(function* () {
-    const { page, errors } = yield* inRecord();
-    yield* page.click(BEAT);
-    const record = `${STUDIO} [data-act="arm"]`;
-    yield* waitFor(page, record);
-    yield* page.focus(record);
-    const seen = yield* watched(
-      page,
-      Effect.gen(function* () {
-        yield* page.press('Enter');
-        yield* until(page, `document.querySelector('${record}') === null`);
-        yield* until(page, `document.activeElement?.matches('${STUDIO}') === true`);
-      }),
-    );
-    yield* holds('a studio control pressed away', 'key', seen);
-    expect(errors).toEqual([]);
-  }),
-);
 
 /**
  * An ask's goTo (`ask/parts.tsx`): its index's entry takes the owner to a section's head, and

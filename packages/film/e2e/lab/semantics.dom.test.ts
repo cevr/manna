@@ -1,125 +1,58 @@
-// The studio's controls as assistive tech and the keyboard meet them, over
-// the probe film with the lab API faked: the header's rule is a vertical
-// separator, and the film switcher lists the films as a group of radio
-// items, the open film checked; and whatever the keyboard focuses (a control,
-// a link, a scroll box, a dialog, a receipt) shows the studio's ring on every
-// page and in every portal, never the browser's; every floating root (a
-// dialog, a menu, a sheet, a receipt) shows it over its own shadow, exactly,
-// on every page that opens it, inside its edge when its box fills the view;
-// and a mouse path that moves the focus from script (the studio holding it)
-// shows no ring.
+// The lab's controls as assistive tech and the keyboard meet them, over the
+// studio film with the lab API faked: whatever the keyboard focuses (a
+// control, a link, a scroll box, a dialog, a receipt) shows the studio's
+// ring on every page and in every portal, never the browser's; and every
+// floating root (a dialog, a menu, a sheet, a receipt) shows it over its own
+// shadow, exactly, on every page that opens it, inside its edge when its box
+// fills the view.
 
 import { Effect, type Scope } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
-import { ServerFailed, pageHref } from '../../src/core/api.ts';
+import { pageHref } from '../../src/core/api.ts';
+import { DESK, PHONE, type Viewport, openAsk } from '../../src/lab/fixtures/harness.ts';
 import {
-  DESK,
-  type Json,
-  PHONE,
-  type Viewport,
-  json,
-  openPlayer,
-  openReview,
-  refused,
-  route,
-} from '../../src/lab/fixtures/harness.ts';
-import { PROBE } from '../../src/lab/fixtures/probe-film.ts';
-import { STUDIO_FILM, STUDIO_FOLDER, STUDIO_SET } from '../../src/lab/fixtures/studio-film.ts';
+  STUDIO_ASK,
+  STUDIO_GUIDED,
+  guidedRoutes,
+  studioRoutes,
+} from '../../src/lab/fixtures/studio-film.ts';
 import { rightClick } from '../../src/lab/fixtures/gestures.ts';
-import {
-  FOCUS_SHOWN,
-  attributeIs,
-  evaluates,
-  textIs,
-  waitFor,
-} from '../../src/lab/fixtures/settled.ts';
+import { FOCUS_SHOWN, evaluates, waitFor } from '../../src/lab/fixtures/settled.ts';
 import type { Tab } from '../../src/lab/fixtures/tab.ts';
 import { FLOATING, LEFT_OPEN, pageAfterPage, registry, runFromMenu, sampled } from './registry.ts';
-import { receipted, review } from './studio-states.ts';
+import { ASK_READY } from './studio-states.ts';
 
 const SLOW = 30_000;
 /** A page's every root, its registry run once. */
 const REGISTRY = 180_000;
 
-/** Each radio item of the film menu: its film, its role and whether it reads as checked. */
-/** The studio at rest: its timeline drawn. */
-const READY = '.st-timeline .st-clip';
-
-/** The studio, `viewport` wide. */
-const studio = (viewport: Viewport = DESK) =>
-  openPlayer({ href: pageHref.studio(PROBE), viewport }, READY);
-
-/** A Set of a film (`STUDIO_FILM`'s), at a desk: its header names the film. */
-const aSet = () =>
-  Effect.map(review(pageHref.set(STUDIO_FOLDER, STUDIO_SET), '.rv-main video')(DESK), (page) => ({
-    page,
-    errors: page.errors,
-  }));
-
-const FILM_ITEMS = `[...document.querySelectorAll('[data-role="film-menu"] [data-film]')].map((e) => [e.dataset.film, e.getAttribute('role'), e.getAttribute('aria-checked'), e.closest('[role="group"]').getAttribute('aria-label')])`;
-
-describe("the shell's header", () => {
-  it.live(
-    'the rule after Films is a vertical separator; the switcher’s films are radio items, the open one checked',
-    () =>
-      Effect.gen(function* () {
-        const { page, errors } = yield* aSet();
-        yield* attributeIs(page, '.sh-header .sh-vsep', 'role', 'separator');
-        yield* attributeIs(page, '.sh-header .sh-vsep', 'aria-orientation', 'vertical');
-        yield* page.click('.sh-switcher');
-        yield* waitFor(page, `[data-role="film-menu"] [data-film="${STUDIO_FILM}"]`);
-        // Every film is a radio item of the group named Films; the open one alone is checked.
-        yield* evaluates(
-          page,
-          `${FILM_ITEMS}.every(([, role, , group]) => role === 'menuitemradio' && group === 'Films')`,
-          true,
-        );
-        yield* evaluates(
-          page,
-          `${FILM_ITEMS}.filter(([, , checked]) => checked === 'true').map(([film]) => film)`,
-          [STUDIO_FILM],
-        );
-        // The check is drawn, not said: no key hint stands for a state.
-        yield* evaluates(
-          page,
-          `document.querySelectorAll('[data-role="film-menu"] kbd').length`,
-          0,
-        );
-        expect(errors).toEqual([]);
-      }).pipe(Effect.scoped),
-    SLOW,
+/** An agent's ask, `viewport` wide, once it is read. */
+const anAsk = (viewport: Viewport = DESK) =>
+  Effect.tap(openAsk(studioRoutes, { href: pageHref.ask(STUDIO_ASK), viewport }), ({ page }) =>
+    waitFor(page, ASK_READY),
   );
-});
 
-describe('a read that fails', () => {
-  it.live(
-    'on the review, a read refused says why in a polite live region, where it said it was reading',
-    () =>
-      Effect.gen(function* () {
-        const { page } = yield* openReview([
-          route('GET', /^\/api\/review\/index/, () =>
-            refused(ServerFailed.make({ tag: 'IndexFailed', reason: 'the renders are locked' })),
-          ),
-        ]);
-        yield* textIs(page, '.rv-main .empty', 'the renders are locked');
-        yield* attributeIs(page, '.rv-main .empty', 'role', 'status');
-      }).pipe(Effect.scoped),
-    SLOW,
-  );
-});
+/** An ask with a receipt on it: Copy link run from ⌘K, the page's clock held so it stays. */
+const receipted = (viewport: Viewport) =>
+  Effect.gen(function* () {
+    const { page } = yield* anAsk(viewport);
+    yield* page.press('Control+k');
+    yield* page.fill('.lab-command-query', 'copy link');
+    yield* waitFor(page, '[data-role="command-menu"] [data-command="link.copy"]');
+    yield* page.press('Enter');
+    yield* waitFor(page, '[data-role="receipt"]');
+    yield* page.clock.hold;
+    return page;
+  });
 
 describe("the kit's focus ring", () => {
   it.live(
-    'on the studio and in its ⌘K portal, a kit control focused from the keyboard shows the studio’s ring',
+    'on an ask and in its ⌘K portal, a kit control focused from the keyboard shows the studio’s ring',
     () =>
       Effect.gen(function* () {
-        const { page, errors } = yield* studio();
-        // The transport's play and next beat (icon buttons), the timeline's Fit (a text button).
-        for (const control of [
-          '.st-key[data-act="play.toggle"]',
-          '.st-key[data-act="studio.on"]',
-          '.st-tbtn[data-act="fit"]',
-        ]) {
+        const { page, errors } = yield* anAsk();
+        // The ask's Send (a kit button) and the header's Go to….
+        for (const control of ['.ak-send [data-act="send"]', '.sh-header [data-act="search"]']) {
           yield* page.focus(control);
           yield* evaluates(page, FOCUS_SHOWN, 'ring');
         }
@@ -127,20 +60,6 @@ describe("the kit's focus ring", () => {
         yield* page.press('Control+k');
         yield* waitFor(page, '.lab-command-query:focus');
         yield* evaluates(page, FOCUS_SHOWN, 'ring');
-        expect(errors).toEqual([]);
-      }).pipe(Effect.scoped),
-    SLOW,
-  );
-
-  it.live(
-    'on a Set, the header’s Studio link and Go to… focused from the keyboard show the studio’s ring',
-    () =>
-      Effect.gen(function* () {
-        const { page, errors } = yield* aSet();
-        for (const control of ['a.sh-studio', '.sh-header [data-act="search"]']) {
-          yield* page.focus(control);
-          yield* evaluates(page, FOCUS_SHOWN, 'ring');
-        }
         expect(errors).toEqual([]);
       }).pipe(Effect.scoped),
     SLOW,
@@ -201,64 +120,16 @@ const keepRest = (root: string) =>
 const ringedOverRest = (root: string) =>
   `((el) => { const s = getComputedStyle(el); const ring = ${RESOLVED}('var(--focus-ring)'); const want = window.restingShadow === 'none' ? ring : ring + ', ' + window.restingShadow; return el.matches('${root}') && s.outlineStyle === 'none' && s.boxShadow === want ? 'exact' : ${NAME}(el) + ': outline ' + s.outlineStyle + ', shadow ' + s.boxShadow + ', not ' + want; })(document.activeElement)`;
 
-/**
- * The element the page shows the keyboard's focus on (`:focus-visible`), by name; `none` when
- * none. A page without the window's focus matches no `:focus-visible` at all, so it answers
- * that instead of a `none` that proves nothing.
- */
-const SHOWN_FOCUS = `(document.hasFocus() ? ((el) => el === null ? 'none' : ${NAME}(el))(document.querySelector(':focus-visible')) : 'a page without focus')`;
-
-/** Whether the studio holds the focus. */
-const IN_STUDIO = `document.activeElement.matches('[data-role="studio"]')`;
-
-/** The beat the studio selects, to record. */
-const STUDIO_ROUTES = [
-  route('GET', /^\/studio\/beats$/, () =>
-    json({
-      film: PROBE,
-      beats: [
-        {
-          id: 'one',
-          file: 'one.wav',
-          parts: [{ kind: 'line', text: 'The ball climbs.' }],
-          sources: [],
-          state: 'staging',
-          recorded: false,
-          attempts: 0,
-        },
-      ],
-    } satisfies Json),
-  ),
-];
-
-/** The recorder's beat, in its dialog. */
-const RECORD_BEAT = '[data-role="record"] [data-beat="one"]';
-
-/** The studio's recorder over `STUDIO_ROUTES`, opened by the pointer from beat one's Voice section. */
-const inRecord = () =>
-  Effect.gen(function* () {
-    const opened = yield* openPlayer(
-      { href: pageHref.studio(PROBE, { sel: 'beat:one' }), viewport: DESK, microphone: true },
-      READY,
-      STUDIO_ROUTES,
-    );
-    const voice = '.st-pane .st-sec[data-section="Voice"]';
-    yield* opened.page.click(`${voice} > summary`);
-    yield* opened.page.click(`${voice} [data-act="record"]`);
-    yield* waitFor(opened.page, RECORD_BEAT);
-    return opened;
-  });
-
 describe('every focus the keyboard shows is the studio’s ring', () => {
   for (const viewport of [DESK, PHONE])
     it.live(
-      `a Tab walk through the studio at ${viewport.width}: every stop, control, scroll box or root, shows the ring, never the browser’s`,
+      `a Tab walk through an ask at ${viewport.width}: every stop, control, scroll box or root, shows the ring, never the browser’s`,
       () =>
         Effect.gen(function* () {
-          const { page, errors } = yield* studio(viewport);
+          const { page, errors } = yield* anAsk(viewport);
           yield* page.evaluate(WATCH_FOCUS);
           for (let i = 0; i < 60; i++) yield* page.press('Tab');
-          yield* evaluates(page, 'window.focusStops.length > 20', true);
+          yield* evaluates(page, 'window.focusStops.length > 5', true);
           yield* evaluates(page, UNRINGED, []);
           expect(errors).toEqual([]);
         }).pipe(Effect.scoped),
@@ -289,31 +160,6 @@ describe('every focus the keyboard shows is the studio’s ring', () => {
  */
 const alone = <A, E>(name: string, body: Effect.Effect<A, E, Scope.Scope>, timeout = SLOW) =>
   it.scopedLive.serial(name, () => Effect.asVoid(body), timeout);
-
-describe('a mouse path that moves the focus from script shows no ring', () => {
-  alone(
-    'on the studio, a plain click on a transport button shows none',
-    Effect.gen(function* () {
-      const { page, errors } = yield* studio();
-      for (const control of ['.st-key[data-act="studio.on"]', '.st-key[data-act="play.toggle"]']) {
-        yield* page.click(control);
-        yield* evaluates(page, SHOWN_FOCUS, 'none');
-      }
-      expect(errors).toEqual([]);
-    }),
-  );
-
-  alone(
-    'in the recorder, opened by the pointer, a click on a beat leaves the focus on the recorder with no ring',
-    Effect.gen(function* () {
-      const { page, errors } = yield* inRecord();
-      yield* page.click(RECORD_BEAT);
-      yield* evaluates(page, IN_STUDIO, true);
-      yield* evaluates(page, SHOWN_FOCUS, 'none');
-      expect(errors).toEqual([]);
-    }),
-  );
-});
 
 /**
  * Every floating root open now, outermost only (⌘K's listbox sits in its dialog), each focused
@@ -368,127 +214,37 @@ interface Walked {
   readonly opening?: true;
 }
 
-/** The roof set of the review: three stills, each one a lightbox opens on. */
-const roof = (id: string, label: string): Json => ({
-  id,
-  label,
-  lines: [`${label} look`],
-  state: 'current',
-  picked: false,
-  verbs: [],
-  media: {
-    _tag: 'Seen',
-    video: {
-      ref: `out/art/roof.${id}.mp4`,
-      name: `roof.${id}.mp4`,
-      size: 2048,
-      mtime: 0,
-      phone: 'none',
-    },
-  },
-  key: `out/art/roof.${id}.mp4`,
-  approval: 'none',
-  comments: [],
-});
-const ROOF_ROUTES = [
-  route('GET', /^\/api\/review\/index/, () =>
-    json({
-      folders: [
-        {
-          ref: 'out/art',
-          title: 'Roofs at dusk',
-          blurb: 'Roofs.',
-          mtime: 0,
-          sets: [
-            {
-              id: 'render:roof',
-              kind: 'render',
-              title: 'The roof',
-              lines: [],
-              start: 0,
-              marks: [],
-              variants: [roof('A', 'Warm'), roof('B', 'Cold')],
-            },
-          ],
-          videos: [],
-          images: [],
-          downloads: [],
-          docs: [],
-        },
-      ],
-    }),
-  ),
-  route('GET', /^\/api\/review\/duration/, () => json({ seconds: 20 })),
-];
-
-/** The studio, `viewport` wide, with the picker a Script clip's Move before… opens. */
-const movePicker = (viewport: Viewport) =>
-  Effect.gen(function* () {
-    const opened = yield* studio(viewport);
-    yield* rightClick(opened.page, '.st-lane[data-track="script"] .st-clip[data-beat="two"]');
-    yield* opened.page.click('[data-role="context-menu"] [data-command="studio.move-before"]');
-    yield* waitFor(opened.page, '[data-role="move-picker"] .st-picker-row');
-    return opened;
-  }).pipe(Effect.orDie);
-
-/** The pages that open floating roots, at a desk, and at a phone's width (its sheets). */
+/** The pages that open floating roots, at a desk, and at a phone's width. */
 const WALKED: ReadonlyArray<Walked> = [
-  {
-    name: 'the studio',
-    open: () => studio(),
-    roots: ['command-menu', 'context-menu', 'keys-sheet', 'receipt', 'versions', 'waits'],
-  },
-  {
-    name: 'the studio at a phone',
-    open: () => studio(PHONE),
-    roots: ['command-menu', 'context-menu', 'keys-sheet', 'receipt', 'versions', 'waits'],
-  },
   ...(
     [
       ['a desk', DESK],
       ['a phone', PHONE],
     ] as const
-  ).map(([where, viewport]): Walked => ({
-    name: `the studio at ${where}, a beat's Move before… open`,
-    open: () => movePicker(viewport),
-    roots: ['move-picker'],
-    opening: true,
-  })),
-  {
-    name: 'the review',
-    open: () => openReview([]),
-    roots: ['command-menu', 'film-menu', 'keys-sheet', 'receipt', 'view-menu'],
-  },
-  ...(
-    [
-      ['a desk', DESK],
-      ['a phone', PHONE],
-    ] as const
-  ).map(([where, viewport]): Walked => ({
-    name: `the review's moments at ${where}, a still in its lightbox`,
-    open: () =>
-      openReview(ROOF_ROUTES, {
-        href: `${pageHref.set('out/art', 'render:roof')}?view=moments&still=B`,
-        viewport,
-      }),
-    roots: ['lightbox'],
-    opening: true,
-  })),
+  ).flatMap(([where, viewport]): ReadonlyArray<Walked> => [
+    {
+      name: `an ask at ${where}`,
+      open: () => anAsk(viewport),
+      roots: ['command-menu', 'context-menu', 'keys-sheet', 'receipt', 'view-menu'],
+    },
+    {
+      name: `an ask at ${where}, a Board panel's still in its lightbox`,
+      open: () =>
+        Effect.tap(
+          openAsk([...guidedRoutes, ...studioRoutes], {
+            href: `${pageHref.ask(STUDIO_GUIDED)}?still=board-open.breath`,
+            viewport,
+          }),
+          ({ page }) => waitFor(page, '[data-role="lightbox"]'),
+        ),
+      roots: ['lightbox'],
+      opening: true,
+    },
+  ]),
 ];
 
 /** The roots the pages open, by their `data-role`: each page's together. */
-const ROOTS = [
-  'command-menu',
-  'context-menu',
-  'film-menu',
-  'keys-sheet',
-  'lightbox',
-  'move-picker',
-  'receipt',
-  'versions',
-  'view-menu',
-  'waits',
-];
+const ROOTS = ['command-menu', 'context-menu', 'keys-sheet', 'lightbox', 'receipt', 'view-menu'];
 
 /**
  * On the page `walked` opens, open every floating root it offers, one at a time: the keys

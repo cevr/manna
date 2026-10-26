@@ -30,7 +30,7 @@ const servedFonts: BunPlugin = {
 /**
  * The fixtures are classic scripts, which cannot name `import.meta`. Effect's
  * config reader does (`import.meta?.env`); a bundle keeps that module when a
- * page loads a module lazily (the review's WebCodecs panes keep all of Effect
+ * page loads a module lazily (all of Effect then stays
  * in the script), so the reader's environment is read as absent.
  */
 const classicScript: BunPlugin = {
@@ -50,30 +50,16 @@ const classicScript: BunPlugin = {
   },
 };
 
-export const ENTRIES = [
-  'review-page.ts',
-  'review-hydrated-page.ts',
-  'ask-page.ts',
-  'ask-hydrated-page.ts',
-  'player-page.ts',
-  'player-hydrated-page.ts',
-  'render-page.ts',
-  'capture-page.ts',
-  'index-owner-page.ts',
-];
+export const ENTRIES = ['ask-page.ts', 'ask-hydrated-page.ts', 'render-page.ts'];
 
 /**
  * The entries bundled with Solid's development build, whose pages say what
  * a production build keeps quiet: each hydration mismatch, as a warning.
  */
-const DEVELOPMENT: ReadonlySet<string> = new Set([
-  'review-hydrated-page.ts',
-  'ask-hydrated-page.ts',
-  'player-hydrated-page.ts',
-]);
+const DEVELOPMENT: ReadonlySet<string> = new Set(['ask-hydrated-page.ts']);
 
 /** The entries whose tests show a talk's footage: their bundles keep the decoder. */
-const FOOTAGE_PAGES: ReadonlySet<string> = new Set(['render-page.ts', 'player-page.ts']);
+const FOOTAGE_PAGES: ReadonlySet<string> = new Set(['render-page.ts']);
 
 /**
  * The footage host loads its decoder (mediabunny) with a talk's first frame.

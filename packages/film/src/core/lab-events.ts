@@ -21,7 +21,7 @@ import {
   answersLine,
   askedIn,
 } from './ask.ts';
-import { beatSelection, pageHref, panelSelection } from './api.ts';
+import { pageHref } from './api.ts';
 import type { BoardFile, Panel } from './board.ts';
 import type { Catalogue } from './catalogue.ts';
 import { type PointRef, pointIdOf } from './point.ts';
@@ -381,33 +381,6 @@ export const gist = (text: string, max = 120): string => {
   return `${line.slice(0, max - 1)}…`;
 };
 
-/** The studio on `beat`, its Board open on the panel held from `at` (`start` too) when one is named. */
-export const boardPath = (film: string, beat: string, at: Option.Option<string>) =>
-  pageHref.studio(film, {
-    sel: Option.match(at, {
-      onNone: () => beatSelection(beat),
-      onSome: (mark) => panelSelection(`${beat}.${mark}`),
-    }),
-  });
-
-/** The studio on a panel, try `n` of it shown in the viewer. */
-const tryPath = (film: string, panel: Panel, n: number) =>
-  pageHref.studio(film, { sel: panelSelection(panel.id), try: n });
-
-/**
- * Where a note is read: the studio with the note open in its inspector
- * (`?note=`), its panel selected when it is on one, else its beat (a note on
- * a frame or on words is on its scene, the beat of that id).
- */
-export const notePath = (note: Note): string =>
-  pageHref.studio(note.film, {
-    sel: Option.match(Option.fromUndefinedOr(note.panel), {
-      onSome: (panel) => panelSelection(panel.id),
-      onNone: () => beatSelection(note.scene),
-    }),
-    note: note.id,
-  });
-
 /** What a note is about, said briefly: its panel, its words, or its scene. */
 const aboutNote = (note: Note): string =>
   Option.match(Option.fromUndefinedOr(note.panel), {
@@ -434,7 +407,7 @@ const noteFields = (note: Note) => ({
       }),
     }),
   }),
-  path: notePath(note),
+  path: pageHref.home(),
 });
 
 /** Who a reply is by, as the feed says it: the owner (`user`) or an agent. */
@@ -578,7 +551,7 @@ export const boardChanges = (
           onSome: (note) => ({ note }),
         }),
         summary: `${film} ${panel.id}: try ${t.n} added (${t.made}${Option.match(Option.fromUndefinedOr(t.note), { onNone: () => '', onSome: (n) => ` for ${n}` })})`,
-        path: tryPath(film, panel, t.n),
+        path: pageHref.home(),
       }));
     const keptBefore = Option.flatMap(was, (p) => Option.fromUndefinedOr(p.kept));
     const kept = Option.filter(
@@ -596,7 +569,7 @@ export const boardChanges = (
           onSome: (text) => ({ text }),
         }),
         summary: `${film} ${panel.id}: try ${n} kept${Option.match(Option.fromUndefinedOr(panel.why), { onNone: () => '', onSome: (why) => `: ${gist(why)}` })}`,
-        path: tryPath(film, panel, n),
+        path: pageHref.home(),
       })),
     );
     return [...tried, ...keeps];
@@ -612,7 +585,7 @@ export const boardChanges = (
       kind: 'beat.approved',
       origin: `board/${film}/${approvalKey(a)}`,
       summary: `${film} beat ${a.beat}: board approved (${a.kept.map((k) => `${k.panel}#${k.try}`).join(', ')})`,
-      path: boardPath(film, a.beat, Option.none()),
+      path: pageHref.home(),
     }));
   const stillApproved = new Set(after.approvals.map((a) => a.beat));
   const withdrawn = before.approvals
@@ -623,7 +596,7 @@ export const boardChanges = (
       kind: 'beat.withdrawn',
       origin: `board/${film}/${approvalKey(a)}`,
       summary: `${film} beat ${a.beat}: board approval withdrawn`,
-      path: boardPath(film, a.beat, Option.none()),
+      path: pageHref.home(),
     }));
   return [...panels, ...approved, ...withdrawn];
 };
@@ -650,7 +623,7 @@ export const catalogueChanges = (
     set,
     address: addressKey(say.address),
     variant: say.variant,
-    path: pageHref.set(set, pointIdAbout(say), say.variant),
+    path: pageHref.home(),
   });
   const named = (say: Pick<Catalogue['comments'][number], 'address' | 'point' | 'variant'>) =>
     `${film} ${pointIdAbout(say)} ${say.variant}`;
@@ -699,11 +672,7 @@ export const catalogueChanges = (
       kind: 'render.recorded',
       origin: `catalogue/${set}/${renderKey(r)}`,
       summary: `${film} ${addressKey(r.address)} ${r.variant}: ${r.kind} recorded`,
-      path: Bool.match(r.kind === 'video', {
-        onTrue: () =>
-          pageHref.set(set, pointIdOf({ _tag: 'Render', address: r.address }), r.variant),
-        onFalse: () => pageHref.folder(set),
-      }),
+      path: pageHref.home(),
     }));
   return [...comments, ...approved, ...withdrawn, ...renders];
 };
@@ -729,7 +698,7 @@ export const setChanges = (
           kind: 'set.published',
           origin: `set/${set}/${seen.stamp}`,
           summary: `set ${titled} published`,
-          path: pageHref.folder(set),
+          path: pageHref.home(),
         },
       ];
     if (was.value.stamp === seen.stamp) return [];
@@ -739,7 +708,7 @@ export const setChanges = (
         kind: 'set.updated',
         origin: `set/${set}/${seen.stamp}`,
         summary: `set ${titled} updated`,
-        path: pageHref.folder(set),
+        path: pageHref.home(),
       },
     ];
   });
@@ -865,7 +834,7 @@ export const productionChanges = (
       ...Option.match(word.set, { onNone: () => ({}), onSome: (set) => ({ set }) }),
       ...Option.match(word.ask, { onNone: () => ({}), onSome: (ask) => ({ ask }) }),
       summary: `${after.production} ${verbs[word._tag]}: ${gist(word.text)}`,
-      path: pageHref.production(after.production),
+      path: pageHref.home(),
     }));
   const opened = after.versions.slice(versions).map((version, i): LabChangeDraft => {
     const number = versions + i + 1;
@@ -876,7 +845,7 @@ export const productionChanges = (
       version: number,
       text: version.title,
       summary: `${after.production} v${number}: ${gist(version.title)}`,
-      path: pageHref.production(after.production, number),
+      path: pageHref.home(),
     };
   });
   // A ledger first seen is its first version: news only past it.
@@ -958,9 +927,6 @@ export const sourceChanges = (
         onNone: () => '',
         onSome: (scene) => ` (${scene})`,
       })}`,
-      path: Option.match(change.scene, {
-        onNone: () => pageHref.studio(change.film),
-        onSome: (beat) => pageHref.studio(change.film, { sel: beatSelection(beat) }),
-      }),
+      path: pageHref.home(),
     };
   });

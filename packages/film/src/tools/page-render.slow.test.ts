@@ -48,7 +48,7 @@ const fixtureBundle = Effect.gen(function* () {
   });
   return {
     files: built.server,
-    entries: new Map<AppPage, string>([['review', 'page.server.js']]),
+    entries: new Map<AppPage, string>([['ask', 'page.server.js']]),
   } satisfies ServerBundle;
 });
 
@@ -68,7 +68,7 @@ const nestedBundle = Effect.gen(function* () {
   });
   return {
     files: built.server,
-    entries: new Map<AppPage, string>([['review', 'render/page.server.js']]),
+    entries: new Map<AppPage, string>([['ask', 'render/page.server.js']]),
   } satisfies ServerBundle;
 });
 
@@ -80,11 +80,11 @@ const ASKED = { url: URL_ASKED, mac: true };
 /** A read answered `text` at once. */
 const answering = (text: string) => () => Effect.sync(() => new Response(text));
 
-/** The review of `build` rendered as `ASKED`, read whole. */
+/** The ask page of `build` rendered as `ASKED`, read whole. */
 const renderOf = (build: RenderBuild, read: (path: string) => Effect.Effect<Response>) =>
   Effect.gen(function* () {
     const renderer = yield* PageRenderer;
-    const page = yield* renderer.render(build, 'review', ASKED, read);
+    const page = yield* renderer.render(build, 'ask', ASKED, read);
     const markup = (yield* Stream.runCollect(page.markup)).join('');
     return { head: page.head, bodyClass: page.bodyClass, markup };
   }).pipe(Effect.scoped);
@@ -135,10 +135,10 @@ export default {
 };
 `;
 
-/** A server bundle of one module, `code`, the review's entry. */
+/** A server bundle of one module, `code`, the ask page's entry. */
 const moduleBundle = (code: string): ServerBundle => ({
   files: [{ path: 'page.js', bytes: new TextEncoder().encode(code) }],
-  entries: new Map<AppPage, string>([['review', 'page.js']]),
+  entries: new Map<AppPage, string>([['ask', 'page.js']]),
 });
 
 /**
@@ -281,7 +281,7 @@ describe("a page's server render", () => {
       Effect.gen(function* () {
         const bundle: ServerBundle = {
           files: [{ path: 'gives-up.js', bytes: new TextEncoder().encode(GIVES_UP) }],
-          entries: new Map<AppPage, string>([['review', 'gives-up.js']]),
+          entries: new Map<AppPage, string>([['ask', 'gives-up.js']]),
         };
         const givenUpAsked = yield* Deferred.make<void>();
         const givenUpStopped = yield* Deferred.make<void>();
@@ -297,7 +297,7 @@ describe("a page's server render", () => {
         };
         yield* Effect.gen(function* () {
           const renderer = yield* PageRenderer;
-          const page = yield* renderer.render({ id: 1, bundle }, 'review', ASKED, read);
+          const page = yield* renderer.render({ id: 1, bundle }, 'ask', ASKED, read);
           // The render goes on, its kept read held: the given-up read's handler stops now.
           const stopped = yield* Deferred.await(givenUpStopped).pipe(
             Effect.timeoutOption('2 seconds'),
@@ -412,7 +412,7 @@ describe("a page's server render", () => {
           const renderer = yield* PageRenderer;
           const page = yield* renderer.render(
             { id: 1, bundle: moduleBundle(READS_ONE) },
-            'review',
+            'ask',
             ASKED,
             () =>
               Effect.andThen(Deferred.done(asked, Exit.void), Effect.never).pipe(
@@ -435,7 +435,7 @@ describe("a page's server render", () => {
     Effect.gen(function* () {
       const bundle: ServerBundle = {
         files: [{ path: 'none.js', bytes: new TextEncoder().encode('export default 1;\n') }],
-        entries: new Map<AppPage, string>([['review', 'none.js']]),
+        entries: new Map<AppPage, string>([['ask', 'none.js']]),
       };
       const failed = yield* Effect.flip(renderOf({ id: 1, bundle }, answering('a')));
       expect(failed.reason).toContain('exports no PageRender');

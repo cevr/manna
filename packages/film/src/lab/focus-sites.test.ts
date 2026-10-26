@@ -18,51 +18,13 @@ import { expect, it } from 'effect-bun-test';
 /**
  * Every place in the lab's sources that moves the focus from script, by its file and its
  * callee with its first argument (a file's two alike are two rows), with the paths that
- * reach it; so is a popup that hands the kit an element or `true` (its first focusable,
- * or the lab sheet itself).
+ * reach it; so is a popup that hands the kit an element or `true` (its first focusable).
  */
 const FOCUS_SITES: ReadonlyArray<readonly [file: string, call: string, reached: string]> = [
   [
     'ask/parts.tsx',
     'focusFor(target',
     "an ask's goTo: its index's entry and its Send with a question open, pressed and clicked below",
-  ],
-  [
-    'review/production.tsx',
-    'focusFor(field',
-    "a Production's Move forward, its form opened: its first field",
-  ],
-  [
-    'film-studio/editing.tsx',
-    'focusFor(el',
-    "the studio's Note on this frame (N, the Note key, a clip's menu): its note bar's line, a text field",
-  ],
-  [
-    'sketch/surface.tsx',
-    'focusFor(el',
-    "a Board panel's markup, its text tool: a text placed on the try, its field",
-  ],
-  ['studio/section.tsx', 'focusFor(r', 'a studio control the keyboard pressed away'],
-  [
-    'studio/section.tsx',
-    'focusFor(r',
-    'a kept take’s reload: no studio path, the studio keeps no focus across a reload',
-  ],
-  [
-    'studio/section.tsx',
-    'focusFor(r',
-    'a studio button, and the prompter, pressed after the keyboard',
-  ],
-  ['studio/section.tsx', 'focusFor(r', 'Keep pressed, disabled under the focus'],
-  [
-    'sheet.tsx',
-    'initialFocus={() => Match.value',
-    "the lab sheet's popup: the sheet itself for a caller's `true`, else the element its caller hands it (the two rows below)",
-  ],
-  [
-    'review/inspector.tsx',
-    'initialFocus={() => Option.getOrElse',
-    "an inspector opened by its row's Inspect (the sheet: sheet-focus.dom.test.ts), or by its comment count (its comment field, a text field)",
   ],
 ];
 

@@ -17,12 +17,11 @@ import { describe, expect, it } from 'effect-bun-test';
 import { pageHref } from '../../src/core/api.ts';
 import { PAGE_ROOT } from '../../src/core/page-render.ts';
 import { openServed } from '../../src/lab/fixtures/harness.ts';
-import { PROBE } from '../../src/lab/fixtures/probe-film.ts';
 import { evaluates, until } from '../../src/lab/fixtures/settled.ts';
-import { STUDIO_FOLDER, STUDIO_SET, studioRoutes } from '../../src/lab/fixtures/studio-film.ts';
+import { STUDIO_ASK, studioRoutes } from '../../src/lab/fixtures/studio-film.ts';
 import { targetBoxes } from '../../src/lab/fixtures/touch-targets.ts';
 import { faceHold } from '../../src/player/face.ts';
-import { DEVICES, SLOW } from './studio-states.ts';
+import { ASK_READY, DEVICES, SLOW } from './studio-states.ts';
 
 /**
  * How far, in CSS px, a target's edge or size may move after the first
@@ -163,16 +162,7 @@ const LATE = `[lab] fonts.late reason=cap cap_ms=${FACE_CAP_MS}`;
 
 for (const device of DEVICES) {
   describe(`the UI faces as they load on ${device.name} (G10)`, () => {
-    const PAGES = [
-      ['Studio', 'player', [], pageHref.studio(PROBE), ['.st-timeline .st-clip']],
-      [
-        'a Set',
-        'review',
-        studioRoutes,
-        pageHref.set(STUDIO_FOLDER, STUDIO_SET),
-        ['.rv-main video', '[data-comments]'],
-      ],
-    ] as const;
+    const PAGES = [['an ask', 'ask', studioRoutes, pageHref.ask(STUDIO_ASK), [ASK_READY]]] as const;
     for (const [name, served, routes, href, ready] of PAGES) {
       it.live(
         `${name}: the root paints nothing while the faces are held, then first paints in them, and no target moves after`,

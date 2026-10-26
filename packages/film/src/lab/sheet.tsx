@@ -1,21 +1,12 @@
-// The studio's one sheet (design language §7) and the one rule a sheet a URL
-// keeps open is dismissed by. Every sheet stands in `Sheet`: an inspector.
+// The one rule a sheet a URL keeps open is dismissed by: an ask's still opened
+// full size (`Zoom`, `ask/material.tsx`) closes by it.
 
 import { useAtomValue } from '@manna/atom-solid';
-import { Sheet as UiSheet } from '@manna/ui/sheet';
 import { Location } from '@manna/url-state';
 import * as UrlAtom from '@manna/url-state/atom';
-import { type JSX, Show } from '@solidjs/web';
-import { Boolean as Bool, type Context, Effect, Match, Option } from 'effect';
-import { createEffect, createSignal, untrack } from 'solid-js';
+import { Effect, Option } from 'effect';
+import { createEffect, untrack } from 'solid-js';
 import { type Host, type Opened, addressOn } from '../browser/host.ts';
-import type { Viewport } from '../browser/viewport.ts';
-import type { Hub } from '../command/hub.ts';
-import type { Selection } from '../command/selection.ts';
-import { targetAttr } from '../command/target.ts';
-import { Hint } from './command/inspector.tsx';
-import { pressed } from './pressed.ts';
-import { PHONE, useMatches } from './viewport.ts';
 
 /** A sheet's dismissal (`useSheetDismissal`): told of each opening, it closes the sheet by one rule. */
 interface SheetDismissal {
@@ -31,9 +22,9 @@ interface SheetDismissal {
 }
 
 /**
- * The one rule a sheet a URL keeps open is dismissed by (Close, Escape, a
- * swipe), for every inspector (`useInspectorPlace`): a tap that opens it on a shut sheet is a step of
- * its own, and dismissing it adds none. The sheet knows which entry that tap
+ * The one rule a sheet a URL keeps open is dismissed by (Escape, a tap
+ * anywhere): a tap that opens it on a shut sheet is a step of its own, and
+ * dismissing it adds none. The sheet knows which entry that tap
  * pushed (an entry a link, a reload or a tap on a sheet already open made is
  * no opening's); the address bar (`addressOn(host).dismiss`) says whether its
  * Close goes Back over that entry or rewrites the entry on screen to name
@@ -75,130 +66,3 @@ export const useSheetDismissal = (
     },
   };
 };
-
-/**
- * The sheet of the selected thing (design language §7), the one frame an
- * inspector stands in: hosted in @manna/ui's Sheet,
- * not over the page (it stays live, a tap outside keeps it open, and only the
- * panel takes presses); beside the page on a laptop, swiped away to the right;
- * on a phone a bottom sheet standing on the shell's floor (and the dock), swiped
- * down, whose grip lowers it to a peek and raises it again. A swipe is the
- * browser's scroll: it scrolls in as it mounts and is gone once scrolled out
- * of view. Its head holds its title and Close. Close, Escape and a swipe each
- * call `onClose`, and its page says what that is (a URL's step); the page
- * unmounting it is its close. Its footer prints the keys of the commands about `of` while
- * the pointer or the focus is in it (`Hint`); a sheet about no one thing
- * (the page's Findings) has none. It opens whole, or lowered on a phone
- * when `peeked`; what a lowered sheet still shows is its page's styles' to
- * say (its head alone).
- */
-export const Sheet = (props: {
-  readonly host: Context.Context<Viewport>;
-  readonly hub: Hub;
-  /** The thing it is about, when it is about one. */
-  readonly of?: Selection;
-  /** Its `data-role`: `inspector`, `scene`, `findings`. */
-  readonly role: string;
-  /** What the sheet is about: its name and values, in their own case when `kind` heads them. */
-  readonly title: JSX.Element;
-  /** The kind of thing it is about (`cue`, `note`), the head's title in the panel title's caps. */
-  readonly kind?: string;
-  /** Its page's class for it, beside the sheet's own. */
-  readonly class?: string;
-  readonly peeked?: boolean;
-  readonly initialFocus: () => HTMLElement | boolean;
-  readonly onClose: () => void;
-  readonly children: JSX.Element;
-}) => {
-  // Whether the page is a phone's width now, followed as the window changes.
-  const phone = useMatches(props.host, PHONE);
-  let popup = Option.none<HTMLElement>();
-  const [peek, setPeek] = createSignal(
-    untrack(() => props.peeked === true && phone()),
-    { ownedWrite: true },
-  );
-  return (
-    <UiSheet.Root
-      open
-      modal={false}
-      disablePointerDismissal
-      position={Bool.match(phone(), {
-        onTrue: () => 'bottom' as const,
-        onFalse: () => 'right' as const,
-      })}
-      onOpenChange={(next) => {
-        if (!next) props.onClose();
-      }}
-    >
-      {/* In place, not moved to the body: a link's sheet is in the server's
-          markup and hydrates there; it stands against the window (fixed),
-          takes no presses, and draws the shadow round the sheet's panel. */}
-      <UiSheet.Portal inline class="lab-inspector-portal">
-        <UiSheet.Overlay class="lab-inspector-overlay">
-          <UiSheet.Popup class="lab-inspector-panel">
-            <UiSheet.Content
-              class={[
-                'lab-inspector-sheet lab-inspector',
-                ...Option.toArray(Option.fromUndefinedOr(props.class)),
-              ].join(' ')}
-              data-role={props.role}
-              data-target={Option.getOrUndefined(
-                Option.map(Option.fromUndefinedOr(props.of), targetAttr),
-              )}
-              data-peek={pressed(peek())}
-              tabindex="-1"
-              ref={(el: HTMLElement) => {
-                popup = Option.some(el);
-              }}
-              initialFocus={() =>
-                Match.value(props.initialFocus()).pipe(
-                  // The sheet itself, not its first control: that is Close, which Space would press.
-                  Match.when(true, () => Option.getOrElse(popup, () => true)),
-                  Match.orElse((asked) => asked),
-                )
-              }
-            >
-              <header class="lab-inspector-head">
-                <SheetGrip peek={peek()} toggle={() => setPeek(!peek())} />
-                <UiSheet.Title class="lab-sheet-title">
-                  <Show when={props.kind} fallback={props.title}>
-                    {(kind) => (
-                      <>
-                        <span class="lab-sheet-kind">{kind()}</span>{' '}
-                        <span class="lab-sheet-subject">{props.title}</span>
-                      </>
-                    )}
-                  </Show>
-                </UiSheet.Title>
-                <UiSheet.Close class="lab-inspector-close" data-act="close-inspector">
-                  Close
-                </UiSheet.Close>
-              </header>
-              <div class="lab-inspector-body">{props.children}</div>
-              <Show when={props.of}>
-                {(of) => <Hint hub={props.hub} selection={of()} gestures={[]} />}
-              </Show>
-            </UiSheet.Content>
-          </UiSheet.Popup>
-        </UiSheet.Overlay>
-      </UiSheet.Portal>
-    </UiSheet.Root>
-  );
-};
-
-/**
- * A phone's sheet's grip (design language §7): the sheet's whole head, a bar
- * drawn at its top; a tap lowers the sheet to a peek (its head over the dock)
- * and raises it again. The head's Close stays above it. None on a laptop,
- * where the sheet stands beside the page.
- */
-const SheetGrip = (props: { readonly peek: boolean; readonly toggle: () => void }) => (
-  <button
-    type="button"
-    class="lab-inspector-grip"
-    data-act="sheet"
-    aria-label={Bool.match(props.peek, { onTrue: () => 'Show more', onFalse: () => 'Show less' })}
-    aria-expanded={pressed(!props.peek)}
-    onClick={() => props.toggle()}
-  />
-);

@@ -34,10 +34,10 @@ export const html = (title: string, script: string) =>
 
 /**
  * An app in a temp folder, by its real path (macOS's temp folder is a link,
- * and the bundler names what it reads by where it lies): its review
- * (`review.html` over `src/p.ts`, which imports `lib/shared.ts`, another
- * package's source), its lab, its player (`sub/player.html`, an entry below
- * the others) and its render page, each file as `own` has it if it names
+ * and the bundler names what it reads by where it lies): its ask page
+ * (`ask.html` over `src/p.ts`, which imports `lib/shared.ts`, another
+ * package's source, with a server entry) and its render page (`sub/index.html`,
+ * an entry below the other), each file as `own` has it if it names
  * it. The folder is written under another name and renamed into place: a
  * watch armed a few milliseconds after a save may still be told of it on
  * macOS (FSEvents hands a new watch the events still on their way), where
@@ -54,17 +54,14 @@ export const appFolderWith = (own: Readonly<Record<string, string>>) =>
     for (const folder of ['src/films', 'sub', 'lib', 'extra'])
       yield* fs.makeDirectory(path.join(making, folder), { recursive: true });
     const files = {
-      'review.html': html('review', './src/p.ts'),
       'ask.html': html('ask', './src/p.ts'),
-      'sub/player.html': html('player', '../src/play.ts'),
-      'index.html': html('render', './src/render.ts'),
+      'sub/index.html': html('render', '../src/render.ts'),
       'src/p.ts': "import { shared } from '../lib/shared.ts';\nconsole.log('first', shared);\n",
       'lib/shared.ts': "export const shared = 'shared one';\n",
-      'src/play.ts': "console.log('the player');\n",
       'src/render.ts': "console.log('the render page');\n",
       'src/notes.json': '{}',
-      // The review's server entry: the same shared source, and one only the server reads.
-      'src/review.server.tsx':
+      // The ask page's server entry: the same shared source, and one only the server reads.
+      'src/ask.server.tsx':
         "import { shared } from '../lib/shared.ts';\nimport { only } from '../lib/server-only.ts';\nexport const rendered = () => `${shared} ${only}`;\n",
       'lib/server-only.ts': "export const only = 'server one';\n",
       ...own,
@@ -76,12 +73,10 @@ export const appFolderWith = (own: Readonly<Record<string, string>>) =>
     const write = (name: string, text: string) => fs.writeFileString(path.join(dir, name), text);
     const spec = {
       pages: {
-        review: path.join(dir, 'review.html'),
-        player: path.join(dir, 'sub', 'player.html'),
         ask: path.join(dir, 'ask.html'),
-        render: path.join(dir, 'index.html'),
+        render: path.join(dir, 'sub', 'index.html'),
       },
-      servers: { review: path.join(dir, 'src', 'review.server.tsx') },
+      servers: { ask: path.join(dir, 'src', 'ask.server.tsx') },
       films: path.join(dir, 'src', 'films'),
       footage: { dir: path.join(dir, 'footage'), out: path.join(dir, 'out') },
     };
@@ -190,8 +185,7 @@ export const MIXED_AT = 1_900_000_000_000;
 export const filmsInMemory = Effect.gen(function* () {
   const html = text('<!doctype html><html><head></head><body></body></html>');
   const files = new Map<string, Uint8Array>([
-    ['/app/review.html', html],
-    ['/app/player.html', html],
+    ['/app/ask.html', html],
     ['/app/index.html', html],
   ]);
   const mtimes = new Map<string, number>();
@@ -232,8 +226,6 @@ export const filmsInMemory = Effect.gen(function* () {
   );
   const spec = {
     pages: {
-      review: '/app/review.html',
-      player: '/app/player.html',
       ask: '/app/ask.html',
       render: '/app/index.html',
     },

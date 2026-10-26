@@ -14,7 +14,6 @@
 // (`server.tsx`), over the same components.
 
 import { useAtomRefresh, useAtomValue } from '@manna/atom-solid';
-import { parseHref } from '@manna/url-state';
 import { For, type JSX, Show } from '@solidjs/web';
 import { Effect, type Layer, Match, Option } from 'effect';
 import type { HttpClient } from 'effect/http';
@@ -27,7 +26,6 @@ import {
   pageCount,
   pageCountText,
 } from '../../core/ask.ts';
-import { pageAt } from '../../core/api.ts';
 import { type Host, addressOn } from '../../browser/host.ts';
 import { TabStore } from '../../browser/storage-browser.ts';
 import { type Hub, makeHub } from '../../command/hub.ts';
@@ -324,13 +322,11 @@ const crumbOf = (place: AskPlace, shown: Option.Option<string>): string =>
   );
 
 /**
- * The ask page in the lab's shell: its crumb the page of asks' title, the
- * film its asks are of; a move to another ask stays on the page, any other
- * page loads.
+ * The ask page in the lab's shell: its name the page of asks' title, the
+ * film its asks are of.
  */
 const Shell = (props: { readonly children: JSX.Element }) => {
   const { state, meta } = useAskRoot();
-  const address = addressOn(meta.host);
   const film = () => Option.flatMap(state.ask(), (a) => a.film);
   const crumb = () =>
     Option.map(state.place(), (place) =>
@@ -340,20 +336,7 @@ const Shell = (props: { readonly children: JSX.Element }) => {
       ),
     );
   return (
-    <PageShell
-      film={film}
-      lastFilm={false}
-      crumb={crumb}
-      films={() => []}
-      hub={meta.hub}
-      host={meta.host}
-      follow={(href) => {
-        if (!Option.contains(pageAt(parseHref(href).pathname), 'ask')) return false;
-        address.go(href);
-        window.scrollTo(0, 0);
-        return true;
-      }}
-    >
+    <PageShell film={film} crumb={crumb} hub={meta.hub}>
       {props.children}
     </PageShell>
   );

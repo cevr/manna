@@ -14,7 +14,7 @@
 // pages included, passes the one gate (`api-server.ts`): each listener's own
 // name (loopback, and the phone's address, `labPhone`) and port, nothing else.
 
-import type { AskStore } from './ask-store.ts';
+import { AskStore } from './ask-store.ts';
 import { asksGroup } from './asks-http.ts';
 import {
   Cache,
@@ -28,9 +28,9 @@ import {
   Path,
   Result,
 } from 'effect';
-import type { HttpPlatform, HttpServerRequest } from 'effect/http';
+import { type HttpPlatform, HttpServerRequest } from 'effect/http';
 import * as HttpApiBuilder from 'effect/http-api/HttpApiBuilder';
-import { LabHttpApi, type MarksPost, type TalkWordsPost } from '../core/api.ts';
+import { LabHttpApi, type MarksPost, type TalkWordsPost, pageHref } from '../core/api.ts';
 import { SourceRefused, StagingTakeUnknown, StillUnknown } from '../core/refusals.ts';
 import { SCRIPT_FILE, editMarks, marksTarget, sayMissed } from './script-source.ts';
 import { ScriptVoices } from './script-voice.ts';
@@ -45,7 +45,8 @@ import { projectGroup } from './project-http.ts';
 import { productionsGroup } from './production-http.ts';
 import { timelineGroup } from './timeline-http.ts';
 import type { FilmTimelines } from './film-timeline.ts';
-import { CACHE, serveFile } from './review-file.ts';
+import { CACHE, serveFile, urlPath } from './review-file.ts';
+import { home } from './lab-home.ts';
 import { reviewGroup } from './review-http.ts';
 import type { Review } from './review.ts';
 import type { ContentStore } from './content-store.ts';
@@ -622,6 +623,14 @@ export const labHandler = Effect.fn('film.lab.handler')(function* (
       ),
     ),
   );
-  const page = (yield* LabPage).answer;
+  const pages = (yield* LabPage).answer;
+  const asks = yield* AskStore;
+  // `/` is no page: it sends the owner on to the ask that waits on him (`lab-home.ts`).
+  const page = Effect.gen(function* () {
+    const request = yield* HttpServerRequest.HttpServerRequest;
+    if (urlPath(request.url) === pageHref.home())
+      return yield* Effect.provideService(home, AskStore, asks);
+    return yield* pages;
+  });
   return yield* serveApi(LabHttpApi, routes, { page, beside });
 });

@@ -1,14 +1,12 @@
 // The shell is one look on every page: at each place (`STATES`' first case,
 // the place as it opens), on each device, every part of its header draws
-// with the computed style a Set's draws it with: each match of a part, its
-// first child (the Films link's icon), and each control with the pointer over
+// with the computed style an ask's draws it with: each match of a part, its
+// first child (the crumb's words), and each control with the pointer over
 // it and with the keyboard's focus on it. A page's own element rule that
 // outweighs a shell part (a link's `color`, a `font`, a margin) shows here as
-// the part and the property it moved. A Set (`STATES.set`'s first case) is
-// the reference: it is a film's, so it draws the Studio link, and it has a
-// playhead, so it draws the timecode; a page draws each part its place has,
-// so no part goes unmatched by being missing from either. The studio draws a
-// header of its own (`film-studio/`), not the shell's, so it is no place here.
+// the part and the property it moved. An ask (`STATES.ask`'s first case) is
+// the reference; every page draws every part, so no part goes unmatched by
+// being missing from either.
 // Each state is checked to hold before it is read: a state the reference
 // never took, or a control its pointer cannot reach, is a failure, and so is
 // a control the page draws (and does not leave out by its own state) that a
@@ -19,24 +17,12 @@ import { Array as Arr, Effect, Option } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { evaluates } from '../../src/lab/fixtures/settled.ts';
 import { type Tab, jsonOf } from '../../src/lab/fixtures/tab.ts';
-import { Places } from '../../src/core/api.ts';
-import {
-  DEVICES,
-  type Device,
-  LAPTOP,
-  SLOW,
-  STATES,
-  byPlace,
-  type PlaceName,
-} from './studio-states.ts';
+import { DEVICES, type Device, LAPTOP, SLOW, STATES, byPlace } from './studio-states.ts';
 
-/** The parts of the shell, by name: the header, Films, the film's switcher, its Studio link, the timecode and Go to. */
+/** The parts of the shell, by name: the header, the page's name and Go to. */
 const PARTS = {
   header: '.sh-header',
-  films: '.sh-films',
-  switcher: '.sh-switcher',
-  studio: '.sh-studio',
-  timecode: '.sh-tc',
+  crumb: '.sh-crumb',
   goto: '.sh-goto',
 };
 
@@ -122,21 +108,11 @@ const LOOKS = `(() => {
   }));
 })()`;
 
-/** A part a page's own state leaves out, and what that state is: a page with no film has no studio to link. */
-const LEFT_OUT = {
-  studio: '.sh[data-film="false"]',
-};
+/** A part a page's own state leaves out, and what that state is: none is left out now. */
+const LEFT_OUT: Partial<Record<Part, string>> = {};
 
-/**
- * Whether a page at `place` has a playhead: its place keeps the playhead's
- * time in the URL (`#t=`), and the header shows that time as the timecode
- * (`page-shell.tsx`).
- */
-const hasPlayhead = (place: PlaceName) => Places[place].policies.hash.has('t');
-
-/** The parts a page at `place` draws, but those its own state leaves out (`LEFT_OUT`): every one, the timecode only with a playhead. */
-const requiredAt = (place: PlaceName): ReadonlyArray<string> =>
-  Object.keys(PARTS).filter((part) => part !== 'timecode' || hasPlayhead(place));
+/** The parts every page draws. */
+const REQUIRED: ReadonlyArray<string> = Object.keys(PARTS);
 
 /** An expression run in the page: the parts `looks` (`LOOKS` as the page reads) has none of, by name; a whole reference, none. */
 const MISSING = (looks: string) =>
@@ -179,11 +155,11 @@ const DIFFERENCES = (reference: string, required: ReadonlyArray<string>) => `(()
 })()`;
 
 /** The controls of the shell, which a pointer and the keyboard's focus land on. */
-const CONTROLS: ReadonlyArray<Part> = ['films', 'switcher', 'studio', 'goto'];
+const CONTROLS: ReadonlyArray<Part> = ['goto'];
 
-/** The controls each device's header shows: a phone's no Studio link (the film menu's Open the studio is its way there). */
+/** The controls each device's header shows: the same on both. */
 const CONTROLS_ON: Readonly<Record<Device['budget'], ReadonlyArray<Part>>> = {
-  phone: CONTROLS.filter((part) => part !== 'studio'),
+  phone: CONTROLS,
   laptop: CONTROLS,
 };
 
@@ -327,27 +303,26 @@ const heldDifferences = (ref: Tab, page: Tab, controls: ReadonlyArray<Part> = CO
     ];
   });
 
-/** The reference every place is read against: a Set as it opens (`STATES.set`'s first case). */
+/** The reference every place is read against: an ask as it opens (`STATES.ask`'s first case). */
 const reference = (viewport: Device['viewport']) =>
   Option.match(
-    Arr.findFirst(byPlace(STATES), ([place]) => place === 'set'),
+    Arr.findFirst(byPlace(STATES), ([place]) => place === 'ask'),
     {
-      onNone: () => Effect.die('STATES opens no Set'),
+      onNone: () => Effect.die('STATES opens no ask'),
       onSome: ([, state]) => state.open(viewport),
     },
   );
 
-/** Each place's first case, the place as it opens, but the reference's own (a Set) and the studio's. */
+/** Each place's first case, the place as it opens, but the reference's own (an ask). */
 const OTHER_PLACES = byPlace(STATES).filter(
-  ([place], i, all) =>
-    place !== 'set' && place !== 'studio' && all.findIndex(([first]) => first === place) === i,
+  ([place], i, all) => place !== 'ask' && all.findIndex(([first]) => first === place) === i,
 );
 
 for (const device of DEVICES) {
   describe(`the shell's parts on ${device.name}`, () => {
-    for (const [place, state] of OTHER_PLACES) {
+    for (const [, state] of OTHER_PLACES) {
       it.live(
-        `${state.name}: each draws as a Set's do, held or not`,
+        `${state.name}: each draws as an ask's do, held or not`,
         () =>
           Effect.gen(function* () {
             const refPage = yield* reference(device.viewport);
@@ -355,9 +330,9 @@ for (const device of DEVICES) {
             // of a part draws as its first does.
             yield* evaluates(refPage, MISSING(LOOKS), []);
             const ref = yield* refPage.evaluate<unknown>(LOOKS);
-            yield* evaluates(refPage, DIFFERENCES(jsonOf(ref), requiredAt('set')), []);
+            yield* evaluates(refPage, DIFFERENCES(jsonOf(ref), REQUIRED), []);
             const page = yield* state.open(device.viewport);
-            yield* evaluates(page, DIFFERENCES(jsonOf(ref), requiredAt(place)), []);
+            yield* evaluates(page, DIFFERENCES(jsonOf(ref), REQUIRED), []);
             expect(yield* heldDifferences(refPage, page, CONTROLS_ON[device.budget])).toEqual([]);
           }).pipe(Effect.scoped),
         SLOW,
@@ -375,17 +350,12 @@ const named = (differences: string) => `${differences}.map((d) => d.split(' is '
 
 describe("the shell guard's own probe", () => {
   it.live(
-    'a playhead page with no timecode, and a reference with no Go to, are found',
+    'a page with no Go to is found',
     () =>
       Effect.gen(function* () {
         const page = yield* reference(LAPTOP.viewport);
-        const ref = yield* page.evaluate<unknown>(LOOKS);
-        yield* page.evaluate(`document.querySelector('.sh-tc').remove()`);
-        yield* evaluates(page, DIFFERENCES(jsonOf(ref), requiredAt('set')), ['draws no timecode']);
-        // A place with no playhead does not ask for one.
-        yield* evaluates(page, DIFFERENCES(jsonOf(ref), requiredAt('folder')), []);
         yield* page.evaluate(`document.querySelector('.sh-goto').remove()`);
-        yield* evaluates(page, MISSING(LOOKS), ['timecode', 'goto']);
+        yield* evaluates(page, MISSING(LOOKS), ['goto']);
       }).pipe(Effect.scoped),
     SLOW,
   );
@@ -396,31 +366,31 @@ describe("the shell guard's own probe", () => {
       Effect.gen(function* () {
         const page = yield* reference(LAPTOP.viewport);
         const ref = yield* page.evaluate<unknown>(LOOKS);
-        // A second Studio link after the first: a later match of a part.
+        // A second Go to after the first: a later match of a part.
         yield* page.evaluate(
-          `(() => { const a = document.querySelector(${jsonOf(PARTS.studio)}); a.after(a.cloneNode(true)); return true; })()`,
+          `(() => { const a = document.querySelector(${jsonOf(PARTS.goto)}); a.after(a.cloneNode(true)); return true; })()`,
         );
         yield* page.evaluate(
           plant(
             [
               // Each a property no child inherits and no colour follows (`currentColor`), but
-              // the italic, which the Films link's icon takes: so each sentence is the plant's own.
-              `${PARTS.studio} ~ ${PARTS.studio} { background-color: rgb(255, 0, 0) !important; }`,
+              // the italic, which the crumb's words take: so each sentence is the plant's own.
+              `${PARTS.goto} ~ ${PARTS.goto} { background-color: rgb(255, 0, 0) !important; }`,
               '.sh-header { opacity: 0.4 !important; margin-left: 12px !important; column-gap: 30px !important; }',
-              '.sh-switcher > :first-child { background-color: rgb(255, 0, 0) !important; }',
-              `${PARTS.films} { border-bottom-right-radius: 9px !important; font-style: italic !important; }`,
+              '.sh-crumb > :first-child { background-color: rgb(255, 0, 0) !important; }',
+              `${PARTS.crumb} { border-bottom-right-radius: 9px !important; font-style: italic !important; }`,
             ].join('\n'),
           ),
         );
-        yield* evaluates(page, named(DIFFERENCES(jsonOf(ref), requiredAt('set'))), [
+        yield* evaluates(page, named(DIFFERENCES(jsonOf(ref), REQUIRED)), [
           'header opacity',
           'header marginLeft',
           'header columnGap',
-          'films fontStyle',
-          'films borderBottomRightRadius',
-          'films child fontStyle',
-          'switcher child backgroundColor',
-          'studio 2 backgroundColor',
+          'crumb fontStyle',
+          'crumb borderBottomRightRadius',
+          'crumb child fontStyle',
+          'crumb child backgroundColor',
+          'goto 2 backgroundColor',
         ]);
       }).pipe(Effect.scoped),
     SLOW,
@@ -436,14 +406,14 @@ describe("the shell guard's own probe", () => {
         yield* page.evaluate(
           plant(
             [
-              `${PARTS.studio}:hover { background-color: rgb(255, 0, 0) !important; }`,
+              `${PARTS.goto}:hover { background-color: rgb(255, 0, 0) !important; }`,
               '.sh-header .sh-goto:focus-visible { box-shadow: none !important; }',
             ].join('\n'),
           ),
         );
         expect((yield* heldDifferences(ref, page)).map((d) => d.split(' is ')[0])).toEqual([
-          'studio hover backgroundColor',
           'goto focus boxShadow',
+          'goto hover backgroundColor',
         ]);
         // A control the keyboard cannot focus takes no focus state: its read says so, and a
         // state the page never takes, the reference's taken, is a difference.

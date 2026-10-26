@@ -35,7 +35,8 @@ import {
   tryOf,
   withdrawBeat,
 } from '../core/board.ts';
-import { LabLinks, boardPath, linksAt, notePath } from '../core/lab-events.ts';
+import { pageHref } from '../core/api.ts';
+import { LabLinks, linksAt } from '../core/lab-events.ts';
 import { unresolved } from '../core/notes.ts';
 import { Note, type NoteDraft, NoteStatus } from '../core/schema.ts';
 import { staleWhy } from './board-stale.ts';
@@ -227,7 +228,7 @@ export const notesReads = Effect.fn('LabMcp.notesReads')(function* () {
 
   const noteRead = (film: FilmName, note: Note): typeof NoteRead.Type => ({
     ...note,
-    links: linksOf(notePath(note)),
+    links: linksOf(pageHref.home()),
     stillFile: path.join(notes.paths(film).stills, note.still),
   });
 
@@ -288,7 +289,7 @@ export const notesReads = Effect.fn('LabMcp.notesReads')(function* () {
               stale: { members: s.members, added: s.added, words: s.words, why: staleWhy(film, s) },
             }),
           }),
-          links: linksOf(boardPath(film, panel.beat, Option.some(panel.at))),
+          links: linksOf(pageHref.home()),
         })),
       approvals: board.approvals.filter((a) =>
         Option.match(beat, { onNone: () => true, onSome: (b) => a.beat === b }),

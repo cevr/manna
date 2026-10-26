@@ -663,7 +663,7 @@ describe('the lint config', () => {
           'packages/film/src/lab/a.tsx',
           'packages/film/src/lab/a.test.ts',
           'packages/film/src/lab/fixtures/a.ts',
-          'packages/film/src/lab/review/mount.tsx',
+          'packages/film/src/lab/ask/mount.tsx',
           'packages/film/lint/a.ts',
           'packages/film/lint/nodes.ts',
           'packages/film/e2e/lab/a.test.ts',

@@ -1,9 +1,9 @@
 // The render page's code is its own: the app's pages (`LAB_PAGES`) built
 // together as the lab builds them (`LabPage`, `PageBundler`), and each
-// studio page's scripts, as its HTML and their static imports load them,
+// lab page's scripts, as its HTML and their static imports load them,
 // never hold the render page's handle (`window.__film`, `mountRender`) or the
 // encoder it alone imports (`player/encode.ts`, mediabunny). A bundler splits
-// the pages' code by the modules each reaches, so a studio page that reaches
+// the pages' code by the modules each reaches, so a lab page that reaches
 // the render page's module (an entry that re-exports it beside what the films
 // import) downloads the encoder on every load, a phone's too.
 
@@ -18,8 +18,8 @@ import { LabPage, PageBundler } from './lab-page.ts';
 import { PageReads } from './api-server.ts';
 import { PageRenderer } from './page-render.ts';
 
-/** A studio page at each of its places' kinds the lab serves: the review and a film's studio. */
-const STUDIO = [pageHref.home(), pageHref.studio('f')];
+/** A lab page at each of its places' kinds the lab serves: an ask and a page of asks. */
+const STUDIO = [pageHref.ask('a1'), pageHref.askPage('a1')];
 
 /** What only the render page's code says: its handle, set on the window. */
 const RENDER_MARK = 'window.__film=';
@@ -41,7 +41,7 @@ const staticImports = (script: string) =>
   Array.from(script.matchAll(/(?:from|import)\s*"(\/[^"]+\.js)"/g), (m) => m[1] ?? '');
 
 describe("the render page's code", () => {
-  it.live('no studio page loads it, as the lab builds the pages together', () =>
+  it.live('no lab page loads it, as the lab builds the pages together', () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const films = yield* fs.makeTempDirectoryScoped({ prefix: 'film-page-graph-' });

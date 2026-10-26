@@ -223,9 +223,9 @@ export const production = Command.make('production').pipe(
   Command.withSubcommands([list, show, create, file]),
 );
 
-/** What the running lab says of a set's folder: listed (its ref and link), not listed, or nothing it could say. */
+/** What the running lab says of a set's folder: listed (its ref), not listed, or nothing it could say. */
 type Listing = Data.TaggedEnum<{
-  Listed: { readonly ref: string; readonly link: string };
+  Listed: { readonly ref: string };
   Unlisted: {};
   Unknown: { readonly reason: string };
 }>;
@@ -272,7 +272,7 @@ const listedByLab = (url: string, folder: string) =>
       ),
       {
         onNone: () => Listing.Unlisted(),
-        onSome: (set) => Listing.Listed({ ref: set.set, link: set.links.local }),
+        onSome: (set) => Listing.Listed({ ref: set.set }),
       },
     );
   }).pipe(Effect.catch((error) => Effect.succeed(Listing.Unknown({ reason: error.message }))));
@@ -301,7 +301,7 @@ export const publish = Command.make(
     const landed = `to ${id} at ${iso(published)}`;
     yield* Console.log(
       Listing.$match(yield* listedByLab(url, folder), {
-        Listed: ({ ref, link }) => `published ${ref} ${landed}  ${link}`,
+        Listed: ({ ref }) => `published ${ref} ${landed}`,
         Unlisted: () =>
           `published ${folder} ${landed}; the lab at ${url} does not list it: it lists the folders under its own review roots that hold something to review`,
         Unknown: ({ reason }) =>

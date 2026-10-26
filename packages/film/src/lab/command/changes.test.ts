@@ -19,7 +19,7 @@ const page = (mac = false) => {
       Clipboard.memory([], 'https://lab.slow.test'),
     ),
   );
-  const hub = Effect.runSyncWith(host)(makeHub('player', () => pageHref.studio('f')));
+  const hub = Effect.runSyncWith(host)(makeHub('ask', () => pageHref.ask('a1')));
   hub.commands.register({
     id: 'notes.frame',
     label: 'Note this frame',

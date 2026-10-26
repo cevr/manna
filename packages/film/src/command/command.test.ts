@@ -15,7 +15,7 @@ const command = (id: string, over: Partial<Omit<Command, 'touch'>> = {}): Comman
   ...over,
 });
 
-const lab = contextAt('player', '/films/f/studio');
+const lab = contextAt('ask', '/films/f/studio');
 
 describe('the command registry', () => {
   test('lists each id once, in the order first registered', () => {

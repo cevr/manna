@@ -3,8 +3,7 @@
 // picture crops it), and a card or a verse panel set by the engine's own
 // card code (`fullCard`, `verse`, in the film's card style: the words
 // exactly as spoken, CRAFT rule 1; never lettering an image route drew).
-// The studio's viewer sets its cards with it, and a panel note's still
-// (`film-studio/panel-still.ts`) paints its try with it, the marks over it.
+// The Board's viewer sets its cards with it.
 // A Board render (`boardFilm`) draws the whole film so: each frame the
 // shots `core/board-render.ts` decides, a picture moving across its hold, a
 // card set by the film's own code.

@@ -61,7 +61,7 @@ import {
   subjectOf,
 } from './catalogue.ts';
 import { type PartError, stretchesOf } from './acts.ts';
-import { boardPath, gist, notePath } from './lab-events.ts';
+import { gist } from './lab-events.ts';
 import type { Placed } from './layout.ts';
 import { cardSaid } from './narration.ts';
 import { noteT, unresolved } from './notes.ts';
@@ -822,7 +822,7 @@ const markersOf = (
           onTrue: () => 'replied' as const,
           onFalse: () => 'open' as const,
         }),
-        href: notePath(note),
+        href: pageHref.home(),
       })),
   });
   return Arr.sort(
@@ -851,11 +851,11 @@ const waitingOf = (
   })),
   ...sources.notes.notes
     .filter((n) => n.status === 'replied')
-    .map((n): Waiting => ({ kind: 'note', id: n.id, text: gist(n.text), href: notePath(n) })),
+    .map((n): Waiting => ({ kind: 'note', id: n.id, text: gist(n.text), href: pageHref.home() })),
   ...beatsToApprove(sources.openBoard).map((beat): Waiting => ({
     kind: 'approve',
     beat,
-    href: boardPath(sources.film, beat, Option.none()),
+    href: pageHref.home(),
   })),
 ];
 

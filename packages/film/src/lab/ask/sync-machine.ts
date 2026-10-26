@@ -1,12 +1,6 @@
-// The review's two machines. The synced player: every video of a set on one
-// clock (the leading version's video), paused, playing, scrubbed or waiting on a
-// stalled video, at ½× or 1×, with one card's sound heard. The view: all the
-// variants, the first against one other (side by side, or wiped: stacked
-// full width, the other right of a divider), the moments (every variant's
-// frame at a few instants), the first and one other's difference at a moment
-// (stills cut at the same instant, so the blend is exact). A version's
-// notes are its Info, in its inspector: an old `?view=notes` reads as
-// All.
+// The player's clock machine: every video it plays on one clock, paused,
+// playing, scrubbed or waiting on a stalled video, at ½× or 1×, with one
+// video's sound heard.
 //
 //   Paused ─Play→ Playing ─Pause→ Paused     Playing ─Stalled→ Buffering ─Resumed→ Playing
 //   any ─ScrubMoved→ Scrubbing ─ScrubReleased→ Playing | Paused (as it was)
@@ -18,22 +12,13 @@
 //   any ─ClockMoved→ the same, on the new clock's end (Failed → Paused: the failure was
 //     the old clock's media)
 //
-//   All | Pair | Wipe | Moments | Diff ─ViewChosen→ any (Pair, Wipe, Diff only with a second version)
-//   Pair | Wipe | Diff ─OtherChosen→ the same, against that other
-//   Moments | Diff ─MomentChosen | MomentStepped→ the same, at that moment
-//
 // Events are facts (a button pressed, the clock moved on, a video stalled);
 // the driver (`sync.ts`) makes the videos do what each state says. A seek (a
 // scrub, a step, Back landing on an entry's time, a play from the end) bumps `seek`, so the driver moves the
 // videos only then, never for the clock's own ticks.
-//
-// The view is kept in the set's URL (`?view= &other= &m=`), not in an actor:
-// the page reads it from there, and `stepView` runs one event through the
-// view machine to the state the page writes back.
 
 import { Effect, Match, Option, Predicate, Schema } from 'effect';
-import { Event, Machine, State, simulate } from 'effect-machine';
-import type { SET_VIEWS } from '../../core/api.ts';
+import { Event, Machine, State } from 'effect-machine';
 import { FILM_FPS, clock, frameRead, timecode } from '../../core/time.ts';
 
 /** An end not known yet: the clock's video's metadata has not loaded. */
@@ -328,207 +313,3 @@ export const reachOf = (state: SyncState): number => {
   if (state.end >= UNKNOWN_END) return Math.max(state.t, state.start);
   return state.end;
 };
-
-// ---------------------------------------------------------------------------
-// The view
-
-/** The views a set shows, each a `?view=` value (`SET_VIEWS` but the old `notes`). */
-const ViewName = Schema.Literals(['all', 'pair', 'wipe', 'moments', 'diff'] satisfies ReadonlyArray<
-  (typeof SET_VIEWS)[number]
->);
-type ViewName = typeof ViewName.Type;
-
-export const ViewState = State({
-  All: {},
-  /** The first variant against `other`, side by side. */
-  Pair: { other: Schema.String },
-  /** The first variant against `other`, stacked full width: the first left of a divider, `other` right of it. */
-  Wipe: { other: Schema.String },
-  /** Every variant's frame at the `index`th moment. */
-  Moments: { index: Schema.Int },
-  /** The first variant's frame and `other`'s at the `index`th moment, in the difference blend. */
-  Diff: { other: Schema.String, index: Schema.Int },
-});
-export type ViewState = typeof ViewState.Type;
-
-export const ViewEvent = Event({
-  ViewChosen: { view: ViewName },
-  OtherChosen: { id: Schema.String },
-  MomentChosen: { index: Schema.Int },
-  /** ←/→ in the moments: `by` moments on, wrapping round the set's `count`. */
-  MomentStepped: { by: Schema.Int, count: Schema.Int },
-});
-export type ViewEvent = typeof ViewEvent.Type;
-
-const VIEWS = [
-  ViewState.All,
-  ViewState.Pair,
-  ViewState.Wipe,
-  ViewState.Moments,
-  ViewState.Diff,
-] as const;
-
-/**
- * The views of the first against one other, the Compare's layouts (side by
- * side, wiped, the difference): a set of one has none of them.
- */
-export const LAYOUTS = ['pair', 'wipe', 'diff'] as const satisfies ReadonlyArray<ViewName>;
-export type Layout = (typeof LAYOUTS)[number];
-const PAIRED: ReadonlyArray<ViewName> = LAYOUTS;
-
-/** The state `view` shows: a pair, its wipe or its difference against `other`, the moments at `index`. */
-const viewEntered = (view: ViewName, other: string, index: number): ViewState =>
-  Match.value(view).pipe(
-    Match.when('all', () => ViewState.All),
-    Match.when('pair', () => ViewState.Pair({ other })),
-    Match.when('wipe', () => ViewState.Wipe({ other })),
-    Match.when('moments', () => ViewState.Moments({ index })),
-    Match.when('diff', () => ViewState.Diff({ other, index })),
-    Match.exhaustive,
-  );
-
-/** The other `state` is against: a pair's, its wipe's or its difference's. */
-export const otherOf = (state: ViewState): Option.Option<string> =>
-  Match.value(state).pipe(
-    Match.tag('Pair', 'Wipe', 'Diff', (s) => Option.some(s.other)),
-    Match.orElse(() => Option.none()),
-  );
-
-/** The moment `state` is at: the moments' or the difference's. */
-const indexOf = (state: ViewState): number =>
-  Match.value(state).pipe(
-    Match.tag('Moments', 'Diff', (s) => s.index),
-    Match.orElse(() => 0),
-  );
-
-/** `index + by`, wrapped round `count` (0 when there are none). */
-export const wrapped = (index: number, by: number, count: number): number => {
-  const n = Math.max(1, count);
-  return (((index + by) % n) + n) % n;
-};
-
-/** `state` at moment `index`: the moments, or the difference against the same other. */
-const atMoment = (state: ViewState, index: number): ViewState =>
-  Match.value(state).pipe(
-    Match.tag('Diff', (s) => ViewState.Diff({ other: s.other, index })),
-    Match.orElse(() => ViewState.Moments({ index })),
-  );
-
-/**
- * The view machine, starting in `initial`; a pair's first other is `other`.
- * A set with no other (one version) has no side by side, no wipe and no
- * difference: it opens in All where a link asks for one, and choosing one
- * leaves it as it is. The pair, its wipe and its difference share the other
- * chosen; the moments and the difference share the moment.
- */
-export const viewMachine = (initial: ViewState, other: Option.Option<string>) =>
-  Machine.make({
-    state: ViewState,
-    event: ViewEvent,
-    initial: Option.match(otherOf(initial), {
-      onNone: () => initial,
-      onSome: (): ViewState =>
-        Option.match(other, { onSome: () => initial, onNone: () => ViewState.All }),
-    }),
-  })
-    .on(VIEWS, ViewEvent.ViewChosen, ({ state, event }) =>
-      Option.match(
-        Option.orElse(otherOf(state), () => other),
-        {
-          onSome: (o) => viewEntered(event.view, o, indexOf(state)),
-          onNone: () =>
-            Match.value(PAIRED.includes(event.view)).pipe(
-              Match.when(true, () => state),
-              Match.orElse(() => viewEntered(event.view, '', indexOf(state))),
-            ),
-        },
-      ),
-    )
-    .on(ViewState.Pair, ViewEvent.OtherChosen, ({ event }) => ViewState.Pair({ other: event.id }))
-    .on(ViewState.Wipe, ViewEvent.OtherChosen, ({ event }) => ViewState.Wipe({ other: event.id }))
-    .on(ViewState.Diff, ViewEvent.OtherChosen, ({ state, event }) =>
-      ViewState.Diff({ other: event.id, index: state.index }),
-    )
-    .on([ViewState.Moments, ViewState.Diff], ViewEvent.MomentChosen, ({ state, event }) =>
-      atMoment(state, Math.max(0, event.index)),
-    )
-    .on([ViewState.Moments, ViewState.Diff], ViewEvent.MomentStepped, ({ state, event }) =>
-      atMoment(state, wrapped(state.index, event.by, event.count)),
-    );
-
-/** The view `event` leaves `state` in, with `other` a pair's first other. */
-export const stepView = (
-  state: ViewState,
-  other: Option.Option<string>,
-  event: ViewEvent,
-): ViewState => Effect.runSync(simulate(viewMachine(state, other), [event])).finalState;
-
-/** The name of the view `state` shows. */
-export const viewNameOf = (state: ViewState): ViewName =>
-  Match.value(state).pipe(
-    Match.tagsExhaustive({
-      All: (): ViewName => 'all',
-      Pair: (): ViewName => 'pair',
-      Wipe: (): ViewName => 'wipe',
-      Moments: (): ViewName => 'moments',
-      Diff: (): ViewName => 'diff',
-    }),
-  );
-
-/**
- * Whether a view plays the videos (so shows the transport): all, the pair
- * and its wipe. The difference stands on stills: two videos kept within the
- * sync's drift would still differ by a frame, and light false edges.
- */
-export const playsIn = (view: ViewName): boolean =>
-  view === 'all' || view === 'pair' || view === 'wipe';
-
-/**
- * A set's modes, one at a time: all its versions, the Compare of
- * the first against one other (its layouts the pair, the wipe and the
- * difference), and the moments. Each opens on its first view.
- */
-const SET_MODES = ['all', 'compare', 'moments'] as const;
-export type SetMode = (typeof SET_MODES)[number];
-
-/** The view a mode opens on. */
-const OPENS: Record<SetMode, ViewName> = { all: 'all', compare: 'pair', moments: 'moments' };
-
-/** The mode `view` is in: a pair, its wipe and its difference are the Compare's. */
-export const modeOf = (view: ViewName): SetMode =>
-  Option.getOrElse(
-    Option.fromUndefinedOr(SET_MODES.find((m) => m === view)),
-    (): SetMode => 'compare',
-  );
-
-/** The modes a set of `count` versions offers: one has no Compare. */
-export const modesOf = (count: number): ReadonlyArray<SetMode> =>
-  SET_MODES.filter((m) => m !== 'compare' || count >= 2);
-
-/** The view the mode after `view`'s opens on, round to the first, among `modes`. */
-export const nextModeView = (view: ViewName, modes: ReadonlyArray<SetMode>): ViewName =>
-  OPENS[modes[(modes.indexOf(modeOf(view)) + 1) % modes.length] ?? 'all'];
-
-/** The view a mode opens on, staying put when `view` is in it already. */
-export const modeView = (mode: SetMode, view: ViewName): ViewName =>
-  Option.getOrElse(
-    Option.liftPredicate(view, (v) => modeOf(v) === mode),
-    () => OPENS[mode],
-  );
-
-/** Compare's layout after `view`, round to the first; none outside Compare. */
-export const nextLayout = (view: ViewName): Option.Option<Layout> =>
-  Option.map(
-    Option.liftPredicate(
-      LAYOUTS.findIndex((l) => l === view),
-      (i) => i >= 0,
-    ),
-    (i) => LAYOUTS[(i + 1) % LAYOUTS.length] ?? 'pair',
-  );
-
-/** The instants the moments show when the set names none: 5, 25, 50, 75 and 95% in. */
-const MOMENT_SPREAD = [0.05, 0.25, 0.5, 0.75, 0.95] as const;
-
-/** Five instants spread over a video of `seconds`, none before `start`, to a tenth. */
-export const spreadMoments = (seconds: number, start: number): ReadonlyArray<number> =>
-  MOMENT_SPREAD.map((x) => Math.max(start, Math.round(seconds * x * 10) / 10));

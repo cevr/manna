@@ -1183,8 +1183,7 @@
       // layers, so its layer bans are off there; they keep the platform
       // package off its index.
       "files": [
-        "**/packages/film/src/lab/review/mount.tsx",
-        "**/packages/film/src/lab/studio/context.tsx",
+        "**/packages/film/src/lab/ask/mount.tsx",
         "**/packages/film/src/lab/**/fixtures/**",
         "**/packages/film/src/lab/**/*.test.ts",
         "**/packages/film/src/lab/**/*.test.tsx"
@@ -1523,18 +1522,14 @@
     },
     {
       // The media module itself, the tests and fixtures; and the sites that
-      // hold an element today, each moved onto the media module by the
-      // readers' batch (NEW6-8): the studio's takes, the lab's player, the review's
-      // compare, and an ask's take.
+      // hold an element today: an ask's player and its material.
       "files": [
         "**/packages/film/src/browser/media*.ts",
         "**/packages/film/src/**/fixtures/**",
         "**/packages/film/src/**/*.test.ts",
         "**/packages/film/src/**/*.test.tsx",
         "**/packages/film/src/lab/ask/material.tsx",
-        "**/packages/film/src/lab/studio/section.tsx",
-        "**/packages/film/src/lab/ask/player.tsx",
-        "**/packages/film/src/lab/review/section.tsx"
+        "**/packages/film/src/lab/ask/player.tsx"
       ],
       "rules": {
         "film/media-through-player": "off"
@@ -1817,7 +1812,7 @@
               "navigator": [
                 {
                   "properties": ["mediaDevices"],
-                  "use": "Capture (packages/film/src/lab/studio/capture.ts)"
+                  "use": "no lab page records audio"
                 },
                 {
                   "properties": ["sendBeacon"],
@@ -1826,10 +1821,10 @@
               ],
               "Audio": { "use": "Media and a Playable (packages/film/src/browser/media.ts)" },
               "AudioContext": {
-                "use": "Capture (packages/film/src/lab/studio/capture.ts) to record, or Media and a Playable (packages/film/src/browser/media.ts) to play; the compare's panes play through Media's live adapter's one sound context (pageSound, packages/film/src/browser/media-browser.ts)"
+                "use": "no lab page records audio; to play, Media and a Playable (packages/film/src/browser/media.ts), through Media's live adapter's one sound context (pageSound, packages/film/src/browser/media-browser.ts)"
               },
-              "AudioWorkletNode": { "use": "Capture (packages/film/src/lab/studio/capture.ts)" },
-              "MediaRecorder": { "use": "Capture (packages/film/src/lab/studio/capture.ts)" },
+              "AudioWorkletNode": { "use": "no lab page records audio" },
+              "MediaRecorder": { "use": "no lab page records audio" },
               "setTimeout": {
                 "use": "Effect.sleep on the host's Clock (timersOn, packages/film/src/player/throttle.ts)"
               },
