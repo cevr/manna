@@ -19,6 +19,12 @@
 // - for a scene that enters on a transition, the previous scene's own
 //   modules, which that transition draws.
 //
+// Each beat has a second key, kept beside it (`SceneKeys.beats`), for a
+// kept segment of frames that read only their beats' times: the same but
+// its start, so it holds wherever the beat sits, and with the previous beat
+// as laid out (its declaration, timing and length) where a transition into
+// the beat draws it.
+//
 // Files are hashed by content and named relative to the films folder, so two
 // checkouts of the same sources agree when the films folder sits at the same
 // depth in each (a worktree or a rift of the repo does): a workspace module
@@ -56,6 +62,13 @@ export interface SceneKeys {
   readonly commit: Option.Option<string>;
   /** By scene id, every scene of the film. */
   readonly keys: ReadonlyMap<string, string>;
+  /**
+   * By scene id, each beat's key wherever it sits in the film (`BeatKeyInput`):
+   * what its key hashes but its start, and the beat a transition into it
+   * draws as laid out. A kept segment of frames that read only their beats'
+   * times is keyed by it (tools/segments.ts).
+   */
+  readonly beats: ReadonlyMap<string, string>;
 }
 
 /** A film as its keys are read: where it lives, its layout and its takes' timings. */
@@ -82,6 +95,31 @@ const SceneKeyInput = Schema.fromJsonString(
     timing: Schema.OptionFromOptionalKey(VoiceTiming),
     voice: Schema.String,
     start: Schema.Finite,
+    dur: Schema.Finite,
+  }),
+);
+
+/** A beat as its frames read it wherever it sits: its declaration, its take's timing and its length. */
+const BeatRead = Schema.Struct({
+  beat: Timed,
+  timing: Schema.OptionFromOptionalKey(VoiceTiming),
+  dur: Schema.Finite,
+});
+
+/**
+ * What a beat's placeless key is the hash of, as JSON: its scene key's
+ * inputs but its start, and, for a beat that enters on a transition, the
+ * beat before it as laid out, which the transition draws on the beat's own
+ * clock (its time there is the beat's plus that beat's length).
+ */
+const BeatKeyInput = Schema.fromJsonString(
+  Schema.Struct({
+    files: Files,
+    entered: Files,
+    enteredBeat: Schema.OptionFromOptionalKey(BeatRead),
+    beat: Timed,
+    timing: Schema.OptionFromOptionalKey(VoiceTiming),
+    voice: Schema.String,
     dur: Schema.Finite,
   }),
 );
@@ -306,6 +344,7 @@ export class Stamps extends Context.Service<Stamps, StampsService>()('@manna/fil
             )
             .toSorted(([a], [b]) => a.localeCompare(b));
         const keys = new Map<string, string>();
+        const beats = new Map<string, string>();
         for (const p of placed) {
           const mine = yield* own(p.spec.id);
           const before = Option.fromUndefinedOr(placed[p.index - 1]);
@@ -316,22 +355,42 @@ export class Stamps extends Context.Service<Stamps, StampsService>()('@manna/fil
             onNone: () => Effect.succeed<ReadonlyArray<string>>([]),
             onSome: (prev) => own(prev.spec.id),
           });
+          const files = digest([...frame, ...mine]);
+          const timing = Rec.get(film.timings.scenes, p.spec.id);
           keys.set(
             p.spec.id,
             sha256Hex(
               yield* Schema.encodeEffect(SceneKeyInput)({
-                files: digest([...frame, ...mine]),
+                files,
                 entered: digest(drawn),
                 beat: p.spec,
-                timing: Rec.get(film.timings.scenes, p.spec.id),
+                timing,
                 voice: film.timings.voice,
                 start: p.start,
                 dur: p.dur,
               }),
             ),
           );
+          beats.set(
+            p.spec.id,
+            sha256Hex(
+              yield* Schema.encodeEffect(BeatKeyInput)({
+                files,
+                entered: digest(drawn),
+                enteredBeat: Option.map(entered, (prev) => ({
+                  beat: prev.spec,
+                  timing: Rec.get(film.timings.scenes, prev.spec.id),
+                  dur: prev.dur,
+                })),
+                beat: p.spec,
+                timing,
+                voice: film.timings.voice,
+                dur: p.dur,
+              }),
+            ),
+          );
         }
-        return { commit: yield* commitAt(dir), keys } satisfies SceneKeys;
+        return { commit: yield* commitAt(dir), keys, beats } satisfies SceneKeys;
       });
 
       return Stamps.of({ scenes });

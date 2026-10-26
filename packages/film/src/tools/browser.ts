@@ -68,6 +68,7 @@ export interface CallErrors {
   readonly scenes: FrameFailed;
   readonly still: FrameFailed;
   readonly figures: FrameFailed;
+  readonly filmTimed: FrameFailed;
 }
 
 /** How long a call may take, and the error its failure is, from its arguments and the reason. */
@@ -108,6 +109,11 @@ const CALLS: CallPolicies = {
   scenes: { timeout: FRAME_TIMEOUT, fail: (_, reason) => FrameFailed.make({ frame: 0, reason }) },
   still: { timeout: FRAME_TIMEOUT, fail: ([frame], reason) => FrameFailed.make({ frame, reason }) },
   figures: {
+    timeout: FRAME_TIMEOUT,
+    fail: ([frame], reason) => FrameFailed.make({ frame, reason }),
+  },
+  // It draws nothing: the page answers from its film's own decision, frame by frame.
+  filmTimed: {
     timeout: FRAME_TIMEOUT,
     fail: ([frame], reason) => FrameFailed.make({ frame, reason }),
   },

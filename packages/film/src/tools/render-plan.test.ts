@@ -346,7 +346,7 @@ describe('segmentChunks, one segment', () => {
 });
 
 describe('a video’s reuse', () => {
-  const fresh = Reuse.Keyed({ scenes: new Map(), fresh: true });
+  const fresh = Reuse.Keyed({ beats: new Map(), fresh: true });
 
   test('is the job’s: keyed by its beats, or off', () => {
     expect(Result.getOrThrow(jobOf({ ...flags, reuse: fresh }))).toMatchObject({ reuse: fresh });

@@ -471,7 +471,7 @@ const renderScenes = <E, R>(renderLayer: Layer.Layer<Renderer, E, R>) =>
               board: false,
               review: false,
               // A scene's segments are kept by its key; `--force` draws them again.
-              reuse: Reuse.Keyed({ scenes: keys.keys, fresh: input.force }),
+              reuse: Reuse.Keyed({ beats: keys.beats, fresh: input.force }),
             }),
           );
           const output = yield* recordOutput(

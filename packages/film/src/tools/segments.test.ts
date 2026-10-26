@@ -34,7 +34,7 @@ const render: RenderRead = {
   platform: 'darwin',
 };
 
-const scenes = new Map([
+const beats = new Map([
   ['a', 'key-a'],
   ['b', 'key-b'],
   ['c', 'key-c'],
@@ -77,7 +77,8 @@ const boardSegments = (
     start: 0,
     end: 600,
     render: { ...render, ...more },
-    scenes,
+    beats,
+    filmTimed: () => true,
     board: Option.some({
       shots: boardShots(placed, board),
       duration: 20,
@@ -100,8 +101,9 @@ describe("a render's segments", () => {
       start: 100,
       end: 400,
       render,
-      scenes,
+      beats,
       board: Option.none(),
+      filmTimed: () => true,
     });
     expect(stretch.map(({ from, to }) => [from, to])).toEqual([
       [100, 150],
@@ -117,10 +119,18 @@ describe("a render's segments", () => {
   test("change a scene render's key only where the changed beat's frames are", () => {
     const of = (changed: ReadonlyMap<string, string>) =>
       keys(
-        beatSegments({ placed, start: 0, end: 600, render, scenes: changed, board: Option.none() }),
+        beatSegments({
+          placed,
+          start: 0,
+          end: 600,
+          render,
+          beats: changed,
+          board: Option.none(),
+          filmTimed: () => true,
+        }),
       );
-    const was = of(scenes);
-    const now = of(new Map([...scenes, ['b', 'key-b2']]));
+    const was = of(beats);
+    const now = of(new Map([...beats, ['b', 'key-b2']]));
     expect([now[0] === was[0], now[1] === was[1], now[2] === was[2]]).toEqual([true, false, true]);
   });
 
@@ -163,8 +173,9 @@ describe("a render's segments", () => {
           start: 0,
           end: 600,
           render,
-          scenes,
+          beats,
           board: Option.some({ shots: boardShots(placed, cards), duration: 20, images }),
+          filmTimed: () => true,
         }),
       );
     };
@@ -193,9 +204,97 @@ describe("a render's segments", () => {
       start: 0,
       end: 600,
       render,
-      scenes: new Map([['a', 'key-a']]),
+      beats: new Map([['a', 'key-a']]),
       board: Option.none(),
+      filmTimed: () => true,
     });
     expect(segments.map((s) => Option.isSome(s.key))).toEqual([true, false, false]);
+  });
+});
+
+/**
+ * The film's whole Board with `a` lasting `seconds` (its key `aKey`), b and c
+ * after it as before, each frame reading the film's seconds where `timed`.
+ */
+const laid = (seconds: number, timed: (i: number) => boolean, aKey = 'key-a') => {
+  const film = Result.getOrThrow(
+    layout(
+      [
+        { id: 'a', min: seconds },
+        { id: 'b', min: 5 },
+        { id: 'c', min: 10 },
+      ],
+      { voice: '', scenes: {} },
+    ),
+  );
+  return beatSegments({
+    placed: film,
+    start: 0,
+    end: Math.ceil((seconds + 15) * 30 - 1e-6),
+    render,
+    beats: new Map([...beats, ['a', aKey]]),
+    board: Option.some({ shots: boardShots(film, board), duration: seconds + 15, images }),
+    filmTimed: timed,
+  });
+};
+
+/** Frames that read only their beats' and shots' times: a Board's panels. */
+const panels = () => false;
+/** Frames that read the film's seconds: every frame the film draws. */
+const drawn = () => true;
+
+describe('a segment moved by an earlier beat', () => {
+  test('is found again when its frames read only their beats, moved by whole frames', () => {
+    // a lasts half a second longer: 15 frames at 30 fps, so b and c start 15 frames later.
+    const was = laid(5, panels);
+    const now = laid(5.5, panels, 'key-a2');
+    expect(now.map(({ from, to }) => [from, to])).toEqual([
+      [0, 165],
+      [165, 315],
+      [315, 615],
+    ]);
+    // a changed; b's first quarter second dissolves in from a's shot, whose motion spans a's
+    // whole hold; c reads only b's shot and its own, each where it was from c's first frame.
+    expect(keys(now).map((k, i) => k === keys(was)[i])).toEqual([false, false, true]);
+    expect(now.map((s) => s.pinned)).toEqual([false, false, false]);
+  });
+
+  test('keeps its place in its key when its frames read the film’s seconds', () => {
+    const was = laid(5, drawn);
+    const now = laid(5.5, drawn, 'key-a2');
+    expect(keys(now).map((k, i) => k === keys(was)[i])).toEqual([false, false, false]);
+    expect(now.map((s) => s.pinned)).toEqual([true, true, true]);
+  });
+
+  test('is drawn again when the move is part of a frame: its frames fall elsewhere in its shots', () => {
+    const was = laid(5, panels);
+    const now = laid(5.01, panels, 'key-a2');
+    expect(keys(now)[2]).not.toBe(keys(was)[2]);
+  });
+
+  test('is cut where its frames start or stop reading the film’s seconds', () => {
+    const segments = laid(5, (i) => i >= 140 && i < 160);
+    expect(segments.map(({ from, to, pinned }) => [from, to, pinned])).toEqual([
+      [0, 140, false],
+      [140, 150, true],
+      [150, 160, true],
+      [160, 300, false],
+      [300, 600, false],
+    ]);
+  });
+
+  test('reads the beat of a shot it shows: a change to that beat alone draws it again', () => {
+    const was = laid(5, panels);
+    // b's shot dissolves into c's first quarter second: c's frames read b's beat (its line sets a card).
+    const now = beatSegments({
+      placed,
+      start: 0,
+      end: 600,
+      render,
+      beats: new Map([...beats, ['b', 'key-b2']]),
+      board: Option.some({ shots: boardShots(placed, board), duration: 20, images }),
+      filmTimed: panels,
+    });
+    expect(keys(now).map((k, i) => k === keys(was)[i])).toEqual([false, false, false]);
   });
 });

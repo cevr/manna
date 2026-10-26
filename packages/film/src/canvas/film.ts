@@ -572,6 +572,17 @@ export interface Film {
    * none and has no `footageAt`, so it is drawn as it always was.
    */
   readonly footageAt?: (T: number) => ReadonlyArray<FootageRead>;
+  /**
+   * Whether frame `T` reads the film's own seconds, not only the times of the
+   * beats and shots it draws: every frame the film draws does (its boil tick,
+   * `boilTick(T)`, wobbles its lines and moves its grain), and a page that
+   * draws over the film (a talk's hook, a review copy's burn-in) does. Absent,
+   * every frame does. A frame that does not draws the same wherever its beat
+   * sits in the film, so a kept segment of such frames is found again after
+   * an earlier beat changes length (tools/segments.ts); a Board's panels are
+   * such frames (`boardFilm`).
+   */
+  readonly filmTimed?: (T: number) => boolean;
   render(ctx: CanvasRenderingContext2D, T: number, opts?: RenderOptions): void;
   /** The Rive rigs its scenes' drawings declare, and the loaded ones it draws with. */
   readonly rigs: FilmRigs;

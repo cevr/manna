@@ -177,6 +177,8 @@ export interface FakeRenderHost {
   readonly figures?: (i: number) => ReadonlyArray<FigureMark>;
   /** The bytes a still of frame `i` encodes to (`still`; the frame's one byte by default): a real PNG for a match. */
   readonly still?: (i: number, view: StillView) => Uint8Array;
+  /** Whether frame `i` reads the film's own seconds (`filmTimed`; every frame by default, as a drawn film's). */
+  readonly filmTimed?: (i: number) => boolean;
 }
 
 /**
@@ -322,6 +324,15 @@ export const fakeRenderHost = (ledger: RenderLedger, host: FakeRenderHost = {}) 
             onNone: (): ReadonlyArray<FigureMark> => [],
             onSome: (figures) => figures(i),
           }),
+        ),
+      filmTimed: (from, to) =>
+        Effect.sync(() =>
+          Array.from({ length: Math.max(0, to - from) }, (_, k) =>
+            Option.match(Option.fromUndefinedOr(host.filmTimed), {
+              onNone: () => true,
+              onSome: (timed) => timed(from + k),
+            }),
+          ),
         ),
     };
   };

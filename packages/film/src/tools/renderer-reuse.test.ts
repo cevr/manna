@@ -79,7 +79,7 @@ const video = (
   });
 
 const keyed = (scenes: ReadonlyMap<string, string> = keys, fresh = false) =>
-  Reuse.Keyed({ scenes, fresh });
+  Reuse.Keyed({ beats: scenes, fresh });
 
 /**
  * Five beats at 2 fps: frames 0–11, 12–24, b's 25–34, 35–47 and 48–59.
@@ -104,8 +104,18 @@ const longerKeys = new Map([...keys, ['a2', 'key-a2'], ['c2', 'key-c2']]);
 /** How a fake page draws frame `i` (`FakeRenderHost.frame`). */
 type Draw = (i: number) => Effect.Effect<void, PageError>;
 
+/**
+ * A film and its page: what it lays out, what its page says of it, and
+ * which of its frames read the film's seconds (every one by default).
+ */
+interface Stage {
+  readonly film: typeof film;
+  readonly info: ExportInfo;
+  readonly filmTimed?: (i: number) => boolean;
+}
+
 /** Renders into one project folder, kept in memory across them: what each drew and joined. */
-const project = (files = new Map<string, Uint8Array>(), stage = { film, info }) => {
+const project = (files = new Map<string, Uint8Array>(), stage: Stage = { film, info }) => {
   const folders = new Set<string>();
   /** The host's cache locks: every render of the project, and a prune by hand, take the same. */
   const lock = memoryManifestLock();
@@ -134,7 +144,8 @@ const project = (files = new Map<string, Uint8Array>(), stage = { film, info }) 
         ),
     })),
   ).pipe(Layer.provide(memoryFileSystem(files, folders)));
-  const render = (job: RenderJob, draw: Draw = () => Effect.void) => {
+  /** `job` rendered into the project, its film laid out and paged as `on` (the project's by default). */
+  const render = (job: RenderJob, draw: Draw = () => Effect.void, on: Stage = stage) => {
     const ledger = emptyLedger();
     const lines: Array<string> = [];
     const pruned: Array<string> = [];
@@ -149,14 +160,14 @@ const project = (files = new Map<string, Uint8Array>(), stage = { film, info }) 
     ]);
     const layer = Renderer.layer.pipe(
       Layer.provide([
-        fakeRenderHost(ledger, { info: stage.info, frame: draw }),
+        fakeRenderHost(ledger, { info: on.info, frame: draw, filmTimed: on.filmTimed }),
         disk,
         Path.layer,
         SoundRender.layer,
       ]),
     );
     return Effect.gen(function* () {
-      const output = yield* (yield* Renderer).render(stage.film, job);
+      const output = yield* (yield* Renderer).render(on.film, job);
       const isShare = (out: string) => out.endsWith('.share.mp4');
       const master = ledger.joins.filter((j) => !isShare(j.out));
       const share = ledger.joins.filter((j) => isShare(j.out));
@@ -322,7 +333,9 @@ describe.concurrent("a film render's segments", () => {
       expect(first.drawn).toEqual(frames(0, 40));
       const again = yield* render(video(keyed()));
       expect(again.drawn).toEqual([]);
-      expect(again.reuse).toEqual(['render.reuse segments=3 drawn=0 frames_drawn=0 fresh=false']);
+      expect(again.reuse).toEqual([
+        'render.reuse segments=3 unpinned=0 drawn=0 frames_drawn=0 fresh=false',
+      ]);
       // Only the page that chose the encoder: no page opened to draw.
       expect(again.pages).toBe(1);
       expect(again.master).toEqual(first.master);
@@ -340,7 +353,7 @@ describe.concurrent("a film render's segments", () => {
       const changed = yield* render(video(keyed(new Map([...keys, ['b', 'key-b2']]))));
       expect(changed.drawn).toEqual(frames(10, 20));
       expect(changed.reuse).toEqual([
-        'render.reuse segments=3 drawn=1 frames_drawn=10 fresh=false',
+        'render.reuse segments=3 unpinned=0 drawn=1 frames_drawn=10 fresh=false',
       ]);
       const beat = (from: number, to: number) => (segments: typeof first.master) =>
         segments.filter((s) => s.at >= from && s.at < to);
@@ -470,7 +483,7 @@ describe.concurrent("a film render's segments", () => {
         );
         expect(second.drawn).toEqual([]);
         expect(second.reuse).toEqual([
-          'render.reuse segments=3 drawn=0 frames_drawn=0 fresh=false',
+          'render.reuse segments=3 unpinned=0 drawn=0 frames_drawn=0 fresh=false',
         ]);
       }),
   );
@@ -564,6 +577,70 @@ describe.concurrent("a film render's segments", () => {
       yield* boarded(board, { 'c.png': 'c, one pixel changed' });
       expect((yield* render(job)).drawn).toEqual(frames(10, 40));
     }),
+  );
+
+  /** The film with a a second longer, two frames at 2 fps: b at frames 12–21, c at 22–41. */
+  const lengthened = (filmTimed?: (i: number) => boolean): Stage => ({
+    film: testFilm(
+      [
+        { id: 'a', min: 6 },
+        { id: 'b', min: 5 },
+        { id: 'c', min: 10 },
+      ],
+      { voice: '', scenes: {} },
+    ),
+    info: { ...info, duration: 21, frames: 42 },
+    ...Option.match(Option.fromUndefinedOr(filmTimed), {
+      onNone: () => ({}),
+      onSome: (timed) => ({ filmTimed: timed }),
+    }),
+  });
+  const panelsOnly = () => false;
+
+  it.live(
+    "of the Board's panels: an earlier beat a second longer, a later beat's kept chunks join at its new place",
+    () =>
+      Effect.gen(function* () {
+        const { render, boarded } = project(new Map(), { film, info, filmTimed: panelsOnly });
+        yield* boarded(board, { 'a.png': 'a', 'b.png': 'b', 'c.png': 'c' });
+        const job = (beats: ReadonlyMap<string, string>) =>
+          video(keyed(beats), Picture.Board({ review: false }));
+        const first = yield* render(job(keys));
+        const moved = yield* render(
+          job(new Map([...keys, ['a', 'key-a2']])),
+          () => Effect.void,
+          lengthened(panelsOnly),
+        );
+        // a is new; b's first quarter second dissolves in from a's shot, which moved with a.
+        expect(moved.drawn).toEqual(frames(0, 22));
+        expect(moved.reuse).toEqual([
+          'render.reuse segments=3 unpinned=3 drawn=2 frames_drawn=22 fresh=false',
+        ]);
+        // c's chunks, as the first render drew them, play from 11 s now in place of 10 s.
+        const c = (from: number, segments: typeof first.master) =>
+          segments.filter((s) => s.at >= from).map((s) => ({ file: s.file, at: s.at - from }));
+        expect(c(11, moved.master)).toEqual(c(10, first.master));
+        expect(c(11, moved.share)).toEqual(c(10, first.share));
+        expect(c(10, first.master).length).toBeGreaterThan(0);
+      }),
+  );
+
+  it.live(
+    'of frames that read the film’s seconds: an earlier beat a second longer draws every later one again',
+    () =>
+      Effect.gen(function* () {
+        const { render, boarded } = project();
+        yield* boarded(board, { 'a.png': 'a', 'b.png': 'b', 'c.png': 'c' });
+        const job = (beats: ReadonlyMap<string, string>) =>
+          video(keyed(beats), Picture.Board({ review: true }));
+        yield* render(job(keys));
+        const moved = yield* render(
+          job(new Map([...keys, ['a', 'key-a2']])),
+          () => Effect.void,
+          lengthened(),
+        );
+        expect(moved.drawn).toEqual(frames(0, 42));
+      }),
   );
 
   it.live('draw again what a --fresh render cut off after a chunk drew over', () =>

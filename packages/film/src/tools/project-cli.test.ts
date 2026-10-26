@@ -97,7 +97,9 @@ const servicesWith = (catalogue: Layer.Layer<RenderCatalogue, never, ContentStor
     ),
     Layer.succeed(
       Stamps,
-      Stamps.of({ scenes: () => Effect.succeed({ commit: Option.none(), keys: KEYS }) }),
+      Stamps.of({
+        scenes: () => Effect.succeed({ commit: Option.none(), keys: KEYS, beats: KEYS }),
+      }),
     ),
     catalogue,
     SoundRender.layer,
@@ -121,7 +123,7 @@ const approveAsLands = (lands: Render) =>
   Effect.gen(function* () {
     const catalogues = yield* RenderCatalogue;
     const placed = yield* placeFilm(FILM);
-    const stamps = sceneStamps({ commit: Option.none(), keys: KEYS }, placed);
+    const stamps = sceneStamps({ commit: Option.none(), keys: KEYS, beats: KEYS }, placed);
     const mix = yield* planKey(FILM, placed);
     // Current: its sources' key now, and the film's mix.
     const current = (id: string) =>

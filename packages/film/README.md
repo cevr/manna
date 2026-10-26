@@ -592,17 +592,29 @@ uncaught error in the page is a `PageError`, never a log line. A missing
 browser is `BrowserMissing`, whose message is the install command.
 
 **Reuse.** A video of the film, an act or a scene, of its scenes or its
-Board, splits its frames at its beats into segments (`beatSegments`,
-`tools/segments.ts`) and keeps each under `out/<film>/cache/segments/<key>/`,
-a folder no catalogue lists. A segment's key (`segmentKey`) hashes the
+Board, splits its frames into segments at its beats and wherever its frames
+start or stop reading the film's own seconds (`beatSegments`,
+`tools/segments.ts`), and keeps each under `out/<film>/cache/segments/<key>/`,
+a folder no catalogue lists. Every frame the film draws reads its seconds
+(its boil tick wobbles its lines and moves its grain), as does a review
+copy's burn-in; a Board's panels read only their shots' times. The page
+says which frames do (`Film.filmTimed`, its `filmTimed` call, asked once
+by the render's first page). A segment's key (`segmentKey`) hashes the
 render's settings (size, fps, scale, encoder, captions, picture, the
-browser's user agent, the platform), its frames, the
-`Stamps` key of each beat its frames fall in (its sources, the film's frame
-and the engine, its layout and its take), and for a Board render each shot its
-frames draw (`shotsSeen`: the try shown and its image's sha256 as it is on
-disk, its motion, the span that times its motion and its dissolves), so a
-neighbour seen across a dissolve at the segment's edge changes it and a panel
-elsewhere does not. The key leaves out which copies a render encodes (the
+browser's user agent, the platform), how many frames it has and, where they
+read the film's seconds, its first frame in the film; each beat its frames
+read (the one they fall in, and each Board shot's) by its key wherever it
+sits (`SceneKeys.beats`: its sources, the film's frame and the engine, its
+layout and its take, and the beat a transition into it draws) and where it
+starts; and for a Board render each shot its frames draw (`shotsSeen`: the
+try shown and its image's sha256 as it is on disk, its motion, the span that
+times its motion and its dissolves). Every time is keyed from the segment's
+first frame in millionths of a frame. So a neighbour seen across a dissolve
+at the segment's edge changes it and a panel elsewhere does not, and a
+segment of panels moved by whole frames when an earlier beat changes its
+length keeps its key: its kept chunks join at its new place
+(`render.reuse segments=<n> unpinned=<k> drawn=<m>`, `unpinned` counting the
+segments keyed wherever they sit). The key leaves out which copies a render encodes (the
 master, its share copy, or both): each copy is encoded alike whatever is
 encoded beside it (a share copy made alone is byte for byte the one made
 beside the master, measured on In Its Order's Board), so the record says
@@ -613,10 +625,13 @@ segment a share-only render kept again, both copies. A render draws only
 the segments it finds no such record of (`<key>/segment.json`, written once
 all the segment's chunks are there), its chunks cut at segment edges
 (`segmentChunks`) and each kept as `<from>-<to>.mp4` (its share copy
-`<from>-<to>.share.mp4`), named by its frames, so two renders that cut a
-segment otherwise never write one file. It opens no drawing page when it
-draws none, and joins every segment's chunks of each copy it writes, kept or
-drawn, packets copied; `render.reuse segments=<n> drawn=<m>` says how many it drew.
+`<from>-<to>.share.mp4`), named and recorded by its frames from the
+segment's first, so two renders that cut a segment otherwise never write
+one file, and a segment found at another place joins whole. It opens no
+drawing page when it draws none, and joins every segment's chunks of each
+copy it writes, kept or drawn, packets copied, each chunk's packets moved to
+where its first frame plays (`Media.join`); `render.reuse` says how many it
+drew.
 The film's cache as a whole is `tools/segment-cache.ts`. A render that keeps
 segments holds the cache's lock (`cache/.segments.lock`, a `ManifestLock`)
 from before it picks them until it is done, so renders of one film take turns

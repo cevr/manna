@@ -920,7 +920,7 @@ const render = <E, R>(
             board: input.board,
             review: input.review,
             // Its segments are kept by the keys it is stamped with.
-            reuse: Reuse.Keyed({ scenes: keys.keys, fresh: input.fresh }),
+            reuse: Reuse.Keyed({ beats: keys.beats, fresh: input.fresh }),
           }),
         );
         yield* renderAndRecord(loaded, scope, job, stamp);

@@ -231,5 +231,13 @@ const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): Expo
       drawWith(i, await footageOf(i), { captions: false, probe: sink });
       return figures;
     },
+    // Read from the film's own decision, drawing nothing: a film that makes none reads its seconds in every frame.
+    filmTimed: (from, to) =>
+      Array.from({ length: Math.max(0, to - from) }, (_, k) =>
+        Option.match(Option.fromUndefinedOr(film.filmTimed), {
+          onNone: () => true,
+          onSome: (timed) => timed((from + k) / film.fps),
+        }),
+      ),
   };
 };
