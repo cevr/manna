@@ -117,9 +117,10 @@ describe('a Board render', () => {
     const { film: f } = filmOf(() => false);
     const gone: BoardFile = {
       ...board,
-      panels: board.panels.map((p) =>
-        p.beat === 'three' ? { ...p, id: 'three.gone', at: BoardName.make('gone') } : p,
-      ),
+      panels: board.panels.map((p) => {
+        if (p.beat !== 'three') return p;
+        return { ...p, id: 'three.gone', at: BoardName.make('gone') };
+      }),
     };
     const r = recorder(1920, 1080);
     expect(() =>

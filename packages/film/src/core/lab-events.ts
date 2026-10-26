@@ -345,7 +345,7 @@ export const isKnownChange: (change: HeardChange) => change is LabChange = Schem
 
 /** A change as it is read, before the feed numbers it, dates it and makes its links. */
 export type LabChangeDraft = Omit<LabChange, 'seq' | 'at' | 'id' | 'links' | 'read' | 'trimmed'> & {
-  /** The lab path it is on (`/films/f/studio?sel=panel:cold.judge`). */
+  /** The lab path it is on: an ask's page (`/asks/a0123456789`), else the lab's home (`/`). */
   readonly path: string;
   /** What in its record it was read from (`notes/f/12`): its id is made from this and its kind. */
   readonly origin: string;

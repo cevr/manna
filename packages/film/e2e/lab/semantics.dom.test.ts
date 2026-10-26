@@ -187,8 +187,11 @@ const ROOTS_RINGED = `(() => {
     // The page's own box: a scroll lock's gutter on a desk is no part of what a root can cover.
     const page = document.documentElement.getBoundingClientRect();
     const fills = box.left <= 0 && box.top <= 0 && box.right >= Math.min(innerWidth, page.right) && box.bottom >= innerHeight;
-    const want = fills ? inset : rest === 'none' ? ring : ring + ', ' + rest;
-    return [name(root), s.outlineStyle === 'none' && s.boxShadow === want ? 'exact' : 'outline ' + s.outlineStyle + ', shadow ' + s.boxShadow + ', not ' + want];
+    let want = ring + ', ' + rest;
+    if (rest === 'none') want = ring;
+    if (fills) want = inset;
+    if (s.outlineStyle === 'none' && s.boxShadow === want) return [name(root), 'exact'];
+    return [name(root), 'outline ' + s.outlineStyle + ', shadow ' + s.boxShadow + ', not ' + want];
   });
   if (had instanceof HTMLElement) had.focus({ focusVisible: hadRing, preventScroll: true });
   return answers;

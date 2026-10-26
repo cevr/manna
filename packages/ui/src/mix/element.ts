@@ -20,7 +20,10 @@ export function onElement<T extends Element = HTMLElement>(
   setup: (element: T) => void | (() => void),
 ): RefFactory<T> {
   let element: T | undefined;
-  onSettled(() => (element ? setup(element) : undefined));
+  onSettled(() => {
+    if (element === undefined) return undefined;
+    return setup(element);
+  });
   return (next) => {
     element = next;
   };

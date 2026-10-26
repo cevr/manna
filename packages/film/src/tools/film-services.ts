@@ -204,11 +204,12 @@ export const filmServices = (spec: FilmServicesSpec) => {
   // The agents' asks: a decision page each, kept under the lab's folder; a board try one shows
   // is found on its board, and the material it shows through the reads its views make.
   const Asks = AskStore.layer.pipe(Layer.provide(AskMaterials.layer));
-  // Each film's timeline as the studio and the `timeline` tool read it, over the stores and a
-  // fresh clock, beside the agents' "doing now" lines, held in memory.
+  // Each film's timeline as the `timeline` tool reads it: its clock read fresh, its Board,
+  // catalogue, notes, the asks and the production's ledger.
   const Timelines = FilmTimelines.layer.pipe(Layer.provide(Asks));
-  // The studio's edits of a version's script, judged on its timeline, written through the
-  // source writer the lab's other writes share, their work filed on the production's ledger.
+  // The agents' edits of a version's script (`beat_move`, `beat_hold`, `undo`), judged on its
+  // timeline, written through the source writer the lab's other writes share, their work filed
+  // on the production's ledger.
   const Edits = BeatEdits.layer.pipe(Layer.provideMerge(Timelines));
   // The Script reader's staging takes, over the studio's readings, the drafts and the narrator.
   return Layer.mergeAll(ScriptVoices.layer, Asks, Edits).pipe(
