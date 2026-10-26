@@ -9,7 +9,7 @@
     "ios": "one run:ios",
     "android": "one run:android",
     "build": "one build",
-    "prebuild:native": "bun vite/prebuild.ts",
+    "prebuild:native": "one prebuild",
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/app.tsbuildinfo && tsc --noEmit -p tsconfig.test.json --incremental --tsBuildInfoFile node_modules/.cache/tsc/test.tsbuildinfo && tsc --noEmit -p tsconfig.infra.json --incremental --tsBuildInfoFile node_modules/.cache/tsc/infra.tsbuildinfo",
     "test": "bun run test:infra & infra=$!; bun run test:app; app=$?; wait $infra && exit $app",
     "test:app": "bun test --preload ./src/test/setup.ts --path-ignore-patterns='**/*.slow.test.*' src",
@@ -32,7 +32,7 @@
     "@manna/hymnal": "workspace:*",
     "@react-navigation/native": "8.0.0-alpha.51",
     "effect": "catalog:",
-    "one": "2.9.0",
+    "one": "2.11.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-native": "0.88.0",
@@ -54,7 +54,7 @@
     "alchemy": "2.0.0-beta.83",
     "effect-bun-test": "catalog:",
     "rolldown": "1.2.13",
-    "sharp": "0.35.4",
+    "sharp": "0.35.5",
     "vite": "8.3.4"
   },
   "reanimated": {

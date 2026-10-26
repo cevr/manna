@@ -3135,7 +3135,7 @@ The form of an entry, each field on its own line:
 - **Source:** the owner's report on the first Release build of the hymnal on his iPhone, 2026-10-22 (run hymnapp, after shell merged at 46263e5dd)
 - **Wrong:** The Release app threw "iOS SDK bindings need a native iOS build" at launch and closed; the Debug app ran.
 - **Cause:** One's `ios-runtime.native.js` connects the SDK bindings as a side effect, but One's `package.json` lists no side effect for it, so the tree-shaken Release bundle dropped the call; the Debug bundle is not tree-shaken, and no unit had built Release.
-- **Guard:** code: `apps/hymnal/vite/sdkruntime.test.ts` `with sdkRuntime, the tree-shaken bundle connects the SDK bindings`, `apps/hymnal/vite/sdkruntime.test.ts` `without it, One’s package drops the set-up, so the plugin is still needed`.
+- **Guard:** code: `apps/hymnal/vite/sdkruntime.test.ts` `One’s package preserves SDK initialization in a tree-shaken native bundle`.
 
 ### approval-counts-reached-steps-only
 
