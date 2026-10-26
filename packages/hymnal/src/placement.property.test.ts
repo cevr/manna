@@ -4,7 +4,7 @@ import { describe, expect, it } from 'effect-bun-test';
 
 import * as Chord from './chord.js';
 import { compiled } from './compiled-fixture.js';
-import { type Hymn, type LineTime, PER_BEAT, type Syllable, sung, type Timing } from './hymn.js';
+import { type Hymn, PER_BEAT, type Syllable, sung, type Timing } from './hymn.js';
 import * as Midi from './midi.js';
 import * as Placement from './placement.js';
 
@@ -304,7 +304,7 @@ const storedAt = (hymn: Hymn, all: readonly Sung[], timing: Timing): ((i: number
 /** A line's placement input as the compiler read it: its sung syllables alone, a shared one carrying none. */
 const inputOf = (
   syllables: readonly Syllable[],
-  time: LineTime,
+  time: Timing['lines'][number],
   before: Chord.Chord | undefined,
 ): Placement.Line => {
   const sungAt = syllables.flatMap((s, k) => (s.notes > 0 ? [k] : []));

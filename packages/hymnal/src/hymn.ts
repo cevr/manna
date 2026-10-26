@@ -137,7 +137,6 @@ const LineTime = Schema.Struct({
   played: Schema.Boolean,
   even: Schema.Boolean,
 });
-export type LineTime = typeof LineTime.Type;
 
 /**
  * When each sung line and syllable comes, read from the file the
