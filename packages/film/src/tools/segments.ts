@@ -461,7 +461,7 @@ export const readCache = (
   });
 
 /** What a prune keeps and removes by. */
-export interface PruneRule {
+interface PruneRule {
   /** Now, in ms. */
   readonly now: number;
   /** A segment last used more than this many days before `now` goes. */
@@ -475,7 +475,7 @@ export interface PruneRule {
  * `days` before `now`, none in `keep`, and none the newest render used (those
  * marked at the newest mark), so `days` 0 keeps exactly the newest render's.
  */
-export const staleSegments = (
+const staleSegments = (
   segments: ReadonlyArray<CachedSegment>,
   rule: PruneRule,
 ): ReadonlyArray<CachedSegment> => {

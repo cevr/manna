@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Path } from 'effect';
 import { memoryFileSystem, text } from './host/testing.ts';
-import { type PruneRule, keepSegment, pruneSegments, readCache } from './segments.ts';
+import { keepSegment, pruneSegments, readCache } from './segments.ts';
 
 const DAY = 86_400_000;
 const NOW = 100 * DAY;
@@ -29,7 +29,11 @@ const kept = (key: string, daysAgo: number, bytes = 100) =>
     );
   });
 
-const prune = (rule: Partial<PruneRule> = {}, dry = false) =>
+/** The film's segments pruned at NOW: unused past 7 days, keeping none, unless `rule` says otherwise. */
+const prune = (
+  rule: { readonly days?: number; readonly keep?: ReadonlySet<string> } = {},
+  dry = false,
+) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
