@@ -26,7 +26,6 @@ import {
   playedKey,
   soundingKey,
   still,
-  syllablesOf,
 } from './chords';
 import { hymns } from './hymns';
 import { simple } from './simple';
@@ -320,7 +319,7 @@ describe('the chords over every compiled hymn', () => {
     for (const { hymn, text, chords } of cases) {
       const timed = hymn.timing?.lines ?? [];
       let i = 0;
-      syllablesOf(text, chords).forEach((shown, p) => {
+      sectionsOf(text, chords).forEach((shown, p) => {
         const section = Option.getOrThrow(Option.fromUndefinedOr(text.sections[p]));
         const part = partOf(hymn, section);
         const first = i;

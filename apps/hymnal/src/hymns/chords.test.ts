@@ -15,7 +15,7 @@ import {
   playedKey,
   soundingKey,
   still,
-  syllablesOf,
+  sectionsOf,
   transposed,
 } from './chords';
 import type { HymnText } from './text';
@@ -60,7 +60,7 @@ describe('a hymn’s syllables', () => {
   });
 
   it('gives each line its words as syllables, a syllable whose text holds a space kept whole', () => {
-    const shown = syllablesOf(
+    const shown = sectionsOf(
       text([section('stanza', 1, ['Abc d', 'E']), section('refrain', 0, ['Fg'])]),
       chords,
     );
@@ -72,7 +72,7 @@ describe('a hymn’s syllables', () => {
   });
 
   it('gives words for a plain part and for a part whose line count is not its section’s', () => {
-    const shown = syllablesOf(
+    const shown = sectionsOf(
       text([section('stanza', 1, ['Abc d']), section('stanza', 2, ['x'])]),
       chords,
     );

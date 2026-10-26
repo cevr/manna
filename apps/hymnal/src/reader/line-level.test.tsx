@@ -17,7 +17,7 @@ const hymn: HymnText = {
   sections: [{ kind: 'stanza', n: 1, lines: ['zona vi', 'ku la'] }],
 };
 
-describe('chord change anchors', () => {
+describe('line-level chord anchors', () => {
   for (const level of ['line', 'syllable'] as const)
     for (const [style, first] of [
       ['simple', 'Cm'],

@@ -48,9 +48,7 @@ import {
   type Move,
   playedKey,
   type SectionChords,
-  type SectionSyllables,
   sectionsOf,
-  syllablesOf,
 } from '~/hymns/chords';
 import type { HymnText, Section } from '~/hymns/hymns';
 import { type ChordStyle, styled } from '~/hymns/simple';
@@ -195,7 +193,6 @@ function PageText({
 
 /** A section drawn as its words alone. */
 const wordsAlone: SectionChords = { _tag: 'Words' };
-const noSyllables: SectionSyllables = { _tag: 'Words' };
 
 /** The key chords are spelled in while none are shown. */
 const hymnKeyAtRest = { tonic: 'C', minor: false } as const;
@@ -224,8 +221,8 @@ const Sections = memo(function Sections({
   const syllables = useMemo(
     () =>
       Option.match(book, {
-        onNone: () => hymn.sections.map(() => noSyllables),
-        onSome: (c) => syllablesOf(hymn, c),
+        onNone: () => hymn.sections.map(() => wordsAlone),
+        onSome: (c) => sectionsOf(hymn, c),
       }),
     [hymn, book],
   );
@@ -235,7 +232,7 @@ const Sections = memo(function Sections({
       key={k}
       section={section}
       shown={Option.getOrElse(Option.fromUndefinedOr(shown[k]), () => wordsAlone)}
-      syllables={Option.getOrElse(Option.fromUndefinedOr(syllables[k]), () => noSyllables)}
+      syllables={Option.getOrElse(Option.fromUndefinedOr(syllables[k]), () => wordsAlone)}
       p={k + 1}
       first={firsts[k] ?? 0}
     />
@@ -252,7 +249,7 @@ const firstLines = (sections: ReadonlyArray<Section>): ReadonlyArray<number> =>
 interface BodyProps {
   readonly section: Section;
   readonly shown: SectionChords;
-  readonly syllables: SectionSyllables;
+  readonly syllables: SectionChords;
   readonly p: number;
   readonly first: number;
 }

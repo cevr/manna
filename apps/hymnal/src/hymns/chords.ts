@@ -49,8 +49,8 @@ export interface HymnChords {
 }
 
 /**
- * A section of the page as it is drawn with chords on: its words alone
- * (`Words`), or each syllable a box under its chord changes (`Syllables`).
+ * A section's words, with chords on or off: its words alone (`Words`), or
+ * its lines' syllable boxes and their chord changes (`Syllables`).
  * Both alignment levels keep the compiled syllable anchors. A syllable
  * with no change shows no chord, including at the start of a line.
  */
@@ -77,30 +77,12 @@ const sungOf = (chords: HymnChords, section: Section): Option.Option<SungPart> =
     (part): part is SungPart => part._tag === 'Sung' && part.lines.length === section.lines.length,
   );
 
-/** Each section of `text`, in page order, as it is drawn with `chords` on. */
+/** Each section of `text`, in page order, at either source alignment level. */
 export const sectionsOf = (text: HymnText, chords: HymnChords): ReadonlyArray<SectionChords> =>
   text.sections.map((section) =>
     Option.match(sungOf(chords, section), {
       onNone: () => words,
       onSome: (part): SectionChords => ({ _tag: 'Syllables', lines: part.lines }),
-    }),
-  );
-
-/**
- * A section as its words are drawn, chords on or off: its words alone
- * (`Words`: a Plain part, or a part whose lines are not the section's), or
- * each line's words as their syllables, in the order the part gives them.
- */
-export type SectionSyllables =
-  | { readonly _tag: 'Words' }
-  | { readonly _tag: 'Syllables'; readonly lines: ReadonlyArray<ReadonlyArray<Word>> };
-
-/** Each section of `text`, in page order, as its syllables: at either level, since both carry them. */
-export const syllablesOf = (text: HymnText, chords: HymnChords): ReadonlyArray<SectionSyllables> =>
-  text.sections.map((section) =>
-    Option.match(sungOf(chords, section), {
-      onNone: (): SectionSyllables => ({ _tag: 'Words' }),
-      onSome: (part): SectionSyllables => ({ _tag: 'Syllables', lines: part.lines }),
     }),
   );
 
