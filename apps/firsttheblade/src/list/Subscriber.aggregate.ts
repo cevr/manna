@@ -10,9 +10,12 @@
  * - `Confirmed`: on the list.
  * - `Left`: off the list. Its letters are kept, so coming back never sends a
  *   film twice.
+ *
+ * `Import` brings a subscriber over from the D1 list the model replaced, as
+ * it stood there (`./Import.command.ts`).
  */
 import * as Domain from '@alchemy.run/domain';
-import { Array as Arr, DateTime, Duration, Option, Predicate, Schema } from 'effect';
+import { Array as Arr, DateTime, Duration, Match, Option, Predicate, Schema } from 'effect';
 
 import {
   Confirm,
@@ -30,14 +33,11 @@ import {
   ReleaseFilmLetter,
   SettleFilmLetter,
 } from './FilmLetter.command.ts';
+import { Import, Imported } from './Import.command.ts';
 import { ExpireSignUp, Leave, Left, SignUpExpired, SignUpLapsed } from './Leave.command.ts';
 import { ConfirmLinkIssued, SignedUp, SignUp } from './SignUp.command.ts';
-import { FilmRef, Millis, SubscriberId } from './Subscriber.id.ts';
+import { type Letter, Letters, Millis, SubscriberId } from './Subscriber.id.ts';
 import { CONFIRM_FOR, RESEND_AFTER } from './timing.ts';
-
-const Letter = Schema.Literals(['sending', 'sent', 'refused']);
-const Letters = Schema.Record(FilmRef, Letter);
-type Letters = typeof Letters.Type;
 
 /** When the newest confirm link was issued, if one stands. */
 const Link = Schema.OptionFromNullOr(Millis);
@@ -103,7 +103,7 @@ const withLink = (s: SubscriberState, link: Option.Option<number>): SubscriberSt
   return { ...s, link };
 };
 
-const setLetter = (film: string, letter: typeof Letter.Type) => (all: Letters) => ({
+const setLetter = (film: string, letter: Letter) => (all: Letters) => ({
   ...all,
   [film]: letter,
 });
@@ -128,13 +128,14 @@ export class Subscriber extends Domain.Aggregate('Subscriber', {
     ClaimFilmLetter,
     ReleaseFilmLetter,
     SettleFilmLetter,
+    Import,
   ],
   decide: {
-    SignUp: (s, _cmd, { now }) => {
+    SignUp: (s, cmd, { now }) => {
       if (s._tag === 'Confirmed') return [];
       const at = DateTime.toEpochMillis(now);
       if (!mayIssue(s, at)) return [SignedUp.make({ at })];
-      return [SignedUp.make({ at }), ConfirmLinkIssued.make({ issued: at })];
+      return [SignedUp.make({ at }), ConfirmLinkIssued.make({ issued: at, origin: cmd.origin })];
     },
     ReleaseConfirmLink: (s, cmd) => {
       if (!Option.contains(linkOf(s), cmd.issued)) return [];
@@ -163,7 +164,7 @@ export class Subscriber extends Domain.Aggregate('Subscriber', {
     ExpireSignUp: (s, cmd) => {
       if (s._tag !== 'Pending' || s.signedUpAt !== cmd.signedUpAt) return [];
       return Option.match(s.leftAt, {
-        onNone: () => [SignUpExpired.make({})],
+        onNone: () => [SignUpExpired.make({ signedUpAt: s.signedUpAt })],
         onSome: (leftAt) => [SignUpLapsed.make({ leftAt })],
       });
     },
@@ -179,6 +180,10 @@ export class Subscriber extends Domain.Aggregate('Subscriber', {
       if (!isSending(s, cmd.film)) return [];
       if (cmd.outcome === 'sent') return [FilmLetterSent.make({ film: cmd.film })];
       return [FilmLetterRefused.make({ film: cmd.film })];
+    },
+    Import: (s, { signedUpAt, link, standing, letters }) => {
+      if (s._tag !== 'None') return [];
+      return [Imported.make({ signedUpAt, link, standing, letters })];
     },
   },
   evolve: {
@@ -214,6 +219,25 @@ export class Subscriber extends Domain.Aggregate('Subscriber', {
     FilmLetterReleased: (s, e) => withLetters(s, dropLetter(e.film)),
     FilmLetterSent: (s, e) => withLetters(s, setLetter(e.film, 'sent')),
     FilmLetterRefused: (s, e) => withLetters(s, setLetter(e.film, 'refused')),
+    Imported: (_s, { signedUpAt, link, standing, letters }) =>
+      Match.value(standing).pipe(
+        Match.tagsExhaustive({
+          Pending: ({ leftAt }): SubscriberState => ({
+            _tag: 'Pending',
+            signedUpAt,
+            link,
+            leftAt,
+            letters,
+          }),
+          Confirmed: ({ at }): SubscriberState => ({
+            _tag: 'Confirmed',
+            confirmedAt: at,
+            link,
+            letters,
+          }),
+          Left: ({ at }): SubscriberState => ({ _tag: 'Left', leftAt: at, link, letters }),
+        }),
+      ),
   },
   reply: {
     SignUp: (_s, events) => ({

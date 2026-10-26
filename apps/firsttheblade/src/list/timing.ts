@@ -1,4 +1,4 @@
-/** The list's waits, as the D1 list (`../mail/list.ts`) and the tokens (`../mail/tokens.ts`) keep them. */
+/** The list's waits: the model's, and the confirm link's, which the routes check too (`../mail/routes.ts`). */
 import { Duration } from 'effect';
 
 /** How long after a confirm link another may be sent to the same address. */

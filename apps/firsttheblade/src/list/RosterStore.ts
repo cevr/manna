@@ -1,15 +1,12 @@
 /**
  * The list as a film's send reads it: who is confirmed, and which letters
- * each was sent. `Roster` writes it from the model's events; the send asks it
- * who still waits for a film and how far the film has gone. On Cloudflare it
- * is a D1 table; the stories keep it in memory.
+ * each was sent. `Roster` writes it from the model's events; the server asks
+ * it who still waits for a film and how far the film has gone. On Cloudflare
+ * it is D1 (`../mail/roster.ts`); the stories keep it in memory.
  */
-import type { RuntimeContext } from 'alchemy/RuntimeContext';
 import { Context, Effect, Match, Option, Ref } from 'effect';
 
-import type { SubscriberId } from './Subscriber.id.ts';
-
-export type Letter = 'sending' | 'sent' | 'refused';
+import type { Letter, SubscriberId } from './Subscriber.id.ts';
 
 /** One change to one subscriber's row. */
 export type RosterChange =
@@ -24,27 +21,11 @@ export type RosterChange =
   /** A claim given back: the subscriber waits for the film again. */
   | { readonly _tag: 'LetterReturned'; readonly subscriber: SubscriberId; readonly film: string };
 
-/** What a film's send has reached, as `List.counts` answers it (`../mail/list.ts`). */
-export interface FilmCounts {
-  readonly confirmed: number;
-  readonly sent: number;
-  readonly refused: number;
-  /** Confirmed, and neither sent the film nor refused it nor being sent it. */
-  readonly waiting: number;
-  /** Claimed and never settled: the letter may have gone, so it is never sent again. */
-  readonly unsure: number;
-}
-
 export class RosterStore extends Context.Service<
   RosterStore,
   {
     /** Applies changes in order. Applying one twice leaves the row as once. */
-    readonly record: (
-      changes: ReadonlyArray<RosterChange>,
-    ) => Effect.Effect<void, never, RuntimeContext>;
-    readonly counts: (film: string) => Effect.Effect<FilmCounts>;
-    /** The confirmed subscribers still waiting for the film, by id. */
-    readonly waiting: (film: string) => Effect.Effect<ReadonlyArray<SubscriberId>>;
+    readonly record: (changes: ReadonlyArray<RosterChange>) => Effect.Effect<void>;
   }
 >()('firsttheblade/RosterStore') {}
 
@@ -72,7 +53,10 @@ const apply = (rows: ReadonlyMap<SubscriberId, Row>, change: RosterChange) => {
   return new Map(rows).set(change.subscriber, next);
 };
 
-/** A roster kept in memory, for the stories. */
+/**
+ * A roster kept in memory, for the stories: the store, and what the server
+ * would ask of it (who waits for a film, and how far the film has gone).
+ */
 export const memory = Effect.gen(function* () {
   const rows = yield* Ref.make<ReadonlyMap<SubscriberId, Row>>(new Map());
   const record = (changes: ReadonlyArray<RosterChange>) =>
@@ -99,5 +83,5 @@ export const memory = Effect.gen(function* () {
         unsure: count('sending'),
       };
     });
-  return RosterStore.of({ record, counts, waiting });
+  return { store: RosterStore.of({ record }), counts, waiting };
 });

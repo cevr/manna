@@ -15,3 +15,14 @@ export const FilmRef = Schema.String;
 
 /** Epoch milliseconds. */
 export const Millis = Schema.Int;
+
+/** The site a sign-up was made at, so its letter's links lead back there. */
+export const Origin = Schema.String;
+
+/** A film's letter to one subscriber: being sent (or unsure, if never settled), sent, or refused for good. */
+export const Letter = Schema.Literals(['sending', 'sent', 'refused']);
+export type Letter = typeof Letter.Type;
+
+/** A subscriber's letters, by film. */
+export const Letters = Schema.Record(FilmRef, Letter);
+export type Letters = typeof Letters.Type;

@@ -13,8 +13,11 @@ export class Leave extends Domain.Command('Leave', {
   rejects: [],
 }) {}
 
-/** A sign-up that never confirmed ran out: the subscriber is forgotten, its address with it. */
-export class SignUpExpired extends Domain.Event('SignUpExpired', {}) {}
+/**
+ * The sign-up made at `signedUpAt` never confirmed and ran out: the
+ * subscriber is forgotten, with the address it gave then.
+ */
+export class SignUpExpired extends Domain.Event('SignUpExpired', { signedUpAt: Millis }) {}
 
 /** A sign-up after leaving ran out unconfirmed: the subscriber is off the list again, as it was at `leftAt`. */
 export class SignUpLapsed extends Domain.Event('SignUpLapsed', { leftAt: Millis }) {}

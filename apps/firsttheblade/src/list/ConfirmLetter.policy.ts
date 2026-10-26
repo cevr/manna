@@ -21,11 +21,12 @@ export const ConfirmLetterLive = ConfirmLetter.toLayer(
     const postman = yield* Postman;
     const subscribers = yield* Subscriber;
     return Effect.fn('ConfirmLetter.send')(function* ({ source, event }) {
-      yield* postman.confirmLetter({ subscriber: source.id, issued: event.issued }).pipe(
+      const { issued, origin } = event;
+      yield* postman.confirmLetter({ subscriber: source.id, issued, origin }).pipe(
         Effect.catchTag('LetterNotSent', () =>
           subscribers
-            .send(source.id, ReleaseConfirmLink.make({ issued: event.issued }), {
-              commandId: `release-link/${source.id}/${event.issued}`,
+            .send(source.id, ReleaseConfirmLink.make({ issued }), {
+              commandId: `release-link/${source.id}/${issued}`,
             })
             .pipe(Effect.asVoid),
         ),

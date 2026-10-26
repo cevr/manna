@@ -1,8 +1,7 @@
 /**
  * The list's rules as stories: given a subscriber's history, a command
- * records these events, replies this, or is refused. The same rules the D1
- * list holds (`../mail/list.test.ts`), over the model in memory, with its
- * policies and projections running for real. The Postman's letters wait
+ * records these events, replies this, or is refused, over the model in
+ * memory, with its policies and projections running for real. The Postman's letters wait
  * until a story answers them, and a clock the story moves stamps each command.
  */
 import { Story } from '@alchemy.run/domain/Story';
@@ -10,6 +9,7 @@ import { DateTime, Duration, Effect, Layer, Option } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
 import * as AddressBook from './AddressBook.ts';
+import { Import, Imported } from './Import.command.ts';
 import { Confirm, Confirmed, ConfirmLinkReleased, StaleLink } from './ConfirmLink.command.ts';
 import {
   ClaimFilmLetter,
@@ -36,6 +36,7 @@ const at = (millis: number) => DateTime.formatIso(DateTime.makeUnsafe(millis));
 const sam = Subscriber.ref(SubscriberId.make('sam'));
 const ari = Subscriber.ref(SubscriberId.make('ari'));
 const FILM = 'path/01';
+const ORIGIN = 'https://firsttheblade.test';
 
 /** The model with a memory address book and roster, the Postman's letters left to the story. */
 const world = Effect.gen(function* () {
@@ -43,7 +44,7 @@ const world = Effect.gen(function* () {
   const roster = yield* RosterStore.memory;
   const ports = Layer.mergeAll(
     Layer.succeed(AddressBook.AddressBook, book.book),
-    Layer.succeed(RosterStore.RosterStore, roster),
+    Layer.succeed(RosterStore.RosterStore, roster.store),
   );
   const story = Story.make(List, {
     layer: ListHandlers.pipe(Layer.provide(ports)),
@@ -68,7 +69,7 @@ const world = Effect.gen(function* () {
 /** A sign-up whose link `issued` went out. */
 const signedUp = (issued: number) => [
   SignedUp.make({ at: issued }),
-  ConfirmLinkIssued.make({ issued }),
+  ConfirmLinkIssued.make({ issued, origin: ORIGIN }),
 ];
 
 /** On the list since T0. */
@@ -76,7 +77,7 @@ const confirmed = [...signedUp(T0), Confirmed.make({ at: T0 })];
 
 /** The confirm letter the Postman was asked for, sent. */
 const mailed = (subscriber: typeof sam, issued: number) => [
-  Story.expectCall(Postman.confirmLetter, { subscriber: subscriber.id, issued }),
+  Story.expectCall(Postman.confirmLetter, { subscriber: subscriber.id, issued, origin: ORIGIN }),
   Story.resolve(Postman.confirmLetter, {}),
 ];
 
@@ -85,16 +86,16 @@ describe('signing up', () => {
     Effect.gen(function* () {
       const { story } = yield* world;
       yield* story(
-        Story.when(sam, SignUp.make({})),
+        Story.when(sam, SignUp.make({ origin: ORIGIN })),
         Story.then(sam, ...signedUp(T0)),
         Story.replied({ issued: Option.some(T0) }),
         ...mailed(sam, T0),
         Story.clock(at(after(T0, '30 minutes'))),
-        Story.when(sam, SignUp.make({})),
+        Story.when(sam, SignUp.make({ origin: ORIGIN })),
         Story.then(sam, SignedUp.make({ at: after(T0, '30 minutes') })),
         Story.replied({ issued: Option.none() }),
         Story.clock(at(after(T0, '1 hour'))),
-        Story.when(sam, SignUp.make({})),
+        Story.when(sam, SignUp.make({ origin: ORIGIN })),
         Story.then(sam, ...signedUp(after(T0, '1 hour'))),
         ...mailed(sam, after(T0, '1 hour')),
       );
@@ -106,7 +107,7 @@ describe('signing up', () => {
       const { story } = yield* world;
       yield* story(
         Story.given(sam, ...confirmed),
-        Story.when(sam, SignUp.make({})),
+        Story.when(sam, SignUp.make({ origin: ORIGIN })),
         Story.then(sam),
         Story.replied({ issued: Option.none() }),
         Story.state(sam, (state) => expect(state._tag).toBe('Confirmed')),
@@ -120,10 +121,10 @@ describe('signing up', () => {
       Effect.gen(function* () {
         const { storyUnmailed } = yield* world;
         yield* storyUnmailed(
-          Story.when(sam, SignUp.make({})),
+          Story.when(sam, SignUp.make({ origin: ORIGIN })),
           Story.then(sam, ...signedUp(T0), ConfirmLinkReleased.make({ issued: T0 })),
           Story.clock(at(after(T0, '1 minute'))),
-          Story.when(sam, SignUp.make({})),
+          Story.when(sam, SignUp.make({ origin: ORIGIN })),
           Story.replied({ issued: Option.some(after(T0, '1 minute')) }),
         );
       }),
@@ -169,7 +170,7 @@ describe('leaving', () => {
       yield* story(
         Story.given(sam, ...confirmed, Left.make({ at: after(T0, '1 day') })),
         Story.clock(at(back)),
-        Story.when(sam, SignUp.make({})),
+        Story.when(sam, SignUp.make({ origin: ORIGIN })),
         Story.then(sam, ...signedUp(back)),
         ...mailed(sam, back),
         Story.when(sam, Confirm.make({ issued: T0 })),
@@ -186,7 +187,7 @@ describe('leaving', () => {
       yield* story(
         Story.given(sam, ...confirmed, Left.make({ at: after(T0, '2 minutes') })),
         Story.clock(at(after(T0, '10 minutes'))),
-        Story.when(sam, SignUp.make({})),
+        Story.when(sam, SignUp.make({ origin: ORIGIN })),
         Story.then(sam, SignedUp.make({ at: after(T0, '10 minutes') })),
         Story.replied({ issued: Option.none() }),
       );
@@ -212,16 +213,16 @@ describe('a sign-up that is never confirmed', () => {
     Effect.gen(function* () {
       const { story, forgotten } = yield* world;
       yield* story(
-        Story.when(sam, SignUp.make({})),
+        Story.when(sam, SignUp.make({ origin: ORIGIN })),
         Story.then(sam, ...signedUp(T0)),
         ...mailed(sam, T0),
         Story.clock(at(after(T0, PENDING_FOR) - 1)),
         Story.then(sam),
         Story.clock(at(after(T0, PENDING_FOR))),
-        Story.then(sam, SignUpExpired.make({})),
+        Story.then(sam, SignUpExpired.make({ signedUpAt: T0 })),
         Story.state(sam, (state) => expect(state._tag).toBe('None')),
       );
-      expect(yield* forgotten).toEqual([sam.id]);
+      expect(yield* forgotten).toEqual([{ subscriber: sam.id, before: after(T0, PENDING_FOR) }]);
     }),
   );
 
@@ -230,19 +231,19 @@ describe('a sign-up that is never confirmed', () => {
       const { story, forgotten } = yield* world;
       const again = after(T0, '20 days');
       yield* story(
-        Story.when(sam, SignUp.make({})),
+        Story.when(sam, SignUp.make({ origin: ORIGIN })),
         Story.then(sam, ...signedUp(T0)),
         ...mailed(sam, T0),
         Story.clock(at(again)),
-        Story.when(sam, SignUp.make({})),
+        Story.when(sam, SignUp.make({ origin: ORIGIN })),
         Story.then(sam, ...signedUp(again)),
         ...mailed(sam, again),
         Story.clock(at(after(T0, PENDING_FOR))),
         Story.then(sam),
         Story.clock(at(after(again, PENDING_FOR))),
-        Story.then(sam, SignUpExpired.make({})),
+        Story.then(sam, SignUpExpired.make({ signedUpAt: again })),
       );
-      expect(yield* forgotten).toEqual([sam.id]);
+      expect(yield* forgotten).toEqual([{ subscriber: sam.id, before: after(again, PENDING_FOR) }]);
     }),
   );
 
@@ -253,7 +254,7 @@ describe('a sign-up that is never confirmed', () => {
       yield* story(
         Story.given(sam, ...confirmed, Left.make({ at: after(T0, '1 day') })),
         Story.clock(at(back)),
-        Story.when(sam, SignUp.make({})),
+        Story.when(sam, SignUp.make({ origin: ORIGIN })),
         Story.then(sam, ...signedUp(back)),
         ...mailed(sam, back),
         Story.clock(at(after(back, PENDING_FOR))),
@@ -268,7 +269,7 @@ describe('a sign-up that is never confirmed', () => {
     Effect.gen(function* () {
       const { story } = yield* world;
       yield* story(
-        Story.when(sam, SignUp.make({})),
+        Story.when(sam, SignUp.make({ origin: ORIGIN })),
         Story.then(sam, ...signedUp(T0)),
         ...mailed(sam, T0),
         Story.when(sam, Confirm.make({ issued: T0 })),
@@ -314,10 +315,10 @@ describe("a film's letter", () => {
     Effect.gen(function* () {
       const { story, roster } = yield* world;
       yield* story(
-        Story.when(sam, SignUp.make({})),
+        Story.when(sam, SignUp.make({ origin: ORIGIN })),
         ...mailed(sam, T0),
         Story.when(sam, Confirm.make({ issued: T0 })),
-        Story.when(ari, SignUp.make({})),
+        Story.when(ari, SignUp.make({ origin: ORIGIN })),
         ...mailed(ari, T0),
         Story.when(ari, Confirm.make({ issued: T0 })),
         Story.when(sam, ClaimFilmLetter.make({ film: FILM })),
@@ -346,7 +347,7 @@ describe("a film's letter", () => {
     Effect.gen(function* () {
       const { story, roster } = yield* world;
       yield* story(
-        Story.when(sam, SignUp.make({})),
+        Story.when(sam, SignUp.make({ origin: ORIGIN })),
         ...mailed(sam, T0),
         Story.when(sam, Confirm.make({ issued: T0 })),
         Story.when(sam, Leave.make({})),
@@ -354,6 +355,71 @@ describe("a film's letter", () => {
         Story.replied({ claimed: false }),
       );
       expect(yield* roster.waiting(FILM)).toEqual([]);
+    }),
+  );
+});
+
+describe('a subscriber imported from the D1 list', () => {
+  const onTheList = {
+    signedUpAt: T0,
+    link: Option.some(T0),
+    standing: { _tag: 'Confirmed' as const, at: T0 },
+    letters: { [FILM]: 'sent' as const },
+  };
+
+  it.effect('stands as it stood there, once: on the roster, and never sent a film twice', () =>
+    Effect.gen(function* () {
+      const { story, roster } = yield* world;
+      yield* story(
+        Story.when(sam, Import.make(onTheList)),
+        Story.then(sam, Imported.make(onTheList)),
+        Story.when(sam, Import.make(onTheList)),
+        Story.then(sam),
+        Story.when(sam, ClaimFilmLetter.make({ film: FILM })),
+        Story.replied({ claimed: false }),
+        Story.when(sam, ClaimFilmLetter.make({ film: 'path/02' })),
+        Story.replied({ claimed: true }),
+      );
+      expect(yield* roster.counts(FILM)).toEqual({
+        confirmed: 1,
+        sent: 1,
+        refused: 0,
+        waiting: 0,
+        unsure: 0,
+      });
+    }),
+  );
+
+  it.effect('is not taken into a subscriber that signed up here first', () =>
+    Effect.gen(function* () {
+      const { story } = yield* world;
+      yield* story(
+        Story.given(sam, ...signedUp(T0)),
+        Story.when(sam, Import.make(onTheList)),
+        Story.then(sam),
+        Story.state(sam, (state) => expect(state._tag).toBe('Pending')),
+      );
+    }),
+  );
+
+  it.effect('waiting to confirm keeps its deadline, and one already past comes due at once', () =>
+    Effect.gen(function* () {
+      const { story, forgotten } = yield* world;
+      const signedUpAt = T0 - Duration.toMillis(PENDING_FOR) - 1;
+      const waiting = {
+        signedUpAt,
+        link: Option.some(signedUpAt),
+        standing: { _tag: 'Pending' as const, leftAt: Option.none() },
+        letters: {},
+      };
+      yield* story(
+        Story.when(sam, Import.make(waiting)),
+        Story.then(sam, Imported.make(waiting), SignUpExpired.make({ signedUpAt })),
+        Story.state(sam, (state) => expect(state._tag).toBe('None')),
+      );
+      expect(yield* forgotten).toEqual([
+        { subscriber: sam.id, before: after(signedUpAt, PENDING_FOR) },
+      ]);
     }),
   );
 });
