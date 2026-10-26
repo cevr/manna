@@ -23,7 +23,11 @@
 // kept segment of frames that read only their beats' times: the same but
 // its start, so it holds wherever the beat sits, and with the previous beat
 // as laid out (its declaration, timing and length) where a transition into
-// the beat draws it.
+// the beat draws it. It reads the film's script with the numbers its beats
+// are laid out by (`lead`, `tail`, `min`) written as 0 (`unlaidScript`, tools/script-source.ts): a
+// beat's length reaches a frame only through the layout, which a segment's
+// key holds as each beat it reads and where that beat starts, so a `tail`
+// changed in the script leaves every other beat's key alone.
 //
 // Files are hashed by content and named relative to the films folder, so two
 // checkouts of the same sources agree when the films folder sits at the same
@@ -55,6 +59,7 @@ import { Short, Timed, type Timings, VoiceTiming } from '../core/schema.ts';
 import { sha256Hex } from './digest.ts';
 import type { FilmPaths } from './film-repo.ts';
 import { collectWithin } from './process.ts';
+import { unlaidScript } from './script-source.ts';
 import { type LocateError, SceneSources } from './scene-sources.ts';
 
 /** The key of each of a film's scenes now, and the commit its checkout is at. */
@@ -204,6 +209,8 @@ interface StampsService {
 /** A file as the stamp read it: its content hash and the files its imports name. */
 interface Read {
   readonly hash: string;
+  /** Its hash with its script's beat lengths left out (`unlaidScript`, tools/script-source.ts); its `hash` where it declares no script. */
+  readonly unlaid: string;
   readonly imports: ReadonlyArray<string>;
 }
 
@@ -251,12 +258,18 @@ export class Stamps extends Context.Service<Stamps, StampsService>()('@manna/fil
       const readOnce = Effect.fn('Stamps.read')(function* (file: string) {
         const source = yield* fs.readFileString(file);
         const imports: Array<string> = [];
-        if (SOURCE.includes(path.extname(file)))
-          for (const spec of importsOf(file, source)) {
-            const to = yield* resolve(spec, file);
-            if (Option.isSome(to)) imports.push(to.value);
-          }
-        return { hash: sha256Hex(source), imports } satisfies Read;
+        const hash = sha256Hex(source);
+        if (!SOURCE.includes(path.extname(file)))
+          return { hash, unlaid: hash, imports } satisfies Read;
+        for (const spec of importsOf(file, source)) {
+          const to = yield* resolve(spec, file);
+          if (Option.isSome(to)) imports.push(to.value);
+        }
+        const unlaid = Option.match(unlaidScript(file, source), {
+          onNone: () => hash,
+          onSome: sha256Hex,
+        });
+        return { hash, unlaid, imports } satisfies Read;
       });
 
       /**
@@ -332,13 +345,14 @@ export class Stamps extends Context.Service<Stamps, StampsService>()('@manna/fil
             onNone: () => Effect.succeed<ReadonlyArray<string>>([]),
             onSome: (site) => closure([site.file], () => false, reads),
           });
-        const digest = (files: ReadonlyArray<string>) =>
+        /** `files` by name, each with its hash as `by` reads it (`hash`, or `unlaid` for a beat's key wherever it sits). */
+        const digest = (files: ReadonlyArray<string>, by: (read: Read) => string = (r) => r.hash) =>
           Arr.dedupe(files)
             .flatMap((file) =>
               Option.toArray(
                 Option.map(
                   Option.fromUndefinedOr(reads.get(file)),
-                  (read) => [path.relative(films, file), read.hash] as const,
+                  (read) => [path.relative(films, file), by(read)] as const,
                 ),
               ),
             )
@@ -355,13 +369,12 @@ export class Stamps extends Context.Service<Stamps, StampsService>()('@manna/fil
             onNone: () => Effect.succeed<ReadonlyArray<string>>([]),
             onSome: (prev) => own(prev.spec.id),
           });
-          const files = digest([...frame, ...mine]);
           const timing = Rec.get(film.timings.scenes, p.spec.id);
           keys.set(
             p.spec.id,
             sha256Hex(
               yield* Schema.encodeEffect(SceneKeyInput)({
-                files,
+                files: digest([...frame, ...mine]),
                 entered: digest(drawn),
                 beat: p.spec,
                 timing,
@@ -375,8 +388,8 @@ export class Stamps extends Context.Service<Stamps, StampsService>()('@manna/fil
             p.spec.id,
             sha256Hex(
               yield* Schema.encodeEffect(BeatKeyInput)({
-                files,
-                entered: digest(drawn),
+                files: digest([...frame, ...mine], (r) => r.unlaid),
+                entered: digest(drawn, (r) => r.unlaid),
                 enteredBeat: Option.map(entered, (prev) => ({
                   beat: prev.spec,
                   timing: Rec.get(film.timings.scenes, prev.spec.id),

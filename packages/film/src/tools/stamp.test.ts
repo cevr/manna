@@ -185,6 +185,66 @@ describe.concurrent('scene keys', () => {
   );
 });
 
+describe.concurrent('beat keys wherever the beat sits', () => {
+  /** Every beat's key wherever it sits, and every scene's key, with `hand` held `seconds` at least (a silent beat lasts 3). */
+  const laidWith = (seconds: number) =>
+    Effect.gen(function* () {
+      const films = yield* Films;
+      const path = yield* Path.Path;
+      const moved = Result.getOrThrow(
+        layout(
+          [
+            { id: 'hand', min: seconds },
+            { id: 'beta', min: 2 },
+            { id: 'built', min: 2 },
+            { id: 'plain', min: 2, enter: { kind: 'fade', dur: 0.5 } },
+          ],
+          { voice: '', scenes: {} },
+        ),
+      );
+      const keys = yield* (yield* Stamps).scenes(film(films, path), moved);
+      return { scenes: Object.fromEntries(keys.keys), beats: Object.fromEntries(keys.beats) };
+    });
+
+  it.effect(
+    'a beat lasting longer changes its own, and every later scene key, but no later beat key',
+    () =>
+      Effect.gen(function* () {
+        const before = yield* laidWith(2);
+        const after = yield* laidWith(5);
+        expect(changed(before.scenes, after.scenes)).toEqual(['hand', 'beta', 'built', 'plain']);
+        expect(changed(before.beats, after.beats)).toEqual(['hand']);
+      }).pipe(Effect.provide(fixture)),
+  );
+
+  it.effect('a beat entered on a transition holds the beat before it as laid out', () =>
+    Effect.gen(function* () {
+      const films = yield* Films;
+      const path = yield* Path.Path;
+      const stamps = yield* Stamps;
+      const laid = (built: number) =>
+        Result.getOrThrow(
+          layout(
+            [
+              { id: 'hand', min: 2 },
+              { id: 'beta', min: 2 },
+              { id: 'built', min: built },
+              { id: 'plain', min: 2, enter: { kind: 'fade', dur: 0.5 } },
+            ],
+            { voice: '', scenes: {} },
+          ),
+        );
+      const one = (yield* stamps.scenes(film(films, path), laid(2))).beats;
+      const two = (yield* stamps.scenes(film(films, path), laid(5))).beats;
+      // `plain` fades in over `built`, drawn on plain's clock plus built's length.
+      expect([...one].filter(([id, key]) => two.get(id) !== key).map(([id]) => id)).toEqual([
+        'built',
+        'plain',
+      ]);
+    }).pipe(Effect.provide(fixture)),
+  );
+});
+
 /** How many times the stamp read each file. */
 class Reads extends Context.Service<Reads, Map<string, number>>()('test/Reads') {}
 

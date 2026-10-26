@@ -605,8 +605,10 @@ browser's user agent, the platform), how many frames it has and, where they
 read the film's seconds, its first frame in the film; each beat its frames
 read (the one they fall in, and each Board shot's) by its key wherever it
 sits (`SceneKeys.beats`: its sources, the film's frame and the engine, its
-layout and its take, and the beat a transition into it draws) and where it
-starts; and for a Board render each shot its frames draw (`shotsSeen`: the
+layout and its take, and the beat a transition into it draws; it reads the
+film's script with the `lead`, `tail` and `min` numbers its beats are laid
+out by left out, `unlaidScript`, so a `tail` changed in the script re-keys
+no other beat) and where it starts; and for a Board render each shot its frames draw (`shotsSeen`: the
 try shown and its image's sha256 as it is on disk, its motion, the span that
 times its motion and its dissolves). Every time is keyed from the segment's
 first frame in millionths of a frame. So a neighbour seen across a dissolve

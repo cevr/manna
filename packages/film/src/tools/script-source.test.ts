@@ -8,6 +8,7 @@ import {
   holdMissed,
   orderMissed,
   sayMissed,
+  unlaidScript,
 } from './script-source.ts';
 
 const SCRIPT = `import { defineScript } from '@manna/film/core';
@@ -185,5 +186,53 @@ describe('a hold of script.ts', () => {
     const computed = THREE.replace('tail: 1.6', 'tail: HOLD');
     const refused = editHold(computed, 'look', 'tail', Option.some(2));
     expect(Result.isFailure(refused) && refused.failure.reason).toContain('by no number');
+  });
+});
+
+describe('unlaidScript', () => {
+  const script = `import { defineScript } from '@manna/film/core';
+const pause = 2;
+export const TITLE = 'Tail';
+export const script = defineScript([
+  { id: 'a', say: '“Milk” — not meat', tail: 0.6, lead: -1, min: 3, picture: 'p' },
+  {
+    id: 'b',
+    tail: pause,
+    'min': 4,
+    picture: 'tail: 9',
+  },
+]);
+export const other = { tail: 5 };
+`;
+  const unlaid = (source: string) => unlaidScript('films/f/script.ts', source);
+
+  test('reads a script the same whatever numbers its beats are laid out by', () => {
+    for (const edit of [
+      script.replace('tail: 0.6', 'tail: 1.1'),
+      // A length taken away, or added, as the lab's hold edits write them.
+      script.replace(' tail: 0.6,', ''),
+      script.replace("'min': 4,", "'min': 4,\n    lead: 0.8,"),
+      // The spacing between a beat's fields.
+      script.replace("id: 'a', say", "id: 'a',\n    say"),
+    ])
+      expect(unlaid(edit)).toEqual(unlaid(script));
+  });
+
+  test('reads any other edit as another script, a length read from a name included', () => {
+    for (const edit of [
+      script.replace('const pause = 2', 'const pause = 3'),
+      script.replace('tail: pause', 'tail: 2'),
+      script.replace("'Tail'", "'Tale'"),
+      script.replace("'tail: 9'", "'tail: 8'"),
+      script.replace('{ tail: 5 }', '{ tail: 6 }'),
+      script.replace("say: '“Milk” — not meat'", "say: '“Milk” — not bread'"),
+    ])
+      expect(unlaid(edit)).not.toEqual(unlaid(script));
+    expect(Option.isSome(unlaid(script))).toBe(true);
+  });
+
+  test('is none for any file but a script that exports its beats', () => {
+    expect(unlaidScript('films/f/kit.ts', script)).toEqual(Option.none());
+    expect(unlaid('export const tail = { tail: 0.6 };')).toEqual(Option.none());
   });
 });
