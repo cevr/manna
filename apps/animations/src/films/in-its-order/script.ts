@@ -27,7 +27,8 @@
 // The order. The joke (`cold`: a young man at a wedding feast still asking
 // for his bottle; Hebrews says that to its readers), the title, then what
 // milk is (`milk`: the plain word), which truths are the milk (`stones`: the
-// six first principles of Hebrews 6:1–2, the series' first tier), the
+// first principles, said as principles and not as a list, and their
+// foundation, Christ; owner, 2026-10-26), the
 // problem in one small dose (`bottle`, `teeth`: some never chew), its other
 // side (`rush`: some skip the first steps and twist the rest; owner,
 // 2026-10-20), the turn (`math`: the meat leaves out nothing that was in the
@@ -43,9 +44,10 @@
 //   book (the milk is the word); in the landing the young man sets the bottle
 //   down at a set table, and the cup stands among the bread and the dishes,
 //   still there (`math` paid off: nothing in the milk is left behind).
-// - The six stones. Laid as a foundation in `stones`, each with its small
-//   gold icon; hopped over in `rush`; the first rise of the path in `path`;
-//   the courtyard's paving for a breath in `name`. Tier One's episode map.
+// - The stones. Plain stones, no icon on any, laid as a foundation in
+//   `stones` and lit gold through when Christ is named its foundation;
+//   hopped over in `rush`; the first rise of the path in `path`; the
+//   courtyard's paving for a breath in `name`. Tier One's episode map.
 // - The grain. A seed in `grain` grows blade, ear, full corn; in the landing
 //   the bread on the table is that corn.
 // - The light from the cross. A small gold cross on the page in `priest`,
@@ -59,7 +61,7 @@
 // opens the act (the chapters, `acts.ts`):
 // - `cold`: the feast table, the series lead holding a baby's bottle,
 //   teal day. "What are milk and meat?"
-// - `stones`: six stones set in a row on parchment, peach. "Which truths are
+// - `stones`: a row of plain stones on parchment, peach. "Which truths are
 //   the milk?"
 // - `math`: the slate of sums combining into one great sum, peach to dawn
 //   (episodes 07 and 10 reuse the slate). "Do we leave the milk behind?"
@@ -147,10 +149,10 @@ export const script = defineScript([
   },
   {
     id: 'stones',
-    say: '{which}So which truths are the milk? {/} {lists}Hebrews lists them, {foundation}and calls them a {*}foundation. {/} {repent}Repentance from dead works. {/} {faith}Faith toward God. {/} {bapt}Baptisms. {/} {hands}The laying on of hands. {/} {resur}The resurrection of the dead. {/} {judg}And eternal judgment. {/} {six}Six stones. {/} {oracles}Hebrews calls them the first principles of the oracles of God. {/} {spoken}An oracle is a word God himself has spoken. {/} {begins}That is where this series {*}begins.',
-    cite: ['Hebrews 6:1–2', 'Hebrews 5:12'],
+    say: '{which}So which truths are the milk? {/} {first}Hebrews calls them the first principles of the oracles of God. {/} {spoken}An oracle is a word God himself has spoken. {/} {plain}First principles are the plain {*}beginnings: {/} {child}simple enough for a child, {/} {build}and strong enough to build a whole life {*}on. {/} {foundation}Hebrews calls them a {*}foundation, {/} {christ}and Paul names that foundation: “other foundation can no man lay than that is laid, which is Jesus {*}Christ.” {//} {begins}That is where this series {*}begins.',
+    cite: ['Hebrews 5:12', 'Hebrews 6:1', '1 Corinthians 3:11'],
     cast: ['villager-child'],
-    picture: `IDEA: the parchment. On \`foundation\` a level line is drawn and six paper stones drop onto it one per name, each carrying a small gold icon: a figure turning round (\`repent\`), an open hand (\`faith\`), a wave of water (\`bapt\`), two hands over a head (\`hands\`), an empty tomb (\`resur\`), a balance scale (\`judg\`). On \`six\` the camera pulls back: six stones, a foundation with nothing yet built on it. On \`oracles\` a gold speech-ribbon unrolls from the top of the page and settles under the stones as their bed. On \`begins\` the linen child steps onto the first stone. ${CARDS}`,
+    picture: `IDEA: the parchment. On \`first\` a gold speech-ribbon unrolls from the top of the page. On \`plain\` a level line is drawn, and on \`child\` and \`build\` plain paper stones settle onto it one after another, each a simple cut-paper block with no icon, mark or letter (the first principles are not drawn as a list). On \`foundation\` the camera pulls back: a row of plain stones, a foundation with nothing yet built on it, the gold ribbon settled under them as their bed. On \`christ\` a warm gold light rises from inside the first stone and runs through the whole row until every stone glows: the foundation is Christ. On \`begins\` the linen child steps onto the first glowing stone. ${CARDS}`,
   },
   {
     id: 'bottle',
@@ -180,7 +182,7 @@ export const script = defineScript([
       'Ellen G. White, The Bible Echo, August 26, 1895',
     ],
     cast: ['villager-child', 'villager-toddler'],
-    picture: `IDEA: the parchment, the six stones from \`stones\` along the bottom. On \`skip\` the linen child hops over the stones without touching them and reaches for a heaped platter at the top of the page. On \`run\` the linen toddler sets off running, tips forward and sits down hard, unhurt, and gets up (a light moment). On \`peter\` a page of writing appears; on \`twist\` one line of it is wrung like a wet cloth, its letters bending. On \`own\` a small book opens beside the page, each word on the page linked to its entry in the book by a thin gold thread. On \`fill\` the child who skipped writes over the empty entries in a colour of his own, and on \`want\` the page turns into a mirror and shows his face. On \`order\` the mirror clears to the page, and the child steps back down onto the first stone. ${CARDS}`,
+    picture: `IDEA: the parchment, the row of plain stones from \`stones\` along the bottom. On \`skip\` the linen child hops over the stones without touching them and reaches for a heaped platter at the top of the page. On \`run\` the linen toddler sets off running, tips forward and sits down hard, unhurt, and gets up (a light moment). On \`peter\` a page of writing appears; on \`twist\` one line of it is wrung like a wet cloth, its letters bending. On \`own\` a small book opens beside the page, each word on the page linked to its entry in the book by a thin gold thread. On \`fill\` the child who skipped writes over the empty entries in a colour of his own, and on \`want\` the page turns into a mirror and shows his face. On \`order\` the mirror clears to the page, and the child steps back down onto the first stone. ${CARDS}`,
   },
   {
     id: 'math',
@@ -195,7 +197,7 @@ export const script = defineScript([
   },
   {
     id: 'priest',
-    say: '{what}So what is the meat? {/} {right}Hebrews serves it right after the milk. {/} {christ}It is Jesus, made “an high {*}priest for ever after the order of Melchisedec.” {//} {once}Not only what Christ did {*}once, {now}but what he is doing {*}now. {/} {other}The meat is never something other than {*}Christ. {/} {him}It is {*}more of him. {/} {light}Every deeper truth is read by one light, and that light streams from his {*}cross.',
+    say: '{what}So what is the meat? {/} {right}Hebrews serves it right after the milk. {/} {christ}It is Jesus, made “an high {*}priest for ever after the order of Melchisedec.” {//} {once}Not only what Christ did {*}once, {now}but what he is doing {*}now. {/} {other}The foundation is {*}Christ, {/} and the meat is Christ {*}too. {/} {him}Never something other: {*}more of him. {/} {light}Every deeper truth is read by one light, and that light streams from his {*}cross.',
     cite: [
       'Hebrews 5:10–11',
       'Hebrews 6:19–20',
@@ -203,7 +205,7 @@ export const script = defineScript([
       'Ellen G. White, Gospel Workers, 315',
     ],
     cast: ['christ'],
-    picture: `IDEA, then STORY. The parchment: the six stones from \`stones\`, each with its own gold icon, the same as when they dropped: a figure turning round, an open hand, a wave of water, two hands over a head, an empty tomb, a balance scale; on \`right\` a gold path runs on from the last stone up the page. On \`christ\` push through into STORY, a medium shot: the tall woven veil fills the frame, glowing gold from behind, and a figure in a priest's white robe and breastplate (Christ), seen from behind, centred and filling most of the frame's height, one hand parting the veil as he passes in through it (never a face of the Father, never a throne in this film). On \`once\` a small cardboard hill with an empty cross at dawn appears in a round panel; on \`now\` the panel slides to sit beside the veil, both lit. On \`light\` pull back to IDEA: a small gold cross at the centre of the page, its light widening in rings across the six stones and up the path. ${CARDS}`,
+    picture: `IDEA, then STORY. The parchment: the row of plain stones from \`stones\`, glowing gold as when Christ was named their foundation, no icon on any; on \`right\` a gold path runs on from the last stone up the page. On \`christ\` push through into STORY, a medium shot: the tall woven veil fills the frame, glowing gold from behind, and a figure in a priest's white robe and breastplate (Christ), seen from behind, centred and filling most of the frame's height, one hand parting the veil as he passes in through it (never a face of the Father, never a throne in this film). On \`once\` a small cardboard hill with an empty cross at dawn appears in a round panel; on \`now\` the panel slides to sit beside the veil, both lit. On \`light\` pull back to IDEA: a small gold cross at the centre of the page, its light widening in rings across the stones and up the path. ${CARDS}`,
   },
   {
     id: 'grain',
@@ -227,9 +229,9 @@ export const script = defineScript([
   },
   {
     id: 'path',
-    say: '{path}Here is the path ahead. {/} {just}“The path of the just is as the shining light, that shineth more and more unto the {*}perfect day.” {//} {stones}First, the six stones of the foundation. {/} {then}Then the meat Hebrews was eager to serve: {priest}a priest in heaven, {sanct}a sanctuary, {cov}a covenant, {rest}and a rest. {/} {last}And last, the strongest meat, {come}the things to {*}come. {/} {one}And all of it is {*}Christ.',
+    say: '{path}Here is the path ahead. {/} {just}“The path of the just is as the shining light, that shineth more and more unto the {*}perfect day.” {//} {stones}First, the {*}foundation. {/} {then}Then the meat Hebrews was eager to serve: {priest}a priest in heaven, {sanct}a sanctuary, {cov}a covenant, {rest}and a rest. {/} {last}And last, the strongest meat, {come}the things to {*}come. {/} {one}And all of it is {*}Christ.',
     cite: ['Proverbs 4:18', 'Hebrews 6:1–2', 'Hebrews 8:1–2, 6', 'Hebrews 4:9', '2 Peter 1:19'],
-    picture: `IDEA: the series map. The parchment widens into a long hill: the six stones at its foot (Tier One), each with its own gold icon, the same as when they dropped: a figure turning round, an open hand, a wave of water, two hands over a head, an empty tomb, a balance scale, the gold path climbing past a veil, a small tent sanctuary, two tablets in an ark and a resting figure under a tree (Tier Two), up to a city on the summit under a dawn sky (Tier Three). On \`just\` the dawn behind the summit brightens in three soft steps, more and more, never all at once. On \`one\` the gold cross's light from \`priest\` spreads until the whole hill lies inside it. ${CARDS}`,
+    picture: `IDEA: the series map. The parchment widens into a long hill: the row of plain stones at its foot (Tier One), glowing gold as in \`stones\`, the gold path climbing past a veil, a small tent sanctuary, two tablets in an ark and a resting figure under a tree (Tier Two), up to a city on the summit under a dawn sky (Tier Three). On \`just\` the dawn behind the summit brightens in three soft steps, more and more, never all at once. On \`one\` the gold cross's light from \`priest\` spreads until the whole hill lies inside it. ${CARDS}`,
   },
   {
     id: 'name',
@@ -240,7 +242,7 @@ export const script = defineScript([
       'E. J. Waggoner, The Medical Missionary, September 1904, 286',
     ],
     cast: ['lead-feast', 'christ'],
-    picture: `IDEA and STORY merged, the landing: the wedding courtyard from \`cold\` in the same layout and framing, now under the teal-to-yellow landing sky. The series lead stands where he stood; on \`sets\` he sets the baby's bottle down. On \`table\` the host's hand (the host is Christ, in His library dress, the plain white robe and the gold sash, at the head of the table) gestures to the place set for him: bread from the field in \`grain\`, and on \`cup\` the cup of milk from \`milk\` beside the plate. On \`taste\` he tastes, close on his face, delight. On \`leaving\` the six stones show for a breath as the courtyard's paving under the table. On \`into\` he stands taller beside the host; the gold cross's light from \`priest\` warms the whole courtyard. The held pause comes after \`into\`. ${CARDS}`,
+    picture: `IDEA and STORY merged, the landing: the wedding courtyard from \`cold\` in the same layout and framing, now under the teal-to-yellow landing sky. The series lead stands where he stood; on \`sets\` he sets the baby's bottle down. On \`table\` the host's hand (the host is Christ, in His library dress, the plain white robe and the gold sash, at the head of the table) gestures to the place set for him: bread from the field in \`grain\`, and on \`cup\` the cup of milk from \`milk\` beside the plate. On \`taste\` he tastes, close on his face, delight. On \`leaving\` the plain stones of the foundation show for a breath as the courtyard's paving under the table. On \`into\` he stands taller beside the host; the gold cross's light from \`priest\` warms the whole courtyard. The held pause comes after \`into\`. ${CARDS}`,
   },
   {
     id: 'thesis',
