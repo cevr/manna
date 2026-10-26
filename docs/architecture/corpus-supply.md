@@ -22,8 +22,16 @@ two `anticonstitutional` and three `counter-revolution` rows. Each entry keeps
 source HTML, plaintext, original headword and stable source-ordinal id.
 Definitions retain their senses and quotation order. FTS5 searches literal
 definition terms with AND, rank and id tie-breaking. Exact lookup wins before
-the bounded `-eth` / `-est` fallback; candidates must exist in the dictionary.
-The response labels heuristic matches. This does not claim universal KJV
+the reviewed KJV alias table, then the bounded `-eth` / `-est` fallback.
+The complete repository KJV domain is committed in
+`packages/core/src/webster/fixtures/kjv-endings.json`: 962 suffix words, plus eight
+explicit irregular/noun guard forms, with frequencies and reviewed resolutions.
+Aliases cover irregulars, spelling changes, colliding stems and explicit
+nonverb exclusions. Missing alias targets stop; an unrelated candidate never
+substitutes for them. The generic fallback rejects one-letter stems. The
+response distinguishes audited aliases from generic heuristic matches.
+Exact grammar entries for dost/hast/art/wast remain exact; the fixture also
+records their canonical do/have/be/be forms. This does not claim universal KJV
 lemmatization, irregular spelling resolution or verse-aware glosses.
 
 `@manna/core/webster` is portable. `@manna/core/webster/bun` opens existing

@@ -3927,6 +3927,26 @@ The form of an entry, each field on its own line:
 - **Cause:** The docs test checked API paths in running text but no page path. It now holds each page path a framework doc writes to a page the lab serves.
 - **Guard:** code: `packages/film/src/docs.slow.test.ts` `pageDrift`
 
+### webster-kjv-lemma-domain
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "The specified KJV fallback picks a wrong entry for common forms."
+- **Source:** hymnapp/webster/round-1-findings.md F1; orchestrator round-2 amendment
+- **Wrong:** Suffix stripping chose doe for doeth/doest and saye for sayest because those unrelated headwords exist.
+- **Cause:** Lexical existence was treated as evidence of the intended KJV lemma. Lookup now uses an audited alias table before generic guesses and stops when an alias target is absent.
+- **Guard:** code: `packages/core/src/webster/kjv.test.ts` `resolves every audited KJV form to its reviewed entry or none with real collision vocabulary`
+
+### webster-bare-before-undoubled
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "Bare-before-undoubled priority is untested."
+- **Source:** hymnapp/webster/round-1-findings.md F6
+- **Wrong:** A collision fixture with retained-e, bare and undoubled stems always selected retained-e and could not detect reversed later candidates.
+- **Cause:** The fixture never reached the ordering it claimed to protect. A synthetic generic form now has only bare and undoubled candidates.
+- **Guard:** code: `packages/core/src/webster/service.test.ts` `tries a bare generic stem before an undoubled stem when retained e is absent`
+
 ### board-food-is-plant-food
 
 - **Date:** 2026-10-26

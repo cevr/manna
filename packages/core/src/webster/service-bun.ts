@@ -43,8 +43,9 @@ export const layerWebsterBun = (input: { readonly filename?: string } = {}) =>
               .all(key),
           catch: (cause) => failure('lookup', cause),
         }).pipe(
-          Effect.flatMap(decode),
-          Effect.mapError((cause) => failure('lookup', cause)),
+          Effect.flatMap((rows) =>
+            decode(rows).pipe(Effect.mapError((cause) => failure('lookup', cause))),
+          ),
         ),
       );
       const search = Effect.fn('Webster.search')(function* (query: string, limit = 20) {

@@ -1,7 +1,8 @@
-import { Context, Effect, Layer } from 'effect';
+import { Context, Effect, Layer, Option } from 'effect';
 
 import { WebsterError, type WebsterEntry, type WebsterLookup } from './model.js';
 import { normalizeHeadword } from './source.js';
+import { kjvAlias } from './kjv-aliases.js';
 
 interface WebsterApi {
   readonly lookup: (query: string) => Effect.Effect<WebsterLookup, WebsterError>;
@@ -16,7 +17,7 @@ const candidates = (key: string): readonly string[] => {
   const bare = key.slice(0, -3);
   const result = [key.slice(0, -2), bare];
   if (/([bcdfghjklmnpqrstvwxyz])\1$/u.test(bare)) result.push(bare.slice(0, -1));
-  return [...new Set(result.filter((candidate) => candidate.length > 0))];
+  return [...new Set(result.filter((candidate) => candidate.length >= 2))];
 };
 
 /** Tokens are reader text. Quoted FTS operators cannot enter the grammar. */
@@ -42,6 +43,14 @@ export const makeWebsterApi = (
     const key = normalizeHeadword(query);
     const exact = yield* byKey(key);
     if (exact.length > 0) return { query, entries: exact, match: 'exact', key };
+    const alias = kjvAlias(key);
+    if (Option.isSome(alias)) {
+      if (alias.value !== 'none') {
+        const entries = yield* byKey(alias.value);
+        if (entries.length > 0) return { query, entries, match: 'kjv-alias', key: alias.value };
+      }
+      return { query, entries: [], match: 'none', key };
+    }
     for (const candidate of candidates(key)) {
       const entries = yield* byKey(candidate);
       if (entries.length > 0) return { query, entries, match: 'kjv-inflection', key: candidate };

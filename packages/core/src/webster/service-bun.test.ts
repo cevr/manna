@@ -21,7 +21,7 @@ const exercise = (filename: string, cases: readonly (readonly [string, string])[
     expect((yield* service.lookup('duplicate')).entries.map((entry) => entry.id)).toEqual([4, 5]);
     expect((yield* service.lookup('unknowneth')).entries).toEqual([]);
     expect((yield* service.lookup('sitteth')).entries.map((entry) => entry.headword)).toEqual([
-      'sitte',
+      'sit',
     ]);
     expect((yield* service.search('courage deprived')).map((entry) => entry.id)).toEqual([1]);
     for (const query of ['courage', '"courage"', 'courage--'])

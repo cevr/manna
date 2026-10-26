@@ -20,6 +20,8 @@ const print = Effect.fn('WebsterCommand.print')(function* (result: WebsterLookup
     return yield* Console.log(`No Webster 1828 entry for "${result.query}".`);
   if (result.match === 'kjv-inflection')
     yield* Console.log(`${result.query} → ${result.key} (KJV inflection heuristic)`);
+  if (result.match === 'kjv-alias')
+    yield* Console.log(`${result.query} → ${result.key} (audited KJV alias)`);
   for (const entry of result.entries)
     yield* Console.log(`${entry.headword}\n${entry.definition}\n`);
 });
