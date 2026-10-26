@@ -108,7 +108,6 @@ The shape as a share of the runtime:
 
 - **Seams:** the gap between one scene's last word and the next scene's first word is 0.6 s or less. Scene `lead` and `tail` set it.
 - **Long pauses:** a pause of 1 s or more goes only where the script means one: before the landing's last word, after a key quotation, or at a register switch.
-- **Chapter turns breathe** (owner, 2026-10-26): at each act turn the last scene of the act holds 3–8 s of music alone (its `tail`), so the viewer has room to take the act in before the next opens.
 - **Comma breaths are rare:** a `{/}` after a comma is cut; the comma is pause enough. Keep `{/}` for sentence ends and the turns the line means.
 - **Between sentences:** 0.2 to 0.5 s.
 - **Pace:** 150–165 words a minute over the spoken span. The owner records the voice, so the script leaves room: about 5–8 % fewer words than the timeline allows.
@@ -119,7 +118,7 @@ The shape as a share of the runtime:
 - **A score is not optional,** and no air is dead: no stretch over 1.5 s below −60 dBFS unless the script declares it.
 - **Designed silences** go in three places only: after the key quotation, at the black moment, and the held beat before the landing's last word.
 - **The bed:** 17 to 20 dB under the voice wherever narration runs, short gaps included.
-- **Music alone:** the music rises only where no one speaks, to about 6 dB under the voice level. That means an optional open of 5 to 7 s, the chapter turns' 3 to 8 s, the landing's 15 to 20 s and the 3 s after the last line.
+- **Music alone:** the music rises only where no one speaks, to about 6 dB under the voice level. That means an optional open of 5 to 7 s, the landing's 15 to 20 s and the 3 s after the last line. No act turn pauses for music alone (owner, 2026-10-26: "take out the music pauses").
 - **The low end:** the register under 70 Hz swells about 15 dB on the problem lines and the climax, and thins under the answers.
 - **Effects:** put them on the story's concrete nouns: serpents, the loom, coins, cloth, chains. Page and slide sounds go only at register switches.
 - **Levels:** the voice sits near −17 dBFS at its 70th percentile, and the master near −18 LUFS.

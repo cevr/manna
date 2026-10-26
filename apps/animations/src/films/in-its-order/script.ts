@@ -139,8 +139,6 @@ export const script = defineScript([
   {
     id: 'milk',
     say: "{start}Start with the milk. {/} {peter}Peter writes, {newborn}“As newborn babes, desire the sincere milk of the word, that ye may {*}grow thereby.” {/} {sincere}Sincere here means pure, {mixed}with {*}nothing mixed in. {/} {word}So the milk is God's word, plain and unmixed. {/} {good}And milk is {*}good. {/} {need}A baby cannot do without it. {/} {began}Every one of us began there, {shame}and there is no shame in a cup of milk.",
-    // A chapter turn: 3 s of music alone before the next act.
-    tail: 3,
     cite: [
       '1 Peter 2:2',
       'E. J. Waggoner, The Present Truth, August 17, 1893, 315',
@@ -177,8 +175,6 @@ export const script = defineScript([
   {
     id: 'rush',
     say: '{other}There is a mistake on the other side, too. {/} {skip}Some reach for the strong meat before they have learned the milk, {run}like a child who tries to run before he can {*}walk. {/} {peter}Peter warns of things in Scripture “hard to be understood, which they that are unlearned and unstable wrest.” {/} {twist}To wrest is to twist. {/} {own}The Bible explains its own words, and we learn them one at a time. {/} {fill}Skip those first steps, and we fill its words with meanings of our own, {want}until it says {*}what we wanted. {/} {order}That is why it serves its truth in {*}order.',
-    // A chapter turn: 4 s of music alone before the next act.
-    tail: 4,
     cite: [
       '2 Peter 3:16',
       'Ellen G. White, Education, 190',
@@ -191,8 +187,6 @@ export const script = defineScript([
   {
     id: 'math',
     say: '{leave}So do we leave the milk {*}behind? {/} {go}Hebrews does say, leaving the principles, let us go on. {/} {but}But leaving them never means throwing them {*}away. {//} {student}Think of a student of mathematics. {/} {adds}First he learns to add and subtract and multiply. {/} {stay}He must not stay there forever. {/} {never}But he never stops {*}using them. {/} {hardest}His hardest problems are those first steps, {*}combined. {/} {unlearned}A student who never learned to add {/} cannot solve them at {*}all. {/} {guess}He can only {*}guess, {wrested}and that is how the hard places of Scripture get {*}wrested. {//} {meat}So it is with meat. {/} {nothing}Solid food leaves out nothing that was in the milk. {/} {more}It has all of it, and {*}more.',
-    // A chapter turn: 4 s of music alone before the next act.
-    tail: 4,
     cite: [
       'Hebrews 6:1',
       'E. J. Waggoner, The Present Truth, January 31, 1895, 65',
@@ -205,8 +199,6 @@ export const script = defineScript([
   {
     id: 'priest',
     say: '{what}So what is the meat? {/} {right}Hebrews serves it right after the milk. {/} {christ}It is Jesus, made “an high {*}priest for ever after the order of Melchisedec.” {//} {once}Not only what Christ did {*}once, {now}but what he is doing {*}now. {/} {other}The foundation is {*}Christ, and the meat is Christ {*}too. {/} {him}Never something other: {*}more of him. {/} {light}Every deeper truth is read by one light, and that light streams from his {*}cross.',
-    // A chapter turn: 4 s of music alone before the next act.
-    tail: 4,
     cite: [
       'Hebrews 5:10–11',
       'Hebrews 6:19–20',
