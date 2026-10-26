@@ -30,7 +30,7 @@ export interface ScriptLine {
  * apart. The sheet, the studio's reading and the lab's panel read this one
  * shape.
  */
-export const Part = Schema.Union([
+const Part = Schema.Union([
   Schema.Struct({
     kind: Schema.Literal('line'),
     /** The reader a turn names; absent for the film's one voice. */
@@ -44,7 +44,7 @@ export const Part = Schema.Union([
     by: Schema.optionalKey(Schema.String),
   }),
 ]);
-export type Part = typeof Part.Type;
+type Part = typeof Part.Type;
 
 /** A beat on the reading sheet: the take's file, its parts to read and the sources it cites. */
 export const SheetBeat = Schema.Struct({

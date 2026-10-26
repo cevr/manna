@@ -349,7 +349,6 @@ export const noRenders = Layer.succeed(
     pictures: () => unreviewed('pictures'),
     renderVideo: () => unreviewed('renderVideo'),
     resolve: () => unreviewed('resolve'),
-    say: () => unreviewed('say'),
     duration: () => unreviewed('duration'),
     frame: () => unreviewed('frame'),
     phone: () => unreviewed('phone'),

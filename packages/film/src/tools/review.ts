@@ -44,7 +44,6 @@ import {
   Queue,
   Record as Rec,
   Ref,
-  Result,
   Schema,
 } from 'effect';
 import { type PlatformError, isPlatformError } from 'effect/PlatformError';
@@ -54,27 +53,14 @@ import {
   CatalogueJson,
   MAIN_VARIANT,
   type Render,
-  type Project,
   approvalState,
   commentsOn,
-  gaveOf,
-  projectNow,
   recordedNow,
-  said,
   renderState,
   saidOn,
   subjectOf,
-  tookOf,
 } from '../core/catalogue.ts';
-import {
-  type ChoicePoint,
-  type ChoiceVariant,
-  approvalRefused,
-  pointHead,
-  seenVariants,
-  subjectAt,
-} from '../core/choice.ts';
-import { Say, type SetSaid, type SetSayPost } from '../core/api.ts';
+import { type ChoicePoint, type ChoiceVariant, pointHead, seenVariants } from '../core/choice.ts';
 import type {
   ReviewDuration,
   ReviewFile,
@@ -86,18 +72,14 @@ import type {
 } from '../core/review.ts';
 import { ReviewManifestJson, canonicalRef } from '../core/review.ts';
 import {
-  ChoiceUnknown,
   type MediaFailed,
   PhoneCopyFailed,
   ReviewFileUnknown,
   ReviewToolFailed,
-  VariantUnknown,
-  VerbRefused,
-  VersionChanged,
 } from '../core/refusals.ts';
 import { clamp } from '../core/time.ts';
 import { counted } from '../core/words.ts';
-import { CATALOGUE_FILE, type CatalogueError, RenderCatalogue } from './catalogue.ts';
+import { CATALOGUE_FILE } from './catalogue.ts';
 import { writeWhole } from './content-store.ts';
 import { AtMtime, fileCache, madeFromName } from './file-cache.ts';
 import { Media, PHONE_COPY, PHONE_RATE } from './media.ts';
@@ -618,19 +600,6 @@ export const recordsUnder = Effect.fn('Review.recordsUnder')(function* (
   }
   return [...byDir.values()];
 });
-
-/**
- * How an approve reads the film's project as it stands now: the project of
- * the film `film`, whose catalogue is in the folder `out`, read in a fresh
- * process; none for a folder that is not this checkout's own for the film
- * (its sources are not here to judge by: its record judges); or why it could
- * not be read.
- */
-export type ProjectRead = (
-  film: string,
-  out: string,
-) => Effect.Effect<Option.Option<Project>, string>;
-
 interface ReviewService {
   readonly roots: ReadonlyArray<ReviewRoot>;
   /** Every folder under the roots with something to review, newest first; read again when `fresh` or stale. */
@@ -654,32 +623,6 @@ interface ReviewService {
   readonly renderVideo: (dir: string, render: Render) => Effect.Effect<Option.Option<ReviewVideo>>;
   /** The file `ref` names: inside its root, there, a file the index lists. */
   readonly resolve: (ref: string) => Effect.Effect<string, ReviewFileUnknown>;
-  /**
-   * Say `asked.say` of version `asked.variant` of the set `point` in the
-   * project folder `folder` (a ref), as it is now: written to that folder's
-   * own catalogue, answered with the folder as the say leaves it and what
-   * it gave or took (`SetSaid`: a scene's run, as a project's say answers
-   * it). A montage keeps no say (its manifest is written by hand). The version is checked
-   * again inside the catalogue's write: one made again since the index showed
-   * it is `VersionChanged`, and an approval is refused by its state then:
-   * against the film's sources as `project` reads them now, the rule the
-   * project's own approve judges by, else (a folder not this checkout's, an
-   * address the project does not list) against its record.
-   */
-  readonly say: (
-    folder: string,
-    point: string,
-    asked: SetSayPost,
-    project: ProjectRead,
-  ) => Effect.Effect<
-    SetSaid,
-    | ReviewFileUnknown
-    | ChoiceUnknown
-    | VariantUnknown
-    | VerbRefused
-    | VersionChanged
-    | CatalogueError
-  >;
   /** A video's length in seconds (its container's index) and its frame rate, kept per path and mtime. */
   readonly duration: (
     ref: string,
@@ -746,7 +689,6 @@ export class Review extends Context.Service<Review, ReviewService>()('@manna/fil
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const media = yield* Media;
-        const catalogues = yield* RenderCatalogue;
         const roots = config.roots.map((root) => ({ ...root, path: path.resolve(root.path) }));
         const phoneRate = config.phoneRate ?? PHONE_RATE;
         const cacheFailed = (name: string) => (error: { readonly message: string }) =>
@@ -1141,148 +1083,6 @@ export class Review extends Context.Service<Review, ReviewService>()('@manna/fil
           return (yield* current(false)).pictures.get(film) ?? [];
         });
 
-        /** The folder `ref` the index lists: as it stands, or read again once when it does not. */
-        const folderListed = Effect.fn('Review.folderListed')(function* (ref: string) {
-          const find = (listed: ReviewIndex) => Arr.findFirst(listed.folders, (f) => f.ref === ref);
-          const had = find(yield* index(false));
-          if (Option.isSome(had)) return had;
-          return find(yield* index(true));
-        });
-
-        const say = Effect.fn('Review.say')(function* (
-          given: string,
-          point: string,
-          asked: SetSayPost,
-          project: ProjectRead,
-        ) {
-          const unknown = ReviewFileUnknown.make({ ref: given });
-          const ref = canonicalOf(roots, given);
-          const dir = pathOf(roots, ref, path);
-          const listed = yield* folderListed(ref);
-          if (Option.isNone(dir) || Option.isNone(listed)) return yield* unknown;
-          const refused = (verb: string, reason: string) =>
-            VerbRefused.make({ point, variant: asked.variant, verb, reason });
-          const file = path.join(dir.value, CATALOGUE_FILE);
-          if (!(yield* isFile(file)))
-            return yield* refused(
-              'say',
-              'the folder is a montage: its review.json is written by hand and keeps no say',
-            );
-          const folder = listed.value;
-          const set = yield* Effect.fromOption(
-            Arr.findFirst(folder.sets, (s) => s.id === point),
-            () => ChoiceUnknown.make({ film: ref, point, known: folder.sets.map((s) => s.id) }),
-          );
-          const variant = yield* Effect.fromOption(
-            Arr.findFirst(set.variants, (v) => v.id === asked.variant),
-            () =>
-              VariantUnknown.make({
-                film: ref,
-                point,
-                variant: asked.variant,
-                known: set.variants.map((v) => v.id),
-              }),
-          );
-          const address = yield* Effect.fromOption(set.address, () =>
-            refused('say', 'it belongs to no film address'),
-          );
-          const at = yield* Clock.currentTimeMillis;
-          const subject = subjectAt(set.ref, address, variant);
-          const { film } = yield* catalogues.read({ name: ref, out: dir.value });
-          // An approve is of a version as the film's sources make it now: read once, here,
-          // beside the write's own check of the version.
-          const sourcesNow = yield* Option.match(
-            Option.liftPredicate(asked.say, (s) => s._tag === 'Approve'),
-            {
-              onNone: () => Effect.succeed(Option.none<Project>()),
-              onSome: () =>
-                Effect.mapError(project(film, dir.value), (reason) => refused('approve', reason)),
-            },
-          );
-          // The index may be up to INDEX_FRESH old: the version is checked
-          // against the catalogue as the write reads it, and the say written
-          // only of the version that was shown. A refusal fails the write before
-          // anything is encoded, so the file stays as it was, byte for byte.
-          const answer = yield* catalogues
-            .attempt({ name: film, out: dir.value }, (catalogue) => {
-              const render = Arr.findFirst(
-                catalogue.renders,
-                (r) =>
-                  r.kind === 'video' &&
-                  r.variant === variant.id &&
-                  addressKey(r.address) === addressKey(address),
-              );
-              const now = Option.map(render, (r) => subjectOf(r).key);
-              if (!Option.contains(now, variant.key))
-                return Result.fail<VersionChanged | VerbRefused>(
-                  VersionChanged.make({ point, variant: variant.id, shown: variant.key, now }),
-                );
-              const stale = Option.flatMap(
-                Option.liftPredicate(asked.say, (s) => s._tag === 'Approve'),
-                () =>
-                  approvalRefused(
-                    set.kind,
-                    Option.match(
-                      Option.orElse(
-                        Option.flatMap(sourcesNow, (p) => projectNow(p, address)),
-                        () => recordedNow(catalogue, address),
-                      ),
-                      {
-                        onNone: () => ({ state: 'current' as const, staleBy: Option.none() }),
-                        onSome: (now) => renderState(render, now),
-                      },
-                    ),
-                  ),
-              );
-              if (Option.isSome(stale)) return Result.fail(refused('approve', stale.value));
-              const next = said(
-                catalogue,
-                subject,
-                asked.say,
-                at,
-                Option.fromUndefinedOr(asked.op),
-              );
-              // The scene a scene's set is of, when the say moved its approval: what a run gave
-              // or took, as a project's say names it (a film's or an act's set names none).
-              const moved = Arr.filter(
-                Option.match(
-                  Option.liftPredicate(
-                    address,
-                    (a): a is Extract<typeof address, { readonly _tag: 'Scenes' }> =>
-                      a._tag === 'Scenes',
-                  ),
-                  { onNone: (): ReadonlyArray<string> => [], onSome: (a) => a.ids },
-                ),
-                () => next.approvals.length !== catalogue.approvals.length,
-              );
-              const answer: Pick<SetSaid, 'gave' | 'took'> = {
-                gave: Option.flatMap(
-                  Option.filter(Option.fromUndefinedOr(asked.op), () =>
-                    Say.guards.Approve(asked.say),
-                  ),
-                  (op) => gaveOf(moved, at, op),
-                ),
-                took: Option.flatMap(Option.liftPredicate(asked.say, Say.guards.Withdraw), (w) =>
-                  tookOf(w.given, moved),
-                ),
-              };
-              return Result.succeed([answer, next] as const);
-            })
-            .pipe(
-              // The index reads the folder again on its next ask: it changed, or
-              // the index was found behind it.
-              Effect.ensuring(drop),
-            );
-          yield* Effect.log(
-            `review.say folder=${ref} point=${point} variant=${variant.id} say=${asked.say._tag}`,
-          );
-          const built = yield* folderAt(file);
-          return yield* Effect.fromOption(
-            Option.map(built, (b): SetSaid => ({ ...b.folder, ...answer })),
-            () => unknown,
-          );
-        });
-
         const videoOfRender = Effect.fn('Review.renderVideo')(function* (
           dir: string,
           render: Render,
@@ -1299,7 +1099,6 @@ export class Review extends Context.Service<Review, ReviewService>()('@manna/fil
           pictures,
           renderVideo: videoOfRender,
           resolve,
-          say,
           duration,
           frame,
           phone,

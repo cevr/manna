@@ -15,6 +15,8 @@
 // lands in the version open when it is filed. The lab client's session ends
 // with its scope, a handshake failed halfway too, and the lab forgets it.
 
+import { FilmName } from './film-repo.ts';
+import { NotesStore } from './notes-store.ts';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Array as Arr,
@@ -47,14 +49,13 @@ import {
   HttpClientRequest,
   HttpClientResponse,
 } from 'effect/http';
-import { Base64 } from 'effect/encoding';
 import { TestClock } from 'effect/testing';
 import { labUrls } from '../core/api.ts';
 import { AskName, imagesIn } from '../core/ask.ts';
 import { type BoardFile, BoardFileJson, BoardName } from '../core/board.ts';
 import { CatalogueJson, emptyCatalogue } from '../core/catalogue.ts';
 import { Segment } from '../core/segment.ts';
-import { currentOf, moveForward, productionsOf } from '../core/production.ts';
+import { moveForward } from '../core/production.ts';
 import { AskStore } from './ask-store.ts';
 import type { ContentStore } from './content-store.ts';
 import { sha256Hex } from './digest.ts';
@@ -173,24 +174,16 @@ const JsonText = Schema.fromJsonString(Schema.Json);
 const writeJson = Schema.encodeSync(JsonText);
 const readJson = Schema.decodeUnknownEffect(JsonText);
 
-/** The owner's note on the film's frame, as the lab's page posts it. */
-const ownerNote = (lab: LabFetch, words: string) =>
-  Effect.promise(() =>
-    lab(
-      new Request(`${MCP_BASE.slice(0, -1)}${labUrls.notes.add({ params: { film: 'f' } })}`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: writeJson({
-          scene: 'cold',
-          T: 1,
-          frame: 30,
-          text: words,
-          still: Base64.encode(text('frame')),
-        }),
-      }),
-      mcpBound,
-    ),
-  );
+/** The owner's note on film `f`'s frame, written to its notes through the store. */
+const ownerNote = (words: string) =>
+  Effect.gen(function* () {
+    const notes = yield* NotesStore;
+    return yield* notes.add(
+      yield* Schema.decodeEffect(FilmName)('f'),
+      { scene: 'cold', T: 1, frame: 30, text: words },
+      text('frame'),
+    );
+  });
 
 describe('who may use the MCP', () => {
   it.effect(
@@ -258,7 +251,6 @@ describe('the lab as an MCP server', () => {
             'overview',
             'publish_set',
             'record_render',
-            'reply',
             'request_tweak',
             'resolve',
             'keep_try',
@@ -283,13 +275,12 @@ describe('the lab as an MCP server', () => {
             'timeline',
             'tweak',
             'undo',
-            'working',
           ].toSorted(),
         );
         const { cursor } = yield* tool('overview');
         // An agent waits; the owner writes a note on the page; the feed reads it.
         const waiting = yield* Effect.forkChild(tool('changes', { since: cursor, wait: 5 }));
-        expect((yield* ownerNote(lab, 'the judge looks away too soon')).status).toBe(200);
+        yield* ownerNote('the judge looks away too soon');
         yield* events.look;
         const heard = yield* Fiber.join(waiting);
         expect(
@@ -304,35 +295,14 @@ describe('the lab as an MCP server', () => {
           ),
         ).toEqual([['note.added', 'f', 'n1', 'owner', 'the judge looks away too soon']]);
         expect(heard.changes[0].links).toEqual({
-          local: `${MCP_BASE}films/f/studio?sel=beat%3Acold&note=n1`,
-          phone: `${MCP_PHONE}films/f/studio?sel=beat%3Acold&note=n1`,
+          local: MCP_BASE,
+          phone: MCP_PHONE,
         });
-        const replied = yield* tool('reply', {
-          film: 'f',
-          note: 'n1',
-          text: 'held two beats longer',
-        });
-        expect(
-          replied.note.thread.map((r: { by: string; text: string }) => [r.by, r.text]),
-        ).toEqual([['agent', 'held two beats longer']]);
         const done = yield* tool('resolve', { film: 'f', note: 'n1' });
         expect(done.note.status).toBe('resolved');
-        // The page reads the thread from the same store.
-        const page = yield* Effect.promise(() =>
-          lab(
-            new Request(`${MCP_BASE.slice(0, -1)}${labUrls.notes.list({ params: { film: 'f' } })}`),
-            mcpBound,
-          ),
-        );
-        const log = yield* Effect.promise(() => page.json());
-        expect(log.notes[0]).toMatchObject({ id: 'n1', status: 'resolved' });
         yield* events.look;
         const after = yield* tool('changes', { since: heard.cursor });
-        expect(after.changes.map((c: { kind: string }) => c.kind)).toEqual([
-          'note.replied',
-          'note.resolved',
-        ]);
-        expect(after.changes[0].by).toBe('agent');
+        expect(after.changes.map((c: { kind: string }) => c.kind)).toEqual(['note.resolved']);
         expect((yield* tool('notes', { film: 'f' })).notes).toEqual([]);
         expect((yield* tool('notes', { film: 'nope' })).refused).toContain('nope');
       }),
@@ -1338,13 +1308,13 @@ describe('film lab events', () => {
           expect(yield* Queue.take(err)).toMatch(
             /^lab events: following http:\/\/localhost:4401\/ from \w+\.\d+$/,
           );
-          expect((yield* ownerNote(lab, 'the judge looks away too soon')).status).toBe(200);
+          yield* ownerNote('the judge looks away too soon');
           yield* events.look;
           const first = yield* Queue.take(out);
           expect(first).toMatch(
             /^note\.added cursor=\w+\.1 at=\S+ id=[0-9a-f]{16} film=f note=n1 summary="[^"]*the judge looks away too soon[^"]*" read="bun cli\.ts lab notes --film f --status all" link=http:\/\/localhost:4401\/films\/f\/studio\?sel=beat%3Acold&note=n1$/,
           );
-          expect((yield* ownerNote(lab, 'and the hand is late')).status).toBe(200);
+          yield* ownerNote('and the hand is late');
           yield* events.look;
           const second = yield* Queue.take(out);
           expect(second).toMatch(/^note\.added cursor=\w+\.2 .* note=n2 /);
@@ -1386,7 +1356,7 @@ describe('film lab events', () => {
           const line = yield* droppable(lab);
           const { out, err, fiber } = yield* filmRunning(line.fetch, ['lab', 'events', '--follow']);
           expect(yield* Queue.take(err)).toContain('lab events: following');
-          yield* ownerNote(lab, 'one');
+          yield* ownerNote('one');
           yield* events.look;
           const first = yield* Queue.take(out);
           expect(first).toMatch(/^note\.added .* note=n1 /);
@@ -1395,7 +1365,7 @@ describe('film lab events', () => {
             /^lab events: lost the lab \(no lab answered at .*\); asking again$/,
           );
           // What the owner does while the line is down, the lab keeps.
-          yield* ownerNote(lab, 'two');
+          yield* ownerNote('two');
           yield* events.look;
           yield* line.restore;
           yield* TestClock.adjust('1 second');
@@ -1432,10 +1402,10 @@ describe('film lab events, against a lab that runs other code', () => {
           }));
           const { out, err, fiber } = yield* filmRunning(newer, ['lab', 'events', '--follow']);
           expect(yield* Queue.take(err)).toContain('lab events: following');
-          yield* ownerNote(lab, 'one');
+          yield* ownerNote('one');
           yield* events.look;
           expect(yield* Queue.take(out)).toMatch(/^note\.added cursor=\w+\.1 .* note=n1 /);
-          yield* ownerNote(lab, 'pinned');
+          yield* ownerNote('pinned');
           yield* events.look;
           expect(yield* Queue.take(out)).toMatch(
             /^note\.pinned cursor=\w+\.2 at=\S+ id=[0-9a-f]{16} film=f note=n2 summary="f n2: note on scene cold: pinned" read="bun cli\.ts lab notes --film f --status all" link=http:\/\/localhost:4401\/\S+$/,
@@ -1443,10 +1413,10 @@ describe('film lab events, against a lab that runs other code', () => {
           expect(yield* Queue.take(err)).toBe(
             'lab events: note.pinned is an event this checkout does not know (the lab runs other code): printed from the fields every event has',
           );
-          yield* ownerNote(lab, 'pinned');
+          yield* ownerNote('pinned');
           yield* events.look;
           expect(yield* Queue.take(out)).toMatch(/^note\.pinned cursor=\w+\.3 .* note=n3 /);
-          yield* ownerNote(lab, 'two');
+          yield* ownerNote('two');
           yield* events.look;
           expect(yield* Queue.take(out)).toMatch(/^note\.added cursor=\w+\.4 .* note=n4 /);
           // Said once for its kind, and no loss said.
@@ -1485,8 +1455,8 @@ describe('film lab events, against a lab that runs other code', () => {
             'notes',
           ]);
           expect(yield* Queue.take(err)).toContain('lab events: following');
-          yield* ownerNote(lab, 'pinned');
-          yield* ownerNote(lab, 'two');
+          yield* ownerNote('pinned');
+          yield* ownerNote('two');
           yield* events.look;
           expect(yield* Queue.take(out)).toMatch(/^note\.pinned cursor=\w+\.1 .* note=n1 /);
           expect(yield* Queue.take(out)).toMatch(/^note\.added cursor=\w+\.2 .* note=n2 /);
@@ -1514,7 +1484,7 @@ describe('film lab events, against a lab that runs other code', () => {
             'note.resolved',
           ]);
           expect(yield* Queue.take(err)).toContain('lab events: following');
-          yield* ownerNote(lab, 'one');
+          yield* ownerNote('one');
           yield* events.look;
           const fetch = (request: Request) => lab(request, mcpBound);
           expect(
@@ -1626,7 +1596,7 @@ describe("film lab events' outages", () => {
           yield* TestClock.adjust('10 seconds');
           expect(yield* Queue.take(err)).toMatch(/^lab events: reconnected to /);
           // A session that works.
-          yield* ownerNote(lab, 'one');
+          yield* ownerNote('one');
           yield* events.look;
           expect(yield* Queue.take(out)).toMatch(/^note\.added .* note=n1 /);
           // Lost again: asked again within the schedule's first step, not its cap.
@@ -1907,11 +1877,7 @@ describe('a set published onto a production through the MCP', () => {
         yield* publish({ production: 'f' });
         expect(yield* stamped).toStrictEqual({ production: 'f', published: 5000 });
         const folders = (yield* (yield* Review).index(true)).folders;
-        const ledger = Option.getOrThrow(yield* (yield* ProductionStore).read('f'));
-        const entries = productionsOf([ledger], folders).flatMap((h) => currentOf(h).entries);
-        expect(entries.flatMap((e) => (e._tag === 'Published' && [e.folder.ref]) || [])).toEqual([
-          'spare/judge-faces',
-        ]);
+        expect(folders.map((f) => f.ref)).toContain('spare/judge-faces');
       }),
     ),
   );
@@ -2079,10 +2045,10 @@ describe('film publish', () => {
   );
 });
 
-/** The questions waiting on production `f`'s current version, by their words. */
+/** The questions filed on production `f`'s ledger, by their words. */
 const waitingOnF = Effect.gen(function* () {
   const ledger = Option.getOrThrow(yield* (yield* ProductionStore).read('f'));
-  return productionsOf([ledger], []).flatMap((h) => currentOf(h).waiting.map((w) => w.ask.text));
+  return ledger.said.flatMap((s) => (s._tag === 'Asked' && [s.text]) || []);
 });
 
 /** Production `f`, with the set `judge-faces` published into the lab's out/. */
@@ -2178,7 +2144,7 @@ describe("the owner's word through the MCP", () => {
             by: 'painter',
             set: 'judge-faces',
           });
-          expect(yield* waitingOnF).toEqual([]);
+          expect(yield* waitingOnF).toEqual([question]);
           // Moved forward, the next word lands in the version open now.
           yield* productions.modify('f', (current) =>
             moveForward(current, { after: 1, title: 'v2', because: Option.none() }, 60_000),
@@ -2548,7 +2514,7 @@ describe('film channel', () => {
         expect(yield* heard).toEqual({ jsonrpc: '2.0', id: 2, result: { tools: [] } });
         yield* say({ jsonrpc: '2.0', method: 'notifications/initialized' });
         yield* Deferred.await(polling);
-        expect((yield* ownerNote(lab, 'the light comes up too fast')).status).toBe(200);
+        yield* ownerNote('the light comes up too fast');
         yield* events.look;
         expect(yield* heard).toMatchObject({
           method: 'notifications/claude/channel',

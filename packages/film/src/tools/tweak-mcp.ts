@@ -19,7 +19,7 @@ import { labCommand } from './lab-command.ts';
 import { FilmParam, LabRefused, refused } from './lab-mcp-parts.ts';
 import { readKnob, readSpans } from './scene-source.ts';
 import { type CueWritten, SceneWriter } from './scene-writer.ts';
-import { writeAnswer } from './steps-http.ts';
+import { writeAnswer } from './write-answer.ts';
 
 /** The fields of a tweak's input it is judged by: what it names, and which cue fields it sets. */
 interface Asked {

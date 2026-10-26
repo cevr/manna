@@ -32,10 +32,6 @@ import { CLOCK_EPSILON, DEFAULT_EASE, type Key, ease, keys, progress, toMs } fro
 export const cueProgress = (cue: ResolvedCue, t: number): number =>
   progress(t, cue.start, cue.dur, ease[cue.ease]);
 
-/** Where `cue` stops playing, in a film at `fps`: its end, or for a cue with no length, the end of its one frame. */
-export const liveEnd = (cue: ResolvedCue, fps: number): number =>
-  cue.dur > 0 ? cue.end : cue.start + 1 / fps;
-
 /**
  * 0→1 for the item at `at` (0 the first, 1 the last) across a staggered cue
  * at scene time `t`, eased by the cue's ease: the items' starts spread over

@@ -1,7 +1,7 @@
-// The board's routes as the studio's Board section calls them: the record read (an empty
-// board before the first panel), an image it names served and one it does
-// not refused, a try kept with why, a beat's board approved once every
-// picture panel keeps a try, then withdrawn; a refusal answers 422 naming why.
+// The board's routes as an ask's Board block reads them: the record read (an
+// empty board before the first panel), an image it names served and one it
+// does not refused, a version folder's image from its own Board, and the
+// panels drawn from what has changed since, each with why.
 
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Schema } from 'effect';
@@ -72,19 +72,6 @@ const files = () =>
 
 const at = (path: string) => `http://127.0.0.1:4401${path}`;
 const bound = { hostname: '127.0.0.1', port: 4401 } as const;
-/** A board post's body: what the page sends. */
-const Body = Schema.Struct({
-  panel: Schema.optionalKey(Schema.String),
-  try: Schema.optionalKey(Schema.Finite),
-  why: Schema.optionalKey(Schema.String),
-  beat: Schema.optionalKey(Schema.String),
-});
-const post = (path: string, body: typeof Body.Type) =>
-  new Request(at(path), {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: Schema.encodeSync(Schema.fromJsonString(Body))(body),
-  });
 const get = (path: string) => new Request(at(path), { method: 'GET' });
 
 describe('the board routes', () => {
@@ -127,40 +114,6 @@ describe('the board routes', () => {
       expect([v1.status, yield* Effect.promise(() => v1.text())]).toEqual([200, 'v1 image two']);
       expect((yield* ask('cold.righteous.1.png', v1Folder)).status).toBe(404);
       expect((yield* ask('cold.righteous.2.png', {})).status).toBe(404);
-    }).pipe(Effect.scoped, Effect.provide(labInMemory(files()))),
-  );
-
-  it.effect('keep a try with why, approve the beat, withdraw it; refuse what the board lacks', () =>
-    Effect.gen(function* () {
-      const lab = yield* labHandler();
-      const ask = (path: string, body: typeof Body.Type) =>
-        Effect.gen(function* () {
-          const r = yield* Effect.promise(() => lab(post(path, body), bound));
-          return { status: r.status, body: yield* Effect.promise(() => r.json()) };
-        });
-      const early = yield* ask(labUrls.board.approve({ params: { film: 'f' } }), { beat: 'cold' });
-      expect(early.status).toBe(422);
-      expect(early.body.reason).toBe('pick a try of cold.righteous first');
-      const picked = yield* ask(labUrls.board.pick({ params: { film: 'f' } }), {
-        panel: 'cold.righteous',
-        try: 2,
-        why: 'the calmer judge',
-      });
-      expect(picked.status).toBe(200);
-      expect(picked.body.panels[0]).toMatchObject({ kept: 2, why: 'the calmer judge' });
-      const approved = yield* ask(labUrls.board.approve({ params: { film: 'f' } }), {
-        beat: 'cold',
-      });
-      expect(approved.body.approvals.map((a: { beat: string }) => a.beat)).toEqual(['cold']);
-      const withdrawn = yield* ask(labUrls.board.withdraw({ params: { film: 'f' } }), {
-        beat: 'cold',
-      });
-      expect(withdrawn.body.approvals).toEqual([]);
-      const unknown = yield* ask(labUrls.board.pick({ params: { film: 'f' } }), {
-        panel: 'cold.job',
-        try: 1,
-      });
-      expect([unknown.status, unknown.body._tag]).toEqual([422, 'BoardRefused']);
     }).pipe(Effect.scoped, Effect.provide(labInMemory(files()))),
   );
 

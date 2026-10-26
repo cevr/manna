@@ -121,30 +121,29 @@ describe('declared routes', () => {
   const declared = declares(LabHttpApi);
 
   test.each([
-    ['GET', '/api/films/rbf/notes'],
-    ['POST', '/api/films/rbf/notes/n-1/resolve'],
-    ['GET', '/api/films/rbf%2Fshorts%2Fverdict/choices/mix'],
+    ['GET', '/api/films/rbf/board'],
+    ['POST', '/api/asks/a-1/answer'],
+    ['GET', '/api/films/rbf%2Fshorts%2Fverdict/board/stale'],
     ['GET', '/api/review/files/out/art/roof.A.md'],
   ])('%s %s is declared', (method, pathname) => {
     expect(declared(method, pathname)).toBe(true);
   });
 
   test.each([
-    ['POST', '/api/films/rbf/notes/n-1'],
-    ['GET', '/api/films/rbf/notes/n-1/resolve'],
-    ['GET', '/lab/rbf/choices'],
-    ['GET', '/api/films/rbf/notes/extra/segments/here'],
+    ['POST', '/api/films/rbf/board'],
+    ['GET', '/api/asks/a-1/answer'],
+    ['GET', '/lab/rbf/board'],
+    ['GET', '/api/films/rbf/notes'],
+    ['POST', '/api/films/rbf/board/pick'],
+    ['GET', '/api/films/rbf/board/extra/segments/here'],
   ])('%s %s is not', (method, pathname) => {
     expect(declared(method, pathname)).toBe(false);
   });
 
   test("the API's paths, as the wire has them", () => {
-    expect(labUrls.notes.list({ params: { film: 'f' } })).toBe('/api/films/f/notes');
-    expect(labUrls.scenes.code({ params: { film: 'f', scene: 's' } })).toBe(
-      '/api/films/f/scenes/s/code',
-    );
-    expect(labUrls.choices.films()).toBe('/api/films');
-    expect(labUrls.project.get({ params: { film: 'f' }, query: {} })).toBe('/api/films/f/project');
+    expect(labUrls.board.read({ params: { film: 'f' } })).toBe('/api/films/f/board');
+    expect(labUrls.script.beats({ params: { film: 'f' } })).toBe('/api/films/f/script');
+    expect(labUrls.asks.read({ params: { ask: 'a1' } })).toBe('/api/asks/a1');
     expect(labUrls.review.index({ query: {} })).toBe('/api/review/index');
     expect(labUrls.page.wait({ query: { since: 3, timeout: 9 } })).toBe(
       '/api/review/build?since=3&timeout=9',

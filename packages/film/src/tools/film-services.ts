@@ -42,7 +42,6 @@ import { FootageLibrary } from './footage.ts';
 import { FootageMedia } from './footage-media.ts';
 import { FreshFilm } from './fresh-film.ts';
 import { FilmTimelines } from './film-timeline.ts';
-import { Working } from './working.ts';
 import type { LabLinks } from '../core/lab-events.ts';
 import { labHandler } from './lab.ts';
 import { LabEvents } from './lab-events.ts';
@@ -210,10 +209,7 @@ export const filmServices = (spec: FilmServicesSpec) => {
   const Asks = AskStore.layer.pipe(Layer.provide(AskMaterials.layer));
   // Each film's timeline as the studio and the `timeline` tool read it, over the stores and a
   // fresh clock, beside the agents' "doing now" lines, held in memory.
-  const Timelines = FilmTimelines.layer.pipe(
-    Layer.provideMerge(Working.layer),
-    Layer.provide(Asks),
-  );
+  const Timelines = FilmTimelines.layer.pipe(Layer.provide(Asks));
   // The studio's edits of a version's script, judged on its timeline, written through the
   // source writer the lab's other writes share, their work filed on the production's ledger.
   const Edits = BeatEdits.layer.pipe(Layer.provideMerge(Timelines));

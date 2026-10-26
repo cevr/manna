@@ -5,7 +5,6 @@ import {
   addNote,
   emptyNotes,
   eventsSince,
-  nearestMoment,
   noteT,
   replyToNote,
   resolveNote,
@@ -15,63 +14,6 @@ import type { NoteDraft, NotesFile } from './schema.ts';
 
 const draft = (text: string): NoteDraft => ({ scene: 'a', T: 1, frame: 30, text });
 const at = '2026-09-25T00:00:00.000Z';
-
-describe('nearestMoment', () => {
-  // Scene a: 0–5 s, no voice. Scene b: from 5 s, a cue at 1–2 s local and one instant at 4 s.
-  const placed = Result.getOrThrow(
-    layout(
-      [
-        { id: 'a', min: 5 },
-        {
-          id: 'b',
-          min: 6,
-          say: 'Look {up}and {live}now.',
-          lead: 0.5,
-          timeline: {
-            rise: { at: 'start', offset: 1, dur: 1 },
-            pop: { at: 'start', offset: 4 },
-          },
-        },
-      ],
-      { voice: '', scenes: {} },
-    ),
-  );
-  const moment = (T: number) => Option.getOrThrow(nearestMoment(placed, T));
-
-  test('names the scene playing at T', () => {
-    expect(moment(2).scene).toBe('a');
-    expect(moment(5).scene).toBe('b');
-    // Past the end: the last scene.
-    expect(moment(999).scene).toBe('b');
-  });
-
-  test('picks the nearest cue edge, start or end', () => {
-    expect(moment(5 + 0.9).cue).toEqual(Option.some({ name: 'rise', edge: 'start' }));
-    expect(moment(5 + 2.2).cue).toEqual(Option.some({ name: 'rise', edge: 'end' }));
-    // An instant has only its start.
-    expect(moment(5 + 3.8).cue).toEqual(Option.some({ name: 'pop', edge: 'start' }));
-  });
-
-  test('picks the nearest mark; a scene with no cues or marks has neither', () => {
-    const [, b] = placed;
-    const live = (b?.speechStart ?? 0) + (b?.voice.marks.get('live') ?? 0);
-    expect(moment(5 + live + 0.05).mark).toEqual(Option.some('live'));
-    expect(moment(1).cue).toEqual(Option.none());
-    expect(moment(1).mark).toEqual(Option.none());
-  });
-
-  test('says how far into its scene T is', () => {
-    expect(moment(2).local).toBe(2);
-    expect(moment(5 + 1.25).local).toBeCloseTo(1.25, 9);
-  });
-
-  test('a T a float hair before a scene’s start is at its start, never before it', () => {
-    // Frame steps add up to a hair under 5 s, which the layout reads as scene b.
-    const hair = moment(5 - 1e-14);
-    expect(hair.scene).toBe('b');
-    expect(hair.local).toBe(0);
-  });
-});
 
 describe('where a note shows', () => {
   const FPS = 30;
@@ -113,14 +55,12 @@ describe('where a note shows', () => {
     // b runs from 3.04 s to 9.04 s: its last frame is 271 (9.0333 s).
     const T = noteT(film(3.04), FPS, { ...made, local: 9 });
     expect(T).toBeCloseTo(271 / FPS, 9);
-    expect(Option.map(nearestMoment(film(3.04), T), (m) => m.scene)).toEqual(Option.some('b'));
   });
 
   test('a scene re-taken shorter than the note holds it on its last frame', () => {
     const late = { ...made, local: 9 };
     const T = noteT(film(5), FPS, late);
     expect(T).toBeCloseTo(5 + 6 - 1 / FPS, 9);
-    expect(Option.map(nearestMoment(film(5), T), (m) => m.scene)).toEqual(Option.some('b'));
   });
 });
 

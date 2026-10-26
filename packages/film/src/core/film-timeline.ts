@@ -91,7 +91,6 @@ import {
   type NextRow,
   type Marker,
   type Waiting,
-  type WorkingLine,
   type FilmTimeline,
 } from './timeline-schema.ts';
 
@@ -278,7 +277,6 @@ interface TimelineSources {
   readonly notes: NotesFile;
   /** The lab's asks; those about the film are read. */
   readonly asks: ReadonlyArray<AskRecord>;
-  readonly working: ReadonlyArray<WorkingLine>;
 }
 
 /** What starts each stage, said as the Next row says it. */
@@ -893,7 +891,6 @@ export const timelineOf = (sources: TimelineSources): FilmTimeline => {
         onNone: () => ({}),
         onSome: (items) => ({ waits: { count: items.length, items } }),
       }),
-      working: sources.working,
     },
   };
 };

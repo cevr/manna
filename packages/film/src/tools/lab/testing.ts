@@ -17,7 +17,6 @@ import type { SourceWriter } from '../source-writer.ts';
 import { FilmTimelines } from '../film-timeline.ts';
 import { BeatEdits } from '../beat-edits.ts';
 import type { FreshFilm } from '../fresh-film.ts';
-import { Working } from '../working.ts';
 import type { Takes } from '../takes.ts';
 import type { Review } from '../review.ts';
 import { HttpPlatform } from 'effect/http';
@@ -87,12 +86,7 @@ export const labInMemory = (
  */
 export const withTimelines = <A, E, R>(stores: Layer.Layer<A, E, R>) =>
   BeatEdits.layer.pipe(
-    Layer.provideMerge(
-      FilmTimelines.layer.pipe(
-        Layer.provide(RenderCatalogue.layer),
-        Layer.provideMerge(Working.layer),
-      ),
-    ),
+    Layer.provideMerge(FilmTimelines.layer.pipe(Layer.provide(RenderCatalogue.layer))),
     Layer.provideMerge(stores),
   );
 

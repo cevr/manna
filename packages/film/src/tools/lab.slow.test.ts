@@ -46,11 +46,10 @@ import { brotliDecompressSync } from 'node:zlib';
 import { parseSync } from 'oxc-parser';
 import { LabHttpApi, Places, Refusal, ScriptBeats, ToolFailure, labUrls } from '../core/api.ts';
 import { routesOf } from '../core/testing.ts';
-import { NotesFile, NotesWait } from '../core/schema.ts';
+import { NotesFile } from '../core/schema.ts';
 import { labHandler } from './lab.ts';
 import {
   type BesideRoutes,
-  LAB_IDLE_SECONDS,
   MAX_REQUEST_BODY,
   PageReads,
   boundUrl,
@@ -61,7 +60,7 @@ import {
 } from './api-server.ts';
 import { RenderCatalogue } from './catalogue.ts';
 import { startLab } from './film-services.ts';
-import { STUDIO_IMPORT_WAIT_S, STUDIO_MAX_BODY } from '../core/studio.ts';
+import { STUDIO_MAX_BODY } from '../core/studio.ts';
 import { LabPage, type LabPageSpec, PageBundler } from './lab-page.ts';
 import { PageRenderer } from './page-render.ts';
 import { echoPages, freshFilm, routePath } from './film-services/testing.ts';
@@ -85,7 +84,7 @@ const readingPages = Layer.effect(
       ...echo,
       answer: Effect.gen(function* () {
         const { read } = yield* PageReads;
-        const response = yield* read(labUrls.notes.list({ params: { film: 'f' } }));
+        const response = yield* read(labUrls.board.read({ params: { film: 'f' } }));
         const body = yield* Effect.promise(() => response.text());
         return HttpServerResponse.text(`${response.status} ${body}`);
       }),
@@ -539,10 +538,6 @@ const heardOf = <E, R>(change: Effect.Effect<void, E, R>) =>
 
 const draft = `{"scene":"hand","T":230.38,"frame":6911,"cue":{"name":"topple","edge":"end"},"box":{"x":860,"y":640,"w":200,"h":120},"text":"too low","still":"${Base64.encode(png)}"}`;
 
-/** A note the lab's page posts with `asks` among its fields (its words, what it asks of them). */
-const noteAsking = (asks: string) =>
-  `{"scene":"hand","T":230.38,"frame":6911,${asks},"text":"too low","still":"${Base64.encode(png)}"}`;
-
 describe('the lab loads no film', () => {
   // The lab runs for days and Bun keeps a module as it first imported it: a
   // module the lab runs that imports a film reads it as it was at the lab's
@@ -564,7 +559,7 @@ describe('lab routes', () => {
       Effect.gen(function* () {
         const lab = yield* labHandler();
         yield* Effect.promise(() =>
-          lab(post(labUrls.notes.add({ params: { film: 'f' } }), draft), bound),
+          lab(post(labUrls.script.marks({ params: { film: 'f' } }), draft), bound),
         );
         const page = yield* Effect.promise(() => lab(get('/asks/a1'), bound).then((r) => r.text()));
         expect(page).toMatch(/^200 \{/);
@@ -588,7 +583,7 @@ describe('lab routes', () => {
           expect([path, page]).toEqual([path, `404 {"_tag":"RouteUnknown","path":"${path}"}`]);
         }
         // An API path is read as ever.
-        const notes = labUrls.notes.list({ params: { film: 'f' } });
+        const notes = labUrls.board.read({ params: { film: 'f' } });
         const read = `/?read=${encodeURIComponent(notes)}`;
         expect(yield* Effect.promise(() => lab(get(read), bound).then((r) => r.text()))).toMatch(
           /^200 \{/,
@@ -675,7 +670,7 @@ describe('lab routes', () => {
   it.effect('a HEAD of a GET route answers as the GET does, without its body', () =>
     Effect.gen(function* () {
       const lab = yield* labHandler();
-      const notes = labUrls.notes.list({ params: { film: 'f' } });
+      const notes = labUrls.board.read({ params: { film: 'f' } });
       const got = yield* Effect.promise(() => lab(get(notes), bound));
       const body = yield* Effect.promise(() => got.text());
       expect(got.status).toBe(200);
@@ -692,7 +687,7 @@ describe('lab routes', () => {
       );
       expect(yield* Effect.promise(() => head.text())).toBe('');
       // A route that takes no GET takes no HEAD either.
-      const added = labUrls.notes.reply({ params: { film: 'f', id: 'n1' } });
+      const added = labUrls.script.marks({ params: { film: 'f' } });
       const refused = yield* Effect.promise(() =>
         lab(new Request(at(added), { method: 'HEAD' }), bound),
       );
@@ -804,128 +799,6 @@ describe('lab routes', () => {
     },
   );
 
-  it.effect('a posted note is listed, its still served, and a wait returns it', () =>
-    Effect.gen(function* () {
-      const lab = yield* labHandler();
-      const posted = yield* Effect.promise(() =>
-        lab(post(labUrls.notes.add({ params: { film: 'f' } }), draft), bound),
-      );
-      expect(posted.status).toBe(200);
-      const listed = yield* Effect.promise(() =>
-        lab(get(labUrls.notes.list({ params: { film: 'f' } })), bound).then((r) => r.json()),
-      );
-      const file = yield* Schema.decodeUnknownEffect(NotesFile)(listed);
-      expect(file.notes.map((n) => [n.id, n.scene, n.cue?.name, n.still])).toEqual([
-        ['n1', 'hand', 'topple', 'n1.png'],
-      ]);
-      const still = yield* Effect.promise(() =>
-        lab(get(labUrls.notes.still({ params: { film: 'f', name: 'n1.png' } })), bound),
-      );
-      expect(still.headers.get('content-type')).toBe('image/png');
-      expect(new Uint8Array(yield* Effect.promise(() => still.arrayBuffer()))).toEqual(png);
-      // Served as a file: by byte ranges, and kept by the browser (a still never changes).
-      const part = yield* Effect.promise(() =>
-        lab(
-          get(labUrls.notes.still({ params: { film: 'f', name: 'n1.png' } }), {
-            range: 'bytes=0-1',
-          }),
-          bound,
-        ),
-      );
-      expect([part.status, part.headers.get('cache-control')]).toEqual([206, 'max-age=86400']);
-      expect(new Uint8Array(yield* Effect.promise(() => part.arrayBuffer()))).toEqual(
-        png.slice(0, 2),
-      );
-      const waited = yield* Effect.promise(() =>
-        lab(
-          get(labUrls.notes.wait({ params: { film: 'f' }, query: { since: 0, timeout: 1 } })),
-          bound,
-        ).then((r) => r.json()),
-      );
-      const wait = yield* Schema.decodeUnknownEffect(NotesWait)(waited);
-      expect(wait.events.map((e) => e._tag)).toEqual(['NoteAdded']);
-      expect(wait.cursor).toBe(1);
-    }).pipe(Effect.scoped, Effect.provide(labInMemory(files()))),
-  );
-
-  it.effect('a user reply reopens the note; resolve closes it', () =>
-    Effect.gen(function* () {
-      const lab = yield* labHandler();
-      yield* Effect.promise(() =>
-        lab(post(labUrls.notes.add({ params: { film: 'f' } }), draft), bound),
-      );
-      const replied = yield* Effect.promise(() =>
-        lab(
-          post(labUrls.notes.reply({ params: { film: 'f', id: 'n1' } }), '{"text":"lower still"}'),
-          bound,
-        ).then((r) => r.json()),
-      );
-      expect(replied).toMatchObject({
-        status: 'open',
-        thread: [{ by: 'user', text: 'lower still' }],
-      });
-      const resolved = yield* Effect.promise(() =>
-        lab(post(labUrls.notes.resolve({ params: { film: 'f', id: 'n1' } }), '{}'), bound).then(
-          (r) => r.json(),
-        ),
-      );
-      expect(resolved).toMatchObject({ status: 'resolved' });
-    }).pipe(Effect.scoped, Effect.provide(labInMemory(files()))),
-  );
-
-  it.effect('a bad body is a 400, an unknown note a 404, a path for a still a 404', () =>
-    Effect.gen(function* () {
-      const lab = yield* labHandler();
-      const status = (req: Request) => Effect.promise(() => lab(req, bound).then((r) => r.status));
-      expect(
-        yield* status(post(labUrls.notes.add({ params: { film: 'f' } }), '{"scene":"hand"}')),
-      ).toBe(400);
-      expect(
-        yield* status(post(labUrls.notes.resolve({ params: { film: 'f', id: 'n9' } }), '{}')),
-      ).toBe(404);
-      expect(yield* status(get('/api/films/f/stills/..%2Fnotes.json'))).toBe(404);
-    }).pipe(Effect.scoped, Effect.provide(labInMemory(files()))),
-  );
-
-  it.effect(
-    "a note on a line's words keeps them, what it asks and a correction's words instead; one that asks what its words cannot is a 400, and nothing is kept",
-    () =>
-      Effect.gen(function* () {
-        const lab = yield* labHandler();
-        const notes = labUrls.notes.add({ params: { film: 'f' } });
-        const status = (asks: string) =>
-          Effect.promise(() => lab(post(notes, noteAsking(asks)), bound).then((r) => r.status));
-        // What a note asks is of its words; only a correction says words instead, and other
-        // words than its own.
-        for (const asks of [
-          '"kind":"removal"',
-          '"words":{"beat":"hand","from":2,"to":3,"text":"rises slowly,"},"replace":"climbs"',
-          '"words":{"beat":"hand","from":2,"to":3,"text":"rises slowly,"},"kind":"removal","replace":"climbs"',
-          '"words":{"beat":"hand","from":2,"to":3,"text":"rises slowly,"},"kind":"correction"',
-          '"words":{"beat":"hand","from":2,"to":3,"text":"rises slowly,"},"kind":"correction","replace":" "',
-          '"words":{"beat":"hand","from":2,"to":3,"text":"rises slowly,"},"kind":"correction","replace":"rises slowly,"',
-        ])
-          expect([asks, yield* status(asks)]).toEqual([asks, 400]);
-        expect(
-          yield* status(
-            '"words":{"beat":"hand","from":2,"to":3,"text":"rises slowly,"},"kind":"correction","replace":"climbs slowly,"',
-          ),
-        ).toBe(200);
-        const listed = yield* Effect.promise(() =>
-          lab(get(labUrls.notes.list({ params: { film: 'f' } })), bound).then((r) => r.json()),
-        );
-        const file = yield* Schema.decodeUnknownEffect(NotesFile)(listed);
-        expect(file.notes.map((n) => [n.id, n.words, n.kind, n.replace])).toEqual([
-          [
-            'n1',
-            { beat: 'hand', from: 2, to: 3, text: 'rises slowly,' },
-            'correction',
-            'climbs slowly,',
-          ],
-        ]);
-      }).pipe(Effect.scoped, Effect.provide(labInMemory(files()))),
-  );
-
   it.effect(
     'a look reaches the easel: its failure answers with its status and tag, a bad body 400',
     () =>
@@ -961,7 +834,7 @@ describe('lab routes', () => {
             return { status: res.status, body: yield* Effect.promise(() => res.text()) };
           });
         // A page for film g, which the app does not have.
-        const other = yield* answer(post(labUrls.notes.add({ params: { film: 'g' } }), draft));
+        const other = yield* answer(post(labUrls.script.marks({ params: { film: 'g' } }), draft));
         expect(other.status).toBe(404);
         expect(
           yield* Schema.decodeEffect(Schema.fromJsonString(Refusal))(other.body),
@@ -970,13 +843,13 @@ describe('lab routes', () => {
           film: 'g',
           known: ['f'],
         });
-        expect((yield* answer(get(labUrls.steps.check({ params: { film: 'g' } })))).status).toBe(
+        expect((yield* answer(get(labUrls.script.beats({ params: { film: 'g' } })))).status).toBe(
           404,
         );
         expect(
-          (yield* answer(post(labUrls.steps.undo({ params: { film: 'g' } }), '{}'))).status,
+          (yield* answer(post(labUrls.script.marks({ params: { film: 'g' } }), '{}'))).status,
         ).toBe(404);
-        expect((yield* answer(get(labUrls.studio.beats({ params: { film: 'g' } })))).status).toBe(
+        expect((yield* answer(get(labUrls.board.stale({ params: { film: 'g' } })))).status).toBe(
           404,
         );
         // A page from before the film was on the wire: no route takes it, and the answer says so.
@@ -987,7 +860,7 @@ describe('lab routes', () => {
         ).toMatchObject({ _tag: 'RouteUnknown', path: '/api/films/f/nope' });
         // Nothing was written; the app's film still answers.
         const listed = yield* Effect.promise(() =>
-          lab(get(labUrls.notes.list({ params: { film: 'f' } })), bound).then((r) => r.json()),
+          lab(get(labUrls.board.read({ params: { film: 'f' } })), bound).then((r) => r.json()),
         );
         expect((yield* Schema.decodeUnknownEffect(NotesFile)(listed)).notes).toEqual([]);
       }).pipe(Effect.scoped, Effect.provide(labInMemory(files()))),
@@ -1190,27 +1063,29 @@ describe('lab routes', () => {
         // A write past the body limit is refused as it streams.
         expect(
           yield* row(
-            post(labUrls.notes.add({ params: { film: 'f' } }), 'x'.repeat(STUDIO_MAX_BODY + 1)),
+            post(labUrls.script.marks({ params: { film: 'f' } }), 'x'.repeat(STUDIO_MAX_BODY + 1)),
           ),
-        ).toEqual([`POST ${labUrls.notes.add({ params: { film: 'f' } })}`, 413, 'BodyTooLarge']);
+        ).toEqual([`POST ${labUrls.script.marks({ params: { film: 'f' } })}`, 413, 'BodyTooLarge']);
         // DNS rebinding: the page's own origin, but a Host that is not the bound host:port.
         const rebound = { host: 'evil.example:4401', origin: 'http://evil.example:4401' };
         expect(
-          (yield* row(post(labUrls.notes.add({ params: { film: 'f' } }), draft, rebound)))[1],
+          (yield* row(post(labUrls.script.marks({ params: { film: 'f' } }), draft, rebound)))[1],
         ).toBe(403);
         // Nothing was written.
         const listed = yield* Effect.promise(() =>
-          lab(get(labUrls.notes.list({ params: { film: 'f' } })), bound).then((r) => r.json()),
+          lab(get(labUrls.board.read({ params: { film: 'f' } })), bound).then((r) => r.json()),
         );
         expect((yield* Schema.decodeUnknownEffect(NotesFile)(listed)).notes).toEqual([]);
         // The lab's own page, by either name for the loopback host, still writes and reads.
         for (const origin of ['http://127.0.0.1:4401', 'http://localhost:4401'])
           expect(
-            (yield* row(post(labUrls.notes.add({ params: { film: 'f' } }), draft, { origin })))[1],
+            (yield* row(
+              post(labUrls.script.marks({ params: { film: 'f' } }), draft, { origin }),
+            ))[1],
           ).toBe(200);
         expect(
           (yield* row(
-            get(labUrls.notes.list({ params: { film: 'f' } }), {
+            get(labUrls.board.read({ params: { film: 'f' } }), {
               host: 'localhost:4401',
               'sec-fetch-site': 'same-origin',
             }),
@@ -1238,7 +1113,7 @@ describe('lab routes', () => {
       const written: Written = { stderr: [], stdout: [] };
       return Effect.gen(function* () {
         const lab = yield* labHandler();
-        const asked = labUrls.notes.list({ params: { film: 'nope' } });
+        const asked = labUrls.board.read({ params: { film: 'nope' } });
         const status = yield* Effect.promise(() => lab(get(asked), bound).then((r) => r.status));
         expect(status).toBe(404);
         expect(
@@ -1269,9 +1144,8 @@ describe('lab routes', () => {
       ])
         expect([path, yield* status(path, { host: 'evil.example' })]).toEqual([path, 403]);
       expect(yield* status('/', {})).toBe(200);
-      expect(yield* status(labUrls.notes.list({ params: { film: 'f' } }), {})).toBe(200);
+      expect(yield* status(labUrls.board.read({ params: { film: 'f' } }), {})).toBe(200);
       // A take's import answers inside the studio's wait, which the server's idle limit outlasts.
-      expect(LAB_IDLE_SECONDS).toBeGreaterThan(STUDIO_IMPORT_WAIT_S);
     }).pipe(Effect.scoped, Effect.provide([labInMemory(files()), FetchHttpClient.layer])),
   );
 
@@ -1296,7 +1170,7 @@ describe('lab routes', () => {
         const server = yield* Layer.build(labServer({ hostname: '127.0.0.1', port: 0 }));
         const url = yield* serveLab(lab).pipe(Effect.provideContext(server));
         const client = yield* HttpClient.HttpClient;
-        const notes = new URL(labUrls.notes.add({ params: { film: 'f' } }), url);
+        const notes = new URL(labUrls.script.marks({ params: { film: 'f' } }), url);
         const sent = (bytes: number) =>
           Effect.flatMap(
             Effect.orDie(

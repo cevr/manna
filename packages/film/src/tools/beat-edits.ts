@@ -101,9 +101,6 @@ interface BeatEditsService {
   ) => Effect.Effect<Edited, StepError | EditError>;
 }
 
-/** Who files the page's edits on the ledger. */
-export const STUDIO_BY = 'the studio';
-
 /** The script of `version`: its own folder's (`v<n>/script.ts`), else the film's own; refused for a version a later one replaced in place. */
 const scriptOf = (
   dir: string,

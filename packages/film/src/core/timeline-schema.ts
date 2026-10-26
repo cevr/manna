@@ -267,30 +267,19 @@ const Waiting = Schema.Union([
 ]).pipe(Schema.toTaggedUnion('kind'));
 export type Waiting = typeof Waiting.Type;
 
-/** An agent's "doing now" line (the `working` tool), as the lab holds it. */
-export const WorkingLine = Schema.Struct({
-  by: Schema.String,
-  text: Schema.String,
-  /** When it was said, ISO. */
-  at: Schema.String,
-});
-export type WorkingLine = typeof WorkingLine.Type;
-
 /**
  * The header's line: the version's stage among the nine, what waits on the
- * owner (`waits`, only when something does: "N wait on you"), and what the
- * agents say they are doing now.
+ * owner (`waits`, only when something does: "N wait on you").
  */
 const TimelineHeader = Schema.Struct({
   stage: Stage,
   waits: Schema.optionalKey(
     Schema.Struct({ count: Schema.Int, items: Schema.NonEmptyArray(Waiting) }),
   ),
-  working: Schema.Array(WorkingLine),
 });
 type TimelineHeader = typeof TimelineHeader.Type;
 
-/** A film's timeline at one version: what the studio draws and the `timeline` tool answers. */
+/** A film's timeline at one version: what the `timeline` tool answers. */
 export const FilmTimeline = Schema.Struct({
   film: Schema.String,
   /** The production whose ledger names its versions; none for a film with no ledger. */

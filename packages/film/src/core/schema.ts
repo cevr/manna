@@ -892,17 +892,17 @@ export type Looks = typeof Looks.Type;
 // beside it in `stills/`.
 
 /** A pinned point (`w` and `h` 0) or a dragged box, in canvas pixels. */
-export const NoteBox = Schema.Struct({
+const NoteBox = Schema.Struct({
   x: Schema.Finite,
   y: Schema.Finite,
   w: Schema.Finite.check(Schema.isGreaterThanOrEqualTo(0)),
   h: Schema.Finite.check(Schema.isGreaterThanOrEqualTo(0)),
 });
-export type NoteBox = typeof NoteBox.Type;
+type NoteBox = typeof NoteBox.Type;
 
 /** One freehand pen stroke, in canvas pixels. */
-export const InkStroke = Schema.Array(Point);
-export type InkStroke = typeof InkStroke.Type;
+const InkStroke = Schema.Array(Point);
+type InkStroke = typeof InkStroke.Type;
 
 export const NoteAuthor = Schema.Literals(['user', 'agent']);
 export type NoteAuthor = typeof NoteAuthor.Type;
@@ -937,21 +937,21 @@ export type NoteCue = typeof NoteCue.Type;
  * the lab's `#t=` and the note's `local` count them): the in and out points
  * marked when it was written, cut to its scene.
  */
-export const NoteRange = Schema.Struct({ from: Seconds, to: Seconds }).check(
+const NoteRange = Schema.Struct({ from: Seconds, to: Seconds }).check(
   Schema.makeFilter((r) => r.to > r.from || 'a range ends after it starts'),
 );
-export type NoteRange = typeof NoteRange.Type;
+type NoteRange = typeof NoteRange.Type;
 
 /**
  * A line of a scene's file a note is about: the file, the line (from 1) and
  * the line's text as it stood, so a reader finds it after the file moves.
  */
-export const NoteSource = Schema.Struct({
+const NoteSource = Schema.Struct({
   file: Schema.String,
   line: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
   text: Schema.String,
 });
-export type NoteSource = typeof NoteSource.Type;
+type NoteSource = typeof NoteSource.Type;
 
 /**
  * Words of a beat's line a note is about: the beat, its first and last word
@@ -1131,15 +1131,6 @@ export type NoteEvent = typeof NoteEvent.Type;
 export const NotesWait = Schema.Struct({ cursor: Seq, events: Schema.Array(NoteEvent) });
 export type NotesWait = typeof NotesWait.Type;
 
-/** The lab's `POST /api/films/:film/notes` body: a draft and its still, a PNG in base64. */
-export const NotePost = Schema.Struct({
-  ...NoteDraft.fields,
-  still: Schema.Uint8ArrayFromBase64,
-}).check(ASKS_OF_WORDS);
-
-/** The lab's `POST /api/films/:film/notes/:id/reply` body. */
-export const ReplyPost = Schema.Struct({ text: Schema.String.check(Schema.isNonEmpty()) });
-
 // ---------------------------------------------------------------------------
 // Lab write-back: the lab edits a scene's cues and knobs in its source file.
 
@@ -1259,42 +1250,6 @@ export type ChangeId = typeof ChangeId.Type;
 /** The id a page gives one Undo or Redo request (`uniqueId`), by which the lab records it once it lands. */
 export const RequestId = Schema.String.pipe(Schema.brand('RequestId'));
 export type RequestId = typeof RequestId.Type;
-
-/**
- * A change in a film's history, by the id the lab gave it as it was made
- * (`change`), unique to it: an undo or a redo of it carries its id, so a
- * receipt's Undo or Redo asks for that change and no other.
- */
-const HistoryStep = Schema.Struct({
-  ...LabStep.fields,
-  change: ChangeId,
-});
-
-/**
- * An Undo or a Redo that landed (`undo …`, `redo …`), with the id the page
- * that asked for it sent (`request`), unique to that request.
- */
-const LandedStep = Schema.Struct({
-  ...HistoryStep.fields,
-  request: RequestId,
-});
-
-/**
- * `GET /api/films/<film>/check`: `film check --static` now; the lab's latest change
- * to a file (a write, `undo …` or `redo …`: a page that change reloaded
- * learns of it here); the writes Undo would put back and Redo would make
- * again; and the Undos and Redos that landed with a request's id, oldest
- * first (as many as Undo can walk back), so a page whose step had no answer
- * learns by its id whether it landed.
- */
-export const CheckReport = Schema.Struct({
-  findings: Schema.Array(CheckLine),
-  latest: Schema.optionalKey(HistoryStep),
-  undo: Schema.optionalKey(HistoryStep),
-  redo: Schema.optionalKey(HistoryStep),
-  landed: Schema.optionalKey(Schema.Array(LandedStep)),
-});
-export type CheckReport = typeof CheckReport.Type;
 
 /** A stretch of a scene file's text: `[start, end)` as offsets into `SceneCode.text` (UTF-16 units, so `text.slice(start, end)`). */
 export const CodeRange = Schema.Tuple([Schema.Int, Schema.Int]);

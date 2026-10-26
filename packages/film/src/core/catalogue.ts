@@ -290,23 +290,6 @@ const drawnBy = (render: Render): Drawn => ({
   mix: Option.flatMap(render.sound, (s) => s.mix),
 });
 
-/**
- * What a render whose version is `version` (`renderVersion`) drew, read
- * against `now`: the key now when the version is it or extends it with a mix
- * (`<key>+<mix>`), else a key of other sources. Exact while a key holds no
- * `+` (a stamp's key is a hex digest, `tools/digest.ts`); the version alone
- * cannot say where a key that holds one ends.
- */
-const drawnOf = (version: string, now: RenderNow): Drawn =>
-  Match.value(version).pipe(
-    Match.when(now.key, (): Drawn => ({ key: now.key, mix: Option.none() })),
-    Match.when(
-      (v) => v.startsWith(`${now.key}+`),
-      (v): Drawn => ({ key: now.key, mix: Option.some(v.slice(now.key.length + 1)) }),
-    ),
-    Match.orElse((v): Drawn => ({ key: v, mix: Option.none() })),
-  );
-
 /** Why `render` is stale against `now`, or none while it is current (`drawnStaleBy`). */
 const staleBy = (render: Render, now: RenderNow): Option.Option<StaleBy> =>
   drawnStaleBy(drawnBy(render), now);
@@ -325,15 +308,6 @@ const judgedBy = (why: Option.Option<StaleBy>): Judgement => ({
   }),
   staleBy: why,
 });
-
-/**
- * A render's version (`renderVersion`, all a set's version carries on the
- * wire) against `now`: its state, and why it is stale, by the rule the write
- * judges an approve by (`renderState`), over what the version says it drew
- * (`drawnOf`).
- */
-export const versionState = (version: string, now: RenderNow): Judgement =>
-  judgedBy(drawnStaleBy(drawnOf(version, now), now));
 
 /** `render` against `now`: its state, and why it is stale, by its stamp and mix as recorded. */
 export const renderState = (render: Option.Option<Render>, now: RenderNow): Judgement =>
@@ -577,8 +551,8 @@ export type Gave = typeof Gave.Type;
  * an approval from; none when the approvals were gone already (withdrawn
  * since, by another or by an Undo before).
  */
-export const Took = Schema.Struct({ op: OpId, scenes: Schema.Array(Schema.String) });
-export type Took = typeof Took.Type;
+const Took = Schema.Struct({ op: OpId, scenes: Schema.Array(Schema.String) });
+type Took = typeof Took.Type;
 
 /**
  * `film project <film> --json`: the film by its address tree for one
@@ -601,37 +575,6 @@ export const Project = Schema.Struct({
   took: maybe(Took),
 });
 export type Project = typeof Project.Type;
-
-/**
- * What the render at `address` is measured against in `project`, as the film
- * stands now: the key its sources have and the mix the film makes. None for
- * an address the project does not list (a short, several scenes at once).
- * The one rule a render's currency is judged by, in the project and in a
- * set's approve alike.
- */
-export const projectNow = (project: Project, address: Address): Option.Option<RenderNow> => {
-  const keyed = (key: string): RenderNow => ({ key, sound: project.sound });
-  return Match.value(address).pipe(
-    Match.tag('Film', () => Option.some(keyed(project.key))),
-    Match.tag('Act', ({ act }) =>
-      Option.map(
-        Arr.findFirst(project.acts, (a) => a.name === act),
-        (a) => keyed(a.key),
-      ),
-    ),
-    Match.tag('Scenes', ({ ids }) =>
-      Option.flatMap(
-        Option.liftPredicate(ids, (i) => i.length === 1),
-        ([id]) =>
-          Option.map(
-            Arr.findFirst(project.scenes, (s) => s.scene === id),
-            (s) => keyed(s.key),
-          ),
-      ),
-    ),
-    Match.orElse(() => Option.none()),
-  );
-};
 
 /** A scene of the film, with the key its sources have now. */
 export interface SceneKey {

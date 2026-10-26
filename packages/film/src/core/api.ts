@@ -1,17 +1,17 @@
 // The lab's HTTP routes, declared once: every path, its params, query, body
 // and answer, and every failure with its status. The server derives its
-// handlers from it (`tools/lab.ts`, `tools/steps-http.ts`, `tools/studio.ts`,
-// `tools/review-http.ts`, `tools/choices-http.ts`, `tools/project-http.ts`, composed in
-// `tools/api-server.ts`), and the pages their clients and URLs (`lab/api.ts`
-// and its siblings), so a route cannot be written two ways.
+// handlers from it (`tools/lab.ts`, `tools/studio.ts`, `tools/review-http.ts`,
+// `tools/asks-http.ts`, composed in `tools/api-server.ts`), and the pages
+// their clients and URLs (`lab/api.ts` and its siblings), so a route cannot
+// be written two ways.
 //
-// One API, `LabHttpApi`, served by `film lab` for every film: what tweaks a
-// film (notes, scene source, steps, studio) and what reviews it (the renders,
-// choices, project). Every route is under `/api/` (`API`), where no page
-// path is: a film's under `/api/films/<film>/`, the films at `/api/films`,
-// and the routes of no one film (the renders' index and files, a frame, a
-// length, the pages' build) under `/api/review/`. A film the app does not
-// have is a 404 FilmUnknown.
+// One API, `LabHttpApi`, served by `film lab` for every film: what the ask
+// pages read and answer (a film's script and Board, a series' drafts, a
+// beat's attempts, the renders, the asks) and the easel's looks and matches.
+// Every route is under `/api/` (`API`), where no page path is: a film's
+// under `/api/films/<film>/`, and the routes of no one film (the renders'
+// index and files, a frame, a length, the pages' build) under
+// `/api/review/`. A film the app does not have is a 404 FilmUnknown.
 //
 // A failure crosses as its own class, JSON with its `_tag`, at the status
 // `Refusals` gives it: the one status table. Anything a handler fails with
@@ -26,18 +26,16 @@
 // through the derived client. packages/film/README.md has the steps.
 
 import { Codec, Field, Place } from '@manna/url-state';
-import { Array as Arr, Match, Option, Schema, SchemaAST } from 'effect';
+import { Array as Arr, Option, Schema, SchemaAST } from 'effect';
 import * as HttpApi from 'effect/http-api/HttpApi';
 import * as HttpApiClient from 'effect/http-api/HttpApiClient';
 import * as HttpApiEndpoint from 'effect/http-api/HttpApiEndpoint';
 import * as HttpApiGroup from 'effect/http-api/HttpApiGroup';
 import * as HttpApiSchema from 'effect/http-api/HttpApiSchema';
-import { PartAddress } from './address.ts';
-import { BoardFile, BoardName } from './board.ts';
+import { BoardFile } from './board.ts';
 import { AskName, AskRecord, AsksPage, StepValues } from './ask.ts';
-import { Gave, OpId, Project, RenderVariantName, Took } from './catalogue.ts';
+import { OpId, Project } from './catalogue.ts';
 import { WaitTimeout } from './wait.ts';
-import { ChoiceWrite, FilmChoices, PickPost, SoundCheck } from './choice.ts';
 import { UnknownAct, UnknownScene, UnknownVoice } from './errors.ts';
 import {
   LabDown,
@@ -61,7 +59,7 @@ import {
   JudgePointUnjudged,
   JudgeRuleMissing,
 } from './judge.ts';
-import { ReviewDuration, ReviewFilms, ReviewFolder, ReviewIndex, ReviewVideo } from './review.ts';
+import { ReviewDuration, ReviewIndex, ReviewVideo } from './review.ts';
 import {
   AttemptUnknown,
   AudioInvalid,
@@ -109,24 +107,9 @@ import {
   BoardFileUnknown,
   BoardRefused,
 } from './refusals.ts';
-import { MoveForward, ProductionFile, ProductionId, Productions } from './production.ts';
-import {
-  ChangeId,
-  CheckReport,
-  LabWrite,
-  Note,
-  NotePost,
-  NotesFile,
-  NotesWait,
-  PageBuild,
-  ReplyPost,
-  RequestId,
-  SceneCode,
-  TakeWord,
-} from './schema.ts';
+import { LabWrite, PageBuild, TakeWord } from './schema.ts';
 import { Segment } from './segment.ts';
-import { FilmTimeline } from './timeline-schema.ts';
-import { KeepPost, StudioAttempts, StudioBeats, StudioTake, TakePost } from './studio.ts';
+import { StudioAttempts } from './studio.ts';
 import { LineRead, Mark } from './delivery.ts';
 
 // ---------------------------------------------------------------------------
@@ -304,126 +287,6 @@ export const statusOf = (refusal: Refusal): number => {
 // ---------------------------------------------------------------------------
 // The groups.
 
-/** A write with nothing to say (a resolve) still sends JSON: the server takes no other write. */
-const NoBody = Schema.Struct({});
-
-/**
- * An Undo or a Redo as a page asks for it: with an id unique to the request,
- * which the lab records on the step once it lands (`CheckReport.landed`);
- * one sent with none (`{}`) is made all the same, and recorded without one.
- * A receipt's asks for its own change (`change`, the id its write answered):
- * stepped only while that change is the one Undo would put back (Redo would
- * make again), else refused (`StepNotNewest`) with nothing written. One with
- * none steps whatever change is newest (⌘Z, the menus).
- */
-const StepRequest = Schema.Struct({
-  request: Schema.optionalKey(RequestId),
-  change: Schema.optionalKey(ChangeId),
-});
-
-/** `GET /api/films/<film>/steps`: the film's history as `CheckReport` gives it, without the check. */
-export const Steps = Schema.Struct({
-  latest: CheckReport.fields.latest,
-  undo: CheckReport.fields.undo,
-  redo: CheckReport.fields.redo,
-  landed: CheckReport.fields.landed,
-});
-export type Steps = typeof Steps.Type;
-
-/**
- * `POST /api/films/<film>/beats/move`: beat `beat` of version `version` (the
- * open one when none) moved before beat `before` (to the end when none).
- */
-const BeatMovePost = Schema.Struct({
-  version: Schema.optionalKey(Schema.Int),
-  beat: Schema.String,
-  before: Schema.optionalKey(Schema.String),
-});
-
-/**
- * `POST /api/films/<film>/beats/hold`: beat `beat`'s hold at `edge` (`lead`,
- * before its words; `tail`, after them) set to `seconds`, snapped to a tenth
- * and kept inside its floors.
- */
-const BeatHoldPost = Schema.Struct({
-  version: Schema.optionalKey(Schema.Int),
-  beat: Schema.String,
-  edge: Schema.Literals(['lead', 'tail']),
-  seconds: Schema.Finite,
-});
-
-/**
- * A studio edit as it answers (a move, a hold, an Undo or a Redo of one):
- * the change it made (none when the script was already so), what it set,
- * what it says to the owner (a receipt's words), and what Undo and Redo
- * would step now. No check runs: the agents re-check what it leaves.
- */
-export const StudioEdit = Schema.Struct({
-  change: Schema.optionalKey(ChangeId),
-  target: Schema.String,
-  said: Schema.String,
-  steps: Steps,
-});
-export type StudioEdit = typeof StudioEdit.Type;
-
-/** A word of a take, by its index into the take's transcript (`core/talk.ts`). */
-const TalkWordIndex = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
-
-/**
- * A word of a talk's section as the lab reads it: its index
- * into the take, as the captions spell it (the talk's fixes), whether the
- * section strikes it, and, for a word it plays, when it is heard in the
- * section (seconds from the section's start, `voiced`).
- */
-const TalkWord = Schema.Struct({
-  index: TalkWordIndex,
-  text: Schema.String,
-  struck: Schema.Boolean,
-  heard: Schema.optionalKey(Schema.Tuple([Schema.Finite, Schema.Finite])),
-});
-export type TalkWord = typeof TalkWord.Type;
-
-/** A talk's section as the lab reads it: its words from its first to its last, and its marks. */
-const TalkSectionWords = Schema.Struct({
-  id: Schema.String,
-  take: Schema.String,
-  words: Schema.Array(TalkWord),
-  marks: Schema.Record(Schema.String, TalkWordIndex),
-});
-
-/**
- * `GET /api/films/<film>/talk`: a talk's sections in play order, as its
- * `talk.ts` cuts them on its takes' transcripts now (`talkCut`), each with
- * every word from its first to its last, struck or played.
- */
-export const TalkWords = Schema.Struct({
-  file: Schema.String,
-  sections: Schema.Array(TalkSectionWords),
-});
-export type TalkWords = typeof TalkWords.Type;
-
-/**
- * `POST /api/films/<film>/talk/cut` and `POST /api/films/<film>/talk/restore`:
- * the words `from`–`to` of `section`, struck or played again.
- */
-export const TalkWordsPost = Schema.Struct({
-  section: Schema.String,
-  from: TalkWordIndex,
-  to: TalkWordIndex,
-});
-export type TalkWordsPost = typeof TalkWordsPost.Type;
-
-/**
- * `POST /api/films/<film>/talk/mark`: the mark `name` set on word `word` of
- * `section`. Any string, so a name the talk's decode would drop (`MarkName`)
- * reaches the server and is refused in its words, not the client's.
- */
-const TalkMarkPost = Schema.Struct({
-  section: Schema.String,
-  word: TalkWordIndex,
-  name: Schema.String,
-});
-
 /**
  * A beat of a film's script as the words reader reads it beside the staged
  * film: what the film plays leaves it out (`scenesOf`), so it comes from the
@@ -560,43 +423,9 @@ export const Say = Schema.Union([
 ]).pipe(Schema.toTaggedUnion('_tag'));
 export type Say = typeof Say.Type;
 
-/** A withdraw: of every approval, or `given` an approve's op, of the approvals it gave alone. */
-export const withdrawSay = (given: Option.Option<OpId> = Option.none()): Say => ({
-  _tag: 'Withdraw',
-  given,
-});
-
 /** `POST /api/films/<film>/choices/say`: a say on one variant of one point, as it is now. */
 export const SayPost = Schema.Struct({ point: Schema.String, variant: Schema.String, say: Say });
 export type SayPost = typeof SayPost.Type;
-
-/**
- * `POST /api/review/sets/<folder>/<point>/say`: a say on one version of a set,
- * as it is now. An approve may name the run it is (`op`), as a scene's approve
- * does: the approval then carries it, and a withdraw given it takes back just
- * that one.
- */
-export const SetSayPost = Schema.Struct({
-  variant: Schema.String,
-  say: Say,
-  op: Schema.optionalKey(OpId),
-});
-export type SetSayPost = typeof SetSayPost.Type;
-
-/**
- * What a set's say answers: the folder as the say leaves it; an approve
- * that named its run (`op`), what it `gave` (the scene whose approval it
- * added; none when the version was approved already); a withdraw given a
- * run, what it `took` (none of it when the approval was withdrawn since), as
- * a project's say answers (`Project.gave`, `Project.took`). Each optional on
- * the wire: any other say carries neither.
- */
-export const SetSaid = Schema.Struct({
-  ...ReviewFolder.fields,
-  gave: Schema.OptionFromOptionalKey(Gave),
-  took: Schema.OptionFromOptionalKey(Took),
-});
-export type SetSaid = typeof SetSaid.Type;
 
 /** A file answered as it lies (a still, a take, a render, a mix): its type is the file's. */
 const FileBytes = Schema.Uint8Array.pipe(HttpApiSchema.asUint8Array());
@@ -609,148 +438,6 @@ const API = '/api';
 const FILM = `${API}/films/:film`;
 /** The routes of no one film: the renders under the roots, and the pages' build. */
 const REVIEW = `${API}/review`;
-
-/** The notes on a film's frames: the file (its `seq` the cursor), a long-polled wait, a still. */
-class NotesGroup extends HttpApiGroup.make('notes').add(
-  HttpApiEndpoint.get('list', `${FILM}/notes`, {
-    params: film,
-    success: NotesFile,
-    error: Refusals,
-  }),
-  HttpApiEndpoint.post('add', `${FILM}/notes`, {
-    params: film,
-    payload: NotePost,
-    success: Note,
-    error: Refusals,
-  }),
-  HttpApiEndpoint.post('reply', `${FILM}/notes/:id/reply`, {
-    params: { ...film, id: Schema.String },
-    payload: ReplyPost,
-    success: Note,
-    error: Refusals,
-  }),
-  HttpApiEndpoint.post('resolve', `${FILM}/notes/:id/resolve`, {
-    params: { ...film, id: Schema.String },
-    payload: NoBody,
-    success: Note,
-    error: Refusals,
-  }),
-  /** The note taken back while it is unanswered (a receipt's Undo): answers the note as it was. */
-  HttpApiEndpoint.post('withdraw', `${FILM}/notes/:id/withdraw`, {
-    params: { ...film, id: Schema.String },
-    payload: NoBody,
-    success: Note,
-    error: Refusals,
-  }),
-  /** The changes past `since`, held open up to `timeout` s (`WaitTimeout`). */
-  HttpApiEndpoint.get('wait', `${FILM}/notes/wait`, {
-    params: film,
-    query: { since: Schema.Finite, timeout: WaitTimeout },
-    success: NotesWait,
-    error: Refusals,
-  }),
-  HttpApiEndpoint.get('still', `${FILM}/stills/:name`, {
-    params: { ...film, name: Schema.String },
-    success: FileBytes,
-    error: Refusals,
-  }),
-) {}
-
-/** A scene's code as the studio's Scene section reads it. */
-class ScenesGroup extends HttpApiGroup.make('scenes').add(
-  /** The scene file's text now, and where its cues and knobs are written and read (the studio's Scene section). */
-  HttpApiEndpoint.get('code', `${FILM}/scenes/:scene/code`, {
-    params: { ...film, scene: Schema.String },
-    success: SceneCode,
-    error: Refusals,
-  }),
-) {}
-
-/** The film's writes stepped back and on, and its check. */
-class StepsGroup extends HttpApiGroup.make('steps').add(
-  HttpApiEndpoint.post('undo', `${FILM}/undo`, {
-    params: film,
-    payload: StepRequest,
-    success: LabWrite,
-    error: Refusals,
-  }),
-  HttpApiEndpoint.post('redo', `${FILM}/redo`, {
-    params: film,
-    payload: StepRequest,
-    success: LabWrite,
-    error: Refusals,
-  }),
-  /** `film check --static` now, the latest change, and what Undo and Redo would do. */
-  HttpApiEndpoint.get('check', `${FILM}/check`, {
-    params: film,
-    success: CheckReport,
-    error: Refusals,
-  }),
-  /** The latest change and what Undo and Redo would do, without the check: what a page reads after a write that answered its findings. */
-  HttpApiEndpoint.get('steps', `${FILM}/steps`, {
-    params: film,
-    success: Steps,
-    error: Refusals,
-  }),
-) {}
-
-/** The studio's edits of a version's script (a beat moved, a hold set), and Undo and Redo of the film's newest change, without the check. */
-class EditsGroup extends HttpApiGroup.make('edits').add(
-  HttpApiEndpoint.post('move', `${FILM}/beats/move`, {
-    params: film,
-    payload: BeatMovePost,
-    success: StudioEdit,
-    error: Refusals,
-  }),
-  HttpApiEndpoint.post('hold', `${FILM}/beats/hold`, {
-    params: film,
-    payload: BeatHoldPost,
-    success: StudioEdit,
-    error: Refusals,
-  }),
-  HttpApiEndpoint.post('undo', `${FILM}/edits/undo`, {
-    params: film,
-    payload: StepRequest,
-    success: StudioEdit,
-    error: Refusals,
-  }),
-  HttpApiEndpoint.post('redo', `${FILM}/edits/redo`, {
-    params: film,
-    payload: StepRequest,
-    success: StudioEdit,
-    error: Refusals,
-  }),
-) {}
-
-/**
- * A talk's words as the lab reads them, and its edits of them: words struck
- * (Cut) or played again (Restore), and a mark set on a word (Mark here). Each write rewrites `talk.ts` by its literal, as a scene write does.
- */
-class TalkGroup extends HttpApiGroup.make('talk').add(
-  HttpApiEndpoint.get('words', `${FILM}/talk`, {
-    params: film,
-    success: TalkWords,
-    error: Refusals,
-  }),
-  HttpApiEndpoint.post('cut', `${FILM}/talk/cut`, {
-    params: film,
-    payload: TalkWordsPost,
-    success: LabWrite,
-    error: Refusals,
-  }),
-  HttpApiEndpoint.post('restore', `${FILM}/talk/restore`, {
-    params: film,
-    payload: TalkWordsPost,
-    success: LabWrite,
-    error: Refusals,
-  }),
-  HttpApiEndpoint.post('mark', `${FILM}/talk/mark`, {
-    params: film,
-    payload: TalkMarkPost,
-    success: LabWrite,
-    error: Refusals,
-  }),
-) {}
 
 /**
  * The film's script as the words reader reads it: each beat's line, picture
@@ -812,26 +499,14 @@ class SeriesGroup extends HttpApiGroup.make('series').add(
   }),
 ) {}
 
-/** A pick on a film's board: the panel, the try kept, and why. */
-const BoardPick = Schema.Struct({
-  panel: Schema.String,
-  try: Schema.Int,
-  why: Schema.OptionFromOptionalKey(Schema.String),
-});
-
-/** A beat's board approved or withdrawn. */
-const BoardBeatPost = Schema.Struct({ beat: BoardName });
-
 /** The panels of a film's Board drawn from what has changed since (its picture's words, a cast sheet), each with why in a sentence. */
-export const BoardStale = Schema.Struct({
+const BoardStale = Schema.Struct({
   panels: Schema.Array(Schema.Struct({ panel: Schema.String, why: Schema.String })),
 });
-export type BoardStale = typeof BoardStale.Type;
 
 /**
- * The film's storyboard (`core/board.ts`, `film board`): the record, an
- * image of it, a try kept, a beat's board approved or withdrawn. Notes on a
- * panel go through the notes' routes, the panel on the note.
+ * The film's storyboard (`core/board.ts`, `film board`) as an ask shows it:
+ * the record, the panels it would draw again, and an image of it.
  */
 class BoardGroup extends HttpApiGroup.make('board').add(
   HttpApiEndpoint.get('read', `${FILM}/board`, {
@@ -852,40 +527,10 @@ class BoardGroup extends HttpApiGroup.make('board').add(
     success: FileBytes,
     error: Refusals,
   }),
-  HttpApiEndpoint.post('pick', `${FILM}/board/pick`, {
-    params: film,
-    payload: BoardPick,
-    success: BoardFile,
-    error: Refusals,
-  }),
-  HttpApiEndpoint.post('approve', `${FILM}/board/approve`, {
-    params: film,
-    payload: BoardBeatPost,
-    success: BoardFile,
-    error: Refusals,
-  }),
-  HttpApiEndpoint.post('withdraw', `${FILM}/board/withdraw`, {
-    params: film,
-    payload: BoardBeatPost,
-    success: BoardFile,
-    error: Refusals,
-  }),
 ) {}
 
-/** The studio: the film's voice recorded in the browser, beat by beat. */
+/** A beat's recorded attempts, as an ask's take block plays them. */
 class StudioGroup extends HttpApiGroup.make('studio').add(
-  HttpApiEndpoint.get('beats', `${FILM}/studio/beats`, {
-    params: film,
-    success: StudioBeats,
-    error: Refusals,
-  }),
-  /** A recording made the beat's take; a take that says something else is a TakeMismatch naming the attempt it saved. */
-  HttpApiEndpoint.post('take', `${FILM}/studio/takes/:beat`, {
-    params: { ...film, beat: Schema.String },
-    payload: TakePost,
-    success: StudioTake,
-    error: Refusals,
-  }),
   HttpApiEndpoint.get('attempts', `${FILM}/studio/takes/:beat/attempts`, {
     params: { ...film, beat: Schema.String },
     success: StudioAttempts,
@@ -894,12 +539,6 @@ class StudioGroup extends HttpApiGroup.make('studio').add(
   HttpApiEndpoint.get('attempt', `${FILM}/studio/takes/:beat/attempts/:file`, {
     params: { ...film, beat: Schema.String, file: Schema.String },
     success: FileBytes,
-    error: Refusals,
-  }),
-  HttpApiEndpoint.post('keep', `${FILM}/studio/takes/:beat/keep`, {
-    params: { ...film, beat: Schema.String },
-    payload: KeepPost,
-    success: StudioTake,
     error: Refusals,
   }),
 ) {}
@@ -932,17 +571,6 @@ class ReviewGroup extends HttpApiGroup.make('review').add(
   HttpApiEndpoint.get('duration', `${REVIEW}/duration`, {
     query: { ref: Schema.String },
     success: ReviewDuration,
-    error: Refusals,
-  }),
-  /**
-   * A say on a version of a set in a film's project folder (its ref written
-   * `%2F` for each `/`), written to that folder's `catalogue.json`: the
-   * folder as the say leaves it, and what it gave or took (`SetSaid`).
-   */
-  HttpApiEndpoint.post('say', `${REVIEW}/sets/:folder/:point/say`, {
-    params: { folder: Schema.String, point: Schema.String },
-    payload: SetSayPost,
-    success: SetSaid,
     error: Refusals,
   }),
 ) {}
@@ -1009,62 +637,6 @@ class AsksGroup extends HttpApiGroup.make('asks').add(
 ) {}
 
 /**
- * A film's choice points (`choice.ts`): listed, a variant picked (or
- * unpicked, or rejected), a variant said of (`Say`), each
- * variant heard alone or in the film's mix, and the film's sound checked
- * after a pick.
- */
-class ChoicesGroup extends HttpApiGroup.make('choices').add(
-  HttpApiEndpoint.get('films', `${API}/films`, { success: ReviewFilms, error: Refusals }),
-  HttpApiEndpoint.get('list', `${FILM}/choices`, {
-    params: film,
-    success: FilmChoices,
-    error: Refusals,
-  }),
-  /** A verb on a variant: the pick lands where the film declares it. */
-  HttpApiEndpoint.post('pick', `${FILM}/choices/pick`, {
-    params: film,
-    payload: PickPost,
-    success: ChoiceWrite,
-    error: Refusals,
-  }),
-  /** A variant approved, its approvals withdrawn, or commented on: the choices after it. */
-  HttpApiEndpoint.post('say', `${FILM}/choices/say`, {
-    params: film,
-    payload: SayPost,
-    success: FilmChoices,
-    error: Refusals,
-  }),
-  /** A variant's own file: a take, an attempt. */
-  HttpApiEndpoint.get('alone', `${FILM}/choices/alone`, {
-    params: film,
-    query: { point: Schema.String, variant: Schema.String },
-    success: FileBytes,
-    error: Refusals,
-  }),
-  /** The film's whole mix with the variant in place (m4a): a score option, a take. */
-  HttpApiEndpoint.get('mix', `${FILM}/choices/mix`, {
-    params: film,
-    query: { point: Schema.String, variant: Schema.String },
-    success: FileBytes,
-    error: Refusals,
-  }),
-  /** `film check --sound` now: dead air and balance in the mix the film makes as it stands. */
-  HttpApiEndpoint.get('soundCheck', `${FILM}/choices/check`, {
-    params: film,
-    success: SoundCheck,
-    error: Refusals,
-  }),
-) {}
-
-/**
- * Which render of each scene a project call is about (`main` when none),
- * decoded as the CLI reads it: a name it would refuse is a 400 here, and
- * never a token in the child's argv.
- */
-const variantField = { variant: Schema.optionalKey(RenderVariantName) };
-
-/**
  * The project as the review page shows it: the project (`catalogue.ts`), the
  * review's ref of its folder when the review's roots hold it (the page's
  * compare link), and each rendered scene's video by scene id: this
@@ -1077,28 +649,6 @@ export const ProjectView = Schema.Struct({
   videos: Schema.Record(Schema.String, ReviewVideo),
 });
 export type ProjectView = typeof ProjectView.Type;
-
-/**
- * A film's project folder by its address tree (`catalogue.ts`): each scene's
- * render, its state and the owner's say. A say on a scene is on its render
- * as stamped; an approval of an act or the film approves its current scenes,
- * and a withdrawal withdraws every approval of its scenes. Each call runs
- * `film project` in a fresh process and answers the project as it now stands.
- */
-class ProjectGroup extends HttpApiGroup.make('project').add(
-  HttpApiEndpoint.get('get', `${FILM}/project`, {
-    params: film,
-    query: variantField,
-    success: ProjectView,
-    error: Refusals,
-  }),
-  HttpApiEndpoint.post('say', `${FILM}/project/say`, {
-    params: film,
-    payload: Schema.Struct({ address: PartAddress, say: Say, ...variantField }),
-    success: ProjectView,
-    error: Refusals,
-  }),
-) {}
 
 /**
  * A look (`core/easel.ts`): stills of a scene as its sources stand, drawn by
@@ -1136,10 +686,10 @@ class MatchesGroup extends HttpApiGroup.make('matches').add(
 /**
  * The lab's own pages: a wait, held open up to `timeout` s (`WaitTimeout`),
  * that answers once a file the pages were built from changed past the build
- * the page was served (`since`), so an open lab reloads onto the new code,
- * or once the track of the `film` the page plays is mixed (another film's
- * mix wakes it not); at once when the page names another `server` (the lab
- * restarted).
+ * the page was served (`since`), or once the track of `film` is mixed
+ * (another film's mix wakes it not); at once when the page names another
+ * `server` (the lab restarted). The page a failed build answers waits on it
+ * and loads again once the pages build.
  */
 class PageGroup extends HttpApiGroup.make('page').add(
   HttpApiEndpoint.get('wait', `${REVIEW}/build`, {
@@ -1155,59 +705,18 @@ class PageGroup extends HttpApiGroup.make('page').add(
 ) {}
 
 /**
- * The lab's API, served by `film lab`: every film's notes, scene source,
- * steps and studio, the renders under the roots and each film's choices and
- * project, and the pages' build.
+ * The lab's API, served by `film lab`: what the ask pages read and send (a
+ * film's script and a series' drafts, its Board, a take's attempts, the
+ * renders under the roots, the asks), and the easel's looks and matches.
  */
-/**
- * A film's timeline as the studio page draws it (`core/film-timeline.ts`,
- * the model the `timeline` tool answers too): at version `v`, else at its
- * production's open version. A version the film has not is
- * `FilmVersionUnknown`; one whose files a later version replaced in place,
- * `FilmVersionUnkept`.
- */
-class TimelineGroup extends HttpApiGroup.make('timeline').add(
-  HttpApiEndpoint.get('read', `${FILM}/timeline`, {
-    params: film,
-    query: { v: Schema.optionalKey(Schema.Int.check(Schema.isGreaterThanOrEqualTo(1))) },
-    success: FilmTimeline,
-    error: Refusals,
-  }),
-) {}
-
-/**
- * The productions (`core/production.ts`): every ledger, which the page lays
- * the review's folders into as each production's timeline, and a production
- * moved forward from the version the mover saw (`VersionMoved` once it has
- * moved since), answered with its ledger as the move leaves it.
- */
-class ProductionsGroup extends HttpApiGroup.make('productions').add(
-  HttpApiEndpoint.get('list', `${API}/productions`, { success: Productions, error: Refusals }),
-  HttpApiEndpoint.post('forward', `${API}/productions/:production/versions`, {
-    params: { production: ProductionId },
-    payload: MoveForward,
-    success: ProductionFile,
-    error: Refusals,
-  }),
-) {}
-
 export class LabHttpApi extends HttpApi.make('lab')
-  .add(NotesGroup)
-  .add(ScenesGroup)
-  .add(StepsGroup)
-  .add(EditsGroup)
-  .add(TalkGroup)
   .add(ScriptGroup)
   .add(SeriesGroup)
   .add(BoardGroup)
   .add(StudioGroup)
   .add(ReviewGroup)
-  .add(ChoicesGroup)
-  .add(ProjectGroup)
   .add(LooksGroup)
   .add(MatchesGroup)
-  .add(ProductionsGroup)
-  .add(TimelineGroup)
   .add(PageGroup)
   .add(AsksGroup) {}
 
@@ -1360,11 +869,7 @@ export const boardFileUrl = (film: string, file: string, folder?: Segment): stri
 export const askShownUrl = (ask: string, file: string): string =>
   labUrls.asks.shown({ params: { ask, file } });
 
-/** A note's still. */
-export const stillUrl = (film: string, name: string): string =>
-  labUrls.notes.still({ params: { film, name } });
-
-/** A studio attempt's audio, to hear it again. */
+/** A beat's recorded attempt's audio, to hear it again. */
 export const attemptUrl = (film: string, beat: string, file: string): string =>
   labUrls.studio.attempt({ params: { film, beat, file } });
 
@@ -1402,10 +907,3 @@ export const reviewFrameUrl = (ref: string, t: Option.Option<number>, w: number)
   const at = Option.match(t, { onNone: () => ({}), onSome: (s) => ({ t: Number(s.toFixed(2)) }) });
   return labUrls.review.frame({ query: { ref, w: Math.round(w), ...at } });
 };
-
-/** A still of a set's file, `w` px wide: an image as it is, a video's frame 10% in. */
-export const reviewStillUrl = (ref: string, w: number): string =>
-  Match.value(/\.(png|jpe?g|webp|gif|avif)$/i.test(ref)).pipe(
-    Match.when(true, () => reviewFileUrl(ref)),
-    Match.orElse(() => reviewFrameUrl(ref, Option.none(), w)),
-  );

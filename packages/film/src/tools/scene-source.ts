@@ -149,7 +149,7 @@ export const numberOf = (e: Expression): Option.Option<number> => {
 };
 
 /** A string literal's text. */
-export const stringOf = (e: Expression): Option.Option<string> => {
+const stringOf = (e: Expression): Option.Option<string> => {
   if (e.type === 'Literal' && Predicate.isString(e.value)) return Option.some(e.value);
   return Option.none();
 };

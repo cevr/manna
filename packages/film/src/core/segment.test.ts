@@ -6,7 +6,6 @@ import { RenderVariantName } from './catalogue.ts';
 import { FootageName } from './footage.ts';
 import { Segment, isSegment } from './segment.ts';
 import { soundEntry } from './sfx.ts';
-import { MarkName } from './talk.ts';
 
 // Every name that is no single segment, or that a record lookup reads off
 // `Object.prototype`: the four times one got through (a `..` footage name, a
@@ -30,7 +29,6 @@ describe('Segment', () => {
   test.each([
     ['a board name', (name: string) => boardNamed(name)],
     ['an act', (name: string) => Schema.decodeOption(ActName)(name)],
-    ['a mark', Schema.decodeOption(MarkName)],
     ['a footage name', Schema.decodeOption(FootageName)],
     ['a render variant', Schema.decodeOption(RenderVariantName)],
   ] as const)('%s is never constructor, prototype or __proto__', (_, decode) => {

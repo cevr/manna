@@ -135,7 +135,6 @@ const rbf = (n: 2 | 3, more: Partial<TimelineSources> = {}): TimelineSources => 
   catalogue: emptyCatalogue(RBF),
   notes: noNotes(RBF),
   asks: [SCRIPT_ASK, CONCEPT_ASK],
-  working: [],
   ...more,
 });
 
@@ -532,7 +531,6 @@ describe('the cold studies: no ledger, no Board, no concept', () => {
     catalogue: emptyCatalogue(COLD),
     notes: noNotes(COLD),
     asks: [],
-    working: [{ by: 'painter', text: 'drawing court', at: '2026-10-16T00:00:00.000Z' }],
   };
   const t = timelineOf(sources);
 
@@ -571,12 +569,8 @@ describe('the cold studies: no ledger, no Board, no concept', () => {
     expect(laneOf(t2, 'render')?.clips[0]?.dur).toBeCloseTo(beatOf(cold, 'court').dur, 6);
   });
 
-  test('nothing waits, so the header has no count; the working line is in it', () => {
+  test('nothing waits, so the header has no count', () => {
     expect(t.header.waits).toBeUndefined();
-    expect(t.markers).toEqual([]);
-    expect(t.header.working).toEqual([
-      { by: 'painter', text: 'drawing court', at: '2026-10-16T00:00:00.000Z' },
-    ]);
   });
 
   test('`tracks` keeps only the lanes named', () => {

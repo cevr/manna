@@ -7,7 +7,7 @@
 import { Schema } from 'effect';
 import { Mark } from './delivery.ts';
 import { Line, TakeStaleReason } from './narration.ts';
-import { HeardAs, TakeSource, Timings, Voice, VoiceTiming } from './schema.ts';
+import { HeardAs, TakeSource, Voice } from './schema.ts';
 import { SheetBeat } from './sheet.ts';
 
 /**
@@ -16,15 +16,6 @@ import { SheetBeat } from './sheet.ts';
  * page derives the longest take it may record from it.
  */
 export const STUDIO_MAX_BODY = 64 * 1024 * 1024;
-
-/**
- * How long the page waits for an import (a take made, heard, kept and the
- * track remixed) before it stops waiting and reads the beat's attempts to
- * learn what became of it. Measured through the studio harness, an import
- * with its speech-to-text faked takes 5 to 7 s (a 2 s and a 60 s take); the
- * real transcriber adds its own time, longest for the longest take.
- */
-export const STUDIO_IMPORT_WAIT_S = 210;
 
 /** A beat as a take is kept against it: its words, the text a take is hashed under, and who reads what. */
 export const ReadBeat = Schema.Struct({
@@ -56,7 +47,7 @@ export const StudioReading = Schema.Struct({
 export type StudioReading = typeof StudioReading.Type;
 
 /** One beat as the studio lists it. */
-export const StudioBeat = Schema.Struct({
+const StudioBeat = Schema.Struct({
   /** Its line as the sheet sets it: the file `takes import` reads it under, its parts and sources. */
   ...SheetBeat.fields,
   /** `recorded`: a person's take, current; `staging`: ElevenLabs'; `stale`: see `staleReason`. */
@@ -71,46 +62,7 @@ export const StudioBeat = Schema.Struct({
   /** How many recordings of this beat are kept to hear or keep instead. */
   attempts: Schema.Int,
 });
-export type StudioBeat = typeof StudioBeat.Type;
-
-/** `GET /api/films/<film>/studio/beats`. */
-export const StudioBeats = Schema.Struct({ film: Schema.String, beats: Schema.Array(StudioBeat) });
-export type StudioBeats = typeof StudioBeats.Type;
-
-/** `POST /api/films/<film>/studio/takes/:beat`: one recording, as the browser made it. */
-export const TakePost = Schema.Struct({
-  /** The recording's bytes, base64. */
-  audio: Schema.String,
-  /**
-   * Its media type: `audio/wav` or `audio/flac` (and their `x-` spellings),
-   * since the take is the film's master; a lossy type (`audio/webm`,
-   * `audio/mp4`, `audio/mpeg`…) is refused 415 `RecordingLossy`.
-   */
-  type: Schema.String,
-  /** Keep it even when its transcript does not match the line. */
-  acceptMismatch: Schema.optionalKey(Schema.Boolean),
-});
-export type TakePost = typeof TakePost.Type;
-
-/** `POST /api/films/<film>/studio/takes/:beat/keep`: an earlier attempt, kept as the take. */
-export const KeepPost = Schema.Struct({
-  file: Schema.String,
-  acceptMismatch: Schema.optionalKey(Schema.Boolean),
-});
-export type KeepPost = typeof KeepPost.Type;
-
-/** A take kept: the beat's new timing, the film's timings as they now stand, and whether the track was remixed. */
-export const StudioTake = Schema.Struct({
-  beat: Schema.String,
-  take: VoiceTiming,
-  /** What speech-to-text heard the take say. */
-  transcript: Schema.String,
-  wer: Schema.Finite,
-  timings: Timings,
-  /** `narration/full.wav` was rebuilt with the take (false: the mix failed, and the log says why). */
-  mixed: Schema.Boolean,
-});
-export type StudioTake = typeof StudioTake.Type;
+type StudioBeat = typeof StudioBeat.Type;
 
 /** One recording of a beat, as the studio lists it to hear or keep. */
 export const StudioAttempt = Schema.Struct({

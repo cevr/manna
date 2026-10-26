@@ -6,73 +6,18 @@
 // DOM-free.
 
 import { Array as Arr, Option, Order } from 'effect';
-import { type Placed, sceneAt } from './layout.ts';
+import { type Placed } from './layout.ts';
 import type {
   Note,
   NoteAuthor,
-  NoteCue,
   NoteDraft,
   NoteEvent,
-  NoteKind,
   NotesFile,
   NoteStatus,
   NotesWait,
   Reply,
 } from './schema.ts';
 import { framesOf } from './time.ts';
-
-/** What a note asks of its words: one that does not say asks nothing of them, as a note. */
-export const kindOf = (note: Pick<NoteDraft, 'kind'>): NoteKind =>
-  Option.getOrElse(Option.fromUndefinedOr(note.kind), (): NoteKind => 'note');
-
-/** Where a time falls on the film: its scene, how far into it, and the cue edge and mark nearest it there. */
-interface Moment {
-  readonly scene: string;
-  /** Scene-local seconds, never below 0. */
-  readonly local: number;
-  readonly cue: Option.Option<NoteCue>;
-  readonly mark: Option.Option<string>;
-}
-
-interface Candidate<A> {
-  readonly value: A;
-  /** Scene-local seconds. */
-  readonly at: number;
-}
-
-/** The candidate closest to `local`; on a tie, the first declared. */
-const closest = <A>(local: number, candidates: ReadonlyArray<Candidate<A>>): Option.Option<A> =>
-  Option.map(
-    Arr.reduce(candidates, Option.none<Candidate<A>>(), (best, c) =>
-      Option.match(best, {
-        onNone: () => Option.some(c),
-        onSome: (b) => {
-          if (Math.abs(c.at - local) < Math.abs(b.at - local)) return Option.some(c);
-          return best;
-        },
-      }),
-    ),
-    (c) => c.value,
-  );
-
-/** The scene at `T` and, in it, the nearest named-cue edge and the nearest `{mark}`. */
-export const nearestMoment = (placed: ReadonlyArray<Placed>, T: number): Option.Option<Moment> =>
-  Option.map(sceneAt(placed, T), (p) => {
-    // Never before the scene: frame steps can add up to a hair under its start,
-    // which the layout already reads as this scene.
-    const local = Math.max(0, T - p.start);
-    const edges = [...p.cues].flatMap(([name, c]): Array<Candidate<NoteCue>> => {
-      const start: Candidate<NoteCue> = { value: { name, edge: 'start' }, at: c.start };
-      // An instant has one edge.
-      if (c.dur === 0) return [start];
-      return [start, { value: { name, edge: 'end' }, at: c.end }];
-    });
-    const marks = [...p.voice.marks].map(([name, at]): Candidate<string> => ({
-      value: name,
-      at: p.speechStart + at,
-    }));
-    return { scene: p.spec.id, local, cue: closest(local, edges), mark: closest(local, marks) };
-  });
 
 /**
  * Film seconds `local` into placed scene `p`: as it is while inside the scene;

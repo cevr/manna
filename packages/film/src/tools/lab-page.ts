@@ -78,7 +78,6 @@ import { type FootageRoot, footageResponse, isFootageUrl } from './footage-route
 import { isNarrationUrl, narrationPath } from './narration-route.ts';
 import { narrationUrls } from '../player/narrated.ts';
 import { CACHE, serveFile } from './review-file.ts';
-import type { Remade } from './source-writer.ts';
 
 /** What the app builds its pages from. */
 export interface LabPageSpec {
@@ -658,21 +657,6 @@ export class LabPage extends Context.Service<LabPage, LabPageService>()(
     return Layer.effect(LabPage, make(spec));
   }
 }
-
-/**
- * What a write's answer says of the mix it made of `film` (`mixedField`):
- * the build a page hears that very mix by (`LabPage.heardAt`), from when it
- * landed (`Remade`); nothing when it mixed nothing or no page hears it.
- */
-export const mixedAnswer = (film: string, remade: Remade) =>
-  Effect.map(
-    Option.match(remade, {
-      onNone: () => Effect.succeedNone,
-      onSome: (at) => Effect.flatMap(LabPage, (page) => page.heardAt(film, at)),
-    }),
-    (heard): { readonly mixed?: PageBuild } =>
-      Option.match(heard, { onNone: () => ({}), onSome: (mixed) => ({ mixed }) }),
-  );
 
 const escapeHtml = (text: string) =>
   text.replace(

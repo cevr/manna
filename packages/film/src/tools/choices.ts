@@ -102,7 +102,7 @@ import {
 import { Takes } from './takes.ts';
 
 /** What a verb did: the change it made (none when it was already so), and the mix it made. */
-export interface Picked {
+interface Picked {
   /** The file it rewrote. */
   readonly file: string;
   readonly target: string;
@@ -259,7 +259,7 @@ interface VoiceKept {
  * lock, one at a time with every other write, and Undo and Redo walk it
  * back, the replaced take with it and the track remixed to play it.
  */
-export const keepVoice = Effect.fn('keepVoice')(function* (
+const keepVoice = Effect.fn('keepVoice')(function* (
   film: FilmName,
   beat: string,
   file: string,

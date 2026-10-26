@@ -1,8 +1,8 @@
 // The lab's notes and board commands (`lab-command.ts`; MCP and `film lab`
 // serve them): a film's notes (`notes`) and its storyboard (`board`) read,
-// and the writes on them, each through the store the page writes through
-// (`NotesStore`, `BoardStore`): a reply or a note marked done (`reply`,
-// `resolve`), a tweak asked of a panel (`request_tweak`), a try kept
+// and the writes on them, each through the store `film board` reads too
+// (`NotesStore`, `BoardStore`): a note marked done (`resolve`), a tweak
+// asked of a panel (`request_tweak`), a try kept
 // (`keep_try`), and a beat's board approved or its approval withdrawn
 // (`approve_beat`, `withdraw_beat`).
 
@@ -135,24 +135,6 @@ const Board = Tool.make('board', {
   success: BoardRead,
   failure: LabRefused,
 }).annotate(Tool.Readonly, true);
-
-const Reply = Tool.make('reply', {
-  description:
-    "Reply in a note's thread, as the agent: the note becomes `replied` until the owner answers or it is marked done. Say what you did and where to look.",
-  parameters: Schema.Struct({
-    ...FilmParam.fields,
-    note: Schema.String.annotate({ description: 'The note (`n12`).' }),
-    text: Schema.String.check(Schema.isNonEmpty()),
-    still: Schema.optionalKey(
-      Schema.String.annotate({
-        description:
-          'A PNG on this machine to show with the reply, by its absolute path: the frame after the change',
-      }),
-    ),
-  }),
-  success: NoteWritten,
-  failure: LabRefused,
-});
 
 const Resolve = Tool.make('resolve', {
   description: 'Mark a note done (resolved), once what it asked is made.',
@@ -312,28 +294,6 @@ export const notesReads = Effect.fn('LabMcp.notesReads')(function* () {
     return yield* boardOf(film, Option.none());
   });
 
-  const reply = Effect.fn('LabMcp.reply')(function* (
-    name: string,
-    id: string,
-    text: string,
-    shown: Option.Option<string>,
-  ) {
-    const film = yield* named(name);
-    const still = yield* Option.match(shown, {
-      onNone: () => Effect.succeedNone,
-      onSome: (file) =>
-        Bool.match(path.isAbsolute(file), {
-          onTrue: () => Effect.asSome(refused(fs.readFile(file))),
-          onFalse: () =>
-            Effect.fail(
-              LabRefused.make({ reason: `${file}: name the still by its absolute path` }),
-            ),
-        }),
-    });
-    const note = yield* refused(notes.reply(film, id, { by: 'agent', text, still }));
-    return { note: noteRead(film, note) };
-  });
-
   const resolve = Effect.fn('LabMcp.resolve')(function* (name: string, id: string) {
     const film = yield* named(name);
     return { note: noteRead(film, yield* refused(notes.resolve(film, id))) };
@@ -391,7 +351,7 @@ export const notesReads = Effect.fn('LabMcp.notesReads')(function* () {
     return { note: noteRead(film, note) };
   });
 
-  return { notesOf, boardOf, boardChanged, reply, resolve, requestTweak };
+  return { notesOf, boardOf, boardChanged, resolve, requestTweak };
 });
 
 /** The work of the notes' and the board's commands. */
@@ -407,10 +367,6 @@ export const notesCommands = [
   labCommand(Board, {
     run: ({ film, beat }) =>
       Effect.flatMap(lab, (l) => l.boardOf(film, Option.fromUndefinedOr(beat))),
-  }),
-  labCommand(Reply, {
-    run: ({ film, note, text, still }) =>
-      Effect.flatMap(lab, (l) => l.reply(film, note, text, Option.fromUndefinedOr(still))),
   }),
   labCommand(Resolve, {
     run: ({ film, note }) => Effect.flatMap(lab, (l) => l.resolve(film, note)),
