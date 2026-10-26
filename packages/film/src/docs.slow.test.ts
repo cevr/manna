@@ -216,8 +216,8 @@ const spanDrift = (markdown: Markdown, code: Code) => {
 
 /** A path under one of the lab's page roots: a page, or a file route served beside the pages. */
 const PAGE_PATH = /^\/(?:films|sets|series|folders|productions|asks|studio)\/\S*$/;
-/** The lab's file routes beside its pages, each word of the path written `x`: a film's narration and its Board's files. */
-const SERVED_BESIDE = /^\/films\/x\/(?:narration\/x|board\.json|board\/x)$/;
+/** The lab's file routes beside its pages, a placeholder or a concrete name in each word: a film's narration and its Board's files. */
+const SERVED_BESIDE = /^\/films\/[^/]+\/(?:narration\/[^/]+|board\.json|board\/[^/]+)$/;
 
 /**
  * Each lab page a text writes in a span (`/asks/<ask>`, `/films/<film>/export?build=<kept>`),
@@ -1387,6 +1387,7 @@ describe('the docs', () => {
           'bun run check <film>             # warns VoiceLevel, SeamLong',
           'Its frame is `/review/frame`; say it with `POST /review/project/<film>/say`.',
           'Hand him `/films/<film>/project` or `/sets/<folder>`, never `/asks/<ask>` nor `/films/<film>/export?build=<kept>` nor `/films/<film>/narration/<file>`.',
+          'Served beside the pages: `/films/in-its-order/narration/full.wav`, `/films/in-its-order/board.json`, `/films/in-its-order/board/open.start.1.png`.',
           'Every page a Place (`packages/film/src/core/api.ts` `Places`, `pageHrefs`).',
           'The review is read by `tools/review.ts` `Review.write`, the bar at `lab/page-shell.tsx:346`.',
           'A request is made in `lab/api.ts` `uniqueId`, which it imports and calls.',
