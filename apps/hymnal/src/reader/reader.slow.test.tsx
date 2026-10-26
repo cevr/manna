@@ -234,7 +234,8 @@ const linesOf = (html: string) =>
     .map((piece) => ({
       label: textOf(/aria-label="([^"]*)"/.exec(piece)?.[1] ?? ''),
       hyphens: count(piece, '>-</'),
-      hidden: [...piece.matchAll(/aria-hidden="true"[^>]*><div[^>]*>-</g)].length,
+      // A hyphen is a span of its word's text, hidden from reading.
+      hidden: [...piece.matchAll(/aria-hidden="true"[^>]*>-</g)].length,
     }));
 
 const count = (html: string, needle: string) => html.split(needle).length - 1;
