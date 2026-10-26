@@ -2,6 +2,7 @@ import * as BunServices from '@effect/platform-bun/BunServices';
 import { Glob, JSONC, TOML } from 'bun';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
+import { bunTests } from './shell.ts';
 import { weakeningFlags } from './strength.ts';
 
 const Root = Schema.fromJsonString(Schema.Struct({ workspaces: Schema.Array(Schema.String) }));
@@ -25,6 +26,11 @@ const Bunfig = Schema.Struct({
 const Manifest = Schema.fromJsonString(
   Schema.Struct({
     scripts: Schema.optionalKey(Schema.Struct({ test: Schema.optionalKey(Schema.String) })),
+  }),
+);
+const SlowManifest = Schema.fromJsonString(
+  Schema.Struct({
+    scripts: Schema.optionalKey(Schema.Struct({ 'test:slow': Schema.optionalKey(Schema.String) })),
   }),
 );
 
@@ -100,6 +106,56 @@ describe("a workspace's test script", () => {
           ),
         );
         expect(weak.flat()).toEqual([]);
+      }),
+  );
+
+  it.effect.layer(BunServices.layer)(
+    "every workspace's test:slow that filters on .slow.test. has a file it runs",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const root = path.join(import.meta.dir, '..', '..', '..', '..');
+        const { workspaces } = yield* Schema.decodeEffect(Root)(
+          yield* fs.readFileString(path.join(root, 'package.json')),
+        );
+        const manifests = workspaces.flatMap((pattern) => [
+          ...new Glob(`${pattern}/package.json`).scanSync({ cwd: root }),
+        ]);
+        const empty = yield* Effect.forEach(manifests, (manifest) =>
+          Effect.map(
+            Effect.flatMap(
+              fs.readFileString(path.join(root, manifest)),
+              Schema.decodeEffect(SlowManifest),
+            ),
+            ({ scripts }) => {
+              const script = Option.getOrElse(
+                Option.fromUndefinedOr(scripts?.['test:slow']),
+                () => '',
+              );
+              // `bun test` exits 1 when its filters match no file, so the deploy that runs it first never deploys.
+              // Each filter is a path substring, so `.slow.test.` and a named file are checked alike.
+              const filters = bunTests(script)
+                .filter((words) => !words.includes('--pass-with-no-tests'))
+                .flatMap((words) => words.filter((word) => word.includes('.slow.test.')));
+              if (filters.length === 0) return [];
+              const held = [
+                ...new Glob('**/*.slow.test.*').scanSync({
+                  cwd: path.join(root, path.dirname(manifest)),
+                }),
+              ].filter((file) => !file.split('/').includes('node_modules'));
+              return filters
+                .filter(
+                  (filter) => !held.some((file) => file.includes(filter.replace(/^\.\//, ''))),
+                )
+                .map(
+                  (filter) =>
+                    `${manifest}: test:slow runs bun test on ${filter} and no file matches it`,
+                );
+            },
+          ),
+        );
+        expect(empty.flat()).toEqual([]);
       }),
   );
 

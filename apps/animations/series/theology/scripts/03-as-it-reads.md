@@ -3,12 +3,12 @@
 Series: The Path of the Just · Tier One (Milk) · 3 of 44
 Promise: the viewer sees that there are only two ways to read the Bible, as it reads or as you read it; that the second has no end of meanings; and that the Bible crosses every age and tongue because it explains its own words, so anyone can learn to use its dictionary, trying each meaning in its passage.
 Prerequisites: 01 (the milk is "the first principles of the oracles of God"), 02 (the Bereans, the one measuring rule; 02 hands off to this film in one line).
-Length: about 6:20 (726 spoken words: 4:41 at 155 wpm, 5:05 with the marked breaths and holds, 4:48–5:14 at 165–150 wpm with them; plus the title, beat leads and tails, about 30 s of music alone and 28 s of credits). Measured with `bun cli.ts drafts` and a word count of the `say` lines, 2026-10-19, after the review.
+Length: about 6:44 (783 spoken words, 5:29 at 155 wpm with the marked breaths and holds; plus the title, beat leads and tails, about 30 s of music alone and 28 s of credits). Measured with `bun cli.ts drafts`, 2026-10-25, after `great` was added.
 Status: kept by the owner, 2026-10-19 (ask a6ec3ed29a1: keep the script, "Much error", the dictionary as a series motif, the 02 handoff), from his idea of that day (`../as-it-reads.md`); reviewed once (okra counsel, deep) and every finding folded or answered (Notes). Nothing narrated. Every KJV line printed by `manna verse` on 2026-10-19; every paraphrase source read with `manna egw lookup` the same day, verbatim in `../sources.md` ("03 · As It Reads") and `../quotes-03.jsonl`, and passed by the frame's verifier. Frame: scripture.md (Principle III). Written to Christ's manner of speaking (series README, Language) and marked for delivery: `{*}` stress, `{/}` breath, `{//}` hold.
 
 ## Header
 
-The order: the cold open on a hillside where Jesus teaches (`cold`: a teacher of the law asks how to inherit eternal life; Jesus answers with two questions, what is written and how do you read it; the man then asks who his neighbour is, a word his teachers argued over without end; who decides what a word in the Bible means?), the title, the callback (`one`: a measure only works if it says one thing), the two ways (`two`), the one dose of the problem (`endless`: "the Bible means whatever it means to you", answered at once), the honest question (`across`: how can an old book speak to every age?), the dictionary in three entries (`waters`: the Bible says what a word means; `talitha`: sometimes it gives the meaning too; `rain`: a song says a thing twice), the deepest turn (`child`: a child learns words from the parent who uses them, and God teaches his the same way; read as you read it, and you only hear your own voice), figures and types (`figure`), the Spirit (`spirit`), and the landing back on the hillside (`name`: the story that defined "neighbour").
+The order: the cold open on a hillside where Jesus teaches (`cold`: a teacher of the law asks how to inherit eternal life; Jesus answers with two questions, what is written and how do you read it; the man then asks who his neighbour is, a word his teachers argued over without end; who decides what a word in the Bible means?), the title, the callback (`one`: a measure only works if it says one thing), the two ways (`two`), the one dose of the problem (`endless`: "the Bible means whatever it means to you", answered at once), the honest question (`across`: how can an old book speak to every age?), the dictionary in four entries (`waters`: the Bible says what a word means; `talitha`: sometimes it gives the meaning too; `rain`: a song says a thing twice; `great`: a word every land already knows, which the Bible defines its own way), the deepest turn (`child`: a child learns words from the parent who uses them, and God teaches his the same way; read as you read it, and you only hear your own voice), figures and types (`figure`), the Spirit (`spirit`), and the landing back on the hillside (`name`: the story that defined "neighbour").
 
 Motifs:
 
@@ -38,7 +38,7 @@ Read against `docs/casting.md` (Part A numbers and sections) and `docs/ensemble.
 
 | Figure | Kind | Scope | In the library? | Beats | The sheet must show |
 | --- | --- | --- | --- | --- | --- |
-| Jesus Christ (`christ`, casting.md #1) | Bible figure, the locked figure, never short | shared | yes: `src/library/cast/christ` | `cold`, `talitha`, `figure` (small, walking by a river), `name`, `thesis`, `end` | seated teaching (three-quarter), turning to answer (front), kneeling at a bed and taking a hand (profile), walking (profile, small); his earthly dress (casting.md: the white robe and gold sash, OQ5), sleeves to the wrist, the hand at the sleeve's end |
+| Jesus Christ (`christ`, casting.md #1) | Bible figure, the locked figure, never short | shared | yes: `src/library/cast/christ` | `cold`, `talitha`, `great` (flat IDEA paper, then kneeling by the basin), `figure` (small, walking by a river), `name`, `thesis`, `end` | seated teaching (three-quarter), turning to answer (front), kneeling at a bed and taking a hand (profile), walking (profile, small); his earthly dress (casting.md: the white robe and gold sash, OQ5), sleeves to the wrist, the hand at the sleeve's end |
 | The teacher of the law (Luke 10:25, "a certain lawyer") | Bible figure, supporting | shared | no; nearest is the scribes (#25, casting.md 1.4, RBF): draw him as one of that kit with his own face | `cold`, `name`, `thesis` | standing with a scroll (front, three-quarter, profile, back), asking with a hand open at the sleeve's end, listening, answering with his mouth set; linen tunic, camel mantle, headcloth; he never sits or lowers the scroll |
 | Two older teachers (`cold`, `argued`) | Bible figures, minor | shared | the scribes (#25) | `cold` | leaning together, shaking their heads (three-quarter); the scribes' dress |
 | Jairus, his wife and their daughter (Mark 5:22–42) | Bible figures, supporting | shared | no | `talitha` | the girl lying, then sitting up with her hand in Christ's (three-quarter, profile), about 0.80 tall (twelve); the parents at the door (front, three-quarter), faces from grief to wonder, the mother's hands at her mouth; plain story cloth, sleeves to the wrist |
@@ -62,17 +62,19 @@ Settings:
 | The teaching hillside in Galilee (a slope, a few olive trees, a road below) | shared (the gospel hillside of #3) | `cold`, `title`, `name`, `thesis`, `end` | teal day; the landing teal to yellow; evening in the credits |
 | Jairus's house, the girl's room by lamplight | shared (new) | `talitha` | peach |
 | The plain kitchen with a stove and a window on the landing (new here; 05, 07 and 10 reuse it). It sits in the city building's layout (ensemble.md, Homes), so Max can pass on the landing | series | `child` | dawn |
-| The parchment page | series | `one`, `two`, `endless`, `across`, `waters`, `rain`, `figure`, `spirit` | peach |
+| The parchment page | series | `one`, `two`, `endless`, `across`, `waters`, `rain`, `great`, `figure`, `spirit` | peach |
 
 Props:
 
 | Prop | Scope | Beats |
 | --- | --- | --- |
-| The dictionary: a small cut-paper book with a gold ribbon, entries as picture pairs | series | `title`, `across`, `waters`, `talitha`, `rain`, `figure`, `name`, `thesis` |
+| The dictionary: a small cut-paper book with a gold ribbon, entries as picture pairs | series | `title`, `across`, `waters`, `talitha`, `rain`, `great`, `figure`, `name`, `thesis` |
 | The hand mirror | film | `two`, `endless`, `child`, `spirit` |
 | The gold measuring rod (from 02) | series | `one`, `name` |
 | The teacher's scroll | film | `cold`, `name`, `thesis` |
 | The Passover lamb and the scarlet doorpost | shared (the sanctuary films use it) | `two`, `figure` |
+| The towel and the basin (John 13:4–5) | shared (the Last Supper films use them) | `great` |
+| The crowned figure on a dais and his bowing servants (flat IDEA paper) | film | `great` |
 | The four beasts of Daniel 7, folding into crowns | shared (29 uses them) | `figure` |
 | The Samaritan's beast and his small jar | shared (with the Samaritan) | `name` |
 
@@ -156,6 +158,13 @@ New to the library: the teacher of the law, Jairus with his wife and daughter, A
 **picture:** IDEA: the parchment. Two lines of gold run side by side across the page like two furrows (drawn as lines, no lettering). On `moses` an old flat paper figure (Moses, camel mantle, open hand at the sleeve's end) sings at the left edge; on `rain` paper raindrops fall onto the first line and on `dew` beads of dew settle onto the second. On `other` the two lines glow together as one. On `teaching` each drop that lands opens into a tiny scroll, and young grass rises under them. The two pictures settle on the dictionary's page: rain beside an open scroll, its third entry.
 **paraphrase sources (not spoken):** none; `other` and `teaching` read this verse's own two lines and claim nothing about Hebrew poetry in general (no pioneer source of the frame's period was found for that; `../sources.md`, "03 · As It Reads").
 
+### `great` · IDEA · ~22 s
+
+**say:** {know}And a word every land already {*}knows? {/} {great}Great. {/} {served}In every land, the great are the ones who are {*}served. {/} {jesus}But Jesus says, “whosoever will be great among you, shall be your minister: {chiefest}and whosoever of you will be the chiefest, shall be servant of all.” {//} {borrow}The Bible does not borrow our {*}meaning. {/} {own}It gives us its {*}own.
+**cite:** Mark 10:42–44; John 13:4–5 (the picture only)
+**picture:** IDEA: the parchment. On `great` the word's picture sits on a fresh page of the dictionary: on `served` a crowned flat paper figure on a dais, small servants bowing before him (Mark 10:42, "their great ones exercise authority upon them"; no land's dress, no named people). On `jesus` Christ stands beside the page as flat paper; on `chiefest` the dais and crown fade, and a towel and a basin of water take their place (John 13:4–5), Christ kneeling beside them. On `borrow` a grey shape, the land's meaning, tries to lay itself over the entry and slides off. On `own` the towel and basin settle on the dictionary's page, its fourth entry.
+**paraphrase sources (not spoken):** none; `served` reads Mark 10:42 itself.
+
 ### `child` · STORY · ~40 s
 
 **say:** {how}So how does a word get its {*}meaning? {/} {picture}Picture a little boy learning his first words. {/} {stove}His mother says warm at the stove, {bath}warm at the bath, {blanket}warm in the blanket, {full}until he knows what warm {*}means. {/} {moses}God told his people to teach his words that way, {sittest}“when thou sittest in thine house, and when thou walkest by the way.” {//} {uses}And he teaches his own words the same way, {/} until we know what they {*}mean. {//} {father}Read as it reads, and you hear your {*}Father. {/} {yourself}Read as you read it, and you only hear your own {*}voice.
@@ -216,6 +225,7 @@ New to the library: the teacher of the law, Jairus with his wife and daughter, A
 - **The cold open's question.** Luke 10:26's two questions ("What is written … how readest thou?") are Jesus' own, and the film does not set them against each other: the man reads well, and Jesus says so. The film's point comes after, when he asks to narrow one word (Luke 10:29, "willing to justify himself"). "He wanted the word to stay small" is left unsaid in speech; the landing shows it.
 - **"Much error starts there."** The owner's thesis is that the root of all error is the way of reading. The review found "Every error" larger than its sources: Matthew 22:29 names two causes (not knowing the scriptures, nor the power of God), and GC 598.3 speaks of "thousands upon thousands who are now wandering in error" for want of taking the Bible as it reads. So the line says "Much", and the owner kept it (2026-10-19).
 - **Spiritual is a good word here.** The film never sets the Spirit against the letter: the second way is named by what it does ("a meaning under the words that the words never give"), and `spirit` keeps 1 Corinthians 2:14's "spiritually discerned" for the good.
+- **`great`, added 2026-10-25 at the owner's word.** He asked for more weight on the Bible defining its own words across cultures and times, so that no land's meaning is read into it; the first example (the serpent, Gen 3:1 and Rev 12:9, which some lands honour) was too advanced for the milk, and he chose "Great" (Mark 10:43–44) and its words in chat. The serpent stays for 06 or the prophecy films. Every KJV line printed by `manna verse` on 2026-10-25.
 - **Types stay.** `figure` keeps the Passover lamb as the Bible's own line (1 Cor 5:7, "Christ our passover"), so typology reads as the dictionary at work.
 - **Credits.** No title in the roll carries a denomination's name. Miller is named only as the author of the rules; nothing of his movement is said or shown.
 - **Frame check (scripture.md):** one Bible as the single rule (said, `one`); the Bible's meaning given by God with the words, not made by the reader (said, `one`); no tradition, council or majority set beside it; nothing narrates the Bible's formation as later editors' work (`across` names its writers as shepherds, kings and fishermen, and `talitha` has Mark keep Jesus' words).

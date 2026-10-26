@@ -3846,3 +3846,23 @@ The form of an entry, each field on its own line:
 - **Wrong:** When a run drew a stale beat again, its later panels rode along by the first panel's keep, drawn from the sheet the owner replaced, so their new tries leaned on the old face.
 - **Cause:** The ride-along took the first panel's shown try, which is its keep while one is kept. A run now rides along by the first try it drew of the first panel, and by the shown try only when it drew none.
 - **Guard:** code: `packages/film/src/tools/board-stale.test.ts` `takes the first panel's first try drawn in this run, never its keep from the sheet replaced`
+
+### slow-test-script-with-no-slow-files
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "`bun run deploy` never deploys: the workspace's `test:slow` exits 1."
+- **Source:** screening/review-1.md F1, the review's first major, headed M1
+- **Wrong:** The screening site's `test:slow` ran `bun test .slow.test.` in a workspace with no slow test file, so it exited 1, and the `deploy` that runs it first stopped before `alchemy deploy`.
+- **Cause:** The script was copied from a workspace that has slow tests. It now typechecks, runs the unit tests and passes `--pass-with-no-tests` to its slow step.
+- **Guard:** code: `packages/scripts/src/test-budget/strength.test.ts` `every workspace's test:slow that filters on .slow.test. has a file it runs`
+
+### screening-render-takes-the-main-variant
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "`render` (and `final` without `--from`) can publish a look wedge or a burn-in Board copy as \"The render\"."
+- **Source:** screening/review-1.md F2, the review's second major, headed M2
+- **Wrong:** `bun run screening publish <film> render` took the newest whole-film video that was not named `board` or `board-review`, so a look wedge, a Board under another variant name or a scaled proof rendered after the full render was published as the render.
+- **Cause:** The rule excluded the Board's two default names instead of naming the full render. It now takes the `main` variant at full scale alone (`apps/animations/screening-renders.ts`).
+- **Guard:** code: `apps/animations/screening-renders.test.ts` `a render is the full render of the film, not a wedge, Board copy or proof after it`

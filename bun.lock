@@ -26,7 +26,9 @@
       "dependencies": {
         "@effect/platform-bun": "catalog:",
         "@manna/film": "workspace:*",
+        "@manna/screening": "workspace:*",
         "effect": "catalog:",
+        "sharp": "0.35.4",
         "three": "0.186.1",
       },
       "devDependencies": {
@@ -117,6 +119,22 @@
         "rolldown": "1.2.13",
         "sharp": "0.35.4",
         "vite": "8.3.4",
+      },
+    },
+    "apps/screening": {
+      "name": "@manna/screening",
+      "version": "0.1.0",
+      "dependencies": {
+        "@solidjs/compiler": "catalog:",
+        "@solidjs/web": "catalog:",
+        "effect": "catalog:",
+        "solid-js": "catalog:",
+      },
+      "devDependencies": {
+        "@effect/platform-bun": "catalog:",
+        "@effect/platform-node": "catalog:",
+        "alchemy": "2.0.0-beta.83",
+        "effect-bun-test": "catalog:",
       },
     },
     "apps/selah": {
@@ -785,6 +803,8 @@
     "@manna/hymnal": ["@manna/hymnal@workspace:packages/hymnal"],
 
     "@manna/hymnal-app": ["@manna/hymnal-app@workspace:apps/hymnal"],
+
+    "@manna/screening": ["@manna/screening@workspace:apps/screening"],
 
     "@manna/scripts": ["@manna/scripts@workspace:packages/scripts"],
 

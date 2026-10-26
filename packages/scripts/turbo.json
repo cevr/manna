@@ -19,6 +19,8 @@
         "$TURBO_ROOT$/packages/*/turbo.json",
         "$TURBO_ROOT$/apps/*/bunfig.toml",
         "$TURBO_ROOT$/packages/*/bunfig.toml",
+        "$TURBO_ROOT$/apps/**/*.slow.test.*",
+        "$TURBO_ROOT$/packages/**/*.slow.test.*",
         "$TURBO_ROOT$/apps/animations/series/*/scripts/*.md"
       ]
     }
