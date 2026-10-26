@@ -7,7 +7,7 @@
  *
  * `registerSolidSsr` adds the plugin to Bun's runtime, for every module of
  * this package imported after it: the package's tests preload it
- * (`./solid-preload.ts`), and the publisher (`apps/animations/screening.ts`)
+ * (`../test/setup.ts`), and the publisher (`apps/animations/screening.ts`)
  * calls it before it imports the pages. Only this package's own `.tsx` is
  * compiled so: a process that also loads other Solid code (the film tools,
  * in the publisher) compiles that as its own owner says. A module is only

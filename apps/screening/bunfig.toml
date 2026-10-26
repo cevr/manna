@@ -1,4 +1,4 @@
 [test]
 # The pages are Solid 2 JSX: the plugin compiles each `.tsx` module to
 # Solid's server output as Bun loads it (`src/solid-ssr.ts`).
-preload = ["./src/solid-preload.ts"]
+preload = ["./test/setup.ts"]

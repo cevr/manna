@@ -6,6 +6,6 @@
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "allowImportingTsExtensions": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "scripts/**/*.ts", "alchemy.run.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "scripts/**/*.ts", "test/**/*.ts", "alchemy.run.ts"],
   "exclude": ["node_modules", ".alchemy"]
 }
