@@ -76,7 +76,7 @@ Craft never outranks the frame ([frame/README.md](frame/README.md)). A paraphras
 
 - BibleProject asks the viewer's question at every turn, in 2 to 15 words, and answers it with a wrap line of 12 words or fewer.
 - **One narrator asks it.** A film has one reader: the narrator asks the question in the viewer's own words, not a setup line, and answers it with the wrap line: "…and God calls him righteous. Declared? But he's guilty. Exactly. And that's the point."
-- **Chapters:** the question that opens each act titles its YouTube chapter, in the viewer's words, 4–6 per film: the act's `chapter` in the film's `look` (`acts.ts`, re-exported by `film.ts`). `bun run chapters <film>` prints them.
+- **Chapters:** a short lower-case phrase taken from the act's own narration or picture titles its YouTube chapter ("a bottle at the feast", "the hardest sum"), 4–6 per film, never a question or a heading (owner, 2026-10-26, adopting a reference video's phrase chapters): the act's `chapter` in the film's `look` (`acts.ts`, re-exported by `film.ts`). `bun run chapters <film>` prints them.
 - **Check:** every register switch in the script comes with a question.
 
 ## 7. The shape in time
@@ -89,10 +89,12 @@ The shape as a share of the runtime:
 | Backstory and history    | 10–48%, never inside the landing                                                                          |
 | Deepest turn or callback | 55–65%                                                                                                    |
 | Landing                  | starts at 70–84% and lasts 20–35 s                                                                        |
-| Music alone              | 25–35 s after the landing                                                                                 |
+| Music alone              | 15–20 s after the landing, then the last line                                                             |
 | Coda                     | credits and sources roll for 20–30 s over the final pull-back; the last 5–20 s stay clear for end screens |
 
 - The landing ends on the thesis line, with a held pause of about 3 s before its last word.
+- **Every film ends with an appeal** (owner, 2026-10-26, from his wife: "the end of every video should be an invitation, kind of an appeal"). Between the landing and the thesis line, one short beat (`appeal`, 15–25 s) speaks to the viewer as "you" and invites one step that the film's truth asks for today. It speaks to each kind of viewer the film names, gently, with no shame (In Its Order: those who ran ahead, back to the milk; those who stayed too long, to start chewing). It quotes nothing new and calls back the film's own lines and images.
+- **The answer, then the last line** (owner, 2026-10-26, from a reference video's shape). The appeal opens with one "So…" sentence that answers the film's question in plain words before it turns to "you". After the landing's music alone, one quiet line of 10–15 words (`last`) closes on the film's opening image, with about 3 s of music after it before the coda.
 - The coda is a scene that speaks nothing and does not breathe (`drawing({ drift: 0, … })`): the credits strip arrives with its first line and leaves with its last, never showing empty, and the camera settles before the clear end.
 - **Check:** each scene's `start` from `cues`, divided by the film's length. `bun run check` warns `EndShort` under 20 s after the last word or a 5 s end card.
 
@@ -106,6 +108,7 @@ The shape as a share of the runtime:
 
 - **Seams:** the gap between one scene's last word and the next scene's first word is 0.6 s or less. Scene `lead` and `tail` set it.
 - **Long pauses:** a pause of 1 s or more goes only where the script means one: before the landing's last word, after a key quotation, or at a register switch.
+- **Comma breaths are rare:** a `{/}` after a comma is cut; the comma is pause enough. Keep `{/}` for sentence ends and the turns the line means.
 - **Between sentences:** 0.2 to 0.5 s.
 - **Pace:** 150–165 words a minute over the spoken span. The owner records the voice, so the script leaves room: about 5–8 % fewer words than the timeline allows.
 - **Check:** a seam is the next scene's `start` plus its speech start, minus this scene's `start` plus its speech end.
@@ -115,7 +118,7 @@ The shape as a share of the runtime:
 - **A score is not optional,** and no air is dead: no stretch over 1.5 s below −60 dBFS unless the script declares it.
 - **Designed silences** go in three places only: after the key quotation, at the black moment, and the held beat before the landing's last word.
 - **The bed:** 17 to 20 dB under the voice wherever narration runs, short gaps included.
-- **Music alone:** the music rises only where no one speaks, to about 6 dB under the voice level. That means an optional open of 5 to 7 s, and the landing's 25 to 35 s.
+- **Music alone:** the music rises only where no one speaks, to about 6 dB under the voice level. That means an optional open of 5 to 7 s, the landing's 15 to 20 s and the 3 s after the last line. No act turn pauses for music alone (owner, 2026-10-26: "take out the music pauses").
 - **The low end:** the register under 70 Hz swells about 15 dB on the problem lines and the climax, and thins under the answers.
 - **Effects:** put them on the story's concrete nouns: serpents, the loom, coins, cloth, chains. Page and slide sounds go only at register switches.
 - **Levels:** the voice sits near −17 dBFS at its 70th percentile, and the master near −18 LUFS.
@@ -151,6 +154,7 @@ A paper theatre lit from behind.
 - **Shade with colour, never with black** (owner, 2026-10-12). A shadow or a shaded side is a different hue, not a darker or greyer copy of the same one: shift it toward the light's complement (a cool violet or blue under warm light, a warm red or orange under cool light), and keep or raise its saturation as its value drops. A highlight shifts toward the light's own hue (a pale gold, a warm cream). Never shade by mixing in black or grey, by an alpha-black layer or by `multiply` with a neutral. Each palette colour carries its ramp as named swatches (its shade, its base, its light; the shade a neighbouring hue), so every scene shades from the same ramps. This holds for contact shadows on the sheet, a figure's turned side, a crease or fold, and the haze between planes. Shading is not outlining: an outline or ink line may be black (owner, 2026-10-13). A look derives its ramps with `ramp` (`@manna/film/canvas`) from its bases and its key light; the knobs are tuned on stills, but none goes under the rule's floors (a chroma of 6 for a shade or a light, a 10° turn), which `ramp` refuses. Until the `shade` unit, the Canvas kit's cast and contact shadows are its warm dark, rgba(40, 28, 16), and a cut's core its cream `#fbf6ea`: a named exception, which the paper-cut look's host lays too.
 - **Ink only for figures and features:** eyes, brows, mouths, hand creases, a prop's letters. Scenery has no outline.
 - **One hand design per look: a circle at the end of an arm in its sleeve, never a hand floating free of the body** (owner, 2026-10-18, the look's v5 decision: "I actually like the style when they have sleeves and like arms, kind of like we have with Jesus and a lot of the characters so far in the cast. Let's make that kind of a standing role for the concept"; on the farmer's rig: "He lifts his hand up, but it just looks weird without the sleeves. So let's add the sleeves."). The paper-cut look, which Rive draws (the main engine, owner 2026-10-12; its figures' rules are DIRECTION's "Paper-cut figures (Rive)"), gives each figure plain circles of its own paper: no thumb, no fingers. Each hand is at the end of its sleeve, which runs from the shoulder to the hand wherever the hand goes; no bare arm or forearm shows. The concept, the cast sheets, the rigs and the critique hold every figure to it. The Canvas kit's `floatingHand` still draws a free mitten with a thumb until its figures become rigs, and a new figure is drawn with circles in sleeves. At rest both arms hang in their sleeves beside the body, bobbing with the breath; on a named cue a hand travels on a soft arc within the figure's reach, its sleeve with it, eased, and settles. A big hand is only a close-up of a figure we have seen, pushed into from its hand, and matched back.
+- **Food is plant food:** a table, a plate or a platter carries loaves, grain, fruit, nuts and vegetables, never meat, fish or bones, even where a script says "meat" for solid food (owner, 2026-10-26, on a platter of meat in In Its Order: "let's make it so this is um, plan-based").
 - **A crowd is never cloned:** vary height, silhouette and hat.
 - **Screen direction is fixed per role** for the whole film; it crosses once, on purpose, at the turn.
 - **Check:** the look-book, its per-scene numbers (luma, saturation, top hues), and the stills at full size. Crop a shaded part at 1:1: its shade must read as a hue of its own beside the base, not the base dimmed; `--mode value` then confirms the shade still reads darker in greys.

@@ -8,7 +8,7 @@ The film’s draft, kept by the owner (ask a5d8568415d), is `apps/animations/ser
 
 ## `cold`
 
-- **Hebrews 5:12** (KJV). Quoted: "They “are become such as have need of milk, and not of strong meat.”" Paraphrased: "Now picture a letter to believers that says nearly the same."
+- **Hebrews 5:12** (KJV). Quoted: "They “are become such as have need of milk, and not of strong meat.”" Paraphrased: "And yet one of the letters in our Bible says nearly that to its readers." and "Grown believers, still on milk."
 
   > For when for the time ye ought to be teachers, ye have need that one teach you again which be the first principles of the oracles of God; and are become such as have need of milk, and not of strong meat.
 
@@ -28,13 +28,17 @@ The film’s draft, kept by the owner (ask a5d8568415d), is `apps/animations/ser
 
 ## `stones`
 
-- **Hebrews 6:1–2** (KJV). Told: the list, said as a list and not as a quotation: "Repentance from dead works. Faith toward God. Baptisms. The laying on of hands. The resurrection of the dead. And eternal judgment." Paraphrased: "Hebrews lists them, and calls them a foundation."
-
-  > Therefore leaving the principles of the doctrine of Christ, let us go on unto perfection; not laying again the foundation of repentance from dead works, and of faith toward God, Of the doctrine of baptisms, and of laying on of hands, and of resurrection of the dead, and of eternal judgment.
-
-- **Hebrews 5:12** (KJV). Paraphrased: "Hebrews calls them the first principles of the oracles of God."
+- **Hebrews 5:12** (KJV). Paraphrased: "Hebrews calls them the first principles of the oracles of God." The first principles are said as principles, not as Hebrews 6's list (owner, 2026-10-26).
 
   > ye have need that one teach you again which be the first principles of the oracles of God
+
+- **Hebrews 6:1** (KJV). Paraphrased: "Hebrews calls them a foundation."
+
+  > Therefore leaving the principles of the doctrine of Christ, let us go on unto perfection; not laying again the foundation of repentance from dead works, and of faith toward God,
+
+- **1 Corinthians 3:11** (KJV). Quoted: "Paul names that foundation: “other foundation can no man lay than that is laid, which is Jesus Christ.”"
+
+  > For other foundation can no man lay than that is laid, which is Jesus Christ.
 
 ## `bottle`
 
@@ -92,6 +96,10 @@ The film’s draft, kept by the owner (ask a5d8568415d), is `apps/animations/ser
 
   > The most profound problems consist only of simple principles in various combinations. So as we leave the first principles of the doctrine of Christ, and go on unto perfection, we leave them only in the sense that we do not use them detached, but in combination. The man who eats hard food, instead of milk, does not reject any element that is in milk, but gets it all and more.
 
+- **7MR 236.1** · Ellen G. White, _Manuscript Releases, vol. 7_. Paraphrased: "A student who never learned to add cannot solve them at all. He can only guess, and that is how the hard places of Scripture get wrested." (owner, from his wife, 2026-10-26; `rush` has said "To wrest is to twist").
+
+  > Some do not seem to comprehend that which is plainly opened before them in the Scriptures concerning their salvation, and, as a result, their religious life is greatly deficient. If they would study and obey the Word of God, their minds would not be so full of conjectures in regard to things that they need not understand.
+
 ## `priest`
 
 - **Hebrews 5:10–11** (KJV). Paraphrased: "Hebrews serves it right after the milk." (5:10–11 runs straight into the milk of 5:12).
@@ -106,7 +114,7 @@ The film’s draft, kept by the owner (ask a5d8568415d), is `apps/animations/ser
 
   > Now of the things which we have spoken this is the sum: We have such an high priest, who is set on the right hand of the throne of the Majesty in the heavens; A minister of the sanctuary, and of the true tabernacle, which the Lord pitched, and not man.
 
-- **GW 315.2** · Ellen G. White, _Gospel Workers_ (1915). Paraphrased: "The meat is never something other than Christ." and "Every deeper truth is read by one light, and that light streams from his cross."
+- **GW 315.2** · Ellen G. White, _Gospel Workers_ (1915). Paraphrased: "The foundation is Christ, and the meat is Christ too. Never something other: more of him." and "Every deeper truth is read by one light, and that light streams from his cross."
 
   > The sacrifice of Christ as an atonement for sin is the great truth around which all other truths cluster. In order to be rightly understood and appreciated, every truth in the word of God, from Genesis to Revelation, must be studied in the light that streams from the cross of Calvary.
 
@@ -142,13 +150,17 @@ The film’s draft, kept by the owner (ask a5d8568415d), is `apps/animations/ser
 
   > As our physical life is sustained by food, so our spiritual life is sustained by the Word of God. And every soul is to receive life from God’s Word for himself. As we must eat for ourselves in order to receive nourishment, so we must receive the Word for ourselves.
 
+- **RH November 27, 1900, par. 16** · Ellen G. White, _The Review and Herald_ (1900). Paraphrased: "once it is digested and becomes part of you" and "until it becomes part of you, and you live it." (owner, from his wife, 2026-10-26).
+
+  > carefully study the Word, eat it, digest it, make it a part of our being. We are to live the Word, not keep it apart from our lives.
+
 ## `path`
 
 - **Proverbs 4:18** (KJV). Quoted, its opening “But” dropped: "“The path of the just is as the shining light, that shineth more and more unto the perfect day.”" The series’ name and verse.
 
   > But the path of the just is as the shining light, that shineth more and more unto the perfect day.
 
-- **Hebrews 6:1–2** (KJV). Paraphrased: "First, the six stones of the foundation." (as in `stones`).
+- **Hebrews 6:1** (KJV). Paraphrased: "First, the foundation." (as in `stones`).
 - **Hebrews 8:1–2, 6** (KJV). Paraphrased: "a priest in heaven, a sanctuary, a covenant".
 
   > We have such an high priest, who is set on the right hand of the throne of the Majesty in the heavens; A minister of the sanctuary, and of the true tabernacle … But now hath he obtained a more excellent ministry, by how much also he is the mediator of a better covenant, which was established upon better promises.
@@ -173,8 +185,34 @@ The film’s draft, kept by the owner (ask a5d8568415d), is `apps/animations/ser
 
 - **MEDM September 1904, page 286.6** · E. J. Waggoner, _The Medical Missionary_ (1904). Paraphrased: "and the milk is on it still." (as in `math`: nothing in the milk is left behind). Shown, not said: the cup of milk beside the plate on the set table.
 
+## `appeal`
+
+The appeal the owner chose, from his wife's word that every film ends with an invitation (chat, 2026-10-26). It quotes nothing; it calls back the film's own lines.
+
+It opens with the film's answer in one "So…" sentence (the owner's pick from a reference video's shape, chat, 2026-10-26): "So the milk is the plain word of God, the meat is more of Christ, and God serves them in order because that is how we grow." It quotes nothing new; it gathers `stones` (the first principles of the oracles of God, Hebrews 5:12), `priest` (the meat is more of Christ) and `grain` (Isaiah 28:10, in order).
+
+- **1 Peter 2:2** (KJV). Paraphrased: "If you ran ahead, come back to the milk. There is no shame in a cup of milk." (as in `milk`).
+
+  > As newborn babes, desire the sincere milk of the word, that ye may grow thereby:
+
+- **Hebrews 5:14** (KJV). Paraphrased: "If you have stayed on milk too long, it is time to start chewing." (as in `teeth`).
+
+  > But strong meat belongeth to them that are of full age, even those who by reason of use have their senses exercised to discern both good and evil.
+
+- **Isaiah 28:10** (KJV). Paraphrased: "Open the word today, and take one plain truth." (as in `grain`, here a little).
+
+  > For precept must be upon precept, precept upon precept; line upon line, line upon line; here a little, and there a little:
+
 ## `thesis`
 
 - **2 Peter 3:18** (KJV). Quoted, its opening “But” dropped: "“Grow in grace, and in the knowledge of our Lord and Saviour Jesus Christ.”", on its full-screen card with “Grow” in gold.
 
   > But grow in grace, and in the knowledge of our Lord and Saviour Jesus Christ. To him be glory both now and for ever. Amen.
+
+## `last`
+
+The quiet last line after the landing's music (the owner's pick from a reference video's shape, chat, 2026-10-26). It quotes nothing; it calls back the cup of `cold` and `milk`.
+
+- **Hebrews 5:12–14** (KJV). Paraphrased: "Every grown guest at that feast once drank from a cup. Not one of them stayed there." Milk is for the babe, and strong meat for those of full age.
+
+  > For every one that useth milk is unskilful in the word of righteousness: for he is a babe. But strong meat belongeth to them that are of full age, even those who by reason of use have their senses exercised to discern both good and evil.
