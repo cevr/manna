@@ -1,0 +1,30 @@
+{
+  "name": "@manna/screening",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./solid-ssr": "./src/solid-ssr.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
+    "test": "bun test --path-ignore-patterns='**/*.slow.test.*' src scripts",
+    "test:slow": "bun test .slow.test.",
+    "keys": "bun scripts/keys.ts",
+    "plan": "alchemy plan alchemy.run.ts --stage prod",
+    "deploy": "turbo run test:slow --filter=@manna/screening && alchemy deploy alchemy.run.ts --stage prod"
+  },
+  "dependencies": {
+    "@solidjs/compiler": "catalog:",
+    "@solidjs/web": "catalog:",
+    "effect": "catalog:",
+    "solid-js": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/platform-bun": "catalog:",
+    "@effect/platform-node": "catalog:",
+    "alchemy": "2.0.0-beta.83",
+    "effect-bun-test": "catalog:"
+  }
+}
