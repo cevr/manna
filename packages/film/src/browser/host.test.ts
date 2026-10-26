@@ -8,8 +8,7 @@ import { Location, UrlState } from '@manna/url-state';
 import { layerMemory } from '@manna/url-state/testing';
 import { Effect, Fiber, Layer, Option, Stream } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
-import { PageLoad } from './page-load.ts';
-import { addressOn, hostOf, reloadAtAddress } from './host.ts';
+import { addressOn, hostOf } from './host.ts';
 
 /** The entry `moves` (one tick's writes) commit, as `<navigation> <href>`. */
 const entryOf = (moves: () => void) =>
@@ -27,32 +26,6 @@ const entryOf = (moves: () => void) =>
   });
 
 describe('the address bar', () => {
-  it.live('a reload loads the page at the place written the moment before', () => {
-    const loaded: Array<string> = [];
-    const address = UrlState.layer.pipe(Layer.provideMerge(layerMemory('/films/p/studio#t=0')));
-    const pageLoad = Layer.effect(
-      PageLoad,
-      Effect.gen(function* () {
-        const bar = yield* Location;
-        return PageLoad.of({
-          reload: Effect.map(bar.current, (entry) => {
-            loaded.push(entry.href);
-          }),
-          open: () => Effect.void,
-        });
-      }),
-    ).pipe(Layer.provideMerge(address));
-    return Effect.gen(function* () {
-      const url = yield* UrlState.UrlState;
-      yield* url.navigate('/films/q/studio#t=1.5', {
-        history: 'replace',
-        throttle: Option.none(),
-      });
-      yield* reloadAtAddress;
-      expect(loaded).toEqual(['/films/q/studio#t=1.5']);
-    }).pipe(Effect.provide(pageLoad));
-  });
-
   it.live(
     "a viewer's move is a step where its place declares one; the URL following the page never is",
     () => {

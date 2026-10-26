@@ -926,11 +926,11 @@ export const Reply = Schema.Struct({
 export type Reply = typeof Reply.Type;
 
 /** The named cue edge nearest the note's time, in its scene. */
-export const NoteCue = Schema.Struct({
+const NoteCue = Schema.Struct({
   name: Schema.String,
   edge: Schema.Literals(['start', 'end']),
 });
-export type NoteCue = typeof NoteCue.Type;
+type NoteCue = typeof NoteCue.Type;
 
 /**
  * A stretch of a note's scene the note is about, in scene-local seconds (as
@@ -971,8 +971,8 @@ export type NoteWords = typeof NoteWords.Type;
  * something of them), a correction (say `replace` in their place) or a
  * removal (cut them).
  */
-export const NoteKind = Schema.Literals(['note', 'correction', 'removal']);
-export type NoteKind = typeof NoteKind.Type;
+const NoteKind = Schema.Literals(['note', 'correction', 'removal']);
+type NoteKind = typeof NoteKind.Type;
 
 /**
  * What a note on a storyboard panel asks of it: a note (it says something of
@@ -1319,7 +1319,7 @@ export type PageBuild = typeof PageBuild.Type;
  * again once the write answered need not again when it hears that number.
  * None when the write mixed nothing, or no page listens for the film's mixes.
  */
-export const mixedField = { mixed: Schema.optionalKey(PageBuild) } as const;
+const mixedField = { mixed: Schema.optionalKey(PageBuild) } as const;
 
 /** What a lab write (or its undo) answers: what the file now declares, and the check after it. */
 export const LabWrite = Schema.Struct({

@@ -546,7 +546,7 @@ export const AudioPart = (props: { readonly block: BlockOf<'audio'> }) => {
  * A markdown file's text, shown as HTML (every character of it escaped
  * first): the file as the index names it, so a file written again is read again.
  */
-export const Markdown = (props: { readonly file: ReviewFile }) => {
+const Markdown = (props: { readonly file: ReviewFile }) => {
   const { meta } = useAskRoot();
   const read = useAtomValue(() => meta.text(props.file));
   return (
@@ -578,7 +578,7 @@ interface Shown {
  * still, and Escape or a tap anywhere closes it, by the sheets' one rule
  * (`useSheetDismissal`), adding no entry.
  */
-export const Zoom = (props: {
+const Zoom = (props: {
   readonly still: string;
   readonly alt: string;
   readonly shown: Shown;
@@ -654,7 +654,7 @@ const CopySaid = (props: { readonly copy: PhoneCopy }) => (
  * has failed, the page reads the index again, and the video plays in its
  * place, or says it failed (on a Set, Choices and an ask alike).
  */
-export const ProxyPending = (props: { readonly video: ReviewVideo }) => {
+const ProxyPending = (props: { readonly video: ReviewVideo }) => {
   const { actions } = useAskRoot();
   const failed = () => props.video.phone === 'failed';
   // Its still, while it can be drawn: one that cannot (a video no frame is read from) leaves the

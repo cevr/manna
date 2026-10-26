@@ -9,7 +9,7 @@
 // which the render page loads, imports it.
 
 import { Location, UrlState } from '@manna/url-state';
-import { Clock, Duration, Effect, Layer, Option, Schedule, Scope, Stream } from 'effect';
+import { Clock, Effect, Layer, Option, Scope } from 'effect';
 import type { Context } from 'effect';
 import { pageMove } from '../core/api.ts';
 import type { Clipboard } from './clipboard.ts';
@@ -18,7 +18,7 @@ import type { Frames } from './frames.ts';
 import type { Highlights } from './highlights.ts';
 import type { Keys } from './keys.ts';
 import type { Media } from './media.ts';
-import { PageLoad } from './page-load.ts';
+import type { PageLoad } from './page-load.ts';
 import type { Pointer } from './pointer.ts';
 import type { Viewport } from './viewport.ts';
 
@@ -139,61 +139,6 @@ export const addressOn = (host: Context.Context<UrlState.UrlState | Location>): 
     },
   };
 };
-
-/**
- * Call `landed` with each entry Back or Forward lands on (a `traverse` from
- * `Location`), until the returned stop: what a page reads its time from
- * again, as it reads its pick from the URL. `UrlState` has already dropped
- * the writes the page had not flushed for the entry it left.
- */
-export const onTraverse = (
-  host: Context.Context<Location>,
-  landed: (href: string) => void,
-): (() => void) => {
-  const fiber = Effect.runForkWith(host)(
-    Location.use((bar) =>
-      bar.changes.pipe(
-        Stream.filter((entry) => entry.navigation === 'traverse'),
-        Stream.runForEach((entry) => Effect.sync(() => landed(entry.href))),
-      ),
-    ),
-  );
-  return () => {
-    fiber.interruptUnsafe();
-  };
-};
-
-/** The longest a page waits for its writes to reach the address bar: 200 looks, 5 ms apart. */
-const WRITTEN_LOOKS = 200;
-
-/**
- * Done when every write the page has made is on the address bar (`UrlState`
- * flushes a tick's writes after the tick), or after a second: what a load of
- * the page anew waits for, as it loads whatever the bar holds.
- */
-const addressWritten: Effect.Effect<void, never, UrlState.UrlState | Location> = Effect.gen(
-  function* () {
-    const url = yield* UrlState.UrlState;
-    const bar = yield* Location;
-    const written = Effect.zipWith(url.href, bar.current, (want, entry) => want === entry.href);
-    yield* Effect.repeat(written, {
-      until: (done) => done,
-      schedule: Schedule.spaced(Duration.millis(5)),
-      times: WRITTEN_LOOKS,
-    });
-  },
-);
-
-/**
- * Load the page again at the place its URL keeps: once the page's writes
- * are on the address bar (`addressWritten`), so a time held the moment
- * before (`holdT`) is the one the page opens on.
- */
-export const reloadAtAddress: Effect.Effect<void, never, UrlState.UrlState | Location | PageLoad> =
-  Effect.andThen(
-    addressWritten,
-    PageLoad.use((load) => load.reload),
-  );
 
 /**
  * A reader of the monotonic time of `host`'s `Clock`, in ms (the page's

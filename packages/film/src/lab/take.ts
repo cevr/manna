@@ -11,7 +11,7 @@ import type { StudioAttempt, StudioAttempts } from '../core/studio.ts';
 import { narrationFileUrl } from '../player/narrated.ts';
 
 /** A take to play: its audio, whose it is, what was heard of it (an attempt's), and how long it lasts. */
-export interface TakeHeard {
+interface TakeHeard {
   readonly url: string;
   /** An owner's recording, or the staging voice's. */
   readonly source: 'recorded' | 'staging';

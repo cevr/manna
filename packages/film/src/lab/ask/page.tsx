@@ -257,7 +257,7 @@ const ManyAsks = (props: {
  * alone as its own page, more as parts of one. Each answer that lands reads
  * the page again, so its count moves and an ask that joined it shows.
  */
-export const AsksPage = (props: { readonly of: string; readonly at: Option.Option<string> }) => {
+const AsksPage = (props: { readonly of: string; readonly at: Option.Option<string> }) => {
   const { meta } = useAskRoot();
   const read = useAtomValue(() => meta.askPage(props.of));
   const again = useAtomRefresh(() => meta.askPage(props.of));

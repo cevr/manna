@@ -19,12 +19,10 @@
 // ends. The player's transport (space, ←/→) is declared here too, as the
 // page's commands, for every page with a synced player.
 
-import { type Context, Data, Effect, Option } from 'effect';
+import { type Context, Effect, Option } from 'effect';
 import { Frames } from '../../browser/frames.ts';
 import { frameAtOrBefore, frameRead } from '../../core/time.ts';
 import { Media, type Playable } from '../../browser/media.ts';
-import { type Command, type Invocation, quietly } from '../../command/command.ts';
-import type { Target } from '../../command/target.ts';
 import {
   type SyncEvent,
   SyncEvent as Events,
@@ -349,74 +347,4 @@ export const makeSync = (
   };
 
   return { attach, apply, follow, timed, stop };
-};
-
-/** What a synced player is asked: play or pause, or a step back or on (`by` frames). */
-export type PlayerKey = Data.TaggedEnum<{
-  Toggle: {};
-  Step: { readonly by: number };
-}>;
-export const PlayerKey = Data.taggedEnum<PlayerKey>();
-
-/** The machine's event for a player's ask: a toggle, or a step of `by` frames. */
-export const playerEvent = (key: PlayerKey): SyncEvent =>
-  PlayerKey.$match(key, {
-    Toggle: () => Events.Toggled,
-    Step: ({ by }) => Events.Stepped({ frames: by }),
-  });
-
-/** The frames a ←/→ moves by: one, ten with Shift (the coarse step), one with Alt. */
-const STEPS_BY: Readonly<Record<Invocation['step'], number>> = { normal: 1, coarse: 10, fine: 1 };
-
-/**
- * Where a step is offered by touch: a long-press on a Set's version
- * (its picture is the version's) or on a page's picture (Choices'), with its
- * ×10 row.
- */
-const STEP_ABOUT: ReadonlyArray<Target> = ['Version', 'Page'];
-
-/**
- * A synced player's transport as the page's commands: Space plays or
- * pauses, ← and → step back or on (ten steps with Shift). `heed` says what
- * the page does with an ask now, or none when it has nothing to do with it
- * (a page whose view does not play): the command is available only then.
- * Every page with a synced player registers these while it is mounted.
- */
-export const playerCommands = (
-  heed: (key: PlayerKey) => Option.Option<() => void>,
-): ReadonlyArray<Command> => {
-  const asked = (key: (how: Invocation) => PlayerKey) => ({
-    when: () => Option.isSome(heed(key({ step: 'normal', via: 'key', input: 'key' }))),
-    run: quietly((_ctx, how) => Option.map(heed(key(how)), (act) => act())),
-  });
-  return [
-    {
-      id: 'review.play',
-      label: 'Play or pause',
-      group: 'Player',
-      keys: ['space'],
-      touch: 'the play button',
-      ...asked(() => PlayerKey.Toggle()),
-    },
-    {
-      id: 'review.step-next',
-      label: 'Step on',
-      group: 'Player',
-      keys: ['arrowright'],
-      about: STEP_ABOUT,
-      stepped: true,
-      touch: 'long-press the picture, then Step on (or ×10)',
-      ...asked((how) => PlayerKey.Step({ by: STEPS_BY[how.step] })),
-    },
-    {
-      id: 'review.step-previous',
-      label: 'Step back',
-      group: 'Player',
-      keys: ['arrowleft'],
-      about: STEP_ABOUT,
-      stepped: true,
-      touch: 'long-press the picture, then Step back (or ×10)',
-      ...asked((how) => PlayerKey.Step({ by: -STEPS_BY[how.step] })),
-    },
-  ];
 };

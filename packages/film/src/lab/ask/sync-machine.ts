@@ -25,8 +25,8 @@ import { FILM_FPS, clock, frameRead, timecode } from '../../core/time.ts';
 export const UNKNOWN_END = Number.MAX_SAFE_INTEGER;
 
 /** The rates the player offers. */
-export const Rate = Schema.Literals([0.5, 1]);
-export type Rate = typeof Rate.Type;
+const Rate = Schema.Literals([0.5, 1]);
+type Rate = typeof Rate.Type;
 
 const Clock = {
   /** Where the set is, in seconds on its clock's video. */
@@ -249,8 +249,6 @@ export const syncMachine = (audible: string, start: number, at: number = start) 
 /** The synced player's actor, started. */
 export const spawnSync = (audible: string, start: number, at: number = start) =>
   Machine.spawn(syncMachine(audible, start, at)).pipe(Effect.tap((actor) => actor.start));
-
-export type SyncActor = Effect.Success<ReturnType<typeof spawnSync>>;
 
 /** Whether the videos should be running: only while playing (a stall holds them all). */
 export const runningOf = (state: SyncState): boolean => state._tag === 'Playing';

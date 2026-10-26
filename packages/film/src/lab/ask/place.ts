@@ -5,8 +5,8 @@
 // `stillIn`, `withStill`), an ask's Board panel opened by its `Zoom`.
 
 import { Place } from '@manna/url-state';
-import { Data, Match, Option } from 'effect';
-import { Places, pageHref } from '../../core/api.ts';
+import { Data, Option } from 'effect';
+import { Places } from '../../core/api.ts';
 
 export type AskPlace = Data.TaggedEnum<{
   /** An ask: the page of asks it is on, taken to it. */
@@ -22,15 +22,6 @@ export const askPlaceOf = (href: string): Option.Option<AskPlace> =>
     Option.map(Place.decode(Places.ask, href), (v) => AskPlace.Ask(v.path)),
     Option.map(Place.decode(Places.askPage, href), (v) => AskPlace.AskPage(v.path)),
   ]);
-
-/** The link that opens `place`, no still open. */
-export const askHrefOf = (place: AskPlace): string =>
-  Match.value(place).pipe(
-    Match.tagsExhaustive({
-      Ask: (p) => pageHref.ask(p.ask),
-      AskPage: (p) => pageHref.askPage(p.page),
-    }),
-  );
 
 /** A place that keeps a still open full size: reads its `?still=` from an href, and writes it. */
 interface Stilled {

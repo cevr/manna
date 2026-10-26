@@ -4,12 +4,14 @@
 import { describe, expect, test } from 'bun:test';
 import { Option } from 'effect';
 import { pageMove } from '../../core/api.ts';
-import { AskPlace, askHrefOf, askPlaceOf, stillIn, withStill } from './place.ts';
+import { AskPlace, askPlaceOf, stillIn, withStill } from './place.ts';
 
 describe('the place in the URL', () => {
   test('an ask and a page of asks read back as written; any other path is none', () => {
-    for (const place of [AskPlace.Ask({ ask: 'a0123456780' }), AskPlace.AskPage({ page: 'a1' })])
-      expect(askPlaceOf(askHrefOf(place))).toEqual(Option.some(place));
+    expect(askPlaceOf('/asks/a0123456780')).toEqual(
+      Option.some(AskPlace.Ask({ ask: 'a0123456780' })),
+    );
+    expect(askPlaceOf('/asks/page/a1')).toEqual(Option.some(AskPlace.AskPage({ page: 'a1' })));
     expect(askPlaceOf('/films/f/export')).toEqual(Option.none());
   });
 

@@ -5,7 +5,7 @@
 // file's (`citeOf`). A multi-select is a list of the same union; only its
 // first item is citable (a batch is an action, not a place). Pure.
 
-import { Option, Schema } from 'effect';
+import { Schema } from 'effect';
 import { ActName } from '../core/address-schema.ts';
 import { reviewFileUrl } from '../core/api.ts';
 
@@ -50,19 +50,6 @@ export type SelectionTag = Selection['_tag'];
 
 /** A talk's words selected, as `?words=` holds them. */
 export type WordsSelection = typeof Selection.cases.Words.Type;
-
-/** `?words=<a>-<b>` read: take word indices, the first not after the last; none for anything else. */
-export const wordsIn = (scene: string, text: string): Option.Option<WordsSelection> =>
-  Option.flatMap(Option.fromNullishOr(/^(\d{1,6})-(\d{1,6})$/.exec(text)), ([, a, b]) =>
-    Option.map(
-      Option.liftPredicate({ from: Number(a), to: Number(b) }, (w) => w.from <= w.to),
-      (w) => Selection.cases.Words.make({ scene, ...w }),
-    ),
-  );
-
-/** `?words=`'s value for words `from`–`to`. */
-export const wordsText = (words: { readonly from: number; readonly to: number }): string =>
-  `${words.from}-${words.to}`;
 
 /**
  * The link that cites `selection` from the page at `href`: a file as itself

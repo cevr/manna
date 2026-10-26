@@ -42,9 +42,6 @@ const Icon = (props: { readonly of: IconName }) => (
   </svg>
 );
 
-/** The speaker a hear button holds: the shell's line icon, so the kit's pressed colour reaches it. */
-export const HearIcon = () => <Icon of="hear" />;
-
 /** A press that plays, by whether it plays now: stop while it does. */
 const PLAY_ICON = { true: 'stop', false: 'play' } as const;
 

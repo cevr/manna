@@ -1,9 +1,8 @@
 // What plays: a `Playable` is anything the pages play and keep in time (a
 // `<video>` or an `<audio>` the page shows, `playableOf`; an `Audio` the
 // page makes, `media-browser.ts`; a compare's pane over decoded frames,
-// `frame-pane.ts`; a fake in a test). The drivers (the review's synced
-// player, `lab/ask/sync.ts`; the preview's narration,
-// `player/narration.ts`) reach media only through it: time is read from it,
+// `frame-pane.ts`; a fake in a test). The drivers (the ask's synced
+// player, `lab/ask/sync.ts`) reach media only through it: time is read from it,
 // a seek is done once the frame at that time is shown, play and pause are
 // effects. `Media` owns what is the host's rule: what a refused play means
 // (`play`: the browser's refusal of sound nobody asked for is `Blocked`, a
@@ -139,7 +138,7 @@ export const playableOf = (el: MediaElement): Playable => {
 };
 
 /** A compare's panes, one per canvas, on one clock, and the letting go of them all. */
-export interface ComparePanes {
+interface ComparePanes {
   readonly panes: ReadonlyArray<Playable>;
   /** Let every pane and every render opened for them go. */
   readonly dispose: () => void;

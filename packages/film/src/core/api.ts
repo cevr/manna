@@ -34,7 +34,7 @@ import * as HttpApiGroup from 'effect/http-api/HttpApiGroup';
 import * as HttpApiSchema from 'effect/http-api/HttpApiSchema';
 import { BoardFile } from './board.ts';
 import { AskName, AskRecord, AsksPage, StepValues } from './ask.ts';
-import { OpId, Project } from './catalogue.ts';
+import { OpId } from './catalogue.ts';
 import { WaitTimeout } from './wait.ts';
 import { UnknownAct, UnknownScene, UnknownVoice } from './errors.ts';
 import {
@@ -59,7 +59,7 @@ import {
   JudgePointUnjudged,
   JudgeRuleMissing,
 } from './judge.ts';
-import { ReviewDuration, ReviewIndex, ReviewVideo } from './review.ts';
+import { ReviewDuration, ReviewIndex } from './review.ts';
 import {
   AttemptUnknown,
   AudioInvalid,
@@ -633,20 +633,6 @@ class AsksGroup extends HttpApiGroup.make('asks').add(
 ) {}
 
 /**
- * The project as the review page shows it: the project (`catalogue.ts`), the
- * review's ref of its folder when the review's roots hold it (the page's
- * compare link), and each rendered scene's video by scene id: this
- * checkout's catalogue record of it, its share copy standing in for its
- * master.
- */
-export const ProjectView = Schema.Struct({
-  project: Project,
-  folder: Schema.OptionFromOptionalKey(Schema.String),
-  videos: Schema.Record(Schema.String, ReviewVideo),
-});
-export type ProjectView = typeof ProjectView.Type;
-
-/**
  * A look (`core/easel.ts`): stills of a scene as its sources stand, drawn by
  * a page the lab holds warm, written under the film's `out/<film>/look/` and
  * answered by their paths. A tool's call (`film lab look`), not a page's: it
@@ -745,13 +731,6 @@ export type PageName = 'ask';
  * drive).
  */
 export type AppPage = PageName | 'render';
-
-/**
- * How often, at most, `#t=` follows a time that moves (play, a drag), in ms:
- * the window the player's writer holds to before it encodes a link (`tInUrl`,
- * `player/main.ts`).
- */
-export const TIME_EVERY_MS = 250;
 
 /** A film by its name: one path segment (a short's `/` is written `%2F`). */
 const filmParams = { film: Codec.Segment };

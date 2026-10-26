@@ -9,9 +9,9 @@
 import { isServer } from '@solidjs/web';
 import { Context as Services, Effect, Option, Scheduler } from 'effect';
 import type { Accessor } from 'solid-js';
-import { createEffect, createSignal, onCleanup } from 'solid-js';
+import { createSignal, onCleanup } from 'solid-js';
 import type { Input } from '../../browser/keys.ts';
-import type { Command, CommandId, Invocation } from '../../command/command.ts';
+import type { CommandId, Invocation } from '../../command/command.ts';
 import type { Context } from '../../command/context.ts';
 import type { Hub } from '../../command/hub.ts';
 import { chordLabel, titleWith } from '../../command/keymap.ts';
@@ -124,9 +124,4 @@ export const deferredRun = (hub: Hub, via: Invocation['via']): DeferredRun => {
       );
     },
   };
-};
-
-/** Register `commands` as they stand, again each time they change, for as long as the owner lives. */
-export const registerWhile = (hub: Hub, commands: Accessor<ReadonlyArray<Command>>): void => {
-  createEffect(commands, (now) => hub.commands.register(...now));
 };

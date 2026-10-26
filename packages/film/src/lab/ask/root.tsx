@@ -42,7 +42,7 @@ type Written = Pick<ReviewFile, 'ref' | 'mtime'>;
  * The page of asks shown, as its header names it: its id (its first ask's),
  * its asks' ids, its title, and the film its asks are of, if any.
  */
-export interface AskShown {
+interface AskShown {
   readonly page: string;
   readonly asks: ReadonlyArray<string>;
   readonly title: string;
@@ -107,14 +107,14 @@ interface AskRootMeta {
   readonly hub: Hub;
 }
 
-export interface AskRootValue {
+interface AskRootValue {
   readonly state: AskRootState;
   readonly actions: AskRootActions;
   readonly meta: AskRootMeta;
 }
 
 /** The ask page's root, given by `AskRoot`. */
-export const AskRootContext = createContext<AskRootValue>();
+const AskRootContext = createContext<AskRootValue>();
 
 /** The ask page's root: its reads, its place, its host and commands. */
 export const useAskRoot = (): AskRootValue => useContext(AskRootContext);

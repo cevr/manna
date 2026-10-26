@@ -30,11 +30,11 @@ export const lineRows = (id: string, parsed: Parsed, at: number): SectionRows =>
 };
 
 /** A piece of a line split at its marks: words said, or a mark's chip. */
-export type LinePiece = Data.TaggedEnum<{
+type LinePiece = Data.TaggedEnum<{
   Said: { readonly text: string };
   Mark: { readonly name: string };
 }>;
-export const LinePiece = Data.taggedEnum<LinePiece>();
+const LinePiece = Data.taggedEnum<LinePiece>();
 
 /**
  * A line, as `parse` read it, split at its marks, in reading order: each

@@ -17,7 +17,7 @@
 // write's answer out of order: it has no value to set it from.
 
 /** One ask: show its answer when it is still the newest, and whether it was overtaken. */
-export interface Ask {
+interface Ask {
   /** Run `show` unless an answer asked after this one is shown: whether it ran. */
   readonly answer: (show: () => void) => boolean;
   /** Whether something was asked after this. */

@@ -16,7 +16,6 @@
 import { Context, Data, Effect, Layer, Option } from 'effect';
 import type { Scope } from 'effect';
 import type { Film, FootageFrames, FootageRead, RenderOptions } from '../canvas/film.ts';
-import type { Ask } from '../core/asked.ts';
 
 /** A footage frame the host could not decode for a frame: named, so the frame is never drawn black. */
 export class FootageFrameMissing extends Data.TaggedError('FootageFrameMissing')<{
@@ -123,42 +122,3 @@ export const footageAt = (
         (footage): FootageShown => ({ footage }),
       ),
   });
-
-/**
- * Frame `T` of `film` painted by `paint`, with its footage decoded first (at
- * once for a film that reads none): it resolves once the frame is painted,
- * so whatever reads the canvas after it (a note's still) reads
- * this frame.
- */
-const paintedAt = (
-  film: Pick<Film, 'footageAt'>,
-  T: number,
-  paint: (shown: FootageShown) => void,
-): Effect.Effect<void, FootageFrameMissing, Footage> =>
-  Effect.flatMap(footageAt(film, T), (shown) => Effect.sync(() => paint(shown)));
-
-/**
- * `paintedAt` for one ask of a surface's frames (an `Ask` of the surface's
- * `newestAsked`, `core/asked.ts`): its frame painted through `answer`, and
- * its failure said, only while nothing was asked after it, as `<video>`
- * drops frames rather than show an old one late. An older ask whose footage
- * lands after a newer one's paints nothing and fails nothing, so a decode
- * that lands late never paints over a newer frame, and a frame no longer
- * asked for never says it failed.
- */
-export const paintedIfNewest = (
-  film: Pick<Film, 'footageAt'>,
-  T: number,
-  paint: (shown: FootageShown) => void,
-  ask: Ask,
-): Effect.Effect<void, FootageFrameMissing, Footage> =>
-  paintedAt(film, T, (shown) => {
-    if (!ask.overtaken()) ask.answer(() => paint(shown));
-  }).pipe(
-    Effect.catchTag('FootageFrameMissing', (missing) =>
-      Effect.suspend(() => {
-        if (ask.overtaken()) return Effect.void;
-        return Effect.fail(missing);
-      }),
-    ),
-  );

@@ -17,7 +17,7 @@ import {
   syncMachine,
 } from './sync-machine.ts';
 import { FILM_FPS } from '../../core/time.ts';
-import { PlayerKey, drifted, playerEvent } from './sync.ts';
+import { drifted } from './sync.ts';
 
 const player = syncMachine('A', 1);
 
@@ -124,7 +124,7 @@ describe('the synced player', () => {
     'steps one frame of the clock either way inside the set, as it stands, onto the frame grid',
     () =>
       Effect.gen(function* () {
-        const step = (by: number) => playerEvent(PlayerKey.Step({ by }));
+        const step = (by: number) => SyncEvent.Stepped({ frames: by });
         const frameOf = (t: number) => Math.round(t * FILM_FPS * 1e6) / 1e6;
         const result = yield* simulate(player, [
           SyncEvent.Measured({ end: 10 }),
@@ -160,7 +160,7 @@ describe('the synced player', () => {
     "steps and counts by the clock's video's own rate once it is known, the film rate until then",
     () =>
       Effect.gen(function* () {
-        const step = playerEvent(PlayerKey.Step({ by: 1 }));
+        const step = SyncEvent.Stepped({ frames: 1 });
         const result = yield* simulate(player, [
           SyncEvent.Measured({ end: 10 }),
           step,
@@ -187,7 +187,7 @@ describe('the synced player', () => {
   it.effect('steps a 29.97 video (30000/1001) on its own grid, never a whole rate', () =>
     Effect.gen(function* () {
       const fps = 30000 / 1001;
-      const step = playerEvent(PlayerKey.Step({ by: 1 }));
+      const step = SyncEvent.Stepped({ frames: 1 });
       const result = yield* simulate(player, [
         SyncEvent.Measured({ end: 60 }),
         SyncEvent.Timed({ fps }),

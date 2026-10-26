@@ -23,8 +23,7 @@ import type { LabFailure } from '../api.ts';
 import { FILM_FPS, clock, timecode } from '../../core/time.ts';
 import { type Playable, playableOf } from '../../browser/media.ts';
 import { Actor } from '../actor.tsx';
-import { HearIcon, PlayIcon } from '../page-shell.tsx';
-import { pressed } from '../pressed.ts';
+import { PlayIcon } from '../page-shell.tsx';
 import { useAskRoot } from './root.tsx';
 import {
   SyncEvent,
@@ -39,31 +38,6 @@ import {
   syncAt,
 } from './sync-machine.ts';
 import { type SyncDriver, makeSync } from './sync.ts';
-
-/**
- * The speaker that makes what it names the sound heard: the one hear button
- * every page draws (a Set's version, a Choices or Project card), pressed
- * while it is the one heard, named for a reader by `title`.
- */
-export const HearToggle = (props: {
-  readonly on: boolean;
-  readonly title: string;
-  readonly hear: () => void;
-  readonly disabled?: boolean;
-}) => (
-  <button
-    type="button"
-    class={['sh-tool', 'rv-sound', { on: props.on }]}
-    data-act="hear"
-    title={props.title}
-    aria-label={props.title}
-    aria-pressed={pressed(props.on)}
-    disabled={props.disabled}
-    onClick={() => props.hear()}
-  >
-    <HearIcon />
-  </button>
-);
 
 /** What a page's player whose clock cannot play says, in its row, in place of the scrub. */
 const CANNOT_PLAY_CLOCK = 'Can’t play this video';
@@ -180,11 +154,7 @@ interface Try {
  * one go as it leaves, whatever replaced it since. `joined`, when given, is
  * told the element's `Playable` as it joins.
  */
-export const useClockMedia = (
-  driver: SyncDriver,
-  id: string,
-  joined?: (media: Playable) => void,
-) => {
+const useClockMedia = (driver: SyncDriver, id: string, joined?: (media: Playable) => void) => {
   let release = Option.none<() => void>();
   onCleanup(() => Option.map(release, (letGo) => letGo()));
   return (el: HTMLMediaElement) => {
@@ -369,7 +339,7 @@ const untimed = Atom.make(AsyncResult.initial<ReviewDuration, LabFailure>()).pip
  * server renders counts frames past the clock's start, so its render never
  * waits on it.
  */
-export const useClockRate = (
+const useClockRate = (
   video: Accessor<Option.Option<Pick<ReviewFile, 'ref' | 'mtime'>>>,
   send: (event: SyncEvent) => void,
 ) => {

@@ -29,19 +29,6 @@ const STILL_HAND = (key: string | number): Hand => ({
   seed: Predicate.isNumber(key) ? key : [...key].reduce((n, c) => n * 31 + c.charCodeAt(0), 7),
 });
 
-/** `image` over the whole `w` × `h` frame, cropped to it from its middle (the film's own crop of a 3:2 panel). */
-export const paintImage = (
-  ctx: CanvasRenderingContext2D,
-  image: CanvasImageSource & { readonly width: number; readonly height: number },
-  w: number,
-  h: number,
-) => {
-  const scale = Math.max(w / image.width, h / image.height);
-  const sw = w / scale;
-  const sh = h / scale;
-  ctx.drawImage(image, (image.width - sw) / 2, (image.height - sh) / 2, sw, sh, 0, 0, w, h);
-};
-
 /** How long a verse panel's highlight takes to sweep its phrase, from its mark. */
 const SWEEP_S = 1.2;
 
@@ -110,7 +97,7 @@ export const paintText = (
 };
 
 /** The board's paper: what a frame with no picture yet is painted on. */
-export const BOARD_PAPER = '#f3ede0';
+const BOARD_PAPER = '#f3ede0';
 
 /** A board image as a page decodes it. */
 export type BoardImage = CanvasImageSource & { readonly width: number; readonly height: number };

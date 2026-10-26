@@ -108,11 +108,6 @@ export const TargetMenu = (props: ParentProps<{ readonly hub: Hub }>) => {
   );
 };
 
-/** The props a target hands the element it renders as (its `render`): spread them onto it. */
-export type TargetElementProps = Parameters<
-  NonNullable<ComponentProps<typeof ContextMenu.Trigger>['render']>
->[0];
-
 /** A thing the page's context menu opens on (a right-click or a long press on it): `of` is the thing. */
 export const Target = (
   props: ComponentProps<typeof ContextMenu.Trigger> & { readonly of: Selection },

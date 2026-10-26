@@ -58,18 +58,6 @@ export const browserCodecs = (phone: boolean): BrowserCodecs => ({
 export const isPhone = (host: Context.Context<Viewport>): Effect.Effect<boolean> =>
   Context.get(host, Viewport).matches(COARSE);
 
-const loadPanes = () => import('./webcodecs-browser.ts');
-
-/**
- * The review page's media: the page's own, its compares on WebCodecs panes
- * where the browser and the files allow. The panes' module, with the
- * decoders (mediabunny) it carries, loads only when the browser allows the
- * panes at all: a phone, or a browser with no `VideoDecoder`, plays `<video>`
- * and downloads none of it.
- */
-export const panesMediaLayer: Layer.Layer<Media, never, Frames | Viewport> =
-  panesMediaLayerWith(loadPanes);
-
 /**
  * `panesMediaLayer` with the panes' module loaded by `load`. A module that
  * will not load (offline, or gone after a rebuild) plays the compare on
