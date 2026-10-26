@@ -189,6 +189,8 @@ The film’s draft, kept by the owner (ask a5d8568415d), is `apps/animations/ser
 
 The appeal the owner chose, from his wife's word that every film ends with an invitation (chat, 2026-10-26). It quotes nothing; it calls back the film's own lines.
 
+It opens with the film's answer in one "So…" sentence (the owner's pick from a reference video's shape, chat, 2026-10-26): "So the milk is the plain word of God, the meat is more of Christ, and God serves them in order because that is how we grow." It quotes nothing new; it gathers `stones` (the first principles of the oracles of God, Hebrews 5:12), `priest` (the meat is more of Christ) and `grain` (Isaiah 28:10, in order).
+
 - **1 Peter 2:2** (KJV). Paraphrased: "If you ran ahead, come back to the milk. There is no shame in a cup of milk." (as in `milk`).
 
   > As newborn babes, desire the sincere milk of the word, that ye may grow thereby:
@@ -206,3 +208,11 @@ The appeal the owner chose, from his wife's word that every film ends with an in
 - **2 Peter 3:18** (KJV). Quoted, its opening “But” dropped: "“Grow in grace, and in the knowledge of our Lord and Saviour Jesus Christ.”", on its full-screen card with “Grow” in gold.
 
   > But grow in grace, and in the knowledge of our Lord and Saviour Jesus Christ. To him be glory both now and for ever. Amen.
+
+## `last`
+
+The quiet last line after the landing's music (the owner's pick from a reference video's shape, chat, 2026-10-26). It quotes nothing; it calls back the cup of `cold` and `milk`.
+
+- **Hebrews 5:12–14** (KJV). Paraphrased: "Every grown guest at that feast once drank from a cup. Not one of them stayed there." Milk is for the babe, and strong meat for those of full age.
+
+  > For every one that useth milk is unskilful in the word of righteousness: for he is a babe. But strong meat belongeth to them that are of full age, even those who by reason of use have their senses exercised to discern both good and evil.

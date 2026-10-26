@@ -127,7 +127,7 @@ const CARDS =
 export const script = defineScript([
   {
     id: 'cold',
-    say: '{baby}A baby drinks milk, and nobody minds. {/} {grown}But picture a young man at a wedding feast, {bottle}still asking for his {*}bottle. {/} {smile}We would {*}smile. {/} {letter}And yet one of the letters in our Bible says nearly that to its {*}readers. {/} {quote}They “are become such as have need of milk, and not of strong {*}meat.” {//} {ouch}Grown believers, {/} still on {*}milk. {/} {what}So what is milk, and what is meat? {/} {why}And why would the Bible care which one we eat?',
+    say: '{baby}A baby drinks milk, and nobody minds. {/} {grown}But picture a young man at a wedding feast, {bottle}still asking for his {*}bottle. {/} {smile}We would {*}smile. {/} {letter}And yet one of the letters in our Bible says nearly that to its {*}readers. {/} {quote}They “are become such as have need of milk, and not of strong {*}meat.” {//} {ouch}Grown believers, still on {*}milk. {/} {what}So what is milk, and what is meat? {/} {why}And why would the Bible care which one we eat?',
     cite: ['Hebrews 5:12'],
     cast: ['lead-feast', 'feast-mother'],
     picture: `STORY: a cardboard courtyard at a village wedding, teal day, lanterns strung, a long table of bread, fruit and dishes. On \`baby\` a mother lifts a cup to a baby's lips, close on the baby's glad face. On \`grown\` the camera trucks down the table to a tall young man in his festive long cream tunic and teal mantle, the series lead; on \`bottle\` he holds up a baby's bottle, hopeful, and the guests either side turn and stare (a light moment); on \`smile\` they smile kindly at him. On \`letter\` a rolled scroll drops onto the table in front of him and unrolls; on \`quote\` its words are not shown (CRAFT rule 1), only the gold seal. On \`ouch\` he winces. On \`what\` the camera lifts to a cup of milk and a platter of bread side by side, the only props lit. ${CARDS}`,
@@ -139,6 +139,8 @@ export const script = defineScript([
   {
     id: 'milk',
     say: "{start}Start with the milk. {/} {peter}Peter writes, {newborn}“As newborn babes, desire the sincere milk of the word, that ye may {*}grow thereby.” {/} {sincere}Sincere here means pure, {mixed}with {*}nothing mixed in. {/} {word}So the milk is God's word, plain and unmixed. {/} {good}And milk is {*}good. {/} {need}A baby cannot do without it. {/} {began}Every one of us began there, {shame}and there is no shame in a cup of milk.",
+    // A chapter turn: 3 s of music alone before the next act.
+    tail: 3,
     cite: [
       '1 Peter 2:2',
       'E. J. Waggoner, The Present Truth, August 17, 1893, 315',
@@ -149,7 +151,7 @@ export const script = defineScript([
   },
   {
     id: 'stones',
-    say: '{which}So which truths are the milk? {/} {first}Hebrews calls them the first principles of the oracles of God. {/} {spoken}An oracle is a word God himself has spoken. {/} {plain}First principles are the plain {*}beginnings: {/} {child}simple enough for a child, {/} {build}and strong enough to build a whole life {*}on. {/} {foundation}Hebrews calls them a {*}foundation, {/} {christ}and Paul names that foundation: “other foundation can no man lay than that is laid, which is Jesus {*}Christ.” {//} {begins}That is where this series {*}begins.',
+    say: '{which}So which truths are the milk? {/} {first}Hebrews calls them the first principles of the oracles of God. {/} {spoken}An oracle is a word God himself has spoken. {/} {plain}First principles are the plain {*}beginnings: {/} {child}simple enough for a child, {build}and strong enough to build a whole life {*}on. {/} {foundation}Hebrews calls them a {*}foundation, {christ}and Paul names that foundation: “other foundation can no man lay than that is laid, which is Jesus {*}Christ.” {//} {begins}That is where this series {*}begins.',
     cite: ['Hebrews 5:12', 'Hebrews 6:1', '1 Corinthians 3:11'],
     cast: ['villager-child'],
     picture: `IDEA: the parchment. On \`first\` a gold speech-ribbon unrolls from the top of the page. On \`plain\` a level line is drawn, and on \`child\` and \`build\` plain paper stones settle onto it one after another, each a simple cut-paper block with no icon, mark or letter (the first principles are not drawn as a list). On \`foundation\` the camera pulls back: a row of plain stones, a foundation with nothing yet built on it, the gold ribbon settled under them as their bed. On \`christ\` a warm gold light rises from inside the first stone and runs through the whole row until every stone glows: the foundation is Christ. On \`begins\` the linen child steps onto the first glowing stone. ${CARDS}`,
@@ -174,7 +176,9 @@ export const script = defineScript([
   },
   {
     id: 'rush',
-    say: '{other}There is a mistake on the other side, too. {/} {skip}Some reach for the strong meat before they have learned the milk, {run}like a child who tries to run before he can {*}walk. {/} {peter}Peter warns of things in Scripture “hard to be understood, which they that are unlearned and unstable wrest.” {/} {twist}To wrest is to twist. {/} {own}The Bible explains its own words, {/} and we learn them one at a time. {/} {fill}Skip those first steps, and we fill its words with meanings of our own, {want}until it says {*}what we wanted. {/} {order}That is why it serves its truth in {*}order.',
+    say: '{other}There is a mistake on the other side, too. {/} {skip}Some reach for the strong meat before they have learned the milk, {run}like a child who tries to run before he can {*}walk. {/} {peter}Peter warns of things in Scripture “hard to be understood, which they that are unlearned and unstable wrest.” {/} {twist}To wrest is to twist. {/} {own}The Bible explains its own words, and we learn them one at a time. {/} {fill}Skip those first steps, and we fill its words with meanings of our own, {want}until it says {*}what we wanted. {/} {order}That is why it serves its truth in {*}order.',
+    // A chapter turn: 4 s of music alone before the next act.
+    tail: 4,
     cite: [
       '2 Peter 3:16',
       'Ellen G. White, Education, 190',
@@ -182,11 +186,13 @@ export const script = defineScript([
       'Ellen G. White, The Bible Echo, August 26, 1895',
     ],
     cast: ['villager-child', 'villager-toddler'],
-    picture: `IDEA: the parchment, the row of plain stones from \`stones\` along the bottom. On \`skip\` the linen child hops over the stones without touching them and reaches for a heaped platter at the top of the page. On \`run\` the linen toddler sets off running, tips forward and sits down hard, unhurt, and gets up (a light moment). On \`peter\` a page of writing appears; on \`twist\` one line of it is wrung like a wet cloth, its letters bending. On \`own\` a small book opens beside the page, each word on the page linked to its entry in the book by a thin gold thread. On \`fill\` the child who skipped writes over the empty entries in a colour of his own, and on \`want\` the page turns into a mirror and shows his face. On \`order\` the mirror clears to the page, and the child steps back down onto the first stone. ${CARDS}`,
+    picture: `IDEA: the parchment, the row of plain stones from \`stones\` along the bottom. On \`skip\` the linen child hops over the stones without touching them and reaches for a heaped platter of plant food at the top of the page: loaves, grain, fruit, nuts and vegetables, never meat, fish or bones. On \`run\` the linen toddler sets off running, tips forward and sits down hard, unhurt, and gets up (a light moment). On \`peter\` a page of writing appears; on \`twist\` one line of it is wrung like a wet cloth, its letters bending. On \`own\` a small book opens beside the page, each word on the page linked to its entry in the book by a thin gold thread. On \`fill\` the child who skipped writes over the empty entries in a colour of his own, and on \`want\` the page turns into a mirror and shows his face. On \`order\` the mirror clears to the page, and the child steps back down onto the first stone. ${CARDS}`,
   },
   {
     id: 'math',
-    say: '{leave}So do we leave the milk {*}behind? {/} {go}Hebrews does say, leaving the principles, let us go on. {/} {but}But leaving them never means throwing them {*}away. {//} {student}Think of a student of mathematics. {/} {adds}First he learns to add and subtract and multiply. {/} {stay}He must not stay there forever. {/} {never}But he never stops {*}using them. {/} {hardest}His hardest problems are those first steps, {*}combined. {/} {unlearned}A student who never learned to add {/} cannot solve them at {*}all. {/} {guess}He can only {*}guess, {/} {wrested}and that is how the hard places of Scripture get {*}wrested. {//} {meat}So it is with meat. {/} {nothing}Solid food leaves out nothing that was in the milk. {/} {more}It has all of it, and {*}more.',
+    say: '{leave}So do we leave the milk {*}behind? {/} {go}Hebrews does say, leaving the principles, let us go on. {/} {but}But leaving them never means throwing them {*}away. {//} {student}Think of a student of mathematics. {/} {adds}First he learns to add and subtract and multiply. {/} {stay}He must not stay there forever. {/} {never}But he never stops {*}using them. {/} {hardest}His hardest problems are those first steps, {*}combined. {/} {unlearned}A student who never learned to add {/} cannot solve them at {*}all. {/} {guess}He can only {*}guess, {wrested}and that is how the hard places of Scripture get {*}wrested. {//} {meat}So it is with meat. {/} {nothing}Solid food leaves out nothing that was in the milk. {/} {more}It has all of it, and {*}more.',
+    // A chapter turn: 4 s of music alone before the next act.
+    tail: 4,
     cite: [
       'Hebrews 6:1',
       'E. J. Waggoner, The Present Truth, January 31, 1895, 65',
@@ -198,7 +204,9 @@ export const script = defineScript([
   },
   {
     id: 'priest',
-    say: '{what}So what is the meat? {/} {right}Hebrews serves it right after the milk. {/} {christ}It is Jesus, made “an high {*}priest for ever after the order of Melchisedec.” {//} {once}Not only what Christ did {*}once, {now}but what he is doing {*}now. {/} {other}The foundation is {*}Christ, {/} and the meat is Christ {*}too. {/} {him}Never something other: {*}more of him. {/} {light}Every deeper truth is read by one light, and that light streams from his {*}cross.',
+    say: '{what}So what is the meat? {/} {right}Hebrews serves it right after the milk. {/} {christ}It is Jesus, made “an high {*}priest for ever after the order of Melchisedec.” {//} {once}Not only what Christ did {*}once, {now}but what he is doing {*}now. {/} {other}The foundation is {*}Christ, and the meat is Christ {*}too. {/} {him}Never something other: {*}more of him. {/} {light}Every deeper truth is read by one light, and that light streams from his {*}cross.',
+    // A chapter turn: 4 s of music alone before the next act.
+    tail: 4,
     cite: [
       'Hebrews 5:10–11',
       'Hebrews 6:19–20',
@@ -223,7 +231,7 @@ export const script = defineScript([
   },
   {
     id: 'eat',
-    say: '{nobody}And nobody can eat your food for you. {/} {jer}The prophet Jeremiah said, {found}“Thy words were found, and I did eat them; and thy word was unto me the {joy}joy and rejoicing of mine heart.” {//} {body}Your body lives on the food you eat yourself, {/} {digested}once it is {*}digested {/} and becomes part of {*}you. {/} {soul}And your soul lives on the {*}word you take in yourself, {/} {part}until it becomes part of you, {/} {live}and you {*}live it.',
+    say: '{nobody}And nobody can eat your food for you. {/} {jer}The prophet Jeremiah said, {found}“Thy words were found, and I did eat them; and thy word was unto me the {joy}joy and rejoicing of mine heart.” {//} {body}Your body lives on the food you eat yourself, {digested}once it is {*}digested {/} and becomes part of {*}you. {/} {soul}And your soul lives on the {*}word you take in yourself, {part}until it becomes part of you, {live}and you {*}live it.',
     cite: [
       'Jeremiah 15:16',
       'Ellen G. White, The Signs of the Times, June 25, 1902',
@@ -251,7 +259,7 @@ export const script = defineScript([
   },
   {
     id: 'appeal',
-    say: '{you}So wherever you are on the path, {/} this is for {*}you. {/} {fast}If you ran ahead, come back to the {*}milk. {/} {shame}There is no shame in a cup of milk. {/} {slow}If you have stayed on milk too long, {/} {chew}it is time to start {*}chewing. {/} {open}Open the word {*}today, {/} {one}and take one plain truth. {/} {set}The table is set, {/} {place}and there is a place for {*}you.',
+    say: '{so}So the milk is the plain word of God, the meat is more of {*}Christ, and God serves them in order because that is how we {*}grow. {//} {you}Wherever you are on the path, this is for {*}you. {/} {fast}If you ran ahead, come back to the {*}milk. {/} {shame}There is no shame in a cup of milk. {/} {slow}If you have stayed on milk too long, {chew}it is time to start {*}chewing. {/} {open}Open the word {*}today, {one}and take one plain truth. {/} {set}The table is set, {place}and there is a place for {*}you.',
     cite: ['1 Peter 2:2', 'Hebrews 5:14', 'Isaiah 28:10'],
     cast: ['christ', 'lead-feast'],
     picture: `STORY, the landing's courtyard under the same teal-to-yellow sky. On \`you\` Christ, the host, in His library dress (the plain white robe and the gold sash), turns from the head of the table toward the viewer, the series lead seated beside Him. On \`fast\` He holds out the small clay cup of milk from \`milk\`; on \`slow\` the bread from \`grain\`; on \`open\` an open book lies on the table, and on \`one\` a single line of it glows gold. On \`set\` the camera settles on the table; on \`place\` an empty place, set with a cup and bread, is lit at the front of the table, facing the viewer. ${CARDS}`,
@@ -260,10 +268,19 @@ export const script = defineScript([
     id: 'thesis',
     say: '{grow}{*}“Grow in grace, and in the knowledge of our Lord and Saviour Jesus Christ.”',
     lead: 1,
-    min: 30,
+    min: 18,
     cite: ['2 Peter 3:18'],
     cast: ['lead-feast', 'christ'],
     picture: `STORY: The answer comes as the only text, the take's own first clause on the full-screen card: "Grow in grace", "Grow" large in gold, the answer to \`cold\`'s question. The music rises alone for about thirty seconds while the camera eases back and lifts over the courtyard, the young man still at the host's side at the set table (the host is Christ, in His library dress, the plain white robe and the gold sash, as in \`name\`). Past the courtyard wall, the field from \`grain\` moves in the wind, full corn, and the hill of \`path\` rises beyond it. ${CARDS}`,
+  },
+  {
+    id: 'last',
+    say: '{every}Every grown guest at that feast once drank from a cup. {/} {none}Not one of them {*}stayed there.',
+    lead: 1,
+    tail: 3,
+    cite: ['Hebrews 5:12–14'],
+    cast: [],
+    picture: `STORY: the wedding courtyard from \`cold\` at dusk, the guests gone, the lanterns low. On \`every\` the camera finds a small clay cup of milk alone on the long table in the last light; on \`none\` the bread beside it, and the empty bench where the young man sat. Quiet; no figure. ${CARDS}`,
   },
   {
     id: 'end',
