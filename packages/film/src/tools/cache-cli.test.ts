@@ -27,7 +27,7 @@ import { cache } from './cache-cli.ts';
 import { CacheBusy, CacheUnrecorded, FlagsConflict } from './errors.ts';
 import { FilmFolder } from './film-repo.ts';
 import { memoryFileSystem, memoryLocks, printingTo, text } from './host/testing.ts';
-import { recordRender, tryHoldCache } from './segment-cache.ts';
+import { holdCache, recordRender } from './segment-cache.ts';
 import { keepSegment } from './segments.ts';
 
 const DAY = 86_400_000;
@@ -182,7 +182,7 @@ describe('film cache', () => {
       return Effect.gen(function* () {
         yield* stocked;
         const { exit, lines } = yield* Effect.scoped(
-          Effect.andThen(tryHoldCache('/out/f'), cli('f', '--prune', '--days', '0')),
+          Effect.andThen(holdCache('/out/f'), cli('f', '--prune', '--days', '0')),
         );
         const failed = Exit.match(exit, {
           onSuccess: Option.none,

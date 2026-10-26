@@ -13,14 +13,7 @@ import { Cause, Effect, Exit, FileSystem, Option, Path, Schema, type Scope } fro
 import { CacheBusy, CacheEscapes, CacheUnrecorded } from './errors.ts';
 import { memoryFileSystem, memoryManifestLock, text } from './host/testing.ts';
 import { ManifestLock } from './manifest-lock.ts';
-import {
-  type PruneRule,
-  pruneHeld,
-  pruneIdle,
-  readCache,
-  recordRender,
-  tryHoldCache,
-} from './segment-cache.ts';
+import { pruneHeld, pruneIdle, readCache, recordRender, holdCache } from './segment-cache.ts';
 import { keepSegment, reuseSegment } from './segments.ts';
 
 const DAY = 86_400_000;
@@ -46,6 +39,9 @@ const kept = (key: string, daysAgo: number, bytes = 100, segments = folder) =>
   });
 
 /** The rule at NOW: unused past 7 days, keeping none, unless `rule` says otherwise. */
+/** What a prune is told: when, how many days, which keys to keep. */
+type PruneRule = Parameters<typeof pruneIdle>[1];
+
 const ruleOf = (rule: Partial<PruneRule>): PruneRule => ({
   now: NOW,
   days: 7,
@@ -250,7 +246,7 @@ describe('pruning a film’s render cache', () => {
       yield* kept('old', 30);
       const busy = yield* Effect.scoped(
         Effect.gen(function* () {
-          expect(yield* tryHoldCache(out)).toBe(true);
+          yield* holdCache(out);
           return failure(yield* Effect.exit(prune()));
         }),
       );
@@ -356,7 +352,7 @@ describe('pruning held', () => {
       yield* kept('old', 30);
       const pruned = yield* Effect.scoped(
         Effect.gen(function* () {
-          yield* tryHoldCache(out);
+          yield* holdCache(out);
           return yield* pruneHeld(out, ruleOf({}), false);
         }),
       );

@@ -52,7 +52,7 @@ const rendersOf = (path: Path.Path, out: string) => path.join(cacheOf(path, out)
  * render's or the prune's: done, failed or interrupted): false, tried once,
  * while another holder (of this process or any other) has it.
  */
-export const tryHoldCache = (
+const tryHoldCache = (
   out: string,
 ): Effect.Effect<boolean, PlatformError, Scope.Scope | FileSystem.FileSystem | Path.Path> =>
   Effect.gen(function* () {
@@ -225,7 +225,7 @@ const recorded = (out: string) =>
   });
 
 /** What a prune keeps and removes by. */
-export interface PruneRule {
+interface PruneRule {
   /** Now, in ms. */
   readonly now: number;
   /** A segment no render used for more than this many days before `now` goes. */
