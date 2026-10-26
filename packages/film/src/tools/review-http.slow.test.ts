@@ -7,7 +7,7 @@ import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Path, Schedule, Schema } from 'effect';
 import { ReviewDuration, ReviewIndex } from '../core/review.ts';
-import { SetSayPost, labUrls, reviewFileUrl, reviewPhoneUrl, ServerFailed } from '../core/api.ts';
+import { labUrls, reviewFileUrl, reviewPhoneUrl, ServerFailed } from '../core/api.ts';
 import { refFromUrl } from './review-http.ts';
 import {
   ReviewTestRoot,
@@ -16,8 +16,6 @@ import {
   reviewTestAsk,
   reviewTestBody,
   reviewTestGet,
-  reviewTestPost,
-  reviewTestRefusalOf,
   REVIEW_TEST_HOME,
   REVIEW_TEST_HOST,
 } from './review/testing.ts';
@@ -207,29 +205,6 @@ describe('review routes', () => {
       }).pipe(Effect.scoped, Effect.provide(reviewHttpFixture)),
   );
 
-  it.effect("takes a say on a set's version by the folder's ref, each `/` written %2F", () =>
-    Effect.gen(function* () {
-      const sayOn = (folder: string) =>
-        reviewTestAsk(
-          reviewTestPost(
-            `/api/review/sets/${encodeURIComponent(folder)}/render:roof/say`,
-            Schema.encodeSync(Schema.fromJsonString(SetSayPost))({
-              variant: 'A',
-              say: { _tag: 'Approve' },
-            }),
-            REVIEW_TEST_HOME,
-          ),
-        );
-      // The montage is reached by its ref, and keeps no say.
-      const montage = yield* sayOn('out/art');
-      expect(montage.status).toBe(409);
-      const refusal = reviewTestRefusalOf(yield* reviewTestBody(montage));
-      expect(refusal._tag).toBe('VerbRefused');
-      expect(refusal.message).toContain('montage');
-      expect((yield* sayOn('out/none')).status).toBe(404);
-    }).pipe(Effect.scoped, Effect.provide(reviewHttpFixture)),
-  );
-
   it.effect("answers its listener's own name and loopback's, and no other host or site", () =>
     Effect.gen(function* () {
       const through = yield* reviewTestAsk(
@@ -266,7 +241,7 @@ describe('review routes', () => {
 
   it.effect("passes the app's page the rest, behind the same hosts", () =>
     Effect.gen(function* () {
-      for (const path of ['/', '/chunk-a1.js', '/films/tiny/narration/s1.mp3']) {
+      for (const path of ['/asks/a1', '/chunk-a1.js', '/films/tiny/narration/s1.mp3']) {
         const own = yield* reviewTestAsk(reviewTestGet(path, { host: REVIEW_TEST_HOST }));
         expect([path, own.status, yield* reviewTestBody(own)]).toEqual([path, 200, `page ${path}`]);
         const rebound = yield* reviewTestAsk(reviewTestGet(path, { host: 'evil.example:8229' }));

@@ -1,0 +1,263 @@
+// The look of the lab's pages, read only through the studio's tokens
+// (`player/tokens.css`, design language §3 and §5): panels on `--surface-1`
+// with no radius, the kit's buttons and segmented controls (the shell's
+// sheet) placed in them, chips in their state's colour, one accent for the playhead, selection, focus and
+// the one primary verb, and every grid folding to one column on a phone
+// (the transport, one row in the shell's dock, stays in reach while the page
+// scrolls: on the shell's floor on a phone, under the header on a laptop). Put
+// in the page by its mount, so the page needs no stylesheet of its own.
+
+import { PHONE, WIDE } from '../viewport.ts';
+
+export const PAGE_CSS = `
+body.rv {
+  color-scheme: dark;
+  margin: 0; background: var(--surface-0); color: var(--text-1);
+  font-family: var(--font); font-size: var(--body-fs); line-height: var(--body-lh);
+}
+.rv *, .rv *::before, .rv *::after { box-sizing: border-box; }
+:where(.rv) a { color: inherit; }
+/* A control is reached on its whole box: the browser leaves a rounded corner out of what a pointer meets. */
+:where(.rv) :where(.sh-btn, .sh-tool) { position: relative; }
+:where(.rv) :where(.sh-btn, .sh-tool)::after { content: ''; position: absolute; inset: 0; }
+.rv-main { padding: var(--s-4) var(--gutter) var(--s-8); padding-bottom: max(var(--s-8), env(safe-area-inset-bottom)); max-width: 1900px; margin: 0 auto; }
+.rv-h {
+  font-size: var(--fs-2); line-height: var(--lh-2); text-transform: uppercase; letter-spacing: var(--track-caps);
+  color: var(--text-2); margin: var(--s-6) 0 var(--s-2); font-weight: var(--w-2);
+}
+.rv-hint, .rv-meta { color: var(--text-2); font-size: var(--fs-2); line-height: var(--lh-2); }
+.rv-row { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; }
+.rv-pick { margin-bottom: var(--s-3); }
+/* A set's modes, and in Compare its layouts beside them (wrapping under on a phone). */
+.rv-set-tools { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-bottom: var(--s-3); }
+.rv-grid { display: grid; gap: var(--s-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
+.rv-grid.rv-wide { grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr)); }
+.rv-grid.rv-two { grid-template-columns: repeat(auto-fit, minmax(min(100%, 640px), 1fr)); }
+.rv-card { background: var(--surface-1); overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+a.rv-card { text-decoration: none; }
+a.rv-card:hover { background: var(--surface-2); }
+.rv-card video, .rv-media { display: block; width: 100%; aspect-ratio: 16 / 9; background: var(--surface-0); object-fit: contain; }
+.rv-card.rv-tall video { aspect-ratio: auto; max-height: 70vh; }
+/*
+ * On a laptop a Set's picture is no taller than its view's room on the
+ * first screen (\`--rv-room\`: under the header, the set's tools row, the
+ * docked transport and the gaps between them), less the rows its view shows
+ * over it (\`--rv-pick-h\`: a row of chips and its gap). A version's picture
+ * (one alone takes the page's width) is contained, so a shorter box
+ * letterboxes the frame, and is less its caption too (\`--rv-cap-h\`: a hit
+ * and its padding), which stays on the first screen. A wipe's frame and a
+ * difference's are narrowed to the room at 16:9, so their pictures still
+ * fill them and the divider splits the picture itself; their captions start
+ * at the fold, as the at-rest budget counts those views.
+ */
+@media ${WIDE} {
+  .rv-main {
+    --rv-room: calc(100dvh - var(--header-h) - var(--s-4) - var(--control-h) - 2 * var(--s-1)
+      - 2 * var(--s-3) - var(--dock-h));
+    --rv-cap-h: calc(var(--hit) + 2 * var(--s-2));
+    --rv-pick-h: calc(var(--control-h) + var(--s-3));
+  }
+  .rv-grid > .rv-card[data-id] video { max-height: calc(var(--rv-room) - var(--rv-cap-h)); }
+  .rv-wipe { max-width: calc((var(--rv-room) - var(--rv-pick-h)) * 16 / 9); margin-inline: auto; }
+  /* A difference shows stills: no transport is docked over it, its room is the dock's too. */
+  .rv-diff {
+    max-width: calc((var(--rv-room) + var(--dock-h) + var(--s-3) - 2 * var(--rv-pick-h)) * 16 / 9);
+    margin-inline: auto;
+  }
+}
+/* A version's picture is its card's to press: a long-press opens the card's menu (its steps,
+   SU-11), never the browser's own over a video, which takes the touch. */
+.rv-card video:not([controls]) { pointer-events: none; }
+/* A still that opens the lightbox: a bare button around its picture. */
+.rv-zoom { display: block; width: 100%; padding: 0; border: 0; background: none; color: inherit; cursor: zoom-in; }
+/* The pair wiped: both videos stacked full width, the other right of the divider. */
+.rv-wipe { position: relative; background: var(--surface-0); overflow: hidden; touch-action: pan-y; }
+.rv-wipe video, .rv-wipe canvas { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: contain; }
+.rv-wipe .rv-wipe-other { position: absolute; inset: 0; }
+.rv-wipe-line { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--on-picture); }
+/* The grip's target is its whole --hit square (a round button is hit only
+   inside its circle); the circle is drawn, the same size, by ::before. */
+.rv-wipe-grip {
+  position: absolute; top: 50%; left: 50%; width: var(--hit); height: var(--hit); transform: translate(-50%, -50%);
+  border: 0; background: none; cursor: ew-resize; touch-action: none; padding: 0;
+}
+.rv-wipe-grip::before {
+  content: ''; position: absolute; inset: 0;
+  border-radius: var(--r-dot); border: 2px solid var(--on-picture); background: var(--on-picture-shade);
+}
+.rv .rv-wipe-grip:focus-visible { box-shadow: none; }
+.rv .rv-wipe-grip:focus-visible::before { box-shadow: var(--focus-ring); }
+.rv-wipe-caps { margin-top: var(--s-2); }
+/* The pair's difference at a moment: the other's still over the first's, in the difference blend. */
+.rv-diff { position: relative; background: var(--surface-0); isolation: isolate; }
+.rv-diff img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: contain; }
+.rv-diff .rv-diff-other { position: absolute; inset: 0; height: 100%; mix-blend-mode: difference; }
+.rv-cap { display: flex; align-items: center; gap: var(--s-2); padding: var(--s-2) var(--s-3); min-width: 0; }
+.rv-name { font-weight: var(--w-2); white-space: nowrap; }
+.rv-tag {
+  color: var(--text-2); font-size: var(--fs-2); line-height: var(--lh-2); flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* A hear button is the kit's icon button (a speaker, \`--accent\` once it is on), at its caption's end. */
+.rv-cap > .rv-sound { margin-left: auto; }
+.rv-letter {
+  font-weight: var(--w-3); min-width: var(--s-6); height: var(--s-6); padding: 0 var(--s-1); border-radius: var(--r-1);
+  display: grid; place-items: center; background: var(--surface-3); color: var(--text-1); flex: none; font-size: var(--fs-2);
+}
+.rv-body { padding: var(--s-2) var(--s-3); }
+/* A series: a card whose head opens its drafts, each a link of the pointer's size into the Script reader. */
+/* A series opens apart from its neighbours: a card shut keeps its own height beside one open. */
+.rv-series { align-self: start; }
+.rv-series summary { display: flex; align-items: baseline; gap: var(--s-2); min-height: var(--hit); padding: var(--s-2) var(--s-3); cursor: pointer; }
+/* Shut or open, said as the production's folds say it. */
+.rv-series summary::before { content: '›'; }
+.rv-series[open] > summary::before { rotate: 90deg; }
+.rv-drafts { margin: 0; padding: 0 var(--s-3) var(--s-2); list-style: none; }
+.rv-drafts li + li { border-top: var(--border); }
+.rv-drafts a { display: flex; align-items: center; min-height: var(--hit); padding-block: var(--s-1); text-decoration: none; }
+@media (hover: hover) { .rv-drafts a:hover { text-decoration: underline; } }
+.rv-strip { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1px; background: var(--surface-0); }
+.rv-strip img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; }
+/* A set card's count of versions, after its title in the line's flow (rows set their badges apart by their gap). */
+.rv-body > b + .sh-badge { margin-left: var(--s-1); }
+/*
+ * The transport: one row in the page's dock (\`.sh-dock\`, the shell's), on
+ * a Set: play, the time, the scrub taking what is
+ * left, then the rate. On a phone the time is where the clock is; the scrub
+ * shows the end. On a laptop the header's timecode is the time, and the row
+ * says only the length.
+ */
+.rv-transport { flex: 1; display: flex; flex-wrap: nowrap; align-items: center; gap: var(--s-3); min-width: 0; }
+@media ${WIDE} {
+  .rv-main .sh-dock { margin-bottom: var(--s-3); }
+  /* One timecode on a laptop: the header's; the row keeps the length. */
+  .rv-time-at { display: none; }
+}
+/* Play: the kit's primary button, square. */
+.rv-big { width: var(--control-h); padding: 0; font-size: var(--fs-4); flex: none; }
+.rv-transport input[type="range"] { flex: 1 1 0; min-width: 0; }
+.rv-transport > .sh-btn { flex: none; }
+.rv-time { font-family: var(--font-mono); color: var(--text-1); font-size: var(--fs-5); line-height: var(--lh-5); font-weight: var(--w-2); white-space: nowrap; flex: none; }
+@media ${PHONE} {
+  .rv-transport { gap: var(--s-2); }
+  .rv-time-rest { display: none; }
+}
+.rv-time[data-state="Buffering"] { color: var(--accent); }
+/* A clock whose media cannot play: the row says so where the scrub was. */
+.rv-transport > .rv-failed {
+  flex: 1 1 0; min-width: 0; color: var(--state-warning);
+  font-size: var(--fs-2); line-height: var(--lh-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/*
+ * A lone video (a video in no set, a render in a sheet): its picture a press
+ * that plays or pauses it, then, once it has moved, its row under it in its
+ * card. Its clock is its own, so the row says its time on a laptop too.
+ */
+.rv-alone-picture { position: relative; display: block; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; }
+/* One whose media cannot play says so across the foot of its picture. */
+.rv-alone-picture .rv-failed {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: var(--s-2) var(--s-3);
+  background: var(--backdrop-deep); color: var(--state-warning);
+  font-size: var(--fs-2); line-height: var(--lh-2); text-align: left;
+}
+.rv-alone-row { padding: var(--s-2) var(--s-3); }
+/* At rest its picture says it plays: the kit's ▶ on a disc at its middle, and its length in a corner. */
+.rv-rest { position: absolute; inset: 0; pointer-events: none; }
+.rv-rest-play { position: absolute; left: 50%; top: 50%; translate: -50% -50%; display: grid; place-items: center;
+  width: calc(2 * var(--hit)); height: calc(2 * var(--hit)); border-radius: 50%;
+  background: var(--backdrop); color: var(--text-1); }
+.rv-rest-play .sh-icon { width: 24px; height: 24px; translate: 2px 0; fill: currentColor; }
+.rv-rest-length { position: absolute; right: var(--s-2); bottom: var(--s-2); padding: 0 var(--s-1);
+  border-radius: var(--r-1); background: var(--backdrop-deep); color: var(--text-1);
+  font-family: var(--font-mono); font-size: var(--fs-2); line-height: var(--lh-2); font-variant-numeric: tabular-nums; }
+/* Play, quiet (\`PlayedAlone\`'s \`quiet\`): the kit's quiet button, at the pointer's size. */
+.rv-big[data-tone="quiet"] { width: var(--hit); min-height: var(--hit); }
+/* A row alone keeps its own time at any width. */
+@media ${WIDE} {
+  .rv-alone-row .rv-time-at { display: inline; }
+}
+/*
+ * The lightbox (\`Zoom\`), over the header and dock, fills the viewport: rings inside. The still
+ * and its caption are one group held in the middle, the caption right under the still; the still
+ * is at most the view less the padding and the caption's line, so the caption never sits off
+ * the screen.
+ */
+.rv-lightbox-backdrop { position: fixed; inset: 0; background: var(--backdrop-deep); z-index: var(--cmd-layer); }
+.rv-lightbox {
+  position: fixed; inset: 0; display: grid; place-items: center; align-content: center; z-index: calc(var(--cmd-layer) + 1);
+  padding: var(--s-4); cursor: zoom-out; gap: var(--s-2);
+}
+.rv-lightbox[role]:focus-visible{box-shadow:var(--focus-ring-inset)}
+.rv-lightbox img { max-width: 100%; max-height: calc(100dvh - 2 * var(--s-4) - var(--s-2) - var(--lh-2)); }
+.rv-lightbox-caption { margin: 0; color: var(--text-2); font-size: var(--fs-2); font-weight: inherit; }
+.rv-note {
+  background: var(--surface-1); padding: var(--s-3) var(--s-4); font-size: var(--fs-3); line-height: var(--lh-3);
+  min-width: 0; overflow-wrap: anywhere;
+}
+.rv-note h1, .rv-note h2, .rv-note h3, .rv-note h4 {
+  color: var(--text-1); margin: var(--s-3) 0 var(--s-1); font-size: var(--fs-4); line-height: var(--lh-4); font-weight: var(--w-3);
+}
+.rv-note h1 { font-size: var(--fs-5); line-height: var(--lh-5); }
+.rv-note h3, .rv-note h4 { font-size: var(--fs-3); line-height: var(--lh-3); }
+.rv-note ul, .rv-note ol { margin: var(--s-1) 0; padding-left: var(--s-4); }
+.rv-note li > ul, .rv-note li > ol { margin: 0; }
+.rv-note p { margin: var(--s-1) 0; }
+.rv-note code { background: var(--surface-2); padding: 0 var(--s-1); border-radius: var(--r-1); font-size: var(--fs-2); }
+.rv-note table { border-collapse: collapse; font-size: var(--fs-2); margin: var(--s-2) 0; display: block; overflow-x: auto; }
+.rv-note td { border: var(--border); padding: var(--s-1) var(--s-2); vertical-align: top; }
+/* Code as it stands: its lines kept, scrolled across inside its box, never wrapped. */
+.rv-note pre {
+  margin: var(--s-2) 0; padding: var(--s-2) var(--s-3); background: var(--surface-2); border-radius: var(--r-1);
+  overflow-x: auto; overflow-wrap: normal; white-space: pre; font-size: var(--fs-2); line-height: var(--lh-2);
+}
+.rv-note pre code { background: none; padding: 0; font-size: inherit; }
+/* A quote: its rule at its left, its words a step quieter. */
+.rv-note blockquote { margin: var(--s-2) 0; padding: 0 0 0 var(--s-3); border-left: 2px solid var(--line-strong); color: var(--text-2); }
+.rv-verdict { border-left: 2px solid var(--line-strong); padding: var(--s-2) var(--s-3); margin: 0 0 var(--s-3); background: var(--surface-2); }
+.rv-doc { background: var(--surface-1); margin-bottom: var(--s-2); }
+.rv-doc summary { padding: var(--s-3) var(--s-4); cursor: pointer; }
+.rv-doc .rv-note { border-top: var(--border); }
+.rv .empty { color: var(--text-2); padding: var(--s-8) 0; text-align: center; }
+:where(.rv) button:disabled { color: var(--text-3); cursor: default; }
+.rv-pending .rv-row { padding: var(--s-2) var(--s-3); }
+/* The phone copy on its way, or failed: said across the foot of the still's box, as a failure to play is. */
+.rv-pending-picture { position: relative; }
+.rv-pending-hint {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: var(--s-2) var(--s-3);
+  background: var(--backdrop-deep); color: var(--text-2); font-size: var(--fs-2); line-height: var(--lh-2);
+}
+.rv-pending-hint[data-copy="failed"] { color: var(--state-warning); }
+/* The row whose inspector is open (design language §5, List row): its left edge in the
+   accent, on a Set's version cards;
+   one the keyboard focuses shows the shell's ring instead. */
+.rv-card[data-selected="true"]:not(:focus-visible) { box-shadow: inset 2px 0 var(--accent); }
+/* The film's length and counts on a Films card, over and under its state band. */
+.rv-film-length, .rv-film-counts { color: var(--text-2); font-size: var(--fs-2); font-variant-numeric: tabular-nums; }
+/* A Films card's band sits between the film's name and its counts. */
+.rv-film-card .pj-band { margin: var(--s-2) 0; }
+/* A segment a scene in its hue, its state a foot of the state's colour. */
+.pj-band { display: flex; gap: 1px; height: calc(var(--s-2) + 2px); margin: var(--s-2) 0 var(--s-3); }
+.pj-band span { flex-basis: 0; min-width: 0; background: var(--hue); }
+.pj-band span[data-state="stale"] { box-shadow: inset 0 -2px 0 var(--state-stale); }
+.pj-band span[data-state="rendered"] { box-shadow: inset 0 -2px 0 var(--state-rendered); }
+.pj-band span[data-state="approved"] { box-shadow: inset 0 -2px 0 var(--state-approved); }
+.rv-tag[data-state="stale"] { color: var(--state-stale); }
+.rv-films { margin-bottom: var(--s-1); }
+.rv .lab-count-hit:focus-visible { box-shadow: none; }
+.rv .lab-count-hit:focus-visible > .lab-count { box-shadow: var(--focus-ring); }
+/*
+ * Every target is the pointer's size, --hit each way (design language §3: a
+ * finger's 44 px on the phone, 28 px on the laptop), grown by padding, never
+ * by bigger text. A slider and a segment are the kit's (the shell's
+ * sheet), --hit already; a loose video's file link --hit square; a row that
+ * holds a name full rows --hit tall (a name's own hit-slop, in the commands'
+ * sheet, then stays inside its row).
+ */
+.rv-cap > a.rv-hint { display: inline-flex; align-items: center; justify-content: center; min-height: var(--hit); min-width: var(--hit); }
+.rv-row:has(> .lab-named) { min-height: var(--hit); }
+@media ${PHONE} {
+  .rv-main { padding: var(--s-3) var(--gutter) var(--s-8); }
+  .rv-cap { flex-wrap: wrap; }
+  .rv-tag { white-space: normal; overflow-wrap: anywhere; }
+}
+`;

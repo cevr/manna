@@ -18,7 +18,7 @@ import * as AsyncResult from 'effect/reactivity/AsyncResult';
 import type * as Atom from 'effect/reactivity/Atom';
 import { type DraftBeatRead, type ScriptBeats, stagingTakeUrl } from '../../core/api.ts';
 import { type LabFailure, reasonOf } from '../api.ts';
-import { ReviewApi } from '../review/api.ts';
+import { AskApi } from '../ask/api.ts';
 import {
   type BriefShown,
   type ReaderPage,
@@ -88,10 +88,10 @@ export const FilmScriptReader = (props: {
         cost={false}
         brief={props.brief ?? 'boxed'}
         source={{
-          voice: ReviewApi.use((api) => api.filmVoice(props.film)),
+          voice: AskApi.use((api) => api.filmVoice(props.film)),
           // Landed in `script.ts` or refused: the script is read again, its words and marks as they are.
           mark: (post) =>
-            ReviewApi.use((api) => api.filmMarks(props.film, post)).pipe(
+            AskApi.use((api) => api.filmMarks(props.film, post)).pipe(
               Effect.ensuring(Effect.sync(again)),
             ),
           takeUrl: (file) => stagingTakeUrl(props.film, file),

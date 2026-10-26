@@ -208,7 +208,7 @@ const inbox = McpServer.prompt({
   name: 'inbox',
   title: 'What waits in the lab',
   description:
-    "The owner's notes that wait across every film, and how to work them through the lab.",
+    'The tweak notes on Board panels that wait across every film, and how to work them through the lab.',
   content: () =>
     Effect.gen(function* () {
       const overview = yield* overviewRead;
@@ -223,7 +223,7 @@ const inbox = McpServer.prompt({
           onEmpty: () => 'No note waits on an agent.',
           onNonEmpty: (waiting) => `These notes wait:\n${waiting.join('\n')}`,
         }),
-        'For each: read it in full (`notes`, `board`; its still is a PNG on disk), do the work, then `reply` saying what changed and where to look, and `resolve` it once made. A tweak note is acted on with `bun run board tweak <film> <note>` in apps/animations.',
+        'For each: read it in full (`notes`, `board`; its still is a PNG on disk), redraw the panel with `bun run board tweak <film> <note>` in apps/animations, and `resolve` it once made.',
         `To hear what the owner does next, call \`changes\` with since=${overview.cursor} and wait=60, again with each cursor it answers.`,
       ].join('\n\n');
     }),
@@ -233,19 +233,19 @@ const inbox = McpServer.prompt({
 // The server
 
 const INSTRUCTIONS = [
-  'The film lab, where the owner reviews the films: notes on frames and board panels, tries kept, beats and renders approved, sets of renders compared. Read with `overview`, `notes`, `board`, `catalogue`, `sets`, `set`; act with `reply`, `resolve`, `request_tweak`, `publish_set`, `record_render`.',
-  "Listen with `changes`: pass the cursor from `overview` as `since` and a `wait` in seconds; it answers as soon as the owner does something (a note, a reply, a kept try, an approval or withdrawal, a comment, a render or set, an answer to an ask, a word on a production's timeline, a film's source written through the lab), each change with its film, panel or render, its words and its lab link. Call it again with the cursor it answers.",
-  "Hand the owner work to review as a guided review (`ask`): one page, a section per piece of material in the flow's order (script → concept → Board → voice → animatic → Rive scenes → sound → render → shorts), each the material itself in place (a script as a `script` block, never a `document` of its Markdown, and one script per ask; the Board, a video, a take, a set's document), then its questions, each a `choose` with your recommendation marked and its `why`; never a path, a link to elsewhere or prose describing what to open. Publish the files first as a set (`publish_set`) when the material is new, but a new script as a series draft (`series/<series>/scripts/<draft>.md`), named in a `script` block; reply on the note that asked for it.",
+  "The film lab, where the owner answers the agents' asks: multiple-choice questions over the material itself (a script, a film's Board, a video, a take, a set's document). Beside the asks it holds each film's Board (tries kept, beats approved, tweaks asked of a panel), the sets of renders and the productions' ledgers. Read with `overview`, `asks`, `notes`, `board`, `catalogue`, `sets`, `set`, `timeline`; act with `ask`, `request_tweak`, `keep_try`, `resolve`, `publish_set`, `record_render`.",
+  "Listen with `changes`: pass the cursor from `overview` as `since` and a `wait` in seconds; it answers as soon as something changes (an answer to an ask, a tweak asked or redrawn, a kept try, an approval or withdrawal, a comment, a render or set, a word on a production's timeline, a film's source written through the lab), each change with its film, panel or render, its words and its lab link. Call it again with the cursor it answers.",
+  "Hand the owner work to review as a guided review (`ask`): one page, a section per piece of material in the flow's order (script → concept → Board → voice → animatic → Rive scenes → sound → render → shorts), each the material itself in place (a script as a `script` block, never a `document` of its Markdown, and one script per ask; the Board, a video, a take, a set's document), then its questions, each a `choose` with your recommendation marked and its `why`; never a path, a link to elsewhere or prose describing what to open. Publish the files first as a set (`publish_set`) when the material is new, but a new script as a series draft (`series/<series>/scripts/<draft>.md`), named in a `script` block.",
   "When a decision is the owner's, ask it (`ask`), each question a `choose` with one option `recommended` (an optional `free_text` beside it for anything else; words are a burden to require); hand the owner its page's link (`page.links`: asks you make while one of yours still asks join its page, so hand a page's link once), hear each answer on `changes` (`ask.step`, `ask.answered`) or wait on it in the background (`bun cli.ts ask wait <ask>`, or `--page <id>` for the whole page, from apps/animations, exits once he has answered), and `close_ask` each once acted on.",
   "When the owner has already decided in chat, file it on his production's timeline with `decide` (feedback that decides nothing, `note`), his own words verbatim as `quote`: never file a decision he did not make. What is still his to choose is an `ask`. Once he has given his word to move on and it is filed (in chat, or an ask he answered), `forward` moves the production to its next version on that decision, named by its `at`; with no decision of his in the version, or one it does not hold, it is refused.",
-  'Read a film as the studio shows it with `timeline` (its lanes, flags, Next row and what waits on the owner). While you work on a film, say what you are doing on its header with `working` (one line, as `by`), and `done: true` when you finish.',
+  "Read a film's timeline with `timeline` (its lanes, flags, Next row and what waits on the owner).",
   EASEL_INSTRUCTIONS,
 ].join('\n\n');
 
 /**
  * What the lab's MCP runs over beside its router, its change feed and its
  * address: the lab's stores, its easel and its critic, its fresh runs of the
- * film CLI, the films' timelines and the agents' "doing now" lines.
+ * film CLI and the films' timelines.
  */
 export type LabMcpNeeds = Exclude<InLabNeeds, LabEvents | LabAddress>;
 

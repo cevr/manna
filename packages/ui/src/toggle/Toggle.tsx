@@ -5,7 +5,7 @@
 // focus. A mouse press takes no focus unless focus is already in the group
 // (upstream focuses the toggle): focus goes where the platform sends it for
 // a press on content that takes none, the group's nearest focusable ancestor
-// (a sheet's popup) or else nowhere, and the press still moves the group's
+// (a dialog's popup) or else nowhere, and the press still moves the group's
 // tab stop to the toggle. Its index is guessed from render order, and
 // before the group settles its tab stop from the DOM, the toggle holding
 // the group's value holds it (the first toggle when the value is empty;
@@ -57,7 +57,7 @@ export function Toggle<Value extends string = string>(props: ToggleProps<Value>)
     onMouseDown(event: MouseEvent) {
       // A mouse press from outside the group takes no focus. Focus moves to
       // the group's focusable ancestor or leaves every control, so a field
-      // commits on its own blur before the press's change, a sheet keeps the
+      // commits on its own blur before the press's change, a dialog keeps the
       // keyboard, and on the page the page keeps its keys (Space, the
       // arrows). A keyboard user already in the group keeps it, on the
       // pressed toggle.

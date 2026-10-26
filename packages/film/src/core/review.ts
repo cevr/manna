@@ -157,12 +157,6 @@ const indexRef = (index: ReviewIndex, ref: string): string =>
     ref,
   );
 
-/** The folder `ref` names in the index, by its canonical ref (`canonicalRef`). */
-export const folderAt = (index: ReviewIndex, ref: string): Option.Option<ReviewFolder> => {
-  const canonical = indexRef(index, ref);
-  return Arr.findFirst(index.folders, (f) => f.ref === canonical);
-};
-
 /** The document `ref` names, among the index's folders' documents (an ask's document is found as the set's page finds it). */
 export const docAt = (index: ReviewIndex, ref: string): Option.Option<ReviewFile> => {
   const canonical = indexRef(index, ref);
@@ -196,7 +190,3 @@ export const ReviewDuration = Schema.Struct({
   fps: maybe(Schema.Finite.check(Schema.isGreaterThan(0))),
 });
 export type ReviewDuration = typeof ReviewDuration.Type;
-
-/** `GET /api/films`: the app's films, by name. */
-export const ReviewFilms = Schema.Struct({ films: Schema.Array(Schema.String) });
-export type ReviewFilms = typeof ReviewFilms.Type;

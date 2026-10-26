@@ -1,11 +1,10 @@
-// Every place of the studio rendered on the server once, by its page's own
+// Every place of the lab rendered on the server once, by its page's own
 // server entry (`LAB_SERVERS`) bundled as the lab bundles it and held pure
 // (`servedFile`, `bundles.ts`): a render that writes state (Solid's
 // `SERVER_WRITE`, which the owner's lab logged at its start) or throws fails
-// here, naming the place. Each place is opened over a fixture film, its reads
-// answered as `openServed` answers them (`servedReads`): the review's places
-// over the studio film (`studio-film.ts`), the lab's and the player's over
-// the probe film. A read the fixture film does not answer fails the place
+// here, naming the place. Each place is opened over the studio film
+// (`studio-film.ts`), its reads answered as `openServed` answers them
+// (`servedReads`). A read the fixture film does not answer fails the place
 // too, so each place renders past its fallback, with a film's data, as the
 // owner's lab renders a real film.
 
@@ -17,29 +16,12 @@ import type { PageRender, PageSink } from '../../src/core/page-render.ts';
 import { servedFile } from '../../src/lab/fixtures/bundles.ts';
 import { type Asked, type ServedName, servedReads } from '../../src/lab/fixtures/harness.ts';
 import type { PLACE_HREFS } from '../../src/lab/fixtures/places.ts';
-import { PROBE } from '../../src/lab/fixtures/probe-film.ts';
-import {
-  STUDIO_ASK,
-  STUDIO_DRAFT,
-  STUDIO_FOLDER,
-  STUDIO_PAGE,
-  STUDIO_PRODUCTION,
-  STUDIO_SERIES,
-  STUDIO_SET,
-  studioRoutes,
-} from '../../src/lab/fixtures/studio-film.ts';
+import { STUDIO_ASK, STUDIO_PAGE, studioRoutes } from '../../src/lab/fixtures/studio-film.ts';
 
 /** Every place (`PLACE_HREFS`), at a link of a fixture film's. */
 const FILM_HREFS = {
-  home: pageHref.home(),
-  production: pageHref.production(STUDIO_PRODUCTION),
   ask: pageHref.ask(STUDIO_ASK),
   askPage: pageHref.askPage(STUDIO_PAGE),
-  draft: pageHref.draft(STUDIO_SERIES, STUDIO_DRAFT),
-  draftBeat: pageHref.draftBeat(STUDIO_SERIES, STUDIO_DRAFT, '1', '0-0'),
-  folder: pageHref.folder(STUDIO_FOLDER),
-  set: pageHref.set(STUDIO_FOLDER, STUDIO_SET),
-  studio: pageHref.studio(PROBE),
 } satisfies Record<keyof typeof PLACE_HREFS, string>;
 
 /** Whether a page is one the server renders: the export page is drawn in the browser alone. */
@@ -142,5 +124,15 @@ describe("every place's server render", () => {
         expect(failed.flat()).toEqual([]);
       }),
     BUNDLING,
+  );
+
+  it.effect("serves no page at a film's studio or a set, which the lab answers 404", () =>
+    Effect.sync(() => {
+      expect(
+        ['/films/f/studio', '/sets/out%2Ff/render:scenes:a'].map((path) =>
+          Option.isNone(pageAt(path)),
+        ),
+      ).toEqual([true, true]);
+    }),
   );
 });

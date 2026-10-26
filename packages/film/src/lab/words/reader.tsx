@@ -1,6 +1,5 @@
 // The one words reader (a series draft's page, a film's or a draft's script
-// in an ask, a beat's words in the studio's inspector and its whole script
-// there): the beats in order, each under
+// in an ask): the beats in order, each under
 // its id and label with its staging take (▶ and its pace once ready), its
 // line at the reading size with its delivery marks (a stressed word heavier,
 // a pause's glyph in its gap), what its picture does and its sources quiet
@@ -11,8 +10,7 @@
 // At rest it is the words, their marks, a ready take and its pace: no
 // control of its own. A tap on a word selects it (shift extends; a text
 // selection across words selects them), where its page keeps a selection
-// (`Selecting`: the URL on a draft's page and in the studio, the ask's own
-// on an ask), and
+// (`Selecting`: the ask's own), and
 // opens the box under its line: Hear, Clear and the words' delivery, each a
 // tap written at once through the source (`POST …/marks`); its takes are
 // read again, the beat's new take queued first. A page that notes words
@@ -60,7 +58,7 @@ import {
 import { type Row, type SectionRows, type WordAt, rangesOf, rowOf } from '../transcript/lit.ts';
 import { lineRows } from './line.ts';
 import { usePainted, wordsReleased } from '../transcript/words.ts';
-import type { ReviewApi } from '../review/api.ts';
+import type { AskApi } from '../ask/api.ts';
 
 /**
  * The reader's own look, over the Script's (`SCRIPT_READ_CSS`): a head that
@@ -346,8 +344,7 @@ interface WordsAt extends Words {
 
 /**
  * Where a reader's words selected are kept, and how a tap moves them: its
- * page's to own (the URL on a draft's page and in the studio, the ask's own
- * on an ask).
+ * page's to own (the ask's own).
  */
 export interface Selecting {
   readonly selected: Accessor<Option.Option<WordsAt>>;
@@ -391,7 +388,7 @@ type Noting = Option.Option<(words: NoteWords) => JSX.Element>;
 export interface ReaderPage {
   readonly host: Host;
   readonly hub: Hub;
-  readonly runtime: Atom.AtomRuntime<ReviewApi, never>;
+  readonly runtime: Atom.AtomRuntime<AskApi, never>;
   readonly playhead: Option.Option<Playhead>;
   readonly noting: Noting;
 }
@@ -554,8 +551,8 @@ const Beats = (props: {
  * script read again).
  */
 interface ScriptSource {
-  readonly voice: Effect.Effect<ScriptVoice, LabFailure, ReviewApi>;
-  readonly mark: (post: MarksPost) => Effect.Effect<unknown, LabFailure, ReviewApi>;
+  readonly voice: Effect.Effect<ScriptVoice, LabFailure, AskApi>;
+  readonly mark: (post: MarksPost) => Effect.Effect<unknown, LabFailure, AskApi>;
   /** A take's audio, by the name its `Ready` gives it. */
   readonly takeUrl: (file: string) => string;
   /** What a beat's head says once its marks are written. */

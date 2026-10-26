@@ -14,7 +14,7 @@ describe('a save to a file a build read', () => {
     () =>
       Effect.gen(function* () {
         const { ask, script, waitWriting } = yield* app;
-        yield* ask('/');
+        yield* ask('/asks/a1');
         const { build } = yield* waitWriting(
           0,
           '10 seconds',
@@ -22,7 +22,7 @@ describe('a save to a file a build read', () => {
           "console.log('second');\n",
         );
         expect(build).toBeGreaterThan(0);
-        expect(buildOf((yield* ask('/')).text)).toBeGreaterThanOrEqual(build);
+        expect(buildOf((yield* ask('/asks/a1')).text)).toBeGreaterThanOrEqual(build);
         expect(yield* script).toContain('second');
       }).pipe(Effect.scoped, Effect.provide(Platform)),
   );
@@ -32,15 +32,10 @@ describe('a save to a file a build read', () => {
     () =>
       Effect.gen(function* () {
         const { ask, script, waitWriting } = yield* app;
-        yield* ask('/');
-        const entry = yield* waitWriting(
-          0,
-          '10 seconds',
-          'review.html',
-          html('looked', './src/p.ts'),
-        );
+        yield* ask('/asks/a1');
+        const entry = yield* waitWriting(0, '10 seconds', 'ask.html', html('looked', './src/p.ts'));
         expect(entry.build).toBeGreaterThan(0);
-        expect((yield* ask('/')).text).toContain('<title>looked</title>');
+        expect((yield* ask('/asks/a1')).text).toContain('<title>looked</title>');
         const shared = yield* waitWriting(
           entry.build,
           '10 seconds',
@@ -57,7 +52,7 @@ describe('a save to a file a build read', () => {
     () =>
       Effect.gen(function* () {
         const { ask, page, waitWriting } = yield* app;
-        yield* ask('/');
+        yield* ask('/asks/a1');
         const settled = (yield* page.wait(
           { since: 0, server: Option.none(), film: Option.none() },
           '1 second',
@@ -75,7 +70,7 @@ describe('a save to a file a build read', () => {
   it.live('a change to a file no build read wakes nothing', () =>
     Effect.gen(function* () {
       const { ask, page, waitWriting } = yield* app;
-      yield* ask('/');
+      yield* ask('/asks/a1');
       // The first build may count once a save it read in the last second: the build once that is heard.
       const settled = (yield* page.wait(
         { since: 0, server: Option.none(), film: Option.none() },

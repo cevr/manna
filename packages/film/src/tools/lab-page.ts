@@ -61,7 +61,7 @@ import {
 } from 'effect';
 import type { BunPlugin } from 'bun';
 import { HttpServerRequest, HttpServerResponse } from 'effect/http';
-import { type AppPage, labUrls, pageAt, servedPlace } from '../core/api.ts';
+import { type AppPage, labUrls, pageAt } from '../core/api.ts';
 import { LONGEST_WAIT } from '../core/wait.ts';
 import type { PageBuild } from '../core/schema.ts';
 import { PAGE_CUT_MARK, type PageAsked } from '../core/page-render.ts';
@@ -78,7 +78,6 @@ import { type FootageRoot, footageResponse, isFootageUrl } from './footage-route
 import { isNarrationUrl, narrationPath } from './narration-route.ts';
 import { narrationUrls } from '../player/narrated.ts';
 import { CACHE, serveFile } from './review-file.ts';
-import type { Remade } from './source-writer.ts';
 
 /** What the app builds its pages from. */
 export interface LabPageSpec {
@@ -658,21 +657,6 @@ export class LabPage extends Context.Service<LabPage, LabPageService>()(
     return Layer.effect(LabPage, make(spec));
   }
 }
-
-/**
- * What a write's answer says of the mix it made of `film` (`mixedField`):
- * the build a page hears that very mix by (`LabPage.heardAt`), from when it
- * landed (`Remade`); nothing when it mixed nothing or no page hears it.
- */
-export const mixedAnswer = (film: string, remade: Remade) =>
-  Effect.map(
-    Option.match(remade, {
-      onNone: () => Effect.succeedNone,
-      onSome: (at) => Effect.flatMap(LabPage, (page) => page.heardAt(film, at)),
-    }),
-    (heard): { readonly mixed?: PageBuild } =>
-      Option.match(heard, { onNone: () => ({}), onSome: (mixed) => ({ mixed }) }),
-  );
 
 const escapeHtml = (text: string) =>
   text.replace(
@@ -1593,21 +1577,8 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       }),
     );
 
-  /**
-   * An old link, or a page the studio replaced, sent on to its place
-   * (`servedPlace`). The browser carries its hash across to a Location that
-   * names none; a beat's Script or Board, whose hash is time in the beat,
-   * names an empty one, so that hash is dropped.
-   */
-  const moved = (from: string, to: string) =>
-    Effect.as(
-      Effect.logInfo(`lab.page.moved from=${from} to=${to}`),
-      HttpServerResponse.redirect(to, { status: 302, headers: { 'cache-control': CACHE.none } }),
-    );
-
-  // A narration file or a footage copy by its exact URL, then a built file, then an old link
-  // or a page the studio replaced sent on to its place, then the page the path serves (`pageAt`, the
-  // places); anything else, a chunk of a build no longer kept among them, is
+  // A narration file or a footage copy by its exact URL, then a built file, then the page the
+  // path serves (`pageAt`, the places); anything else, a chunk of a build no longer kept among them, is
   // a 404 and never a page's HTML.
   const answer = Effect.gen(function* () {
     const request = yield* HttpServerRequest.HttpServerRequest;
@@ -1617,9 +1588,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
     if (isFootageUrl(pathname)) return yield* footageResponse(spec.footage, request, pathname);
     const built = yield* asset(pathname);
     if (Option.isSome(built)) return built.value;
-    const old = `${pathname}${url.search}`;
-    const place = servedPlace(old);
-    if (Option.isSome(place)) return yield* moved(old, place.value);
     const wedgeId = Option.fromNullishOr(url.searchParams.get('wedge'));
     const keptId = Option.fromNullishOr(url.searchParams.get('build'));
     return yield* Option.match(pageAt(pathname), {

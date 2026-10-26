@@ -18,7 +18,6 @@ import {
   Effect,
   FileSystem,
   Layer,
-  Match,
   Option,
   Path,
   Predicate,
@@ -175,7 +174,7 @@ export const encoderReady: Effect.Effect<
     // Pages of its own, so the doctor's other lines print when Chrome is missing.
     const browser = yield* makeBrowser;
     const page = yield* browser.open(`${server.url}?export`);
-    const candidates = encoderCandidates(yield* Platform, Option.none());
+    const candidates = encoderCandidates(Option.none());
     const encoder = yield* pageEncoder(page, 1, true, candidates);
     const cores = yield* Cores;
     const { workers, max } = encoderLimits(encoder, cores);
@@ -501,8 +500,8 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
                 onSome: () => shortPage(first.info.width).scale * job.scale,
               });
               // Before a frame is drawn: a browser that cannot encode the film with
-              // one of the encoders this platform allows fails here.
-              const candidates = encoderCandidates(platform, job.encoder);
+              // one of the encoders the render allows fails here.
+              const candidates = encoderCandidates(job.encoder);
               const by = yield* first.use((one) => pageEncoder(one, k, job.share, candidates));
               const probed: Probed = { info: first.info, short: found, scale: k, encoder: by };
               return probed;
@@ -771,23 +770,8 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
             frames: total,
             audio: track,
           });
-        /** The software encoder's share: x264 over the joined master. */
-        const x264Share = (out: string) =>
-          Effect.gen(function* () {
-            const from = yield* Clock.currentTimeMillis;
-            yield* media.shareCopy(target, out);
-            const secs = ((yield* Clock.currentTimeMillis) - from) / 1000;
-            yield* Effect.log(`render.share by=x264 secs=${secs.toFixed(1)} file=${out}`);
-          });
-        const shared = Option.filter(Option.some(shareName(target)), () => job.share);
-        yield* Option.match(shared, {
-          onNone: () => Effect.void,
-          onSome: (out) =>
-            Match.value(shareInPage).pipe(
-              Match.when(true, () => joinedShare(out)),
-              Match.orElse(() => x264Share(out)),
-            ),
-        });
+        const shared = Option.filter(Option.some(shareName(target)), () => shareInPage);
+        yield* Option.match(shared, { onNone: () => Effect.void, onSome: joinedShare });
 
         const captions = captionsName(target);
         const cues = Option.match(where.short, {

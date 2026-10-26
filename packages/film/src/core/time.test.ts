@@ -16,7 +16,6 @@ import {
   progress,
   staggered,
   timecode,
-  timecodeParts,
 } from './time.ts';
 
 describe('a word heard at or after a mark', () => {
@@ -119,9 +118,9 @@ describe('time', () => {
       let before = '';
       // Each frame's start, and two times inside it.
       for (let i = 0; i < 1000 * 3; i++) {
-        const p = timecodeParts(i / 3 / fps, fps);
-        const ff = Number(p.ff);
-        const now = `${p.hh}:${p.mm}:${p.ss}:${p.ff.padStart(4, '0')}`;
+        const [hh = '', mm = '', ss = '', fr = ''] = timecode(i / 3 / fps, fps).split(':');
+        const ff = Number(fr);
+        const now = `${hh}:${mm}:${ss}:${fr.padStart(4, '0')}`;
         if (!(ff >= 0 && ff <= last) || now < before)
           wrong.push(`${fps} fps, frame ${i / 3}: ${now}`);
         before = now;

@@ -9,7 +9,7 @@
 // put it there too, from `value` (see Toggle); a `value` naming no toggle
 // gives none there, and the first once the browser settles. A mouse press from outside the group takes no focus:
 // focus goes where the platform sends it for a press on content that takes
-// none, the nearest focusable ancestor (a sheet's popup) or else nowhere;
+// none, the nearest focusable ancestor (a dialog's popup) or else nowhere;
 // the pressed toggle takes the tab stop either way (see Toggle).
 // Upstream's uncontrolled mode, `multiple`, `disabled`, `orientation` and
 // `loopFocus` are left out.

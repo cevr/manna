@@ -1,6 +1,5 @@
 // The look of the pages' command surfaces (⌘K, the `?` sheet, the context
-// menu, the inspector's fields and hint, the review's inspector sheet and
-// comment dot, the receipts' toasts, and every primitive after them). The rules
+// menu, the receipts' toasts, and every primitive after them). The rules
 // read the studio's tokens (`player/tokens.css`, design language §3 and §5:
 // menus and toasts on `--surface-2` with `--line-strong` and `--shadow-pop`,
 // rows `--row-h`, keys in the Kbd part's look, the accent only for a
@@ -9,33 +8,14 @@
 // the tokens. Only what no studio token holds is named here
 // (`COMMAND_TOKENS`): the paddings and heights the surfaces compose, and
 // their own geometry (widths, heights, the layer). Put in the page by its
-// root (`mountFilmStudio`, `mountReview`). Each surface fits a phone:
-// no wider than the screen less its gutters, scrolling inside itself. A
-// field is the kit's (`.sh-field`), styled where the kit is, never here. A phone's width is the studio's one breakpoint
-// (`PHONE`, `WIDE`), asked through its owner. Focus is the shell's ring; a
-// sheet (@manna/ui's Sheet) and the phone sheet's grip, whose edge its
-// scroller clips, draw it inside (`--focus-ring-inset`; this sheet comes after
-// the review's, whose ring it overrides). A sheet takes presses on its panel
-// alone, which stands off the page's scrollbar at the window's edge: its
-// portal round it draws its shadow and takes no presses. Comments here ship
-// with the review's render-blocking CSS, so the notes stand in this one.
-//
-// A sheet about a thing has its kind for a title; its name and values keep
-// their own case (an ease is a literal). On a wide screen it stands beside
-// the page, not over it: the page makes room while an inspector is open. On a
-// phone (the shell's width) the sheet rises from the bottom (design language
-// §7): the screen's width, standing on what `--cmd-sheet-floor` says (the
-// shell's floor, `--shell-floor`: the safe area; and the shell's dock
-// docked on it), so both stay in reach; at most three quarters of the screen tall. Its
-// head is its grip (a bar drawn at its top): a tap lowers it to a peek, its
-// head alone, and raises it again. The head's Close stands over the grip, a
-// whole target of its own: the grip round it leaves it no spacing. While it
-// stands whole the page makes room under it, so its last row can be scrolled
-// above it. Over an open sheet on a phone the receipts stand on its top
-// edge, by anchor positioning; a browser with none keeps them at the foot,
-// centred.
+// page (`ASK_PAGE`). Each surface fits a phone: no wider than the screen
+// less its gutters, scrolling inside itself. A field is the kit's
+// (`.sh-field`), styled where the kit is, never here. A phone's width is the
+// studio's one breakpoint (`PHONE`), asked through its owner. On a phone the
+// receipts stand on what `--cmd-sheet-floor` says (the shell's floor,
+// `--shell-floor`: the safe area; and the shell's dock docked on it).
 
-import { PHONE, WIDE } from '../viewport.ts';
+import { PHONE } from '../viewport.ts';
 
 /**
  * The command surfaces' own constants: the four paddings and heights they
@@ -54,9 +34,7 @@ body {
   --cmd-height: 72vh;
   --cmd-top: 12vh;
   --cmd-layer: 40;
-  --cmd-sheet-height: 75dvh;
   --cmd-sheet-floor: var(--shell-floor);
-  --cmd-grip-height: 4px;
 }
 `;
 
@@ -125,36 +103,6 @@ const COMMAND_RULES = `
 .lab-context-menu kbd:empty { display: none; }
 /* A radio item's check (the film switcher's open film): a glyph in the key's ink, no key's box. */
 .lab-context-check { font-size: var(--fs-2); color: var(--text-2); }
-.lab-inspector-hint {
-  display: none; flex-wrap: wrap; gap: var(--s-1) var(--s-2); margin-top: var(--s-1);
-  color: var(--text-2); font-family: var(--font); font-size: var(--fs-2); line-height: var(--body-lh);
-}
-.lab-inspector:hover .lab-inspector-hint, .lab-inspector:focus-within .lab-inspector-hint { display: flex; }
-@media (pointer: coarse) {
-  .lab-inspector:hover .lab-inspector-hint, .lab-inspector:focus-within .lab-inspector-hint { display: none; }
-}
-.lab-inspector-hint kbd {
-  font-family: var(--font); font-size: var(--fs-2); color: var(--text-1); padding: var(--cmd-key-pad);
-  border: 1px solid var(--line-strong); border-radius: var(--r-1);
-}
-.lab-inspector-portal { position: fixed; inset: 0; z-index: var(--cmd-layer); pointer-events: none; filter: drop-shadow(var(--shadow-pop)); }
-.lab-inspector-sheet:focus-visible { box-shadow: var(--focus-ring-inset); }
-.lab-inspector-panel { position: relative; right: var(--sheet-scroll-padding-x); width: min(var(--inspector-w), 100vw); height: 100%; }
-.lab-inspector-sheet {
-  overflow: auto; display: flex; flex-direction: column; gap: var(--s-2);
-  background: var(--surface-2); color: var(--text-1); border-left: 1px solid var(--line-strong);
-  padding: var(--s-3); outline: none;
-  font-family: var(--font); font-size: var(--body-fs); line-height: var(--body-lh);
-}
-.lab-inspector-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-2); }
-.lab-inspector-body { display: flex; flex-direction: column; gap: var(--s-1); }
-.lab-inspector-close, .lab-count {
-  font: inherit; font-size: var(--fs-2); cursor: pointer; border-radius: var(--r-2);
-}
-.lab-inspector-close {
-  background: none; color: var(--text-1); border: 1px solid var(--line-strong);
-  padding: var(--cmd-button-pad); min-height: var(--control-h);
-}
 .lab-inspect {
   font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; text-align: inherit;
 }
@@ -184,37 +132,13 @@ const COMMAND_RULES = `
   border: 1px solid var(--line-strong); border-radius: var(--r-1); background: none; color: var(--text-1);
   line-height: var(--cmd-count-size);
 }
-@media ${WIDE} { body:has(.lab-inspector-sheet) { padding-right: var(--inspector-w); } }
-.lab-inspector-grip { display: none; }
 @media ${PHONE} {
   body:has(.sh-dock) { --cmd-sheet-floor: calc(var(--shell-floor) + var(--dock-h)); }
-  .lab-inspector-panel { right: auto; bottom: var(--cmd-sheet-floor); align-self: flex-start; width: var(--visual-viewport-width, 100%); height: auto; }
-  .lab-inspector-sheet {
-    max-height: var(--cmd-sheet-height);
-    border-left: 0; border-top: 1px solid var(--line-strong);
-    border-radius: var(--r-sheet) var(--r-sheet) 0 0;
-  }
-  .lab-inspector-head { position: relative; align-items: center; min-height: var(--hit); }
-  .lab-inspector-grip {
-    display: block; position: absolute; inset: calc(-1 * var(--s-3)) calc(-1 * var(--s-3)) 0;
-    padding: 0; border: 0; background: none; cursor: pointer;
-  }
-  .lab-inspector-grip:focus-visible { box-shadow: var(--focus-ring-inset); }
-  .lab-inspector-grip::before {
-    content: ''; position: absolute; top: var(--s-2); left: 50%; width: var(--s-8);
-    height: var(--cmd-grip-height); margin-left: calc(var(--s-8) / -2);
-    border-radius: var(--r-1); background: var(--line-strong);
-  }
-  .lab-inspector-head .lab-sheet-title { position: relative; pointer-events: none; }
-  .lab-inspector-head .lab-inspector-close { position: relative; z-index: 1; min-height: var(--hit); }
-  .lab-inspector-sheet[data-peek="true"] > :not(.lab-inspector-head) { display: none; }
-  body:has(.lab-inspector-sheet:not([data-peek="true"])) .sh-body { padding-bottom: var(--cmd-sheet-height); }
 }
 .lab-clamp { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /*
  * The receipts (design language §5) cover no control. On a phone they are
- * first in the bottom stack: over what the sheet stands on (the dock) and
- * over a sheet's peek. Elsewhere, at the foot, centred.
+ * first in the bottom stack: over the dock. Elsewhere, at the foot, centred.
  */
 .lab-receipts {
   position: fixed; z-index: calc(var(--cmd-layer) + 2); left: 50%; bottom: var(--gutter); transform: translateX(-50%);
@@ -223,12 +147,6 @@ const COMMAND_RULES = `
 }
 @media ${PHONE} {
   .lab-receipts { bottom: calc(var(--cmd-sheet-floor) + var(--s-2)); }
-}
-@supports (anchor-name: --a) {
-  @media ${PHONE} {
-    .lab-inspector-sheet { anchor-name: --cmd-sheet; }
-    body:has(.lab-inspector-sheet) .lab-receipts { position-anchor: --cmd-sheet; bottom: calc(anchor(top) + var(--s-2)); }
-  }
 }
 .lab-receipt {
   background: var(--surface-2); color: var(--text-1); border: 1px solid var(--line-strong);

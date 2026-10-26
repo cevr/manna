@@ -26,9 +26,9 @@ const loader = Effect.suspend(() => {
 });
 
 const TSX = [
-  `${import.meta.dir}/../lab/film-studio/editing.tsx`,
-  `${import.meta.dir}/../lab/film-studio/page.tsx`,
-  `${import.meta.dir}/../lab/film-studio/inspector.tsx`,
+  `${import.meta.dir}/../lab/ask/page.tsx`,
+  `${import.meta.dir}/../lab/ask/material.tsx`,
+  `${import.meta.dir}/../lab/ask/parts.tsx`,
 ];
 
 /** How many `end` listeners the process's stdin holds: the subject of this test. */

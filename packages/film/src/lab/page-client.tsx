@@ -6,19 +6,15 @@
 // components run. A film page whose film does not start, or whose faces do
 // not load, fails (`PageEnd`): its tree disposed and its keys unheard before
 // it says why in its place.
-// Every studio page mounts in the one sequence `mountStudio` runs (a film's
-// studio and the review).
+// Every lab page with a shell mounts in the one sequence `mountStudio` runs
+// (the ask page).
 
 import { Location } from '@manna/url-state';
 import { type JSX, hydrate, render } from '@solidjs/web';
-import { Deferred, Effect, Fiber, type Layer, Option } from 'effect';
-import type { Frames } from '../browser/frames.ts';
-import { type BrowserServices, type Host, addressOn, hostOf } from '../browser/host.ts';
+import { Deferred, Effect, Fiber, Option } from 'effect';
+import { type BrowserServices, type Host, hostOf } from '../browser/host.ts';
 import { BrowserHost } from '../browser/host-browser.ts';
-import type { Media } from '../browser/media.ts';
-import type { Viewport } from '../browser/viewport.ts';
 import type { Hub } from '../command/hub.ts';
-import { legacyPlace } from '../core/api.ts';
 import { PAGE_CUT, PAGE_MOUNTED, PAGE_ROOT, PAGE_STYLE } from '../core/page-render.ts';
 import { showFailure } from '../player/dom.ts';
 import { registerFace } from '../player/face.ts';
@@ -116,12 +112,6 @@ interface StudioPage {
   /** The event its mount logs, with where it is and how it mounted (`lab.shell`). */
   readonly event: string;
   /**
-   * Its media, when it does more than the host's own (the review's
-   * compares on WebCodecs panes, `panesMediaLayer`): its host is
-   * `BrowserHost.withMedia` it, so no other page loads what it needs.
-   */
-  readonly media?: Layer.Layer<Media, never, Frames | Viewport>;
-  /**
    * Its commands' hub and its app over `host`, given what fails the page: a
    * film page's body, loaded later, fails it when its film does not start.
    */
@@ -136,23 +126,15 @@ interface StudioPage {
 }
 
 /**
- * Mount `studio` into the page over the browser's host: an old link the
- * server could not see all of (a bare `#<seconds>`) goes on to its place;
- * the UI faces are registered first, so the fonts a film waits on include them;
+ * Mount `studio` into the page over the browser's host: the UI faces are
+ * registered first, so the fonts a film waits on include them;
  * then its commands and their one key listener, and the page mounted
  * (`mountPage`), its end settled on it.
  */
 export const mountStudio = (studio: StudioPage): void => {
-  const host = hostOf(
-    Option.match(Option.fromUndefinedOr(studio.media), {
-      onNone: () => BrowserHost.layer,
-      onSome: BrowserHost.withMedia,
-    }),
-  );
+  const host = hostOf(BrowserHost.layer);
   Effect.runSyncWith(host)(
     Effect.gen(function* () {
-      const address = addressOn(host);
-      Option.map(legacyPlace(address.href()), address.follow);
       registerFace(document.fonts);
       const ending = yield* makePageEnd;
       const { hub, app } = yield* studio.on(host, ending.fail);

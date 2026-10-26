@@ -2,7 +2,7 @@
 //
 // A dialog's state: the popup's (open, mounted, elements) plus whether it
 // is modal, whether outside presses dismiss it, the ids of its title and
-// description (a sheet is a dialog here, closed by a swipe too). Opening and
+// description. Opening and
 // closing go through `setOpen`: `onOpenChange` first (which may cancel),
 // then the interactions hear of it, then the state changes.
 import { type Accessor, createSignal, untrack } from 'solid-js';

@@ -47,7 +47,7 @@ export const frameRead = (seconds: number, fps: number): number => Math.round(se
  * second's first frame the first to start in it, so its timecode keeps to
  * the clock.
  */
-export const timecodeParts = (seconds: number, fps: number = FILM_FPS): TimecodeParts => {
+const timecodeParts = (seconds: number, fps: number = FILM_FPS): TimecodeParts => {
   const frames = frameRead(Math.abs(seconds), fps);
   const perSecond = Math.max(1, Math.round(fps));
   const counted = countedWhole(fps);

@@ -1,25 +1,20 @@
-// The lab's studio commands (`lab-command.ts`; MCP and `film lab` serve
+// The lab's timeline commands (`lab-command.ts`; MCP and `film lab` serve
 // them, in the lab alone: both read what the lab holds): a film's timeline
-// read as the studio page reads it (`timeline`, over `FilmTimelines`), an
-// agent's "doing now" line said on the studio's header (`working`, held in
-// the lab's memory by `Working`), and the studio's edits of a version's
+// read (`timeline`, over `FilmTimelines`), and the edits of a version's
 // script (`beat_move`, `beat_hold`, and `undo` of the film's newest change),
-// made by `BeatEdits` as the page makes them: the owner and the agents step
-// one history.
+// made by `BeatEdits`: every agent steps one history.
 
-import { Duration, Effect, Match, Option, Schema } from 'effect';
+import { Effect, Match, Option, Schema } from 'effect';
 import * as Tool from 'effect/ai/Tool';
 import { ChangeId } from '../core/schema.ts';
 import { BeatEdits, type Edited } from './beat-edits.ts';
 import { onlyTracks } from '../core/film-timeline.ts';
 import { seamsAround } from '../core/beat-edit.ts';
-import { FilmTimeline, Track, WorkingLine } from '../core/timeline-schema.ts';
+import { FilmTimeline, Track } from '../core/timeline-schema.ts';
 import { LabLinks } from '../core/lab-events.ts';
-import { type FilmFolder, filmNamed } from './film-repo.ts';
 import { FilmTimelines } from './film-timeline.ts';
 import { LabAddress, labCommand } from './lab-command.ts';
 import { FilmParam, LabRefused, refused } from './lab-mcp-parts.ts';
-import { WORKING_HELD, Working } from './working.ts';
 
 // ---------------------------------------------------------------------------
 // What the tools answer, and the tools
@@ -31,15 +26,9 @@ const TimelineRead = Schema.Struct({
   lab: LabLinks,
 });
 
-const WorkingRead = Schema.Struct({
-  film: Schema.String,
-  /** The film's lines now, the newest first. */
-  working: Schema.Array(WorkingLine),
-});
-
 const TimelineTool = Tool.make('timeline', {
   description:
-    "A film's timeline at one version, as the studio draws it: each stage of the flow that has material is a lane of clips on the film's clock (script beats, Board panels on their marks, takes, scenes, score movements, renders), each with its start and length in seconds, its state (made, kept, approved) and its clock (`estimated`: words at the reading pace, no take yet). Beside it: the act bands, the flags of what waits on the owner (open asks, his notes not yet done) at their times, each of the nine stages reached, a gap or ahead, the Next row (the first stage ahead and what starts it), and the header (the stage, what waits on him, the agents' `working` lines). `version` (a number) reads another version; the production's open one when left out. `tracks` keeps only those lanes.",
+    "A film's timeline at one version: each stage of the flow that has material is a lane of clips on the film's clock (script beats, Board panels on their marks, takes, scenes, score movements, renders), each with its start and length in seconds, its state (made, kept, approved) and its clock (`estimated`: words at the reading pace, no take yet). Beside it: the act bands, the flags of what waits on the owner (open asks, his notes not yet done) at their times, each of the nine stages reached, a gap or ahead, the Next row (the first stage ahead and what starts it), and the header (the stage, what waits on him). `version` (a number) reads another version; the production's open one when left out. `tracks` keeps only those lanes.",
   parameters: Schema.Struct({
     ...FilmParam.fields,
     version: Schema.optionalKey(
@@ -52,24 +41,6 @@ const TimelineTool = Tool.make('timeline', {
   success: TimelineRead,
   failure: LabRefused,
 }).annotate(Tool.Readonly, true);
-
-const WorkingTool = Tool.make('working', {
-  description: `Say on the film's studio header what you are doing now, in one line (\`text\`: "drawing cold from its Board"), as \`by\` (who you are): it replaces your last line on that film. Say \`done: true\` (no \`text\` needed) when you finish and your line clears; a line you leave clears after ${Duration.toMinutes(WORKING_HELD)} minutes of silence. The lab holds it in memory only. Answers the film's lines now.`,
-  parameters: Schema.Struct({
-    ...FilmParam.fields,
-    text: Schema.optionalKey(
-      Schema.String.check(Schema.isNonEmpty(), Schema.isMaxLength(200)).annotate({
-        description: 'What you are doing now, in one line: needed unless `done` is true.',
-      }),
-    ),
-    by: Schema.String.check(Schema.isNonEmpty(), Schema.isMaxLength(80)).annotate({
-      description: 'Who you are: your line on the film is the one this names.',
-    }),
-    done: Schema.optionalKey(Schema.Boolean),
-  }),
-  success: WorkingRead,
-  failure: LabRefused,
-});
 
 /** An edit as an agent reads it: the change it made (the id `undo` takes), what it set, and what it says. */
 const EditRead = Schema.Struct({
@@ -95,7 +66,7 @@ const ByParam = Schema.String.check(Schema.isNonEmpty(), Schema.isMaxLength(80))
 
 const BeatMoveTool = Tool.make('beat_move', {
   description:
-    "Move a beat of a version's script before another beat, or to the end (`before` left out), as the studio's drag does: one write of the script's beats order through the lab's history (the owner's ⌘Z undoes it, and `undo` undoes his). Refused when the move is no move or would put an act or a score movement before the one declared ahead of it. The film follows on its next read (later beats, their Board panels, scenes and movements move with their beats); a film with a production gets \"re-time, re-check seams, re-render\" filed on its ledger while the move stands. Answers the change's id, what it set and what it says.",
+    "Move a beat of a version's script before another beat, or to the end (`before` left out): one write of the script's beats order through the lab's history (`undo` undoes it). Refused when the move is no move or would put an act or a score movement before the one declared ahead of it. The film follows on its next read (later beats, their Board panels, scenes and movements move with their beats); a film with a production gets \"re-time, re-check seams, re-render\" filed on its ledger while the move stands. Answers the change's id, what it set and what it says.",
   parameters: Schema.Struct({
     ...FilmParam.fields,
     version: VersionParam,
@@ -111,7 +82,7 @@ const BeatMoveTool = Tool.make('beat_move', {
 
 const BeatHoldTool = Tool.make('beat_hold', {
   description:
-    "Set a beat's hold, as the studio's trim of a clip's edge does: `lead` (the time before its words) or `tail` (the time after them) held `seconds`, snapped to 0.1 s and kept at or above its floor (lead 0.5 s, tail 0.1 s, or less when the beat already holds less); a tail on 0.1 s is the default and is written as none. Refused when it would change nothing the film plays: a beat with no words, or a tail its `min` absorbs. One write of the script through the lab's history, filed on the ledger as `beat_move` is. Answers the change's id, what it set, what it says, and the seams into and out of the beat as the version reads after it, each from the end of a beat's take to the next beat's words (`film check` measures a seam from the last word heard).",
+    "Set a beat's hold: `lead` (the time before its words) or `tail` (the time after them) held `seconds`, snapped to 0.1 s and kept at or above its floor (lead 0.5 s, tail 0.1 s, or less when the beat already holds less); a tail on 0.1 s is the default and is written as none. Refused when it would change nothing the film plays: a beat with no words, or a tail its `min` absorbs. One write of the script through the lab's history, filed on the ledger as `beat_move` is. Answers the change's id, what it set, what it says, and the seams into and out of the beat as the version reads after it, each from the end of a beat's take to the next beat's words (`film check` measures a seam from the last word heard).",
   parameters: Schema.Struct({
     ...FilmParam.fields,
     version: VersionParam,
@@ -126,7 +97,7 @@ const BeatHoldTool = Tool.make('beat_hold', {
 
 const UndoTool = Tool.make('undo', {
   description:
-    "Undo the film's newest change in the lab's one history (the owner's edits on the studio page and the agents' alike), or, given `change` (an id an edit answered), that change only: refused when another change stands before it, so an older step is never undone past a newer one. Withdraws the work its edit filed on the ledger. Answers what it undid.",
+    "Undo the film's newest change in the lab's one history (every agent's edits), or, given `change` (an id an edit answered), that change only: refused when another change stands before it, so an older step is never undone past a newer one. Withdraws the work its edit filed on the ledger. Answers what it undid.",
   parameters: Schema.Struct({
     ...FilmParam.fields,
     change: Schema.optionalKey(ChangeId),
@@ -151,12 +122,7 @@ const scriptLane = (timeline: FilmTimeline) =>
     ),
   );
 
-/** What a line said with no words is refused with. */
-const NO_TEXT = LabRefused.make({
-  reason: 'say `text` (what you are doing now), or `done: true` to clear your line',
-});
-
-/** The studio's commands: its reads, the agents' lines, and its edits of a version's script. */
+/** The timeline's commands: its read, and the edits of a version's script. */
 export const timelineCommands = [
   labCommand(BeatMoveTool, {
     run: ({ film, version, beat, before, by }) =>
@@ -192,8 +158,7 @@ export const timelineCommands = [
       Effect.gen(function* () {
         const edits = yield* BeatEdits;
         const undone = yield* refused(
-          edits.step(
-            'undo',
+          edits.undo(
             film,
             Option.match(Option.fromUndefinedOr(change), {
               onNone: () => ({}),
@@ -211,21 +176,6 @@ export const timelineCommands = [
         const lab = yield* LabAddress;
         const read = yield* refused(timelines.timeline(film, Option.fromUndefinedOr(version)));
         return { ...onlyTracks(read, Option.fromUndefinedOr(tracks)), lab };
-      }),
-  }),
-  labCommand(WorkingTool, {
-    run: ({ film, text, by, done }) =>
-      Effect.gen(function* () {
-        const working = yield* Working;
-        const films = yield* Effect.context<FilmFolder>();
-        const named = yield* refused(filmNamed(film).pipe(Effect.provideContext(films)));
-        if (done === true) yield* working.done(named, by);
-        else
-          yield* Option.match(Option.fromUndefinedOr(text), {
-            onNone: () => Effect.fail(NO_TEXT),
-            onSome: (line) => working.say(named, by, line),
-          });
-        return { film: named, working: yield* working.on(named) };
       }),
   }),
 ];

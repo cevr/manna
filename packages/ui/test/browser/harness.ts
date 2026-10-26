@@ -136,7 +136,7 @@ const page = (head: string, served: string | undefined): string => `<!doctype ht
 <style>
   body { margin: 0; font: 14px sans-serif; }
   /* A host page's own overscroll gestures (pull to refresh, swipe back) reload or leave the page under
-     a test; a finger that drags past a hidden sheet reaches the document. */
+     a test. */
   html { overscroll-behavior: none; }
   [hidden] { display: none !important; }
 </style>${head}</head>

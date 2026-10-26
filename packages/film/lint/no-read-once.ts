@@ -3,7 +3,7 @@
 // page had drawn at that instant: a status line before its update lands, a
 // list before the write it shows comes back, a peak meter at the floor. That
 // passes on an idle machine and fails under load. The shared waits are in `packages/film/src/lab/fixtures/settled.ts`
-// (`textIs`, `textHas`, `valueIs`, `attributeIs`, `countIs`, …).
+// (`textIs`, `textHas`, `countIs`, …).
 //
 // The tab (`lab/fixtures/tab.ts`) reads the page one way only, `evaluate`;
 // so refused in a `*.dom.test.ts` is an `evaluate(…)` (the tab's, or a
@@ -176,7 +176,7 @@ export const noReadOnce = Rule.define({
             context.report(
               Diagnostic.make({
                 node,
-                message: `${name} reads the page once, whatever it had drawn at that instant: wait for the value instead (textIs, textHas, valueIs, attributeIs, countIs, evaluates or until in lab/fixtures/settled.ts).`,
+                message: `${name} reads the page once, whatever it had drawn at that instant: wait for the value instead (textIs, textHas, countIs, evaluates or until in lab/fixtures/settled.ts).`,
               }),
             ),
         }),

@@ -18,16 +18,13 @@ import {
   type Keyed,
   type SceneKey,
   renderNeed,
-  renderState,
   partSubject,
-  projectNow,
   projectOf,
   recordRender,
   renderIn,
   sceneSlot,
   subjectOf,
   tookOf,
-  versionState,
   withdraw,
   withdrawScenes,
 } from './catalogue.ts';
@@ -117,61 +114,6 @@ describe('a scene render against its sources', () => {
 const sounding = (render: Render, mix: string): Render => ({
   ...render,
   sound: Option.some({ mix: Option.some(mix), pieces: [{ start: 0, duration: 4 }] }),
-});
-
-describe('versionState', () => {
-  test('judges a render, and its version (its key alone), against the sources and mix now', () => {
-    const silent = sceneRender('a', 'k1');
-    const unmixed = { ...silent, sound: Option.some({ mix: Option.none(), pieces: [] }) };
-    type Judged = ReturnType<typeof versionState>;
-    const current: Judged = { state: 'current', staleBy: Option.none() };
-    const bySources: Judged = { state: 'stale', staleBy: Option.some('sources') };
-    const bySound: Judged = { state: 'stale', staleBy: Option.some('sound') };
-    const k1 = { key: 'k1', sound: Option.none<string>() };
-    const k1m1 = { key: 'k1', sound: Option.some('m1') };
-    // [render, now, its judgement], each written out.
-    const rows: ReadonlyArray<readonly [Render, typeof k1, Judged]> = [
-      [silent, k1, current],
-      [silent, k1m1, bySound],
-      [unmixed, k1, current],
-      [unmixed, k1m1, bySound],
-      [sounding(silent, 'm1'), k1, current],
-      [sounding(silent, 'm1'), k1m1, current],
-      [sounding(silent, 'm2'), k1m1, bySound],
-      [sceneRender('a', 'k2'), k1, bySources],
-      [sounding(sceneRender('a', 'k2'), 'm1'), k1m1, bySources],
-      [sceneRender('a', 'k1'), { key: 'k10', sound: Option.none() }, bySources],
-    ];
-    for (const [render, now, judged] of rows) {
-      expect([subjectOf(render).key, now, renderState(Option.some(render), now)]).toEqual([
-        subjectOf(render).key,
-        now,
-        judged,
-      ]);
-      expect([subjectOf(render).key, now, versionState(subjectOf(render).key, now)]).toEqual([
-        subjectOf(render).key,
-        now,
-        judged,
-      ]);
-    }
-    expect(renderState(Option.none(), k1)).toEqual({ state: 'missing', staleBy: Option.none() });
-    // A render is judged by its stamp and its mix as recorded, whatever its key holds: a
-    // stamp `k1+m1` (keys are hex digests, but the record allows it) is not the key `k1`.
-    expect(renderState(Option.some(sceneRender('a', 'k1+m1')), k1)).toEqual(bySources);
-    expect(renderState(Option.some(sceneRender('a', 'k1+m1')), k1m1)).toEqual(bySources);
-    // Its version alone cannot say where its key ends: read against the key now, the tail is a mix.
-    expect(versionState(subjectOf(sceneRender('a', 'k1+m1')).key, k1m1)).toEqual(current);
-    // A version by its key: other sources, then another mix, then current.
-    const now = { key: 'k1', sound: Option.some('m1') };
-    expect(versionState('k2+m1', now)).toEqual({ state: 'stale', staleBy: Option.some('sources') });
-    expect(versionState('k1+m2', now)).toEqual({ state: 'stale', staleBy: Option.some('sound') });
-    expect(versionState('k1', now)).toEqual({ state: 'stale', staleBy: Option.some('sound') });
-    expect(versionState('k1+m1', now)).toEqual({ state: 'current', staleBy: Option.none() });
-    // A key that only begins like the key now is other sources.
-    expect(versionState('k10', { key: 'k1', sound: Option.none() }).staleBy).toEqual(
-      Option.some('sources'),
-    );
-  });
 });
 
 /** The film keyed now with the film's mix key `sound`. */
@@ -476,36 +418,4 @@ test('catalogue.json round-trips through its schema', () => {
   const catalogue = comment(approve(withRenders(render), of(render), 1), of(render), 'ok', 2);
   const text = Schema.encodeSync(CatalogueJson)(catalogue);
   expect(Schema.decodeSync(CatalogueJson)(text)).toEqual(catalogue);
-});
-
-describe("what a part is measured against in the project's read", () => {
-  const ONE = ActName.make('one');
-  const project = projectOf(
-    emptyCatalogue('f'),
-    {
-      key: 'film-k',
-      sound: Option.some('mix-1'),
-      acts: [{ act: ONE, scenes: ['a'], key: 'act-k' }],
-      scenes: [{ scene: 'a', key: 'k-a' }],
-    },
-    'main',
-  );
-
-  test('the film, an act and one scene each carry their key and the film mix', () => {
-    expect(projectNow(project, { _tag: 'Film' })).toEqual(
-      Option.some({ key: 'film-k', sound: Option.some('mix-1') }),
-    );
-    expect(projectNow(project, { _tag: 'Act', act: ONE })).toEqual(
-      Option.some({ key: 'act-k', sound: Option.some('mix-1') }),
-    );
-    expect(projectNow(project, sceneAddress('a'))).toEqual(
-      Option.some({ key: 'k-a', sound: Option.some('mix-1') }),
-    );
-  });
-
-  test('a part the project does not list, or several scenes at once, is judged by none', () => {
-    expect(projectNow(project, sceneAddress('zzz'))).toEqual(Option.none());
-    expect(projectNow(project, { _tag: 'Act', act: ActName.make('nope') })).toEqual(Option.none());
-    expect(projectNow(project, { _tag: 'Scenes', ids: ['a', 'b'] })).toEqual(Option.none());
-  });
 });

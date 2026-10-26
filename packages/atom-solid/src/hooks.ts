@@ -313,19 +313,6 @@ function mountAtom<A>(registry: AtomRegistry.AtomRegistry, atom: () => Atom.Atom
 }
 
 /**
- * Mounts an atom in the current Solid registry for the lifetime of the current
- * Solid computation.
- *
- * The hook uses the current registry (`useRegistry`), mounts inside a Solid
- * computation, and releases the mount through Solid cleanup when the
- * computation changes or the owner is disposed.
- */
-export const useAtomMount = <A>(atom: () => Atom.Atom<A>): void => {
-  const registry = useRegistry();
-  mountAtom(registry, atom);
-};
-
-/**
  * The write callback returned by {@link useAtomSet}. For an `AsyncResult`
  * atom, the `promiseExit` mode returns a promise of the write's full `Exit`.
  */

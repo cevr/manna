@@ -25,7 +25,7 @@ import {
   oneQuestion,
 } from '../core/ask.ts';
 import { type BoardFile, BoardFileJson, BoardName } from '../core/board.ts';
-import { REVIEW_FILES, askShownUrl, boardFileUrl, labUrls, stillUrl } from '../core/api.ts';
+import { REVIEW_FILES, askShownUrl, boardFileUrl, labUrls } from '../core/api.ts';
 import { ReviewFileUnknown } from '../core/refusals.ts';
 import { Segment } from '../core/segment.ts';
 import type { ReviewIndex } from '../core/review.ts';
@@ -302,8 +302,8 @@ const trySource = (n: number): Source => ({
 const stillSource = (name: string): Source => ({
   kind: 'still',
   file: `${NOTES_LAB}/f/stills/${name}`,
-  image: { src: stillUrl('f', name) },
-  src: stillUrl('f', name),
+  image: { src: `/api/films/f/stills/${name}` },
+  src: `/api/films/f/stills/${name}`,
 });
 const setSources = STILLS.map(setSource);
 const trySources = TRIES.map(trySource);

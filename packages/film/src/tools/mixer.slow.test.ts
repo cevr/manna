@@ -90,7 +90,6 @@ const writingMedia = (
           }
         }),
       join: () => Effect.void,
-      shareCopy: () => Effect.void,
     }),
   );
 

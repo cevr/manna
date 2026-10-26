@@ -10,7 +10,7 @@ import { describe, expect, test } from 'bun:test';
 import { claimPress } from '@manna/ui/press';
 import { Effect, Fiber, Option } from 'effect';
 import { hostOf } from './host.ts';
-import { Pointer, Surface } from './pointer.ts';
+import { Pointer } from './pointer.ts';
 
 /** An element that can hold a pointer's capture: the ids it was asked to capture. */
 class Pressable extends EventTarget {
@@ -48,7 +48,7 @@ const page = () => {
     drag = Option.some(
       Effect.runForkWith(host)(
         Pointer.use((p) =>
-          p.press(down, new Surface('the element'), () =>
+          p.press(down, { name: 'the element' }, () =>
             Option.some({
               move: (ev: PointerEvent) => moves.push(ev.clientX),
               end: (lifted: Option.Option<PointerEvent>) =>
@@ -169,7 +169,7 @@ const surface = (follow: (id: number) => boolean = () => true) => {
   const window = new EventTarget();
   const element = new Pressable();
   const host = hostOf(Pointer.layerOn(window));
-  const held = new Surface('the strip');
+  const held = { name: 'the strip' };
   const took: Array<number> = [];
   const moves: Array<string> = [];
   const fibers: Array<Fiber.Fiber<void>> = [];

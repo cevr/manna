@@ -1,7 +1,8 @@
 // The note follower the docs give an agent hears every note the owner makes:
 // each follower a doc names for notes, read with its `--name`s, matches every
-// event the old `film notes --watch` printed (a note made, a tweak asked of a
-// panel among them, and the owner's reply).
+// event the old `film notes --watch` printed that the feed still tells (a
+// tweak asked of a panel, and the owner's reply; a note on a frame is told
+// only as it is answered).
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
@@ -78,7 +79,7 @@ describe('the note follower the docs give', () => {
         const path = yield* Path.Path;
         const root = path.join(import.meta.dir, '..', '..', '..', '..');
         const kinds = printedKinds();
-        expect(kinds).toEqual(['note.added', 'tweak.requested', 'note.replied']);
+        expect(kinds).toEqual(['tweak.requested', 'note.replied']);
         for (const file of DOCS) {
           const spans = followersIn(yield* fs.readFileString(path.join(root, file)));
           const followers = spans.filter((span) => !span.warns);

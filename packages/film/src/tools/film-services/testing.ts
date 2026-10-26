@@ -252,7 +252,7 @@ export const noWrites = Layer.succeed(
   SourceWriter.of({
     write: () => unusedSource,
     around: () => unusedSource,
-    step: () => unusedSource,
+    undo: () => unusedSource,
     history: () => unusedSource,
     // Nothing lands through a writer no test calls.
     landings: Effect.succeed([]),
@@ -349,7 +349,6 @@ export const noRenders = Layer.succeed(
     pictures: () => unreviewed('pictures'),
     renderVideo: () => unreviewed('renderVideo'),
     resolve: () => unreviewed('resolve'),
-    say: () => unreviewed('say'),
     duration: () => unreviewed('duration'),
     frame: () => unreviewed('frame'),
     phone: () => unreviewed('phone'),

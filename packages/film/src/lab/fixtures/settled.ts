@@ -89,36 +89,12 @@ export const textIs = (page: Tab, selector: string, want: string | RegExp) =>
 export const textHas = (page: Tab, selector: string, part: string) =>
   settle(page, { selector, read: TEXT, want: { _tag: 'Has', value: part } });
 
-/** Wait until the elements at `selector`, in order, have text `want`. */
-export const textsAre = (page: Tab, selector: string, want: ReadonlyArray<string>) =>
-  settle(page, { selector, read: TEXT, want: { _tag: 'List', values: want } });
-
-/** Wait until the elements at `selector`, in order, have attribute `name` equal to `want`. */
-export const attributesAre = (
-  page: Tab,
-  selector: string,
-  name: string,
-  want: ReadonlyArray<string>,
-) =>
-  settle(page, {
-    selector,
-    read: { _tag: 'Attribute', name },
-    want: { _tag: 'List', values: want },
-  });
-
-/** Wait until the first element at `selector` has attribute `name` equal to `want`, or matching it. */
-export const attributeIs = (page: Tab, selector: string, name: string, want: string | RegExp) =>
-  settle(page, { selector, read: { _tag: 'Attribute', name }, want: wantOf(want) });
-
 /** Wait until `n` elements match `selector`. */
 export const countIs = (page: Tab, selector: string, n: number) =>
   settle(page, { selector, read: { _tag: 'Count' }, want: { _tag: 'Is', value: n } });
 
 /** Wait until `selector` is in the page and shown. */
 export const waitFor = (page: Tab, selector: string) => page.waitFor(selector);
-
-/** Wait until `selector` is in the page, shown or not (a hidden composer, a folded row). */
-export const attached = (page: Tab, selector: string) => page.attached(selector);
 
 /** What a script run in the page can be waited on to answer. */
 type Answer = boolean | number | string | ReadonlyArray<boolean | number | string>;
@@ -137,30 +113,6 @@ export const evaluates = (page: Tab, script: string, want: Answer) =>
 
 /** Wait until `check`, run in the page, is true. */
 export const until = (page: Tab, check: string) => page.until(check);
-
-/**
- * Wait until every sheet stands: none is scrolling in or out (`data-entering`,
- * `data-exiting`, `@manna/ui/sheet`). A sheet's box is where it rests only
- * then, and a scroll into view would stop one on its way.
- */
-export const sheetsStand = (page: Tab) =>
-  page.until(`document.querySelector('[data-entering], [data-exiting]') === null`);
-
-/**
- * An expression run in the page: what `property` of a probe styled
- * `property: value` computes to beside `selector`'s first match (in its
- * parent, so it reads the same tokens), as the page draws it.
- */
-const computedBeside = (selector: string, property: string, value: string) =>
-  `((el) => { const probe = document.createElement('i'); probe.style.setProperty(${json(property)}, ${json(value)}); el.parentElement.append(probe); const drawn = getComputedStyle(probe).getPropertyValue(${json(property)}); probe.remove(); return drawn; })(document.querySelector(${json(selector)}))`;
-
-/** An expression run in the page: whether `selector`'s first match draws `property` as `value` would (a token as `var(--…)`). */
-const drawnAs = (selector: string, property: string, value: string) =>
-  `getComputedStyle(document.querySelector(${json(selector)})).getPropertyValue(${json(property)}) === ${computedBeside(selector, property, value)}`;
-
-/** An expression run in the page: whether `selector`'s first match is drawn in the colour token `token` (its words' ink). */
-export const inkIs = (selector: string, token: string) =>
-  drawnAs(selector, 'color', `var(${token})`);
 
 /**
  * An expression run in the page: how the focused element shows its focus,

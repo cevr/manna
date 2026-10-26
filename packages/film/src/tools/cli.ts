@@ -1038,7 +1038,7 @@ const lab = <E>(
     ),
   ).pipe(
     Command.withDescription(
-      "Serve the lab for every film: the player with notes on frames, cues and knobs that write back to the scene files and the studio, beside every render under the roots, compared in sync, and each film's choices and scenes to approve (Ctrl-C stops it)",
+      "Serve the lab for every film: the agents' asks for the owner to answer (a script, a Board, a video, a take, a document, each in place), and its MCP and commands over the Board, the sets, the productions' ledgers and the easel (Ctrl-C stops it)",
     ),
   );
 

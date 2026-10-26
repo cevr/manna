@@ -30,7 +30,6 @@ Every hook reads and writes atoms through the current `AtomRegistry`
   (`() => f(value())`).
 - `useAtomSet(() => atom)`: a setter that takes a value, without subscribing. With `{ mode: 'promiseExit' }`, for an `AsyncResult` atom, the
   setter resolves with the write's `Exit` and never rejects.
-- `useAtomMount(() => atom)`: keeps the atom mounted for the owner's life.
 - `useAtomRefresh(() => atom)`: a callback that refreshes the atom.
 - `useAtomSuspense(() => atom)`: for an `AsyncResult` atom, an accessor that
   suspends the nearest `<Loading>` while the result is initial and throws the

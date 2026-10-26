@@ -10,6 +10,8 @@
 // are kept in the lab's folder: a lab started again delivers on from the
 // cursor it kept, and a subscription past its `refreshBefore` is dropped.
 
+import { FilmName } from './film-repo.ts';
+import { NotesStore } from './notes-store.ts';
 import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'effect-bun-test';
 import {
@@ -29,17 +31,15 @@ import * as BunHttpServer from '@effect/platform-bun/BunHttpServer';
 import { Base64 } from 'effect/encoding';
 import { HttpServer, HttpServerRequest, HttpServerResponse } from 'effect/http';
 import { TestClock } from 'effect/testing';
-import { labUrls } from '../core/api.ts';
 import { LAB_EVENTS } from '../core/lab-events.ts';
 import { RenderCatalogue } from './catalogue.ts';
 import { text } from './host/testing.ts';
 import { NOTES_LAB, labInMemory } from './lab/testing.ts';
-import { type LabFetch, MCP_BASE, labWithMcp, mcpBound, mcpPost } from './lab-mcp/testing.ts';
+import { type LabFetch, labWithMcp, mcpPost } from './lab-mcp/testing.ts';
 
 /** A secret of 32 bytes, as a subscriber makes one. */
 const SECRET = `whsec_${Base64.encode(new Uint8Array(32).fill(7))}`;
 
-const jsonText = Schema.encodeSync(Schema.fromJsonString(Schema.Json));
 /** JSON read as a client reads it: the test names the fields it checks. */
 const readJson: (text: string) => any = Schema.decodeUnknownSync(
   Schema.fromJsonString(Schema.Json),
@@ -136,30 +136,28 @@ const rpc = (lab: LabFetch, method: string, params: Schema.JsonObject = {}) =>
       ),
   );
 
-/** The owner's note on film `f`, as the lab's page posts it. */
-const ownerNote = (lab: LabFetch, words: string) =>
-  Effect.promise(() =>
-    lab(
-      new Request(`${MCP_BASE.slice(0, -1)}${labUrls.notes.add({ params: { film: 'f' } })}`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: jsonText({
-          scene: 'cold',
-          T: 1,
-          frame: 30,
-          text: words,
-          still: Base64.encode(text('frame')),
-        }),
-      }),
-      mcpBound,
-    ),
-  );
+/** A tweak the owner asked of film `f`'s panel `cold.judge`, written to its notes through the store. */
+const ownerNote = (words: string) =>
+  Effect.gen(function* () {
+    const notes = yield* NotesStore;
+    return yield* notes.add(
+      yield* Schema.decodeEffect(FilmName)('f'),
+      {
+        scene: 'cold',
+        T: 1,
+        frame: 30,
+        panel: { id: 'cold.judge', try: 1, ask: 'tweak' },
+        text: words,
+      },
+      text('frame'),
+    );
+  });
 
 /** A subscription to `name` (of film `f` unless `args` says otherwise) at the callback's `path`, with `more` of subscribe's params (its `secret` the delivery's). */
 const subscribeAt = (
   url: string,
   { secret = SECRET, ...more }: { readonly secret?: string } & Schema.JsonObject = {},
-  name = 'note.added',
+  name = 'tweak.requested',
   args: Schema.JsonObject = { film: 'f' },
 ): Schema.JsonObject => ({
   name,
@@ -245,13 +243,13 @@ describe('MCP Events on the lab', () => {
           expect(signedWith(SECRET, verification)).toBe(true);
 
           // One POST per event, signed, its id the webhook's.
-          yield* ownerNote(lab, 'the judge looks away too soon');
+          yield* ownerNote('the judge looks away too soon');
           yield* events.look;
           const first = yield* Queue.take(hook.heard);
           const one = readDelivered(first.body);
           expect(one).toMatchObject({
-            name: 'note.added',
-            data: { kind: 'note.added', note: 'n1', text: 'the judge looks away too soon' },
+            name: 'tweak.requested',
+            data: { kind: 'tweak.requested', note: 'n1', text: 'the judge looks away too soon' },
           });
           expect(one.cursor).toBe(`${cursor.split('.')[0]}.1`);
           expect(first.headers['webhook-id']).toBe(one.eventId);
@@ -263,7 +261,7 @@ describe('MCP Events on the lab', () => {
 
           // A callback that fails is tried again: the same event id, the same body.
           yield* Ref.set(hook.statuses, [500]);
-          yield* ownerNote(lab, 'and the hand is late');
+          yield* ownerNote('and the hand is late');
           yield* events.look;
           const failed = yield* Queue.take(hook.heard);
           const retried = yield* Queue.take(hook.heard);
@@ -286,7 +284,7 @@ describe('MCP Events on the lab', () => {
           // Unsubscribed, it hears nothing more; a second subscription hears the next note alone.
           expect(
             yield* rpc(lab, 'events/unsubscribe', {
-              name: 'note.added',
+              name: 'tweak.requested',
               arguments: { film: 'f' },
               delivery: { mode: 'webhook', url: `${hook.url}/a` },
             }),
@@ -300,9 +298,13 @@ describe('MCP Events on the lab', () => {
               },
             },
           });
-          yield* rpc(lab, 'events/subscribe', subscribeAt(`${hook.url}/b`, {}, 'note.added', {}));
+          yield* rpc(
+            lab,
+            'events/subscribe',
+            subscribeAt(`${hook.url}/b`, {}, 'tweak.requested', {}),
+          );
           expect((yield* Queue.take(hook.heard)).path).toBe('/b');
-          yield* ownerNote(lab, 'the third');
+          yield* ownerNote('the third');
           yield* events.look;
           const third = yield* Queue.take(hook.heard);
           expect([third.path, readDelivered(third.body).data.note]).toEqual(['/b', 'n3']);
@@ -320,7 +322,7 @@ describe('MCP Events on the lab', () => {
           expect(kept).toMatchObject({
             subscriptions: [
               {
-                name: 'note.added',
+                name: 'tweak.requested',
                 url: `${hook.url}/b`,
                 cursor: delivered,
               },
@@ -402,14 +404,14 @@ describe('MCP Events on the lab', () => {
               const made = yield* rpc(lab, 'events/subscribe', forever);
               expect(made.result.refreshBefore).toBeNull();
               yield* Queue.take(hook.heard);
-              yield* ownerNote(lab, 'one');
+              yield* ownerNote('one');
               yield* events.look;
               expect(readDelivered((yield* Queue.take(hook.heard)).body).data.note).toBe('n1');
             }),
           );
           // The lab again, over the same folder: its subscription delivers on.
           const { lab, events } = yield* labWithMcp;
-          yield* ownerNote(lab, 'two');
+          yield* ownerNote('two');
           yield* events.look;
           expect(readDelivered((yield* Queue.take(hook.heard)).body).data.note).toBe('n2');
 
@@ -438,7 +440,7 @@ describe('MCP Events on the lab', () => {
         Effect.gen(function* () {
           const { lab, events } = yield* labWithMcp;
           const hook = yield* callback;
-          yield* ownerNote(lab, 'one');
+          yield* ownerNote('one');
           yield* events.look;
           const now = (yield* events.since(Option.none())).cursor;
           const epoch = now.split('.')[0];
@@ -466,7 +468,7 @@ describe('MCP Events on the lab', () => {
           yield* Queue.take(hook.heard);
           // The lab started again before the first has stopped: both deliver from the folder's subscription.
           const second = yield* labWithMcp;
-          yield* ownerNote(first.lab, 'one');
+          yield* ownerNote('one');
           yield* first.events.look;
           yield* second.events.look;
           const [a, b] = [
@@ -531,10 +533,10 @@ describe('MCP Events on the lab', () => {
         const fs = yield* FileSystem.FileSystem;
         yield* fs.remove(SUBSCRIPTIONS);
         yield* fs.makeDirectory(SUBSCRIPTIONS);
-        yield* ownerNote(lab, 'one');
+        yield* ownerNote('one');
         yield* events.look;
         expect(readDelivered((yield* Queue.take(hook.heard)).body).data.note).toBe('n1');
-        yield* ownerNote(lab, 'two');
+        yield* ownerNote('two');
         yield* events.look;
         expect(readDelivered((yield* Queue.take(hook.heard)).body).data.note).toBe('n2');
       }),

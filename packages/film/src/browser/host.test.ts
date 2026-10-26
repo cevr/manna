@@ -8,8 +8,7 @@ import { Location, UrlState } from '@manna/url-state';
 import { layerMemory } from '@manna/url-state/testing';
 import { Effect, Fiber, Layer, Option, Stream } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
-import { PageLoad } from './page-load.ts';
-import { addressOn, hostOf, reloadAtAddress } from './host.ts';
+import { addressOn, hostOf } from './host.ts';
 
 /** The entry `moves` (one tick's writes) commit, as `<navigation> <href>`. */
 const entryOf = (moves: () => void) =>
@@ -27,67 +26,27 @@ const entryOf = (moves: () => void) =>
   });
 
 describe('the address bar', () => {
-  it.live('a reload loads the page at the place written the moment before', () => {
-    const loaded: Array<string> = [];
-    const address = UrlState.layer.pipe(Layer.provideMerge(layerMemory('/films/p/studio#t=0')));
-    const pageLoad = Layer.effect(
-      PageLoad,
-      Effect.gen(function* () {
-        const bar = yield* Location;
-        return PageLoad.of({
-          reload: Effect.map(bar.current, (entry) => {
-            loaded.push(entry.href);
-          }),
-          open: () => Effect.void,
-        });
-      }),
-    ).pipe(Layer.provideMerge(address));
-    return Effect.gen(function* () {
-      const url = yield* UrlState.UrlState;
-      yield* url.navigate('/films/q/studio#t=1.5', {
-        history: 'replace',
-        throttle: Option.none(),
-      });
-      yield* reloadAtAddress;
-      expect(loaded).toEqual(['/films/q/studio#t=1.5']);
-    }).pipe(Effect.provide(pageLoad));
-  });
-
   it.live(
     "a viewer's move is a step where its place declares one; the URL following the page never is",
     () => {
-      const host = hostOf(UrlState.layer.pipe(Layer.provideMerge(layerMemory('/films/p/studio'))));
+      const host = hostOf(UrlState.layer.pipe(Layer.provideMerge(layerMemory('/asks/a1'))));
       const address = addressOn(host);
       return Effect.gen(function* () {
-        // The time alone, on the viewer's move or the page's: no step.
-        expect(yield* entryOf(() => address.go('/films/p/studio#t=1'))).toBe(
-          'replace /films/p/studio#t=1',
+        // A still opened full size: a cited key, a step.
+        expect(yield* entryOf(() => address.go('/asks/a1?still=x'))).toBe('push /asks/a1?still=x');
+        // The page following its own still: written in place.
+        expect(yield* entryOf(() => address.follow('/asks/a1?still=y'))).toBe(
+          'replace /asks/a1?still=y',
         );
-        expect(yield* entryOf(() => address.follow('/films/p/studio#t=2'))).toBe(
-          'replace /films/p/studio#t=2',
-        );
-        // A beat selected and a note opened: cited keys, each a step.
-        expect(yield* entryOf(() => address.go('/films/p/studio?sel=rise#t=2'))).toBe(
-          'push /films/p/studio?sel=rise#t=2',
-        );
-        expect(yield* entryOf(() => address.go('/films/p/studio?sel=rise&note=n1#t=2'))).toBe(
-          'push /films/p/studio?sel=rise&note=n1#t=2',
-        );
-        // The page following its own selection: written in place.
-        expect(yield* entryOf(() => address.follow('/films/p/studio?sel=fall#t=3'))).toBe(
-          'replace /films/p/studio?sel=fall#t=3',
-        );
-        // Another film's studio: a step.
-        expect(yield* entryOf(() => address.go('/films/q/studio#t=0'))).toBe(
-          'push /films/q/studio#t=0',
-        );
-        // A play write and a jump in one tick are one step, judged from the entry on screen.
+        // Another ask: a step.
+        expect(yield* entryOf(() => address.go('/asks/a2'))).toBe('push /asks/a2');
+        // A follow and a move in one tick are one step, judged from the entry on screen.
         expect(
           yield* entryOf(() => {
-            address.follow('/films/p/studio#t=0');
-            address.go('/films/p/studio#t=0.5');
+            address.follow('/asks/a2?still=x');
+            address.go('/asks/a2?still=y');
           }),
-        ).toBe('push /films/p/studio#t=0.5');
+        ).toBe('push /asks/a2?still=y');
       }).pipe(Effect.provide(Layer.succeedContext(host)));
     },
   );

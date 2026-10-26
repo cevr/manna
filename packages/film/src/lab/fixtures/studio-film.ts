@@ -1,4 +1,4 @@
-// A synthetic film over every review page of the studio, for the tests that
+// A synthetic film over every lab page, for the tests that
 // walk them all (the touch-target guard): one film, `toy`, of an act (open,
 // close) and two loose scenes (coda, end), open rendered so its row links
 // its Stack; its choices are a score of three options, a look of two, a
@@ -28,10 +28,10 @@ import {
 export const STUDIO_FILM = 'toy';
 
 /** The film's project folder, as the review's roots hold it. */
-export const STUDIO_FOLDER = 'out/toy';
+const STUDIO_FOLDER = 'out/toy';
 
-/** The render set of scene open, in the folder: the Set page's point. */
-export const STUDIO_SET = 'render:scenes:open';
+/** The render set of scene open, in the folder. */
+const STUDIO_SET = 'render:scenes:open';
 
 const FILM_AT: Json = { _tag: 'Film' };
 const scenesAt = (...ids: ReadonlyArray<string>): Json => ({ _tag: 'Scenes', ids });
@@ -237,14 +237,14 @@ const indexOf = (versions: ReadonlyArray<string>, docs: ReadonlyArray<Json> = []
 });
 
 /** The toy's production: two versions, a decision, an open question, and a set filed by hand that no root holds now. */
-export const STUDIO_PRODUCTION = 'toy-cut';
+const STUDIO_PRODUCTION = 'toy-cut';
 
 /**
- * The toy production's ledger, as `GET /api/productions` sends it, with
+ * The toy production's ledger, as the production store reads it, with
  * `later` versions after its two; `film` names the film it makes (none: a
  * track, so the toy keeps its Films card).
  */
-export const productionLedgerWith = (
+const productionLedgerWith = (
   later: ReadonlyArray<Json>,
   film: ReadonlyArray<string> = [],
 ): Json => ({
@@ -564,11 +564,11 @@ export const guidedRoutes: ReadonlyArray<FakeRoute> = [
 ];
 
 /** A series of the app's, listed beside the films, and its one draft. */
-export const STUDIO_SERIES = 'toy-talks';
-export const STUDIO_DRAFT = '01-first-breath';
+const STUDIO_SERIES = 'toy-talks';
+const STUDIO_DRAFT = '01-first-breath';
 
 /** The draft as `GET /api/series/<series>/<draft>` sends it, its first beat's line said `say`. */
-export const draftRecordWith = (say = 'The first thing God {*}gave was breath.'): Json => ({
+const draftRecordWith = (say = 'The first thing God {*}gave was breath.'): Json => ({
   series: STUDIO_SERIES,
   draft: STUDIO_DRAFT,
   title: 'The first breath',
@@ -689,10 +689,4 @@ export const studioRoutes: ReadonlyArray<FakeRoute> = [
   ),
   route('GET', /^\/api\/series\/toy-talks\/01-first-breath$/, () => json(draftRecord)),
   route('GET', /^\/api\/series\/toy-talks\/01-first-breath\/voice$/, () => json(draftVoice)),
-];
-
-/** The studio's routes with open's render set holding three versions: a pair leaves one out. */
-export const studioRoutesOfThree: ReadonlyArray<FakeRoute> = [
-  route('GET', /^\/api\/review\/index/, () => json(indexOf(['main', 'warm', 'cool']))),
-  ...studioRoutes,
 ];

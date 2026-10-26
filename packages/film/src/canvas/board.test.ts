@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from 'bun:test';
 import { Match, Option, Result, Schema } from 'effect';
-import { type BoardImage, boardFilm, paintText } from './board.ts';
+import { type BoardImage, boardFilm } from './board.ts';
 import type { CardStyle } from './card.ts';
 import type { Film } from './film.ts';
 import { applyAffine, recorder, withDom } from './fixtures/stand-in.ts';
@@ -15,9 +15,7 @@ import { Shot } from '../core/animatic.ts';
 import { boardFrameAt } from '../core/board-render.ts';
 import { type BoardFile, BoardName, type Panel, emptyBoard } from '../core/board.ts';
 import { Segment } from '../core/segment.ts';
-import { type Placed, layout } from '../core/layout.ts';
-import { estimate } from '../core/narration.ts';
-import { voicedAt } from '../core/voiced.ts';
+import { layout } from '../core/layout.ts';
 
 const STYLE: CardStyle = {
   ground: '#0e1010',
@@ -25,58 +23,6 @@ const STYLE: CardStyle = {
   payoffScale: 2.5,
   payoffColor: '#e6b347',
 };
-
-/** A film with only what a card reads of it: its size, its title, its card style. */
-const film: Film = Schema.decodeSync(Schema.Any)({
-  width: 1920,
-  height: 1080,
-  title: 'probe',
-  look: { card: { style: STYLE } },
-});
-
-/** Beat `one` saying `line`, its words heard as an estimate times them, with the marks `marks`. */
-const placed = (line: string, marks: ReadonlyArray<readonly [string, number]>): Placed => {
-  const words = estimate(line).map((w) => ({ ...w, voiced: voicedAt(w.start + 0.15, w.end) }));
-  return Schema.decodeSync(Schema.Any)({
-    spec: { id: 'one' },
-    voice: { words, marks: new Map(marks) },
-    speechStart: 0,
-    start: 0,
-  });
-};
-
-describe('a card panel', () => {
-  test("held from the beat's start, sets the line from its first word", () => {
-    const r = recorder(1920, 1080);
-    const set = withDom(() =>
-      paintText(
-        r.ctx,
-        film,
-        placed('Be just with God.', []),
-        { _tag: 'Card', payoff: 'just' },
-        'start',
-        0,
-        9,
-      ),
-    );
-    expect(set).toEqual(Result.succeed(undefined));
-  });
-  test('held from a mark the line lacks, says so', () => {
-    const r = recorder(1920, 1080);
-    const set = withDom(() =>
-      paintText(
-        r.ctx,
-        film,
-        placed('Be just with God.', []),
-        { _tag: 'Card', payoff: 'just' },
-        'gone',
-        0,
-        9,
-      ),
-    );
-    expect(Result.isFailure(set) && set.failure).toContain('{gone}');
-  });
-});
 
 describe('a Board render', () => {
   /** Beats `one`, `two` and `three`, 5 s each from 0, saying their lines on an estimate. */
@@ -165,6 +111,21 @@ describe('a Board render', () => {
     withDom(() => boardFilm(f, board, tries().images, false).render(r.ctx, 12));
     expect(r.fills.map((fill) => fill.style)).toContain('#0e1010');
     expect(drew).toEqual([]);
+  });
+
+  test('fails the frame on a card held from a mark its line lacks, naming the mark', () => {
+    const { film: f } = filmOf(() => false);
+    const gone: BoardFile = {
+      ...board,
+      panels: board.panels.map((p) => {
+        if (p.beat !== 'three') return p;
+        return { ...p, id: 'three.gone', at: BoardName.make('gone') };
+      }),
+    };
+    const r = recorder(1920, 1080);
+    expect(() =>
+      withDom(() => boardFilm(f, gone, tries().images, false).render(r.ctx, 12)),
+    ).toThrow('{gone}');
   });
 
   test("draws a card the film's scenes declare over a picture panel, through the film", () => {

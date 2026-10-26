@@ -33,9 +33,9 @@ describe('a page that does not build', () => {
   it.live('a page that does not build answers the bundler, and serves again once fixed', () =>
     Effect.gen(function* () {
       const { ask, script, waitWriting } = yield* app;
-      yield* ask('/');
+      yield* ask('/asks/a1');
       yield* waitWriting(0, '10 seconds', 'src/p.ts', "import './missing.ts';\n");
-      const broken = yield* ask('/');
+      const broken = yield* ask('/asks/a1');
       expect(broken.status).toBe(500);
       expect(broken.text).toContain('missing.ts');
       // In the studio's look: its tokens, no colour of its own.
@@ -44,7 +44,7 @@ describe('a page that does not build', () => {
       // The failed build read nothing new; a fix to the file it last read is still heard.
       const built = buildOf(broken.text);
       yield* waitWriting(built, '10 seconds', 'src/p.ts', "console.log('fixed');\n");
-      expect((yield* ask('/')).status).toBe(200);
+      expect((yield* ask('/asks/a1')).status).toBe(200);
       expect(yield* script).toContain('fixed');
     }).pipe(Effect.scoped, Effect.provide(Platform)),
   );
@@ -59,7 +59,7 @@ describe('a page that does not build', () => {
         const stills = path.resolve(import.meta.dir, '..', 'player', 'stills.ts');
         for (const folder of [
           path.join(spec.films, 'toy', 'scenes'),
-          path.join(path.dirname(spec.pages.review), 'lib', 'scenes'),
+          path.join(path.dirname(spec.pages.ask), 'lib', 'scenes'),
         ])
           yield* fs.makeDirectory(folder, { recursive: true });
         yield* write('src/films/toy/scenes/one.ts', "export const one = 'scene one';\n");
@@ -71,10 +71,10 @@ describe('a page that does not build', () => {
           "import { shown } from './films/toy/scenes/shown.ts';\nconsole.log(shown);\n",
         );
         yield* write(
-          'src/review.server.tsx',
+          'src/ask.server.tsx',
           `import { one } from './films/toy/scenes/one.ts';\nimport { two } from '../lib/scenes/two.ts';\nimport { makeStills } from '${stills}';\nexport const rendered = () => [one, two, typeof makeStills].join(' ');\n`,
         );
-        const refused = yield* ask('/');
+        const refused = yield* ask('/asks/a1');
         expect(refused.status).toBe(500);
         const failed = Option.getOrElse((yield* page.built).failed, () => '');
         expect(failed).toContain('draws no film');
@@ -86,17 +86,17 @@ describe('a page that does not build', () => {
         yield* waitWriting(
           buildOf(refused.text),
           '10 seconds',
-          'src/review.server.tsx',
+          'src/ask.server.tsx',
           "export const rendered = () => 'none';\n",
         );
-        expect((yield* ask('/')).status).toBe(200);
+        expect((yield* ask('/asks/a1')).status).toBe(200);
       }).pipe(Effect.scoped, Effect.provide(Platform)),
   );
 
   it.live("a build that fails is the look's failure, in the bundler's words", () =>
     Effect.gen(function* () {
       const { ask, page, write } = yield* app;
-      yield* ask('/');
+      yield* ask('/asks/a1');
       yield* write('src/p.ts', "import './missing.ts';\n");
       const now = yield* page.built;
       expect(Option.getOrElse(now.failed, () => '')).toContain('missing.ts');
@@ -107,7 +107,7 @@ describe('a page that does not build', () => {
     Effect.gen(function* () {
       const { spec, write } = yield* appFolderWith({ 'src/p.ts': "import './missing.ts';\n" });
       const { page, ask } = yield* served(spec, PageBundler.layer);
-      const broken = yield* ask('/');
+      const broken = yield* ask('/asks/a1');
       expect(broken.status).toBe(500);
       const since = buildOf(broken.text);
       yield* write('src/p.ts', "console.log('fixed cold');\n");
@@ -116,7 +116,7 @@ describe('a page that does not build', () => {
         '5 seconds',
       );
       expect(heard.build).toBeGreaterThan(since);
-      expect((yield* ask('/')).status).toBe(200);
+      expect((yield* ask('/asks/a1')).status).toBe(200);
     }).pipe(Effect.scoped, Effect.provide(Platform)),
   );
 
@@ -129,7 +129,7 @@ describe('a page that does not build', () => {
           'src/p.ts': "import { gone } from '../lib/missing.ts';\nconsole.log(gone);\n",
         });
         const { page, ask } = yield* served(spec, PageBundler.layer);
-        const broken = yield* ask('/');
+        const broken = yield* ask('/asks/a1');
         expect(broken.status).toBe(500);
         const since = buildOf(broken.text);
         // The failed page's wait, as its own script asks it; no page is asked meanwhile.
@@ -140,7 +140,7 @@ describe('a page that does not build', () => {
         const heard = yield* Fiber.join(waiting);
         expect(heard.build).toBeGreaterThan(since);
         // The page it reloads onto, asked once: the build the wait made, served.
-        const fixed = yield* ask('/');
+        const fixed = yield* ask('/asks/a1');
         expect([fixed.status, buildOf(fixed.text)]).toEqual([200, heard.build]);
       }).pipe(Effect.scoped, Effect.provide(Platform)),
   );
@@ -170,7 +170,7 @@ describe('a page that does not build', () => {
           }),
         ).pipe(Layer.provide(PageBundler.layerTest));
         const { page, ask } = yield* served(spec, flaky);
-        const broken = yield* ask('/');
+        const broken = yield* ask('/asks/a1');
         expect([broken.status, broken.text.includes('stale resolve 1')]).toEqual([500, true]);
         const since = buildOf(broken.text);
         // The failed page's wait, as its own script asks it; nothing is saved, no page asked.
@@ -179,7 +179,7 @@ describe('a page that does not build', () => {
           '5 seconds',
         );
         expect(heard.build).toBeGreaterThan(since);
-        const fixed = yield* ask('/');
+        const fixed = yield* ask('/asks/a1');
         expect([fixed.status, buildOf(fixed.text)]).toEqual([200, heard.build]);
       }).pipe(Effect.scoped, Effect.provide(Platform)),
   );
@@ -189,9 +189,9 @@ describe('a page that does not build', () => {
     () =>
       Effect.gen(function* () {
         const { ask, waitWriting } = yield* app;
-        yield* ask('/');
+        yield* ask('/asks/a1');
         yield* waitWriting(0, '10 seconds', 'src/p.ts', "import './missing.ts';\n");
-        const broken = (yield* ask('/')).text;
+        const broken = (yield* ask('/asks/a1')).text;
         const code = /<script>([\s\S]*)<\/script>/.exec(broken)?.[1] ?? '';
         const server = serverOf(broken);
         const build = buildOf(broken);

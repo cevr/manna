@@ -4,8 +4,7 @@
 // A swipe's pure geometry, for the toast, which runs its own swipe: how far a
 // drag travels in a direction, its damping against the allowed directions,
 // and an element's computed translation and scale. Upstream's gesture hook
-// around them, which names the file, is left out: no part reads it (the
-// sheet's swipe is the browser's own scroll).
+// around them, which names the file, is left out: no part reads it.
 import { ownerWindow } from './dom.ts';
 
 export type SwipeDirection = 'up' | 'down' | 'left' | 'right';

@@ -5,8 +5,8 @@
 //
 // - the route tables in packages/film/README.md: each row is a route the lab's
 //   API declares (`routesOf`), and each declared route has a
-//   row. A cell may list more than one: `POST /api/films/<film>/undo`, `/redo` (a
-//   sibling of the path before), `GET /api/films/<film>/project`; `POST …/say`
+//   row. A cell may list more than one: `GET /api/films/<film>/script`, `/board`
+//   (a sibling of the path before), `GET /api/films/<film>/board`; `GET …/stale`
 //   (below it);
 // - each route in running text, here and in NORTH_STAR.md and the app's
 //   README: a `GET /api/…` span is a declared route, and a bare API path
@@ -78,7 +78,7 @@ import { Effect, FileSystem, Layer, Option, Path, Predicate, Schema } from 'effe
 import type { PlatformError } from 'effect/PlatformError';
 import { JSONC, TOML } from 'bun';
 import { type Node, type Program, Visitor, parseSync } from 'oxc-parser';
-import { LabHttpApi } from './core/api.ts';
+import { LabHttpApi, pageAt } from './core/api.ts';
 import { declares as declaresRoute, routesOf } from './core/testing.ts';
 import { fieldsOf } from './tools/lab-fields.ts';
 import { allCommands } from './tools/lab-commands.ts';
@@ -140,14 +140,14 @@ interface Code {
   readonly written: ReadonlySet<string>;
 }
 
-/** `/api/films/<film>/choices/mix?point=&variant=` as declared: `/api/films/:film/choices/mix`; a `<ref>` is the rest of the path. */
+/** `/api/films/<film>/board/stale?beat=` as declared: `/api/films/:film/board/stale`; a `<ref>` is the rest of the path. */
 const declaredPath = (written: string) =>
   written
     .replace(/\[?\?.*$/, '')
     .replaceAll('<ref>', '*')
     .replace(/<(\w+)>/g, ':$1');
 
-/** The path a span writes, read against the path before it: `…/say` below it, `/redo` beside it. */
+/** The path a span writes, read against the path before it: `…/stale` below it, `/board` beside it. */
 const pathAfter = (before: string, written: string) => {
   if (written.startsWith('…/')) return `${before}${written.slice(1)}`;
   if (/^\/[^/]+$/.test(written) && before !== '')
@@ -213,6 +213,25 @@ const spanDrift = (markdown: Markdown, code: Code) => {
     }),
   );
 };
+
+/** A path under one of the lab's page roots: a page, or a file route served beside the pages. */
+const PAGE_PATH = /^\/(?:films|sets|series|folders|productions|asks|studio)\/\S*$/;
+/** The lab's file routes beside its pages, a placeholder or a concrete name in each word: a film's narration and its Board's files. */
+const SERVED_BESIDE = /^\/films\/[^/]+\/(?:narration\/[^/]+|board\.json|board\/[^/]+)$/;
+
+/**
+ * Each lab page a text writes in a span (`/asks/<ask>`, `/films/<film>/export?build=<kept>`),
+ * its words (`<film>`, `:film`) any: a page `pageAt` serves, or a file route beside them.
+ * A framework doc's only: the prior arts record each page as it landed.
+ */
+const pageDrift = (markdown: Markdown) =>
+  matches(proseOf(markdown), SPAN).flatMap((m) => {
+    const span = group(m, 2).trim();
+    if (!PAGE_PATH.test(span)) return [];
+    const path = span.replace(/[?#].*$/, '').replace(/<[^>]+>|:[a-z]+/g, 'x');
+    if (Option.isSome(pageAt(path)) || SERVED_BESIDE.test(path)) return [];
+    return [`page ${span} is no page of the lab`];
+  });
 
 /**
  * Each rule a doc names, in the form the plugin registers (`film/no-read-once`,
@@ -672,6 +691,7 @@ const drift = (doc: Doc, code: Code): ReadonlyArray<string> => {
   return [
     ...routeDrift(markdown, code),
     ...spanDrift(markdown, code),
+    ...pageDrift(markdown),
     ...ruleDrift(markdown, code),
     ...scriptDrift(markdown, code),
     ...markdown.lines.flatMap((line) => [
@@ -1270,16 +1290,16 @@ describe('the docs', () => {
               '/**',
               ' * GET /api/review/gone',
               ' */',
-              '// POST /api/films/<film>/choices/pick and GET /api/review/index',
+              '// POST /api/films/<film>/script/marks and GET /api/review/index',
               "const url = 'GET /api/nowhere';",
               'const a = 1; // POST /api/films/:film/choices/level after code',
               '/*',
               '  GET /api/review/also-gone',
               '*/',
               '// HEAD /api/review/index, OPTIONS /api/films/<film>/notes',
-              '// GET /api/films/${encodeURIComponent(film)}/notes/wait, POST /api/films/:film/notes/:id/reply.',
-              '// GET /api/films/${encodeURIComponent({ name: film }.name)}/notes/wait (GET /api/review/index).',
-              '// `POST /api/films/<film>/choices/pick(extra)` takes no pick',
+              '// GET /api/films/${encodeURIComponent(film)}/board/stale, GET /api/films/:film/board/files/:file.',
+              '// GET /api/films/${encodeURIComponent({ name: film }.name)}/board/stale (GET /api/review/index).',
+              '// `POST /api/films/<film>/script/marks(extra)` takes no mark',
               '// polls `/api/review/gone?since=` for a build, and /api/films/<film>/gone/too.',
               '// reads /api/review/index?fresh, under /api/films/probe, every route under /api/ and its own /api/own',
               "const own = new URL('/api/own', 'http://lab');",
@@ -1297,7 +1317,7 @@ describe('the docs', () => {
           'red.ts:9: GET /api/review/also-gone is declared by no API',
           'red.ts:11: HEAD /api/review/index is declared by no API',
           'red.ts:11: OPTIONS /api/films/<film>/notes is declared by no API',
-          'red.ts:14: POST /api/films/<film>/choices/pick(extra) is declared by no API',
+          'red.ts:14: POST /api/films/<film>/script/marks(extra) is declared by no API',
           // A bare path is any method's route, or a prefix of some, or the file's own.
           'red.ts:15: /api/review/gone?since= is declared by no API',
           'red.ts:15: /api/films/<film>/gone/too is declared by no API',
@@ -1366,6 +1386,8 @@ describe('the docs', () => {
           'bun run render <film> --tag p7   # render a tagged variant',
           'bun run check <film>             # warns VoiceLevel, SeamLong',
           'Its frame is `/review/frame`; say it with `POST /review/project/<film>/say`.',
+          'Hand him `/films/<film>/project` or `/sets/<folder>`, never `/asks/<ask>` nor `/films/<film>/export?build=<kept>` nor `/films/<film>/narration/<file>`.',
+          'Served beside the pages: `/films/in-its-order/narration/full.wav`, `/films/in-its-order/board.json`, `/films/in-its-order/board/open.start.1.png`.',
           'Every page a Place (`packages/film/src/core/api.ts` `Places`, `pageHrefs`).',
           'The review is read by `tools/review.ts` `Review.write`, the bar at `lab/page-shell.tsx:346`.',
           'A request is made in `lab/api.ts` `uniqueId`, which it imports and calls.',
@@ -1450,6 +1472,8 @@ describe('the docs', () => {
         'stale.md: route GET /index.json is declared by no API',
         'stale.md: path /review/frame is no route of the API',
         'stale.md: route POST /review/project/:film/say is declared by no API',
+        'stale.md: page /films/<film>/project is no page of the lab',
+        'stale.md: page /sets/<folder> is no page of the lab',
         'stale.md: rule film/no-such-rule is not registered',
         'stale.md: rule film/frobnicate is not registered',
         'stale.md: bun run nothing: no such script',

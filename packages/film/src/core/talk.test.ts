@@ -12,12 +12,12 @@ import { SYNTHETIC_SOURCE, syntheticTake } from './fixtures/talk-take.ts';
 import { layout } from './layout.ts';
 import { noteT } from './notes.ts';
 import { Timings } from './schema.ts';
+import { Segment } from './segment.ts';
 import { SAFE_ZONES, roomAcross, safeRect } from './shorts.ts';
 import {
   TALK_FORMATS,
   TALK_FPS,
   TALK_LAYOUT,
-  MarkName,
   type Talk,
   Talk as TalkSchema,
   type TalkCut,
@@ -28,7 +28,7 @@ import {
   talkTranscripts,
 } from './talk.ts';
 
-const CHARGE = MarkName.make('charge');
+const CHARGE = Segment.make('charge');
 
 const WORDS = ['Is', 'the', 'um', 'verdict', 'a', 'cover', 'up', 'No', 'it', 'is', 'not'];
 
@@ -268,7 +268,7 @@ describe('a talk cut on its transcript', () => {
           take: 'a',
           from: 0,
           to: 6,
-          marks: { [CHARGE]: 5, [MarkName.make('verdict')]: 5 },
+          marks: { [CHARGE]: 5, [Segment.make('verdict')]: 5 },
           timeline: { tablets: { mark: 'charge', dur: 1 }, seal: { mark: 'verdict', dur: 1 } },
         },
       ]),
@@ -337,7 +337,7 @@ describe('a talk cut on its transcript', () => {
             from: 0,
             to: 5,
             cut: [[2, 2]],
-            marks: { [MarkName.make('m')]: 2 },
+            marks: { [Segment.make('m')]: 2 },
           },
         ]),
       ),

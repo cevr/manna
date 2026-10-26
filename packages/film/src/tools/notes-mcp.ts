@@ -1,8 +1,8 @@
 // The lab's notes and board commands (`lab-command.ts`; MCP and `film lab`
 // serve them): a film's notes (`notes`) and its storyboard (`board`) read,
-// and the writes on them, each through the store the page writes through
-// (`NotesStore`, `BoardStore`): a reply or a note marked done (`reply`,
-// `resolve`), a tweak asked of a panel (`request_tweak`), a try kept
+// and the writes on them, each through the store `film board` reads too
+// (`NotesStore`, `BoardStore`): a note marked done (`resolve`), a tweak
+// asked of a panel (`request_tweak`), a try kept
 // (`keep_try`), and a beat's board approved or its approval withdrawn
 // (`approve_beat`, `withdraw_beat`).
 
@@ -35,7 +35,8 @@ import {
   tryOf,
   withdrawBeat,
 } from '../core/board.ts';
-import { LabLinks, boardPath, linksAt, notePath } from '../core/lab-events.ts';
+import { pageHref } from '../core/api.ts';
+import { LabLinks, linksAt } from '../core/lab-events.ts';
 import { unresolved } from '../core/notes.ts';
 import { Note, type NoteDraft, NoteStatus } from '../core/schema.ts';
 import { staleWhy } from './board-stale.ts';
@@ -118,7 +119,7 @@ const NoteWritten = Schema.Struct({ note: NoteRead });
 
 const Notes = Tool.make('notes', {
   description:
-    "A film's notes: what the owner wrote on its frames, a line's words or a board panel, each with its thread, its status (open, replied, resolved), its lab link and its still on disk. `status: unresolved` (the default) lists what waits; `all` lists every note.",
+    "A film's notes: the tweaks asked of its board panels, each with its thread, its status (open, replied, resolved), its lab link and its still on disk. `status: unresolved` (the default) lists what waits; `all` lists every note.",
   parameters: Schema.Struct({
     ...FilmParam.fields,
     status: Schema.optionalKey(Schema.Literals(['unresolved', 'all', ...NoteStatus.literals])),
@@ -135,24 +136,6 @@ const Board = Tool.make('board', {
   failure: LabRefused,
 }).annotate(Tool.Readonly, true);
 
-const Reply = Tool.make('reply', {
-  description:
-    "Reply in a note's thread, as the agent: the note becomes `replied` until the owner answers or it is marked done. Say what you did and where to look.",
-  parameters: Schema.Struct({
-    ...FilmParam.fields,
-    note: Schema.String.annotate({ description: 'The note (`n12`).' }),
-    text: Schema.String.check(Schema.isNonEmpty()),
-    still: Schema.optionalKey(
-      Schema.String.annotate({
-        description:
-          'A PNG on this machine to show with the reply, by its absolute path: the frame after the change',
-      }),
-    ),
-  }),
-  success: NoteWritten,
-  failure: LabRefused,
-});
-
 const Resolve = Tool.make('resolve', {
   description: 'Mark a note done (resolved), once what it asked is made.',
   parameters: Schema.Struct({ ...FilmParam.fields, note: Schema.String }),
@@ -162,7 +145,7 @@ const Resolve = Tool.make('resolve', {
 
 const RequestTweak = Tool.make('request_tweak', {
   description:
-    "Ask for a board panel to be made again, as a tweak note on it (what `film board tweak <film> <note>` acts on), its still the try it starts from: `try`, else the kept one, else the first. Use it to put the owner's word from chat onto the board. The note sits on its panel in the studio's inspector (its Board section), and its link opens the studio there.",
+    "Ask for a board panel to be made again, as a tweak note on it (what `film board tweak <film> <note>` acts on), its still the try it starts from: `try`, else the kept one, else the first. Use it to put the owner's word from chat onto the board.",
   parameters: Schema.Struct({
     ...FilmParam.fields,
     panel: Schema.String.annotate({ description: 'The panel (`<beat>.<mark>`).' }),
@@ -227,7 +210,7 @@ export const notesReads = Effect.fn('LabMcp.notesReads')(function* () {
 
   const noteRead = (film: FilmName, note: Note): typeof NoteRead.Type => ({
     ...note,
-    links: linksOf(notePath(note)),
+    links: linksOf(pageHref.home()),
     stillFile: path.join(notes.paths(film).stills, note.still),
   });
 
@@ -288,7 +271,7 @@ export const notesReads = Effect.fn('LabMcp.notesReads')(function* () {
               stale: { members: s.members, added: s.added, words: s.words, why: staleWhy(film, s) },
             }),
           }),
-          links: linksOf(boardPath(film, panel.beat, Option.some(panel.at))),
+          links: linksOf(pageHref.home()),
         })),
       approvals: board.approvals.filter((a) =>
         Option.match(beat, { onNone: () => true, onSome: (b) => a.beat === b }),
@@ -309,28 +292,6 @@ export const notesReads = Effect.fn('LabMcp.notesReads')(function* () {
     const at = DateTime.formatIso(yield* DateTime.now);
     yield* refused(boards.modify(film, (board) => change(board, at)));
     return yield* boardOf(film, Option.none());
-  });
-
-  const reply = Effect.fn('LabMcp.reply')(function* (
-    name: string,
-    id: string,
-    text: string,
-    shown: Option.Option<string>,
-  ) {
-    const film = yield* named(name);
-    const still = yield* Option.match(shown, {
-      onNone: () => Effect.succeedNone,
-      onSome: (file) =>
-        Bool.match(path.isAbsolute(file), {
-          onTrue: () => Effect.asSome(refused(fs.readFile(file))),
-          onFalse: () =>
-            Effect.fail(
-              LabRefused.make({ reason: `${file}: name the still by its absolute path` }),
-            ),
-        }),
-    });
-    const note = yield* refused(notes.reply(film, id, { by: 'agent', text, still }));
-    return { note: noteRead(film, note) };
   });
 
   const resolve = Effect.fn('LabMcp.resolve')(function* (name: string, id: string) {
@@ -390,7 +351,7 @@ export const notesReads = Effect.fn('LabMcp.notesReads')(function* () {
     return { note: noteRead(film, note) };
   });
 
-  return { notesOf, boardOf, boardChanged, reply, resolve, requestTweak };
+  return { notesOf, boardOf, boardChanged, resolve, requestTweak };
 });
 
 /** The work of the notes' and the board's commands. */
@@ -406,10 +367,6 @@ export const notesCommands = [
   labCommand(Board, {
     run: ({ film, beat }) =>
       Effect.flatMap(lab, (l) => l.boardOf(film, Option.fromUndefinedOr(beat))),
-  }),
-  labCommand(Reply, {
-    run: ({ film, note, text, still }) =>
-      Effect.flatMap(lab, (l) => l.reply(film, note, text, Option.fromUndefinedOr(still))),
   }),
   labCommand(Resolve, {
     run: ({ film, note }) => Effect.flatMap(lab, (l) => l.resolve(film, note)),

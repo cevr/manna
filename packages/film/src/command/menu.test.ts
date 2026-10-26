@@ -1,9 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import { Effect, Option } from 'effect';
-import { BY_BUTTON, type Command, quiet } from './command.ts';
+import { Effect } from 'effect';
+import { type Command, Receipt } from './command.ts';
 import { contextAt } from './context.ts';
-import { pageHref } from '../core/api.ts';
-import { GO_TO, goToCommands, shellCommands } from './go.ts';
 import { byGroup, contextRows, menuRows, rowChord, rowKey, sheetRows, viewRows } from './menu.ts';
 
 const command = (id: string, group: string, label: string): Command => ({
@@ -12,15 +10,21 @@ const command = (id: string, group: string, label: string): Command => ({
   group,
   touch: 'a test command',
   when: () => true,
-  run: () => Effect.succeed(quiet),
+  run: () => Effect.succeed(Receipt.Quiet()),
 });
+
+/** A command found only by typing in ⌘K (`Command.typed`). */
+const typed: Command = {
+  ...command('go.scene.cold', 'Go to', 'Go to scene cold'),
+  typed: true,
+};
 
 const commands = [
   command('play.toggle', 'Transport', 'Play or pause'),
   command('edit.undo', 'Edit', 'Undo'),
   command('play.frame-next', 'Transport', 'Next frame'),
 ];
-const ctx = contextAt('player', '/films/f/studio');
+const ctx = contextAt('ask', '/films/f/studio');
 
 describe('the command menu and the sheet', () => {
   test('group commands where their group first comes, keeping their order within it', () => {
@@ -44,8 +48,8 @@ describe('the command menu and the sheet', () => {
     expect(menuRows(commands, ctx, 'nothing')).toEqual([]);
   });
 
-  test('a Go to entry is a row once a word is typed, and never in the sheet or a context menu', () => {
-    const goes = goToCommands([{ kind: 'scene', id: 'cold', name: 'cold', go: () => {} }]);
+  test('a typed command is a row once a word is typed, and never in the sheet or a context menu', () => {
+    const goes = [typed];
     const all = [...commands, ...goes];
     expect(menuRows(all, ctx, '').map((r) => r.command.id)).not.toContain('go.scene.cold');
     expect(menuRows(all, ctx, 'cold').map((r) => r.label)).toEqual(['Go to scene cold']);
@@ -54,12 +58,12 @@ describe('the command menu and the sheet', () => {
   });
 
   test('the sheet lists every command a key is bound to, one found only by typing too', () => {
-    const goes = goToCommands([{ kind: 'scene', id: 'cold', name: 'cold', go: () => {} }]);
+    const goes = [typed];
     const bound = (id: string) => ['g'].filter(() => id === 'go.scene.cold');
     expect(sheetRows([...commands, ...goes], bound).map(([group]) => group)).toEqual([
       'Transport',
       'Edit',
-      GO_TO,
+      'Go to',
     ]);
   });
 
@@ -106,45 +110,5 @@ describe("a stepped command in a context menu (a finger's Shift)", () => {
     expect(menuRows([next], ctx, '').map((r) => [r.label, r.step])).toEqual([
       ['Next frame', 'normal'],
     ]);
-  });
-});
-
-describe('Go to (AA-2)', () => {
-  test('each destination is a command named by its kind and id that goes there', () => {
-    const went: Array<string> = [];
-    const [go] = goToCommands([
-      { kind: 'folder', id: 'out/art', name: 'Roofs out/art', go: () => went.push('out/art') },
-    ]);
-    expect(go?.id).toBe('go.folder.out/art');
-    expect(go?.label).toBe('Go to folder Roofs out/art');
-    expect(go?.group).toBe(GO_TO);
-    Effect.runSync(go?.run(ctx, { ...BY_BUTTON, input: 'pointer' }) ?? Effect.succeed(quiet));
-    expect(went).toEqual(['out/art']);
-  });
-
-  test("the shell's moves are commands: Films on ⇧1, the film's studio on ⇧2", () => {
-    const went: Array<string> = [];
-    const moves = (film: Option.Option<string>, onFilms: boolean) =>
-      shellCommands(
-        () => film,
-        () => onFilms,
-        (href) => went.push(href),
-      );
-    const open = (film: Option.Option<string>, onFilms: boolean) =>
-      moves(film, onFilms)
-        .filter((c) => c.when(ctx))
-        .map((c) => c.id);
-    expect(moves(Option.some('roofs'), false).map((c) => [c.id, c.keys])).toEqual([
-      ['page.films', ['shift+1']],
-      ['page.studio', ['shift+2']],
-    ]);
-    // Films from Films is no move; a page of no film has no studio to open.
-    expect(open(Option.some('roofs'), true)).toEqual(['page.studio']);
-    expect(open(Option.none(), false)).toEqual(['page.films']);
-    const studio = moves(Option.some('roofs/shorts/hook'), true).find(
-      (c) => c.id === 'page.studio',
-    );
-    Effect.runSync(studio?.run(ctx, { ...BY_BUTTON, input: 'pointer' }) ?? Effect.succeed(quiet));
-    expect(went).toEqual([pageHref.studio('roofs/shorts/hook')]);
   });
 });

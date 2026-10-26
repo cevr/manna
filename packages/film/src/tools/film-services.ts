@@ -1,10 +1,8 @@
 // The film's composition root: the services every `film` command and the lab
 // run with, the lab's pages, and the lab's start, built in one place. Its
-// consumers are the CLI (`runFilmCli`, `cli.ts`) and the app's studio
-// harness (`apps/animations/studio-harness.ts`), which drives this same lab
-// over a copy of a film with a fake ElevenLabs. A consumer that built these
-// layers itself would drift from the lab it means to be
-// (`film-services.slow.test.ts` names the two and sweeps for a third).
+// one consumer is the CLI (`runFilmCli`, `cli.ts`). A consumer that built
+// these layers itself would drift from the lab it means to be
+// (`film-services.slow.test.ts` names the CLI and sweeps for another).
 
 import { AskMaterials } from './ask-materials.ts';
 import { AskStore } from './ask-store.ts';
@@ -42,7 +40,6 @@ import { FootageLibrary } from './footage.ts';
 import { FootageMedia } from './footage-media.ts';
 import { FreshFilm } from './fresh-film.ts';
 import { FilmTimelines } from './film-timeline.ts';
-import { Working } from './working.ts';
 import type { LabLinks } from '../core/lab-events.ts';
 import { labHandler } from './lab.ts';
 import { LabEvents } from './lab-events.ts';
@@ -98,8 +95,7 @@ interface FilmServicesSpec {
   >;
   /**
    * ElevenLabs: the real one (`ElevenLabs.layer`), or a fixture's fake, which
-   * may read the film and its media (the studio harness hears each take as
-   * its line).
+   * may read the film and its media.
    */
   readonly elevenLabs: Layer.Layer<ElevenLabs, never, FilmRepo | Media | BunServices.BunServices>;
   /**
@@ -208,14 +204,12 @@ export const filmServices = (spec: FilmServicesSpec) => {
   // The agents' asks: a decision page each, kept under the lab's folder; a board try one shows
   // is found on its board, and the material it shows through the reads its views make.
   const Asks = AskStore.layer.pipe(Layer.provide(AskMaterials.layer));
-  // Each film's timeline as the studio and the `timeline` tool read it, over the stores and a
-  // fresh clock, beside the agents' "doing now" lines, held in memory.
-  const Timelines = FilmTimelines.layer.pipe(
-    Layer.provideMerge(Working.layer),
-    Layer.provide(Asks),
-  );
-  // The studio's edits of a version's script, judged on its timeline, written through the
-  // source writer the lab's other writes share, their work filed on the production's ledger.
+  // Each film's timeline as the `timeline` tool reads it: its clock read fresh, its Board,
+  // catalogue, notes, the asks and the production's ledger.
+  const Timelines = FilmTimelines.layer.pipe(Layer.provide(Asks));
+  // The agents' edits of a version's script (`beat_move`, `beat_hold`, `undo`), judged on its
+  // timeline, written through the source writer the lab's other writes share, their work filed
+  // on the production's ledger.
   const Edits = BeatEdits.layer.pipe(Layer.provideMerge(Timelines));
   // The Script reader's staging takes, over the studio's readings, the drafts and the narrator.
   return Layer.mergeAll(ScriptVoices.layer, Asks, Edits).pipe(

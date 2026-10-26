@@ -17,7 +17,7 @@
 // The owner's approvals and comments are the catalogue's records
 // (`catalogue.ts`), each on one variant as it was when given (its `key`).
 // Pure: the tools' adapters (`tools/choices.ts`, `tools/review.ts`) build
-// the points, and the review page shows them.
+// the points, and an ask shows them.
 
 import { Array as Arr, Effect, Option, Schema, SchemaTransformation } from 'effect';
 import { Address } from './address.ts';
@@ -33,7 +33,7 @@ import {
   topicAt,
 } from './catalogue.ts';
 import { PointId, PointRef, pointIdOf } from './point.ts';
-import { ChangeId, CheckLine, Seconds, maybe, mixedField } from './schema.ts';
+import { Seconds, maybe } from './schema.ts';
 import { ReviewFile, ReviewVideo } from './served.ts';
 
 /** What a choice point chooses between; each kind has one adapter. */
@@ -192,7 +192,7 @@ const STALE = {
 } as const satisfies { readonly [K in ChoiceKind]: string };
 
 /** Why a render stale by `StaleBy` is, and how to make it current. */
-export const STALE_BY = {
+const STALE_BY = {
   sources: {
     why: 'its sources changed since it was made',
     fix: 'render it again, then approve the new render',
@@ -270,7 +270,7 @@ export const variantNamed = (point: ChoicePoint, id: string): Option.Option<Choi
   Arr.findFirst(point.variants, (v) => v.id === id);
 
 /** A variant that is seen, with its video: what a set compares side by side. */
-export interface SeenVariant extends ChoiceVariant {
+interface SeenVariant extends ChoiceVariant {
   readonly video: ReviewVideo;
 }
 
@@ -284,21 +284,10 @@ export const seenVariants = (point: ChoicePoint): ReadonlyArray<SeenVariant> =>
     }),
   );
 
-/** A point as a set compares it: its seen variants alone, each with its video. */
-export interface SeenPoint extends Omit<ChoicePoint, 'variants'> {
-  readonly variants: ReadonlyArray<SeenVariant>;
-}
-
-/** `point` as a set compares it. */
-export const seenPoint = (point: ChoicePoint): SeenPoint => ({
-  ...point,
-  variants: seenVariants(point),
-});
-
 // ---------------------------------------------------------------------------
-// On the wire: the review's `choices` routes (`api.ts`).
+// What `film options` reads and writes.
 
-/** `GET /api/films/<film>/choices`: the film's choice points, and the renders they are heard against. */
+/** The film's choice points, and the renders they are heard against. */
 export const FilmChoices = Schema.Struct({
   film: Schema.String,
   /**
@@ -312,7 +301,7 @@ export const FilmChoices = Schema.Struct({
 });
 export type FilmChoices = typeof FilmChoices.Type;
 
-/** `POST /api/films/<film>/choices/pick`: a verb on one variant of one point. */
+/** A verb on one variant of one point. */
 export const PickPost = Schema.Struct({
   point: Schema.String,
   variant: Schema.String,
@@ -325,24 +314,3 @@ export const PickPost = Schema.Struct({
   acceptMismatch: Schema.optionalKey(Schema.Boolean),
 });
 export type PickPost = typeof PickPost.Type;
-
-/** What a pick answers: the file it changed, the film's choices as they now stand, and the check after it. */
-export const ChoiceWrite = Schema.Struct({
-  file: Schema.String,
-  /** What changed: `score play piano`, `sound paper.slide keep 3f2a…`. */
-  target: Schema.String,
-  /**
-   * The change it made, by the id the lab's history knows it by (what a
-   * receipt's Undo asks for); none when the source already said so, and
-   * there is nothing to undo.
-   */
-  change: Schema.optionalKey(ChangeId),
-  choices: FilmChoices,
-  findings: Schema.Array(CheckLine),
-  ...mixedField,
-});
-export type ChoiceWrite = typeof ChoiceWrite.Type;
-
-/** `GET /api/films/<film>/choices/check`: `film check --sound` now (dead air, balance against the mix it makes). */
-export const SoundCheck = Schema.Struct({ findings: Schema.Array(CheckLine) });
-export type SoundCheck = typeof SoundCheck.Type;

@@ -3,8 +3,7 @@
 // picture crops it), and a card or a verse panel set by the engine's own
 // card code (`fullCard`, `verse`, in the film's card style: the words
 // exactly as spoken, CRAFT rule 1; never lettering an image route drew).
-// The studio's viewer sets its cards with it, and a panel note's still
-// (`film-studio/panel-still.ts`) paints its try with it, the marks over it.
+// The Board's viewer sets its cards with it.
 // A Board render (`boardFilm`) draws the whole film so: each frame the
 // shots `core/board-render.ts` decides, a picture moving across its hold, a
 // card set by the film's own code.
@@ -30,19 +29,6 @@ const STILL_HAND = (key: string | number): Hand => ({
   seed: Predicate.isNumber(key) ? key : [...key].reduce((n, c) => n * 31 + c.charCodeAt(0), 7),
 });
 
-/** `image` over the whole `w` × `h` frame, cropped to it from its middle (the film's own crop of a 3:2 panel). */
-export const paintImage = (
-  ctx: CanvasRenderingContext2D,
-  image: CanvasImageSource & { readonly width: number; readonly height: number },
-  w: number,
-  h: number,
-) => {
-  const scale = Math.max(w / image.width, h / image.height);
-  const sw = w / scale;
-  const sh = h / scale;
-  ctx.drawImage(image, (image.width - sw) / 2, (image.height - sh) / 2, sw, sh, 0, 0, w, h);
-};
-
 /** How long a verse panel's highlight takes to sweep its phrase, from its mark. */
 const SWEEP_S = 1.2;
 
@@ -52,7 +38,7 @@ const SWEEP_S = 1.2;
  * as they are heard, a verse with its phrase swept. Why not, when the film
  * declares no card style or its words do not read (a mark its line lacks).
  */
-export const paintText = (
+const paintText = (
   ctx: CanvasRenderingContext2D,
   film: Film,
   p: Placed,
@@ -111,7 +97,7 @@ export const paintText = (
 };
 
 /** The board's paper: what a frame with no picture yet is painted on. */
-export const BOARD_PAPER = '#f3ede0';
+const BOARD_PAPER = '#f3ede0';
 
 /** A board image as a page decodes it. */
 export type BoardImage = CanvasImageSource & { readonly width: number; readonly height: number };

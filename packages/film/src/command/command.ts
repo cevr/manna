@@ -75,27 +75,6 @@ interface NoteBound {
   readonly note: string;
 }
 
-/** The note `bound` names; none for a change or an approve. */
-export const boundNote = (bound: Bound): Option.Option<string> =>
-  Option.map(
-    Option.liftPredicate(bound, (b): b is NoteBound => 'note' in b),
-    (b) => b.note,
-  );
-
-/** The history's change `bound` names; none for an approve's. */
-export const boundChange = (bound: Bound): Option.Option<ChangeId> =>
-  Option.map(
-    Option.liftPredicate(bound, (b): b is ChangeBound => 'change' in b),
-    (b) => b.change,
-  );
-
-/** The approve run `bound` names; none for a change in the history. */
-export const boundGave = (bound: Bound): Option.Option<GaveBound['gave']> =>
-  Option.map(
-    Option.liftPredicate(bound, (b): b is GaveBound => 'gave' in b),
-    (b) => b.gave,
-  );
-
 /**
  * Why a command cannot act on a receipt's change, in words to say: `Now`
  * while it may yet (the page still reading the lab's history, another film's
@@ -116,7 +95,7 @@ export const Unfit = Data.taggedEnum<Unfit>();
 type Tone = 'done' | 'refused' | 'busy';
 
 /** A receipt that says nothing. */
-export const quiet: Receipt = Receipt.Quiet();
+const quiet: Receipt = Receipt.Quiet();
 
 /** A command's `run` that does `act` and says nothing (`quiet`): the page shows what changed. */
 export const quietly =
@@ -133,7 +112,7 @@ export const quietly =
  * for a write that changed nothing (a value already so) is an earlier
  * write's change, or another film's.
  */
-export interface Undoing {
+interface Undoing {
   readonly command: CommandId;
   readonly bound: Bound;
 }
@@ -150,10 +129,6 @@ export const said = (text: string, undo: Option.Option<Undoing> = Option.none())
 /** A receipt that says why nothing was done, with the command that goes past it, if any. */
 export const refused = (text: string, past: Option.Option<CommandId> = Option.none()): Receipt =>
   Receipt.Said({ said: text, undo: past, bound: Option.none(), tone: 'refused' });
-
-/** A receipt that says what is on its way (`undoing…`): its slot's next receipt replaces it. */
-export const busy = (text: string): Receipt =>
-  Receipt.Said({ said: text, undo: Option.none(), bound: Option.none(), tone: 'busy' });
 
 /**
  * How a command was asked for: the step a key's modifiers pick, where it came

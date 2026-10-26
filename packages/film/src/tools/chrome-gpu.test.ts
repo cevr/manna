@@ -63,15 +63,14 @@ describe('the GPU launcher', () => {
 describe('which Chrome is spawned through the launcher', () => {
   it.effect('the renderer on macOS, which asks for the GPU', () =>
     Effect.sync(() => {
-      expect(throughGpuLauncher('darwin', launchArgs('darwin'))).toBe(true);
+      expect(throughGpuLauncher('darwin', launchArgs)).toBe(true);
     }),
   );
 
   it.effect('no Chrome on Linux, whatever its flags; none that asks for no GPU', () =>
     Effect.sync(() => {
-      expect(throughGpuLauncher('linux', launchArgs('linux'))).toBe(false);
-      expect(throughGpuLauncher('linux', launchArgs('darwin'))).toBe(false);
-      expect(throughGpuLauncher('darwin', launchArgs('linux'))).toBe(false);
+      expect(throughGpuLauncher('linux', launchArgs)).toBe(false);
+      expect(throughGpuLauncher('darwin', ['--disable-gpu-vsync'])).toBe(false);
     }),
   );
 });

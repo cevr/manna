@@ -384,7 +384,7 @@ const asksReads = Effect.fn('LabMcp.asksReads')(function* () {
       production,
       version,
       said,
-      links: linksOf(pageHref.production(production, version)),
+      links: linksOf(pageHref.home()),
     };
   });
 
@@ -410,7 +410,7 @@ const asksReads = Effect.fn('LabMcp.asksReads')(function* () {
       version,
       title: given.title,
       because: Option.getOrElse(move.because, () => ''),
-      links: linksOf(pageHref.production(production, version)),
+      links: linksOf(pageHref.home()),
     };
   });
 

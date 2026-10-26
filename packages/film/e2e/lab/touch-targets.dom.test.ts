@@ -1,4 +1,4 @@
-// Every studio page, at rest and with what it discloses open, on a phone
+// Every lab page, at rest and with what it discloses open, on a phone
 // (390 × 844, a finger) and on a laptop (1440 × 900, a mouse): each shown
 // control a pointer can operate (buttons, links, summaries, fields, sliders,
 // menu items, anything focusable) has a hit area of `--hit` at least, the
@@ -35,9 +35,6 @@ import {
   RECEIPTS,
   STATES,
   targetsIn,
-  drawnIn,
-  LONG_PRESSED,
-  LONG_PRESSED_AT,
 } from './studio-states.ts';
 
 for (const device of DEVICES) {
@@ -45,18 +42,6 @@ for (const device of DEVICES) {
     for (const [place, state] of byPlace(STATES))
       it.live(state.name, () => targetsIn(place, state, device), SLOW);
   });
-
-  // Serial: while a finger is down on one tab, Chrome drops, or lands as a bare click, the
-  // touches the file's other cases send their own tabs at the same time.
-  it.live.serial(
-    `${LONG_PRESSED.name} on ${device.name}: its targets are the device's size, and it is drawn in its tokens`,
-    () =>
-      Effect.andThen(
-        targetsIn(LONG_PRESSED_AT, LONG_PRESSED, device),
-        drawnIn(LONG_PRESSED_AT, LONG_PRESSED, device),
-      ),
-    2 * SLOW,
-  );
 }
 
 describe('a place named exempt from a guard', () => {
@@ -68,10 +53,10 @@ describe('a place named exempt from a guard', () => {
     expect(
       unmeasured({
         ...STATES,
-        home: { measuredAt: 'set', why: 'planted' },
-        set: { measuredAt: 'folder', why: 'planted' },
+        ask: { measuredAt: 'askPage', why: 'planted' },
+        askPage: { measuredAt: 'askPage', why: 'planted' },
       }),
-    ).toEqual(['home']);
+    ).toEqual(['ask', 'askPage']);
   });
 });
 
@@ -79,7 +64,7 @@ describe('a place named exempt from a guard', () => {
 const ROLE = /(?:data-role="([\w-]+)"|\brole="([\w-]+-menu)")/g;
 
 /** The roles in those sources that are a part of a surface (a toast, a hint), not one. */
-const PARTS: ReadonlySet<string> = new Set(['receipt', 'inspector-hint']);
+const PARTS: ReadonlySet<string> = new Set(['receipt']);
 
 /** The command surfaces `sources` name, each by its `data-role`. */
 const surfacesOf = (sources: ReadonlyArray<string>): ReadonlyArray<string> =>
@@ -108,7 +93,6 @@ describe('the command surfaces', () => {
         expect.arrayContaining([
           'command-menu',
           'context-menu',
-          'chip-menu',
           'view-menu',
           'receipts',
           'keys-sheet',

@@ -24,9 +24,7 @@
 // production. A version's number is its place in the ledger, so a gap or a
 // repeat cannot be written. Pure: the lab's page and its tools share it.
 
-import { Array as Arr, Data, Effect, Match, Option, Order, Result, Schema } from 'effect';
-import { type BoardFile, approvalOf } from './board.ts';
-import type { ChoicePoint } from './choice.ts';
+import { Array as Arr, Data, Effect, Option, Order, Result, Schema } from 'effect';
 import { DecisionUnknown, Undecided, VersionMoved, WordUnaimed } from './refusals.ts';
 import type { ReviewFolder } from './review.ts';
 import { maybe } from './schema.ts';
@@ -149,11 +147,7 @@ export const ProductionFile = Schema.Struct({
 });
 export type ProductionFile = typeof ProductionFile.Type;
 
-/** `GET /api/productions`: every production's ledger. */
-export const Productions = Schema.Struct({ productions: Schema.Array(ProductionFile) });
-export type Productions = typeof Productions.Type;
-
-/** `POST /api/productions/<production>/versions`: move forward from version `after`. */
+/** A move forward from version `after` (`forward`). */
 export const MoveForward = Schema.Struct({
   /** The version the mover saw as current: refused when the production has moved since. */
   after: VersionNumber,
@@ -306,18 +300,7 @@ export const setNamed = (
   return Result.succeed(Option.map(Arr.head(refs), (ref) => ({ ref, folder })));
 };
 
-/**
- * A question that waits on the owner: an ask no decision on its set, and no
- * pick or approval in its choice, has answered; with the set and the choice
- * it names, when the review holds them.
- */
-export interface Waiting {
-  readonly ask: Said;
-  readonly folder: Option.Option<ReviewFolder>;
-  readonly point: Option.Option<ChoicePoint>;
-}
-
-export type Entry = Data.TaggedEnum<{
+type Entry = Data.TaggedEnum<{
   /** A set published into the version. */
   Published: { readonly at: number; readonly folder: ReviewFolder };
   /** A set the ledger files that no root holds now (moved, trashed, on another machine). */
@@ -325,39 +308,7 @@ export type Entry = Data.TaggedEnum<{
   /** The owner's decision or note. */
   Said: { readonly at: number; readonly said: Said };
 }>;
-export const Entry = Data.taggedEnum<Entry>();
-
-/** One version as the timeline shows it. */
-export interface VersionView {
-  readonly n: number;
-  readonly title: string;
-  readonly at: number;
-  readonly because: Option.Option<string>;
-  /** When the next version opened; none for the current one. */
-  readonly until: Option.Option<number>;
-  readonly current: boolean;
-  /** Newest first. */
-  readonly entries: ReadonlyArray<Entry>;
-  /** The questions that wait on the owner, whenever asked (only the current version holds them). */
-  readonly waiting: ReadonlyArray<Waiting>;
-}
-
-/** A production as its timeline shows it. */
-export interface ProductionHistory {
-  readonly production: string;
-  readonly title: string;
-  readonly film: Option.Option<string>;
-  readonly blurb: Option.Option<string>;
-  /** Whether a ledger keeps it; one named only by its sets has none until it moves forward. */
-  readonly kept: boolean;
-  /** Newest first: the current version is the first. */
-  readonly versions: ReadonlyArray<VersionView>;
-  /** The newest thing on it: an entry's time, else the current version's opening. */
-  readonly latest: number;
-}
-
-/** The ledger of a production that only its sets name: one version, open since the start. */
-const implicit = (production: string): ProductionFile => newProduction(production, production, 0);
+const Entry = Data.taggedEnum<Entry>();
 
 /** The version (1-based) open at `at`: the last opened at or before it, else the first. */
 export const versionAt = (file: ProductionFile, at: number): number =>
@@ -423,29 +374,6 @@ export const forwardOnDecision = (
   );
 };
 
-/** A version number the ledger has, else none. */
-const known = (file: ProductionFile, n: number): Option.Option<number> =>
-  Option.liftPredicate(n, (v) => Number.isInteger(v) && v >= 1 && v <= file.versions.length);
-
-/** When a folder was published: as its manifest says, else its newest file's time. */
-const publishedAt = (folder: ReviewFolder): number =>
-  Option.getOrElse(Option.fromUndefinedOr(folder.published), () => folder.mtime);
-
-/** The version `folder` is in for `file`, when it is the production's: named by the set, else filed. */
-const versionOfFolder = (file: ProductionFile, folder: ReviewFolder): Option.Option<number> => {
-  if (folder.production === file.production)
-    return Option.orElse(
-      Option.flatMap(Option.fromUndefinedOr(folder.version), (n) => known(file, n)),
-      () => Option.some(versionAt(file, publishedAt(folder))),
-    );
-  if (Option.isSome(Option.fromUndefinedOr(folder.production))) return Option.none();
-  const path = setPathOf(folder.ref);
-  return Option.flatMap(
-    Arr.findLast(file.filed, (f) => f.set === path),
-    (f) => known(file, f.version),
-  );
-};
-
 /**
  * Whether `said` is a decision on the set at `path` that covers `point` (one
  * on the set alone covers all its choices). An ask's answer is not: it
@@ -472,213 +400,11 @@ export const decidedSince = (
   since: number,
 ): boolean => said.some((s) => s.at >= since && decides(s, setPathOf(ref), point));
 
-/** The decision on `point` of the set at `path`, newest first, when there is one. */
-const decisionOn = (said: ReadonlyArray<Said>, path: string, point: string): Option.Option<Said> =>
-  Arr.findLast(said, (s) => decides(s, path, Option.some(point)));
-
-/** Whether a variant of `point` is picked or approved. */
-const pickedIn = (point: ChoicePoint): boolean =>
-  point.variants.some((v) => v.approval === 'approved' || v.picked);
-
-/**
- * The questions that wait on the owner: every ask in `said` that no later
- * decision on its set (and choice), nor a pick in its choice, nor (for an
- * ask's question) that ask's own answer or withdrawal, answers; with
- * the set and choice from `folders` when the review holds them.
- */
-const waitingIn = (
-  said: ReadonlyArray<Said>,
-  folders: ReadonlyArray<ReviewFolder>,
-): ReadonlyArray<Waiting> =>
-  said.flatMap((ask) => {
-    if (ask._tag !== 'Asked') return [];
-    const path = Option.getOrElse(ask.set, () => '');
-    const folder = Arr.findFirst(folders, (f) => setPathOf(f.ref) === path);
-    const point = Option.flatMap(folder, (f) =>
-      Arr.findFirst(f.sets, (p) => Option.contains(ask.point, p.id)),
-    );
-    const asked = askNamed(ask);
-    const closesIt = (s: Said) =>
-      s._tag !== 'Asked' && Option.isSome(asked) && Option.contains(s.ask, asked.value);
-    const answered =
-      said.some((s) => closesIt(s) || (s.at >= ask.at && decides(s, path, ask.point))) ||
-      Option.exists(point, pickedIn);
-    return [{ ask, folder, point }].filter(() => !answered);
-  });
-
 /** A choice's state on the timeline: picked, decided, asked and open, or none of these. */
-export type ChoiceState = Data.TaggedEnum<{
+type ChoiceState = Data.TaggedEnum<{
   Picked: { readonly variants: ReadonlyArray<string> };
   Decided: { readonly variant: Option.Option<string> };
   Waiting: {};
   Quiet: {};
 }>;
-export const ChoiceState = Data.taggedEnum<ChoiceState>();
-
-/** The state of `point` in `folder`, given the production's words and what waits. */
-export const choiceStateOf = (
-  folder: ReviewFolder,
-  point: ChoicePoint,
-  said: ReadonlyArray<Said>,
-  waiting: ReadonlyArray<Waiting>,
-): ChoiceState => {
-  const picked = point.variants
-    .filter((v) => v.approval === 'approved' || v.picked)
-    .map((v) => v.label);
-  if (picked.length > 0) return ChoiceState.Picked({ variants: picked });
-  const decided = decisionOn(said, setPathOf(folder.ref), point.id);
-  if (Option.isSome(decided)) return ChoiceState.Decided({ variant: decided.value.variant });
-  const asked = waiting.some(
-    (w) =>
-      Option.exists(w.folder, (f) => f.ref === folder.ref) &&
-      Option.contains(w.ask.point, point.id),
-  );
-  return Match.value(asked).pipe(
-    Match.when(true, () => ChoiceState.Waiting()),
-    Match.orElse(() => ChoiceState.Quiet()),
-  );
-};
-
-const newestFirst = Order.flip(Order.mapInput(Order.Number, (e: Entry) => e.at));
-
-/**
- * `production`'s history: its ledger (none for one only its sets name)
- * with the review's folders laid into its versions.
- */
-const historyOf = (
-  production: string,
-  ledger: Option.Option<ProductionFile>,
-  folders: ReadonlyArray<ReviewFolder>,
-): ProductionHistory => {
-  const file = Option.getOrElse(ledger, () => implicit(production));
-  const placed = folders.flatMap((folder) =>
-    Option.match(versionOfFolder(file, folder), {
-      onNone: () => [],
-      onSome: (n) => [{ n, folder }],
-    }),
-  );
-  const listed = new Set(placed.map((p) => setPathOf(p.folder.ref)));
-  const missing = file.filed.filter((f) => !listed.has(f.set) && f.version <= file.versions.length);
-  const count = file.versions.length;
-  const waiting = waitingIn(file.said, folders);
-  const versions = file.versions.map((opened, i): VersionView => {
-    const n = i + 1;
-    const mine = placed.filter((p) => p.n === n);
-    const until = Option.map(Option.fromUndefinedOr(file.versions[n]), (next) => next.at);
-    // A set's time is kept inside its version's span: a file touched since does not re-date it.
-    const within = (at: number) =>
-      Math.min(
-        Math.max(at, opened.at),
-        Option.getOrElse(until, () => Number.POSITIVE_INFINITY),
-      );
-    const entries = Arr.sort(
-      [
-        ...mine.map((p) =>
-          Entry.Published({ at: within(publishedAt(p.folder)), folder: p.folder }),
-        ),
-        ...missing
-          .filter((f) => f.version === n)
-          .map((f) => Entry.Missing({ at: opened.at, set: f.set })),
-        ...file.said
-          .filter((s) => versionAt(file, s.at) === n)
-          .map((s) => Entry.Said({ at: s.at, said: s })),
-      ],
-      newestFirst,
-    );
-    return {
-      n,
-      title: opened.title,
-      at: opened.at,
-      because: opened.because,
-      until,
-      current: n === count,
-      entries,
-      waiting: waiting.filter(() => n === count),
-    };
-  });
-  const shown = versions.toReversed();
-  const top = shown[0];
-  return {
-    production: file.production,
-    title: file.title,
-    film: file.film,
-    blurb: file.blurb,
-    kept: Option.isSome(ledger),
-    versions: shown,
-    latest: Math.max(top?.at ?? 0, ...(top?.entries ?? []).map((e) => e.at)),
-  };
-};
-
-/** Every production there is: each ledger's, and each named by a set; newest first. */
-export const productionsOf = (
-  ledgers: ReadonlyArray<ProductionFile>,
-  folders: ReadonlyArray<ReviewFolder>,
-): ReadonlyArray<ProductionHistory> => {
-  const named = folders.flatMap((f) => Option.toArray(Option.fromUndefinedOr(f.production)));
-  const ids = Arr.dedupe([...ledgers.map((l) => l.production), ...named]);
-  return Arr.sort(
-    ids.map((id) =>
-      historyOf(
-        id,
-        Arr.findFirst(ledgers, (l) => l.production === id),
-        folders,
-      ),
-    ),
-    Order.flip(Order.mapInput(Order.Number, (h: ProductionHistory) => h.latest)),
-  );
-};
-
-/** The folders no production's timeline holds: what the front door lists loose. */
-export const unfiledOf = (
-  histories: ReadonlyArray<ProductionHistory>,
-  folders: ReadonlyArray<ReviewFolder>,
-): ReadonlyArray<ReviewFolder> => {
-  const held = new Set(
-    histories.flatMap((h) =>
-      h.versions.flatMap((v) => v.entries.filter(Entry.$is('Published')).map((e) => e.folder.ref)),
-    ),
-  );
-  return folders.filter((f) => !held.has(f.ref));
-};
-
-/** The current version of a history (its first). */
-export const currentOf = (history: ProductionHistory): VersionView =>
-  history.versions[0] ?? {
-    n: 1,
-    title: 'v1',
-    at: 0,
-    because: Option.none(),
-    until: Option.none(),
-    current: true,
-    entries: [],
-    waiting: [],
-  };
-
-/**
- * A film's board as a production's version shows it, its first stage: the
- * picture panels and how many keep a try, the beats and how many are
- * approved as they stand (`approvalOf`), and how many were approved on tries
- * changed since. Read from the film's `board.json` (`core/board.ts`); a text
- * panel (a card, a verse page) is the engine's and is not counted.
- */
-export interface BoardStage {
-  readonly panels: number;
-  readonly kept: number;
-  readonly beats: number;
-  readonly approved: number;
-  readonly stale: number;
-}
-
-/** `board`'s stage. */
-export const boardStageOf = (board: BoardFile): BoardStage => {
-  const pictures = board.panels.filter((p) => Option.isNone(Option.fromUndefinedOr(p.text)));
-  const beats = Arr.dedupe(board.panels.map((p) => p.beat));
-  const states = beats.map((beat) => approvalOf(board, beat));
-  return {
-    panels: pictures.length,
-    kept: pictures.filter((p) => Option.isSome(Option.fromUndefinedOr(p.kept))).length,
-    beats: beats.length,
-    approved: states.filter((s) => s === 'approved').length,
-    stale: states.filter((s) => s === 'stale').length,
-  };
-};
+const ChoiceState = Data.taggedEnum<ChoiceState>();

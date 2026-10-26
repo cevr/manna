@@ -137,12 +137,12 @@ const CaptionWord = Schema.String.check(
 );
 
 /**
- * A mark's name, as a line writes it (`{law}`): the lab's Mark here writes
- * only a name this decodes. A `Segment`, so never `__proto__`, which an
+ * A mark's name, as a line writes it (`{law}`): a talk's `marks` hold
+ * only names this decodes. A `Segment`, so never `__proto__`, which an
  * object literal's key does not make an own key of (it sets the prototype),
  * so the talk imported would have no such mark.
  */
-export const MarkName = Segment.check(
+const MarkName = Segment.check(
   Schema.isPattern(/^[a-zA-Z0-9_-]+$/, { message: 'a mark is letters, digits, _ and -' }),
 );
 

@@ -49,7 +49,7 @@ import {
   ServerFailed,
   WriteNotJson,
   isRefusal,
-  servedPlace,
+  pageHref,
   pageAt,
   prefixesOf,
   statusOf,
@@ -121,7 +121,7 @@ const refused = (reason: string) => Option.some<Refusal>(RequestRefused.make({ r
 /**
  * A link opened from another site (a chat, a mail): a GET or HEAD the
  * browser makes for a new document (`Sec-Fetch-Mode: navigate`,
- * `Sec-Fetch-Dest: document`) of one of the app's pages (`pageAt`) or a link the lab sends on to one (`servedPlace`). The site
+ * `Sec-Fetch-Dest: document`) of one of the app's pages (`pageAt`) or its home, which the lab sends on to one. The site
  * cannot read what it answers, and a page runs nothing; the API, a script, a
  * file and a write stay the server's own.
  */
@@ -129,7 +129,7 @@ const isNavigation = (request: HttpServerRequest.HttpServerRequest) =>
   SAFE_METHODS.includes(request.method) &&
   Option.contains(header(request, 'sec-fetch-mode'), 'navigate') &&
   Option.contains(header(request, 'sec-fetch-dest'), 'document') &&
-  (Option.isSome(pageAt(urlPath(request.url))) || Option.isSome(servedPlace(request.url)));
+  (Option.isSome(pageAt(urlPath(request.url))) || urlPath(request.url) === pageHref.home());
 
 /**
  * Whether a write carries a body the JSON rule judges: a POST always (a
@@ -688,16 +688,14 @@ export const serveApi = <
 
 /**
  * How long a connection stays open with nothing sent: Bun's longest. A
- * film's first mix renders the whole film before it answers; a take's import
- * answers within the studio's wait (`STUDIO_IMPORT_WAIT_S`, 210 s), which is
- * shorter, so the page stops waiting before the socket closes. `changes`
+ * film's first mix renders the whole film before it answers. `changes`
  * waits at most 120 s. A critique's counsel runs for minutes, but no request
  * holds it: the critique is a job, and a call answers by
  * `CRITIQUE_DEADLINE` (50 s from its start) when its match and staging read
  * end inside it, within the 60 s Claude Code's MCP client gives a tool call
  * (`easel-mcp.ts`).
  */
-export const LAB_IDLE_SECONDS = 255;
+const LAB_IDLE_SECONDS = 255;
 
 /**
  * The largest body Bun reads before the gate: the gate's own limit and a

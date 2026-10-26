@@ -1735,7 +1735,7 @@ The form of an entry, each field on its own line:
 - **Source:** p6-studio-steps/review-4.md F1
 - **Wrong:** A mark's chip that seeks was set in Geist on an 18 px line while a plain chip was set in the code's mono face, so the band's chips differed by whether they could be pressed.
 - **Cause:** The chip's font sat on one class (0,1,0), and the studio's button reset `.st-app button:where(…) { font: inherit }` (0,1,1) outranked it on a button.
-- **Guard:** code: `packages/film/e2e/lab/studio/code.dom.test.ts` `chip.fontFamily === code.fontFamily`
+- **Guard:** none: the studio's code view is deleted (studio-subtract).
 
 ### mail-send-claimed-before-it-goes
 
@@ -3866,3 +3866,33 @@ The form of an entry, each field on its own line:
 - **Wrong:** `bun run screening publish <film> render` took the newest whole-film video that was not named `board` or `board-review`, so a look wedge, a Board under another variant name or a scaled proof rendered after the full render was published as the render.
 - **Cause:** The rule excluded the Board's two default names instead of naming the full render. It now takes the `main` variant at full scale alone (`apps/animations/screening-renders.ts`).
 - **Guard:** code: `apps/animations/screening-renders.test.ts` `a render is the full render of the film, not a wedge, Board copy or proof after it`
+
+### ask-root-lost-the-page-commands
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "The View menu contains only Keyboard shortcuts. The owner cannot select the original."
+- **Source:** studio-subtract/review-1.md F1, the review's first major, headed M1
+- **Wrong:** The ask's own root, cut out of the review's, kept the copy a video plays and its setter but registered none of the review root's page commands, so a phone with a ready proxy could never play the original, and Refresh was gone.
+- **Cause:** The review root registered its page commands beside its reads; the extraction moved the reads, and the browser cases that ran the commands went with the review's tests. The ask root now registers Refresh and Proxy or Original, and the ask's browser cases run both.
+- **Guard:** code: `packages/film/e2e/lab/ask/ask.dom.test.ts` `a phone plays the originals from it and the proxies again: the cut's video stands where it stood, playing`
+
+### lab-home-failed-read-as-empty-inbox
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "An owner whose asks directory is unreadable gets the same answer as an owner with no open asks."
+- **Source:** studio-subtract/review-1.md F2, the review's second major, headed M2
+- **Wrong:** The lab's home caught a failed list of the asks and answered 200 with "Nothing waits on you", and its test required that answer.
+- **Cause:** The home took a failed read for an empty one. It now answers 500 with the failure's tag, and says nothing waits only after a list that read.
+- **Guard:** code: `packages/film/src/tools/lab-home.test.ts` `with an asks folder it cannot read, answers 500 and never says nothing waits`
+
+### film-skill-sends-agents-to-deleted-pages
+
+- **Date:** 2026-10-25
+- **Kind:** review
+- **Said:** "The Render step still tells an agent to hand the owner `/films/<film>/project` or `/sets/<folder>`."
+- **Source:** studio-subtract/review-1.md F3, the review's first minor, headed m1
+- **Wrong:** The film skill's Render step, its delivery reference and the architecture loop's lab line named pages the lab no longer serves, and the Render step still promised the Linux x264 share pass.
+- **Cause:** The docs test checked API paths in running text but no page path. It now holds each page path a framework doc writes to a page the lab serves.
+- **Guard:** code: `packages/film/src/docs.slow.test.ts` `pageDrift`

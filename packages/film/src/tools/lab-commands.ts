@@ -10,10 +10,9 @@
 //   in its own process, through the stores the lab writes through; each
 //   write holds its file's lock across processes (`ContentStore`).
 // - `inLab`: over what only the running lab holds (`InLabNeeds`): its change
-//   feed (`overview`, `changes`), the agents' "doing now" lines (`working`,
-//   and `timeline`, which shows them), the film's one history of edits
-//   (`beat_move`, `beat_hold`, `tweak`, `undo`: the studio page steps it
-//   too), the asks' page lock (`ask`: an ask
+//   feed (`overview`, `changes`), the film's timelines (`timeline`), the
+//   film's one history of edits (`beat_move`, `beat_hold`, `tweak`, `undo`),
+//   the asks' page lock (`ask`: an ask
 //   joins its asker's open page under a lock held in memory), and the easel
 //   (`look`, `match`, `critique`: the warm page and the critic beside it). A
 //   terminal calls it on the lab at `FILM_LAB_URL` (`lab-client.ts`).
@@ -46,7 +45,6 @@ import type { SceneWriter } from './scene-writer.ts';
 import { SetRead, setsCommands, setsReads } from './sets-mcp.ts';
 import { timelineCommands } from './timeline-mcp.ts';
 import { tweakCommands } from './tweak-mcp.ts';
-import type { Working } from './working.ts';
 
 /** The longest a `changes` call waits for a change, in seconds: well inside the lab's idle limit. */
 const MAX_WAIT_S = 120;
@@ -122,7 +120,7 @@ export const overviewRead = Effect.gen(function* () {
       const waiting = unresolved(log);
       return {
         film,
-        links: linksOf(pageHref.studio(film)),
+        links: linksOf(pageHref.home()),
         notes: {
           open: waiting.filter((n) => n.status === 'open').length,
           replied: waiting.filter((n) => n.status === 'replied').length,
@@ -203,7 +201,6 @@ export type InLabNeeds =
   | Easel
   | Critic
   | FilmTimelines
-  | Working
   | BeatEdits
   | SceneWriter;
 

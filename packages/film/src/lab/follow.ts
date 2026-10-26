@@ -1,10 +1,9 @@
 // Follow: the one rule by which a view's scroll box keeps what the frame
-// lights in sight, as the words reader keeps the beat at the studio's
-// playhead (`words/reader.tsx`) and the code view the line the frame reads
-// (`film-studio/code.tsx`). The page's clock is the view's to give
-// (`FollowClock`): the studio's. Whether the view places its box is one
-// `Following` the view makes, and its Follow button (`follow-button.tsx`)
-// shows while a reader has the box.
+// lights in sight, as the words reader keeps the beat at the playhead
+// (`words/reader.tsx`). The page's clock is the view's to give
+// (`FollowClock`). Whether the view places its box is one `Following` the
+// view makes, and its Follow button (`follow-button.tsx`) shows while a
+// reader has the box.
 // The view names a target as a key that only changes when the target does
 // (so a frame that moves nothing reads no layout), and a span of rows for it.
 // When the key changes, or the box or its content is resized, and the span is

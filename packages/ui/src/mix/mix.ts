@@ -4,19 +4,16 @@
 // - a prop mixin, a props bag with getters for its live values: spread onto
 //   an element, its attributes render into the server's markup, and its
 //   handlers are delegated and merged (every one runs);
-// - a ref factory, for work only the DOM can do (listener options, document
-//   and window listeners, observers, focus, measuring). It is made in the
-//   component's body, on the server too, and registers the DOM work; the
-//   callback it returns only keeps the element, because Solid calls it before
-//   the element is connected and before its dynamic attributes are set, and
-//   never on the server. Made inline in `ref={...}` on an element with a
-//   spread, it would be made in the browser alone: the server never
-//   evaluates such an element's `ref`, and the hydration ids would shift.
+// - a ref factory (`element.ts`), for work only the DOM can do (listener
+//   options, document and window listeners, observers, focus, measuring).
+//   Made inline in `ref={...}` on an element with a spread, it would be made
+//   in the browser alone: the server never evaluates such an element's
+//   `ref`, and the hydration ids would shift.
 // A prop mixin may carry its ref factories under `ref`.
 import type { JSX } from '@solidjs/web';
-import { onSettled } from 'solid-js';
 
 import { mergePropsN } from '../merge-props/mergeProps.ts';
+import { type RefFactory, onElement } from './element.ts';
 
 /** The tag whose element is exactly `T` (`button` for `HTMLButtonElement`). */
 type TagOf<T extends Element> = {
@@ -33,9 +30,6 @@ type TagOf<T extends Element> = {
 type AttributesOf<T extends Element> = [TagOf<T>] extends [never]
   ? JSX.HTMLAttributes<T>
   : JSX.IntrinsicElements[TagOf<T>];
-
-/** The callback a ref factory returns: Solid passes it the element. */
-export type RefFactory<T extends Element = HTMLElement> = (element: T) => void;
 
 /**
  * The props a mixin gives an element of type `T`. `ref` takes callbacks only
@@ -61,23 +55,6 @@ export function mix<T extends Element = HTMLElement>(
   ...mixins: ReadonlyArray<Mixin<T> | false | null | undefined>
 ): Mixin<T> {
   return mergePropsN(mixins) as Mixin<T>;
-}
-
-/**
- * A ref factory that runs `setup` on its element once the render has settled
- * (the element connected, its attributes set); what `setup` returns runs when
- * the owner is disposed. Make it in a component's body, under the element's
- * owner: made before its element exists (above a `<Show>`), it finds no
- * element when the render settles and does nothing.
- */
-export function onElement<T extends Element = HTMLElement>(
-  setup: (element: T) => void | (() => void),
-): RefFactory<T> {
-  let element: T | undefined;
-  onSettled(() => (element ? setup(element) : undefined));
-  return (next) => {
-    element = next;
-  };
 }
 
 interface ListenTargets {

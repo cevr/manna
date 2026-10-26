@@ -27,20 +27,17 @@ import { type Address, sceneAddress } from '../core/address.ts';
 import {
   type Catalogue,
   CatalogueJson,
-  OpId,
   type Render,
   RenderVariantName,
   approve,
   comment,
   emptyCatalogue,
-  projectOf,
   recordRender,
   subjectOf,
 } from '../core/catalogue.ts';
-import { type SetSayPost, withdrawSay } from '../core/api.ts';
 import type { ChoiceVariant } from '../core/choice.ts';
 import { MediaFailed } from '../core/refusals.ts';
-import { type ReviewFolder, type ReviewIndex, ReviewManifestJson } from '../core/review.ts';
+import { type ReviewIndex, ReviewManifestJson } from '../core/review.ts';
 import { RenderCatalogue } from './catalogue.ts';
 import { ContentStore } from './content-store.ts';
 import { AtMtime, madeFromName } from './file-cache.ts';
@@ -48,7 +45,6 @@ import { Media } from './media.ts';
 import { reviewMedia } from './media/testing.ts';
 import {
   type Found,
-  type ProjectRead,
   Review,
   montageFolder,
   namesInMontage,
@@ -588,9 +584,6 @@ const fixture = (
 const writeText = (file: string, text: string) =>
   Effect.flatMap(FileSystem.FileSystem, (fs) => fs.writeFileString(file, text));
 
-/** A say judged by the record alone: no project is read (a folder that is not this checkout's own). */
-const byRecord: ProjectRead = () => Effect.succeedNone;
-
 describe('the review service', () => {
   it.effect('indexes the roots by their records: a montage, and a project by its catalogue', () =>
     Effect.gen(function* () {
@@ -627,238 +620,6 @@ describe('the review service', () => {
       ]);
       expect(yield* review.pictures('other')).toEqual([]);
     }).pipe(Effect.provide(fixture(false))),
-  );
-
-  it.effect(
-    "a say on a set's version is written to its folder's own catalogue, and answered with the folder",
-    () =>
-      Effect.gen(function* () {
-        const review = yield* Review;
-        const fs = yield* FileSystem.FileSystem;
-        const path = yield* Path.Path;
-        const commentsOf = (folder: Option.Option<ReviewFolder>, point: string) =>
-          Option.match(folder, {
-            onNone: () => [],
-            onSome: (f) =>
-              (
-                f.sets.find((s) => s.id === point)?.variants.find((v) => v.id === 'main')
-                  ?.comments ?? []
-              ).map((c) => c.text),
-          });
-        const projectIn = (index: ReviewIndex) =>
-          Option.fromUndefinedOr(index.folders.find((f) => f.ref === 'out/f'));
-        const film = Option.getOrThrow(projectIn(yield* review.index(false))).sets[0]?.id ?? '';
-        const answered = yield* review.say(
-          'out/f',
-          film,
-          { variant: 'main', say: { _tag: 'Comment', text: 'warmer' } },
-          byRecord,
-        );
-        expect(answered.ref).toBe('out/f');
-        expect(commentsOf(Option.some(answered), film)).toEqual(['warmer']);
-        const onDisk = yield* Schema.decodeEffect(CatalogueJson)(
-          yield* fs.readFileString(path.join(yield* Root, 'out', 'f', 'catalogue.json')),
-        );
-        expect(onDisk.comments.map((c) => [c.variant, c.text])).toEqual([['main', 'warmer']]);
-        // The index reads the folder again at once.
-        expect(commentsOf(projectIn(yield* review.index(false)), film)).toEqual(['warmer']);
-        const tagOf = (ref: string, point: string, variant: string) =>
-          Effect.map(
-            Effect.flip(review.say(ref, point, { variant, say: { _tag: 'Approve' } }, byRecord)),
-            (e) => e._tag,
-          );
-        // A montage keeps no say; a set, a version or a folder that is not there is named.
-        expect(yield* tagOf('out/art', 'render:roof', 'A')).toBe('VerbRefused');
-        expect(yield* tagOf('out/f', 'render:nowhere', 'main')).toBe('ChoiceUnknown');
-        expect(yield* tagOf('out/f', film, 'gone')).toBe('VariantUnknown');
-        expect(yield* tagOf('out/none', film, 'main')).toBe('ReviewFileUnknown');
-      }).pipe(Effect.provide(fixture(false))),
-  );
-
-  it.effect(
-    'a say on a version rendered again since the index showed it is refused, and nothing is written',
-    () =>
-      Effect.gen(function* () {
-        const review = yield* Review;
-        const fs = yield* FileSystem.FileSystem;
-        const path = yield* Path.Path;
-        const file = path.join(yield* Root, 'out', 'f', 'catalogue.json');
-        const shown = Option.getOrThrow(
-          Option.fromUndefinedOr(
-            (yield* review.index(false)).folders.find((f) => f.ref === 'out/f'),
-          ),
-        );
-        const film = shown.sets[0]?.id ?? '';
-        expect(shown.sets[0]?.variants.find((v) => v.id === 'main')?.key).toBe('k1');
-        // main is rendered again (k2) while the index still shows k1.
-        const again = recordRender(projectCatalogue, {
-          ...videoRender({ _tag: 'Film' }, 'film', 'main', 'k2'),
-          at: 9,
-        });
-        // Spaced as no encoder writes it: a rewrite of the same catalogue shows in its bytes.
-        yield* fs.writeFileString(
-          file,
-          `  ${yield* Schema.encodeEffect(CatalogueJson)(again)}\n\n`,
-        );
-        /** The file's bytes and inode: a refusal leaves both, a write replaces the file. */
-        const asItIs = Effect.all([
-          fs.readFileString(file),
-          Effect.map(fs.stat(file), (info) => Option.getOrUndefined(info.ino)),
-        ]);
-        const before = yield* asItIs;
-        const refused = yield* Effect.flip(
-          review.say('out/f', film, { variant: 'main', say: { _tag: 'Approve' } }, byRecord),
-        );
-        expect(refused._tag).toBe('VersionChanged');
-        expect(yield* asItIs).toEqual(before);
-        // Read again, the version now shown is approved as it is.
-        const now = yield* review.say(
-          'out/f',
-          film,
-          { variant: 'main', say: { _tag: 'Approve' } },
-          byRecord,
-        );
-        const main = now.sets.find((s) => s.id === film)?.variants.find((v) => v.id === 'main');
-        expect([main?.key, main?.approval]).toEqual(['k2', 'approved']);
-        // wide, drawn from k1, is stale beside main's k2: its approval is refused, the file untouched.
-        const approved = yield* asItIs;
-        const wide = yield* Effect.flip(
-          review.say('out/f', film, { variant: 'wide', say: { _tag: 'Approve' } }, byRecord),
-        );
-        expect(wide._tag).toBe('VerbRefused');
-        expect(wide.message).toContain('stale');
-        expect(yield* asItIs).toEqual(approved);
-      }).pipe(Effect.provide(fixture(false))),
-  );
-
-  it.effect(
-    "an approve is judged by the film's sources now, as the project judges it, not by the record",
-    () =>
-      Effect.gen(function* () {
-        const review = yield* Review;
-        const fs = yield* FileSystem.FileSystem;
-        const path = yield* Path.Path;
-        const file = path.join(yield* Root, 'out', 'f', 'catalogue.json');
-        const shown = Option.getOrThrow(
-          Option.fromUndefinedOr(
-            (yield* review.index(false)).folders.find((f) => f.ref === 'out/f'),
-          ),
-        );
-        const scene = shown.sets.find((s) => s.title === 'scene a')?.id ?? '';
-        // The film's sources now: scene `a` carries `key`; the record's newest render says k1.
-        const readAs =
-          (key: string): ProjectRead =>
-          () =>
-            Effect.succeedSome(
-              projectOf(
-                PROJECT,
-                { key: 'film-now', sound: Option.none(), acts: [], scenes: [{ scene: 'a', key }] },
-                'main',
-              ),
-            );
-        const before = yield* fs.readFileString(file);
-        // Drawn from k1, the scene's sources are k2 now: the record knows no better, the project does.
-        const refused = yield* Effect.flip(
-          review.say('out/f', scene, { variant: 'main', say: { _tag: 'Approve' } }, readAs('k2')),
-        );
-        expect(refused._tag).toBe('VerbRefused');
-        expect(refused.message).toContain('stale');
-        expect(yield* fs.readFileString(file)).toBe(before);
-        // A project that cannot be read judges nothing: the approve is refused, not let through.
-        const unread = yield* Effect.flip(
-          review.say('out/f', scene, { variant: 'main', say: { _tag: 'Approve' } }, () =>
-            Effect.fail('the film did not load'),
-          ),
-        );
-        expect(unread._tag).toBe('VerbRefused');
-        expect(unread.message).toContain('the film did not load');
-        expect(yield* fs.readFileString(file)).toBe(before);
-        // Current against the sources now, it is approved by the run the page named, so its Undo is exact.
-        const op = OpId.make('op-1');
-        const now = yield* review.say(
-          'out/f',
-          scene,
-          { variant: 'main', say: { _tag: 'Approve' }, op },
-          readAs('k1'),
-        );
-        expect(
-          now.sets.find((s) => s.id === scene)?.variants.find((v) => v.id === 'main')?.approval,
-        ).toBe('approved');
-        const onDisk = yield* Schema.decodeEffect(CatalogueJson)(yield* fs.readFileString(file));
-        expect(onDisk.approvals.map((a) => a.op)).toEqual([Option.some(op)]);
-        // A withdraw given that op takes just that approval.
-        const withdrawn = yield* review.say(
-          'out/f',
-          scene,
-          { variant: 'main', say: withdrawSay(Option.some(op)) },
-          readAs('k1'),
-        );
-        expect(
-          withdrawn.sets.find((s) => s.id === scene)?.variants.find((v) => v.id === 'main')
-            ?.approval,
-        ).toBe('none');
-      }).pipe(Effect.provide(fixture(false))),
-  );
-
-  it.effect(
-    "a set's say answers what the catalogue gave and took, as a project's does: never what was asked",
-    () =>
-      Effect.gen(function* () {
-        const review = yield* Review;
-        const shown = Option.getOrThrow(
-          Option.fromUndefinedOr(
-            (yield* review.index(false)).folders.find((f) => f.ref === 'out/f'),
-          ),
-        );
-        const scene = shown.sets.find((s) => s.title === 'scene a')?.id ?? '';
-        const film = shown.sets.find((s) => s.title === 'film')?.id ?? '';
-        const asNow: ProjectRead = () =>
-          Effect.succeedSome(
-            projectOf(
-              PROJECT,
-              {
-                key: 'k1',
-                sound: Option.none(),
-                acts: [],
-                scenes: [{ scene: 'a', key: 'k1' }],
-              },
-              'main',
-            ),
-          );
-        const say = (point: string, asked: SetSayPost) => review.say('out/f', point, asked, asNow);
-        const approve = (op: OpId): SetSayPost => ({
-          variant: 'main',
-          say: { _tag: 'Approve' },
-          op,
-        });
-        const withdrawn = (given: Option.Option<OpId>): SetSayPost => ({
-          variant: 'main',
-          say: withdrawSay(given),
-        });
-        const OP_1 = OpId.make('op-1');
-        const OP_2 = OpId.make('op-2');
-        // The run that approved gave the scene; one after it, the scene approved already, gave none.
-        const first = yield* say(scene, approve(OP_1));
-        expect(Option.map(first.gave, (g) => [g.op, g.scenes])).toEqual(Option.some([OP_1, ['a']]));
-        expect(first.took).toEqual(Option.none());
-        expect((yield* say(scene, approve(OP_2))).gave).toEqual(Option.none());
-        // Its Undo took the scene back; again, there was nothing left to take.
-        expect((yield* say(scene, withdrawn(Option.some(OP_1)))).took).toEqual(
-          Option.some({ op: OP_1, scenes: ['a'] }),
-        );
-        expect((yield* say(scene, withdrawn(Option.some(OP_1)))).took).toEqual(
-          Option.some({ op: OP_1, scenes: [] }),
-        );
-        // A plain approve or unapprove, or a comment, answers neither.
-        const plain = [
-          yield* say(film, { variant: 'main', say: { _tag: 'Approve' } }),
-          yield* say(film, withdrawn(Option.none())),
-          yield* say(film, { variant: 'main', say: { _tag: 'Comment', text: 'hm' } }),
-        ];
-        expect(plain.map((a) => [a.gave, a.took])).toEqual(
-          plain.map(() => [Option.none(), Option.none()]),
-        );
-      }).pipe(Effect.provide(fixture(false))),
   );
 
   it.effect('resolves a ref inside its root that the index lists, and nothing else', () =>

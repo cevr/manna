@@ -4,7 +4,7 @@
 // decodes gapless (its encoder padding trimmed, a mono file one channel), a
 // person's recording (WAV, M4A, AIFF, MP3) loads and its take encodes, a film
 // joins from its segments with its track (and a failed join leaves the file
-// that was there), a share copy is made and re-muxes with a new track, a
+// that was there), a phone copy re-muxes with a new track, a
 // still, a phone copy and a sound's card and sheet are made, and a
 // file that is missing or not media fails as MediaFailed. fixtures/tone.mp3 is half a second of
 // 440 Hz, mono, 44.1 kHz, with a LAME gapless header. fixtures/segment-*.mp4
@@ -433,39 +433,7 @@ describe('Media', () => {
   );
 
   it.effect.layer(MediaOnDisk)(
-    "a share copy is x264's encode of the joined film, in-process, every frame in place, its track copied",
-    () =>
-      Effect.scoped(
-        Effect.gen(function* () {
-          const dir = yield* tempDir;
-          const media = yield* Media;
-          const fs = yield* FileSystem.FileSystem;
-          yield* media.join({
-            out: `${dir}/film.mp4`,
-            segments: [
-              { file: fixture('segment-a.mp4'), at: 0 },
-              { file: fixture('segment-b.mp4'), at: 0.5 },
-            ],
-            frames: 30,
-            audio: Option.some(yield* media.encodeAac(second())),
-          });
-          yield* media.shareCopy(`${dir}/film.mp4`, `${dir}/film.share.mp4`);
-          const [video, audio] = yield* readBack(`${dir}/film.share.mp4`);
-          expect([video?.codec, audio?.codec]).toEqual(['avc', 'aac']);
-          expect(video?.times.length).toBe(30);
-          expect(video?.duration).toBeCloseTo(1, 1);
-          expect(audio?.duration).toBeCloseTo(1, 1);
-          // Nothing else is left beside it.
-          expect([...(yield* fs.readDirectory(dir))].sort()).toEqual([
-            'film.mp4',
-            'film.share.mp4',
-          ]);
-        }),
-      ),
-  );
-
-  it.effect.layer(MediaOnDisk)(
-    "a share copy re-muxes with a new track: x264's reordered frames and the track reach the file side by side",
+    "a phone copy re-muxes with a new track: x264's reordered frames and the track reach the file side by side",
     () =>
       Effect.scoped(
         Effect.gen(function* () {
@@ -487,9 +455,9 @@ describe('Media', () => {
             frames: 60,
             audio: Option.some(yield* track(1)),
           });
-          yield* media.shareCopy(`${dir}/film.mp4`, `${dir}/film.share.mp4`);
-          yield* media.remux(`${dir}/film.share.mp4`, yield* track(0.5));
-          const [video, audio] = yield* readBack(`${dir}/film.share.mp4`);
+          yield* media.phoneCopy(`${dir}/film.mp4`, `${dir}/film.phone.mp4`);
+          yield* media.remux(`${dir}/film.phone.mp4`, yield* track(0.5));
+          const [video, audio] = yield* readBack(`${dir}/film.phone.mp4`);
           expect([video?.codec, audio?.codec]).toEqual(['avc', 'aac']);
           expect(video?.times.length).toBe(60);
           expect(audio?.duration).toBeCloseTo(2, 1);
@@ -803,19 +771,6 @@ describe('Media', () => {
           (yield* Media).writePng('/nonexistent/x/sheet.png', image),
         );
         expect(failed).toMatchObject({ _tag: 'MediaFailed', op: 'write' });
-      }),
-    ),
-  );
-
-  it.effect.layer(MediaOnDisk)('a share copy that fails leaves no file behind', () =>
-    Effect.scoped(
-      Effect.gen(function* () {
-        const dir = yield* tempDir;
-        const error = yield* Effect.flip(
-          (yield* Media).shareCopy('/nonexistent/film-probe-x.mp4', `${dir}/x.share.mp4`),
-        );
-        expect([error._tag, error.op]).toEqual(['MediaFailed', 'encode']);
-        expect(yield* (yield* FileSystem.FileSystem).readDirectory(dir)).toEqual([]);
       }),
     ),
   );

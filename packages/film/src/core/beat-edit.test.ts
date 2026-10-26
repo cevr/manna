@@ -1,13 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { Option, Result } from 'effect';
-import {
-  dropMoves,
-  heldWithin,
-  holdWritten,
-  movedOrder,
-  movedWords,
-  trimReadout,
-} from './beat-edit.ts';
+import { heldWithin, holdWritten, movedOrder, movedWords } from './beat-edit.ts';
 
 const IDS = ['cold', 'title', 'look', 'woman', 'end'];
 
@@ -42,13 +35,6 @@ describe('a beat moved', () => {
     expect(Result.isFailure(broken) && broken.failure).toContain('break the film');
     expect(Result.isSuccess(movedOrder(IDS, 'end', Option.some('woman'), [acts]))).toBe(true);
   });
-
-  test('a drop on itself or just after itself does not move it', () => {
-    expect(dropMoves(IDS, 'look', 2)).toBe(false);
-    expect(dropMoves(IDS, 'look', 3)).toBe(false);
-    expect(dropMoves(IDS, 'look', 1)).toBe(true);
-    expect(dropMoves(IDS, 'look', 5)).toBe(true);
-  });
 });
 
 describe('a hold trimmed', () => {
@@ -71,10 +57,5 @@ describe('a hold trimmed', () => {
     expect(holdWritten('tail', 0.1)).toEqual(Option.none());
     expect(holdWritten('tail', 1.6)).toEqual(Option.some(1.6));
     expect(holdWritten('lead', 0.5)).toEqual(Option.some(0.5));
-  });
-
-  test('reads out the change and the length', () => {
-    expect(trimReadout(3, 41.5)).toBe('hold +3.0 s · 41.5 s long');
-    expect(trimReadout(-0.4, 2)).toBe('hold −0.4 s · 2.0 s long');
   });
 });

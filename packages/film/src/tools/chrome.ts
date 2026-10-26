@@ -119,16 +119,11 @@ const macShell = (arch: string): ReadonlyArray<string> =>
     Match.orElse(() => []),
   );
 
-/** Playwright's browser caches under the home folder: Linux's, then macOS's. */
-const PLAYWRIGHT_CACHES = [
-  ['.cache', 'ms-playwright'],
-  ['Library', 'Caches', 'ms-playwright'],
-];
+/** Playwright's browser cache under the home folder, macOS's. */
+const PLAYWRIGHT_CACHES = [['Library', 'Caches', 'ms-playwright']];
 
-/** Chromium's executable inside one of Playwright's `chromium-<revision>` folders, per platform. */
+/** Chromium's executable inside one of Playwright's `chromium-<revision>` folders, on macOS. */
 const PLAYWRIGHT_BINARIES = [
-  'chrome-linux64/chrome',
-  'chrome-linux/chrome',
   'chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing',
   'chrome-mac/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing',
   'chrome-mac-arm64/Chromium.app/Contents/MacOS/Chromium',

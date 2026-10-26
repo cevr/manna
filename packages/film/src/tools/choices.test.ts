@@ -243,7 +243,7 @@ const imported = (file: string, accepted = false) =>
   });
 
 describe('Choices: a voice picked', () => {
-  it.effect('Undo and Redo of a kept voice each name a take whose file is in narration', () => {
+  it.effect('Undo of a kept voice names a take whose file is in narration', () => {
     const { files, layer } = setup();
     return Effect.gen(function* () {
       const first = yield* imported('/rec/a1.wav');
@@ -254,7 +254,7 @@ describe('Choices: a voice picked', () => {
       expect(secondBytes).not.toEqual(firstBytes);
       expect((yield* timings).scenes['a']?.file).toBe(second);
       const before = files.get(TIMINGS);
-      // The owner goes back to the first reading through the choices routes.
+      // The first reading picked again (`film options`).
       const point = pointIdOf({ _tag: 'Voice', beat: 'a' });
       const picked = yield* (yield* Choices).pick(F, { point, variant: first, verb: 'pick' });
       expect(Option.isSome(picked.change)).toBe(true);
@@ -262,18 +262,13 @@ describe('Choices: a voice picked', () => {
       expect(takesIn(files)).toEqual([first]);
       const writer = yield* SourceWriter;
       // Undo: the timings name the second reading again, and its file is there to play.
-      yield* writer.step('undo', F);
+      yield* writer.undo(F);
       expect((yield* timings).scenes['a']?.file).toBe(second);
       expect(files.get(`${NARRATION}/${second}`)).toEqual(secondBytes);
       expect(files.get(TIMINGS)).toEqual(before);
       // narration/ holds just the take the timings name, as git had it; the other stays an attempt.
       expect(takesIn(files)).toEqual([second]);
       expect(files.has(`${NARRATION}/attempts/a/${first}`)).toBe(true);
-      // Redo: the first reading again, its file there too.
-      yield* writer.step('redo', F);
-      expect((yield* timings).scenes['a']?.file).toBe(first);
-      expect(takesIn(files)).toEqual([first]);
-      expect(files.get(`${NARRATION}/${first}`)).toEqual(firstBytes);
     }).pipe(Effect.provide(layer));
   });
 
@@ -304,7 +299,7 @@ describe('Choices: a voice picked', () => {
         files.set(`${NARRATION}/${second}`, secondBytes ?? new Uint8Array());
         files.delete(`${NARRATION}/${first}`);
         const live = files.get(TIMINGS);
-        const refused = yield* Effect.flip((yield* SourceWriter).step('undo', F));
+        const refused = yield* Effect.flip((yield* SourceWriter).undo(F));
         expect(refused._tag).toBe('UndoUnavailable');
         // The take the live timings name stays in narration, byte for byte.
         expect(files.get(TIMINGS)).toEqual(live);
@@ -327,7 +322,7 @@ describe('Choices: a voice picked', () => {
         const point = pointIdOf({ _tag: 'Voice', beat: 'a' });
         yield* (yield* Choices).pick(F, { point, variant: first, verb: 'pick' });
         const writer = yield* SourceWriter;
-        const undoing = yield* Effect.forkChild(writer.step('undo', F));
+        const undoing = yield* Effect.forkChild(writer.undo(F));
         yield* Deferred.await(mixing);
         // The lab's check, asked now, says the Undo landed.
         const latest = Option.map((yield* writer.history(F)).latest, (c) => c.target);
@@ -374,7 +369,7 @@ describe('Choices: a voice picked', () => {
       const after = files.get(TIMINGS);
       // The second reading's attempt is gone from this machine (a cleared folder).
       files.delete(`${NARRATION}/attempts/a/${second}`);
-      const refused = yield* Effect.flip((yield* SourceWriter).step('undo', F));
+      const refused = yield* Effect.flip((yield* SourceWriter).undo(F));
       expect(refused._tag).toBe('UndoUnavailable');
       expect(refused.message).toContain(second);
       expect(files.get(TIMINGS)).toEqual(after);
@@ -385,7 +380,7 @@ describe('Choices: a voice picked', () => {
 
 describe('Choices: a score picked', () => {
   it.effect(
-    'mixes the track again once sound.ts plays it, and again on its Undo and Redo, each answering when its own mix landed',
+    'mixes the track again once sound.ts plays it, and again on its Undo, each answering when its own mix landed',
     () => {
       const mixes: Array<string> = [];
       const { files, layer } = setup(
@@ -400,14 +395,13 @@ describe('Choices: a score picked', () => {
         expect(mixes.map((m) => m.includes("play: 'strings'"))).toEqual([true]);
         // The track's mtime as that mix landed it: the first mix.
         expect(picked.mixed).toEqual(Option.some(1));
-        const writer = yield* SourceWriter;
-        const [, undone] = yield* writer.step('undo', F);
-        const [, redone] = yield* writer.step('redo', F);
-        expect(mixes.map((m) => m.includes("play: 'strings'"))).toEqual([true, false, true]);
-        expect([undone, redone]).toEqual([Option.some(2), Option.some(3)]);
         // A pick of what already plays writes nothing, and mixes nothing.
         const again = yield* (yield* Choices).pick(F, { point, variant: 'strings', verb: 'pick' });
         expect(again.mixed).toEqual(Option.none());
+        const writer = yield* SourceWriter;
+        const [, undone] = yield* writer.undo(F);
+        expect(mixes.map((m) => m.includes("play: 'strings'"))).toEqual([true, false]);
+        expect(undone).toEqual(Option.some(2));
       }).pipe(Effect.provide(layer));
     },
   );

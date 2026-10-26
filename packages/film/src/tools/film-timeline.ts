@@ -4,8 +4,7 @@
 // is read once after the change) and its Board, each from the version's own
 // files (its folder, `<film>/v<n>/`, or the film's registered files); the
 // open version's Board; and the film's catalogue, notes, the lab's asks, the
-// production's ledger and the agents' "doing now" lines. The `timeline` tool
-// answers it; the studio page reads the same service.
+// production's ledger. The `timeline` tool answers it.
 
 import {
   Array as Arr,
@@ -31,7 +30,6 @@ import { FilmFolder, type FilmName, filmNamed, keptWhenMade } from './film-repo.
 import { type FreshError, FreshFilm } from './fresh-film.ts';
 import { NotesStore } from './notes-store.ts';
 import { ProductionStore } from './production-store.ts';
-import { Working } from './working.ts';
 
 /** Why a timeline does not read: the film or the version is not there, or a source does not read. */
 export type TimelineError =
@@ -87,7 +85,6 @@ export class FilmTimelines extends Context.Service<FilmTimelines, FilmTimelinesS
       const asks = yield* AskStore;
       const catalogues = yield* RenderCatalogue;
       const productions = yield* ProductionStore;
-      const working = yield* Working;
       const films = yield* Effect.context<FilmFolder>();
       const clocks = yield* Cache.makeWith((at: Clocked) => fresh.clock(at.film, at.folder), {
         capacity: CLOCKS_KEPT,
@@ -124,7 +121,6 @@ export class FilmTimelines extends Context.Service<FilmTimelines, FilmTimelinesS
             catalogue: catalogues.read(at),
             notes: notes.read(film),
             asks: asks.list,
-            working: working.on(film),
           },
           { concurrency: 'unbounded' },
         );

@@ -1,4 +1,4 @@
-// An id no other has, made where it is needed: a page's Undo or Redo request
+// An id no other has, made where it is needed: an Undo request
 // (`RequestId`, `StepRequest.request`), a change in a film's history
 // (`ChangeId`, `Change.id`), an approve run (`OpId`). The time it was made
 // and a random part, so two ids made by different processes, or by one

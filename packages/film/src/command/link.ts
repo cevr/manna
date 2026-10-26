@@ -1,24 +1,19 @@
 // Copy link: the link to what the viewer sees, on every page and in
 // every context menu, so a pasted link opens it (Addressable). With nothing
-// selected, or with the thing the URL already cites, it is the page's own
-// URL: its place, its selection, its time. From a context menu opened on
-// another thing, it is that thing's citation (`citeOf`). The link goes on
-// the page's clipboard (`Clipboard`), whole.
+// selected it is the page's own URL: its place and its still open. From a
+// context menu opened on a thing, it is that thing's citation (`citeOf`).
+// The link goes on the page's clipboard (`Clipboard`), whole.
 
-import { Effect, Equal, Option } from 'effect';
+import { Effect, Option } from 'effect';
 import type { Context as Services } from 'effect';
 import { Clipboard } from '../browser/clipboard.ts';
 import { type Command, refused, said } from './command.ts';
 import type { Context } from './context.ts';
-import { citeOf, selectionOf, selectionText } from './selection.ts';
+import { citeOf, selectionText } from './selection.ts';
 import { EVERYWHERE } from './target.ts';
 
-/** The thing a link from `ctx` cites, when it is not what the URL already cites. */
-const other = (ctx: Context) =>
-  Option.filter(
-    Option.fromUndefinedOr(ctx.selection[0]),
-    (s) => !Option.exists(selectionOf(ctx.href), (cited) => Equal.equals(cited, s)),
-  );
+/** The thing a link from `ctx` cites, if the page has one selected. */
+const other = (ctx: Context) => Option.fromUndefinedOr(ctx.selection[0]);
 
 /** The link from `ctx`: the page's URL, or the citation of the other thing it is about. */
 export const linkOf = (ctx: Context): string =>

@@ -5,8 +5,7 @@ import { hostOf } from '../browser/host.ts';
 import { Keys } from '../browser/keys.ts';
 import { type Command, type Receipt, quietly, said } from './command.ts';
 import { makeHub } from './hub.ts';
-import { Selection } from './selection.ts';
-import { beatSelection, pageHref } from '../core/api.ts';
+import { pageHref } from '../core/api.ts';
 
 /** The modifiers a press holds. */
 interface Held {
@@ -17,12 +16,12 @@ interface Held {
 }
 
 /** A page whose presses go to `target`, with a hub at `href`, on a Mac's keyboard unless `mac` is false. */
-const pageWith = (href = pageHref.studio('f', { sel: beatSelection('one') }), mac = true) => {
+const pageWith = (href = pageHref.ask('a1'), mac = true) => {
   const target = new EventTarget();
   const host = hostOf(
     Layer.mergeAll(Keys.layerOn(target, mac), Clipboard.memory([], 'https://lab.slow.test')),
   );
-  const hub = Effect.runSyncWith(host)(makeHub('player', () => href));
+  const hub = Effect.runSyncWith(host)(makeHub('ask', () => href));
   const stop = Effect.runCallbackWith(host)(hub.listen);
   const keydown = (key: string, held: Held = {}) => {
     const e = Object.assign(new Event('keydown', { cancelable: true }), { key, ...held });
@@ -118,11 +117,9 @@ describe('the hub', () => {
     stop();
   });
 
-  test("reads the URL's selection and what the page refines it with; receipts reach their sinks", () => {
+  test('starts with nothing selected and takes what the page refines it with; receipts reach their sinks', () => {
     const { hub } = pageWith();
-    expect(hub.context().selection).toEqual([
-      Selection.cases.Scene.make({ film: 'f', scene: 'one' }),
-    ]);
+    expect(hub.context().selection).toEqual([]);
     const stopRefining = hub.refine((ctx) => ({ ...ctx, playing: true }));
     expect(hub.context().playing).toBe(true);
     stopRefining();

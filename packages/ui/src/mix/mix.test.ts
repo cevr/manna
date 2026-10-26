@@ -2,7 +2,8 @@ import { describe, expect, it } from 'bun:test';
 import { createSignal, flush } from 'solid-js';
 
 import type { BaseUIEvent, HTMLProps } from '../internals/types.ts';
-import { mix, type Mixin, type RefFactory } from './mix.ts';
+import type { RefFactory } from './element.ts';
+import { mix, type Mixin } from './mix.ts';
 
 const read = (mixin: Mixin<HTMLElement>, key: string): unknown => (mixin as HTMLProps)[key];
 const fire = (mixin: Mixin<HTMLElement>, key: string, event: Event) =>

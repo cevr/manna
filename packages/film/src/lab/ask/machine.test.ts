@@ -13,8 +13,8 @@ import { describe, expect, it } from 'effect-bun-test';
 import { AskName, AskRecord, AskState, type StepValues } from '../../core/ask.ts';
 import { ServerFailed } from '../../core/api.ts';
 import { AskRefused, AskUnknown } from '../../core/refusals.ts';
-import { type LabFailure, LabUnreachable } from '../api.ts';
-import { ReviewApi } from '../review/api.ts';
+import { type LabFailure, called } from '../api.ts';
+import { AskApi } from './api.ts';
 import { AskPageEvent, AskPageState, spawnAskPage } from './machine.ts';
 
 /** A step's name, decoded as the lab decodes it. */
@@ -81,16 +81,13 @@ const fakeLab = (
   sent: Array<Sent>,
 ) =>
   Layer.succeed(
-    ReviewApi,
-    ReviewApi.of({
+    AskApi,
+    AskApi.of({
       index: unused,
       duration: unused,
       text: unused,
       phoneCopy: unused,
-      say: unused,
-      productions: unused(),
       board: unused,
-      forward: unused,
       ask: () => reads.shift() ?? Effect.die('read once too often'),
       askPage: unused,
       answer: (_id, sections) => {
@@ -112,7 +109,7 @@ const fakeLab = (
 const pageOn = (id: string) =>
   spawnAskPage(
     id,
-    ReviewApi.use((api) => api.ask(id)),
+    AskApi.use((api) => api.ask(id)),
   );
 
 const opened = (record: AskRecord, said = '') =>
@@ -210,7 +207,7 @@ describe("an ask's page", () => {
   it.effect('a send that does not reach the lab keeps the page as drafted, to send again', () => {
     const sent: Array<Sent> = [];
     const answers: Array<Effect.Effect<AskRecord, LabFailure>> = [
-      Effect.fail(LabUnreachable.make({ message: 'the lab did not answer' })),
+      called(Effect.fail({ message: 'the lab did not answer' })),
       Effect.succeed(ended),
     ];
     return Effect.gen(function* () {
@@ -313,9 +310,7 @@ describe("an ask's page", () => {
           [Effect.succeed(asking)],
           () =>
             Deferred.await(out).pipe(
-              Effect.andThen(
-                Effect.fail(LabUnreachable.make({ message: 'the lab did not answer' })),
-              ),
+              Effect.andThen(called(Effect.fail({ message: 'the lab did not answer' }))),
             ),
           sent,
         ),
@@ -431,10 +426,7 @@ describe("an ask's page", () => {
       Effect.scoped,
       Effect.provide(
         fakeLab(
-          [
-            Effect.fail(LabUnreachable.make({ message: 'the lab did not answer' })),
-            Effect.succeed(asking),
-          ],
+          [called(Effect.fail({ message: 'the lab did not answer' })), Effect.succeed(asking)],
           () => Effect.die('not sent'),
           [],
         ),

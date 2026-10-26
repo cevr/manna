@@ -12,7 +12,8 @@ import type { JSX } from '@solidjs/web';
 import { createRenderEffect, createSignal } from 'solid-js';
 
 import type { HTMLProps } from '../../../src/internals/types.ts';
-import { mix, onElement } from '../../../src/mix/mix.ts';
+import { onElement } from '../../../src/mix/element.ts';
+import { mix } from '../../../src/mix/mix.ts';
 import { Toggle } from '../../../src/toggle/index.ts';
 import { ToggleGroup } from '../../../src/toggle-group/index.ts';
 import { log } from './log.ts';

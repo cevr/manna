@@ -1,0 +1,361 @@
+// The lab's players: the one video that plays on a clock of its own (an
+// ask's video), the synced player's transport row, the ref that joins a
+// media element to a player's driver, and the frame rate its clock counts.
+
+import { useAtomSet, useAtomValue } from '@manna/atom-solid';
+import { Effect, Match, Option } from 'effect';
+import { Machine } from 'effect-machine';
+import * as ActorAtom from 'effect-machine/atom';
+import { Show } from '@solidjs/web';
+import {
+  type Accessor,
+  type ParentProps,
+  createEffect,
+  createMemo,
+  createSignal,
+  onCleanup,
+  onSettled,
+  untrack,
+} from 'solid-js';
+import type { ReviewDuration, ReviewFile } from '../../core/review.ts';
+import * as AsyncResult from 'effect/reactivity/AsyncResult';
+import * as Atom from 'effect/reactivity/Atom';
+import type { LabFailure } from '../api.ts';
+import { FILM_FPS, clock, timecode } from '../../core/time.ts';
+import { type Playable, playableOf } from '../../browser/media.ts';
+import { Actor } from '../actor.tsx';
+import { PlayIcon } from '../page-shell.tsx';
+import { useAskRoot } from './root.tsx';
+import {
+  SyncEvent,
+  type SyncState,
+  atRest,
+  clockParts,
+  lengthText,
+  failureOf,
+  reachOf,
+  runningOf,
+  syncMachine,
+  syncAt,
+} from './sync-machine.ts';
+import { type SyncDriver, makeSync } from './sync.ts';
+
+/** What a page's player whose clock cannot play says, in its row, in place of the scrub. */
+const CANNOT_PLAY_CLOCK = 'Can’t play this video';
+
+/**
+ * A synced player's row: play, the clock and a scrub (`scrubs` names what it
+ * moves), then `children` (the docked transport's rate chip). Once its
+ * clock's media cannot play (`Failed`) the row says so in place of the
+ * scrub, and play is off: there is nothing to play or scrub until the page
+ * gives the clock new media (another quality, another picture).
+ */
+const TransportRow = (
+  props: ParentProps<{
+    readonly sync: Accessor<SyncState>;
+    readonly send: (event: SyncEvent) => void;
+    readonly scrubs: string;
+    readonly title: string;
+    /** Whether it plays one video on a clock of its own (`PlayedAlone`), not the page's. */
+    readonly alone?: boolean;
+    /** Whether its play is quiet, not the view's one verb (`PlayedAlone`'s `quiet`). */
+    readonly quiet?: boolean;
+  }>,
+) => {
+  // The clock as the server opened it: at its start, as a page whose link
+  // says where (`#t=`) opens there only in the browser, the server never
+  // seeing the hash. The server's render and the client's hydration show it,
+  // so both write the same markup; the page's own clock follows once
+  // hydrated (a hydration adopts the server's text and writes it again only
+  // when the value next changes, so a clock read live as it hydrates would
+  // keep the server's time).
+  const opened = untrack(() => syncAt(props.sync().audible, props.sync().start));
+  const sync = createMemo(() => props.sync(), { ssrSource: 'client', loadingValue: opened });
+  const send = { sync: props.send };
+  const playing = () => runningOf(sync()) || sync()._tag === 'Buffering';
+  const failure = () => failureOf(sync());
+  // A lone video says its time as its length says it at rest; a review's clock, by the frame.
+  const say = Match.value(props.alone === true).pipe(
+    Match.when(true, () => clock),
+    Match.orElse(() => timecode),
+  );
+  const time = () => clockParts(sync(), say);
+  return (
+    <section class={['rv-transport', { 'rv-alone-row': props.alone === true }]}>
+      <button
+        type="button"
+        class="sh-btn rv-big"
+        data-primary={Option.getOrUndefined(Option.liftPredicate('', () => props.quiet !== true))}
+        data-tone={Option.getOrUndefined(Option.liftPredicate('quiet', () => props.quiet === true))}
+        data-act="play"
+        aria-label={Match.value(playing()).pipe(
+          Match.when(true, () => 'Pause'),
+          Match.orElse(() => 'Play'),
+        )}
+        title={props.title}
+        disabled={Option.isSome(failure())}
+        onClick={() => send.sync(SyncEvent.Toggled)}
+      >
+        {/* Named by its word; the glyph is drawn, not read. */}
+        <span aria-hidden="true">
+          {Match.value(playing()).pipe(
+            Match.when(true, () => '❚❚'),
+            Match.orElse(() => '▶'),
+          )}
+        </span>
+      </button>
+      <span class="rv-time" data-state={sync()._tag}>
+        {/* The time where the video is. */}
+        <span class="rv-time-at">{time().at}</span>
+        {/* The end, and a wait: a phone's row leaves them out (the scrub shows the end). */}
+        <span class="rv-time-rest">{time().rest}</span>
+      </span>
+      <Show
+        when={Option.getOrUndefined(failure())}
+        fallback={
+          <input
+            type="range"
+            aria-label={props.scrubs}
+            min={sync().start}
+            max={reachOf(sync())}
+            step="0.05"
+            value={sync().t}
+            onInput={(e) => send.sync(SyncEvent.ScrubMoved({ t: Number(e.currentTarget.value) }))}
+            onChange={() => send.sync(SyncEvent.ScrubReleased)}
+          />
+        }
+      >
+        {(reason) => (
+          <span class="rv-failed" data-role="failed" data-reason={reason()}>
+            {CANNOT_PLAY_CLOCK}
+          </span>
+        )}
+      </Show>
+      {props.children}
+    </section>
+  );
+};
+
+/** The one video a lone player plays: its clock and the one heard. */
+const ALONE = 'alone';
+
+/** What a lone video whose media cannot play says, on its picture, which tries it again. */
+const CANNOT_PLAY = 'Can’t play this video · Try again';
+
+/** One try at a lone video's source: the `n`th (0: the first; later ones are retries). */
+interface Try {
+  readonly src: string;
+  readonly n: number;
+}
+
+/**
+ * The `ref` of a media element that joins `driver` as `id`, for as long as
+ * the calling owner lives: a page makes a fresh element for each source (and
+ * each retry), so the driver knows the clock's media is new, and lets this
+ * one go as it leaves, whatever replaced it since. `joined`, when given, is
+ * told the element's `Playable` as it joins.
+ */
+const useClockMedia = (driver: SyncDriver, id: string, joined?: (media: Playable) => void) => {
+  let release = Option.none<() => void>();
+  onCleanup(() => Option.map(release, (letGo) => letGo()));
+  return (el: HTMLMediaElement) => {
+    const media = playableOf(el);
+    release = Option.some(driver.attach(id, media));
+    Option.map(Option.fromUndefinedOr(joined), (told) => told(media));
+  };
+};
+
+/**
+ * A video on a clock of its own (a video in no set, a render in a sheet),
+ * never the browser's controls: at rest (`atRest`) its picture is the one
+ * control, a press plays or pauses it; once it has moved (playing, scrubbed,
+ * paused past its start) the review's transport row shows under it (play,
+ * the clock, a scrub), for the whole of a scrub; until then its room stands
+ * empty under the picture, so the row's coming moves nothing. A failure is its media's:
+ * each try at a source (a new source, or a retry of a failed one) is a fresh
+ * element on the same clock, so a new source stands where the last stood,
+ * playing if it played, and nothing of a failed try outlives it. Once its
+ * media cannot play (`Failed`) its picture says so and no row shows (there
+ * is nothing to play or scrub); a press on the picture then tries again,
+ * from where the failure left it, and plays as it starts (the press asked
+ * for it). It is heard, and its time is its own, not the page's. `children`
+ * are its `<track>`s.
+ */
+export const PlayedAlone = (
+  props: ParentProps<{
+    readonly src: string;
+    readonly poster: string;
+    /** The video it plays, whose own frames its clock counts. */
+    readonly video: Pick<ReviewFile, 'ref' | 'mtime'>;
+    /** Where it stands as it opens, in seconds (its start, 0, when none). */
+    readonly at?: number;
+    /**
+     * Whether its row's play is quiet: on a page whose verb is elsewhere (an
+     * ask's Send), the picture is the video's press and its row's play the
+     * kit's quiet button, at the pointer's size.
+     */
+    readonly quiet?: boolean;
+  }>,
+) => {
+  const { meta } = useAskRoot();
+  const [retried, setRetried] = createSignal<Option.Option<Try>>(Option.none());
+  // The length at rest is the browser's measure, which the server's render has not: a video
+  // whose metadata came before the page's script would draw it during hydration, over markup
+  // that has none. It shows once the page has settled.
+  const [settled, setSettled] = createSignal(false, { ownedWrite: true });
+  onSettled(() => {
+    setSettled(true);
+  });
+  // The play a press on a failed picture asked for: the retry's element's alone, taken once
+  // as that element starts (a source switched away and back is a new try, which plays only
+  // if the clock plays).
+  let asked = Option.none<Try>();
+  const takeAsked = (at: Try) => {
+    const mine = Option.exists(asked, (a) => a.src === at.src && a.n === at.n);
+    if (mine) asked = Option.none();
+    return mine;
+  };
+  // A new source is its first try; the same source keeps its retries.
+  const current = createMemo((): Try => ({
+    src: props.src,
+    n: Option.getOrElse(
+      Option.map(
+        Option.filter(retried(), (r) => r.src === props.src),
+        (r) => r.n,
+      ),
+      () => 0,
+    ),
+  }));
+  return (
+    <Actor
+      runtime={meta.runtime}
+      spawn={Machine.spawn(
+        syncMachine(
+          ALONE,
+          0,
+          untrack(() => Option.getOrElse(Option.fromUndefinedOr(props.at), () => 0)),
+        ),
+      ).pipe(Effect.tap((actor) => actor.start))}
+    >
+      {(actor) => {
+        const syncAtom = ActorAtom.make(actor);
+        const sync = useAtomValue(() => syncAtom);
+        const send = useAtomSet(() => syncAtom);
+        const driver = makeSync(ALONE, send, meta.host);
+        useClockRate(() => Option.some(props.video), send);
+        onCleanup(driver.stop);
+        createEffect(sync, (state) => driver.apply(state));
+        const failure = () => failureOf(sync());
+        const failed = () => Option.isSome(failure());
+        const label = () =>
+          Option.match(failure(), { onNone: () => 'Play / pause', onSome: () => CANNOT_PLAY });
+        return (
+          <>
+            <button
+              type="button"
+              class="rv-alone-picture"
+              data-act="play-video"
+              title={label()}
+              aria-label={label()}
+              onClick={() => {
+                if (!failed()) return send(SyncEvent.Toggled);
+                const at = untrack(current);
+                const next = { src: at.src, n: at.n + 1 };
+                asked = Option.some(next);
+                setRetried(Option.some(next));
+              }}
+            >
+              <Show when={current()} keyed>
+                {(at: Try) => {
+                  const ref = useClockMedia(driver, ALONE);
+                  // A retry plays as it starts: the press asked for it, once.
+                  if (takeAsked(at)) onSettled(() => send(SyncEvent.Toggled));
+                  return (
+                    <video
+                      class="rv-media"
+                      preload="metadata"
+                      playsinline
+                      poster={props.poster}
+                      src={at.src}
+                      ref={ref}
+                    >
+                      {props.children}
+                    </video>
+                  );
+                }}
+              </Show>
+              <Show when={failed()}>
+                <span
+                  class="rv-failed"
+                  data-role="failed"
+                  data-reason={Option.getOrElse(failure(), () => '')}
+                >
+                  {CANNOT_PLAY}
+                </span>
+              </Show>
+              {/* At rest the picture says it plays: ▶ on a disc, and its length once measured. */}
+              <Show when={atRest(sync()) && !failed()}>
+                <span class="rv-rest" data-role="at-rest" aria-hidden="true">
+                  <span class="rv-rest-play">
+                    <PlayIcon />
+                  </span>
+                  <Show
+                    when={Option.getOrUndefined(Option.filter(lengthText(sync()), () => settled()))}
+                  >
+                    {(length: Accessor<string>) => <span class="rv-rest-length">{length()}</span>}
+                  </Show>
+                </span>
+              </Show>
+            </button>
+            {/*
+             * Its row only once it has moved: none at rest or failed, and no room kept for it, so
+             * what follows the picture (its caption) is right under it. The first play pushes that
+             * down; the picture pressed stays where it is.
+             */}
+            <Show when={!atRest(sync()) && !failed()}>
+              <TransportRow
+                sync={sync}
+                send={send}
+                scrubs="Scrub the video"
+                title="Play / pause"
+                alone
+                quiet={props.quiet}
+              />
+            </Show>
+          </>
+        );
+      }}
+    </Actor>
+  );
+};
+
+/** No video to time, as a page-only read is (`timedHere`): the same kind of atom on either side. */
+const untimed = Atom.make(AsyncResult.initial<ReviewDuration, LabFailure>()).pipe(
+  Atom.withServerValue(() => AsyncResult.initial<ReviewDuration, LabFailure>()),
+);
+
+/**
+ * Tell a clock (`send`) the frame rate of its video (`video`, none when it
+ * has none): the rate the server reads from the video's own packets
+ * (`ReviewDuration.fps`, as measured), once it answers; the film rate (`FILM_FPS`) while the answer is pending, or when
+ * the video names none. Read in the page only (`timedHere`): nothing the
+ * server renders counts frames past the clock's start, so its render never
+ * waits on it.
+ */
+const useClockRate = (
+  video: Accessor<Option.Option<Pick<ReviewFile, 'ref' | 'mtime'>>>,
+  send: (event: SyncEvent) => void,
+) => {
+  const { meta } = useAskRoot();
+  const timed = useAtomValue(() =>
+    Option.match(video(), { onNone: () => untimed, onSome: meta.timedHere }),
+  );
+  createEffect(
+    () =>
+      Option.getOrElse(
+        Option.flatMap(AsyncResult.value(timed()), (t) => t.fps),
+        () => FILM_FPS,
+      ),
+    (fps) => send(SyncEvent.Timed({ fps })),
+  );
+};

@@ -459,7 +459,7 @@ interface Reads {
  * reads (a card's flood) and a draw it lets go (`sheet`'s first guess)
  * record none.
  */
-export interface ClockReads {
+interface ClockReads {
   /** Each cue read by name: `f.cue`, and `f.at`, `f.keys`, `f.stagger` and `f.staggerAt` through it. */
   readonly cues: Map<string, Set<string>>;
   /** Each mark read by name: `f.mark`, and both ends of `f.spoken` through it. */

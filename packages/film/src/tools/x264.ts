@@ -5,10 +5,10 @@
 // at any size measured. This one encodes the copies the tools make, told
 // apart by what mediabunny hands a registered encoder, its config: a
 // footage copy by its content hint (`FOOTAGE_HINTS`, `core/footage.ts`),
-// and a film's by the quality a conversion asks for: a quantizer is a
-// render's share copy, a bitrate a review's phone copy (`SHARE_X264`,
-// `media.ts` `PHONE_ENCODE`). A film's two are level 4.1 (preset slow's reference
-// frames would otherwise raise it to 5.0, which some phones refuse). x264
+// and a film's by the quality a conversion asks for: a quantizer is x264's
+// CRF at that value, a bitrate a review's phone copy (`media.ts`
+// `PHONE_ENCODE`), at level 4.1 (preset slow's reference frames would
+// otherwise raise it to 5.0, which some phones refuse). x264
 // places every key frame by its own interval: NodeAV's encoder clears the
 // picture type a frame carries, so the key frames a conversion asks for
 // never reach it. Packets leave in Annex B, and mediabunny's MP4 muxer
@@ -27,16 +27,6 @@ import {
 } from '../core/footage.ts';
 import { FILM_FPS } from '../core/time.ts';
 import { PHONE_ENCODE } from './media.ts';
-
-/**
- * A share copy (a quantizer quality): x264's CRF at that value, preset slow,
- * tune grain, the paper's grain kept, on as many threads as x264 takes.
- */
-const SHARE_X264 = {
-  preset: 'slow',
-  tune: 'grain',
-  level: '4.1',
-};
 
 /** Microseconds: the time base frames and packets carry. */
 const MICROS = 1_000_000;
@@ -106,7 +96,10 @@ const settingsOf = (config: VideoEncoderConfig, options: VideoEncoderEncodeOptio
     onNone: () => filmSettingsOf(config, options, fps),
   });
 
-/** A film's share copy or phone copy (above), at `fps` frames a second. */
+/**
+ * A film's copy (above), at `fps` frames a second: a quantizer quality is
+ * x264's CRF at that value (at level 4.1); a bitrate, the phone copy's.
+ */
 const filmSettingsOf = (
   config: VideoEncoderConfig,
   options: VideoEncoderEncodeOptions,
@@ -115,10 +108,13 @@ const filmSettingsOf = (
   Match.value(config.bitrateMode).pipe(
     Match.when('quantizer', () => ({
       context: {},
-      options: Option.match(Option.fromNullishOr(options.avc?.quantizer), {
-        onNone: () => SHARE_X264,
-        onSome: (crf) => ({ ...SHARE_X264, crf }),
-      }),
+      options: {
+        level: '4.1',
+        ...Option.match(Option.fromNullishOr(options.avc?.quantizer), {
+          onNone: () => ({}),
+          onSome: (crf) => ({ crf }),
+        }),
+      },
     })),
     Match.orElse(() => ({
       context: {

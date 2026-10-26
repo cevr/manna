@@ -6,10 +6,9 @@
 // resolve with is refused, judged fresh on the clock the film's files give
 // now; the text is formatted and read back before it lands, only over the
 // text it read; `film check --static` runs fresh after it. It lands on the
-// film's one history, so the owner's Undo on the studio page and the `undo`
-// command step it as they step his own edits, and the change feed tells it
-// (`source.written`). Tuning is the agents' work: the studio shows the code
-// and draws none of these controls.
+// film's one history, so the `undo` command steps it, and the change feed
+// tells it (`source.written`). Tuning is the agents' work: no page draws
+// these controls.
 
 import { Effect, Option, Predicate, Record, Result, Schema } from 'effect';
 import * as Tool from 'effect/ai/Tool';
@@ -19,7 +18,7 @@ import { labCommand } from './lab-command.ts';
 import { FilmParam, LabRefused, refused } from './lab-mcp-parts.ts';
 import { readKnob, readSpans } from './scene-source.ts';
 import { type CueWritten, SceneWriter } from './scene-writer.ts';
-import { writeAnswer } from './steps-http.ts';
+import { writeAnswer } from './write-answer.ts';
 
 /** The fields of a tweak's input it is judged by: what it names, and which cue fields it sets. */
 interface Asked {
@@ -65,7 +64,7 @@ const TweakParams = Schema.Struct({
 
 const TweakTool = Tool.make('tweak', {
   description:
-    "Set one value of a scene's `drawing({...})` literal: a `cue`'s timing (any of `offset`, `dur`, `until`, `untilOffset`, `ease`, `stagger`; `dur` and `until` each replace the other) or a `knob`'s `value`. The lab writes it into the scene file as a literal and reads it back formatted. Refused when the value is computed in the file, not a literal (the reason names the expression), when the drawing's literal is shared by other scenes, or when the cue's new timing would not resolve on the clock the film's files give now. One write through the lab's history: the owner's Undo on the studio and `undo` step it, and the change feed tells it. Answers the change's id, its file and what it set, the cue's span and where it lands on the scene's clock (or why it could not be resolved), or the knob as the file now declares it, and `film check --static` run after it.",
+    "Set one value of a scene's `drawing({...})` literal: a `cue`'s timing (any of `offset`, `dur`, `until`, `untilOffset`, `ease`, `stagger`; `dur` and `until` each replace the other) or a `knob`'s `value`. The lab writes it into the scene file as a literal and reads it back formatted. Refused when the value is computed in the file, not a literal (the reason names the expression), when the drawing's literal is shared by other scenes, or when the cue's new timing would not resolve on the clock the film's files give now. One write through the lab's history: `undo` steps it, and the change feed tells it. Answers the change's id, its file and what it set, the cue's span and where it lands on the scene's clock (or why it could not be resolved), or the knob as the file now declares it, and `film check --static` run after it.",
   parameters: TweakParams,
   success: LabWrite,
   failure: LabRefused,

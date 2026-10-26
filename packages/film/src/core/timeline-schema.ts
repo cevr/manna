@@ -1,8 +1,7 @@
 // The shape of a film's timeline (`film-timeline.ts` builds it): the clock a
-// version plays on, its versions, and the timeline the studio page draws and
-// the `timeline` tool answers, each a Schema. Kept apart from the model's
-// functions so the lab's API (`api.ts`) declares the studio's route over it
-// without importing what the model imports (its links are `api.ts`'s own).
+// version plays on, its versions, and the timeline the `timeline` tool
+// answers, each a Schema. Kept apart from the model's functions so a reader
+// of the shape imports nothing the model imports.
 
 import { Schema } from 'effect';
 import { PanelText } from './board.ts';
@@ -267,30 +266,19 @@ const Waiting = Schema.Union([
 ]).pipe(Schema.toTaggedUnion('kind'));
 export type Waiting = typeof Waiting.Type;
 
-/** An agent's "doing now" line (the `working` tool), as the lab holds it. */
-export const WorkingLine = Schema.Struct({
-  by: Schema.String,
-  text: Schema.String,
-  /** When it was said, ISO. */
-  at: Schema.String,
-});
-export type WorkingLine = typeof WorkingLine.Type;
-
 /**
  * The header's line: the version's stage among the nine, what waits on the
- * owner (`waits`, only when something does: "N wait on you"), and what the
- * agents say they are doing now.
+ * owner (`waits`, only when something does: "N wait on you").
  */
 const TimelineHeader = Schema.Struct({
   stage: Stage,
   waits: Schema.optionalKey(
     Schema.Struct({ count: Schema.Int, items: Schema.NonEmptyArray(Waiting) }),
   ),
-  working: Schema.Array(WorkingLine),
 });
 type TimelineHeader = typeof TimelineHeader.Type;
 
-/** A film's timeline at one version: what the studio draws and the `timeline` tool answers. */
+/** A film's timeline at one version: what the `timeline` tool answers. */
 export const FilmTimeline = Schema.Struct({
   film: Schema.String,
   /** The production whose ledger names its versions; none for a film with no ledger. */

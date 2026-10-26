@@ -1,13 +1,13 @@
 // Which H.264 encoder a render uses, as data. The page decides once, before
 // it draws a frame (`chooseEncoder`, player/encode.ts), among the encoders
-// this platform allows (`encoderCandidates`): the Mac renders on its GPU's
-// encoder and nothing else, so a Mac that loses it stops loudly rather than
-// changing the film's look; a platform with no hardware path (Chromium gets
-// the GPU on macOS only, tools/browser.ts `launchArgs`) encodes in software.
+// a render allows (`encoderCandidates`): films render on the owner's Macs
+// only, on the GPU's encoder and nothing else unless `--encoder software`
+// asks, so a Mac that loses it stops loudly rather than changing the film's
+// look.
 // The renderer hands the one choice to every page, so every chunk of a
 // render is encoded alike: the chunks are joined without re-encoding.
 
-import { Match, Option, Schema } from 'effect';
+import { Option, Schema } from 'effect';
 
 /** The GPU's encoder: quantizer rate control, at most 14 at once (tools/render-plan.ts). */
 const Hardware = Schema.TaggedStruct('Hardware', {});
@@ -44,9 +44,9 @@ export const encoderName = (encoder: Encoder): EncoderName =>
 
 /**
  * Whether `encoder` makes the share copy in the page, beside the master: the
- * hardware encoder does (quantizer 26). The software one keeps the grain in
- * the page only at 24 Mbps, so its share is x264's, from the joined master
- * (tools/media.ts, `shareCopy`).
+ * hardware encoder does (quantizer 26). The software one makes none: it keeps
+ * the grain in the page only at 24 Mbps, so `--share` with `--encoder
+ * software` is refused (`jobOf`, tools/render-plan.ts).
  */
 export const sharesInPage = (encoder: Encoder): boolean =>
   Encoder.match(encoder, { Hardware: () => true, Software: () => false });
@@ -55,22 +55,10 @@ export const sharesInPage = (encoder: Encoder): boolean =>
 export const encoderNamed = (name: EncoderName): Encoder => BY_NAME[name];
 
 /**
- * The encoders a render on `platform` may choose from, in order: the one
- * `asked` for (`--encoder`), else on macOS the hardware encoder only (a Mac
- * whose GPU encoder fails is `EncoderMissing`, never a silent software
- * master), else the software encoder (no other platform launches Chromium
- * with the GPU).
+ * The encoders a render may choose from: the one `asked` for (`--encoder`),
+ * else the hardware encoder only (a Mac whose GPU encoder fails is
+ * `EncoderMissing`, never a silent software master).
  */
-export const encoderCandidates = (
-  platform: string,
-  asked: Option.Option<Encoder>,
-): ReadonlyArray<Encoder> =>
-  Option.match(asked, {
-    onSome: (encoder) => [encoder],
-    onNone: () => [
-      Match.value(platform).pipe(
-        Match.when('darwin', () => BY_NAME.hardware),
-        Match.orElse(() => BY_NAME.software),
-      ),
-    ],
-  });
+export const encoderCandidates = (asked: Option.Option<Encoder>): ReadonlyArray<Encoder> => [
+  Option.getOrElse(asked, () => BY_NAME.hardware),
+];

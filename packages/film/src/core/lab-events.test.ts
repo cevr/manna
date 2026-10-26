@@ -23,13 +23,12 @@ import {
   gist,
   namesMatch,
   noteChanges,
-  notePath,
   notesNews,
   productionChanges,
   setChanges,
 } from './lab-events.ts';
 import { Said, moveForward, newProduction } from './production.ts';
-import { addNote, emptyNotes, eventsSince, replyToNote, withdrawNote } from './notes.ts';
+import { addNote, emptyNotes, eventsSince, replyToNote } from './notes.ts';
 import type { Note } from './schema.ts';
 import { Segment } from './segment.ts';
 
@@ -59,7 +58,7 @@ describe('boardChanges', () => {
       panels: [{ id: 'cold.judge', beat: COLD, at: JUDGE, tries: [tried(1), tried(2)] }],
     });
     expect(boardChanges(before, added, 'r1').map((c) => [c.kind, c.panel, c.try, c.path])).toEqual([
-      ['board.tried', 'cold.judge', 2, '/films/f/studio?sel=panel%3Acold.judge&try=2'],
+      ['board.tried', 'cold.judge', 2, '/'],
     ]);
     const kept = board({
       panels: [
@@ -79,7 +78,7 @@ describe('boardChanges', () => {
       try: 2,
       text: 'calmer',
       beat: 'cold',
-      path: '/films/f/studio?sel=panel%3Acold.judge&try=2',
+      path: '/',
     });
     expect(keep?.summary).toBe('f cold.judge: try 2 kept: calmer');
     const approval = {
@@ -89,7 +88,7 @@ describe('boardChanges', () => {
     };
     const approved = { ...kept, approvals: [approval] };
     expect(boardChanges(kept, approved, 'r1').map((c) => [c.kind, c.beat, c.path])).toEqual([
-      ['beat.approved', 'cold', '/films/f/studio?sel=beat%3Acold'],
+      ['beat.approved', 'cold', '/'],
     ]);
     // Approved again (new tries) is an approval, not a withdrawal.
     const again = { ...kept, approvals: [{ ...approval, at: '2026-10-14T02:00:00.000Z' }] };
@@ -130,22 +129,9 @@ const note = (more: Partial<Note> = {}): Note => ({
   ...more,
 });
 
-describe('notePath', () => {
-  it('opens the studio on the note, its beat selected, for a note on a frame or on words', () => {
-    expect(notePath(note())).toBe('/films/f/studio?sel=beat%3Acold&note=n7');
-    expect(
-      notePath(note({ words: { beat: 'cold', from: 0, to: 1, text: 'the law' }, kind: 'note' })),
-    ).toBe('/films/f/studio?sel=beat%3Acold&note=n7');
-  });
-
-  it('opens the studio on the note, its panel selected, for a note on a panel', () => {
-    expect(notePath(note({ panel: { id: 'cold.judge', try: 2, ask: 'tweak' } }))).toBe(
-      '/films/f/studio?sel=panel%3Acold.judge&note=n7',
-    );
-  });
-
-  it('is the link of every change on the note', () => {
-    const n = note({ panel: { id: 'cold.judge' } });
+describe("a note's link", () => {
+  it("is the lab's home on every change of the note: no page shows notes", () => {
+    const n = note({ panel: { id: 'cold.judge', ask: 'tweak' } });
     const reply = {
       seq: 2,
       by: 'agent' as const,
@@ -157,9 +143,7 @@ describe('notePath', () => {
       { _tag: 'NoteReplied', seq: 2, note: n, reply },
       { _tag: 'NoteResolved', seq: 3, note: n },
     ]);
-    expect(changes.map((c) => c.path)).toEqual(
-      Array.from({ length: 3 }, () => '/films/f/studio?sel=panel%3Acold.judge&note=n7'),
-    );
+    expect(changes.map((c) => c.path)).toEqual(Array.from({ length: 3 }, () => '/'));
   });
 });
 
@@ -196,7 +180,7 @@ describe('catalogueChanges', () => {
       ['render.recorded', 'spare/f', 'main'],
     ]);
     expect(changes[0]).toMatchObject({ note: 'c1', text: 'too dark', by: 'owner' });
-    expect(changes.every((c) => c.path.startsWith('/sets/spare%2Ff'))).toBe(true);
+    expect(changes.every((c) => c.path === '/')).toBe(true);
     expect(
       catalogueChanges('spare/f', said, { ...said, approvals: [] }).map((c) => c.kind),
     ).toEqual(['render.withdrawn']);
@@ -207,7 +191,7 @@ describe('setChanges', () => {
   it('says a set published once, then updated only when its manifest changed', () => {
     const one = new Map([['spare/a', { title: Option.some('Faces'), stamp: 'x' }]]);
     expect(setChanges(new Map(), one).map((c) => [c.kind, c.set, c.summary, c.path])).toEqual([
-      ['set.published', 'spare/a', 'set spare/a (Faces) published', '/sets/spare%2Fa'],
+      ['set.published', 'spare/a', 'set spare/a (Faces) published', '/'],
     ]);
     expect(setChanges(one, one)).toEqual([]);
     const changed = new Map([['spare/a', { title: Option.none<string>(), stamp: 'y' }]]);
@@ -371,7 +355,7 @@ describe('the catalogue', () => {
   ): LabChangeDraft => ({
     kind,
     summary: `${kind} said`,
-    path: '/films/f/studio',
+    path: '/asks/a1',
     origin: 'test/1',
     ...more,
   });
@@ -403,7 +387,7 @@ describe('the catalogue', () => {
       tool: { name: 'ask_read', arguments: { ask: 'a1f' } },
       cli: 'bun cli.ts lab ask_read --ask a1f',
     });
-    expect(read('note.added', { film: 'f', note: 'n3' })).toEqual({
+    expect(read('tweak.requested', { film: 'f', note: 'n3' })).toEqual({
       tool: { name: 'notes', arguments: { film: 'f', status: 'all' } },
       cli: 'bun cli.ts lab notes --film f --status all',
     });
@@ -443,16 +427,16 @@ describe('the catalogue', () => {
     expect(
       new TextEncoder().encode(Schema.encodeSync(Schema.fromJsonString(LabChange))(change)).length,
     ).toBeLessThanOrEqual(256 * 1024);
-    const small = changeOf(draft('note.added', { text: 'short' }), 1, 'T', links);
+    const small = changeOf(draft('tweak.requested', { text: 'short' }), 1, 'T', links);
     expect(small.trimmed).toBeUndefined();
-    expect(small.links.local).toBe('http://localhost:8229/films/f/studio');
+    expect(small.links.local).toBe('http://localhost:8229/asks/a1');
   });
 
   it('matches names by globs: none is every one', () => {
     expect(namesMatch([], 'ask.step')).toBe(true);
     expect(namesMatch(['ask.*'], 'ask.step')).toBe(true);
     expect(namesMatch(['ask.*'], 'task.step')).toBe(false);
-    expect(namesMatch(['*.approved', 'note.added'], 'beat.approved')).toBe(true);
+    expect(namesMatch(['*.approved', 'tweak.requested'], 'beat.approved')).toBe(true);
     expect(namesMatch(['ask.step'], 'ask.stepped')).toBe(false);
   });
 
@@ -461,7 +445,7 @@ describe('the catalogue', () => {
       Record.keys(LAB_EVENTS)
         .filter((kind) => namesMatch(['notes'], kind))
         .toSorted(),
-    ).toEqual(['note.added', 'note.replied', 'note.resolved', 'note.withdrawn', 'tweak.requested']);
+    ).toEqual(['note.replied', 'note.resolved', 'tweak.requested']);
     expect(namesMatch(['board'], 'beat.approved')).toBe(true);
     expect(namesMatch(['notes'], 'board.kept')).toBe(false);
     // A kind the catalogue does not know is read from no record.
@@ -470,7 +454,12 @@ describe('the catalogue', () => {
 });
 
 describe('a note log over time', () => {
-  const draft = { scene: 'cold', T: 1, frame: 30 };
+  const draft = {
+    scene: 'cold',
+    T: 1,
+    frame: 30,
+    panel: { id: 'cold.judge', try: 1, ask: 'tweak' as const },
+  };
   const made = (file: ReturnType<typeof emptyNotes>, text: string, at: string) =>
     addNote(file, { ...draft, text }, at);
 
@@ -478,18 +467,29 @@ describe('a note log over time', () => {
   const told = (before: ReturnType<typeof emptyNotes>, after: ReturnType<typeof emptyNotes>) =>
     notesNews(before, after).map((c) => [c.kind, c.note, c.text]);
 
-  it('tells a note withdrawn while the log went on, by the owner', () => {
-    const one = made(emptyNotes('f'), 'hand lower', '2026-10-18T10:00:00.000Z');
-    const two = made(one, 'look up', '2026-10-18T10:01:00.000Z');
-    const gone = Option.getOrThrow(withdrawNote(two, 'n1'));
-    expect(notesNews(two, gone).map((c) => [c.kind, c.note, c.by, c.text])).toEqual([
-      ['note.withdrawn', 'n1', 'owner', 'hand lower'],
+  it("tells an older file's note on a frame only as it is answered: a note is added only as a tweak", () => {
+    const frame = addNote(
+      emptyNotes('f'),
+      { scene: 'cold', T: 1, frame: 30, text: 'hand lower' },
+      '2026-10-18T10:00:00.000Z',
+    );
+    expect(told(emptyNotes('f'), frame)).toEqual([]);
+    const replied = replyToNote(
+      frame,
+      'n1',
+      { by: 'agent', text: 'lowered', still: Option.none() },
+      '2026-10-18T10:05:00.000Z',
+    );
+    expect(told(frame, replied)).toEqual([['note.replied', 'n1', 'lowered']]);
+    // A tweak is told by the owner, its read again tells nothing more.
+    const tweak = made(replied, 'look up', '2026-10-18T10:06:00.000Z');
+    expect(notesNews(replied, tweak).map((c) => [c.kind, c.note, c.by, c.text])).toEqual([
+      ['tweak.requested', 'n3', 'owner', 'look up'],
     ]);
-    // Read again: nothing more.
-    expect(notesNews(gone, gone)).toEqual([]);
+    expect(notesNews(tweak, tweak)).toEqual([]);
   });
 
-  it('tells a reset log whole and withdraws nothing, whether its count fell, held or passed the old one', () => {
+  it('tells a reset log whole, whether its count fell, held or passed the old one', () => {
     const one = made(emptyNotes('f'), 'before reset', '2026-10-18T10:00:00.000Z');
     const two = made(one, 'also before', '2026-10-18T10:01:00.000Z');
     const fresh = (texts: ReadonlyArray<string>) =>
@@ -498,13 +498,13 @@ describe('a note log over time', () => {
         emptyNotes('f'),
       );
     // Below the old count: one new note where two were.
-    expect(told(two, fresh(['after one']))).toEqual([['note.added', 'n1', 'after one']]);
+    expect(told(two, fresh(['after one']))).toEqual([['tweak.requested', 'n1', 'after one']]);
     // At the old count: a new n1 where n1 was.
-    expect(told(one, fresh(['after one']))).toEqual([['note.added', 'n1', 'after one']]);
+    expect(told(one, fresh(['after one']))).toEqual([['tweak.requested', 'n1', 'after one']]);
     // Past it, inside one read: trashed, then two notes made.
     expect(told(one, fresh(['after one', 'after two']))).toEqual([
-      ['note.added', 'n1', 'after one'],
-      ['note.added', 'n2', 'after two'],
+      ['tweak.requested', 'n1', 'after one'],
+      ['tweak.requested', 'n2', 'after two'],
     ]);
   });
 
@@ -594,7 +594,7 @@ describe('productionChanges', () => {
         version: 2,
         text: 'One Line',
         summary: 'rbf v2: One Line',
-        path: '/productions/rbf?v=2',
+        path: '/',
       },
     ]);
   });

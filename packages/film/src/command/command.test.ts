@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { Effect, Option } from 'effect';
-import { type Command, labelOf, makeCommands, quiet, refused, said } from './command.ts';
+import { type Command, Receipt, labelOf, makeCommands, refused, said } from './command.ts';
 import { contextAt, focusOf, isField, selected, withFocused, withSelection } from './context.ts';
 import { Selection } from './selection.ts';
 import { ChangeId } from '../core/schema.ts';
@@ -11,11 +11,11 @@ const command = (id: string, over: Partial<Omit<Command, 'touch'>> = {}): Comman
   group: 'test',
   touch: 'a test command',
   when: () => true,
-  run: () => Effect.succeed(quiet),
+  run: () => Effect.succeed(Receipt.Quiet()),
   ...over,
 });
 
-const lab = contextAt('player', '/films/f/studio');
+const lab = contextAt('ask', '/films/f/studio');
 
 describe('the command registry', () => {
   test('lists each id once, in the order first registered', () => {

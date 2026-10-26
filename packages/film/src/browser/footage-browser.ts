@@ -1,6 +1,5 @@
 // Footage, live (`footage.ts`): each source opened with mediabunny (an
-// `Input` over a ranged `UrlSource`, as the compare's panes open renders,
-// `webcodecs-browser.ts`) and its frames decoded through a
+// `Input` over a ranged `UrlSource`) and its frames decoded through a
 // `VideoSampleSink`. A frame asked for alone (`ready`) is decoded from its
 // key frame (`getSample`) and copied onto a canvas of the host's, a few kept
 // by (source, second) so a still and a seek on the same frame decode it

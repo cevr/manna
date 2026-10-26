@@ -7,7 +7,7 @@ import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import { Array as Arr, Context, Effect, FileSystem, Layer, Option, Result } from 'effect';
 import { sceneAddress } from '../core/address.ts';
-import { withdrawSay } from '../core/api.ts';
+import type { Say } from '../core/api.ts';
 import {
   OpId,
   approvalState,
@@ -19,6 +19,12 @@ import {
 } from '../core/catalogue.ts';
 import { RenderCatalogue } from './catalogue.ts';
 import { ContentStore } from './content-store.ts';
+
+/** A withdraw: of every approval, or `given` an approve's op, of the approvals it gave alone. */
+const withdrawSay = (given: Option.Option<OpId> = Option.none()): Say => ({
+  _tag: 'Withdraw',
+  given,
+});
 
 /** A catalogue of its own, as another process holds one: nothing in memory is shared. */
 const ownCatalogue = Effect.map(

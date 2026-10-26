@@ -3,8 +3,8 @@
 // it tells its tries, and a cursor from another run is answered with every
 // change kept, said as a reset. A production's ledger is read too, and a
 // reader is answered only the events it names (globs) about the film it names.
-// A change to a film's source through the lab's writer (the studio's beat
-// move, an agent's undo) is told as it landed: written, undone, redone.
+// A change to a film's source through the lab's writer (an agent's beat
+// move, its undo) is told as it landed: written, undone.
 
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Fiber, FileSystem, Option, Result, Schema } from 'effect';
@@ -45,6 +45,14 @@ const board: BoardFile = {
 
 const boardJson = Schema.encodeSync(BoardFileJson)(board);
 
+/** A tweak asked of a panel: the one note the lab adds (`request_tweak`). */
+const tweak = {
+  scene: 'cold',
+  T: 1,
+  frame: 30,
+  panel: { id: 'cold.judge', try: 1, ask: 'tweak' as const },
+};
+
 const files = () =>
   new Map<string, Uint8Array>([['/films/f/scenes/index.ts', text('export {};\n')]]);
 
@@ -53,7 +61,7 @@ describe('the change feed', () => {
     Effect.gen(function* () {
       const notes = yield* NotesStore;
       const film = yield* filmNamed('f');
-      const draft = { scene: 'cold', T: 1, frame: 30 };
+      const draft = tweak;
       yield* notes.add(film, { ...draft, text: 'before the lab' }, text('png'));
       const events = yield* LabEvents.make({ links: { local: 'http://localhost:8229/' } });
       yield* events.look;
@@ -65,13 +73,12 @@ describe('the change feed', () => {
       yield* events.look;
       const seen = yield* events.since(Option.some(cursor));
       expect(seen.changes.map((c) => [c.seq, c.kind, c.text ?? c.try])).toEqual([
-        [1, 'note.added', 'after it'],
+        [1, 'tweak.requested', 'after it'],
         [2, 'board.tried', 1],
       ]);
-      // A note opens in the studio's inspector on its beat, a try in its viewer on its panel.
       expect(seen.changes.map((c) => c.links)).toEqual([
-        { local: 'http://localhost:8229/films/f/studio?sel=beat%3Acold&note=n2' },
-        { local: 'http://localhost:8229/films/f/studio?sel=panel%3Acold.judge&try=1' },
+        { local: 'http://localhost:8229/' },
+        { local: 'http://localhost:8229/' },
       ]);
       expect(seen.reset).toBe(false);
       // Read again with nothing new: nothing said twice.
@@ -82,52 +89,30 @@ describe('the change feed', () => {
     }).pipe(Effect.provide(labInMemory(files()))),
   );
 
-  it.effect('tells a note the owner withdrew, as the file no longer holds it', () =>
+  it.effect('tells a notes file trashed and made again, two notes within one read, whole', () =>
     Effect.gen(function* () {
       const notes = yield* NotesStore;
+      const fs = yield* FileSystem.FileSystem;
       const film = yield* filmNamed('f');
       const events = yield* LabEvents.make({ links: { local: 'http://localhost:8229/' } });
       yield* events.look;
       const { cursor } = yield* events.since(Option.none());
-      yield* notes.add(film, { scene: 'cold', T: 1, frame: 30, text: 'taken back' }, text('png'));
+      yield* notes.add(film, { ...tweak, text: 'before' }, text('png'));
       yield* events.look;
-      yield* notes.withdraw(film, 'n1');
+      yield* fs.remove(`${NOTES_LAB}/f/notes.json`);
+      // Made again later: its n1 is a note of its own, made at another time.
+      yield* TestClock.adjust('1 minute');
+      yield* notes.add(film, { ...tweak, text: 'after one' }, text('png'));
+      yield* notes.add(film, { ...tweak, text: 'after two' }, text('png'));
       yield* events.look;
       const told = (yield* events.since(Option.some(cursor))).changes;
       expect(told.map((c) => [c.kind, c.note, c.text])).toEqual([
-        ['note.added', 'n1', 'taken back'],
-        ['note.withdrawn', 'n1', 'taken back'],
+        ['tweak.requested', 'n1', 'before'],
+        ['tweak.requested', 'n1', 'after one'],
+        ['tweak.requested', 'n2', 'after two'],
       ]);
-      expect(told[0]?.id).not.toBe(told[1]?.id);
+      expect(new Set(told.map((c) => c.id)).size).toBe(3);
     }).pipe(Effect.provide(labInMemory(files()))),
-  );
-
-  it.effect(
-    'tells a notes file trashed and made again, two notes within one read, whole: no withdrawal',
-    () =>
-      Effect.gen(function* () {
-        const notes = yield* NotesStore;
-        const fs = yield* FileSystem.FileSystem;
-        const film = yield* filmNamed('f');
-        const events = yield* LabEvents.make({ links: { local: 'http://localhost:8229/' } });
-        yield* events.look;
-        const { cursor } = yield* events.since(Option.none());
-        yield* notes.add(film, { scene: 'cold', T: 1, frame: 30, text: 'before' }, text('png'));
-        yield* events.look;
-        yield* fs.remove(`${NOTES_LAB}/f/notes.json`);
-        // Made again later: its n1 is a note of its own, made at another time.
-        yield* TestClock.adjust('1 minute');
-        yield* notes.add(film, { scene: 'cold', T: 1, frame: 30, text: 'after one' }, text('png'));
-        yield* notes.add(film, { scene: 'cold', T: 1, frame: 30, text: 'after two' }, text('png'));
-        yield* events.look;
-        const told = (yield* events.since(Option.some(cursor))).changes;
-        expect(told.map((c) => [c.kind, c.note, c.text])).toEqual([
-          ['note.added', 'n1', 'before'],
-          ['note.added', 'n1', 'after one'],
-          ['note.added', 'n2', 'after two'],
-        ]);
-        expect(new Set(told.map((c) => c.id)).size).toBe(3);
-      }).pipe(Effect.provide(labInMemory(files()))),
   );
 
   it.effect('wakes a wait on the change itself, with no clock passing', () =>
@@ -141,7 +126,7 @@ describe('the change feed', () => {
       // The wait has heard nothing yet when the note lands.
       yield* Effect.repeat(Effect.yieldNow, { times: 10 });
       expect(waiting.pollUnsafe()).toBeUndefined();
-      yield* notes.add(film, { scene: 'cold', T: 1, frame: 30, text: 'heard' }, text('png'));
+      yield* notes.add(film, { ...tweak, text: 'heard' }, text('png'));
       yield* events.look;
       // The test clock stands still: a wait that polled the clock would never answer.
       const heard = yield* Fiber.join(waiting);
@@ -179,14 +164,14 @@ describe('the change feed', () => {
           by: Option.some('agent'),
         });
         yield* productions.forward('f', { after: 1, title: 'v2', because: Option.none() }, 3);
-        yield* notes.add(film, { scene: 'cold', T: 1, frame: 30, text: 'a note' }, text('png'));
+        yield* notes.add(film, { ...tweak, text: 'a note' }, text('png'));
         yield* events.look;
         const kinds = (of: Parameters<typeof events.since>[1]) =>
           Effect.map(events.since(Option.some(cursor), of), (answer) =>
             answer.changes.map((change) => change.kind),
           );
         expect(yield* kinds({})).toEqual([
-          'note.added',
+          'tweak.requested',
           'production.decided',
           'production.forwarded',
         ]);
@@ -205,7 +190,7 @@ describe('the change feed', () => {
       }).pipe(Effect.provide(labInMemory(files()))),
   );
 
-  it.effect("tells each change to a film's source as it landed: written, undone, redone", () =>
+  it.effect("tells each change to a film's source as it landed: written, undone", () =>
     Effect.gen(function* () {
       const writer = yield* SourceWriter;
       const fs = yield* FileSystem.FileSystem;
@@ -234,33 +219,21 @@ describe('the change feed', () => {
       expect(
         filmWide.changes.map((c) => [c.kind, c.beat ?? 'the film', c.summary, c.links.local]),
       ).toEqual([
-        [
-          'source.written',
-          'cold',
-          'f changed: knob palm (cold)',
-          'http://localhost:8229/films/f/studio?sel=beat%3Acold',
-        ],
-        [
-          'source.written',
-          'the film',
-          'f changed: score play piano',
-          'http://localhost:8229/films/f/studio',
-        ],
+        ['source.written', 'cold', 'f changed: knob palm (cold)', 'http://localhost:8229/'],
+        ['source.written', 'the film', 'f changed: score play piano', 'http://localhost:8229/'],
       ]);
-      yield* writer.step('undo', 'f');
-      yield* writer.step('undo', 'f');
-      yield* writer.step('redo', 'f');
+      yield* writer.undo('f');
+      yield* writer.undo('f');
       yield* events.look;
       const told = yield* events.since(Option.some(filmWide.cursor));
       expect(told.changes.map((c) => [c.kind, c.film, c.beat ?? 'the film', c.text])).toEqual([
         ['source.undone', 'f', 'the film', 'score play piano'],
         ['source.undone', 'f', 'cold', 'knob palm'],
-        ['source.redone', 'f', 'cold', 'knob palm'],
       ]);
       // One change, each step its own id; read as its timeline.
-      const knob = [filmWide.changes[0], ...told.changes.slice(1)].map((c) => c?.id);
-      expect(new Set(knob).size).toBe(3);
-      expect(told.changes[2]?.read.cli).toBe('bun cli.ts lab timeline --film f');
+      const knob = [filmWide.changes[0], told.changes[1]].map((c) => c?.id);
+      expect(new Set(knob).size).toBe(2);
+      expect(told.changes[1]?.read.cli).toBe('bun cli.ts lab timeline --film f');
       // Read again with nothing new: nothing said twice.
       yield* events.look;
       expect((yield* events.since(Option.some(told.cursor))).changes).toEqual([]);

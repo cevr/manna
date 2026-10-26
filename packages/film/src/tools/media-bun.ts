@@ -102,13 +102,6 @@ import {
 } from './media.ts';
 
 /**
- * x264's CRF for a share copy (preset slow, tune grain: `x264.ts`), chosen
- * against righteousness-by-faith's lossless stills (packages/film/README.md,
- * "Software share").
- */
-const SHARE_CRF = 22;
-
-/**
  * The rate a phone copy of a `seconds`-long video asks x264 for: under
  * `PHONE_RATE` by as much as its buffer could add (x264 spends at most the
  * rate over the video's length and a full buffer), so the copy averages
@@ -1086,18 +1079,6 @@ export const layer = Layer.effect(
       yield* within('encode', video, PHONE_LIMIT, phone);
     });
 
-    const shareCopy = Effect.fn('Media.shareCopy')(function* (master: string, out: string) {
-      // Written whole, so a failed or cut-off encode leaves no share behind.
-      yield* mediaWhole(out, (partial) =>
-        reencode(
-          master,
-          partial,
-          () => new Quality({ quantizer: SHARE_CRF }),
-          () => Option.none(),
-        ),
-      );
-    });
-
     const writePng = Effect.fn('Media.writePng')(function* (file: string, image: Raster) {
       yield* fs
         .writeFile(file, encodePng(image))
@@ -1164,7 +1145,6 @@ export const layer = Layer.effect(
       remux,
       load,
       encodeFlac,
-      shareCopy,
       still,
       phoneCopy,
       card,

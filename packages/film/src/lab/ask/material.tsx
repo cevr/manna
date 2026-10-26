@@ -13,6 +13,8 @@
 // a copy of a view: a fix to the view is a fix here.
 
 import { useAtomValue } from '@manna/atom-solid';
+import { Dialog } from '@manna/ui/dialog';
+import * as UrlAtom from '@manna/url-state/atom';
 import { For, type JSX, Show } from '@solidjs/web';
 import { Array as Arr, Boolean as Bool, Match, Option } from 'effect';
 import * as Atom from 'effect/reactivity/Atom';
@@ -29,7 +31,12 @@ import {
 import { type AskBlock, scriptSource } from '../../core/ask.ts';
 import { type ScriptBeats, boardFileUrl, reviewFrameUrl } from '../../core/api.ts';
 import { type BoardFile, type Panel, panelsOf, shownTry } from '../../core/board.ts';
-import { docAt, videoAt } from '../../core/review.ts';
+import { type ReviewFile, type ReviewVideo, docAt, videoAt } from '../../core/review.ts';
+import type { PhoneCopy } from '../../core/served.ts';
+import { addressOn } from '../../browser/host.ts';
+import { useSheetDismissal } from '../sheet.tsx';
+import { escapeHtml, markdownHtml } from './markdown.ts';
+import { stillIn, withStill } from './place.ts';
 import { PANEL_THUMB_CSS, PanelFigure, PanelThumb } from '../board/figure.tsx';
 import { lineWords, panelWords } from '../board/words.ts';
 import { PlaceStyle } from '../place-style.tsx';
@@ -37,15 +44,14 @@ import { WIDE } from '../viewport.ts';
 import { pressed } from '../pressed.ts';
 import { SCRIPT_READ_CSS } from '../script/style.ts';
 import { type LabFailure, reasonOf } from '../api.ts';
-import { ReviewApi } from '../review/api.ts';
-import { useReview } from '../review/context.tsx';
-import { DraftReader, useDraftTitles } from '../review/draft.tsx';
+import { AskApi } from './api.ts';
+import { useAskRoot } from './root.tsx';
+import { DraftReader, useDraftTitles } from './draft.tsx';
 import { FilmScriptReader } from '../words/film-script.tsx';
 import { takeHeard } from '../take.ts';
-import { POSTER_W, videoSource } from '../review/format.ts';
-import { PlayedAlone } from '../review/player.tsx';
+import { POSTER_W, failedText, sizeText, videoSource } from './format.ts';
+import { PlayedAlone } from './player.tsx';
 import { READER_CSS, type Selecting, useOwnSelecting } from '../words/reader.tsx';
-import { Markdown, ProxyPending, Zoom } from '../review/section.tsx';
 
 type BlockOf<K extends AskBlock['kind']> = Extract<AskBlock, { readonly kind: K }>;
 
@@ -209,7 +215,7 @@ const Clamped = (props: ParentProps) => {
 
 /** A set's Markdown, as the set's page reads it, clamped while it is long. */
 export const DocumentPart = (props: { readonly block: BlockOf<'document'> }) => {
-  const { state } = useReview();
+  const { state } = useAskRoot();
   const file = createMemo(() =>
     Option.flatMap(AsyncResult.value(state.index()), (index) => docAt(index, props.block.ref)),
   );
@@ -267,7 +273,7 @@ const DraftScript = (props: {
  * read it untracked in its own effects.
  */
 export const ScriptPart = (props: { readonly block: BlockOf<'script'> }) => {
-  const { meta } = useReview();
+  const { meta } = useAskRoot();
   const selecting = useOwnSelecting();
   const only = Option.fromUndefinedOr(props.block.beats);
   const source = untrack(() => scriptSource(props.block));
@@ -389,7 +395,7 @@ const AskPanelThumb = (props: { readonly film: string; readonly panel: Panel }) 
 
 /** A film's Board: the panels named, each as the Board shows it, by beat. */
 export const BoardPart = (props: { readonly block: BlockOf<'board'> }) => {
-  const { meta } = useReview();
+  const { meta } = useAskRoot();
   const read = useAtomValue(() => meta.board(props.block.film));
   // The words each panel holds over are the script's: read as every reader of the film reads it.
   const script = useAtomValue(() => meta.script(props.block.film));
@@ -457,7 +463,7 @@ export const BoardPart = (props: { readonly block: BlockOf<'board'> }) => {
 
 /** A video the review serves, in the review's player, from `at`. */
 export const VideoPart = (props: { readonly block: BlockOf<'video'> }) => {
-  const { state } = useReview();
+  const { state } = useAskRoot();
   const video = createMemo(() =>
     Option.flatMap(AsyncResult.value(state.index()), (index) => videoAt(index, props.block.ref)),
   );
@@ -501,9 +507,9 @@ export const VideoPart = (props: { readonly block: BlockOf<'video'> }) => {
  * voice's), and what was heard of an attempt.
  */
 export const AudioPart = (props: { readonly block: BlockOf<'audio'> }) => {
-  const { meta } = useReview();
+  const { meta } = useAskRoot();
   const attempts = meta.runtime
-    .atom(ReviewApi.use((api) => api.attempts(props.block.film, props.block.beat)))
+    .atom(AskApi.use((api) => api.attempts(props.block.film, props.block.beat)))
     .pipe(Atom.withServerValue(() => AsyncResult.initial()));
   const read = useAtomValue(() => attempts);
   const take = createMemo(() =>
@@ -534,4 +540,168 @@ export const AudioPart = (props: { readonly block: BlockOf<'audio'> }) => {
       </Show>
     </Framed>
   );
+};
+
+/**
+ * A markdown file's text, shown as HTML (every character of it escaped
+ * first): the file as the index names it, so a file written again is read again.
+ */
+const Markdown = (props: { readonly file: ReviewFile }) => {
+  const { meta } = useAskRoot();
+  const read = useAtomValue(() => meta.text(props.file));
+  return (
+    <div
+      class="rv-note"
+      innerHTML={Option.getOrElse(Option.map(AsyncResult.value(read()), markdownHtml), () =>
+        Match.value(AsyncResult.isFailure(read())).pipe(
+          Match.when(true, () => `<p class="rv-hint">${escapeHtml(failedText(read()))}</p>`),
+          Match.orElse(() => '<p class="rv-hint">loading…</p>'),
+        ),
+      )}
+    />
+  );
+};
+
+/** An image the lightbox shows: its source, and the caption under it (what its card no longer says). */
+interface Shown {
+  readonly src: string;
+  readonly caption: string;
+}
+
+/**
+ * A still that opens full size in the lightbox, with its caption (`shown`):
+ * a button, so a tap, a click, Enter and Space all open it, and its name
+ * says what opens. The URL keeps it open (`?still=` its `name`), so a link
+ * opens it, and Back closes it as every sheet's opening is. The lightbox is
+ * the kit's dialog over every other layer of the page (the header and the
+ * dock too), titled by its caption: focus moves into it and back to the
+ * still, and Escape or a tap anywhere closes it, by the sheets' one rule
+ * (`useSheetDismissal`), adding no entry.
+ */
+const Zoom = (props: {
+  readonly still: string;
+  readonly alt: string;
+  readonly shown: Shown;
+  readonly name: string;
+}) => {
+  const { meta } = useAskRoot();
+  const href = useAtomValue(() => UrlAtom.href);
+  const address = addressOn(meta.host);
+  const dismissal = useSheetDismissal(meta.host, (at, name) =>
+    Option.exists(stillIn(at), (open) => open === name),
+  );
+  const open = () => Option.exists(stillIn(href()), (name) => name === props.name);
+  const show = () =>
+    Option.map(withStill(untrack(href), props.name), (to) => {
+      dismissal.opening(props.name);
+      address.go(to);
+    });
+  const close = () => dismissal.dismiss(() => withStill(untrack(href), ''));
+  return (
+    <>
+      <button
+        type="button"
+        class="rv-zoom"
+        aria-label={`Open ${props.shown.caption}`}
+        onClick={show}
+      >
+        <img class="rv-media" loading="lazy" src={props.still} alt={props.alt} />
+      </button>
+      <Dialog.Root
+        open={open()}
+        onOpenChange={(next: boolean) => {
+          if (!next) close();
+        }}
+      >
+        <Dialog.Portal>
+          <Dialog.Backdrop class="rv-lightbox-backdrop" />
+          <Dialog.Popup
+            class="rv-lightbox"
+            data-role="lightbox"
+            data-still={props.name}
+            onClick={close}
+          >
+            <img src={props.shown.src} alt={props.shown.caption} />
+            <Dialog.Title class="rv-lightbox-caption">{props.shown.caption}</Dialog.Title>
+          </Dialog.Popup>
+        </Dialog.Portal>
+      </Dialog.Root>
+    </>
+  );
+};
+
+/** What a video with no phone copy to play says across its picture: on its way, or failed. */
+const COPY_SAID = {
+  pending: 'Phone copy on its way',
+  ready: 'Phone copy on its way',
+  failed: 'The phone copy could not be made',
+} as const;
+
+/** What a video with no phone copy to play says across its picture, as its copy stands (`copy`). */
+const CopySaid = (props: { readonly copy: PhoneCopy }) => (
+  <span class="rv-pending-hint" data-copy={props.copy}>
+    {COPY_SAID[props.copy]}
+  </span>
+);
+
+/**
+ * In a video's place while it has no phone copy to play, on Proxy: its
+ * still with what is happening across its foot (so the box says so before
+ * the still has come), on its way or failed, and the way to play the
+ * Original instead. The original is never streamed in its place unasked.
+ * While the index has the copy on its way the page asks after it every few
+ * seconds (`CopyAwaited`) and says what it hears; once the copy is made or
+ * has failed, the page reads the index again, and the video plays in its
+ * place, or says it failed (on a Set, Choices and an ask alike).
+ */
+const ProxyPending = (props: { readonly video: ReviewVideo }) => {
+  const { actions } = useAskRoot();
+  const failed = () => props.video.phone === 'failed';
+  // Its still, while it can be drawn: one that cannot (a video no frame is read from) leaves the
+  // box empty at its 16:9, never a broken image. Kept by the still's address, so another video's
+  // is drawn afresh.
+  const still = () => reviewFrameUrl(props.video.ref, Option.none(), POSTER_W);
+  const [undrawn, setUndrawn] = createSignal(Option.none<string>(), { ownedWrite: true });
+  const drawn = () => !Option.contains(undrawn(), still());
+  return (
+    <div class="rv-pending" data-proxy={STATE_PROXY[`${failed()}`]}>
+      <div class="rv-pending-picture">
+        <Show when={drawn()} fallback={<div class="rv-media" aria-hidden="true" />}>
+          <img
+            class="rv-media"
+            loading="lazy"
+            alt=""
+            src={still()}
+            onError={(e) => setUndrawn(Option.some(e.currentTarget.getAttribute('src') ?? ''))}
+          />
+        </Show>
+        <Show when={!failed()} fallback={<CopySaid copy="failed" />}>
+          <CopyAwaited video={props.video} />
+        </Show>
+      </div>
+      <p class="rv-row">
+        <button type="button" class="sh-btn" onClick={() => actions.quality('full')}>
+          Play the original ({sizeText(props.video.size)})
+        </button>
+      </p>
+    </div>
+  );
+};
+
+/** A video's `data-proxy`, by whether its phone copy failed. */
+const STATE_PROXY = { true: 'failed', false: 'pending' } as const;
+
+/**
+ * Asks after video `video`'s phone copy while it is on its way, and says
+ * what it hears; once the copy is made or has failed, the index is read
+ * again (it says so too, or the video plays).
+ */
+const CopyAwaited = (props: { readonly video: ReviewVideo }) => {
+  const { actions, meta } = useAskRoot();
+  const asked = useAtomValue(() => meta.phoneCopy(props.video.ref));
+  const copy = () => Option.getOrElse(AsyncResult.value(asked()), (): PhoneCopy => 'pending');
+  createEffect(copy, (now) => {
+    if (now !== 'pending') actions.indexChanged();
+  });
+  return <CopySaid copy={copy()} />;
 };

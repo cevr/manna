@@ -42,21 +42,12 @@ describe('framePage', () => {
 });
 
 describe('launchArgs', () => {
-  test('macOS asks for the GPU: the hardware encoder, WebGL on Metal and the 2D canvas accelerated', () => {
-    expect(launchArgs('darwin')).toEqual([
+  test("a render asks for the Mac's GPU: the hardware encoder, WebGL on Metal and the 2D canvas accelerated", () => {
+    expect(launchArgs).toEqual([
       '--disable-gpu-vsync',
       '--disable-frame-rate-limit',
       '--enable-gpu',
       '--use-angle=metal',
-    ]);
-  });
-
-  test('Linux gets no macOS-only backend, and WebGL on SwiftShader by name; the canvas draws in software', () => {
-    expect(launchArgs('linux')).toEqual([
-      '--disable-gpu-vsync',
-      '--disable-frame-rate-limit',
-      '--enable-unsafe-swiftshader',
-      '--disable-accelerated-2d-canvas',
     ]);
   });
 });

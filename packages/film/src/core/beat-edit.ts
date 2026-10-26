@@ -75,16 +75,6 @@ export const movedOrder = (
   });
 };
 
-/** Whether a drop of `beat` at gap `gap` (the index of the beat it would go before; `ids.length` for the end) moves it. */
-export const dropMoves = (ids: ReadonlyArray<string>, beat: string, gap: number): boolean => {
-  const at = ids.indexOf(beat);
-  return at >= 0 && gap !== at && gap !== at + 1;
-};
-
-/** The beat a drop at gap `gap` goes before: none at the end. */
-export const beforeGap = (ids: ReadonlyArray<string>, gap: number): MovedBefore =>
-  Arr.get(ids, gap);
-
 /** Each edge's floor in the layout. */
 const FLOOR = { lead: MIN_LEAD, tail: DEFAULT_TAIL } satisfies Record<HoldEdge, number>;
 
@@ -130,7 +120,7 @@ const wordsOf = (b: HeldBeat): number =>
   });
 
 /** A beat once a hold is written: its length, and its holds as the layout lays them. */
-export interface Held {
+interface Held {
   readonly dur: number;
   readonly hold: BeatHold;
 }
@@ -235,10 +225,6 @@ const signedSeconds = (s: number): string => {
   return Bool.match(s < 0, { onTrue: () => `−${shown} s`, onFalse: () => `+${shown} s` });
 };
 
-/** A trim's live readout: the hold's change, and the beat's length after it (`hold +3.0 s · 41.5 s long`). */
-export const trimReadout = (change: number, length: number): string =>
-  `hold ${signedSeconds(change)} · ${length.toFixed(1)} s long`;
-
 /** What a hold set says to the owner. */
 export const heldWords = (beat: string, edge: HoldEdge, from: number, to: number): string =>
   `Held ${beat} ${signedSeconds(to - from)} ${SIDE[edge]} its words.`;
@@ -247,12 +233,8 @@ export const heldWords = (beat: string, edge: HoldEdge, from: number, to: number
 export const heldAlready = (beat: string, edge: HoldEdge, value: number): string =>
   `${beat} already holds ${value.toFixed(1)} s ${SIDE[edge]} its words.`;
 
-/** How a step's words begin. */
-const STEPPED = { undo: 'Undone', redo: 'Redone' } as const;
-
-/** A step's change as the owner's words name it (`Undone: Moved look to the end.`): the words its edit said, or what it set. */
-export const stepped = (verb: 'undo' | 'redo', words: string): string =>
-  `${STEPPED[verb]}: ${words}`;
+/** An undone change as the owner's words name it (`Undone: Moved look to the end.`): the words its edit said, or what it set. */
+export const undone = (words: string): string => `Undone: ${words}`;
 
 /** What every edit of the script tells the owner comes next: the agents' part. */
 export const AGENTS_AFTER = 'Agents re-time and re-check.';

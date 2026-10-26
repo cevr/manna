@@ -1,4 +1,4 @@
-// The studio's edits as an agent and the page make them, over a film in
+// The agents' edits of a script, over a film in
 // memory whose clock is laid from its script as it stands (the fresh read the
 // lab makes, here in the test's process): a beat moved through `beat_move`
 // lands in the script's order and the timeline follows it (the later beats
@@ -7,11 +7,11 @@
 // withdraws the work; a hold set through `beat_hold` is snapped and held to
 // its floor; two edits undo one at a time, and an older one asked by id is
 // refused while a newer stands; a move that would break the acts or the
-// movements is refused and writes nothing; the page's routes and the tools
-// step one history; a note is withdrawn while it is unanswered.
+// movements is refused and writes nothing; the tools of two agents step one
+// history.
 
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, Layer, Option, Result, Schema } from 'effect';
+import { Effect, Layer, Option, Result } from 'effect';
 import { filmClock } from '../core/film-timeline.ts';
 import { layout } from '../core/layout.ts';
 import { RenderCatalogue } from './catalogue.ts';
@@ -19,7 +19,7 @@ import { ProductionStore } from './production-store.ts';
 import { echoPages, freshFilm, writesInMemory } from './film-services/testing.ts';
 import { text } from './host/testing.ts';
 import { labInMemory } from './lab/testing.ts';
-import { type LabFetch, MCP_BASE, labWithMcp, mcpBound, mcpSession } from './lab-mcp/testing.ts';
+import { labWithMcp, mcpSession } from './lab-mcp/testing.ts';
 
 const SCRIPT = '/films/f/script.ts';
 
@@ -138,37 +138,6 @@ const ledgerNotes = Effect.gen(function* () {
 });
 
 const scriptNow = (files: Map<string, Uint8Array>) => new TextDecoder().decode(files.get(SCRIPT));
-
-const Json = Schema.fromJsonString(Schema.Json);
-
-/** A POST to the lab's API, as the page sends it: its status and its body. */
-const post = (lab: LabFetch, path: string, body: Schema.Json) =>
-  Effect.gen(function* () {
-    const sent = yield* Effect.orDie(Schema.encodeEffect(Json)(body));
-    const answer = yield* Effect.promise(() =>
-      lab(
-        new Request(`${MCP_BASE.slice(0, -1)}${path}`, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: sent,
-        }),
-        mcpBound,
-      ),
-    );
-    // Read as the page reads JSON: the test names the fields it checks.
-    const read = yield* Effect.promise(() => answer.json());
-    return { status: answer.status, body: read };
-  });
-
-/** A GET of the lab's API, as the page sends it: its status and its body. */
-const get = (lab: LabFetch, path: string) =>
-  Effect.gen(function* () {
-    const answer = yield* Effect.promise(() =>
-      lab(new Request(`${MCP_BASE.slice(0, -1)}${path}`), mcpBound),
-    );
-    const read = yield* Effect.promise(() => answer.json());
-    return { status: answer.status, body: read };
-  });
 
 /** The beats the script lane shows, as `[beat, start]`. */
 const scriptLane = (timeline: { lanes: ReadonlyArray<{ track: string; clips: any }> }) =>
@@ -289,7 +258,7 @@ describe('beat_hold', () => {
 });
 
 describe('beat_hold on a beat a hold cannot change', () => {
-  it.effect('refuses a hold on a silent beat, in words, on the tool and the page alike', () =>
+  it.effect('refuses a hold on a silent beat, in words', () =>
     provided(
       (files) =>
         Effect.gen(function* () {
@@ -303,14 +272,6 @@ describe('beat_hold on a beat a hold cannot change', () => {
             by: 'painter',
           });
           expect(asked.refused).toContain('title has no words to hold: it lasts 3.0 s');
-          const page = yield* post(lab, '/api/films/f/beats/hold', {
-            beat: 'title',
-            edge: 'lead',
-            seconds: 2,
-          });
-          expect(page.status).toBe(422);
-          expect(page.body._tag).toBe('HoldUnchanged');
-          expect(page.body.reason).toContain('title has no words to hold: it lasts 3.0 s');
           expect(scriptNow(files)).toBe(LIKE_RBF);
         }),
       LIKE_RBF,
@@ -394,11 +355,10 @@ describe('one history', () => {
           yield* produced;
           const { lab } = yield* labWithMcp;
           const { tool } = yield* mcpSession(lab);
-          // The owner moves on the page; the agent holds through its tool.
-          const moved = yield* post(lab, '/api/films/f/beats/move', { beat: 'look' });
-          expect(moved.status).toBe(200);
-          expect(moved.body.said).toBe('Moved look to the end. Agents re-time and re-check.');
-          expect(moved.body.steps.undo.target).toBe('move look to the end');
+          // One agent moves a beat, another holds one: one history.
+          const moved = yield* tool('beat_move', { film: 'f', beat: 'look', by: 'editor' });
+          expect(moved.said).toBe('Moved look to the end. Agents re-time and re-check.');
+          expect(moved.target).toBe('move look to the end');
           const afterMove = scriptNow(files);
           const held = yield* tool('beat_hold', {
             film: 'f',
@@ -408,82 +368,26 @@ describe('one history', () => {
             by: 'painter',
           });
           expect(yield* ledgerNotes).toEqual([
-            ['Moved look to the end. Re-time, re-check seams, re-render.', 'the studio'],
+            ['Moved look to the end. Re-time, re-check seams, re-render.', 'editor'],
             ['Held cold +1.9 s after its words. Re-time, re-check seams, re-render.', 'painter'],
           ]);
-          const older = yield* tool('undo', { film: 'f', change: moved.body.change });
-          expect(older.refused).toContain('hold cold tail');
-          // ⌘Z on the page sends the newest step it knows: its own move, refused while the hold stands.
-          const stale = yield* post(lab, '/api/films/f/edits/undo', {
-            change: moved.body.steps.undo.change,
-          });
-          expect(stale.status).toBe(409);
-          expect(stale.body._tag).toBe('StepNotNewest');
-          expect(stale.body.reason).toContain('hold cold tail came after it');
-          // The page reads the history again, and its next ⌘Z sends the agent's hold.
-          const history = yield* get(lab, '/api/films/f/steps');
-          expect(history.body.undo.change).toBe(held.change);
-          const first = yield* post(lab, '/api/films/f/edits/undo', {
-            change: history.body.undo.change,
-          });
-          expect(first.body.said).toBe('Undone: Held cold +1.9 s after its words.');
-          expect(first.body.change).toBe(held.change);
+          // The older change asked by id is refused while the newer stands.
+          const older = yield* tool('undo', { film: 'f', change: moved.change });
+          expect(older.refused).toContain('hold cold tail came after it');
+          const first = yield* tool('undo', { film: 'f', change: held.change });
+          expect(first.said).toBe('Undone: Held cold +1.9 s after its words.');
+          expect(first.change).toBe(held.change);
           expect(scriptNow(files)).toBe(afterMove);
           expect(yield* ledgerNotes).toEqual([
-            ['Moved look to the end. Re-time, re-check seams, re-render.', 'the studio'],
+            ['Moved look to the end. Re-time, re-check seams, re-render.', 'editor'],
           ]);
-          const second = yield* post(lab, '/api/films/f/edits/undo', {
-            change: first.body.steps.undo.change,
-          });
-          expect(second.body.said).toBe('Undone: Moved look to the end.');
+          // Asked for no change, an undo takes the newest.
+          const second = yield* tool('undo', { film: 'f' });
+          expect(second.said).toBe('Undone: Moved look to the end.');
           expect(scriptNow(files)).toBe(WRITTEN);
           expect(yield* ledgerNotes).toEqual([]);
-          // ⇧⌘Z makes the move again, and files its work again: each names the step its answer gave.
-          const redone = yield* post(lab, '/api/films/f/edits/redo', {
-            change: second.body.steps.redo.change,
-          });
-          expect(redone.body.said).toBe('Redone: Moved look to the end.');
-          expect(scriptNow(files)).toBe(afterMove);
-          expect((yield* ledgerNotes).length).toBe(1);
-          const again = yield* post(lab, '/api/films/f/edits/redo', {
-            change: redone.body.steps.redo.change,
-          });
-          expect(again.body.change).toBe(held.change);
-          expect((yield* ledgerNotes).length).toBe(2);
-          // Nothing left undone: the page shows no Redo, and the lab refuses one asked.
-          expect(again.body.steps.redo).toBeUndefined();
-          const nothing = yield* post(lab, '/api/films/f/edits/redo', {});
-          expect(nothing.status).toBe(409);
+          expect((yield* tool('undo', { film: 'f' })).refused).toContain('nothing to undo');
         }),
       ),
-  );
-});
-
-describe('a note withdrawn', () => {
-  it.effect('is taken back while it is unanswered, and stands once answered', () =>
-    provided(() =>
-      Effect.gen(function* () {
-        const { lab } = yield* labWithMcp;
-        const draft = {
-          scene: 'look',
-          T: 3,
-          frame: 90,
-          text: 'too dark here',
-          still: 'iVBORw0KGgo=',
-        };
-        const added = yield* post(lab, '/api/films/f/notes', draft);
-        expect(added.status).toBe(200);
-        const withdrawn = yield* post(lab, `/api/films/f/notes/${added.body.id}/withdraw`, {});
-        expect(withdrawn.status).toBe(200);
-        expect(withdrawn.body.text).toBe('too dark here');
-        const { tool } = yield* mcpSession(lab);
-        expect((yield* tool('notes', { film: 'f', status: 'all' })).notes).toEqual([]);
-        const kept = yield* post(lab, '/api/films/f/notes', draft);
-        yield* tool('reply', { film: 'f', note: kept.body.id, text: 'lifted the lamp' });
-        const late = yield* post(lab, `/api/films/f/notes/${kept.body.id}/withdraw`, {});
-        expect(late.status).toBe(409);
-        expect(late.body._tag).toBe('NoteAnswered');
-      }),
-    ),
   );
 });

@@ -1,8 +1,7 @@
 // The studio's read model: a film's timeline, one version at a time, every
 // stage of the flow laid on the film's clock (script → concept → Board →
 // voice → animatic → scenes → sound → render → shorts). The lab's `timeline`
-// tool answers it and the studio page draws it, so an agent and the owner
-// read one model.
+// tool answers it, so every agent reads one model.
 //
 // It is built from what the lab already reads, never a file parsed a second
 // way: the version's clock (`FilmClock`, made by `film read clock` from
@@ -19,13 +18,13 @@
 // the concept is reached by a decision that keeps them and is otherwise a
 // named gap, never a lane. Each clip carries its state (made, kept,
 // approved) and its clock (`estimated`: its length is read from its words at
-// the reading pace, no take measures it; the page hatches it). The header's
+// the reading pace, no take measures it). The header's
 // stage is the first, in the flow's order, that is not done.
 //
 // The markers are what waits on the owner and has a time: open asks and his
 // notes not yet done. The header counts what waits on him (open asks, notes
-// an agent answered, beats the open version's Board holds ready to approve)
-// and carries the agents' "doing now" lines. Pure: the lab's service reads
+// an agent answered, beats the open version's Board holds ready to approve).
+// Pure: the lab's service reads
 // the sources and calls `timelineOf`.
 
 import {
@@ -61,7 +60,7 @@ import {
   subjectOf,
 } from './catalogue.ts';
 import { type PartError, stretchesOf } from './acts.ts';
-import { boardPath, gist, notePath } from './lab-events.ts';
+import { gist } from './lab-events.ts';
 import type { Placed } from './layout.ts';
 import { cardSaid } from './narration.ts';
 import { noteT, unresolved } from './notes.ts';
@@ -91,7 +90,6 @@ import {
   type NextRow,
   type Marker,
   type Waiting,
-  type WorkingLine,
   type FilmTimeline,
 } from './timeline-schema.ts';
 
@@ -278,7 +276,6 @@ interface TimelineSources {
   readonly notes: NotesFile;
   /** The lab's asks; those about the film are read. */
   readonly asks: ReadonlyArray<AskRecord>;
-  readonly working: ReadonlyArray<WorkingLine>;
 }
 
 /** What starts each stage, said as the Next row says it. */
@@ -822,7 +819,7 @@ const markersOf = (
           onTrue: () => 'replied' as const,
           onFalse: () => 'open' as const,
         }),
-        href: notePath(note),
+        href: pageHref.home(),
       })),
   });
   return Arr.sort(
@@ -851,11 +848,11 @@ const waitingOf = (
   })),
   ...sources.notes.notes
     .filter((n) => n.status === 'replied')
-    .map((n): Waiting => ({ kind: 'note', id: n.id, text: gist(n.text), href: notePath(n) })),
+    .map((n): Waiting => ({ kind: 'note', id: n.id, text: gist(n.text), href: pageHref.home() })),
   ...beatsToApprove(sources.openBoard).map((beat): Waiting => ({
     kind: 'approve',
     beat,
-    href: boardPath(sources.film, beat, Option.none()),
+    href: pageHref.home(),
   })),
 ];
 
@@ -893,7 +890,6 @@ export const timelineOf = (sources: TimelineSources): FilmTimeline => {
         onNone: () => ({}),
         onSome: (items) => ({ waits: { count: items.length, items } }),
       }),
-      working: sources.working,
     },
   };
 };

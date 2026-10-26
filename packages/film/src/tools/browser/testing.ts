@@ -77,7 +77,6 @@ export interface RenderLedger {
   /** The encoders each page choosing one was allowed, in order. */
   readonly encoderAsked: Array<ReadonlyArray<Encoder['_tag']>>;
   /** Every share copy made by x264 from a joined master. */
-  readonly shareCopies: Array<{ readonly master: string; readonly out: string }>;
   /** Every frame drawn, by any page. */
   readonly frames: Array<number>;
   /** Look-books composed, by any page. */
@@ -107,7 +106,6 @@ export const emptyLedger = (): RenderLedger => ({
   encoders: { spawned: 0, finished: 0, killed: 0 },
   encodedBy: [],
   encoderAsked: [],
-  shareCopies: [],
   frames: [],
   lookbooks: { composed: 0 },
   contacts: [],
@@ -379,7 +377,6 @@ export const fakeRenderMedia = (ledger: RenderLedger, host: FakeRenderHost = {})
           Effect.onInterrupt(() => Effect.sync(() => void (ledger.aacInterrupted.count += 1))),
           Effect.as({ packets: [], meta: {} }),
         ),
-      shareCopy: (master, out) => Effect.sync(() => void ledger.shareCopies.push({ master, out })),
       remux: (video) => Effect.sync(() => void ledger.remuxes.push(video)),
       join: (film) =>
         Effect.sync(() => void ledger.joins.push(film)).pipe(

@@ -798,10 +798,8 @@
                   "@manna/film/tokens.css",
                   "@manna/film/tools",
                   "@manna/film/solid-plugin",
-                  "@manna/film/play",
-                  "@manna/film/review",
-                  "@manna/film/review-server",
-                  "@manna/film/play-server"
+                  "@manna/film/ask",
+                  "@manna/film/ask-server"
                 ],
                 "message": "the engine never imports the player, tools, lab or the host's adapters (browser): they import it (packages/film/README.md, the purity rule)."
               },
@@ -869,10 +867,8 @@
                   "@manna/film/tokens.css",
                   "@manna/film/tools",
                   "@manna/film/solid-plugin",
-                  "@manna/film/play",
-                  "@manna/film/review",
-                  "@manna/film/review-server",
-                  "@manna/film/play-server"
+                  "@manna/film/ask",
+                  "@manna/film/ask-server"
                 ],
                 "message": "the engine never imports the player, tools, lab or the host's adapters (browser): they import it (packages/film/README.md, the purity rule)."
               },
@@ -937,10 +933,8 @@
                   "@manna/film/tokens.css",
                   "@manna/film/tools",
                   "@manna/film/solid-plugin",
-                  "@manna/film/play",
-                  "@manna/film/review",
-                  "@manna/film/review-server",
-                  "@manna/film/play-server"
+                  "@manna/film/ask",
+                  "@manna/film/ask-server"
                 ],
                 "message": "the Rive loader and its runtimes never import the player, tools, lab, the pages' commands or the host's adapters (browser): the player and the tools import them (packages/film/README.md, the purity rule)."
               },
@@ -1005,10 +999,8 @@
                   "@manna/film/tokens.css",
                   "@manna/film/tools",
                   "@manna/film/solid-plugin",
-                  "@manna/film/play",
-                  "@manna/film/review",
-                  "@manna/film/review-server",
-                  "@manna/film/play-server"
+                  "@manna/film/ask",
+                  "@manna/film/ask-server"
                 ],
                 "message": "the house look never imports the player, tools, lab, the pages' commands, the Rive loader (src/rive/) or the host's adapters (browser): they may import it (packages/film/README.md, the purity rule)."
               }
@@ -1059,10 +1051,8 @@
                   "@manna/film/tokens.css",
                   "@manna/film/tools",
                   "@manna/film/solid-plugin",
-                  "@manna/film/play",
-                  "@manna/film/review",
-                  "@manna/film/review-server",
-                  "@manna/film/play-server"
+                  "@manna/film/ask",
+                  "@manna/film/ask-server"
                 ],
                 "message": "the engine never imports the player, tools or lab: they import it (packages/film/README.md, the purity rule)."
               }
@@ -1104,10 +1094,8 @@
                   "**/lab",
                   "@manna/film/tools",
                   "@manna/film/solid-plugin",
-                  "@manna/film/play",
-                  "@manna/film/review",
-                  "@manna/film/review-server",
-                  "@manna/film/play-server"
+                  "@manna/film/ask",
+                  "@manna/film/ask-server"
                 ],
                 "message": "the player never imports the tools or the lab: the lab mounts the player (packages/film/README.md, the purity rule)."
               },
@@ -1183,8 +1171,7 @@
       // layers, so its layer bans are off there; they keep the platform
       // package off its index.
       "files": [
-        "**/packages/film/src/lab/review/mount.tsx",
-        "**/packages/film/src/lab/studio/context.tsx",
+        "**/packages/film/src/lab/ask/mount.tsx",
         "**/packages/film/src/lab/**/fixtures/**",
         "**/packages/film/src/lab/**/*.test.ts",
         "**/packages/film/src/lab/**/*.test.tsx"
@@ -1255,10 +1242,8 @@
                   "@manna/film/tokens.css",
                   "@manna/film/tools",
                   "@manna/film/solid-plugin",
-                  "@manna/film/play",
-                  "@manna/film/review",
-                  "@manna/film/review-server",
-                  "@manna/film/play-server"
+                  "@manna/film/ask",
+                  "@manna/film/ask-server"
                 ],
                 "message": "the pages' commands never import the player, the tools or the lab: they register their commands with it (packages/film/README.md, the purity rule)."
               }
@@ -1523,18 +1508,14 @@
     },
     {
       // The media module itself, the tests and fixtures; and the sites that
-      // hold an element today, each moved onto the media module by the
-      // readers' batch (NEW6-8): the studio's takes, the review's player and
-      // compare, and an ask's take.
+      // hold an element today: an ask's player and its material.
       "files": [
         "**/packages/film/src/browser/media*.ts",
         "**/packages/film/src/**/fixtures/**",
         "**/packages/film/src/**/*.test.ts",
         "**/packages/film/src/**/*.test.tsx",
         "**/packages/film/src/lab/ask/material.tsx",
-        "**/packages/film/src/lab/studio/section.tsx",
-        "**/packages/film/src/lab/review/player.tsx",
-        "**/packages/film/src/lab/review/section.tsx"
+        "**/packages/film/src/lab/ask/player.tsx"
       ],
       "rules": {
         "film/media-through-player": "off"
@@ -1623,10 +1604,8 @@
                   "@manna/film/tokens.css",
                   "@manna/film/tools",
                   "@manna/film/solid-plugin",
-                  "@manna/film/play",
-                  "@manna/film/review",
-                  "@manna/film/review-server",
-                  "@manna/film/play-server"
+                  "@manna/film/ask",
+                  "@manna/film/ask-server"
                 ],
                 "message": "the host's adapters never import the player, the tools or the lab: the pages import them (packages/film/README.md, the purity rule)."
               }
@@ -1817,7 +1796,7 @@
               "navigator": [
                 {
                   "properties": ["mediaDevices"],
-                  "use": "Capture (packages/film/src/lab/studio/capture.ts)"
+                  "use": "no lab page records audio"
                 },
                 {
                   "properties": ["sendBeacon"],
@@ -1826,10 +1805,10 @@
               ],
               "Audio": { "use": "Media and a Playable (packages/film/src/browser/media.ts)" },
               "AudioContext": {
-                "use": "Capture (packages/film/src/lab/studio/capture.ts) to record, or Media and a Playable (packages/film/src/browser/media.ts) to play; the compare's panes play through Media's live adapter's one sound context (pageSound, packages/film/src/browser/media-browser.ts)"
+                "use": "no lab page records audio; to play, Media and a Playable (packages/film/src/browser/media.ts)"
               },
-              "AudioWorkletNode": { "use": "Capture (packages/film/src/lab/studio/capture.ts)" },
-              "MediaRecorder": { "use": "Capture (packages/film/src/lab/studio/capture.ts)" },
+              "AudioWorkletNode": { "use": "no lab page records audio" },
+              "MediaRecorder": { "use": "no lab page records audio" },
               "setTimeout": {
                 "use": "Effect.sleep on the host's Clock (timersOn, packages/film/src/player/throttle.ts)"
               },

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { Effect, Option } from 'effect';
 import type { KeyPress } from '../browser/keys.ts';
-import { type Command, quiet } from './command.ts';
+import { type Command, Receipt } from './command.ts';
 import { type Context, contextAt } from './context.ts';
 import { Resolved, bindingsOf, chordLabel, keysOf, parseChord, resolve } from './keymap.ts';
 
@@ -22,11 +22,11 @@ const command = (id: string, over: Partial<Omit<Command, 'touch'>> = {}): Comman
   group: 'test',
   touch: 'a test command',
   when: () => true,
-  run: () => Effect.succeed(quiet),
+  run: () => Effect.succeed(Receipt.Quiet()),
   ...over,
 });
 
-const page = contextAt('player', '/films/f/studio');
+const page = contextAt('ask', '/films/f/studio');
 
 /** What `p` does among `commands` in `ctx`: the command and step it runs, `owned` or `pass`. */
 const does = (p: KeyPress, commands: ReadonlyArray<Command>, ctx: Context = page) =>

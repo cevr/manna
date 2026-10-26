@@ -61,9 +61,8 @@ export const SETTINGS = {
      */
     master: /* @__PURE__ */ new Quality({ bitrate: 37_000_000, bitrateMode: 'variable' }),
     /**
-     * No share copy in the page: this encoder kept the grain only at 24 Mbps,
-     * 1.16 GB for the film. The share is x264's, made from the joined master
-     * (`Media.shareCopy`, tools/media.ts).
+     * No share copy: this encoder kept the grain only at 24 Mbps, 1.16 GB for
+     * the film, so a software render makes none (`jobOf`, tools/render-plan.ts).
      */
     share: null,
     /**

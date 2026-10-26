@@ -222,7 +222,7 @@ interface TakesService {
   ) => Effect.Effect<Imported, TakesError>;
   /**
    * The takes the film's timings name, kept in step with a text of them by
-   * the SourceWriter's Undo and Redo: brought back into `narration/` from
+   * the SourceWriter's Undo: brought back into `narration/` from
    * `narration/attempts/<beat>/`, and put away there. They make nothing (`remake`
    * none): a keep that mixes the track says so itself (`keepVoice`).
    */

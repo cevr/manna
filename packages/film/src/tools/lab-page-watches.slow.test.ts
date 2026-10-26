@@ -24,12 +24,12 @@ describe("the watches, as a build's reads change", () => {
       Effect.gen(function* () {
         // Every file the build reads lies in a folder watched from the start (an entry's).
         const { spec, write } = yield* appFolderWith({
-          'review.html': html('review', './src/lab.ts'),
-          'src/review.server.tsx': "export const rendered = () => 'served';\n",
+          'ask.html': html('ask', './src/lab.ts'),
+          'src/ask.server.tsx': "export const rendered = () => 'served';\n",
         });
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const dir = path.dirname(spec.pages.review);
+        const dir = path.dirname(spec.pages.ask);
         // The same folder by another name, as macOS names its temp folder (`/var` for `/private/var`).
         const linked = `${dir}-linked`;
         yield* fs.symlink(dir, linked);
@@ -38,12 +38,12 @@ describe("the watches, as a build's reads change", () => {
           {
             ...spec,
             pages: Record.map(spec.pages, through),
-            servers: { review: through(spec.servers.review) },
+            servers: { ask: through(spec.servers.ask) },
             films: through(spec.films),
           },
           PageBundler.layer,
         );
-        const built = buildOf((yield* ask('/')).text);
+        const built = buildOf((yield* ask('/asks/a1')).text);
         // Past the arming check of any watch the build began: nothing was saved since.
         const held = yield* page.wait(
           { since: built, server: Option.none(), film: Option.none() },
@@ -61,7 +61,7 @@ describe("the watches, as a build's reads change", () => {
   it.live('one save, made as the watched folders change, is heard', () =>
     Effect.gen(function* () {
       const { ask, script, waitWriting, waitOnce, write } = yield* app;
-      yield* ask('/');
+      yield* ask('/asks/a1');
       // The page now reads one more folder: the watches change with its next build.
       yield* write('extra/x.ts', "export const x = 'x';\n");
       const moved = yield* waitWriting(
@@ -70,7 +70,7 @@ describe("the watches, as a build's reads change", () => {
         'src/p.ts',
         "import { shared } from '../lib/shared.ts';\nimport { x } from '../extra/x.ts';\nconsole.log(shared, x);\n",
       );
-      expect((yield* ask('/')).status).toBe(200);
+      expect((yield* ask('/asks/a1')).status).toBe(200);
       // One save at once, to a folder watched before and after.
       const heard = yield* waitOnce(
         moved.build,
@@ -87,7 +87,7 @@ describe("the watches, as a build's reads change", () => {
     Effect.gen(function* () {
       const { spec, write } = yield* appFolder;
       const path = yield* Path.Path;
-      const dir = path.dirname(spec.pages.review);
+      const dir = path.dirname(spec.pages.ask);
       // A bundler whose reads are scripted: the entries and `graph`, and `during` once, mid-build.
       const graph = yield* Ref.make<ReadonlyArray<string>>([path.join(dir, 'src', 'p.ts')]);
       const during = yield* Ref.make<Effect.Effect<void>>(Effect.void);
@@ -117,7 +117,7 @@ describe("the watches, as a build's reads change", () => {
         }),
       );
       const { page, ask } = yield* served(spec, scripted);
-      yield* ask('/');
+      yield* ask('/asks/a1');
       // The first build may count once a save it read in the last second: the build once that is heard.
       const settled = (yield* page.wait(
         { since: 0, server: Option.none(), film: Option.none() },
@@ -138,7 +138,7 @@ describe("the watches, as a build's reads change", () => {
           Effect.sleep('300 millis'),
         ).pipe(Effect.orDie),
       );
-      const second = buildOf((yield* ask('/')).text);
+      const second = buildOf((yield* ask('/asks/a1')).text);
       const heard = yield* page.wait(
         { since: second, server: Option.none(), film: Option.none() },
         '3 seconds',

@@ -170,8 +170,8 @@ export function isTabbable(element: Element | null): element is FocusableElement
 }
 
 /**
- * The nearest ancestor of `element` that takes focus (a dialog's popup, a
- * sheet): where the platform moves focus on a press on content that takes
+ * The nearest ancestor of `element` that takes focus (a dialog's popup):
+ * where the platform moves focus on a press on content that takes
  * none. `null` when there is none, and focus then leaves every control.
  */
 export function getFocusableAncestor(element: Element): FocusableElement | null {

@@ -609,7 +609,7 @@ describe('the lint config', () => {
           alias: `@manna/film/${key.replace(/^\.\//, '')}`,
           folder: Option.fromNullishOr(/^\.\/src\/([\w-]+)\//.exec(target)?.[1]),
         }));
-        expect(aliases.map((a) => a.alias)).toContain('@manna/film/review');
+        expect(aliases.map((a) => a.alias)).toContain('@manna/film/ask');
         const missing = config.overrides.flatMap((o) =>
           optionsIn(o, 'no-restricted-imports', Imports).flatMap((options) =>
             (options.patterns ?? []).flatMap(({ group }) => {
@@ -663,7 +663,7 @@ describe('the lint config', () => {
           'packages/film/src/lab/a.tsx',
           'packages/film/src/lab/a.test.ts',
           'packages/film/src/lab/fixtures/a.ts',
-          'packages/film/src/lab/review/mount.tsx',
+          'packages/film/src/lab/ask/mount.tsx',
           'packages/film/lint/a.ts',
           'packages/film/lint/nodes.ts',
           'packages/film/e2e/lab/a.test.ts',

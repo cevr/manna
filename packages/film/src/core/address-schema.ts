@@ -52,13 +52,6 @@ export const Address = Schema.Union([
 export type Address = typeof Address.Type;
 
 /**
- * A part of the film's own tree (the project's): the whole, one act, some
- * scenes. A short is cut across the film, not a branch of it.
- */
-export const PartAddress = Schema.Union([FilmPart, ActPart, ScenesPart]);
-export type PartAddress = typeof PartAddress.Type;
-
-/**
  * One address as a string, equal for equal addresses: `film`, `act:<name>`,
  * `scenes:<id>,<id>`, `short:<id>`. A record keyed by address compares these.
  */

@@ -5,7 +5,7 @@
 // - score: `play` in `sound.ts`, and look: `play` of a look in `palette.ts`,
 //   each the one string spliced by the parser (`choice-source.ts`) through
 //   the SourceWriter (a score's pick mixes the track again once it lands,
-//   and on its Undo and Redo);
+//   and on its Undo);
 // - take: kept, unkept or rejected by its sha256 through the library's own
 //   operations (`SoundLibrary.keep`/`unkeep`/`reject`) by the film CLI in a
 //   fresh process (the library's prompts are its sources too), recorded
@@ -102,7 +102,7 @@ import {
 import { Takes } from './takes.ts';
 
 /** What a verb did: the change it made (none when it was already so), and the mix it made. */
-export interface Picked {
+interface Picked {
   /** The file it rewrote. */
   readonly file: string;
   readonly target: string;
@@ -256,10 +256,9 @@ interface VoiceKept {
  * says so, and the track remixed), recorded around the timings' rewrite by
  * the SourceWriter with the takes the timings name (`Takes.named`) and the
  * track mixed from them (`film mix`). So every keep runs under the writer's
- * lock, one at a time with every other write, and Undo and Redo walk it
- * back, the replaced take with it and the track remixed to play it.
+ * lock, one at a time with every other write, and Undo walks it back, the replaced take with it and the track remixed to play it.
  */
-export const keepVoice = Effect.fn('keepVoice')(function* (
+const keepVoice = Effect.fn('keepVoice')(function* (
   film: FilmName,
   beat: string,
   file: string,
@@ -392,7 +391,7 @@ export class Choices extends Context.Service<Choices, ChoicesService>()(
 
       /**
        * What follows `sound.ts`: the track mixed from it (`film mix`), mixed
-       * again once a write of it lands, and on its Undo and Redo, each
+       * again once a write of it lands, and on its Undo, each
        * answering when it landed (`Track.remake`). It names no file to bring
        * back or put away.
        */

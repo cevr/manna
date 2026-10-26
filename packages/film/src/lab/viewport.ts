@@ -5,11 +5,6 @@
 // page is hydrated. A page rendered in the browser alone reads the window
 // from the start.
 
-import { Effect, Stream } from 'effect';
-import type { Context } from 'effect';
-import { type Accessor, createMemo, createSignal, onSettled } from 'solid-js';
-import { Viewport } from '../browser/viewport.ts';
-
 /** A phone's widest window, in CSS px: the studio's one breakpoint. */
 const PHONE_WIDEST = 899;
 
@@ -26,20 +21,3 @@ export const PHONE = `(max-width: ${PHONE_WIDEST}px)`;
 
 /** Wider than a phone: a laptop's window, `PHONE`'s other side. */
 export const WIDE = `(min-width: ${PHONE_WIDEST + 1}px)`;
-
-/** Whether the window `host` sees matches `query`, for as long as the calling owner lives. */
-export const useMatches = (host: Context.Context<Viewport>, query: string): Accessor<boolean> => {
-  const [now, setNow] = createSignal(
-    Effect.runSyncWith(host)(Viewport.use((v) => v.matches(query))),
-    { ownedWrite: true },
-  );
-  onSettled(() => {
-    const fiber = Effect.runForkWith(host)(
-      Viewport.use((v) =>
-        Stream.runForEach(v.changes(query), (matches) => Effect.sync(() => setNow(matches))),
-      ),
-    );
-    return () => fiber.interruptUnsafe();
-  });
-  return createMemo(now, { ssrSource: 'client', loadingValue: Viewport.served(query) });
-};

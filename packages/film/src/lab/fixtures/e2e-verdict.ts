@@ -308,8 +308,8 @@ export const ancestorsIn = (ps: string, pid: number): ReadonlyArray<string> => {
   return commands;
 };
 
-/** A locker's options that take a value as the next word: `flock -w 5`, `flock -E 3`, `lockf -t 5`. */
-const VALUED = new Set(['-w', '--wait', '--timeout', '-E', '--conflict-exit-code', '-t']);
+/** A locker's options that take a value as the next word: `lockf -t 5`. */
+const VALUED = new Set(['-t']);
 
 /** A locker's first word past its options. */
 const operandOf = (args: ReadonlyArray<string>): Option.Option<string> =>
@@ -321,19 +321,19 @@ const operandOf = (args: ReadonlyArray<string>): Option.Option<string> =>
 
 /**
  * The file a command holds locked, when the command is a locker: its program
- * `flock` or `lockf` (by any path), its first word past its options. A
+ * `lockf` (by any path), its first word past its options. A
  * shell whose script names a locker is not one: the locker it starts is a
  * process, and an ancestor, of its own.
  */
 export const lockedBy = (command: string): Option.Option<string> => {
   const [program = '', ...args] = command.trim().split(/\s+/);
-  if (!/^(?:\S*\/)?(?:flock|lockf)$/.test(program)) return Option.none();
+  if (!/^(?:\S*\/)?lockf$/.test(program)) return Option.none();
   return operandOf(args);
 };
 
 /**
  * Whether one of `commands` (this process's ancestors' command lines) holds
- * `lock` already: a `flock` or `lockf` on that very file, the two paths
+ * `lock` already: a `lockf` on that very file, the two paths
  * compared by `realPath` (macOS's `/tmp` is `/private/tmp`). A check run
  * inside one runs in that hold, rather than wait on itself.
  */

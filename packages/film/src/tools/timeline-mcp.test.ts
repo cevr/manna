@@ -1,17 +1,13 @@
-// The studio's tools through the lab's MCP, as an agent calls them: a film's
+// The timeline's tools through the lab's MCP, as an agent calls them: a film's
 // timeline at its production's open version (the registered files, read
 // fresh), at a version asked (a version folder's clock, read fresh with its
 // folder, and its own Board on its lane), a version it has not refused by
 // name, and only the lanes asked; the header waits on the open version's
 // Board whichever version is read; a clock is read once per stamp of the
-// film's sources; an agent's "doing now" line on the header, said by name,
-// replaced by its next and cleared when it says it is done. The lines
-// themselves clear after half an hour of silence (`Working`, on the test
-// clock).
+// film's sources.
 
 import { describe, expect, it } from 'effect-bun-test';
-import { Duration, Effect, Layer, Option, Result, Schema } from 'effect';
-import { TestClock } from 'effect/testing';
+import { Effect, Layer, Option, Result, Schema } from 'effect';
 import { type BoardFile, BoardFileJson, BoardName } from '../core/board.ts';
 import type { FilmClock } from '../core/timeline-schema.ts';
 import { Segment } from '../core/segment.ts';
@@ -21,7 +17,6 @@ import { echoPages, freshFilm } from './film-services/testing.ts';
 import { text } from './host/testing.ts';
 import { labInMemory } from './lab/testing.ts';
 import { labWithMcp, mcpSession } from './lab-mcp/testing.ts';
-import { WORKING_HELD, Working } from './working.ts';
 
 /** Film `f`'s v1, kept in its folder (`v1/`): a voiced beat with a mark, its take staged, and a silent one. */
 const older: FilmClock = {
@@ -152,7 +147,7 @@ const twoVersions = Effect.gen(function* () {
 /** What the open version's Board holds ready: its one beat waits on the owner's approval. */
 const SEED_WAITS = {
   count: 1,
-  items: [{ kind: 'approve', beat: 'seed', href: '/films/f/studio?sel=beat%3Aseed' }],
+  items: [{ kind: 'approve', beat: 'seed', href: '/' }],
 };
 
 describe('timeline', () => {
@@ -237,69 +232,4 @@ describe('timeline', () => {
       mtimes,
     );
   });
-});
-
-describe('working', () => {
-  it.effect(
-    "says an agent's line on the header by name, replaces it with its next, and clears it on done",
-    () =>
-      provided(
-        Effect.gen(function* () {
-          const { lab } = yield* labWithMcp;
-          const { tool } = yield* mcpSession(lab);
-          const said = yield* tool('working', { film: 'f', text: 'drawing cold', by: 'painter' });
-          expect(said.working.map((l: { by: string; text: string }) => [l.by, l.text])).toEqual([
-            ['painter', 'drawing cold'],
-          ]);
-          yield* tool('working', { film: 'f', text: 'checking the seams', by: 'checker' });
-          yield* tool('working', { film: 'f', text: 'drawing title', by: 'painter' });
-          const header = (yield* tool('timeline', { film: 'f' })).header.working;
-          expect(
-            header.map((l: { by: string; text: string }) => [l.by, l.text]).toSorted(),
-          ).toEqual([
-            ['checker', 'checking the seams'],
-            ['painter', 'drawing title'],
-          ]);
-          // Done needs no words.
-          const done = yield* tool('working', { film: 'f', by: 'painter', done: true });
-          expect(done.working.map((l: { by: string }) => l.by)).toEqual(['checker']);
-          // A line names who says it, and a line not done says something.
-          expect((yield* tool('working', { film: 'f', text: 'x' })).refused).toContain('by');
-          expect((yield* tool('working', { film: 'f', by: 'painter' })).refused).toBe(
-            'say `text` (what you are doing now), or `done: true` to clear your line',
-          );
-          expect(
-            (yield* tool('working', { film: 'nope', text: 'x', by: 'painter' })).refused,
-          ).toContain('nope');
-        }),
-      ),
-  );
-
-  it.effect.layer(Working.layer)("a film's lines are its own", () =>
-    Effect.gen(function* () {
-      const working = yield* Working;
-      yield* working.say('f', 'painter', 'drawing cold');
-      expect((yield* working.on('f')).map((l) => l.by)).toEqual(['painter']);
-      expect(yield* working.on('g')).toEqual([]);
-    }),
-  );
-
-  it.effect.layer(Working.layer)(
-    'a line clears after half an hour of silence; a newer one stays',
-    () =>
-      Effect.gen(function* () {
-        const working = yield* Working;
-        yield* working.say('f', 'painter', 'drawing cold');
-        yield* TestClock.adjust(Duration.minutes(20));
-        yield* working.say('f', 'checker', 'checking cold');
-        expect((yield* working.on('f')).map((l) => l.by)).toEqual(['checker', 'painter']);
-        yield* TestClock.adjust(Duration.subtract(Duration.minutes(10), Duration.millis(1)));
-        expect((yield* working.on('f')).length).toBe(2);
-        yield* TestClock.adjust(Duration.millis(1));
-        expect((yield* working.on('f')).map((l) => l.by)).toEqual(['checker']);
-        yield* TestClock.adjust(WORKING_HELD);
-        expect(yield* working.on('f')).toEqual([]);
-        expect(yield* working.on('g')).toEqual([]);
-      }),
-  );
 });
