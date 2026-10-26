@@ -554,6 +554,7 @@ describe('timeline', () => {
       layout(
         [{ id: 'a', say: 'Look {live}and live.', lead: 0.5, timeline: { lift: { mark: 'live' } } }],
         noTakes,
+        30,
       ),
     );
     expect(a?.cues.get('lift')?.start).toBe(0.5 + (a?.voice.marks.get('live') ?? NaN));
@@ -567,6 +568,7 @@ describe('timeline', () => {
           { id: 'b', say: 'Look.' },
         ],
         noTakes,
+        30,
       ),
     );
     expect(a?.knobs.get('handY')).toBe(800);
@@ -588,6 +590,7 @@ describe('timeline', () => {
           },
         ],
         noTakes,
+        30,
       ),
     );
     expect(placed.length).toBe(1);

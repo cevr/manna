@@ -47,7 +47,7 @@ const recorded: Timings = {
   scenes: { said: spokenTake('Hi there.') },
 };
 const film = testFilm(scenes, recorded);
-const placed = Result.getOrThrow(layout(scenes, recorded));
+const placed = Result.getOrThrow(layout(scenes, recorded, 30));
 const NOW = { score: Option.none<string>(), inPlace: Option.none() };
 
 /** The same film in a folder on Windows. */

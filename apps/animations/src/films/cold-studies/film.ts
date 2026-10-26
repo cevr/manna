@@ -7,15 +7,17 @@ import { fonts, palette } from './palette.ts';
 import { scenes } from './scenes/index.ts';
 import { TITLE } from './script.ts';
 
-/** The film, from its narration as the framework loads it (`narratedFilms`). */
-export const film = ({ timings, audio }: Narrated) =>
+/** The frames a second the film is laid and drawn at: its page (`narratedFilms`) and the tools both read it here. */
+export const fps = 30;
+
+/** The film, from its narration (its timings, its master, its `fps`) as the framework loads it (`narratedFilms`). */
+export const film = (narrated: Narrated) =>
   createFilm({
+    ...narrated,
     title: TITLE,
     paper: { base: palette.paper, tone: palette.paperTone, seed: 1888 },
     shade: palette.shade,
     scenes,
-    timings,
-    audio,
     palette,
     captions: { font: `500 38px "${fonts.body}"`, color: palette.ink, plate: palette.plate },
   });

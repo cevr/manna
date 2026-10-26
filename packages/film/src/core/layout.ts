@@ -13,15 +13,17 @@ import {
 } from './errors.ts';
 import { type SceneVoice, voiceFor } from './narration.ts';
 import type { Knob, ResolvedCue, ScenePoint, Timed, Timings, Transition } from './schema.ts';
-import { CLOCK_EPSILON, FILM_FPS, frameOn, frameRead } from './time.ts';
+import { CLOCK_EPSILON, frameRead, movedFrames, secondsAt } from './time.ts';
 import { type SceneClock, type TimelineError, pointOn, resolveTimeline } from './timeline.ts';
 
 export interface Placed<S extends Timed = Timed> {
   readonly spec: S;
   readonly index: number;
-  /** Its first frame at the layout's rate: its exact start snapped to the nearest frame (`layout`). */
+  /** The frames a second the film is laid at: the film's own declared rate (`layout`). */
+  readonly fps: number;
+  /** Its first frame at `fps`: its exact start snapped to the nearest frame (`layout`). */
   readonly frame: number;
-  /** Its start in seconds: its first frame's (`frame / fps`). */
+  /** Its start in seconds: its first frame's (`secondsAt`). */
   readonly start: number;
   /**
    * Its length on whole frames: from its first frame to the next beat's, the
@@ -98,8 +100,10 @@ export const beatLength = (b: BeatSpan): number =>
 export type LayoutError = DuplicateScene | LineError | TimelineError;
 
 /**
- * Lay scenes end to end at `fps` (`FILM_FPS` unless the film draws at
- * another rate). Each beat starts on a whole frame: the frame nearest where
+ * Lay scenes end to end at `fps`, the film's declared rate (its `film.ts`'s
+ * `fps`, which its page and the tools both read; a talk's `TALK_FPS`): one
+ * rate for every clock of the film, so the page, the mix, the checks and the
+ * lab place each beat on the same frame. Each beat starts on a whole frame: the frame nearest where
  * the exact lengths before it (`beatLength`) end, so its start (picture and
  * voice together) sits at most half a frame from its exact place, and it
  * lasts to the next beat's first frame. The mix lays each take from that
@@ -109,7 +113,7 @@ export type LayoutError = DuplicateScene | LineError | TimelineError;
 export const layout = <S extends Timed>(
   scenes: ReadonlyArray<S>,
   timings: Timings | undefined,
-  fps: number = FILM_FPS,
+  fps: number,
 ): Result.Result<Placed<S>[], LayoutError> => {
   const out: Placed<S>[] = [];
   /** Where the beat starts with every length before it exact. */
@@ -129,7 +133,7 @@ export const layout = <S extends Timed>(
     const min = spec.min ?? 0;
     const length = beatLength({ words: voice.duration, lead, tail, min });
     const frame = frameRead(exact, fps);
-    const dur = (frameRead(exact + length, fps) - frame) / fps;
+    const dur = secondsAt(frameRead(exact + length, fps) - frame, fps);
     const speechStart = voice.duration > 0 ? lead : 0;
     const cues = resolveTimeline(spec.timeline, clockOf(spec.id, voice, speechStart, dur));
     if (Result.isFailure(cues)) return Result.fail(cues.failure);
@@ -137,8 +141,9 @@ export const layout = <S extends Timed>(
     out.push({
       spec,
       index,
+      fps,
       frame,
-      start: frame / fps,
+      start: secondsAt(frame, fps),
       dur,
       length,
       voice,
@@ -154,23 +159,16 @@ export const layout = <S extends Timed>(
 };
 
 /**
- * The seconds film second `T` lies into beat `p`, at the `fps` it was laid
- * at. A frame's `T` (on the frame grid, `frameOn`) reads the whole frames
- * from the beat's first, an integer, in seconds: so a frame the same whole
- * frames into a beat, wherever the beat now starts, reads the very same
- * seconds. Any other `T` (a preview's clock, a cue's start sought) reads its
- * own seconds less the beat's start. Every painter reads a beat's own time
- * so.
+ * The seconds film second `T` lies into beat `p`, on the rate it was laid at
+ * (`movedFrames` back by its first frame). A frame's `T` (`frameOn`) reads
+ * the whole frames from the beat's first, as `secondsAt` writes them: so a
+ * frame the same whole frames into a beat, wherever the beat now starts,
+ * reads the very same seconds. Any other `T` (a preview's clock, a cue's
+ * start sought) reads its own seconds less the beat's start. Every painter
+ * reads a beat's own time so, and none names a rate of its own.
  */
-export const beatTime = (
-  p: { readonly frame: number; readonly start: number },
-  T: number,
-  fps: number,
-): number =>
-  Option.match(frameOn(T, fps), {
-    onSome: (frame) => (frame - p.frame) / fps,
-    onNone: () => T - p.start,
-  });
+export const beatTime = (p: { readonly fps: number; readonly frame: number }, T: number): number =>
+  movedFrames(T, -p.frame, p.fps);
 
 /**
  * Where `point` lands in placed scene `p`, scene-local (`pointOn`): a cue it

@@ -14,7 +14,7 @@ How a film's figures, props and scenery move between their poses so they read as
 6. **Variety without chaos.** Repeated things (rain, leaves, a crowd's breath) each take a seeded phase, speed and size. Never `Math.random()` in a frame (a frame is a pure function of time, [RIVE.md](RIVE.md)), and never everything in sync.
 7. **One main action per beat, plus two or three idle movements.** The action tells the line; the idle only says the place is alive. Figures not in the action stay quiet.
 8. **Opacity for appearing and leaving.** A figure or a prop is never dimmed halfway to mean "less". A diagram's icon that steps back for another is a state the board names, not this.
-9. **Give every move enough frames.** A film draws at 30 fps (`FILM_FPS`). A move under about 100 ms is two or three frames and flickers: a blink closes in at least 110 ms.
+9. **Give every move enough frames.** A film draws at the rate its `film.ts` declares (`fps`, 30 for every film so far). A move under about 100 ms is two or three frames and flickers: a blink closes in at least 110 ms.
 
 ## Curves
 

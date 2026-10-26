@@ -14,6 +14,7 @@ import { drawFindings, impureAt, momentCounts } from './draw-check.ts';
 /** A film of the given scenes, four seconds each. */
 const filmOf = (...scenes: ReadonlyArray<readonly [string, SceneSpec['draw']]>) =>
   createFilm({
+    fps: 30,
     title: 'draw',
     paper: { base: '#ffffff', tone: '#000000', seed: 1 },
     shade: '#000000',
@@ -99,6 +100,7 @@ describe('the draw leg', () => {
       };
       const found = yield* drawFindings(() =>
         createFilm({
+          fps: 30,
           title: 'draw',
           paper: { base: '#ffffff', tone: '#000000', seed: 1 },
           shade: '#000000',

@@ -84,6 +84,7 @@ const placed = Result.getOrThrow(
       { id: 'b', say: 'Amen.', lead: 0.5, tail: 1 },
     ],
     timings,
+    30,
   ),
 );
 

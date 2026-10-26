@@ -66,6 +66,8 @@ describe('FilmRepo', () => {
       // Its film.ts declares the look: two acts, the first from the opening.
       const look = Option.getOrThrow(loaded.look);
       expect(look.acts.map((act) => act.from)).toEqual(['open', 'title']);
+      // And its rate, the one its page is made at.
+      expect(loaded.fps).toBe(24);
     }),
   );
 
@@ -78,6 +80,8 @@ describe('FilmRepo', () => {
       Effect.gen(function* () {
         const loaded = yield* (yield* FilmRepo).load('sample', Segment.make('v3'));
         expect(loaded.scenes.map((s) => s.id)).toEqual(['seed', 'end']);
+        // It keeps no film.ts: it is laid at the rate the film declares.
+        expect(loaded.fps).toBe(24);
         expect(Object.keys(loaded.timings.scenes)).toEqual(['seed']);
         expect(Option.getOrThrow(loaded.look).acts.map((act) => String(act.name))).toEqual([
           'sowing',

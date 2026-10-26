@@ -38,16 +38,22 @@ import { memoryFileSystem, memoryManifestLock, text } from './host/testing.ts';
 import { ManifestLock } from './manifest-lock.ts';
 import { pruneIdle, readCache, recordRender } from './segment-cache.ts';
 
+/** The rate the films here declare, and their pages draw at. */
+const FPS = 2;
+
 /** Three beats, 5, 5 and 10 seconds, at 2 fps: frames 0–9, 10–19 and 20–39. */
-const film = testFilm(
-  [
-    { id: 'a', min: 5 },
-    { id: 'b', min: 5 },
-    { id: 'c', min: 10 },
-  ],
-  { voice: '', scenes: {} },
-);
-const info: ExportInfo = { width: 1920, height: 1080, fps: 2, duration: 20, frames: 40 };
+const film = {
+  ...testFilm(
+    [
+      { id: 'a', min: 5 },
+      { id: 'b', min: 5 },
+      { id: 'c', min: 10 },
+    ],
+    { voice: '', scenes: {} },
+  ),
+  fps: FPS,
+};
+const info: ExportInfo = { width: 1920, height: 1080, fps: FPS, duration: 20, frames: 40 };
 const frames = (from: number, to: number) => Array.from({ length: to - from }, (_, k) => from + k);
 
 const keys = new Map([
@@ -87,17 +93,20 @@ const keyed = (scenes: ReadonlyMap<string, string> = keys, fresh = false) =>
  * frames at least, then cut at the beats); drawn alone, one.
  */
 const longer = {
-  film: testFilm(
-    [
-      { id: 'a', min: 6 },
-      { id: 'a2', min: 6.5 },
-      { id: 'b', min: 5 },
-      { id: 'c', min: 6.5 },
-      { id: 'c2', min: 6 },
-    ],
-    { voice: '', scenes: {} },
-  ),
-  info: { width: 1920, height: 1080, fps: 2, duration: 30, frames: 60 },
+  film: {
+    ...testFilm(
+      [
+        { id: 'a', min: 6 },
+        { id: 'a2', min: 6.5 },
+        { id: 'b', min: 5 },
+        { id: 'c', min: 6.5 },
+        { id: 'c2', min: 6 },
+      ],
+      { voice: '', scenes: {} },
+    ),
+    fps: FPS,
+  },
+  info: { width: 1920, height: 1080, fps: FPS, duration: 30, frames: 60 },
 };
 const longerKeys = new Map([...keys, ['a2', 'key-a2'], ['c2', 'key-c2']]);
 
@@ -581,14 +590,17 @@ describe.concurrent("a film render's segments", () => {
 
   /** The film with a a second longer, two frames at 2 fps: b at frames 12–21, c at 22–41. */
   const lengthened = (filmTimed?: (i: number) => boolean): Stage => ({
-    film: testFilm(
-      [
-        { id: 'a', min: 6 },
-        { id: 'b', min: 5 },
-        { id: 'c', min: 10 },
-      ],
-      { voice: '', scenes: {} },
-    ),
+    film: {
+      ...testFilm(
+        [
+          { id: 'a', min: 6 },
+          { id: 'b', min: 5 },
+          { id: 'c', min: 10 },
+        ],
+        { voice: '', scenes: {} },
+      ),
+      fps: FPS,
+    },
     info: { ...info, duration: 21, frames: 42 },
     ...Option.match(Option.fromUndefinedOr(filmTimed), {
       onNone: () => ({}),

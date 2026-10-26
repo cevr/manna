@@ -54,7 +54,7 @@ import {
   shortPage,
   shortPieces,
 } from '../core/shorts.ts';
-import { FILM_FPS } from '../core/time.ts';
+import { secondsAt } from '../core/time.ts';
 import { type FramePage, type PageOpenError, makeBrowser } from './browser.ts';
 import { type MediaFailed } from '../core/refusals.ts';
 import {
@@ -68,6 +68,7 @@ import {
   type LookbookFailed,
   type PageCrashed,
   type PageError,
+  PageRateDiffers,
   RangeEmpty,
   type CacheEscapes,
   type TooManyEncoders,
@@ -201,6 +202,7 @@ type RenderError =
   | AudioMissing
   | AudioStale
   | RangeEmpty
+  | PageRateDiffers
   | TooManyEncoders
   | PlaceError
   | ShortError
@@ -331,7 +333,7 @@ export interface Remuxed {
 
 /**
  * The film's master checked, before anything is drawn or cut, against the
- * film it must cover (`seconds`, to within `tolerance`) and the plan the film
+ * film it must cover (`seconds`, to within one of its frames) and the plan the film
  * mixes to now, its placed code sounds measured through the sound renderer:
  * that plan's key (none when it does not build).
  */
@@ -341,15 +343,27 @@ const masterChecked = (
   film: LoadedFilm,
   placed: ReadonlyArray<Placed>,
   seconds: number,
-  tolerance: number,
 ) =>
   Effect.gen(function* () {
     const master = yield* readMaster(fs, media, film.paths);
+    const tolerance = secondsAt(1, film.fps);
     const key = yield* planKey(film, placed).pipe(Effect.provideService(FileSystem.FileSystem, fs));
     const finding = masterFinding(masterFile(film.paths), master, { seconds, key }, tolerance);
     if (Option.isSome(finding)) return yield* finding.value;
     return key;
   });
+
+/**
+ * A page of `film` that draws at the rate the film declares, the one the
+ * tools laid it at (`LoadedFilm.fps`): else `PageRateDiffers`, before a frame
+ * is drawn, since its beats would start on frames the segment keys and the
+ * mix do not place them on.
+ */
+const declaredRate = (film: LoadedFilm, page: number) =>
+  Effect.when(
+    Effect.fail(PageRateDiffers.make({ film: film.paths.name, page, declared: film.fps })),
+    Effect.succeed(page !== film.fps),
+  );
 
 /** `pcm` cut at `pieces`, each join faded, and encoded to AAC once. */
 const cutTrack = (media: MediaService, pcm: Pcm, pieces: ReadonlyArray<FilmPiece>) =>
@@ -380,7 +394,7 @@ export const remuxer = Effect.fn('film.remuxer')(function* (film: LoadedFilm) {
   const fs = yield* FileSystem.FileSystem;
   const media = yield* Media;
   const placed = yield* placeFilm(film);
-  const mix = yield* masterChecked(fs, media, film, placed, filmEnd(placed), 1 / FILM_FPS);
+  const mix = yield* masterChecked(fs, media, film, placed, filmEnd(placed));
   const pcm = yield* media.decode(masterFile(film.paths));
   return Effect.fn('film.remux')(function* (video: Remuxed) {
     const track = yield* cutTrack(media, pcm, video.pieces);
@@ -419,13 +433,8 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
       const bytesWhole = (file: string, bytes: Uint8Array) =>
         writeWhole(fs, file, (partial) => fs.writeFile(partial, bytes));
 
-      const checkedMaster = (
-        film: LoadedFilm,
-        placed: ReadonlyArray<Placed>,
-        seconds: number,
-        tolerance: number,
-      ) =>
-        masterChecked(fs, media, film, placed, seconds, tolerance).pipe(
+      const checkedMaster = (film: LoadedFilm, placed: ReadonlyArray<Placed>, seconds: number) =>
+        masterChecked(fs, media, film, placed, seconds).pipe(
           Effect.provideService(SoundRender, sounds),
         );
       const trackOf = (cut: AudioCut) => trackCut(media, cut);
@@ -476,10 +485,10 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         });
 
       /** The short on a page's clock: the same spans, on the same frames, it draws. */
-      const shortOn = (placed: ReadonlyArray<Placed>, cut: Cut, fps: number) =>
+      const shortOn = (placed: ReadonlyArray<Placed>, cut: Cut) =>
         Cut.$match(cut, {
           Whole: () => Effect.succeedNone,
-          Short: ({ short }) => Effect.asSome(Effect.fromResult(resolveShort(placed, short, fps))),
+          Short: ({ short }) => Effect.asSome(Effect.fromResult(resolveShort(placed, short))),
         });
 
       const video = Effect.fnUntraced(function* (
@@ -505,7 +514,8 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
                 server: job.server,
                 picture: job.picture,
               });
-              const found = yield* shortOn(placed, job.cut, first.info.fps);
+              yield* declaredRate(film, first.info.fps);
+              const found = yield* shortOn(placed, job.cut);
               // A short's page is 9:16 at the film's density: it encodes down to 1080 × 1920.
               const k = Option.match(found, {
                 onNone: () => job.scale,
@@ -530,11 +540,14 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         const where: Where = { placed, short };
         const { start, end } = frameSpan(info, job.from, job.to);
         if (end <= start)
-          return yield* RangeEmpty.make({ from: start / info.fps, to: end / info.fps });
+          return yield* RangeEmpty.make({
+            from: secondsAt(start, info.fps),
+            to: secondsAt(end, info.fps),
+          });
         const total = end - start;
         const target = Option.getOrElse(job.out, () => clip);
         yield* fs.makeDirectory(path.dirname(target), { recursive: true });
-        const range = { from: start / info.fps, to: end / info.fps };
+        const range = { from: secondsAt(start, info.fps), to: secondsAt(end, info.fps) };
 
         // The film declares its track only once every take is recorded (a
         // short's page declares none: it plays the film's under its spans).
@@ -563,7 +576,7 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         const sound = yield* Option.match(audio, {
           onNone: () => Effect.succeedNone,
           onSome: (cut) =>
-            checkedMaster(film, where.placed, seconds, 1 / info.fps).pipe(
+            checkedMaster(film, where.placed, seconds).pipe(
               Effect.map((mix): RenderSound => ({ mix, pieces: cut.pieces })),
               Effect.asSome,
             ),
@@ -822,7 +835,7 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
                 .map((e) => ({ from: e.chunk.from, master: e.master, share: e.share })),
           }),
         );
-        const atOf = (from: number) => (from - start) / info.fps;
+        const atOf = (from: number) => secondsAt(from - start, info.fps);
         /** The master at `target`, when the render writes one. */
         const masterAt = Option.filter(Option.some(target), () => hasMaster(copies));
         /** The share copy beside it, when the render writes one (the hardware encoder's, made in the page). */
@@ -993,8 +1006,11 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         // Clipped to the film as a video's range is, so no frame repeats at either end.
         const { start, end } = frameSpan(info, job.from, job.to);
         if (end <= start)
-          return yield* RangeEmpty.make({ from: start / info.fps, to: end / info.fps });
-        const times = contactTimes(start / info.fps, end / info.fps, job.every);
+          return yield* RangeEmpty.make({
+            from: secondsAt(start, info.fps),
+            to: secondsAt(end, info.fps),
+          });
+        const times = contactTimes(secondsAt(start, info.fps), secondsAt(end, info.fps), job.every);
         const sheet = path.join(dir, contactSheetName);
         yield* bytesWhole(
           sheet,
@@ -1010,7 +1026,10 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         return imagesOutput(
           'contact',
           [sheet],
-          Option.liftPredicate({ from: start / info.fps, to: end / info.fps }, () => ranged),
+          Option.liftPredicate(
+            { from: secondsAt(start, info.fps), to: secondsAt(end, info.fps) },
+            () => ranged,
+          ),
         );
       });
 
@@ -1049,8 +1068,9 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
                   server: job.server,
                   picture: job.picture,
                 });
+                yield* declaredRate(film, pool.info.fps);
                 // A short's spans must resolve on the page's frames, as a video's do.
-                yield* shortOn(placed, cut, pool.info.fps);
+                yield* shortOn(placed, cut);
                 return yield* run(pool);
               }),
             );

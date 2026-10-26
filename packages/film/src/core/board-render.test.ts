@@ -220,10 +220,11 @@ describe("a Board render's shots", () => {
           { id: 'name', say: '{sets}Be just with God.' },
         ],
         { voice: 'v', scenes: { cold: take } },
+        30,
       ),
     );
     const clock = Result.getOrThrow(
-      filmClock(placed, { acts: [], movements: [], drawn: () => false }),
+      filmClock(placed, 30, { acts: [], movements: [], drawn: () => false }),
     );
     const studio = shotsOf(clock.beats.map(timedBeat), board);
     expect(boardShots(placed, board)).toEqual(studio);

@@ -37,6 +37,7 @@ const lights: ReadonlyArray<readonly [string, SceneSpec['light']]> = [
 
 const film = withDom(() =>
   createFilm({
+    fps: 30,
     title: 'light',
     width: W,
     height: H,
@@ -131,6 +132,7 @@ describe('a scene is lit by its light', () => {
     });
     const many = withDom(() =>
       createFilm({
+        fps: 30,
         title: 'shifting',
         width: W,
         height: H,

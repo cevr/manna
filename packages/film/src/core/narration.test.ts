@@ -105,6 +105,7 @@ describe('narration', () => {
           { id: 'b', min: 4, draw },
         ],
         noTakes,
+        30,
       ),
     );
     const a = placed[0];

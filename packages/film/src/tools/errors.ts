@@ -601,6 +601,21 @@ export class TooManyEncoders extends Schema.TaggedError<TooManyEncoders>()('TooM
   }
 }
 
+/**
+ * A film's page draws at another rate than the film declares (its `film.ts`'s
+ * `fps`, the one the tools lay it at): its beats would start on other frames
+ * than the mix, the checks and the segment keys place them on.
+ */
+export class PageRateDiffers extends Schema.TaggedError<PageRateDiffers>()('PageRateDiffers', {
+  film: Schema.String,
+  page: Schema.Finite,
+  declared: Schema.Finite,
+}) {
+  override get message() {
+    return `${this.film}'s page draws at ${this.page} fps, but the film declares ${this.declared} fps (its film.ts's fps): its page must be made at the rate it declares`;
+  }
+}
+
 /** A render range with no frames in it. */
 export class RangeEmpty extends Schema.TaggedError<RangeEmpty>()('RangeEmpty', {
   from: Schema.Finite,

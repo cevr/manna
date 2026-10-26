@@ -26,7 +26,7 @@ import {
 } from '../../src/lab/fixtures/talk-film.ts';
 
 const cut = Result.getOrThrow(talkCut(TALK_EDIT, { a: TALK_TAKE }));
-const placed = Result.getOrThrow(layout(cut.scenes, cut.timings));
+const placed = Result.getOrThrow(layout(cut.scenes, cut.timings, 30));
 
 /** Seconds as the talk's frames. */
 const frameOf = (s: number) => Math.round(s * TALK_FPS);

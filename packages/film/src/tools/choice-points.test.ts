@@ -61,7 +61,7 @@ const film = (over: Partial<MeasuredFilm> = {}): MeasuredFilm => ({
   ...over,
 });
 
-const placed = Result.getOrThrow(layout(holdScenes, holdTimings));
+const placed = Result.getOrThrow(layout(holdScenes, holdTimings, 30));
 
 const attempt = (file: string, at: number, hash: string) => ({
   beat: 'held',

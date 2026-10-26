@@ -32,6 +32,7 @@ const timed = (secs: number, last = 6) =>
         { id: 'b', min: last, draw },
       ],
       noTakes,
+      30,
     ),
   );
 

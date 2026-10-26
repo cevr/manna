@@ -335,8 +335,12 @@ describe('film read clock, run fresh', () => {
           ['open', 'estimated', false],
           ['end', 'silent', false],
         ]);
-        // Its tail of 2 s in place of the default 0.1 s; its end held 4 s by `min`.
-        expect((folder.beats[0]?.dur ?? 0) - (film.beats[0]?.dur ?? 0)).toBeCloseTo(1.9, 6);
+        // Every clock is laid at the film's declared 24 fps, a version folder's too.
+        expect([film.fps, folder.fps, own.fps]).toEqual([24, 24, 24]);
+        // Its tail of 2 s in place of the default 0.1 s, to within one of those frames; its end held 4 s by `min`.
+        expect(
+          Math.abs((folder.beats[0]?.dur ?? 0) - (film.beats[0]?.dur ?? 0) - 1.9),
+        ).toBeLessThanOrEqual(1 / 24);
         expect(folder.beats[1]?.dur).toBe(4);
         expect([folder.acts, folder.movements]).toEqual([[], []]);
         // v3's own take (staging, its mark on its own words), its own drawn

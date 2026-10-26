@@ -168,7 +168,7 @@ export const CUES_RULES: ReadonlyArray<FlagRule> = [
 const range = (from: number, to: number) => `${from.toFixed(3).padStart(8)}–${to.toFixed(3)}`;
 
 /**
- * A short's spans, resolved on its page's frames (`Checker.cut`): each one's
+ * A short's spans, resolved on the film's frames (`Checker.cut`): each one's
  * film time and its time in the short, then the short's length.
  */
 export const shortReport = (cut: ResolvedShort): ReadonlyArray<string> => [

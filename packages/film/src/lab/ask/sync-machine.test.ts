@@ -10,17 +10,25 @@ import {
   SyncEvent,
   SyncState,
   UNKNOWN_END,
+  UNTIMED_FPS,
   atRest,
   clockParts,
   reachOf,
   runningOf,
   syncMachine,
 } from './sync-machine.ts';
-import { FILM_FPS } from '../../core/time.ts';
 
 const player = syncMachine('A', 1);
 
-const clock = { t: 1, start: 1, end: 10, fps: FILM_FPS, rate: 1, audible: 'A', seek: 0 } as const;
+const clock = {
+  t: 1,
+  start: 1,
+  end: 10,
+  fps: UNTIMED_FPS,
+  rate: 1,
+  audible: 'A',
+  seek: 0,
+} as const;
 
 describe('the synced player', () => {
   it.effect('plays and pauses, by the button and by space', () =>
@@ -124,7 +132,7 @@ describe('the synced player', () => {
     () =>
       Effect.gen(function* () {
         const step = (by: number) => SyncEvent.Stepped({ frames: by });
-        const frameOf = (t: number) => Math.round(t * FILM_FPS * 1e6) / 1e6;
+        const frameOf = (t: number) => Math.round(t * UNTIMED_FPS * 1e6) / 1e6;
         const result = yield* simulate(player, [
           SyncEvent.Measured({ end: 10 }),
           // A clock between frames (a video's time) steps from the frame its timecode reads.
@@ -151,7 +159,7 @@ describe('the synced player', () => {
           SyncEvent.Measured({ end: 10 }),
           ...Array.from({ length: 10 }, () => step(1)),
         ]);
-        expect(tens.finalState.t).toBe(40 / FILM_FPS);
+        expect(tens.finalState.t).toBe(40 / UNTIMED_FPS);
       }),
   );
 
@@ -169,9 +177,9 @@ describe('the synced player', () => {
         ]);
         // At the film rate (30): frame 31; at 24, from the frame it reads (24.8, so 25) on.
         expect(result.states.map((s) => [s.fps, s.t])).toEqual([
-          [FILM_FPS, 1],
-          [FILM_FPS, 1],
-          [FILM_FPS, 31 / 30],
+          [UNTIMED_FPS, 1],
+          [UNTIMED_FPS, 1],
+          [UNTIMED_FPS, 31 / 30],
           [24, 31 / 30],
           [24, 26 / 24],
           [24, 27 / 24],

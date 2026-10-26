@@ -44,6 +44,7 @@ const ORDER = Object.keys(scenes);
 const film = (): Film =>
   withDom(() =>
     createFilm({
+      fps: 30,
       title: 'breath',
       width: W,
       height: H,

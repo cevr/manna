@@ -35,6 +35,7 @@ import {
 import { type LayoutError, type Placed, layout } from '../core/layout.ts';
 import type { VoicePieces } from '../core/mix.ts';
 import {
+  TALK_FPS,
   Talk,
   type TalkCut,
   type TalkTake,
@@ -95,6 +96,14 @@ export const masterFile = (paths: FilmPaths): string => `${paths.narration}/full
 /** A film as the tools see it: the clock's part of each scene, its voice, sound and data. */
 export interface LoadedFilm {
   readonly paths: FilmPaths;
+  /**
+   * The frames a second it is laid and drawn at: its `film.ts`'s `fps` (a
+   * version folder's too: it keeps no `film.ts`), the rate its page is made
+   * at (`Narrated.fps`); a talk's `TALK_FPS`. Every tool lays it at this rate
+   * (`placeFilm`), so the mix, the checks, the lab's clock and the segment
+   * keys place each beat on the frame its page draws it on.
+   */
+  readonly fps: number;
   readonly scenes: ReadonlyArray<Timed>;
   /** Who reads it (`voice.ts`); none for a talk, which its speaker recorded on camera. */
   readonly voice: Option.Option<Voice>;
@@ -267,6 +276,12 @@ const SoundModule = Schema.Struct({ sound: Sound });
  * re-exports its own.
  */
 const FilmModule = Schema.Struct({ look: Schema.optionalKey(Look) });
+/**
+ * The film's frame rate, its `film.ts`'s `fps`: required, the one place a
+ * film's rate is declared. Its page is made at it (`narratedFilms`) and the
+ * tools lay it at it.
+ */
+const FilmRate = Schema.Struct({ fps: Schema.Finite.check(Schema.isGreaterThan(0)) });
 const ShortsModule = Schema.Struct({ shorts: Shorts });
 /** A talk's `talk.ts`: its edit. */
 const TalkModule = Schema.Struct({ talk: Talk });
@@ -342,7 +357,7 @@ export type PlaceError = LayoutError;
 
 /** Lay the film out; an authoring error fails as itself, naming its scene and cue. */
 export const placeFilm = (film: LoadedFilm): Effect.Effect<ReadonlyArray<Placed>, PlaceError> =>
-  Effect.fromResult(layout(film.scenes, film.timings));
+  Effect.fromResult(layout(film.scenes, film.timings, film.fps));
 
 const asFilmName = Schema.decodeSync(FilmName);
 
@@ -607,6 +622,7 @@ export class FilmRepo extends Context.Service<FilmRepo, FilmRepoService>()(
             const sound = yield* soundIn(name, at);
             const loaded: LoadedFilm = {
               paths: at,
+              fps: TALK_FPS,
               scenes: talk.cut.scenes,
               voice: Option.none(),
               sound,
@@ -656,6 +672,7 @@ export class FilmRepo extends Context.Service<FilmRepo, FilmRepoService>()(
           const library = yield* loadSounds;
           const loaded: LoadedFilm = {
             paths: at,
+            fps: (yield* loadModule(name, path.join(paths(name).dir, 'film.ts'), FilmRate)).fps,
             scenes,
             voice: Option.some(voice),
             sound,

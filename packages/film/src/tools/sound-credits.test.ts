@@ -67,7 +67,7 @@ describe('the credit roll', () => {
 describe('film check', () => {
   const scenes = [{ id: 'cold', min: 2 }];
   const timings = { voice: '', scenes: {} };
-  const placed = Result.getOrThrow(layout(scenes, timings));
+  const placed = Result.getOrThrow(layout(scenes, timings, 30));
   const sounds = measuredSounds(library, {}, '/sounds');
   /** What the static leg says of the film's credits, placing `sound` and rolling `credits`. */
   const creditsFound = (sound: Sound, credits: Option.Option<ReadonlyArray<Credit>>) =>

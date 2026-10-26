@@ -1006,7 +1006,7 @@ the film's grain laid over the paper only (`grainRect`), so nothing touches
 the band. `Film.look` carries the film's paper, shade, finish and `short`
 style (`ShortStyle` on `FilmSpec.short`: the hook's and captions' fonts and
 colours, sizes in 1080×1920 px, checked by `createFilm`). The
-renderer resolves the short again on the page's fps, cuts `full.wav` to its
+renderer resolves the short on the film's layout, at its declared rate, cuts `full.wav` to its
 pieces (`splice`, a `JOIN_FADE` of 10 ms each side of a join only), and
 writes `out/<film>/shorts/<id>/main.mp4` and `main.vtt` (`shortCaptions`: the
 phrases the page burns in, as it shows them).
@@ -1076,11 +1076,11 @@ warning), and its open is still only while the take's frame holds too (the
 probe records each footage frame a frame draws, `FootageMark`, so a talking
 head is motion read from the edit, not the pixels).
 
-A short resolves on its page's frame rate (`Checker.cut`: the rate the film
-declares, read from the page's `info.fps`, as the renderer does), so
+A short resolves on the film's layout, at the rate the film declares (its
+`film.ts`'s `fps`, `LoadedFilm.fps`, the rate its page draws at), so
 `check --short`, `cues --short` and the render cut the same frames.
 `--static` runs only what the words tell (length, first word, the loop's
-silence), probing no frames: it opens the page once, for its rate.
+silence), probing no frames.
 `film cues --short` prints `shortReport` at that rate. A short draws at about parity with the film per frame (~0.92× of the
 same frames as a 16:9 render, measured against one contiguous range): the
 9:16 page costs nothing extra, and saves nothing either.

@@ -11,7 +11,6 @@
 
 import { Array as Arr, Option, Result, Schema } from 'effect';
 import { type SceneTimes, momentOf } from './easel.ts';
-import { FILM_FPS } from './time.ts';
 
 /** The most moments a judge shows of each version: the scene's places spread evenly beyond it. */
 const JUDGE_MOMENTS = 12;
@@ -109,14 +108,15 @@ export interface JudgeMoment {
 }
 
 /**
- * The moments a judge shows of `scene`: each mark's word and each cue's
- * middle, in time order, one per frame as a look resolves it (`momentOf`:
- * the film's frame, counted from the film's start), and at most `cap`,
+ * The moments a judge shows of `scene` (laid at `fps`, the film's rate): each
+ * mark's word and each cue's middle, in time order, one per frame as a look
+ * resolves it (`momentOf`: the film's frame, counted from the film's start), and at most `cap`,
  * spread evenly from the first to the last when there are more. A scene
  * with neither shows its middle.
  */
 export const judgeMoments = (
   scene: SceneTimes,
+  fps: number,
   cap: number = JUDGE_MOMENTS,
 ): ReadonlyArray<JudgeMoment> => {
   const places = [
@@ -127,7 +127,7 @@ export const judgeMoments = (
     })),
   ]
     .filter((m) => m.second >= 0 && m.second <= scene.dur)
-    .flatMap((m) => Option.toArray(Result.getSuccess(momentOf(scene, FILM_FPS, m.at))))
+    .flatMap((m) => Option.toArray(Result.getSuccess(momentOf(scene, fps, m.at))))
     .toSorted((a, b) => a.frame - b.frame || a.at.localeCompare(b.at));
   const once = Arr.dedupeWith(places, (a, b) => a.frame === b.frame).map((m): JudgeMoment => ({
     at: m.at,

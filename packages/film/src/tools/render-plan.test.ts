@@ -47,6 +47,7 @@ const threeScenes = {
         { id: 'c', min: 6 },
       ],
       { voice: '', scenes: {} },
+      30,
     ),
   ),
   look: Option.none(),

@@ -101,30 +101,30 @@ describe('quotedWords', () => {
 
 describe('shortPhrases', () => {
   const draw = () => {};
-  const placed = Result.getOrThrow(
-    layout(
-      [
-        { id: 'a', say: 'One two {three}three four five six.', draw },
-        { id: 'b', say: 'He said “seven eight nine” {ten}ten eleven.', draw },
-      ],
-      { voice: '', scenes: {} },
-    ),
-  );
+  /** The two beats laid at `fps`. */
+  const placedAt = (fps: number) =>
+    Result.getOrThrow(
+      layout(
+        [
+          { id: 'a', say: 'One two {three}three four five six.', draw },
+          { id: 'b', say: 'He said “seven eight nine” {ten}ten eleven.', draw },
+        ],
+        { voice: '', scenes: {} },
+        fps,
+      ),
+    );
+  const placed = placedAt(30);
 
   test('the words under each span, on the short clock, quotations flagged', () => {
     const short = Result.getOrThrow(
-      resolveShort(
-        placed,
-        {
-          id: 'cut',
-          title: 'Cut',
-          spans: [
-            { scene: 'b', from: { at: 'speech' }, to: { mark: 'ten' } },
-            { scene: 'a', from: { mark: 'three' }, to: { at: 'speechEnd' } },
-          ],
-        },
-        30,
-      ),
+      resolveShort(placed, {
+        id: 'cut',
+        title: 'Cut',
+        spans: [
+          { scene: 'b', from: { at: 'speech' }, to: { mark: 'ten' } },
+          { scene: 'a', from: { mark: 'three' }, to: { at: 'speechEnd' } },
+        ],
+      }),
     );
     const phrases = shortPhrases(placed, short);
     const words = phrases.flatMap((p) => p.words);
@@ -163,18 +163,16 @@ describe('shortPhrases', () => {
 
   test("a span's first phrase shows on its first frame, however the word's time rounds", () => {
     // `three` sits between frames: the span starts on the frame nearest it.
+    // The film laid at 7 fps: its frames are long, so the mark falls well between two.
+    const coarse = placedAt(7);
     const short = Result.getOrThrow(
-      resolveShort(
-        placed,
-        {
-          id: 'cut',
-          title: 'Cut',
-          spans: [{ scene: 'a', from: { mark: 'three' }, to: { at: 'speechEnd' } }],
-        },
-        7,
-      ),
+      resolveShort(coarse, {
+        id: 'cut',
+        title: 'Cut',
+        spans: [{ scene: 'a', from: { mark: 'three' }, to: { at: 'speechEnd' } }],
+      }),
     );
-    const phrases = shortPhrases(placed, short);
+    const phrases = shortPhrases(coarse, short);
     expect(phrases[0]?.words[0]?.text).toBe('three');
     expect(phrases[0]?.start).toBe(0);
     // Each phrase shows by the frame its first word falls in, and none overlaps the next.
@@ -211,19 +209,15 @@ describe('shortPhrases', () => {
       source: 'elevenlabs' as const,
     };
     const film = Result.getOrThrow(
-      layout([{ id: 'a', say, lead: 0, draw }], { voice: 'v', scenes: { a: take } }),
+      layout([{ id: 'a', say, lead: 0, draw }], { voice: 'v', scenes: { a: take } }, 30),
     );
     const short = Result.getOrThrow(
-      resolveShort(
-        film,
-        {
-          id: 'cut',
-          title: 'Cut',
-          // From the scene's start, which is no word: a span opening on the voice would hide the late word.
-          spans: [{ scene: 'a', from: { at: 'start' }, to: { at: 'speechEnd' } }],
-        },
-        30,
-      ),
+      resolveShort(film, {
+        id: 'cut',
+        title: 'Cut',
+        // From the scene's start, which is no word: a span opening on the voice would hide the late word.
+        spans: [{ scene: 'a', from: { at: 'start' }, to: { at: 'speechEnd' } }],
+      }),
     );
     const phrases = shortPhrases(film, short);
     const first = phrases[0]?.words[0];

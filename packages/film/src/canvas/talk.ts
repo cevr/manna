@@ -159,7 +159,7 @@ export const createTalk = (
     return Option.map(Option.fromUndefinedOr(sections.get(p.spec.id)), (s) => ({
       ...s,
       p,
-      t: beatTime(p, T, base.fps),
+      t: beatTime(p, T),
     }));
   };
 

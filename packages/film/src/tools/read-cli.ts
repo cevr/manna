@@ -548,13 +548,16 @@ const clock = Command.make(
         Effect.gen(function* () {
           const script = yield* repo.script(input.film, Option.getOrUndefined(input.folder));
           const timings = yield* (yield* ContentStore).read(at.timings);
+          // The rate the film declares: a version folder keeps no `film.ts` of its own.
+          const { fps } = yield* repo.load(input.film);
           return yield* Effect.fromResult(
             Result.flatMap(
               layout(
                 Option.getOrElse(script, () => []),
                 timings,
+                fps,
               ),
-              (placed) => filmClock(placed, { acts: [], movements: [], drawn: () => false }),
+              (placed) => filmClock(placed, fps, { acts: [], movements: [], drawn: () => false }),
             ),
           );
         }),
@@ -562,8 +565,8 @@ const clock = Command.make(
         Effect.gen(function* () {
           const loaded = yield* repo.load(input.film, Option.getOrUndefined(input.folder));
           return yield* Effect.fromResult(
-            Result.flatMap(layout(untimed(loaded.scenes), loaded.timings), (placed) =>
-              filmClock(placed, {
+            Result.flatMap(layout(untimed(loaded.scenes), loaded.timings, loaded.fps), (placed) =>
+              filmClock(placed, loaded.fps, {
                 acts: Option.match(loaded.look, { onNone: () => [], onSome: (look) => look.acts }),
                 movements: Option.getOrElse(
                   Option.flatMap(

@@ -62,8 +62,9 @@ const ClockPart = Schema.Struct({
 });
 export type ClockPart = typeof ClockPart.Type;
 
-/** A version's clock: its beats in order, its acts, and the movements of the score it plays. */
+/** A version's clock: the rate it is laid at (the film's declared `fps`), its beats in order, its acts, and the movements of the score it plays. */
 export const FilmClock = Schema.Struct({
+  fps: Schema.Finite,
   beats: Schema.Array(ClockBeat),
   acts: Schema.Array(ClockPart),
   movements: Schema.Array(ClockPart),

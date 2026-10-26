@@ -14,7 +14,7 @@ import { RenderVariantName } from './catalogue.ts';
 import type { Placed } from './layout.ts';
 import { Shot, shotsOf } from './animatic.ts';
 import { clockBeat, timedBeat } from './film-timeline.ts';
-import { frameAtOrBefore, ticksAt } from './time.ts';
+import { TICKS_PER_FRAME, frameAtOrBefore, ticksAt } from './time.ts';
 
 /** What a render's frames picture: the film's scenes, or its Board (`review`: with the burn-in). */
 export type Picture = Data.TaggedEnum<{
@@ -159,11 +159,11 @@ export const boardClock = (
   fps: number,
 ): BoardClock => {
   const beats = new Map(placed.map((p) => [p.spec.id, p]));
-  /** Film second `t` of beat `p` in ticks: its start's (its first frame's, laid at `fps`), plus its time into the beat. */
+  /** Film second `t` of beat `p` in ticks: its first frame's, plus its time into the beat. */
   const tickIn = (p: Option.Option<Placed>, t: number): number =>
     Option.match(p, {
       onNone: () => ticksAt(t, fps),
-      onSome: (beat) => ticksAt(beat.start, fps) + ticksAt(t - beat.start, fps),
+      onSome: (beat) => beat.frame * TICKS_PER_FRAME + ticksAt(t - beat.start, fps),
     });
   return {
     fps,

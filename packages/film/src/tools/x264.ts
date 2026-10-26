@@ -25,11 +25,13 @@ import {
   type FootageCopy,
   type FootageRecipe,
 } from '../core/footage.ts';
-import { FILM_FPS } from '../core/time.ts';
 import { PHONE_ENCODE } from './media.ts';
 
 /** Microseconds: the time base frames and packets carry. */
 const MICROS = 1_000_000;
+
+/** The rate an encoder runs at when neither its conversion nor its first frame names one: the rate every film declares today. */
+const UNTIMED_FPS = 30;
 
 /** An Annex B stream's first SPS (NAL type 7): its profile, constraints and level bytes. */
 const spsBytes = (data: Uint8Array): Option.Option<Uint8Array> =>
@@ -194,7 +196,7 @@ export class X264Encoder extends CustomVideoEncoder {
    * The encoder, made on the first frame with the settings its copy asks
    * (`settingsOf`), at the rate the conversion names, else the video's own:
    * one frame in its first frame's length (a conversion that keeps the
-   * video's rate names none), else the films' own.
+   * video's rate names none), else `UNTIMED_FPS`.
    */
   private opened(
     first: VideoSample,
@@ -210,7 +212,7 @@ export class X264Encoder extends CustomVideoEncoder {
               (length) => MICROS / length,
             ),
           ),
-          () => FILM_FPS,
+          () => UNTIMED_FPS,
         );
         const settings = settingsOf(this.config, options, fps);
         return Effect.promise(() =>

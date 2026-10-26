@@ -34,6 +34,7 @@ describe('a Board render', () => {
         { id: 'three', say: 'Be just with God.', min: 5 },
       ],
       { voice: '', scenes: {} },
+      30,
     ),
   );
   const panel = (id: string, extra: Partial<Panel>): Panel => ({
@@ -139,7 +140,7 @@ describe('a Board render', () => {
 
   test('covers the whole frame at either end of a push and a pan, a pan with a pixel to spare', () => {
     const one = Result.getOrThrow(
-      layout([{ id: 'one', say: 'A baby drinks milk.', min: 5 }], { voice: '', scenes: {} }),
+      layout([{ id: 'one', say: 'A baby drinks milk.', min: 5 }], { voice: '', scenes: {} }, 30),
     );
     const f: Film = Schema.decodeSync(Schema.Any)({
       width: 1920,

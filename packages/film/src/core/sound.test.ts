@@ -37,6 +37,7 @@ const placed = Result.getOrThrow(
       { id: 'c', min: 5, draw },
     ],
     noTakes,
+    30,
   ),
 );
 
@@ -182,7 +183,7 @@ describe('sound', () => {
   });
 
   test('a movement longer than the API composes in one chunk is refused', () => {
-    const long = Result.getOrThrow(layout([{ id: 'a', min: 130 }], noTakes));
+    const long = Result.getOrThrow(layout([{ id: 'a', min: 130 }], noTakes, 30));
     const one = { ...music, movements: [{ from: 'a', name: 'Whole', styles: [] }] };
     expect(outcome(musicPlan(one, long))).toBe('MovementTooLong');
     expect(MAX_CHUNK_MS).toBe(120_000);

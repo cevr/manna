@@ -7,7 +7,7 @@
 
 import { Array as Arr, Context, Effect, Layer, Option } from 'effect';
 import type { Scope } from '../core/address.ts';
-import { CLOCK_EPSILON, type Interval } from '../core/time.ts';
+import { CLOCK_EPSILON, type Interval, secondsAt } from '../core/time.ts';
 import { shortPhrases } from '../core/phrases.ts';
 import type { ShortError } from '../core/errors.ts';
 import type { LumaArea, Probed } from '../core/export-handle.ts';
@@ -174,10 +174,10 @@ interface CheckerService {
     film: LoadedFilm,
     options: LayoutCheckOptions,
   ) => Effect.Effect<ReadonlyArray<LayoutFinding>, LayoutCheckError>;
-  /** A short on its page's frames (`shortKey`): the rate the film declares, as the renderer reads it. */
+  /** A short on the film's frames, at the rate the film declares: the frames its page draws and the renderer cuts. */
   readonly cut: (film: LoadedFilm, short: Short) => Effect.Effect<ResolvedShort, ShortCheckError>;
   /**
-   * Check a short, resolved on its page's frames: what its words tell (its
+   * Check a short, resolved on the film's frames: what its words tell (its
    * length, its first word, its loop's silence); then, unless `static`, its
    * page probed every half second and at each phrase's first frame for text
    * past the safe zone, the open for motion and the film's title card, and
@@ -263,27 +263,18 @@ export class Checker extends Context.Service<Checker, CheckerService>()(
       });
 
       /**
-       * The short's page, `workers` of it, and the short resolved on the rate
-       * that page declares: the frames the renderer draws, never an assumed 30.
+       * The short resolved on the film's layout, at the rate the film declares
+       * (the one its page draws at): the frames the renderer draws, and its
+       * phrases.
        */
-      const onPage = Effect.fnUntraced(function* (
-        film: LoadedFilm,
-        declared: Short,
-        workers: number,
-      ) {
+      const resolved = Effect.fnUntraced(function* (film: LoadedFilm, declared: Short) {
         const placed = yield* placeFilm(film);
-        const pool = yield* pages.open(shortKey(film.paths.name, declared.id), {
-          workers,
-          captions: true,
-          server: Option.none(),
-        });
-        const info = pool.info;
-        const cut = yield* Effect.fromResult(resolveShort(placed, declared, info.fps));
-        return { pool, info, cut, phrases: shortPhrases(placed, cut) };
+        const cut = yield* Effect.fromResult(resolveShort(placed, declared));
+        return { cut, phrases: shortPhrases(placed, cut) };
       });
 
       const cut = Effect.fn('Checker.cut')(function* (film: LoadedFilm, declared: Short) {
-        return (yield* Effect.scoped(onPage(film, declared, 1))).cut;
+        return (yield* resolved(film, declared)).cut;
       });
 
       const short = Effect.fn('Checker.short')(function* (
@@ -295,9 +286,15 @@ export class Checker extends Context.Service<Checker, CheckerService>()(
         return yield* Effect.scoped(
           Effect.gen(function* () {
             const workers = Math.max(1, options.workers);
-            const { pool, info, cut, phrases } = yield* onPage(film, declared, workers);
+            const { cut, phrases } = yield* resolved(film, declared);
             const words = shortStaticFindings(cut, phrases);
             if (options.static) return words;
+            const pool = yield* pages.open(shortKey(name, declared.id), {
+              workers,
+              captions: true,
+              server: Option.none(),
+            });
+            const info = pool.info;
             // The short's page is named for the short: the film's title and size are on the film's page.
             const { title, band } = yield* Effect.map(
               pages.open(name, { workers: 1, captions: true, server: Option.none() }),
@@ -309,7 +306,7 @@ export class Checker extends Context.Service<Checker, CheckerService>()(
             const probed = yield* Effect.forEach(frames, probeAt, { concurrency: workers });
             const unsafe = mergeUnsafe(
               Arr.zip(frames, probed).flatMap(([i, p]) =>
-                unsafeTexts(cut.id, options.zone, i / info.fps, p, k),
+                unsafeTexts(cut.id, options.zone, secondsAt(i, info.fps), p, k),
               ),
             );
             const open = yield* Effect.forEach(openFrames(info.fps), probeAt, {
@@ -365,7 +362,8 @@ export class Checker extends Context.Service<Checker, CheckerService>()(
               Option.match(span, {
                 onNone: () => true,
                 onSome: ({ from, to }) =>
-                  i / info.fps + CLOCK_EPSILON >= from && i / info.fps + CLOCK_EPSILON < to,
+                  secondsAt(i, info.fps) + CLOCK_EPSILON >= from &&
+                  secondsAt(i, info.fps) + CLOCK_EPSILON < to,
               });
             const frames = zoneFrames(
               { duration: vertical.duration, fps: info.fps },
@@ -374,7 +372,7 @@ export class Checker extends Context.Service<Checker, CheckerService>()(
             const probed = yield* Effect.forEach(frames, probeAt, { concurrency: workers });
             const unsafe = mergeUnsafe(
               Arr.zip(frames, probed).flatMap(([i, p]) =>
-                unsafeTexts(vertical.id, 'platforms', i / info.fps, p, k),
+                unsafeTexts(vertical.id, 'platforms', secondsAt(i, info.fps), p, k),
               ),
             );
             const open = yield* Effect.forEach(openFrames(info.fps).filter(inSpan), probeAt, {

@@ -585,10 +585,11 @@ describe('the clock a version plays on', () => {
       layout(
         [{ id: 'a', say: 'one two {m} three' }, { id: 'b' }, { id: 'c', say: 'four' }],
         NO_TAKES,
+        30,
       ),
     );
     const clock = Result.getOrThrow(
-      filmClock(placed, {
+      filmClock(placed, 30, {
         acts: [
           { from: 'a', name: 'open' },
           { from: 'c', name: 'close' },
@@ -614,10 +615,10 @@ describe('the clock a version plays on', () => {
 
   test("a beat's words in film seconds; a card panel carries what the engine sets and the words its line says", () => {
     const placed = Result.getOrThrow(
-      layout([{ id: 'a', say: 'one two {m} three four' }], NO_TAKES),
+      layout([{ id: 'a', say: 'one two {m} three four' }], NO_TAKES, 30),
     );
     const clock = Result.getOrThrow(
-      filmClock(placed, { acts: [], movements: [], drawn: () => true }),
+      filmClock(placed, 30, { acts: [], movements: [], drawn: () => true }),
     );
     const a = beatOf(clock, 'a');
     expect(a.words?.map((w) => w.text)).toEqual(['one', 'two', 'three', 'four']);
@@ -656,8 +657,8 @@ describe('the clock a version plays on', () => {
   });
 
   test('an act on a beat the clock has not fails, naming it', () => {
-    const placed = Result.getOrThrow(layout([{ id: 'a' }], NO_TAKES));
-    const read = filmClock(placed, {
+    const placed = Result.getOrThrow(layout([{ id: 'a' }], NO_TAKES, 30));
+    const read = filmClock(placed, 30, {
       acts: [{ from: 'z', name: 'lost' }],
       movements: [],
       drawn: () => true,
@@ -666,9 +667,11 @@ describe('the clock a version plays on', () => {
   });
 
   test('a movement over a beat with no take is estimated; one over silence alone is measured', () => {
-    const placed = Result.getOrThrow(layout([{ id: 'a', say: 'one two' }, { id: 'b' }], NO_TAKES));
+    const placed = Result.getOrThrow(
+      layout([{ id: 'a', say: 'one two' }, { id: 'b' }], NO_TAKES, 30),
+    );
     const clock = Result.getOrThrow(
-      filmClock(placed, {
+      filmClock(placed, 30, {
         acts: [],
         movements: [
           { from: 'a', name: 'spoken' },

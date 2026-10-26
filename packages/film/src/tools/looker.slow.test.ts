@@ -58,7 +58,7 @@ const setup = () => {
         resolveAddress(
           {
             name: 'test',
-            placed: Result.getOrThrow(layout(holdScenes, holdTimings)),
+            placed: Result.getOrThrow(layout(holdScenes, holdTimings, 30)),
             look: Option.none(),
             shorts: [],
           },

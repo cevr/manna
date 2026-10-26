@@ -98,7 +98,7 @@ export const laidOut = (
   film: LoadedFilm,
   address: Address,
 ): Result.Result<LaidOut, LayoutError | AddressError> =>
-  Result.flatMap(layout(film.scenes, film.timings), (placed) =>
+  Result.flatMap(layout(film.scenes, film.timings, film.fps), (placed) =>
     Result.map(
       resolveAddress(
         { name: film.paths.name, placed, look: film.look, shorts: film.shorts },
@@ -285,7 +285,11 @@ const drawnFindings = Effect.fnUntraced(function* (
       const { film: build } = yield* Schema.decodeUnknownEffect(FilmFile)(module).pipe(
         Effect.mapError((error) => invalid(error.message)),
       );
-      const narrated = { timings: film.timings, audio: narrationUrls(film.paths.name).audio };
+      const narrated = {
+        timings: film.timings,
+        audio: narrationUrls(film.paths.name).audio,
+        fps: film.fps,
+      };
       return yield* drawFindings(() => build(narrated), scenes);
     }),
   );
@@ -314,9 +318,9 @@ export const drawLeg = Effect.fn('check.draw')(function* (
 });
 
 /**
- * `check --short`: the short resolved on its page's frame rate, its words
- * (its length, its first word, its loop's silence), then, unless `static`,
- * its page's frames. `static` still opens the page, for its rate.
+ * `check --short`: the short resolved on the film's frames, at the rate the
+ * film declares, its words (its length, its first word, its loop's silence),
+ * then, unless `static`, its page's frames. `static` opens no page.
  */
 export const shortLeg = Effect.fn('check.short')(function* (
   film: LoadedFilm,

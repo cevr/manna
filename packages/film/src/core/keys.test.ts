@@ -70,7 +70,7 @@ describe('the keys of paid assets', () => {
     Effect.gen(function* () {
       const timings = yield* Schema.decodeEffect(TimingsJson)(yield* committed);
       const plan = yield* Effect.fromResult(
-        musicPlan(piano, Result.getOrThrow(layout(scenes, timings))),
+        musicPlan(piano, Result.getOrThrow(layout(scenes, timings, 30))),
       );
       expect(musicKey(piano, plan)).toBe('20920098');
     }),

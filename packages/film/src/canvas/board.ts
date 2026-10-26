@@ -245,7 +245,7 @@ export const boardFilm = (
                   p,
                   text,
                   mark,
-                  beatTime(p, T, fps),
+                  beatTime(p, T),
                   secondsOfTicks(tickOf(T) - said, fps),
                 ),
             },

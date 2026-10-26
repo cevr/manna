@@ -87,12 +87,12 @@ const beatsOf = (source: string) =>
 const clockOf = (files: Map<string, Uint8Array>) =>
   Effect.sync(() => {
     const beats = beatsOf(new TextDecoder().decode(files.get(SCRIPT)));
-    const placed = Result.getOrThrow(layout(beats, { voice: '', scenes: {} }));
+    const placed = Result.getOrThrow(layout(beats, { voice: '', scenes: {} }, 30));
     // The parts on beats this script holds.
     const on = (parts: ReadonlyArray<{ readonly from: string; readonly name: string }>) =>
       parts.filter((p) => beats.some((b) => b.id === p.from));
     return Result.getOrThrow(
-      filmClock(placed, { acts: on(ACTS), movements: on(MOVEMENTS), drawn: () => true }),
+      filmClock(placed, 30, { acts: on(ACTS), movements: on(MOVEMENTS), drawn: () => true }),
     );
   });
 

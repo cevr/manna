@@ -159,7 +159,7 @@ describe('a talk cut on its transcript', () => {
     const total = (section?.pieces ?? []).reduce((sum, p) => sum + (p.to - p.from), 0);
     expect(section?.voice.duration).toBeCloseTo(total, 9);
     expect(section?.voice.file).toBe(`${SYNTHETIC_SOURCE}/voice.flac`);
-    const placed = Result.getOrThrow(layout(cut.scenes, cut.timings));
+    const placed = Result.getOrThrow(layout(cut.scenes, cut.timings, 30));
     expect(placed[0]?.dur).toBeCloseTo(total, 9);
     expect(placed[0]?.voice.recorded).toBe(true);
     // The pieces are back to back from zero, and each seam is where the next one starts.
@@ -228,8 +228,8 @@ describe('a talk cut on its transcript', () => {
     expect(ahead.timings.scenes['claim']).toEqual(behind.timings.scenes['claim']);
     expect(ahead.timings.scenes['hook']).toEqual(behind.timings.scenes['hook']);
     // A note 0.4 s into the claim, made with the hook ahead, shows 0.4 s into the claim after the move.
-    const placedAhead = Result.getOrThrow(layout(ahead.scenes, ahead.timings));
-    const placedBehind = Result.getOrThrow(layout(behind.scenes, behind.timings));
+    const placedAhead = Result.getOrThrow(layout(ahead.scenes, ahead.timings, 30));
+    const placedBehind = Result.getOrThrow(layout(behind.scenes, behind.timings, 30));
     const note = { scene: 'claim', T: 0, local: 0.4 };
     const start = (placed: typeof placedAhead) =>
       placed.find((p) => p.spec.id === 'claim')?.start ?? -1;
@@ -255,7 +255,7 @@ describe('a talk cut on its transcript', () => {
       ),
     );
     expect(cut.scenes[0]?.say).toBe('Is the verdict, a {charge}cover up');
-    const placed = Result.getOrThrow(layout(cut.scenes, cut.timings));
+    const placed = Result.getOrThrow(layout(cut.scenes, cut.timings, 30));
     const word = cut.sections[0]?.voice.words[4];
     expect(placed[0]?.cues.get('tablets')?.start).toBeCloseTo(word?.start ?? -1, 9);
   });
@@ -274,7 +274,7 @@ describe('a talk cut on its transcript', () => {
       ]),
     );
     expect(cut.scenes[0]?.say).toBe('Is the um verdict a {charge}{verdict}cover up');
-    const placed = Result.getOrThrow(layout(cut.scenes, cut.timings));
+    const placed = Result.getOrThrow(layout(cut.scenes, cut.timings, 30));
     const word = cut.sections[0]?.voice.words[5];
     expect(placed[0]?.cues.get('tablets')?.start).toBeCloseTo(word?.start ?? -1, 9);
     expect(placed[0]?.cues.get('seal')?.start).toBeCloseTo(word?.start ?? -1, 9);
@@ -453,7 +453,7 @@ describe("a talk's captions", () => {
     { fixes: { a: { '3': 'verdict,' } }, quotes: [{ take: 'a', from: 7, to: 7 }] },
   );
   const cut = cutOf(talk);
-  const placed = Result.getOrThrow(layout(cut.scenes, cut.timings));
+  const placed = Result.getOrThrow(layout(cut.scenes, cut.timings, 30));
   const phrases = talkPhrases(talk, cut, placed);
 
   it('says each kept word once, as the talk spells it, in order, and never a struck one', () => {

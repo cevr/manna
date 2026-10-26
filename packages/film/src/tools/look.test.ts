@@ -56,7 +56,7 @@ const face = (scene: string, size: number, alpha = 1): FaceMark => ({
 
 // Three spoken scenes: `held` never changes, `brief` flips black and white
 // each sample, `ambient` is the paper's grey. Each declares one face.
-const placed = Result.getOrThrow(layout(holdScenes, holdTimings));
+const placed = Result.getOrThrow(layout(holdScenes, holdTimings, 30));
 
 /** A declared look's acts laid over `film`. */
 const actsIn = (look: Look, film: ReadonlyArray<Placed>) => stretchesOf(look.acts, film);
@@ -115,7 +115,7 @@ describe('HeldShare', () => {
 
   test('a scene the voice does not speak in is not judged', () => {
     const silent: ReadonlyArray<Timed> = [{ id: 'quiet', min: 6 }];
-    const quiet = Result.getOrThrow(layout(silent, { voice: '', scenes: {} }));
+    const quiet = Result.getOrThrow(layout(silent, { voice: '', scenes: {} }, 30));
     const at = lookSamples(quiet, FPS, 1_000_000);
     const still = sceneLooks(
       quiet,
@@ -249,7 +249,7 @@ describe('chapters', () => {
     { id: 'b', min: 12 },
     { id: 'c', min: 12 },
   ];
-  const laid = Result.getOrThrow(layout(three, { voice: '', scenes: {} }));
+  const laid = Result.getOrThrow(layout(three, { voice: '', scenes: {} }, 30));
   const named = (look: Look) => chapters('f', Result.getOrThrow(actsIn(look, laid)), laid);
 
   test('a chapter starts at mm:ss, or h:mm:ss past an hour', () => {
@@ -277,7 +277,7 @@ describe('chapters', () => {
     const tooFew = named({ acts: [{ from: 'a', name: ONE, chapter: 'Who?' }] });
     expect(Result.isFailure(tooFew) && tooFew.failure.reason).toContain('YouTube needs 3');
     const four = Result.getOrThrow(
-      layout([...three, { id: 'd', min: 12 }], { voice: '', scenes: {} }),
+      layout([...three, { id: 'd', min: 12 }], { voice: '', scenes: {} }, 30),
     );
     const lateActs = Result.getOrThrow(
       actsIn(
@@ -299,7 +299,7 @@ describe('chapters', () => {
       { id: 'b', min: 4 },
       { id: 'c', min: 12 },
     ];
-    const tight = Result.getOrThrow(layout(short, { voice: '', scenes: {} }));
+    const tight = Result.getOrThrow(layout(short, { voice: '', scenes: {} }, 30));
     const acts = Result.getOrThrow(
       actsIn(
         {

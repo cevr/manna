@@ -26,6 +26,7 @@ describe('where a note shows', () => {
           { id: next, min: nextSeconds },
         ],
         { voice: '', scenes: {} },
+        30,
       ),
     );
   // Made 1.5 s into b while a lasted 5 s.
