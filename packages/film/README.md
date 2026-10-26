@@ -776,8 +776,8 @@ from one encoder. The platform names the candidates (`encoderCandidates`,
 `core/encoder.ts`): the Mac asks for the hardware encoder and nothing else, a
 box with no hardware path (Linux) for the software one, and `--encoder
 hardware|software` for exactly the one named. The page tries them
-(`encoderChoice`, `player/encode.ts`, `canEncodeVideo` with the master's
-settings, and the share copy's only when it makes one in the page) and answers
+(`encoderChoice`, `player/encode.ts`, `canEncodeVideo` with the settings of
+each copy it encodes there: the master's, the share copy's, or both) and answers
 `Hardware | Software | Missing{reason}` (`EncoderChoice`). The renderer opens
 one page for that answer, logs `render.encoder kind=… workers=… encoders=…
 cores=…`, and hands the same encoder to every chunk; `Missing` is
@@ -866,8 +866,8 @@ same or better. The hardware path is untouched (preroll 0, the same
 ### Software share: none
 
 A software render makes no share copy: the in-page software encoder kept
-the grain only at 24 Mbps (1.16 GB for 7 minutes), so `--share` with
-`--encoder software` is refused (`jobOf`, `tools/render-plan.ts`), and a
+the grain only at 24 Mbps (1.16 GB for 7 minutes), so `--share` or
+`--share-only` with `--encoder software` is refused (`jobOf`, `tools/render-plan.ts`), and a
 software render left to its default makes none. x264 (`tools/x264.ts`,
 libx264 in-process through NodeAV, registered as mediabunny's `avc`
 encoder) encodes the review's phone copies and the footage copies.
