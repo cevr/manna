@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
     top: 3,
     width: 1,
     height: 5,
-    backgroundColor: color.line,
+    backgroundColor: color.edge,
   },
   notch: {
     position: 'absolute',
