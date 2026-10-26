@@ -1,6 +1,8 @@
 /**
  * `bun run icon`: draws every app icon from the one wheat blade,
- * `assets/icon/wheat.svg`, in the app's own colour tokens (`wada167`).
+ * `assets/icon/wheat.svg`, in the brand's Moonlit wheat (`@manna/brand`):
+ * the night's blade on the wheat by day, the wheat's blade on the night by
+ * night.
  *
  * Each row of `icons` is one PNG: its size, its layout (how large the wheat
  * sits on the square), the wheat's colour, and its ground, or none for the
@@ -9,17 +11,18 @@
  * as an SVG and sharp renders it (`draw`). An icon with a ground is opaque,
  * with no alpha channel. An icon with no ground is the wheat's colour in
  * every pixel, with the shape in the alpha channel alone. The run also writes
- * the web's `favicon.svg` (blue on ecru, ecru on blue in dark mode) and
- * `manifest.webmanifest`.
+ * the web's `favicon.svg` (the night's blade on the wheat, the wheat's on the
+ * night in dark mode) and `manifest.webmanifest`.
  *
  * A native build reads the new icons only after `bun run prebuild:native`.
  */
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
+import { PALETTE } from '@manna/brand';
 import { Console, Effect, FileSystem, Option, Path, Schema } from 'effect';
 import sharp from 'sharp';
 
-import { wada167 } from '../src/theme.ts';
+import { theme } from '../src/theme.ts';
 
 /**
  * How the wheat sits on its square, centred on the shape's box:
@@ -43,8 +46,6 @@ export interface Icon {
   readonly ground: Option.Option<string>;
 }
 
-const blue = wada167.vandarPoelsBlue;
-const ecru = wada167.ecru;
 const white = '#ffffff';
 const black = '#000000';
 
@@ -52,8 +53,20 @@ const on = (ground: string) => Option.some(ground);
 const clear = Option.none<string>();
 
 export const icons: ReadonlyArray<Icon> = [
-  { file: 'assets/icon/ios-light.png', size: 1024, layout: 'full', wheat: blue, ground: on(ecru) },
-  { file: 'assets/icon/ios-dark.png', size: 1024, layout: 'full', wheat: ecru, ground: on(blue) },
+  {
+    file: 'assets/icon/ios-light.png',
+    size: 1024,
+    layout: 'full',
+    wheat: PALETTE.night,
+    ground: on(PALETTE.wheat),
+  },
+  {
+    file: 'assets/icon/ios-dark.png',
+    size: 1024,
+    layout: 'full',
+    wheat: PALETTE.wheat,
+    ground: on(PALETTE.night),
+  },
   {
     file: 'assets/icon/ios-tinted.png',
     size: 1024,
@@ -65,7 +78,7 @@ export const icons: ReadonlyArray<Icon> = [
     file: 'assets/icon/android-foreground.png',
     size: 1024,
     layout: 'adaptive',
-    wheat: blue,
+    wheat: PALETTE.night,
     ground: clear,
   },
   {
@@ -78,19 +91,49 @@ export const icons: ReadonlyArray<Icon> = [
   // The launch screen's artwork, on the ground `vite/app.ts` names: One's
   // prebuild trims an opaque ground away and draws what is left `width`
   // points wide, so the square keeps its size only with a transparent ground.
-  { file: 'public/splash.png', size: 1024, layout: 'full', wheat: blue, ground: clear },
-  { file: 'public/splash-dark.png', size: 1024, layout: 'full', wheat: ecru, ground: clear },
-  { file: 'public/apple-touch-icon.png', size: 180, layout: 'full', wheat: blue, ground: on(ecru) },
-  { file: 'public/icon-192.png', size: 192, layout: 'full', wheat: blue, ground: on(ecru) },
-  { file: 'public/icon-512.png', size: 512, layout: 'full', wheat: blue, ground: on(ecru) },
+  { file: 'public/splash.png', size: 1024, layout: 'full', wheat: PALETTE.night, ground: clear },
+  {
+    file: 'public/splash-dark.png',
+    size: 1024,
+    layout: 'full',
+    wheat: PALETTE.wheat,
+    ground: clear,
+  },
+  {
+    file: 'public/apple-touch-icon.png',
+    size: 180,
+    layout: 'full',
+    wheat: PALETTE.night,
+    ground: on(PALETTE.wheat),
+  },
+  {
+    file: 'public/icon-192.png',
+    size: 192,
+    layout: 'full',
+    wheat: PALETTE.night,
+    ground: on(PALETTE.wheat),
+  },
+  {
+    file: 'public/icon-512.png',
+    size: 512,
+    layout: 'full',
+    wheat: PALETTE.night,
+    ground: on(PALETTE.wheat),
+  },
   {
     file: 'public/icon-maskable-512.png',
     size: 512,
     layout: 'maskable',
-    wheat: blue,
-    ground: on(ecru),
+    wheat: PALETTE.night,
+    ground: on(PALETTE.wheat),
   },
-  { file: 'public/favicon-32.png', size: 32, layout: 'favicon', wheat: blue, ground: on(ecru) },
+  {
+    file: 'public/favicon-32.png',
+    size: 32,
+    layout: 'favicon',
+    wheat: PALETTE.night,
+    ground: on(PALETTE.wheat),
+  },
 ];
 
 /** The wheat's path and the box its `viewBox` draws tight around it. */
@@ -205,11 +248,11 @@ export const draw = (wheat: Wheat, icon: Icon): Effect.Effect<Buffer, DrawFailed
   });
 };
 
-/** The tab's icon: blue wheat on ecru, and ecru on blue when the system is dark. */
+/** The tab's icon: the night's blade on the wheat, and the wheat's on the night when the system is dark. */
 export const faviconSvg = (wheat: Wheat): string =>
   [
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">',
-    `<style>rect{fill:${ecru}}path{fill:${blue}}@media (prefers-color-scheme: dark){rect{fill:${blue}}path{fill:${ecru}}}</style>`,
+    `<style>rect{fill:${PALETTE.wheat}}path{fill:${PALETTE.night}}@media (prefers-color-scheme: dark){rect{fill:${PALETTE.night}}path{fill:${PALETTE.wheat}}}</style>`,
     '<rect width="32" height="32"/>',
     placed(wheat, 'favicon', 32, ''),
     '</svg>',
@@ -240,7 +283,7 @@ export const manifest = `${Schema.encodeSync(WebManifestJson)({
   name: 'Hymnal',
   short_name: 'Hymnal',
   start_url: '/',
-  background_color: ecru,
+  background_color: theme.light.ground,
   icons: [
     { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
     { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },

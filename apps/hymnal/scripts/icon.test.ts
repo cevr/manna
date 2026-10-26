@@ -1,21 +1,22 @@
 /**
  * The app icon, held to its config and to its one shape: the native config
- * names icons that exist at their sizes, in the app's own colour tokens; every
+ * names icons that exist at their sizes, in the brand's colours; every
  * pixel of every icon is the ground, the wheat or a blend of the two; the
  * Android layers stay inside the launcher's safe circle; and every committed
  * file is what `bun run icon` draws from `assets/icon/wheat.svg` now.
  *
- * The expected colours come from the tokens (`wada167`), not from the
- * script's table, so a wrong row in the table is red too.
+ * The expected colours come from the brand (`@manna/brand`) and the theme,
+ * not from the script's table, so a wrong row in the table is red too.
  */
 
 import * as BunServices from '@effect/platform-bun/BunServices';
+import { PALETTE } from '@manna/brand';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
 import { validateNativeApp } from 'one/native';
 import sharp from 'sharp';
 
-import { wada167 } from '../src/theme.ts';
+import { theme } from '../src/theme.ts';
 import { app } from '../vite/app.ts';
 import { WebManifestJson, draw, faviconSvg, icons, manifest, wheatOf } from './icon.ts';
 
@@ -54,18 +55,18 @@ const decode = (file: string) => pixels(`${ROOT}/${file}`);
 
 const meta = (file: string) => Effect.promise(() => sharp(`${ROOT}/${file}`).metadata());
 
-const blue = wada167.vandarPoelsBlue;
-const ecru = wada167.ecru;
+const NIGHT = PALETTE.night;
+const WHEAT = PALETTE.wheat;
 
 /** Each opaque two-colour icon's ground and wheat. */
 const opaque: ReadonlyArray<readonly [string, string, string]> = [
-  ['assets/icon/ios-light.png', ecru, blue],
-  ['assets/icon/ios-dark.png', blue, ecru],
-  ['public/apple-touch-icon.png', ecru, blue],
-  ['public/icon-192.png', ecru, blue],
-  ['public/icon-512.png', ecru, blue],
-  ['public/icon-maskable-512.png', ecru, blue],
-  ['public/favicon-32.png', ecru, blue],
+  ['assets/icon/ios-light.png', WHEAT, NIGHT],
+  ['assets/icon/ios-dark.png', NIGHT, WHEAT],
+  ['public/apple-touch-icon.png', WHEAT, NIGHT],
+  ['public/icon-192.png', WHEAT, NIGHT],
+  ['public/icon-512.png', WHEAT, NIGHT],
+  ['public/icon-maskable-512.png', WHEAT, NIGHT],
+  ['public/favicon-32.png', WHEAT, NIGHT],
 ];
 
 const corners = (p: Pixels) =>
@@ -206,11 +207,15 @@ describe('the app icon', () => {
       });
     }));
 
-  test('takes its colours from the tokens', () =>
+  test('takes its colours from the brand, and the launch screen the app’s ground', () =>
     Effect.sync(() => {
-      expect(app.icon.backgroundColor).toBe(ecru);
-      expect(app.icon.dark.backgroundColor).toBe(blue);
-      expect(app.android.adaptiveIcon.backgroundColor).toBe(ecru);
+      expect(app.icon.backgroundColor).toBe(WHEAT);
+      expect(app.icon.dark.backgroundColor).toBe(NIGHT);
+      expect(app.android.adaptiveIcon.backgroundColor).toBe(WHEAT);
+      expect([app.splash.backgroundColor, app.splash.dark.backgroundColor]).toEqual([
+        theme.light.ground,
+        theme.dark.ground,
+      ]);
     }));
 
   test('draws every opaque pixel as ground, wheat or a blend of the two', () =>
@@ -268,7 +273,7 @@ describe('the app icon', () => {
 
   test('keeps the Android layers in their colour and inside the safe circle', () => {
     const layers: ReadonlyArray<readonly [string, Rgb]> = [
-      [app.android.adaptiveIcon.foreground, rgb(blue)],
+      [app.android.adaptiveIcon.foreground, rgb(NIGHT)],
       [app.android.adaptiveIcon.monochrome, rgb('#ffffff')],
     ];
     return Effect.forEach(
@@ -309,16 +314,16 @@ describe('the app icon', () => {
   test('keeps the maskable icon inside the W3C safe circle', () =>
     decode('public/icon-maskable-512.png').pipe(
       Effect.map((p) => {
-        const ground = rgb(ecru);
+        const ground = rgb(WHEAT);
         expect(outside(p, 0.4, (i) => !exact(p.data, i, ground))).toBe('none');
       }),
     ));
 
-  test('draws the launch screen as the wheat on its token ground, light and dark', () => {
+  test('draws the launch screen as the wheat on the app’s ground, light and dark', () => {
     const { splash } = app;
     const screens: ReadonlyArray<readonly [string, string, string, string]> = [
-      [splash.source, splash.backgroundColor, ecru, blue],
-      [splash.dark.source, splash.dark.backgroundColor, blue, ecru],
+      [splash.source, splash.backgroundColor, theme.light.ground, NIGHT],
+      [splash.dark.source, splash.dark.backgroundColor, theme.dark.ground, WHEAT],
     ];
     return Effect.forEach(
       screens,

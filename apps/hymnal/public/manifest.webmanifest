@@ -2,7 +2,7 @@
   "name": "Hymnal",
   "short_name": "Hymnal",
   "start_url": "/",
-  "background_color": "#c2ae93",
+  "background_color": "#fff9e0",
   "icons": [
     {
       "src": "/icon-192.png",

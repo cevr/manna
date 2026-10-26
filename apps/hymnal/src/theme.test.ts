@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
+import { PALETTE } from '@manna/brand';
 import { Match } from 'effect';
 
 import { onColor, type Roles, theme } from './theme';
@@ -65,26 +66,36 @@ describe('the palette meets WCAG AA', () => {
 
 /**
  * The panel the open dials stand on reads against the page under it: its
- * edge is a control's boundary (WCAG 1.4.11, 3:1 on the ground), and its
- * fill lifts off the ground (1.08:1 at the least), in both schemes.
+ * edge is a control's boundary, at 3.5:1 on the ground (WCAG 1.4.11's 3:1,
+ * with the margin the panel's shadow takes from the ground beside it: barfix
+ * measured 2.88:1 there for an edge at 3.13:1 on the plain ground). Its fill
+ * is lighter than the ground: by day white, as far as any fill lifts off the
+ * brand's paper (1.06:1), and by night at least 1.08:1.
  */
 describe('the dials’ panel stands off the page', () => {
   for (const scheme of ['light', 'dark'] as const) {
-    test(`${scheme}: the edge is at least 3:1 on the ground`, () => {
+    test(`${scheme}: the edge is at least 3.5:1 on the ground`, () => {
       const roles = theme[scheme];
-      expect(contrast(roles.edge, roles.ground)).toBeGreaterThanOrEqual(3);
+      expect(contrast(roles.edge, roles.ground)).toBeGreaterThanOrEqual(3.5);
     });
-    test(`${scheme}: the fill lifts at least 1.08:1 off the ground`, () => {
+    test(`${scheme}: the fill is lighter than the ground`, () => {
       const roles = theme[scheme];
-      expect(contrast(roles.panel, roles.ground)).toBeGreaterThanOrEqual(1.08);
+      expect(luminance(roles.panel)).toBeGreaterThan(luminance(roles.ground));
     });
   }
+  test('light: the fill is white, the most lift the paper allows', () => {
+    expect(theme.light.panel).toBe('#ffffff');
+    expect(contrast(theme.light.panel, theme.light.ground)).toBeGreaterThanOrEqual(1.05);
+  });
+  test('dark: the fill lifts at least 1.08:1 off the ground', () => {
+    expect(contrast(theme.dark.panel, theme.dark.ground)).toBeGreaterThanOrEqual(1.08);
+  });
 });
 
 /**
  * Every fill whose channels step by 17 (`#000` to `#fff`, 4096 of them), and
- * the accents of the Wada palettes the owner was shown (A's two, and D's
- * and E's `#099197`, between the luminances near-black and white each miss).
+ * the brand's own colours, among them its accent and the wheat, which the
+ * theme fills with.
  */
 const fills = [
   ...Array.from({ length: 4096 }, (_, index) =>
@@ -92,61 +103,59 @@ const fills = [
       .map((digit) => digit.toString(16).repeat(2))
       .reduce((hex, pair) => `${hex}${pair}`, '#'),
   ),
-  '#064f6e',
-  '#a7d4e4',
-  '#099197',
+  ...Object.values(PALETTE),
 ];
 
 test('text on any fill, as onColor picks it, meets WCAG AA', () => {
   const under = fills.filter((fill) => contrast(onColor(fill), fill) < 4.5);
   expect(under).toEqual([]);
-  // The page's near-black where it reaches AA: on palette A's dark accent, and on D's and E's.
-  expect([onColor('#a7d4e4'), onColor('#099197'), onColor('#064f6e')]).toEqual([
-    '#111314',
-    '#111314',
+  // The night where it reaches AA (on the wheat), else white (on the deepened
+  // wheat), else black (on a mid teal, where neither does).
+  expect([onColor(PALETTE.wheat), onColor(PALETTE.accent), onColor('#099197')]).toEqual([
+    PALETTE.night,
     '#ffffff',
+    '#000000',
   ]);
 });
 
 test('the contrast ratio is WCAG 2’s', () => {
   expect(contrast('#000000', '#ffffff')).toBeCloseTo(21, 5);
   expect(contrast('#777777', '#ffffff')).toBeCloseTo(4.48, 2);
-  // A colour whose channels differ: Vandar Poel's Blue on the light ground.
-  expect(contrast('#064f6e', '#eee8e1')).toBeCloseTo(7.34, 2);
+  // A colour whose channels differ: the night on the paper.
+  expect(contrast('#12354e', '#fff9e0')).toBeCloseTo(12.08, 2);
 });
 
 /**
- * The roles as the palette page's `theme()` draws Wada No. 167, but for light
- * muted (20% toward the ground, not 35%) and dark soft (70%, not 55%), which
- * reach AA. A change to the mixing, the palette or a channel's order shows here.
+ * The roles as Moonlit wheat draws them. A change to the brand, the mixing or
+ * a channel's order shows here.
  */
-test('the roles are palette A', () => {
+test('the roles are Moonlit wheat', () => {
   expect(theme).toEqual({
     light: {
-      ground: '#eee8e1',
-      ink: '#064f6e',
-      muted: '#346e85',
-      line: '#99998b',
-      accent: '#064f6e',
-      soft: '#bddfeb',
+      ground: PALETTE.paper,
+      ink: PALETTE.ink,
+      muted: PALETTE.soft,
+      line: '#b8beb4',
+      accent: PALETTE.accent,
+      soft: PALETTE.wheat,
       onAccent: '#ffffff',
-      pressed: '#346e85',
+      pressed: '#655e1f',
       onPressed: '#ffffff',
-      panel: '#f8f6f3',
-      edge: '#5e899a',
+      panel: '#ffffff',
+      edge: '#718388',
     },
     dark: {
-      ground: '#032431',
-      ink: '#e4dbce',
-      muted: '#8a928f',
-      line: '#304950',
-      accent: '#a7d4e4',
-      soft: '#345967',
-      onAccent: '#111314',
-      pressed: '#86b1c0',
-      onPressed: '#111314',
-      panel: '#0a2b38',
-      edge: '#4d7382',
+      ground: PALETTE.night,
+      ink: PALETTE.nightInk,
+      muted: PALETTE.nightSoft,
+      line: PALETTE.nightRule,
+      accent: PALETTE.nightAccent,
+      soft: '#596d6b',
+      onAccent: PALETTE.night,
+      pressed: '#d0ca9b',
+      onPressed: PALETTE.night,
+      panel: '#1b3c52',
+      edge: '#89927e',
     },
   });
 });

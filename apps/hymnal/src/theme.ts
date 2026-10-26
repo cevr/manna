@@ -1,30 +1,27 @@
 /**
- * The app's colours: eleven roles in light and dark, all drawn from Sanzo Wada's
- * combination No. 167 (Ecru, Pale King's Blue, Vandar Poel's Blue), the
- * palette A the owner chose for Selah and the hymnal. A screen reads a role
- * (`color.ts` on the web, `color.native.ts` on a phone), never a hex value.
+ * The app's colours: eleven roles in light and dark, all drawn from the
+ * brand's Moonlit wheat (`@manna/brand`, the one source the First the Blade
+ * site reads too): the wheat on the night. A screen reads a role (`color.ts`
+ * on the web, `color.native.ts` on a phone), never a hex value.
  *
- * The roles follow the palette page's `theme()`: a light ground is Ecru mixed
- * toward white, a dark ground is the ink mixed toward black. Two mixes are
- * shallower than the page's so each text role meets WCAG AA on what it sits
- * on (`theme.test.ts`): light muted mixes 20% toward the ground (35% reads at
- * 3.32:1), and dark soft mixes 70% toward the ground (55% leaves the ink at
- * 3.75:1 on a pressed row). Text on the accent (`onAccent`) is the page's
- * near-black where it meets AA on the fill, else white, else black
- * (`onColor`), so any accent a palette gives has AA text on it. A pressed
- * accent is a fill of its own (`pressed`), with its own text (`onPressed`),
- * so the pressed state keeps AA too. The open dials stand on a raised,
- * opaque panel (`panel`): the ground mixed toward white in light and toward
- * Pale King's Blue in dark, a lift of about 1.1:1, so no page word shows
- * through it. Its edge (`edge`) is the ground mixed toward the accent, at
- * least 3:1 on the ground (WCAG 1.4.11, a control's boundary).
+ * Light is the site's day: the paper under the night's ink, the brand's quiet
+ * text and its deepened wheat for the accent. Dark is the site's night: the
+ * night under the wheat, with the brand's quiet text and rule by night. A
+ * pressed row or a selection (`soft`) is the wheat by day, and the wheat 70%
+ * toward the night by night, so ink and accent text keep WCAG AA on it
+ * (`theme.test.ts`). Text on the accent (`onAccent`) is the night where it
+ * meets AA on the fill, else white, else black (`onColor`). A pressed accent
+ * is a fill of its own (`pressed`), the accent a fifth toward the night, with
+ * its own text (`onPressed`), so the pressed state keeps AA and its label's
+ * colour. The open dials stand on a raised, opaque panel (`panel`), so no
+ * page word shows through it: white by day (the most any fill lifts off the
+ * paper, 1.06:1), and the night 4% toward the wheat by night (1.1:1). Its
+ * edge (`edge`) is the ground mixed toward the ink, at least 3.5:1 on the
+ * ground: WCAG 1.4.11's 3:1 for a control's boundary, with the margin the
+ * shadow under the panel takes from the ground around it.
  */
 
-export const wada167 = {
-  ecru: '#c2ae93',
-  paleKingsBlue: '#a7d4e4',
-  vandarPoelsBlue: '#064f6e',
-} as const;
+import { PALETTE } from '@manna/brand';
 
 export interface Roles {
   /** The screen's background. */
@@ -41,13 +38,13 @@ export interface Roles {
   readonly soft: string;
   /** Text drawn on an accent fill: the play button's label on the web and Android. */
   readonly onAccent: string;
-  /** The accent fill while it is pressed: the accent mixed a fifth toward the ground. */
+  /** The accent fill while it is pressed: the accent mixed a fifth toward the night. */
   readonly pressed: string;
   /** Text drawn on the pressed fill, picked for it as `onAccent` is for the accent. */
   readonly onPressed: string;
   /** A raised surface over the page, the open dials' panel: the ground lifted a little. */
   readonly panel: string;
-  /** The panel's edge: a control's boundary, at least 3:1 on the ground. */
+  /** The panel's edge: a control's boundary, at least 3.5:1 on the ground. */
   readonly edge: string;
 }
 
@@ -94,45 +91,43 @@ const contrast = (a: string, b: string) => {
 };
 
 /**
- * Text on a fill of `fill`: the palette page's near-black where it meets
- * WCAG AA (4.5:1), else white where it does, else black. White and black
- * between them meet AA on every fill; the page's own pick by luminance
- * (near-black above 0.35) leaves fills between 0.1833 and 0.35 under it.
+ * Text on a fill of `fill`: the night where it meets WCAG AA (4.5:1), else
+ * white where it does, else black. White and black between them meet AA on
+ * every fill.
  */
 export const onColor = (fill: string) =>
-  ['#111314', '#ffffff'].find((text) => contrast(text, fill) >= 4.5) ?? '#000000';
+  [PALETTE.night, '#ffffff'].find((text) => contrast(text, fill) >= 4.5) ?? '#000000';
 
-const lightGround = mix(wada167.ecru, '#ffffff', 0.72);
-const darkGround = mix(wada167.vandarPoelsBlue, '#000000', 0.55);
-const darkInk = mix(wada167.ecru, '#ffffff', 0.55);
-const lightPressed = mix(wada167.vandarPoelsBlue, lightGround, 0.2);
-const darkPressed = mix(wada167.paleKingsBlue, darkGround, 0.2);
+const lightPressed = mix(PALETTE.accent, PALETTE.night, 0.2);
+const darkPressed = mix(PALETTE.nightAccent, PALETTE.night, 0.2);
 
 export const theme = {
   light: {
-    ground: lightGround,
-    ink: wada167.vandarPoelsBlue,
-    muted: mix(wada167.vandarPoelsBlue, lightGround, 0.2),
-    line: mix(wada167.ecru, wada167.vandarPoelsBlue, 0.22),
-    accent: wada167.vandarPoelsBlue,
-    soft: mix(wada167.paleKingsBlue, '#ffffff', 0.25),
-    onAccent: onColor(wada167.vandarPoelsBlue),
+    ground: PALETTE.paper,
+    ink: PALETTE.ink,
+    muted: PALETTE.soft,
+    // The paper 30% toward the ink: 1.8:1 on the paper, as the brand's rule
+    // by night is on the night, so a track or a grabber reads in both schemes.
+    line: mix(PALETTE.paper, PALETTE.ink, 0.3),
+    accent: PALETTE.accent,
+    soft: PALETTE.wheat,
+    onAccent: onColor(PALETTE.accent),
     pressed: lightPressed,
     onPressed: onColor(lightPressed),
-    panel: mix(lightGround, '#ffffff', 0.6),
-    edge: mix(lightGround, wada167.vandarPoelsBlue, 0.62),
+    panel: '#ffffff',
+    edge: mix(PALETTE.paper, PALETTE.ink, 0.6),
   },
   dark: {
-    ground: darkGround,
-    ink: darkInk,
-    muted: mix(darkInk, darkGround, 0.4),
-    line: mix(darkGround, darkInk, 0.2),
-    accent: wada167.paleKingsBlue,
-    soft: mix(wada167.paleKingsBlue, darkGround, 0.7),
-    onAccent: onColor(wada167.paleKingsBlue),
+    ground: PALETTE.night,
+    ink: PALETTE.nightInk,
+    muted: PALETTE.nightSoft,
+    line: PALETTE.nightRule,
+    accent: PALETTE.nightAccent,
+    soft: mix(PALETTE.nightAccent, PALETTE.night, 0.7),
+    onAccent: onColor(PALETTE.nightAccent),
     pressed: darkPressed,
     onPressed: onColor(darkPressed),
-    panel: mix(darkGround, wada167.paleKingsBlue, 0.04),
-    edge: mix(darkGround, wada167.paleKingsBlue, 0.45),
+    panel: mix(PALETTE.night, PALETTE.wheat, 0.04),
+    edge: mix(PALETTE.night, PALETTE.nightInk, 0.5),
   },
 } as const satisfies { readonly light: Roles; readonly dark: Roles };
