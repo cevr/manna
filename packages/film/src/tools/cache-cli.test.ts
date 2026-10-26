@@ -64,7 +64,7 @@ const kept = (key: string, daysAgo: number, bytes: number) =>
     );
   });
 
-/** Three segments: one unused for ten days, one for three, one the newest render's. */
+/** Three segments: one unused for ten days, one for three, one the newest render of the film used. */
 const stocked = Effect.gen(function* () {
   yield* TestClock.setTime(NOW);
   yield* kept('old', 10, 1000);
@@ -123,7 +123,7 @@ describe('film cache', () => {
     }).pipe(Effect.provide(Layer.merge(BunServices.layer, over(files))));
   });
 
-  it.effect('--prune --days 0 keeps only the newest render’s', () => {
+  it.effect('--prune --days 0 keeps only what the newest render of each output used', () => {
     const files = new Map<string, Uint8Array>();
     return Effect.gen(function* () {
       yield* stocked;

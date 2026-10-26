@@ -612,17 +612,25 @@ The film's cache as a whole is `tools/segment-cache.ts`. A render that keeps
 segments holds the cache's lock (`cache/.segments.lock`, a `ManifestLock`)
 from before it picks them until it is done, so renders of one film take turns
 (`render.cache.waiting`). Each segment it reuses or keeps is marked used
-(`used` in its record, the render's start time, never moved back; a record
-without one reads its mtime), and once done it records the keys it used for
-the file it wrote (`cache/renders/<id>.json`) and deletes for good the
+(`used` in its record, the render's start time, never moved back, a
+`--fresh` redraw included; a record without one reads its mtime). Each video
+render removes the record of the file it writes before it replaces that file
+(`cache/renders/<id>.json`), and once done writes it again with the keys it
+used (none when it keeps no segments); a record that fails to write leaves
+the render done. A render that keeps segments then deletes for good the
 segments no render used for `PRUNE_DAYS` (7) that no record names, never a
 folder still drawn (no record): `render.cache.pruned count=<n> freed=<bytes>`.
-`film cache <film> [--prune [--days n] [--dry-run]] [--json]`
+A segment the newest render of an output (the film, an act, a scene, the
+Board, `board-review`, …) used is kept past the 7 days while that render's
+record names it. `film cache <film> [--prune [--days n] [--dry-run]] [--json]`
 (`tools/cache-cli.ts`) prints the cache's size and prunes it by hand: refused
 (`CacheBusy`) while a render holds the cache, `--days 0` keeping exactly what
-the records name (refused, `CacheUnrecorded`, before any render has recorded).
-A cache or segments folder, or a segment, that is a link is refused
-(`CacheEscapes`): nothing is read or deleted through one.
+the newest render of each output used. `--days 0` is refused before any
+render has recorded (`CacheUnrecorded`), and while a video the catalogue
+holds has no record (`CacheOutputUnrecorded`, naming it: render it again).
+A cache folder, its lock file, the segments folder, a segment, a file in
+one, or a record that is a link is refused (`CacheEscapes`) before the lock
+is taken or anything is read or deleted through it.
 `--fresh` drops each segment's record and draws it again (`project render
 --force` too), so a fresh render cut off leaves its segments to be drawn. A
 short and a wedge's look (`--level`) draw every frame into a temp folder of

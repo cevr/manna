@@ -5,9 +5,12 @@
 //   film cache <film> --prune [--days 7] [--dry-run]    delete the segments no render used for --days
 //
 // A render prunes the same way once it is done (PRUNE_DAYS). A segment a
-// render's record names is kept, so `--days 0` keeps exactly the segments
-// the newest render of each file used; on a cache no render has recorded it
-// is refused. A prune while a render of the film holds its cache is refused
+// render's record names is kept at every `--days`, so `--days 0` keeps
+// exactly the segments the newest render of each output (the film, an act, a
+// scene, the Board, `board-review`, …) used. It is refused on a cache no
+// render has recorded, and while a video the catalogue holds has no record
+// (one whose render could not write it, or rendered before renders recorded
+// them). A prune while a render of the film holds its cache is refused
 // (`CacheBusy`), not waited on: the render prunes once it is done, and a
 // prune by hand never hangs. A folder a render is still drawing (no record
 // yet) is counted and never removed, and nothing outside the segments folder
@@ -97,14 +100,14 @@ export const cache = Command.make(
     prune: Flag.Boolean('prune').pipe(
       Flag.withDefault(false),
       Flag.withDescription(
-        `delete the segments no render has used for --days (${PRUNE_DAYS}), never one the newest render used`,
+        `delete the segments no render has used for --days (${PRUNE_DAYS}), never one the newest render of an output used`,
       ),
     ),
     days: Flag.Int('days').pipe(
       Flag.withSchema(Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))),
       Flag.optional,
       Flag.withDescription(
-        `with --prune: how many days unused a segment is kept (default ${PRUNE_DAYS}; 0 keeps only the newest render's)`,
+        `with --prune: how many days unused a segment is kept (default ${PRUNE_DAYS}; 0 keeps only what the newest render of each output used)`,
       ),
     ),
     dryRun: Flag.Boolean('dry-run').pipe(
