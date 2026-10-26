@@ -26,7 +26,9 @@
 // (`/asks/page/<id>`) stacks its asks in the order made under one count, an
 // answered one folded to a line of its answers, and takes the owner to the
 // first still asking (or, by one ask's own link, to that ask); each ask sends
-// alone, and the page read again moves the count.
+// alone, and the page read again moves the count. The header's View menu
+// plays the originals and the proxies again, the cut standing where it stood,
+// playing, and its Refresh reads the index from its roots and the Board again.
 
 import { Array as Arr, Boolean as Bool, Deferred, Effect, Exit, Option } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
@@ -38,6 +40,7 @@ import {
   type FakeRoute,
   type Json,
   PHONE,
+  TONE,
   file,
   json,
   later,
@@ -1109,6 +1112,104 @@ describe('a page of asks', () => {
         yield* textIs(page, '.akp-count', '1 of 3 answered');
         yield* until(page, takenTo(STUDIO_PAGE_PACE));
         yield* until(page, 'scrollY > 0');
+        expect(errors).toEqual([]);
+      }).pipe(Effect.scoped),
+    SLOW,
+  );
+});
+
+/** The guided review's cut, its video and its play. */
+const CUT = '.ak-step[data-step="cut"] [data-material="video"]';
+const CUT_VIDEO = `document.querySelector('${CUT} video')`;
+/** The header's View menu, and one of its rows by its command. */
+const VIEW_MENU = '.sh-header [data-act="view-menu"]';
+const viewRow = (id: string) => `[data-role="view-menu"] [data-command="${id}"]`;
+/**
+ * Where the next video made after now first plays from, kept as
+ * `STARTED_AT`: every video in the page is marked seen, and the first
+ * unmarked one to start playing says its time then.
+ */
+const WATCH_START = `(() => {
+  for (const v of document.querySelectorAll('video')) v.dataset.seen = '';
+  window.__startedAt = undefined;
+  document.addEventListener('playing', (e) => {
+    if (!('seen' in e.target.dataset)) window.__startedAt ??= e.target.currentTime;
+  }, true);
+})()`;
+const STARTED_AT = 'window.__startedAt';
+
+describe("an ask's View menu", () => {
+  it.live(
+    "a phone plays the originals from it and the proxies again: the cut's video stands where it stood, playing",
+    () =>
+      Effect.gen(function* () {
+        // Both copies of the cut are the same ten seconds of tone; its proxy is ready, so a phone plays it.
+        const { page, errors } = yield* openAsk(
+          [
+            route('GET', /^\/api\/review\/(files|phone)\/out\/toy\/take-1\.mp4/, () => TONE),
+            ...guidedRoutes,
+            ...studioRoutes,
+          ],
+          { href: pageHref.ask(STUDIO_GUIDED), viewport: PHONE },
+        );
+        yield* waitFor(page, `${CUT} [data-act="play-video"]`);
+        yield* evaluates(page, `${CUT_VIDEO}.src.includes('/api/review/phone/')`, true);
+        yield* page.click(`${CUT} [data-act="play-video"]`);
+        yield* until(page, `!${CUT_VIDEO}.paused && ${CUT_VIDEO}.currentTime > 3`);
+        for (const [label, src] of [
+          ['Play the originals', '/api/review/files/'],
+          ['Play the proxies', '/api/review/phone/'],
+        ] as const) {
+          yield* page.evaluate(WATCH_START);
+          yield* page.click(VIEW_MENU);
+          yield* textIs(page, viewRow('ask.quality'), label);
+          yield* page.click(viewRow('ask.quality'));
+          yield* until(page, `${CUT_VIDEO}.src.includes('${src}')`);
+          // The other copy starts where this one stood, or past it, and plays on.
+          yield* until(page, `${STARTED_AT} > 2.9 && !${CUT_VIDEO}.paused`);
+        }
+        expect(errors).toEqual([]);
+      }).pipe(Effect.scoped),
+    SLOW,
+  );
+
+  it.live(
+    'Refresh reads the review index again from its roots, and the Board again',
+    () =>
+      Effect.gen(function* () {
+        // The guided review's own answers, each read after the page's first telling the case so.
+        const guided = (path: string) =>
+          Option.getOrThrow(
+            Arr.findFirst(guidedRoutes, (r) => r.method === 'GET' && r.path.test(path)),
+          );
+        const index = guided('/api/review/index');
+        const board = guided('/api/films/toy/board');
+        const walked = yield* Deferred.make<void>();
+        const boardAgain = yield* Deferred.make<void>();
+        let boards = 0;
+        const { page, asked, errors } = yield* openAsk(
+          [
+            route('GET', /^\/api\/review\/index\?fresh=1$/, (a) =>
+              told(Deferred.done(walked, Exit.void), index.answer(a)),
+            ),
+            route('GET', board.path, (a) => {
+              boards += 1;
+              if (boards === 1) return board.answer(a);
+              return told(Deferred.done(boardAgain, Exit.void), board.answer(a));
+            }),
+            ...guidedRoutes,
+            ...studioRoutes,
+          ],
+          { href: pageHref.ask(STUDIO_GUIDED), viewport: PHONE },
+        );
+        yield* waitFor(page, ASK_READY);
+        yield* textHas(page, '.ak-step[data-step="board"] [data-panel="open.title"]', 'breath');
+        expect(asked.filter((a) => a.path === '/api/review/index?fresh=1')).toEqual([]);
+        yield* page.click(VIEW_MENU);
+        yield* page.click(viewRow('ask.refresh'));
+        yield* Deferred.await(walked);
+        yield* Deferred.await(boardAgain);
+        yield* textHas(page, '.ak-step[data-step="board"] [data-panel="open.title"]', 'breath');
         expect(errors).toEqual([]);
       }).pipe(Effect.scoped),
     SLOW,

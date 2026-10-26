@@ -10,6 +10,7 @@ The lab (`bun run lab`, `/asks/<ask>`; always on as the box's `film-lab` unit) i
 4. **Notes.** A note carries frame, still, box, scene, nearest cue and mark; `lab events --follow` delivers each event and resumes from a cursor; after a lab restart an event can come twice, with the same `id=`. Check a note on a storyboard card, on a transition, and at a scene's last frame.
 5. **Speed.** Lab frame time and scrub rate from the performance baseline. The lab redraws the current `T` only (pure frames): anything that redraws more is a finding.
 6. **Agent instruments.** What the agent needs to answer a note without the owner: stills at a time, a contact sheet of one cue, the diff of the last write, the check findings for the scene. Missing ones are findings.
+7. **Kept controls.** A page whose root is cut out of a larger one keeps every page command (View menu, ⌘K, long-press) its material had there, each held by a browser case at the new seam: the ask kept Refresh and Proxy or Original that way.
 
 ## Prior art to compare
 

@@ -4,7 +4,8 @@
 // videos and documents a section shows), a film's script and Board, a series
 // draft, a video's length and phone copy, a document's text. The page reads
 // them through `useAskRoot`; the reads the server's render makes are sent
-// with the page and adopted by the browser (`served`).
+// with the page and adopted by the browser (`served`). Its page commands, in
+// the header's View menu and ⌘K, are Refresh and the copy videos play.
 
 import { RegistryProvider, useAtomSet, useAtomValue, useRegistry } from '@manna/atom-solid';
 import * as UrlAtom from '@manna/url-state/atom';
@@ -14,7 +15,7 @@ import * as AsyncResult from 'effect/reactivity/AsyncResult';
 import * as Atom from 'effect/reactivity/Atom';
 import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
 import type { Accessor, ParentProps } from 'solid-js';
-import { createContext, createMemo, createSignal, useContext } from 'solid-js';
+import { createContext, createMemo, createSignal, onCleanup, useContext } from 'solid-js';
 import type { AsksPage } from '../../core/ask.ts';
 import { newestAsked } from '../../core/asked.ts';
 import type { BoardFile } from '../../core/board.ts';
@@ -25,6 +26,7 @@ import { type BrowserServices, type Host, hostLayer } from '../../browser/host.t
 import { keptText } from '../../browser/storage.ts';
 import { ViewerStore } from '../../browser/storage-browser.ts';
 import { Viewport } from '../../browser/viewport.ts';
+import { type Command, quietly, said } from '../../command/command.ts';
 import type { Hub } from '../../command/hub.ts';
 import { type LabClient, type LabFailure, served } from '../api.ts';
 import { PHONE } from '../viewport.ts';
@@ -85,6 +87,8 @@ interface AskRootActions {
   readonly quality: (quality: Quality) => void;
   /** Read the index again (a phone copy made or failed): the newest read answers. */
   readonly indexChanged: () => void;
+  /** Read again what the sections show: the index, the series, and every Board, script and draft read. */
+  readonly refresh: () => void;
 }
 
 interface AskRootMeta {
@@ -137,6 +141,50 @@ const qualityOf = (stored: Option.Option<string>, narrow: () => boolean): Qualit
  * phone's, as the lab's pages are designed for first.
  */
 const SERVED_QUALITY: Quality = 'phone';
+
+/** What the copy-played command does next, by the copy played now. */
+const OTHER_QUALITY: Readonly<Record<Quality, Quality>> = { phone: 'full', full: 'phone' };
+const QUALITY_LABEL: Readonly<Record<Quality, string>> = {
+  phone: 'Play the originals',
+  full: 'Play the proxies',
+};
+const QUALITY_SAID: Readonly<Record<Quality, string>> = {
+  phone: 'Playing the proxies (720p copies)',
+  full: 'Playing the originals',
+};
+
+/**
+ * The ask page's page-wide commands, in the View menu, ⌘K and the page's
+ * long-press menu: Refresh reads what the sections show again; the copy
+ * played switches between the Proxy (a 720p copy, made for big videos) and
+ * the Original, a per-viewer setting kept in this browser.
+ */
+const pageCommands = (root: AskRootValue): ReadonlyArray<Command> => [
+  {
+    id: 'ask.refresh',
+    label: 'Refresh',
+    group: 'View',
+    about: ['Page'],
+    touch: 'long-press the page, then Refresh',
+    when: () => true,
+    run: quietly(() => root.actions.refresh()),
+  },
+  {
+    id: 'ask.quality',
+    label: 'Playback: Proxy or Original',
+    labelIn: () => QUALITY_LABEL[root.state.quality()],
+    group: 'View',
+    about: ['Page'],
+    touch: 'long-press the page, then Play the originals',
+    when: () => true,
+    run: () =>
+      Effect.sync(() => {
+        const next = OTHER_QUALITY[root.state.quality()];
+        root.actions.quality(next);
+        return said(QUALITY_SAID[next]);
+      }),
+  },
+];
 
 /** The ask page's root around `children`: its runtime, its place and its reads. */
 export const AskRoot = (
@@ -249,14 +297,38 @@ export const AskRoot = (
       ssrSource: 'client',
       loadingValue: SERVED_QUALITY,
     });
+    // Every Board, script and series draft (`series/draft`) the page has read, read again on a refresh.
+    const boardsRead = new Set<string>();
+    const scriptsRead = new Set<string>();
+    const draftsRead = new Set<string>();
     const value: AskRootValue = {
       state: { place, ask, index, series, quality },
-      actions: { quality: keep, indexChanged },
+      actions: {
+        quality: keep,
+        indexChanged,
+        refresh: () => {
+          registry.refresh(seriesAtom);
+          for (const film of boardsRead) registry.refresh(boardOf(film));
+          for (const film of scriptsRead) registry.refresh(scriptOf(film));
+          for (const key of draftsRead) registry.refresh(draftOf(key));
+          indexChanged();
+        },
+      },
       meta: {
         askPage: askPageOf,
-        board: boardOf,
-        script: scriptOf,
-        draft: (series, draft) => draftOf(`${series}/${draft}`),
+        board: (film) => {
+          boardsRead.add(film);
+          return boardOf(film);
+        },
+        script: (film) => {
+          scriptsRead.add(film);
+          return scriptOf(film);
+        },
+        draft: (series, draft) => {
+          const key = `${series}/${draft}`;
+          draftsRead.add(key);
+          return draftOf(key);
+        },
         text: (file) => textOf({ ref: file.ref, mtime: file.mtime }),
         timedHere: (file) => timedHereOf({ ref: file.ref, mtime: file.mtime }),
         phoneCopy: phoneOf,
@@ -265,6 +337,7 @@ export const AskRoot = (
         hub: props.hub,
       },
     };
+    onCleanup(props.hub.commands.register(...pageCommands(value)));
     return <AskRootContext value={value}>{inner.children}</AskRootContext>;
   };
 
