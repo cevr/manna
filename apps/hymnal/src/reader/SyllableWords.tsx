@@ -12,8 +12,10 @@
  * it (`over`), the words a fixed gap apart; a box widened by a long chord
  * stretches the hyphen after it. The chordless syllables that follow a
  * chordless syllable of the same word join its box as spans of its text, so
- * they keep the places they had as boxes of their own. A page draws about
- * one native view a word or a chord, not four a syllable (pagerperf P2).
+ * they keep the places they had as boxes of their own. A box with no chord
+ * has an empty view as tall as a chord row in its chord's place, and every
+ * box stands on its syllables' foot, so the syllables keep one baseline. A
+ * page draws about one native view a word or a chord, not four a syllable.
  *
  * Each text names its first syllable (`syllable-p-l-s`): on the web every
  * syllable keeps its own id, as a span; on iOS a span is no element, so a
@@ -130,11 +132,11 @@ export function SyllableLine({
             // A word alone is one text, the space after it a no-break space, so no row drops it at its end.
             onNone: () => (
               <View key={w} style={[styles.word, pulled]}>
-                {run(placed, (w < words.length - 1 && ' ') || '')}
+                {run(placed, (w < words.length - 1 && '\u00A0') || '')}
               </View>
             ),
             onSome: (draw) => (
-              <View key={w} style={[styles.word, pulled]}>
+              <View key={w} style={[styles.word, styles.onFoot, pulled]}>
                 {boxesOf(placed).map((joined, b, all) => {
                   const head = Arr.headNonEmpty(joined);
                   return (
@@ -201,7 +203,9 @@ const wordStarts = (words: ReadonlyArray<Word>): ReadonlyArray<number> =>
 
 const styles = StyleSheet.create({
   line: { flexDirection: 'row', flexWrap: 'wrap' },
-  boxed: { rowGap: 6, marginBottom: 8 },
+  // A boxed line's words, and each word's boxes, stand on their syllables' foot: one baseline in a row.
+  boxed: { rowGap: 6, marginBottom: 8, alignItems: 'flex-end' },
+  onFoot: { alignItems: 'flex-end' },
   word: { flexDirection: 'row' },
   box: { flexDirection: 'column' },
   syllable: { flexDirection: 'row' },

@@ -17,7 +17,15 @@
 import * as Chord from '@manna/hymnal/chord';
 import { Option } from 'effect';
 import { createContext, memo, use } from 'react';
-import { Pressable, type StyleProp, StyleSheet, Text, type TextStyle, View } from 'react-native';
+import {
+  Pressable,
+  type StyleProp,
+  StyleSheet,
+  Text,
+  type TextStyle,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 
 import { color, useAccent } from '~/color';
 import type { Section } from '~/hymns/hymns';
@@ -128,7 +136,13 @@ const heldOver = (held: Chord.Chord, first: string) => (box: Box, place: string)
   return <ChordText chords={[held]} tone="held" testID={`held-${place}`} />;
 };
 
-/** A box's chords, or an empty row of the same height so the line keeps one baseline. */
+/**
+ * A box's chords, or a row of no chord: a bare space as tall as a chord row,
+ * which draws no view of its own, so a row of chordless words keeps a chord
+ * row's height. The boxes of a line stand on their syllables' foot
+ * (`SyllableWords.tsx`), so the syllables keep one baseline whatever the
+ * system's text size makes of the chord rows.
+ */
 function BoxChords({
   chords,
   id,
@@ -137,13 +151,13 @@ function BoxChords({
   readonly id: string;
 }) {
   const text = usePageText();
-  if (chords.length === 0) {
+  const { fontScale } = useWindowDimensions();
+  if (chords.length === 0)
     return (
-      <Text style={[styles.chord, text.chords]} dynamicTypeRamp="subheadline" aria-hidden>
-        {'​'}
-      </Text>
+      <View
+        style={[styles.noChord, { height: (text.chords.lineHeight ?? CHORD_LINE) * fontScale }]}
+      />
     );
-  }
   return <ChordText chords={chords} testID={id} />;
 }
 
@@ -212,6 +226,8 @@ export const chordSlop = (lineHeight: number) => {
 const styles = StyleSheet.create({
   notice: { fontSize: 13, color: color.muted },
   chord: { fontSize: 15, lineHeight: 20, fontWeight: '600', paddingRight: 6 },
+  // As wide as a chord's own space after it, so a chordless box is never narrower than one.
+  noChord: { width: 6 },
   lineLevel: { marginBottom: 8 },
   row: { flexDirection: 'row' },
 });
