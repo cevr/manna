@@ -665,9 +665,10 @@ record names it. `film cache <film> [--prune [--days n] [--dry-run]] [--json]`
 (`tools/cache-cli.ts`) prints the cache's size and prunes it by hand: refused
 (`CacheBusy`) while a render holds the cache, `--days 0` keeping exactly what
 the newest render of each output used. `--days 0` is refused before any
-render has recorded (`CacheUnrecorded`), and while a video the catalogue
-holds has no record of its lead file (`CacheOutputUnrecorded`, naming it:
-render it again).
+render has recorded (`CacheUnrecorded`), and while videos the catalogue
+holds have no record of their lead files (`CacheOutputUnrecorded`, naming
+each: render each again). `record_render` gives a video it catalogues an
+empty record, unless a render of its lead file left one.
 A cache folder, its lock file, the segments folder, a segment, a file in
 one, or a record that is a link is refused (`CacheEscapes`) before the lock
 is taken or anything is read or deleted through it.

@@ -865,15 +865,15 @@ export class CacheUnrecorded extends Schema.TaggedError<CacheUnrecorded>()('Cach
 }
 
 /**
- * `--days 0` while an output the film's catalogue holds has no render
- * record: its newest render's segments are unknown (the record failed to
- * write, or the output was rendered before renders recorded them).
+ * `--days 0` while outputs the film's catalogue holds have no render
+ * record, each named: their newest renders' segments are unknown (each was
+ * rendered before renders recorded them, or its record does not read).
  */
 export class CacheOutputUnrecorded extends Schema.TaggedError<CacheOutputUnrecorded>()(
   'CacheOutputUnrecorded',
-  { output: Schema.String },
+  { outputs: Schema.NonEmptyArray(Schema.String) },
 ) {
   override get message() {
-    return `the newest render of ${this.output} has no record of the segments it used: render it again, then prune with --days 0`;
+    return `no record of the segments the newest render of each of these used: ${this.outputs.join(', ')}. Render each again, then prune with --days 0`;
   }
 }

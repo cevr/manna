@@ -458,8 +458,8 @@ export const pruneHeld = (
     if (rule.days === 0 && cache.segments.length > 0) {
       if (!named.any) return yield* CacheUnrecorded.make({ folder: segmentsFolder(out) });
       const unrecorded = (yield* cataloguedVideos(out)).filter((clip) => !named.targets.has(clip));
-      const first = Arr.head(unrecorded);
-      if (Option.isSome(first)) return yield* CacheOutputUnrecorded.make({ output: first.value });
+      if (Arr.isArrayNonEmpty(unrecorded))
+        return yield* CacheOutputUnrecorded.make({ outputs: unrecorded });
     }
     const before = rule.now - rule.days * DAY_MS;
     // With 0 days a segment's age does not count: the records alone keep.

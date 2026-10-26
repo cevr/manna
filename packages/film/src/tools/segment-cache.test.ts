@@ -187,21 +187,26 @@ describe('pruning a film’s render cache', () => {
   });
 
   it.effect(
-    'with 0 days refuses while an output the catalogue holds has no record, naming it, and deletes nothing',
+    'with 0 days refuses while outputs the catalogue holds have no record, naming each, and deletes nothing',
     () => {
       const files = new Map<string, Uint8Array>();
       return Effect.gen(function* () {
         yield* kept('scene', 0);
         yield* kept('film', 0);
         yield* recordRender(out, '/out/f/scenes/a/main.mp4', NOW, ['scene']);
-        yield* catalogued(['scenes/a/main.mp4', 'film/main.mp4']);
+        yield* catalogued(['scenes/a/main.mp4', 'film/main.mp4', 'acts/one/main.mp4']);
         const failed = failure(yield* Effect.exit(prune({ days: 0 })));
         expect(Option.filter(failed, Schema.is(CacheOutputUnrecorded))).toEqual(
-          Option.some(CacheOutputUnrecorded.make({ output: '/out/f/film/main.mp4' })),
+          Option.some(
+            CacheOutputUnrecorded.make({
+              outputs: ['/out/f/film/main.mp4', '/out/f/acts/one/main.mp4'],
+            }),
+          ),
         );
         expect(left(files)).toEqual(['film', 'scene']);
-        // Its render recorded, the prune runs.
+        // Their renders recorded, the prune runs.
         yield* recordRender(out, '/out/f/film/main.mp4', NOW, ['film']);
+        yield* recordRender(out, '/out/f/acts/one/main.mp4', NOW, []);
         expect((yield* prune({ days: 0 })).removed).toEqual([]);
       }).pipe(over(files));
     },
