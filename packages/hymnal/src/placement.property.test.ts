@@ -243,7 +243,7 @@ const signatures = (bytes: Uint8Array) => {
 };
 
 /** Each compiled hymn, with its file's meters in the timing's units. */
-const loaded = Effect.gen(function* () {
+const load = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const hymns = yield* compiled;
   return yield* Effect.forEach(
@@ -265,6 +265,10 @@ const loaded = Effect.gen(function* () {
     { concurrency: 16 },
   );
 });
+
+/** The hymns, read once as the file loads, for every test here: each read is 695 files. */
+// oxlint-disable-next-line effect/noAsyncFunction -- read once at module evaluation, so no case pays for it inside its time limit
+const loaded = await Effect.runPromise(load.pipe(Effect.provide(BunServices.layer)));
 
 /** One stored line on the timeline, in the timing's units, as R1 read it. */
 interface Walked {
@@ -430,9 +434,8 @@ describe('R1 over the compiled set', () => {
   it.effect(
     "judges the hymns whose files' bars their melodies do not confirm, the printed ones confirmed",
     () =>
-      Effect.gen(function* () {
-        const hymns = yield* loaded;
-        const unconfirmed = hymns.filter((h) => !h.confirmed).map((h) => h.hymn.number);
+      Effect.sync(() => {
+        const unconfirmed = loaded.filter((h) => !h.confirmed).map((h) => h.hymn.number);
         // Each a file whose bars or meter the printed page does not have: tick 0 not the printed
         // downbeat (474), 6/4 bars in a 4/4 file (51, 259), and the rest the review's probe found.
         for (const n of [
@@ -443,12 +446,12 @@ describe('R1 over the compiled set', () => {
         expect(unconfirmed).not.toContain(373);
         // R1 still strikes the chords of nearly every hymn: 102 of 695 are left as their files play.
         expect(unconfirmed.length).toBeLessThan(120);
-      }).pipe(Effect.provide(BunServices.layer)),
+      }),
   );
 
   it.effect("moves no guitar change of a hymn whose melody does not confirm its file's bars", () =>
-    Effect.gen(function* () {
-      const hymns = (yield* loaded).filter((h) => !h.confirmed);
+    Effect.sync(() => {
+      const hymns = loaded.filter((h) => !h.confirmed);
       const late = hymns.flatMap((h) => {
         const found = walked(h).flatMap((w) => lateChanges(w, h.grid));
         return found.length === 0 ? [] : [{ n: h.hymn.number, found }];
@@ -458,7 +461,7 @@ describe('R1 over the compiled set', () => {
         ...late.flatMap(({ found }) => found.slice(0, 1)),
       ];
       expect(late.length, report.join('\n')).toBe(0);
-    }).pipe(Effect.provide(BunServices.layer)),
+    }),
   );
 
   /** Stanza 1's lines of a compiled hymn, each its guitar changes as `[syllable, at]`. */
@@ -493,9 +496,8 @@ describe('R1 over the compiled set', () => {
   it.effect(
     'puts every guitar change of every played sung line on a strong beat, or none comes before its limit',
     () =>
-      Effect.gen(function* () {
-        const hymns = yield* loaded;
-        const lines = hymns.flatMap((h) => walked(h).map((w) => ({ w, h })));
+      Effect.sync(() => {
+        const lines = loaded.flatMap((h) => walked(h).map((w) => ({ w, h })));
         const changes = lines.reduce((sum, { w }) => sum + w.line.changes.length, 0);
         // A hymn whose melody does not confirm its file's bars keeps the file's placement.
         const found = lines.flatMap(({ w, h }) => (h.confirmed ? storedBreaches(w, h.grid) : []));
@@ -503,7 +505,7 @@ describe('R1 over the compiled set', () => {
         // Nearly every one of the 13,318 sung lines is walked: none is left out unseen.
         expect(lines.length).toBeGreaterThan(13_000);
         expect(changes).toBeGreaterThan(70_000);
-      }).pipe(Effect.provide(BunServices.layer)),
+      }),
   );
 
   it.effect(
