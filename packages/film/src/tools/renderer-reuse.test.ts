@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Boolean as Bool,
+  Clock,
   Deferred,
   Effect,
   Exit,
@@ -98,11 +99,13 @@ const project = (files = new Map<string, Uint8Array>(), stage = { film, info }) 
   const render = (job: RenderJob, draw: Draw = () => Effect.void) => {
     const ledger = emptyLedger();
     const lines: Array<string> = [];
-    // The render's reuse line kept, every other line dropped.
+    const pruned: Array<string> = [];
+    // The render's reuse and prune lines kept, every other line dropped.
     const logged = Logger.layer([
       Logger.make(({ message }) => {
         const line = [message].flat().join(' ');
         if (line.startsWith('render.reuse')) lines.push(line);
+        if (line.startsWith('render.cache')) pruned.push(line);
       }),
     ]);
     const layer = Renderer.layer.pipe(
@@ -118,6 +121,7 @@ const project = (files = new Map<string, Uint8Array>(), stage = { film, info }) 
       const [join, share] = ledger.joins;
       return {
         reuse: lines,
+        pruned,
         drawn: ledger.frames.toSorted((x, y) => x - y),
         pages: ledger.pages.opened,
         master: Option.getOrThrow(Option.fromUndefinedOr(join)).segments,
@@ -160,6 +164,20 @@ const project = (files = new Map<string, Uint8Array>(), stage = { film, info }) 
 };
 
 const read = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
+
+/** `live`, its wall time `days` days later: what a render marks and prunes by, its waits still real. */
+const later = (live: Clock.Clock, days: number): Clock.Clock => {
+  const shift = days * 86_400_000;
+  return {
+    currentTimeMillisUnsafe: () => live.currentTimeMillisUnsafe() + shift,
+    currentTimeMillis: Effect.map(live.currentTimeMillis, (ms) => ms + shift),
+    currentTimeNanosUnsafe: () => live.currentTimeNanosUnsafe() + BigInt(shift) * 1_000_000n,
+    currentTimeNanos: Effect.map(live.currentTimeNanos, (ns) => ns + BigInt(shift) * 1_000_000n),
+    monotonicTimeNanosUnsafe: () => live.monotonicTimeNanosUnsafe(),
+    monotonicTimeNanos: live.monotonicTimeNanos,
+    sleep: (duration) => live.sleep(duration),
+  };
+};
 
 /** Beat `beat`'s one picture panel, held from its start, showing try 1. */
 const panel = (beat: string): Panel => ({
@@ -235,6 +253,40 @@ describe.concurrent("a film render's segments", () => {
       expect(again.drawn).toEqual(frames(0, 40));
       expect(again.reuse).toEqual([]);
     }),
+  );
+
+  it.live(
+    'mark each segment they reuse, and once done delete those no render used for a week',
+    () =>
+      Effect.gen(function* () {
+        const { render } = project();
+        const live = yield* Clock.Clock;
+        /** A render that reads the time `days` days from now (its pages still wait in real time). */
+        const on = (days: number, job: RenderJob) =>
+          render(job).pipe(Effect.provideService(Clock.Clock, later(live, days)));
+        yield* on(0, video(keyed()));
+        // Six days on, c changes: a's and b's segments are reused, so used now.
+        const sixth = yield* on(6, video(keyed(new Map([...keys, ['c', 'key-c2']]))));
+        expect(sixth.pruned).toEqual(['render.cache.pruned count=0 freed=0']);
+        // Ten days on, every beat changes: the first c, unused for ten days,
+        // goes; a and b (used four days ago) and c2 stay.
+        const tenth = yield* on(
+          10,
+          video(
+            keyed(
+              new Map([
+                ['a', 'key-a3'],
+                ['b', 'key-b3'],
+                ['c', 'key-c3'],
+              ]),
+            ),
+          ),
+        );
+        expect(tenth.pruned).toHaveLength(1);
+        expect(tenth.pruned[0]).toMatch(/^render\.cache\.pruned count=1 freed=[1-9]\d*$/);
+        const back = yield* on(10, video(keyed()));
+        expect(back.drawn).toEqual(frames(20, 40));
+      }),
   );
 
   it.live('of the Board: a changed image draws only the segments that show it', () =>

@@ -5,7 +5,8 @@
 // (copied, not re-encoded) with the audio cut from the lossless master and
 // encoded to AAC. A video of the film, an act or a scene keeps each beat's
 // chunks under the film's project folder by what its frames read
-// (`segments.ts`) and draws only the beats it has not kept. The server, the
+// (`segments.ts`) and draws only the beats it has not kept; once done, it
+// deletes the film's segments no render has used for a week. The server, the
 // browser and every page (a pool of `Pages`) live in one scope: a failure, or
 // Ctrl-C, closes them all.
 
@@ -78,7 +79,9 @@ import {
   keepSegment,
   keptFolder,
   keptNames,
-  keptSegment,
+  PRUNE_DAYS,
+  pruneSegments,
+  reuseSegment,
   segmentsFolder,
 } from './segments.ts';
 import { type LoadedFilm, type PlaceError, masterFile, placeFilm } from './film-repo.ts';
@@ -623,6 +626,8 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
             ),
         });
         const fresh = Option.exists(keeping, (k) => k.fresh);
+        /** This render's mark: each segment it reuses or keeps is recorded as used at it. */
+        const used = yield* Clock.currentTimeMillis;
         // --fresh finds no kept copy, and drops each one's record before it draws it again.
         const kept = yield* Effect.forEach(segments, (segment) =>
           Option.match(segment.key, {
@@ -630,13 +635,21 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
             onSome: (key) =>
               Bool.match(fresh, {
                 onTrue: () => Effect.as(dropSegment(fs, path, folder, key), Option.none()),
-                onFalse: () => keptSegment(fs, path, folder, key),
+                onFalse: () => reuseSegment(fs, path, folder, key, used),
               }),
           }),
         );
         /** The segments to draw, each with its place among all of them. */
         const missing = segments.flatMap((segment, at) =>
           Arr.filter([{ ...segment, at }], () => Option.isNone(kept[at] ?? Option.none())),
+        );
+        // A segment to draw has no record while it is drawn (one whose files
+        // are gone loses its own), so a prune leaves its folder alone.
+        yield* Effect.forEach(missing, (segment) =>
+          Option.match(segment.key, {
+            onNone: () => Effect.void,
+            onSome: (key) => dropSegment(fs, path, folder, key),
+          }),
         );
         const chunks = segmentChunks(missing, workers);
         const toDraw = chunks.reduce((sum, chunk) => sum + chunk.to - chunk.from, 0);
@@ -739,6 +752,7 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
                     to: e.chunk.to,
                     share: Option.isSome(e.share),
                   })),
+                used,
               ),
           }),
         );
@@ -834,6 +848,23 @@ export class Renderer extends Context.Service<Renderer, RendererService>()(
         yield* Effect.log(
           `render.done frames=${total} chunks=${chunks.length} audio=${Option.isSome(audio)} secs=${secs.toFixed(1)} fps=${(total / secs).toFixed(1)} ${perFrame(spent)} file=${target} share=${Option.getOrElse(shared, () => 'none')} captions=${captions}`,
         );
+        // A render that keeps segments, once done, prunes the film's: each no
+        // render has used for PRUNE_DAYS goes, never one this render used. A
+        // prune that fails leaves the render done.
+        if (Option.isSome(keeping)) {
+          const keep = new Set(segments.flatMap((s) => Option.toArray(s.key)));
+          const now = yield* Clock.currentTimeMillis;
+          yield* pruneSegments(fs, path, folder, { now, days: PRUNE_DAYS, keep }, false).pipe(
+            Effect.flatMap((pruned) =>
+              Effect.log(
+                `render.cache.pruned count=${pruned.removed.length} freed=${pruned.freed}`,
+              ),
+            ),
+            Effect.catch((error) =>
+              Effect.logWarning(`render.cache.prune failed reason="${error.message}"`),
+            ),
+          );
+        }
         const written: RenderOutput = {
           kind: 'video',
           clip: Option.some(target),

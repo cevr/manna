@@ -20,6 +20,10 @@
 //
 // So a panel or a beat elsewhere leaves a segment's key alone, and a
 // neighbour seen across a dissolve at its edge changes it.
+//
+// Each render marks the segments it reuses or keeps as used at its start
+// (`used` in the record), and a prune (`pruneSegments`, after each render
+// and `film cache --prune`) deletes those no render used for some days.
 
 import {
   Array as Arr,
@@ -35,6 +39,7 @@ import { PanelText, shownTry } from '../core/board.ts';
 import { Shot } from '../core/animatic.ts';
 import { type ShotSeen, shotsSeen } from '../core/board-render.ts';
 import type { Placed } from '../core/layout.ts';
+import { isSegment } from '../core/segment.ts';
 import { frameAtOrAfter } from '../core/time.ts';
 import { writeWhole } from './content-store.ts';
 import { sha256Hex } from './digest.ts';
@@ -249,8 +254,18 @@ const KeptChunk = Schema.Struct({
 });
 type KeptChunk = typeof KeptChunk.Type;
 
-/** A kept segment's record, `<key>/segment.json`: its chunks in frame order. */
-const KeptSegmentJson = Schema.fromJsonString(Schema.Struct({ chunks: Schema.Array(KeptChunk) }));
+/**
+ * A kept segment's record, `<key>/segment.json`: its chunks in frame order,
+ * and `used`, when a render last drew or reused it (ms since the epoch). A
+ * record written before renders marked it has no `used`: its file's mtime
+ * stands in (`lastUsed`).
+ */
+const KeptSegmentJson = Schema.fromJsonString(
+  Schema.Struct({
+    chunks: Schema.Array(KeptChunk),
+    used: Schema.OptionFromOptionalKey(Schema.Finite),
+  }),
+);
 
 /**
  * A chunk's files in a kept segment's folder, named by its frames:
@@ -271,15 +286,33 @@ export const keptFolder = (folder: string, key: string): string => `${folder}/${
 const recordOf = (path: Path.Path, folder: string, key: string): string =>
   path.join(keptFolder(folder, key), 'segment.json');
 
-/**
- * Segment `key`'s chunks as kept under `folder`, their files by path; none
- * when it was never kept whole (no record), or a file it lists is gone.
- */
-export const keptSegment = (
+/** Segment `key`'s record under `folder`, its chunks named as kept, written whole with `used` as its last use. */
+const writeRecord = (
   fs: FileSystem.FileSystem,
   path: Path.Path,
   folder: string,
   key: string,
+  chunks: ReadonlyArray<KeptChunk>,
+  used: number,
+): Effect.Effect<void, PlatformError> => {
+  const record = Schema.encodeSync(KeptSegmentJson)({ chunks, used: Option.some(used) });
+  const file = recordOf(path, folder, key);
+  return writeWhole(fs, file, (partial) => fs.writeFileString(partial, record));
+};
+
+/**
+ * Segment `key`'s chunks as kept under `folder`, their files by path, its
+ * record marked used at `used`; none when it was never kept whole (no
+ * record), or a file it lists is gone. The mark is written as the render
+ * finds it, before it joins the files, so a prune that runs meanwhile sees
+ * it in use.
+ */
+export const reuseSegment = (
+  fs: FileSystem.FileSystem,
+  path: Path.Path,
+  folder: string,
+  key: string,
+  used: number,
 ): Effect.Effect<Option.Option<ReadonlyArray<KeptChunk>>, PlatformError> =>
   Effect.gen(function* () {
     const dir = keptFolder(folder, key);
@@ -294,13 +327,16 @@ export const keptSegment = (
     }));
     const files = chunks.flatMap((c) => [c.master, ...Option.toArray(c.share)]);
     const there = yield* Effect.forEach(files, (file) => fs.exists(file));
-    return Option.liftPredicate(chunks, () => there.every(Boolean));
+    if (!there.every(Boolean)) return Option.none();
+    yield* writeRecord(fs, path, folder, key, read.value.chunks, used);
+    return Option.some(chunks);
   });
 
 /**
  * Segment `key` recorded as kept under `folder`, its `chunks` (files named
- * by `keptNames`, already in its folder) in frame order. Written last and
- * whole, so a segment is found only once every chunk of it is there.
+ * by `keptNames`, already in its folder) in frame order, used at `used`.
+ * Written last and whole, so a segment is found only once every chunk of it
+ * is there.
  */
 export const keepSegment = (
   fs: FileSystem.FileSystem,
@@ -308,9 +344,14 @@ export const keepSegment = (
   folder: string,
   key: string,
   chunks: ReadonlyArray<{ readonly from: number; readonly to: number; readonly share: boolean }>,
-): Effect.Effect<void, PlatformError> => {
-  const record = Schema.encodeSync(KeptSegmentJson)({
-    chunks: chunks.map((c) => ({
+  used: number,
+): Effect.Effect<void, PlatformError> =>
+  writeRecord(
+    fs,
+    path,
+    folder,
+    key,
+    chunks.map((c) => ({
       from: c.from,
       to: c.to,
       master: keptNames(c.from, c.to).master,
@@ -319,16 +360,15 @@ export const keepSegment = (
         () => keptNames(c.from, c.to).share,
       ),
     })),
-  });
-  const file = recordOf(path, folder, key);
-  return writeWhole(fs, file, (partial) => fs.writeFileString(partial, record));
-};
+    used,
+  );
 
 /**
  * Segment `key` no longer kept under `folder`: its record gone, so no render
- * finds it until one draws it whole again. A `--fresh` render drops each
- * segment's record before it draws it, so one cut off leaves none of what it
- * was told not to trust.
+ * finds it until one draws it whole again. A render drops the record of each
+ * segment it draws before it draws it (a `--fresh` render, of every one), so
+ * one cut off leaves none of what it was told not to trust, and a folder a
+ * render is drawing into has no record: a prune never takes it.
  */
 export const dropSegment = (
   fs: FileSystem.FileSystem,
@@ -336,3 +376,147 @@ export const dropSegment = (
   folder: string,
   key: string,
 ): Effect.Effect<void, PlatformError> => fs.remove(recordOf(path, folder, key), { force: true });
+
+/** A day, in ms: `--days` counts in them. */
+const DAY_MS = 86_400_000;
+
+/** How many days a segment no render has used is kept, after each render and by default in `film cache --prune`. */
+export const PRUNE_DAYS = 7;
+
+/** A segment kept whole (its record written): its key, the bytes of its folder, and when a render last used it (ms). */
+export interface CachedSegment {
+  readonly key: string;
+  readonly bytes: number;
+  readonly used: number;
+}
+
+/** What a film's segments folder holds: each segment kept whole, and each folder with no record (a render drawing it). */
+export interface SegmentCache {
+  readonly segments: ReadonlyArray<CachedSegment>;
+  readonly drawing: ReadonlyArray<{ readonly key: string; readonly bytes: number }>;
+}
+
+/** Every byte the cache holds, its kept segments and the folders still drawn. */
+export const cacheBytes = (cache: SegmentCache): number =>
+  [...cache.segments, ...cache.drawing].reduce((sum, s) => sum + s.bytes, 0);
+
+/** The bytes of every file at or under `dir`. */
+const bytesUnder = (fs: FileSystem.FileSystem, path: Path.Path, dir: string) =>
+  Effect.gen(function* () {
+    const names = yield* fs.readDirectory(dir, { recursive: true });
+    const sizes = yield* Effect.forEach(names, (name) =>
+      Effect.map(fs.stat(path.join(dir, name)), (info) => {
+        if (info.type !== 'File') return 0;
+        return Number(info.size);
+      }),
+    );
+    return sizes.reduce((sum, n) => sum + n, 0);
+  });
+
+/** When segment `key`'s record says a render last used it: its `used`, else the record's mtime, else never (0). */
+const lastUsed = (fs: FileSystem.FileSystem, path: Path.Path, folder: string, key: string) =>
+  Effect.gen(function* () {
+    const record = recordOf(path, folder, key);
+    const read = Schema.decodeOption(KeptSegmentJson)(yield* fs.readFileString(record));
+    const marked = Option.flatMap(read, (r) => r.used);
+    if (Option.isSome(marked)) return marked.value;
+    const info = yield* fs.stat(record);
+    return Option.getOrElse(
+      Option.map(info.mtime, (at) => at.getTime()),
+      () => 0,
+    );
+  });
+
+/**
+ * What `folder` (`segmentsFolder`) holds: each folder in it by its name, a
+ * segment when its record is there, else one a render is drawing. Nothing
+ * else in it (a file, a name no key could be) is read; an absent folder
+ * holds nothing.
+ */
+export const readCache = (
+  fs: FileSystem.FileSystem,
+  path: Path.Path,
+  folder: string,
+): Effect.Effect<SegmentCache, PlatformError> =>
+  Effect.gen(function* () {
+    if (!(yield* fs.exists(folder))) return { segments: [], drawing: [] };
+    const names = (yield* fs.readDirectory(folder)).filter(isSegment).toSorted();
+    const read = yield* Effect.forEach(names, (key) =>
+      Effect.gen(function* () {
+        const dir = keptFolder(folder, key);
+        if ((yield* fs.stat(dir)).type !== 'Directory') return [];
+        const bytes = yield* bytesUnder(fs, path, dir);
+        if (!(yield* fs.exists(recordOf(path, folder, key))))
+          return [{ key, bytes, used: Option.none<number>() }];
+        return [{ key, bytes, used: Option.some(yield* lastUsed(fs, path, folder, key)) }];
+      }),
+    );
+    const all = read.flat();
+    return {
+      segments: all.flatMap((s) => Option.toArray(Option.map(s.used, (used) => ({ ...s, used })))),
+      drawing: all
+        .filter((s) => Option.isNone(s.used))
+        .map((s) => ({ key: s.key, bytes: s.bytes })),
+    };
+  });
+
+/** What a prune keeps and removes by. */
+export interface PruneRule {
+  /** Now, in ms. */
+  readonly now: number;
+  /** A segment last used more than this many days before `now` goes. */
+  readonly days: number;
+  /** Keys never removed: the segments the render that prunes has just used. */
+  readonly keep: ReadonlySet<string>;
+}
+
+/**
+ * The segments of `segments` a prune removes: each last used more than
+ * `days` before `now`, none in `keep`, and none the newest render used (those
+ * marked at the newest mark), so `days` 0 keeps exactly the newest render's.
+ */
+export const staleSegments = (
+  segments: ReadonlyArray<CachedSegment>,
+  rule: PruneRule,
+): ReadonlyArray<CachedSegment> => {
+  const newest = Math.max(...segments.map((s) => s.used));
+  const before = rule.now - rule.days * DAY_MS;
+  return segments.filter((s) => s.used < before && s.used < newest && !rule.keep.has(s.key));
+};
+
+/** A prune's work: the cache as it found it, and the segments it removed (or, dry, would remove). */
+export interface Pruned {
+  readonly found: SegmentCache;
+  readonly removed: ReadonlyArray<CachedSegment>;
+  readonly freed: number;
+}
+
+/**
+ * The film's segments under `folder` pruned by `rule` (`staleSegments`):
+ * each stale one's folder deleted for good, as build output is. Each is read
+ * again just before it goes, and stays when a render has since used it
+ * (another mark) or is drawing it again (no record). `dry` removes nothing
+ * and answers what it would remove.
+ */
+export const pruneSegments = (
+  fs: FileSystem.FileSystem,
+  path: Path.Path,
+  folder: string,
+  rule: PruneRule,
+  dry: boolean,
+): Effect.Effect<Pruned, PlatformError> =>
+  Effect.gen(function* () {
+    const found = yield* readCache(fs, path, folder);
+    const stale = staleSegments(found.segments, rule);
+    if (dry) return { found, removed: stale, freed: stale.reduce((sum, s) => sum + s.bytes, 0) };
+    const removed = yield* Effect.forEach(stale, (segment) =>
+      Effect.gen(function* () {
+        if (!(yield* fs.exists(recordOf(path, folder, segment.key)))) return [];
+        if ((yield* lastUsed(fs, path, folder, segment.key)) !== segment.used) return [];
+        yield* fs.remove(keptFolder(folder, segment.key), { recursive: true });
+        return [segment];
+      }),
+    );
+    const gone = removed.flat();
+    return { found, removed: gone, freed: gone.reduce((sum, s) => sum + s.bytes, 0) };
+  });
