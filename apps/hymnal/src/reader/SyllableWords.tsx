@@ -5,10 +5,10 @@
  * first word pulled back to the line's start, so a wrapped line hangs
  * (`HangingLine` does the same for a Plain part's words).
  *
- * With chords off (and under a line-level part's chord row), a word is one
+ * With chords off, a word is one
  * text: its syllables are spans of it, each with its own colour, and the
- * words sit a space apart, as the page's words do. Under syllable-level
- * chords, each syllable with a chord over it is a box with its chords over
+ * words sit a space apart, as the page's words do. With chords on at either
+ * alignment level, each syllable with a chord over it is a box with its chords over
  * it (`over`), the words a fixed gap apart; a box widened by a long chord
  * stretches the hyphen after it; a box that can hold no chord keeps its
  * hyphen as a span of its text. The chordless syllables that follow a
@@ -29,7 +29,8 @@
  * without the visual join or trailing hyphens. While
  * the line is sung (`follow/`), it is `selected`, its syllables take the
  * muted colour and the sung syllable the accent: a change of colour only, so
- * nothing moves.
+ * nothing moves. A line without syllable times is highlighted whole, in
+ * the accent on a soft tint.
  *
  * A syllable's text takes no touch, so a tap in the target of the chord over
  * it (`chordSlop`, 44 points tall) opens that chord wherever the syllable

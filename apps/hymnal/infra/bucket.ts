@@ -12,7 +12,7 @@
  * narrow the origins once the web build's host is settled.
  */
 import * as Alchemy from 'alchemy';
-import * as Cloudflare from 'alchemy/Cloudflare';
+import * as Cloudflare from '@alchemy.run/cloudflare';
 
 import { HYMNS_HOST } from '../src/remote.ts';
 

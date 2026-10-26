@@ -5,20 +5,23 @@
  * Each line subscribes to its own mark, so a syllable moving on tells one line
  * and a line changing tells two (the one left and the one reached); the
  * other lines of the page are never drawn again. A line reads its mark as
- * one number: `OFF` when it is not the sung line, else the index of its sung
- * syllable (`-1` when none is lit: a line-level or Plain line, an unplayed
- * one, or a rest).
+ * one number: `OFF` when it is not the sung line, `WHOLE` for a line with
+ * no individual syllable times, else the index of its sung syllable (`-1`
+ * during a rest before the first timed syllable).
  */
 
 /** The mark of a line that is not being sung. */
 export const OFF = -2;
 
+/** A sung line with no individual syllable times, highlighted whole. */
+export const WHOLE = -3;
+
 export interface Marks {
-  /** The line's mark: `OFF`, or its sung syllable (`-1` for none). */
+  /** The line's mark: `OFF`, `WHOLE`, or its sung syllable (`-1` during a timed rest). */
   readonly markOf: (line: number) => number;
   /** Calls `listener` whenever the line's mark changes. */
   readonly subscribe: (line: number, listener: () => void) => () => void;
-  /** Marks `line` (`-1` for none) with its sung `syllable` (`-1` for none). */
+  /** Marks `line` (`-1` for none) with `WHOLE` or its sung `syllable` (`-1` during a timed rest). */
   readonly set: (line: number, syllable: number) => void;
   /** The sung line, `-1` for none. */
   readonly line: () => number;

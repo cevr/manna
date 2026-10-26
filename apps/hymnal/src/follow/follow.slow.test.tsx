@@ -236,12 +236,13 @@ describe('the follow on a hymn page', () => {
     expect(page.selected()).toEqual([]);
   });
 
-  it('marks a line with no syllable times but lights none of its words', () => {
+  it('highlights a line with no syllable times whole', () => {
     const { number, k, start } = lineLevel();
     using page = mount(number);
     page.at(start + 1);
     expect(page.selected()).toEqual([k]);
-    expect(page.colours(k)).not.toContain(ACCENT);
+    expect(page.colours(k).length).toBeGreaterThan(0);
+    expect(page.colours(k).every((colour) => colour === ACCENT)).toBe(true);
   });
 
   it('draws one line again when the sung syllable moves, and two when the line changes', () => {

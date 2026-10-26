@@ -51,6 +51,26 @@ The form of an entry, each field on its own line:
 
 ## Process and tooling
 
+### hymn-line-level-chord-anchors
+
+- **Date:** 2026-10-26
+- **Kind:** owner
+- **Said:** "the chords are not really at the syllables"
+- **Source:** oneup/owner-r1-look.md 1
+- **Wrong:** Line-level parts flattened their compiled chord anchors into a separate paragraph, so chords packed left and wrapped independently of syllables.
+- **Cause:** The reader treated lower timing confidence as a reason to discard available layout anchors.
+- **Guard:** code: `apps/hymnal/src/reader/line-level.test.tsx` `line-level chord anchors`
+
+### hymn-visible-untimed-follow
+
+- **Date:** 2026-10-26
+- **Kind:** owner
+- **Said:** "It's not highlighting here."
+- **Source:** oneup/owner-r1-look.md 2
+- **Wrong:** The follow selected an untimed line in accessibility but coloured all its syllables muted, with no visible highlight.
+- **Cause:** The no-syllable-time state had no distinct highlight treatment.
+- **Guard:** code: `apps/hymnal/src/follow/whole-line.test.tsx` `visible whole-line follow`
+
 ### hymn-boxed-paragraph-spoken-label
 
 - **Date:** 2026-10-26
@@ -3135,7 +3155,7 @@ The form of an entry, each field on its own line:
 - **Source:** the owner's report on the first Release build of the hymnal on his iPhone, 2026-10-22 (run hymnapp, after shell merged at 46263e5dd)
 - **Wrong:** The Release app threw "iOS SDK bindings need a native iOS build" at launch and closed; the Debug app ran.
 - **Cause:** One's `ios-runtime.native.js` connects the SDK bindings as a side effect, but One's `package.json` lists no side effect for it, so the tree-shaken Release bundle dropped the call; the Debug bundle is not tree-shaken, and no unit had built Release.
-- **Guard:** code: `apps/hymnal/vite/sdkruntime.test.ts` `with sdkRuntime, the tree-shaken bundle connects the SDK bindings`, `apps/hymnal/vite/sdkruntime.test.ts` `without it, One’s package drops the set-up, so the plugin is still needed`.
+- **Guard:** code: `apps/hymnal/vite/sdkruntime.test.ts` `One’s package preserves SDK initialization in a tree-shaken native bundle`.
 
 ### approval-counts-reached-steps-only
 

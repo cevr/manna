@@ -18,7 +18,7 @@
  * environment and binds them to the sync's Worker as secrets.
  */
 import * as Alchemy from 'alchemy';
-import * as Cloudflare from 'alchemy/Cloudflare';
+import * as Cloudflare from '@alchemy.run/cloudflare';
 import { Effect } from 'effect';
 
 import Search from './server/cloudflare/Search.ts';

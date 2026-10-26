@@ -27,7 +27,13 @@ import {
   useRef,
   useSyncExternalStore,
 } from 'react';
-import type { HostInstance, LayoutChangeEvent, ScrollViewInstance, TextStyle } from 'react-native';
+import type {
+  ColorValue,
+  HostInstance,
+  LayoutChangeEvent,
+  ScrollViewInstance,
+  TextStyle,
+} from 'react-native';
 
 import { color, useAccent } from '~/color';
 import { usePlayer } from '~/player/context';
@@ -38,7 +44,7 @@ import { book } from './book';
 import { followerOf, type Report } from './follower';
 import { handOf } from './hand';
 import { introOf } from './intro';
-import { type Marks, marksOf, OFF } from './marks';
+import { type Marks, marksOf, OFF, WHOLE } from './marks';
 import { seekCount } from './seeks';
 
 interface Follow {
@@ -64,7 +70,7 @@ export function FollowProvider({
   return <FollowContext value={value}>{children}</FollowContext>;
 }
 
-/** Line `index`'s mark: `OFF`, or its sung syllable (`-1` for none). */
+/** Line `index`'s mark: `OFF`, `WHOLE`, or its sung syllable (`-1` during a timed rest). */
 const useLineMark = (index: number): number => {
   const { marks } = use(FollowContext);
   const subscribe = useCallback(
@@ -81,8 +87,9 @@ const useLineMark = (index: number): number => {
  * view (kept for the follow's scroll), and each syllable's colour, by its
  * place in the line from 0. The sung line's syllables are muted and its
  * sung syllable is the accent; a line not sung keeps its own colour. The
- * line is not boxed or tinted: in the light theme the ink is the accent, so
- * the sung syllable shows only against muted ones.
+ * timed line has no tint: in the light theme the ink is the accent, so the
+ * sung syllable shows only against muted ones. Without syllable times, the
+ * whole line takes the accent on a soft tint, visible in either theme.
  */
 export const useLineFollow = (index: number) => {
   const { keep } = use(FollowContext);
@@ -97,19 +104,20 @@ export const useLineFollow = (index: number) => {
       }),
     [keep, index],
   );
+  const wordsStyle = wordsStyleOf(mark === WHOLE, accent);
   const syllableStyle = (syllable: number): TextStyle => {
     if (!marked) return {};
+    if (mark === WHOLE) return wordsStyle;
     if (syllable === mark) return { color: accent };
     return { color: color.muted };
   };
-  /** A line drawn as words alone (a Plain part) has no syllable to light: it is muted whole. */
-  const wordsStyle = wordsStyleOf(marked);
   return { marked, ref, syllableStyle, wordsStyle };
 };
 
-const wordsStyleOf = (marked: boolean): TextStyle => {
+/** A line without individual times is highlighted whole, with no layout change. */
+const wordsStyleOf = (marked: boolean, accent: ColorValue): TextStyle => {
   if (!marked) return {};
-  return { color: color.muted };
+  return { color: accent, backgroundColor: color.soft };
 };
 
 /** The player's state when no player is provided. */

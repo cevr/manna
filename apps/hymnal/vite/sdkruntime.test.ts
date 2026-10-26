@@ -4,13 +4,11 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Effect } from 'effect';
 import { build } from 'rolldown';
 
-import { sdkRuntime } from './sdkruntime';
-
 const app = new URL('..', import.meta.url).pathname;
 const entry = '\0sdk-entry';
 
 /** Bundles one module that calls the SDK, as One's iOS backends do, tree-shaken as the Release bundle is. */
-const bundle = (plugins: ReadonlyArray<ReturnType<typeof sdkRuntime>>) =>
+const bundle = () =>
   Effect.promise(() =>
     build({
       input: entry,
@@ -29,7 +27,6 @@ const bundle = (plugins: ReadonlyArray<ReturnType<typeof sdkRuntime>>) =>
               ? `import { callSDK } from 'one/ios-runtime'; globalThis.call = callSDK;`
               : undefined,
         },
-        ...plugins,
       ],
     }),
   ).pipe(
@@ -41,11 +38,7 @@ const bundle = (plugins: ReadonlyArray<ReturnType<typeof sdkRuntime>>) =>
 const setUp = 'createHybridObject("OneSDK")';
 
 describe('the Release bundle keeps One’s iOS SDK set-up', () => {
-  it.effect('with sdkRuntime, the tree-shaken bundle connects the SDK bindings', () =>
-    bundle([sdkRuntime()]).pipe(Effect.map((code) => expect(code).toContain(setUp))),
-  );
-
-  it.effect('without it, One’s package drops the set-up, so the plugin is still needed', () =>
-    bundle([]).pipe(Effect.map((code) => expect(code).not.toContain(setUp))),
+  it.effect('One’s package preserves SDK initialization in a tree-shaken native bundle', () =>
+    bundle().pipe(Effect.map((code) => expect(code).toContain(setUp))),
   );
 });

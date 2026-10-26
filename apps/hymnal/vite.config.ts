@@ -3,7 +3,6 @@ import { defineConfig } from 'vite';
 
 import { app } from './vite/app';
 import { hymnal } from './vite/hymnal';
-import { sdkRuntime } from './vite/sdkruntime';
 
 export default defineConfig({
   // The web dev client loads Reanimated from its source, which imports a CommonJS script for its
@@ -16,7 +15,7 @@ export default defineConfig({
       build: { server: { unified: true } },
       native: {
         // The native bundle is its own rolldown build: it takes the words too.
-        bundlerOptions: { plugins: [hymnal(), sdkRuntime()] },
+        bundlerOptions: { plugins: [hymnal()] },
         app,
       },
     }),

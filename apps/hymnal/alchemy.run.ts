@@ -11,7 +11,7 @@
  * into the bucket (`infra/audio/copy.ts`).
  */
 import * as Alchemy from 'alchemy';
-import * as Cloudflare from 'alchemy/Cloudflare';
+import * as Cloudflare from '@alchemy.run/cloudflare';
 import { Stage } from 'alchemy/Stage';
 import { Effect, Schema } from 'effect';
 

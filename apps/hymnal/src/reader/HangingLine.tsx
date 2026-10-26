@@ -8,8 +8,8 @@
  *
  * It draws a line of a Plain part, which carries words and no syllables; a
  * sung line is drawn as its syllables (`SyllableWords.tsx`). While the line
- * is sung (`follow/`), it is `selected` and its words take the muted colour:
- * it has no syllable to light.
+ * is sung (`follow/`), it is `selected` and its words take the accent on a
+ * soft tint: the line is highlighted whole, since it has no syllable times.
  */
 
 import { type StyleProp, StyleSheet, Text, type TextStyle, View } from 'react-native';

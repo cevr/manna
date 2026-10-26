@@ -22,7 +22,7 @@
 import { Option } from 'effect';
 
 import { type Clock, clockAt, observe, placeOf, SLACK } from './clock';
-import { marksOf } from './marks';
+import { marksOf, WHOLE } from './marks';
 import { placeAt, type Timeline } from './timeline';
 
 /** How long before a line is sung the page scrolls to it: about one beat. */
@@ -98,7 +98,9 @@ export const followerOf = (timeline: Timeline, host: Host) => {
     const place = placeAt(timeline, at);
     if (place.line !== marks.line() && place.line >= 0)
       host.log(`line i=${place.line} of=${timeline.lines.length} at=${Math.round(at)}`);
-    marks.set(place.line, place.syllable);
+    const line = timeline.lines[place.line];
+    if (line && line.syllables.length === 0) marks.set(place.line, WHOLE);
+    else marks.set(place.line, place.syllable);
     const ahead = placeAt(timeline, at + LEAD);
     // A seek shows the line sung now; playing on shows the next line LEAD ms early.
     let target = ahead.line;

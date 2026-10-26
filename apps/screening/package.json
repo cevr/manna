@@ -22,9 +22,10 @@
     "solid-js": "catalog:"
   },
   "devDependencies": {
+    "@alchemy.run/cloudflare": "2.0.0-beta.84",
     "@effect/platform-bun": "catalog:",
     "@effect/platform-node": "catalog:",
-    "alchemy": "2.0.0-beta.83",
+    "alchemy": "2.0.0-beta.84",
     "effect-bun-test": "catalog:"
   }
 }

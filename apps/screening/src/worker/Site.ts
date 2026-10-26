@@ -12,7 +12,7 @@
  * of its own.
  */
 import { RuntimeContext } from 'alchemy';
-import * as Cloudflare from 'alchemy/Cloudflare';
+import * as Cloudflare from '@alchemy.run/cloudflare';
 import { Stage } from 'alchemy/Stage';
 import { Effect, Option } from 'effect';
 import { HttpServerRequest } from 'effect/http';

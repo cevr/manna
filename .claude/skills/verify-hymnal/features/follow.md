@@ -3,8 +3,9 @@
 While a hymn plays, its page follows the singing. The line sung now is
 marked: its syllables turn muted and the syllable sung now takes the accent
 colour, with chords on or off, with no box and no underline. A line with no
-syllable times (a Plain part, or a line the score holds even) is marked
-whole: its words turn muted and none is lit. The page scrolls each line in about 600 ms
+syllable times (a Plain or line-level part, or a line the score holds even) is marked
+whole: its words take the accent on a soft tint, with no invented syllable timing.
+This stays visible in light mode, where accent equals ordinary ink. The page scrolls each line in about 600 ms
 before it is sung, a third of the way down, so a reader never scrolls by
 hand. With sound on, the marks keep time with the recording; with sound off
 (the `Sound` switch beside Play turned off), nothing sounds and they keep the score's time
@@ -18,7 +19,7 @@ brings the sung line back and follows again. The marked line is
 - `follow-play`: one tap on `Play hymn <n>` follows the hymn to its last line, with no other touch.
 - `follow-play-recording`: with sound on (web, muted browser), the marks follow the recording.
 - `follow-line`: exactly one line is marked at a time, in order, never back, each line longer than 1 s seen, and the marked line and the next line's top inside the page's scroll.
-- `follow-syllable`: the sung syllable in the accent colour, the rest of the marked line muted, chords on or off.
+- `follow-syllable`: with syllable times, the sung syllable in the accent colour, the rest of the marked line muted, chords on or off. Without syllable times, the whole line is highlighted in the accent on a soft tint.
 - `follow-sound`: with `Sound off`, Play sounds nothing and the marks run on the score's clock. One Play tap is enough: the player shows Playing from the first sung line, which is marked, with no seek. While a recording is still loading, `Sound off`, Pause and Stop answer at once, and a load that never answers is given up after 15 s.
 - `follow-hand`: a drag of the page while it plays shows `Resume follow` and stops the scroll; a tap on it brings the marked line back into view.
 - `follow-intro`: before the first sung line (the recording's intro, or a seek into it), a thin line over the first line fills; it is the `Introduction` progress bar (`testID` `intro`, value `N seconds to the first line`), adds no height, and is gone once line 0 is marked. With `Sound off` Play starts at the first line, so it shows only after a seek into the intro.
@@ -34,7 +35,7 @@ brings the sung line back and follows again. The marked line is
 
 - **Preconditions:** the hymn reader open (`sim open hymns/100 --expect "label=Play hymn 100"`). On iOS, `Sound off` before any Play: the `Sound` button's state is its value, which the presented `sim snapshot` does not show, so read it with `agent-device snapshot --json --raw --observe-only --force-full --session verify-hymnal` (the node labelled `Sound`: value `checked` is on, `unchecked` is off), and `sim tap label=Sound` while it reads `checked` (player.md, Gotchas). On iOS, Play is pressed only with sound off.
 - **States:** default (playing, paused by hand, ended), loading (web, before the recording sounds). Empty and error are n/a: every hymn has a timeline.
-- **Regression:** `apps/hymnal/src/follow/timeline.test.ts`, `apps/hymnal/src/follow/clock.test.ts`, `apps/hymnal/src/follow/follower.test.ts`, `apps/hymnal/src/player/sound.test.ts`, `apps/hymnal/src/follow/follow.slow.test.tsx`, `apps/hymnal/src/hymns/chords.property.test.ts` (the syllables of every sung line, one per syllable time), `apps/hymnal/scripts/follow.test.ts` (the checker's judge).
+- **Regression:** `apps/hymnal/src/follow/timeline.test.ts`, `apps/hymnal/src/follow/clock.test.ts`, `apps/hymnal/src/follow/follower.test.ts`, `apps/hymnal/src/player/sound.test.ts`, `apps/hymnal/src/follow/follow.slow.test.tsx`, `apps/hymnal/src/follow/whole-line.test.tsx` (visible untimed highlights), `apps/hymnal/src/hymns/chords.property.test.ts` (the syllables of every sung line, one per syllable time), `apps/hymnal/scripts/follow.test.ts` (the checker's judge).
 
 1. **One tap to the end (iOS, `follow-play`, `follow-line`, `follow-sound`).** With the page of hymn 100 open and `Sound off`, from the repo root: `bun run --cwd apps/hymnal follow --udid <udid> --hymn 100 --out "$EVIDENCE/follow"`. It presses `Play hymn 100` once, touches nothing else, records `follow-100.mp4` and reads the tree about every 0.5 s until the button reads `Play hymn 100 again`. → one JSON line, exit 0: `holds` true, `backwards` 0, `missed` [], `last` true, `outside` 0, `doubled` 0, `mismatched` 0, `adrift` 0 (each marked line is sung within 1.5 s of the sample's time on the score clock, which starts at the first sung line at the tap), `early` false (the player does not end more than 1.5 s before the timeline does), `ended` true, `touches` 1. Then the same on hymns 93 (a refrain after each stanza) and 212, each opened by `sim open` first.
 2. **The syllable (iOS, `follow-syllable`).** During step 1's run of 100 with chords off, `sim shot syllable-1` and, some seconds later, `sim shot syllable-2`. Crop the marked line 1:1 into the evidence. → one syllable in the accent colour, the rest of the line muted, a muted hyphen between the syllables of a word; no box, no underline. Then the same two shots with chords on (before the run, `sim tap "label=Open player"`, `sim tap label=Chords` (the sheet's switch) and a drag down of the sheet's grabber to close it, or a hold of the bar's `Key` (chords-and-capo.md, A hold); the same again after the run to put chords off): the chords keep their own colour over the syllables.

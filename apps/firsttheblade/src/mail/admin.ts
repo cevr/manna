@@ -1,6 +1,6 @@
 /**
  * What `bun run mail:send` (`../../scripts/mail-send.ts`) and the Worker's
- * send route (`./routes.ts`) say to each other: one contract, read on both
+ * admin route (`./routes.ts`) say to each other: one contract, read on both
  * sides.
  */
 import { Schema } from 'effect';
@@ -20,7 +20,7 @@ export const SendCounts = Schema.Struct({
   sent: Schema.Int,
   refused: Schema.Int,
   waiting: Schema.Int,
-  /** Sends that stopped before their outcome was kept: never sent again (`./list.ts`). */
+  /** Sends that stopped before their outcome was kept: never sent again (`./roster.ts`). */
   unsure: Schema.Int,
   queued: Schema.Int,
 });

@@ -23,7 +23,7 @@
  * emptied and deleted with the stage.
  */
 import * as Alchemy from 'alchemy';
-import * as Cloudflare from 'alchemy/Cloudflare';
+import * as Cloudflare from '@alchemy.run/cloudflare';
 import * as Effect from 'effect/Effect';
 
 /** The prod bucket's name, as `sounds/library.ts` names it in `store`. */

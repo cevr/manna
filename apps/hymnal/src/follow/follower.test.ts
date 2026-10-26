@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
 import { followerOf, type Host, LEAD, type Report } from './follower';
-import { OFF } from './marks';
+import { OFF, WHOLE } from './marks';
 import { type TimedLine, type Timeline, timelineOf } from './timeline';
 
 const line = (start: number, syllables: ReadonlyArray<number>): TimedLine => ({
@@ -59,6 +59,22 @@ const harness = (timeline: Timeline = three) => {
 const playing = (at: number): Report => ({ _tag: 'Here', at, state: 'playing' });
 
 describe('followerOf', () => {
+  it('distinguishes a timed rest from an untimed whole line', () => {
+    const h = harness({
+      lines: [line(1000, [1300]), line(2000, [])],
+      first: 1000,
+      end: 3000,
+    });
+    h.report(playing(1000));
+    expect(h.marks()).toEqual([-1, OFF]);
+    h.advance(299);
+    expect(h.marks()).toEqual([-1, OFF]);
+    h.advance(300);
+    expect(h.marks()).toEqual([0, OFF]);
+    h.advance(1000);
+    expect(h.marks()).toEqual([OFF, WHOLE]);
+  });
+
   it('marks nothing before the first sung line, then each line and syllable as it is sung', () => {
     const h = harness();
     h.report(playing(0));
@@ -68,7 +84,7 @@ describe('followerOf', () => {
     h.advance(1600);
     expect(h.marks()).toEqual([1, OFF, OFF]);
     h.advance(2100);
-    expect(h.marks()).toEqual([OFF, -1, OFF]);
+    expect(h.marks()).toEqual([OFF, WHOLE, OFF]);
     h.advance(3500);
     expect(h.marks()).toEqual([OFF, OFF, 1]);
     h.advance(4100);
@@ -89,7 +105,7 @@ describe('followerOf', () => {
     expect(at(1499)).toEqual([0, OFF]);
     expect(at(1500)).toEqual([1, OFF]);
     expect(at(2000)).toEqual([2, OFF]);
-    expect(at(3000)).toEqual([OFF, -1]);
+    expect(at(3000)).toEqual([OFF, WHOLE]);
     expect(at(4000)).toEqual([OFF, OFF]);
   });
 

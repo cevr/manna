@@ -13,7 +13,7 @@
  * off. Any other stage is a throwaway copy on a generated `workers.dev` name
  * and never touches the domain.
  */
-import * as Cloudflare from 'alchemy/Cloudflare';
+import * as Cloudflare from '@alchemy.run/cloudflare';
 import { Stage } from 'alchemy/Stage';
 import { Effect, Option } from 'effect';
 import { HttpServerRequest } from 'effect/http';

@@ -251,13 +251,16 @@ const syllableCount = (n: number) =>
   );
 
 describe('a hymn page with chords on and a line-level part', () => {
-  it('draws the chord row over the line’s syllables (F1c)', () => {
+  it('keeps the compiled chord anchors on the line’s syllables (F1c)', () => {
     const number = lineLevelHymn();
     using app = mount(<HymnPage hymn={hymn(number)} reader={readerOn(chordsOn())} />);
-    const html = app.host.innerHTML;
-    const row = /data-testid="chords-(\d+)-(\d+)"/.exec(html);
-    expect(row).not.toBeNull();
-    expect(html).toContain(`data-testid="syllable-${row?.[1]}-${row?.[2]}-1"`);
+    const chords = [...app.host.querySelectorAll('[data-testid^="chord-"]')];
+    expect(chords.length).toBeGreaterThan(0);
+    for (const chord of chords) {
+      const place = chord.getAttribute('data-testid')?.slice('chord-'.length);
+      expect(app.host.querySelector(`[data-testid="syllable-${place}"]`)).not.toBeNull();
+    }
+    expect(app.host.querySelector('[data-testid^="chords-"]')).toBeNull();
   });
 });
 

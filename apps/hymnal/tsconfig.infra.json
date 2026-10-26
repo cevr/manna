@@ -9,7 +9,6 @@
     "infra/**/*.ts",
     "scripts/**/*.ts",
     "src/remote.ts",
-    "vite/prebuild.ts",
     "vite/sdkruntime.test.ts",
     "vite/words.ts"
   ],

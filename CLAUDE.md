@@ -11,7 +11,7 @@ manna/
 │   ├── animations/     # Narrated cut-paper explainer films (@manna/animations, built on @manna/film)
 │   ├── egw-search/     # EGW search: Solid 2 page over an Effect HttpApi server (@manna/egw-search; Alchemy → Cloudflare, egw.cvr.im)
 │   ├── firsttheblade/  # The First the Blade site: Solid 2 prerender behind an Effect Worker (@manna/firsttheblade; Alchemy → Cloudflare)
-│   ├── hymnal/         # The hymnal app: One 2.9 (React 19.3, React Native 0.88) for iOS, Android and web (@manna/hymnal-app)
+│   ├── hymnal/         # The hymnal app: One 2.11 (React 19.3, React Native 0.88) for iOS, Android and web (@manna/hymnal-app)
 │   ├── selah/          # Native macOS Scripture memorization (@manna/selah; SwiftUI, FSRS)
 │   └── triedgold/      # triedgold.com (@manna/triedgold, React Router 8 SSR on a Worker; brand tokens in src/brand.ts; Alchemy → Cloudflare)
 ├── packages/
