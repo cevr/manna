@@ -1,9 +1,9 @@
 import { Effect, Layer, Schema } from 'effect';
 import type { HttpServerResponse } from 'effect/http';
+import * as PlatformError from 'effect/PlatformError';
 import { describe, expect, it } from 'effect-bun-test';
 import { AskName, AskRecord, AskState } from '../core/ask.ts';
 import { AskStore } from './ask-store.ts';
-import { FileInvalid } from './errors.ts';
 import { home } from './lab-home.ts';
 
 /** An ask `id` in `state`, decoded as the store decodes it. */
@@ -65,13 +65,19 @@ describe("the lab's home", () => {
     }),
   );
 
-  it.effect('with a store it cannot read, says nothing waits', () =>
+  it.effect('with an asks folder it cannot read, answers 500 and never says nothing waits', () =>
     Effect.gen(function* () {
-      const answer = yield* homeOver(
-        Effect.fail(FileInvalid.make({ file: '/nonexistent/asks', reason: 'unreadable' })),
-      );
-      expect(answer.status).toBe(200);
-      expect(words(answer)).toContain('<p>Nothing waits on you</p>');
+      const denied = PlatformError.systemError({
+        _tag: 'PermissionDenied',
+        module: 'FileSystem',
+        method: 'readDirectory',
+        pathOrDescriptor: '/nonexistent/asks',
+        description: 'EACCES',
+      });
+      const answer = yield* homeOver(Effect.fail(denied));
+      expect(answer.status).toBe(500);
+      expect(words(answer)).toContain('The asks could not be read (PlatformError)');
+      expect(words(answer)).not.toContain('Nothing waits on you');
     }),
   );
 });
