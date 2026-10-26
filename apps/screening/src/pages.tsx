@@ -55,7 +55,7 @@ h2 { margin: 32px 0 12px; font: 600 1.125rem/1.3 "New York", Georgia, ui-serif, 
 .cards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr)); margin: 0; padding: 0; list-style: none; }
 .card { display: block; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--card); text-decoration: none; }
 .card img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: #000; }
-.card .meta { padding: 12px 14px 14px; }
+.card .meta { display: block; padding: 12px 14px 14px; }
 .card .name { display: block; font-weight: 600; }
 .card .date { display: block; color: var(--muted); font-size: 0.9375rem; }
 video { display: block; width: 100%; max-height: 80vh; aspect-ratio: 16 / 9; border-radius: 12px; background: #000; }
@@ -87,20 +87,19 @@ const Document = (props: DocumentProps) => (
   </html>
 );
 
-/** A card linking to a page: its poster, its name and its date. */
+/** A card linking to a page: its poster, its name, and below it `detail`. */
 const Card = (props: {
   readonly href: string;
   readonly name: string;
+  readonly detail: string;
   readonly version: Version;
 }) => (
   <li>
     <a class="card" href={props.href}>
-      <img src={PATHS.asset(props.version.poster.key)} alt="" loading="lazy" decoding="async" />
+      <img src={PATHS.asset(props.version.poster.key)} alt="" decoding="async" />
       <span class="meta">
         <span class="name">{props.name}</span>
-        <span class="date">
-          {VERSION_LABELS[props.version.name]} · {dayLabel(props.version.day)}
-        </span>
+        <span class="date">{props.detail}</span>
       </span>
     </a>
   </li>
@@ -119,6 +118,7 @@ const IndexPage = (props: { readonly films: ReadonlyArray<FilmManifest> }) => {
               <Card
                 href={PATHS.folder(entry.film.film)}
                 name={entry.film.title}
+                detail={`${VERSION_LABELS[entry.newest.name]} · ${dayLabel(entry.newest.day)}`}
                 version={entry.newest}
               />
             )}
@@ -142,6 +142,7 @@ const FolderPage = (props: { readonly film: FilmManifest }) => (
           <Card
             href={PATHS.version(props.film.film, version.name)}
             name={VERSION_LABELS[version.name]}
+            detail={dayLabel(version.day)}
             version={version}
           />
         )}

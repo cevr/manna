@@ -2,20 +2,18 @@
  * `bun run keys [--stage s] [--env file]`: what the publisher needs to reach
  * a deployed stage, from the stack's outputs, into the publisher's
  * git-ignored `.env` (`../animations/.env` by default, where
- * `bun run screening` reads it): the account, the bucket-scoped S3 key pair,
- * the bucket's name and the site's URL (`SCREENING_*`).
+ * `bun run screening` reads it): the site's URL, the desk's URL and the
+ * desk's secret (`SCREENING_URL`, `SCREENING_DESK_URL`,
+ * `SCREENING_DESK_TOKEN`).
  *
- * The deploy keeps the token's value in the stack's local state
- * (`.alchemy/`, git-ignored). R2's S3 API takes the token's id as the access
- * key id and the sha256 of its value as the secret; both are derived here and
- * written beside whatever else `.env` holds, replacing only the `SCREENING_*`
- * lines, the file readable by its owner alone. Nothing but the variables'
- * names is printed.
+ * The deploy keeps the secret in the stack's local state (`.alchemy/`,
+ * git-ignored). It is written beside whatever else `.env` holds, replacing
+ * only the `SCREENING_*` lines, the file readable by its owner alone.
+ * Nothing but the variables' names is printed.
  */
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import { makeLocalState } from 'alchemy/State';
-import { Console, Crypto, Effect, FileSystem, Option, Path, Redacted, Schema } from 'effect';
-import { Hex } from 'effect/encoding';
+import { Console, Effect, FileSystem, Option, Path, Redacted, Schema } from 'effect';
 import { Command, Flag } from 'effect/cli';
 
 import { DOMAIN, SERVED_FROM } from '../src/site.ts';
@@ -25,11 +23,9 @@ const STACK = 'screening';
 
 /** The stack's outputs `keys` reads. */
 const SiteOutputs = Schema.Struct({
-  /** The Worker's `workers.dev` URL; none on a stage served from its custom domain alone. */
+  /** The site's `workers.dev` URL; none on a stage served from its custom domain alone. */
   url: Schema.OptionFromOptionalNullOr(Schema.String),
-  bucket: Schema.String,
-  accountId: Schema.String,
-  keyId: Schema.String,
+  desk: Schema.String,
   token: Schema.Redacted(Schema.String),
 });
 
@@ -57,13 +53,15 @@ const envWith = (existing: string, entries: ReadonlyArray<readonly [string, stri
   return `${kept}\n${added}\n`;
 };
 
+const bare = (url: string) => url.replace(/\/+$/, '');
+
 /**
  * The site's address on `stage`: `prod` served from its custom domain is
  * `https://films.cvr.im`; any other stage, its `workers.dev` URL.
  */
 const siteUrl = (stage: string, url: Option.Option<string>): string => {
   if (stage === 'prod' && SERVED_FROM === 'custom-domain') return `https://${DOMAIN}`;
-  return Option.getOrElse(url, () => '').replace(/\/+$/, '');
+  return bare(Option.getOrElse(url, () => ''));
 };
 
 const keys = Command.make(
@@ -71,7 +69,7 @@ const keys = Command.make(
   {
     stage: Flag.String('stage').pipe(
       Flag.withDefault('prod'),
-      Flag.withDescription('the stage whose key to write'),
+      Flag.withDescription('the stage to publish to'),
     ),
     env: Flag.String('env').pipe(
       Flag.withDefault('../animations/.env'),
@@ -81,36 +79,30 @@ const keys = Command.make(
   Effect.fn('screening.keys')(function* (input) {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const crypto = yield* Crypto.Crypto;
     const state = yield* makeLocalState();
     const raw = yield* state.getOutput({ stack: STACK, stage: input.stage });
     const found = Option.fromNullishOr(raw);
     if (Option.isNone(found)) return yield* SiteNotDeployed.make({ stage: input.stage });
     const outputs = yield* Schema.decodeUnknownEffect(SiteOutputs)(found.value);
-    const secret = Hex.encode(
-      yield* crypto.digest('SHA-256', new TextEncoder().encode(Redacted.value(outputs.token))),
-    );
     const file = path.resolve(input.env);
     let existing = '';
     if (yield* fs.exists(file)) existing = yield* fs.readFileString(file);
     const next = envWith(existing, [
-      ['SCREENING_ACCOUNT_ID', outputs.accountId],
-      ['SCREENING_ACCESS_KEY_ID', outputs.keyId],
-      ['SCREENING_SECRET_ACCESS_KEY', secret],
-      ['SCREENING_BUCKET', outputs.bucket],
       ['SCREENING_URL', siteUrl(input.stage, outputs.url)],
+      ['SCREENING_DESK_URL', bare(outputs.desk)],
+      ['SCREENING_DESK_TOKEN', Redacted.value(outputs.token)],
     ]);
     const partial = `${file}.partial`;
     yield* fs.writeFileString(partial, next, { mode: 0o600 });
     yield* fs.chmod(partial, 0o600);
     yield* fs.rename(partial, file);
     yield* Console.log(
-      `wrote SCREENING_ACCOUNT_ID, SCREENING_ACCESS_KEY_ID, SCREENING_SECRET_ACCESS_KEY, SCREENING_BUCKET, SCREENING_URL to ${file} (stage ${input.stage})`,
+      `wrote SCREENING_URL, SCREENING_DESK_URL, SCREENING_DESK_TOKEN to ${file} (stage ${input.stage})`,
     );
   }),
 ).pipe(
   Command.withDescription(
-    "The publisher's key, bucket and URL, from the deployed stack, into .env",
+    "The site's and the desk's URLs and the desk's secret, from the deployed stack, into .env",
   ),
 );
 

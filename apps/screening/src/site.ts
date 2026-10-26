@@ -19,6 +19,9 @@ export const DOMAIN = 'films.cvr.im';
 /** The Worker's script name on `prod`, which names its `workers.dev` host. */
 export const WORKER_NAME = 'screening';
 
+/** The desk's script name on `prod` (`./worker/Desk.ts`), on its `workers.dev` host alone. */
+export const DESK_NAME = 'screening-desk';
+
 /** The prod bucket's name. */
 export const PROD_BUCKET = 'screening';
 

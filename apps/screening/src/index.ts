@@ -1,18 +1,10 @@
 /**
- * The screening site as the publisher reads it: a film's manifest and its
- * keys in the bucket (`./manifest.ts`), and the plan of what publishing a
- * version writes (`./publish.ts`). The pages are Solid JSX: import
- * `@manna/screening/solid-ssr` before this module.
+ * The screening site as the publisher reads it: a film's manifest
+ * (`./manifest.ts`), what a version is made of (`./publish.ts`), and the
+ * desk that writes it to the bucket (`./desk-client.ts`). The pages are
+ * Solid JSX: call `registerSolidSsr` (`@manna/screening/solid-ssr`) before
+ * importing this module.
  */
-export {
-  type AssetExt,
-  type FilmManifest,
-  FilmManifestJson,
-  isManifestKey,
-  PATHS,
-  VERSION_LABELS,
-  VERSION_NAMES,
-  VersionName,
-  versionsOf,
-} from './manifest.ts';
-export { type Material, type MaterialFile, type MaterialPanel, publication } from './publish.ts';
+export { type FilmManifest, PATHS, VERSION_NAMES, versionsOf } from './manifest.ts';
+export { type Material, type MaterialFile } from './publish.ts';
+export { deskClient, publishTo } from './desk-client.ts';
