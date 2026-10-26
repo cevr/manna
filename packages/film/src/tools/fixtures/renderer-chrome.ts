@@ -1,5 +1,5 @@
 // The renderer's Chrome, as `ps` sees it: this process opens a view with the
-// renderer's flags (`launchArgs`, this platform's), reads the Chrome whose
+// renderer's flags (`launchArgs`), reads the Chrome whose
 // parent is this process, kills it, opens another view (Bun spawns Chrome
 // again) and reads that one. It prints one JSON line: its own pid and each
 // Chrome's command line. Run by `e2e/tools/renderer-chrome.dom.test.ts`, as a
@@ -34,7 +34,7 @@ const ours = Effect.gen(function* () {
 /** A view with the renderer's flags, open while the Chrome under it is read. */
 const viewed = Effect.scoped(
   Effect.gen(function* () {
-    const view = yield* openView(launchArgs(process.platform), { width: 800, height: 600 });
+    const view = yield* openView(launchArgs, { width: 800, height: 600 });
     yield* Effect.promise(() => view.navigate('about:blank'));
     return yield* ours;
   }),

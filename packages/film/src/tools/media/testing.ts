@@ -92,7 +92,6 @@ export const reviewMedia = (
         writeWav: () => unused,
         encodeAac: () => unused,
         join: () => unused,
-        shareCopy: () => unused,
       });
     }),
   );
@@ -138,8 +137,6 @@ export const fakeMedia = (
       encodeAac: () => Effect.succeed({ packets: [], meta: {} }),
       join: (film) => Effect.sync(() => void files.set(film.out, text(`mp4 ${film.frames}`))),
       remux: (video) => Effect.sync(() => void files.set(video, text(`remuxed ${video}`))),
-      shareCopy: (master, out) =>
-        Effect.sync(() => void files.set(out, text(`share of ${master}`))),
       load: (file, rate) =>
         Option.match(Option.fromNullishOr(files.get(file)), {
           onNone: () =>

@@ -329,7 +329,6 @@ describe.concurrent('Renderer', () => {
           '/out/test/film/main.mp4',
           '/out/test/film/main.share.mp4',
         ]);
-        expect(ledger.shareCopies).toEqual([]);
       }),
   );
 
@@ -356,26 +355,24 @@ describe.concurrent('Renderer', () => {
   );
 
   it.live(
-    'on Linux every chunk is encoded in software on the default pages, and x264 makes the share from the master',
+    '--encoder software encodes every chunk in software on its default pages, and makes no share copy',
     () =>
       Effect.gen(function* () {
+        const software = Option.some({ _tag: 'Software' } as const);
         const { ledger, render } = setup({ encoders: ['Software'] });
-        yield* render({ ...video, workers: Option.none(), share: true }, 'linux');
+        yield* render({ ...video, workers: Option.none(), share: false, encoder: software });
         expect(ledger.encoderAsked).toEqual([['Software']]);
         expect(ledger.pages.opened).toBe(1 + SOFTWARE_WORKERS);
         expect(ledger.encodedBy.length).toBe(ledger.encoders.spawned);
         expect(new Set(ledger.encodedBy)).toEqual(new Set(['Software']));
-        // One join, the master's; the share is x264's encode of it.
+        // One join, the master's.
         expect(ledger.joins.map((j) => j.out)).toEqual(['/out/test/film/main.mp4']);
-        expect(ledger.shareCopies).toEqual([
-          { master: '/out/test/film/main.mp4', out: '/out/test/film/main.share.mp4' },
-        ]);
         expectAllClosed(ledger);
 
         // One encoder a page, one a core: seventeen pages are too many for 16 cores.
         const over = setup({ encoders: ['Software'] });
         const error = yield* Effect.flip(
-          over.render({ ...video, workers: Option.some(17), share: true }, 'linux'),
+          over.render({ ...video, workers: Option.some(17), share: false, encoder: software }),
         );
         expect(error.message).toBe(
           '17 pages need 17 encoders at once, over the 16 software encoders a render may run; use --workers 16 or fewer',
@@ -386,7 +383,7 @@ describe.concurrent('Renderer', () => {
   it.live('a browser that cannot encode the film fails before a frame is drawn', () =>
     Effect.gen(function* () {
       const { ledger, render } = setup({ encoders: [] });
-      const exit = yield* Effect.exit(render(video, 'linux'));
+      const exit = yield* Effect.exit(render(video));
       expect(Exit.findErrorOption(exit).pipe(Option.map((e) => e._tag))).toEqual(
         Option.some('EncoderMissing'),
       );

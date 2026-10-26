@@ -207,11 +207,10 @@ render logs `render.encoder kind=…` and `bun run doctor` prints the same
 choice on its `encoder` line. The Mac renders on its hardware encoder only:
 if the GPU encoder fails the render stops with `EncoderMissing` rather than
 changing the film's look (`--encoder software` renders there in software on
-purpose). A Linux box (GPU launch flags are macOS-only) renders on Chromium's
-software encoder, and its share copy is made after the join by x264, in-process, from the
-master (`render.share by=x264`), which adds minutes but keeps the grain at
-half the size the in-page encoder needed (`packages/film/README.md`,
-"Encoders"). Each page runs one encoder, two on the Mac with the share copy.
+purpose, with no share copy: `--share` with it is refused, as the share copy
+is the hardware encoder's, made in the page; `packages/film/README.md`,
+"Encoders"). Each page runs one encoder, two on the hardware encoder with the
+share copy.
 On hardware past 14 at once the encoder hangs; on software more encoders than
 cores only thrash. So a render that would need more fails with
 `TooManyEncoders` before it draws (hardware: at most 7 pages with the share

@@ -15,8 +15,8 @@
 #    test's bun processes open is one its cached `test` task hashes
 #    (`test-reads.ts`).
 #
-# It runs under the host's test lock (`flock` where there is one, else
-# `lockf -k`, on `$LOCK`), so two slow suites on one machine take turns.
+# It runs under the host's test lock (`lockf -k` on `$LOCK`), so two slow
+# suites on one machine take turns.
 set -u
 cd "$(dirname "$0")/../../.."
 
@@ -24,7 +24,6 @@ LOCK=/tmp/manna-gate-tests.lock
 
 if [ "${MANNA_TEST_SLOW_LOCKED:-}" != 1 ]; then
   export MANNA_TEST_SLOW_LOCKED=1
-  if command -v flock >/dev/null 2>&1; then exec flock "$LOCK" sh "$0" "$@"; fi
   exec lockf -k "$LOCK" sh "$0" "$@"
 fi
 

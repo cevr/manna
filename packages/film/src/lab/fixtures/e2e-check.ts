@@ -1,8 +1,8 @@
 // `bun run test:e2e:check [--base <log>] [--log <log>]`: the film e2e, read
 // for what the change under test caused. It takes the host's e2e lock
-// (`flock` where there is one, else `lockf -k`, on /tmp/manna-e2e.lock)
-// for the whole run, so two workspaces on one machine queue rather than time
-// each other out; run inside an outer `flock`/`lockf` on that lock, it runs
+// (`lockf -k` on /tmp/manna-e2e.lock) for the whole run, so two
+// workspaces on one machine queue rather than time each other out; run
+// inside an outer `lockf` on that lock, it runs
 // in that hold instead of waiting on itself. Holding the lock, it waits (at
 // most LOAD_WAIT) for the host's load to fall to its core count. It runs the
 // suite (`test:e2e`), printing as it goes and keeping its output in `<log>`
@@ -136,7 +136,7 @@ const outputOf = (command: string, args: ReadonlyArray<string>) =>
 const processes = outputOf('ps', ['-A', '-o', 'pid=', '-o', 'ppid=', '-o', 'command=']);
 
 /**
- * Whether an ancestor of this process is a `flock`/`lockf` holding LOCK
+ * Whether an ancestor of this process is a `lockf` holding LOCK
  * itself: the lock file and each file an ancestor locks compared as the file
  * system resolves them (a path that does not resolve, as written).
  */
@@ -155,20 +155,13 @@ const heldOutside = Effect.gen(function* () {
   return heldByAncestor(commands, LOCK, (path) => resolved.get(path) ?? path);
 });
 
-/** Run this check again under the host's lock, `flock` if the machine has it, else `lockf -k`. */
+/** Run this check again under the host's lock, `lockf -k` (which keeps the lock file). */
 const underLock = (args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
-    const flock = (yield* exitOf('sh', ['-c', 'command -v flock'], { stdout: 'ignore' })) === 0;
-    // `lockf -k` keeps the lock file, as `flock` does.
-    const locker = Match.value(flock).pipe(
-      Match.when(true, () => ['flock', LOCK] as const),
-      Match.orElse(() => ['lockf', '-k', LOCK] as const),
-    );
-    const [command, ...lockArgs] = locker;
     yield* Console.log(
       `test:e2e:check: taking the host's e2e lock (${LOCK}); a run that holds it makes this one wait`,
     );
-    return yield* exitOf(command, [...lockArgs, process.execPath, import.meta.path, ...args], {
+    return yield* exitOf('lockf', ['-k', LOCK, process.execPath, import.meta.path, ...args], {
       env: { [HELD]: '1' },
       extendEnv: true,
       stdin: 'inherit',
@@ -350,7 +343,7 @@ const main = Effect.gen(function* () {
   if (Option.isSome(yield* Config.option(Config.String(HELD)))) return yield* check(flags);
   if (yield* heldOutside) {
     yield* Console.log(
-      `test:e2e:check: an outer flock/lockf already holds ${LOCK}: running in its hold (the check takes the lock itself, so it need not be wrapped)`,
+      `test:e2e:check: an outer lockf already holds ${LOCK}: running in its hold (the check takes the lock itself, so it need not be wrapped)`,
     );
     return yield* check(flags);
   }

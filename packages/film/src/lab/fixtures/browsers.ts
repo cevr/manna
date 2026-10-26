@@ -65,9 +65,8 @@ const flags = Effect.runSync(
     Effect.map(micFile, (wav) => [
       // The renderer's software 2D canvas (`tools/browser.ts`), as every test draws.
       '--disable-accelerated-2d-canvas',
-      // WebGL 2 on SwiftShader, Chrome's software GPU, as a render on Linux has it
-      // (`tools/browser.ts` `launchArgs`), so a rig the Rive Renderer draws (`src/rive`) is
-      // drawn. On every platform: the tests ask for no GPU, so their Chrome keeps the
+      // WebGL 2 on SwiftShader, Chrome's software GPU, so a rig the Rive Renderer
+      // draws (`src/rive`) is drawn: the tests ask for no GPU, so their Chrome keeps the
       // `--disable-gpu` Bun spawns it with, and SwiftShader is the only WebGL it can have.
       '--enable-unsafe-swiftshader',
       // Plays media without a gesture: the test is the reviewer, and it never clicks first.

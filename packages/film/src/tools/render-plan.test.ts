@@ -3,6 +3,7 @@ import { Option, Result } from 'effect';
 import { type Address, resolveAddress } from '../core/address.ts';
 import { ActName } from '../core/address-schema.ts';
 import { MAIN_VARIANT, RenderVariantName } from '../core/catalogue.ts';
+import { encoderNamed } from '../core/encoder.ts';
 import { layout } from '../core/layout.ts';
 import {
   Cut,
@@ -116,6 +117,18 @@ describe('jobOf', () => {
     expect(job._tag).toBe('Video');
     expect(job).toMatchObject({ scale: 1, share: false, from: Option.some(2) });
     expect(Result.getOrThrow(jobOf(flags))).toMatchObject({ _tag: 'Video', share: true });
+  });
+
+  test('a software render makes no share copy, and --share with --encoder software is refused', () => {
+    const software = { ...flags, encoder: Option.some(encoderNamed('software')) };
+    expect(Result.getOrThrow(jobOf(software))).toMatchObject({ _tag: 'Video', share: false });
+    expect(Result.getOrThrow(jobOf({ ...software, share: Option.some(false) }))).toMatchObject({
+      share: false,
+    });
+    const refused = Result.flip(jobOf({ ...software, share: Option.some(true) }));
+    expect(Result.getOrThrow(refused).message).toBe(
+      "--share does not go with --encoder software: the share copy is the hardware encoder's, made in the page beside the master",
+    );
   });
 
   test('a review render of the Board makes no share copy unless --share asks for one', () => {

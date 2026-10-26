@@ -56,12 +56,6 @@ export interface MediaService {
    */
   readonly remux: (video: string, audio: AacTrack) => Effect.Effect<void, MediaFailed>;
   /**
-   * The share copy of the film at `master`, written to `out`: its video
-   * encoded again by x264 at CRF `SHARE_CRF` (`media-bun.ts`, `x264.ts`),
-   * its track copied. `out` appears only once whole.
-   */
-  readonly shareCopy: (master: string, out: string) => Effect.Effect<void, MediaFailed>;
-  /**
    * A JPEG of the frame `video` shows at `at` seconds, `width` pixels wide,
    * written to `out` whatever its name.
    */

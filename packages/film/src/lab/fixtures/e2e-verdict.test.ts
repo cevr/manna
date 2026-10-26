@@ -284,8 +284,7 @@ describe('what blocks', () => {
     // Another workspace's lock is a wait, not this run's hold.
     expect(held(ancestorsIn(`${ps}\n   60     1 bun e2e-check.ts`, 60))).toBe(false);
     expect(held(['bun e2e-check.ts', outer])).toBe(true);
-    expect(held(['/usr/bin/flock /private/tmp/manna-e2e.lock bun x'])).toBe(true);
-    expect(held(['flock -w 30 /tmp/manna-e2e.lock bun x'])).toBe(true);
+    expect(held(['/usr/bin/lockf -k /private/tmp/manna-e2e.lock bun x'])).toBe(true);
     expect(held(['lockf -k -t 60 /tmp/manna-e2e.lock bun x'])).toBe(true);
     expect(held(['lockf -k /tmp/manna-gate.lock bun run gate', '-zsh'])).toBe(false);
   });
@@ -301,14 +300,11 @@ describe('what blocks', () => {
     expect(held(['bun run notes lockf /tmp/manna-e2e.lock'])).toBe(false);
     // A lock of the same name elsewhere is another lock.
     expect(held(['lockf -k /Users/cvr/tmp/manna-e2e.lock bun run test:e2e:check'])).toBe(false);
-    expect(held(['flock /tmp/manna-e2e.lock.old bun x'])).toBe(false);
+    expect(held(['lockf -k /tmp/manna-e2e.lock.old bun x'])).toBe(false);
     expect(lockedBy('/usr/bin/lockf -k -t 5 /tmp/x.lock bun x')).toEqual(
       Option.some('/tmp/x.lock'),
     );
-    expect(lockedBy('flock --wait=5 /tmp/x.lock bun x')).toEqual(Option.some('/tmp/x.lock'));
-    expect(lockedBy('flock --timeout 5 -E 3 /tmp/x.lock bun x')).toEqual(
-      Option.some('/tmp/x.lock'),
-    );
+    expect(lockedBy('lockf -s -t 5 /tmp/x.lock bun x')).toEqual(Option.some('/tmp/x.lock'));
     expect(lockedBy('lockf')).toEqual(Option.none());
     expect(lockedBy('blockfoo /tmp/x.lock')).toEqual(Option.none());
   });

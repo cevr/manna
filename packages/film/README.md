@@ -763,26 +763,23 @@ Playwright's headless shell), else Playwright's cached Chromium. Every later
 view names the same launcher and profile, so a Chrome Bun spawns again after
 the first one died runs its GPU too, in the same profile. The renderer asks
 for it (`launchArgs`), so `render`, `doctor` and the lab's `look` and
-look-book draw in one such Chrome; the browser tests do not, and no other
-platform does. On macOS that Chrome draws on the GPU: WebGL on Metal
+look-book draw in one such Chrome; the browser tests do not. That Chrome
+draws on the Mac's GPU: WebGL on Metal
 (`--use-angle=metal`) and the 2D canvas accelerated, which renders RBF's
 `cold` and `title` at 101 fps against 84 in software, with pixels the owner
 judged the same (2026-10-25; under 1 level on average, most on the
 anti-aliased edges of ink and text). Films render on the owner's Macs only.
-Elsewhere the 2D canvas stays software (`--disable-accelerated-2d-canvas`)
-and WebGL runs on SwiftShader, asked for by name
-(`--enable-unsafe-swiftshader`).
 `e2e/tools/renderer-chrome.dom.test.ts` reads the renderer's Chrome from `ps`
 on macOS: no `--disable-gpu`, exec'd by the launcher, and spawned again the
 same way.
 
-|                  | Hardware (macOS)                                           | Software (Linux, any box without a GPU encoder)                         |
-| ---------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------- |
-| Chromium flags   | `--enable-gpu --use-angle=metal`, through the GPU launcher | neither: Bun's `--disable-gpu` stays (`launchArgs`, `tools/browser.ts`) |
-| master           | quantizer 16 (~37 Mbps)                                    | 37 Mbps variable, 2-frame pre-roll (13.4 Mbps, 765 MB for 7.6 min)      |
-| share            | quantizer 26, in the page (~160 MB)                        | x264 CRF 22 from the joined master (2.2 Mbps, 126 MB)                   |
-| encoders at once | 14 (past it the encoder hangs)                             | one per core                                                            |
-| default pages    | 6                                                          | 8, or half the cores below 16                                           |
+|                  | Hardware (the default)                                     | Software (`--encoder software`)                                    |
+| ---------------- | ---------------------------------------------------------- | ------------------------------------------------------------------ |
+| Chromium flags   | `--enable-gpu --use-angle=metal`, through the GPU launcher | the same (`launchArgs`, `tools/browser.ts`)                        |
+| master           | quantizer 16 (~37 Mbps)                                    | 37 Mbps variable, 2-frame pre-roll (13.4 Mbps, 765 MB for 7.6 min) |
+| share            | quantizer 26, in the page (~160 MB)                        | none (`--share` is refused)                                        |
+| encoders at once | 14 (past it the encoder hangs)                             | one per core                                                       |
+| default pages    | 6                                                          | 8, or half the cores below 16                                      |
 
 `SETTINGS` (`player/encode.ts`) holds both columns; the hardware one
 (quantizer 16/26, prefer-hardware, a key frame every 2 s, latency mode
@@ -819,56 +816,19 @@ Frames after the first are P-frames on a better reference, and measured the
 same or better. The hardware path is untouched (preroll 0, the same
 `CanvasSource` as before).
 
-### Software share: x264 after the join
+### Software share: none
 
-The share is x264's (`Media.shareCopy`, `SHARE_CRF`), since the in-page
-software encoder kept the grain only at 24 Mbps (1.16 GB for 7 minutes): a
-mediabunny conversion of the joined master, its video encoded again by x264
-in-process (`tools/x264.ts`, libx264 through NodeAV, registered as
-mediabunny's `avc` encoder): CRF 22, preset slow, tune grain, level 4.1
-(preset slow's reference frames would raise it to 5.0), AAC copied, written
-into a partial beside `<out>` and renamed over it once whole. The review's
-derived files (a frame, a phone copy, a mix) are written whole too. It logs
-`render.share by=x264 secs=…`.
-
-x264 (core 165) spends 3.6 MB on 8 s of paper at 78–86 s and 4.0 MB at
-158–166 s, the grain kept. The in-page software share at 6, 10 and 14 Mbps
-(6.2, 10.1 and 12.7 MB for those 8 s) smoothed the paper flat.
-
-Not `@mediabunny/server`'s libx264: it (through NodeAV) runs a fixed
-`qp` with qmin = qmax on the default preset, with no CRF, preset or tune to
-pass (`@mediabunny/server/src/video-encoder.ts`), and at equal size it kept far
-less grain: q23 was 444 MB and kept 0.33–0.67, against x264 CRF 23 tune
-grain's 487 MB at 0.75–0.83; over those 8 s of paper, 4 Mbps (4.3 MB) and
-q22 (2.7 MB) both smoothed it flat.
-
-The share at righteousness-by-faith's 7 review frames (grain kept / SSIM Y),
-beside the master it came from, measured with the same settings on x264
-core 164:
-
-| t (s) | master      | x264 share  |
-| ----- | ----------- | ----------- |
-| 7.5   | 0.86 / 0.95 | 0.81 / 0.90 |
-| 81.5  | 0.92 / 0.92 | 0.85 / 0.90 |
-| 140.4 | 0.82 / 0.93 | 0.78 / 0.86 |
-| 161.5 | 0.94 / 0.91 | 0.89 / 0.88 |
-| 236.8 | 0.86 / 0.96 | 0.81 / 0.91 |
-| 241.5 | 0.83 / 0.95 | 0.81 / 0.91 |
-| 321.5 | 0.88 / 0.93 | 0.84 / 0.90 |
-
-One pass after the join, not per-segment passes beside the render, measured
-on the Workbox (16 cores): the one-pass render took 447.5 s (pages and join
-158.9 s, x264 288.6 s). x264 over the 52 segments, 4 at a time, while a
-`--no-share` render ran took 324.0 s, and the render beside it slowed from
-158.9 s to 385.7 s, so about 388 s in all: 60 s saved, for share segments
-to join (x264's parameter sets must then match across segments) and a render
-that no longer measures alone. Decided by subtract-before-you-add: the one
-pass stays.
+A software render makes no share copy: the in-page software encoder kept
+the grain only at 24 Mbps (1.16 GB for 7 minutes), so `--share` with
+`--encoder software` is refused (`jobOf`, `tools/render-plan.ts`), and a
+software render left to its default makes none. x264 (`tools/x264.ts`,
+libx264 in-process through NodeAV, registered as mediabunny's `avc`
+encoder) encodes the review's phone copies and the footage copies.
 
 The software default of 8 pages is the knee of renders of two scenes of
 `righteousness-by-faith` without the share copy, timed at each page count
-(1325 frames, 16 cores, the median of 3 runs; the share is x264's after the
-join, so the pages carry one encoder each):
+(1325 frames, 16 cores, the median of 3 runs; the pages carry one encoder
+each):
 
 | pages | 4    | 6    | 8    | 10    |
 | ----- | ---- | ---- | ---- | ----- |
@@ -4276,9 +4236,9 @@ real server does not serve.
 
 `bun run test:e2e:check [--base <log>] [--log <log>]` runs the same suite
 and says what the change under test caused. It takes the host's e2e lock
-itself for the whole run (`flock /tmp/manna-e2e.lock` on the workbox,
-`lockf -k` on a Mac, which has no `flock`), so two workspaces on one machine
-queue; it says so before it waits. Do not wrap it in `flock` or `lockf`: run
+itself for the whole run (`lockf -k /tmp/manna-e2e.lock`), so two
+workspaces on one machine queue; it says so before it waits. Do not wrap it
+in `lockf`: run
 inside an outer lock on that file, it sees the lock in its ancestors and runs
 in that hold rather than wait on itself. Holding the lock, it waits for the
 host's one-minute load to fall to its core count, at most twenty minutes,
@@ -4335,8 +4295,6 @@ page's own work takes seconds, and a suite of them only times out. From
 FILM_E2E_CPU_THROTTLE=20 lockf -k /tmp/manna-e2e.lock \
   bun src/lab/fixtures/run-suite.ts --max-concurrency=3 --preload ./e2e/preload.ts --timeout 20000 <file> -t '<case>'
 ```
-
-On the workbox, `flock /tmp/manna-e2e.lock` in place of `lockf -k …`.
 
 ## Knobs
 

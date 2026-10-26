@@ -10,7 +10,6 @@
 // is `PageError`, a dead renderer process is `PageCrashed`.
 
 import {
-  Array as Arr,
   Context,
   Deferred,
   Duration,
@@ -211,9 +210,8 @@ const LOAD_TIMEOUT = Duration.minutes(1);
 const SETTLE = Duration.seconds(1);
 
 /**
- * Chrome's flags on `platform` (`process.platform`). Films render on the
- * owner's Macs only (owner, 2026-10-25), so on macOS Chrome draws on the
- * Mac's GPU: the GPU process runs (`GPU_FLAG`: `tools/chrome.ts` spawns
+ * Chrome's flags for a render. Films render on the owner's Macs only
+ * (owner, 2026-10-25), so Chrome draws on the Mac's GPU: the GPU process runs (`GPU_FLAG`: `tools/chrome.ts` spawns
  * Chrome through the GPU launcher, `tools/chrome-gpu.ts`, which drops the
  * `--disable-gpu` Bun spawns every Chrome with), WebGL runs on Metal
  * (`--use-angle=metal`) and the 2D canvas is accelerated. It holds the
@@ -221,26 +219,17 @@ const SETTLE = Duration.seconds(1);
  * 2026-10-25): 101 fps at 4 pages against 84 fps drawn in software, the draw
  * 34 ms a frame to 8; the pixels move by under 1 level on average, most on
  * the anti-aliased edges of ink and text, and the owner judged the stills
- * the same ("I mean it looks the same. Yeah V2 looks okay"). Elsewhere the
- * 2D canvas draws in software and WebGL (a look drawn in 3D, `canvas/gl.ts`,
- * a `webgl2` rig) on SwiftShader, Chrome's software GPU, asked for by name:
- * Chrome is withdrawing the fallback it takes to it unasked, and without it a
- * 3D look would draw its 2D fallback, silently. There the page encodes in
- * software when it finds no hardware encoder (`chooseEncoder`,
- * player/encode.ts).
+ * the same ("I mean it looks the same. Yeah V2 looks okay").
  */
-export const launchArgs = (platform: string): ReadonlyArray<string> => [
+export const launchArgs: ReadonlyArray<string> = [
   '--disable-gpu-vsync',
   '--disable-frame-rate-limit',
-  ...Arr.filter([GPU_FLAG, '--use-angle=metal'], () => platform === 'darwin'),
-  ...Arr.filter(
-    ['--enable-unsafe-swiftshader', '--disable-accelerated-2d-canvas'],
-    () => platform !== 'darwin',
-  ),
+  GPU_FLAG,
+  '--use-angle=metal',
 ];
 
 /** A tab of this process's Chrome, with the renderer's flags, 1920 × 1080 CSS pixels at one device pixel each; closed with the scope. */
-const frameView = openView(launchArgs(process.platform), { width: 1920, height: 1080 });
+const frameView = openView(launchArgs, { width: 1920, height: 1080 });
 
 /** A script the page runs, `answer` once it is there: the export handle, waited for on the page's own timers. */
 const HANDLE = `new Promise((done) => {

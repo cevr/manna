@@ -178,8 +178,7 @@ export type RenderJob = Data.TaggedEnum<{
     readonly out: Option.Option<string>;
     /**
      * Also a small copy to send, `shareName(out)`: encoded in the same pass
-     * on the hardware encoder, made from the joined master by x264 on the
-     * software one (`Media.shareCopy`).
+     * on the hardware encoder. A software render makes none (`jobOf`).
      */
     readonly share: boolean;
     /** `--encoder`: the one encoder the render may use; none takes the platform's (`encoderCandidates`). */
@@ -338,6 +337,17 @@ export const jobOf = (flags: RenderFlags): Result.Result<RenderJob, FlagsConflic
     ...Arr.filter(['fresh'], () => freshOf(flags.reuse)),
   ]);
   const workers = Option.map(flags.workers, (n) => Math.max(1, n));
+  const software = Option.exists(flags.encoder, (e) => !sharesInPage(e));
+  // The share copy is the hardware encoder's, made in the page beside the master.
+  if (software && Option.getOrElse(flags.share, () => false))
+    return Result.fail(
+      FlagsConflict.make({
+        flag: 'share',
+        rule: 'excludes',
+        other: 'encoder software',
+        reason: "the share copy is the hardware encoder's, made in the page beside the master",
+      }),
+    );
   const base = {
     address: flags.scope.address,
     variant: flags.variant,
@@ -378,8 +388,9 @@ export const jobOf = (flags: RenderFlags): Result.Result<RenderJob, FlagsConflic
             to,
             scale: Option.getOrElse(flags.scale, () => 1),
             out: flags.out,
-            // A review render is watched, not sent: it makes its share copy only when asked.
-            share: Option.getOrElse(flags.share, () => !flags.review),
+            // A review render is watched, not sent: it makes its share copy only when
+            // asked. A software render makes none.
+            share: Option.getOrElse(flags.share, () => !flags.review && !software),
             encoder: flags.encoder,
             reuse: flags.reuse,
           }),
