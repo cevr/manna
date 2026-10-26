@@ -22,7 +22,10 @@
  * lifts with no drag lets it go on to the dial's value, the value as it is
  * at the lift: one set from outside while the finger is down (a second
  * finger on the twin dial or on Reset) is where the row goes. Only a row
- * the finger or its glide moved snaps to the nearest detent.
+ * the finger or its glide moved snaps to the nearest detent. The dial's own
+ * turns come back to it as its value, in order and maybe late (a busy
+ * JavaScript thread takes them seconds after the glide has ended): the row
+ * never turns back for them.
  * A double tap asks for a reset. VoiceOver reads the dial as adjustable:
  * a swipe up or down turns it one detent.
  *
