@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./webster": "./src/webster/index.ts",
     "./egw": "./src/egw/index.ts",
     "./egw-db": "./src/egw-db/index.ts",
     "./egw-db/bun": "./src/egw-db/book-database-bun.ts",

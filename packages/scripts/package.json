@@ -7,6 +7,7 @@
   "author": "",
   "type": "module",
   "scripts": {
+    "build:webster": "bun src/webster-compiler/main.ts",
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo && bun src/typecheck-coverage.ts",
     "test": "bun test --parallel=4 --path-ignore-patterns='**/*.slow.test.*' src lint",
     "test:slow": "bun test --parallel=4 .slow.test.",

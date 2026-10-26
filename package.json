@@ -10,6 +10,7 @@
     "apps/*"
   ],
   "scripts": {
+    "build:webster": "bun run --cwd packages/scripts build:webster",
     "build": "turbo run build",
     "build:topics": "bun run --cwd packages/scripts build:topics",
     "build:vectors": "bun run --cwd packages/scripts build:vectors",
