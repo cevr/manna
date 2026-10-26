@@ -341,6 +341,8 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 
 - Owner, 2026-10-26, on the pale held chords (`apps/hymnal/src/reader/Chords.tsx:66`, `tone: 'held'`: a line whose first syllable has no chord shows the chord held over from the line before, muted): "Okay, that makes sense. Yeah, we don't really need to Yeah, I don't think we really need it". Unit `heldhide` removes the held chord: a line with no new chord starts with no chord over it, and only the changes (gold) show. It runs after oneup merges (oneup r2 works in the same reader files), before selahone planning. (owner, heldhide)
 
+- Owner, 2026-10-26, on the order after heldhide: "lets do selah after we're done current queue". The hymnal queue runs first: heldhide, then playbulk (keyplay, playswap, followsync, chordplace, offline), findbulk, tuner, tempo, with checkbulk in a free slot. `selahone` planning starts after that queue. (owner, selahone)
+
 ## Owner questions
 
 - Clicks in silent mode (feel): keep them muted under the silent switch, as iOS keyboard clicks are (recommended: the phone stays quiet at worship), or play them even in silent mode (a new sound path, checked against the hymn audio session). Asked 2026-10-25. Answer (owner, 2026-10-25): "Yeah, the clicks, that's fine. Stay muted in silent mode". No change. (feel)
