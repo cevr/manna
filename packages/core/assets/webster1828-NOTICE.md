@@ -22,5 +22,15 @@ not fully documented. This snapshot is not a complete critical edition.
 The bounded dictionary-backed `-eth` / `-est` lookup is a heuristic. It does
 not resolve every KJV inflection or spelling, including the absent `shew`.
 
+The transcription also omits portions of etymologies and quotation-author
+credits, expands abbreviated biblical references, and sometimes renumbers
+senses. It is not a diplomatic transcription of the scans. Manna applies three
+scan-backed citation corrections in derived plaintext while preserving source
+HTML: `charity`, 1 Corinthians 8:1 → 1 Corinthians 13 (volume 1, leaf 373);
+`love`, 1 John 4:7 → 1 John 4 (volume 2, leaf 83); `prevent`, Psalms 119:148 →
+Psalms 119 (volume 2, leaf 353). The scans give chapter references only. No
+replacement verse number is inferred. These corrections are recorded in
+`packages/core/src/webster/corrections.ts` and projection metadata.
+
 Primary facsimiles: [volume 1](https://archive.org/details/americandictiona01websrich)
 and [volume 2](https://archive.org/details/americandictiona02websrich).

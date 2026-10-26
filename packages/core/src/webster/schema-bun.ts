@@ -4,7 +4,7 @@ import { Effect } from 'effect';
 import { WebsterError } from './model.js';
 import { WEBSTER_SCHEMA_VERSION, WEBSTER_SOURCE } from './source.js';
 
-export const websterMetadata = (db: Database): ReadonlyMap<string, string> =>
+const websterMetadata = (db: Database): ReadonlyMap<string, string> =>
   new Map(
     db
       .query<{ key: string; value: string }, []>('SELECT key, value FROM meta')

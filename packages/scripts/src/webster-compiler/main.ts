@@ -38,6 +38,8 @@ const command = Command.make(
         csv: bytes,
         destination: args.out,
         expectedDigest: WEBSTER_SOURCE.sha256,
+        expectedRecords: WEBSTER_SOURCE.records,
+        expectedKeys: WEBSTER_SOURCE.keys,
       });
       yield* Console.log(
         `${result.path}: ${result.records} records, ${result.keys} keys; ${result.size} bytes; sha256:${result.sha256}`,

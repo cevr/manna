@@ -45,6 +45,26 @@ const loadEnvDefines = Effect.fn('loadEnvDefines')(function* (rootDir: string) {
  *  is copied off this machine. */
 const DATA_ASSETS = [
   {
+    source: 'packages/core/data/webster.db',
+    name: 'webster.db',
+    label: 'Webster 1828 artifact (bun run build:webster)',
+  },
+  {
+    source: 'packages/core/data/webster.manifest.json',
+    name: 'webster.manifest.json',
+    label: 'Webster build manifest',
+  },
+  {
+    source: 'packages/core/assets/webster1828-NOTICE.md',
+    name: 'webster1828-NOTICE.md',
+    label: 'Webster attribution and limitations',
+  },
+  {
+    source: 'packages/core/assets/webster1828-LICENSE.txt',
+    name: 'webster1828-LICENSE.txt',
+    label: 'Webster data licence',
+  },
+  {
     source: 'packages/core/data/topics.db',
     name: 'topics.db',
     label: 'Topics artifact',

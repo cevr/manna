@@ -19,9 +19,21 @@ import {
 import {
   layerNativeBibleArtifacts,
   layerNativeTopicsArtifacts,
+  layerNativeWebsterArtifacts,
   type NativeFileArtifactSource,
 } from '@manna/core/corpus-supply/bun';
-import { Config, Console, Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
+import {
+  Config,
+  Console,
+  Effect,
+  FileSystem,
+  Inspectable,
+  Layer,
+  Option,
+  Path,
+  Result,
+  Schema,
+} from 'effect';
 import { Command, Flag } from 'effect/cli';
 import { HttpClient, HttpClientResponse } from 'effect/http';
 
@@ -115,6 +127,57 @@ const ensureArtifacts = (bibleDir: string, path: Path.Path, force: boolean) => {
   }).pipe(Effect.provide(supply));
 };
 
+/** Build the optional Webster supply at the command boundary. */
+const ensureWebsterArtifacts = (input: {
+  readonly destination: string;
+  readonly sources: readonly NativeFileArtifactSource[];
+  readonly refresh?: boolean;
+}) =>
+  CorpusSupply.use((supply) =>
+    supply.ensure({ target: Target.webster(), refresh: input.refresh }),
+  ).pipe(
+    Effect.provide(CorpusSupply.layer.pipe(Layer.provide(layerNativeWebsterArtifacts(input)))),
+  );
+
+const installWebster = Effect.fn('Init.installWebster')(function* (
+  directory: string,
+  path: Path.Path,
+  refresh: boolean,
+) {
+  const destination = path.join(directory, 'webster.db');
+  const result = yield* Effect.result(
+    ensureWebsterArtifacts({
+      destination,
+      refresh,
+      sources: [
+        ...packagedDataCandidates('webster.db').map((candidate): NativeFileArtifactSource => ({
+          kind: 'packaged',
+          path: candidate,
+          label: 'packaged-webster',
+        })),
+        {
+          kind: 'workspace',
+          path: path.resolve(process.cwd(), 'packages/core/data/webster.db'),
+          label: 'workspace-webster',
+        },
+        { kind: 'runtime', path: destination, label: 'runtime-webster' },
+      ],
+    }),
+  );
+  if (Result.isFailure(result)) {
+    yield* Console.error(
+      `✗ webster.db — installation unavailable or rejected: ${Inspectable.toStringUnknown(result.failure, 0)}`,
+    );
+    yield* Console.error(
+      '  Run bun run build:webster, then manna init. Binary distributions must ship data/webster.db and its licence/notice.',
+    );
+    return;
+  }
+  let status = 'ready';
+  if (result.success.activated.length > 0) status = 'installed and verified';
+  yield* Console.log(`✓ webster.db (${status})`);
+});
+
 export const init = Command.make('init', { force }, (args) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -134,6 +197,7 @@ export const init = Command.make('init', { force }, (args) =>
       bibleStatus = 'ready';
     }
     yield* Console.log(`✓ bible.db (${bibleStatus})`);
+    yield* installWebster(bibleDir, path, args.force);
 
     yield* Option.match(topics, {
       onNone: () =>

@@ -14,7 +14,12 @@ import {
 } from '../corpus-supply/topics-verifier.js';
 import { Effect, Option, Schema } from 'effect';
 import { checkWebsterSchema } from '../webster/schema-bun.js';
-import { WEBSTER_SOURCE, normalizeHeadword, definitionText } from '../webster/source.js';
+import {
+  WEBSTER_SOURCE,
+  WEBSTER_PROJECTION_VERSION,
+  normalizeHeadword,
+  sourceDefinition,
+} from '../webster/source.js';
 
 import {
   closeDatabase,
@@ -102,6 +107,7 @@ export const verifyWebsterDatabase = (filename: string): Effect.Effect<number, u
         if (integrity !== 'ok') return yield* Effect.fail('Webster SQLite integrity check failed');
         for (const [key, expected] of Object.entries({
           source_url: WEBSTER_SOURCE.url,
+          projection_version: WEBSTER_PROJECTION_VERSION,
           source_revision: WEBSTER_SOURCE.revision,
           source_sha256: WEBSTER_SOURCE.sha256,
           licence: WEBSTER_SOURCE.licence,
@@ -133,7 +139,7 @@ export const verifyWebsterDatabase = (filename: string): Effect.Effect<number, u
                   row.id === index + 1 &&
                   row.key === normalizeHeadword(row.headword) &&
                   row.source_html.trim().length > 0 &&
-                  row.definition === definitionText(row.source_html),
+                  row.definition === sourceDefinition(row.headword, row.source_html),
               );
             const duplicates = db
               .query<{ key: string; n: number }, []>(

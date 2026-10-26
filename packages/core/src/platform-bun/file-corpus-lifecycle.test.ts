@@ -18,7 +18,7 @@ import type { CorpusName, CorpusProvenance } from '../corpus-supply/model.js';
 import { CorpusSupply } from '../corpus-supply/service.js';
 import { Target } from '../corpus-supply/model.js';
 import { layerNativeWebsterArtifacts } from './bible-artifact.js';
-import { writeWebsterFixture } from '../webster/fixture-bun.js';
+import { writeWebsterFixture } from '../webster/fixtures/sqlite-bun.js';
 import {
   layerNativeFileArtifacts,
   type NativeFileArtifactProvenanceStore,

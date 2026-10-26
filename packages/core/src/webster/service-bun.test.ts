@@ -3,7 +3,7 @@ import { Database } from 'bun:sqlite';
 import { Effect, FileSystem, Layer, Result } from 'effect';
 import { expect, it } from 'bun:test';
 
-import { writeWebsterFixture } from './fixture-bun.js';
+import { writeWebsterFixture } from './fixtures/sqlite-bun.js';
 import { layerWebsterBun } from './service-bun.js';
 import { WebsterService } from './service.js';
 import type { WebsterEntry } from './model.js';
