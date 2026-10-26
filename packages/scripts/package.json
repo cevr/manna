@@ -12,7 +12,6 @@
     "test:slow": "bun test --parallel=4 .slow.test.",
     "build:topics": "bun src/topics-compiler/main.ts",
     "build:vectors": "bun src/vector-compiler/main.ts",
-    "fetch:stills": "bun src/fetch-stills.ts",
     "dead-exports": "bun src/dead-exports.ts",
     "judged:measure": "bun --no-env-file src/judged/measure.ts",
     "judged:quality": "bun --no-env-file src/judged/quality-run.ts"
