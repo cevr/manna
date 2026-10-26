@@ -13,47 +13,38 @@
  * shares the sending domain with prod (`./domain.ts`).
  *
  * The email list's routes run in the same Worker, over D1, Email Sending, a
- * Queue and a Rate Limit (`./mail.ts`). Its two secrets, `MAIL_TOKEN_KEY` (the
- * key its links are signed with) and `MAIL_ADMIN_TOKEN` (what `bun run
- * mail:send` must show), are read from the deployer's environment and bound
- * as Worker secrets; they are never in the repository. The Worker is also the
- * queue's consumer: each batch of a film's send is delivered here
- * (`../mail/deliver.ts`). Its cron trigger runs the daily purge of sign-ups
- * never confirmed (`../mail/purge.ts`).
+ * Queue and a Rate Limit, with the list's model on Durable Objects
+ * (`./mail.ts`). Its two secrets, `MAIL_TOKEN_KEY` (the key its ids and links
+ * are hashed with) and `MAIL_ADMIN_TOKEN` (what `bun run mail:send` must
+ * show), are read from the deployer's environment and bound as Worker
+ * secrets; they are never in the repository. The Worker is also the queue's
+ * consumer: each batch of a film's send is delivered here
+ * (`../mail/deliver.ts`). A sign-up never confirmed runs out on its own
+ * schedule, in the model (`../list/SignUpExpiry.policy.ts`).
  */
-import type { RuntimeContext } from 'alchemy';
 import { Stage } from 'alchemy/Stage';
 import * as Cloudflare from '@alchemy.run/cloudflare';
-import { Config, Effect, Layer, Option, Schema, Stream } from 'effect';
+import { Context, Effect, Layer, Option, Schema, Stream } from 'effect';
 import { HttpServerRequest } from 'effect/http';
 
 import { deliver } from '../mail/deliver.ts';
 import { warnMail } from '../mail/log.ts';
-import { purge, PURGE_CRON } from '../mail/purge.ts';
 import { Delivery } from '../mail/queue.ts';
 import type { MailServices } from '../mail/routes.ts';
 
 import { DOMAIN, REDIRECTED_DOMAINS, SERVED_FROM, type ServedFrom, WORKER_NAME } from '../site.ts';
 import { Assets } from './assets.ts';
-import {
-  DELIVERY,
-  layerCloudflare,
-  MailBindings,
-  MailDatabase,
-  MailQueue,
-  MailSender,
-  SignupLimit,
-} from './mail.ts';
+import { DELIVERY, layerCloudflare, MailBindings, MailQueue } from './mail.ts';
 import { respond } from './respond.ts';
 
 const readDelivery = Schema.decodeUnknownOption(Delivery);
 
 /** The Worker's answer to a request: the policy, over the site's services. */
-const serve = (services: Layer.Layer<MailServices, never, RuntimeContext>) =>
+const serve = (services: Context.Context<MailServices>) =>
   Effect.gen(function* () {
     const request = yield* HttpServerRequest.HttpServerRequest;
     return yield* respond(request);
-  }).pipe(Effect.provide(services));
+  }).pipe(Effect.provideContext(services));
 
 const ASSETS = {
   directory: 'dist',
@@ -99,15 +90,7 @@ export default class Site extends Cloudflare.Worker<Site>()(
         Cloudflare.fromCloudflareFetcher(env['ASSETS']).fetch(request).pipe(Effect.orDie),
     });
     const queue = yield* MailQueue;
-    const mail = layerCloudflare({
-      db: yield* Cloudflare.D1.QueryDatabase(MailDatabase),
-      email: yield* Cloudflare.Email.Send(MailSender),
-      queue: yield* Cloudflare.Queues.WriteQueue(queue),
-      limit: yield* SignupLimit,
-      exec: yield* Cloudflare.WorkerExecutionContext,
-      tokenKey: yield* Config.Redacted('MAIL_TOKEN_KEY'),
-      adminToken: yield* Config.Redacted('MAIL_ADMIN_TOKEN'),
-    });
+    const mail = yield* Effect.context<Exclude<MailServices, Assets>>();
 
     // A batch fails only when a letter could not be sent now; the queue
     // then tries the whole batch again, and what was sent is passed over.
@@ -120,13 +103,9 @@ export default class Site extends Cloudflare.Worker<Site>()(
           else yield* warnMail('film.unreadable', { message: message.id });
         }
         yield* deliver(deliveries);
-      }).pipe(Effect.provide(mail)),
+      }).pipe(Effect.provideContext(mail)),
     );
 
-    yield* Cloudflare.Workers.cron(PURGE_CRON, () => purge().pipe(Effect.provide(mail)));
-
-    return {
-      fetch: serve(Layer.merge(Layer.succeed(Assets, assets), mail)),
-    };
-  }).pipe(Effect.provide(MailBindings)),
+    return { fetch: serve(Context.add(mail, Assets, assets)) };
+  }).pipe(Effect.provide(layerCloudflare.pipe(Layer.provideMerge(MailBindings)))),
 ) {}

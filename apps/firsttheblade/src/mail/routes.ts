@@ -7,8 +7,10 @@
  *   honeypot, a new address, a pending one and a confirmed one all answer
  *   the same 303 to the check page, and the answer does not wait for the
  *   work on the address (`./background.ts`), so neither the page nor the
- *   time it takes tells who is on the list; only a new or pending address (at most
- *   once an hour) is sent a confirm letter.
+ *   time it takes tells who is on the list. That work keeps the address in
+ *   the address book and signs its subscriber up in the model
+ *   (`../list/`), whose `ConfirmLetter` policy sends the letter: only to a
+ *   new or pending address, at most once an hour.
  * - `GET /subscribe/confirm?token=`: the one-button page, and nothing more,
  *   since mail scanners open links; a browser's script presses its button
  *   as it opens, and `POST` (the button) confirms, 303 to the confirmed page. A link that ran out or was replaced goes to a page that
@@ -17,28 +19,39 @@
  *   button or from a mail app's one click (RFC 8058), and answers the left
  *   page, 200, never a redirect. Leaving twice is leaving.
  * - `POST /mail/send`, with `Authorization: Bearer <MAIL_ADMIN_TOKEN>`: puts
- *   a film's send on the queue (`./deliver.ts`), or with `dryRun` counts it.
+ *   a film's send on the queue (`./deliver.ts`), for each subscriber the
+ *   roster says still waits for it, or with `dryRun` counts it.
+ * - `POST /mail/import`, with the same token: brings the D1 list's
+ *   subscribers into the model (`./legacy.ts`); running it again changes
+ *   nothing.
  *
  * Every answer is a redirect, a page or a short text, and the logs name
  * ids, counts and codes, never an address or a token.
  */
-import { Clock, Context, Crypto, Duration, Effect, Exit, Option, Redacted, Schema } from 'effect';
+import type { Key } from '@alchemy.run/domain/Aggregate';
+import { Clock, Context, Crypto, Duration, Effect, Option, Redacted, Schema } from 'effect';
 import { Headers, type HttpServerRequest, HttpServerResponse, UrlParams } from 'effect/http';
 
+import { Confirm } from '../list/ConfirmLink.command.ts';
+import { Leave } from '../list/Leave.command.ts';
+import { SignUp } from '../list/SignUp.command.ts';
+import { Subscriber } from '../list/Subscriber.aggregate.ts';
+import type { SubscriberId } from '../list/Subscriber.id.ts';
+import { CONFIRM_FOR } from '../list/timing.ts';
 import { Assets, pageRequest } from '../worker/assets.ts';
 import { type Address, addressOf } from './address.ts';
+import { Addresses } from './addresses.ts';
+import { type ImportAnswer, type SendAnswer, SendRequest } from './admin.ts';
 import { Background } from './background.ts';
 import { Films } from './films.ts';
-import { confirmLetter } from './letters.ts';
-import { type SendAnswer, SendRequest } from './admin.ts';
-import { type ConfirmClaim, List } from './list.ts';
+import { legacySubscribers } from './legacy.ts';
 import { logMail, reasonOf, warnMail } from './log.ts';
-import { Mailer } from './mailer.ts';
 import { MAIL_PAGES, MAIL_ROUTES, SIGNUP_FIELDS } from './paths.ts';
 import { BATCH, FilmQueue, type QueueError } from './queue.ts';
-import type { SqlError } from './sql.ts';
+import { RosterTable } from './roster.ts';
+import type { Sql, SqlError } from './sql.ts';
 import { Throttle } from './throttle.ts';
-import { CONFIRM_FOR, type Token, Tokens } from './tokens.ts';
+import { type Token, Tokens } from './tokens.ts';
 
 /** The secret `bun run mail:send` sends as its bearer token. */
 export class AdminToken extends Context.Service<AdminToken, Redacted.Redacted<string>>()(
@@ -48,8 +61,10 @@ export class AdminToken extends Context.Service<AdminToken, Redacted.Redacted<st
 /** Everything the routes need from their host. */
 export type MailServices =
   | Assets
-  | List
-  | Mailer
+  | Key<'Subscriber'>
+  | Addresses
+  | RosterTable
+  | Sql
   | Tokens
   | Throttle
   | FilmQueue
@@ -62,7 +77,8 @@ const see = (path: string) => HttpServerResponse.redirect(path, { status: 303 })
 
 const text = (body: string, status: number) => HttpServerResponse.text(body, { status });
 
-const json = (body: SendAnswer, status: number) => HttpServerResponse.jsonUnsafe(body, { status });
+const json = (body: SendAnswer | ImportAnswer, status: number) =>
+  HttpServerResponse.jsonUnsafe(body, { status });
 
 /** A page the prerender wrote, as this route's answer. */
 const page = Effect.fn('Mail.page')(function* (
@@ -94,31 +110,21 @@ const placeOf = (request: HttpServerRequest.HttpServerRequest) =>
 
 /**
  * What a sign-up does beside its answer, which does not wait for it: the
- * address goes on the list, and its confirm letter is sent when one may go.
- * Its time is read here, when it runs. Every failure, a defect too, is
- * logged and changes no answer; a letter that could not be made or sent
- * gives its claim back, so a second try sends one.
+ * address is kept, then its subscriber signs up in the model, whose
+ * `ConfirmLetter` policy sends the letter when a link was issued. Its time is
+ * read here, when it runs. Every failure, a defect too, is logged and
+ * changes no answer.
  */
 const signUpAfter = Effect.fn('Mail.signUpAfter')(
   function* (address: Address, origin: string) {
-    const list = yield* List;
-    const claim = yield* list.signUp(address, yield* Clock.currentTimeMillis);
-    if (Option.isNone(claim)) return yield* logMail('subscribe.quiet');
-    const subscriber = claim.value.subscriber;
     const tokens = yield* Tokens;
-    const mailer = yield* Mailer;
-    const sent = yield* Effect.exit(
-      Effect.gen(function* () {
-        const token = yield* tokens.sign({ _tag: 'Confirm', ...claim.value });
-        yield* mailer.send(confirmLetter(address, origin, token));
-      }),
-    );
-    if (Exit.isSuccess(sent)) return yield* logMail('subscribe.mailed', { subscriber });
-    yield* warnMail('subscribe.unsent', {
-      subscriber,
-      reason: reasonOf(sent.cause, (failure) => failure.code),
-    });
-    yield* list.release(claim.value);
+    const addresses = yield* Addresses;
+    const subscribers = yield* Subscriber;
+    const subscriber = yield* tokens.idOf(address);
+    yield* addresses.keep(subscriber, address, yield* Clock.currentTimeMillis);
+    const { reply } = yield* subscribers.send(subscriber, SignUp.make({ origin }));
+    if (Option.isNone(reply.issued)) return yield* logMail('subscribe.quiet');
+    yield* logMail('subscribe.issued', { subscriber });
   },
   Effect.catchCause((cause) =>
     warnMail('subscribe.failed', { reason: reasonOf(cause, (failure) => failure._tag) }),
@@ -147,6 +153,12 @@ const subscribe = Effect.fn('Mail.subscribe')(function* (
   yield* background.run(signUpAfter(address.value, originOf(request)));
   return see(MAIL_PAGES.check);
 });
+
+/** The link a confirm token names: its subscriber, and when it was issued. */
+interface ConfirmClaim {
+  readonly subscriber: SubscriberId;
+  readonly issued: number;
+}
 
 /** The claim a confirm link makes, while it is one and has not run out. */
 const claimOf = (read: Token, now: number): Option.Option<ConfirmClaim> => {
@@ -196,9 +208,13 @@ const confirm = Effect.fn('Mail.confirm')(function* (request: HttpServerRequest.
     yield* logMail('confirm.expired');
     return see(MAIL_PAGES.expired);
   }
-  const list = yield* List;
-  const outcome = yield* list.confirm(claim.value, now);
-  yield* logMail(`confirm.${outcome}`, { subscriber: claim.value.subscriber });
+  const subscribers = yield* Subscriber;
+  const { subscriber, issued } = claim.value;
+  const outcome = yield* subscribers.send(subscriber, Confirm.make({ issued })).pipe(
+    Effect.as('confirmed' as const),
+    Effect.catchTag('StaleLink', () => Effect.succeed('invalid' as const)),
+  );
+  yield* logMail(`confirm.${outcome}`, { subscriber });
   if (outcome === 'confirmed') return see(MAIL_PAGES.confirmed);
   return see(MAIL_PAGES.expired);
 });
@@ -238,8 +254,8 @@ const leave = Effect.fn('Mail.leave')(function* (request: HttpServerRequest.Http
     yield* logMail('unsubscribe.invalid');
     return yield* page(request, MAIL_PAGES.badLink, 400);
   }
-  const list = yield* List;
-  yield* list.unsubscribe(leaver.value, yield* Clock.currentTimeMillis);
+  const subscribers = yield* Subscriber;
+  yield* subscribers.send(leaver.value, Leave.make({}));
   yield* logMail('unsubscribe.done', { subscriber: leaver.value });
   return yield* page(request, MAIL_PAGES.left, 200);
 });
@@ -261,7 +277,8 @@ const sameSecret = Effect.fn('Mail.sameSecret')(function* (given: string, held: 
 
 const BEARER = /^Bearer (.+)$/;
 
-const send = Effect.fn('Mail.send')(function* (request: HttpServerRequest.HttpServerRequest) {
+/** Whether a request carries the admin token. */
+const isAdmin = Effect.fn('Mail.isAdmin')(function* (request: HttpServerRequest.HttpServerRequest) {
   const held = yield* AdminToken;
   const given = Option.getOrElse(
     Option.flatMap(Headers.get(request.headers, 'authorization'), (header) =>
@@ -269,7 +286,11 @@ const send = Effect.fn('Mail.send')(function* (request: HttpServerRequest.HttpSe
     ),
     () => '',
   );
-  if (!(yield* sameSecret(given, Redacted.value(held)))) {
+  return yield* sameSecret(given, Redacted.value(held));
+});
+
+const send = Effect.fn('Mail.send')(function* (request: HttpServerRequest.HttpServerRequest) {
+  if (!(yield* isAdmin(request))) {
     yield* warnMail('send.unauthorized');
     return json({ error: 'unauthorized' }, 401);
   }
@@ -281,18 +302,18 @@ const send = Effect.fn('Mail.send')(function* (request: HttpServerRequest.HttpSe
   const film = (yield* Films).find(body.value.film);
   if (Option.isNone(film)) return json({ error: `no film ${body.value.film} on the site` }, 404);
   const ref = film.value.ref;
-  const list = yield* List;
-  const counts = yield* list.counts(ref);
+  const roster = yield* RosterTable;
+  const counts = yield* roster.counts(ref);
   if (body.value.dryRun === true) {
     yield* logMail('send.dry', { film: ref, ...counts });
     return json({ film: ref, ...counts, queued: 0 }, 200);
   }
   const queue = yield* FilmQueue;
   const origin = originOf(request);
-  let after = 0;
+  let after = '';
   let queued = 0;
   for (;;) {
-    const ids = yield* list.waiting(ref, after, BATCH);
+    const ids = yield* roster.waiting(ref, after, BATCH);
     if (ids.length === 0) break;
     yield* queue.put(ids.map((subscriber) => ({ film: ref, subscriber, origin })));
     queued += ids.length;
@@ -300,6 +321,31 @@ const send = Effect.fn('Mail.send')(function* (request: HttpServerRequest.HttpSe
   }
   yield* logMail('send.queued', { film: ref, queued });
   return json({ film: ref, ...counts, queued }, 202);
+});
+
+/**
+ * The import: each subscriber of the D1 list, its address kept and its
+ * standing brought into the model, under a command id of its row's, so a
+ * second run sends nothing new.
+ */
+const importList = Effect.fn('Mail.import')(function* (
+  request: HttpServerRequest.HttpServerRequest,
+) {
+  if (!(yield* isAdmin(request))) {
+    yield* warnMail('import.unauthorized');
+    return json({ error: 'unauthorized' }, 401);
+  }
+  const tokens = yield* Tokens;
+  const addresses = yield* Addresses;
+  const subscribers = yield* Subscriber;
+  const legacy = yield* legacySubscribers();
+  for (const one of legacy) {
+    const subscriber = yield* tokens.idOf(one.address);
+    yield* addresses.keep(subscriber, one.address, yield* Clock.currentTimeMillis);
+    yield* subscribers.send(subscriber, one.command, { commandId: `import/${one.id}` });
+  }
+  yield* logMail('import.done', { imported: legacy.length });
+  return json({ imported: legacy.length }, 200);
 });
 
 type Handler = (
@@ -324,6 +370,7 @@ const ROUTES = new Map<string, ReadonlyMap<string, Handler>>([
     ]),
   ],
   [MAIL_ROUTES.send, new Map([['POST', send]])],
+  [MAIL_ROUTES.import, new Map([['POST', importList]])],
 ]);
 
 /**

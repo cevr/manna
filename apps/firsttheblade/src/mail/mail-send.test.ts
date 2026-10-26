@@ -6,13 +6,13 @@ import { HttpClient, HttpClientResponse, HttpServerRequest, HttpServerResponse }
 
 import { send } from '../../scripts/mail-send.ts';
 import { SERIES, type Series } from '../content.ts';
+import { SubscriberId } from '../list/Subscriber.id.ts';
 import { Assets } from '../worker/assets.ts';
 import { respond } from '../worker/respond.ts';
 import { layerOf } from './films.ts';
-import { List } from './list.ts';
+import { RosterTable } from './roster.ts';
 import { layerTest, TEST_ADMIN_TOKEN } from './local.ts';
 import { Queued } from './queue.ts';
-import { Address } from './address.ts';
 
 const ORIGIN = 'https://firsttheblade.test';
 
@@ -73,9 +73,9 @@ const test = it.effect.layer(
 describe('bun run mail:send', () => {
   test('counts on a dry run and queues on a send, through the Worker', () =>
     Effect.gen(function* () {
-      const list = yield* List;
-      const claim = Option.getOrThrow(yield* list.signUp(Address.make('ann@example.com'), 0));
-      yield* list.confirm(claim, 1);
+      // One subscriber on the roster, as the model's projection writes it.
+      const roster = yield* RosterTable;
+      yield* roster.record([{ _tag: 'Joined', subscriber: SubscriberId.make('ann') }]);
       yield* send({ film: 'path/01', dryRun: true, origin: ORIGIN });
       yield* send({ film: 'path/01', dryRun: false, origin: ORIGIN });
       const said = (yield* TestConsole.logLines).filter((line) => String(line).startsWith('path/'));

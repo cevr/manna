@@ -5,19 +5,21 @@ import { TestClock } from 'effect/testing';
 import { Headers, HttpServerRequest, HttpServerResponse } from 'effect/http';
 
 import { SERIES, type Series } from '../content.ts';
+import { Subscriber } from '../list/Subscriber.aggregate.ts';
+import { PENDING_FOR } from '../list/timing.ts';
 import { Assets } from '../worker/assets.ts';
 import { CACHE, respond } from '../worker/respond.ts';
 import { Address } from './address.ts';
-import { Background, Held } from './background.ts';
+import { Addresses } from './addresses.ts';
+import { Background } from './background.ts';
 import { deliver } from './deliver.ts';
 import { layerOf } from './films.ts';
-import { List, PENDING_FOR } from './list.ts';
-import { layerTest, TEST_ADMIN_TOKEN } from './local.ts';
+import { layerTest, Settle, TEST_ADMIN_TOKEN } from './local.ts';
 import { Mailbox, Mailer, MailRefused, MailUnavailable } from './mailer.ts';
 import { MAIL_PAGES, SIGNUP_FIELDS } from './paths.ts';
-import { purge } from './purge.ts';
 import { Queued } from './queue.ts';
-import { SqlError } from './sql.ts';
+import { RosterTable } from './roster.ts';
+import { Sql } from './sql.ts';
 import { SIGNUPS } from './throttle.ts';
 import { Tokens } from './tokens.ts';
 
@@ -98,13 +100,24 @@ const postSignUp = (fields: Readonly<Record<string, string>>, place = '192.0.2.1
     headers: { 'cf-connecting-ip': place },
   });
 
+/** Runs what waits: a sign-up's work, then the model's policies, projections and commands come due. */
+const settle = Effect.gen(function* () {
+  yield* (yield* Settle).settle;
+});
+
+/** How far the film's send has gone, once the roster has caught up with the model. */
+const counts = Effect.gen(function* () {
+  yield* settle;
+  return yield* (yield* RosterTable).counts(FILM);
+});
+
 /** The sign-up form's post, answered, and its work after the answer run. */
 const signUp = Effect.fn('Test.signUp')(function* (
   fields: Readonly<Record<string, string>>,
   place?: string,
 ) {
   const response = yield* postSignUp(fields, place);
-  yield* (yield* Held).settle;
+  yield* settle;
   return response;
 });
 
@@ -137,6 +150,7 @@ const joined = Effect.fn('Test.joined')(function* (address: string) {
   yield* signUp({ email: address });
   const confirmed = yield* pressConfirm(confirmLinkIn((yield* letters).at(-1)?.text ?? ''));
   expect(header(confirmed, 'location')).toBe(MAIL_PAGES.confirmed);
+  yield* settle;
 });
 
 /** What `bun run mail:send` posts: its JSON, as text. */
@@ -176,42 +190,42 @@ describe('signing up', () => {
         expect(header(response, 'location')).toBe(MAIL_PAGES.check);
       }
       expect(known.headers).toEqual(fresh.headers);
-      yield* (yield* Held).settle;
+      yield* settle;
       const sent = yield* letters;
       expect(sent).toHaveLength(2);
       expect(sent[1]?.to).toBe(Address.make('ben@example.com'));
     }));
 
-  test('a sign-up is answered while its letter is still being sent', () =>
+  test('a sign-up is answered before its work runs, and the work then sends the letter', () =>
     Effect.gen(function* () {
-      // As on Cloudflare, the work starts at once, and the answer does not wait for it.
+      // As on Cloudflare, the work starts at once, beside the answer, and the
+      // model's policy sends the letter after it.
       const scope = yield* Scope.Scope;
-      const eager = Background.of({ run: (work) => Effect.asVoid(Effect.forkIn(work, scope)) });
-      const asked = yield* Deferred.make<boolean>();
-      const stuck = Mailer.of({
-        send: () => Deferred.succeed(asked, true).pipe(Effect.andThen(Effect.never)),
+      const after = yield* Settle;
+      const gate = yield* Deferred.make<boolean>();
+      const done = yield* Deferred.make<boolean>();
+      const eager = Background.of({
+        run: (work) =>
+          Effect.asVoid(
+            Effect.forkIn(
+              Deferred.await(gate).pipe(
+                Effect.andThen(work),
+                Effect.andThen(after.settle),
+                Effect.andThen(Deferred.succeed(done, true)),
+              ),
+              scope,
+            ),
+          ),
       });
       const response = yield* postSignUp({ email: ANN }).pipe(
         Effect.provideService(Background, eager),
-        Effect.provideService(Mailer, stuck),
       );
       expect(header(response, 'location')).toBe(MAIL_PAGES.check);
-      expect(yield* Deferred.await(asked)).toBe(true);
-    }).pipe(Effect.scoped));
-
-  test('a confirm letter that cannot be made is logged, and the next try sends it', () =>
-    Effect.gen(function* () {
-      const tokens = yield* Tokens;
-      const broken = Tokens.of({ ...tokens, sign: () => Effect.die('no signature') });
-      const response = yield* signUp({ email: ANN }).pipe(Effect.provideService(Tokens, broken));
-      expect(header(response, 'location')).toBe(MAIL_PAGES.check);
       expect(yield* letters).toHaveLength(0);
-      const unsent = (yield* Heard).lines().filter((line) => line.includes('subscribe.unsent'));
-      expect(unsent).toHaveLength(1);
-      expect(unsent[0]).toContain('reason=defect');
-      yield* signUp({ email: ANN });
+      yield* Deferred.succeed(gate, true);
+      yield* Deferred.await(done);
       expect(yield* letters).toHaveLength(1);
-    }));
+    }).pipe(Effect.scoped));
 
   test('a sign-up whose work runs after the address leaves sends a link that confirms', () =>
     Effect.gen(function* () {
@@ -225,7 +239,7 @@ describe('signing up', () => {
       yield* TestClock.adjust(Duration.millis(1));
       yield* call(leave, { method: 'POST' });
       yield* TestClock.adjust(Duration.millis(1));
-      yield* (yield* Held).settle;
+      yield* settle;
       const letter = (yield* letters).at(-1);
       expect(letter?.subject).toStartWith('Confirm');
       const confirmed = yield* pressConfirm(confirmLinkIn(letter?.text ?? ''));
@@ -261,8 +275,9 @@ describe('signing up', () => {
       });
       expect(header(response, 'location')).toBe(MAIL_PAGES.check);
       expect(yield* letters).toHaveLength(0);
-      const list = yield* List;
-      expect(yield* list.signUp(Address.make('ann@example.com'), 0)).toSatisfy(Option.isSome);
+      const ann = yield* (yield* Tokens).idOf(Address.make('ann@example.com'));
+      expect(yield* (yield* Addresses).find(ann)).toEqual(Option.none());
+      expect((yield* (yield* Subscriber).state(ann))._tag).toBe('None');
     }));
 
   test('an address that does not read is sent to the page that asks again', () =>
@@ -316,8 +331,7 @@ describe('confirming', () => {
         const body = yield* Effect.promise(() => HttpServerResponse.toWeb(opened).text());
         expect(body).toContain(MAIL_PAGES.confirm);
       }
-      const list = yield* List;
-      expect((yield* list.counts(FILM)).confirmed).toBe(0);
+      expect((yield* counts).confirmed).toBe(0);
     }));
 
   test("the page's button confirms, and pressing it twice confirms once", () =>
@@ -329,8 +343,7 @@ describe('confirming', () => {
       expect(header(first, 'location')).toBe(MAIL_PAGES.confirmed);
       const second = yield* call(link, { method: 'POST' });
       expect(header(second, 'location')).toBe(MAIL_PAGES.confirmed);
-      const list = yield* List;
-      expect((yield* list.counts(FILM)).confirmed).toBe(1);
+      expect((yield* counts).confirmed).toBe(1);
     }));
 
   test('a link seven days old, or changed, or missing, leads to the page that signs up again', () =>
@@ -339,7 +352,8 @@ describe('confirming', () => {
       const [letter] = yield* letters;
       const token = tokenIn(letter?.text ?? '');
       // Another subscriber's id under this one's signature, and a cut signature.
-      const others = [token.replace(/^c\.\d+\./, 'c.99.'), token.slice(0, -4)];
+      const another = `c.${'A'.repeat(22)}.`;
+      const others = [token.replace(/^c\.[\w-]{22}\./, another), token.slice(0, -4)];
       expect(others.every((other) => other !== token)).toBe(true);
       const links = [
         ...others.map((other) => `/subscribe/confirm?token=${encodeURIComponent(other)}`),
@@ -355,8 +369,7 @@ describe('confirming', () => {
       for (const method of ['GET', 'POST']) {
         expect(header(yield* call(late, { method }), 'location')).toBe(MAIL_PAGES.expired);
       }
-      const list = yield* List;
-      expect((yield* list.counts(FILM)).confirmed).toBe(0);
+      expect((yield* counts).confirmed).toBe(0);
     }));
 });
 
@@ -421,8 +434,7 @@ describe('sending a film', () => {
       expect(letter?.text).toContain(leave);
       expect(letter?.html).toContain(leave);
       expect(letter?.html).not.toContain('<img');
-      const list = yield* List;
-      expect(yield* list.counts(FILM)).toEqual({
+      expect(yield* counts).toEqual({
         confirmed: 2,
         sent: 2,
         refused: 0,
@@ -447,8 +459,7 @@ describe('sending a film', () => {
       );
       const failed = yield* Effect.flip(deliver(deliveries));
       expect(failed._tag).toBe('MailUnavailable');
-      const list = yield* List;
-      expect(yield* list.counts(FILM)).toEqual({
+      expect(yield* counts).toEqual({
         confirmed: 3,
         sent: 0,
         refused: 1,
@@ -456,7 +467,7 @@ describe('sending a film', () => {
         unsure: 0,
       });
       yield* deliver(deliveries);
-      expect(yield* list.counts(FILM)).toEqual({
+      expect(yield* counts).toEqual({
         confirmed: 3,
         sent: 2,
         refused: 1,
@@ -476,12 +487,11 @@ describe('sending a film', () => {
         deliver(deliveries).pipe(Effect.provideService(Tokens, broken)),
       );
       expect(failed._tag).toBe('Failure');
-      const list = yield* List;
-      expect(yield* list.counts(FILM)).toMatchObject({ waiting: 1, unsure: 0 });
+      expect(yield* counts).toMatchObject({ waiting: 1, unsure: 0 });
       yield* deliver(deliveries);
       const films = (yield* letters).filter((letter) => letter.subject.startsWith('A new'));
       expect(films).toHaveLength(1);
-      expect(yield* list.counts(FILM)).toMatchObject({ sent: 1, unsure: 0 });
+      expect(yield* counts).toMatchObject({ sent: 1, unsure: 0 });
     }));
 
   test('a subscriber who leaves while their letter is made is not sent it', () =>
@@ -515,7 +525,7 @@ describe('sending a film', () => {
       expect((yield* letters).filter((letter) => letter.subject.startsWith('A new'))).toHaveLength(
         0,
       );
-      expect(yield* (yield* List).counts(FILM)).toMatchObject({ sent: 0, refused: 0, unsure: 0 });
+      expect(yield* counts).toMatchObject({ sent: 0, refused: 0, unsure: 0 });
     }));
 
   test('a letter sent whose outcome could not be kept is never sent again', () =>
@@ -523,19 +533,24 @@ describe('sending a film', () => {
       yield* joined(ANN);
       yield* admin(`{"film":"${FILM}"}`);
       const deliveries = yield* (yield* Queued).deliveries;
-      const list = yield* List;
-      const forgetful = List.of({
-        ...list,
-        recordSend: () => SqlError.make({ statement: 'list.recordSend', reason: 'test' }),
+      // The letter goes, and the delivery stops before its outcome is kept.
+      const mailer = yield* Mailer;
+      const gone = yield* Deferred.make<boolean>();
+      const lost = Mailer.of({
+        send: (letter) =>
+          mailer
+            .send(letter)
+            .pipe(Effect.andThen(Deferred.succeed(gone, true)), Effect.andThen(Effect.never)),
       });
-      const failed = yield* Effect.flip(
-        deliver(deliveries).pipe(Effect.provideService(List, forgetful)),
+      const delivering = yield* Effect.forkChild(
+        deliver(deliveries).pipe(Effect.provideService(Mailer, lost)),
       );
-      expect(failed._tag).toBe('SqlError');
+      yield* Deferred.await(gone);
+      yield* Fiber.interrupt(delivering);
       yield* deliver(deliveries);
       const films = (yield* letters).filter((letter) => letter.subject.startsWith('A new'));
       expect(films).toHaveLength(1);
-      expect(yield* list.counts(FILM)).toMatchObject({ sent: 0, waiting: 0, unsure: 1 });
+      expect(yield* counts).toMatchObject({ sent: 0, waiting: 0, unsure: 1 });
       yield* admin(`{"film":"${FILM}"}`);
       expect(yield* (yield* Queued).deliveries).toHaveLength(1);
     }));
@@ -557,7 +572,7 @@ describe('leaving', () => {
       const page = yield* call(link);
       expect(page.status).toBe(200);
       expect(header(page, 'cache-control')).toBe(CACHE.never);
-      expect((yield* call('/unsubscribe?token=u.1.forged')).status).toBe(400);
+      expect((yield* call(`/unsubscribe?token=u.${'A'.repeat(22)}.forged`)).status).toBe(400);
       expect((yield* call('/unsubscribe')).status).toBe(400);
     }));
 
@@ -576,8 +591,7 @@ describe('leaving', () => {
     Effect.gen(function* () {
       const link = yield* leaveLink;
       for (let n = 0; n < 2; n += 1) yield* expectLeft(yield* call(link, { method: 'POST' }));
-      const list = yield* List;
-      expect((yield* list.counts(FILM)).confirmed).toBe(0);
+      expect((yield* counts).confirmed).toBe(0);
     }));
 
   test("a mail app's one click leaves in either form encoding, never redirected (RFC 8058)", () =>
@@ -587,8 +601,7 @@ describe('leaving', () => {
       multipart.set('List-Unsubscribe', 'One-Click');
       const bodies = [new URLSearchParams({ 'List-Unsubscribe': 'One-Click' }), multipart];
       for (const body of bodies) yield* expectLeft(yield* call(link, { method: 'POST', body }));
-      const list = yield* List;
-      expect((yield* list.counts(FILM)).confirmed).toBe(0);
+      expect((yield* counts).confirmed).toBe(0);
     }));
 
   test('a confirm link does not leave', () =>
@@ -602,30 +615,91 @@ describe('leaving', () => {
     }));
 });
 
-describe('the daily purge', () => {
-  test('undoes a sign-up never confirmed, thirty days after it, and logs counts only', () =>
+describe('a sign-up never confirmed', () => {
+  test('is forgotten thirty days after it, its address with it, and a confirmed one is not', () =>
     Effect.gen(function* () {
       yield* signUp({ email: ANN });
       yield* signUp({ email: 'ben@example.com' });
       yield* joined('cal@example.com');
       yield* TestClock.adjust(PENDING_FOR);
-      yield* purge();
-      const done = (yield* Heard).lines().filter((line) => line.includes('purge.done'));
-      expect(done).toEqual(['[mail] purge.done deleted=2 sends=0 left=0']);
-      const list = yield* List;
-      expect((yield* list.counts(FILM)).confirmed).toBe(1);
+      yield* settle;
+      const tokens = yield* Tokens;
+      const addresses = yield* Addresses;
+      const subscribers = yield* Subscriber;
+      for (const address of ['ann@example.com', 'ben@example.com']) {
+        const id = yield* tokens.idOf(Address.make(address));
+        expect(yield* addresses.find(id)).toEqual(Option.none());
+        expect((yield* subscribers.state(id))._tag).toBe('None');
+      }
+      const cal = yield* tokens.idOf(Address.make('cal@example.com'));
+      expect(yield* addresses.find(cal)).toEqual(Option.some(Address.make('cal@example.com')));
+      expect((yield* counts).confirmed).toBe(1);
     }));
 
-  test('a purge that fails is logged by its reason, and fails nothing else', () =>
+  test('signed up again after it was forgotten, is sent a link that confirms', () =>
     Effect.gen(function* () {
-      const list = yield* List;
-      const broken = List.of({
-        ...list,
-        purge: () => Effect.fail(SqlError.make({ statement: 'list.purge', reason: 'down' })),
-      });
-      yield* purge().pipe(Effect.provideService(List, broken));
-      const failed = (yield* Heard).lines().filter((line) => line.includes('purge.'));
-      expect(failed).toEqual(['[mail] purge.failed reason=SqlError']);
+      yield* signUp({ email: ANN });
+      yield* TestClock.adjust(PENDING_FOR);
+      yield* settle;
+      yield* joined(ANN);
+      expect((yield* counts).confirmed).toBe(1);
+    }));
+});
+
+describe('importing the D1 list', () => {
+  /** What `bun run mail:import` posts. */
+  const importList = (token = TEST_ADMIN_TOKEN) =>
+    call('/mail/import', { method: 'POST', headers: { authorization: `Bearer ${token}` } });
+
+  /** A row of the D1 list, as the list wrote it. */
+  const row = Effect.fn('Test.row')(function* (
+    id: number,
+    address: string,
+    status: string,
+    at: { readonly signedUp: number; readonly confirmed?: number; readonly left?: number },
+  ) {
+    const sql = yield* Sql;
+    yield* sql.run(
+      {
+        name: 'test.row',
+        text: `INSERT INTO subscribers
+                 (id, address, status, created_at, signed_up_at, confirm_sent_at, confirmed_at, unsubscribed_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      },
+      [id, address, status, at.signedUp, at.signedUp, at.signedUp, at.confirmed ?? 0, at.left ?? 0],
+    );
+  });
+
+  test('brings each subscriber over as it stood, with its film letters, once', () =>
+    Effect.gen(function* () {
+      yield* row(1, 'ann@example.com', 'confirmed', { signedUp: 1, confirmed: 2 });
+      yield* row(2, 'ben@example.com', 'unsubscribed', { signedUp: 1, confirmed: 2, left: 3 });
+      const sql = yield* Sql;
+      yield* sql.run(
+        {
+          name: 'test.send',
+          text: `INSERT INTO sends (film, subscriber_id, outcome, at) VALUES (?, 1, 'sent', 4)`,
+        },
+        [FILM],
+      );
+      expect((yield* importList('wrong')).status).toBe(401);
+      for (let run = 0; run < 2; run += 1) {
+        const imported = yield* importList();
+        expect(imported.status).toBe(200);
+        expect(yield* Effect.promise(() => answerOf(imported))).toEqual({ imported: 2 });
+      }
+      expect(yield* counts).toEqual({ confirmed: 1, sent: 1, refused: 0, waiting: 0, unsure: 0 });
+      const ann = yield* (yield* Tokens).idOf(Address.make('ann@example.com'));
+      expect(yield* (yield* Addresses).find(ann)).toEqual(
+        Option.some(Address.make('ann@example.com')),
+      );
+      // Ann was sent the film there, so she is not sent it here.
+      yield* admin(`{"film":"${FILM}"}`);
+      expect(yield* (yield* Queued).deliveries).toHaveLength(0);
+      // Ben left there, and may come back here, once his last link is an hour old.
+      yield* TestClock.adjust(Duration.hours(2));
+      yield* joined('ben@example.com');
+      expect((yield* counts).confirmed).toBe(2);
     }));
 });
 

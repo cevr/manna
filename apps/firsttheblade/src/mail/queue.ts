@@ -6,10 +6,12 @@
  */
 import { Context, Effect, Layer, Ref, Schema } from 'effect';
 
+import { SubscriberId } from '../list/Subscriber.id.ts';
+
 export const Delivery = Schema.Struct({
   /** `<series id>/<no>` (`./films.ts`). */
   film: Schema.String,
-  subscriber: Schema.Int,
+  subscriber: SubscriberId,
   /** The site the send was asked at, so its links lead back there. */
   origin: Schema.String,
 });
