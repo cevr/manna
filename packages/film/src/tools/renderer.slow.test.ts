@@ -237,8 +237,13 @@ describe.concurrent('Renderer', () => {
           '/out/test/film/trial.mp4',
           '/out/test/film/trial.share.mp4',
         ]);
-        const under = (p: string) => p.startsWith('/out/test/');
+        // Beside its address only the captions; the film's cache holds the render's record of it.
+        const under = (p: string) =>
+          p.startsWith('/out/test/') && !p.startsWith('/out/test/cache/');
         expect([...bare.files.keys()].filter(under)).toEqual(['/out/test/film/trial.vtt']);
+        expect([...bare.files.keys()].filter((p) => p.startsWith('/out/test/cache/'))).toEqual([
+          expect.stringMatching(/^\/out\/test\/cache\/renders\/[0-9a-f]{16}\.json$/),
+        ]);
         // Its own segments folder goes, once joined.
         expect([...bare.folders].filter((f) => f.startsWith('/tmp/film-segments-'))).toEqual([]);
         expect(output).toEqual({
