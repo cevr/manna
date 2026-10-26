@@ -45,8 +45,8 @@ wheat centred on the app's own ground: the night's blade on the paper
 ## Gotchas
 
 - The home screen caches an app's icon by bundle id: a rebuild over an installed app can keep the old icon. Uninstall first.
-- The icons in the build come from `apps/hymnal/assets/icon/`, copied in by `prebuild:native`: after `bun run icon`, pass `--prebuild` again.
+- The icons in the build come from `apps/hymnal/assets/icon/`, copied in by `prebuild:native`: after `bun run --cwd apps/hymnal icon`, pass `--prebuild` again.
 - The dark and tinted icons follow the home screen's icon style (Edit → Customize), not the system appearance. With the style `Default`, `appearance dark` leaves the light icon on the home screen, and every other app's icon stays light too. Choose `Dark` (with `Auto`) or `Tinted` there, and put back `Default` at the end.
-- SpringBoard keeps the launch screen it drew first in memory, past an uninstall and a reinstall and past removing the app's `Library/SplashBoard`: a new launch screen shows only after the simulator restarts (`xcrun simctl shutdown`, then `boot`). Until then a cold launch shows the old one.
+- SpringBoard keeps the launch screen it drew first in memory, past an uninstall and a reinstall and past removing the SplashBoard folder in the app's data container's Library: a new launch screen shows only after the simulator restarts (`xcrun simctl shutdown`, then `boot`). Until then a cold launch shows the old one.
 - The launch screen lasts well under a second on a warm dev server: shoot as the launch starts, in a burst, never after a sleep.
 - A headless browser shows no tab strip, so the web proof is the served files and the head's links, not a shot of the tab.
