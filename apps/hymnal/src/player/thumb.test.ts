@@ -59,12 +59,18 @@ describe('the key model', () => {
     expect(events).toHaveLength(31);
   });
 
-  it('resets to the printed key and no capo, the dials and chords as they were, with one cue', () =>
+  it('resets a moved hymn to the printed key and no capo, the dials and chords as they were, with one cue', () =>
     each((printed, state, event) => {
-      if (event._tag !== 'Reset') return;
+      if (event._tag !== 'Reset' || isStill(state.move)) return;
       const next = step(printed, state, event);
       expect(next.state).toEqual({ chords: state.chords, move: still, open: state.open });
       expect(next.cues).toEqual([plain('reset')]);
+    }));
+
+  it('closes the dials at once on a reset of a hymn already at home, with no cue (barfix m7)', () =>
+    each((printed, state, event) => {
+      if (event._tag !== 'Reset' || !isStill(state.move)) return;
+      expect(step(printed, state, event)).toEqual({ state: { ...state, open: false }, cues: [] });
     }));
 
   it('closes the dials once a reset’s turn home has been seen, the move and chords as they were, with no cue', () =>

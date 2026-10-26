@@ -26,7 +26,6 @@ import Animated, {
   ReduceMotion,
   type SharedValue,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withDelay,
   withSpring,
@@ -37,6 +36,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { color } from '~/color';
 
 import { DETENT } from './dial';
+import { useReduceMotion } from './motion';
 
 /** The panel's padding round its rows, and the space between them, in points. */
 export const PANEL_PAD = 8;
@@ -108,10 +108,12 @@ export function DialPopover({
   const [shown, setShown] = useState(open);
   if (open && !shown) setShown(true);
   // While it closes the panel draws what it showed when it was last open: a page turn or a reset
-  // that closes it changes nothing in it as it goes.
+  // that closes it changes nothing in it as it goes. Each open draw is kept once it is drawn.
   const last = useRef(children);
-  if (open) last.current = children;
-  const reduced = useReducedMotion();
+  useEffect(() => {
+    if (open) last.current = children;
+  });
+  const reduced = useReduceMotion();
   const { width } = useWindowDimensions();
   const progress = useSharedValue(0);
   // The panel's size, measured as it lays out; until then, its size with two rows across the screen.

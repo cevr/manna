@@ -20,8 +20,18 @@
 
 import * as Chord from '@manna/hymnal/chord';
 import { useAtom, useAtomValue } from '@effect/atom-react';
-import { Duration, Effect, Fiber, Option } from 'effect';
-import { createContext, use, useEffect, useMemo, useRef, useState } from 'react';
+import { Clock, Duration, Effect, Fiber, Option } from 'effect';
+import {
+  createContext,
+  memo,
+  use,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { color, useAccent } from '~/color';
@@ -37,6 +47,7 @@ import {
   capoSaid,
   type CapoStop,
   capoStops,
+  isStill,
   keySaid,
   type KeyStop,
   keyStops,
@@ -51,6 +62,12 @@ export const ChordReaderContext = createContext<ChordReader>(reader);
 
 /** How long the dials stay open over the bar after a reset: the turn home (300 ms), then the reader sees it rest. */
 export const RESET_WAIT = 600;
+
+/**
+ * The clock a reset's wait for its close runs on: the live clock, or a
+ * test's `TestClock`, which moves the wait without real time passing.
+ */
+export const ResetClock = createContext<Clock.Clock>(Clock.Clock.defaultValue());
 
 /** The key model of hymn `number`'s page, bound to the stores, and its printed key if it has chords. */
 export const useThumb = (number: number) => {
@@ -70,20 +87,20 @@ export const useThumb = (number: number) => {
   const [open, setOpen] = useState(false);
   // How many resets were told here: a dial turns home on the reset's curve when the count moves.
   const [resets, setResets] = useState(0);
-  // The reset whose close waits, while one does.
-  const [waiting, setWaiting] = useState(Option.none<number>());
+  // Whether the last reset's close waits; each reset starts its wait again.
+  const [waiting, setWaiting] = useState(false);
   // The dials open on one hymn: another hymn's page (a page turn) finds them closed, and no close waits.
   const [openOn, setOpenOn] = useState(number);
   if (openOn !== number) {
     setOpenOn(number);
     setOpen(false);
-    setWaiting(Option.none());
+    setWaiting(false);
   }
   const cue = useCue();
+  const clock = use(ResetClock);
   // Events that come before the page draws again (a fling's detents) each step from the last.
   const now = useRef<Thumb>({ chords, move, open });
   now.current = { chords, move, open };
-  const told = useRef(resets);
   const apply = (event: ThumbEvent) => {
     // A hymn with no chords opens no dials: a hold still turns chords on or off.
     const key = Option.orElse(printed, () => Option.liftPredicate(noKey, () => keyless(event)));
@@ -95,35 +112,46 @@ export const useThumb = (number: number) => {
       if (!sameMove(next.state.move, was.move)) setMove(next.state.move);
       if (next.state.open !== was.open) setOpen(next.state.open);
       for (const cued of next.cues) cue(cued);
-      if (!ThumbEvent.$is('Reset')(event)) continue;
-      told.current += 1;
-      setResets(told.current);
-      if (next.state.open) setWaiting(Option.some(told.current));
+      // A reset of a hymn already at home turns nothing home, so it neither counts nor waits.
+      if (!ThumbEvent.$is('Reset')(event) || isStill(was.move)) continue;
+      setResets((count) => count + 1);
+      setWaiting(next.state.open);
     }
   };
+  // The handlers stay one pair of functions for the page's life, so the dials need not draw again
+  // for a draw of the bar (a playback tick); each call runs the latest `apply`.
+  const latest = useRef(apply);
+  useLayoutEffect(() => {
+    latest.current = apply;
+  });
   /** A touch of the reader's: it ends any wait for a reset's close. */
-  const keep = () => setWaiting(Option.none());
-  const send = (event: ThumbEvent) => {
-    keep();
-    apply(event);
-  };
+  const keep = useCallback(() => setWaiting(false), []);
+  const send = useCallback((event: ThumbEvent) => {
+    setWaiting(false);
+    latest.current(event);
+  }, []);
   useEffect(() => {
-    if (Option.isNone(waiting)) return;
+    if (!waiting) return;
     const closing = Effect.runFork(
       Effect.sleep(Duration.millis(RESET_WAIT)).pipe(
         Effect.andThen(
           Effect.sync(() => {
-            setWaiting(Option.none());
-            apply(ThumbEvent.ResetShown());
+            setWaiting(false);
+            latest.current(ThumbEvent.ResetShown());
           }),
         ),
+        Effect.provideService(Clock.Clock, clock),
       ),
     );
     return () => {
       Effect.runFork(Fiber.interrupt(closing));
     };
-  }, [waiting]);
-  return { printed, state: { chords, move, open }, send, keep, resets };
+  }, [waiting, resets, clock]);
+  const state = useMemo(() => ({ chords, move, open }), [chords, move, open]);
+  return useMemo(
+    () => ({ printed, state, send, keep, resets }),
+    [printed, state, send, keep, resets],
+  );
 };
 
 export type BoundThumb = ReturnType<typeof useThumb>;
@@ -139,9 +167,11 @@ const sameMove = (a: Move, b: Move) => a.transpose === b.transpose && a.capo ===
 
 /**
  * The dials `thumb` shows (`shownOf`), top to bottom, for a hymn printed in
- * `printed`, each a row of the panel they stand on (`DialPanel`).
+ * `printed`, each a row of the panel they stand on (`DialPanel`). They draw
+ * again only when the model does: a draw of the bar around them (a playback
+ * tick) hands them the same model, so the 24 stops are not drawn again.
  */
-export function Dials({
+export const Dials = memo(function Dials({
   thumb,
   printed,
 }: {
@@ -205,7 +235,7 @@ export function Dials({
       })}
     </View>
   );
-}
+});
 
 /** Reset, while the move is not the hymn as printed: "↺ Db, no capo". */
 function ResetChip({

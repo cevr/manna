@@ -32,7 +32,6 @@ import Animated, {
   Easing,
   ReduceMotion,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withSpring,
   withTiming,
@@ -42,6 +41,7 @@ import { color } from '~/color';
 import { GuitarHead } from '~/reader/GuitarHead';
 
 import type { BoundThumb } from './Dials';
+import { useReduceMotion } from './motion';
 import { type Face, faceOf, saidOf, ThumbEvent } from './thumb';
 
 /** How long a press is held before it turns chords on or off. */
@@ -69,7 +69,7 @@ export function KeyButton({
   readonly onLayout?: (event: LayoutChangeEvent) => void;
 }) {
   const { printed, state, send } = thumb;
-  const reduced = useReducedMotion();
+  const reduced = useReduceMotion();
   const scale = useSharedValue(1);
   // Whether the press under way turned chords on or off: its release then lets nothing go.
   const held = useRef(false);

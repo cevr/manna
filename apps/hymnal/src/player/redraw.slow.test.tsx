@@ -1,15 +1,18 @@
 /**
  * What one detent of the key or the capo dial draws again on hymn 100's
  * page (spec Risk 7): the chord texts alone, through the played key's
- * context, and never a section, a line or its syllables.
+ * context, and never a section, a line or its syllables; and what a
+ * playback tick draws again with the dials open over the bar: not the dials.
  *
- * Three counters stand on the real page, each a wrapper that draws or calls
+ * Four counters stand on the real page, each a wrapper that draws or calls
  * the real one:
  * - `ChordLines`, a section's lines under their chords, counts the sections
  *   drawn again: with chords on, every section of the page draws one;
  * - `SyllableLine` counts the sung lines drawn again, with their syllables;
  * - `useChordTap` counts the chord texts drawn again: `ChordText` alone
- *   calls it, once a draw.
+ *   calls it, once a draw;
+ * - `Dials` counts the dials drawn again over the bar, memoized as the real
+ *   ones are: a playback tick draws the bar and must not draw them.
  *
  * `test:slow` runs this file in a process of its own, so no other file
  * meets the wrappers.
@@ -17,9 +20,9 @@
 
 import { describe, expect, it, mock } from 'bun:test';
 import { RegistryContext } from '@effect/atom-react';
-import { Duration, Option } from 'effect';
+import { Duration, Effect, Option, Stream } from 'effect';
 import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
-import { act, type ComponentProps } from 'react';
+import { act, type ComponentProps, memo, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { createRoot } from 'react-dom/client';
 
@@ -34,11 +37,12 @@ import { fakeDevice } from '../test/device';
 import { perform } from '../test/props';
 import { readerOn } from '../test/reader';
 import { PlayerContext } from './context';
+import * as DialsModule from './Dials';
 import { ChordReaderContext } from './Dials';
-import { playerOn } from './player';
-import { PageBar } from './PlayerBar';
+import { Command, Player, playerOn } from './player';
+import { PageBar, PlayerBar } from './PlayerBar';
 
-const drawn = { sections: 0, lines: 0, chords: 0 };
+const drawn = { sections: 0, lines: 0, chords: 0, dials: 0 };
 const Lines = Chords.ChordLines;
 const line = Syllables.SyllableLine;
 const tap = Sheet.useChordTap;
@@ -57,6 +61,26 @@ mock.module('~/reader/SyllableWords', () => ({
     return line(props);
   },
 }));
+type DialsProps = ComponentProps<typeof DialsModule.Dials>;
+const RealDials = DialsModule.Dials as unknown as {
+  readonly type?: (props: DialsProps) => ReactNode;
+};
+/** The real dials' draw: the function a memo wraps, or the function itself. */
+const memoized = Option.fromNullishOr(RealDials.type);
+const drawDials = Option.getOrElse(
+  memoized,
+  () => RealDials as unknown as (props: DialsProps) => ReactNode,
+);
+/** Draws the real dials and counts the draw: memoized as the real ones are, so a skipped draw is not counted. */
+const countedDials = (props: DialsProps) => {
+  drawn.dials += 1;
+  return drawDials(props);
+};
+// oxlint-disable-next-line effect/noModuleMocks -- the dials' draws are counted on the real bar, so the dials are wrapped; the wrapper draws the real ones, memoized as they are, and test:slow runs this file alone.
+mock.module('./Dials', () => ({
+  ...DialsModule,
+  Dials: Option.match(memoized, { onNone: () => countedDials, onSome: () => memo(countedDials) }),
+}));
 // oxlint-disable-next-line effect/noModuleMocks -- a chord text's draws are counted by the hook it alone calls; the wrapper calls the real hook, and test:slow runs this file alone.
 mock.module('~/reader/ChordSheet', () => ({
   ...Sheet,
@@ -70,7 +94,8 @@ mock.module('~/reader/ChordSheet', () => ({
 const mount = () => {
   const hymn = Option.getOrThrow(hymnAt('100'));
   const reader = readerOn(new Map([['chords', 'true']]));
-  const player = playerOn(fakeDevice().layer, Duration.millis(1));
+  const played = fakeDevice();
+  const player = playerOn(played.layer, Duration.millis(1));
   const registry = AtomRegistry.make();
   const host = document.createElement('div');
   document.body.append(host);
@@ -85,6 +110,7 @@ const mount = () => {
               <HymnPage hymn={hymn} reader={reader} />
               <PageBar track={hymn} />
             </View>
+            <PlayerBar />
           </PlayerContext>
         </ChordReaderContext>
       </RegistryContext>,
@@ -92,8 +118,24 @@ const mount = () => {
   );
   const get = (selector: string) =>
     Option.getOrThrow(Option.fromNullishOr(host.querySelector(selector)));
+  /** Waits until the player's place is `at` seconds, as its device tells it. */
+  const at = (seconds: number) =>
+    act(() =>
+      Effect.runPromise(
+        AtomRegistry.toStream(registry, player.state).pipe(
+          Stream.filter((state) => Player.$is('Playing')(state) && state.at === seconds),
+          Stream.runHead,
+          Effect.asVoid,
+          Effect.timeout(Duration.seconds(2)),
+        ),
+      ),
+    );
   return {
     get,
+    device: played.device,
+    at,
+    /** Hymn 100 started, as Play starts it. */
+    play: () => act(() => registry.set(player.send, Command.Start({ track: hymn }))),
     /** The sections the page draws, each a stanza or the refrain. */
     sections: () => host.querySelectorAll('[role="group"][aria-label]').length,
     /** The chord texts the page draws: each change and each chord held over. */
@@ -101,7 +143,7 @@ const mount = () => {
       host.querySelectorAll('[data-testid^="chord-"], [data-testid^="held-"]').length,
     /** What one detent of dial `label`, as VoiceOver turns it, drew again on the page. */
     detent: (label: string) => {
-      Object.assign(drawn, { sections: 0, lines: 0, chords: 0 });
+      Object.assign(drawn, { sections: 0, lines: 0, chords: 0, dials: 0 });
       perform(get(`[role="slider"][aria-label="${label}"]`), 'increment');
       return { ...drawn };
     },
@@ -128,6 +170,34 @@ describe('a detent of the key or the capo dial', () => {
     const texts = page.chordTexts();
     expect(texts).toBeGreaterThan(50);
     for (const label of ['Key', 'Key', 'Capo', 'Capo', 'Key'])
-      expect(page.detent(label)).toEqual({ sections: 0, lines: 0, chords: texts });
+      expect(page.detent(label)).toMatchObject({ sections: 0, lines: 0, chords: texts });
   });
+});
+
+describe('a playback tick with the dials open (pagerperf P4)', () => {
+  it('draws the bar again and the dials not at all', () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        using page = mount();
+        page.play();
+        page.device.now = { state: 'playing', positionMs: 1_000, durationMs: 151_000 };
+        yield* Effect.promise(() => page.at(1));
+        act(() =>
+          page
+            .get('[role="button"][aria-label="Key"]')
+            .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 })),
+        );
+        // The dials drew as they opened, so a draw again would be counted.
+        expect(drawn.dials).toBeGreaterThan(0);
+        for (const seconds of [2, 3, 4]) {
+          drawn.dials = 0;
+          page.device.now = { state: 'playing', positionMs: seconds * 1_000, durationMs: 151_000 };
+          yield* Effect.promise(() => page.at(seconds));
+          expect(
+            page.get('[role="slider"][aria-label="Seek"]').getAttribute('aria-valuetext'),
+          ).toBe(`0:0${seconds} of 2:31`);
+          expect(drawn.dials).toBe(0);
+        }
+      }),
+    ));
 });

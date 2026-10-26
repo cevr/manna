@@ -68,7 +68,6 @@ import Animated, {
   type SharedValue,
   useAnimatedReaction,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withSequence,
   type WithTimingConfig,
@@ -91,6 +90,7 @@ import {
   ringOf,
   slotOf,
 } from './dial';
+import { useReduceMotion } from './motion';
 
 export interface DialProps<A> {
   /** Which dial it is: its detents' cues name it (`~/feel/cue`). */
@@ -149,7 +149,7 @@ function Dial<A>(props: DialProps<A>) {
   const { dial, label, title, stops, index, wrap, said, drawStop, testID, resets = 0 } = props;
   const cue = useCue();
   const accent = useAccent();
-  const reduced = useReducedMotion();
+  const reduced = useReduceMotion();
   const detents = { name: dial, count: stops.length, wrap };
   const place = useSharedValue(index * DETENT);
   const start = useSharedValue(0);

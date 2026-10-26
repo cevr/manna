@@ -8,7 +8,9 @@
  * held to 0 to 11: a turn past an end stays at the end and cues a wall.
  * Reset is the hymn as printed: its key and no capo. Over the bar the dials
  * stay open while the rows turn home, and close once the reader has seen
- * them go (`ResetShown`, which the bar tells when its wait is over).
+ * them go (`ResetShown`, which the bar tells when its wait is over). A reset
+ * of a hymn already at home (a double tap on a dial there) closes them at
+ * once, with no cue.
  *
  * Each step gives the next state and the cues it makes (`~/feel/cue`). A
  * step gives nothing else: no player command has a place in it, so no
@@ -88,7 +90,11 @@ export const step = (printed: Chord.Key, state: Thumb, event: ThumbEvent): Step 
         cues: (held !== capo && [plain('wall')]) || [],
       };
     },
-    Reset: () => ({ state: { ...state, move: still }, cues: [plain('reset')] }),
+    // A reset of a hymn already at home has nothing to turn home: the dials close at once, with no cue.
+    Reset: () => {
+      if (isStill(state.move)) return { state: { ...state, open: false }, cues: [] };
+      return { state: { ...state, move: still }, cues: [plain('reset')] };
+    },
     ResetShown: () => ({ state: { ...state, open: false }, cues: [] }),
   });
 

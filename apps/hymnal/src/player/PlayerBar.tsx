@@ -13,7 +13,9 @@
  * and title only when the bar's hymn is not the page's own; the Sound
  * switch; and the player's button. While another hymn sounds over a page,
  * a compact Play for the page's hymn sits before Sound. A swipe up on the
- * bar opens the sheet too.
+ * bar opens the sheet too. Over a hymn page, a pan from the docked bar's
+ * left edge goes back, as the stack's own edge pan does above the bar
+ * (`BackEdge`).
  *
  * Play springs the bar taller, 56 to 88 points, and shows the seeker under
  * the buttons (`Seeker`); Pause settles it back. The bar and the key dials
@@ -79,7 +81,7 @@ export const useDockedBar = (player: HymnPlayer) =>
   dockedBar(useAtomValue(player.state), useShownPage());
 
 function Docked({ player }: { readonly player: HymnPlayer }) {
-  return <Drawn bar={useDockedBar(player)} page={useShownPage()} player={player} />;
+  return <Drawn bar={useDockedBar(player)} page={useShownPage()} player={player} docked />;
 }
 
 function OnPage({ player, track }: { readonly player: HymnPlayer; readonly track: Track }) {
@@ -88,6 +90,7 @@ function OnPage({ player, track }: { readonly player: HymnPlayer; readonly track
       bar={pageBar(useAtomValue(player.state), track)}
       page={Option.some(track)}
       player={player}
+      docked={false}
     />
   );
 }
@@ -116,6 +119,8 @@ interface Drawing {
   readonly shown: Option.Option<Track>;
   readonly send: (command: Command) => void;
   readonly inset: number;
+  /** Whether the bar is docked under the stack, not a page's own. */
+  readonly docked: boolean;
 }
 
 /**
@@ -127,17 +132,19 @@ function Drawn({
   bar,
   page,
   player,
+  docked,
 }: {
   readonly bar: Bar;
   readonly page: Option.Option<Track>;
   readonly player: HymnPlayer;
+  readonly docked: boolean;
 }) {
   const send = useAtomSet(player.send);
   const inset = Math.max(useSafeAreaInsets().bottom, 0);
   return Bar.$match(bar, {
     Hidden: () => <></>,
     Shown: ({ track, state, page: other }) => {
-      const drawing = { track, state, page: other, shown: page, send, inset };
+      const drawing = { track, state, page: other, shown: page, send, inset, docked };
       return (
         <>
           <View testID="bar-room" aria-hidden style={{ height: REST + inset }} />
@@ -289,7 +296,40 @@ function Frame({
           </GestureDetector>
         </GestureHandlerRootView>
       </Animated.View>
+      {drawing.docked && Option.isSome(shown) && <BackEdge />}
     </View>
+  );
+}
+
+/** How far a pan on the docked bar's edge strip goes right, or how fast, to go back. */
+const BACK_PAN = 40;
+const BACK_SPEED = 500;
+
+/**
+ * The docked bar's left edge: a strip as wide as the bar's own padding,
+ * over the whole bar, where a pan to the right goes back, as the stack's
+ * own edge pan does above the bar. The docked bar lies outside the stack, so
+ * the stack's back gesture never gets a touch that starts on it; a hymn
+ * page's own bar lies in its screen, and needs no strip.
+ */
+function BackEdge() {
+  const router = useRouter();
+  const back = usePanGesture({
+    testID: 'bar-back-edge',
+    runOnJS: true,
+    activeOffsetX: [-1000, 10],
+    failOffsetY: [-24, 24],
+    onDeactivate: ({ translationX = 0, velocityX = 0 }) => {
+      if (translationX < BACK_PAN && velocityX < BACK_SPEED) return;
+      router.back();
+    },
+  });
+  return (
+    <GestureHandlerRootView style={styles.backEdge}>
+      <GestureDetector gesture={back}>
+        <View testID="bar-back-edge" style={styles.fill} />
+      </GestureDetector>
+    </GestureHandlerRootView>
   );
 }
 
@@ -483,4 +523,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
   },
   pressed: { backgroundColor: color.soft },
+  // Over the bar's own left padding, the key button right of it.
+  backEdge: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 12 },
+  fill: { flex: 1 },
 });

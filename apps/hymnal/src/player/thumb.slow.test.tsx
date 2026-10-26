@@ -13,11 +13,13 @@
  */
 
 import { RegistryContext } from '@effect/atom-react';
+import { spyOn } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import { Duration, Effect, Option, Stream } from 'effect';
+import { TestClock } from 'effect/testing';
 import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
 import { act, type ReactNode, useState } from 'react';
-import { View } from 'react-native';
+import { AccessibilityInfo, View } from 'react-native';
 import { createRoot } from 'react-dom/client';
 
 import { hymnAt } from '~/hymns/hymns';
@@ -34,7 +36,7 @@ import { actionsOf, perform, propsWith } from '../test/props';
 import { readerOn } from '../test/reader';
 import { PlayerContext } from './context';
 import { DETENT } from './dial';
-import { ChordReaderContext, RESET_WAIT } from './Dials';
+import { ChordReaderContext, RESET_WAIT, ResetClock } from './Dials';
 import { FullPlayer } from './FullPlayer';
 import { Player, playerOn } from './player';
 import { REST, RISE, SOUNDING } from './bar';
@@ -129,6 +131,8 @@ const mount = (
   const player = playerOn(played.layer, Duration.millis(1));
   const registry = AtomRegistry.make();
   const reader = readerOn(device);
+  // A reset's wait for its close runs on this clock, which the test moves: no real time passes.
+  const clock = Effect.runSync(Effect.scoped(TestClock.make()));
   const host = document.createElement('div');
   document.body.append(host);
   const root = createRoot(host);
@@ -136,7 +140,9 @@ const mount = (
     root.render(
       <RegistryContext value={registry}>
         <ChordReaderContext value={reader}>
-          <PlayerContext value={Option.some(player)}>{screen(reader)}</PlayerContext>
+          <ResetClock value={clock}>
+            <PlayerContext value={Option.some(player)}>{screen(reader)}</PlayerContext>
+          </ResetClock>
         </ChordReaderContext>
       </RegistryContext>,
     ),
@@ -195,6 +201,9 @@ const mount = (
         );
       }),
     sends: () => sends,
+    /** The reset clock moved on `ms`, with React told of what was set as it moved. */
+    advance: (ms: number) =>
+      Effect.promise(() => act(() => Effect.runPromise(clock.adjust(Duration.millis(ms))))),
     /** Hymn `n`'s move written to the reader's store, as a dial elsewhere (the twin) writes it. */
     setMove: (n: number, move: { readonly transpose: number; readonly capo: number }) =>
       registry.set(reader.move(n), move),
@@ -210,10 +219,6 @@ const mount = (
 };
 
 type Page = ReturnType<typeof mount>;
-
-/** Real time passing, `ms` of it, with React told of what was set in it. */
-const waitFor = (ms: number) =>
-  Effect.promise(() => act(() => Effect.runPromise(Effect.sleep(Duration.millis(ms)))));
 
 const keyButton = (page: Page) => page.get('[role="button"][aria-label="Key"]');
 const dial = (page: Page, label: string) => page.find(`[role="slider"][aria-label="${label}"]`);
@@ -380,9 +385,9 @@ describe('bar J on a hymn page', () => {
         expect(valueOf(page, 'Key')).toEqual(Option.some('Db'));
         expect(valueOf(page, 'Capo')).toEqual(Option.some('No capo'));
         expect(Option.isNone(page.find('[aria-label="Reset"]'))).toBe(true);
-        yield* waitFor(RESET_WAIT / 2);
+        yield* page.advance(RESET_WAIT / 2);
         expect(Option.isSome(dial(page, 'Key'))).toBe(true);
-        yield* waitFor(RESET_WAIT / 2 + 100);
+        yield* page.advance(RESET_WAIT / 2 + 100);
         expect(Option.isNone(dial(page, 'Key'))).toBe(true);
 
         // A double tap on a dial does the same.
@@ -391,7 +396,7 @@ describe('bar J on a hymn page', () => {
         act(() => gestureOf('dial-capo-twice').onActivate?.({ x: 0 }));
         expect(device.get('move.100')).toBe('{"transpose":0,"capo":0}');
         expect(Option.isSome(dial(page, 'Key'))).toBe(true);
-        yield* waitFor(RESET_WAIT + 100);
+        yield* page.advance(RESET_WAIT + 100);
         expect(Option.isNone(dial(page, 'Key'))).toBe(true);
       }),
   );
@@ -403,7 +408,7 @@ describe('bar J on a hymn page', () => {
       turn(page, 'Capo');
       page.press('Reset');
       act(() => gestureOf('dial-key-pan').onBegin?.({ x: 0 }));
-      yield* waitFor(RESET_WAIT + 100);
+      yield* page.advance(RESET_WAIT + 100);
       expect(Option.isSome(dial(page, 'Key'))).toBe(true);
     }),
   );
@@ -419,7 +424,7 @@ describe('bar J on a hymn page', () => {
         tapKey(page);
         expect(Option.isNone(dial(page, 'Key'))).toBe(true);
         tapKey(page);
-        yield* waitFor(RESET_WAIT + 100);
+        yield* page.advance(RESET_WAIT + 100);
         // The wait ended with the tap: the dials opened after it stay open.
         expect(Option.isSome(dial(page, 'Key'))).toBe(true);
       }),
@@ -438,7 +443,7 @@ describe('bar J on a hymn page', () => {
           Option.fromNullishOr(sheet.querySelector('[aria-label="Reset"]')),
         ).dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
       });
-      yield* waitFor(RESET_WAIT + 100);
+      yield* page.advance(RESET_WAIT + 100);
       expect(sheet.querySelector('[aria-label="Capo"]')?.getAttribute('aria-valuetext')).toBe(
         'No capo',
       );
@@ -809,5 +814,83 @@ describe('the player sheet over a hymn page', () => {
         expect(Option.isSome(capo())).toBe(true);
         expect(page.sends()).toBe(sends);
       }),
+  );
+});
+
+/** The panel's transform as drawn, empty when it only fades. */
+const panelMotion = (page: Page) =>
+  getComputedStyle(page.get('[data-testid="dials-panel"]')).transform;
+
+describe('the bar and its dials under Reduce Motion', () => {
+  it.live('follow a change of the setting made while the bar is on screen (M9)', () =>
+    Effect.gen(function* () {
+      // The system's setting, as `AccessibilityInfo` tells it: off at the start, then changed by the test.
+      const told = new Array<(on: boolean) => void>();
+      // oxlint-disable-next-line effect/noModuleMocks -- the system's setting is React Native's own boundary, read by the bar's hook; the spy stands in for the system and is put back as the test ends.
+      using _enabled = spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
+      // oxlint-disable-next-line effect/noModuleMocks -- the system tells a change through this listener; the spy keeps the bar's handler so the test can tell one, and is put back as the test ends.
+      using _listen = spyOn(AccessibilityInfo, 'addEventListener').mockImplementation(((
+        _event: string,
+        handler: (on: boolean) => void,
+      ) => {
+        told.push(handler);
+        return { remove: () => void told.splice(told.indexOf(handler), 1) };
+      }) as unknown as typeof AccessibilityInfo.addEventListener);
+      using page = mount(route(100));
+      // The setting's first read lands before the first tap.
+      yield* Effect.promise(() => act(() => Effect.runPromise(Effect.void)));
+      tapKey(page);
+      // Motion allowed: the panel springs out of the key button, scaled and moved.
+      expect(panelMotion(page)).toContain('scale(');
+      tapKey(page);
+      act(() => {
+        for (const handler of [...told]) handler(true);
+      });
+      tapKey(page);
+      // Reduce Motion on: the open is a fade alone.
+      expect(panelMotion(page)).not.toContain('scale(');
+      tapKey(page);
+      act(() => {
+        for (const handler of [...told]) handler(false);
+      });
+      tapKey(page);
+      expect(panelMotion(page)).toContain('scale(');
+    }),
+  );
+});
+
+describe('the docked bar’s left edge (O3)', () => {
+  it.live('goes back on a pan to the right from the docked bar’s edge, and only there', () =>
+    Effect.gen(function* () {
+      using page = mount(route(100));
+      // The page's own bar lies in its screen, where the stack's edge pan reaches: no strip.
+      expect(Option.isNone(page.find('[data-testid="bar-back-edge"]'))).toBe(true);
+      page.press('Play hymn 100');
+      page.device.now = { state: 'playing', positionMs: 1_000, durationMs: 151_000 };
+      yield* page.until((state) => Player.$is('Playing')(state) && state.at === 1);
+      // Docked under the stack, the bar has the strip over its left padding.
+      expect(Option.isSome(page.find('[data-testid="bar-back-edge"]'))).toBe(true);
+      const edge = gestureOf('bar-back-edge');
+      act(() => edge.onDeactivate?.({ x: 4, translationX: 12, velocityX: 100, canceled: false }));
+      expect(routed).toEqual([]);
+      act(() => edge.onDeactivate?.({ x: 4, translationX: 80, velocityX: 100, canceled: false }));
+      expect(routed).toEqual(['back']);
+      act(() => edge.onDeactivate?.({ x: 4, translationX: 20, velocityX: 900, canceled: false }));
+      expect(routed).toEqual(['back', 'back']);
+    }),
+  );
+});
+
+describe('a double tap on a dial at home (barfix m7)', () => {
+  it.live('closes the dials at once, with no wait for a reset', () =>
+    Effect.gen(function* () {
+      using page = mount(route(100));
+      tapKey(page);
+      expect(Option.isSome(dial(page, 'Key'))).toBe(true);
+      act(() => gestureOf('dial-capo-twice').onActivate?.({ x: 0 }));
+      expect(Option.isNone(dial(page, 'Key'))).toBe(true);
+      yield* page.advance(RESET_WAIT + 100);
+      expect(Option.isNone(dial(page, 'Key'))).toBe(true);
+    }),
   );
 });
