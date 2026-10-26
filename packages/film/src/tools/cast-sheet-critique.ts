@@ -53,7 +53,7 @@ const groupOf = (layout: string, at: number): string => {
 };
 
 /** What `layout` asks of `view`: its numbered clause after the words its group shares, or the whole layout when it numbers none for it. */
-const askedOf = (layout: string, view: number): string =>
+export const askedOf = (layout: string, view: number): string =>
   Option.getOrElse(
     Option.flatMap(Arr.get(ORDINALS, view - 1), (word) =>
       Option.flatMap(

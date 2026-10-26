@@ -1,0 +1,339 @@
+// A figure composed from a traced sheet (`film concept trace`'s tables, in
+// the sheet's own pixels): each part taken to the cast's canon by one scale
+// a sheet (`scale`, units a pixel), the head's parts about the head's centre
+// and the body's about the feet, and composed of the house's parts
+// (`figure`). Each arm, traced whole as it hangs, is cut at its elbow into
+// its upper sleeve and its forearm, the elbow on the line from its shoulder
+// to its hand (so it hangs straight at rest and `armReach` bends it from
+// there), the two overlapping round the elbow so the joint stays covered;
+// the upper sleeve ends at its shoulder in a ball about its pivot, its half
+// width across, so it turns onto itself as the arm swings (RIVE.md, "Cut a
+// traced mass by what lies in front of it"). Every traced figure takes the
+// same numbers (its face's, its stance's, both arms' and their elbows', and
+// an open mouth's when it has one), so a pose names them on any view. Pure.
+
+import type { ConceptRef } from '../core/match.ts';
+import { figure } from './figure.ts';
+import type { Paper } from './paper.ts';
+import { Ear } from './parts/ear.ts';
+import { Hair } from './parts/hair.ts';
+import { Hands } from './parts/hands.ts';
+import { Headcloth } from './parts/headcloth.ts';
+import { Head } from './parts/head.ts';
+import { JointedArm, armHand } from './parts/arm.ts';
+import { KitA, tracedKit } from './parts/kit.ts';
+import { OpenMouth } from './parts/mouth.ts';
+import { Robe } from './parts/body.ts';
+import { Sandals } from './parts/feet.ts';
+import { Stance } from './parts/stance.ts';
+import { Stature } from './parts/stature.ts';
+import type { FaceKnob, Pt } from './rig/parts.ts';
+
+/** A colour laid on a part, clipped to it: its pieces in sheet pixels and its colour; `skin` on a garment marks the figure's skin. */
+export interface TracedTone {
+  readonly pts: ReadonlyArray<ReadonlyArray<Pt>>;
+  readonly color: `#${string}`;
+  readonly skin?: true;
+}
+
+/** A traced arm: its sleeve whole as it hangs, its hand's circle, its paper and what lies on it. */
+export interface TracedArmSpec {
+  readonly outline: ReadonlyArray<Pt>;
+  readonly hand: { readonly at: Pt; readonly r: number };
+  readonly paper: Paper;
+  readonly tones?: ReadonlyArray<TracedTone>;
+  /** Where its elbow lies between its shoulder and its hand, a share of the way down (0.45 unless given). */
+  readonly elbow?: number;
+}
+
+/** What a traced figure is composed of, every point in its sheet's pixels. */
+export interface TracedFigureSpec {
+  readonly concept: ConceptRef;
+  /** Canon units a sheet pixel: one for every view of a sheet. */
+  readonly scale: number;
+  /** The head's centre and the feet's middle at the soles, the figure's origin. */
+  readonly headAt: Pt;
+  readonly feet: Pt;
+  readonly head: {
+    readonly view: 'front' | 'threeQuarter' | 'side' | 'back';
+    readonly outline: ReadonlyArray<Pt>;
+    readonly paper: Paper;
+    readonly tones?: ReadonlyArray<TracedTone>;
+  };
+  readonly hair?: {
+    readonly outline: ReadonlyArray<Pt>;
+    readonly paper: Paper;
+    readonly tones?: ReadonlyArray<TracedTone>;
+  };
+  readonly headcloth?: { readonly outline: ReadonlyArray<Pt>; readonly paper: Paper };
+  readonly ears?: {
+    readonly near?: ReadonlyArray<Pt>;
+    readonly far?: ReadonlyArray<Pt>;
+    readonly paper: Paper;
+  };
+  /** The face's marks as the sheet draws them (`tracedKit`), the features' slide after the gaze, the face at rest and where its eyes look. */
+  readonly face: {
+    readonly marks: Parameters<typeof tracedKit>[0];
+    readonly turn: number;
+    readonly rest?: Parameters<typeof KitA>[0]['rest'];
+    readonly gaze: Pt;
+  };
+  /** A mouth thrown open where the kit's mouth sits: its width and height, units, and its paper. */
+  readonly mouth?: { readonly w: number; readonly h: number; readonly paper: `#${string}` };
+  readonly body: {
+    readonly outline: ReadonlyArray<Pt>;
+    readonly paper: Paper;
+    readonly tones?: ReadonlyArray<TracedTone>;
+  };
+  readonly arms: { readonly near: TracedArmSpec; readonly far: TracedArmSpec };
+  readonly feet_: {
+    readonly near: {
+      readonly outline: ReadonlyArray<Pt>;
+      readonly tones?: ReadonlyArray<TracedTone>;
+    };
+    readonly far: {
+      readonly outline: ReadonlyArray<Pt>;
+      readonly tones?: ReadonlyArray<TracedTone>;
+    };
+    readonly paper: Paper;
+    readonly sole: `#${string}`;
+  };
+  readonly hands: Paper;
+  /** The figure's breath: seconds, the trunk's height at its top against its own, the neck's rise. */
+  readonly breath?: { readonly period: number; readonly trunk: number; readonly neck: number };
+}
+
+/** Every traced figure's numbers: its face's, its stance's, both arms' and their elbows'. */
+export type TracedKnob =
+  | FaceKnob
+  | 'lean'
+  | 'tilt'
+  | 'nod'
+  | 'nearArm'
+  | 'nearElbow'
+  | 'farArm'
+  | 'farElbow';
+
+/** Two decimals: how a traced point is written into the print. */
+const hundredth = (v: number) => +v.toFixed(2);
+
+/** `pts` cut to the side of the row `y` that `keep` names: what lies above it (`above`) or below. */
+const cutAt = (pts: ReadonlyArray<Pt>, y: number, keep: 'above' | 'below'): Pt[] => {
+  const inside = (p: Pt) => (keep === 'above' ? p[1] <= y : p[1] >= y);
+  const out: Pt[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i] ?? [0, 0];
+    const b = pts[(i + 1) % pts.length] ?? [0, 0];
+    if (inside(a)) out.push(a);
+    if (inside(a) !== inside(b)) {
+      const t = (y - a[1]) / (b[1] - a[1]);
+      out.push([a[0] + (b[0] - a[0]) * t, y]);
+    }
+  }
+  return out;
+};
+
+/** The span of `pts` across the row `y`: its leftmost and rightmost crossing. */
+const spanAt = (pts: ReadonlyArray<Pt>, y: number): readonly [number, number] => {
+  const xs: number[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i] ?? [0, 0];
+    const b = pts[(i + 1) % pts.length] ?? [0, 0];
+    if (a[1] <= y !== b[1] <= y) xs.push(a[0] + ((b[0] - a[0]) * (y - a[1])) / (b[1] - a[1]));
+  }
+  return xs.length === 0 ? [0, 0] : [Math.min(...xs), Math.max(...xs)];
+};
+
+/** The point at height `y` on the line from `a` to `b`. */
+const onLine = (a: Pt, b: Pt, y: number): Pt => [
+  a[0] + ((b[0] - a[0]) * (y - a[1])) / (b[1] - a[1]),
+  y,
+];
+
+/** How far the upper sleeve and the forearm run past the elbow into each other, sheet pixels. */
+const ELBOW_OVERLAP = 10;
+
+/** The points round a shoulder's ball, over its top. */
+const BALL_POINTS = 9;
+
+/**
+ * A traced arm cut at its elbow, in sheet pixels: its pivot (the middle of
+ * the sleeve its half width below its top), its elbow on the line from the
+ * pivot to its hand, its upper sleeve (to past the elbow, its top a ball
+ * about the pivot) and its forearm (from before the elbow to its cuff).
+ */
+export const cutArm = (arm: TracedArmSpec) => {
+  const top = Math.min(...arm.outline.map(([, y]) => y));
+  const [l0, r0] = spanAt(arm.outline, top + 12);
+  const half = (r0 - l0) / 2;
+  const pivot: Pt = [l0 + half, top + half];
+  const elbowY = pivot[1] + (arm.hand.at[1] - pivot[1]) * (arm.elbow ?? 0.45);
+  const elbow = onLine(pivot, arm.hand.at, elbowY);
+  const below = cutAt(cutAt(arm.outline, elbowY + ELBOW_OVERLAP, 'above'), pivot[1], 'below');
+  const [bl, br] = spanAt(arm.outline, pivot[1] + 1);
+  const r = Math.max(half, (br - bl) / 2);
+  const ball: Pt[] = Array.from({ length: BALL_POINTS }, (_, i) => {
+    const a = Math.PI + (i / (BALL_POINTS - 1)) * Math.PI;
+    return [pivot[0] + r * Math.cos(a), pivot[1] + r * Math.sin(a)];
+  });
+  // The cut sleeve runs clockwise on screen: its top's two corners at the pivot's row are its ends.
+  const upper = [...ball, ...below.filter(([, y]) => y > pivot[1] + 0.5)];
+  const forearm = cutAt(arm.outline, elbowY - ELBOW_OVERLAP, 'below');
+  return { pivot, elbow, upper, forearm };
+};
+
+/** `p` turned `by` radians about the figure's feet, its origin. */
+const leanedBy = ([x, y]: Pt, by: number): Pt => {
+  const [c, sn] = [Math.cos(by), Math.sin(by)];
+  return [x * c - y * sn, x * sn + y * c];
+};
+
+/**
+ * Where a traced figure's hands lie with its numbers at `n` (any left out at
+ * rest), units from its feet: each arm's hand turned and bent by its numbers
+ * (`armHand`), then leaned with the body about the feet. The host draws its
+ * circle hands there, each at its cuff.
+ */
+export const tracedHands = (
+  arms: { readonly near: JointedArm; readonly far: JointedArm },
+  n: Readonly<Partial<Record<TracedKnob, number>>>,
+) => ({
+  near: leanedBy(armHand(arms.near, n.nearArm ?? 0, n.nearElbow ?? 0), n.lean ?? 0),
+  far: leanedBy(armHand(arms.far, n.farArm ?? 0, n.farElbow ?? 0), n.lean ?? 0),
+});
+
+/**
+ * A figure composed from `spec`'s traced parts, standing on its feet: each
+ * part in the cast's canon, its head about its centre, its body about its
+ * feet; its arms cut at their elbows (`cutArm`), its circle hands at their
+ * cuffs. Its numbers are every traced figure's (`TracedKnob`), and an open
+ * mouth's (`shout`) when it has one.
+ */
+export const tracedFigure = (spec: TracedFigureSpec) => {
+  const s = spec.scale;
+  const fromHead = ([x, y]: Pt): Pt => [
+    hundredth((x - spec.headAt[0]) * s),
+    hundredth((y - spec.headAt[1]) * s),
+  ];
+  const fromFeet = ([x, y]: Pt): Pt => [
+    hundredth((x - spec.feet[0]) * s),
+    hundredth((y - spec.feet[1]) * s),
+  ];
+  const head = (pts: ReadonlyArray<Pt>) => pts.map(fromHead);
+  const body = (pts: ReadonlyArray<Pt>) => pts.map(fromFeet);
+  const toned = (to: (pts: ReadonlyArray<Pt>) => Pt[], tones: ReadonlyArray<TracedTone> = []) =>
+    tones.flatMap((t) =>
+      t.pts.map((pts) =>
+        t.skin === true
+          ? { pts: to(pts), color: t.color, skin: true as const }
+          : { pts: to(pts), color: t.color },
+      ),
+    );
+  const headOutline = head(spec.head.outline);
+  const ys = headOutline.map(([, y]) => y);
+  const headY = hundredth((spec.headAt[1] - spec.feet[1]) * s);
+  const chin = Math.max(...ys);
+  const armOf = (arm: TracedArmSpec) => {
+    const cut = cutArm(arm);
+    return JointedArm({
+      pivot: fromFeet(cut.pivot),
+      rest: 0,
+      outline: body(cut.upper),
+      elbow: fromFeet(cut.elbow),
+      bend: 0,
+      forearm: body(cut.forearm),
+      hand: fromFeet(arm.hand.at),
+      paper: arm.paper,
+      tones: toned(body, arm.tones),
+      forearmTones: toned(body, arm.tones),
+    });
+  };
+  const near = armOf(spec.arms.near);
+  const far = armOf(spec.arms.far);
+  const bodyOutline = body(spec.body.outline);
+  const hem = Math.max(...bodyOutline.map(([, y]) => y));
+  const headWidth =
+    Math.max(...headOutline.map(([x]) => x)) - Math.min(...headOutline.map(([x]) => x));
+  // The sheet draws both hands one size; the larger traced circle is that size, so each touches its cuff.
+  const handR = Math.max(spec.arms.near.hand.r, spec.arms.far.hand.r);
+  const handShare = hundredth((2 * handR * s) / headWidth);
+  // Room round him for his head's tilt, his arms' reach and his outline; his feet are the rig's origin.
+  const all = [...bodyOutline, ...headOutline.map(([x, y]): Pt => [x, y + headY])];
+  const reach = Math.max(...all.map(([x]) => Math.abs(x))) + 120;
+  const top = Math.min(...all.map(([, y]) => y)) - 60;
+  const feet: Pt = [Math.ceil(reach), Math.ceil(-top)];
+  const art = { width: Math.ceil(2 * reach), height: Math.ceil(-top + 30), feet };
+  const kit = tracedKit(spec.face.marks, { scale: s, head: spec.headAt }, spec.face.turn);
+  const ears = spec.ears;
+  const f = figure({
+    concept: spec.concept,
+    art,
+    stature: Stature.Canon(),
+    stance: Stance.Standing({ breath: spec.breath ?? { period: 4, trunk: 1.01, neck: -2 } }),
+    head: Head.Traced({
+      view: spec.head.view,
+      outline: headOutline,
+      y: headY,
+      neck: hundredth(headY + chin),
+      set: { x: hundredth((spec.headAt[0] - spec.feet[0]) * s) },
+      paper: spec.head.paper,
+      tones: toned(head, spec.head.tones),
+    }),
+    hair:
+      spec.hair === undefined
+        ? undefined
+        : Hair.Traced({
+            outline: head(spec.hair.outline),
+            paper: spec.hair.paper,
+            tones: toned(head, spec.hair.tones),
+          }),
+    headcloth:
+      spec.headcloth === undefined
+        ? undefined
+        : Headcloth({ outline: head(spec.headcloth.outline), paper: spec.headcloth.paper }),
+    ear:
+      ears === undefined
+        ? undefined
+        : ears.near !== undefined && ears.far !== undefined
+          ? Ear.Both({ near: head(ears.near), far: head(ears.far), paper: ears.paper })
+          : Ear.Traced({ outline: head(ears.near ?? ears.far ?? []), paper: ears.paper }),
+    face: KitA(
+      spec.face.rest === undefined
+        ? { ...kit, gaze: spec.face.gaze }
+        : { ...kit, rest: spec.face.rest, gaze: spec.face.gaze },
+    ),
+    mouth: spec.mouth === undefined ? undefined : OpenMouth(spec.mouth),
+    body: Robe.Traced({
+      outline: bodyOutline,
+      hem,
+      paper: spec.body.paper,
+      tones: toned(body, spec.body.tones),
+    }),
+    arms: { near, far },
+    feet: Sandals({
+      paper: spec.feet_.paper,
+      near: {
+        corners: body(spec.feet_.near.outline),
+        radii: [1],
+        tones: toned(body, spec.feet_.near.tones),
+      },
+      far: {
+        corners: body(spec.feet_.far.outline),
+        radii: [1],
+        tones: toned(body, spec.feet_.far.tones),
+      },
+      sole: spec.feet_.sole,
+    }),
+    hands: Hands({ paper: spec.hands, share: handShare }),
+  });
+  const knobs: Readonly<Record<TracedKnob, number>> = f.knobs;
+  return {
+    figure: { ...f, knobs },
+    /** Its arms, for the host that draws its hands: each reaches its hand to a point (`armReach`), its hand at rest, its shoulder. */
+    arms: { near, far },
+    /** Its hands' circle across, units. */
+    hand: hundredth(2 * handR * s),
+    /** The face `check` reads (`RivePropSpec.face`): its node, and its head's height, units. */
+    face: { node: 'face', height: hundredth(chin - Math.min(...ys)) } as const,
+  };
+};

@@ -607,6 +607,7 @@
         "**/packages/film/src/core/raster.ts",
         "**/packages/film/src/core/cast-sheet-pixels.ts",
         "**/packages/film/src/core/cast-underlay.ts",
+        "**/packages/film/src/core/trace.ts",
         "**/packages/film/src/core/fixtures/figure.ts"
       ],
       "rules": {

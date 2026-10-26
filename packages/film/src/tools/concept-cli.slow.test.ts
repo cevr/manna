@@ -27,6 +27,7 @@ import { Segment } from '../core/segment.ts';
 import { concept } from './concept-cli.ts';
 import { ContentStore } from './content-store.ts';
 import { FilmFolder } from './film-repo.ts';
+import { Pages } from './pages.ts';
 import { encodePng } from './png.ts';
 import { memoryFileSystem, printingTo, text } from './host/testing.ts';
 
@@ -67,11 +68,17 @@ const files = () =>
     Path.layer,
   );
 
+/** No export pages: these runs draw no cast render. */
+const NO_PAGES = Layer.succeed(
+  Pages,
+  Pages.of({ open: () => Effect.die('no export pages in this test') }),
+);
+
 /** `film concept …args`: its exit and what it printed. */
 const run = (args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const lines = yield* Queue.unbounded<string>();
-    const exit = yield* Command.runWith(concept(HOUSE, []), { version: '0' })(args).pipe(
+    const exit = yield* Command.runWith(concept(HOUSE, [], NO_PAGES), { version: '0' })(args).pipe(
       Effect.provideService(Console.Console, printingTo(lines)),
       Effect.exit,
     );

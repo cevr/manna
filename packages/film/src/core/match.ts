@@ -46,14 +46,25 @@ const BoardImage = Schema.String.check(
   }),
 );
 
+/** A cast member's id, as its sheet folder is named (`lead-feast`). */
+const CastMember = Schema.String.check(
+  Schema.isPattern(new RegExp(`^${NAME}$`), { message: "a cast member's id: one name" }),
+);
+
+/** A kind of cast sheet a member keeps. */
+const CastSheetKind = Schema.Literals(['turnaround', 'poses', 'heads']);
+
 /**
  * A concept image: a set's file (`out/<set>/<file>`: a kept concept, a model
- * sheet), or a Board try of the film's own, by its file in the film's
- * `board/` folder (board.json's `tries[].file`).
+ * sheet), a Board try of the film's own, by its file in the film's `board/`
+ * folder (board.json's `tries[].file`), or a cast member's kept sheet of a
+ * kind (`kept/<sheet>.png` in the member's record, the film's own role's
+ * before the library's), which is tracked, so it reads in any checkout.
  */
 export const ConceptImage = Schema.Union([
   Schema.Struct({ set: SetName, file: SetFile }),
   Schema.Struct({ board: BoardImage }),
+  Schema.Struct({ cast: CastMember, sheet: CastSheetKind }),
 ]);
 export type ConceptImage = typeof ConceptImage.Type;
 
@@ -65,11 +76,12 @@ export type ConceptImage = typeof ConceptImage.Type;
 export const ConceptRef = Schema.Struct({ image: ConceptImage, box: PixelBox });
 export type ConceptRef = typeof ConceptRef.Type;
 
-/** A concept image as a line names it: `<set>/<file>` or `board/<file>`. */
+/** A concept image as a line names it: `<set>/<file>`, `board/<file>` or `cast/<member>/kept/<sheet>.png`. */
 export const conceptImageName = (image: ConceptImage): string =>
   Match.value(image).pipe(
     Match.when({ set: Match.string }, (set) => `${set.set}/${set.file}`),
     Match.when({ board: Match.string }, (board) => `board/${board.board}`),
+    Match.when({ cast: Match.string }, (cast) => `cast/${cast.cast}/kept/${cast.sheet}.png`),
     Match.exhaustive,
   );
 

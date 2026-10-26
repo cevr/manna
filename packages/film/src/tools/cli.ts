@@ -121,6 +121,7 @@ import type { CritiqueRule } from '../core/critique.ts';
 import { Review, type ReviewRoot } from './review.ts';
 import { labSubcommands } from './events-cli.ts';
 import { read } from './read-cli.ts';
+import { Pages } from './pages.ts';
 import { PreviewServer } from './preview-server.ts';
 import {
   DRAW_WORKERS,
@@ -1183,7 +1184,11 @@ export const runFilmCli = <E>({
       ),
       channel.pipe(Command.provide(FetchHttpClient.layer)),
       review(films, critiquing.rules),
-      concept(house, critiquing.rules),
+      concept(
+        house,
+        critiquing.rules,
+        Pages.layer.pipe(Layer.provide([Browser.layer, previewServer])),
+      ),
       ask,
       production,
       publish,
