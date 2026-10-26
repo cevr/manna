@@ -343,6 +343,8 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 
 - Owner, 2026-10-26, on the order after heldhide: "lets do selah after we're done current queue". The hymnal queue runs first: heldhide, then playbulk (keyplay, playswap, followsync, chordplace, offline), findbulk, tuner, tempo, with checkbulk in a free slot. `selahone` planning starts after that queue. (owner, selahone)
 
+- Owner, 2026-10-26, Selah planning (in the orchestrator session): Selah becomes **Heartseed** (Luke 8:11–15), a voice-first app to memorize the whole Bible, "delightful … fun and simple and easy to use". Free: KJV, 3 passages of up to 20 verses, the Fear promises, sync. Pro: $2.99 a month, $14.99 a year, $39.99 lifetime (replaces the $3.99 unlock); licensed texts sold one by one. iPhone first, then Mac, then Android; no import from the SwiftUI app. Every decision with its quote: `apps/selah/plans/heartseed-brief.md`. (owner, selahone)
+
 ## Owner questions
 
 - Clicks in silent mode (feel): keep them muted under the silent switch, as iOS keyboard clicks are (recommended: the phone stays quiet at worship), or play them even in silent mode (a new sound path, checked against the hymn audio session). Asked 2026-10-25. Answer (owner, 2026-10-25): "Yeah, the clicks, that's fine. Stay muted in silent mode". No change. (feel)
