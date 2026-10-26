@@ -163,7 +163,7 @@
       "name": "@manna/cli",
       "version": "1.0.0",
       "bin": {
-        "bible": "bin/bible",
+        "manna": "bin/manna",
       },
       "dependencies": {
         "@effect/platform-bun": "catalog:",

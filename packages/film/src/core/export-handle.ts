@@ -22,6 +22,8 @@ export const ExportInfo = Schema.Struct({
   frames: Schema.Int,
   /** The mixed track's URL, present only when every take is recorded. */
   audio: Schema.optional(Schema.String),
+  /** The browser the page runs in, by its user agent: a kept segment's key names it (tools/segments.ts). */
+  agent: Schema.optional(Schema.String),
 });
 export type ExportInfo = typeof ExportInfo.Type;
 

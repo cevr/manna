@@ -576,22 +576,44 @@ draw is timed apart from the encoder: each `render.progress` line and
 `render.done` say how many ms a frame went to drawing, encoding and carrying
 the chunk out of the page (`draw_ms=… encode_ms=… transfer_ms=…`), and a
 perf script times the draw alone with `drawTimes(frames)`. A video's
-frames split into chunks (`planChunks`: about four per page, at least a second
+frames to draw split into chunks (`segmentChunks`, never across a segment's
+edge, below: about four per page, at least a second
 and at most eight each, then a tail of `workers` chunks at half that size, a
 quarter, and so on down to a second, so the last chunk each page pulls is its
 smallest and the pages finish together) on a queue that idle pages pull from; each page draws
 its chunk and encodes it with the browser's H.264 encoder through mediabunny
-(`player/encode.ts`, a key frame every two seconds) into a segment of its own
+(`player/encode.ts`, a key frame every two seconds) into an MP4 of its own
 (and, unless `--no-share`, a share copy from a second encoder in the same
 pass), and a chunk whose page crashes is retried once on a new page. Which
-encoder is data, chosen once (below). `Media.join` joins the segments in order with the track cut from
+encoder is data, chosen once (below). `Media.join` joins the chunks in order with the track cut from
 `full.wav` under the range and encoded to AAC, and the captions (`main.vtt`) are written
 beside the MP4 from `captionCues`, the same line timing the burned-in captions
-use. Segments are written to a temp folder of the render's own (`makeTempDirectory`), removed once joined;
-a video leaves no segments under `out/<film>/`, whatever its variant. A
-contact sheet is composed in one page (`player/contact.ts`). An
+use. A contact sheet is composed in one page (`player/contact.ts`). An
 uncaught error in the page is a `PageError`, never a log line. A missing
 browser is `BrowserMissing`, whose message is the install command.
+
+**Reuse.** A video of the film, an act or a scene, of its scenes or its
+Board, splits its frames at its beats into segments (`beatSegments`,
+`tools/segments.ts`) and keeps each under `out/<film>/cache/segments/<key>/`,
+a folder no catalogue lists. A segment's key (`segmentKey`) hashes the
+render's settings (size, fps, scale, encoder, the share copy made in the page,
+captions, picture, the browser's user agent, the platform), its frames, the
+`Stamps` key of each beat its frames fall in (its sources, the film's frame
+and the engine, its layout and its take), and for a Board render each shot its
+frames draw (`shotsSeen`: the try shown and its image's sha256 as it is on
+disk, its motion, the span that times its motion and its dissolves), so a
+neighbour seen across a dissolve at the segment's edge changes it and a panel
+elsewhere does not. A render draws only the segments it finds no record of
+(`<key>/segment.json`, written once all the segment's chunks are there), its
+chunks cut at segment edges (`segmentChunks`) and each kept as
+`<from>-<to>.mp4`, named by its frames, so two renders that cut a segment
+otherwise never write one file. It opens no drawing page when it draws none,
+and joins every segment's chunks, kept or drawn, and their share copies,
+packets copied; `render.reuse segments=<n> drawn=<m>` says how many it drew.
+`--fresh` drops each segment's record and draws it again (`project render
+--force` too), so a fresh render cut off leaves its segments to be drawn. A
+short and a wedge's look (`--level`) draw every frame into a temp folder of
+the render's own, removed once joined.
 
 ## Project folder
 
@@ -638,7 +660,9 @@ Nothing else moves, and no captions are burnt in (the `.vtt` beside it
 keeps the line). `--review` (variant `board-review`) burns in, small in the
 bottom-left corner, the film time, the beat and the panel with its try
 (`0:41.3 · name · name.sets · try 5`, `burnIn`), so a frame of the owner's
-screen capture names where he is. The page (`player/board.ts`) reads the
+screen capture names where he is. A review copy is watched, not sent, so it
+makes no share copy unless `--share` asks for one, which doubles its speed
+(a share copy is a second hardware encode of every frame). The page (`player/board.ts`) reads the
 board and every kept try from its server (`boardFile`,
 `/films/<film>/board.json`, `/films/<film>/board/<file>`) and decodes them
 before the first frame; one it cannot read fails the render
