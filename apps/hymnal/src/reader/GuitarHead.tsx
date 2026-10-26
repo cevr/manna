@@ -1,8 +1,9 @@
 /**
  * The chords button's mark, the same on every platform: an acoustic guitar's
  * head, a headstock with three tuning pegs on each side over the top of the
- * neck, drawn in the accent. The headstock is filled while chords are on and
- * outlined while they are off.
+ * neck. The headstock is filled while chords are on, drawn in the pill's ink
+ * (`onPill`) on the key button's lit pill, and outlined in the accent while
+ * they are off.
  */
 
 import { StyleSheet, View } from 'react-native';
@@ -14,14 +15,15 @@ const pegs = [4, 9, 14] as const;
 
 export function GuitarHead({ on }: { readonly on: boolean }) {
   const accent = useAccent();
-  const ink = { backgroundColor: accent };
+  const tint = [accent, color.onPill][Number(on)] ?? accent;
+  const ink = { backgroundColor: tint };
   return (
     <View aria-hidden testID="guitar-head" style={styles.mark}>
       {pegs.flatMap((top) => [
         <View key={`l${top}`} style={[styles.peg, styles.left, { top }, ink]} />,
         <View key={`r${top}`} style={[styles.peg, styles.right, { top }, ink]} />,
       ])}
-      <View style={[styles.head, { borderColor: accent }, on && ink]} />
+      <View style={[styles.head, { borderColor: tint }, on && ink]} />
       <View style={[styles.neck, ink]} />
     </View>
   );

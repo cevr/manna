@@ -8,8 +8,8 @@ wheat is the adaptive icon's foreground in the night, on a wheat ground,
 with a white monochrome layer for themed icons. On the web the tab shows the
 wheat (the wheat's blade on the night when the system is dark), and the page
 names a touch icon and a web manifest. The launch screen shows the same
-wheat centred on the app's own ground: the night's blade on the paper
-(`#fff9e0`) in light mode, the wheat's on the night in dark mode.
+wheat centred on the app's own ground: the night's blade on the sky's white
+(`#f7f9fb`) in light mode, the wheat's on the night in dark mode.
 
 ## Sub-features
 
@@ -18,7 +18,7 @@ wheat centred on the app's own ground: the night's blade on the paper
 - `icon-tinted`: the tinted icon, the wheat in the system's tint.
 - `icon-name`: the name under the icon reads `Hymnal`.
 - `icon-web`: the favicons, touch icon and manifest the page links, each served.
-- `splash-light`: a cold launch in light mode shows the night's blade on the paper.
+- `splash-light`: a cold launch in light mode shows the night's blade on the sky's white.
 - `splash-dark`: a cold launch in dark mode shows the wheat's blade on the night.
 
 ## How to get to it (user POV)
@@ -39,7 +39,7 @@ wheat centred on the app's own ground: the night's blade on the paper
 3. **Dark (`icon-dark`).** Bind SpringBoard: `agent-device open com.apple.springboard --platform ios --session verify-hymnal`. Long-press an empty spot (`agent-device longpress 200 600 --session verify-hymnal`), `agent-device press 'label="Edit"' --settle --session verify-hymnal`, `agent-device press 'label="Customize"' --settle --session verify-hymnal`, then press `Dark` and its `Auto`, tap `dismiss popup` and press `Done`. `xcrun simctl ui <udid> appearance dark`, then the shot to `home-dark.png`. → the wheat's blade on the night.
 4. **Tinted (`icon-tinted`).** The same path to Customize, then press `Tinted`, and the shot to `home-tinted.png`. → the white wheat in the tint on a glassy ground. Put the style back to `Default` (on iOS 27 the sheet's buttons can drop out of the snapshot: press `Default` at its point from a screenshot), then `Done`.
 5. **The asset catalog.** `xcrun --sdk iphonesimulator assetutil --info <Hymnal.app>/Assets.car > "$EVIDENCE/assetutil.json"`, with `<Hymnal.app>` the `paths.app` of `sim install`'s line. → `AppIcon` has three 1024 px renditions: `icon-1024.png`, `icon-1024-dark.png` (`UIAppearanceDark`) and `icon-1024-tinted.png` (`ISAppearanceTintable`); `Splash` has `splash*.png` and `splash-dark*.png` (`UIAppearanceDark`).
-6. **Launch screen (`splash-light`, `splash-dark`).** `xcrun simctl shutdown <udid>`, `xcrun simctl boot <udid>` (Gotchas). For each appearance: `xcrun simctl ui <udid> appearance light`, `xcrun simctl terminate <udid> im.cvr.hymnal`, then `xcrun simctl launch <udid> im.cvr.hymnal` and, at once, `xcrun simctl io <udid> screenshot` a few times in a row to `splash-light.png`. → the first frames show the night's blade centred on the paper; with `appearance dark`, the wheat's blade on the night. The hymn list follows.
+6. **Launch screen (`splash-light`, `splash-dark`).** `xcrun simctl shutdown <udid>`, `xcrun simctl boot <udid>` (Gotchas). For each appearance: `xcrun simctl ui <udid> appearance light`, `xcrun simctl terminate <udid> im.cvr.hymnal`, then `xcrun simctl launch <udid> im.cvr.hymnal` and, at once, `xcrun simctl io <udid> screenshot` a few times in a row to `splash-light.png`. → the first frames show the night's blade centred on the sky's white; with `appearance dark`, the wheat's blade on the night. The hymn list follows.
 7. **Web (`icon-web`).** `sim boot --platform web --port $PORT --out "$EVIDENCE"`. `curl -s -o /dev/null -w "%{http_code}" http://localhost:$PORT/<file>` for `manifest.webmanifest`, `favicon.svg`, `favicon-32.png` and `apple-touch-icon.png`. → `200` each. `agent-browser --session verify-hymnal eval "JSON.stringify([...document.head.querySelectorAll('link[rel=icon],link[rel=apple-touch-icon],link[rel=manifest]')].map(l => l.rel + ' ' + l.getAttribute('href')))"` → `icon /favicon-32.png`, `icon /favicon.svg`, `apple-touch-icon /apple-touch-icon.png`, `manifest /manifest.webmanifest`.
 
 ## Gotchas

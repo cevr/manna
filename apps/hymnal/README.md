@@ -20,12 +20,17 @@ under its number, and the refrain written out each time it is sung.
   and no derived file is committed.
 - The colours are the brand's, Moonlit wheat (the wheat on the night), from
   its one source, `@manna/brand` (`packages/brand`), which the First the
-  Blade site reads too. `src/theme.ts` draws eleven roles from it in light
-  and dark: ground, ink, muted, line, accent, soft, onAccent (the text on an
-  accent fill), pressed and onPressed (a held accent fill and its text), and
-  panel and edge (the open dials' raised panel and its border). Light is the
-  site's day (the night's ink on the paper), dark the site's night (the
-  wheat on the night). A screen reads a role, never a hex value. On iOS each
+  Blade site reads too, as the owner's pick "sky" (2026-10-25): the brand's
+  painted sky as the second colour. `src/theme.ts` draws fifteen roles from
+  it in light and dark: ground, ink, muted, line, accent, chord (the chords
+  and the dials' current stop), soft, onAccent (the text on an accent
+  fill), pressed and onPressed (a held accent fill and its text), panel and
+  edge (the open dials' panel and its border), bar (the docked player bar),
+  and pill and onPill (the key button's lit pill and the dials' Reset, and
+  their ink). Light is a cool white page under the night's ink, with the
+  dusk's gold deepened for the chords; dark keeps the night as the page,
+  with the dusk's gold for the accent and the chords. A screen reads a
+  role, never a hex value. On iOS each
   role is a `DynamicColorIOS` (`src/color.native.ts`), on the web a CSS
   `light-dark()` property (`src/color.ts`). Android keeps the system's
   colours. `src/theme.test.ts` holds every text role to WCAG AA on what it
@@ -298,10 +303,10 @@ The app is named Hymnal, and its icon is one blade of wheat:
   (white) layers, on a wheat ground the launcher draws.
 - Web: `public/favicon.svg` (the wheat's blade on the night in dark mode),
   `favicon-32.png`, `apple-touch-icon.png`, and the manifest's icons, one of
-  them maskable. The manifest's ground is the app's light ground, the paper.
+  them maskable. The manifest's ground is the app's light ground, the sky's white.
 - The launch screen: `public/splash.png` (the night's blade) and
   `splash-dark.png` (the wheat's), each on a transparent square the launch
-  screen centres 200 points wide on the app's own ground (the paper, and
+  screen centres 200 points wide on the app's own ground (the sky's white, and
   the night in dark mode), so the first screen follows with no change of
   colour. One's prebuild trims an opaque ground away, so the ground is the
   config's `backgroundColor`, not the PNG's.

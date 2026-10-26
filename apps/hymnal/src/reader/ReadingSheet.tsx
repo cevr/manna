@@ -84,11 +84,10 @@ function TextSize({ size }: { readonly size: Atom.Writable<number> }) {
 }
 
 function SizeMark({ points, current }: { readonly points: number; readonly current: boolean }) {
-  const accent = useAccent();
   return (
     <Text
       aria-hidden
-      style={[styles.size, { fontSize: Math.min(points, 26) }, current && { color: accent }]}
+      style={[styles.size, { fontSize: Math.min(points, 26) }, current && { color: color.chord }]}
       maxFontSizeMultiplier={MOST_SCALE}
     >
       A

@@ -75,7 +75,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { color, useAccent } from '~/color';
+import { color } from '~/color';
 import { type DialName, useCue } from '~/feel/cue';
 
 import {
@@ -148,7 +148,6 @@ const WIDEST = 'CAPO';
 function Dial<A>(props: DialProps<A>) {
   const { dial, label, title, stops, index, wrap, said, drawStop, testID, resets = 0 } = props;
   const cue = useCue();
-  const accent = useAccent();
   const reduced = useReduceMotion();
   const detents = { name: dial, count: stops.length, wrap };
   const place = useSharedValue(index * DETENT);
@@ -396,10 +395,7 @@ function Dial<A>(props: DialProps<A>) {
                 </Stop>
               ))}
             </View>
-            <Animated.View
-              pointerEvents="none"
-              style={[styles.notch, { backgroundColor: accent }, notch]}
-            />
+            <Animated.View pointerEvents="none" style={[styles.notch, notch]} />
           </View>
         </View>
       </GestureDetector>
@@ -511,5 +507,6 @@ const styles = StyleSheet.create({
     width: 2,
     height: 9,
     transformOrigin: 'top',
+    backgroundColor: color.chord,
   },
 });

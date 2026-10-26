@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
   },
-  lit: { backgroundColor: color.soft },
+  lit: { backgroundColor: color.pill },
   off: {
     paddingRight: 6,
     borderWidth: StyleSheet.hairlineWidth,
@@ -176,6 +176,12 @@ const styles = StyleSheet.create({
   },
   dim: { opacity: 0.5 },
   words: { alignItems: 'flex-start' },
-  over: { fontSize: 9.5, lineHeight: 11, fontWeight: '600', letterSpacing: 0.8, color: color.ink },
-  key: { fontSize: 15, lineHeight: 17, fontWeight: '700', color: color.ink },
+  over: {
+    fontSize: 9.5,
+    lineHeight: 11,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    color: color.onPill,
+  },
+  key: { fontSize: 15, lineHeight: 17, fontWeight: '700', color: color.onPill },
 });

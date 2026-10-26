@@ -34,7 +34,7 @@ import {
 } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { color, useAccent } from '~/color';
+import { color } from '~/color';
 import { useCue } from '~/feel/cue';
 import { hasChords, keyName, type Move, soundingKey } from '~/hymns/chords';
 import { styled } from '~/hymns/simple';
@@ -261,37 +261,35 @@ function ResetChip({
   );
 }
 
-/** A key on the key dial, the current one in the accent: the printed key marked with a dot under it. */
+/** A key on the key dial, the current one in the chord colour: the printed key marked with a dot under it. */
 function KeyName({ stop, current }: { readonly stop: KeyStop; readonly current: boolean }) {
-  const accent = useAccent();
   return (
     <>
       <Text
-        style={[styles.key, stop.name.length > 1 && styles.longKey, current && { color: accent }]}
+        style={[styles.key, stop.name.length > 1 && styles.longKey, current && styles.current]}
         numberOfLines={1}
         maxFontSizeMultiplier={MOST_SCALE}
       >
         {stop.name}
       </Text>
-      {stop.printed && <View style={[styles.home, { backgroundColor: accent }]} />}
+      {stop.printed && <View style={styles.home} />}
     </>
   );
 }
 
-/** A fret on the capo dial: its number over the key played there, an open key in the accent. */
+/** A fret on the capo dial: its number over the key played there, the current one and an open key in the chord colour. */
 function Fret({ stop, current }: { readonly stop: CapoStop; readonly current: boolean }) {
-  const accent = useAccent();
   return (
     <>
       <Text
-        style={[styles.fret, current && { color: accent }]}
+        style={[styles.fret, current && styles.current]}
         numberOfLines={1}
         maxFontSizeMultiplier={MOST_SCALE}
       >
         {stop.capo}
       </Text>
       <Text
-        style={[styles.played, stop.open && [styles.open, { color: accent }]]}
+        style={[styles.played, stop.open && styles.open]}
         numberOfLines={1}
         maxFontSizeMultiplier={MOST_SCALE}
       >
@@ -309,14 +307,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 16,
     justifyContent: 'center',
-    backgroundColor: color.soft,
+    backgroundColor: color.pill,
   },
   pressed: { opacity: 0.6 },
-  chipText: { fontSize: 13, fontWeight: '600', color: color.ink },
+  chipText: { fontSize: 13, fontWeight: '600', color: color.onPill },
   key: { fontSize: 17, fontWeight: '600', color: color.muted },
   longKey: { fontSize: 14 },
-  home: { position: 'absolute', bottom: 5, width: 4, height: 4, borderRadius: 2, opacity: 0.7 },
+  current: { color: color.chord },
+  home: {
+    position: 'absolute',
+    bottom: 5,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    opacity: 0.7,
+    backgroundColor: color.chord,
+  },
   fret: { fontSize: 15, lineHeight: 17, fontWeight: '700', color: color.muted },
   played: { fontSize: 10, lineHeight: 12, color: color.muted },
-  open: { fontWeight: '700' },
+  open: { fontWeight: '700', color: color.chord },
 });

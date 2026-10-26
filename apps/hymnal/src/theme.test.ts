@@ -37,20 +37,29 @@ const contrast = (a: string, b: string) => {
  * The player draws on the ground: its title in ink, its caption and times
  * in muted, the hymn number and iOS's play button in accent; the web's and
  * Android's play button is an accent fill under onAccent, and while pressed
- * a pressed fill under onPressed.
+ * a pressed fill under onPressed. The chords stand on the page, and the
+ * search field's placeholder on soft.
  */
 const pairs: ReadonlyArray<readonly [text: keyof Roles, on: keyof Roles]> = [
   ['ink', 'ground'],
   ['muted', 'ground'],
   ['accent', 'ground'],
+  ['chord', 'ground'],
   ['ink', 'soft'],
   ['accent', 'soft'],
+  ['muted', 'soft'],
   ['onAccent', 'accent'],
   ['onPressed', 'pressed'],
-  // The open dials' panel: its labels and keys in muted, its current key and notch in accent, the reset chip's ink on soft.
+  // The open dials' panel: its labels and keys in muted, its current stop in chord, the Reset pill's ink on the pill.
   ['ink', 'panel'],
   ['muted', 'panel'],
   ['accent', 'panel'],
+  ['chord', 'panel'],
+  ['onPill', 'pill'],
+  // The docked bar: its title in ink, its marks in muted and accent.
+  ['ink', 'bar'],
+  ['muted', 'bar'],
+  ['accent', 'bar'],
 ];
 
 describe('the palette meets WCAG AA', () => {
@@ -69,8 +78,8 @@ describe('the palette meets WCAG AA', () => {
  * edge is a control's boundary, at 3.5:1 on the ground (WCAG 1.4.11's 3:1,
  * with the margin the panel's shadow takes from the ground beside it: barfix
  * measured 2.88:1 there for an edge at 3.13:1 on the plain ground). Its fill
- * is lighter than the ground: by day white, as far as any fill lifts off the
- * brand's paper (1.06:1), and by night at least 1.08:1.
+ * is a tone of its own: by day the sky a step deeper than the page, by
+ * night the night raised, each at least 1.05:1 off the ground.
  */
 describe('the dials’ panel stands off the page', () => {
   for (const scheme of ['light', 'dark'] as const) {
@@ -78,17 +87,14 @@ describe('the dials’ panel stands off the page', () => {
       const roles = theme[scheme];
       expect(contrast(roles.edge, roles.ground)).toBeGreaterThanOrEqual(3.5);
     });
-    test(`${scheme}: the fill is lighter than the ground`, () => {
+    test(`${scheme}: the fill is at least 1.05:1 off the ground`, () => {
       const roles = theme[scheme];
-      expect(luminance(roles.panel)).toBeGreaterThan(luminance(roles.ground));
+      expect(contrast(roles.panel, roles.ground)).toBeGreaterThanOrEqual(1.05);
     });
   }
-  test('light: the fill is white, the most lift the paper allows', () => {
-    expect(theme.light.panel).toBe('#ffffff');
-    expect(contrast(theme.light.panel, theme.light.ground)).toBeGreaterThanOrEqual(1.05);
-  });
-  test('dark: the fill lifts at least 1.08:1 off the ground', () => {
-    expect(contrast(theme.dark.panel, theme.dark.ground)).toBeGreaterThanOrEqual(1.08);
+  test('light: the fill is deeper than the page, and dark: lighter', () => {
+    expect(luminance(theme.light.panel)).toBeLessThan(luminance(theme.light.ground));
+    expect(luminance(theme.dark.panel)).toBeGreaterThan(luminance(theme.dark.ground));
   });
 });
 
@@ -126,36 +132,48 @@ test('the contrast ratio is WCAG 2’s', () => {
 });
 
 /**
- * The roles as Moonlit wheat draws them. A change to the brand, the mixing or
- * a channel's order shows here.
+ * The roles as the owner's pick, "sky" (2026-10-25), draws them: each role
+ * the prototype named is its value there, or within 2 of it per channel
+ * where a mix of the brand's colours draws it (light muted, panel and soft,
+ * dark line), but the edges, moved until they read at 3.5:1 (the prototype's were
+ * 1.6:1 by day and 2.3:1 by night). A change to the brand, the mixing or a
+ * channel's order shows here.
  */
-test('the roles are Moonlit wheat', () => {
+test('the roles are the sky', () => {
   expect(theme).toEqual({
     light: {
-      ground: PALETTE.paper,
-      ink: PALETTE.ink,
-      muted: PALETTE.soft,
-      line: '#b8beb4',
-      accent: PALETTE.accent,
-      soft: PALETTE.wheat,
+      ground: '#f7f9fb',
+      ink: PALETTE.night,
+      muted: '#526b7d',
+      line: '#dfe6ee',
+      accent: PALETTE.night,
+      chord: PALETTE.duskDeep,
+      soft: '#e1e8f0',
       onAccent: '#ffffff',
-      pressed: '#655e1f',
+      pressed: '#405c71',
       onPressed: '#ffffff',
-      panel: '#ffffff',
-      edge: '#718388',
+      panel: '#ebeff5',
+      edge: '#6e869c',
+      bar: '#f7f9fb',
+      pill: PALETTE.sky,
+      onPill: PALETTE.night,
     },
     dark: {
       ground: PALETTE.night,
-      ink: PALETTE.nightInk,
-      muted: PALETTE.nightSoft,
-      line: PALETTE.nightRule,
-      accent: PALETTE.nightAccent,
-      soft: '#596d6b',
+      ink: '#eef2f6',
+      muted: PALETTE.sky,
+      line: '#2c4c64',
+      accent: PALETTE.duskGold,
+      chord: PALETTE.duskGold,
+      soft: PALETTE.nightPanel,
       onAccent: PALETTE.night,
-      pressed: '#d0ca9b',
+      pressed: '#c8ab7e',
       onPressed: PALETTE.night,
-      panel: '#1b3c52',
-      edge: '#89927e',
+      panel: PALETTE.nightPanel,
+      edge: '#778ea3',
+      bar: '#0f2d43',
+      pill: PALETTE.sky,
+      onPill: PALETTE.night,
     },
   });
 });

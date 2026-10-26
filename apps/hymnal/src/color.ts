@@ -20,6 +20,10 @@ const roles = [
   'onPressed',
   'panel',
   'edge',
+  'chord',
+  'bar',
+  'pill',
+  'onPill',
 ] as const satisfies ReadonlyArray<keyof Roles>;
 
 export const color = {
@@ -30,6 +34,10 @@ export const color = {
   soft: 'var(--soft)',
   panel: 'var(--panel)',
   edge: 'var(--edge)',
+  chord: 'var(--chord)',
+  bar: 'var(--bar)',
+  pill: 'var(--pill)',
+  onPill: 'var(--onPill)',
 } satisfies Record<Exclude<keyof Roles, Fill>, ColorValue>;
 
 /** The roles a screen reads through a hook: the accent fill and its text, pressed or not. */

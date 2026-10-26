@@ -32,6 +32,10 @@ export const color = Platform.select({
     soft: dynamic('soft'),
     panel: dynamic('panel'),
     edge: dynamic('edge'),
+    chord: dynamic('chord'),
+    bar: dynamic('bar'),
+    pill: dynamic('pill'),
+    onPill: dynamic('onPill'),
   }),
   // Each a theme attribute that resolves to one colour: React Native reads a
   // resolved attribute's value as the colour, so an attribute that resolves
@@ -46,6 +50,10 @@ export const color = Platform.select({
     soft: PlatformColor('?android:attr/colorControlHighlight'),
     panel: PlatformColor('?android:attr/colorBackground'),
     edge: PlatformColor('?android:attr/colorForeground'),
+    chord: PlatformColor('?android:attr/colorForeground'),
+    bar: PlatformColor('?android:attr/colorBackground'),
+    pill: PlatformColor('?android:attr/colorControlHighlight'),
+    onPill: PlatformColor('?android:attr/colorForeground'),
   }),
 })() satisfies Record<Exclude<keyof Roles, Fill>, ColorValue>;
 

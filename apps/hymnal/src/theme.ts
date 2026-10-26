@@ -1,24 +1,29 @@
 /**
- * The app's colours: eleven roles in light and dark, all drawn from the
- * brand's Moonlit wheat (`@manna/brand`, the one source the First the Blade
- * site reads too): the wheat on the night. A screen reads a role (`color.ts`
- * on the web, `color.native.ts` on a phone), never a hex value.
+ * The app's colours: fifteen roles in light and dark, all drawn from the
+ * brand (`@manna/brand`, the one source the First the Blade site reads too)
+ * as the owner's pick of 2026-10-25, "sky": the brand's painted sky as the
+ * second colour, the night as the ink. A screen reads a role (`color.ts` on
+ * the web, `color.native.ts` on a phone), never a hex value.
  *
- * Light is the site's day: the paper under the night's ink, the brand's quiet
- * text and its deepened wheat for the accent. Dark is the site's night: the
- * night under the wheat, with the brand's quiet text and rule by night. A
- * pressed row or a selection (`soft`) is the wheat by day, and the wheat 70%
- * toward the night by night, so ink and accent text keep WCAG AA on it
- * (`theme.test.ts`). Text on the accent (`onAccent`) is the night where it
+ * Light is a cool white page (the sky tinted 88% toward white) under the
+ * night's ink, with the night for the accent too (the hymn numbers, the
+ * tint, the play button) and the dusk's gold deepened for the chords
+ * (`chord`). Panels and pressed rows are the sky tinted less far toward
+ * white, the rules a step deeper, and the key button's lit pill the sky
+ * itself under the night (`pill`, `onPill`). Dark keeps the night as the
+ * page, with a sky-white ink, the sky for quiet text, the dusk's gold for
+ * the accent and the chords, the night raised (`nightPanel`) for panels and
+ * pressed rows, and the docked bar a shade under the night (`bar`).
+ *
+ * Text on a fill (`onAccent`, `onPressed`, `onPill`) is the night where it
  * meets AA on the fill, else white, else black (`onColor`). A pressed accent
- * is a fill of its own (`pressed`), the accent a fifth toward the night, with
- * its own text (`onPressed`), so the pressed state keeps AA and its label's
- * colour. The open dials stand on a raised, opaque panel (`panel`), so no
- * page word shows through it: white by day (the most any fill lifts off the
- * paper, 1.06:1), and the night 4% toward the wheat by night (1.1:1). Its
- * edge (`edge`) is the ground mixed toward the ink, at least 3.5:1 on the
- * ground: WCAG 1.4.11's 3:1 for a control's boundary, with the margin the
- * shadow under the panel takes from the ground around it.
+ * is a fill of its own (`pressed`), the accent a fifth toward the ground.
+ * The open dials stand on an opaque panel (`panel`), so no page word shows
+ * through it; its edge (`edge`) is the sky moved toward the night by day and
+ * the night toward the sky by night, until it reads at 3.5:1 on the ground:
+ * WCAG 1.4.11's 3:1 for a control's boundary, with the margin the shadow
+ * under the panel takes from the ground around it. Every text role keeps
+ * WCAG AA on every role it is drawn on (`theme.test.ts`).
  */
 
 import { PALETTE } from '@manna/brand';
@@ -26,26 +31,34 @@ import { PALETTE } from '@manna/brand';
 export interface Roles {
   /** The screen's background. */
   readonly ground: string;
-  /** Body text and titles. */
+  /** Body text, the hymn's words and titles. */
   readonly ink: string;
-  /** Secondary text: section labels, placeholders, the refrain's mark. */
+  /** Secondary text: section labels, placeholders, the refrain's mark, the dials' stops. */
   readonly muted: string;
   /** Separators and outlines; never under text. */
   readonly line: string;
-  /** The tab tint, the hymn number, links. */
+  /** The tab tint, the hymn number, links, the play button. */
   readonly accent: string;
-  /** A pressed row, a selection: under ink and accent text. */
+  /** A chord's symbol over the words, and the dials' current stop and notch. */
+  readonly chord: string;
+  /** A pressed row, a selection, the search field: under ink, accent and muted text. */
   readonly soft: string;
   /** Text drawn on an accent fill: the play button's label on the web and Android. */
   readonly onAccent: string;
-  /** The accent fill while it is pressed: the accent mixed a fifth toward the night. */
+  /** The accent fill while it is pressed: the accent mixed a fifth toward the ground. */
   readonly pressed: string;
   /** Text drawn on the pressed fill, picked for it as `onAccent` is for the accent. */
   readonly onPressed: string;
-  /** A raised surface over the page, the open dials' panel: the ground lifted a little. */
+  /** A surface over the page, the open dials' panel. */
   readonly panel: string;
   /** The panel's edge: a control's boundary, at least 3.5:1 on the ground. */
   readonly edge: string;
+  /** The docked player bar's ground. */
+  readonly bar: string;
+  /** A pill-shaped button's fill: the key button with chords on, the dials' Reset. */
+  readonly pill: string;
+  /** Text and marks drawn on the pill. */
+  readonly onPill: string;
 }
 
 type Rgb = readonly [number, number, number];
@@ -98,36 +111,50 @@ const contrast = (a: string, b: string) => {
 export const onColor = (fill: string) =>
   [PALETTE.night, '#ffffff'].find((text) => contrast(text, fill) >= 4.5) ?? '#000000';
 
-const lightPressed = mix(PALETTE.accent, PALETTE.night, 0.2);
-const darkPressed = mix(PALETTE.nightAccent, PALETTE.night, 0.2);
+const white = '#ffffff';
+
+/** The sky tinted `t` of the way toward white. */
+const skyTint = (t: number) => mix(PALETTE.sky, white, t);
+
+const lightGround = skyTint(0.88);
+const lightPressed = mix(PALETTE.night, lightGround, 0.2);
+const darkPressed = mix(PALETTE.duskGold, PALETTE.night, 0.2);
 
 export const theme = {
   light: {
-    ground: PALETTE.paper,
-    ink: PALETTE.ink,
-    muted: PALETTE.soft,
-    // The paper 30% toward the ink: 1.8:1 on the paper, as the brand's rule
-    // by night is on the night, so a track or a grabber reads in both schemes.
-    line: mix(PALETTE.paper, PALETTE.ink, 0.3),
-    accent: PALETTE.accent,
-    soft: PALETTE.wheat,
-    onAccent: onColor(PALETTE.accent),
+    ground: lightGround,
+    ink: PALETTE.night,
+    // The night 27% toward white: the brand's quiet text a shade bluer, for the sky.
+    muted: mix(PALETTE.night, white, 0.268),
+    line: skyTint(0.529),
+    accent: PALETTE.night,
+    chord: PALETTE.duskDeep,
+    soft: skyTint(0.57),
+    onAccent: onColor(PALETTE.night),
     pressed: lightPressed,
     onPressed: onColor(lightPressed),
-    panel: '#ffffff',
-    edge: mix(PALETTE.paper, PALETTE.ink, 0.6),
+    panel: skyTint(0.709),
+    edge: mix(PALETTE.sky, PALETTE.night, 0.45),
+    bar: lightGround,
+    pill: PALETTE.sky,
+    onPill: onColor(PALETTE.sky),
   },
   dark: {
     ground: PALETTE.night,
-    ink: PALETTE.nightInk,
-    muted: PALETTE.nightSoft,
-    line: PALETTE.nightRule,
-    accent: PALETTE.nightAccent,
-    soft: mix(PALETTE.nightAccent, PALETTE.night, 0.7),
-    onAccent: onColor(PALETTE.nightAccent),
+    ink: skyTint(0.75),
+    muted: PALETTE.sky,
+    line: mix(PALETTE.night, PALETTE.sky, 0.153),
+    accent: PALETTE.duskGold,
+    chord: PALETTE.duskGold,
+    soft: PALETTE.nightPanel,
+    onAccent: onColor(PALETTE.duskGold),
     pressed: darkPressed,
     onPressed: onColor(darkPressed),
-    panel: mix(PALETTE.night, PALETTE.wheat, 0.04),
-    edge: mix(PALETTE.night, PALETTE.nightInk, 0.5),
+    panel: PALETTE.nightPanel,
+    edge: mix(PALETTE.night, PALETTE.sky, 0.6),
+    // The night 15% toward black: the docked bar sits a shade under the page.
+    bar: mix(PALETTE.night, '#000000', 0.147),
+    pill: PALETTE.sky,
+    onPill: onColor(PALETTE.sky),
   },
 } as const satisfies { readonly light: Roles; readonly dark: Roles };

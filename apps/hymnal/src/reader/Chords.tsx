@@ -27,7 +27,7 @@ import {
   View,
 } from 'react-native';
 
-import { color, useAccent } from '~/color';
+import { color } from '~/color';
 import type { Section } from '~/hymns/hymns';
 import type { Box, SectionChords, Word } from '~/hymns/chords';
 
@@ -162,7 +162,7 @@ function BoxChords({
 }
 
 /**
- * Chords in order, spelled in the played key: a change in the accent, a
+ * Chords in order, spelled in the played key: a change in the chord colour, a
  * chord held over from the line before (`tone` `held`) muted. Where there
  * are chords, a tap opens the sheet of how to play them (`ChordSheet.tsx`):
  * the text is a button with no padding of its own, its target grown to 44
@@ -178,11 +178,14 @@ function ChordText({
   readonly tone?: 'change' | 'held';
 }) {
   const key = use(PlayedKey);
-  const accent = useAccent();
   const text = usePageText();
   const tap = useChordTap();
   const names = chords.map((chord) => Chord.format(chord, key)).join(' ');
-  const style = [styles.chord, text.chords, { color: { change: accent, held: color.muted }[tone] }];
+  const style = [
+    styles.chord,
+    text.chords,
+    { color: { change: color.chord, held: color.muted }[tone] },
+  ];
   if (chords.length === 0)
     return (
       <Text testID={testID} style={style} dynamicTypeRamp="subheadline">
