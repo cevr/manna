@@ -1,7 +1,7 @@
 /**
  * The hymnal's topics, built one way for the compile script and for the test
- * that holds the committed file to it: hymnal.db's sections (`categories`)
- * and each hymn's section (`category_id`), with the print's corrections
+ * that holds the committed file to it: source-text.json's sections (`categories`)
+ * and each hymn's section (`categoryId`), with the print's corrections
  * from `data/fixes/topics.json` applied (a range the print files under
  * another section, a name the print gives otherwise). The result must be a
  * partition of 1–695, one range per section: a section split in two, a
@@ -9,15 +9,16 @@
  * refused, never repaired.
  */
 
-import { HymnalService, HymnId } from '@manna/core/hymnal';
+import { HymnId } from '@manna/core/hymnal';
 import { Effect, Schema } from 'effect';
 
+import { SourceHymnal } from './source-text.js';
 import { type Topic, Topics } from '../src/hymn.js';
 
 const FIRST = 1;
 const LAST = 695;
 
-/** A range hymnal.db files under section `from` that the print puts under `to`. */
+/** A captured-source range under section `from` that the print puts under `to`. */
 const Move = Schema.Struct({
   first: Schema.Int,
   last: Schema.Int,
@@ -45,7 +46,7 @@ export type Fixes = typeof Fixes.Type;
 export const decodeFixes = (text: string) =>
   Schema.decodeEffect(Schema.fromJsonString(Fixes))(text);
 
-/** What the builder reads from hymnal.db: each section's id and name, and each hymn's section. */
+/** Captured source rows: each section's id and name, and each hymn's section. */
 export interface Rows {
   readonly categories: ReadonlyArray<{ readonly id: number; readonly name: string }>;
   readonly hymns: ReadonlyArray<{ readonly number: number; readonly categoryId: number }>;
@@ -66,7 +67,7 @@ export class TopicsError extends Schema.TaggedError<TopicsError>()('TopicsError'
 const fail = (reason: TopicsError['reason'], detail: string) =>
   Effect.fail(TopicsError.make({ reason, detail }));
 
-/** The topics of hymns 1–695: hymnal.db's sections with the print's moves and names applied. */
+/** The topics of hymns 1–695: captured sections with the print's moves and names applied. */
 export const buildTopics = (rows: Rows, fixes: Fixes): Effect.Effect<Topics, TopicsError> =>
   Effect.gen(function* () {
     const section = new Map(rows.hymns.map((h) => [h.number, h.categoryId]));
@@ -112,9 +113,9 @@ export const buildTopics = (rows: Rows, fixes: Fixes): Effect.Effect<Topics, Top
     );
   });
 
-/** The rows of hymns 1–695 and the sections, read through `HymnalService`. */
+/** Source rows 1–695 and sections, through the independent source-text layer. */
 export const readRows = Effect.gen(function* () {
-  const hymnal = yield* HymnalService;
+  const hymnal = yield* SourceHymnal;
   const categories = yield* hymnal.getCategories;
   const hymns = yield* Effect.forEach(
     Array.from({ length: LAST - FIRST + 1 }, (_, i) => FIRST + i),

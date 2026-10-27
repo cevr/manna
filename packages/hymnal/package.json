@@ -19,6 +19,7 @@
     "chart": "bun scripts/chart.ts",
     "census": "bun scripts/census.ts",
     "compile": "bun scripts/compile.ts",
+    "compile:db": "bun scripts/compile-db.ts",
     "golden": "bun scripts/golden.ts",
     "render": "bun scripts/render/render.ts",
     "split": "bun scripts/split.ts",

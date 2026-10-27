@@ -1,6 +1,6 @@
 /**
  * Text fidelity, the class property: every hymn 1-695, compiled fresh from
- * its hymnal.db row and its MIDI file (the source the compile script builds,
+ * its source-text row and its MIDI file (the source the compile script builds,
  * compiled in `fidelity-worker.ts` off this thread), sings exactly its printed text in the order the hymnal sings it, line for
  * line: nothing missing, nothing extra, nothing moved. A line is compared as
  * the golden compares a syllable: case and punctuation ignored (each word's
@@ -9,7 +9,7 @@
  * The oracle builds the expected lines from the sources alone, never from the
  * compiler or `sung`: the row's stanzas by id and its one negative-id
  * refrain; the refrain's place from `data/fixes/refrains.json`, read off each
- * refrain hymn's page; and, for a row hymnal.db holds rewritten from its
+ * refrain hymn's page; and, for a source row rewritten from its
  * page (each hymn with a `data/fixes/NNN.json`: the census's `fixed` hymns,
  * its `matches` hymns written as the page lays them out, and the seven fixes
  * before it), that printed source in place of the row.
@@ -18,21 +18,11 @@
  * below hold the property to the defects it exists to catch.
  */
 
-import { HymnalService, HymnId } from '@manna/core/hymnal';
-import { layerHymnalBun } from '@manna/core/hymnal/bun';
+import { HymnId } from '@manna/core/hymnal';
+import { SourceHymnal, layerSourceText } from '../scripts/source-text.js';
 import { BunWorker } from '@effect/platform-bun';
 import * as BunServices from '@effect/platform-bun/BunServices';
-import {
-  Array as Arr,
-  Cause,
-  ConfigProvider,
-  Deferred,
-  Effect,
-  FileSystem,
-  Layer,
-  Result,
-  Schema,
-} from 'effect';
+import { Array as Arr, Cause, Deferred, Effect, FileSystem, Layer, Result, Schema } from 'effect';
 import * as Worker from 'effect/workers/Worker';
 import { describe, expect, it } from 'effect-bun-test';
 
@@ -41,16 +31,7 @@ import { type Hymn, type Part, sung } from './hymn.js';
 const data = (file: string) => new URL(`../data/${file}`, import.meta.url).pathname;
 
 const layer = Layer.merge(
-  layerHymnalBun.pipe(
-    Layer.provide(BunServices.layer),
-    Layer.provide(
-      ConfigProvider.layer(
-        ConfigProvider.fromEnv({
-          env: { HOME: '/', HYMNAL_DB_PATH: data('../../core/data/hymnal.db') },
-        }),
-      ),
-    ),
-  ),
+  layerSourceText.pipe(Layer.provide(BunServices.layer)),
   BunServices.layer,
 );
 
@@ -169,7 +150,7 @@ const fromPrint = (text: string, order: Order | undefined) =>
   );
 
 /**
- * A hymnal.db row: its stanzas by id, and its one negative-id refrain at the
+ * A captured source row: its stanzas by id, and its one negative-id refrain at the
  * place the census lists. A refrain the census does not place, or a place
  * listed for a hymn with no refrain, is a failure: there is no default.
  */
@@ -309,7 +290,7 @@ const compileOne = (n: number) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const { printed: order } = yield* orders;
-    const row = yield* (yield* HymnalService).getHymn(HymnId.make(n));
+    const row = yield* (yield* SourceHymnal).getHymn(HymnId.make(n));
     const fix = data(`fixes/${String(n).padStart(3, '0')}.json`);
     const printed = (yield* fs.exists(fix))
       ? yield* fromPrint(yield* fs.readFileString(fix), order.get(n))

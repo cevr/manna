@@ -15,6 +15,7 @@
     "apps/animations/src/films/*/v*/board.json",
     "apps/animations/sounds/fits/*.json",
     "apps/animations/series/*/scripts/*.md",
-    "packages/hymnal/data/sdah-1985/*.json"
+    "packages/hymnal/data/sdah-1985/*.json",
+    "packages/hymnal/data/source-text.json"
   ]
 }

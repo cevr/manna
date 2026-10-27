@@ -67,7 +67,7 @@ interface Source {
   readonly book: 'sdah-1985';
   readonly number: number;
   readonly title: string;
-  /** The text's verses as hymnal.db keeps them: a negative id is a refrain. */
+  /** Independent source-text verses: a negative id is a refrain. SQLite is generated downstream. */
   readonly verses: ReadonlyArray<{ readonly id: number; readonly text: string }>;
   readonly midi: Uint8Array;
   /** Why the hymn is held back: every part is then plain text. */
