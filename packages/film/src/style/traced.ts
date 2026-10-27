@@ -53,6 +53,13 @@ interface TracedArmSpec {
    */
   readonly pivot?: Pt;
   /**
+   * Where its upper sleeve ends at its shoulder: a ball about its pivot (the
+   * hanging default, so it turns with no gap), or `traced`, the sleeve's own
+   * traced end, for a sleeve the sheet draws raised clear of its side whose
+   * root runs on under its garment there (a ball would show past its edges).
+   */
+  readonly root?: 'ball' | 'traced';
+  /**
    * The shade along its sleeve's edges (`sleeveEdges`), in this colour: what
    * shows the sleeve where it lies on its garment, since no line runs there.
    */
@@ -231,10 +238,11 @@ const BALL_POINTS = 9;
  * A traced arm cut at its elbow, in sheet pixels: its pivot (the middle of
  * the sleeve its half width below its top), its elbow on the line from the
  * pivot to its hand, its upper sleeve (to past the elbow, its top a ball
- * about the pivot) and its forearm (from before the elbow to its cuff).
+ * about the pivot, or its traced end, `root`) and its forearm (from before
+ * the elbow to its cuff).
  */
 const cutArm = (arm: TracedArmSpec, outline: ReadonlyArray<Pt>) => {
-  if (arm.pivot === undefined) return cutHanging(arm.hand.at, arm.elbow, outline);
+  if (arm.pivot === undefined) return cutHanging(arm.hand.at, arm.elbow, outline, arm.root);
   // Turned about its pivot till its hand hangs straight below it, cut as a hanging arm, and turned back.
   const [px, py] = arm.pivot;
   const by = Math.PI / 2 - Math.atan2(arm.hand.at[1] - py, arm.hand.at[0] - px);
@@ -252,7 +260,7 @@ const cutArm = (arm: TracedArmSpec, outline: ReadonlyArray<Pt>) => {
     0,
   );
   const begun = [...turned.slice(first), ...turned.slice(0, first)];
-  const cut = cutHanging(to(arm.hand.at), arm.elbow, begun);
+  const cut = cutHanging(to(arm.hand.at), arm.elbow, begun, arm.root);
   return {
     pivot: back(cut.pivot),
     elbow: back(cut.elbow),
@@ -262,7 +270,12 @@ const cutArm = (arm: TracedArmSpec, outline: ReadonlyArray<Pt>) => {
 };
 
 /** A hanging arm, its hand below its shoulder, cut at its elbow (`cutArm`). */
-const cutHanging = (hand: Pt, share: number | undefined, outline: ReadonlyArray<Pt>) => {
+const cutHanging = (
+  hand: Pt,
+  share: number | undefined,
+  outline: ReadonlyArray<Pt>,
+  root: TracedArmSpec['root'],
+) => {
   const top = Math.min(...outline.map(([, y]) => y));
   const [l0, r0] = spanAt(outline, top + 12);
   const half = (r0 - l0) / 2;
@@ -276,8 +289,11 @@ const cutHanging = (hand: Pt, share: number | undefined, outline: ReadonlyArray<
     const a = Math.PI + (i / (BALL_POINTS - 1)) * Math.PI;
     return [pivot[0] + r * Math.cos(a), pivot[1] + r * Math.sin(a)];
   });
-  // The cut sleeve runs clockwise on screen: its top's two corners at the pivot's row are its ends.
-  const upper = [...ball, ...below.filter(([, y]) => y > pivot[1] + 0.5)];
+  // A ball: the cut sleeve runs clockwise on screen, its top's two corners at the pivot's row its ends. Traced: the sleeve down from its own end.
+  const upper =
+    root === 'traced'
+      ? cutAt(outline, elbowY + ELBOW_OVERLAP, 'above')
+      : [...ball, ...below.filter(([, y]) => y > pivot[1] + 0.5)];
   const forearm = cutAt(outline, elbowY - ELBOW_OVERLAP, 'below');
   return { pivot, elbow, upper, forearm };
 };
