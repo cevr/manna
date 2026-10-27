@@ -109,6 +109,87 @@ export const TRACE = {
       hem: 786,
       split: 192,
     }),
+    reaching: standing({
+      box: [899, 232, 1221, 829],
+      out: 'reaching-traced.ts',
+      about:
+        'standing three-quarters to screen left, leaning to the low table: his face to our left, his ear behind; his cream right sleeve reaching down from his shoulder to his hand on the bottle there, the sleeve against his side; his teal left sleeve hanging; the cream sash knotted at his waist, its two ends hanging; his sandals',
+      face: [1042, 382],
+      marked: {
+        marks: {
+          eyes: [
+            [1024, 364],
+            [1065, 361],
+          ],
+          brows: [
+            [1017, 338],
+            [1063, 336],
+          ],
+          mouth: [1056, 402],
+        },
+      },
+      ears: { earNear: [1126, 350] },
+      chin: { kind: 'closed', row: 428 },
+      sharp: [],
+      // The lit rim down his face's left edge (1009-1010 on row 380).
+      skinLit: ['#f9dda2', '#fac88d'],
+      near: {
+        pick: { silhouette: true },
+        // His sleeve from his shoulder down to his hand on the bottle, cut from his tunic where the sheet shades it there, short of the bottle and ending at his hand's middle; the drape under his elbow against his side his garment's (a hand ends its sleeve: no sleeve lies farther from the elbow than it).
+        clip: [
+          [975, 415],
+          [1046, 415],
+          [1056, 440],
+          [1054, 535],
+          [1000, 575],
+          [984, 588],
+          [975, 560],
+        ],
+        below: 465,
+        hand: [980, 585],
+        // All but its shoulder (above row 465): the rest his garment gives up.
+        off: rect(960, 465, 1070, 630),
+      },
+      far: {
+        pick: { silhouette: true },
+        // Its inner edge on the line the sheet inks between his sleeve and his mantle.
+        clip: [
+          [1230, 440],
+          [1165, 440],
+          [1145, 470],
+          [1140, 490],
+          [1146, 530],
+          [1152, 590],
+          [1155, 613],
+          [1230, 613],
+        ],
+        below: 480,
+        hand: [1194, 634],
+      },
+      arms: 'raised',
+      necks: [],
+      // The low table and the bottle on it, no part of him.
+      beside: [
+        [890, 515],
+        [978, 515],
+        [978, 612],
+        [1012, 612],
+        [1012, 650],
+        [985, 650],
+        [985, 840],
+        [890, 840],
+      ],
+      sash: {
+        band: [1050, 556, 1142, 580],
+        knots: [[1106, 568, 17, 14]],
+        ends: [
+          { top: [1088, 1100, 582], bottom: [1078, 1097, 676] },
+          { top: [1103, 1116, 582], bottom: [1102, 1125, 716] },
+        ],
+      },
+      hem: 786,
+      split: 1125,
+    }),
     seated: standing({
       box: [604, 331, 892, 836],
       out: 'seated-traced.ts',

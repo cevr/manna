@@ -22,6 +22,7 @@ import { PAPERS, TONES } from './papers.ts';
 import * as PROFILE_LEFT from './profile-left-traced.ts';
 import * as PROFILE_RIGHT from './profile-right-traced.ts';
 import * as RAISED from './raised-traced.ts';
+import * as REACHING from './reaching-traced.ts';
 import * as SEATED from './seated-traced.ts';
 import * as THREE_QUARTER_LEFT from './three-quarter-left-traced.ts';
 import * as THREE_QUARTER_RIGHT from './three-quarter-right-traced.ts';
@@ -345,6 +346,15 @@ export const leadFeastRaised = leadView(
     nearArm: { pivot: [144, 476], elbow: 0.35, root: 'traced', tones: RAISED_SLEEVE },
   },
 );
+
+/** Reaching (poses-4): three-quarters to screen left, leaning to the low table, his near sleeve down from his shoulder against his side to his hand on the bottle there, as the sheet draws it; his teal far sleeve hanging. */
+export const leadFeastReaching = leadView(REACHING, {
+  sheet: 'poses',
+  head: { view: 'threeQuarter' },
+  ears: { near: REACHING.EAR_NEAR },
+  face: { ...AT_REST, marks: REACHING.MARKS, extra: WITH_EXTRA },
+  sleeves: { near: 'cream', far: 'teal' },
+});
 
 /** How far his seated hand at his chin is laid down onto his raised sleeve's top, sheet pixels. */
 const SEATED_WRIST = 4;

@@ -108,6 +108,13 @@ export const leadFeastRaisedProp = figureProp(
   LEAD.leadFeastRaised,
 );
 
+/** The series lead leaning to the low table, his near hand on the bottle there. */
+export const leadFeastReachingProp = figureProp(
+  ARTBOARDS.leadFeastReaching,
+  'lead-feast-reaching',
+  LEAD.leadFeastReaching,
+);
+
 /** The series lead seated on a low stool. */
 export const leadFeastSeatedProp = figureProp(
   ARTBOARDS.leadFeastSeated,

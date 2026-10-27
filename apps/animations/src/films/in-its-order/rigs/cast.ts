@@ -26,6 +26,7 @@ import * as LEAD_FRONT from '../../../library/cast/lead-feast/rig/front-traced.t
 import * as LEAD from '../../../library/cast/lead-feast/rig/lead.ts';
 import * as LEAD_PROFILE_LEFT from '../../../library/cast/lead-feast/rig/profile-left-traced.ts';
 import * as LEAD_PROFILE_RIGHT from '../../../library/cast/lead-feast/rig/profile-right-traced.ts';
+import * as LEAD_REACHING from '../../../library/cast/lead-feast/rig/reaching-traced.ts';
 import * as LEAD_RAISED from '../../../library/cast/lead-feast/rig/raised-traced.ts';
 import * as LEAD_SEATED from '../../../library/cast/lead-feast/rig/seated-traced.ts';
 import * as LEAD_TQ_LEFT from '../../../library/cast/lead-feast/rig/three-quarter-left-traced.ts';
@@ -286,20 +287,20 @@ export const CAST = castTable({
           props: [{ name: 'stool', draw: stool(43, 134, -97), layer: 'behind' }],
         },
       ),
-      // Three-quarters left, leaning to the low table, his near hand on the bottle there, his head bowed to it.
+      // Three-quarters left, leaning to the low table, his near hand on the bottle there: his reaching composition, its sleeve as the sheet draws it.
       'poses-4': pose(
-        [899, 232, 1221, 829],
-        [1107.5, 829],
-        LEAD.leadFeastThreeQuarterLeft,
-        RIGS.leadFeastThreeQuarterLeftProp,
+        LEAD_REACHING.BOX,
+        LEAD_REACHING.FEET,
+        LEAD.leadFeastReaching,
+        RIGS.leadFeastReachingProp,
         {
-          lean: -0.1,
-          numbers: { nod: 6, tilt: -0.1, mouth: 3 },
-          // His elbow out from him: the sheet's arm runs near straight from his shoulder down to the bottle.
-          reach: [['near', [985, 590], 'out']],
+          lean: 0,
+          numbers: { mouth: 3 },
+          reach: [],
+          // The table's top at the sheet's row 617 from its left end to 1007, its leg at 952; the bottle on it, its middle at 953, in front of his hand.
           props: [
-            { name: 'table', draw: table(-152, -78, -157, -120), layer: 'behind' },
-            { name: 'bottle', draw: bottle([-114, -157]), layer: 'behind' },
+            { name: 'table', draw: table(-152, -73, -146, -113), layer: 'behind' },
+            { name: 'bottle', draw: bottle([-112, -146]), layer: 'front' },
           ],
         },
       ),

@@ -85,6 +85,13 @@ export const FIGURES = figuresFile({
       figure: LEAD.leadFeastRaised.figure,
       hands: 'leadFeastHand',
     },
+    leadFeastReaching: {
+      name: 'LeadFeastReaching',
+      seed: 3110,
+      stage: 4160,
+      figure: LEAD.leadFeastReaching.figure,
+      hands: 'leadFeastHand',
+    },
   },
 });
 
