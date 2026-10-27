@@ -52,8 +52,8 @@ export const PAPERS = papers({
 
 /** The colours laid on his papers as tones, as the sheet paints them. */
 export const TONES = {
-  /** The teal mantle across his tunic. */
-  mantle: '#4f7385',
+  /** The teal mantle across his tunic: the sheet's lit teal, hue 193°. */
+  mantle: '#4f7a85',
   /** The mantle's far side, turned toward blue-violet. */
   mantleShade: '#456079',
   /** The cream sash, its knot and its ends. */
@@ -68,8 +68,8 @@ export const TONES = {
   strap: '#5c3627',
   /** His sandals' soles: a dark brown, as heavy as the line. */
   sole: '#3b2418',
-  /** The dark of his hair under its curls. */
-  hairShade: '#5d3626',
+  /** The dark of his hair under its curls, turned 12° from his hair toward rose. */
+  hairShade: '#58302a',
   /** The light on his curls. */
   hairLight: '#7b4530',
   /** The edge of his cream sleeve where it lies on his tunic: its shade, turned toward rose. */

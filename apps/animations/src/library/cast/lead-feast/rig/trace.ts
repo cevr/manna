@@ -330,12 +330,13 @@ export const standing = (v: Standing): TraceSheetView => {
         minus: ['handNearPaper', 'handFarPaper'],
         doc: 'His far arm (screen right) in its sleeve, from his shoulder to his cuff.',
       },
-      armNearBelow: { within: 'armNear', clip: wide(v.near.below, y1), as: 'none' },
-      armFarBelow: { within: 'armFar', clip: wide(v.far.below, y1), as: 'none' },
+      // Each worn in 6 px: the garment the arm hangs beside runs on under its sleeve's paper, so the garment's line lies under the sleeve.
+      armNearBelow: { within: 'armNear', clip: wide(v.near.below, y1), shrink: 6, as: 'none' },
+      armFarBelow: { within: 'armFar', clip: wide(v.far.below, y1), shrink: 6, as: 'none' },
       body: {
         silhouette: true,
         clip: wide(v.chin.row - chin.garment, v.hem),
-        // Smoothed past the house's step: where an arm hung, the garment's side is the sleeve's ragged inner edge, bared when the arm swings.
+        // Smoothed past the house's step: its sides run on under the arms' paper (`shrink`), and the step where they begin is no corner of it.
         smooth: 8,
         // An open chin's head runs down into the neck: the garment's top is the neckline the sheet paints round it.
         minus: [
