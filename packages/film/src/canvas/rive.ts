@@ -57,16 +57,7 @@ import type { ConceptRef } from '../core/match.ts';
 import { dropGl, holdGl } from './gl.ts';
 import { probeFace, probeFigure, probesFaces, probesFigures } from './probe.ts';
 
-export {
-  type CastModule,
-  type CastProp,
-  type CastSheet,
-  type CastSheets,
-  type CastTable,
-  type CastView,
-  type CastWith,
-  castTable,
-} from './cast.ts';
+export { type CastProp, type CastView, castTable } from './cast.ts';
 
 /** Which of Rive's renderers draws a rig. */
 export type RiveEngine = 'canvas' | 'webgl2';

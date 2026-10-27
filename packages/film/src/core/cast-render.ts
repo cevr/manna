@@ -66,10 +66,10 @@ export type CastRender = typeof CastRender.Type;
 export const CastRenderJson = Schema.fromJsonString(CastRender);
 
 /** A finding an answer names that the render does not hold. */
-export class CastFindingUnknown extends Schema.TaggedError<CastFindingUnknown>()(
-  'CastFindingUnknown',
-  { finding: Schema.String, reason: Schema.String },
-) {
+class CastFindingUnknown extends Schema.TaggedError<CastFindingUnknown>()('CastFindingUnknown', {
+  finding: Schema.String,
+  reason: Schema.String,
+}) {
   override get message() {
     return `no finding ${this.finding} to answer: ${this.reason}`;
   }

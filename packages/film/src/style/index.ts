@@ -61,11 +61,9 @@ export {
 export { type Pt, boilTime, boxOf, creaseOf, ellipse, reachAbout, smooth } from './rig/parts.ts';
 export { roundedPolygon, shifted } from './rig/shapes.ts';
 export {
-  type TracedArmSpec,
   type TracedFigureSpec,
   type TracedKnob,
   type TracedTone,
-  cutArm,
   tracedFigure,
   tracedHands,
 } from './traced.ts';

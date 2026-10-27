@@ -59,17 +59,17 @@ const SHEET_VIEW = { mode: 'plain', captions: false, format: 'image/png' } as co
 const SIDE_GAP = 16;
 
 /** A cast render that cannot be made: the film's table, its record or its page do not give what it needs. */
-export class CastRenderRefused extends Schema.TaggedError<CastRenderRefused>()(
-  'CastRenderRefused',
-  { member: Schema.String, reason: Schema.String },
-) {
+class CastRenderRefused extends Schema.TaggedError<CastRenderRefused>()('CastRenderRefused', {
+  member: Schema.String,
+  reason: Schema.String,
+}) {
   override get message() {
     return `${this.member}'s cast render: ${this.reason}`;
   }
 }
 
 /** What a render asks: the kinds to draw (every kind kept when none), and whether to critique. */
-export interface CastRenderAsk {
+interface CastRenderAsk {
   readonly kinds: ReadonlyArray<SheetKind>;
   readonly critique: boolean;
 }

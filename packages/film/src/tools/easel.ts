@@ -109,7 +109,7 @@ const MATCH_VIEW = { mode: 'plain', captions: false, format: 'image/png' } as co
  * the member's record (`castFolder`: the film's own role's before the
  * library's); a member with no record is said as why, never thrown.
  */
-export const conceptPath = (
+const conceptPath = (
   path: Path.Path,
   paths: FilmPaths,
   image: ConceptImage,

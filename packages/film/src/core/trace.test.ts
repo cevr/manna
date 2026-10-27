@@ -1,7 +1,13 @@
 import { describe, expect, test } from 'bun:test';
 import type { Raster } from './raster.ts';
 import { Result } from 'effect';
-import { STEP, type TraceView, tracedModule, traceView } from './trace.ts';
+import { tracedModule, traceView } from './trace.ts';
+
+/** A view as the tracer reads it. */
+type TraceView = Parameters<typeof traceView>[1];
+
+/** The least gap between two of an outline's points: a third of RIVE.md's 8 px step, so no spike from a fine step. */
+const LEAST_GAP = 8 / 3;
 
 /** A sheet 120 × 220 on white: a round skin head inked round, over a cream body inked round, its lower half a teal shade. */
 const sheet = (): Raster => {
@@ -67,11 +73,11 @@ describe('traceView', () => {
     expect(Math.abs(bx0 - 32)).toBeLessThanOrEqual(3);
     expect(Math.abs(bx1 - 88)).toBeLessThanOrEqual(3);
     expect(Math.abs(by1 - 198)).toBeLessThanOrEqual(3);
-    // A point every STEP pixels or so along the edge: no spike from a fine step.
+    // A point every step or so along the edge: no spike from a fine step.
     for (const pts of [head, body])
       pts.forEach((p, i) => {
         const q = pts[(i + 1) % pts.length] ?? p;
-        expect(Math.hypot(q[0] - p[0], q[1] - p[1])).toBeGreaterThan(STEP / 3);
+        expect(Math.hypot(q[0] - p[0], q[1] - p[1])).toBeGreaterThan(LEAST_GAP);
       });
     expect(t.tones['shade']?.length).toBe(1);
     expect(t.head?.at[0]).toBeCloseTo(60, -1);

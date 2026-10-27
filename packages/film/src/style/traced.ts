@@ -37,7 +37,7 @@ export interface TracedTone {
 }
 
 /** A traced arm: its sleeve whole as it hangs, its hand's circle, its paper and what lies on it. */
-export interface TracedArmSpec {
+interface TracedArmSpec {
   readonly outline: ReadonlyArray<Pt>;
   readonly hand: { readonly at: Pt; readonly r: number };
   readonly paper: Paper;
@@ -210,7 +210,7 @@ const BALL_POINTS = 9;
  * pivot to its hand, its upper sleeve (to past the elbow, its top a ball
  * about the pivot) and its forearm (from before the elbow to its cuff).
  */
-export const cutArm = (arm: TracedArmSpec) => {
+const cutArm = (arm: TracedArmSpec) => {
   const top = Math.min(...arm.outline.map(([, y]) => y));
   const [l0, r0] = spanAt(arm.outline, top + 12);
   const half = (r0 - l0) / 2;

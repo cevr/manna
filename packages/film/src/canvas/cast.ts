@@ -19,7 +19,7 @@ type Pt = readonly [number, number];
 type SheetBox = readonly [number, number, number, number];
 
 /** A rig drawn with a view's own: its pose, its origin at `at` in the view's units. */
-export interface CastWith {
+interface CastWith {
   readonly rig: RivePropSpec;
   readonly pose: PoseOf<RivePropSpec>;
   readonly at: Pt;
@@ -43,7 +43,7 @@ export interface CastView {
 }
 
 /** A film's cast render table: member, kind (`turnaround`, `poses`, `heads`), kept view name. */
-export type CastTable = Readonly<
+type CastTable = Readonly<
   Record<string, Readonly<Record<string, Readonly<Record<string, CastView>>>>>
 >;
 
@@ -55,7 +55,7 @@ export interface CastSheet {
 }
 
 /** Each member's sheets, by kind: what the render's canvas and scale are. */
-export type CastSheets = Readonly<Record<string, Readonly<Record<string, CastSheet>>>>;
+type CastSheets = Readonly<Record<string, Readonly<Record<string, CastSheet>>>>;
 
 /** What a film's `rigs/cast.ts` gives the cast render: its table, its sheets, and the paper its page lays them on. */
 export interface CastModule {

@@ -23,10 +23,10 @@ import type { Raster } from './raster.ts';
 export type TracePt = readonly [number, number];
 
 /** A box in the sheet's pixels: left, top, right, bottom. */
-export type TraceBox = readonly [number, number, number, number];
+type TraceBox = readonly [number, number, number, number];
 
 /** How a part is written. */
-export type TraceAs = 'outline' | 'tones' | 'circle' | 'marks' | 'none';
+type TraceAs = 'outline' | 'tones' | 'circle' | 'marks' | 'none';
 
 /** One part of a view, as the tracer picks it. */
 export interface TracePart {
@@ -61,7 +61,7 @@ export interface TracePart {
 }
 
 /** A face's marks, each by a seed on (or beside) its ink: one eye and one brow in profile. */
-export interface TraceMarkSeeds {
+interface TraceMarkSeeds {
   readonly eyes: readonly [TracePt] | readonly [TracePt, TracePt];
   readonly brows: readonly [TracePt] | readonly [TracePt, TracePt];
   /**
@@ -73,7 +73,7 @@ export interface TraceMarkSeeds {
 }
 
 /** One view of a sheet, as its spec asks for it. */
-export interface TraceView {
+interface TraceView {
   /** The view's box in the sheet, as the record keeps it. */
   readonly box: TraceBox;
   /**
@@ -125,7 +125,7 @@ export interface Traced {
 }
 
 /** A face's marks as `tracedKit` (`@manna/film/style`) takes them, sheet pixels. */
-export interface TracedMarks {
+interface TracedMarks {
   readonly eyes: readonly [TracePt, TracePt];
   readonly eye: readonly [number, number];
   readonly brows: readonly [readonly [TracePt, TracePt], readonly [TracePt, TracePt]];
@@ -135,7 +135,7 @@ export interface TracedMarks {
 }
 
 /** A region of the view: its id, its centre, its box, its size in pixels and its median colour. */
-export interface TraceRegion {
+interface TraceRegion {
   readonly id: number;
   readonly at: TracePt;
   readonly box: TraceBox;
@@ -144,7 +144,7 @@ export interface TraceRegion {
 }
 
 /** Below this luma (0..255) a pixel is ink: the sheets' line reads 4 to 30, their darkest hair shade 42 and up. */
-export const INK_LUMA = 40;
+const INK_LUMA = 40;
 
 /** The ground is paper and its shadow, all lighter than this luma: the line's edge, antialiased, is darker. */
 const GROUND_LUMA = 110;
@@ -156,7 +156,7 @@ const LINE_HALF = 3;
 const GROW = 4;
 
 /** An outline's points, sheet pixels apart along its edge (RIVE.md: 8 or more). */
-export const STEP = 9;
+const STEP = 9;
 
 /** How far an edge is smoothed each way along it, pixels, before its points are taken. */
 const SMOOTH = 3;
@@ -584,7 +584,7 @@ const nearestPiece = (g: Grid, pieces: ReadonlyArray<ReadonlyArray<number>>, p: 
 const rounded = (p: TracePt): TracePt => [half(p[0]), half(p[1])];
 
 /** A trace spec the sheet cannot be read by: a part it does not name, a part made of itself, a seed on nothing, a part left empty. */
-export class TraceRefused extends Schema.TaggedError<TraceRefused>()('TraceRefused', {
+class TraceRefused extends Schema.TaggedError<TraceRefused>()('TraceRefused', {
   reason: Schema.String,
 }) {
   override get message() {
