@@ -39,7 +39,7 @@ import { usePlayer } from './context';
 import { DialPanel } from './DialPanel';
 import { ChordReaderContext, Dials, useThumb } from './Dials';
 import { useShownPage } from './page';
-import { Command, type HymnPlayer, Player, type Track } from './player';
+import { Command, type HymnPlayer, Player, type Track, trackOf } from './player';
 import { Scrubber } from './Scrubber';
 import { clock } from './time';
 import { ThumbEvent } from './thumb';
@@ -71,16 +71,41 @@ const caption: (player: Player) => string = Player.$match({
     }),
 });
 
-/** The hymn the route names (`?hymn=<n>`), if it names one there is. */
-const useRouteHymn = (): Option.Option<Track> =>
-  Option.flatMap(Option.fromNullishOr(useParams<{ hymn: string }>().hymn), hymnAt);
+/** The bar's hymn and, when different, the reader page it opened over. */
+const useRoute = () => {
+  const { hymn, page } = useParams<{ hymn: string; page: string }>();
+  return {
+    hymn: Option.flatMap(Option.fromNullishOr(hymn), hymnAt),
+    page: Option.flatMap(Option.fromNullishOr(page), hymnAt),
+  };
+};
 
 function Sheet({ player }: { readonly player: HymnPlayer }) {
-  const bar = barFor(useAtomValue(player.state), useRouteHymn());
+  const current = useAtomValue(player.state);
+  const route = useRoute();
+  // Once the page's Play takes ownership, it remains the sheet's hymn on
+  // Pause too. Before that press the sheet keeps the hymn the bar opened.
+  const owner = Option.orElse(
+    Option.filter(route.page, (page) =>
+      Option.exists(trackOf(current), (held) => held.number === page.number),
+    ),
+    () => route.hymn,
+  );
+  const bar = barFor(current, owner);
   const send = useAtomSet(player.send);
   return Bar.$match(bar, {
     Hidden: () => <Nothing />,
-    Shown: ({ track, state, page }) => <Held track={track} state={state} page={page} send={send} />,
+    Shown: ({ track, state, page }) => (
+      <Held
+        track={track}
+        state={state}
+        page={Option.filter(
+          Option.orElse(route.page, () => page),
+          (page) => page.number !== track.number,
+        )}
+        send={send}
+      />
+    ),
   });
 }
 

@@ -1030,10 +1030,11 @@ describe('the full player on the web’s stack', () => {
 
   it.live('a sheet for hymn 3 offers its Play while 100 sounds, then shows only hymn 3', () =>
     Effect.gen(function* () {
-      using page = mount(sheetOn(three));
+      using page = mount(stack(3));
       page.send(Command.Start({ track: morning }));
       page.device.now = { state: 'playing', positionMs: 90_000, durationMs: 151_000 };
       yield* page.until(Player.$is('Playing'));
+      page.press('Open player');
       expect(heading(page)).toEqual(Option.some(`100 ${morning.title}`));
       expect(Option.isSome(page.find('[aria-label="Pause hymn 100"]'))).toBe(true);
       page.press('Play hymn 3');
@@ -1045,6 +1046,10 @@ describe('the full player on the web’s stack', () => {
       expect(Option.isSome(page.find('[aria-label="Pause hymn 3"]'))).toBe(true);
       expect(Option.isNone(page.find('[aria-label="Pause hymn 100"]'))).toBe(true);
       expect(page.device.played).toEqual([audioUrl(100), audioUrl(3)]);
+      page.press('Pause hymn 3');
+      yield* page.until(Player.$is('Paused'));
+      expect(heading(page)).toEqual(Option.some(`3 ${three.title}`));
+      expect(Option.isSome(page.find('[aria-label="Play hymn 3"]'))).toBe(true);
     }),
   );
 

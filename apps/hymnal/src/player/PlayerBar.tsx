@@ -247,7 +247,10 @@ function Frame({
   }, [target]);
   const springing = useAnimatedStyle(() => ({ height: height.value }));
   const router = useRouter();
-  const sheet: Href = `/player?hymn=${track.number}`;
+  const sheet = Option.match(page, {
+    onNone: () => `/player?hymn=${track.number}` as const,
+    onSome: (page) => `/player?hymn=${track.number}&page=${page.number}` as const,
+  });
   const swipe = usePanGesture({
     testID: 'bar-swipe',
     runOnJS: true,
@@ -278,6 +281,7 @@ function Frame({
                 <Opener
                   track={track}
                   state={state}
+                  href={sheet}
                   named={!Option.exists(shown, (hymn) => hymn.number === track.number)}
                 />
                 {Option.match(page, {
@@ -346,17 +350,17 @@ function BackEdge() {
 function Opener({
   track,
   state,
+  href,
   named,
 }: {
   readonly track: Track;
   readonly state: Player;
+  readonly href: Href;
   readonly named: boolean;
 }) {
   const accent = useAccent();
   const cue = useCue();
-  const link = useLinkTo({
-    href: Link.resolveHref({ pathname: '/player', params: { hymn: String(track.number) } }),
-  });
+  const link = useLinkTo({ href: Link.resolveHref(href) });
   return (
     <Pressable
       {...link}
