@@ -82,9 +82,10 @@ export const bottle =
 const PLATE = { r: 44, deep: 28, rim: 9 } as const;
 
 /**
- * The wooden plate, a deep dish held up at the mouth, its rim's middle at
- * `at`, tipped `tilt` radians (positive turns its open rim toward screen
- * right): its round body under its rim, and the dark of its inside within it.
+ * The wooden plate, a deep dish tipped into the mouth, its rim's middle at
+ * `at`, tipped `tilt` radians (positive lowers its rim's screen-right end):
+ * its round body under its rim, seen from outside, its far lip the top of its
+ * outline.
  */
 export const plate = (at: Pt, tilt: number) => (ctx: CanvasRenderingContext2D) => {
   const { r, deep, rim } = PLATE;
@@ -96,9 +97,6 @@ export const plate = (at: Pt, tilt: number) => (ctx: CanvasRenderingContext2D) =
   ctx.ellipse(0, 0, r, rim, 0, Math.PI, 2 * Math.PI);
   ctx.closePath();
   inked(ctx, PAPER.wood, [-r, -rim], [r, deep]);
-  ctx.beginPath();
-  ctx.ellipse(0, 0, r - 6, rim - 3, 0, 0, 2 * Math.PI);
-  inked(ctx, { lit: PAPER.wood.shade, shade: PAPER.wood.shade }, [-r, -rim], [r, rim]);
   ctx.restore();
 };
 

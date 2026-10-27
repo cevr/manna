@@ -27,11 +27,23 @@ export const PAPERS = papers({
   /** His cream tunic: its far side turned toward a warm lavender-beige. */
   tunic: { color: '#fde1bc', shade: '#e8c3ad', light: '#fff0d8', crease: TURN.robe },
   /** His cream sleeve (his right arm), in the light: the tunic's cream. */
-  sleeve: { color: '#fbe0bb', shade: '#e8c3ad', light: '#fff0d8', crease: TURN.sleeve },
+  sleeve: { color: '#fbe0bb', shade: '#e8c3ad', light: '#fff0d8', crease: TURN.sleeve, rim: 0 },
   /** His cream sleeve where it crosses his cream tunic whole (seated, his hand at his chin): a step darker, as the sheet paints it there, so it parts from the tunic with no line. */
-  sleeveAcross: { color: '#f0d4b8', shade: '#dcb7a3', light: '#fbe6cc', crease: TURN.sleeve },
+  sleeveAcross: {
+    color: '#f0d4b8',
+    shade: '#dcb7a3',
+    light: '#fbe6cc',
+    crease: TURN.sleeve,
+    rim: 0,
+  },
   /** His teal sleeve (his left arm, under the mantle): the mantle's teal, its far side toward blue-violet. */
-  mantleSleeve: { color: '#5d8790', shade: '#435770', light: '#6f979c', crease: TURN.sleeve },
+  mantleSleeve: {
+    color: '#5d8790',
+    shade: '#435770',
+    light: '#6f979c',
+    crease: TURN.sleeve,
+    rim: 0,
+  },
   /** His bare feet in their sandals: his skin. */
   foot: { color: '#f8a466', light: '#f8a466' },
   /** His hands: his skin, shaded only at the far edge, toward rose. */

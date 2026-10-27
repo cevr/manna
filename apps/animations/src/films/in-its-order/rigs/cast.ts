@@ -262,10 +262,10 @@ export const CAST = castTable({
           lean: 0,
           numbers: { tilt: 0.35, mouth: 0 },
           reach: [
-            ['near', [394, 368]],
-            ['far', [345, 378]],
+            ['near', [466, 374]],
+            ['far', [390, 334]],
           ],
-          props: [{ name: 'plate', draw: plate([-50, -362], 0.55) }],
+          props: [{ name: 'plate', draw: plate([-41, -377], 0.55) }],
         },
       ),
       // Seated on the stool, three-quarters left, his near hand at his chin, his far hand on his lap.

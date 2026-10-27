@@ -210,7 +210,7 @@ export const standing = (v: Standing): TraceSheetView => {
       },
       hair: {
         within: 'hairMass',
-        grow: 2,
+        grow: 4,
         smooth: 4,
         inside: 'head',
         minus: Object.keys(ears),
