@@ -14,6 +14,7 @@
  * switch (the bar's hold, with no long press) and its key and capo dials
  * with reset (`Dials`); then the reader's settings, the text size dial, the
  * font, the line spacing and the screen kept on.
+ * The placement dial belongs to the sheet's named hymn even when no reader is mounted.
  */
 
 import { useAtomSet, useAtomValue } from '@effect/atom-react';
@@ -167,6 +168,7 @@ function Held({
         </View>
       </View>
       <PageChords track={track} />
+      <PlacementDial key={track.number} number={track.number} />
       <Reading />
     </ScrollView>
   );
@@ -256,7 +258,6 @@ function ChordSection({ number }: { readonly number: number }) {
         <DialPanel>
           <Dials thumb={thumb} printed={printed} />
         </DialPanel>
-        <PlacementDial key={number} number={number} />
       </View>
     ),
   });

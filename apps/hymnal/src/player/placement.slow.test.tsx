@@ -3,11 +3,14 @@ import { placements, type Placement } from '@manna/hymnal/placement';
 import * as Chord from '@manna/hymnal/chord';
 import { expect, test } from 'bun:test';
 import { it } from 'effect-bun-test';
-import { Duration, Effect, Option, Stream } from 'effect';
+import { Duration, Effect, Layer, Option, Stream } from 'effect';
+import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import * as Atom from 'effect/reactivity/Atom';
 import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { settingsOn } from '~/settings';
 import { hymnAt } from '~/hymns/hymns';
 import { chordBook, sectionsOf } from '~/hymns/chords';
 import { styled } from '~/hymns/simple';
@@ -25,6 +28,38 @@ import { ChordReaderContext } from './Dials';
 import { FullPlayer } from './FullPlayer';
 import { PlayerContext } from './context';
 import { Command, Player, playerOn } from './player';
+
+test('server placement rendering uses its default without opening the device store', () => {
+  let opened = 0,
+    reads = 0;
+  const store = Layer.effect(KeyValueStore.KeyValueStore)(
+    Effect.sync(() => {
+      opened++;
+      return KeyValueStore.makeStringOnly({
+        get: () =>
+          Effect.sync(() => {
+            reads++;
+            return '"file"';
+          }),
+        set: () => Effect.void,
+        remove: () => Effect.void,
+        clear: Effect.void,
+        size: Effect.succeed(0),
+      });
+    }),
+  );
+  const own = settingsOn(store);
+  const reader = { ...readerOn(), placement: own.placement, placementFor: own.placementFor };
+  const registry = AtomRegistry.make();
+  renderToStaticMarkup(
+    <RegistryContext value={registry}>
+      <HymnPage hymn={Option.getOrThrow(hymnAt('388'))} reader={reader} />
+    </RegistryContext>,
+  );
+  expect(opened).toBe(0);
+  expect(reads).toBe(0);
+  registry.dispose();
+});
 
 test('all bundled placements match their numeric sidecars without changing box counts', () => {
   const variants = readPlacementPatches(readPlaybackHymns());
@@ -108,7 +143,7 @@ test('placement serializes every global, override and hymn combination and rejec
   }
 });
 
-const mount = (number: number, controlled = true) => {
+const mount = (number: number, controlled = true, pageVisible = true) => {
   const hymn = Option.getOrThrow(hymnAt(String(number)));
   const reader = readerOn(new Map([['chords', 'true']]));
   const registry = AtomRegistry.make();
@@ -126,8 +161,8 @@ const mount = (number: number, controlled = true) => {
       <RegistryContext value={registry}>
         <ChordReaderContext value={reader}>
           <PlayerContext value={Option.some(shown)}>
-            <Shown hymn={hymn} />
-            <HymnPage hymn={hymn} reader={reader} />
+            {pageVisible && <Shown hymn={hymn} />}
+            {pageVisible && <HymnPage hymn={hymn} reader={reader} />}
             <FullPlayer />
           </PlayerContext>
         </ChordReaderContext>
@@ -199,6 +234,17 @@ const mount = (number: number, controlled = true) => {
     },
   };
 };
+
+test('web sheet exposes placement for its named hymn without a mounted reader', () => {
+  using page = mount(388, true, false);
+  const before = page.trace();
+  expect(
+    page.get('[role="slider"][aria-label="Chord placement"]').getAttribute('aria-valuetext'),
+  ).toBe('On the beat');
+  page.choose('simpler');
+  expect(page.registry.get(page.reader.placementFor(388))).toBe('simpler');
+  expect(page.trace()).toEqual(before);
+});
 
 test('placement updates real reader anchors in every player state without playback commands', () => {
   for (const number of [373, 388]) {

@@ -99,11 +99,14 @@ export const HymnPage = memo(function HymnPage({
   const move = useAtomValue(reader.move(hymn.number));
   const placementAtom = useMemo(
     () =>
-      Atom.make((get) => {
-        const own = get(reader.placementFor(hymn.number));
-        if (own === 'inherit') return get(reader.placement);
-        return own;
-      }),
+      Atom.withServerValue(
+        Atom.make((get) => {
+          const own = get(reader.placementFor(hymn.number));
+          if (own === 'inherit') return get(reader.placement);
+          return own;
+        }),
+        (): Placement => 'beat',
+      ),
     [reader, hymn.number],
   );
   const placement = useAtomValue(placementAtom);
