@@ -333,6 +333,49 @@ for (const origin of origins)
         }),
       );
 
+for (const origin of ['Loading probeA', 'after Seek', 'Sound-off resume probeL'] as const)
+  it.effect(
+    `keyplay fixed origin stays fixed after another Resume during preparation ${origin}`,
+    () =>
+      Effect.gen(function* () {
+        using app = yield* open(origin !== 'Sound-off resume probeL');
+        const target = yield* beginLanding(app, origin, true);
+        yield* settle;
+        expect(app.pending.length).toBeGreaterThan(0);
+        app.send(Command.Resume());
+        yield* settle;
+        // The device still waits for its source; Resume expresses intent,
+        // not evidence that music moved during the pending preparation.
+        app.force({ state: 'loading', positionMs: 0, durationMs: 240_000 });
+        yield* app.tick(1000);
+        app.pending.at(-1)?.release();
+        yield* settle;
+        expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(target);
+      }),
+  );
+
+it.effect('keyplay a moving origin resumes its clock after Pause during preparation probeC', () =>
+  Effect.gen(function* () {
+    using app = yield* open();
+    app.send(Command.Start({ track }));
+    yield* app.playing;
+    yield* app.tick(10_000);
+    const before = app.read().positionMs;
+    app.hold();
+    app.move(100, 3);
+    yield* settle;
+    app.send(Command.Pause());
+    yield* settle;
+    yield* app.tick(300);
+    app.send(Command.Resume());
+    yield* settle;
+    yield* app.tick(400);
+    app.pending.at(-1)?.release();
+    yield* settle;
+    expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(before + 400);
+  }),
+);
+
 it.effect(
   'keyplay probeD probeN replacement reports keep follow forward and the hand pause held',
   () =>

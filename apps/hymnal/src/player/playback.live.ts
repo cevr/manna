@@ -69,12 +69,15 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
   let turn = 0;
   let wants: Intent = 'play';
   const paused = () => wants === 'pause';
-  let retained: Option.Option<Run> = Option.none();
+  // Intent may pause/resume a moving hand-over. It cannot promote a
+  // fixed landing into musical time before that recording has landed.
+  let retained: Option.Option<{ readonly clock: Run; readonly continuous: boolean }> =
+    Option.none();
   const retainedStatus = (status: Status) =>
     Effect.map(Clock.currentTimeMillis, (now): Status =>
       Option.match(retained, {
         onNone: () => status,
-        onSome: (run) => ({ ...status, replacementMs: placeOf(run, now) }),
+        onSome: ({ clock }) => ({ ...status, replacementMs: placeOf(clock, now) }),
       }),
     );
   const stale = () =>
@@ -149,7 +152,7 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
       const now = yield* Clock.currentTimeMillis;
       const to = Option.match(retained, {
         onNone: () => fromMs,
-        onSome: (run) => placeOf(run, now),
+        onSome: ({ clock }) => placeOf(clock, now),
       });
       return yield* call('seek', () => audio().seek(to));
     }).pipe(
@@ -171,7 +174,10 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
         wants = options?.intent ?? 'play';
         const began = yield* Clock.currentTimeMillis;
         retained = Option.liftPredicate(
-          clockAt(fromMs, options?.continuous === true && !paused(), began),
+          {
+            clock: clockAt(fromMs, options?.continuous === true && !paused(), began),
+            continuous: options?.continuous === true,
+          },
           () => options?.ready === true || options?.continuous === true,
         );
         const status = yield* call('play', () => {
@@ -200,7 +206,7 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
             return yield* PlaybackError.make({
               operation: error.operation,
               message: error.message,
-              positionMs: placeOf(retained.value, yield* Clock.currentTimeMillis),
+              positionMs: placeOf(retained.value.clock, yield* Clock.currentTimeMillis),
             });
           }),
         ),
@@ -208,13 +214,19 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
     pause: Effect.gen(function* () {
       wants = 'pause';
       const now = yield* Clock.currentTimeMillis;
-      retained = Option.map(retained, (run) => clockAt(placeOf(run, now), false, now));
+      retained = Option.map(retained, (run) => ({
+        ...run,
+        clock: clockAt(placeOf(run.clock, now), false, now),
+      }));
       return yield* call('pause', () => audio().pause());
     }),
     resume: Effect.gen(function* () {
       wants = 'play';
       const now = yield* Clock.currentTimeMillis;
-      retained = Option.map(retained, (run) => clockAt(placeOf(run, now), true, now));
+      retained = Option.map(retained, (run) => ({
+        ...run,
+        clock: clockAt(placeOf(run.clock, now), run.continuous, now),
+      }));
       return yield* call('resume', () => audio().resume());
     }),
     seek: (positionMs) =>
@@ -222,7 +234,10 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
         const now = yield* Clock.currentTimeMillis;
         // A seek chooses a fixed landing. Music has not moved there while
         // its recording is still preparing, even if Play remains the intent.
-        retained = Option.map(retained, () => clockAt(positionMs, false, now));
+        retained = Option.map(retained, () => ({
+          clock: clockAt(positionMs, false, now),
+          continuous: false,
+        }));
         return yield* call('seek', () => audio().seek(positionMs));
       }),
     status: call('status', () => audio().getPlaybackStatus()).pipe(Effect.flatMap(retainedStatus)),
