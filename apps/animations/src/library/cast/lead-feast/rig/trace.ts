@@ -241,8 +241,13 @@ export const standing = (v: Standing): TraceSheetView => {
     parts: {
       face: { seeds: [v.face], clip: wide(y0, v.chin.row), as: 'none' },
       ...ears,
-      // What stands beside him (a wooden plate at his lips, and the hands that hold it there) is none of his hair, nor his neck.
-      hairMass: { classes: BROWN, clip: wide(y0, v.chin.row), minus: ['beside'], as: 'none' },
+      // What stands beside him (a wooden plate at his lips, and the hands that hold it there) is none of his hair, nor his neck; nor is a hand with its ring of ink (the dark where his fist meets his chin, poses-3).
+      hairMass: {
+        classes: BROWN,
+        clip: wide(y0, v.chin.row),
+        minus: ['beside', 'handNearRing', 'handFarRing'],
+        as: 'none',
+      },
       // An open chin's neck: the skin between his jaw and the garment's neckline (none under a closed chin).
       neckSkin: { classes: ['skin'], clip: neckBand, minus: ['beside'], as: 'none' },
       head: {
