@@ -1127,11 +1127,19 @@ const mouth = (fig: Figure, k: FaceShape) =>
  * The marks a face may draw past the kit's own, each a figure opts into
  * (`KitA.extra`), each shown by a number of its own that rests at 0, so a
  * figure that opts into none prints as before: `wince`, eyes squeezed shut
- * as `>` `<` and a wavering mouth; `glad`, eyes shut in a smile, two arches.
- * An expression that shows one sets the kit's eyes (and, wincing, its mouth
- * line) to 0.
+ * as `>` `<` and a wavering mouth; `glad`, eyes shut in a smile, two arches,
+ * and a wide smile. An expression that shows one sets the kit's eyes and
+ * its mouth line to 0.
  */
 export const EXTRA_FACE = { wince: 0, glad: 0 } as const;
+
+/**
+ * The glad smile, each a share of the kit's mouth's half-width: how far
+ * each corner lies from its middle, how far the corners rise and how far its
+ * middle dips. A glad face's sheet draws its smile near twice the width of
+ * the kit's line at rest (lead-feast heads-6: 53 px against 30).
+ */
+const GLAD_MOUTH = { half: 1.75, lift: 0.12, dip: 0.42 } as const;
 export type ExtraFaceKnob = keyof typeof EXTRA_FACE;
 
 /** An ink stroke of the kit along `path`, `thickness` wide, shown by the number `knob`. */
@@ -1202,9 +1210,27 @@ const extraMarks = (fig: Figure, k: FaceShape, extra: ReadonlyArray<ExtraFaceKno
         ),
       ]),
     ],
-    // Each eye an arch, shut in a smile.
-    glad: () =>
-      sides.map(([side, x]) =>
+    // Each eye an arch, shut in a smile; the mouth a smile wider than the kit's line (`GLAD_MOUTH`).
+    glad: () => [
+      el('Node', { x: k.mouth[0], y: k.mouth[1], name: 'gladMouthAt' }, [
+        markShape(
+          fig,
+          'gladMouth',
+          smoothPath(
+            fig,
+            'gladMouth',
+            [
+              [-GLAD_MOUTH.half * k.mouthHalf, -GLAD_MOUTH.lift * k.mouthHalf],
+              [0, GLAD_MOUTH.dip * k.mouthHalf],
+              [GLAD_MOUTH.half * k.mouthHalf, -GLAD_MOUTH.lift * k.mouthHalf],
+            ],
+            false,
+          ),
+          k.mouthLine,
+          'glad',
+        ),
+      ]),
+      ...sides.map(([side, x]) =>
         el('Node', { x, y: k.eyeY, name: `glad${side}Side` }, [
           markShape(
             fig,
@@ -1224,6 +1250,7 @@ const extraMarks = (fig: Figure, k: FaceShape, extra: ReadonlyArray<ExtraFaceKno
           ),
         ]),
       ),
+    ],
   };
   return extra.flatMap((m) => marks[m]());
 };

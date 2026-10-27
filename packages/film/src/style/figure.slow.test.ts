@@ -596,6 +596,20 @@ describe('a bearded head, and the parts of a head turned and of bare feet', () =
     expect(printed(rml, 'headPaper')).toEqual(toMillionth(ellipse(0, 0, 50, 60, 12)));
   });
 
+  test("a glad face's smile is its own mark, shown by glad, near twice as wide as the kit's mouth line", () => {
+    const face = KitA({ x: 0, y: 0, scale: 1, gaze: [0, 12], extra: ['glad'] });
+    const rml = drawnOf(figure({ ...standingOf(), face }));
+    const xs = printed(rml, 'gladMouth').map(([x]) => x);
+    const half = kitMarks().mouthHalf;
+    expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(2 * 1.75 * half, 3);
+    const smile = rml.slice(rml.indexOf('name="gladMouth"'), rml.indexOf('name="gladLSide"'));
+    expect(smile).toMatch(/<DataBindContext sourcePathIds="[^"]+" propertyKey="18"/);
+    const plain = drawnOf(
+      figure({ ...standingOf(), face: KitA({ x: 0, y: 0, scale: 1, gaze: [0, 12] }) }),
+    );
+    expect(plain).not.toContain('gladMouth');
+  });
+
   test('curled hair cuts each curl as its own disc over the mass, where and as wide as given', () => {
     const curls = [
       { at: [-20, -50] as const, r: 8 },
@@ -1918,6 +1932,25 @@ describe('an arm bent at its elbow, trousers, and an open chin', () => {
       const { turn } = armReach(bent, target);
       expect(sideOf(target, elbowAt(turn))).toBe(sideOf(target, bent.hand));
     }
+  });
+
+  test('bends with the elbow out from the middle when asked, and still reaches the point', () => {
+    const out = Math.sign(bent.pivot[0]) || 1;
+    const outward = [
+      [110, -220],
+      [-20, -250],
+      [100, -300],
+    ].map((target) => {
+      const pt: Pt = [target[0] ?? 0, target[1] ?? 0];
+      const asked = armReach(bent, pt, 'out');
+      const rested = armReach(bent, pt);
+      expect(asked.hand[0]).toBeCloseTo(pt[0], 6);
+      expect(asked.hand[1]).toBeCloseTo(pt[1], 6);
+      const [e, r] = [elbowAt(asked.turn), elbowAt(rested.turn)];
+      expect((e[0] - r[0]) * out).toBeGreaterThanOrEqual(-1e-9);
+      return (e[0] - r[0]) * out;
+    });
+    expect(Math.max(...outward)).toBeGreaterThan(1);
   });
 
   test('trousers draw two legs and a shoe under each in one outline, the shoes over the legs', () => {

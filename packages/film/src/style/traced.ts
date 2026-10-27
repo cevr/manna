@@ -46,6 +46,13 @@ interface TracedArmSpec {
   /** Where its elbow lies between its shoulder and its hand, a share of the way down (0.45 unless given). */
   readonly elbow?: number;
   /**
+   * Where it turns, sheet pixels, when the sheet draws it raised (a forearm
+   * up from an elbow on his knee to his hand at his chin, its upper sleeve
+   * hidden): it is cut as though turned about here till its hand hangs below
+   * it. Unless given, it hangs: its pivot the middle of its sleeve below its top.
+   */
+  readonly pivot?: Pt;
+  /**
    * The shade along its sleeve's edges (`sleeveEdges`), in this colour: what
    * shows the sleeve where it lies on its garment, since no line runs there.
    */
@@ -227,12 +234,41 @@ const BALL_POINTS = 9;
  * about the pivot) and its forearm (from before the elbow to its cuff).
  */
 const cutArm = (arm: TracedArmSpec, outline: ReadonlyArray<Pt>) => {
+  if (arm.pivot === undefined) return cutHanging(arm.hand.at, arm.elbow, outline);
+  // Turned about its pivot till its hand hangs straight below it, cut as a hanging arm, and turned back.
+  const [px, py] = arm.pivot;
+  const by = Math.PI / 2 - Math.atan2(arm.hand.at[1] - py, arm.hand.at[0] - px);
+  const turn =
+    (a: number) =>
+    ([x, y]: Pt): Pt => [
+      px + (x - px) * Math.cos(a) - (y - py) * Math.sin(a),
+      py + (x - px) * Math.sin(a) + (y - py) * Math.cos(a),
+    ];
+  const [to, back] = [turn(by), turn(-by)];
+  // Begun at its new top, as a traced outline is begun at its top: its cut sleeve's ends are then the corners at its pivot's row.
+  const turned = outline.map(to);
+  const first = turned.reduce(
+    (best, p, i) => (p[1] < (turned[best]?.[1] ?? Infinity) ? i : best),
+    0,
+  );
+  const begun = [...turned.slice(first), ...turned.slice(0, first)];
+  const cut = cutHanging(to(arm.hand.at), arm.elbow, begun);
+  return {
+    pivot: back(cut.pivot),
+    elbow: back(cut.elbow),
+    upper: cut.upper.map(back),
+    forearm: cut.forearm.map(back),
+  };
+};
+
+/** A hanging arm, its hand below its shoulder, cut at its elbow (`cutArm`). */
+const cutHanging = (hand: Pt, share: number | undefined, outline: ReadonlyArray<Pt>) => {
   const top = Math.min(...outline.map(([, y]) => y));
   const [l0, r0] = spanAt(outline, top + 12);
   const half = (r0 - l0) / 2;
   const pivot: Pt = [l0 + half, top + half];
-  const elbowY = pivot[1] + (arm.hand.at[1] - pivot[1]) * (arm.elbow ?? 0.45);
-  const elbow = onLine(pivot, arm.hand.at, elbowY);
+  const elbowY = pivot[1] + (hand[1] - pivot[1]) * (share ?? 0.45);
+  const elbow = onLine(pivot, hand, elbowY);
   const below = cutAt(cutAt(outline, elbowY + ELBOW_OVERLAP, 'above'), pivot[1], 'below');
   const [bl, br] = spanAt(outline, pivot[1] + 1);
   const r = Math.max(half, (br - bl) / 2);

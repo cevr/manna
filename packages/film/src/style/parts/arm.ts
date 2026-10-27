@@ -133,9 +133,12 @@ type Reach = { readonly turn: number; readonly bend: number; readonly hand: Pt }
  * elbows that reach it, the arm bends with the one on the side of that line
  * its hand hangs on at rest, so a reach out from rest keeps one elbow all
  * the way; when the line runs through its hand at rest, the one out from
- * the figure's middle (the side its shoulder lies on). Pure.
+ * the figure's middle (the side its shoulder lies on). With `elbow: 'out'`,
+ * always the one out from the figure's middle: a hand reached down and
+ * across before him, whose elbow at rest's side would fold in over his
+ * chest. Pure.
  */
-export const armReach = (arm: JointedArm, target: Pt): Reach => {
+export const armReach = (arm: JointedArm, target: Pt, elbow: 'rest' | 'out' = 'rest'): Reach => {
   const [s, e, h] = [arm.pivot, arm.elbow, arm.hand];
   const upper = Math.hypot(e[0] - s[0], e[1] - s[1]);
   const fore = Math.hypot(h[0] - e[0], h[1] - e[1]);
@@ -156,11 +159,17 @@ export const armReach = (arm: JointedArm, target: Pt): Reach => {
   const rest = Math.sign(side(h));
   const [e1, e2] = [elbowAt(a1), elbowAt(a2)];
   const a =
-    rest === 0 ? ((e1[0] - e2[0]) * out >= 0 ? a1 : a2) : Math.sign(side(e1)) === rest ? a1 : a2;
+    rest === 0 || elbow === 'out'
+      ? (e1[0] - e2[0]) * out >= 0
+        ? a1
+        : a2
+      : Math.sign(side(e1)) === rest
+        ? a1
+        : a2;
   const turn = within(a - Math.atan2(e[1] - s[1], e[0] - s[0]));
-  const elbow = elbowAt(a);
+  const bent = elbowAt(a);
   const reach: Pt = [s[0] + (dx / (span || 1)) * d, s[1] + (dy / (span || 1)) * d];
-  const forearm = Math.atan2(reach[1] - elbow[1], reach[0] - elbow[0]);
+  const forearm = Math.atan2(reach[1] - bent[1], reach[0] - bent[0]);
   const bend = within(forearm - Math.atan2(h[1] - e[1], h[0] - e[0]) - turn);
   return { turn, bend, hand: armHand(arm, turn, bend) };
 };
