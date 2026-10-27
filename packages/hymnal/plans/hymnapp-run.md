@@ -5,71 +5,71 @@ The work, in the owner's words (2026-10-16/17): a hymnal app on One (onestack.de
 Host: claude (laptop) · Units at once: 1 agent (owner, 2026-10-21) · Gate: ~35 s warm (`bun run gate`, 31 tasks) · Reserved: publish, paid calls, force-push (the r2 deploy and copy are the orchestrator's after merge, owner 2026-10-18; the owner deleted S3 `cvr-hymns` 2026-10-18 after all 694 objects matched R2 by size) · Repo: ~/Developer/personal/bible-tools · Base: b27a9471b
 Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>` (rift fails on this repo), branch `hymnapp/<unit>`. Merge = rebase on origin/main, gate, `git push origin HEAD:main` (ff only).
 
-| Unit       | Depends on                     | Workspace                 | Agents            | Result                 |
-| ---------- | ------------------------------ | ------------------------- | ----------------- | ---------------------- |
-| glass      | appbase                        | .rifts/bible-tools/glass  | impl ab2ba40 (r8) | dropped                |
-| manna      | barfix                         | .rifts/manna/manna        |                   | merged 95dfe06aa       |
-| reader1    | appbase                        | .rifts/manna/reader1      | impl a4ef6ed (r1) | merged 5d339030e       |
-| palette    | reader1                        |                           |                   | merged 6cb76a3c4       |
-| playstall  | playerfix                      | (removed)                 | (closed)          | merged 055a51bac       |
-| census2    | hymnrows                       | .rifts/manna/census2      |                   | merged 0de80174f       |
-| census3    | census2                        |                           |                   | folded into checkbulk  |
-| pagerows   | census2                        | worktree                  | (closed)          | merged 63e310e82       |
-| one29      | playerfix, coldload            |                           |                   | merged 8e527c5db       |
-| topicdata  | —                              |                           |                   | merged 3784ae17e       |
-| shell      | topicdata                      | .rifts/manna/shell        | a90e66e812e023e45 | merged 46263e5dd       |
-| sdkfx      | shell                          | .rifts/manna/sdkfx        | orchestrator      | merged 51b5e976f       |
-| sticky     | shell                          |                           |                   | folded into uibulk     |
-| uibulk     | chords, shell, playstall       |                           |                   | merged 2f7de2e1d       |
-| chordsimp  | chords, uibulk                 | removed                   |                   | merged d34ce0021       |
-| h220       | pagerows                       | removed                   |                   | merged 5ffd09c2e       |
-| worship    | uibulk, render                 | removed                   | a454c54eeec07a736 | merged b7b060b8f       |
-| tuner      | chordbulk                      |                           |                   |                        |
-| tempo      | worship                        |                           |                   |                        |
-| follow2    | worship                        | .rifts/manna/follow2      | a6c9723295ba443cc | merged 622350708       |
-| appicon    | worship                        | .rifts/manna/appicon      | a4d3e2ed97ddb4ba8 | merged 9d31cb7a8       |
-| chordbulk  | chordsimp, worship             | removed                   | (closed)          | merged a70cd91c9       |
-| pagerflick | chordbulk                      | removed                   | (closed)          | met on base            |
-| chordbar   | chordbulk                      | removed                   | (closed)          | merged 0647d1c1e       |
-| barfix     | chordbar, feel                 |                           |                   | merged e3ab39e14       |
-| polishbulk | barfix, ftbbrand, feel         |                           |                   | merged f2d7480b3       |
-| oneup      | polishbulk                     |                           |                   | merged 90c924002       |
-| heldhide   | oneup                          |                           |                   | merged ffa22d191       |
-| hymndb     | heldhide                       |                           |                   |                        |
-| webster    | —                              |                           |                   |                        |
-| selahone   | oneup                          |                           |                   |                        |
-| playbulk   | chordbulk, feel                |                           |                   |                        |
-| findbulk   | feel, topicdata, playbulk      |                           |                   |                        |
-| checkbulk  | chordbulk, feel                |                           |                   |                        |
-| barmisc    | barfix                         |                           |                   | folded into polishbulk |
-| hymnbrand  | barfix, ftbbrand               |                           |                   | folded into polishbulk |
-| clickrate  | feel, barfix                   |                           |                   | folded into polishbulk |
-| listsearch | feel                           |                           |                   | folded into findbulk   |
-| feel       | chordbar                       | removed                   | (closed)          | merged cfe6d5f87       |
-| chordplace | chordbar, feel                 |                           |                   | folded into playbulk   |
-| browse-app | feel, playswap                 |                           |                   | folded into findbulk   |
-| keyplay    | keys, barfix                   |                           |                   | folded into playbulk   |
-| playswap   | chordbulk                      |                           |                   | folded into playbulk   |
-| followsync | chordbulk                      |                           |                   | folded into playbulk   |
-| ftbbrand   | —                              | removed                   | (closed)          | merged 160e59b48       |
-| keys       | render                         |                           |                   | merged 8be940a53       |
-| hymnbar    | shell, playstall               |                           |                   | folded into uibulk     |
-| pager      | coldload, playstall            |                           |                   | folded into uibulk     |
-| offline    | playstall                      |                           |                   | folded into playbulk   |
-| search     | coldload                       |                           |                   | folded into findbulk   |
-| search2    | search                         |                           |                   | folded into findbulk   |
-| scripture  | search, topicdata              |                           |                   | folded into findbulk   |
-| lists      | uibulk                         |                           |                   | folded into uibulk     |
-| topics     | search, topicdata              |                           |                   | folded into findbulk   |
-| readview   | pager                          |                           |                   | folded into uibulk     |
-| render     | hymnrows                       |                           |                   | merged 524e754ae       |
-| sync       | hymnrows                       |                           |                   | folded into worship    |
-| follow     | sync, uibulk, playstall        |                           |                   | folded into worship    |
-| rate       | follow                         |                           |                   | folded into worship    |
-| reader     | appbase, compile, glass, manna | .rifts/bible-tools/reader |                   | superseded by reader1  |
-| chords     | reader                         | .rifts/manna/chords       |                   | merged 5e6a4b85f       |
-| listen     | chords                         | .rifts/manna/listen       |                   | superseded by player   |
-| selah      | reader                         | .rifts/manna/selah        |                   |                        |
+| Unit       | Depends on                     | Workspace                 | Agents                            | Result                 |
+| ---------- | ------------------------------ | ------------------------- | --------------------------------- | ---------------------- |
+| glass      | appbase                        | .rifts/bible-tools/glass  | impl ab2ba40 (r8)                 | dropped                |
+| manna      | barfix                         | .rifts/manna/manna        |                                   | merged 95dfe06aa       |
+| reader1    | appbase                        | .rifts/manna/reader1      | impl a4ef6ed (r1)                 | merged 5d339030e       |
+| palette    | reader1                        |                           |                                   | merged 6cb76a3c4       |
+| playstall  | playerfix                      | (removed)                 | (closed)                          | merged 055a51bac       |
+| census2    | hymnrows                       | .rifts/manna/census2      |                                   | merged 0de80174f       |
+| census3    | census2                        |                           |                                   | folded into checkbulk  |
+| pagerows   | census2                        | worktree                  | (closed)                          | merged 63e310e82       |
+| one29      | playerfix, coldload            |                           |                                   | merged 8e527c5db       |
+| topicdata  | —                              |                           |                                   | merged 3784ae17e       |
+| shell      | topicdata                      | .rifts/manna/shell        | a90e66e812e023e45                 | merged 46263e5dd       |
+| sdkfx      | shell                          | .rifts/manna/sdkfx        | orchestrator                      | merged 51b5e976f       |
+| sticky     | shell                          |                           |                                   | folded into uibulk     |
+| uibulk     | chords, shell, playstall       |                           |                                   | merged 2f7de2e1d       |
+| chordsimp  | chords, uibulk                 | removed                   |                                   | merged d34ce0021       |
+| h220       | pagerows                       | removed                   |                                   | merged 5ffd09c2e       |
+| worship    | uibulk, render                 | removed                   | a454c54eeec07a736                 | merged b7b060b8f       |
+| tuner      | chordbulk                      |                           |                                   |                        |
+| tempo      | worship                        |                           |                                   |                        |
+| follow2    | worship                        | .rifts/manna/follow2      | a6c9723295ba443cc                 | merged 622350708       |
+| appicon    | worship                        | .rifts/manna/appicon      | a4d3e2ed97ddb4ba8                 | merged 9d31cb7a8       |
+| chordbulk  | chordsimp, worship             | removed                   | (closed)                          | merged a70cd91c9       |
+| pagerflick | chordbulk                      | removed                   | (closed)                          | met on base            |
+| chordbar   | chordbulk                      | removed                   | (closed)                          | merged 0647d1c1e       |
+| barfix     | chordbar, feel                 |                           |                                   | merged e3ab39e14       |
+| polishbulk | barfix, ftbbrand, feel         |                           |                                   | merged f2d7480b3       |
+| oneup      | polishbulk                     |                           |                                   | merged 90c924002       |
+| heldhide   | oneup                          |                           |                                   | merged ffa22d191       |
+| hymndb     | heldhide                       |                           |                                   |                        |
+| webster    | —                              | .rifts/manna/webster      | codex 01a17a57, r3 codex 01a17acc | merged 0f610564c       |
+| selahone   | oneup                          |                           |                                   |                        |
+| playbulk   | chordbulk, feel                |                           |                                   |                        |
+| findbulk   | feel, topicdata, playbulk      |                           |                                   |                        |
+| checkbulk  | chordbulk, feel                |                           |                                   |                        |
+| barmisc    | barfix                         |                           |                                   | folded into polishbulk |
+| hymnbrand  | barfix, ftbbrand               |                           |                                   | folded into polishbulk |
+| clickrate  | feel, barfix                   |                           |                                   | folded into polishbulk |
+| listsearch | feel                           |                           |                                   | folded into findbulk   |
+| feel       | chordbar                       | removed                   | (closed)                          | merged cfe6d5f87       |
+| chordplace | chordbar, feel                 |                           |                                   | folded into playbulk   |
+| browse-app | feel, playswap                 |                           |                                   | folded into findbulk   |
+| keyplay    | keys, barfix                   |                           |                                   | folded into playbulk   |
+| playswap   | chordbulk                      |                           |                                   | folded into playbulk   |
+| followsync | chordbulk                      |                           |                                   | folded into playbulk   |
+| ftbbrand   | —                              | removed                   | (closed)                          | merged 160e59b48       |
+| keys       | render                         |                           |                                   | merged 8be940a53       |
+| hymnbar    | shell, playstall               |                           |                                   | folded into uibulk     |
+| pager      | coldload, playstall            |                           |                                   | folded into uibulk     |
+| offline    | playstall                      |                           |                                   | folded into playbulk   |
+| search     | coldload                       |                           |                                   | folded into findbulk   |
+| search2    | search                         |                           |                                   | folded into findbulk   |
+| scripture  | search, topicdata              |                           |                                   | folded into findbulk   |
+| lists      | uibulk                         |                           |                                   | folded into uibulk     |
+| topics     | search, topicdata              |                           |                                   | folded into findbulk   |
+| readview   | pager                          |                           |                                   | folded into uibulk     |
+| render     | hymnrows                       |                           |                                   | merged 524e754ae       |
+| sync       | hymnrows                       |                           |                                   | folded into worship    |
+| follow     | sync, uibulk, playstall        |                           |                                   | folded into worship    |
+| rate       | follow                         |                           |                                   | folded into worship    |
+| reader     | appbase, compile, glass, manna | .rifts/bible-tools/reader |                                   | superseded by reader1  |
+| chords     | reader                         | .rifts/manna/chords       |                                   | merged 5e6a4b85f       |
+| listen     | chords                         | .rifts/manna/listen       |                                   | superseded by player   |
+| selah      | reader                         | .rifts/manna/selah        |                                   |                        |
 
 Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `inexact` (the 7 MIDI files whose verses do not split: 126 225 262 292 403 453 580), `decks` (syllable splits into feat/hymn-decks, last by the owner's word), `selah` (planned: after reader, see Decisions; macOS stays SwiftUI until react-native-gpui ships a real package).
 
@@ -494,5 +494,7 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 - initfresh (new unit, measured by the webster r1 verifier, `tmp/orchestrate/hymnapp/webster/round-1-verify.md`): `manna init` with a fresh home fails with `SQLiteError: unable to open database file` on main f0708fe6f and on webster alike. Fix it so a fresh install works; the acceptance check runs `manna init` with HOME set to an empty scratch dir. (webster)
 
 - biblebuild (new unit; incident 2026-10-26): `bun run sync:bible` always copies the built `bible.db` into the runtime folder `~/.bible` (`packages/core/src/sync/bible-sync.ts:138-142`, `paths.runtimeDatabase`). The webster verifier ran it with the real home and overwrote the owner's `~/.bible/bible.db`; the orchestrator restored the July repo copy (`packages/core/data/bible.db`, sha e72244f5). Decision (owner 2026-10-26: "we can sync via GitHub artifact or something, whatever makes sense"): the build writes only the workspace `packages/core/data/bible.db` and never the runtime folder; `~/.bible` gets its copy only from `manna init`, which already reads the GitHub release artifact (`BIBLE_ARTIFACT_RELEASE`, `packages/cli/src/commands/init.ts`), so publishing a new build means uploading it as that release asset. Remove the runtime copy from `bible-sync.ts`, and add a unit test that the build writes nothing under HOME. Until it merges, every verifier brief sets HOME to a scratch dir for any build step. (webster)
+
+- webster follow-ups (merged 0f610564c after 3 rounds; `tmp/orchestrate/hymnapp/webster/round-3-findings.md`, `round-2-findings.md`, `round-1-findings.md`): new unit **webkjv** for the KJV lookup rows the exit rule deferred: `proceedeth` (11 times, Matt 4:4) prints PROCEEDER's entry and `loatheth` an empty LOATHE (the NOTICE that ships with the data does not name them); `closest` (Jer 22:15) is labelled exact and lands on the adjective, outside the verb property; the verb-source property should anchor the verb label to the entry's own headword and fail on unused exceptions (r3 T1), and should cover `exact-inflection` rows (r3 T2); the real-SQLite collision fixture never reaches retained-e first (r2 m1). Also: docs lines name a review pass (r3 m1, `fixtures/README.md:44-45`, `docs/architecture/corpus-supply.md:33`); upstream rows that hold a neighbouring headword are not disclosed (r3 m2); r2 o1–o4 and r1 F5/F11/F13 stay open. Run `bun run build:webster` before any `test:slow`. Before Heartseed ships the glosses, the owner decides how CC BY-SA 4.0 (the transcription's licence) fits App Store distribution. (webster)
 
 ## Review later
