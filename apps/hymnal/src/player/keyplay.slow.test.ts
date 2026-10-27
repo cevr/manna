@@ -308,12 +308,17 @@ for (const origin of origins)
       it.effect(`keyplay landing property ${origin} key=${keyChange} loadMs=${loadMs}`, () =>
         Effect.gen(function* () {
           const silent =
-            (origin === 'Playing' && !keyChange) ||
-            origin === 'Paused' ||
-            origin === 'Sound-off resume probeL';
+            (origin === 'Playing' && !keyChange) || origin === 'Sound-off resume probeL';
           let recorded = 240_000;
           if (origin === 'silent-tail rewind probeM') recorded = 60_000;
           using app = yield* open(!silent, recorded);
+          // A paused native recording reloads without a Key change when
+          // Play retries its missing chosen set. This is distinct from
+          // resuming the silent score clock in probeL.
+          if (origin === 'Paused' && !keyChange) {
+            app.move(100, 1);
+            app.missing.add(audioUrl(100, 1));
+          }
           const target = yield* beginLanding(app, origin, keyChange);
           yield* settle;
           expect(app.pending.length).toBeGreaterThan(0);
@@ -1037,7 +1042,9 @@ const replacementStep = (app: App, seed: number, step: number) =>
     yield* app.playing;
     app.send(Command.Seek({ seconds: 20 + seed + step }));
     yield* app.tick();
-    expect(app.read().positionMs).toBeGreaterThanOrEqual((20 + seed + step) * 1000);
+    expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(
+      (20 + seed + step) * 1000,
+    );
   });
 
 it.effect(
