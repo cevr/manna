@@ -563,6 +563,25 @@ and the census catches each one.
 
 ## Numeric playback sidecars
 
+`compilePlacements` derives On the beat, Simpler and As the file plays from
+one original alignment. The default uses R1 only when the melody confirms
+the file's grid. Simpler then folds changes shorter than one felt beat;
+when the grid is unconfirmed it folds the unchanged file anchors. A first
+change that remains shorter than a beat takes the next surviving chord at
+its own position. As the file plays keeps the original guitar projection.
+The sidecars carry sparse numeric replacement tuples for the alternatives:
+`<number>.json` keeps the default score; `<number>.placements.json` keeps
+the corpus-bound alternatives. Every hymn has both files, including an
+empty alternative, so regeneration does not leave a former mode behind.
+The manifest lists the nonempty alternatives to read at build time.
+Each replacement is
+part index (refrain after stanzas), line, syllable, then chord degree,
+quality index, bass degree and offset. Full harmony and timing occur once.
+The native/web chord bundle carries these alternatives as an encoded string
+beside one copy of the syllable encoding, decoded only for a selected mode.
+The build validates their schema, corpus binding
+and target cuts. It does not check generation provenance or MIDI freshness.
+
 Run `bun run --cwd packages/hymnal playback` after a metadata mismatch or a
 compiler/input change. `--out <directory>` writes a scratch numeric set for comparison.
 The generator compiles each hymn in memory and writes only numeric cuts,
@@ -577,8 +596,8 @@ The app's chord and timing derivations both use `readPlayback`. The manifest
 lists the sidecars whose numeric projection differs from the corpus. The
 build decodes these overrides and checks version, hymn identity, source
 digest and word cuts before joining them to the existing words. Other
-hymns reuse their corpus objects; all 695 sidecars remain available for
-placement work. Each hymn's digest
+hymns reuse their corpus objects; all 695 default sidecars remain available,
+alongside their compact placement alternatives. Each hymn's digest
 covers only the exact corpus bytes onto which the cuts are joined. MIDI
 and compiler staleness do not fail app builds or app unit tests. One `manifest.json`
 holds generation provenance, which the build does not check: source text, refrain order; `src/align.ts`,

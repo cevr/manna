@@ -96,6 +96,14 @@ under its number, and the refrain written out each time it is sung.
 
 ## Chords
 
+`Chord placement` in Settings chooses On the beat (default), Simpler, or
+As the file plays. Each hymn's player sheet has the same three choices on
+an adjustable dial. Turning it stores an override for that hymn;
+`Use global chord placement` clears it explicitly. Both choices survive
+a relaunch and take effect during play without a recording command.
+Placement changes numeric guitar anchors before Simple/Advanced spelling.
+It changes no words, timing, sounding Key or capo. Only actual changes show.
+
 The `Chords` button in a hymn's header (the stored `chords` setting, off by
 default) draws the hymn's guitar chords over its words. Each sung syllable
 is a box with its chords above it in the body's own font, a word's boxes
@@ -558,5 +566,5 @@ The manifest's global fingerprint is generation provenance only. The build
 checks each override's corpus digest, schema and word cuts; other hymns reuse
 the corpus objects. Stale compiler or MIDI inputs never fail the app build.
 Generation and the slow fresh-compile test catch staleness.
-All 695 numeric sidecars remain available. Their census records each part's
+All 695 default sidecars and their numeric placement alternatives remain available. Their census records each part's
 follow level. A mismatch names its reason and the regenerate command.

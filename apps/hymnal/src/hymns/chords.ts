@@ -156,7 +156,8 @@ const mark = (when: boolean, text: string): string => (when && text) || '';
 // ----------------------------------------------------------------------------
 
 /*
- * A hymn's string is JSON: `[number, tonic, minor, stanzas, refrain]`, the
+ * A hymn's string is JSON: `[number, tonic, minor, stanzas, refrain]`, with
+ * an optional sixth string carrying encoded numeric placement alternatives; the
  * refrain 0 when there is none. A part is 0 when `Plain`, else
  * `[level, lines]`, each line one string: its syllables joined by `|`, each
  * `+` first when it is in the word before it, then its text, then, when it
@@ -166,7 +167,6 @@ const mark = (when: boolean, text: string): string => (when && text) || '';
  * none of `|`, `~` and `+`: the build fails on one that does (`encodeHymn`).
  */
 
-const Hex = Schema.Literals(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b']);
 const EncodedSung = Schema.Tuple([
   Schema.Literals(['syllable', 'line']),
   Schema.NonEmptyArray(Schema.String),
@@ -178,10 +178,14 @@ const EncodedHymn = Schema.Tuple([
   Schema.Boolean,
   Schema.Array(EncodedPart),
   EncodedPart,
-  Schema.optionalKey(Placements),
+  // Keep alternatives encoded until selected: the default reading allocates
+  // neither their patch arrays nor their chord objects.
+  Schema.optionalKey(Schema.String),
 ]);
 type EncodedPart = typeof EncodedPart.Type;
 const encodeEncoded = Schema.encodeOption(Schema.fromJsonString(EncodedHymn));
+const encodePlacements = Schema.encodeOption(Schema.fromJsonString(Placements));
+const decodePlacements = Schema.decodeUnknownOption(Schema.fromJsonString(Placements));
 
 const tokenOf = (chord: Chord.Chord): string =>
   `${chord.root.toString(16)}${chord.quality}${Option.match(Option.fromUndefinedOr(chord.bass), {
@@ -237,57 +241,50 @@ export const encodeHymn = (hymn: Hymn, placements?: Placements): Option.Option<s
         onNone: () =>
           encodeEncoded([hymn.number, hymn.key.tonic, hymn.key.minor, stanzas, refrain]),
         onSome: (modes) =>
-          encodeEncoded([hymn.number, hymn.key.tonic, hymn.key.minor, stanzas, refrain, modes]),
+          Option.flatMap(encodePlacements(modes), (encoded) =>
+            encodeEncoded([hymn.number, hymn.key.tonic, hymn.key.minor, stanzas, refrain, encoded]),
+          ),
       }),
     ),
   );
 
 const decodeEncoded = Schema.decodeUnknownOption(Schema.fromJsonString(EncodedHymn));
-const isHex = Schema.is(Hex);
-const isQuality = Schema.is(Chord.Quality);
 const isKey = Schema.is(Chord.Key);
 
-const chordOf = (token: string): Option.Option<Chord.Chord> => {
-  const [head = '', ...over] = token.split('/');
-  const root = head.slice(0, 1);
-  const quality = head.slice(1);
-  if (!isHex(root) || !isQuality(quality) || over.length > 1) return Option.none();
-  const chord = { root: Number.parseInt(root, 16), quality };
-  return Option.match(Option.fromIterable(over), {
-    onNone: () => Option.some(chord),
-    onSome: (bass) =>
-      Option.map(Option.liftPredicate(bass, isHex), (hex) => ({
-        ...chord,
-        bass: Number.parseInt(hex, 16),
-      })),
-  });
-};
-
-/** A syllable's box from its string, and whether it joins the word before it. */
-const boxOf = (encoded: string): Option.Option<{ readonly box: Box; readonly joins: boolean }> => {
-  const joins = encoded.startsWith('+');
-  const [text = '', ...tokens] = encoded.slice(Number(joins)).split('~');
-  return Option.match(Option.fromIterable(tokens), {
-    onNone: () => Option.some({ box: { text, chords: [] }, joins }),
-    onSome: (chords) =>
-      Option.map(
-        Option.filter(Option.all(chords.split(' ').map(chordOf)), () => tokens.length === 1),
-        (decoded) => ({ box: { text, chords: decoded }, joins }),
-      ),
-  });
-};
-
+/** The complete finite token vocabulary. Repeated chords share immutable values. */
+const tokens = new Map<string, Chord.Chord>();
+for (let root = 0; root < 12; root++)
+  for (const quality of Chord.Quality.literals) {
+    const token = `${root.toString(16)}${quality}`;
+    tokens.set(token, { root, quality });
+    for (let bass = 0; bass < 12; bass++)
+      tokens.set(`${token}/${bass.toString(16)}`, { root, quality, bass });
+  }
 /** A line's syllables, grouped into words. */
-const wordsOf = (line: string): Option.Option<ReadonlyArray<Word>> =>
-  Option.map(Option.all(line.split('|').map(boxOf)), (boxes) => {
-    const grouped: Array<Array<Box>> = [];
-    for (const { box, joins } of boxes) {
-      const last = grouped.at(-1);
-      if (joins && last) last.push(box);
-      else grouped.push([box]);
+const wordsOf = (line: string): Option.Option<ReadonlyArray<Word>> => {
+  const grouped: Array<Array<Box>> = [];
+  for (const encoded of line.split('|')) {
+    const joins = encoded.startsWith('+');
+    const body = encoded.slice(Number(joins));
+    const delimiter = body.indexOf('~');
+    const chords: Chord.Chord[] = [];
+    let text = body;
+    if (delimiter >= 0) {
+      if (body.indexOf('~', delimiter + 1) >= 0) return Option.none();
+      text = body.slice(0, delimiter);
+      for (const token of body.slice(delimiter + 1).split(' ')) {
+        const chord = tokens.get(token);
+        if (!chord) return Option.none();
+        chords.push(chord);
+      }
     }
-    return grouped;
-  });
+    const box = { text, chords };
+    const last = grouped.at(-1);
+    if (joins && last) last.push(box);
+    else grouped.push([box]);
+  }
+  return Option.some(grouped);
+};
 
 const decodePart = (part: EncodedPart): Option.Option<PartChords> => {
   if (part === 0) return Option.some({ _tag: 'Plain' });
@@ -316,7 +313,8 @@ export const decodeHymn = (
         if (placement === 'beat') return Option.some(hymn);
         return Option.match(Option.fromUndefinedOr(placements), {
           onNone: () => Option.some(hymn),
-          onSome: (modes) => placed(hymn, modes[placement]),
+          onSome: (value) =>
+            Option.flatMap(decodePlacements(value), (modes) => placed(hymn, modes[placement])),
         });
       }),
     );

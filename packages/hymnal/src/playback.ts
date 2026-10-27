@@ -32,6 +32,7 @@ export const Placements = Schema.Struct({
   simpler: Schema.Array(PlacementPatch),
 });
 export type Placements = typeof Placements.Type;
+export const PlacementData = Schema.Struct({ sourceHash: Schema.String, placements: Placements });
 const Cut = Schema.Struct({
   word: Count,
   offset: Count,
@@ -60,7 +61,6 @@ export const Playback = Schema.Struct({
   verses: Schema.Struct({ text: Count, midi: Count, exact: Schema.Boolean }),
   stanzas: Schema.Array(NumericPart),
   refrain: Schema.Array(NumericPart),
-  placements: Schema.optionalKey(Placements),
 });
 export type Playback = typeof Playback.Type;
 

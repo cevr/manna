@@ -9,7 +9,7 @@ import * as Chord from './chord.js';
 import * as Placement from './placement.js';
 import { type compile, compilePlacements } from './compile.js';
 import { Hymn, type Syllable, sung } from './hymn.js';
-import { Playback, metadataOf, placementPatches } from './playback.js';
+import { Playback, PlacementData, metadataOf, placementPatches } from './playback.js';
 import { secondsAt, timingOf } from './timing.js';
 import { readPlayback } from '../scripts/playback.js';
 import { decodeOrders, sourceOf } from '../scripts/sources.js';
@@ -334,6 +334,87 @@ const comparePlacementLine = (
 const refrainLines = (text: string | undefined, lastOnly: boolean, stored: boolean) =>
   text === undefined || (lastOnly && !stored) ? [] : linesOf(text);
 
+const generatedRuleMatches = (
+  line: Placement.Line,
+  grid: Placement.Grid,
+  seed: number,
+  mode: Placement.Placement,
+) => {
+  const confirmed = seed % 2 === 0;
+  const expected = expectedChanges(line, grid, mode !== 'file' && confirmed, mode === 'simpler');
+  const rule = confirmed ? 'strong+length' : 'length';
+  const actual =
+    mode === 'file' || (mode === 'beat' && !confirmed)
+      ? line.changes
+      : Placement.apply(mode === 'beat' ? 'strong' : rule, line, grid);
+  return (
+    actual.length === expected.length &&
+    actual.every(
+      (c, i) =>
+        c.syllable === expected[i]?.syllable &&
+        Math.abs(Math.round((c.at / 96) * 1000) / 1000 - (expected[i]?.at ?? Infinity)) <=
+          0.00051 &&
+        c.chord.root === expected[i]?.chord.root,
+    )
+  );
+};
+
+it.effect('P4 generated meters, boundaries and shared onsets obey each placement rule', () =>
+  Effect.sync(() => {
+    const meters = [
+      [1, 2],
+      [2, 2],
+      [3, 2],
+      [4, 2],
+      [2, 4],
+      [3, 4],
+      [4, 4],
+      [6, 4],
+      [9, 4],
+      [3, 8],
+      [4, 8],
+      [6, 8],
+      [9, 8],
+      [12, 8],
+    ];
+    const faults: number[][] = [];
+    let checked = 0;
+    for (let seed = 1; seed <= 128; seed++)
+      for (const [m, values] of meters.entries()) {
+        const [numerator = 4, denominator = 4] = values;
+        const grid: Placement.Grid = {
+          ticksPerBeat: 96,
+          tonic: 0,
+          meters: [
+            { tick: 0, numerator, denominator },
+            { tick: 1536, numerator: 3, denominator: 4 },
+          ],
+        };
+        const line: Placement.Line = {
+          syllables: Array.from({ length: 12 }, (_, k) => ({
+            start: 384 + 96 * k + (k > 1 && seed % 3 === 0 ? -96 : 0),
+            length: 96 * (1 + ((seed + k) % 5)),
+            key: 60 + k,
+          })),
+          changes: [0, 1, 4, 5, 8, 11].map((syllable, k) => ({
+            syllable,
+            at: (k % 2) * (seed % 48),
+            chord: { root: (k * 5) % 12, quality: '' },
+          })),
+          until: 1536 + (seed % 96),
+          before: seed % 2 ? undefined : { root: 7, quality: '' },
+        };
+        for (const mode of ['beat', 'simpler', 'file'] as const) {
+          if (!generatedRuleMatches(line, grid, seed, mode))
+            faults.push([seed, m, ['beat', 'simpler', 'file'].indexOf(mode)]);
+          checked++;
+        }
+      }
+    expect(checked).toBe(5376);
+    expect(faults.slice(0, 10)).toEqual([]);
+  }),
+);
+
 const placementFaults = (
   modes: Record<Placement.Placement, Hymn>,
   score: Score.Score,
@@ -413,12 +494,18 @@ it.effect(
           file: placementPatches(fresh, modes.file),
           simpler: placementPatches(fresh, modes.simpler),
         };
-        const withPlacements =
-          placements.file.length > 0 || placements.simpler.length > 0
-            ? { ...base, placements }
-            : base;
-        if ((yield* encode(metadata)) !== (yield* encode(withPlacements)))
-          faults.push([row.number, 1]);
+        const alternative = yield* Schema.decodeEffect(Schema.fromJsonString(PlacementData))(
+          read(`playback/${pad(row.number)}.placements.json`),
+        );
+        if (
+          (yield* Schema.encodeEffect(Schema.fromJsonString(PlacementData))(alternative)) !==
+          (yield* Schema.encodeEffect(Schema.fromJsonString(PlacementData))({
+            sourceHash: metadata.sourceHash,
+            placements,
+          }))
+        )
+          faults.push([row.number, 15]);
+        if ((yield* encode(metadata)) !== expected) faults.push([row.number, 1]);
         for (const other of [modes.file, modes.simpler]) {
           const withoutGuitar = (m: Playback): Playback => {
             const parts = (parts: Playback['stanzas']) =>

@@ -6,6 +6,7 @@ import { Hymn, sung } from '../src/hymn.js';
 import {
   Playback,
   type Placements,
+  PlacementData,
   applyMetadata,
   metadataOf,
   placementPatches,
@@ -26,6 +27,7 @@ const Manifest = Schema.Struct({
 });
 const decodeManifest = Schema.decodeUnknownSync(Schema.fromJsonString(Manifest));
 const decodePlayback = Schema.decodeUnknownEffect(Schema.fromJsonString(Playback));
+const decodePlacement = Schema.decodeUnknownOption(Schema.fromJsonString(PlacementData));
 const regenerate = 'bun run --cwd packages/hymnal playback';
 const mismatch = (reason: string, number?: number): never => {
   throw new Error(
@@ -107,31 +109,38 @@ export const readPlayback = (hymns: readonly Hymn[]): readonly Hymn[] => {
   });
 };
 
+const validPlacementTargets = (hymn: Hymn, placements: Placements) => {
+  const parts = [...hymn.stanzas, ...(hymn.refrain === undefined ? [] : [hymn.refrain.part])];
+  for (const changes of [placements.file, placements.simpler]) {
+    if (new Set(changes.map(([p, l, k]) => `${p}:${l}:${k}`)).size !== changes.length) return false;
+    for (const [p, l, k] of changes) {
+      const part = parts[p];
+      if (part?._tag !== 'Sung' || part.lines[l]?.[k] === undefined) return false;
+    }
+  }
+  return true;
+};
+
 /** Numeric placement alternatives for the shared native/web chord bundle. */
 export const readPlacementPatches = (hymns: readonly Hymn[]): ReadonlyMap<number, Placements> => {
-  const manifest = decodeManifest(readFileSync(join(folder, 'manifest.json'), 'utf8'));
+  const decodedManifest = Result.try(() =>
+    decodeManifest(readFileSync(join(folder, 'manifest.json'), 'utf8')),
+  );
+  if (Result.isFailure(decodedManifest)) return mismatch('manifest');
+  const manifest = decodedManifest.success;
   const rows = new Map<number, Placements>();
   for (const number of manifest.placements ?? []) {
     const hymn = hymns.find((hymn) => hymn.number === number);
     if (hymn === undefined) return mismatch('shape', number);
-    const result = Effect.runSync(
-      decodePlayback(readFileSync(join(folder, `${pad(number)}.json`), 'utf8')).pipe(
-        Effect.flatMap((metadata) =>
-          applyMetadata(hymn, metadata, corpusHash(number)).pipe(Effect.as(metadata)),
-        ),
-        Effect.result,
-      ),
+    const raw = Result.try(() =>
+      readFileSync(join(folder, `${pad(number)}.placements.json`), 'utf8'),
     );
-    if (result._tag === 'Failure') return mismatch('schema', number);
-    const placements = result.success.placements;
-    if (placements === undefined) return mismatch('shape', number);
-    const parts = [...hymn.stanzas, ...(hymn.refrain === undefined ? [] : [hymn.refrain.part])];
-    for (const patch of [...placements.file, ...placements.simpler]) {
-      const [p, l, k] = patch;
-      const part = parts[p];
-      if (part?._tag !== 'Sung' || part.lines[l]?.[k] === undefined)
-        return mismatch('cuts', number);
-    }
+    if (Result.isFailure(raw)) return mismatch('file', number);
+    const decoded = decodePlacement(raw.success);
+    if (decoded._tag === 'None') return mismatch('schema', number);
+    if (decoded.value.sourceHash !== corpusHash(number)) return mismatch('source', number);
+    const placements = decoded.value.placements;
+    if (!validPlacementTargets(hymn, placements)) return mismatch('cuts', number);
     rows.set(number, placements);
   }
   return rows;
@@ -189,9 +198,10 @@ export const generatePlayback = async (out = folder) => {
     };
     const hasPlacements = placements.file.length > 0 || placements.simpler.length > 0;
     if (hasPlacements) placementNumbers.push(row.number);
+    writeFileSync(join(out, `${pad(row.number)}.json`), `${JSON.stringify(metadata)}\n`);
     writeFileSync(
-      join(out, `${pad(row.number)}.json`),
-      `${JSON.stringify(hasPlacements ? { ...metadata, placements } : metadata)}\n`,
+      join(out, `${pad(row.number)}.placements.json`),
+      `${JSON.stringify({ sourceHash, placements })}\n`,
     );
     const counts = countsOf(hymn);
     const baseline = Effect.runSync(

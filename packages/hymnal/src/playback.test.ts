@@ -4,7 +4,7 @@ import { test } from 'bun:test';
 import { Effect, Result, Schema } from 'effect';
 import { expect, it } from 'effect-bun-test';
 import { Hymn } from './hymn.js';
-import { Playback, applyMetadata, metadataOf } from './playback.js';
+import { Playback, PlacementData, applyMetadata, metadataOf } from './playback.js';
 
 test('playback sidecars stay one line, hymn-local and below 17 MB', () => {
   const data = new URL('../data/', import.meta.url);
@@ -14,9 +14,25 @@ test('playback sidecars stay one line, hymn-local and below 17 MB', () => {
   const faults: number[][] = [];
   let bytes = 0;
   let hymns = 0;
+  let alternatives = 0;
   for (const name of names) {
     const raw = readFileSync(new URL(name, folder), 'utf8');
     bytes += Buffer.byteLength(raw);
+    if (/^\d{3}\.placements\.json$/.test(name)) {
+      alternatives++;
+      const number = Number(name.slice(0, 3));
+      const decoded = Schema.decodeOption(Schema.fromJsonString(PlacementData))(raw);
+      const digest = new Bun.CryptoHasher('sha256')
+        .update(readFileSync(new URL(`sdah-1985/${String(number).padStart(3, '0')}.json`, data)))
+        .digest('hex');
+      if (
+        !raw.endsWith('\n') ||
+        raw.trimEnd().includes('\n') ||
+        decoded._tag === 'None' ||
+        decoded.value.sourceHash !== digest
+      )
+        faults.push([number, 5]);
+    }
     if (!/^\d{3}\.json$/.test(name)) continue;
     const number = Number(name.slice(0, 3));
     hymns++;
@@ -32,21 +48,15 @@ test('playback sidecars stay one line, hymn-local and below 17 MB', () => {
     if (
       Object.keys(metadata).some(
         (key) =>
-          ![
-            'version',
-            'number',
-            'sourceHash',
-            'timing',
-            'verses',
-            'stanzas',
-            'refrain',
-            'placements',
-          ].includes(key),
+          !['version', 'number', 'sourceHash', 'timing', 'verses', 'stanzas', 'refrain'].includes(
+            key,
+          ),
       )
     )
       faults.push([number, 3]);
   }
   expect(hymns).toBe(695);
+  expect(alternatives).toBe(695);
   expect(faults.slice(0, 10)).toEqual([]);
   expect(bytes).toBeLessThan(17_000_000);
   const changed = census.census
