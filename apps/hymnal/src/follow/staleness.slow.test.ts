@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { expect, test } from 'bun:test';
+import { afterAll, expect, test } from 'bun:test';
 import { Context, Effect, Layer, ManagedRuntime, Option } from 'effect';
 
 const root = resolve(import.meta.dir, '../../../..');
@@ -177,7 +177,9 @@ const cloneInputs = (checkout: string) => {
 const scratchLayer = Layer.effect(Scratch)(
   Effect.gen(function* () {
     const scratch = yield* Effect.acquireRelease(
-      Effect.sync(() => mkdtempSync(resolve(tmpdir(), 'hymnal-staleness-'))),
+      Effect.sync(() =>
+        mkdtempSync(resolve(process.env['HYMNAL_STALE_ROOT'] ?? tmpdir(), 'hymnal-staleness-')),
+      ),
       (path) =>
         Effect.sync(() => {
           const code = Bun.spawnSync(['trash', path]).exitCode;
@@ -198,9 +200,10 @@ const scratchLayer = Layer.effect(Scratch)(
 // This test file runs in its own host process. Its runtime owns one scoped
 // clone across the serial cases, including filtered runs and failed cases.
 const runtime = ManagedRuntime.make(scratchLayer);
-// Bun's test host exits directly; the exit fallback also closes filtered runs.
-// The layer's release is synchronous and reports cleanup failure separately.
-process.once('exit', () => Effect.runSync(runtime.disposeEffect));
+// The Layer owns acquisition/release. Bun has no shared-layer suite adapter;
+// its suite-close callback binds that scope to full and filtered host runs.
+// oxlint-disable-next-line effect/noTestLifecycleHooks -- host adapter only: close the shared Layer scope after per-case default-limit tests, including filtered runs.
+afterAll(() => runtime.dispose());
 for (const row of cases)
   test(`playback builds survive real stale generation inputs: ${row.id}`, () =>
     runtime.runPromise(
@@ -213,4 +216,35 @@ for (const row of cases)
         expect(actual.counts, row.id).toBe('21-pass,0-fail');
       }),
     ));
-test('stale-input scratch scope releases after its cases', () => runtime.dispose());
+
+test('filtered stale-input runs release their scratch directory', () =>
+  Effect.runPromise(
+    Effect.gen(function* () {
+      const parent = yield* Effect.acquireRelease(
+        Effect.sync(() => mkdtempSync(resolve(tmpdir(), 'hymnal-staleness-parent-'))),
+        (path) =>
+          Effect.sync(() => {
+            if (Bun.spawnSync(['trash', path]).exitCode !== 0) process.exitCode = 1;
+          }),
+      );
+      const child = Bun.spawn(
+        ['bun', 'test', import.meta.path, '--test-name-pattern', 'fixed-lock-newline'],
+        {
+          cwd: root,
+          env: { ...process.env, HYMNAL_STALE_ROOT: parent },
+          stdout: 'pipe',
+          stderr: 'pipe',
+        },
+      );
+      const code = yield* Effect.promise(async () => {
+        const [, , code] = await Promise.all([
+          new Response(child.stdout).text(),
+          new Response(child.stderr).text(),
+          child.exited,
+        ]);
+        return code;
+      });
+      expect(code).toBe(0);
+      expect(readdirSync(parent).length).toBe(0);
+    }).pipe(Effect.scoped),
+  ));
