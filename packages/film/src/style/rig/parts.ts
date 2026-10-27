@@ -1140,6 +1140,15 @@ export const EXTRA_FACE = { wince: 0, glad: 0 } as const;
  * the kit's line at rest (lead-feast heads-6: 53 px against 30).
  */
 const GLAD_MOUTH = { half: 1.75, lift: 0.12, dip: 0.42 } as const;
+
+/**
+ * A shut eye's marks, shares of the kit's eye height: how far the wince's
+ * chevron reaches above and below the eye's middle, so a knit brow above it
+ * stays a mark of its own; and how far the glad arch's ends lie below its
+ * middle and its middle above, a shallow arc as a glad face's sheet draws
+ * it (lead-feast heads-6: about 5 px of rise over 25).
+ */
+const SHUT_EYE = { chevron: 0.3, gladEnds: 0.1, gladMiddle: 0.1 } as const;
 export type ExtraFaceKnob = keyof typeof EXTRA_FACE;
 
 /** An ink stroke of the kit along `path`, `thickness` wide, shown by the number `knob`. */
@@ -1183,9 +1192,9 @@ const extraMarks = (fig: Figure, k: FaceShape, extra: ReadonlyArray<ExtraFaceKno
             fig,
             `wince${side}`,
             straightPath([
-              [-w * toward, -0.36 * h],
+              [-w * toward, -SHUT_EYE.chevron * h],
               [0.8 * w * toward, 0],
-              [-w * toward, 0.36 * h],
+              [-w * toward, SHUT_EYE.chevron * h],
             ]),
             k.brow,
             'wince',
@@ -1239,9 +1248,9 @@ const extraMarks = (fig: Figure, k: FaceShape, extra: ReadonlyArray<ExtraFaceKno
               fig,
               `glad${side}`,
               [
-                [-1.1 * w, 0.2 * h],
-                [0, -0.22 * h],
-                [1.1 * w, 0.2 * h],
+                [-1.1 * w, SHUT_EYE.gladEnds * h],
+                [0, -SHUT_EYE.gladMiddle * h],
+                [1.1 * w, SHUT_EYE.gladEnds * h],
               ],
               false,
             ),

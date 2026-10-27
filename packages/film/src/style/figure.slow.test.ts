@@ -610,6 +610,23 @@ describe('a bearded head, and the parts of a head turned and of bare feet', () =
     expect(plain).not.toContain('gladMouth');
   });
 
+  test("a glad face's shut eye is a shallow arc, its rise under a fifth of its width; a wince's chevron no taller than its eye's 0.6", () => {
+    const face = KitA({ x: 0, y: 0, scale: 1, gaze: [0, 12], extra: ['glad', 'wince'] });
+    const rml = drawnOf(figure({ ...standingOf(), face }));
+    const span = (pts: ReadonlyArray<Pt>, i: 0 | 1) =>
+      Math.max(...pts.map((p) => p[i])) - Math.min(...pts.map((p) => p[i]));
+    const arch = printed(rml, 'gladL');
+    expect(span(arch, 1) / span(arch, 0)).toBeLessThan(0.2);
+    const chevron = Array.from(
+      rml
+        .slice(rml.indexOf('name="winceLSide"'), rml.indexOf('name="winceRSide"'))
+        .matchAll(/<StraightVertex x="([^"]+)" y="([^"]+)"/g),
+      (m): Pt => [Number(m[1]), Number(m[2])],
+    );
+    expect(chevron).toHaveLength(3);
+    expect(span(chevron, 1)).toBeLessThanOrEqual(0.6 * kitMarks().eye[1] + 1e-6);
+  });
+
   test('curled hair cuts each curl as its own disc over the mass, where and as wide as given', () => {
     const curls = [
       { at: [-20, -50] as const, r: 8 },
