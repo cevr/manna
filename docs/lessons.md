@@ -4287,6 +4287,36 @@ The form of an entry, each field on its own line:
 - **Cause:** Generation provenance was treated as a build prerequisite instead of leaving staleness to generation and the slow fresh-compile proof. Builds need only schema, corpus binding and valid word cuts.
 - **Guard:** code: `apps/hymnal/src/follow/staleness.slow.test.ts` `playback builds survive stale generation inputs`; `packages/hymnal/src/playback.test.ts` `playback sidecars stay one line, hymn-local and below 17 MB`
 
+### chord-placement-changes-only
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "Simpler shows repeated chords that are not changes"
+- **Source:** hymnapp/playbulk/p4-round-1-findings.md M1
+- **Wrong:** Folding a short change left a redundant return to the chord still sounding.
+- **Cause:** The fold and its oracle both retained events without checking the resulting harmony.
+- **Guard:** code: `packages/hymnal/src/placement.test.ts` `length shows only changes after folding a brief return`, `strong+length shows only changes after folding a brief return`; `packages/hymnal/src/playback.test.ts` `playback sidecars stay one line, hymn-local and below 17 MB`
+
+### chord-placement-controls
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "The placement dial shows on hymns with no chords"
+- **Source:** hymnapp/playbulk/p4-round-1-findings.md m1, m2, m3
+- **Wrong:** Chordless sheets offered a setting with no effect; web inheritance used an unsupported selected state; the manifest list had no completeness check.
+- **Cause:** The sheet, accessibility state and manifest were checked against their own inputs.
+- **Guard:** code: `apps/hymnal/src/player/placement.slow.test.tsx` `a chordless hymn sheet exposes no placement control or override`, `Use global clears a hymn override, follows later defaults, and retires a fling owner`; `packages/hymnal/src/playback.test.ts` `playback sidecars stay one line, hymn-local and below 17 MB`
+
+### slow-test-default-limit
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "The package corpus slow test now runs at bun's 5 s limit and fails at normal load"
+- **Source:** hymnapp/playbulk/p4-round-1-findings.md M2 and m5
+- **Wrong:** Repeated alignment and serialization used the corpus test's margin; one stale-input scenario raised its timeout to 120 seconds.
+- **Cause:** Shared setup and repeated checks ran inside large test cases.
+- **Guard:** skill: normal-load runtime margins and scenario sizes require measurement. Carried by `.claude/skills/verify-hymnal/features/follow.md`: "Never add a timeout argument to a test or raise a runner timeout. Split long scenarios into cases under the default limit. An extended corpus slow test keeps at least 30% headroom under the 5 s default, measured in five paired runs at load 5 or more."
+
 ### playback-build-inputs
 
 - **Date:** 2026-10-27

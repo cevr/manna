@@ -59,6 +59,8 @@ Numeric guards: `packages/hymnal/src/playback.slow.test.ts` walks all 695 hymns,
 
 ## Gotchas
 
+- Never add a timeout argument to a test or raise a runner timeout. Split long scenarios into cases under the default limit. An extended corpus slow test keeps at least 30% headroom under the 5 s default, measured in five paired runs at load 5 or more.
+
 - The simulator plays through the Mac's speakers: on iOS, read the `Sound` button's value as `unchecked` before every Play. The choice is kept across relaunches. The checker refuses to press Play unless it reads `unchecked` itself.
 - The pager keeps the pages beside the open hymn in the tree, each with a `hymn-scroll` and `line` nodes of its own, off the screen. The checker takes the scroll whose frame, cut to its ancestors' frames, the screen shows, and only the lines inside it; read a raw snapshot the same way.
 - In a dev build a LogBox toast at the foot can cover the player bar. A tap on the bar then opens the LogBox, the press never reaches the app, and the checker samples a hymn that never plays (`seen` 0, `ended` false). The snapshot still lists the bar's buttons under the toast, so take a `sim shot` before a run. `agent-device react-native dismiss-overlay --session verify-hymnal` clears it; run it again until it reports `No React Native overlay detected`. The pager sets `recycleItems`, so LegendList's warning no longer raises one on every launch.
