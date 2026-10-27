@@ -23,6 +23,7 @@ for (const state of ['playing', 'paused', 'ended', 'failed', 'idle'] as const)
       const clock = yield* TestClock.testClockWith(Effect.succeed);
       const reply = yield* Deferred.make<Status>();
       const reading = yield* Deferred.make<boolean>();
+      const replied = yield* Deferred.make<boolean>();
       const plays: Array<{ uri: string; from: number }> = [];
       const announced: string[] = [];
       let now: Status = { state: 'idle', positionMs: 0 };
@@ -38,7 +39,10 @@ for (const state of ['playing', 'paused', 'ended', 'failed', 'idle'] as const)
         status: Effect.suspend(() => {
           if (!old) return Effect.succeed(now);
           old = false;
-          return Deferred.succeed(reading, true).pipe(Effect.andThen(Deferred.await(reply)));
+          return Deferred.succeed(reading, true).pipe(
+            Effect.andThen(Deferred.await(reply)),
+            Effect.tap(() => Deferred.succeed(replied, true)),
+          );
         }),
         pause: Effect.sync(() => (now = { ...now, state: 'paused' })),
         resume: Effect.sync(() => (now = { ...now, state: 'playing' })),
@@ -67,6 +71,7 @@ for (const state of ['playing', 'paused', 'ended', 'failed', 'idle'] as const)
       registry.set(player.send, Command.Start({ track: second }));
       yield* settle;
       yield* Deferred.succeed(reply, { state, positionMs: 90_000, durationMs: 240_000 });
+      yield* Deferred.await(replied);
       yield* settle;
       // Neither identity, time, terminal state nor follow may come from hymn 100.
       const shown = registry.get(player.state);

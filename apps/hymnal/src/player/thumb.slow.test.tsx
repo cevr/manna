@@ -15,7 +15,7 @@
 import { RegistryContext } from '@effect/atom-react';
 import { spyOn } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
-import { Duration, Effect, Option, Stream } from 'effect';
+import { Deferred, Duration, Effect, Latch, Layer, Option, Stream } from 'effect';
 import { TestClock } from 'effect/testing';
 import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
 import { act, type ReactNode, useState } from 'react';
@@ -38,7 +38,7 @@ import { PlayerContext } from './context';
 import { DETENT } from './dial';
 import { ChordReaderContext, RESET_WAIT, ResetClock } from './Dials';
 import { FullPlayer } from './FullPlayer';
-import { Player, playerOn } from './player';
+import { Playback, Player, playerOn } from './player';
 import { REST, RISE, SOUNDING } from './bar';
 import { PageBar, PlayerBar } from './PlayerBar';
 
@@ -125,10 +125,17 @@ const clearParams = () => {
 const mount = (
   screen: (reader: ChordReader) => ReactNode,
   device: Map<string, string> = chordsOn(),
+  observing: Effect.Effect<void> = Effect.void,
 ) => {
   routed.splice(0);
   const played = fakeDevice();
-  const player = playerOn(played.layer, Duration.millis(1));
+  const controlled = Layer.effect(Playback)(
+    Effect.map(Playback, (device) => ({
+      ...device,
+      status: observing.pipe(Effect.andThen(device.status)),
+    })),
+  ).pipe(Layer.provide(played.layer));
+  const player = playerOn(controlled, Duration.millis(1));
   const registry = AtomRegistry.make();
   const reader = readerOn(device);
   // A reset's wait for its close runs on this clock, which the test moves: no real time passes.
@@ -504,6 +511,35 @@ describe('bar J on a hymn page', () => {
 });
 
 describe('bar J’s spring and seeker', () => {
+  it.live("a page swap clears the former hymn's unlanded seeker immediately", () =>
+    Effect.gen(function* () {
+      const gate = yield* Latch.make(true);
+      const waiting = yield* Deferred.make<boolean>();
+      const observing = Effect.suspend(() => {
+        if (Latch.isOpen(gate)) return Effect.void;
+        return Deferred.succeed(waiting, true).pipe(Effect.andThen(gate.await));
+      });
+      using page = mount(turning(100), chordsOn(), observing);
+      page.press('Play hymn 100');
+      page.device.now = { state: 'playing', positionMs: 80_000, durationMs: 151_000 };
+      yield* page.until((state) => Player.$is('Playing')(state) && state.at === 80);
+      yield* gate.close;
+      yield* Deferred.await(waiting);
+      page.device.lagging = true;
+      perform(page.get('[aria-label="Seek"]'), 'increment');
+      expect(page.get('[aria-label="Seek"]').getAttribute('aria-valuetext')).toBe('1:30 of 2:31');
+      act(() => turned.to(3));
+      page.press('Play hymn 3');
+      yield* page.until(Player.$is('Loading'));
+      expect(page.get('[aria-label="Seek"]').getAttribute('aria-valuetext')).toBe('0:00 of 0:00');
+      page.device.now = { state: 'playing', positionMs: 300, durationMs: 120_000 };
+      yield* gate.open;
+      yield* page.until(Player.$is('Playing'));
+      expect(page.get('[aria-label="Seek"]').getAttribute('aria-valuetext')).toBe('0:00 of 2:00');
+      expect(page.device.sought).toEqual([90_000]);
+    }),
+  );
+
   it.live('springs taller on Play with the seeker, seeks by a drag, and settles on Pause', () =>
     Effect.gen(function* () {
       using page = mount(route(100));

@@ -400,7 +400,9 @@ export const playerOn = (
          * One status read per Start, run in the player's scope.
          * Commands on that hymn share an in-flight read. A new Start
          * owns a fresh read, even in the same clock millisecond: the former
-         * recording's delayed status must neither block nor describe its replacement.
+         * recording's delayed status cannot describe its replacement or hold
+         * the player's read slot. The score clock also observes outside its
+         * command lock, so a new device Play is independent of that read.
          */
         const readDevice = Effect.suspend(() =>
           Option.match(

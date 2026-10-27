@@ -7,7 +7,17 @@
 
 import { RegistryContext } from '@effect/atom-react';
 import { describe, expect, it } from 'effect-bun-test';
-import { Array as Arr, Duration, Effect, Match, Option, Stream } from 'effect';
+import {
+  Array as Arr,
+  Deferred,
+  Duration,
+  Effect,
+  Latch,
+  Layer,
+  Match,
+  Option,
+  Stream,
+} from 'effect';
 import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
 import { act, type ReactNode, useEffect, useState } from 'react';
 import { View } from 'react-native';
@@ -27,7 +37,7 @@ import { opened, opening, params, routed, safeArea, stack } from '../test/one';
 import { PlayerContext } from './context';
 import { FullPlayer } from './FullPlayer';
 import { useShowsPage } from './page';
-import { Command, Player, playerOn, type Track, type RecordingSelection } from './player';
+import { Command, Playback, Player, playerOn, type Track, type RecordingSelection } from './player';
 import { RecordingNotice } from './RecordingNotice';
 import { PlayerBar } from './PlayerBar';
 import { StackBottom } from './StackBottom';
@@ -233,10 +243,19 @@ const gradientOf = (css: string) => {
  * `screen` (by default the full player over hymn 100's page) over a fresh
  * player, mounted in the document; it unmounts when the test's `using` ends.
  */
-const mount = (screen: ReactNode = sheetOver(morning)) => {
+const mount = (
+  screen: ReactNode = sheetOver(morning),
+  observing: Effect.Effect<void> = Effect.void,
+) => {
   opened.splice(0);
   const { device, layer } = fakeDevice();
-  const player = playerOn(layer, Duration.millis(1));
+  const controlled = Layer.effect(Playback)(
+    Effect.map(Playback, (device) => ({
+      ...device,
+      status: observing.pipe(Effect.andThen(device.status)),
+    })),
+  ).pipe(Layer.provide(layer));
+  const player = playerOn(controlled, Duration.millis(1));
   const registry = AtomRegistry.make();
   const host = document.createElement('div');
   document.body.append(host);
@@ -1050,6 +1069,35 @@ describe('the full player on the web’s stack', () => {
       yield* page.until(Player.$is('Paused'));
       expect(heading(page)).toEqual(Option.some(`3 ${three.title}`));
       expect(Option.isSome(page.find('[aria-label="Play hymn 3"]'))).toBe(true);
+    }),
+  );
+
+  it.live("a sheet swap clears the former hymn's unlanded seek immediately", () =>
+    Effect.gen(function* () {
+      const gate = yield* Latch.make(true);
+      const waiting = yield* Deferred.make<boolean>();
+      const observing = Effect.suspend(() => {
+        if (Latch.isOpen(gate)) return Effect.void;
+        return Deferred.succeed(waiting, true).pipe(Effect.andThen(gate.await));
+      });
+      using page = mount(stack(3), observing);
+      page.send(Command.Start({ track: morning }));
+      page.device.now = { state: 'playing', positionMs: 40_000, durationMs: 151_000 };
+      yield* page.until(Player.$is('Playing'));
+      page.press('Open player');
+      yield* gate.close;
+      yield* Deferred.await(waiting);
+      page.device.lagging = true;
+      act(() => drag(page.bar(), '90'));
+      expect(page.bar().getAttribute('aria-valuetext')).toBe('1:30 of 2:31');
+      page.press('Play hymn 3');
+      yield* page.until(Player.$is('Loading'));
+      expect(page.bar().getAttribute('aria-valuetext')).toBe('0:00 of 0:00');
+      page.device.now = { state: 'playing', positionMs: 300, durationMs: 120_000 };
+      yield* gate.open;
+      yield* page.until(Player.$is('Playing'));
+      expect(page.bar().getAttribute('aria-valuetext')).toBe('0:00 of 2:00');
+      expect(page.device.sought).toEqual([90_000]);
     }),
   );
 

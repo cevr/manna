@@ -9,7 +9,8 @@
  *
  * Everything is at the thumb, left to right: on a hymn page, the key button
  * (`KeyButton`) for the page's hymn; the opener, which opens the player
- * sheet on the bar's hymn (`/player?hymn=<n>`), and holds the hymn's number
+ * sheet on the bar's hymn (`/player?hymn=<n>`, with `page=<m>` while another
+ * hymn sounds over the reader), and holds the hymn's number
  * and title only when the bar's hymn is not the page's own; the Sound
  * switch; and the player's button. While another hymn sounds over a page,
  * a compact Play for the page's hymn sits before Sound. A swipe up on the
@@ -293,6 +294,7 @@ function Frame({
               </View>
               {tall(state) && (
                 <Seeker
+                  key={track.number}
                   at={at}
                   length={length}
                   onSeek={(seconds) => send(Command.Seek({ seconds }))}
@@ -342,8 +344,9 @@ function BackEdge() {
 
 /**
  * The bar's body: a button that opens the player sheet on the bar's hymn
- * (`/player?hymn=<n>`), so the sheet shows what the bar showed whether or
- * not the page under it stays mounted. It names the hymn (`named`) unless
+ * (`/player?hymn=<n>`, with `page=<m>` for a differing reader), so the sheet
+ * keeps that hymn, offers the page's Play and follows it after a swap,
+ * whether or not the page stays mounted. It names the hymn (`named`) unless
  * the bar's hymn is the page's own, which the page already names; then it
  * shows a grabber, as the sheet it opens has.
  */

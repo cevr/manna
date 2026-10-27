@@ -51,6 +51,46 @@ The form of an entry, each field on its own line:
 
 ## Process and tooling
 
+### hymn-swap-native-rejection-schedules
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "the `failed` dimension of the Start-from-every-state table runs nothing"
+- **Source:** playbulk/p2-round-1-findings.md F1 (the first finding, headed m1)
+- **Wrong:** A failed flag released no pending work in most states, and stale held plays always resolved.
+- **Cause:** The fake did not model a replaced native play rejecting. The state table repeated the same path.
+- **Guard:** code: `apps/hymnal/src/player/keyplay.slow.test.ts` `playswap late native loads actually reject=${failed} after rapid Starts`
+
+### hymn-status-observation-does-not-lock-play
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "With Sound on, an old `device.status` in flight holds the new hymn's device play until it answers."
+- **Source:** playbulk/p2-round-1-findings.md F3 (the third finding, headed m3); owner requests independent Play in P2 round 2
+- **Wrong:** A new Start had its own player read slot but still waited for the score clock's old status observer.
+- **Cause:** The observer held the command lock across the device round trip. Observation now runs outside that lock and accepts replies only for the current clock revision, including after a Seek or Pause.
+- **Guard:** code: `apps/hymnal/src/player/keyplay.slow.test.ts` `playswap Sound on starts before a former ${state} status answers`; code: `apps/hymnal/src/player/keyplay.slow.test.ts` `playswap independent observation cannot revive a former tail after ${command}`
+
+### hymn-swap-clears-scrub-hand
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "3's bar shows 1:30 until the hold ends"
+- **Source:** playbulk/p2-round-1-findings.md F4 (the fourth finding, headed o1); reproduced with an unlanded seek and held status read
+- **Wrong:** Both new hymn seek controls could retain the former hymn's sent place and say 1:30 of 0:00 while loading.
+- **Cause:** Scrub state outlived its hymn. Each control now has the hymn number as its React key.
+- **Guard:** code: `apps/hymnal/src/player/ui.slow.test.tsx` `a sheet swap clears the former hymn's unlanded seek immediately`; code: `apps/hymnal/src/player/thumb.slow.test.tsx` `a page swap clears the former hymn's unlanded seeker immediately`
+
+### hymn-swap-awaits-the-old-reply-witness
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "Count the answered status calls before that assertion."
+- **Source:** playbulk/p2-round-1-findings.md F6 (the sixth finding, headed o3)
+- **Wrong:** A stale-status assertion relied only on a fixed number of scheduler yields.
+- **Cause:** The test lacked a receipt that the controlled old status had actually answered. It now awaits that answer before checking ownership.
+- **Guard:** code: `apps/hymnal/src/player/playswap.slow.test.ts` `playswap ignores an old ${state} status even when Starts share a millisecond`
+
 ### fixed-landing-does-not-consume-load-time
 
 - **Date:** 2026-10-27

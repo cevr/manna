@@ -1,8 +1,10 @@
 /**
  * The full player, a sheet over the stack that the bottom bar opens on its
- * hymn (`/player?hymn=<n>`): the hymn its route names, or the hymn held when
- * it names none, as the bar gives it (`barFor`, the route's hymn as the
- * page). The route is its one source on every platform: the web keeps no
+ * hymn (`/player?hymn=<n>`, plus `page=<m>` when another hymn sounds over
+ * the reader). It keeps that held hymn and offers Play for the route's page;
+ * once the player holds that page's hymn, the sheet keeps it on Pause too.
+ * With no hymn in the route it shows the held hymn (`barFor`). The route
+ * carries the page context on every platform: the web keeps no
  * page mounted under it, a phone does. Its number and title, a button that
  * goes to the hymn's page (`title.ts`), what the player is
  * doing, its button, and a bar to drag to any place in the recording with
@@ -140,7 +142,12 @@ function Held({
         </Text>
         <RecordingNotice number={track.number} />
         <View style={styles.position}>
-          <Scrubber at={at} length={length} onSeek={(seconds) => send(Command.Seek({ seconds }))} />
+          <Scrubber
+            key={track.number}
+            at={at}
+            length={length}
+            onSeek={(seconds) => send(Command.Seek({ seconds }))}
+          />
           <View style={styles.times}>
             <Text style={styles.time} dynamicTypeRamp="footnote">
               {clock(at)}
@@ -273,7 +280,13 @@ const styles = StyleSheet.create({
   position: { gap: 4 },
   times: { flexDirection: 'row', justifyContent: 'space-between' },
   time: { fontSize: 13, color: color.muted, fontVariant: ['tabular-nums'] },
-  row: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', minHeight: 44 },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 44,
+    gap: 8,
+  },
   section: { paddingTop: 8 },
   switchRow: {
     flexDirection: 'row',

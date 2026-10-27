@@ -11,10 +11,11 @@
  * pauses the device and runs the clock from the device's place; on plays
  * the recording from the clock's place.
  *
- * Every call and every switch takes one lock while it reads and sets what
- * the clock holds, but a play the device has not answered holds no lock: the
- * player's reads, Pause, Stop and the switch go on while it loads. A hand-over
- * meanwhile (a switch, a new play, a stop) answers that play at once with the
+ * Commands and Sound switches update the clock under one lock. The status
+ * observer reads the device outside it and accepts replies only for the
+ * current generation, so a former observer cannot delay a new Play. Pending
+ * device plays also hold no lock: Pause, Stop and Sound switches go on while
+ * they load. A hand-over (a switch, a new play, a stop) answers that play with the
  * place as it stands, and the device's late answer is dropped.
  */
 
@@ -111,6 +112,14 @@ export const scoreClock = (
 ) =>
   Effect.gen(function* () {
     const lock = yield* Semaphore.make(1);
+    let revision = 0;
+    /** A command or play answer invalidates observations made before it. */
+    const changing = <A, E>(change: Effect.Effect<A, E>) =>
+      lock.withPermit(
+        Effect.sync(() => {
+          revision += 1;
+        }).pipe(Effect.andThen(change)),
+      );
     const held: Held = {
       uri: Option.none(),
       timeline: Option.none(),
@@ -173,6 +182,34 @@ export const scoreClock = (
       return yield* fromDevice(yield* device.status);
     });
 
+    /** Observe without holding a command behind a native status round trip. */
+    const readStatus: Effect.Effect<Status, PlaybackError> = Effect.gen(function* () {
+      const snapshot = yield* lock.withPermit(
+        Effect.gen(function* () {
+          const now = yield* Clock.currentTimeMillis;
+          return {
+            revision,
+            clock: Option.map(held.clock, (clock) => selected(clockStatus(clock, end(), now))),
+          };
+        }),
+      );
+      if (Option.isSome(snapshot.clock)) return snapshot.clock.value;
+      // A failed former read is stale too. Neither its status nor its error
+      // may change the replacement's selection, duration or silent tail.
+      const reply = yield* Effect.exit(device.status);
+      const accepted = yield* lock.withPermit(
+        Effect.gen(function* () {
+          if (snapshot.revision !== revision || Option.isSome(held.clock))
+            return Option.none<Status>();
+          return Option.some(yield* fromDevice(yield* reply));
+        }),
+      );
+      return yield* Option.match(accepted, {
+        onNone: () => readStatus,
+        onSome: Effect.succeed,
+      });
+    });
+
     /** Whether the recording holds place `at`, as far as the device has told. */
     const recordedAt = (at: number) =>
       at < end() && Option.match(held.recorded, { onNone: () => true, onSome: (ms) => at < ms });
@@ -219,12 +256,12 @@ export const scoreClock = (
           Effect.raceFirst(
             Effect.asSome(Effect.exit(device.play(uri, at, options))),
             Effect.as(Deferred.await(over), Option.none()),
-          ).pipe(Effect.flatMap((told) => lock.withPermit(played(turn, told)))),
+          ).pipe(Effect.flatMap((told) => changing(played(turn, told)))),
       });
 
     /** `step` under the lock, then carried out. */
     const locked = (step: Effect.Effect<Step, PlaybackError>) =>
-      Effect.flatMap(lock.withPermit(step), settle);
+      Effect.flatMap(changing(step), settle);
 
     const play = (uri: string, fromMs: number, options?: PlayOptions) =>
       Effect.gen(function* () {
@@ -324,7 +361,7 @@ export const scoreClock = (
       Stream.changes,
       Stream.drop(1),
       Stream.runForEach((on) =>
-        lock.withPermit(switchTo(on)).pipe(
+        changing(switchTo(on)).pipe(
           Effect.flatMap(
             Option.match({
               onNone: () => Effect.void,
@@ -341,7 +378,7 @@ export const scoreClock = (
 
     const api: PlaybackApi = {
       play: (uri, fromMs, options) => locked(play(uri, fromMs, options)),
-      pause: lock.withPermit(
+      pause: changing(
         Effect.gen(function* () {
           held.intent = 'pause';
           const now = yield* Clock.currentTimeMillis;
@@ -363,9 +400,9 @@ export const scoreClock = (
             return yield* answer(seekDevice(ms));
           }),
         ),
-      status: lock.withPermit(current),
+      status: readStatus,
       selectRecording: (selection) =>
-        lock.withPermit(
+        changing(
           Effect.gen(function* () {
             held.selection = Option.some(selection);
             held.uri = Option.some(audioUrl(selection.number, selection.requested));
@@ -376,7 +413,7 @@ export const scoreClock = (
             yield* device.selectRecording?.(selection) ?? Effect.void;
           }),
         ),
-      stop: lock.withPermit(
+      stop: changing(
         Effect.gen(function* () {
           yield* handOver;
           held.uri = Option.none();

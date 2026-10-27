@@ -14,8 +14,10 @@ page, the opener holds that hymn's number and title. Play springs the bar
 taller (56 to 88 pt) and shows the seeker under the buttons (`Seek`: the
 time gone, a track with a knob to drag, the time left); Pause settles it.
 A tap on the opener, or a swipe up on the bar, opens the player sheet on
-the bar's hymn at `/player?hymn=<n>` (the route names the hymn, as the web
-keeps no page under the sheet): the hymn's number and title, what the player
+the bar's hymn at `/player?hymn=<n>`, with `page=<m>` when another hymn
+sounds over the reader. The sheet offers that page's Play and keeps its hymn
+after a swap, including on Pause. The route carries this context because the
+web keeps no page under the sheet: the hymn's number and title, what the player
 is doing, its button, a `Position` bar to drag in every state (still while
 the length is not known), over the hymn's own page its `Key` and `Capo`
 dials, and the reader's settings (the `Text size` dial, `Font`, `Line
@@ -25,7 +27,7 @@ spacing`, `Keep screen on`).
 
 - `player-swap-page`: while a hymn loads, plays or buffers over another hymn's page, `Play hymn <page>` sends the normal `Command.Start`. It replaces the held hymn at the new hymn's own start and saved Key. Navigation alone does not swap. A paused held hymn gives way to the page's own Play.
 - `player-swap-sheet`: Open player keeps the sounding hymn's controls and offers `Play <page>` beside them when another hymn's page is shown. Its link carries the page number as well as the held hymn, since the web unmounts the reader. After that press, its heading, Pause and position all describe the new hymn, including after Pause.
-- `player-swap-race`: replies from a former Start cannot change the new hymn's identity, position, terminal state, announcement or follow. Same-millisecond Starts still own separate status reads. Model tests cover late status and native load replies; the silent UI drive covers page ownership and follow only.
+- `player-swap-race`: replies from a former Start cannot change the new hymn's identity, position, terminal state, announcement or follow. Same-millisecond Starts still own separate status reads. With Sound on, the new Play does not wait for the former status observer; its late reply cannot change the new score clock. Model tests cover late status and native load replies; the silent UI drive covers page ownership and follow only.
 - `player-key-set`: Play uses the held hymn's saved sounding Key. Printed key uses `warm-1`; offsets -5..-1 use `warm-1-down5..1`, and 1..6 use `warm-1-up1..6`.
 - `player-key-switch`: a Key hand-over from Playing keeps the current musical time plus preparation time. A hand-over from Loading or Buffering, a resume from Paused, and a Seek land exactly at their targets. A short gap is allowed. A paused Key selection starts nothing; the next Play uses that Key at the held place. Reset obeys the same rule. During a moving replacement, follow receives its running place, so a hand pause stays held.
   Recording hand-overs seek immediately after Play; on a readiness refusal they pause before waiting and resume after landing only when Play is still wanted. This is best effort. One can sound opening samples before that separate Pause takes effect; recording output and the size of that exposure remain unverified under the playbulk silence rule.
@@ -37,7 +39,7 @@ spacing`, `Keep screen on`).
 - `player-spring`: Play springs the bar from 56 to 88 pt with a little overshoot and shows the adjustable `Seek` under the buttons, the first Play after launch too; Pause settles it back and `Seek` goes. A page turn while it plays leaves the tall bar as it is, with no spring. The page under it does not move: its height is the same playing and paused.
 - `player-seek-bar`: a drag of `Seek` moves the place, sent once the finger lifts (the knob grows under the finger and settles on release), and the follow marks the line sung there; a drag on `Seek` never opens the sheet, and a swipe up that starts on `Seek` opens the sheet and moves no place.
 - `player-bar-page`: while the player holds no hymn, the bar is the hymn page's own: on a back (the header's button or a pan from the left edge) it slides out with the page, never left on the screen after the page has gone; on a push it slides in with it.
-- `player-full`: `Open player`, or a swipe up on the bar, opens the sheet `/player?hymn=<n>` on the bar's hymn, with the group `Recording`, that hymn's heading and the `Position` bar in every state, on the web too (where the page under it unmounts). A paused held hymn gives way to the page's, as on the bar.
+- `player-full`: `Open player`, or a swipe up on the bar, opens the sheet `/player?hymn=<n>` on the bar's hymn, with `page=<m>` when a different hymn sounds over the reader. The sheet offers Play for that page and follows it after a swap, including on Pause. It holds the group `Recording`, that hymn's heading and the `Position` bar in every state, on the web too (where the reader unmounts). A paused held hymn gives way to the page before the sheet opens, as on the bar. On a swap, Position and Seek clear the former hymn's held thumb position at once.
 - `player-sheet-reader`: the sheet holds the group `Reading`: the `Text size` dial (adjustable, its value the share, `100%`), `Font`, `Line spacing` and `Keep screen on`; a step of the size moves the page's words at once. Over the hymn's own page it also holds the group `Chord settings`: the `Chords` switch (chords on or off, as the bar's hold), the `Capo` and `Key` dials and, while moved, `Reset`.
 - `player-title`: the sheet's hymn number and title is a button named `<n>, <title>` (hint: opens the hymn's page). A press closes the sheet and pushes that hymn's page where the sheet was, with its back button and back pan; over that hymn's own page the sheet only closes. The player is not told: a track plays or stays paused as it was.
 - `player-seek-hold`: on iOS, while a finger drags the sheet's `Position` bar, in any direction, the sheet does not move; once the finger lifts, a drag elsewhere on the sheet moves it again.

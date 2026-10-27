@@ -39,10 +39,11 @@ const native = (clock: Clock.Clock, recorded = 240_000) => {
   let id = 0;
   let hold = false;
   let holdStatus = false;
+  let nextStatus = Option.none<Status>();
   let listener: Parameters<Device['audio']['watchRemoteCommands']>[0] = () => {};
   const statusWaiting: Array<() => void> = [];
   const calls: Array<{ operation: string; uri?: string; at: number; time: number }> = [];
-  const pending: Array<{ release: (failed?: boolean) => void }> = [];
+  const pending: Array<{ release: (failed?: boolean) => void; result: () => Promise<Status> }> = [];
   const missing = new Set<string>();
   const read = (): Status => {
     let elapsed = 0;
@@ -76,11 +77,26 @@ const native = (clock: Clock.Clock, recorded = 240_000) => {
         };
         if (!hold) return Promise.resolve(finish());
         hold = false;
-        return new Promise((resolve) =>
-          pending.push({ release: (failed) => resolve(finish(failed)) }),
+        const result: Promise<Status> = new Promise((resolve, reject) =>
+          pending.push({
+            release: (failed) => {
+              if (failed && owner !== id) {
+                reject('playback was replaced');
+                return;
+              }
+              resolve(finish(failed));
+            },
+            result: () => result,
+          }),
         );
+        return result;
       },
       getPlaybackStatus: () => {
+        if (Option.isSome(nextStatus)) {
+          const captured = nextStatus.value;
+          nextStatus = Option.none();
+          return new Promise((resolve) => statusWaiting.push(() => resolve(captured)));
+        }
         if (!holdStatus) return Promise.resolve(read());
         return new Promise((resolve) => statusWaiting.push(() => resolve(read())));
       },
@@ -131,6 +147,9 @@ const native = (clock: Clock.Clock, recorded = 240_000) => {
       if (!on) for (const release of statusWaiting.splice(0)) release();
     },
     statusWaiting: () => statusWaiting.length,
+    holdNextStatus: (status: Status) => {
+      nextStatus = Option.some(status);
+    },
     force: set,
     hold: () => {
       hold = true;
@@ -1153,6 +1172,76 @@ it.effect(
 
 type App = Effect.Success<ReturnType<typeof open>>;
 
+for (const failed of [false, true])
+  it.effect(`playswap late native loads actually reject=${failed} after rapid Starts`, () =>
+    Effect.gen(function* () {
+      using app = yield* open();
+      app.hold();
+      app.send(Command.Start({ track }));
+      yield* settle;
+      app.move(3, 2, 7);
+      app.hold();
+      app.send(Command.Start({ track: other }));
+      yield* settle;
+      app.move(100, -2, 11);
+      app.hold();
+      app.send(Command.Start({ track }));
+      yield* settle;
+      expect(app.pending).toHaveLength(3);
+      // Observe the actual native Promise outcomes, even though its callers
+      // were interrupted. No scheduled dimension may release nothing.
+      const outcomes = Promise.allSettled(app.pending.map((pending) => pending.result()));
+      app.pending.forEach((pending, index) => pending.release(index < 2 && failed));
+      expect((yield* Effect.promise(() => outcomes)).map((outcome) => outcome.status)).toEqual([
+        ...Match.value(failed).pipe(
+          Match.when(true, () => ['rejected', 'rejected'] as const),
+          Match.orElse(() => ['fulfilled', 'fulfilled'] as const),
+        ),
+        'fulfilled',
+      ]);
+      yield* app.playing;
+      expect(app.registry.get(app.player.recording)).toEqual(
+        Option.some({ number: 100, requested: -2, effective: -2 }),
+      );
+      expect(app.calls.filter((call) => call.operation === 'play').map((call) => call.uri)).toEqual(
+        [audioUrl(100), audioUrl(3, 2), audioUrl(100, -2)],
+      );
+      expect(app.calls.filter((call) => call.operation === 'seek').at(-1)?.at).toBe(0);
+    }),
+  );
+
+for (const state of ['playing', 'ended', 'failed'] as const)
+  it.effect(`playswap Sound on starts before a former ${state} status answers`, () =>
+    Effect.gen(function* () {
+      using app = yield* open();
+      app.send(Command.Start({ track }));
+      yield* app.playing;
+      app.holdNextStatus({ state, positionMs: 90_000, durationMs: 90_000 });
+      yield* app.tick();
+      expect(app.statusWaiting()).toBe(1);
+      app.move(3, 2, 7);
+      app.send(Command.Start({ track: other }));
+      yield* settle;
+      // The old observer stays unresolved until the new recording plays.
+      expect(
+        app.calls.filter((call) => call.operation === 'play' && call.uri === audioUrl(3, 2)),
+      ).toHaveLength(1);
+      yield* app.playing;
+      expect(app.statusWaiting()).toBe(1);
+      const before = Option.getOrThrow(Option.liftPredicate(app.state(), Player.$is('Playing')));
+      expect(before.track.number).toBe(3);
+      app.holdStatus(false);
+      yield* app.tick();
+      expect(app.state()).toEqual(
+        Player.Playing({ track: other, at: before.at + 0.25, length: before.length }),
+      );
+      expect(app.registry.get(app.player.recording)).toEqual(
+        Option.some({ number: 3, requested: 2, effective: 2 }),
+      );
+      expect(app.calls.filter((call) => call.operation === 'pause')).toEqual([]);
+    }),
+  );
+
 const enterState = (app: App, state: Player['_tag']) =>
   Effect.gen(function* () {
     if (state === 'Idle') return;
@@ -1173,6 +1262,34 @@ const enterState = (app: App, state: Player['_tag']) =>
     yield* app.tick();
   });
 
+for (const command of ['Seek', 'Pause'] as const)
+  it.effect(`playswap independent observation cannot revive a former tail after ${command}`, () =>
+    Effect.gen(function* () {
+      using app = yield* open();
+      app.send(Command.Start({ track }));
+      yield* app.playing;
+      app.holdNextStatus({ state: 'ended', positionMs: 90_000, durationMs: 90_000 });
+      yield* app.tick();
+      expect(app.statusWaiting()).toBe(1);
+      const at = app.read().positionMs / 1000;
+      app.send(
+        Match.value(command).pipe(
+          Match.when('Seek', () => Command.Seek({ seconds: 20 })),
+          Match.orElse(() => Command.Pause()),
+        ),
+      );
+      yield* settle;
+      app.holdStatus(false);
+      yield* app.tick();
+      const expected = Match.value(command).pipe(
+        Match.when('Seek', () => Player.Playing({ track, at: 20.25, length: Option.some(240) })),
+        Match.orElse(() => Player.Paused({ track, at, length: Option.some(240) })),
+      );
+      expect(app.state()).toEqual(expected);
+      expect(app.calls.filter((call) => call.operation === 'play')).toHaveLength(1);
+    }),
+  );
+
 for (const state of [
   'Idle',
   'Loading',
@@ -1183,40 +1300,35 @@ for (const state of [
   'Stopped',
   'Failed',
 ] as const) {
-  for (const failed of [false, true])
-    it.effect(
-      `playswap Start from ${state} keeps the new hymn through old replies failed=${failed}`,
-      () =>
-        Effect.gen(function* () {
-          using app = yield* open();
-          yield* enterState(app, state);
-          expect(app.state()._tag).toBe(state);
-          app.move(3, 2, 7);
-          app.send(Command.Start({ track: other }));
-          yield* app.playing;
-          expect(app.registry.get(app.player.recording)).toEqual(
-            Option.some({ number: 3, requested: 2, effective: 2 }),
-          );
-          expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(0);
-          // Return to the former page: this is a new Start, never its old place.
-          app.move(100, -2, 11);
-          app.send(Command.Start({ track }));
-          yield* app.playing;
-          const selected = Option.some({ number: 100, requested: -2, effective: -2 });
-          expect(app.registry.get(app.player.recording)).toEqual(selected);
-          expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(0);
-          const calls = app.calls.length;
-          for (const pending of app.pending) pending.release(failed);
-          yield* app.tick();
-          expect(app.state()._tag).toBe('Playing');
-          expect(app.registry.get(app.player.recording)).toEqual(selected);
-          expect(
-            app.calls
-              .slice(calls)
-              .filter((it) => ['play', 'seek', 'announce'].includes(it.operation)),
-          ).toEqual([]);
-        }),
-    );
+  it.effect(`playswap Start from ${state} starts at the new hymn and chosen Key`, () =>
+    Effect.gen(function* () {
+      using app = yield* open();
+      yield* enterState(app, state);
+      expect(app.state()._tag).toBe(state);
+      app.move(3, 2, 7);
+      app.send(Command.Start({ track: other }));
+      yield* app.playing;
+      expect(app.registry.get(app.player.recording)).toEqual(
+        Option.some({ number: 3, requested: 2, effective: 2 }),
+      );
+      expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(0);
+      // Return to the former page: this is a new Start, never its old place.
+      app.move(100, -2, 11);
+      app.send(Command.Start({ track }));
+      yield* app.playing;
+      const selected = Option.some({ number: 100, requested: -2, effective: -2 });
+      expect(app.registry.get(app.player.recording)).toEqual(selected);
+      expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(0);
+      const calls = app.calls.length;
+      for (const pending of app.pending) pending.release();
+      yield* app.tick();
+      expect(app.state()._tag).toBe('Playing');
+      expect(app.registry.get(app.player.recording)).toEqual(selected);
+      expect(
+        app.calls.slice(calls).filter((it) => ['play', 'seek', 'announce'].includes(it.operation)),
+      ).toEqual([]);
+    }),
+  );
 
   it.effect(`keyplay state ${state} keeps intent and rejects old replies`, () =>
     Effect.gen(function* () {
