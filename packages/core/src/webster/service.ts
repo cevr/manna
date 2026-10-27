@@ -41,13 +41,17 @@ export const makeWebsterApi = (
 ): WebsterApi => ({
   lookup: Effect.fn('WebsterService.lookup')(function* (query) {
     const key = normalizeHeadword(query);
-    const exact = yield* byKey(key);
-    if (exact.length > 0) return { query, entries: exact, match: 'exact', key };
+    // Jeremiah 22:15 uses the verb CLOSE; the exact CLOSEST row is an adjective.
+    // This one audited override also stops when CLOSE is unavailable.
+    if (key !== 'closest') {
+      const exact = yield* byKey(key);
+      if (exact.length > 0) return { query, entries: exact, match: 'exact', key };
+    }
     const alias = kjvAlias(key);
     if (Option.isSome(alias)) {
-      if (alias.value !== 'none') {
-        const entries = yield* byKey(alias.value);
-        if (entries.length > 0) return { query, entries, match: 'kjv-alias', key: alias.value };
+      if (alias.value._tag === 'Lemma') {
+        const entries = yield* byKey(alias.value.key);
+        if (entries.length > 0) return { query, entries, match: 'kjv-alias', key: alias.value.key };
       }
       return { query, entries: [], match: 'none', key };
     }

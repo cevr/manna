@@ -3,6 +3,7 @@ import { Effect, FileSystem, Option, Result, Schema, Stream } from 'effect';
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 import { expect, it } from 'effect-bun-test';
+import { WebsterLookup } from '@manna/core/webster';
 
 import { dataCandidates } from '../../src/lib/paths.js';
 import { initializeWebster } from '../../src/commands/webster.js';
@@ -50,6 +51,7 @@ const decode = Schema.decodeUnknownSync(
     }),
   ),
 );
+const decodeLookup = Schema.decodeUnknownSync(Schema.fromJsonString(WebsterLookup));
 
 const runCompiled = Effect.fn('WebsterTest.runCompiled')(
   function* (executable: string, home: string, cwd: string, args: readonly string[]) {
@@ -110,6 +112,25 @@ it.scoped(
       yield* fs.copyFile(`${root}/packages/core/data/webster.db`, `${bin}/data/webster.db`);
       for (const name of ['webster1828-LICENSE.txt', 'webster1828-NOTICE.md'])
         yield* fs.copyFile(`${root}/packages/core/assets/${name}`, `${bin}/data/${name}`);
+      const notice = yield* fs.readFileString(`${bin}/data/webster1828-NOTICE.md`);
+      expect(yield* fs.readFile(`${bin}/data/webster1828-NOTICE.md`)).toEqual(
+        yield* fs.readFile(`${root}/packages/core/assets/webster1828-NOTICE.md`),
+      );
+      expect(notice).toContain('neighbouring');
+      for (const word of [
+        'PROCEED',
+        'PROCEEDER',
+        'LOATHE',
+        'COINAGE',
+        'COINCIDE',
+        'FULCRUM',
+        'FULFILL',
+        'BAIRN',
+        'BAIT',
+        'BAILER',
+        'BAILIFF',
+      ])
+        expect(notice).toContain(word);
       const destination = `${home}/.bible/webster.db`;
       const candidates = dataCandidates(
         { executableDir: bin, buildRoot: Option.none() },
@@ -138,6 +159,21 @@ it.scoped(
       expect(decode(lookup.stdout).entries[0]?.headword).toBe('dismayed');
       const verb = yield* runCompiled(executable, home, cwd, ['webster', 'doeth', '--json']);
       expect(decode(verb.stdout).entries[0]?.headword).toBe('do');
+      for (const form of ['proceedeth', 'loatheth']) {
+        const result = yield* runCompiled(executable, home, cwd, ['webster', form, '--json']);
+        expect(result.status).toBe(0);
+        expect(decodeLookup(result.stdout)).toMatchObject({ entries: [], match: 'none' });
+        const human = yield* runCompiled(executable, home, cwd, ['webster', form]);
+        expect(human.status).toBe(0);
+        expect(human.stdout).toContain(`No Webster 1828 entry for "${form}".`);
+      }
+      const closest = yield* runCompiled(executable, home, cwd, ['webster', 'closest', '--json']);
+      expect(closest.status).toBe(0);
+      expect(decodeLookup(closest.stdout)).toMatchObject({ match: 'kjv-alias', key: 'close' });
+      expect(decode(closest.stdout).entries[0]?.headword).toBe('close');
+      const aliasText = yield* runCompiled(executable, home, cwd, ['webster', 'closest']);
+      expect(aliasText.status).toBe(0);
+      expect(aliasText.stdout).toContain('closest → close (audited KJV alias)');
       const search = yield* runCompiled(executable, home, cwd, [
         'webster',
         'search',

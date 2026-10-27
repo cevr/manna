@@ -19,15 +19,21 @@ Definitions are not paraphrased. The build manifest identifies the exact bytes.
 Known limits: upstream reports approximately 600 words in its separate
 work-in-progress file. That file is excluded. Earlier transcription lineage is
 not fully documented. This snapshot is not a complete critical edition.
-KJV lookup uses exact entries, then an audited alias table, then a bounded
+KJV lookup has one audited precedence exception: closest in Jeremiah 22:15
+returns the verb CLOSE instead of the exact adjective CLOSEST. If CLOSE is
+absent, it returns no entry. Otherwise lookup uses exact entries, then an audited alias table, then a bounded
 suffix heuristic. The complete repository KJV ending-word census is committed
 with frequencies and expected resolutions, including explicit no-match cases.
-Verb results are checked against source part-of-speech labels, with the
-documented same-word and malformed-source exceptions in the KJV fixture.
+Verb and exact-inflection results are checked against part-of-speech or grammar
+labels following their own headword, with necessary same-word exceptions and
+their reasons in the KJV fixture.
 Headword spelling alone does not establish verb identity. Missing verb entries
 include MEET, MEDDLE, HASTEN, REPAY, SOW, SWALLOW, TILL and LEAVE. The last four
 keys contain unrelated nouns (swine, bird, vetch and permission); their KJV
 verb forms return no entries.
+PROCEED contains PROCEEDER's text, and LOATHE has only its heading. The KJV
+forms proceedeth and loatheth therefore return no entry. Exact queries retain
+these raw transcription records.
 The source lacks `shew`; the aliases for shewest/sheweth use `show`, whose entry
 explicitly lists that spelling. Unseen forms still carry no universal guarantee.
 
@@ -35,6 +41,15 @@ Two known electronic key defects remain uncorrected: `e` contains DESCRIPTIVE's
 text instead of the letter-E entry, and DESCRIPTIVE is also keyed `descriptiv`,
 so exact `descriptive` is absent. These are source defects, not valid lexical
 aliases. The raw records remain preserved for provenance and future scan work.
+
+Some upstream rows have an empty own heading followed by a neighbouring
+headword's text: COINAGE → COINCIDE, FULCRUM → FULFILL, BAIRN → BAIT and
+BAILER → BAILIFF. The pinned source preserves these rows and may lack independent
+keys for the neighbours, including fulfill, bailiff and hasten. KJV fulfil
+therefore has no guaranteed entry. A prior audit counted 839 rows with this
+empty-heading shape, including valid spelling variants; these are not all
+unrelated-word errors. Future gloss consumers must skip unsafe rows. These
+disclosures and KJV stops do not implement gloss selection or repair source text.
 
 The transcription also omits portions of etymologies and quotation-author
 credits, adds verse numbers to abbreviated chapter references, and sometimes

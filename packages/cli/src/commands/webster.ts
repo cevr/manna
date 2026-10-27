@@ -103,7 +103,7 @@ const search = Command.make(
       if (args.json) return yield* Console.log(yield* encodeSearch({ query, entries }));
       yield* print({ query, entries, match: 'none', key: '' }, false);
     }),
-);
+).pipe(Command.withDescription('Search Webster 1828 definitions for all supplied words'));
 
 export const webster = Command.make('webster', { query, json }, (args) =>
   Effect.gen(function* () {

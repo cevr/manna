@@ -11,12 +11,8 @@
     "sorrow": "Same-word noun with verbal glosses and examples.",
     "smooth": "Same-word adjective with verbal senses.",
     "drop": "Same-word noun; the verb entry is absent.",
-    "challenge": "Same-word noun and verb; the source uses VT.",
     "shall": "Auxiliary explained in prose without a part-of-speech label.",
-    "ought": "The source uses v. imperfect rather than an italic verb label.",
-    "enquire": "Cross-reference to inquire and its derivatives.",
-    "proceed": "Known malformed source row: only PROCEEDER's definition remains.",
-    "loathe": "Known malformed source row: only the headword remains."
+    "enquire": "Cross-reference to inquire and its derivatives."
   },
   "forms": [
     {
@@ -1161,9 +1157,9 @@
     {
       "form": "closest",
       "frequency": 1,
-      "lemma": "closest",
-      "canonical": "closest",
-      "kind": "exact",
+      "lemma": "close",
+      "canonical": "close",
+      "kind": "verb",
       "reference": "Jeremiah 22:15"
     },
     {
@@ -3962,7 +3958,7 @@
     {
       "form": "loatheth",
       "frequency": 2,
-      "lemma": "loathe",
+      "lemma": "none",
       "canonical": "loathe",
       "kind": "verb",
       "reference": "Numbers 21:5"
@@ -4948,7 +4944,7 @@
     {
       "form": "proceedeth",
       "frequency": 11,
-      "lemma": "proceed",
+      "lemma": "none",
       "canonical": "proceed",
       "kind": "verb",
       "reference": "Genesis 24:50"

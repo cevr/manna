@@ -1,4 +1,4 @@
-import { WebsterService } from '@manna/core/webster';
+import { WebsterLookup, WebsterService } from '@manna/core/webster';
 import { Console, Effect, FileSystem, Schema } from 'effect';
 import { BunServices } from '@effect/platform-bun';
 import { Command } from 'effect/cli';
@@ -13,9 +13,36 @@ const command = webster.pipe(
       entries: [
         { id: 1, headword: 'dismayed', definition: 'Disheartened; deprived of courage.' },
         { id: 2, headword: 'love', definition: 'Affection.' },
+        ...['proceed', 'loathe', 'closest', 'close', 'none'].map((headword, index) => ({
+          id: index + 3,
+          headword,
+          definition: 'Synthetic dictionary collision.',
+        })),
       ],
     }),
   ),
+);
+
+it.effect(
+  'prints successful no-entry results for unsafe KJV forms and the audited closest alias',
+  () =>
+    Effect.gen(function* () {
+      for (const form of ['proceedeth', 'loatheth']) {
+        const result = yield* runCli(command, [form, '--json']);
+        expect(result.success).toBe(true);
+        expect(decodeLookup(result.stdout)).toMatchObject({ entries: [], match: 'none' });
+        const human = yield* runCli(command, [form]);
+        expect(human.success).toBe(true);
+        expect(human.stdout).toContain(`No Webster 1828 entry for "${form}".`);
+      }
+      const result = yield* runCli(command, ['closest', '--json']);
+      expect(result.success).toBe(true);
+      expect(decodeLookup(result.stdout)).toMatchObject({ match: 'kjv-alias', key: 'close' });
+      expect(decode(result.stdout).entries.map((entry) => entry.headword)).toEqual(['close']);
+      const human = yield* runCli(command, ['closest']);
+      expect(human.success).toBe(true);
+      expect(human.stdout).toContain('closest → close (audited KJV alias)');
+    }),
 );
 const decode = Schema.decodeUnknownSync(
   Schema.fromJsonString(
@@ -27,6 +54,7 @@ const decode = Schema.decodeUnknownSync(
     }),
   ),
 );
+const decodeLookup = Schema.decodeUnknownSync(Schema.fromJsonString(WebsterLookup));
 
 const initWithConsole = (
   input: Parameters<typeof initializeWebster>[0],
@@ -98,5 +126,8 @@ it.effect('rejects limits outside 1–100 and exposes help', () =>
     const help = yield* runCli(command, ['--help']);
     expect(help.success).toBe(true);
     expect(help.stdout).toContain('search');
+    const searchHelp = yield* runCli(command, ['search', '--help']);
+    expect(searchHelp.success).toBe(true);
+    expect(searchHelp.stdout).toContain('Search Webster 1828 definitions');
   }),
 );

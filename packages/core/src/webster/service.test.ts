@@ -41,4 +41,44 @@ it('tries a bare generic stem before an undoubled stem when retained e is absent
     WebsterService.use((service) => service.lookup('beggeth')).pipe(Effect.provide(layer)),
   );
   expect(result.entries.map((entry) => entry.headword)).toEqual(['begg']);
+  expect(result.match).toBe('kjv-inflection');
+});
+
+it('uses retained e before bare and undoubled generic collisions without an alias', () => {
+  const layer = WebsterService.Test({
+    entries: ['xqsitte', 'xqsitt', 'xqsit'].map((headword, index) => ({
+      id: index + 1,
+      headword,
+      definition: 'Synthetic collision.',
+    })),
+  });
+  for (const query of ['xqsitteth', 'xqsittest']) {
+    const result = Effect.runSync(
+      WebsterService.use((service) => service.lookup(query)).pipe(Effect.provide(layer)),
+    );
+    expect(result.entries.map((entry) => entry.headword)).toEqual(['xqsitte']);
+    expect(result.match).toBe('kjv-inflection');
+  }
+});
+
+it('distinguishes the exact NONE headword, no-entry aliases and missing alias targets', () => {
+  const layer = WebsterService.Test({
+    entries: ['none', 'closest', 'clo', 'doe', 'proceede', 'loathe', 'sow'].map(
+      (headword, index) => ({
+        id: index + 1,
+        headword,
+        definition: 'Synthetic collision.',
+      }),
+    ),
+  });
+  const lookup = (query: string) =>
+    Effect.runSync(
+      WebsterService.use((service) => service.lookup(query)).pipe(Effect.provide(layer)),
+    );
+  expect(lookup('none')).toMatchObject({ match: 'exact', key: 'none' });
+  expect(lookup('none').entries.map((entry) => entry.headword)).toEqual(['none']);
+  for (const query of ['soweth', 'proceedeth', 'loatheth', 'doeth', 'closest']) {
+    expect(lookup(query).entries).toEqual([]);
+    expect(lookup(query).match).toBe('none');
+  }
 });

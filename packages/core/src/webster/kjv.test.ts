@@ -29,7 +29,26 @@ for (const [form, expected] of [
 for (const form of ['soweth', 'sowest', 'swalloweth', 'tilleth', 'tillest', 'leaveth', 'leftest'])
   it(`returns no entry for KJV ${form} when the source has only an unrelated noun homograph`, () => {
     expect(lookup(form).entries).toEqual([]);
+    expect(lookup(form).match).toBe('none');
   });
+
+for (const form of ['proceedeth', 'loatheth'])
+  it(`returns no entry for KJV ${form} when its source record is unsafe`, () => {
+    expect(lookup(form).entries).toEqual([]);
+    expect(lookup(form).match).toBe('none');
+  });
+
+it('resolves closest to the audited KJV verb close ahead of the exact adjective', () => {
+  expect(lookup('closest')).toMatchObject({ match: 'kjv-alias', key: 'close' });
+  expect(lookup('closest').entries.map((entry) => entry.headword)).toEqual(['close']);
+});
+
+it('preserves exact grammar entries ahead of irregular aliases', () => {
+  for (const form of ['art', 'dost', 'hast', 'wast']) {
+    expect(lookup(form).match).toBe('exact');
+    expect(lookup(form).entries.map((entry) => entry.headword)).toEqual([form]);
+  }
+});
 
 it('resolves every audited KJV form to its reviewed entry or none with real collision vocabulary', () => {
   const failures = Effect.runSync(

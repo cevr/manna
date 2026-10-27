@@ -4022,10 +4022,10 @@ The form of an entry, each field on its own line:
 - **Date:** 2026-10-26
 - **Kind:** review
 - **Said:** "Seven KJV verb forms resolve to an unrelated noun homograph."
-- **Source:** hymnapp/webster/round-1-findings.md F1; recurrence hymnapp/webster/round-2-findings.md B1; orchestrator round-3 amendment
+- **Source:** hymnapp/webster/round-1-findings.md F1; recurrence hymnapp/webster/round-2-findings.md B1; hymnapp/webster/round-3-findings.md T1/T2
 - **Wrong:** SOW, SWALLOW, TILL and LEAVE passed a headword-only oracle despite containing only unrelated nouns for these KJV verbs.
-- **Cause:** Matching the expected spelling was treated as proof of verb identity. The complete KJV verb domain now checks source labels independently, with only the review's explicit exceptions. Missing verbs resolve to none.
-- **Guard:** code: `packages/core/src/webster/kjv.slow.test.ts` `every KJV verb form resolves to a source-marked verb or no entry`
+- **Cause:** Matching the expected spelling or a neighbouring word's verb label was treated as proof of verb identity. The complete verb and exact-inflection domain checks own-heading source labels, with necessary same-word exceptions that must be consumed. Missing or unsafe verbs resolve to none.
+- **Guard:** code: `packages/core/src/webster/kjv.slow.test.ts` `every KJV verb and exact inflection resolves to its own source-marked verb or no entry with no unused exceptions`
 
 ### webster-bare-before-undoubled
 

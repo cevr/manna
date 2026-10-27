@@ -23,6 +23,25 @@ const exercise = (filename: string, cases: readonly (readonly [string, string])[
     expect((yield* service.lookup('sitteth')).entries.map((entry) => entry.headword)).toEqual([
       'sit',
     ]);
+    expect((yield* service.lookup('sitteth')).match).toBe('kjv-alias');
+    for (const [query, expected] of [
+      ['xqsitteth', 'xqsitte'],
+      ['xqsittest', 'xqsitte'],
+      ['beggeth', 'begg'],
+    ] as const) {
+      const result = yield* service.lookup(query);
+      expect(result.entries.map((entry) => entry.headword)).toEqual([expected]);
+      expect(result.match).toBe('kjv-inflection');
+    }
+    expect((yield* service.lookup('none')).match).toBe('exact');
+    expect((yield* service.lookup('none')).entries.map((entry) => entry.headword)).toEqual([
+      'none',
+    ]);
+    for (const query of ['soweth', 'proceedeth', 'loatheth', 'closest', 'doeth']) {
+      const result = yield* service.lookup(query);
+      expect(result.entries).toEqual([]);
+      expect(result.match).toBe('none');
+    }
     expect((yield* service.search('courage deprived')).map((entry) => entry.id)).toEqual([1]);
     for (const query of ['courage', '"courage"', 'courage--'])
       expect((yield* service.search(query, 1)).map((entry) => entry.id)).toEqual([2]);
@@ -73,6 +92,21 @@ it('real readonly SQLite carries bounded KJV rules and literal ranked AND defini
           { id: 8, headword: 'sitte', definition: 'Retained e.' },
           { id: 9, headword: 'sitt', definition: 'Bare root.' },
         ];
+        for (const headword of [
+          'xqsitte',
+          'xqsitt',
+          'xqsit',
+          'begg',
+          'beg',
+          'none',
+          'closest',
+          'clo',
+          'doe',
+          'proceede',
+          'loathe',
+          'sow',
+        ])
+          entries.push({ id: entries.length + 1, headword, definition: 'Synthetic collision.' });
         for (const headword of new Set(cases.map(([, root]) => root)))
           entries.push({ id: entries.length + 1, headword, definition: 'Synthetic.' });
         yield* writeWebsterFixture(filename, entries);
