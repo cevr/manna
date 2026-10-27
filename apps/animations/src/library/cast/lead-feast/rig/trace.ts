@@ -917,7 +917,46 @@ export const TRACE = {
         },
       },
       ears: { earNear: [657, 322] },
-      chin: { kind: 'closed', row: 392 },
+      // His ear's skin runs on into his cheek at its front and lobe (no line, rows 321-336): x 644-669, rows 305-336.
+      earClips: { earNear: oval(656.5, 320.5, 13, 16) },
+      earLit: oval(656.5, 320.5, 13, 16),
+      chin: {
+        kind: 'closed',
+        row: 392,
+        // His jaw's short line, from his chin's ink (x 623, rows 376-382) up toward his ear, tapering out by x 639.
+        line: [
+          [623, 374],
+          [640, 365],
+          [642, 368],
+          [627, 386],
+          [623, 386],
+        ],
+        // Its corner, where the sheet's ink runs into its brown (x 622-623, rows 376-382).
+        corner: [
+          [615, 377],
+          [621, 375],
+          [627, 375],
+          [627, 384],
+          [621, 384],
+          [621, 378],
+          [615, 378],
+        ],
+        // All of it light (mean L 117-131, #b0603e at 630,373).
+        fade: rect(615, 360, 645, 390),
+        // The rose under it (#e7895b at 640,367) and up to under his ear (#ed8c5a at 652,347), soft round it (#f39c69 at 644,360).
+        shade: [
+          [648, 338],
+          [660, 338],
+          [660, 355],
+          [647, 367],
+          [640, 375],
+          [636, 385],
+          [624, 387],
+          [624, 381],
+          [638, 368],
+          [644, 355],
+        ],
+      },
       // His nape: his last curl turns under, and his neck runs down from it.
       sharp: [[668.5, 397.5]],
       near: {
@@ -1017,7 +1056,31 @@ export const TRACE = {
         },
       },
       ears: { earNear: [1123, 322] },
-      chin: { kind: 'closed', row: 394 },
+      // His ear's skin runs on into his cheek at its front (no line, rows 312-330): x 1113-1138, rows 304-337.
+      earClips: { earNear: oval(1124.5, 320.5, 12, 17) },
+      earLit: oval(1124.5, 320.5, 12, 17),
+      chin: {
+        kind: 'closed',
+        row: 394,
+        // No brown line: the sheet lays his jaw as its rose alone (#dd7a4e at 1144,369).
+        line: [],
+        // The rose along his jaw from his chin's ink (#e1845a at 1156,379) up to under his ear, soft round it (#f19a69 at 1138,366), down his neck under his chin.
+        shade: [
+          [1116, 362],
+          [1124, 352],
+          [1132, 338],
+          [1140, 344],
+          [1148, 358],
+          [1158, 370],
+          [1160, 376],
+          [1160, 401],
+          [1152, 397],
+          [1144, 389],
+          [1136, 380],
+          [1126, 374],
+          [1118, 372],
+        ],
+      },
       sharp: [],
       near: {
         pick: sleeveAt([1110, 480]),

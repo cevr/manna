@@ -293,7 +293,8 @@ export const leadFeastThreeQuarterLeft = leadView(THREE_QUARTER_LEFT, {
 /** In profile to screen left: one eye, his ear behind his cheek, his teal left sleeve hanging over his side, his cream right sleeve beyond him (it shows raised, poses-2). */
 export const leadFeastProfileLeft = leadView(PROFILE_LEFT, {
   sheet: 'turnaround',
-  head: { view: 'side' },
+  head: { view: 'side', chin: 'open' },
+  jaw: TONES.chinLine,
   ears: { near: PROFILE_LEFT.EAR_NEAR },
   face: { ...AT_REST, marks: PROFILE_LEFT.MARKS },
   sleeves: { near: 'teal', far: 'cream' },
@@ -318,7 +319,7 @@ export const leadFeastBack = leadView(BACK, {
 /** In profile to screen right: one eye, his ear behind his cheek, his cream right sleeve hanging over his side, the mantle a strip down his back. */
 export const leadFeastProfileRight = leadView(PROFILE_RIGHT, {
   sheet: 'turnaround',
-  head: { view: 'side' },
+  head: { view: 'side', chin: 'open' },
   ears: { near: PROFILE_RIGHT.EAR_NEAR },
   face: { ...AT_REST, marks: PROFILE_RIGHT.MARKS },
   sleeves: { near: 'cream', far: 'cream' },

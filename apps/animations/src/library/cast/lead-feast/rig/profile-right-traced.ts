@@ -21,24 +21,18 @@ export const FEET: Pt = [1146, 858];
 
 /** An ear, flat skin cut inside his head: its ink is his head's, and the hair beside it lies round it. */
 export const EAR_NEAR: Pt[] = [
-  [1138, 347],
-  [1136, 347],
-  [1133.5, 347.5],
-  [1131.5, 347.5],
-  [1127, 347.5],
-  [1129, 343],
-  [1127, 340.5],
-  [1122, 334],
-  [1113.5, 329.5],
-  [1113.5, 319.5],
-  [1113.5, 308.5],
-  [1126.5, 298.5],
-  [1135.5, 307.5],
-  [1140.5, 312.5],
-  [1138.5, 322],
-  [1138.5, 328.5],
-  [1138.5, 334.5],
-  [1138.5, 341],
+  [1124.5, 304.5],
+  [1126.5, 305.5],
+  [1128.5, 305],
+  [1130.5, 306.5],
+  [1137.5, 312.5],
+  [1137.5, 328.5],
+  [1130.5, 334.5],
+  [1128.5, 336],
+  [1126.5, 335.5],
+  [1124.5, 336.5],
+  [1111, 327],
+  [1109.5, 313.5],
 ];
 
 /** His head's paper to the line under his chin: his face, his ears and his skull under his hair. */
@@ -159,11 +153,14 @@ export const HAIR: Pt[] = [
   [1115, 309.5],
   [1112.5, 315],
   [1112.5, 319.5],
-  [1112.5, 331.5],
-  [1125, 336],
-  [1127, 342.5],
-  [1132, 359],
-  [1116.5, 368.5],
+  [1112.5, 332],
+  [1125.5, 336.5],
+  [1127.5, 341.5],
+  [1130, 349],
+  [1125.5, 361.5],
+  [1117.5, 364],
+  [1114, 365],
+  [1106, 363.5],
   [1102.5, 362],
   [1102, 362],
   [1102, 362],
@@ -545,41 +542,41 @@ export const FOOT_FAR: Pt[] = [
   [1140.5, 819],
 ];
 
-/** The light on his ears, their lit rim; the hollow inside each is the ear's own paper. */
-export const EAR_LIGHT: Pt[][] = [
+/** The light on his ears, their lit rim. */
+export const EAR_LIGHT: Pt[][] = [];
+
+/** An ear turned to the light: its skin lit as his face (none unless the view reads it). */
+export const EAR_LIT: Pt[][] = [
   [
-    [1138, 315],
-    [1129, 309.5],
-    [1127, 305.5],
-    [1118.5, 313.5],
-    [1119, 314],
-    [1118.5, 316],
-    [1119.5, 317],
-    [1122, 318.5],
-    [1125, 318],
-    [1126.5, 320.5],
-    [1128.5, 324],
-    [1127, 331],
-    [1131.5, 332.5],
-    [1133.5, 333],
-    [1135.5, 331],
-    [1137.5, 331.5],
-    [1139, 332],
-    [1138, 335],
-    [1138.5, 335.5],
-    [1138, 336],
-    [1138.5, 338],
-    [1137.5, 338.5],
-    [1125.5, 347],
-    [1111.5, 325.5],
-    [1115, 314.5],
-    [1117.5, 305.5],
-    [1129.5, 300],
-    [1136, 308.5],
-    [1137.5, 311],
-    [1137.5, 313],
+    [1126.5, 305],
+    [1126.5, 305.5],
+    [1128, 305],
+    [1128.5, 305.5],
+    [1129.5, 306],
+    [1132, 307.5],
+    [1131, 309],
+    [1130, 309.5],
+    [1125.5, 308],
+    [1125.5, 308.5],
+    [1113.5, 314.5],
+    [1115.5, 322.5],
+    [1123.5, 331.5],
+    [1122.5, 332.5],
+    [1127, 334],
+    [1126, 335],
+    [1124.5, 336.5],
+    [1121, 334],
+    [1120.5, 334.5],
+    [1113, 322.5],
+    [1110.5, 309],
   ],
 ];
+
+/** An ear where it turns from the light: its skin a step deeper, toward rose. */
+export const EAR_SHADE: Pt[][] = [];
+
+/** The hollow of an ear in shade, its skin turned toward rose (a lit ear's hollow is its own paper). */
+export const EAR_HOLLOW: Pt[][] = [];
 
 /** The dark brown band the sheet paints round an ear as its contour (a front's), laid on his head: none where the band runs on into his hair. */
 export const EAR_BAND: Pt[][] = [];
@@ -840,6 +837,74 @@ export const NECK_SHADE: Pt[][] = [];
 
 /** The line his jaw lays on his neck under his chin, in the sheet's brown: from side to side, or rising to his ear (none under a closed chin). */
 export const JAW: Pt[][] = [];
+
+/** His jaw's line where it lightens toward his ear, laid over it (none unless the view reads it). */
+export const JAW_FADE: Pt[][] = [];
+
+/** The rose shade under his jaw's line, laid on his head and his neck: up to his ear and down the far side of his neck on a turned head (none unless the view reads it). */
+export const JAW_SHADE: Pt[][] = [
+  [
+    [1145, 369],
+    [1148.5, 371],
+    [1154, 372.5],
+    [1157, 375.5],
+    [1157.5, 376.5],
+    [1157.5, 378],
+    [1158, 378.5],
+    [1157.5, 378.5],
+    [1158, 382],
+    [1156, 382],
+    [1152, 382],
+    [1145, 374],
+    [1144, 370.5],
+    [1143.5, 370],
+    [1145, 369.5],
+  ],
+  [
+    [1131, 342.5],
+    [1132.5, 341.5],
+    [1136.5, 342],
+    [1134.5, 344],
+    [1133, 345.5],
+    [1129, 344.5],
+  ],
+];
+
+/** The soft rose round the shade under his jaw, laid under it: his skin turning from the light below his ear and down his neck (none unless the view reads it). */
+export const JAW_SOFT: Pt[][] = [
+  [
+    [1133.5, 341.5],
+    [1134, 342],
+    [1136, 342.5],
+    [1136.5, 343.5],
+    [1139.5, 348],
+    [1140, 353],
+    [1143.5, 357.5],
+    [1146.5, 361.5],
+    [1157.5, 370.5],
+    [1158.5, 374.5],
+    [1159.5, 378],
+    [1157.5, 381.5],
+    [1157, 384.5],
+    [1157, 387.5],
+    [1157.5, 392],
+    [1156, 395],
+    [1156, 396],
+    [1155, 396],
+    [1154.5, 396.5],
+    [1143.5, 385],
+    [1130.5, 376.5],
+    [1118, 367.5],
+    [1120.5, 363.5],
+    [1124.5, 360],
+    [1126.5, 355.5],
+    [1128.5, 351.5],
+    [1127.5, 346],
+    [1130.5, 343],
+    [1131, 342],
+    [1132.5, 342],
+  ],
+];
 
 /** His skin the garment's neck shows, below his chin: lit, as his face. */
 export const SKIN: Pt[][] = [
