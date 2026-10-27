@@ -361,6 +361,8 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 
 - Owner, 2026-10-27, on topicsdb: "the topics will be based off the videos that we're making, kind of like, um, further study and more in-depth study on all the videos." topicsdb is parked: no topic pages are written ahead of the films. Each topic page grows from a published film (its script, verses and sources) as that film's further, in-depth study, beside its First the Blade study page; the 40 draft stubs wait for that. `manna wiki topics` keeps answering from the Nave catalog until then. (topicsdb)
 
+- Owner, 2026-10-27: "Sure, file them." Filed on One: onejs/one#1065 (managed players cannot own Now Playing or remote commands, so a crossfade loses the lock screen) and onejs/one#1066 (load the global session paused at a position). When either lands, a follow-up unit revisits playbulk P1's gap (crossfade) and F6 (opening sample). (playbulk)
+
 ## Owner questions
 
 - Clicks in silent mode (feel): keep them muted under the silent switch, as iOS keyboard clicks are (recommended: the phone stays quiet at worship), or play them even in silent mode (a new sound path, checked against the hymn audio session). Asked 2026-10-25. Answer (owner, 2026-10-25): "Yeah, the clicks, that's fine. Stay muted in silent mode". No change. (feel)
