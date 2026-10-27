@@ -15,6 +15,7 @@ import {
   type CastModule,
   type CastSheet,
   type CastView,
+  castDrawOrder,
   castPage,
   castRigs,
 } from '../canvas/cast.ts';
@@ -26,26 +27,33 @@ import { RiveRuntimeBrowser } from '../rive/runtime-browser.ts';
 /** The rate a cast page is laid at: any, since each scene is one still. */
 const FPS = 30;
 
-/** One view drawn on its sheet: clipped to its box, its rig's origin at `at`, at the sheet's scale, its props and the rigs drawn with it about that origin. */
+/** How far past its kept box a view is drawn, sheet pixels: a line the figure lays just past the box (a crown's ink) shows on the sheet, where the crop by the box can be read against it. */
+const CLIP_MARGIN = 12;
+
+/** One view drawn on its sheet: clipped to its box and `CLIP_MARGIN` round it, its rig's origin at `at`, at the sheet's scale, its props and the rigs drawn with it about that origin, in their order (`castDrawOrder`). */
 const drawView = (f: Frame, view: CastView, sheet: CastSheet) => {
   const { ctx } = f;
   const [x0, y0, x1, y1] = view.box;
   ctx.save();
   ctx.beginPath();
-  ctx.rect(x0, y0, x1 - x0, y1 - y0);
+  ctx.rect(
+    x0 - CLIP_MARGIN,
+    y0 - CLIP_MARGIN,
+    x1 - x0 + 2 * CLIP_MARGIN,
+    y1 - y0 + 2 * CLIP_MARGIN,
+  );
   ctx.clip();
   ctx.translate(view.at[0], view.at[1]);
   ctx.scale(sheet.scale, sheet.scale);
-  const props = view.props ?? [];
-  for (const p of props.filter((p) => p.behind === true)) p.draw(ctx);
-  f.rive(view.rig.key, view.pose);
-  for (const w of view.with ?? []) {
-    ctx.save();
-    ctx.translate(w.at[0], w.at[1]);
-    f.rive(w.rig.key, w.pose);
-    ctx.restore();
-  }
-  for (const p of props.filter((p) => p.behind !== true)) p.draw(ctx);
+  for (const d of castDrawOrder(view))
+    if (d.kind === 'prop') d.prop.draw(ctx);
+    else if (d.kind === 'figure') f.rive(view.rig.key, view.pose);
+    else {
+      ctx.save();
+      ctx.translate(d.with.at[0], d.with.at[1]);
+      f.rive(d.with.rig.key, d.with.pose);
+      ctx.restore();
+    }
   ctx.restore();
 };
 

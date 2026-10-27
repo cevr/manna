@@ -5,7 +5,7 @@ import {
   CastRenderJson,
   answerFinding,
   castRenderMarkdown,
-  nextRender,
+  castViewLines,
 } from './cast-render.ts';
 
 const RENDER: CastRender = {
@@ -64,9 +64,16 @@ const RENDER: CastRender = {
 };
 
 describe('a cast render', () => {
-  test('counts up from one past the highest render made', () => {
-    expect(nextRender([])).toBe(1);
-    expect(nextRender([1, 3, 2])).toBe(4);
+  test('prints each view: why it is unmatched only when it is, then its findings', () => {
+    expect(RENDER.views.map(castViewLines)).toEqual([
+      [
+        'turnaround-front: rows=1 flagged=jaw width critique=taken findings=1',
+        '  turnaround-front/f1 palette: The sash is a shade warmer.',
+      ],
+      [
+        'turnaround-back: rows=0 flagged=none unmatched="the kept view reads no figure: no pair of eyes" critique=skipped findings=0',
+      ],
+    ]);
   });
 
   test('answers a finding it holds, in its record, and keeps every other as it was', () => {

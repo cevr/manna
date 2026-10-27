@@ -25,12 +25,26 @@ interface CastWith {
   readonly at: Pt;
 }
 
-/** A plain canvas piece a view draws (a bottle, a stool): in the view's units about its origin, behind its figure or in front. */
+/**
+ * Where a prop lies among a view's drawings (`castDrawOrder`): behind its
+ * figure (a stool, a table), held (over the figure, under the rigs drawn
+ * with it: a bottle in front of the sleeve, its hand over it), or in front
+ * of them all.
+ */
+type CastLayer = 'behind' | 'held' | 'front';
+
+/** A plain canvas piece a view draws (a bottle, a stool): in the view's units about its origin, in its layer (`front` unless given). */
 export interface CastProp {
   readonly name: string;
   readonly draw: (ctx: CanvasRenderingContext2D) => void;
-  readonly behind?: true;
+  readonly layer?: CastLayer;
 }
+
+/** One drawing of a view, in the order the page draws them: a prop, its figure, or a rig drawn with it. */
+type CastDrawing =
+  | { readonly kind: 'prop'; readonly prop: CastProp }
+  | { readonly kind: 'figure' }
+  | { readonly kind: 'with'; readonly with: CastWith };
 
 /** One kept view: its kept box, where its rig's origin stands in the sheet's pixels, the rig in its pose, and what is drawn with it. */
 export interface CastView {
@@ -69,6 +83,25 @@ export const castPage = (film: string, member: string) => `${film}/cast/${member
 
 /** A film's cast render table, checked by its type: every view of every kind of every member. */
 export const castTable = <const T extends CastTable>(table: T): T => table;
+
+/**
+ * A view's drawings back to front: the props behind its figure, the figure,
+ * the props it holds, the rigs drawn with it (its hands, over what they
+ * hold), the props in front.
+ */
+export const castDrawOrder = (view: CastView): ReadonlyArray<CastDrawing> => {
+  const props = (layer: CastLayer): CastDrawing[] =>
+    (view.props ?? [])
+      .filter((p) => (p.layer ?? 'front') === layer)
+      .map((prop) => ({ kind: 'prop', prop }));
+  return [
+    ...props('behind'),
+    { kind: 'figure' },
+    ...props('held'),
+    ...(view.with ?? []).map((w): CastDrawing => ({ kind: 'with', with: w })),
+    ...props('front'),
+  ];
+};
 
 /** Every rig a member's views draw, by key: what its page declares and loads. */
 export const castRigs = (member: Readonly<Record<string, Readonly<Record<string, CastView>>>>) => {

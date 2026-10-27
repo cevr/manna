@@ -75,9 +75,6 @@ class CastFindingUnknown extends Schema.TaggedError<CastFindingUnknown>()('CastF
   }
 }
 
-/** The number the next render takes: one past the highest of `taken`, 1 for the first. */
-export const nextRender = (taken: ReadonlyArray<number>): number => Math.max(0, ...taken) + 1;
-
 /** A finding's name in a render: `<kind>-<view>/<id>`. */
 const findingRef = (v: CastViewRendered, f: CastFinding) => `${v.kind}-${v.view}/${f.id}`;
 
@@ -163,6 +160,23 @@ const viewSection = (v: CastViewRendered): ReadonlyArray<string> => [
     onNonEmpty: (fs) => ['Findings:', '', ...fs.map(findingLine), ''],
   }),
 ];
+
+/**
+ * A view's lines as `film concept render` prints them: its rows, the names
+ * of its flagged rows, why it is unmatched when it is, its critique and how
+ * many findings; then each finding, its reference and its aspect.
+ */
+export const castViewLines = (v: CastViewRendered): ReadonlyArray<string> => {
+  const flagged = Arr.match(
+    v.rows.filter((r) => r.flagged).map((r) => r.name),
+    { onEmpty: () => 'none', onNonEmpty: (names) => names.join(',') },
+  );
+  const unmatched = said(v.unmatched, (why) => ` unmatched="${why}"`, '');
+  return [
+    `${v.kind}-${v.view}: rows=${v.rows.length} flagged=${flagged}${unmatched} critique=${v.critique} findings=${v.findings.length}`,
+    ...v.findings.map((f) => `  ${findingRef(v, f)} ${f.aspect}: ${f.what}`),
+  ];
+};
 
 /** The render's summary: a section a view, its side-by-side, its flagged rows, each finding and its answer. */
 export const castRenderMarkdown = (render: CastRender): string =>

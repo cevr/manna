@@ -2133,8 +2133,11 @@ most), and its stills carry the levels in their names
 holds each figure a frame draws against the concept it was painted from.
 A rig declares its concept beside itself (`RivePropSpec.concept`, a
 `ConceptRef` in `core/match.ts`: a set's image, `{set, file}` under
-`out/<set>/`, or a Board try of the film's own, `{board}` under its
-`board/`, and the figure's box in it, in the image's pixels); drawing the
+`out/<set>/`, a Board try of the film's own, `{board}` under its
+`board/`, or a cast member's kept sheet, `{cast, sheet}`, `kept/<sheet>.png`
+in his record, the film's own role's folder before the library's
+(`castFolder`, `tools/cast-library.ts`), and the figure's box in it, in the
+image's pixels); drawing the
 rig declares its figure on the frame (`probeFigure`, `canvas/probe.ts`: its
 key, its box on screen, its concept), and the export handle's `figures`
 answers a frame's (`ExportHandle`, drawn under a probe like `probe`).

@@ -12,8 +12,9 @@
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
-import { Array as Arr, Console, Effect, Layer, Option, Schema } from 'effect';
+import { Console, Effect, Layer, Option, Schema } from 'effect';
 import type { CritiqueRule } from '../core/critique.ts';
+import { castViewLines } from '../core/cast-render.ts';
 import { SheetKind } from '../core/cast-sheet.ts';
 import { answerCast, renderCast } from './cast-render.ts';
 import { Counsel } from './counsel.ts';
@@ -84,21 +85,7 @@ export const render = <E, R>(pages: Layer.Layer<Pages, E, R>, rules: ReadonlyArr
       yield* Console.log(
         `render ${input.member} n=${made.render.n} views=${made.render.views.length} riv=${made.render.riv.slice(0, 12)} ${made.dir}`,
       );
-      for (const v of made.render.views) {
-        const flagged = Arr.match(
-          v.rows.filter((r) => r.flagged).map((r) => r.name),
-          { onEmpty: () => 'none', onNonEmpty: (names) => names.join(',') },
-        );
-        const unmatched = Option.match(Option.fromUndefinedOr(v.unmatched), {
-          onNone: () => '',
-          onSome: (why) => ` unmatched="${why}"`,
-        });
-        yield* Console.log(
-          `${v.kind}-${v.view}: rows=${v.rows.length} flagged=${flagged}${unmatched} critique=${v.critique} findings=${v.findings.length}`,
-        );
-        for (const f of v.findings)
-          yield* Console.log(`  ${v.kind}-${v.view}/${f.id} ${f.aspect}: ${f.what}`);
-      }
+      for (const line of made.render.views.flatMap(castViewLines)) yield* Console.log(line);
     }),
   ).pipe(
     Command.provide(Layer.mergeAll(pages, Critic.layer(rules).pipe(Layer.provide(Counsel.layer)))),

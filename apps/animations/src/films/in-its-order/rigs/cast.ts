@@ -249,8 +249,8 @@ export const CAST = castTable({
           lean: 0,
           numbers: { mouth: 3 },
           reach: [['near', [62, 392]]],
-          // The bottle behind his hand, held round its middle.
-          props: [{ name: 'bottle', draw: bottle([-86, -290], 0.9), behind: true }],
+          // The bottle held: over his sleeve, under his hand round its middle.
+          props: [{ name: 'bottle', draw: bottle([-86, -290], 0.9), layer: 'held' }],
         },
       ),
       // In profile to the left, both hands up, his head tipped back, the plate at his mouth.
@@ -282,7 +282,7 @@ export const CAST = castTable({
             ['near', LEAD_SEATED.HAND_NEAR.at],
             ['far', LEAD_SEATED.HAND_FAR.at],
           ],
-          props: [{ name: 'stool', draw: stool(68, 134, -97), behind: true }],
+          props: [{ name: 'stool', draw: stool(68, 134, -97), layer: 'behind' }],
         },
       ),
       // Three-quarters left, leaning to the low table, his near hand on the bottle there, his head bowed to it.
@@ -296,8 +296,8 @@ export const CAST = castTable({
           numbers: { nod: 6, tilt: -0.1, mouth: 3 },
           reach: [['near', [985, 590]]],
           props: [
-            { name: 'table', draw: table(-152, -78, -157, -120), behind: true },
-            { name: 'bottle', draw: bottle([-114, -157]), behind: true },
+            { name: 'table', draw: table(-152, -78, -157, -120), layer: 'behind' },
+            { name: 'bottle', draw: bottle([-114, -157]), layer: 'behind' },
           ],
         },
       ),

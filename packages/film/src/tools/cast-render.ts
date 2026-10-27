@@ -32,7 +32,6 @@ import {
   type CastViewRendered,
   answerFinding,
   castRenderMarkdown,
-  nextRender,
 } from '../core/cast-render.ts';
 import { CastSheetJson, type CastSheetRecord, castKindPlan } from '../core/cast-record.ts';
 import { SheetKind } from '../core/cast-sheet.ts';
@@ -48,6 +47,7 @@ import { turnaroundLayout } from './cast-sheet-brief.ts';
 import { Critic, type CritiqueTaken } from './critique.ts';
 import { sha256Hex } from './digest.ts';
 import { FileInvalid } from './errors.ts';
+import { reserveNumbered } from './numbered-folder.ts';
 import { FilmFolder, type FilmName, importFilmModule } from './film-repo.ts';
 import { type ExportPages, Pages } from './pages.ts';
 import { decodePng, encodePng } from './png.ts';
@@ -78,13 +78,6 @@ interface CastRenderAsk {
 const renderRoot = Effect.fn('Cast.renderRoot')(function* (film: FilmName, member: string) {
   const path = yield* Path.Path;
   return path.join((yield* FilmFolder).paths(film).out, 'cast', member, 'render');
-});
-
-/** The renders already made under `root`, by number. */
-const rendersIn = Effect.fn('Cast.rendersIn')(function* (root: string) {
-  const fs = yield* FileSystem.FileSystem;
-  const names = yield* fs.readDirectory(root).pipe(Effect.orElseSucceed((): string[] => []));
-  return names.filter((n) => /^\d+$/.test(n)).map(Number);
 });
 
 /** A measure's rows of `concept` against `render`, or why none could be read. */
@@ -368,9 +361,7 @@ export const renderCast = Effect.fn('Cast.render')(function* (
     return yield* CastRenderRefused.make({ member, reason: 'no kind asked is kept' });
   yield* coveredBy(member, table, record, kinds);
   const root = yield* renderRoot(film, member);
-  const n = nextRender(yield* rendersIn(root));
-  const dir = path.join(root, String(n));
-  yield* fs.makeDirectory(dir, { recursive: true });
+  const { n, dir } = yield* reserveNumbered(root);
   const pool = yield* (yield* Pages).open(castPage(film, member), {
     workers: 1,
     captions: false,
