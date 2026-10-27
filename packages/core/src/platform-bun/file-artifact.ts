@@ -125,7 +125,11 @@ export interface NativeFileArtifactProvenanceStore {
 const sourceError = (operation: string, cause: unknown): CorpusSourceUnavailableError =>
   CorpusSourceUnavailableError.make({ operation, cause });
 
-const localSource = (corpus: string, source: LocalFileArtifactSource) => ({
+const localSource = (
+  corpus: string,
+  source: LocalFileArtifactSource,
+  layout: FileArtifactLayout,
+) => ({
   kind: source.kind,
   acquire: Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -146,11 +150,9 @@ const localSource = (corpus: string, source: LocalFileArtifactSource) => ({
       kind: source.kind,
       provenance,
       expectedSize: Option.none(),
-      bytes: fs
-        .stream(source.path)
-        .pipe(
-          Stream.mapError((cause) => sourceError(`read-${corpus}-artifact:${source.label}`, cause)),
-        ),
+      bytes: localFileBytes(source.path, layout).pipe(
+        Stream.mapError((cause) => sourceError(`read-${corpus}-artifact:${source.label}`, cause)),
+      ),
     };
   }).pipe(
     Effect.mapError((cause) => sourceError(`open-${corpus}-artifact:${source.label}`, cause)),
@@ -208,7 +210,7 @@ class FileArtifactStoreError extends Schema.TaggedError<FileArtifactStoreError>(
 export const storeError = (operation: string) => (cause: unknown) =>
   FileArtifactStoreError.make({ operation, cause });
 
-export const openDatabase = (filename: string, readonly: boolean) =>
+const openDatabase = (filename: string, readonly: boolean) =>
   Effect.try({
     // `create: false` is bun:sqlite's `fileMustExist`: a candidate that is not
     // there is a verification failure, never an empty database sprung into
@@ -222,6 +224,53 @@ export const closeDatabase = (database: Database) =>
     try: () => database.close(),
     catch: storeError('close-database'),
   });
+
+/** SQLite can need writable auxiliary state even for a read-only WAL query.
+ * Copy the main file and any committed WAL into a private, scoped directory;
+ * never create sidecars or checkpoint the source. Missing sources still fail.
+ */
+const copySqlite = Effect.fn('FileArtifact.copySqlite')(function* (filename: string) {
+  const fs = yield* FileSystem.FileSystem;
+  const directory = yield* fs.makeTempDirectoryScoped({ prefix: 'manna-sqlite-check-' });
+  const copy = `${directory}/artifact.db`;
+  yield* fs.copyFile(filename, copy);
+  if (yield* fs.exists(`${filename}-wal`)) yield* fs.copyFile(`${filename}-wal`, `${copy}-wal`);
+  return copy;
+});
+
+const localFileBytes = (source: string, layout: FileArtifactLayout) =>
+  Stream.unwrap(
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      // A live SQLite source may hold committed rows only in its WAL. Fold
+      // those into a private copy before streaming a single-file artifact.
+      let filename = source;
+      if (layout === 'sqlite' && (yield* fs.exists(`${source}-wal`))) {
+        filename = yield* copySqlite(source);
+        yield* Effect.acquireUseRelease(
+          openDatabase(filename, false),
+          (db) =>
+            Effect.try({
+              try: () => db.exec('PRAGMA journal_mode=DELETE'),
+              catch: storeError('checkpoint-source-copy'),
+            }),
+          closeDatabase,
+        );
+      }
+      return fs.stream(filename);
+    }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+export const withDatabaseSnapshot = <A>(
+  filename: string,
+  use: (database: Database) => Effect.Effect<A, unknown>,
+): Effect.Effect<A, unknown> =>
+  Effect.scoped(
+    Effect.gen(function* () {
+      const copy = yield* copySqlite(filename);
+      return yield* Effect.acquireUseRelease(openDatabase(copy, false), use, closeDatabase);
+    }),
+  ).pipe(Effect.provide(BunServices.layer));
 
 export const countRows = (database: Database, table: string, where = '') =>
   Effect.try({
@@ -253,47 +302,44 @@ export const integrityCheck = (database: Database) =>
  *  the same `StoredProvenance` codec the native store writes and reads. */
 const sqliteProvenanceStore: NativeFileArtifactProvenanceStore = {
   read: (filename) =>
-    Effect.acquireUseRelease(
-      openDatabase(filename, true),
-      (database) =>
-        Effect.gen(function* () {
-          const row = Schema.Struct({ value: Schema.String });
-          const value = (key: string) =>
-            Effect.try({
-              try: () => database.query('SELECT value FROM meta WHERE key = ?').get(key),
-              catch: storeError('read-provenance'),
-            }).pipe(
-              Effect.flatMap((raw) =>
-                Schema.decodeUnknownEffect(row)(raw).pipe(
-                  Effect.mapError(storeError('read-provenance')),
-                ),
+    withDatabaseSnapshot(filename, (database) =>
+      Effect.gen(function* () {
+        const row = Schema.Struct({ value: Schema.String });
+        const value = (key: string) =>
+          Effect.try({
+            try: () => database.query('SELECT value FROM meta WHERE key = ?').get(key),
+            catch: storeError('read-provenance'),
+          }).pipe(
+            Effect.flatMap((raw) =>
+              Schema.decodeUnknownEffect(row)(raw).pipe(
+                Effect.mapError(storeError('read-provenance')),
               ),
-              Effect.map((decoded) => decoded.value),
-            );
-          const optionalValue = (key: string) =>
-            Effect.try({
-              try: () => database.query('SELECT value FROM meta WHERE key = ?').get(key),
-              catch: storeError('read-provenance'),
-            }).pipe(
-              Effect.map((raw) =>
-                Option.fromNullishOr(raw).pipe(
-                  Option.flatMap((found) =>
-                    Schema.decodeUnknownOption(row)(found).pipe(
-                      Option.map((decoded) => decoded.value),
-                    ),
+            ),
+            Effect.map((decoded) => decoded.value),
+          );
+        const optionalValue = (key: string) =>
+          Effect.try({
+            try: () => database.query('SELECT value FROM meta WHERE key = ?').get(key),
+            catch: storeError('read-provenance'),
+          }).pipe(
+            Effect.map((raw) =>
+              Option.fromNullishOr(raw).pipe(
+                Option.flatMap((found) =>
+                  Schema.decodeUnknownOption(row)(found).pipe(
+                    Option.map((decoded) => decoded.value),
                   ),
                 ),
               ),
-            );
-          const stored = yield* Schema.decodeEffect(StoredProvenance)({
-            source: yield* value('corpus_source'),
-            revision: yield* value('corpus_revision'),
-            digest: yield* value('corpus_digest'),
-            ...storedGeneration(yield* optionalValue('corpus_generation')),
-          }).pipe(Effect.mapError(storeError('read-provenance')));
-          return provenanceFrom(stored);
-        }),
-      closeDatabase,
+            ),
+          );
+        const stored = yield* Schema.decodeEffect(StoredProvenance)({
+          source: yield* value('corpus_source'),
+          revision: yield* value('corpus_revision'),
+          digest: yield* value('corpus_digest'),
+          ...storedGeneration(yield* optionalValue('corpus_generation')),
+        }).pipe(Effect.mapError(storeError('read-provenance')));
+        return provenanceFrom(stored);
+      }),
     ),
   write: (filename, provenance) =>
     Effect.acquireUseRelease(
@@ -596,7 +642,7 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
   const provenanceStore = input.provenanceStore ?? defaultProvenanceStore();
   const makeSource = (source: NativeFileArtifactSource) => {
     if (source.kind === 'release') return releaseSource(corpus, source, fetchArtifact);
-    return localSource(corpus, source);
+    return localSource(corpus, source, layout);
   };
   const recipe = input.artifact.layerRecipe({
     sources: input.sources.map(makeSource),

@@ -1,4 +1,5 @@
 import { BunFileSystem } from '@effect/platform-bun';
+import { Database } from 'bun:sqlite';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { Context, Effect, FileSystem, Layer, Option } from 'effect';
@@ -17,7 +18,7 @@ import type {
 import type { CorpusName, CorpusProvenance } from '../corpus-supply/model.js';
 import { CorpusSupply } from '../corpus-supply/service.js';
 import { Target } from '../corpus-supply/model.js';
-import { layerNativeWebsterArtifacts } from './bible-artifact.js';
+import { layerNativeTopicsArtifacts, layerNativeWebsterArtifacts } from './bible-artifact.js';
 import { writeWebsterFixture } from '../webster/fixtures/sqlite-bun.js';
 import {
   layerNativeFileArtifacts,
@@ -142,8 +143,69 @@ const attemptWebsterInstall = (destination: string, source: string) =>
     ),
   );
 
+const installTopics = (destination: string, source: string) =>
+  CorpusSupply.use((supply) => supply.ensure({ target: Target.topics() })).pipe(
+    Effect.provide(
+      CorpusSupply.layer.pipe(
+        Layer.provide(
+          layerNativeTopicsArtifacts({
+            destination,
+            sources: [{ kind: 'packaged', path: source, label: 'topics-fixture' }],
+          }),
+        ),
+      ),
+    ),
+  );
+
 describe('parameterized File Corpus lifecycle', () => {
   const test = it.scopedLive.layer(BunFileSystem.layer);
+
+  test('installs closed WAL artifacts and committed live WAL rows without altering sources', () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: 'sqlite-wal-artifact-' });
+      for (const live of [false, true]) {
+        const source = `${dir}/source-${String(live)}.db`;
+        const destination = `${dir}/installed-${String(live)}.db`;
+        const db = yield* Effect.acquireRelease(
+          Effect.sync(() => new Database(source)),
+          (db) => Effect.sync(() => db.close()),
+        );
+        yield* Effect.sync(() => {
+          db.exec(`CREATE TABLE meta(key TEXT PRIMARY KEY,value TEXT);
+            INSERT INTO meta VALUES('schema_major','1');
+            CREATE TABLE topics(id INTEGER); INSERT INTO topics VALUES(1);
+            CREATE TABLE topic_aliases(id INTEGER); INSERT INTO topic_aliases VALUES(1);
+            CREATE TABLE topic_edges(id INTEGER); CREATE TABLE topic_catalog_keys(id INTEGER);
+            PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0;`);
+          if (live) db.exec('INSERT INTO topics VALUES(2)');
+          else db.close();
+        });
+        const files = [source];
+        if (live) files.push(`${source}-wal`, `${source}-shm`);
+        const before = yield* Effect.forEach(files, (file) =>
+          Effect.gen(function* () {
+            return { file, bytes: yield* fs.readFile(file), stat: yield* fs.stat(file) };
+          }),
+        );
+        const receipt = yield* installTopics(destination, source);
+        let expected = 1;
+        if (live) expected = 2;
+        expect(receipt.activated).toMatchObject([{ corpus: 'topics', installed: expected }]);
+        expect((yield* installTopics(destination, source)).activated).toEqual([]);
+        for (const { file, bytes, stat } of before) {
+          expect(yield* fs.readFile(file)).toEqual(bytes);
+          const after = yield* fs.stat(file);
+          expect(after.ino).toEqual(stat.ino);
+          expect(after.mtime).toEqual(stat.mtime);
+          expect(after.size).toEqual(stat.size);
+        }
+        expect(yield* fs.exists(`${source}-wal`)).toBe(live);
+        expect(yield* fs.exists(`${source}-shm`)).toBe(live);
+        expect(yield* fs.exists(`${destination}.building`)).toBe(false);
+        expect(yield* fs.exists(`${destination}-wal`)).toBe(false);
+      }
+    }));
 
   test('Webster rejects a synthetic or corrupt candidate before replacing the destination', () =>
     Effect.gen(function* () {

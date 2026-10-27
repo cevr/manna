@@ -51,6 +51,26 @@ The form of an entry, each field on its own line:
 
 ## Process and tooling
 
+### init-preserves-installed-corpora
+
+- **Date:** 2026-10-26
+- **Kind:** owner
+- **Said:** "manna init exits 0 and installs bible, topics, webster and hymnal on an empty HOME, and on a HOME that already holds every database it exits 0 without replacing them (no --force)."
+- **Source:** initfresh/spec.md Goal; measured failure in initfresh/red-base.md.
+- **Wrong:** Default init replaced existing files or fetched a Bible release while offline.
+- **Cause:** Generic source-identity refresh was used as init's preservation policy.
+- **Guard:** code: `packages/cli/test/commands/init.test.ts` `default init preserves every existing database without HTTP or provenance writes`
+
+### sqlite-wal-artifact-verification
+
+- **Date:** 2026-10-26
+- **Kind:** owner
+- **Said:** "Handle a copied `-wal` when one exists; do not lose committed rows in a live WAL database."
+- **Source:** initfresh/spec.md Risks; measured failure in initfresh/red-base.md.
+- **Wrong:** A closed WAL artifact failed read-only integrity verification; streaming only a live source's main file omitted committed WAL rows.
+- **Cause:** SQLite needs private writable auxiliary state for these WAL reads; a single-file stream does not include a live WAL.
+- **Guard:** code: `packages/core/src/platform-bun/file-corpus-lifecycle.test.ts` `installs closed WAL artifacts and committed live WAL rows without altering sources`
+
 ### hymn-search-literal-operators
 
 - **Date:** 2026-10-27

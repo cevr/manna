@@ -12,6 +12,9 @@ phone reads compiled JSON; this feature has no app route.
 - `corpus-db-search`: Unicode FTS and literal, bounded substring search.
 - `corpus-db-cli`: get/search/categories/category/missing contracts and isolated init acquisition.
 - `corpus-db-legacy`: read-only compatibility with installed version-0 databases.
+- `corpus-init-empty`: full init installs all four databases in an empty scratch HOME.
+- `corpus-init-preserve`: default init preserves existing files, including offline and legacy installs.
+- `corpus-init-wal`: closed WAL artifacts and live WAL commits survive acquisition and verification.
 
 ## How to get to it (user POV)
 
@@ -53,6 +56,19 @@ phone reads compiled JSON; this feature has no app route.
    download/skip/force/failure behavior pass. Owner storage stays untouched.
    Operator-like queries (`a*`, `{title}`, `title:`) and a lone accented letter
    use literal substring matches; they do not gain broad FTS token matches.
+   For full init, set `INITFRESH_UNIT=/Users/cvr/Developer/personal/manna/tmp/orchestrate/hymnapp/initfresh`
+   and `INITFRESH_BOOTSTRAP=$(mktemp -d /tmp/initfresh-bootstrap.XXXXXX)`, then run:
+   - `HOME="$INITFRESH_BOOTSTRAP" bun "$INITFRESH_UNIT/acceptance.ts" "$PWD" --compiled --property`
+   - `HOME="$INITFRESH_BOOTSTRAP" bun "$INITFRESH_UNIT/acceptance.ts" "$PWD" --compiled --property --delete-journal`
+   - `HOME="$INITFRESH_BOOTSTRAP" bun "$INITFRESH_UNIT/wal-probe.ts"` (diagnostic only).
+     → each acceptance exits 0 with `ACCEPTANCE GREEN failures=0`: four installed
+     targets, populated legacy/prior-provenance/offline preservation, and 16 presence
+     subsets per journal mode. Hash, inode, mtime and size stay unchanged for existing
+     databases. No provenance migration, HTTP request on the populated offline leg,
+     or `.building` residue is allowed. Keep pinned size/digest rejection and force
+     refresh covered. The WAL probe's read-only failure is expected diagnostic data.
+     Fast guards: `packages/cli/test/commands/init.test.ts` and
+     `packages/core/src/platform-bun/file-corpus-lifecycle.test.ts` (tiny closed/live WAL fixtures).
 5. **Run proof.** `bun "$UNIT/verify.ts" "$PWD"`.
    → two compiler outputs equal the shipped bytes; 920 source rows and 68 original
    categories equal the planner's copied base; real CLI boundary IDs, all five

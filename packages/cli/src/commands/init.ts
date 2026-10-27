@@ -75,6 +75,11 @@ const ensureHymnal = Effect.fn('Init.ensureHymnal')(function* (
   }
 });
 
+const artifactStatus = (receipt: CorpusSupplyReceipt): string => {
+  if (receipt.activated.length > 0) return 'installed and verified';
+  return 'ready';
+};
+
 /**
  * Resolve the bible and topics artifacts against one `CorpusSupply`
  * composition. The supply layer is built and provided here, at this
@@ -119,14 +124,22 @@ const ensureArtifacts = (bibleDir: string, path: Path.Path, force: boolean) => {
   );
 
   return Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
     const corpus = yield* CorpusSupply;
-    const bible = yield* corpus.ensure({ refresh: force });
+    // Init fills missing slots. Existing files need neither provenance nor a
+    // source comparison; replacing them is the explicit --force operation.
+    let bible = 'ready';
+    if (force || !(yield* fs.exists(path.join(bibleDir, 'bible.db')))) {
+      bible = artifactStatus(yield* corpus.ensure({ refresh: force }));
+    }
     // Writings-style catch-and-warn (§3.5): a missing topics artifact leaves
     // the wiki on catalog pages, which is a degraded feature, not a failed init.
-    const topics = yield* corpus.ensure({ target: Target.topics(), refresh: force }).pipe(
-      Effect.asSome,
-      Effect.orElseSucceed(() => Option.none<CorpusSupplyReceipt>()),
-    );
+    let topics = Option.some('ready');
+    if (force || !(yield* fs.exists(path.join(bibleDir, 'topics.db')))) {
+      topics = yield* corpus
+        .ensure({ target: Target.topics(), refresh: force })
+        .pipe(Effect.map(artifactStatus), Effect.option);
+    }
     return { bible, topics };
   }).pipe(Effect.provide(supply));
 };
@@ -145,25 +158,19 @@ export const init = Command.make('init', { force }, (args) =>
 
     const { bible, topics } = yield* ensureArtifacts(bibleDir, path, args.force);
 
-    let bibleStatus = 'installed and verified';
-    if (bible.activated.length === 0) {
-      bibleStatus = 'ready';
+    yield* Console.log(`✓ bible.db (${bible})`);
+    if (!args.force && (yield* fs.exists(path.join(bibleDir, 'webster.db')))) {
+      yield* Console.log('✓ webster.db (ready)');
+    } else {
+      yield* initializeWebster({ directory: bibleDir, refresh: args.force });
     }
-    yield* Console.log(`✓ bible.db (${bibleStatus})`);
-    yield* initializeWebster({ directory: bibleDir, refresh: args.force });
 
     yield* Option.match(topics, {
       onNone: () =>
         Console.log(`✗ topics.db — build it with:`).pipe(
           Effect.andThen(Console.log(`  bun run build:topics`)),
         ),
-      onSome: (receipt) =>
-        Console.log(
-          `✓ topics.db (${Option.match(
-            Option.liftPredicate(receipt.activated, (activated) => activated.length > 0),
-            { onNone: () => 'ready', onSome: () => 'installed and verified' },
-          )})`,
-        ),
+      onSome: (status) => Console.log(`✓ topics.db (${status})`),
     });
 
     // Download each database
