@@ -55,7 +55,7 @@ interface LeadTable {
   readonly CURLS: ReadonlyArray<{ readonly at: Pt; readonly r: number }>;
   readonly NECK_SHADE: Pieces;
   readonly JAW: Pieces;
-  /** The brown band round an ear, laid on his head (a front's); the poses' tables, traced before it, have none. */
+  /** The brown band round an ear, laid on his head (a front's): present when the spec that wrote the table reads an `earBand` part. */
   readonly EAR_BAND?: Pieces;
   /** The light on his ears, their lit rim (traced with `EAR_BAND`). */
   readonly EAR_LIGHT?: Pieces;

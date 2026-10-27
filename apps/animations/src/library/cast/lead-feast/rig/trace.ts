@@ -296,6 +296,8 @@ export const standing = (v: Standing): TraceSheetView => {
     feet: ['footNear', 'footFar'],
     // His outlines and the tones on them fitted as cubics; his feet and their straps, drawn as sandals, are points.
     path: 'cubic',
+    // His line is read brown too: the sheet paints the inner part of the line round his far ear in his band's brown, inside 1 px of ink.
+    line: 'brown',
     ...v.marked,
     parts: {
       face: { seeds: [v.face], clip: wide(y0, v.chin.row), as: 'none' },
