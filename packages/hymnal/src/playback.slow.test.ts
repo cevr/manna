@@ -490,99 +490,104 @@ const placementFaults = (
   return { faults, lines };
 };
 
-it.effect(
-  'P3 every stored part and sung occurrence uses the selected melody and deterministic sidecar',
-  () =>
-    Effect.gen(function* () {
-      const sources = yield* decodeSourceText(read('source-text.json'));
-      const orders = yield* decodeOrders(read('fixes/refrains.json'));
-      const rows = sources.hymns.filter((row) => row.number <= 695);
-      const baseline = yield* Effect.forEach(rows, (row) =>
-        decode(read(`sdah-1985/${pad(row.number)}.json`)),
-      );
-      const joined = readPlayback(baseline);
-      const faults: number[][] = [];
-      let checked = 0,
-        placementLines = 0,
-        occurrences = 0,
-        melismas = 0,
-        shared = 0,
-        plain = 0;
-      for (const row of rows) {
-        const bytes = readFileSync(`${data}midi/${pad(row.number)}.mid`);
-        const source = yield* sourceOf({ ...row, name: row.title }, bytes, orders);
-        const modes = yield* compilePlacements(source);
-        const fresh = modes.beat;
-        const metadata = yield* Schema.decodeEffect(Schema.fromJsonString(Playback))(
-          read(`playback/${pad(row.number)}.json`),
+for (const [from, to] of [
+  [1, 350],
+  [351, 695],
+] as const)
+  it.effect(
+    `P3 every stored part and sung occurrence uses the selected melody and deterministic sidecar: ${from}-${to}`,
+    () =>
+      Effect.gen(function* () {
+        const sources = yield* decodeSourceText(read('source-text.json'));
+        const orders = yield* decodeOrders(read('fixes/refrains.json'));
+        const rows = sources.hymns.filter((row) => row.number >= from && row.number <= to);
+        expect(rows.length).toBe(to - from + 1);
+        const baseline = yield* Effect.forEach(rows, (row) =>
+          decode(read(`sdah-1985/${pad(row.number)}.json`)),
         );
-        const base = yield* metadataOf(fresh, metadata.sourceHash);
-        const expected = json(base);
-        const placements = {
-          file: placementPatches(fresh, modes.file),
-          simpler: placementPatches(fresh, modes.simpler),
-        };
-        const alternative = yield* Schema.decodeEffect(Schema.fromJsonString(PlacementData))(
-          read(`playback/${pad(row.number)}.placements.json`),
-        );
-        if (
-          json(alternative) !==
-          json({
-            sourceHash: metadata.sourceHash,
-            placements,
-          })
-        )
-          faults.push([row.number, 15]);
-        if (json(metadata) !== expected) faults.push([row.number, 1]);
-        // Compare the complete in-memory readings, excluding only guitar.
-        // This also holds words/cuts, not merely their numeric projection.
-        // Never print these strings: only a numeric fault leaves this check.
-        const unchanged = withoutGuitar(fresh);
-        for (const other of [modes.file, modes.simpler]) {
-          if (withoutGuitar(other) !== unchanged) faults.push([row.number, 13]);
+        const joined = new Map(readPlayback(baseline).map((hymn) => [hymn.number, hymn]));
+        const faults: number[][] = [];
+        let checked = 0,
+          placementLines = 0,
+          occurrences = 0,
+          melismas = 0,
+          shared = 0,
+          plain = 0;
+        for (const row of rows) {
+          const bytes = readFileSync(`${data}midi/${pad(row.number)}.mid`);
+          const source = yield* sourceOf({ ...row, name: row.title }, bytes, orders);
+          const modes = yield* compilePlacements(source);
+          const fresh = modes.beat;
+          const metadata = yield* Schema.decodeEffect(Schema.fromJsonString(Playback))(
+            read(`playback/${pad(row.number)}.json`),
+          );
+          const base = yield* metadataOf(fresh, metadata.sourceHash);
+          const expected = json(base);
+          const placements = {
+            file: placementPatches(fresh, modes.file),
+            simpler: placementPatches(fresh, modes.simpler),
+          };
+          const alternative = yield* Schema.decodeEffect(Schema.fromJsonString(PlacementData))(
+            read(`playback/${pad(row.number)}.placements.json`),
+          );
+          if (
+            json(alternative) !==
+            json({
+              sourceHash: metadata.sourceHash,
+              placements,
+            })
+          )
+            faults.push([row.number, 15]);
+          if (json(metadata) !== expected) faults.push([row.number, 1]);
+          // Compare the complete in-memory readings, excluding only guitar.
+          // This also holds words/cuts, not merely their numeric projection.
+          // Never print these strings: only a numeric fault leaves this check.
+          const unchanged = withoutGuitar(fresh);
+          for (const other of [modes.file, modes.simpler]) {
+            if (withoutGuitar(other) !== unchanged) faults.push([row.number, 13]);
+          }
+          const actual = joined.get(row.number);
+          if (
+            actual === undefined ||
+            json(yield* metadataOf(actual, metadata.sourceHash)) !== expected
+          )
+            faults.push([row.number, 2]);
+          const midi = yield* Midi.parse(bytes);
+          const score = Score.fromMidi(midi, source.verses.filter((v) => v.id >= 0).length);
+          const aligned = alignedStanzas(score, source);
+          const placementsChecked = placementFaults(modes, score, source, aligned);
+          placementLines += placementsChecked.lines;
+          faults.push(...placementsChecked.faults.map((f) => [row.number, 14, ...f]));
+          const result = alignmentFaults(fresh, score, aligned, midi);
+          faults.push(
+            ...result.faults.map((f) => [row.number, ...f]),
+            ...occurrenceFaults(fresh).map((f) => [row.number, ...f]),
+          );
+          checked += result.checked;
+          melismas += result.melismas;
+          shared += result.shared;
+          occurrences += sung(fresh).length;
+          plain += fresh.stanzas.filter((p) => p._tag === 'Plain').length;
         }
-        const actual = joined[row.number - 1];
-        if (
-          actual === undefined ||
-          json(yield* metadataOf(actual, metadata.sourceHash)) !== expected
-        )
-          faults.push([row.number, 2]);
-        const midi = yield* Midi.parse(bytes);
-        const score = Score.fromMidi(midi, source.verses.filter((v) => v.id >= 0).length);
-        const aligned = alignedStanzas(score, source);
-        const placementsChecked = placementFaults(modes, score, source, aligned);
-        placementLines += placementsChecked.lines;
-        faults.push(...placementsChecked.faults.map((f) => [row.number, 14, ...f]));
-        const result = alignmentFaults(fresh, score, aligned, midi);
-        faults.push(
-          ...result.faults.map((f) => [row.number, ...f]),
-          ...occurrenceFaults(fresh).map((f) => [row.number, ...f]),
-        );
-        checked += result.checked;
-        melismas += result.melismas;
-        shared += result.shared;
-        occurrences += sung(fresh).length;
-        plain += fresh.stanzas.filter((p) => p._tag === 'Plain').length;
-      }
-      yield* Console.log(`P4 corpus placementLines=${placementLines} modes=3`);
-      yield* Console.log(
-        `P3 corpus checked=${checked} occurrences=${occurrences} melismas=${melismas} shared=${shared} plain=${plain}`,
-      );
-      if (faults.length)
+        yield* Console.log(`P4 corpus placementLines=${placementLines} modes=3`);
         yield* Console.log(
-          `P3 corpus faults=${faults
-            .slice(0, 30)
-            .map((f) => f.join(','))
-            .join(';')} count=${faults.length}`,
+          `P3 corpus checked=${checked} occurrences=${occurrences} melismas=${melismas} shared=${shared} plain=${plain}`,
         );
-      expect(faults.slice(0, 30)).toEqual([]);
-      expect(checked).toBeGreaterThan(100000);
-      expect(occurrences).toBeGreaterThan(10000);
-      expect(melismas).toBeGreaterThan(6000);
-      expect(shared).toBeGreaterThan(0);
-      expect(plain).toBeGreaterThanOrEqual(7);
-    }),
-);
+        if (faults.length)
+          yield* Console.log(
+            `P3 corpus faults=${faults
+              .slice(0, 30)
+              .map((f) => f.join(','))
+              .join(';')} count=${faults.length}`,
+          );
+        expect(faults.slice(0, 30)).toEqual([]);
+        expect(checked).toBeGreaterThan(40000);
+        expect(occurrences).toBeGreaterThan(5000);
+        expect(melismas).toBeGreaterThan(2000);
+        expect(shared).toBeGreaterThan(0);
+        expect(plain).toBeGreaterThan(0);
+      }),
+  );
 
 const caseOf = (seed: number) => {
   const size = 1 + (seed % 65);

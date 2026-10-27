@@ -35,7 +35,7 @@
  * slot of the window shows a key, in order.
  *
  * The name keeps one line at every text size, whole: its column is as wide
- * as the widest dial name (`WIDEST`) drawn at the text size showing, and
+ * as the widest dial name drawn at the text size showing, and
  * `TITLE` points at the least, so the notches of every dial line up and
  * the column follows a change of the system's text size as the text does.
  * Every text in the row grows with Dynamic Type at most `MOST_SCALE` times,
@@ -147,10 +147,6 @@ const TITLES = { key: 'KEY', capo: 'CAPO', size: 'SIZE', placement: 'PLACE' } sa
   DialName,
   string
 >;
-const WIDEST = Object.values(TITLES).reduce((widest, title) => {
-  if (title.length > widest.length) return title;
-  return widest;
-}, '');
 
 function Dial<A>(props: DialProps<A>) {
   const { dial, label, title, stops, index, wrap, said, drawStop, testID, resets = 0 } = props;
@@ -362,13 +358,18 @@ function Dial<A>(props: DialProps<A>) {
           style={styles.dial}
         >
           <View style={styles.titleColumn} aria-hidden>
-            <Text
-              style={[styles.title, styles.sizer]}
-              numberOfLines={1}
-              maxFontSizeMultiplier={MOST_SCALE}
-            >
-              {WIDEST}
-            </Text>
+            <View style={styles.sizer}>
+              {Object.values(TITLES).map((name) => (
+                <Text
+                  key={name}
+                  style={styles.title}
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={MOST_SCALE}
+                >
+                  {name}
+                </Text>
+              ))}
+            </View>
             <Text
               style={[styles.title, styles.name]}
               numberOfLines={1}
@@ -479,7 +480,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   titleColumn: { minWidth: TITLE, justifyContent: 'center' },
-  sizer: { opacity: 0 },
+  sizer: { opacity: 0, height: 0 },
   name: { position: 'absolute', left: 0 },
   title: {
     paddingLeft: 16,

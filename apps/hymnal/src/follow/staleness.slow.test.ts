@@ -182,7 +182,7 @@ const scratchLayer = Layer.effect(Scratch)(
       ),
       (path) =>
         Effect.sync(() => {
-          const code = Bun.spawnSync(['trash', path]).exitCode;
+          const code = Bun.spawnSync(['/bin/rm', '-rf', path]).exitCode;
           if (code !== 0) process.exitCode = 1;
           console.log(`P3 scratch released=${Number(code === 0)}`);
         }),
@@ -224,7 +224,7 @@ test('filtered stale-input runs release their scratch directory', () =>
         Effect.sync(() => mkdtempSync(resolve(tmpdir(), 'hymnal-staleness-parent-'))),
         (path) =>
           Effect.sync(() => {
-            if (Bun.spawnSync(['trash', path]).exitCode !== 0) process.exitCode = 1;
+            if (Bun.spawnSync(['/bin/rm', '-rf', path]).exitCode !== 0) process.exitCode = 1;
           }),
       );
       const child = Bun.spawn(

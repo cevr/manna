@@ -21,7 +21,7 @@ the recording only when it changes the sounding Key.
 ## Sub-features
 
 - `chords-placement-hymn`: the player sheet's named hymn has an adjustable `Chord placement` dial when it has chords, even with no reader mounted. Its visible marks read `Beat`, `Simpler`, `File`; its accessible values read `On the beat`, `Simpler`, `As the file plays`. Turning it sets only that hymn's override.
-- `chords-placement-inherit`: `Use global chord placement` explicitly clears the override. Its pressed state and the adjacent global value show inheritance.
+- `chords-placement-inherit`: `Use global chord placement` explicitly clears the override. Its pressed state on web, selected state on native, and the adjacent global value show inheritance.
 - `chords-placement-playing`: on 373 and 388 with Sound off, changing placement applies the numeric anchors immediately in Simple and Advanced. Playing and elapsed place continue, with no Play, Stop or Seek call. No pale `held-*` node returns.
 - `chords-placement-reset`: pressing `Use global chord placement` or double-tapping the placement dial retires its touch/fling owner. A queued detent from that owner cannot replace the clear.
 - `chords-placement-kept`: after leaving, returning and relaunching, each override stays; another hymn still inherits global. The global row is in `settings.md`.
