@@ -22,7 +22,6 @@ import {
   MODEL_FINGERPRINT,
   VectorManifest,
 } from '@manna/core/search';
-import { layerBunEmbedder } from '@manna/core/search/bun';
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import {
   Cause,
@@ -39,6 +38,7 @@ import { Command, Flag } from 'effect/cli';
 
 import { clearCheckpoint, embedAllResumable } from './checkpoint.js';
 import { bookRanges, paragraphIds } from './emit.js';
+import { vectorBuildEmbedder } from './paths.js';
 import { readVectorSource } from './source.js';
 
 const repoRoot = new URL('../../../../', import.meta.url).pathname.replace(/\/$/u, '');
@@ -167,7 +167,7 @@ const buildVectors = Command.make('build:vectors', { out, writingsDb, limit, jso
         `  Search will find only these paragraphs. Use --limit 0 for a release.`,
       );
     }
-  }).pipe(Effect.provide(layerBunEmbedder)),
+  }).pipe(Effect.provide(vectorBuildEmbedder)),
 );
 
 const cli = Command.run(buildVectors, { version: '1.0.0' });

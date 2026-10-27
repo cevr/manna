@@ -1,5 +1,7 @@
 import { Command } from 'effect/cli';
-import { Console, Effect, References } from 'effect';
+import { BunServices } from '@effect/platform-bun';
+import { layerWebsterBun } from '@manna/core/webster/bun';
+import { Console, Effect, Layer, References } from 'effect';
 
 import { concordance, verse } from './bible.js';
 import { check } from './check.js';
@@ -18,6 +20,7 @@ import { study } from './study.js';
 import { sync } from './sync.js';
 import { topics } from './topics.js';
 import { wiki } from './wiki.js';
+import { webster } from './webster.js';
 import { cliOptions, CliOptions } from '../services/cli-options.js';
 import { CliProcessLive } from '../services/process.js';
 
@@ -37,6 +40,7 @@ Commands:
   slides            Build presentation decks
   handbook          Generate handbook studies
   hymns             Search hymns
+  webster           Look up Webster 1828 words or search definitions
   notes             Export and organize Apple Notes
   export            Export generated output
   init              Initialize local data
@@ -57,6 +61,7 @@ export const rootCommand = Command.make('manna', cliOptions, () => Console.log(r
     slides,
     handbook,
     hymns,
+    webster.pipe(Command.provide(() => layerWebsterBun().pipe(Layer.provide(BunServices.layer)))),
     messages,
     notes,
     sabbathSchool,

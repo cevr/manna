@@ -16,7 +16,7 @@
  */
 
 import * as Chord from '@manna/hymnal/chord';
-import { Match, Option } from 'effect';
+import { Option } from 'effect';
 import { createContext, memo, use } from 'react';
 import {
   Pressable,
@@ -30,7 +30,7 @@ import {
 
 import { color } from '~/color';
 import type { Section } from '~/hymns/hymns';
-import type { Box, SectionChords, Word } from '~/hymns/chords';
+import type { Box, SectionChords } from '~/hymns/chords';
 
 import { SyllableLine } from './SyllableWords';
 import { useChordTap } from './ChordSheet';
@@ -60,35 +60,24 @@ export function ChordNotice({
 
 /**
  * A section's lines under their chords; `p` is its place on the page, from 1.
- * Both alignment levels draw the compiled anchors as boxes. `syllables`
- * carries the shown chord style's anchors for a line-level section, whose
- * `shown.lines` contains only the flattened chord sequence.
- *
- * A line whose first syllable carries no chord shows the chord held over
- * from the line before (`shown.held`), muted: over its first syllable
- * (`held-p-l-1`).
+ * Both alignment levels draw the compiled anchors as boxes. Only chord
+ * changes show; a chordless opening keeps an empty chord row.
  */
 export const ChordLines = memo(function ChordLines({
   section,
   shown,
-  syllables,
   p,
   first,
   style,
 }: {
   readonly section: Section;
   readonly shown: Exclude<SectionChords, { readonly _tag: 'Words' }>;
-  /** Each line's words as syllables. */
-  readonly syllables: ReadonlyArray<ReadonlyArray<Word>>;
   readonly p: number;
   /** The section's first line's place in the hymn as sung, from 0. */
   readonly first: number;
   readonly style: StyleProp<TextStyle>;
 }) {
-  const lines = Match.value(shown).pipe(
-    Match.tagsExhaustive({ Syllables: (part) => part.lines, Line: () => syllables }),
-  );
-  return lines.map((words, l) => (
+  return shown.lines.map((words, l) => (
     <SyllableLine
       key={l}
       words={words}
@@ -96,12 +85,7 @@ export const ChordLines = memo(function ChordLines({
       at={`${p}-${l + 1}`}
       index={first + l}
       style={style}
-      over={Option.some(
-        Option.match(Option.flatten(Option.fromUndefinedOr(shown.held[l])), {
-          onNone: () => boxChords,
-          onSome: (chord) => heldOver(chord, `${p}-${l + 1}-1`),
-        }),
-      )}
+      over={Option.some(boxChords)}
     />
   ));
 });
@@ -110,12 +94,6 @@ export const ChordLines = memo(function ChordLines({
 const boxChords = (box: Box, place: string) => (
   <BoxChords chords={box.chords} id={`chord-${place}`} />
 );
-
-/** A box's chords, and `held` over the box at `first` (`held-p-l-1`), which carries none. */
-const heldOver = (held: Chord.Chord, first: string) => (box: Box, place: string) => {
-  if (place !== first || box.chords.length > 0) return boxChords(box, place);
-  return <ChordText chords={[held]} tone="held" testID={`held-${place}`} />;
-};
 
 /**
  * A box's chords, or a row of no chord: a bare space as tall as a chord row,
@@ -143,8 +121,7 @@ function BoxChords({
 }
 
 /**
- * Chords in order, spelled in the played key: a change in the chord colour, a
- * chord held over from the line before (`tone` `held`) muted. Where there
+ * Chord changes in order, spelled in the played key and chord colour. Where there
  * are chords, a tap opens the sheet of how to play them (`ChordSheet.tsx`):
  * the text is a button with no padding of its own, its target grown to 44
  * points tall by its hit slop alone, so the row it sits in does not move.
@@ -152,21 +129,15 @@ function BoxChords({
 function ChordText({
   chords,
   testID,
-  tone = 'change',
 }: {
   readonly chords: ReadonlyArray<Chord.Chord>;
   readonly testID: string;
-  readonly tone?: 'change' | 'held';
 }) {
   const key = use(PlayedKey);
   const text = usePageText();
   const tap = useChordTap();
   const names = chords.map((chord) => Chord.format(chord, key)).join(' ');
-  const style = [
-    styles.chord,
-    text.chords,
-    { color: { change: color.chord, held: color.muted }[tone] },
-  ];
+  const style = [styles.chord, text.chords, { color: color.chord }];
   if (chords.length === 0)
     return (
       <Text testID={testID} style={style} dynamicTypeRamp="subheadline">
@@ -182,7 +153,7 @@ function ChordText({
     <Pressable
       testID={testID}
       role="button"
-      aria-label={{ change: names, held: `${names}, held over` }[tone]}
+      aria-label={names}
       accessibilityHint="Shows how to play it"
       hitSlop={chordSlop(text.chords.lineHeight ?? CHORD_LINE)}
       onPress={() => tap(chords)}

@@ -1,6 +1,18 @@
+import * as InMemory from '@alchemy.run/domain/InMemory';
 import { BunServices } from '@effect/platform-bun';
 import { describe, expect, it } from 'effect-bun-test';
-import { Context, Deferred, Duration, Effect, Fiber, Layer, Logger, Option, Scope } from 'effect';
+import {
+  Clock,
+  Context,
+  Deferred,
+  Duration,
+  Effect,
+  Fiber,
+  Layer,
+  Logger,
+  Option,
+  Scope,
+} from 'effect';
 import { TestClock } from 'effect/testing';
 import { Headers, HttpServerRequest, HttpServerResponse } from 'effect/http';
 
@@ -11,14 +23,22 @@ import { Assets } from '../worker/assets.ts';
 import { CACHE, respond } from '../worker/respond.ts';
 import { Address } from './address.ts';
 import { Addresses } from './addresses.ts';
-import { Background } from './background.ts';
+import { Background, Held, layerHeld } from './background.ts';
 import { deliver } from './deliver.ts';
 import { layerOf } from './films.ts';
 import { layerTest, Settle, TEST_ADMIN_TOKEN } from './local.ts';
-import { Mailbox, Mailer, MailRefused, MailUnavailable } from './mailer.ts';
+import {
+  layerMemory as mailerMemory,
+  Mailbox,
+  Mailer,
+  MailRefused,
+  MailUnavailable,
+} from './mailer.ts';
+import { layerModel, layerTables } from './model.ts';
 import { MAIL_PAGES, SIGNUP_FIELDS } from './paths.ts';
 import { Queued } from './queue.ts';
 import { RosterTable } from './roster.ts';
+import { layerSqlite } from './sql-sqlite.ts';
 import { SIGNUPS } from './throttle.ts';
 import { Tokens } from './tokens.ts';
 
@@ -87,6 +107,49 @@ const test = it.effect.layer(
     Layer.provide(BunServices.layer),
   ),
 );
+
+/** The real model, built with the signing port under test, over fresh in-memory tables. */
+const modelWithTokens = (tokens: Tokens['Service']) =>
+  Layer.unwrap(
+    Clock.clockWith((clock) =>
+      Effect.sync(() => {
+        const platform = InMemory.make({
+          manual: true,
+          now: () => clock.currentTimeMillisUnsafe(),
+        });
+        const live = Clock.Clock.defaultValue();
+        const settling = Layer.effect(
+          Settle,
+          Effect.gen(function* () {
+            const held = yield* Held;
+            return Settle.of({
+              settle: Effect.gen(function* () {
+                yield* held.settle;
+                const until = live.currentTimeMillisUnsafe() + 5000;
+                while (live.currentTimeMillisUnsafe() < until) {
+                  yield* platform.control.drain;
+                  yield* live.sleep(Duration.zero);
+                  if (yield* platform.control.idle) {
+                    expect(platform.control.failures).toEqual([]);
+                    return;
+                  }
+                }
+                return yield* Effect.die(new Error('the signing test model did not settle'));
+              }),
+            });
+          }),
+        );
+        return Layer.merge(layerModel.pipe(Layer.provide(platform.layer)), settling).pipe(
+          Layer.provideMerge(
+            Layer.mergeAll(layerTables, Layer.succeed(Tokens, tokens), mailerMemory, layerHeld),
+          ),
+          Layer.provide(layerSqlite),
+          Layer.provide(BunServices.layer),
+          Layer.fresh,
+        );
+      }),
+    ),
+  );
 
 const call = (path: string, init: RequestInit = {}) =>
   respond(HttpServerRequest.fromWeb(new Request(`${ORIGIN}${path}`, init)));
@@ -195,35 +258,56 @@ describe('signing up', () => {
       expect(sent[1]?.to).toBe(Address.make('ben@example.com'));
     }));
 
-  test('a sign-up is answered before its work runs, and the work then sends the letter', () =>
+  test('a sign-up is answered while its background work is already running', () =>
     Effect.gen(function* () {
-      // As on Cloudflare, the work starts at once, beside the answer, and the
-      // model's policy sends the letter after it.
+      yield* joined(ANN);
+      const addresses = yield* Addresses;
       const scope = yield* Scope.Scope;
       const after = yield* Settle;
-      const gate = yield* Deferred.make<boolean>();
-      const done = yield* Deferred.make<boolean>();
-      const eager = Background.of({
-        run: (work) =>
-          Effect.asVoid(
-            Effect.forkIn(
-              Deferred.await(gate).pipe(
-                Effect.andThen(work),
-                Effect.andThen(after.settle),
-                Effect.andThen(Deferred.succeed(done, true)),
-              ),
-              scope,
+      for (const [address, expectedLetters] of [
+        [ANN, 1],
+        ['ben@example.com', 2],
+      ] as const) {
+        const entered = yield* Deferred.make<boolean>();
+        const release = yield* Deferred.make<boolean>();
+        const done = yield* Deferred.make<boolean>();
+        const keeping = Addresses.of({
+          ...addresses,
+          keep: (...args) =>
+            Deferred.succeed(entered, true).pipe(
+              Effect.andThen(Deferred.await(release)),
+              Effect.andThen(addresses.keep(...args)),
             ),
-          ),
-      });
-      const response = yield* postSignUp({ email: ANN }).pipe(
-        Effect.provideService(Background, eager),
-      );
-      expect(header(response, 'location')).toBe(MAIL_PAGES.check);
-      expect(yield* letters).toHaveLength(0);
-      yield* Deferred.succeed(gate, true);
-      yield* Deferred.await(done);
-      expect(yield* letters).toHaveLength(1);
+        });
+        // The request's work starts now. The model's mail policy runs when settled.
+        const eager = Background.of({
+          run: (work) =>
+            Effect.asVoid(
+              Effect.forkIn(
+                work.pipe(
+                  Effect.andThen(after.settle),
+                  Effect.andThen(Deferred.succeed(done, true)),
+                ),
+                scope,
+                { startImmediately: true },
+              ),
+            ),
+        });
+        const answering = yield* postSignUp({ email: address }).pipe(
+          Effect.provideService(Background, eager),
+          Effect.provideService(Addresses, keeping),
+          Effect.forkChild,
+        );
+        yield* Deferred.await(entered);
+        const response = yield* Fiber.join(answering);
+        expect(response.status).toBe(303);
+        expect(header(response, 'location')).toBe(MAIL_PAGES.check);
+        expect(yield* Deferred.isDone(done)).toBe(false);
+        expect(yield* letters).toHaveLength(1);
+        yield* Deferred.succeed(release, true);
+        yield* Deferred.await(done);
+        expect(yield* letters).toHaveLength(expectedLetters);
+      }
     }).pipe(Effect.scoped));
 
   test('a sign-up whose work runs after the address leaves sends a link that confirms', () =>
@@ -314,6 +398,43 @@ describe('signing up', () => {
       expect(yield* letters).toHaveLength(0);
       yield* signUp({ email: ANN });
       expect(yield* letters).toHaveLength(1);
+    }));
+
+  test('a confirm letter that cannot be made is logged, and the next try sends it', () =>
+    Effect.gen(function* () {
+      const tokens = yield* Tokens;
+      const heard = yield* Heard;
+      const subscriber = yield* tokens.idOf(Address.make('ann@example.com'));
+      let attempts = 0;
+      const signing = Tokens.of({
+        ...tokens,
+        sign: (token) =>
+          Effect.suspend(() => {
+            attempts += 1;
+            if (attempts === 1) return Effect.die('private signing payload ann@example.com');
+            return tokens.sign(token);
+          }),
+      });
+      yield* Effect.gen(function* () {
+        const first = yield* signUp({ email: ANN });
+        expect(first.status).toBe(303);
+        expect(attempts).toBe(1);
+        expect(yield* letters).toHaveLength(0);
+        expect(heard.lines().filter((line) => line.includes('subscribe.unsent'))).toEqual([
+          `[mail] subscribe.unsent subscriber=${subscriber} reason=defect`,
+        ]);
+        expect(heard.lines().join('\n')).not.toContain('private signing payload');
+        expect(heard.lines().join('\n').toLowerCase()).not.toContain('ann@example.com');
+        const again = yield* signUp({ email: ANN });
+        expect(again.status).toBe(303);
+        expect(attempts).toBe(2);
+        const sent = yield* letters;
+        expect(sent).toHaveLength(1);
+        const confirmed = yield* pressConfirm(confirmLinkIn(sent[0]?.text ?? ''));
+        expect(header(confirmed, 'location')).toBe(MAIL_PAGES.confirmed);
+        expect((yield* counts).confirmed).toBe(1);
+        // oxlint-disable-next-line effect/noInlineProvide -- This test boundary rebuilds the model with the one-shot signing port before any request runs.
+      }).pipe(Effect.provide(modelWithTokens(signing)));
     }));
 });
 

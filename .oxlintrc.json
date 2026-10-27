@@ -22,6 +22,17 @@
     ],
     "import/no-duplicates": "error",
     "import/no-unassigned-import": ["error", { "allow": ["**/*.css", "**/*.scss"] }],
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["**/core/src/**", "**/hymnal/scripts/**"],
+            "message": "Use declared package dependencies and public exports across package boundaries."
+          }
+        ]
+      }
+    ],
     "node/no-process-env": "error",
     "no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
     "no-underscore-dangle": "off",
@@ -258,6 +269,10 @@
           {
             "patterns": [
               {
+                "group": ["**/core/src/**", "**/hymnal/scripts/**"],
+                "message": "Use declared package dependencies and public exports across package boundaries."
+              },
+              {
                 "group": [
                   "node:*",
                   "bun:*",
@@ -284,7 +299,17 @@
         "**/packages/core/src/**/*.spec.tsx"
       ],
       "rules": {
-        "no-restricted-imports": "off"
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["**/core/src/**", "**/hymnal/scripts/**"],
+                "message": "Use declared package dependencies and public exports across package boundaries."
+              }
+            ]
+          }
+        ]
       }
     },
     {
@@ -587,6 +612,10 @@
           {
             "patterns": [
               {
+                "group": ["**/core/src/**", "**/hymnal/scripts/**"],
+                "message": "Use declared package dependencies and public exports across package boundaries."
+              },
+              {
                 "regex": "[?&]inline\\b",
                 "message": "an import inlined into the file that imports it (?inline): an image inside another file has no bytes of its own an approval can hold, and the site's content policy (img-src 'self') has the browser refuse it. Import the file's URL, which the build emits as a file of its own."
               }
@@ -703,6 +732,12 @@
                 "name": "effect/cli",
                 "message": "import the module by its own path (`import * as Command from 'effect/cli/Command'`): the barrel loads all 12 of its modules."
               }
+            ],
+            "patterns": [
+              {
+                "group": ["**/core/src/**", "**/hymnal/scripts/**"],
+                "message": "Use declared package dependencies and public exports across package boundaries."
+              }
             ]
           }
         ]
@@ -737,6 +772,10 @@
               }
             ],
             "patterns": [
+              {
+                "group": ["**/core/src/**", "**/hymnal/scripts/**"],
+                "message": "Use declared package dependencies and public exports across package boundaries."
+              },
               {
                 "group": [
                   "**/canvas/**",
@@ -809,6 +848,10 @@
                 "message": "the engine never imports the player, tools, lab or the host's adapters (browser): they import it (packages/film/README.md, the purity rule)."
               },
               {
+                "group": ["**/core/src/**", "**/hymnal/scripts/**"],
+                "message": "Use declared package dependencies and public exports across package boundaries."
+              },
+              {
                 "group": ["**/rive/**", "**/rive"],
                 "message": "the engine declares a rig and draws it (canvas/rive.ts); it never imports the Rive loader or its runtimes (src/rive/), which load a film's rigs for the player and the tools (packages/film/README.md, the purity rule)."
               },
@@ -878,6 +921,10 @@
                 "message": "the engine never imports the player, tools, lab or the host's adapters (browser): they import it (packages/film/README.md, the purity rule)."
               },
               {
+                "group": ["**/core/src/**", "**/hymnal/scripts/**"],
+                "message": "Use declared package dependencies and public exports across package boundaries."
+              },
+              {
                 "group": [
                   "**/style/**",
                   "**/style",
@@ -944,6 +991,10 @@
                 "message": "the Rive loader and its runtimes never import the player, tools, lab, the pages' commands or the host's adapters (browser): the player and the tools import them (packages/film/README.md, the purity rule)."
               },
               {
+                "group": ["**/core/src/**", "**/hymnal/scripts/**"],
+                "message": "Use declared package dependencies and public exports across package boundaries."
+              },
+              {
                 "group": [
                   "**/style/**",
                   "**/style",
@@ -1008,6 +1059,10 @@
                   "@manna/film/ask-server"
                 ],
                 "message": "the house look never imports the player, tools, lab, the pages' commands, the Rive loader (src/rive/) or the host's adapters (browser): they may import it (packages/film/README.md, the purity rule)."
+              },
+              {
+                "group": ["**/core/src/**", "**/hymnal/scripts/**"],
+                "message": "Use declared package dependencies and public exports across package boundaries."
               }
             ]
           }
@@ -1060,6 +1115,10 @@
                   "@manna/film/ask-server"
                 ],
                 "message": "the engine never imports the player, tools or lab: they import it (packages/film/README.md, the purity rule)."
+              },
+              {
+                "group": ["**/core/src/**", "**/hymnal/scripts/**"],
+                "message": "Use declared package dependencies and public exports across package boundaries."
               }
             ]
           }
@@ -1113,6 +1172,10 @@
                   "!**/rive/runtime-browser.ts"
                 ],
                 "message": "a page reaches the host through its services: only a page's mount builds the host (`BrowserHost`, browser/host-browser.ts), and the stores are storage-browser.ts's."
+              },
+              {
+                "group": ["**/core/src/**", "**/hymnal/scripts/**"],
+                "message": "Use declared package dependencies and public exports across package boundaries."
               }
             ]
           }
@@ -1165,6 +1228,10 @@
               {
                 "group": ["**/packages/film/src/**"],
                 "message": "an app reaches the film through its package exports (`@manna/film/rive`, `@manna/film/canvas`), never a path into its source: the exports are the film's public modules (packages/film/README.md, the purity rule)."
+              },
+              {
+                "group": ["**/core/src/**", "**/hymnal/scripts/**"],
+                "message": "Use declared package dependencies and public exports across package boundaries."
               }
             ]
           }
@@ -1185,6 +1252,12 @@
         "no-restricted-imports": [
           "error",
           {
+            "patterns": [
+              {
+                "group": ["**/core/src/**", "**/hymnal/scripts/**"],
+                "message": "Use declared package dependencies and public exports across package boundaries."
+              }
+            ],
             "paths": [
               {
                 "name": "@effect/platform-bun",
@@ -1251,6 +1324,10 @@
                   "@manna/film/ask-server"
                 ],
                 "message": "the pages' commands never import the player, the tools or the lab: they register their commands with it (packages/film/README.md, the purity rule)."
+              },
+              {
+                "group": ["**/core/src/**", "**/hymnal/scripts/**"],
+                "message": "Use declared package dependencies and public exports across package boundaries."
               }
             ]
           }
@@ -1613,6 +1690,10 @@
                   "@manna/film/ask-server"
                 ],
                 "message": "the host's adapters never import the player, the tools or the lab: the pages import them (packages/film/README.md, the purity rule)."
+              },
+              {
+                "group": ["**/core/src/**", "**/hymnal/scripts/**"],
+                "message": "Use declared package dependencies and public exports across package boundaries."
               }
             ]
           }
@@ -1969,6 +2050,10 @@
                   "**/lab/**"
                 ],
                 "message": "@manna/ui is a leaf of plain DOM primitives: no Effect, no film engine, no lab."
+              },
+              {
+                "group": ["**/core/src/**", "**/hymnal/scripts/**"],
+                "message": "Use declared package dependencies and public exports across package boundaries."
               }
             ]
           }
@@ -2010,6 +2095,12 @@
         "no-restricted-imports": [
           "error",
           {
+            "patterns": [
+              {
+                "group": ["**/core/src/**", "**/hymnal/scripts/**"],
+                "message": "Use declared package dependencies and public exports across package boundaries."
+              }
+            ],
             "paths": [
               {
                 "name": "@effect/platform-bun",

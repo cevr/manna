@@ -5,9 +5,15 @@ import { app } from './vite/app';
 import { hymnal } from './vite/hymnal';
 
 export default defineConfig({
-  // The web dev client loads Reanimated from its source, which imports a CommonJS script for its
-  // default export; prebundled, the script has one, so the layout's route loads (D3).
-  optimizeDeps: { include: ['react-native-reanimated/scripts/validate-worklets-version'] },
+  // Gesture Handler probes Reanimated's TSX source entry. Keep that graph and its nested CommonJS
+  // helpers in the web optimizer; the explicit include also invalidates existing optimizer caches.
+  optimizeDeps: {
+    extensions: ['.tsx'],
+    include: [
+      'react-native-reanimated/scripts/validate-worklets-version',
+      'react-native-reanimated/src/createAnimatedComponent/AnimatedComponent',
+    ],
+  },
   plugins: [
     hymnal(),
     one({

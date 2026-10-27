@@ -1,9 +1,9 @@
 /**
  * What the compiler is given for each hymn, built one way for the compile
  * script and for the test that compiles every hymn fresh: the row's title
- * and verses from hymnal.db, the MIDI file's bytes, why it is held back (if
+ * and verses from source-text.json, the MIDI file's bytes, why it is held back (if
  * it is), and where its refrain is sung (`data/fixes/refrains.json`, read
- * off each refrain hymn's page: hymnal.db cannot say it). Every refrain hymn
+ * off each refrain hymn's page: source text cannot say it). Every refrain hymn
  * is listed there, and only those: a refrain with no place, or a place for a
  * hymn with no refrain, is refused, never filled with a default.
  */

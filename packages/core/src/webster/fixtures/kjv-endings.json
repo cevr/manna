@@ -1,0 +1,7832 @@
+{
+  "source": "packages/core/assets/kjv.json",
+  "sourceSha256": "1c5416ad800be6cb7443d24ae298e7bfd8652ffa2e673ed3a5a3b392407f5ded",
+  "verses": 31102,
+  "tokenPattern": "[a-z]+(?:['’-][a-z]+)*",
+  "suffixForms": 962,
+  "extraForms": ["art", "breast", "dost", "doth", "hast", "hath", "saith", "wast"],
+  "verbSourceExceptions": {
+    "water": "Same-word noun; the verb entry is absent.",
+    "haste": "Same-word noun; the verb entry is absent.",
+    "sorrow": "Same-word noun with verbal glosses and examples.",
+    "smooth": "Same-word adjective with verbal senses.",
+    "drop": "Same-word noun; the verb entry is absent.",
+    "shall": "Auxiliary explained in prose without a part-of-speech label.",
+    "enquire": "Cross-reference to inquire and its derivatives."
+  },
+  "forms": [
+    {
+      "form": "abhorrest",
+      "frequency": 2,
+      "lemma": "abhor",
+      "canonical": "abhor",
+      "kind": "verb",
+      "reference": "Isaiah 7:16"
+    },
+    {
+      "form": "abhorreth",
+      "frequency": 5,
+      "lemma": "abhor",
+      "canonical": "abhor",
+      "kind": "verb",
+      "reference": "Job 33:20"
+    },
+    {
+      "form": "abideth",
+      "frequency": 30,
+      "lemma": "abide",
+      "canonical": "abide",
+      "kind": "verb",
+      "reference": "Numbers 31:23"
+    },
+    {
+      "form": "abodest",
+      "frequency": 1,
+      "lemma": "abide",
+      "canonical": "abide",
+      "kind": "verb",
+      "reference": "Judges 5:16"
+    },
+    {
+      "form": "aboundeth",
+      "frequency": 3,
+      "lemma": "abound",
+      "canonical": "abound",
+      "kind": "verb",
+      "reference": "Proverbs 29:22"
+    },
+    {
+      "form": "acceptest",
+      "frequency": 1,
+      "lemma": "accept",
+      "canonical": "accept",
+      "kind": "verb",
+      "reference": "Luke 20:21"
+    },
+    {
+      "form": "accepteth",
+      "frequency": 4,
+      "lemma": "accept",
+      "canonical": "accept",
+      "kind": "verb",
+      "reference": "Job 34:19"
+    },
+    {
+      "form": "accuseth",
+      "frequency": 1,
+      "lemma": "accuse",
+      "canonical": "accuse",
+      "kind": "verb",
+      "reference": "John 5:45"
+    },
+    {
+      "form": "acknowledgeth",
+      "frequency": 1,
+      "lemma": "acknowledge",
+      "canonical": "acknowledge",
+      "kind": "verb",
+      "reference": "1 John 2:23"
+    },
+    {
+      "form": "addeth",
+      "frequency": 4,
+      "lemma": "add",
+      "canonical": "add",
+      "kind": "verb",
+      "reference": "Job 34:37"
+    },
+    {
+      "form": "adorneth",
+      "frequency": 1,
+      "lemma": "adorn",
+      "canonical": "adorn",
+      "kind": "verb",
+      "reference": "Isaiah 61:10"
+    },
+    {
+      "form": "advantageth",
+      "frequency": 1,
+      "lemma": "advantage",
+      "canonical": "advantage",
+      "kind": "verb",
+      "reference": "1 Corinthians 15:32"
+    },
+    {
+      "form": "affecteth",
+      "frequency": 1,
+      "lemma": "affect",
+      "canonical": "affect",
+      "kind": "verb",
+      "reference": "Lamentations 3:51"
+    },
+    {
+      "form": "afflictest",
+      "frequency": 1,
+      "lemma": "afflict",
+      "canonical": "afflict",
+      "kind": "verb",
+      "reference": "1 Kings 8:35"
+    },
+    {
+      "form": "agreeth",
+      "frequency": 2,
+      "lemma": "agree",
+      "canonical": "agree",
+      "kind": "verb",
+      "reference": "Mark 14:70"
+    },
+    {
+      "form": "aijeleth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Psalms 22:1",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "aileth",
+      "frequency": 7,
+      "lemma": "ail",
+      "canonical": "ail",
+      "kind": "verb",
+      "reference": "Genesis 21:17"
+    },
+    {
+      "form": "alameth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "1 Chronicles 7:8",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "alemeth",
+      "frequency": 3,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "1 Chronicles 6:60",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "alloweth",
+      "frequency": 1,
+      "lemma": "allow",
+      "canonical": "allow",
+      "kind": "verb",
+      "reference": "Romans 14:22"
+    },
+    {
+      "form": "altereth",
+      "frequency": 2,
+      "lemma": "alter",
+      "canonical": "alter",
+      "kind": "verb",
+      "reference": "Daniel 6:8"
+    },
+    {
+      "form": "anointest",
+      "frequency": 1,
+      "lemma": "anoint",
+      "canonical": "anoint",
+      "kind": "verb",
+      "reference": "Psalms 23:5"
+    },
+    {
+      "form": "answerest",
+      "frequency": 6,
+      "lemma": "answer",
+      "canonical": "answer",
+      "kind": "verb",
+      "reference": "1 Samuel 26:14"
+    },
+    {
+      "form": "answereth",
+      "frequency": 13,
+      "lemma": "answer",
+      "canonical": "answer",
+      "kind": "verb",
+      "reference": "1 Samuel 28:15"
+    },
+    {
+      "form": "appeareth",
+      "frequency": 10,
+      "lemma": "appear",
+      "canonical": "appear",
+      "kind": "verb",
+      "reference": "Leviticus 13:14"
+    },
+    {
+      "form": "appeaseth",
+      "frequency": 1,
+      "lemma": "appease",
+      "canonical": "appease",
+      "kind": "verb",
+      "reference": "Proverbs 15:18"
+    },
+    {
+      "form": "appertaineth",
+      "frequency": 2,
+      "lemma": "appertain",
+      "canonical": "appertain",
+      "kind": "verb",
+      "reference": "Leviticus 6:5"
+    },
+    {
+      "form": "appointeth",
+      "frequency": 1,
+      "lemma": "appoint",
+      "canonical": "appoint",
+      "kind": "verb",
+      "reference": "Daniel 5:21"
+    },
+    {
+      "form": "approacheth",
+      "frequency": 1,
+      "lemma": "approach",
+      "canonical": "approach",
+      "kind": "verb",
+      "reference": "Luke 12:33"
+    },
+    {
+      "form": "approvest",
+      "frequency": 1,
+      "lemma": "approve",
+      "canonical": "approve",
+      "kind": "verb",
+      "reference": "Romans 2:18"
+    },
+    {
+      "form": "approveth",
+      "frequency": 1,
+      "lemma": "approve",
+      "canonical": "approve",
+      "kind": "verb",
+      "reference": "Lamentations 3:36"
+    },
+    {
+      "form": "ariseth",
+      "frequency": 11,
+      "lemma": "arise",
+      "canonical": "arise",
+      "kind": "verb",
+      "reference": "1 Kings 18:44"
+    },
+    {
+      "form": "art",
+      "frequency": 495,
+      "lemma": "art",
+      "canonical": "be",
+      "kind": "exact-inflection",
+      "reference": "Genesis 3:9",
+      "note": "Exact grammar entry is retained; canonical verb is be."
+    },
+    {
+      "form": "ascendeth",
+      "frequency": 2,
+      "lemma": "ascend",
+      "canonical": "ascend",
+      "kind": "verb",
+      "reference": "Revelation 11:7"
+    },
+    {
+      "form": "ashtoreth",
+      "frequency": 3,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "1 Kings 11:5",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "askest",
+      "frequency": 3,
+      "lemma": "ask",
+      "canonical": "ask",
+      "kind": "verb",
+      "reference": "Judges 13:18"
+    },
+    {
+      "form": "asketh",
+      "frequency": 11,
+      "lemma": "ask",
+      "canonical": "ask",
+      "kind": "verb",
+      "reference": "Genesis 32:17"
+    },
+    {
+      "form": "availeth",
+      "frequency": 4,
+      "lemma": "avail",
+      "canonical": "avail",
+      "kind": "verb",
+      "reference": "Esther 5:13"
+    },
+    {
+      "form": "avengeth",
+      "frequency": 2,
+      "lemma": "avenge",
+      "canonical": "avenge",
+      "kind": "verb",
+      "reference": "2 Samuel 22:48"
+    },
+    {
+      "form": "awakest",
+      "frequency": 2,
+      "lemma": "awake",
+      "canonical": "awake",
+      "kind": "verb",
+      "reference": "Psalms 73:20"
+    },
+    {
+      "form": "awaketh",
+      "frequency": 3,
+      "lemma": "awake",
+      "canonical": "awake",
+      "kind": "verb",
+      "reference": "Psalms 73:20"
+    },
+    {
+      "form": "azmaveth",
+      "frequency": 8,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "2 Samuel 23:31",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "backbiteth",
+      "frequency": 1,
+      "lemma": "backbite",
+      "canonical": "backbite",
+      "kind": "verb",
+      "reference": "Psalms 15:3"
+    },
+    {
+      "form": "badest",
+      "frequency": 1,
+      "lemma": "bid",
+      "canonical": "bid",
+      "kind": "verb",
+      "reference": "Genesis 27:19"
+    },
+    {
+      "form": "baketh",
+      "frequency": 1,
+      "lemma": "bake",
+      "canonical": "bake",
+      "kind": "verb",
+      "reference": "Isaiah 44:15"
+    },
+    {
+      "form": "baptizest",
+      "frequency": 1,
+      "lemma": "baptize",
+      "canonical": "baptize",
+      "kind": "verb",
+      "reference": "John 1:25"
+    },
+    {
+      "form": "baptizeth",
+      "frequency": 2,
+      "lemma": "baptize",
+      "canonical": "baptize",
+      "kind": "verb",
+      "reference": "John 1:33"
+    },
+    {
+      "form": "barest",
+      "frequency": 3,
+      "lemma": "bear",
+      "canonical": "bear",
+      "kind": "verb",
+      "reference": "1 Kings 2:26"
+    },
+    {
+      "form": "basest",
+      "frequency": 2,
+      "lemma": "base",
+      "canonical": "base",
+      "kind": "superlative",
+      "reference": "Ezekiel 29:15"
+    },
+    {
+      "form": "bearest",
+      "frequency": 5,
+      "lemma": "bear",
+      "canonical": "bear",
+      "kind": "verb",
+      "reference": "Judges 13:3"
+    },
+    {
+      "form": "beareth",
+      "frequency": 25,
+      "lemma": "bear",
+      "canonical": "bear",
+      "kind": "verb",
+      "reference": "Leviticus 11:25"
+    },
+    {
+      "form": "beatest",
+      "frequency": 2,
+      "lemma": "beat",
+      "canonical": "beat",
+      "kind": "verb",
+      "reference": "Deuteronomy 24:20"
+    },
+    {
+      "form": "beateth",
+      "frequency": 1,
+      "lemma": "beat",
+      "canonical": "beat",
+      "kind": "verb",
+      "reference": "1 Corinthians 9:26"
+    },
+    {
+      "form": "becamest",
+      "frequency": 2,
+      "lemma": "become",
+      "canonical": "become",
+      "kind": "verb",
+      "reference": "1 Chronicles 17:22"
+    },
+    {
+      "form": "becometh",
+      "frequency": 15,
+      "lemma": "become",
+      "canonical": "become",
+      "kind": "verb",
+      "reference": "Psalms 93:5"
+    },
+    {
+      "form": "befalleth",
+      "frequency": 3,
+      "lemma": "befall",
+      "canonical": "befall",
+      "kind": "verb",
+      "reference": "Ecclesiastes 3:19"
+    },
+    {
+      "form": "begettest",
+      "frequency": 2,
+      "lemma": "beget",
+      "canonical": "beget",
+      "kind": "verb",
+      "reference": "Genesis 48:6"
+    },
+    {
+      "form": "begetteth",
+      "frequency": 3,
+      "lemma": "beget",
+      "canonical": "beget",
+      "kind": "verb",
+      "reference": "Proverbs 17:21"
+    },
+    {
+      "form": "beginnest",
+      "frequency": 1,
+      "lemma": "begin",
+      "canonical": "begin",
+      "kind": "verb",
+      "reference": "Deuteronomy 16:9"
+    },
+    {
+      "form": "behaveth",
+      "frequency": 1,
+      "lemma": "behave",
+      "canonical": "behave",
+      "kind": "verb",
+      "reference": "1 Corinthians 7:36"
+    },
+    {
+      "form": "beholdest",
+      "frequency": 4,
+      "lemma": "behold",
+      "canonical": "behold",
+      "kind": "verb",
+      "reference": "Psalms 10:14"
+    },
+    {
+      "form": "beholdeth",
+      "frequency": 4,
+      "lemma": "behold",
+      "canonical": "behold",
+      "kind": "verb",
+      "reference": "Job 24:18"
+    },
+    {
+      "form": "believest",
+      "frequency": 8,
+      "lemma": "believe",
+      "canonical": "believe",
+      "kind": "verb",
+      "reference": "Luke 1:20"
+    },
+    {
+      "form": "believeth",
+      "frequency": 45,
+      "lemma": "believe",
+      "canonical": "believe",
+      "kind": "verb",
+      "reference": "Job 15:22"
+    },
+    {
+      "form": "belongest",
+      "frequency": 1,
+      "lemma": "belong",
+      "canonical": "belong",
+      "kind": "verb",
+      "reference": "1 Samuel 30:13"
+    },
+    {
+      "form": "belongeth",
+      "frequency": 20,
+      "lemma": "belong",
+      "canonical": "belong",
+      "kind": "verb",
+      "reference": "Numbers 8:24"
+    },
+    {
+      "form": "bendeth",
+      "frequency": 2,
+      "lemma": "bend",
+      "canonical": "bend",
+      "kind": "verb",
+      "reference": "Psalms 58:7"
+    },
+    {
+      "form": "benzoheth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "1 Chronicles 4:20",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "bereaveth",
+      "frequency": 1,
+      "lemma": "bereave",
+      "canonical": "bereave",
+      "kind": "verb",
+      "reference": "Lamentations 1:20"
+    },
+    {
+      "form": "best",
+      "frequency": 25,
+      "lemma": "best",
+      "canonical": "best",
+      "kind": "exact",
+      "reference": "Genesis 43:11"
+    },
+    {
+      "form": "beth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Psalms 119:9",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "bethazmaveth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Nehemiah 7:28",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "betrayest",
+      "frequency": 1,
+      "lemma": "betray",
+      "canonical": "betray",
+      "kind": "verb",
+      "reference": "Luke 22:48"
+    },
+    {
+      "form": "betrayeth",
+      "frequency": 3,
+      "lemma": "betray",
+      "canonical": "betray",
+      "kind": "verb",
+      "reference": "Mark 14:42"
+    },
+    {
+      "form": "bewaileth",
+      "frequency": 1,
+      "lemma": "bewail",
+      "canonical": "bewail",
+      "kind": "verb",
+      "reference": "Jeremiah 4:31"
+    },
+    {
+      "form": "bewrayeth",
+      "frequency": 3,
+      "lemma": "bewray",
+      "canonical": "bewray",
+      "kind": "verb",
+      "reference": "Proverbs 27:16"
+    },
+    {
+      "form": "biddeth",
+      "frequency": 1,
+      "lemma": "bid",
+      "canonical": "bid",
+      "kind": "verb",
+      "reference": "2 John 1:11"
+    },
+    {
+      "form": "bindeth",
+      "frequency": 9,
+      "lemma": "bind",
+      "canonical": "bind",
+      "kind": "verb",
+      "reference": "Job 5:18"
+    },
+    {
+      "form": "biteth",
+      "frequency": 2,
+      "lemma": "bite",
+      "canonical": "bite",
+      "kind": "verb",
+      "reference": "Genesis 49:17"
+    },
+    {
+      "form": "blasphemest",
+      "frequency": 1,
+      "lemma": "blaspheme",
+      "canonical": "blaspheme",
+      "kind": "verb",
+      "reference": "John 10:36"
+    },
+    {
+      "form": "blasphemeth",
+      "frequency": 5,
+      "lemma": "blaspheme",
+      "canonical": "blaspheme",
+      "kind": "verb",
+      "reference": "Leviticus 24:16"
+    },
+    {
+      "form": "blessest",
+      "frequency": 3,
+      "lemma": "bless",
+      "canonical": "bless",
+      "kind": "verb",
+      "reference": "Numbers 22:6"
+    },
+    {
+      "form": "blesseth",
+      "frequency": 8,
+      "lemma": "bless",
+      "canonical": "bless",
+      "kind": "verb",
+      "reference": "Genesis 27:29"
+    },
+    {
+      "form": "blindeth",
+      "frequency": 1,
+      "lemma": "blind",
+      "canonical": "blind",
+      "kind": "verb",
+      "reference": "Exodus 23:8"
+    },
+    {
+      "form": "blotteth",
+      "frequency": 1,
+      "lemma": "blot",
+      "canonical": "blot",
+      "kind": "verb",
+      "reference": "Isaiah 43:25"
+    },
+    {
+      "form": "bloweth",
+      "frequency": 4,
+      "lemma": "blow",
+      "canonical": "blow",
+      "kind": "verb",
+      "reference": "Isaiah 18:3"
+    },
+    {
+      "form": "boastest",
+      "frequency": 1,
+      "lemma": "boast",
+      "canonical": "boast",
+      "kind": "verb",
+      "reference": "Psalms 52:1"
+    },
+    {
+      "form": "boasteth",
+      "frequency": 4,
+      "lemma": "boast",
+      "canonical": "boast",
+      "kind": "verb",
+      "reference": "Psalms 10:3"
+    },
+    {
+      "form": "borroweth",
+      "frequency": 1,
+      "lemma": "borrow",
+      "canonical": "borrow",
+      "kind": "verb",
+      "reference": "Psalms 37:21"
+    },
+    {
+      "form": "boweth",
+      "frequency": 3,
+      "lemma": "bow",
+      "canonical": "bow",
+      "kind": "verb",
+      "reference": "Judges 7:5"
+    },
+    {
+      "form": "brakest",
+      "frequency": 5,
+      "lemma": "break",
+      "canonical": "break",
+      "kind": "verb",
+      "reference": "Exodus 34:1"
+    },
+    {
+      "form": "breakest",
+      "frequency": 1,
+      "lemma": "break",
+      "canonical": "break",
+      "kind": "verb",
+      "reference": "Psalms 48:7"
+    },
+    {
+      "form": "breaketh",
+      "frequency": 17,
+      "lemma": "break",
+      "canonical": "break",
+      "kind": "verb",
+      "reference": "Genesis 32:26"
+    },
+    {
+      "form": "breast",
+      "frequency": 18,
+      "lemma": "breast",
+      "canonical": "breast",
+      "kind": "exact",
+      "reference": "Exodus 29:26"
+    },
+    {
+      "form": "breatheth",
+      "frequency": 1,
+      "lemma": "breathe",
+      "canonical": "breathe",
+      "kind": "verb",
+      "reference": "Deuteronomy 20:16"
+    },
+    {
+      "form": "bridleth",
+      "frequency": 1,
+      "lemma": "bridle",
+      "canonical": "bridle",
+      "kind": "verb",
+      "reference": "James 1:26"
+    },
+    {
+      "form": "bringest",
+      "frequency": 5,
+      "lemma": "bring",
+      "canonical": "bring",
+      "kind": "verb",
+      "reference": "1 Kings 1:42"
+    },
+    {
+      "form": "bringeth",
+      "frequency": 79,
+      "lemma": "bring",
+      "canonical": "bring",
+      "kind": "verb",
+      "reference": "Exodus 6:7"
+    },
+    {
+      "form": "broughtest",
+      "frequency": 13,
+      "lemma": "bring",
+      "canonical": "bring",
+      "kind": "verb",
+      "reference": "Exodus 32:7"
+    },
+    {
+      "form": "buildest",
+      "frequency": 5,
+      "lemma": "build",
+      "canonical": "build",
+      "kind": "verb",
+      "reference": "Deuteronomy 22:8"
+    },
+    {
+      "form": "buildeth",
+      "frequency": 9,
+      "lemma": "build",
+      "canonical": "build",
+      "kind": "verb",
+      "reference": "Joshua 6:26"
+    },
+    {
+      "form": "burneth",
+      "frequency": 18,
+      "lemma": "burn",
+      "canonical": "burn",
+      "kind": "verb",
+      "reference": "Leviticus 13:24"
+    },
+    {
+      "form": "buyest",
+      "frequency": 2,
+      "lemma": "buy",
+      "canonical": "buy",
+      "kind": "verb",
+      "reference": "Leviticus 25:14"
+    },
+    {
+      "form": "buyeth",
+      "frequency": 3,
+      "lemma": "buy",
+      "canonical": "buy",
+      "kind": "verb",
+      "reference": "Proverbs 31:16"
+    },
+    {
+      "form": "callest",
+      "frequency": 3,
+      "lemma": "call",
+      "canonical": "call",
+      "kind": "verb",
+      "reference": "Matthew 19:17"
+    },
+    {
+      "form": "calleth",
+      "frequency": 30,
+      "lemma": "call",
+      "canonical": "call",
+      "kind": "verb",
+      "reference": "1 Kings 8:43"
+    },
+    {
+      "form": "calveth",
+      "frequency": 1,
+      "lemma": "calve",
+      "canonical": "calve",
+      "kind": "verb",
+      "reference": "Job 21:10"
+    },
+    {
+      "form": "camest",
+      "frequency": 28,
+      "lemma": "come",
+      "canonical": "come",
+      "kind": "verb",
+      "reference": "Genesis 16:8"
+    },
+    {
+      "form": "carest",
+      "frequency": 3,
+      "lemma": "care",
+      "canonical": "care",
+      "kind": "verb",
+      "reference": "Matthew 22:16"
+    },
+    {
+      "form": "careth",
+      "frequency": 7,
+      "lemma": "care",
+      "canonical": "care",
+      "kind": "verb",
+      "reference": "Deuteronomy 11:12"
+    },
+    {
+      "form": "carriest",
+      "frequency": 1,
+      "lemma": "carry",
+      "canonical": "carry",
+      "kind": "verb",
+      "reference": "Psalms 90:5"
+    },
+    {
+      "form": "carrieth",
+      "frequency": 3,
+      "lemma": "carry",
+      "canonical": "carry",
+      "kind": "verb",
+      "reference": "Job 21:18"
+    },
+    {
+      "form": "castest",
+      "frequency": 3,
+      "lemma": "cast",
+      "canonical": "cast",
+      "kind": "verb",
+      "reference": "Job 15:4"
+    },
+    {
+      "form": "casteth",
+      "frequency": 16,
+      "lemma": "cast",
+      "canonical": "cast",
+      "kind": "verb",
+      "reference": "Job 21:10"
+    },
+    {
+      "form": "catcheth",
+      "frequency": 3,
+      "lemma": "catch",
+      "canonical": "catch",
+      "kind": "verb",
+      "reference": "Leviticus 17:13"
+    },
+    {
+      "form": "causest",
+      "frequency": 2,
+      "lemma": "cause",
+      "canonical": "cause",
+      "kind": "verb",
+      "reference": "Job 30:22"
+    },
+    {
+      "form": "causeth",
+      "frequency": 32,
+      "lemma": "cause",
+      "canonical": "cause",
+      "kind": "verb",
+      "reference": "Numbers 5:18"
+    },
+    {
+      "form": "ceaseth",
+      "frequency": 10,
+      "lemma": "cease",
+      "canonical": "cease",
+      "kind": "verb",
+      "reference": "Psalms 12:1"
+    },
+    {
+      "form": "challengeth",
+      "frequency": 1,
+      "lemma": "challenge",
+      "canonical": "challenge",
+      "kind": "verb",
+      "reference": "Exodus 22:9"
+    },
+    {
+      "form": "chanceth",
+      "frequency": 1,
+      "lemma": "chance",
+      "canonical": "chance",
+      "kind": "verb",
+      "reference": "Deuteronomy 23:10"
+    },
+    {
+      "form": "changest",
+      "frequency": 1,
+      "lemma": "change",
+      "canonical": "change",
+      "kind": "verb",
+      "reference": "Job 14:20"
+    },
+    {
+      "form": "changeth",
+      "frequency": 2,
+      "lemma": "change",
+      "canonical": "change",
+      "kind": "verb",
+      "reference": "Psalms 15:4"
+    },
+    {
+      "form": "chargest",
+      "frequency": 1,
+      "lemma": "charge",
+      "canonical": "charge",
+      "kind": "verb",
+      "reference": "2 Samuel 3:8"
+    },
+    {
+      "form": "chaseth",
+      "frequency": 1,
+      "lemma": "chase",
+      "canonical": "chase",
+      "kind": "verb",
+      "reference": "Proverbs 19:26"
+    },
+    {
+      "form": "chastenest",
+      "frequency": 1,
+      "lemma": "chasten",
+      "canonical": "chasten",
+      "kind": "verb",
+      "reference": "Psalms 94:12"
+    },
+    {
+      "form": "chasteneth",
+      "frequency": 5,
+      "lemma": "chasten",
+      "canonical": "chasten",
+      "kind": "verb",
+      "reference": "Deuteronomy 8:5"
+    },
+    {
+      "form": "chastiseth",
+      "frequency": 1,
+      "lemma": "chastise",
+      "canonical": "chastise",
+      "kind": "verb",
+      "reference": "Psalms 94:10"
+    },
+    {
+      "form": "cheereth",
+      "frequency": 1,
+      "lemma": "cheer",
+      "canonical": "cheer",
+      "kind": "verb",
+      "reference": "Judges 9:13"
+    },
+    {
+      "form": "cherisheth",
+      "frequency": 2,
+      "lemma": "cherish",
+      "canonical": "cherish",
+      "kind": "verb",
+      "reference": "Ephesians 5:29"
+    },
+    {
+      "form": "chest",
+      "frequency": 6,
+      "lemma": "chest",
+      "canonical": "chest",
+      "kind": "exact",
+      "reference": "2 Kings 12:9"
+    },
+    {
+      "form": "cheth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Psalms 119:57",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "cheweth",
+      "frequency": 8,
+      "lemma": "chew",
+      "canonical": "chew",
+      "kind": "verb",
+      "reference": "Leviticus 11:3"
+    },
+    {
+      "form": "chiefest",
+      "frequency": 8,
+      "lemma": "chief",
+      "canonical": "chief",
+      "kind": "superlative",
+      "reference": "1 Samuel 2:29"
+    },
+    {
+      "form": "chinnereth",
+      "frequency": 4,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Numbers 34:11",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "choicest",
+      "frequency": 2,
+      "lemma": "choice",
+      "canonical": "choice",
+      "kind": "superlative",
+      "reference": "Isaiah 5:2"
+    },
+    {
+      "form": "choosest",
+      "frequency": 2,
+      "lemma": "choose",
+      "canonical": "choose",
+      "kind": "verb",
+      "reference": "Job 15:5"
+    },
+    {
+      "form": "chooseth",
+      "frequency": 3,
+      "lemma": "choose",
+      "canonical": "choose",
+      "kind": "verb",
+      "reference": "Job 7:15"
+    },
+    {
+      "form": "clappeth",
+      "frequency": 1,
+      "lemma": "clap",
+      "canonical": "clap",
+      "kind": "verb",
+      "reference": "Job 34:37"
+    },
+    {
+      "form": "cleanseth",
+      "frequency": 3,
+      "lemma": "cleanse",
+      "canonical": "cleanse",
+      "kind": "verb",
+      "reference": "Job 37:21"
+    },
+    {
+      "form": "cleaveth",
+      "frequency": 13,
+      "lemma": "cleave",
+      "canonical": "cleave",
+      "kind": "verb",
+      "reference": "Deuteronomy 14:6"
+    },
+    {
+      "form": "climbeth",
+      "frequency": 1,
+      "lemma": "climb",
+      "canonical": "climb",
+      "kind": "verb",
+      "reference": "John 10:1"
+    },
+    {
+      "form": "closest",
+      "frequency": 1,
+      "lemma": "close",
+      "canonical": "close",
+      "kind": "verb",
+      "reference": "Jeremiah 22:15"
+    },
+    {
+      "form": "clothest",
+      "frequency": 1,
+      "lemma": "clothe",
+      "canonical": "clothe",
+      "kind": "verb",
+      "reference": "Jeremiah 4:30"
+    },
+    {
+      "form": "comest",
+      "frequency": 29,
+      "lemma": "come",
+      "canonical": "come",
+      "kind": "verb",
+      "reference": "Genesis 10:19"
+    },
+    {
+      "form": "cometh",
+      "frequency": 282,
+      "lemma": "come",
+      "canonical": "come",
+      "kind": "verb",
+      "reference": "Genesis 24:43"
+    },
+    {
+      "form": "comforteth",
+      "frequency": 5,
+      "lemma": "comfort",
+      "canonical": "comfort",
+      "kind": "verb",
+      "reference": "Job 29:25"
+    },
+    {
+      "form": "commandest",
+      "frequency": 3,
+      "lemma": "command",
+      "canonical": "command",
+      "kind": "verb",
+      "reference": "Joshua 1:16"
+    },
+    {
+      "form": "commandeth",
+      "frequency": 13,
+      "lemma": "command",
+      "canonical": "command",
+      "kind": "verb",
+      "reference": "Exodus 16:32"
+    },
+    {
+      "form": "commendeth",
+      "frequency": 4,
+      "lemma": "commend",
+      "canonical": "commend",
+      "kind": "verb",
+      "reference": "Romans 5:8"
+    },
+    {
+      "form": "committest",
+      "frequency": 1,
+      "lemma": "commit",
+      "canonical": "commit",
+      "kind": "verb",
+      "reference": "Hosea 5:3"
+    },
+    {
+      "form": "committeth",
+      "frequency": 19,
+      "lemma": "commit",
+      "canonical": "commit",
+      "kind": "verb",
+      "reference": "Leviticus 20:10"
+    },
+    {
+      "form": "compassest",
+      "frequency": 1,
+      "lemma": "compass",
+      "canonical": "compass",
+      "kind": "verb",
+      "reference": "Psalms 139:3"
+    },
+    {
+      "form": "compasseth",
+      "frequency": 5,
+      "lemma": "compass",
+      "canonical": "compass",
+      "kind": "verb",
+      "reference": "Genesis 2:11"
+    },
+    {
+      "form": "compellest",
+      "frequency": 1,
+      "lemma": "compel",
+      "canonical": "compel",
+      "kind": "verb",
+      "reference": "Galatians 2:14"
+    },
+    {
+      "form": "compoundeth",
+      "frequency": 1,
+      "lemma": "compound",
+      "canonical": "compound",
+      "kind": "verb",
+      "reference": "Exodus 30:33"
+    },
+    {
+      "form": "concealeth",
+      "frequency": 2,
+      "lemma": "conceal",
+      "canonical": "conceal",
+      "kind": "verb",
+      "reference": "Proverbs 11:13"
+    },
+    {
+      "form": "concerneth",
+      "frequency": 2,
+      "lemma": "concern",
+      "canonical": "concern",
+      "kind": "verb",
+      "reference": "Psalms 138:8"
+    },
+    {
+      "form": "condemnest",
+      "frequency": 1,
+      "lemma": "condemn",
+      "canonical": "condemn",
+      "kind": "verb",
+      "reference": "Romans 2:1"
+    },
+    {
+      "form": "condemneth",
+      "frequency": 4,
+      "lemma": "condemn",
+      "canonical": "condemn",
+      "kind": "verb",
+      "reference": "Job 15:6"
+    },
+    {
+      "form": "confesseth",
+      "frequency": 3,
+      "lemma": "confess",
+      "canonical": "confess",
+      "kind": "verb",
+      "reference": "Proverbs 28:13"
+    },
+    {
+      "form": "confirmeth",
+      "frequency": 3,
+      "lemma": "confirm",
+      "canonical": "confirm",
+      "kind": "verb",
+      "reference": "Numbers 30:14"
+    },
+    {
+      "form": "considerest",
+      "frequency": 2,
+      "lemma": "consider",
+      "canonical": "consider",
+      "kind": "verb",
+      "reference": "Jeremiah 33:24"
+    },
+    {
+      "form": "considereth",
+      "frequency": 9,
+      "lemma": "consider",
+      "canonical": "consider",
+      "kind": "verb",
+      "reference": "Psalms 33:15"
+    },
+    {
+      "form": "consisteth",
+      "frequency": 1,
+      "lemma": "consist",
+      "canonical": "consist",
+      "kind": "verb",
+      "reference": "Luke 12:15"
+    },
+    {
+      "form": "constraineth",
+      "frequency": 2,
+      "lemma": "constrain",
+      "canonical": "constrain",
+      "kind": "verb",
+      "reference": "Job 32:18"
+    },
+    {
+      "form": "consulteth",
+      "frequency": 1,
+      "lemma": "consult",
+      "canonical": "consult",
+      "kind": "verb",
+      "reference": "Luke 14:31"
+    },
+    {
+      "form": "consumeth",
+      "frequency": 4,
+      "lemma": "consume",
+      "canonical": "consume",
+      "kind": "verb",
+      "reference": "Job 13:28"
+    },
+    {
+      "form": "containeth",
+      "frequency": 1,
+      "lemma": "contain",
+      "canonical": "contain",
+      "kind": "verb",
+      "reference": "Ezekiel 23:32"
+    },
+    {
+      "form": "contemneth",
+      "frequency": 1,
+      "lemma": "contemn",
+      "canonical": "contemn",
+      "kind": "verb",
+      "reference": "Ezekiel 21:10"
+    },
+    {
+      "form": "contendest",
+      "frequency": 1,
+      "lemma": "contend",
+      "canonical": "contend",
+      "kind": "verb",
+      "reference": "Job 10:2"
+    },
+    {
+      "form": "contendeth",
+      "frequency": 3,
+      "lemma": "contend",
+      "canonical": "contend",
+      "kind": "verb",
+      "reference": "Job 40:2"
+    },
+    {
+      "form": "continueth",
+      "frequency": 5,
+      "lemma": "continue",
+      "canonical": "continue",
+      "kind": "verb",
+      "reference": "Job 14:2"
+    },
+    {
+      "form": "converteth",
+      "frequency": 1,
+      "lemma": "convert",
+      "canonical": "convert",
+      "kind": "verb",
+      "reference": "James 5:20"
+    },
+    {
+      "form": "convinceth",
+      "frequency": 1,
+      "lemma": "convince",
+      "canonical": "convince",
+      "kind": "verb",
+      "reference": "John 8:46"
+    },
+    {
+      "form": "correcteth",
+      "frequency": 2,
+      "lemma": "correct",
+      "canonical": "correct",
+      "kind": "verb",
+      "reference": "Job 5:17"
+    },
+    {
+      "form": "corrupteth",
+      "frequency": 1,
+      "lemma": "corrupt",
+      "canonical": "corrupt",
+      "kind": "verb",
+      "reference": "Luke 12:33"
+    },
+    {
+      "form": "coucheth",
+      "frequency": 1,
+      "lemma": "couch",
+      "canonical": "couch",
+      "kind": "verb",
+      "reference": "Deuteronomy 33:13"
+    },
+    {
+      "form": "couldest",
+      "frequency": 5,
+      "lemma": "can",
+      "canonical": "can",
+      "kind": "verb",
+      "reference": "Jeremiah 3:5"
+    },
+    {
+      "form": "counteth",
+      "frequency": 3,
+      "lemma": "count",
+      "canonical": "count",
+      "kind": "verb",
+      "reference": "Job 19:11"
+    },
+    {
+      "form": "coupleth",
+      "frequency": 2,
+      "lemma": "couple",
+      "canonical": "couple",
+      "kind": "verb",
+      "reference": "Exodus 26:10"
+    },
+    {
+      "form": "coverest",
+      "frequency": 2,
+      "lemma": "cover",
+      "canonical": "cover",
+      "kind": "verb",
+      "reference": "Deuteronomy 22:12"
+    },
+    {
+      "form": "covereth",
+      "frequency": 27,
+      "lemma": "cover",
+      "canonical": "cover",
+      "kind": "verb",
+      "reference": "Exodus 29:13"
+    },
+    {
+      "form": "coveteth",
+      "frequency": 2,
+      "lemma": "covet",
+      "canonical": "covet",
+      "kind": "verb",
+      "reference": "Proverbs 21:26"
+    },
+    {
+      "form": "craveth",
+      "frequency": 1,
+      "lemma": "crave",
+      "canonical": "crave",
+      "kind": "verb",
+      "reference": "Proverbs 16:26"
+    },
+    {
+      "form": "createth",
+      "frequency": 1,
+      "lemma": "create",
+      "canonical": "create",
+      "kind": "verb",
+      "reference": "Amos 4:13"
+    },
+    {
+      "form": "creepeth",
+      "frequency": 14,
+      "lemma": "creep",
+      "canonical": "creep",
+      "kind": "verb",
+      "reference": "Genesis 1:25"
+    },
+    {
+      "form": "criest",
+      "frequency": 5,
+      "lemma": "cry",
+      "canonical": "cry",
+      "kind": "verb",
+      "reference": "Exodus 14:15"
+    },
+    {
+      "form": "crieth",
+      "frequency": 17,
+      "lemma": "cry",
+      "canonical": "cry",
+      "kind": "verb",
+      "reference": "Genesis 4:10"
+    },
+    {
+      "form": "croucheth",
+      "frequency": 1,
+      "lemma": "crouch",
+      "canonical": "crouch",
+      "kind": "verb",
+      "reference": "Psalms 10:10"
+    },
+    {
+      "form": "crownest",
+      "frequency": 1,
+      "lemma": "crown",
+      "canonical": "crown",
+      "kind": "verb",
+      "reference": "Psalms 65:11"
+    },
+    {
+      "form": "crowneth",
+      "frequency": 1,
+      "lemma": "crown",
+      "canonical": "crown",
+      "kind": "verb",
+      "reference": "Psalms 103:4"
+    },
+    {
+      "form": "cumbereth",
+      "frequency": 1,
+      "lemma": "cumber",
+      "canonical": "cumber",
+      "kind": "verb",
+      "reference": "Luke 13:7"
+    },
+    {
+      "form": "cursest",
+      "frequency": 1,
+      "lemma": "curse",
+      "canonical": "curse",
+      "kind": "verb",
+      "reference": "Numbers 22:6"
+    },
+    {
+      "form": "curseth",
+      "frequency": 10,
+      "lemma": "curse",
+      "canonical": "curse",
+      "kind": "verb",
+      "reference": "Genesis 12:3"
+    },
+    {
+      "form": "cuttest",
+      "frequency": 1,
+      "lemma": "cut",
+      "canonical": "cut",
+      "kind": "verb",
+      "reference": "Deuteronomy 24:19"
+    },
+    {
+      "form": "cutteth",
+      "frequency": 6,
+      "lemma": "cut",
+      "canonical": "cut",
+      "kind": "verb",
+      "reference": "Job 28:10"
+    },
+    {
+      "form": "dabbasheth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Joshua 19:11",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "daleth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Psalms 119:25",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "darkeneth",
+      "frequency": 1,
+      "lemma": "darken",
+      "canonical": "darken",
+      "kind": "verb",
+      "reference": "Job 38:2"
+    },
+    {
+      "form": "dasheth",
+      "frequency": 2,
+      "lemma": "dash",
+      "canonical": "dash",
+      "kind": "verb",
+      "reference": "Psalms 137:9"
+    },
+    {
+      "form": "dealest",
+      "frequency": 2,
+      "lemma": "deal",
+      "canonical": "deal",
+      "kind": "verb",
+      "reference": "Exodus 5:15"
+    },
+    {
+      "form": "dealeth",
+      "frequency": 10,
+      "lemma": "deal",
+      "canonical": "deal",
+      "kind": "verb",
+      "reference": "Judges 18:4"
+    },
+    {
+      "form": "decayeth",
+      "frequency": 3,
+      "lemma": "decay",
+      "canonical": "decay",
+      "kind": "verb",
+      "reference": "Job 14:11"
+    },
+    {
+      "form": "deceiveth",
+      "frequency": 6,
+      "lemma": "deceive",
+      "canonical": "deceive",
+      "kind": "verb",
+      "reference": "Proverbs 26:19"
+    },
+    {
+      "form": "deckest",
+      "frequency": 1,
+      "lemma": "deck",
+      "canonical": "deck",
+      "kind": "verb",
+      "reference": "Jeremiah 4:30"
+    },
+    {
+      "form": "decketh",
+      "frequency": 1,
+      "lemma": "deck",
+      "canonical": "deck",
+      "kind": "verb",
+      "reference": "Isaiah 61:10"
+    },
+    {
+      "form": "declareth",
+      "frequency": 4,
+      "lemma": "declare",
+      "canonical": "declare",
+      "kind": "verb",
+      "reference": "Isaiah 41:26"
+    },
+    {
+      "form": "declineth",
+      "frequency": 2,
+      "lemma": "decline",
+      "canonical": "decline",
+      "kind": "verb",
+      "reference": "Psalms 102:11"
+    },
+    {
+      "form": "defendest",
+      "frequency": 1,
+      "lemma": "defend",
+      "canonical": "defend",
+      "kind": "verb",
+      "reference": "Psalms 5:11"
+    },
+    {
+      "form": "deferreth",
+      "frequency": 1,
+      "lemma": "defer",
+      "canonical": "defer",
+      "kind": "verb",
+      "reference": "Proverbs 19:11"
+    },
+    {
+      "form": "defileth",
+      "frequency": 9,
+      "lemma": "defile",
+      "canonical": "defile",
+      "kind": "verb",
+      "reference": "Exodus 31:14"
+    },
+    {
+      "form": "delayeth",
+      "frequency": 2,
+      "lemma": "delay",
+      "canonical": "delay",
+      "kind": "verb",
+      "reference": "Matthew 24:48"
+    },
+    {
+      "form": "delightest",
+      "frequency": 1,
+      "lemma": "delight",
+      "canonical": "delight",
+      "kind": "verb",
+      "reference": "Psalms 51:16"
+    },
+    {
+      "form": "delighteth",
+      "frequency": 14,
+      "lemma": "delight",
+      "canonical": "delight",
+      "kind": "verb",
+      "reference": "Esther 6:6"
+    },
+    {
+      "form": "deliverest",
+      "frequency": 2,
+      "lemma": "deliver",
+      "canonical": "deliver",
+      "kind": "verb",
+      "reference": "Psalms 35:10"
+    },
+    {
+      "form": "delivereth",
+      "frequency": 13,
+      "lemma": "deliver",
+      "canonical": "deliver",
+      "kind": "verb",
+      "reference": "Job 36:15"
+    },
+    {
+      "form": "denieth",
+      "frequency": 4,
+      "lemma": "deny",
+      "canonical": "deny",
+      "kind": "verb",
+      "reference": "Luke 12:9"
+    },
+    {
+      "form": "departeth",
+      "frequency": 8,
+      "lemma": "depart",
+      "canonical": "depart",
+      "kind": "verb",
+      "reference": "Job 27:21"
+    },
+    {
+      "form": "descendeth",
+      "frequency": 1,
+      "lemma": "descend",
+      "canonical": "descend",
+      "kind": "verb",
+      "reference": "James 3:15"
+    },
+    {
+      "form": "describeth",
+      "frequency": 2,
+      "lemma": "describe",
+      "canonical": "describe",
+      "kind": "verb",
+      "reference": "Romans 4:6"
+    },
+    {
+      "form": "deserveth",
+      "frequency": 1,
+      "lemma": "deserve",
+      "canonical": "deserve",
+      "kind": "verb",
+      "reference": "Job 11:6"
+    },
+    {
+      "form": "desirest",
+      "frequency": 2,
+      "lemma": "desire",
+      "canonical": "desire",
+      "kind": "verb",
+      "reference": "Psalms 51:6"
+    },
+    {
+      "form": "desireth",
+      "frequency": 17,
+      "lemma": "desire",
+      "canonical": "desire",
+      "kind": "verb",
+      "reference": "Deuteronomy 14:26"
+    },
+    {
+      "form": "despisest",
+      "frequency": 1,
+      "lemma": "despise",
+      "canonical": "despise",
+      "kind": "verb",
+      "reference": "Romans 2:4"
+    },
+    {
+      "form": "despiseth",
+      "frequency": 19,
+      "lemma": "despise",
+      "canonical": "despise",
+      "kind": "verb",
+      "reference": "Job 36:5"
+    },
+    {
+      "form": "destroyest",
+      "frequency": 4,
+      "lemma": "destroy",
+      "canonical": "destroy",
+      "kind": "verb",
+      "reference": "Job 14:19"
+    },
+    {
+      "form": "destroyeth",
+      "frequency": 8,
+      "lemma": "destroy",
+      "canonical": "destroy",
+      "kind": "verb",
+      "reference": "Deuteronomy 8:20"
+    },
+    {
+      "form": "detest",
+      "frequency": 1,
+      "lemma": "detest",
+      "canonical": "detest",
+      "kind": "exact",
+      "reference": "Deuteronomy 7:26"
+    },
+    {
+      "form": "deviseth",
+      "frequency": 8,
+      "lemma": "devise",
+      "canonical": "devise",
+      "kind": "verb",
+      "reference": "Psalms 36:4"
+    },
+    {
+      "form": "devourest",
+      "frequency": 1,
+      "lemma": "devour",
+      "canonical": "devour",
+      "kind": "verb",
+      "reference": "Ezekiel 36:13"
+    },
+    {
+      "form": "devoureth",
+      "frequency": 10,
+      "lemma": "devour",
+      "canonical": "devour",
+      "kind": "verb",
+      "reference": "2 Samuel 11:25"
+    },
+    {
+      "form": "diddest",
+      "frequency": 1,
+      "lemma": "do",
+      "canonical": "do",
+      "kind": "verb",
+      "reference": "Acts 7:28"
+    },
+    {
+      "form": "diest",
+      "frequency": 1,
+      "lemma": "die",
+      "canonical": "die",
+      "kind": "verb",
+      "reference": "Ruth 1:17"
+    },
+    {
+      "form": "dieth",
+      "frequency": 30,
+      "lemma": "die",
+      "canonical": "die",
+      "kind": "verb",
+      "reference": "Leviticus 7:24"
+    },
+    {
+      "form": "differeth",
+      "frequency": 2,
+      "lemma": "differ",
+      "canonical": "differ",
+      "kind": "verb",
+      "reference": "1 Corinthians 15:41"
+    },
+    {
+      "form": "diggeth",
+      "frequency": 3,
+      "lemma": "dig",
+      "canonical": "dig",
+      "kind": "verb",
+      "reference": "Proverbs 16:27"
+    },
+    {
+      "form": "dippeth",
+      "frequency": 2,
+      "lemma": "dip",
+      "canonical": "dip",
+      "kind": "verb",
+      "reference": "Matthew 26:23"
+    },
+    {
+      "form": "directeth",
+      "frequency": 3,
+      "lemma": "direct",
+      "canonical": "direct",
+      "kind": "verb",
+      "reference": "Job 37:3"
+    },
+    {
+      "form": "disannulleth",
+      "frequency": 1,
+      "lemma": "disannul",
+      "canonical": "disannul",
+      "kind": "verb",
+      "reference": "Galatians 3:15"
+    },
+    {
+      "form": "disappointeth",
+      "frequency": 1,
+      "lemma": "disappoint",
+      "canonical": "disappoint",
+      "kind": "verb",
+      "reference": "Job 5:12"
+    },
+    {
+      "form": "discerneth",
+      "frequency": 1,
+      "lemma": "discern",
+      "canonical": "discern",
+      "kind": "verb",
+      "reference": "Ecclesiastes 8:5"
+    },
+    {
+      "form": "discovereth",
+      "frequency": 2,
+      "lemma": "discover",
+      "canonical": "discover",
+      "kind": "verb",
+      "reference": "Job 12:22"
+    },
+    {
+      "form": "disguiseth",
+      "frequency": 1,
+      "lemma": "disguise",
+      "canonical": "disguise",
+      "kind": "verb",
+      "reference": "Job 24:15"
+    },
+    {
+      "form": "dishonest",
+      "frequency": 2,
+      "lemma": "dishonest",
+      "canonical": "dishonest",
+      "kind": "exact",
+      "reference": "Ezekiel 22:13"
+    },
+    {
+      "form": "dishonourest",
+      "frequency": 1,
+      "lemma": "dishonor",
+      "canonical": "dishonor",
+      "kind": "verb",
+      "reference": "Romans 2:23"
+    },
+    {
+      "form": "dishonoureth",
+      "frequency": 3,
+      "lemma": "dishonor",
+      "canonical": "dishonor",
+      "kind": "verb",
+      "reference": "Micah 7:6"
+    },
+    {
+      "form": "dissembleth",
+      "frequency": 1,
+      "lemma": "dissemble",
+      "canonical": "dissemble",
+      "kind": "verb",
+      "reference": "Proverbs 26:24"
+    },
+    {
+      "form": "dissolvest",
+      "frequency": 1,
+      "lemma": "dissolve",
+      "canonical": "dissolve",
+      "kind": "verb",
+      "reference": "Job 30:22"
+    },
+    {
+      "form": "distributeth",
+      "frequency": 1,
+      "lemma": "distribute",
+      "canonical": "distribute",
+      "kind": "verb",
+      "reference": "Job 21:17"
+    },
+    {
+      "form": "divideth",
+      "frequency": 10,
+      "lemma": "divide",
+      "canonical": "divide",
+      "kind": "verb",
+      "reference": "Leviticus 11:4"
+    },
+    {
+      "form": "divineth",
+      "frequency": 1,
+      "lemma": "divine",
+      "canonical": "divine",
+      "kind": "verb",
+      "reference": "Genesis 44:5"
+    },
+    {
+      "form": "doest",
+      "frequency": 45,
+      "lemma": "do",
+      "canonical": "do",
+      "kind": "verb",
+      "reference": "Genesis 4:7"
+    },
+    {
+      "form": "doeth",
+      "frequency": 96,
+      "lemma": "do",
+      "canonical": "do",
+      "kind": "verb",
+      "reference": "Genesis 31:12"
+    },
+    {
+      "form": "dost",
+      "frequency": 56,
+      "lemma": "dost",
+      "canonical": "do",
+      "kind": "exact-inflection",
+      "reference": "Genesis 32:29",
+      "note": "Exact grammar entry is retained; canonical verb is do."
+    },
+    {
+      "form": "doth",
+      "frequency": 207,
+      "lemma": "do",
+      "canonical": "do",
+      "kind": "verb",
+      "reference": "Genesis 3:5"
+    },
+    {
+      "form": "doubteth",
+      "frequency": 1,
+      "lemma": "doubt",
+      "canonical": "doubt",
+      "kind": "verb",
+      "reference": "Romans 14:23"
+    },
+    {
+      "form": "draweth",
+      "frequency": 12,
+      "lemma": "draw",
+      "canonical": "draw",
+      "kind": "verb",
+      "reference": "Deuteronomy 25:11"
+    },
+    {
+      "form": "dreameth",
+      "frequency": 2,
+      "lemma": "dream",
+      "canonical": "dream",
+      "kind": "verb",
+      "reference": "Isaiah 29:8"
+    },
+    {
+      "form": "dresseth",
+      "frequency": 1,
+      "lemma": "dress",
+      "canonical": "dress",
+      "kind": "verb",
+      "reference": "Exodus 30:7"
+    },
+    {
+      "form": "drewest",
+      "frequency": 1,
+      "lemma": "draw",
+      "canonical": "draw",
+      "kind": "verb",
+      "reference": "Lamentations 3:57"
+    },
+    {
+      "form": "drieth",
+      "frequency": 3,
+      "lemma": "dry",
+      "canonical": "dry",
+      "kind": "verb",
+      "reference": "Job 14:11"
+    },
+    {
+      "form": "drinketh",
+      "frequency": 17,
+      "lemma": "drink",
+      "canonical": "drink",
+      "kind": "verb",
+      "reference": "Genesis 44:5"
+    },
+    {
+      "form": "driveth",
+      "frequency": 4,
+      "lemma": "drive",
+      "canonical": "drive",
+      "kind": "verb",
+      "reference": "2 Kings 9:20"
+    },
+    {
+      "form": "droppeth",
+      "frequency": 1,
+      "lemma": "drop",
+      "canonical": "drop",
+      "kind": "verb",
+      "reference": "Ecclesiastes 10:18"
+    },
+    {
+      "form": "dureth",
+      "frequency": 1,
+      "lemma": "dure",
+      "canonical": "dure",
+      "kind": "verb",
+      "reference": "Matthew 13:21"
+    },
+    {
+      "form": "dwellest",
+      "frequency": 19,
+      "lemma": "dwell",
+      "canonical": "dwell",
+      "kind": "verb",
+      "reference": "Deuteronomy 12:29"
+    },
+    {
+      "form": "dwelleth",
+      "frequency": 58,
+      "lemma": "dwell",
+      "canonical": "dwell",
+      "kind": "verb",
+      "reference": "Leviticus 19:34"
+    },
+    {
+      "form": "earnest",
+      "frequency": 8,
+      "lemma": "earnest",
+      "canonical": "earnest",
+      "kind": "exact",
+      "reference": "Romans 8:19"
+    },
+    {
+      "form": "earneth",
+      "frequency": 2,
+      "lemma": "earn",
+      "canonical": "earn",
+      "kind": "verb",
+      "reference": "Haggai 1:6"
+    },
+    {
+      "form": "eatest",
+      "frequency": 3,
+      "lemma": "eat",
+      "canonical": "eat",
+      "kind": "verb",
+      "reference": "Genesis 2:17"
+    },
+    {
+      "form": "eateth",
+      "frequency": 56,
+      "lemma": "eat",
+      "canonical": "eat",
+      "kind": "verb",
+      "reference": "Exodus 12:15"
+    },
+    {
+      "form": "edifieth",
+      "frequency": 3,
+      "lemma": "edify",
+      "canonical": "edify",
+      "kind": "verb",
+      "reference": "1 Corinthians 8:1"
+    },
+    {
+      "form": "eightieth",
+      "frequency": 1,
+      "lemma": "eightieth",
+      "canonical": "eightieth",
+      "kind": "exact",
+      "reference": "1 Kings 6:1"
+    },
+    {
+      "form": "eldest",
+      "frequency": 14,
+      "lemma": "eldest",
+      "canonical": "eldest",
+      "kind": "exact",
+      "reference": "Genesis 24:2"
+    },
+    {
+      "form": "elisabeth",
+      "frequency": 8,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Luke 1:5",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "emboldeneth",
+      "frequency": 1,
+      "lemma": "embolden",
+      "canonical": "embolden",
+      "kind": "verb",
+      "reference": "Job 16:3"
+    },
+    {
+      "form": "encampeth",
+      "frequency": 2,
+      "lemma": "encamp",
+      "canonical": "encamp",
+      "kind": "verb",
+      "reference": "Psalms 34:7"
+    },
+    {
+      "form": "endeth",
+      "frequency": 1,
+      "lemma": "end",
+      "canonical": "end",
+      "kind": "verb",
+      "reference": "Isaiah 24:8"
+    },
+    {
+      "form": "endureth",
+      "frequency": 59,
+      "lemma": "endure",
+      "canonical": "endure",
+      "kind": "verb",
+      "reference": "1 Chronicles 16:34"
+    },
+    {
+      "form": "enlargeth",
+      "frequency": 3,
+      "lemma": "enlarge",
+      "canonical": "enlarge",
+      "kind": "verb",
+      "reference": "Deuteronomy 33:20"
+    },
+    {
+      "form": "enquirest",
+      "frequency": 1,
+      "lemma": "enquire",
+      "canonical": "enquire",
+      "kind": "verb",
+      "reference": "Job 10:6"
+    },
+    {
+      "form": "enrichest",
+      "frequency": 1,
+      "lemma": "enrich",
+      "canonical": "enrich",
+      "kind": "verb",
+      "reference": "Psalms 65:9"
+    },
+    {
+      "form": "entangleth",
+      "frequency": 1,
+      "lemma": "entangle",
+      "canonical": "entangle",
+      "kind": "verb",
+      "reference": "2 Timothy 2:4"
+    },
+    {
+      "form": "entereth",
+      "frequency": 20,
+      "lemma": "enter",
+      "canonical": "enter",
+      "kind": "verb",
+      "reference": "Numbers 4:30"
+    },
+    {
+      "form": "enticeth",
+      "frequency": 1,
+      "lemma": "entice",
+      "canonical": "entice",
+      "kind": "verb",
+      "reference": "Proverbs 16:29"
+    },
+    {
+      "form": "entreateth",
+      "frequency": 1,
+      "lemma": "entreat",
+      "canonical": "entreat",
+      "kind": "verb",
+      "reference": "Job 24:21"
+    },
+    {
+      "form": "enviest",
+      "frequency": 1,
+      "lemma": "envy",
+      "canonical": "envy",
+      "kind": "verb",
+      "reference": "Numbers 11:29"
+    },
+    {
+      "form": "envieth",
+      "frequency": 1,
+      "lemma": "envy",
+      "canonical": "envy",
+      "kind": "verb",
+      "reference": "1 Corinthians 13:4"
+    },
+    {
+      "form": "erreth",
+      "frequency": 2,
+      "lemma": "err",
+      "canonical": "err",
+      "kind": "verb",
+      "reference": "Proverbs 10:17"
+    },
+    {
+      "form": "escapeth",
+      "frequency": 6,
+      "lemma": "escape",
+      "canonical": "escape",
+      "kind": "verb",
+      "reference": "1 Kings 19:17"
+    },
+    {
+      "form": "escheweth",
+      "frequency": 2,
+      "lemma": "eschew",
+      "canonical": "eschew",
+      "kind": "verb",
+      "reference": "Job 1:8"
+    },
+    {
+      "form": "establisheth",
+      "frequency": 3,
+      "lemma": "establish",
+      "canonical": "establish",
+      "kind": "verb",
+      "reference": "Numbers 30:14"
+    },
+    {
+      "form": "esteemeth",
+      "frequency": 4,
+      "lemma": "esteem",
+      "canonical": "esteem",
+      "kind": "verb",
+      "reference": "Job 41:27"
+    },
+    {
+      "form": "exacteth",
+      "frequency": 1,
+      "lemma": "exact",
+      "canonical": "exact",
+      "kind": "verb",
+      "reference": "Job 11:6"
+    },
+    {
+      "form": "exaltest",
+      "frequency": 1,
+      "lemma": "exalt",
+      "canonical": "exalt",
+      "kind": "verb",
+      "reference": "Exodus 9:17"
+    },
+    {
+      "form": "exalteth",
+      "frequency": 9,
+      "lemma": "exalt",
+      "canonical": "exalt",
+      "kind": "verb",
+      "reference": "Job 36:22"
+    },
+    {
+      "form": "exceedest",
+      "frequency": 1,
+      "lemma": "exceed",
+      "canonical": "exceed",
+      "kind": "verb",
+      "reference": "2 Chronicles 9:6"
+    },
+    {
+      "form": "exceedeth",
+      "frequency": 1,
+      "lemma": "exceed",
+      "canonical": "exceed",
+      "kind": "verb",
+      "reference": "1 Kings 10:7"
+    },
+    {
+      "form": "excellest",
+      "frequency": 1,
+      "lemma": "excel",
+      "canonical": "excel",
+      "kind": "verb",
+      "reference": "Proverbs 31:29"
+    },
+    {
+      "form": "excelleth",
+      "frequency": 3,
+      "lemma": "excel",
+      "canonical": "excel",
+      "kind": "verb",
+      "reference": "Ecclesiastes 2:13"
+    },
+    {
+      "form": "executest",
+      "frequency": 1,
+      "lemma": "execute",
+      "canonical": "execute",
+      "kind": "verb",
+      "reference": "Psalms 99:4"
+    },
+    {
+      "form": "executeth",
+      "frequency": 6,
+      "lemma": "execute",
+      "canonical": "execute",
+      "kind": "verb",
+      "reference": "Psalms 9:16"
+    },
+    {
+      "form": "exerciseth",
+      "frequency": 1,
+      "lemma": "exercise",
+      "canonical": "exercise",
+      "kind": "verb",
+      "reference": "Revelation 13:12"
+    },
+    {
+      "form": "exhorteth",
+      "frequency": 1,
+      "lemma": "exhort",
+      "canonical": "exhort",
+      "kind": "verb",
+      "reference": "Romans 12:8"
+    },
+    {
+      "form": "extendeth",
+      "frequency": 1,
+      "lemma": "extend",
+      "canonical": "extend",
+      "kind": "verb",
+      "reference": "Psalms 16:2"
+    },
+    {
+      "form": "fadeth",
+      "frequency": 7,
+      "lemma": "fade",
+      "canonical": "fade",
+      "kind": "verb",
+      "reference": "Isaiah 1:30"
+    },
+    {
+      "form": "faileth",
+      "frequency": 19,
+      "lemma": "fail",
+      "canonical": "fail",
+      "kind": "verb",
+      "reference": "Genesis 47:15"
+    },
+    {
+      "form": "faintest",
+      "frequency": 1,
+      "lemma": "faint",
+      "canonical": "faint",
+      "kind": "verb",
+      "reference": "Job 4:5"
+    },
+    {
+      "form": "fainteth",
+      "frequency": 4,
+      "lemma": "faint",
+      "canonical": "faint",
+      "kind": "verb",
+      "reference": "Psalms 84:2"
+    },
+    {
+      "form": "fairest",
+      "frequency": 3,
+      "lemma": "fair",
+      "canonical": "fair",
+      "kind": "superlative",
+      "reference": "Song of Solomon 1:8"
+    },
+    {
+      "form": "fallest",
+      "frequency": 1,
+      "lemma": "fall",
+      "canonical": "fall",
+      "kind": "verb",
+      "reference": "Jeremiah 37:13"
+    },
+    {
+      "form": "falleth",
+      "frequency": 28,
+      "lemma": "fall",
+      "canonical": "fall",
+      "kind": "verb",
+      "reference": "Exodus 1:10"
+    },
+    {
+      "form": "fashioneth",
+      "frequency": 3,
+      "lemma": "fashion",
+      "canonical": "fashion",
+      "kind": "verb",
+      "reference": "Psalms 33:15"
+    },
+    {
+      "form": "fastest",
+      "frequency": 1,
+      "lemma": "fast",
+      "canonical": "fast",
+      "kind": "verb",
+      "reference": "Matthew 6:17"
+    },
+    {
+      "form": "fattest",
+      "frequency": 2,
+      "lemma": "fat",
+      "canonical": "fat",
+      "kind": "superlative",
+      "reference": "Psalms 78:31"
+    },
+    {
+      "form": "favourest",
+      "frequency": 1,
+      "lemma": "favor",
+      "canonical": "favor",
+      "kind": "verb",
+      "reference": "Psalms 41:11"
+    },
+    {
+      "form": "favoureth",
+      "frequency": 1,
+      "lemma": "favor",
+      "canonical": "favor",
+      "kind": "verb",
+      "reference": "2 Samuel 20:11"
+    },
+    {
+      "form": "fearest",
+      "frequency": 3,
+      "lemma": "fear",
+      "canonical": "fear",
+      "kind": "verb",
+      "reference": "Genesis 22:12"
+    },
+    {
+      "form": "feareth",
+      "frequency": 20,
+      "lemma": "fear",
+      "canonical": "fear",
+      "kind": "verb",
+      "reference": "1 Kings 1:51"
+    },
+    {
+      "form": "feedest",
+      "frequency": 2,
+      "lemma": "feed",
+      "canonical": "feed",
+      "kind": "verb",
+      "reference": "Psalms 80:5"
+    },
+    {
+      "form": "feedeth",
+      "frequency": 8,
+      "lemma": "feed",
+      "canonical": "feed",
+      "kind": "verb",
+      "reference": "Proverbs 15:14"
+    },
+    {
+      "form": "feignest",
+      "frequency": 2,
+      "lemma": "feign",
+      "canonical": "feign",
+      "kind": "verb",
+      "reference": "1 Kings 14:6"
+    },
+    {
+      "form": "fellest",
+      "frequency": 1,
+      "lemma": "fall",
+      "canonical": "fall",
+      "kind": "verb",
+      "reference": "2 Samuel 3:34"
+    },
+    {
+      "form": "fetcheth",
+      "frequency": 1,
+      "lemma": "fetch",
+      "canonical": "fetch",
+      "kind": "verb",
+      "reference": "Deuteronomy 19:5"
+    },
+    {
+      "form": "fewest",
+      "frequency": 1,
+      "lemma": "few",
+      "canonical": "few",
+      "kind": "superlative",
+      "reference": "Deuteronomy 7:7"
+    },
+    {
+      "form": "fiftieth",
+      "frequency": 4,
+      "lemma": "fiftieth",
+      "canonical": "fiftieth",
+      "kind": "exact",
+      "reference": "Leviticus 25:10"
+    },
+    {
+      "form": "fighteth",
+      "frequency": 3,
+      "lemma": "fight",
+      "canonical": "fight",
+      "kind": "verb",
+      "reference": "Exodus 14:25"
+    },
+    {
+      "form": "fillest",
+      "frequency": 1,
+      "lemma": "fill",
+      "canonical": "fill",
+      "kind": "verb",
+      "reference": "Psalms 17:14"
+    },
+    {
+      "form": "filleth",
+      "frequency": 6,
+      "lemma": "fill",
+      "canonical": "fill",
+      "kind": "verb",
+      "reference": "Job 9:18"
+    },
+    {
+      "form": "findest",
+      "frequency": 2,
+      "lemma": "find",
+      "canonical": "find",
+      "kind": "verb",
+      "reference": "Genesis 31:32"
+    },
+    {
+      "form": "findeth",
+      "frequency": 27,
+      "lemma": "find",
+      "canonical": "find",
+      "kind": "verb",
+      "reference": "Genesis 4:14"
+    },
+    {
+      "form": "finest",
+      "frequency": 2,
+      "lemma": "fine",
+      "canonical": "fine",
+      "kind": "superlative",
+      "reference": "Psalms 81:16"
+    },
+    {
+      "form": "fitteth",
+      "frequency": 1,
+      "lemma": "fit",
+      "canonical": "fit",
+      "kind": "verb",
+      "reference": "Isaiah 44:13"
+    },
+    {
+      "form": "flattereth",
+      "frequency": 6,
+      "lemma": "flatter",
+      "canonical": "flatter",
+      "kind": "verb",
+      "reference": "Psalms 36:2"
+    },
+    {
+      "form": "fleddest",
+      "frequency": 2,
+      "lemma": "flee",
+      "canonical": "flee",
+      "kind": "verb",
+      "reference": "Genesis 35:1"
+    },
+    {
+      "form": "fleeth",
+      "frequency": 8,
+      "lemma": "flee",
+      "canonical": "flee",
+      "kind": "verb",
+      "reference": "Deuteronomy 19:11"
+    },
+    {
+      "form": "flieth",
+      "frequency": 5,
+      "lemma": "fly",
+      "canonical": "fly",
+      "kind": "verb",
+      "reference": "Deuteronomy 4:17"
+    },
+    {
+      "form": "flourisheth",
+      "frequency": 2,
+      "lemma": "flourish",
+      "canonical": "flourish",
+      "kind": "verb",
+      "reference": "Psalms 90:6"
+    },
+    {
+      "form": "floweth",
+      "frequency": 12,
+      "lemma": "flow",
+      "canonical": "flow",
+      "kind": "verb",
+      "reference": "Leviticus 20:24"
+    },
+    {
+      "form": "fluttereth",
+      "frequency": 1,
+      "lemma": "flutter",
+      "canonical": "flutter",
+      "kind": "verb",
+      "reference": "Deuteronomy 32:11"
+    },
+    {
+      "form": "foameth",
+      "frequency": 2,
+      "lemma": "foam",
+      "canonical": "foam",
+      "kind": "verb",
+      "reference": "Mark 9:18"
+    },
+    {
+      "form": "foldeth",
+      "frequency": 1,
+      "lemma": "fold",
+      "canonical": "fold",
+      "kind": "verb",
+      "reference": "Ecclesiastes 4:5"
+    },
+    {
+      "form": "followeth",
+      "frequency": 15,
+      "lemma": "follow",
+      "canonical": "follow",
+      "kind": "verb",
+      "reference": "2 Kings 11:15"
+    },
+    {
+      "form": "forbeareth",
+      "frequency": 2,
+      "lemma": "forbear",
+      "canonical": "forbear",
+      "kind": "verb",
+      "reference": "Numbers 9:13"
+    },
+    {
+      "form": "forbiddeth",
+      "frequency": 1,
+      "lemma": "forbid",
+      "canonical": "forbid",
+      "kind": "verb",
+      "reference": "3 John 1:10"
+    },
+    {
+      "form": "foreseeth",
+      "frequency": 2,
+      "lemma": "foresee",
+      "canonical": "foresee",
+      "kind": "verb",
+      "reference": "Proverbs 22:3"
+    },
+    {
+      "form": "forest",
+      "frequency": 38,
+      "lemma": "forest",
+      "canonical": "forest",
+      "kind": "exact",
+      "reference": "1 Samuel 22:5"
+    },
+    {
+      "form": "forgavest",
+      "frequency": 2,
+      "lemma": "forgive",
+      "canonical": "forgive",
+      "kind": "verb",
+      "reference": "Psalms 32:5"
+    },
+    {
+      "form": "forgettest",
+      "frequency": 2,
+      "lemma": "forget",
+      "canonical": "forget",
+      "kind": "verb",
+      "reference": "Psalms 44:24"
+    },
+    {
+      "form": "forgetteth",
+      "frequency": 4,
+      "lemma": "forget",
+      "canonical": "forget",
+      "kind": "verb",
+      "reference": "Job 39:15"
+    },
+    {
+      "form": "forgiveth",
+      "frequency": 2,
+      "lemma": "forgive",
+      "canonical": "forgive",
+      "kind": "verb",
+      "reference": "Psalms 103:3"
+    },
+    {
+      "form": "formeth",
+      "frequency": 2,
+      "lemma": "form",
+      "canonical": "form",
+      "kind": "verb",
+      "reference": "Amos 4:13"
+    },
+    {
+      "form": "forsaketh",
+      "frequency": 6,
+      "lemma": "forsake",
+      "canonical": "forsake",
+      "kind": "verb",
+      "reference": "Job 6:14"
+    },
+    {
+      "form": "forsookest",
+      "frequency": 2,
+      "lemma": "forsake",
+      "canonical": "forsake",
+      "kind": "verb",
+      "reference": "Nehemiah 9:17"
+    },
+    {
+      "form": "fortieth",
+      "frequency": 4,
+      "lemma": "fortieth",
+      "canonical": "fortieth",
+      "kind": "exact",
+      "reference": "Numbers 33:38"
+    },
+    {
+      "form": "foundest",
+      "frequency": 1,
+      "lemma": "find",
+      "canonical": "find",
+      "kind": "verb",
+      "reference": "Nehemiah 9:8"
+    },
+    {
+      "form": "frameth",
+      "frequency": 2,
+      "lemma": "frame",
+      "canonical": "frame",
+      "kind": "verb",
+      "reference": "Psalms 50:19"
+    },
+    {
+      "form": "fretteth",
+      "frequency": 1,
+      "lemma": "fret",
+      "canonical": "fret",
+      "kind": "verb",
+      "reference": "Proverbs 19:3"
+    },
+    {
+      "form": "frustrateth",
+      "frequency": 1,
+      "lemma": "frustrate",
+      "canonical": "frustrate",
+      "kind": "verb",
+      "reference": "Isaiah 44:25"
+    },
+    {
+      "form": "gaddest",
+      "frequency": 1,
+      "lemma": "gad",
+      "canonical": "gad",
+      "kind": "verb",
+      "reference": "Jeremiah 2:36"
+    },
+    {
+      "form": "gatherest",
+      "frequency": 1,
+      "lemma": "gather",
+      "canonical": "gather",
+      "kind": "verb",
+      "reference": "Deuteronomy 24:21"
+    },
+    {
+      "form": "gathereth",
+      "frequency": 17,
+      "lemma": "gather",
+      "canonical": "gather",
+      "kind": "verb",
+      "reference": "Numbers 19:10"
+    },
+    {
+      "form": "gavest",
+      "frequency": 34,
+      "lemma": "give",
+      "canonical": "give",
+      "kind": "verb",
+      "reference": "Genesis 3:12"
+    },
+    {
+      "form": "gendereth",
+      "frequency": 2,
+      "lemma": "gender",
+      "canonical": "gender",
+      "kind": "verb",
+      "reference": "Job 21:10"
+    },
+    {
+      "form": "getteth",
+      "frequency": 9,
+      "lemma": "get",
+      "canonical": "get",
+      "kind": "verb",
+      "reference": "2 Samuel 5:8"
+    },
+    {
+      "form": "girdeth",
+      "frequency": 4,
+      "lemma": "gird",
+      "canonical": "gird",
+      "kind": "verb",
+      "reference": "1 Kings 20:11"
+    },
+    {
+      "form": "givest",
+      "frequency": 12,
+      "lemma": "give",
+      "canonical": "give",
+      "kind": "verb",
+      "reference": "Deuteronomy 15:9"
+    },
+    {
+      "form": "giveth",
+      "frequency": 126,
+      "lemma": "give",
+      "canonical": "give",
+      "kind": "verb",
+      "reference": "Genesis 49:21"
+    },
+    {
+      "form": "gloriest",
+      "frequency": 1,
+      "lemma": "glory",
+      "canonical": "glory",
+      "kind": "verb",
+      "reference": "Jeremiah 49:4"
+    },
+    {
+      "form": "glorieth",
+      "frequency": 3,
+      "lemma": "glory",
+      "canonical": "glory",
+      "kind": "verb",
+      "reference": "Jeremiah 9:24"
+    },
+    {
+      "form": "glorifieth",
+      "frequency": 1,
+      "lemma": "glorify",
+      "canonical": "glorify",
+      "kind": "verb",
+      "reference": "Psalms 50:23"
+    },
+    {
+      "form": "gnasheth",
+      "frequency": 3,
+      "lemma": "gnash",
+      "canonical": "gnash",
+      "kind": "verb",
+      "reference": "Job 16:9"
+    },
+    {
+      "form": "goest",
+      "frequency": 46,
+      "lemma": "go",
+      "canonical": "go",
+      "kind": "verb",
+      "reference": "Genesis 10:19"
+    },
+    {
+      "form": "goeth",
+      "frequency": 135,
+      "lemma": "go",
+      "canonical": "go",
+      "kind": "verb",
+      "reference": "Genesis 2:14"
+    },
+    {
+      "form": "goodliest",
+      "frequency": 2,
+      "lemma": "goodly",
+      "canonical": "goodly",
+      "kind": "superlative",
+      "reference": "1 Samuel 8:16"
+    },
+    {
+      "form": "graveth",
+      "frequency": 1,
+      "lemma": "grave",
+      "canonical": "grave",
+      "kind": "verb",
+      "reference": "Isaiah 22:16"
+    },
+    {
+      "form": "greatest",
+      "frequency": 21,
+      "lemma": "great",
+      "canonical": "great",
+      "kind": "superlative",
+      "reference": "1 Chronicles 12:14"
+    },
+    {
+      "form": "greeteth",
+      "frequency": 1,
+      "lemma": "greet",
+      "canonical": "greet",
+      "kind": "verb",
+      "reference": "2 Timothy 4:21"
+    },
+    {
+      "form": "grieveth",
+      "frequency": 2,
+      "lemma": "grieve",
+      "canonical": "grieve",
+      "kind": "verb",
+      "reference": "Ruth 1:13"
+    },
+    {
+      "form": "groaneth",
+      "frequency": 1,
+      "lemma": "groan",
+      "canonical": "groan",
+      "kind": "verb",
+      "reference": "Romans 8:22"
+    },
+    {
+      "form": "gropeth",
+      "frequency": 1,
+      "lemma": "grope",
+      "canonical": "grope",
+      "kind": "verb",
+      "reference": "Deuteronomy 28:29"
+    },
+    {
+      "form": "groweth",
+      "frequency": 14,
+      "lemma": "grow",
+      "canonical": "grow",
+      "kind": "verb",
+      "reference": "Exodus 10:5"
+    },
+    {
+      "form": "guest",
+      "frequency": 1,
+      "lemma": "guest",
+      "canonical": "guest",
+      "kind": "exact",
+      "reference": "Luke 19:7"
+    },
+    {
+      "form": "halteth",
+      "frequency": 2,
+      "lemma": "halt",
+      "canonical": "halt",
+      "kind": "verb",
+      "reference": "Micah 4:6"
+    },
+    {
+      "form": "hammoleketh",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "1 Chronicles 7:18",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "handleth",
+      "frequency": 3,
+      "lemma": "handle",
+      "canonical": "handle",
+      "kind": "verb",
+      "reference": "Proverbs 16:20"
+    },
+    {
+      "form": "hangeth",
+      "frequency": 2,
+      "lemma": "hang",
+      "canonical": "hang",
+      "kind": "verb",
+      "reference": "Job 26:7"
+    },
+    {
+      "form": "happeneth",
+      "frequency": 6,
+      "lemma": "happen",
+      "canonical": "happen",
+      "kind": "verb",
+      "reference": "Ecclesiastes 2:14"
+    },
+    {
+      "form": "hardeneth",
+      "frequency": 4,
+      "lemma": "harden",
+      "canonical": "harden",
+      "kind": "verb",
+      "reference": "Proverbs 21:29"
+    },
+    {
+      "form": "hareth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "1 Samuel 22:5",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "harosheth",
+      "frequency": 3,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Judges 4:2",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "harvest",
+      "frequency": 61,
+      "lemma": "harvest",
+      "canonical": "harvest",
+      "kind": "exact",
+      "reference": "Genesis 8:22"
+    },
+    {
+      "form": "hast",
+      "frequency": 1071,
+      "lemma": "hast",
+      "canonical": "have",
+      "kind": "exact-inflection",
+      "reference": "Genesis 3:11",
+      "note": "Exact grammar entry is retained; canonical verb is have."
+    },
+    {
+      "form": "hasteneth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "hasten",
+      "kind": "verb",
+      "reference": "Isaiah 51:14",
+      "note": "Dictionary lacks hasten; do not substitute an unrelated entry."
+    },
+    {
+      "form": "hasteth",
+      "frequency": 9,
+      "lemma": "haste",
+      "canonical": "haste",
+      "kind": "verb",
+      "reference": "Job 9:26"
+    },
+    {
+      "form": "hatcheth",
+      "frequency": 1,
+      "lemma": "hatch",
+      "canonical": "hatch",
+      "kind": "verb",
+      "reference": "Jeremiah 17:11"
+    },
+    {
+      "form": "hatest",
+      "frequency": 6,
+      "lemma": "hate",
+      "canonical": "hate",
+      "kind": "verb",
+      "reference": "2 Samuel 19:6"
+    },
+    {
+      "form": "hateth",
+      "frequency": 31,
+      "lemma": "hate",
+      "canonical": "hate",
+      "kind": "verb",
+      "reference": "Exodus 23:5"
+    },
+    {
+      "form": "hath",
+      "frequency": 2263,
+      "lemma": "have",
+      "canonical": "have",
+      "kind": "verb",
+      "reference": "Genesis 1:20"
+    },
+    {
+      "form": "hazarmaveth",
+      "frequency": 2,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Genesis 10:26",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "healeth",
+      "frequency": 4,
+      "lemma": "heal",
+      "canonical": "heal",
+      "kind": "verb",
+      "reference": "Exodus 15:26"
+    },
+    {
+      "form": "heapeth",
+      "frequency": 2,
+      "lemma": "heap",
+      "canonical": "heap",
+      "kind": "verb",
+      "reference": "Psalms 39:6"
+    },
+    {
+      "form": "heardest",
+      "frequency": 12,
+      "lemma": "hear",
+      "canonical": "hear",
+      "kind": "verb",
+      "reference": "Deuteronomy 4:36"
+    },
+    {
+      "form": "hearest",
+      "frequency": 11,
+      "lemma": "hear",
+      "canonical": "hear",
+      "kind": "verb",
+      "reference": "Ruth 2:8"
+    },
+    {
+      "form": "heareth",
+      "frequency": 52,
+      "lemma": "hear",
+      "canonical": "hear",
+      "kind": "verb",
+      "reference": "Exodus 16:7"
+    },
+    {
+      "form": "hearkeneth",
+      "frequency": 2,
+      "lemma": "hearken",
+      "canonical": "hearken",
+      "kind": "verb",
+      "reference": "Proverbs 1:33"
+    },
+    {
+      "form": "helpeth",
+      "frequency": 4,
+      "lemma": "help",
+      "canonical": "help",
+      "kind": "verb",
+      "reference": "1 Chronicles 12:18"
+    },
+    {
+      "form": "heth",
+      "frequency": 14,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Genesis 10:15",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "heweth",
+      "frequency": 3,
+      "lemma": "hew",
+      "canonical": "hew",
+      "kind": "verb",
+      "reference": "Isaiah 10:15"
+    },
+    {
+      "form": "hidest",
+      "frequency": 6,
+      "lemma": "hide",
+      "canonical": "hide",
+      "kind": "verb",
+      "reference": "Job 13:24"
+    },
+    {
+      "form": "hideth",
+      "frequency": 16,
+      "lemma": "hide",
+      "canonical": "hide",
+      "kind": "verb",
+      "reference": "1 Samuel 23:23"
+    },
+    {
+      "form": "highest",
+      "frequency": 18,
+      "lemma": "high",
+      "canonical": "high",
+      "kind": "superlative",
+      "reference": "Psalms 18:13"
+    },
+    {
+      "form": "hindereth",
+      "frequency": 1,
+      "lemma": "hinder",
+      "canonical": "hinder",
+      "kind": "verb",
+      "reference": "Isaiah 14:6"
+    },
+    {
+      "form": "hirest",
+      "frequency": 1,
+      "lemma": "hire",
+      "canonical": "hire",
+      "kind": "verb",
+      "reference": "Ezekiel 16:33"
+    },
+    {
+      "form": "holdest",
+      "frequency": 6,
+      "lemma": "hold",
+      "canonical": "hold",
+      "kind": "verb",
+      "reference": "Esther 4:14"
+    },
+    {
+      "form": "holdeth",
+      "frequency": 9,
+      "lemma": "hold",
+      "canonical": "hold",
+      "kind": "verb",
+      "reference": "Job 2:3"
+    },
+    {
+      "form": "holiest",
+      "frequency": 3,
+      "lemma": "holy",
+      "canonical": "holy",
+      "kind": "superlative",
+      "reference": "Hebrews 9:3"
+    },
+    {
+      "form": "honest",
+      "frequency": 7,
+      "lemma": "honest",
+      "canonical": "honest",
+      "kind": "exact",
+      "reference": "Luke 8:15"
+    },
+    {
+      "form": "honourest",
+      "frequency": 1,
+      "lemma": "honor",
+      "canonical": "honor",
+      "kind": "verb",
+      "reference": "1 Samuel 2:29"
+    },
+    {
+      "form": "honoureth",
+      "frequency": 9,
+      "lemma": "honor",
+      "canonical": "honor",
+      "kind": "verb",
+      "reference": "Psalms 15:4"
+    },
+    {
+      "form": "hopeth",
+      "frequency": 1,
+      "lemma": "hope",
+      "canonical": "hope",
+      "kind": "verb",
+      "reference": "1 Corinthians 13:7"
+    },
+    {
+      "form": "hottest",
+      "frequency": 1,
+      "lemma": "hot",
+      "canonical": "hot",
+      "kind": "superlative",
+      "reference": "2 Samuel 11:15"
+    },
+    {
+      "form": "humbleth",
+      "frequency": 7,
+      "lemma": "humble",
+      "canonical": "humble",
+      "kind": "verb",
+      "reference": "1 Kings 21:29"
+    },
+    {
+      "form": "huntest",
+      "frequency": 2,
+      "lemma": "hunt",
+      "canonical": "hunt",
+      "kind": "verb",
+      "reference": "1 Samuel 24:11"
+    },
+    {
+      "form": "hunteth",
+      "frequency": 1,
+      "lemma": "hunt",
+      "canonical": "hunt",
+      "kind": "verb",
+      "reference": "Leviticus 17:13"
+    },
+    {
+      "form": "hurleth",
+      "frequency": 1,
+      "lemma": "hurl",
+      "canonical": "hurl",
+      "kind": "verb",
+      "reference": "Job 27:21"
+    },
+    {
+      "form": "imagineth",
+      "frequency": 1,
+      "lemma": "imagine",
+      "canonical": "imagine",
+      "kind": "verb",
+      "reference": "Nahum 1:11"
+    },
+    {
+      "form": "imputeth",
+      "frequency": 2,
+      "lemma": "impute",
+      "canonical": "impute",
+      "kind": "verb",
+      "reference": "Psalms 32:2"
+    },
+    {
+      "form": "inclineth",
+      "frequency": 1,
+      "lemma": "incline",
+      "canonical": "incline",
+      "kind": "verb",
+      "reference": "Proverbs 2:18"
+    },
+    {
+      "form": "increasest",
+      "frequency": 1,
+      "lemma": "increase",
+      "canonical": "increase",
+      "kind": "verb",
+      "reference": "Job 10:17"
+    },
+    {
+      "form": "increaseth",
+      "frequency": 15,
+      "lemma": "increase",
+      "canonical": "increase",
+      "kind": "verb",
+      "reference": "Job 10:16"
+    },
+    {
+      "form": "inhabitest",
+      "frequency": 1,
+      "lemma": "inhabit",
+      "canonical": "inhabit",
+      "kind": "verb",
+      "reference": "Psalms 22:3"
+    },
+    {
+      "form": "inhabiteth",
+      "frequency": 2,
+      "lemma": "inhabit",
+      "canonical": "inhabit",
+      "kind": "verb",
+      "reference": "Job 15:28"
+    },
+    {
+      "form": "inheriteth",
+      "frequency": 1,
+      "lemma": "inherit",
+      "canonical": "inherit",
+      "kind": "verb",
+      "reference": "Numbers 35:8"
+    },
+    {
+      "form": "intendest",
+      "frequency": 1,
+      "lemma": "intend",
+      "canonical": "intend",
+      "kind": "verb",
+      "reference": "Exodus 2:14"
+    },
+    {
+      "form": "intermeddleth",
+      "frequency": 1,
+      "lemma": "intermeddle",
+      "canonical": "intermeddle",
+      "kind": "verb",
+      "reference": "Proverbs 18:1"
+    },
+    {
+      "form": "ishbosheth",
+      "frequency": 12,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "2 Samuel 2:8",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "japheth",
+      "frequency": 11,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Genesis 5:32",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "jerubbesheth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "2 Samuel 11:21",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "jetheth",
+      "frequency": 2,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Genesis 36:40",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "judgest",
+      "frequency": 8,
+      "lemma": "judge",
+      "canonical": "judge",
+      "kind": "verb",
+      "reference": "Psalms 51:4"
+    },
+    {
+      "form": "judgeth",
+      "frequency": 17,
+      "lemma": "judge",
+      "canonical": "judge",
+      "kind": "verb",
+      "reference": "Job 21:22"
+    },
+    {
+      "form": "justifieth",
+      "frequency": 4,
+      "lemma": "justify",
+      "canonical": "justify",
+      "kind": "verb",
+      "reference": "Proverbs 17:15"
+    },
+    {
+      "form": "keepest",
+      "frequency": 4,
+      "lemma": "keep",
+      "canonical": "keep",
+      "kind": "verb",
+      "reference": "1 Kings 8:23"
+    },
+    {
+      "form": "keepeth",
+      "frequency": 46,
+      "lemma": "keep",
+      "canonical": "keep",
+      "kind": "verb",
+      "reference": "Exodus 21:18"
+    },
+    {
+      "form": "killest",
+      "frequency": 2,
+      "lemma": "kill",
+      "canonical": "kill",
+      "kind": "verb",
+      "reference": "Matthew 23:37"
+    },
+    {
+      "form": "killeth",
+      "frequency": 23,
+      "lemma": "kill",
+      "canonical": "kill",
+      "kind": "verb",
+      "reference": "Leviticus 17:3"
+    },
+    {
+      "form": "kindleth",
+      "frequency": 3,
+      "lemma": "kindle",
+      "canonical": "kindle",
+      "kind": "verb",
+      "reference": "Job 41:21"
+    },
+    {
+      "form": "kirharaseth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "2 Kings 3:25",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "kirhareseth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Isaiah 16:7",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "knewest",
+      "frequency": 10,
+      "lemma": "know",
+      "canonical": "know",
+      "kind": "verb",
+      "reference": "Deuteronomy 8:3"
+    },
+    {
+      "form": "knocketh",
+      "frequency": 4,
+      "lemma": "knock",
+      "canonical": "knock",
+      "kind": "verb",
+      "reference": "Song of Solomon 5:2"
+    },
+    {
+      "form": "knowest",
+      "frequency": 89,
+      "lemma": "know",
+      "canonical": "know",
+      "kind": "verb",
+      "reference": "Genesis 30:26"
+    },
+    {
+      "form": "knoweth",
+      "frequency": 104,
+      "lemma": "know",
+      "canonical": "know",
+      "kind": "verb",
+      "reference": "Genesis 33:13"
+    },
+    {
+      "form": "laboureth",
+      "frequency": 5,
+      "lemma": "labor",
+      "canonical": "labor",
+      "kind": "verb",
+      "reference": "Proverbs 16:26"
+    },
+    {
+      "form": "lackest",
+      "frequency": 2,
+      "lemma": "lack",
+      "canonical": "lack",
+      "kind": "verb",
+      "reference": "Mark 10:21"
+    },
+    {
+      "form": "lacketh",
+      "frequency": 5,
+      "lemma": "lack",
+      "canonical": "lack",
+      "kind": "verb",
+      "reference": "Numbers 31:49"
+    },
+    {
+      "form": "ladeth",
+      "frequency": 1,
+      "lemma": "lade",
+      "canonical": "lade",
+      "kind": "verb",
+      "reference": "Habakkuk 2:6"
+    },
+    {
+      "form": "languisheth",
+      "frequency": 8,
+      "lemma": "languish",
+      "canonical": "languish",
+      "kind": "verb",
+      "reference": "Isaiah 24:4"
+    },
+    {
+      "form": "lappeth",
+      "frequency": 2,
+      "lemma": "lap",
+      "canonical": "lap",
+      "kind": "verb",
+      "reference": "Judges 7:5"
+    },
+    {
+      "form": "laugheth",
+      "frequency": 1,
+      "lemma": "laugh",
+      "canonical": "laugh",
+      "kind": "verb",
+      "reference": "Job 41:29"
+    },
+    {
+      "form": "layest",
+      "frequency": 2,
+      "lemma": "lay",
+      "canonical": "lay",
+      "kind": "verb",
+      "reference": "Numbers 11:11"
+    },
+    {
+      "form": "layeth",
+      "frequency": 18,
+      "lemma": "lay",
+      "canonical": "lay",
+      "kind": "verb",
+      "reference": "Job 21:19"
+    },
+    {
+      "form": "leadest",
+      "frequency": 1,
+      "lemma": "lead",
+      "canonical": "lead",
+      "kind": "verb",
+      "reference": "Psalms 80:1"
+    },
+    {
+      "form": "leadeth",
+      "frequency": 14,
+      "lemma": "lead",
+      "canonical": "lead",
+      "kind": "verb",
+      "reference": "1 Samuel 13:17"
+    },
+    {
+      "form": "leaneth",
+      "frequency": 2,
+      "lemma": "lean",
+      "canonical": "lean",
+      "kind": "verb",
+      "reference": "2 Samuel 3:29"
+    },
+    {
+      "form": "leaveneth",
+      "frequency": 2,
+      "lemma": "leaven",
+      "canonical": "leaven",
+      "kind": "verb",
+      "reference": "1 Corinthians 5:6"
+    },
+    {
+      "form": "leaveth",
+      "frequency": 6,
+      "lemma": "none",
+      "canonical": "leave",
+      "kind": "verb",
+      "reference": "Job 39:14"
+    },
+    {
+      "form": "leddest",
+      "frequency": 5,
+      "lemma": "lead",
+      "canonical": "lead",
+      "kind": "verb",
+      "reference": "2 Samuel 5:2"
+    },
+    {
+      "form": "leftest",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "leave",
+      "kind": "verb",
+      "reference": "Nehemiah 9:28"
+    },
+    {
+      "form": "lendeth",
+      "frequency": 4,
+      "lemma": "lend",
+      "canonical": "lend",
+      "kind": "verb",
+      "reference": "Deuteronomy 15:2"
+    },
+    {
+      "form": "lest",
+      "frequency": 240,
+      "lemma": "lest",
+      "canonical": "lest",
+      "kind": "exact",
+      "reference": "Genesis 3:3"
+    },
+    {
+      "form": "lettest",
+      "frequency": 3,
+      "lemma": "let",
+      "canonical": "let",
+      "kind": "verb",
+      "reference": "Job 15:13"
+    },
+    {
+      "form": "letteth",
+      "frequency": 3,
+      "lemma": "let",
+      "canonical": "let",
+      "kind": "verb",
+      "reference": "2 Kings 10:24"
+    },
+    {
+      "form": "licketh",
+      "frequency": 1,
+      "lemma": "lick",
+      "canonical": "lick",
+      "kind": "verb",
+      "reference": "Numbers 22:4"
+    },
+    {
+      "form": "liest",
+      "frequency": 5,
+      "lemma": "lie",
+      "canonical": "lie",
+      "kind": "verb",
+      "reference": "Genesis 28:13"
+    },
+    {
+      "form": "lieth",
+      "frequency": 59,
+      "lemma": "lie",
+      "canonical": "lie",
+      "kind": "verb",
+      "reference": "Genesis 4:7"
+    },
+    {
+      "form": "liftest",
+      "frequency": 4,
+      "lemma": "lift",
+      "canonical": "lift",
+      "kind": "verb",
+      "reference": "Job 30:22"
+    },
+    {
+      "form": "lifteth",
+      "frequency": 10,
+      "lemma": "lift",
+      "canonical": "lift",
+      "kind": "verb",
+      "reference": "1 Samuel 2:7"
+    },
+    {
+      "form": "lighteneth",
+      "frequency": 2,
+      "lemma": "lighten",
+      "canonical": "lighten",
+      "kind": "verb",
+      "reference": "Proverbs 29:13"
+    },
+    {
+      "form": "lightest",
+      "frequency": 1,
+      "lemma": "light",
+      "canonical": "light",
+      "kind": "verb",
+      "reference": "Numbers 8:2"
+    },
+    {
+      "form": "lighteth",
+      "frequency": 3,
+      "lemma": "light",
+      "canonical": "light",
+      "kind": "verb",
+      "reference": "Exodus 30:8"
+    },
+    {
+      "form": "liketh",
+      "frequency": 3,
+      "lemma": "like",
+      "canonical": "like",
+      "kind": "verb",
+      "reference": "Deuteronomy 23:16"
+    },
+    {
+      "form": "limiteth",
+      "frequency": 1,
+      "lemma": "limit",
+      "canonical": "limit",
+      "kind": "verb",
+      "reference": "Hebrews 4:7"
+    },
+    {
+      "form": "lingereth",
+      "frequency": 1,
+      "lemma": "linger",
+      "canonical": "linger",
+      "kind": "verb",
+      "reference": "2 Peter 2:3"
+    },
+    {
+      "form": "listeth",
+      "frequency": 2,
+      "lemma": "list",
+      "canonical": "list",
+      "kind": "verb",
+      "reference": "John 3:8"
+    },
+    {
+      "form": "livest",
+      "frequency": 4,
+      "lemma": "live",
+      "canonical": "live",
+      "kind": "verb",
+      "reference": "Deuteronomy 12:19"
+    },
+    {
+      "form": "liveth",
+      "frequency": 96,
+      "lemma": "live",
+      "canonical": "live",
+      "kind": "verb",
+      "reference": "Genesis 9:3"
+    },
+    {
+      "form": "loadeth",
+      "frequency": 1,
+      "lemma": "load",
+      "canonical": "load",
+      "kind": "verb",
+      "reference": "Psalms 68:19"
+    },
+    {
+      "form": "loatheth",
+      "frequency": 2,
+      "lemma": "none",
+      "canonical": "loathe",
+      "kind": "verb",
+      "reference": "Numbers 21:5"
+    },
+    {
+      "form": "lodgest",
+      "frequency": 1,
+      "lemma": "lodge",
+      "canonical": "lodge",
+      "kind": "verb",
+      "reference": "Ruth 1:16"
+    },
+    {
+      "form": "lodgeth",
+      "frequency": 1,
+      "lemma": "lodge",
+      "canonical": "lodge",
+      "kind": "verb",
+      "reference": "Acts 10:6"
+    },
+    {
+      "form": "longeth",
+      "frequency": 4,
+      "lemma": "long",
+      "canonical": "long",
+      "kind": "verb",
+      "reference": "Genesis 34:8"
+    },
+    {
+      "form": "lookest",
+      "frequency": 2,
+      "lemma": "look",
+      "canonical": "look",
+      "kind": "verb",
+      "reference": "Job 13:27"
+    },
+    {
+      "form": "looketh",
+      "frequency": 33,
+      "lemma": "look",
+      "canonical": "look",
+      "kind": "verb",
+      "reference": "Leviticus 13:12"
+    },
+    {
+      "form": "looseth",
+      "frequency": 2,
+      "lemma": "loose",
+      "canonical": "loose",
+      "kind": "verb",
+      "reference": "Job 12:18"
+    },
+    {
+      "form": "loseth",
+      "frequency": 1,
+      "lemma": "lose",
+      "canonical": "lose",
+      "kind": "verb",
+      "reference": "Matthew 10:39"
+    },
+    {
+      "form": "lotheth",
+      "frequency": 1,
+      "lemma": "lothe",
+      "canonical": "lothe",
+      "kind": "verb",
+      "reference": "Ezekiel 16:45"
+    },
+    {
+      "form": "lovest",
+      "frequency": 12,
+      "lemma": "love",
+      "canonical": "love",
+      "kind": "verb",
+      "reference": "Genesis 22:2"
+    },
+    {
+      "form": "loveth",
+      "frequency": 65,
+      "lemma": "love",
+      "canonical": "love",
+      "kind": "verb",
+      "reference": "Genesis 27:9"
+    },
+    {
+      "form": "lowest",
+      "frequency": 11,
+      "lemma": "lowest",
+      "canonical": "lowest",
+      "kind": "exact",
+      "reference": "Deuteronomy 32:22"
+    },
+    {
+      "form": "loweth",
+      "frequency": 1,
+      "lemma": "low",
+      "canonical": "low",
+      "kind": "verb",
+      "reference": "Job 6:5"
+    },
+    {
+      "form": "lusteth",
+      "frequency": 6,
+      "lemma": "lust",
+      "canonical": "lust",
+      "kind": "verb",
+      "reference": "Deuteronomy 12:15"
+    },
+    {
+      "form": "madest",
+      "frequency": 10,
+      "lemma": "make",
+      "canonical": "make",
+      "kind": "verb",
+      "reference": "Nehemiah 9:8"
+    },
+    {
+      "form": "maintainest",
+      "frequency": 1,
+      "lemma": "maintain",
+      "canonical": "maintain",
+      "kind": "verb",
+      "reference": "Psalms 16:5"
+    },
+    {
+      "form": "makest",
+      "frequency": 26,
+      "lemma": "make",
+      "canonical": "make",
+      "kind": "verb",
+      "reference": "Judges 18:3"
+    },
+    {
+      "form": "maketh",
+      "frequency": 126,
+      "lemma": "make",
+      "canonical": "make",
+      "kind": "verb",
+      "reference": "Exodus 4:11"
+    },
+    {
+      "form": "manifest",
+      "frequency": 39,
+      "lemma": "manifest",
+      "canonical": "manifest",
+      "kind": "exact",
+      "reference": "Ecclesiastes 3:18"
+    },
+    {
+      "form": "markest",
+      "frequency": 1,
+      "lemma": "mark",
+      "canonical": "mark",
+      "kind": "verb",
+      "reference": "Job 10:14"
+    },
+    {
+      "form": "marketh",
+      "frequency": 3,
+      "lemma": "mark",
+      "canonical": "mark",
+      "kind": "verb",
+      "reference": "Job 33:11"
+    },
+    {
+      "form": "marrieth",
+      "frequency": 4,
+      "lemma": "marry",
+      "canonical": "marry",
+      "kind": "verb",
+      "reference": "Isaiah 62:5"
+    },
+    {
+      "form": "mayest",
+      "frequency": 114,
+      "lemma": "may",
+      "canonical": "may",
+      "kind": "verb",
+      "reference": "Genesis 2:16"
+    },
+    {
+      "form": "meanest",
+      "frequency": 4,
+      "lemma": "mean",
+      "canonical": "mean",
+      "kind": "verb",
+      "reference": "Genesis 33:8"
+    },
+    {
+      "form": "meaneth",
+      "frequency": 8,
+      "lemma": "mean",
+      "canonical": "mean",
+      "kind": "verb",
+      "reference": "Deuteronomy 29:24"
+    },
+    {
+      "form": "meddleth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "meddle",
+      "kind": "verb",
+      "reference": "Proverbs 26:17",
+      "note": "Dictionary lacks meddle; do not substitute an unrelated entry."
+    },
+    {
+      "form": "meetest",
+      "frequency": 2,
+      "lemma": "none",
+      "canonical": "meet",
+      "kind": "verb",
+      "reference": "2 Kings 10:3",
+      "note": "Dictionary lacks meet; do not substitute an unrelated entry."
+    },
+    {
+      "form": "meeteth",
+      "frequency": 3,
+      "lemma": "none",
+      "canonical": "meet",
+      "kind": "verb",
+      "reference": "Genesis 32:17",
+      "note": "Dictionary lacks meet; do not substitute an unrelated entry."
+    },
+    {
+      "form": "melteth",
+      "frequency": 7,
+      "lemma": "melt",
+      "canonical": "melt",
+      "kind": "verb",
+      "reference": "Psalms 58:8"
+    },
+    {
+      "form": "mephibosheth",
+      "frequency": 15,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "2 Samuel 4:4",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "meshullemeth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "2 Kings 21:19",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "mightest",
+      "frequency": 19,
+      "lemma": "may",
+      "canonical": "may",
+      "kind": "verb",
+      "reference": "Deuteronomy 4:35"
+    },
+    {
+      "form": "mightiest",
+      "frequency": 1,
+      "lemma": "mighty",
+      "canonical": "mighty",
+      "kind": "superlative",
+      "reference": "1 Chronicles 11:19"
+    },
+    {
+      "form": "ministereth",
+      "frequency": 2,
+      "lemma": "minister",
+      "canonical": "minister",
+      "kind": "verb",
+      "reference": "2 Corinthians 9:10"
+    },
+    {
+      "form": "mispereth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Nehemiah 7:7",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "mockest",
+      "frequency": 1,
+      "lemma": "mock",
+      "canonical": "mock",
+      "kind": "verb",
+      "reference": "Job 11:3"
+    },
+    {
+      "form": "mocketh",
+      "frequency": 5,
+      "lemma": "mock",
+      "canonical": "mock",
+      "kind": "verb",
+      "reference": "Job 13:9"
+    },
+    {
+      "form": "modest",
+      "frequency": 1,
+      "lemma": "modest",
+      "canonical": "modest",
+      "kind": "exact",
+      "reference": "1 Timothy 2:9"
+    },
+    {
+      "form": "mourneth",
+      "frequency": 11,
+      "lemma": "mourn",
+      "canonical": "mourn",
+      "kind": "verb",
+      "reference": "2 Samuel 19:1"
+    },
+    {
+      "form": "moveth",
+      "frequency": 8,
+      "lemma": "move",
+      "canonical": "move",
+      "kind": "verb",
+      "reference": "Genesis 1:21"
+    },
+    {
+      "form": "multiplieth",
+      "frequency": 3,
+      "lemma": "multiply",
+      "canonical": "multiply",
+      "kind": "verb",
+      "reference": "Job 9:17"
+    },
+    {
+      "form": "mustereth",
+      "frequency": 1,
+      "lemma": "muster",
+      "canonical": "muster",
+      "kind": "verb",
+      "reference": "Isaiah 13:4"
+    },
+    {
+      "form": "nameth",
+      "frequency": 1,
+      "lemma": "name",
+      "canonical": "name",
+      "kind": "verb",
+      "reference": "2 Timothy 2:19"
+    },
+    {
+      "form": "nazareth",
+      "frequency": 29,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Matthew 2:23",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "needest",
+      "frequency": 1,
+      "lemma": "need",
+      "canonical": "need",
+      "kind": "verb",
+      "reference": "John 16:30"
+    },
+    {
+      "form": "needeth",
+      "frequency": 6,
+      "lemma": "need",
+      "canonical": "need",
+      "kind": "verb",
+      "reference": "Genesis 33:15"
+    },
+    {
+      "form": "nest",
+      "frequency": 15,
+      "lemma": "nest",
+      "canonical": "nest",
+      "kind": "exact",
+      "reference": "Numbers 24:21"
+    },
+    {
+      "form": "nourisheth",
+      "frequency": 1,
+      "lemma": "nourish",
+      "canonical": "nourish",
+      "kind": "verb",
+      "reference": "Ephesians 5:29"
+    },
+    {
+      "form": "numberest",
+      "frequency": 3,
+      "lemma": "number",
+      "canonical": "number",
+      "kind": "verb",
+      "reference": "Exodus 30:12"
+    },
+    {
+      "form": "obeyeth",
+      "frequency": 3,
+      "lemma": "obey",
+      "canonical": "obey",
+      "kind": "verb",
+      "reference": "Isaiah 50:10"
+    },
+    {
+      "form": "observest",
+      "frequency": 1,
+      "lemma": "observe",
+      "canonical": "observe",
+      "kind": "verb",
+      "reference": "Isaiah 42:20"
+    },
+    {
+      "form": "observeth",
+      "frequency": 1,
+      "lemma": "observe",
+      "canonical": "observe",
+      "kind": "verb",
+      "reference": "Ecclesiastes 11:4"
+    },
+    {
+      "form": "obtaineth",
+      "frequency": 2,
+      "lemma": "obtain",
+      "canonical": "obtain",
+      "kind": "verb",
+      "reference": "Proverbs 12:2"
+    },
+    {
+      "form": "occupieth",
+      "frequency": 1,
+      "lemma": "occupy",
+      "canonical": "occupy",
+      "kind": "verb",
+      "reference": "1 Corinthians 14:16"
+    },
+    {
+      "form": "offereth",
+      "frequency": 15,
+      "lemma": "offer",
+      "canonical": "offer",
+      "kind": "verb",
+      "reference": "Leviticus 6:26"
+    },
+    {
+      "form": "openest",
+      "frequency": 2,
+      "lemma": "open",
+      "canonical": "open",
+      "kind": "verb",
+      "reference": "Psalms 104:28"
+    },
+    {
+      "form": "openeth",
+      "frequency": 21,
+      "lemma": "open",
+      "canonical": "open",
+      "kind": "verb",
+      "reference": "Exodus 13:2"
+    },
+    {
+      "form": "opposest",
+      "frequency": 1,
+      "lemma": "oppose",
+      "canonical": "oppose",
+      "kind": "verb",
+      "reference": "Job 30:21"
+    },
+    {
+      "form": "opposeth",
+      "frequency": 1,
+      "lemma": "oppose",
+      "canonical": "oppose",
+      "kind": "verb",
+      "reference": "2 Thessalonians 2:4"
+    },
+    {
+      "form": "oppresseth",
+      "frequency": 5,
+      "lemma": "oppress",
+      "canonical": "oppress",
+      "kind": "verb",
+      "reference": "Numbers 10:9"
+    },
+    {
+      "form": "ordaineth",
+      "frequency": 1,
+      "lemma": "ordain",
+      "canonical": "ordain",
+      "kind": "verb",
+      "reference": "Psalms 7:13"
+    },
+    {
+      "form": "ordereth",
+      "frequency": 1,
+      "lemma": "order",
+      "canonical": "order",
+      "kind": "verb",
+      "reference": "Psalms 50:23"
+    },
+    {
+      "form": "oughtest",
+      "frequency": 4,
+      "lemma": "ought",
+      "canonical": "ought",
+      "kind": "verb",
+      "reference": "1 Kings 2:9"
+    },
+    {
+      "form": "overcometh",
+      "frequency": 11,
+      "lemma": "overcome",
+      "canonical": "overcome",
+      "kind": "verb",
+      "reference": "1 John 5:4"
+    },
+    {
+      "form": "overfloweth",
+      "frequency": 1,
+      "lemma": "overflow",
+      "canonical": "overflow",
+      "kind": "verb",
+      "reference": "Joshua 3:15"
+    },
+    {
+      "form": "overtaketh",
+      "frequency": 1,
+      "lemma": "overtake",
+      "canonical": "overtake",
+      "kind": "verb",
+      "reference": "1 Chronicles 21:12"
+    },
+    {
+      "form": "overthroweth",
+      "frequency": 5,
+      "lemma": "overthrow",
+      "canonical": "overthrow",
+      "kind": "verb",
+      "reference": "Job 12:19"
+    },
+    {
+      "form": "overturneth",
+      "frequency": 3,
+      "lemma": "overturn",
+      "canonical": "overturn",
+      "kind": "verb",
+      "reference": "Job 9:5"
+    },
+    {
+      "form": "owest",
+      "frequency": 4,
+      "lemma": "owe",
+      "canonical": "owe",
+      "kind": "verb",
+      "reference": "Matthew 18:28"
+    },
+    {
+      "form": "oweth",
+      "frequency": 1,
+      "lemma": "owe",
+      "canonical": "owe",
+      "kind": "verb",
+      "reference": "Philemon 1:18"
+    },
+    {
+      "form": "owneth",
+      "frequency": 2,
+      "lemma": "own",
+      "canonical": "own",
+      "kind": "verb",
+      "reference": "Leviticus 14:35"
+    },
+    {
+      "form": "pacifieth",
+      "frequency": 2,
+      "lemma": "pacify",
+      "canonical": "pacify",
+      "kind": "verb",
+      "reference": "Proverbs 21:14"
+    },
+    {
+      "form": "panteth",
+      "frequency": 3,
+      "lemma": "pant",
+      "canonical": "pant",
+      "kind": "verb",
+      "reference": "Psalms 38:10"
+    },
+    {
+      "form": "pardoneth",
+      "frequency": 1,
+      "lemma": "pardon",
+      "canonical": "pardon",
+      "kind": "verb",
+      "reference": "Micah 7:18"
+    },
+    {
+      "form": "partakest",
+      "frequency": 1,
+      "lemma": "partake",
+      "canonical": "partake",
+      "kind": "verb",
+      "reference": "Romans 11:17"
+    },
+    {
+      "form": "parteth",
+      "frequency": 3,
+      "lemma": "part",
+      "canonical": "part",
+      "kind": "verb",
+      "reference": "Leviticus 11:3"
+    },
+    {
+      "form": "passest",
+      "frequency": 5,
+      "lemma": "pass",
+      "canonical": "pass",
+      "kind": "verb",
+      "reference": "Deuteronomy 3:21"
+    },
+    {
+      "form": "passeth",
+      "frequency": 38,
+      "lemma": "pass",
+      "canonical": "pass",
+      "kind": "verb",
+      "reference": "Exodus 30:13"
+    },
+    {
+      "form": "paweth",
+      "frequency": 1,
+      "lemma": "paw",
+      "canonical": "paw",
+      "kind": "verb",
+      "reference": "Job 39:21"
+    },
+    {
+      "form": "payeth",
+      "frequency": 1,
+      "lemma": "pay",
+      "canonical": "pay",
+      "kind": "verb",
+      "reference": "Psalms 37:21"
+    },
+    {
+      "form": "peleth",
+      "frequency": 2,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Numbers 16:1",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "perceivest",
+      "frequency": 2,
+      "lemma": "perceive",
+      "canonical": "perceive",
+      "kind": "verb",
+      "reference": "Proverbs 14:7"
+    },
+    {
+      "form": "perceiveth",
+      "frequency": 3,
+      "lemma": "perceive",
+      "canonical": "perceive",
+      "kind": "verb",
+      "reference": "Job 14:21"
+    },
+    {
+      "form": "performeth",
+      "frequency": 4,
+      "lemma": "perform",
+      "canonical": "perform",
+      "kind": "verb",
+      "reference": "Nehemiah 5:13"
+    },
+    {
+      "form": "perisheth",
+      "frequency": 9,
+      "lemma": "perish",
+      "canonical": "perish",
+      "kind": "verb",
+      "reference": "Job 4:11"
+    },
+    {
+      "form": "persecutest",
+      "frequency": 6,
+      "lemma": "persecute",
+      "canonical": "persecute",
+      "kind": "verb",
+      "reference": "Acts 9:4"
+    },
+    {
+      "form": "persuadest",
+      "frequency": 1,
+      "lemma": "persuade",
+      "canonical": "persuade",
+      "kind": "verb",
+      "reference": "Acts 26:28"
+    },
+    {
+      "form": "persuadeth",
+      "frequency": 2,
+      "lemma": "persuade",
+      "canonical": "persuade",
+      "kind": "verb",
+      "reference": "2 Kings 18:32"
+    },
+    {
+      "form": "pertaineth",
+      "frequency": 7,
+      "lemma": "pertain",
+      "canonical": "pertain",
+      "kind": "verb",
+      "reference": "Leviticus 14:32"
+    },
+    {
+      "form": "perverteth",
+      "frequency": 5,
+      "lemma": "pervert",
+      "canonical": "pervert",
+      "kind": "verb",
+      "reference": "Exodus 23:8"
+    },
+    {
+      "form": "pibeseth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Ezekiel 30:17",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "pierceth",
+      "frequency": 1,
+      "lemma": "pierce",
+      "canonical": "pierce",
+      "kind": "verb",
+      "reference": "Job 40:24"
+    },
+    {
+      "form": "pineth",
+      "frequency": 1,
+      "lemma": "pine",
+      "canonical": "pine",
+      "kind": "verb",
+      "reference": "Mark 9:18"
+    },
+    {
+      "form": "pisseth",
+      "frequency": 6,
+      "lemma": "piss",
+      "canonical": "piss",
+      "kind": "verb",
+      "reference": "1 Samuel 25:22"
+    },
+    {
+      "form": "pitieth",
+      "frequency": 3,
+      "lemma": "pity",
+      "canonical": "pity",
+      "kind": "verb",
+      "reference": "Psalms 103:13"
+    },
+    {
+      "form": "planteth",
+      "frequency": 5,
+      "lemma": "plant",
+      "canonical": "plant",
+      "kind": "verb",
+      "reference": "Proverbs 31:16"
+    },
+    {
+      "form": "playeth",
+      "frequency": 1,
+      "lemma": "play",
+      "canonical": "play",
+      "kind": "verb",
+      "reference": "Ezekiel 23:44"
+    },
+    {
+      "form": "pleadeth",
+      "frequency": 3,
+      "lemma": "plead",
+      "canonical": "plead",
+      "kind": "verb",
+      "reference": "Job 16:21"
+    },
+    {
+      "form": "pleaseth",
+      "frequency": 6,
+      "lemma": "please",
+      "canonical": "please",
+      "kind": "verb",
+      "reference": "Genesis 16:6"
+    },
+    {
+      "form": "plotteth",
+      "frequency": 1,
+      "lemma": "plot",
+      "canonical": "plot",
+      "kind": "verb",
+      "reference": "Psalms 37:12"
+    },
+    {
+      "form": "ploweth",
+      "frequency": 1,
+      "lemma": "plow",
+      "canonical": "plow",
+      "kind": "verb",
+      "reference": "1 Corinthians 9:10"
+    },
+    {
+      "form": "plucketh",
+      "frequency": 1,
+      "lemma": "pluck",
+      "canonical": "pluck",
+      "kind": "verb",
+      "reference": "Proverbs 14:1"
+    },
+    {
+      "form": "pochereth",
+      "frequency": 2,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Ezra 2:57",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "pondereth",
+      "frequency": 3,
+      "lemma": "ponder",
+      "canonical": "ponder",
+      "kind": "verb",
+      "reference": "Proverbs 5:21"
+    },
+    {
+      "form": "poorest",
+      "frequency": 1,
+      "lemma": "poor",
+      "canonical": "poor",
+      "kind": "superlative",
+      "reference": "2 Kings 24:14"
+    },
+    {
+      "form": "possessest",
+      "frequency": 1,
+      "lemma": "possess",
+      "canonical": "possess",
+      "kind": "verb",
+      "reference": "Deuteronomy 26:1"
+    },
+    {
+      "form": "possesseth",
+      "frequency": 2,
+      "lemma": "possess",
+      "canonical": "possess",
+      "kind": "verb",
+      "reference": "Numbers 36:8"
+    },
+    {
+      "form": "poureth",
+      "frequency": 11,
+      "lemma": "pour",
+      "canonical": "pour",
+      "kind": "verb",
+      "reference": "Job 12:21"
+    },
+    {
+      "form": "praiseth",
+      "frequency": 1,
+      "lemma": "praise",
+      "canonical": "praise",
+      "kind": "verb",
+      "reference": "Proverbs 31:28"
+    },
+    {
+      "form": "prayest",
+      "frequency": 2,
+      "lemma": "pray",
+      "canonical": "pray",
+      "kind": "verb",
+      "reference": "Matthew 6:5"
+    },
+    {
+      "form": "prayeth",
+      "frequency": 7,
+      "lemma": "pray",
+      "canonical": "pray",
+      "kind": "verb",
+      "reference": "1 Kings 8:28"
+    },
+    {
+      "form": "preachest",
+      "frequency": 1,
+      "lemma": "preach",
+      "canonical": "preach",
+      "kind": "verb",
+      "reference": "Romans 2:21"
+    },
+    {
+      "form": "preacheth",
+      "frequency": 3,
+      "lemma": "preach",
+      "canonical": "preach",
+      "kind": "verb",
+      "reference": "Acts 19:13"
+    },
+    {
+      "form": "preparest",
+      "frequency": 3,
+      "lemma": "prepare",
+      "canonical": "prepare",
+      "kind": "verb",
+      "reference": "Numbers 15:8"
+    },
+    {
+      "form": "prepareth",
+      "frequency": 3,
+      "lemma": "prepare",
+      "canonical": "prepare",
+      "kind": "verb",
+      "reference": "2 Chronicles 30:19"
+    },
+    {
+      "form": "preservest",
+      "frequency": 2,
+      "lemma": "preserve",
+      "canonical": "preserve",
+      "kind": "verb",
+      "reference": "Nehemiah 9:6"
+    },
+    {
+      "form": "preserveth",
+      "frequency": 8,
+      "lemma": "preserve",
+      "canonical": "preserve",
+      "kind": "verb",
+      "reference": "Job 36:6"
+    },
+    {
+      "form": "presseth",
+      "frequency": 2,
+      "lemma": "press",
+      "canonical": "press",
+      "kind": "verb",
+      "reference": "Psalms 38:2"
+    },
+    {
+      "form": "prevailest",
+      "frequency": 1,
+      "lemma": "prevail",
+      "canonical": "prevail",
+      "kind": "verb",
+      "reference": "Job 14:20"
+    },
+    {
+      "form": "prevaileth",
+      "frequency": 1,
+      "lemma": "prevail",
+      "canonical": "prevail",
+      "kind": "verb",
+      "reference": "Lamentations 1:13"
+    },
+    {
+      "form": "preventest",
+      "frequency": 1,
+      "lemma": "prevent",
+      "canonical": "prevent",
+      "kind": "verb",
+      "reference": "Psalms 21:3"
+    },
+    {
+      "form": "priest",
+      "frequency": 497,
+      "lemma": "priest",
+      "canonical": "priest",
+      "kind": "exact",
+      "reference": "Genesis 14:18"
+    },
+    {
+      "form": "proceedeth",
+      "frequency": 11,
+      "lemma": "none",
+      "canonical": "proceed",
+      "kind": "verb",
+      "reference": "Genesis 24:50"
+    },
+    {
+      "form": "proclaimeth",
+      "frequency": 1,
+      "lemma": "proclaim",
+      "canonical": "proclaim",
+      "kind": "verb",
+      "reference": "Proverbs 12:23"
+    },
+    {
+      "form": "procureth",
+      "frequency": 1,
+      "lemma": "procure",
+      "canonical": "procure",
+      "kind": "verb",
+      "reference": "Proverbs 11:27"
+    },
+    {
+      "form": "profaneth",
+      "frequency": 1,
+      "lemma": "profane",
+      "canonical": "profane",
+      "kind": "verb",
+      "reference": "Leviticus 21:9"
+    },
+    {
+      "form": "profiteth",
+      "frequency": 6,
+      "lemma": "profit",
+      "canonical": "profit",
+      "kind": "verb",
+      "reference": "Job 34:9"
+    },
+    {
+      "form": "prolongeth",
+      "frequency": 2,
+      "lemma": "prolong",
+      "canonical": "prolong",
+      "kind": "verb",
+      "reference": "Proverbs 10:27"
+    },
+    {
+      "form": "prophesieth",
+      "frequency": 7,
+      "lemma": "prophesy",
+      "canonical": "prophesy",
+      "kind": "verb",
+      "reference": "Jeremiah 28:9"
+    },
+    {
+      "form": "prospereth",
+      "frequency": 4,
+      "lemma": "prosper",
+      "canonical": "prosper",
+      "kind": "verb",
+      "reference": "Ezra 5:8"
+    },
+    {
+      "form": "protest",
+      "frequency": 3,
+      "lemma": "protest",
+      "canonical": "protest",
+      "kind": "exact",
+      "reference": "Genesis 43:3"
+    },
+    {
+      "form": "proveth",
+      "frequency": 1,
+      "lemma": "prove",
+      "canonical": "prove",
+      "kind": "verb",
+      "reference": "Deuteronomy 13:3"
+    },
+    {
+      "form": "provideth",
+      "frequency": 2,
+      "lemma": "provide",
+      "canonical": "provide",
+      "kind": "verb",
+      "reference": "Job 38:41"
+    },
+    {
+      "form": "provoketh",
+      "frequency": 3,
+      "lemma": "provoke",
+      "canonical": "provoke",
+      "kind": "verb",
+      "reference": "Proverbs 20:2"
+    },
+    {
+      "form": "publisheth",
+      "frequency": 4,
+      "lemma": "publish",
+      "canonical": "publish",
+      "kind": "verb",
+      "reference": "Isaiah 52:7"
+    },
+    {
+      "form": "puffeth",
+      "frequency": 3,
+      "lemma": "puff",
+      "canonical": "puff",
+      "kind": "verb",
+      "reference": "Psalms 10:5"
+    },
+    {
+      "form": "purgeth",
+      "frequency": 1,
+      "lemma": "purge",
+      "canonical": "purge",
+      "kind": "verb",
+      "reference": "John 15:2"
+    },
+    {
+      "form": "purifieth",
+      "frequency": 2,
+      "lemma": "purify",
+      "canonical": "purify",
+      "kind": "verb",
+      "reference": "Numbers 19:13"
+    },
+    {
+      "form": "purposeth",
+      "frequency": 1,
+      "lemma": "purpose",
+      "canonical": "purpose",
+      "kind": "verb",
+      "reference": "2 Corinthians 9:7"
+    },
+    {
+      "form": "pursueth",
+      "frequency": 8,
+      "lemma": "pursue",
+      "canonical": "pursue",
+      "kind": "verb",
+      "reference": "Leviticus 26:17"
+    },
+    {
+      "form": "puttest",
+      "frequency": 7,
+      "lemma": "put",
+      "canonical": "put",
+      "kind": "verb",
+      "reference": "Numbers 24:21"
+    },
+    {
+      "form": "putteth",
+      "frequency": 30,
+      "lemma": "put",
+      "canonical": "put",
+      "kind": "verb",
+      "reference": "Exodus 30:33"
+    },
+    {
+      "form": "quickeneth",
+      "frequency": 5,
+      "lemma": "quicken",
+      "canonical": "quicken",
+      "kind": "verb",
+      "reference": "John 5:21"
+    },
+    {
+      "form": "quieteth",
+      "frequency": 1,
+      "lemma": "quiet",
+      "canonical": "quiet",
+      "kind": "verb",
+      "reference": "Job 37:17"
+    },
+    {
+      "form": "rageth",
+      "frequency": 1,
+      "lemma": "rage",
+      "canonical": "rage",
+      "kind": "verb",
+      "reference": "Proverbs 14:16"
+    },
+    {
+      "form": "raiseth",
+      "frequency": 8,
+      "lemma": "raise",
+      "canonical": "raise",
+      "kind": "verb",
+      "reference": "1 Samuel 2:8"
+    },
+    {
+      "form": "rattleth",
+      "frequency": 1,
+      "lemma": "rattle",
+      "canonical": "rattle",
+      "kind": "verb",
+      "reference": "Job 39:23"
+    },
+    {
+      "form": "reacheth",
+      "frequency": 14,
+      "lemma": "reach",
+      "canonical": "reach",
+      "kind": "verb",
+      "reference": "Numbers 21:30"
+    },
+    {
+      "form": "readest",
+      "frequency": 2,
+      "lemma": "read",
+      "canonical": "read",
+      "kind": "verb",
+      "reference": "Luke 10:26"
+    },
+    {
+      "form": "readeth",
+      "frequency": 4,
+      "lemma": "read",
+      "canonical": "read",
+      "kind": "verb",
+      "reference": "Habakkuk 2:2"
+    },
+    {
+      "form": "reapest",
+      "frequency": 2,
+      "lemma": "reap",
+      "canonical": "reap",
+      "kind": "verb",
+      "reference": "Leviticus 23:22"
+    },
+    {
+      "form": "reapeth",
+      "frequency": 4,
+      "lemma": "reap",
+      "canonical": "reap",
+      "kind": "verb",
+      "reference": "Isaiah 17:5"
+    },
+    {
+      "form": "rebellest",
+      "frequency": 2,
+      "lemma": "rebel",
+      "canonical": "rebel",
+      "kind": "verb",
+      "reference": "2 Kings 18:20"
+    },
+    {
+      "form": "rebuketh",
+      "frequency": 4,
+      "lemma": "rebuke",
+      "canonical": "rebuke",
+      "kind": "verb",
+      "reference": "Proverbs 9:7"
+    },
+    {
+      "form": "receiveth",
+      "frequency": 37,
+      "lemma": "receive",
+      "canonical": "receive",
+      "kind": "verb",
+      "reference": "Judges 19:18"
+    },
+    {
+      "form": "reckoneth",
+      "frequency": 1,
+      "lemma": "reckon",
+      "canonical": "reckon",
+      "kind": "verb",
+      "reference": "Matthew 25:19"
+    },
+    {
+      "form": "recompensest",
+      "frequency": 1,
+      "lemma": "recompense",
+      "canonical": "recompense",
+      "kind": "verb",
+      "reference": "Jeremiah 32:18"
+    },
+    {
+      "form": "redeemeth",
+      "frequency": 2,
+      "lemma": "redeem",
+      "canonical": "redeem",
+      "kind": "verb",
+      "reference": "Psalms 34:22"
+    },
+    {
+      "form": "refraineth",
+      "frequency": 1,
+      "lemma": "refrain",
+      "canonical": "refrain",
+      "kind": "verb",
+      "reference": "Proverbs 10:19"
+    },
+    {
+      "form": "refresheth",
+      "frequency": 1,
+      "lemma": "refresh",
+      "canonical": "refresh",
+      "kind": "verb",
+      "reference": "Proverbs 25:13"
+    },
+    {
+      "form": "refuseth",
+      "frequency": 9,
+      "lemma": "refuse",
+      "canonical": "refuse",
+      "kind": "verb",
+      "reference": "Exodus 7:14"
+    },
+    {
+      "form": "regardest",
+      "frequency": 4,
+      "lemma": "regard",
+      "canonical": "regard",
+      "kind": "verb",
+      "reference": "2 Samuel 19:6"
+    },
+    {
+      "form": "regardeth",
+      "frequency": 15,
+      "lemma": "regard",
+      "canonical": "regard",
+      "kind": "verb",
+      "reference": "Deuteronomy 10:17"
+    },
+    {
+      "form": "reignest",
+      "frequency": 1,
+      "lemma": "reign",
+      "canonical": "reign",
+      "kind": "verb",
+      "reference": "1 Chronicles 29:12"
+    },
+    {
+      "form": "reigneth",
+      "frequency": 13,
+      "lemma": "reign",
+      "canonical": "reign",
+      "kind": "verb",
+      "reference": "1 Samuel 12:14"
+    },
+    {
+      "form": "rejecteth",
+      "frequency": 1,
+      "lemma": "reject",
+      "canonical": "reject",
+      "kind": "verb",
+      "reference": "John 12:48"
+    },
+    {
+      "form": "rejoicest",
+      "frequency": 1,
+      "lemma": "rejoice",
+      "canonical": "rejoice",
+      "kind": "verb",
+      "reference": "Jeremiah 11:15"
+    },
+    {
+      "form": "rejoiceth",
+      "frequency": 18,
+      "lemma": "rejoice",
+      "canonical": "rejoice",
+      "kind": "verb",
+      "reference": "1 Samuel 2:1"
+    },
+    {
+      "form": "relieveth",
+      "frequency": 1,
+      "lemma": "relieve",
+      "canonical": "relieve",
+      "kind": "verb",
+      "reference": "Psalms 146:9"
+    },
+    {
+      "form": "remainest",
+      "frequency": 2,
+      "lemma": "remain",
+      "canonical": "remain",
+      "kind": "verb",
+      "reference": "Lamentations 5:19"
+    },
+    {
+      "form": "remaineth",
+      "frequency": 37,
+      "lemma": "remain",
+      "canonical": "remain",
+      "kind": "verb",
+      "reference": "Genesis 8:22"
+    },
+    {
+      "form": "rememberest",
+      "frequency": 2,
+      "lemma": "remember",
+      "canonical": "remember",
+      "kind": "verb",
+      "reference": "Psalms 88:5"
+    },
+    {
+      "form": "remembereth",
+      "frequency": 5,
+      "lemma": "remember",
+      "canonical": "remember",
+      "kind": "verb",
+      "reference": "Psalms 9:12"
+    },
+    {
+      "form": "remeth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Joshua 19:21",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "removeth",
+      "frequency": 5,
+      "lemma": "remove",
+      "canonical": "remove",
+      "kind": "verb",
+      "reference": "Deuteronomy 27:17"
+    },
+    {
+      "form": "renderest",
+      "frequency": 1,
+      "lemma": "render",
+      "canonical": "render",
+      "kind": "verb",
+      "reference": "Psalms 62:12"
+    },
+    {
+      "form": "rendereth",
+      "frequency": 1,
+      "lemma": "render",
+      "canonical": "render",
+      "kind": "verb",
+      "reference": "Isaiah 66:6"
+    },
+    {
+      "form": "renewest",
+      "frequency": 2,
+      "lemma": "renew",
+      "canonical": "renew",
+      "kind": "verb",
+      "reference": "Job 10:17"
+    },
+    {
+      "form": "rentest",
+      "frequency": 1,
+      "lemma": "rend",
+      "canonical": "rend",
+      "kind": "verb",
+      "reference": "Jeremiah 4:30"
+    },
+    {
+      "form": "repayeth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "repay",
+      "kind": "verb",
+      "reference": "Deuteronomy 7:10",
+      "note": "Dictionary lacks repay; do not substitute an unrelated entry."
+    },
+    {
+      "form": "repeateth",
+      "frequency": 1,
+      "lemma": "repeat",
+      "canonical": "repeat",
+      "kind": "verb",
+      "reference": "Proverbs 17:9"
+    },
+    {
+      "form": "repentest",
+      "frequency": 1,
+      "lemma": "repent",
+      "canonical": "repent",
+      "kind": "verb",
+      "reference": "Jonah 4:2"
+    },
+    {
+      "form": "repenteth",
+      "frequency": 5,
+      "lemma": "repent",
+      "canonical": "repent",
+      "kind": "verb",
+      "reference": "Genesis 6:7"
+    },
+    {
+      "form": "repliest",
+      "frequency": 1,
+      "lemma": "reply",
+      "canonical": "reply",
+      "kind": "verb",
+      "reference": "Romans 9:20"
+    },
+    {
+      "form": "reproachest",
+      "frequency": 1,
+      "lemma": "reproach",
+      "canonical": "reproach",
+      "kind": "verb",
+      "reference": "Luke 11:45"
+    },
+    {
+      "form": "reproacheth",
+      "frequency": 7,
+      "lemma": "reproach",
+      "canonical": "reproach",
+      "kind": "verb",
+      "reference": "Numbers 15:30"
+    },
+    {
+      "form": "reproveth",
+      "frequency": 4,
+      "lemma": "reprove",
+      "canonical": "reprove",
+      "kind": "verb",
+      "reference": "Job 40:2"
+    },
+    {
+      "form": "request",
+      "frequency": 19,
+      "lemma": "request",
+      "canonical": "request",
+      "kind": "exact",
+      "reference": "Judges 8:24"
+    },
+    {
+      "form": "requirest",
+      "frequency": 1,
+      "lemma": "require",
+      "canonical": "require",
+      "kind": "verb",
+      "reference": "Ruth 3:11"
+    },
+    {
+      "form": "requireth",
+      "frequency": 2,
+      "lemma": "require",
+      "canonical": "require",
+      "kind": "verb",
+      "reference": "Ecclesiastes 3:15"
+    },
+    {
+      "form": "rescueth",
+      "frequency": 1,
+      "lemma": "rescue",
+      "canonical": "rescue",
+      "kind": "verb",
+      "reference": "Daniel 6:27"
+    },
+    {
+      "form": "reserveth",
+      "frequency": 2,
+      "lemma": "reserve",
+      "canonical": "reserve",
+      "kind": "verb",
+      "reference": "Jeremiah 5:24"
+    },
+    {
+      "form": "resisteth",
+      "frequency": 4,
+      "lemma": "resist",
+      "canonical": "resist",
+      "kind": "verb",
+      "reference": "Romans 13:2"
+    },
+    {
+      "form": "respecteth",
+      "frequency": 2,
+      "lemma": "respect",
+      "canonical": "respect",
+      "kind": "verb",
+      "reference": "Job 37:24"
+    },
+    {
+      "form": "rest",
+      "frequency": 275,
+      "lemma": "rest",
+      "canonical": "rest",
+      "kind": "exact",
+      "reference": "Genesis 8:9"
+    },
+    {
+      "form": "restest",
+      "frequency": 1,
+      "lemma": "rest",
+      "canonical": "rest",
+      "kind": "verb",
+      "reference": "Romans 2:17"
+    },
+    {
+      "form": "resteth",
+      "frequency": 4,
+      "lemma": "rest",
+      "canonical": "rest",
+      "kind": "verb",
+      "reference": "Job 24:23"
+    },
+    {
+      "form": "restoreth",
+      "frequency": 2,
+      "lemma": "restore",
+      "canonical": "restore",
+      "kind": "verb",
+      "reference": "Psalms 23:3"
+    },
+    {
+      "form": "restrainest",
+      "frequency": 1,
+      "lemma": "restrain",
+      "canonical": "restrain",
+      "kind": "verb",
+      "reference": "Job 15:4"
+    },
+    {
+      "form": "retaineth",
+      "frequency": 3,
+      "lemma": "retain",
+      "canonical": "retain",
+      "kind": "verb",
+      "reference": "Proverbs 3:18"
+    },
+    {
+      "form": "returneth",
+      "frequency": 7,
+      "lemma": "return",
+      "canonical": "return",
+      "kind": "verb",
+      "reference": "Psalms 146:4"
+    },
+    {
+      "form": "revealeth",
+      "frequency": 6,
+      "lemma": "reveal",
+      "canonical": "reveal",
+      "kind": "verb",
+      "reference": "Proverbs 11:13"
+    },
+    {
+      "form": "revengeth",
+      "frequency": 2,
+      "lemma": "revenge",
+      "canonical": "revenge",
+      "kind": "verb",
+      "reference": "Nahum 1:2"
+    },
+    {
+      "form": "revilest",
+      "frequency": 1,
+      "lemma": "revile",
+      "canonical": "revile",
+      "kind": "verb",
+      "reference": "Acts 23:4"
+    },
+    {
+      "form": "rewardeth",
+      "frequency": 6,
+      "lemma": "reward",
+      "canonical": "reward",
+      "kind": "verb",
+      "reference": "Job 21:19"
+    },
+    {
+      "form": "rideth",
+      "frequency": 7,
+      "lemma": "ride",
+      "canonical": "ride",
+      "kind": "verb",
+      "reference": "Leviticus 15:9"
+    },
+    {
+      "form": "risest",
+      "frequency": 2,
+      "lemma": "rise",
+      "canonical": "rise",
+      "kind": "verb",
+      "reference": "Deuteronomy 6:7"
+    },
+    {
+      "form": "riseth",
+      "frequency": 14,
+      "lemma": "rise",
+      "canonical": "rise",
+      "kind": "verb",
+      "reference": "Deuteronomy 22:26"
+    },
+    {
+      "form": "roareth",
+      "frequency": 3,
+      "lemma": "roar",
+      "canonical": "roar",
+      "kind": "verb",
+      "reference": "Job 37:4"
+    },
+    {
+      "form": "roasteth",
+      "frequency": 2,
+      "lemma": "roast",
+      "canonical": "roast",
+      "kind": "verb",
+      "reference": "Proverbs 12:27"
+    },
+    {
+      "form": "robbeth",
+      "frequency": 1,
+      "lemma": "rob",
+      "canonical": "rob",
+      "kind": "verb",
+      "reference": "Proverbs 28:24"
+    },
+    {
+      "form": "rolleth",
+      "frequency": 1,
+      "lemma": "roll",
+      "canonical": "roll",
+      "kind": "verb",
+      "reference": "Proverbs 26:27"
+    },
+    {
+      "form": "rulest",
+      "frequency": 2,
+      "lemma": "rule",
+      "canonical": "rule",
+      "kind": "verb",
+      "reference": "2 Chronicles 20:6"
+    },
+    {
+      "form": "ruleth",
+      "frequency": 14,
+      "lemma": "rule",
+      "canonical": "rule",
+      "kind": "verb",
+      "reference": "2 Samuel 23:3"
+    },
+    {
+      "form": "runnest",
+      "frequency": 1,
+      "lemma": "run",
+      "canonical": "run",
+      "kind": "verb",
+      "reference": "Proverbs 4:12"
+    },
+    {
+      "form": "runneth",
+      "frequency": 11,
+      "lemma": "run",
+      "canonical": "run",
+      "kind": "verb",
+      "reference": "Ezra 8:15"
+    },
+    {
+      "form": "rusheth",
+      "frequency": 1,
+      "lemma": "rush",
+      "canonical": "rush",
+      "kind": "verb",
+      "reference": "Jeremiah 8:6"
+    },
+    {
+      "form": "sacrificeth",
+      "frequency": 6,
+      "lemma": "sacrifice",
+      "canonical": "sacrifice",
+      "kind": "verb",
+      "reference": "Exodus 22:20"
+    },
+    {
+      "form": "saith",
+      "frequency": 1262,
+      "lemma": "say",
+      "canonical": "say",
+      "kind": "verb",
+      "reference": "Genesis 22:16"
+    },
+    {
+      "form": "saluteth",
+      "frequency": 5,
+      "lemma": "salute",
+      "canonical": "salute",
+      "kind": "verb",
+      "reference": "Romans 16:23"
+    },
+    {
+      "form": "sanctifieth",
+      "frequency": 4,
+      "lemma": "sanctify",
+      "canonical": "sanctify",
+      "kind": "verb",
+      "reference": "Matthew 23:17"
+    },
+    {
+      "form": "satest",
+      "frequency": 2,
+      "lemma": "sit",
+      "canonical": "sit",
+      "kind": "verb",
+      "reference": "Psalms 9:4"
+    },
+    {
+      "form": "satisfiest",
+      "frequency": 1,
+      "lemma": "satisfy",
+      "canonical": "satisfy",
+      "kind": "verb",
+      "reference": "Psalms 145:16"
+    },
+    {
+      "form": "satisfieth",
+      "frequency": 3,
+      "lemma": "satisfy",
+      "canonical": "satisfy",
+      "kind": "verb",
+      "reference": "Psalms 103:5"
+    },
+    {
+      "form": "savest",
+      "frequency": 3,
+      "lemma": "save",
+      "canonical": "save",
+      "kind": "verb",
+      "reference": "2 Samuel 22:3"
+    },
+    {
+      "form": "saveth",
+      "frequency": 7,
+      "lemma": "save",
+      "canonical": "save",
+      "kind": "verb",
+      "reference": "1 Samuel 14:39"
+    },
+    {
+      "form": "savourest",
+      "frequency": 2,
+      "lemma": "savor",
+      "canonical": "savor",
+      "kind": "verb",
+      "reference": "Matthew 16:23"
+    },
+    {
+      "form": "sawest",
+      "frequency": 21,
+      "lemma": "see",
+      "canonical": "see",
+      "kind": "verb",
+      "reference": "Genesis 20:10"
+    },
+    {
+      "form": "sayest",
+      "frequency": 40,
+      "lemma": "say",
+      "canonical": "say",
+      "kind": "verb",
+      "reference": "Exodus 33:12"
+    },
+    {
+      "form": "scaleth",
+      "frequency": 1,
+      "lemma": "scale",
+      "canonical": "scale",
+      "kind": "verb",
+      "reference": "Proverbs 21:22"
+    },
+    {
+      "form": "scarest",
+      "frequency": 1,
+      "lemma": "scare",
+      "canonical": "scare",
+      "kind": "verb",
+      "reference": "Job 7:14"
+    },
+    {
+      "form": "scattereth",
+      "frequency": 10,
+      "lemma": "scatter",
+      "canonical": "scatter",
+      "kind": "verb",
+      "reference": "Job 37:11"
+    },
+    {
+      "form": "scornest",
+      "frequency": 2,
+      "lemma": "scorn",
+      "canonical": "scorn",
+      "kind": "verb",
+      "reference": "Proverbs 9:12"
+    },
+    {
+      "form": "scorneth",
+      "frequency": 4,
+      "lemma": "scorn",
+      "canonical": "scorn",
+      "kind": "verb",
+      "reference": "Job 39:7"
+    },
+    {
+      "form": "scourgeth",
+      "frequency": 1,
+      "lemma": "scourge",
+      "canonical": "scourge",
+      "kind": "verb",
+      "reference": "Hebrews 12:6"
+    },
+    {
+      "form": "sealest",
+      "frequency": 1,
+      "lemma": "seal",
+      "canonical": "seal",
+      "kind": "verb",
+      "reference": "Ezekiel 28:12"
+    },
+    {
+      "form": "sealeth",
+      "frequency": 3,
+      "lemma": "seal",
+      "canonical": "seal",
+      "kind": "verb",
+      "reference": "Job 9:7"
+    },
+    {
+      "form": "searchest",
+      "frequency": 2,
+      "lemma": "search",
+      "canonical": "search",
+      "kind": "verb",
+      "reference": "Job 10:6"
+    },
+    {
+      "form": "searcheth",
+      "frequency": 8,
+      "lemma": "search",
+      "canonical": "search",
+      "kind": "verb",
+      "reference": "1 Chronicles 28:9"
+    },
+    {
+      "form": "seduceth",
+      "frequency": 1,
+      "lemma": "seduce",
+      "canonical": "seduce",
+      "kind": "verb",
+      "reference": "Proverbs 12:26"
+    },
+    {
+      "form": "seekest",
+      "frequency": 9,
+      "lemma": "seek",
+      "canonical": "seek",
+      "kind": "verb",
+      "reference": "Genesis 37:15"
+    },
+    {
+      "form": "seeketh",
+      "frequency": 42,
+      "lemma": "seek",
+      "canonical": "seek",
+      "kind": "verb",
+      "reference": "1 Samuel 19:2"
+    },
+    {
+      "form": "seemeth",
+      "frequency": 28,
+      "lemma": "seem",
+      "canonical": "seem",
+      "kind": "verb",
+      "reference": "Leviticus 14:35"
+    },
+    {
+      "form": "seest",
+      "frequency": 36,
+      "lemma": "see",
+      "canonical": "see",
+      "kind": "verb",
+      "reference": "Genesis 13:15"
+    },
+    {
+      "form": "seeth",
+      "frequency": 54,
+      "lemma": "see",
+      "canonical": "see",
+      "kind": "verb",
+      "reference": "Genesis 16:13"
+    },
+    {
+      "form": "sellest",
+      "frequency": 1,
+      "lemma": "sell",
+      "canonical": "sell",
+      "kind": "verb",
+      "reference": "Psalms 44:12"
+    },
+    {
+      "form": "selleth",
+      "frequency": 7,
+      "lemma": "sell",
+      "canonical": "sell",
+      "kind": "verb",
+      "reference": "Exodus 21:16"
+    },
+    {
+      "form": "sendest",
+      "frequency": 6,
+      "lemma": "send",
+      "canonical": "send",
+      "kind": "verb",
+      "reference": "Deuteronomy 15:13"
+    },
+    {
+      "form": "sendeth",
+      "frequency": 15,
+      "lemma": "send",
+      "canonical": "send",
+      "kind": "verb",
+      "reference": "Deuteronomy 24:3"
+    },
+    {
+      "form": "sentest",
+      "frequency": 4,
+      "lemma": "send",
+      "canonical": "send",
+      "kind": "verb",
+      "reference": "Exodus 15:7"
+    },
+    {
+      "form": "separateth",
+      "frequency": 5,
+      "lemma": "separate",
+      "canonical": "separate",
+      "kind": "verb",
+      "reference": "Numbers 6:5"
+    },
+    {
+      "form": "servest",
+      "frequency": 2,
+      "lemma": "serve",
+      "canonical": "serve",
+      "kind": "verb",
+      "reference": "Daniel 6:16"
+    },
+    {
+      "form": "serveth",
+      "frequency": 9,
+      "lemma": "serve",
+      "canonical": "serve",
+      "kind": "verb",
+      "reference": "Numbers 3:36"
+    },
+    {
+      "form": "seth",
+      "frequency": 8,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Genesis 4:25",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "settest",
+      "frequency": 7,
+      "lemma": "set",
+      "canonical": "set",
+      "kind": "verb",
+      "reference": "Deuteronomy 23:20"
+    },
+    {
+      "form": "setteth",
+      "frequency": 22,
+      "lemma": "set",
+      "canonical": "set",
+      "kind": "verb",
+      "reference": "Numbers 1:51"
+    },
+    {
+      "form": "settlest",
+      "frequency": 1,
+      "lemma": "settle",
+      "canonical": "settle",
+      "kind": "verb",
+      "reference": "Psalms 65:10"
+    },
+    {
+      "form": "sewest",
+      "frequency": 1,
+      "lemma": "sew",
+      "canonical": "sew",
+      "kind": "verb",
+      "reference": "Job 14:17"
+    },
+    {
+      "form": "seweth",
+      "frequency": 1,
+      "lemma": "sew",
+      "canonical": "sew",
+      "kind": "verb",
+      "reference": "Mark 2:21"
+    },
+    {
+      "form": "shaketh",
+      "frequency": 7,
+      "lemma": "shake",
+      "canonical": "shake",
+      "kind": "verb",
+      "reference": "Job 9:6"
+    },
+    {
+      "form": "shallecheth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "1 Chronicles 26:16",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "shameth",
+      "frequency": 1,
+      "lemma": "shame",
+      "canonical": "shame",
+      "kind": "verb",
+      "reference": "Proverbs 28:7"
+    },
+    {
+      "form": "sharpeneth",
+      "frequency": 3,
+      "lemma": "sharpen",
+      "canonical": "sharpen",
+      "kind": "verb",
+      "reference": "Job 16:9"
+    },
+    {
+      "form": "sheddeth",
+      "frequency": 2,
+      "lemma": "shed",
+      "canonical": "shed",
+      "kind": "verb",
+      "reference": "Genesis 9:6"
+    },
+    {
+      "form": "sheth",
+      "frequency": 2,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Numbers 24:17",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "shewest",
+      "frequency": 5,
+      "lemma": "show",
+      "canonical": "show",
+      "kind": "verb",
+      "reference": "2 Chronicles 6:14"
+    },
+    {
+      "form": "sheweth",
+      "frequency": 20,
+      "lemma": "show",
+      "canonical": "show",
+      "kind": "verb",
+      "reference": "Genesis 41:28"
+    },
+    {
+      "form": "shibboleth",
+      "frequency": 1,
+      "lemma": "shibboleth",
+      "canonical": "shibboleth",
+      "kind": "exact",
+      "reference": "Judges 12:6"
+    },
+    {
+      "form": "shineth",
+      "frequency": 9,
+      "lemma": "shine",
+      "canonical": "shine",
+      "kind": "verb",
+      "reference": "Job 25:5"
+    },
+    {
+      "form": "shooteth",
+      "frequency": 3,
+      "lemma": "shoot",
+      "canonical": "shoot",
+      "kind": "verb",
+      "reference": "Job 8:16"
+    },
+    {
+      "form": "shouldest",
+      "frequency": 73,
+      "lemma": "shall",
+      "canonical": "shall",
+      "kind": "verb",
+      "reference": "Genesis 3:11"
+    },
+    {
+      "form": "shouteth",
+      "frequency": 1,
+      "lemma": "shout",
+      "canonical": "shout",
+      "kind": "verb",
+      "reference": "Psalms 78:65"
+    },
+    {
+      "form": "shutteth",
+      "frequency": 8,
+      "lemma": "shut",
+      "canonical": "shut",
+      "kind": "verb",
+      "reference": "Job 12:14"
+    },
+    {
+      "form": "sibboleth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Judges 12:6",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "sighest",
+      "frequency": 1,
+      "lemma": "sigh",
+      "canonical": "sigh",
+      "kind": "verb",
+      "reference": "Ezekiel 21:7"
+    },
+    {
+      "form": "sigheth",
+      "frequency": 1,
+      "lemma": "sigh",
+      "canonical": "sigh",
+      "kind": "verb",
+      "reference": "Lamentations 1:8"
+    },
+    {
+      "form": "signifieth",
+      "frequency": 1,
+      "lemma": "signify",
+      "canonical": "signify",
+      "kind": "verb",
+      "reference": "Hebrews 12:27"
+    },
+    {
+      "form": "singeth",
+      "frequency": 1,
+      "lemma": "sing",
+      "canonical": "sing",
+      "kind": "verb",
+      "reference": "Proverbs 25:20"
+    },
+    {
+      "form": "sinnest",
+      "frequency": 1,
+      "lemma": "sin",
+      "canonical": "sin",
+      "kind": "verb",
+      "reference": "Job 35:6"
+    },
+    {
+      "form": "sinneth",
+      "frequency": 22,
+      "lemma": "sin",
+      "canonical": "sin",
+      "kind": "verb",
+      "reference": "Numbers 15:28"
+    },
+    {
+      "form": "sittest",
+      "frequency": 7,
+      "lemma": "sit",
+      "canonical": "sit",
+      "kind": "verb",
+      "reference": "Exodus 18:14"
+    },
+    {
+      "form": "sitteth",
+      "frequency": 42,
+      "lemma": "sit",
+      "canonical": "sit",
+      "kind": "verb",
+      "reference": "Exodus 11:5"
+    },
+    {
+      "form": "slanderest",
+      "frequency": 1,
+      "lemma": "slander",
+      "canonical": "slander",
+      "kind": "verb",
+      "reference": "Psalms 50:20"
+    },
+    {
+      "form": "slandereth",
+      "frequency": 1,
+      "lemma": "slander",
+      "canonical": "slander",
+      "kind": "verb",
+      "reference": "Psalms 101:5"
+    },
+    {
+      "form": "slayeth",
+      "frequency": 5,
+      "lemma": "slay",
+      "canonical": "slay",
+      "kind": "verb",
+      "reference": "Genesis 4:15"
+    },
+    {
+      "form": "sleepest",
+      "frequency": 4,
+      "lemma": "sleep",
+      "canonical": "sleep",
+      "kind": "verb",
+      "reference": "Psalms 44:23"
+    },
+    {
+      "form": "sleepeth",
+      "frequency": 7,
+      "lemma": "sleep",
+      "canonical": "sleep",
+      "kind": "verb",
+      "reference": "1 Kings 18:27"
+    },
+    {
+      "form": "slewest",
+      "frequency": 1,
+      "lemma": "slay",
+      "canonical": "slay",
+      "kind": "verb",
+      "reference": "1 Samuel 21:9"
+    },
+    {
+      "form": "slideth",
+      "frequency": 1,
+      "lemma": "slide",
+      "canonical": "slide",
+      "kind": "verb",
+      "reference": "Hosea 4:16"
+    },
+    {
+      "form": "slippeth",
+      "frequency": 3,
+      "lemma": "slip",
+      "canonical": "slip",
+      "kind": "verb",
+      "reference": "Deuteronomy 19:5"
+    },
+    {
+      "form": "slumbereth",
+      "frequency": 1,
+      "lemma": "slumber",
+      "canonical": "slumber",
+      "kind": "verb",
+      "reference": "2 Peter 2:3"
+    },
+    {
+      "form": "smallest",
+      "frequency": 2,
+      "lemma": "small",
+      "canonical": "small",
+      "kind": "superlative",
+      "reference": "1 Samuel 9:21"
+    },
+    {
+      "form": "smelleth",
+      "frequency": 1,
+      "lemma": "smell",
+      "canonical": "smell",
+      "kind": "verb",
+      "reference": "Job 39:25"
+    },
+    {
+      "form": "smitest",
+      "frequency": 2,
+      "lemma": "smite",
+      "canonical": "smite",
+      "kind": "verb",
+      "reference": "Exodus 2:13"
+    },
+    {
+      "form": "smiteth",
+      "frequency": 13,
+      "lemma": "smite",
+      "canonical": "smite",
+      "kind": "verb",
+      "reference": "Exodus 21:12"
+    },
+    {
+      "form": "smootheth",
+      "frequency": 1,
+      "lemma": "smooth",
+      "canonical": "smooth",
+      "kind": "verb",
+      "reference": "Isaiah 41:7"
+    },
+    {
+      "form": "smotest",
+      "frequency": 1,
+      "lemma": "smite",
+      "canonical": "smite",
+      "kind": "verb",
+      "reference": "Exodus 17:5"
+    },
+    {
+      "form": "snuffeth",
+      "frequency": 1,
+      "lemma": "snuff",
+      "canonical": "snuff",
+      "kind": "verb",
+      "reference": "Jeremiah 2:24"
+    },
+    {
+      "form": "sojourneth",
+      "frequency": 15,
+      "lemma": "sojourn",
+      "canonical": "sojourn",
+      "kind": "verb",
+      "reference": "Exodus 3:22"
+    },
+    {
+      "form": "sophereth",
+      "frequency": 2,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Ezra 2:55",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "sorroweth",
+      "frequency": 1,
+      "lemma": "sorrow",
+      "canonical": "sorrow",
+      "kind": "verb",
+      "reference": "1 Samuel 10:2"
+    },
+    {
+      "form": "soundeth",
+      "frequency": 1,
+      "lemma": "sound",
+      "canonical": "sound",
+      "kind": "verb",
+      "reference": "Exodus 19:13"
+    },
+    {
+      "form": "sowest",
+      "frequency": 3,
+      "lemma": "none",
+      "canonical": "sow",
+      "kind": "verb",
+      "reference": "1 Corinthians 15:36"
+    },
+    {
+      "form": "soweth",
+      "frequency": 15,
+      "lemma": "none",
+      "canonical": "sow",
+      "kind": "verb",
+      "reference": "Proverbs 6:14"
+    },
+    {
+      "form": "spakest",
+      "frequency": 10,
+      "lemma": "speak",
+      "canonical": "speak",
+      "kind": "verb",
+      "reference": "Judges 13:11"
+    },
+    {
+      "form": "spareth",
+      "frequency": 4,
+      "lemma": "spare",
+      "canonical": "spare",
+      "kind": "verb",
+      "reference": "Proverbs 13:24"
+    },
+    {
+      "form": "speakest",
+      "frequency": 17,
+      "lemma": "speak",
+      "canonical": "speak",
+      "kind": "verb",
+      "reference": "1 Samuel 9:21"
+    },
+    {
+      "form": "speaketh",
+      "frequency": 74,
+      "lemma": "speak",
+      "canonical": "speak",
+      "kind": "verb",
+      "reference": "Genesis 45:12"
+    },
+    {
+      "form": "spendest",
+      "frequency": 1,
+      "lemma": "spend",
+      "canonical": "spend",
+      "kind": "verb",
+      "reference": "Luke 10:35"
+    },
+    {
+      "form": "spendeth",
+      "frequency": 3,
+      "lemma": "spend",
+      "canonical": "spend",
+      "kind": "verb",
+      "reference": "Proverbs 21:20"
+    },
+    {
+      "form": "spoilest",
+      "frequency": 1,
+      "lemma": "spoil",
+      "canonical": "spoil",
+      "kind": "verb",
+      "reference": "Isaiah 33:1"
+    },
+    {
+      "form": "spoileth",
+      "frequency": 4,
+      "lemma": "spoil",
+      "canonical": "spoil",
+      "kind": "verb",
+      "reference": "Psalms 35:10"
+    },
+    {
+      "form": "spreadest",
+      "frequency": 1,
+      "lemma": "spread",
+      "canonical": "spread",
+      "kind": "verb",
+      "reference": "Ezekiel 27:7"
+    },
+    {
+      "form": "spreadeth",
+      "frequency": 14,
+      "lemma": "spread",
+      "canonical": "spread",
+      "kind": "verb",
+      "reference": "Leviticus 13:8"
+    },
+    {
+      "form": "springeth",
+      "frequency": 4,
+      "lemma": "spring",
+      "canonical": "spring",
+      "kind": "verb",
+      "reference": "1 Kings 4:33"
+    },
+    {
+      "form": "sprinkleth",
+      "frequency": 2,
+      "lemma": "sprinkle",
+      "canonical": "sprinkle",
+      "kind": "verb",
+      "reference": "Leviticus 7:14"
+    },
+    {
+      "form": "stablisheth",
+      "frequency": 2,
+      "lemma": "stablish",
+      "canonical": "stablish",
+      "kind": "verb",
+      "reference": "Habakkuk 2:12"
+    },
+    {
+      "form": "staggereth",
+      "frequency": 1,
+      "lemma": "stagger",
+      "canonical": "stagger",
+      "kind": "verb",
+      "reference": "Isaiah 19:14"
+    },
+    {
+      "form": "standest",
+      "frequency": 6,
+      "lemma": "stand",
+      "canonical": "stand",
+      "kind": "verb",
+      "reference": "Genesis 24:31"
+    },
+    {
+      "form": "standeth",
+      "frequency": 30,
+      "lemma": "stand",
+      "canonical": "stand",
+      "kind": "verb",
+      "reference": "Numbers 14:14"
+    },
+    {
+      "form": "stayeth",
+      "frequency": 1,
+      "lemma": "stay",
+      "canonical": "stay",
+      "kind": "verb",
+      "reference": "Isaiah 27:8"
+    },
+    {
+      "form": "stealeth",
+      "frequency": 3,
+      "lemma": "steal",
+      "canonical": "steal",
+      "kind": "verb",
+      "reference": "Exodus 21:16"
+    },
+    {
+      "form": "steppeth",
+      "frequency": 1,
+      "lemma": "step",
+      "canonical": "step",
+      "kind": "verb",
+      "reference": "John 5:7"
+    },
+    {
+      "form": "sticketh",
+      "frequency": 1,
+      "lemma": "stick",
+      "canonical": "stick",
+      "kind": "verb",
+      "reference": "Proverbs 18:24"
+    },
+    {
+      "form": "stillest",
+      "frequency": 1,
+      "lemma": "still",
+      "canonical": "still",
+      "kind": "verb",
+      "reference": "Psalms 89:9"
+    },
+    {
+      "form": "stilleth",
+      "frequency": 1,
+      "lemma": "still",
+      "canonical": "still",
+      "kind": "verb",
+      "reference": "Psalms 65:7"
+    },
+    {
+      "form": "stingeth",
+      "frequency": 1,
+      "lemma": "sting",
+      "canonical": "sting",
+      "kind": "verb",
+      "reference": "Proverbs 23:32"
+    },
+    {
+      "form": "stinketh",
+      "frequency": 2,
+      "lemma": "stink",
+      "canonical": "stink",
+      "kind": "verb",
+      "reference": "Isaiah 50:2"
+    },
+    {
+      "form": "stirreth",
+      "frequency": 8,
+      "lemma": "stir",
+      "canonical": "stir",
+      "kind": "verb",
+      "reference": "Deuteronomy 32:11"
+    },
+    {
+      "form": "stonest",
+      "frequency": 2,
+      "lemma": "stone",
+      "canonical": "stone",
+      "kind": "verb",
+      "reference": "Matthew 23:37"
+    },
+    {
+      "form": "stoodest",
+      "frequency": 3,
+      "lemma": "stand",
+      "canonical": "stand",
+      "kind": "verb",
+      "reference": "Numbers 22:34"
+    },
+    {
+      "form": "stoopeth",
+      "frequency": 1,
+      "lemma": "stoop",
+      "canonical": "stoop",
+      "kind": "verb",
+      "reference": "Isaiah 46:1"
+    },
+    {
+      "form": "stoppeth",
+      "frequency": 4,
+      "lemma": "stop",
+      "canonical": "stop",
+      "kind": "verb",
+      "reference": "Job 5:16"
+    },
+    {
+      "form": "straiteneth",
+      "frequency": 1,
+      "lemma": "straiten",
+      "canonical": "straiten",
+      "kind": "verb",
+      "reference": "Job 12:23"
+    },
+    {
+      "form": "straitest",
+      "frequency": 1,
+      "lemma": "strait",
+      "canonical": "strait",
+      "kind": "superlative",
+      "reference": "Acts 26:5"
+    },
+    {
+      "form": "strengtheneth",
+      "frequency": 7,
+      "lemma": "strengthen",
+      "canonical": "strengthen",
+      "kind": "verb",
+      "reference": "Job 15:25"
+    },
+    {
+      "form": "stretchest",
+      "frequency": 1,
+      "lemma": "stretch",
+      "canonical": "stretch",
+      "kind": "verb",
+      "reference": "Psalms 104:2"
+    },
+    {
+      "form": "stretcheth",
+      "frequency": 7,
+      "lemma": "stretch",
+      "canonical": "stretch",
+      "kind": "verb",
+      "reference": "Job 15:25"
+    },
+    {
+      "form": "striketh",
+      "frequency": 3,
+      "lemma": "strike",
+      "canonical": "strike",
+      "kind": "verb",
+      "reference": "Job 34:26"
+    },
+    {
+      "form": "striveth",
+      "frequency": 2,
+      "lemma": "strive",
+      "canonical": "strive",
+      "kind": "verb",
+      "reference": "Isaiah 45:9"
+    },
+    {
+      "form": "strongest",
+      "frequency": 1,
+      "lemma": "strongest",
+      "canonical": "strongest",
+      "kind": "exact",
+      "reference": "Proverbs 30:30"
+    },
+    {
+      "form": "studieth",
+      "frequency": 2,
+      "lemma": "study",
+      "canonical": "study",
+      "kind": "verb",
+      "reference": "Proverbs 15:28"
+    },
+    {
+      "form": "stumbleth",
+      "frequency": 4,
+      "lemma": "stumble",
+      "canonical": "stumble",
+      "kind": "verb",
+      "reference": "Proverbs 24:17"
+    },
+    {
+      "form": "subdueth",
+      "frequency": 3,
+      "lemma": "subdue",
+      "canonical": "subdue",
+      "kind": "verb",
+      "reference": "Psalms 18:47"
+    },
+    {
+      "form": "succeedest",
+      "frequency": 2,
+      "lemma": "succeed",
+      "canonical": "succeed",
+      "kind": "verb",
+      "reference": "Deuteronomy 12:29"
+    },
+    {
+      "form": "sufferest",
+      "frequency": 1,
+      "lemma": "suffer",
+      "canonical": "suffer",
+      "kind": "verb",
+      "reference": "Revelation 2:20"
+    },
+    {
+      "form": "suffereth",
+      "frequency": 5,
+      "lemma": "suffer",
+      "canonical": "suffer",
+      "kind": "verb",
+      "reference": "Psalms 66:9"
+    },
+    {
+      "form": "sufficeth",
+      "frequency": 1,
+      "lemma": "suffice",
+      "canonical": "suffice",
+      "kind": "verb",
+      "reference": "John 14:8"
+    },
+    {
+      "form": "supplieth",
+      "frequency": 2,
+      "lemma": "supply",
+      "canonical": "supply",
+      "kind": "verb",
+      "reference": "2 Corinthians 9:12"
+    },
+    {
+      "form": "swalloweth",
+      "frequency": 2,
+      "lemma": "none",
+      "canonical": "swallow",
+      "kind": "verb",
+      "reference": "Job 5:5"
+    },
+    {
+      "form": "swarest",
+      "frequency": 5,
+      "lemma": "swear",
+      "canonical": "swear",
+      "kind": "verb",
+      "reference": "Exodus 32:13"
+    },
+    {
+      "form": "sweareth",
+      "frequency": 11,
+      "lemma": "swear",
+      "canonical": "swear",
+      "kind": "verb",
+      "reference": "Leviticus 6:3"
+    },
+    {
+      "form": "swimmest",
+      "frequency": 1,
+      "lemma": "swim",
+      "canonical": "swim",
+      "kind": "verb",
+      "reference": "Ezekiel 32:6"
+    },
+    {
+      "form": "swimmeth",
+      "frequency": 1,
+      "lemma": "swim",
+      "canonical": "swim",
+      "kind": "verb",
+      "reference": "Isaiah 25:11"
+    },
+    {
+      "form": "takest",
+      "frequency": 9,
+      "lemma": "take",
+      "canonical": "take",
+      "kind": "verb",
+      "reference": "Exodus 4:9"
+    },
+    {
+      "form": "taketh",
+      "frequency": 74,
+      "lemma": "take",
+      "canonical": "take",
+      "kind": "verb",
+      "reference": "Exodus 20:7"
+    },
+    {
+      "form": "talkest",
+      "frequency": 3,
+      "lemma": "talk",
+      "canonical": "talk",
+      "kind": "verb",
+      "reference": "Judges 6:17"
+    },
+    {
+      "form": "talketh",
+      "frequency": 2,
+      "lemma": "talk",
+      "canonical": "talk",
+      "kind": "verb",
+      "reference": "Psalms 37:30"
+    },
+    {
+      "form": "tanhumeth",
+      "frequency": 2,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "2 Kings 25:23",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "tarriest",
+      "frequency": 1,
+      "lemma": "tarry",
+      "canonical": "tarry",
+      "kind": "verb",
+      "reference": "Acts 22:16"
+    },
+    {
+      "form": "tarrieth",
+      "frequency": 2,
+      "lemma": "tarry",
+      "canonical": "tarry",
+      "kind": "verb",
+      "reference": "1 Samuel 30:24"
+    },
+    {
+      "form": "tasteth",
+      "frequency": 1,
+      "lemma": "taste",
+      "canonical": "taste",
+      "kind": "verb",
+      "reference": "Job 34:3"
+    },
+    {
+      "form": "teachest",
+      "frequency": 8,
+      "lemma": "teach",
+      "canonical": "teach",
+      "kind": "verb",
+      "reference": "Psalms 94:12"
+    },
+    {
+      "form": "teacheth",
+      "frequency": 16,
+      "lemma": "teach",
+      "canonical": "teach",
+      "kind": "verb",
+      "reference": "2 Samuel 22:35"
+    },
+    {
+      "form": "teareth",
+      "frequency": 6,
+      "lemma": "tear",
+      "canonical": "tear",
+      "kind": "verb",
+      "reference": "Deuteronomy 33:20"
+    },
+    {
+      "form": "tebeth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Esther 2:16",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "teeth",
+      "frequency": 50,
+      "lemma": "teeth",
+      "canonical": "teeth",
+      "kind": "exact",
+      "reference": "Genesis 49:12"
+    },
+    {
+      "form": "tellest",
+      "frequency": 1,
+      "lemma": "tell",
+      "canonical": "tell",
+      "kind": "verb",
+      "reference": "Psalms 56:8"
+    },
+    {
+      "form": "telleth",
+      "frequency": 7,
+      "lemma": "tell",
+      "canonical": "tell",
+      "kind": "verb",
+      "reference": "2 Samuel 7:11"
+    },
+    {
+      "form": "tempest",
+      "frequency": 18,
+      "lemma": "tempest",
+      "canonical": "tempest",
+      "kind": "exact",
+      "reference": "Job 9:17"
+    },
+    {
+      "form": "tempteth",
+      "frequency": 1,
+      "lemma": "tempt",
+      "canonical": "tempt",
+      "kind": "verb",
+      "reference": "James 1:13"
+    },
+    {
+      "form": "tendeth",
+      "frequency": 5,
+      "lemma": "tend",
+      "canonical": "tend",
+      "kind": "verb",
+      "reference": "Proverbs 10:16"
+    },
+    {
+      "form": "terrifiest",
+      "frequency": 1,
+      "lemma": "terrify",
+      "canonical": "terrify",
+      "kind": "verb",
+      "reference": "Job 7:14"
+    },
+    {
+      "form": "testifieth",
+      "frequency": 5,
+      "lemma": "testify",
+      "canonical": "testify",
+      "kind": "verb",
+      "reference": "Hosea 7:10"
+    },
+    {
+      "form": "teth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "Psalms 119:65",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "thinkest",
+      "frequency": 9,
+      "lemma": "think",
+      "canonical": "think",
+      "kind": "verb",
+      "reference": "2 Samuel 10:3"
+    },
+    {
+      "form": "thinketh",
+      "frequency": 6,
+      "lemma": "think",
+      "canonical": "think",
+      "kind": "verb",
+      "reference": "2 Samuel 18:27"
+    },
+    {
+      "form": "thirsteth",
+      "frequency": 4,
+      "lemma": "thirst",
+      "canonical": "thirst",
+      "kind": "verb",
+      "reference": "Psalms 42:2"
+    },
+    {
+      "form": "thirtieth",
+      "frequency": 9,
+      "lemma": "thirtieth",
+      "canonical": "thirtieth",
+      "kind": "exact",
+      "reference": "2 Kings 15:13"
+    },
+    {
+      "form": "thoughtest",
+      "frequency": 1,
+      "lemma": "think",
+      "canonical": "think",
+      "kind": "verb",
+      "reference": "Psalms 50:21"
+    },
+    {
+      "form": "thresheth",
+      "frequency": 1,
+      "lemma": "thresh",
+      "canonical": "thresh",
+      "kind": "verb",
+      "reference": "1 Corinthians 9:10"
+    },
+    {
+      "form": "threwest",
+      "frequency": 1,
+      "lemma": "throw",
+      "canonical": "throw",
+      "kind": "verb",
+      "reference": "Nehemiah 9:11"
+    },
+    {
+      "form": "thrusteth",
+      "frequency": 1,
+      "lemma": "thrust",
+      "canonical": "thrust",
+      "kind": "verb",
+      "reference": "Job 32:13"
+    },
+    {
+      "form": "thundereth",
+      "frequency": 3,
+      "lemma": "thunder",
+      "canonical": "thunder",
+      "kind": "verb",
+      "reference": "Job 37:4"
+    },
+    {
+      "form": "tillest",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "till",
+      "kind": "verb",
+      "reference": "Genesis 4:12"
+    },
+    {
+      "form": "tilleth",
+      "frequency": 2,
+      "lemma": "none",
+      "canonical": "till",
+      "kind": "verb",
+      "reference": "Proverbs 12:11"
+    },
+    {
+      "form": "tookest",
+      "frequency": 2,
+      "lemma": "take",
+      "canonical": "take",
+      "kind": "verb",
+      "reference": "Psalms 99:8"
+    },
+    {
+      "form": "topheth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "2 Kings 23:10",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "toucheth",
+      "frequency": 40,
+      "lemma": "touch",
+      "canonical": "touch",
+      "kind": "verb",
+      "reference": "Genesis 26:11"
+    },
+    {
+      "form": "transgressest",
+      "frequency": 1,
+      "lemma": "transgress",
+      "canonical": "transgress",
+      "kind": "verb",
+      "reference": "Esther 3:3"
+    },
+    {
+      "form": "transgresseth",
+      "frequency": 4,
+      "lemma": "transgress",
+      "canonical": "transgress",
+      "kind": "verb",
+      "reference": "Proverbs 16:10"
+    },
+    {
+      "form": "travailest",
+      "frequency": 1,
+      "lemma": "travail",
+      "canonical": "travail",
+      "kind": "verb",
+      "reference": "Galatians 4:27"
+    },
+    {
+      "form": "travaileth",
+      "frequency": 7,
+      "lemma": "travail",
+      "canonical": "travail",
+      "kind": "verb",
+      "reference": "Job 15:20"
+    },
+    {
+      "form": "travelleth",
+      "frequency": 2,
+      "lemma": "travel",
+      "canonical": "travel",
+      "kind": "verb",
+      "reference": "Proverbs 6:11"
+    },
+    {
+      "form": "treadeth",
+      "frequency": 10,
+      "lemma": "tread",
+      "canonical": "tread",
+      "kind": "verb",
+      "reference": "Deuteronomy 25:4"
+    },
+    {
+      "form": "treasurest",
+      "frequency": 1,
+      "lemma": "treasure",
+      "canonical": "treasure",
+      "kind": "verb",
+      "reference": "Romans 2:5"
+    },
+    {
+      "form": "trembleth",
+      "frequency": 4,
+      "lemma": "tremble",
+      "canonical": "tremble",
+      "kind": "verb",
+      "reference": "Job 37:1"
+    },
+    {
+      "form": "trickleth",
+      "frequency": 1,
+      "lemma": "trickle",
+      "canonical": "trickle",
+      "kind": "verb",
+      "reference": "Lamentations 3:49"
+    },
+    {
+      "form": "triest",
+      "frequency": 3,
+      "lemma": "try",
+      "canonical": "try",
+      "kind": "verb",
+      "reference": "1 Chronicles 29:17"
+    },
+    {
+      "form": "trieth",
+      "frequency": 5,
+      "lemma": "try",
+      "canonical": "try",
+      "kind": "verb",
+      "reference": "Job 34:3"
+    },
+    {
+      "form": "trimmest",
+      "frequency": 1,
+      "lemma": "trim",
+      "canonical": "trim",
+      "kind": "verb",
+      "reference": "Jeremiah 2:33"
+    },
+    {
+      "form": "troublest",
+      "frequency": 1,
+      "lemma": "trouble",
+      "canonical": "trouble",
+      "kind": "verb",
+      "reference": "Mark 5:35"
+    },
+    {
+      "form": "troubleth",
+      "frequency": 10,
+      "lemma": "trouble",
+      "canonical": "trouble",
+      "kind": "verb",
+      "reference": "1 Samuel 16:15"
+    },
+    {
+      "form": "trustest",
+      "frequency": 6,
+      "lemma": "trust",
+      "canonical": "trust",
+      "kind": "verb",
+      "reference": "2 Kings 18:19"
+    },
+    {
+      "form": "trusteth",
+      "frequency": 17,
+      "lemma": "trust",
+      "canonical": "trust",
+      "kind": "verb",
+      "reference": "Job 40:23"
+    },
+    {
+      "form": "turnest",
+      "frequency": 3,
+      "lemma": "turn",
+      "canonical": "turn",
+      "kind": "verb",
+      "reference": "1 Kings 2:3"
+    },
+    {
+      "form": "turneth",
+      "frequency": 33,
+      "lemma": "turn",
+      "canonical": "turn",
+      "kind": "verb",
+      "reference": "Leviticus 20:6"
+    },
+    {
+      "form": "twentieth",
+      "frequency": 36,
+      "lemma": "twentieth",
+      "canonical": "twentieth",
+      "kind": "exact",
+      "reference": "Genesis 8:14"
+    },
+    {
+      "form": "uncovereth",
+      "frequency": 3,
+      "lemma": "uncover",
+      "canonical": "uncover",
+      "kind": "verb",
+      "reference": "Leviticus 20:19"
+    },
+    {
+      "form": "understandest",
+      "frequency": 4,
+      "lemma": "understand",
+      "canonical": "understand",
+      "kind": "verb",
+      "reference": "Job 15:9"
+    },
+    {
+      "form": "understandeth",
+      "frequency": 11,
+      "lemma": "understand",
+      "canonical": "understand",
+      "kind": "verb",
+      "reference": "1 Chronicles 28:9"
+    },
+    {
+      "form": "upbraideth",
+      "frequency": 1,
+      "lemma": "upbraid",
+      "canonical": "upbraid",
+      "kind": "verb",
+      "reference": "James 1:5"
+    },
+    {
+      "form": "upholdest",
+      "frequency": 1,
+      "lemma": "uphold",
+      "canonical": "uphold",
+      "kind": "verb",
+      "reference": "Psalms 41:12"
+    },
+    {
+      "form": "upholdeth",
+      "frequency": 4,
+      "lemma": "uphold",
+      "canonical": "uphold",
+      "kind": "verb",
+      "reference": "Psalms 37:17"
+    },
+    {
+      "form": "usest",
+      "frequency": 1,
+      "lemma": "use",
+      "canonical": "use",
+      "kind": "verb",
+      "reference": "Psalms 119:132"
+    },
+    {
+      "form": "useth",
+      "frequency": 7,
+      "lemma": "use",
+      "canonical": "use",
+      "kind": "verb",
+      "reference": "Deuteronomy 18:10"
+    },
+    {
+      "form": "uttereth",
+      "frequency": 9,
+      "lemma": "utter",
+      "canonical": "utter",
+      "kind": "verb",
+      "reference": "Job 15:5"
+    },
+    {
+      "form": "valiantest",
+      "frequency": 1,
+      "lemma": "valiant",
+      "canonical": "valiant",
+      "kind": "superlative",
+      "reference": "Judges 21:10"
+    },
+    {
+      "form": "valuest",
+      "frequency": 1,
+      "lemma": "value",
+      "canonical": "value",
+      "kind": "verb",
+      "reference": "Leviticus 27:12"
+    },
+    {
+      "form": "vanisheth",
+      "frequency": 2,
+      "lemma": "vanish",
+      "canonical": "vanish",
+      "kind": "verb",
+      "reference": "Job 7:9"
+    },
+    {
+      "form": "vaunteth",
+      "frequency": 1,
+      "lemma": "vaunt",
+      "canonical": "vaunt",
+      "kind": "verb",
+      "reference": "1 Corinthians 13:4"
+    },
+    {
+      "form": "vilest",
+      "frequency": 1,
+      "lemma": "vile",
+      "canonical": "vile",
+      "kind": "superlative",
+      "reference": "Psalms 12:8"
+    },
+    {
+      "form": "visitest",
+      "frequency": 3,
+      "lemma": "visit",
+      "canonical": "visit",
+      "kind": "verb",
+      "reference": "Psalms 8:4"
+    },
+    {
+      "form": "visiteth",
+      "frequency": 1,
+      "lemma": "visit",
+      "canonical": "visit",
+      "kind": "verb",
+      "reference": "Job 31:14"
+    },
+    {
+      "form": "vomiteth",
+      "frequency": 1,
+      "lemma": "vomit",
+      "canonical": "vomit",
+      "kind": "verb",
+      "reference": "Leviticus 18:25"
+    },
+    {
+      "form": "vowest",
+      "frequency": 2,
+      "lemma": "vow",
+      "canonical": "vow",
+      "kind": "verb",
+      "reference": "Deuteronomy 12:17"
+    },
+    {
+      "form": "voweth",
+      "frequency": 1,
+      "lemma": "vow",
+      "canonical": "vow",
+      "kind": "verb",
+      "reference": "Malachi 1:14"
+    },
+    {
+      "form": "waiteth",
+      "frequency": 11,
+      "lemma": "wait",
+      "canonical": "wait",
+      "kind": "verb",
+      "reference": "Job 24:15"
+    },
+    {
+      "form": "wakeneth",
+      "frequency": 2,
+      "lemma": "waken",
+      "canonical": "waken",
+      "kind": "verb",
+      "reference": "Isaiah 50:4"
+    },
+    {
+      "form": "waketh",
+      "frequency": 2,
+      "lemma": "wake",
+      "canonical": "wake",
+      "kind": "verb",
+      "reference": "Psalms 127:1"
+    },
+    {
+      "form": "walkest",
+      "frequency": 7,
+      "lemma": "walk",
+      "canonical": "walk",
+      "kind": "verb",
+      "reference": "Deuteronomy 6:7"
+    },
+    {
+      "form": "walketh",
+      "frequency": 41,
+      "lemma": "walk",
+      "canonical": "walk",
+      "kind": "verb",
+      "reference": "Genesis 24:65"
+    },
+    {
+      "form": "wanderest",
+      "frequency": 1,
+      "lemma": "wander",
+      "canonical": "wander",
+      "kind": "verb",
+      "reference": "Jeremiah 2:20"
+    },
+    {
+      "form": "wandereth",
+      "frequency": 6,
+      "lemma": "wander",
+      "canonical": "wander",
+      "kind": "verb",
+      "reference": "Job 15:23"
+    },
+    {
+      "form": "wanteth",
+      "frequency": 7,
+      "lemma": "want",
+      "canonical": "want",
+      "kind": "verb",
+      "reference": "Deuteronomy 15:8"
+    },
+    {
+      "form": "warmeth",
+      "frequency": 2,
+      "lemma": "warm",
+      "canonical": "warm",
+      "kind": "verb",
+      "reference": "Job 39:14"
+    },
+    {
+      "form": "warreth",
+      "frequency": 1,
+      "lemma": "war",
+      "canonical": "war",
+      "kind": "verb",
+      "reference": "2 Timothy 2:4"
+    },
+    {
+      "form": "washest",
+      "frequency": 1,
+      "lemma": "wash",
+      "canonical": "wash",
+      "kind": "verb",
+      "reference": "Job 14:19"
+    },
+    {
+      "form": "wast",
+      "frequency": 66,
+      "lemma": "wast",
+      "canonical": "be",
+      "kind": "exact-inflection",
+      "reference": "Genesis 3:11",
+      "note": "Exact grammar entry is retained; canonical verb is be."
+    },
+    {
+      "form": "wasteth",
+      "frequency": 3,
+      "lemma": "waste",
+      "canonical": "waste",
+      "kind": "verb",
+      "reference": "Job 14:10"
+    },
+    {
+      "form": "watcheth",
+      "frequency": 3,
+      "lemma": "watch",
+      "canonical": "watch",
+      "kind": "verb",
+      "reference": "Psalms 37:32"
+    },
+    {
+      "form": "waterest",
+      "frequency": 2,
+      "lemma": "water",
+      "canonical": "water",
+      "kind": "verb",
+      "reference": "Psalms 65:9"
+    },
+    {
+      "form": "watereth",
+      "frequency": 5,
+      "lemma": "water",
+      "canonical": "water",
+      "kind": "verb",
+      "reference": "Psalms 104:13"
+    },
+    {
+      "form": "wavereth",
+      "frequency": 1,
+      "lemma": "waver",
+      "canonical": "waver",
+      "kind": "verb",
+      "reference": "James 1:6"
+    },
+    {
+      "form": "waxeth",
+      "frequency": 2,
+      "lemma": "wax",
+      "canonical": "wax",
+      "kind": "verb",
+      "reference": "Psalms 6:7"
+    },
+    {
+      "form": "weakeneth",
+      "frequency": 2,
+      "lemma": "weaken",
+      "canonical": "weaken",
+      "kind": "verb",
+      "reference": "Job 12:21"
+    },
+    {
+      "form": "weareth",
+      "frequency": 1,
+      "lemma": "wear",
+      "canonical": "wear",
+      "kind": "verb",
+      "reference": "James 2:3"
+    },
+    {
+      "form": "wearieth",
+      "frequency": 2,
+      "lemma": "weary",
+      "canonical": "weary",
+      "kind": "verb",
+      "reference": "Job 37:11"
+    },
+    {
+      "form": "weavest",
+      "frequency": 1,
+      "lemma": "weave",
+      "canonical": "weave",
+      "kind": "verb",
+      "reference": "Judges 16:13"
+    },
+    {
+      "form": "weepest",
+      "frequency": 3,
+      "lemma": "weep",
+      "canonical": "weep",
+      "kind": "verb",
+      "reference": "1 Samuel 1:8"
+    },
+    {
+      "form": "weepeth",
+      "frequency": 4,
+      "lemma": "weep",
+      "canonical": "weep",
+      "kind": "verb",
+      "reference": "2 Samuel 19:1"
+    },
+    {
+      "form": "weigheth",
+      "frequency": 2,
+      "lemma": "weigh",
+      "canonical": "weigh",
+      "kind": "verb",
+      "reference": "Job 28:25"
+    },
+    {
+      "form": "wentest",
+      "frequency": 14,
+      "lemma": "go",
+      "canonical": "go",
+      "kind": "verb",
+      "reference": "Genesis 49:4"
+    },
+    {
+      "form": "west",
+      "frequency": 69,
+      "lemma": "west",
+      "canonical": "west",
+      "kind": "exact",
+      "reference": "Genesis 12:8"
+    },
+    {
+      "form": "whirleth",
+      "frequency": 1,
+      "lemma": "whirl",
+      "canonical": "whirl",
+      "kind": "verb",
+      "reference": "Ecclesiastes 1:6"
+    },
+    {
+      "form": "willeth",
+      "frequency": 1,
+      "lemma": "will",
+      "canonical": "will",
+      "kind": "verb",
+      "reference": "Romans 9:16"
+    },
+    {
+      "form": "winketh",
+      "frequency": 2,
+      "lemma": "wink",
+      "canonical": "wink",
+      "kind": "verb",
+      "reference": "Proverbs 6:13"
+    },
+    {
+      "form": "winneth",
+      "frequency": 1,
+      "lemma": "win",
+      "canonical": "win",
+      "kind": "verb",
+      "reference": "Proverbs 11:30"
+    },
+    {
+      "form": "winnoweth",
+      "frequency": 1,
+      "lemma": "winnow",
+      "canonical": "winnow",
+      "kind": "verb",
+      "reference": "Ruth 3:2"
+    },
+    {
+      "form": "wipeth",
+      "frequency": 2,
+      "lemma": "wipe",
+      "canonical": "wipe",
+      "kind": "verb",
+      "reference": "2 Kings 21:13"
+    },
+    {
+      "form": "withdrawest",
+      "frequency": 1,
+      "lemma": "withdraw",
+      "canonical": "withdraw",
+      "kind": "verb",
+      "reference": "Psalms 74:11"
+    },
+    {
+      "form": "withdraweth",
+      "frequency": 1,
+      "lemma": "withdraw",
+      "canonical": "withdraw",
+      "kind": "verb",
+      "reference": "Job 36:7"
+    },
+    {
+      "form": "withereth",
+      "frequency": 8,
+      "lemma": "wither",
+      "canonical": "wither",
+      "kind": "verb",
+      "reference": "Job 8:12"
+    },
+    {
+      "form": "withheldest",
+      "frequency": 1,
+      "lemma": "withhold",
+      "canonical": "withhold",
+      "kind": "verb",
+      "reference": "Nehemiah 9:20"
+    },
+    {
+      "form": "withholdeth",
+      "frequency": 4,
+      "lemma": "withhold",
+      "canonical": "withhold",
+      "kind": "verb",
+      "reference": "Job 12:15"
+    },
+    {
+      "form": "witnesseth",
+      "frequency": 2,
+      "lemma": "witness",
+      "canonical": "witness",
+      "kind": "verb",
+      "reference": "John 5:32"
+    },
+    {
+      "form": "worketh",
+      "frequency": 37,
+      "lemma": "work",
+      "canonical": "work",
+      "kind": "verb",
+      "reference": "Job 33:29"
+    },
+    {
+      "form": "worshippeth",
+      "frequency": 6,
+      "lemma": "worship",
+      "canonical": "worship",
+      "kind": "verb",
+      "reference": "Nehemiah 9:6"
+    },
+    {
+      "form": "wotteth",
+      "frequency": 1,
+      "lemma": "wot",
+      "canonical": "wot",
+      "kind": "verb",
+      "reference": "Genesis 39:8"
+    },
+    {
+      "form": "wouldest",
+      "frequency": 38,
+      "lemma": "will",
+      "canonical": "will",
+      "kind": "verb",
+      "reference": "Genesis 30:15"
+    },
+    {
+      "form": "woundeth",
+      "frequency": 1,
+      "lemma": "wound",
+      "canonical": "wound",
+      "kind": "verb",
+      "reference": "Job 5:18"
+    },
+    {
+      "form": "wrest",
+      "frequency": 5,
+      "lemma": "wrest",
+      "canonical": "wrest",
+      "kind": "exact",
+      "reference": "Exodus 23:2"
+    },
+    {
+      "form": "writest",
+      "frequency": 2,
+      "lemma": "write",
+      "canonical": "write",
+      "kind": "verb",
+      "reference": "Job 13:26"
+    },
+    {
+      "form": "writeth",
+      "frequency": 1,
+      "lemma": "write",
+      "canonical": "write",
+      "kind": "verb",
+      "reference": "Psalms 87:6"
+    },
+    {
+      "form": "wrongeth",
+      "frequency": 1,
+      "lemma": "wrong",
+      "canonical": "wrong",
+      "kind": "verb",
+      "reference": "Proverbs 8:36"
+    },
+    {
+      "form": "wroughtest",
+      "frequency": 1,
+      "lemma": "work",
+      "canonical": "work",
+      "kind": "verb",
+      "reference": "Ruth 2:19"
+    },
+    {
+      "form": "yieldeth",
+      "frequency": 4,
+      "lemma": "yield",
+      "canonical": "yield",
+      "kind": "verb",
+      "reference": "Nehemiah 9:37"
+    },
+    {
+      "form": "youngest",
+      "frequency": 18,
+      "lemma": "youngest",
+      "canonical": "youngest",
+      "kind": "exact",
+      "reference": "Genesis 42:13"
+    },
+    {
+      "form": "zereth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "1 Chronicles 4:7",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "zoheleth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "1 Kings 1:9",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    },
+    {
+      "form": "zoheth",
+      "frequency": 1,
+      "lemma": "none",
+      "canonical": "none",
+      "kind": "name-or-heading",
+      "reference": "1 Chronicles 4:20",
+      "note": "No exact dictionary entry; a name or Hebrew heading is not a verb."
+    }
+  ]
+}

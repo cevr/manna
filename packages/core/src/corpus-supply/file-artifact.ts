@@ -1,7 +1,11 @@
 import { Context, Effect, Layer, Option, Schema, SchemaTransformation } from 'effect';
 import type { Stream } from 'effect';
 
-import type { CorpusInstallationError, CorpusSourceUnavailableError } from './errors.js';
+import type {
+  CorpusInstallationError,
+  CorpusSourceUnavailableError,
+  SqliteRefreshRefused,
+} from './errors.js';
 import type { CorpusFileName, CorpusGeneration, CorpusProvenance } from './model.js';
 import { makeCorpusStorageIdentity, type CorpusStorageIdentity } from './storage-identity.js';
 
@@ -145,7 +149,7 @@ export interface FileArtifactInstallerService {
     artifact: FileArtifact,
   ) => Effect.Effect<
     { readonly installed: number; readonly provenance: CorpusProvenance },
-    CorpusInstallationError
+    CorpusInstallationError | SqliteRefreshRefused
   >;
   /** Where the *host* reads the generation this installer activated.
    *
@@ -333,4 +337,22 @@ export const TopicsArtifact = makeFileCorpusArtifact({
   label: 'Topics',
   Recipe: TopicsArtifactRecipe,
   Installer: TopicsArtifactInstaller,
+});
+
+export class WebsterArtifactRecipe extends Context.Service<
+  WebsterArtifactRecipe,
+  FileArtifactRecipeService
+>()('@manna/core/corpus-supply/WebsterArtifactRecipe') {}
+
+export class WebsterArtifactInstaller extends Context.Service<
+  WebsterArtifactInstaller,
+  FileArtifactInstallerService
+>()('@manna/core/corpus-supply/WebsterArtifactInstaller') {}
+
+/** Optional local corpus. A source build must precede distribution. */
+export const WebsterArtifact = makeFileCorpusArtifact({
+  corpus: 'webster',
+  label: 'Webster 1828',
+  Recipe: WebsterArtifactRecipe,
+  Installer: WebsterArtifactInstaller,
 });

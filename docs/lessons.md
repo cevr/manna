@@ -51,6 +51,86 @@ The form of an entry, each field on its own line:
 
 ## Process and tooling
 
+### sqlite-staging-sidefiles
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "the installer does not own SQLite's sidecars of its staging file"
+- **Source:** initfresh/round-1-findings.md F1
+- **Wrong:** A stale hot staging journal could roll old pages into a verified candidate, and normal WAL installs left staging WAL and SHM files.
+- **Cause:** Staging side files were neither cleared before streaming nor owned through provenance writing and cleanup.
+- **Guard:** code: `packages/core/src/platform-bun/file-corpus-lifecycle.test.ts` `discards a stale hot staging journal before installing different candidate bytes`; code: `packages/core/src/platform-bun/bible-artifact.test.ts` `installs a self-contained WAL Bible without staging WAL or SHM residue`; code: `packages/core/src/platform-bun/file-corpus-lifecycle.test.ts` `owns staging SQLite side files before streaming and after every failed install phase`
+
+### init-preserves-installed-corpora
+
+- **Date:** 2026-10-26
+- **Kind:** owner
+- **Said:** "manna init exits 0 and installs bible, topics, webster and hymnal on an empty HOME, and on a HOME that already holds every database it exits 0 without replacing them (no --force)."
+- **Source:** initfresh/spec.md Goal; measured failure in initfresh/red-base.md.
+- **Wrong:** Default init replaced existing files or fetched a Bible release while offline.
+- **Cause:** Generic source-identity refresh was used as init's preservation policy.
+- **Guard:** code: `packages/cli/test/commands/init.test.ts` `default init preserves every existing database without HTTP or provenance writes`
+
+### sqlite-wal-artifact-verification
+
+- **Date:** 2026-10-26
+- **Kind:** owner
+- **Said:** "Handle a copied `-wal` when one exists; do not lose committed rows in a live WAL database."
+- **Source:** initfresh/spec.md Risks; measured failure in initfresh/red-base.md.
+- **Wrong:** A closed WAL artifact failed read-only integrity verification; streaming only a live source's main file omitted committed WAL rows.
+- **Cause:** SQLite needs private writable auxiliary state for these WAL reads; a single-file stream does not include a live WAL.
+- **Guard:** code: `packages/core/src/platform-bun/file-corpus-lifecycle.test.ts` `installs closed WAL artifacts and committed live WAL rows without altering sources`
+
+### hymn-search-literal-operators
+
+- **Date:** 2026-10-27
+- **Kind:** owner
+- **Said:** "let's just fix those real quick. They all seem pretty small."
+- **Source:** Owner's 2026-10-27 instruction, `tmp/orchestrate/hymnapp/hymndb/log.md` (quote and provenance supplied by the hymnapp orchestrator).
+- **Wrong:** Operator-like input and a lone accented letter gained broad token matches.
+- **Cause:** FTS tokenization discarded the literal symbols or folded a single letter's diacritic.
+- **Guard:** code: `packages/core/src/hymnal/service-bun.test.ts` `keeps operator-like queries and lone accented letters on literal substring search`
+
+### hymn-source-package-boundaries
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "a test and the source layer reach into other packages by relative path"
+- **Source:** hymndb/round-1-findings.md F3
+- **Wrong:** A CLI test imported hymnal scripts, and hymnal scripts bypassed the core package export.
+- **Cause:** Internal paths stood in for a public package boundary.
+- **Guard:** lint:no-restricted-imports, proof `packages/cli/test/commands/hymns.slow.test.ts` `rejects imports that bypass core and hymnal package exports`
+
+### hymn-source-canonical-bytes
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "the two source writers do not reproduce the committed bytes"
+- **Source:** hymndb/round-1-findings.md F4
+- **Wrong:** Capture, corrections and formatting produced different source bytes and stale database fingerprints.
+- **Cause:** The writers had separate serializers, and oxfmt also owned the source layout.
+- **Guard:** code: `packages/hymnal/src/topics.test.ts` `keeps source-text bytes in the canonical writer format`
+
+### hymn-search-text-before-topic-index
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "hymns search drops real text matches at the default limit, displaced by topic-name matches"
+- **Source:** hymndb/round-1-findings.md F1
+- **Wrong:** FTS searched topic names before applying the result limit, so topic-only hits displaced title/text matches.
+- **Cause:** MATCH covered every indexed column instead of the lookup contract's title and full-text columns.
+- **Guard:** code: `packages/core/src/hymnal/service-bun.test.ts` `excludes topic-only matches from title and text search`
+
+### hymn-database-test-only-exports
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "the deploy gate's dead-export step goes red (a gate regression, not user-facing)"
+- **Source:** hymndb/round-1-findings.md F2
+- **Wrong:** Four implementation details were exported only for tests and failed the existing dead-export check.
+- **Cause:** Tests reached internal schema/constants and an acquisition helper instead of the built artifact and init command.
+- **Guard:** skill: dead exports already have a deterministic check outside the fast gate. Carried by `.claude/skills/verify-hymnal/features/corpus-db.md`: "Run `bun run dead-exports` before handoff when a change adds exports."
+
 ### hymn-line-level-chord-anchors
 
 - **Date:** 2026-10-26
@@ -1805,7 +1885,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-mail/review-1.md F4
 - **Wrong:** Joining again after leaving cleared `confirm_sent_at`, so leave and sign-up in turn sent a confirm letter each time, past the hour between them.
 - **Cause:** One column held two meanings, the newest link and the start of the hour, and the rejoin cleared it for the first.
-- **Guard:** code: `apps/firsttheblade/src/mail/list.test.ts` `leaving and joining again does not start the hour between confirm letters again`
+- **Guard:** code: `apps/firsttheblade/src/list/List.story.test.ts` `leaving and coming back does not start the hour between links again`
 
 ### film-letter-made-before-its-claim
 
@@ -1845,7 +1925,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-mail/review-2.md F4
 - **Wrong:** The test that the sign-up answers before its work held the work until it was settled, while Alchemy's `waitUntil` starts it at once, and the doc said the work runs after the answer.
 - **Cause:** The test double was built for the order wanted, not the one the host gives.
-- **Guard:** code: `apps/firsttheblade/src/mail/mail.test.ts` `a sign-up is answered while its letter is still being sent`
+- **Guard:** code: `apps/firsttheblade/src/mail/mail.test.ts` `a sign-up is answered while its background work is already running`
 
 ### send-claim-checks-the-subscriber
 
@@ -3927,6 +4007,76 @@ The form of an entry, each field on its own line:
 - **Cause:** The docs test checked API paths in running text but no page path. It now holds each page path a framework doc writes to a page the lab serves.
 - **Guard:** code: `packages/film/src/docs.slow.test.ts` `pageDrift`
 
+### webster-kjv-lemma-domain
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "The specified KJV fallback picks a wrong entry for common forms."
+- **Source:** hymnapp/webster/round-1-findings.md F1; orchestrator round-2 amendment
+- **Wrong:** Suffix stripping chose doe for doeth/doest and saye for sayest because those unrelated headwords exist.
+- **Cause:** Lexical existence was treated as evidence of the intended KJV lemma. Lookup now uses an audited alias table before generic guesses and stops when an alias target is absent.
+- **Guard:** code: `packages/core/src/webster/kjv.test.ts` `resolves every audited KJV form to its reviewed entry or none with real collision vocabulary`
+
+### webster-kjv-verb-source
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "Seven KJV verb forms resolve to an unrelated noun homograph."
+- **Source:** hymnapp/webster/round-1-findings.md F1; recurrence hymnapp/webster/round-2-findings.md B1; hymnapp/webster/round-3-findings.md T1/T2
+- **Wrong:** SOW, SWALLOW, TILL and LEAVE passed a headword-only oracle despite containing only unrelated nouns for these KJV verbs.
+- **Cause:** Matching the expected spelling or a neighbouring word's verb label was treated as proof of verb identity. The complete verb and exact-inflection domain checks own-heading source labels, with necessary same-word exceptions that must be consumed. Missing or unsafe verbs resolve to none.
+- **Guard:** code: `packages/core/src/webster/kjv.slow.test.ts` `every KJV verb and exact inflection resolves to its own source-marked verb or no entry with no unused exceptions`
+
+### webster-bare-before-undoubled
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "Bare-before-undoubled priority is untested."
+- **Source:** hymnapp/webster/round-1-findings.md F6
+- **Wrong:** A collision fixture with retained-e, bare and undoubled stems always selected retained-e and could not detect reversed later candidates.
+- **Cause:** The fixture never reached the ordering it claimed to protect. A synthetic generic form now has only bare and undoubled candidates.
+- **Guard:** code: `packages/core/src/webster/service.test.ts` `tries a bare generic stem before an undoubled stem when retained e is absent`
+
+### webster-active-runtime-identity
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "Init re-installs Webster on every run when only the runtime copy exists."
+- **Source:** hymnapp/webster/round-1-findings.md F2
+- **Wrong:** Replacing the active file changed its mtime, which the runtime source treated as a new revision, so repeat init copied the whole corpus again.
+- **Cause:** File modification identity was used in place of the verified active content identity. The self-runtime candidate now retains that identity and recomputes its digest only on an explicit refresh.
+- **Guard:** code: `packages/cli/test/commands/webster.slow.test.ts` `keeps a verified active runtime corpus unchanged across repeated init`
+
+### webster-init-readable-diagnostic
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "Init's Webster failure line dumps the error as JSON."
+- **Source:** hymnapp/webster/round-1-findings.md F3
+- **Wrong:** Missing data printed a nested infrastructure error with paths and ENOENT details instead of one concise failure and remedy.
+- **Cause:** The UI rendered the raw error object. The init leg now prints its tag, a short explanation and the build/install remedy.
+- **Guard:** code: `packages/cli/test/commands/webster.test.ts` `init reports a missing Webster corpus with a short remedy and no error JSON`
+
+### webster-init-production-leg
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "Init's own Webster leg runs in no test."
+- **Source:** hymnapp/webster/round-1-findings.md F7
+- **Wrong:** The relocation test rebuilt an ensure graph and supplied only packaged sources, so init's runtime source and output were untested.
+- **Cause:** The test reproduced the wiring instead of invoking the production operation. Init and the relocation test now share the source list, ensure and message operation.
+- **Guard:** code: `packages/cli/test/commands/webster.slow.test.ts` `relocated CLI reads packaged corpus without checkout fallback and preserves active data after failed refresh`
+
+### bible-build-is-not-installation
+
+- **Date:** 2026-10-26
+- **Kind:** owner
+- **Said:** "I mean, we can sync via GitHub artifact or something, whatever makes sense"
+- **Source:** hymnapp/biblebuild/spec.md; owner build/install separation decision
+- **Wrong:** A workspace Bible rebuild copied over the installed database; vector and native builds could populate implicit HOME caches.
+- **Cause:** Corpus production shared runtime destination and cache defaults. The builder now has no runtime path, and build hosts supply workspace cache defaults.
+- **Guard:** code: `packages/core/src/sync/bible-sync.test.ts` `builds only workspace databases across force, existing outputs and home configurations`; `packages/core/src/sync/bible-sync.test.ts` `preserves an installed runtime tree and its bytes during a forced workspace rebuild`; `packages/scripts/src/vector-compiler/paths.test.ts` `vector build supplies a workspace cache independent of HOME and honors explicit model caches`; `packages/core/scripts/build-native.test.ts` `native and wasm builds keep implicit Zig caches in the workspace and preserve overrides`
+
 ### board-food-is-plant-food
 
 - **Date:** 2026-10-26
@@ -4026,3 +4176,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** A 2 x 10 px strip of cream cut loose of the figure was taken for the ground's grain, so `slivers` scored 0.
 - **Cause:** Every piece under 24 px off the figure was ground, thin or not. A piece that is a thin strip, 2 px thick or less and 6 px long or more, now stays a sliver.
 - **Guard:** code: `packages/film/src/core/fit-rows.test.ts` `a thin strip of paper off the figure is a sliver, not the ground's grain; a thick or a short one is grain`, `packages/film/src/core/fit-rows.slow.test.ts` `a strip 2 px thick or less and 6 px long or more is a sliver, wherever it lies; any other is not`
+
+### init-refresh-outgoing-wal
+
+- **Date:** 2026-10-27
+- **Kind:** retraction
+- **Said:** chose: "Refuse while the destination WAL is non-empty." (orchestrator decision)
+- **Source:** hymnapp/initwal/spec.md Decided; hymnapp/initwal/round-1-findings.md m4; orchestrator round-2 correction
+- **Wrong:** Init replaced main bytes while committed pages belonged to an outgoing WAL. The first ledger entry also attributed the orchestrator's refusal decision to the owner without an owner quote.
+- **Cause:** Replacement treated a destination as one file, and optional-source error handling could hide refusal. One core metadata check now covers the destination and resolved path before activation. Every install stages and renames; all refusals fail the final command after unaffected work finishes. This entry retracts the unsupported owner attribution and records the actual orchestrator decision.
+- **Guard:** code: `packages/cli/test/commands/init.test.ts` `forced init refuses every non-empty WAL and reports all refusals without touching destinations`; `packages/cli/test/commands/init.test.ts` `forced init refuses live WALs beside all four resolved symlink targets`; `packages/cli/test/commands/init.test.ts` `forced init permits empty and absent WALs at the CLI pre-check and fails closed on stat errors`; `packages/core/src/platform-bun/file-corpus-lifecycle.test.ts` `refuses non-empty destination WALs at activation and permits empty or absent WALs`

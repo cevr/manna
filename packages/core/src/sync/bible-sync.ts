@@ -1,18 +1,7 @@
 /** Builds the canonical unified Bible database from bundled source catalogs. */
 
 import * as SqliteBun from '@effect/sql-sqlite-bun/SqliteClient';
-import {
-  Config,
-  Console,
-  DateTime,
-  Effect,
-  FileSystem,
-  Layer,
-  Option,
-  Path,
-  Predicate,
-  Schema,
-} from 'effect';
+import { Console, DateTime, Effect, FileSystem, Layer, Path, Schema } from 'effect';
 
 import { BibleCorpus, decodeBibleCorpusArchive } from '../bible-db/index.js';
 import type { BibleCorpusArchive } from '../bible-db/index.js';
@@ -20,23 +9,16 @@ import type { BibleCorpusArchive } from '../bible-db/index.js';
 interface BibleSyncPaths {
   readonly assetsDirectory: string;
   readonly database: string;
-  readonly runtimeDatabase?: string;
 }
 
 const decodeJson = Schema.decodeUnknownEffect(Schema.fromJsonString(Schema.Unknown));
 
 export const defaultBibleSyncPaths = Effect.fn('BibleSync.defaultPaths')(function* () {
   const path = yield* Path.Path;
-  const home = yield* Config.String('HOME').pipe(
-    Config.orElse(() => Config.String('USERPROFILE')),
-    Config.option,
-  );
   const dataDirectory = path.resolve(import.meta.dir, '../../data');
-  const runtimeDatabase = Option.map(home, (value) => path.join(value, '.bible', 'bible.db'));
   return {
     assetsDirectory: path.resolve(import.meta.dir, '../../assets'),
     database: path.resolve(dataDirectory, 'bible.db'),
-    runtimeDatabase: Option.getOrUndefined(runtimeDatabase),
   } satisfies BibleSyncPaths;
 });
 
@@ -134,13 +116,6 @@ export const syncBible = Effect.fn('BibleSync.syncBible')(function* (
   yield* install.pipe(
     Effect.onError(() => removeDatabaseFiles(buildingDatabase).pipe(Effect.ignore)),
   );
-
-  const runtimeTarget = paths.runtimeDatabase;
-  if (Predicate.isNotUndefined(runtimeTarget)) {
-    yield* fs.makeDirectory(path.dirname(runtimeTarget), { recursive: true });
-    yield* fs.copyFile(paths.database, runtimeTarget);
-    yield* Console.log(`\nCopied to runtime location: ${runtimeTarget}`);
-  }
 
   const details = yield* fs.stat(paths.database);
   const sizeMB = (Number(details.size) / 1024 / 1024).toFixed(2);

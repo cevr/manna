@@ -1,0 +1,11 @@
+{
+  "edition": "1828",
+  "url": "https://raw.githubusercontent.com/akaitsurugi/webster1828/b52403774b5b24d01377bbab29f642be226e9bb4/webster1828.csv",
+  "revision": "b52403774b5b24d01377bbab29f642be226e9bb4",
+  "sha256": "5ba9750ae13e3938441721d00677f8eacf45b63bd631639de247155892e54fb0",
+  "bytes": 16731155,
+  "records": 62391,
+  "keys": 62388,
+  "licence": "CC-BY-SA-4.0",
+  "notice": "Noah Webster and akaitsurugi/webster1828 contributors. Adapted as SQLite/FTS5 with normalized keys and HTML-derived plaintext; original source HTML retained. CC BY-SA 4.0: https://creativecommons.org/licenses/by-sa/4.0/. Plaintext citation corrections for charity (1 Corinthians 13), love (1 John 4) and prevent (Psalms 119) restore scan chapter references without inferred verse numbers. Electronic verse expansions may be wrong; e contains DESCRIPTIVE text and descriptiv is a malformed DESCRIPTIVE key. Approximately 600 work-in-progress words are excluded upstream; earlier transcription lineage is not fully documented. This is not a complete critical edition."
+}

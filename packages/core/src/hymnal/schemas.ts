@@ -32,7 +32,7 @@ export const hymnFirstLine = (verses: readonly HymnVerse[]): string => {
 };
 
 /**
- * A hymn from the SDA Hymnal
+ * A hymn or liturgical reading from the SDA Hymnal; IDs 696–920 are readings.
  */
 export class Hymn extends Schema.Class<Hymn>('Hymn')({
   id: HymnId,

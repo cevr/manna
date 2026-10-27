@@ -1,5 +1,89 @@
 # Corpus Supply
 
+## Webster 1828
+
+Webster is an optional File Corpus. Bible bootstrap stays unchanged.
+`manna init` explicitly ensures Webster through `Target.webster()` and reports
+missing or rejected data with a remedy. A corrupt candidate fails closed.
+The native lifecycle verifies before atomic activation and preserves the prior
+active file after acquisition or verification failure.
+
+Run `bun run build:webster` from a source checkout. The compiler fetches only the
+CSV pinned in `packages/core/assets/webster1828-source.json`, verifies its bytes
+and SHA-256, and emits ignored `packages/core/data/webster.db` and
+`webster.manifest.json`. `--source <CSV>` accepts the same pinned bytes offline;
+`--out <path>` selects a build output. Builds reject the owner's runtime
+`.bible` directory. Compilation uses a fresh sibling, validates SQLite/FTS,
+closes the connection and atomically replaces the selected database. The
+adjacent manifest holds size and digest; no self-hash is stored in the database.
+The manifest names the basename, not a build machine's absolute path. Run
+`bun run build:webster` once in each checkout before Webster's slow tests or the
+repository slow suite; tests never fetch or silently build the corpus.
+
+The snapshot retains all 62,391 records and 62,388 normalized keys, including
+two `anticonstitutional` and three `counter-revolution` rows. Each entry keeps
+source HTML, plaintext, original headword and stable source-ordinal id.
+Definitions retain their senses and quotation order. FTS5 searches literal
+definition terms with AND, rank and id tie-breaking. The audited `closest`
+override resolves to CLOSE (Jeremiah 22:15) instead of the exact adjective;
+if CLOSE is absent it returns none. Otherwise exact lookup wins before
+the reviewed KJV alias table, then the bounded `-eth` / `-est` fallback.
+The complete repository KJV domain is committed in
+`packages/core/src/webster/fixtures/kjv-endings.json`: 962 suffix words, plus eight
+explicit irregular/noun guard forms, with frequencies and expected resolutions.
+An independent real-SQLite property checks all 876 verb and exact-inflection
+rows for labels or explicit grammar entries after their own bold headword,
+with necessary same-word exceptions and their reasons in the fixture. Every
+exception must be consumed. The frozen reviewed-lemma judgments and full census
+remain separate checks. Fast fixture vocabulary is compared with real required
+SQLite keys. A headword-string match alone does not establish verb identity.
+Aliases cover irregulars, spelling changes, colliding stems and explicit
+nonverb exclusions. The seven KJV forms for the missing SOW, SWALLOW, TILL and
+LEAVE verbs return none; exact noun queries retain their raw entries.
+`proceedeth` and `loatheth` also return none because their source records contain
+PROCEEDER's text and only a heading respectively. Canonical verbs remain in the
+fixture. Alias outcomes distinguish a lemma key from an explicit no-entry stop
+and from no alias. Missing alias targets stop; an unrelated
+candidate never substitutes for them. The generic fallback rejects one-letter
+stems. The response distinguishes audited aliases from generic heuristic matches.
+Exact grammar entries for dost/hast/art/wast remain exact; the fixture also
+records their canonical do/have/be/be forms. This does not claim universal KJV
+lemmatization, irregular spelling resolution or verse-aware glosses.
+
+`@manna/core/webster` is portable. `@manna/core/webster/bun` opens existing
+read-only SQLite at an explicit filename, `WEBSTER_DB_PATH`, or
+`~/.bible/webster.db`. `manna webster <word> [--json]` looks up an entry;
+`manna webster search <definition words> [--limit 1..100] [--json]` searches
+definitions. JSON has `query` and `entries`. No match is successful empty data;
+missing or corrupt storage is an actionable error.
+
+There is no Webster release pin. Native sources are packaged, workspace, then
+existing runtime data. A binary distributor must build the corpus first.
+A runtime source that is the verified active file retains that identity instead
+of treating its changed mtime as a new revision. Repeat init skips that copy.
+The exported `initializeWebster` operation owns the source list, ensure and
+readable receipt used by both `init` and the isolated slow checks.
+The CLI build stages the artifact, manifest, `webster1828-NOTICE.md` and
+`webster1828-LICENSE.txt` into package data and beside the executable. Missing
+optional assets are reported; CLI compilation never downloads or builds them.
+
+The original 1828 work is public domain. The selected electronic transcription
+and adapted artifact are CC BY-SA 4.0. Preserve the complete licence, attribution
+to Noah Webster and the akaitsurugi/webster1828 contributors, the pinned
+revision, marked changes, ShareAlike, and no additional restrictions. This data
+licence is distinct from the application's code licence. Upstream reports
+roughly 600 work-in-progress words outside this snapshot and does not fully
+document the earlier transcription lineage. This is not a complete critical
+edition. App distribution, mobile/browser adapters and Heartseed UI are outside
+this corpus unit.
+
+The scan sample also found omitted etymological text and quotation credits,
+expanded biblical references and altered numbering. Three incorrect references
+in `charity`, `love` and `prevent` are corrected in plaintext using the original
+scans, recorded in `packages/core/src/webster/corrections.ts`. Source HTML stays
+unchanged. Projection metadata identifies this transformation. See the shipped
+notice for exact corrections and source limits.
+
 `CorpusSupply.ensure(input?)` is the only application-facing asset bootstrap operation. New computers do not need repository asset folders or manual copying: CLI and browser acquire the pinned release Artifact, while desktop first checks its packaged and workspace sources before falling back to the same release.
 
 ## Current Bible Artifact

@@ -1,6 +1,6 @@
 /**
  * The committed timing is the compiler's: every hymn compiled afresh from
- * hymnal.db and its MIDI file (by the compile script, into a scratch folder)
+ * source-text.json and its MIDI file (by the compile script, into a scratch folder)
  * carries the timing its committed file carries.
  */
 
@@ -18,7 +18,7 @@ const decodeHymn = Schema.decodeUnknownEffect(Schema.fromJsonString(Hymn));
 
 describe('the committed timing', () => {
   it.effect(
-    'is what the compiler gives each hymn from hymnal.db and its file',
+    'is what the compiler gives each hymn from source text and its file',
     () =>
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;

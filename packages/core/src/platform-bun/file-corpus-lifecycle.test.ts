@@ -1,7 +1,8 @@
 import { BunFileSystem } from '@effect/platform-bun';
+import { Database } from 'bun:sqlite';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
-import { Context, Effect, FileSystem, type Layer, Option } from 'effect';
+import { Context, Effect, FileSystem, Layer, Option } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
 import {
@@ -13,8 +14,13 @@ import {
 import type {
   CorpusInstallationError,
   CorpusSourceUnavailableError,
+  SqliteRefreshRefused,
 } from '../corpus-supply/errors.js';
 import type { CorpusName, CorpusProvenance } from '../corpus-supply/model.js';
+import { CorpusSupply } from '../corpus-supply/service.js';
+import { Target } from '../corpus-supply/model.js';
+import { layerNativeTopicsArtifacts, layerNativeWebsterArtifacts } from './bible-artifact.js';
+import { writeWebsterFixture } from '../webster/fixtures/sqlite-bun.js';
 import {
   layerNativeFileArtifacts,
   type NativeFileArtifactProvenanceStore,
@@ -103,7 +109,7 @@ const install = (input: {
 /** Reads the corpus name an installer stamped on a failure. An unregistered
  *  corpus must leave it unset rather than borrow a registered corpus's name. */
 const reportedCorpus = (
-  failure: CorpusSourceUnavailableError | CorpusInstallationError,
+  failure: CorpusSourceUnavailableError | CorpusInstallationError | SqliteRefreshRefused,
 ): Option.Option<CorpusName> => {
   if (failure._tag === 'CorpusInstallationError') return Option.fromNullishOr(failure.corpus);
   return Option.none();
@@ -124,8 +130,272 @@ const releaseSource = (input: {
 
 const fixtureDigest = `sha256:${bytesToHex(sha256(new TextEncoder().encode(FIXTURE_BYTES)))}`;
 
+const attemptWebsterInstall = (destination: string, source: string) =>
+  CorpusSupply.use((supply) => supply.ensure({ target: Target.webster() })).pipe(
+    Effect.provide(
+      CorpusSupply.layer.pipe(
+        Layer.provide(
+          layerNativeWebsterArtifacts({
+            destination,
+            sources: [{ kind: 'workspace', path: source, label: 'webster-test' }],
+          }),
+        ),
+      ),
+    ),
+  );
+
+const installTopics = (destination: string, source: string) =>
+  CorpusSupply.use((supply) => supply.ensure({ target: Target.topics() })).pipe(
+    Effect.provide(
+      CorpusSupply.layer.pipe(
+        Layer.provide(
+          layerNativeTopicsArtifacts({
+            destination,
+            sources: [{ kind: 'packaged', path: source, label: 'topics-fixture' }],
+          }),
+        ),
+      ),
+    ),
+  );
+
+const topicsFixture = (filename: string, count: number) =>
+  Effect.acquireUseRelease(
+    Effect.sync(() => new Database(filename)),
+    (db) =>
+      Effect.sync(() =>
+        db.exec(`
+      PRAGMA journal_mode=DELETE;
+      CREATE TABLE meta(key TEXT PRIMARY KEY,value TEXT);
+      INSERT INTO meta VALUES('schema_major','1');
+      CREATE TABLE topics(id INTEGER, name TEXT);
+      WITH RECURSIVE n(x) AS (VALUES(1) UNION ALL SELECT x+1 FROM n WHERE x<${count})
+        INSERT INTO topics SELECT x, printf('%0100d', x) FROM n;
+      CREATE TABLE topic_aliases(id INTEGER); INSERT INTO topic_aliases VALUES(1);
+      CREATE TABLE topic_edges(id INTEGER); CREATE TABLE topic_catalog_keys(id INTEGER);
+    `),
+      ),
+    (db) => Effect.sync(() => db.close()),
+  );
+
+/** Capture a real synced rollback journal while its transaction is open, then
+ * close the writer before reusing the captured bytes. This models a crash's
+ * hot side file without spawning or signalling any process.
+ */
+const hotJournal = (filename: string) =>
+  Effect.acquireUseRelease(
+    Effect.sync(() => new Database(filename, { create: false })),
+    (db) =>
+      Effect.gen(function* () {
+        yield* Effect.sync(() => {
+          db.exec(`PRAGMA synchronous=FULL; PRAGMA cache_size=10; PRAGMA cache_spill=1;
+          BEGIN;
+          UPDATE meta SET value=value WHERE key='schema_major';
+          UPDATE topics SET id=id+1000000;
+          CREATE TABLE spill(value TEXT);`);
+          const insert = db.prepare('INSERT INTO spill VALUES(?)');
+          for (let index = 0; index < 1000; index++) insert.run('x'.repeat(500));
+        });
+        const fs = yield* FileSystem.FileSystem;
+        return yield* fs.readFile(`${filename}-journal`);
+      }),
+    (db) => Effect.sync(() => db.close()),
+  );
+
 describe('parameterized File Corpus lifecycle', () => {
   const test = it.scopedLive.layer(BunFileSystem.layer);
+
+  test('refuses non-empty destination WALs at activation and permits empty or absent WALs', () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: 'sqlite-destination-wal-' });
+      for (const mode of ['positive', 'empty', 'absent', 'late', 'staging-link']) {
+        const destination = `${dir}/${mode}.db`;
+        yield* fs.writeFileString(destination, 'outgoing');
+        if (mode === 'positive') yield* fs.writeFileString(`${destination}-wal`, 'x');
+        if (mode === 'empty') yield* fs.writeFileString(`${destination}-wal`, '');
+        const external = `${dir}/external.db`;
+        if (mode === 'staging-link') {
+          yield* fs.writeFileString(external, 'external-bytes');
+          yield* fs.symlink(external, `${destination}.building`);
+        }
+        const result = yield* Effect.result(
+          install({
+            destination,
+            sources: [releaseSource({ digest: fixtureDigest, size: FIXTURE_BYTES.length })],
+            fetch: () => Effect.succeed(new Response(FIXTURE_BYTES)),
+            verify: () => Effect.succeed(1),
+            provenanceStore: {
+              ...makeProvenanceStore(),
+              write: () => {
+                if (mode === 'late') return fs.writeFileString(`${destination}-wal`, 'x');
+                return Effect.void;
+              },
+            },
+          }),
+        );
+        const refused = mode === 'positive' || mode === 'late';
+        if (refused) {
+          expect(result._tag).toBe('Failure');
+          expect(yield* fs.readFileString(destination)).toBe('outgoing');
+        } else {
+          expect(result._tag).toBe('Success');
+          expect(yield* fs.readFileString(destination)).toBe(FIXTURE_BYTES);
+        }
+        if (refused) expect(yield* fs.readFileString(`${destination}-wal`)).toBe('x');
+        if (mode === 'empty') expect(yield* fs.readFileString(`${destination}-wal`)).toBe('');
+        if (mode === 'absent') expect(yield* fs.exists(`${destination}-wal`)).toBe(false);
+        if (mode === 'staging-link')
+          expect(yield* fs.readFileString(external)).toBe('external-bytes');
+        expect((yield* fs.readDirectory(dir)).some((name) => name.includes('.building'))).toBe(
+          false,
+        );
+      }
+    }));
+
+  test('discards a stale hot staging journal before installing different candidate bytes', () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: 'sqlite-hot-staging-' });
+      const old = `${dir}/old.db`;
+      const source = `${dir}/source.db`;
+      const destination = `${dir}/topics.db`;
+      const building = `${destination}.building`;
+      yield* topicsFixture(old, 3);
+      yield* topicsFixture(source, 5000);
+      const journal = yield* hotJournal(old);
+      expect([...journal.subarray(0, 8)]).toEqual([0xd9, 0xd5, 0x05, 0xf9, 0x20, 0xa1, 0x63, 0xd7]);
+      yield* fs.copyFile(old, building);
+      yield* fs.writeFile(`${building}-journal`, journal);
+      const receipt = yield* installTopics(destination, source);
+      expect(receipt.activated).toMatchObject([{ corpus: 'topics', installed: 5000 }]);
+      yield* Effect.acquireUseRelease(
+        Effect.sync(() => new Database(destination, { readonly: true, create: false })),
+        (db) =>
+          Effect.sync(() => {
+            expect(db.query('SELECT count(*) AS n FROM topics').get()).toEqual({ n: 5000 });
+            expect(db.query('PRAGMA integrity_check').get()).toEqual({ integrity_check: 'ok' });
+          }),
+        (db) => Effect.sync(() => db.close()),
+      );
+      expect((yield* fs.readDirectory(dir)).filter((name) => name.includes('.building'))).toEqual(
+        [],
+      );
+    }));
+
+  test('owns staging SQLite side files before streaming and after every failed install phase', () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: 'sqlite-staging-failure-' });
+      for (const phase of ['stream', 'verify', 'provenance']) {
+        const destination = `${dir}/${phase}.db`;
+        const building = `${destination}.building`;
+        const sideFiles = ['-journal', '-wal', '-shm'].map((suffix) => `${building}${suffix}`);
+        const seed = Effect.forEach(sideFiles, (file) => fs.writeFileString(file, 'discarded'), {
+          discard: true,
+        });
+        yield* fs.writeFileString(destination, 'active-bytes');
+        yield* seed;
+        const failure = yield* Effect.flip(
+          install({
+            destination,
+            sources: [releaseSource({ digest: fixtureDigest, size: FIXTURE_BYTES.length })],
+            fetch: () =>
+              Effect.gen(function* () {
+                for (const file of sideFiles) expect(yield* fs.exists(file)).toBe(false);
+                if (phase === 'stream') return yield* Effect.fail('stream rejected');
+                return new Response(FIXTURE_BYTES);
+              }),
+            verify: () =>
+              Effect.gen(function* () {
+                if (phase === 'verify') {
+                  yield* seed;
+                  return yield* Effect.fail('verify rejected');
+                }
+                return 1;
+              }),
+            provenanceStore: {
+              read: () => Effect.fail('no prior provenance'),
+              write: () => seed.pipe(Effect.andThen(Effect.fail('provenance rejected'))),
+            },
+          }),
+        );
+        expect(failure).toMatchObject({ _tag: 'CorpusInstallationError' });
+        expect(yield* fs.readFileString(destination)).toBe('active-bytes');
+        expect((yield* fs.readDirectory(dir)).filter((name) => name.includes('.building'))).toEqual(
+          [],
+        );
+      }
+    }));
+
+  test('installs closed WAL artifacts and committed live WAL rows without altering sources', () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: 'sqlite-wal-artifact-' });
+      for (const live of [false, true]) {
+        const source = `${dir}/source-${String(live)}.db`;
+        const destination = `${dir}/installed-${String(live)}.db`;
+        const db = yield* Effect.acquireRelease(
+          Effect.sync(() => new Database(source)),
+          (db) => Effect.sync(() => db.close()),
+        );
+        yield* Effect.sync(() => {
+          db.exec(`CREATE TABLE meta(key TEXT PRIMARY KEY,value TEXT);
+            INSERT INTO meta VALUES('schema_major','1');
+            CREATE TABLE topics(id INTEGER); INSERT INTO topics VALUES(1);
+            CREATE TABLE topic_aliases(id INTEGER); INSERT INTO topic_aliases VALUES(1);
+            CREATE TABLE topic_edges(id INTEGER); CREATE TABLE topic_catalog_keys(id INTEGER);
+            PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0;`);
+          if (live) db.exec('INSERT INTO topics VALUES(2)');
+          else db.close();
+        });
+        const files = [source];
+        if (live) files.push(`${source}-wal`, `${source}-shm`);
+        const before = yield* Effect.forEach(files, (file) =>
+          Effect.gen(function* () {
+            return { file, bytes: yield* fs.readFile(file), stat: yield* fs.stat(file) };
+          }),
+        );
+        const receipt = yield* installTopics(destination, source);
+        let expected = 1;
+        if (live) expected = 2;
+        expect(receipt.activated).toMatchObject([{ corpus: 'topics', installed: expected }]);
+        expect((yield* installTopics(destination, source)).activated).toEqual([]);
+        for (const { file, bytes, stat } of before) {
+          expect(yield* fs.readFile(file)).toEqual(bytes);
+          const after = yield* fs.stat(file);
+          expect(after.ino).toEqual(stat.ino);
+          expect(after.mtime).toEqual(stat.mtime);
+          expect(after.size).toEqual(stat.size);
+        }
+        expect(yield* fs.exists(`${source}-wal`)).toBe(live);
+        expect(yield* fs.exists(`${source}-shm`)).toBe(live);
+        expect((yield* fs.readDirectory(dir)).filter((name) => name.includes('.building'))).toEqual(
+          [],
+        );
+        expect(yield* fs.exists(`${destination}-wal`)).toBe(false);
+      }
+    }));
+
+  test('Webster rejects a synthetic or corrupt candidate before replacing the destination', () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: 'webster-rejected-' });
+      const destination = `${dir}/active.db`;
+      yield* fs.writeFileString(destination, 'prior-bytes');
+      const source = `${dir}/candidate.db`;
+      yield* writeWebsterFixture(source, [{ id: 1, headword: 'word', definition: 'Synthetic.' }]);
+      expect(yield* Effect.flip(attemptWebsterInstall(destination, source))).toMatchObject({
+        _tag: 'CorpusInstallationError',
+        corpus: 'webster',
+      });
+      expect(yield* fs.readFileString(destination)).toBe('prior-bytes');
+      yield* fs.writeFileString(source, 'not sqlite');
+      expect(yield* Effect.flip(attemptWebsterInstall(destination, source))).toMatchObject({
+        _tag: 'CorpusInstallationError',
+        corpus: 'webster',
+      });
+      expect(yield* fs.readFileString(destination)).toBe('prior-bytes');
+    }));
 
   test('swaps the destination atomically once the candidate verifies', () =>
     Effect.gen(function* () {

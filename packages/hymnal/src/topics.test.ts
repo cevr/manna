@@ -1,25 +1,18 @@
-import { layerHymnalBun } from '@manna/core/hymnal/bun';
+import {
+  decodeSourceText,
+  layerSourceText,
+  serializeSourceText,
+  SOURCE_TEXT,
+} from '../scripts/source-text.js';
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { Config, ConfigProvider, Effect, FileSystem, Layer, Option, Result, Schema } from 'effect';
+import { Config, Effect, FileSystem, Layer, Option, Result, Schema } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
 import { buildTopics, decodeFixes, type Fixes, readRows, type Rows } from '../scripts/topics.js';
 import { type Topic, Topics, topicOf } from './hymn.js';
 
-/** The tracked hymnal.db, read as the compile script reads it. */
-const hymnal = layerHymnalBun.pipe(
-  Layer.provide(BunServices.layer),
-  Layer.provide(
-    ConfigProvider.layer(
-      ConfigProvider.fromEnv({
-        env: {
-          HOME: '/',
-          HYMNAL_DB_PATH: new URL('../../core/data/hymnal.db', import.meta.url).pathname,
-        },
-      }),
-    ),
-  ),
-);
+/** The independent captured source, read as the compile script reads it. */
+const hymnal = layerSourceText.pipe(Layer.provide(BunServices.layer));
 
 const TOPICS = new URL('../data/sdah-1985/topics.json', import.meta.url).pathname;
 const FIXES = new URL('../data/fixes/topics.json', import.meta.url).pathname;
@@ -39,6 +32,15 @@ const inputs = Effect.gen(function* () {
 }).pipe(Effect.provide(Layer.merge(hymnal, BunServices.layer)));
 
 const fold = (s: string) => s.toLowerCase();
+
+it.effect('keeps source-text bytes in the canonical writer format', () =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const text = yield* fs.readFileString(SOURCE_TEXT);
+    const source = yield* decodeSourceText(text);
+    expect(serializeSourceText(source) === text, 'source-text:canonical-bytes').toBe(true);
+  }).pipe(Effect.provide(BunServices.layer)),
+);
 
 /** The section a move files hymn n under, else the db's. */
 const expectedSection = (rows: Rows, fixes: Fixes, n: number) =>

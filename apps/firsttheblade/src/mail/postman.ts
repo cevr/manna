@@ -2,7 +2,7 @@
  * The model's Postman (`../list/Postman.external.ts`): a confirm letter for a
  * subscriber, to the address the address book keeps for it, with a link
  * signed for the link the model issued. A letter that does not go (no
- * address kept, or a mailer that will not take it) is `LetterNotSent`, and
+ * address kept, a signing defect, or a mailer that will not take it) is `LetterNotSent`, and
  * the model gives its link back. The logs name the subscriber's id and the
  * mailer's code, never the address.
  */
@@ -30,7 +30,9 @@ export const layerPostman = Postman.toLayer(
           .find(subscriber)
           .pipe(Effect.catchTag('SqlError', (failure) => notSent(failure.statement)));
         if (Option.isNone(found)) return yield* notSent('no address');
-        const token = yield* tokens.sign({ _tag: 'Confirm', subscriber, issued });
+        const token = yield* Effect.suspend(() =>
+          tokens.sign({ _tag: 'Confirm', subscriber, issued }),
+        ).pipe(Effect.catchDefect(() => notSent('defect')));
         yield* mailer
           .send(confirmLetter(found.value, origin, token))
           .pipe(Effect.catch((failure) => notSent(failure.code)));

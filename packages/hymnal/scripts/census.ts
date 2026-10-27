@@ -34,7 +34,7 @@
  *   (`by: "ocr"`, Apple Vision, rows matched to the base row's parts only to
  *   order them). A reader that would not transcribe a page reads nothing.
  *
- * Every hymn is sung as units: each stanza (hymnal.db's ids 0 and up) with
+ * Every hymn is sung as units: each stanza (captured-source ids 0 and up) with
  * the refrain (its negative id) after it, so a refrain written once or
  * inline, or varying by stanza, reads alike. A reading's run is a maximal run
  * of words where it differs from the base row in one unit (letters only;
@@ -65,20 +65,11 @@
  * Each run exits 1 on a problem.
  */
 
-import { HymnalService, HymnId } from '@manna/core/hymnal';
-import { layerHymnalBun } from '@manna/core/hymnal/bun';
+import { HymnId } from '@manna/core/hymnal';
+import { SourceHymnal, layerSourceText } from './source-text.js';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Database } from 'bun:sqlite';
-import {
-  ConfigProvider,
-  Effect,
-  FileSystem,
-  Layer,
-  Option,
-  Predicate,
-  Schema,
-  Struct,
-} from 'effect';
+import { Effect, FileSystem, Layer, Option, Predicate, Schema, Struct } from 'effect';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 
@@ -127,7 +118,7 @@ export const printedOf = (crops: ReadonlyArray<{ readonly shows: string }>) =>
 const same = (a: readonly string[], b: readonly string[]) =>
   a.length === b.length && a.every((word, i) => word === b[i]);
 
-/** hymnal.db's verses: an id (0 and up a stanza, negative the refrain) and its text. */
+/** Captured verses: an id (0 and up a stanza, negative the refrain) and its text. */
 export type Verses = ReadonlyArray<{ readonly id: number; readonly text: string }>;
 
 /** The lines of each unit a row sings: each stanza by id, the refrain's lines after it. */
@@ -2426,7 +2417,7 @@ export const isLayoutLine = (n: number, line: string) =>
 /** What the checks read: all committed, and the base rows read from git. */
 export interface Sources {
   readonly inventory: Inventory;
-  /** Each hymn's hymnal.db row as committed. */
+  /** Each hymn's independent source-text row as committed. */
   readonly rows: ReadonlyMap<number, Verses>;
   /** Each hymn's row at the census's base commit, read from git. */
   readonly base: ReadonlyMap<number, Verses>;
@@ -3280,7 +3271,7 @@ export const baseFixesAt = (commit: string) =>
  */
 export const loadSources = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
-  const hymnal = yield* HymnalService;
+  const hymnal = yield* SourceHymnal;
   const inventory = yield* decodeInventory(yield* fs.readFileString(path.join(DATA, 'pages.json')));
   const census = yield* decodeCensus(yield* fs.readFileString(path.join(DATA, 'census.json')));
   const base = yield* baseRowsAt(census.base.commit);
@@ -3517,21 +3508,9 @@ export const censusLines = (
   ];
 };
 
-/** The hymnal over the committed hymnal.db, and Bun's services: what `loadSources` reads through. */
+/** Independent captured source and Bun services; historical Git rows stay a separate oracle. */
 export const censusLayer = Layer.merge(
-  layerHymnalBun.pipe(
-    Layer.provide(BunServices.layer),
-    Layer.provide(
-      ConfigProvider.layer(
-        ConfigProvider.fromEnv({
-          env: {
-            HOME: process.env['HOME'] ?? '',
-            HYMNAL_DB_PATH: path.resolve(DATA, '../../core/data/hymnal.db'),
-          },
-        }),
-      ),
-    ),
-  ),
+  layerSourceText.pipe(Layer.provide(BunServices.layer)),
   BunServices.layer,
 );
 
