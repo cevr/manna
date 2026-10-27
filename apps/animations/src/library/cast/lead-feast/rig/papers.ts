@@ -51,8 +51,14 @@ export const PAPERS = papers({
     crease: TURN.sleeve,
     rim: 0,
   },
-  /** His bare feet in their sandals: his skin. */
-  foot: { color: '#f8a466', light: '#f8a466' },
+  /**
+   * His bare feet in their sandals: his skin. The light core inside their
+   * line is his soles' leather (`TONES.sole`): the house lays it half outside
+   * the paper, past the tones clipped to it, so a skin core showed as a peach
+   * line between his sole and his ink, where the sheet's sole runs into its
+   * line (front x 40-75, rows 845-858).
+   */
+  foot: { color: '#f8a466', light: '#3b2418' },
   /** His hands: his skin, shaded only at the far edge, toward rose. */
   hand: { color: '#fdaf72', shade: '#e8906a', light: '#fec48e', crease: TURN.hand },
 });

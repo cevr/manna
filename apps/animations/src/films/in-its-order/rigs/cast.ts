@@ -341,7 +341,8 @@ export const CAST = castTable({
       // Three-quarters left, his head tipped: worried, his brows' inner ends up, his mouth turned down.
       'heads-3': bust(
         [530, 314, 763, 650],
-        [615, 445],
+        // Where the sheet draws his eyes' middle less the 21 px his roll swings them right of his rig's (eyes 57-67 and 102-114 against the render's 80-89 and 122-133 at 615): his head inside its box.
+        [594, 448],
         LEAD_TQ_LEFT,
         LEAD.leadFeastThreeQuarterLeft,
         RIGS.leadFeastThreeQuarterLeftProp,

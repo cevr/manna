@@ -166,6 +166,9 @@ const CURL_CRESCENT = 0.35;
 /** Where his eyes rest: ahead, a little down. */
 const GAZE: Pt = [0, 40];
 
+/** How far above the ground his soles run, units: his sheets paint each sole into the line under his foot (front x 50: skin to row 844, then 10 rows of dark), so the house's 6.5 laid a 9-row band of leather over his skin there. */
+const SOLE_DEPTH = 3.5;
+
 /** One view of him, composed from its traced table `t` as `v` says. */
 const leadView = (t: LeadTable, v: LeadViewSpec) =>
   tracedFigure({
@@ -241,6 +244,7 @@ const leadView = (t: LeadTable, v: LeadViewSpec) =>
       far: { outline: t.FOOT_FAR, tones: [tone(t.STRAP_FAR, TONES.strap)] },
       paper: PAPERS.foot,
       sole: TONES.sole,
+      soleDepth: SOLE_DEPTH,
     },
     hands: PAPERS.hand,
   });
