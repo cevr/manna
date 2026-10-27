@@ -553,3 +553,7 @@ melody supplies both syllable times and chord anchors. A melisma keeps its
 syllable until the next syllable onset. Shared-note syllables have the same
 onset; Plain and untrusted parts keep whole-line follow marks. Input hashes
 prevent stale metadata from being joined to different words or MIDI files.
+One manifest fingerprints compiler inputs and lists changed projections.
+The build checks each override's own MIDI/corpus digest; other hymns reuse the corpus objects.
+All 695 numeric sidecars remain available. Their census records each part's
+follow level. A mismatch names its reason and the regenerate command.

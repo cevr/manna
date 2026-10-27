@@ -1,7 +1,7 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
-import { align } from './align.js';
+import { align, anchorsOf, type Alignment } from './align.js';
 import * as Midi from './midi.js';
 import * as Fixture from './midi-fixture.js';
 import * as Score from './score.js';
@@ -23,6 +23,26 @@ const sung = (score: Score.Score, lines: readonly string[]) =>
   );
 
 describe('align', () => {
+  it.effect('a wholly shared line retains the preceding anchor or the span start', () =>
+    Effect.sync(() => {
+      const shared = { text: 'ta', note: 0, notes: 0, word: 0 };
+      const alignment: Alignment = {
+        melody: [{ start: 768, end: 960, key: 72, channel: 0 }],
+        lines: [[shared], [{ ...shared, notes: 1 }], [shared, { ...shared, word: 1 }]],
+        cost: 0,
+        melismas: 0,
+        shared: { inWord: 0, acrossWords: 3 },
+      };
+      expect(anchorsOf(alignment, 384).map((line) => line.map((a) => [a.start, a.end]))).toEqual([
+        [[384, 384]],
+        [[768, 960]],
+        [
+          [768, 768],
+          [768, 768],
+        ],
+      ]);
+    }),
+  );
   it.effect('holds a syllable over an even pair of short notes, off the strong beats', () =>
     Effect.gen(function* () {
       const score = yield* tune([

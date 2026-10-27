@@ -1,8 +1,9 @@
 /** Numeric playback metadata. Words stay in the read-only corpus; cuts are
  * offsets into its words. Timing and chords come from one fresh compilation.
- * The build supplies the fingerprint of the corpus and compiler inputs.
+ * Each sidecar carries its own MIDI/corpus digest. The build manifest owns
+ * global compiler provenance.
  */
-import { Array as Arr, Effect, Schema } from 'effect';
+import { Array as Arr, Effect, Result, Schema } from 'effect';
 import type { Mutable } from 'effect/Types';
 import * as Chord from './chord.js';
 import { type Hymn, type Part, type Plain, type Syllable, Reason, Timing, sung } from './hymn.js';
@@ -32,7 +33,10 @@ const NumericPart = Schema.Struct({
     Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: Reason.literals.length - 1 })),
   ),
   lines: Schema.Array(Schema.Array(Cut)),
-  fit: Schema.Array(Schema.Finite),
+  fit: Schema.Union([
+    Schema.Tuple([]),
+    Schema.Tuple([Count, Count, Count, Count, Count, Schema.Finite]),
+  ]),
 });
 export const Playback = Schema.Struct({
   version: Schema.Literal(1),
@@ -121,7 +125,7 @@ const decodeChanges = (changes: readonly (typeof Change.Type)[]) =>
   changes.map((c) => {
     const chord: Mutable<Chord.Chord> = {
       root: c.root,
-      quality: Chord.Quality.literals[c.quality] ?? '',
+      quality: Arr.getUnsafe(Chord.Quality.literals, c.quality),
     };
     if (c.bass >= 0) chord.bass = c.bass;
     return { chord, at: c.at };
@@ -140,13 +144,52 @@ const consistentTiming = (hymn: Hymn): boolean => {
   });
 };
 
-/** Join only after schema decoding and input fingerprint validation. */
+const fitOf = (values: (typeof NumericPart.Type)['fit']) => {
+  if (values.length === 0) return undefined;
+  const [notes, syllables, melismas, inWord, acrossWords, cost] = values;
+  return { notes, syllables, melismas, shared: { inWord, acrossWords }, cost };
+};
+
+const lineOf = (
+  words: readonly string[],
+  line: readonly (typeof Cut.Type)[],
+  refuse: () => PlaybackMismatch,
+): Result.Result<[Syllable, ...Syllable[]], PlaybackMismatch> => {
+  const used = words.map(() => 0);
+  const syllables: Syllable[] = [];
+  for (const cut of line) {
+    const word = words[cut.word];
+    if (
+      word === undefined ||
+      cut.offset !== used[cut.word] ||
+      cut.offset + cut.length > word.length
+    )
+      return Result.fail(refuse());
+    used[cut.word] = cut.offset + cut.length;
+    const full = decodeChanges(cut.full),
+      guitar = decodeChanges(cut.guitar);
+    const syllable: Mutable<Syllable> = {
+      text: word.slice(cut.offset, cut.offset + cut.length),
+      word: cut.word,
+      notes: cut.notes,
+      beats: cut.beats,
+    };
+    if (Arr.isArrayNonEmpty(full)) syllable.full = full;
+    if (Arr.isArrayNonEmpty(guitar)) syllable.guitar = guitar;
+    syllables.push(syllable);
+  }
+  return words.some((word, i) => used[i] !== word.length) || !Arr.isArrayNonEmpty(syllables)
+    ? Result.fail(refuse())
+    : Result.succeed(syllables);
+};
+
+/** Join decoded numeric cuts in plain loops; one typed failure boundary. */
 export const applyMetadata = (
   hymn: Hymn,
   metadata: Playback,
   sourceHash: string,
 ): Effect.Effect<Hymn, PlaybackMismatch> =>
-  Effect.gen(function* () {
+  Effect.suspend(() => {
     const refuse = (reason: PlaybackMismatch['reason']) =>
       PlaybackMismatch.make({ number: hymn.number, reason });
     if (
@@ -154,88 +197,61 @@ export const applyMetadata = (
       metadata.number !== hymn.number ||
       metadata.sourceHash !== sourceHash
     )
-      return yield* refuse('source');
+      return Effect.fail(refuse('source'));
     if (
       metadata.stanzas.length !== hymn.stanzas.length ||
       metadata.refrain.length !== Number(hymn.refrain !== undefined)
     )
-      return yield* refuse('shape');
+      return Effect.fail(refuse('shape'));
     const partOf = (
       part: Part,
       numeric: typeof NumericPart.Type,
-    ): Effect.Effect<Part, PlaybackMismatch> =>
-      Effect.gen(function* () {
-        if (numeric.lines.length !== part.lines.length) return yield* refuse('shape');
-        const why = numeric.why.map((n) => Reason.literals[n] ?? 'notes');
-        const [notes, syllables, melismas, inWord, acrossWords, cost] = numeric.fit;
-        const fit =
-          notes === undefined ||
-          syllables === undefined ||
-          melismas === undefined ||
-          inWord === undefined ||
-          acrossWords === undefined ||
-          cost === undefined
-            ? undefined
-            : { notes, syllables, melismas, shared: { inWord, acrossWords }, cost };
-        if (numeric.level === 0) {
-          const lines =
-            part._tag === 'Plain'
-              ? [...part.lines]
-              : part.lines.map((_, l) => wordsOf(part, l).join(' '));
-          if (!Arr.isArrayNonEmpty(lines) || !Arr.isArrayNonEmpty(why))
-            return yield* refuse('shape');
-          const plain: Mutable<Plain> = { _tag: 'Plain', lines, why };
-          if (fit !== undefined) plain.fit = fit;
-          return plain;
-        }
-        const lines = yield* Effect.forEach(numeric.lines, (line, l) =>
-          Effect.gen(function* () {
-            const words = wordsOf(part, l);
-            const used = words.map(() => 0);
-            const syllables = yield* Effect.forEach(line, (cut) =>
-              Effect.gen(function* () {
-                const word = words[cut.word];
-                if (
-                  word === undefined ||
-                  cut.offset !== used[cut.word] ||
-                  cut.offset + cut.length > word.length
-                )
-                  return yield* refuse('cuts');
-                used[cut.word] = cut.offset + cut.length;
-                const full = decodeChanges(cut.full),
-                  guitar = decodeChanges(cut.guitar);
-                const syllable: Mutable<Syllable> = {
-                  text: word.slice(cut.offset, cut.offset + cut.length),
-                  word: cut.word,
-                  notes: cut.notes,
-                  beats: cut.beats,
-                };
-                if (Arr.isArrayNonEmpty(full)) syllable.full = full;
-                if (Arr.isArrayNonEmpty(guitar)) syllable.guitar = guitar;
-                return syllable;
-              }),
-            );
-            if (words.some((word, i) => used[i] !== word.length) || !Arr.isArrayNonEmpty(syllables))
-              return yield* refuse('cuts');
-            return syllables;
-          }),
-        );
-        if (!Arr.isArrayNonEmpty(lines) || fit === undefined) return yield* refuse('shape');
-        return { _tag: 'Sung', level: numeric.level === 1 ? 'line' : 'syllable', lines, fit, why };
+    ): Result.Result<Part, PlaybackMismatch> => {
+      if (numeric.lines.length !== part.lines.length) return Result.fail(refuse('shape'));
+      const why = numeric.why.map((n) => Arr.getUnsafe(Reason.literals, n));
+      const fit = fitOf(numeric.fit);
+      if (numeric.level === 0) {
+        const lines =
+          part._tag === 'Plain'
+            ? [...part.lines]
+            : part.lines.map((_, l) => wordsOf(part, l).join(' '));
+        if (!Arr.isArrayNonEmpty(lines) || !Arr.isArrayNonEmpty(why))
+          return Result.fail(refuse('shape'));
+        const plain: Mutable<Plain> = { _tag: 'Plain', lines, why };
+        if (fit !== undefined) plain.fit = fit;
+        return Result.succeed(plain);
+      }
+      const lines: Array<[Syllable, ...Syllable[]]> = [];
+      for (const [l, line] of numeric.lines.entries()) {
+        const decoded = lineOf(wordsOf(part, l), line, () => refuse('cuts'));
+        if (Result.isFailure(decoded)) return Result.fail(decoded.failure);
+        lines.push(decoded.success);
+      }
+      if (!Arr.isArrayNonEmpty(lines) || fit === undefined) return Result.fail(refuse('shape'));
+      return Result.succeed({
+        _tag: 'Sung',
+        level: numeric.level === 1 ? 'line' : 'syllable',
+        lines,
+        fit,
+        why,
       });
-    const stanzas = yield* Effect.forEach(hymn.stanzas, (part, i) => {
+    };
+    const stanzas: Part[] = [];
+    for (const [i, part] of hymn.stanzas.entries()) {
       const numeric = metadata.stanzas[i];
-      return numeric === undefined ? Effect.fail(refuse('shape')) : partOf(part, numeric);
-    });
-    if (!Arr.isArrayNonEmpty(stanzas)) return yield* refuse('shape');
+      if (numeric === undefined) return Effect.fail(refuse('shape'));
+      const result = partOf(part, numeric);
+      if (Result.isFailure(result)) return Effect.fail(result.failure);
+      stanzas.push(result.success);
+    }
+    if (!Arr.isArrayNonEmpty(stanzas)) return Effect.fail(refuse('shape'));
     const numericRefrain = metadata.refrain[0];
-    const refrain =
-      hymn.refrain === undefined || numericRefrain === undefined
-        ? undefined
-        : {
-            order: hymn.refrain.order,
-            part: yield* partOf(hymn.refrain.part, numericRefrain),
-          };
+    let refrain: Hymn['refrain'];
+    if (hymn.refrain !== undefined && numericRefrain !== undefined) {
+      const result = partOf(hymn.refrain.part, numericRefrain);
+      if (Result.isFailure(result)) return Effect.fail(result.failure);
+      refrain = { order: hymn.refrain.order, part: result.success };
+    }
     const joined: Mutable<Hymn> = {
       ...hymn,
       stanzas,
@@ -243,6 +259,6 @@ export const applyMetadata = (
       timing: metadata.timing,
     };
     if (refrain !== undefined) joined.refrain = refrain;
-    if (!consistentTiming(joined)) return yield* refuse('shape');
-    return joined;
+    if (!consistentTiming(joined)) return Effect.fail(refuse('shape'));
+    return Effect.succeed(joined);
   });

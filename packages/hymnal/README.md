@@ -563,16 +563,34 @@ and the census catches each one.
 
 ## Numeric playback sidecars
 
-Run `bun run --cwd packages/hymnal playback` after score, alignment or timing
-changes. `--out <directory>` writes a scratch numeric set for comparison.
+Run `bun run --cwd packages/hymnal playback` after a metadata mismatch or a
+compiler/input change. `--out <directory>` writes a scratch numeric set for comparison.
 The generator compiles each hymn in memory and writes only numeric cuts,
-chords, timing, source fingerprints and a deterministic census. It formats
-the files with the repository's installed oxfmt. It does not rewrite the
+chords, timing, source digests and a deterministic census. All JSON files
+are minified on one line and excluded from oxfmt. The fast storage guard
+limits the complete directory to 17 MB. The census includes each stored
+part's follow level (0 plain, 1 line, 2 syllable), stanzas then refrain,
+beside its baseline levels. It does not rewrite the
 read-only text corpus or the downstream database.
 
-The app's chord and timing derivations both use `readPlayback`. It decodes
-each sidecar and checks its version, hymn identity, source fingerprint and
-word cuts before joining it to the existing words. The fingerprint covers
-source text, refrain order, MIDI and the exact corpus file. A dedicated
+The app's chord and timing derivations both use `readPlayback`. The manifest
+lists the sidecars whose numeric projection differs from the corpus. The
+build decodes these overrides and checks version, hymn identity, source
+digest and word cuts before joining them to the existing words. Other
+hymns reuse their corpus objects; all 695 sidecars remain available for
+placement work. Each hymn's digest
+covers only its MIDI bytes and exact corpus bytes. One `manifest.json`
+holds the global fingerprint: source text, refrain order; `src/align.ts`,
+`chord.ts`, `compile.ts`, `harmony.ts`, `hymn.ts`, `midi.ts`, `placement.ts`,
+`playback.ts`, `score.ts`, `syllables.ts`, `timing.ts`; `scripts/sources.ts`,
+`source-text.ts`, `playback.ts`; this package's `package.json`, root
+`bun.lock`, the installed `syllable` and `cmu-pronouncing-dictionary` entry
+bytes and `syllable/problematic.js`. The fast package storage guard checks
+all 695 own MIDI/corpus digests. The build checks the own digest of each
+override it uses; unchanged projections use the corpus directly.
+A compiler edit with unchanged output
+rewrites only the manifest. A mismatch states its reason and the regenerate
+command above. The slow all-hymn test checks fresh compilation against all
+committed sidecars. A dedicated
 single-voice track is retained, including legato; an earlier polyphonic
 accompaniment uses the keyboard soprano. Both compilers use that selection.

@@ -16,6 +16,7 @@ import { encodeHymn } from '../src/hymns/chords';
 import { readHymns } from './words';
 
 let playback = Option.none<readonly Hymn[]>();
+let chords = Option.none<ReadonlyArray<readonly [number, string]>>();
 
 /** One checked numeric source for both chord and follow derivations. */
 export const readPlaybackHymns = (): readonly Hymn[] => {
@@ -23,13 +24,24 @@ export const readPlaybackHymns = (): readonly Hymn[] => {
   return Option.getOrThrow(playback);
 };
 
-export const readChords = (): ReadonlyArray<readonly [number, string]> =>
-  readPlaybackHymns().map((hymn) => [
-    hymn.number,
-    Option.getOrThrowWith(
-      encodeHymn(hymn),
-      () => new Error(`hymnal: hymn ${hymn.number} has a syllable the chord encoding cannot carry`),
-    ),
-  ]);
+export const readChords = (): ReadonlyArray<readonly [number, string]> => {
+  if (Option.isNone(chords))
+    chords = Option.some(
+      readPlaybackHymns().map(
+        (hymn) =>
+          [
+            hymn.number,
+            Option.getOrThrowWith(
+              encodeHymn(hymn),
+              () =>
+                new Error(
+                  `hymnal: hymn ${hymn.number} has a syllable the chord encoding cannot carry`,
+                ),
+            ),
+          ] as const,
+      ),
+    );
+  return Option.getOrThrow(chords);
+};
 
 if (import.meta.main) process.stdout.write(JSON.stringify(readChords()));

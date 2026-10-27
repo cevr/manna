@@ -80,13 +80,23 @@ export const encodeTiming = (hymn: Hymn): Option.Option<string> =>
       .join(';');
   });
 
-export const readTiming = (): ReadonlyArray<readonly [number, string]> =>
-  readPlaybackHymns().map((hymn) => [
-    hymn.number,
-    Option.getOrThrowWith(
-      encodeTiming(hymn),
-      () => new Error(`hymnal: hymn ${hymn.number} has no timing`),
-    ),
-  ]);
+let encoded = Option.none<ReadonlyArray<readonly [number, string]>>();
+
+export const readTiming = (): ReadonlyArray<readonly [number, string]> => {
+  if (Option.isNone(encoded))
+    encoded = Option.some(
+      readPlaybackHymns().map(
+        (hymn) =>
+          [
+            hymn.number,
+            Option.getOrThrowWith(
+              encodeTiming(hymn),
+              () => new Error(`hymnal: hymn ${hymn.number} has no timing`),
+            ),
+          ] as const,
+      ),
+    );
+  return Option.getOrThrow(encoded);
+};
 
 if (import.meta.main) process.stdout.write(JSON.stringify(readTiming()));

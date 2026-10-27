@@ -114,6 +114,7 @@ const place = (
   score: Score.Score,
   span: Score.Span,
   alignment: Align.Alignment,
+  anchors: ReturnType<typeof Align.anchorsOf>,
   level: Harmony.Level,
 ): Array<Array<Placed[]>> => {
   const tpb = score.ticksPerBeat;
@@ -121,24 +122,23 @@ const place = (
   const slack = tpb / 16;
   const spans = Harmony.chords(score, span.start, span.end, level);
   const sung = alignment.lines.flatMap((line, l) =>
-    line.map((syllable, k) => ({ syllable, line: l, k })),
+    line.map((syllable, k) => ({
+      syllable,
+      line: l,
+      k,
+      start: anchors[l]?.[k]?.start ?? span.start,
+      end: anchors[l]?.[k]?.end ?? span.end,
+    })),
   );
-  const startOf = (s: Align.Syllable) => alignment.melody[s.note]?.start ?? span.start;
-  const endOf = (s: Align.Syllable) => alignment.melody[s.note + s.notes - 1]?.end ?? span.end;
   const out = alignment.lines.map((line) => line.map((): Placed[] => []));
   let shown: Chord.Chord | undefined;
   let line = -1;
-  sung.forEach(({ syllable, line: l, k }, i) => {
+  sung.forEach(({ syllable, line: l, k, start, end: noteEnd }, i) => {
     if (syllable.notes === 0) return;
-    const start = startOf(syllable);
     const next = sung.slice(i + 1).find((s) => s.syllable.notes > 0);
     // A line's last syllable owns no rest after it, unless it ends the verse.
     const end =
-      next === undefined
-        ? span.end
-        : next.line !== l
-          ? Math.min(endOf(syllable), startOf(next.syllable))
-          : startOf(next.syllable);
+      next === undefined ? span.end : next.line !== l ? Math.min(noteEnd, next.start) : next.start;
     const placed: Placed[] = [];
     const show = (chord: Chord.Chord, at: number) => {
       placed.push({ chord, at: round(Math.max(0, at) / tpb) });
@@ -242,15 +242,6 @@ interface Laid {
   readonly starts: number[][] | undefined;
 }
 
-/**
- * Each laid line's syllable starts, in ticks: a syllable's first note's
- * start, or for one sharing the note before it, its predecessor's start. A
- * line that opens on a note shared with the line before starts at its own
- * first note instead, so each line's syllables come before the next line's.
- */
-const startsOf = (alignment: Align.Alignment, span: Score.Span): number[][] =>
-  Align.anchorsOf(alignment, span.start).map((line) => line.map((anchor) => anchor.start));
-
 /** Judges a placement: words alone, chords per line, or chords on syllables. */
 const judge = (
   fit: Fit | undefined,
@@ -298,18 +289,16 @@ const lay = (score: Score.Score, n: number, lines: readonly string[]): Laid => {
     : undefined;
   const { level, why } = judge(fit, info);
   if (level === 'text') return { level, why, fit, lines: [], struck: [], starts: undefined };
-  const full = place(score, span, alignment, 'full');
-  const guitar = place(score, span, alignment, 'guitar');
+  const anchors = Align.anchorsOf(alignment, span.start);
+  const full = place(score, span, alignment, anchors, 'full');
+  const guitar = place(score, span, alignment, anchors, 'guitar');
   const tpb = score.ticksPerBeat;
   const linesWith = (guitar: ReadonlyArray<ReadonlyArray<Placed[]>>) =>
     alignment.lines.map((line, l) =>
       line.map((s, k): Syllable => {
-        const first = alignment.melody[s.note];
-        const last = alignment.melody[s.note + s.notes - 1];
+        const anchor = anchors[l]?.[k];
         const beats =
-          s.notes === 0 || first === undefined || last === undefined
-            ? 0
-            : round((last.end - first.start) / tpb);
+          s.notes === 0 || anchor === undefined ? 0 : round((anchor.end - anchor.start) / tpb);
         const f = full[l]?.[k] ?? [];
         const g = guitar[l]?.[k] ?? [];
         const syllable: Mutable<Syllable> = { text: s.text, word: s.word, notes: s.notes, beats };
@@ -324,7 +313,7 @@ const lay = (score: Score.Score, n: number, lines: readonly string[]): Laid => {
     fit,
     lines: linesWith(guitar),
     struck: linesWith(strike(score, alignment, guitar)),
-    starts: startsOf(alignment, span),
+    starts: anchors.map((line) => line.map((anchor) => anchor.start)),
   };
 };
 

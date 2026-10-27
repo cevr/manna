@@ -4277,6 +4277,36 @@ The form of an entry, each field on its own line:
 - **Cause:** Its stale answer used the live observer instead of the clock or last accepted device snapshot.
 - **Guard:** code: `apps/hymnal/src/player/keyplay.slow.test.ts` `keyplay a handed-over play cannot delay a third Start behind native status`
 
+### playback-sidecar-storage
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "The sidecar shape is an unjustified repo and gate cost"
+- **Source:** hymnapp/playbulk/p3-round-1-findings.md F1 (Major M1, ledger ordinal)
+- **Wrong:** Every compiler edit rewrote 695 global digests, and formatting doubled the generated size.
+- **Cause:** Each hymn repeated global provenance and generated numeric JSON passed through oxfmt.
+- **Guard:** code: `packages/hymnal/src/playback.test.ts` `playback sidecars stay one line, hymn-local and below 17 MB`
+
+### melody-onset-slack
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "Nothing pins the polyphony rule's onset slack."
+- **Source:** hymnapp/playbulk/p3-round-1-findings.md F4 (Optional o1, ledger ordinal)
+- **Wrong:** A same-tick-only polyphony mutant passed all corpus and score checks.
+- **Cause:** The fixtures struck every accompaniment voice at exactly the same tick.
+- **Guard:** code: `packages/hymnal/src/score.test.ts` `rejects accompaniment attacks 1-24 ticks apart and keeps a tune beyond onset slack`
+
+### playback-census-follow-levels
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "add each part's level to the census so level changes show in review."
+- **Source:** hymnapp/playbulk/p3-round-1-findings.md F2 (Minor m1, ledger ordinal)
+- **Wrong:** The census hid hymn 214 stanza 2 changing from syllable to line follow.
+- **Cause:** It counted syllables and notes without recording each part's follow level.
+- **Guard:** code: `packages/hymnal/src/playback.test.ts` `playback sidecars stay one line, hymn-local and below 17 MB`
+
 ### init-refresh-outgoing-wal
 
 - **Date:** 2026-10-27

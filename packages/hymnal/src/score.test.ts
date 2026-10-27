@@ -49,6 +49,38 @@ const real = (n: number) =>
   });
 
 describe('Score.fromMidi', () => {
+  it.effect(
+    'rejects accompaniment attacks 1-24 ticks apart and keeps a tune beyond onset slack',
+    () =>
+      Effect.sync(() => {
+        for (let offset = 1; offset <= 25; offset++) {
+          const accompaniment = {
+            name: '',
+            program: 105,
+            notes: [
+              { start: 0, end: 384, key: 60, channel: 0 },
+              { start: offset, end: 384 + offset, key: 67, channel: 0 },
+            ],
+          };
+          const keyboard = {
+            name: '',
+            program: 5,
+            notes: [{ start: 0, end: 384, key: 72, channel: 0 }],
+          };
+          const midi: Midi.Midi = {
+            ticksPerBeat: 384,
+            lastTick: 768,
+            tracks: [accompaniment, keyboard],
+            tempos: [{ tick: 0, microsPerQuarter: 500000 }],
+            keySignatures: [],
+            timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+          };
+          expect(Score.melodyOf(midi, [keyboard]).map((n) => n.key)).toEqual(
+            offset <= 24 ? [72] : [60, 67],
+          );
+        }
+      }),
+  );
   it.effect('reads all 262 soprano notes on 388 and keeps dedicated legato on 33', () =>
     Effect.gen(function* () {
       const midi = yield* real(388);

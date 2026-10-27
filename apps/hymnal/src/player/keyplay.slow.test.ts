@@ -46,7 +46,7 @@ const groupSamples = (hymn: Hymn, timed: Timeline, minimum: number) => {
 
 for (const number of [388, 373, 214])
   it.effect(
-    `followsync public player and scoreClock retain syllable groups for hymn ${number}`,
+    `followsync public player and scoreClock seek within timeline melismas for hymn ${number}`,
     () =>
       Effect.gen(function* () {
         const encoded = readTiming().find(([n]) => n === number)?.[1] ?? '';

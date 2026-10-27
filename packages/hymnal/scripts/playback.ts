@@ -1,7 +1,7 @@
 /** Generate numeric sidecars without writing lyric-bearing compiled hymns. */
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { Effect, Schema } from 'effect';
+import { Effect, Result, Schema } from 'effect';
 import { Hymn, sung } from '../src/hymn.js';
 import { Playback, applyMetadata, metadataOf } from '../src/playback.js';
 
@@ -13,6 +13,19 @@ const loadSources = () => import('./sources.js');
 const loadSourceText = () => import('./source-text.js');
 const textBytes = () => readFileSync(join(data, 'source-text.json'), 'utf8');
 const fixesBytes = () => readFileSync(join(data, 'fixes/refrains.json'), 'utf8');
+const Manifest = Schema.Struct({
+  version: Schema.Literal(1),
+  inputsHash: Schema.String,
+  overrides: Schema.Array(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 695 }))),
+});
+const decodeManifest = Schema.decodeUnknownSync(Schema.fromJsonString(Manifest));
+const decodePlayback = Schema.decodeUnknownEffect(Schema.fromJsonString(Playback));
+const regenerate = 'bun run --cwd packages/hymnal playback';
+const mismatch = (reason: string, number?: number): never => {
+  throw new Error(
+    `playback: metadata mismatch reason=${reason}${number === undefined ? '' : ` hymn=${number}`} regenerate="${regenerate}"`,
+  );
+};
 const inputsHash = (source: string, fixes: string) => {
   const hash = new Bun.CryptoHasher('sha256').update('playback-v1\0').update(source).update(fixes);
   for (const file of [
@@ -30,37 +43,62 @@ const inputsHash = (source: string, fixes: string) => {
   ]) {
     hash.update(readFileSync(new URL(`../src/${file}.ts`, import.meta.url)));
   }
-  hash.update(readFileSync(new URL('./sources.ts', import.meta.url)));
+  for (const file of [
+    './sources.ts',
+    './source-text.ts',
+    './playback.ts',
+    '../package.json',
+    '../../../bun.lock',
+  ])
+    hash.update(readFileSync(new URL(file, import.meta.url)));
+  for (const name of ['syllable', 'cmu-pronouncing-dictionary'])
+    hash.update(readFileSync(new URL(import.meta.resolve(name))));
+  hash.update(readFileSync(new URL('./problematic.js', import.meta.resolve('syllable'))));
   return hash.digest('hex');
 };
-const fingerprint = (number: number, inputs: string) => {
+const fingerprint = (number: number) => {
   const midi = readFileSync(join(data, `midi/${pad(number)}.mid`));
   const corpus = readFileSync(join(data, `sdah-1985/${pad(number)}.json`));
-  const sourceHash = new Bun.CryptoHasher('sha256')
-    .update(inputs)
-    .update(midi)
-    .update(corpus)
-    .digest('hex');
+  const sourceHash = new Bun.CryptoHasher('sha256').update(midi).update(corpus).digest('hex');
   return { midi, sourceHash };
+};
+const fingerprints = () =>
+  new Map(Array.from({ length: 695 }, (_, i) => [i + 1, fingerprint(i + 1)]));
+const ownSource = (sources: ReturnType<typeof fingerprints>, number: number) => {
+  const source = sources.get(number);
+  return source === undefined ? mismatch('source', number) : source;
 };
 
 /** Both native and web build derivations use the same checked numeric join. */
 export const readPlayback = (hymns: readonly Hymn[]): readonly Hymn[] => {
-  const source = textBytes(),
-    fixes = fixesBytes();
-  const inputs = inputsHash(source, fixes);
+  const checked = Result.try(() => inputsHash(textBytes(), fixesBytes()));
+  if (Result.isFailure(checked)) return mismatch('file');
+  const inputs = checked.success;
+  const decodedManifest = Result.try(() =>
+    decodeManifest(readFileSync(join(folder, 'manifest.json'), 'utf8')),
+  );
+  if (Result.isFailure(decodedManifest)) return mismatch('manifest');
+  const manifest = decodedManifest.success;
+  if (manifest.inputsHash !== inputs) return mismatch('inputs');
+  const overrides = new Set(manifest.overrides);
   return hymns.map((hymn) => {
-    const { sourceHash } = fingerprint(hymn.number, inputs);
-    const decoded = Schema.decodeEffect(Schema.fromJsonString(Playback))(
-      readFileSync(join(folder, `${pad(hymn.number)}.json`), 'utf8'),
+    // The corpus check proves every other sidecar equals the existing numeric
+    // projection. Its own digest is checked by the fast package storage guard.
+    if (!overrides.has(hymn.number)) return hymn;
+    const raw = Result.try(() => ({
+      sourceHash: fingerprint(hymn.number).sourceHash,
+      text: readFileSync(join(folder, `${pad(hymn.number)}.json`), 'utf8'),
+    }));
+    if (Result.isFailure(raw)) return mismatch('file', hymn.number);
+    const decoded = decodePlayback(raw.success.text).pipe(
+      Effect.mapError(() => ({ reason: 'schema' })),
     );
     const joined = decoded.pipe(
-      Effect.flatMap((metadata) => applyMetadata(hymn, metadata, sourceHash)),
+      Effect.flatMap((metadata) => applyMetadata(hymn, metadata, raw.success.sourceHash)),
       Effect.result,
     );
     const result = Effect.runSync(joined);
-    if (result._tag === 'Failure')
-      throw new Error(`playback: metadata mismatch hymn=${hymn.number}`);
+    if (result._tag === 'Failure') return mismatch(result.failure.reason, hymn.number);
     return result.success;
   });
 };
@@ -74,6 +112,7 @@ const countsOf = (hymn: Hymn) => {
     line.part._tag === 'Plain' ? [] : (line.part.lines[line.line] ?? []),
   );
   return {
+    levels: parts.map((part) => (part._tag === 'Plain' ? 0 : part.level === 'line' ? 1 : 2)),
     sungParts: sungParts.length,
     syllables: syllables.length,
     melismas: syllables.filter((s) => s.notes > 1).length,
@@ -86,7 +125,7 @@ const countsOf = (hymn: Hymn) => {
 };
 
 export const generatePlayback = async (out = folder) => {
-  // Reading sidecars during a build needs no compiler or pronunciation dictionary.
+  // Build reads do not evaluate the compiler or pronunciation dictionary modules.
   const [{ compile }, { decodeOrders, sourceOf }, { decodeSourceText }] = await Promise.all([
     loadCompiler(),
     loadSources(),
@@ -94,6 +133,7 @@ export const generatePlayback = async (out = folder) => {
   ]);
   const source = textBytes(),
     fixes = fixesBytes();
+  const sources = fingerprints();
   const inputs = inputsHash(source, fixes);
   const decoded = Effect.runSync(decodeSourceText(source));
   const orders = Effect.runSync(decodeOrders(fixes));
@@ -105,7 +145,7 @@ export const generatePlayback = async (out = folder) => {
     affectedHymns = 0;
   const census = [];
   for (const row of decoded.hymns.filter((row) => row.number <= 695)) {
-    const { midi, sourceHash } = fingerprint(row.number, inputs);
+    const { midi, sourceHash } = ownSource(sources, row.number);
     const hymn = Effect.runSync(
       sourceOf({ ...row, name: row.title }, midi, orders).pipe(Effect.flatMap(compile)),
     );
@@ -137,11 +177,10 @@ export const generatePlayback = async (out = folder) => {
     census,
   };
   writeFileSync(join(out, 'census.json'), `${JSON.stringify(summary)}\n`);
-  const formatted = Bun.spawnSync(
-    [new URL('../../../node_modules/.bin/oxfmt', import.meta.url).pathname, out],
-    { stdout: 'ignore', stderr: 'ignore' },
+  writeFileSync(
+    join(out, 'manifest.json'),
+    `${JSON.stringify({ version: 1, inputsHash: inputs, overrides: census.filter((row) => row.changed).map((row) => row.number) })}\n`,
   );
-  if (formatted.exitCode !== 0) throw new Error('playback: numeric metadata formatting failed');
   return summary;
 };
 

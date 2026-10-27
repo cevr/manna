@@ -1,7 +1,56 @@
+/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals -- read-only generated JSON storage guard checks raw fields and bytes. */
+import { readFileSync, readdirSync } from 'node:fs';
+import { test } from 'bun:test';
 import { Effect, Result, Schema } from 'effect';
 import { expect, it } from 'effect-bun-test';
 import { Hymn } from './hymn.js';
 import { Playback, applyMetadata, metadataOf } from './playback.js';
+
+test('playback sidecars stay one line, hymn-local and below 17 MB', () => {
+  const data = new URL('../data/', import.meta.url);
+  const folder = new URL('playback/', data);
+  const names = readdirSync(folder).filter((name) => name.endsWith('.json'));
+  const census = JSON.parse(readFileSync(new URL('census.json', folder), 'utf8'));
+  const faults: number[][] = [];
+  let bytes = 0;
+  let hymns = 0;
+  for (const name of names) {
+    const raw = readFileSync(new URL(name, folder), 'utf8');
+    bytes += Buffer.byteLength(raw);
+    if (!/^\d{3}\.json$/.test(name)) continue;
+    const number = Number(name.slice(0, 3));
+    hymns++;
+    if (!raw.endsWith('\n') || raw.trimEnd().includes('\n')) faults.push([number, 1]);
+    const metadata = JSON.parse(raw);
+    const row = census.census.find((row: { number: number }) => row.number === number);
+    const levels = [...metadata.stanzas, ...metadata.refrain].map((part) => part.level);
+    if (JSON.stringify(row?.levels) !== JSON.stringify(levels)) faults.push([number, 4]);
+    const digest = new Bun.CryptoHasher('sha256')
+      .update(readFileSync(new URL(`midi/${name.slice(0, 3)}.mid`, data)))
+      .update(readFileSync(new URL(`sdah-1985/${name}`, data)))
+      .digest('hex');
+    if (metadata.sourceHash !== digest) faults.push([number, 2]);
+    if (
+      Object.keys(metadata).some(
+        (key) =>
+          !['version', 'number', 'sourceHash', 'timing', 'verses', 'stanzas', 'refrain'].includes(
+            key,
+          ),
+      )
+    )
+      faults.push([number, 3]);
+  }
+  expect(hymns).toBe(695);
+  expect(faults.slice(0, 10)).toEqual([]);
+  expect(bytes).toBeLessThan(17_000_000);
+  const changed = census.census
+    .filter(
+      (row: { levels: number[]; baseline: { levels: number[] } }) =>
+        JSON.stringify(row.levels) !== JSON.stringify(row.baseline.levels),
+    )
+    .map((row: { number: number }) => row.number);
+  expect(changed).toEqual([214, 388]);
+});
 
 const hymn = Schema.decodeSync(Hymn)({
   version: 1,
@@ -48,6 +97,19 @@ it.effect('numeric playback joins cuts and chords without storing words', () =>
     const decoded = yield* Schema.decodeEffect(Schema.fromJsonString(Playback))(encoded);
     const joined = yield* applyMetadata(hymn, decoded, 'fingerprint');
     expect(joined).toEqual(hymn);
+  }),
+);
+
+it.effect('numeric playback fit carries exactly zero or six bounded values', () =>
+  Effect.gen(function* () {
+    const metadata = yield* metadataOf(hymn, 'fingerprint');
+    for (let length = 0; length <= 7; length++) {
+      const candidate = {
+        ...metadata,
+        stanzas: metadata.stanzas.map((part) => ({ ...part, fit: Array(length).fill(0) })),
+      };
+      expect(Schema.is(Playback)(candidate)).toBe(length === 0 || length === 6);
+    }
   }),
 );
 
