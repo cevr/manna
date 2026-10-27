@@ -384,6 +384,8 @@ export const CAST = castTable({
         {
           glad: 1,
           marksY: -11,
+          // His brows 3 px back down, under the fringe his rig's hair hangs lower than the sheet's.
+          browY: 2,
           eyes: 0,
           mouthLine: 0,
         },
