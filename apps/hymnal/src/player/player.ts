@@ -124,6 +124,9 @@ export interface Status {
   readonly state: 'idle' | 'loading' | 'playing' | 'paused' | 'ended' | 'failed';
   readonly positionMs: number;
   readonly durationMs?: number;
+  /** Musical place retained while the global session prepares a replacement. */
+  readonly replacementMs?: number;
+  readonly recording?: RecordingSelection;
 }
 
 /** A replacement follows musical time while the global recording loads. */
@@ -131,6 +134,7 @@ export interface PlayOptions {
   readonly continuous: boolean;
   readonly ready: boolean;
   readonly intent?: Intent;
+  readonly recording?: { readonly number: number; readonly offset: number };
 }
 
 /** Requested and effective sounding offsets; a fallback is never silently claimed as the chosen Key. */
@@ -458,6 +462,14 @@ export const playerOn = (
               if (Option.isNone(held.proof.pending)) held.seeking = Option.none();
             }),
           );
+        /** The adapter's retained clock follows newer seeks while its replacement prepares. */
+        const replacementLanded = (asked: number, at: number) => (status: Status) =>
+          Effect.suspend(() =>
+            Option.match(held.proof.pending, {
+              onNone: () => answeredAt(asked, at)(status),
+              onSome: (pending) => answeredAt(pending.known, pending.target)(status),
+            }),
+          );
         /** The ask that moves the device cut off: a newer one moves it, or the recording is let go. */
         const cut = Effect.suspend(() => {
           const fiber = held.moving;
@@ -493,16 +505,21 @@ export const playerOn = (
           });
         /** A seek the device refused or answered outside its window, asked again while it holds the recording. */
         const askAgain = (status: Status) =>
-          Option.match(
-            Option.filter(
-              held.seeking,
-              (it) => !it.asking && holdsRecording(status) && Option.isSome(held.proof.pending),
-            ),
-            {
-              onNone: () => Effect.void,
-              onSome: ({ to }) => moves(askSeek(to)),
-            },
-          );
+          Effect.suspend(() => {
+            // A key load lands the latest retained target itself; retrying a
+            // refused seek must not cancel that load or its one fallback.
+            if (held.replacing) return Effect.void;
+            return Option.match(
+              Option.filter(
+                held.seeking,
+                (it) => !it.asking && holdsRecording(status) && Option.isSome(held.proof.pending),
+              ),
+              {
+                onNone: () => Effect.void,
+                onSome: ({ to }) => moves(askSeek(to)),
+              },
+            );
+          });
         /** The hymn on the lock screen and in Control Center; a failure only logged. */
         const announce = (track: Track) =>
           device
@@ -644,6 +661,7 @@ export const playerOn = (
               return false;
             }
             if (next.seen === 'stale') return true;
+            if (status.recording?.number === track.number) remember(status.recording);
             yield* askAgain(status);
             // A give-up lets the recording go: the reads end, whether the ask answered or not.
             let gaveUp = false;
@@ -775,82 +793,75 @@ export const playerOn = (
           });
         /** A load: Loading at once, the device asked to play from `fromMs`, its status read while it loads. */
         const keyOf = (track: Track) => soundingOffset(get.registry.get(keyFor(track.number)));
+        const remember = (selection: RecordingSelection) => {
+          const was = get.registry.get(recording);
+          if (
+            Option.exists(
+              was,
+              (it) =>
+                it.number === selection.number &&
+                it.requested === selection.requested &&
+                it.effective === selection.effective,
+            )
+          )
+            return;
+          get.registry.set(recording, Option.some(selection));
+        };
         const playSet = (track: Track, offset: number, fromMs: number, continuous: boolean) =>
           Effect.gen(function* () {
             const id = held.id;
             const began = yield* now;
             const ours = () => held.id === id;
             held.offset = offset;
-            const selection = (effective: number) =>
-              Effect.sync(() => {
-                if (ours())
-                  get.registry.set(
-                    recording,
-                    Option.some({ number: track.number, requested: offset, effective }),
-                  );
-              });
-            // Preserve the existing printed-key start and its proof timing.
-            if (offset === 0 && !continuous)
-              return yield* device
-                .play(audioUrl(track.number), fromMs)
-                .pipe(Effect.tap(() => selection(0)));
-            held.replacing = true;
-            const attempt = (effective: number, retained?: number) =>
-              Effect.gen(function* () {
-                const elapsed = (yield* now) - began;
-                let advanced = 0;
-                if (continuous && held.wants === 'play') advanced = Math.max(0, elapsed);
-                return yield* device
-                  .play(audioUrl(track.number, effective), retained ?? fromMs + advanced, {
-                    continuous,
-                    ready: offset !== 0 || continuous,
-                    intent: held.wants,
-                  })
-                  .pipe(
-                    Effect.filterOrFail(
-                      (status) => status.state !== 'failed',
-                      () =>
-                        PlaybackError.make({ operation: 'play', message: 'recording unavailable' }),
+            held.replacing = offset !== 0 || continuous;
+            return yield* device
+              .play(audioUrl(track.number, offset), fromMs, {
+                continuous,
+                ready: offset !== 0 || continuous,
+                intent: held.wants,
+                recording: { number: track.number, offset },
+              })
+              .pipe(
+                Effect.tap((status) =>
+                  Effect.sync(() => {
+                    if (ours())
+                      remember(
+                        status.recording ?? {
+                          number: track.number,
+                          requested: offset,
+                          effective: offset,
+                        },
+                      );
+                  }),
+                ),
+                Effect.ensuring(
+                  Effect.sync(() => {
+                    if (ours()) held.replacing = false;
+                  }),
+                ),
+                Effect.tap((status) =>
+                  Effect.flatMap(now, (settled) =>
+                    Effect.logInfo('player.key.settled').pipe(
+                      Effect.annotateLogs({
+                        hymn: track.number,
+                        requested: offset,
+                        started: began,
+                        settled,
+                        gapMs: settled - began,
+                        positionMs: status.positionMs,
+                      }),
                     ),
-                  );
-              });
-            return yield* attempt(offset).pipe(
-              Effect.tap(() => selection(offset)),
-              Effect.catchTag('PlaybackError', (error) => {
-                if (!ours() || offset === 0) return Effect.fail(error);
-                return Effect.logWarning('player.key.fallback').pipe(
-                  Effect.annotateLogs({ hymn: track.number, requested: offset, effective: 0 }),
-                  Effect.andThen(selection(0)),
-                  Effect.andThen(attempt(0, error.positionMs)),
-                );
-              }),
-              Effect.ensuring(
-                Effect.sync(() => {
-                  if (ours()) held.replacing = false;
-                }),
-              ),
-              Effect.tap((status) =>
-                Effect.flatMap(now, (settled) =>
-                  Effect.logInfo('player.key.settled').pipe(
-                    Effect.annotateLogs({
-                      hymn: track.number,
-                      requested: offset,
-                      started: began,
-                      settled,
-                      gapMs: settled - began,
-                      positionMs: status.positionMs,
-                    }),
                   ),
                 ),
-              ),
-            );
+              );
           });
         const load = (track: Track, fromMs: number) =>
           Effect.gen(function* () {
             held.wants = 'play';
             held.resuming = false;
             held.id += 1;
-            held.offset = keyOf(track);
+            const offset = keyOf(track);
+            held.offset = offset;
             const asked = yield* now;
             held.proof = Proof.loaded(asked, fromMs);
             const seeking = { to: fromMs, asking: true };
@@ -858,12 +869,13 @@ export const playerOn = (
             yield* show(Player.Loading({ track }));
             // The play's answer lands it: past 0, the adapter answers with its seek's answer.
             const id = held.id;
-            const played = playSet(track, keyOf(track), fromMs, false).pipe(
+            const played = playSet(track, offset, fromMs, false).pipe(
               Effect.tap((status) =>
                 Effect.when(
-                  Effect.flatMap(startedAt(asked, fromMs, status), (to) =>
-                    answeredAt(asked, to)(status),
-                  ),
+                  Effect.flatMap(startedAt(asked, fromMs, status), (to) => {
+                    if (offset !== 0) return replacementLanded(asked, to)(status);
+                    return answeredAt(asked, to)(status);
+                  }),
                   Effect.sync(() => held.id === id),
                 ),
               ),
@@ -1059,7 +1071,7 @@ export const playerOn = (
               );
               return;
             }
-            yield* ask(track, askSeek(ms), logged, true);
+            yield* ask(track, askSeek(ms), logged, !held.replacing);
           });
         if (KeyChange.$is('Key')(command)) {
           const { number, offset } = command;
@@ -1074,7 +1086,10 @@ export const playerOn = (
               // A paused selection is applied on the next Play; the dial never starts sound.
               if (held.wants === 'pause' || letGo(current) || Player.$is('Ended')(current)) return;
               const read = yield* device.status.pipe(Effect.option);
-              const at = Proof.replacementAt(held.proof, read);
+              const at = Option.getOrElse(
+                Option.flatMap(read, (it) => Option.fromNullishOr(it.replacementMs)),
+                () => Proof.replacementAt(held.proof, read),
+              );
               held.id += 1;
               held.reading = Option.none();
               held.seeking = Option.none();
@@ -1086,7 +1101,7 @@ export const playerOn = (
                 playSet(track, soundingOffset(offset), at, true).pipe(
                   Effect.tap((status) =>
                     Effect.when(
-                      answeredAt(asked, at)(status),
+                      replacementLanded(asked, at)(status),
                       Effect.sync(() => held.id === id),
                     ),
                   ),

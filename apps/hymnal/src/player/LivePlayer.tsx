@@ -17,10 +17,15 @@ import { PlayerContext } from './context';
 import { playbackLive } from './playback.live';
 import { playerOn, statusEvery } from './player';
 import { soundOn } from './sound';
+import { recordingsOn } from './recording';
 
 /** Whether the recording sounds, as the score clock reads it: the Sound setting, set at mount. */
 const sound = Effect.runSync(SubscriptionRef.make(true));
-const player = playerOn(counted(soundOn(playbackLive, book.of, sound)), statusEvery, settings.move);
+const player = playerOn(
+  counted(soundOn(recordingsOn(playbackLive), book.of, sound)),
+  statusEvery,
+  settings.move,
+);
 /** The context's one value: a draw again (the Sound switch) hands every reader the same player, so no page draws again for it. */
 const provided = Option.some(player);
 

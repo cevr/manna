@@ -13,6 +13,7 @@ import { playbackOn, type Device } from './playback.live';
 import { Command, Playback, Player, playerOn, type Status, statusEvery } from './player';
 import { counted } from '../follow/seeks';
 import { soundOn } from './sound';
+import { recordingsOn } from './recording';
 import type { Timeline } from '../follow/timeline';
 
 const track = { number: 100, title: 'Hymn 100' };
@@ -22,8 +23,8 @@ const timeline: Timeline = { first: 5000, end: 240_000, lines: [] };
 // Flush the registry, Promise adapter and stream queues without advancing time.
 const settle = Effect.forEach(Array.from({ length: 20 }), () => Effect.yieldNow);
 
-const native = (clock: Clock.Clock) => {
-  let now: Status = { state: 'idle', positionMs: 0, durationMs: 240_000 };
+const native = (clock: Clock.Clock, recorded = 240_000) => {
+  let now: Status = { state: 'idle', positionMs: 0, durationMs: recorded };
   let since = clock.currentTimeMillisUnsafe();
   let id = 0;
   let hold = false;
@@ -33,7 +34,10 @@ const native = (clock: Clock.Clock) => {
   const read = (): Status => {
     let elapsed = 0;
     if (now.state === 'playing') elapsed = clock.currentTimeMillisUnsafe() - since;
-    return { ...now, positionMs: now.positionMs + elapsed };
+    const positionMs = Math.min(recorded, now.positionMs + elapsed);
+    if (now.state === 'playing' && positionMs >= recorded)
+      return { ...now, state: 'ended', positionMs };
+    return { ...now, positionMs };
   };
   const set = (next: Status) => {
     now = next;
@@ -47,13 +51,13 @@ const native = (clock: Clock.Clock) => {
       play: (uri) => {
         const owner = ++id;
         tell('play', 0, uri);
-        set({ state: 'loading', positionMs: 0, durationMs: 240_000 });
+        set({ state: 'loading', positionMs: 0, durationMs: recorded });
         const finish = (failed = false) => {
           if (owner === id)
             set({
               state: ((failed || missing.has(uri)) && 'failed') || 'playing',
               positionMs: 0,
-              durationMs: 240_000,
+              durationMs: recorded,
             });
           return read();
         };
@@ -107,10 +111,10 @@ const native = (clock: Clock.Clock) => {
   };
 };
 
-const open = (sound = true) =>
+const open = (sound = true, recorded = 240_000) =>
   Effect.gen(function* () {
     const clock = yield* TestClock.testClockWith(Effect.succeed);
-    const fake = native(clock);
+    const fake = native(clock, recorded);
     const on = yield* SubscriptionRef.make(sound);
     const seeks = yield* SubscriptionRef.make(0);
     const moves = Atom.family(() =>
@@ -124,7 +128,7 @@ const open = (sound = true) =>
     const player = playerOn(
       Layer.mergeAll(
         counted(
-          soundOn(playback, () => Option.some(timeline), on),
+          soundOn(recordingsOn(playback), () => Option.some(timeline), on),
           seeks,
         ).pipe(Layer.provide(clockLayer)),
         clockLayer,
@@ -145,6 +149,7 @@ const open = (sound = true) =>
       registry,
       moves,
       seeks,
+      sound: on,
       send: (command: Command) => registry.set(player.send, command),
       state: () => registry.get(player.state),
       move: (number: number, transpose: number, capo = 0) =>
@@ -205,6 +210,82 @@ it.effect('keyplay paused selection waits for Play and resumes at its held place
     yield* app.playing;
     expect(app.calls.filter((it) => it.operation === 'play').at(-1)?.uri).toBe(audioUrl(100, -2));
     expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(before);
+  }),
+);
+
+it.effect('keyplay rapid delayed keys retain the entire preparation interval', () =>
+  Effect.gen(function* () {
+    using app = yield* open();
+    app.send(Command.Start({ track }));
+    yield* app.playing;
+    yield* app.tick(10_000);
+    const before = app.read().positionMs;
+    app.hold();
+    app.move(100, 1);
+    yield* app.tick(300);
+    app.hold();
+    app.move(100, 2);
+    yield* app.tick(700);
+    app.pending[1]?.release();
+    yield* app.playing;
+    expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(before + 1000);
+    const count = app.calls.length;
+    app.pending[0]?.release(true);
+    yield* app.tick();
+    expect(app.calls.length).toBe(count);
+  }),
+);
+
+it.effect('keyplay Sound on uses the selected set and its printed fallback', () =>
+  Effect.gen(function* () {
+    using app = yield* open(false);
+    app.move(100, 1);
+    app.missing.add(audioUrl(100, 1));
+    app.send(Command.Start({ track }));
+    yield* app.playing;
+    yield* app.tick(10_000);
+    yield* SubscriptionRef.set(app.sound, true);
+    yield* app.tick();
+    expect(app.calls.filter((it) => it.operation === 'play').map((it) => it.uri)).toEqual([
+      audioUrl(100, 1),
+      audioUrl(100),
+    ]);
+    expect(app.registry.get(app.player.recording)).toEqual(
+      Option.some({ number: 100, requested: 1, effective: 0 }),
+    );
+  }),
+);
+
+it.effect('keyplay a silent score tail keeps place across Key and falls back on rewind', () =>
+  Effect.gen(function* () {
+    using app = yield* open(true, 60_000);
+    app.send(Command.Start({ track }));
+    yield* app.playing;
+    yield* app.tick(70_000);
+    yield* app.tick(1000);
+    const before = app.state();
+    expect(before._tag).toBe('Playing');
+    const calls = app.calls.filter((it) => it.operation === 'play').length;
+    app.move(100, 2);
+    yield* app.tick(1000);
+    const after = app.state();
+    expect(after._tag).toBe('Playing');
+    if (before._tag === 'Playing' && after._tag === 'Playing') expect(after.at).toBe(before.at + 1);
+    expect(app.calls.filter((it) => it.operation === 'play').length).toBe(calls);
+    app.missing.add(audioUrl(100, 2));
+    app.send(Command.Seek({ seconds: 40 }));
+    yield* app.tick();
+    yield* app.playing;
+    expect(
+      app.calls
+        .filter((it) => it.operation === 'play')
+        .slice(-2)
+        .map((it) => it.uri),
+    ).toEqual([audioUrl(100, 2), audioUrl(100)]);
+    expect(app.read().positionMs).toBeGreaterThanOrEqual(40_000);
+    expect(app.registry.get(app.player.recording)).toEqual(
+      Option.some({ number: 100, requested: 2, effective: 0 }),
+    );
   }),
 );
 
@@ -301,7 +382,8 @@ it.effect('keyplay a seek during a pending key load owns the final landing', () 
     yield* app.playing;
     yield* app.tick();
     expect(app.read().positionMs).toBeGreaterThanOrEqual(40_000);
-    expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(40_000);
+    expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(40_500);
+    yield* Console.log('keyplay-proof pendingSeekMs=40000 prepareMs=500 landedAtMs=40500');
   }),
 );
 
@@ -335,6 +417,73 @@ it.effect('keyplay an old recording that fails at zero keeps the last proved mus
     expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBeGreaterThanOrEqual(
       before,
     );
+  }),
+);
+
+it.effect('keyplay a fresh printed-key Start supersedes a pending transposed load', () =>
+  Effect.gen(function* () {
+    using app = yield* open();
+    app.send(Command.Start({ track }));
+    yield* app.playing;
+    app.hold();
+    app.move(100, 1);
+    yield* settle;
+    app.send(Command.Start({ track: other }));
+    yield* app.playing;
+    expect(app.registry.get(app.player.recording)).toEqual(
+      Option.some({ number: 3, requested: 0, effective: 0 }),
+    );
+    const count = app.calls.length;
+    app.pending[0]?.release(true);
+    yield* app.tick();
+    expect(app.state()._tag).toBe('Playing');
+    expect(
+      app.calls.slice(count).filter((it) => it.operation === 'play' || it.operation === 'announce'),
+    ).toEqual([]);
+  }),
+);
+
+for (const failed of [false, true]) {
+  it.effect(`keyplay a seek retains key-load ownership and fallback failed=${failed}`, () =>
+    Effect.gen(function* () {
+      using app = yield* open();
+      app.send(Command.Start({ track }));
+      yield* app.playing;
+      app.hold();
+      app.move(100, 1);
+      yield* settle;
+      app.send(Command.Seek({ seconds: 40 }));
+      yield* app.tick(500);
+      app.pending[0]?.release(failed);
+      yield* app.playing;
+      yield* app.tick();
+      let effective = 1;
+      if (failed) effective = 0;
+      expect(app.registry.get(app.player.recording)).toEqual(
+        Option.some({ number: 100, requested: 1, effective }),
+      );
+      expect(app.read().positionMs).toBeGreaterThanOrEqual(40_000);
+      expect(app.calls.filter((it) => it.operation === 'play').length).toBe(2 + Number(failed));
+    }),
+  );
+}
+
+it.effect('keyplay an initial chosen-key load lands a newer seek without losing identity', () =>
+  Effect.gen(function* () {
+    using app = yield* open();
+    app.move(100, -2);
+    app.hold();
+    app.send(Command.Start({ track }));
+    yield* settle;
+    app.send(Command.Seek({ seconds: 40 }));
+    yield* app.tick(500);
+    app.pending[0]?.release();
+    yield* app.playing;
+    yield* app.tick();
+    expect(app.registry.get(app.player.recording)).toEqual(
+      Option.some({ number: 100, requested: -2, effective: -2 }),
+    );
+    expect(app.read().positionMs).toBeGreaterThanOrEqual(40_000);
   }),
 );
 
@@ -443,8 +592,7 @@ const enterState = (app: App, state: Player['_tag']) =>
       for (let i = 0; i < 12; i++) yield* app.tick();
     }
     if (state === 'Ended') app.force({ state: 'ended', positionMs: 240_000, durationMs: 240_000 });
-    if (state === 'Failed')
-      app.force({ state: 'failed', positionMs: 240_000, durationMs: 240_000 });
+    if (state === 'Failed') app.force({ state: 'failed', positionMs: 20_000, durationMs: 240_000 });
     yield* app.tick();
   });
 

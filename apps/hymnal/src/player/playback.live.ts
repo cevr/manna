@@ -70,6 +70,13 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
   let wants: Intent = 'play';
   const paused = () => wants === 'pause';
   let retained: Option.Option<Run> = Option.none();
+  const retainedStatus = (status: Status) =>
+    Effect.map(Clock.currentTimeMillis, (now): Status =>
+      Option.match(retained, {
+        onNone: () => status,
+        onSome: (run) => ({ ...status, replacementMs: placeOf(run, now) }),
+      }),
+    );
   const stale = () =>
     PlaybackError.make({ operation: 'superseded', message: 'newer playback owns the session' });
   /** The page's Media Session presses, kept until the player takes them. */
@@ -164,8 +171,8 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
         wants = options?.intent ?? 'play';
         const began = yield* Clock.currentTimeMillis;
         retained = Option.liftPredicate(
-          clockAt(fromMs, !paused(), began),
-          () => options?.continuous === true,
+          clockAt(fromMs, options?.continuous === true && !paused(), began),
+          () => options?.ready === true || options?.continuous === true,
         );
         const status = yield* call('play', () => {
           // One drops the Media Session's handlers before this returns.
@@ -180,9 +187,11 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
         let landed = status;
         if (fromMs > 0 || options?.ready) landed = yield* landAt(fromMs, owner);
         if (owner !== turn) return landed;
+        landed = yield* retainedStatus(landed);
         retained = Option.none();
         // Pause may arrive while play/seek waits for the native session.
-        if (options && paused()) return yield* call('pause', () => audio().pause());
+        if ((options?.ready || options?.continuous) && paused())
+          return yield* call('pause', () => audio().pause());
         return landed;
       }).pipe(
         Effect.catchTag('PlaybackError', (error) =>
@@ -214,7 +223,7 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
         retained = Option.map(retained, () => clockAt(positionMs, wants === 'play', now));
         return yield* call('seek', () => audio().seek(positionMs));
       }),
-    status: call('status', () => audio().getPlaybackStatus()),
+    status: call('status', () => audio().getPlaybackStatus()).pipe(Effect.flatMap(retainedStatus)),
     // One drops the Media Session's handlers with the recording; the page's
     // Play starts it again, so its handlers stay.
     stop: Effect.suspend(() => {

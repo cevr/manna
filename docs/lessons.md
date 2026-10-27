@@ -51,6 +51,56 @@ The form of an entry, each field on its own line:
 
 ## Process and tooling
 
+### rapid-key-load-retains-preparation-time
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "Superseded preparation loses elapsed musical time."
+- **Source:** playbulk/p1-round-1-checks.md F4
+- **Wrong:** A second key load discarded the elapsed preparation of the first.
+- **Cause:** Replacement used only the last proved device position, without the adapter's retained musical clock.
+- **Guard:** code: `apps/hymnal/src/player/keyplay.slow.test.ts` `keyplay rapid delayed keys retain the entire preparation interval`
+
+### score-clock-recording-fallback-owner
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "Score-clock handovers bypass missing-key fallback."
+- **Source:** playbulk/p1-round-1-checks.md F5
+- **Wrong:** Sound on could leave a missing selected recording without its printed-key fallback.
+- **Cause:** Fallback lived above the clock, while its internal handovers called the device directly.
+- **Guard:** code: `apps/hymnal/src/player/keyplay.slow.test.ts` `keyplay Sound on uses the selected set and its printed fallback`
+
+### key-change-keeps-silent-tail
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "Changing Key in a silent score tail loses place."
+- **Source:** playbulk/p1-round-1-checks.md F6
+- **Wrong:** A key change restarted a silent tail from the shorter recording's end.
+- **Cause:** Replacement forgot the clock's known recording end and tried to reload past it.
+- **Guard:** code: `apps/hymnal/src/player/keyplay.slow.test.ts` `keyplay a silent score tail keeps place across Key and falls back on rewind`
+
+### printed-start-clears-key-load-normalization
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "A fresh printed-key Start can retain the former key load's status normalization."
+- **Source:** playbulk/p1-round-1-checks.md F2
+- **Wrong:** A printed-key Start after an in-flight transposed load could show Loading or Buffering while its new recording played.
+- **Cause:** The normal-start branch returned before resetting the shared replacement flag.
+- **Guard:** code: `apps/hymnal/src/player/keyplay.slow.test.ts` `keyplay a fresh printed-key Start supersedes a pending transposed load`
+
+### key-load-owns-fallback-through-seeks
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "A Seek can cancel the key load's identity update and missing-set fallback."
+- **Source:** playbulk/p1-round-1-checks.md F3
+- **Wrong:** Seeking during preparation could leave the recording identity stale or prevent the one printed-key fallback.
+- **Cause:** Seek cancelled the fiber that owned key preparation and fallback.
+- **Guard:** code: `apps/hymnal/src/player/keyplay.slow.test.ts` `keyplay an initial chosen-key load lands a newer seek without losing identity`, `apps/hymnal/src/player/keyplay.slow.test.ts` `keyplay a seek retains key-load ownership and fallback failed=${failed}`
+
 ### recording-switch-failed-zero
 
 - **Date:** 2026-10-27

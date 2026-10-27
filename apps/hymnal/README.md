@@ -145,6 +145,10 @@ Key. Capo changes shapes only. It dispatches no playback operation. The
 lock-screen and Media Session continue to use the global One session.
 `src/player/keyplay.slow.test.ts` covers these rules through the real player,
 score clock and adapter with a fake device; it makes no sound.
+`src/player/recording.ts` owns selection and fallback below the score clock,
+so Sound on and a rewind from a silent tail use the same policy. Recording
+identity travels explicitly with play options and status. A silent tail
+keeps its clock when Key changes, then uses the chosen set on a rewind.
 
 - `src/player/player.ts` holds the player: its states (idle, loading,
   playing, buffering, paused, ended, stopped, failed) as an Effect atom, and
