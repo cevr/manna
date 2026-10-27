@@ -8,8 +8,8 @@
 // centre, so a curl stays round as it boils. Pure.
 
 import { Schema } from 'effect';
-import { decoder } from '../decode.ts';
-import { HexColour, Paper, Tones, unrimmed } from '../paper.ts';
+import { decoder, ruleCheck } from '../decode.ts';
+import { HexColour, Paper, Tones, colourOfItsOwn, unrimmed } from '../paper.ts';
 import { Length, Outline, Point, Share } from './measure.ts';
 
 /** Traced hair: its outline as the concept cuts it, its paper, and the light on it as tones. */
@@ -35,7 +35,13 @@ const CurledHairPart = Schema.TaggedStruct('CurledHair', {
   shade: HexColour,
   /** How far a curl's lit disc lies toward the light, a share of its radius: the crescent's width. */
   crescent: Share,
-}).check(unrimmed);
+}).check(
+  unrimmed,
+  // A curl is laid in its hair's paper with this shade over it: that paper is held to GreyShade as any paper is.
+  ruleCheck('GreyShade', (h: { readonly paper: Paper; readonly shade: `#${string}` }) =>
+    colourOfItsOwn(h.paper.color, h.shade),
+  ),
+);
 
 export type Hair = typeof TracedHairPart.Type | typeof CurledHairPart.Type;
 

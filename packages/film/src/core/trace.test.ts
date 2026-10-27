@@ -268,6 +268,44 @@ describe('traceView', () => {
     expect(reach({ ...shade, shrink: 6 })).toBeGreaterThanOrEqual(reach(shade) + 3);
   });
 
+  test("reads a part to its line's inner edge as well where the line's outer edge is antialiased: a ring of luma 70 outside the ink, seeded or the silhouette", () => {
+    const plain = sheet();
+    const rgba = new Uint8Array(plain.rgba);
+    // One pixel round the outside of the body's and the head's ink, between it and the white ground: luma 70.
+    const ring = (x: number, y: number) =>
+      ((x === 29 || x === 91) && y >= 61 && y <= 201) ||
+      ((y === 61 || y === 201) && x >= 29 && x <= 91) ||
+      (Math.hypot(x - 60, y - 40) > 22 && Math.hypot(x - 60, y - 40) <= 23.5);
+    for (let y = 0; y < plain.height; y++)
+      for (let x = 0; x < plain.width; x++)
+        if (ring(x, y)) rgba.set([70, 70, 70], (y * plain.width + x) * 4);
+    const ringed: Raster = { ...plain, rgba };
+    const view: TraceView = {
+      ...VIEW,
+      parts: {
+        ...VIEW.parts,
+        whole: {
+          silhouette: true,
+          clip: [
+            [0, 70],
+            [120, 70],
+            [120, 220],
+            [0, 220],
+          ],
+          doc: 'The body below the head, as the figure.',
+        },
+      },
+    };
+    const boxes = (r: Raster) => {
+      const t = Result.getOrThrow(traceView(r, view));
+      return ['head', 'body', 'whole'].map((name) => boxOf(t.outlines[name] ?? []));
+    };
+    const [want, got] = [boxes(plain), boxes(ringed)];
+    got.forEach((box, i) =>
+      box.forEach((v, j) => expect(Math.abs(v - (want[i]?.[j] ?? 0))).toBeLessThanOrEqual(1)),
+    );
+  });
+
   test('writes a table that names what it was traced from, with no colour in it', () => {
     const source = tracedModule(
       ['Traced from a test sheet by `film concept trace`.'],

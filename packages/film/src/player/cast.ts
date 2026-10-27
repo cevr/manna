@@ -15,6 +15,7 @@ import {
   type CastModule,
   type CastSheet,
   type CastView,
+  castClip,
   castDrawOrder,
   castPage,
   castRigs,
@@ -30,19 +31,22 @@ const FPS = 30;
 /** How far past its kept box a view is drawn, sheet pixels: a line the figure lays just past the box (a crown's ink) shows on the sheet, where the crop by the box can be read against it. */
 const CLIP_MARGIN = 12;
 
-/** One view drawn on its sheet: clipped to its box and `CLIP_MARGIN` round it, its rig's origin at `at`, at the sheet's scale, its props and the rigs drawn with it about that origin, in their order (`castDrawOrder`). */
-const drawView = (f: Frame, view: CastView, sheet: CastSheet) => {
+/** One view drawn on its sheet beside `views` (the sheet's every view): clipped to its box and `CLIP_MARGIN` round it less the others' boxes (`castClip`), its rig's origin at `at`, at the sheet's scale, its props and the rigs drawn with it about that origin, in their order (`castDrawOrder`). */
+const drawView = (f: Frame, view: CastView, views: ReadonlyArray<CastView>, sheet: CastSheet) => {
   const { ctx } = f;
-  const [x0, y0, x1, y1] = view.box;
+  const clip = castClip(view, views, CLIP_MARGIN);
+  const [x0, y0, x1, y1] = clip.box;
   ctx.save();
   ctx.beginPath();
-  ctx.rect(
-    x0 - CLIP_MARGIN,
-    y0 - CLIP_MARGIN,
-    x1 - x0 + 2 * CLIP_MARGIN,
-    y1 - y0 + 2 * CLIP_MARGIN,
-  );
+  ctx.rect(x0, y0, x1 - x0, y1 - y0);
   ctx.clip();
+  // Each cut taken out of the clip: the box again with the cut inside it, its inside even-odd out.
+  for (const [cx0, cy0, cx1, cy1] of clip.cuts) {
+    ctx.beginPath();
+    ctx.rect(x0, y0, x1 - x0, y1 - y0);
+    ctx.rect(cx0, cy0, cx1 - cx0, cy1 - cy0);
+    ctx.clip('evenodd');
+  }
   ctx.translate(view.at[0], view.at[1]);
   ctx.scale(sheet.scale, sheet.scale);
   for (const d of castDrawOrder(view))
@@ -89,7 +93,8 @@ const castFilm = (film: string, member: string, m: CastModule): Film => {
       drift: 0 as const,
       rigs,
       draw: (f: Frame) => {
-        for (const view of Object.values(kinds[kind] ?? {})) drawView(f, view, sheet);
+        const views = Object.values(kinds[kind] ?? {});
+        for (const view of views) drawView(f, view, views, sheet);
       },
     })),
   });

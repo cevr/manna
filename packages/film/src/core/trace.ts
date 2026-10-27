@@ -176,6 +176,9 @@ const GROUND_LUMA = 110;
  */
 const LINE_MAX = 10;
 
+/** How wide the antialiased edge between the ground and the line's ink runs, pixels: the ground crosses it to follow the ink to its inner edge. */
+const EDGE_AA = 2;
+
 /** How far a part grows into the ink round it, pixels: half the sheets' line, so two parts meet under a line between them. */
 const GROW = 4;
 
@@ -993,10 +996,16 @@ const readOf = (sheet: Raster, view: TraceView) => {
   const figure = (k: number) => ground[k] === 0;
   const kinds = classesOf(g, view.classes, (k) => figure(k) && ink[k] === 0);
   const { label, regions } = regionsOf(g, kinds);
-  // The figure inside its line: the ground grown through the ink it meets, and the antialiased pixel past that.
+  // The figure inside its line: the ground grown across the antialiased edge outside the line (darker than the ground, lighter than ink), through the ink it meets, and the antialiased pixel past that.
+  const bridged = grown(
+    g,
+    ground,
+    EDGE_AA,
+    (k) => ink[k] === 0 && lumaAt(sheet, sheetIndex(g, k)) < GROUND_LUMA,
+  );
   const line = grown(
     g,
-    grown(g, ground, LINE_MAX, (k) => ink[k] === 1),
+    grown(g, bridged, LINE_MAX, (k) => ink[k] === 1),
     1,
     () => true,
   );

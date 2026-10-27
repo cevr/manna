@@ -103,6 +103,55 @@ export const castDrawOrder = (view: CastView): ReadonlyArray<CastDrawing> => {
   ];
 };
 
+/** `a` less `b`, as the boxes it leaves (none, or up to four): the bands above and below `b`, then those beside it between them. */
+const boxLess = (a: SheetBox, b: SheetBox): SheetBox[] => {
+  const [ax0, ay0, ax1, ay1] = a;
+  const [bx0, by0, bx1, by1] = b;
+  if (bx0 >= ax1 || bx1 <= ax0 || by0 >= ay1 || by1 <= ay0) return [a];
+  const [my0, my1] = [Math.max(ay0, by0), Math.min(ay1, by1)];
+  const bands: SheetBox[] = [
+    [ax0, ay0, ax1, my0],
+    [ax0, my1, ax1, ay1],
+    [ax0, my0, Math.max(ax0, bx0), my1],
+    [Math.min(ax1, bx1), my0, ax1, my1],
+  ];
+  return bands.filter(([x0, y0, x1, y1]) => x1 > x0 && y1 > y0);
+};
+
+/** Where a view of a sheet is drawn: within `box`, less each of `cuts`. */
+interface CastClip {
+  readonly box: SheetBox;
+  readonly cuts: ReadonlyArray<SheetBox>;
+}
+
+/**
+ * Where `view` is drawn on its sheet beside `views` (the sheet's every
+ * view, itself too): its kept box and `margin` round it, where a line it
+ * lays just past its box (a crown's ink) shows, less every other view's box
+ * there but what lies in its own. A view's crop by its box then holds its
+ * own drawing alone, never a neighbour's ink that ran over into it.
+ */
+export const castClip = (
+  view: CastView,
+  views: ReadonlyArray<CastView>,
+  margin: number,
+): CastClip => {
+  const [x0, y0, x1, y1] = view.box;
+  const box: SheetBox = [x0 - margin, y0 - margin, x1 + margin, y1 + margin];
+  const [bx0, by0, bx1, by1] = box;
+  const cuts = views
+    .filter((other) => other !== view)
+    .flatMap((other) => boxLess(other.box, view.box))
+    .map(([cx0, cy0, cx1, cy1]): SheetBox => [
+      Math.max(cx0, bx0),
+      Math.max(cy0, by0),
+      Math.min(cx1, bx1),
+      Math.min(cy1, by1),
+    ])
+    .filter(([cx0, cy0, cx1, cy1]) => cx1 > cx0 && cy1 > cy0);
+  return { box, cuts };
+};
+
 /** Every rig a member's views draw, by key: what its page declares and loads. */
 export const castRigs = (member: Readonly<Record<string, Readonly<Record<string, CastView>>>>) => {
   const rigs: Record<string, RivePropSpec> = {};

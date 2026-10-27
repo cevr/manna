@@ -3,6 +3,7 @@ import { Record as Rec } from 'effect';
 import { DIRECTION } from './house.ts';
 import { figure, isComposed } from './figure.ts';
 import { overridesIn } from './override.ts';
+import { tracedFigure } from './traced.ts';
 import { paper } from './paper.ts';
 import { ARM_SIDES, Arm, JointedArm, armHand, armReach } from './parts/arm.ts';
 import { Beard } from './parts/beard.ts';
@@ -1412,6 +1413,20 @@ describe('the parts', () => {
         );
   });
 
+  test("a curl's shade is held to GreyShade as its paper's is: black or a grey refused, a hue of its own kept", () => {
+    const curled = (shade: `#${string}`) => () =>
+      Hair.Curls({
+        outline: ellipse(0, -40, 50, 25, 12),
+        paper: HAIR,
+        curls: [{ at: [0, -40], r: 8 }],
+        shade,
+        crescent: 0.35,
+      });
+    for (const shade of ['#000000', '#555555'] as const)
+      expect(curled(shade)).toThrow(/Hair.Curls refused by GreyShade/);
+    expect(curled('#3a2a20')).not.toThrow();
+  });
+
   test('an outline cut from its corners with two in turn at one point is refused, as is a tunic whose neck is not above its hem', () => {
     const doubled: Pt[] = [
       [-40, -330],
@@ -1998,5 +2013,118 @@ describe('an arm bent at its elbow, trousers, and an open chin', () => {
     }
     const shod = drawnOf(figure({ ...standingOf(), arms: { far: bent } }));
     expect(shod).not.toContain('<DrawTarget');
+  });
+});
+
+/** A sleeve `half` wide each way of the line from `a` to `b`, sheet pixels. */
+const sleeveAlong = (a: Pt, b: Pt, half: number): Pt[] => {
+  const l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+  const [nx, ny] = [(-(b[1] - a[1]) / l) * half, ((b[0] - a[0]) / l) * half];
+  return [
+    [a[0] + nx, a[1] + ny],
+    [b[0] + nx, b[1] + ny],
+    [b[0] - nx, b[1] - ny],
+    [a[0] - nx, a[1] - ny],
+  ];
+};
+
+/** A figure traced from a sheet at one unit a pixel: a round head, a square garment, a hanging near sleeve, and a far sleeve as `far` gives it. */
+const tracedOf = (far: Parameters<typeof tracedFigure>[0]['arms']['far']) =>
+  tracedFigure({
+    concept: CONCEPT,
+    scale: 1,
+    headAt: [100, 100],
+    feet: [100, 450],
+    head: { view: 'front', outline: ellipse(100, 100, 40, 44, 16), paper: SKIN },
+    face: {
+      marks: {
+        eyes: [
+          [85, 95],
+          [115, 95],
+        ],
+        eye: [4, 6],
+        brows: [
+          [
+            [78, 82],
+            [92, 82],
+          ],
+          [
+            [108, 82],
+            [122, 82],
+          ],
+        ],
+        brow: 3,
+        mouth: [
+          [92, 120],
+          [108, 120],
+        ],
+        mouthLine: 3,
+      },
+      turn: 0,
+      gaze: [0, 0],
+    },
+    body: {
+      outline: [
+        [50, 145],
+        [150, 145],
+        [160, 420],
+        [40, 420],
+      ],
+      paper: WHITE,
+    },
+    arms: {
+      near: {
+        outline: sleeveAlong([55, 150], [45, 300], 12),
+        hand: { at: [45, 305], r: 9 },
+        paper: WHITE,
+      },
+      far,
+    },
+    feet_: {
+      near: {
+        outline: [
+          [60, 420],
+          [95, 420],
+          [95, 450],
+          [60, 450],
+        ],
+      },
+      far: {
+        outline: [
+          [105, 420],
+          [140, 420],
+          [140, 450],
+          [105, 450],
+        ],
+      },
+      paper: FLAT,
+      sole: '#6b4a3a',
+    },
+    hands: SKIN,
+  });
+
+describe('a traced figure', () => {
+  test('a raised arm turns about the pivot it is given: the arm keeps that pivot, and its hand turned 45° lands where it would turned about it', () => {
+    const pivot: Pt = [144, 176];
+    const hand: Pt = [245, 94];
+    const { arms } = tracedOf({
+      outline: sleeveAlong([132, 186], [240, 98], 13),
+      hand: { at: hand, r: 9 },
+      paper: WHITE,
+      pivot,
+      root: 'traced',
+    });
+    // The figure's units: one a sheet pixel, about its feet.
+    const fromFeet = ([x, y]: Pt): Pt => [x - 100, y - 450];
+    expect(arms.far.pivot).toEqual(fromFeet(pivot));
+    const [px, py] = fromFeet(pivot);
+    const [hx, hy] = fromFeet(hand);
+    const by = Math.PI / 4;
+    const want: Pt = [
+      px + (hx - px) * Math.cos(by) - (hy - py) * Math.sin(by),
+      py + (hx - px) * Math.sin(by) + (hy - py) * Math.cos(by),
+    ];
+    const got = armHand(arms.far, by);
+    expect(Math.hypot(got[0] - want[0], got[1] - want[1])).toBeLessThan(0.01);
   });
 });

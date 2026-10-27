@@ -63,11 +63,14 @@ type PaperFields = typeof PaperFields.Type;
  * black), by the predicate `film match` reads a figure's pixels with
  * (`shadeKind`).
  */
-const colourShade = ruleCheck('GreyShade', (p: PaperFields) =>
-  p.shade === undefined ||
-  shadeKind(hsvOf(channelsOf(p.color)), hsvOf(channelsOf(p.shade))) === 'colour'
+export const colourOfItsOwn = (color: Hex, shade: Hex): true | string =>
+  shadeKind(hsvOf(channelsOf(color)), hsvOf(channelsOf(shade))) === 'colour'
     ? true
-    : `its shade ${p.shade} is ${p.color} greyed or blackened: give it a hue of its own`,
+    : `its shade ${shade} is ${color} greyed or blackened: give it a hue of its own`;
+
+/** A paper's shade held to `colourOfItsOwn`, GreyShade. */
+const colourShade = ruleCheck('GreyShade', (p: PaperFields) =>
+  p.shade === undefined ? true : colourOfItsOwn(p.color, p.shade),
 );
 
 /** A paper, checked: only `paper` (or `papers`) makes one, and a part decodes it again. */
