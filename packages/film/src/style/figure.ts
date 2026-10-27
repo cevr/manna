@@ -47,7 +47,7 @@ import { type Over, decodeOver } from './parts/over.ts';
 import { type Seated, type Standing, decodeSeated, decodeStanding } from './parts/stance.ts';
 import { type GivenRobe, type Stain, type State, decodeState } from './parts/states.ts';
 import { type Stature, decodeStature } from './parts/stature.ts';
-import { FACE, type FaceKnob, type Pt } from './rig/parts.ts';
+import { EXTRA_FACE, FACE, type FaceKnob, type Pt } from './rig/parts.ts';
 import { fromEdge, garmentOutline, inside } from './rig/shapes.ts';
 
 /** A standing figure's artboard: its size, and where its feet stand on it (the rig's origin). */
@@ -85,6 +85,15 @@ interface Composed {
   /** What the story does to its garment, in any order: each kind once. */
   readonly states?: ReadonlyArray<State>;
   readonly hands: Hands;
+  /**
+   * How its traced outlines are written: `cubic`, each a chain of cubics
+   * fitted to its sheet (`core/fit.ts`: an anchor, its out handle, the next
+   * anchor's in handle, and so on round), drawn with each handle its own way
+   * so a corner stays a corner; points the house's smooth path runs through
+   * when left out. It holds for its traced head and what is cut inside it,
+   * its traced robe, its arms, and the tones laid on each.
+   */
+  readonly path?: 'cubic';
 }
 
 /** A standing figure: its feet are its origin. */
@@ -163,6 +172,7 @@ const slots = {
   over: Schema.optionalKey(Schema.Unknown),
   states: Schema.optionalKey(Schema.Array(Schema.Unknown).check(oncePerKind)),
   hands: Schema.Unknown,
+  path: Schema.optional(Schema.Literal('cubic')),
 };
 
 /** A standing figure's slots: every figure's, its artboard, its stance and its feet. */
@@ -198,6 +208,7 @@ interface ComposedParts {
   readonly over?: Over;
   readonly states: { readonly stain?: Stain; readonly robe?: GivenRobe };
   readonly hands: Hands;
+  readonly path?: 'cubic';
 }
 
 /** A standing figure's parts: every figure's, its artboard, its stance and its feet. */
@@ -295,7 +306,7 @@ const gazeFrom = (head: Head) => [0, head.y] as const;
 /**
  * A figure's numbers at rest, in the house's order (the view model keeps
  * it, so the file keeps its bytes): the face kit's (`FACE`, its gaze first,
- * its rest where the figure's face differs), the open mouth's, the
+ * its rest where the figure's face differs), the marks past the kit's it opts into (`EXTRA_FACE`), the open mouth's, the
  * stance's, the head's, the states' (the stain before the given robe), the
  * arms' (each its turn at rest and a jointed arm's bend after it, the near
  * one first). A number set again
@@ -311,6 +322,7 @@ const knobsOf = (f: Parts) => {
       gazeY: y + f.face.gaze[1],
     }),
   );
+  for (const mark of f.face.extra ?? []) knobs.set(mark, EXTRA_FACE[mark]);
   if (f.mouth !== undefined) knobs.set('shout', 0);
   for (const [name, rest] of Object.entries(STANCE)) knobs.set(name, rest);
   if (f.head._tag === 'RoundHead') knobs.set('faceY', 0);
@@ -486,7 +498,8 @@ const composedOf = (spec: FigureSpec, concept: ConceptRef): ComposedParts => {
     hands,
   };
   if (parts.states.robe !== undefined) skinUnderRobe(parts);
-  return parts;
+  // A figure that writes no path leaves the key out, so its parts are as they were.
+  return spec.path === undefined ? parts : { ...parts, path: spec.path };
 };
 
 /** A figure's parts of `spec`: its slots checked as its stance's, then each part as its kind's. */

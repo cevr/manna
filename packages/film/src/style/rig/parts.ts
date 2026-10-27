@@ -158,6 +158,8 @@ interface Tone {
   readonly color: string;
   readonly alpha?: number;
   readonly soft?: boolean;
+  /** Its points a chain of cubics (`cubicPath`), not points the smooth path runs through. */
+  readonly cubic?: true;
 }
 
 /** The grey paper of a person, its far side and its light: the figure ramp. */
@@ -377,6 +379,8 @@ export interface Figure {
   readonly converters: () => ReadonlyArray<Element>;
   /** Key each of `pts` (the vertices `key.i`) to crawl within `amp` units of where it is cut, on the boil's ticks. */
   readonly boil: (key: string, pts: ReadonlyArray<Pt>, amp: number) => void;
+  /** Key each of `pts` (the vertices `key.i`) to crawl within `amp` units as one: the whole outline moved, its shape kept (a curl about its centre). */
+  readonly boilWhole: (key: string, pts: ReadonlyArray<Pt>, amp: number) => void;
   /**
    * Key the `n` vertices `key.i` to crawl exactly as `like.i` do (a cast
    * shadow following its piece), each `shift[i]` units off it when given (a
@@ -452,6 +456,14 @@ export const figure = (
           Array.from({ length: BOIL.ticks }, (_, tick) => [tick / BOIL.fps, c + d(tick), 'hold']);
         tracks[`${key}.${i}`] = { x: keys(p[0], dx), y: keys(p[1], dy) };
       }),
+    boilWhole: (key, pts, amp) => {
+      const [dx, dy] = [crawl(r, amp), crawl(r, amp)];
+      const keys = (c: number, d: (tick: number) => number): K[] =>
+        Array.from({ length: BOIL.ticks }, (_, tick) => [tick / BOIL.fps, c + d(tick), 'hold']);
+      pts.forEach((p, i) => {
+        tracks[`${key}.${i}`] = { x: keys(p[0], dx), y: keys(p[1], dy) };
+      });
+    },
     echo: (key, like, n, shift) => {
       for (let i = 0; i < n; i++) {
         const track = tracks[`${like}.${i}`];
@@ -529,6 +541,48 @@ const smoothPath = (fig: Figure, key: string, pts: ReadonlyArray<Pt>, closed = t
   return el('PointsPath', { isClosed: closed, isClockwise: true, name: 'Path' }, vertices);
 };
 
+/** A handle from `from` to `to`, as a detached vertex writes it: its angle and its length. */
+const handle = (from: Pt, to: Pt) => {
+  const [dx, dy] = [to[0] - from[0], to[1] - from[1]];
+  const distance = Math.hypot(dx, dy);
+  return { rotation: distance === 0 ? 0 : Math.atan2(dy, dx), distance };
+};
+
+/**
+ * A closed path along a chain of cubics (`core/fit.ts`: each anchor, its out
+ * handle, the next anchor's in handle, and so on round): each anchor a
+ * detached vertex named `key.j`, so the boil keys it and its handles ride
+ * with it, and each handle its own way, so a corner stays a corner.
+ */
+const cubicPath = (fig: Figure, key: string, chain: ReadonlyArray<Pt>): Element => {
+  const n = Math.floor(chain.length / 3);
+  const vertices = Array.from({ length: n }, (_, j) => {
+    const a = chain[3 * j] ?? [0, 0];
+    const into = handle(a, chain[(3 * j - 1 + 3 * n) % (3 * n)] ?? a);
+    const out = handle(a, chain[3 * j + 1] ?? a);
+    const name = `${key}.${j}`;
+    return el('CubicDetachedVertex', {
+      x: a[0],
+      y: a[1],
+      inRotation: into.rotation,
+      inDistance: into.distance,
+      outRotation: out.rotation,
+      outDistance: out.distance,
+      name,
+      id: fig.idOf(name),
+    });
+  });
+  return el('PointsPath', { isClosed: true, isClockwise: true, name: 'Path' }, vertices);
+};
+
+/** A closed path through `pts`: a chain of cubics' (`cubicPath`) when `cubic`, else the smooth path through them. */
+const pathOf = (fig: Figure, key: string, pts: ReadonlyArray<Pt>, cubic?: true) =>
+  cubic === true ? cubicPath(fig, key, pts) : smoothPath(fig, key, pts);
+
+/** The vertices a path through `pts` has, as the boil keys them: a chain's anchors, or every point. */
+const vertexPts = (pts: ReadonlyArray<Pt>, cubic?: true): ReadonlyArray<Pt> =>
+  cubic === true ? pts.filter((_, i) => i % 3 === 0) : pts;
+
 /**
  * A piece of the figure: a closed smooth outline through `pts`, painted
  * `look` with its crease across its own box, and its outline on the boil
@@ -541,7 +595,7 @@ export const piece = (
   key: string,
   pts: ReadonlyArray<Pt>,
   look: PieceLook,
-  opts: { readonly boil?: number } = {},
+  opts: { readonly boil?: number; readonly cubic?: true } = {},
 ): Element => paperOf(fig, { key, pts, look, ...opts }, false);
 
 /**
@@ -552,10 +606,11 @@ export const piece = (
 const paperOf = (fig: Figure, part: Part, inside: boolean): Element => {
   const { key, pts, look } = part;
   const boil = part.boil ?? 0.9;
-  if (boil > 0) fig.boil(key, pts, boil);
+  if (boil > 0 && part.crawl === 'whole') fig.boilWhole(key, vertexPts(pts, part.cubic), boil);
+  else if (boil > 0) fig.boil(key, vertexPts(pts, part.cubic), boil);
   const box = boxOf(pts);
   const shape = el('Shape', { name: key, id: fig.idOf(key) }, [
-    smoothPath(fig, key, pts),
+    pathOf(fig, key, pts, part.cubic),
     ...paints(fig, look, box, inside),
   ]);
   const crescent = look.shade === undefined ? undefined : look.crease?.crescent;
@@ -569,7 +624,7 @@ const paperOf = (fig: Figure, part: Part, inside: boolean): Element => {
   return el('Node', { name: `${key}Piece` }, [
     ...onTop,
     shape,
-    ...(cast && look.over !== undefined ? casts(fig, key, pts, look, look.over, boil > 0) : []),
+    ...(cast && look.over !== undefined ? casts(fig, part, look.over, boil > 0) : []),
   ]);
 };
 
@@ -601,6 +656,23 @@ const inset = (pts: ReadonlyArray<Pt>, by: number): Pt[] => {
   });
 };
 
+/**
+ * A chain of cubics (`cubicPath`) moved `by` units inward: each anchor and
+ * its two handles together, along the anchor's normal as `inset` finds it
+ * among the anchors, so its curve keeps its shape.
+ */
+const insetChain = (chain: ReadonlyArray<Pt>, by: number): Pt[] => {
+  const anchors = chain.filter((_, i) => i % 3 === 0);
+  const moved = inset(anchors, by);
+  return chain.map((p, i) => {
+    // A point's anchor: itself, the anchor its out handle leaves, or the next one, whose in handle it is.
+    const j = ((Math.floor((i + 1) / 3) % anchors.length) + anchors.length) % anchors.length;
+    const a = anchors[j] ?? p;
+    const m = moved[j] ?? a;
+    return [p[0] + m[0] - a[0], p[1] + m[1] - a[1]];
+  });
+};
+
 /** How far toward the crease a rim keeps its whole light before it fades, a share of the way. */
 const RIM_HOLD = 0.6;
 
@@ -612,17 +684,19 @@ const RIM_HOLD = 0.6;
  */
 const rimOf = (fig: Figure, part: Part, width: number, box: Box, boils: boolean): Element => {
   const name = `${part.key}Rim`;
-  const pts = inset(part.pts, width / 2);
-  if (boils)
+  const pts = part.cubic === true ? insetChain(part.pts, width / 2) : inset(part.pts, width / 2);
+  if (boils) {
+    const [from, to] = [vertexPts(part.pts, part.cubic), vertexPts(pts, part.cubic)];
     fig.echo(
       name,
       part.key,
-      pts.length,
-      pts.map((p, i): Pt => [p[0] - (part.pts[i]?.[0] ?? 0), p[1] - (part.pts[i]?.[1] ?? 0)]),
+      to.length,
+      to.map((p, i): Pt => [p[0] - (from[i]?.[0] ?? 0), p[1] - (from[i]?.[1] ?? 0)]),
     );
+  }
   const { start, end, at } = creaseOf(box, part.look.crease);
   return el('Shape', { name, id: fig.idOf(name) }, [
-    smoothPath(fig, name, pts),
+    pathOf(fig, name, pts, part.cubic),
     el('Stroke', { thickness: width, join: 'round', cap: 'round', name: 'Rim' }, [
       el('LinearGradient', { startX: start[0], startY: start[1], endX: end[0], endY: end[1] }, [
         el('GradientStop', { colorValue: argb(part.look.light), position: 0 }),
@@ -648,15 +722,16 @@ const litOf = (fig: Figure, part: Part, share: number, box: Box, boils: boolean)
     (-Math.sin(toward) * share * (box.y1 - box.y0)) / 2,
   ];
   const pts = part.pts.map(([x, y]): Pt => [x + by[0], y + by[1]]);
+  const n = vertexPts(pts, part.cubic).length;
   if (boils)
     fig.echo(
       name,
       part.key,
-      pts.length,
-      pts.map(() => by),
+      n,
+      Array.from({ length: n }, () => by),
     );
   return el('Shape', { name, id: fig.idOf(name) }, [
-    smoothPath(fig, name, pts),
+    pathOf(fig, name, pts, part.cubic),
     el('Fill', { name: 'Lit' }, [solid(part.look.color)]),
     el('ClippingShape', { sourceId: fig.idOf(part.key), name: 'Clip' }),
   ]);
@@ -681,7 +756,7 @@ const toneOf = (fig: Figure, key: string, tone: Tone, i: number): Element => {
       )
     : solid(tone.color, alpha);
   return el('Shape', { name, id: fig.idOf(name) }, [
-    smoothPath(fig, name, tone.pts),
+    pathOf(fig, name, tone.pts, tone.cubic),
     el('Fill', { name: 'Tone' }, [paint]),
     el('ClippingShape', { sourceId: fig.idOf(key), name: 'Clip' }),
   ]);
@@ -695,6 +770,10 @@ export interface Part {
   readonly pts: ReadonlyArray<Pt>;
   readonly look: PieceLook;
   readonly boil?: number;
+  /** Its points a chain of cubics (`cubicPath`), not points the smooth path runs through. */
+  readonly cubic?: true;
+  /** How it crawls on the boil: each vertex on its own (unless given), or `whole`, its shape kept (`Figure.boilWhole`). */
+  readonly crawl?: 'whole';
   /** The joints it turns on, outermost first, each about its point by its number: its points are where it is traced, so each joint turns it about a point in the same frame. */
   readonly frames?: ReadonlyArray<Frame>;
 }
@@ -761,8 +840,8 @@ export const silhouette = (
   const name = `${key}Ink`;
   const paths = parts.map((p) => {
     const at = `${name}${p.key}`;
-    if ((p.boil ?? 0.9) > 0) fig.echo(at, p.key, p.pts.length);
-    return framed(fig, p, `${key}Ink`, smoothPath(fig, at, p.pts));
+    if ((p.boil ?? 0.9) > 0) fig.echo(at, p.key, vertexPts(p.pts, p.cubic).length);
+    return framed(fig, p, `${key}Ink`, pathOf(fig, at, p.pts, p.cubic));
   });
   const d = fig.direction;
   const weight = opts.ink ?? 'outer';
@@ -810,12 +889,11 @@ const behindOf = (fig: Figure, name: string, target: string): Element =>
  */
 const casts = (
   fig: Figure,
-  key: string,
-  pts: ReadonlyArray<Pt>,
-  look: PieceLook,
+  part: Part,
   over: NonNullable<PieceLook['over']>,
   boils: boolean,
 ): Element[] => {
+  const { key, pts, look } = part;
   const lift = look.shadow ?? 0.35;
   const cast = (
     name: string,
@@ -823,9 +901,9 @@ const casts = (
     target: { readonly key: string; readonly placement: 'before' | 'after' },
     clip?: string,
   ) => {
-    if (boils) fig.echo(name, key, pts.length);
+    if (boils) fig.echo(name, key, vertexPts(pts, part.cubic).length);
     return el('Shape', { name, id: fig.idOf(name) }, [
-      smoothPath(fig, name, pts),
+      pathOf(fig, name, pts, part.cubic),
       shadowFill(shade, lift),
       ...(clip === undefined
         ? []
@@ -1018,8 +1096,8 @@ const eye = (fig: Figure, k: FaceShape, side: 'L' | 'R', x: number, scale: numbe
     fig.bind('eyeW', KEY.scaleX),
   ]);
 
-/** The mouth: a line whose middle bends (smile, frown), and an "oh" that opens over it. */
-const mouth = (fig: Figure, k: FaceShape) =>
+/** The mouth: a line whose middle bends (smile, frown), as wide as `mouthW` says where the face opts into it, and an "oh" that opens over it. */
+const mouth = (fig: Figure, k: FaceShape, extra: ReadonlyArray<ExtraFaceKnob>) =>
   el('Node', { x: k.mouth[0], y: k.mouth[1], name: 'mouth', id: fig.idOf('mouth') }, [
     el('Shape', { scaleX: 0, scaleY: 0, name: 'mouthOh', id: fig.idOf('mouthOh') }, [
       ellipsePath(8, 10.5),
@@ -1042,28 +1120,186 @@ const mouth = (fig: Figure, k: FaceShape) =>
         ...fig.inkBind(k.mouthLine, 0),
       ]),
       fig.bind('mouthLine', KEY.opacity),
+      ...(extra.includes('mouthW') ? [fig.bind('mouthW', KEY.scaleX)] : []),
     ]),
   ]);
+
+/**
+ * What a face may do past the kit's own, each a figure opts into
+ * (`KitA.extra`), each moved by a number of its own that rests where the
+ * kit is, so a figure that opts into none prints as before. Its marks, each
+ * shown by its number (0 hides it): `wince`, eyes squeezed shut as `>` `<`
+ * and a wavering mouth; `glad`, eyes shut in a smile, two arches, and a wide
+ * smile. An expression that shows one sets the kit's eyes and its mouth line
+ * to 0. Its slides, for a sheet that draws a face's marks elsewhere on the
+ * head than the kit lays them: `marksY`, every mark and its rest together,
+ * kit units down the face (negative up), as a sheet draws a nod by the marks
+ * alone inside a head that holds still; `mouthY`, the kit's mouth alone, kit
+ * units down; `mouthW`, the kit's mouth line's width, 1 the kit's.
+ */
+export const EXTRA_FACE = { wince: 0, glad: 0, marksY: 0, mouthY: 0, mouthW: 1 } as const;
+
+/**
+ * The glad smile, each a share of the kit's mouth's half-width: how far
+ * each corner lies from its middle, how far the corners rise and how far its
+ * middle dips. A glad face's sheet draws its smile near twice the width of
+ * the kit's line at rest (lead-feast heads-6: 53 px against 30).
+ */
+const GLAD_MOUTH = { half: 1.75, lift: 0.12, dip: 0.42 } as const;
+
+/**
+ * A shut eye's marks, shares of the kit's eye height: how far the wince's
+ * chevron reaches above and below the eye's middle, so a knit brow above it
+ * stays a mark of its own; and how far the glad arch's ends lie below its
+ * middle and its middle above, a shallow arc as a glad face's sheet draws
+ * it (lead-feast heads-6: about 5 px of rise over 25).
+ */
+const SHUT_EYE = { chevron: 0.3, gladEnds: 0.1, gladMiddle: 0.1 } as const;
+export type ExtraFaceKnob = keyof typeof EXTRA_FACE;
+
+/** An ink stroke of the kit along `path`, `thickness` wide, shown by the number `knob`. */
+const markShape = (
+  fig: Figure,
+  key: string,
+  path: Element,
+  thickness: number,
+  knob: ExtraFaceKnob,
+) =>
+  el('Shape', { name: key, id: fig.idOf(key) }, [
+    path,
+    el('Stroke', { thickness, cap: 'round', join: 'round', name: 'Ink' }, [
+      solid(inkOf(fig.direction)),
+      ...fig.inkBind(thickness, 0),
+    ]),
+    fig.bind(knob, KEY.opacity),
+  ]);
+
+/** An open line of straight segments through `pts`. */
+const straightPath = (pts: ReadonlyArray<Pt>) =>
+  el(
+    'PointsPath',
+    { isClosed: false, isClockwise: true, name: 'Path' },
+    pts.map(([x, y], i) => el('StraightVertex', { x, y, name: `p${i}` })),
+  );
+
+/** The extra marks `extra` names, each in its place on the kit `k`. */
+const extraMarks = (fig: Figure, k: FaceShape, extra: ReadonlyArray<ExtraFaceKnob>): Element[] => {
+  const [w, h] = k.eye;
+  const sides = [
+    ['L', k.eyes[0], 1],
+    ['R', k.eyes[1], -1],
+  ] as const;
+  const marks: Record<ExtraFaceKnob, () => Element[]> = {
+    // The slides draw no mark of their own (`faceKit` binds them).
+    marksY: () => [],
+    mouthY: () => [],
+    mouthW: () => [],
+    // Each eye a chevron pointing in toward the nose; the mouth a short wave.
+    wince: () => [
+      ...sides.map(([side, x, toward]) =>
+        el('Node', { x, y: k.eyeY, name: `wince${side}Side` }, [
+          markShape(
+            fig,
+            `wince${side}`,
+            straightPath([
+              [-w * toward, -SHUT_EYE.chevron * h],
+              [0.8 * w * toward, 0],
+              [-w * toward, SHUT_EYE.chevron * h],
+            ]),
+            k.brow,
+            'wince',
+          ),
+        ]),
+      ),
+      el('Node', { x: k.mouth[0], y: k.mouth[1], name: 'winceMouthAt' }, [
+        markShape(
+          fig,
+          'winceMouth',
+          smoothPath(
+            fig,
+            'winceMouth',
+            [-1, -0.66, -0.33, 0, 0.33, 0.66, 1].map((t, i): Pt => [
+              t * k.mouthHalf * 1.15,
+              (i % 2 === 0 ? 0.5 : -0.5) * k.mouthLine,
+            ]),
+            false,
+          ),
+          k.mouthLine,
+          'wince',
+        ),
+      ]),
+    ],
+    // Each eye an arch, shut in a smile; the mouth a smile wider than the kit's line (`GLAD_MOUTH`).
+    glad: () => [
+      el('Node', { x: k.mouth[0], y: k.mouth[1], name: 'gladMouthAt' }, [
+        markShape(
+          fig,
+          'gladMouth',
+          smoothPath(
+            fig,
+            'gladMouth',
+            [
+              [-GLAD_MOUTH.half * k.mouthHalf, -GLAD_MOUTH.lift * k.mouthHalf],
+              [0, GLAD_MOUTH.dip * k.mouthHalf],
+              [GLAD_MOUTH.half * k.mouthHalf, -GLAD_MOUTH.lift * k.mouthHalf],
+            ],
+            false,
+          ),
+          k.mouthLine,
+          'glad',
+        ),
+      ]),
+      ...sides.map(([side, x]) =>
+        el('Node', { x, y: k.eyeY, name: `glad${side}Side` }, [
+          markShape(
+            fig,
+            `glad${side}`,
+            smoothPath(
+              fig,
+              `glad${side}`,
+              [
+                [-1.1 * w, SHUT_EYE.gladEnds * h],
+                [0, -SHUT_EYE.gladMiddle * h],
+                [1.1 * w, SHUT_EYE.gladEnds * h],
+              ],
+              false,
+            ),
+            k.brow,
+            'glad',
+          ),
+        ]),
+      ),
+    ],
+  };
+  return extra.flatMap((m) => marks[m]());
+};
 
 /**
  * The face, centred at (x, y) in its parent's frame and `scale` times the
  * kit's size: brows, eyes and mouth, each moved by the figure's view-model
  * numbers (`FACE`), and the eyes' sockets; the features together slide a
  * little toward the gaze (`turn`). `shape` gives the marks a figure's
- * sheet draws otherwise than the kit (`FaceShape`). Named `face`, the node
+ * sheet draws otherwise than the kit (`FaceShape`), and `extra` the marks
+ * and slides past the kit's it opts into (`EXTRA_FACE`). Named `face`, the node
  * `check`'s face probe reads.
  */
 export const faceKit = (
   fig: Figure,
   at: { x: number; y: number; scale?: number },
   shape: Partial<FaceShape> = {},
+  extra: ReadonlyArray<ExtraFaceKnob> = [],
 ) => {
   const scale = at.scale ?? 1;
   const k = kitMarks(shape);
+  // A slide the face opts into: a node round `inner`, moved by its number.
+  const slid = (knob: 'marksY' | 'mouthY', name: string, inner: ReadonlyArray<Element>) =>
+    extra.includes(knob)
+      ? [el('Node', { name, id: fig.idOf(name) }, [fig.bind(knob, KEY.y), ...inner])]
+      : inner;
   return el(
     'Node',
     { x: at.x, y: at.y, scaleX: at.scale, scaleY: at.scale, name: 'face', id: fig.idOf('face') },
-    [
+    slid('marksY', 'marksSlide', [
       el('Node', { name: 'features', id: fig.idOf('features') }, [
         el('TranslationConstraint', {
           targetId: fig.idOf('gaze'),
@@ -1083,12 +1319,14 @@ export const faceKit = (
         ]),
         eye(fig, k, 'L', k.eyes[0], scale),
         eye(fig, k, 'R', k.eyes[1], scale),
-        mouth(fig, k),
+        ...slid('mouthY', 'mouthSlide', [mouth(fig, k, extra)]),
+        ...extraMarks(fig, k, extra),
         el('Node', { x: k.eyes[0], y: k.eyeY, name: 'socketL', id: fig.idOf('socketL') }),
         el('Node', { x: k.eyes[1], y: k.eyeY, name: 'socketR', id: fig.idOf('socketR') }),
       ]),
+      // The features' rest slides with them, so the gaze still moves them no farther than `turn`.
       el('Node', { name: 'faceRest', id: fig.idOf('faceRest') }),
-    ],
+    ]),
   );
 };
 

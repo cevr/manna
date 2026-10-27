@@ -105,8 +105,13 @@ interface SheetView {
   readonly layout: Option.Option<string>;
 }
 
-/** A cast sheet try's views to critique: where they are, in words, and the folder its answers are kept in. */
+/**
+ * A cast sheet's views to critique: a try's (`sheet`, each held to its
+ * layout's words) or a render's (`render`, each rig held to its kept view);
+ * where they are, in words, and the folder its answers are kept in.
+ */
 interface SheetCritique {
+  readonly drawn?: 'sheet' | 'render';
   readonly place: string;
   readonly kept: string;
   readonly views: ReadonlyArray<SheetView>;
@@ -315,7 +320,7 @@ const askOfMatch = (taken: MatchTaken, staging: CritiqueStaging, path: Path.Path
 
 /** A cast sheet try's views as a critique asks them. */
 const askOfSheet = (sheet: SheetCritique): CritiqueAsk => ({
-  drawn: 'sheet',
+  drawn: sheet.drawn ?? 'sheet',
   staging: UNSTAGED,
   place: sheet.place,
   logged: `sheet="${sheet.place}"`,

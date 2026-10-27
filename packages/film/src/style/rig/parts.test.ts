@@ -22,6 +22,61 @@ describe('the figure parts', () => {
     for (const [, v] of x) expect(Math.abs(v - 3)).toBeLessThanOrEqual(1);
   });
 
+  test('a chain of cubics draws its corners with handles of their own, and boils its anchors alone', () => {
+    const fig = figure(ids(), 'Test', 7, 0, DIRECTION);
+    // A square's chain: each side one straight cubic, its handles a third of the way along it.
+    const corners: Pt[] = [
+      [0, 0],
+      [30, 0],
+      [30, 30],
+      [0, 30],
+    ];
+    const chain = corners.flatMap((a, i): Pt[] => {
+      const b = corners[(i + 1) % 4] ?? a;
+      const third = (k: number): Pt => [
+        a[0] + ((b[0] - a[0]) * k) / 3,
+        a[1] + ((b[1] - a[1]) * k) / 3,
+      ];
+      return [a, third(1), third(2)];
+    });
+    const shape = piece(fig, 'sq', chain, { color: '#ffffff', light: '#ffffff' }, { cubic: true });
+    const vertices = all(shape).filter((e) => e.name === 'CubicDetachedVertex');
+    expect(vertices).toHaveLength(4);
+    const attr = (e: Element, k: string) => Number(e.attrs.find(([n]) => n === k)?.[1]);
+    const first = vertices[0] as Element;
+    // At [0, 0] the line arrives from [0, 30] (its in handle points down) and leaves for [30, 0].
+    expect(attr(first, 'inRotation')).toBeCloseTo(Math.PI / 2, 3);
+    expect(attr(first, 'outRotation')).toBeCloseTo(0, 3);
+    expect(attr(first, 'outDistance')).toBeCloseTo(10, 3);
+    expect(Object.keys(fig.boilTracks()).sort()).toEqual(['sq.0', 'sq.1', 'sq.2', 'sq.3']);
+  });
+
+  test('a piece that crawls whole moves every vertex as one, its shape kept', () => {
+    const fig = figure(ids(), 'Test', 7, 0, DIRECTION);
+    const disc = ellipse(20, 10, 6, 6, 12);
+    piece(fig, 'curl', disc, { color: '#71442e', light: '#71442e' });
+    const own = fig.boilTracks();
+    const whole = figure(ids(), 'Test', 7, 0, DIRECTION);
+    whole.boilWhole('curl', disc, 0.9);
+    const tracks = whole.boilTracks();
+    // Each tick, every vertex lies off where it was cut by the one offset.
+    const offsets = (t: typeof tracks, tick: number) =>
+      disc.map((p, i) => {
+        const at = t[`curl.${i}`] ?? {};
+        return [(at['x']?.[tick]?.[1] ?? 0) - p[0], (at['y']?.[tick]?.[1] ?? 0) - p[1]];
+      });
+    for (const tick of [0, 13, 31]) {
+      const [first, ...rest] = offsets(tracks, tick);
+      for (const o of rest) {
+        expect(o[0] ?? 0).toBeCloseTo(first?.[0] ?? 0, 9);
+        expect(o[1] ?? 0).toBeCloseTo(first?.[1] ?? 0, 9);
+      }
+    }
+    // A piece that crawls by its vertices moves each its own way.
+    const [a, b] = offsets(own, 13);
+    expect(a).not.toEqual(b);
+  });
+
   test('the crease runs along the one light, from the upper left', () => {
     const { start, end, at } = creaseOf({ x0: -10, y0: -20, x1: 30, y1: 40 });
     expect(Math.atan2(end[1] - start[1], end[0] - start[0])).toBeCloseTo(LIGHT.toward);

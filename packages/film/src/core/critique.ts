@@ -114,25 +114,36 @@ const stagingLines = (staging: CritiqueStaging): ReadonlyArray<string> =>
     ],
   });
 
-/** What the figures were drawn in: a film's scene (a rig drawn there), or a cast sheet (a view painted from the concept, that the rigs are traced from). */
-export type CritiqueDrawn = 'scene' | 'sheet';
+/**
+ * What the figures were drawn in: a film's scene (a rig drawn there), a cast
+ * sheet (a view painted from the concept, that the rigs are traced from), or
+ * a cast render (a rig drawn in one kept view of its member's sheet, the
+ * concept that kept view).
+ */
+export type CritiqueDrawn = 'scene' | 'sheet' | 'render';
 
 /** The packet's opening: what each figure is, by what it was drawn in. */
 const drawnIn = (drawn: CritiqueDrawn, place: string): string =>
   (drawn === 'sheet' &&
     `Each figure below is one view of a cast sheet (${place}), painted from a concept: the film's rigs are traced from the sheet, so what differs here differs in every scene. Hold each view to its concept in the face, the proportion, the palette, the sleeves and the artifacts, and to its layout's words in the angle and the pose.`) ||
+  (drawn === 'render' &&
+    `Each figure below is a Rive rig drawn in one view of a cast member's kept sheet (${place}): the concept is that kept view, cut from the sheet the owner kept, and the render is the rig in the pose the view shows, laid in the view's box at the sheet's one scale, with any held thing, seat or table drawn as a plain cut-paper piece. Every scene draws this rig, so what differs here differs in every scene. Hold each render to its kept view in the angle, the face, the pose, the proportion, the palette, the sleeves and the artifacts.`) ||
   `Each figure below was drawn in a film's scene (${place}) from a painted concept.`;
 
-/** How a head's angle is judged: a scene's figure holds its concept's angle; a sheet's view holds the angle its layout asks for. */
+/** How a head's angle is judged: a scene's figure and a render hold their concept's angle; a sheet's view holds the angle its layout asks for. */
 const angleRule = (drawn: CritiqueDrawn): string =>
   (drawn === 'sheet' &&
     "On a sheet each view's turn and tilt are what its layout asks (said under it), never the concept's: an angle is a finding only where the view differs from its layout's words.") ||
+  (drawn === 'render' &&
+    "The kept view's turn and tilt are the design (its layout's words, said under it, say what it was painted to show): a render turned or tilted otherwise is a finding.") ||
   "A concept's angle is design, never a slip: a different angle is a finding.";
 
-/** On a sheet, the gesture each view's layout asks for is the design. */
+/** On a sheet, the gesture each view's layout asks for is the design; on a render, the kept view's gesture is. */
 const poseRule = (drawn: CritiqueDrawn): string =>
   (drawn === 'sheet' &&
     ' On a sheet each view holds the gesture its layout asks (said under it): a raised hand, a bow or a lean the layout asks for is never a finding.') ||
+  (drawn === 'render' &&
+    " The kept view's gesture is the design: a hand placed otherwise, another lean or another gesture is a finding.") ||
   '';
 
 /** The packet the counsel reads: what to compare, the rules, each figure's crops and flags, and the answer's form. */

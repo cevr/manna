@@ -4347,6 +4347,96 @@ The form of an entry, each field on its own line:
 - **Cause:** It counted syllables and notes without recording each part's follow level.
 - **Guard:** code: `packages/hymnal/src/playback.test.ts` `playback sidecars stay one line, hymn-local and below 17 MB`
 
+### rig-silhouette-outside-the-sheet
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "the silhouette sits about 4.5 px outside the sheet's on every edge"
+- **Source:** iio-cold-cast/review-art-1.md F2, the review's second finding, headed G2
+- **Wrong:** lead-feast's render 40 laid every traced part's edge about 4.5 px outside the sheet's, so his body came out 5-6% wide, and the cast render showed it to a model, which did not name it.
+- **Cause:** The cast render measured proportions and asked a model; nothing compared the outer edge row by row. `film concept render` now measures `silhouette.edge` per band and shows a view to the critic only once every fit row passes.
+- **Guard:** code: `packages/film/src/tools/fit-rows.slow.test.ts` `render 40's 4.5 px offset fails silhouette.edge, render 155 passes every row`, `packages/film/src/tools/cast-render.slow.test.ts` `the critique waits on every fit bar`
+
+### rig-face-outline-kinks
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "face-outline kinks"
+- **Source:** iio-cold-cast/review-art-2.md F4, the review's fourth finding, headed M3
+- **Wrong:** The traced face outlines kept corners the sheet does not draw: a 25 px ink run under the front's right ear on render 95, bumps on the busts' jaws, a nose hook on both profiles.
+- **Cause:** The tracer kept a sharp turn wherever its mask stepped, and no measure read the outline's turns against the sheet's. `outline.turns` now does, per band, and holds the critique.
+- **Guard:** code: `packages/film/src/tools/fit-rows.slow.test.ts` `render 95's kink in the front's head fails outline.turns there, render 155's head passes`
+
+### rig-seated-pose-chest-fold
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "an "A" on his chest"
+- **Source:** iio-cold-cast/review-art-3.md F2, the review's second finding, headed a2
+- **Wrong:** poses-3's raised sleeve folded into two mauve strokes closed by a dark bar at row 285, where the sheet lays a mid-tone and leaves the bottom open.
+- **Cause:** The fold was a tone the tracer read whole, and only a reviewer's scanline found the bar. The scanline is now the view's probe, and its critique waits on it.
+- **Guard:** code: `apps/animations/src/films/in-its-order/rigs/cast.ts` `name: 'chestFold'`
+
+### rig-seated-pose-off-the-stool
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "he sits in front of the stool, not on it"
+- **Source:** iio-cold-cast/review-art-3.md F1, the review's first finding, headed a1
+- **Wrong:** poses-3 drew the stool's seat behind his robe at row 375, where the sheet runs the seat in under his mantle.
+- **Cause:** The prop's place was read by eye, and a model shown the side-by-side did not name it. The seat's row is now the view's probe.
+- **Guard:** code: `apps/animations/src/films/in-its-order/rigs/cast.ts` `name: 'seat'`
+
+### rig-nod-cuts-the-ears
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "the nod shortens his face and cuts his ears, and the head still reads level"
+- **Source:** iio-cold-cast/review-art-3.md F4, the review's fourth finding, headed a4
+- **Wrong:** heads-6's nod ended his left ear near row 150 against the sheet's 165, and raised his chin's line.
+- **Cause:** A nod moves the ear and the chin, and nothing measured either after one. The chin's column and the ear's row are now probes on every bust that has them.
+- **Guard:** code: `apps/animations/src/films/in-its-order/rigs/cast.ts` `EAR_PROBE`, `apps/animations/src/films/in-its-order/rigs/cast.ts` `CHIN_PROBE`
+
+### rig-frown-sits-high
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "the frown sits 20 px high"
+- **Source:** iio-cold-cast/review-art-3.md F5, the review's fifth finding, headed a5
+- **Wrong:** heads-3's frown sat 20 px above the sheet's mouth.
+- **Cause:** A mouth's row is a mark inside the face no proportion row measures. The mouth's column is now the view's probe.
+- **Guard:** code: `apps/animations/src/films/in-its-order/rigs/cast.ts` `name: 'mouth'`
+
+### fit-probe-one-way
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "probes discard colour boundaries and ignore added transitions"
+- **Source:** rig-fit/round-1-findings.md F1, the review's first finding
+- **Wrong:** A probe read every paper as one class and matched only the sheet's changes to the render's, so an 8 px shift of the teal/cream seam scored 0 and a stroke the render added inside a part passed every row.
+- **Cause:** The probe was written to find the sheet's edges on the render, and an added line was left to `ink.edge`, whose mean hides one stroke. A probe now matches each change of class in order on both crops, between two papers too, and a change on either with no match fails it.
+- **Guard:** code: `packages/film/src/core/fit-rows.test.ts` `a probe fails where the seam between two papers moves 8 px, and passes where it stays`, `packages/film/src/core/fit-rows.test.ts` `a probe fails where the render draws a stroke the sheet does not, alone or beside one it does`
+
+### fit-labels-dropped-silently
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "unreadable labels silently remove checks"
+- **Source:** rig-fit/round-1-findings.md F2, the review's second finding
+- **Wrong:** A label whose class, or whose anchor's class, the fit rows do not read was dropped with every label named after it, so lead-feast's back had no part rows and an erased hand there passed.
+- **Cause:** The part rows kept only the labels the classes could read, and a missing row reads as a pass. A compared label that picks no region on a crop, itself or through a label its rules name, now fails both its rows and says which label and why.
+- **Guard:** code: `packages/film/src/core/fit-rows.test.ts` `an erased hand fails its part rows, whether its anchor is read or no class reads it, saying why`
+
+### fit-grain-hides-slivers
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "speck removal hides qualifying slivers"
+- **Source:** rig-fit/round-1-findings.md F3, the review's third finding
+- **Wrong:** A 2 x 10 px strip of cream cut loose of the figure was taken for the ground's grain, so `slivers` scored 0.
+- **Cause:** Every piece under 24 px off the figure was ground, thin or not. A piece that is a thin strip, 2 px thick or less and 6 px long or more, now stays a sliver.
+- **Guard:** code: `packages/film/src/core/fit-rows.test.ts` `a thin strip of paper off the figure is a sliver, not the ground's grain; a thick or a short one is grain`, `packages/film/src/core/fit-rows.slow.test.ts` `a strip 2 px thick or less and 6 px long or more is a sliver, wherever it lies; any other is not`
+
 ### init-refresh-outgoing-wal
 
 - **Date:** 2026-10-27

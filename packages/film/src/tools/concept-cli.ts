@@ -49,6 +49,19 @@
 //     unless `--replace` with `--ask` replaces it on his answer to that ask:
 //     the old kept sheet and views move into `kept/replaced/`, the record
 //     names both.
+//
+//   film concept trace <spec.ts> [--view <name> ...]
+//     a kept sheet's views traced into the tables a rig is composed from
+//     (`trace-cli.ts`, `core/trace.ts`), each written beside the spec.
+//
+//   film concept render <film> <member> [--kind turnaround|poses|heads] [--no-critique]
+//   film concept render <film> <member> --render <n> --finding <kind>-<view>/<id> --stands <why>
+//     the member's cast render (`cast-render.ts`): every kept view of his
+//     sheets drawn by its rig in its pose from the film's `rigs/cast.ts`, on
+//     the scenes' own draw path, cut by its kept box, measured against the
+//     kept view, laid beside it at 1:1 and critiqued, into
+//     `out/<film>/cast/<member>/render/<n>/`; or a finding of render n
+//     answered: it stands, and why (a fix is a new render).
 
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
@@ -88,6 +101,9 @@ import { measureFigure } from '../core/figure.ts';
 import { castSheetBrief, turnaroundLayout } from './cast-sheet-brief.ts';
 import { FilmFolder, filmNamed } from './film-repo.ts';
 import { ImageRoute } from './image-route.ts';
+import { trace } from './trace-cli.ts';
+import { render } from './cast-render-cli.ts';
+import type { Pages } from './pages.ts';
 import { decodePng, encodePng } from './png.ts';
 
 /** A `--concept` that is not `<crop.png>:<view>`, or whose crop shows no figure. */
@@ -536,10 +552,22 @@ const keep = Command.make(
 );
 
 /** `film concept` over the app's house look, its critique over the app's figure rules. */
-export const concept = (house: HouseLook, rules: ReadonlyArray<CritiqueRule>) =>
+export const concept = <E, R>(
+  house: HouseLook,
+  rules: ReadonlyArray<CritiqueRule>,
+  pages: Layer.Layer<Pages, E, R>,
+) =>
   Command.make('concept').pipe(
     Command.withDescription(
       "A cast member's sheet: its brief, a try measured, tries drawn and measured, a try critiqued, a try kept",
     ),
-    Command.withSubcommands([brief(house), measure, cast(house), critique(rules), keep]),
+    Command.withSubcommands([
+      brief(house),
+      measure,
+      cast(house),
+      critique(rules),
+      keep,
+      render(pages, rules),
+      trace,
+    ]),
   );

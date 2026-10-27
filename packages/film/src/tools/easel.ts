@@ -77,6 +77,7 @@ import type { SourceRefused } from '../core/refusals.ts';
 import { Browser, type FramePage } from './browser.ts';
 import { FilmFolder, type FilmName, type FilmPaths } from './film-repo.ts';
 import { LabPage, type PagesNow } from './lab-page.ts';
+import { castFolder } from './cast-library.ts';
 import { decodePng, encodePng } from './png.ts';
 import { PALETTE_FILE, paletteSwaps } from './wedge.ts';
 
@@ -102,13 +103,30 @@ type MatchError =
 /** A match's still: the whole frame, plain, as a PNG, captions off. */
 const MATCH_VIEW = { mode: 'plain', captions: false, format: 'image/png' } as const;
 
-/** Where a concept image is: a set's file in the out folder beside the film's, a Board try in the film's `board/`. */
-const conceptPath = (path: Path.Path, paths: FilmPaths, image: ConceptImage): string =>
+/**
+ * Where a concept image is: a set's file in the out folder beside the
+ * film's, a Board try in the film's `board/`, a cast member's kept sheet in
+ * the member's record (`castFolder`: the film's own role's before the
+ * library's); a member with no record is said as why, never thrown.
+ */
+const conceptPath = (
+  path: Path.Path,
+  paths: FilmPaths,
+  image: ConceptImage,
+): Effect.Effect<string, string, FilmFolder | FileSystem.FileSystem | Path.Path> =>
   Match.value(image).pipe(
     Match.when({ set: Match.string }, (set) =>
-      path.join(path.dirname(paths.out), set.set, set.file),
+      Effect.succeed(path.join(path.dirname(paths.out), set.set, set.file)),
     ),
-    Match.when({ board: Match.string }, (board) => path.join(paths.dir, 'board', board.board)),
+    Match.when({ board: Match.string }, (board) =>
+      Effect.succeed(path.join(paths.dir, 'board', board.board)),
+    ),
+    Match.when({ cast: Match.string }, (cast) =>
+      castFolder(paths.name, cast.cast).pipe(
+        Effect.map((folder) => path.join(folder, 'kept', `${cast.sheet}.png`)),
+        Effect.mapError((e) => e.message),
+      ),
+    ),
     Match.exhaustive,
   );
 
@@ -416,7 +434,16 @@ export class Easel extends Context.Service<Easel, EaselService>()('@manna/film/t
             const declared = Option.fromUndefinedOr(mark.concept);
             if (Option.isNone(declared)) return unmatched('its rig declares no concept');
             const concept = declared.value;
-            const file = conceptPath(path, paths, concept.image);
+            const found = yield* Effect.result(
+              conceptPath(path, paths, concept.image).pipe(
+                Effect.provideService(FilmFolder, folder),
+                Effect.provideService(FileSystem.FileSystem, fs),
+                Effect.provideService(Path.Path, path),
+              ),
+            );
+            if (Result.isFailure(found))
+              return unmatched(`its concept ${conceptImageName(concept.image)}: ${found.failure}`);
+            const file = found.success;
             const bytes = yield* Effect.result(fs.readFile(file));
             if (Result.isFailure(bytes))
               return unmatched(`its concept ${conceptImageName(concept.image)} is not at ${file}`);

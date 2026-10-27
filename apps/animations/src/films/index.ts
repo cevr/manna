@@ -1,16 +1,19 @@
 // Every film the player and the renderer know about, loaded on demand, and
 // the pages the player mounts: each film, each of its shorts (`shorts.ts`)
 // under `<film>/shorts/<id>`, and each talk (`talkFilms`: the speaker's own
-// take, cut on his words), a film of its own under its folder's name.
+// take, cut on his words), a film of its own under its folder's name; and
+// each cast member's render under `<film>/cast/<member>` (`castPages`: his
+// rigs in every kept view of his sheets, for `film concept render`).
 
 import { shortPages } from '@manna/film/canvas';
-import { type Films, narratedFilms, talkFilms } from '@manna/film/player';
+import { type Films, castPages, narratedFilms, talkFilms } from '@manna/film/player';
 import { faces } from './faces.ts';
 import { shorts as righteousnessByFaithShorts } from './righteousness-by-faith/shorts.ts';
 
 const righteousnessByFaith = () => import('./righteousness-by-faith/film.ts');
 const coldStudies = () => import('./cold-studies/film.ts');
 const inItsOrder = () => import('./in-its-order/film.ts');
+const inItsOrderCast = () => import('./in-its-order/rigs/cast.ts');
 
 /**
  * The films, by folder: each key names a folder under `src/films`, and the
@@ -29,7 +32,7 @@ export const films = narratedFilms(
   faces,
 );
 
-/** Every page the player serves: the films, then each film's shorts. */
+/** Every page the player serves: the films, each film's shorts, and each film's cast renders (`film concept render`). */
 export const pages = {
   ...films,
   ...shortPages(
@@ -37,4 +40,5 @@ export const pages = {
     films['righteousness-by-faith'],
     righteousnessByFaithShorts,
   ),
+  ...castPages('in-its-order', ['lead-feast', 'feast-mother'], inItsOrderCast),
 } satisfies Films;

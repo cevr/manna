@@ -3,6 +3,7 @@ import { Record as Rec } from 'effect';
 import { DIRECTION } from './house.ts';
 import { figure, isComposed } from './figure.ts';
 import { overridesIn } from './override.ts';
+import { tracedFigure } from './traced.ts';
 import { paper } from './paper.ts';
 import { ARM_SIDES, Arm, JointedArm, armHand, armReach } from './parts/arm.ts';
 import { Beard } from './parts/beard.ts';
@@ -21,7 +22,7 @@ import { GivenRobe, type State, Stain } from './parts/states.ts';
 import { Stature } from './parts/stature.ts';
 import { FIGURE_TIMELINES, HAND_TIMELINES, drawFigure, drawHand } from './rig/draw.ts';
 import { FACE, type FaceKnob, type Pt, ellipse, kitMarks, figure as rigOf } from './rig/parts.ts';
-import { fragment, ids } from './rig/rml.ts';
+import { type Element, el, fragment, ids } from './rig/rml.ts';
 import { roundedPolygon, tucked, tuckedRimmed } from './rig/shapes.ts';
 
 // A figure composed of the house's parts, each checked as it is made: the
@@ -596,6 +597,120 @@ describe('a bearded head, and the parts of a head turned and of bare feet', () =
     expect(printed(rml, 'headPaper')).toEqual(toMillionth(ellipse(0, 0, 50, 60, 12)));
   });
 
+  test("a glad face's smile is its own mark, shown by glad, near twice as wide as the kit's mouth line", () => {
+    const face = KitA({ x: 0, y: 0, scale: 1, gaze: [0, 12], extra: ['glad'] });
+    const rml = drawnOf(figure({ ...standingOf(), face }));
+    const xs = printed(rml, 'gladMouth').map(([x]) => x);
+    const half = kitMarks().mouthHalf;
+    expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(2 * 1.75 * half, 3);
+    const smile = rml.slice(rml.indexOf('name="gladMouth"'), rml.indexOf('name="gladLSide"'));
+    expect(smile).toMatch(/<DataBindContext sourcePathIds="[^"]+" propertyKey="18"/);
+    const plain = drawnOf(
+      figure({ ...standingOf(), face: KitA({ x: 0, y: 0, scale: 1, gaze: [0, 12] }) }),
+    );
+    expect(plain).not.toContain('gladMouth');
+  });
+
+  test("a face's slides are its own to take: marksY moves every mark with its rest, mouthY the kit's mouth alone, mouthW its line's width; a face that names none has none", () => {
+    const extra = ['marksY', 'mouthY', 'mouthW'] as const;
+    const slid = figure({
+      ...standingOf(),
+      face: KitA({ x: 0, y: 0, scale: 1, gaze: [0, 12], extra }),
+    });
+    expect(slid.knobs).toMatchObject({ marksY: 0, mouthY: 0, mouthW: 1 });
+    const tree = el('Rive', {}, drawFigure(rigOf(ids(), 'Figure', 1, 0, DIRECTION), slid));
+    const nameOf = (e: Element) => e.attrs.find(([k]) => k === 'name')?.[1];
+    const named = (e: Element, key: string): Element | undefined =>
+      nameOf(e) === key ? e : e.children.map((c) => named(c, key)).find((c) => c !== undefined);
+    const inside = (key: string) => (named(tree, key)?.children ?? []).map(nameOf);
+    const bound = (key: string) =>
+      (named(tree, key)?.children ?? [])
+        .filter((c) => c.name === 'DataBindContext')
+        .map((c) => c.attrs.find(([k]) => k === 'propertyKey')?.[1]);
+    expect(inside('marksSlide')).toEqual([undefined, 'features', 'faceRest']);
+    expect(bound('marksSlide')).toEqual([14]);
+    expect(inside('mouthSlide')).toEqual([undefined, 'mouth']);
+    expect(bound('mouthSlide')).toEqual([14]);
+    expect(bound('mouthLine')).toEqual([18, 16]);
+    const plain = drawnOf(figure(standingOf()));
+    for (const key of ['marksSlide', 'mouthSlide']) expect(plain).not.toContain(`name="${key}"`);
+    const plainTree = el(
+      'Rive',
+      {},
+      drawFigure(rigOf(ids(), 'Figure', 1, 0, DIRECTION), figure(standingOf())),
+    );
+    expect(
+      (named(plainTree, 'mouthLine')?.children ?? []).filter((c) => c.name === 'DataBindContext'),
+    ).toHaveLength(1);
+  });
+
+  test("a glad face's shut eye is a shallow arc, its rise under a fifth of its width; a wince's chevron no taller than its eye's 0.6", () => {
+    const face = KitA({ x: 0, y: 0, scale: 1, gaze: [0, 12], extra: ['glad', 'wince'] });
+    const rml = drawnOf(figure({ ...standingOf(), face }));
+    const span = (pts: ReadonlyArray<Pt>, i: 0 | 1) =>
+      Math.max(...pts.map((p) => p[i])) - Math.min(...pts.map((p) => p[i]));
+    const arch = printed(rml, 'gladL');
+    expect(span(arch, 1) / span(arch, 0)).toBeLessThan(0.2);
+    const chevron = Array.from(
+      rml
+        .slice(rml.indexOf('name="winceLSide"'), rml.indexOf('name="winceRSide"'))
+        .matchAll(/<StraightVertex x="([^"]+)" y="([^"]+)"/g),
+      (m): Pt => [Number(m[1]), Number(m[2])],
+    );
+    expect(chevron).toHaveLength(3);
+    expect(span(chevron, 1)).toBeLessThanOrEqual(0.6 * kitMarks().eye[1] + 1e-6);
+  });
+
+  test('curled hair cuts each curl as its own disc over the mass, where and as wide as given', () => {
+    const curls = [
+      { at: [-20, -50] as const, r: 8 },
+      { at: [15, -55] as const, r: 10 },
+    ];
+    const hair = Hair.Curls({
+      outline: ellipse(0, -40, 50, 25, 12),
+      paper: HAIR,
+      curls,
+      shade: '#3a2a20',
+      crescent: 0.35,
+    });
+    const rml = drawnOf(figure({ ...standingOf(), hair }));
+    const at = (name: string) => rml.indexOf(`name="${name}"`);
+    expect(at('curl0')).toBeGreaterThan(-1);
+    expect(at('curl0')).toBeLessThan(at('curl1'));
+    expect(at('curl1')).toBeLessThan(at('hair'));
+    const boxes = curls.map((_, i) => {
+      const pts = printed(rml, `curl${i}`);
+      const xs = pts.map((p) => p[0]);
+      const ys = pts.map((p) => p[1]);
+      return [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    });
+    curls.forEach((c, i) => {
+      const [x0 = 0, x1 = 0, y0 = 0, y1 = 0] = boxes[i] ?? [];
+      expect((x0 + x1) / 2).toBeCloseTo(c.at[0], 0);
+      expect((y0 + y1) / 2).toBeCloseTo(c.at[1], 0);
+      expect((x1 - x0) / 2).toBeCloseTo(c.r, 0);
+    });
+  });
+
+  test("a kit laid over lies above the hair cut in its head, and under it unless given (a cut's list runs top first)", () => {
+    const at = (rml: string, name: string) => rml.indexOf(`name="${name}"`);
+    const under = drawnOf(
+      figure({
+        ...standingOf(),
+        face: KitA({ x: 0, y: 0, scale: 1, rotation: 0.1, gaze: [0, 12] }),
+      }),
+    );
+    const over = drawnOf(
+      figure({
+        ...standingOf(),
+        face: KitA({ x: 0, y: 0, scale: 1, rotation: 0.1, gaze: [0, 12], layer: 'over' }),
+      }),
+    );
+    expect(at(under, 'faceTurn')).toBeGreaterThan(at(under, 'hair'));
+    expect(at(over, 'faceTurn')).toBeLessThan(at(over, 'hair'));
+    expect(at(over, 'headPaper')).toBeGreaterThan(at(over, 'hair'));
+  });
+
   test('a kit turned on its head turns about its place, and its open mouth turns with it', () => {
     const turn = 0.3;
     const face = KitA({ x: -8, y: 8, scale: 1.3, rotation: turn, gaze: [-300, 40] });
@@ -633,6 +748,28 @@ describe('a bearded head, and the parts of a head turned and of bare feet', () =
     expect(rml).not.toContain('name="ear"');
   });
 
+  test("an ear's tones are laid on it as its light and shade, on each ear where both show; an ear with none lays none", () => {
+    const lit: Pt[] = [
+      [-50, 2],
+      [-44, 2],
+      [-44, 18],
+      [-50, 18],
+    ];
+    const both = {
+      near: ellipse(-45, 10, 6, 10, 10),
+      far: ellipse(45, 10, 6, 10, 10),
+      paper: FLAT,
+    };
+    const toned = Ear.Both({ ...both, tones: [{ pts: lit, color: '#fbc580' }] });
+    const rml = drawnOf(figure({ ...standingOf(), ear: toned }));
+    expect(printed(rml, 'earNearTone0')).toEqual(lit);
+    expect(rml).toMatch(/name="earNearTone0"[^]*?colorValue="FFFBC580"/);
+    expect(rml).toContain('name="earFarTone0"');
+    expect(drawnOf(figure({ ...standingOf(), ear: Ear.Both(both) }))).not.toContain(
+      'name="earNearTone0"',
+    );
+  });
+
   test('sandals: each bare foot cut from its corners, the near one first, its strap and then its sole laid on it', () => {
     const rml = drawnOf(figure({ ...standingOf(), feet: sandals }));
     const places = placesOf(rml, ['footNear', 'footFar']);
@@ -654,6 +791,16 @@ describe('a bearded head, and the parts of a head turned and of bare feet', () =
       [64, -6.5],
       [64, 4],
       [14, 4],
+    ]);
+  });
+
+  test('sandals whose sheet paints the sole into the line under the foot: each sole runs only as far above the ground as they say', () => {
+    const rml = drawnOf(figure({ ...standingOf(), feet: { ...sandals, soleDepth: 2 } }));
+    expect(printed(rml, 'footNearTone1')).toEqual([
+      [-64, -2],
+      [-14, -2],
+      [-14, 4],
+      [-64, 4],
     ]);
   });
 
@@ -1331,6 +1478,20 @@ describe('the parts', () => {
         );
   });
 
+  test("a curl's shade is held to GreyShade as its paper's is: black or a grey refused, a hue of its own kept", () => {
+    const curled = (shade: `#${string}`) => () =>
+      Hair.Curls({
+        outline: ellipse(0, -40, 50, 25, 12),
+        paper: HAIR,
+        curls: [{ at: [0, -40], r: 8 }],
+        shade,
+        crescent: 0.35,
+      });
+    for (const shade of ['#000000', '#555555'] as const)
+      expect(curled(shade)).toThrow(/Hair.Curls refused by GreyShade/);
+    expect(curled('#3a2a20')).not.toThrow();
+  });
+
   test('an outline cut from its corners with two in turn at one point is refused, as is a tunic whose neck is not above its hem', () => {
     const doubled: Pt[] = [
       [-40, -330],
@@ -1870,6 +2031,25 @@ describe('an arm bent at its elbow, trousers, and an open chin', () => {
     }
   });
 
+  test('bends with the elbow out from the middle when asked, and still reaches the point', () => {
+    const out = Math.sign(bent.pivot[0]) || 1;
+    const outward = [
+      [110, -220],
+      [-20, -250],
+      [100, -300],
+    ].map((target) => {
+      const pt: Pt = [target[0] ?? 0, target[1] ?? 0];
+      const asked = armReach(bent, pt, 'out');
+      const rested = armReach(bent, pt);
+      expect(asked.hand[0]).toBeCloseTo(pt[0], 6);
+      expect(asked.hand[1]).toBeCloseTo(pt[1], 6);
+      const [e, r] = [elbowAt(asked.turn), elbowAt(rested.turn)];
+      expect((e[0] - r[0]) * out).toBeGreaterThanOrEqual(-1e-9);
+      return (e[0] - r[0]) * out;
+    });
+    expect(Math.max(...outward)).toBeGreaterThan(1);
+  });
+
   test('trousers draw two legs and a shoe under each in one outline, the shoes over the legs', () => {
     const rml = drawnOf(figure(openOf()));
     const places = placesOf(rml, ['legs', 'shoeL', 'shoeR', 'legL', 'legR', 'legsInk']);
@@ -1898,5 +2078,118 @@ describe('an arm bent at its elbow, trousers, and an open chin', () => {
     }
     const shod = drawnOf(figure({ ...standingOf(), arms: { far: bent } }));
     expect(shod).not.toContain('<DrawTarget');
+  });
+});
+
+/** A sleeve `half` wide each way of the line from `a` to `b`, sheet pixels. */
+const sleeveAlong = (a: Pt, b: Pt, half: number): Pt[] => {
+  const l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+  const [nx, ny] = [(-(b[1] - a[1]) / l) * half, ((b[0] - a[0]) / l) * half];
+  return [
+    [a[0] + nx, a[1] + ny],
+    [b[0] + nx, b[1] + ny],
+    [b[0] - nx, b[1] - ny],
+    [a[0] - nx, a[1] - ny],
+  ];
+};
+
+/** A figure traced from a sheet at one unit a pixel: a round head, a square garment, a hanging near sleeve, and a far sleeve as `far` gives it. */
+const tracedOf = (far: Parameters<typeof tracedFigure>[0]['arms']['far']) =>
+  tracedFigure({
+    concept: CONCEPT,
+    scale: 1,
+    headAt: [100, 100],
+    feet: [100, 450],
+    head: { view: 'front', outline: ellipse(100, 100, 40, 44, 16), paper: SKIN },
+    face: {
+      marks: {
+        eyes: [
+          [85, 95],
+          [115, 95],
+        ],
+        eye: [4, 6],
+        brows: [
+          [
+            [78, 82],
+            [92, 82],
+          ],
+          [
+            [108, 82],
+            [122, 82],
+          ],
+        ],
+        brow: 3,
+        mouth: [
+          [92, 120],
+          [108, 120],
+        ],
+        mouthLine: 3,
+      },
+      turn: 0,
+      gaze: [0, 0],
+    },
+    body: {
+      outline: [
+        [50, 145],
+        [150, 145],
+        [160, 420],
+        [40, 420],
+      ],
+      paper: WHITE,
+    },
+    arms: {
+      near: {
+        outline: sleeveAlong([55, 150], [45, 300], 12),
+        hand: { at: [45, 305], r: 9 },
+        paper: WHITE,
+      },
+      far,
+    },
+    feet_: {
+      near: {
+        outline: [
+          [60, 420],
+          [95, 420],
+          [95, 450],
+          [60, 450],
+        ],
+      },
+      far: {
+        outline: [
+          [105, 420],
+          [140, 420],
+          [140, 450],
+          [105, 450],
+        ],
+      },
+      paper: FLAT,
+      sole: '#6b4a3a',
+    },
+    hands: SKIN,
+  });
+
+describe('a traced figure', () => {
+  test('a raised arm turns about the pivot it is given: the arm keeps that pivot, and its hand turned 45° lands where it would turned about it', () => {
+    const pivot: Pt = [144, 176];
+    const hand: Pt = [245, 94];
+    const { arms } = tracedOf({
+      outline: sleeveAlong([132, 186], [240, 98], 13),
+      hand: { at: hand, r: 9 },
+      paper: WHITE,
+      pivot,
+      root: 'traced',
+    });
+    // The figure's units: one a sheet pixel, about its feet.
+    const fromFeet = ([x, y]: Pt): Pt => [x - 100, y - 450];
+    expect(arms.far.pivot).toEqual(fromFeet(pivot));
+    const [px, py] = fromFeet(pivot);
+    const [hx, hy] = fromFeet(hand);
+    const by = Math.PI / 4;
+    const want: Pt = [
+      px + (hx - px) * Math.cos(by) - (hy - py) * Math.sin(by),
+      py + (hx - px) * Math.sin(by) + (hy - py) * Math.cos(by),
+    ];
+    const got = armHand(arms.far, by);
+    expect(Math.hypot(got[0] - want[0], got[1] - want[1])).toBeLessThan(0.01);
   });
 });
