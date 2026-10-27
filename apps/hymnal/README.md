@@ -3,6 +3,20 @@
 The hymnal app (One). This README covers how the app reads the hymns, how it
 plays their recordings, and where the recordings live and how they got there.
 
+## Web development
+
+Use the real One client to verify web startup: follow
+[Web client](../../.claude/skills/verify-hymnal/features/web-client.md)
+for cold startup, migration from an existing optimizer cache, a warm restart
+and the hydrated production build. Server HTML can contain the list and
+stanzas even when the client fails before mounting.
+
+`vite.config.ts` keeps Gesture Handler's deep Reanimated TSX probe and its
+nested CommonJS helpers inside the web dependency optimizer. The explicit
+deep include changes Vite's cache hash too; changing only the eligible
+extensions does not invalidate an existing cache. The validation script
+stays included so its CommonJS default export is available.
+
 ## The reader
 
 One screen and a stack: the home screen lists all 695 hymns, number and

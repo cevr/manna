@@ -142,10 +142,13 @@ What the drivers do that a step does not show:
   about 1 s. When a snapshot takes 2 s (a loaded host), `adrift` is a coin
   toss: read the snapshot's time in the JSON, and claim `adrift` only from a
   run whose snapshots take about 1 s.
-- **The web dev client** (D3): `sim open hymns/100 --expect "label=Stanza 1"`
-  on `--platform web` must answer `ok`, and its `sim snapshot` must hold no
-  `one-route-error-overlay` and no "Route failed to load". Run it once
-  after `sim boot --platform web`, before any web step.
+- **The web client** (D3): run [Web client](features/web-client.md) after
+  `sim boot --platform web`, before any web step. `sim open hymns/100
+  --expect "label=Stanza 1"` must answer `ok`, but server HTML alone can
+  satisfy it. Also prove hydration, a home row click and Open player →
+  Reading, with no route-error overlay or raw RNW CommonJS requests.
+  Use the recipe's numeric/boolean proof instead of snapshots, images,
+  recordings or console dumps; keep hymn words out of evidence.
 - **Frame readers.** Two readers of a screen recording, from the repo
   root, print one line per frame and read no words:
   `bun .claude/skills/verify-hymnal/scripts/bartop.ts <video.mp4> [from] [to]`
