@@ -142,6 +142,8 @@ hymn's move.
 
 ## The player
 
+Play on another hymn's page replaces the held hymn at that page's own start and saved Key. Navigation alone keeps the held hymn. `Command.Start({ track })` is the normal start/swap command for reader and browse controls. Each Start owns its status reads, including Starts in one clock millisecond; late replies cannot describe the replacement. A full sheet route for another hymn also offers that hymn's Play while the held hymn sounds. The bar and sheet share `PlayPage` and the same command.
+
 A hymn page plays the hymn's 1985 recording from `audioUrl(n, offset)`: a Play or
 Pause button in the accent (a `UIButton`'s title on iOS, an accent fill
 under the onAccent text on the web and Android), a bar to seek, and the time played and the

@@ -20,6 +20,7 @@ import { HymnScreen } from '~/reader/HymnScreen';
 import { StackHeader } from '~/test/stack';
 import { audioUrl } from '~/remote';
 import { theme } from '~/theme';
+import { book } from '~/follow/book';
 
 import { fakeDevice } from '../test/device';
 import { opened, opening, params, routed, safeArea, stack } from '../test/one';
@@ -999,6 +1000,53 @@ describe('the full player on the web’s stack', () => {
       page.find('[role="group"][aria-label="Recording"] [role="heading"]'),
       (found) => found.textContent,
     );
+
+  it.live('Play on page 3 moves follow from the former hymn to its first line', () =>
+    Effect.gen(function* () {
+      using page = mount(route(3));
+      page.send(Command.Start({ track: morning }));
+      page.device.now = { state: 'playing', positionMs: 90_000, durationMs: 151_000 };
+      yield* page.until(Player.$is('Playing'));
+      const selected = () =>
+        page
+          .all('[data-testid="line"]')
+          .flatMap((line, index) =>
+            Arr.filter([index], () => line.getAttribute('aria-selected') === 'true'),
+          );
+      expect(selected()).toEqual([]);
+      page.press('Play hymn 3');
+      yield* page.until(Player.$is('Loading'));
+      page.device.now = {
+        state: 'playing',
+        positionMs: Option.getOrThrow(book.of(3)).first + 3,
+        durationMs: 120_000,
+      };
+      yield* page.until(Player.$is('Playing'));
+      expect(selected()).toEqual([0]);
+      expect(Option.isNone(page.find('[aria-label="Pause hymn 100"]'))).toBe(true);
+      expect(Option.isSome(page.find('[aria-label="Pause hymn 3"]'))).toBe(true);
+    }),
+  );
+
+  it.live('a sheet for hymn 3 offers its Play while 100 sounds, then shows only hymn 3', () =>
+    Effect.gen(function* () {
+      using page = mount(sheetOn(three));
+      page.send(Command.Start({ track: morning }));
+      page.device.now = { state: 'playing', positionMs: 90_000, durationMs: 151_000 };
+      yield* page.until(Player.$is('Playing'));
+      expect(heading(page)).toEqual(Option.some(`100 ${morning.title}`));
+      expect(Option.isSome(page.find('[aria-label="Pause hymn 100"]'))).toBe(true);
+      page.press('Play hymn 3');
+      yield* page.until(Player.$is('Loading'));
+      expect(page.device.now.positionMs).toBe(0);
+      page.device.now = { state: 'playing', positionMs: 300, durationMs: 120_000 };
+      yield* page.until(Player.$is('Playing'));
+      expect(heading(page)).toEqual(Option.some(`3 ${three.title}`));
+      expect(Option.isSome(page.find('[aria-label="Pause hymn 3"]'))).toBe(true);
+      expect(Option.isNone(page.find('[aria-label="Pause hymn 100"]'))).toBe(true);
+      expect(page.device.played).toEqual([audioUrl(100), audioUrl(3)]);
+    }),
+  );
 
   it.live('opened from hymn 3’s page with nothing held, shows hymn 3 with Play and its bar', () =>
     Effect.sync(() => {

@@ -46,6 +46,7 @@ import { ThumbEvent } from './thumb';
 import { TitleGo, titleGoes } from './title';
 import { Toggle } from './Toggle';
 import { RecordingNotice } from './RecordingNotice';
+import { PlayPage } from './PlayPage';
 
 export function FullPlayer() {
   return Option.match(usePlayer(), {
@@ -79,17 +80,19 @@ function Sheet({ player }: { readonly player: HymnPlayer }) {
   const send = useAtomSet(player.send);
   return Bar.$match(bar, {
     Hidden: () => <Nothing />,
-    Shown: ({ track, state }) => <Held track={track} state={state} send={send} />,
+    Shown: ({ track, state, page }) => <Held track={track} state={state} page={page} send={send} />,
   });
 }
 
 function Held({
   track,
   state,
+  page,
   send,
 }: {
   readonly track: Track;
   readonly state: Player;
+  readonly page: Option.Option<Track>;
   readonly send: (command: Command) => void;
 }) {
   const accent = useAccent();
@@ -123,6 +126,10 @@ function Held({
           </View>
         </View>
         <View style={styles.row}>
+          {Option.match(page, {
+            onNone: () => <></>,
+            onSome: (track) => <PlayPage track={track} send={send} />,
+          })}
           <Toggle track={track} state={state} send={pressed} />
         </View>
       </View>

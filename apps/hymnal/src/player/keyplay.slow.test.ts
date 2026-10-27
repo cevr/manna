@@ -138,7 +138,11 @@ const native = (clock: Clock.Clock, recorded = 240_000) => {
   };
 };
 
-const open = (sound = true, recorded = 240_000) =>
+const open = (
+  sound = true,
+  recorded = 240_000,
+  timelineFor: (number: number) => Option.Option<Timeline> = () => Option.some(timeline),
+) =>
   Effect.gen(function* () {
     const clock = yield* TestClock.testClockWith(Effect.succeed);
     const fake = native(clock, recorded);
@@ -154,10 +158,9 @@ const open = (sound = true, recorded = 240_000) =>
     );
     const player = playerOn(
       Layer.mergeAll(
-        counted(
-          soundOn(recordingsOn(playback), () => Option.some(timeline), on),
-          seeks,
-        ).pipe(Layer.provide(clockLayer)),
+        counted(soundOn(recordingsOn(playback), timelineFor, on), seeks).pipe(
+          Layer.provide(clockLayer),
+        ),
         clockLayer,
         Layer.succeed(References.MinimumLogLevel, 'None'),
       ),
@@ -1180,6 +1183,41 @@ for (const state of [
   'Stopped',
   'Failed',
 ] as const) {
+  for (const failed of [false, true])
+    it.effect(
+      `playswap Start from ${state} keeps the new hymn through old replies failed=${failed}`,
+      () =>
+        Effect.gen(function* () {
+          using app = yield* open();
+          yield* enterState(app, state);
+          expect(app.state()._tag).toBe(state);
+          app.move(3, 2, 7);
+          app.send(Command.Start({ track: other }));
+          yield* app.playing;
+          expect(app.registry.get(app.player.recording)).toEqual(
+            Option.some({ number: 3, requested: 2, effective: 2 }),
+          );
+          expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(0);
+          // Return to the former page: this is a new Start, never its old place.
+          app.move(100, -2, 11);
+          app.send(Command.Start({ track }));
+          yield* app.playing;
+          const selected = Option.some({ number: 100, requested: -2, effective: -2 });
+          expect(app.registry.get(app.player.recording)).toEqual(selected);
+          expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(0);
+          const calls = app.calls.length;
+          for (const pending of app.pending) pending.release(failed);
+          yield* app.tick();
+          expect(app.state()._tag).toBe('Playing');
+          expect(app.registry.get(app.player.recording)).toEqual(selected);
+          expect(
+            app.calls
+              .slice(calls)
+              .filter((it) => ['play', 'seek', 'announce'].includes(it.operation)),
+          ).toEqual([]);
+        }),
+    );
+
   it.effect(`keyplay state ${state} keeps intent and rejects old replies`, () =>
     Effect.gen(function* () {
       using app = yield* open();
@@ -1203,6 +1241,43 @@ for (const state of [
     }),
   );
 }
+
+it.effect(
+  "playswap silent Starts use each hymn's first sung line and discard the former place",
+  () =>
+    Effect.gen(function* () {
+      using app = yield* open(false, 240_000, (number) =>
+        Option.some({
+          ...timeline,
+          first: Match.value(number).pipe(
+            Match.when(3, () => 12_000),
+            Match.orElse(() => 5000),
+          ),
+        }),
+      );
+      app.send(Command.Start({ track }));
+      yield* app.playing;
+      app.send(Command.Seek({ seconds: 90 }));
+      yield* app.tick();
+      app.move(3, -3, 5);
+      const began = yield* Clock.currentTimeMillis;
+      app.send(Command.Start({ track: other }));
+      yield* app.playing;
+      const elapsed = (yield* Clock.currentTimeMillis) - began;
+      const shown = app.state();
+      expect(shown._tag).toBe('Playing');
+      expect(
+        Player.$is('Playing')(shown) && {
+          number: shown.track.number,
+          start: shown.at - elapsed / 1000,
+        },
+      ).toEqual({ number: 3, start: 12 });
+      expect(app.registry.get(app.player.recording)).toEqual(
+        Option.some({ number: 3, requested: -3, effective: -3 }),
+      );
+      expect(app.calls.filter((it) => it.operation !== 'announce')).toEqual([]);
+    }),
+);
 
 const replacementStep = (app: App, seed: number, step: number) =>
   Effect.gen(function* () {

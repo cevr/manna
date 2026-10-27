@@ -297,12 +297,17 @@ const placeOf = (proof: Proof.Proof) => Option.map(proof.place, seconds);
 /** What the player holds across the commands (see `held` in `playerOn`). */
 interface Held {
   wants: Intent;
+  /** A fresh Start owns its reads independently of Key and Resume handovers. */
+  starts: number;
   /** Distinguishes acts even when two commands share one clock millisecond. */
   acts: number;
   proof: Proof.Proof;
   seeking: Option.Option<{ readonly to: number; asking: boolean }>;
   moving: Option.Option<Fiber.Fiber<unknown, unknown>>;
-  reading: Option.Option<Deferred.Deferred<Proof.Read, PlaybackError>>;
+  reading: Option.Option<{
+    readonly start: number;
+    readonly done: Deferred.Deferred<Proof.Read, PlaybackError>;
+  }>;
   resuming: boolean;
   id: number;
   announced: number;
@@ -337,6 +342,7 @@ export const playerOn = (
    */
   const held: Held = {
     wants: 'play',
+    starts: 0,
     acts: 0,
     proof: Proof.none,
     seeking: Option.none(),
@@ -391,47 +397,52 @@ export const playerOn = (
             );
           });
         /**
-         * One status read, run in the player's scope: reads are one at a time (D7), so a read
-         * a command finds in flight is the one it takes, and a command that cuts off the reads
-         * before it never drops an answer the device gave.
+         * One status read per Start, run in the player's scope.
+         * Commands on that hymn share an in-flight read. A new Start
+         * owns a fresh read, even in the same clock millisecond: the former
+         * recording's delayed status must neither block nor describe its replacement.
          */
         const readDevice = Effect.suspend(() =>
-          Option.match(held.reading, {
-            onSome: Deferred.await,
-            onNone: () =>
-              Effect.gen(function* () {
-                const done = yield* Deferred.make<Proof.Read, PlaybackError>();
-                held.reading = Option.some(done);
-                const reading = Effect.gen(function* () {
-                  const asked = yield* now;
-                  const raw = yield* device.status;
-                  // The global session may briefly report idle/failed or the old paused
-                  // session while a replacement and its one fallback are in flight.
-                  let status = raw;
-                  if (held.replacing)
-                    status = {
-                      ...raw,
-                      state: 'loading',
-                      positionMs:
-                        raw.replacementMs ??
-                        Option.getOrElse(held.proof.place, () => raw.positionMs),
-                    };
-                  return { asked, answered: yield* now, status };
-                }).pipe(
-                  // A read is taken while in flight: once answered, the next read is asked anew.
-                  Effect.onExit(() =>
-                    Effect.sync(() => {
-                      if (Option.exists(held.reading, (it) => it === done))
-                        held.reading = Option.none();
-                    }),
-                  ),
-                  Effect.exit,
-                  Effect.flatMap((exit) => Deferred.done(done, exit)),
-                );
-                yield* Effect.forkIn(reading, answers, { startImmediately: true });
-                return yield* Deferred.await(done);
-              }),
-          }),
+          Option.match(
+            Option.filter(held.reading, (reading) => reading.start === held.starts),
+            {
+              onSome: ({ done }) => Deferred.await(done),
+              onNone: () =>
+                Effect.gen(function* () {
+                  const done = yield* Deferred.make<Proof.Read, PlaybackError>();
+                  const start = held.starts;
+                  held.reading = Option.some({ start, done });
+                  const reading = Effect.gen(function* () {
+                    const asked = yield* now;
+                    const raw = yield* device.status;
+                    // The global session may briefly report idle/failed or the old paused
+                    // session while a replacement and its one fallback are in flight.
+                    let status = raw;
+                    if (held.starts === start && held.replacing)
+                      status = {
+                        ...raw,
+                        state: 'loading',
+                        positionMs:
+                          raw.replacementMs ??
+                          Option.getOrElse(held.proof.place, () => raw.positionMs),
+                      };
+                    return { asked, answered: yield* now, status };
+                  }).pipe(
+                    // A read is taken while in flight: once answered, the next read is asked anew.
+                    Effect.onExit(() =>
+                      Effect.sync(() => {
+                        if (Option.exists(held.reading, (it) => it.done === done))
+                          held.reading = Option.none();
+                      }),
+                    ),
+                    Effect.exit,
+                    Effect.flatMap((exit) => Deferred.done(done, exit)),
+                  );
+                  yield* Effect.forkIn(reading, answers, { startImmediately: true });
+                  return yield* Deferred.await(done);
+                }),
+            },
+          ),
         );
         /**
          * A read asked since the latest act, and since any answer that said `ended` unless it says
@@ -452,12 +463,18 @@ export const playerOn = (
          */
         const landable = () => Option.exists(held.seeking, (it) => it.asking);
         /** One read, taken into the proof and shown nowhere; a refused read changes nothing. */
-        const lastLook = readFresh.pipe(
-          Effect.tap((read) =>
-            Effect.sync(() => (held.proof = Proof.readOf(held.proof, read, landable()).proof)),
-          ),
-          Effect.option,
-        );
+        const lastLook = Effect.suspend(() => {
+          const start = held.starts;
+          return readFresh.pipe(
+            Effect.tap((read) =>
+              Effect.sync(() => {
+                if (held.starts === start)
+                  held.proof = Proof.readOf(held.proof, read, landable()).proof;
+              }),
+            ),
+            Effect.option,
+          );
+        });
         /**
          * The device answered the ask for `to` ms, asked at `asked`: the act lands
          * when the answer's place is in its window (`Proof.answered`), and the
@@ -1168,7 +1185,11 @@ export const playerOn = (
           Option.orElse(() => holding),
         );
         return yield* Command.$match(command, {
-          Start: ({ track }) => load(track, 0),
+          Start: ({ track }) =>
+            Effect.suspend(() => {
+              held.starts += 1;
+              return load(track, 0);
+            }),
           Pause: () =>
             Option.match(holding, {
               onNone: () => Effect.sync(() => (held.wants = 'pause')),

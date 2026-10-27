@@ -60,6 +60,7 @@ import { KeyButton } from './KeyButton';
 import { Seeker } from './Seeker';
 import { ThumbEvent } from './thumb';
 import { RecordingNotice } from './RecordingNotice';
+import { PlayPage } from './PlayPage';
 
 /** The bar docked under the stack, while the player holds a hymn. */
 export function PlayerBar() {
@@ -385,31 +386,6 @@ function Opener({
   );
 }
 
-/** The page's hymn played in place of the one sounding: a compact text button. */
-function PlayPage({
-  track,
-  send,
-}: {
-  readonly track: Track;
-  readonly send: (command: Command) => void;
-}) {
-  const accent = useAccent();
-  const cue = useCue();
-  return (
-    <Pressable
-      role="button"
-      aria-label={`Play hymn ${track.number}`}
-      onPress={() => {
-        cue(plain('play'));
-        send(Command.Start({ track }));
-      }}
-      style={styles.compact}
-    >
-      <Text style={[styles.compactText, { color: accent }]}>{`Play ${track.number}`}</Text>
-    </Pressable>
-  );
-}
-
 /**
  * Whether Play sounds the recording: on, a speaker with waves in the accent;
  * off, a speaker with a slash, muted, and the score clock runs (`sound.ts`).
@@ -515,8 +491,6 @@ const styles = StyleSheet.create({
   grabber: { width: 36, height: 5, borderRadius: 2.5, backgroundColor: color.line },
   number: { fontSize: 15, fontWeight: '600', fontVariant: ['tabular-nums'] },
   title: { flex: 1, fontSize: 15, color: color.ink },
-  compact: { minHeight: 44, minWidth: 44, justifyContent: 'center', paddingHorizontal: 4 },
-  compactText: { fontSize: 15, fontWeight: '600', fontVariant: ['tabular-nums'] },
   mark: {
     width: 44,
     height: 44,
