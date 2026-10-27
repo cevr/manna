@@ -113,6 +113,14 @@ interface TraceView {
   readonly feet?: ReadonlyArray<string>;
   /** How its parts are written unless a part says (`TracePart.path`): `points` unless given. */
   readonly path?: 'points' | 'cubic';
+  /**
+   * What its line is read as (`ink` unless given): the ink alone, or `brown`,
+   * where the sheet paints its line's inner part in a brown darker than
+   * `LINE_LUMA` (an ear's outer edge: 7 px of brown inside 1 px of ink), so
+   * that brown within `LINE_MIN` of the ground is line too. A sheet that
+   * fills a part in so dark a brown keeps `ink`, or the part loses its rim.
+   */
+  readonly line?: 'ink' | 'brown';
 }
 
 /** A view of a sheet as a trace spec names it: how it is traced, the table it writes beside the spec, what the table says it is. */
@@ -184,8 +192,9 @@ const GROUND_LUMA = 110;
 const LINE_MAX = 10;
 
 /**
- * The narrowest the sheets' silhouette line runs, pixels: within this of the
- * ground, a pixel as dark as `LINE_LUMA` is line, where a sheet paints its
+ * The narrowest the sheets' silhouette line runs, pixels: in a view that reads
+ * a brown line (`TraceView.line`), within this of the ground a pixel as dark
+ * as `LINE_LUMA` is line, where a sheet paints its
  * line's inner part in the dark brown of its hair's band (an ear's outer
  * edge: 7 px of brown, then 1 px of ink).
  */
@@ -1030,19 +1039,23 @@ const readOf = (sheet: Raster, view: TraceView) => {
     EDGE_AA,
     (k) => ink[k] === 0 && lumaAt(sheet, sheetIndex(g, k)) < GROUND_LUMA,
   );
-  // Its first `LINE_MIN` pixels are line where they are as dark as its brown, the rest of the way ink alone.
-  const least = grown(
-    g,
-    bridged,
-    LINE_MIN,
-    (k) => ink[k] === 1 || lumaAt(sheet, sheetIndex(g, k)) < LINE_LUMA,
-  );
-  const line = grown(
-    g,
-    grown(g, least, LINE_MAX - LINE_MIN, (k) => ink[k] === 1),
-    1,
-    () => true,
-  );
+  // Through the ink to its inner edge; a view that reads a brown line takes its first `LINE_MIN` pixels where they are as dark as its brown, the rest of the way ink alone.
+  const inked = (k: number) => ink[k] === 1;
+  const through =
+    view.line === 'brown'
+      ? grown(
+          g,
+          grown(
+            g,
+            bridged,
+            LINE_MIN,
+            (k) => inked(k) || lumaAt(sheet, sheetIndex(g, k)) < LINE_LUMA,
+          ),
+          LINE_MAX - LINE_MIN,
+          inked,
+        )
+      : grown(g, bridged, LINE_MAX, inked);
+  const line = grown(g, through, 1, () => true);
   const rd: Read = {
     g,
     n,

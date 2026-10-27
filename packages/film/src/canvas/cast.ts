@@ -131,11 +131,7 @@ interface CastClip {
  * there but what lies in its own. A view's crop by its box then holds its
  * own drawing alone, never a neighbour's ink that ran over into it.
  */
-export const castClip = (
-  view: CastView,
-  views: ReadonlyArray<CastView>,
-  margin: number,
-): CastClip => {
+const castClip = (view: CastView, views: ReadonlyArray<CastView>, margin: number): CastClip => {
   const [x0, y0, x1, y1] = view.box;
   const box: SheetBox = [x0 - margin, y0 - margin, x1 + margin, y1 + margin];
   const [bx0, by0, bx1, by1] = box;
@@ -150,6 +146,33 @@ export const castClip = (
     ])
     .filter(([cx0, cy0, cx1, cy1]) => cx1 > cx0 && cy1 > cy0);
   return { box, cuts };
+};
+
+/** The part of a 2D context a view's clip is laid on. */
+export type CastClipContext = Pick<CanvasRenderingContext2D, 'beginPath' | 'rect' | 'clip'>;
+
+/**
+ * Clips `ctx` to where `view` is drawn beside `views` (`castClip`): its box
+ * and `margin` round it, then each cut taken out of it (the box again with
+ * the cut inside it, its inside even-odd out). The caller saves and restores.
+ */
+export const clipCast = (
+  ctx: CastClipContext,
+  view: CastView,
+  views: ReadonlyArray<CastView>,
+  margin: number,
+) => {
+  const clip = castClip(view, views, margin);
+  const [x0, y0, x1, y1] = clip.box;
+  ctx.beginPath();
+  ctx.rect(x0, y0, x1 - x0, y1 - y0);
+  ctx.clip();
+  for (const [cx0, cy0, cx1, cy1] of clip.cuts) {
+    ctx.beginPath();
+    ctx.rect(x0, y0, x1 - x0, y1 - y0);
+    ctx.rect(cx0, cy0, cx1 - cx0, cy1 - cy0);
+    ctx.clip('evenodd');
+  }
 };
 
 /** Every rig a member's views draw, by key: what its page declares and loads. */

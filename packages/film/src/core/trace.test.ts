@@ -399,6 +399,7 @@ describe('traceView, a sheet painted in dark brown beside its ink', () => {
     const view: TraceView = {
       box: [0, 0, 80, 80],
       classes: { hair: ['#6a3e2b'], hairDark: ['#4f2b21'] },
+      line: 'brown',
       parts: { hair: { classes: ['hair', 'hairDark'], doc: 'The hair to its line.' } },
     };
     const [x0 = 0, x1 = 0] = across(
@@ -407,5 +408,35 @@ describe('traceView, a sheet painted in dark brown beside its ink', () => {
     // Its left edge on the ink's inner edge, at 16; its right on the brown's, at 63, not the ink's at 70.
     expect(Math.abs(x0 - 16)).toBeLessThanOrEqual(2);
     expect(Math.abs(x1 - 63)).toBeLessThanOrEqual(2);
+  });
+
+  test("reads a part filled in the band's dark brown to its ink's inner edge unless the view reads a brown line: the brown is the part's own paint", () => {
+    // A dark-brown body inked round 4 px: its paint runs 14 to 86.
+    const sheet = painted(100, [
+      [INK, (x, y) => x >= 10 && x <= 90 && y >= 10 && y <= 90],
+      [BAND, (x, y) => x >= 14 && x <= 86 && y >= 14 && y <= 86],
+    ]);
+    const plain: TraceView = {
+      box: [0, 0, 100, 100],
+      classes: { hairDark: ['#4b2e1e'] },
+      parts: {
+        body: { seeds: [[50, 50]], doc: 'The body, seeded.' },
+        whole: { silhouette: true, doc: 'The body, as the figure.' },
+      },
+    };
+    const spans = (v: TraceView) => {
+      const t = Result.getOrThrow(traceView(sheet, v));
+      return ['body', 'whole'].map((name) => across(t.outlines[name] ?? []));
+    };
+    // Read as ink alone (the default), each ends on the ink's inner edge.
+    spans(plain).forEach(([l = 0, r = 0]) => {
+      expect(Math.abs(l - 14)).toBeLessThanOrEqual(2);
+      expect(Math.abs(r - 86)).toBeLessThanOrEqual(2);
+    });
+    // Read as a brown line, its brown's first pixels are taken as line: the part ends inside its paint.
+    spans({ ...plain, line: 'brown' }).forEach(([l = 0, r = 0]) => {
+      expect(l).toBeGreaterThan(16.5);
+      expect(r).toBeLessThan(84.5);
+    });
   });
 });

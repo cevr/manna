@@ -2534,7 +2534,14 @@ tones laid on another part, and the table is written beside the spec with
 the sheet, the view's box and the command in its header, so a fix is traced
 again by running it once more. Tables hold points only; the colours are
 the film's papers. A part ends on the inner edge of the sheet's line, since
-the house lays its own line outside its paper. Its mask is opened and closed
+the house lays its own line outside its paper. A part grows into the line
+round it (`grow`) through anything darker than the ground (`into: 'dark'`,
+unless given), or through ink alone and its antialiased edge (`into: 'ink'`),
+so a band of dark paint beside it (the brown round an ear) stays the part it
+is. A view's line is read as ink alone (`line: 'ink'`, unless given), or with
+`line: 'brown'` its first 6 px are line where they are darker than luma 60
+too (a line painted brown inside 1 px of ink); a part filled in so dark a
+brown keeps the default. Its mask is opened and closed
 (`open`, `close`) so a sliver or a notch thinner than that goes, may be worn
 in from its edge (`shrink`: a garment then runs on under a sleeve it gives
 up), and an outline that doubles back on itself is refused unless the spec

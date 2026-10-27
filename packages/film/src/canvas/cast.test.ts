@@ -1,6 +1,34 @@
 import { describe, expect, test } from 'bun:test';
-import { type CastProp, type CastView, castClip, castDrawOrder } from './cast.ts';
+import {
+  type CastClipContext,
+  type CastProp,
+  type CastView,
+  castDrawOrder,
+  clipCast,
+} from './cast.ts';
 import type { RivePropSpec } from './rive.ts';
+
+/** A rectangle as a path takes it: its corner, its width and its height. */
+type Rect = readonly [number, number, number, number];
+
+/** Each clip `clipCast` lays on a context for `view`: its path's rectangles and its fill rule. */
+const recordedClips = (view: CastView, views: ReadonlyArray<CastView>) => {
+  const clips: Array<{ readonly rects: ReadonlyArray<Rect>; readonly rule: CanvasFillRule }> = [];
+  let path: Rect[] = [];
+  const ctx: CastClipContext = {
+    beginPath: () => {
+      path = [];
+    },
+    rect: (x, y, w, h) => {
+      path.push([x, y, w, h]);
+    },
+    clip: (rule?: CanvasFillRule | Path2D) => {
+      clips.push({ rects: path, rule: rule === 'evenodd' ? 'evenodd' : 'nonzero' });
+    },
+  };
+  clipCast(ctx, view, views, 12);
+  return clips;
+};
 
 const rig = (key: string): RivePropSpec => ({
   source: { riv: '/figures.riv', artboard: key, timelines: [] },
@@ -43,11 +71,14 @@ describe('a cast view', () => {
     });
     const [left, right] = [viewAt([0, 0, 100, 100]), viewAt([100, 0, 200, 100])];
     const views = [left, right];
-    // Whether a view's drawing at `p` is laid on the sheet: inside its clip's box, in none of its cuts.
+    // Whether a view's drawing at `p` is laid on the sheet, as the clips the player lays on its context (`clipCast`) let it through: inside each clip's path by its fill rule.
     const laid = (view: CastView, [x, y]: readonly [number, number]) => {
-      const { box, cuts } = castClip(view, views, 12);
-      const within = ([x0, y0, x1, y1]: CastView['box']) => x >= x0 && x < x1 && y >= y0 && y < y1;
-      return within(box) && !cuts.some(within);
+      const clips = recordedClips(view, views);
+      const within = ([x0, y0, w, h]: Rect) => x >= x0 && x < x0 + w && y >= y0 && y < y0 + h;
+      return clips.every(({ rects, rule }) => {
+        const count = rects.filter(within).length;
+        return rule === 'evenodd' ? count % 2 === 1 : count > 0;
+      });
     };
     const each = (x0: number, x1: number, y0: number, y1: number) =>
       Array.from({ length: (x1 - x0) * (y1 - y0) }, (_, i): readonly [number, number] => [
