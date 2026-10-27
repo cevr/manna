@@ -260,12 +260,12 @@ export const CAST = castTable({
         RIGS.leadFeastProfileLeftProp,
         {
           lean: 0,
-          numbers: { tilt: 0.22, mouth: 0 },
+          numbers: { tilt: 0.35, mouth: 0 },
           reach: [
             ['near', [402, 367]],
             ['far', [416, 360]],
           ],
-          props: [{ name: 'plate', draw: plate([-66, -374], 0.22), behind: true }],
+          props: [{ name: 'plate', draw: plate([-52, -372], 0.55) }],
         },
       ),
       // Seated on the stool, three-quarters left, his near hand at his chin, his far hand on his lap.

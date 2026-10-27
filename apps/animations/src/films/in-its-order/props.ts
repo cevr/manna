@@ -22,7 +22,7 @@ const SOFT = 0.06;
 
 /** A paper's lit colour and its shade, toward the light's complement, as the kept sheets paint them. */
 const PAPER = {
-  milk: { lit: palette.milk, shade: '#d9d6e6' },
+  milk: { lit: '#fde9c8', shade: '#e6d0c4' },
   teat: { lit: palette.gold, shade: palette.goldShade },
   wood: { lit: '#8a5233', shade: '#5f4535' },
 } as const;
@@ -62,12 +62,12 @@ const inked = (
   unprobed(ctx, () => ctx.stroke());
 };
 
-/** The baby's bottle, its body's bottom middle at `at`: a milk-white body, its collar, its pale teat; `size` 1 is 33 units across. */
+/** The baby's bottle, its body's bottom middle at `at`: a cream body, its collar, its teat; `size` 1 is 33 units across and 48 tall. */
 export const bottle =
   (at: Pt, size = 1) =>
   (ctx: CanvasRenderingContext2D) => {
     const [x, y] = at;
-    const [w, h] = [33 * size, 58 * size];
+    const [w, h] = [33 * size, 48 * size];
     roundRect(ctx, x - w / 2, y - h, w, h, 9 * size);
     inked(ctx, PAPER.milk, [x - w / 2, y - h], [x + w / 2, y]);
     roundRect(ctx, x - 0.36 * w, y - h - 7 * size, 0.72 * w, 8 * size, 3 * size);
@@ -78,17 +78,27 @@ export const bottle =
     inked(ctx, PAPER.teat, [x - 6 * size, y - h - 20 * size], [x + 6 * size, y - h - 12 * size]);
   };
 
-/** The wooden plate, held up at the mouth and tipped `tilt` radians: a shallow dish seen from its side, its middle at `at`. */
+/** The plate's half width and its depth below its rim, units. */
+const PLATE = { r: 44, deep: 28, rim: 9 } as const;
+
+/**
+ * The wooden plate, a deep dish held up at the mouth, its rim's middle at
+ * `at`, tipped `tilt` radians (positive turns its open rim toward screen
+ * right): its round body under its rim, and the dark of its inside within it.
+ */
 export const plate = (at: Pt, tilt: number) => (ctx: CanvasRenderingContext2D) => {
+  const { r, deep, rim } = PLATE;
   ctx.save();
   ctx.translate(at[0], at[1]);
   ctx.rotate(tilt);
   ctx.beginPath();
-  ctx.ellipse(0, 0, 46, 17, 0, 0, Math.PI);
-  ctx.lineTo(-46, -2);
-  ctx.ellipse(0, -2, 46, 7, 0, Math.PI, 2 * Math.PI);
+  ctx.ellipse(0, 0, r, deep, 0, 0, Math.PI);
+  ctx.ellipse(0, 0, r, rim, 0, Math.PI, 2 * Math.PI);
   ctx.closePath();
-  inked(ctx, PAPER.wood, [-46, -9], [46, 17]);
+  inked(ctx, PAPER.wood, [-r, -rim], [r, deep]);
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r - 6, rim - 3, 0, 0, 2 * Math.PI);
+  inked(ctx, { lit: PAPER.wood.shade, shade: PAPER.wood.shade }, [-r, -rim], [r, rim]);
   ctx.restore();
 };
 
