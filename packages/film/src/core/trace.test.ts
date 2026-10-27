@@ -2,60 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { Raster } from './raster.ts';
 import { Result } from 'effect';
 import { tracedModule, traceView } from './trace.ts';
-
-/** A view as the tracer reads it. */
-type TraceView = Parameters<typeof traceView>[1];
-
-/** The least gap between two of an outline's points: a third of RIVE.md's 8 px step, so no spike from a fine step. */
-const LEAST_GAP = 8 / 3;
-
-/** A sheet 120 × 220 on white: a round skin head inked round, over a cream body inked round, its lower half a teal shade. */
-const sheet = (): Raster => {
-  const [width, height] = [120, 220];
-  const rgba = new Uint8Array(width * height * 4).fill(255);
-  const put = (x: number, y: number, [r, g, b]: readonly [number, number, number]) => {
-    const i = (y * width + x) * 4;
-    rgba[i] = r;
-    rgba[i + 1] = g;
-    rgba[i + 2] = b;
-  };
-  /** Every pixel `inside` takes painted `colour`, later layers over earlier. */
-  const layer = (
-    colour: readonly [number, number, number],
-    inside: (x: number, y: number) => boolean,
-  ) => {
-    for (let y = 0; y < height; y++)
-      for (let x = 0; x < width; x++) if (inside(x, y)) put(x, y, colour);
-  };
-  layer([20, 16, 14], (x, y) => x >= 30 && x <= 90 && y >= 62 && y <= 200);
-  layer([253, 225, 188], (x, y) => x >= 34 && x <= 86 && y >= 66 && y <= 196);
-  layer([78, 113, 130], (x, y) => x > 60 && x <= 86 && y > 140 && y <= 196);
-  layer([20, 16, 14], (x, y) => Math.hypot(x - 60, y - 40) <= 22);
-  layer([253, 175, 112], (x, y) => Math.hypot(x - 60, y - 40) <= 18);
-  return { width, height, rgba };
-};
-
-const VIEW: TraceView = {
-  box: [0, 0, 120, 220],
-  classes: { skin: ['#fdaf70'], cream: ['#fde1bc'], teal: ['#4e7182'] },
-  head: 'head',
-  feet: ['body'],
-  parts: {
-    head: { seeds: [[60, 40]], doc: 'The head.' },
-    body: { seeds: [[50, 100]], plus: ['shade'], doc: 'The body.' },
-    shade: { classes: ['teal'], as: 'tones', doc: 'The shade on it.' },
-  },
-};
-
-/** The box round `pts`. */
-const boxOf = (
-  pts: ReadonlyArray<readonly [number, number]>,
-): readonly [number, number, number, number] => [
-  Math.min(...pts.map(([x]) => x)),
-  Math.min(...pts.map(([, y]) => y)),
-  Math.max(...pts.map(([x]) => x)),
-  Math.max(...pts.map(([, y]) => y)),
-];
+import { LEAST_GAP, VIEW, boxOf, sheet, type TraceView } from './fixtures/trace/view.ts';
 
 describe('traceView', () => {
   test("reads each part to the inner edge of its line, its points a coarse step apart, its head's centre and its feet", () => {
@@ -206,66 +153,6 @@ describe('traceView', () => {
       [34, 196],
     ] as const)
       expect(Math.min(...anchors.map(([ax, ay]) => Math.hypot(ax - x, ay - y)))).toBeLessThan(3);
-  });
-
-  test('opens a sliver off a part, and refuses an outline that doubles back on itself', () => {
-    /** The sheet with ink, then skin, painted where each says, over the head's ring of ink. */
-    const painted = (
-      ink: (x: number, y: number) => boolean,
-      skin: (x: number, y: number) => boolean,
-    ): Raster => {
-      const base = sheet();
-      const rgba = new Uint8Array(base.rgba);
-      for (let y = 0; y < base.height; y++)
-        for (let x = 0; x < base.width; x++) {
-          if (ink(x, y)) rgba.set([20, 16, 14], (y * base.width + x) * 4);
-          if (skin(x, y)) rgba.set([253, 175, 112], (y * base.width + x) * 4);
-        }
-      return { ...base, rgba };
-    };
-    const plain = Result.getOrThrow(traceView(sheet(), VIEW)).outlines['head'] ?? [];
-    // A sliver of skin out into the ring, a pixel wide inside its antialiased edge: a slip of the edge, opened off.
-    const sliver = painted(
-      () => false,
-      (x, y) => x >= 59 && x <= 61 && y >= 20 && y < 24,
-    );
-    expect(Result.getOrThrow(traceView(sliver, VIEW)).outlines['head']).toEqual(plain);
-    // A spike of skin five pixels wide and twenty long, inked round, out of the top of the head: the outline turns back at its tip.
-    const spike = painted(
-      (x, y) => x >= 56 && x <= 64 && y < 22,
-      (x, y) => x >= 58 && x <= 62 && y >= 2 && y < 24,
-    );
-    const refused = traceView(spike, VIEW);
-    expect(Result.isFailure(refused) && refused.failure.reason).toContain(
-      'the part head doubles back on itself',
-    );
-  });
-
-  test("smooths a part's edge as far each way as the part asks", () => {
-    const corners = (body: TraceView['parts'][string]) => {
-      const view: TraceView = { ...VIEW, parts: { ...VIEW.parts, body } };
-      const outline = Result.getOrThrow(traceView(sheet(), view)).outlines['body'] ?? [];
-      // How near the outline comes to the body's top-left corner.
-      return Math.min(...outline.map(([x, y]) => Math.hypot(x - 32, y - 64)));
-    };
-    const body = { seeds: [[50, 100]], plus: ['shade'] } as const;
-    expect(corners({ ...body, smooth: 12 })).toBeGreaterThan(corners(body) + 2);
-  });
-
-  test('wears a part in from its edge as far as it asks, so a part less it keeps a rim under it', () => {
-    // How far right the body runs in the shade's rows (the shade fills 61 to 86 across, 141 to 196 down).
-    const reach = (shade: TraceView['parts'][string]) => {
-      const view: TraceView = {
-        ...VIEW,
-        parts: { ...VIEW.parts, shade, body: { seeds: [[50, 100]], minus: ['shade'] } },
-      };
-      const body = Result.getOrThrow(traceView(sheet(), view)).outlines['body'] ?? [];
-      return Math.max(...body.filter(([, y]) => y > 155 && y < 185).map(([x]) => x));
-    };
-    const shade = { classes: ['teal'], as: 'none' } as const;
-    // Less the whole shade, the body ends where the shade begins; less the shade worn in 6 px, it runs on into it (4 px past its smoothing).
-    expect(reach(shade)).toBeLessThan(63);
-    expect(reach({ ...shade, shrink: 6 })).toBeGreaterThanOrEqual(reach(shade) + 3);
   });
 
   test('writes a table that names what it was traced from, with no colour in it', () => {
