@@ -51,6 +51,16 @@ The form of an entry, each field on its own line:
 
 ## Process and tooling
 
+### recording-preparation-keeps-status-observer
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "An early failed status stops reads before fallback finishes."
+- **Source:** playbulk/p1-round-1-checks.md F7
+- **Wrong:** A Sound-on handover could complete its printed-key fallback after the player had stopped observing status.
+- **Cause:** Native status reported failure before its pending Play promise answered.
+- **Guard:** code: `apps/hymnal/src/player/keyplay.slow.test.ts` `keyplay Sound on keeps reading through a failed preparation and fallback`
+
 ### rapid-key-load-retains-preparation-time
 
 - **Date:** 2026-10-27

@@ -16,6 +16,7 @@ export const recordingsOver = (device: PlaybackApi): PlaybackApi => {
   let turn = 0;
   let wants: Intent = 'play';
   let selection = Option.none<RecordingSelection>();
+  let preparing = Option.none<number>();
   const selected = (status: Status): Status =>
     Option.match(selection, {
       onNone: () => status,
@@ -26,6 +27,10 @@ export const recordingsOver = (device: PlaybackApi): PlaybackApi => {
     play: (uri, fromMs, options) =>
       Effect.gen(function* () {
         const owner = ++turn;
+        preparing = Option.liftPredicate(
+          fromMs,
+          () => options?.ready === true || options?.continuous === true,
+        );
         const identity = options?.recording;
         wants = options?.intent ?? 'play';
         selection = Option.map(Option.fromNullishOr(identity), (identity) => ({
@@ -53,7 +58,7 @@ export const recordingsOver = (device: PlaybackApi): PlaybackApi => {
                   }),
               ),
             );
-        const status = yield* attempt(uri, fromMs).pipe(
+        return yield* attempt(uri, fromMs).pipe(
           Effect.catchTag('PlaybackError', (error) =>
             Effect.gen(function* () {
               if (
@@ -84,11 +89,31 @@ export const recordingsOver = (device: PlaybackApi): PlaybackApi => {
               );
             }),
           ),
+          Effect.map((status) => {
+            if (owner !== turn) return status;
+            return selected(status);
+          }),
+          Effect.ensuring(
+            Effect.sync(() => {
+              if (owner === turn) preparing = Option.none();
+            }),
+          ),
         );
-        if (owner !== turn) return status;
-        return selected(status);
       }),
-    status: Effect.map(device.status, selected),
+    // A failure status may precede play's rejection. Keep the reader
+    // observing until this owner and its one fallback have answered.
+    status: Effect.map(device.status, (status) =>
+      selected(
+        Option.match(preparing, {
+          onNone: () => status,
+          onSome: (fromMs): Status => ({
+            ...status,
+            state: 'loading',
+            positionMs: status.replacementMs ?? fromMs,
+          }),
+        }),
+      ),
+    ),
     pause: Effect.suspend(() => {
       wants = 'pause';
       return Effect.map(device.pause, selected);
@@ -101,6 +126,7 @@ export const recordingsOver = (device: PlaybackApi): PlaybackApi => {
     stop: Effect.suspend(() => {
       turn++;
       selection = Option.none();
+      preparing = Option.none();
       return device.stop;
     }),
   };

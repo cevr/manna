@@ -256,6 +256,30 @@ it.effect('keyplay Sound on uses the selected set and its printed fallback', () 
   }),
 );
 
+it.effect('keyplay Sound on keeps reading through a failed preparation and fallback', () =>
+  Effect.gen(function* () {
+    using app = yield* open(false);
+    app.move(100, 1);
+    app.send(Command.Start({ track }));
+    yield* app.playing;
+    yield* app.tick(10_000);
+    app.hold();
+    yield* SubscriptionRef.set(app.sound, true);
+    yield* settle;
+    // The native status can report failure before its play Promise answers.
+    app.force({ state: 'failed', positionMs: 0, durationMs: 240_000 });
+    yield* app.tick(500);
+    expect(app.state()._tag).not.toBe('Failed');
+    app.pending[0]?.release(true);
+    yield* app.tick();
+    yield* app.playing;
+    expect(app.registry.get(app.player.recording)).toEqual(
+      Option.some({ number: 100, requested: 1, effective: 0 }),
+    );
+    expect(app.read().positionMs).toBeGreaterThanOrEqual(15_000);
+  }),
+);
+
 it.effect('keyplay a silent score tail keeps place across Key and falls back on rewind', () =>
   Effect.gen(function* () {
     using app = yield* open(true, 60_000);
