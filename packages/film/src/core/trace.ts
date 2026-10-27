@@ -37,6 +37,13 @@ export interface TracePart {
   readonly classes?: ReadonlyArray<string>;
   /** The whole figure to the middle of its line, most often clipped (a garment: what lies below the chin). */
   readonly silhouette?: boolean;
+  /**
+   * How far it reaches: inside the sheet's line (`core`, unless given), or
+   * the whole figure, its line too (`figure`), where the sheet's line runs
+   * wider than the house's (an ear's lobe drawn dark inside its line), so a
+   * polygon read off the sheet (`clip`) gives its edge there.
+   */
+  readonly reach?: 'core' | 'figure';
   /** Instead of seeds, the pixels of another part (a shade within its garment). */
   readonly within?: string;
   /** Only what also lies in another part, last (the hair cut inside the head). */
@@ -72,6 +79,13 @@ export interface TracePart {
   readonly shrink?: number;
   /** Where its outline turns back as sharply as the sheet draws it (a nape under curls), sheet pixels: a turn past `TURN_MAX` within `SHARP_REACH` of one is the sheet's, never refused. */
   readonly sharp?: ReadonlyArray<TracePt>;
+  /**
+   * Where its outline runs: through its edge pixels' middles (`middle`,
+   * unless given), or half a pixel out, along their outer sides (`outer`): a
+   * thin tone (a line the sheet paints in brown) written through its edge
+   * pixels' middles reads a pixel narrower than the sheet paints it.
+   */
+  readonly edge?: 'middle' | 'outer';
   /** A curled part's curls' least and greatest radius, pixels (`CURL` unless given). */
   readonly curl?: { readonly min: number; readonly max: number };
   /** How its outline and tones are written: points every `STEP` (`points`), or a chain of cubics fitted to its edge (`cubic`, `core/fit.ts`); the view's unless given. */
@@ -594,6 +608,16 @@ const areaOf = (pts: ReadonlyArray<TracePt>) => {
 /** How a part is written: its points every `STEP`, or a chain of cubics. */
 type TracePath = 'points' | 'cubic';
 
+/** A closed edge walked clockwise on screen (`edgeOf`), each point moved half a pixel out along its normal: from its pixels' middles to their outer sides. */
+const outward = (pts: ReadonlyArray<TracePt>): TracePt[] =>
+  pts.map((p, i) => {
+    const a = pts[(i - 1 + pts.length) % pts.length] ?? p;
+    const b = pts[(i + 1) % pts.length] ?? p;
+    const [dx, dy] = [b[0] - a[0], b[1] - a[1]];
+    const l = Math.hypot(dx, dy);
+    return l === 0 ? p : [p[0] + (0.5 * dy) / l, p[1] - (0.5 * dx) / l];
+  });
+
 /**
  * The outline of `pixels` (one piece) in sheet pixels: its edge smoothed and
  * taken every `STEP`, or smoothed less and fitted as a chain of cubics
@@ -604,12 +628,15 @@ const outlineOf = (
   pixels: ReadonlyArray<number>,
   path: TracePath,
   smooth?: number,
+  edgeAt: 'middle' | 'outer' = 'middle',
 ): TracePt[] => {
   const edge = edgeOf(g, filled(g, maskOf(g, pixels)));
+  const run = (by: number) =>
+    edgeAt === 'outer' ? outward(smoothed(edge, by)) : smoothed(edge, by);
   const line =
     path === 'cubic'
-      ? fitClosed(smoothed(edge, smooth ?? CUBIC_SMOOTH), SHEET_FIT)
-      : resampled(smoothed(edge, smooth ?? SMOOTH), STEP);
+      ? fitClosed(run(smooth ?? CUBIC_SMOOTH), SHEET_FIT)
+      : resampled(run(smooth ?? SMOOTH), STEP);
   return line.map(([x, y]): TracePt => [half(g.x0 + x + 0.5), half(g.y0 + y + 0.5)]);
 };
 
@@ -811,6 +838,8 @@ interface Read {
   readonly kinds: Int8Array;
   readonly label: Int32Array;
   readonly core: (k: number) => boolean;
+  /** Whether a pixel is the figure's, its line too: what a part that reaches the `figure` keeps. */
+  readonly figure: (k: number) => boolean;
   readonly classIds: ReadonlyArray<string>;
   /** Why the spec cannot be read, each as it is met. */
   readonly refused: string[];
@@ -861,10 +890,14 @@ const holdToColour = (rd: Read, mask: Uint8Array, colour: NonNullable<TracePart[
   dropFrom(mask, (k) => far.some((c) => dist(k, c) < dist(k, near)));
 };
 
+/** Whether a pixel lies where `part` reaches (`TracePart.reach`): inside the line, or the figure, its line too. */
+const reachOf = (rd: Read, part: TracePart) => (part.reach === 'figure' ? rd.figure : rd.core);
+
 /** The pixels a part picks: another part's, the silhouette's, its classes', its seeds' regions, held to its colour, plus other parts'. */
 const pickedOf = (rd: Read, name: string, part: TracePart, of: (name: string) => Uint8Array) => {
   const mask = part.within === undefined ? new Uint8Array(rd.n) : of(part.within).slice();
-  if (part.silhouette === true) for (let k = 0; k < rd.n; k++) if (rd.core(k)) mask[k] = 1;
+  const reached = reachOf(rd, part);
+  if (part.silhouette === true) for (let k = 0; k < rd.n; k++) if (reached(k)) mask[k] = 1;
   addClasses(rd, name, part.classes ?? [], mask);
   addSeeds(rd, name, part.seeds ?? [], mask);
   if (part.colour !== undefined) holdToColour(rd, mask, part.colour);
@@ -880,6 +913,7 @@ const formedOf = (
   of: (name: string) => Uint8Array,
 ) => {
   const { g } = rd;
+  const reached = reachOf(rd, part);
   const seeded = (part.seeds ?? []).length > 0 || (part.classes ?? []).length > 0;
   const by = part.grow ?? (seeded ? GROW : 0);
   const mask =
@@ -907,7 +941,7 @@ const formedOf = (
     const m = of(part.inside);
     dropFrom(mask, (k) => m[k] === 0);
   }
-  dropFrom(mask, (k) => !rd.core(k));
+  dropFrom(mask, (k) => !reached(k));
   return part.shrink === undefined ? mask : eroded(g, mask, part.shrink);
 };
 
@@ -1064,6 +1098,7 @@ const readOf = (sheet: Raster, view: TraceView) => {
     kinds,
     label,
     core: (k) => line[k] === 0,
+    figure,
     classIds: Object.keys(view.classes),
     refused: [],
   };
@@ -1096,7 +1131,7 @@ const writtenOf = (rd: Read, view: TraceView, of: (name: string) => Uint8Array) 
     const largest = pieces[0] ?? [];
     if (as !== 'tones' && largest.length === 0) rd.refused.push(`the part ${name} is empty`);
     else if (as === 'outline') {
-      const outline = outlineOf(g, largest, path, part.smooth);
+      const outline = outlineOf(g, largest, path, part.smooth, part.edge);
       const hairpins = hairpinsOf(outline, path, part.sharp);
       if (hairpins.length > 0)
         rd.refused.push(`the part ${name} doubles back on itself at ${hairpins.join(', ')}`);
@@ -1105,7 +1140,7 @@ const writtenOf = (rd: Read, view: TraceView, of: (name: string) => Uint8Array) 
     else
       tones[name] = pieces
         .filter((p) => p.length >= (part.min ?? TONE_MIN))
-        .map((p) => outlineOf(g, p, path, part.smooth))
+        .map((p) => outlineOf(g, p, path, part.smooth, part.edge))
         .filter((pts) => pts.length >= 3 && areaOf(pts) > 0);
   }
   return { outlines, tones, circles, curls };

@@ -2541,7 +2541,13 @@ so a band of dark paint beside it (the brown round an ear) stays the part it
 is. A view's line is read as ink alone (`line: 'ink'`, unless given), or with
 `line: 'brown'` its first 6 px are line where they are darker than luma 60
 too (a line painted brown inside 1 px of ink); a part filled in so dark a
-brown keeps the default. Its mask is opened and closed
+brown keeps the default. A part reaches inside the line (`reach: 'core'`,
+unless given), or the whole figure, its line too (`reach: 'figure'`), where
+the sheet's line runs wider than the house's and a polygon read off the
+sheet gives its edge (an ear's lobe drawn dark inside its line). Its outline
+runs through its edge pixels' middles (`edge: 'middle'`, unless given), or
+half a pixel out (`edge: 'outer'`), so a thin tone keeps the width the sheet
+paints it. Its mask is opened and closed
 (`open`, `close`) so a sliver or a notch thinner than that goes, may be worn
 in from its edge (`shrink`: a garment then runs on under a sleeve it gives
 up), and an outline that doubles back on itself is refused unless the spec

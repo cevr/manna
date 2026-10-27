@@ -439,4 +439,61 @@ describe('traceView, a sheet painted in dark brown beside its ink', () => {
       expect(r).toBeLessThan(84.5);
     });
   });
+
+  test("writes a thin tone along its edge pixels' outer sides as wide as the sheet paints it, where through their middles it reads a pixel short", () => {
+    // Skin inked round; across it a brown line 6 px tall (rows 40 to 45).
+    const sheet = painted(100, [
+      [INK, (x, y) => x >= 10 && x <= 90 && y >= 10 && y <= 90],
+      [SKIN, (x, y) => x >= 16 && x <= 84 && y >= 16 && y <= 84],
+      [[125, 72, 47], (x, y) => x >= 20 && x <= 80 && y >= 40 && y <= 45],
+    ]);
+    const size = (edge: 'middle' | 'outer') => {
+      const view: TraceView = {
+        box: [0, 0, 100, 100],
+        classes: { skin: ['#fdaf70'], line: ['#7d482f'] },
+        parts: { line: { classes: ['line'], grow: 0, edge, as: 'tones', min: 10 } },
+      };
+      const pts = (Result.getOrThrow(traceView(sheet, view)).tones['line'] ?? []).flat();
+      const [x0, y0, x1, y1] = boxOf(pts);
+      return [x1 - x0, y1 - y0];
+    };
+    const [, tall = 0] = size('outer');
+    expect(Math.abs(tall - 6)).toBeLessThanOrEqual(0.3);
+    expect(size('middle')[1]).toBeLessThanOrEqual(5.2);
+  });
+
+  test("reads a part that reaches the figure out to its polygon inside a line wider than the house's, and a part that does not to the line's inner reach", () => {
+    // A cream body inked round 16 px (its paint 26 to 74); a polygon 7 px inside the ink's outer edge.
+    const sheet = painted(100, [
+      [INK, (x, y) => x >= 10 && x <= 90 && y >= 10 && y <= 90],
+      [[253, 225, 188], (x, y) => x >= 26 && x <= 74 && y >= 26 && y <= 74],
+    ]);
+    const lobe: ReadonlyArray<readonly [number, number]> = [
+      [17, 17],
+      [84, 17],
+      [84, 84],
+      [17, 84],
+    ];
+    const view: TraceView = {
+      box: [0, 0, 100, 100],
+      classes: { cream: ['#fde1bc'] },
+      parts: {
+        inside: { silhouette: true, clip: lobe, doc: 'The figure inside its line.' },
+        reaching: {
+          silhouette: true,
+          clip: lobe,
+          reach: 'figure',
+          doc: 'The figure to its polygon.',
+        },
+      },
+    };
+    const t = Result.getOrThrow(traceView(sheet, view));
+    const [rl = 0, rr = 0] = across(t.outlines['reaching'] ?? []);
+    expect(Math.abs(rl - 17)).toBeLessThanOrEqual(1.5);
+    expect(Math.abs(rr - 84)).toBeLessThanOrEqual(1.5);
+    // Inside the line: 11 px in from the ground's edge at most, never out to the polygon.
+    const [il = 0, ir = 0] = across(t.outlines['inside'] ?? []);
+    expect(il).toBeGreaterThan(20);
+    expect(ir).toBeLessThan(81);
+  });
 });
