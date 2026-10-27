@@ -286,13 +286,17 @@ interface RenderAt {
   readonly write: boolean;
 }
 
-/** What a view's fit rows hold it to: its member's colour classes, and its own probes and bars (`rigs/cast.ts`). */
+/** What a view's fit rows hold it to: its member's colour classes, and its own part labels, probes and bars (`rigs/cast.ts`). */
 const fitSpecOf = (table: CastModule, member: string, kind: SheetKind, view: string): FitSpec => {
   const fit = Option.flatMap(Option.fromUndefinedOr(tableViews(table, member, kind)[view]), (v) =>
     Option.fromUndefinedOr(v.fit),
   );
   return {
     classes: Option.getOrElse(Option.fromUndefinedOr(table.FIT_CLASSES?.[member]), () => ({})),
+    labels: Option.getOrElse(
+      Option.flatMap(fit, (f) => Option.fromUndefinedOr(f.labels)),
+      () => ({}),
+    ),
     probes: Option.getOrElse(
       Option.flatMap(fit, (f) => Option.fromUndefinedOr(f.probes)),
       () => [],

@@ -1,7 +1,9 @@
 // How each view of the series lead's kept turnaround is traced (`bun run
 // concept trace src/library/cast/lead-feast/rig/trace.ts` from
 // apps/animations): the sheet, its colour classes, and per view its parts by
-// their seeds in the sheet's pixels. The sheet inks only his silhouette, his
+// his part labels (`labels.ts`), none by a seed: a point of the sheet places
+// only a polygon it cuts (an ear's box and band) and a mark of his face (each
+// read as the ink nearest it). The sheet inks only his silhouette, his
 // face and the sleeve that lies on his side in profile, so a part the sheet
 // parts by colour alone is cut by a polygon read off the sheet (a sleeve at
 // its shoulder, the sash's band, knot and ends). A head whose neck runs into
@@ -12,7 +14,9 @@
 // so every view's table is read the one way. The tables it writes sit beside
 // it, one per view (`<view>-traced.ts`). Pure.
 
-import type { TracePart, TracePt, TraceSheet, TraceSheetView } from '@manna/film/tools';
+import type { LabelTable, TracePart, TracePt, TraceSheet, TraceSheetView } from '@manna/film/tools';
+import { Option } from 'effect';
+import { LABELS } from './labels.ts';
 
 /** The sheet's colour classes: each its lit side and its shade, sampled from the kept turnaround. */
 export const CLASSES = {
@@ -194,23 +198,35 @@ const CHIN = {
   },
 } as const;
 
-/** How an arm is read: as the silhouette cut to its polygon, or (lying on the garment, in profile) as the region the sheet's ink closes round its sleeve. */
+/** How a part is picked: by a seed in the sheet's pixels, or by a label of the view's table (`labels.ts`). */
+type Picked = TracePt | { readonly label: string };
+
+/** A part's pick as the tracer takes it: its seed, or its label. */
+const pickOf = (
+  p: Picked,
+): { readonly seeds: ReadonlyArray<TracePt> } | { readonly label: string } => {
+  if ('label' in p) return { label: p.label };
+  return { seeds: [p] };
+};
+
+/** How an arm is read: as the silhouette cut to its polygon, or (lying on the garment, in profile) as the region the sheet's ink closes round its sleeve, by its seed or its label. */
 type ArmPick =
   | { readonly silhouette: true }
-  | { readonly seeds: ReadonlyArray<TracePt>; readonly grow: number };
+  | { readonly seeds: ReadonlyArray<TracePt>; readonly grow: number }
+  | { readonly label: string; readonly grow: number };
 
 /** An arm read as the silhouette cut to its polygon. */
 const SILHOUETTE: ArmPick = { silhouette: true };
 
-/** An arm read as its sleeve's region, seeded at `p`, grown through its ink to meet its hand at its cuff. */
-export const sleeveAt = (p: TracePt): ArmPick => ({ seeds: [p], grow: 6 });
+/** An arm read as its sleeve's region, seeded at `p` or labelled `p`, grown through its ink to meet its hand at its cuff. */
+export const sleeveAt = (p: Picked): ArmPick => ({ ...pickOf(p), grow: 6 });
 
-/** An arm: how it is read, its polygon, the row under its armpit, and its hand's seed. */
+/** An arm: how it is read, its polygon, the row under its armpit, and how its hand is picked. */
 interface ArmSpec {
   readonly pick: ArmPick;
   readonly clip: TracePt[];
   readonly below: number;
-  readonly hand: TracePt;
+  readonly hand: Picked;
   /** Raised clear of his side: the polygon of its sleeve his garment gives up, all but its root at his shoulder (that stays the garment's, so the arm turns inside it). */
   readonly off?: TracePt[];
   /** Where the sheet paints its sleeve's edge in a shade darker than its seed reaches, with no line between it and his garment: the polygon its sleeve runs out to. */
@@ -254,16 +270,25 @@ const THREE_QUARTER_RIGHT_EAR: TracePt[] = [
   [1327, 308],
 ];
 
-/** What one standing view is read from: its seeds and the polygons the sheet parts by colour alone. */
+/** A labelled ear: its label, and the point its box and its band are cut round, sheet pixels (it picks no region: its label does), where the view cuts either round a point. */
+interface EarAt {
+  readonly label: string;
+  readonly at?: TracePt;
+}
+
+/** What one standing view is read from: its parts' seeds or its labels, and the polygons the sheet parts by colour alone. */
 interface Standing {
   readonly box: readonly [number, number, number, number];
   readonly out: string;
   readonly about: string;
-  readonly face: TracePt;
+  /** The view's part labels (`labels.ts`): none for a view picked by seeds alone. */
+  readonly labels?: LabelTable;
+  /** How his face is picked; a labelled face names its chin's line (`chin.line`), since the line round its seed is read from a point. */
+  readonly face: Picked;
   /** The face's marks (a view from behind shows none). */
   readonly marked: Pick<TraceSheetView, 'marks'>;
-  /** Each ear's seed: both from in front or behind, the one that shows on a turned head (`earNear`). */
-  readonly ears: { readonly earNear: TracePt; readonly earFar?: TracePt };
+  /** Each ear: both from in front or behind, the one that shows on a turned head (`earNear`). */
+  readonly ears: { readonly earNear: TracePt | EarAt; readonly earFar?: TracePt | EarAt };
   /**
    * An ear the sheet draws with no line between it and his cheek (its skin
    * runs on into his face, a turned head's), as the polygon round it read
@@ -317,8 +342,8 @@ interface Standing {
   readonly near: ArmSpec;
   readonly far: ArmSpec;
   readonly arms: keyof typeof UNDER_ARMS;
-  /** His neck's seeds, where it shows as a tone on the garment (from behind). */
-  readonly necks: ReadonlyArray<TracePt>;
+  /** His neck's seeds, or its label, where it shows as a tone on the garment (from behind). */
+  readonly necks: ReadonlyArray<TracePt> | { readonly label: string };
   /** What stands beside him in his view (a stool), as a polygon, no part of him: none for a view with nothing there. */
   readonly beside: TracePt[];
   readonly sash: Sash;
@@ -352,15 +377,15 @@ const EAR_BAND_CLIP = {
   hair: (_seed: TracePt, _top: number): TracePt[] => [],
 } as const;
 
-/** An ear seeded at `seed`: flat skin cut inside his head, within `clip` (a box round the seed, the oval the sheet draws it where its skin runs on into his cheek, or the polygon round its lobe). */
+/** An ear picked by `pick` (its seed or its label): flat skin cut inside his head, within `clip` (a box round its point, the oval the sheet draws it where its skin runs on into his cheek, or the polygon round its lobe). */
 const ear = (
-  seed: TracePt,
+  pick: ReturnType<typeof pickOf>,
   clip: ReadonlyArray<TracePt>,
   sharp: ReadonlyArray<TracePt>,
   band: string,
 ) =>
   ({
-    seeds: [seed],
+    ...pick,
     clip,
     sharp,
     // Less its band where the view lays one: the band's specks of ink are the band's, never grown over by the ear.
@@ -372,6 +397,30 @@ const ear = (
     doc: "An ear, flat skin cut inside his head: its ink is his head's, and the hair beside it lies round it.",
   }) satisfies TracePart;
 
+/** A polygon `cut` round an ear's point: a bare point (its seed too) or a labelled ear's; none round a labelled ear that gives none. */
+const cutRound = (e: TracePt | EarAt, cut: (at: TracePt) => TracePt[]): TracePt[] => {
+  if (!('label' in e)) return cut(e);
+  return Option.match(Option.fromUndefinedOr(e.at), { onNone: () => [], onSome: cut });
+};
+
+/** An ear's pick: its label, else its point as its seed. */
+const earPick = (e: TracePt | EarAt) => {
+  if ('label' in e) return pickOf({ label: e.label });
+  return pickOf(e);
+};
+
+/** The band round a seeded face's point his jaw's deep shade is read in, from `jaw` above `row` to 12 below it: none round a labelled face (it names its chin's line). */
+const jawAround = (face: Picked, row: number, jaw: number): TracePt[] => {
+  if ('label' in face) return [];
+  return rect(face[0] - JAW_REACH, row - jaw, face[0] + JAW_REACH, row + 12);
+};
+
+/** His neck's pick: its label, or its seeds (none: no neck read). */
+const neckPick = (necks: Standing['necks']) => {
+  if ('label' in necks) return { label: necks.label };
+  return { seeds: necks };
+};
+
 /** A standing view's parts: his head, hair and ears; his garment, its mantle, sash and neck; his arms and hands; his feet and straps. */
 export const standing = (v: Standing): TraceSheetView => {
   const [x0, y0, x1, y1] = v.box;
@@ -380,9 +429,14 @@ export const standing = (v: Standing): TraceSheetView => {
   const clips: Readonly<Record<string, ReadonlyArray<TracePt>>> = v.earClips ?? {};
   const lobes: Readonly<Record<string, ReadonlyArray<TracePt>>> = v.earLobes ?? {};
   const ears = Object.fromEntries(
-    Object.entries(v.ears).map(([name, seed]) => [
+    Object.entries(v.ears).map(([name, e]) => [
       name,
-      ear(seed, lobes[name] ?? clips[name] ?? earBox(seed), v.earSharp ?? [], `${name}Band`),
+      ear(
+        earPick(e),
+        lobes[name] ?? clips[name] ?? cutRound(e, (at) => earBox(at)),
+        v.earSharp ?? [],
+        `${name}Band`,
+      ),
     ]),
   );
   // Each ear's lobe, where the view reads one: his figure within its polygon, his head's (`<ear>Lobe`); and the band's tone over it, swollen past it so it reaches his head's edge there with no skin between them (`<ear>LobeUnder`, laid on his head's paper, it shows only inside it). None elsewhere.
@@ -401,16 +455,16 @@ export const standing = (v: Standing): TraceSheetView => {
   const lobeNames = Object.keys(v.ears).map((name) => `${name}Lobe`);
   const lobesUnder = Object.keys(v.ears).map((name) => `${name}LobeUnder`);
   // Each ear's band, its brown round the ear in the ear's box (grown 2 px over the specks of ink in it), none unless the view lays it as a tone: what his hair gives up below the ear's top (`<ear>Band`), and the tone, which runs on up under his hair from the box's top (`<ear>BandUnder`), so no skin shows between them.
-  const bandOf = (seed: TracePt, top: number): TracePart => ({
+  const bandOf = (e: TracePt | EarAt, top: number): TracePart => ({
     classes: BROWN,
-    clip: EAR_BAND_CLIP[v.earBand ?? 'hair'](seed, top),
+    clip: cutRound(e, (at) => EAR_BAND_CLIP[v.earBand ?? 'hair'](at, top)),
     grow: 2,
     as: 'none',
   });
   const bands = Object.fromEntries(
-    Object.entries(v.ears).flatMap(([name, seed]) => [
-      [`${name}Band`, bandOf(seed, BAND_TOP)],
-      [`${name}BandUnder`, bandOf(seed, EAR_REACH)],
+    Object.entries(v.ears).flatMap(([name, e]) => [
+      [`${name}Band`, bandOf(e, BAND_TOP)],
+      [`${name}BandUnder`, bandOf(e, EAR_REACH)],
     ]),
   );
   const bandsCut = Object.keys(v.ears).map((name) => `${name}Band`);
@@ -428,9 +482,10 @@ export const standing = (v: Standing): TraceSheetView => {
     path: 'cubic',
     // His line is read brown too: the sheet paints the inner part of the line round his far ear in his band's brown, inside 1 px of ink.
     line: 'brown',
+    labels: v.labels ?? {},
     ...v.marked,
     parts: {
-      face: { seeds: [v.face], clip: wide(y0, v.chin.row), as: 'none' },
+      face: { ...pickOf(v.face), clip: wide(y0, v.chin.row), as: 'none' },
       // His face above where his garment is read from: the garment rises behind his head's paper there, so no gap shows his head's line under it.
       faceAbove: { within: 'face', clip: wide(y0, v.chin.row - chin.garment), grow: 0, as: 'none' },
       ...ears,
@@ -576,14 +631,7 @@ export const standing = (v: Standing): TraceSheetView => {
         colour: JAW_LINE[v.chin.paint ?? 'brown'],
         inside: 'head',
         // Under the chin only, never the curls beside the jaw: its band runs out to the hair at the ear; or the line the sheet paints, as the view reads it.
-        clip:
-          v.chin.line ??
-          rect(
-            v.face[0] - JAW_REACH,
-            v.chin.row - chin.shade - chin.jaw,
-            v.face[0] + JAW_REACH,
-            v.chin.row - chin.shade + 12,
-          ),
+        clip: v.chin.line ?? jawAround(v.face, v.chin.row - chin.shade, chin.jaw),
         grow: 1,
         as: 'none',
       },
@@ -640,12 +688,17 @@ export const standing = (v: Standing): TraceSheetView => {
         min: 30,
         doc: 'The soft rose round the shade under his jaw, laid under it: his skin turning from the light below his ear and down his neck (none unless the view reads it).',
       },
-      handNear: { seeds: [v.near.hand], grow: 1, as: 'circle', doc: 'His near hand at its cuff.' },
-      handFar: { seeds: [v.far.hand], grow: 1, as: 'circle', doc: 'His far hand at its cuff.' },
-      handNearPaper: { seeds: [v.near.hand], grow: 0, as: 'none' },
-      handFarPaper: { seeds: [v.far.hand], grow: 0, as: 'none' },
-      handNearRing: { seeds: [v.near.hand], grow: 8, as: 'none' },
-      handFarRing: { seeds: [v.far.hand], grow: 8, as: 'none' },
+      handNear: {
+        ...pickOf(v.near.hand),
+        grow: 1,
+        as: 'circle',
+        doc: 'His near hand at its cuff.',
+      },
+      handFar: { ...pickOf(v.far.hand), grow: 1, as: 'circle', doc: 'His far hand at its cuff.' },
+      handNearPaper: { ...pickOf(v.near.hand), grow: 0, as: 'none' },
+      handFarPaper: { ...pickOf(v.far.hand), grow: 0, as: 'none' },
+      handNearRing: { ...pickOf(v.near.hand), grow: 8, as: 'none' },
+      handFarRing: { ...pickOf(v.far.hand), grow: 8, as: 'none' },
       // Each sleeve out to its shaded edge where the view gives its polygon (none unless it does).
       armNearPlus: { silhouette: true, clip: v.near.plus ?? [], as: 'none' },
       armFarPlus: { silhouette: true, clip: v.far.plus ?? [], as: 'none' },
@@ -699,7 +752,7 @@ export const standing = (v: Standing): TraceSheetView => {
         doc: "His skin the garment's neck shows, below his chin: lit, as his face.",
       },
       neck: {
-        seeds: v.necks,
+        ...neckPick(v.necks),
         inside: 'body',
         as: 'tones',
         doc: "His neck under his hair, in the tunic's neck (from behind).",
@@ -764,9 +817,10 @@ export const TRACE = {
     front: standing({
       box: [18, 194, 265, 857],
       out: 'front-traced.ts',
+      labels: LABELS.front,
       about:
         "his front view: curly hair over his ears' tops, his ears, a beardless face; his cream tunic, the teal mantle from his left shoulder (screen right) down to his right hip, the cream sash knotted at his waist with its two ends hanging; his cream right sleeve and his teal left sleeve; his sandals",
-      face: [133, 334],
+      face: { label: 'face' },
       marked: {
         marks: {
           eyes: [
@@ -780,7 +834,11 @@ export const TRACE = {
           mouth: [141, 350],
         },
       },
-      ears: { earNear: [72, 322], earFar: [210, 322] },
+      // Each ear's box and its band's tone are cut round these points.
+      ears: {
+        earNear: { label: 'earNear', at: [72, 322] },
+        earFar: { label: 'earFar', at: [210, 322] },
+      },
       earBand: 'tone',
       // His far ear's lobe, which the sheet draws dark inside its line (rows 336-346): the sheet's outer edge (221 at rows 312-322, 216 at 334, 198 at 347) less the line's 7 px.
       earLobes: {
@@ -824,7 +882,7 @@ export const TRACE = {
           [0, 610],
         ],
         below: 472,
-        hand: [48, 622],
+        hand: { label: 'handNear' },
       },
       far: {
         pick: SILHOUETTE,
@@ -837,7 +895,7 @@ export const TRACE = {
           [290, 610],
         ],
         below: 472,
-        hand: [235, 622],
+        hand: { label: 'handFar' },
       },
       arms: 'beside',
       necks: [],
@@ -856,9 +914,10 @@ export const TRACE = {
     threeQuarterLeft: standing({
       box: [292, 194, 511, 857],
       out: 'three-quarter-left-traced.ts',
+      labels: LABELS.threeQuarterLeft,
       about:
         "his three-quarter view turned to screen left: his face to our left of his head's middle, his far ear behind it; the mantle over his left shoulder (screen right) and down across him; his cream right sleeve near us, his teal left sleeve far; his sandals",
-      face: [382, 334],
+      face: { label: 'face' },
       marked: {
         marks: {
           eyes: [
@@ -872,7 +931,8 @@ export const TRACE = {
           mouth: [358, 351],
         },
       },
-      ears: { earNear: [440, 322] },
+      // His ear's skin runs on into his face: its region is his face's, cut to the oval the sheet draws it.
+      ears: { earNear: { label: 'face' } },
       earClips: { earNear: oval(440.5, 323, 12.5, 19.5) },
       skinLit: ['#fcdb9c', '#f9cb8a', '#fbd59c'],
       chin: {
@@ -923,7 +983,7 @@ export const TRACE = {
           [280, 612],
         ],
         below: 472,
-        hand: [315, 623],
+        hand: { label: 'handNear' },
       },
       far: {
         pick: SILHOUETTE,
@@ -936,7 +996,7 @@ export const TRACE = {
           [525, 612],
         ],
         below: 470,
-        hand: [476, 623],
+        hand: { label: 'handFar' },
       },
       arms: 'beside',
       necks: [],
@@ -955,9 +1015,10 @@ export const TRACE = {
     profileLeft: standing({
       box: [552, 195, 733, 857],
       out: 'profile-left-traced.ts',
+      labels: LABELS.profileLeft,
       about:
         'his profile facing screen left: one eye, his ear behind his cheek, his curls behind; his teal left arm hanging over his side in front of him, the sash knotted at his front with its end hanging; his sandals',
-      face: [618, 335],
+      face: { label: 'face' },
       marked: {
         marks: {
           eyes: [[589, 312]],
@@ -971,7 +1032,8 @@ export const TRACE = {
           },
         },
       },
-      ears: { earNear: [657, 322] },
+      // His ear's skin runs on into his face: its region is his face's, cut to the oval the sheet draws it.
+      ears: { earNear: { label: 'face' } },
       // His ear's skin runs on into his cheek at its front and lobe (no line, rows 321-336): x 644-669, rows 305-336.
       earClips: { earNear: oval(656.5, 320.5, 13, 16) },
       earLit: oval(656.5, 320.5, 13, 16),
@@ -1015,7 +1077,7 @@ export const TRACE = {
       // His nape: his last curl turns under, and his neck runs down from it.
       sharp: [[668.5, 397.5]],
       near: {
-        pick: sleeveAt([650, 480]),
+        pick: sleeveAt({ label: 'sleeve' }),
         clip: [
           [612, 405],
           [700, 405],
@@ -1023,10 +1085,10 @@ export const TRACE = {
           [612, 607],
         ],
         below: 405,
-        hand: [644, 622],
+        hand: { label: 'hand' },
       },
       far: {
-        pick: sleeveAt([650, 480]),
+        pick: sleeveAt({ label: 'sleeve' }),
         clip: [
           [612, 405],
           [700, 405],
@@ -1034,7 +1096,7 @@ export const TRACE = {
           [612, 607],
         ],
         below: 405,
-        hand: [644, 622],
+        hand: { label: 'hand' },
       },
       arms: 'onGarment',
       necks: [],
@@ -1050,11 +1112,15 @@ export const TRACE = {
     back: standing({
       box: [761, 194, 1018, 857],
       out: 'back-traced.ts',
+      labels: LABELS.back,
       about:
         'his back: his curls over the whole of his head, his ears either side; the mantle over his left shoulder (screen left from behind) and down across his back; his teal left sleeve on screen left, his cream right sleeve on screen right; his heels in their sandals',
-      face: [892, 288],
+      face: { label: 'face' },
       marked: {},
-      ears: { earNear: [819, 322], earFar: [962, 322] },
+      ears: {
+        earNear: { label: 'earNear', at: [819, 322] },
+        earFar: { label: 'earFar', at: [962, 322] },
+      },
       earSharp: [[964.5, 307.5]],
       chin: {
         kind: 'closed',
@@ -1076,7 +1142,7 @@ export const TRACE = {
           [750, 612],
         ],
         below: 472,
-        hand: [788, 625],
+        hand: { label: 'handNear' },
       },
       far: {
         pick: SILHOUETTE,
@@ -1089,10 +1155,10 @@ export const TRACE = {
           [1030, 612],
         ],
         below: 472,
-        hand: [988, 625],
+        hand: { label: 'handFar' },
       },
       arms: 'beside',
-      necks: [[891, 390]],
+      necks: { label: 'neck' },
       beside: [],
       sash: { band: [826, 540, 956, 562], knots: [], ends: [] },
       hem: 808,
@@ -1101,9 +1167,10 @@ export const TRACE = {
     profileRight: standing({
       box: [1048, 194, 1237, 858],
       out: 'profile-right-traced.ts',
+      labels: LABELS.profileRight,
       about:
         'his profile facing screen right: one eye, his ear behind his cheek, his curls behind; his cream right arm hanging over his side in front of him, the mantle down his back, the sash knotted at his front with its end hanging; his sandals',
-      face: [1167, 336],
+      face: { label: 'face' },
       marked: {
         marks: {
           eyes: [[1198, 312]],
@@ -1117,7 +1184,8 @@ export const TRACE = {
           },
         },
       },
-      ears: { earNear: [1123, 322] },
+      // His ear's skin runs on into his face: its region is his face's, cut to the oval the sheet draws it.
+      ears: { earNear: { label: 'face' } },
       // His ear's skin runs on into his cheek at its front (no line, rows 312-330): x 1113-1138, rows 304-337.
       earClips: { earNear: oval(1124.5, 320.5, 12, 17) },
       earLit: oval(1124.5, 320.5, 12, 17),
@@ -1145,16 +1213,16 @@ export const TRACE = {
       },
       sharp: [],
       near: {
-        pick: sleeveAt([1110, 480]),
+        pick: sleeveAt({ label: 'sleeve' }),
         clip: PROFILE_RIGHT_SLEEVE,
         below: 405,
-        hand: [1130, 620],
+        hand: { label: 'hand' },
       },
       far: {
-        pick: sleeveAt([1110, 480]),
+        pick: sleeveAt({ label: 'sleeve' }),
         clip: PROFILE_RIGHT_SLEEVE,
         below: 405,
-        hand: [1130, 620],
+        hand: { label: 'hand' },
       },
       arms: 'onGarment',
       necks: [],
@@ -1170,9 +1238,10 @@ export const TRACE = {
     threeQuarterRight: standing({
       box: [1268, 194, 1510, 856],
       out: 'three-quarter-right-traced.ts',
+      labels: LABELS.threeQuarterRight,
       about:
         "his three-quarter view turned to screen right: his face to our right of his head's middle; the mantle over his left shoulder (screen right) and down across him; his cream right sleeve on screen left, his teal left sleeve on screen right; his sandals",
-      face: [1402, 333],
+      face: { label: 'face' },
       marked: {
         marks: {
           eyes: [
@@ -1186,7 +1255,8 @@ export const TRACE = {
           mouth: [1419, 350],
         },
       },
-      ears: { earNear: [1338, 322] },
+      // His ear's skin runs on into his face: its region is his face's, cut to its skin's edge; the band under it is cut round this point.
+      ears: { earNear: { label: 'face', at: [1338, 322] } },
       earClips: { earNear: THREE_QUARTER_RIGHT_EAR },
       // The band under his ear (x 1329-1362, rows 335-372), parted from his hair by the sheet's line (x 1318-1328, rows 331-339).
       earBand: 'under',
@@ -1240,7 +1310,7 @@ export const TRACE = {
           [1258, 612],
         ],
         below: 472,
-        hand: [1300, 622],
+        hand: { label: 'handNear' },
       },
       far: {
         pick: SILHOUETTE,
@@ -1253,7 +1323,7 @@ export const TRACE = {
           [1520, 612],
         ],
         below: 472,
-        hand: [1483, 622],
+        hand: { label: 'handFar' },
       },
       arms: 'beside',
       necks: [],

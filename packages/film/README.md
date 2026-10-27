@@ -2525,11 +2525,21 @@ reads the new `kept/` and `views/` as before.
 ### The cast render: `film concept trace` and `film concept render`
 
 A kept sheet becomes a member's rigs in two commands. `film concept trace
-<spec.ts> [--view <name>]` (`tools/trace-cli.ts`, pure in `core/trace.ts`)
+<spec.ts> [--view <name>] [--check]` (`tools/trace-cli.ts`, pure in `core/trace.ts`)
 reads each view of a kept sheet into the table its rig is composed from:
 the spec names the member, the sheet, its colour classes and each view's
-parts by seed points in sheet pixels, clipped by polygons where the sheet
-draws no line between two parts; each part is an outline, a circle or the
+parts, by their labels or by seed points in sheet pixels, clipped by
+polygons where the sheet draws no line between two parts. A label
+(`core/label.ts`, a view's `labels`, a part's `label`) names a part once by
+its colour classes and, where one class holds two parts, by where its
+region lies against another label's (`above`, `below`, `left` or `right`
+of its box, `touching` it across a line), the largest region left: no
+point of the sheet, so one table reads every view it is written for; a
+label that picks no region, names none or is made of itself is refused by
+name. `--check` writes nothing: it traces each view and says whether the
+table beside the spec is what it traces (the formatter's spacing,
+semicolons and trailing commas aside), naming the region each label picked,
+and fails on any that is not. Each part is an outline, a circle or the
 tones laid on another part, and the table is written beside the spec with
 the sheet, the view's box and the command in its header, so a fix is traced
 again by running it once more. Tables hold points only; the colours are
@@ -2578,8 +2588,11 @@ its fit rows (`core/fit-rows.ts` `fitRows`): the outer ink edge per band
 has not (`outline.turns`), the figure masks' overlap (`silhouette.iou`), the
 render's ink to the sheet's (`ink.edge`), paper slivers and enclosed ground
 beyond the sheet's (`slivers`, `holes`), each colour class's overlap and
-colour (`class.iou`, `class.colour`, from the member's `FIT_CLASSES`), and
-each of the view's probes, a scanline's class runs compared by their edges
+colour (`class.iou`, `class.colour`, from the member's `FIT_CLASSES`), each
+part the view's labels pick on both crops, the render's by the film's papers
+(`part.iou`, `part.edge`, the view's `fit.labels`: a label whose region the
+sheet runs on into another part's is read for other labels' rules alone,
+`compared: false`), and each of the view's probes, a scanline's class runs compared by their edges
 (`probe.<name>`, the view's `fit.probes`). Each row has a bar (`FIT_BARS`,
 a view's `fit.bars` over it, each with why). Only a view whose every row
 passes (`fitPasses`) is shown to a fresh model at 1:1 with its clause of the

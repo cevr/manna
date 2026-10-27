@@ -12,6 +12,7 @@
 // data a test reads in Bun, and only its props' draws touch a canvas.
 
 import type { FitBar, FitBarName, FitClass, FitProbe } from '../core/fit-rows.ts';
+import type { LabelTable } from '../core/label.ts';
 import type { PoseOf, RivePropSpec } from './rive.ts';
 
 type Pt = readonly [number, number];
@@ -54,10 +55,12 @@ interface CastFitBar extends FitBar {
 
 /**
  * What a view's fit rows hold beyond the house's (`core/fit-rows.ts`): its
+ * member's part labels for it (`core/label.ts`: a part row each), its
  * probes (a scanline across a feature a review measured: an ear's band, a
  * chin's line), and a bar of its own for a row, each with its reason.
  */
 interface CastFit {
+  readonly labels?: LabelTable;
   readonly probes?: ReadonlyArray<FitProbe>;
   readonly bars?: Readonly<Partial<Record<FitBarName, CastFitBar>>>;
 }

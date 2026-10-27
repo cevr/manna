@@ -25,6 +25,7 @@ import * as LEAD_BACK from '../../../library/cast/lead-feast/rig/back-traced.ts'
 import * as LEAD_DRINKING from '../../../library/cast/lead-feast/rig/drinking-traced.ts';
 import * as LEAD_FRONT from '../../../library/cast/lead-feast/rig/front-traced.ts';
 import * as LEAD from '../../../library/cast/lead-feast/rig/lead.ts';
+import { LABELS as LEAD_LABELS } from '../../../library/cast/lead-feast/rig/labels.ts';
 import * as LEAD_PROFILE_LEFT from '../../../library/cast/lead-feast/rig/profile-left-traced.ts';
 import * as LEAD_PROFILE_RIGHT from '../../../library/cast/lead-feast/rig/profile-right-traced.ts';
 import * as LEAD_REACHING from '../../../library/cast/lead-feast/rig/reaching-traced.ts';
@@ -308,7 +309,15 @@ const BUST_BARS = {
   'class.iou/cream': { min: 0, why: BUST_WHY },
 } as const;
 
-/** A view's own fit: its probes and its bars, each with why (`CastView.fit`). */
+/** Why the front's near ear is held to no part bar: the render lays its band to the ear's lobe alone, so the ear's skin runs on into his cheek under it and is his face's region (r155, keep-ready in review-art-3; the band's place is held by B1's `earLeft` probe on the busts). */
+const NEAR_EAR_WHY =
+  "the render's near ear runs on into his cheek under its band, so it is his face's region (r155; review-art-3 B1 kept the band)";
+
+/** Why the three-quarter left's near hand is held looser: the house draws a hand as a whole circle (CRAFT, circle hands) where the sheet hides its far side behind his sleeve's shade. */
+const CIRCLE_HAND_WHY =
+  'a circle hand (CRAFT) over the hand the sheet half hides in shade (r155 0.5 and 5.78; review-art-3 kept the view)';
+
+/** A view's own fit: its labels, its probes and its bars, each with why (`CastView.fit`). */
 type ViewFit = NonNullable<CastView['fit']>;
 
 /**
@@ -319,6 +328,27 @@ type ViewFit = NonNullable<CastView['fit']>;
  * frown, heads-6's chin and ear).
  */
 const LEAD_FIT = {
+  // Each turnaround view's part rows, by the labels his tables are traced from (`labels.ts`); from behind, his hair reads as his line, so no label of his back is read but his mantle and his cream, compared by no row.
+  turnaround: {
+    front: {
+      labels: LEAD_LABELS.front,
+      bars: {
+        'part.iou/earNear': { why: NEAR_EAR_WHY },
+        'part.edge/earNear': { why: NEAR_EAR_WHY },
+      },
+    },
+    threeQuarterLeft: {
+      labels: LEAD_LABELS.threeQuarterLeft,
+      bars: {
+        'part.iou/handNear': { min: 0.45, why: CIRCLE_HAND_WHY },
+        'part.edge/handNear': { max: 6, why: CIRCLE_HAND_WHY },
+      },
+    },
+    profileLeft: { labels: LEAD_LABELS.profileLeft },
+    back: { labels: LEAD_LABELS.back },
+    profileRight: { labels: LEAD_LABELS.profileRight },
+    threeQuarterRight: { labels: LEAD_LABELS.threeQuarterRight },
+  },
   poses: {
     'poses-1': {
       bars: {
@@ -418,27 +448,37 @@ const WINCE: Numbers = { wince: 1, eyes: 0, mouthLine: 0, browY: -5, browTilt: -
 export const CAST = castTable({
   'lead-feast': {
     turnaround: {
-      front: turnaround(LEAD_FRONT, LEAD.leadFeastFront, RIGS.leadFeastFrontProp),
-      threeQuarterLeft: turnaround(
-        LEAD_TQ_LEFT,
-        LEAD.leadFeastThreeQuarterLeft,
-        RIGS.leadFeastThreeQuarterLeftProp,
+      front: fitted(
+        LEAD_FIT.turnaround.front,
+        turnaround(LEAD_FRONT, LEAD.leadFeastFront, RIGS.leadFeastFrontProp),
       ),
-      profileLeft: turnaround(
-        LEAD_PROFILE_LEFT,
-        LEAD.leadFeastProfileLeft,
-        RIGS.leadFeastProfileLeftProp,
+      threeQuarterLeft: fitted(
+        LEAD_FIT.turnaround.threeQuarterLeft,
+        turnaround(
+          LEAD_TQ_LEFT,
+          LEAD.leadFeastThreeQuarterLeft,
+          RIGS.leadFeastThreeQuarterLeftProp,
+        ),
       ),
-      back: turnaround(LEAD_BACK, LEAD.leadFeastBack, RIGS.leadFeastBackProp),
-      profileRight: turnaround(
-        LEAD_PROFILE_RIGHT,
-        LEAD.leadFeastProfileRight,
-        RIGS.leadFeastProfileRightProp,
+      profileLeft: fitted(
+        LEAD_FIT.turnaround.profileLeft,
+        turnaround(LEAD_PROFILE_LEFT, LEAD.leadFeastProfileLeft, RIGS.leadFeastProfileLeftProp),
       ),
-      threeQuarterRight: turnaround(
-        LEAD_TQ_RIGHT,
-        LEAD.leadFeastThreeQuarterRight,
-        RIGS.leadFeastThreeQuarterRightProp,
+      back: fitted(
+        LEAD_FIT.turnaround.back,
+        turnaround(LEAD_BACK, LEAD.leadFeastBack, RIGS.leadFeastBackProp),
+      ),
+      profileRight: fitted(
+        LEAD_FIT.turnaround.profileRight,
+        turnaround(LEAD_PROFILE_RIGHT, LEAD.leadFeastProfileRight, RIGS.leadFeastProfileRightProp),
+      ),
+      threeQuarterRight: fitted(
+        LEAD_FIT.turnaround.threeQuarterRight,
+        turnaround(
+          LEAD_TQ_RIGHT,
+          LEAD.leadFeastThreeQuarterRight,
+          RIGS.leadFeastThreeQuarterRightProp,
+        ),
       ),
     },
     poses: {

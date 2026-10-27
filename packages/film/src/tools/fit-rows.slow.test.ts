@@ -8,7 +8,7 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Result } from 'effect';
-import { type FitRow, fitPasses, fitRows } from '../core/fit-rows.ts';
+import { type FitRow, type FitSpec, fitPasses, fitRows } from '../core/fit-rows.ts';
 import { decodePng } from './png.ts';
 
 const crop = (name: string) =>
@@ -20,11 +20,48 @@ const crop = (name: string) =>
     return Result.getOrThrow(decodePng(bytes));
   }).pipe(Effect.provide(BunServices.layer));
 
-/** `view`'s rows on render `n` against its kept crop. */
-const rowsOf = (view: string, n: number) =>
+/** `view`'s rows on render `n` against its kept crop, held to `spec`. */
+const rowsOf = (view: string, n: number, spec: FitSpec = {}) =>
   Effect.gen(function* () {
-    return fitRows(yield* crop(`${view}.concept`), yield* crop(`r${n}-${view}.render`));
+    return fitRows(yield* crop(`${view}.concept`), yield* crop(`r${n}-${view}.render`), spec);
   });
+
+/** lead-feast's colour classes, his sheet's samples and the papers that paint them (In Its Order's `FIT_CLASSES`), and his front's face label (`labels.ts`). */
+const LABELLED: FitSpec = {
+  classes: {
+    cream: {
+      sheet: ['#fde1bc', '#e3bea0', '#feecca', '#f7d8b2'],
+      paper: [
+        '#fde1bc',
+        '#e8c3ad',
+        '#fff0d8',
+        '#fbe0bb',
+        '#fbddb6',
+        '#fde8c8',
+        '#f1d2b0',
+        '#e1bda0',
+      ],
+    },
+    teal: {
+      sheet: ['#4e7182', '#58859b', '#61898d', '#4e768b', '#3f5f73'],
+      paper: ['#608989', '#435770', '#729c99', '#4f7a85', '#456079', '#4a6479', '#476c7b'],
+    },
+    skin: {
+      sheet: ['#fdaf70', '#e58a62', '#f3996a', '#f8a062'],
+      paper: [
+        '#fdaf72',
+        '#fec48e',
+        '#f59d66',
+        '#e8906a',
+        '#f8a466',
+        '#e58a62',
+        '#e27f55',
+        '#f2a06c',
+      ],
+    },
+  },
+  labels: { face: { classes: ['skin'] } },
+};
 
 const failing = (rows: ReadonlyArray<FitRow>, name: string) =>
   rows.filter((r) => r.name === name && !r.pass);
@@ -44,6 +81,23 @@ describe('fit rows on lead-feast', () => {
           expect(fitPasses(r155)).toBe(true);
         }),
     );
+
+  it.effect(
+    "render 40's offset fails the front's face by its part rows, render 155's face passes them",
+    () =>
+      Effect.gen(function* () {
+        const face = (rows: ReadonlyArray<FitRow>) =>
+          rows.filter((r) => r.part === 'face').map((r) => `${r.name} ${r.pass}`);
+        expect(face(yield* rowsOf('turnaround-front', 40, LABELLED))).toEqual([
+          'part.iou false',
+          'part.edge false',
+        ]);
+        expect(face(yield* rowsOf('turnaround-front', 155, LABELLED))).toEqual([
+          'part.iou true',
+          'part.edge true',
+        ]);
+      }),
+  );
 
   it.effect(
     "render 95's kink in the front's head fails outline.turns there, render 155's head passes",

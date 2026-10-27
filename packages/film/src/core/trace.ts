@@ -4,7 +4,9 @@
 // ground the figure stands on, reached from the view's box's edge without
 // crossing ink. What lies inside the figure and is not ink falls into
 // regions, each a run of paper the sheet inked round; a part of the view is
-// the regions its seed points lie in (a sleeve, the hair, a face), cut by a
+// the region its label picks (`core/label.ts`: by its classes and where it
+// lies against another label's) or the regions its seed points lie in (a
+// sleeve, the hair, a face), cut by a
 // polygon where the sheet draws no line between two parts (a sleeve at its
 // shoulder), less or plus other parts, and grown into the ink round it, so
 // two parts the sheet parts by a line meet under it. A part is written as
@@ -18,6 +20,7 @@
 
 import { Result, Schema } from 'effect';
 import { SHEET_FIT, anchorTurns, anchorsOf, fitClosed } from './fit.ts';
+import { type LabelTable, labelRegions, touchingIn } from './label.ts';
 import type { Raster } from './raster.ts';
 
 /** A point in the sheet's pixels. */
@@ -33,6 +36,8 @@ type TraceAs = 'outline' | 'tones' | 'circle' | 'curls' | 'marks' | 'none';
 export interface TracePart {
   /** Points inside the part's regions, sheet pixels: each picks the region it lies in (or the nearest, on ink). */
   readonly seeds?: ReadonlyArray<TracePt>;
+  /** The region a label of the view's table picks (`TraceView.labels`, `core/label.ts`), in place of a seed. */
+  readonly label?: string;
   /** Every pixel of these colour classes (the hair's every curl), most often clipped. */
   readonly classes?: ReadonlyArray<string>;
   /** The whole figure to the middle of its line, most often clipped (a garment: what lies below the chin). */
@@ -119,6 +124,8 @@ interface TraceView {
   readonly classes: Readonly<Record<string, ReadonlyArray<string>>>;
   /** The parts, by name: each written as its `as` says, in this order. */
   readonly parts: Readonly<Record<string, TracePart>>;
+  /** The member's part labels (`core/label.ts`): each a region a part picks by its `label`, by its classes and where it lies, never a point of the sheet. */
+  readonly labels?: LabelTable;
   /** The face's marks, by their seeds. */
   readonly marks?: TraceMarkSeeds;
   /** The part whose box's centre is the head's (`PANEL.head`); none for a view with no head traced. */
@@ -170,6 +177,8 @@ export interface Traced {
   readonly feet?: TracePt;
   /** Each region the sheet's ink parts, for a spec's author: its centre, its box, its size and its colour. */
   readonly regions: ReadonlyArray<TraceRegion>;
+  /** The region each label of the view's table picked, for a spec's author. */
+  readonly labelled: Readonly<Record<string, TraceRegion>>;
 }
 
 /** A face's marks as `tracedKit` (`@manna/film/style`) takes them, sheet pixels. */
@@ -182,9 +191,10 @@ interface TracedMarks {
   readonly mouthLine: number;
 }
 
-/** A region of the view: its id, its centre, its box, its size in pixels and its median colour. */
+/** A region of the view: its id, its colour class, its centre, its box, its size in pixels and its median colour. */
 interface TraceRegion {
   readonly id: number;
+  readonly class: string;
   readonly at: TracePt;
   readonly box: TraceBox;
   readonly size: number;
@@ -416,8 +426,8 @@ const nearestClass = (
   return best;
 };
 
-/** The regions of one colour class each, four ways, each its own label from 1. */
-const regionsOf = (g: Grid, kinds: Int8Array): Labelled => {
+/** The regions of one colour class each (`classIds` names them, from 1), four ways, each its own label from 1. */
+const regionsOf = (g: Grid, kinds: Int8Array, classIds: ReadonlyArray<string>): Labelled => {
   const label = new Int32Array(g.w * g.h);
   const regions: TraceRegion[] = [];
   let next = 1;
@@ -447,6 +457,7 @@ const regionsOf = (g: Grid, kinds: Int8Array): Labelled => {
     };
     regions.push({
       id,
+      class: classIds[(kind ?? 0) - 1] ?? '',
       at: [
         g.x0 + Math.round(xs.reduce((a, b) => a + b, 0) / xs.length),
         g.y0 + Math.round(ys.reduce((a, b) => a + b, 0) / ys.length),
@@ -463,6 +474,13 @@ const regionsOf = (g: Grid, kinds: Int8Array): Labelled => {
   }
   return { label, regions };
 };
+
+/** How near two regions lie to touch, pixels: across the widest line the sheet draws between them, and its antialiased edge. */
+const TOUCH = LINE_MAX + EDGE_AA;
+
+/** Whether two of the view's regions touch, across the line between them (`touchingIn`). */
+const touchingOf = (g: Grid, label: Int32Array, regions: ReadonlyArray<TraceRegion>) =>
+  touchingIn({ label, w: g.w, h: g.h, origin: [g.x0, g.y0] }, regions, TOUCH);
 
 /** The view pixel at sheet point `p`, or none outside the view. */
 const pixelAt = (g: Grid, [x, y]: TracePt): number | undefined => {
@@ -841,6 +859,8 @@ interface Read {
   /** Whether a pixel is the figure's, its line too: what a part that reaches the `figure` keeps. */
   readonly figure: (k: number) => boolean;
   readonly classIds: ReadonlyArray<string>;
+  /** The region each label of the view's table picked (`core/label.ts`). */
+  readonly labelled: Readonly<Record<string, TraceRegion>>;
   /** Why the spec cannot be read, each as it is met. */
   readonly refused: string[];
 }
@@ -874,6 +894,13 @@ const addSeeds = (rd: Read, name: string, seeds: ReadonlyArray<TracePt>, mask: U
   }
 };
 
+/** Every pixel of the region the label `label` picked set in `mask`. */
+const addLabel = (rd: Read, name: string, label: string, mask: Uint8Array) => {
+  const region = rd.labelled[label];
+  if (region === undefined) rd.refused.push(`the part ${name} names no label ${label}`);
+  else for (let k = 0; k < rd.n; k++) if (rd.label[k] === region.id) mask[k] = 1;
+};
+
 /** `mask` held to the pixels nearer `colour.near` than each of `colour.far`. */
 const holdToColour = (rd: Read, mask: Uint8Array, colour: NonNullable<TracePart['colour']>) => {
   const { g } = rd;
@@ -900,6 +927,7 @@ const pickedOf = (rd: Read, name: string, part: TracePart, of: (name: string) =>
   if (part.silhouette === true) for (let k = 0; k < rd.n; k++) if (reached(k)) mask[k] = 1;
   addClasses(rd, name, part.classes ?? [], mask);
   addSeeds(rd, name, part.seeds ?? [], mask);
+  if (part.label !== undefined) addLabel(rd, name, part.label, mask);
   if (part.colour !== undefined) holdToColour(rd, mask, part.colour);
   for (const other of part.plus ?? []) addTo(mask, of(other));
   return mask;
@@ -914,7 +942,8 @@ const formedOf = (
 ) => {
   const { g } = rd;
   const reached = reachOf(rd, part);
-  const seeded = (part.seeds ?? []).length > 0 || (part.classes ?? []).length > 0;
+  const seeded =
+    (part.seeds ?? []).length > 0 || (part.classes ?? []).length > 0 || part.label !== undefined;
   const by = part.grow ?? (seeded ? GROW : 0);
   const mask =
     by > 0
@@ -1065,7 +1094,9 @@ const readOf = (sheet: Raster, view: TraceView) => {
   const ground = flood(g, edgePixels(g), (k) => lumaAt(sheet, sheetIndex(g, k)) >= GROUND_LUMA);
   const figure = (k: number) => ground[k] === 0;
   const kinds = classesOf(g, view.classes, (k) => figure(k) && ink[k] === 0);
-  const { label, regions } = regionsOf(g, kinds);
+  const classIds = Object.keys(view.classes);
+  const { label, regions } = regionsOf(g, kinds, classIds);
+  const labels = labelRegions(regions, view.labels ?? {}, touchingOf(g, label, regions));
   // The figure inside its line: the ground grown across the antialiased edge outside the line (darker than the ground, lighter than ink), through the ink it meets, and the antialiased pixel past that.
   const bridged = grown(
     g,
@@ -1099,8 +1130,9 @@ const readOf = (sheet: Raster, view: TraceView) => {
     label,
     core: (k) => line[k] === 0,
     figure,
-    classIds: Object.keys(view.classes),
-    refused: [],
+    classIds,
+    labelled: labels.picked,
+    refused: [...labels.refused],
   };
   return { rd, figure, regions: regions.filter((r) => r.size >= REGION_MIN) };
 };
@@ -1156,7 +1188,7 @@ export const traceView = (sheet: Raster, view: TraceView): Result.Result<Traced,
   const { rd, figure, regions } = readOf(sheet, view);
   const { g } = rd;
   const of = partsOf(rd, view.parts);
-  let traced: Traced = { ...writtenOf(rd, view, of), regions };
+  let traced: Traced = { ...writtenOf(rd, view, of), regions, labelled: rd.labelled };
   const marks = view.marks === undefined ? undefined : marksOf(rd, figure, view.marks);
   if (marks !== undefined) traced = { ...traced, marks };
   if (view.head !== undefined) {

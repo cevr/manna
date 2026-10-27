@@ -173,4 +173,23 @@ describe('fitRows', () => {
     ]);
     expect(rows.filter((r) => r.name === 'class.colour').map((r) => r.value)).toEqual([0, 0]);
   });
+
+  test('part rows compare the region each label picks on both crops: one moved fails, one in place passes', () => {
+    const spec = {
+      classes: {
+        cream: { sheet: ['#fde1bc'], paper: ['#fde1bc'] },
+        teal: { sheet: ['#61898d'], paper: ['#61898d'] },
+      },
+      labels: {
+        robe: { classes: ['teal'] },
+        mantle: { classes: ['teal'], compared: false },
+      },
+    };
+    const parts = (dx: number) =>
+      fitRows(SHEET, paint({ ground: RENDER_GROUND, dx }), spec)
+        .filter((r) => r.name.startsWith('part.'))
+        .map((r) => `${r.name}/${r.part} ${r.pass}`);
+    expect(parts(0)).toEqual(['part.iou/robe true', 'part.edge/robe true']);
+    expect(parts(8)).toEqual(['part.iou/robe false', 'part.edge/robe false']);
+  });
 });

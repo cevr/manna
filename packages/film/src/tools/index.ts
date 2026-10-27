@@ -49,3 +49,4 @@ export * from './easel.ts';
 export { CACHE } from './review-file.ts';
 export { runFillPicks } from './fill-picks.ts';
 export type { TracePart, TracePt, TraceSheet, TraceSheetView } from '../core/trace.ts';
+export type { LabelTable } from '../core/label.ts';

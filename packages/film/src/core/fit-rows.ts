@@ -24,6 +24,11 @@
 //   `class.iou`, the class's overlap (the sheet's pixels by its samples, the
 //   render's by the film's papers), and `class.colour`, the mean ΔE76
 //   between the two crops where both read it.
+// - With his part labels too (`FitSpec.labels`), per label both crops can
+//   read (its classes among the classes): `part.iou`, the overlap of the
+//   region it picks on each crop, and `part.edge`, the mean distance between
+//   their edges, both ways. Each crop is labelled by its own classes, the
+//   render by the film's papers, so a part is the same part on both.
 // - With a view's probes (`FitSpec.probes`), `probe.<name>`: a row or a
 //   column read as a string of classes (ink, ground, each class), the
 //   largest distance from a change of class on one crop to the same change
@@ -34,6 +39,7 @@
 // bar. Pure: RGBA in, rows out, the same rows for the same crops.
 
 import { type Rgb, componentsOf, deltaE, labOf, lumaOf, rgbAt } from './cast-sheet-pixels.ts';
+import { type LabelRegion, type LabelTable, labelRegions, touchingIn } from './label.ts';
 import type { Raster } from './raster.ts';
 
 /**
@@ -43,6 +49,13 @@ import type { Raster } from './raster.ts';
  * the art reviews' probes read it (`runs.ts`, `edge.ts`, luma 80 to 90).
  */
 const LINE_LUMA = 90;
+
+/** The least overlap of a labelled part's regions on the two crops (`part.iou`), and the most mean distance between their edges, pixels (`part.edge`): calibrated in rig-fit round 1. */
+const PART_IOU = 0.7;
+const PART_EDGE = 3;
+
+/** How near two of a crop's regions lie to touch, pixels (`core/label.ts` `touching`): across the widest line a sheet draws, as the tracer reads it. */
+const PART_TOUCH = 12;
 
 /** A row's bar: the least and the most its value may be. */
 export interface FitBar {
@@ -82,14 +95,16 @@ export const FIT_BARS = {
   holes: { max: 8 },
   'class.iou': { min: 0.6 },
   'class.colour': { max: 12 },
+  'part.iou': { min: PART_IOU },
+  'part.edge': { max: PART_EDGE },
   probe: { max: 4 },
 } as const satisfies Record<string, FitBar>;
 
-/** A bar's name: a row's, a row's and band's, a class row's and class's, or `probe` for every probe's row. */
+/** A bar's name: a row's, a row's and band's, a class or part row's and its class or part's, or `probe` for every probe's row. */
 export type FitBarName =
   | keyof typeof FIT_BARS
   | `${'silhouette.edge' | 'outline.turns'}/${'head' | 'body'}`
-  | `${'class.iou' | 'class.colour'}/${string}`;
+  | `${'class.iou' | 'class.colour' | 'part.iou' | 'part.edge'}/${string}`;
 
 /**
  * The bar a row is held to: the spec's for its name and band or part
@@ -129,9 +144,10 @@ export interface FitProbe {
   readonly bar?: FitBar;
 }
 
-/** What a view is held to beyond the figure: its member's classes, its probes, and its own bars. */
+/** What a view is held to beyond the figure: its member's classes, his part labels (`core/label.ts`, read on both crops by the classes), its probes, and its own bars. */
 export interface FitSpec {
   readonly classes?: Readonly<Record<string, FitClass>>;
+  readonly labels?: LabelTable;
   readonly probes?: ReadonlyArray<FitProbe>;
   readonly bars?: Readonly<Partial<Record<FitBarName, FitBar>>>;
 }
@@ -499,6 +515,134 @@ const classRows = (
   });
 };
 
+/** A crop's regions of each class, four ways: each pixel's region id (-1 for none) and each region as a label reads it, its box and centre in crop pixels. */
+const regionsOf = (read: Read, kinds: Int8Array, names: ReadonlyArray<string>) => {
+  const { w, h } = read;
+  const label = new Int32Array(w * h).fill(-1);
+  const regions: LabelRegion[] = [];
+  names.forEach((name, k) => {
+    const { components, labels } = componentsOf(
+      Uint8Array.from(kinds, (v) => (v === k ? 1 : 0)),
+      w,
+      h,
+      false,
+    );
+    const base = regions.length;
+    const [sx, sy] = [new Float64Array(components.length), new Float64Array(components.length)];
+    for (let i = 0; i < labels.length; i++) {
+      const id = labels[i] ?? -1;
+      if (id < 0) continue;
+      label[i] = base + id;
+      sx[id] = (sx[id] ?? 0) + (i % w);
+      sy[id] = (sy[id] ?? 0) + Math.floor(i / w);
+    }
+    for (const c of components)
+      regions.push({
+        id: base + c.id,
+        class: name,
+        at: [(sx[c.id] ?? 0) / c.area, (sy[c.id] ?? 0) / c.area],
+        box: c.box,
+        size: c.area,
+      });
+  });
+  return { label, regions };
+};
+
+/** The labels a crop's classes can read: each of the classes, naming only labels that are too. */
+const readable = (table: LabelTable, names: ReadonlyArray<string>): LabelTable => {
+  const ok = (name: string, seen: ReadonlySet<string>): boolean => {
+    const label = table[name];
+    if (label === undefined || seen.has(name)) return false;
+    const next = new Set([...seen, name]);
+    return (
+      label.classes.every((c) => names.includes(c)) &&
+      (label.where ?? []).every((w) => ok(Object.values(w)[0] ?? '', next))
+    );
+  };
+  return Object.fromEntries(Object.entries(table).filter(([name]) => ok(name, new Set())));
+};
+
+/** The pixels of `mask` with a pixel off it four ways (or the crop's edge) beside them. */
+const edgeOfMask = (mask: Uint8Array, w: number, h: number) =>
+  Uint8Array.from(mask, (m, i) => {
+    if (m === 0) return 0;
+    const [x, y] = [i % w, Math.floor(i / w)];
+    const off = (nx: number, ny: number) =>
+      nx < 0 || ny < 0 || nx >= w || ny >= h || mask[ny * w + nx] === 0;
+    return off(x - 1, y) || off(x + 1, y) || off(x, y - 1) || off(x, y + 1) ? 1 : 0;
+  });
+
+/** The mean distance from each edge pixel of `a` to the nearest of `b`'s, pixels. */
+const meanDistance = (a: Uint8Array, b: Uint8Array, w: number, h: number) => {
+  const d = distancesTo(b, w, h);
+  let [sum, n] = [0, 0];
+  for (let i = 0; i < a.length; i++)
+    if (a[i] === 1) {
+      sum += Math.sqrt(d[i] ?? 0);
+      n++;
+    }
+  return n === 0 ? w + h : sum / n;
+};
+
+/**
+ * The part rows: for each label both crops' classes can read, the overlap of
+ * the region it picks on each, and the mean distance between their edges,
+ * both ways; a label that picks no region on a crop has none to overlap
+ * (`part.iou` 0) and an edge as far as the crop is wide and high.
+ */
+const partRows = (
+  crops: readonly [Read, Read],
+  kinds: readonly [Int8Array, Int8Array],
+  names: ReadonlyArray<string>,
+  table: LabelTable,
+  bar: (name: keyof typeof FIT_BARS, band: FitBand, part: string) => FitBar,
+): FitRow[] => {
+  const labels = readable(table, names);
+  const compared = Object.keys(labels).filter((name) => labels[name]?.compared !== false);
+  const [c] = crops;
+  const { w, h } = c;
+  const sides = crops.map((read, s) => {
+    const { label, regions } = regionsOf(read, kinds[s] ?? new Int8Array(), names);
+    const picks = labelRegions(
+      regions,
+      labels,
+      touchingIn({ label, w, h, origin: [0, 0] }, regions, PART_TOUCH),
+    );
+    const maskOf = (name: string) => {
+      const id = picks.picked[name]?.id;
+      return Uint8Array.from(label, (l) => (id !== undefined && l === id ? 1 : 0));
+    };
+    return { picks, maskOf };
+  });
+  const [sheet, render] = sides;
+  if (sheet === undefined || render === undefined) return [];
+  return compared.flatMap((name) => {
+    const [a, b] = [sheet.maskOf(name), render.maskOf(name)];
+    const [ca, cb] = [count(a), count(b)];
+    const where = [
+      ...(ca === 0 ? ['picks no region on the sheet'] : []),
+      ...(cb === 0 ? ['picks no region on the render'] : []),
+    ].join('; ');
+    const counts = { concept: ca, render: cb };
+    const more: Pick<FitRow, 'concept' | 'render' | 'where'> =
+      where === '' ? counts : { ...counts, where };
+    const [ea, eb] = [edgeOfMask(a, w, h), edgeOfMask(b, w, h)];
+    const edge =
+      ca === 0 || cb === 0 ? w + h : (meanDistance(ea, eb, w, h) + meanDistance(eb, ea, w, h)) / 2;
+    return [
+      rowOf(
+        'part.iou',
+        'figure',
+        name,
+        ca === 0 || cb === 0 ? 0 : iouOf(a, b),
+        bar('part.iou', 'figure', name),
+        more,
+      ),
+      rowOf('part.edge', 'figure', name, edge, bar('part.edge', 'figure', name), more),
+    ];
+  });
+};
+
 /**
  * A probe's pixels read as classes, in runs: `G` the ground, `H` a hole, `K`
  * darker than its line's luma (`FitProbe.dark`), each other pixel by its
@@ -657,8 +801,10 @@ export const fitRows = (
     classifier(c, classes, (k) => k.sheet),
     classifier(r, classes, (k) => k.paper),
   ];
-  rows.push(...classRows(c, r, classes, [classesOf(c, classOf[0]), classesOf(r, classOf[1])], bar));
+  const kinds = [classesOf(c, classOf[0]), classesOf(r, classOf[1])] as const;
+  rows.push(...classRows(c, r, classes, kinds, bar));
   const names = Object.keys(classes);
+  rows.push(...partRows([c, r], kinds, names, spec.labels ?? {}, bar));
   for (const p of spec.probes ?? [])
     rows.push(probeRow(c, r, p, classOf, names, p.bar ?? bar('probe')));
   return rows;
