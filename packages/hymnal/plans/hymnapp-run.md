@@ -40,7 +40,7 @@ Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>`
 | initfresh  | hymndb, biblebuild             | .rifts/manna/initfresh    | codex 01a17b30                    | merged 77b7b9ad0       |
 | topicsdb   | initfresh                      |                           |                                   |                        |
 | webkjv     | webster                        | .rifts/manna/webkjv       | codex 01a17b7d                    | merged f9b98a9ca       |
-| initwal    | initfresh                      |                           |                                   |                        |
+| initwal    | initfresh                      | .rifts/manna/initwal      | codex 01a17bcd                    | merged 2555b26a5       |
 | webster    | —                              | .rifts/manna/webster      | codex 01a17a57, r3 codex 01a17acc | merged 0f610564c       |
 | selahone   | oneup                          |                           |                                   |                        |
 | playbulk   | chordbulk, feel                |                           |                                   |                        |
@@ -515,5 +515,7 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 - webkjv follow-ups (merged f9b98a9ca after 2 rounds; `tmp/orchestrate/hymnapp/webkjv/round-2-findings.md`, `round-1-findings.md`): proceedeth and loatheth now give no entry, closest gives the verb CLOSE (also on a direct lookup: no verse context exists). Open, optional: the precedence choice is still a boolean outside the match; a NoEntry-override mutant survives (changes no result today); one doc comment names `closest`; r1 o2 (a NOTICE comparison that cannot fail) and o5. `WebsterError` export waits for the error-contract follow-up (r1 F5 remainder) that gives it a consumer. The owner's installed `manna` was rebuilt with this lookup code (webster.db unchanged). (webkjv)
 
 - initwal (new unit): two init fixes in one place. (1) initfresh N1: `init --force` over a destination whose `-wal` is non-empty must refuse and say why, never replay that WAL onto the new file or write the old database. (2) The CLI slow test "keeps a verified active runtime corpus unchanged across repeated init" runs about 5,0xx ms against Bun's 5,000 ms default and failed the initfresh and webkjv verifiers; make it pass by design (faster fixture or an explicit timeout with a measured reason). (initfresh, webkjv)
+
+- initwal follow-ups (merged 2555b26a5 after 2 rounds; `tmp/orchestrate/hymnapp/initwal/round-2-findings.md`): `init --force` refuses any database whose resolved `-wal` is non-empty, finishes the others and exits 1; every install stages to `.building` and renames after the recheck (symlinked destinations included). Decision (orchestrator, r2 m1): default init also exits 1 when a database is missing but its `-wal` is non-empty, since installing beside that WAL would let SQLite replay it. The CLI slow test that timed out now runs about 810 ms. Open: r2 one Minor and two Optional. The owner's rebuilt `manna init` exits 0 with `~/.bible` unchanged. Upstream One requests to batch: Now Playing on managed players (crossfade) and a paused-load/start-at on the global session (playbulk P1 F6). (initwal, playbulk)
 
 ## Review later
