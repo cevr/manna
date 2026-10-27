@@ -6,13 +6,20 @@
  *  imported, not restated), so only statement execution lives here.
  */
 
-import type { Database } from 'bun:sqlite';
+import { Database } from 'bun:sqlite';
 
 import {
   verifyTopicsArtifact,
   type TopicsArtifactReader,
 } from '../corpus-supply/topics-verifier.js';
 import { Effect, Option, Schema } from 'effect';
+import { checkWebsterSchema } from '../webster/schema-bun.js';
+import {
+  WEBSTER_SOURCE,
+  WEBSTER_PROJECTION_VERSION,
+  normalizeHeadword,
+  sourceDefinition,
+} from '../webster/source.js';
 
 import {
   closeDatabase,
@@ -87,5 +94,99 @@ export const verifyTopicsDatabase = (filename: string): Effect.Effect<number, un
   Effect.acquireUseRelease(
     openDatabase(filename, true),
     (database) => verifyTopicsArtifact(bunTopicsReader(database)),
+    closeDatabase,
+  );
+
+export const verifyWebsterDatabase = (filename: string): Effect.Effect<number, unknown> =>
+  Effect.acquireUseRelease(
+    openDatabase(filename, true),
+    (db) =>
+      Effect.gen(function* () {
+        const meta = yield* checkWebsterSchema(db);
+        const integrity = yield* integrityCheck(db);
+        if (integrity !== 'ok') return yield* Effect.fail('Webster SQLite integrity check failed');
+        for (const [key, expected] of Object.entries({
+          source_url: WEBSTER_SOURCE.url,
+          projection_version: WEBSTER_PROJECTION_VERSION,
+          source_revision: WEBSTER_SOURCE.revision,
+          source_sha256: WEBSTER_SOURCE.sha256,
+          licence: WEBSTER_SOURCE.licence,
+          source_records: String(WEBSTER_SOURCE.records),
+          notice: WEBSTER_SOURCE.notice,
+        })) {
+          if (meta.get(key) !== expected)
+            return yield* Effect.fail(`Webster metadata mismatch: ${key}`);
+        }
+        const count = yield* Effect.try({
+          try: () => {
+            const rows = db
+              .query<
+                {
+                  id: number;
+                  headword: string;
+                  key: string;
+                  source_html: string;
+                  definition: string;
+                },
+                []
+              >('SELECT id, headword, key, source_html, definition FROM entries ORDER BY id')
+              .all();
+            const valid =
+              rows.length === WEBSTER_SOURCE.records &&
+              new Set(rows.map((row) => row.key)).size === WEBSTER_SOURCE.keys &&
+              rows.every(
+                (row, index) =>
+                  row.id === index + 1 &&
+                  row.key === normalizeHeadword(row.headword) &&
+                  row.source_html.trim().length > 0 &&
+                  row.definition === sourceDefinition(row.headword, row.source_html),
+              );
+            const duplicates = db
+              .query<{ key: string; n: number }, []>(
+                'SELECT key, count(*) AS n FROM entries GROUP BY key HAVING count(*) > 1 ORDER BY key',
+              )
+              .all();
+            const duplicateCounts =
+              duplicates.length === 2 &&
+              duplicates[0]?.key === 'anticonstitutional' &&
+              duplicates[0]?.n === 2 &&
+              duplicates[1]?.key === 'counter-revolution' &&
+              duplicates[1]?.n === 3;
+            const exact = db
+              .query<{ n: number }, []>(
+                "SELECT count(*) AS n FROM entries_fts JOIN entries e ON e.id = entries_fts.rowid WHERE entries_fts MATCH 'definition : disheartened' AND e.key = 'dismayed'",
+              )
+              .get();
+            return valid && duplicateCounts && exact?.n === 1;
+          },
+          catch: storeError('verify-webster'),
+        }).pipe(
+          Effect.flatMap((valid) => {
+            if (!valid)
+              return Effect.fail(
+                'Webster entry census, normalized keys or definition FTS is invalid',
+              );
+            return Effect.succeed(WEBSTER_SOURCE.records);
+          }),
+        );
+        // FTS cross-content verification needs a writable connection. Its
+        // isolated memory copy leaves candidate and active files read-only.
+        yield* Effect.acquireUseRelease(
+          Effect.try({
+            try: () => Database.deserialize(db.serialize()),
+            catch: storeError('copy-webster-fts'),
+          }),
+          (copy) =>
+            Effect.try({
+              try: () =>
+                copy.exec(
+                  "INSERT INTO entries_fts(entries_fts, rank) VALUES ('integrity-check', 1)",
+                ),
+              catch: storeError('verify-webster-fts'),
+            }),
+          closeDatabase,
+        );
+        return count;
+      }),
     closeDatabase,
   );

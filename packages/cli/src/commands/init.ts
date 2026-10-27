@@ -26,6 +26,7 @@ import { Command, Flag } from 'effect/cli';
 import { HttpClient, HttpClientResponse } from 'effect/http';
 
 import { packagedDataCandidates } from '~/src/lib/paths';
+import { initializeWebster } from './webster.js';
 
 class InitError extends Schema.TaggedError<InitError>()('InitError', {
   cause: Schema.Unknown,
@@ -149,6 +150,7 @@ export const init = Command.make('init', { force }, (args) =>
       bibleStatus = 'ready';
     }
     yield* Console.log(`✓ bible.db (${bibleStatus})`);
+    yield* initializeWebster({ directory: bibleDir, refresh: args.force });
 
     yield* Option.match(topics, {
       onNone: () =>

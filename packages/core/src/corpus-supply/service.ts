@@ -6,6 +6,7 @@ import { VectorsArtifact } from '../search/vector-artifact.js';
 import {
   BibleArtifact,
   TopicsArtifact,
+  WebsterArtifact,
   type RegisteredFileCorpus,
   type RuntimeArtifactRelease,
   type WiredFileCorpus,
@@ -129,6 +130,7 @@ type FileCorpusRegistry = { readonly [K in CorpusFileName]: RegisteredFileCorpus
 const fileCorpora = {
   bible: BibleArtifact,
   topics: TopicsArtifact,
+  webster: WebsterArtifact,
   // §9.6's optional paragraph vector index. Best-effort like `topics` and one
   // step more so: with no index installed, search still answers — lexically,
   // carrying `VectorIndexUnavailable`.

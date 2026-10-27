@@ -1,7 +1,7 @@
 import { BunFileSystem } from '@effect/platform-bun';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
-import { Context, Effect, FileSystem, type Layer, Option } from 'effect';
+import { Context, Effect, FileSystem, Layer, Option } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
 import {
@@ -15,6 +15,10 @@ import type {
   CorpusSourceUnavailableError,
 } from '../corpus-supply/errors.js';
 import type { CorpusName, CorpusProvenance } from '../corpus-supply/model.js';
+import { CorpusSupply } from '../corpus-supply/service.js';
+import { Target } from '../corpus-supply/model.js';
+import { layerNativeWebsterArtifacts } from './bible-artifact.js';
+import { writeWebsterFixture } from '../webster/fixtures/sqlite-bun.js';
 import {
   layerNativeFileArtifacts,
   type NativeFileArtifactProvenanceStore,
@@ -124,8 +128,43 @@ const releaseSource = (input: {
 
 const fixtureDigest = `sha256:${bytesToHex(sha256(new TextEncoder().encode(FIXTURE_BYTES)))}`;
 
+const attemptWebsterInstall = (destination: string, source: string) =>
+  CorpusSupply.use((supply) => supply.ensure({ target: Target.webster() })).pipe(
+    Effect.provide(
+      CorpusSupply.layer.pipe(
+        Layer.provide(
+          layerNativeWebsterArtifacts({
+            destination,
+            sources: [{ kind: 'workspace', path: source, label: 'webster-test' }],
+          }),
+        ),
+      ),
+    ),
+  );
+
 describe('parameterized File Corpus lifecycle', () => {
   const test = it.scopedLive.layer(BunFileSystem.layer);
+
+  test('Webster rejects a synthetic or corrupt candidate before replacing the destination', () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: 'webster-rejected-' });
+      const destination = `${dir}/active.db`;
+      yield* fs.writeFileString(destination, 'prior-bytes');
+      const source = `${dir}/candidate.db`;
+      yield* writeWebsterFixture(source, [{ id: 1, headword: 'word', definition: 'Synthetic.' }]);
+      expect(yield* Effect.flip(attemptWebsterInstall(destination, source))).toMatchObject({
+        _tag: 'CorpusInstallationError',
+        corpus: 'webster',
+      });
+      expect(yield* fs.readFileString(destination)).toBe('prior-bytes');
+      yield* fs.writeFileString(source, 'not sqlite');
+      expect(yield* Effect.flip(attemptWebsterInstall(destination, source))).toMatchObject({
+        _tag: 'CorpusInstallationError',
+        corpus: 'webster',
+      });
+      expect(yield* fs.readFileString(destination)).toBe('prior-bytes');
+    }));
 
   test('swaps the destination atomically once the candidate verifies', () =>
     Effect.gen(function* () {

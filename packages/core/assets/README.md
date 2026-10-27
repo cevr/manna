@@ -1,4 +1,10 @@
-# Bible corpus assets
+# Corpus assets
+
+Webster 1828 uses the pinned CSV identified by `webster1828-source.json`.
+Run `bun run build:webster` to generate the ignored SQLite and digest manifest
+under `packages/core/data`. This adapted electronic transcription is CC BY-SA
+4.0; distribute `webster1828-NOTICE.md` and the complete
+`webster1828-LICENSE.txt` beside it. The notice states the source limitations.
 
 `naves-topical-bible.json` is a normalized public-domain edition of Orville J.
 Nave's *Nave's Topical Bible*. It was copied from the CC0 Open Christian Data

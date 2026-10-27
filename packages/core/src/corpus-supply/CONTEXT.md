@@ -1,5 +1,11 @@
 # Corpus Supply
 
+Webster 1828 is an optional File Corpus addressed by `Target.webster()`.
+It uses its own Recipe and Installer keys and the same verified native lifecycle.
+Bootstrap remains Bible-only. Webster has no release pin; hosts offer packaged,
+workspace and runtime files. Its compiler, licence and notice are separate from
+the application code. The Bun reader opens the installed active SQLite read-only.
+
 The canonical language for acquiring external Bible and Writings assets, coercing them into trusted material, and installing replaceable corpora.
 
 ## Language

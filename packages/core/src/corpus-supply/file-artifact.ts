@@ -334,3 +334,21 @@ export const TopicsArtifact = makeFileCorpusArtifact({
   Recipe: TopicsArtifactRecipe,
   Installer: TopicsArtifactInstaller,
 });
+
+export class WebsterArtifactRecipe extends Context.Service<
+  WebsterArtifactRecipe,
+  FileArtifactRecipeService
+>()('@manna/core/corpus-supply/WebsterArtifactRecipe') {}
+
+export class WebsterArtifactInstaller extends Context.Service<
+  WebsterArtifactInstaller,
+  FileArtifactInstallerService
+>()('@manna/core/corpus-supply/WebsterArtifactInstaller') {}
+
+/** Optional local corpus. A source build must precede distribution. */
+export const WebsterArtifact = makeFileCorpusArtifact({
+  corpus: 'webster',
+  label: 'Webster 1828',
+  Recipe: WebsterArtifactRecipe,
+  Installer: WebsterArtifactInstaller,
+});

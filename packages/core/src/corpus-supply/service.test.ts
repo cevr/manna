@@ -20,7 +20,7 @@ import {
   type CorpusProvenance,
 } from './model.js';
 import { WritingsAssetRecipe } from './source.js';
-import { BibleArtifact } from './file-artifact.js';
+import { BibleArtifact, WebsterArtifact } from './file-artifact.js';
 
 /** A whole archive as a publication streamed in one chapter. */
 const publicationStream = (archive: PublicationArchive) => ({
@@ -67,6 +67,46 @@ const contribution: WritingsContribution = {
   provenance: unknownProvenance('egw-api', '2026-07-20'),
   publication: publicationStream(archive),
 };
+
+it.effect(
+  'addresses Webster through its own registered slots without changing Bible bootstrap',
+  () =>
+    Effect.gen(function* () {
+      const supply = yield* CorpusSupply;
+      const receipt = yield* supply.ensure({ target: Target.webster() });
+      expect(receipt.activated).toMatchObject([{ corpus: 'webster', installed: 62391 }]);
+      const bootstrap = yield* Effect.flip(supply.ensure());
+      expect(bootstrap).toMatchObject({ _tag: 'CorpusRecipeUnavailableError', corpus: 'bible' });
+    }).pipe(
+      Effect.provide(
+        CorpusSupply.layer.pipe(
+          Layer.provide(
+            Layer.merge(
+              WebsterArtifact.layerRecipe({
+                sources: [
+                  {
+                    kind: 'workspace',
+                    acquire: Effect.succeed({
+                      kind: 'workspace',
+                      provenance: contribution.provenance,
+                      expectedSize: Option.none(),
+                      bytes: Stream.empty,
+                    }),
+                  },
+                ],
+              }),
+              WebsterArtifact.layerInstaller({
+                current: Effect.succeedNone,
+                activeFile: Effect.succeedNone,
+                install: (artifact) =>
+                  Effect.succeed({ installed: 62391, provenance: artifact.provenance }),
+              }),
+            ),
+          ),
+        ),
+      ),
+    ),
+);
 
 const makeLayer = (options: {
   readonly needsSync: boolean;

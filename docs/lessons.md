@@ -3977,6 +3977,66 @@ The form of an entry, each field on its own line:
 - **Cause:** The docs test checked API paths in running text but no page path. It now holds each page path a framework doc writes to a page the lab serves.
 - **Guard:** code: `packages/film/src/docs.slow.test.ts` `pageDrift`
 
+### webster-kjv-lemma-domain
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "The specified KJV fallback picks a wrong entry for common forms."
+- **Source:** hymnapp/webster/round-1-findings.md F1; orchestrator round-2 amendment
+- **Wrong:** Suffix stripping chose doe for doeth/doest and saye for sayest because those unrelated headwords exist.
+- **Cause:** Lexical existence was treated as evidence of the intended KJV lemma. Lookup now uses an audited alias table before generic guesses and stops when an alias target is absent.
+- **Guard:** code: `packages/core/src/webster/kjv.test.ts` `resolves every audited KJV form to its reviewed entry or none with real collision vocabulary`
+
+### webster-kjv-verb-source
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "Seven KJV verb forms resolve to an unrelated noun homograph."
+- **Source:** hymnapp/webster/round-1-findings.md F1; recurrence hymnapp/webster/round-2-findings.md B1; orchestrator round-3 amendment
+- **Wrong:** SOW, SWALLOW, TILL and LEAVE passed a headword-only oracle despite containing only unrelated nouns for these KJV verbs.
+- **Cause:** Matching the expected spelling was treated as proof of verb identity. The complete KJV verb domain now checks source labels independently, with only the review's explicit exceptions. Missing verbs resolve to none.
+- **Guard:** code: `packages/core/src/webster/kjv.slow.test.ts` `every KJV verb form resolves to a source-marked verb or no entry`
+
+### webster-bare-before-undoubled
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "Bare-before-undoubled priority is untested."
+- **Source:** hymnapp/webster/round-1-findings.md F6
+- **Wrong:** A collision fixture with retained-e, bare and undoubled stems always selected retained-e and could not detect reversed later candidates.
+- **Cause:** The fixture never reached the ordering it claimed to protect. A synthetic generic form now has only bare and undoubled candidates.
+- **Guard:** code: `packages/core/src/webster/service.test.ts` `tries a bare generic stem before an undoubled stem when retained e is absent`
+
+### webster-active-runtime-identity
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "Init re-installs Webster on every run when only the runtime copy exists."
+- **Source:** hymnapp/webster/round-1-findings.md F2
+- **Wrong:** Replacing the active file changed its mtime, which the runtime source treated as a new revision, so repeat init copied the whole corpus again.
+- **Cause:** File modification identity was used in place of the verified active content identity. The self-runtime candidate now retains that identity and recomputes its digest only on an explicit refresh.
+- **Guard:** code: `packages/cli/test/commands/webster.slow.test.ts` `keeps a verified active runtime corpus unchanged across repeated init`
+
+### webster-init-readable-diagnostic
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "Init's Webster failure line dumps the error as JSON."
+- **Source:** hymnapp/webster/round-1-findings.md F3
+- **Wrong:** Missing data printed a nested infrastructure error with paths and ENOENT details instead of one concise failure and remedy.
+- **Cause:** The UI rendered the raw error object. The init leg now prints its tag, a short explanation and the build/install remedy.
+- **Guard:** code: `packages/cli/test/commands/webster.test.ts` `init reports a missing Webster corpus with a short remedy and no error JSON`
+
+### webster-init-production-leg
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "Init's own Webster leg runs in no test."
+- **Source:** hymnapp/webster/round-1-findings.md F7
+- **Wrong:** The relocation test rebuilt an ensure graph and supplied only packaged sources, so init's runtime source and output were untested.
+- **Cause:** The test reproduced the wiring instead of invoking the production operation. Init and the relocation test now share the source list, ensure and message operation.
+- **Guard:** code: `packages/cli/test/commands/webster.slow.test.ts` `relocated CLI reads packaged corpus without checkout fallback and preserves active data after failed refresh`
+
 ### board-food-is-plant-food
 
 - **Date:** 2026-10-26

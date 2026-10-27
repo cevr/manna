@@ -10,6 +10,7 @@ describe('root command graph', () => {
       const result = yield* runCli(rootCommand, []);
 
       expect(result.success).toBe(true);
+      expect(result.stdout).toContain('webster');
     }),
   );
 

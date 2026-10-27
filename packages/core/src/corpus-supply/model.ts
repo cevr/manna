@@ -8,7 +8,7 @@ import type { CorpusContributionRejectedError, CorpusSourceUnavailableError } fr
  *  semantic verifier, an atomic swap. `makeFileCorpusArtifact` is parameterized
  *  by this vocabulary, so adding a file corpus adds a name here and nothing
  *  else to the lifecycle. */
-export const CorpusFileName = Schema.Literals(['bible', 'topics', 'vectors']);
+export const CorpusFileName = Schema.Literals(['bible', 'topics', 'vectors', 'webster']);
 export type CorpusFileName = typeof CorpusFileName.Type;
 
 /** The corpora installed per publication through a SQL transaction rather than
@@ -173,6 +173,7 @@ export const Target = {
   bible: (): FileCorpusTarget => FileCorpusTarget.make({ corpus: 'bible' }),
   topics: (): FileCorpusTarget => FileCorpusTarget.make({ corpus: 'topics' }),
   vectors: (): FileCorpusTarget => FileCorpusTarget.make({ corpus: 'vectors' }),
+  webster: (): FileCorpusTarget => FileCorpusTarget.make({ corpus: 'webster' }),
   writings: (publications?: readonly PublicationId[]): WritingsTarget =>
     WritingsTarget.make({ publications }),
 };
