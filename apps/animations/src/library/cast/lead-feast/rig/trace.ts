@@ -383,7 +383,7 @@ export const standing = (v: Standing): TraceSheetView => {
       // An open chin's neck: the skin between his jaw and the garment's neckline (none under a closed chin).
       neckSkin: { classes: ['skin'], clip: neckBand, minus: ['beside'], as: 'none' },
       head: {
-        plus: ['face', 'hairMass', 'neckSkin', ...Object.keys(ears), ...lobeNames],
+        plus: ['face', 'hairMass', 'neckSkin', 'jawCorner', ...Object.keys(ears), ...lobeNames],
         // Out to an ear's lobe where the view reads one, past the sheet's line there.
         reach: 'figure',
         // A hand raised to the chin is its own circle, never the head's skin.
@@ -498,7 +498,7 @@ export const standing = (v: Standing): TraceSheetView => {
         grow: 1,
         as: 'none',
       },
-      // Where his jaw's line meets his ink at his chin's corner: his figure there, the ink too, so the line starts under the ink (laid on his head's paper, it shows only inside it).
+      // Where his jaw's line meets his ink at his chin's corner: his figure there, the ink too, his head's paper and his jaw's line, so the line starts under the ink and the garment's edge behind his chin shows no light between them.
       jawCorner: { silhouette: true, clip: v.chin.corner ?? [], reach: 'figure', as: 'none' },
       jaw: {
         plus: ['jawLine', 'jawCorner'],
@@ -793,10 +793,12 @@ export const TRACE = {
         ],
         // Its corner, where the sheet's ink runs into its brown (#492713 at 378,386).
         corner: [
-          [374, 384],
-          [380, 383],
+          [369, 385],
+          [379, 383],
           [380, 392],
-          [374, 392],
+          [375, 392],
+          [375, 386],
+          [369, 386],
         ],
         // Lighter past x 404, toward his ear (mean L 110 there against L 93 under his chin).
         fade: rect(404, 350, 430, 395),
