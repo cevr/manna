@@ -177,8 +177,8 @@ interface ArmSpec {
 const UNDER_ARMS = {
   beside: ['armNearBelow', 'armFarBelow', 'handNearRing', 'handFarRing'],
   onGarment: [],
-  // His near arm raised clear of his side: the garment gives up its sleeve but for its root at his shoulder, so his side under it is the garment's own.
-  raised: ['armNearOff', 'armFarBelow', 'handNearRing', 'handFarRing'],
+  // An arm raised clear of his side: the garment gives up its sleeve but for its root (at his shoulder, or a raised far sleeve's elbow end), so his side under it is the garment's own.
+  raised: ['armNearOff', 'armFarOff', 'armFarBelow', 'handNearRing', 'handFarRing'],
 } as const;
 
 /** What one standing view is read from: its seeds and the polygons the sheet parts by colour alone. */
@@ -241,9 +241,10 @@ export const standing = (v: Standing): TraceSheetView => {
     parts: {
       face: { seeds: [v.face], clip: wide(y0, v.chin.row), as: 'none' },
       ...ears,
-      hairMass: { classes: BROWN, clip: wide(y0, v.chin.row), as: 'none' },
+      // What stands beside him (a wooden plate at his lips, and the hands that hold it there) is none of his hair, nor his neck.
+      hairMass: { classes: BROWN, clip: wide(y0, v.chin.row), minus: ['beside'], as: 'none' },
       // An open chin's neck: the skin between his jaw and the garment's neckline (none under a closed chin).
-      neckSkin: { classes: ['skin'], clip: neckBand, as: 'none' },
+      neckSkin: { classes: ['skin'], clip: neckBand, minus: ['beside'], as: 'none' },
       head: {
         plus: ['face', 'hairMass', 'neckSkin', ...Object.keys(ears)],
         // A hand raised to the chin is its own circle, never the head's skin.
@@ -340,8 +341,9 @@ export const standing = (v: Standing): TraceSheetView => {
       },
       // Each worn in 6 px: the garment the arm hangs beside runs on under its sleeve's paper, so the garment's line lies under the sleeve.
       armNearBelow: { within: 'armNear', clip: wide(v.near.below, y1), shrink: 6, as: 'none' },
-      // A raised sleeve, all but its root (none unless the view gives its polygon).
+      // A raised sleeve, all but its root (none unless the view gives its polygon), each.
       armNearOff: { within: 'armNear', clip: v.near.off ?? [], as: 'none' },
+      armFarOff: { within: 'armFar', clip: v.far.off ?? [], as: 'none' },
       armFarBelow: { within: 'armFar', clip: wide(v.far.below, y1), shrink: 6, as: 'none' },
       body: {
         silhouette: true,

@@ -109,6 +109,90 @@ export const TRACE = {
       hem: 786,
       split: 192,
     }),
+    drinking: standing({
+      box: [324, 226, 601, 831],
+      out: 'drinking-traced.ts',
+      about:
+        'in profile to screen left, his head tipped back, drinking from the wooden plate at his lips: one eye, his ear behind his cheek, his curls behind; his teal left sleeve raised before him, its upper arm across his chest, its forearm up to his hand under the plate; his cream right sleeve raised beyond it to his hand at the plate; the sash knotted at his front, its end hanging; his sandals',
+      face: [485, 347],
+      marked: {
+        marks: {
+          eyes: [[465, 330]],
+          brows: [[475, 307]],
+          // His mouth at the plate's rim, hidden by it: where the sheet would draw it.
+          mouth: {
+            ends: [
+              [441, 361],
+              [452, 363],
+            ],
+            line: 5,
+          },
+        },
+      },
+      ears: { earNear: [528, 360] },
+      // His head tipped back: no line under his jaw runs level, so his head runs down his throat to the neckline (row 440), the shade under his jaw a tone on it.
+      chin: { kind: 'open', row: 440 },
+      sharp: [],
+      near: {
+        pick: { silhouette: true },
+        // His teal sleeve: its forearm up from his elbow to his hand, its upper arm across his chest to his shoulder, cut from his mantle where the sheet shades it.
+        clip: [
+          [388, 406],
+          [396, 393],
+          [420, 393],
+          [432, 400],
+          [440, 404],
+          [454, 440],
+          [522, 414],
+          [532, 420],
+          [530, 494],
+          [470, 502],
+          [432, 514],
+          [400, 508],
+          [384, 482],
+        ],
+        below: 830,
+        hand: [404, 370],
+        // His forearm's top half his garment gives up; its lower half (joining his far sleeve to him) and his upper arm on his chest it keeps, under the sleeve.
+        off: rect(330, 380, 440, 440),
+      },
+      far: {
+        pick: { silhouette: true },
+        // His cream sleeve beyond his teal forearm, from its elbow up to his hand at the plate.
+        clip: [
+          [336, 388],
+          [386, 388],
+          [384, 470],
+          [400, 500],
+          [380, 506],
+          [338, 482],
+        ],
+        below: 830,
+        hand: [354, 375],
+        // His garment keeps all of it (no `off`), joined to him through his teal elbow: it turns about its elbow inside that.
+      },
+      arms: 'raised',
+      necks: [],
+      // The plate at his lips, no part of him; and his hands under it, their own circles (none of his neck).
+      beside: [
+        [326, 294],
+        [420, 294],
+        [456, 330],
+        [452, 366],
+        [440, 384],
+        [442, 398],
+        [432, 410],
+        [340, 410],
+        [326, 390],
+      ],
+      sash: {
+        band: [432, 550, 540, 576],
+        knots: [[444, 562, 11, 13]],
+        ends: [{ top: [434, 452, 576], bottom: [433, 453, 703] }],
+      },
+      hem: 784,
+      split: 470,
+    }),
     reaching: standing({
       box: [899, 232, 1221, 829],
       out: 'reaching-traced.ts',

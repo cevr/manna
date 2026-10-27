@@ -108,6 +108,13 @@ export const leadFeastRaisedProp = figureProp(
   LEAD.leadFeastRaised,
 );
 
+/** The series lead in profile drinking from the plate at his lips, both arms raised. */
+export const leadFeastDrinkingProp = figureProp(
+  ARTBOARDS.leadFeastDrinking,
+  'lead-feast-drinking',
+  LEAD.leadFeastDrinking,
+);
+
 /** The series lead leaning to the low table, his near hand on the bottle there. */
 export const leadFeastReachingProp = figureProp(
   ARTBOARDS.leadFeastReaching,

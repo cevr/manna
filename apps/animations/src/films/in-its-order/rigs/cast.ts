@@ -22,6 +22,7 @@ import {
   type tracedFigure,
 } from '@manna/film/style';
 import * as LEAD_BACK from '../../../library/cast/lead-feast/rig/back-traced.ts';
+import * as LEAD_DRINKING from '../../../library/cast/lead-feast/rig/drinking-traced.ts';
 import * as LEAD_FRONT from '../../../library/cast/lead-feast/rig/front-traced.ts';
 import * as LEAD from '../../../library/cast/lead-feast/rig/lead.ts';
 import * as LEAD_PROFILE_LEFT from '../../../library/cast/lead-feast/rig/profile-left-traced.ts';
@@ -257,19 +258,16 @@ export const CAST = castTable({
       ),
       // In profile to the left, both hands up, his head tipped back, the plate at his mouth.
       'poses-2': pose(
-        [324, 226, 601, 831],
-        [479, 831],
-        LEAD.leadFeastProfileLeft,
-        RIGS.leadFeastProfileLeftProp,
+        LEAD_DRINKING.BOX,
+        LEAD_DRINKING.FEET,
+        LEAD.leadFeastDrinking,
+        RIGS.leadFeastDrinkingProp,
         {
           lean: 0,
-          numbers: { tilt: 0.45, mouth: 0 },
-          reach: [
-            ['near', [404, 360]],
-            ['far', [366, 344]],
-          ],
-          // The plate's rim at his lips, the dish out before his face, his mouth clear of it; held: over his sleeves, under his hands.
-          props: [{ name: 'plate', draw: plate([-60, -360], 0.55), layer: 'held' }],
+          numbers: {},
+          reach: [],
+          // The plate's rim at his lips (the sheet's 397, 337), the dish out before his face; held: over his sleeves, under his hands.
+          props: [{ name: 'plate', draw: plate([-55, -360], 0.55), layer: 'held' }],
         },
       ),
       // Seated on the stool, three-quarters left, his near hand at his chin, his far hand on his lap.

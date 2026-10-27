@@ -21,6 +21,7 @@ import * as FRONT from './front-traced.ts';
 import { PAPERS, TONES } from './papers.ts';
 import * as PROFILE_LEFT from './profile-left-traced.ts';
 import * as PROFILE_RIGHT from './profile-right-traced.ts';
+import * as DRINKING from './drinking-traced.ts';
 import * as RAISED from './raised-traced.ts';
 import * as REACHING from './reaching-traced.ts';
 import * as SEATED from './seated-traced.ts';
@@ -84,12 +85,17 @@ interface LeadViewSpec {
   /** Which sleeve each arm is in: his right arm's is cream (`creamAcross` where it crosses his cream tunic whole, seated), his left's teal. */
   readonly sleeves: { readonly near: keyof typeof SLEEVE; readonly far: keyof typeof SLEEVE };
   /** His near arm as the view draws it: where it turns when raised, sheet pixels (`TracedArmSpec.pivot`; seated, his elbow on his knee), and what lies on its sleeve (in profile, its cuff). */
-  readonly nearArm?: {
-    readonly pivot?: Pt;
-    readonly elbow?: number;
-    readonly root?: 'ball' | 'traced';
-    readonly tones?: ReadonlyArray<TracedTone>;
-  };
+  readonly nearArm?: ArmOf;
+  /** His far arm as the view draws it, as his near arm's. */
+  readonly farArm?: ArmOf;
+}
+
+/** An arm as a view draws it: where it turns when raised, sheet pixels (`TracedArmSpec.pivot`), its elbow's share, where its upper sleeve ends (`root`), and what lies on its sleeve. */
+interface ArmOf {
+  readonly pivot?: Pt;
+  readonly elbow?: number;
+  readonly root?: 'ball' | 'traced';
+  readonly tones?: ReadonlyArray<TracedTone>;
 }
 
 /** A tone of `color` on `pts` (none drawn where it has no pieces). */
@@ -101,6 +107,7 @@ const SLEEVE = {
   creamAcross: PAPERS.sleeveAcross,
   teal: PAPERS.mantleSleeve,
   raised: PAPERS.sleeveRaised,
+  tealRaised: PAPERS.mantleSleeve,
 } as const;
 
 /** The shade along each sleeve's edges, by its cloth: what shows it where it lies on his garment; none on a sleeve raised clear of it (its shading its own tones, `RAISED_SLEEVE`). */
@@ -109,6 +116,7 @@ const SLEEVE_EDGE: Readonly<Record<keyof typeof SLEEVE, { readonly edge?: `#${st
   creamAcross: { edge: TONES.creamAcross },
   teal: { edge: TONES.tealEdge },
   raised: {},
+  tealRaised: {},
 };
 
 /** How deep the band across a sleeve's cuff runs, sheet pixels: the line the sheet draws where a sleeve lying on his garment ends over his hand. */
@@ -188,6 +196,7 @@ const leadView = (t: LeadTable, v: LeadViewSpec) =>
         hand: t.HAND_FAR,
         paper: SLEEVE[v.sleeves.far],
         ...SLEEVE_EDGE[v.sleeves.far],
+        ...v.farArm,
       },
     },
     feet_: {
@@ -344,6 +353,54 @@ export const leadFeastRaised = leadView(
     // Turned about a point on the line from his hand through his elbow's fold (the notch at 105,443 and the elbow's corner at 55,505 lie square across it), so its cut at his elbow runs through both.
     // Its upper sleeve ends where the sheet ends it, its root under his tunic: a ball would show past its edges.
     nearArm: { pivot: [144, 476], elbow: 0.35, root: 'traced', tones: RAISED_SLEEVE },
+  },
+);
+
+/** The shade lines the sheet paints along his raised teal upper arm where it lies across his mantle (poses-2): its top edge and its underside, sheet pixels. */
+const DRINKING_SLEEVE: ReadonlyArray<TracedTone> = [
+  tone(
+    [
+      straight([
+        [440, 436],
+        [522, 405],
+        [536, 412],
+        [536, 422],
+        [456, 448],
+      ]),
+      straight([
+        [400, 500],
+        [470, 494],
+        [536, 486],
+        [536, 520],
+        [400, 520],
+      ]),
+    ],
+    TONES.tealEdge,
+  ),
+];
+
+/**
+ * Drinking (poses-2): in profile to screen left, his head tipped back, the
+ * plate at his lips. His teal near sleeve raised before him, its upper arm
+ * across his chest, turning about his shoulder there; his cream far sleeve
+ * beyond his teal forearm, its upper arm hidden, turning about its elbow's
+ * end (his garment keeps it there, under his teal elbow). Both end at their
+ * own traced roots. His hands the house's one size, his far hand's.
+ */
+export const leadFeastDrinking = leadView(
+  {
+    ...DRINKING,
+    HAND_NEAR: { at: [404, 378] satisfies Pt, r: DRINKING.HAND_FAR.r },
+    HAND_FAR: { at: [355, 380] satisfies Pt, r: DRINKING.HAND_FAR.r },
+  },
+  {
+    sheet: 'poses',
+    head: { view: 'side' },
+    ears: { near: DRINKING.EAR_NEAR },
+    face: { ...AT_REST, marks: DRINKING.MARKS },
+    sleeves: { near: 'tealRaised', far: 'cream' },
+    nearArm: { pivot: [515, 455], elbow: 0.2, root: 'traced', tones: DRINKING_SLEEVE },
+    farArm: { pivot: [366, 478], root: 'traced' },
   },
 );
 
