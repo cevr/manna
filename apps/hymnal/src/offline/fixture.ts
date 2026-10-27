@@ -1,0 +1,103 @@
+/** Synthetic external boundaries for controlled storage/HTTP schedules. No media is fetched. */
+import { Effect, Layer, Option } from 'effect';
+import {
+  type Entry,
+  Http,
+  Media,
+  OfflineError,
+  identityKey,
+  offlineLayer,
+  type Identity,
+  type Range,
+} from './cache';
+
+export const fake = () => {
+  const entries = new Map<string, Entry>();
+  const files = new Map<string, Uint8Array>();
+  const calls: { id: Identity; at: number; etag: Option.Option<string> }[] = [];
+  const control = {
+    readFails: false,
+    writeFails: false,
+    saveFails: false,
+    networkFails: false,
+    networkFailsAt: -1,
+    total: 12,
+    chunk: 12,
+    etag: '"v1"',
+    active: 0,
+    maxActive: 0,
+    before: (_id: Identity, _at: number): Effect.Effect<void> => Effect.void,
+    writing: Effect.void,
+  };
+  const fail = () => OfflineError.make({ code: 'storage' });
+  const media = Layer.succeed(
+    Media,
+    Media.of({
+      list: Effect.sync(() => [...entries.values()]),
+      size: (id) => Effect.sync(() => files.get(identityKey(id))?.length ?? 0),
+      append: (id, at, bytes) =>
+        Effect.gen(function* () {
+          if (control.writeFails) return yield* fail();
+          const data = new Uint8Array(at + bytes.length);
+          data.set(files.get(identityKey(id))?.subarray(0, at) ?? []);
+          data.set(bytes, at);
+          files.set(identityKey(id), data);
+          yield* control.writing;
+        }),
+      save: (entry) =>
+        Effect.gen(function* () {
+          if (control.saveFails) return yield* fail();
+          entries.set(identityKey(entry), entry);
+        }),
+      remove: (id) =>
+        Effect.sync(() => {
+          entries.delete(identityKey(id));
+          files.delete(identityKey(id));
+        }),
+      local: (entry) =>
+        Effect.gen(function* () {
+          if (control.readFails) return yield* fail();
+          return `file:///synthetic/${identityKey(entry)}`;
+        }),
+    }),
+  );
+  const http = Layer.succeed(
+    Http,
+    Http.of({
+      range: Effect.fn('Fake.range')(function* (id, at, _end, etag): Effect.fn.Return<
+        Range,
+        OfflineError
+      > {
+        calls.push({ id, at, etag: Option.fromUndefinedOr(etag) });
+        control.active++;
+        control.maxActive = Math.max(control.maxActive, control.active);
+        return yield* Effect.gen(function* () {
+          yield* control.before(id, at);
+          if (control.networkFails || at === control.networkFailsAt)
+            return yield* OfflineError.make({ code: 'network' });
+          const bytes = new Uint8Array(Math.min(control.chunk, control.total - at));
+          if (at === 0) {
+            bytes[0] = 255;
+            bytes[1] = 251;
+          }
+          return { at, total: control.total, etag: control.etag, bytes };
+        }).pipe(
+          Effect.ensuring(
+            Effect.sync(() => {
+              control.active--;
+            }),
+          ),
+        );
+      }),
+    }),
+  );
+  return {
+    entries,
+    files,
+    calls,
+    control,
+    media,
+    http,
+    layer: offlineLayer.pipe(Layer.provide(media), Layer.provide(http)),
+  };
+};
