@@ -130,10 +130,10 @@ const SLEEVE = {
   tealRaised: PAPERS.mantleSleeve,
 } as const;
 
-/** The shade along each sleeve's edges, by its cloth: what shows it where it lies on his garment; none on a sleeve raised clear of it (its shading its own tones, `RAISED_SLEEVE`). */
+/** The shade along each sleeve's edges, by its cloth: what shows it where it lies on his garment; none on a sleeve raised clear of it, or across his tunic whole (its shading its own tones, `RAISED_SLEEVE`, `SEATED_SLEEVE`). */
 const SLEEVE_EDGE: Readonly<Record<keyof typeof SLEEVE, { readonly edge?: `#${string}` }>> = {
   cream: { edge: TONES.creamEdge },
-  creamAcross: { edge: TONES.creamAcross },
+  creamAcross: {},
   teal: { edge: TONES.tealEdge },
   raised: {},
   tealRaised: {},
@@ -495,6 +495,78 @@ const seatedArms = () => {
   };
 };
 
+/**
+ * The sheet's shading of his raised sleeve, seated, sheet pixels, laid on
+ * its lit paper (each clipped to the sleeve): its inner half a step darker
+ * (#ecc9a8 at 709,576), its inner edge a mauve stripe (#a17d71 at 720,576)
+ * that parts it from his tunic with no line, split by a thin band of that
+ * darker cream below his wrist (x 720-725, rows 584-616), as the sheet
+ * paints a fold and the edge beside it.
+ */
+const SEATED_SLEEVE: ReadonlyArray<TracedTone> = [
+  tone(
+    [
+      straight([
+        [698, 557],
+        [705, 566],
+        [703, 576],
+        [701, 586],
+        [698, 596],
+        [696, 606],
+        [693, 616],
+        [689, 623],
+        [688, 631],
+        [764, 631],
+        [764, 557],
+      ]),
+    ],
+    TONES.creamAcrossInner,
+  ),
+  tone(
+    [
+      straight([
+        [712, 557],
+        [720, 566],
+        [719, 571],
+        [718, 576],
+        [717, 581],
+        [716, 586],
+        [715, 591],
+        [714, 596],
+        [713, 601],
+        [712, 606],
+        [711, 611],
+        [709, 616],
+        [709, 621],
+        [764, 621],
+        [764, 557],
+      ]),
+    ],
+    TONES.creamAcross,
+  ),
+  tone(
+    [
+      straight([
+        [721, 584],
+        [720, 591],
+        [719, 596],
+        [717, 601],
+        [716, 606],
+        [714, 611],
+        [710, 616],
+        [721, 616],
+        [725, 611],
+        [725, 606],
+        [724, 601],
+        [724, 596],
+        [723, 591],
+        [722, 584],
+      ]),
+    ],
+    TONES.creamAcrossInner,
+  ),
+];
+
 /** Seated on a low stool, three-quarters to screen left (poses-3): his robe over his knees, his sandals under its hem; his near sleeve raised to his chin as the sheet draws it, his far arm his standing one. */
 export const leadFeastSeated = leadView(
   { ...SEATED, ...seatedArms() },
@@ -506,6 +578,6 @@ export const leadFeastSeated = leadView(
     face: { ...AT_REST, marks: SEATED.MARKS, extra: WITH_EXTRA },
     sleeves: { near: 'creamAcross', far: 'teal' },
     // His elbow on his knee, the raised sleeve's lowest middle.
-    nearArm: { pivot: [692, 622] },
+    nearArm: { pivot: [692, 622], tones: SEATED_SLEEVE },
   },
 );

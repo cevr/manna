@@ -453,6 +453,15 @@ export const TRACE = {
         clip: rect(640, 515, 770, 690),
         below: 515,
         hand: [707, 527],
+        // His sleeve's inner edge, a mauve stripe (#a17d71 at 720,576) the seed stops at, out to where his tunic's cream begins (x 726-729, rows 565-593).
+        plus: [
+          [704, 565],
+          [726, 565],
+          [726, 571],
+          [727, 581],
+          [729, 593],
+          [704, 593],
+        ],
       },
       far: {
         pick: sleeveAt([802, 602]),

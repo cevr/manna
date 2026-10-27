@@ -28,14 +28,8 @@ export const PAPERS = papers({
   tunic: { color: '#fde1bc', shade: '#e8c3ad', light: '#fff0d8', crease: TURN.robe },
   /** His cream sleeve (his right arm), in the light: the tunic's cream. */
   sleeve: { color: '#fbe0bb', shade: '#e8c3ad', light: '#fff0d8', crease: TURN.sleeve, rim: 0 },
-  /** His cream sleeve where it crosses his cream tunic whole (seated, his hand at his chin): a step darker, as the sheet paints it there, so it parts from the tunic with no line. */
-  sleeveAcross: {
-    color: '#f0d4b8',
-    shade: '#dcb7a3',
-    light: '#fbe6cc',
-    crease: TURN.sleeve,
-    rim: 0,
-  },
+  /** His cream sleeve where it crosses his cream tunic whole (seated, his hand at his chin): flat, the sheet's lit cream there (#fbddb6 at 684,576); its inner half and the edge that parts it from his tunic laid on it as tones (`SEATED_SLEEVE` in `lead.ts`). */
+  sleeveAcross: { color: '#fbddb6', light: '#fde8c8', rim: 0 },
   /**
    * His cream sleeve raised clear of his side (poses-1): flat, a step darker
    * than his tunic, as the sheet paints it (#f1d1ad at 75,455), so it parts
@@ -113,6 +107,8 @@ export const TONES = {
   raisedUnder: '#e9c6a6',
   /** The fold his raised sleeve makes at its elbow, down from the notch: the sheet's (#d6b29b at 108,455). */
   raisedFold: '#d6b29b',
-  /** The edge of his cream sleeve where it crosses his cream tunic whole (seated, his hand at his chin): deeper, the one thing that parts them. */
-  creamAcross: '#c79c8b',
+  /** The edge of his cream sleeve where it crosses his cream tunic whole (seated, his hand at his chin): a mauve stripe, the one thing that parts them (#a17d71 at 720,576; #a48072 at 716,591). */
+  creamAcross: '#a37f72',
+  /** That sleeve's inner half, a step darker than its lit cream (#ecc9a8 at 709,576; #ebc9a8 at 704,606). */
+  creamAcrossInner: '#ecc9a8',
 } as const satisfies Record<string, `#${string}`>;

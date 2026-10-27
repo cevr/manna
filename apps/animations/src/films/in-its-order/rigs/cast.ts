@@ -371,7 +371,7 @@ export const CAST = castTable({
         RIGS.leadFeastFrontProp,
         WINCE,
       ),
-      // His front: glad, his eyes shut in a smile and the glad mark's wide smile in place of his mouth's line, his head lifted on a long neck (nod -12 lifts it 20 px off the bust's place, where the sheet draws his eyes).
+      // His front: glad, his eyes shut in a smile and the glad mark's wide smile in place of his mouth's line, his head lifted (nod -7 lifts it 12 px off the bust's place: his smile 3 px under the sheet's, his chin's line 10 over it; lifted higher, the ink round his open chin rises out from behind his garment and crosses his neck).
       'heads-6': bust(
         [1276, 313, 1519, 650],
         [1399, 445.5],
@@ -380,7 +380,7 @@ export const CAST = castTable({
         RIGS.leadFeastFrontProp,
         {
           glad: 1,
-          nod: -12,
+          nod: -7,
           eyes: 0,
           mouthLine: 0,
         },

@@ -213,6 +213,8 @@ interface ArmSpec {
   readonly hand: TracePt;
   /** Raised clear of his side: the polygon of its sleeve his garment gives up, all but its root at his shoulder (that stays the garment's, so the arm turns inside it). */
   readonly off?: TracePt[];
+  /** Where the sheet paints its sleeve's edge in a shade darker than its seed reaches, with no line between it and his garment: the polygon its sleeve runs out to. */
+  readonly plus?: TracePt[];
 }
 
 /** What the garment keeps where the arms lie: beside it, it gives up what they cover below the armpit and each hand with its ring of ink (else the ring's inner half stays the garment's, a hook bared when the arm swings); on it (a profile), it keeps all. */
@@ -630,9 +632,13 @@ export const standing = (v: Standing): TraceSheetView => {
       handFarPaper: { seeds: [v.far.hand], grow: 0, as: 'none' },
       handNearRing: { seeds: [v.near.hand], grow: 8, as: 'none' },
       handFarRing: { seeds: [v.far.hand], grow: 8, as: 'none' },
+      // Each sleeve out to its shaded edge where the view gives its polygon (none unless it does).
+      armNearPlus: { silhouette: true, clip: v.near.plus ?? [], as: 'none' },
+      armFarPlus: { silhouette: true, clip: v.far.plus ?? [], as: 'none' },
       armNear: {
         ...v.near.pick,
         clip: v.near.clip,
+        plus: ['armNearPlus'],
         // Opened 3 px: a sliver its polygon leaves along the garment's side is no part of the sleeve.
         open: 3,
         minus: ['handNearPaper', 'handFarPaper'],
@@ -641,6 +647,7 @@ export const standing = (v: Standing): TraceSheetView => {
       armFar: {
         ...v.far.pick,
         clip: v.far.clip,
+        plus: ['armFarPlus'],
         open: 3,
         minus: ['handNearPaper', 'handFarPaper'],
         doc: 'His far arm (screen right) in its sleeve, from his shoulder to his cuff.',
