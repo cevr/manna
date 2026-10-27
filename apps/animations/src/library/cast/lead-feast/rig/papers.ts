@@ -21,7 +21,7 @@ export const PAPERS = papers({
   /** His skin: a warm peach, flat, as the sheet paints his face. */
   skin: { color: '#fdaf72', light: '#fec48e' },
   /** His ears: his skin a touch deeper, flat, with no rim (cut inside his head's outline). */
-  ear: { color: '#f5a068', light: '#f5a068' },
+  ear: { color: '#f59d66', light: '#f59d66' },
   /** His hair: a warm mid brown, flat; its dark under the curls laid on it as tones. */
   hair: { color: '#71442e', light: '#71442e' },
   /** His cream tunic: its far side turned toward a warm lavender-beige. */
@@ -73,8 +73,18 @@ export const TONES = {
   jaw: '#c8704e',
   /** The line his jaw lays under his chin where the sheet paints it (#7d482d at 138,388 on the turnaround). */
   chinLine: '#7d482f',
-  /** The lit rim of his ears (#fac17f at 50,314 on the turnaround), paler than his skin. */
-  earLight: '#f9c07f',
+  /** That line where it lightens toward his ear (#9d5733 at 408,372; its mean L 110). */
+  chinFade: '#a05b38',
+  /** The lit rim of his ears, paler than his skin, toward the sheet's yellow there (#f9d695 to #f8da9b at 68,308). */
+  earLight: '#fbd593',
+  /** The hollow of an ear in shade: his skin turned toward rose (#e07a55 at 204,319 on the turnaround, its deepest). */
+  earHollow: '#e07a53',
+  /** An ear where it turns from the light (#f09261 at 212,319; #e79162 at 432,319). */
+  earShade: '#ea9060',
+  /** The rose shade under his jaw's line, on his head and his neck (#e07a50 at 392,390; #dc7651 by the ear). */
+  jawShade: '#e27f55',
+  /** The soft rose round that shade, below his ear and down his neck (#f3a374 at 414,352). */
+  jawSoft: '#f2a06c',
   /** The dark brown band the sheet paints round a front ear as its contour (#4b2e1e at 81,314). */
   earBand: '#4b2e1e',
   /** His sandals' straps: a warm brown. */

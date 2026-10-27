@@ -46,6 +46,21 @@ const oval = (cx: number, cy: number, rx: number, ry: number): TracePt[] =>
 const shifted = (pts: ReadonlyArray<TracePt>, by: TracePt): TracePt[] =>
   pts.map(([x, y]) => [x + by[0], y + by[1]]);
 
+/** A polygon swollen `by` pixels: each point moved that far from its middle. */
+const swollen = (pts: ReadonlyArray<TracePt>, by: number): TracePt[] => {
+  const [mx, my] = [
+    pts.reduce((s, [x]) => s + x, 0) / Math.max(1, pts.length),
+    pts.reduce((s, [, y]) => s + y, 0) / Math.max(1, pts.length),
+  ];
+  return pts.map(([x, y]) => {
+    const l = Math.max(1, Math.hypot(x - mx, y - my));
+    return [x + ((x - mx) / l) * by, y + ((y - my) / l) * by];
+  });
+};
+
+/** How far past an ear's lobe its band's tone runs, sheet pixels: past his head's edge there, which it is laid inside. */
+const LOBE_UNDER = 4;
+
 /** Where the sheet lays the sash's rose shade: each piece again, this far to its right and down, under it. */
 const SASH_SHADE: TracePt = [4, 2];
 
@@ -128,7 +143,22 @@ interface Chin {
   readonly row: number;
   /** Round the line the sheet paints under his chin in brown with no ink (his jaw, rising to his ear on a turned head), the polygon his jaw tone is read in: under an open chin, a band about his face's seed unless given. */
   readonly line?: ReadonlyArray<TracePt>;
+  /** Round the rose shade the sheet paints under that line (up to his ear and down the far side of his neck on a turned head), the polygon his jaw's shade is read in: none unless given. */
+  readonly shade?: ReadonlyArray<TracePt>;
+  /** Where that line meets his ink at his chin's corner, a polygon over both: the line starts under the ink (none unless given). */
+  readonly corner?: ReadonlyArray<TracePt>;
+  /** Where that line lightens toward his ear, the polygon it is laid lighter in (none unless given). */
+  readonly fade?: ReadonlyArray<TracePt>;
 }
+
+/** The sheet's brown his jaw's line is read nearer than his skin's colours, lit and shaded: the line lightens toward his ear, so it is read by colour, not by his hair's classes alone. */
+const JAW_LINE = { near: '#985636', far: ['#fdaf70', '#f8a062', '#e58a62', '#e07a50'] };
+
+/** The rose shade under his jaw's line, read nearer than his lit skin. */
+const JAW_SHADE = { near: '#e8875a', far: ['#f2a06c', '#fdaf70', '#feb476', '#fcdb9c', '#f9cb8a'] };
+
+/** The soft rose round that shade (L 170 to 182, #f3a374 at 414,352), read nearer than his lit skin. */
+const JAW_SOFT = { near: '#f2a06c', far: ['#fdaf70', '#feb476', '#fcdb9c', '#f9cb8a'] };
 
 /** How far either side of the face's seed the jaw's deep shade is read, sheet pixels. */
 const JAW_REACH = 36;
@@ -210,6 +240,17 @@ interface Standing {
    * band runs on into his hair and is his hair.
    */
   readonly earBand?: keyof typeof EAR_BAND_CLIP;
+  /**
+   * An ear whose lobe the sheet draws inside its line (the front's far ear:
+   * its lower third dark brown and ink), as the polygon round it, read off
+   * the sheet's outer edge less the house's line (7 px): the ear is read
+   * within it, and his head and the band's tone run out to it, so the lobe is
+   * round, in the band's brown, and the line round it keeps its width.
+   */
+  readonly earLobes?: {
+    readonly earNear?: ReadonlyArray<TracePt>;
+    readonly earFar?: ReadonlyArray<TracePt>;
+  };
   /** Where an ear's outline turns as sharply as the sheet draws it (the tip of a crescent ear seen from behind), vouched for (`TracePart.sharp`). */
   readonly earSharp?: ReadonlyArray<TracePt>;
   readonly chin: Chin;
@@ -231,15 +272,23 @@ interface Standing {
   readonly split: number;
 }
 
-/** The box round an ear's seed its skin is read within. */
-const earBox = (seed: TracePt) => rect(seed[0] - 16, seed[1] - 26, seed[0] + 16, seed[1] + 26);
-/** Where an ear's band is read as its tone, by how the view lays it: in the ear's box (`tone`), or nowhere (`hair`: it runs on into his hair). */
+/** How far above and below an ear's seed its box runs, sheet pixels. */
+const EAR_REACH = 26;
+
+/** The box round an ear's seed its skin is read within, from `top` above the seed. */
+const earBox = (seed: TracePt, top = EAR_REACH) =>
+  rect(seed[0] - 16, seed[1] - top, seed[0] + 16, seed[1] + EAR_REACH);
+
+/** How far above an ear's seed his hair gives its brown up to the band's tone, sheet pixels: the ear's top, where the sheet's hair ends over it. */
+const BAND_TOP = 18;
+
+/** Where an ear's band is read as its tone, by how the view lays it: in the ear's box from `top` above its seed (`tone`), or nowhere (`hair`: it runs on into his hair). */
 const EAR_BAND_CLIP = {
   tone: earBox,
-  hair: (_seed: TracePt): TracePt[] => [],
+  hair: (_seed: TracePt, _top: number): TracePt[] => [],
 } as const;
 
-/** An ear seeded at `seed`: flat skin cut inside his head, within `clip` (a box round the seed, or the oval the sheet draws it where its skin runs on into his cheek). */
+/** An ear seeded at `seed`: flat skin cut inside his head, within `clip` (a box round the seed, the oval the sheet draws it where its skin runs on into his cheek, or the polygon round its lobe). */
 const ear = (
   seed: TracePt,
   clip: ReadonlyArray<TracePt>,
@@ -267,24 +316,43 @@ export const standing = (v: Standing): TraceSheetView => {
   const ovals: Readonly<Record<string, TracePt[]>> = Object.fromEntries(
     Object.entries(v.earOvals ?? {}).map(([name, o]) => [name, oval(...o)]),
   );
+  const lobes: Readonly<Record<string, ReadonlyArray<TracePt>>> = v.earLobes ?? {};
   const ears = Object.fromEntries(
     Object.entries(v.ears).map(([name, seed]) => [
       name,
-      ear(seed, ovals[name] ?? earBox(seed), v.earSharp ?? [], `${name}Band`),
+      ear(seed, lobes[name] ?? ovals[name] ?? earBox(seed), v.earSharp ?? [], `${name}Band`),
     ]),
   );
-  // Each ear's band, its brown round the ear in the ear's box (grown 2 px over the specks of ink in it); none unless the view lays it as a tone.
+  // Each ear's lobe, where the view reads one: his figure within its polygon, his head's (`<ear>Lobe`); and the band's tone over it, swollen past it so it reaches his head's edge there with no skin between them (`<ear>LobeUnder`, laid on his head's paper, it shows only inside it). None elsewhere.
+  const lobeOf = (pts: ReadonlyArray<TracePt>): TracePart => ({
+    silhouette: true,
+    clip: pts,
+    reach: 'figure',
+    as: 'none',
+  });
+  const lobeParts = Object.fromEntries(
+    Object.keys(v.ears).flatMap((name) => [
+      [`${name}Lobe`, lobeOf(lobes[name] ?? [])],
+      [`${name}LobeUnder`, lobeOf(swollen(lobes[name] ?? [], LOBE_UNDER))],
+    ]),
+  );
+  const lobeNames = Object.keys(v.ears).map((name) => `${name}Lobe`);
+  const lobesUnder = Object.keys(v.ears).map((name) => `${name}LobeUnder`);
+  // Each ear's band, its brown round the ear in the ear's box (grown 2 px over the specks of ink in it), none unless the view lays it as a tone: what his hair gives up below the ear's top (`<ear>Band`), and the tone, which runs on up under his hair from the box's top (`<ear>BandUnder`), so no skin shows between them.
+  const bandOf = (seed: TracePt, top: number): TracePart => ({
+    classes: BROWN,
+    clip: EAR_BAND_CLIP[v.earBand ?? 'hair'](seed, top),
+    grow: 2,
+    as: 'none',
+  });
   const bands = Object.fromEntries(
-    Object.entries(v.ears).map(([name, seed]) => [
-      `${name}Band`,
-      {
-        classes: BROWN,
-        clip: EAR_BAND_CLIP[v.earBand ?? 'hair'](seed),
-        grow: 2,
-        as: 'none',
-      } satisfies TracePart,
+    Object.entries(v.ears).flatMap(([name, seed]) => [
+      [`${name}Band`, bandOf(seed, BAND_TOP)],
+      [`${name}BandUnder`, bandOf(seed, EAR_REACH)],
     ]),
   );
+  const bandsCut = Object.keys(v.ears).map((name) => `${name}Band`);
+  const bandsUnder = Object.keys(v.ears).map((name) => `${name}BandUnder`);
   const neckBand = wide(v.chin.row - chin.shade, v.chin.row);
   const shadeBand = wide(v.chin.row - chin.shade, v.chin.row + chin.under);
   return {
@@ -304,6 +372,7 @@ export const standing = (v: Standing): TraceSheetView => {
       // His face above where his garment is read from: the garment rises behind his head's paper there, so no gap shows his head's line under it.
       faceAbove: { within: 'face', clip: wide(y0, v.chin.row - chin.garment), grow: 0, as: 'none' },
       ...ears,
+      ...lobeParts,
       // What stands beside him (a wooden plate at his lips, and the hands that hold it there) is none of his hair, nor his neck; nor is a hand with its ring of ink (the dark where his fist meets his chin, poses-3).
       hairMass: {
         classes: BROWN,
@@ -314,7 +383,9 @@ export const standing = (v: Standing): TraceSheetView => {
       // An open chin's neck: the skin between his jaw and the garment's neckline (none under a closed chin).
       neckSkin: { classes: ['skin'], clip: neckBand, minus: ['beside'], as: 'none' },
       head: {
-        plus: ['face', 'hairMass', 'neckSkin', ...Object.keys(ears)],
+        plus: ['face', 'hairMass', 'neckSkin', ...Object.keys(ears), ...lobeNames],
+        // Out to an ear's lobe where the view reads one, past the sheet's line there.
+        reach: 'figure',
         // A hand raised to the chin is its own circle, never the head's skin.
         minus: ['handNearPaper', 'handFarPaper'],
         // Never opened: an ear joins his head by a neck thinner than his ear's line, and opening it parts the ear off.
@@ -334,22 +405,44 @@ export const standing = (v: Standing): TraceSheetView => {
         open: v.hairOpen ?? 2,
         inside: 'head',
         // Less his jaw's line: on a turned head it runs on into his hair at his ear.
-        minus: [...Object.keys(ears), 'earBand', 'jaw'],
+        minus: [...Object.keys(ears), ...bandsCut, 'jaw'],
         doc: 'His hair, the whole mass of curls over his head.',
       },
       ...bands,
       earsAll: { plus: Object.keys(ears), grow: 0, as: 'none' },
       earLight: {
         classes: ['skin'],
-        colour: { near: '#fac17f', far: ['#f3975f', '#ec9060'] },
+        // Only the pale rim (L 205 and up, #f9d695 at 50,115), not the ear's lit middle beside it (#f8bb76, L 197): that is the ear's paper.
+        colour: { near: '#f9d08f', far: ['#fbbb7a', '#f5a068', '#f3975f', '#ec9060'] },
         inside: 'earsAll',
         grow: 0,
         as: 'tones',
         min: 15,
-        doc: "The light on his ears, their lit rim; the hollow inside each is the ear's own paper.",
+        doc: 'The light on his ears, their lit rim.',
+      },
+      earShade: {
+        classes: ['skin'],
+        // His ear turned from the light, a step deeper than its paper (#f09261 L 169 at 194,125; #e79162 L 165 at 432,319), not its deep hollow.
+        colour: { near: '#e8905f', far: ['#f59d66', '#f7a469', '#e27e55', '#fac17f', '#fdd695'] },
+        inside: 'earsAll',
+        grow: 0,
+        as: 'tones',
+        min: 15,
+        doc: 'An ear where it turns from the light: its skin a step deeper, toward rose.',
+      },
+      earHollow: {
+        classes: ['skin'],
+        // Only its deep rose (L 148 to 158, #e07a55 at 186,125), not the mid tone round it (#f09261, L 169): that is the ear's paper.
+        colour: { near: '#e27e55', far: ['#ee9262', '#f5a068', '#f7a265', '#fac17f', '#fdd695'] },
+        inside: 'earsAll',
+        grow: 0,
+        as: 'tones',
+        min: 15,
+        doc: "The hollow of an ear in shade, its skin turned toward rose (a lit ear's hollow is its own paper).",
       },
       earBand: {
-        plus: Object.keys(bands),
+        plus: [...bandsUnder, ...lobesUnder],
+        reach: 'figure',
         as: 'tones',
         min: 20,
         doc: "The dark brown band the sheet paints round an ear as its contour (a front's), laid on his head: none where the band runs on into his hair.",
@@ -389,8 +482,9 @@ export const standing = (v: Standing): TraceSheetView => {
         smooth: 8,
         doc: 'The shade under his jaw, down his neck (none under a closed chin).',
       },
-      jaw: {
-        classes: BROWN,
+      jawLine: {
+        classes: [...BROWN, 'skin'],
+        colour: JAW_LINE,
         inside: 'head',
         // Under the chin only, never the curls beside the jaw: its band runs out to the hair at the ear; or the line the sheet paints, as the view reads it.
         clip:
@@ -402,12 +496,60 @@ export const standing = (v: Standing): TraceSheetView => {
             v.chin.row - chin.shade + 12,
           ),
         grow: 1,
+        as: 'none',
+      },
+      // Where his jaw's line meets his ink at his chin's corner: his figure there, the ink too, so the line starts under the ink (laid on his head's paper, it shows only inside it).
+      jawCorner: { silhouette: true, clip: v.chin.corner ?? [], reach: 'figure', as: 'none' },
+      jaw: {
+        plus: ['jawLine', 'jawCorner'],
+        // Written along its edge pixels' outer sides: a thin line, it keeps the width the sheet paints it.
+        edge: 'outer',
+        reach: 'figure',
+        grow: 0,
         // Never opened, smoothed 1 px: the line tapers to a point where it rises to his ear, and a wider smoothing thins its tail.
         open: 0,
         smooth: 1,
         as: 'tones',
         min: 30,
         doc: "The line his jaw lays on his neck under his chin, in the sheet's brown: from side to side, or rising to his ear (none under a closed chin).",
+      },
+      jawFade: {
+        within: 'jaw',
+        edge: 'outer',
+        clip: v.chin.fade ?? [],
+        reach: 'figure',
+        grow: 0,
+        open: 0,
+        smooth: 1,
+        as: 'tones',
+        min: 10,
+        doc: "His jaw's line where it lightens toward his ear, laid over it (none unless the view reads it).",
+      },
+      jawShade: {
+        classes: ['skin'],
+        colour: JAW_SHADE,
+        clip: v.chin.shade ?? [],
+        // Plus his jaw's line: it runs on under the line, so no lit skin shows between them.
+        plus: ['jaw'],
+        reach: 'figure',
+        grow: 0,
+        smooth: 4,
+        as: 'tones',
+        min: 30,
+        doc: "The rose shade under his jaw's line, laid on his head and his neck: up to his ear and down the far side of his neck on a turned head (none unless the view reads it).",
+      },
+      jawSoft: {
+        classes: ['skin'],
+        colour: JAW_SOFT,
+        clip: v.chin.shade ?? [],
+        // Plus the deeper shade: it runs on under it, so no lit skin shows between them.
+        plus: ['jawShade'],
+        reach: 'figure',
+        grow: 0,
+        smooth: 4,
+        as: 'tones',
+        min: 30,
+        doc: 'The soft rose round the shade under his jaw, laid under it: his skin turning from the light below his ear and down his neck (none unless the view reads it).',
       },
       handNear: { seeds: [v.near.hand], grow: 1, as: 'circle', doc: 'His near hand at its cuff.' },
       handFar: { seeds: [v.far.hand], grow: 1, as: 'circle', doc: 'His far hand at its cuff.' },
@@ -546,9 +688,36 @@ export const TRACE = {
       },
       ears: { earNear: [72, 322], earFar: [210, 322] },
       earBand: 'tone',
+      // His far ear's lobe, which the sheet draws dark inside its line (rows 336-346): the sheet's outer edge (221 at rows 312-322, 216 at 334, 198 at 347) less the line's 7 px.
+      earLobes: {
+        earFar: [
+          [198, 298],
+          [212, 298],
+          [213, 306],
+          [214, 310],
+          [214, 324],
+          [212, 328],
+          [210, 331],
+          [208, 334],
+          [206, 336],
+          [204, 338],
+          [202, 340],
+          [199, 342],
+          [196, 344],
+          [193, 346],
+          [190, 347],
+          [198, 332],
+        ],
+      },
       // The lit rim down his cheeks and jaw (#fcdb9c at 85,314; #f9cb8a at 69,330) is his skin: his face runs to his line.
       skinLit: ['#fcdb9c', '#f9cb8a', '#fbd59c'],
-      chin: { kind: 'closed', row: 393, line: rect(112, 376, 172, 397) },
+      chin: {
+        kind: 'closed',
+        row: 393,
+        line: rect(112, 376, 172, 397),
+        // The rose under his chin, from under its line (#e88d63 at 140,392).
+        shade: rect(100, 380, 186, 414),
+      },
       sharp: [],
       near: {
         pick: SILHOUETTE,
@@ -621,6 +790,29 @@ export const TRACE = {
           [422, 364],
           [422, 378],
           [370, 402],
+        ],
+        // Its corner, where the sheet's ink runs into its brown (#492713 at 378,386).
+        corner: [
+          [374, 384],
+          [380, 383],
+          [380, 392],
+          [374, 392],
+        ],
+        // Lighter past x 404, toward his ear (mean L 110 there against L 93 under his chin).
+        fade: rect(404, 350, 430, 395),
+        // The rose under his jaw's line (#e07a50 at 392,390), up to his ear (#dc7651 at 416,370) and down the far side of his neck.
+        shade: [
+          [378, 390],
+          [392, 384],
+          [410, 372],
+          [416, 362],
+          [428, 350],
+          [440, 354],
+          [440, 372],
+          [430, 409],
+          [412, 416],
+          [392, 406],
+          [378, 397],
         ],
       },
       sharp: [],

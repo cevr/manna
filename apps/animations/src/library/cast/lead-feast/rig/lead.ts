@@ -59,6 +59,16 @@ interface LeadTable {
   readonly EAR_BAND?: Pieces;
   /** The light on his ears, their lit rim (traced with `EAR_BAND`). */
   readonly EAR_LIGHT?: Pieces;
+  /** The hollow of an ear in shade (traced with `EAR_BAND`). */
+  readonly EAR_HOLLOW?: Pieces;
+  /** An ear where it turns from the light (traced with `EAR_BAND`). */
+  readonly EAR_SHADE?: Pieces;
+  /** The rose shade under his jaw's line, on his head and his neck (traced with `EAR_BAND`). */
+  readonly JAW_SHADE?: Pieces;
+  /** The soft rose round that shade (traced with `EAR_BAND`). */
+  readonly JAW_SOFT?: Pieces;
+  /** His jaw's line where it lightens toward his ear (traced with `EAR_BAND`). */
+  readonly JAW_FADE?: Pieces;
   readonly BODY: ReadonlyArray<Pt>;
   readonly SKIN: Pieces;
   readonly NECK: Pieces;
@@ -164,7 +174,13 @@ const leadView = (t: LeadTable, v: LeadViewSpec) =>
       ...v.head,
       outline: t.HEAD,
       paper: PAPERS.skin,
-      tones: [tone(t.JAW, v.jaw ?? TONES.jaw), tone(t.EAR_BAND ?? [], TONES.earBand)],
+      tones: [
+        tone(t.JAW_SOFT ?? [], TONES.jawSoft),
+        tone(t.JAW_SHADE ?? [], TONES.jawShade),
+        tone(t.JAW, v.jaw ?? TONES.jaw),
+        tone(t.JAW_FADE ?? [], TONES.chinFade),
+        tone(t.EAR_BAND ?? [], TONES.earBand),
+      ],
     },
     hair: {
       outline: t.HAIR,
@@ -172,7 +188,15 @@ const leadView = (t: LeadTable, v: LeadViewSpec) =>
       tones: [tone(t.HAIR_LIGHT, TONES.hairLight), tone(t.HAIR_DARK, TONES.hairShade)],
       curls: { discs: t.CURLS, shade: TONES.hairShade, crescent: CURL_CRESCENT },
     },
-    ears: { ...v.ears, paper: PAPERS.ear, tones: [tone(t.EAR_LIGHT ?? [], TONES.earLight)] },
+    ears: {
+      ...v.ears,
+      paper: PAPERS.ear,
+      tones: [
+        tone(t.EAR_LIGHT ?? [], TONES.earLight),
+        tone(t.EAR_SHADE ?? [], TONES.earShade),
+        tone(t.EAR_HOLLOW ?? [], TONES.earHollow),
+      ],
+    },
     face: { ...v.face, gaze: GAZE },
     body: {
       outline: t.BODY,
@@ -180,6 +204,8 @@ const leadView = (t: LeadTable, v: LeadViewSpec) =>
       tones: [
         { ...tone(t.SKIN, PAPERS.skin.color), skin: true },
         { ...tone(t.NECK_SHADE, TONES.neck), skin: true },
+        { ...tone(t.JAW_SOFT ?? [], TONES.jawSoft), skin: true },
+        { ...tone(t.JAW_SHADE ?? [], TONES.jawShade), skin: true },
         { ...tone(t.NECK, TONES.neck), skin: true },
         tone(t.MANTLE, TONES.mantle),
         tone(t.MANTLE_SHADE, TONES.mantleShade),
