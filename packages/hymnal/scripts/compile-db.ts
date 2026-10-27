@@ -83,7 +83,7 @@ export const readDatabaseSources = Effect.fn('CorpusDatabase.readSources')(funct
     source_text_sha256: sha256(sourceText),
     compiled_sha256: sha256([...compiledHashes, `index.json:${sha256(indexText)}`].join('\n')),
     topics_sha256: sha256(topicsText),
-    shapes_sha256: sha256(metreText),
+    metres_sha256: sha256(metreText),
     census_sha256: sha256(censusText),
     recordings_sha256: sha256(recordings),
   };

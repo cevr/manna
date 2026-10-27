@@ -5,7 +5,7 @@
  *
  * Downloads pre-built databases from GitHub:
  * - bible.db: KJV text, Strong's concordance, cross-references
- * - hymnal.db: 920 SDA hymns
+ * - hymnal.db: 695 SDA hymns and 225 liturgical readings
  * - egw-paragraphs.db: too large to host — prints sync instructions
  */
 
@@ -37,8 +37,8 @@ const DBS = {
   hymnal: {
     name: 'hymnal.db',
     url: `${GITHUB_RAW}/packages/core/data/hymnal.db`,
-    description: 'SDA Hymnal (920 hymns)',
-    size: '~950KB',
+    description: 'SDA Hymnal (695 hymns and 225 readings)',
+    size: '~21 MiB',
   },
 } as const;
 
@@ -58,6 +58,21 @@ const downloadFile = (url: string, dest: string, label: string) =>
     );
     yield* fs.writeFile(dest, new Uint8Array(bytes));
   });
+
+/** Hymnal acquisition is separate from other corpora so callers can supply an isolated destination. */
+export const ensureHymnal = Effect.fn('Init.ensureHymnal')(function* (
+  destination: string,
+  refresh: boolean,
+) {
+  const fs = yield* FileSystem.FileSystem;
+  const db = DBS.hymnal;
+  if (!refresh && (yield* fs.exists(destination))) {
+    yield* Console.log(`✓ ${db.name} (${db.description})`);
+  } else {
+    yield* downloadFile(db.url, destination, `${db.name} ${db.size}`);
+    yield* Console.log(`✓ ${db.name} installed`);
+  }
+});
 
 /**
  * Resolve the bible and topics artifacts against one `CorpusSupply`
@@ -150,15 +165,7 @@ export const init = Command.make('init', { force }, (args) =>
     });
 
     // Download each database
-    for (const db of Object.values(DBS)) {
-      const dbPath = path.join(bibleDir, db.name);
-      if (!args.force && (yield* fs.exists(dbPath))) {
-        yield* Console.log(`✓ ${db.name} (${db.description})`);
-      } else {
-        yield* downloadFile(db.url, dbPath, `${db.name} ${db.size}`);
-        yield* Console.log(`✓ ${db.name} installed`);
-      }
-    }
+    yield* ensureHymnal(path.join(bibleDir, DBS.hymnal.name), args.force);
 
     // EGW database status
     const egwDbPath = path.join(bibleDir, 'egw-paragraphs.db');

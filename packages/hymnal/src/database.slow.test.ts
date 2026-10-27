@@ -6,7 +6,7 @@ import { describe, expect, it } from 'effect-bun-test';
 import { HymnalService, HymnId } from '@manna/core/hymnal';
 import { layerHymnalBun } from '@manna/core/hymnal/bun';
 
-import { buildDatabase, OUTPUT, readDatabaseSources } from '../scripts/compile-db.js';
+import { buildDatabase, DATA, OUTPUT, readDatabaseSources } from '../scripts/compile-db.js';
 import { keyOnPitch, pitchClass } from './chord.js';
 import { type DatabaseSources, META_KEYS, validateSources } from './database.js';
 import { type Fit, type Hymn, type Part, type Reason, type Syllable, sung } from './hymn.js';
@@ -575,6 +575,44 @@ const auditService = Effect.fn('DatabaseTest.service')(function* (sources: Datab
     expect(json(actual.verses) === json(expected), `${source.number}:service:verses`).toBe(true);
   }
 });
+
+it.effect('rejects malformed parts and source references before replacing a valid artifact', () =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const dir = yield* fs.makeTempDirectoryScoped();
+    const input = `${dir}/inputs`;
+    yield* fs.makeDirectory(input);
+    yield* fs.copy(`${DATA}/sdah-1985`, `${input}/sdah-1985`);
+    for (const name of ['source-text.json', 'shapes.json', 'census.json'])
+      yield* fs.copyFile(`${DATA}/${name}`, `${input}/${name}`);
+    const sources = yield* readDatabaseSources();
+    const output = `${dir}/artifact.db`;
+    yield* fs.copyFile(OUTPUT, output);
+    const before = yield* fs.readFile(output);
+    const first = sources.hymns[0];
+    const malformed = { ...first, stanzas: [{ _tag: 'Invalid', lines: ['fixture'] }] };
+    yield* fs.writeFileString(`${input}/sdah-1985/001.json`, json(malformed));
+    const compile = readDatabaseSources(input).pipe(
+      Effect.flatMap((s) => buildDatabase(output, s)),
+    );
+    expect(Result.isFailure(yield* Effect.result(compile))).toBe(true);
+    const afterPart = yield* fs.readFile(output);
+    expect(before.length === afterPart.length && before.every((b, i) => b === afterPart[i])).toBe(
+      true,
+    );
+    yield* fs.copyFile(`${DATA}/sdah-1985/001.json`, `${input}/sdah-1985/001.json`);
+    const invalid = {
+      ...sources.source,
+      hymns: sources.source.hymns.map((h) => (h.number === 696 ? { ...h, categoryId: 999 } : h)),
+    };
+    yield* fs.writeFileString(`${input}/source-text.json`, json(invalid));
+    expect(Result.isFailure(yield* Effect.result(compile))).toBe(true);
+    const afterReference = yield* fs.readFile(output);
+    expect(
+      before.length === afterReference.length && before.every((b, i) => b === afterReference[i]),
+    ).toBe(true);
+  }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+);
 
 const readAll = (file: string, sources: DatabaseSources) =>
   auditService(sources).pipe(Effect.provide(serviceLayer(file)));

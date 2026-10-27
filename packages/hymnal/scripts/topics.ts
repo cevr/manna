@@ -17,7 +17,7 @@ import { type Topic, Topics } from '../src/hymn.js';
 const FIRST = 1;
 const LAST = 695;
 
-/** A range hymnal.db files under section `from` that the print puts under `to`. */
+/** A captured-source range under section `from` that the print puts under `to`. */
 const Move = Schema.Struct({
   first: Schema.Int,
   last: Schema.Int,
@@ -45,7 +45,7 @@ export type Fixes = typeof Fixes.Type;
 export const decodeFixes = (text: string) =>
   Schema.decodeEffect(Schema.fromJsonString(Fixes))(text);
 
-/** What the builder reads from hymnal.db: each section's id and name, and each hymn's section. */
+/** Captured source rows: each section's id and name, and each hymn's section. */
 export interface Rows {
   readonly categories: ReadonlyArray<{ readonly id: number; readonly name: string }>;
   readonly hymns: ReadonlyArray<{ readonly number: number; readonly categoryId: number }>;
@@ -66,7 +66,7 @@ export class TopicsError extends Schema.TaggedError<TopicsError>()('TopicsError'
 const fail = (reason: TopicsError['reason'], detail: string) =>
   Effect.fail(TopicsError.make({ reason, detail }));
 
-/** The topics of hymns 1–695: hymnal.db's sections with the print's moves and names applied. */
+/** The topics of hymns 1–695: captured sections with the print's moves and names applied. */
 export const buildTopics = (rows: Rows, fixes: Fixes): Effect.Effect<Topics, TopicsError> =>
   Effect.gen(function* () {
     const section = new Map(rows.hymns.map((h) => [h.number, h.categoryId]));

@@ -47,15 +47,15 @@ notes, a melisma marked with the notes it holds (`is_2`).
 ## The compiled hymnal
 
 `bun run compile` compiles every hymn of the SDA Hymnal (1985), 1 to 695,
-from its text (`packages/core/data/hymnal.db`, read through
-`@manna/core/hymnal`) and its MIDI file (`data/midi/NNN.mid`) into
+from its independent text (`data/source-text.json`, read through
+`scripts/source-text.ts`) and its MIDI file (`data/midi/NNN.mid`) into
 `data/sdah-1985/NNN.json`, one hymn each, and `data/sdah-1985/index.json`
 (each hymn's number, title and lowest level). It decodes every file it wrote
 back through the schema and writes a report beside the folder,
 `data/sdah-1985.report.md` (not tracked: it names the time taken): the counts
 by level, the reasons, the inexact verse splits, the held hymns and the
 alignment key's result. The same inputs give the same bytes. Flags, each
-relative to the repository root: `--db`, `--midi`, `--out`, `--key`.
+relative to the repository root: `--midi`, `--out`, `--key`.
 
 The app reads a hymn through `@manna/hymnal/hymn`, which imports only
 `effect` and `@manna/hymnal/chord` (no Bun, Node or dictionary). A hymn holds
@@ -97,7 +97,7 @@ sections as each page prints them at its foot, as ranges of hymn numbers
 (`Topics` in `@manna/hymnal/hymn`, `{ id, name, first, last }`, ordered).
 The schema refuses a table that is not a partition of 1–695, so every hymn
 has exactly one topic, and `topicOf(topics, n)` gives it. `scripts/topics.ts`
-builds it from hymnal.db's sections and `data/fixes/topics.json`, where the
+builds it from the captured source sections and `data/fixes/topics.json`, where the
 print differs: a range filed under another section (421–437 print ETERNAL
 LIFE), a name the print gives otherwise (HOLY SCRIPTURES, a trailing
 carriage return), and each page foot read as a witness (an owner photo, a
@@ -106,11 +106,12 @@ between two printed witnesses of the same heading). A section split in two
 with no move for it is refused (`TopicsError`), never repaired. The report
 lists each topic with its witnesses and the topics no page witnesses.
 
-A hymnal.db row whose text contradicts its printed page is rewritten from
+A source-text row whose text contradicts its printed page is rewritten from
 `data/fixes/<n>.json`: the page as printed, its `print` naming the source
 and each line's `from` the page image, system and row it was read from.
-`bun scripts/hymnal-fixes.ts [--db <hymnal.db>]` writes every fix into
-hymnal.db and changes no other row: the stanzas as ids 0 to n − 1 and the
+`bun scripts/hymnal-fixes.ts [--out <absolute-db-file>]` writes every fix into
+source-text.json, recompiles JSON, then rebuilds SQLite through `compile-db.ts`.
+It changes no other source row: the stanzas as ids 0 to n − 1 and the
 refrain as id -1. A refrain whose lines differ by stanza (`varies`, each
 with the stanzas it follows) cannot be one refrain, so each stanza is
 written with the refrain sung after it inline, and the row has no refrain
@@ -182,7 +183,7 @@ The MIDI files, the hand charts, the key and the compiled set are tracked
 here (owner, 2026-10-18). Most tests build their MIDI in code
 (`src/midi-fixture.ts`); `src/score.test.ts` reads three files that carry no
 key signature (6, 162, 663). `src/fidelity.slow.test.ts` compiles every hymn
-fresh from hymnal.db, `data/fixes` and its MIDI file, as `bun run compile`
+fresh from source-text.json, `data/fixes` and its MIDI file, as `bun run compile`
 does (in four workers, `src/fidelity-worker.ts`, so the compiles share the
 cores), and checks that `sung` gives exactly the printed lines in the order the
 hymnal sings them: each stanza's lines, and the refrain where
@@ -191,6 +192,69 @@ compared word for word with case and punctuation set aside. It builds the
 expected order from the text and the fixes alone, never from the compiler,
 and refuses a refrain `refrains.json` does not place. The tests read no
 chart, key or compiled file.
+
+## Generated SQLite corpus
+
+`bun run --cwd packages/hymnal compile:db` writes `packages/core/data/hymnal.db`.
+`bun packages/hymnal/scripts/compile-db.ts --out <absolute-file>` builds an isolated copy.
+The compiler validates inputs, writes a fresh sibling in one stable transaction,
+closes and reopens it for integrity checks, then atomically replaces the destination.
+Repeated builds on the installed Bun/SQLite version have identical bytes.
+The artifact is 21,991,424 bytes (about 21 MiB). It contains 695 hymns and 225
+liturgical readings, with IDs 1–920. It contains no favorites, views or settings.
+
+The source graph is `source-text.json` plus printed corrections and MIDI →
+compiled JSON → SQLite. `source-text.json` version 1 captures all 920 original
+titles, category IDs and ordered verse IDs/text, and all 68 original categories.
+It excludes personal state. Hymns 1–695 in SQLite come from decoded `Hymn` files;
+readings 696–920 come from the source capture. Corrected `topics.json` supplies
+the first 62 sections; captured categories 63–68 supply the reading sections.
+Topic fixes apply once upstream. Compilation and the census read the independent
+capture; the census also retains its historical Git database oracle.
+
+An explicit legacy source import is available with
+`bun packages/hymnal/scripts/source-text.ts --capture-db <copied-legacy-db> --out <source-file>`.
+It opens the supplied copy read-only. Normal builds ignore `HYMNAL_DB_PATH` and
+work when the generated artifact is absent. Page corrections belong in
+`data/fixes`, then run `scripts/hymnal-fixes.ts`; it updates captured verses,
+recompiles JSON and invokes the same SQLite writer. `compile(source)` remains pure.
+
+SQLite `user_version` is 2; builder version is 1. Ordered normalized tables hold
+stanzas/refrains, lines, syllables, both chord levels and every placement,
+topics/memberships, keys/recordings, census/metre evidence and timelines/tempos/
+sung line occurrences/syllable starts. Child ordinals start at zero. `stanzas.verse_id`
+retains zero-based stanza IDs and -1 for a shared refrain. Readings retain their
+original ordered verse IDs. `hymns.first_line` is the full opening stanza line;
+the service keeps its existing 60-character summary rule. `hymns_fts` has rowid =
+hymn ID and Unicode-tokenized title, first line, refrain, full text and topic words.
+The adapter quotes literal FTS input and keeps substring matches through a bounded
+LIKE path, with stable ID order. It reads legacy version-0 files and version 2
+read-only. Other versions and storage/decode failures are typed errors.
+
+`hymn_keys` retains printed spelling at transpose 0 and derives -5…6 with the
+existing key functions. Chords stay as degrees and syllable anchors.
+`recordings` holds constants-derived set/object keys, credits and unknown
+availability; hash, bytes, duration and measurements are null. Descriptors do
+not prove an upload. `hymn_metres` holds the 500 unchanged printed metre readings
+with reader and image provenance. It is incomplete evidence, distinct from
+the musical time signature. `hymn_census` retains all 695 states and compact
+page/source/digest/read-count/commit provenance. No author, composer, tune,
+Scripture, fine-topic or inferred metrical index is supplied.
+
+`corpus_meta` has this fixed key set: `book`, `builder_version`, `format_version`,
+`input_sha256`, `source_text_sha256`, `compiled_sha256`, `topics_sha256`,
+`metres_sha256`, `census_sha256`, `recordings_sha256`, `recording_credits`.
+Digests cover input bytes and committed recording descriptors; the combined
+digest covers the named input fingerprints. Metadata excludes timestamps,
+machine paths and the database's own hash. Increment builder version when the
+projection format changes; introduce a new schema version for incompatible readers.
+
+`src/database.slow.test.ts` checks the full public projection and every descriptor,
+all service verses, FTS, mutation detection, byte reproducibility and atomic failure.
+The normal unit suite uses small synthetic schema/adapter checks.
+`packages/cli/test/commands/hymns.slow.test.ts` drives real CLI parsing for both
+formats and checks init acquisition with isolated HTTP and filesystem fixtures.
+The app continues to read compiled JSON through the portable `./hymn` export.
 
 ## Recordings
 
@@ -291,7 +355,7 @@ What the plain run reads and checks itself:
   first 16 hex digits of the file's sha256), and the words a judge saw each
   crop print at the place. A committed crop no ruling names is a problem.
 - The base row: hymnal.db at `base.commit`, read from git.
-- `data/fixes/NNN.json` and hymnal.db: a `fixed` row is the base row with
+- `data/fixes/NNN.json` and source-text.json: a `fixed` row is the base row with
   each ruling applied, and each fix line's `from` names a deciding image of
   its hymn.
 
@@ -484,7 +548,7 @@ printed in parentheses, 5 as words and 3 as a shared row, each as the
 row sings it, so its row stands and it `matches`.
 
 `src/census.slow.test.ts` reads the census, the inventory, the rulings, the
-crops, the fixes and hymnal.db, and checks each entry against them: its
+crops, the fixes and source-text.json, and checks each entry against them: its
 deciding page, its base row, its state from its rulings, and its committed
 row as the base row with each ruling applied. Its mutant cases relabel an
 entry, drop a ruling or a crop, swap a crop's bytes, change a row word or a

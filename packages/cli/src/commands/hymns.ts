@@ -1,7 +1,7 @@
 /**
  * Hymns Command
  *
- * CLI commands for querying the SDA Hymnal.
+ * CLI commands for querying the SDA Hymnal's 695 hymns and 225 liturgical readings.
  */
 
 import { Argument, Command, Flag } from 'effect/cli';

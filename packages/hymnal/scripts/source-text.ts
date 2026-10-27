@@ -1,5 +1,6 @@
 /** Independent corpus source. SQLite is only an explicit, read-only capture input. */
 import { Database } from 'bun:sqlite';
+import * as BunServices from '@effect/platform-bun/BunServices';
 import { HymnalService, HymnId, CategoryId } from '@manna/core/hymnal';
 import {
   Category,
@@ -124,34 +125,63 @@ export const layerSourceText = Layer.effect(
   }),
 );
 
+const captureRows = (db: Database) => {
+  const categories = db
+    .query<{ id: number; name: string }, []>('SELECT id, name FROM categories ORDER BY id')
+    .all();
+  const hymns = db
+    .query<{ id: number; name: string; category_id: number; verses: string }, []>(
+      'SELECT id, name, category_id, verses FROM hymns ORDER BY id',
+    )
+    .all()
+    .map((row) => ({
+      number: row.id,
+      title: row.name,
+      categoryId: row.category_id,
+      verses: Schema.decodeSync(Schema.fromJsonString(Schema.Array(Verse)))(row.verses),
+    }));
+  return JSON.stringify({ version: 1, book: 'sdah-1985', categories, hymns });
+};
+
+const capture = Effect.fn('SourceText.capture')((file: string) =>
+  Effect.acquireUseRelease(
+    Effect.try({
+      try: () => new Database(file, { readonly: true }),
+      catch: () => SourceTextError.make({ operation: 'capture-open' }),
+    }),
+    (db) =>
+      Effect.try({
+        try: () => captureRows(db),
+        catch: () => SourceTextError.make({ operation: 'capture-rows' }),
+      }).pipe(Effect.flatMap(decodeSourceText)),
+    (db) => Effect.sync(() => db.close()),
+  ),
+);
+
 if (import.meta.main) {
   const args = process.argv.slice(2);
   const at = args.indexOf('--capture-db');
   const out = args.indexOf('--out');
-  if (at < 0 || !args[at + 1] || out < 0 || !args[out + 1]) {
+  const input = args[at + 1],
+    target = args[out + 1];
+  if (at < 0 || input === undefined || out < 0 || target === undefined) {
     console.error('source-text requires --capture-db <copied-legacy-db> --out <source-file>');
     process.exitCode = 1;
   } else {
-    const db = new Database(args[at + 1], { readonly: true });
-    const categories = db
-      .query<{ id: number; name: string }, []>('SELECT id, name FROM categories ORDER BY id')
-      .all();
-    const hymns = db
-      .query<{ id: number; name: string; category_id: number; verses: string }, []>(
-        'SELECT id, name, category_id, verses FROM hymns ORDER BY id',
-      )
-      .all()
-      .map((row) => ({
-        number: row.id,
-        title: row.name,
-        categoryId: row.category_id,
-        verses: Schema.decodeSync(Schema.fromJsonString(Schema.Array(Verse)))(row.verses),
-      }));
-    db.close();
-    const source = await Effect.runPromise(
-      decodeSourceText(JSON.stringify({ version: 1, book: 'sdah-1985', categories, hymns })),
-    );
-    await Bun.write(args[out + 1] ?? SOURCE_TEXT, `${JSON.stringify(source)}\n`);
-    console.log(`source-text captured rows=${hymns.length} categories=${categories.length}`);
+    const program = Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const source = yield* capture(input);
+      yield* fs
+        .writeFileString(target, `${JSON.stringify(source)}\n`)
+        .pipe(Effect.mapError(() => SourceTextError.make({ operation: 'capture-write' })));
+      console.log(
+        `source-text captured rows=${source.hymns.length} categories=${source.categories.length}`,
+      );
+    }).pipe(Effect.provide(BunServices.layer));
+    const result = await Effect.runPromise(Effect.result(program));
+    if (result._tag === 'Failure') {
+      console.error(`FAIL source-text operation=${result.failure.operation}`);
+      process.exitCode = 1;
+    }
   }
 }

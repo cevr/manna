@@ -9,7 +9,7 @@
  * The oracle builds the expected lines from the sources alone, never from the
  * compiler or `sung`: the row's stanzas by id and its one negative-id
  * refrain; the refrain's place from `data/fixes/refrains.json`, read off each
- * refrain hymn's page; and, for a row hymnal.db holds rewritten from its
+ * refrain hymn's page; and, for a source row rewritten from its
  * page (each hymn with a `data/fixes/NNN.json`: the census's `fixed` hymns,
  * its `matches` hymns written as the page lays them out, and the seven fixes
  * before it), that printed source in place of the row.
@@ -150,7 +150,7 @@ const fromPrint = (text: string, order: Order | undefined) =>
   );
 
 /**
- * A hymnal.db row: its stanzas by id, and its one negative-id refrain at the
+ * A captured source row: its stanzas by id, and its one negative-id refrain at the
  * place the census lists. A refrain the census does not place, or a place
  * listed for a hymn with no refrain, is a failure: there is no default.
  */

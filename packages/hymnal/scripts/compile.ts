@@ -46,6 +46,12 @@ const FIRST = 1;
 const LAST = 695;
 
 const args = process.argv.slice(2);
+if (args.includes('--db')) {
+  console.error(
+    'compile: use source-text.ts --capture-db <copied-legacy-db> --out <source-file> for explicit source import',
+  );
+  process.exit(1);
+}
 const flag = (name: string, fallback: string) => {
   const at = args.indexOf(name);
   return path.resolve(ROOT, at < 0 ? fallback : (args[at + 1] ?? fallback));

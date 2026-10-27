@@ -163,10 +163,11 @@ describe('versioned corpus reader', () => {
           const matches = yield* service.searchHymns(query);
           expect(matches.some((h) => h.id === 1)).toBe(true);
         }
-        for (const query of ['*', 'NEAR(', 'alpha OR impossible', '%', '_'])
+        for (const query of ['*', 'NEAR(', 'alpha OR impossible', '%', '_', String.fromCharCode(0)])
           expect((yield* service.searchHymns(query)).length).toBe(0);
         expect((yield* service.searchHymns('alpha', 1)).map((h) => Number(h.id))).toEqual([1]);
         expect((yield* service.searchHymns('alpha', 0)).length).toBe(0);
+        expect((yield* service.searchHymns('alpha', -1)).map((h) => Number(h.id))).toEqual([1, 2]);
         expect((yield* service.searchHymns('', 920)).map((h) => Number(h.id))).toEqual([1, 2]);
       }).pipe(Effect.provide(syntheticLayer('normalized'))),
   );

@@ -24,9 +24,9 @@ export const META_KEYS = [
   'compiled_sha256',
   'format_version',
   'input_sha256',
+  'metres_sha256',
   'recording_credits',
   'recordings_sha256',
-  'shapes_sha256',
   'source_text_sha256',
   'topics_sha256',
 ] as const;
@@ -251,8 +251,9 @@ export const populateDatabase = Effect.fn('CorpusDatabase.populate')(function* (
   yield* validateSources(sources);
   yield* Effect.try({
     try: () => {
-      db.exec(CORPUS_SCHEMA);
+      db.exec('PRAGMA foreign_keys=ON');
       db.transaction(() => {
+        db.exec(CORPUS_SCHEMA);
         for (const key of META_KEYS)
           insertInto(db, 'corpus_meta', 'key,value')(key, sources.meta[key]);
         writeTopics(db, sources);
@@ -261,8 +262,8 @@ export const populateDatabase = Effect.fn('CorpusDatabase.populate')(function* (
         for (const reading of sources.source.hymns.filter((h) => h.number > 695))
           writeReading(db, sources, writer, reading);
         writeEvidence(db, sources);
+        db.exec("INSERT INTO hymns_fts(hymns_fts) VALUES('optimize')");
       })();
-      db.exec("INSERT INTO hymns_fts(hymns_fts) VALUES('optimize')");
     },
     catch: () => CorpusDatabaseError.make({ operation: 'populate' }),
   });

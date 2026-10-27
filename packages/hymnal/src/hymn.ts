@@ -233,7 +233,7 @@ export type Index = typeof Index.Type;
 /** The last hymn the compiled set carries: the readings after it are not compiled. */
 const LAST_HYMN = 695;
 
-/** A section of the hymnal, as its pages print it at the foot: its id in hymnal.db, its name and its hymns. */
+/** A printed section: its stable captured-source id, name and hymn range. SQLite projects this table. */
 export const Topic = Schema.Struct({
   id: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
   name: Schema.String.check(Schema.isNonEmpty(), Schema.isTrimmed()),

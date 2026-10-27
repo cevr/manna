@@ -1,8 +1,8 @@
 /**
- * Writes each hymn whose hymnal.db row contradicts its printed page into
- * hymnal.db, from its printed source, every printed word kept:
+ * Applies printed corrections to independent source text, recompiles JSON,
+ * then rebuilds SQLite through its sole writer, compile-db.ts:
  *
- *   bun packages/hymnal/scripts/hymnal-fixes.ts [--db <hymnal.db>]
+ *   bun packages/hymnal/scripts/hymnal-fixes.ts [--out <absolute-db-file>]
  *
  * A printed source is `data/fixes/<NNN>.json`: the hymn as its page prints
  * it, each line with where it was read. Its refrain is a list of lines, and a
@@ -18,8 +18,8 @@
  * - no refrain: the stanzas as ids 0 to n - 1.
  *
  * Only the rows with a printed source are written. The output depends on the
- * sources alone, so a rerun writes the same rows. `--db` is read against the
- * working directory; a missing file is refused, never created.
+ * sources alone, so a rerun writes the same rows. `--out` selects the generated
+ * database; it never selects an input database.
  */
 
 import * as BunServices from '@effect/platform-bun/BunServices';

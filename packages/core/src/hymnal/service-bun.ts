@@ -69,6 +69,7 @@ const literalLike = (query: string) =>
   `%${query.toLowerCase().replaceAll('\\', '\\\\').replaceAll('%', '\\%').replaceAll('_', '\\_')}%`;
 const boundedLimit = (limit: number) => {
   if (!Number.isFinite(limit)) return 20;
+  if (limit < 0) return 920;
   return Math.min(920, Math.max(0, Math.floor(limit)));
 };
 const categorySql = (version: number) => {
@@ -200,6 +201,8 @@ export const layerHymnalBun: Layer.Layer<
       Effect.try({
         try: () => {
           const maximum = boundedLimit(limit);
+          // SQLite text/FTS treats NUL as a terminator; no corpus entry contains it.
+          if (query.includes('\0')) return [];
           if (version === 2) {
             const term = literalLike(query);
             return db
