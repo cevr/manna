@@ -645,6 +645,27 @@ export const NECK_SHADE: Pt[][] = [
   ],
 ];
 
+/** The brown line his jaw lays across his neck, under his chin (none under a closed chin). */
+export const JAW: Pt[][] = [
+  [
+    [162.5, 382],
+    [162.5, 387.5],
+    [154, 390.5],
+    [145, 392.5],
+    [136, 392],
+    [127.5, 390.5],
+    [119, 388],
+    [122, 383.5],
+    [130.5, 386],
+    [139.5, 387],
+    [148.5, 386],
+    [157, 383.5],
+  ],
+];
+
+/** His skin the garment's neck shows, below his chin: lit, as his face. */
+export const SKIN: Pt[][] = [];
+
 /** His neck under his hair, in the tunic's neck (from behind). */
 export const NECK: Pt[][] = [];
 
