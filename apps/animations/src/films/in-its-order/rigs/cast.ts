@@ -281,8 +281,8 @@ export const CAST = castTable({
           numbers: {},
           // His near arm is the raised sleeve the sheet draws, its hand at his chin as traced (`leadFeastSeated`): it reaches nowhere.
           reach: [['far', LEAD_SEATED.HAND_FAR.at]],
-          // The stool's seat runs in under his robe, as the sheet's does.
-          props: [{ name: 'stool', draw: stool(43, 134, -97), layer: 'behind' }],
+          // The stool behind him, its seat's top on the sheet's line (row 703) and running in under his mantle; its front leg beside his robe's side (x 803-825) and its far one at x 855-877, where the sheet draws them.
+          props: [{ name: 'stool', draw: stool(69, 133, -97), layer: 'behind' }],
         },
       ),
       // Three-quarters left, leaning to the low table, his near hand on the bottle there: his reaching composition, its sleeve as the sheet draws it.
@@ -350,7 +350,10 @@ export const CAST = castTable({
           // Rolled 13°, as the sheet's head is.
           tilt: 0.22,
           browTilt: 0.4,
-          mouth: -2.5,
+          // His frown short and near flat, where the sheet draws it (rows 178-188 at x 65-80), under the line his rig's mouth lies on: 0.22 of his eyes' spacing wide.
+          mouth: -0.5,
+          mouthY: 12,
+          mouthW: 0.76,
         },
       ),
       // His front: plain, his mouth level.
@@ -371,7 +374,7 @@ export const CAST = castTable({
         RIGS.leadFeastFrontProp,
         WINCE,
       ),
-      // His front: glad, his eyes shut in a smile and the glad mark's wide smile in place of his mouth's line, his head lifted (nod -7 lifts it 12 px off the bust's place: his smile 3 px under the sheet's, his chin's line 10 over it; lifted higher, the ink round his open chin rises out from behind his garment and crosses his neck).
+      // His front: glad, his eyes shut in a smile and the glad mark's wide smile in place of his mouth's line, his face turned up as the sheet draws it: his marks lifted inside a head that holds the bust's place (`marksY`), so his chin's line and his ears stay where the sheet draws them.
       'heads-6': bust(
         [1276, 313, 1519, 650],
         [1399, 445.5],
@@ -380,7 +383,7 @@ export const CAST = castTable({
         RIGS.leadFeastFrontProp,
         {
           glad: 1,
-          nod: -7,
+          marksY: -11,
           eyes: 0,
           mouthLine: 0,
         },

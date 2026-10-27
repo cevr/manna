@@ -227,9 +227,9 @@ const UNDER_ARMS = {
 
 /**
  * The profile right's sleeve, its back edge on the line where the sheet's
- * teal strip behind it meets its cream (x 1087-1088, rows 436-532): the
- * sleeve's region, grown through the strip's shaded teal, ran 3-5 px past it
- * in bumps the teal showed between.
+ * teal strip behind it meets its cream (x 1087-1088, rows 436-532). The
+ * polygon bounds the sleeve's region there, so its growth through the
+ * strip's shaded teal stops at that line and the edge stays straight.
  */
 const PROFILE_RIGHT_SLEEVE: TracePt[] = [
   [1091, 405],

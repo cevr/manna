@@ -268,10 +268,12 @@ const shifted = (
 
 /**
  * The marks past Kit A's his face draws where both eyes show (his heads
- * sheet): a wince and a glad shut-eyed smile. A profile's one eye takes
- * neither.
+ * sheet): a wince and a glad shut-eyed smile; and the slides his busts take
+ * where the heads sheet draws his marks elsewhere on his head than his rig
+ * lays them (his face turned up, his frown low). A profile's one eye takes
+ * none.
  */
-const WITH_EXTRA = ['wince', 'glad'] as const;
+const WITH_EXTRA = ['wince', 'glad', 'marksY', 'mouthY', 'mouthW'] as const;
 
 /** His face at rest: the features slid half after his gaze, a small smile; laid over his hair, so a brow knit up into his hairline shows. */
 const AT_REST = { turn: 0.5, rest: { mouth: 2.5 }, layer: 'over' } as const;
@@ -498,10 +500,12 @@ const seatedArms = () => {
 /**
  * The sheet's shading of his raised sleeve, seated, sheet pixels, laid on
  * its lit paper (each clipped to the sleeve): its inner half a step darker
- * (#ecc9a8 at 709,576), its inner edge a mauve stripe (#a17d71 at 720,576)
- * that parts it from his tunic with no line, split by a thin band of that
- * darker cream below his wrist (x 720-725, rows 584-616), as the sheet
- * paints a fold and the edge beside it.
+ * (#ecc9a8 at 709,576), its inner edge a fold that parts it from his tunic
+ * with no line: a mauve stroke (#a17d71 at 720,576) on its near side, a
+ * softer one on its far side to row 604 (where the sheet's lap hand begins),
+ * and from below his wrist (row 581) a mid-tone between them that opens at
+ * the bottom, so the near stroke ends in a point (x 708, row 618) with
+ * nothing across it.
  */
 const SEATED_SLEEVE: ReadonlyArray<TracedTone> = [
   tone(
@@ -547,23 +551,87 @@ const SEATED_SLEEVE: ReadonlyArray<TracedTone> = [
   tone(
     [
       straight([
-        [721, 584],
-        [720, 591],
-        [719, 596],
-        [717, 601],
-        [716, 606],
-        [714, 611],
-        [710, 616],
-        [721, 616],
-        [725, 611],
-        [725, 606],
-        [724, 601],
-        [724, 596],
-        [723, 591],
-        [722, 584],
+        [726, 557],
+        [764, 557],
+        [764, 604],
+        [722, 604],
+        [721.5, 581],
+        [724.5, 571],
+        [725, 566],
       ]),
     ],
-    TONES.creamAcrossInner,
+    TONES.creamAcrossFar,
+  ),
+  tone(
+    [
+      straight([
+        [722, 581],
+        [723, 586],
+        [724, 591],
+        [725, 596],
+        [726, 601],
+        [727, 604],
+        [764, 604],
+        [764, 626],
+        [708, 626],
+        [708, 618],
+        [710.5, 615],
+        [713.5, 612],
+        [715.5, 606],
+        [716.5, 601],
+        [718, 596],
+        [719.5, 591],
+        [720.5, 586],
+        [721.5, 581],
+      ]),
+    ],
+    TONES.creamAcrossFold,
+  ),
+];
+
+/**
+ * His teal sleeve on his lap, seated, as it hangs before it reaches there
+ * (`seatedArms`, sheet pixels: his forearm from about row 640 to its cuff at
+ * 723, his hand's top at 713): lit whole (the sheet's #7fa194 at 764,621,
+ * lightest by his hand), so it lies off the mantle under it; shaded along
+ * its forearm's right side, the side that turns under as it reaches (the
+ * sheet's #476c7b at 792,651); and a cuff, a band across it just above his
+ * hand (rows 698-706), so his hand ends a sleeve.
+ */
+const LAP_SLEEVE: ReadonlyArray<TracedTone> = [
+  tone(
+    [
+      straight([
+        [800, 540],
+        [890, 540],
+        [890, 740],
+        [800, 740],
+      ]),
+    ],
+    TONES.lapSleeve,
+  ),
+  tone(
+    [
+      straight([
+        [862, 630],
+        [890, 630],
+        [890, 740],
+        [857, 740],
+        [855, 660],
+      ]),
+    ],
+    TONES.lapSleeveUnder,
+  ),
+  tone(
+    [
+      straight([
+        [800, 698],
+        [890, 698],
+        [890, 706],
+        [800, 706],
+      ]),
+    ],
+    TONES.tealEdge,
   ),
 ];
 
@@ -579,5 +647,6 @@ export const leadFeastSeated = leadView(
     sleeves: { near: 'creamAcross', far: 'teal' },
     // His elbow on his knee, the raised sleeve's lowest middle.
     nearArm: { pivot: [692, 622], tones: SEATED_SLEEVE },
+    farArm: { tones: LAP_SLEEVE },
   },
 );

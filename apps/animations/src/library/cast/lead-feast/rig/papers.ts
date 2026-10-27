@@ -47,10 +47,10 @@ export const PAPERS = papers({
   },
   /**
    * His bare feet in their sandals: his skin. The light core inside their
-   * line is his soles' leather (`TONES.sole`): the house lays it half outside
-   * the paper, past the tones clipped to it, so a skin core showed as a peach
-   * line between his sole and his ink, where the sheet's sole runs into its
-   * line (front x 40-75, rows 845-858).
+   * line is his soles' leather (`TONES.sole`): the house lays the core half
+   * outside the paper, past the tones clipped to it, so the leather core keeps
+   * his sole running into its line as the sheet draws it (front x 40-75, rows
+   * 845-858), with no skin between the sole and the ink.
    */
   foot: { color: '#f8a466', light: '#3b2418' },
   /** His hands: his skin, shaded only at the far edge, toward rose. */
@@ -111,4 +111,12 @@ export const TONES = {
   creamAcross: '#a37f72',
   /** That sleeve's inner half, a step darker than its lit cream (#ecc9a8 at 709,576; #ebc9a8 at 704,606). */
   creamAcrossInner: '#ecc9a8',
+  /** His teal sleeve lying on his lap, seated: lit, lighter than the mantle under it (#7fa194 to #769791 by his hand, 764-780,621). */
+  lapSleeve: '#729c99',
+  /** That sleeve's underside: toward blue-violet (#476c7b at 792,651; #4d7280 at 776,661). */
+  lapSleeveUnder: '#476c7b',
+  /** The fold that edge makes down his sleeve below his wrist: a mid-tone between its two strokes (#e1bda0 at 720,601; #e3c0a5 at 720,606). */
+  creamAcrossFold: '#e1bda0',
+  /** The fold's far stroke, softer than its near one (#bb948b at 726,596; #b79186 at 726,586). */
+  creamAcrossFar: '#ba9387',
 } as const satisfies Record<string, `#${string}`>;
