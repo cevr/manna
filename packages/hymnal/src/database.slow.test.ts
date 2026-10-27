@@ -1,7 +1,17 @@
 /** All comparisons report only number, table, field and index. No corpus value enters a matcher. */
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Database } from 'bun:sqlite';
-import { ConfigProvider, Context, Effect, FileSystem, Layer, Result, Schema, Stream } from 'effect';
+import {
+  ConfigProvider,
+  Context,
+  Effect,
+  FileSystem,
+  Layer,
+  type Path,
+  Result,
+  Schema,
+  Stream,
+} from 'effect';
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 import { describe, expect, it } from 'effect-bun-test';
@@ -803,15 +813,41 @@ describe('generated corpus', () => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const dir = yield* fs.makeTempDirectoryScoped();
+        const committed = yield* fs.readFile(OUTPUT);
+        const encodedVersion = new DataView(
+          committed.buffer,
+          committed.byteOffset,
+          committed.byteLength,
+        ).getUint32(96);
+        const expectedVersion = `${Math.floor(encodedVersion / 1_000_000)}.${Math.floor(encodedVersion / 1_000) % 1_000}.${encodedVersion % 1_000}`;
+        const runtimeVersion = yield* Effect.acquireUseRelease(
+          Effect.sync(() => new Database(':memory:')),
+          (db) =>
+            Effect.sync(
+              () =>
+                db.query<{ version: string }, []>('SELECT sqlite_version() AS version').get()
+                  ?.version,
+            ),
+          (db) => Effect.sync(() => db.close()),
+        );
+        expect(runtimeVersion, `sqlite_version mismatch: artifact=${expectedVersion}`).toBe(
+          expectedVersion,
+        );
         const sources = yield* readDatabaseSources();
         const a = `${dir}/a.db`,
           b = `${dir}/b.db`;
-        yield* buildDatabase(a, sources);
+        // This assignment also checks that the build does not require a caller's Scope.
+        const build: Effect.Effect<void, unknown, FileSystem.FileSystem | Path.Path> =
+          buildDatabase(a, sources);
+        yield* build;
         yield* buildDatabase(b, sources);
+        expect((yield* fs.readDirectory(dir)).toSorted(), 'build:scoped-temporary-cleanup').toEqual(
+          ['a.db', 'b.db'],
+        );
         const bytes = yield* fs.readFile(a);
         const same = (other: Uint8Array) => Buffer.from(bytes).equals(other);
         expect(same(yield* fs.readFile(b))).toBe(true);
-        expect(same(yield* fs.readFile(OUTPUT)), 'committed-artifact-current').toBe(true);
+        expect(same(committed), 'committed-artifact-current').toBe(true);
         yield* Effect.scoped(
           Effect.gen(function* () {
             const db = yield* open(a);
@@ -824,6 +860,26 @@ describe('generated corpus', () => {
         const result = yield* Effect.result(buildDatabase(a, invalid));
         expect(Result.isFailure(result)).toBe(true);
         expect(same(yield* fs.readFile(a)), 'invalid-input-atomic').toBe(true);
+        const reading = sources.source.hymns.find((h) => h.number === 696);
+        expect(reading !== undefined).toBe(true);
+        if (!reading) return;
+        const duplicateReading = {
+          ...sources,
+          source: { ...sources.source, hymns: [...sources.source.hymns, reading] },
+        };
+        const failedWrite = yield* Effect.result(buildDatabase(a, duplicateReading));
+        expect(
+          Result.isFailure(failedWrite) &&
+            failedWrite.failure._tag === 'CorpusDatabaseError' &&
+            failedWrite.failure.operation === 'populate' &&
+            failedWrite.failure.cause?.code === 'SQLITE_CONSTRAINT_PRIMARYKEY' &&
+            failedWrite.failure.cause.errno === 1555,
+          'build:sqlite-cause',
+        ).toBe(true);
+        expect(same(yield* fs.readFile(a)), 'failed-write-atomic').toBe(true);
+        expect((yield* fs.readDirectory(dir)).toSorted(), 'failed-write:temporary-cleanup').toEqual(
+          ['a.db', 'b.db'],
+        );
         const duplicate = {
           ...sources,
           hymns: [sources.hymns[0], ...sources.hymns].filter((h): h is Hymn => h !== undefined),

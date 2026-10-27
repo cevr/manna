@@ -12,7 +12,6 @@ import {
   populateDatabase,
   SCHEMA_VERSION,
   MetreEvidence,
-  validateSources,
 } from '../src/database.js';
 import { Hymn, Index, Topics } from '../src/hymn.js';
 import {
@@ -103,7 +102,6 @@ export const readDatabaseSources = Effect.fn('CorpusDatabase.readSources')(funct
       recording_credits: JSON.stringify(RECORDING_CREDITS),
     },
   };
-  yield* validateSources(sources);
   return sources;
 });
 
@@ -112,7 +110,6 @@ export const buildDatabase = Effect.fn('CorpusDatabase.build')(function* (
   out: string,
   sources: DatabaseSources,
 ) {
-  yield* validateSources(sources);
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   if (!path.isAbsolute(out))
@@ -125,7 +122,7 @@ export const buildDatabase = Effect.fn('CorpusDatabase.build')(function* (
   const open = Effect.acquireRelease(
     Effect.try({
       try: () => new Database(temporary),
-      catch: () => CorpusDatabaseError.make({ operation: 'open-candidate' }),
+      catch: (cause) => CorpusDatabaseError.fromSqlite('open-candidate', cause),
     }),
     (db) => Effect.sync(() => db.close()),
   );
@@ -142,7 +139,7 @@ export const buildDatabase = Effect.fn('CorpusDatabase.build')(function* (
     }),
   );
   yield* fs.rename(temporary, out);
-});
+}, Effect.scoped);
 
 if (import.meta.main) {
   const args = process.argv.slice(2);

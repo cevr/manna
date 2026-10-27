@@ -199,8 +199,10 @@ chart, key or compiled file.
 `bun packages/hymnal/scripts/compile-db.ts --out <absolute-file>` builds an isolated copy.
 The compiler validates inputs, writes a fresh sibling in one stable transaction,
 closes and reopens it for integrity checks, then atomically replaces the destination.
-Repeated builds on the installed Bun/SQLite version have identical bytes.
-The artifact is 21,991,424 bytes (about 21 MiB). It contains 695 hymns and 225
+Repeated builds on the supported SQLite version (`SELECT sqlite_version()` =
+`3.54.0`, with Bun 1.4.4 here) have identical bytes. The byte-equality test reports
+a SQLite version mismatch before comparing artifact content.
+It contains 695 hymns and 225
 liturgical readings, with IDs 1–920. It contains no favorites, views or settings.
 
 The source graph is `source-text.json` plus printed corrections and MIDI →

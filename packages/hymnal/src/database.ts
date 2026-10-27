@@ -1,6 +1,6 @@
 /** Bun-only corpus projection. The phone imports hymn.ts, never this module. */
 import type { Database } from 'bun:sqlite';
-import { Effect, Schema } from 'effect';
+import { Effect, Option, Schema } from 'effect';
 
 import type { SourceText } from '../scripts/source-text.js';
 import { keyOnPitch, pitchClass } from './chord.js';
@@ -69,13 +69,23 @@ export interface DatabaseSources {
   readonly meta: Readonly<Record<(typeof META_KEYS)[number], string>>;
 }
 
+const SQLiteCause = Schema.Struct({ code: Schema.String, errno: Schema.Int });
+
 export class CorpusDatabaseError extends Schema.TaggedError<CorpusDatabaseError>()(
   'CorpusDatabaseError',
   {
     operation: Schema.String,
     number: Schema.optionalKey(Schema.Int),
+    cause: Schema.optional(SQLiteCause),
   },
-) {}
+) {
+  /** Codes carry the SQLite failure without SQL, parameters or corpus values. */
+  static fromSqlite = (operation: string, cause: unknown) =>
+    CorpusDatabaseError.make({
+      operation,
+      cause: Option.getOrUndefined(Schema.decodeUnknownOption(SQLiteCause)(cause)),
+    });
+}
 
 type StoredPart =
   | Sung
@@ -265,9 +275,8 @@ export const populateDatabase = Effect.fn('CorpusDatabase.populate')(function* (
         db.exec("INSERT INTO hymns_fts(hymns_fts) VALUES('optimize')");
       })();
     },
-    catch: () => CorpusDatabaseError.make({ operation: 'populate' }),
+    catch: (cause) => CorpusDatabaseError.fromSqlite('populate', cause),
   });
-  yield* checkDatabase(db);
 });
 
 const writeTopics = (db: Database, sources: DatabaseSources) => {
@@ -506,7 +515,7 @@ export const checkDatabase = Effect.fn('CorpusDatabase.check')((db: Database) =>
       db.exec("INSERT INTO hymns_fts(hymns_fts) VALUES('integrity-check')");
       return valid;
     },
-    catch: () => CorpusDatabaseError.make({ operation: 'integrity' }),
+    catch: (cause) => CorpusDatabaseError.fromSqlite('integrity', cause),
   }).pipe(
     Effect.flatMap((valid) =>
       valid ? Effect.void : Effect.fail(CorpusDatabaseError.make({ operation: 'integrity' })),
