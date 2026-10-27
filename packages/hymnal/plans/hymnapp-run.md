@@ -356,6 +356,9 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 - Owner, 2026-10-26: "a lot of work has gone in the hymn though in kind of adding different indexes and whatnot. Let's see, can we improve the Hymnal SQLite that we have with all these new additions". `packages/core/data/hymnal.db` still has the old shape (920 rows of `hymns` with a `verses` text blob, 68 categories, no syllables, chords, keys, metres or indexes). Unit `hymndb` rebuilds it from the compiled SDA Hymnal (1985) in `@manna/hymnal` as a generated file, so later index work (findbulk's topics, scripture and metres) flows into it. It takes the hymnal slot after heldhide, before playbulk. (owner, hymndb)
 - Owner, 2026-10-26: "I have heartseed now. I've bought it. It's available" — the domain heartseed.app is bought (Cloudflare Registrar recommended). The Heartseed site deploys there when selahone builds it. (owner, selahone)
 
+- Owner, 2026-10-27, on the CC BY-SA 4.0 Webster text in Heartseed: "put the CC. For the Webster text". Heartseed ships the Webster 1828 entries under CC BY-SA 4.0 with its attribution and licence notice in the app (an About/credits screen); share-alike binds the dictionary data, not the app code. (heartseed, webster)
+- Owner, 2026-10-27: "Yeah, deploy for me" — the orchestrator deploys First the Blade prod (ledgerred's confirm-link fix) from a worktree on main with the main checkout's prod state copied in, plan first ("update" only), state copied home after. (ledgerred)
+
 ## Owner questions
 
 - Clicks in silent mode (feel): keep them muted under the silent switch, as iOS keyboard clicks are (recommended: the phone stays quiet at worship), or play them even in silent mode (a new sound path, checked against the hymn audio session). Asked 2026-10-25. Answer (owner, 2026-10-25): "Yeah, the clicks, that's fine. Stay muted in silent mode". No change. (feel)
