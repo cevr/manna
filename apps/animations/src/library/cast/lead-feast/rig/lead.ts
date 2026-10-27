@@ -50,6 +50,7 @@ interface LeadTable {
   readonly HAIR_LIGHT: Pieces;
   readonly HAIR_DARK: Pieces;
   readonly NECK_SHADE: Pieces;
+  readonly JAW: Pieces;
   readonly BODY: ReadonlyArray<Pt>;
   readonly SKIN: Pieces;
   readonly NECK: Pieces;
@@ -112,7 +113,7 @@ const leadView = (t: LeadTable, v: LeadViewSpec) =>
       ...v.head,
       outline: t.HEAD,
       paper: PAPERS.skin,
-      tones: [tone(t.NECK_SHADE, TONES.neck)],
+      tones: [tone(t.NECK_SHADE, TONES.neck), tone(t.JAW, TONES.jaw)],
     },
     hair: {
       outline: t.HAIR,

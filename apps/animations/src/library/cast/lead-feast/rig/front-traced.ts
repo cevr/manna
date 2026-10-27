@@ -645,6 +645,24 @@ export const NECK_SHADE: Pt[][] = [
   ],
 ];
 
+/** The deep shade his jaw lays on his neck right under his chin, the edge it closes over (none under a closed chin). */
+export const JAW: Pt[][] = [
+  [
+    [164.5, 381],
+    [163.5, 387.5],
+    [155, 390.5],
+    [146.5, 392.5],
+    [137.5, 392.5],
+    [128.5, 391.5],
+    [120, 388.5],
+    [117.5, 382.5],
+    [126, 384.5],
+    [134.5, 386.5],
+    [143.5, 386.5],
+    [152.5, 385],
+  ],
+];
+
 /** His skin the garment's neck shows, below his chin: lit, as his face. */
 export const SKIN: Pt[][] = [];
 

@@ -109,16 +109,21 @@ interface Chin {
   readonly row: number;
 }
 
-/** How far above the chin's row the garment is read from, and how tall the band the shade under the jaw is read in, by the chin's kind. */
+/** How far either side of the face's seed the jaw's deep shade is read, sheet pixels. */
+const JAW_REACH = 36;
+
+/** How far above the chin's row the garment is read from, how tall the band the shade under the jaw is read in, and how far above that band the jaw's deep shade is read from, by the chin's kind. */
 const CHIN = {
   open: {
     garment: 25,
     shade: 45,
+    jaw: 15,
     doc: "His head's paper down into his garment's neck (his chin open): his face, his ears, his neck and his skull under his hair.",
   },
   closed: {
     garment: 10,
     shade: 0,
+    jaw: 0,
     doc: "His head's paper: his face, his ears and his skull under his hair.",
   },
 } as const;
@@ -243,6 +248,21 @@ export const standing = (v: Standing): TraceSheetView => {
         smooth: 8,
         doc: 'The shade under his jaw, down his neck (none under a closed chin).',
       },
+      jaw: {
+        classes: BROWN,
+        inside: 'head',
+        // Under the chin only, never the curls beside the jaw: its band runs out to the hair at the ear.
+        clip: rect(
+          v.face[0] - JAW_REACH,
+          v.chin.row - chin.shade - chin.jaw,
+          v.face[0] + JAW_REACH,
+          v.chin.row - chin.shade + 12,
+        ),
+        grow: 1,
+        as: 'tones',
+        min: 30,
+        doc: 'The deep shade his jaw lays on his neck right under his chin, the edge it closes over (none under a closed chin).',
+      },
       handNear: { seeds: [v.near.hand], grow: 1, as: 'circle', doc: 'His near hand at its cuff.' },
       handFar: { seeds: [v.far.hand], grow: 1, as: 'circle', doc: 'His far hand at its cuff.' },
       handNearPaper: { seeds: [v.near.hand], grow: 0, as: 'none' },
@@ -300,6 +320,7 @@ export const standing = (v: Standing): TraceSheetView => {
         inside: 'body',
         grow: 2,
         as: 'tones',
+        min: 150,
         doc: 'The teal mantle across him, laid on his tunic.',
       },
       mantleShade: {

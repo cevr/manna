@@ -62,6 +62,8 @@ export const TONES = {
   sashShade: '#c9a39b',
   /** The shade his chin lays on his neck: his skin turned toward rose. */
   neck: '#e58a62',
+  /** The deep shade his jaw lays on his neck right under his chin, the edge it closes over: his skin turned deep toward rose. */
+  jaw: '#c8704e',
   /** His sandals' straps: a warm brown. */
   strap: '#5c3627',
   /** His sandals' soles: a dark brown, as heavy as the line. */
