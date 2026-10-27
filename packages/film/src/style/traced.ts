@@ -107,7 +107,7 @@ export interface TracedFigureSpec {
     readonly turn: number;
     readonly rest?: Parameters<typeof KitA>[0]['rest'];
     readonly gaze: Pt;
-    /** The marks past the kit's it draws (`EXTRA_FACE`): a wince, a glad shut-eyed smile. */
+    /** The marks past the kit's it draws and the slides it takes (`EXTRA_FACE`): a wince, a glad shut-eyed smile; its marks or its mouth moved on the head. */
     readonly extra?: ReadonlyArray<ExtraFaceKnob>;
     /** The kit laid over what is cut in his head (`KitA.layer`), so a brow turned into his hairline shows. */
     readonly layer?: 'over';

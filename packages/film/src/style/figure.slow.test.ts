@@ -22,7 +22,7 @@ import { GivenRobe, type State, Stain } from './parts/states.ts';
 import { Stature } from './parts/stature.ts';
 import { FIGURE_TIMELINES, HAND_TIMELINES, drawFigure, drawHand } from './rig/draw.ts';
 import { FACE, type FaceKnob, type Pt, ellipse, kitMarks, figure as rigOf } from './rig/parts.ts';
-import { fragment, ids } from './rig/rml.ts';
+import { type Element, el, fragment, ids } from './rig/rml.ts';
 import { roundedPolygon, tucked, tuckedRimmed } from './rig/shapes.ts';
 
 // A figure composed of the house's parts, each checked as it is made: the
@@ -609,6 +609,39 @@ describe('a bearded head, and the parts of a head turned and of bare feet', () =
       figure({ ...standingOf(), face: KitA({ x: 0, y: 0, scale: 1, gaze: [0, 12] }) }),
     );
     expect(plain).not.toContain('gladMouth');
+  });
+
+  test("a face's slides are its own to take: marksY moves every mark with its rest, mouthY the kit's mouth alone, mouthW its line's width; a face that names none has none", () => {
+    const extra = ['marksY', 'mouthY', 'mouthW'] as const;
+    const slid = figure({
+      ...standingOf(),
+      face: KitA({ x: 0, y: 0, scale: 1, gaze: [0, 12], extra }),
+    });
+    expect(slid.knobs).toMatchObject({ marksY: 0, mouthY: 0, mouthW: 1 });
+    const tree = el('Rive', {}, drawFigure(rigOf(ids(), 'Figure', 1, 0, DIRECTION), slid));
+    const nameOf = (e: Element) => e.attrs.find(([k]) => k === 'name')?.[1];
+    const named = (e: Element, key: string): Element | undefined =>
+      nameOf(e) === key ? e : e.children.map((c) => named(c, key)).find((c) => c !== undefined);
+    const inside = (key: string) => (named(tree, key)?.children ?? []).map(nameOf);
+    const bound = (key: string) =>
+      (named(tree, key)?.children ?? [])
+        .filter((c) => c.name === 'DataBindContext')
+        .map((c) => c.attrs.find(([k]) => k === 'propertyKey')?.[1]);
+    expect(inside('marksSlide')).toEqual([undefined, 'features', 'faceRest']);
+    expect(bound('marksSlide')).toEqual([14]);
+    expect(inside('mouthSlide')).toEqual([undefined, 'mouth']);
+    expect(bound('mouthSlide')).toEqual([14]);
+    expect(bound('mouthLine')).toEqual([18, 16]);
+    const plain = drawnOf(figure(standingOf()));
+    for (const key of ['marksSlide', 'mouthSlide']) expect(plain).not.toContain(`name="${key}"`);
+    const plainTree = el(
+      'Rive',
+      {},
+      drawFigure(rigOf(ids(), 'Figure', 1, 0, DIRECTION), figure(standingOf())),
+    );
+    expect(
+      (named(plainTree, 'mouthLine')?.children ?? []).filter((c) => c.name === 'DataBindContext'),
+    ).toHaveLength(1);
   });
 
   test("a glad face's shut eye is a shallow arc, its rise under a fifth of its width; a wince's chevron no taller than its eye's 0.6", () => {

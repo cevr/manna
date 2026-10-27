@@ -1096,8 +1096,8 @@ const eye = (fig: Figure, k: FaceShape, side: 'L' | 'R', x: number, scale: numbe
     fig.bind('eyeW', KEY.scaleX),
   ]);
 
-/** The mouth: a line whose middle bends (smile, frown), and an "oh" that opens over it. */
-const mouth = (fig: Figure, k: FaceShape) =>
+/** The mouth: a line whose middle bends (smile, frown), as wide as `mouthW` says where the face opts into it, and an "oh" that opens over it. */
+const mouth = (fig: Figure, k: FaceShape, extra: ReadonlyArray<ExtraFaceKnob>) =>
   el('Node', { x: k.mouth[0], y: k.mouth[1], name: 'mouth', id: fig.idOf('mouth') }, [
     el('Shape', { scaleX: 0, scaleY: 0, name: 'mouthOh', id: fig.idOf('mouthOh') }, [
       ellipsePath(8, 10.5),
@@ -1120,18 +1120,24 @@ const mouth = (fig: Figure, k: FaceShape) =>
         ...fig.inkBind(k.mouthLine, 0),
       ]),
       fig.bind('mouthLine', KEY.opacity),
+      ...(extra.includes('mouthW') ? [fig.bind('mouthW', KEY.scaleX)] : []),
     ]),
   ]);
 
 /**
- * The marks a face may draw past the kit's own, each a figure opts into
- * (`KitA.extra`), each shown by a number of its own that rests at 0, so a
- * figure that opts into none prints as before: `wince`, eyes squeezed shut
- * as `>` `<` and a wavering mouth; `glad`, eyes shut in a smile, two arches,
- * and a wide smile. An expression that shows one sets the kit's eyes and
- * its mouth line to 0.
+ * What a face may do past the kit's own, each a figure opts into
+ * (`KitA.extra`), each moved by a number of its own that rests where the
+ * kit is, so a figure that opts into none prints as before. Its marks, each
+ * shown by its number (0 hides it): `wince`, eyes squeezed shut as `>` `<`
+ * and a wavering mouth; `glad`, eyes shut in a smile, two arches, and a wide
+ * smile. An expression that shows one sets the kit's eyes and its mouth line
+ * to 0. Its slides, for a sheet that draws a face's marks elsewhere on the
+ * head than the kit lays them: `marksY`, every mark and its rest together,
+ * kit units down the face (negative up), as a sheet draws a nod by the marks
+ * alone inside a head that holds still; `mouthY`, the kit's mouth alone, kit
+ * units down; `mouthW`, the kit's mouth line's width, 1 the kit's.
  */
-export const EXTRA_FACE = { wince: 0, glad: 0 } as const;
+export const EXTRA_FACE = { wince: 0, glad: 0, marksY: 0, mouthY: 0, mouthW: 1 } as const;
 
 /**
  * The glad smile, each a share of the kit's mouth's half-width: how far
@@ -1184,6 +1190,10 @@ const extraMarks = (fig: Figure, k: FaceShape, extra: ReadonlyArray<ExtraFaceKno
     ['R', k.eyes[1], -1],
   ] as const;
   const marks: Record<ExtraFaceKnob, () => Element[]> = {
+    // The slides draw no mark of their own (`faceKit` binds them).
+    marksY: () => [],
+    mouthY: () => [],
+    mouthW: () => [],
     // Each eye a chevron pointing in toward the nose; the mouth a short wave.
     wince: () => [
       ...sides.map(([side, x, toward]) =>
@@ -1270,7 +1280,7 @@ const extraMarks = (fig: Figure, k: FaceShape, extra: ReadonlyArray<ExtraFaceKno
  * numbers (`FACE`), and the eyes' sockets; the features together slide a
  * little toward the gaze (`turn`). `shape` gives the marks a figure's
  * sheet draws otherwise than the kit (`FaceShape`), and `extra` the marks
- * past the kit's it opts into (`EXTRA_FACE`). Named `face`, the node
+ * and slides past the kit's it opts into (`EXTRA_FACE`). Named `face`, the node
  * `check`'s face probe reads.
  */
 export const faceKit = (
@@ -1281,10 +1291,15 @@ export const faceKit = (
 ) => {
   const scale = at.scale ?? 1;
   const k = kitMarks(shape);
+  // A slide the face opts into: a node round `inner`, moved by its number.
+  const slid = (knob: 'marksY' | 'mouthY', name: string, inner: ReadonlyArray<Element>) =>
+    extra.includes(knob)
+      ? [el('Node', { name, id: fig.idOf(name) }, [fig.bind(knob, KEY.y), ...inner])]
+      : inner;
   return el(
     'Node',
     { x: at.x, y: at.y, scaleX: at.scale, scaleY: at.scale, name: 'face', id: fig.idOf('face') },
-    [
+    slid('marksY', 'marksSlide', [
       el('Node', { name: 'features', id: fig.idOf('features') }, [
         el('TranslationConstraint', {
           targetId: fig.idOf('gaze'),
@@ -1304,13 +1319,14 @@ export const faceKit = (
         ]),
         eye(fig, k, 'L', k.eyes[0], scale),
         eye(fig, k, 'R', k.eyes[1], scale),
-        mouth(fig, k),
+        ...slid('mouthY', 'mouthSlide', [mouth(fig, k, extra)]),
         ...extraMarks(fig, k, extra),
         el('Node', { x: k.eyes[0], y: k.eyeY, name: 'socketL', id: fig.idOf('socketL') }),
         el('Node', { x: k.eyes[1], y: k.eyeY, name: 'socketR', id: fig.idOf('socketR') }),
       ]),
+      // The features' rest slides with them, so the gaze still moves them no farther than `turn`.
       el('Node', { name: 'faceRest', id: fig.idOf('faceRest') }),
-    ],
+    ]),
   );
 };
 
