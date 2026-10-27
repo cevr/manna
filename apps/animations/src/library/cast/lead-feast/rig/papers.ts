@@ -71,6 +71,12 @@ export const TONES = {
   neck: '#e58a62',
   /** The deep shade his jaw lays on his neck right under his chin, the edge it closes over: his skin turned deep toward rose. */
   jaw: '#c8704e',
+  /** The line his jaw lays under his chin where the sheet paints it (#7d482d at 138,388 on the turnaround). */
+  chinLine: '#7d482f',
+  /** The lit rim of his ears (#fac17f at 50,314 on the turnaround), paler than his skin. */
+  earLight: '#f9c07f',
+  /** The dark brown band the sheet paints round a front ear as its contour (#4b2e1e at 81,314). */
+  earBand: '#4b2e1e',
   /** His sandals' straps: a warm brown. */
   strap: '#5c3627',
   /** His sandals' soles: a dark brown, as heavy as the line. */

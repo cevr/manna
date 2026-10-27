@@ -55,6 +55,10 @@ interface LeadTable {
   readonly CURLS: ReadonlyArray<{ readonly at: Pt; readonly r: number }>;
   readonly NECK_SHADE: Pieces;
   readonly JAW: Pieces;
+  /** The brown band round an ear, laid on his head (a front's); the poses' tables, traced before it, have none. */
+  readonly EAR_BAND?: Pieces;
+  /** The light on his ears, their lit rim (traced with `EAR_BAND`). */
+  readonly EAR_LIGHT?: Pieces;
   readonly BODY: ReadonlyArray<Pt>;
   readonly SKIN: Pieces;
   readonly NECK: Pieces;
@@ -78,6 +82,8 @@ interface LeadTable {
 interface LeadViewSpec {
   readonly sheet: keyof typeof SHEETS;
   readonly head: Pick<TracedFigureSpec['head'], 'view' | 'chin'>;
+  /** The colour of the line his jaw lays under his chin (`JAW`): the sheet's brown where it paints one (`TONES.chinLine`), else his deep neck shade. */
+  readonly jaw?: `#${string}`;
   /** The ears that show, as the view's table traces them. */
   readonly ears: { readonly near: ReadonlyArray<Pt>; readonly far?: ReadonlyArray<Pt> };
   /** His face's marks; from behind, the front's laid where his hair covers them. */
@@ -158,7 +164,7 @@ const leadView = (t: LeadTable, v: LeadViewSpec) =>
       ...v.head,
       outline: t.HEAD,
       paper: PAPERS.skin,
-      tones: [tone(t.JAW, TONES.jaw)],
+      tones: [tone(t.JAW, v.jaw ?? TONES.jaw), tone(t.EAR_BAND ?? [], TONES.earBand)],
     },
     hair: {
       outline: t.HAIR,
@@ -166,7 +172,7 @@ const leadView = (t: LeadTable, v: LeadViewSpec) =>
       tones: [tone(t.HAIR_LIGHT, TONES.hairLight), tone(t.HAIR_DARK, TONES.hairShade)],
       curls: { discs: t.CURLS, shade: TONES.hairShade, crescent: CURL_CRESCENT },
     },
-    ears: { ...v.ears, paper: PAPERS.ear },
+    ears: { ...v.ears, paper: PAPERS.ear, tones: [tone(t.EAR_LIGHT ?? [], TONES.earLight)] },
     face: { ...v.face, gaze: GAZE },
     body: {
       outline: t.BODY,
@@ -238,7 +244,8 @@ const AT_REST = { turn: 0.5, rest: { mouth: 2.5 }, layer: 'over' } as const;
 /** His front view: turned to us, a small smile; his cream right sleeve on screen left, his teal left on screen right. */
 export const leadFeastFront = leadView(FRONT, {
   sheet: 'turnaround',
-  head: { view: 'front' },
+  head: { view: 'front', chin: 'open' },
+  jaw: TONES.chinLine,
   ears: { near: FRONT.EAR_NEAR, far: FRONT.EAR_FAR },
   face: { ...AT_REST, marks: FRONT.MARKS, extra: WITH_EXTRA },
   sleeves: { near: 'cream', far: 'teal' },
@@ -247,7 +254,8 @@ export const leadFeastFront = leadView(FRONT, {
 /** Three-quarters to screen left: his face slid toward it, his ear behind; his cream right sleeve near us, his teal left far. */
 export const leadFeastThreeQuarterLeft = leadView(THREE_QUARTER_LEFT, {
   sheet: 'turnaround',
-  head: { view: 'threeQuarter' },
+  head: { view: 'threeQuarter', chin: 'open' },
+  jaw: TONES.chinLine,
   ears: { near: THREE_QUARTER_LEFT.EAR_NEAR },
   face: { ...AT_REST, marks: THREE_QUARTER_LEFT.MARKS, extra: WITH_EXTRA },
   sleeves: { near: 'cream', far: 'teal' },
@@ -390,7 +398,7 @@ const DRINKING_SLEEVE: ReadonlyArray<TracedTone> = [
 export const leadFeastDrinking = leadView(
   {
     ...DRINKING,
-    HAND_NEAR: { at: [404, 378] satisfies Pt, r: DRINKING.HAND_FAR.r },
+    HAND_NEAR: { at: [397, 381] satisfies Pt, r: DRINKING.HAND_FAR.r },
     HAND_FAR: { at: [355, 380] satisfies Pt, r: DRINKING.HAND_FAR.r },
   },
   {
@@ -400,7 +408,7 @@ export const leadFeastDrinking = leadView(
     face: { ...AT_REST, marks: DRINKING.MARKS },
     sleeves: { near: 'tealRaised', far: 'cream' },
     nearArm: { pivot: [515, 455], elbow: 0.2, root: 'traced', tones: DRINKING_SLEEVE },
-    farArm: { pivot: [366, 478], root: 'traced' },
+    farArm: { pivot: [374, 460], root: 'traced' },
   },
 );
 
