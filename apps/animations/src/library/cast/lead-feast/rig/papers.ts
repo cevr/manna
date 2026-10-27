@@ -77,6 +77,8 @@ export const TONES = {
   chinFade: '#a05b38',
   /** The lit rim of his ears, paler than his skin, toward the sheet's yellow there (#f9d695 to #f8da9b at 68,308). */
   earLight: '#fbd593',
+  /** An ear turned to the light, its skin as lit as his face's but for its hollow (#fcbc84 at 1338,334; #fbbf86 at 1330,319, the three-quarter right's). */
+  earLit: '#fcbd84',
   /** The hollow of an ear in shade: his skin turned toward rose (#e07a55 at 204,319 on the turnaround, its deepest). */
   earHollow: '#e07a53',
   /** An ear where it turns from the light (#f09261 at 212,319; #e79162 at 432,319). */

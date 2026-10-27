@@ -213,6 +213,21 @@ const UNDER_ARMS = {
   raised: ['armNearOff', 'armFarOff', 'armFarBelow', 'handNearRing', 'handFarRing'],
 } as const;
 
+/** The three-quarter right's ear, read off the sheet round its skin: its skin runs on into his cheek (no line at x 1349), and its lobe turns in at its lower left, where the band of hair under it meets his hair (x 1329-1331, rows 330-335). */
+const THREE_QUARTER_RIGHT_EAR: TracePt[] = [
+  [1330, 303],
+  [1340, 302],
+  [1347, 305],
+  [1349, 312],
+  [1349, 334],
+  [1347, 341],
+  [1338, 339],
+  [1333, 334],
+  [1329, 328],
+  [1327, 318],
+  [1327, 308],
+];
+
 /** What one standing view is read from: its seeds and the polygons the sheet parts by colour alone. */
 interface Standing {
   readonly box: readonly [number, number, number, number];
@@ -225,19 +240,22 @@ interface Standing {
   readonly ears: { readonly earNear: TracePt; readonly earFar?: TracePt };
   /**
    * An ear the sheet draws with no line between it and his cheek (its skin
-   * runs on into his face, a turned head's), as the oval it is, read off the
-   * sheet: its middle, its half-width and its half-height. Its skin is cut
-   * there, never a box of his face.
+   * runs on into his face, a turned head's), as the polygon round it read
+   * off the sheet (the oval it is, or its skin's own edge where its lobe
+   * turns in). Its skin is cut there, never a box of his face.
    */
-  readonly earOvals?: {
-    readonly earNear?: readonly [number, number, number, number];
-    readonly earFar?: readonly [number, number, number, number];
+  readonly earClips?: {
+    readonly earNear?: ReadonlyArray<TracePt>;
+    readonly earFar?: ReadonlyArray<TracePt>;
   };
   /**
    * Where the sheet paints the dark brown band beside an ear as its contour
    * (a front: between his ear and his cheek, and round its outer edge), it is
-   * laid on his head as a tone (`earBand`), not as his hair; elsewhere the
-   * band runs on into his hair and is his hair.
+   * laid on his head as a tone (`earBand`), not as his hair (`tone`). Where
+   * the band under a turned head's ear is parted from his hair by the sheet's
+   * line, it is laid so too, under the ear alone (`under`): his hair is one
+   * piece, so a parted band is lost from it. Elsewhere the band runs on into
+   * his hair and is his hair (`hair`).
    */
   readonly earBand?: keyof typeof EAR_BAND_CLIP;
   /**
@@ -253,6 +271,8 @@ interface Standing {
   };
   /** Where an ear's outline turns as sharply as the sheet draws it (the tip of a crescent ear seen from behind), vouched for (`TracePart.sharp`). */
   readonly earSharp?: ReadonlyArray<TracePt>;
+  /** Where an ear is turned to the light, its skin lit as his face's but for its hollow (the three-quarter right's): read there as a tone (`earLit`) on the ear's deeper paper. None unless given. */
+  readonly earLit?: ReadonlyArray<TracePt>;
   readonly chin: Chin;
   /** Where his head's outline turns back as sharply as the sheet draws it (his nape under his curls), vouched for (`TracePart.sharp`). */
   readonly sharp: ReadonlyArray<TracePt>;
@@ -282,9 +302,19 @@ const earBox = (seed: TracePt, top = EAR_REACH) =>
 /** How far above an ear's seed his hair gives its brown up to the band's tone, sheet pixels: the ear's top, where the sheet's hair ends over it. */
 const BAND_TOP = 18;
 
-/** Where an ear's band is read as its tone, by how the view lays it: in the ear's box from `top` above its seed (`tone`), or nowhere (`hair`: it runs on into his hair). */
+/** How far below an ear's seed the band under a turned head's ear is read from, and to, sheet pixels: from its lobe's lower half (the ear's skin is not brown) to where it tapers out down his neck (x 1329-1362, rows 335-372 on the three-quarter right). */
+const UNDER_EAR = { from: 10, to: 52, left: 16, right: 24 } as const;
+
+/** Where an ear's band is read as its tone, by how the view lays it: in the ear's box from `top` above its seed (`tone`), under the ear alone (`under`), or nowhere (`hair`: it runs on into his hair). */
 const EAR_BAND_CLIP = {
   tone: earBox,
+  under: (seed: TracePt, _top: number): TracePt[] =>
+    rect(
+      seed[0] - UNDER_EAR.left,
+      seed[1] + UNDER_EAR.from,
+      seed[0] + UNDER_EAR.right,
+      seed[1] + UNDER_EAR.to,
+    ),
   hair: (_seed: TracePt, _top: number): TracePt[] => [],
 } as const;
 
@@ -313,14 +343,12 @@ export const standing = (v: Standing): TraceSheetView => {
   const [x0, y0, x1, y1] = v.box;
   const wide = (a: number, b: number) => rect(x0 - 10, a, x1 + 10, b);
   const chin = CHIN[v.chin.kind];
-  const ovals: Readonly<Record<string, TracePt[]>> = Object.fromEntries(
-    Object.entries(v.earOvals ?? {}).map(([name, o]) => [name, oval(...o)]),
-  );
+  const clips: Readonly<Record<string, ReadonlyArray<TracePt>>> = v.earClips ?? {};
   const lobes: Readonly<Record<string, ReadonlyArray<TracePt>>> = v.earLobes ?? {};
   const ears = Object.fromEntries(
     Object.entries(v.ears).map(([name, seed]) => [
       name,
-      ear(seed, lobes[name] ?? ovals[name] ?? earBox(seed), v.earSharp ?? [], `${name}Band`),
+      ear(seed, lobes[name] ?? clips[name] ?? earBox(seed), v.earSharp ?? [], `${name}Band`),
     ]),
   );
   // Each ear's lobe, where the view reads one: his figure within its polygon, his head's (`<ear>Lobe`); and the band's tone over it, swollen past it so it reaches his head's edge there with no skin between them (`<ear>LobeUnder`, laid on his head's paper, it shows only inside it). None elsewhere.
@@ -419,6 +447,17 @@ export const standing = (v: Standing): TraceSheetView => {
         as: 'tones',
         min: 15,
         doc: 'The light on his ears, their lit rim.',
+      },
+      earLit: {
+        classes: ['skin'],
+        // Its lit skin and its rim (L 195 and up, #fcbc84 at 1338,334), not its hollow (#fbab75, L 189): the palest of the rim is laid over it (`earLight`).
+        colour: { near: '#fcbf85', far: ['#f9a571', '#f59d66'] },
+        inside: 'earsAll',
+        clip: v.earLit ?? [],
+        grow: 0,
+        as: 'tones',
+        min: 15,
+        doc: 'An ear turned to the light: its skin lit as his face (none unless the view reads it).',
       },
       earShade: {
         classes: ['skin'],
@@ -779,7 +818,7 @@ export const TRACE = {
         },
       },
       ears: { earNear: [440, 322] },
-      earOvals: { earNear: [440.5, 323, 12.5, 19.5] },
+      earClips: { earNear: oval(440.5, 323, 12.5, 19.5) },
       skinLit: ['#fcdb9c', '#f9cb8a', '#fbd59c'],
       chin: {
         kind: 'closed',
@@ -1033,7 +1072,47 @@ export const TRACE = {
         },
       },
       ears: { earNear: [1338, 322] },
-      chin: { kind: 'closed', row: 391 },
+      earClips: { earNear: THREE_QUARTER_RIGHT_EAR },
+      // The band under his ear (x 1329-1362, rows 335-372), parted from his hair by the sheet's line (x 1318-1328, rows 331-339).
+      earBand: 'under',
+      earLit: THREE_QUARTER_RIGHT_EAR,
+      skinLit: ['#fcdb9c', '#f9cb8a', '#fbd59c'],
+      chin: {
+        kind: 'closed',
+        row: 391,
+        // His jaw's line, from the band under his ear (x 1364) down to his chin's ink (x 1412, rows 384-390).
+        line: [
+          [1412, 384],
+          [1366, 362],
+          [1364, 364],
+          [1364, 378],
+          [1412, 402],
+        ],
+        // Its corner, where the sheet's ink runs into its brown (x 1412-1413, rows 384-390).
+        corner: [
+          [1422, 385],
+          [1412, 383],
+          [1411, 393],
+          [1419, 393],
+          [1419, 386],
+          [1422, 386],
+        ],
+        // Lighter before x 1376, toward his ear (mean L 116-129 there against L 94-99 under his chin).
+        fade: rect(1350, 350, 1376, 395),
+        // The rose under his jaw's line (#e4855b at 1386,389), from under his ear to his chin (#e3906a at 1408,400).
+        shade: [
+          [1362, 362],
+          [1372, 368],
+          [1390, 378],
+          [1414, 388],
+          [1414, 408],
+          [1402, 406],
+          [1390, 400],
+          [1376, 390],
+          [1364, 380],
+          [1360, 370],
+        ],
+      },
       sharp: [],
       near: {
         pick: SILHOUETTE,

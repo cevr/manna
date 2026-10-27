@@ -59,6 +59,8 @@ interface LeadTable {
   readonly EAR_BAND?: Pieces;
   /** The light on his ears, their lit rim (traced with `EAR_BAND`). */
   readonly EAR_LIGHT?: Pieces;
+  /** An ear turned to the light, lit as his face but for its hollow (traced where the view reads `earLit`). */
+  readonly EAR_LIT?: Pieces;
   /** The hollow of an ear in shade (traced with `EAR_BAND`). */
   readonly EAR_HOLLOW?: Pieces;
   /** An ear where it turns from the light (traced with `EAR_BAND`). */
@@ -192,6 +194,7 @@ const leadView = (t: LeadTable, v: LeadViewSpec) =>
       ...v.ears,
       paper: PAPERS.ear,
       tones: [
+        tone(t.EAR_LIT ?? [], TONES.earLit),
         tone(t.EAR_LIGHT ?? [], TONES.earLight),
         tone(t.EAR_SHADE ?? [], TONES.earShade),
         tone(t.EAR_HOLLOW ?? [], TONES.earHollow),
@@ -325,7 +328,8 @@ export const leadFeastProfileRight = leadView(PROFILE_RIGHT, {
 /** Three-quarters to screen right: his face slid toward it, his ear behind; his cream right sleeve on screen left, his teal left on screen right. */
 export const leadFeastThreeQuarterRight = leadView(THREE_QUARTER_RIGHT, {
   sheet: 'turnaround',
-  head: { view: 'threeQuarter' },
+  head: { view: 'threeQuarter', chin: 'open' },
+  jaw: TONES.chinLine,
   ears: { near: THREE_QUARTER_RIGHT.EAR_NEAR },
   face: { ...AT_REST, marks: THREE_QUARTER_RIGHT.MARKS, extra: WITH_EXTRA },
   sleeves: { near: 'cream', far: 'teal' },

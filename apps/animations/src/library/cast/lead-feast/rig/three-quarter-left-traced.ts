@@ -531,6 +531,9 @@ export const FOOT_FAR: Pt[] = [
 /** The light on his ears, their lit rim. */
 export const EAR_LIGHT: Pt[][] = [];
 
+/** An ear turned to the light: its skin lit as his face (none unless the view reads it). */
+export const EAR_LIT: Pt[][] = [];
+
 /** An ear where it turns from the light: its skin a step deeper, toward rose. */
 export const EAR_SHADE: Pt[][] = [
   [
