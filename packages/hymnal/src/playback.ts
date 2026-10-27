@@ -18,6 +18,20 @@ const Change = Schema.Struct({
   bass: Schema.Int.check(Schema.isBetween({ minimum: -1, maximum: 11 })),
   at: Schema.Finite,
 });
+const CompactChange = Schema.Tuple([
+  Chord.Degree,
+  Quality,
+  Schema.Int.check(Schema.isBetween({ minimum: -1, maximum: 11 })),
+  Schema.Finite,
+]);
+/** Part index (refrain follows stanzas), line, syllable, replacement changes. */
+export const PlacementPatch = Schema.Tuple([Count, Count, Count, Schema.Array(CompactChange)]);
+export type PlacementPatch = typeof PlacementPatch.Type;
+export const Placements = Schema.Struct({
+  file: Schema.Array(PlacementPatch),
+  simpler: Schema.Array(PlacementPatch),
+});
+export type Placements = typeof Placements.Type;
 const Cut = Schema.Struct({
   word: Count,
   offset: Count,
@@ -46,6 +60,7 @@ export const Playback = Schema.Struct({
   verses: Schema.Struct({ text: Count, midi: Count, exact: Schema.Boolean }),
   stanzas: Schema.Array(NumericPart),
   refrain: Schema.Array(NumericPart),
+  placements: Schema.optionalKey(Placements),
 });
 export type Playback = typeof Playback.Type;
 
@@ -97,6 +112,42 @@ const numericPart = (part: Part): typeof NumericPart.Type => ({
           });
         }),
 });
+
+/** Only changed numeric guitar anchors are stored; words and timing occur once. */
+export const placementPatches = (base: Hymn, other: Hymn): readonly PlacementPatch[] => {
+  const parts = (hymn: Hymn) => [
+    ...hymn.stanzas,
+    ...(hymn.refrain === undefined ? [] : [hymn.refrain.part]),
+  ];
+  const to = parts(other);
+  return parts(base).flatMap((part, p) =>
+    part._tag === 'Plain'
+      ? []
+      : part.lines.flatMap((line, l) =>
+          line.flatMap((s, k): PlacementPatch[] => {
+            const next = to[p];
+            if (next?._tag !== 'Sung') return [];
+            const changes = changesOf(next.lines[l]?.[k]?.guitar);
+            const previous = changesOf(s.guitar);
+            if (
+              previous.length === changes.length &&
+              previous.every((c, i) => {
+                const other = changes[i];
+                return (
+                  other !== undefined &&
+                  c.root === other.root &&
+                  c.quality === other.quality &&
+                  c.bass === other.bass &&
+                  c.at === other.at
+                );
+              })
+            )
+              return [];
+            return [[p, l, k, changes.map((c) => [c.root, c.quality, c.bass, c.at])]];
+          }),
+        ),
+  );
+};
 
 /** Never serializes a hymn's text, title, or MIDI track names. */
 export const metadataOf = (hymn: Hymn, sourceHash: string) =>

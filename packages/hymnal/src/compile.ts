@@ -181,6 +181,7 @@ const strike = (
   score: Score.Score,
   alignment: Align.Alignment,
   placed: ReadonlyArray<ReadonlyArray<Placed[]>>,
+  rule: Placement.RuleId = 'strong',
 ): Array<Array<Placed[]>> => {
   const tpb = score.ticksPerBeat;
   const grid: Placement.Grid = {
@@ -217,13 +218,10 @@ const strike = (
     };
     const originals = sungAt.flatMap((k) => chords[k] ?? []);
     const out = line.map((): Placed[] => []);
-    Placement.apply('strong', input, grid).forEach((change, i) => {
-      const was = input.changes[i];
-      const original = originals[i];
+    Placement.apply(rule, input, grid).forEach((change) => {
       const k = sungAt[change.syllable];
-      if (k === undefined || was === undefined || original === undefined) return;
-      const same = was.syllable === change.syllable && was.at === change.at;
-      out[k]?.push(same ? original : { chord: change.chord, at: round(change.at / tpb) });
+      if (k === undefined) return;
+      out[k]?.push({ chord: change.chord, at: round(change.at / tpb) });
     });
     before = originals.at(-1)?.chord ?? before;
     return out;
@@ -238,6 +236,8 @@ interface Laid {
   readonly lines: Syllable[][];
   /** The same lines with each guitar chord where a guitarist strikes it (`strike`). */
   readonly struck: Syllable[][];
+  readonly simpler: Syllable[][];
+  readonly folded: Syllable[][];
   /** Each line's syllable starts in ticks, as `lines`; absent when laid as words alone. */
   readonly starts: number[][] | undefined;
 }
@@ -288,7 +288,8 @@ const lay = (score: Score.Score, n: number, lines: readonly string[]): Laid => {
       }
     : undefined;
   const { level, why } = judge(fit, info);
-  if (level === 'text') return { level, why, fit, lines: [], struck: [], starts: undefined };
+  if (level === 'text')
+    return { level, why, fit, lines: [], struck: [], simpler: [], folded: [], starts: undefined };
   const anchors = Align.anchorsOf(alignment, span.start);
   const full = place(score, span, alignment, anchors, 'full');
   const guitar = place(score, span, alignment, anchors, 'guitar');
@@ -313,6 +314,8 @@ const lay = (score: Score.Score, n: number, lines: readonly string[]): Laid => {
     fit,
     lines: linesWith(guitar),
     struck: linesWith(strike(score, alignment, guitar)),
+    simpler: linesWith(strike(score, alignment, guitar, 'strong+length')),
+    folded: linesWith(strike(score, alignment, guitar, 'length')),
     starts: anchors.map((line) => line.map((anchor) => anchor.start)),
   };
 };
@@ -384,9 +387,9 @@ const versesOf = (source: Source) => {
 };
 
 /** Compiles a hymn from its text and its MIDI file. */
-export const compile = (
+export const compilePlacements = (
   source: Source,
-): Effect.Effect<Hymn, Midi.MidiParseError | VerseLayoutError> =>
+): Effect.Effect<Record<Placement.Placement, Hymn>, Midi.MidiParseError | VerseLayoutError> =>
   Effect.gen(function* () {
     const { stanzas, refrain } = yield* versesOf(source);
     const midi = yield* Midi.parse(source.midi);
@@ -426,7 +429,8 @@ export const compile = (
       const plain: Mutable<Hymn> = { ...head, stanzas: Arr.map(stanzas, held) };
       if (refrain !== undefined)
         plain.refrain = { order: refrain.order, part: held(refrain.lines) };
-      return timed(plain, () => undefined);
+      const hymn = timed(plain, () => undefined);
+      return { beat: hymn, simpler: hymn, file: hymn };
     }
     const laid = Arr.map(stanzas, (lines, n) => lay(score, n, [...lines, ...tail(n)]));
     /** The hymn with each laying's lines `pick` chooses. */
@@ -455,7 +459,16 @@ export const compile = (
       })),
       tonic: Chord.pitchClass(score.key.tonic),
     };
-    return Placement.confirms(grid, Placement.judgedLines(asPlayed))
-      ? built((one) => one.struck)
-      : asPlayed;
+    const confirmed = Placement.confirms(grid, Placement.judgedLines(asPlayed));
+    return {
+      beat: confirmed ? built((one) => one.struck) : asPlayed,
+      simpler: built((one) => (confirmed ? one.simpler : one.folded)),
+      file: asPlayed,
+    };
   });
+
+/** The default guitar reading, derived from the same alignment as the other placements. */
+export const compile = (
+  source: Source,
+): Effect.Effect<Hymn, Midi.MidiParseError | VerseLayoutError> =>
+  compilePlacements(source).pipe(Effect.map((modes) => modes.beat));

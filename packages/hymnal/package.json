@@ -10,6 +10,8 @@
     "./recordings": "./src/recordings.ts",
     "./recording-manifest": "./src/recording-manifest.ts",
     "./timing": "./src/timing.ts",
+    "./placement": "./src/placement.ts",
+    "./playback": "./src/playback.ts",
     "./playback/build": "./scripts/playback.ts"
   },
   "scripts": {

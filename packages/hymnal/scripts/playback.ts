@@ -3,7 +3,13 @@ import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Effect, Result, Schema } from 'effect';
 import { Hymn, sung } from '../src/hymn.js';
-import { Playback, applyMetadata, metadataOf } from '../src/playback.js';
+import {
+  Playback,
+  type Placements,
+  applyMetadata,
+  metadataOf,
+  placementPatches,
+} from '../src/playback.js';
 
 const data = new URL('../data/', import.meta.url).pathname;
 const folder = join(data, 'playback');
@@ -16,6 +22,7 @@ const fixesBytes = () => readFileSync(join(data, 'fixes/refrains.json'), 'utf8')
 const Manifest = Schema.Struct({
   version: Schema.Literal(1),
   overrides: Schema.Array(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 695 }))),
+  placements: Schema.optionalKey(Schema.Array(Schema.Int)),
 });
 const decodeManifest = Schema.decodeUnknownSync(Schema.fromJsonString(Manifest));
 const decodePlayback = Schema.decodeUnknownEffect(Schema.fromJsonString(Playback));
@@ -100,6 +107,36 @@ export const readPlayback = (hymns: readonly Hymn[]): readonly Hymn[] => {
   });
 };
 
+/** Numeric placement alternatives for the shared native/web chord bundle. */
+export const readPlacementPatches = (hymns: readonly Hymn[]): ReadonlyMap<number, Placements> => {
+  const manifest = decodeManifest(readFileSync(join(folder, 'manifest.json'), 'utf8'));
+  const rows = new Map<number, Placements>();
+  for (const number of manifest.placements ?? []) {
+    const hymn = hymns.find((hymn) => hymn.number === number);
+    if (hymn === undefined) return mismatch('shape', number);
+    const result = Effect.runSync(
+      decodePlayback(readFileSync(join(folder, `${pad(number)}.json`), 'utf8')).pipe(
+        Effect.flatMap((metadata) =>
+          applyMetadata(hymn, metadata, corpusHash(number)).pipe(Effect.as(metadata)),
+        ),
+        Effect.result,
+      ),
+    );
+    if (result._tag === 'Failure') return mismatch('schema', number);
+    const placements = result.success.placements;
+    if (placements === undefined) return mismatch('shape', number);
+    const parts = [...hymn.stanzas, ...(hymn.refrain === undefined ? [] : [hymn.refrain.part])];
+    for (const patch of [...placements.file, ...placements.simpler]) {
+      const [p, l, k] = patch;
+      const part = parts[p];
+      if (part?._tag !== 'Sung' || part.lines[l]?.[k] === undefined)
+        return mismatch('cuts', number);
+    }
+    rows.set(number, placements);
+  }
+  return rows;
+};
+
 /** Fresh compilation is in memory. No source text enters generated files. */
 const countsOf = (hymn: Hymn) => {
   const parts = [...hymn.stanzas, ...(hymn.refrain === undefined ? [] : [hymn.refrain.part])];
@@ -123,11 +160,8 @@ const countsOf = (hymn: Hymn) => {
 
 export const generatePlayback = async (out = folder) => {
   // Build reads do not evaluate the compiler or pronunciation dictionary modules.
-  const [{ compile }, { decodeOrders, sourceOf }, { decodeSourceText }] = await Promise.all([
-    loadCompiler(),
-    loadSources(),
-    loadSourceText(),
-  ]);
+  const [{ compilePlacements }, { decodeOrders, sourceOf }, { decodeSourceText }] =
+    await Promise.all([loadCompiler(), loadSources(), loadSourceText()]);
   const source = textBytes(),
     fixes = fixesBytes();
   const sources = fingerprints();
@@ -141,13 +175,24 @@ export const generatePlayback = async (out = folder) => {
     sungParts = 0,
     affectedHymns = 0;
   const census = [];
+  const placementNumbers: number[] = [];
   for (const row of decoded.hymns.filter((row) => row.number <= 695)) {
     const { midi, sourceHash } = ownSource(sources, row.number);
-    const hymn = Effect.runSync(
-      sourceOf({ ...row, name: row.title }, midi, orders).pipe(Effect.flatMap(compile)),
+    const modes = Effect.runSync(
+      sourceOf({ ...row, name: row.title }, midi, orders).pipe(Effect.flatMap(compilePlacements)),
     );
+    const hymn = modes.beat;
     const metadata = Effect.runSync(metadataOf(hymn, sourceHash));
-    writeFileSync(join(out, `${pad(row.number)}.json`), `${JSON.stringify(metadata)}\n`);
+    const placements = {
+      file: placementPatches(hymn, modes.file),
+      simpler: placementPatches(hymn, modes.simpler),
+    };
+    const hasPlacements = placements.file.length > 0 || placements.simpler.length > 0;
+    if (hasPlacements) placementNumbers.push(row.number);
+    writeFileSync(
+      join(out, `${pad(row.number)}.json`),
+      `${JSON.stringify(hasPlacements ? { ...metadata, placements } : metadata)}\n`,
+    );
     const counts = countsOf(hymn);
     const baseline = Effect.runSync(
       Schema.decodeEffect(Schema.fromJsonString(Hymn))(
@@ -176,7 +221,7 @@ export const generatePlayback = async (out = folder) => {
   writeFileSync(join(out, 'census.json'), `${JSON.stringify(summary)}\n`);
   writeFileSync(
     join(out, 'manifest.json'),
-    `${JSON.stringify({ version: 1, inputsHash: inputs, overrides: census.filter((row) => row.changed).map((row) => row.number) })}\n`,
+    `${JSON.stringify({ version: 1, inputsHash: inputs, overrides: census.filter((row) => row.changed).map((row) => row.number), placements: placementNumbers })}\n`,
   );
   return summary;
 };

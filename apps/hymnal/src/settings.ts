@@ -16,6 +16,7 @@ import * as Atom from 'effect/reactivity/Atom';
 
 import { Move, still } from './hymns/chords';
 import { ChordStyle } from './hymns/simple';
+import { Placement } from '@manna/hymnal/placement';
 import { Numbers } from './reader/lists';
 import { DEFAULT_SIZE, Font, Size, Spacing } from './reader/reading';
 
@@ -46,6 +47,15 @@ export const settingsOn = (store: Layer.Layer<KeyValueStore.KeyValueStore>) => {
      * The same for every hymn.
      */
     chordStyle: setting('chords.style', ChordStyle, 'simple'),
+    /** Global chord anchors; a hymn inherits until it has an explicit override. */
+    placement: setting('chords.placement', Placement, 'beat'),
+    placementFor: Atom.family((number: number) =>
+      setting(
+        `chords.placement.${number}`,
+        Schema.Literals(['inherit', ...Placement.literals]),
+        'inherit',
+      ),
+    ),
     appearance: setting('appearance', Appearance, 'system'),
     /**
      * Whether Play sounds the recording, the switch beside Play: the same

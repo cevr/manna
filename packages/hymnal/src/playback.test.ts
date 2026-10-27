@@ -32,9 +32,16 @@ test('playback sidecars stay one line, hymn-local and below 17 MB', () => {
     if (
       Object.keys(metadata).some(
         (key) =>
-          !['version', 'number', 'sourceHash', 'timing', 'verses', 'stanzas', 'refrain'].includes(
-            key,
-          ),
+          ![
+            'version',
+            'number',
+            'sourceHash',
+            'timing',
+            'verses',
+            'stanzas',
+            'refrain',
+            'placements',
+          ].includes(key),
       )
     )
       faults.push([number, 3]);

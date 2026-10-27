@@ -5,9 +5,11 @@ import { expect, it } from 'effect-bun-test';
 import * as Align from './align.js';
 import * as Midi from './midi.js';
 import * as Score from './score.js';
-import { compile } from './compile.js';
-import { Hymn, sung } from './hymn.js';
-import { Playback, metadataOf } from './playback.js';
+import * as Chord from './chord.js';
+import * as Placement from './placement.js';
+import { type compile, compilePlacements } from './compile.js';
+import { Hymn, type Syllable, sung } from './hymn.js';
+import { Playback, metadataOf, placementPatches } from './playback.js';
 import { secondsAt, timingOf } from './timing.js';
 import { readPlayback } from '../scripts/playback.js';
 import { decodeOrders, sourceOf } from '../scripts/sources.js';
@@ -174,6 +176,211 @@ const alignmentFaults = (
   return { faults, checked, melismas, shared };
 };
 
+const referenceStrongAfter = (grid: Placement.Grid, from: number, end: number) => {
+  const slack = grid.ticksPerBeat / 16;
+  for (const [j, m] of grid.meters.entries()) {
+    const compound = m.numerator > 3 && m.numerator % 3 === 0;
+    const b = ((grid.ticksPerBeat * 4) / m.denominator) * (compound ? 3 : 1);
+    const beats = compound ? m.numerator / 3 : m.numerator;
+    const limit = Math.min(end, grid.meters[j + 1]?.tick ?? end) - slack;
+    for (let n = Math.max(0, Math.floor((from - m.tick) / b)); m.tick + n * b < limit; n++) {
+      const t = m.tick + n * b;
+      if (t > from + slack && (n % beats === 0 || (beats === 4 && n % 4 === 2))) return t;
+    }
+  }
+  return from;
+};
+
+/** Independent event-list oracle. It never calls the production placement rules. */
+const expectedChanges = (
+  line: Placement.Line,
+  grid: Placement.Grid,
+  strong: boolean,
+  simpler: boolean,
+) => {
+  const tick = (c: Placement.Change) => (line.syllables[c.syllable]?.start ?? 0) + c.at;
+  const slack = grid.ticksPerBeat / 16;
+  const meter = (at: number) =>
+    grid.meters.filter((m) => m.tick <= at + slack).at(-1) ?? {
+      tick: 0,
+      numerator: 4,
+      denominator: 4,
+    };
+  const beat = (m: Midi.TimeSignature) =>
+    ((grid.ticksPerBeat * 4) / m.denominator) * (m.numerator > 3 && m.numerator % 3 === 0 ? 3 : 1);
+  const count = (m: Midi.TimeSignature) =>
+    m.numerator > 3 && m.numerator % 3 === 0 ? m.numerator / 3 : m.numerator;
+  const isStrong = (at: number) => {
+    const m = meter(at),
+      b = beat(m),
+      n = Math.round((at - m.tick) / b);
+    return (
+      Math.abs(at - m.tick - n * b) <= slack &&
+      (n % count(m) === 0 || (count(m) === 4 && n % 4 === 2))
+    );
+  };
+  let events = line.changes.map((c, i) => {
+    const from = tick(c);
+    let to = from;
+    const held =
+      c.syllable === 0 &&
+      c.at === 0 &&
+      (line.before === undefined || Chord.equals(line.before, c.chord));
+    if (strong && !held && !isStrong(from)) {
+      const next = line.changes[i + 1];
+      const end = Math.min(line.until, next === undefined ? line.until : tick(next));
+      to = referenceStrongAfter(grid, from, end);
+    }
+    let syllable = c.syllable;
+    let offset = c.at;
+    if (to !== from) {
+      line.syllables.forEach((s, k) => {
+        if (s.start <= to + slack) syllable = k;
+      });
+      offset = to - (line.syllables[syllable]?.start ?? to);
+      if (Math.abs(offset) <= slack) offset = 0;
+    }
+    return {
+      tick: (line.syllables[syllable]?.start ?? 0) + offset,
+      chord: c.chord,
+      syllable,
+      at: Math.round((offset / grid.ticksPerBeat) * 1000) / 1000,
+    };
+  });
+  if (simpler) {
+    const kept: typeof events = [];
+    events.forEach((event, i) => {
+      const duration = (events[i + 1]?.tick ?? line.until) - event.tick;
+      if (kept.length === 0 || duration >= beat(meter(event.tick))) kept.push(event);
+    });
+    if (kept[0] && kept[1] && kept[1].tick - kept[0].tick < beat(meter(kept[0].tick)))
+      kept.splice(0, 2, { ...kept[0], chord: kept[1].chord });
+    events = kept;
+  }
+  return events;
+};
+
+const rawPlacementLine = (
+  alignment: Align.Alignment,
+  l: number,
+  original: readonly Syllable[],
+  before: Chord.Chord | undefined,
+  tpb: number,
+) => {
+  const aligned = alignment.lines[l] ?? [];
+  const owned = aligned.flatMap((s, k) => (s.notes > 0 ? [k] : []));
+  const syllables = owned.map((k) => {
+    const s = aligned[k];
+    const start = alignment.melody[s?.note ?? -1]?.start ?? 0;
+    const end = s === undefined ? start : (alignment.melody[s.note + s.notes - 1]?.end ?? start);
+    return { start, length: end - start, key: undefined };
+  });
+  const changes = owned.flatMap((k, j) =>
+    (original[k]?.guitar ?? []).map((c) => ({
+      syllable: j,
+      at: Math.round(c.at * tpb),
+      chord: c.chord,
+    })),
+  );
+  const next = alignment.lines[l + 1]?.find((s) => s.notes > 0);
+  const nextStart =
+    next === undefined ? Infinity : (alignment.melody[next.note]?.start ?? Infinity);
+  const last = syllables.at(-1);
+  const input: Placement.Line = {
+    syllables,
+    changes,
+    before,
+    until: Math.min(nextStart, (last?.start ?? 0) + (last?.length ?? 0)),
+  };
+  return { owned, input };
+};
+
+const comparePlacementLine = (
+  modes: Record<Placement.Placement, Hymn>,
+  v: number,
+  l: number,
+  refrain: boolean,
+  owned: readonly number[],
+  input: Placement.Line,
+  grid: Placement.Grid,
+  confirmed: boolean,
+) => {
+  const faults: number[][] = [];
+  for (const mode of ['beat', 'simpler', 'file'] as const) {
+    const expected = expectedChanges(input, grid, mode !== 'file' && confirmed, mode === 'simpler');
+    const part = refrain ? modes[mode].refrain?.part : modes[mode].stanzas[v];
+    const actual =
+      part?._tag !== 'Sung'
+        ? []
+        : owned.flatMap((k, j) =>
+            (part.lines[l]?.[k]?.guitar ?? []).map((c) => ({ ...c, syllable: j })),
+          );
+    const same =
+      actual.length === expected.length &&
+      actual.every((c, i) => {
+        const want = expected[i];
+        return (
+          want !== undefined &&
+          c.syllable === want.syllable &&
+          Math.abs(c.at - want.at) <= 0.00051 &&
+          Chord.equals(c.chord, want.chord)
+        );
+      });
+    if (!same) faults.push([v, l, ['beat', 'simpler', 'file'].indexOf(mode)]);
+  }
+  return faults;
+};
+
+const refrainLines = (text: string | undefined, lastOnly: boolean, stored: boolean) =>
+  text === undefined || (lastOnly && !stored) ? [] : linesOf(text);
+
+const placementFaults = (
+  modes: Record<Placement.Placement, Hymn>,
+  score: Score.Score,
+  source: Parameters<typeof compile>[0],
+) => {
+  const faults: number[][] = [];
+  const file = modes.file;
+  const texts = source.verses.filter((v) => v.id >= 0).toSorted((a, b) => a.id - b.id);
+  const refrainText = source.verses.find((v) => v.id < 0);
+  const lastOnly = source.order === 'first-and-last' || source.order === 'after-last';
+  const storedFrom = lastOnly ? texts.length - 1 : 0;
+  const grid: Placement.Grid = { ticksPerBeat: score.ticksPerBeat, meters: score.meters, tonic: 0 };
+  const confirmed = Placement.confirms(
+    {
+      ...grid,
+      ticksPerBeat: 96,
+      meters: grid.meters.map((m) => ({ ...m, tick: (m.tick * 96) / grid.ticksPerBeat })),
+    },
+    Placement.judgedLines(file),
+  );
+  let lines = 0;
+  for (const [v, text] of texts.entries()) {
+    const tail = refrainLines(refrainText?.text, lastOnly, v === storedFrom);
+    const count = linesOf(text.text).length;
+    const alignment = Align.align(score, Math.min(v, score.verses.spans.length - 1), [
+      ...linesOf(text.text),
+      ...tail,
+    ]);
+    let before: Chord.Chord | undefined;
+    for (const [l] of alignment.lines.entries()) {
+      const refrain = l >= count;
+      const part = refrain ? file.refrain?.part : file.stanzas[v];
+      const lineIndex = refrain ? l - count : l;
+      if (part?._tag !== 'Sung') continue;
+      const original = part.lines[lineIndex] ?? [];
+      const { owned, input } = rawPlacementLine(alignment, l, original, before, score.ticksPerBeat);
+      before = input.changes.at(-1)?.chord ?? before;
+      if (refrain && v !== storedFrom) continue; // Repeated occurrences share the stored refrain's anchors, checked below.
+      lines++;
+      faults.push(
+        ...comparePlacementLine(modes, v, lineIndex, refrain, owned, input, grid, confirmed),
+      );
+    }
+  }
+  return { faults, lines };
+};
+
 it.effect(
   'P3 every stored part and sung occurrence uses the selected melody and deterministic sidecar',
   () =>
@@ -187,6 +394,7 @@ it.effect(
       const joined = readPlayback(baseline);
       const faults: number[][] = [];
       let checked = 0,
+        placementLines = 0,
         occurrences = 0,
         melismas = 0,
         shared = 0,
@@ -194,12 +402,36 @@ it.effect(
       for (const row of rows) {
         const bytes = readFileSync(`${data}midi/${pad(row.number)}.mid`);
         const source = yield* sourceOf({ ...row, name: row.title }, bytes, orders);
-        const fresh = yield* compile(source);
+        const modes = yield* compilePlacements(source);
+        const fresh = modes.beat;
         const metadata = yield* Schema.decodeEffect(Schema.fromJsonString(Playback))(
           read(`playback/${pad(row.number)}.json`),
         );
-        const expected = yield* metadataOf(fresh, metadata.sourceHash).pipe(Effect.flatMap(encode));
-        if ((yield* encode(metadata)) !== expected) faults.push([row.number, 1]);
+        const base = yield* metadataOf(fresh, metadata.sourceHash);
+        const expected = yield* encode(base);
+        const placements = {
+          file: placementPatches(fresh, modes.file),
+          simpler: placementPatches(fresh, modes.simpler),
+        };
+        const withPlacements =
+          placements.file.length > 0 || placements.simpler.length > 0
+            ? { ...base, placements }
+            : base;
+        if ((yield* encode(metadata)) !== (yield* encode(withPlacements)))
+          faults.push([row.number, 1]);
+        for (const other of [modes.file, modes.simpler]) {
+          const withoutGuitar = (m: Playback): Playback => {
+            const parts = (parts: Playback['stanzas']) =>
+              parts.map((p) => ({
+                ...p,
+                lines: p.lines.map((line) => line.map((s) => ({ ...s, guitar: [] }))),
+              }));
+            return { ...m, stanzas: parts(m.stanzas), refrain: parts(m.refrain) };
+          };
+          const numeric = yield* metadataOf(other, metadata.sourceHash);
+          if ((yield* encode(withoutGuitar(numeric))) !== (yield* encode(withoutGuitar(base))))
+            faults.push([row.number, 13]);
+        }
         const actual = joined[row.number - 1];
         if (
           actual === undefined ||
@@ -207,6 +439,13 @@ it.effect(
         )
           faults.push([row.number, 2]);
         const midi = yield* Midi.parse(bytes);
+        const placementsChecked = placementFaults(
+          modes,
+          Score.fromMidi(midi, source.verses.filter((v) => v.id >= 0).length),
+          source,
+        );
+        placementLines += placementsChecked.lines;
+        faults.push(...placementsChecked.faults.map((f) => [row.number, 14, ...f]));
         const result = alignmentFaults(
           fresh,
           Score.fromMidi(midi, source.verses.filter((v) => v.id >= 0).length),
@@ -223,6 +462,7 @@ it.effect(
         occurrences += sung(fresh).length;
         plain += fresh.stanzas.filter((p) => p._tag === 'Plain').length;
       }
+      yield* Console.log(`P4 corpus placementLines=${placementLines} modes=3`);
       yield* Console.log(
         `P3 corpus checked=${checked} occurrences=${occurrences} melismas=${melismas} shared=${shared} plain=${plain}`,
       );

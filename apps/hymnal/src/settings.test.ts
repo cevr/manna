@@ -12,6 +12,21 @@ import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
 import { DEFAULT_SIZE } from './reader/reading';
 import { settingsOn } from './settings';
 
+it('placement defaults to beat and an inherited hymn follows a later global choice', () => {
+  const device = new Map<string, string>();
+  const first = launch(device);
+  expect(first.registry.get(first.settings.placement)).toBe('beat');
+  expect(first.registry.get(first.settings.placementFor(373))).toBe('inherit');
+  first.registry.set(first.settings.placement, 'file');
+  first.registry.set(first.settings.placementFor(388), 'simpler');
+  first.registry.dispose();
+  const again = launch(device);
+  expect(again.registry.get(again.settings.placement)).toBe('file');
+  expect(again.registry.get(again.settings.placementFor(373))).toBe('inherit');
+  expect(again.registry.get(again.settings.placementFor(388))).toBe('simpler');
+  again.registry.dispose();
+});
+
 /** A store over `map`: what the device keeps between two launches. */
 const storeOver = (map: Map<string, string>) =>
   Layer.succeed(KeyValueStore.KeyValueStore)(
