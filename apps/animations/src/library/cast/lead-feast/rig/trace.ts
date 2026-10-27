@@ -225,6 +225,20 @@ const UNDER_ARMS = {
   raised: ['armNearOff', 'armFarOff', 'armFarBelow', 'handNearRing', 'handFarRing'],
 } as const;
 
+/**
+ * The profile right's sleeve, its back edge on the line where the sheet's
+ * teal strip behind it meets its cream (x 1087-1088, rows 436-532): the
+ * sleeve's region, grown through the strip's shaded teal, ran 3-5 px past it
+ * in bumps the teal showed between.
+ */
+const PROFILE_RIGHT_SLEEVE: TracePt[] = [
+  [1091, 405],
+  [1166, 405],
+  [1166, 607],
+  [1088, 607],
+  [1088, 436],
+];
+
 /** The three-quarter right's ear, read off the sheet round its skin: its skin runs on into his cheek (no line at x 1349), and its lobe turns in at its lower left, where the band of hair under it meets his hair (x 1329-1331, rows 330-335). */
 const THREE_QUARTER_RIGHT_EAR: TracePt[] = [
   [1330, 303],
@@ -1132,23 +1146,13 @@ export const TRACE = {
       sharp: [],
       near: {
         pick: sleeveAt([1110, 480]),
-        clip: [
-          [1083, 405],
-          [1166, 405],
-          [1166, 607],
-          [1083, 607],
-        ],
+        clip: PROFILE_RIGHT_SLEEVE,
         below: 405,
         hand: [1130, 620],
       },
       far: {
         pick: sleeveAt([1110, 480]),
-        clip: [
-          [1083, 405],
-          [1166, 405],
-          [1166, 607],
-          [1083, 607],
-        ],
+        clip: PROFILE_RIGHT_SLEEVE,
         below: 405,
         hand: [1130, 620],
       },
