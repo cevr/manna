@@ -3987,6 +3987,16 @@ The form of an entry, each field on its own line:
 - **Cause:** The test reproduced the wiring instead of invoking the production operation. Init and the relocation test now share the source list, ensure and message operation.
 - **Guard:** code: `packages/cli/test/commands/webster.slow.test.ts` `relocated CLI reads packaged corpus without checkout fallback and preserves active data after failed refresh`
 
+### bible-build-is-not-installation
+
+- **Date:** 2026-10-26
+- **Kind:** owner
+- **Said:** "I mean, we can sync via GitHub artifact or something, whatever makes sense"
+- **Source:** hymnapp/biblebuild/spec.md; owner build/install separation decision
+- **Wrong:** A workspace Bible rebuild copied over the installed database; vector and native builds could populate implicit HOME caches.
+- **Cause:** Corpus production shared runtime destination and cache defaults. The builder now has no runtime path, and build hosts supply workspace cache defaults.
+- **Guard:** code: `packages/core/src/sync/bible-sync.test.ts` `builds only workspace databases across force, existing outputs and home configurations`; `packages/core/src/sync/bible-sync.test.ts` `preserves an installed runtime tree and its bytes during a forced workspace rebuild`; `packages/scripts/src/vector-compiler/paths.test.ts` `vector build supplies a workspace cache independent of HOME and honors explicit model caches`; `packages/core/scripts/build-native.test.ts` `native and wasm builds keep implicit Zig caches in the workspace and preserve overrides`
+
 ### board-food-is-plant-food
 
 - **Date:** 2026-10-26

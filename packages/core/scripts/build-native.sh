@@ -28,6 +28,11 @@ src="$here/native"
 out="$here/dist-native"
 what="${1:-all}"
 
+# Builds keep implicit toolchain caches beside the workspace's dependencies.
+# Explicit operator locations still take precedence.
+export ZIG_GLOBAL_CACHE_DIR="${ZIG_GLOBAL_CACHE_DIR:-$here/node_modules/.cache/zig/global}"
+export ZIG_LOCAL_CACHE_DIR="${ZIG_LOCAL_CACHE_DIR:-$here/node_modules/.cache/zig/local}"
+
 mkdir -p "$out"
 
 # A committed artifact carries a stamp beside it (`<artifact>.stamp`): the

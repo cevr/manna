@@ -11,7 +11,7 @@
  *  and a GPU provider would be a second execution path to reconcile.
  */
 
-import type { Layer } from 'effect';
+import { Config, Option, type Layer } from 'effect';
 
 import type { QueryEmbedder } from './embedder.js';
 import { bibleHomeModelsFallback, layerTransformersEmbedder } from './embedder-transformers.js';
@@ -21,3 +21,11 @@ export const layerBunEmbedder: Layer.Layer<QueryEmbedder> = layerTransformersEmb
   device: 'cpu',
   fallbackCacheDir: bibleHomeModelsFallback,
 });
+
+/** Build hosts select a workspace cache; BIBLE_MODEL_CACHE still wins in the loader. */
+export const layerBunEmbedderWithCache = (cacheDirectory: string): Layer.Layer<QueryEmbedder> =>
+  layerTransformersEmbedder({
+    adapter: 'bun',
+    device: 'cpu',
+    fallbackCacheDir: Config.succeed(Option.some(cacheDirectory)),
+  });
