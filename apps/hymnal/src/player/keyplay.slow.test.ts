@@ -25,6 +25,102 @@ import { scoreClock, soundOn } from './sound';
 import { recordingsOn } from './recording';
 import type { Timeline } from '../follow/timeline';
 import { followerOf } from '../follow/follower';
+import { placeAt, timelineOf } from '../follow/timeline';
+import { readTiming } from '../../vite/timing';
+import { readPlaybackHymns } from '../../vite/chords';
+import { sung, type Hymn } from '@manna/hymnal/hymn';
+
+const groupSamples = (hymn: Hymn, timed: Timeline, minimum: number) => {
+  const heard = sung(hymn);
+  return timed.lines.flatMap((times, line) => {
+    const part = heard[line]?.part;
+    if (part?._tag !== 'Sung') return [];
+    return times.syllables.flatMap((start, syllable) => {
+      const count = part.lines[heard[line]?.line ?? 0]?.[syllable]?.notes ?? 0;
+      const next = times.syllables[syllable + 1] ?? times.until;
+      if (count < minimum || next <= start) return [];
+      return [start + 1, (start + next) / 2, next - 1].map((at) => ({ at, line, syllable }));
+    });
+  });
+};
+
+for (const number of [388, 373, 214])
+  it.effect(
+    `followsync public player and scoreClock retain syllable groups for hymn ${number}`,
+    () =>
+      Effect.gen(function* () {
+        const encoded = readTiming().find(([n]) => n === number)?.[1] ?? '';
+        const timed = Option.getOrThrow(timelineOf(encoded));
+        const hymn = Option.getOrThrow(
+          Option.fromUndefinedOr(readPlaybackHymns().find((hymn) => hymn.number === number)),
+        );
+        using app = yield* open(false, timed.end, (n) =>
+          Option.filter(Option.some(timed), () => n === number),
+        );
+        const track = { number, title: `Hymn ${number}` };
+        app.send(Command.Start({ track }));
+        yield* app.playing;
+        let minimum = 2;
+        if (number === 373) minimum = 1;
+        const samples = groupSamples(hymn, timed, minimum);
+        for (const { at, line, syllable } of samples) {
+          app.send(Command.Seek({ seconds: at / 1000 }));
+          yield* settle;
+          const state = app.state();
+          expect(state._tag).toBe('Playing');
+          if (state._tag !== 'Playing') continue;
+          const place = placeAt(timed, state.at * 1000);
+          expect([place.line, place.syllable]).toEqual([line, syllable]);
+        }
+        expect(samples.length).toBeGreaterThan(0);
+        // A live Key change changes recording identity, never the score place.
+        const before = app.state();
+        app.move(number, 1);
+        yield* settle;
+        expect(app.state()).toEqual(before);
+        yield* app.tick();
+        const after = app.state();
+        if (before._tag === 'Playing' && after._tag === 'Playing')
+          expect(after.at).toBe(before.at + 0.25);
+        expect(app.calls.filter((call) => call.operation === 'play')).toEqual([]);
+      }),
+  );
+
+it.effect('followsync shared-note groups stay simultaneous through public Start and Seek', () =>
+  Effect.gen(function* () {
+    const timed: Timeline = {
+      first: 1000,
+      end: 4000,
+      lines: [
+        {
+          start: 1000,
+          until: 4000,
+          played: true,
+          even: false,
+          syllables: [1000, 1000, 2000],
+          words: [0, 1, 2],
+        },
+      ],
+    };
+    using app = yield* open(false, 4000, () => Option.some(timed));
+    app.send(Command.Start({ track }));
+    yield* app.playing;
+    for (const [at, syllable] of [
+      [1000, 1],
+      [1500, 1],
+      [1999, 1],
+      [2000, 2],
+      [3999, 2],
+    ] as const) {
+      app.send(Command.Seek({ seconds: at / 1000 }));
+      yield* settle;
+      const state = app.state();
+      expect(state._tag).toBe('Playing');
+      if (state._tag === 'Playing') expect(placeAt(timed, state.at * 1000).syllable).toBe(syllable);
+    }
+    expect(app.calls.filter((call) => call.operation === 'play')).toEqual([]);
+  }),
+);
 
 const track = { number: 100, title: 'Hymn 100' };
 const other = { number: 3, title: 'Hymn 3' };

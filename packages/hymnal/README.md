@@ -560,3 +560,19 @@ row as the base row with each ruling applied. Its mutant cases relabel an
 entry, drop a ruling or a crop, swap a crop's bytes, change a row word or a
 later refrain variant, move a page, and point a fix line at another page,
 and the census catches each one.
+
+## Numeric playback sidecars
+
+Run `bun run --cwd packages/hymnal playback` after score, alignment or timing
+changes. `--out <directory>` writes a scratch numeric set for comparison.
+The generator compiles each hymn in memory and writes only numeric cuts,
+chords, timing, source fingerprints and a deterministic census. It formats
+the files with the repository's installed oxfmt. It does not rewrite the
+read-only text corpus or the downstream database.
+
+The app's chord and timing derivations both use `readPlayback`. It decodes
+each sidecar and checks its version, hymn identity, source fingerprint and
+word cuts before joining it to the existing words. The fingerprint covers
+source text, refrain order, MIDI and the exact corpus file. A dedicated
+single-voice track is retained, including legato; an earlier polyphonic
+accompaniment uses the keyboard soprano. Both compilers use that selection.

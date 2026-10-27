@@ -9,12 +9,22 @@
  */
 
 import { Option } from 'effect';
+import { readPlayback } from '@manna/hymnal/playback/build';
+import type { Hymn } from '@manna/hymnal/hymn';
 
 import { encodeHymn } from '../src/hymns/chords';
 import { readHymns } from './words';
 
+let playback = Option.none<readonly Hymn[]>();
+
+/** One checked numeric source for both chord and follow derivations. */
+export const readPlaybackHymns = (): readonly Hymn[] => {
+  if (Option.isNone(playback)) playback = Option.some(readPlayback(readHymns()));
+  return Option.getOrThrow(playback);
+};
+
 export const readChords = (): ReadonlyArray<readonly [number, string]> =>
-  readHymns().map((hymn) => [
+  readPlaybackHymns().map((hymn) => [
     hymn.number,
     Option.getOrThrowWith(
       encodeHymn(hymn),

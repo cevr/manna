@@ -13,8 +13,26 @@ const folder = join(data, 'playback');
 const pad = (n: number) => String(n).padStart(3, '0');
 const textBytes = () => readFileSync(join(data, 'source-text.json'), 'utf8');
 const fixesBytes = () => readFileSync(join(data, 'fixes/refrains.json'), 'utf8');
-const inputsHash = (source: string, fixes: string) =>
-  new Bun.CryptoHasher('sha256').update('playback-v1\0').update(source).update(fixes).digest('hex');
+const inputsHash = (source: string, fixes: string) => {
+  const hash = new Bun.CryptoHasher('sha256').update('playback-v1\0').update(source).update(fixes);
+  for (const file of [
+    'align',
+    'chord',
+    'compile',
+    'harmony',
+    'hymn',
+    'midi',
+    'placement',
+    'playback',
+    'score',
+    'syllables',
+    'timing',
+  ]) {
+    hash.update(readFileSync(new URL(`../src/${file}.ts`, import.meta.url)));
+  }
+  hash.update(readFileSync(new URL('./sources.ts', import.meta.url)));
+  return hash.digest('hex');
+};
 const fingerprint = (number: number, inputs: string) => {
   const midi = readFileSync(join(data, `midi/${pad(number)}.mid`));
   const corpus = readFileSync(join(data, `sdah-1985/${pad(number)}.json`));
@@ -67,13 +85,13 @@ const countsOf = (hymn: Hymn) => {
   };
 };
 
-export const generatePlayback = () => {
+export const generatePlayback = (out = folder) => {
   const source = textBytes(),
     fixes = fixesBytes();
   const inputs = inputsHash(source, fixes);
   const decoded = Effect.runSync(decodeSourceText(source));
   const orders = Effect.runSync(decodeOrders(fixes));
-  mkdirSync(folder, { recursive: true });
+  mkdirSync(out, { recursive: true });
   let melismas = 0,
     shared = 0,
     syllables = 0,
@@ -86,7 +104,7 @@ export const generatePlayback = () => {
       sourceOf({ ...row, name: row.title }, midi, orders).pipe(Effect.flatMap(compile)),
     );
     const metadata = Effect.runSync(metadataOf(hymn, sourceHash));
-    writeFileSync(join(folder, `${pad(row.number)}.json`), `${JSON.stringify(metadata)}\n`);
+    writeFileSync(join(out, `${pad(row.number)}.json`), `${JSON.stringify(metadata)}\n`);
     const counts = countsOf(hymn);
     const baseline = Effect.runSync(
       Schema.decodeEffect(Schema.fromJsonString(Hymn))(
@@ -112,12 +130,18 @@ export const generatePlayback = () => {
     affectedHymns,
     census,
   };
-  writeFileSync(join(folder, 'census.json'), `${JSON.stringify(summary)}\n`);
+  writeFileSync(join(out, 'census.json'), `${JSON.stringify(summary)}\n`);
+  const formatted = Bun.spawnSync(
+    [new URL('../../../node_modules/.bin/oxfmt', import.meta.url).pathname, out],
+    { stdout: 'ignore', stderr: 'ignore' },
+  );
+  if (formatted.exitCode !== 0) throw new Error('playback: numeric metadata formatting failed');
   return summary;
 };
 
 if (import.meta.main) {
-  const summary = generatePlayback();
+  const flag = process.argv.indexOf('--out');
+  const summary = generatePlayback(flag < 0 ? folder : process.argv[flag + 1]);
   console.log(
     `P3 generated hymns=${summary.hymns} syllables=${summary.syllables} melismas=${summary.melismas} shared=${summary.shared} affected=${summary.affectedHymns}`,
   );

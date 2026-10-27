@@ -5,7 +5,7 @@ import { type Hymn, sung } from '@manna/hymnal/hymn';
 import { Array as Arr, Option } from 'effect';
 import bundled from 'virtual:hymnal-timing';
 
-import { readHymns } from '../../vite/words';
+import { readPlaybackHymns } from '../../vite/chords';
 import { type Place, type Timeline, placeAt, timelineOf, timingBook } from './timeline';
 
 const decoded = (encoded: string): Timeline => Option.getOrThrow(timelineOf(encoded));
@@ -114,7 +114,7 @@ const placeFaults = (timeline: Timeline, ms: number, place: Place): ReadonlyArra
 };
 
 describe('every bundled hymn timeline', () => {
-  const hymns = readHymns();
+  const hymns = readPlaybackHymns();
   const timelines = new Map(bundled.map(([number, encoded]) => [number, decoded(encoded)]));
 
   it('carries one line per sung line, at the compiled times, lit only where words may be', () => {

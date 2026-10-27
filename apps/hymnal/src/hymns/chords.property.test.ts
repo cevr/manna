@@ -14,8 +14,7 @@ import * as Chord from '@manna/hymnal/chord';
 import type { Hymn, Part } from '@manna/hymnal/hymn';
 import { Match, Option } from 'effect';
 
-import { readChords } from '../../vite/chords';
-import { readHymns } from '../../vite/words';
+import { readChords, readPlaybackHymns } from '../../vite/chords';
 import {
   chordBook,
   hasChords,
@@ -32,7 +31,7 @@ import { simple } from './simple';
 import type { HymnText, Section } from './text';
 
 const book = chordBook(readChords());
-const compiled = new Map(readHymns().map((hymn) => [hymn.number, hymn]));
+const compiled = new Map(readPlaybackHymns().map((hymn) => [hymn.number, hymn]));
 
 interface Case {
   readonly hymn: Hymn;

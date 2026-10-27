@@ -49,6 +49,20 @@ const real = (n: number) =>
   });
 
 describe('Score.fromMidi', () => {
+  it.effect('reads all 262 soprano notes on 388 and keeps dedicated legato on 33', () =>
+    Effect.gen(function* () {
+      const midi = yield* real(388);
+      const selected = Score.melodyOf(midi, Score.harmonyTracks(midi));
+      const soprano = midi.tracks[2]?.notes ?? [];
+      expect(selected).toHaveLength(262);
+      expect(selected).toEqual([...soprano]);
+      const dedicated = yield* real(33);
+      const first = dedicated.tracks.find((t) => t.notes.length > 0);
+      expect(Score.melodyOf(dedicated, Score.harmonyTracks(dedicated))).toEqual(
+        Score.topVoice(first?.notes ?? [], dedicated.ticksPerBeat / 16),
+      );
+    }).pipe(Effect.provide(BunServices.layer)),
+  );
   it.effect('selects soprano behind polyphonic accompaniment and preserves dedicated melody', () =>
     Effect.gen(function* () {
       for (const dedicated of [false, true]) {

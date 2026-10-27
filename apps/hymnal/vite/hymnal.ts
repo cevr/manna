@@ -12,7 +12,8 @@
  *   come, one string per hymn (about 600 KB), made by `timing.ts`, and
  *   decoded only for a hymn the player follows.
  * The web and the native bundle both take them from this plugin, so the app
- * reads its hymns offline and nothing derived is committed.
+ * reads its hymns offline. Chords and timing join the versioned numeric
+ * sidecars in `packages/hymnal/data/playback` onto the read-only words.
  *
  * The derivations run under Bun: Vite loads this config under Node, which
  * cannot import the hymnal package's TypeScript.

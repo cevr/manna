@@ -25,7 +25,7 @@ import * as Timing from '@manna/hymnal/timing';
 import { type Hymn, sung } from '@manna/hymnal/hymn';
 import { Option } from 'effect';
 
-import { readHymns } from './words';
+import { readPlaybackHymns } from './chords';
 
 /** Each word's syllable indices, from the syllables' `word` places. */
 const wordsOf = (words: ReadonlyArray<number>): ReadonlyArray<ReadonlyArray<number>> => {
@@ -81,7 +81,7 @@ export const encodeTiming = (hymn: Hymn): Option.Option<string> =>
   });
 
 export const readTiming = (): ReadonlyArray<readonly [number, string]> =>
-  readHymns().map((hymn) => [
+  readPlaybackHymns().map((hymn) => [
     hymn.number,
     Option.getOrThrowWith(
       encodeTiming(hymn),

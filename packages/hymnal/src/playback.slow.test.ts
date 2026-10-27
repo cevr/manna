@@ -91,6 +91,34 @@ const occurrenceFaults = (hymn: Hymn) => {
   return faults;
 };
 
+const refrainFaults = (
+  hymn: Hymn,
+  v: number,
+  anchors: ReturnType<typeof Align.anchorsOf>,
+  count: number,
+  span: Score.Span,
+  intro: number,
+  shift: number,
+  tpb: number,
+) => {
+  const heard = sung(hymn);
+  const first = heard.findIndex((line) => line.verse === v + 1);
+  const tail = anchors.slice(count);
+  const faults: number[][] = [];
+  const check = (at: number, move: number) => {
+    for (const [l, line] of tail.entries()) {
+      const timed = hymn.timing?.lines[at + l];
+      if (timed?.even !== false) continue;
+      for (const [k, anchor] of line.entries())
+        if (timed.syllables[k] !== Math.round(((anchor.start + move) * 96) / tpb))
+          faults.push([11, at + l, k]);
+    }
+  };
+  if (heard[first + count]?.verse === 'refrain') check(first + count, shift);
+  if (v === 0 && heard[0]?.verse === 'refrain' && tail.length > 0) check(0, intro - span.end);
+  return faults;
+};
+
 const alignmentFaults = (
   fresh: Hymn,
   score: Score.Score,
@@ -118,11 +146,22 @@ const alignmentFaults = (
         ? 0
         : midi.lastTick + (v - score.verses.spans.length) * (span.end - span.start) - span.start;
     faults.push(...stanzaFaults(fresh, v, anchors, shift, midi.ticksPerBeat).map((f) => [v, ...f]));
-    for (const a of anchors.flat()) {
-      checked++;
-      if (a.notes > 1) melismas++;
-      if (a.notes === 0) shared++;
-    }
+    if (span !== undefined)
+      faults.push(
+        ...refrainFaults(
+          fresh,
+          v,
+          anchors,
+          linesOf(stanza.text).length,
+          span,
+          score.verses.spans[0]?.start ?? 0,
+          shift,
+          midi.ticksPerBeat,
+        ),
+      );
+    checked += anchors.flat().length;
+    melismas += anchors.flat().filter((a) => a.notes > 1).length;
+    shared += anchors.flat().filter((a) => a.notes === 0).length;
   }
   return { faults, checked, melismas, shared };
 };

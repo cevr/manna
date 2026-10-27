@@ -27,6 +27,17 @@ brings the sung line back and follows again. The marked line is
 
 ## How to get to it (user POV)
 
+### Selected melody and shared notes
+
+- `follow-soprano`: on 388, then control 373, the follow and chords use the same selected melody. A separate tune track is kept when it has one pitch per onset; polyphonic accompaniment cannot displace the keyboard soprano. Legato overlaps alone do not disqualify a tune.
+- `follow-melisma`: internal melody notes keep one syllable selected until its next distinct syllable onset. Seek on either side of that boundary. Repeat with chords off/on and Simple/Advanced. The MIDI tempo map supplies the times, rounded to 1/96-beat units before conversion to milliseconds.
+- `follow-shared-note`: a zero-note syllable shares its predecessor's onset. At a line opening it shares that line's first owned note, or the previous anchor if the entire line shares. Simultaneous starts select the last syllable in the group; no extra note or time is consumed. Plain and untrusted lines retain whole-line marks.
+- `follow-key-continuity`: change Key while silently playing 388 and 373; elapsed place and follow keep advancing. Drag and Resume follow, and seek into the intro and back into a sung line.
+
+For these rows, use Sound off before every Play on web and iOS. Run Doctor before the drive and after surprises. Retain only line/syllable indexes, numeric timing, rectangles and control states. Do not capture media or persist hymn words. Only snapshots near 1 s with Doctor timing approval can support a 1,500 ms live timing claim. Sound-off proof does not establish recording output.
+
+Numeric guards: `packages/hymnal/src/playback.slow.test.ts` walks all 695 hymns, every stored part and sung occurrence, including the held hymns; generated cases cover shared notes, melismas, rests, meters, tempos and accompaniment. `src/player/keyplay.slow.test.ts` drives the public player and scoreClock on 388, 373, 214 and shared-note fixtures. `data/playback/census.json` holds the deterministic census; sidecar source/version mismatches fail the build.
+
 - A hymn page, `hymnal://hymns/<n>` (iOS) or `/hymns/<n>` (web): `Play hymn <n>` in the bar at its foot.
 - `Resume follow` over the page after a drag while it plays.
 - `Open player`, then the `Position` bar, to seek.

@@ -544,3 +544,12 @@ connected profile, Alchemy refuses it ("already connected").
 
 The S3 bucket stays. The old Expo app still reads it, so its deletion is the
 owner's decision.
+
+## Playback metadata
+
+The chord and follow bundles join the same versioned numeric sidecars from
+`packages/hymnal/data/playback` onto the read-only corpus words. The selected
+melody supplies both syllable times and chord anchors. A melisma keeps its
+syllable until the next syllable onset. Shared-note syllables have the same
+onset; Plain and untrusted parts keep whole-line follow marks. Input hashes
+prevent stale metadata from being joined to different words or MIDI files.
