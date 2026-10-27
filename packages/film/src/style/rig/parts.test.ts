@@ -22,6 +22,35 @@ describe('the figure parts', () => {
     for (const [, v] of x) expect(Math.abs(v - 3)).toBeLessThanOrEqual(1);
   });
 
+  test('a chain of cubics draws its corners with handles of their own, and boils its anchors alone', () => {
+    const fig = figure(ids(), 'Test', 7, 0, DIRECTION);
+    // A square's chain: each side one straight cubic, its handles a third of the way along it.
+    const corners: Pt[] = [
+      [0, 0],
+      [30, 0],
+      [30, 30],
+      [0, 30],
+    ];
+    const chain = corners.flatMap((a, i): Pt[] => {
+      const b = corners[(i + 1) % 4] ?? a;
+      const third = (k: number): Pt => [
+        a[0] + ((b[0] - a[0]) * k) / 3,
+        a[1] + ((b[1] - a[1]) * k) / 3,
+      ];
+      return [a, third(1), third(2)];
+    });
+    const shape = piece(fig, 'sq', chain, { color: '#ffffff', light: '#ffffff' }, { cubic: true });
+    const vertices = all(shape).filter((e) => e.name === 'CubicDetachedVertex');
+    expect(vertices).toHaveLength(4);
+    const attr = (e: Element, k: string) => Number(e.attrs.find(([n]) => n === k)?.[1]);
+    const first = vertices[0] as Element;
+    // At [0, 0] the line arrives from [0, 30] (its in handle points down) and leaves for [30, 0].
+    expect(attr(first, 'inRotation')).toBeCloseTo(Math.PI / 2, 3);
+    expect(attr(first, 'outRotation')).toBeCloseTo(0, 3);
+    expect(attr(first, 'outDistance')).toBeCloseTo(10, 3);
+    expect(Object.keys(fig.boilTracks()).sort()).toEqual(['sq.0', 'sq.1', 'sq.2', 'sq.3']);
+  });
+
   test('the crease runs along the one light, from the upper left', () => {
     const { start, end, at } = creaseOf({ x0: -10, y0: -20, x1: 30, y1: 40 });
     expect(Math.atan2(end[1] - start[1], end[0] - start[0])).toBeCloseTo(LIGHT.toward);

@@ -58,21 +58,21 @@ const boxOf = (
 ];
 
 describe('traceView', () => {
-  test("reads each part to the middle of its line, its points a coarse step apart, its head's centre and its feet", () => {
+  test("reads each part to the inner edge of its line, its points a coarse step apart, its head's centre and its feet", () => {
     const t = Result.getOrThrow(traceView(sheet(), VIEW));
     const head = t.outlines['head'] ?? [];
     const body = t.outlines['body'] ?? [];
-    // The head's ink runs from 18 to 22 px out: its outline lies near the middle of it.
+    // The head's ink runs from 18 to 22 px out: its outline lies on the inner edge, since the house lays its line outside.
     const [hx0, hy0, hx1, hy1] = boxOf(head);
-    expect(Math.abs(hx0 - 40)).toBeLessThanOrEqual(3);
-    expect(Math.abs(hx1 - 80)).toBeLessThanOrEqual(3);
-    expect(Math.abs(hy0 - 20)).toBeLessThanOrEqual(3);
-    expect(Math.abs(hy1 - 60)).toBeLessThanOrEqual(3);
-    // The body is the cream and the teal shade the line runs round, as one outline.
+    expect(Math.abs(hx0 - 42)).toBeLessThanOrEqual(3);
+    expect(Math.abs(hx1 - 78)).toBeLessThanOrEqual(3);
+    expect(Math.abs(hy0 - 22)).toBeLessThanOrEqual(3);
+    expect(Math.abs(hy1 - 58)).toBeLessThanOrEqual(3);
+    // The body is the cream and the teal shade the line runs round, as one outline, inside its line (34 to 86, down to 196).
     const [bx0, , bx1, by1] = boxOf(body);
-    expect(Math.abs(bx0 - 32)).toBeLessThanOrEqual(3);
-    expect(Math.abs(bx1 - 88)).toBeLessThanOrEqual(3);
-    expect(Math.abs(by1 - 198)).toBeLessThanOrEqual(3);
+    expect(Math.abs(bx0 - 34)).toBeLessThanOrEqual(2);
+    expect(Math.abs(bx1 - 86)).toBeLessThanOrEqual(2);
+    expect(Math.abs(by1 - 196)).toBeLessThanOrEqual(2);
     // A point every step or so along the edge: no spike from a fine step.
     for (const pts of [head, body])
       pts.forEach((p, i) => {
@@ -82,10 +82,10 @@ describe('traceView', () => {
     expect(t.tones['shade']?.length).toBe(1);
     expect(t.head?.at[0]).toBeCloseTo(60, -1);
     expect(t.feet?.[0]).toBeCloseTo(60, -1);
-    expect(Math.abs((t.feet?.[1] ?? 0) - 198)).toBeLessThanOrEqual(3);
+    expect(Math.abs((t.feet?.[1] ?? 0) - 196)).toBeLessThanOrEqual(2);
   });
 
-  test('reads each brow between ends half its stroke inside its ink (its round cap reaches them), and takes a mouth given by its ends as given', () => {
+  test('reads each brow between ends half its stroke inside its ink (its round cap reaches them), each mark its own ink, and takes a mouth given by its ends as given', () => {
     const base = sheet();
     const rgba = new Uint8Array(base.rgba);
     // Two eyes and two brows, small ink pieces inside the head.
@@ -104,8 +104,9 @@ describe('traceView', () => {
           [53, 40],
           [67, 40],
         ],
+        // The left brow's seed lies nearer its eye's ink than its own: the eye, taken first, leaves it the brow.
         brows: [
-          [52, 30],
+          [53, 35],
           [68, 30],
         ],
         mouth: {
@@ -131,6 +132,77 @@ describe('traceView', () => {
     ];
     expect(from[0]).toBeCloseTo(50.5, 0);
     expect(to[0]).toBeCloseTo(55.5, 0);
+  });
+
+  test('refuses a face mark with no ink of its own to read, rather than throw', () => {
+    // A figure inked only round its outside: no small piece of ink for a mark.
+    const [width, height] = [80, 80];
+    const rgba = new Uint8Array(width * height * 4).fill(255);
+    for (let y = 10; y < 70; y++)
+      for (let x = 10; x < 70; x++) rgba.set([20, 16, 14], (y * width + x) * 4);
+    for (let y = 14; y < 66; y++)
+      for (let x = 14; x < 66; x++) rgba.set([253, 175, 112], (y * width + x) * 4);
+    const traced = traceView(
+      { width, height, rgba },
+      {
+        box: [0, 0, 80, 80],
+        classes: { skin: ['#fdaf70'] },
+        parts: { head: { seeds: [[40, 40]] } },
+        marks: { eyes: [[35, 35]], brows: [[35, 30]], mouth: [40, 50] },
+      },
+    );
+    expect(Result.isFailure(traced) && traced.failure.reason).toContain(
+      'the eye at 35,35 finds no ink of its own',
+    );
+  });
+
+  test('fits a cubic part as a chain whose anchors hold its corners', () => {
+    const t = Result.getOrThrow(traceView(sheet(), { ...VIEW, path: 'cubic' }));
+    const chain = t.outlines['body'] ?? [];
+    expect(chain.length % 3).toBe(0);
+    const anchors = chain.filter((_, i) => i % 3 === 0);
+    expect(anchors.length).toBeLessThanOrEqual(8);
+    // The body's paper runs 34 to 86 across and 66 to 196 down: each corner an anchor, within the pixel its edge loses to antialiasing and the pixel its smoothing rounds.
+    for (const [x, y] of [
+      [34, 66],
+      [86, 66],
+      [86, 196],
+      [34, 196],
+    ] as const)
+      expect(Math.min(...anchors.map(([ax, ay]) => Math.hypot(ax - x, ay - y)))).toBeLessThan(3);
+  });
+
+  test('opens a sliver off a part, and refuses an outline that doubles back on itself', () => {
+    /** The sheet with ink, then skin, painted where each says, over the head's ring of ink. */
+    const painted = (
+      ink: (x: number, y: number) => boolean,
+      skin: (x: number, y: number) => boolean,
+    ): Raster => {
+      const base = sheet();
+      const rgba = new Uint8Array(base.rgba);
+      for (let y = 0; y < base.height; y++)
+        for (let x = 0; x < base.width; x++) {
+          if (ink(x, y)) rgba.set([20, 16, 14], (y * base.width + x) * 4);
+          if (skin(x, y)) rgba.set([253, 175, 112], (y * base.width + x) * 4);
+        }
+      return { ...base, rgba };
+    };
+    const plain = Result.getOrThrow(traceView(sheet(), VIEW)).outlines['head'] ?? [];
+    // A sliver of skin out into the ring, a pixel wide inside its antialiased edge: a slip of the edge, opened off.
+    const sliver = painted(
+      () => false,
+      (x, y) => x >= 59 && x <= 61 && y >= 20 && y < 24,
+    );
+    expect(Result.getOrThrow(traceView(sliver, VIEW)).outlines['head']).toEqual(plain);
+    // A spike of skin five pixels wide and twenty long, inked round, out of the top of the head: the outline turns back at its tip.
+    const spike = painted(
+      (x, y) => x >= 56 && x <= 64 && y < 22,
+      (x, y) => x >= 58 && x <= 62 && y >= 2 && y < 24,
+    );
+    const refused = traceView(spike, VIEW);
+    expect(Result.isFailure(refused) && refused.failure.reason).toContain(
+      'the part head doubles back on itself',
+    );
   });
 
   test("smooths a part's edge as far each way as the part asks", () => {

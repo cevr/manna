@@ -158,6 +158,8 @@ interface Tone {
   readonly color: string;
   readonly alpha?: number;
   readonly soft?: boolean;
+  /** Its points a chain of cubics (`cubicPath`), not points the smooth path runs through. */
+  readonly cubic?: true;
 }
 
 /** The grey paper of a person, its far side and its light: the figure ramp. */
@@ -529,6 +531,48 @@ const smoothPath = (fig: Figure, key: string, pts: ReadonlyArray<Pt>, closed = t
   return el('PointsPath', { isClosed: closed, isClockwise: true, name: 'Path' }, vertices);
 };
 
+/** A handle from `from` to `to`, as a detached vertex writes it: its angle and its length. */
+const handle = (from: Pt, to: Pt) => {
+  const [dx, dy] = [to[0] - from[0], to[1] - from[1]];
+  const distance = Math.hypot(dx, dy);
+  return { rotation: distance === 0 ? 0 : Math.atan2(dy, dx), distance };
+};
+
+/**
+ * A closed path along a chain of cubics (`core/fit.ts`: each anchor, its out
+ * handle, the next anchor's in handle, and so on round): each anchor a
+ * detached vertex named `key.j`, so the boil keys it and its handles ride
+ * with it, and each handle its own way, so a corner stays a corner.
+ */
+const cubicPath = (fig: Figure, key: string, chain: ReadonlyArray<Pt>): Element => {
+  const n = Math.floor(chain.length / 3);
+  const vertices = Array.from({ length: n }, (_, j) => {
+    const a = chain[3 * j] ?? [0, 0];
+    const into = handle(a, chain[(3 * j - 1 + 3 * n) % (3 * n)] ?? a);
+    const out = handle(a, chain[3 * j + 1] ?? a);
+    const name = `${key}.${j}`;
+    return el('CubicDetachedVertex', {
+      x: a[0],
+      y: a[1],
+      inRotation: into.rotation,
+      inDistance: into.distance,
+      outRotation: out.rotation,
+      outDistance: out.distance,
+      name,
+      id: fig.idOf(name),
+    });
+  });
+  return el('PointsPath', { isClosed: true, isClockwise: true, name: 'Path' }, vertices);
+};
+
+/** A closed path through `pts`: a chain of cubics' (`cubicPath`) when `cubic`, else the smooth path through them. */
+const pathOf = (fig: Figure, key: string, pts: ReadonlyArray<Pt>, cubic?: true) =>
+  cubic === true ? cubicPath(fig, key, pts) : smoothPath(fig, key, pts);
+
+/** The vertices a path through `pts` has, as the boil keys them: a chain's anchors, or every point. */
+const vertexPts = (pts: ReadonlyArray<Pt>, cubic?: true): ReadonlyArray<Pt> =>
+  cubic === true ? pts.filter((_, i) => i % 3 === 0) : pts;
+
 /**
  * A piece of the figure: a closed smooth outline through `pts`, painted
  * `look` with its crease across its own box, and its outline on the boil
@@ -541,7 +585,7 @@ export const piece = (
   key: string,
   pts: ReadonlyArray<Pt>,
   look: PieceLook,
-  opts: { readonly boil?: number } = {},
+  opts: { readonly boil?: number; readonly cubic?: true } = {},
 ): Element => paperOf(fig, { key, pts, look, ...opts }, false);
 
 /**
@@ -552,10 +596,10 @@ export const piece = (
 const paperOf = (fig: Figure, part: Part, inside: boolean): Element => {
   const { key, pts, look } = part;
   const boil = part.boil ?? 0.9;
-  if (boil > 0) fig.boil(key, pts, boil);
+  if (boil > 0) fig.boil(key, vertexPts(pts, part.cubic), boil);
   const box = boxOf(pts);
   const shape = el('Shape', { name: key, id: fig.idOf(key) }, [
-    smoothPath(fig, key, pts),
+    pathOf(fig, key, pts, part.cubic),
     ...paints(fig, look, box, inside),
   ]);
   const crescent = look.shade === undefined ? undefined : look.crease?.crescent;
@@ -569,7 +613,7 @@ const paperOf = (fig: Figure, part: Part, inside: boolean): Element => {
   return el('Node', { name: `${key}Piece` }, [
     ...onTop,
     shape,
-    ...(cast && look.over !== undefined ? casts(fig, key, pts, look, look.over, boil > 0) : []),
+    ...(cast && look.over !== undefined ? casts(fig, part, look.over, boil > 0) : []),
   ]);
 };
 
@@ -601,6 +645,23 @@ const inset = (pts: ReadonlyArray<Pt>, by: number): Pt[] => {
   });
 };
 
+/**
+ * A chain of cubics (`cubicPath`) moved `by` units inward: each anchor and
+ * its two handles together, along the anchor's normal as `inset` finds it
+ * among the anchors, so its curve keeps its shape.
+ */
+const insetChain = (chain: ReadonlyArray<Pt>, by: number): Pt[] => {
+  const anchors = chain.filter((_, i) => i % 3 === 0);
+  const moved = inset(anchors, by);
+  return chain.map((p, i) => {
+    // A point's anchor: itself, the anchor its out handle leaves, or the next one, whose in handle it is.
+    const j = ((Math.floor((i + 1) / 3) % anchors.length) + anchors.length) % anchors.length;
+    const a = anchors[j] ?? p;
+    const m = moved[j] ?? a;
+    return [p[0] + m[0] - a[0], p[1] + m[1] - a[1]];
+  });
+};
+
 /** How far toward the crease a rim keeps its whole light before it fades, a share of the way. */
 const RIM_HOLD = 0.6;
 
@@ -612,17 +673,19 @@ const RIM_HOLD = 0.6;
  */
 const rimOf = (fig: Figure, part: Part, width: number, box: Box, boils: boolean): Element => {
   const name = `${part.key}Rim`;
-  const pts = inset(part.pts, width / 2);
-  if (boils)
+  const pts = part.cubic === true ? insetChain(part.pts, width / 2) : inset(part.pts, width / 2);
+  if (boils) {
+    const [from, to] = [vertexPts(part.pts, part.cubic), vertexPts(pts, part.cubic)];
     fig.echo(
       name,
       part.key,
-      pts.length,
-      pts.map((p, i): Pt => [p[0] - (part.pts[i]?.[0] ?? 0), p[1] - (part.pts[i]?.[1] ?? 0)]),
+      to.length,
+      to.map((p, i): Pt => [p[0] - (from[i]?.[0] ?? 0), p[1] - (from[i]?.[1] ?? 0)]),
     );
+  }
   const { start, end, at } = creaseOf(box, part.look.crease);
   return el('Shape', { name, id: fig.idOf(name) }, [
-    smoothPath(fig, name, pts),
+    pathOf(fig, name, pts, part.cubic),
     el('Stroke', { thickness: width, join: 'round', cap: 'round', name: 'Rim' }, [
       el('LinearGradient', { startX: start[0], startY: start[1], endX: end[0], endY: end[1] }, [
         el('GradientStop', { colorValue: argb(part.look.light), position: 0 }),
@@ -648,15 +711,16 @@ const litOf = (fig: Figure, part: Part, share: number, box: Box, boils: boolean)
     (-Math.sin(toward) * share * (box.y1 - box.y0)) / 2,
   ];
   const pts = part.pts.map(([x, y]): Pt => [x + by[0], y + by[1]]);
+  const n = vertexPts(pts, part.cubic).length;
   if (boils)
     fig.echo(
       name,
       part.key,
-      pts.length,
-      pts.map(() => by),
+      n,
+      Array.from({ length: n }, () => by),
     );
   return el('Shape', { name, id: fig.idOf(name) }, [
-    smoothPath(fig, name, pts),
+    pathOf(fig, name, pts, part.cubic),
     el('Fill', { name: 'Lit' }, [solid(part.look.color)]),
     el('ClippingShape', { sourceId: fig.idOf(part.key), name: 'Clip' }),
   ]);
@@ -681,7 +745,7 @@ const toneOf = (fig: Figure, key: string, tone: Tone, i: number): Element => {
       )
     : solid(tone.color, alpha);
   return el('Shape', { name, id: fig.idOf(name) }, [
-    smoothPath(fig, name, tone.pts),
+    pathOf(fig, name, tone.pts, tone.cubic),
     el('Fill', { name: 'Tone' }, [paint]),
     el('ClippingShape', { sourceId: fig.idOf(key), name: 'Clip' }),
   ]);
@@ -695,6 +759,8 @@ export interface Part {
   readonly pts: ReadonlyArray<Pt>;
   readonly look: PieceLook;
   readonly boil?: number;
+  /** Its points a chain of cubics (`cubicPath`), not points the smooth path runs through. */
+  readonly cubic?: true;
   /** The joints it turns on, outermost first, each about its point by its number: its points are where it is traced, so each joint turns it about a point in the same frame. */
   readonly frames?: ReadonlyArray<Frame>;
 }
@@ -761,8 +827,8 @@ export const silhouette = (
   const name = `${key}Ink`;
   const paths = parts.map((p) => {
     const at = `${name}${p.key}`;
-    if ((p.boil ?? 0.9) > 0) fig.echo(at, p.key, p.pts.length);
-    return framed(fig, p, `${key}Ink`, smoothPath(fig, at, p.pts));
+    if ((p.boil ?? 0.9) > 0) fig.echo(at, p.key, vertexPts(p.pts, p.cubic).length);
+    return framed(fig, p, `${key}Ink`, pathOf(fig, at, p.pts, p.cubic));
   });
   const d = fig.direction;
   const weight = opts.ink ?? 'outer';
@@ -810,12 +876,11 @@ const behindOf = (fig: Figure, name: string, target: string): Element =>
  */
 const casts = (
   fig: Figure,
-  key: string,
-  pts: ReadonlyArray<Pt>,
-  look: PieceLook,
+  part: Part,
   over: NonNullable<PieceLook['over']>,
   boils: boolean,
 ): Element[] => {
+  const { key, pts, look } = part;
   const lift = look.shadow ?? 0.35;
   const cast = (
     name: string,
@@ -823,9 +888,9 @@ const casts = (
     target: { readonly key: string; readonly placement: 'before' | 'after' },
     clip?: string,
   ) => {
-    if (boils) fig.echo(name, key, pts.length);
+    if (boils) fig.echo(name, key, vertexPts(pts, part.cubic).length);
     return el('Shape', { name, id: fig.idOf(name) }, [
-      smoothPath(fig, name, pts),
+      pathOf(fig, name, pts, part.cubic),
       shadowFill(shade, lift),
       ...(clip === undefined
         ? []

@@ -17,6 +17,7 @@
 // only picks its pixels, and the film's papers paint it. Pure.
 
 import { Result, Schema } from 'effect';
+import { SHEET_FIT, anchorTurns, anchorsOf, fitClosed } from './fit.ts';
 import type { Raster } from './raster.ts';
 
 /** A point in the sheet's pixels. */
@@ -54,8 +55,10 @@ export interface TracePart {
   readonly as?: TraceAs;
   /** A tone's smallest piece, square pixels (`TONE_MIN` unless given). */
   readonly min?: number;
-  /** How many edge pixels each way its edge is averaged over before it is taken every `STEP` (`SMOOTH` unless given): more rounds a curled edge into waves. */
+  /** How many edge pixels each way its edge is averaged over before it is taken every `STEP` or fitted (`SMOOTH` or `CUBIC_SMOOTH` unless given): more rounds a curled edge into waves. */
   readonly smooth?: number;
+  /** How its outline and tones are written: points every `STEP` (`points`), or a chain of cubics fitted to its edge (`cubic`, `core/fit.ts`); the view's unless given. */
+  readonly path?: 'points' | 'cubic';
   /** What the table says of it, one line. */
   readonly doc?: string;
 }
@@ -91,6 +94,8 @@ interface TraceView {
   readonly head?: string;
   /** The parts whose lowest row is the soles' and whose middle is the feet's (`PANEL.feet`). */
   readonly feet?: ReadonlyArray<string>;
+  /** How its parts are written unless a part says (`TracePart.path`): `points` unless given. */
+  readonly path?: 'points' | 'cubic';
 }
 
 /** A view of a sheet as a trace spec names it: how it is traced, the table it writes beside the spec, what the table says it is. */
@@ -149,11 +154,25 @@ const INK_LUMA = 40;
 /** The ground is paper and its shadow, all lighter than this luma: the line's edge, antialiased, is darker. */
 const GROUND_LUMA = 110;
 
-/** Half the sheets' silhouette line, pixels: a part reaches its middle, where the house's own line is drawn. */
-const LINE_HALF = 3;
+/**
+ * The widest the sheets' silhouette line runs, pixels (they draw it 6 to 9
+ * wide): the ink the ground reaches through ink is that line, and a part ends
+ * on its inner edge, since the house lays its own line outside its paper
+ * (`rig/parts.ts`, `edgeWidths`).
+ */
+const LINE_MAX = 14;
 
-/** How far a part grows into the ink round it, pixels: half the sheets' line, so two parts meet under it. */
+/** How far a part grows into the ink round it, pixels: half the sheets' line, so two parts meet under a line between them. */
 const GROW = 4;
+
+/** How far each way a written part's mask is opened and closed, pixels: a sliver or a notch this thin is a slip of the edge, never the sheet's. */
+const OPEN = 1;
+
+/** The sharpest an outline may turn at a point, radians: past it, it doubles back on itself (a hairpin), and its ink draws a spur. */
+const TURN_MAX = (120 * Math.PI) / 180;
+
+/** How far a cubic part's edge is smoothed each way before it is fitted, pixels: the pixel stair, no more. */
+const CUBIC_SMOOTH = 2;
 
 /** An outline's points, sheet pixels apart along its edge (RIVE.md: 8 or more). */
 const STEP = 9;
@@ -528,11 +547,62 @@ const areaOf = (pts: ReadonlyArray<TracePt>) => {
   return Math.abs(twice) / 2;
 };
 
-/** The outline of `pixels` (one piece) in sheet pixels: its edge smoothed and taken every `STEP`. */
-const outlineOf = (g: Grid, pixels: ReadonlyArray<number>, smooth = SMOOTH): TracePt[] =>
-  resampled(smoothed(edgeOf(g, filled(g, maskOf(g, pixels))), smooth), STEP).map(
-    ([x, y]): TracePt => [half(g.x0 + x + 0.5), half(g.y0 + y + 0.5)],
+/** How a part is written: its points every `STEP`, or a chain of cubics. */
+type TracePath = 'points' | 'cubic';
+
+/**
+ * The outline of `pixels` (one piece) in sheet pixels: its edge smoothed and
+ * taken every `STEP`, or smoothed less and fitted as a chain of cubics
+ * (`fitClosed`).
+ */
+const outlineOf = (
+  g: Grid,
+  pixels: ReadonlyArray<number>,
+  path: TracePath,
+  smooth?: number,
+): TracePt[] => {
+  const edge = edgeOf(g, filled(g, maskOf(g, pixels)));
+  const line =
+    path === 'cubic'
+      ? fitClosed(smoothed(edge, smooth ?? CUBIC_SMOOTH), SHEET_FIT)
+      : resampled(smoothed(edge, smooth ?? SMOOTH), STEP);
+  return line.map(([x, y]): TracePt => [half(g.x0 + x + 0.5), half(g.y0 + y + 0.5)]);
+};
+
+/** How sharply an outline of points turns at each, radians (0 straight on, π doubling back). */
+const pointTurns = (pts: ReadonlyArray<TracePt>) =>
+  pts.map((p, i) => {
+    const a = pts[(i - 1 + pts.length) % pts.length] ?? p;
+    const b = pts[(i + 1) % pts.length] ?? p;
+    const [ux, uy, vx, vy] = [p[0] - a[0], p[1] - a[1], b[0] - p[0], b[1] - p[1]];
+    const l = Math.hypot(ux, uy) * Math.hypot(vx, vy);
+    return l === 0 ? 0 : Math.acos(Math.max(-1, Math.min(1, (ux * vx + uy * vy) / l)));
+  });
+
+/** Where an outline doubles back on itself (`TURN_MAX`): each such point and its turn, degrees. */
+const hairpinsOf = (pts: ReadonlyArray<TracePt>, path: TracePath) => {
+  const at = path === 'cubic' ? anchorsOf(pts) : pts;
+  const turns = path === 'cubic' ? anchorTurns(pts) : pointTurns(pts);
+  return turns.flatMap((t, i) =>
+    t > TURN_MAX ? [`${(at[i] ?? [0, 0]).join(',')} (${Math.round((t * 180) / Math.PI)}°)`] : [],
   );
+};
+
+/** `mask` less every pixel within `by` of a pixel outside it. */
+const eroded = (g: Grid, mask: Uint8Array, by: number): Uint8Array =>
+  grown(
+    g,
+    mask.map((v) => 1 - v),
+    by,
+    () => true,
+  ).map((v) => 1 - v);
+
+/** `mask` opened and closed `by` pixels: a sliver or a notch thinner than twice that gone, every other edge where it was. */
+const cleaned = (g: Grid, mask: Uint8Array, by: number): Uint8Array => {
+  const all = () => true;
+  const opened = grown(g, eroded(g, mask, by), by, all);
+  return eroded(g, grown(g, opened, by, all), by);
+};
 
 /** A mark's ink: its pixels' centre, its box, its stroke's width, and the two ends of the line it is drawn along (the pair of its pixels farthest apart, each moved half the stroke inward). */
 const markOf = (g: Grid, pixels: ReadonlyArray<number>) => {
@@ -573,13 +643,18 @@ const markOf = (g: Grid, pixels: ReadonlyArray<number>) => {
   };
 };
 
-/** The ink piece nearest `p` among `pieces` (each its pixels), by its nearest pixel. */
-const nearestPiece = (g: Grid, pieces: ReadonlyArray<ReadonlyArray<number>>, p: TracePt) => {
+/** The ink piece nearest `p` among `pieces` (each its pixels) and not `taken`, by its nearest pixel: none when no piece is left. */
+const nearestPiece = (
+  g: Grid,
+  pieces: ReadonlyArray<ReadonlyArray<number>>,
+  p: TracePt,
+  taken: ReadonlySet<ReadonlyArray<number>> = new Set(),
+) => {
   const [px, py] = [p[0] - g.x0, p[1] - g.y0];
   let best: ReadonlyArray<number> = [];
   let bestD = Infinity;
   for (const piece of pieces)
-    for (const k of piece) {
+    for (const k of taken.has(piece) ? [] : piece) {
       const d = Math.hypot((k % g.w) - px, Math.floor(k / g.w) - py);
       if (d < bestD) {
         bestD = d;
@@ -760,15 +835,31 @@ const marksOf = (
     rd.ink.map((v, k) => (v === 1 && figure(k) ? 1 : 0)),
   );
   const near = inkPieces.filter((p) => p.length < (g.w * g.h) / 50);
-  const mark = (p: TracePt) => markOf(g, nearestPiece(g, near, p));
-  const eyes = seeds.eyes.map(mark);
-  const brows = seeds.brows.map(mark);
+  // Each mark takes the nearest piece no mark before it took: a brow seed beside its eye takes the brow.
+  const taken = new Set<ReadonlyArray<number>>();
+  const mark = (what: string) => (p: TracePt) => {
+    const piece = nearestPiece(g, near, p, taken);
+    if (piece.length === 0) {
+      rd.refused.push(`the ${what} at ${p.join(',')} finds no ink of its own`);
+      return undefined;
+    }
+    taken.add(piece);
+    return markOf(g, piece);
+  };
+  const eyes = seeds.eyes.map(mark('eye'));
+  const brows = seeds.brows.map(mark('brow'));
   const mouth = isReadMouth(seeds.mouth)
     ? { ends: seeds.mouth.ends, stroke: seeds.mouth.line }
-    : mark(seeds.mouth);
+    : mark('mouth')(seeds.mouth);
   const [e0, e1] = [eyes[0], eyes[1] ?? eyes[0]];
   const [b0, b1] = [brows[0], brows[1] ?? brows[0]];
-  if (e0 === undefined || e1 === undefined || b0 === undefined || b1 === undefined)
+  if (
+    e0 === undefined ||
+    e1 === undefined ||
+    b0 === undefined ||
+    b1 === undefined ||
+    mouth === undefined
+  )
     return undefined;
   return {
     eyes: [rounded(e0.centre), rounded(e1.centre)],
@@ -811,19 +902,53 @@ const readOf = (sheet: Raster, view: TraceView) => {
   const figure = (k: number) => ground[k] === 0;
   const kinds = classesOf(g, view.classes, (k) => figure(k) && ink[k] === 0);
   const { label, regions } = regionsOf(g, kinds);
-  // The figure as far as the middle of its line: what its own line is drawn round.
-  const rim = grown(g, ground, LINE_HALF, () => true);
+  // The figure inside its line: the ground grown through the ink it meets, and the antialiased pixel past that.
+  const line = grown(
+    g,
+    grown(g, ground, LINE_MAX, (k) => ink[k] === 1),
+    1,
+    () => true,
+  );
   const rd: Read = {
     g,
     n,
     ink,
     kinds,
     label,
-    core: (k) => rim[k] === 0,
+    core: (k) => line[k] === 0,
     classIds: Object.keys(view.classes),
     refused: [],
   };
   return { rd, figure, regions: regions.filter((r) => r.size >= REGION_MIN) };
+};
+
+/** Each part of `view` written as its `as` says: its outline, its tones or its circle, its mask opened and closed first (`cleaned`); an outline that doubles back refused. */
+const writtenOf = (rd: Read, view: TraceView, of: (name: string) => Uint8Array) => {
+  const { g } = rd;
+  const outlines: Record<string, ReadonlyArray<TracePt>> = {};
+  const tones: Record<string, ReadonlyArray<ReadonlyArray<TracePt>>> = {};
+  const circles: Record<string, { at: TracePt; r: number }> = {};
+  for (const [name, part] of Object.entries(view.parts)) {
+    const as = part.as ?? 'outline';
+    if (as === 'none' || as === 'marks') continue;
+    const path = part.path ?? view.path ?? 'points';
+    const pieces = piecesOf(g, cleaned(g, of(name), OPEN));
+    const largest = pieces[0] ?? [];
+    if (as !== 'tones' && largest.length === 0) rd.refused.push(`the part ${name} is empty`);
+    else if (as === 'outline') {
+      const outline = outlineOf(g, largest, path, part.smooth);
+      const hairpins = hairpinsOf(outline, path);
+      if (hairpins.length > 0)
+        rd.refused.push(`the part ${name} doubles back on itself at ${hairpins.join(', ')}`);
+      outlines[name] = outline;
+    } else if (as === 'circle') circles[name] = circleOf(g, largest);
+    else
+      tones[name] = pieces
+        .filter((p) => p.length >= (part.min ?? TONE_MIN))
+        .map((p) => outlineOf(g, p, path, part.smooth))
+        .filter((pts) => pts.length >= 3 && areaOf(pts) > 0);
+  }
+  return { outlines, tones, circles };
 };
 
 /**
@@ -836,24 +961,7 @@ export const traceView = (sheet: Raster, view: TraceView): Result.Result<Traced,
   const { rd, figure, regions } = readOf(sheet, view);
   const { g } = rd;
   const of = partsOf(rd, view.parts);
-  const outlines: Record<string, ReadonlyArray<TracePt>> = {};
-  const tones: Record<string, ReadonlyArray<ReadonlyArray<TracePt>>> = {};
-  const circles: Record<string, { at: TracePt; r: number }> = {};
-  for (const [name, part] of Object.entries(view.parts)) {
-    const as = part.as ?? 'outline';
-    if (as === 'none' || as === 'marks') continue;
-    const pieces = piecesOf(g, of(name));
-    const largest = pieces[0] ?? [];
-    if (as !== 'tones' && largest.length === 0) rd.refused.push(`the part ${name} is empty`);
-    else if (as === 'outline') outlines[name] = outlineOf(g, largest, part.smooth);
-    else if (as === 'circle') circles[name] = circleOf(g, largest);
-    else
-      tones[name] = pieces
-        .filter((p) => p.length >= (part.min ?? TONE_MIN))
-        .map((p) => outlineOf(g, p, part.smooth))
-        .filter((pts) => pts.length >= 3 && areaOf(pts) > 0);
-  }
-  let traced: Traced = { outlines, tones, circles, regions };
+  let traced: Traced = { ...writtenOf(rd, view, of), regions };
   const marks = view.marks === undefined ? undefined : marksOf(rd, figure, view.marks);
   if (marks !== undefined) traced = { ...traced, marks };
   if (view.head !== undefined) {

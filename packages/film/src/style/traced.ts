@@ -12,6 +12,7 @@
 // same numbers (its face's, its stance's, both arms' and their elbows', and
 // an open mouth's when it has one), so a pose names them on any view. Pure.
 
+import { SHEET_FIT, chainThrough, fitClosed, flattened } from '../core/fit.ts';
 import type { ConceptRef } from '../core/match.ts';
 import { figure } from './figure.ts';
 import type { Paper } from './paper.ts';
@@ -110,6 +111,13 @@ export interface TracedFigureSpec {
   readonly hands: Paper;
   /** The figure's breath: seconds, the trunk's height at its top against its own, the neck's rise. */
   readonly breath?: { readonly period: number; readonly trunk: number; readonly neck: number };
+  /**
+   * How its tables write its head's, hair's, ears', body's and arms'
+   * outlines and the tones on them: `cubic`, chains of cubics fitted to the
+   * sheet (`film concept trace`, a part's `path`); points when left out. Its
+   * feet are points either way.
+   */
+  readonly path?: 'cubic';
 }
 
 /** Every traced figure's numbers: its face's, its stance's, both arms' and their elbows'. */
@@ -210,15 +218,15 @@ const BALL_POINTS = 9;
  * pivot to its hand, its upper sleeve (to past the elbow, its top a ball
  * about the pivot) and its forearm (from before the elbow to its cuff).
  */
-const cutArm = (arm: TracedArmSpec) => {
-  const top = Math.min(...arm.outline.map(([, y]) => y));
-  const [l0, r0] = spanAt(arm.outline, top + 12);
+const cutArm = (arm: TracedArmSpec, outline: ReadonlyArray<Pt>) => {
+  const top = Math.min(...outline.map(([, y]) => y));
+  const [l0, r0] = spanAt(outline, top + 12);
   const half = (r0 - l0) / 2;
   const pivot: Pt = [l0 + half, top + half];
   const elbowY = pivot[1] + (arm.hand.at[1] - pivot[1]) * (arm.elbow ?? 0.45);
   const elbow = onLine(pivot, arm.hand.at, elbowY);
-  const below = cutAt(cutAt(arm.outline, elbowY + ELBOW_OVERLAP, 'above'), pivot[1], 'below');
-  const [bl, br] = spanAt(arm.outline, pivot[1] + 1);
+  const below = cutAt(cutAt(outline, elbowY + ELBOW_OVERLAP, 'above'), pivot[1], 'below');
+  const [bl, br] = spanAt(outline, pivot[1] + 1);
   const r = Math.max(half, (br - bl) / 2);
   const ball: Pt[] = Array.from({ length: BALL_POINTS }, (_, i) => {
     const a = Math.PI + (i / (BALL_POINTS - 1)) * Math.PI;
@@ -226,9 +234,12 @@ const cutArm = (arm: TracedArmSpec) => {
   });
   // The cut sleeve runs clockwise on screen: its top's two corners at the pivot's row are its ends.
   const upper = [...ball, ...below.filter(([, y]) => y > pivot[1] + 0.5)];
-  const forearm = cutAt(arm.outline, elbowY - ELBOW_OVERLAP, 'below');
+  const forearm = cutAt(outline, elbowY - ELBOW_OVERLAP, 'below');
   return { pivot, elbow, upper, forearm };
 };
+
+/** How finely a chain is laid as points to be cut or read (`flattened`), sheet pixels. */
+const FLAT_STEP = 1;
 
 /** `p` turned `by` radians about the figure's feet, its origin. */
 const leanedBy = ([x, y]: Pt, by: number): Pt => {
@@ -259,6 +270,13 @@ export const tracedHands = (
  */
 export const tracedFigure = (spec: TracedFigureSpec) => {
   const s = spec.scale;
+  const cubic = spec.path === 'cubic';
+  // A chain's points are its anchors and handles: what is read off its line is read off the line laid as points.
+  const line = (pts: ReadonlyArray<Pt>) => (cubic ? flattened(pts, FLAT_STEP * s) : pts);
+  // A polygon the house would draw smooth through its points, as a chain when the figure's outlines are chains.
+  const asPath = (pts: ReadonlyArray<Pt>) => (cubic ? chainThrough(pts) : [...pts]);
+  // A cut sheet outline fitted again as a chain, when the figure's outlines are chains.
+  const refit = (pts: ReadonlyArray<Pt>) => (cubic ? fitClosed(pts, SHEET_FIT) : [...pts]);
   const fromHead = ([x, y]: Pt): Pt => [
     hundredth((x - spec.headAt[0]) * s),
     hundredth((y - spec.headAt[1]) * s),
@@ -278,23 +296,24 @@ export const tracedFigure = (spec: TracedFigureSpec) => {
       ),
     );
   const headOutline = head(spec.head.outline);
-  const ys = headOutline.map(([, y]) => y);
+  const ys = line(headOutline).map(([, y]) => y);
   const headY = hundredth((spec.headAt[1] - spec.feet[1]) * s);
   const chin = Math.max(...ys);
   const armOf = (arm: TracedArmSpec) => {
-    const cut = cutArm(arm);
+    const outline = cubic ? flattened(arm.outline, FLAT_STEP) : arm.outline;
+    const cut = cutArm(arm, outline);
     const edges: ReadonlyArray<TracedTone> =
       arm.edge === undefined
         ? []
-        : [{ pts: sleeveEdges(arm.outline, spec.headAt[0]), color: arm.edge }];
+        : [{ pts: sleeveEdges(outline, spec.headAt[0]).map(asPath), color: arm.edge }];
     const tones = [...edges, ...(arm.tones ?? [])];
     return JointedArm({
       pivot: fromFeet(cut.pivot),
       rest: 0,
-      outline: body(cut.upper),
+      outline: body(refit(cut.upper)),
       elbow: fromFeet(cut.elbow),
       bend: 0,
-      forearm: body(cut.forearm),
+      forearm: body(refit(cut.forearm)),
       hand: fromFeet(arm.hand.at),
       paper: arm.paper,
       tones: toned(body, tones),
@@ -304,14 +323,15 @@ export const tracedFigure = (spec: TracedFigureSpec) => {
   const near = armOf(spec.arms.near);
   const far = armOf(spec.arms.far);
   const bodyOutline = body(spec.body.outline);
-  const hem = Math.max(...bodyOutline.map(([, y]) => y));
+  const hem = Math.max(...line(bodyOutline).map(([, y]) => y));
+  // The house reads a head's width off its outline's points (`figure`, its hands' size): so is it read here.
   const headWidth =
     Math.max(...headOutline.map(([x]) => x)) - Math.min(...headOutline.map(([x]) => x));
   // The sheet draws both hands one size; the larger traced circle is that size, so each touches its cuff.
   const handR = Math.max(spec.arms.near.hand.r, spec.arms.far.hand.r);
   const handShare = hundredth((2 * handR * s) / headWidth);
   // Room round him for his head's tilt, his arms' reach and his outline; his feet are the rig's origin.
-  const all = [...bodyOutline, ...headOutline.map(([x, y]): Pt => [x, y + headY])];
+  const all = [...line(bodyOutline), ...line(headOutline).map(([x, y]): Pt => [x, y + headY])];
   const reach = Math.max(...all.map(([x]) => Math.abs(x))) + 120;
   const top = Math.min(...all.map(([, y]) => y)) - 60;
   const feet: Pt = [Math.ceil(reach), Math.ceil(-top)];
@@ -381,6 +401,7 @@ export const tracedFigure = (spec: TracedFigureSpec) => {
       sole: spec.feet_.sole,
     }),
     hands: Hands({ paper: spec.hands, share: handShare }),
+    path: spec.path,
   });
   // Every traced figure's numbers, and the extra marks' where its face opts into them.
   const knobs: Readonly<Record<Exclude<TracedKnob, ExtraFaceKnob>, number>> &

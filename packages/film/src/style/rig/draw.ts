@@ -183,7 +183,19 @@ interface Cut {
   readonly pts: ReadonlyArray<Pt>;
   readonly look: PieceLook;
   readonly boil?: number;
+  readonly cubic?: true;
 }
+
+/** Whether `f`'s traced outlines are chains of cubics (`Parts.path`). */
+const cubicOf = (f: Parts): true | undefined => (f.path === 'cubic' ? true : undefined);
+
+/** `look` with the tones laid on it drawn as chains of cubics, when `cubic`. */
+const cubicLook = (look: PieceLook, cubic: true | undefined): PieceLook =>
+  cubic === undefined ? look : { ...look, tones: (look.tones ?? []).map((t) => ({ ...t, cubic })) };
+
+/** `cut` drawn as a chain of cubics, and its tones, when `cubic`. */
+const cubicCut = <C extends Cut>(cut: C, cubic: true | undefined): C =>
+  cubic === undefined ? cut : { ...cut, cubic, look: cubicLook(cut.look, cubic) };
 
 /** The ear or the ears, flat skin inside the head's outline, each crawling as a small piece: both ears the near one first. */
 const earsOf = (ear: Ear): Cut[] => {
@@ -321,6 +333,8 @@ const shoutsOf = (rig: Figure, f: Parts) =>
  */
 const tracedHeadOf = (rig: Figure, f: Parts, head: TracedHead) => {
   const face = f.beard === undefined ? undefined : kitOf(rig, f.face);
+  const cuts = cutOf(f).map((c) => cubicCut(c, cubicOf(f)));
+  const own = cubicCut(headPaperOf(head), cubicOf(f));
   return el('Node', { y: head.neck, name: 'neck', id: rig.idOf('neck') }, [
     el('Node', { name: 'head', id: rig.idOf('head') }, [
       rig.bind('tilt', KEY.rotation),
@@ -334,8 +348,8 @@ const tracedHeadOf = (rig: Figure, f: Parts, head: TracedHead) => {
               rig,
               'headCut',
               face === undefined
-                ? [...cutOf(f), ...shoutsOf(rig, f), kitOf(rig, f.face), headPaperOf(head)]
-                : [...shoutsOf(rig, f), face, ...tuckedUnder([...cutOf(f), headPaperOf(head)])],
+                ? [...cuts, ...shoutsOf(rig, f), kitOf(rig, f.face), own]
+                : [...shoutsOf(rig, f), face, ...tuckedUnder([...cuts, own])],
               head.chin === 'open' ? { behind: garmentBack(f) } : {},
             ),
           ],
@@ -391,11 +405,18 @@ const bandsOf = (rig: Figure, b: Bands) =>
  * An arm's sleeve `key` on its pivot, in `look` and in the pose it is
  * traced in, turned there by its side's number (`nearArm`, `farArm`).
  */
-const sleeveOf = (rig: Figure, side: ArmSide, arm: Arm, key: string, look: PieceLook): Element =>
+const sleeveOf = (
+  rig: Figure,
+  side: ArmSide,
+  arm: Arm,
+  key: string,
+  look: PieceLook,
+  cubic: true | undefined,
+): Element =>
   el('Node', { x: arm.pivot[0], y: arm.pivot[1], name: `${key}Arm`, id: rig.idOf(`${key}Arm`) }, [
     rig.bind(`${side}Arm`, KEY.rotation),
     el('Node', { x: -arm.pivot[0], y: -arm.pivot[1], name: `${key}At` }, [
-      piece(rig, key, arm.outline, look),
+      piece(rig, key, arm.outline, cubicLook(look, cubic), { cubic }),
     ]),
   ]);
 
@@ -411,17 +432,30 @@ interface Sleeves {
  * sleeve in its shoulder's (`Part.frames`), each joint turned by its side's
  * number (`nearArm`, `nearElbow`).
  */
-const jointedOf = (side: ArmSide, arm: JointedArm, key: string, sleeves: Sleeves): Part[] => {
+const jointedOf = (
+  side: ArmSide,
+  arm: JointedArm,
+  key: string,
+  sleeves: Sleeves,
+  cubic: true | undefined,
+): Part[] => {
   const shoulder = { at: arm.pivot, knob: `${side}Arm`, name: `${key}Arm` };
   const elbow = { at: arm.elbow, knob: `${side}Elbow`, name: `${key}Elbow` };
   return [
     {
       key: `${key}Fore`,
       pts: arm.forearm,
-      look: sleeves.look(arm, 'forearm'),
+      look: cubicLook(sleeves.look(arm, 'forearm'), cubic),
       frames: [shoulder, elbow],
+      cubic,
     },
-    { key, pts: arm.outline, look: sleeves.look(arm, 'upper'), frames: [shoulder] },
+    {
+      key,
+      pts: arm.outline,
+      look: cubicLook(sleeves.look(arm, 'upper'), cubic),
+      frames: [shoulder],
+      cubic,
+    },
   ];
 };
 
@@ -448,19 +482,23 @@ const sleevedOf = (
     const arm = f.arms[side];
     return arm === undefined ? [] : [{ side, arm, key: `${side}${sleeves.key}` }];
   });
+  const cubic = cubicOf(f);
   const front = sided.flatMap(({ side, arm, key: at }) =>
-    arm._tag === 'JointedArm' ? jointedOf(side, arm, at, sleeves) : [],
+    arm._tag === 'JointedArm' ? jointedOf(side, arm, at, sleeves, cubic) : [],
   );
   const behind = sided.flatMap(({ side, arm, key: at }) =>
-    arm._tag === 'Arm' ? [sleeveOf(rig, side, arm, at, sleeves.look(arm, 'upper'))] : [],
+    arm._tag === 'Arm' ? [sleeveOf(rig, side, arm, at, sleeves.look(arm, 'upper'), cubic)] : [],
   );
   const hem = hemOver(f);
+  // Only a traced robe's outline is fitted: any other garment's is drawn by the house.
+  const own = f.body._tag === 'TracedRobe' ? cubic : undefined;
+  const paper = cubicLook(look, own);
   return front.length === 0 && behind.length === 0 && under.length === 0 && hem === undefined
-    ? piece(rig, key, outline, look)
+    ? piece(rig, key, outline, paper, { cubic: own })
     : silhouette(
         rig,
         `${key}Cut`,
-        [...front, ...under, { key, pts: outline, look }, ...behind],
+        [...front, ...under, { key, pts: outline, look: paper, cubic: own }, ...behind],
         hem === undefined ? {} : { behind: hem },
       );
 };

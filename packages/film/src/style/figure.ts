@@ -85,6 +85,15 @@ interface Composed {
   /** What the story does to its garment, in any order: each kind once. */
   readonly states?: ReadonlyArray<State>;
   readonly hands: Hands;
+  /**
+   * How its traced outlines are written: `cubic`, each a chain of cubics
+   * fitted to its sheet (`core/fit.ts`: an anchor, its out handle, the next
+   * anchor's in handle, and so on round), drawn with each handle its own way
+   * so a corner stays a corner; points the house's smooth path runs through
+   * when left out. It holds for its traced head and what is cut inside it,
+   * its traced robe, its arms, and the tones laid on each.
+   */
+  readonly path?: 'cubic';
 }
 
 /** A standing figure: its feet are its origin. */
@@ -163,6 +172,7 @@ const slots = {
   over: Schema.optionalKey(Schema.Unknown),
   states: Schema.optionalKey(Schema.Array(Schema.Unknown).check(oncePerKind)),
   hands: Schema.Unknown,
+  path: Schema.optional(Schema.Literal('cubic')),
 };
 
 /** A standing figure's slots: every figure's, its artboard, its stance and its feet. */
@@ -198,6 +208,7 @@ interface ComposedParts {
   readonly over?: Over;
   readonly states: { readonly stain?: Stain; readonly robe?: GivenRobe };
   readonly hands: Hands;
+  readonly path?: 'cubic';
 }
 
 /** A standing figure's parts: every figure's, its artboard, its stance and its feet. */
@@ -487,7 +498,8 @@ const composedOf = (spec: FigureSpec, concept: ConceptRef): ComposedParts => {
     hands,
   };
   if (parts.states.robe !== undefined) skinUnderRobe(parts);
-  return parts;
+  // A figure that writes no path leaves the key out, so its parts are as they were.
+  return spec.path === undefined ? parts : { ...parts, path: spec.path };
 };
 
 /** A figure's parts of `spec`: its slots checked as its stance's, then each part as its kind's. */

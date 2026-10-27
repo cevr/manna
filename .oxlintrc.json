@@ -600,7 +600,8 @@
       // labels and its distance fields read pixel by pixel. Typed arrays and
       // label tables are indexed inside their bounds (`!`, `?? 0`) and each
       // pixel branches with a ternary, as the mix's sample loops do; the
-      // measure stays pure, RGBA in, numbers out.
+      // measure stays pure, RGBA in, numbers out. The tracer and the fit of
+      // its edges (`core/fit.ts`) read points the same way.
       "files": [
         "**/packages/film/src/core/figure.ts",
         "**/packages/film/src/core/render-artifacts.ts",
@@ -608,6 +609,7 @@
         "**/packages/film/src/core/cast-sheet-pixels.ts",
         "**/packages/film/src/core/cast-underlay.ts",
         "**/packages/film/src/core/trace.ts",
+        "**/packages/film/src/core/fit.ts",
         "**/packages/film/src/core/fixtures/figure.ts"
       ],
       "rules": {
