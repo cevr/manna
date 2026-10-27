@@ -21,6 +21,8 @@ export const fake = () => {
     saveFails: false,
     networkFails: false,
     networkFailsAt: -1,
+    removeFails: false,
+    removeFailNumber: -1,
     total: 12,
     chunk: 12,
     etag: '"v1"',
@@ -50,7 +52,8 @@ export const fake = () => {
           entries.set(identityKey(entry), entry);
         }),
       remove: (id) =>
-        Effect.sync(() => {
+        Effect.gen(function* () {
+          if (control.removeFails || id.number === control.removeFailNumber) return yield* fail();
           entries.delete(identityKey(id));
           files.delete(identityKey(id));
         }),

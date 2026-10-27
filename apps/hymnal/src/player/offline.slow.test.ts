@@ -71,6 +71,149 @@ const device = () => {
 };
 const timeline = { first: 5000, end: 240000, lines: [] };
 
+for (const continuous of [true, false])
+  it.effect(`offline pending lookup keeps pause and resume time continuous=${continuous}`, () => {
+    const f = fake();
+    return Effect.gen(function* () {
+      const cache = yield* Offline,
+        d = device();
+      const entered = yield* Deferred.make<boolean>(),
+        release = yield* Deferred.make<Option.Option<string>>();
+      const held = {
+        ...cache,
+        local: () => Deferred.succeed(entered, true).pipe(Effect.andThen(Deferred.await(release))),
+      };
+      const api = localOver(d.api, held);
+      const pending = yield* api
+        .play(audioUrl(100, 2), 32000, {
+          recording: { number: 100, offset: 2 },
+          continuous,
+          ready: true,
+          intent: 'play',
+        })
+        .pipe(Effect.forkChild);
+      yield* Deferred.await(entered);
+      yield* TestClock.adjust(1000);
+      yield* api.pause;
+      yield* TestClock.adjust(2000);
+      yield* api.resume;
+      yield* TestClock.adjust(500);
+      yield* Deferred.succeed(release, Option.none());
+      yield* Fiber.join(pending);
+      let expected = 32000;
+      if (continuous) expected = 33500;
+      expect(d.calls.at(-1)?.at).toBe(expected);
+    }).pipe(Effect.provide(f.layer), Effect.scoped);
+  });
+
+it.effect('offline local read failure retries remote at the provider retained position', () => {
+  const f = fake();
+  return Effect.gen(function* () {
+    const cache = yield* Offline,
+      d = device(),
+      id = { number: 100, offset: 2 };
+    yield* cache.enqueue(id);
+    yield* idle(cache);
+    const failed: PlaybackApi = {
+      ...d.api,
+      play: (uri, at, options) => {
+        if (uri.startsWith('file:'))
+          return PlaybackError.make({ operation: 'play', message: 'synthetic', positionMs: 57000 });
+        return d.api.play(uri, at, options);
+      },
+    };
+    yield* localOver(failed, cache).play(audioUrl(100, 2), 32000, {
+      recording: id,
+      continuous: true,
+      ready: true,
+      intent: 'play',
+    });
+    expect(d.calls.at(-1)?.at).toBe(57000);
+  }).pipe(Effect.provide(f.layer));
+});
+
+it.effect('offline Pause during a failed local prepare stays paused on the remote retry', () => {
+  const f = fake();
+  return Effect.gen(function* () {
+    const cache = yield* Offline,
+      d = device(),
+      id = { number: 100, offset: 2 };
+    yield* cache.enqueue(id);
+    yield* idle(cache);
+    const entered = yield* Deferred.make<boolean>(),
+      reply = yield* Deferred.make<Status, PlaybackError>();
+    const intents: string[] = [];
+    const delayed: PlaybackApi = {
+      ...d.api,
+      play: (uri, at, options) => {
+        if (uri.startsWith('file:'))
+          return Deferred.succeed(entered, true).pipe(Effect.andThen(Deferred.await(reply)));
+        intents.push(options?.intent ?? 'play');
+        return d.api.play(uri, at, options);
+      },
+    };
+    const api = localOver(delayed, cache);
+    const pending = yield* api
+      .play(audioUrl(100, 2), 32000, {
+        recording: id,
+        continuous: true,
+        ready: true,
+        intent: 'play',
+      })
+      .pipe(Effect.forkChild);
+    yield* Deferred.await(entered);
+    yield* api.pause;
+    yield* Deferred.fail(
+      reply,
+      PlaybackError.make({ operation: 'play', message: 'synthetic', positionMs: 32000 }),
+    );
+    yield* Fiber.join(pending);
+    expect(intents).toEqual(['pause']);
+  }).pipe(Effect.provide(f.layer), Effect.scoped);
+});
+
+it.effect('offline a former invalidation cannot start remote after a newer Play', () => {
+  const f = fake();
+  return Effect.gen(function* () {
+    const cache = yield* Offline,
+      d = device(),
+      id = { number: 100, offset: 2 };
+    yield* cache.enqueue(id);
+    yield* idle(cache);
+    const entered = yield* Deferred.make<boolean>(),
+      release = yield* Deferred.make<boolean>();
+    const delayed = {
+      ...cache,
+      invalidate: () =>
+        Deferred.succeed(entered, true).pipe(
+          Effect.andThen(Deferred.await(release)),
+          Effect.asVoid,
+        ),
+    };
+    const failed: PlaybackApi = {
+      ...d.api,
+      play: (uri, at, options) => {
+        if (uri.startsWith('file:'))
+          return PlaybackError.make({ operation: 'play', message: 'synthetic' });
+        return d.api.play(uri, at, options);
+      },
+    };
+    const api = localOver(failed, delayed);
+    const pending = yield* api
+      .play(audioUrl(100, 2), 32000, { recording: id, continuous: true, ready: true })
+      .pipe(Effect.exit, Effect.forkChild);
+    yield* Deferred.await(entered);
+    yield* api.play(audioUrl(3), 0, {
+      recording: { number: 3, offset: 0 },
+      continuous: false,
+      ready: false,
+    });
+    yield* Deferred.succeed(release, true);
+    expect(Exit.isFailure(yield* Fiber.join(pending))).toBe(true);
+    expect(d.calls.map((c) => c.number)).toEqual([3]);
+  }).pipe(Effect.provide(f.layer), Effect.scoped);
+});
+
 it.effect('offline missing media keeps the public player failure and retry path', () =>
   Effect.gen(function* () {
     const f = fake(),

@@ -293,9 +293,9 @@ export const offlineLayer = Layer.effect(Offline)(
       }),
     );
     const invalidate = Effect.fn('Offline.invalidate')(function* (id: Identity) {
-      yield* media.remove(id);
       entries.delete(identityKey(id));
-      yield* publish;
+      failed.add(identityKey(id));
+      yield* media.remove(id).pipe(Effect.ensuring(publish));
     });
     return Offline.of({
       enqueue: (id) => locked(add(id).pipe(Effect.andThen(publish))),
@@ -314,13 +314,15 @@ export const offlineLayer = Layer.effect(Offline)(
               const disk = yield* media.list;
               for (const row of new Map(
                 [...entries.values(), ...disk].map((row) => [identityKey(row), row]),
-              ).values())
+              ).values()) {
                 yield* media.remove(row);
+                entries.delete(identityKey(row));
+              }
               entries.clear();
               failed.clear();
               paused = false;
               yield* publish;
-            }),
+            }).pipe(Effect.ensuring(publish)),
           ),
         ),
       ),

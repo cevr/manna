@@ -51,6 +51,26 @@ The form of an entry, each field on its own line:
 
 ## Process and tooling
 
+### offline-storage-failure-counts
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "a failed unlink must not keep an unreadable entry counted as saved"
+- **Source:** hymnapp/playbulk/p5-self-check.md F3
+- **Wrong:** An unlink failure retained an unreadable entry in the saved index. A later delete failure also hid earlier successful removals from the count.
+- **Cause:** Index changes and publication waited for all storage work to succeed.
+- **Guard:** code: `apps/hymnal/src/offline/cache.slow.test.ts` `offline a failed removal still invalidates an unreadable saved entry`; `apps/hymnal/src/offline/cache.slow.test.ts` `offline a partial delete failure keeps counts consistent and can be retried`
+
+### offline-local-retry-ownership
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "a local retry must keep the latest intent, retained position and owner after invalidation"
+- **Source:** hymnapp/playbulk/p5-self-check.md F2
+- **Wrong:** A failed local prepare could retry remote at its initial position with Play intent after Pause, or after a newer Play took ownership during invalidation.
+- **Cause:** The local adapter captured a play's options and position across asynchronous storage work, and checked ownership only before invalidation.
+- **Guard:** code: `apps/hymnal/src/player/offline.slow.test.ts` `offline local read failure retries remote at the provider retained position`; `apps/hymnal/src/player/offline.slow.test.ts` `offline Pause during a failed local prepare stays paused on the remote retry`; `apps/hymnal/src/player/offline.slow.test.ts` `offline a former invalidation cannot start remote after a newer Play`
+
 ### offline-native-progress-value
 
 - **Date:** 2026-10-27

@@ -1,5 +1,5 @@
 /* oxlint-disable effect/noInlineProvide -- each inner program is a test runtime boundary; restart cases deliberately close and rebuild the layer over the same synthetic disk. */
-import { Deferred, Effect, Fiber, Option, References, Stream } from 'effect';
+import { Deferred, Effect, Exit, Fiber, Option, References, Stream } from 'effect';
 import { expect, it } from 'effect-bun-test';
 import { Offline, identityKey } from './cache';
 import { fake } from './fixture';
@@ -10,6 +10,38 @@ const idle = (cache: typeof Offline.Service) =>
     Stream.take(1),
     Stream.runDrain,
   );
+
+it.effect('offline a failed removal still invalidates an unreadable saved entry', () => {
+  const f = fake();
+  return Effect.gen(function* () {
+    const cache = yield* Offline,
+      id = { number: 100, offset: 0 };
+    yield* cache.enqueue(id);
+    yield* idle(cache);
+    f.control.removeFails = true;
+    f.control.readFails = true;
+    expect(Option.isNone(yield* cache.local(id))).toBe(true);
+    expect((yield* cache.snapshot).saved).toBe(0);
+    expect((yield* cache.snapshot).bytes).toBe(0);
+  }).pipe(Effect.provide(f.layer));
+});
+
+it.effect('offline a partial delete failure keeps counts consistent and can be retried', () => {
+  const f = fake();
+  return Effect.gen(function* () {
+    const cache = yield* Offline;
+    for (const number of [1, 2]) yield* cache.enqueue({ number, offset: 0 });
+    yield* idle(cache);
+    f.control.removeFailNumber = 2;
+    expect(Exit.isFailure(yield* Effect.exit(cache.deleteAll))).toBe(true);
+    expect((yield* cache.snapshot).saved).toBe(1);
+    expect((yield* cache.snapshot).bytes).toBe(12);
+    f.control.removeFailNumber = -1;
+    yield* cache.deleteAll;
+    expect((yield* cache.snapshot).saved).toBe(0);
+    expect(f.files.size).toBe(0);
+  }).pipe(Effect.provide(f.layer));
+});
 
 for (let offset = -5; offset <= 6; offset++)
   it.effect(`offline restart keeps all 695 saved identities offset=${offset}`, () =>
