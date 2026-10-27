@@ -810,10 +810,39 @@ const matchChanges = (
   return { farthest, lost };
 };
 
+/** The class each place from `lo` to `hi` lies in, by the runs that cover it. */
+const classesOver = (
+  runs: ReadonlyArray<{ cls: string; from: number; to: number }>,
+  lo: number,
+  hi: number,
+) =>
+  Array.from(
+    { length: hi - lo + 1 },
+    (_, k) => runs.find((x) => x.from <= lo + k && x.to >= lo + k)?.cls,
+  );
+
+/** The longest stretch from `lo` to `hi` where the sheet's runs and the render's lie in other classes. */
+const longestDiffering = (
+  cr: ReadonlyArray<{ cls: string; from: number; to: number }>,
+  rr: ReadonlyArray<{ cls: string; from: number; to: number }>,
+  lo: number,
+  hi: number,
+) => {
+  const [cs, rs] = [classesOver(cr, lo, hi), classesOver(rr, lo, hi)];
+  let [run, longest] = [0, 0];
+  for (let k = 0; k < cs.length; k++) {
+    run = cs[k] === rs[k] ? 0 : run + 1;
+    longest = Math.max(longest, run);
+  }
+  return longest;
+};
+
 /**
  * A probe's row: the largest distance between a change on the sheet and the
  * same change on the render, matched in order (`matchChanges`), or the
- * probe's length where a change on either has no match: the render draws
+ * longest stretch of the probe the two cover with other classes where that
+ * is more (a stroke laid over the whole probe moves no change within it), or
+ * the probe's length where a change on either has no match: the render draws
  * each of the sheet's edges along the probe where the sheet does, and none
  * it does not.
  */
@@ -837,9 +866,16 @@ const probeRow = (
   const said = (runs: ReadonlyArray<{ cls: string; from: number; to: number }>) =>
     runs.map((x) => `${x.cls}${x.from}-${x.to}`).join(' ');
   const unmatched = lost.length > 0 ? `; ${lost.join(', ')}` : '';
-  return rowOf(`probe.${p.name}`, 'figure', 'figure', lost.length > 0 ? length : farthest, bar, {
-    where: `${p.along} ${p.at} ${p.from}-${p.to}: sheet ${said(cr)} | render ${said(rr)}${unmatched}`,
-  });
+  return rowOf(
+    `probe.${p.name}`,
+    'figure',
+    'figure',
+    lost.length > 0 ? length : Math.max(farthest, longestDiffering(cr, rr, lo, hi)),
+    bar,
+    {
+      where: `${p.along} ${p.at} ${p.from}-${p.to}: sheet ${said(cr)} | render ${said(rr)}${unmatched}`,
+    },
+  );
 };
 
 /**

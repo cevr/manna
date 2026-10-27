@@ -144,6 +144,18 @@ describe('fitRows', () => {
     expect(belt([60], [60, 66])?.pass).toBe(false);
   });
 
+  test('a probe fails where the render lays a stroke over the whole probe, its edges past both ends', () => {
+    const probe = { name: 'fold', along: 'row', at: 61, from: 23, to: 41 } as const;
+    const fold = (marks: ReadonlyArray<number>) =>
+      rowNamed(
+        fitRows(SHEET, paint({ ground: RENDER_GROUND, marks }), { probes: [probe] }),
+        'probe.fold',
+      );
+    expect(fold([])?.pass).toBe(true);
+    expect(fold([60])?.value).toBe(19);
+    expect(fold([60])?.pass).toBe(false);
+  });
+
   test("a change just inside a probe's end is matched to the same change just past it", () => {
     const probe = { name: 'belt', along: 'col', at: 38, from: 30, to: 61 } as const;
     const row = rowNamed(
