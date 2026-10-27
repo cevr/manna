@@ -1,14 +1,15 @@
 /** Real parser/handler receipts. Never attach child output or corpus values to assertions. */
 import { BunServices } from '@effect/platform-bun';
 import { Database } from 'bun:sqlite';
-import { ConfigProvider, Effect, FileSystem, Layer, Result, Schema, Stream } from 'effect';
+import { ConfigProvider, Context, Effect, FileSystem, Layer, Result, Schema, Stream } from 'effect';
 import { Command } from 'effect/cli';
 import { FetchHttpClient, HttpClient, HttpClientResponse } from 'effect/http';
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 import { describe, expect, it } from 'effect-bun-test';
 
-import { readSourceText, type SourceText } from '../../../hymnal/scripts/source-text.js';
+import { HymnalService, HymnId } from '@manna/core/hymnal';
+import { layerHymnalBun } from '@manna/core/hymnal/bun';
 import { init } from '../../src/commands/init.js';
 
 const ARTIFACT = new URL('../../../core/data/hymnal.db', import.meta.url).pathname;
@@ -54,7 +55,7 @@ const cli = Effect.fn('HymnsProof.cli')(function* (
   return { stdout, stderr, code: Number(code) };
 }, Effect.scoped);
 
-const legacyFixture = (file: string, source: SourceText) =>
+const legacyFixture = (file: string, hymns: readonly (typeof ReturnedHymn.Type)[]) =>
   Effect.acquireUseRelease(
     Effect.sync(() => new Database(file)),
     (db) =>
@@ -63,18 +64,18 @@ const legacyFixture = (file: string, source: SourceText) =>
       CREATE TABLE hymns(id INTEGER PRIMARY KEY,name TEXT,category_id INTEGER,category TEXT,verses TEXT,favorite INTEGER,views INTEGER);
       CREATE TABLE settings(key TEXT,value TEXT); INSERT INTO settings VALUES('fixture','retained');`);
         db.transaction(() => {
-          for (const c of source.categories)
-            db.query('INSERT INTO categories VALUES(?,?)').run(c.id, c.name);
-          for (const h of source.hymns.filter((h) => [2, 696].includes(h.number)))
+          for (const h of hymns) {
+            db.query('INSERT OR IGNORE INTO categories VALUES(?,?)').run(h.categoryId, h.category);
             db.query('INSERT INTO hymns VALUES(?,?,?,?,?,?,?)').run(
-              h.number,
-              h.title,
+              h.id,
+              h.name,
               h.categoryId,
-              source.categories.find((c) => c.id === h.categoryId)?.name ?? '',
+              h.category,
               json(h.verses),
               1,
               17,
             );
+          }
         })();
       }),
     (db) => Effect.sync(() => db.close()),
@@ -122,28 +123,94 @@ const runInit = (home: string, refresh: boolean, client: Layer.Layer<HttpClient.
 };
 
 describe('hymns CLI corpus contract', () => {
+  it.effect('rejects imports that bypass core and hymnal package exports', () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const dir = yield* fs.makeTempDirectoryScoped();
+      const spawner = yield* ChildProcessSpawner;
+      const probe = [
+        "import { coreProbe } from '../../../core/src/private.js';",
+        "import { hymnalProbe } from '../../../hymnal/scripts/private.js';",
+        'export { coreProbe, hymnalProbe };',
+      ].join('\n');
+      for (const filename of [
+        'packages/cli/test/commands/hymns.slow.test.ts',
+        'packages/hymnal/scripts/source-text.ts',
+        'packages/core/src/hymnal/service-bun.ts',
+        'packages/film/src/core/probe.ts',
+      ]) {
+        const file = `${dir}/${filename}`;
+        yield* fs.makeDirectory(file.slice(0, file.lastIndexOf('/')), { recursive: true });
+        yield* fs.writeFileString(file, probe);
+        const child = yield* spawner.spawn(
+          ChildProcess.make(
+            'bun',
+            [
+              'x',
+              '--no-install',
+              'oxlint',
+              '--format',
+              'json',
+              '--no-ignore',
+              '--config',
+              new URL('../../../../.oxlintrc.json', import.meta.url).pathname,
+              file,
+            ],
+            {
+              cwd: new URL('../../../..', import.meta.url).pathname,
+              forceKillAfter: '5 seconds',
+            },
+          ),
+        );
+        const [out, code] = yield* Effect.all(
+          [
+            Stream.mkString(Stream.decodeText(child.stdout)),
+            child.exitCode,
+            Stream.runDrain(child.stderr),
+          ],
+          { concurrency: 3 },
+        );
+        expect(Number(code), filename).toBe(1);
+        expect((out.match(/no-restricted-imports/g) ?? []).length >= 2, filename).toBe(true);
+      }
+    }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+
   it.effect(
     'returns complete verses for normalized and installed legacy databases without changing either file',
     () =>
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const dir = yield* fs.makeTempDirectoryScoped();
-        const source = yield* readSourceText();
         const normalized = `${dir}/normalized.db`,
           legacy = `${dir}/legacy.db`;
         yield* fs.copyFile(ARTIFACT, normalized);
-        yield* legacyFixture(legacy, source);
+        const reader = (file: string) =>
+          layerHymnalBun.pipe(
+            Layer.provide(
+              ConfigProvider.layer(ConfigProvider.fromUnknown({ HOME: dir, HYMNAL_DB_PATH: file })),
+            ),
+            Layer.provide(BunServices.layer),
+          );
+        const corpus = Context.get(yield* Layer.build(reader(normalized)), HymnalService);
+        yield* legacyFixture(
+          legacy,
+          yield* Effect.forEach([2, 696], (id) => corpus.getHymn(HymnId.make(id))),
+        );
         for (const file of [normalized, legacy]) {
           const before = yield* fs.readFile(file);
+          const service = Context.get(yield* Layer.build(reader(file)), HymnalService);
           for (const id of [2, 696]) {
             const result = yield* cli(dir, file, ['get', String(id), '--json']);
             expect(result.code, `${id}:cli:exit`).toBe(0);
             const hymn = yield* decodeHymn(result.stdout);
-            const expected = source.hymns[id - 1];
+            const expected = yield* service.getHymn(HymnId.make(id));
             expect(
               hymn.id === id &&
-                hymn.name === expected?.title &&
-                json(hymn.verses) === json(expected?.verses),
+                hymn.name === expected.name &&
+                hymn.category === expected.category &&
+                hymn.categoryId === expected.categoryId &&
+                json(hymn.verses) === json(expected.verses),
               `${id}:cli:full-verses`,
             ).toBe(true);
           }

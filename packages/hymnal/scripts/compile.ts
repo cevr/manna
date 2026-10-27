@@ -20,7 +20,7 @@
  */
 
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { HymnalService, HymnId } from '@manna/core/hymnal';
+import { HymnId } from '@manna/core/hymnal';
 import { Data, Effect, Layer, Option, Result, Schema } from 'effect';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -38,7 +38,7 @@ import {
   Topics,
 } from '../src/hymn.js';
 import { decodeOrders, HELD, sourceOf } from './sources.js';
-import { layerSourceText } from './source-text.js';
+import { SourceHymnal, layerSourceText } from './source-text.js';
 import { buildTopics, decodeFixes, type Fixes, readRows } from './topics.js';
 
 const ROOT = path.resolve(import.meta.dir, '../../..');
@@ -201,7 +201,7 @@ class Failed extends Data.TaggedError('Failed')<{ readonly why: string }> {}
 /** Compiles hymn n and writes its file. */
 const compileOne = (n: number, orders: ReadonlyMap<number, Order>) =>
   Effect.gen(function* () {
-    const text = yield* (yield* HymnalService)
+    const text = yield* (yield* SourceHymnal)
       .getHymn(HymnId.make(n))
       .pipe(Effect.mapError((e) => new Failed({ why: `${n}: ${e._tag}` })));
     const file = Bun.file(path.join(midiDir, `${pad(n)}.mid`));

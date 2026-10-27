@@ -1,17 +1,17 @@
 /** Independent corpus source. SQLite is only an explicit, read-only capture input. */
 import { Database } from 'bun:sqlite';
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { HymnalService, HymnId, CategoryId } from '@manna/core/hymnal';
 import {
   Category,
   Hymn,
-  HymnSummary,
   HymnVerse,
-  hymnFirstLine,
-} from '../../core/src/hymnal/schemas.js';
-import { HymnalError, HymnNotFoundError } from '../../core/src/hymnal/service.js';
-import { VerseId } from '../../core/src/types/ids.js';
-import { Effect, FileSystem, Layer, Schema } from 'effect';
+  HymnId,
+  CategoryId,
+  VerseId,
+  HymnalError,
+  HymnNotFoundError,
+} from '@manna/core/hymnal';
+import { Context, Effect, FileSystem, Layer, Schema } from 'effect';
 
 export const SOURCE_TEXT = new URL('../data/source-text.json', import.meta.url).pathname;
 const Verse = Schema.Struct({ id: Schema.Int, text: Schema.String });
@@ -47,6 +47,9 @@ export const SourceText = Schema.Struct({
 );
 export type SourceText = typeof SourceText.Type;
 
+/** Stable source bytes are also a database input fingerprint. */
+export const serializeSourceText = (source: SourceText) => `${JSON.stringify(source, null, 2)}\n`;
+
 export class SourceTextError extends Schema.TaggedError<SourceTextError>()('SourceTextError', {
   operation: Schema.String,
 }) {}
@@ -65,9 +68,18 @@ export const readSourceText = Effect.fn('SourceText.read')(function* (file = SOU
   return yield* decodeSourceText(text);
 });
 
-/** Reuses the existing text contract at build time; never reads a generated database. */
+/** The source compiler needs lookups and categories, not runtime search. */
+export class SourceHymnal extends Context.Service<
+  SourceHymnal,
+  {
+    readonly getHymn: (id: HymnId) => Effect.Effect<Hymn, HymnNotFoundError>;
+    readonly getCategories: Effect.Effect<readonly Category[]>;
+  }
+>()('@manna/hymnal/SourceHymnal') {}
+
+/** Reuses the public text types at build time; never reads a generated database. */
 export const layerSourceText = Layer.effect(
-  HymnalService,
+  SourceHymnal,
   Effect.gen(function* () {
     const source = yield* readSourceText().pipe(
       Effect.mapError(() =>
@@ -88,16 +100,7 @@ export const layerSourceText = Layer.effect(
         category: names.get(row.categoryId) ?? '',
         verses: row.verses.map((v) => HymnVerse.make({ id: VerseId.make(v.id), text: v.text })),
       });
-    const summary = (row: SourceText['hymns'][number]) => {
-      const hymn = project(row);
-      return HymnSummary.make({
-        id: hymn.id,
-        name: hymn.name,
-        category: hymn.category,
-        firstLine: hymnFirstLine(hymn.verses),
-      });
-    };
-    return HymnalService.of({
+    return SourceHymnal.of({
       getHymn: Effect.fn('SourceText.getHymn')(function* (id: HymnId) {
         const row = rows.get(id);
         if (row === undefined) return yield* HymnNotFoundError.make({ id });
@@ -105,21 +108,6 @@ export const layerSourceText = Layer.effect(
       }),
       getCategories: Effect.succeed(
         source.categories.map((c) => Category.make({ ...c, id: CategoryId.make(c.id) })),
-      ),
-      getHymnsByCategory: Effect.fn('SourceText.getHymnsByCategory')((id: CategoryId) =>
-        Effect.succeed(source.hymns.filter((h) => h.categoryId === id).map(summary)),
-      ),
-      searchHymns: Effect.fn('SourceText.searchHymns')((query: string, limit = 20) =>
-        Effect.succeed(
-          source.hymns
-            .filter((h) =>
-              `${h.title}\n${h.verses.map((v) => v.text).join('\n')}`
-                .toLowerCase()
-                .includes(query.toLowerCase()),
-            )
-            .slice(0, limit)
-            .map(summary),
-        ),
       ),
     });
   }),
@@ -172,7 +160,7 @@ if (import.meta.main) {
       const fs = yield* FileSystem.FileSystem;
       const source = yield* capture(input);
       yield* fs
-        .writeFileString(target, `${JSON.stringify(source)}\n`)
+        .writeFileString(target, serializeSourceText(source))
         .pipe(Effect.mapError(() => SourceTextError.make({ operation: 'capture-write' })));
       console.log(
         `source-text captured rows=${source.hymns.length} categories=${source.categories.length}`,

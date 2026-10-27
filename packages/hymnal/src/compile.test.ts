@@ -1,5 +1,5 @@
-import { HymnalService, HymnId } from '@manna/core/hymnal';
-import { layerSourceText } from '../scripts/source-text.js';
+import { HymnId } from '@manna/core/hymnal';
+import { SourceHymnal, layerSourceText } from '../scripts/source-text.js';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, Layer } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
@@ -778,7 +778,7 @@ describe('compile: verse layout', () => {
     'reads hymn 593 from source text as three stanzas, each with the refrain ending the print sings after it',
     () =>
       Effect.gen(function* () {
-        const text = yield* (yield* HymnalService).getHymn(HymnId.make(593));
+        const text = yield* (yield* SourceHymnal).getHymn(HymnId.make(593));
         const hymn = yield* compile({ ...source(tuneFile(3), []), verses: text.verses });
         expect(hymn.refrain).toBeUndefined();
         expect(hymn.stanzas.map((stanza) => wordsOf(stanza).length)).toEqual([8, 8, 8]);
@@ -799,7 +799,7 @@ describe('compile: verse layout', () => {
     'reads hymn 220 from source text as three stanzas, each with the refrain lines its own row prints',
     () =>
       Effect.gen(function* () {
-        const text = yield* (yield* HymnalService).getHymn(HymnId.make(220));
+        const text = yield* (yield* SourceHymnal).getHymn(HymnId.make(220));
         const hymn = yield* compile({ ...source(tuneFile(3), []), verses: text.verses });
         expect(hymn.refrain).toBeUndefined();
         expect(hymn.stanzas.map((stanza) => wordsOf(stanza).length)).toEqual([13, 13, 13]);
@@ -813,7 +813,7 @@ describe('compile: verse layout', () => {
 
   it.effect("reads hymn 628 from source text with stanza 2's four printed lines", () =>
     Effect.gen(function* () {
-      const text = yield* (yield* HymnalService).getHymn(HymnId.make(628));
+      const text = yield* (yield* SourceHymnal).getHymn(HymnId.make(628));
       const hymn = yield* compile({
         ...source(tuneFile(3), []),
         verses: text.verses,

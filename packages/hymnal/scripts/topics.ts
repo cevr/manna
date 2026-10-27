@@ -9,9 +9,10 @@
  * refused, never repaired.
  */
 
-import { HymnalService, HymnId } from '@manna/core/hymnal';
+import { HymnId } from '@manna/core/hymnal';
 import { Effect, Schema } from 'effect';
 
+import { SourceHymnal } from './source-text.js';
 import { type Topic, Topics } from '../src/hymn.js';
 
 const FIRST = 1;
@@ -114,7 +115,7 @@ export const buildTopics = (rows: Rows, fixes: Fixes): Effect.Effect<Topics, Top
 
 /** Source rows 1–695 and sections, through the independent source-text layer. */
 export const readRows = Effect.gen(function* () {
-  const hymnal = yield* HymnalService;
+  const hymnal = yield* SourceHymnal;
   const categories = yield* hymnal.getCategories;
   const hymns = yield* Effect.forEach(
     Array.from({ length: LAST - FIRST + 1 }, (_, i) => FIRST + i),

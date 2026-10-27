@@ -28,7 +28,7 @@ import { readdirSync } from 'node:fs';
 import path from 'node:path';
 
 import { buildDatabase, OUTPUT, readDatabaseSources } from './compile-db.js';
-import { readSourceText, SOURCE_TEXT } from './source-text.js';
+import { readSourceText, serializeSourceText, SOURCE_TEXT } from './source-text.js';
 
 const Line = Schema.Struct({ text: Schema.String, from: Schema.String });
 const Lines = Schema.Array(Line);
@@ -100,7 +100,7 @@ if (import.meta.main) {
     console.log(`hymnal-fixes ${printed.number} wrote ids ${verses.map((v) => v.id).join(' ')}`);
   }
   if (JSON.stringify(hymns) !== JSON.stringify(source.hymns))
-    await Bun.write(SOURCE_TEXT, `${JSON.stringify({ ...source, hymns }, null, 2)}\n`);
+    await Bun.write(SOURCE_TEXT, serializeSourceText({ ...source, hymns }));
   const compiled = Bun.spawnSync(['bun', path.resolve(import.meta.dir, 'compile.ts')], {
     stdout: 'pipe',
     stderr: 'pipe',

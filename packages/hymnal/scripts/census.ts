@@ -65,8 +65,8 @@
  * Each run exits 1 on a problem.
  */
 
-import { HymnalService, HymnId } from '@manna/core/hymnal';
-import { layerSourceText } from './source-text.js';
+import { HymnId } from '@manna/core/hymnal';
+import { SourceHymnal, layerSourceText } from './source-text.js';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Database } from 'bun:sqlite';
 import { Effect, FileSystem, Layer, Option, Predicate, Schema, Struct } from 'effect';
@@ -3271,7 +3271,7 @@ export const baseFixesAt = (commit: string) =>
  */
 export const loadSources = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
-  const hymnal = yield* HymnalService;
+  const hymnal = yield* SourceHymnal;
   const inventory = yield* decodeInventory(yield* fs.readFileString(path.join(DATA, 'pages.json')));
   const census = yield* decodeCensus(yield* fs.readFileString(path.join(DATA, 'census.json')));
   const base = yield* baseRowsAt(census.base.commit);

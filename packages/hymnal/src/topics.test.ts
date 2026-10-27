@@ -1,4 +1,9 @@
-import { layerSourceText } from '../scripts/source-text.js';
+import {
+  decodeSourceText,
+  layerSourceText,
+  serializeSourceText,
+  SOURCE_TEXT,
+} from '../scripts/source-text.js';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Config, Effect, FileSystem, Layer, Option, Result, Schema } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
@@ -27,6 +32,15 @@ const inputs = Effect.gen(function* () {
 }).pipe(Effect.provide(Layer.merge(hymnal, BunServices.layer)));
 
 const fold = (s: string) => s.toLowerCase();
+
+it.effect('keeps source-text bytes in the canonical writer format', () =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const text = yield* fs.readFileString(SOURCE_TEXT);
+    const source = yield* decodeSourceText(text);
+    expect(serializeSourceText(source) === text, 'source-text:canonical-bytes').toBe(true);
+  }).pipe(Effect.provide(BunServices.layer)),
+);
 
 /** The section a move files hymn n under, else the db's. */
 const expectedSection = (rows: Rows, fixes: Fixes, n: number) =>

@@ -51,6 +51,26 @@ The form of an entry, each field on its own line:
 
 ## Process and tooling
 
+### hymn-source-package-boundaries
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "a test and the source layer reach into other packages by relative path"
+- **Source:** hymndb/round-1-findings.md F3
+- **Wrong:** A CLI test imported hymnal scripts, and hymnal scripts bypassed the core package export.
+- **Cause:** Internal paths stood in for a public package boundary.
+- **Guard:** lint:no-restricted-imports, proof `packages/cli/test/commands/hymns.slow.test.ts` `rejects imports that bypass core and hymnal package exports`
+
+### hymn-source-canonical-bytes
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "the two source writers do not reproduce the committed bytes"
+- **Source:** hymndb/round-1-findings.md F4
+- **Wrong:** Capture, corrections and formatting produced different source bytes and stale database fingerprints.
+- **Cause:** The writers had separate serializers, and oxfmt also owned the source layout.
+- **Guard:** code: `packages/hymnal/src/topics.test.ts` `keeps source-text bytes in the canonical writer format`
+
 ### hymn-search-text-before-topic-index
 
 - **Date:** 2026-10-26

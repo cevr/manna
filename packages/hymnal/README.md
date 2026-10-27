@@ -212,6 +212,10 @@ the first 62 sections; captured categories 63–68 supply the reading sections.
 Topic fixes apply once upstream. Compilation and the census read the independent
 capture; the census also retains its historical Git database oracle.
 
+Both source writers use `serializeSourceText` (two-space JSON plus a final newline).
+The source capture is excluded from oxfmt; its byte format and input fingerprint
+belong to that serializer.
+
 An explicit legacy source import is available with
 `bun packages/hymnal/scripts/source-text.ts --capture-db <copied-legacy-db> --out <source-file>`.
 It opens the supplied copy read-only. Normal builds ignore `HYMNAL_DB_PATH` and

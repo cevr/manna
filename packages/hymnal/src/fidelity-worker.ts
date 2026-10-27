@@ -8,8 +8,8 @@
  * no expected line.
  */
 
-import { HymnalService, HymnId } from '@manna/core/hymnal';
-import { layerSourceText } from '../scripts/source-text.js';
+import { HymnId } from '@manna/core/hymnal';
+import { SourceHymnal, layerSourceText } from '../scripts/source-text.js';
 import { BunWorkerRunner } from '@effect/platform-bun';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Cause, Effect, FileSystem, Layer, Result } from 'effect';
@@ -49,7 +49,7 @@ const compileAll = (numbers: readonly number[], send: (done: Done) => Effect.Eff
     for (const n of numbers) {
       const done = yield* Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
-        const row = yield* (yield* HymnalService).getHymn(HymnId.make(n));
+        const row = yield* (yield* SourceHymnal).getHymn(HymnId.make(n));
         const midi = yield* fs.readFile(data(`midi/${String(n).padStart(3, '0')}.mid`));
         const result = yield* Effect.result(
           sourceOf({ number: n, name: row.name, verses: row.verses }, midi, yield* orders).pipe(

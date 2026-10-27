@@ -2,74 +2,278 @@
   "version": 1,
   "book": "sdah-1985",
   "categories": [
-    { "id": 1, "name": "Adoration and Praise" },
-    { "id": 2, "name": "Morning Worship" },
-    { "id": 3, "name": "Evening Worship" },
-    { "id": 4, "name": "Opening of Worship" },
-    { "id": 5, "name": "Close of Worship" },
-    { "id": 6, "name": "Trinity" },
-    { "id": 7, "name": "Love of God" },
-    { "id": 8, "name": "Majesty and Power of God" },
-    { "id": 9, "name": "Power of God in Nature" },
-    { "id": 10, "name": "Faithfulness of God" },
-    { "id": 11, "name": "Grace and Mercy of God" },
-    { "id": 12, "name": "First Advent" },
-    { "id": 13, "name": "Birth" },
-    { "id": 14, "name": "Life and Ministry" },
-    { "id": 15, "name": "Sufferings and Death" },
-    { "id": 16, "name": "Resurrection and Ascension" },
-    { "id": 17, "name": "Priesthood" },
-    { "id": 18, "name": "Love of Christ for Us" },
-    { "id": 19, "name": "Second Advent" },
-    { "id": 20, "name": "Kingdom and Reign" },
-    { "id": 21, "name": "Glory and Praise" },
-    { "id": 22, "name": "Holy Spirit" },
-    { "id": 23, "name": "Holy Scripture" },
-    { "id": 24, "name": "Invitation" },
-    { "id": 25, "name": "Repentance" },
-    { "id": 26, "name": "Forgiveness" },
-    { "id": 27, "name": "Consecration" },
-    { "id": 28, "name": "Baptism" },
-    { "id": 29, "name": "Salvation and Redemption" },
-    { "id": 30, "name": "Community in Christ" },
-    { "id": 31, "name": "Mission of the Church" },
-    { "id": 32, "name": "Church Dedication" },
-    { "id": 33, "name": "Ordination" },
-    { "id": 34, "name": "Child Dedication" },
-    { "id": 35, "name": "Sabbath" },
-    { "id": 36, "name": "Communion" },
-    { "id": 37, "name": "Law and Grace" },
-    { "id": 38, "name": "Spiritual Gifts" },
-    { "id": 39, "name": "Judgment" },
-    { "id": 40, "name": "Resurrection of the Saints" },
-    { "id": 41, "name": "Eternal Life" },
-    { "id": 42, "name": "Early Advent" },
-    { "id": 43, "name": "Our Love for God" },
-    { "id": 44, "name": "Joy and Peace" },
-    { "id": 45, "name": "Hope and Comfort" },
-    { "id": 46, "name": "Meditation and Prayer" },
-    { "id": 47, "name": "Faith and Trust" },
-    { "id": 48, "name": "Guidance" },
-    { "id": 49, "name": "Thankfulness" },
-    { "id": 50, "name": "Humility" },
-    { "id": 51, "name": "Loving Service\r" },
-    { "id": 52, "name": "Love for One Another" },
-    { "id": 53, "name": "Obedience" },
-    { "id": 54, "name": "Watchfulness" },
-    { "id": 55, "name": "Christian Warfare" },
-    { "id": 56, "name": "Pilgrimage" },
-    { "id": 57, "name": "Stewardship" },
-    { "id": 58, "name": "Health and Wholeness" },
-    { "id": 59, "name": "Love of Country" },
-    { "id": 60, "name": "Love in the Home" },
-    { "id": 61, "name": "Marriage" },
-    { "id": 62, "name": "Sentences and Responses" },
-    { "id": 63, "name": "Scripture Readings" },
-    { "id": 64, "name": "Canticles and Prayers" },
-    { "id": 65, "name": "Calls to Worship" },
-    { "id": 66, "name": "Words of Assurance" },
-    { "id": 67, "name": "Offertory Sentences" },
-    { "id": 68, "name": "Benedictions" }
+    {
+      "id": 1,
+      "name": "Adoration and Praise"
+    },
+    {
+      "id": 2,
+      "name": "Morning Worship"
+    },
+    {
+      "id": 3,
+      "name": "Evening Worship"
+    },
+    {
+      "id": 4,
+      "name": "Opening of Worship"
+    },
+    {
+      "id": 5,
+      "name": "Close of Worship"
+    },
+    {
+      "id": 6,
+      "name": "Trinity"
+    },
+    {
+      "id": 7,
+      "name": "Love of God"
+    },
+    {
+      "id": 8,
+      "name": "Majesty and Power of God"
+    },
+    {
+      "id": 9,
+      "name": "Power of God in Nature"
+    },
+    {
+      "id": 10,
+      "name": "Faithfulness of God"
+    },
+    {
+      "id": 11,
+      "name": "Grace and Mercy of God"
+    },
+    {
+      "id": 12,
+      "name": "First Advent"
+    },
+    {
+      "id": 13,
+      "name": "Birth"
+    },
+    {
+      "id": 14,
+      "name": "Life and Ministry"
+    },
+    {
+      "id": 15,
+      "name": "Sufferings and Death"
+    },
+    {
+      "id": 16,
+      "name": "Resurrection and Ascension"
+    },
+    {
+      "id": 17,
+      "name": "Priesthood"
+    },
+    {
+      "id": 18,
+      "name": "Love of Christ for Us"
+    },
+    {
+      "id": 19,
+      "name": "Second Advent"
+    },
+    {
+      "id": 20,
+      "name": "Kingdom and Reign"
+    },
+    {
+      "id": 21,
+      "name": "Glory and Praise"
+    },
+    {
+      "id": 22,
+      "name": "Holy Spirit"
+    },
+    {
+      "id": 23,
+      "name": "Holy Scripture"
+    },
+    {
+      "id": 24,
+      "name": "Invitation"
+    },
+    {
+      "id": 25,
+      "name": "Repentance"
+    },
+    {
+      "id": 26,
+      "name": "Forgiveness"
+    },
+    {
+      "id": 27,
+      "name": "Consecration"
+    },
+    {
+      "id": 28,
+      "name": "Baptism"
+    },
+    {
+      "id": 29,
+      "name": "Salvation and Redemption"
+    },
+    {
+      "id": 30,
+      "name": "Community in Christ"
+    },
+    {
+      "id": 31,
+      "name": "Mission of the Church"
+    },
+    {
+      "id": 32,
+      "name": "Church Dedication"
+    },
+    {
+      "id": 33,
+      "name": "Ordination"
+    },
+    {
+      "id": 34,
+      "name": "Child Dedication"
+    },
+    {
+      "id": 35,
+      "name": "Sabbath"
+    },
+    {
+      "id": 36,
+      "name": "Communion"
+    },
+    {
+      "id": 37,
+      "name": "Law and Grace"
+    },
+    {
+      "id": 38,
+      "name": "Spiritual Gifts"
+    },
+    {
+      "id": 39,
+      "name": "Judgment"
+    },
+    {
+      "id": 40,
+      "name": "Resurrection of the Saints"
+    },
+    {
+      "id": 41,
+      "name": "Eternal Life"
+    },
+    {
+      "id": 42,
+      "name": "Early Advent"
+    },
+    {
+      "id": 43,
+      "name": "Our Love for God"
+    },
+    {
+      "id": 44,
+      "name": "Joy and Peace"
+    },
+    {
+      "id": 45,
+      "name": "Hope and Comfort"
+    },
+    {
+      "id": 46,
+      "name": "Meditation and Prayer"
+    },
+    {
+      "id": 47,
+      "name": "Faith and Trust"
+    },
+    {
+      "id": 48,
+      "name": "Guidance"
+    },
+    {
+      "id": 49,
+      "name": "Thankfulness"
+    },
+    {
+      "id": 50,
+      "name": "Humility"
+    },
+    {
+      "id": 51,
+      "name": "Loving Service\r"
+    },
+    {
+      "id": 52,
+      "name": "Love for One Another"
+    },
+    {
+      "id": 53,
+      "name": "Obedience"
+    },
+    {
+      "id": 54,
+      "name": "Watchfulness"
+    },
+    {
+      "id": 55,
+      "name": "Christian Warfare"
+    },
+    {
+      "id": 56,
+      "name": "Pilgrimage"
+    },
+    {
+      "id": 57,
+      "name": "Stewardship"
+    },
+    {
+      "id": 58,
+      "name": "Health and Wholeness"
+    },
+    {
+      "id": 59,
+      "name": "Love of Country"
+    },
+    {
+      "id": 60,
+      "name": "Love in the Home"
+    },
+    {
+      "id": 61,
+      "name": "Marriage"
+    },
+    {
+      "id": 62,
+      "name": "Sentences and Responses"
+    },
+    {
+      "id": 63,
+      "name": "Scripture Readings"
+    },
+    {
+      "id": 64,
+      "name": "Canticles and Prayers"
+    },
+    {
+      "id": 65,
+      "name": "Calls to Worship"
+    },
+    {
+      "id": 66,
+      "name": "Words of Assurance"
+    },
+    {
+      "id": 67,
+      "name": "Offertory Sentences"
+    },
+    {
+      "id": 68,
+      "name": "Benedictions"
+    }
   ],
   "hymns": [
     {
@@ -96,7 +300,10 @@
       "title": "All Creatures of Our God and King",
       "categoryId": 1,
       "verses": [
-        { "id": -1, "text": "Oh, praise Him! Oh, praise Him!\nAlleluia, alleluia, alleluia!" },
+        {
+          "id": -1,
+          "text": "Oh, praise Him! Oh, praise Him!\nAlleluia, alleluia, alleluia!"
+        },
         {
           "id": 0,
           "text": "All creatures of our God and King,\nLift up your voice with us and sing:\nAlleluia! Alleluia!\nO burning sun with golden beam\nAnd silver moon with softer gleam:"
@@ -341,7 +548,10 @@
           "id": 0,
           "text": "Let us praise the name of the Lord!\nGive Him glory, Amen.\nAmen, amen, Amen, amen."
         },
-        { "id": 1, "text": "Go ye into all the world,\r\nAleluia, Amen.\nAmen, amen, Amen, amen." }
+        {
+          "id": 1,
+          "text": "Go ye into all the world,\r\nAleluia, Amen.\nAmen, amen, Amen, amen."
+        }
       ]
     },
     {
@@ -556,7 +766,10 @@
       "title": "Every Star Shall Sing A Carol",
       "categoryId": 1,
       "verses": [
-        { "id": -1, "text": "God above, Man below,\nHoly is the name I know." },
+        {
+          "id": -1,
+          "text": "God above, Man below,\nHoly is the name I know."
+        },
         {
           "id": 0,
           "text": "Every star shall sing a carol;\nEvery creature, high or low,\nCome and praise the King of heaven\nBy whatever name you know."
@@ -614,7 +827,10 @@
       "title": "Rejoice, Ye Pure in Heart!",
       "categoryId": 1,
       "verses": [
-        { "id": -1, "text": "Rejoice! Rejoice!\nRejoice, give thanks, and sing!" },
+        {
+          "id": -1,
+          "text": "Rejoice! Rejoice!\nRejoice, give thanks, and sing!"
+        },
         {
           "id": 0,
           "text": "Rejoice, ye pure in heart!\nRejoice, give thanks, and sing;\nYour festal banner wave on high,\nThe cross of Christ your King."
@@ -2023,7 +2239,10 @@
       "title": "Ye Watchers and Ye Holy Ones",
       "categoryId": 8,
       "verses": [
-        { "id": -1, "text": "Alleluia, Alleluia,\nAlleluia, Alleluia, Alleluia!" },
+        {
+          "id": -1,
+          "text": "Alleluia, Alleluia,\nAlleluia, Alleluia, Alleluia!"
+        },
         {
           "id": 0,
           "text": "Ye watchers and ye holy ones,\nBright seraphs, cherubim and thrones,\nRaise the glad strain, Alleluia!\nCry out, dominions, princedoms, powers,\nVirtues, archangels, angels'choirs,"
@@ -2503,11 +2722,26 @@
       "title": "Let Us With a Gladsome Mind",
       "categoryId": 11,
       "verses": [
-        { "id": -1, "text": "For His mercies shall endure,\nEver faithful, ever sure." },
-        { "id": 0, "text": "Let us with a gladsome mind\nPraise the Lord, for He is kind:" },
-        { "id": 1, "text": "He, with all commanding might,\nFilled the newmade world with light:" },
-        { "id": 2, "text": "All things living He does feed;\nHis full hand supplies their need:" },
-        { "id": 3, "text": "Let us then with gladsome mind\nPraise the Lord, for He is kind:" }
+        {
+          "id": -1,
+          "text": "For His mercies shall endure,\nEver faithful, ever sure."
+        },
+        {
+          "id": 0,
+          "text": "Let us with a gladsome mind\nPraise the Lord, for He is kind:"
+        },
+        {
+          "id": 1,
+          "text": "He, with all commanding might,\nFilled the newmade world with light:"
+        },
+        {
+          "id": 2,
+          "text": "All things living He does feed;\nHis full hand supplies their need:"
+        },
+        {
+          "id": 3,
+          "text": "Let us then with gladsome mind\nPraise the Lord, for He is kind:"
+        }
       ]
     },
     {
@@ -2561,7 +2795,10 @@
       "title": "O Come, O Come, Immanuel",
       "categoryId": 12,
       "verses": [
-        { "id": -1, "text": "Rejoice! Rejoice! Immanuel\nShall come to thee, O Israel!" },
+        {
+          "id": -1,
+          "text": "Rejoice! Rejoice! Immanuel\nShall come to thee, O Israel!"
+        },
         {
           "id": 0,
           "text": "O come, O come, Immanuel,\nAnd ransom captive Israel\nThat mourns in lonely exile here\nUntil the Son of God appear."
@@ -2623,7 +2860,10 @@
       "title": "The First Noel",
       "categoryId": 13,
       "verses": [
-        { "id": -1, "text": "Noel, Noel, Noel, Noel,\nBorn is the King of Israel." },
+        {
+          "id": -1,
+          "text": "Noel, Noel, Noel, Noel,\nBorn is the King of Israel."
+        },
         {
           "id": 0,
           "text": "The first noel the angel did say\nWas to certain poor shepherds in fields as they lay;\nIn fields where they lay keeping their sheep,\nOn a cold winter's night that was so deep."
@@ -2720,7 +2960,10 @@
       "title": "Hark! the Herald Angels Sing",
       "categoryId": 13,
       "verses": [
-        { "id": -1, "text": "Hark! the herald angels sing,\n\"Glory to the newborn King.\"" },
+        {
+          "id": -1,
+          "text": "Hark! the herald angels sing,\n\"Glory to the newborn King.\""
+        },
         {
           "id": 0,
           "text": "Hark! the herald angels sing,\n\"Glory to the newborn King;\nPeace on earth, and mercy mild,\nGod and sinners reconciled!\"\nJoyful, all ye nations, rise,\nJoin the triumph of the skies;\nWith th'angelic host proclaim,\n\"Christ is born in Bethlehem!\""
@@ -3149,7 +3392,10 @@
       "title": "Angels We Have Heard On High",
       "categoryId": 13,
       "verses": [
-        { "id": -1, "text": "Gloria in excelsis Deo,\nGloria in excelsis Deo." },
+        {
+          "id": -1,
+          "text": "Gloria in excelsis Deo,\nGloria in excelsis Deo."
+        },
         {
           "id": 0,
           "text": "Angels we have heard on high,\nSinging sweetly through the night,\nAnd the mountains in reply\nEchoing their brave delight."
@@ -3828,7 +4074,10 @@
       "title": "The Strife Is O'er",
       "categoryId": 16,
       "verses": [
-        { "id": -2, "text": "Alleluia, alleluia, alleluia!" },
+        {
+          "id": -2,
+          "text": "Alleluia, alleluia, alleluia!"
+        },
         {
           "id": 0,
           "text": "The strife is o'er, the battle done;\nNow is the victor's triumph won!\nNow be the song of praise begun. Alleluia!\n"
@@ -3852,7 +4101,10 @@
       "title": "Good Christian Friends Rejoice",
       "categoryId": 16,
       "verses": [
-        { "id": -1, "text": "Alleluia! Alleluia! Alleluia!" },
+        {
+          "id": -1,
+          "text": "Alleluia! Alleluia! Alleluia!"
+        },
         {
           "id": 0,
           "text": "Good Christian friends, rejoice and sing!\nNow is the triumph of our King!\nTo all the world glad news we bring:"
@@ -4571,7 +4823,10 @@
       "title": "This Is the Threefold Truth",
       "categoryId": 19,
       "verses": [
-        { "id": -1, "text": "Christ has died!\nChrist is risen!\nChrist will come again!" },
+        {
+          "id": -1,
+          "text": "Christ has died!\nChrist is risen!\nChrist will come again!"
+        },
         {
           "id": 0,
           "text": "This is the threefold truth\nOn which our faith depends;\nAnd with this joyful cry\nWorship begins and ends;"
@@ -4794,7 +5049,10 @@
       "title": "Jesus Is Coming Again",
       "categoryId": 19,
       "verses": [
-        { "id": -1, "text": "Coming again, coming again,\nJesus is coming again!" },
+        {
+          "id": -1,
+          "text": "Coming again, coming again,\nJesus is coming again!"
+        },
         {
           "id": 0,
           "text": "Lift up the trumpet, and loud let it ring:\nJesus is coming again!\nCheer up, ye pilgrims, be joyful and sing;\nJesus is coming again!"
@@ -8003,7 +8261,10 @@
       "title": "God Is Love",
       "categoryId": 30,
       "verses": [
-        { "id": -1, "text": "God is love, and where true love is\r\nGod Himself is there." },
+        {
+          "id": -1,
+          "text": "God is love, and where true love is\r\nGod Himself is there."
+        },
         {
           "id": 0,
           "text": "Here in Christ we gather, love of Christ our calling.\nChrist, our love, is with us, gladness be His greeting.\nLet us fear Him, yes, and love Him, God eternal.\nLoving Him, let each love Christ in all his brethren."
@@ -8828,7 +9089,10 @@
       "title": "Crowning Jewel of Creation",
       "categoryId": 35,
       "verses": [
-        { "id": -1, "text": "Blessed Sabbath made for man,\nGift from the Creator's hand." },
+        {
+          "id": -1,
+          "text": "Blessed Sabbath made for man,\nGift from the Creator's hand."
+        },
         {
           "id": 0,
           "text": "Crowning jewel of creation,\nBlest and hallowed, sanctified;\nTime and changes all transcending,\nShared forever, glorified."
@@ -12172,7 +12436,10 @@
       "title": "It Is Well With My Soul",
       "categoryId": 47,
       "verses": [
-        { "id": -1, "text": "It is well with my soul,\nIt is well, it is well with my soul." },
+        {
+          "id": -1,
+          "text": "It is well with my soul,\nIt is well, it is well with my soul."
+        },
         {
           "id": 0,
           "text": "When peace, like a river, attendeth my way,\nWhen sorrows like sea billows roll\nWhatever my lot, Thou hast taught me to say,\nIt is well, it is well with my soul."
@@ -15092,19 +15359,42 @@
       "title": "Dresden Amen",
       "categoryId": 62,
       "verses": [
-        { "id": 0, "text": "Amen,\nAmen." },
-        { "id": 1, "text": "Amen." },
-        { "id": 2, "text": "Amen." },
-        { "id": 3, "text": "Amen, (Amen.)" },
-        { "id": 4, "text": "Amen." },
-        { "id": 5, "text": "Amen, Amen, Amen." }
+        {
+          "id": 0,
+          "text": "Amen,\nAmen."
+        },
+        {
+          "id": 1,
+          "text": "Amen."
+        },
+        {
+          "id": 2,
+          "text": "Amen."
+        },
+        {
+          "id": 3,
+          "text": "Amen, (Amen.)"
+        },
+        {
+          "id": 4,
+          "text": "Amen."
+        },
+        {
+          "id": 5,
+          "text": "Amen, Amen, Amen."
+        }
       ]
     },
     {
       "number": 664,
       "title": "Sevenfold Amen",
       "categoryId": 62,
-      "verses": [{ "id": 0, "text": "Amen, Amen, Amen, Amen, Amen, Amen, Amen." }]
+      "verses": [
+        {
+          "id": 0,
+          "text": "Amen, Amen, Amen, Amen, Amen, Amen, Amen."
+        }
+      ]
     },
     {
       "number": 665,
@@ -15233,7 +15523,10 @@
       "title": "May the Lord Bless and Keep You",
       "categoryId": 62,
       "verses": [
-        { "id": 0, "text": "May the Lord bless and keep you both now and evermore.\nAmen, Amen." }
+        {
+          "id": 0,
+          "text": "May the Lord bless and keep you both now and evermore.\nAmen, Amen."
+        }
       ]
     },
     {
@@ -15241,7 +15534,10 @@
       "title": "Thy Word Is A Lantern",
       "categoryId": 62,
       "verses": [
-        { "id": 0, "text": "Thy Word is a lantern unto my feet,\nAnd a light unto my path." }
+        {
+          "id": 0,
+          "text": "Thy Word is a lantern unto my feet,\nAnd a light unto my path."
+        }
       ]
     },
     {
@@ -15540,7 +15836,10 @@
       "title": "How Lovely is Thy Dwelling Place - Psalm 84",
       "categoryId": 63,
       "verses": [
-        { "id": 0, "text": "How lovely is thy dwelling place,\nO Lord of hosts!" },
+        {
+          "id": 0,
+          "text": "How lovely is thy dwelling place,\nO Lord of hosts!"
+        },
         {
           "id": 1,
           "text": "My soul longs, yea, faints\r\nfor the courts of the Lord;\r\nmy heart and flesh sing for joy\r\nto the living God."
@@ -15557,7 +15856,10 @@
           "id": 4,
           "text": "For the Lord God is a sun and shield;\r\nhe bestows favor and honor.\nNo good thing does the Lord withhold\nfrom those who walk uprightly."
         },
-        { "id": 5, "text": "O Lord of hosts,\nblessed is the man who trusts in thee!" }
+        {
+          "id": 5,
+          "text": "O Lord of hosts,\nblessed is the man who trusts in thee!"
+        }
       ]
     },
     {
@@ -15662,7 +15964,10 @@
           "id": 0,
           "text": "Oh give thanks to the Lord, call upon His name;\nMake known His deeds among the peoples."
         },
-        { "id": 1, "text": "Sing to Him, sing praises to Him;\r\nSpeak of all His wonders." },
+        {
+          "id": 1,
+          "text": "Sing to Him, sing praises to Him;\r\nSpeak of all His wonders."
+        },
         {
           "id": 2,
           "text": "Glory in His holy name;\nLet the heart of those who seek the Lord be glad.\nSeek the Lord and His strength;\r\nSeek His face continually."
@@ -15671,7 +15976,10 @@
           "id": 3,
           "text": "Remember His wonders which He as done,\nHis marvels, and the judgments uttered by His mouth,\r\nO seed of Abraham, His servant,\r\nO sons of Jacob, His chosen ones!"
         },
-        { "id": 4, "text": "He is the Lord our God;\nHis judgments are in all the earth." },
+        {
+          "id": 4,
+          "text": "He is the Lord our God;\nHis judgments are in all the earth."
+        },
         {
           "id": 5,
           "text": "He has remembered His covenant forever,\nThe word which He commanded\nto a thousand generations."
@@ -15699,7 +16007,10 @@
           "id": 3,
           "text": "who lifts the weak out of the dust\r\nand raises the poor from the dunghill,\ngiving them a place among princes,\namong the princes of his people;\nwho makes the woman in a childless\nhouse a happy mother of children."
         },
-        { "id": 4, "text": "O praise the Lord." }
+        {
+          "id": 4,
+          "text": "O praise the Lord."
+        }
       ]
     },
     {
@@ -15707,13 +16018,22 @@
       "title": "If I Lift Up My Eyes to the Hills - Psalm 121",
       "categoryId": 63,
       "verses": [
-        { "id": 0, "text": "If I lift up my eyes to the hills,\nwhere shall I find help?" },
-        { "id": 1, "text": "Help comes only from the Lord,\nmaker of heaven and earth." },
+        {
+          "id": 0,
+          "text": "If I lift up my eyes to the hills,\nwhere shall I find help?"
+        },
+        {
+          "id": 1,
+          "text": "Help comes only from the Lord,\nmaker of heaven and earth."
+        },
         {
           "id": 2,
           "text": "How could he let your foot stumble?\nHow could he, your guardian, sleep?"
         },
-        { "id": 3, "text": "The guardian of Israel\nnever slumbers, never sleeps." },
+        {
+          "id": 3,
+          "text": "The guardian of Israel\nnever slumbers, never sleeps."
+        },
         {
           "id": 4,
           "text": "The Lord is your guardian,\nyour defence at your right hand;\nthe sun will not strike you by day\nnor the moon by night."
@@ -15823,7 +16143,10 @@
           "id": 3,
           "text": "praise him with the clash of cymbals,\npraise him with triumphant cymbals;"
         },
-        { "id": 4, "text": "let everything that has breath praise the Lord!\nO praise the Lord." }
+        {
+          "id": 4,
+          "text": "let everything that has breath praise the Lord!\nO praise the Lord."
+        }
       ]
     },
     {
@@ -15948,7 +16271,10 @@
           "id": 3,
           "text": "For as high as the heavens are above the earth,\nso great is his love for those who fear him;\nas far as the east is from the west,\nso far has he removed our transgressions from us."
         },
-        { "id": 4, "text": "Praise the Lord, O my soul." }
+        {
+          "id": 4,
+          "text": "Praise the Lord, O my soul."
+        }
       ]
     },
     {
@@ -15960,18 +16286,54 @@
           "id": 0,
           "text": "It is good to give thanks to the Lord,\nfor his love endures for ever."
         },
-        { "id": 1, "text": "Give thanks to the God of gods;\nhis love endures for ever." },
-        { "id": 2, "text": "Give thanks to the Lord of lords;\r\nhis love endures for ever." },
-        { "id": 3, "text": "Alone he works great marvels;\r\nhis love endures for ever." },
-        { "id": 4, "text": "In wisdom he made the heavens;\nhis love endures for ever." },
-        { "id": 5, "text": "He laid the earth upon the waters;\r\nhis love endures for ever." },
-        { "id": 6, "text": "He made the great lights,\r\nhis love endures for ever," },
-        { "id": 7, "text": "The sun to rule by day,\r\nhis love endures for ever," },
-        { "id": 8, "text": "The moon and the stars to rule by night;\nhis love endures for ever." },
-        { "id": 9, "text": "He remembered us when we were cast down,\nhis love endures for ever," },
-        { "id": 10, "text": "and rescued us from our enemies;\r\nhis love endures for ever." },
-        { "id": 11, "text": "He gives food to all his creatures;\r\nhis love endures for ever." },
-        { "id": 12, "text": "Give thanks to the God of heaven,\nfor his love endures for ever." }
+        {
+          "id": 1,
+          "text": "Give thanks to the God of gods;\nhis love endures for ever."
+        },
+        {
+          "id": 2,
+          "text": "Give thanks to the Lord of lords;\r\nhis love endures for ever."
+        },
+        {
+          "id": 3,
+          "text": "Alone he works great marvels;\r\nhis love endures for ever."
+        },
+        {
+          "id": 4,
+          "text": "In wisdom he made the heavens;\nhis love endures for ever."
+        },
+        {
+          "id": 5,
+          "text": "He laid the earth upon the waters;\r\nhis love endures for ever."
+        },
+        {
+          "id": 6,
+          "text": "He made the great lights,\r\nhis love endures for ever,"
+        },
+        {
+          "id": 7,
+          "text": "The sun to rule by day,\r\nhis love endures for ever,"
+        },
+        {
+          "id": 8,
+          "text": "The moon and the stars to rule by night;\nhis love endures for ever."
+        },
+        {
+          "id": 9,
+          "text": "He remembered us when we were cast down,\nhis love endures for ever,"
+        },
+        {
+          "id": 10,
+          "text": "and rescued us from our enemies;\r\nhis love endures for ever."
+        },
+        {
+          "id": 11,
+          "text": "He gives food to all his creatures;\r\nhis love endures for ever."
+        },
+        {
+          "id": 12,
+          "text": "Give thanks to the God of heaven,\nfor his love endures for ever."
+        }
       ]
     },
     {
@@ -15995,7 +16357,10 @@
           "id": 3,
           "text": "God is love,\nand be who abides in love abides in God,\nand God in him."
         },
-        { "id": 4, "text": "Beloved, if God so loved us,\nwe also ought to love one another." },
+        {
+          "id": 4,
+          "text": "Beloved, if God so loved us,\nwe also ought to love one another."
+        },
         {
           "id": 5,
           "text": "If someone says, \"I love God,\"\nand bates his brother, be is a liar;\nfor be who does not love his brother whom be bas seen,\nbow can be love God whom be bas not seen?"
@@ -16035,7 +16400,10 @@
           "id": 5,
           "text": "You made him ruler over the works of your hands:\nyou put everything under his feet:\nall locks and herds,\nand the beasts of the field,\nthe birds of the air,\nand the fish of the sea,\nall that swim the paths of the seas."
         },
-        { "id": 6, "text": "O Lord, our Lord,\nhow majestic is your name in all the earth!" }
+        {
+          "id": 6,
+          "text": "O Lord, our Lord,\nhow majestic is your name in all the earth!"
+        }
       ]
     },
     {
@@ -16144,7 +16512,10 @@
           "id": 1,
           "text": "Praise the Lord with the harp;\nMake melody to Him with an\ninstrument of ten strings."
         },
-        { "id": 2, "text": "Sing to Him a new song;\nPlay skillfully with a shout of joy." },
+        {
+          "id": 2,
+          "text": "Sing to Him a new song;\nPlay skillfully with a shout of joy."
+        },
         {
           "id": 3,
           "text": "For the word of the Lord is right,\nAnd all His work is done in truth.\nHe loves righteousness and justice;\nThe earth is full of the goodness of the Lord."
@@ -16191,7 +16562,10 @@
       "title": "God is Our Refuge and Strength - Psalm 46",
       "categoryId": 63,
       "verses": [
-        { "id": 0, "text": "God is our refuge and strength,\nA very present help in trouble." },
+        {
+          "id": 0,
+          "text": "God is our refuge and strength,\nA very present help in trouble."
+        },
         {
           "id": 1,
           "text": "Therefore we will not fear,\nThough the earth be removed,\nAnd though the mountains be\ncarried into the midst of the sea;\nThough its waters roar and be troubled,\nThough the mountains shake with its swelling."
@@ -16204,7 +16578,10 @@
           "id": 3,
           "text": "The nations raged, the kingdoms were moved;\nHe uttered His voice, the earth melted."
         },
-        { "id": 4, "text": "The Lord of hosts is with us;\nThe God of Jacob is our refuge." },
+        {
+          "id": 4,
+          "text": "The Lord of hosts is with us;\nThe God of Jacob is our refuge."
+        },
         {
           "id": 5,
           "text": "Come, behold the works of the Lord,\nWho has made desolations in the earth.\nHe makes wars cease to the end of the earth;\nHe breaks the bow and cuts the spear in two;\nHe burns the chariot in the fire."
@@ -16213,7 +16590,10 @@
           "id": 6,
           "text": "Be still, and know that I am God;\nI will be exalted among the nations,\nI will be exalted in the earth!"
         },
-        { "id": 7, "text": "The Lord of hosts is with us;\nThe God of Jacob is our refuge." }
+        {
+          "id": 7,
+          "text": "The Lord of hosts is with us;\nThe God of Jacob is our refuge."
+        }
       ]
     },
     {
@@ -16221,7 +16601,10 @@
       "title": "Lord, You Have Been Our Refuge - Psalm 90",
       "categoryId": 63,
       "verses": [
-        { "id": 0, "text": "Lord, you have been our refuge age after age." },
+        {
+          "id": 0,
+          "text": "Lord, you have been our refuge age after age."
+        },
         {
           "id": 1,
           "text": "Before the mountains were born\r\nbefore the earth or the world came to birth,\nyou were God from all eternity and for ever."
@@ -16246,7 +16629,10 @@
           "id": 6,
           "text": "but they all add up to anxiety and trouble\nover in a trice, and then we are gone.\nWho yet has felt the full force of your fury,\nor learnt to fear the violence of your rage?"
         },
-        { "id": 7, "text": "Teach us to count how few days we have\nand so gain wisdom of heart." }
+        {
+          "id": 7,
+          "text": "Teach us to count how few days we have\nand so gain wisdom of heart."
+        }
       ]
     },
     {
@@ -16410,7 +16796,10 @@
       "title": "The Lord is My Shepherd - Psalm 23",
       "categoryId": 63,
       "verses": [
-        { "id": 0, "text": "The Lord is my shepherd;\nI shall not want." },
+        {
+          "id": 0,
+          "text": "The Lord is my shepherd;\nI shall not want."
+        },
         {
           "id": 1,
           "text": "He maketh me to lie down in green pastures:\nhe leadeth me beside the still waters."
@@ -16563,7 +16952,10 @@
       "title": "The Birth of Christ - Matthew 1, Luke 2",
       "categoryId": 63,
       "verses": [
-        { "id": 0, "text": "This is how the birth of Jesus Christ came about." },
+        {
+          "id": 0,
+          "text": "This is how the birth of Jesus Christ came about."
+        },
         {
           "id": 1,
           "text": "His mother Mary was pledged to be married to Joseph,\nbut before they came together,\nshe was found to be with child\nthrough the Holy Spirit."
@@ -16807,8 +17199,14 @@
           "id": 5,
           "text": "So the women hurried away from the tomb,\nafraid yet filled with joy,\nand ran to tell his disciples."
         },
-        { "id": 6, "text": "Suddenly Jesus met them. \"Greetings,\" he said." },
-        { "id": 7, "text": "They came to him, clasped his feet and worshiped him." }
+        {
+          "id": 6,
+          "text": "Suddenly Jesus met them. \"Greetings,\" he said."
+        },
+        {
+          "id": 7,
+          "text": "They came to him, clasped his feet and worshiped him."
+        }
       ]
     },
     {
@@ -16898,7 +17296,10 @@
           "id": 3,
           "text": "Therefore, since we have a great high priest\nwho has gone through the heavens,\nJesus the Son of God,\nlet us hold firmly to the faith we profess....\nLet us then approach the throne of\ngrace with confidence,\nso that we may receive mercy and\nfind grace to help us in our time of need."
         },
-        { "id": 4, "text": "We have this hope as an anchor for\nthe soul, firm and secure." }
+        {
+          "id": 4,
+          "text": "We have this hope as an anchor for\nthe soul, firm and secure."
+        }
       ]
     },
     {
@@ -17007,8 +17408,14 @@
       "title": "The Lord Works Justice - Psalm 103",
       "categoryId": 63,
       "verses": [
-        { "id": 0, "text": "The Lord works vindication and justice\nfor all who are oppressed." },
-        { "id": 1, "text": "He made known his ways to Moses,\nhis acts to the people of Israel." },
+        {
+          "id": 0,
+          "text": "The Lord works vindication and justice\nfor all who are oppressed."
+        },
+        {
+          "id": 1,
+          "text": "He made known his ways to Moses,\nhis acts to the people of Israel."
+        },
         {
           "id": 2,
           "text": "As far as the east is from the west,\nso far does he remove our transgressions from us."
@@ -17033,7 +17440,10 @@
           "id": 7,
           "text": "Bless the Lord, O you his angels,\nyou mighty ones who do his word,\nhearkening to the voice of his word!"
         },
-        { "id": 8, "text": "Bless the Lord, all his hosts,\nhis ministers that do his will!" },
+        {
+          "id": 8,
+          "text": "Bless the Lord, all his hosts,\nhis ministers that do his will!"
+        },
         {
           "id": 9,
           "text": "Bless the Lord, all his works,\nin all places of his dominion.\nBless the Lord, O my soul!"
@@ -17225,7 +17635,10 @@
           "id": 4,
           "text": "Ye men of Galilee,\nWhy stand ye gazing up into heaven?\nthis same Jesus, which is taken up\nfrom you into heaven,\nshall so come in like manner\nas ye have seen him go into heaven."
         },
-        { "id": 5, "text": "Watch therefore:\nfor ye know not what hour your Lord doth come." },
+        {
+          "id": 5,
+          "text": "Watch therefore:\nfor ye know not what hour your Lord doth come."
+        },
         {
           "id": 6,
           "text": "But know this, that if the goodman\nof the house had known in what watch\nthe thief would come, he would have watched,\nand would not have suffered his house\nto be broken up.\nTherefore be ye also ready:\nfor in such an hour as ye think not\nthe Son of man cometh."
@@ -17385,7 +17798,10 @@
           "id": 1,
           "text": "\"even the Spirit of truth,\nwhom the world cannot receive,\nbecause it neither sees him nor knows him;\nyou know him, for he dwells with you,\nand will be in you."
         },
-        { "id": 2, "text": "\"I will not leave you desolate;\nI will come to you.\"" },
+        {
+          "id": 2,
+          "text": "\"I will not leave you desolate;\nI will come to you.\""
+        },
         {
           "id": 3,
           "text": "\"Nevertheless I tell you the truth:\nit is to your advantage that I go away,\nfor if I do not go away,\nthe Counselor will not come to you;\nbut if I go, I will send him to you."
@@ -17421,7 +17837,10 @@
       "title": "God's Word - Psalm 119",
       "categoryId": 63,
       "verses": [
-        { "id": 0, "text": "How can a youth remain pure?\nBy behaving as your word prescribes." },
+        {
+          "id": 0,
+          "text": "How can a youth remain pure?\nBy behaving as your word prescribes."
+        },
         {
           "id": 1,
           "text": "I have sought you with all my heart,\ndo not let me stray from your commandments."
@@ -17430,20 +17849,38 @@
           "id": 2,
           "text": "I have treasured your promises in my heart,\nsince I have no wish to sin against you."
         },
-        { "id": 3, "text": "How blessed are you, Yahweh!\nTeach me your statutes!" },
+        {
+          "id": 3,
+          "text": "How blessed are you, Yahweh!\nTeach me your statutes!"
+        },
         {
           "id": 4,
           "text": "With my lips I have repeated them,\nall these rulings from your own mouth."
         },
-        { "id": 5, "text": "In the way of your decrees lies my joy,\na joy beyond all wealth." },
+        {
+          "id": 5,
+          "text": "In the way of your decrees lies my joy,\na joy beyond all wealth."
+        },
         {
           "id": 6,
           "text": "I mean to meditate on your precepts\nand to concentrate on your paths."
         },
-        { "id": 7, "text": "I find my delight in your statutes,\nI do not forget your word." },
-        { "id": 8, "text": "Open my eyes: I shall concentrate\non the marvels of your Law." },
-        { "id": 9, "text": "Now your word is a lamp to my feet,\na light to my path." },
-        { "id": 10, "text": "As your word unfolds, it gives light,\nand the simple understand." },
+        {
+          "id": 7,
+          "text": "I find my delight in your statutes,\nI do not forget your word."
+        },
+        {
+          "id": 8,
+          "text": "Open my eyes: I shall concentrate\non the marvels of your Law."
+        },
+        {
+          "id": 9,
+          "text": "Now your word is a lamp to my feet,\na light to my path."
+        },
+        {
+          "id": 10,
+          "text": "As your word unfolds, it gives light,\nand the simple understand."
+        },
         {
           "id": 11,
           "text": "Faithfulness is the essence of your word,\nyour righteous rulings bold good for ever."
@@ -17612,7 +18049,10 @@
           "id": 8,
           "text": "\"But the father said to his servants,\n'Quick! fetch a robe, my best one,\nand put it on him;\nput a ring on his finger and shoes on his feet.\nBring the fatted calf and kill it,\nand let us have a feast to celebrate the day.\nFor this son of mine was dead and\nhas come back to life;\nhe was lost and is found.'"
         },
-        { "id": 9, "text": "\"And the festivities began.\"" }
+        {
+          "id": 9,
+          "text": "\"And the festivities began.\""
+        }
       ]
     },
     {
@@ -17675,7 +18115,10 @@
           "id": 6,
           "text": "\"Go therefore and make disciples of all nations,\nbaptizing them in the name of the\nFather and of the Son and of the\nHoly Spirit, teaching them to observe\nall that I have commanded you;"
         },
-        { "id": 7, "text": "\"and lo, I am with you always,\nto the close of the age.\"" }
+        {
+          "id": 7,
+          "text": "\"and lo, I am with you always,\nto the close of the age.\""
+        }
       ]
     },
     {
@@ -17948,7 +18391,10 @@
           "id": 4,
           "text": "There should be no division\tin the body, but...\nits parts should have equal concern for each other.\nIf one part suffers, every part suffers with it;\nif one part is honored, every part rejoices with it."
         },
-        { "id": 5, "text": "Now you are the body of Cbrist,\nand each one of you is a part of it." }
+        {
+          "id": 5,
+          "text": "Now you are the body of Cbrist,\nand each one of you is a part of it."
+        }
       ]
     },
     {
@@ -17976,7 +18422,10 @@
           "id": 4,
           "text": "\"Go therefore and make disciples of all the nations,\nbaptizing them in the name of the\r\nFather and of the Son and of the Holy Spirit,\nteaching them to observe all things\nthat I have commanded you;"
         },
-        { "id": 5, "text": "\"and lo, I am with you always,\neven to the end of the age.\" Amen." }
+        {
+          "id": 5,
+          "text": "\"and lo, I am with you always,\neven to the end of the age.\" Amen."
+        }
       ]
     },
     {
@@ -18117,7 +18566,10 @@
           "id": 2,
           "text": "He came to Simon Peter, who said to him,\n\"Lord, are you going to wash my feet?\"\nJesus replied, \"You do not realize\nnow what I am doing,\nbut later you will understand.\"\n\"No,\" said Peter, \"you shall never wash my feet.\""
         },
-        { "id": 3, "text": "Jesus answered, \"Unless I wash you,\nyou have no part with me.\"" },
+        {
+          "id": 3,
+          "text": "Jesus answered, \"Unless I wash you,\nyou have no part with me.\""
+        },
         {
           "id": 4,
           "text": "\"Then, Lord,\" Simon Peter replied,\n\"not just my feet but my hands and\nmy head as well!\""
@@ -18130,7 +18582,10 @@
           "id": 6,
           "text": "When he had finished washing their feet,\nhe put on his clothes and returned to his place."
         },
-        { "id": 7, "text": "\"Do you understand what I have\ndone for your\" tie asked them." },
+        {
+          "id": 7,
+          "text": "\"Do you understand what I have\ndone for your\" tie asked them."
+        },
         {
           "id": 8,
           "text": "\"You call me 'Teacher' and 'Lord,'\nand rightly so, for that is what I am."
@@ -18150,7 +18605,10 @@
       "title": "The Lord's Supper - 1 Corinthians 11",
       "categoryId": 63,
       "verses": [
-        { "id": 0, "text": "I received from the Lord\nthat which I also delivered to you:" },
+        {
+          "id": 0,
+          "text": "I received from the Lord\nthat which I also delivered to you:"
+        },
         {
           "id": 1,
           "text": "that the Lord Jesus on the same night\nin which He was betrayed took bread:\nand when He had given thanks,\nHe broke it and said,"
@@ -18159,7 +18617,10 @@
           "id": 2,
           "text": "\"Take, eat; this is My body\nwhich is broken for you;\ndo this in remembrance of Me.\""
         },
-        { "id": 3, "text": "In the same manner He also took the\ncup after supper, saying," },
+        {
+          "id": 3,
+          "text": "In the same manner He also took the\ncup after supper, saying,"
+        },
         {
           "id": 4,
           "text": "\"This cup is the new covenant in My blood.\nThis do, as often as you drink it,\nin remembrance of Me.\""
@@ -18218,7 +18679,10 @@
           "id": 0,
           "text": "God spake all these words, saying,\nI am the Lord thy God,\nwhich have brought thee out of the land of Egypt,\nout of the house of bondage."
         },
-        { "id": 1, "text": "Thou shalt have no other gods before me." },
+        {
+          "id": 1,
+          "text": "Thou shalt have no other gods before me."
+        },
         {
           "id": 2,
           "text": "Thou shalt not make unto thee any graven image,\nor any likeness of any thing\nthat is in heaven above,\nor that is in the earth beneath,\nor that is in the water under the earth:"
@@ -18247,15 +18711,30 @@
           "id": 8,
           "text": "for in six days the Lord made heaven and earth,\nthe sea, and all that in them is,\nand rested the seventh day:"
         },
-        { "id": 9, "text": "wherefore the Lord blessed the sabbath day,\nand hallowed it." },
+        {
+          "id": 9,
+          "text": "wherefore the Lord blessed the sabbath day,\nand hallowed it."
+        },
         {
           "id": 10,
           "text": "Honour thy father and thy mother,\nthat thy days may be long upon the land\nwhich the Lord thy God giveth thee."
         },
-        { "id": 11, "text": "Thou shalt not kill." },
-        { "id": 12, "text": "Thou shalt not commit adultery." },
-        { "id": 13, "text": "Thou shalt not steal." },
-        { "id": 14, "text": "Thou shalt not bear false witness\nagainst thy neighbour." },
+        {
+          "id": 11,
+          "text": "Thou shalt not kill."
+        },
+        {
+          "id": 12,
+          "text": "Thou shalt not commit adultery."
+        },
+        {
+          "id": 13,
+          "text": "Thou shalt not steal."
+        },
+        {
+          "id": 14,
+          "text": "Thou shalt not bear false witness\nagainst thy neighbour."
+        },
         {
           "id": 15,
           "text": "Thou shalt not covet thy neighbour's house,\nthou shalt not covet thy neighbour's wife,\nnor his manservant, nor his maidservant,\nnor his ox, nor his ass,\nnor any thing that is thy neighbour's."
@@ -18295,7 +18774,10 @@
           "id": 6,
           "text": "The body is a unit,\nthough it is made up of many parts;\nand though all its parts are many,\nthey form one body."
         },
-        { "id": 7, "text": "So it is with Christ." }
+        {
+          "id": 7,
+          "text": "So it is with Christ."
+        }
       ]
     },
     {
@@ -18350,7 +18832,10 @@
           "id": 1,
           "text": "It is written:\n\"'As surely as I live,' says the Lord,\n'Every knee will bow before me;\nevery tongue will confess to God.'\""
         },
-        { "id": 2, "text": "So then, each of us will give an\naccount of himself to God." },
+        {
+          "id": 2,
+          "text": "So then, each of us will give an\naccount of himself to God."
+        },
         {
           "id": 3,
           "text": "My dear children, I write this to you\nso that you will not sin.\nBut if anybody does sin,\nwe have one who speaks to the Father\nin our defense—Jesus Christ,\nthe Righteous One."
@@ -18588,13 +19073,22 @@
           "id": 5,
           "text": "Lift up your heads, O gates! and be lifted up,\nO ancient doors! that the King of glory may come in."
         },
-        { "id": 6, "text": "Who is the King of glory?" },
+        {
+          "id": 6,
+          "text": "Who is the King of glory?"
+        },
         {
           "id": 7,
           "text": "The Lord, strong and mighty,\nthe Lord, mighty ill battle!\nLift up your heads, O gates!\nand be lifted up, O ancient doors!\nthat the King of glory may come in,"
         },
-        { "id": 8, "text": "Who is this King of glory?" },
-        { "id": 9, "text": "The Lord of hosts, he is the King of glory!" }
+        {
+          "id": 8,
+          "text": "Who is this King of glory?"
+        },
+        {
+          "id": 9,
+          "text": "The Lord of hosts, he is the King of glory!"
+        }
       ]
     },
     {
@@ -18649,7 +19143,10 @@
           "id": 0,
           "text": "Let love be genuine; hate what is evil,\nhold fast to what is good;\nlove one another with brotherly affection;\noutdo one another in showing honor."
         },
-        { "id": 1, "text": "Never Bag in zeal, but aglow with the Spirit,\nserve the Lord." },
+        {
+          "id": 1,
+          "text": "Never Bag in zeal, but aglow with the Spirit,\nserve the Lord."
+        },
         {
           "id": 2,
           "text": "Rejoice in your hope, be patient\nin tribulation, be constant in prayer."
@@ -18674,7 +19171,10 @@
           "id": 7,
           "text": "No, \"if your enemy is hungry, feed him;\nif he is thirsty, give him drink;\nfor by so doing you will heap burning coals\nupon his head.\""
         },
-        { "id": 8, "text": "Do not be overcome by evil,\nbut overcome evil with good." }
+        {
+          "id": 8,
+          "text": "Do not be overcome by evil,\nbut overcome evil with good."
+        }
       ]
     },
     {
@@ -18761,7 +19261,10 @@
           "id": 6,
           "text": "and in that image there is no room\r\nfor distinction between Greek and Jew,\nbetween the circumcised or the uncircumcised,\nor between barbarian and Scythian, slave and free man."
         },
-        { "id": 7, "text": "There is only Christ:\nhe is everything and he is in everything." }
+        {
+          "id": 7,
+          "text": "There is only Christ:\nhe is everything and he is in everything."
+        }
       ]
     },
     {
@@ -18886,7 +19389,10 @@
       "title": "Happy Are All Who Fear the Lord - Psalm 128",
       "categoryId": 63,
       "verses": [
-        { "id": 0, "text": "Happy are all who fear the Lord,\nwho live according to his will." },
+        {
+          "id": 0,
+          "text": "Happy are all who fear the Lord,\nwho live according to his will."
+        },
         {
           "id": 1,
           "text": "You shall eat the fruit of your own labours,\nyou shall be happy and you shall prosper."
@@ -18895,12 +19401,18 @@
           "id": 2,
           "text": "Your wife shall be like a fruitful vine\nin the heart of your house;\nyour sons shall be like olive-shoots\nround about your table."
         },
-        { "id": 3, "text": "This is the blessing in store for the\nman who fears the Lord." },
+        {
+          "id": 3,
+          "text": "This is the blessing in store for the\nman who fears the Lord."
+        },
         {
           "id": 4,
           "text": "May the Lord bless you from Zion;\nmay you share the prosperity of Jerusalem\nall the days of your life,\nand live to see your children's children!"
         },
-        { "id": 5, "text": "Peace be upon Israel!" }
+        {
+          "id": 5,
+          "text": "Peace be upon Israel!"
+        }
       ]
     },
     {
@@ -18908,7 +19420,10 @@
       "title": "Wisdom - Proverbs 3",
       "categoryId": 63,
       "verses": [
-        { "id": 0, "text": "Happy the man who discovers wisdom,\nthe man who gains discernment:" },
+        {
+          "id": 0,
+          "text": "Happy the man who discovers wisdom,\nthe man who gains discernment:"
+        },
         {
           "id": 1,
           "text": "gaining her is more rewarding than silver,\nmore profitable than gold."
@@ -18940,15 +19455,30 @@
           "id": 0,
           "text": "\"Blessed are the poor in spirit,\nfor theirs is the kingdom of heaven."
         },
-        { "id": 1, "text": "\"Blessed are those who mourn,\nfor they will be comforted." },
-        { "id": 2, "text": "\"Blessed are the meek,\nfor they will inherit the earth." },
+        {
+          "id": 1,
+          "text": "\"Blessed are those who mourn,\nfor they will be comforted."
+        },
+        {
+          "id": 2,
+          "text": "\"Blessed are the meek,\nfor they will inherit the earth."
+        },
         {
           "id": 3,
           "text": "\"Blessed are those who hunger and\nthirst for righteousness,\nfor they will be filled."
         },
-        { "id": 4, "text": "\"Blessed are the merciful,\nfor they will be shown mercy." },
-        { "id": 5, "text": "\"Blessed are the pure in heart,\nfor they will see God." },
-        { "id": 6, "text": "\"Blessed are the peacemakers,\nfor they will be called sons of God." },
+        {
+          "id": 4,
+          "text": "\"Blessed are the merciful,\nfor they will be shown mercy."
+        },
+        {
+          "id": 5,
+          "text": "\"Blessed are the pure in heart,\nfor they will see God."
+        },
+        {
+          "id": 6,
+          "text": "\"Blessed are the peacemakers,\nfor they will be called sons of God."
+        },
         {
           "id": 7,
           "text": "\"Blessed are those who are persecuted\nbecause of righteousness,\nfor theirs is the kingdom of heaven."
@@ -19112,7 +19642,10 @@
       "title": "Union with Christ - John 15",
       "categoryId": 63,
       "verses": [
-        { "id": 0, "text": "\"I am the true vine,\nand My Father is the vinedresser." },
+        {
+          "id": 0,
+          "text": "\"I am the true vine,\nand My Father is the vinedresser."
+        },
         {
           "id": 1,
           "text": "\"Every branch in Me that does not bear fruit,\nHe takes away;\nand every branch that bears fruit,\nHe prunes it, that it may bear more fruit."
@@ -19199,7 +19732,10 @@
           "id": 2,
           "text": "Lead me in the path of thy commandments,\nfor I delight in it....\nTurn my eyes from looking at vanities;\nand give me life in thy ways."
         },
-        { "id": 3, "text": "Thy word is a lamp to my feet\nand a light to my path." },
+        {
+          "id": 3,
+          "text": "Thy word is a lamp to my feet\nand a light to my path."
+        },
         {
           "id": 4,
           "text": "Good and upright is the Lord;\ntherefore he instructs sinners in the way.\nHe leads the humble in what is right,\nand teaches the humble his way."
@@ -19523,7 +20059,10 @@
           "id": 5,
           "text": "Strive for perfection; listen to my appeals;\nagree with one another; live in peace."
         },
-        { "id": 6, "text": "And the God of love and peace will be with you." }
+        {
+          "id": 6,
+          "text": "And the God of love and peace will be with you."
+        }
       ]
     },
     {
@@ -19574,7 +20113,10 @@
           "id": 3,
           "text": "who keeps his oath even when it hurts,\nwho lends his money without usury and\r\ndoes not accept a bribe against the innocent."
         },
-        { "id": 4, "text": "He who does these things will never be shaken." }
+        {
+          "id": 4,
+          "text": "He who does these things will never be shaken."
+        }
       ]
     },
     {
@@ -19726,7 +20268,10 @@
           "id": 1,
           "text": "Then it was said among the nations,\n\"The Lord has done great things for them.\"\nThe Lord has done great things for us,\nand we are filled with joy."
         },
-        { "id": 2, "text": "Restore our fortunes, O Lord,\nlike streams in the Negev." },
+        {
+          "id": 2,
+          "text": "Restore our fortunes, O Lord,\nlike streams in the Negev."
+        },
         {
           "id": 3,
           "text": "Those who sow in tears\nwill reap with songs of joy.\nHe who goes out weeping,\ncarrying seed to sow,\nwill return with songs of joy,\ncarrying sheaves with him."
@@ -19843,10 +20388,22 @@
           "id": 0,
           "text": "The Lord God took the man\nand put him in the Garden of Eden\nto work it and take care of it."
         },
-        { "id": 1, "text": "Six days you shall labor and do all your work." },
-        { "id": 2, "text": "\"By the sweat of your brow\nyou will eat your food.\"" },
-        { "id": 3, "text": "The sleep of a laborer is sweet,\nwhether he eats little or much." },
-        { "id": 4, "text": "Whatever your hand finds to do,\ndo it with all your might." },
+        {
+          "id": 1,
+          "text": "Six days you shall labor and do all your work."
+        },
+        {
+          "id": 2,
+          "text": "\"By the sweat of your brow\nyou will eat your food.\""
+        },
+        {
+          "id": 3,
+          "text": "The sleep of a laborer is sweet,\nwhether he eats little or much."
+        },
+        {
+          "id": 4,
+          "text": "Whatever your hand finds to do,\ndo it with all your might."
+        },
         {
           "id": 5,
           "text": "We gave you this rule:\n\"If a man will not work,\nhe shall not eat.\""
@@ -19979,7 +20536,10 @@
           "id": 2,
           "text": "Impress them on your children.\nTalk about them when you sit at home\nand when you walk along the road,\nwhen you lie down and when you get up."
         },
-        { "id": 3, "text": "Children, obey your parents in the Lord,\nfor this is right." },
+        {
+          "id": 3,
+          "text": "Children, obey your parents in the Lord,\nfor this is right."
+        },
         {
           "id": 4,
           "text": "\"Honor your father and mother\"\nwhich is the first commandment with a promise\n\"that it may go well with you\nand that you may enjoy long life on the earth.\""
@@ -20069,7 +20629,10 @@
       "title": "A Noble Wife - Proverbs 31",
       "categoryId": 63,
       "verses": [
-        { "id": 0, "text": "Who can find a virtuous wife?\nFor her worth is far above rubies." },
+        {
+          "id": 0,
+          "text": "Who can find a virtuous wife?\nFor her worth is far above rubies."
+        },
         {
           "id": 1,
           "text": "The heart of her husband safely trusts her;\nSo he will have no lack of gain.\nShe does him good and not evil\nAll the days of her life."
@@ -20117,7 +20680,10 @@
           "id": 4,
           "text": "\"It follows that they are no longer two individuals:\nthey are one flesh.\nWhat God has joined together,\nman must not separate.\""
         },
-        { "id": 5, "text": "Be subject to one another\nout of reverence for Christ." },
+        {
+          "id": 5,
+          "text": "Be subject to one another\nout of reverence for Christ."
+        },
         {
           "id": 6,
           "text": "Wives, be subject to your husbands\nas to the Lord;\nfor the man is the head of the woman,\njust as Christ also is the head of the church."
@@ -20145,7 +20711,10 @@
           "id": 1,
           "text": "\"The Lord is my strength and song,\nAnd He has become my salvation;\nHe is my God, and I will praise Him;\nMy Father's God, and I will exalt Him."
         },
-        { "id": 2, "text": "\"The Lord is a man of war;\nThe Lord is His name." },
+        {
+          "id": 2,
+          "text": "\"The Lord is a man of war;\nThe Lord is His name."
+        },
         {
           "id": 3,
           "text": "\"Pharaoh's chariots and his army\nHe has cast into the sea;\nHis chosen captains also\nare drowned in the Red Sea."
@@ -20194,7 +20763,10 @@
           "id": 14,
           "text": "\"You will bring them in and plant them\nIn the mountain of Your inheritance,\nIn the place, O Lord, which You have made\nFor Your own dwelling,\nThe sanctuary, O Lord,\nwhich You hands have established."
         },
-        { "id": 15, "text": "\"The Lord shall reign forever and ever.\"" }
+        {
+          "id": 15,
+          "text": "\"The Lord shall reign forever and ever.\""
+        }
       ]
     },
     {
@@ -20202,14 +20774,26 @@
       "title": "Out of the Depths - Psalm 130",
       "categoryId": 64,
       "verses": [
-        { "id": 0, "text": "Out of the depths I have cried to You, O Lord;" },
+        {
+          "id": 0,
+          "text": "Out of the depths I have cried to You, O Lord;"
+        },
         {
           "id": 1,
           "text": "Lord, hear my voice!\nLet Your ears be attentive\nTo the voice of my supplications."
         },
-        { "id": 2, "text": "If You, Lord, should mark iniquities,\nO Lord, who could stand?" },
-        { "id": 3, "text": "But there is forgiveness with You,\nThat You may be feared." },
-        { "id": 4, "text": "I wait for the Lord, my soul waits,\nAnd in His word I do hope." },
+        {
+          "id": 2,
+          "text": "If You, Lord, should mark iniquities,\nO Lord, who could stand?"
+        },
+        {
+          "id": 3,
+          "text": "But there is forgiveness with You,\nThat You may be feared."
+        },
+        {
+          "id": 4,
+          "text": "I wait for the Lord, my soul waits,\nAnd in His word I do hope."
+        },
         {
           "id": 5,
           "text": "My soul waits for the Lord\nMore than those who watch for the morning—\nI say, more than those who watch for the morning."
@@ -20218,7 +20802,10 @@
           "id": 6,
           "text": "O Israel, hope in the Lord;\nFor with the Lord there is mercy,\nAnd with Him is abundant redemption."
         },
-        { "id": 7, "text": "nd He shall redeem Israel\nFrom all his iniquities." }
+        {
+          "id": 7,
+          "text": "nd He shall redeem Israel\nFrom all his iniquities."
+        }
       ]
     },
     {
@@ -20230,12 +20817,18 @@
           "id": 0,
           "text": "\"Holy, holy, holy is the Lord of hosts;\nThe whole earth is full of His glory!\""
         },
-        { "id": 1, "text": "\"Hosanna!\n'Blessed is He who comes in the\nname of the Lord!'" },
+        {
+          "id": 1,
+          "text": "\"Hosanna!\n'Blessed is He who comes in the\nname of the Lord!'"
+        },
         {
           "id": 2,
           "text": "\"Blessed is the kingdom of our father David\nThat comes in the name of the Lord!"
         },
-        { "id": 3, "text": "\"Hosanna in the highest!\"" }
+        {
+          "id": 3,
+          "text": "\"Hosanna in the highest!\""
+        }
       ]
     },
     {
@@ -20319,13 +20912,22 @@
       "title": "Paul's Doxology - Romans 11",
       "categoryId": 64,
       "verses": [
-        { "id": 0, "text": "Oh, the depth of the riches\nof the wisdom and knowledge of God!" },
-        { "id": 1, "text": "How unsearchable his judgments,\nand his paths beyond tracing out!" },
+        {
+          "id": 0,
+          "text": "Oh, the depth of the riches\nof the wisdom and knowledge of God!"
+        },
+        {
+          "id": 1,
+          "text": "How unsearchable his judgments,\nand his paths beyond tracing out!"
+        },
         {
           "id": 2,
           "text": "\"Who has known the mind of the Lord?\nOr who has been his counselor?\""
         },
-        { "id": 3, "text": "\"Who has ever given to God,\nthat God should repay him?\"" },
+        {
+          "id": 3,
+          "text": "\"Who has ever given to God,\nthat God should repay him?\""
+        },
         {
           "id": 4,
           "text": "For from him and through him\nand to him are all things.\nTo him be the glory forever! Amen."
@@ -20373,7 +20975,10 @@
           "id": 8,
           "text": "But he who is spiritual judges all things,\nyet he himself is rightly judged by no one.\nFor \"Who has known the mind of the\nLord that he may instruct Him?\""
         },
-        { "id": 9, "text": "But we have the mind of Christ." }
+        {
+          "id": 9,
+          "text": "But we have the mind of Christ."
+        }
       ]
     },
     {
@@ -20497,7 +21102,10 @@
           "id": 2,
           "text": "What we have seen and heard\nwe are telling you so that you too\nmay be in union with us,\nas we are in union with the Father\nand with his Son Jesus Christ."
         },
-        { "id": 3, "text": "We are writing this to you\nto make our own joy complete." }
+        {
+          "id": 3,
+          "text": "We are writing this to you\nto make our own joy complete."
+        }
       ]
     },
     {
@@ -20527,13 +21135,22 @@
       "title": "Psalm 43:3, 4",
       "categoryId": 65,
       "verses": [
-        { "id": 0, "text": "Send forth your light and your truth,\nlet them guide me;" },
+        {
+          "id": 0,
+          "text": "Send forth your light and your truth,\nlet them guide me;"
+        },
         {
           "id": 1,
           "text": "let them bring me to your holy mountain,\nto the place where you dwell."
         },
-        { "id": 2, "text": "Then will I go to the altar of God,\nto God, my joy and my delight." },
-        { "id": 3, "text": "I will praise you with the harp,\nO God, my God." }
+        {
+          "id": 2,
+          "text": "Then will I go to the altar of God,\nto God, my joy and my delight."
+        },
+        {
+          "id": 3,
+          "text": "I will praise you with the harp,\nO God, my God."
+        }
       ]
     },
     {
@@ -20632,8 +21249,14 @@
           "id": 1,
           "text": "All flesh must come to you\nwith all its sins;\nthough our faults overpower us,\nyou blot them out."
         },
-        { "id": 2, "text": "Happy the man you choose,\nwhom you invite to live in your courts." },
-        { "id": 3, "text": "Fill us with the good things of your house,\nof your holy Temple." }
+        {
+          "id": 2,
+          "text": "Happy the man you choose,\nwhom you invite to live in your courts."
+        },
+        {
+          "id": 3,
+          "text": "Fill us with the good things of your house,\nof your holy Temple."
+        }
       ]
     },
     {
@@ -20826,7 +21449,10 @@
           "id": 0,
           "text": "Open for me the gates of righteousness;\nI will enter and give thanks to the Lord."
         },
-        { "id": 1, "text": "This is the gate of the Lord\nthrough which the righteous may enter." },
+        {
+          "id": 1,
+          "text": "This is the gate of the Lord\nthrough which the righteous may enter."
+        },
         {
           "id": 2,
           "text": "I will give you thanks,\nfor you answered me;\nyou have become my salvation."
@@ -20864,7 +21490,10 @@
       "title": "Psalm 135:1-3",
       "categoryId": 65,
       "verses": [
-        { "id": 0, "text": "O praise the Lord." },
+        {
+          "id": 0,
+          "text": "O praise the Lord."
+        },
         {
           "id": 1,
           "text": "Praise the name of the Lord;\npraise him, you servants of the Lord,\nwho stand in the house of the Lord,\nin the temple courts of our God."
@@ -21029,8 +21658,14 @@
       "title": "Revelation 22:17",
       "categoryId": 65,
       "verses": [
-        { "id": 0, "text": "\"Come!\" say the Spirit and the bride." },
-        { "id": 1, "text": "\"Come!\" let each hearer reply." },
+        {
+          "id": 0,
+          "text": "\"Come!\" say the Spirit and the bride."
+        },
+        {
+          "id": 1,
+          "text": "\"Come!\" let each hearer reply."
+        },
         {
           "id": 2,
           "text": "Come forward, you who are thirsty;\naccept the water of life, a free gift to all who desire it."
@@ -21189,13 +21824,22 @@
           "id": 0,
           "text": "\"Yours, O Lord, is the greatness\nand the power and the glory\nand the majesty and the splendor,\nfor everything in heaven and earth is yours."
         },
-        { "id": 1, "text": "\"Yours, O Lord, is the kingdom;\nyou are exalted as head over all." },
-        { "id": 2, "text": "\"Wealth and honor come from you;\nyou are the ruler of all things." },
+        {
+          "id": 1,
+          "text": "\"Yours, O Lord, is the kingdom;\nyou are exalted as head over all."
+        },
+        {
+          "id": 2,
+          "text": "\"Wealth and honor come from you;\nyou are the ruler of all things."
+        },
         {
           "id": 3,
           "text": "\"In your hands are strength and power\nto exalt and give strength to all."
         },
-        { "id": 4, "text": "\"Now, our God, we give you thanks,\nand praise your glorious name.\"" }
+        {
+          "id": 4,
+          "text": "\"Now, our God, we give you thanks,\nand praise your glorious name.\""
+        }
       ]
     },
     {

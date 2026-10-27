@@ -18,8 +18,8 @@
  * below hold the property to the defects it exists to catch.
  */
 
-import { HymnalService, HymnId } from '@manna/core/hymnal';
-import { layerSourceText } from '../scripts/source-text.js';
+import { HymnId } from '@manna/core/hymnal';
+import { SourceHymnal, layerSourceText } from '../scripts/source-text.js';
 import { BunWorker } from '@effect/platform-bun';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Array as Arr, Cause, Deferred, Effect, FileSystem, Layer, Result, Schema } from 'effect';
@@ -290,7 +290,7 @@ const compileOne = (n: number) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const { printed: order } = yield* orders;
-    const row = yield* (yield* HymnalService).getHymn(HymnId.make(n));
+    const row = yield* (yield* SourceHymnal).getHymn(HymnId.make(n));
     const fix = data(`fixes/${String(n).padStart(3, '0')}.json`);
     const printed = (yield* fs.exists(fix))
       ? yield* fromPrint(yield* fs.readFileString(fix), order.get(n))
