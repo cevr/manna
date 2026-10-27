@@ -328,7 +328,7 @@ type ViewFit = NonNullable<CastView['fit']>;
  * frown, heads-6's chin and ear).
  */
 const LEAD_FIT = {
-  // Each turnaround view's part rows, by the labels his tables are traced from (`labels.ts`); from behind, his hair reads as his line, so no label of his back is read but his mantle and his cream, compared by no row.
+  // Each turnaround view's part rows, by the labels his tables are traced from (`labels.ts`). From behind, his head's label is his hair, which the fit rows read as his line (no fit class), so his head's, neck's, ears' and hands' rows fail as unresolved on both crops, and his back's critique waits, until his back has labels the fit classes read.
   turnaround: {
     front: {
       labels: LEAD_LABELS.front,

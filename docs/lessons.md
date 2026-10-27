@@ -3996,3 +3996,33 @@ The form of an entry, each field on its own line:
 - **Wrong:** heads-3's frown sat 20 px above the sheet's mouth.
 - **Cause:** A mouth's row is a mark inside the face no proportion row measures. The mouth's column is now the view's probe.
 - **Guard:** code: `apps/animations/src/films/in-its-order/rigs/cast.ts` `name: 'mouth'`
+
+### fit-probe-one-way
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "probes discard colour boundaries and ignore added transitions"
+- **Source:** rig-fit/round-1-findings.md F1, the review's first finding
+- **Wrong:** A probe read every paper as one class and matched only the sheet's changes to the render's, so an 8 px shift of the teal/cream seam scored 0 and a stroke the render added inside a part passed every row.
+- **Cause:** The probe was written to find the sheet's edges on the render, and an added line was left to `ink.edge`, whose mean hides one stroke. A probe now matches each change of class in order on both crops, between two papers too, and a change on either with no match fails it.
+- **Guard:** code: `packages/film/src/core/fit-rows.test.ts` `a probe fails where the seam between two papers moves 8 px, and passes where it stays`, `packages/film/src/core/fit-rows.test.ts` `a probe fails where the render draws a stroke the sheet does not, alone or beside one it does`
+
+### fit-labels-dropped-silently
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "unreadable labels silently remove checks"
+- **Source:** rig-fit/round-1-findings.md F2, the review's second finding
+- **Wrong:** A label whose class, or whose anchor's class, the fit rows do not read was dropped with every label named after it, so lead-feast's back had no part rows and an erased hand there passed.
+- **Cause:** The part rows kept only the labels the classes could read, and a missing row reads as a pass. A compared label that picks no region on a crop, itself or through a label its rules name, now fails both its rows and says which label and why.
+- **Guard:** code: `packages/film/src/core/fit-rows.test.ts` `an erased hand fails its part rows, and so does a hand whose anchor no class reads, saying why`
+
+### fit-grain-hides-slivers
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "speck removal hides qualifying slivers"
+- **Source:** rig-fit/round-1-findings.md F3, the review's third finding
+- **Wrong:** A 2 x 10 px strip of cream cut loose of the figure was taken for the ground's grain, so `slivers` scored 0.
+- **Cause:** Every piece under 24 px off the figure was ground, thin or not. A piece that is a thin strip, 2 px thick or less and 6 px long or more, now stays a sliver.
+- **Guard:** code: `packages/film/src/core/fit-rows.test.ts` `a thin strip of paper off the figure is a sliver, not the ground's grain; a thick or a short one is grain`, `packages/film/src/core/fit-rows.slow.test.ts` `a strip 2 px thick or less and 6 px long or more is a sliver, wherever it lies; any other is not`

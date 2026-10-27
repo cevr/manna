@@ -17,22 +17,27 @@
 //   (its second difference over 3 rows) less the sheet's sharpest within 3
 //   rows of it: a kink the sheet does not draw.
 // - `slivers`: paper 2 px thin or less in thin strips 6 px long or more
-//   (a seam between a line and the hair, a hairpin's tip) the render has
-//   beyond the sheet's, pixels.
+//   (a seam between a line and the hair, a hairpin's tip, a strip cut loose
+//   of the figure) the render has beyond the sheet's, pixels.
 // - `holes`: the ground the figure closes round, beyond the sheet's, pixels.
 // - With the member's colour classes (`FitSpec.classes`), per class:
 //   `class.iou`, the class's overlap (the sheet's pixels by its samples, the
 //   render's by the film's papers), and `class.colour`, the mean ΔE76
 //   between the two crops where both read it.
-// - With his part labels too (`FitSpec.labels`), per label both crops can
-//   read (its classes among the classes): `part.iou`, the overlap of the
-//   region it picks on each crop, and `part.edge`, the mean distance between
-//   their edges, both ways. Each crop is labelled by its own classes, the
-//   render by the film's papers, so a part is the same part on both.
+// - With his part labels too (`FitSpec.labels`), per label the view
+//   compares: `part.iou`, the overlap of the region it picks on each crop,
+//   and `part.edge`, the mean distance between their edges, both ways. Each
+//   crop is labelled by its own classes, the render by the film's papers, so
+//   a part is the same part on both. A label that picks no region on a crop,
+//   itself or through a label its rules name (one of a class the rows read
+//   none of), fails both rows and says which label and why.
 // - With a view's probes (`FitSpec.probes`), `probe.<name>`: a row or a
-//   column read as a string of classes (ink, ground, each class), the
-//   largest distance from a change of class on one crop to the same change
-//   on the other (an ear's band, a chin's line), pixels.
+//   column read as a string of classes (ink, ground, each class), each
+//   change of class on one crop matched in order to the same change on the
+//   other (an ear's band, a chin's line, a seam between two papers); the
+//   largest distance between a matched pair, pixels, or the probe's length
+//   where a change on either crop has no match (a line the render adds or
+//   leaves out).
 // The bands: `head`, the top 30% of the sheet's figure rows (the cast
 // canon's head share rounded up), `body` the rest, `figure` the whole. A
 // row passes exactly when its value, rounded to hundredths, lies inside its
@@ -165,7 +170,7 @@ const GROUND_SPREAD = 1.5;
 /** The border's pixels farther than this from its median colour, ΔE76, are the figure where it crosses the border, not its ground's grain. */
 const BORDER_GROUND = 15;
 
-/** A piece of the figure smaller than this, pixels, is the ground's grain the flood stepped round: ground. */
+/** A piece of the figure smaller than this, pixels, is the ground's grain the flood stepped round: ground, unless it is a thin strip (`thinStrips`), a sliver. */
 const SPECK = 24;
 
 /** The head band's share of the figure's rows, from its top. */
@@ -188,6 +193,9 @@ const SLIVER_LONG = 6;
 
 /** Under this luma a probe reads a pixel as the line, as the art reviews' class strings do (`probes.ts`, `cls`: L < 60). */
 const PROBE_DARK = 60;
+
+/** How far past each end a probe is read, pixels: a change just inside an end is matched to the same change just outside it, and a change outside both ends is matched but not held. */
+const PROBE_REACH = 8;
 
 /** A probe's run shorter than this is the antialiased edge between two classes, pixels: it joins the run before it. */
 const PROBE_RUN = 2;
@@ -251,6 +259,32 @@ const fromBorder = (mask: Uint8Array, w: number, h: number): Uint8Array => {
   return Uint8Array.from(labels, (l) => (border.has(l) ? 1 : 0));
 };
 
+const count = (m: Uint8Array) => m.reduce((s, v) => s + v, 0);
+
+/** Each pixel of `mask` marked in `thin` where its run along a line (`n` pixels, the `k`th at `at(k)`) is `SLIVER_THICK` or thinner. */
+const markThin = (mask: Uint8Array, thin: Uint8Array, n: number, at: (k: number) => number) => {
+  let start = 0;
+  for (let k = 0; k <= n; k++) {
+    if (k < n && mask[at(k)] === 1) continue;
+    if (k - start > 0 && k - start <= SLIVER_THICK) for (let j = start; j < k; j++) thin[at(j)] = 1;
+    start = k + 1;
+  }
+};
+
+/** The pixels of `mask` in thin strips: `SLIVER_THICK` or less across, along a row or a column, in a piece `SLIVER_LONG` long or more. */
+const thinStrips = (mask: Uint8Array, w: number, h: number): Uint8Array => {
+  const thin = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) markThin(mask, thin, w, (x) => y * w + x);
+  for (let x = 0; x < w; x++) markThin(mask, thin, h, (y) => y * w + x);
+  const { components, labels } = componentsOf(thin, w, h, true);
+  const long = new Set(
+    components
+      .filter((c) => Math.max(c.box[2] - c.box[0], c.box[3] - c.box[1]) >= SLIVER_LONG)
+      .map((c) => c.id),
+  );
+  return Uint8Array.from(labels, (l) => (long.has(l) ? 1 : 0));
+};
+
 /** A crop read into its ground, figure, ink and paper; none when it holds no figure. */
 const readCrop = (r: Raster): Read | undefined => {
   const { width: w, height: h } = r;
@@ -259,13 +293,17 @@ const readCrop = (r: Raster): Read | undefined => {
   const { lab, near } = groundColour(r, labs);
   const like = Uint8Array.from(labs, (c) => (deltaE(c, lab) <= near ? 1 : 0));
   const ground = fromBorder(like, w, h);
-  // A speck the flood stepped round (the paper's grain) is ground.
+  // A speck the flood stepped round (the paper's grain) is ground; a speck
+  // that is a thin strip, cut loose of the figure, stays a sliver of it.
   const figure = Uint8Array.from(ground, (g) => 1 - g);
   const pieces = componentsOf(figure, w, h, true);
-  for (let i = 0; i < n; i++) {
-    const piece = pieces.components[pieces.labels[i] ?? -1];
-    if (piece !== undefined && piece.area < SPECK) ground[i] = 1;
-  }
+  const specks = Uint8Array.from(pieces.labels, (l) =>
+    (pieces.components[l]?.area ?? SPECK) < SPECK ? 1 : 0,
+  );
+  const strips = thinStrips(specks, w, h);
+  const kept = new Set(pieces.labels.filter((l, i) => strips[i] === 1));
+  for (let i = 0; i < n; i++)
+    if (specks[i] === 1 && !kept.has(pieces.labels[i] ?? -1)) ground[i] = 1;
   const holes = new Uint8Array(n);
   const ink = new Uint8Array(n);
   const paper = new Uint8Array(n);
@@ -420,29 +458,8 @@ const inkEdgeOf = (c: Read, r: Read) => {
   return count === 0 ? 0 : sum / count;
 };
 
-/** Each paper pixel marked where its run of paper along a line (`n` pixels, the `k`th at `at(k)`) is `SLIVER_THICK` or thinner. */
-const markThin = (paper: Uint8Array, thin: Uint8Array, n: number, at: (k: number) => number) => {
-  let start = 0;
-  for (let k = 0; k <= n; k++) {
-    if (k < n && paper[at(k)] === 1) continue;
-    if (k - start > 0 && k - start <= SLIVER_THICK) for (let j = start; j < k; j++) thin[at(j)] = 1;
-    start = k + 1;
-  }
-};
-
-/** The pixels of thin paper (`SLIVER_THICK` or less across, row or column) in runs `SLIVER_LONG` long or more. */
-const sliversOf = (read: Read) => {
-  const { w, h, paper } = read;
-  const thin = new Uint8Array(w * h);
-  for (let y = 0; y < h; y++) markThin(paper, thin, w, (x) => y * w + x);
-  for (let x = 0; x < w; x++) markThin(paper, thin, h, (y) => y * w + x);
-  const { components } = componentsOf(thin, read.w, read.h, true);
-  return components
-    .filter((c) => Math.max(c.box[2] - c.box[0], c.box[3] - c.box[1]) >= SLIVER_LONG)
-    .reduce((s, c) => s + c.area, 0);
-};
-
-const count = (m: Uint8Array) => m.reduce((s, v) => s + v, 0);
+/** The paper pixels in thin strips (`thinStrips`), a sliver's. */
+const sliversOf = (read: Read) => count(thinStrips(read.paper, read.w, read.h));
 
 /** A pixel's class: the index of the class whose colour (`pick` of each) lies nearest it. */
 const classifier = (
@@ -548,18 +565,26 @@ const regionsOf = (read: Read, kinds: Int8Array, names: ReadonlyArray<string>) =
   return { label, regions };
 };
 
-/** The labels a crop's classes can read: each of the classes, naming only labels that are too. */
-const readable = (table: LabelTable, names: ReadonlyArray<string>): LabelTable => {
-  const ok = (name: string, seen: ReadonlySet<string>): boolean => {
-    const label = table[name];
-    if (label === undefined || seen.has(name)) return false;
-    const next = new Set([...seen, name]);
-    return (
-      label.classes.every((c) => names.includes(c)) &&
-      (label.where ?? []).every((w) => ok(Object.values(w)[0] ?? '', next))
-    );
-  };
-  return Object.fromEntries(Object.entries(table).filter(([name]) => ok(name, new Set())));
+/**
+ * Why label `name` picks no region on a crop: the first label down its rules
+ * that picks none while every label it names picks one (itself when its own
+ * rules hold), with its classes the rows read no region of (no fit class).
+ */
+const unresolved = (
+  table: LabelTable,
+  picked: Readonly<Record<string, LabelRegion>>,
+  names: ReadonlyArray<string>,
+  name: string,
+  seen: ReadonlySet<string> = new Set(),
+): string => {
+  const label = table[name];
+  if (label === undefined) return `no label ${name}`;
+  if (seen.has(name)) return `the label ${name} is made of itself`;
+  const named = (label.where ?? []).map((w) => Object.values(w)[0] ?? '');
+  const first = named.find((n) => picked[n] === undefined);
+  if (first !== undefined) return unresolved(table, picked, names, first, new Set([...seen, name]));
+  const unread = label.classes.filter((c) => !names.includes(c));
+  return `${name} picks no region${unread.length > 0 ? ` (${unread.join(', ')}: no fit class)` : ''}`;
 };
 
 /** The pixels of `mask` with a pixel off it four ways (or the crop's edge) beside them. */
@@ -585,10 +610,11 @@ const meanDistance = (a: Uint8Array, b: Uint8Array, w: number, h: number) => {
 };
 
 /**
- * The part rows: for each label both crops' classes can read, the overlap of
- * the region it picks on each, and the mean distance between their edges,
- * both ways; a label that picks no region on a crop has none to overlap
- * (`part.iou` 0) and an edge as far as the crop is wide and high.
+ * The part rows: for each label the view compares, the overlap of the region
+ * it picks on each crop, and the mean distance between their edges, both
+ * ways. A label that picks no region on a crop, itself or through a label its
+ * rules name, has none to overlap (`part.iou` 0) and an edge as far as the
+ * crop is wide and high, and its rows say why (`unresolved`).
  */
 const partRows = (
   crops: readonly [Read, Read],
@@ -597,22 +623,22 @@ const partRows = (
   table: LabelTable,
   bar: (name: keyof typeof FIT_BARS, band: FitBand, part: string) => FitBar,
 ): FitRow[] => {
-  const labels = readable(table, names);
-  const compared = Object.keys(labels).filter((name) => labels[name]?.compared !== false);
+  const compared = Object.keys(table).filter((name) => table[name]?.compared !== false);
   const [c] = crops;
   const { w, h } = c;
   const sides = crops.map((read, s) => {
     const { label, regions } = regionsOf(read, kinds[s] ?? new Int8Array(), names);
     const picks = labelRegions(
       regions,
-      labels,
+      table,
       touchingIn({ label, w, h, origin: [0, 0] }, regions, PART_TOUCH),
     );
     const maskOf = (name: string) => {
       const id = picks.picked[name]?.id;
       return Uint8Array.from(label, (l) => (id !== undefined && l === id ? 1 : 0));
     };
-    return { picks, maskOf };
+    const why = (name: string) => unresolved(table, picks.picked, names, name);
+    return { maskOf, why };
   });
   const [sheet, render] = sides;
   if (sheet === undefined || render === undefined) return [];
@@ -620,8 +646,8 @@ const partRows = (
     const [a, b] = [sheet.maskOf(name), render.maskOf(name)];
     const [ca, cb] = [count(a), count(b)];
     const where = [
-      ...(ca === 0 ? ['picks no region on the sheet'] : []),
-      ...(cb === 0 ? ['picks no region on the render'] : []),
+      ...(ca === 0 ? [`unresolved on the sheet: ${sheet.why(name)}`] : []),
+      ...(cb === 0 ? [`unresolved on the render: ${render.why(name)}`] : []),
     ].join('; ');
     const counts = { concept: ca, render: cb };
     const more: Pick<FitRow, 'concept' | 'render' | 'where'> =
@@ -688,7 +714,7 @@ const probeRuns = (
   names: ReadonlyArray<string>,
 ) => {
   const runs: ProbeRun[] = [];
-  const [a, b] = [Math.min(p.from, p.to), Math.max(p.from, p.to)];
+  const [a, b] = [Math.min(p.from, p.to) - PROBE_REACH, Math.max(p.from, p.to) + PROBE_REACH];
   for (let t = a; t <= b; t++) {
     const [x, y] = p.along === 'row' ? [t, p.at] : [p.at, t];
     if (x < 0 || y < 0 || x >= read.w || y >= read.h) continue;
@@ -700,21 +726,96 @@ const probeRuns = (
   return joinedRuns(runs);
 };
 
-/** A run's class as a change is typed: the ground, a hole and the line by their own, every paper (a class's tone flickers on a lit edge) as one. */
-const sideOf = (cls: string) => (cls === 'G' || cls === 'H' || cls === 'K' ? cls : 'P');
+/** A change of class along a probe: `from>to` and where it lies. */
+interface ProbeChange {
+  readonly kind: string;
+  readonly at: number;
+}
 
-/** The changes along a probe at the ground, a hole or the line: each `from>to` and where it lies (a change between two papers is no edge of the line's). */
-const changesOf = (runs: ReadonlyArray<{ cls: string; from: number }>) =>
-  runs
-    .slice(1)
-    .map((run, k) => ({ kind: `${sideOf(runs[k]?.cls ?? '')}>${sideOf(run.cls)}`, at: run.from }))
-    .filter((ch) => ch.kind !== 'P>P');
+/** The changes of class along a probe, in order: at the ground, a hole, the line and between two papers. */
+const changesOf = (runs: ReadonlyArray<{ cls: string; from: number }>): ProbeChange[] =>
+  runs.slice(1).map((run, k) => ({ kind: `${runs[k]?.cls ?? ''}>${run.cls}`, at: run.from }));
+
+/** A step of an alignment: how many changes it leaves unmatched from there on, how far its pairs lie in all, and what it does (`LEAVE_A` leaves the sheet's change, `LEAVE_B` the render's, `PAIR` pairs them). */
+type AlignStep = readonly [left: number, moved: number, does: number];
+
+const [LEAVE_A, LEAVE_B, PAIR] = [0, 1, 2];
+
+/** The step of least `left`, then least `moved`, the first of a tie. */
+const leastStep = (x: AlignStep, y: AlignStep) =>
+  y[0] < x[0] || (y[0] === x[0] && y[1] < x[1]) ? y : x;
+
+/** The best step from change `i` of `a` and `j` of `b` on, by the steps after it; none at both ends. */
+const stepFrom = (
+  a: ReadonlyArray<ProbeChange>,
+  b: ReadonlyArray<ProbeChange>,
+  after: (i: number, j: number) => AlignStep,
+  i: number,
+  j: number,
+): AlignStep | undefined => {
+  const [ca, cb] = [a[i], b[j]];
+  const steps: AlignStep[] = [];
+  if (ca !== undefined) steps.push([after(i + 1, j)[0] + 1, after(i + 1, j)[1], LEAVE_A]);
+  if (cb !== undefined) steps.push([after(i, j + 1)[0] + 1, after(i, j + 1)[1], LEAVE_B]);
+  if (ca !== undefined && cb !== undefined && ca.kind === cb.kind) {
+    const [l, d] = after(i + 1, j + 1);
+    steps.push([l, d + Math.abs(ca.at - cb.at), PAIR]);
+  }
+  return steps.length === 0 ? undefined : steps.reduce(leastStep);
+};
+
+/** Every step of the alignment of `a` and `b`, from the ends back: the step taken from each pair of indices, by `at(i, j)`. */
+const alignmentOf = (a: ReadonlyArray<ProbeChange>, b: ReadonlyArray<ProbeChange>) => {
+  const [n, m] = [a.length, b.length];
+  const at = (i: number, j: number) => i * (m + 1) + j;
+  const steps = new Array<AlignStep>((n + 1) * (m + 1)).fill([0, 0, LEAVE_A]);
+  const after = (i: number, j: number) => steps[at(i, j)] ?? [0, 0, LEAVE_A];
+  for (let i = n; i >= 0; i--)
+    for (let j = m; j >= 0; j--) {
+      const s = stepFrom(a, b, after, i, j);
+      if (s !== undefined) steps[at(i, j)] = s;
+    }
+  return { at, step: Uint8Array.from(steps, (s) => s[2]) };
+};
 
 /**
- * A probe's row: the largest distance from a change on the sheet to the
- * same change on the render (the probe's length where the render has none):
- * the render draws each of the sheet's edges along the probe where the sheet
- * does. A line the render adds is `ink.edge`'s.
+ * The sheet's changes `a` matched to the render's `b` one to one, in order
+ * and of one kind: the most pairs, then the least distance between them in
+ * all (an alignment, as an edit distance's). The largest distance of a pair
+ * with a change `held` (within the probe's ends), and each held change of
+ * either left with no match.
+ */
+const matchChanges = (
+  a: ReadonlyArray<ProbeChange>,
+  b: ReadonlyArray<ProbeChange>,
+  held: (ch: ProbeChange) => boolean,
+) => {
+  const { at, step } = alignmentOf(a, b);
+  const [n, m] = [a.length, b.length];
+  let [i, j, farthest] = [0, 0, 0];
+  const lost: string[] = [];
+  while (i < n || j < m) {
+    const [ca, cb, s] = [a[i], b[j], step[at(i, j)]];
+    if (s === PAIR && ca !== undefined && cb !== undefined) {
+      if (held(ca) || held(cb)) farthest = Math.max(farthest, Math.abs(ca.at - cb.at));
+      [i, j] = [i + 1, j + 1];
+    } else if (s === LEAVE_A && ca !== undefined) {
+      if (held(ca)) lost.push(`the sheet's ${ca.kind} at ${ca.at} unmatched`);
+      i++;
+    } else {
+      if (cb !== undefined && held(cb)) lost.push(`render adds ${cb.kind} at ${cb.at}`);
+      j++;
+    }
+  }
+  return { farthest, lost };
+};
+
+/**
+ * A probe's row: the largest distance between a change on the sheet and the
+ * same change on the render, matched in order (`matchChanges`), or the
+ * probe's length where a change on either has no match: the render draws
+ * each of the sheet's edges along the probe where the sheet does, and none
+ * it does not.
  */
 const probeRow = (
   c: Read,
@@ -726,22 +827,18 @@ const probeRow = (
 ): FitRow => {
   const cr = probeRuns(c, p, classOf[0], names);
   const rr = probeRuns(r, p, classOf[1], names);
-  const [cc, rc] = [changesOf(cr), changesOf(rr)];
-  const length = Math.abs(p.to - p.from) + 1;
-  const farthest = (
-    from: ReadonlyArray<{ kind: string; at: number }>,
-    to: ReadonlyArray<{ kind: string; at: number }>,
-  ) =>
-    from.reduce((worst, ch) => {
-      const near = to
-        .filter((o) => o.kind === ch.kind)
-        .reduce((m, o) => Math.min(m, Math.abs(o.at - ch.at)), length);
-      return Math.max(worst, near);
-    }, 0);
+  const [lo, hi] = [Math.min(p.from, p.to), Math.max(p.from, p.to)];
+  const { farthest, lost } = matchChanges(
+    changesOf(cr),
+    changesOf(rr),
+    (ch) => ch.at > lo && ch.at <= hi,
+  );
+  const length = hi - lo + 1;
   const said = (runs: ReadonlyArray<{ cls: string; from: number; to: number }>) =>
     runs.map((x) => `${x.cls}${x.from}-${x.to}`).join(' ');
-  return rowOf(`probe.${p.name}`, 'figure', 'figure', farthest(cc, rc), bar, {
-    where: `${p.along} ${p.at} ${p.from}-${p.to}: sheet ${said(cr)} | render ${said(rr)}`,
+  const unmatched = lost.length > 0 ? `; ${lost.join(', ')}` : '';
+  return rowOf(`probe.${p.name}`, 'figure', 'figure', lost.length > 0 ? length : farthest, bar, {
+    where: `${p.along} ${p.at} ${p.from}-${p.to}: sheet ${said(cr)} | render ${said(rr)}${unmatched}`,
   });
 };
 

@@ -1,77 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { Option } from 'effect';
-import { FIT_BARS, type FitRow, fitPasses, fitRows } from './fit-rows.ts';
+import { FIT_BARS, type FitRow, type FitSpec, fitPasses, fitRows } from './fit-rows.ts';
+import { RENDER_GROUND, SHEET_GROUND, W, H, paint } from './fixtures/fit/figure.ts';
 import type { Raster } from './raster.ts';
-
-type Rgb = readonly [number, number, number];
-
-const INK: Rgb = [43, 29, 22];
-const CREAM: Rgb = [253, 225, 188];
-const TEAL: Rgb = [97, 137, 141];
-const SHEET_GROUND: Rgb = [253, 241, 219];
-const RENDER_GROUND: Rgb = [238, 221, 201];
-
-const W = 64;
-const H = 96;
-
-/** A head (a disc) over a body (a box) inside a 3 px line, `dx` to the right; its body's left half teal. */
-const figure = (x: number, y: number, dx = 0) => {
-  const [px, py] = [x - dx, y];
-  return (
-    (px - 32) ** 2 + (py - 18) ** 2 <= 10 ** 2 || (px >= 18 && px <= 46 && py >= 26 && py <= 84)
-  );
-};
-
-interface Paint {
-  readonly ground: Rgb;
-  readonly dx?: number;
-  readonly sliver?: boolean;
-  readonly hole?: boolean;
-  readonly mark?: number;
-}
-
-const NEAR: ReadonlyArray<readonly [number, number]> = [
-  [3, 0],
-  [-3, 0],
-  [0, 3],
-  [0, -3],
-  [2, 2],
-  [-2, 2],
-  [2, -2],
-  [-2, -2],
-];
-
-/** A pixel of the figure moved by `dx`: the ground outside it, its line within 3 px of its edge, teal on its body's left half, cream elsewhere. */
-const colourAt = (ground: Rgb, x: number, y: number, dx: number): Rgb => {
-  if (!figure(x, y, dx)) return ground;
-  if (NEAR.some(([ox, oy]) => !figure(x + ox, y + oy, dx))) return INK;
-  if (y > 26 && x - dx < 32) return TEAL;
-  return CREAM;
-};
-
-/** The box `[x0, x1) × [y0, y1)` of `rgba` filled with `c`. */
-const fill = (
-  rgba: Uint8Array,
-  [x0, x1, y0, y1]: readonly [number, number, number, number],
-  c: Rgb,
-) => {
-  for (let y = y0; y < y1; y++)
-    for (let x = x0; x < x1; x++) rgba.set([c[0], c[1], c[2], 255], (y * W + x) * 4);
-};
-
-/** The figure painted on `ground`: its line, its cream and teal papers, and what the paint adds. */
-const paint = ({ ground, dx = 0, sliver = false, hole = false, mark }: Paint): Raster => {
-  const rgba = new Uint8Array(W * H * 4);
-  for (let y = 0; y < H; y++)
-    for (let x = 0; x < W; x++) fill(rgba, [x, x + 1, y, y + 1], colourAt(ground, x, y, dx));
-  // A 2 px strip of cream just outside the body's right line: a sliver.
-  if (sliver) fill(rgba, [47 + dx, 49 + dx, 50, 62], CREAM);
-  // A 6 px square of the ground inside the body: a hole.
-  if (hole) fill(rgba, [26 + dx, 32 + dx, 60, 66], ground);
-  // A line 3 px thick across the body from row `mark`.
-  Option.map(Option.fromUndefinedOr(mark), (m) => fill(rgba, [22 + dx, 43 + dx, m, m + 3], INK));
-  return { width: W, height: H, rgba };
-};
 
 const SHEET = paint({ ground: SHEET_GROUND });
 
@@ -86,6 +17,16 @@ const within = (r: FitRow) =>
     onNone: () => true,
     onSome: (max) => r.value <= max,
   });
+
+/** The figure's papers and a hand's skin, each painted on the render as on the sheet. */
+const CLASSES = {
+  cream: { sheet: ['#fde1bc'], paper: ['#fde1bc'] },
+  teal: { sheet: ['#61898d'], paper: ['#61898d'] },
+  skin: { sheet: ['#fdaf70'], paper: ['#fdaf70'] },
+} as const;
+
+/** The row named `name` of `rows`. */
+const rowNamed = (rows: ReadonlyArray<FitRow>, name: string) => rows.find((r) => r.name === name);
 
 describe('fitRows', () => {
   test('the same figure on another ground passes every row, the same rows each time', () => {
@@ -120,6 +61,21 @@ describe('fitRows', () => {
     ]);
   });
 
+  test("a thin strip of paper off the figure is a sliver, not the ground's grain; a thick or a short one is grain", () => {
+    const slivers = (x0: number, x1: number, y0: number, y1: number) =>
+      rowNamed(
+        fitRows(SHEET, paint({ ground: RENDER_GROUND, strips: [[x0, x1, y0, y1]] })),
+        'slivers',
+      )?.value;
+    // 2 × 10 px, 5 px off the body's right line.
+    expect(slivers(52, 54, 40, 50)).toBe(20);
+    // 1 × 6 px against the line.
+    expect(slivers(47, 48, 40, 46)).toBe(6);
+    // 3 × 6 px and 2 × 5 px off the figure: the ground's grain.
+    expect(slivers(52, 55, 40, 46)).toBe(0);
+    expect(slivers(52, 54, 40, 45)).toBe(0);
+  });
+
   test('each row passes exactly when its value lies inside its bar', () => {
     for (const p of [{ dx: 8 }, { sliver: true }, { hole: true }, {}])
       for (const r of fitRows(SHEET, paint({ ground: RENDER_GROUND, ...p })))
@@ -148,23 +104,68 @@ describe('fitRows', () => {
   });
 
   test("a probe fails where the render's line is not where the sheet's is, and passes where it is", () => {
-    const sheet = paint({ ground: SHEET_GROUND, mark: 60 });
+    const sheet = paint({ ground: SHEET_GROUND, marks: [60] });
     const probe = { name: 'belt', along: 'col', at: 38, from: 30, to: 80 } as const;
     const at = (mark: number) =>
-      fitRows(sheet, paint({ ground: RENDER_GROUND, mark }), { probes: [probe] }).find(
-        (r) => r.name === 'probe.belt',
+      rowNamed(
+        fitRows(sheet, paint({ ground: RENDER_GROUND, marks: [mark] }), { probes: [probe] }),
+        'probe.belt',
       );
     expect(at(61)?.pass).toBe(true);
     expect(at(70)?.value).toBe(10);
     expect(at(70)?.pass).toBe(false);
   });
 
+  test('a probe fails where the seam between two papers moves 8 px, and passes where it stays', () => {
+    const probe = { name: 'seam', along: 'row', at: 50, from: 10, to: 54 } as const;
+    const at = (seam: number) =>
+      rowNamed(
+        fitRows(SHEET, paint({ ground: RENDER_GROUND, seam }), {
+          classes: CLASSES,
+          probes: [probe],
+        }),
+        'probe.seam',
+      );
+    expect(at(32)?.value).toBe(0);
+    expect(at(40)?.value).toBe(8);
+    expect(at(40)?.pass).toBe(false);
+  });
+
+  test('a probe fails where the render draws a stroke the sheet does not, alone or beside one it does', () => {
+    const probe = { name: 'belt', along: 'col', at: 38, from: 30, to: 80 } as const;
+    const belt = (sheet: ReadonlyArray<number>, render: ReadonlyArray<number>) =>
+      rowNamed(
+        fitRows(
+          paint({ ground: SHEET_GROUND, marks: sheet }),
+          paint({ ground: RENDER_GROUND, marks: render }),
+          { probes: [probe] },
+        ),
+        'probe.belt',
+      );
+    const alone = belt([], [60]);
+    expect(alone?.pass).toBe(false);
+    expect(alone?.where).toContain('render adds');
+    expect(belt([60], [60, 66])?.pass).toBe(false);
+    // The sheet's stroke the render leaves out fails the same way.
+    expect(belt([60], [])?.pass).toBe(false);
+  });
+
+  test("a change just inside a probe's end is matched to the same change just past it", () => {
+    const probe = { name: 'belt', along: 'col', at: 38, from: 30, to: 61 } as const;
+    const row = rowNamed(
+      fitRows(
+        paint({ ground: SHEET_GROUND, marks: [62] }),
+        paint({ ground: RENDER_GROUND, marks: [60] }),
+        { probes: [probe] },
+      ),
+      'probe.belt',
+    );
+    expect(row?.value).toBe(2);
+  });
+
   test('class rows read each class on the sheet by its samples and on the render by its papers', () => {
     const rows = fitRows(SHEET, paint({ ground: RENDER_GROUND }), {
-      classes: {
-        cream: { sheet: ['#fde1bc'], paper: ['#fde1bc'] },
-        teal: { sheet: ['#61898d'], paper: ['#61898d'] },
-      },
+      classes: { cream: CLASSES.cream, teal: CLASSES.teal },
     });
     const iou = rows.filter((r) => r.name === 'class.iou');
     expect(iou.map((r) => [r.part, r.value])).toEqual([
@@ -176,10 +177,7 @@ describe('fitRows', () => {
 
   test('part rows compare the region each label picks on both crops: one moved fails, one in place passes', () => {
     const spec = {
-      classes: {
-        cream: { sheet: ['#fde1bc'], paper: ['#fde1bc'] },
-        teal: { sheet: ['#61898d'], paper: ['#61898d'] },
-      },
+      classes: { cream: CLASSES.cream, teal: CLASSES.teal },
       labels: {
         robe: { classes: ['teal'] },
         mantle: { classes: ['teal'], compared: false },
@@ -191,5 +189,36 @@ describe('fitRows', () => {
         .map((r) => `${r.name}/${r.part} ${r.pass}`);
     expect(parts(0)).toEqual(['part.iou/robe true', 'part.edge/robe true']);
     expect(parts(8)).toEqual(['part.iou/robe false', 'part.edge/robe false']);
+  });
+
+  test('an erased hand fails its part rows, and so does a hand whose anchor no class reads, saying why', () => {
+    const hands = (spec: FitSpec, hand: boolean) =>
+      fitRows(paint({ ground: SHEET_GROUND, hand: true }), paint({ ground: RENDER_GROUND, hand }), {
+        classes: CLASSES,
+        ...spec,
+      }).filter((r) => r.part === 'hand');
+    const anchored: FitSpec = {
+      labels: {
+        robe: { classes: ['teal'], compared: false },
+        hand: { classes: ['skin'], where: [{ touching: 'robe' }] },
+      },
+    };
+    expect(hands(anchored, true).map((r) => r.pass)).toEqual([true, true]);
+    expect(hands(anchored, false).map((r) => r.pass)).toEqual([false, false]);
+    const unread: FitSpec = {
+      labels: {
+        head: { classes: ['hair'], compared: false },
+        hand: { classes: ['skin'], where: [{ below: 'head' }] },
+      },
+    };
+    for (const hand of [false, true]) {
+      const rows = hands(unread, hand);
+      expect(rows.map((r) => [r.name, r.pass])).toEqual([
+        ['part.iou', false],
+        ['part.edge', false],
+      ]);
+      expect(rows[0]?.where).toContain('head');
+      expect(rows[0]?.where).toContain('hair');
+    }
   });
 });

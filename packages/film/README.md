@@ -2586,14 +2586,18 @@ laid side by side at 1:1 (no rescale, so a height error shows), and held to
 its fit rows (`core/fit-rows.ts` `fitRows`): the outer ink edge per band
 (`silhouette.edge`, head the line's top 30%), the outline's turns the sheet
 has not (`outline.turns`), the figure masks' overlap (`silhouette.iou`), the
-render's ink to the sheet's (`ink.edge`), paper slivers and enclosed ground
-beyond the sheet's (`slivers`, `holes`), each colour class's overlap and
-colour (`class.iou`, `class.colour`, from the member's `FIT_CLASSES`), each
-part the view's labels pick on both crops, the render's by the film's papers
-(`part.iou`, `part.edge`, the view's `fit.labels`: a label whose region the
-sheet runs on into another part's is read for other labels' rules alone,
-`compared: false`), and each of the view's probes, a scanline's class runs compared by their edges
-(`probe.<name>`, the view's `fit.probes`). Each row has a bar (`FIT_BARS`,
+render's ink to the sheet's (`ink.edge`), paper slivers (a thin strip
+against the line or cut loose of it) and enclosed ground beyond the sheet's
+(`slivers`, `holes`), each colour class's overlap and colour (`class.iou`,
+`class.colour`, from the member's `FIT_CLASSES`), each part the view's
+labels pick on both crops, the render's by the film's papers (`part.iou`,
+`part.edge`, the view's `fit.labels`: a label whose region the sheet runs on
+into another part's is read for other labels' rules alone, `compared:
+false`; a compared label that picks no region on a crop, itself or through
+a label its rules name, fails both rows and says why), and each of the
+view's probes, a scanline's changes of class matched in order on both crops,
+between two papers too (`probe.<name>`, the view's `fit.probes`: a change on
+either with no match fails at the probe's length). Each row has a bar (`FIT_BARS`,
 a view's `fit.bars` over it, each with why). Only a view whose every row
 passes (`fitPasses`) is shown to a fresh model at 1:1 with its clause of the
 sheet's layout (`Critic`, the `render` packet); another's critique is
