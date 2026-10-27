@@ -1,0 +1,665 @@
+// Fit rows: a cast render's view held to the view the owner kept by
+// numbers, each with its bar, before a model is shown it (`film concept
+// render`, `tools/cast-render.ts`). Both crops are cut by the kept box at
+// one scale. Each crop's ground is its own (a render's paper is not the
+// sheet's): the colour of its border, and the ground is what its border
+// reaches through pixels near that colour, four ways. The figure is the
+// rest: what the ink bounds, its line too. A crop whose figure is not read
+// gives no row, and no rows never pass (`fitPasses`).
+//
+// The rows, each a number and its bar (`FIT_BARS`, a view's own in its
+// spec):
+// - `silhouette.edge`, per band: the mean distance of the outer edge, left
+//   and right, row by row, where both crops have the figure.
+// - `silhouette.iou`: the figures' overlap.
+// - `ink.edge`: the mean distance from the render's ink to the sheet's.
+// - `outline.turns`, per band: the render's sharpest turn of its outer edge
+//   (its second difference over 3 rows) less the sheet's sharpest within 3
+//   rows of it: a kink the sheet does not draw.
+// - `slivers`: paper 2 px thin or less in thin strips 6 px long or more
+//   (a seam between a line and the hair, a hairpin's tip) the render has
+//   beyond the sheet's, pixels.
+// - `holes`: the ground the figure closes round, beyond the sheet's, pixels.
+// - With the member's colour classes (`FitSpec.classes`), per class:
+//   `class.iou`, the class's overlap (the sheet's pixels by its samples, the
+//   render's by the film's papers), and `class.colour`, the mean ΔE76
+//   between the two crops where both read it.
+// - With a view's probes (`FitSpec.probes`), `probe.<name>`: a row or a
+//   column read as a string of classes (ink, ground, each class), the
+//   largest distance from a change of class on one crop to the same change
+//   on the other (an ear's band, a chin's line), pixels.
+// The bands: `head`, the top 30% of the sheet's figure rows (the cast
+// canon's head share rounded up), `body` the rest, `figure` the whole. A
+// row passes exactly when its value, rounded to hundredths, lies inside its
+// bar. Pure: RGBA in, rows out, the same rows for the same crops.
+
+import { type Rgb, componentsOf, deltaE, labOf, lumaOf, rgbAt } from './cast-sheet-pixels.ts';
+import type { Raster } from './raster.ts';
+
+/**
+ * Below this luma a pixel of the figure is its line: the ink (a sheet's 4
+ * to 30, a render's 39) and its antialiased edge, and the hair's darkest
+ * brown on both. The outer edge is the outermost such pixel of a row, as
+ * the art reviews' probes read it (`runs.ts`, `edge.ts`, luma 80 to 90).
+ */
+const LINE_LUMA = 90;
+
+/** A row's bar: the least and the most its value may be. */
+export interface FitBar {
+  readonly min?: number;
+  readonly max?: number;
+}
+
+/** Where a row measures: the whole figure, its head band or the rest. */
+type FitBand = 'figure' | 'head' | 'body';
+
+/** One row: what it measures, where, its value and bar, and whether it passes; the two crops' own numbers and where it was worst, when it has them. */
+export interface FitRow {
+  readonly name: string;
+  readonly band: FitBand;
+  readonly part: string;
+  readonly value: number;
+  readonly bar: FitBar;
+  readonly pass: boolean;
+  readonly concept?: number;
+  readonly render?: number;
+  readonly where?: string;
+}
+
+/**
+ * Each row's bar, by its name (a probe's under `probe`), or by its name and
+ * band where a band's differs (`outline.turns/body`: a hand's or a foot's
+ * end steps the outer edge, where a head's curve only turns), measured on
+ * lead-feast's renders (rig-fit round 1).
+ */
+export const FIT_BARS = {
+  'silhouette.edge': { max: 3 },
+  'silhouette.iou': { min: 0.9 },
+  'ink.edge': { max: 2.5 },
+  'outline.turns': { max: 5 },
+  'outline.turns/body': { max: 12 },
+  slivers: { max: 4 },
+  holes: { max: 8 },
+  'class.iou': { min: 0.6 },
+  'class.colour': { max: 12 },
+  probe: { max: 4 },
+} as const satisfies Record<string, FitBar>;
+
+/** A bar's name: a row's, a row's and band's, a class row's and class's, or `probe` for every probe's row. */
+export type FitBarName =
+  | keyof typeof FIT_BARS
+  | `${'silhouette.edge' | 'outline.turns'}/${'head' | 'body'}`
+  | `${'class.iou' | 'class.colour'}/${string}`;
+
+/**
+ * The bar a row is held to: the spec's for its name and band or part
+ * (`class.iou/cream`), else for its name, else `FIT_BARS`' the same way.
+ */
+const barOf = (
+  spec: FitSpec,
+  name: keyof typeof FIT_BARS,
+  band: FitBand,
+  part = 'figure',
+): FitBar => {
+  const own = Object.entries(spec.bars ?? {});
+  for (const k of [`${name}/${band}`, `${name}/${part}`, name]) {
+    const b = own.find(([key]) => key === k)?.[1];
+    if (b !== undefined) return b;
+  }
+  const banded = Object.entries(FIT_BARS).find(([key]) => key === `${name}/${band}`)?.[1];
+  return banded ?? FIT_BARS[name];
+};
+
+/** A colour class: its samples on the sheet, and the film's papers that paint it on the render. */
+export interface FitClass {
+  readonly sheet: ReadonlyArray<string>;
+  readonly paper: ReadonlyArray<string>;
+}
+
+/** A probe: a row (`along: 'row'`, at its y) or a column (at its x) of the crop, from `from` to `to` across it, crop pixels. */
+export interface FitProbe {
+  readonly name: string;
+  readonly along: 'row' | 'col';
+  readonly at: number;
+  readonly from: number;
+  readonly to: number;
+  /** Under this luma a pixel reads as the line (`PROBE_DARK` unless given): a chin's brown line reads under 135, the sheet's dark teal under 90. */
+  readonly dark?: number;
+  /** Its own bar (the spec's `probe` bar, else `FIT_BARS.probe`, unless given). */
+  readonly bar?: FitBar;
+}
+
+/** What a view is held to beyond the figure: its member's classes, its probes, and its own bars. */
+export interface FitSpec {
+  readonly classes?: Readonly<Record<string, FitClass>>;
+  readonly probes?: ReadonlyArray<FitProbe>;
+  readonly bars?: Readonly<Partial<Record<FitBarName, FitBar>>>;
+}
+
+/**
+ * How near the crop's ground colour a pixel is ground, ΔE76: `GROUND_SPREAD`
+ * times the spread of its border's ground (its 90th centile), and never less
+ * than `GROUND_DE`. A render's ground is flat (its spread under 1.5) and its
+ * cream papers lie 5 to 8 from it; a sheet's paper has a grain (5 to 6),
+ * and its line closes its figure, cream and all, from the flood.
+ */
+const GROUND_DE = 3;
+const GROUND_SPREAD = 1.5;
+
+/** The border's pixels farther than this from its median colour, ΔE76, are the figure where it crosses the border, not its ground's grain. */
+const BORDER_GROUND = 15;
+
+/** A piece of the figure smaller than this, pixels, is the ground's grain the flood stepped round: ground. */
+const SPECK = 24;
+
+/** The head band's share of the figure's rows, from its top. */
+const HEAD_SHARE = 0.3;
+
+/** How many rows the outline's turn spans each way. */
+const TURN_SPAN = 3;
+
+/** How far each way the sheet's sharpest turn is looked for beside the render's. */
+const TURN_NEAR = 3;
+
+/** How many rows from the figure's top and bottom the turn is not read: a crown's or a sole's flat row turns any way. */
+const TURN_END = 6;
+
+/** The thickest paper a sliver is, pixels. */
+const SLIVER_THICK = 2;
+
+/** The shortest run of thin paper that is a sliver, pixels. */
+const SLIVER_LONG = 6;
+
+/** Under this luma a probe reads a pixel as the line, as the art reviews' class strings do (`probes.ts`, `cls`: L < 60). */
+const PROBE_DARK = 60;
+
+/** A probe's run shorter than this is the antialiased edge between two classes, pixels: it joins the run before it. */
+const PROBE_RUN = 2;
+
+/** A value as the row keeps it: rounded to hundredths. */
+const kept = (v: number) => Math.round(v * 100) / 100;
+
+const within = (v: number, bar: FitBar) =>
+  (bar.min === undefined || v >= bar.min) && (bar.max === undefined || v <= bar.max);
+
+/** Whether every row passes; no rows never do (a crop whose figure is not read). */
+export const fitPasses = (rows: ReadonlyArray<FitRow>): boolean =>
+  rows.length > 0 && rows.every((r) => r.pass);
+
+/** A crop read: its size, its ground colour, its ground, its figure, its ink and its paper. */
+interface Read {
+  readonly r: Raster;
+  readonly w: number;
+  readonly h: number;
+  readonly lab: Rgb;
+  /** 1 where the border reaches through ground-like pixels. */
+  readonly ground: Uint8Array;
+  /** 1 where ground-like but closed in by the figure: a hole. */
+  readonly holes: Uint8Array;
+  readonly ink: Uint8Array;
+  /** The figure's pixels that are neither ink nor a hole. */
+  readonly paper: Uint8Array;
+  /** Each row's outer edge, left and right (NaN where the row holds no figure). */
+  readonly left: Float64Array;
+  readonly right: Float64Array;
+  readonly top: number;
+  readonly bottom: number;
+}
+
+/** The crop's ground colour (its border's median, Lab) and how near it a pixel is ground (`GROUND_DE`). */
+const groundColour = (r: Raster, labs: ReadonlyArray<Rgb>) => {
+  const { width: w, height: h } = r;
+  const at: number[] = [];
+  for (let x = 0; x < w; x++) at.push(x, (h - 1) * w + x);
+  for (let y = 1; y < h - 1; y++) at.push(y * w, y * w + w - 1);
+  const median = (c: 0 | 1 | 2) => {
+    const vs = at.map((i) => r.rgba[i * 4 + c] ?? 0).sort((a, b) => a - b);
+    return vs[vs.length >> 1] ?? 0;
+  };
+  const lab = labOf([median(0), median(1), median(2)]);
+  const spread = at
+    .map((i) => deltaE(labs[i] ?? lab, lab))
+    .filter((d) => d <= BORDER_GROUND)
+    .sort((a, b) => a - b);
+  const p90 = spread[Math.floor(0.9 * (spread.length - 1))] ?? 0;
+  return { lab, near: Math.max(GROUND_DE, GROUND_SPREAD * p90) };
+};
+
+/** The pixels of `mask` whose four-way piece touches the crop's border. */
+const fromBorder = (mask: Uint8Array, w: number, h: number): Uint8Array => {
+  const { labels } = componentsOf(mask, w, h, false);
+  const border = new Set<number>();
+  for (let x = 0; x < w; x++) border.add(labels[x] ?? -1).add(labels[(h - 1) * w + x] ?? -1);
+  for (let y = 0; y < h; y++) border.add(labels[y * w] ?? -1).add(labels[y * w + w - 1] ?? -1);
+  border.delete(-1);
+  return Uint8Array.from(labels, (l) => (border.has(l) ? 1 : 0));
+};
+
+/** A crop read into its ground, figure, ink and paper; none when it holds no figure. */
+const readCrop = (r: Raster): Read | undefined => {
+  const { width: w, height: h } = r;
+  const n = w * h;
+  const labs = Array.from({ length: n }, (_, i) => labOf(rgbAt(r, i)));
+  const { lab, near } = groundColour(r, labs);
+  const like = Uint8Array.from(labs, (c) => (deltaE(c, lab) <= near ? 1 : 0));
+  const ground = fromBorder(like, w, h);
+  // A speck the flood stepped round (the paper's grain) is ground.
+  const figure = Uint8Array.from(ground, (g) => 1 - g);
+  const pieces = componentsOf(figure, w, h, true);
+  for (let i = 0; i < n; i++) {
+    const piece = pieces.components[pieces.labels[i] ?? -1];
+    if (piece !== undefined && piece.area < SPECK) ground[i] = 1;
+  }
+  const holes = new Uint8Array(n);
+  const ink = new Uint8Array(n);
+  const paper = new Uint8Array(n);
+  const left = new Float64Array(h).fill(Number.NaN);
+  const right = new Float64Array(h).fill(Number.NaN);
+  let [top, bottom] = [-1, -1];
+  for (let i = 0; i < n; i++) {
+    if (ground[i] === 1) continue;
+    if (like[i] === 1) holes[i] = 1;
+    else if (lumaOf(rgbAt(r, i)) >= LINE_LUMA) paper[i] = 1;
+    else {
+      ink[i] = 1;
+      const [x, y] = [i % w, Math.floor(i / w)];
+      if (Number.isNaN(left[y] ?? Number.NaN)) left[y] = x;
+      right[y] = x;
+      if (top < 0) top = y;
+      bottom = y;
+    }
+  }
+  if (top < 0) return undefined;
+  return { r, w, h, lab, ground, holes, ink, paper, left, right, top, bottom };
+};
+
+/** A row: its value kept to hundredths and held to its bar. */
+const rowOf = (
+  name: string,
+  band: FitBand,
+  part: string,
+  value: number,
+  bar: FitBar,
+  more: Pick<FitRow, 'concept' | 'render' | 'where'> = {},
+): FitRow => {
+  const v = kept(value);
+  return { name, band, part, value: v, bar, pass: within(v, bar), ...more };
+};
+
+/** The rows of `band`, by the sheet's figure: the head's top 30%, the body the rest. */
+const bandRows = (c: Read, band: 'head' | 'body'): readonly [number, number] => {
+  const split = c.top + Math.ceil(HEAD_SHARE * (c.bottom - c.top + 1));
+  return band === 'head' ? [c.top, split - 1] : [split, c.bottom];
+};
+
+/** The mean distance of the two crops' outer edges over the band's rows both hold the figure in. */
+const edgeOf = (c: Read, r: Read, [y0, y1]: readonly [number, number]) => {
+  let [sum, count] = [0, 0];
+  for (let y = y0; y <= Math.min(y1, r.h - 1); y++) {
+    const [cl, cr] = [c.left[y] ?? Number.NaN, c.right[y] ?? Number.NaN];
+    const [rl, rr] = [r.left[y] ?? Number.NaN, r.right[y] ?? Number.NaN];
+    if (Number.isNaN(cl) || Number.isNaN(rl)) continue;
+    sum += Math.abs(cl - rl) + Math.abs(cr - rr);
+    count += 2;
+  }
+  return count === 0 ? Math.max(c.w, r.w) : sum / count;
+};
+
+/** The second difference of an edge at row `y` over `TURN_SPAN` rows: NaN where a row of it holds no figure. */
+const turnAt = (e: Float64Array, y: number) => {
+  const [a, b, d] = [e[y - TURN_SPAN], e[y], e[y + TURN_SPAN]];
+  if (a === undefined || b === undefined || d === undefined) return Number.NaN;
+  return Math.abs(a - 2 * b + d);
+};
+
+/** The render's sharpest turn past the sheet's sharpest within `TURN_NEAR` rows, in the band, on either side. */
+const turnsOf = (c: Read, r: Read, [y0, y1]: readonly [number, number]) => {
+  let worst = { excess: 0, concept: 0, render: 0, where: 'none' };
+  for (const side of ['left', 'right'] as const)
+    for (let y = Math.max(y0, c.top + TURN_END); y <= Math.min(y1, c.bottom - TURN_END); y++) {
+      const t = turnAt(r[side], y);
+      if (Number.isNaN(t)) continue;
+      let sheet = 0;
+      for (let d = -TURN_NEAR; d <= TURN_NEAR; d++) {
+        const s = turnAt(c[side], y + d);
+        if (!Number.isNaN(s)) sheet = Math.max(sheet, s);
+      }
+      if (t - sheet > worst.excess)
+        worst = { excess: t - sheet, concept: sheet, render: t, where: `${side} row ${y}` };
+    }
+  return worst;
+};
+
+/** How many pixels of `a` and of `b` overlap, over how many either holds. */
+const iouOf = (a: Uint8Array, b: Uint8Array) => {
+  let [both, either] = [0, 0];
+  for (let i = 0; i < a.length; i++) {
+    const [x, y] = [a[i] === 1, b[i] === 1];
+    if (x && y) both++;
+    if (x || y) either++;
+  }
+  return either === 0 ? 1 : both / either;
+};
+
+/** Where parabola `q` (rooted at `f[q]`) crosses parabola `p`. */
+const crossing = (f: Float64Array, q: number, p: number) =>
+  ((f[q] ?? 0) + q * q - ((f[p] ?? 0) + p * p)) / (2 * q - 2 * p);
+
+/** One line's squared distances, `f` its samples: the lower envelope of the parabolas rooted at them (Felzenszwalb and Huttenlocher). */
+const envelope = (f: Float64Array, n: number): Float64Array => {
+  const out = new Float64Array(n);
+  const v = new Int32Array(n);
+  const z = new Float64Array(n + 1);
+  let k = 0;
+  z[0] = -Infinity;
+  z[1] = Infinity;
+  for (let q = 1; q < n; q++) {
+    let s = crossing(f, q, v[k] ?? 0);
+    while (k > 0 && s <= (z[k] ?? 0)) {
+      k--;
+      s = crossing(f, q, v[k] ?? 0);
+    }
+    k++;
+    v[k] = q;
+    z[k] = s;
+    z[k + 1] = Infinity;
+  }
+  k = 0;
+  for (let q = 0; q < n; q++) {
+    while ((z[k + 1] ?? Infinity) < q) k++;
+    const p = v[k] ?? 0;
+    out[q] = (q - p) ** 2 + (f[p] ?? 0);
+  }
+  return out;
+};
+
+/** Each pixel's distance to the nearest set pixel of `mask`, squared: a column's envelope, then a row's. */
+const distancesTo = (mask: Uint8Array, w: number, h: number): Float64Array => {
+  const FAR = (w + h) ** 2;
+  const d = Float64Array.from(mask, (m) => (m === 1 ? 0 : FAR));
+  const col = new Float64Array(h);
+  for (let x = 0; x < w; x++) {
+    for (let y = 0; y < h; y++) col[y] = d[y * w + x] ?? FAR;
+    const o = envelope(col, h);
+    for (let y = 0; y < h; y++) d[y * w + x] = o[y] ?? FAR;
+  }
+  const row = new Float64Array(w);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) row[x] = d[y * w + x] ?? FAR;
+    const o = envelope(row, w);
+    for (let x = 0; x < w; x++) d[y * w + x] = o[x] ?? FAR;
+  }
+  return d;
+};
+
+/** The mean distance from the render's ink to the sheet's, pixels; `w + h` a pixel where the sheet has no ink at all. */
+const inkEdgeOf = (c: Read, r: Read) => {
+  const d = distancesTo(c.ink, c.w, c.h);
+  let [sum, count] = [0, 0];
+  for (let i = 0; i < r.ink.length; i++)
+    if (r.ink[i] === 1) {
+      sum += Math.sqrt(d[i] ?? 0);
+      count++;
+    }
+  return count === 0 ? 0 : sum / count;
+};
+
+/** Each paper pixel marked where its run of paper along a line (`n` pixels, the `k`th at `at(k)`) is `SLIVER_THICK` or thinner. */
+const markThin = (paper: Uint8Array, thin: Uint8Array, n: number, at: (k: number) => number) => {
+  let start = 0;
+  for (let k = 0; k <= n; k++) {
+    if (k < n && paper[at(k)] === 1) continue;
+    if (k - start > 0 && k - start <= SLIVER_THICK) for (let j = start; j < k; j++) thin[at(j)] = 1;
+    start = k + 1;
+  }
+};
+
+/** The pixels of thin paper (`SLIVER_THICK` or less across, row or column) in runs `SLIVER_LONG` long or more. */
+const sliversOf = (read: Read) => {
+  const { w, h, paper } = read;
+  const thin = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) markThin(paper, thin, w, (x) => y * w + x);
+  for (let x = 0; x < w; x++) markThin(paper, thin, h, (y) => y * w + x);
+  const { components } = componentsOf(thin, read.w, read.h, true);
+  return components
+    .filter((c) => Math.max(c.box[2] - c.box[0], c.box[3] - c.box[1]) >= SLIVER_LONG)
+    .reduce((s, c) => s + c.area, 0);
+};
+
+const count = (m: Uint8Array) => m.reduce((s, v) => s + v, 0);
+
+/** A pixel's class: the index of the class whose colour (`pick` of each) lies nearest it. */
+const classifier = (
+  read: Read,
+  classes: Readonly<Record<string, FitClass>>,
+  pick: (c: FitClass) => ReadonlyArray<string>,
+): ((i: number) => number) => {
+  const samples = Object.values(classes).flatMap((c, k) =>
+    pick(c).map((hex) => ({
+      k,
+      rgb: [
+        Number.parseInt(hex.slice(1, 3), 16),
+        Number.parseInt(hex.slice(3, 5), 16),
+        Number.parseInt(hex.slice(5, 7), 16),
+      ] as const,
+    })),
+  );
+  return (i) => {
+    const [r, g, b] = rgbAt(read.r, i);
+    let [best, bestD] = [-1, Infinity];
+    for (const s of samples) {
+      const dd = (r - s.rgb[0]) ** 2 + (g - s.rgb[1]) ** 2 + (b - s.rgb[2]) ** 2;
+      if (dd < bestD) [best, bestD] = [s.k, dd];
+    }
+    return best;
+  };
+};
+
+/** Each paper pixel's class (-1 off the paper). */
+const classesOf = (read: Read, classOf: (i: number) => number): Int8Array => {
+  const out = new Int8Array(read.w * read.h).fill(-1);
+  for (let i = 0; i < out.length; i++) if (read.paper[i] === 1) out[i] = classOf(i);
+  return out;
+};
+
+/** The class rows: each class's overlap, and its mean ΔE where both crops read it. */
+const classRows = (
+  c: Read,
+  r: Read,
+  classes: Readonly<Record<string, FitClass>>,
+  kinds: readonly [Int8Array, Int8Array],
+  bar: (name: keyof typeof FIT_BARS, band: FitBand, part: string) => FitBar,
+): FitRow[] => {
+  const [ck, rk] = kinds;
+  const maskOf = (of: Int8Array, k: number) => Uint8Array.from(of, (v) => (v === k ? 1 : 0));
+  return Object.keys(classes).flatMap((name, k) => {
+    const [a, b] = [maskOf(ck, k), maskOf(rk, k)];
+    const [ca, cb] = [count(a), count(b)];
+    if (ca === 0 && cb === 0) return [];
+    let [sum, n] = [0, 0];
+    for (let i = 0; i < a.length; i++)
+      if (a[i] === 1 && b[i] === 1) {
+        sum += deltaE(labOf(rgbAt(c.r, i)), labOf(rgbAt(r.r, i)));
+        n++;
+      }
+    // Where both crops hold a class but never in one place, its colours are not compared: ΔE 100, past any bar.
+    return [
+      rowOf('class.iou', 'figure', name, iouOf(a, b), bar('class.iou', 'figure', name), {
+        concept: ca,
+        render: cb,
+      }),
+      rowOf(
+        'class.colour',
+        'figure',
+        name,
+        n === 0 ? 100 : sum / n,
+        bar('class.colour', 'figure', name),
+      ),
+    ];
+  });
+};
+
+/**
+ * A probe's pixels read as classes, in runs: `G` the ground, `H` a hole, `K`
+ * darker than its line's luma (`FitProbe.dark`), each other pixel by its
+ * class's name, `P` with no classes.
+ */
+/** A run of one class along a probe, from and to, crop pixels. */
+interface ProbeRun {
+  cls: string;
+  readonly from: number;
+  to: number;
+}
+
+/** Pixel `i`'s class on a probe darker than `dark` is its line. */
+const probeClass = (
+  read: Read,
+  i: number,
+  dark: number,
+  classOf: (i: number) => number,
+  names: ReadonlyArray<string>,
+) => {
+  if (read.ground[i] === 1) return 'G';
+  if (read.holes[i] === 1) return 'H';
+  if (lumaOf(rgbAt(read.r, i)) < dark) return 'K';
+  return names[classOf(i)] ?? 'P';
+};
+
+/** `runs` with each thinner than `PROBE_RUN` joined to the run before it (a first stays), and runs of one class joined. */
+const joinedRuns = (runs: ReadonlyArray<ProbeRun>): ProbeRun[] => {
+  const out: ProbeRun[] = [];
+  for (const run of runs) {
+    const last = out[out.length - 1];
+    const thin = run.to - run.from + 1 < PROBE_RUN;
+    if (last !== undefined && (thin || last.cls === run.cls)) last.to = run.to;
+    else out.push({ ...run });
+  }
+  return out;
+};
+
+const probeRuns = (
+  read: Read,
+  p: FitProbe,
+  classOf: (i: number) => number,
+  names: ReadonlyArray<string>,
+) => {
+  const runs: ProbeRun[] = [];
+  const [a, b] = [Math.min(p.from, p.to), Math.max(p.from, p.to)];
+  for (let t = a; t <= b; t++) {
+    const [x, y] = p.along === 'row' ? [t, p.at] : [p.at, t];
+    if (x < 0 || y < 0 || x >= read.w || y >= read.h) continue;
+    const cls = probeClass(read, y * read.w + x, p.dark ?? PROBE_DARK, classOf, names);
+    const last = runs[runs.length - 1];
+    if (last !== undefined && last.cls === cls) last.to = t;
+    else runs.push({ cls, from: t, to: t });
+  }
+  return joinedRuns(runs);
+};
+
+/** A run's class as a change is typed: the ground, a hole and the line by their own, every paper (a class's tone flickers on a lit edge) as one. */
+const sideOf = (cls: string) => (cls === 'G' || cls === 'H' || cls === 'K' ? cls : 'P');
+
+/** The changes along a probe at the ground, a hole or the line: each `from>to` and where it lies (a change between two papers is no edge of the line's). */
+const changesOf = (runs: ReadonlyArray<{ cls: string; from: number }>) =>
+  runs
+    .slice(1)
+    .map((run, k) => ({ kind: `${sideOf(runs[k]?.cls ?? '')}>${sideOf(run.cls)}`, at: run.from }))
+    .filter((ch) => ch.kind !== 'P>P');
+
+/**
+ * A probe's row: the largest distance from a change on the sheet to the
+ * same change on the render (the probe's length where the render has none):
+ * the render draws each of the sheet's edges along the probe where the sheet
+ * does. A line the render adds is `ink.edge`'s.
+ */
+const probeRow = (
+  c: Read,
+  r: Read,
+  p: FitProbe,
+  classOf: readonly [(i: number) => number, (i: number) => number],
+  names: ReadonlyArray<string>,
+  bar: FitBar,
+): FitRow => {
+  const cr = probeRuns(c, p, classOf[0], names);
+  const rr = probeRuns(r, p, classOf[1], names);
+  const [cc, rc] = [changesOf(cr), changesOf(rr)];
+  const length = Math.abs(p.to - p.from) + 1;
+  const farthest = (
+    from: ReadonlyArray<{ kind: string; at: number }>,
+    to: ReadonlyArray<{ kind: string; at: number }>,
+  ) =>
+    from.reduce((worst, ch) => {
+      const near = to
+        .filter((o) => o.kind === ch.kind)
+        .reduce((m, o) => Math.min(m, Math.abs(o.at - ch.at)), length);
+      return Math.max(worst, near);
+    }, 0);
+  const said = (runs: ReadonlyArray<{ cls: string; from: number; to: number }>) =>
+    runs.map((x) => `${x.cls}${x.from}-${x.to}`).join(' ');
+  return rowOf(`probe.${p.name}`, 'figure', 'figure', farthest(cc, rc), bar, {
+    where: `${p.along} ${p.at} ${p.from}-${p.to}: sheet ${said(cr)} | render ${said(rr)}`,
+  });
+};
+
+/**
+ * The fit rows of `render` against `concept`, two crops of one kept box:
+ * every row `FIT_BARS` names, per band where it has bands, the class rows
+ * with `spec.classes` and a row per probe in `spec.probes`, each held to
+ * its bar (`spec.bars` before `FIT_BARS`). None when either crop reads no
+ * figure.
+ */
+export const fitRows = (
+  concept: Raster,
+  render: Raster,
+  spec: FitSpec = {},
+): ReadonlyArray<FitRow> => {
+  const c = readCrop(concept);
+  const r = readCrop(render);
+  if (c === undefined || r === undefined || c.w !== r.w || c.h !== r.h) return [];
+  const bar = (name: keyof typeof FIT_BARS, band: FitBand = 'figure', part = 'figure') =>
+    barOf(spec, name, band, part);
+  const rows: FitRow[] = [];
+  for (const band of ['head', 'body'] as const) {
+    const ys = bandRows(c, band);
+    rows.push(
+      rowOf('silhouette.edge', band, 'figure', edgeOf(c, r, ys), bar('silhouette.edge', band)),
+    );
+    const t = turnsOf(c, r, ys);
+    rows.push(
+      rowOf('outline.turns', band, 'figure', t.excess, bar('outline.turns', band), {
+        concept: t.concept,
+        render: t.render,
+        where: t.where,
+      }),
+    );
+  }
+  const figure = (read: Read) => Uint8Array.from(read.ground, (g) => 1 - g);
+  rows.push(
+    rowOf('silhouette.iou', 'figure', 'figure', iouOf(figure(c), figure(r)), bar('silhouette.iou')),
+  );
+  rows.push(rowOf('ink.edge', 'figure', 'figure', inkEdgeOf(c, r), bar('ink.edge')));
+  const [cs, rs] = [sliversOf(c), sliversOf(r)];
+  rows.push(
+    rowOf('slivers', 'figure', 'figure', Math.max(0, rs - cs), bar('slivers'), {
+      concept: cs,
+      render: rs,
+    }),
+  );
+  const [ch, rh] = [count(c.holes), count(r.holes)];
+  rows.push(
+    rowOf('holes', 'figure', 'figure', Math.max(0, rh - ch), bar('holes'), {
+      concept: ch,
+      render: rh,
+    }),
+  );
+  const classes = spec.classes ?? {};
+  const classOf: readonly [(i: number) => number, (i: number) => number] = [
+    classifier(c, classes, (k) => k.sheet),
+    classifier(r, classes, (k) => k.paper),
+  ];
+  rows.push(...classRows(c, r, classes, [classesOf(c, classOf[0]), classesOf(r, classOf[1])], bar));
+  const names = Object.keys(classes);
+  for (const p of spec.probes ?? [])
+    rows.push(probeRow(c, r, p, classOf, names, p.bar ?? bar('probe')));
+  return rows;
+};

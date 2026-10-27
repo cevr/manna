@@ -11,6 +11,7 @@
 // props (a bottle, a stool), each a plain canvas piece. Pure: the table is
 // data a test reads in Bun, and only its props' draws touch a canvas.
 
+import type { FitBar, FitBarName, FitClass, FitProbe } from '../core/fit-rows.ts';
 import type { PoseOf, RivePropSpec } from './rive.ts';
 
 type Pt = readonly [number, number];
@@ -46,7 +47,22 @@ type CastDrawing =
   | { readonly kind: 'figure' }
   | { readonly kind: 'with'; readonly with: CastWith };
 
-/** One kept view: its kept box, where its rig's origin stands in the sheet's pixels, the rig in its pose, and what is drawn with it. */
+/** A bar a view holds a fit row to in place of the house's (`FIT_BARS`), and why. */
+interface CastFitBar extends FitBar {
+  readonly why: string;
+}
+
+/**
+ * What a view's fit rows hold beyond the house's (`core/fit-rows.ts`): its
+ * probes (a scanline across a feature a review measured: an ear's band, a
+ * chin's line), and a bar of its own for a row, each with its reason.
+ */
+interface CastFit {
+  readonly probes?: ReadonlyArray<FitProbe>;
+  readonly bars?: Readonly<Partial<Record<FitBarName, CastFitBar>>>;
+}
+
+/** One kept view: its kept box, where its rig's origin stands in the sheet's pixels, the rig in its pose, what is drawn with it, and what its fit rows hold beyond the house's. */
 export interface CastView {
   readonly box: SheetBox;
   readonly at: Pt;
@@ -54,6 +70,7 @@ export interface CastView {
   readonly pose: PoseOf<RivePropSpec>;
   readonly with?: ReadonlyArray<CastWith>;
   readonly props?: ReadonlyArray<CastProp>;
+  readonly fit?: CastFit;
 }
 
 /** A film's cast render table: member, kind (`turnaround`, `poses`, `heads`), kept view name. */
@@ -71,11 +88,12 @@ export interface CastSheet {
 /** Each member's sheets, by kind: what the render's canvas and scale are. */
 type CastSheets = Readonly<Record<string, Readonly<Record<string, CastSheet>>>>;
 
-/** What a film's `rigs/cast.ts` gives the cast render: its table, its sheets, and the paper its page lays them on. */
+/** What a film's `rigs/cast.ts` gives the cast render: its table, its sheets, the paper its page lays them on, and each member's colour classes for his fit rows (none, no class rows). */
 export interface CastModule {
   readonly CAST: CastTable;
   readonly SHEETS: CastSheets;
   readonly PAPER: { readonly base: string; readonly tone: string; readonly seed: number };
+  readonly FIT_CLASSES?: Readonly<Record<string, Readonly<Record<string, FitClass>>>>;
 }
 
 /** The page name of `member`'s cast render in `film`: what the player mounts and `film concept render` opens. */

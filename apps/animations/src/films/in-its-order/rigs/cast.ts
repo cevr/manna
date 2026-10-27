@@ -32,6 +32,11 @@ import * as LEAD_RAISED from '../../../library/cast/lead-feast/rig/raised-traced
 import * as LEAD_SEATED from '../../../library/cast/lead-feast/rig/seated-traced.ts';
 import * as LEAD_TQ_LEFT from '../../../library/cast/lead-feast/rig/three-quarter-left-traced.ts';
 import * as LEAD_TQ_RIGHT from '../../../library/cast/lead-feast/rig/three-quarter-right-traced.ts';
+import { CLASSES as LEAD_CLASSES } from '../../../library/cast/lead-feast/rig/trace.ts';
+import {
+  PAPERS as LEAD_PAPERS,
+  TONES as LEAD_TONES,
+} from '../../../library/cast/lead-feast/rig/papers.ts';
 import { palette } from '../palette.ts';
 import { bottle, plate, stool, table } from '../props.ts';
 import * as RIGS from './rigs.ts';
@@ -45,6 +50,64 @@ type Composed = ReturnType<typeof tracedFigure>;
 
 /** The film's paper, as its page lays it (`film.ts`). */
 export const PAPER = { base: palette.paper, tone: palette.paperTone, seed: 1844 } as const;
+
+/** A paper's colours: its own, its shade and its light. */
+const coloursOf = (
+  ...ps: ReadonlyArray<{ readonly color: string; readonly shade?: string; readonly light?: string }>
+) =>
+  ps.flatMap((p) => [
+    p.color,
+    ...(p.shade === undefined ? [] : [p.shade]),
+    ...(p.light === undefined ? [] : [p.light]),
+  ]);
+
+/**
+ * Each member's colour classes for his fit rows (`film concept render`): a
+ * class's samples on his kept sheets, and the papers and tones that paint it
+ * on his rigs. His hair and its brown read as his line (darker than luma
+ * 90), so it is no class.
+ */
+export const FIT_CLASSES = {
+  'lead-feast': {
+    cream: {
+      sheet: LEAD_CLASSES.cream,
+      paper: [
+        ...coloursOf(
+          LEAD_PAPERS.tunic,
+          LEAD_PAPERS.sleeve,
+          LEAD_PAPERS.sleeveAcross,
+          LEAD_PAPERS.sleeveRaised,
+        ),
+        LEAD_TONES.sash,
+        LEAD_TONES.raisedUnder,
+        LEAD_TONES.creamAcrossInner,
+        LEAD_TONES.creamAcrossFold,
+      ],
+    },
+    teal: {
+      sheet: LEAD_CLASSES.teal,
+      paper: [
+        ...coloursOf(LEAD_PAPERS.mantleSleeve),
+        LEAD_TONES.mantle,
+        LEAD_TONES.mantleShade,
+        LEAD_TONES.tealEdge,
+        LEAD_TONES.lapSleeveUnder,
+      ],
+    },
+    skin: {
+      sheet: LEAD_CLASSES.skin,
+      paper: [
+        ...coloursOf(LEAD_PAPERS.skin, LEAD_PAPERS.ear, LEAD_PAPERS.hand),
+        LEAD_PAPERS.foot.color,
+        LEAD_TONES.neck,
+        LEAD_TONES.jawShade,
+        LEAD_TONES.jawSoft,
+        LEAD_TONES.earLit,
+        LEAD_TONES.earShade,
+      ],
+    },
+  },
+} as const;
 
 /** Every kept sheet is drawn 1536 by 1024. */
 const SHEET = { width: 1536, height: 1024 } as const;
@@ -211,6 +274,143 @@ const bust = (
   });
 };
 
+/**
+ * A probe across a feature review-art-3 measured (`review-art-3-receipts/
+ * probes-155.txt`), crop pixels, at the review's own line and darkness: his
+ * chin's line down x 120 (luma under 135), his near ear's outer edge along
+ * row 155 (under 90).
+ */
+const CHIN_PROBE = { name: 'chin', along: 'col', at: 120, from: 150, to: 260, dark: 135 } as const;
+const EAR_PROBE = { name: 'earLeft', along: 'row', at: 155, from: 20, to: 80, dark: 90 } as const;
+
+/**
+ * Why a bust's rows are held to the busts' bars: review-art-3's b2, kept
+ * ready on render 155. Each bust is his turnaround rig at the heads sheet's
+ * scale (7 to 8% wide, his shoulders narrow, his sash at his neck, his cream
+ * garment read teal), not a bust rig of its own: a follow-up.
+ */
+const BUST_WHY = "review-art-3 b2: the bust is his turnaround rig, not a bust rig (r155's values)";
+
+/**
+ * The busts' bars, each just past the widest the four busts review-art-3
+ * kept ready read on render 155 (heads-1, 2, 4 and 5): his head band's edge
+ * 8.17 (heads-2), its turn 22 (heads-2), his body's edge 10.18 (heads-1),
+ * the overlap 0.81 (heads-5), thin paper 82 px (heads-5's chevrons), his
+ * cream 0.01 (heads-5). A bust's own defect is its probe's: heads-3's frown,
+ * heads-6's chin and ear.
+ */
+const BUST_BARS = {
+  'silhouette.edge/head': { max: 9, why: BUST_WHY },
+  'outline.turns/head': { max: 23, why: BUST_WHY },
+  'silhouette.edge/body': { max: 11, why: BUST_WHY },
+  'silhouette.iou': { min: 0.8, why: BUST_WHY },
+  slivers: { max: 90, why: BUST_WHY },
+  'class.iou/cream': { min: 0, why: BUST_WHY },
+} as const;
+
+/** A view's own fit: its probes and its bars, each with why (`CastView.fit`). */
+type ViewFit = NonNullable<CastView['fit']>;
+
+/**
+ * The lead's views' own fits, by kind and view: the busts' bars and probes,
+ * each pose's bars where review-art-3 kept it ready with a difference he is
+ * shown (its value on render 155 just inside), and the probes on what
+ * review-art-3 measured wrong (poses-3's seat and chest fold, heads-3's
+ * frown, heads-6's chin and ear).
+ */
+const LEAD_FIT = {
+  poses: {
+    'poses-1': {
+      bars: {
+        'silhouette.edge/head': {
+          max: 6,
+          why: 'review-art-3 b8: the bottle laid over his hand (r155 5.32)',
+        },
+        'outline.turns/head': {
+          max: 72,
+          why: "review-art-3 b8: the bottle's top steps his head band's edge (r155 70)",
+        },
+      },
+    },
+    'poses-2': {
+      bars: {
+        'silhouette.edge/head': {
+          max: 10,
+          why: 'review-art-3 b8, m13: two whole hands side by side at the plate (r155 8.94)',
+        },
+        'outline.turns/head': {
+          max: 103,
+          why: "review-art-3 b8: the plate's rim and his hands step his head band's edge (r155 101)",
+        },
+        'class.iou/teal': { min: 0.5, why: 'review-art-3 b8: his far sleeve short (r155 0.51)' },
+      },
+    },
+    'poses-3': {
+      probes: [
+        // a1: the stool's line under his torso, read across the seat; a2: the "A" bar on his chest (luma under 160, the review's #).
+        { name: 'seat', along: 'row', at: 375, from: 180, to: 288 },
+        { name: 'chestFold', along: 'row', at: 285, from: 98, to: 130, dark: 160 },
+      ],
+    },
+    'poses-4': {
+      bars: {
+        'outline.turns/head': {
+          max: 12,
+          why: 'review-art-3 b9: kept ready; his rolled head over the reach (r155 11)',
+        },
+        'silhouette.edge/body': {
+          max: 5.5,
+          why: 'review-art-3 b9: the table and the bottle by his reaching hand (r155 5)',
+        },
+        'outline.turns/body': {
+          max: 67,
+          why: "review-art-3 b9: the table's top steps his body's edge (r155 65)",
+        },
+        'silhouette.iou': {
+          min: 0.84,
+          why: 'review-art-3 b9: the table and the bottle (r155 0.85)',
+        },
+      },
+    },
+    'poses-5': {
+      bars: {
+        'silhouette.edge/head': {
+          max: 14,
+          why: 'review-art-3 b3: poses-5 is his front at rest; the poses sheet draws his head larger (r155 12.91)',
+        },
+        'outline.turns/head': { max: 9, why: 'review-art-3 b3 (r155 8)' },
+        'silhouette.edge/body': {
+          max: 9,
+          why: 'review-art-3 b3: his body 23% wider under the chin on the sheet (r155 8.48)',
+        },
+        'outline.turns/body': { max: 21, why: 'review-art-3 b3 (r155 20)' },
+        'silhouette.iou': { min: 0.86, why: 'review-art-3 b3 (r155 0.87)' },
+        'class.iou/teal': { min: 0.55, why: 'review-art-3 b3 (r155 0.59)' },
+        'class.iou/skin': {
+          min: 0.45,
+          why: "review-art-3 b3: his head smaller than the sheet's (r155 0.48)",
+        },
+      },
+    },
+  },
+  heads: {
+    'heads-1': { bars: BUST_BARS, probes: [EAR_PROBE] },
+    'heads-2': { bars: BUST_BARS, probes: [CHIN_PROBE, EAR_PROBE] },
+    // a5: the frown, down x 72 above his chin (luma under 100).
+    'heads-3': {
+      bars: BUST_BARS,
+      probes: [{ name: 'mouth', along: 'col', at: 72, from: 140, to: 200, dark: 100 }],
+    },
+    'heads-4': { bars: BUST_BARS, probes: [EAR_PROBE] },
+    'heads-5': { bars: BUST_BARS, probes: [EAR_PROBE] },
+    // a4: the nod that cut his ears and raised his chin's line.
+    'heads-6': { bars: BUST_BARS, probes: [CHIN_PROBE, EAR_PROBE] },
+  },
+} satisfies Readonly<Record<string, Readonly<Record<string, ViewFit>>>>;
+
+/** `view` with its own fit (`CastView.fit`). */
+const fitted = (fit: ViewFit, view: CastView): CastView => ({ ...view, fit });
+
 /** A wince: his eyes squeezed shut as `>` `<`, his brows knit, his mouth a wavering line. */
 const WINCE: Numbers = { wince: 1, eyes: 0, mouthLine: 0, browY: -5, browTilt: -0.5 };
 
@@ -243,72 +443,69 @@ export const CAST = castTable({
     },
     poses: {
       // Three-quarters left, his near arm raised with the bottle at his shoulder's height: his raised composition, its sleeve and his rolled head as the sheet draws them.
-      'poses-1': pose(
-        LEAD_RAISED.BOX,
-        LEAD_RAISED.FEET,
-        LEAD.leadFeastRaised,
-        RIGS.leadFeastRaisedProp,
-        {
+      'poses-1': fitted(
+        LEAD_FIT.poses['poses-1'],
+        pose(LEAD_RAISED.BOX, LEAD_RAISED.FEET, LEAD.leadFeastRaised, RIGS.leadFeastRaisedProp, {
           lean: 0,
           numbers: { mouth: 3 },
           reach: [],
           // The bottle in front of his fist, its foot at the sheet's (70, 418).
           props: [{ name: 'bottle', draw: bottle([-80, -299]), layer: 'front' }],
-        },
+        }),
       ),
       // In profile to the left, both hands up, his head tipped back, the plate at his mouth.
-      'poses-2': pose(
-        LEAD_DRINKING.BOX,
-        LEAD_DRINKING.FEET,
-        LEAD.leadFeastDrinking,
-        RIGS.leadFeastDrinkingProp,
-        {
-          lean: 0,
-          numbers: {},
-          reach: [],
-          // The plate's rim at his lips (the sheet's 397, 337), the dish out before his face; held: over his sleeves, under his hands.
-          props: [{ name: 'plate', draw: plate([-55, -360], 0.55), layer: 'held' }],
-        },
+      'poses-2': fitted(
+        LEAD_FIT.poses['poses-2'],
+        pose(
+          LEAD_DRINKING.BOX,
+          LEAD_DRINKING.FEET,
+          LEAD.leadFeastDrinking,
+          RIGS.leadFeastDrinkingProp,
+          {
+            lean: 0,
+            numbers: {},
+            reach: [],
+            // The plate's rim at his lips (the sheet's 397, 337), the dish out before his face; held: over his sleeves, under his hands.
+            props: [{ name: 'plate', draw: plate([-55, -360], 0.55), layer: 'held' }],
+          },
+        ),
       ),
       // Seated on the stool, three-quarters left, his near hand at his chin, his far hand on his lap.
-      'poses-3': pose(
-        LEAD_SEATED.BOX,
-        LEAD_SEATED.FEET,
-        LEAD.leadFeastSeated,
-        RIGS.leadFeastSeatedProp,
-        {
+      'poses-3': fitted(
+        LEAD_FIT.poses['poses-3'],
+        pose(LEAD_SEATED.BOX, LEAD_SEATED.FEET, LEAD.leadFeastSeated, RIGS.leadFeastSeatedProp, {
           lean: 0,
           numbers: {},
           // His near arm is the raised sleeve the sheet draws, its hand at his chin as traced (`leadFeastSeated`): it reaches nowhere.
           reach: [['far', LEAD_SEATED.HAND_FAR.at]],
           // The stool behind him, its seat's top on the sheet's line (row 703) and running in under his mantle; its front leg beside his robe's side (x 803-825) and its far one at x 855-877, where the sheet draws them.
           props: [{ name: 'stool', draw: stool(69, 133, -97), layer: 'behind' }],
-        },
+        }),
       ),
       // Three-quarters left, leaning to the low table, his near hand on the bottle there: his reaching composition, its sleeve as the sheet draws it.
-      'poses-4': pose(
-        LEAD_REACHING.BOX,
-        LEAD_REACHING.FEET,
-        LEAD.leadFeastReaching,
-        RIGS.leadFeastReachingProp,
-        {
-          lean: 0,
-          numbers: { mouth: 3 },
-          reach: [],
-          // The table's top at the sheet's row 617 from its left end to 1007, its leg at 952; the bottle on it, its middle at 953, in front of his hand.
-          props: [
-            { name: 'table', draw: table(-152, -73, -146, -113), layer: 'behind' },
-            { name: 'bottle', draw: bottle([-112, -146]), layer: 'front' },
-          ],
-        },
+      'poses-4': fitted(
+        LEAD_FIT.poses['poses-4'],
+        pose(
+          LEAD_REACHING.BOX,
+          LEAD_REACHING.FEET,
+          LEAD.leadFeastReaching,
+          RIGS.leadFeastReachingProp,
+          {
+            lean: 0,
+            numbers: { mouth: 3 },
+            reach: [],
+            // The table's top at the sheet's row 617 from its left end to 1007, its leg at 952; the bottle on it, its middle at 953, in front of his hand.
+            props: [
+              { name: 'table', draw: table(-152, -73, -146, -113), layer: 'behind' },
+              { name: 'bottle', draw: bottle([-112, -146]), layer: 'front' },
+            ],
+          },
+        ),
       ),
       // His front at rest.
-      'poses-5': pose(
-        [1259, 225, 1493, 829],
-        [1382, 829],
-        LEAD.leadFeastFront,
-        RIGS.leadFeastFrontProp,
-        {
+      'poses-5': fitted(
+        LEAD_FIT.poses['poses-5'],
+        pose([1259, 225, 1493, 829], [1382, 829], LEAD.leadFeastFront, RIGS.leadFeastFrontProp, {
           lean: 0,
           numbers: {},
           reach: [
@@ -316,79 +513,97 @@ export const CAST = castTable({
             ['far', [1460, 632]],
           ],
           props: [],
-        },
+        }),
       ),
     },
     heads: {
       // Three-quarters left: glad, a warm smile.
-      'heads-1': bust(
-        [26, 314, 267, 650],
-        [105, 446.5],
-        LEAD_TQ_LEFT,
-        LEAD.leadFeastThreeQuarterLeft,
-        RIGS.leadFeastThreeQuarterLeftProp,
-        { mouth: 3.5 },
+      'heads-1': fitted(
+        LEAD_FIT.heads['heads-1'],
+        bust(
+          [26, 314, 267, 650],
+          [105, 446.5],
+          LEAD_TQ_LEFT,
+          LEAD.leadFeastThreeQuarterLeft,
+          RIGS.leadFeastThreeQuarterLeftProp,
+          { mouth: 3.5 },
+        ),
       ),
       // Three-quarters left: a wince.
-      'heads-2': bust(
-        [284, 314, 519, 649],
-        [362, 453],
-        LEAD_TQ_LEFT,
-        LEAD.leadFeastThreeQuarterLeft,
-        RIGS.leadFeastThreeQuarterLeftProp,
-        WINCE,
+      'heads-2': fitted(
+        LEAD_FIT.heads['heads-2'],
+        bust(
+          [284, 314, 519, 649],
+          [362, 453],
+          LEAD_TQ_LEFT,
+          LEAD.leadFeastThreeQuarterLeft,
+          RIGS.leadFeastThreeQuarterLeftProp,
+          WINCE,
+        ),
       ),
       // Three-quarters left, his head tipped: worried, his brows' inner ends up, his mouth turned down.
-      'heads-3': bust(
-        [530, 314, 763, 650],
-        // Where the sheet draws his eyes' middle less the 21 px his roll swings them right of his rig's (eyes 57-67 and 102-114 against the render's 80-89 and 122-133 at 615): his head inside its box.
-        [594, 448],
-        LEAD_TQ_LEFT,
-        LEAD.leadFeastThreeQuarterLeft,
-        RIGS.leadFeastThreeQuarterLeftProp,
-        {
-          // Rolled 13°, as the sheet's head is.
-          tilt: 0.22,
-          browTilt: 0.4,
-          // His frown short and near flat, where the sheet draws it (rows 178-188 at x 65-80), under the line his rig's mouth lies on: 0.22 of his eyes' spacing wide.
-          mouth: -0.5,
-          mouthY: 12,
-          mouthW: 0.76,
-        },
+      'heads-3': fitted(
+        LEAD_FIT.heads['heads-3'],
+        bust(
+          [530, 314, 763, 650],
+          // Where the sheet draws his eyes' middle less the 21 px his roll swings them right of his rig's (eyes 57-67 and 102-114 against the render's 80-89 and 122-133 at 615): his head inside its box.
+          [594, 448],
+          LEAD_TQ_LEFT,
+          LEAD.leadFeastThreeQuarterLeft,
+          RIGS.leadFeastThreeQuarterLeftProp,
+          {
+            // Rolled 13°, as the sheet's head is.
+            tilt: 0.22,
+            browTilt: 0.4,
+            // His frown short and near flat, where the sheet draws it (rows 178-188 at x 65-80), under the line his rig's mouth lies on: 0.22 of his eyes' spacing wide.
+            mouth: -0.5,
+            mouthY: 12,
+            mouthW: 0.76,
+          },
+        ),
       ),
       // His front: plain, his mouth level.
-      'heads-4': bust(
-        [774, 314, 1014, 650],
-        [894, 448.5],
-        LEAD_FRONT,
-        LEAD.leadFeastFront,
-        RIGS.leadFeastFrontProp,
-        { mouth: 0 },
+      'heads-4': fitted(
+        LEAD_FIT.heads['heads-4'],
+        bust(
+          [774, 314, 1014, 650],
+          [894, 448.5],
+          LEAD_FRONT,
+          LEAD.leadFeastFront,
+          RIGS.leadFeastFrontProp,
+          { mouth: 0 },
+        ),
       ),
       // His front: a wince.
-      'heads-5': bust(
-        [1025, 313, 1265, 650],
-        [1144.5, 452],
-        LEAD_FRONT,
-        LEAD.leadFeastFront,
-        RIGS.leadFeastFrontProp,
-        WINCE,
+      'heads-5': fitted(
+        LEAD_FIT.heads['heads-5'],
+        bust(
+          [1025, 313, 1265, 650],
+          [1144.5, 452],
+          LEAD_FRONT,
+          LEAD.leadFeastFront,
+          RIGS.leadFeastFrontProp,
+          WINCE,
+        ),
       ),
       // His front: glad, his eyes shut in a smile and the glad mark's wide smile in place of his mouth's line, his face turned up as the sheet draws it: his marks lifted inside a head that holds the bust's place (`marksY`), so his chin's line and his ears stay where the sheet draws them.
-      'heads-6': bust(
-        [1276, 313, 1519, 650],
-        [1399, 445.5],
-        LEAD_FRONT,
-        LEAD.leadFeastFront,
-        RIGS.leadFeastFrontProp,
-        {
-          glad: 1,
-          marksY: -11,
-          // His brows 3 px back down, under the fringe his rig's hair hangs lower than the sheet's.
-          browY: 2,
-          eyes: 0,
-          mouthLine: 0,
-        },
+      'heads-6': fitted(
+        LEAD_FIT.heads['heads-6'],
+        bust(
+          [1276, 313, 1519, 650],
+          [1399, 445.5],
+          LEAD_FRONT,
+          LEAD.leadFeastFront,
+          RIGS.leadFeastFrontProp,
+          {
+            glad: 1,
+            marksY: -11,
+            // His brows 3 px back down, under the fringe his rig's hair hangs lower than the sheet's.
+            browY: 2,
+            eyes: 0,
+            mouthLine: 0,
+          },
+        ),
       ),
     },
   },

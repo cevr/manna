@@ -8,8 +8,9 @@
 // a new render. The summary (`render.md`) is written from the record, so the
 // two never disagree. Pure.
 
-import { Array as Arr, Match, Option, Result, Schema } from 'effect';
+import { Array as Arr, Boolean as Bool, Match, Option, Result, Schema } from 'effect';
 import { CRITIQUE_ASPECTS } from './critique.ts';
+import { FIT_BARS, type FitBar, type FitRow, fitPasses } from './fit-rows.ts';
 import { FigureMatched } from './match.ts';
 
 /** A box in a sheet's pixels: left, top, right, bottom. */
@@ -25,7 +26,26 @@ const CastFinding = Schema.Struct({
 });
 type CastFinding = typeof CastFinding.Type;
 
-/** One kept view as rendered: its box, its files (relative to the render's folder), its rows, its critique and findings. */
+/** A row's bar: the least and the most its value may be. */
+const CastFitBar = Schema.Struct({
+  min: Schema.optionalKey(Schema.Finite),
+  max: Schema.optionalKey(Schema.Finite),
+});
+
+/** One fit row as the record keeps it (`FitRow`). */
+const CastFitRow = Schema.Struct({
+  name: Schema.String,
+  band: Schema.Literals(['figure', 'head', 'body']),
+  part: Schema.String,
+  value: Schema.Finite,
+  bar: CastFitBar,
+  pass: Schema.Boolean,
+  concept: Schema.optionalKey(Schema.Finite),
+  render: Schema.optionalKey(Schema.Finite),
+  where: Schema.optionalKey(Schema.String),
+});
+
+/** One kept view as rendered: its box, its files (relative to the render's folder), its rows, its fit rows, its critique and findings. */
 const CastViewRendered = Schema.Struct({
   kind: Schema.String,
   view: Schema.String,
@@ -40,6 +60,8 @@ const CastViewRendered = Schema.Struct({
   rows: FigureMatched.fields.rows,
   /** Why no row could be measured: the measure read no figure in a crop. */
   unmatched: Schema.OptionFromOptionalKey(Schema.String),
+  /** Its fit rows (`fit-rows.ts`), each with its bar: the critique waits on every one passing. A render made before them has none. */
+  fit: Schema.optionalKey(Schema.Array(CastFitRow)),
   critique: Schema.Literals(['taken', 'skipped']),
   /** Why the critique was skipped: never a pass. */
   skipped: Schema.OptionFromOptionalKey(Schema.String),
@@ -161,10 +183,57 @@ const viewSection = (v: CastViewRendered): ReadonlyArray<string> => [
   }),
 ];
 
+/** A bar in words: `≤ 3`, `≥ 0.9`, `0.5 to 2`. */
+const barWords = (bar: FitBar) => {
+  const [min, max] = [Option.fromUndefinedOr(bar.min), Option.fromUndefinedOr(bar.max)];
+  return Option.match(Option.all([min, max]), {
+    onSome: ([lo, hi]) => `${lo} to ${hi}`,
+    onNone: () =>
+      Option.match(max, {
+        onSome: (hi) => `≤ ${hi}`,
+        onNone: () => said(Option.map(min, String), (lo) => `≥ ${lo}`, 'any'),
+      }),
+  });
+};
+
+/** A fit row's name with its band and part where it has them: `silhouette.edge/head`, `class.iou/teal`. */
+const fitName = (r: FitRow) => [r.name, r.band, r.part].filter((s) => s !== 'figure').join('/');
+
+/** The fit rows a view's record holds: none for a render made before them. */
+const fitOf = (v: CastViewRendered): ReadonlyArray<FitRow> =>
+  Option.getOrElse(Option.fromUndefinedOr(v.fit), () => []);
+
+/** A fit row in words: `silhouette.edge/head 4.2 (bar ≤ 3)`. */
+const fitWords = (r: FitRow) => `${fitName(r)} ${r.value} (bar ${barWords(r.bar)})`;
+
+/** Each fit row of a view, a line each, for a read of the fit rows alone: `front FAIL silhouette.edge/head 4.2 (bar ≤ 3) right row 40`. */
+export const fitRowLines = (v: CastViewRendered): ReadonlyArray<string> =>
+  fitOf(v).map(
+    (r) =>
+      `  ${v.kind}-${v.view} ${Bool.match(r.pass, { onTrue: () => 'pass', onFalse: () => 'FAIL' })} ${fitWords(r)}${said(Option.fromUndefinedOr(r.where), (w) => ` ${w}`, '')}`,
+  );
+
+/**
+ * Why a view's critique waits on its fit rows: none when every row passes;
+ * else each row that fails, its value and its bar, or that none could be
+ * measured (no rows never pass).
+ */
+export const fitHeld = (rows: ReadonlyArray<FitRow>): Option.Option<string> => {
+  if (fitPasses(rows)) return Option.none();
+  if (rows.length === 0) return Option.some('fit: no rows (a crop reads no figure)');
+  return Option.some(
+    `fit: ${rows
+      .filter((r) => !r.pass)
+      .map(fitWords)
+      .join(', ')}`,
+  );
+};
+
 /**
  * A view's lines as `film concept render` prints them: its rows, the names
- * of its flagged rows, why it is unmatched when it is, its critique and how
- * many findings; then each finding, its reference and its aspect.
+ * of its flagged rows, why it is unmatched when it is, its fit (`pass`, or
+ * its failing rows), its critique and how many findings; then each finding,
+ * its reference and its aspect.
  */
 export const castViewLines = (v: CastViewRendered): ReadonlyArray<string> => {
   const flagged = Arr.match(
@@ -172,13 +241,69 @@ export const castViewLines = (v: CastViewRendered): ReadonlyArray<string> => {
     { onEmpty: () => 'none', onNonEmpty: (names) => names.join(',') },
   );
   const unmatched = said(v.unmatched, (why) => ` unmatched="${why}"`, '');
+  const fit = Option.match(Option.fromUndefinedOr(v.fit), {
+    onNone: () => '',
+    onSome: (rows) =>
+      ` fit=${Option.match(fitHeld(rows), {
+        onNone: () => 'pass',
+        onSome: () =>
+          Arr.match(rows.filter((r) => !r.pass).map(fitName), {
+            onEmpty: () => 'none',
+            onNonEmpty: (names) => names.join(','),
+          }),
+      })}`,
+  });
   return [
-    `${v.kind}-${v.view}: rows=${v.rows.length} flagged=${flagged}${unmatched} critique=${v.critique} findings=${v.findings.length}`,
+    `${v.kind}-${v.view}: rows=${v.rows.length} flagged=${flagged}${unmatched}${fit} critique=${v.critique} findings=${v.findings.length}`,
     ...v.findings.map((f) => `  ${findingRef(v, f)} ${f.aspect}: ${f.what}`),
   ];
 };
 
-/** The render's summary: a section a view, its side-by-side, its flagged rows, each finding and its answer. */
+/** A fit row as the summary's table holds it, its view first. */
+/** The house's bar for a row (`FIT_BARS`), its band's before its name's (every probe's is `probe`'s), where the view holds the row to a bar of its own. */
+const houseBarOf = (r: FitRow): Option.Option<FitBar> => {
+  const name = r.name.replace(/^probe\..*/, 'probe');
+  const house = (key: string) =>
+    Option.map(
+      Option.fromUndefinedOr(Object.entries(FIT_BARS).find(([k]) => k === key)),
+      ([, bar]): FitBar => bar,
+    );
+  return Option.filter(
+    Option.orElse(house(`${name}/${r.band}`), () => house(name)),
+    (bar) => bar.min !== r.bar.min || bar.max !== r.bar.max,
+  );
+};
+
+const fitLine = (v: CastViewRendered, r: FitRow) =>
+  `| ${v.kind} ${v.view} | ${fitName(r)} | ${r.value} | ${barWords(r.bar)}${said(Option.map(houseBarOf(r), barWords), (h) => ` (house ${h})`, '')} | ${Bool.match(r.pass, { onTrue: () => 'pass', onFalse: () => '**fail**' })} | ${said(Option.fromUndefinedOr(r.where), (w) => w.replaceAll('|', '\\|'), '')} |`;
+
+/** The fit rows of every view, the failing ones first; none for a render made before them. */
+const fitSection = (render: CastRender): ReadonlyArray<string> => {
+  const measured = render.views.filter((v) => Option.isSome(Option.fromUndefinedOr(v.fit)));
+  if (measured.length === 0) return [];
+  const rows = measured.flatMap((v) => fitOf(v).map((r) => ({ v, r })));
+  const unread = measured.filter((v) => fitOf(v).length === 0);
+  const ordered = [...rows.filter((x) => !x.r.pass), ...rows.filter((x) => x.r.pass)];
+  return [
+    '## Fit rows',
+    '',
+    `${measured.filter((v) => fitPasses(fitOf(v))).length} of ${render.views.length} views pass every bar; a view's critique waits on its every row passing.`,
+    '',
+    ...Arr.match(unread, {
+      onEmpty: (): ReadonlyArray<string> => [],
+      onNonEmpty: (vs) => [
+        ...vs.map((v) => `- ${v.kind} ${v.view}: no rows (a crop reads no figure)`),
+        '',
+      ],
+    }),
+    '| view | row | value | bar | | where |',
+    '| --- | --- | --- | --- | --- | --- |',
+    ...ordered.map(({ v, r }) => fitLine(v, r)),
+    '',
+  ];
+};
+
+/** The render's summary: its fit rows (failing first), then a section a view, its side-by-side, its flagged rows, each finding and its answer. */
 export const castRenderMarkdown = (render: CastRender): string =>
   [
     `# ${render.member}'s cast render ${render.n}`,
@@ -189,5 +314,6 @@ export const castRenderMarkdown = (render: CastRender): string =>
       .map(([kind, k]) => `${kind} ${k.scale.toFixed(4)} px a unit`)
       .join(', ')}), its kept view on the left, the render on the right, at 1:1.`,
     '',
+    ...fitSection(render),
     ...render.views.flatMap(viewSection),
   ].join('\n');

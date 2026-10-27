@@ -15,7 +15,7 @@
 import type { TracePart, TracePt, TraceSheet, TraceSheetView } from '@manna/film/tools';
 
 /** The sheet's colour classes: each its lit side and its shade, sampled from the kept turnaround. */
-const CLASSES = {
+export const CLASSES = {
   cream: ['#fde1bc', '#e3bea0', '#feecca', '#f7d8b2'],
   teal: ['#4e7182', '#58859b', '#61898d', '#4e768b', '#3f5f73'],
   skin: ['#fdaf70', '#e58a62', '#f3996a', '#f8a062'],

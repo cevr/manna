@@ -5,9 +5,12 @@
 // sheets as one still on a canvas the sheet's size, through the export page
 // a render draws with (`Pages`). Each view is cut from that still and from
 // the kept sheet by its kept box, both measured and compared with the
-// match's own code (`measureFigure`, `compareFigures`, `matchTable`), laid
-// side by side at 1:1, and shown to a fresh model at 1:1 (`Critic`, one run a
-// sheet, with the view's clause of the sheet's layout, `askedOf`). It all
+// match's own code (`measureFigure`, `compareFigures`, `matchTable`), held
+// to its fit rows (`core/fit-rows.ts`: its member's classes and its own
+// probes and bars from the table), laid side by side at 1:1, and shown to a
+// fresh model at 1:1 once every fit row passes (`Critic`, one run a sheet,
+// with the view's clause of the sheet's layout, `askedOf`); a view whose rows
+// fail is never sent, its critique skipped with them (`fitHeld`). It all
 // lands in `out/<film>/cast/<member>/render/<n>/` with its record
 // (`render.json`, `core/cast-render.ts`) and summary (`render.md`). A
 // finding is answered on the render that found it (`answerCast`): it stands,
@@ -25,18 +28,20 @@ import {
   Result,
   Schema,
 } from 'effect';
-import { type CastModule, castPage } from '../canvas/cast.ts';
+import { type CastModule, type CastView, castPage } from '../canvas/cast.ts';
 import {
   type CastRender,
   CastRenderJson,
   type CastViewRendered,
   answerFinding,
   castRenderMarkdown,
+  fitHeld,
 } from '../core/cast-render.ts';
 import { CastSheetJson, type CastSheetRecord, castKindPlan } from '../core/cast-record.ts';
 import { SheetKind } from '../core/cast-sheet.ts';
 import type { CritiqueFinding } from '../core/critique.ts';
 import { measureFigure } from '../core/figure.ts';
+import { type FitRow, type FitSpec, fitRows } from '../core/fit-rows.ts';
 import type { SceneTimes } from '../core/easel.ts';
 import { compareFigures, matchTable } from '../core/match.ts';
 import { type Raster, besideRaster, cropRaster } from '../core/raster.ts';
@@ -68,10 +73,17 @@ class CastRenderRefused extends Schema.TaggedError<CastRenderRefused>()('CastRen
   }
 }
 
-/** What a render asks: the kinds to draw (every kind kept when none), and whether to critique. */
+/**
+ * What a render asks: the kinds to draw (every kind kept when none), the
+ * views (`<kind>-<view>`, every view of each kind drawn when none), whether
+ * to critique, and whether to read the fit rows alone (`fitOnly`: no
+ * critique, nothing written).
+ */
 interface CastRenderAsk {
   readonly kinds: ReadonlyArray<SheetKind>;
+  readonly views: ReadonlyArray<string>;
   readonly critique: boolean;
+  readonly fitOnly: boolean;
 }
 
 /** The render folder of `member` in `film`'s outputs. */
@@ -98,7 +110,7 @@ const isCastModule = (u: unknown): u is CastModule =>
   Predicate.isObject(u.CAST) &&
   Predicate.isObject(u.SHEETS);
 
-/** One kept view cut from the kept sheet and from the render, and its rows. */
+/** One kept view cut from the kept sheet and from the render, its rows and its fit rows. */
 interface Cut {
   readonly v: {
     readonly view: number;
@@ -109,6 +121,7 @@ interface Cut {
   readonly concept: Raster;
   readonly render: Raster;
   readonly rows: Result.Result<ReadonlyArray<CastViewRendered['rows'][number]>, string>;
+  readonly fit: ReadonlyArray<FitRow>;
 }
 
 /** The measure's lines on a cut, as the critique is shown them. */
@@ -147,6 +160,7 @@ const renderedOf = (kind: string, cut: Cut, taken: CritiqueTaken): CastViewRende
     },
     rows: Result.getOrElse(cut.rows, () => []),
     unmatched: Result.getFailure(cut.rows),
+    fit: cut.fit,
     critique: Option.match(skipped, {
       onNone: () => 'taken' as const,
       onSome: () => 'skipped' as const,
@@ -188,7 +202,7 @@ const tableOf = Effect.fn('Cast.table')(function* (member: string, file: string)
 const tableViews = (table: CastModule, member: string, kind: SheetKind) =>
   Option.fromUndefinedOr(table.CAST[member]).pipe(
     Option.flatMap((kinds) => Option.fromUndefinedOr(kinds[kind])),
-    Option.getOrElse(() => ({})),
+    Option.getOrElse((): Readonly<Record<string, CastView>> => ({})),
   );
 
 /** `member`'s sheet of `kind` in the table: its size and scale. */
@@ -256,20 +270,90 @@ const writeCut = Effect.fn('Cast.writeCut')(function* (
   yield* fs.writeFileString(path.join(dir, `${cut.stem}.md`), tableText);
 });
 
-/** Where one render is drawn and written: its member's record and sheet folder, its page, its folder and number. */
+/** Where one render is drawn and written: its member's record, sheet folder and table, its page, its folder and number, the views asked, whether it critiques and whether it writes. */
 interface RenderAt {
   readonly member: string;
   readonly record: CastSheetRecord;
   readonly folder: string;
+  readonly table: CastModule;
   readonly pool: ExportPages;
   readonly scenes: ReadonlyArray<SceneTimes>;
   readonly root: string;
   readonly dir: string;
   readonly n: number;
+  readonly views: ReadonlyArray<string>;
   readonly critique: boolean;
+  readonly write: boolean;
 }
 
-/** One kind of the member's sheets drawn as one still, each kept view cut from it and from the kept sheet, written, critiqued. */
+/** What a view's fit rows hold it to: its member's colour classes, and its own probes and bars (`rigs/cast.ts`). */
+const fitSpecOf = (table: CastModule, member: string, kind: SheetKind, view: string): FitSpec => {
+  const fit = Option.flatMap(Option.fromUndefinedOr(tableViews(table, member, kind)[view]), (v) =>
+    Option.fromUndefinedOr(v.fit),
+  );
+  return {
+    classes: Option.getOrElse(Option.fromUndefinedOr(table.FIT_CLASSES?.[member]), () => ({})),
+    probes: Option.getOrElse(
+      Option.flatMap(fit, (f) => Option.fromUndefinedOr(f.probes)),
+      () => [],
+    ),
+    bars: Option.getOrElse(
+      Option.flatMap(fit, (f) => Option.fromUndefinedOr(f.bars)),
+      () => ({}),
+    ),
+  };
+};
+
+/**
+ * The cuts critiqued: each whose fit rows all pass is shown to the critic
+ * (in one run, none when it is not asked or no cut passes); each other is
+ * held, skipped with its failing rows (`fitHeld`), never sent. Each cut as
+ * its record holds it.
+ */
+const critiqued = Effect.fn('Cast.critiqued')(function* (
+  at: RenderAt,
+  kind: SheetKind,
+  cuts: ReadonlyArray<Cut>,
+  place: string,
+  layout: string,
+) {
+  const path = yield* Path.Path;
+  const held = (cut: Cut) => fitHeld(cut.fit);
+  const sent = cuts.filter((cut) => Option.isNone(held(cut)));
+  const critic = yield* Critic;
+  const taken = yield* Bool.match(at.critique && sent.length > 0, {
+    onTrue: () =>
+      critic.critiqueSheet({
+        drawn: 'render',
+        place,
+        kept: path.join(at.root, 'answers'),
+        views: sent.map((cut) => ({
+          figure: cut.stem,
+          concept: path.join(at.dir, `${cut.stem}.concept.png`),
+          sheet: path.join(at.dir, `${cut.stem}.render.png`),
+          flagged: flaggedOf(cut),
+          file: path.join(at.dir, `${cut.stem}.critique.md`),
+          layout: Option.some(askedOf(layout, cut.v.view)),
+        })),
+      }),
+    onFalse: () =>
+      Effect.succeed(
+        Bool.match(at.write, {
+          onTrue: () => NOT_ASKED,
+          onFalse: () => ({ ...NOT_ASKED, skipped: 'asked with --fit-only' }),
+        }),
+      ),
+  });
+  return cuts.map((cut) =>
+    Option.match(held(cut), {
+      onNone: () => renderedOf(kind, cut, taken),
+      onSome: (why) =>
+        renderedOf(kind, cut, { figures: [], cached: false, skipped: why, rejected: [] }),
+    }),
+  );
+});
+
+/** One kind of the member's sheets drawn as one still, each kept view asked cut from it and from the kept sheet, held to its fit rows, written, critiqued once its rows pass. */
 const renderKind = Effect.fn('Cast.renderKind')(function* (at: RenderAt, kind: SheetKind) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -284,7 +368,7 @@ const renderKind = Effect.fn('Cast.renderKind')(function* (at: RenderAt, kind: S
     Math.floor((scene.start + scene.dur / 2) * at.pool.info.fps),
     SHEET_VIEW,
   );
-  yield* fs.writeFile(path.join(dir, `${kind}.render.png`), png);
+  if (at.write) yield* fs.writeFile(path.join(dir, `${kind}.render.png`), png);
   const drawn = yield* Effect.fromResult(decodePng(png));
   const keptSheet = yield* Effect.fromResult(
     decodePng(yield* fs.readFile(path.join(at.folder, 'kept', `${kind}.png`))),
@@ -294,40 +378,35 @@ const renderKind = Effect.fn('Cast.renderKind')(function* (at: RenderAt, kind: S
     () => turnaroundLayout(record.who),
   );
   const place = `${member}'s ${kind} sheet, render ${at.n}`;
-  const cuts = keptViews(record, kind).map((v): Cut => {
-    const concept = cropRaster(keptSheet, v.box);
-    const render = cropRaster(drawn, v.box);
-    return { v, stem: `${kind}-${v.name}`, concept, render, rows: measured(concept, render) };
-  });
+  const cuts = keptViews(record, kind)
+    .filter((v) => at.views.length === 0 || at.views.includes(`${kind}-${v.name}`))
+    .map((v): Cut => {
+      const concept = cropRaster(keptSheet, v.box);
+      const render = cropRaster(drawn, v.box);
+      return {
+        v,
+        stem: `${kind}-${v.name}`,
+        concept,
+        render,
+        rows: measured(concept, render),
+        fit: fitRows(concept, render, fitSpecOf(at.table, member, kind, v.name)),
+      };
+    });
+  if (!at.write) return yield* critiqued(at, kind, cuts, place, layout);
   yield* Effect.forEach(cuts, (cut) => writeCut(dir, place, member, kind, cut));
-  const critic = yield* Critic;
-  const taken = yield* Bool.match(at.critique, {
-    onTrue: () =>
-      critic.critiqueSheet({
-        drawn: 'render',
-        place,
-        kept: path.join(at.root, 'answers'),
-        views: cuts.map((cut) => ({
-          figure: cut.stem,
-          concept: path.join(dir, `${cut.stem}.concept.png`),
-          sheet: path.join(dir, `${cut.stem}.render.png`),
-          flagged: flaggedOf(cut),
-          file: path.join(dir, `${cut.stem}.critique.md`),
-          layout: Option.some(askedOf(layout, cut.v.view)),
-        })),
-      }),
-    onFalse: () => Effect.succeed(NOT_ASKED),
-  });
-  // A skipped critique is written as skipped, with its reason, in each view's file.
-  yield* Effect.forEach(Option.toArray(Option.fromUndefinedOr(taken.skipped)), (why) =>
-    Effect.forEach(cuts, (cut) =>
-      fs.writeFileString(
-        path.join(dir, `${cut.stem}.critique.md`),
-        `# ${cut.stem}\n\nSkipped: ${why}\n`,
-      ),
-    ),
+  const views = yield* critiqued(at, kind, cuts, place, layout);
+  // A skipped critique is written as skipped, with its reason, in the view's file.
+  yield* Effect.forEach(views, (v) =>
+    Option.match(v.skipped, {
+      onNone: () => Effect.void,
+      onSome: (why) =>
+        fs.writeFileString(
+          path.join(dir, v.files.critique),
+          `# ${kind}-${v.view}\n\nSkipped: ${why}\n`,
+        ),
+    }),
   );
-  return cuts.map((cut) => renderedOf(kind, cut, taken));
+  return views;
 });
 
 /**
@@ -353,15 +432,29 @@ export const renderCast = Effect.fn('Cast.render')(function* (
   const rigs = path.join(paths.dir, 'rigs');
   const table = yield* tableOf(member, path.join(rigs, 'cast.ts'));
   const riv = sha256Hex(yield* fs.readFile(path.join(rigs, 'figures.riv')));
+  const kept = SheetKind.literals.flatMap((k) => keptViews(record, k).map((v) => `${k}-${v.name}`));
+  const unknown = ask.views.filter((v) => !kept.includes(v));
+  if (unknown.length > 0)
+    return yield* CastRenderRefused.make({
+      member,
+      reason: `no kept view ${unknown.join(', ')} (kept: ${kept.join(', ')})`,
+    });
   const kinds = Arr.filter(
     SheetKind.literals,
-    (k) => keptViews(record, k).length > 0 && (ask.kinds.length === 0 || ask.kinds.includes(k)),
+    (k) =>
+      keptViews(record, k).length > 0 &&
+      (ask.kinds.length === 0 || ask.kinds.includes(k)) &&
+      (ask.views.length === 0 || ask.views.some((v) => v.startsWith(`${k}-`))),
   );
   if (kinds.length === 0)
     return yield* CastRenderRefused.make({ member, reason: 'no kind asked is kept' });
   yield* coveredBy(member, table, record, kinds);
   const root = yield* renderRoot(film, member);
-  const { n, dir } = yield* reserveNumbered(root);
+  // A read of the fit rows alone writes nothing: no render folder is taken.
+  const { n, dir } = yield* Bool.match(ask.fitOnly, {
+    onTrue: () => Effect.succeed({ n: 0, dir: root }),
+    onFalse: () => reserveNumbered(root),
+  });
   const pool = yield* (yield* Pages).open(castPage(film, member), {
     workers: 1,
     captions: false,
@@ -372,12 +465,15 @@ export const renderCast = Effect.fn('Cast.render')(function* (
     member,
     record,
     folder,
+    table,
     pool,
     scenes,
     root,
     dir,
     n,
-    critique: ask.critique,
+    views: ask.views,
+    critique: ask.critique && !ask.fitOnly,
+    write: !ask.fitOnly,
   };
   const views = (yield* Effect.forEach(kinds, (kind) => renderKind(at, kind))).flat();
   const sheets = Object.fromEntries(
@@ -401,12 +497,13 @@ export const renderCast = Effect.fn('Cast.render')(function* (
     kinds: sheets,
     views,
   };
+  if (ask.fitOnly) return { render: made, dir: Option.none<string>() };
   yield* fs.writeFileString(
     path.join(dir, 'render.json'),
     yield* Schema.encodeEffect(CastRenderJson)(made),
   );
   yield* fs.writeFileString(path.join(dir, 'render.md'), castRenderMarkdown(made));
-  return { render: made, dir };
+  return { render: made, dir: Option.some(dir) };
 });
 
 /** Answer finding `finding` (`<kind>-<view>/<id>`) of `member`'s render `n`: it stands, for `why`, in its record and summary. */

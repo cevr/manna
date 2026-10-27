@@ -2558,7 +2558,8 @@ with `path: 'cubic'` draws with detached handles. A part read `as: 'curls'`
 is written as a disc on each lobe, the curls `Hair.Curls` cuts. A mark with
 no ink of its own to read is refused, never thrown.
 
-`film concept render <film> <member> [--kind <kind>] [--no-critique]`
+`film concept render <film> <member> [--kind <kind>] [--view <kind>-<view>]
+[--no-critique] [--fit-only]`
 (`tools/cast-render.ts`, its record in `core/cast-render.ts`) draws every
 view the member's record keeps by its rig. The film's `rigs/cast.ts` is the
 table (`CastTable`, `canvas/cast.ts`, through `@manna/film/rive`): for each
@@ -2571,13 +2572,27 @@ loaded as a film loads them, `drawRig` on the canvas engine, the film's
 ink), through the export page a render draws with. Each view is cut from
 that still and from the kept sheet by its kept box, measured and compared
 with the match's own code (`measureFigure`, `compareFigures`, `matchTable`),
-laid side by side at 1:1 (no rescale, so a height error shows), and shown to
-a fresh model at 1:1 with its clause of the sheet's layout (`Critic`, the
-`render` packet). A view the measure reads no figure in says why
-(`unmatched`). It lands in `out/<film>/cast/<member>/render/<n>/`:
+laid side by side at 1:1 (no rescale, so a height error shows), and held to
+its fit rows (`core/fit-rows.ts` `fitRows`): the outer ink edge per band
+(`silhouette.edge`, head the line's top 30%), the outline's turns the sheet
+has not (`outline.turns`), the figure masks' overlap (`silhouette.iou`), the
+render's ink to the sheet's (`ink.edge`), paper slivers and enclosed ground
+beyond the sheet's (`slivers`, `holes`), each colour class's overlap and
+colour (`class.iou`, `class.colour`, from the member's `FIT_CLASSES`), and
+each of the view's probes, a scanline's class runs compared by their edges
+(`probe.<name>`, the view's `fit.probes`). Each row has a bar (`FIT_BARS`,
+a view's `fit.bars` over it, each with why). Only a view whose every row
+passes (`fitPasses`) is shown to a fresh model at 1:1 with its clause of the
+sheet's layout (`Critic`, the `render` packet); another's critique is
+skipped with `fit: <the rows that fail>` (`fitHeld`), so no model call is
+spent on a rig a measure already refuses. `--fit-only` prints the rows and
+writes nothing (no render folder, no critique): the fast loop while a rig is
+fixed, a view at a time with `--view`. A view the measure reads no figure in
+says why (`unmatched`). It lands in `out/<film>/cast/<member>/render/<n>/`:
 `<kind>.render.png`, and per view `<kind>-<view>.concept.png`, `.render.png`,
 `.side.png`, `.md` and `.critique.md`, with `render.json` (the `riv`'s hash,
-each sheet's scale, each view's rows and findings) and `render.md`. A
+each sheet's scale, each view's rows, fit rows and findings) and `render.md`,
+its fit rows at the top, the failing first. A
 finding is answered on the render that found it, `--render <n> --finding
 <kind>-<view>/<id> --stands <why>`; a fix is a new render.
 

@@ -1,8 +1,10 @@
 // `film concept render <film> <member> [--kind turnaround|poses|heads ...]
-// [--no-critique]`: the member's cast render (`cast-render.ts`), each kept
-// view of each kind asked (every kind kept when none) drawn by its rig from
-// the film's `rigs/cast.ts`, laid beside its kept view, measured and
-// critiqued; a line a view, its flagged rows and findings under it.
+// [--view <kind>-<view> ...] [--no-critique] [--fit-only]`: the member's cast
+// render (`cast-render.ts`), each kept view asked (every view of every kind
+// kept when none) drawn by its rig from the film's `rigs/cast.ts`, laid
+// beside its kept view, held to its fit rows and critiqued once every row
+// passes; a line a view, its flagged rows, its fit and findings under it.
+// `--fit-only` prints each view's fit rows and writes nothing: the fast loop.
 //
 // `film concept render <film> <member> --render <n> --finding
 // <kind>-<view>/<id> --stands "<why>"`: answer a finding of render n, that it
@@ -14,7 +16,7 @@ import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
 import { Console, Effect, Layer, Option, Schema } from 'effect';
 import type { CritiqueRule } from '../core/critique.ts';
-import { castViewLines } from '../core/cast-render.ts';
+import { castViewLines, fitRowLines } from '../core/cast-render.ts';
 import { SheetKind } from '../core/cast-sheet.ts';
 import { answerCast, renderCast } from './cast-render.ts';
 import { Counsel } from './counsel.ts';
@@ -46,11 +48,21 @@ export const render = <E, R>(pages: Layer.Layer<Pages, E, R>, rules: ReadonlyArr
           'a sheet to draw: turnaround, poses or heads (every kept one when none)',
         ),
       ),
+      view: Flag.String('view').pipe(
+        Flag.atLeast(0),
+        Flag.withDescription(
+          'a kept view to draw, <kind>-<view> (every view of each kind when none)',
+        ),
+      ),
       critique: Flag.Boolean('critique').pipe(
         Flag.withDefault(true),
         Flag.withDescription(
-          'show each view to a fresh model (--no-critique skips it, written as skipped)',
+          'show each view whose fit rows all pass to a fresh model (--no-critique skips it, written as skipped)',
         ),
+      ),
+      fitOnly: Flag.Boolean('fit-only').pipe(
+        Flag.withDefault(false),
+        Flag.withDescription("print each view's fit rows alone: no critique, nothing written"),
       ),
       render: Flag.Int('render').pipe(
         Flag.optional,
@@ -80,12 +92,19 @@ export const render = <E, R>(pages: Layer.Layer<Pages, E, R>, rules: ReadonlyArr
         return yield* Console.log(`answered ${input.member} render ${n} ${finding}: stands`);
       }
       const made = yield* Effect.scoped(
-        renderCast(film, input.member, { kinds: input.kind, critique: input.critique }),
+        renderCast(film, input.member, {
+          kinds: input.kind,
+          views: input.view,
+          critique: input.critique,
+          fitOnly: input.fitOnly,
+        }),
       );
       yield* Console.log(
-        `render ${input.member} n=${made.render.n} views=${made.render.views.length} riv=${made.render.riv.slice(0, 12)} ${made.dir}`,
+        `render ${input.member} n=${made.render.n} views=${made.render.views.length} riv=${made.render.riv.slice(0, 12)} ${Option.getOrElse(made.dir, () => '(fit only, nothing written)')}`,
       );
       for (const line of made.render.views.flatMap(castViewLines)) yield* Console.log(line);
+      if (input.fitOnly)
+        for (const line of made.render.views.flatMap(fitRowLines)) yield* Console.log(line);
     }),
   ).pipe(
     Command.provide(Layer.mergeAll(pages, Critic.layer(rules).pipe(Layer.provide(Counsel.layer)))),
