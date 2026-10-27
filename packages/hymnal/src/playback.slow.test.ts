@@ -17,6 +17,14 @@ const data = new URL('../data/', import.meta.url).pathname;
 const read = (file: string) => readFileSync(`${data}${file}`, 'utf8');
 const decode = Schema.decodeEffect(Schema.fromJsonString(Hymn));
 const pad = (n: number) => String(n).padStart(3, '0');
+const sameNotes = (actual: readonly Midi.Note[], expected: readonly Midi.Note[]) =>
+  actual.length === expected.length &&
+  actual.every(
+    (note, i) =>
+      note.start === expected[i]?.start &&
+      note.end === expected[i]?.end &&
+      note.key === expected[i]?.key,
+  );
 const encode = Schema.encodeEffect(Schema.fromJsonString(Playback));
 const linesOf = (text: string) =>
   text
@@ -343,11 +351,17 @@ it.effect(
             { tick: 768, numerator: 3, denominator: 4 },
           ],
         };
-        if (Score.melodyOf(midi, [soprano]).some((n, i) => n !== melody[i])) faults.push([seed, 3]);
+        if (!sameNotes(Score.melodyOf(midi, [soprano]), melody)) faults.push([seed, 3]);
+        const dedicated = {
+          ...soprano,
+          program: 68,
+          notes: melody.map((note) => ({ ...note, key: note.key + 12 })),
+        };
         if (
-          Score.melodyOf({ ...midi, tracks: [{ ...soprano, program: 68 }, soprano] }, [
-            soprano,
-          ]).some((n, i) => n !== melody[i])
+          !sameNotes(
+            Score.melodyOf({ ...midi, tracks: [dedicated, soprano] }, [soprano]),
+            dedicated.notes,
+          )
         )
           faults.push([seed, 4]);
       }

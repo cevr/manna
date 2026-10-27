@@ -1342,6 +1342,37 @@ it.effect('keyplay a handed-over play cannot delay a third Start behind native s
   }).pipe(Effect.scoped),
 );
 
+it.effect('keyplay a Sound-on hand-over cannot delay the third public Start', () =>
+  Effect.gen(function* () {
+    using app = yield* open(false);
+    app.send(Command.Start({ track }));
+    yield* app.playing;
+    // The Sound switch owns this load independently of the command's scope.
+    app.hold();
+    yield* SubscriptionRef.set(app.sound, true);
+    yield* settle;
+    expect(app.pending).toHaveLength(1);
+    app.holdStatus(true);
+    app.hold();
+    app.send(Command.Start({ track: other }));
+    yield* settle;
+    app.hold();
+    app.send(Command.Start({ track }));
+    yield* settle;
+    expect(app.calls.filter((call) => call.operation === 'play').map((call) => call.uri)).toEqual([
+      audioUrl(100),
+      audioUrl(3),
+      audioUrl(100),
+    ]);
+    app.holdStatus(false);
+    app.pending.forEach((pending) => pending.release());
+    yield* app.playing;
+    expect(app.registry.get(app.player.recording)).toEqual(
+      Option.some({ number: 100, requested: 0, effective: 0 }),
+    );
+  }),
+);
+
 for (const state of ['playing', 'ended', 'failed'] as const)
   it.effect(`playswap Sound on starts before a former ${state} status answers`, () =>
     Effect.gen(function* () {
