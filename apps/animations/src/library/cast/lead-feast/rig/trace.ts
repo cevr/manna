@@ -117,14 +117,19 @@ const CHIN = {
   open: {
     garment: 25,
     shade: 45,
+    under: 0,
+    shadeIn: 'head',
     jaw: 15,
     doc: "His head's paper down into his garment's neck (his chin open): his face, his ears, his neck and his skull under his hair.",
   },
+  // His chin closed on the line the sheet draws under it: his neck is his garment's, narrower than his jaw, its shade laid on it under his chin.
   closed: {
     garment: 10,
     shade: 0,
+    under: 45,
+    shadeIn: 'body',
     jaw: 0,
-    doc: "His head's paper: his face, his ears and his skull under his hair.",
+    doc: "His head's paper to the line under his chin: his face, his ears and his skull under his hair.",
   },
 } as const;
 
@@ -164,6 +169,8 @@ interface Standing {
   /** Each ear's seed: both from in front or behind, the one that shows on a turned head (`earNear`). */
   readonly ears: { readonly earNear: TracePt; readonly earFar?: TracePt };
   readonly chin: Chin;
+  /** Where his head's outline turns back as sharply as the sheet draws it (his nape under his curls), vouched for (`TracePart.sharp`). */
+  readonly sharp: ReadonlyArray<TracePt>;
   readonly near: ArmSpec;
   readonly far: ArmSpec;
   readonly arms: keyof typeof UNDER_ARMS;
@@ -181,6 +188,8 @@ const ear = (seed: TracePt) =>
   ({
     seeds: [seed],
     clip: rect(seed[0] - 16, seed[1] - 26, seed[0] + 16, seed[1] + 26),
+    // Opened 2 px: the thin tip an ear seen past his hair ends in is no part of it.
+    open: 2,
     doc: "An ear, flat skin cut inside his head: its ink is his head's, and the hair beside it lies round it.",
   }) satisfies TracePart;
 
@@ -191,6 +200,7 @@ export const standing = (v: Standing): TraceSheetView => {
   const chin = CHIN[v.chin.kind];
   const ears = Object.fromEntries(Object.entries(v.ears).map(([name, seed]) => [name, ear(seed)]));
   const neckBand = wide(v.chin.row - chin.shade, v.chin.row);
+  const shadeBand = wide(v.chin.row - chin.shade, v.chin.row + chin.under);
   return {
     box: v.box,
     out: v.out,
@@ -198,6 +208,8 @@ export const standing = (v: Standing): TraceSheetView => {
     classes: CLASSES,
     head: 'head',
     feet: ['footNear', 'footFar'],
+    // His outlines and the tones on them fitted as cubics; his feet and their straps, drawn as sandals, are points.
+    path: 'cubic',
     ...v.marked,
     parts: {
       face: { seeds: [v.face], clip: wide(y0, v.chin.row), as: 'none' },
@@ -209,18 +221,31 @@ export const standing = (v: Standing): TraceSheetView => {
         plus: ['face', 'hairMass', 'neckSkin', ...Object.keys(ears)],
         // A hand raised to the chin is its own circle, never the head's skin.
         minus: ['handNearPaper', 'handFarPaper'],
+        // Opened 2 px: a sliver a hand at his chin leaves of his skin is none of his head.
+        open: 2,
+        // Closed 5 px: the notch an ear's own line leaves where it meets his outline is filled.
+        close: 5,
+        sharp: v.sharp,
         grow: 3,
-        smooth: 5,
         doc: chin.doc,
       },
       hair: {
         within: 'hairMass',
         grow: 4,
-        smooth: 4,
+        // Opened 3 px: the wedge his hair leaves between an ear and his head's line is no lock of it.
+        open: 3,
         inside: 'head',
         minus: Object.keys(ears),
         doc: 'His hair, the whole mass of curls over his head.',
       },
+      curls: {
+        within: 'hair',
+        minus: ['hairDarkMask'],
+        grow: 0,
+        as: 'curls',
+        doc: 'His curls, each a disc on a lobe of his hair where its dark does not part them.',
+      },
+      hairDarkMask: { classes: ['hairDark'], inside: 'hair', grow: 0, as: 'none' },
       hairLight: {
         classes: ['hairLight'],
         inside: 'hair',
@@ -240,8 +265,8 @@ export const standing = (v: Standing): TraceSheetView => {
       neckShade: {
         classes: ['skin'],
         colour: { near: '#e58a62', far: ['#fdaf70', '#f8a062'] },
-        inside: 'head',
-        clip: neckBand,
+        inside: chin.shadeIn,
+        clip: shadeBand,
         grow: 0,
         as: 'tones',
         min: 150,
@@ -272,12 +297,15 @@ export const standing = (v: Standing): TraceSheetView => {
       armNear: {
         ...v.near.pick,
         clip: v.near.clip,
+        // Opened 3 px: a sliver its polygon leaves along the garment's side is no part of the sleeve.
+        open: 3,
         minus: ['handNearPaper', 'handFarPaper'],
         doc: 'His near arm (screen left) in its sleeve, from his shoulder to his cuff.',
       },
       armFar: {
         ...v.far.pick,
         clip: v.far.clip,
+        open: 3,
         minus: ['handNearPaper', 'handFarPaper'],
         doc: 'His far arm (screen right) in its sleeve, from his shoulder to his cuff.',
       },
@@ -337,12 +365,14 @@ export const standing = (v: Standing): TraceSheetView => {
         silhouette: true,
         clip: rect(x0 - 10, v.hem, v.split, y1 + 10),
         minus: ['beside'],
+        path: 'points',
         doc: 'His near foot in its sandal.',
       },
       footFar: {
         silhouette: true,
         clip: rect(v.split, v.hem, x1 + 10, y1 + 10),
         minus: ['beside'],
+        path: 'points',
         doc: 'His far foot in its sandal.',
       },
       strapNear: {
@@ -350,6 +380,7 @@ export const standing = (v: Standing): TraceSheetView => {
         inside: 'footNear',
         grow: 1,
         as: 'tones',
+        path: 'points',
         doc: "His near sandal's strap.",
       },
       strapFar: {
@@ -357,6 +388,7 @@ export const standing = (v: Standing): TraceSheetView => {
         inside: 'footFar',
         grow: 1,
         as: 'tones',
+        path: 'points',
         doc: "His far sandal's strap.",
       },
     },
@@ -388,7 +420,8 @@ export const TRACE = {
         },
       },
       ears: { earNear: [72, 322], earFar: [210, 322] },
-      chin: { kind: 'open', row: 432 },
+      chin: { kind: 'closed', row: 393 },
+      sharp: [],
       near: {
         pick: SILHOUETTE,
         clip: [
@@ -449,7 +482,8 @@ export const TRACE = {
         },
       },
       ears: { earNear: [440, 322] },
-      chin: { kind: 'open', row: 430 },
+      chin: { kind: 'closed', row: 390 },
+      sharp: [],
       near: {
         pick: SILHOUETTE,
         clip: [
@@ -510,7 +544,9 @@ export const TRACE = {
         },
       },
       ears: { earNear: [657, 322] },
-      chin: { kind: 'open', row: 432 },
+      chin: { kind: 'closed', row: 392 },
+      // His nape: his last curl turns under, and his neck runs down from it.
+      sharp: [[668.5, 397.5]],
       near: {
         pick: sleeveAt([650, 480]),
         clip: [
@@ -549,6 +585,7 @@ export const TRACE = {
       marked: {},
       ears: { earNear: [819, 322], earFar: [962, 322] },
       chin: { kind: 'closed', row: 380 },
+      sharp: [],
       near: {
         pick: SILHOUETTE,
         clip: [
@@ -602,7 +639,8 @@ export const TRACE = {
         },
       },
       ears: { earNear: [1123, 322] },
-      chin: { kind: 'open', row: 432 },
+      chin: { kind: 'closed', row: 394 },
+      sharp: [],
       near: {
         pick: sleeveAt([1110, 480]),
         clip: [
@@ -656,7 +694,8 @@ export const TRACE = {
         },
       },
       ears: { earNear: [1338, 322] },
-      chin: { kind: 'open', row: 430 },
+      chin: { kind: 'closed', row: 391 },
+      sharp: [],
       near: {
         pick: SILHOUETTE,
         clip: [

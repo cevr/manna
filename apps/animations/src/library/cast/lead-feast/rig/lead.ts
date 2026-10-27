@@ -49,6 +49,7 @@ interface LeadTable {
   readonly HAIR: ReadonlyArray<Pt>;
   readonly HAIR_LIGHT: Pieces;
   readonly HAIR_DARK: Pieces;
+  readonly CURLS: ReadonlyArray<{ readonly at: Pt; readonly r: number }>;
   readonly NECK_SHADE: Pieces;
   readonly JAW: Pieces;
   readonly BODY: ReadonlyArray<Pt>;
@@ -99,6 +100,9 @@ const SLEEVE_EDGE = {
   teal: TONES.tealEdge,
 } as const;
 
+/** How far each curl's lit disc lies toward the light, a share of its radius: the dark crescent under it, as the sheet paints his curls. */
+const CURL_CRESCENT = 0.35;
+
 /** Where his eyes rest: ahead, a little down. */
 const GAZE: Pt = [0, 40];
 
@@ -109,16 +113,18 @@ const leadView = (t: LeadTable, v: LeadViewSpec) =>
     scale: SHEETS[v.sheet].scale,
     headAt: t.HEAD_AT.at,
     feet: t.FEET,
+    path: 'cubic',
     head: {
       ...v.head,
       outline: t.HEAD,
       paper: PAPERS.skin,
-      tones: [tone(t.NECK_SHADE, TONES.neck), tone(t.JAW, TONES.jaw)],
+      tones: [tone(t.JAW, TONES.jaw)],
     },
     hair: {
       outline: t.HAIR,
       paper: PAPERS.hair,
       tones: [tone(t.HAIR_LIGHT, TONES.hairLight), tone(t.HAIR_DARK, TONES.hairShade)],
+      curls: { discs: t.CURLS, shade: TONES.hairShade, crescent: CURL_CRESCENT },
     },
     ears: { ...v.ears, paper: PAPERS.ear },
     face: { ...v.face, gaze: GAZE },
@@ -127,6 +133,7 @@ const leadView = (t: LeadTable, v: LeadViewSpec) =>
       paper: PAPERS.tunic,
       tones: [
         { ...tone(t.SKIN, PAPERS.skin.color), skin: true },
+        { ...tone(t.NECK_SHADE, TONES.neck), skin: true },
         { ...tone(t.NECK, TONES.neck), skin: true },
         tone(t.MANTLE, TONES.mantle),
         tone(t.MANTLE_SHADE, TONES.mantleShade),
@@ -183,13 +190,13 @@ const shifted = (
  */
 const WITH_EXTRA = ['wince', 'glad'] as const;
 
-/** His face at rest: the features slid half after his gaze, a small smile. */
-const AT_REST = { turn: 0.5, rest: { mouth: 2.5 } } as const;
+/** His face at rest: the features slid half after his gaze, a small smile; laid over his hair, so a brow knit up into his hairline shows. */
+const AT_REST = { turn: 0.5, rest: { mouth: 2.5 }, layer: 'over' } as const;
 
 /** His front view: turned to us, a small smile; his cream right sleeve on screen left, his teal left on screen right. */
 export const leadFeastFront = leadView(FRONT, {
   sheet: 'turnaround',
-  head: { view: 'front', chin: 'open' },
+  head: { view: 'front' },
   ears: { near: FRONT.EAR_NEAR, far: FRONT.EAR_FAR },
   face: { ...AT_REST, marks: FRONT.MARKS, extra: WITH_EXTRA },
   sleeves: { near: 'cream', far: 'teal' },
@@ -198,7 +205,7 @@ export const leadFeastFront = leadView(FRONT, {
 /** Three-quarters to screen left: his face slid toward it, his ear behind; his cream right sleeve near us, his teal left far. */
 export const leadFeastThreeQuarterLeft = leadView(THREE_QUARTER_LEFT, {
   sheet: 'turnaround',
-  head: { view: 'threeQuarter', chin: 'open' },
+  head: { view: 'threeQuarter' },
   ears: { near: THREE_QUARTER_LEFT.EAR_NEAR },
   face: { ...AT_REST, marks: THREE_QUARTER_LEFT.MARKS, extra: WITH_EXTRA },
   sleeves: { near: 'cream', far: 'teal' },
@@ -207,7 +214,7 @@ export const leadFeastThreeQuarterLeft = leadView(THREE_QUARTER_LEFT, {
 /** In profile to screen left: one eye, his ear behind his cheek, his teal left sleeve hanging over his side. */
 export const leadFeastProfileLeft = leadView(PROFILE_LEFT, {
   sheet: 'turnaround',
-  head: { view: 'side', chin: 'open' },
+  head: { view: 'side' },
   ears: { near: PROFILE_LEFT.EAR_NEAR },
   face: { ...AT_REST, marks: PROFILE_LEFT.MARKS },
   sleeves: { near: 'teal', far: 'teal' },
@@ -231,7 +238,7 @@ export const leadFeastBack = leadView(BACK, {
 /** In profile to screen right: one eye, his ear behind his cheek, his cream right sleeve hanging over his side, the mantle a strip down his back. */
 export const leadFeastProfileRight = leadView(PROFILE_RIGHT, {
   sheet: 'turnaround',
-  head: { view: 'side', chin: 'open' },
+  head: { view: 'side' },
   ears: { near: PROFILE_RIGHT.EAR_NEAR },
   face: { ...AT_REST, marks: PROFILE_RIGHT.MARKS },
   sleeves: { near: 'cream', far: 'cream' },
@@ -240,7 +247,7 @@ export const leadFeastProfileRight = leadView(PROFILE_RIGHT, {
 /** Three-quarters to screen right: his face slid toward it, his ear behind; his cream right sleeve on screen left, his teal left on screen right. */
 export const leadFeastThreeQuarterRight = leadView(THREE_QUARTER_RIGHT, {
   sheet: 'turnaround',
-  head: { view: 'threeQuarter', chin: 'open' },
+  head: { view: 'threeQuarter' },
   ears: { near: THREE_QUARTER_RIGHT.EAR_NEAR },
   face: { ...AT_REST, marks: THREE_QUARTER_RIGHT.MARKS, extra: WITH_EXTRA },
   sleeves: { near: 'cream', far: 'teal' },
@@ -274,7 +281,7 @@ export const leadFeastSeated = leadView(
   { ...SEATED, ...seatedArms() },
   {
     sheet: 'poses',
-    head: { view: 'threeQuarter', chin: 'open' },
+    head: { view: 'threeQuarter' },
     ears: { near: SEATED.EAR_NEAR },
     face: { ...AT_REST, marks: SEATED.MARKS, extra: WITH_EXTRA },
     sleeves: { near: 'creamAcross', far: 'teal' },

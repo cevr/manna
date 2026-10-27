@@ -209,7 +209,7 @@ const bust = (
 };
 
 /** A wince: his eyes squeezed shut as `>` `<`, his brows knit, his mouth a wavering line. */
-const WINCE: Numbers = { wince: 1, eyes: 0, mouthLine: 0, browY: 3 };
+const WINCE: Numbers = { wince: 1, eyes: 0, mouthLine: 0, browY: 3, browTilt: -0.5 };
 
 /** Each member's kept views, by kind and view name, as the render draws them. */
 export const CAST = castTable({

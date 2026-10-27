@@ -36,7 +36,8 @@ export const TRACE = {
         },
       },
       ears: { earNear: [807, 462] },
-      chin: { kind: 'open', row: 530 },
+      chin: { kind: 'closed', row: 517 },
+      sharp: [],
       near: {
         pick: sleeveAt([687, 582]),
         clip: rect(640, 515, 770, 690),
