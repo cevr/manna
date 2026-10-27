@@ -27,7 +27,7 @@ import { Robe } from './parts/body.ts';
 import { Sandals } from './parts/feet.ts';
 import { Stance } from './parts/stance.ts';
 import { Stature } from './parts/stature.ts';
-import type { FaceKnob, Pt } from './rig/parts.ts';
+import type { ExtraFaceKnob, FaceKnob, Pt } from './rig/parts.ts';
 
 /** A colour laid on a part, clipped to it: its pieces in sheet pixels and its colour; `skin` on a garment marks the figure's skin. */
 export interface TracedTone {
@@ -44,6 +44,11 @@ export interface TracedArmSpec {
   readonly tones?: ReadonlyArray<TracedTone>;
   /** Where its elbow lies between its shoulder and its hand, a share of the way down (0.45 unless given). */
   readonly elbow?: number;
+  /**
+   * The shade along its sleeve's edges (`sleeveEdges`), in this colour: what
+   * shows the sleeve where it lies on its garment, since no line runs there.
+   */
+  readonly edge?: `#${string}`;
 }
 
 /** What a traced figure is composed of, every point in its sheet's pixels. */
@@ -79,6 +84,8 @@ export interface TracedFigureSpec {
     readonly turn: number;
     readonly rest?: Parameters<typeof KitA>[0]['rest'];
     readonly gaze: Pt;
+    /** The marks past the kit's it draws (`EXTRA_FACE`): a wince, a glad shut-eyed smile. */
+    readonly extra?: ReadonlyArray<ExtraFaceKnob>;
   };
   /** A mouth thrown open where the kit's mouth sits: its width and height, units, and its paper. */
   readonly mouth?: { readonly w: number; readonly h: number; readonly paper: `#${string}` };
@@ -108,6 +115,7 @@ export interface TracedFigureSpec {
 /** Every traced figure's numbers: its face's, its stance's, both arms' and their elbows'. */
 export type TracedKnob =
   | FaceKnob
+  | ExtraFaceKnob
   | 'lean'
   | 'tilt'
   | 'nod'
@@ -151,6 +159,44 @@ const onLine = (a: Pt, b: Pt, y: number): Pt => [
   a[0] + ((b[0] - a[0]) * (y - a[1])) / (b[1] - a[1]),
   y,
 ];
+
+/** The shade's width along a sleeve's inner edge (toward the body) and its outer edge, a share of the sleeve's width. */
+const EDGE = { inner: 0.26, outer: 0.12 } as const;
+
+/** The rows a sleeve's edge shade is laid on: enough that its band follows the sleeve's curve. */
+const EDGE_ROWS = 24;
+
+/**
+ * A sleeve's edge shades as it hangs, sheet pixels: a band down its inner
+ * edge (the side toward `centre`, the body's middle) and a thinner one down
+ * its outer edge, each from its shoulder's row to its cuff, each its share
+ * (`EDGE`) of the sleeve's width at each row. Laid on the sleeve and clipped
+ * to it, they turn with it, so a sleeve that lies on its garment shows its
+ * edges there (the house draws no line where an arm crosses its garment).
+ */
+const sleeveEdges = (
+  outline: ReadonlyArray<Pt>,
+  centre: number,
+): ReadonlyArray<ReadonlyArray<Pt>> => {
+  const ys = outline.map(([, y]) => y);
+  const [top, bottom] = [Math.min(...ys), Math.max(...ys)];
+  const rows = Array.from(
+    { length: EDGE_ROWS + 1 },
+    (_, i) => top + 2 + ((bottom - top - 4) * i) / EDGE_ROWS,
+  );
+  const spans = rows.map((y) => ({ y, span: spanAt(outline, y) }));
+  const [l0, r0] = spanAt(outline, (top + bottom) / 2);
+  const innerLeft = (l0 + r0) / 2 > centre;
+  const band = (left: boolean, share: number): Pt[] => {
+    const edge = spans.map(({ y, span: [l, r] }): Pt => [left ? l - 2 : r + 2, y]);
+    const inside = spans.map(({ y, span: [l, r] }): Pt => [
+      left ? l + (r - l) * share : r - (r - l) * share,
+      y,
+    ]);
+    return [...edge, ...inside.reverse()];
+  };
+  return [band(innerLeft, EDGE.inner), band(!innerLeft, EDGE.outer)];
+};
 
 /** How far the upper sleeve and the forearm run past the elbow into each other, sheet pixels. */
 const ELBOW_OVERLAP = 10;
@@ -237,6 +283,11 @@ export const tracedFigure = (spec: TracedFigureSpec) => {
   const chin = Math.max(...ys);
   const armOf = (arm: TracedArmSpec) => {
     const cut = cutArm(arm);
+    const edges: ReadonlyArray<TracedTone> =
+      arm.edge === undefined
+        ? []
+        : [{ pts: sleeveEdges(arm.outline, spec.headAt[0]), color: arm.edge }];
+    const tones = [...edges, ...(arm.tones ?? [])];
     return JointedArm({
       pivot: fromFeet(cut.pivot),
       rest: 0,
@@ -246,8 +297,8 @@ export const tracedFigure = (spec: TracedFigureSpec) => {
       forearm: body(cut.forearm),
       hand: fromFeet(arm.hand.at),
       paper: arm.paper,
-      tones: toned(body, arm.tones),
-      forearmTones: toned(body, arm.tones),
+      tones: toned(body, tones),
+      forearmTones: toned(body, tones),
     });
   };
   const near = armOf(spec.arms.near);
@@ -267,6 +318,10 @@ export const tracedFigure = (spec: TracedFigureSpec) => {
   const art = { width: Math.ceil(2 * reach), height: Math.ceil(-top + 30), feet };
   const kit = tracedKit(spec.face.marks, { scale: s, head: spec.headAt }, spec.face.turn);
   const ears = spec.ears;
+  const rested =
+    spec.face.rest === undefined
+      ? { ...kit, gaze: spec.face.gaze }
+      : { ...kit, rest: spec.face.rest, gaze: spec.face.gaze };
   const tracedHead = {
     view: spec.head.view,
     outline: headOutline,
@@ -302,11 +357,7 @@ export const tracedFigure = (spec: TracedFigureSpec) => {
         : ears.near !== undefined && ears.far !== undefined
           ? Ear.Both({ near: head(ears.near), far: head(ears.far), paper: ears.paper })
           : Ear.Traced({ outline: head(ears.near ?? ears.far ?? []), paper: ears.paper }),
-    face: KitA(
-      spec.face.rest === undefined
-        ? { ...kit, gaze: spec.face.gaze }
-        : { ...kit, rest: spec.face.rest, gaze: spec.face.gaze },
-    ),
+    face: KitA(spec.face.extra === undefined ? rested : { ...rested, extra: spec.face.extra }),
     mouth: spec.mouth === undefined ? undefined : OpenMouth(spec.mouth),
     body: Robe.Traced({
       outline: bodyOutline,
@@ -331,11 +382,15 @@ export const tracedFigure = (spec: TracedFigureSpec) => {
     }),
     hands: Hands({ paper: spec.hands, share: handShare }),
   });
-  const knobs: Readonly<Record<TracedKnob, number>> = f.knobs;
+  // Every traced figure's numbers, and the extra marks' where its face opts into them.
+  const knobs: Readonly<Record<Exclude<TracedKnob, ExtraFaceKnob>, number>> &
+    Readonly<Partial<Record<ExtraFaceKnob, number>>> = f.knobs;
   return {
     figure: f,
     /** Its view model's numbers, every traced figure's (`TracedKnob`). */
     knobs,
+    /** Its view model's numbers by name, as a rig declares them (`RivePropSpec.source.numbers`). */
+    numbers: Object.keys(knobs).filter((k): k is TracedKnob => k in f.knobs),
     /** Its arms, for the host that draws its hands: each reaches its hand to a point (`armReach`), its hand at rest, its shoulder. */
     arms: { near, far },
     /** Its hands' circle across, units. */

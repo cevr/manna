@@ -47,7 +47,7 @@ import { type Over, decodeOver } from './parts/over.ts';
 import { type Seated, type Standing, decodeSeated, decodeStanding } from './parts/stance.ts';
 import { type GivenRobe, type Stain, type State, decodeState } from './parts/states.ts';
 import { type Stature, decodeStature } from './parts/stature.ts';
-import { FACE, type FaceKnob, type Pt } from './rig/parts.ts';
+import { EXTRA_FACE, FACE, type FaceKnob, type Pt } from './rig/parts.ts';
 import { fromEdge, garmentOutline, inside } from './rig/shapes.ts';
 
 /** A standing figure's artboard: its size, and where its feet stand on it (the rig's origin). */
@@ -295,7 +295,7 @@ const gazeFrom = (head: Head) => [0, head.y] as const;
 /**
  * A figure's numbers at rest, in the house's order (the view model keeps
  * it, so the file keeps its bytes): the face kit's (`FACE`, its gaze first,
- * its rest where the figure's face differs), the open mouth's, the
+ * its rest where the figure's face differs), the marks past the kit's it opts into (`EXTRA_FACE`), the open mouth's, the
  * stance's, the head's, the states' (the stain before the given robe), the
  * arms' (each its turn at rest and a jointed arm's bend after it, the near
  * one first). A number set again
@@ -311,6 +311,7 @@ const knobsOf = (f: Parts) => {
       gazeY: y + f.face.gaze[1],
     }),
   );
+  for (const mark of f.face.extra ?? []) knobs.set(mark, EXTRA_FACE[mark]);
   if (f.mouth !== undefined) knobs.set('shout', 0);
   for (const [name, rest] of Object.entries(STANCE)) knobs.set(name, rest);
   if (f.head._tag === 'RoundHead') knobs.set('faceY', 0);

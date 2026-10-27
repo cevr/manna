@@ -28,7 +28,7 @@ const CLASSES = {
 const BROWN = ['hairLight', 'hair', 'hairDark'];
 
 /** A box as a polygon. */
-const rect = (x0: number, y0: number, x1: number, y1: number): TracePt[] => [
+export const rect = (x0: number, y0: number, x1: number, y1: number): TracePt[] => [
   [x0, y0],
   [x1, y0],
   [x1, y1],
@@ -131,8 +131,8 @@ type ArmPick =
 /** An arm read as the silhouette cut to its polygon. */
 const SILHOUETTE: ArmPick = { silhouette: true };
 
-/** An arm read as its sleeve's region, seeded at `p`, grown into its ink. */
-const sleeveAt = (p: TracePt): ArmPick => ({ seeds: [p], grow: 3 });
+/** An arm read as its sleeve's region, seeded at `p`, grown through its ink to meet its hand at its cuff. */
+export const sleeveAt = (p: TracePt): ArmPick => ({ seeds: [p], grow: 6 });
 
 /** An arm: how it is read, its polygon, the row under its armpit, and its hand's seed. */
 interface ArmSpec {
@@ -142,8 +142,11 @@ interface ArmSpec {
   readonly hand: TracePt;
 }
 
-/** What the garment keeps where the arms lie: beside it, it gives up what they cover below the armpit; on it (a profile), it keeps all. */
-const UNDER_ARMS = { beside: ['armNearBelow', 'armFarBelow'], onGarment: [] } as const;
+/** What the garment keeps where the arms lie: beside it, it gives up what they cover below the armpit and each hand with its ring of ink (else the ring's inner half stays the garment's, a hook bared when the arm swings); on it (a profile), it keeps all. */
+const UNDER_ARMS = {
+  beside: ['armNearBelow', 'armFarBelow', 'handNearRing', 'handFarRing'],
+  onGarment: [],
+} as const;
 
 /** What one standing view is read from: its seeds and the polygons the sheet parts by colour alone. */
 interface Standing {
@@ -161,6 +164,8 @@ interface Standing {
   readonly arms: keyof typeof UNDER_ARMS;
   /** His neck's seeds, where it shows as a tone on the garment (from behind). */
   readonly necks: ReadonlyArray<TracePt>;
+  /** What stands beside him in his view (a stool), as a polygon, no part of him: none for a view with nothing there. */
+  readonly beside: TracePt[];
   readonly sash: Sash;
   readonly hem: number;
   readonly split: number;
@@ -175,7 +180,7 @@ const ear = (seed: TracePt) =>
   }) satisfies TracePart;
 
 /** A standing view's parts: his head, hair and ears; his garment, its mantle, sash and neck; his arms and hands; his feet and straps. */
-const standing = (v: Standing): TraceSheetView => {
+export const standing = (v: Standing): TraceSheetView => {
   const [x0, y0, x1, y1] = v.box;
   const wide = (a: number, b: number) => rect(x0 - 10, a, x1 + 10, b);
   const chin = CHIN[v.chin.kind];
@@ -197,6 +202,8 @@ const standing = (v: Standing): TraceSheetView => {
       neckSkin: { classes: ['skin'], clip: neckBand, as: 'none' },
       head: {
         plus: ['face', 'hairMass', 'neckSkin', ...Object.keys(ears)],
+        // A hand raised to the chin is its own circle, never the head's skin.
+        minus: ['handNearPaper', 'handFarPaper'],
         grow: 3,
         smooth: 5,
         doc: chin.doc,
@@ -236,10 +243,12 @@ const standing = (v: Standing): TraceSheetView => {
         smooth: 8,
         doc: 'The shade under his jaw, down his neck (none under a closed chin).',
       },
-      handNear: { seeds: [v.near.hand], as: 'circle', doc: 'His near hand at its cuff.' },
-      handFar: { seeds: [v.far.hand], as: 'circle', doc: 'His far hand at its cuff.' },
-      handNearPaper: { seeds: [v.near.hand], grow: 1, as: 'none' },
-      handFarPaper: { seeds: [v.far.hand], grow: 1, as: 'none' },
+      handNear: { seeds: [v.near.hand], grow: 1, as: 'circle', doc: 'His near hand at its cuff.' },
+      handFar: { seeds: [v.far.hand], grow: 1, as: 'circle', doc: 'His far hand at its cuff.' },
+      handNearPaper: { seeds: [v.near.hand], grow: 0, as: 'none' },
+      handFarPaper: { seeds: [v.far.hand], grow: 0, as: 'none' },
+      handNearRing: { seeds: [v.near.hand], grow: 8, as: 'none' },
+      handFarRing: { seeds: [v.far.hand], grow: 8, as: 'none' },
       armNear: {
         ...v.near.pick,
         clip: v.near.clip,
@@ -257,10 +266,20 @@ const standing = (v: Standing): TraceSheetView => {
       body: {
         silhouette: true,
         clip: wide(v.chin.row - chin.garment, v.hem),
+        // Smoothed past the house's step: where an arm hung, the garment's side is the sleeve's ragged inner edge, bared when the arm swings.
+        smooth: 8,
         // An open chin's head runs down into the neck: the garment's top is the neckline the sheet paints round it.
-        minus: [...UNDER_ARMS[v.arms], 'handNearPaper', 'handFarPaper', 'face', 'neckSkin'],
+        minus: [
+          ...UNDER_ARMS[v.arms],
+          'handNearPaper',
+          'handFarPaper',
+          'face',
+          'neckSkin',
+          'beside',
+        ],
         doc: 'His tunic and the mantle over it as one garment: its neck, its shoulders, its sides under his arms, its hem.',
       },
+      beside: { silhouette: true, clip: v.beside, as: 'none' },
       neck: {
         seeds: v.necks,
         inside: 'body',
@@ -287,11 +306,13 @@ const standing = (v: Standing): TraceSheetView => {
       footNear: {
         silhouette: true,
         clip: rect(x0 - 10, v.hem, v.split, y1 + 10),
+        minus: ['beside'],
         doc: 'His near foot in its sandal.',
       },
       footFar: {
         silhouette: true,
         clip: rect(v.split, v.hem, x1 + 10, y1 + 10),
+        minus: ['beside'],
         doc: 'His far foot in its sandal.',
       },
       strapNear: {
@@ -366,6 +387,7 @@ export const TRACE = {
       },
       arms: 'beside',
       necks: [],
+      beside: [],
       sash: {
         band: [83, 539, 198, 562],
         knots: [[140, 552, 14]],
@@ -426,6 +448,7 @@ export const TRACE = {
       },
       arms: 'beside',
       necks: [],
+      beside: [],
       sash: {
         band: [340, 540, 437, 562],
         knots: [[380, 552, 14]],
@@ -482,6 +505,7 @@ export const TRACE = {
       },
       arms: 'onGarment',
       necks: [],
+      beside: [],
       sash: { band: [560, 540, 615, 562], knots: [[572, 552, 13]], ends: [[560, 552, 580, 680]] },
       hem: 808,
       split: 640,
@@ -523,6 +547,7 @@ export const TRACE = {
       },
       arms: 'beside',
       necks: [[891, 390]],
+      beside: [],
       sash: { band: [826, 540, 956, 562], knots: [], ends: [] },
       hem: 808,
       split: 888,
@@ -572,6 +597,7 @@ export const TRACE = {
       },
       arms: 'onGarment',
       necks: [],
+      beside: [],
       sash: {
         band: [1165, 540, 1225, 562],
         knots: [[1207, 550, 13]],
@@ -629,6 +655,7 @@ export const TRACE = {
       },
       arms: 'beside',
       necks: [],
+      beside: [],
       sash: {
         band: [1343, 540, 1450, 562],
         knots: [[1405, 552, 15]],

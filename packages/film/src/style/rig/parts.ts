@@ -1046,17 +1046,124 @@ const mouth = (fig: Figure, k: FaceShape) =>
   ]);
 
 /**
+ * The marks a face may draw past the kit's own, each a figure opts into
+ * (`KitA.extra`), each shown by a number of its own that rests at 0, so a
+ * figure that opts into none prints as before: `wince`, eyes squeezed shut
+ * as `>` `<` and a wavering mouth; `glad`, eyes shut in a smile, two arches.
+ * An expression that shows one sets the kit's eyes (and, wincing, its mouth
+ * line) to 0.
+ */
+export const EXTRA_FACE = { wince: 0, glad: 0 } as const;
+export type ExtraFaceKnob = keyof typeof EXTRA_FACE;
+
+/** An ink stroke of the kit along `path`, `thickness` wide, shown by the number `knob`. */
+const markShape = (
+  fig: Figure,
+  key: string,
+  path: Element,
+  thickness: number,
+  knob: ExtraFaceKnob,
+) =>
+  el('Shape', { name: key, id: fig.idOf(key) }, [
+    path,
+    el('Stroke', { thickness, cap: 'round', join: 'round', name: 'Ink' }, [
+      solid(inkOf(fig.direction)),
+      ...fig.inkBind(thickness, 0),
+    ]),
+    fig.bind(knob, KEY.opacity),
+  ]);
+
+/** An open line of straight segments through `pts`. */
+const straightPath = (pts: ReadonlyArray<Pt>) =>
+  el(
+    'PointsPath',
+    { isClosed: false, isClockwise: true, name: 'Path' },
+    pts.map(([x, y], i) => el('StraightVertex', { x, y, name: `p${i}` })),
+  );
+
+/** The extra marks `extra` names, each in its place on the kit `k`. */
+const extraMarks = (fig: Figure, k: FaceShape, extra: ReadonlyArray<ExtraFaceKnob>): Element[] => {
+  const [w, h] = k.eye;
+  const sides = [
+    ['L', k.eyes[0], 1],
+    ['R', k.eyes[1], -1],
+  ] as const;
+  const marks: Record<ExtraFaceKnob, () => Element[]> = {
+    // Each eye a chevron pointing in toward the nose; the mouth a short wave.
+    wince: () => [
+      ...sides.map(([side, x, toward]) =>
+        el('Node', { x, y: k.eyeY, name: `wince${side}Side` }, [
+          markShape(
+            fig,
+            `wince${side}`,
+            straightPath([
+              [-w * toward, -0.36 * h],
+              [0.8 * w * toward, 0],
+              [-w * toward, 0.36 * h],
+            ]),
+            k.brow,
+            'wince',
+          ),
+        ]),
+      ),
+      el('Node', { x: k.mouth[0], y: k.mouth[1], name: 'winceMouthAt' }, [
+        markShape(
+          fig,
+          'winceMouth',
+          smoothPath(
+            fig,
+            'winceMouth',
+            [-1, -0.66, -0.33, 0, 0.33, 0.66, 1].map((t, i): Pt => [
+              t * k.mouthHalf * 1.15,
+              (i % 2 === 0 ? 0.5 : -0.5) * k.mouthLine,
+            ]),
+            false,
+          ),
+          k.mouthLine,
+          'wince',
+        ),
+      ]),
+    ],
+    // Each eye an arch, shut in a smile.
+    glad: () =>
+      sides.map(([side, x]) =>
+        el('Node', { x, y: k.eyeY, name: `glad${side}Side` }, [
+          markShape(
+            fig,
+            `glad${side}`,
+            smoothPath(
+              fig,
+              `glad${side}`,
+              [
+                [-1.1 * w, 0.2 * h],
+                [0, -0.22 * h],
+                [1.1 * w, 0.2 * h],
+              ],
+              false,
+            ),
+            k.brow,
+            'glad',
+          ),
+        ]),
+      ),
+  };
+  return extra.flatMap((m) => marks[m]());
+};
+
+/**
  * The face, centred at (x, y) in its parent's frame and `scale` times the
  * kit's size: brows, eyes and mouth, each moved by the figure's view-model
  * numbers (`FACE`), and the eyes' sockets; the features together slide a
  * little toward the gaze (`turn`). `shape` gives the marks a figure's
- * sheet draws otherwise than the kit (`FaceShape`). Named `face`, the node
+ * sheet draws otherwise than the kit (`FaceShape`), and `extra` the marks
+ * past the kit's it opts into (`EXTRA_FACE`). Named `face`, the node
  * `check`'s face probe reads.
  */
 export const faceKit = (
   fig: Figure,
   at: { x: number; y: number; scale?: number },
   shape: Partial<FaceShape> = {},
+  extra: ReadonlyArray<ExtraFaceKnob> = [],
 ) => {
   const scale = at.scale ?? 1;
   const k = kitMarks(shape);
@@ -1084,6 +1191,7 @@ export const faceKit = (
         eye(fig, k, 'L', k.eyes[0], scale),
         eye(fig, k, 'R', k.eyes[1], scale),
         mouth(fig, k),
+        ...extraMarks(fig, k, extra),
         el('Node', { x: k.eyes[0], y: k.eyeY, name: 'socketL', id: fig.idOf('socketL') }),
         el('Node', { x: k.eyes[1], y: k.eyeY, name: 'socketR', id: fig.idOf('socketR') }),
       ]),

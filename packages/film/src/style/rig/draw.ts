@@ -117,7 +117,7 @@ const leanEyes = (node: Element, lean: number): Element => {
  * place where the concept draws the face tipped.
  */
 const kitOf = (rig: Figure, face: KitA) => {
-  const drawn = faceKit(rig, { x: face.x, y: face.y, scale: face.scale }, face.shape);
+  const drawn = faceKit(rig, { x: face.x, y: face.y, scale: face.scale }, face.shape, face.extra);
   const kit = face.eyeLean === undefined ? drawn : leanEyes(drawn, face.eyeLean);
   if (face.rotation === undefined) return kit;
   return el('Node', { x: face.x, y: face.y, rotation: face.rotation, name: 'faceTurn' }, [

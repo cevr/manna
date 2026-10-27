@@ -21,6 +21,7 @@ import * as FRONT from './front-traced.ts';
 import { PAPERS, TONES } from './papers.ts';
 import * as PROFILE_LEFT from './profile-left-traced.ts';
 import * as PROFILE_RIGHT from './profile-right-traced.ts';
+import * as SEATED from './seated-traced.ts';
 import * as THREE_QUARTER_LEFT from './three-quarter-left-traced.ts';
 import * as THREE_QUARTER_RIGHT from './three-quarter-right-traced.ts';
 
@@ -33,6 +34,8 @@ const LEAD_FEAST_HEIGHT = 440;
  */
 export const SHEETS = {
   turnaround: { scale: LEAD_FEAST_HEIGHT / (FRONT.FEET[1] - FRONT.HEAD_AT.top) },
+  // His poses: poses-5, his front at rest, his hair (row 225) to his soles (row 829).
+  poses: { scale: LEAD_FEAST_HEIGHT / (829 - 225) },
 } as const;
 
 type Pieces = ReadonlyArray<ReadonlyArray<Pt>>;
@@ -83,6 +86,9 @@ const tone = (pts: Pieces, color: `#${string}`): TracedTone => ({ pts, color });
 /** The paper of each sleeve by its cloth. */
 const SLEEVE = { cream: PAPERS.sleeve, teal: PAPERS.mantleSleeve } as const;
 
+/** The shade along each sleeve's edges, by its cloth: what shows it where it lies on his garment. */
+const SLEEVE_EDGE = { cream: TONES.creamEdge, teal: TONES.tealEdge } as const;
+
 /** Where his eyes rest: ahead, a little down. */
 const GAZE: Pt = [0, 40];
 
@@ -120,8 +126,18 @@ const leadView = (t: LeadTable, v: LeadViewSpec) =>
       ],
     },
     arms: {
-      near: { outline: t.ARM_NEAR, hand: t.HAND_NEAR, paper: SLEEVE[v.sleeves.near] },
-      far: { outline: t.ARM_FAR, hand: t.HAND_FAR, paper: SLEEVE[v.sleeves.far] },
+      near: {
+        outline: t.ARM_NEAR,
+        hand: t.HAND_NEAR,
+        paper: SLEEVE[v.sleeves.near],
+        edge: SLEEVE_EDGE[v.sleeves.near],
+      },
+      far: {
+        outline: t.ARM_FAR,
+        hand: t.HAND_FAR,
+        paper: SLEEVE[v.sleeves.far],
+        edge: SLEEVE_EDGE[v.sleeves.far],
+      },
     },
     feet_: {
       near: { outline: t.FOOT_NEAR, tones: [tone(t.STRAP_NEAR, TONES.strap)] },
@@ -149,6 +165,13 @@ const shifted = (
   };
 };
 
+/**
+ * The marks past Kit A's his face draws where both eyes show (his heads
+ * sheet): a wince and a glad shut-eyed smile. A profile's one eye takes
+ * neither.
+ */
+const WITH_EXTRA = ['wince', 'glad'] as const;
+
 /** His face at rest: the features slid half after his gaze, a small smile. */
 const AT_REST = { turn: 0.5, rest: { mouth: 2.5 } } as const;
 
@@ -157,7 +180,7 @@ export const leadFeastFront = leadView(FRONT, {
   sheet: 'turnaround',
   head: { view: 'front', chin: 'open' },
   ears: { near: FRONT.EAR_NEAR, far: FRONT.EAR_FAR },
-  face: { ...AT_REST, marks: FRONT.MARKS },
+  face: { ...AT_REST, marks: FRONT.MARKS, extra: WITH_EXTRA },
   sleeves: { near: 'cream', far: 'teal' },
 });
 
@@ -166,7 +189,7 @@ export const leadFeastThreeQuarterLeft = leadView(THREE_QUARTER_LEFT, {
   sheet: 'turnaround',
   head: { view: 'threeQuarter', chin: 'open' },
   ears: { near: THREE_QUARTER_LEFT.EAR_NEAR },
-  face: { ...AT_REST, marks: THREE_QUARTER_LEFT.MARKS },
+  face: { ...AT_REST, marks: THREE_QUARTER_LEFT.MARKS, extra: WITH_EXTRA },
   sleeves: { near: 'cream', far: 'teal' },
 });
 
@@ -208,6 +231,41 @@ export const leadFeastThreeQuarterRight = leadView(THREE_QUARTER_RIGHT, {
   sheet: 'turnaround',
   head: { view: 'threeQuarter', chin: 'open' },
   ears: { near: THREE_QUARTER_RIGHT.EAR_NEAR },
-  face: { ...AT_REST, marks: THREE_QUARTER_RIGHT.MARKS },
+  face: { ...AT_REST, marks: THREE_QUARTER_RIGHT.MARKS, extra: WITH_EXTRA },
   sleeves: { near: 'cream', far: 'teal' },
 });
+
+/**
+ * His three-quarter-left arms laid on his seated view: each arm's outline and
+ * hand taken from the turnaround's pixels to the poses sheet's (one scale
+ * each, the same units) about his head's centre, so they hang from his
+ * shoulders as they do standing. The seated sheet draws one sleeve raised to
+ * his chin and the other on his lap, the upper sleeve hidden, so neither
+ * traces as an arm cut at its elbow; his standing arms, posed by their
+ * numbers, reach there (`rigs/cast.ts`).
+ */
+const seatedArms = () => {
+  const k = SHEETS.turnaround.scale / SHEETS.poses.scale;
+  const [fx, fy] = THREE_QUARTER_LEFT.HEAD_AT.at;
+  const [tx, ty] = SEATED.HEAD_AT.at;
+  const moved = ([x, y]: Pt): Pt => [tx + (x - fx) * k, ty + (y - fy) * k];
+  const hand = (h: { readonly at: Pt; readonly r: number }) => ({ at: moved(h.at), r: h.r * k });
+  return {
+    ARM_NEAR: THREE_QUARTER_LEFT.ARM_NEAR.map(moved),
+    ARM_FAR: THREE_QUARTER_LEFT.ARM_FAR.map(moved),
+    HAND_NEAR: hand(THREE_QUARTER_LEFT.HAND_NEAR),
+    HAND_FAR: hand(THREE_QUARTER_LEFT.HAND_FAR),
+  };
+};
+
+/** Seated on a low stool, three-quarters to screen left (poses-3): his robe over his knees, his sandals under its hem; his arms his standing ones. */
+export const leadFeastSeated = leadView(
+  { ...SEATED, ...seatedArms() },
+  {
+    sheet: 'poses',
+    head: { view: 'threeQuarter', chin: 'open' },
+    ears: { near: SEATED.EAR_NEAR },
+    face: { ...AT_REST, marks: SEATED.MARKS, extra: WITH_EXTRA },
+    sleeves: { near: 'cream', far: 'teal' },
+  },
+);

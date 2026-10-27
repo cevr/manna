@@ -17,7 +17,6 @@ import {
   type TracedKnob,
   type tracedFigure,
 } from '@manna/film/style';
-import { Record as Rec } from 'effect';
 import * as LEAD from '../../../library/cast/lead-feast/rig/lead.ts';
 import { ARTBOARDS, FIGURES } from './figures.ts';
 import figuresRiv from './figures.riv' with { type: 'file' };
@@ -35,7 +34,7 @@ const figureProp = (
     riv: figuresRiv,
     artboard,
     timelines: FIGURE_TIMELINES,
-    numbers: Rec.keys(composed.knobs),
+    numbers: composed.numbers,
   },
   engine: 'canvas',
   ...FIGURES.shot,
@@ -101,3 +100,10 @@ export const leadFeastThreeQuarterRightProp = figureProp(
 
 /** The series lead's hand, in his skin. */
 export const leadFeastHandProp = handProp(ARTBOARDS.leadFeastHand, 'lead-feast-hand');
+
+/** The series lead seated on a low stool. */
+export const leadFeastSeatedProp = figureProp(
+  ARTBOARDS.leadFeastSeated,
+  'lead-feast-seated',
+  LEAD.leadFeastSeated,
+);

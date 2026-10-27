@@ -56,4 +56,8 @@ export const TONES = {
   hairShade: '#5d3626',
   /** The light on his curls. */
   hairLight: '#85492e',
+  /** The edge of his cream sleeve where it lies on his tunic: its shade, turned toward rose. */
+  creamEdge: '#d9ae9e',
+  /** The edge of his teal sleeve where it lies on his mantle: toward blue-violet. */
+  tealEdge: '#3a4b68',
 } as const satisfies Record<string, `#${string}`>;

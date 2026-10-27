@@ -54,6 +54,8 @@ const KitAPart = Schema.TaggedStruct('KitA', {
   rest: Schema.optionalKey(Rest),
   /** Where the eyes look at rest, units from the figure's body's middle at its head's height: a round head's centre (a traced head is carried off it, by its `set`). */
   gaze: Point,
+  /** The marks past the kit's own it draws, each shown by its own number (`EXTRA_FACE`, `rig/parts.ts`): a figure that names none prints as before. */
+  extra: Schema.optionalKey(Schema.Array(Schema.Literals(['wince', 'glad']))),
 });
 export type KitA = typeof KitAPart.Type;
 
