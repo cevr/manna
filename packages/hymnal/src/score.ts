@@ -79,7 +79,17 @@ export const topVoice = (notes: readonly Note[], slack: number): Note[] => {
 
 export const melodyOf = (midi: Midi, harmony: readonly Track[]): Note[] => {
   const first = midi.tracks.find((track) => track.notes.length > 0);
-  const own = first !== undefined && !harmony.includes(first) ? first : harmony[0];
+  const slack = midi.ticksPerBeat / 16;
+  // A dedicated tune has one voice. An earlier polyphonic accompaniment
+  // (388, for example) cannot displace the keyboard's soprano.
+  // Legato overlaps do not make a dedicated tune an accompaniment. Look
+  // for multiple pitches struck together, within the file's onset slack.
+  const single = !first?.notes.some((note, i, notes) =>
+    notes.some(
+      (other, j) => j < i && Math.abs(note.start - other.start) <= slack && note.key !== other.key,
+    ),
+  );
+  const own = first !== undefined && !harmony.includes(first) && single ? first : harmony[0];
   return own === undefined ? [] : topVoice(own.notes, midi.ticksPerBeat / 16);
 };
 

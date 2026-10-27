@@ -1,0 +1,2056 @@
+{
+  "version": 1,
+  "number": 510,
+  "sourceHash": "b84fe022eabcd1079f29262fca2558e70e95d913984f3014c0ef0b71ed94c30d",
+  "timing": {
+    "perBeat": 96,
+    "tempos": [
+      [0, 483091],
+      [1728, 604229],
+      [2208, 1863354],
+      [2304, 483091],
+      [9120, 1630434],
+      [9216, 483091],
+      [16032, 1630434],
+      [16128, 483091],
+      [22944, 1630434],
+      [23040, 483091],
+      [29376, 604229],
+      [29856, 2040816],
+      [29952, 545454]
+    ],
+    "intro": 2304,
+    "end": 29952,
+    "lines": [
+      {
+        "start": 2304,
+        "until": 3456,
+        "syllables": [2304, 2400, 2496, 2592, 2784, 2880, 3072, 3168, 3264],
+        "played": true,
+        "even": false
+      },
+      {
+        "start": 3456,
+        "until": 4608,
+        "syllables": [3456, 3552, 3648, 3744, 3936, 4032, 4224, 4320],
+        "played": true,
+        "even": false
+      },
+      {
+        "start": 4608,
+        "until": 5760,
+        "syllables": [4608, 4704, 4800, 4896, 5088, 5184, 5376, 5472, 5568],
+        "played": true,
+        "even": false
+      },
+      {
+        "start": 5760,
+        "until": 6912,
+        "syllables": [5760, 5856, 5952, 6048, 6240, 6336, 6528, 6624],
+        "played": true,
+        "even": false
+      },
+      {
+        "start": 6912,
+        "until": 8064,
+        "syllables": [6912, 7008, 7104, 7200, 7392, 7488, 7680, 7776],
+        "played": true,
+        "even": false
+      },
+      {
+        "start": 8064,
+        "until": 9216,
+        "syllables": [8064, 8160, 8256, 8352, 8544, 8640, 8832, 8928],
+        "played": true,
+        "even": false
+      },
+      {
+        "start": 9216,
+        "until": 10368,
+        "syllables": [9216, 9312, 9408, 9504, 9696, 9792, 9984, 10080, 10176],
+        "played": true,
+        "even": false
+      },
+      {
+        "start": 10368,
+        "until": 11520,
+        "syllables": [10368, 10464, 10560, 10656, 10848, 10944, 11136, 11232],
+        "played": true,
+        "even": false
+      },
+      {
+        "start": 11520,
+        "until": 12672,
+        "syllables": [11520, 11616, 11712, 11808, 12000, 12096, 12288, 12384, 12480],
+        "played": true,
+        "even": false
+      },
+      {
+        "start": 12672,
+        "until": 13824,
+        "syllables": [12672, 12768, 12864, 12960, 13152, 13248, 13440, 13536],
+        "played": true,
+        "even": false
+      },
+      {
+        "start": 13824,
+        "until": 14976,
+        "syllables": [13824, 13920, 14016, 14112, 14304, 14400, 14592, 14688],
+        "played": true,
+        "even": false
+      },
+      {
+        "start": 14976,
+        "until": 16128,
+        "syllables": [14976, 15072, 15168, 15264, 15456, 15552, 15744, 15840],
+        "played": true,
+        "even": false
+      },
+      {
+        "start": 16128,
+        "until": 17280,
+        "syllables": [16128, 16224, 16320, 16416, 16608, 16704, 16896, 16992, 17088],
+        "played": true,
+        "even": false
+      },
+      {
+        "start": 17280,
+        "until": 18432,
+        "syllables": [17280, 17376, 17472, 17568, 17760, 17856, 18048, 18144],
+        "played": true,
+        "even": false
+      },
+      {
+        "start": 18432,
+        "until": 19584,
+        "syllables": [18432, 18528, 18624, 18720, 18912, 19008, 19200, 19296, 19392],
+        "played": true,
+        "even": false
+      },
+      {
+        "start": 19584,
+        "until": 20352,
+        "syllables": [19584, 19680, 19872, 20064, 20160],
+        "played": true,
+        "even": false
+      },
+      {
+        "start": 20352,
+        "until": 21504,
+        "syllables": [20352, 20448, 20736, 20832, 20928, 21024, 21216, 21312],
+        "played": true,
+        "even": false
+      },
+      {
+        "start": 21504,
+        "until": 23040,
+        "syllables": [21504, 21600, 21888, 22176, 22368, 22464, 22656, 22752],
+        "played": true,
+        "even": false
+      },
+      {
+        "start": 23040,
+        "until": 24192,
+        "syllables": [23040, 23136, 23232, 23328, 23520, 23616, 23808, 23904, 24000],
+        "played": true,
+        "even": false
+      },
+      {
+        "start": 24192,
+        "until": 25344,
+        "syllables": [24192, 24288, 24384, 24480, 24672, 24768, 24960, 25056],
+        "played": true,
+        "even": false
+      },
+      {
+        "start": 25344,
+        "until": 26496,
+        "syllables": [25344, 25440, 25536, 25632, 25824, 25920, 26112, 26208, 26304],
+        "played": true,
+        "even": false
+      },
+      {
+        "start": 26496,
+        "until": 27648,
+        "syllables": [26496, 26592, 26688, 26784, 26976, 27072, 27264, 27360],
+        "played": true,
+        "even": false
+      },
+      {
+        "start": 27648,
+        "until": 28800,
+        "syllables": [27648, 27744, 27840, 27936, 28128, 28224, 28416, 28512],
+        "played": true,
+        "even": false
+      },
+      {
+        "start": 28800,
+        "until": 29952,
+        "syllables": [28800, 28896, 28992, 29088, 29280, 29376, 29568, 29664],
+        "played": true,
+        "even": false
+      }
+    ]
+  },
+  "verses": { "text": 4, "midi": 4, "exact": true },
+  "stanzas": [
+    {
+      "level": 2,
+      "why": [],
+      "lines": [
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.969,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": 0, "at": 0 }],
+            "guitar": []
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 1, "bass": 7, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 5, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 5, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 6,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 11, "quality": 7, "bass": 2, "at": 0 }],
+            "guitar": [{ "root": 7, "quality": 2, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 7,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 8,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 1.969,
+            "full": [],
+            "guitar": []
+          }
+        ],
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [],
+            "guitar": []
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.969,
+            "full": [],
+            "guitar": []
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 3,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": 0, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 5,
+            "length": 5,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 2.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          }
+        ],
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 6,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": 0, "at": 0 }],
+            "guitar": []
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 2,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 1, "bass": 7, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 5, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 5, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 11, "quality": 7, "bass": 2, "at": 0 }],
+            "guitar": [{ "root": 7, "quality": 2, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 2,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 6,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 1.969,
+            "full": [],
+            "guitar": []
+          }
+        ],
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [],
+            "guitar": []
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": 0, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 0,
+            "length": 8,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 6,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 6,
+            "offset": 2,
+            "length": 5,
+            "notes": 1,
+            "beats": 2.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          }
+        ],
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 7, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 7, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 0,
+            "length": 6,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 2, "quality": 3, "bass": 5, "at": 0 }],
+            "guitar": [{ "root": 2, "quality": 3, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 6,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 7, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 7, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 6,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 2.99,
+            "full": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }]
+          }
+        ],
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 2, "quality": 1, "bass": 5, "at": 0 }],
+            "guitar": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": 0, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 11, "quality": 9, "bass": 2, "at": 0 }],
+            "guitar": [{ "root": 11, "quality": 9, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 6,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 7,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 2.677,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          }
+        ]
+      ],
+      "fit": [50, 50, 0, 0, 0, 2.8]
+    },
+    {
+      "level": 2,
+      "why": [],
+      "lines": [
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": 0, "at": 0 }],
+            "guitar": []
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 1, "bass": 7, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 5, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 5, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 2,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 11, "quality": 7, "bass": 2, "at": 0 }],
+            "guitar": [{ "root": 7, "quality": 2, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 6,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 6,
+            "offset": 4,
+            "length": 4,
+            "notes": 1,
+            "beats": 1.969,
+            "full": [],
+            "guitar": []
+          }
+        ],
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [],
+            "guitar": []
+          },
+          {
+            "word": 1,
+            "offset": 4,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 2,
+            "offset": 2,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": 0, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 3,
+            "length": 6,
+            "notes": 1,
+            "beats": 2.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          }
+        ],
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": 0, "at": 0 }],
+            "guitar": []
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 1, "bass": 7, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 5, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 5, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 6,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 11, "quality": 7, "bass": 2, "at": 0 }],
+            "guitar": [{ "root": 7, "quality": 2, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 7,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 7,
+            "offset": 4,
+            "length": 4,
+            "notes": 1,
+            "beats": 1.969,
+            "full": [],
+            "guitar": []
+          }
+        ],
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [],
+            "guitar": []
+          },
+          {
+            "word": 1,
+            "offset": 3,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": 0, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 6,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 2.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          }
+        ],
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 7, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 7, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 2, "quality": 3, "bass": 5, "at": 0 }],
+            "guitar": [{ "root": 2, "quality": 3, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 6,
+            "offset": 0,
+            "length": 1,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 7, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 7, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 7,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 2.99,
+            "full": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }]
+          }
+        ],
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 2, "quality": 1, "bass": 5, "at": 0 }],
+            "guitar": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 0,
+            "length": 7,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": 0, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 11, "quality": 9, "bass": 2, "at": 0 }],
+            "guitar": [{ "root": 11, "quality": 9, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 2,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 6,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 2.677,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          }
+        ]
+      ],
+      "fit": [50, 50, 0, 1, 0, 3.8]
+    },
+    {
+      "level": 2,
+      "why": [],
+      "lines": [
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": 0, "at": 0 }],
+            "guitar": []
+          },
+          {
+            "word": 1,
+            "offset": 2,
+            "length": 5,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 1,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 1, "bass": 7, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 1,
+            "length": 4,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 5, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 5, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 11, "quality": 7, "bass": 2, "at": 0 }],
+            "guitar": [{ "root": 7, "quality": 2, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 4,
+            "length": 3,
+            "notes": 1,
+            "beats": 1.969,
+            "full": [],
+            "guitar": []
+          }
+        ],
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [],
+            "guitar": []
+          },
+          {
+            "word": 1,
+            "offset": 5,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": 0, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 3,
+            "length": 4,
+            "notes": 1,
+            "beats": 2.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          }
+        ],
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": 0, "at": 0 }],
+            "guitar": []
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 2,
+            "offset": 4,
+            "length": 4,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 1, "bass": 7, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 5, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 5, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 2,
+            "length": 6,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 11, "quality": 7, "bass": 2, "at": 0 }],
+            "guitar": [{ "root": 7, "quality": 2, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 5,
+            "length": 3,
+            "notes": 1,
+            "beats": 1.969,
+            "full": [],
+            "guitar": []
+          }
+        ],
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 14,
+            "notes": 2,
+            "beats": 1.99,
+            "full": [{ "root": 2, "quality": 1, "bass": -1, "at": 1 }],
+            "guitar": [{ "root": 2, "quality": 1, "bass": -1, "at": 1 }]
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": 0, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }]
+          }
+        ],
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 2.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 2,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 7, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 7, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 6,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 2, "quality": 3, "bass": 5, "at": 0 }],
+            "guitar": [{ "root": 2, "quality": 3, "bass": -1, "at": 0 }]
+          }
+        ],
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 7, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 7, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 2.99,
+            "full": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 3,
+            "notes": 3,
+            "beats": 2.99,
+            "full": [
+              { "root": 9, "quality": 1, "bass": -1, "at": 0 },
+              { "root": 4, "quality": 1, "bass": -1, "at": 1 },
+              { "root": 2, "quality": 1, "bass": 5, "at": 2 }
+            ],
+            "guitar": [
+              { "root": 9, "quality": 1, "bass": -1, "at": 0 },
+              { "root": 4, "quality": 1, "bass": -1, "at": 1 },
+              { "root": 2, "quality": 1, "bass": -1, "at": 2 }
+            ]
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": 0, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 11, "quality": 9, "bass": 2, "at": 0 }],
+            "guitar": [{ "root": 11, "quality": 9, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 6,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 7,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 2.677,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          }
+        ]
+      ],
+      "fit": [50, 47, 3, 0, 0, 5.4]
+    },
+    {
+      "level": 2,
+      "why": [],
+      "lines": [
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": 0, "at": 0 }],
+            "guitar": []
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 1, "bass": 7, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 5, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 5, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 6,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 11, "quality": 7, "bass": 2, "at": 0 }],
+            "guitar": [{ "root": 7, "quality": 2, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 6,
+            "offset": 2,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 6,
+            "offset": 6,
+            "length": 5,
+            "notes": 1,
+            "beats": 1.969,
+            "full": [],
+            "guitar": []
+          }
+        ],
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 0,
+            "offset": 2,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [],
+            "guitar": []
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 2,
+            "offset": 3,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": 0, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 5,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 8,
+            "length": 3,
+            "notes": 1,
+            "beats": 2.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          }
+        ],
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": 0, "at": 0 }],
+            "guitar": []
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 5,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 0,
+            "length": 6,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 1, "bass": 7, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 5, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 5, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 2,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 11, "quality": 7, "bass": 2, "at": 0 }],
+            "guitar": [{ "root": 7, "quality": 2, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 4,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 7,
+            "length": 5,
+            "notes": 1,
+            "beats": 1.969,
+            "full": [],
+            "guitar": []
+          }
+        ],
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 6,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [],
+            "guitar": []
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 4,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": 0, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 6,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 2.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          }
+        ],
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 3,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 7, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 7, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 3,
+            "length": 4,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 2, "quality": 3, "bass": 5, "at": 0 }],
+            "guitar": [{ "root": 2, "quality": 3, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 7, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 7, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 2.99,
+            "full": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 0, "quality": 0, "bass": -1, "at": 0 }]
+          }
+        ],
+        [
+          {
+            "word": 0,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 1,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 2,
+            "offset": 0,
+            "length": 4,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 2, "quality": 1, "bass": 5, "at": 0 }],
+            "guitar": [{ "root": 2, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 3,
+            "offset": 0,
+            "length": 6,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 4,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 9, "quality": 1, "bass": 0, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 5,
+            "offset": 0,
+            "length": 3,
+            "notes": 1,
+            "beats": 1.99,
+            "full": [{ "root": 11, "quality": 9, "bass": 2, "at": 0 }],
+            "guitar": [{ "root": 11, "quality": 9, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 6,
+            "offset": 0,
+            "length": 2,
+            "notes": 1,
+            "beats": 0.99,
+            "full": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 4, "quality": 0, "bass": -1, "at": 0 }]
+          },
+          {
+            "word": 6,
+            "offset": 2,
+            "length": 5,
+            "notes": 1,
+            "beats": 2.99,
+            "full": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }],
+            "guitar": [{ "root": 9, "quality": 1, "bass": -1, "at": 0 }]
+          }
+        ]
+      ],
+      "fit": [50, 50, 0, 0, 0, 3]
+    }
+  ],
+  "refrain": []
+}

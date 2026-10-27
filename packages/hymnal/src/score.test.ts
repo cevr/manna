@@ -49,6 +49,49 @@ const real = (n: number) =>
   });
 
 describe('Score.fromMidi', () => {
+  it.effect('selects soprano behind polyphonic accompaniment and preserves dedicated melody', () =>
+    Effect.gen(function* () {
+      for (const dedicated of [false, true]) {
+        const melody: Fixture.Voice = [
+          [72, 1],
+          [74, 1],
+          [76, 2],
+        ];
+        const midi = yield* Midi.parse(
+          Fixture.write({
+            tracks: [
+              {
+                program: 105,
+                voices: dedicated
+                  ? [
+                      [
+                        [79, 1],
+                        [77, 1],
+                        [76, 2],
+                      ],
+                    ]
+                  : [
+                      [
+                        [60, 1],
+                        [62, 1],
+                        [64, 2],
+                      ],
+                      [
+                        [67, 1],
+                        [69, 1],
+                        [71, 2],
+                      ],
+                    ],
+              },
+              { program: 5, voices: [melody] },
+            ],
+          }),
+        );
+        const wanted = midi.tracks[dedicated ? 1 : 2]?.notes ?? [];
+        expect(Score.melodyOf(midi, Score.harmonyTracks(midi))).toEqual([...wanted]);
+      }
+    }),
+  );
   it.effect('names the key of a file with no signature from its closing chord', () =>
     Effect.gen(function* () {
       for (const minor of [false, true]) {

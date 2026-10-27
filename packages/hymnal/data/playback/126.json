@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "number": 126,
+  "sourceHash": "92e07a64111d357d4084058611c421bafe459d6604d7b1d3e461f842cfb27548",
+  "timing": {
+    "perBeat": 96,
+    "tempos": [
+      [0, 545454],
+      [960, 681818],
+      [1440, 1764705],
+      [1536, 545454],
+      [7584, 1538461],
+      [7680, 545454],
+      [13728, 1538461],
+      [13824, 545454],
+      [19392, 674157],
+      [19872, 1875000],
+      [19968, 600000]
+    ],
+    "intro": 4608,
+    "end": 19968,
+    "lines": [
+      { "start": 4608, "until": 5208, "syllables": [], "played": true, "even": true },
+      { "start": 5208, "until": 5808, "syllables": [], "played": true, "even": true },
+      { "start": 5808, "until": 6408, "syllables": [], "played": true, "even": true },
+      { "start": 6408, "until": 7008, "syllables": [], "played": true, "even": true },
+      { "start": 7008, "until": 7608, "syllables": [], "played": true, "even": true },
+      { "start": 7608, "until": 8208, "syllables": [], "played": true, "even": true },
+      { "start": 8208, "until": 8808, "syllables": [], "played": true, "even": true },
+      { "start": 8808, "until": 9408, "syllables": [], "played": true, "even": true },
+      { "start": 9408, "until": 9984, "syllables": [], "played": true, "even": true },
+      { "start": 9984, "until": 10560, "syllables": [], "played": true, "even": true },
+      { "start": 10560, "until": 11136, "syllables": [], "played": true, "even": true },
+      { "start": 11136, "until": 11712, "syllables": [], "played": true, "even": true },
+      { "start": 11712, "until": 12288, "syllables": [], "played": true, "even": true },
+      { "start": 12288, "until": 12864, "syllables": [], "played": true, "even": true },
+      { "start": 12864, "until": 13440, "syllables": [], "played": true, "even": true },
+      { "start": 13440, "until": 14016, "syllables": [], "played": true, "even": true },
+      { "start": 14016, "until": 14760, "syllables": [], "played": true, "even": true },
+      { "start": 14760, "until": 15504, "syllables": [], "played": true, "even": true },
+      { "start": 15504, "until": 16248, "syllables": [], "played": true, "even": true },
+      { "start": 16248, "until": 16992, "syllables": [], "played": true, "even": true },
+      { "start": 16992, "until": 17735, "syllables": [], "played": true, "even": true },
+      { "start": 17735, "until": 18479, "syllables": [], "played": true, "even": true },
+      { "start": 18479, "until": 19223, "syllables": [], "played": true, "even": true },
+      { "start": 19223, "until": 19968, "syllables": [], "played": true, "even": true }
+    ]
+  },
+  "verses": { "text": 3, "midi": 3, "exact": false },
+  "stanzas": [
+    { "level": 0, "why": [0], "lines": [[], [], [], [], [], [], [], []], "fit": [] },
+    { "level": 0, "why": [0], "lines": [[], [], [], [], [], [], [], []], "fit": [] },
+    { "level": 0, "why": [0], "lines": [[], [], [], [], [], [], [], []], "fit": [] }
+  ],
+  "refrain": []
+}

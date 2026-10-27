@@ -248,19 +248,8 @@ interface Laid {
  * line that opens on a note shared with the line before starts at its own
  * first note instead, so each line's syllables come before the next line's.
  */
-const startsOf = (alignment: Align.Alignment, span: Score.Span): number[][] => {
-  let before = span.start;
-  return alignment.lines.map((line) => {
-    const own = line.map((s) => (s.notes === 0 ? undefined : alignment.melody[s.note]?.start));
-    let last = own.find((start) => start !== undefined) ?? before;
-    const starts = own.map((start) => {
-      last = start ?? last;
-      return last;
-    });
-    before = starts.at(-1) ?? before;
-    return starts;
-  });
-};
+const startsOf = (alignment: Align.Alignment, span: Score.Span): number[][] =>
+  Align.anchorsOf(alignment, span.start).map((line) => line.map((anchor) => anchor.start));
 
 /** Judges a placement: words alone, chords per line, or chords on syllables. */
 const judge = (

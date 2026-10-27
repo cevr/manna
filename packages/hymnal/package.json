@@ -9,7 +9,9 @@
     "./hymn": "./src/hymn.ts",
     "./recordings": "./src/recordings.ts",
     "./recording-manifest": "./src/recording-manifest.ts",
-    "./timing": "./src/timing.ts"
+    "./timing": "./src/timing.ts",
+    "./playback": "./src/playback.ts",
+    "./playback/build": "./scripts/playback.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
@@ -19,6 +21,7 @@
     "chart": "bun scripts/chart.ts",
     "census": "bun scripts/census.ts",
     "compile": "bun scripts/compile.ts",
+    "playback": "bun scripts/playback.ts",
     "compile:db": "bun scripts/compile-db.ts",
     "golden": "bun scripts/golden.ts",
     "render": "bun scripts/render/render.ts",

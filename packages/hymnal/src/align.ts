@@ -41,6 +41,30 @@ export interface Alignment {
   readonly cost: number;
 }
 
+/** Numeric anchors shared by chord placement and timing. Shared syllables
+ * retain their predecessor's onset; at a line opening they use that line's
+ * first owned note, or the preceding anchor when the whole line shares.
+ * A melisma ends at its last assigned note, including internal rests.
+ */
+export const anchorsOf = (alignment: Alignment, start: number) => {
+  let before = start;
+  return alignment.lines.map((line) => {
+    const own = line.map((s) => (s.notes > 0 ? alignment.melody[s.note]?.start : undefined));
+    let last = own.find((tick) => tick !== undefined) ?? before;
+    const anchors = line.map((s, i) => {
+      last = own[i] ?? last;
+      return {
+        note: s.note,
+        notes: s.notes,
+        start: last,
+        end: s.notes > 0 ? (alignment.melody[s.note + s.notes - 1]?.end ?? last) : last,
+      };
+    });
+    before = last;
+    return anchors;
+  });
+};
+
 interface Planned {
   readonly line: number;
   readonly word: number;
