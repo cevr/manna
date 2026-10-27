@@ -131,6 +131,8 @@ export interface TracedFigureSpec {
     };
     readonly paper: Paper;
     readonly sole: `#${string}`;
+    /** How far above the ground the soles run, units (`Sandals.soleDepth`; the house's unless given). */
+    readonly soleDepth?: number;
   };
   readonly hands: Paper;
   /** The figure's breath: seconds, the trunk's height at its top against its own, the neck's rise. */
@@ -478,6 +480,7 @@ export const tracedFigure = (spec: TracedFigureSpec) => {
         tones: toned(body, spec.feet_.far.tones),
       },
       sole: spec.feet_.sole,
+      soleDepth: spec.feet_.soleDepth,
     }),
     hands: Hands({ paper: spec.hands, share: handShare }),
     path: spec.path,

@@ -75,6 +75,8 @@ const SandalsPart = Schema.TaggedStruct('Sandals', {
   far: SandalFoot,
   /** The soles' leather, under each foot's last units, as heavy as the line. */
   sole: HexColour,
+  /** How far above the ground the soles run, units (6.5 unless given): shallower where a sheet paints its sole into the line under the foot. */
+  soleDepth: Schema.optional(Length),
 });
 export type Sandals = typeof SandalsPart.Type;
 

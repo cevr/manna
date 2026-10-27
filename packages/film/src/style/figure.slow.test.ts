@@ -761,6 +761,16 @@ describe('a bearded head, and the parts of a head turned and of bare feet', () =
     ]);
   });
 
+  test('sandals whose sheet paints the sole into the line under the foot: each sole runs only as far above the ground as they say', () => {
+    const rml = drawnOf(figure({ ...standingOf(), feet: { ...sandals, soleDepth: 2 } }));
+    expect(printed(rml, 'footNearTone1')).toEqual([
+      [-64, -2],
+      [-14, -2],
+      [-14, 4],
+      [-64, 4],
+    ]);
+  });
+
   test('a headcloth is cut under a beard and an ear and over the hair: its band, then its edge, then its cloth, the band lit by its tones', () => {
     const rml = drawnOf(figure({ ...standingOf(), beard, headcloth }));
     const places = placesOf(rml, [

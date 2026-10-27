@@ -684,13 +684,13 @@ const shoesOf = (rig: Figure, s: Shoes) =>
     );
   });
 
-/** A sandal's sole under the foot cut from `corners`, as `SOLE` lays it. */
-const soleOf = (corners: ReadonlyArray<Pt>): Pt[] => {
+/** A sandal's sole under the foot cut from `corners`, as `SOLE` lays it, `depth` units up from the ground. */
+const soleOf = (corners: ReadonlyArray<Pt>, depth: number): Pt[] => {
   const xs = corners.map(([x]) => x);
   const [heel, toe] = [Math.min(...xs) - SOLE.past, Math.max(...xs) + SOLE.past];
   return [
-    [heel, -SOLE.depth],
-    [toe, -SOLE.depth],
+    [heel, -depth],
+    [toe, -depth],
     [toe, SOLE.under],
     [heel, SOLE.under],
   ];
@@ -709,7 +709,10 @@ const sandalsOf = (rig: Figure, s: Sandals) =>
       key,
       roundedPolygon(foot.corners, foot.radii),
       looked(s.paper, {
-        tones: [...(foot.tones ?? []), { pts: soleOf(foot.corners), color: s.sole }],
+        tones: [
+          ...(foot.tones ?? []),
+          { pts: soleOf(foot.corners, s.soleDepth ?? SOLE.depth), color: s.sole },
+        ],
       }),
       { boil: SMALL_BOIL },
     ),
