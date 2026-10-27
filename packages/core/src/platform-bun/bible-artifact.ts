@@ -16,7 +16,9 @@ import {
   type TopicsArtifactInstaller,
   type TopicsArtifactRecipe,
 } from '../corpus-supply/file-artifact.js';
-import type { Effect, Layer } from 'effect';
+import { Context, Effect, Layer, Option, Predicate } from 'effect';
+import { CorpusProvenance } from '../corpus-supply/model.js';
+import { CorpusSourceUnavailableError } from '../corpus-supply/errors.js';
 
 import {
   verifyBibleDatabase,
@@ -71,10 +73,59 @@ export const layerNativeTopicsArtifacts = (input: {
 export const layerNativeWebsterArtifacts = (input: {
   readonly destination: string;
   readonly sources: readonly NativeFileArtifactSource[];
-}): Layer.Layer<WebsterArtifactInstaller | WebsterArtifactRecipe> =>
-  layerNativeFileArtifacts({
+}): Layer.Layer<WebsterArtifactInstaller | WebsterArtifactRecipe> => {
+  const native = layerNativeFileArtifacts({
     artifact: WebsterArtifact,
     destination: input.destination,
     sources: input.sources,
     verify: verifyWebsterDatabase,
   });
+  return Layer.effectContext(
+    Effect.gen(function* () {
+      const built = yield* Layer.build(native);
+      const installer = Context.get(built, WebsterArtifact.Installer);
+      const recipe = Context.get(built, WebsterArtifact.Recipe);
+      const runtime = input.sources.filter((source) => source.kind === 'runtime');
+      let runtimeIndex = 0;
+      const sources = recipe.sources.map((source) => {
+        if (source.kind !== 'runtime') return source;
+        const declared = runtime[runtimeIndex++];
+        if (
+          Predicate.isUndefined(declared) ||
+          declared.kind !== 'runtime' ||
+          declared.path !== input.destination
+        )
+          return source;
+        return {
+          ...source,
+          acquire: Effect.gen(function* () {
+            const artifact = yield* source.acquire;
+            const active = yield* installer.current.pipe(
+              Effect.mapError((cause) =>
+                CorpusSourceUnavailableError.make({
+                  operation: 'read-active-webster-identity',
+                  cause,
+                }),
+              ),
+            );
+            if (Option.isNone(active)) return artifact;
+            // A verified active file has a content identity already. Its mtime is
+            // not a new content revision. Digest is recomputed if refresh copies it.
+            return {
+              ...artifact,
+              provenance: CorpusProvenance.make({
+                source: active.value.source,
+                revision: active.value.revision,
+                generation: active.value.generation,
+                digest: Option.none(),
+              }),
+            };
+          }),
+        };
+      });
+      return Context.make(WebsterArtifact.Installer, installer).pipe(
+        Context.add(WebsterArtifact.Recipe, { ...recipe, sources }),
+      );
+    }),
+  );
+};

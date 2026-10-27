@@ -3947,6 +3947,36 @@ The form of an entry, each field on its own line:
 - **Cause:** The fixture never reached the ordering it claimed to protect. A synthetic generic form now has only bare and undoubled candidates.
 - **Guard:** code: `packages/core/src/webster/service.test.ts` `tries a bare generic stem before an undoubled stem when retained e is absent`
 
+### webster-active-runtime-identity
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "Init re-installs Webster on every run when only the runtime copy exists."
+- **Source:** hymnapp/webster/round-1-findings.md F2
+- **Wrong:** Replacing the active file changed its mtime, which the runtime source treated as a new revision, so repeat init copied the whole corpus again.
+- **Cause:** File modification identity was used in place of the verified active content identity. The self-runtime candidate now retains that identity and recomputes its digest only on an explicit refresh.
+- **Guard:** code: `packages/cli/test/commands/webster.slow.test.ts` `keeps a verified active runtime corpus unchanged across repeated init`
+
+### webster-init-readable-diagnostic
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "Init's Webster failure line dumps the error as JSON."
+- **Source:** hymnapp/webster/round-1-findings.md F3
+- **Wrong:** Missing data printed a nested infrastructure error with paths and ENOENT details instead of one concise failure and remedy.
+- **Cause:** The UI rendered the raw error object. The init leg now prints its tag, a short explanation and the build/install remedy.
+- **Guard:** code: `packages/cli/test/commands/webster.test.ts` `init reports a missing Webster corpus with a short remedy and no error JSON`
+
+### webster-init-production-leg
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "Init's own Webster leg runs in no test."
+- **Source:** hymnapp/webster/round-1-findings.md F7
+- **Wrong:** The relocation test rebuilt an ensure graph and supplied only packaged sources, so init's runtime source and output were untested.
+- **Cause:** The test reproduced the wiring instead of invoking the production operation. Init and the relocation test now share the source list, ensure and message operation.
+- **Guard:** code: `packages/cli/test/commands/webster.slow.test.ts` `relocated CLI reads packaged corpus without checkout fallback and preserves active data after failed refresh`
+
 ### board-food-is-plant-food
 
 - **Date:** 2026-10-26

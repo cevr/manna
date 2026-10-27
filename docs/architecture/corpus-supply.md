@@ -16,6 +16,9 @@ and SHA-256, and emits ignored `packages/core/data/webster.db` and
 `.bible` directory. Compilation uses a fresh sibling, validates SQLite/FTS,
 closes the connection and atomically replaces the selected database. The
 adjacent manifest holds size and digest; no self-hash is stored in the database.
+The manifest names the basename, not a build machine's absolute path. Run
+`bun run build:webster` once in each checkout before Webster's slow tests or the
+repository slow suite; tests never fetch or silently build the corpus.
 
 The snapshot retains all 62,391 records and 62,388 normalized keys, including
 two `anticonstitutional` and three `counter-revolution` rows. Each entry keeps
@@ -43,6 +46,10 @@ missing or corrupt storage is an actionable error.
 
 There is no Webster release pin. Native sources are packaged, workspace, then
 existing runtime data. A binary distributor must build the corpus first.
+A runtime source that is the verified active file retains that identity instead
+of treating its changed mtime as a new revision. Repeat init skips that copy.
+The exported `initializeWebster` operation owns the source list, ensure and
+readable receipt used by both `init` and the isolated slow checks.
 The CLI build stages the artifact, manifest, `webster1828-NOTICE.md` and
 `webster1828-LICENSE.txt` into package data and beside the executable. Missing
 optional assets are reported; CLI compilation never downloads or builds them.

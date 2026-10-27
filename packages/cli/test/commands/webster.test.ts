@@ -1,9 +1,10 @@
 import { WebsterService } from '@manna/core/webster';
-import { Effect, Schema } from 'effect';
+import { Console, Effect, FileSystem, Schema } from 'effect';
+import { BunServices } from '@effect/platform-bun';
 import { Command } from 'effect/cli';
 import { expect, it } from 'effect-bun-test';
 
-import { webster } from '../../src/commands/webster.js';
+import { initializeWebster, webster } from '../../src/commands/webster.js';
 import { runCli } from '../lib/run-cli.js';
 
 const command = webster.pipe(
@@ -25,6 +26,39 @@ const decode = Schema.decodeUnknownSync(
       ),
     }),
   ),
+);
+
+const initWithConsole = (
+  input: Parameters<typeof initializeWebster>[0],
+  console: Console.Console,
+) => initializeWebster(input).pipe(Effect.provideService(Console.Console, console));
+
+it.scoped('init reports a missing Webster corpus with a short remedy and no error JSON', () =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const directory = yield* fs.makeTempDirectoryScoped({ prefix: 'webster-init-message-' });
+    const diagnostics: string[] = [];
+    const output: string[] = [];
+    const console: Console.Console = {
+      ...Console.Console.defaultValue(),
+      log: (...parts) => {
+        output.push(parts.join(' '));
+      },
+      error: (...parts) => {
+        diagnostics.push(parts.join(' '));
+      },
+    };
+    yield* initWithConsole(
+      { directory, packagedPaths: [], workspaceRoot: '/nonexistent/webster-workspace' },
+      console,
+    );
+    expect(diagnostics[0]).toContain('CorpusSourceUnavailableError');
+    expect(diagnostics.join('\n')).toContain('bun run build:webster');
+    expect(diagnostics.join('\n')).not.toContain('{"_tag"');
+    expect(diagnostics.join('\n')).not.toContain('ENOENT');
+    expect(output).toEqual([]);
+    expect(yield* fs.exists(`${directory}/webster.db`)).toBe(false);
+  }).pipe(Effect.provide(BunServices.layer)),
 );
 
 it.effect(

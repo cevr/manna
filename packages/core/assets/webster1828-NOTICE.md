@@ -19,12 +19,23 @@ Definitions are not paraphrased. The build manifest identifies the exact bytes.
 Known limits: upstream reports approximately 600 words in its separate
 work-in-progress file. That file is excluded. Earlier transcription lineage is
 not fully documented. This snapshot is not a complete critical edition.
-The bounded dictionary-backed `-eth` / `-est` lookup is a heuristic. It does
-not resolve every KJV inflection or spelling, including the absent `shew`.
+KJV lookup uses exact entries, then an audited alias table, then a bounded
+suffix heuristic. The complete repository KJV ending-word census is committed
+with frequencies and reviewed resolutions, including explicit no-match cases.
+The source lacks `shew`; the aliases for shewest/sheweth use `show`, whose entry
+explicitly lists that spelling. Unseen forms still carry no universal guarantee.
+
+Two known electronic key defects remain uncorrected: `e` contains DESCRIPTIVE's
+text instead of the letter-E entry, and DESCRIPTIVE is also keyed `descriptiv`,
+so exact `descriptive` is absent. These are source defects, not valid lexical
+aliases. The raw records remain preserved for provenance and future scan work.
 
 The transcription also omits portions of etymologies and quotation-author
-credits, expands abbreviated biblical references, and sometimes renumbers
-senses. It is not a diplomatic transcription of the scans. Manna applies three
+credits, adds verse numbers to abbreviated chapter references, and sometimes
+renumbers senses. Added verse numbers can be wrong: three of the ten sampled
+entries had an incorrect reference expansion. Unchecked expansions must not be
+treated as scan-verified citations. This is not a diplomatic transcription.
+Manna applies three
 scan-backed citation corrections in derived plaintext while preserving source
 HTML: `charity`, 1 Corinthians 8:1 → 1 Corinthians 13 (volume 1, leaf 373);
 `love`, 1 John 4:7 → 1 John 4 (volume 2, leaf 83); `prevent`, Psalms 119:148 →

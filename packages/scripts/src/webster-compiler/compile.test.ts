@@ -38,6 +38,9 @@ it.scoped(
         destination: `${dir}/dictionary.db`,
       });
       expect(artifact.records).toBe(2);
+      const manifestText = yield* fs.readFileString(`${dir}/dictionary.manifest.json`);
+      expect(manifestText).toContain('"path":"dictionary.db"');
+      expect(manifestText).not.toContain(dir);
       const db = yield* Effect.acquireRelease(
         Effect.sync(() => new Database(artifact.path, { readonly: true })),
         (opened) => Effect.sync(() => opened.close()),

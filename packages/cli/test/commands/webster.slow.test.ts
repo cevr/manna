@@ -1,28 +1,45 @@
 import { BunServices } from '@effect/platform-bun';
-import { Effect, FileSystem, Layer, Option, Result, Schema, Stream } from 'effect';
-import { CorpusSupply, Target } from '@manna/core/corpus-supply';
-import {
-  layerNativeWebsterArtifacts,
-  type NativeFileArtifactSource,
-} from '@manna/core/corpus-supply/bun';
+import { Effect, FileSystem, Option, Result, Schema, Stream } from 'effect';
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 import { expect, it } from 'effect-bun-test';
 
 import { dataCandidates } from '../../src/lib/paths.js';
-
-const ensureWebsterArtifacts = (input: {
-  readonly destination: string;
-  readonly sources: readonly NativeFileArtifactSource[];
-  readonly refresh?: boolean;
-}) =>
-  CorpusSupply.use((supply) =>
-    supply.ensure({ target: Target.webster(), refresh: input.refresh }),
-  ).pipe(
-    Effect.provide(CorpusSupply.layer.pipe(Layer.provide(layerNativeWebsterArtifacts(input)))),
-  );
+import { initializeWebster } from '../../src/commands/webster.js';
 
 const root = new URL('../../../../', import.meta.url).pathname.replace(/\/$/u, '');
+
+it.scoped('keeps a verified active runtime corpus unchanged across repeated init', () =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const dir = yield* fs.makeTempDirectoryScoped({ prefix: 'webster-runtime-' });
+    const destination = `${dir}/webster.db`;
+    yield* initializeWebster({
+      directory: dir,
+      packagedPaths: [`${root}/packages/core/data/webster.db`],
+      workspaceRoot: '/nonexistent/webster-workspace',
+    });
+    const before = yield* fs.readFile(destination);
+    const input = {
+      directory: dir,
+      packagedPaths: [],
+      workspaceRoot: '/nonexistent/webster-workspace',
+    };
+    expect(yield* initializeWebster(input)).toMatchObject({
+      _tag: 'Success',
+      success: { skipped: ['canonical'] },
+    });
+    expect(yield* initializeWebster(input)).toMatchObject({
+      _tag: 'Success',
+      success: { skipped: ['canonical'] },
+    });
+    expect(yield* fs.readFile(destination)).toEqual(before);
+    expect(yield* initializeWebster({ ...input, refresh: true })).toMatchObject({
+      _tag: 'Success',
+      success: { activated: [{ corpus: 'webster', installed: 62391 }] },
+    });
+  }).pipe(Effect.provide(BunServices.layer)),
+);
 const decode = Schema.decodeUnknownSync(
   Schema.fromJsonString(
     Schema.Struct({
@@ -98,22 +115,29 @@ it.scoped(
         { executableDir: bin, buildRoot: Option.none() },
         'webster.db',
       );
-      const sources = candidates.map((path) => ({
-        kind: 'packaged' as const,
-        path,
-        label: 'packaged-webster',
-      }));
-      const first = yield* ensureWebsterArtifacts({ destination, sources });
-      expect(first.activated).toMatchObject([{ corpus: 'webster', installed: 62391 }]);
-      expect((yield* ensureWebsterArtifacts({ destination, sources })).skipped).toEqual([
-        'canonical',
-      ]);
-      expect(
-        (yield* ensureWebsterArtifacts({ destination, sources, refresh: true })).activated,
-      ).toHaveLength(1);
+      const input = {
+        directory: `${home}/.bible`,
+        packagedPaths: candidates,
+        workspaceRoot: '/nonexistent/webster-workspace',
+      };
+      const first = yield* initializeWebster(input);
+      expect(first).toMatchObject({
+        _tag: 'Success',
+        success: { activated: [{ corpus: 'webster', installed: 62391 }] },
+      });
+      expect(yield* initializeWebster(input)).toMatchObject({
+        _tag: 'Success',
+        success: { skipped: ['canonical'] },
+      });
+      expect(yield* initializeWebster({ ...input, refresh: true })).toMatchObject({
+        _tag: 'Success',
+        success: { activated: [{ corpus: 'webster', installed: 62391 }] },
+      });
       const lookup = yield* runCompiled(executable, home, cwd, ['webster', 'dismayed', '--json']);
       expect(lookup.status).toBe(0);
       expect(decode(lookup.stdout).entries[0]?.headword).toBe('dismayed');
+      const verb = yield* runCompiled(executable, home, cwd, ['webster', 'doeth', '--json']);
+      expect(decode(verb.stdout).entries[0]?.headword).toBe('do');
       const search = yield* runCompiled(executable, home, cwd, [
         'webster',
         'search',
@@ -126,24 +150,17 @@ it.scoped(
       expect(decode(search.stdout).entries[0]?.headword).toBe('dismayed');
       const previous = yield* fs.readFile(destination);
       yield* fs.writeFileString(`${bin}/data/webster.db`, 'corrupt candidate');
-      expect(
-        Result.isFailure(
-          yield* Effect.result(ensureWebsterArtifacts({ destination, sources, refresh: true })),
-        ),
-      ).toBe(true);
+      expect(Result.isFailure(yield* initializeWebster({ ...input, refresh: true }))).toBe(true);
       expect(yield* fs.readFile(destination)).toEqual(previous);
       expect(
         (yield* runCompiled(executable, home, cwd, ['webster', 'dismayed', '--json'])).status,
       ).toBe(0);
-      const failedSource = [
-        { kind: 'packaged' as const, path: `${bin}/absent.db`, label: 'missing' },
-      ];
-      const preserved = yield* ensureWebsterArtifacts({
-        destination,
-        sources: failedSource,
-        refresh: true,
+      const preserved = yield* initializeWebster({
+        ...input,
+        packagedPaths: [`${bin}/absent.db`],
+        refresh: false,
       });
-      expect(preserved.skipped).toEqual(['canonical']);
+      expect(preserved).toMatchObject({ _tag: 'Success', success: { skipped: ['canonical'] } });
       expect(yield* fs.readFile(destination)).toEqual(previous);
     }).pipe(Effect.provide(BunServices.layer)),
   120000,

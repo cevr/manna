@@ -152,7 +152,10 @@ export const compileWebster = Effect.fn('WebsterCompiler.compile')(function* (in
     sourceSha256: digest,
   };
   const manifestPath = input.destination.replace(/\.db$/u, '') + '.manifest.json';
-  const encoded = yield* Schema.encodeEffect(ManifestJson)(manifest);
+  const encoded = yield* Schema.encodeEffect(ManifestJson)({
+    ...manifest,
+    path: path.basename(input.destination),
+  });
   yield* fs.writeFileString(path.join(temp, 'manifest.json'), encoded);
   yield* fs.rename(candidate, input.destination);
   yield* fs.rename(path.join(temp, 'manifest.json'), manifestPath);
