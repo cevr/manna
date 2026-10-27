@@ -85,7 +85,7 @@ describe('traceView', () => {
     expect(Math.abs((t.feet?.[1] ?? 0) - 198)).toBeLessThanOrEqual(3);
   });
 
-  test("takes a mouth given by its ends as given, where its ink runs into the line's and reads as no piece of its own", () => {
+  test('reads each brow between ends half its stroke inside its ink (its round cap reaches them), and takes a mouth given by its ends as given', () => {
     const base = sheet();
     const rgba = new Uint8Array(base.rgba);
     // Two eyes and two brows, small ink pieces inside the head.
@@ -124,6 +124,13 @@ describe('traceView', () => {
     ]);
     expect(marks?.mouthLine).toBe(3);
     expect(Math.abs((marks?.eyes[0][0] ?? 0) - 53.5)).toBeLessThanOrEqual(1);
+    // The left brow's ink runs from x 49 to 56 (pixel centres 49.5 to 56.5), two pixels thick: its line, a pixel inside each end.
+    const [from, to] = marks?.brows[0] ?? [
+      [0, 0],
+      [0, 0],
+    ];
+    expect(from[0]).toBeCloseTo(50.5, 0);
+    expect(to[0]).toBeCloseTo(55.5, 0);
   });
 
   test("smooths a part's edge as far each way as the part asks", () => {

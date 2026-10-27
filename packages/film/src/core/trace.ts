@@ -534,7 +534,7 @@ const outlineOf = (g: Grid, pixels: ReadonlyArray<number>, smooth = SMOOTH): Tra
     ([x, y]): TracePt => [half(g.x0 + x + 0.5), half(g.y0 + y + 0.5)],
   );
 
-/** A mark's ink: its pixels' centre, its box, and its two ends (the pair farthest apart). */
+/** A mark's ink: its pixels' centre, its box, its stroke's width, and the two ends of the line it is drawn along (the pair of its pixels farthest apart, each moved half the stroke inward). */
 const markOf = (g: Grid, pixels: ReadonlyArray<number>) => {
   const pts = pixels.map((k): TracePt => [
     g.x0 + (k % g.w) + 0.5,
@@ -555,13 +555,21 @@ const markOf = (g: Grid, pixels: ReadonlyArray<number>) => {
     );
   const a = far(centre);
   const b = far(a);
-  const [left, right] = a[0] <= b[0] ? [a, b] : [b, a];
   const length = Math.max(1, Math.hypot(b[0] - a[0], b[1] - a[1]));
+  const stroke = pixels.length / length;
+  // A stroke's round cap reaches half its width past each end of its line: the ends a stroke is drawn between lie that far inside its ink.
+  const inset = Math.min(stroke / 2, length / 2 - 0.5) / length;
+  const toward = (p: TracePt, q: TracePt): TracePt => [
+    p[0] + (q[0] - p[0]) * inset,
+    p[1] + (q[1] - p[1]) * inset,
+  ];
+  const [ia, ib] = [toward(a, b), toward(b, a)];
+  const [left, right] = ia[0] <= ib[0] ? [ia, ib] : [ib, ia];
   return {
     centre,
     size: [Math.max(...xs) - Math.min(...xs) + 1, Math.max(...ys) - Math.min(...ys) + 1] as const,
     ends: [left, right] as const,
-    stroke: pixels.length / length,
+    stroke,
   };
 };
 
