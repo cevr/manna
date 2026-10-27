@@ -14,11 +14,19 @@
  * so the page sets its own after each.
  */
 
-import { Duration, Effect, Layer, Match, Option, Queue, Stream } from 'effect';
+import { Clock, Duration, Effect, Layer, Match, Option, Queue, Stream } from 'effect';
 import { One } from 'one';
 import { Platform } from 'react-native';
 
-import { Playback, type PlaybackApi, PlaybackError, Remote, type Status } from './player';
+import { clockAt, placeOf, type Clock as Run } from '../follow/clock';
+import {
+  Playback,
+  type PlaybackApi,
+  PlaybackError,
+  Remote,
+  type Status,
+  type Intent,
+} from './player';
 
 /** One's `Audio` and `Network` as the playback uses them. */
 export interface Device {
@@ -58,6 +66,12 @@ const call = <A>(operation: string, run: () => Promise<A>) =>
  */
 export const playbackOn = (device: () => Device, session: Option.Option<Session>): PlaybackApi => {
   const audio = () => device().audio;
+  let turn = 0;
+  let wants: Intent = 'play';
+  const paused = () => wants === 'pause';
+  let retained: Option.Option<Run> = Option.none();
+  const stale = () =>
+    PlaybackError.make({ operation: 'superseded', message: 'newer playback owns the session' });
   /** The page's Media Session presses, kept until the player takes them. */
   const pressed = Effect.runSync(Queue.unbounded<Remote>());
   const tell = (remote: Remote) => void Queue.offerUnsafe(pressed, remote);
@@ -122,36 +136,92 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
    * gives nothing up by a time or a count of its own: the player owns the
    * wait, and a newer command cuts the asking off.
    */
-  const landAt = (fromMs: number): Effect.Effect<Status, PlaybackError> =>
-    call('seek', () => audio().seek(fromMs)).pipe(
+  const landAt = (fromMs: number, owner: number): Effect.Effect<Status, PlaybackError> =>
+    Effect.gen(function* () {
+      if (owner !== turn) return yield* stale();
+      const now = yield* Clock.currentTimeMillis;
+      const to = Option.match(retained, {
+        onNone: () => fromMs,
+        onSome: (run) => placeOf(run, now),
+      });
+      return yield* call('seek', () => audio().seek(to));
+    }).pipe(
       Effect.catchTag('PlaybackError', (refused) =>
-        call('status', () => audio().getPlaybackStatus()).pipe(
-          Effect.filterOrFail(holdsRecording, () => refused),
-          Effect.andThen(Effect.sleep(askAgainAfter)),
-          Effect.andThen(Effect.suspend(() => landAt(fromMs))),
-        ),
+        Effect.suspend(() => {
+          if (owner !== turn) return Effect.fail(stale());
+          return call('status', () => audio().getPlaybackStatus()).pipe(
+            Effect.filterOrFail(holdsRecording, () => refused),
+            Effect.andThen(Effect.sleep(askAgainAfter)),
+            Effect.andThen(Effect.suspend(() => landAt(fromMs, owner))),
+          );
+        }),
       ),
     );
   return Playback.of({
-    play: (uri, fromMs) =>
-      call('play', () => {
-        // One drops the Media Session's handlers before this returns.
-        const playing = audio().play(uri);
-        own();
-        return playing;
+    play: (uri, fromMs, options) =>
+      Effect.gen(function* () {
+        const owner = ++turn;
+        wants = options?.intent ?? 'play';
+        const began = yield* Clock.currentTimeMillis;
+        retained = Option.liftPredicate(
+          clockAt(fromMs, !paused(), began),
+          () => options?.continuous === true,
+        );
+        const status = yield* call('play', () => {
+          // One drops the Media Session's handlers before this returns.
+          const playing = audio().play(uri);
+          own();
+          return playing;
+        });
+        if (owner !== turn) {
+          if (fromMs > 0) return yield* stale();
+          return status;
+        }
+        let landed = status;
+        if (fromMs > 0 || options?.ready) landed = yield* landAt(fromMs, owner);
+        if (owner !== turn) return landed;
+        retained = Option.none();
+        // Pause may arrive while play/seek waits for the native session.
+        if (options && paused()) return yield* call('pause', () => audio().pause());
+        return landed;
       }).pipe(
-        Effect.filterOrElse(
-          () => fromMs <= 0,
-          () => landAt(fromMs),
+        Effect.catchTag('PlaybackError', (error) =>
+          Effect.gen(function* () {
+            if (error.operation === 'superseded' || Option.isNone(retained)) return yield* error;
+            return yield* PlaybackError.make({
+              operation: error.operation,
+              message: error.message,
+              positionMs: placeOf(retained.value, yield* Clock.currentTimeMillis),
+            });
+          }),
         ),
       ),
-    pause: call('pause', () => audio().pause()),
-    resume: call('resume', () => audio().resume()),
-    seek: (positionMs) => call('seek', () => audio().seek(positionMs)),
+    pause: Effect.gen(function* () {
+      wants = 'pause';
+      const now = yield* Clock.currentTimeMillis;
+      retained = Option.map(retained, (run) => clockAt(placeOf(run, now), false, now));
+      return yield* call('pause', () => audio().pause());
+    }),
+    resume: Effect.gen(function* () {
+      wants = 'play';
+      const now = yield* Clock.currentTimeMillis;
+      retained = Option.map(retained, (run) => clockAt(placeOf(run, now), true, now));
+      return yield* call('resume', () => audio().resume());
+    }),
+    seek: (positionMs) =>
+      Effect.gen(function* () {
+        const now = yield* Clock.currentTimeMillis;
+        retained = Option.map(retained, () => clockAt(positionMs, wants === 'play', now));
+        return yield* call('seek', () => audio().seek(positionMs));
+      }),
     status: call('status', () => audio().getPlaybackStatus()),
     // One drops the Media Session's handlers with the recording; the page's
     // Play starts it again, so its handlers stay.
-    stop: call('stop', () => audio().stop()).pipe(Effect.tap(() => Effect.sync(own))),
+    stop: Effect.suspend(() => {
+      turn += 1;
+      retained = Option.none();
+      return call('stop', () => audio().stop()).pipe(Effect.tap(() => Effect.sync(own)));
+    }),
     connection,
     announce: (announcement) =>
       call('announce', () => audio().setNowPlayingInfo(announcement)).pipe(

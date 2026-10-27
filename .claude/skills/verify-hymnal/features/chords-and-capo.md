@@ -14,7 +14,9 @@ button is the dim guitar alone, and a tap opens the key dial alone: turning
 it turns chords on. Each hymn keeps its own key and capo; chords on or off
 holds for every hymn. Chords are Simple at first: at most one plain chord
 over a syllable, where the harmony changes; Settings → Chords → `Advanced`
-shows every chord as compiled. No dial, reset or hold reaches the sound.
+shows every chord as compiled. Key selects the held hymn's recording at its
+current place. Capo and a chord hold change the reading only. Reset changes
+the recording only when it changes the sounding Key.
 
 ## Sub-features
 

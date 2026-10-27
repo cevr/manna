@@ -46,7 +46,8 @@ import {
 } from 'effect';
 import * as Atom from 'effect/reactivity/Atom';
 
-import { audioUrl } from '~/remote';
+import { audioUrl, soundingOffset } from '~/remote';
+import { type Move, still } from '~/hymns/chords';
 
 import * as Proof from './proof';
 
@@ -107,6 +108,10 @@ export type Command = Data.TaggedEnum<{
 }>;
 export const Command = Data.taggedEnum<Command>();
 
+/** Internal subscription message. The reader and remote command vocabulary stays unchanged. */
+type KeyChange = Data.TaggedEnum<{ Key: { readonly number: number; readonly offset: number } }>;
+const KeyChange = Data.taggedEnum<KeyChange>();
+
 /**
  * What the reader last asked of the recording: to hear it (Start, Resume, the
  * lock screen's play) or not (Pause, the lock screen's pause). A device that
@@ -121,9 +126,24 @@ export interface Status {
   readonly durationMs?: number;
 }
 
+/** A replacement follows musical time while the global recording loads. */
+export interface PlayOptions {
+  readonly continuous: boolean;
+  readonly ready: boolean;
+  readonly intent?: Intent;
+}
+
+/** Requested and effective sounding offsets; a fallback is never silently claimed as the chosen Key. */
+export interface RecordingSelection {
+  readonly number: number;
+  readonly requested: number;
+  readonly effective: number;
+}
+
 export class PlaybackError extends Schema.TaggedError<PlaybackError>()('PlaybackError', {
   operation: Schema.String,
   message: Schema.String,
+  positionMs: Schema.optionalKey(Schema.Finite),
 }) {}
 
 /**
@@ -161,7 +181,11 @@ export interface PlaybackApi {
    * Play `uri` from `fromMs` in place of whatever plays now; past 0, it asks
    * the seek again while the device holds the recording, until it lands.
    */
-  readonly play: (uri: string, fromMs: number) => Effect.Effect<Status, PlaybackError>;
+  readonly play: (
+    uri: string,
+    fromMs: number,
+    options?: PlayOptions,
+  ) => Effect.Effect<Status, PlaybackError>;
   readonly pause: Effect.Effect<Status, PlaybackError>;
   /** Play on; from the start once the recording has ended. */
   readonly resume: Effect.Effect<Status, PlaybackError>;
@@ -274,14 +298,28 @@ interface Held {
   resuming: boolean;
   id: number;
   announced: number;
+  offset: number;
+  replacing: boolean;
 }
 
+const printed = Atom.make<Move>(still);
+
 /** The player's atoms over the device's `playback`, reading its status every `every` while it moves. */
-export const playerOn = (playback: Layer.Layer<Playback>, every: Duration.Input) => {
+export const playerOn = (
+  playback: Layer.Layer<Playback>,
+  every: Duration.Input,
+  moveFor: (number: number) => Atom.Atom<Move> = () => printed,
+) => {
+  const keyFor = Atom.family((number: number) =>
+    Atom.map(moveFor(number), (move) => soundingOffset(move.transpose)),
+  );
   const runtime = Atom.runtime(
     Layer.provideMerge(Layer.mergeAll(linkLayer, answersLayer), playback),
   );
   const state = Atom.make<Player>(Player.Idle()).pipe(Atom.keepAlive);
+  const recording = Atom.make<Option.Option<RecordingSelection>>(Option.none()).pipe(
+    Atom.keepAlive,
+  );
   /**
    * What the player holds across the commands: the reader's intent, what the
    * reads have proved, the place a seek still asks the device for (and
@@ -298,11 +336,13 @@ export const playerOn = (playback: Layer.Layer<Playback>, every: Duration.Input)
     resuming: false,
     id: 0,
     announced: -1,
+    offset: 0,
+    replacing: false,
   };
 
   const send = runtime
     .fn(
-      Effect.fn('Player.send')(function* (command: Command, get: Atom.FnContext) {
+      Effect.fn('Player.send')(function* (command: Command | KeyChange, get: Atom.FnContext) {
         const device = yield* Playback;
         const link = yield* Link;
         const answers = yield* Answers;
@@ -354,7 +394,16 @@ export const playerOn = (playback: Layer.Layer<Playback>, every: Duration.Input)
                 held.reading = Option.some(done);
                 const reading = Effect.gen(function* () {
                   const asked = yield* now;
-                  const status = yield* device.status;
+                  const raw = yield* device.status;
+                  // The global session may briefly report idle/failed or the old paused
+                  // session while a replacement and its one fallback are in flight.
+                  let status = raw;
+                  if (held.replacing)
+                    status = {
+                      ...raw,
+                      state: 'loading',
+                      positionMs: Option.getOrElse(held.proof.place, () => raw.positionMs),
+                    };
                   return { asked, answered: yield* now, status };
                 }).pipe(
                   // A read is taken while in flight: once answered, the next read is asked anew.
@@ -725,21 +774,97 @@ export const playerOn = (playback: Layer.Layer<Playback>, every: Duration.Input)
             return start;
           });
         /** A load: Loading at once, the device asked to play from `fromMs`, its status read while it loads. */
+        const keyOf = (track: Track) => soundingOffset(get.registry.get(keyFor(track.number)));
+        const playSet = (track: Track, offset: number, fromMs: number, continuous: boolean) =>
+          Effect.gen(function* () {
+            const id = held.id;
+            const began = yield* now;
+            const ours = () => held.id === id;
+            held.offset = offset;
+            const selection = (effective: number) =>
+              Effect.sync(() => {
+                if (ours())
+                  get.registry.set(
+                    recording,
+                    Option.some({ number: track.number, requested: offset, effective }),
+                  );
+              });
+            // Preserve the existing printed-key start and its proof timing.
+            if (offset === 0 && !continuous)
+              return yield* device
+                .play(audioUrl(track.number), fromMs)
+                .pipe(Effect.tap(() => selection(0)));
+            held.replacing = true;
+            const attempt = (effective: number, retained?: number) =>
+              Effect.gen(function* () {
+                const elapsed = (yield* now) - began;
+                let advanced = 0;
+                if (continuous && held.wants === 'play') advanced = Math.max(0, elapsed);
+                return yield* device
+                  .play(audioUrl(track.number, effective), retained ?? fromMs + advanced, {
+                    continuous,
+                    ready: offset !== 0 || continuous,
+                    intent: held.wants,
+                  })
+                  .pipe(
+                    Effect.filterOrFail(
+                      (status) => status.state !== 'failed',
+                      () =>
+                        PlaybackError.make({ operation: 'play', message: 'recording unavailable' }),
+                    ),
+                  );
+              });
+            return yield* attempt(offset).pipe(
+              Effect.tap(() => selection(offset)),
+              Effect.catchTag('PlaybackError', (error) => {
+                if (!ours() || offset === 0) return Effect.fail(error);
+                return Effect.logWarning('player.key.fallback').pipe(
+                  Effect.annotateLogs({ hymn: track.number, requested: offset, effective: 0 }),
+                  Effect.andThen(selection(0)),
+                  Effect.andThen(attempt(0, error.positionMs)),
+                );
+              }),
+              Effect.ensuring(
+                Effect.sync(() => {
+                  if (ours()) held.replacing = false;
+                }),
+              ),
+              Effect.tap((status) =>
+                Effect.flatMap(now, (settled) =>
+                  Effect.logInfo('player.key.settled').pipe(
+                    Effect.annotateLogs({
+                      hymn: track.number,
+                      requested: offset,
+                      started: began,
+                      settled,
+                      gapMs: settled - began,
+                      positionMs: status.positionMs,
+                    }),
+                  ),
+                ),
+              ),
+            );
+          });
         const load = (track: Track, fromMs: number) =>
           Effect.gen(function* () {
             held.wants = 'play';
             held.resuming = false;
             held.id += 1;
+            held.offset = keyOf(track);
             const asked = yield* now;
             held.proof = Proof.loaded(asked, fromMs);
             const seeking = { to: fromMs, asking: true };
             held.seeking = Option.liftPredicate(seeking, () => fromMs > 0);
             yield* show(Player.Loading({ track }));
             // The play's answer lands it: past 0, the adapter answers with its seek's answer.
-            const played = device.play(audioUrl(track.number), fromMs).pipe(
+            const id = held.id;
+            const played = playSet(track, keyOf(track), fromMs, false).pipe(
               Effect.tap((status) =>
-                Effect.flatMap(startedAt(asked, fromMs, status), (to) =>
-                  answeredAt(asked, to)(status),
+                Effect.when(
+                  Effect.flatMap(startedAt(asked, fromMs, status), (to) =>
+                    answeredAt(asked, to)(status),
+                  ),
+                  Effect.sync(() => held.id === id),
                 ),
               ),
               Effect.ensuring(Effect.sync(() => (seeking.asking = false))),
@@ -774,6 +899,15 @@ export const playerOn = (playback: Layer.Layer<Playback>, every: Duration.Input)
               yield* show(shown);
               yield* ask(track, device.resume, logged);
             });
+          if (
+            keyOf(track) !== held.offset ||
+            Option.exists(
+              get.registry.get(recording),
+              (selected) =>
+                selected.number === track.number && selected.requested !== selected.effective,
+            )
+          )
+            return fromPlace();
           return Player.$match(current, {
             Stopped: fromPlace,
             Failed: fromPlace,
@@ -927,6 +1061,53 @@ export const playerOn = (playback: Layer.Layer<Playback>, every: Duration.Input)
             }
             yield* ask(track, askSeek(ms), logged, true);
           });
+        if (KeyChange.$is('Key')(command)) {
+          const { number, offset } = command;
+          return yield* onHeld((track) =>
+            Effect.gen(function* () {
+              if (
+                track.number !== number ||
+                keyOf(track) !== soundingOffset(offset) ||
+                held.offset === soundingOffset(offset)
+              )
+                return yield* follow(track);
+              // A paused selection is applied on the next Play; the dial never starts sound.
+              if (held.wants === 'pause' || letGo(current) || Player.$is('Ended')(current)) return;
+              const read = yield* device.status.pipe(Effect.option);
+              const at = Option.getOrElse(
+                Option.map(held.proof.pending, (it) => it.target),
+                () =>
+                  Option.getOrElse(
+                    Option.map(read, (it) => it.positionMs),
+                    () => Option.getOrElse(held.proof.place, () => 0),
+                  ),
+              );
+              held.id += 1;
+              held.reading = Option.none();
+              held.seeking = Option.none();
+              const id = held.id;
+              const asked = yield* now;
+              yield* act(Option.some(at));
+              yield* ask(
+                track,
+                playSet(track, soundingOffset(offset), at, true).pipe(
+                  Effect.tap((status) =>
+                    Effect.when(
+                      answeredAt(asked, at)(status),
+                      Effect.sync(() => held.id === id),
+                    ),
+                  ),
+                ),
+                (error) =>
+                  Effect.logWarning('player.key.failed').pipe(
+                    Effect.annotateLogs({ hymn: number, offset, operation: error.operation }),
+                    Effect.as(false),
+                  ),
+                true,
+              );
+            }),
+          );
+        }
         /** The hymn the command is about: the one it starts, else the one held. */
         const subject = Option.liftPredicate(command, Command.$is('Start')).pipe(
           Option.map(({ track }) => track),
@@ -977,7 +1158,32 @@ export const playerOn = (playback: Layer.Layer<Playback>, every: Duration.Input)
     }),
   );
 
-  return { state, send, remote };
+  // Subscribe to the held hymn and its sounding offset, not a page or the
+  // capo. Playback ticks compare as the same primitive hymn number.
+  const heldNumber = Atom.map(state, (value) =>
+    Option.match(trackOf(value), {
+      onNone: () => 0,
+      onSome: (track) => track.number,
+    }),
+  );
+  const chosen = Atom.make((get) => {
+    const number = get(heldNumber);
+    if (number === 0) return { number, offset: 0 };
+    return { number, offset: soundingOffset(get(keyFor(number))) };
+  });
+  const keys = runtime.atom((get) =>
+    get.stream(chosen).pipe(
+      Stream.changesWith((a, b) => a.number === b.number && a.offset === b.offset),
+      Stream.runForEach(({ number, offset }) =>
+        Effect.sync(() => {
+          if (number !== 0 && offset !== held.offset)
+            get.set(send, KeyChange.Key({ number, offset }));
+        }),
+      ),
+    ),
+  );
+
+  return { state, send, remote, keys, recording };
 };
 
 /** A player's atoms: its state, the commands it takes and its lock-screen follower. */

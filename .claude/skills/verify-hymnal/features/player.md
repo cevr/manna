@@ -23,6 +23,10 @@ spacing`, `Keep screen on`).
 
 ## Sub-features
 
+- `player-key-set`: Play uses the held hymn's saved sounding Key. Printed key uses `warm-1`; offsets -5..-1 use `warm-1-down5..1`, and 1..6 use `warm-1-up1..6`.
+- `player-key-switch`: turning Key during Play replaces the global recording at the current musical time plus preparation time. A short gap is allowed. A paused Key selection starts nothing; the next Play uses that Key at the held place. Reset obeys the same rule.
+- `player-key-fallback`: an unavailable chosen set is tried once, then printed key is tried once at the retained place. The bar and sheet show `Recording in printed key. Chosen key unavailable. Play retries it.` A later Play retries the chosen key. A stale failed request cannot take back the newest selection.
+- `player-capo-invariant`: Capo 0→1→11→0 changes shapes alone. It makes no recording Play, Stop or Seek call and does not reset follow.
 - `player-play`: `Play hymn <n>` starts the recording; the button becomes `Pause hymn <n>`.
 - `player-pause`: `Pause hymn <n>` pauses; the button becomes `Play hymn <n>` again.
 - `player-bar`: the bar (region `Player`) shows on a hymn page and on every screen while the player holds a hymn. On a hymn page it holds, in order, `Key`, `Open player`, `Sound` and `Play hymn <n>`, and no number or title when its hymn is the page's own; off a page it holds no `Key`, and the opener holds the number and title. `Open player` tells the place (`0:30 of 2:00`). `Sound` and Play/Pause are marks of one size (about 22 pt in 44 by 44 targets), with no text (`Play <n>` shows while another hymn sounds over a page). The full player keeps its text buttons.
@@ -64,6 +68,7 @@ spacing`, `Keep screen on`).
 
 ## Gotchas
 
+- For the four `player-key-*`/`player-capo-invariant` rows, follow the playbulk silence rules on both platforms. Read Sound off immediately before every Play. Use no snapshots, screenshots, recordings or raw console captures. Read only control state, position and selected line indexes in memory. Open 100, Play once, turn Key one detent and Reset. Position must keep advancing and intent must remain Playing. Pause, turn Key, verify the position holds, then Play after reading Sound off again. Turn Capo 0→1→11 and reset without a Key change: the place keeps moving. Leave and return to the hymn to check the saved setting. Recording selection/fallback and native switch-gap arithmetic are proved by fake adapters; Sound-off drives prove score-clock continuity, not recording output or gap quality.
 - The simulator plays through the Mac's speakers. Never press Play on iOS with sound on; the web browser is muted by `sim boot`, so play there with sound on.
 - On iOS, press Play only once the `Sound` button reads off. The presented `sim snapshot` shows only `[button] "Sound"`; read its value with `agent-device snapshot --json --raw --observe-only --force-full --session verify-hymnal` (`checked` is on, `unchecked` is off). `sim tap label=Sound` turns it, and the choice is kept, so a relaunch (or another drive's) may have left it on. Put it back to `Sound on` at the end of a drive, after a relaunch, when the player holds no hymn.
 - Step 7 needs a known length, which only a play gives. On iOS, point `audioUrl` (`src/remote.ts`) at a silent local file for the drive alone (`ffmpeg -f lavfi -i anullsrc=r=44100:cl=mono -t 120 silent.mp3`, as `file:///<path>`: One's iOS audio takes `file://` or `https://` only), press Play in the sheet, then Pause. Revert the edit before any commit.

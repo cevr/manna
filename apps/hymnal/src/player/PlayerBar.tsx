@@ -59,6 +59,7 @@ import { type BoundThumb, Dials, useThumb } from './Dials';
 import { KeyButton } from './KeyButton';
 import { Seeker } from './Seeker';
 import { ThumbEvent } from './thumb';
+import { RecordingNotice } from './RecordingNotice';
 
 /** The bar docked under the stack, while the player holds a hymn. */
 export function PlayerBar() {
@@ -296,6 +297,7 @@ function Frame({
           </GestureDetector>
         </GestureHandlerRootView>
       </Animated.View>
+      <RecordingNotice number={track.number} />
       {drawing.docked && Option.isSome(shown) && <BackEdge />}
     </View>
   );

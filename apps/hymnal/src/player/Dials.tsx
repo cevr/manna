@@ -14,8 +14,8 @@
  * keeps the dials open, a tap on the key button closes them at once. A page
  * turn and the page's going end it too. In the player sheet the dials stay.
  *
- * Nothing here holds the player: a turn, a reset or a hold never reaches
- * the sound.
+ * The held hymn's sounding key is observed by the player. Capo and chords
+ * change only the reading; neither reaches the recording.
  */
 
 import * as Chord from '@manna/hymnal/chord';

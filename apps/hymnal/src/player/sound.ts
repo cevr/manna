@@ -33,7 +33,7 @@ import * as Semaphore from 'effect/Semaphore';
 
 import { type Clock as Run, clockAt, placeOf } from '../follow/clock';
 import type { Timeline } from '../follow/timeline';
-import { Playback, type PlaybackApi, PlaybackError, type Status } from './player';
+import { Playback, type PlaybackApi, PlaybackError, type Status, type PlayOptions } from './player';
 
 /** The hymn a recording's URL plays: its file is `<number>.mp3` (`src/remote.ts`). */
 export const hymnOf = (uri: string): Option.Option<number> =>
@@ -66,6 +66,7 @@ type Step = Data.TaggedEnum<{
     readonly at: number;
     readonly turn: number;
     readonly over: Deferred.Deferred<number>;
+    readonly options?: PlayOptions;
   };
 }>;
 const Step = Data.taggedEnum<Step>();
@@ -154,12 +155,12 @@ export const scoreClock = (
       at < end() && Option.match(held.recorded, { onNone: () => true, onSome: (ms) => at < ms });
 
     /** Hand the place to the device: it is to play the recording from `at`. */
-    const sounded = (uri: string, at: number) =>
+    const sounded = (uri: string, at: number, options?: PlayOptions) =>
       Effect.gen(function* () {
         yield* handOver;
         held.clock = Option.none();
         held.sounding = true;
-        return Step.Sound({ uri, at, turn: held.turn, over: held.over });
+        return Step.Sound({ uri, at, turn: held.turn, over: held.over, options });
       });
 
     const answer = (status: Effect.Effect<Status, PlaybackError>) =>
@@ -181,9 +182,9 @@ export const scoreClock = (
     const settle = (step: Step): Effect.Effect<Status, PlaybackError> =>
       Step.$match(step, {
         Answer: ({ status }) => Effect.succeed(status),
-        Sound: ({ uri, at, turn, over }) =>
+        Sound: ({ uri, at, turn, over, options }) =>
           Effect.raceFirst(
-            Effect.asSome(Effect.exit(device.play(uri, at))),
+            Effect.asSome(Effect.exit(device.play(uri, at, options))),
             Effect.as(Deferred.await(over), Option.none()),
           ).pipe(Effect.flatMap((told) => lock.withPermit(played(turn, told)))),
       });
@@ -192,13 +193,13 @@ export const scoreClock = (
     const locked = (step: Effect.Effect<Step, PlaybackError>) =>
       Effect.flatMap(lock.withPermit(step), settle);
 
-    const play = (uri: string, fromMs: number) =>
+    const play = (uri: string, fromMs: number, options?: PlayOptions) =>
       Effect.gen(function* () {
         yield* handOver;
         held.uri = Option.some(uri);
         held.timeline = Option.flatMap(hymnOf(uri), timelineFor);
         held.recorded = Option.none();
-        if (yield* SubscriptionRef.get(sound)) return yield* sounded(uri, fromMs);
+        if (yield* SubscriptionRef.get(sound)) return yield* sounded(uri, fromMs, options);
         if (Option.isNone(held.timeline))
           return yield* PlaybackError.make({ operation: 'play', message: `no timing for ${uri}` });
         if (held.sounding) yield* device.stop;
@@ -285,7 +286,7 @@ export const scoreClock = (
     );
 
     const api: PlaybackApi = {
-      play: (uri, fromMs) => locked(play(uri, fromMs)),
+      play: (uri, fromMs, options) => locked(play(uri, fromMs, options)),
       pause: lock.withPermit(
         Effect.gen(function* () {
           const now = yield* Clock.currentTimeMillis;

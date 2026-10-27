@@ -45,6 +45,7 @@ import { clock } from './time';
 import { ThumbEvent } from './thumb';
 import { TitleGo, titleGoes } from './title';
 import { Toggle } from './Toggle';
+import { RecordingNotice } from './RecordingNotice';
 
 export function FullPlayer() {
   return Option.match(usePlayer(), {
@@ -109,6 +110,7 @@ function Held({
         <Text aria-live="polite" style={styles.caption} dynamicTypeRamp="subheadline">
           {caption(state)}
         </Text>
+        <RecordingNotice number={track.number} />
         <View style={styles.position}>
           <Scrubber at={at} length={length} onSeek={(seconds) => send(Command.Seek({ seconds }))} />
           <View style={styles.times}>

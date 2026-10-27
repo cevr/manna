@@ -128,12 +128,23 @@ hymn's move.
 
 ## The player
 
-A hymn page plays the hymn's 1985 recording from `audioUrl(n)`: a Play or
+A hymn page plays the hymn's 1985 recording from `audioUrl(n, offset)`: a Play or
 Pause button in the accent (a `UIButton`'s title on iOS, an accent fill
 under the onAccent text on the web and Android), a bar to seek, and the time played and the
 length. The recording plays on when the reader leaves the hymn, and a bar
 docked at the foot of the screen shows the hymn playing (its number, title and Play or Pause);
 a press on it opens the hymn. Playing another hymn replaces the first.
+
+The held hymn's saved Key selects its signed recording set (offset -5…6).
+During Play, a Key change replaces One's global session at the retained
+musical place plus elapsed preparation time. A short gap is allowed; numeric
+`player.key.settled` timestamps report it. A paused selection waits for the
+next Play. Missing sets fall back once to printed key at the retained place;
+the bar and sheet show that fallback, and a later Play retries the chosen
+Key. Capo changes shapes only. It dispatches no playback operation. The
+lock-screen and Media Session continue to use the global One session.
+`src/player/keyplay.slow.test.ts` covers these rules through the real player,
+score clock and adapter with a fake device; it makes no sound.
 
 - `src/player/player.ts` holds the player: its states (idle, loading,
   playing, buffering, paused, ended, stopped, failed) as an Effect atom, and
