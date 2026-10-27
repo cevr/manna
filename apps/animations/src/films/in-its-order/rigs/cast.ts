@@ -249,7 +249,8 @@ export const CAST = castTable({
           lean: 0,
           numbers: { mouth: 3 },
           reach: [['near', [62, 392]]],
-          props: [{ name: 'bottle', draw: bottle([-81, -299]), behind: true }],
+          // The bottle behind his hand, held round its middle.
+          props: [{ name: 'bottle', draw: bottle([-86, -290], 0.9), behind: true }],
         },
       ),
       // In profile to the left, both hands up, his head tipped back, the plate at his mouth.
@@ -262,8 +263,8 @@ export const CAST = castTable({
           lean: 0,
           numbers: { tilt: 0.35, mouth: 0 },
           reach: [
-            ['near', [466, 374]],
-            ['far', [390, 334]],
+            ['near', [404, 360]],
+            ['far', [366, 344]],
           ],
           props: [{ name: 'plate', draw: plate([-41, -377], 0.55) }],
         },
@@ -344,7 +345,7 @@ export const CAST = castTable({
         LEAD.leadFeastThreeQuarterLeft,
         RIGS.leadFeastThreeQuarterLeftProp,
         {
-          tilt: 0.2,
+          tilt: 0.12,
           browTilt: 0.4,
           mouth: -2.5,
         },
