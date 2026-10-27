@@ -10,15 +10,13 @@ import {
   type Path,
   Result,
   Schema,
-  Stream,
 } from 'effect';
-import * as ChildProcess from 'effect/process/ChildProcess';
-import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 import { describe, expect, it } from 'effect-bun-test';
 import { HymnalService, HymnId } from '@manna/core/hymnal';
 import { layerHymnalBun } from '@manna/core/hymnal/bun';
 
 import { buildDatabase, DATA, OUTPUT, readDatabaseSources } from '../scripts/compile-db.js';
+import { readSourceText } from '../scripts/source-text.js';
 import { keyOnPitch, pitchClass } from './chord.js';
 import { type DatabaseSources, validateSources } from './database.js';
 import { type Fit, type Hymn, type Part, type Reason, type Syllable, sung } from './hymn.js';
@@ -92,44 +90,54 @@ const searchProbes = [
   'the',
   'in',
   'of',
+  'a*',
+  'é',
+  '{title}',
+  'title:',
 ] as const;
 
-it.effect('keeps legacy search IDs and order for 61 probes at limits 20 and 920', () =>
-  Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
-    const dir = yield* fs.makeTempDirectoryScoped();
-    const spawner = yield* ChildProcessSpawner;
-    const child = yield* spawner.spawn(
-      ChildProcess.make(
-        'git',
-        ['show', 'e2a5f052397882f5eb1a7f951de27d00f1ff3a04:packages/core/data/hymnal.db'],
-        {
-          cwd: new URL('../../..', import.meta.url).pathname,
-          env: { HOME: dir },
-          extendEnv: true,
-          forceKillAfter: '5 seconds',
-        },
-      ),
-    );
-    const [chunks, code] = yield* Effect.all(
-      [Stream.runCollect(child.stdout), child.exitCode, Stream.runDrain(child.stderr)],
-      { concurrency: 3 },
-    );
-    expect(Number(code)).toBe(0);
-    const legacy = `${dir}/legacy.db`;
-    yield* fs.writeFile(legacy, Buffer.concat(chunks));
-    const base = Context.get(yield* Layer.build(serviceLayer(legacy)), HymnalService);
-    const head = Context.get(yield* Layer.build(serviceLayer(OUTPUT)), HymnalService);
-    for (const [probe, query] of searchProbes.entries())
-      for (const limit of [20, 920]) {
-        const expected = (yield* base.searchHymns(query, limit)).map((h) => Number(h.id));
-        const actual = (yield* head.searchHymns(query, limit)).map((h) => Number(h.id));
-        expect(
-          actual.length === expected.length && actual.every((id, i) => id === expected[i]),
-          `search:probe=${probe}:limit=${limit}`,
-        ).toBe(true);
-      }
-  }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+it.effect(
+  'keeps legacy search IDs and order for word and operator probes without Git history',
+  () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const dir = yield* fs.makeTempDirectoryScoped();
+      const legacy = `${dir}/legacy.db`;
+      // The independent source capture preserves every v0 title and ordered verse byte.
+      const source = yield* readSourceText();
+      yield* Effect.acquireUseRelease(
+        Effect.sync(() => new Database(legacy)),
+        (db) =>
+          Effect.sync(() => {
+            db.exec(
+              `CREATE TABLE hymns(id INTEGER PRIMARY KEY,name TEXT,category_id INTEGER,category TEXT,verses TEXT)`,
+            );
+            db.transaction(() => {
+              const insert = db.query('INSERT INTO hymns VALUES(?,?,?,?,?)');
+              for (const hymn of source.hymns)
+                insert.run(
+                  hymn.number,
+                  hymn.title,
+                  hymn.categoryId,
+                  source.categories.find((c) => c.id === hymn.categoryId)?.name ?? '',
+                  json(hymn.verses),
+                );
+            })();
+          }),
+        (db) => Effect.sync(() => db.close()),
+      );
+      const base = Context.get(yield* Layer.build(serviceLayer(legacy)), HymnalService);
+      const head = Context.get(yield* Layer.build(serviceLayer(OUTPUT)), HymnalService);
+      for (const [probe, query] of searchProbes.entries())
+        for (const limit of [20, 920]) {
+          const expected = (yield* base.searchHymns(query, limit)).map((h) => Number(h.id));
+          const actual = (yield* head.searchHymns(query, limit)).map((h) => Number(h.id));
+          expect(
+            actual.length === expected.length && actual.every((id, i) => id === expected[i]),
+            `search:probe=${probe}:limit=${limit}`,
+          ).toBe(true);
+        }
+    }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
 );
 type SqlValue = number | string | null;
 type Row = Partial<

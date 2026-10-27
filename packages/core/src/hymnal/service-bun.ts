@@ -65,6 +65,16 @@ const normalizedRow = (db: Database, id: number): Option.Option<HymnRow> => {
 };
 
 const literalFts = (query: string) => `"${query.replaceAll('"', '""')}"`;
+/** Operators stay literal; single-letter tokens would broaden through Unicode folding. */
+const canUseFts = (query: string) => {
+  if (/[^\p{L}\p{M}\p{N}\s'’]/u.test(query)) return false;
+  const tokens =
+    query
+      .normalize('NFD')
+      .replaceAll(/\p{M}/gu, '')
+      .match(/[\p{L}\p{N}]+/gu) ?? [];
+  return tokens.some((token) => Array.from(token).length > 1);
+};
 const literalLike = (query: string) =>
   `%${query.toLowerCase().replaceAll('\\', '\\\\').replaceAll('%', '\\%').replaceAll('_', '\\_')}%`;
 const boundedLimit = (limit: number) => {
@@ -72,9 +82,61 @@ const boundedLimit = (limit: number) => {
   if (limit < 0) return 920;
   return Math.min(920, Math.max(0, Math.floor(limit)));
 };
-const categorySql = (version: number) => {
-  if (version === 2) return 'SELECT id, name FROM topics ORDER BY id';
-  return 'SELECT * FROM categories ORDER BY id';
+
+/** Each format owns its queries; the layer selects one reader before serving requests. */
+const legacyReader = (db: Database) => ({
+  readRow: (id: number) => {
+    const value = db.query('SELECT * FROM hymns WHERE id=?').get(id);
+    if (Predicate.isNull(value)) return Option.none<HymnRow>();
+    return Option.some(Schema.decodeUnknownSync(HymnRow)(value));
+  },
+  categories: () => db.query<CategoryRow, []>('SELECT * FROM categories ORDER BY id').all(),
+  categoryRows: (id: number) =>
+    db.query<HymnRow, [number]>('SELECT * FROM hymns WHERE category_id = ? ORDER BY id').all(id),
+  searchRows: (query: string, limit: number) => {
+    const term = `%${query.toLowerCase()}%`;
+    return db
+      .query<HymnRow, [string, string, number]>(`
+      SELECT * FROM hymns WHERE LOWER(name) LIKE ? OR LOWER(verses) LIKE ?
+      ORDER BY id LIMIT ?`)
+      .all(term, term, limit);
+  },
+});
+
+const normalizedReader = (db: Database) => {
+  const readRow = (id: number) => normalizedRow(db, id);
+  const readIds = (ids: readonly { id: number }[]) =>
+    ids.flatMap(({ id }) => Option.toArray(readRow(id)));
+  const likeSql = `SELECT rowid AS id FROM hymns_fts
+    WHERE LOWER(title) LIKE ? ESCAPE '\\' OR LOWER(full_text) LIKE ? ESCAPE '\\'`;
+  return {
+    readRow,
+    categories: () => db.query<CategoryRow, []>('SELECT id, name FROM topics ORDER BY id').all(),
+    categoryRows: (id: number) =>
+      readIds(
+        db
+          .query<{ id: number }, [number]>(
+            'SELECT hymn_id AS id FROM hymn_topics WHERE topic_id=? ORDER BY hymn_id',
+          )
+          .all(id),
+      ),
+    searchRows: (query: string, limit: number) => {
+      const term = literalLike(query);
+      if (!canUseFts(query))
+        return readIds(
+          db
+            .query<{ id: number }, [string, string, number]>(`${likeSql} ORDER BY id LIMIT ?`)
+            .all(term, term, limit),
+        );
+      return readIds(
+        db
+          .query<{ id: number }, [string, string, string, number]>(`
+        SELECT rowid AS id FROM hymns_fts WHERE hymns_fts MATCH ?
+        UNION ${likeSql} ORDER BY id LIMIT ?`)
+          .all(`{title full_text}: ${literalFts(query)}`, term, term, limit),
+      );
+    },
+  };
 };
 
 export const layerHymnalBun: Layer.Layer<
@@ -135,12 +197,7 @@ export const layerHymnalBun: Layer.Layer<
         cause: version,
         message: 'Unsupported hymnal corpus version',
       });
-    const readRow = (id: number) => {
-      if (version === 2) return normalizedRow(db, id);
-      const value = db.query('SELECT * FROM hymns WHERE id=?').get(id);
-      if (Predicate.isNull(value)) return Option.none<HymnRow>();
-      return Option.some(Schema.decodeUnknownSync(HymnRow)(value));
-    };
+    const reader = { 0: legacyReader, 2: normalizedReader }[version](db);
     const summary = (row: HymnRow) =>
       HymnSummary.make({
         id: HymnId.make(row.id),
@@ -152,7 +209,7 @@ export const layerHymnalBun: Layer.Layer<
     const getHymn = Effect.fn('HymnalService.getHymn')(function* (id: HymnId) {
       const hymn = yield* Effect.try({
         try: () =>
-          Option.map(readRow(id), (row) =>
+          Option.map(reader.readRow(id), (row) =>
             Hymn.make({
               id: HymnId.make(row.id),
               name: row.name,
@@ -169,9 +226,8 @@ export const layerHymnalBun: Layer.Layer<
 
     const getCategories = Effect.try({
       try: () =>
-        db
-          .query<CategoryRow, []>(categorySql(version))
-          .all()
+        reader
+          .categories()
           .map((row) => Category.make({ id: CategoryId.make(row.id), name: row.name })),
       catch: (cause) => HymnalError.make({ operation: 'getCategories', cause }),
     }).pipe(Effect.withSpan('HymnalService.getCategories'));
@@ -179,20 +235,7 @@ export const layerHymnalBun: Layer.Layer<
     const getHymnsByCategory = Effect.fn('HymnalService.getHymnsByCategory')(
       (categoryId: CategoryId) =>
         Effect.try({
-          try: () => {
-            if (version === 0)
-              return db
-                .query<HymnRow, [number]>('SELECT * FROM hymns WHERE category_id = ? ORDER BY id')
-                .all(categoryId)
-                .map(summary);
-            return db
-              .query<{ hymn_id: number }, [number]>(
-                'SELECT hymn_id FROM hymn_topics WHERE topic_id=? ORDER BY hymn_id',
-              )
-              .all(categoryId)
-              .flatMap(({ hymn_id }) => Option.toArray(readRow(hymn_id)))
-              .map(summary);
-          },
+          try: () => reader.categoryRows(categoryId).map(summary),
           catch: (cause) => HymnalError.make({ operation: 'getHymnsByCategory', cause }),
         }),
     );
@@ -203,35 +246,7 @@ export const layerHymnalBun: Layer.Layer<
           const maximum = boundedLimit(limit);
           // SQLite text/FTS treats NUL as a terminator; no corpus entry contains it.
           if (query.includes('\0')) return [];
-          if (version === 2) {
-            const term = literalLike(query);
-            return db
-              .query<{ id: number }, [string, string, string, number]>(`
-              SELECT rowid AS id FROM hymns_fts WHERE hymns_fts MATCH ?
-              UNION SELECT rowid AS id FROM hymns_fts
-                WHERE LOWER(title) LIKE ? ESCAPE '\\' OR LOWER(full_text) LIKE ? ESCAPE '\\'
-              ORDER BY id LIMIT ?`)
-              .all(`{title full_text}: ${literalFts(query)}`, term, term, maximum)
-              .flatMap(({ id }) => Option.toArray(readRow(id)))
-              .map(summary);
-          }
-          const searchTerm = `%${query.toLowerCase()}%`;
-          return db
-            .query<HymnRow, [string, string, number]>(
-              `SELECT * FROM hymns
-                 WHERE LOWER(name) LIKE ? OR LOWER(verses) LIKE ?
-                 ORDER BY id
-                 LIMIT ?`,
-            )
-            .all(searchTerm, searchTerm, maximum)
-            .map((row) =>
-              HymnSummary.make({
-                id: HymnId.make(row.id),
-                name: row.name,
-                category: row.category,
-                firstLine: firstLineFromJson(row.verses),
-              }),
-            );
+          return reader.searchRows(query, maximum).map(summary);
         },
         catch: (cause) => HymnalError.make({ operation: 'searchHymns', cause }),
       }),

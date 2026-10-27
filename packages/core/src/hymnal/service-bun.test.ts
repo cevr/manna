@@ -97,7 +97,7 @@ const writeSynthetic = (file: string, mode: 'normalized' | 'unknown' | 'decode' 
       INSERT INTO hymn_topics VALUES(1,1),(2,1);
       INSERT INTO stanzas VALUES(1,1,0,0),(2,1,1,-1),(3,2,0,0);
       INSERT INTO lines VALUES(1,0,'alpha springboard'),(1,1,'omega stanza'),(2,0,'refrain token'),(3,0,'alpha second');`);
-    const title = 'O\'Brien "Delta" Ωmega';
+    const title = 'O\'Brien "Delta" Ωmega a e title';
     db.query('INSERT INTO hymns VALUES(?,?,?)').run(1, title, 'hymn');
     db.query(
       'INSERT INTO hymns_fts(rowid,title,first_line,refrain,full_text,topics) VALUES(?,?,?,?,?,?)',
@@ -135,6 +135,20 @@ const syntheticLayer = (mode: Parameters<typeof writeSynthetic>[1]) =>
   ).pipe(Layer.provide(BunServices.layer), Layer.fresh);
 
 describe('versioned corpus reader', () => {
+  it.effect(
+    'keeps operator-like queries and lone accented letters on literal substring search',
+    () =>
+      Effect.gen(function* () {
+        const service = yield* HymnalService;
+        for (const query of ['a*', 'é', '{title}', 'title:'])
+          expect(
+            (yield* service.searchHymns(query)).map((h) => Number(h.id)),
+            'literal-query',
+          ).toEqual([]);
+        expect((yield* service.searchHymns('title')).map((h) => Number(h.id))).toEqual([1]);
+      }).pipe(Effect.provide(syntheticLayer('normalized'))),
+  );
+
   it.effect('excludes topic-only matches from title and text search', () =>
     Effect.gen(function* () {
       const service = yield* HymnalService;

@@ -51,6 +51,16 @@ The form of an entry, each field on its own line:
 
 ## Process and tooling
 
+### hymn-search-literal-operators
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "FTS adds word matches for punctuation-only and operator-like input that the substring search never returned"
+- **Source:** hymndb/round-2-findings.md m1
+- **Wrong:** Operator-like input and a lone accented letter gained broad token matches.
+- **Cause:** FTS tokenization discarded the literal symbols or folded a single letter's diacritic.
+- **Guard:** code: `packages/core/src/hymnal/service-bun.test.ts` `keeps operator-like queries and lone accented letters on literal substring search`
+
 ### hymn-source-package-boundaries
 
 - **Date:** 2026-10-27
