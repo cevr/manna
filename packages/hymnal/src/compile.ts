@@ -170,12 +170,12 @@ const place = (
 
 /**
  * Moves each guitar change to where a guitarist strikes it (`placement.ts`,
- * rule `strong`): the next strong beat, never onto or past the next change
- * nor past the end of the line's last note. A line's opening chord moves
+ * by the supplied rule): later within the line, never onto or past the next
+ * change nor past the end of the line's last note. A line's opening chord moves
  * only when a different chord ends the laying's line before it, so a
  * stanza's first line never moves. Syllables sharing the note before them
- * carry none, as before. The compiler keeps these lines only for a hymn whose
- * melody confirms the file's bars.
+ * carry none. The compiler selects the strong-beat readings only when the
+ * melody confirms the file's bars; otherwise it uses the original anchors.
  */
 const strike = (
   score: Score.Score,
@@ -236,7 +236,9 @@ interface Laid {
   readonly lines: Syllable[][];
   /** The same lines with each guitar chord where a guitarist strikes it (`strike`). */
   readonly struck: Syllable[][];
+  /** Strong-beat anchors with brief changes folded and redundant returns removed. */
   readonly simpler: Syllable[][];
+  /** Original anchors with brief changes folded, for an unconfirmed grid. */
   readonly folded: Syllable[][];
   /** Each line's syllable starts in ticks, as `lines`; absent when laid as words alone. */
   readonly starts: number[][] | undefined;
@@ -386,7 +388,7 @@ const versesOf = (source: Source) => {
   });
 };
 
-/** Compiles a hymn from its text and its MIDI file. */
+/** Compiles three placement readings from one melody and alignment per stanza. */
 export const compilePlacements = (
   source: Source,
 ): Effect.Effect<Record<Placement.Placement, Hymn>, Midi.MidiParseError | VerseLayoutError> =>

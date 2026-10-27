@@ -3,8 +3,9 @@
  * functions over one line's sung syllables (each its start, length and
  * melody key in the file's ticks), its chord changes as they come in the
  * file, and the file's meters. The compiler places every guitar chord by
- * `strong` (R1, the owner's pick, 2026-10-24: `compile.ts`); the other rules
- * are the chordfeel study's candidates, kept for its page.
+ * `strong` when the melody confirms the grid (On the beat), then folds
+ * brief changes for Simpler, or keeps the original anchors for File.
+ * The other rules are the chordfeel study's candidates.
  *
  * Every rule keeps a line's chords in order and moves a change only later
  * in its line: never onto or past the next change's place today, never to
@@ -413,6 +414,7 @@ const moveEach = (line: Line, grid: Grid, target: Target): Change[] => {
 /**
  * Folds each change that lasts less than a beat into the chord before it;
  * a first change still that short gives its place to the change after it.
+ * Only changes from the harmony left sounding are retained.
  */
 const foldShort = (line: Line, grid: Grid, changes: readonly Change[]): Change[] => {
   const lengthOf = (i: number, list: readonly Change[]) => {
@@ -433,7 +435,10 @@ const foldShort = (line: Line, grid: Grid, changes: readonly Change[]): Change[]
   ) {
     out.splice(0, 2, { ...second, syllable: first.syllable, at: first.at });
   }
-  return out;
+  return out.filter((change, i) => {
+    const previous = out[i - 1];
+    return previous === undefined || !Chord.equals(previous.chord, change.chord);
+  });
 };
 
 const TARGETS: Record<RuleId, (line: Line, grid: Grid) => Change[]> = {

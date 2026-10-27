@@ -229,6 +229,36 @@ describe('R2 melody chord tone', () => {
 });
 
 describe('R3 minimum length', () => {
+  for (const rule of ['length', 'strong+length'] as const)
+    check(`${rule} shows only changes after folding a brief return`, () => {
+      const tune = syllables([0, 8, 60], [8, 2, 62], [10, 4, 64]);
+      expect(
+        Placement.apply(
+          rule,
+          line(tune, [
+            [0, C],
+            [1, G],
+            [2, C],
+          ]),
+          FOUR,
+        ),
+      ).toEqual([{ syllable: 0, at: 0, chord: C }]);
+      // A short opening gives its place to G; a later G adds no change.
+      const opening = syllables([0, 2, 60], [2, 6, 62], [8, 2, 64], [10, 4, 65]);
+      expect(
+        Placement.apply(
+          rule,
+          line(opening, [
+            [0, C],
+            [1, G],
+            [2, F],
+            [3, G],
+          ]),
+          FOUR,
+        ),
+      ).toEqual([{ syllable: 0, at: 0, chord: G }]);
+    });
+
   check('folds a change shorter than a beat into the chord before it', () => {
     const tune = syllables([0, 4, 60], [4, 2, 62], [6, 2, 64], [8, 8, 65]);
     expect(

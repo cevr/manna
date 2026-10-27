@@ -6,6 +6,71 @@ import { expect, it } from 'effect-bun-test';
 import { Hymn } from './hymn.js';
 import { Playback, PlacementData, applyMetadata, metadataOf } from './playback.js';
 
+const collectVariant = (
+  raw: string,
+  number: number,
+  data: URL,
+  variants: Map<number, typeof PlacementData.Type>,
+  placementNumbers: number[],
+) => {
+  const decoded = Schema.decodeOption(Schema.fromJsonString(PlacementData))(raw);
+  if (decoded._tag === 'None') return false;
+  variants.set(number, decoded.value);
+  if (decoded.value.placements.file.length || decoded.value.placements.simpler.length)
+    placementNumbers.push(number);
+  const digest = new Bun.CryptoHasher('sha256')
+    .update(readFileSync(new URL(`sdah-1985/${String(number).padStart(3, '0')}.json`, data)))
+    .digest('hex');
+  return raw.endsWith('\n') && !raw.trimEnd().includes('\n') && decoded.value.sourceHash === digest;
+};
+
+const repeatsInLine = (
+  line: Playback['stanzas'][number]['lines'][number],
+  patches: ReadonlyMap<string, ReadonlyArray<ReadonlyArray<number>>>,
+  p: number,
+  l: number,
+) => {
+  const repeats: number[] = [];
+  let before: readonly number[] | undefined;
+  line.forEach((s, k) => {
+    const chords =
+      patches.get(`${p}:${l}:${k}`) ?? s.guitar.map((c) => [c.root, c.quality, c.bass, c.at]);
+    for (const chord of chords) {
+      if (before && chord.slice(0, 3).every((value, i) => value === before?.[i])) repeats.push(k);
+      before = chord;
+    }
+  });
+  return repeats;
+};
+
+/** Only a different harmony is a change; this oracle does not fold events. */
+const repeatedChanges = (
+  scores: ReadonlyMap<number, Playback>,
+  variants: ReadonlyMap<number, typeof PlacementData.Type>,
+) => {
+  const repeats: number[][] = [];
+  for (const [number, score] of scores) {
+    for (const mode of ['beat', 'simpler', 'file'] as const) {
+      const changes = mode === 'beat' ? [] : (variants.get(number)?.placements[mode] ?? []);
+      const patches = new Map(changes.map(([p, l, k, chords]) => [`${p}:${l}:${k}`, chords]));
+      [...score.stanzas, ...score.refrain].forEach((part, p) => {
+        part.lines.forEach((line, l) => {
+          repeats.push(
+            ...repeatsInLine(line, patches, p, l).map((k) => [
+              number,
+              p,
+              l,
+              k,
+              ['beat', 'simpler', 'file'].indexOf(mode),
+            ]),
+          );
+        });
+      });
+    }
+  }
+  return repeats;
+};
+
 test('playback sidecars stay one line, hymn-local and below 17 MB', () => {
   const data = new URL('../data/', import.meta.url);
   const folder = new URL('playback/', data);
@@ -15,29 +80,23 @@ test('playback sidecars stay one line, hymn-local and below 17 MB', () => {
   let bytes = 0;
   let hymns = 0;
   let alternatives = 0;
+  const placementNumbers: number[] = [];
+  const scores = new Map<number, Playback>();
+  const variants = new Map<number, typeof PlacementData.Type>();
   for (const name of names) {
     const raw = readFileSync(new URL(name, folder), 'utf8');
     bytes += Buffer.byteLength(raw);
     if (/^\d{3}\.placements\.json$/.test(name)) {
       alternatives++;
       const number = Number(name.slice(0, 3));
-      const decoded = Schema.decodeOption(Schema.fromJsonString(PlacementData))(raw);
-      const digest = new Bun.CryptoHasher('sha256')
-        .update(readFileSync(new URL(`sdah-1985/${String(number).padStart(3, '0')}.json`, data)))
-        .digest('hex');
-      if (
-        !raw.endsWith('\n') ||
-        raw.trimEnd().includes('\n') ||
-        decoded._tag === 'None' ||
-        decoded.value.sourceHash !== digest
-      )
-        faults.push([number, 5]);
+      if (!collectVariant(raw, number, data, variants, placementNumbers)) faults.push([number, 5]);
     }
     if (!/^\d{3}\.json$/.test(name)) continue;
     const number = Number(name.slice(0, 3));
     hymns++;
     if (!raw.endsWith('\n') || raw.trimEnd().includes('\n')) faults.push([number, 1]);
     const metadata = JSON.parse(raw);
+    scores.set(number, metadata);
     const row = census.census.find((row: { number: number }) => row.number === number);
     const levels = [...metadata.stanzas, ...metadata.refrain].map((part) => part.level);
     if (JSON.stringify(row?.levels) !== JSON.stringify(levels)) faults.push([number, 4]);
@@ -57,6 +116,13 @@ test('playback sidecars stay one line, hymn-local and below 17 MB', () => {
   }
   expect(hymns).toBe(695);
   expect(alternatives).toBe(695);
+  const manifest = JSON.parse(readFileSync(new URL('manifest.json', folder), 'utf8'));
+  expect(placementNumbers.toSorted((a, b) => a - b)).toEqual(manifest.placements);
+  // Independent changes-only statement over the stored projection: a label
+  // equal to the previous label in its line is never a new chord change.
+  const repeats = repeatedChanges(scores, variants);
+  expect(repeats.length).toBe(0);
+  expect(repeats.filter(([number, p, l]) => number === 388 && p === 0 && l === 1)).toEqual([]);
   expect(faults.slice(0, 10)).toEqual([]);
   expect(bytes).toBeLessThan(17_000_000);
   const changed = census.census

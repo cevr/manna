@@ -1,6 +1,6 @@
 /* oxlint-disable effect/noNodeBuiltinImport -- read-only corpus fixture; compilation remains in memory. */
 import { readFileSync } from 'node:fs';
-import { Console, Effect, Schema } from 'effect';
+import { Console, Effect, Option, Schema } from 'effect';
 import { expect, it } from 'effect-bun-test';
 import * as Align from './align.js';
 import * as Midi from './midi.js';
@@ -27,12 +27,26 @@ const sameNotes = (actual: readonly Midi.Note[], expected: readonly Midi.Note[])
       note.end === expected[i]?.end &&
       note.key === expected[i]?.key,
   );
-const encode = Schema.encodeEffect(Schema.fromJsonString(Playback));
 const linesOf = (text: string) =>
   text
     .split('\n')
     .map((s) => s.trim())
     .filter(Boolean);
+// Values are schema-checked at their input boundary; comparisons need no
+// second validation traversal through each cut and chord.
+const json = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
+const withoutGuitar = (hymn: Hymn) => {
+  const part = (p: Hymn['stanzas'][number]) => {
+    if (p._tag === 'Plain') return p;
+    return { ...p, lines: p.lines.map((line) => line.map(({ guitar: _guitar, ...s }) => s)) };
+  };
+  const parts = hymn.stanzas.map(part);
+  const refrain = Option.map(Option.fromUndefinedOr(hymn.refrain), (r) => ({
+    ...r,
+    part: part(r.part),
+  }));
+  return json({ ...hymn, stanzas: parts, refrain: Option.getOrUndefined(refrain) });
+};
 
 const groupFaults = (alignment: Align.Alignment, start: number) => {
   const faults: number[][] = [];
@@ -129,25 +143,36 @@ const refrainFaults = (
   return faults;
 };
 
-const alignmentFaults = (
-  fresh: Hymn,
-  score: Score.Score,
-  source: Parameters<typeof compile>[0],
-  midi: Midi.Midi,
-) => {
+/** One independent alignment per stanza, shared by the timing and placement oracles. */
+const alignedStanzas = (score: Score.Score, source: Parameters<typeof compile>[0]) => {
   const stanzas = source.verses.filter((v) => v.id >= 0).toSorted((a, b) => a.id - b.id);
   const refrain = source.verses.find((v) => v.id < 0);
   const lastOnly = source.order === 'first-and-last' || source.order === 'after-last';
+  return stanzas.map((stanza, v) => {
+    const lines = linesOf(stanza.text);
+    const tail =
+      refrain === undefined || (lastOnly && v !== stanzas.length - 1) ? [] : linesOf(refrain.text);
+    const index = Math.min(v, score.verses.spans.length - 1);
+    return {
+      v,
+      count: lines.length,
+      span: score.verses.spans[index],
+      alignment: Align.align(score, index, [...lines, ...tail]),
+    };
+  });
+};
+
+const alignmentFaults = (
+  fresh: Hymn,
+  score: Score.Score,
+  aligned: ReturnType<typeof alignedStanzas>,
+  midi: Midi.Midi,
+) => {
   const faults: number[][] = [];
   let checked = 0,
     melismas = 0,
     shared = 0;
-  for (const [v, stanza] of stanzas.entries()) {
-    const tail =
-      refrain === undefined || (lastOnly && v !== stanzas.length - 1) ? [] : linesOf(refrain.text);
-    const index = Math.min(v, score.verses.spans.length - 1);
-    const span = score.verses.spans[index];
-    const alignment = Align.align(score, index, [...linesOf(stanza.text), ...tail]);
+  for (const { v, count, span, alignment } of aligned) {
     if (!Number.isFinite(alignment.cost)) continue;
     const { faults: groups, anchors } = groupFaults(alignment, span?.start ?? 0);
     faults.push(...groups.map((f) => [v, ...f]));
@@ -162,7 +187,7 @@ const alignmentFaults = (
           fresh,
           v,
           anchors,
-          linesOf(stanza.text).length,
+          count,
           span,
           score.verses.spans[0]?.start ?? 0,
           shift,
@@ -255,7 +280,12 @@ const expectedChanges = (
     });
     if (kept[0] && kept[1] && kept[1].tick - kept[0].tick < beat(meter(kept[0].tick)))
       kept.splice(0, 2, { ...kept[0], chord: kept[1].chord });
-    events = kept;
+    // A displayed event must change the harmony still sounding after folds.
+    // State this independently of the production fold's retention predicate.
+    events = kept.filter((event, i) => {
+      const prior = kept[i - 1];
+      return prior === undefined || !Chord.equals(event.chord, prior.chord);
+    });
   }
   return events;
 };
@@ -327,12 +357,16 @@ const comparePlacementLine = (
         );
       });
     if (!same) faults.push([v, l, ['beat', 'simpler', 'file'].indexOf(mode)]);
+    if (
+      actual.some((c, i) => {
+        const prior = actual[i - 1];
+        return prior !== undefined && Chord.equals(c.chord, prior.chord);
+      })
+    )
+      faults.push([v, l, ['beat', 'simpler', 'file'].indexOf(mode), 16]);
   }
   return faults;
 };
-
-const refrainLines = (text: string | undefined, lastOnly: boolean, stored: boolean) =>
-  text === undefined || (lastOnly && !stored) ? [] : linesOf(text);
 
 const generatedRuleMatches = (
   line: Placement.Line,
@@ -419,11 +453,11 @@ const placementFaults = (
   modes: Record<Placement.Placement, Hymn>,
   score: Score.Score,
   source: Parameters<typeof compile>[0],
+  aligned: ReturnType<typeof alignedStanzas>,
 ) => {
   const faults: number[][] = [];
   const file = modes.file;
   const texts = source.verses.filter((v) => v.id >= 0).toSorted((a, b) => a.id - b.id);
-  const refrainText = source.verses.find((v) => v.id < 0);
   const lastOnly = source.order === 'first-and-last' || source.order === 'after-last';
   const storedFrom = lastOnly ? texts.length - 1 : 0;
   const grid: Placement.Grid = { ticksPerBeat: score.ticksPerBeat, meters: score.meters, tonic: 0 };
@@ -436,13 +470,7 @@ const placementFaults = (
     Placement.judgedLines(file),
   );
   let lines = 0;
-  for (const [v, text] of texts.entries()) {
-    const tail = refrainLines(refrainText?.text, lastOnly, v === storedFrom);
-    const count = linesOf(text.text).length;
-    const alignment = Align.align(score, Math.min(v, score.verses.spans.length - 1), [
-      ...linesOf(text.text),
-      ...tail,
-    ]);
+  for (const { v, count, alignment } of aligned) {
     let before: Chord.Chord | undefined;
     for (const [l] of alignment.lines.entries()) {
       const refrain = l >= count;
@@ -489,7 +517,7 @@ it.effect(
           read(`playback/${pad(row.number)}.json`),
         );
         const base = yield* metadataOf(fresh, metadata.sourceHash);
-        const expected = yield* encode(base);
+        const expected = json(base);
         const placements = {
           file: placementPatches(fresh, modes.file),
           simpler: placementPatches(fresh, modes.simpler),
@@ -498,47 +526,34 @@ it.effect(
           read(`playback/${pad(row.number)}.placements.json`),
         );
         if (
-          (yield* Schema.encodeEffect(Schema.fromJsonString(PlacementData))(alternative)) !==
-          (yield* Schema.encodeEffect(Schema.fromJsonString(PlacementData))({
+          json(alternative) !==
+          json({
             sourceHash: metadata.sourceHash,
             placements,
-          }))
+          })
         )
           faults.push([row.number, 15]);
-        if ((yield* encode(metadata)) !== expected) faults.push([row.number, 1]);
+        if (json(metadata) !== expected) faults.push([row.number, 1]);
+        // Compare the complete in-memory readings, excluding only guitar.
+        // This also holds words/cuts, not merely their numeric projection.
+        // Never print these strings: only a numeric fault leaves this check.
+        const unchanged = withoutGuitar(fresh);
         for (const other of [modes.file, modes.simpler]) {
-          const withoutGuitar = (m: Playback): Playback => {
-            const parts = (parts: Playback['stanzas']) =>
-              parts.map((p) => ({
-                ...p,
-                lines: p.lines.map((line) => line.map((s) => ({ ...s, guitar: [] }))),
-              }));
-            return { ...m, stanzas: parts(m.stanzas), refrain: parts(m.refrain) };
-          };
-          const numeric = yield* metadataOf(other, metadata.sourceHash);
-          if ((yield* encode(withoutGuitar(numeric))) !== (yield* encode(withoutGuitar(base))))
-            faults.push([row.number, 13]);
+          if (withoutGuitar(other) !== unchanged) faults.push([row.number, 13]);
         }
         const actual = joined[row.number - 1];
         if (
           actual === undefined ||
-          (yield* metadataOf(actual, metadata.sourceHash).pipe(Effect.flatMap(encode))) !== expected
+          json(yield* metadataOf(actual, metadata.sourceHash)) !== expected
         )
           faults.push([row.number, 2]);
         const midi = yield* Midi.parse(bytes);
-        const placementsChecked = placementFaults(
-          modes,
-          Score.fromMidi(midi, source.verses.filter((v) => v.id >= 0).length),
-          source,
-        );
+        const score = Score.fromMidi(midi, source.verses.filter((v) => v.id >= 0).length);
+        const aligned = alignedStanzas(score, source);
+        const placementsChecked = placementFaults(modes, score, source, aligned);
         placementLines += placementsChecked.lines;
         faults.push(...placementsChecked.faults.map((f) => [row.number, 14, ...f]));
-        const result = alignmentFaults(
-          fresh,
-          Score.fromMidi(midi, source.verses.filter((v) => v.id >= 0).length),
-          source,
-          midi,
-        );
+        const result = alignmentFaults(fresh, score, aligned, midi);
         faults.push(
           ...result.faults.map((f) => [row.number, ...f]),
           ...occurrenceFaults(fresh).map((f) => [row.number, ...f]),
