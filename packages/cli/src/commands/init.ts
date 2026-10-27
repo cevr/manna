@@ -60,7 +60,7 @@ const downloadFile = (url: string, dest: string, label: string) =>
   });
 
 /** Hymnal acquisition is separate from other corpora so callers can supply an isolated destination. */
-export const ensureHymnal = Effect.fn('Init.ensureHymnal')(function* (
+const ensureHymnal = Effect.fn('Init.ensureHymnal')(function* (
   destination: string,
   refresh: boolean,
 ) {

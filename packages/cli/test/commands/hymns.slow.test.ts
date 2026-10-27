@@ -1,14 +1,15 @@
 /** Real parser/handler receipts. Never attach child output or corpus values to assertions. */
 import { BunServices } from '@effect/platform-bun';
 import { Database } from 'bun:sqlite';
-import { Effect, FileSystem, Layer, Result, Schema, Stream } from 'effect';
-import { HttpClient, HttpClientResponse } from 'effect/http';
+import { ConfigProvider, Effect, FileSystem, Layer, Result, Schema, Stream } from 'effect';
+import { Command } from 'effect/cli';
+import { FetchHttpClient, HttpClient, HttpClientResponse } from 'effect/http';
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 import { describe, expect, it } from 'effect-bun-test';
 
 import { readSourceText, type SourceText } from '../../../hymnal/scripts/source-text.js';
-import { ensureHymnal } from '../../src/commands/init.js';
+import { init } from '../../src/commands/init.js';
 
 const ARTIFACT = new URL('../../../core/data/hymnal.db', import.meta.url).pathname;
 const MAIN = new URL('../../src/main.ts', import.meta.url).pathname;
@@ -79,11 +80,46 @@ const legacyFixture = (file: string, source: SourceText) =>
     (db) => Effect.sync(() => db.close()),
   );
 
-const acquireHymnal = (
-  file: string,
-  refresh: boolean,
-  client: Layer.Layer<HttpClient.HttpClient>,
-) => ensureHymnal(file, refresh).pipe(Effect.provide(client));
+/** A synthetic installed Bible satisfies init's unrelated prerequisite without corpus content.
+ * Its newer generation keeps even --force from fetching a compiled-in older floor. */
+const initPrerequisite = (file: string) =>
+  Effect.acquireUseRelease(
+    Effect.sync(() => new Database(file)),
+    (db) =>
+      Effect.sync(() => {
+        db.exec(`CREATE TABLE books(id INTEGER);
+      INSERT INTO books WITH RECURSIVE n(x) AS (VALUES(1) UNION ALL SELECT x+1 FROM n WHERE x<66) SELECT x FROM n;
+      CREATE TABLE verses(version_code TEXT);
+      INSERT INTO verses WITH RECURSIVE n(x) AS (VALUES(1) UNION ALL SELECT x+1 FROM n WHERE x<31102) SELECT 'KJV' FROM n;
+      CREATE TABLE strongs(id INTEGER); INSERT INTO strongs VALUES(1);
+      CREATE TABLE cross_refs(source TEXT); INSERT INTO cross_refs VALUES('openbible'),('tske');
+      CREATE TABLE margin_notes(id INTEGER); INSERT INTO margin_notes VALUES(1);
+      CREATE TABLE topics(id INTEGER); INSERT INTO topics VALUES(1);
+      CREATE TABLE meta(key TEXT PRIMARY KEY,value TEXT);
+      INSERT INTO meta VALUES('corpus_source','fixture'),('corpus_revision','fixture-v1'),('corpus_generation','1');`);
+        db.query('INSERT INTO meta VALUES(?,?)').run('corpus_digest', `sha256:${'0'.repeat(64)}`);
+      }),
+    (db) => Effect.sync(() => db.close()),
+  );
+
+/** Named fetch adapter prevents any unrelated native fallback from reaching the network. */
+const blockedNativeFetch = Object.assign(
+  () => Effect.runPromise(Effect.succeed(new Response('', { status: 503 }))),
+  { preconnect: () => {} },
+);
+
+const runInit = (home: string, refresh: boolean, client: Layer.Layer<HttpClient.HttpClient>) => {
+  const args: string[] = [];
+  if (refresh) args.push('--force');
+  return Command.runWith(init, { version: 'test' })(args).pipe(
+    Effect.provide(client),
+    Effect.provideService(
+      ConfigProvider.ConfigProvider,
+      ConfigProvider.fromUnknown({ HOME: home }),
+    ),
+    Effect.provideService(FetchHttpClient.Fetch, blockedNativeFetch),
+  );
+};
 
 describe('hymns CLI corpus contract', () => {
   it.effect(
@@ -157,7 +193,9 @@ describe('hymns CLI corpus contract', () => {
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const dir = yield* fs.makeTempDirectoryScoped();
-        const file = `${dir}/hymnal.db`;
+        const file = `${dir}/.bible/hymnal.db`;
+        yield* fs.makeDirectory(`${dir}/.bible`);
+        yield* initPrerequisite(`${dir}/.bible/bible.db`);
         const asked: string[] = [];
         const client = Layer.succeed(
           HttpClient.HttpClient,
@@ -173,13 +211,13 @@ describe('hymns CLI corpus contract', () => {
             }),
           ),
         );
-        yield* acquireHymnal(file, false, client);
+        yield* runInit(dir, false, client);
         expect([...(yield* fs.readFile(file))]).toEqual([42, 1]);
-        yield* acquireHymnal(file, false, client);
+        yield* runInit(dir, false, client);
         expect(asked.length).toBe(1);
-        yield* acquireHymnal(file, true, client);
+        yield* runInit(dir, true, client);
         expect([...(yield* fs.readFile(file))]).toEqual([42, 2]);
-        const failed = yield* Effect.result(acquireHymnal(file, true, client));
+        const failed = yield* Effect.result(runInit(dir, true, client));
         expect(Result.isFailure(failed)).toBe(true);
         expect([...(yield* fs.readFile(file))]).toEqual([42, 2]);
         expect(asked.length).toBe(3);

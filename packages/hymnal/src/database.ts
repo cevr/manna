@@ -17,7 +17,7 @@ import { KEY_TRANSPOSES, keySet, recordingKey } from './recordings.js';
 
 export const SCHEMA_VERSION = 2;
 export const BUILDER_VERSION = '1';
-export const META_KEYS = [
+const META_KEYS = [
   'book',
   'builder_version',
   'census_sha256',
@@ -83,7 +83,7 @@ type StoredPart =
       readonly lines: readonly string[];
       readonly why: readonly Reason[];
     });
-export const partLines = (part: StoredPart): readonly string[] => {
+const partLines = (part: StoredPart): readonly string[] => {
   if (part._tag === 'Plain') return part.lines;
   return part.lines.map((line) =>
     line.map((s, i) => `${i > 0 && line[i - 1]?.word !== s.word ? ' ' : ''}${s.text}`).join(''),
@@ -143,7 +143,7 @@ const validateTiming = Effect.fn('CorpusDatabase.validateTiming')(function* (hym
   }
 });
 
-export const CORPUS_SCHEMA = `
+const CORPUS_SCHEMA = `
 PRAGMA foreign_keys=ON;
 PRAGMA user_version=2;
 CREATE TABLE corpus_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL) STRICT;

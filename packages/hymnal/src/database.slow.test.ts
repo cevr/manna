@@ -1,14 +1,16 @@
 /** All comparisons report only number, table, field and index. No corpus value enters a matcher. */
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Database } from 'bun:sqlite';
-import { ConfigProvider, Effect, FileSystem, Layer, Result, Schema } from 'effect';
+import { ConfigProvider, Context, Effect, FileSystem, Layer, Result, Schema, Stream } from 'effect';
+import * as ChildProcess from 'effect/process/ChildProcess';
+import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 import { describe, expect, it } from 'effect-bun-test';
 import { HymnalService, HymnId } from '@manna/core/hymnal';
 import { layerHymnalBun } from '@manna/core/hymnal/bun';
 
 import { buildDatabase, DATA, OUTPUT, readDatabaseSources } from '../scripts/compile-db.js';
 import { keyOnPitch, pitchClass } from './chord.js';
-import { type DatabaseSources, META_KEYS, validateSources } from './database.js';
+import { type DatabaseSources, validateSources } from './database.js';
 import { type Fit, type Hymn, type Part, type Reason, type Syllable, sung } from './hymn.js';
 import { keySet, recordingKey } from './recordings.js';
 
@@ -17,6 +19,108 @@ const open = (file: string) =>
     Effect.sync(() => new Database(file)),
     (db) => Effect.sync(() => db.close()),
   );
+
+const searchProbes = [
+  'worship',
+  'advent',
+  'scripture',
+  'praise',
+  'sabbath',
+  'morning',
+  'evening',
+  'second',
+  'nature',
+  'communion',
+  'death',
+  'kingdom',
+  'and',
+  'love',
+  'grace',
+  'faith',
+  'hope',
+  'jesus',
+  'christ',
+  'god',
+  'lord',
+  'spirit',
+  'holy',
+  'father',
+  'son',
+  'cross',
+  'blood',
+  'heaven',
+  'earth',
+  'glory',
+  'light',
+  'life',
+  'peace',
+  'joy',
+  'heart',
+  'soul',
+  'home',
+  'prayer',
+  'trust',
+  'mercy',
+  'save',
+  'saved',
+  'salvation',
+  'come',
+  'sing',
+  'song',
+  'pardon',
+  'word',
+  'truth',
+  'church',
+  'service',
+  'mission',
+  'baptism',
+  'resurrection',
+  'eternal',
+  'judgment',
+  'creation',
+  'redemption',
+  'the',
+  'in',
+  'of',
+] as const;
+
+it.effect('keeps legacy search IDs and order for 61 probes at limits 20 and 920', () =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const dir = yield* fs.makeTempDirectoryScoped();
+    const spawner = yield* ChildProcessSpawner;
+    const child = yield* spawner.spawn(
+      ChildProcess.make(
+        'git',
+        ['show', 'e2a5f052397882f5eb1a7f951de27d00f1ff3a04:packages/core/data/hymnal.db'],
+        {
+          cwd: new URL('../../..', import.meta.url).pathname,
+          env: { HOME: dir },
+          extendEnv: true,
+          forceKillAfter: '5 seconds',
+        },
+      ),
+    );
+    const [chunks, code] = yield* Effect.all(
+      [Stream.runCollect(child.stdout), child.exitCode, Stream.runDrain(child.stderr)],
+      { concurrency: 3 },
+    );
+    expect(Number(code)).toBe(0);
+    const legacy = `${dir}/legacy.db`;
+    yield* fs.writeFile(legacy, Buffer.concat(chunks));
+    const base = Context.get(yield* Layer.build(serviceLayer(legacy)), HymnalService);
+    const head = Context.get(yield* Layer.build(serviceLayer(OUTPUT)), HymnalService);
+    for (const [probe, query] of searchProbes.entries())
+      for (const limit of [20, 920]) {
+        const expected = (yield* base.searchHymns(query, limit)).map((h) => Number(h.id));
+        const actual = (yield* head.searchHymns(query, limit)).map((h) => Number(h.id));
+        expect(
+          actual.length === expected.length && actual.every((id, i) => id === expected[i]),
+          `search:probe=${probe}:limit=${limit}`,
+        ).toBe(true);
+      }
+  }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+);
 type SqlValue = number | string | null;
 type Row = Partial<
   Record<
@@ -317,11 +421,10 @@ const assertNoFaults = (faults: readonly string[]) => {
 const auditMetadata = (db: Database, sources: DatabaseSources) => {
   const check = (ok: boolean, label: string) => expect(ok, label).toBe(true);
   const metadata = rows(db, 'SELECT key,value FROM corpus_meta ORDER BY key');
+  const expectedMeta = Object.entries(sources.meta).toSorted(([a], [b]) => a.localeCompare(b));
   check(
-    metadata.length === META_KEYS.length &&
-      metadata.every(
-        (r, i) => r.key === META_KEYS[i] && r.value === sources.meta[META_KEYS[i] ?? 'book'],
-      ),
+    metadata.length === expectedMeta.length &&
+      metadata.every((r, i) => r.key === expectedMeta[i]?.[0] && r.value === expectedMeta[i]?.[1]),
     'corpus_meta:keys-values',
   );
   const parts = sources.hymns.flatMap((h) => [
@@ -374,6 +477,23 @@ const auditMetadata = (db: Database, sources: DatabaseSources) => {
   auditDescriptors(db, sources, check);
   auditEvidence(db, sources, check);
   auditFts(db, sources, check);
+  auditConstraints(db);
+};
+
+/** Exercise the shipped constraints at the artifact seam, without exporting its DDL for tests. */
+const auditConstraints = (db: Database) => {
+  db.exec('PRAGMA foreign_keys=ON');
+  expect(() => db.exec("INSERT INTO lines VALUES(-1,999999,0,'fixture')")).toThrow();
+  expect(() =>
+    db.exec("INSERT INTO stanzas VALUES(-1,1,999,0,'Plain','text','[]',NULL)"),
+  ).toThrow();
+  expect(() =>
+    db.exec(`INSERT INTO chords
+    SELECT syllable_id,level,ordinal,at+1,root,quality,bass FROM chords LIMIT 1`),
+  ).toThrow();
+  expect(() =>
+    db.exec("INSERT INTO stanzas VALUES(-1,1,999,999,'Plain','syllable','[]',NULL)"),
+  ).toThrow();
 };
 
 const auditDescriptors = (

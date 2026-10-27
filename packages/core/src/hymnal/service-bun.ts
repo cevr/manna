@@ -211,7 +211,7 @@ export const layerHymnalBun: Layer.Layer<
               UNION SELECT rowid AS id FROM hymns_fts
                 WHERE LOWER(title) LIKE ? ESCAPE '\\' OR LOWER(full_text) LIKE ? ESCAPE '\\'
               ORDER BY id LIMIT ?`)
-              .all(literalFts(query), term, term, maximum)
+              .all(`{title full_text}: ${literalFts(query)}`, term, term, maximum)
               .flatMap(({ id }) => Option.toArray(readRow(id)))
               .map(summary);
           }

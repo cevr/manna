@@ -29,7 +29,7 @@ phone reads compiled JSON; this feature has no app route.
   `/Users/cvr/Developer/personal/manna/tmp/orchestrate/hymnapp/hymndb`.
 - **States:** default build/lookup, empty search/missing ID and invalid-input error.
   sim drive, focus-visible, open and loading are n/a: SQLite has no app route.
-- **Regression:** `packages/hymnal/src/database.test.ts`, `database.slow.test.ts`,
+- **Regression:** `packages/hymnal/src/database.slow.test.ts`,
   `packages/core/src/hymnal/service-bun.test.ts`,
   `packages/cli/test/commands/hymns.slow.test.ts`.
 
@@ -53,6 +53,8 @@ phone reads compiled JSON; this feature has no app route.
    `ACCEPTANCE GREEN failures=0`. Keep only safe result labels, counts and hashes.
 
 ## Gotchas
+
+- Run `bun run dead-exports` before handoff when a change adds exports.
 
 - Name corpus entries by number in proof. Capture CLI output in memory and reduce
   it to booleans/counts before logging. Assertions compare booleans with safe coordinates.

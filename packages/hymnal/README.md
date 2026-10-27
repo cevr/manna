@@ -251,7 +251,7 @@ projection format changes; introduce a new schema version for incompatible reade
 
 `src/database.slow.test.ts` checks the full public projection and every descriptor,
 all service verses, FTS, mutation detection, byte reproducibility and atomic failure.
-The normal unit suite uses small synthetic schema/adapter checks.
+The normal unit suite uses small synthetic adapter checks.
 `packages/cli/test/commands/hymns.slow.test.ts` drives real CLI parsing for both
 formats and checks init acquisition with isolated HTTP and filesystem fixtures.
 The app continues to read compiled JSON through the portable `./hymn` export.

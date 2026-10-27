@@ -135,6 +135,12 @@ const syntheticLayer = (mode: Parameters<typeof writeSynthetic>[1]) =>
   ).pipe(Layer.provide(BunServices.layer), Layer.fresh);
 
 describe('versioned corpus reader', () => {
+  it.effect('excludes topic-only matches from title and text search', () =>
+    Effect.gen(function* () {
+      const service = yield* HymnalService;
+      expect((yield* service.searchHymns('synthetic')).length).toBe(0);
+    }).pipe(Effect.provide(syntheticLayer('normalized'))),
+  );
   it.effect(
     'reconstructs ordered normalized verses and preserves the portable lookup contracts',
     () =>

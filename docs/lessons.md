@@ -51,6 +51,26 @@ The form of an entry, each field on its own line:
 
 ## Process and tooling
 
+### hymn-search-text-before-topic-index
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "hymns search drops real text matches at the default limit, displaced by topic-name matches"
+- **Source:** hymndb/round-1-findings.md F1
+- **Wrong:** FTS searched topic names before applying the result limit, so topic-only hits displaced title/text matches.
+- **Cause:** MATCH covered every indexed column instead of the lookup contract's title and full-text columns.
+- **Guard:** code: `packages/core/src/hymnal/service-bun.test.ts` `excludes topic-only matches from title and text search`
+
+### hymn-database-test-only-exports
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "the deploy gate's dead-export step goes red (a gate regression, not user-facing)"
+- **Source:** hymndb/round-1-findings.md F2
+- **Wrong:** Four implementation details were exported only for tests and failed the existing dead-export check.
+- **Cause:** Tests reached internal schema/constants and an acquisition helper instead of the built artifact and init command.
+- **Guard:** skill: dead exports already have a deterministic check outside the fast gate. Carried by `.claude/skills/verify-hymnal/features/corpus-db.md`: "Run `bun run dead-exports` before handoff when a change adds exports."
+
 ### hymn-line-level-chord-anchors
 
 - **Date:** 2026-10-26
