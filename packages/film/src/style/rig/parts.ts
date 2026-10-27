@@ -379,6 +379,8 @@ export interface Figure {
   readonly converters: () => ReadonlyArray<Element>;
   /** Key each of `pts` (the vertices `key.i`) to crawl within `amp` units of where it is cut, on the boil's ticks. */
   readonly boil: (key: string, pts: ReadonlyArray<Pt>, amp: number) => void;
+  /** Key each of `pts` (the vertices `key.i`) to crawl within `amp` units as one: the whole outline moved, its shape kept (a curl about its centre). */
+  readonly boilWhole: (key: string, pts: ReadonlyArray<Pt>, amp: number) => void;
   /**
    * Key the `n` vertices `key.i` to crawl exactly as `like.i` do (a cast
    * shadow following its piece), each `shift[i]` units off it when given (a
@@ -454,6 +456,14 @@ export const figure = (
           Array.from({ length: BOIL.ticks }, (_, tick) => [tick / BOIL.fps, c + d(tick), 'hold']);
         tracks[`${key}.${i}`] = { x: keys(p[0], dx), y: keys(p[1], dy) };
       }),
+    boilWhole: (key, pts, amp) => {
+      const [dx, dy] = [crawl(r, amp), crawl(r, amp)];
+      const keys = (c: number, d: (tick: number) => number): K[] =>
+        Array.from({ length: BOIL.ticks }, (_, tick) => [tick / BOIL.fps, c + d(tick), 'hold']);
+      pts.forEach((p, i) => {
+        tracks[`${key}.${i}`] = { x: keys(p[0], dx), y: keys(p[1], dy) };
+      });
+    },
     echo: (key, like, n, shift) => {
       for (let i = 0; i < n; i++) {
         const track = tracks[`${like}.${i}`];
@@ -596,7 +606,8 @@ export const piece = (
 const paperOf = (fig: Figure, part: Part, inside: boolean): Element => {
   const { key, pts, look } = part;
   const boil = part.boil ?? 0.9;
-  if (boil > 0) fig.boil(key, vertexPts(pts, part.cubic), boil);
+  if (boil > 0 && part.crawl === 'whole') fig.boilWhole(key, vertexPts(pts, part.cubic), boil);
+  else if (boil > 0) fig.boil(key, vertexPts(pts, part.cubic), boil);
   const box = boxOf(pts);
   const shape = el('Shape', { name: key, id: fig.idOf(key) }, [
     pathOf(fig, key, pts, part.cubic),
@@ -761,6 +772,8 @@ export interface Part {
   readonly boil?: number;
   /** Its points a chain of cubics (`cubicPath`), not points the smooth path runs through. */
   readonly cubic?: true;
+  /** How it crawls on the boil: each vertex on its own (unless given), or `whole`, its shape kept (`Figure.boilWhole`). */
+  readonly crawl?: 'whole';
   /** The joints it turns on, outermost first, each about its point by its number: its points are where it is traced, so each joint turns it about a point in the same frame. */
   readonly frames?: ReadonlyArray<Frame>;
 }

@@ -156,6 +156,42 @@ describe('traceView', () => {
     );
   });
 
+  test('reads a curled part as a disc on each of its lobes', () => {
+    // Three lobes of brown, each a disc of radius 10, overlapping in a row, inked round.
+    const lobes: ReadonlyArray<readonly [number, number]> = [
+      [30, 40],
+      [48, 40],
+      [66, 40],
+    ];
+    const [width, height] = [100, 80];
+    const rgba = new Uint8Array(width * height * 4).fill(255);
+    const paint = (c: readonly [number, number, number], r: number) => {
+      for (let y = 0; y < height; y++)
+        for (let x = 0; x < width; x++)
+          if (lobes.some(([cx, cy]) => Math.hypot(x - cx, y - cy) <= r))
+            rgba.set(c, (y * width + x) * 4);
+    };
+    paint([20, 16, 14], 14);
+    paint([113, 68, 46], 10);
+    const t = Result.getOrThrow(
+      traceView(
+        { width, height, rgba },
+        {
+          box: [0, 0, 100, 80],
+          classes: { hair: ['#71442e'] },
+          parts: { hair: { classes: ['hair'], as: 'curls', curl: { min: 4, max: 12 } } },
+        },
+      ),
+    );
+    const curls = t.curls['hair'] ?? [];
+    expect(curls.length).toBe(3);
+    for (const [cx, cy] of lobes)
+      expect(
+        Math.min(...curls.map((c) => Math.hypot(c.at[0] - cx, c.at[1] - cy))),
+      ).toBeLessThanOrEqual(2);
+    for (const c of curls) expect(Math.abs(c.r - 9)).toBeLessThanOrEqual(2);
+  });
+
   test('fits a cubic part as a chain whose anchors hold its corners', () => {
     const t = Result.getOrThrow(traceView(sheet(), { ...VIEW, path: 'cubic' }));
     const chain = t.outlines['body'] ?? [];

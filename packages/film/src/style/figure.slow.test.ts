@@ -596,6 +596,56 @@ describe('a bearded head, and the parts of a head turned and of bare feet', () =
     expect(printed(rml, 'headPaper')).toEqual(toMillionth(ellipse(0, 0, 50, 60, 12)));
   });
 
+  test('curled hair cuts each curl as its own disc over the mass, where and as wide as given', () => {
+    const curls = [
+      { at: [-20, -50] as const, r: 8 },
+      { at: [15, -55] as const, r: 10 },
+    ];
+    const hair = Hair.Curls({
+      outline: ellipse(0, -40, 50, 25, 12),
+      paper: HAIR,
+      curls,
+      shade: '#3a2a20',
+      crescent: 0.35,
+    });
+    const rml = drawnOf(figure({ ...standingOf(), hair }));
+    const at = (name: string) => rml.indexOf(`name="${name}"`);
+    expect(at('curl0')).toBeGreaterThan(-1);
+    expect(at('curl0')).toBeLessThan(at('curl1'));
+    expect(at('curl1')).toBeLessThan(at('hair'));
+    const boxes = curls.map((_, i) => {
+      const pts = printed(rml, `curl${i}`);
+      const xs = pts.map((p) => p[0]);
+      const ys = pts.map((p) => p[1]);
+      return [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    });
+    curls.forEach((c, i) => {
+      const [x0 = 0, x1 = 0, y0 = 0, y1 = 0] = boxes[i] ?? [];
+      expect((x0 + x1) / 2).toBeCloseTo(c.at[0], 0);
+      expect((y0 + y1) / 2).toBeCloseTo(c.at[1], 0);
+      expect((x1 - x0) / 2).toBeCloseTo(c.r, 0);
+    });
+  });
+
+  test("a kit laid over lies above the hair cut in its head, and under it unless given (a cut's list runs top first)", () => {
+    const at = (rml: string, name: string) => rml.indexOf(`name="${name}"`);
+    const under = drawnOf(
+      figure({
+        ...standingOf(),
+        face: KitA({ x: 0, y: 0, scale: 1, rotation: 0.1, gaze: [0, 12] }),
+      }),
+    );
+    const over = drawnOf(
+      figure({
+        ...standingOf(),
+        face: KitA({ x: 0, y: 0, scale: 1, rotation: 0.1, gaze: [0, 12], layer: 'over' }),
+      }),
+    );
+    expect(at(under, 'faceTurn')).toBeGreaterThan(at(under, 'hair'));
+    expect(at(over, 'faceTurn')).toBeLessThan(at(over, 'hair'));
+    expect(at(over, 'headPaper')).toBeGreaterThan(at(over, 'hair'));
+  });
+
   test('a kit turned on its head turns about its place, and its open mouth turns with it', () => {
     const turn = 0.3;
     const face = KitA({ x: -8, y: 8, scale: 1.3, rotation: turn, gaze: [-300, 40] });

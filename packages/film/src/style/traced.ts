@@ -72,6 +72,12 @@ export interface TracedFigureSpec {
     readonly outline: ReadonlyArray<Pt>;
     readonly paper: Paper;
     readonly tones?: ReadonlyArray<TracedTone>;
+    /** Its curls (`Hair.Curls`): each a disc, its centre and radius in sheet pixels; the dark of a curl's far side, and the crescent's share of its radius. */
+    readonly curls?: {
+      readonly discs: ReadonlyArray<{ readonly at: Pt; readonly r: number }>;
+      readonly shade: `#${string}`;
+      readonly crescent: number;
+    };
   };
   readonly headcloth?: { readonly outline: ReadonlyArray<Pt>; readonly paper: Paper };
   readonly ears?: {
@@ -87,6 +93,8 @@ export interface TracedFigureSpec {
     readonly gaze: Pt;
     /** The marks past the kit's it draws (`EXTRA_FACE`): a wince, a glad shut-eyed smile. */
     readonly extra?: ReadonlyArray<ExtraFaceKnob>;
+    /** The kit laid over what is cut in his head (`KitA.layer`), so a brow turned into his hairline shows. */
+    readonly layer?: 'over';
   };
   /** A mouth thrown open where the kit's mouth sits: its width and height, units, and its paper. */
   readonly mouth?: { readonly w: number; readonly h: number; readonly paper: `#${string}` };
@@ -338,10 +346,27 @@ export const tracedFigure = (spec: TracedFigureSpec) => {
   const art = { width: Math.ceil(2 * reach), height: Math.ceil(-top + 30), feet };
   const kit = tracedKit(spec.face.marks, { scale: s, head: spec.headAt }, spec.face.turn);
   const ears = spec.ears;
-  const rested =
+  const gazed =
     spec.face.rest === undefined
       ? { ...kit, gaze: spec.face.gaze }
       : { ...kit, rest: spec.face.rest, gaze: spec.face.gaze };
+  const rested = spec.face.layer === undefined ? gazed : { ...gazed, layer: spec.face.layer };
+  const hairOf = (hair: TracedFigureSpec['hair']) => {
+    if (hair === undefined) return undefined;
+    const traced = {
+      outline: head(hair.outline),
+      paper: hair.paper,
+      tones: toned(head, hair.tones),
+    };
+    return hair.curls === undefined
+      ? Hair.Traced(traced)
+      : Hair.Curls({
+          ...traced,
+          curls: hair.curls.discs.map((c) => ({ at: fromHead(c.at), r: hundredth(c.r * s) })),
+          shade: hair.curls.shade,
+          crescent: hair.curls.crescent,
+        });
+  };
   const tracedHead = {
     view: spec.head.view,
     outline: headOutline,
@@ -359,14 +384,7 @@ export const tracedFigure = (spec: TracedFigureSpec) => {
     head: Head.Traced(
       spec.head.chin === undefined ? tracedHead : { ...tracedHead, chin: spec.head.chin },
     ),
-    hair:
-      spec.hair === undefined
-        ? undefined
-        : Hair.Traced({
-            outline: head(spec.hair.outline),
-            paper: spec.hair.paper,
-            tones: toned(head, spec.hair.tones),
-          }),
+    hair: hairOf(spec.hair),
     headcloth:
       spec.headcloth === undefined
         ? undefined

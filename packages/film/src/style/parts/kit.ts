@@ -56,6 +56,13 @@ const KitAPart = Schema.TaggedStruct('KitA', {
   gaze: Point,
   /** The marks past the kit's own it draws, each shown by its own number (`EXTRA_FACE`, `rig/parts.ts`): a figure that names none prints as before. */
   extra: Schema.optionalKey(Schema.Array(Schema.Literals(['wince', 'glad']))),
+  /**
+   * Where it lies among what is cut inside its head (a beardless head's):
+   * under it unless given, so hair over the brow hides a brow raised into it
+   * (a face under the hair of a view from behind); `over`, over it, so a
+   * brow turned up into the hairline (a knit wince) still shows.
+   */
+  layer: Schema.optionalKey(Schema.Literal('over')),
 });
 export type KitA = typeof KitAPart.Type;
 

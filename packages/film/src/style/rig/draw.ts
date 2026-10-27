@@ -184,6 +184,7 @@ interface Cut {
   readonly look: PieceLook;
   readonly boil?: number;
   readonly cubic?: true;
+  readonly crawl?: 'whole';
 }
 
 /** Whether `f`'s traced outlines are chains of cubics (`Parts.path`). */
@@ -215,12 +216,42 @@ const earsOf = (ear: Ear): Cut[] => {
   }
 };
 
-/** The hair, inside the head's outline, its light laid on it as tones. */
-const hairOf = (hair: Hair): Cut => ({
-  key: 'hair',
-  pts: hair.outline,
-  look: looked(hair.paper, { tones: hair.tones ?? [] }),
-});
+/** The points round a curl. */
+const CURL_POINTS = 12;
+
+/** How far a curl crawls, units: a small piece's. */
+const CURL_BOIL = 0.6;
+
+/**
+ * The hair, inside the head's outline, its light laid on it as tones; and,
+ * curled, its curls over it, front first: each a disc in its paper with no
+ * line of its own, its shade showing as the crescent on its side away from
+ * the light (`Crease.crescent`), crawling whole about its centre. Curls
+ * carry the hair's paper as it is, and only cubic hair's mass is a chain:
+ * a curl's disc is points.
+ */
+const hairOf = (hair: Hair): Cut[] => {
+  const mass: Cut = {
+    key: 'hair',
+    pts: hair.outline,
+    look: looked(hair.paper, { tones: hair.tones ?? [] }),
+  };
+  if (hair._tag === 'TracedHair') return [mass];
+  const curl = looked(hair.paper, {
+    shade: hair.shade,
+    crease: { ...hair.paper.crease, crescent: hair.crescent },
+  });
+  return [
+    ...hair.curls.map((c, i): Cut => ({
+      key: `curl${i}`,
+      pts: ellipse(c.at[0], c.at[1], c.r, c.r, CURL_POINTS),
+      look: curl,
+      boil: CURL_BOIL,
+      crawl: 'whole',
+    })),
+    mass,
+  ];
+};
 
 /** A beard and the lip cut in it, the lip in front, the beard's light laid on it as tones. */
 const beardOf = (beard: Beard): Cut[] => [
@@ -262,7 +293,7 @@ const cutOf = (f: Parts): Cut[] => [
   ...(f.beard === undefined ? [] : beardOf(f.beard)),
   ...(f.ear === undefined ? [] : earsOf(f.ear)),
   ...(f.headcloth === undefined ? [] : headclothOf(f.headcloth)),
-  ...(f.hair === undefined ? [] : [hairOf(f.hair)]),
+  ...(f.hair === undefined ? [] : hairOf(f.hair)),
 ];
 
 /** A traced head's own paper, the colour on its skin laid on it as tones. */
@@ -333,7 +364,8 @@ const shoutsOf = (rig: Figure, f: Parts) =>
  */
 const tracedHeadOf = (rig: Figure, f: Parts, head: TracedHead) => {
   const face = f.beard === undefined ? undefined : kitOf(rig, f.face);
-  const cuts = cutOf(f).map((c) => cubicCut(c, cubicOf(f)));
+  // A curl is a disc of points, whatever the figure writes its traced outlines as.
+  const cuts = cutOf(f).map((c) => (c.crawl === 'whole' ? c : cubicCut(c, cubicOf(f))));
   const own = cubicCut(headPaperOf(head), cubicOf(f));
   return el('Node', { y: head.neck, name: 'neck', id: rig.idOf('neck') }, [
     el('Node', { name: 'head', id: rig.idOf('head') }, [
@@ -348,7 +380,9 @@ const tracedHeadOf = (rig: Figure, f: Parts, head: TracedHead) => {
               rig,
               'headCut',
               face === undefined
-                ? [...cuts, ...shoutsOf(rig, f), kitOf(rig, f.face), own]
+                ? f.face.layer === 'over'
+                  ? [kitOf(rig, f.face), ...cuts, ...shoutsOf(rig, f), own]
+                  : [...cuts, ...shoutsOf(rig, f), kitOf(rig, f.face), own]
                 : [...shoutsOf(rig, f), face, ...tuckedUnder([...cuts, own])],
               head.chin === 'open' ? { behind: garmentBack(f) } : {},
             ),

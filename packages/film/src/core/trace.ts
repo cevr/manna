@@ -27,7 +27,7 @@ export type TracePt = readonly [number, number];
 type TraceBox = readonly [number, number, number, number];
 
 /** How a part is written. */
-type TraceAs = 'outline' | 'tones' | 'circle' | 'marks' | 'none';
+type TraceAs = 'outline' | 'tones' | 'circle' | 'curls' | 'marks' | 'none';
 
 /** One part of a view, as the tracer picks it. */
 export interface TracePart {
@@ -57,6 +57,14 @@ export interface TracePart {
   readonly min?: number;
   /** How many edge pixels each way its edge is averaged over before it is taken every `STEP` or fitted (`SMOOTH` or `CUBIC_SMOOTH` unless given): more rounds a curled edge into waves. */
   readonly smooth?: number;
+  /** How far each way its mask is opened and closed before it is written, pixels (`OPEN` unless given): a wedge or a notch thinner than twice that goes. */
+  readonly open?: number;
+  /** How far each way its mask is closed, pixels (its `open` unless given): a notch an inner line leaves where it meets the silhouette's (an ear's against the cheek) is filled. */
+  readonly close?: number;
+  /** Where its outline turns back as sharply as the sheet draws it (a nape under curls), sheet pixels: a turn past `TURN_MAX` within `SHARP_REACH` of one is the sheet's, never refused. */
+  readonly sharp?: ReadonlyArray<TracePt>;
+  /** A curled part's curls' least and greatest radius, pixels (`CURL` unless given). */
+  readonly curl?: { readonly min: number; readonly max: number };
   /** How its outline and tones are written: points every `STEP` (`points`), or a chain of cubics fitted to its edge (`cubic`, `core/fit.ts`); the view's unless given. */
   readonly path?: 'points' | 'cubic';
   /** What the table says of it, one line. */
@@ -120,6 +128,10 @@ export interface Traced {
   readonly outlines: Readonly<Record<string, ReadonlyArray<TracePt>>>;
   readonly tones: Readonly<Record<string, ReadonlyArray<ReadonlyArray<TracePt>>>>;
   readonly circles: Readonly<Record<string, { readonly at: TracePt; readonly r: number }>>;
+  /** Each curled part's curls, each a disc: its centre and its radius. */
+  readonly curls: Readonly<
+    Record<string, ReadonlyArray<{ readonly at: TracePt; readonly r: number }>>
+  >;
   readonly marks?: TracedMarks;
   /** The head's box's centre, and its top row and its height. */
   readonly head?: { readonly at: TracePt; readonly top: number; readonly height: number };
@@ -160,7 +172,7 @@ const GROUND_LUMA = 110;
  * on its inner edge, since the house lays its own line outside its paper
  * (`rig/parts.ts`, `edgeWidths`).
  */
-const LINE_MAX = 14;
+const LINE_MAX = 10;
 
 /** How far a part grows into the ink round it, pixels: half the sheets' line, so two parts meet under a line between them. */
 const GROW = 4;
@@ -168,10 +180,10 @@ const GROW = 4;
 /** How far each way a written part's mask is opened and closed, pixels: a sliver or a notch this thin is a slip of the edge, never the sheet's. */
 const OPEN = 1;
 
-/** The sharpest an outline may turn at a point, radians: past it, it doubles back on itself (a hairpin), and its ink draws a spur. */
-const TURN_MAX = (120 * Math.PI) / 180;
+/** The sharpest an outline may turn at a point, radians: past it, it doubles back on itself (a hairpin, a sliver's tip) and its ink draws a spur; a cut's corner (a sleeve at its shoulder) turns less. */
+const TURN_MAX = (150 * Math.PI) / 180;
 
-/** How far a cubic part's edge is smoothed each way before it is fitted, pixels: the pixel stair, no more. */
+/** How far a cubic part's edge is smoothed each way before it is fitted, pixels: the pixel stair and the brush's grain on the line's inner edge. */
 const CUBIC_SMOOTH = 2;
 
 /** An outline's points, sheet pixels apart along its edge (RIVE.md: 8 or more). */
@@ -579,13 +591,86 @@ const pointTurns = (pts: ReadonlyArray<TracePt>) =>
     return l === 0 ? 0 : Math.acos(Math.max(-1, Math.min(1, (ux * vx + uy * vy) / l)));
   });
 
-/** Where an outline doubles back on itself (`TURN_MAX`): each such point and its turn, degrees. */
-const hairpinsOf = (pts: ReadonlyArray<TracePt>, path: TracePath) => {
+/** How near a point of an outline lies to a sharp turn its spec vouches for (`TracePart.sharp`) to be that turn, pixels. */
+const SHARP_REACH = 8;
+
+/** Where an outline doubles back on itself (`TURN_MAX`), past the turns `sharp` vouches for: each such point and its turn, degrees. */
+const hairpinsOf = (
+  pts: ReadonlyArray<TracePt>,
+  path: TracePath,
+  sharp: ReadonlyArray<TracePt> = [],
+) => {
   const at = path === 'cubic' ? anchorsOf(pts) : pts;
   const turns = path === 'cubic' ? anchorTurns(pts) : pointTurns(pts);
-  return turns.flatMap((t, i) =>
-    t > TURN_MAX ? [`${(at[i] ?? [0, 0]).join(',')} (${Math.round((t * 180) / Math.PI)}°)`] : [],
-  );
+  const vouched = (p: TracePt) =>
+    sharp.some((s) => Math.hypot(s[0] - p[0], s[1] - p[1]) <= SHARP_REACH);
+  return turns.flatMap((t, i) => {
+    const p = at[i] ?? [0, 0];
+    return t > TURN_MAX && !vouched(p)
+      ? [`${p.join(',')} (${Math.round((t * 180) / Math.PI)}°)`]
+      : [];
+  });
+};
+
+/** A curl's least and greatest radius unless a part gives its own, pixels: the sheets' curls run 6 to 16 across their lobes. */
+const CURL = { min: 5, max: 14 } as const;
+
+/** How near two curls' centres may lie, a share of their radii summed: a little overlap, as curls lie. */
+const CURL_SPREAD = 0.8;
+
+/**
+ * Each pixel's distance to the nearest pixel outside `mask`, pixels
+ * (a chamfer's two passes, 1 straight and √2 across): 0 outside it.
+ */
+const inside = (g: Grid, mask: Uint8Array): Float32Array => {
+  const d = new Float32Array(mask.length).map((_, k) => (mask[k] === 1 ? Infinity : 0));
+  const at = (x: number, y: number) =>
+    x < 0 || y < 0 || x >= g.w || y >= g.h ? 0 : (d[y * g.w + x] ?? 0);
+  const pass = (ys: number[], xs: number[], dir: 1 | -1) => {
+    for (const y of ys)
+      for (const x of xs) {
+        const k = y * g.w + x;
+        if (mask[k] === 0) continue;
+        d[k] = Math.min(
+          d[k] ?? 0,
+          at(x - dir, y) + 1,
+          at(x, y - dir) + 1,
+          at(x - dir, y - dir) + Math.SQRT2,
+          at(x + dir, y - dir) + Math.SQRT2,
+        );
+      }
+  };
+  const ys = Array.from({ length: g.h }, (_, i) => i);
+  const xs = Array.from({ length: g.w }, (_, i) => i);
+  pass(ys, xs, 1);
+  pass(ys.reverse(), xs.reverse(), -1);
+  return d;
+};
+
+/**
+ * The curls `pixels` (a part's mask) is made of, sheet pixels: discs, each
+ * as wide as the mask lets it be about its centre (its distance inside),
+ * taken widest first, held to `size`, none nearer another than `CURL_SPREAD`
+ * of their radii summed, down to the least. They lie on the mask's lobes:
+ * where its curls bulge, a disc fits.
+ */
+const curlsOf = (
+  g: Grid,
+  mask: Uint8Array,
+  size: { readonly min: number; readonly max: number },
+): Array<{ at: TracePt; r: number }> => {
+  const d = inside(g, mask);
+  const order = [...d.keys()]
+    .filter((k) => (d[k] ?? 0) >= size.min)
+    .sort((a, b) => (d[b] ?? 0) - (d[a] ?? 0));
+  const taken: Array<{ x: number; y: number; r: number }> = [];
+  for (const k of order) {
+    const [x, y] = [k % g.w, Math.floor(k / g.w)];
+    const r = Math.min(size.max, d[k] ?? 0);
+    if (taken.every((c) => Math.hypot(c.x - x, c.y - y) >= CURL_SPREAD * (c.r + r)))
+      taken.push({ x, y, r });
+  }
+  return taken.map((c) => ({ at: rounded([g.x0 + c.x + 0.5, g.y0 + c.y + 0.5]), r: half(c.r) }));
 };
 
 /** `mask` less every pixel within `by` of a pixel outside it. */
@@ -597,12 +682,16 @@ const eroded = (g: Grid, mask: Uint8Array, by: number): Uint8Array =>
     () => true,
   ).map((v) => 1 - v);
 
-/** `mask` opened and closed `by` pixels: a sliver or a notch thinner than twice that gone, every other edge where it was. */
-const cleaned = (g: Grid, mask: Uint8Array, by: number): Uint8Array => {
+/** `mask` opened `open` pixels and closed `close`: a sliver thinner than twice the one gone, a notch thinner than twice the other filled, every other edge where it was. */
+const cleaned = (g: Grid, mask: Uint8Array, open: number, close: number): Uint8Array => {
   const all = () => true;
-  const opened = grown(g, eroded(g, mask, by), by, all);
-  return eroded(g, grown(g, opened, by, all), by);
+  const opened = grown(g, eroded(g, mask, open), open, all);
+  return eroded(g, grown(g, opened, close, all), close);
 };
+
+/** How a part's mask is cleaned before it is written (`cleaned`): opened and closed `OPEN` unless it says. */
+const cleanedOf = (g: Grid, mask: Uint8Array, part: TracePart) =>
+  cleaned(g, mask, part.open ?? OPEN, part.close ?? part.open ?? OPEN);
 
 /** A mark's ink: its pixels' centre, its box, its stroke's width, and the two ends of the line it is drawn along (the pair of its pixels farthest apart, each moved half the stroke inward). */
 const markOf = (g: Grid, pixels: ReadonlyArray<number>) => {
@@ -922,22 +1011,34 @@ const readOf = (sheet: Raster, view: TraceView) => {
   return { rd, figure, regions: regions.filter((r) => r.size >= REGION_MIN) };
 };
 
+/** A part written as curls (`curlsOf`) from its mask opened and closed; with none as wide as its least, refused. */
+const curledOf = (rd: Read, name: string, part: TracePart, mask: Uint8Array) => {
+  const curls = curlsOf(rd.g, cleanedOf(rd.g, mask, part), part.curl ?? CURL);
+  if (curls.length === 0) rd.refused.push(`the part ${name} has no curl as wide as its least`);
+  return curls;
+};
+
 /** Each part of `view` written as its `as` says: its outline, its tones or its circle, its mask opened and closed first (`cleaned`); an outline that doubles back refused. */
 const writtenOf = (rd: Read, view: TraceView, of: (name: string) => Uint8Array) => {
   const { g } = rd;
   const outlines: Record<string, ReadonlyArray<TracePt>> = {};
   const tones: Record<string, ReadonlyArray<ReadonlyArray<TracePt>>> = {};
   const circles: Record<string, { at: TracePt; r: number }> = {};
+  const curls: Record<string, ReadonlyArray<{ at: TracePt; r: number }>> = {};
   for (const [name, part] of Object.entries(view.parts)) {
     const as = part.as ?? 'outline';
     if (as === 'none' || as === 'marks') continue;
+    if (as === 'curls') {
+      curls[name] = curledOf(rd, name, part, of(name));
+      continue;
+    }
     const path = part.path ?? view.path ?? 'points';
-    const pieces = piecesOf(g, cleaned(g, of(name), OPEN));
+    const pieces = piecesOf(g, cleanedOf(g, of(name), part));
     const largest = pieces[0] ?? [];
     if (as !== 'tones' && largest.length === 0) rd.refused.push(`the part ${name} is empty`);
     else if (as === 'outline') {
       const outline = outlineOf(g, largest, path, part.smooth);
-      const hairpins = hairpinsOf(outline, path);
+      const hairpins = hairpinsOf(outline, path, part.sharp);
       if (hairpins.length > 0)
         rd.refused.push(`the part ${name} doubles back on itself at ${hairpins.join(', ')}`);
       outlines[name] = outline;
@@ -948,7 +1049,7 @@ const writtenOf = (rd: Read, view: TraceView, of: (name: string) => Uint8Array) 
         .map((p) => outlineOf(g, p, path, part.smooth))
         .filter((pts) => pts.length >= 3 && areaOf(pts) > 0);
   }
-  return { outlines, tones, circles };
+  return { outlines, tones, circles, curls };
 };
 
 /**
@@ -1023,6 +1124,12 @@ export const tracedModule = (header: ReadonlyArray<string>, view: TraceView, t: 
       '',
       doc(name, name),
       `export const ${constName(name)}: Pt[][] = [\n${list.map((p) => `  ${pts(p, '  ')},`).join('\n')}\n];`,
+    );
+  for (const [name, list] of Object.entries(t.curls))
+    lines.push(
+      '',
+      doc(name, name),
+      `export const ${constName(name)}: ReadonlyArray<{ readonly at: Pt; readonly r: number }> = [\n${list.map((c) => `  { at: [${c.at.join(', ')}], r: ${c.r} },`).join('\n')}\n];`,
     );
   for (const [name, c] of Object.entries(t.circles))
     lines.push(
