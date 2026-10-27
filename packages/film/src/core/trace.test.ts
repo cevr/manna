@@ -268,62 +268,90 @@ describe('traceView', () => {
     expect(reach({ ...shade, shrink: 6 })).toBeGreaterThanOrEqual(reach(shade) + 3);
   });
 
+  test('writes a table that names what it was traced from, with no colour in it', () => {
+    const source = tracedModule(
+      ['Traced from a test sheet by `film concept trace`.'],
+      VIEW,
+      Result.getOrThrow(traceView(sheet(), VIEW)),
+    );
+    expect(source).toContain('// Traced from a test sheet by `film concept trace`.');
+    expect(source).toContain('export const HEAD: Pt[] = [');
+    expect(source).toContain('export const BODY: Pt[] = [');
+    expect(source).not.toMatch(/#[0-9a-f]{6}/i);
+  });
+});
+
+/** A sheet `size` square on white, each layer painted over the ones before it. */
+const painted = (
+  size: number,
+  layers: ReadonlyArray<
+    readonly [readonly [number, number, number], (x: number, y: number) => boolean]
+  >,
+): Raster => {
+  const rgba = new Uint8Array(size * size * 4).fill(255);
+  for (const [rgb, inside] of layers)
+    for (let y = 0; y < size; y++)
+      for (let x = 0; x < size; x++) if (inside(x, y)) rgba.set(rgb, (y * size + x) * 4);
+  return { width: size, height: size, rgba };
+};
+
+/** The left and right of `pts`. */
+const across = (pts: ReadonlyArray<readonly [number, number]>) => [
+  Math.min(...pts.map(([x]) => x)),
+  Math.max(...pts.map(([x]) => x)),
+];
+
+const INK = [20, 16, 14] as const;
+const HAIR = [106, 62, 43] as const;
+const BAND = [75, 46, 30] as const;
+const SKIN = [253, 175, 112] as const;
+
+describe('traceView, a sheet painted in dark brown beside its ink', () => {
   test("reads a part to its line's inner edge as well where the line's outer edge is antialiased: a ring of luma 70 outside the ink, seeded or the silhouette", () => {
-    const plain = sheet();
-    const rgba = new Uint8Array(plain.rgba);
-    // One pixel round the outside of the body's and the head's ink, between it and the white ground: luma 70.
+    // A cream body inked round 4 px (14 to 46 inside it); ringed, one pixel of luma 70 round the ink's outside.
+    const body: ReadonlyArray<
+      readonly [readonly [number, number, number], (x: number, y: number) => boolean]
+    > = [
+      [INK, (x, y) => x >= 10 && x <= 50 && y >= 10 && y <= 50],
+      [[253, 225, 188], (x, y) => x >= 14 && x <= 46 && y >= 14 && y <= 46],
+    ];
     const ring = (x: number, y: number) =>
-      ((x === 29 || x === 91) && y >= 61 && y <= 201) ||
-      ((y === 61 || y === 201) && x >= 29 && x <= 91) ||
-      (Math.hypot(x - 60, y - 40) > 22 && Math.hypot(x - 60, y - 40) <= 23.5);
-    for (let y = 0; y < plain.height; y++)
-      for (let x = 0; x < plain.width; x++)
-        if (ring(x, y)) rgba.set([70, 70, 70], (y * plain.width + x) * 4);
-    const ringed: Raster = { ...plain, rgba };
+      x >= 9 && x <= 51 && y >= 9 && y <= 51 && (x === 9 || x === 51 || y === 9 || y === 51);
     const view: TraceView = {
-      ...VIEW,
+      box: [0, 0, 60, 60],
+      classes: { cream: ['#fde1bc'] },
       parts: {
-        ...VIEW.parts,
-        whole: {
-          silhouette: true,
-          clip: [
-            [0, 70],
-            [120, 70],
-            [120, 220],
-            [0, 220],
-          ],
-          doc: 'The body below the head, as the figure.',
-        },
+        body: { seeds: [[30, 30]], doc: 'The body, seeded.' },
+        whole: { silhouette: true, doc: 'The body, as the figure.' },
       },
     };
-    const boxes = (r: Raster) => {
-      const t = Result.getOrThrow(traceView(r, view));
-      return ['head', 'body', 'whole'].map((name) => boxOf(t.outlines[name] ?? []));
+    const lefts = (sheet: Raster) => {
+      const t = Result.getOrThrow(traceView(sheet, view));
+      return ['body', 'whole'].map((name) => across(t.outlines[name] ?? []));
     };
-    const [want, got] = [boxes(plain), boxes(ringed)];
-    got.forEach((box, i) =>
-      box.forEach((v, j) => expect(Math.abs(v - (want[i]?.[j] ?? 0))).toBeLessThanOrEqual(1)),
+    const want = lefts(painted(60, body));
+    const got = lefts(painted(60, [[[70, 70, 70], ring], ...body]));
+    got.forEach((edges, i) =>
+      edges.forEach((v, j) => expect(Math.abs(v - (want[i]?.[j] ?? 0))).toBeLessThanOrEqual(1)),
     );
+    // Both end on the ink's inner edge, at 14 and 46.
+    want.forEach(([l = 0, r = 0]) => {
+      expect(Math.abs(l - 14)).toBeLessThanOrEqual(3);
+      expect(Math.abs(r - 46)).toBeLessThanOrEqual(3);
+    });
   });
 
   test('reads a band of dark brown paint beside an ear (lighter than ink, no ink by it) as hair: an ear grown into ink alone grows over none of it', () => {
-    const [width, height] = [120, 120];
-    const rgba = new Uint8Array(width * height * 4).fill(255);
-    const layer = (
-      rgb: readonly [number, number, number],
-      inside: (x: number, y: number) => boolean,
-    ) => {
-      for (let y = 0; y < height; y++)
-        for (let x = 0; x < width; x++) if (inside(x, y)) rgba.set(rgb, (y * width + x) * 4);
-    };
     // Inked round, 4 px: hair over the top; below it his face, a band 6 px wide, his ear, and a band 17 px wide behind it, then hair.
-    layer([20, 16, 14], (x, y) => x >= 10 && x <= 110 && y >= 10 && y <= 110);
-    layer([106, 62, 43], (x, y) => x >= 14 && x <= 106 && y >= 14 && y <= 106);
-    layer([75, 46, 30], (x, y) => x >= 45 && x <= 83 && y >= 41 && y <= 106);
-    layer([253, 175, 112], (x, y) => x >= 14 && x <= 44 && y >= 41 && y <= 106);
-    layer([253, 175, 112], (x, y) => x >= 51 && x <= 66 && y >= 55 && y <= 85);
+    const sheet = painted(120, [
+      [INK, (x, y) => x >= 10 && x <= 110 && y >= 10 && y <= 110],
+      [HAIR, (x, y) => x >= 14 && x <= 106 && y >= 14 && y <= 106],
+      [BAND, (x, y) => x >= 45 && x <= 83 && y >= 41 && y <= 106],
+      [SKIN, (x, y) => x >= 14 && x <= 44 && y >= 41 && y <= 106],
+      [SKIN, (x, y) => x >= 51 && x <= 66 && y >= 55 && y <= 85],
+    ]);
     const view: TraceView = {
-      box: [0, 0, width, height],
+      box: [0, 0, 120, 120],
       classes: { skin: ['#fdaf70'], hair: ['#6a3e2b'], hairDark: ['#4f2b21'] },
       parts: {
         ear: {
@@ -346,8 +374,8 @@ describe('traceView', () => {
         },
       },
     };
-    const t = Result.getOrThrow(traceView({ width, height, rgba }, view));
-    const [ex0, , ex1] = boxOf(t.outlines['ear'] ?? []);
+    const t = Result.getOrThrow(traceView(sheet, view));
+    const [ex0 = 0, ex1 = 0] = across(t.outlines['ear'] ?? []);
     expect(ex0).toBeGreaterThanOrEqual(50.5);
     expect(ex1).toBeLessThanOrEqual(67.5);
     // Even-odd: whether `p` lies inside the hair's outline.
@@ -362,41 +390,22 @@ describe('traceView', () => {
   });
 
   test("reads a line whose inner part is painted the band's brown (6 px of it inside 1 px of ink) as line: the part ends at the brown's inner edge", () => {
-    const [width, height] = [80, 80];
-    const rgba = new Uint8Array(width * height * 4).fill(255);
-    const layer = (
-      rgb: readonly [number, number, number],
-      inside: (x: number, y: number) => boolean,
-    ) => {
-      for (let y = 0; y < height; y++)
-        for (let x = 0; x < width; x++) if (inside(x, y)) rgba.set(rgb, (y * width + x) * 4);
-    };
     // Inked round 6 px, but down its right side 1 px of ink with 6 px of brown inside it; hair within.
-    layer([20, 16, 14], (x, y) => x >= 10 && x <= 70 && y >= 10 && y <= 70);
-    layer([75, 46, 30], (x, y) => x >= 63 && x <= 69 && y >= 16 && y <= 64);
-    layer([106, 62, 43], (x, y) => x >= 16 && x <= 62 && y >= 16 && y <= 64);
+    const sheet = painted(80, [
+      [INK, (x, y) => x >= 10 && x <= 70 && y >= 10 && y <= 70],
+      [BAND, (x, y) => x >= 63 && x <= 69 && y >= 16 && y <= 64],
+      [HAIR, (x, y) => x >= 16 && x <= 62 && y >= 16 && y <= 64],
+    ]);
     const view: TraceView = {
-      box: [0, 0, width, height],
+      box: [0, 0, 80, 80],
       classes: { hair: ['#6a3e2b'], hairDark: ['#4f2b21'] },
       parts: { hair: { classes: ['hair', 'hairDark'], doc: 'The hair to its line.' } },
     };
-    const [x0, , x1] = boxOf(
-      Result.getOrThrow(traceView({ width, height, rgba }, view)).outlines['hair'] ?? [],
+    const [x0 = 0, x1 = 0] = across(
+      Result.getOrThrow(traceView(sheet, view)).outlines['hair'] ?? [],
     );
     // Its left edge on the ink's inner edge, at 16; its right on the brown's, at 63, not the ink's at 70.
     expect(Math.abs(x0 - 16)).toBeLessThanOrEqual(2);
     expect(Math.abs(x1 - 63)).toBeLessThanOrEqual(2);
-  });
-
-  test('writes a table that names what it was traced from, with no colour in it', () => {
-    const source = tracedModule(
-      ['Traced from a test sheet by `film concept trace`.'],
-      VIEW,
-      Result.getOrThrow(traceView(sheet(), VIEW)),
-    );
-    expect(source).toContain('// Traced from a test sheet by `film concept trace`.');
-    expect(source).toContain('export const HEAD: Pt[] = [');
-    expect(source).toContain('export const BODY: Pt[] = [');
-    expect(source).not.toMatch(/#[0-9a-f]{6}/i);
   });
 });
