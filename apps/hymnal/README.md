@@ -369,6 +369,25 @@ no longer matches the script, so an edit to `wheat.svg` needs `bun run icon`.
 
 ## Recordings: R2 at hymns.cvr.im
 
+The app saves each visible hymn's printed-key recording in the background.
+Play in another Key queues that set too; capo never changes its identity.
+`src/offline/` owns two scoped workers and durable media files: application
+support on native, origin-private files on web, namespaced by recording set.
+Media bytes never enter settings KVS or the browser HTTP cache. A completed
+file resolves locally first. A failed local read invalidates it and attempts
+the original remote URL once. Missing sets retain the normal Retry behavior.
+
+Settings → Downloads offers all 695 printed-key recordings, completed counts,
+saved byte size, cancel/resume and delete. Saves use bounded 256 KiB ranges
+and strong validators. Only a complete, length-checked file with a media
+header becomes available locally. Partial data resumes only at its exact
+durable offset with a matching entity; otherwise it restarts. Delete and
+cancel invalidate older work. React draws progress in one Settings leaf and
+does not own the workers. `bun run test:offline` checks synthetic storage,
+loopback HTTP and the public player without making sound. For a development
+UI drive, `VITE_HYMNAL_RECORDINGS_ORIGIN` selects a loopback fixture. A release
+always uses R2. Never use production Download all for a verification run.
+
 The 1985 SDA Hymnal's recordings are in the Cloudflare R2 bucket `cvr-hymns`,
 served publicly at `https://hymns.cvr.im`. The app builds each URL from
 `src/remote.ts` (`audioUrl(n)` is `https://hymns.cvr.im/audio/warm-1/sdah/<n>.mp3`).

@@ -1,7 +1,7 @@
 /* oxlint-disable effect/noAsyncFunction, effect/noTryCatch, effect/noThrowStatement, eslint/no-await-in-loop -- OPFS adapter: keep writable-stream close/abort and DOMException handling at the host boundary; every public operation enters Effect.tryPromise. */
 /** Browser media lives in OPFS, apart from the HTTP cache and synchronous settings. */
 import { Effect, Layer, Schema } from 'effect';
-import { Entry, identityKey, Media, OfflineError, type Identity } from './cache';
+import { Entry, Identity, identityKey, Media, OfflineError, storageName } from './cache';
 
 const call = <A>(run: () => Promise<A>) =>
   Effect.tryPromise({ try: run, catch: () => OfflineError.make({ code: 'storage' }) });
@@ -13,7 +13,7 @@ export const mediaLayer = Layer.effect(Media)(
     const root = () =>
       navigator.storage
         .getDirectory()
-        .then((dir) => dir.getDirectoryHandle('hymnal-recordings-v1', { create: true }));
+        .then((dir) => dir.getDirectoryHandle(storageName, { create: true }));
     const file = async (id: Identity, suffix: string, create = false) =>
       (await root()).getFileHandle(`${identityKey(id)}.${suffix}`, { create });
     yield* Effect.addFinalizer(() =>
@@ -29,6 +29,7 @@ export const mediaLayer = Layer.effect(Media)(
           const match = /^(\d+)_(0|-?[1-6])\.(json|bin)$/.exec(name);
           if (!match || handle.kind !== 'file') continue;
           const id = { number: Number(match[1]), offset: Number(match[2]) };
+          if (!Schema.is(Identity)(id)) continue;
           const key = identityKey(id);
           if (!found.has(key))
             found.set(key, { ...id, bytes: 0, total: 1, etag: '', complete: false });

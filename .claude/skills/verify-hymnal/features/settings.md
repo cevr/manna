@@ -19,6 +19,7 @@ played on, as their licences ask; the app's version is not shown.
 - `settings-chords`: under the heading `Chords`, a radio group `Chord style` of `Simple`, `Advanced`, `Simple` checked at first; a press chooses one, hymns show their chords in it, and it holds after a relaunch.
 - `settings-feel`: the switch `Sounds and haptics`, after `Chord style` and before `About`, on at first; a press turns it off, and it stays off after a relaunch (`feel.md` for what it silences).
 - `about`: the heading `About`, then the credits: `Salamander Grand Piano` by `Alexander Holm`, `CC BY 3.0` (a link to the licence), and `VS Chamber Orchestra 2` by `Versilian Studios`, `CC0`.
+- Downloads: after `Sounds and haptics`, before `About`. [Downloaded recordings](offline.md) owns `offline-download-all`, `offline-progress`, `offline-size`, `offline-delete`, `offline-resume` and `offline-deduplicate`, including the fake-origin journey and silence limits.
 
 ## How to get to it (user POV)
 

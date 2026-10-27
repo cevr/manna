@@ -6,7 +6,7 @@
  */
 
 import { useAtomMount, useAtomValue } from '@effect/atom-react';
-import { Effect, Option, SubscriptionRef } from 'effect';
+import { Effect, Layer, Option, SubscriptionRef } from 'effect';
 import { type ReactNode, useEffect } from 'react';
 
 import { book } from '~/follow/book';
@@ -18,11 +18,18 @@ import { playbackLive } from './playback.live';
 import { playerOn, statusEvery } from './player';
 import { soundOn } from './sound';
 import { recordingsOn } from './recording';
+import { localOn, savingOn } from './offline';
+import { offlineLive } from '~/offline/live';
+import { SaveShown } from '~/offline/Open';
 
 /** Whether the recording sounds, as the score clock reads it: the Sound setting, set at mount. */
 const sound = Effect.runSync(SubscriptionRef.make(true));
 const player = playerOn(
-  counted(soundOn(recordingsOn(playbackLive), book.of, sound)),
+  counted(
+    savingOn(
+      soundOn(recordingsOn(localOn(playbackLive).pipe(Layer.provide(offlineLive))), book.of, sound),
+    ).pipe(Layer.provide(offlineLive)),
+  ),
   statusEvery,
   settings.move,
 );
@@ -37,5 +44,10 @@ export function LivePlayer({ children }: { readonly children: ReactNode }) {
   const on = useAtomValue(settings.sound);
   // The setting is the app's; the score clock is outside React, so it is told each change.
   useEffect(() => Effect.runSync(SubscriptionRef.set(sound, on)), [on]);
-  return <PlayerContext value={provided}>{children}</PlayerContext>;
+  return (
+    <PlayerContext value={provided}>
+      <SaveShown />
+      {children}
+    </PlayerContext>
+  );
 }

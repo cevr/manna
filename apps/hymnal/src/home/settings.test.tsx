@@ -33,11 +33,15 @@ describe('the Settings route', () => {
         ...page.matchAll(/<div (?=[^>]*role="radiogroup")(?=[^>]*aria-label="([^"]+)")/g),
       ].map(([, label]) => label),
       chords: page.includes('>Chords<'),
+      downloads: ['Downloads', 'Download all recordings', 'Delete downloads'].every((label) =>
+        page.includes(label),
+      ),
       radios: radiosOf(page),
     }).toEqual({
       heading: true,
       groups: ['Appearance', 'Chord style', 'Chord placement'],
       chords: true,
+      downloads: true,
       radios: [
         { label: 'System', checked: true },
         { label: 'Light', checked: false },

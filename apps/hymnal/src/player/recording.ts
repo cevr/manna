@@ -39,13 +39,19 @@ export const recordingsOver = (device: PlaybackApi): PlaybackApi => {
           effective: identity.offset,
         }));
         const began = yield* Clock.currentTimeMillis;
-        const attempt = (source: string, at: number) =>
+        const attempt = (source: string, at: number, offset = identity?.offset) =>
           device
             .play(source, at, {
               ...options,
               continuous: options?.continuous ?? false,
               ready: options?.ready ?? false,
               intent: wants,
+              ...Option.match(Option.fromNullishOr(identity), {
+                onNone: () => ({}),
+                onSome: (recording) => ({
+                  recording: { number: recording.number, offset: offset ?? recording.offset },
+                }),
+              }),
             })
             .pipe(
               Effect.filterOrFail(
@@ -86,6 +92,7 @@ export const recordingsOver = (device: PlaybackApi): PlaybackApi => {
               return yield* attempt(
                 audioUrl(identity.number),
                 error.positionMs ?? fromMs + advanced,
+                0,
               );
             }),
           ),

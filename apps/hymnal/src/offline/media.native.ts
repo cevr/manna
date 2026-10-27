@@ -2,7 +2,7 @@
 /** Native media uses application support, never the platform's evictable cache. */
 import { Effect, Layer, Schema } from 'effect';
 import { One } from 'one';
-import { Entry, identityKey, Media, OfflineError, type Identity } from './cache';
+import { Entry, Identity, identityKey, Media, OfflineError, storageName } from './cache';
 
 const call = <A>(run: () => Promise<A>) =>
   Effect.tryPromise({ try: run, catch: () => OfflineError.make({ code: 'storage' }) });
@@ -10,7 +10,7 @@ const decode = Schema.decodeUnknownOption(Schema.fromJsonString(Entry));
 const encode = Schema.encodeSync(Schema.fromJsonString(Entry));
 export const mediaLayer = Layer.sync(Media, () => {
   const fs = One.FileSystem;
-  const root = `${fs.getDirectories().applicationSupport.replace(/\/$/, '')}/hymnal-recordings-v1/`;
+  const root = `${fs.getDirectories().applicationSupport.replace(/\/$/, '')}/${storageName}/`;
   const path = (id: Identity, ext: string) => `${root}${identityKey(id)}.${ext}`;
   const ready = () => fs.makeDirectory(root, true);
   return Media.of({
@@ -21,6 +21,7 @@ export const mediaLayer = Layer.sync(Media, () => {
         const match = /^(\d+)_(0|-?[1-6])\.(json|mp3)$/.exec(file.name);
         if (!match) continue;
         const id = { number: Number(match[1]), offset: Number(match[2]) };
+        if (!Schema.is(Identity)(id)) continue;
         const key = identityKey(id);
         if (!found.has(key))
           found.set(key, { ...id, bytes: 0, total: 1, etag: '', complete: false });

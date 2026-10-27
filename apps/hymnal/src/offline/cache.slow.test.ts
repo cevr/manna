@@ -137,6 +137,7 @@ it.effect('offline interruption resumes only a matching validator and exact dura
     f.control.before = () => Effect.void;
     yield* Effect.gen(function* () {
       const cache = yield* Offline;
+      expect((yield* cache.snapshot).failed).toBe(1);
       yield* cache.enqueue(id);
       yield* idle(cache);
       expect((yield* cache.snapshot).saved).toBe(1);

@@ -17,6 +17,7 @@ import type { Appearance } from '~/settings';
 import { settings } from '~/store';
 import { color, useAccent } from '~/color';
 import { placements } from '~/settings';
+import { Downloads } from '~/offline/Downloads';
 
 interface Choice<A extends string> {
   readonly value: A;
@@ -48,6 +49,7 @@ export default function Settings() {
       <Heading style={styles.section}>Chord placement</Heading>
       <Choices label="Chord placement" value={settings.placement} choices={placements} />
       <FeelSwitch />
+      <Downloads />
       <About />
     </ScrollView>
   );

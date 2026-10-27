@@ -12,6 +12,10 @@ import {
 } from 'effect';
 import * as Semaphore from 'effect/Semaphore';
 import { soundingOffset } from '~/remote';
+import { RECORDING_SET } from '@manna/hymnal/recordings';
+
+/** A later immutable recording set must not resolve files from an earlier set. */
+export const storageName = `hymnal-recordings-${RECORDING_SET}-v1`;
 
 export const Identity = Schema.Struct({
   number: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 695 })),
@@ -149,10 +153,12 @@ export const offlineLayer = Layer.effect(Offline)(
                 row.complete &&
                 (row.bytes !== row.total || (yield* media.size(row)) !== row.bytes)
               ) {
+                failed.add(identityKey(row));
                 yield* media.remove(row);
                 return;
               }
               entries.set(identityKey(row), row);
+              if (!row.complete) failed.add(identityKey(row));
             }),
           { discard: true },
         ),
