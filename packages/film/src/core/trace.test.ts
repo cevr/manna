@@ -252,6 +252,22 @@ describe('traceView', () => {
     expect(corners({ ...body, smooth: 12 })).toBeGreaterThan(corners(body) + 2);
   });
 
+  test('wears a part in from its edge as far as it asks, so a part less it keeps a rim under it', () => {
+    // How far right the body runs in the shade's rows (the shade fills 61 to 86 across, 141 to 196 down).
+    const reach = (shade: TraceView['parts'][string]) => {
+      const view: TraceView = {
+        ...VIEW,
+        parts: { ...VIEW.parts, shade, body: { seeds: [[50, 100]], minus: ['shade'] } },
+      };
+      const body = Result.getOrThrow(traceView(sheet(), view)).outlines['body'] ?? [];
+      return Math.max(...body.filter(([, y]) => y > 155 && y < 185).map(([x]) => x));
+    };
+    const shade = { classes: ['teal'], as: 'none' } as const;
+    // Less the whole shade, the body ends where the shade begins; less the shade worn in 6 px, it runs on into it (4 px past its smoothing).
+    expect(reach(shade)).toBeLessThan(63);
+    expect(reach({ ...shade, shrink: 6 })).toBeGreaterThanOrEqual(reach(shade) + 3);
+  });
+
   test('writes a table that names what it was traced from, with no colour in it', () => {
     const source = tracedModule(
       ['Traced from a test sheet by `film concept trace`.'],

@@ -61,6 +61,8 @@ export interface TracePart {
   readonly open?: number;
   /** How far each way its mask is closed, pixels (its `open` unless given): a notch an inner line leaves where it meets the silhouette's (an ear's against the cheek) is filled. */
   readonly close?: number;
+  /** How far its mask is worn in from its edge once formed, pixels (none unless given): a part another gives up only under its middle, so that one's edge lies under its paper (a garment under a sleeve). */
+  readonly shrink?: number;
   /** Where its outline turns back as sharply as the sheet draws it (a nape under curls), sheet pixels: a turn past `TURN_MAX` within `SHARP_REACH` of one is the sheet's, never refused. */
   readonly sharp?: ReadonlyArray<TracePt>;
   /** A curled part's curls' least and greatest radius, pixels (`CURL` unless given). */
@@ -867,7 +869,7 @@ const formedOf = (
     dropFrom(mask, (k) => m[k] === 0);
   }
   dropFrom(mask, (k) => !rd.core(k));
-  return mask;
+  return part.shrink === undefined ? mask : eroded(g, mask, part.shrink);
 };
 
 /** Each part's mask, by name, made once, each from the parts it names. */
