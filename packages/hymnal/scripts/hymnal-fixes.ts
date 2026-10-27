@@ -22,10 +22,13 @@
  * working directory; a missing file is refused, never created.
  */
 
-import { Database } from 'bun:sqlite';
-import { Schema } from 'effect';
+import * as BunServices from '@effect/platform-bun/BunServices';
+import { Effect, Schema } from 'effect';
 import { readdirSync } from 'node:fs';
 import path from 'node:path';
+
+import { buildDatabase, OUTPUT, readDatabaseSources } from './compile-db.js';
+import { readSourceText, SOURCE_TEXT } from './source-text.js';
 
 const Line = Schema.Struct({ text: Schema.String, from: Schema.String });
 const Lines = Schema.Array(Line);
@@ -77,28 +80,35 @@ const versesOf = (printed: Printed): typeof Verses.Type => {
 
 if (import.meta.main) {
   const args = process.argv.slice(2);
-  const at = args.indexOf('--db');
-  const file =
-    at < 0
-      ? path.resolve(import.meta.dir, '../../core/data/hymnal.db')
-      : path.resolve(args[at + 1] ?? '');
+  const at = args.indexOf('--out');
+  const file = at < 0 ? OUTPUT : path.resolve(args[at + 1] ?? '');
   const dir = path.resolve(import.meta.dir, '../data/fixes');
   const sources = readdirSync(dir)
     .filter((name) => /^\d{3}\.json$/.test(name))
     .toSorted();
-  const db = new Database(file, { create: false, readwrite: true });
+  const source = await Effect.runPromise(readSourceText().pipe(Effect.provide(BunServices.layer)));
+  const hymns = [...source.hymns];
   for (const name of sources) {
     const printed = Schema.decodeSync(Printed)(await Bun.file(path.join(dir, name)).text());
     if (`${String(printed.number).padStart(3, '0')}.json` !== name)
       throw new Error(`${name} prints hymn ${printed.number}`);
-    const before = db.query('SELECT verses FROM hymns WHERE id = ?').get(printed.number);
-    if (before === null) throw new Error(`hymn ${printed.number} is not in ${file}`);
+    const before = hymns[printed.number - 1];
+    if (before?.number !== printed.number)
+      throw new Error(`hymn ${printed.number} is not in source text`);
     const verses = versesOf(printed);
-    db.query('UPDATE hymns SET verses = ? WHERE id = ?').run(
-      Schema.encodeSync(Verses)(verses),
-      printed.number,
-    );
+    hymns[printed.number - 1] = { ...before, verses };
     console.log(`hymnal-fixes ${printed.number} wrote ids ${verses.map((v) => v.id).join(' ')}`);
   }
-  db.close();
+  if (JSON.stringify(hymns) !== JSON.stringify(source.hymns))
+    await Bun.write(SOURCE_TEXT, `${JSON.stringify({ ...source, hymns }, null, 2)}\n`);
+  const compiled = Bun.spawnSync(['bun', path.resolve(import.meta.dir, 'compile.ts')], {
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+  if (compiled.exitCode !== 0) throw new Error('hymnal-fixes: compile failed');
+  await Effect.runPromise(
+    Effect.gen(function* () {
+      yield* buildDatabase(file, yield* readDatabaseSources());
+    }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
 }
