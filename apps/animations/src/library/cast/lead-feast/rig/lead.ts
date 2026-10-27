@@ -50,7 +50,6 @@ interface LeadTable {
   readonly HAIR_LIGHT: Pieces;
   readonly HAIR_DARK: Pieces;
   readonly NECK_SHADE: Pieces;
-  readonly JAW: Pieces;
   readonly BODY: ReadonlyArray<Pt>;
   readonly SKIN: Pieces;
   readonly NECK: Pieces;
@@ -78,18 +77,26 @@ interface LeadViewSpec {
   readonly ears: { readonly near: ReadonlyArray<Pt>; readonly far?: ReadonlyArray<Pt> };
   /** His face's marks; from behind, the front's laid where his hair covers them. */
   readonly face: Omit<TracedFigureSpec['face'], 'gaze'>;
-  /** Which sleeve each arm is in: his right arm's is cream, his left's teal. */
-  readonly sleeves: { readonly near: 'cream' | 'teal'; readonly far: 'cream' | 'teal' };
+  /** Which sleeve each arm is in: his right arm's is cream (`creamAcross` where it crosses his cream tunic whole, seated), his left's teal. */
+  readonly sleeves: { readonly near: keyof typeof SLEEVE; readonly far: keyof typeof SLEEVE };
 }
 
 /** A tone of `color` on `pts` (none drawn where it has no pieces). */
 const tone = (pts: Pieces, color: `#${string}`): TracedTone => ({ pts, color });
 
 /** The paper of each sleeve by its cloth. */
-const SLEEVE = { cream: PAPERS.sleeve, teal: PAPERS.mantleSleeve } as const;
+const SLEEVE = {
+  cream: PAPERS.sleeve,
+  creamAcross: PAPERS.sleeveAcross,
+  teal: PAPERS.mantleSleeve,
+} as const;
 
 /** The shade along each sleeve's edges, by its cloth: what shows it where it lies on his garment. */
-const SLEEVE_EDGE = { cream: TONES.creamEdge, teal: TONES.tealEdge } as const;
+const SLEEVE_EDGE = {
+  cream: TONES.creamEdge,
+  creamAcross: TONES.creamAcross,
+  teal: TONES.tealEdge,
+} as const;
 
 /** Where his eyes rest: ahead, a little down. */
 const GAZE: Pt = [0, 40];
@@ -105,7 +112,7 @@ const leadView = (t: LeadTable, v: LeadViewSpec) =>
       ...v.head,
       outline: t.HEAD,
       paper: PAPERS.skin,
-      tones: [tone(t.NECK_SHADE, TONES.neck), tone(t.JAW, TONES.jaw)],
+      tones: [tone(t.NECK_SHADE, TONES.neck)],
     },
     hair: {
       outline: t.HAIR,
@@ -269,6 +276,6 @@ export const leadFeastSeated = leadView(
     head: { view: 'threeQuarter', chin: 'open' },
     ears: { near: SEATED.EAR_NEAR },
     face: { ...AT_REST, marks: SEATED.MARKS, extra: WITH_EXTRA },
-    sleeves: { near: 'cream', far: 'teal' },
+    sleeves: { near: 'creamAcross', far: 'teal' },
   },
 );

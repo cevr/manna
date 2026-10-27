@@ -262,10 +262,10 @@ export const CAST = castTable({
           lean: 0,
           numbers: { tilt: 0.35, mouth: 0 },
           reach: [
-            ['near', [402, 367]],
-            ['far', [416, 360]],
+            ['near', [394, 368]],
+            ['far', [345, 378]],
           ],
-          props: [{ name: 'plate', draw: plate([-52, -372], 0.55) }],
+          props: [{ name: 'plate', draw: plate([-50, -362], 0.55) }],
         },
       ),
       // Seated on the stool, three-quarters left, his near hand at his chin, his far hand on his lap.
@@ -291,7 +291,7 @@ export const CAST = castTable({
         LEAD.leadFeastThreeQuarterLeft,
         RIGS.leadFeastThreeQuarterLeftProp,
         {
-          lean: -0.06,
+          lean: -0.1,
           numbers: { nod: 6, tilt: -0.1, mouth: 3 },
           reach: [['near', [985, 590]]],
           props: [
@@ -309,7 +309,10 @@ export const CAST = castTable({
         {
           lean: 0,
           numbers: {},
-          reach: [],
+          reach: [
+            ['near', [1294, 632]],
+            ['far', [1460, 632]],
+          ],
           props: [],
         },
       ),
@@ -364,15 +367,16 @@ export const CAST = castTable({
         RIGS.leadFeastFrontProp,
         WINCE,
       ),
-      // His front: glad, his eyes shut in a smile.
+      // His front: glad, his eyes shut in a smile, his head lifted on a long neck (nod -12 lifts it 20 px off the bust's place, where the sheet draws his eyes).
       'heads-6': bust(
         [1276, 313, 1519, 650],
-        [1399, 425],
+        [1399, 445.5],
         LEAD_FRONT,
         LEAD.leadFeastFront,
         RIGS.leadFeastFrontProp,
         {
           glad: 1,
+          nod: -12,
           eyes: 0,
           mouth: 4.5,
         },

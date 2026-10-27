@@ -25,9 +25,11 @@ export const PAPERS = papers({
   /** His hair: a warm mid brown, flat; its dark under the curls laid on it as tones. */
   hair: { color: '#71442e', light: '#71442e' },
   /** His cream tunic: its far side turned toward a warm lavender-beige. */
-  tunic: { color: '#fde1bc', shade: '#e2bca6', light: '#fff0d8', crease: TURN.robe },
+  tunic: { color: '#fde1bc', shade: '#e8c3ad', light: '#fff0d8', crease: TURN.robe },
   /** His cream sleeve (his right arm), in the light: the tunic's cream. */
-  sleeve: { color: '#fbe0bb', shade: '#e2bca6', light: '#fff0d8', crease: TURN.sleeve },
+  sleeve: { color: '#fbe0bb', shade: '#e8c3ad', light: '#fff0d8', crease: TURN.sleeve },
+  /** His cream sleeve where it crosses his cream tunic whole (seated, his hand at his chin): a step darker, as the sheet paints it there, so it parts from the tunic with no line. */
+  sleeveAcross: { color: '#f0d4b8', shade: '#dcb7a3', light: '#fbe6cc', crease: TURN.sleeve },
   /** His teal sleeve (his left arm, under the mantle): the mantle's teal, its far side toward blue-violet. */
   mantleSleeve: { color: '#5d8790', shade: '#435770', light: '#6f979c', crease: TURN.sleeve },
   /** His bare feet in their sandals: his skin. */
@@ -48,18 +50,18 @@ export const TONES = {
   sashShade: '#c9a39b',
   /** The shade his chin lays on his neck: his skin turned toward rose. */
   neck: '#e58a62',
-  /** The brown line his jaw lays across his neck, right under his chin. */
-  jaw: '#7e492d',
   /** His sandals' straps: a warm brown. */
-  strap: '#6f412c',
+  strap: '#5c3627',
   /** His sandals' soles: a dark brown, as heavy as the line. */
   sole: '#3b2418',
   /** The dark of his hair under its curls. */
   hairShade: '#5d3626',
   /** The light on his curls. */
-  hairLight: '#85492e',
+  hairLight: '#7b4530',
   /** The edge of his cream sleeve where it lies on his tunic: its shade, turned toward rose. */
-  creamEdge: '#d9ae9e',
+  creamEdge: '#dcb5a0',
   /** The edge of his teal sleeve where it lies on his mantle: toward blue-violet. */
-  tealEdge: '#3a4b68',
+  tealEdge: '#4a6479',
+  /** The edge of his cream sleeve where it crosses his cream tunic whole (seated, his hand at his chin): deeper, the one thing that parts them. */
+  creamAcross: '#c79c8b',
 } as const satisfies Record<string, `#${string}`>;

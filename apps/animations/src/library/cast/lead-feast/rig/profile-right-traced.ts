@@ -646,9 +646,6 @@ export const HAIR_DARK: Pt[][] = [
 /** The shade under his jaw, down his neck (none under a closed chin). */
 export const NECK_SHADE: Pt[][] = [];
 
-/** The brown line his jaw lays across his neck, under his chin (none under a closed chin). */
-export const JAW: Pt[][] = [];
-
 /** His skin the garment's neck shows, below his chin: lit, as his face. */
 export const SKIN: Pt[][] = [];
 

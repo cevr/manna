@@ -109,18 +109,16 @@ interface Chin {
   readonly row: number;
 }
 
-/** How far above the chin's row the garment is read from, how tall the band the shade under the jaw is read in, and how far above that band the jaw's brown line is read from, by the chin's kind. */
+/** How far above the chin's row the garment is read from, and how tall the band the shade under the jaw is read in, by the chin's kind. */
 const CHIN = {
   open: {
     garment: 25,
     shade: 45,
-    jaw: 15,
     doc: "His head's paper down into his garment's neck (his chin open): his face, his ears, his neck and his skull under his hair.",
   },
   closed: {
     garment: 10,
     shade: 0,
-    jaw: 0,
     doc: "His head's paper: his face, his ears and his skull under his hair.",
   },
 } as const;
@@ -244,15 +242,6 @@ export const standing = (v: Standing): TraceSheetView => {
         min: 150,
         smooth: 8,
         doc: 'The shade under his jaw, down his neck (none under a closed chin).',
-      },
-      jaw: {
-        classes: BROWN,
-        inside: 'head',
-        clip: wide(v.chin.row - chin.shade - chin.jaw, v.chin.row - chin.shade + 12),
-        grow: 0,
-        as: 'tones',
-        min: 30,
-        doc: 'The brown line his jaw lays across his neck, under his chin (none under a closed chin).',
       },
       handNear: { seeds: [v.near.hand], grow: 1, as: 'circle', doc: 'His near hand at its cuff.' },
       handFar: { seeds: [v.far.hand], grow: 1, as: 'circle', doc: 'His far hand at its cuff.' },
