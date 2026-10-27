@@ -1001,7 +1001,14 @@ export const TRACE = {
       marked: {},
       ears: { earNear: [819, 322], earFar: [962, 322] },
       earSharp: [[964.5, 307.5]],
-      chin: { kind: 'closed', row: 380 },
+      chin: {
+        kind: 'closed',
+        row: 380,
+        // No jaw seen from behind.
+        line: [],
+        // The rose his hair lays on his neck under it (#e58860 at 891,379), soft below (#ef9e6a at 891,389), his skin from row 389 down.
+        shade: rect(856, 366, 926, 400),
+      },
       sharp: [],
       near: {
         pick: SILHOUETTE,

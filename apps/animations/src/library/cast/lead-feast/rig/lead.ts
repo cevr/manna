@@ -96,6 +96,8 @@ interface LeadViewSpec {
   readonly head: Pick<TracedFigureSpec['head'], 'view' | 'chin'>;
   /** The colour of the line his jaw lays under his chin (`JAW`): the sheet's brown where it paints one (`TONES.chinLine`), else his deep neck shade. */
   readonly jaw?: `#${string}`;
+  /** The colour of his neck where it shows as a tone on his garment (`NECK`, from behind): his skin where the sheet paints it lit under the shade his hair lays on it, else his neck's shade. */
+  readonly neck?: `#${string}`;
   /** The ears that show, as the view's table traces them. */
   readonly ears: { readonly near: ReadonlyArray<Pt>; readonly far?: ReadonlyArray<Pt> };
   /** His face's marks; from behind, the front's laid where his hair covers them. */
@@ -207,9 +209,9 @@ const leadView = (t: LeadTable, v: LeadViewSpec) =>
       tones: [
         { ...tone(t.SKIN, PAPERS.skin.color), skin: true },
         { ...tone(t.NECK_SHADE, TONES.neck), skin: true },
+        { ...tone(t.NECK, v.neck ?? TONES.neck), skin: true },
         { ...tone(t.JAW_SOFT ?? [], TONES.jawSoft), skin: true },
         { ...tone(t.JAW_SHADE ?? [], TONES.jawShade), skin: true },
-        { ...tone(t.NECK, TONES.neck), skin: true },
         tone(t.MANTLE, TONES.mantle),
         tone(t.MANTLE_SHADE, TONES.mantleShade),
         tone(t.SASH_SHADE, TONES.sashShade),
@@ -304,7 +306,8 @@ export const leadFeastProfileLeft = leadView(PROFILE_LEFT, {
 /** From behind: his curls over his whole head, his ears either side; his teal left sleeve on screen left, his cream right on screen right; his face, under his hair, is the front's. */
 export const leadFeastBack = leadView(BACK, {
   sheet: 'turnaround',
-  head: { view: 'back' },
+  head: { view: 'back', chin: 'open' },
+  neck: PAPERS.skin.color,
   ears: { near: BACK.EAR_NEAR, far: BACK.EAR_FAR },
   face: {
     turn: AT_REST.turn,
