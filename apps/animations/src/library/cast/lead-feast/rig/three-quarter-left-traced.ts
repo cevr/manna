@@ -684,13 +684,7 @@ export const JAW: Pt[][] = [
 ];
 
 /** His skin the garment's neck shows, below his chin: lit, as his face. */
-export const SKIN: Pt[][] = [
-  [
-    [338.5, 499],
-    [339.5, 507.5],
-    [337.5, 505.5],
-  ],
-];
+export const SKIN: Pt[][] = [];
 
 /** His neck under his hair, in the tunic's neck (from behind). */
 export const NECK: Pt[][] = [];

@@ -296,7 +296,7 @@ export const standing = (v: Standing): TraceSheetView => {
         inside: 'body',
         minus: ['handNearRing', 'handFarRing'],
         as: 'tones',
-        min: 40,
+        min: 280,
         smooth: 4,
         doc: "His skin the garment's neck shows, below his chin: lit, as his face.",
       },
