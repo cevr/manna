@@ -203,7 +203,10 @@ const earsOf = (ear: Ear): Cut[] => {
   const flat = (key: string, pts: ReadonlyArray<Pt>): Cut => ({
     key,
     pts,
-    look: looked(ear.paper),
+    look:
+      ear._tag !== 'RoundEar' && ear.tones !== undefined
+        ? looked(ear.paper, { tones: ear.tones })
+        : looked(ear.paper),
     boil: SMALL_BOIL,
   });
   switch (ear._tag) {

@@ -98,6 +98,8 @@ export interface TracedFigureSpec {
     readonly near?: ReadonlyArray<Pt>;
     readonly far?: ReadonlyArray<Pt>;
     readonly paper: Paper;
+    /** The light and shade on them as the sheet paints them, laid as tones (`Ear`), sheet pixels. */
+    readonly tones?: ReadonlyArray<TracedTone>;
   };
   /** The face's marks as the sheet draws them (`tracedKit`), the features' slide after the gaze, the face at rest and where its eyes look. */
   readonly face: {
@@ -421,6 +423,16 @@ export const tracedFigure = (spec: TracedFigureSpec) => {
           crescent: hair.curls.crescent,
         });
   };
+  // Both ears where both show, else the one; the light on them as tones where the sheet gives it.
+  const earOf = (e: NonNullable<TracedFigureSpec['ears']>) => {
+    const tones = e.tones === undefined ? undefined : toned(head, e.tones);
+    if (e.near !== undefined && e.far !== undefined) {
+      const both = { near: head(e.near), far: head(e.far), paper: e.paper };
+      return tones === undefined ? Ear.Both(both) : Ear.Both({ ...both, tones });
+    }
+    const one = { outline: head(e.near ?? e.far ?? []), paper: e.paper };
+    return tones === undefined ? Ear.Traced(one) : Ear.Traced({ ...one, tones });
+  };
   const tracedHead = {
     view: spec.head.view,
     outline: headOutline,
@@ -443,12 +455,7 @@ export const tracedFigure = (spec: TracedFigureSpec) => {
       spec.headcloth === undefined
         ? undefined
         : Headcloth({ outline: head(spec.headcloth.outline), paper: spec.headcloth.paper }),
-    ear:
-      ears === undefined
-        ? undefined
-        : ears.near !== undefined && ears.far !== undefined
-          ? Ear.Both({ near: head(ears.near), far: head(ears.far), paper: ears.paper })
-          : Ear.Traced({ outline: head(ears.near ?? ears.far ?? []), paper: ears.paper }),
+    ear: ears === undefined ? undefined : earOf(ears),
     face: KitA(spec.face.extra === undefined ? rested : { ...rested, extra: spec.face.extra }),
     mouth: spec.mouth === undefined ? undefined : OpenMouth(spec.mouth),
     body: Robe.Traced({

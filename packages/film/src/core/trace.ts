@@ -51,6 +51,13 @@ export interface TracePart {
   readonly minus?: ReadonlyArray<string>;
   /** How far it grows into the ink round it, pixels (`GROW` unless given; 0 for none). */
   readonly grow?: number;
+  /**
+   * What it grows into: anything darker than the ground (`dark`, unless
+   * given: a line the sheet draws in a brown lighter than ink is crossed too),
+   * or `ink` alone and its antialiased edge, so a band of dark paint beside it
+   * (the brown round an ear, lighter than ink) stays the part it is.
+   */
+  readonly into?: 'dark' | 'ink';
   /** How it is written (`outline` unless given). */
   readonly as?: TraceAs;
   /** A tone's smallest piece, square pixels (`TONE_MIN` unless given). */
@@ -175,6 +182,17 @@ const GROUND_LUMA = 110;
  * (`rig/parts.ts`, `edgeWidths`).
  */
 const LINE_MAX = 10;
+
+/**
+ * The narrowest the sheets' silhouette line runs, pixels: within this of the
+ * ground, a pixel as dark as `LINE_LUMA` is line, where a sheet paints its
+ * line's inner part in the dark brown of its hair's band (an ear's outer
+ * edge: 7 px of brown, then 1 px of ink).
+ */
+const LINE_MIN = 6;
+
+/** Under this luma a pixel within `LINE_MIN` of the ground is line: the dark brown a sheet paints there reads 44 to 57, its hair's curls 70 and up. */
+const LINE_LUMA = 60;
 
 /** How wide the antialiased edge between the ground and the line's ink runs, pixels: the ground crosses it to follow the ink to its inner edge. */
 const EDGE_AA = 2;
@@ -774,6 +792,13 @@ interface Read {
   readonly g: Grid;
   readonly n: number;
   readonly ink: Uint8Array;
+  /**
+   * The ink and its antialiased edge, what a part that grows `into: 'ink'` grows into: every
+   * pixel darker than the ground within `EDGE_AA` of ink. A band of dark
+   * paint the sheet lays with no ink by it (the brown behind an ear, lighter
+   * than ink) is no line: a part beside it never grows over it.
+   */
+  readonly lined: Uint8Array;
   readonly kinds: Int8Array;
   readonly label: Int32Array;
   readonly core: (k: number) => boolean;
@@ -854,7 +879,9 @@ const formedOf = (
           g,
           picked,
           by,
-          (k) => rd.core(k) && (rd.ink[k] === 1 || lumaAt(g.r, sheetIndex(g, k)) < GROUND_LUMA),
+          part.into === 'ink'
+            ? (k) => rd.core(k) && rd.lined[k] === 1
+            : (k) => rd.core(k) && (rd.ink[k] === 1 || lumaAt(g.r, sheetIndex(g, k)) < GROUND_LUMA),
         )
       : picked;
   const clip = part.clip;
@@ -1003,9 +1030,16 @@ const readOf = (sheet: Raster, view: TraceView) => {
     EDGE_AA,
     (k) => ink[k] === 0 && lumaAt(sheet, sheetIndex(g, k)) < GROUND_LUMA,
   );
+  // Its first `LINE_MIN` pixels are line where they are as dark as its brown, the rest of the way ink alone.
+  const least = grown(
+    g,
+    bridged,
+    LINE_MIN,
+    (k) => ink[k] === 1 || lumaAt(sheet, sheetIndex(g, k)) < LINE_LUMA,
+  );
   const line = grown(
     g,
-    grown(g, bridged, LINE_MAX, (k) => ink[k] === 1),
+    grown(g, least, LINE_MAX - LINE_MIN, (k) => ink[k] === 1),
     1,
     () => true,
   );
@@ -1013,6 +1047,7 @@ const readOf = (sheet: Raster, view: TraceView) => {
     g,
     n,
     ink,
+    lined: grown(g, ink, EDGE_AA, (k) => lumaAt(sheet, sheetIndex(g, k)) < GROUND_LUMA),
     kinds,
     label,
     core: (k) => line[k] === 0,

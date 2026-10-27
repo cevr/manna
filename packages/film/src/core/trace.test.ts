@@ -306,6 +306,88 @@ describe('traceView', () => {
     );
   });
 
+  test('reads a band of dark brown paint beside an ear (lighter than ink, no ink by it) as hair: an ear grown into ink alone grows over none of it', () => {
+    const [width, height] = [120, 120];
+    const rgba = new Uint8Array(width * height * 4).fill(255);
+    const layer = (
+      rgb: readonly [number, number, number],
+      inside: (x: number, y: number) => boolean,
+    ) => {
+      for (let y = 0; y < height; y++)
+        for (let x = 0; x < width; x++) if (inside(x, y)) rgba.set(rgb, (y * width + x) * 4);
+    };
+    // Inked round, 4 px: hair over the top; below it his face, a band 6 px wide, his ear, and a band 17 px wide behind it, then hair.
+    layer([20, 16, 14], (x, y) => x >= 10 && x <= 110 && y >= 10 && y <= 110);
+    layer([106, 62, 43], (x, y) => x >= 14 && x <= 106 && y >= 14 && y <= 106);
+    layer([75, 46, 30], (x, y) => x >= 45 && x <= 83 && y >= 41 && y <= 106);
+    layer([253, 175, 112], (x, y) => x >= 14 && x <= 44 && y >= 41 && y <= 106);
+    layer([253, 175, 112], (x, y) => x >= 51 && x <= 66 && y >= 55 && y <= 85);
+    const view: TraceView = {
+      box: [0, 0, width, height],
+      classes: { skin: ['#fdaf70'], hair: ['#6a3e2b'], hairDark: ['#4f2b21'] },
+      parts: {
+        ear: {
+          seeds: [[58, 70]],
+          clip: [
+            [42, 44],
+            [74, 44],
+            [74, 96],
+            [42, 96],
+          ],
+          into: 'ink',
+          doc: 'The ear, grown into the ink round it alone.',
+        },
+        hairMass: { classes: ['hair', 'hairDark'], as: 'none' },
+        hair: {
+          within: 'hairMass',
+          minus: ['ear'],
+          open: 2,
+          doc: 'The hair, the band beside the ear too.',
+        },
+      },
+    };
+    const t = Result.getOrThrow(traceView({ width, height, rgba }, view));
+    const [ex0, , ex1] = boxOf(t.outlines['ear'] ?? []);
+    expect(ex0).toBeGreaterThanOrEqual(50.5);
+    expect(ex1).toBeLessThanOrEqual(67.5);
+    // Even-odd: whether `p` lies inside the hair's outline.
+    const hair = t.outlines['hair'] ?? [];
+    const inHair = ([px, py]: readonly [number, number]) =>
+      hair.reduce((inside, [xi, yi], i) => {
+        const [xj, yj] = hair[(i + hair.length - 1) % hair.length] ?? [xi, yi];
+        const crosses = yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi;
+        return inside !== crosses;
+      }, false);
+    expect([inHair([48, 70]), inHair([69, 70]), inHair([80, 70])]).toEqual([true, true, true]);
+  });
+
+  test("reads a line whose inner part is painted the band's brown (6 px of it inside 1 px of ink) as line: the part ends at the brown's inner edge", () => {
+    const [width, height] = [80, 80];
+    const rgba = new Uint8Array(width * height * 4).fill(255);
+    const layer = (
+      rgb: readonly [number, number, number],
+      inside: (x: number, y: number) => boolean,
+    ) => {
+      for (let y = 0; y < height; y++)
+        for (let x = 0; x < width; x++) if (inside(x, y)) rgba.set(rgb, (y * width + x) * 4);
+    };
+    // Inked round 6 px, but down its right side 1 px of ink with 6 px of brown inside it; hair within.
+    layer([20, 16, 14], (x, y) => x >= 10 && x <= 70 && y >= 10 && y <= 70);
+    layer([75, 46, 30], (x, y) => x >= 63 && x <= 69 && y >= 16 && y <= 64);
+    layer([106, 62, 43], (x, y) => x >= 16 && x <= 62 && y >= 16 && y <= 64);
+    const view: TraceView = {
+      box: [0, 0, width, height],
+      classes: { hair: ['#6a3e2b'], hairDark: ['#4f2b21'] },
+      parts: { hair: { classes: ['hair', 'hairDark'], doc: 'The hair to its line.' } },
+    };
+    const [x0, , x1] = boxOf(
+      Result.getOrThrow(traceView({ width, height, rgba }, view)).outlines['hair'] ?? [],
+    );
+    // Its left edge on the ink's inner edge, at 16; its right on the brown's, at 63, not the ink's at 70.
+    expect(Math.abs(x0 - 16)).toBeLessThanOrEqual(2);
+    expect(Math.abs(x1 - 63)).toBeLessThanOrEqual(2);
+  });
+
   test('writes a table that names what it was traced from, with no colour in it', () => {
     const source = tracedModule(
       ['Traced from a test sheet by `film concept trace`.'],

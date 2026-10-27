@@ -715,6 +715,28 @@ describe('a bearded head, and the parts of a head turned and of bare feet', () =
     expect(rml).not.toContain('name="ear"');
   });
 
+  test("an ear's tones are laid on it as its light and shade, on each ear where both show; an ear with none lays none", () => {
+    const lit: Pt[] = [
+      [-50, 2],
+      [-44, 2],
+      [-44, 18],
+      [-50, 18],
+    ];
+    const both = {
+      near: ellipse(-45, 10, 6, 10, 10),
+      far: ellipse(45, 10, 6, 10, 10),
+      paper: FLAT,
+    };
+    const toned = Ear.Both({ ...both, tones: [{ pts: lit, color: '#fbc580' }] });
+    const rml = drawnOf(figure({ ...standingOf(), ear: toned }));
+    expect(printed(rml, 'earNearTone0')).toEqual(lit);
+    expect(rml).toMatch(/name="earNearTone0"[^]*?colorValue="FFFBC580"/);
+    expect(rml).toContain('name="earFarTone0"');
+    expect(drawnOf(figure({ ...standingOf(), ear: Ear.Both(both) }))).not.toContain(
+      'name="earNearTone0"',
+    );
+  });
+
   test('sandals: each bare foot cut from its corners, the near one first, its strap and then its sole laid on it', () => {
     const rml = drawnOf(figure({ ...standingOf(), feet: sandals }));
     const places = placesOf(rml, ['footNear', 'footFar']);

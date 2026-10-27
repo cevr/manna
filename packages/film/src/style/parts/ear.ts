@@ -6,7 +6,7 @@
 
 import { Match, Schema } from 'effect';
 import { decoder } from '../decode.ts';
-import { Paper, unrimmed } from '../paper.ts';
+import { Paper, Tones, unrimmed } from '../paper.ts';
 import { Length, Outline, Point } from './measure.ts';
 
 /** A round ear: its centre in the head's frame, its half-width and half-height, its paper. */
@@ -21,6 +21,8 @@ type RoundEar = typeof RoundEarPart.Type;
 const TracedEarPart = Schema.TaggedStruct('TracedEar', {
   outline: Outline,
   paper: Paper,
+  /** The light and shade on it as the concept paints them (its lit rim, the hollow inside it), laid as tones. */
+  tones: Schema.optionalKey(Tones),
 }).check(unrimmed);
 type TracedEar = typeof TracedEarPart.Type;
 
@@ -29,6 +31,8 @@ const BothEarsPart = Schema.TaggedStruct('BothEars', {
   near: Outline,
   far: Outline,
   paper: Paper,
+  /** The light and shade on them, laid as tones: each clipped to the ear it lies on. */
+  tones: Schema.optionalKey(Tones),
 }).check(unrimmed);
 type BothEars = typeof BothEarsPart.Type;
 
