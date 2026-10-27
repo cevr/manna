@@ -48,9 +48,7 @@ import {
   type Move,
   playedKey,
   type SectionChords,
-  type SectionSyllables,
   sectionsOf,
-  syllablesOf,
 } from '~/hymns/chords';
 import type { HymnText, Section } from '~/hymns/hymns';
 import { type ChordStyle, styled } from '~/hymns/simple';
@@ -195,7 +193,6 @@ function PageText({
 
 /** A section drawn as its words alone. */
 const wordsAlone: SectionChords = { _tag: 'Words' };
-const noSyllables: SectionSyllables = { _tag: 'Words' };
 
 /** The key chords are spelled in while none are shown. */
 const hymnKeyAtRest = { tonic: 'C', minor: false } as const;
@@ -220,18 +217,14 @@ const Sections = memo(function Sections({
       }),
     [hymn, chords],
   );
-  // The line-level renderer needs the styled anchors as well as their names.
   // With chords off, only the bundled syllable text is used.
   const syllables = useMemo(
     () =>
-      Option.match(
-        Option.orElse(chords, () => book),
-        {
-          onNone: () => hymn.sections.map(() => noSyllables),
-          onSome: (c) => syllablesOf(hymn, c),
-        },
-      ),
-    [hymn, book, chords],
+      Option.match(book, {
+        onNone: () => hymn.sections.map(() => wordsAlone),
+        onSome: (c) => sectionsOf(hymn, c),
+      }),
+    [hymn, book],
   );
   const firsts = useMemo(() => firstLines(hymn.sections), [hymn.sections]);
   return hymn.sections.map((section, k) => (
@@ -239,7 +232,7 @@ const Sections = memo(function Sections({
       key={k}
       section={section}
       shown={Option.getOrElse(Option.fromUndefinedOr(shown[k]), () => wordsAlone)}
-      syllables={Option.getOrElse(Option.fromUndefinedOr(syllables[k]), () => noSyllables)}
+      syllables={Option.getOrElse(Option.fromUndefinedOr(syllables[k]), () => wordsAlone)}
       p={k + 1}
       first={firsts[k] ?? 0}
     />
@@ -256,7 +249,7 @@ const firstLines = (sections: ReadonlyArray<Section>): ReadonlyArray<number> =>
 interface BodyProps {
   readonly section: Section;
   readonly shown: SectionChords;
-  readonly syllables: SectionSyllables;
+  readonly syllables: SectionChords;
   readonly p: number;
   readonly first: number;
 }
@@ -293,16 +286,7 @@ function Body({
   if (syllables._tag === 'Words')
     return <Lines lines={section.lines} first={first} style={style} />;
   if (shown._tag !== 'Words')
-    return (
-      <ChordLines
-        section={section}
-        shown={shown}
-        syllables={syllables.lines}
-        p={p}
-        first={first}
-        style={style}
-      />
-    );
+    return <ChordLines section={section} shown={shown} p={p} first={first} style={style} />;
   return syllables.lines.map((words, l) => (
     <SyllableLine
       key={l}

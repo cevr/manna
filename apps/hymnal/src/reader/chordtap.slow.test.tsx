@@ -244,7 +244,7 @@ describe('a tap on a chord', () => {
     expect(app.host.textContent).toContain('Dsus4 Dsus2');
   });
 
-  it('shows the chord held over a moved line’s first syllable, muted, under capo 1, Simple and Advanced (hymn 373’s refrain)', () => {
+  it('leaves a moved line’s opening empty and keeps its actual change tappable under capo 1 in both styles (373)', () => {
     const reader = moved(373, 0, 1);
     using _app = mount(
       <>
@@ -252,21 +252,16 @@ describe('a tap on a chord', () => {
         <HymnPage hymn={Option.getOrThrow(hymnAt('373'))} reader={reader} />
       </>,
     );
-    const held = () => {
-      const chord = Option.getOrThrow(find('[data-testid="held-2-1-1"]'));
-      return {
-        text: chord.textContent,
-        label: chord.getAttribute('aria-label'),
-        muted: (
-          chord.querySelector<HTMLElement>('div, span')?.getAttribute('style') ?? ''
-        ).includes('var(--muted)'),
-        own: Option.isSome(find('[data-testid="chord-2-1-1"]')),
-      };
-    };
-    // R1 moves the refrain's first change to its third syllable: the stanza's last chord, I, is held there.
-    expect(held()).toEqual({ text: 'G', label: 'G, held over', muted: true, own: false });
-    press('[aria-label="Pick Advanced"]');
-    expect(held()).toEqual({ text: 'G', label: 'G, held over', muted: true, own: false });
+    for (const style of ['Simple', 'Advanced']) {
+      if (style === 'Advanced') press('[aria-label="Pick Advanced"]');
+      expect(Option.isSome(find('[data-testid="held-2-1-1"]'))).toBe(false);
+      expect(Option.isSome(find('[data-testid="chord-2-1-1"]'))).toBe(false);
+      const change = Option.getOrThrow(find('[data-testid="chord-2-1-4"]'));
+      expect(change.getAttribute('aria-label')).toBe('C');
+      press('[data-testid="chord-2-1-4"]');
+      using _sheet = sheetAt(pushed().at(-1) ?? '');
+      expect(namesShown()).toBe('C');
+    }
   });
 
   it('reads the chord as a button named by its symbol alone, as the page shows it', () => {

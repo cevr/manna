@@ -86,11 +86,13 @@ The `Chords` button in a hymn's header (the stored `chords` setting, off by
 default) draws the hymn's guitar chords over its words. Each sung syllable
 is a box with its chords above it in the body's own font, a word's boxes
 stay together, and a line wraps between words; a chord wider than its
-syllable widens the box, and inside a word the gap shows a hyphen. A part
-placed by line shows each line's chords in one row above it, a plain part
-its words alone, and a hymn with no chords says so. With chords off, a sung
+syllable widens the box, and inside a word the gap shows a hyphen. Both
+alignment levels draw each chord over its syllable. Only changes show;
+a line with no opening change starts with no chord above it. A plain part
+shows its words alone, and a hymn with no chords says so. With chords off, a sung
 line still shows its syllables, a hyphen inside each word, so a played
-hymn's follow lights the syllable sung. While chords are on,
+hymn's follow lights the syllable sung; a line without syllable times is
+highlighted whole. While chords are on,
 `Transpose down`/`Transpose up` move the sounding key (`Key <key>`) through
 the twelve keys, and `Capo down`/`Capo up` set a capo fret, 0 to 11, the
 chords then shown as the shapes that fret plays (`Capo <n>, <key> shapes`).
