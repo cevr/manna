@@ -32,6 +32,7 @@ import {
 } from './file-artifact.js';
 
 export type { NativeFileArtifactSource } from './file-artifact.js';
+export { checkSqliteRefresh } from './file-artifact.js';
 
 /** The Bible instance of the native File Corpus lifecycle: the canonical
  *  destination plus the 66-book / 31,102-verse semantic verifier. */

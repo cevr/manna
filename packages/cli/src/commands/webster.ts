@@ -1,5 +1,5 @@
 import { WebsterEntry, WebsterLookup, WebsterService } from '@manna/core/webster';
-import { CorpusSupply, Target } from '@manna/core/corpus-supply';
+import { CorpusSupply, Target, SqliteRefreshRefused } from '@manna/core/corpus-supply';
 import {
   layerNativeWebsterArtifacts,
   type NativeFileArtifactSource,
@@ -7,7 +7,7 @@ import {
 import { Console, Effect, Layer, Path, Result, Schema } from 'effect';
 import { Argument, Command, Flag } from 'effect/cli';
 import { packagedDataCandidates } from '../lib/paths.js';
-import { SqliteRefreshRefused, withSqliteRefresh } from '../lib/sqlite-refresh.js';
+import { withSqliteRefresh } from '../lib/sqlite-refresh.js';
 
 /** The optional init leg owns source priority, supply and its user-facing receipt. */
 export const initializeWebster = Effect.fn('WebsterCommand.initialize')(function* (input: {

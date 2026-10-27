@@ -14,7 +14,11 @@ import * as BunServices from '@effect/platform-bun/BunServices';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 
-import { CorpusInstallationError, CorpusSourceUnavailableError } from '../corpus-supply/errors.js';
+import {
+  CorpusInstallationError,
+  CorpusSourceUnavailableError,
+  SqliteRefreshRefused,
+} from '../corpus-supply/errors.js';
 import type { FileArtifactSourceKind, FileCorpusArtifact } from '../corpus-supply/file-artifact.js';
 import {
   assetSourceId,
@@ -124,6 +128,51 @@ export interface NativeFileArtifactProvenanceStore {
 
 const sourceError = (operation: string, cause: unknown): CorpusSourceUnavailableError =>
   CorpusSourceUnavailableError.make({ operation, cause });
+
+/** Metadata only: SQLite places a symlink-opened database's WAL beside its real path. */
+export const checkSqliteRefresh = Effect.fn('FileArtifact.checkSqliteRefresh')(function* (
+  destination: string,
+) {
+  const fs = yield* FileSystem.FileSystem;
+  const inspectionRefused = (wal: string) =>
+    SqliteRefreshRefused.make({
+      destination,
+      wal,
+      message: `Cannot inspect ${wal} for ${destination}; refresh refused. Close the database-using program and let SQLite checkpoint cleanly, then retry.`,
+    });
+  const resolved = yield* fs.realPath(destination).pipe(
+    Effect.asSome,
+    Effect.catchIf(
+      (cause) => cause.reason._tag === 'NotFound',
+      () => Effect.succeedNone,
+    ),
+    Effect.mapError(() => inspectionRefused(`${destination}-wal`)),
+  );
+  const paths = new Set([destination, ...Option.toArray(resolved)]);
+  for (const database of paths) {
+    const wal = `${database}-wal`;
+    const details = yield* fs.stat(wal).pipe(
+      Effect.asSome,
+      Effect.catchIf(
+        (cause) => cause.reason._tag === 'NotFound',
+        () => Effect.succeedNone,
+      ),
+      Effect.mapError(() => inspectionRefused(wal)),
+    );
+    if (!Option.exists(details, (info) => info.size > 0n)) continue;
+    const exists = yield* fs.exists(database).pipe(Effect.mapError(() => inspectionRefused(wal)));
+    let recovery =
+      'Close the database-using program and let that program/SQLite checkpoint cleanly, then retry.';
+    if (!exists)
+      recovery =
+        'The matching database file is missing. Close the database-using program. Keep the WAL and recover its matching database from backup before letting SQLite checkpoint cleanly; then retry.';
+    return yield* SqliteRefreshRefused.make({
+      destination,
+      wal,
+      message: `Refusing to replace ${destination}: ${wal} is non-empty. Replacement could replay the outgoing WAL and corrupt data. ${recovery}`,
+    });
+  }
+});
 
 const localSource = (
   corpus: string,
@@ -732,6 +781,9 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
         // exactly what this run created and never a live generation.
         let staged = Option.none<string>();
         const install = Effect.gen(function* () {
+          // Unlink stale staging names before exclusive creation: never follow
+          // a symlink or overwrite bytes through a hard-linked staging file.
+          yield* fs.remove(building, { force: true });
           yield* clearSqliteSideFiles;
           yield* artifact.bytes.pipe(
             Stream.tap((chunk) =>
@@ -740,7 +792,7 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
                 written += chunk.byteLength;
               }),
             ),
-            Stream.run(fs.sink(building)),
+            Stream.run(fs.sink(building, { flag: 'wx' })),
           );
           // Size and digest are the whole trust surface, so both close before
           // the semantic verifier is allowed to open the candidate file.
@@ -799,20 +851,7 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
           const installed = yield* verify(building);
           yield* provenanceStore.write(building, provenance);
           yield* clearSqliteSideFiles;
-          // The outgoing WAL belongs to its writer. Never replay it against
-          // replacement bytes or clean it as though it were staging state.
-          const wal = yield* fs.stat(`${input.destination}-wal`).pipe(
-            Effect.asSome,
-            Effect.catchIf(
-              (cause) => cause.reason._tag === 'NotFound',
-              () => Effect.succeedNone,
-            ),
-            Effect.mapError(storeError('activate-destination-wal')),
-          );
-          if (Option.exists(wal, (info) => info.size > 0n))
-            return yield* storeError('activate-destination-wal')(
-              'Non-empty outgoing WAL: close the database-using program and let SQLite checkpoint cleanly, then retry',
-            );
+          yield* checkSqliteRefresh(input.destination);
           yield* fs.rename(building, input.destination);
           // A SQLite artifact carries its own provenance, so a sidecar left
           // by an earlier flat install of the same destination would be a
@@ -850,7 +889,10 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
           ),
         );
       }).pipe(
-        Effect.mapError((cause) => CorpusInstallationError.make({ corpus: reportedCorpus, cause })),
+        Effect.mapError((cause) => {
+          if (Schema.is(SqliteRefreshRefused)(cause)) return cause;
+          return CorpusInstallationError.make({ corpus: reportedCorpus, cause });
+        }),
         Effect.provide(BunServices.layer),
       ),
   });

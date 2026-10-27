@@ -4090,9 +4090,9 @@ The form of an entry, each field on its own line:
 ### init-refresh-outgoing-wal
 
 - **Date:** 2026-10-27
-- **Kind:** owner
-- **Said:** "Refuse while the destination WAL is non-empty."
-- **Source:** hymnapp/initwal/spec.md Decided (approved as written); hymnapp/initfresh/round-2-findings.md N1
-- **Wrong:** Init replaced the main file while committed pages still belonged to its outgoing WAL, allowing SQLite to replay old pages against different database bytes.
-- **Cause:** Replacement treated the destination as one file and optional-source error handling could hide a refusal. Init now checks WAL size before each forced operation, the SQLite installer checks again before activation, and all refusals make the final command fail after unaffected work finishes.
-- **Guard:** code: `packages/cli/test/commands/init.test.ts` `forced init refuses every non-empty WAL and reports all refusals without touching destinations`; `packages/core/src/platform-bun/file-corpus-lifecycle.test.ts` `refuses non-empty destination WALs at activation and permits empty or absent WALs`
+- **Kind:** retraction
+- **Said:** chose: "Refuse while the destination WAL is non-empty." (orchestrator decision)
+- **Source:** hymnapp/initwal/spec.md Decided; hymnapp/initwal/round-1-findings.md m4; orchestrator round-2 correction
+- **Wrong:** Init replaced main bytes while committed pages belonged to an outgoing WAL. The first ledger entry also attributed the orchestrator's refusal decision to the owner without an owner quote.
+- **Cause:** Replacement treated a destination as one file, and optional-source error handling could hide refusal. One core metadata check now covers the destination and resolved path before activation. Every install stages and renames; all refusals fail the final command after unaffected work finishes. This entry retracts the unsupported owner attribution and records the actual orchestrator decision.
+- **Guard:** code: `packages/cli/test/commands/init.test.ts` `forced init refuses every non-empty WAL and reports all refusals without touching destinations`; `packages/cli/test/commands/init.test.ts` `forced init refuses live WALs beside all four resolved symlink targets`; `packages/cli/test/commands/init.test.ts` `forced init permits empty and absent WALs at the CLI pre-check and fails closed on stat errors`; `packages/core/src/platform-bun/file-corpus-lifecycle.test.ts` `refuses non-empty destination WALs at activation and permits empty or absent WALs`

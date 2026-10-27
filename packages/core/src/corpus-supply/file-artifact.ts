@@ -1,7 +1,11 @@
 import { Context, Effect, Layer, Option, Schema, SchemaTransformation } from 'effect';
 import type { Stream } from 'effect';
 
-import type { CorpusInstallationError, CorpusSourceUnavailableError } from './errors.js';
+import type {
+  CorpusInstallationError,
+  CorpusSourceUnavailableError,
+  SqliteRefreshRefused,
+} from './errors.js';
 import type { CorpusFileName, CorpusGeneration, CorpusProvenance } from './model.js';
 import { makeCorpusStorageIdentity, type CorpusStorageIdentity } from './storage-identity.js';
 
@@ -145,7 +149,7 @@ export interface FileArtifactInstallerService {
     artifact: FileArtifact,
   ) => Effect.Effect<
     { readonly installed: number; readonly provenance: CorpusProvenance },
-    CorpusInstallationError
+    CorpusInstallationError | SqliteRefreshRefused
   >;
   /** Where the *host* reads the generation this installer activated.
    *

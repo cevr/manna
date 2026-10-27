@@ -14,6 +14,7 @@ import {
 import type {
   CorpusInstallationError,
   CorpusSourceUnavailableError,
+  SqliteRefreshRefused,
 } from '../corpus-supply/errors.js';
 import type { CorpusName, CorpusProvenance } from '../corpus-supply/model.js';
 import { CorpusSupply } from '../corpus-supply/service.js';
@@ -108,7 +109,7 @@ const install = (input: {
 /** Reads the corpus name an installer stamped on a failure. An unregistered
  *  corpus must leave it unset rather than borrow a registered corpus's name. */
 const reportedCorpus = (
-  failure: CorpusSourceUnavailableError | CorpusInstallationError,
+  failure: CorpusSourceUnavailableError | CorpusInstallationError | SqliteRefreshRefused,
 ): Option.Option<CorpusName> => {
   if (failure._tag === 'CorpusInstallationError') return Option.fromNullishOr(failure.corpus);
   return Option.none();
@@ -207,11 +208,16 @@ describe('parameterized File Corpus lifecycle', () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const dir = yield* fs.makeTempDirectoryScoped({ prefix: 'sqlite-destination-wal-' });
-      for (const mode of ['positive', 'empty', 'absent', 'late']) {
+      for (const mode of ['positive', 'empty', 'absent', 'late', 'staging-link']) {
         const destination = `${dir}/${mode}.db`;
         yield* fs.writeFileString(destination, 'outgoing');
         if (mode === 'positive') yield* fs.writeFileString(`${destination}-wal`, 'x');
         if (mode === 'empty') yield* fs.writeFileString(`${destination}-wal`, '');
+        const external = `${dir}/external.db`;
+        if (mode === 'staging-link') {
+          yield* fs.writeFileString(external, 'external-bytes');
+          yield* fs.symlink(external, `${destination}.building`);
+        }
         const result = yield* Effect.result(
           install({
             destination,
@@ -238,6 +244,8 @@ describe('parameterized File Corpus lifecycle', () => {
         if (refused) expect(yield* fs.readFileString(`${destination}-wal`)).toBe('x');
         if (mode === 'empty') expect(yield* fs.readFileString(`${destination}-wal`)).toBe('');
         if (mode === 'absent') expect(yield* fs.exists(`${destination}-wal`)).toBe(false);
+        if (mode === 'staging-link')
+          expect(yield* fs.readFileString(external)).toBe('external-bytes');
         expect((yield* fs.readDirectory(dir)).some((name) => name.includes('.building'))).toBe(
           false,
         );

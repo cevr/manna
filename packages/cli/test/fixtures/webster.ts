@@ -1,6 +1,10 @@
 import { Database } from 'bun:sqlite';
 import { Effect } from 'effect';
-import source from '../../../core/assets/webster1828-source.json';
+import {
+  WEBSTER_SOURCE as source,
+  WEBSTER_SCHEMA_VERSION,
+  WEBSTER_PROJECTION_VERSION,
+} from '@manna/core/webster';
 
 /** Full production census and FTS contract, with minimal synthetic definition text. */
 export const compactWebster = (filename: string) =>
@@ -23,9 +27,9 @@ export const compactWebster = (filename: string) =>
             CASE WHEN x=6 THEN 'disheartened' ELSE 'x' END FROM n;`);
           const insert = db.prepare('INSERT INTO meta VALUES(?,?)');
           for (const [key, value] of Object.entries({
-            schema_version: '1',
+            schema_version: WEBSTER_SCHEMA_VERSION,
             edition: source.edition,
-            projection_version: '1-scan-references',
+            projection_version: WEBSTER_PROJECTION_VERSION,
             source_url: source.url,
             source_revision: source.revision,
             source_sha256: source.sha256,

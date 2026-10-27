@@ -14,24 +14,22 @@ import {
   CorpusSupply,
   type CorpusSupplyReceipt,
   Target,
+  type SqliteRefreshRefused,
   topicsReleaseSource,
 } from '@manna/core/corpus-supply';
 import {
   layerNativeBibleArtifacts,
   layerNativeTopicsArtifacts,
   type NativeFileArtifactSource,
+  checkSqliteRefresh,
 } from '@manna/core/corpus-supply/bun';
 import { Config, Console, Effect, FileSystem, Layer, Path, Schema } from 'effect';
-import { Command, Flag } from 'effect/cli';
+import { CliError, Command, Flag } from 'effect/cli';
 import { HttpClient, HttpClientResponse } from 'effect/http';
 
 import { packagedDataCandidates } from '~/src/lib/paths';
 import { initializeWebster } from './webster.js';
-import {
-  checkSqliteRefresh,
-  SqliteRefreshRefused,
-  withSqliteRefresh,
-} from '../lib/sqlite-refresh.js';
+import { withSqliteRefresh } from '../lib/sqlite-refresh.js';
 
 class InitError extends Schema.TaggedError<InitError>()('InitError', {
   cause: Schema.Unknown,
@@ -53,17 +51,36 @@ const force = Flag.Boolean('force').pipe(
   Flag.withDescription('Re-download databases even if they exist'),
 );
 
-const downloadFile = (url: string, dest: string, label: string, refresh: boolean) =>
+const downloadFile = (url: string, dest: string, label: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
-    yield* Console.log(`Downloading ${label}...`);
-    const bytes = yield* HttpClient.get(url).pipe(
-      Effect.flatMap(HttpClientResponse.filterStatusOk),
-      Effect.flatMap((response) => response.arrayBuffer),
-      Effect.mapError((cause) => InitError.make({ cause })),
+    const building = `${dest}.building`;
+    let staged = false;
+    const install = Effect.gen(function* () {
+      yield* Console.log(`Downloading ${label}...`);
+      const bytes = yield* HttpClient.get(url).pipe(
+        Effect.flatMap(HttpClientResponse.filterStatusOk),
+        Effect.flatMap((response) => response.arrayBuffer),
+        Effect.mapError((cause) => InitError.make({ cause })),
+      );
+      yield* fs.remove(building, { force: true });
+      yield* Effect.scoped(
+        Effect.gen(function* () {
+          const file = yield* fs.open(building, { flag: 'wx' });
+          staged = true;
+          yield* file.writeAll(new Uint8Array(bytes));
+        }),
+      );
+      yield* checkSqliteRefresh(dest);
+      yield* fs.rename(building, dest);
+      staged = false;
+    });
+    yield* install.pipe(
+      Effect.onError(() => {
+        if (staged) return fs.remove(building, { force: true }).pipe(Effect.ignore);
+        return Effect.void;
+      }),
     );
-    if (refresh) yield* checkSqliteRefresh(dest);
-    yield* fs.writeFile(dest, new Uint8Array(bytes));
   });
 
 /** Hymnal acquisition is separate from other corpora so callers can supply an isolated destination. */
@@ -76,7 +93,7 @@ const ensureHymnal = Effect.fn('Init.ensureHymnal')(function* (
   if (!refresh && (yield* fs.exists(destination))) {
     yield* Console.log(`✓ ${db.name} (${db.description})`);
   } else {
-    yield* downloadFile(db.url, destination, `${db.name} ${db.size}`, refresh);
+    yield* downloadFile(db.url, destination, `${db.name} ${db.size}`);
     yield* Console.log(`✓ ${db.name} installed`);
   }
 });
@@ -86,11 +103,7 @@ const artifactStatus = (receipt: CorpusSupplyReceipt): string => {
   return 'ready';
 };
 
-/**
- * Resolve the bible and topics artifacts against one `CorpusSupply`
- * composition. The supply layer is built and provided here, at this
- * operation's own boundary, so the command handler never provides inline.
- */
+/** Build the native Bible/Topics supply used by an isolated artifact operation. */
 const artifactSupply = (bibleDir: string, path: Path.Path) => {
   const bibleArtifacts = layerNativeBibleArtifacts({
     destination: path.join(bibleDir, 'bible.db'),
@@ -128,6 +141,25 @@ const artifactSupply = (bibleDir: string, path: Path.Path) => {
   return CorpusSupply.layer.pipe(Layer.provide(Layer.merge(bibleArtifacts, topicsArtifacts)));
 };
 
+const ensureArtifact = (
+  bibleDir: string,
+  path: Path.Path,
+  name: 'bible' | 'topics',
+  refresh: boolean,
+) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const destination = path.join(bibleDir, `${name}.db`);
+    if (!refresh && (yield* fs.exists(destination))) return 'ready';
+    return artifactStatus(
+      yield* withSqliteRefresh(
+        destination,
+        refresh,
+        CorpusSupply.use((corpus) => corpus.ensure({ target: Target.file(name), refresh })),
+      ),
+    );
+  }).pipe(Effect.provide(artifactSupply(bibleDir, path)));
+
 export const init = Command.make('init', { force }, (args) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -140,46 +172,25 @@ export const init = Command.make('init', { force }, (args) =>
       yield* Console.log(`Created ${bibleDir}`);
     }
 
-    const refusals: string[] = [];
+    let refusals = 0;
     const reportRefusal = (error: SqliteRefreshRefused) =>
       Console.error(`✗ ${error.message}`).pipe(
         Effect.tap(() =>
           Effect.sync(() => {
-            refusals.push(error.destination);
+            refusals++;
           }),
         ),
       );
-    const ensureArtifact = (name: 'bible' | 'topics') =>
-      Effect.gen(function* () {
-        const destination = path.join(bibleDir, `${name}.db`);
-        let status = 'ready';
-        // Default init fills missing slots without inspecting existing data.
-        if (args.force || !(yield* fs.exists(destination))) {
-          status = artifactStatus(
-            yield* withSqliteRefresh(
-              destination,
-              args.force,
-              CorpusSupply.use((corpus) =>
-                corpus.ensure({
-                  target: Target.file(name),
-                  refresh: args.force,
-                }),
-              ),
-            ),
-          );
-        }
-        yield* Console.log(`✓ ${name}.db (${status})`);
-      }).pipe(Effect.provide(artifactSupply(bibleDir, path)));
-    yield* ensureArtifact('bible').pipe(Effect.catchTag('SqliteRefreshRefused', reportRefusal));
+    yield* ensureArtifact(bibleDir, path, 'bible', args.force).pipe(
+      Effect.flatMap((status) => Console.log(`✓ bible.db (${status})`)),
+      Effect.catchTag('SqliteRefreshRefused', reportRefusal),
+    );
     // Topics remains optional for unavailable/rejected sources, but a WAL
     // refusal is an unsafe requested refresh and must fail the final command.
-    yield* ensureArtifact('topics').pipe(
-      Effect.catch((error) => {
-        if (Schema.is(SqliteRefreshRefused)(error)) return reportRefusal(error);
-        return Console.log('✗ topics.db — build it with:').pipe(
-          Effect.andThen(Console.log('  bun run build:topics')),
-        );
-      }),
+    const topicsLines = yield* ensureArtifact(bibleDir, path, 'topics', args.force).pipe(
+      Effect.map((status) => [`✓ topics.db (${status})`]),
+      Effect.catchTag('SqliteRefreshRefused', (error) => reportRefusal(error).pipe(Effect.as([]))),
+      Effect.orElseSucceed(() => ['✗ topics.db — build it with:', '  bun run build:topics']),
     );
     if (!args.force && (yield* fs.exists(path.join(bibleDir, 'webster.db')))) {
       yield* Console.log('✓ webster.db (ready)');
@@ -188,6 +199,8 @@ export const init = Command.make('init', { force }, (args) =>
         Effect.catchTag('SqliteRefreshRefused', reportRefusal),
       );
     }
+
+    yield* Effect.forEach(topicsLines, (line) => Console.log(line), { discard: true });
 
     // Download each database
     const hymnal = path.join(bibleDir, DBS.hymnal.name);
@@ -206,9 +219,9 @@ export const init = Command.make('init', { force }, (args) =>
 
     yield* Console.log(``);
     yield* Console.log(`Databases: ${bibleDir}`);
-    if (refusals.length > 0)
-      return yield* InitError.make({
-        cause: `${refusals.length} database refresh(es) refused; see WAL recovery instructions above.`,
+    if (refusals > 0)
+      return yield* CliError.UserError.make({
+        cause: `${refusals} database refresh(es) refused; see WAL recovery instructions above.`,
       });
   }),
 );
