@@ -59,7 +59,7 @@ The form of an entry, each field on its own line:
 - **Source:** playbulk/p2-round-1-findings.md F1 (the first finding, headed m1)
 - **Wrong:** A failed flag released no pending work in most states, and stale held plays always resolved.
 - **Cause:** The fake did not model a replaced native play rejecting. The state table repeated the same path.
-- **Guard:** code: `apps/hymnal/src/player/keyplay.slow.test.ts` `playswap late native loads actually reject=${failed} after rapid Starts`
+- **Guard:** code: `apps/hymnal/src/player/keyplay.slow.test.ts` `playswap interrupted old loads cannot trigger fallback after native rejection=${failed}`
 
 ### hymn-status-observation-does-not-lock-play
 
@@ -4271,7 +4271,8 @@ The form of an entry, each field on its own line:
 
 - **Date:** 2026-10-27
 - **Kind:** review
-- **Source:** hymnapp/playbulk/p2-round-2-findings.md o-a (F1)
+- **Said:** "a handed-over play's answer still reads device.status under the lock."
+- **Source:** hymnapp/playbulk/p2-round-2-findings.md F1 (Optional o-a, ledger ordinal)
 - **Wrong:** A handed-over play could wait on native status while holding the score clock command lock.
 - **Cause:** Its stale answer used the live observer instead of the clock or last accepted device snapshot.
 - **Guard:** code: `apps/hymnal/src/player/keyplay.slow.test.ts` `keyplay a handed-over play cannot delay a third Start behind native status`
