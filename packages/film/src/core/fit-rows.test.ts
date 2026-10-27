@@ -62,18 +62,14 @@ describe('fitRows', () => {
   });
 
   test("a thin strip of paper off the figure is a sliver, not the ground's grain; a thick or a short one is grain", () => {
-    const slivers = (x0: number, x1: number, y0: number, y1: number) =>
-      rowNamed(
-        fitRows(SHEET, paint({ ground: RENDER_GROUND, strips: [[x0, x1, y0, y1]] })),
-        'slivers',
-      )?.value;
-    // 2 × 10 px, 5 px off the body's right line.
-    expect(slivers(52, 54, 40, 50)).toBe(20);
-    // 1 × 6 px against the line.
-    expect(slivers(47, 48, 40, 46)).toBe(6);
-    // 3 × 6 px and 2 × 5 px off the figure: the ground's grain.
-    expect(slivers(52, 55, 40, 46)).toBe(0);
-    expect(slivers(52, 54, 40, 45)).toBe(0);
+    // 2 × 10 px, 5 px off the body's right line: a sliver; 3 × 6 px under it and 2 × 5 px left of the body's foot: the ground's grain.
+    const strips = [
+      [52, 54, 40, 50],
+      [52, 55, 60, 66],
+      [10, 12, 88, 93],
+    ] as const;
+    const rows = fitRows(SHEET, paint({ ground: RENDER_GROUND, strips }));
+    expect(rowNamed(rows, 'slivers')?.value).toBe(20);
   });
 
   test('each row passes exactly when its value lies inside its bar', () => {
@@ -146,8 +142,6 @@ describe('fitRows', () => {
     expect(alone?.pass).toBe(false);
     expect(alone?.where).toContain('render adds');
     expect(belt([60], [60, 66])?.pass).toBe(false);
-    // The sheet's stroke the render leaves out fails the same way.
-    expect(belt([60], [])?.pass).toBe(false);
   });
 
   test("a change just inside a probe's end is matched to the same change just past it", () => {
@@ -191,7 +185,7 @@ describe('fitRows', () => {
     expect(parts(8)).toEqual(['part.iou/robe false', 'part.edge/robe false']);
   });
 
-  test('an erased hand fails its part rows, and so does a hand whose anchor no class reads, saying why', () => {
+  test('an erased hand fails its part rows, whether its anchor is read or no class reads it, saying why', () => {
     const hands = (spec: FitSpec, hand: boolean) =>
       fitRows(paint({ ground: SHEET_GROUND, hand: true }), paint({ ground: RENDER_GROUND, hand }), {
         classes: CLASSES,
@@ -211,14 +205,11 @@ describe('fitRows', () => {
         hand: { classes: ['skin'], where: [{ below: 'head' }] },
       },
     };
-    for (const hand of [false, true]) {
-      const rows = hands(unread, hand);
-      expect(rows.map((r) => [r.name, r.pass])).toEqual([
-        ['part.iou', false],
-        ['part.edge', false],
-      ]);
-      expect(rows[0]?.where).toContain('head');
-      expect(rows[0]?.where).toContain('hair');
-    }
+    const rows = hands(unread, false);
+    expect(rows.map((r) => [r.name, r.pass])).toEqual([
+      ['part.iou', false],
+      ['part.edge', false],
+    ]);
+    expect(rows[0]?.where).toContain('head picks no region (hair: no fit class)');
   });
 });

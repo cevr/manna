@@ -4015,7 +4015,7 @@ The form of an entry, each field on its own line:
 - **Source:** rig-fit/round-1-findings.md F2, the review's second finding
 - **Wrong:** A label whose class, or whose anchor's class, the fit rows do not read was dropped with every label named after it, so lead-feast's back had no part rows and an erased hand there passed.
 - **Cause:** The part rows kept only the labels the classes could read, and a missing row reads as a pass. A compared label that picks no region on a crop, itself or through a label its rules name, now fails both its rows and says which label and why.
-- **Guard:** code: `packages/film/src/core/fit-rows.test.ts` `an erased hand fails its part rows, and so does a hand whose anchor no class reads, saying why`
+- **Guard:** code: `packages/film/src/core/fit-rows.test.ts` `an erased hand fails its part rows, whether its anchor is read or no class reads it, saying why`
 
 ### fit-grain-hides-slivers
 
