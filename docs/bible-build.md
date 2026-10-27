@@ -13,8 +13,7 @@ and moves it into the workspace output after installation succeeds.
 
 Installation is explicit. `manna init` consumes `BIBLE_ARTIFACT_RELEASE` through
 `ensureArtifacts` in `packages/cli/src/commands/init.ts`. It fetches the pinned
-GitHub release asset. It does not consume the local Bible build output. This
-change leaves init's source selection, validation, and replacement policy intact.
+GitHub release asset. It does not consume the local Bible build output.
 
 ## Build and sync audit
 
@@ -24,27 +23,29 @@ native compilation, or owner database access is needed for these guards.
 
 | Entry point                                                              | Output and HOME effects                                                                                                                                       | Disposition                                                                                                                                                                                                         |
 | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Core `sync:bible`, `sync:bible:force`; CLI `manna sync [--force]`        | Workspace `data/bible.db` only; no runtime copy                                                                                                               | Fixed in `bible-sync.ts`. Scratch-home tests cover force, existing output, HOME/USERPROFILE/neither, and installed sentinel bytes.                                                                                  |
+| Core `sync:bible`, `sync:bible:force`; CLI `manna sync [--force]`        | Workspace `data/bible.db` only; no runtime copy                                                                                                               | `bible-sync.ts` builds only the workspace output. Scratch-home tests cover force, existing output, HOME/USERPROFILE/neither, and installed sentinel bytes.                                                          |
 | Scripts `build:topics`                                                   | Workspace `packages/core/data/topics.db` by default. Bible and writings inputs can default to HOME/.bible; `topics-compiler/lookups.ts` opens them read-only. | No implicit installation. Explicit `--out` is the operator's destination.                                                                                                                                           |
 | Scripts `build:webster`                                                  | Workspace `webster.db` and manifest; `webster-compiler/compile.ts` rejects output inside HOME/.bible.                                                         | Preserve the existing guard. `initializeWebster` belongs to explicit init installation.                                                                                                                             |
 | Scripts `build:vectors`                                                  | Workspace `vectors.bvi`, `.part`, and checkpoint. `vector-compiler/source.ts` reads writings read-only.                                                       | `vector-compiler/paths.ts` supplies `packages/core/node_modules/.cache/bible-models` to the build embedder. `BIBLE_MODEL_CACHE` still overrides it. The normal CLI embedder still falls back to HOME/.bible/models. |
 | CLI `build` (`packages/cli/scripts/build.ts`)                            | Workspace `bin/manna`, package/bin data assets, ONNX dylibs, and package `node_modules/.bin/manna`                                                            | Workspace staging only; no implicit HOME installation.                                                                                                                                                              |
-| Core `scripts/build-native.sh`                                           | Workspace `dist-native`; Zig caches default to `packages/core/node_modules/.cache/zig/{global,local}`                                                         | Fixed cache defaults. Explicit `ZIG_GLOBAL_CACHE_DIR` and `ZIG_LOCAL_CACHE_DIR` remain supported independently. The fake-toolchain test copies the script and uses scratch artifacts only.                          |
-| CLI `process-bible-data.ts`, `process-tske.ts`, `scrape-margin-notes.ts` | Bundled core source assets                                                                                                                                    | Workspace outputs; no data regeneration in this fix.                                                                                                                                                                |
+| Core `scripts/build-native.sh`                                           | Workspace `dist-native`; Zig caches default to `packages/core/node_modules/.cache/zig/{global,local}`                                                         | Workspace cache defaults. Explicit `ZIG_GLOBAL_CACHE_DIR` and `ZIG_LOCAL_CACHE_DIR` remain supported independently. The fake-toolchain test copies the script and uses scratch artifacts only.                      |
+| CLI `process-bible-data.ts`, `process-tske.ts`, `scrape-margin-notes.ts` | Bundled core source assets                                                                                                                                    | Workspace source-data generation.                                                                                                                                                                                   |
 | `manna egw sync`, `manna egw download`                                   | Acquire and install writings into runtime storage                                                                                                             | Explicit runtime installation. A repository build must not invoke these commands.                                                                                                                                   |
 | CLI `scripts/backfill-book-classification.ts`                            | Updates HOME/.bible/egw-paragraphs.db unless dry-run                                                                                                          | Explicit runtime maintenance, outside package builds. Follow-up: require an explicit database destination and a safe maintenance contract before using it as build tooling.                                         |
-| Hymnal                                                                   | No build/sync entry in core, CLI, or scripts at this unit's base; runtime reader `core/src/hymnal/service-bun.ts`, installer in init                          | Generation is owned by the separate hymndb unit and must remain workspace-only.                                                                                                                                     |
+| Hymnal                                                                   | Runtime reader `core/src/hymnal/service-bun.ts`; init installs the corpus.                                                                                    | Corpus generation belongs to hymnal tooling and must use workspace outputs.                                                                                                                                         |
 | Study (`core/src/study/service-bun.ts`, CLI `commands/study.ts`)         | Bible is immutable/read-only. Writings opens read-write for schema initialization. Bundle output uses caller paths.                                           | No repository corpus build/sync entry. Follow-up: review the runtime writings initialization contract. This is not a universally read-only service.                                                                 |
+| Bun runtime (build and sync processes)                                   | Defaults to HOME/Library/Caches/bun on macOS.                                                                                                                 | Out of scope follow-up; isolated builds redirect `BUN_RUNTIME_TRANSPILER_CACHE_PATH`.                                                                                                                               |
 
-Build defaults must not write to HOME-derived runtime or cache locations,
-including third-party caches. An explicit cache override or output path is the
-operator's selected location. A checkout inside the user's home remains a valid
-workspace. This boundary is not a generic filesystem sandbox.
+Corpus outputs and model/toolchain caches use workspace defaults. Bun's runtime
+transpiler cache remains an out-of-scope follow-up, as listed above. An explicit
+cache override or output path is the operator's selected location. A checkout
+inside the user's home remains a valid workspace. This boundary is not a generic
+filesystem sandbox.
 
 ## Owner release procedure
 
-These are owner release actions, separate from this source fix. Do not run them
-as part of its tests.
+Release publication and pin updates are explicit owner actions. Run regression
+checks separately from full corpus generation and release publication.
 
 1. In an isolated workspace, create scratch HOME and a separate Bun transpiler
    cache. Build and validate the full corpus there:
@@ -68,18 +69,16 @@ as part of its tests.
    gh release create <new-tag> packages/core/data/bible.db --repo cevr/manna --title <title> --notes-file <release-notes-file>
    ```
 
-   Use a new `db-<version>` tag. Do not replace the existing db-v2 asset under
+   Use a new `db-<version>` tag. Do not replace an existing release asset under
    its old digest.
 
 4. In a separate owner-controlled release change, update
    `BIBLE_ARTIFACT_RELEASE` in
    `packages/core/src/corpus-supply/file-artifact.ts`: release URL, revision,
-   `sha256:<hex>` digest, and exact byte length. The unchanged source pin for
-   this unit is db-v2 at
-   `https://github.com/cevr/manna/releases/download/db-v2/bible.db`, with size
-   156,291,072 bytes.
+   `sha256:<hex>` digest, and exact byte length. The source of truth for the
+   current pin is `BIBLE_ARTIFACT_RELEASE` in
+   [file-artifact.ts](../packages/core/src/corpus-supply/file-artifact.ts).
 
 5. Ship the pin through the normal CLI distribution. The user explicitly runs
    `manna init` to install, or its existing `--force` option when replacement is
-   intended. This unit does not assert fresh-home init success; the initfresh
-   unit owns that verification. It adds no installer or artifact fallback.
+   intended.

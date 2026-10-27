@@ -24,10 +24,8 @@ const readGenesis = (database: string) =>
     return (yield* bible.getChapter(1, 1))[0]?.text ?? '';
   }).pipe(Effect.provide(BibleDatabaseBun.layerBun(database)));
 
-const pathsFor = (config: Record<string, string>) =>
-  defaultBibleSyncPaths().pipe(
-    Effect.provide(ConfigProvider.layer(ConfigProvider.fromUnknown(config))),
-  );
+const withHome = (config: Record<string, string>) =>
+  Effect.provide(ConfigProvider.layer(ConfigProvider.fromUnknown(config)));
 
 const makeFixture = Effect.fn('BibleSyncTest.makeFixture')(function* () {
   const fs = yield* FileSystem.FileSystem;
@@ -83,6 +81,63 @@ const makeFixture = Effect.fn('BibleSyncTest.makeFixture')(function* () {
   return { directory, assetsDirectory };
 });
 
+const checkWorkspace = Effect.fn('BibleSyncTest.checkWorkspace')(function* (
+  home: string,
+  output: string,
+  assetsDirectory: string,
+  force: boolean,
+  existing: boolean,
+) {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const paths = yield* defaultBibleSyncPaths();
+  expect(paths.database).toBe(path.resolve(import.meta.dir, '../../data/bible.db'));
+  if (existing) yield* fs.writeFileString(output, 'existing workspace database');
+  yield* syncBible(force, { ...paths, assetsDirectory, database: output });
+  expect(yield* fs.readDirectory(home)).toEqual([]);
+  expect(yield* fs.exists(`${output}.building`)).toBe(false);
+  if (existing && !force) {
+    expect(yield* fs.readFileString(output)).toBe('existing workspace database');
+  } else {
+    expect(yield* readGenesis(output)).toBe('In the beginning');
+  }
+});
+
+const checkInstalledRuntime = Effect.fn('BibleSyncTest.checkInstalledRuntime')(function* (
+  home: string,
+  database: string,
+  assetsDirectory: string,
+) {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const runtime = path.join(home, '.bible');
+  yield* fs.makeDirectory(runtime, { recursive: true });
+  for (const name of ['bible.db', 'bible.db-wal', 'bible.db-shm', '.sentinel']) {
+    yield* fs.writeFileString(path.join(runtime, name), `sentinel ${name}`);
+  }
+  const paths = yield* defaultBibleSyncPaths();
+  yield* syncBible(true, { ...paths, assetsDirectory, database });
+
+  expect(yield* fs.readDirectory(home)).toEqual(['.bible']);
+  expect((yield* fs.readDirectory(runtime)).toSorted()).toEqual(
+    ['bible.db', 'bible.db-wal', 'bible.db-shm', '.sentinel'].toSorted(),
+  );
+  for (const name of yield* fs.readDirectory(runtime)) {
+    expect(yield* fs.readFileString(path.join(runtime, name))).toBe(`sentinel ${name}`);
+  }
+
+  expect(yield* readGenesis(database)).toBe('In the beginning');
+  expect(yield* fs.exists(`${database}.building`)).toBe(false);
+
+  yield* writeAsset(assetsDirectory, 'kjv.json', {
+    metadata: { name: 'King James Version', year: '1611/1769' },
+    verses: [{ book_name: 'Genesis', book: 1, chapter: 1, verse: 1, text: 'Changed source' }],
+  });
+
+  yield* syncBible(false, { ...paths, assetsDirectory, database });
+  expect(yield* readGenesis(database)).toBe('In the beginning');
+});
+
 describe('Bible sync', () => {
   const test = it.scopedLive.layer(BunServices.layer);
 
@@ -100,18 +155,10 @@ describe('Bible sync', () => {
             yield* fs.makeDirectory(home);
             const config: Record<string, string> = {};
             if (mode !== 'neither') config[mode] = home;
-            const paths = yield* pathsFor(config);
-            expect(paths.database).toBe(path.resolve(import.meta.dir, '../../data/bible.db'));
             const output = path.join(directory, `${label}.db`);
-            if (existing) yield* fs.writeFileString(output, 'existing workspace database');
-            yield* syncBible(force, { ...paths, assetsDirectory, database: output });
-            expect(yield* fs.readDirectory(home)).toEqual([]);
-            expect(yield* fs.exists(`${output}.building`)).toBe(false);
-            if (existing && !force) {
-              expect(yield* fs.readFileString(output)).toBe('existing workspace database');
-            } else {
-              expect(yield* readGenesis(output)).toBe('In the beginning');
-            }
+            yield* checkWorkspace(home, output, assetsDirectory, force, existing).pipe(
+              withHome(config),
+            );
           }
         }
       }
@@ -119,36 +166,10 @@ describe('Bible sync', () => {
 
   test('preserves an installed runtime tree and its bytes during a forced workspace rebuild', () =>
     Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const { directory, assetsDirectory } = yield* makeFixture();
-      const database = path.join(directory, 'bible.db');
       const home = path.join(directory, 'existing home Ω');
-      const runtime = path.join(home, '.bible');
-      yield* fs.makeDirectory(runtime, { recursive: true });
-      for (const name of ['bible.db', 'bible.db-wal', 'bible.db-shm', '.sentinel']) {
-        yield* fs.writeFileString(path.join(runtime, name), `sentinel ${name}`);
-      }
-      const paths = yield* pathsFor({ HOME: home });
-      yield* syncBible(true, { ...paths, assetsDirectory, database });
-
-      expect(yield* fs.readDirectory(home)).toEqual(['.bible']);
-      expect((yield* fs.readDirectory(runtime)).toSorted()).toEqual(
-        ['bible.db', 'bible.db-wal', 'bible.db-shm', '.sentinel'].toSorted(),
-      );
-      for (const name of yield* fs.readDirectory(runtime)) {
-        expect(yield* fs.readFileString(path.join(runtime, name))).toBe(`sentinel ${name}`);
-      }
-
-      expect(yield* readGenesis(database)).toBe('In the beginning');
-      expect(yield* fs.exists(`${database}.building`)).toBe(false);
-
-      yield* writeAsset(assetsDirectory, 'kjv.json', {
-        metadata: { name: 'King James Version', year: '1611/1769' },
-        verses: [{ book_name: 'Genesis', book: 1, chapter: 1, verse: 1, text: 'Changed source' }],
-      });
-
-      yield* syncBible(false, { ...paths, assetsDirectory, database });
-      expect(yield* readGenesis(database)).toBe('In the beginning');
+      const database = path.join(directory, 'bible.db');
+      yield* checkInstalledRuntime(home, database, assetsDirectory).pipe(withHome({ HOME: home }));
     }));
 });
