@@ -24,6 +24,7 @@ it('rejects a neighbouring heading and verb labels in body prose', () => {
     ['sow', '<b>SOW,</b> noun A swine. Compare <i>verb</i> elsewhere.'],
     ['sow', '<b>SOW,</b> unrelated words v. To plant.'],
     ['sow', '<b>SOWING,</b> <i>verb</i> To plant.'],
+    ['sow', '<p><b>SOW,</b></p><p><i>verb</i> To plant.'],
   ] as const)
     expect(hasOwnVerbMarker(html, headword)).toBe(false);
 });

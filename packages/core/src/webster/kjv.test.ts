@@ -1,4 +1,4 @@
-import { Effect } from 'effect';
+import { Effect, Schema } from 'effect';
 import { expect, it } from 'bun:test';
 
 import domain from './fixtures/kjv-endings.json';
@@ -16,6 +16,15 @@ const lookup = (query: string) =>
   Effect.runSync(
     WebsterService.use((service) => service.lookup(query)).pipe(Effect.provide(layer)),
   );
+
+it('keeps the independently reviewed lexical judgments for the complete KJV domain', () => {
+  // The independent reviewed-domain digest prevents a matching wrong fixture
+  // edit from excusing a wrong production lemma.
+  const judgments = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown))(domain.forms);
+  expect(new Bun.CryptoHasher('sha256').update(judgments).digest('hex')).toBe(
+    '010f43f619980acd4d4df9ec965ecb3e1fb40b9aea761d6f83f381a6086aa387',
+  );
+});
 
 for (const [form, expected] of [
   ['doeth', 'do'],

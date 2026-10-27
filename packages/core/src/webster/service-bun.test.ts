@@ -100,7 +100,7 @@ it('real readonly SQLite carries bounded KJV rules and literal ranked AND defini
           'beg',
           'none',
           'closest',
-          'clo',
+          'clos',
           'doe',
           'proceede',
           'loathe',

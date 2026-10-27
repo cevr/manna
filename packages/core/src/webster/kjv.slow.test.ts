@@ -11,18 +11,6 @@ import { layerWebsterBun } from './service-bun.js';
 
 const filename = new URL('../../data/webster.db', import.meta.url).pathname;
 
-it.scoped('keeps the independently reviewed lexical judgments for the complete KJV domain', () =>
-  Effect.gen(function* () {
-    // The independent reviewed-domain digest prevents a matching wrong fixture
-    // edit from excusing a wrong production lemma.
-    const judgments = yield* Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown))(
-      domain.forms,
-    );
-    expect(new Bun.CryptoHasher('sha256').update(judgments).digest('hex')).toBe(
-      '010f43f619980acd4d4df9ec965ecb3e1fb40b9aea761d6f83f381a6086aa387',
-    );
-  }),
-);
 it.scoped(
   'every KJV verb and exact inflection resolves to its own source-marked verb or no entry with no unused exceptions',
   () =>

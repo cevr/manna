@@ -44,9 +44,9 @@ springe, stepp, swimm, tri, warre) so a wrong stem can fail without a full DB.
 The slow test compares required exact keys, suffix candidates, reviewed targets
 and canonical irregular targets with real SQLite. It requires every required
 existing key and rejects any nonexistent fixture key. Curated collision extras
-remain. It also reproduces the full census and freezes the reviewed 970-row
-judgments with a digest, independently of the production stemmer.
-Its separate source property covers 876 `verb` and `exact-inflection` rows,
+remain. It also reproduces the full census. The fast test freezes the reviewed
+970-row judgments with a digest, independently of the production stemmer.
+The slow source property covers 876 `verb` and `exact-inflection` rows,
 including art/dost/hast/wast and rows with `lemma: "none"`. A neighbouring word's
 label or body prose cannot establish identity. Later verb senses under the same
 word remain valid. A verb label alone cannot distinguish sing from singe; the

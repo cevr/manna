@@ -63,7 +63,7 @@ it('uses retained e before bare and undoubled generic collisions without an alia
 
 it('distinguishes the exact NONE headword, no-entry aliases and missing alias targets', () => {
   const layer = WebsterService.Test({
-    entries: ['none', 'closest', 'clo', 'doe', 'proceede', 'loathe', 'sow'].map(
+    entries: ['none', 'closest', 'clos', 'doe', 'proceede', 'loathe', 'sow'].map(
       (headword, index) => ({
         id: index + 1,
         headword,

@@ -5,5 +5,5 @@ export {
   WEBSTER_PROJECTION_VERSION,
   sourceDefinition,
 } from './source.js';
-export { WebsterEntry, WebsterLookup, WebsterError } from './model.js';
+export { WebsterEntry, WebsterLookup } from './model.js';
 export { WebsterService } from './service.js';
