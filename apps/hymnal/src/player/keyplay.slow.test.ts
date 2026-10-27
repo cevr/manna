@@ -1,13 +1,22 @@
 /* oxlint-disable effect/noNewPromise -- the fake replaces One's Promise-based device API and exposes each reply for controlled schedules. */
 import { expect, it } from 'effect-bun-test';
-import { Clock, Console, Effect, Fiber, Layer, Option, References, SubscriptionRef } from 'effect';
+import {
+  Clock,
+  Console,
+  Effect,
+  Fiber,
+  Layer,
+  Match,
+  Option,
+  References,
+  SubscriptionRef,
+} from 'effect';
 import * as Atom from 'effect/reactivity/Atom';
 import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
 import { TestClock } from 'effect/testing';
-import { keyFromSignature } from '@manna/hymnal/chord';
 
 import { audioUrl } from '~/remote';
-import { type Move, soundingKey, playedKey, transposed } from '~/hymns/chords';
+import { type Move } from '~/hymns/chords';
 
 import { playbackOn, type Device } from './playback.live';
 import { Command, Playback, Player, playerOn, type Status, statusEvery } from './player';
@@ -15,6 +24,7 @@ import { counted } from '../follow/seeks';
 import { soundOn } from './sound';
 import { recordingsOn } from './recording';
 import type { Timeline } from '../follow/timeline';
+import { followerOf } from '../follow/follower';
 
 const track = { number: 100, title: 'Hymn 100' };
 const other = { number: 3, title: 'Hymn 3' };
@@ -28,6 +38,9 @@ const native = (clock: Clock.Clock, recorded = 240_000) => {
   let since = clock.currentTimeMillisUnsafe();
   let id = 0;
   let hold = false;
+  let holdStatus = false;
+  let listener: Parameters<Device['audio']['watchRemoteCommands']>[0] = () => {};
+  const statusWaiting: Array<() => void> = [];
   const calls: Array<{ operation: string; uri?: string; at: number; time: number }> = [];
   const pending: Array<{ release: (failed?: boolean) => void }> = [];
   const missing = new Set<string>();
@@ -67,7 +80,10 @@ const native = (clock: Clock.Clock, recorded = 240_000) => {
           pending.push({ release: (failed) => resolve(finish(failed)) }),
         );
       },
-      getPlaybackStatus: () => Promise.resolve(read()),
+      getPlaybackStatus: () => {
+        if (!holdStatus) return Promise.resolve(read());
+        return new Promise((resolve) => statusWaiting.push(() => resolve(read())));
+      },
       seek: (at) => {
         tell('seek', at);
         if (now.state === 'failed' || now.state === 'loading') return Promise.reject('not ready');
@@ -91,7 +107,12 @@ const native = (clock: Clock.Clock, recorded = 240_000) => {
         tell('announce');
         return Promise.resolve();
       },
-      watchRemoteCommands: () => () => {},
+      watchRemoteCommands: (receive) => {
+        listener = receive;
+        return () => {
+          listener = () => {};
+        };
+      },
     },
     network: {
       getState: () => Promise.resolve({ isConnected: true } as never),
@@ -104,6 +125,12 @@ const native = (clock: Clock.Clock, recorded = 240_000) => {
     pending,
     missing,
     read,
+    remote: (event: Parameters<typeof listener>[0]) => listener(event),
+    holdStatus: (on: boolean) => {
+      holdStatus = on;
+      if (!on) for (const release of statusWaiting.splice(0)) release();
+    },
+    statusWaiting: () => statusWaiting.length,
     force: set,
     hold: () => {
       hold = true;
@@ -169,6 +196,320 @@ const open = (sound = true, recorded = 240_000) =>
     };
   });
 
+// The oracle is independent of the adapters: only an already moving clock
+// keeps time during a hand-over. A chosen landing never consumes load time.
+const origins = [
+  'Playing',
+  'Paused',
+  'Loading probeA',
+  'Buffering probeO',
+  'after Seek',
+  'Sound-off resume probeL',
+  'silent-tail rewind probeM',
+] as const;
+
+const pausedLanding = (app: App, keyChange: boolean) =>
+  Effect.gen(function* () {
+    app.send(Command.Pause());
+    yield* settle;
+    const paused = app.state();
+    expect(paused._tag).toBe('Paused');
+    let target = 0;
+    if (paused._tag === 'Paused') target = paused.at * 1000;
+    yield* SubscriptionRef.set(app.sound, true);
+    yield* settle;
+    if (keyChange) app.move(100, 1);
+    yield* settle;
+    app.hold();
+    app.send(Command.Resume());
+    return target;
+  });
+
+const tailLanding = (app: App, keyChange: boolean) =>
+  Effect.gen(function* () {
+    yield* app.tick(61_000);
+    if (keyChange) app.move(100, 1);
+    yield* settle;
+    app.hold();
+    app.send(Command.Seek({ seconds: 40 }));
+    return 40_000;
+  });
+
+const stalledLanding = (app: App, keyChange: boolean) =>
+  Effect.gen(function* () {
+    const target = app.read().positionMs;
+    app.force({ ...app.read(), state: 'loading' });
+    let ticks = 12;
+    if (!keyChange) ticks = 68;
+    for (let i = 0; i < ticks; i++) yield* app.tick();
+    expect(app.state()._tag).toBe('Buffering');
+    app.hold();
+    if (keyChange) app.move(100, 1);
+    else app.send(Command.Resume());
+    return target;
+  });
+
+const soughtLanding = (app: App) =>
+  Effect.gen(function* () {
+    app.hold();
+    app.move(100, 1);
+    yield* settle;
+    app.send(Command.Seek({ seconds: 40 }));
+    return 40_000;
+  });
+
+const playingLanding = (app: App, keyChange: boolean) =>
+  Effect.gen(function* () {
+    const state = app.state();
+    expect(state._tag).toBe('Playing');
+    let target = 0;
+    if (state._tag === 'Playing') target = state.at * 1000;
+    app.hold();
+    if (keyChange) app.move(100, 1);
+    else yield* SubscriptionRef.set(app.sound, true);
+    return target;
+  });
+
+const beginLanding = (app: App, origin: (typeof origins)[number], keyChange: boolean) =>
+  Effect.gen(function* () {
+    if (origin === 'Loading probeA' || (origin === 'after Seek' && !keyChange)) {
+      if (origin === 'after Seek') app.move(100, 1);
+      app.hold();
+      app.send(Command.Start({ track }));
+      yield* settle;
+      expect(app.state()._tag).toBe('Loading');
+      if (origin === 'after Seek') {
+        app.send(Command.Seek({ seconds: 40 }));
+        return 40_000;
+      }
+      if (keyChange) {
+        app.hold();
+        app.move(100, 1);
+      }
+      return 0;
+    }
+    app.send(Command.Start({ track }));
+    yield* app.playing;
+    yield* app.tick(10_000);
+    return yield* Match.value(origin).pipe(
+      Match.when(Match.is('Paused', 'Sound-off resume probeL'), () =>
+        pausedLanding(app, keyChange),
+      ),
+      Match.when('silent-tail rewind probeM', () => tailLanding(app, keyChange)),
+      Match.when('Buffering probeO', () => stalledLanding(app, keyChange)),
+      Match.when('after Seek', () => soughtLanding(app)),
+      Match.orElse(() => playingLanding(app, keyChange)),
+    );
+  });
+
+for (const origin of origins)
+  for (const keyChange of [false, true])
+    for (const loadMs of [0, 100, 1000, 1500])
+      it.effect(`keyplay landing property ${origin} key=${keyChange} loadMs=${loadMs}`, () =>
+        Effect.gen(function* () {
+          const silent =
+            (origin === 'Playing' && !keyChange) ||
+            origin === 'Paused' ||
+            origin === 'Sound-off resume probeL';
+          let recorded = 240_000;
+          if (origin === 'silent-tail rewind probeM') recorded = 60_000;
+          using app = yield* open(!silent, recorded);
+          const target = yield* beginLanding(app, origin, keyChange);
+          yield* settle;
+          expect(app.pending.length).toBeGreaterThan(0);
+          yield* app.tick(loadMs);
+          app.pending.at(-1)?.release();
+          yield* settle;
+          let expected = target;
+          if (origin === 'Playing') expected += loadMs;
+          expect(app.read().positionMs).toBe(expected);
+          const lastSeek = app.calls.filter((it) => it.operation === 'seek').at(-1);
+          if (lastSeek) expect(lastSeek.at).toBe(expected);
+        }),
+      );
+
+it.effect(
+  'keyplay probeD probeN replacement reports keep follow forward and the hand pause held',
+  () =>
+    Effect.gen(function* () {
+      using app = yield* open();
+      app.send(Command.Start({ track }));
+      yield* app.playing;
+      yield* app.tick(10_000);
+      let now = 0;
+      let timers: Array<{ at: number; run: () => void }> = [];
+      const scrolled: number[] = [];
+      const follower = followerOf(
+        {
+          first: 0,
+          end: 30_000,
+          lines: Array.from({ length: 30 }, (_, k) => ({
+            start: k * 1000,
+            until: (k + 1) * 1000,
+            played: true,
+            even: false,
+            syllables: [k * 1000, k * 1000 + 500],
+            words: [0, 1],
+          })),
+        },
+        {
+          now: () => now,
+          wake: (ms, run) => {
+            const timer = { at: now + ms, run };
+            timers.push(timer);
+            return () => {
+              timers = timers.filter((it) => it !== timer);
+            };
+          },
+          scrollTo: (line) => scrolled.push(line),
+          log: () => {},
+        },
+      );
+      const advance = (to: number) => {
+        for (;;) {
+          const due = timers.filter((it) => it.at <= to).toSorted((a, b) => a.at - b.at)[0];
+          if (!due) break;
+          timers = timers.filter((it) => it !== due);
+          now = due.at;
+          due.run();
+        }
+        now = to;
+      };
+      const report = (state: Player) => {
+        if (state._tag === 'Playing')
+          follower.report({ _tag: 'Here', state: 'playing', at: state.at * 1000 });
+      };
+      report(app.state());
+      follower.drag();
+      const scrollCount = scrolled.length;
+      const unsubscribe = app.registry.subscribe(app.player.state, report);
+      app.hold();
+      app.move(100, 1);
+      yield* settle;
+      let last = -1;
+      for (let k = 1; k <= 6; k++) {
+        advance(k * 250);
+        yield* app.tick();
+        const state = app.state();
+        expect(state._tag).toBe('Playing');
+        if (state._tag === 'Playing') expect(state.at * 1000).toBe(10_250 + k * 250);
+        const line = follower.marks.line();
+        const mark = line * 2 + follower.marks.markOf(line);
+        expect(mark).toBeGreaterThanOrEqual(last);
+        last = mark;
+        expect(follower.held.get()).toBe(true);
+      }
+      app.pending.at(-1)?.release();
+      yield* settle;
+      expect(follower.held.get()).toBe(true);
+      expect(scrolled.length).toBe(scrollCount);
+      unsubscribe();
+      follower.stop();
+    }),
+);
+
+for (const loadMs of [0, 1000])
+  it.effect(
+    `keyplay probeK7 a Seek during the key status read cannot lose the chosen set loadMs=${loadMs}`,
+    () =>
+      Effect.gen(function* () {
+        using app = yield* open();
+        app.send(Command.Start({ track }));
+        yield* app.playing;
+        yield* app.tick(10_000);
+        app.holdStatus(true);
+        yield* app.tick();
+        app.move(100, 1);
+        yield* settle;
+        expect(app.statusWaiting()).toBeGreaterThan(0);
+        app.send(Command.Seek({ seconds: 40 }));
+        yield* settle;
+        if (loadMs > 0) app.hold();
+        app.holdStatus(false);
+        yield* settle;
+        if (loadMs > 0) {
+          expect(app.pending.length).toBe(1);
+          yield* app.tick(loadMs);
+          app.pending.at(-1)?.release();
+          yield* settle;
+        }
+        yield* app.tick();
+        expect(app.calls.filter((it) => it.operation === 'play').at(-1)?.uri).toBe(
+          audioUrl(100, 1),
+        );
+        expect(app.registry.get(app.player.recording)).toEqual(
+          Option.some({ number: 100, requested: 1, effective: 1 }),
+        );
+        expect(app.read().positionMs).toBe(40_250);
+      }),
+  );
+
+for (const command of ['Pause', 'Start', 'Key'] as const)
+  it.effect(`keyplay a claimed key status read yields to a newer ${command}`, () =>
+    Effect.gen(function* () {
+      using app = yield* open();
+      app.send(Command.Start({ track }));
+      yield* app.playing;
+      app.holdStatus(true);
+      yield* app.tick();
+      app.move(100, 1);
+      yield* settle;
+      if (command === 'Pause') app.send(Command.Pause());
+      if (command === 'Start') app.send(Command.Start({ track: other }));
+      if (command === 'Key') app.move(100, 2);
+      yield* settle;
+      app.holdStatus(false);
+      yield* app.tick();
+      expect(
+        app.calls.filter((it) => it.operation === 'play' && it.uri === audioUrl(100, 1)),
+      ).toEqual([]);
+      if (command === 'Pause') {
+        expect(app.state()._tag).toBe('Paused');
+        app.send(Command.Resume());
+        yield* app.playing;
+        expect(app.calls.filter((it) => it.operation === 'play').at(-1)?.uri).toBe(
+          audioUrl(100, 1),
+        );
+      } else {
+        let uri = audioUrl(100, 2);
+        if (command === 'Start') uri = audioUrl(3);
+        expect(app.calls.filter((it) => it.operation === 'play').at(-1)?.uri).toBe(uri);
+      }
+    }),
+  );
+
+for (const action of ['printed selection', 'remote Play'] as const)
+  it.effect(`keyplay fallback ${action} does not reload the sounding set probeB probeE`, () =>
+    Effect.gen(function* () {
+      using app = yield* open();
+      app.send(Command.Start({ track }));
+      yield* app.playing;
+      app.missing.add(audioUrl(100, 2));
+      app.move(100, 2);
+      yield* app.tick();
+      yield* app.playing;
+      const count = app.calls.filter((it) =>
+        ['play', 'seek', 'stop'].includes(it.operation),
+      ).length;
+      if (action === 'printed selection') app.move(100, 0);
+      else app.remote({ type: 'play' });
+      yield* app.tick();
+      expect(app.state()._tag).toBe('Playing');
+      expect(app.calls.filter((it) => ['play', 'seek', 'stop'].includes(it.operation)).length).toBe(
+        count,
+      );
+      let requested = 2;
+      if (action === 'printed selection') requested = 0;
+      expect(app.registry.get(app.player.recording)).toEqual(
+        Option.some({
+          number: 100,
+          requested,
+          effective: 0,
+        }),
+      );
+    }),
+  );
+
 it.effect('keyplay playing switch keeps musical place and maps preparation time', () =>
   Effect.gen(function* () {
     using app = yield* open();
@@ -185,8 +526,6 @@ it.effect('keyplay playing switch keeps musical place and maps preparation time'
     yield* app.playing;
     const seek = app.calls.filter((it) => it.operation === 'seek').at(-1);
     expect(seek?.at).toBe(before + 750);
-    expect(app.read().positionMs).toBeGreaterThanOrEqual(before + 750);
-    expect(app.read().positionMs).toBeLessThanOrEqual(before + 1000);
     expect(yield* SubscriptionRef.get(app.seeks)).toBe(0);
     yield* Console.log(`keyplay-proof switchGapMs=750 startAtMs=${before} landedAtMs=${seek?.at}`);
   }),
@@ -263,6 +602,8 @@ it.effect('keyplay Sound on keeps reading through a failed preparation and fallb
     app.send(Command.Start({ track }));
     yield* app.playing;
     yield* app.tick(10_000);
+    const before = app.state();
+    expect(before._tag).toBe('Playing');
     app.hold();
     yield* SubscriptionRef.set(app.sound, true);
     yield* settle;
@@ -271,12 +612,16 @@ it.effect('keyplay Sound on keeps reading through a failed preparation and fallb
     yield* app.tick(500);
     expect(app.state()._tag).not.toBe('Failed');
     app.pending[0]?.release(true);
+    yield* settle;
+    if (before._tag === 'Playing')
+      expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(
+        before.at * 1000 + 500,
+      );
     yield* app.tick();
     yield* app.playing;
     expect(app.registry.get(app.player.recording)).toEqual(
       Option.some({ number: 100, requested: 1, effective: 0 }),
     );
-    expect(app.read().positionMs).toBeGreaterThanOrEqual(15_000);
   }),
 );
 
@@ -306,7 +651,7 @@ it.effect('keyplay a silent score tail keeps place across Key and falls back on 
         .slice(-2)
         .map((it) => it.uri),
     ).toEqual([audioUrl(100, 2), audioUrl(100)]);
-    expect(app.read().positionMs).toBeGreaterThanOrEqual(40_000);
+    expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(40_000);
     expect(app.registry.get(app.player.recording)).toEqual(
       Option.some({ number: 100, requested: 2, effective: 0 }),
     );
@@ -322,6 +667,7 @@ it.effect('keyplay missing set falls back once at retained place and a later Pla
     const before = app.read().positionMs;
     app.missing.add(audioUrl(100, 2));
     app.move(100, 2);
+    yield* settle;
     yield* app.tick();
     yield* app.playing;
     expect(app.calls.filter((it) => it.operation === 'play').map((it) => it.uri)).toEqual([
@@ -329,9 +675,7 @@ it.effect('keyplay missing set falls back once at retained place and a later Pla
       audioUrl(100, 2),
       audioUrl(100),
     ]);
-    expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBeGreaterThanOrEqual(
-      before,
-    );
+    expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(before);
     expect(app.registry.get(app.player.recording)).toEqual(
       Option.some({ number: 100, requested: 2, effective: 0 }),
     );
@@ -405,9 +749,8 @@ it.effect('keyplay a seek during a pending key load owns the final landing', () 
     app.pending[0]?.release();
     yield* app.playing;
     yield* app.tick();
-    expect(app.read().positionMs).toBeGreaterThanOrEqual(40_000);
-    expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(40_500);
-    yield* Console.log('keyplay-proof pendingSeekMs=40000 prepareMs=500 landedAtMs=40500');
+    expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(40_000);
+    yield* Console.log('keyplay-proof pendingSeekMs=40000 prepareMs=500 landedAtMs=40000');
   }),
 );
 
@@ -438,9 +781,7 @@ it.effect('keyplay an old recording that fails at zero keeps the last proved mus
     app.force({ state: 'failed', positionMs: 0, durationMs: 240_000 });
     app.move(100, 1);
     yield* app.playing;
-    expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBeGreaterThanOrEqual(
-      before,
-    );
+    expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(before);
   }),
 );
 
@@ -486,7 +827,7 @@ for (const failed of [false, true]) {
       expect(app.registry.get(app.player.recording)).toEqual(
         Option.some({ number: 100, requested: 1, effective }),
       );
-      expect(app.read().positionMs).toBeGreaterThanOrEqual(40_000);
+      expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(40_000);
       expect(app.calls.filter((it) => it.operation === 'play').length).toBe(2 + Number(failed));
     }),
   );
@@ -507,7 +848,7 @@ it.effect('keyplay an initial chosen-key load lands a newer seek without losing 
     expect(app.registry.get(app.player.recording)).toEqual(
       Option.some({ number: 100, requested: -2, effective: -2 }),
     );
-    expect(app.read().positionMs).toBeGreaterThanOrEqual(40_000);
+    expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(40_000);
   }),
 );
 
@@ -552,6 +893,7 @@ it.effect(
           const selected = app.registry.get(app.player.recording);
           for (let capo = 0; capo < 12; capo++) {
             app.move(number, offset, capo);
+            yield* settle;
             expect(app.registry.get(app.player.recording)).toBe(selected);
             cases++;
           }
@@ -580,21 +922,35 @@ it.effect(
 );
 
 it.effect(
-  'keyplay sounding identity is independent of major minor enharmonic spelling and octave turns',
+  'keyplay octave-equivalent settings keep the sounding set and dispatch across all capo frets',
   () =>
-    Effect.sync(() => {
-      for (let fifths = -7; fifths <= 7; fifths++)
-        for (const minor of [true, false]) {
-          const key = keyFromSignature(fifths, minor);
-          for (let offset = -5; offset <= 6; offset++)
-            for (let capo = 0; capo < 12; capo++) {
-              const move = { transpose: offset, capo };
-              expect(soundingKey(key, move)).toEqual(soundingKey(key, { ...move, capo: 0 }));
-              expect(transposed(move, 12)).toEqual(move);
-              expect(transposed(move, -24)).toEqual(move);
-              expect(playedKey(key, move).minor).toBe(minor);
-            }
-        }
+    Effect.gen(function* () {
+      using app = yield* open();
+      app.send(Command.Start({ track }));
+      yield* app.playing;
+      for (let offset = -5; offset <= 6; offset++) {
+        app.move(100, offset);
+        yield* settle;
+        const selected = app.registry.get(app.player.recording);
+        const count = app.calls.filter((it) =>
+          ['play', 'seek', 'stop'].includes(it.operation),
+        ).length;
+        expect(selected).toEqual(
+          Option.some({ number: 100, requested: offset, effective: offset }),
+        );
+        expect(app.calls.filter((it) => it.operation === 'play').at(-1)?.uri).toBe(
+          audioUrl(100, offset),
+        );
+        for (const octave of [-2, 0, 1])
+          for (let capo = 0; capo < 12; capo++) {
+            app.move(100, offset + octave * 12, capo);
+            yield* settle;
+            expect(app.registry.get(app.player.recording)).toBe(selected);
+            expect(
+              app.calls.filter((it) => ['play', 'seek', 'stop'].includes(it.operation)).length,
+            ).toBe(count);
+          }
+      }
     }),
 );
 

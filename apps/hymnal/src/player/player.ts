@@ -195,6 +195,8 @@ export interface PlaybackApi {
   readonly resume: Effect.Effect<Status, PlaybackError>;
   readonly seek: (positionMs: number) => Effect.Effect<Status, PlaybackError>;
   readonly status: Effect.Effect<Status, PlaybackError>;
+  /** Adopt a selection whose effective set already sounds, without a device load. */
+  readonly selectRecording?: (selection: RecordingSelection) => Effect.Effect<void>;
   /** Let the recording go: nothing loads or plays, the lock screen shows nothing, and the status says `idle`. */
   readonly stop: Effect.Effect<void, PlaybackError>;
   /** Whether the device has a connection: now, then at each change, in order. */
@@ -295,6 +297,8 @@ const placeOf = (proof: Proof.Proof) => Option.map(proof.place, seconds);
 /** What the player holds across the commands (see `held` in `playerOn`). */
 interface Held {
   wants: Intent;
+  /** Distinguishes acts even when two commands share one clock millisecond. */
+  acts: number;
   proof: Proof.Proof;
   seeking: Option.Option<{ readonly to: number; asking: boolean }>;
   moving: Option.Option<Fiber.Fiber<unknown, unknown>>;
@@ -333,6 +337,7 @@ export const playerOn = (
    */
   const held: Held = {
     wants: 'play',
+    acts: 0,
     proof: Proof.none,
     seeking: Option.none(),
     moving: Option.none(),
@@ -375,6 +380,7 @@ export const playerOn = (
          */
         const act = (target: Option.Option<number>) =>
           Effect.flatMap(now, (at) => {
+            held.acts += 1;
             held.proof = Proof.acted(held.proof, at, target);
             const was = get.registry.get(state);
             const kept = Player.$is('Playing')(was) && heardWithin(at);
@@ -406,7 +412,9 @@ export const playerOn = (
                     status = {
                       ...raw,
                       state: 'loading',
-                      positionMs: Option.getOrElse(held.proof.place, () => raw.positionMs),
+                      positionMs:
+                        raw.replacementMs ??
+                        Option.getOrElse(held.proof.place, () => raw.positionMs),
                     };
                   return { asked, answered: yield* now, status };
                 }).pipe(
@@ -570,10 +578,11 @@ export const playerOn = (
             ),
           );
           const at = seconds(
-            Option.getOrElse(
-              Option.map(held.proof.pending, (it) => it.target),
-              () => read.status.positionMs,
-            ),
+            read.status.replacementMs ??
+              Option.getOrElse(
+                Option.map(held.proof.pending, (it) => it.target),
+                () => read.status.positionMs,
+              ),
           );
           const quiet = Proof.silentFor(held.proof, read);
           /**
@@ -758,7 +767,7 @@ export const playerOn = (
               Match.when(true, () => moves(asking)),
               Match.orElse(() => Effect.forkIn(asking, answers, { startImmediately: true })),
             );
-            yield* watch(track, answered);
+            yield* Effect.interruptible(watch(track, answered));
           });
         /** Read the device's status until its playback stops moving. */
         const follow = (track: Track) =>
@@ -913,11 +922,12 @@ export const playerOn = (
             });
           if (
             keyOf(track) !== held.offset ||
-            Option.exists(
-              get.registry.get(recording),
-              (selected) =>
-                selected.number === track.number && selected.requested !== selected.effective,
-            )
+            (!Player.$is('Playing')(current) &&
+              Option.exists(
+                get.registry.get(recording),
+                (selected) =>
+                  selected.number === track.number && selected.requested !== selected.effective,
+              ))
           )
             return fromPlace();
           return Player.$match(current, {
@@ -1083,35 +1093,71 @@ export const playerOn = (
                 held.offset === soundingOffset(offset)
               )
                 return yield* follow(track);
+              const selected = get.registry.get(recording);
+              if (
+                !held.replacing &&
+                Option.exists(
+                  selected,
+                  (it) => it.number === number && it.effective === soundingOffset(offset),
+                )
+              ) {
+                const selection = {
+                  number,
+                  requested: soundingOffset(offset),
+                  effective: soundingOffset(offset),
+                };
+                held.offset = selection.requested;
+                yield* device.selectRecording?.(selection) ?? Effect.void;
+                remember(selection);
+                return yield* follow(track);
+              }
               // A paused selection is applied on the next Play; the dial never starts sound.
               if (held.wants === 'pause' || letGo(current) || Player.$is('Ended')(current)) return;
-              const read = yield* device.status.pipe(Effect.option);
-              const at = Option.getOrElse(
-                Option.flatMap(read, (it) => Option.fromNullishOr(it.replacementMs)),
-                () => Proof.replacementAt(held.proof, read),
-              );
-              held.id += 1;
-              held.reading = Option.none();
-              held.seeking = Option.none();
-              const id = held.id;
-              const asked = yield* now;
-              yield* act(Option.some(at));
-              yield* ask(
-                track,
-                playSet(track, soundingOffset(offset), at, true).pipe(
-                  Effect.tap((status) =>
-                    Effect.when(
-                      replacementLanded(asked, at)(status),
-                      Effect.sync(() => held.id === id),
+              // A command may replace this watcher while the native status
+              // round trip waits. Claim the replacement before interruption
+              // resumes; its preparation then belongs to the player scope.
+              yield* Effect.uninterruptible(
+                Effect.gen(function* () {
+                  const before = held.id;
+                  const origin = held.acts;
+                  const read = yield* readFresh.pipe(
+                    Effect.map((it) => it.status),
+                    Effect.option,
+                  );
+                  if (
+                    before !== held.id ||
+                    keyOf(track) !== soundingOffset(offset) ||
+                    held.wants === 'pause'
+                  )
+                    return;
+                  const at = Option.getOrElse(
+                    Option.flatMap(read, (it) => Option.fromNullishOr(it.replacementMs)),
+                    () => Proof.replacementAt(held.proof, read),
+                  );
+                  held.id += 1;
+                  held.seeking = Option.none();
+                  const id = held.id;
+                  const asked = yield* now;
+                  const continuous = Player.$is('Playing')(current) && origin === held.acts;
+                  yield* act(Option.some(at));
+                  yield* ask(
+                    track,
+                    playSet(track, soundingOffset(offset), at, continuous).pipe(
+                      Effect.tap((status) =>
+                        Effect.when(
+                          replacementLanded(asked, at)(status),
+                          Effect.sync(() => held.id === id),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                (error) =>
-                  Effect.logWarning('player.key.failed').pipe(
-                    Effect.annotateLogs({ hymn: number, offset, operation: error.operation }),
-                    Effect.as(false),
-                  ),
-                true,
+                    (error) =>
+                      Effect.logWarning('player.key.failed').pipe(
+                        Effect.annotateLogs({ hymn: number, offset, operation: error.operation }),
+                        Effect.as(false),
+                      ),
+                    true,
+                  );
+                }),
               );
             }),
           );

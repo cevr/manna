@@ -123,6 +123,10 @@ export const recordingsOver = (device: PlaybackApi): PlaybackApi => {
       return Effect.map(device.resume, selected);
     }),
     seek: (at) => Effect.map(device.seek(at), selected),
+    selectRecording: (recording) =>
+      Effect.sync(() => {
+        selection = Option.some(recording);
+      }),
     stop: Effect.suspend(() => {
       turn++;
       selection = Option.none();

@@ -24,8 +24,8 @@ spacing`, `Keep screen on`).
 ## Sub-features
 
 - `player-key-set`: Play uses the held hymn's saved sounding Key. Printed key uses `warm-1`; offsets -5..-1 use `warm-1-down5..1`, and 1..6 use `warm-1-up1..6`.
-- `player-key-switch`: turning Key during Play replaces the global recording at the current musical time plus preparation time. A short gap is allowed. A paused Key selection starts nothing; the next Play uses that Key at the held place. Reset obeys the same rule.
-- `player-key-fallback`: an unavailable chosen set is tried once, then printed key is tried once at the retained place. The bar and sheet show `Recording in printed key. Chosen key unavailable. Play retries it.` A later Play retries the chosen key. A stale failed request cannot take back the newest selection.
+- `player-key-switch`: a Key hand-over from Playing keeps the current musical time plus preparation time. A hand-over from Loading or Buffering, a resume from Paused, and a Seek land exactly at their targets. A short gap is allowed. A paused Key selection starts nothing; the next Play uses that Key at the held place. Reset obeys the same rule. During a moving replacement, follow receives its running place, so a hand pause stays held.
+- `player-key-fallback`: an unavailable chosen set is tried once, then printed key is tried once at the retained place. The bar and sheet show `Recording in printed key. Chosen key unavailable. Play retries it.` A later Play from Paused or Retry retries the chosen key. A remote Play while already Playing keeps the sounding fallback. Choosing its effective key updates selection without a load or seek. A stale failed request cannot take back the newest selection.
 - `player-capo-invariant`: Capo 0→1→11→0 changes shapes alone. It makes no recording Play, Stop or Seek call and does not reset follow.
 - `player-play`: `Play hymn <n>` starts the recording; the button becomes `Pause hymn <n>`.
 - `player-pause`: `Pause hymn <n>` pauses; the button becomes `Play hymn <n>` again.

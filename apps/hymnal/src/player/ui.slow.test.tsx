@@ -26,7 +26,8 @@ import { opened, opening, params, routed, safeArea, stack } from '../test/one';
 import { PlayerContext } from './context';
 import { FullPlayer } from './FullPlayer';
 import { useShowsPage } from './page';
-import { Command, Player, playerOn, type Track } from './player';
+import { Command, Player, playerOn, type Track, type RecordingSelection } from './player';
+import { RecordingNotice } from './RecordingNotice';
 import { PlayerBar } from './PlayerBar';
 import { StackBottom } from './StackBottom';
 import { useCommitAtRest, useScrub } from './scrub';
@@ -291,6 +292,8 @@ const mount = (screen: ReactNode = sheetOver(morning)) => {
     text: () => host.textContent,
     /** The player's state now. */
     player: () => registry.get(player.state),
+    selection: (selection: Option.Option<RecordingSelection>) =>
+      act(() => registry.set(player.recording, selection)),
     [Symbol.dispose]: () => {
       act(() => root.unmount());
       host.remove();
@@ -301,6 +304,28 @@ const mount = (screen: ReactNode = sheetOver(morning)) => {
 };
 
 describe('the full player', () => {
+  it.live('shows a recording fallback only for its held hymn and an unequal effective key', () =>
+    Effect.sync(() => {
+      using screen = mount(
+        <>
+          <RecordingNotice number={100} />
+          <RecordingNotice number={3} />
+        </>,
+      );
+      expect(screen.all('[role="status"]').length).toBe(0);
+      screen.selection(Option.some({ number: 100, requested: 2, effective: 0 }));
+      expect(screen.all('[role="status"]').length).toBe(1);
+      expect(screen.find('[data-testid="recording-key-fallback"]').pipe(Option.isSome)).toBe(true);
+      screen.selection(Option.some({ number: 100, requested: 0, effective: 0 }));
+      expect(screen.all('[role="status"]').length).toBe(0);
+      screen.selection(Option.some({ number: 4, requested: 2, effective: 0 }));
+      expect(screen.all('[role="status"]').length).toBe(0);
+      screen.selection(Option.some({ number: 3, requested: -1, effective: 0 }));
+      expect(screen.all('[role="status"]').length).toBe(1);
+      screen.selection(Option.none());
+      expect(screen.all('[role="status"]').length).toBe(0);
+    }),
+  );
   it.live('plays hymn 100: loading, then playing with its place and length, then paused', () =>
     Effect.gen(function* () {
       using page = mount();

@@ -16,7 +16,7 @@
  * - `data/`: reserved for the compiled hymn data.
  */
 
-import { RECORDING_SET, recordingKey } from '@manna/hymnal/recordings';
+import { keySet, recordingKey } from '@manna/hymnal/recordings';
 
 export const HYMNS_HOST = 'hymns.cvr.im';
 
@@ -26,13 +26,8 @@ export const HYMNS_ORIGIN = `https://${HYMNS_HOST}`;
 export const soundingOffset = (offset: number) => ((((offset + 5) % 12) + 12) % 12) - 5;
 
 /** The recording's identity is its hymn number and sounding offset, independent of capo. */
-export const audioKey = (hymn: number, offset = 0) => {
-  const signed = soundingOffset(offset);
-  let suffix = '';
-  if (signed > 0) suffix = `-up${signed}`;
-  if (signed < 0) suffix = `-down${-signed}`;
-  return `audio/${RECORDING_SET}${suffix}/${recordingKey(hymn)}`;
-};
+export const audioKey = (hymn: number, offset = 0) =>
+  `audio/${keySet(soundingOffset(offset))}/${recordingKey(hymn)}`;
 
 /** The bucket key of a recording copied from the S3 bucket. */
 export const sourcedKey = (hymn: number) => `audio/sdah/${hymn}.mp3`;

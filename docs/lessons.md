@@ -51,6 +51,76 @@ The form of an entry, each field on its own line:
 
 ## Process and tooling
 
+### fixed-landing-does-not-consume-load-time
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "Score-clock hand-overs skip the device's load time on printed hymns."
+- **Source:** playbulk/p1-round-1-findings.md F1
+- **Wrong:** A resume from a silent pause and a rewind from the silent tail skipped music during loading.
+- **Cause:** All clock hand-overs were marked continuous, including fixed targets.
+- **Guard:** code: `apps/hymnal/src/player/keyplay.slow.test.ts` `keyplay landing property`
+
+### key-load-origin-controls-continuity
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "A Key change before the first sound starts the chosen set late."
+- **Source:** playbulk/p1-round-1-findings.md F2
+- **Wrong:** Replacing a Loading or Buffering recording advanced its fixed landing by the load time.
+- **Cause:** Key changes assumed the clock was moving in every state.
+- **Guard:** code: `apps/hymnal/src/player/keyplay.slow.test.ts` `keyplay landing property`
+
+### replacement-reports-running-place
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "In a Sound-on Key gap the follow flickers back and ends a hand pause."
+- **Source:** playbulk/p1-round-1-findings.md F3
+- **Wrong:** The player pinned replacement reports to the old place, causing follow to snap backwards.
+- **Cause:** Player normalization discarded the adapter's running replacement place.
+- **Guard:** code: `apps/hymnal/src/player/keyplay.slow.test.ts` `keyplay probeD probeN replacement reports keep follow forward and the hand pause held`
+
+### key-claim-survives-status-read
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "A command during the Key change's status read cancels the change for good."
+- **Source:** playbulk/p1-round-1-findings.md F4
+- **Wrong:** Seek could leave the chosen key different from the sounding recording indefinitely.
+- **Cause:** Interruption could drop the key command before it claimed a replacement.
+- **Guard:** code: `apps/hymnal/src/player/keyplay.slow.test.ts` `keyplay probeK7 a Seek during the key status read cannot lose the chosen set`
+
+### fallback-selection-keeps-effective-set
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "The fallback state causes needless reloads."
+- **Source:** playbulk/p1-round-1-findings.md F5
+- **Wrong:** Choosing the sounding fallback key or pressing remote Play while Playing reloaded the recording.
+- **Cause:** Selection was compared only with the requested key, and every Resume retried a fallback.
+- **Guard:** code: `apps/hymnal/src/player/keyplay.slow.test.ts` `keyplay fallback`
+
+### recording-layout-has-one-owner
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "audioKey encodes the uploader's set rule a second time."
+- **Source:** playbulk/p1-round-1-findings.md F7
+- **Wrong:** The app duplicated the recording set suffix rule.
+- **Cause:** URL selection did not reuse the shared recording key function.
+- **Guard:** code: `apps/hymnal/infra/remote.test.ts` `selects all signed sets and identifies octave-equivalent sounding keys`
+
+### key-identity-guards-settle-subscriptions
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "Test strength."
+- **Source:** playbulk/p1-round-1-findings.md F8
+- **Wrong:** The full capo domain asserted before subscription work, and permissive landing bounds hid skipped music.
+- **Cause:** Assertions did not wait for the public identity path or require exact landings.
+- **Guard:** code: `apps/hymnal/src/player/keyplay.slow.test.ts` `keyplay held settings alone select the recording across the entire identity and capo domain`
+
 ### recording-preparation-keeps-status-observer
 
 - **Date:** 2026-10-27

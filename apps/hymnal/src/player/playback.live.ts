@@ -220,7 +220,9 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
     seek: (positionMs) =>
       Effect.gen(function* () {
         const now = yield* Clock.currentTimeMillis;
-        retained = Option.map(retained, () => clockAt(positionMs, wants === 'play', now));
+        // A seek chooses a fixed landing. Music has not moved there while
+        // its recording is still preparing, even if Play remains the intent.
+        retained = Option.map(retained, () => clockAt(positionMs, false, now));
         return yield* call('seek', () => audio().seek(positionMs));
       }),
     status: call('status', () => audio().getPlaybackStatus()).pipe(Effect.flatMap(retainedStatus)),

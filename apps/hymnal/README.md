@@ -136,12 +136,17 @@ docked at the foot of the screen shows the hymn playing (its number, title and P
 a press on it opens the hymn. Playing another hymn replaces the first.
 
 The held hymn's saved Key selects its signed recording set (offset -5…6).
-During Play, a Key change replaces One's global session at the retained
-musical place plus elapsed preparation time. A short gap is allowed; numeric
+From Playing, a Key change replaces One's global session at the retained
+musical place plus elapsed preparation time. Loading, Buffering, a resume
+from Paused and a Seek keep a fixed landing through preparation. Follow
+receives the running replacement place, keeping a hand pause held.
+A short gap is allowed; numeric
 `player.key.settled` timestamps report it. A paused selection waits for the
 next Play. Missing sets fall back once to printed key at the retained place;
-the bar and sheet show that fallback, and a later Play retries the chosen
-Key. Capo changes shapes only. It dispatches no playback operation. The
+the bar and sheet show that fallback, and a Play from Paused or Retry retries
+the chosen Key. A remote Play while Playing keeps the sounding fallback.
+Selecting the effective set updates the selection without loading or seeking.
+Capo changes shapes only. It dispatches no playback operation. The
 lock-screen and Media Session continue to use the global One session.
 `src/player/keyplay.slow.test.ts` covers these rules through the real player,
 score clock and adapter with a fake device; it makes no sound.

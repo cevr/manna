@@ -33,6 +33,7 @@ import * as Semaphore from 'effect/Semaphore';
 
 import { type Clock as Run, clockAt, placeOf } from '../follow/clock';
 import type { Timeline } from '../follow/timeline';
+import { audioUrl } from '~/remote';
 import {
   Playback,
   type PlaybackApi,
@@ -177,7 +178,7 @@ export const scoreClock = (
       at < end() && Option.match(held.recorded, { onNone: () => true, onSome: (ms) => at < ms });
 
     /** Hand the place to the device: it is to play the recording from `at`. */
-    const sounded = (uri: string, at: number, options?: PlayOptions) =>
+    const sounded = (uri: string, at: number, continuous: boolean, options?: PlayOptions) =>
       Effect.gen(function* () {
         yield* handOver;
         held.clock = Option.none();
@@ -188,7 +189,7 @@ export const scoreClock = (
             Option.map(held.options, (options) => ({
               ...options,
               ready: true,
-              continuous: true,
+              continuous,
               intent: held.intent,
             })),
           );
@@ -250,7 +251,8 @@ export const scoreClock = (
         }));
         if (tail) return yield* answer(run(fromMs, held.intent === 'play'));
         held.recorded = Option.none();
-        if (yield* SubscriptionRef.get(sound)) return yield* sounded(uri, fromMs, options);
+        if (yield* SubscriptionRef.get(sound))
+          return yield* sounded(uri, fromMs, options?.continuous === true, options);
         if (Option.isNone(held.timeline))
           return yield* PlaybackError.make({ operation: 'play', message: `no timing for ${uri}` });
         if (held.sounding) yield* device.stop;
@@ -271,10 +273,10 @@ export const scoreClock = (
         const on = yield* SubscriptionRef.get(sound);
         const uri = Option.getOrElse(held.uri, () => '');
         if (at >= end()) {
-          if (on) return yield* sounded(uri, 0);
+          if (on) return yield* sounded(uri, 0, false);
           return yield* answer(run(first(), true));
         }
-        if (on && recordedAt(at)) return yield* sounded(uri, at);
+        if (on && recordedAt(at)) return yield* sounded(uri, at, false);
         return yield* answer(run(at, true));
       });
 
@@ -282,7 +284,7 @@ export const scoreClock = (
       Effect.gen(function* () {
         const on = yield* SubscriptionRef.get(sound);
         const uri = Option.getOrElse(held.uri, () => '');
-        if (on && clock.playing && recordedAt(ms)) return yield* sounded(uri, ms);
+        if (on && clock.playing && recordedAt(ms)) return yield* sounded(uri, ms, false);
         return yield* answer(run(Math.min(ms, end()), clock.playing));
       });
 
@@ -315,7 +317,7 @@ export const scoreClock = (
           recordedAt,
         );
         if (Option.isNone(at)) return Option.none<Step>();
-        return Option.some(yield* sounded(uri, at.value));
+        return Option.some(yield* sounded(uri, at.value, true));
       });
 
     yield* SubscriptionRef.changes(sound).pipe(
@@ -362,6 +364,18 @@ export const scoreClock = (
           }),
         ),
       status: lock.withPermit(current),
+      selectRecording: (selection) =>
+        lock.withPermit(
+          Effect.gen(function* () {
+            held.selection = Option.some(selection);
+            held.uri = Option.some(audioUrl(selection.number, selection.requested));
+            held.options = Option.map(held.options, (options) => ({
+              ...options,
+              recording: { number: selection.number, offset: selection.requested },
+            }));
+            yield* device.selectRecording?.(selection) ?? Effect.void;
+          }),
+        ),
       stop: lock.withPermit(
         Effect.gen(function* () {
           yield* handOver;
