@@ -154,6 +154,13 @@ describe('fitRows', () => {
     expect(fold([])?.pass).toBe(true);
     expect(fold([60])?.value).toBe(19);
     expect(fold([60])?.pass).toBe(false);
+    const fromEdge = rowNamed(
+      fitRows(SHEET, paint({ ground: RENDER_GROUND, marks: [60] }), {
+        probes: [{ ...probe, from: 21 }],
+      }),
+      'probe.fold',
+    );
+    expect(fromEdge?.pass).toBe(false);
   });
 
   test('a probe holds an inked seam moved 3 px to its edges, not to the stretch both edges sweep', () => {

@@ -826,7 +826,9 @@ const classesOver = (
  * render's lie in other classes and neither changes class within it: a
  * stretch an edge of either crosses is that edge moved, which the matched
  * changes already measure, while one no edge crosses is paper the render
- * covers with another class (a stroke laid along the probe).
+ * covers with another class (a stroke laid along the probe). An edge on the
+ * probe's first place is not held by the matching (`probeRow`), so it
+ * excuses no stretch here either.
  */
 const longestDiffering = (
   cr: ReadonlyArray<{ cls: string; from: number; to: number }>,
@@ -835,7 +837,9 @@ const longestDiffering = (
   hi: number,
 ) => {
   const [cs, rs] = [classesOver(cr, lo, hi), classesOver(rr, lo, hi)];
-  const edges = new Set([...changesOf(cr), ...changesOf(rr)].map((ch) => ch.at));
+  const edges = new Set(
+    [...changesOf(cr), ...changesOf(rr)].map((ch) => ch.at).filter((at) => at > lo && at <= hi),
+  );
   let [from, longest] = [-1, 0];
   for (let k = 0; k <= cs.length; k++) {
     const differs = k < cs.length && cs[k] !== rs[k];
