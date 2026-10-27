@@ -4086,3 +4086,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** The `rush` panels drew "a heaped platter" as roast fowl and joints of meat with bones, because the script calls solid food "strong meat" and the picture named no food.
 - **Cause:** A picture that names food without saying what it is leaves the image model to draw meat as flesh.
 - **Guard:** skill: what food looks like is a judgement on a drawn picture, not a rule a lint can read in a script. Carried by `.claude/skills/film/CRAFT.md`: "Food is plant food"
+
+### init-refresh-outgoing-wal
+
+- **Date:** 2026-10-27
+- **Kind:** owner
+- **Said:** "Refuse while the destination WAL is non-empty."
+- **Source:** hymnapp/initwal/spec.md Decided (approved as written); hymnapp/initfresh/round-2-findings.md N1
+- **Wrong:** Init replaced the main file while committed pages still belonged to its outgoing WAL, allowing SQLite to replay old pages against different database bytes.
+- **Cause:** Replacement treated the destination as one file and optional-source error handling could hide a refusal. Init now checks WAL size before each forced operation, the SQLite installer checks again before activation, and all refusals make the final command fail after unaffected work finishes.
+- **Guard:** code: `packages/cli/test/commands/init.test.ts` `forced init refuses every non-empty WAL and reports all refusals without touching destinations`; `packages/core/src/platform-bun/file-corpus-lifecycle.test.ts` `refuses non-empty destination WALs at activation and permits empty or absent WALs`

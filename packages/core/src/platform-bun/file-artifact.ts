@@ -799,6 +799,20 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
           const installed = yield* verify(building);
           yield* provenanceStore.write(building, provenance);
           yield* clearSqliteSideFiles;
+          // The outgoing WAL belongs to its writer. Never replay it against
+          // replacement bytes or clean it as though it were staging state.
+          const wal = yield* fs.stat(`${input.destination}-wal`).pipe(
+            Effect.asSome,
+            Effect.catchIf(
+              (cause) => cause.reason._tag === 'NotFound',
+              () => Effect.succeedNone,
+            ),
+            Effect.mapError(storeError('activate-destination-wal')),
+          );
+          if (Option.exists(wal, (info) => info.size > 0n))
+            return yield* storeError('activate-destination-wal')(
+              'Non-empty outgoing WAL: close the database-using program and let SQLite checkpoint cleanly, then retry',
+            );
           yield* fs.rename(building, input.destination);
           // A SQLite artifact carries its own provenance, so a sidecar left
           // by an earlier flat install of the same destination would be a

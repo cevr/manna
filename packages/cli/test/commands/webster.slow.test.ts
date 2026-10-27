@@ -7,6 +7,7 @@ import { WebsterLookup } from '@manna/core/webster';
 
 import { dataCandidates } from '../../src/lib/paths.js';
 import { initializeWebster } from '../../src/commands/webster.js';
+import { compactWebster } from '../fixtures/webster.js';
 
 const root = new URL('../../../../', import.meta.url).pathname.replace(/\/$/u, '');
 
@@ -15,10 +16,17 @@ it.scoped('keeps a verified active runtime corpus unchanged across repeated init
     const fs = yield* FileSystem.FileSystem;
     const dir = yield* fs.makeTempDirectoryScoped({ prefix: 'webster-runtime-' });
     const destination = `${dir}/webster.db`;
-    yield* initializeWebster({
-      directory: dir,
-      packagedPaths: [`${root}/packages/core/data/webster.db`],
-      workspaceRoot: '/nonexistent/webster-workspace',
+    const source = `${dir}/source.db`;
+    yield* compactWebster(source);
+    expect(
+      yield* initializeWebster({
+        directory: dir,
+        packagedPaths: [source],
+        workspaceRoot: '/nonexistent/webster-workspace',
+      }),
+    ).toMatchObject({
+      _tag: 'Success',
+      success: { activated: [{ corpus: 'webster', installed: 62391 }] },
     });
     const before = yield* fs.readFile(destination);
     const input = {

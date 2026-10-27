@@ -21,12 +21,17 @@ import {
   layerNativeTopicsArtifacts,
   type NativeFileArtifactSource,
 } from '@manna/core/corpus-supply/bun';
-import { Config, Console, Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
+import { Config, Console, Effect, FileSystem, Layer, Path, Schema } from 'effect';
 import { Command, Flag } from 'effect/cli';
 import { HttpClient, HttpClientResponse } from 'effect/http';
 
 import { packagedDataCandidates } from '~/src/lib/paths';
 import { initializeWebster } from './webster.js';
+import {
+  checkSqliteRefresh,
+  SqliteRefreshRefused,
+  withSqliteRefresh,
+} from '../lib/sqlite-refresh.js';
 
 class InitError extends Schema.TaggedError<InitError>()('InitError', {
   cause: Schema.Unknown,
@@ -48,7 +53,7 @@ const force = Flag.Boolean('force').pipe(
   Flag.withDescription('Re-download databases even if they exist'),
 );
 
-const downloadFile = (url: string, dest: string, label: string) =>
+const downloadFile = (url: string, dest: string, label: string, refresh: boolean) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     yield* Console.log(`Downloading ${label}...`);
@@ -57,6 +62,7 @@ const downloadFile = (url: string, dest: string, label: string) =>
       Effect.flatMap((response) => response.arrayBuffer),
       Effect.mapError((cause) => InitError.make({ cause })),
     );
+    if (refresh) yield* checkSqliteRefresh(dest);
     yield* fs.writeFile(dest, new Uint8Array(bytes));
   });
 
@@ -70,7 +76,7 @@ const ensureHymnal = Effect.fn('Init.ensureHymnal')(function* (
   if (!refresh && (yield* fs.exists(destination))) {
     yield* Console.log(`✓ ${db.name} (${db.description})`);
   } else {
-    yield* downloadFile(db.url, destination, `${db.name} ${db.size}`);
+    yield* downloadFile(db.url, destination, `${db.name} ${db.size}`, refresh);
     yield* Console.log(`✓ ${db.name} installed`);
   }
 });
@@ -85,7 +91,7 @@ const artifactStatus = (receipt: CorpusSupplyReceipt): string => {
  * composition. The supply layer is built and provided here, at this
  * operation's own boundary, so the command handler never provides inline.
  */
-const ensureArtifacts = (bibleDir: string, path: Path.Path, force: boolean) => {
+const artifactSupply = (bibleDir: string, path: Path.Path) => {
   const bibleArtifacts = layerNativeBibleArtifacts({
     destination: path.join(bibleDir, 'bible.db'),
     sources: [{ kind: 'release', ...BIBLE_ARTIFACT_RELEASE }],
@@ -119,29 +125,7 @@ const ensureArtifacts = (bibleDir: string, path: Path.Path, force: boolean) => {
       ...topicsReleaseSource(),
     ],
   });
-  const supply = CorpusSupply.layer.pipe(
-    Layer.provide(Layer.merge(bibleArtifacts, topicsArtifacts)),
-  );
-
-  return Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
-    const corpus = yield* CorpusSupply;
-    // Init fills missing slots. Existing files need neither provenance nor a
-    // source comparison; replacing them is the explicit --force operation.
-    let bible = 'ready';
-    if (force || !(yield* fs.exists(path.join(bibleDir, 'bible.db')))) {
-      bible = artifactStatus(yield* corpus.ensure({ refresh: force }));
-    }
-    // Writings-style catch-and-warn (§3.5): a missing topics artifact leaves
-    // the wiki on catalog pages, which is a degraded feature, not a failed init.
-    let topics = Option.some('ready');
-    if (force || !(yield* fs.exists(path.join(bibleDir, 'topics.db')))) {
-      topics = yield* corpus
-        .ensure({ target: Target.topics(), refresh: force })
-        .pipe(Effect.map(artifactStatus), Effect.option);
-    }
-    return { bible, topics };
-  }).pipe(Effect.provide(supply));
+  return CorpusSupply.layer.pipe(Layer.provide(Layer.merge(bibleArtifacts, topicsArtifacts)));
 };
 
 export const init = Command.make('init', { force }, (args) =>
@@ -156,25 +140,60 @@ export const init = Command.make('init', { force }, (args) =>
       yield* Console.log(`Created ${bibleDir}`);
     }
 
-    const { bible, topics } = yield* ensureArtifacts(bibleDir, path, args.force);
-
-    yield* Console.log(`✓ bible.db (${bible})`);
+    const refusals: string[] = [];
+    const reportRefusal = (error: SqliteRefreshRefused) =>
+      Console.error(`✗ ${error.message}`).pipe(
+        Effect.tap(() =>
+          Effect.sync(() => {
+            refusals.push(error.destination);
+          }),
+        ),
+      );
+    const ensureArtifact = (name: 'bible' | 'topics') =>
+      Effect.gen(function* () {
+        const destination = path.join(bibleDir, `${name}.db`);
+        let status = 'ready';
+        // Default init fills missing slots without inspecting existing data.
+        if (args.force || !(yield* fs.exists(destination))) {
+          status = artifactStatus(
+            yield* withSqliteRefresh(
+              destination,
+              args.force,
+              CorpusSupply.use((corpus) =>
+                corpus.ensure({
+                  target: Target.file(name),
+                  refresh: args.force,
+                }),
+              ),
+            ),
+          );
+        }
+        yield* Console.log(`✓ ${name}.db (${status})`);
+      }).pipe(Effect.provide(artifactSupply(bibleDir, path)));
+    yield* ensureArtifact('bible').pipe(Effect.catchTag('SqliteRefreshRefused', reportRefusal));
+    // Topics remains optional for unavailable/rejected sources, but a WAL
+    // refusal is an unsafe requested refresh and must fail the final command.
+    yield* ensureArtifact('topics').pipe(
+      Effect.catch((error) => {
+        if (Schema.is(SqliteRefreshRefused)(error)) return reportRefusal(error);
+        return Console.log('✗ topics.db — build it with:').pipe(
+          Effect.andThen(Console.log('  bun run build:topics')),
+        );
+      }),
+    );
     if (!args.force && (yield* fs.exists(path.join(bibleDir, 'webster.db')))) {
       yield* Console.log('✓ webster.db (ready)');
     } else {
-      yield* initializeWebster({ directory: bibleDir, refresh: args.force });
+      yield* initializeWebster({ directory: bibleDir, refresh: args.force }).pipe(
+        Effect.catchTag('SqliteRefreshRefused', reportRefusal),
+      );
     }
 
-    yield* Option.match(topics, {
-      onNone: () =>
-        Console.log(`✗ topics.db — build it with:`).pipe(
-          Effect.andThen(Console.log(`  bun run build:topics`)),
-        ),
-      onSome: (status) => Console.log(`✓ topics.db (${status})`),
-    });
-
     // Download each database
-    yield* ensureHymnal(path.join(bibleDir, DBS.hymnal.name), args.force);
+    const hymnal = path.join(bibleDir, DBS.hymnal.name);
+    yield* withSqliteRefresh(hymnal, args.force, ensureHymnal(hymnal, args.force)).pipe(
+      Effect.catchTag('SqliteRefreshRefused', reportRefusal),
+    );
 
     // EGW database status
     const egwDbPath = path.join(bibleDir, 'egw-paragraphs.db');
@@ -187,5 +206,9 @@ export const init = Command.make('init', { force }, (args) =>
 
     yield* Console.log(``);
     yield* Console.log(`Databases: ${bibleDir}`);
+    if (refusals.length > 0)
+      return yield* InitError.make({
+        cause: `${refusals.length} database refresh(es) refused; see WAL recovery instructions above.`,
+      });
   }),
 );

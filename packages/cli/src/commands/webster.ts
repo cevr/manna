@@ -7,6 +7,7 @@ import {
 import { Console, Effect, Layer, Path, Result, Schema } from 'effect';
 import { Argument, Command, Flag } from 'effect/cli';
 import { packagedDataCandidates } from '../lib/paths.js';
+import { SqliteRefreshRefused, withSqliteRefresh } from '../lib/sqlite-refresh.js';
 
 /** The optional init leg owns source priority, supply and its user-facing receipt. */
 export const initializeWebster = Effect.fn('WebsterCommand.initialize')(function* (input: {
@@ -33,9 +34,14 @@ export const initializeWebster = Effect.fn('WebsterCommand.initialize')(function
     { kind: 'runtime', path: destination, label: 'runtime-webster' },
   ];
   const result = yield* Effect.result(
-    ensureWebster({ destination, sources, refresh: input.refresh }),
+    withSqliteRefresh(
+      destination,
+      input.refresh ?? false,
+      ensureWebster({ destination, sources, refresh: input.refresh }),
+    ),
   );
   if (Result.isFailure(result)) {
+    if (Schema.is(SqliteRefreshRefused)(result.failure)) return yield* result.failure;
     yield* Console.error(
       `✗ webster.db — ${result.failure._tag}: data is not built/shipped, or the candidate was rejected.`,
     );

@@ -203,6 +203,47 @@ const hotJournal = (filename: string) =>
 describe('parameterized File Corpus lifecycle', () => {
   const test = it.scopedLive.layer(BunFileSystem.layer);
 
+  test('refuses non-empty destination WALs at activation and permits empty or absent WALs', () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: 'sqlite-destination-wal-' });
+      for (const mode of ['positive', 'empty', 'absent', 'late']) {
+        const destination = `${dir}/${mode}.db`;
+        yield* fs.writeFileString(destination, 'outgoing');
+        if (mode === 'positive') yield* fs.writeFileString(`${destination}-wal`, 'x');
+        if (mode === 'empty') yield* fs.writeFileString(`${destination}-wal`, '');
+        const result = yield* Effect.result(
+          install({
+            destination,
+            sources: [releaseSource({ digest: fixtureDigest, size: FIXTURE_BYTES.length })],
+            fetch: () => Effect.succeed(new Response(FIXTURE_BYTES)),
+            verify: () => Effect.succeed(1),
+            provenanceStore: {
+              ...makeProvenanceStore(),
+              write: () => {
+                if (mode === 'late') return fs.writeFileString(`${destination}-wal`, 'x');
+                return Effect.void;
+              },
+            },
+          }),
+        );
+        const refused = mode === 'positive' || mode === 'late';
+        if (refused) {
+          expect(result._tag).toBe('Failure');
+          expect(yield* fs.readFileString(destination)).toBe('outgoing');
+        } else {
+          expect(result._tag).toBe('Success');
+          expect(yield* fs.readFileString(destination)).toBe(FIXTURE_BYTES);
+        }
+        if (refused) expect(yield* fs.readFileString(`${destination}-wal`)).toBe('x');
+        if (mode === 'empty') expect(yield* fs.readFileString(`${destination}-wal`)).toBe('');
+        if (mode === 'absent') expect(yield* fs.exists(`${destination}-wal`)).toBe(false);
+        expect((yield* fs.readDirectory(dir)).some((name) => name.includes('.building'))).toBe(
+          false,
+        );
+      }
+    }));
+
   test('discards a stale hot staging journal before installing different candidate bytes', () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;

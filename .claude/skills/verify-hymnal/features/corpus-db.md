@@ -15,6 +15,8 @@ phone reads compiled JSON; this feature has no app route.
 - `corpus-init-empty`: full init installs all four databases in an empty scratch HOME.
 - `corpus-init-preserve`: default init preserves existing files, including offline and legacy installs.
 - `corpus-init-wal`: closed WAL artifacts and live WAL commits survive acquisition and verification.
+- `corpus-init-wal-refuse`: forced init refuses each non-empty destination WAL, preserves its side files, finishes unaffected databases and exits non-zero.
+- `corpus-init-runtime-repeat`: verified Webster runtime data stays byte-identical through two default init calls; explicit refresh still verifies and activates.
 
 ## How to get to it (user POV)
 
@@ -69,6 +71,24 @@ phone reads compiled JSON; this feature has no app route.
      refresh covered. The WAL probe's read-only failure is expected diagnostic data.
      Fast guards: `packages/cli/test/commands/init.test.ts` and
      `packages/core/src/platform-bun/file-corpus-lifecycle.test.ts` (tiny closed/live WAL fixtures).
+     For forced-refresh refusal, set `INITWAL_UNIT=/Users/cvr/Developer/personal/manna/tmp/orchestrate/hymnapp/initwal`
+     and `INITWAL_BOOTSTRAP=$(mktemp -d /tmp/initwal-bootstrap-scratch.XXXXXX)`, then run:
+   - `HOME="$INITWAL_BOOTSTRAP" bun "$INITWAL_UNIT/acceptance.ts" "$PWD"`
+   - `HOME="$INITWAL_BOOTSTRAP" bun "$INITWAL_UNIT/acceptance.ts" "$PWD" --property`
+     → exits 0, `INITWAL GREEN cases=1 failures=0` and `INITWAL GREEN cases=64 failures=0`.
+     Each refusal names its database and WAL, explains corruption risk and asks the user
+     to close the database-using program and let SQLite checkpoint cleanly before retrying.
+     No database open, checkpoint or side-file cleanup is permitted on a refused target.
+     Live, crash-image and malformed one-byte WALs are refused; absent/empty controls
+     refresh normally. Default init and unrelated installed databases stay unchanged.
+     For runtime-repeat timing, make `INITWAL_TEST_HOME=$(mktemp -d /tmp/initwal-test-scratch.XXXXXX)`.
+     Run `HOME="$INITWAL_TEST_HOME" bun test packages/cli/test/commands/webster.slow.test.ts --test-name-pattern 'keeps a verified active runtime corpus unchanged across repeated init'`
+     three times in sequence below load 12, without a global timeout override. Record each
+     test duration; each must pass at the default limit. The compact synthetic fixture
+     retains the real 62,391-row verifier. The relocated CLI case retains the real corpus:
+     build the prerequisite with `HOME="$INITWAL_TEST_HOME" bun run build:webster` only when
+     `packages/core/data/webster.db` is absent, then run the full slow file with the same HOME.
+     These checks use CLI/SQLite; sim drive, app launch, audio and device steps are n/a.
 5. **Run proof.** `bun "$UNIT/verify.ts" "$PWD"`.
    → two compiler outputs equal the shipped bytes; 920 source rows and 68 original
    categories equal the planner's copied base; real CLI boundary IDs, all five
