@@ -49,6 +49,19 @@
 //     unless `--replace` with `--ask` replaces it on his answer to that ask:
 //     the old kept sheet and views move into `kept/replaced/`, the record
 //     names both.
+//
+//   film concept trace <spec.ts> [--view <name> ...]
+//     a kept sheet's views traced into the tables a rig is composed from
+//     (`trace-cli.ts`, `core/trace.ts`), each written beside the spec.
+//
+//   film concept render <film> <member> [--kind turnaround|poses|heads] [--no-critique]
+//   film concept render <film> <member> --render <n> --finding <kind>-<view>/<id> --stands <why>
+//     the member's cast render (`cast-render.ts`): every kept view of his
+//     sheets drawn by its rig in its pose from the film's `rigs/cast.ts`, on
+//     the scenes' own draw path, cut by its kept box, measured against the
+//     kept view, laid beside it at 1:1 and critiqued, into
+//     `out/<film>/cast/<member>/render/<n>/`; or a finding of render n
+//     answered: it stands, and why (a fix is a new render).
 
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';

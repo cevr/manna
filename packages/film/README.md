@@ -2519,6 +2519,42 @@ try. `--replace` with no `--ask`, or on a kind not kept, and a new try
 missing or unreadable, are `SheetKept`, and write nothing. The Board's lock
 reads the new `kept/` and `views/` as before.
 
+### The cast render: `film concept trace` and `film concept render`
+
+A kept sheet becomes a member's rigs in two commands. `film concept trace
+<spec.ts> [--view <name>]` (`tools/trace-cli.ts`, pure in `core/trace.ts`)
+reads each view of a kept sheet into the table its rig is composed from:
+the spec names the member, the sheet, its colour classes and each view's
+parts by seed points in sheet pixels, clipped by polygons where the sheet
+draws no line between two parts; each part is an outline, a circle or the
+tones laid on another part, and the table is written beside the spec with
+the sheet, the view's box and the command in its header, so a fix is traced
+again by running it once more. Tables hold points only; the colours are
+the film's papers.
+
+`film concept render <film> <member> [--kind <kind>] [--no-critique]`
+(`tools/cast-render.ts`, its record in `core/cast-render.ts`) draws every
+view the member's record keeps by its rig. The film's `rigs/cast.ts` is the
+table (`CastTable`, `canvas/cast.ts`, through `@manna/film/rive`): for each
+kept view, its box, where the rig's feet stand on the sheet, its rig, its
+pose's numbers, the circle hands drawn with it and the props the sheet lays
+there; its `SHEETS` gives each sheet one scale, sheet pixels a canon unit.
+The cast page (`<film>/cast/<member>`, `player/cast.ts`) draws each kind as
+one still on a canvas the sheet's size with the scenes' own path (the rigs
+loaded as a film loads them, `drawRig` on the canvas engine, the film's
+ink), through the export page a render draws with. Each view is cut from
+that still and from the kept sheet by its kept box, measured and compared
+with the match's own code (`measureFigure`, `compareFigures`, `matchTable`),
+laid side by side at 1:1 (no rescale, so a height error shows), and shown to
+a fresh model at 1:1 with its clause of the sheet's layout (`Critic`, the
+`render` packet). A view the measure reads no figure in says why
+(`unmatched`). It lands in `out/<film>/cast/<member>/render/<n>/`:
+`<kind>.render.png`, and per view `<kind>-<view>.concept.png`, `.render.png`,
+`.side.png`, `.md` and `.critique.md`, with `render.json` (the `riv`'s hash,
+each sheet's scale, each view's rows and findings) and `render.md`. A
+finding is answered on the render that found it, `--render <n> --finding
+<kind>-<view>/<id> --stands <why>`; a fix is a new render.
+
 ### The review: `film review`, and keep needs evidence
 
 `film review <film> --set <name> --scene <id> --at <place> --at <place>
