@@ -36,6 +36,13 @@ export const PAPERS = papers({
     crease: TURN.sleeve,
     rim: 0,
   },
+  /**
+   * His cream sleeve raised clear of his side (poses-1): flat, a step darker
+   * than his tunic, as the sheet paints it (#f1d1ad at 75,455), so it parts
+   * from his tunic at his shoulder with no line; its shade laid on it as
+   * tones (`RAISED_SLEEVE` in `lead.ts`).
+   */
+  sleeveRaised: { color: '#f1d2b0', light: '#fbe6c3', rim: 0 },
   /** His teal sleeve (his left arm, under the mantle): greener than the mantle, as the sheet paints it (#628989, hue 180), its far side toward blue-violet. */
   mantleSleeve: {
     color: '#608989',
@@ -76,6 +83,10 @@ export const TONES = {
   creamEdge: '#dcb5a0',
   /** The edge of his teal sleeve where it lies on his mantle: toward blue-violet. */
   tealEdge: '#4a6479',
+  /** The underside of his raised sleeve, its upper arm and elbow: the sheet's shade there, toward rose (#e9c6a6 at 120,497). */
+  raisedUnder: '#e9c6a6',
+  /** The fold his raised sleeve makes at its elbow, down from the notch: the sheet's (#d6b29b at 108,455). */
+  raisedFold: '#d6b29b',
   /** The edge of his cream sleeve where it crosses his cream tunic whole (seated, his hand at his chin): deeper, the one thing that parts them. */
   creamAcross: '#c79c8b',
 } as const satisfies Record<string, `#${string}`>;

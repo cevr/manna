@@ -101,6 +101,13 @@ export const leadFeastThreeQuarterRightProp = figureProp(
 /** The series lead's hand, in his skin. */
 export const leadFeastHandProp = handProp(ARTBOARDS.leadFeastHand, 'lead-feast-hand');
 
+/** The series lead standing with his near arm raised, a bottle in its hand. */
+export const leadFeastRaisedProp = figureProp(
+  ARTBOARDS.leadFeastRaised,
+  'lead-feast-raised',
+  LEAD.leadFeastRaised,
+);
+
 /** The series lead seated on a low stool. */
 export const leadFeastSeatedProp = figureProp(
   ARTBOARDS.leadFeastSeated,

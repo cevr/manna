@@ -23,7 +23,8 @@ const SOFT = 0.06;
 /** A paper's lit colour and its shade, toward the light's complement, as the kept sheets paint them. */
 const PAPER = {
   milk: { lit: '#fde9c8', shade: '#e6d0c4' },
-  teat: { lit: palette.gold, shade: palette.goldShade },
+  // The sheet's orange teat, its lit side and its shaded right (poses-1, rows 326-346).
+  teat: { lit: '#fab85e', shade: '#e5943b' },
   wood: { lit: '#8a5233', shade: '#5f4535' },
 } as const;
 
@@ -62,7 +63,16 @@ const inked = (
   unprobed(ctx, () => ctx.stroke());
 };
 
-/** The baby's bottle, its body's bottom middle at `at`: a cream body, its collar, its teat; `size` 1 is 33 units across and 48 tall. */
+/**
+ * The teat's shape, units at size 1, its ink's half width in each: its
+ * foot's half width on the collar, its neck's (its round tip's radius), and
+ * how high its tip's middle stands over the collar, as the sheet draws it
+ * (poses-1: its paper 32 px across at its foot, 10 at its tip, 24 tall, at
+ * 1.37 px a unit).
+ */
+const TEAT = { foot: 13.5, neck: 5.5, rise: 14 } as const;
+
+/** The baby's bottle, its body's bottom middle at `at`: a cream body, its collar, its orange teat on the collar; `size` 1 is 33 units across and 48 tall. */
 export const bottle =
   (at: Pt, size = 1) =>
   (ctx: CanvasRenderingContext2D) => {
@@ -70,12 +80,19 @@ export const bottle =
     const [w, h] = [33 * size, 48 * size];
     roundRect(ctx, x - w / 2, y - h, w, h, 9 * size);
     inked(ctx, PAPER.milk, [x - w / 2, y - h], [x + w / 2, y]);
-    roundRect(ctx, x - 0.36 * w, y - h - 7 * size, 0.72 * w, 8 * size, 3 * size);
-    inked(ctx, PAPER.milk, [x - 0.36 * w, y - h - 7 * size], [x + 0.36 * w, y - h + size]);
+    const collar = y - h - 7 * size;
+    roundRect(ctx, x - 0.36 * w, collar, 0.72 * w, 8 * size, 3 * size);
+    inked(ctx, PAPER.milk, [x - 0.36 * w, collar], [x + 0.36 * w, y - h + size]);
+    // The teat: its foot flared on the collar, its neck, its round tip.
+    const [foot, neck] = [TEAT.foot * size, TEAT.neck * size];
+    const rise = collar - TEAT.rise * size;
     ctx.beginPath();
-    ctx.ellipse(x, y - h - 12 * size, 6 * size, 8 * size, 0, Math.PI, 2 * Math.PI);
+    ctx.moveTo(x - foot, collar);
+    ctx.quadraticCurveTo(x - neck, collar - 2 * size, x - neck, rise);
+    ctx.arc(x, rise, neck, Math.PI, 2 * Math.PI);
+    ctx.quadraticCurveTo(x + neck, collar - 2 * size, x + foot, collar);
     ctx.closePath();
-    inked(ctx, PAPER.teat, [x - 6 * size, y - h - 20 * size], [x + 6 * size, y - h - 12 * size]);
+    inked(ctx, PAPER.teat, [x - foot, rise - neck], [x + foot, collar]);
   };
 
 /** The plate's half width and its depth below its rim, units. */

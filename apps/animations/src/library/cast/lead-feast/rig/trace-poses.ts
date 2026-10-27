@@ -1,12 +1,16 @@
-// How the series lead's seated pose is traced from his kept poses sheet
-// (`bun run concept trace src/library/cast/lead-feast/rig/trace-poses.ts`
+// How the series lead's raised and seated poses are traced from his kept
+// poses sheet (`bun run concept trace src/library/cast/lead-feast/rig/trace-poses.ts`
 // from apps/animations), as his turnaround's views are (`trace.ts`,
-// `standing`): poses-3, seated on a low stool three-quarters to screen left,
-// his robe over his knees, his sandals showing. His other poses are his
-// turnaround's views posed by their numbers. What stands beside him, the
-// stool (a prop), is cut from him by a polygon; his sleeves
-// lie on his garment, each the region its ink closes. The table it writes
-// sits beside it (`seated-traced.ts`). Pure.
+// `standing`): poses-1, standing three-quarters to screen left, his near
+// sleeve raised and bent at its elbow below the bottle in his hand (a
+// standing view's sleeve, drawn narrow beside his side, raises to a stick, and
+// his garment runs on under it); poses-3, seated on a low stool
+// three-quarters to screen left, his robe over his knees, his sandals
+// showing. His other poses are his turnaround's views posed by their numbers.
+// What stands beside him, the bottle and the stool (props), is cut from him
+// by a polygon; a seated sleeve lies on his garment, the region its ink
+// closes. The tables it writes sit beside it (`raised-traced.ts`,
+// `seated-traced.ts`). Pure.
 
 import type { TraceSheet } from '@manna/film/tools';
 import { rect, sleeveAt, standing } from './trace.ts';
@@ -16,6 +20,95 @@ export const TRACE = {
   sheet: '../cast-sheet/kept/poses.png',
   kind: 'poses',
   views: {
+    raised: standing({
+      box: [22, 226, 310, 828],
+      out: 'raised-traced.ts',
+      about:
+        "standing three-quarters to screen left, his head rolled toward the bottle: his face to our left, his ear behind; his cream right sleeve raised, bent at its elbow below his hand, the bottle in his hand at his shoulder's height; his teal left sleeve hanging at his side; the cream sash knotted at his waist, its two ends hanging; his sandals",
+      face: [190, 360],
+      marked: {
+        marks: {
+          eyes: [
+            [164, 340],
+            [206, 342],
+          ],
+          brows: [
+            [168, 313],
+            [212, 320],
+          ],
+          mouth: [180, 383],
+        },
+      },
+      ears: { earNear: [262, 366] },
+      chin: { kind: 'closed', row: 408 },
+      sharp: [],
+      // The band of curls behind his ear runs out to a hairline thinner than 2 px opens.
+      hairOpen: 3,
+      // The lit rim down his face's left edge (145-148 on row 330).
+      skinLit: ['#fbd59c', '#f9bf86'],
+      near: {
+        pick: { silhouette: true },
+        // His raised sleeve, from his cuff under his hand round his elbow to his shoulder, cut from his tunic where the sheet shades it there.
+        clip: [
+          [10, 428],
+          [96, 428],
+          [106, 436],
+          [154, 414],
+          [160, 424],
+          [150, 446],
+          [137, 503],
+          [137, 525],
+          [10, 525],
+        ],
+        below: 503,
+        hand: [38, 400],
+        // All but a tongue of its root round its pivot (124.7, 477.9), clear of its edges: the rest his garment gives up.
+        off: [
+          [0, 400],
+          [160, 400],
+          [160, 464],
+          [106, 464],
+          [106, 494],
+          [160, 494],
+          [160, 540],
+          [0, 540],
+        ],
+      },
+      far: {
+        pick: { silhouette: true },
+        // Its inner edge in the dark the sheet paints between his sleeve and his mantle (239-246), so the sleeve covers it.
+        clip: [
+          [330, 440],
+          [262, 440],
+          [248, 462],
+          [239, 485],
+          [238, 600],
+          [244, 614],
+          [330, 614],
+        ],
+        below: 470,
+        hand: [278, 636],
+      },
+      arms: 'raised',
+      necks: [],
+      // The bottle in his hand, no part of him.
+      beside: [
+        [44, 314],
+        [102, 314],
+        [102, 421],
+        [44, 421],
+      ],
+      sash: {
+        band: [128, 551, 246, 575],
+        knots: [[184, 564, 17, 13]],
+        ends: [
+          { top: [165, 180, 575], bottom: [156, 175, 674] },
+          { top: [181, 198, 575], bottom: [179, 204, 716] },
+        ],
+      },
+      hem: 786,
+      split: 192,
+    }),
     seated: standing({
       box: [604, 331, 892, 836],
       out: 'seated-traced.ts',

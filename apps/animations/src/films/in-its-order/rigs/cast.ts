@@ -26,6 +26,7 @@ import * as LEAD_FRONT from '../../../library/cast/lead-feast/rig/front-traced.t
 import * as LEAD from '../../../library/cast/lead-feast/rig/lead.ts';
 import * as LEAD_PROFILE_LEFT from '../../../library/cast/lead-feast/rig/profile-left-traced.ts';
 import * as LEAD_PROFILE_RIGHT from '../../../library/cast/lead-feast/rig/profile-right-traced.ts';
+import * as LEAD_RAISED from '../../../library/cast/lead-feast/rig/raised-traced.ts';
 import * as LEAD_SEATED from '../../../library/cast/lead-feast/rig/seated-traced.ts';
 import * as LEAD_TQ_LEFT from '../../../library/cast/lead-feast/rig/three-quarter-left-traced.ts';
 import * as LEAD_TQ_RIGHT from '../../../library/cast/lead-feast/rig/three-quarter-right-traced.ts';
@@ -239,19 +240,18 @@ export const CAST = castTable({
       ),
     },
     poses: {
-      // Three-quarters left, his near arm raised with the bottle at his shoulder's height.
+      // Three-quarters left, his near arm raised with the bottle at his shoulder's height: his raised composition, its sleeve and his rolled head as the sheet draws them.
       'poses-1': pose(
-        [22, 226, 310, 828],
-        [180.5, 828],
-        LEAD.leadFeastThreeQuarterLeft,
-        RIGS.leadFeastThreeQuarterLeftProp,
+        LEAD_RAISED.BOX,
+        LEAD_RAISED.FEET,
+        LEAD.leadFeastRaised,
+        RIGS.leadFeastRaisedProp,
         {
           lean: 0,
-          // His head rolled 8° toward the bottle, as the sheet draws it.
-          numbers: { mouth: 3, tilt: 0.14 },
-          reach: [['near', [62, 392]]],
-          // The bottle held: over his sleeve, under his hand round its foot, standing above it as tall as his head is wide.
-          props: [{ name: 'bottle', draw: bottle([-86, -312], 1.1), layer: 'held' }],
+          numbers: { mouth: 3 },
+          reach: [],
+          // The bottle in front of his fist, its foot at the sheet's (70, 418).
+          props: [{ name: 'bottle', draw: bottle([-80, -299]), layer: 'front' }],
         },
       ),
       // In profile to the left, both hands up, his head tipped back, the plate at his mouth.

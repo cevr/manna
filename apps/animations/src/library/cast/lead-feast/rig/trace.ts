@@ -169,12 +169,16 @@ interface ArmSpec {
   readonly clip: TracePt[];
   readonly below: number;
   readonly hand: TracePt;
+  /** Raised clear of his side: the polygon of its sleeve his garment gives up, all but its root at his shoulder (that stays the garment's, so the arm turns inside it). */
+  readonly off?: TracePt[];
 }
 
 /** What the garment keeps where the arms lie: beside it, it gives up what they cover below the armpit and each hand with its ring of ink (else the ring's inner half stays the garment's, a hook bared when the arm swings); on it (a profile), it keeps all. */
 const UNDER_ARMS = {
   beside: ['armNearBelow', 'armFarBelow', 'handNearRing', 'handFarRing'],
   onGarment: [],
+  // His near arm raised clear of his side: the garment gives up its sleeve but for its root at his shoulder, so his side under it is the garment's own.
+  raised: ['armNearOff', 'armFarBelow', 'handNearRing', 'handFarRing'],
 } as const;
 
 /** What one standing view is read from: its seeds and the polygons the sheet parts by colour alone. */
@@ -190,6 +194,10 @@ interface Standing {
   readonly chin: Chin;
   /** Where his head's outline turns back as sharply as the sheet draws it (his nape under his curls), vouched for (`TracePart.sharp`). */
   readonly sharp: ReadonlyArray<TracePt>;
+  /** The lit rim a view paints down his face's edge, as more of his skin's samples (none unless given): paler than his skin, nearer his cream than it. */
+  readonly skinLit?: ReadonlyArray<string>;
+  /** How far his hair is opened where a view draws the band behind his ear thinner than 2 px opens clean (2 unless given). */
+  readonly hairOpen?: number;
   readonly near: ArmSpec;
   readonly far: ArmSpec;
   readonly arms: keyof typeof UNDER_ARMS;
@@ -224,7 +232,7 @@ export const standing = (v: Standing): TraceSheetView => {
     box: v.box,
     out: v.out,
     about: v.about,
-    classes: CLASSES,
+    classes: { ...CLASSES, skin: [...CLASSES.skin, ...(v.skinLit ?? [])] },
     head: 'head',
     feet: ['footNear', 'footFar'],
     // His outlines and the tones on them fitted as cubics; his feet and their straps, drawn as sandals, are points.
@@ -253,8 +261,8 @@ export const standing = (v: Standing): TraceSheetView => {
       hair: {
         within: 'hairMass',
         grow: 4,
-        // Opened 2 px: the band of hair the sheet draws behind an ear is his, the hairline tip it ends in is not.
-        open: 2,
+        // Opened 2 px (or as the view says): the band of hair the sheet draws behind an ear is his, the hairline tip it ends in is not.
+        open: v.hairOpen ?? 2,
         inside: 'head',
         minus: Object.keys(ears),
         doc: 'His hair, the whole mass of curls over his head.',
@@ -332,6 +340,8 @@ export const standing = (v: Standing): TraceSheetView => {
       },
       // Each worn in 6 px: the garment the arm hangs beside runs on under its sleeve's paper, so the garment's line lies under the sleeve.
       armNearBelow: { within: 'armNear', clip: wide(v.near.below, y1), shrink: 6, as: 'none' },
+      // A raised sleeve, all but its root (none unless the view gives its polygon).
+      armNearOff: { within: 'armNear', clip: v.near.off ?? [], as: 'none' },
       armFarBelow: { within: 'armFar', clip: wide(v.far.below, y1), shrink: 6, as: 'none' },
       body: {
         silhouette: true,

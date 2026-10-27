@@ -21,6 +21,7 @@ import * as FRONT from './front-traced.ts';
 import { PAPERS, TONES } from './papers.ts';
 import * as PROFILE_LEFT from './profile-left-traced.ts';
 import * as PROFILE_RIGHT from './profile-right-traced.ts';
+import * as RAISED from './raised-traced.ts';
 import * as SEATED from './seated-traced.ts';
 import * as THREE_QUARTER_LEFT from './three-quarter-left-traced.ts';
 import * as THREE_QUARTER_RIGHT from './three-quarter-right-traced.ts';
@@ -82,7 +83,12 @@ interface LeadViewSpec {
   /** Which sleeve each arm is in: his right arm's is cream (`creamAcross` where it crosses his cream tunic whole, seated), his left's teal. */
   readonly sleeves: { readonly near: keyof typeof SLEEVE; readonly far: keyof typeof SLEEVE };
   /** His near arm as the view draws it: where it turns when raised, sheet pixels (`TracedArmSpec.pivot`; seated, his elbow on his knee), and what lies on its sleeve (in profile, its cuff). */
-  readonly nearArm?: { readonly pivot?: Pt; readonly tones?: ReadonlyArray<TracedTone> };
+  readonly nearArm?: {
+    readonly pivot?: Pt;
+    readonly elbow?: number;
+    readonly root?: 'ball' | 'traced';
+    readonly tones?: ReadonlyArray<TracedTone>;
+  };
 }
 
 /** A tone of `color` on `pts` (none drawn where it has no pieces). */
@@ -93,17 +99,23 @@ const SLEEVE = {
   cream: PAPERS.sleeve,
   creamAcross: PAPERS.sleeveAcross,
   teal: PAPERS.mantleSleeve,
+  raised: PAPERS.sleeveRaised,
 } as const;
 
-/** The shade along each sleeve's edges, by its cloth: what shows it where it lies on his garment. */
-const SLEEVE_EDGE = {
-  cream: TONES.creamEdge,
-  creamAcross: TONES.creamAcross,
-  teal: TONES.tealEdge,
-} as const;
+/** The shade along each sleeve's edges, by its cloth: what shows it where it lies on his garment; none on a sleeve raised clear of it (its shading its own tones, `RAISED_SLEEVE`). */
+const SLEEVE_EDGE: Readonly<Record<keyof typeof SLEEVE, { readonly edge?: `#${string}` }>> = {
+  cream: { edge: TONES.creamEdge },
+  creamAcross: { edge: TONES.creamAcross },
+  teal: { edge: TONES.tealEdge },
+  raised: {},
+};
 
 /** How deep the band across a sleeve's cuff runs, sheet pixels: the line the sheet draws where a sleeve lying on his garment ends over his hand. */
 const CUFF = 6;
+
+/** A polygon as the straight sides of a cubic chain: each corner, its two handles on its own side. */
+const straight = (corners: ReadonlyArray<Pt>): Pt[] =>
+  corners.flatMap((p, i) => [p, p, corners[(i + 1) % corners.length] ?? p]);
 
 /** The band across the cuff of the sleeve traced as `outline`, in `color`, a chain of four straight sides past its edges (laid on the sleeve, it is clipped to it). */
 const cuffOf = (outline: ReadonlyArray<Pt>, color: `#${string}`): TracedTone => {
@@ -116,7 +128,7 @@ const cuffOf = (outline: ReadonlyArray<Pt>, color: `#${string}`): TracedTone => 
     [x1, bottom + 4],
     [x0, bottom + 4],
   ];
-  return { pts: [corners.flatMap((p, i) => [p, p, corners[(i + 1) % 4] ?? p])], color };
+  return { pts: [straight(corners)], color };
 };
 
 /** How far each curl's lit disc lies toward the light, a share of its radius: the dark crescent under it, as the sheet paints his curls. */
@@ -167,14 +179,14 @@ const leadView = (t: LeadTable, v: LeadViewSpec) =>
         outline: t.ARM_NEAR,
         hand: t.HAND_NEAR,
         paper: SLEEVE[v.sleeves.near],
-        edge: SLEEVE_EDGE[v.sleeves.near],
+        ...SLEEVE_EDGE[v.sleeves.near],
         ...v.nearArm,
       },
       far: {
         outline: t.ARM_FAR,
         hand: t.HAND_FAR,
         paper: SLEEVE[v.sleeves.far],
-        edge: SLEEVE_EDGE[v.sleeves.far],
+        ...SLEEVE_EDGE[v.sleeves.far],
       },
     },
     feet_: {
@@ -274,6 +286,65 @@ export const leadFeastThreeQuarterRight = leadView(THREE_QUARTER_RIGHT, {
   face: { ...AT_REST, marks: THREE_QUARTER_RIGHT.MARKS, extra: WITH_EXTRA },
   sleeves: { near: 'cream', far: 'teal' },
 });
+
+/**
+ * His near hand round the bottle on his raised view, sheet pixels: the
+ * sheet's fist, mostly behind the bottle, shows only its ring's left and
+ * lower edges (its inner edge at x 30 and row 422), so the traced circle
+ * (its visible crescent's) is too small and too far left. His hand is the
+ * house's one size, his far hand's, laid inside that ring and down onto his
+ * cuff (row 426), as a hand touches its sleeve.
+ */
+const RAISED_HAND_NEAR = {
+  at: [52, 410],
+  r: RAISED.HAND_FAR.r,
+} as const satisfies { readonly at: Pt; readonly r: number };
+
+/**
+ * The sheet's shading of his raised sleeve, sheet pixels, laid on its flat
+ * paper (each clipped to the sleeve): the shade under its upper arm and round
+ * its elbow; the fold down from the notch at its elbow.
+ */
+const RAISED_SLEEVE: ReadonlyArray<TracedTone> = [
+  tone(
+    [
+      straight([
+        [40, 476],
+        [66, 492],
+        [139, 488],
+        [139, 540],
+        [30, 540],
+      ]),
+    ],
+    TONES.raisedUnder,
+  ),
+  tone(
+    [
+      straight([
+        [102, 440],
+        [109, 440],
+        [115, 478],
+        [110, 479],
+      ]),
+    ],
+    TONES.raisedFold,
+  ),
+];
+
+/** Raised (poses-1): three-quarters to screen left, his head rolled toward the bottle in his raised near hand; his near sleeve bent at its elbow as the sheet draws it, turning about his shoulder; his teal far sleeve hanging. */
+export const leadFeastRaised = leadView(
+  { ...RAISED, HAND_NEAR: RAISED_HAND_NEAR },
+  {
+    sheet: 'poses',
+    head: { view: 'threeQuarter' },
+    ears: { near: RAISED.EAR_NEAR },
+    face: { ...AT_REST, marks: RAISED.MARKS, extra: WITH_EXTRA },
+    sleeves: { near: 'raised', far: 'teal' },
+    // Turned about a point on the line from his hand through his elbow's fold (the notch at 105,443 and the elbow's corner at 55,505 lie square across it), so its cut at his elbow runs through both.
+    // Its upper sleeve ends where the sheet ends it, its root under his tunic: a ball would show past its edges.
+    nearArm: { pivot: [144, 476], elbow: 0.35, root: 'traced', tones: RAISED_SLEEVE },
+  },
+);
 
 /** How far his seated hand at his chin is laid down onto his raised sleeve's top, sheet pixels. */
 const SEATED_WRIST = 4;

@@ -9,6 +9,7 @@
 import { describe, expect, test } from 'bun:test';
 import LEAD_FEAST from '../../../library/cast/lead-feast/cast-sheet/cast-sheet.json' with { type: 'json' };
 import * as LEAD from '../../../library/cast/lead-feast/rig/lead.ts';
+import * as LEAD_RAISED from '../../../library/cast/lead-feast/rig/raised-traced.ts';
 import * as LEAD_SEATED from '../../../library/cast/lead-feast/rig/seated-traced.ts';
 import { CAST, SHEETS } from './cast.ts';
 import { ARTBOARDS } from './figures.ts';
@@ -78,4 +79,49 @@ describe("IIO's cast render table", () => {
       Math.hypot(drawn[0] - (hx - seated.at[0]) / scale, drawn[1] - (hy - seated.at[1]) / scale),
     ).toBeLessThan(4);
   });
+
+  test('raised, his near sleeve ends at its own traced root at his shoulder: nothing of it shows past the sleeve the sheet draws', () => {
+    const scale = SHEETS['lead-feast'].poses.scale;
+    const [fx, fy] = LEAD_RAISED.FEET;
+    const sleeve = curve(LEAD_RAISED.ARM_NEAR).map(([x, y]): Pt => [
+      (x - fx) / scale,
+      (y - fy) / scale,
+    ]);
+    const upper = curve(LEAD.leadFeastRaised.arms.near.outline);
+    expect(upper.filter((p) => !within(p, sleeve, 1))).toEqual([]);
+  });
 });
+
+type Pt = readonly [number, number];
+
+/** A closed cubic chain (each anchor, its out handle, the next anchor's in handle) laid as points along its curves. */
+const curve = (chain: ReadonlyArray<Pt>): Pt[] =>
+  chain.flatMap((a, i) => {
+    if (i % 3 !== 0) return [];
+    const [c1, c2, b] = [chain[i + 1] ?? a, chain[i + 2] ?? a, chain[(i + 3) % chain.length] ?? a];
+    return Array.from({ length: 10 }, (_, k): Pt => {
+      const [t, u] = [k / 10, 1 - k / 10];
+      const at = (n: 0 | 1) =>
+        u * u * u * a[n] + 3 * u * u * t * c1[n] + 3 * u * t * t * c2[n] + t * t * t * b[n];
+      return [at(0), at(1)];
+    });
+  });
+
+/** Whether `p` lies inside `poly`, or within `reach` of its edge. */
+const within = (p: Pt, poly: ReadonlyArray<Pt>, reach: number): boolean => {
+  let inside = false;
+  let near = Infinity;
+  for (let i = 0; i < poly.length; i++) {
+    const [ax, ay] = poly[i] ?? p;
+    const [bx, by] = poly[(i + 1) % poly.length] ?? p;
+    if (ay > p[1] !== by > p[1] && p[0] < ax + ((bx - ax) * (p[1] - ay)) / (by - ay))
+      inside = !inside;
+    const [dx, dy] = [bx - ax, by - ay];
+    const t = Math.max(
+      0,
+      Math.min(1, ((p[0] - ax) * dx + (p[1] - ay) * dy) / (dx * dx + dy * dy || 1)),
+    );
+    near = Math.min(near, Math.hypot(p[0] - ax - t * dx, p[1] - ay - t * dy));
+  }
+  return inside || near <= reach;
+};
