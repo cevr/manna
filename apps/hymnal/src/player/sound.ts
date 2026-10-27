@@ -113,6 +113,7 @@ export const scoreClock = (
   Effect.gen(function* () {
     const lock = yield* Semaphore.make(1);
     let revision = 0;
+    let lastStatus: Status = { state: 'idle', positionMs: 0 };
     /** A command or play answer invalidates observations made before it. */
     const changing = <A, E>(change: Effect.Effect<A, E>) =>
       lock.withPermit(
@@ -162,6 +163,7 @@ export const scoreClock = (
      * past the recording's end, the silent clock on to the timeline's end.
      */
     const fromDevice = (status: Status) => {
+      lastStatus = status;
       if (status.recording) held.selection = Option.some(status.recording);
       held.recorded = Option.orElse(Option.fromNullishOr(status.durationMs), () => held.recorded);
       const at = status.durationMs ?? status.positionMs;
@@ -175,11 +177,11 @@ export const scoreClock = (
       );
     };
 
-    /** The status now: the silent clock's while it runs, else the device's. */
+    /** A stale play answers from memory and never waits on a native observer. */
     const current = Effect.gen(function* () {
       const now = yield* Clock.currentTimeMillis;
       if (Option.isSome(held.clock)) return selected(clockStatus(held.clock.value, end(), now));
-      return yield* fromDevice(yield* device.status);
+      return selected(lastStatus);
     });
 
     /** Observe without holding a command behind a native status round trip. */
@@ -205,6 +207,8 @@ export const scoreClock = (
         }),
       );
       return yield* Option.match(accepted, {
+        // Retries stop once a device round trip has no intervening command;
+        // continuous mutations can defer this observer until they stop.
         onNone: () => readStatus,
         onSome: Effect.succeed,
       });

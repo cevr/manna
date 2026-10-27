@@ -21,7 +21,7 @@ import { type Move } from '~/hymns/chords';
 import { playbackOn, type Device } from './playback.live';
 import { Command, Playback, Player, playerOn, type Status, statusEvery } from './player';
 import { counted } from '../follow/seeks';
-import { soundOn } from './sound';
+import { scoreClock, soundOn } from './sound';
 import { recordingsOn } from './recording';
 import type { Timeline } from '../follow/timeline';
 import { followerOf } from '../follow/follower';
@@ -1173,42 +1173,78 @@ it.effect(
 type App = Effect.Success<ReturnType<typeof open>>;
 
 for (const failed of [false, true])
-  it.effect(`playswap late native loads actually reject=${failed} after rapid Starts`, () =>
-    Effect.gen(function* () {
-      using app = yield* open();
-      app.hold();
-      app.send(Command.Start({ track }));
-      yield* settle;
-      app.move(3, 2, 7);
-      app.hold();
-      app.send(Command.Start({ track: other }));
-      yield* settle;
-      app.move(100, -2, 11);
-      app.hold();
-      app.send(Command.Start({ track }));
-      yield* settle;
-      expect(app.pending).toHaveLength(3);
-      // Observe the actual native Promise outcomes, even though its callers
-      // were interrupted. No scheduled dimension may release nothing.
-      const outcomes = Promise.allSettled(app.pending.map((pending) => pending.result()));
-      app.pending.forEach((pending, index) => pending.release(index < 2 && failed));
-      expect((yield* Effect.promise(() => outcomes)).map((outcome) => outcome.status)).toEqual([
-        ...Match.value(failed).pipe(
-          Match.when(true, () => ['rejected', 'rejected'] as const),
-          Match.orElse(() => ['fulfilled', 'fulfilled'] as const),
-        ),
-        'fulfilled',
-      ]);
-      yield* app.playing;
-      expect(app.registry.get(app.player.recording)).toEqual(
-        Option.some({ number: 100, requested: -2, effective: -2 }),
-      );
-      expect(app.calls.filter((call) => call.operation === 'play').map((call) => call.uri)).toEqual(
-        [audioUrl(100), audioUrl(3, 2), audioUrl(100, -2)],
-      );
-      expect(app.calls.filter((call) => call.operation === 'seek').at(-1)?.at).toBe(0);
-    }),
+  it.effect(
+    `playswap interrupted old loads cannot trigger fallback after native rejection=${failed}`,
+    () =>
+      Effect.gen(function* () {
+        using app = yield* open();
+        app.hold();
+        app.send(Command.Start({ track }));
+        yield* settle;
+        app.move(3, 2, 7);
+        app.hold();
+        app.send(Command.Start({ track: other }));
+        yield* settle;
+        app.move(100, -2, 11);
+        app.hold();
+        app.send(Command.Start({ track }));
+        yield* settle;
+        expect(app.pending).toHaveLength(3);
+        // The adapter's stale callers have been interrupted. Observe the native
+        // outcomes and prove neither completion can trigger a printed fallback.
+        const outcomes = Promise.allSettled(app.pending.map((pending) => pending.result()));
+        app.pending.forEach((pending, index) => pending.release(index < 2 && failed));
+        expect((yield* Effect.promise(() => outcomes)).map((outcome) => outcome.status)).toEqual([
+          ...Match.value(failed).pipe(
+            Match.when(true, () => ['rejected', 'rejected'] as const),
+            Match.orElse(() => ['fulfilled', 'fulfilled'] as const),
+          ),
+          'fulfilled',
+        ]);
+        yield* app.playing;
+        expect(app.registry.get(app.player.recording)).toEqual(
+          Option.some({ number: 100, requested: -2, effective: -2 }),
+        );
+        expect(
+          app.calls.filter((call) => call.operation === 'play').map((call) => call.uri),
+        ).toEqual([audioUrl(100), audioUrl(3, 2), audioUrl(100, -2)]);
+        expect(app.calls.filter((call) => call.operation === 'seek').at(-1)?.at).toBe(0);
+      }),
   );
+
+it.effect('keyplay a handed-over play cannot delay a third Start behind native status', () =>
+  Effect.gen(function* () {
+    const clock = yield* TestClock.testClockWith(Effect.succeed);
+    const app = native(clock);
+    const on = yield* SubscriptionRef.make(true);
+    const api = yield* scoreClock(
+      playbackOn(() => app.device, Option.none()),
+      () => Option.some(timeline),
+      on,
+    );
+    app.hold();
+    const first = yield* api.play(audioUrl(100), 0).pipe(Effect.forkChild);
+    yield* settle;
+    expect(app.pending).toHaveLength(1);
+    app.holdStatus(true);
+    app.hold();
+    const second = yield* api.play(audioUrl(3), 0).pipe(Effect.forkChild);
+    yield* settle;
+    app.hold();
+    const third = yield* api.play(audioUrl(100), 0).pipe(Effect.forkChild);
+    yield* settle;
+    expect(app.calls.filter((call) => call.operation === 'play').map((call) => call.uri)).toEqual([
+      audioUrl(100),
+      audioUrl(3),
+      audioUrl(100),
+    ]);
+    app.holdStatus(false);
+    app.pending.forEach((pending) => pending.release());
+    yield* Fiber.join(first);
+    yield* Fiber.join(second);
+    yield* Fiber.join(third);
+  }).pipe(Effect.scoped),
+);
 
 for (const state of ['playing', 'ended', 'failed'] as const)
   it.effect(`playswap Sound on starts before a former ${state} status answers`, () =>

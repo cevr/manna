@@ -4267,6 +4267,15 @@ The form of an entry, each field on its own line:
 - **Cause:** A picture that names food without saying what it is leaves the image model to draw meat as flesh.
 - **Guard:** skill: what food looks like is a judgement on a drawn picture, not a rule a lint can read in a script. Carried by `.claude/skills/film/CRAFT.md`: "Food is plant food"
 
+### playbulk-stale-play-snapshot
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Source:** hymnapp/playbulk/p2-round-2-findings.md o-a (F1)
+- **Wrong:** A handed-over play could wait on native status while holding the score clock command lock.
+- **Cause:** Its stale answer used the live observer instead of the clock or last accepted device snapshot.
+- **Guard:** code: `apps/hymnal/src/player/keyplay.slow.test.ts` `keyplay a handed-over play cannot delay a third Start behind native status`
+
 ### init-refresh-outgoing-wal
 
 - **Date:** 2026-10-27
