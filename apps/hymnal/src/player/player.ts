@@ -1074,14 +1074,7 @@ export const playerOn = (
               // A paused selection is applied on the next Play; the dial never starts sound.
               if (held.wants === 'pause' || letGo(current) || Player.$is('Ended')(current)) return;
               const read = yield* device.status.pipe(Effect.option);
-              const at = Option.getOrElse(
-                Option.map(held.proof.pending, (it) => it.target),
-                () =>
-                  Option.getOrElse(
-                    Option.map(read, (it) => it.positionMs),
-                    () => Option.getOrElse(held.proof.place, () => 0),
-                  ),
-              );
+              const at = Proof.replacementAt(held.proof, read);
               held.id += 1;
               held.reading = Option.none();
               held.seeking = Option.none();

@@ -442,3 +442,13 @@ export const answered = (proof: Proof, answer: Read, target: number): Answered =
 /** How long silence has been proved, as of `read`: from the run's first read to `read`'s ask. */
 export const silentFor = (proof: Proof, read: Read) =>
   Option.match(proof.quietFrom, { onNone: () => 0, onSome: (from) => read.asked - from });
+
+/** A replacement keeps a pending seek, else the furthest proved or valid current place. */
+export const replacementAt = (proof: Proof, status: Option.Option<Status>): number => {
+  if (Option.isSome(proof.pending)) return proof.pending.value.target;
+  let at = Option.getOrElse(proof.place, () => 0);
+  for (const read of Option.toArray(status)) {
+    if (read.state !== 'failed' && read.state !== 'idle') at = Math.max(at, read.positionMs);
+  }
+  return at;
+};

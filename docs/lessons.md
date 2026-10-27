@@ -51,6 +51,16 @@ The form of an entry, each field on its own line:
 
 ## Process and tooling
 
+### recording-switch-failed-zero
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "A key switch can use zero when the old recording fails at zero."
+- **Source:** playbulk/p1-round-1-checks.md F1
+- **Wrong:** A replacement chose the failed session's zero instead of the last proved musical place.
+- **Cause:** The key-switch path trusted every status position, including a failed session's reset value.
+- **Guard:** code: `apps/hymnal/src/player/keyplay.test.ts` `keeps the proved place when a replaced session reports failure or a loading zero`
+
 ### hymn-search-literal-operators
 
 - **Date:** 2026-10-27

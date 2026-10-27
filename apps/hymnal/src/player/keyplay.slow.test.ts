@@ -322,6 +322,22 @@ it.effect('keyplay all capo frets leave a playing recording and its dispatch tra
   }),
 );
 
+it.effect('keyplay an old recording that fails at zero keeps the last proved musical place', () =>
+  Effect.gen(function* () {
+    using app = yield* open();
+    app.send(Command.Start({ track }));
+    yield* app.playing;
+    yield* app.tick(20_000);
+    const before = app.read().positionMs;
+    app.force({ state: 'failed', positionMs: 0, durationMs: 240_000 });
+    app.move(100, 1);
+    yield* app.playing;
+    expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBeGreaterThanOrEqual(
+      before,
+    );
+  }),
+);
+
 it.effect(
   'keyplay silent scoreClock keeps the line time across keys and capo without device calls',
   () =>
