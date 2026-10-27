@@ -2,15 +2,15 @@
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Effect, Schema } from 'effect';
-import { compile } from '../src/compile.js';
 import { Hymn, sung } from '../src/hymn.js';
 import { Playback, applyMetadata, metadataOf } from '../src/playback.js';
-import { decodeOrders, sourceOf } from './sources.js';
-import { decodeSourceText } from './source-text.js';
 
 const data = new URL('../data/', import.meta.url).pathname;
 const folder = join(data, 'playback');
 const pad = (n: number) => String(n).padStart(3, '0');
+const loadCompiler = () => import('../src/compile.js');
+const loadSources = () => import('./sources.js');
+const loadSourceText = () => import('./source-text.js');
 const textBytes = () => readFileSync(join(data, 'source-text.json'), 'utf8');
 const fixesBytes = () => readFileSync(join(data, 'fixes/refrains.json'), 'utf8');
 const inputsHash = (source: string, fixes: string) => {
@@ -85,7 +85,13 @@ const countsOf = (hymn: Hymn) => {
   };
 };
 
-export const generatePlayback = (out = folder) => {
+export const generatePlayback = async (out = folder) => {
+  // Reading sidecars during a build needs no compiler or pronunciation dictionary.
+  const [{ compile }, { decodeOrders, sourceOf }, { decodeSourceText }] = await Promise.all([
+    loadCompiler(),
+    loadSources(),
+    loadSourceText(),
+  ]);
   const source = textBytes(),
     fixes = fixesBytes();
   const inputs = inputsHash(source, fixes);
@@ -141,7 +147,7 @@ export const generatePlayback = (out = folder) => {
 
 if (import.meta.main) {
   const flag = process.argv.indexOf('--out');
-  const summary = generatePlayback(flag < 0 ? folder : process.argv[flag + 1]);
+  const summary = await generatePlayback(flag < 0 ? folder : process.argv[flag + 1]);
   console.log(
     `P3 generated hymns=${summary.hymns} syllables=${summary.syllables} melismas=${summary.melismas} shared=${summary.shared} affected=${summary.affectedHymns}`,
   );

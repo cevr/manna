@@ -5,7 +5,7 @@
 import { Array as Arr, Effect, Schema } from 'effect';
 import type { Mutable } from 'effect/Types';
 import * as Chord from './chord.js';
-import { type Hymn, type Part, type Plain, type Syllable, Reason, Timing } from './hymn.js';
+import { type Hymn, type Part, type Plain, type Syllable, Reason, Timing, sung } from './hymn.js';
 
 const Count = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
 const Quality = Schema.Int.check(
@@ -45,7 +45,7 @@ export const Playback = Schema.Struct({
 });
 export type Playback = typeof Playback.Type;
 
-export class PlaybackMismatch extends Schema.TaggedError<PlaybackMismatch>()('PlaybackMismatch', {
+class PlaybackMismatch extends Schema.TaggedError<PlaybackMismatch>()('PlaybackMismatch', {
   number: Schema.Int,
   reason: Schema.Literals(['source', 'shape', 'cuts']),
 }) {}
@@ -126,6 +126,19 @@ const decodeChanges = (changes: readonly (typeof Change.Type)[]) =>
     if (c.bass >= 0) chord.bass = c.bass;
     return { chord, at: c.at };
   });
+
+const consistentTiming = (hymn: Hymn): boolean => {
+  const timing = hymn.timing;
+  if (timing === undefined) return false;
+  const lines = sung(hymn);
+  if (timing.lines.length !== lines.length) return false;
+  return lines.every((line, i) => {
+    const at = timing.lines[i];
+    if (at === undefined) return false;
+    if (line.part._tag === 'Plain') return at.even && at.syllables.length === 0;
+    return at.syllables.length === line.part.lines[line.line]?.length;
+  });
+};
 
 /** Join only after schema decoding and input fingerprint validation. */
 export const applyMetadata = (
@@ -230,5 +243,6 @@ export const applyMetadata = (
       timing: metadata.timing,
     };
     if (refrain !== undefined) joined.refrain = refrain;
+    if (!consistentTiming(joined)) return yield* refuse('shape');
     return joined;
   });

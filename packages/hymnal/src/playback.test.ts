@@ -58,6 +58,14 @@ it.effect('numeric playback refuses stale sources, identity, shape and invalid c
       { ...metadata, sourceHash: 'stale' },
       { ...metadata, number: 2 },
       { ...metadata, stanzas: [] },
+      { ...metadata, timing: { ...metadata.timing, lines: [] } },
+      {
+        ...metadata,
+        timing: {
+          ...metadata.timing,
+          lines: metadata.timing.lines.map((line) => ({ ...line, syllables: [] })),
+        },
+      },
       {
         ...metadata,
         stanzas: metadata.stanzas.map((part) => ({
