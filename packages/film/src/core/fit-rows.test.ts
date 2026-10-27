@@ -156,6 +156,24 @@ describe('fitRows', () => {
     expect(fold([60])?.pass).toBe(false);
   });
 
+  test('a probe holds an inked seam moved 3 px to its edges, not to the stretch both edges sweep', () => {
+    const probe = { name: 'seam', along: 'row', at: 50, from: 27, to: 40 } as const;
+    const seam = (at: number) =>
+      rowNamed(
+        fitRows(
+          paint({ ground: SHEET_GROUND, seam: 33, seamInk: 3 }),
+          paint({ ground: RENDER_GROUND, seam: at, seamInk: 3 }),
+          {
+            classes: CLASSES,
+            probes: [probe],
+          },
+        ),
+        'probe.seam',
+      );
+    expect(seam(33)?.value).toBe(0);
+    expect(seam(36)?.value).toBe(3);
+  });
+
   test("a change just inside a probe's end is matched to the same change just past it", () => {
     const probe = { name: 'belt', along: 'col', at: 38, from: 30, to: 61 } as const;
     const row = rowNamed(

@@ -44,6 +44,8 @@ export interface Paint {
   readonly dx?: number;
   /** The column its teal gives way to its cream at (`SEAM` unless given). */
   readonly seam?: number;
+  /** How many columns of ink lie along the seam, just left of it (none unless given). */
+  readonly seamInk?: number;
   /** A 2 × 12 px strip of cream just outside the body's right line. */
   readonly sliver?: boolean;
   /** Boxes of cream painted over it: strips, attached or not. */
@@ -86,6 +88,7 @@ export const paint = ({
   ground,
   dx = 0,
   seam = SEAM,
+  seamInk = 0,
   sliver = false,
   strips = [],
   hole = false,
@@ -95,6 +98,7 @@ export const paint = ({
   const rgba = new Uint8Array(W * H * 4);
   for (let y = 0; y < H; y++)
     for (let x = 0; x < W; x++) fill(rgba, [x, x + 1, y, y + 1], colourAt(ground, x, y, dx, seam));
+  if (seamInk > 0) fill(rgba, [seam - seamInk + dx, seam + dx, BODY.top + 4, BODY.bottom - 3], INK);
   if (sliver) fill(rgba, [47 + dx, 49 + dx, 50, 62], CREAM);
   for (const s of strips) fill(rgba, s, CREAM);
   if (hole) fill(rgba, [26 + dx, 32 + dx, 60, 66], ground);

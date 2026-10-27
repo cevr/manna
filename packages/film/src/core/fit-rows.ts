@@ -821,7 +821,13 @@ const classesOver = (
     (_, k) => runs.find((x) => x.from <= lo + k && x.to >= lo + k)?.cls,
   );
 
-/** The longest stretch from `lo` to `hi` where the sheet's runs and the render's lie in other classes. */
+/**
+ * The longest stretch from `lo` to `hi` where the sheet's runs and the
+ * render's lie in other classes and neither changes class within it: a
+ * stretch an edge of either crosses is that edge moved, which the matched
+ * changes already measure, while one no edge crosses is paper the render
+ * covers with another class (a stroke laid along the probe).
+ */
 const longestDiffering = (
   cr: ReadonlyArray<{ cls: string; from: number; to: number }>,
   rr: ReadonlyArray<{ cls: string; from: number; to: number }>,
@@ -829,10 +835,16 @@ const longestDiffering = (
   hi: number,
 ) => {
   const [cs, rs] = [classesOver(cr, lo, hi), classesOver(rr, lo, hi)];
-  let [run, longest] = [0, 0];
-  for (let k = 0; k < cs.length; k++) {
-    run = cs[k] === rs[k] ? 0 : run + 1;
-    longest = Math.max(longest, run);
+  const edges = new Set([...changesOf(cr), ...changesOf(rr)].map((ch) => ch.at));
+  let [from, longest] = [-1, 0];
+  for (let k = 0; k <= cs.length; k++) {
+    const differs = k < cs.length && cs[k] !== rs[k];
+    if (differs && from < 0) from = k;
+    if (!differs && from >= 0) {
+      const crossed = [...edges].some((at) => at >= lo + from && at <= lo + k);
+      if (!crossed) longest = Math.max(longest, k - from);
+      from = -1;
+    }
   }
   return longest;
 };
