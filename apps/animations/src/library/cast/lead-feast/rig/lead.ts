@@ -594,9 +594,11 @@ const SEATED_SLEEVE: ReadonlyArray<TracedTone> = [
  * (`seatedArms`, sheet pixels: his forearm from about row 640 to its cuff at
  * 723, his hand's top at 713): lit whole (the sheet's #7fa194 at 764,621,
  * lightest by his hand), so it lies off the mantle under it; shaded along
- * its forearm's right side, the side that turns under as it reaches (the
- * sheet's #476c7b at 792,651); and a cuff, a band across it just above his
- * hand (rows 698-706), so his hand ends a sleeve.
+ * its right side from above his elbow, the side that turns under as it
+ * reaches, one width (12 px inside its edge) on his upper arm and his
+ * forearm, so the shade runs round his elbow with no step where the two
+ * meet (the sheet's #476c7b at 792,651); and a cuff, a band across it just
+ * above his hand (rows 698-706), so his hand ends a sleeve.
  */
 const LAP_SLEEVE: ReadonlyArray<TracedTone> = [
   tone(
@@ -613,11 +615,14 @@ const LAP_SLEEVE: ReadonlyArray<TracedTone> = [
   tone(
     [
       straight([
-        [862, 630],
-        [890, 630],
+        [847, 620],
+        [890, 620],
         [890, 740],
-        [857, 740],
-        [855, 660],
+        [860, 740],
+        [859, 700],
+        [856, 680],
+        [854, 660],
+        [851, 640],
       ]),
     ],
     TONES.lapSleeveUnder,
