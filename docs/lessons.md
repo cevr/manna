@@ -51,6 +51,16 @@ The form of an entry, each field on its own line:
 
 ## Process and tooling
 
+### sqlite-staging-sidefiles
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "the installer does not own SQLite's sidecars of its staging file"
+- **Source:** initfresh/round-1-findings.md F1
+- **Wrong:** A stale hot staging journal could roll old pages into a verified candidate, and normal WAL installs left staging WAL and SHM files.
+- **Cause:** Staging side files were neither cleared before streaming nor owned through provenance writing and cleanup.
+- **Guard:** code: `packages/core/src/platform-bun/file-corpus-lifecycle.test.ts` `discards a stale hot staging journal before installing different candidate bytes`; code: `packages/core/src/platform-bun/bible-artifact.test.ts` `installs a self-contained WAL Bible without staging WAL or SHM residue`; code: `packages/core/src/platform-bun/file-corpus-lifecycle.test.ts` `owns staging SQLite side files before streaming and after every failed install phase`
+
 ### init-preserves-installed-corpora
 
 - **Date:** 2026-10-26

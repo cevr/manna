@@ -65,7 +65,7 @@ phone reads compiled JSON; this feature has no app route.
      targets, populated legacy/prior-provenance/offline preservation, and 16 presence
      subsets per journal mode. Hash, inode, mtime and size stay unchanged for existing
      databases. No provenance migration, HTTP request on the populated offline leg,
-     or `.building` residue is allowed. Keep pinned size/digest rejection and force
+     or `.building*` residue (including `-journal`, `-wal` and `-shm`) is allowed. Keep pinned size/digest rejection and force
      refresh covered. The WAL probe's read-only failure is expected diagnostic data.
      Fast guards: `packages/cli/test/commands/init.test.ts` and
      `packages/core/src/platform-bun/file-corpus-lifecycle.test.ts` (tiny closed/live WAL fixtures).

@@ -1,4 +1,5 @@
 import { BunFileSystem } from '@effect/platform-bun';
+import { Database } from 'bun:sqlite';
 import { Effect, FileSystem, Layer, Option } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
@@ -41,8 +42,61 @@ const ensure = (
   }).pipe(Effect.provide(supply));
 };
 
+const installBibleFile = (destination: string, source: string) =>
+  CorpusSupply.use((supply) => supply.ensure()).pipe(
+    Effect.provide(
+      CorpusSupply.layer.pipe(
+        Layer.provide(
+          layerNativeBibleArtifacts({
+            destination,
+            sources: [{ kind: 'packaged', path: source, label: 'closed-wal-bible' }],
+          }),
+        ),
+      ),
+    ),
+  );
+
 describe('native Bible Artifact adapter', () => {
   const test = it.scopedLive.layer(BunFileSystem.layer);
+
+  test('installs a self-contained WAL Bible without staging WAL or SHM residue', () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: 'bible-staging-wal-' });
+      const source = `${dir}/source.db`;
+      const destination = `${dir}/bible.db`;
+      yield* Effect.acquireUseRelease(
+        Effect.sync(() => new Database(source)),
+        (db) =>
+          Effect.sync(() =>
+            db.exec(`
+          CREATE TABLE books(id INTEGER);
+          INSERT INTO books WITH RECURSIVE n(x) AS (VALUES(1) UNION ALL SELECT x+1 FROM n WHERE x<66) SELECT x FROM n;
+          CREATE TABLE verses(version_code TEXT);
+          INSERT INTO verses WITH RECURSIVE n(x) AS (VALUES(1) UNION ALL SELECT x+1 FROM n WHERE x<31102) SELECT 'KJV' FROM n;
+          CREATE TABLE strongs(id INTEGER); INSERT INTO strongs VALUES(1);
+          CREATE TABLE cross_refs(source TEXT); INSERT INTO cross_refs VALUES('openbible'),('tske');
+          CREATE TABLE margin_notes(id INTEGER); INSERT INTO margin_notes VALUES(1);
+          CREATE TABLE topics(id INTEGER); INSERT INTO topics VALUES(1);
+          PRAGMA journal_mode=WAL;
+        `),
+          ),
+        (db) => Effect.sync(() => db.close()),
+      );
+      const receipt = yield* installBibleFile(destination, source);
+      expect(receipt.activated).toMatchObject([{ corpus: 'bible', installed: 31_102 }]);
+      expect((yield* fs.readDirectory(dir)).filter((name) => name.includes('.building'))).toEqual(
+        [],
+      );
+      yield* Effect.acquireUseRelease(
+        Effect.sync(() => new Database(destination, { readonly: true, create: false })),
+        (db) =>
+          Effect.sync(() => {
+            expect(db.query('SELECT count(*) AS n FROM verses').get()).toEqual({ n: 31_102 });
+          }),
+        (db) => Effect.sync(() => db.close()),
+      );
+    }));
 
   test('activates the first available source atomically and reuses exact Provenance', () =>
     Effect.gen(function* () {

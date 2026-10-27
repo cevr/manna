@@ -298,6 +298,23 @@ export const integrityCheck = (database: Database) =>
     Effect.map((row) => row.integrity_check),
   );
 
+/** A staged database must carry every committed page in its main file before
+ * its side files can be discarded and the main file alone can be activated.
+ * SQLite can refuse a journal-mode change without throwing, so check the mode.
+ */
+const sealDatabase = (database: Database) =>
+  Effect.try({
+    try: () => database.query('PRAGMA journal_mode=DELETE').get(),
+    catch: storeError('checkpoint-database'),
+  }).pipe(
+    Effect.flatMap((mode) =>
+      Schema.decodeUnknownEffect(Schema.Struct({ journal_mode: Schema.Literal('delete') }))(
+        mode,
+      ).pipe(Effect.mapError(storeError('checkpoint-database'))),
+    ),
+    Effect.asVoid,
+  );
+
 /** The SQLite provenance store over `bun:sqlite`: the same `meta` rows through
  *  the same `StoredProvenance` codec the native store writes and reads. */
 const sqliteProvenanceStore: NativeFileArtifactProvenanceStore = {
@@ -368,7 +385,7 @@ const sqliteProvenanceStore: NativeFileArtifactProvenanceStore = {
             })();
           },
           catch: storeError('write-provenance'),
-        }),
+        }).pipe(Effect.andThen(sealDatabase(database))),
       closeDatabase,
     ),
 };
@@ -699,12 +716,23 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
         const path = yield* Path.Path;
         yield* fs.makeDirectory(path.dirname(input.destination), { recursive: true });
         const building = `${input.destination}.building`;
+        const clearSqliteSideFiles = Effect.gen(function* () {
+          if (layout !== 'sqlite') return;
+          // These exact paths belong to the discarded or completed staging
+          // candidate, never to the active database at input.destination.
+          yield* Effect.forEach(
+            ['-journal', '-wal', '-shm'],
+            (suffix) => fs.remove(`${building}${suffix}`, { force: true }),
+            { discard: true },
+          );
+        });
         const hasher = sha256.create();
         let written = 0;
         // Set once the candidate has a name of its own, so a failure removes
         // exactly what this run created and never a live generation.
         let staged = Option.none<string>();
         const install = Effect.gen(function* () {
+          yield* clearSqliteSideFiles;
           yield* artifact.bytes.pipe(
             Stream.tap((chunk) =>
               Effect.sync(() => {
@@ -770,6 +798,7 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
           }
           const installed = yield* verify(building);
           yield* provenanceStore.write(building, provenance);
+          yield* clearSqliteSideFiles;
           yield* fs.rename(building, input.destination);
           // A SQLite artifact carries its own provenance, so a sidecar left
           // by an earlier flat install of the same destination would be a
@@ -788,6 +817,7 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
             Effect.all(
               [
                 fs.remove(building, { force: true }),
+                clearSqliteSideFiles,
                 // The candidate's staging sidecar goes with the candidate: a
                 // failed install must leave nothing behind that a later read
                 // could mistake for a generation.
