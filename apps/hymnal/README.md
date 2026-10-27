@@ -148,6 +148,11 @@ the chosen Key. A remote Play while Playing keeps the sounding fallback.
 Selecting the effective set updates the selection without loading or seeking.
 Capo changes shapes only. It dispatches no playback operation. The
 lock-screen and Media Session continue to use the global One session.
+Recording hand-overs seek immediately after Play. If readiness refuses the seek,
+it pauses before the retry wait and resumes after landing when Play is
+still wanted. One starts before that separate Pause can take effect, so
+opening-sample exposure remains unverified. An atomic paused-load/start-at
+operation on One's global session is a later upstream follow-up.
 `src/player/keyplay.slow.test.ts` covers these rules through the real player,
 score clock and adapter with a fake device; it makes no sound.
 `src/player/recording.ts` owns selection and fallback below the score clock,

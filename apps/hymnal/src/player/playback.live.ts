@@ -54,6 +54,8 @@ const askAgainAfter = Duration.millis(100);
 const holdsRecording = (status: Status) =>
   status.state === 'loading' || status.state === 'playing' || status.state === 'paused';
 
+const awaitsPlay = (status: Status) => status.state === 'paused' || status.state === 'loading';
+
 const call = <A>(operation: string, run: () => Promise<A>) =>
   Effect.tryPromise({
     try: run,
@@ -68,6 +70,7 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
   const audio = () => device().audio;
   let turn = 0;
   let wants: Intent = 'play';
+  let heldForLanding = false;
   const paused = () => wants === 'pause';
   // Intent may pause/resume a moving hand-over. It cannot promote a
   // fixed landing into musical time before that recording has landed.
@@ -146,7 +149,11 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
    * gives nothing up by a time or a count of its own: the player owns the
    * wait, and a newer command cuts the asking off.
    */
-  const landAt = (fromMs: number, owner: number): Effect.Effect<Status, PlaybackError> =>
+  const landAt = (
+    fromMs: number,
+    owner: number,
+    holdDuringLoad: boolean,
+  ): Effect.Effect<Status, PlaybackError> =>
     Effect.gen(function* () {
       if (owner !== turn) return yield* stale();
       const now = yield* Clock.currentTimeMillis;
@@ -159,11 +166,25 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
       Effect.catchTag('PlaybackError', (refused) =>
         Effect.suspend(() => {
           if (owner !== turn) return Effect.fail(stale());
-          return call('status', () => audio().getPlaybackStatus()).pipe(
-            Effect.filterOrFail(holdsRecording, () => refused),
-            Effect.andThen(Effect.sleep(askAgainAfter)),
-            Effect.andThen(Effect.suspend(() => landAt(fromMs, owner))),
-          );
+          return Effect.gen(function* () {
+            const status = yield* call('status', () => audio().getPlaybackStatus()).pipe(
+              Effect.filterOrFail(holdsRecording, () => refused),
+            );
+            if (owner !== turn) return yield* stale();
+            // Seek immediately when ready. If it is refused, hold the
+            // hand-over before the retry wait; a separate Pause cannot
+            // prevent opening samples before it takes effect. Ordinary
+            // loads keep their device-driven preparation contract.
+            if (holdDuringLoad && (!heldForLanding || status.state === 'playing')) {
+              yield* call('pause', () => audio().pause()).pipe(
+                Effect.filterOrFail(holdsRecording, () => refused),
+              );
+              if (owner !== turn) return yield* stale();
+              heldForLanding = true;
+            }
+            yield* Effect.sleep(askAgainAfter);
+            return yield* landAt(fromMs, owner, holdDuringLoad);
+          });
         }),
       ),
     );
@@ -171,6 +192,7 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
     play: (uri, fromMs, options) =>
       Effect.gen(function* () {
         const owner = ++turn;
+        heldForLanding = false;
         wants = options?.intent ?? 'play';
         const began = yield* Clock.currentTimeMillis;
         retained = Option.liftPredicate(
@@ -191,8 +213,13 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
           return status;
         }
         let landed = status;
-        if (fromMs > 0 || options?.ready) landed = yield* landAt(fromMs, owner);
+        if (fromMs > 0 || options?.ready)
+          landed = yield* landAt(fromMs, owner, Option.isSome(retained));
         if (owner !== turn) return landed;
+        if (heldForLanding && !paused() && awaitsPlay(landed))
+          landed = yield* call('resume', () => audio().resume());
+        if (owner !== turn) return landed;
+        heldForLanding = false;
         landed = yield* retainedStatus(landed);
         retained = Option.none();
         // Pause may arrive while play/seek waits for the native session.
@@ -245,6 +272,7 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
     // Play starts it again, so its handlers stay.
     stop: Effect.suspend(() => {
       turn += 1;
+      heldForLanding = false;
       retained = Option.none();
       return call('stop', () => audio().stop()).pipe(Effect.tap(() => Effect.sync(own)));
     }),

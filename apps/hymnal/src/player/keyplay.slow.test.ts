@@ -196,6 +196,152 @@ const open = (sound = true, recorded = 240_000) =>
     };
   });
 
+for (const pauseIntent of [false, true])
+  it.effect(`keyplay readiness refusal holds sound until landing pauseIntent=${pauseIntent}`, () =>
+    Effect.gen(function* () {
+      const clock = yield* TestClock.testClockWith(Effect.succeed);
+      const fake = native(clock);
+      let ready = false;
+      const order: string[] = [];
+      const device: Device = {
+        ...fake.device,
+        audio: {
+          ...fake.device.audio,
+          // One's native Play answers Loading before its seek can land.
+          play: (uri) => {
+            order.push('play');
+            return fake.device.audio
+              .play(uri)
+              .then(() => fake.force({ state: 'loading', positionMs: 0, durationMs: 240_000 }));
+          },
+          seek: (at) => {
+            order.push('seek');
+            if (!ready) return Promise.reject('not ready');
+            return fake.device.audio.seek(at);
+          },
+          pause: () => {
+            order.push('pause');
+            return fake.device.audio.pause();
+          },
+          resume: () => {
+            order.push('resume');
+            return fake.device.audio.resume();
+          },
+        },
+      };
+      const playback = playbackOn(() => device, Option.none());
+      const playing = yield* playback
+        .play(audioUrl(100, 1), 20_000, {
+          ready: true,
+          continuous: true,
+          recording: { number: 100, offset: 1 },
+        })
+        .pipe(Effect.forkChild({ startImmediately: true }));
+      yield* settle;
+      expect(order.slice(0, 3)).toEqual(['play', 'seek', 'pause']);
+      yield* TestClock.adjust(400);
+      yield* settle;
+      if (pauseIntent) yield* playback.pause;
+      expect(fake.read().state).toBe('paused');
+      expect(order.filter((it) => it === 'resume')).toEqual([]);
+      yield* TestClock.adjust(600);
+      yield* settle;
+      ready = true;
+      yield* TestClock.adjust(100);
+      yield* settle;
+      const landed = yield* Fiber.join(playing);
+      let target = 21_100;
+      let state: Status['state'] = 'playing';
+      if (pauseIntent) {
+        target = 20_400;
+        state = 'paused';
+      }
+      expect(fake.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(target);
+      expect(landed.state).toBe(state);
+      expect(order.filter((it) => it === 'resume').length).toBe(Number(!pauseIntent));
+    }),
+  );
+
+it.effect('keyplay a ready source seeks immediately without a pause or resume', () =>
+  Effect.gen(function* () {
+    const clock = yield* TestClock.testClockWith(Effect.succeed);
+    const fake = native(clock);
+    const playback = playbackOn(() => fake.device, Option.none());
+    const landed = yield* playback.play(audioUrl(100, 1), 20_000, {
+      ready: true,
+      continuous: true,
+      recording: { number: 100, offset: 1 },
+    });
+    expect(fake.calls.map((it) => it.operation)).toEqual(['play', 'seek']);
+    expect(landed.positionMs).toBe(20_000);
+    expect(landed.state).toBe('playing');
+  }),
+);
+
+it.effect('keyplay a readiness-hold Pause error stays a provider error', () =>
+  Effect.gen(function* () {
+    const clock = yield* TestClock.testClockWith(Effect.succeed);
+    const fake = native(clock);
+    const device: Device = {
+      ...fake.device,
+      audio: {
+        ...fake.device.audio,
+        seek: () => Promise.reject('not ready'),
+        pause: () => Promise.reject('pause unavailable'),
+      },
+    };
+    const playback = playbackOn(() => device, Option.none());
+    const error = yield* Effect.flip(
+      playback.play(audioUrl(100, 1), 20_000, {
+        ready: true,
+        continuous: true,
+        recording: { number: 100, offset: 1 },
+      }),
+    );
+    expect(error.operation).toBe('pause');
+    expect(error.message).toBe('pause unavailable');
+    expect(fake.calls.map((it) => it.operation)).toEqual(['play']);
+  }),
+);
+
+it.effect('keyplay an obsolete readiness read cannot pause the newer recording', () =>
+  Effect.gen(function* () {
+    const clock = yield* TestClock.testClockWith(Effect.succeed);
+    const fake = native(clock);
+    let release = () => {};
+    let reading = false;
+    const device: Device = {
+      ...fake.device,
+      audio: {
+        ...fake.device.audio,
+        seek: () => Promise.reject('not ready'),
+        getPlaybackStatus: () =>
+          new Promise((resolve) => {
+            reading = true;
+            release = () => resolve(fake.read());
+          }),
+      },
+    };
+    const playback = playbackOn(() => device, Option.none());
+    const former = yield* playback
+      .play(audioUrl(100, 1), 20_000, {
+        ready: true,
+        continuous: true,
+        recording: { number: 100, offset: 1 },
+      })
+      .pipe(Effect.forkChild({ startImmediately: true }));
+    yield* settle;
+    expect(reading).toBe(true);
+    yield* playback.play(audioUrl(100, 2), 0);
+    release();
+    yield* settle;
+    const error = yield* Effect.flip(Fiber.join(former));
+    expect(error.operation).toBe('superseded');
+    expect(fake.calls.map((it) => it.operation)).toEqual(['play', 'play']);
+    expect(fake.read().state).toBe('playing');
+  }),
+);
+
 // The oracle is independent of the adapters: only an already moving clock
 // keeps time during a hand-over. A chosen landing never consumes load time.
 const origins = [
