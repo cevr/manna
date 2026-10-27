@@ -14,7 +14,11 @@ import * as BunServices from '@effect/platform-bun/BunServices';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 
-import { CorpusInstallationError, CorpusSourceUnavailableError } from '../corpus-supply/errors.js';
+import {
+  CorpusInstallationError,
+  CorpusSourceUnavailableError,
+  SqliteRefreshRefused,
+} from '../corpus-supply/errors.js';
 import type { FileArtifactSourceKind, FileCorpusArtifact } from '../corpus-supply/file-artifact.js';
 import {
   assetSourceId,
@@ -125,7 +129,56 @@ export interface NativeFileArtifactProvenanceStore {
 const sourceError = (operation: string, cause: unknown): CorpusSourceUnavailableError =>
   CorpusSourceUnavailableError.make({ operation, cause });
 
-const localSource = (corpus: string, source: LocalFileArtifactSource) => ({
+/** Metadata only: SQLite places a symlink-opened database's WAL beside its real path. */
+export const checkSqliteRefresh = Effect.fn('FileArtifact.checkSqliteRefresh')(function* (
+  destination: string,
+) {
+  const fs = yield* FileSystem.FileSystem;
+  const inspectionRefused = (wal: string) =>
+    SqliteRefreshRefused.make({
+      destination,
+      wal,
+      message: `Cannot inspect ${wal} for ${destination}; refresh refused. Close the database-using program and let SQLite checkpoint cleanly, then retry.`,
+    });
+  const resolved = yield* fs.realPath(destination).pipe(
+    Effect.asSome,
+    Effect.catchIf(
+      (cause) => cause.reason._tag === 'NotFound',
+      () => Effect.succeedNone,
+    ),
+    Effect.mapError(() => inspectionRefused(`${destination}-wal`)),
+  );
+  const paths = new Set([destination, ...Option.toArray(resolved)]);
+  for (const database of paths) {
+    const wal = `${database}-wal`;
+    const details = yield* fs.stat(wal).pipe(
+      Effect.asSome,
+      Effect.catchIf(
+        (cause) => cause.reason._tag === 'NotFound',
+        () => Effect.succeedNone,
+      ),
+      Effect.mapError(() => inspectionRefused(wal)),
+    );
+    if (!Option.exists(details, (info) => info.size > 0n)) continue;
+    const exists = yield* fs.exists(database).pipe(Effect.mapError(() => inspectionRefused(wal)));
+    let recovery =
+      'Close the database-using program and let that program/SQLite checkpoint cleanly, then retry.';
+    if (!exists)
+      recovery =
+        'The matching database file is missing. Close the database-using program. Keep the WAL and recover its matching database from backup before letting SQLite checkpoint cleanly; then retry.';
+    return yield* SqliteRefreshRefused.make({
+      destination,
+      wal,
+      message: `Refusing to replace ${destination}: ${wal} is non-empty. Replacement could replay the outgoing WAL and corrupt data. ${recovery}`,
+    });
+  }
+});
+
+const localSource = (
+  corpus: string,
+  source: LocalFileArtifactSource,
+  layout: FileArtifactLayout,
+) => ({
   kind: source.kind,
   acquire: Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -146,11 +199,9 @@ const localSource = (corpus: string, source: LocalFileArtifactSource) => ({
       kind: source.kind,
       provenance,
       expectedSize: Option.none(),
-      bytes: fs
-        .stream(source.path)
-        .pipe(
-          Stream.mapError((cause) => sourceError(`read-${corpus}-artifact:${source.label}`, cause)),
-        ),
+      bytes: localFileBytes(source.path, layout).pipe(
+        Stream.mapError((cause) => sourceError(`read-${corpus}-artifact:${source.label}`, cause)),
+      ),
     };
   }).pipe(
     Effect.mapError((cause) => sourceError(`open-${corpus}-artifact:${source.label}`, cause)),
@@ -208,7 +259,7 @@ class FileArtifactStoreError extends Schema.TaggedError<FileArtifactStoreError>(
 export const storeError = (operation: string) => (cause: unknown) =>
   FileArtifactStoreError.make({ operation, cause });
 
-export const openDatabase = (filename: string, readonly: boolean) =>
+const openDatabase = (filename: string, readonly: boolean) =>
   Effect.try({
     // `create: false` is bun:sqlite's `fileMustExist`: a candidate that is not
     // there is a verification failure, never an empty database sprung into
@@ -222,6 +273,53 @@ export const closeDatabase = (database: Database) =>
     try: () => database.close(),
     catch: storeError('close-database'),
   });
+
+/** SQLite can need writable auxiliary state even for a read-only WAL query.
+ * Copy the main file and any committed WAL into a private, scoped directory;
+ * never create sidecars or checkpoint the source. Missing sources still fail.
+ */
+const copySqlite = Effect.fn('FileArtifact.copySqlite')(function* (filename: string) {
+  const fs = yield* FileSystem.FileSystem;
+  const directory = yield* fs.makeTempDirectoryScoped({ prefix: 'manna-sqlite-check-' });
+  const copy = `${directory}/artifact.db`;
+  yield* fs.copyFile(filename, copy);
+  if (yield* fs.exists(`${filename}-wal`)) yield* fs.copyFile(`${filename}-wal`, `${copy}-wal`);
+  return copy;
+});
+
+const localFileBytes = (source: string, layout: FileArtifactLayout) =>
+  Stream.unwrap(
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      // A live SQLite source may hold committed rows only in its WAL. Fold
+      // those into a private copy before streaming a single-file artifact.
+      let filename = source;
+      if (layout === 'sqlite' && (yield* fs.exists(`${source}-wal`))) {
+        filename = yield* copySqlite(source);
+        yield* Effect.acquireUseRelease(
+          openDatabase(filename, false),
+          (db) =>
+            Effect.try({
+              try: () => db.exec('PRAGMA journal_mode=DELETE'),
+              catch: storeError('checkpoint-source-copy'),
+            }),
+          closeDatabase,
+        );
+      }
+      return fs.stream(filename);
+    }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+export const withDatabaseSnapshot = <A>(
+  filename: string,
+  use: (database: Database) => Effect.Effect<A, unknown>,
+): Effect.Effect<A, unknown> =>
+  Effect.scoped(
+    Effect.gen(function* () {
+      const copy = yield* copySqlite(filename);
+      return yield* Effect.acquireUseRelease(openDatabase(copy, false), use, closeDatabase);
+    }),
+  ).pipe(Effect.provide(BunServices.layer));
 
 export const countRows = (database: Database, table: string, where = '') =>
   Effect.try({
@@ -249,51 +347,65 @@ export const integrityCheck = (database: Database) =>
     Effect.map((row) => row.integrity_check),
   );
 
+/** A staged database must carry every committed page in its main file before
+ * its side files can be discarded and the main file alone can be activated.
+ * SQLite can refuse a journal-mode change without throwing, so check the mode.
+ */
+const sealDatabase = (database: Database) =>
+  Effect.try({
+    try: () => database.query('PRAGMA journal_mode=DELETE').get(),
+    catch: storeError('checkpoint-database'),
+  }).pipe(
+    Effect.flatMap((mode) =>
+      Schema.decodeUnknownEffect(Schema.Struct({ journal_mode: Schema.Literal('delete') }))(
+        mode,
+      ).pipe(Effect.mapError(storeError('checkpoint-database'))),
+    ),
+    Effect.asVoid,
+  );
+
 /** The SQLite provenance store over `bun:sqlite`: the same `meta` rows through
  *  the same `StoredProvenance` codec the native store writes and reads. */
 const sqliteProvenanceStore: NativeFileArtifactProvenanceStore = {
   read: (filename) =>
-    Effect.acquireUseRelease(
-      openDatabase(filename, true),
-      (database) =>
-        Effect.gen(function* () {
-          const row = Schema.Struct({ value: Schema.String });
-          const value = (key: string) =>
-            Effect.try({
-              try: () => database.query('SELECT value FROM meta WHERE key = ?').get(key),
-              catch: storeError('read-provenance'),
-            }).pipe(
-              Effect.flatMap((raw) =>
-                Schema.decodeUnknownEffect(row)(raw).pipe(
-                  Effect.mapError(storeError('read-provenance')),
-                ),
+    withDatabaseSnapshot(filename, (database) =>
+      Effect.gen(function* () {
+        const row = Schema.Struct({ value: Schema.String });
+        const value = (key: string) =>
+          Effect.try({
+            try: () => database.query('SELECT value FROM meta WHERE key = ?').get(key),
+            catch: storeError('read-provenance'),
+          }).pipe(
+            Effect.flatMap((raw) =>
+              Schema.decodeUnknownEffect(row)(raw).pipe(
+                Effect.mapError(storeError('read-provenance')),
               ),
-              Effect.map((decoded) => decoded.value),
-            );
-          const optionalValue = (key: string) =>
-            Effect.try({
-              try: () => database.query('SELECT value FROM meta WHERE key = ?').get(key),
-              catch: storeError('read-provenance'),
-            }).pipe(
-              Effect.map((raw) =>
-                Option.fromNullishOr(raw).pipe(
-                  Option.flatMap((found) =>
-                    Schema.decodeUnknownOption(row)(found).pipe(
-                      Option.map((decoded) => decoded.value),
-                    ),
+            ),
+            Effect.map((decoded) => decoded.value),
+          );
+        const optionalValue = (key: string) =>
+          Effect.try({
+            try: () => database.query('SELECT value FROM meta WHERE key = ?').get(key),
+            catch: storeError('read-provenance'),
+          }).pipe(
+            Effect.map((raw) =>
+              Option.fromNullishOr(raw).pipe(
+                Option.flatMap((found) =>
+                  Schema.decodeUnknownOption(row)(found).pipe(
+                    Option.map((decoded) => decoded.value),
                   ),
                 ),
               ),
-            );
-          const stored = yield* Schema.decodeEffect(StoredProvenance)({
-            source: yield* value('corpus_source'),
-            revision: yield* value('corpus_revision'),
-            digest: yield* value('corpus_digest'),
-            ...storedGeneration(yield* optionalValue('corpus_generation')),
-          }).pipe(Effect.mapError(storeError('read-provenance')));
-          return provenanceFrom(stored);
-        }),
-      closeDatabase,
+            ),
+          );
+        const stored = yield* Schema.decodeEffect(StoredProvenance)({
+          source: yield* value('corpus_source'),
+          revision: yield* value('corpus_revision'),
+          digest: yield* value('corpus_digest'),
+          ...storedGeneration(yield* optionalValue('corpus_generation')),
+        }).pipe(Effect.mapError(storeError('read-provenance')));
+        return provenanceFrom(stored);
+      }),
     ),
   write: (filename, provenance) =>
     Effect.acquireUseRelease(
@@ -322,7 +434,7 @@ const sqliteProvenanceStore: NativeFileArtifactProvenanceStore = {
             })();
           },
           catch: storeError('write-provenance'),
-        }),
+        }).pipe(Effect.andThen(sealDatabase(database))),
       closeDatabase,
     ),
 };
@@ -596,7 +708,7 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
   const provenanceStore = input.provenanceStore ?? defaultProvenanceStore();
   const makeSource = (source: NativeFileArtifactSource) => {
     if (source.kind === 'release') return releaseSource(corpus, source, fetchArtifact);
-    return localSource(corpus, source);
+    return localSource(corpus, source, layout);
   };
   const recipe = input.artifact.layerRecipe({
     sources: input.sources.map(makeSource),
@@ -653,12 +765,26 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
         const path = yield* Path.Path;
         yield* fs.makeDirectory(path.dirname(input.destination), { recursive: true });
         const building = `${input.destination}.building`;
+        const clearSqliteSideFiles = Effect.gen(function* () {
+          if (layout !== 'sqlite') return;
+          // These exact paths belong to the discarded or completed staging
+          // candidate, never to the active database at input.destination.
+          yield* Effect.forEach(
+            ['-journal', '-wal', '-shm'],
+            (suffix) => fs.remove(`${building}${suffix}`, { force: true }),
+            { discard: true },
+          );
+        });
         const hasher = sha256.create();
         let written = 0;
         // Set once the candidate has a name of its own, so a failure removes
         // exactly what this run created and never a live generation.
         let staged = Option.none<string>();
         const install = Effect.gen(function* () {
+          // Unlink stale staging names before exclusive creation: never follow
+          // a symlink or overwrite bytes through a hard-linked staging file.
+          yield* fs.remove(building, { force: true });
+          yield* clearSqliteSideFiles;
           yield* artifact.bytes.pipe(
             Stream.tap((chunk) =>
               Effect.sync(() => {
@@ -666,7 +792,7 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
                 written += chunk.byteLength;
               }),
             ),
-            Stream.run(fs.sink(building)),
+            Stream.run(fs.sink(building, { flag: 'wx' })),
           );
           // Size and digest are the whole trust surface, so both close before
           // the semantic verifier is allowed to open the candidate file.
@@ -724,6 +850,8 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
           }
           const installed = yield* verify(building);
           yield* provenanceStore.write(building, provenance);
+          yield* clearSqliteSideFiles;
+          yield* checkSqliteRefresh(input.destination);
           yield* fs.rename(building, input.destination);
           // A SQLite artifact carries its own provenance, so a sidecar left
           // by an earlier flat install of the same destination would be a
@@ -742,6 +870,7 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
             Effect.all(
               [
                 fs.remove(building, { force: true }),
+                clearSqliteSideFiles,
                 // The candidate's staging sidecar goes with the candidate: a
                 // failed install must leave nothing behind that a later read
                 // could mistake for a generation.
@@ -760,7 +889,10 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
           ),
         );
       }).pipe(
-        Effect.mapError((cause) => CorpusInstallationError.make({ corpus: reportedCorpus, cause })),
+        Effect.mapError((cause) => {
+          if (Schema.is(SqliteRefreshRefused)(cause)) return cause;
+          return CorpusInstallationError.make({ corpus: reportedCorpus, cause });
+        }),
         Effect.provide(BunServices.layer),
       ),
   });

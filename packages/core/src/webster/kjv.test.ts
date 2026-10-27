@@ -1,4 +1,4 @@
-import { Effect } from 'effect';
+import { Effect, Schema } from 'effect';
 import { expect, it } from 'bun:test';
 
 import domain from './fixtures/kjv-endings.json';
@@ -17,6 +17,15 @@ const lookup = (query: string) =>
     WebsterService.use((service) => service.lookup(query)).pipe(Effect.provide(layer)),
   );
 
+it('keeps the independently reviewed lexical judgments for the complete KJV domain', () => {
+  // The independent reviewed-domain digest prevents a matching wrong fixture
+  // edit from excusing a wrong production lemma.
+  const judgments = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown))(domain.forms);
+  expect(new Bun.CryptoHasher('sha256').update(judgments).digest('hex')).toBe(
+    '010f43f619980acd4d4df9ec965ecb3e1fb40b9aea761d6f83f381a6086aa387',
+  );
+});
+
 for (const [form, expected] of [
   ['doeth', 'do'],
   ['doest', 'do'],
@@ -29,7 +38,26 @@ for (const [form, expected] of [
 for (const form of ['soweth', 'sowest', 'swalloweth', 'tilleth', 'tillest', 'leaveth', 'leftest'])
   it(`returns no entry for KJV ${form} when the source has only an unrelated noun homograph`, () => {
     expect(lookup(form).entries).toEqual([]);
+    expect(lookup(form).match).toBe('none');
   });
+
+for (const form of ['proceedeth', 'loatheth'])
+  it(`returns no entry for KJV ${form} when its source record is unsafe`, () => {
+    expect(lookup(form).entries).toEqual([]);
+    expect(lookup(form).match).toBe('none');
+  });
+
+it('resolves closest to the audited KJV verb close ahead of the exact adjective', () => {
+  expect(lookup('closest')).toMatchObject({ match: 'kjv-alias', key: 'close' });
+  expect(lookup('closest').entries.map((entry) => entry.headword)).toEqual(['close']);
+});
+
+it('preserves exact grammar entries ahead of irregular aliases', () => {
+  for (const form of ['art', 'dost', 'hast', 'wast']) {
+    expect(lookup(form).match).toBe('exact');
+    expect(lookup(form).entries.map((entry) => entry.headword)).toEqual([form]);
+  }
+});
 
 it('resolves every audited KJV form to its reviewed entry or none with real collision vocabulary', () => {
   const failures = Effect.runSync(

@@ -4,42 +4,83 @@ import { Effect, FileSystem, Layer, Schema } from 'effect';
 import { expect, it } from 'effect-bun-test';
 
 import domain from './fixtures/kjv-endings.json';
+import lexicon from './fixtures/kjv-lexicon.json';
+import { hasOwnVerbMarker } from './fixtures/verb-source.js';
 import { WebsterService } from './service.js';
 import { layerWebsterBun } from './service-bun.js';
 
 const filename = new URL('../../data/webster.db', import.meta.url).pathname;
-// Source labels, including the pinned transcription's abbreviation and grammar
-// entries. A matching headword alone does not establish that it is the verb.
-const verbMarker =
-  /<i>verb\b|<i>v<\/i>\.|<\/b>,?\s*(?:v\.|V[TI]\b|(?:the )?second person\b|past tense of the substantive verb\b)/iu;
 
-it.scoped('every KJV verb form resolves to a source-marked verb or no entry', () =>
-  WebsterService.use((service) =>
-    Effect.gen(function* () {
-      const db = yield* Effect.acquireRelease(
-        Effect.sync(() => new Database(filename, { readonly: true, create: false })),
-        (opened) => Effect.sync(() => opened.close()),
-      );
-      const source = db.query<{ source_html: string }, [number]>(
-        'SELECT source_html FROM entries WHERE id = ?',
-      );
-      const exceptions = new Set(Object.keys(domain.verbSourceExceptions));
-      const failures: string[] = [];
-      expect(domain.forms).toHaveLength(970);
-      for (const row of domain.forms) {
-        if (row.kind !== 'verb') continue;
-        const result = yield* service.lookup(row.form);
-        for (const entry of result.entries) {
-          const html = source.get(entry.id)?.source_html ?? '';
-          const sameWordException =
-            entry.headword === row.canonical && exceptions.has(entry.headword);
-          if (!verbMarker.test(html) && !sameWordException)
-            failures.push(`${row.form} → ${entry.headword}: source does not mark a verb`);
+it.scoped(
+  'every KJV verb and exact inflection resolves to its own source-marked verb or no entry with no unused exceptions',
+  () =>
+    WebsterService.use((service) =>
+      Effect.gen(function* () {
+        const db = yield* Effect.acquireRelease(
+          Effect.sync(() => new Database(filename, { readonly: true, create: false })),
+          (opened) => Effect.sync(() => opened.close()),
+        );
+        const source = db.query<{ source_html: string }, [number]>(
+          'SELECT source_html FROM entries WHERE id = ?',
+        );
+        const exceptions = new Set(Object.keys(domain.verbSourceExceptions));
+        const used = new Set<string>();
+        const failures: string[] = [];
+        let verbRows = 0;
+        let exactInflections = 0;
+        expect(domain.forms).toHaveLength(970);
+        for (const row of domain.forms) {
+          if (row.kind !== 'verb' && row.kind !== 'exact-inflection') continue;
+          verbRows++;
+          if (row.kind === 'exact-inflection') exactInflections++;
+          const result = yield* service.lookup(row.form);
+          if (row.kind === 'exact-inflection') expect(result.match).toBe('exact');
+          for (const entry of result.entries) {
+            const html = source.get(entry.id)?.source_html ?? '';
+            if (hasOwnVerbMarker(html, entry.headword)) continue;
+            if (entry.headword === row.canonical && exceptions.has(entry.headword)) {
+              used.add(entry.headword);
+              continue;
+            }
+            failures.push(`${row.form} → ${entry.headword}: source does not mark its own verb`);
+          }
         }
+        expect(failures).toEqual([]);
+        expect([...exceptions].filter((key) => !used.has(key))).toEqual([]);
+        expect(verbRows).toBe(876);
+        expect(exactInflections).toBe(4);
+      }),
+    ).pipe(Effect.provide(layerWebsterBun({ filename }).pipe(Layer.provide(BunServices.layer)))),
+);
+
+it.scoped('the fast lexicon contains every required real key and no nonexistent keys', () =>
+  Effect.gen(function* () {
+    const db = yield* Effect.acquireRelease(
+      Effect.sync(() => new Database(filename, { readonly: true, create: false })),
+      (opened) => Effect.sync(() => opened.close()),
+    );
+    const required = new Set<string>();
+    for (const row of domain.forms) {
+      required.add(row.form);
+      if (row.lemma !== 'none') required.add(row.lemma);
+      if (row.canonical !== 'none') required.add(row.canonical);
+      if (/(eth|est)$/u.test(row.form)) {
+        const bare = row.form.slice(0, -3);
+        required.add(row.form.slice(0, -2));
+        required.add(bare);
+        if (/([bcdfghjklmnpqrstvwxyz])\1$/u.test(bare)) required.add(bare.slice(0, -1));
       }
-      expect(failures).toEqual([]);
-    }),
-  ).pipe(Effect.provide(layerWebsterBun({ filename }).pipe(Layer.provide(BunServices.layer)))),
+    }
+    const real = new Set(
+      db
+        .query<{ key: string }, []>('SELECT DISTINCT key FROM entries')
+        .all()
+        .map((row) => row.key),
+    );
+    const fast = new Set(lexicon.keys);
+    expect([...required].filter((key) => real.has(key) && !fast.has(key))).toEqual([]);
+    expect([...fast].filter((key) => !real.has(key))).toEqual([]);
+  }),
 );
 
 const actualDomain = WebsterService.use((service) =>

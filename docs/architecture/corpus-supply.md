@@ -24,18 +24,26 @@ The snapshot retains all 62,391 records and 62,388 normalized keys, including
 two `anticonstitutional` and three `counter-revolution` rows. Each entry keeps
 source HTML, plaintext, original headword and stable source-ordinal id.
 Definitions retain their senses and quotation order. FTS5 searches literal
-definition terms with AND, rank and id tie-breaking. Exact lookup wins before
+definition terms with AND, rank and id tie-breaking. The audited `closest`
+override resolves to CLOSE (Jeremiah 22:15) instead of the exact adjective;
+if CLOSE is absent it returns none. Otherwise exact lookup wins before
 the reviewed KJV alias table, then the bounded `-eth` / `-est` fallback.
 The complete repository KJV domain is committed in
 `packages/core/src/webster/fixtures/kjv-endings.json`: 962 suffix words, plus eight
 explicit irregular/noun guard forms, with frequencies and expected resolutions.
-An independent real-SQLite property checks every verb result's source HTML for
-verb labels or explicit grammar entries, with the review's documented exceptions
-in the fixture. A headword-string match alone does not establish verb identity.
+An independent real-SQLite property checks all 876 verb and exact-inflection
+rows for labels or explicit grammar entries after their own bold headword,
+with necessary same-word exceptions and their reasons in the fixture. Every
+exception must be consumed. The frozen reviewed-lemma judgments and full census
+remain separate checks. Fast fixture vocabulary is compared with real required
+SQLite keys. A headword-string match alone does not establish verb identity.
 Aliases cover irregulars, spelling changes, colliding stems and explicit
-nonverb exclusions. The missing SOW, SWALLOW, TILL and LEAVE verbs explicitly
-resolve to none, preserving their canonical verbs in the fixture instead of
-returning the unrelated noun homographs. Missing alias targets stop; an unrelated
+nonverb exclusions. The seven KJV forms for the missing SOW, SWALLOW, TILL and
+LEAVE verbs return none; exact noun queries retain their raw entries.
+`proceedeth` and `loatheth` also return none because their source records contain
+PROCEEDER's text and only a heading respectively. Canonical verbs remain in the
+fixture. Alias outcomes distinguish a lemma key from an explicit no-entry stop
+and from no alias. Missing alias targets stop; an unrelated
 candidate never substitutes for them. The generic fallback rejects one-letter
 stems. The response distinguishes audited aliases from generic heuristic matches.
 Exact grammar entries for dost/hast/art/wast remain exact; the fixture also

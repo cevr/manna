@@ -28,6 +28,12 @@ export class CorpusInstallationError extends Schema.TaggedError<CorpusInstallati
   },
 ) {}
 
+/** Expected refusal: the caller does not own the outgoing SQLite session or WAL. */
+export class SqliteRefreshRefused extends Schema.TaggedError<SqliteRefreshRefused>()(
+  'SqliteRefreshRefused',
+  { destination: Schema.String, wal: Schema.String, message: Schema.String },
+) {}
+
 export class CorpusRecipeUnavailableError extends Schema.TaggedError<CorpusRecipeUnavailableError>()(
   'CorpusRecipeUnavailableError',
   {
@@ -39,4 +45,5 @@ export type CorpusSupplyError =
   | CorpusSourceUnavailableError
   | CorpusContributionRejectedError
   | CorpusInstallationError
+  | SqliteRefreshRefused
   | CorpusRecipeUnavailableError;

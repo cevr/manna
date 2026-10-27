@@ -2,7 +2,7 @@ import { Context, Effect, Layer, Option } from 'effect';
 
 import { WebsterError, type WebsterEntry, type WebsterLookup } from './model.js';
 import { normalizeHeadword } from './source.js';
-import { kjvAlias } from './kjv-aliases.js';
+import { KjvAlias, kjvAlias } from './kjv-aliases.js';
 
 interface WebsterApi {
   readonly lookup: (query: string) => Effect.Effect<WebsterLookup, WebsterError>;
@@ -41,16 +41,27 @@ export const makeWebsterApi = (
 ): WebsterApi => ({
   lookup: Effect.fn('WebsterService.lookup')(function* (query) {
     const key = normalizeHeadword(query);
-    const exact = yield* byKey(key);
-    if (exact.length > 0) return { query, entries: exact, match: 'exact', key };
-    const alias = kjvAlias(key);
-    if (Option.isSome(alias)) {
-      if (alias.value !== 'none') {
-        const entries = yield* byKey(alias.value);
-        if (entries.length > 0) return { query, entries, match: 'kjv-alias', key: alias.value };
-      }
-      return { query, entries: [], match: 'none', key };
+    const none: WebsterLookup = { query, entries: [], match: 'none', key };
+    const resolveAlias = (target: string) =>
+      byKey(target).pipe(
+        Effect.map((entries): WebsterLookup => {
+          if (entries.length > 0) return { query, entries, match: 'kjv-alias', key: target };
+          return none;
+        }),
+      );
+    const policy = Option.map(
+      kjvAlias(key),
+      KjvAlias.$match({
+        Override: ({ key }) => ({ override: true, result: resolveAlias(key) }),
+        Lemma: ({ key }) => ({ override: false, result: resolveAlias(key) }),
+        NoEntry: () => ({ override: false, result: Effect.succeed(none) }),
+      }),
+    );
+    if (Option.isNone(policy) || !policy.value.override) {
+      const exact = yield* byKey(key);
+      if (exact.length > 0) return { query, entries: exact, match: 'exact', key };
     }
+    if (Option.isSome(policy)) return yield* policy.value.result;
     for (const candidate of candidates(key)) {
       const entries = yield* byKey(candidate);
       if (entries.length > 0) return { query, entries, match: 'kjv-inflection', key: candidate };
