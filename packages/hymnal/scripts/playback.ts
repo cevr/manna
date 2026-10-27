@@ -15,7 +15,6 @@ const textBytes = () => readFileSync(join(data, 'source-text.json'), 'utf8');
 const fixesBytes = () => readFileSync(join(data, 'fixes/refrains.json'), 'utf8');
 const Manifest = Schema.Struct({
   version: Schema.Literal(1),
-  inputsHash: Schema.String,
   overrides: Schema.Array(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 695 }))),
 });
 const decodeManifest = Schema.decodeUnknownSync(Schema.fromJsonString(Manifest));
@@ -58,9 +57,11 @@ const inputsHash = (source: string, fixes: string) => {
 };
 const fingerprint = (number: number) => {
   const midi = readFileSync(join(data, `midi/${pad(number)}.mid`));
+  return { midi, sourceHash: corpusHash(number) };
+};
+const corpusHash = (number: number) => {
   const corpus = readFileSync(join(data, `sdah-1985/${pad(number)}.json`));
-  const sourceHash = new Bun.CryptoHasher('sha256').update(midi).update(corpus).digest('hex');
-  return { midi, sourceHash };
+  return new Bun.CryptoHasher('sha256').update(corpus).digest('hex');
 };
 const fingerprints = () =>
   new Map(Array.from({ length: 695 }, (_, i) => [i + 1, fingerprint(i + 1)]));
@@ -71,22 +72,18 @@ const ownSource = (sources: ReturnType<typeof fingerprints>, number: number) => 
 
 /** Both native and web build derivations use the same checked numeric join. */
 export const readPlayback = (hymns: readonly Hymn[]): readonly Hymn[] => {
-  const checked = Result.try(() => inputsHash(textBytes(), fixesBytes()));
-  if (Result.isFailure(checked)) return mismatch('file');
-  const inputs = checked.success;
   const decodedManifest = Result.try(() =>
     decodeManifest(readFileSync(join(folder, 'manifest.json'), 'utf8')),
   );
   if (Result.isFailure(decodedManifest)) return mismatch('manifest');
   const manifest = decodedManifest.success;
-  if (manifest.inputsHash !== inputs) return mismatch('inputs');
   const overrides = new Set(manifest.overrides);
   return hymns.map((hymn) => {
     // The corpus check proves every other sidecar equals the existing numeric
     // projection. Its own digest is checked by the fast package storage guard.
     if (!overrides.has(hymn.number)) return hymn;
     const raw = Result.try(() => ({
-      sourceHash: fingerprint(hymn.number).sourceHash,
+      sourceHash: corpusHash(hymn.number),
       text: readFileSync(join(folder, `${pad(hymn.number)}.json`), 'utf8'),
     }));
     if (Result.isFailure(raw)) return mismatch('file', hymn.number);

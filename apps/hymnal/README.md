@@ -552,8 +552,11 @@ The chord and follow bundles join the same versioned numeric sidecars from
 melody supplies both syllable times and chord anchors. A melisma keeps its
 syllable until the next syllable onset. Shared-note syllables have the same
 onset; Plain and untrusted parts keep whole-line follow marks. Input hashes
-prevent stale metadata from being joined to different words or MIDI files.
+prevent metadata from being joined to different corpus words.
 One manifest fingerprints compiler inputs and lists changed projections.
-The build checks each override's own MIDI/corpus digest; other hymns reuse the corpus objects.
+The manifest's global fingerprint is generation provenance only. The build
+checks each override's corpus digest, schema and word cuts; other hymns reuse
+the corpus objects. Stale compiler or MIDI inputs never fail the app build.
+Generation and the slow fresh-compile test catch staleness.
 All 695 numeric sidecars remain available. Their census records each part's
 follow level. A mismatch names its reason and the regenerate command.

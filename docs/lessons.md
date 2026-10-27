@@ -4282,10 +4282,20 @@ The form of an entry, each field on its own line:
 - **Date:** 2026-10-27
 - **Kind:** review
 - **Said:** "The sidecar shape is an unjustified repo and gate cost"
-- **Source:** hymnapp/playbulk/p3-round-1-findings.md F1 (Major M1, ledger ordinal)
-- **Wrong:** Every compiler edit rewrote 695 global digests, and formatting doubled the generated size.
-- **Cause:** Each hymn repeated global provenance and generated numeric JSON passed through oxfmt.
-- **Guard:** code: `packages/hymnal/src/playback.test.ts` `playback sidecars stay one line, hymn-local and below 17 MB`
+- **Source:** hymnapp/playbulk/p3-round-1-findings.md F1 and hymnapp/playbulk/p3-round-2-findings.md F1 (Major M1, ledger ordinals)
+- **Wrong:** Every compiler edit rewrote 695 global digests, formatting doubled the size, and checking global provenance made unrelated edits fail app builds.
+- **Cause:** Generation provenance was treated as a build prerequisite instead of leaving staleness to generation and the slow fresh-compile proof. Builds need only schema, corpus binding and valid word cuts.
+- **Guard:** code: `apps/hymnal/src/follow/staleness.slow.test.ts` `playback builds survive stale generation inputs`; `packages/hymnal/src/playback.test.ts` `playback sidecars stay one line, hymn-local and below 17 MB`
+
+### playback-build-inputs
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "The app build's turbo inputs do not include the files the build now reads"
+- **Source:** hymnapp/playbulk/p3-round-2-findings.md F2 (Minor m1, ledger ordinal)
+- **Wrong:** A numeric sidecar or join change could reuse a cached app bundle.
+- **Cause:** The app build inputs listed the corpus and compiler sources but omitted the numeric sidecars and join script.
+- **Guard:** code: `apps/hymnal/src/follow/staleness.slow.test.ts` `playback build cache includes its numeric data and join`
 
 ### melody-onset-slack
 

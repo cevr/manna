@@ -579,18 +579,22 @@ build decodes these overrides and checks version, hymn identity, source
 digest and word cuts before joining them to the existing words. Other
 hymns reuse their corpus objects; all 695 sidecars remain available for
 placement work. Each hymn's digest
-covers only its MIDI bytes and exact corpus bytes. One `manifest.json`
-holds the global fingerprint: source text, refrain order; `src/align.ts`,
+covers only the exact corpus bytes onto which the cuts are joined. MIDI
+and compiler staleness do not fail app builds or app unit tests. One `manifest.json`
+holds generation provenance, which the build does not check: source text, refrain order; `src/align.ts`,
 `chord.ts`, `compile.ts`, `harmony.ts`, `hymn.ts`, `midi.ts`, `placement.ts`,
 `playback.ts`, `score.ts`, `syllables.ts`, `timing.ts`; `scripts/sources.ts`,
 `source-text.ts`, `playback.ts`; this package's `package.json`, root
 `bun.lock`, the installed `syllable` and `cmu-pronouncing-dictionary` entry
 bytes and `syllable/problematic.js`. The fast package storage guard checks
-all 695 own MIDI/corpus digests. The build checks the own digest of each
+all 695 corpus digests. The build checks the corpus digest of each
 override it uses; unchanged projections use the corpus directly.
 A compiler edit with unchanged output
-rewrites only the manifest. A mismatch states its reason and the regenerate
-command above. The slow all-hymn test checks fresh compilation against all
-committed sidecars. A dedicated
+rewrites only the manifest when the generator runs; the app continues to
+build before regeneration. Staleness is caught by fresh generation and
+the slow all-hymn fresh-compile test, which compares all committed sidecars
+and proves override completeness. A build fails only on invalid schema,
+corpus binding or word cuts, with the reason and regenerate command above.
+A dedicated
 single-voice track is retained, including legato; an earlier polyphonic
 accompaniment uses the keyboard soprano. Both compilers use that selection.

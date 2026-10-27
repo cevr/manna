@@ -26,7 +26,6 @@ test('playback sidecars stay one line, hymn-local and below 17 MB', () => {
     const levels = [...metadata.stanzas, ...metadata.refrain].map((part) => part.level);
     if (JSON.stringify(row?.levels) !== JSON.stringify(levels)) faults.push([number, 4]);
     const digest = new Bun.CryptoHasher('sha256')
-      .update(readFileSync(new URL(`midi/${name.slice(0, 3)}.mid`, data)))
       .update(readFileSync(new URL(`sdah-1985/${name}`, data)))
       .digest('hex');
     if (metadata.sourceHash !== digest) faults.push([number, 2]);
@@ -49,7 +48,10 @@ test('playback sidecars stay one line, hymn-local and below 17 MB', () => {
         JSON.stringify(row.levels) !== JSON.stringify(row.baseline.levels),
     )
     .map((row: { number: number }) => row.number);
-  expect(changed).toEqual([214, 388]);
+  expect(
+    changed,
+    'Follow levels changed; run bun run --cwd packages/hymnal playback and review the census',
+  ).toEqual([214, 388]);
 });
 
 const hymn = Schema.decodeSync(Hymn)({
