@@ -287,6 +287,41 @@ it.effect('keyplay pause and seek during replacement supersede its time and inte
   }),
 );
 
+it.effect('keyplay a seek during a pending key load owns the final landing', () =>
+  Effect.gen(function* () {
+    using app = yield* open();
+    app.send(Command.Start({ track }));
+    yield* app.playing;
+    app.hold();
+    app.move(100, 1);
+    yield* settle;
+    app.send(Command.Seek({ seconds: 40 }));
+    yield* app.tick(500);
+    app.pending[0]?.release();
+    yield* app.playing;
+    yield* app.tick();
+    expect(app.read().positionMs).toBeGreaterThanOrEqual(40_000);
+    expect(app.calls.filter((it) => it.operation === 'seek').at(-1)?.at).toBe(40_000);
+  }),
+);
+
+it.effect('keyplay all capo frets leave a playing recording and its dispatch trace unchanged', () =>
+  Effect.gen(function* () {
+    using app = yield* open();
+    app.send(Command.Start({ track }));
+    yield* app.playing;
+    const before = app.calls.length;
+    const selected = app.registry.get(app.player.recording);
+    for (let capo = 0; capo < 12; capo++) {
+      app.move(100, 0, capo);
+      yield* settle;
+      expect(app.calls.length).toBe(before);
+      expect(app.state()._tag).toBe('Playing');
+      expect(app.registry.get(app.player.recording)).toBe(selected);
+    }
+  }),
+);
+
 it.effect(
   'keyplay silent scoreClock keeps the line time across keys and capo without device calls',
   () =>
