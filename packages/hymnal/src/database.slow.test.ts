@@ -18,7 +18,7 @@ import { layerHymnalBun } from '@manna/core/hymnal/bun';
 import { buildDatabase, DATA, OUTPUT, readDatabaseSources } from '../scripts/compile-db.js';
 import { readSourceText } from '../scripts/source-text.js';
 import { keyOnPitch, pitchClass } from './chord.js';
-import { type DatabaseSources, validateSources } from './database.js';
+import type { DatabaseSources } from './database.js';
 import { type Fit, type Hymn, type Part, type Reason, type Syllable, sung } from './hymn.js';
 import { keySet, recordingKey } from './recordings.js';
 
@@ -892,12 +892,12 @@ describe('generated corpus', () => {
           ...sources,
           hymns: [sources.hymns[0], ...sources.hymns].filter((h): h is Hymn => h !== undefined),
         };
-        expect(Result.isFailure(yield* Effect.result(validateSources(duplicate)))).toBe(true);
+        expect(Result.isFailure(yield* Effect.result(buildDatabase(a, duplicate)))).toBe(true);
         const index = {
           ...sources,
           index: { ...sources.index, hymns: sources.index.hymns.slice(1) },
         };
-        expect(Result.isFailure(yield* Effect.result(validateSources(index)))).toBe(true);
+        expect(Result.isFailure(yield* Effect.result(buildDatabase(a, index)))).toBe(true);
       }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
 });

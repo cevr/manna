@@ -101,9 +101,7 @@ const partLines = (part: StoredPart): readonly string[] => {
 };
 
 /** Relational checks complement the source schemas. Failure carries only number and field. */
-export const validateSources = Effect.fn('CorpusDatabase.validate')(function* (
-  sources: DatabaseSources,
-) {
+const validateSources = Effect.fn('CorpusDatabase.validate')(function* (sources: DatabaseSources) {
   const { source, hymns, index, topics, metres, census } = sources;
   if (hymns.length !== 695 || hymns.some((h, i) => h.number !== i + 1))
     return yield* CorpusDatabaseError.make({ operation: 'hymn-domain' });
