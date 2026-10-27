@@ -161,6 +161,45 @@ describe('part sheet', () => {
     expect(reasonOf(paintHidden(sheet, 'arm', paint, under))).toBe('the sheet holds no part arm');
   });
 
+  test('hidden paint is refused under a front pixel that is not opaque, which would let it show', () => {
+    // an ink box with one clear texel inside it, read by the default figure reader
+    const { view } = viewOf(32, 32, (x, y) =>
+      Option.liftPredicate(INK, () => x >= 8 && x < 24 && y >= 8 && y < 24),
+    );
+    view.rgba.set([0, 0, 0, 0], (16 * 32 + 16) * 4);
+    const all = [
+      {
+        polygon: [
+          [0, 0],
+          [32, 0],
+          [32, 32],
+          [0, 32],
+        ] as const,
+      },
+    ];
+    const sheet = Result.getOrThrow(
+      cutParts(view, {
+        parts: [
+          { name: 'cloak', take: all },
+          { name: 'body', take: all },
+        ],
+      }),
+    );
+    expect(ownerAt(sheet, 16, 16)).toBe(1);
+    const red: Raster = { width: 32, height: 32, rgba: new Uint8Array(32 * 32 * 4) };
+    for (let i = 0; i < 32 * 32; i++) red.rgba.set([255, 0, 0, 255], i * 4);
+    const clear = new Uint8Array(32 * 32);
+    clear[16 * 32 + 16] = 1;
+    expect(reasonOf(paintHidden(sheet, 'body', red, clear))).toBe(
+      'paint at (16, 16) would show at rest: cloak, in front of body, is not opaque there',
+    );
+    // under an opaque pixel of the same part, the paint is hidden
+    const opaque = new Uint8Array(32 * 32);
+    opaque[12 * 32 + 12] = 1;
+    const painted = Result.getOrThrow(paintHidden(sheet, 'body', red, opaque));
+    expect(recompose(painted, view).rgba).toEqual(view.rgba);
+  });
+
   test('the same view and cut give the same sheet', () => {
     const [a, b] = [sheetOf(), sheetOf()];
     expect(a.owner).toEqual(b.owner);

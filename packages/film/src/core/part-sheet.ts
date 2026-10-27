@@ -287,10 +287,11 @@ export const recompose = (sheet: PartSheet, ground?: Raster): Raster => {
 
 /**
  * `sheet` with `paint`'s bytes laid into part `part` at each pixel `where`
- * marks (1), each one a pixel a part in front of `part` owns, so that paint
- * never shows at rest. Refused, laying nothing, where any marked pixel is not
- * (the ground, the part's own, a part behind it), for a part the sheet does
- * not hold, or for paint or a mask of another size.
+ * marks (1), each one a pixel a part in front of `part` owns and is opaque on,
+ * so that paint never shows at rest. Refused, laying nothing, where any marked
+ * pixel is not (the ground, the part's own, a part behind it, a front part's
+ * pixel of alpha below 255), for a part the sheet does not hold, or for paint
+ * or a mask of another size.
  */
 export const paintHidden = (
   sheet: PartSheet,
@@ -305,12 +306,21 @@ export const paintHidden = (
   if (paint.width !== sheet.width || paint.height !== sheet.height || where.length !== n)
     return refuse(`the paint or its mask is not the sheet's size, ${sheet.width}×${sheet.height}`);
   // a part in front of the part at k is one listed before it: owner 1 to k
-  const shows = where.findIndex(
-    (m, i) => m === 1 && !((sheet.owner[i] ?? 0) >= 1 && (sheet.owner[i] ?? 0) <= k),
-  );
-  if (shows >= 0)
+  const inFront = (i: number) => (sheet.owner[i] ?? 0) >= 1 && (sheet.owner[i] ?? 0) <= k;
+  const at = (i: number) => `(${i % sheet.width}, ${Math.floor(i / sheet.width)})`;
+  const unowned = where.findIndex((m, i) => m === 1 && !inFront(i));
+  if (unowned >= 0)
     return refuse(
-      `paint at (${shows % sheet.width}, ${Math.floor(shows / sheet.width)}) would show at rest: no part in front of ${part} owns it`,
+      `paint at ${at(unowned)} would show at rest: no part in front of ${part} owns it`,
+    );
+  // recompose lets a pixel through where its owner is not opaque, so only an opaque owner hides paint
+  const seen = where.findIndex(
+    (m, i) =>
+      m === 1 && (sheet.parts[(sheet.owner[i] ?? 1) - 1]?.pixels.rgba[i * 4 + 3] ?? 0) < 255,
+  );
+  if (seen >= 0)
+    return refuse(
+      `paint at ${at(seen)} would show at rest: ${sheet.parts[(sheet.owner[seen] ?? 1) - 1]?.name ?? 'the part in front'}, in front of ${part}, is not opaque there`,
     );
   const parts = sheet.parts.map((p, j): PartLayer => {
     if (j !== k) return p;
