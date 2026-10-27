@@ -1,11 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import {
-  type CastClipContext,
-  type CastProp,
-  type CastView,
-  castDrawOrder,
-  clipCast,
-} from './cast.ts';
+import { type CastProp, type CastView, castDrawOrder, clipCast } from './cast.ts';
 import type { RivePropSpec } from './rive.ts';
 
 /** A rectangle as a path takes it: its corner, its width and its height. */
@@ -15,7 +9,7 @@ type Rect = readonly [number, number, number, number];
 const recordedClips = (view: CastView, views: ReadonlyArray<CastView>) => {
   const clips: Array<{ readonly rects: ReadonlyArray<Rect>; readonly rule: CanvasFillRule }> = [];
   let path: Rect[] = [];
-  const ctx: CastClipContext = {
+  const ctx: Parameters<typeof clipCast>[0] = {
     beginPath: () => {
       path = [];
     },

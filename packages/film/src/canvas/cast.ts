@@ -149,7 +149,7 @@ const castClip = (view: CastView, views: ReadonlyArray<CastView>, margin: number
 };
 
 /** The part of a 2D context a view's clip is laid on. */
-export type CastClipContext = Pick<CanvasRenderingContext2D, 'beginPath' | 'rect' | 'clip'>;
+type CastClipContext = Pick<CanvasRenderingContext2D, 'beginPath' | 'rect' | 'clip'>;
 
 /**
  * Clips `ctx` to where `view` is drawn beside `views` (`castClip`): its box
