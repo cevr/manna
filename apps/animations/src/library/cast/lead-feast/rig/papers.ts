@@ -36,11 +36,11 @@ export const PAPERS = papers({
     crease: TURN.sleeve,
     rim: 0,
   },
-  /** His teal sleeve (his left arm, under the mantle): the mantle's teal, its far side toward blue-violet. */
+  /** His teal sleeve (his left arm, under the mantle): greener than the mantle, as the sheet paints it (#628989, hue 180), its far side toward blue-violet. */
   mantleSleeve: {
-    color: '#5d8790',
+    color: '#608989',
     shade: '#435770',
-    light: '#6f979c',
+    light: '#729c99',
     crease: TURN.sleeve,
     rim: 0,
   },

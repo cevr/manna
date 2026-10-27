@@ -81,8 +81,8 @@ interface LeadViewSpec {
   readonly face: Omit<TracedFigureSpec['face'], 'gaze'>;
   /** Which sleeve each arm is in: his right arm's is cream (`creamAcross` where it crosses his cream tunic whole, seated), his left's teal. */
   readonly sleeves: { readonly near: keyof typeof SLEEVE; readonly far: keyof typeof SLEEVE };
-  /** His near arm as the view draws it raised: where it turns, sheet pixels (`TracedArmSpec.pivot`); seated, his elbow on his knee. */
-  readonly nearArm?: { readonly pivot: Pt };
+  /** His near arm as the view draws it: where it turns when raised, sheet pixels (`TracedArmSpec.pivot`; seated, his elbow on his knee), and what lies on its sleeve (in profile, its cuff). */
+  readonly nearArm?: { readonly pivot?: Pt; readonly tones?: ReadonlyArray<TracedTone> };
 }
 
 /** A tone of `color` on `pts` (none drawn where it has no pieces). */
@@ -101,6 +101,23 @@ const SLEEVE_EDGE = {
   creamAcross: TONES.creamAcross,
   teal: TONES.tealEdge,
 } as const;
+
+/** How deep the band across a sleeve's cuff runs, sheet pixels: the line the sheet draws where a sleeve lying on his garment ends over his hand. */
+const CUFF = 6;
+
+/** The band across the cuff of the sleeve traced as `outline`, in `color`, a chain of four straight sides past its edges (laid on the sleeve, it is clipped to it). */
+const cuffOf = (outline: ReadonlyArray<Pt>, color: `#${string}`): TracedTone => {
+  const xs = outline.map(([x]) => x);
+  const bottom = Math.max(...outline.map(([, y]) => y));
+  const [x0, x1] = [Math.min(...xs) - 4, Math.max(...xs) + 4];
+  const corners: Pt[] = [
+    [x0, bottom - CUFF],
+    [x1, bottom - CUFF],
+    [x1, bottom + 4],
+    [x0, bottom + 4],
+  ];
+  return { pts: [corners.flatMap((p, i) => [p, p, corners[(i + 1) % 4] ?? p])], color };
+};
 
 /** How far each curl's lit disc lies toward the light, a share of its radius: the dark crescent under it, as the sheet paints his curls. */
 const CURL_CRESCENT = 0.35;
@@ -221,6 +238,7 @@ export const leadFeastProfileLeft = leadView(PROFILE_LEFT, {
   ears: { near: PROFILE_LEFT.EAR_NEAR },
   face: { ...AT_REST, marks: PROFILE_LEFT.MARKS },
   sleeves: { near: 'teal', far: 'cream' },
+  nearArm: { tones: [cuffOf(PROFILE_LEFT.ARM_NEAR, TONES.tealEdge)] },
 });
 
 /** From behind: his curls over his whole head, his ears either side; his teal left sleeve on screen left, his cream right on screen right; his face, under his hair, is the front's. */
@@ -245,6 +263,7 @@ export const leadFeastProfileRight = leadView(PROFILE_RIGHT, {
   ears: { near: PROFILE_RIGHT.EAR_NEAR },
   face: { ...AT_REST, marks: PROFILE_RIGHT.MARKS },
   sleeves: { near: 'cream', far: 'cream' },
+  nearArm: { tones: [cuffOf(PROFILE_RIGHT.ARM_NEAR, TONES.creamEdge)] },
 });
 
 /** Three-quarters to screen right: his face slid toward it, his ear behind; his cream right sleeve on screen left, his teal left on screen right. */
