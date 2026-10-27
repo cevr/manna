@@ -84,9 +84,9 @@ The form of an entry, each field on its own line:
 ### hymn-search-literal-operators
 
 - **Date:** 2026-10-27
-- **Kind:** review
-- **Said:** "FTS adds word matches for punctuation-only and operator-like input that the substring search never returned"
-- **Source:** hymndb/round-2-findings.md m1
+- **Kind:** owner
+- **Said:** "let's just fix those real quick. They all seem pretty small."
+- **Source:** Owner's 2026-10-27 instruction, `tmp/orchestrate/hymnapp/hymndb/log.md` (quote and provenance supplied by the hymnapp orchestrator).
 - **Wrong:** Operator-like input and a lone accented letter gained broad token matches.
 - **Cause:** FTS tokenization discarded the literal symbols or folded a single letter's diacritic.
 - **Guard:** code: `packages/core/src/hymnal/service-bun.test.ts` `keeps operator-like queries and lone accented letters on literal substring search`
@@ -1885,7 +1885,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-mail/review-1.md F4
 - **Wrong:** Joining again after leaving cleared `confirm_sent_at`, so leave and sign-up in turn sent a confirm letter each time, past the hour between them.
 - **Cause:** One column held two meanings, the newest link and the start of the hour, and the rejoin cleared it for the first.
-- **Guard:** code: `apps/firsttheblade/src/mail/list.test.ts` `leaving and joining again does not start the hour between confirm letters again`
+- **Guard:** code: `apps/firsttheblade/src/list/List.story.test.ts` `leaving and coming back does not start the hour between links again`
 
 ### film-letter-made-before-its-claim
 
@@ -1925,7 +1925,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-mail/review-2.md F4
 - **Wrong:** The test that the sign-up answers before its work held the work until it was settled, while Alchemy's `waitUntil` starts it at once, and the doc said the work runs after the answer.
 - **Cause:** The test double was built for the order wanted, not the one the host gives.
-- **Guard:** code: `apps/firsttheblade/src/mail/mail.test.ts` `a sign-up is answered while its letter is still being sent`
+- **Guard:** code: `apps/firsttheblade/src/mail/mail.test.ts` `a sign-up is answered while its background work is already running`
 
 ### send-claim-checks-the-subscriber
 
