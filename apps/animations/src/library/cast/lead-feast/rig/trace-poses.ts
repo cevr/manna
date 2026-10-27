@@ -13,7 +13,7 @@
 // `seated-traced.ts`). Pure.
 
 import type { TraceSheet } from '@manna/film/tools';
-import { rect, sleeveAt, standing } from './trace.ts';
+import { oval, rect, sleeveAt, standing } from './trace.ts';
 
 export const TRACE = {
   member: 'lead-feast',
@@ -40,7 +40,44 @@ export const TRACE = {
         },
       },
       ears: { earNear: [262, 366] },
-      chin: { kind: 'closed', row: 408 },
+      // His ear's skin runs on into the rose of his cheek (no line, rows 354-374): x 247-269, rows 345-375.
+      earClips: { earNear: oval(258, 360, 11, 15) },
+      // The band of curls under his ear (x 232-262, rows 378-393), parted from his hair by the sheet's line.
+      earBand: 'under',
+      earLit: oval(258, 360, 11, 15),
+      chin: {
+        kind: 'closed',
+        // Below his jaw's line where it leaves his chin's ink (rows 408-418 at x 188).
+        row: 420,
+        // His jaw's line, rising from his chin's ink to his ear, in a deep rose (#d7774b at 192,413; #d36d43 at 222,400): 10 rows deep at x 188, 5 at x 224.
+        paint: 'rose',
+        line: [
+          [186, 406],
+          [228, 394],
+          [232, 400],
+          [206, 416],
+          [188, 420],
+          [186, 420],
+        ],
+        // That rose, from his chin's ink up to his ear, and the soft rose under it on his neck (#ea9566 at 202,423); his head rolled from the light, the soft rose runs on up his face's far edge to his temple (x 236-240 at row 330, x 228-258 at row 370).
+        shade: [
+          [234, 326],
+          [244, 326],
+          [244, 350],
+          [262, 356],
+          [262, 372],
+          [244, 384],
+          [234, 396],
+          [232, 414],
+          [204, 432],
+          [186, 428],
+          [186, 404],
+          [204, 400],
+          [218, 390],
+          [226, 378],
+          [228, 354],
+        ],
+      },
       sharp: [],
       // The band of curls behind his ear runs out to a hairline thinner than 2 px opens.
       hairOpen: 3,
@@ -130,8 +167,37 @@ export const TRACE = {
         },
       },
       ears: { earNear: [528, 360] },
+      // His ear's skin runs on into his cheek at its front (no line, rows 350-372): x 517-541, rows 342-375.
+      earClips: { earNear: oval(529, 358, 12, 17) },
+      earLit: oval(529, 358, 12, 17),
       // His head tipped back: no line under his jaw runs level, so his head runs down his throat to the neckline (row 440), the shade under his jaw a tone on it.
-      chin: { kind: 'open', row: 440 },
+      chin: {
+        kind: 'open',
+        row: 440,
+        // His jaw's line, from his chin's ink back to under his ear, in a deep rose (#d4744a at 482,398; #e68e60 at 508,388).
+        paint: 'rose',
+        line: [
+          [470, 394],
+          [490, 391],
+          [512, 383],
+          [514, 389],
+          [492, 402],
+          [470, 405],
+        ],
+        // That rose, and the soft rose under it down his throat (#f29660 at 494,406).
+        shade: [
+          [468, 392],
+          [484, 388],
+          [500, 384],
+          [510, 376],
+          [520, 378],
+          [520, 392],
+          [512, 402],
+          [512, 418],
+          [474, 418],
+          [468, 404],
+        ],
+      },
       sharp: [],
       near: {
         pick: { silhouette: true },
@@ -213,8 +279,60 @@ export const TRACE = {
         },
       },
       ears: { earNear: [1126, 350] },
-      chin: { kind: 'closed', row: 428 },
+      // His ear's skin runs on into the rose of his cheek (no line, rows 340-370): x 1104-1128, rows 334-372.
+      earClips: { earNear: oval(1116, 352, 12, 18) },
+      earLit: oval(1116, 352, 12, 18),
+      chin: {
+        kind: 'closed',
+        row: 428,
+        // His jaw's line, rising from his chin's ink (x 1069, rows 419-426) to his ear, in a deep rose (#d16e44 at 1075,422; #d47148 at 1101,403).
+        paint: 'rose',
+        line: [
+          [1067, 416],
+          [1107, 397],
+          [1111, 402],
+          [1109, 408],
+          [1071, 430],
+          [1067, 428],
+        ],
+        // That rose, the soft rose under it on his neck (#e99467 at 1099,422), and up his face's far edge to his temple (#f19968, x 1089-1095 at row 336).
+        shade: [
+          [1089, 326],
+          [1099, 326],
+          [1105, 336],
+          [1095, 362],
+          [1103, 372],
+          [1113, 372],
+          [1117, 392],
+          [1113, 408],
+          [1121, 418],
+          [1117, 432],
+          [1095, 436],
+          [1069, 430],
+          [1065, 420],
+          [1085, 412],
+          [1099, 398],
+          [1093, 382],
+          [1089, 352],
+        ],
+      },
       sharp: [],
+      // His darkest hair, behind his ear down to his neck, painted into his line as dark as its ink (L 40-43 at x 1109-1120, row 382), and the band of curls under his ear it holds (x 1106-1129, rows 362-392): out to the sheet's outer edge (x 1145 at row 362, 1134 at 382, 1124 at 392) less 7 px.
+      hairReach: [
+        [1131, 350],
+        [1139, 356],
+        [1138, 362],
+        [1133, 372],
+        [1127, 382],
+        [1117, 392],
+        [1107, 398],
+        [1103, 392],
+        [1105, 372],
+        [1114, 364],
+        [1124, 352],
+      ],
+      // The hairline over his brow runs out to a tip thinner than 2 px opens (it doubles back at 997.5,353.5).
+      hairOpen: 3,
       // The lit rim down his face's left edge (1009-1010 on row 380).
       skinLit: ['#f9dda2', '#fac88d'],
       near: {
@@ -294,7 +412,41 @@ export const TRACE = {
         },
       },
       ears: { earNear: [807, 462] },
-      chin: { kind: 'closed', row: 517 },
+      // His ear's skin runs on into the rose of his cheek (no line, rows 455-478): x 797-819, rows 447-479.
+      earClips: { earNear: oval(808, 463, 11, 16) },
+      earLit: oval(808, 463, 11, 16),
+      chin: {
+        kind: 'closed',
+        row: 517,
+        // His jaw's line, brown where it leaves his fist (#753a20 at 754,508), a deep rose on toward his ear (#d57048 at 764,508; rows 491-499 at x 784): laid in its rose.
+        paint: 'rose',
+        line: [
+          [744, 504],
+          [766, 500],
+          [786, 489],
+          [788, 497],
+          [776, 508],
+          [760, 518],
+          [744, 520],
+        ],
+        // That rose, the soft rose under it on his neck (#e58d5f at 784,511), and up his face's far edge to his temple (x 776-790, rows 427-500).
+        shade: [
+          [780, 427],
+          [790, 427],
+          [794, 451],
+          [790, 481],
+          [800, 491],
+          [798, 507],
+          [796, 523],
+          [774, 527],
+          [754, 525],
+          [750, 517],
+          [770, 507],
+          [774, 497],
+          [776, 481],
+          [780, 459],
+        ],
+      },
       sharp: [],
       near: {
         pick: sleeveAt([687, 582]),

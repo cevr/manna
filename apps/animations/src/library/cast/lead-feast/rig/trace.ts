@@ -36,7 +36,7 @@ export const rect = (x0: number, y0: number, x1: number, y1: number): TracePt[] 
 ];
 
 /** An oval as a polygon of 16 points, `rx` across and `ry` down from its middle. */
-const oval = (cx: number, cy: number, rx: number, ry: number): TracePt[] =>
+export const oval = (cx: number, cy: number, rx: number, ry: number): TracePt[] =>
   Array.from({ length: 16 }, (_, i): TracePt => [
     Math.round((cx + rx * Math.cos((i / 16) * 2 * Math.PI)) * 2) / 2,
     Math.round((cy + ry * Math.sin((i / 16) * 2 * Math.PI)) * 2) / 2,
@@ -149,10 +149,20 @@ interface Chin {
   readonly corner?: ReadonlyArray<TracePt>;
   /** Where that line lightens toward his ear, the polygon it is laid lighter in (none unless given). */
   readonly fade?: ReadonlyArray<TracePt>;
+  /** How the sheet paints that line: in brown (`brown`, unless given), or in a deep rose (`rose`, his poses: #d47048, L 133 to 140), read nearer it than his rose shade. */
+  readonly paint?: keyof typeof JAW_LINE;
 }
 
-/** The sheet's brown his jaw's line is read nearer than his skin's colours, lit and shaded: the line lightens toward his ear, so it is read by colour, not by his hair's classes alone. */
-const JAW_LINE = { near: '#985636', far: ['#fdaf70', '#f8a062', '#e58a62', '#e07a50'] };
+/**
+ * The colour his jaw's line is read nearer than his skin's colours, lit and
+ * shaded, by how the sheet paints it: the sheet's brown (the line lightens
+ * toward his ear, so it is read by colour, not by his hair's classes alone),
+ * or its deep rose, nearer it than his shade's rose.
+ */
+const JAW_LINE = {
+  brown: { near: '#985636', far: ['#fdaf70', '#f8a062', '#e58a62', '#e07a50'] },
+  rose: { near: '#d47048', far: ['#fdaf70', '#f8a062', '#e8875a', '#f2a06c', '#e58d5f'] },
+} as const;
 
 /** The rose shade under his jaw's line, read nearer than his lit skin. */
 const JAW_SHADE = { near: '#e8875a', far: ['#f2a06c', '#fdaf70', '#feb476', '#fcdb9c', '#f9cb8a'] };
@@ -280,6 +290,14 @@ interface Standing {
   readonly skinLit?: ReadonlyArray<string>;
   /** How far his hair is opened where a view draws the band behind his ear thinner than 2 px opens clean (2 unless given). */
   readonly hairOpen?: number;
+  /**
+   * Where the sheet paints his hair into his line as dark as its ink (L 40
+   * to 43, behind an ear down to his neck), so a reading of the line takes
+   * it, and his head and hair stop short of his silhouette: the polygon round
+   * it, read off the sheet's outer edge less the house's line (7 px). His
+   * head, his hair and its dark run out to it. None unless given.
+   */
+  readonly hairReach?: ReadonlyArray<TracePt>;
   readonly near: ArmSpec;
   readonly far: ArmSpec;
   readonly arms: keyof typeof UNDER_ARMS;
@@ -302,8 +320,8 @@ const earBox = (seed: TracePt, top = EAR_REACH) =>
 /** How far above an ear's seed his hair gives its brown up to the band's tone, sheet pixels: the ear's top, where the sheet's hair ends over it. */
 const BAND_TOP = 18;
 
-/** How far below an ear's seed the band under a turned head's ear is read from, and to, sheet pixels: from its lobe's lower half (the ear's skin is not brown) to where it tapers out down his neck (x 1329-1362, rows 335-372 on the three-quarter right). */
-const UNDER_EAR = { from: 10, to: 52, left: 16, right: 24 } as const;
+/** How far round an ear's seed the band under a turned head's ear is read, sheet pixels: from its lobe's lower half (the ear's skin is not brown) to where it tapers out down his neck, and from the band's far end to its near (x 1329-1362, rows 335-372 on the three-quarter right; x 232-262, rows 378-393 on poses-1). */
+const UNDER_EAR = { from: 10, to: 52, left: 32, right: 24 } as const;
 
 /** Where an ear's band is read as its tone, by how the view lays it: in the ear's box from `top` above its seed (`tone`), under the ear alone (`under`), or nowhere (`hair`: it runs on into his hair). */
 const EAR_BAND_CLIP = {
@@ -410,8 +428,18 @@ export const standing = (v: Standing): TraceSheetView => {
       },
       // An open chin's neck: the skin between his jaw and the garment's neckline (none under a closed chin).
       neckSkin: { classes: ['skin'], clip: neckBand, minus: ['beside'], as: 'none' },
+      // Where the view reads his hair painted into his line as dark as its ink: his figure within its polygon, past the line (none unless given).
+      hairReach: { silhouette: true, clip: v.hairReach ?? [], reach: 'figure', as: 'none' },
       head: {
-        plus: ['face', 'hairMass', 'neckSkin', 'jawCorner', ...Object.keys(ears), ...lobeNames],
+        plus: [
+          'face',
+          'hairMass',
+          'neckSkin',
+          'jawCorner',
+          'hairReach',
+          ...Object.keys(ears),
+          ...lobeNames,
+        ],
         // Out to an ear's lobe where the view reads one, past the sheet's line there.
         reach: 'figure',
         // A hand raised to the chin is its own circle, never the head's skin.
@@ -428,6 +456,9 @@ export const standing = (v: Standing): TraceSheetView => {
       },
       hair: {
         within: 'hairMass',
+        // Out past his line where the view reads his hair painted into it (`hairReach`).
+        plus: ['hairReach'],
+        reach: 'figure',
         grow: 4,
         // Opened 2 px (or as the view says): the band of hair the sheet draws behind an ear is his, the hairline tip it ends in is not.
         open: v.hairOpen ?? 2,
@@ -504,6 +535,9 @@ export const standing = (v: Standing): TraceSheetView => {
       },
       hairDark: {
         classes: ['hairDark'],
+        // And his hair painted into his line, as dark as it is (`hairReach`).
+        plus: ['hairReach'],
+        reach: 'figure',
         inside: 'hair',
         grow: 0,
         as: 'tones',
@@ -523,7 +557,7 @@ export const standing = (v: Standing): TraceSheetView => {
       },
       jawLine: {
         classes: [...BROWN, 'skin'],
-        colour: JAW_LINE,
+        colour: JAW_LINE[v.chin.paint ?? 'brown'],
         inside: 'head',
         // Under the chin only, never the curls beside the jaw: its band runs out to the hair at the ear; or the line the sheet paints, as the view reads it.
         clip:

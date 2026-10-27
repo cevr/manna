@@ -388,7 +388,8 @@ export const leadFeastRaised = leadView(
   { ...RAISED, HAND_NEAR: RAISED_HAND_NEAR },
   {
     sheet: 'poses',
-    head: { view: 'threeQuarter' },
+    head: { view: 'threeQuarter', chin: 'open' },
+    jaw: TONES.jawRose,
     ears: { near: RAISED.EAR_NEAR },
     face: { ...AT_REST, marks: RAISED.MARKS, extra: WITH_EXTRA },
     sleeves: { near: 'raised', far: 'teal' },
@@ -437,7 +438,8 @@ export const leadFeastDrinking = leadView(
   },
   {
     sheet: 'poses',
-    head: { view: 'side' },
+    head: { view: 'side', chin: 'open' },
+    jaw: TONES.jawRose,
     ears: { near: DRINKING.EAR_NEAR },
     face: { ...AT_REST, marks: DRINKING.MARKS },
     sleeves: { near: 'tealRaised', far: 'cream' },
@@ -449,7 +451,8 @@ export const leadFeastDrinking = leadView(
 /** Reaching (poses-4): three-quarters to screen left, leaning to the low table, his near sleeve down from his shoulder against his side to his hand on the bottle there, as the sheet draws it; his teal far sleeve hanging. */
 export const leadFeastReaching = leadView(REACHING, {
   sheet: 'poses',
-  head: { view: 'threeQuarter' },
+  head: { view: 'threeQuarter', chin: 'open' },
+  jaw: TONES.jawRose,
   ears: { near: REACHING.EAR_NEAR },
   face: { ...AT_REST, marks: REACHING.MARKS, extra: WITH_EXTRA },
   sleeves: { near: 'cream', far: 'teal' },
@@ -493,7 +496,8 @@ export const leadFeastSeated = leadView(
   { ...SEATED, ...seatedArms() },
   {
     sheet: 'poses',
-    head: { view: 'threeQuarter' },
+    head: { view: 'threeQuarter', chin: 'open' },
+    jaw: TONES.jawRose,
     ears: { near: SEATED.EAR_NEAR },
     face: { ...AT_REST, marks: SEATED.MARKS, extra: WITH_EXTRA },
     sleeves: { near: 'creamAcross', far: 'teal' },

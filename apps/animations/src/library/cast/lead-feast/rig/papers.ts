@@ -87,6 +87,8 @@ export const TONES = {
   jawShade: '#e27f55',
   /** The soft rose round that shade, below his ear and down his neck (#f3a374 at 414,352). */
   jawSoft: '#f2a06c',
+  /** The line his jaw lays under his chin where the poses sheet paints it in a deep rose, not brown (#d47048 at 764,508; #d4744a at 482,398). */
+  jawRose: '#d5714a',
   /** The dark brown band the sheet paints round a front ear as its contour (#4b2e1e at 81,314). */
   earBand: '#4b2e1e',
   /** His sandals' straps: a warm brown. */
