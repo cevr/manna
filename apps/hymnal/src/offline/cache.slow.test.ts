@@ -12,6 +12,36 @@ const idle = (cache: typeof Offline.Service) =>
   );
 
 for (let offset = -5; offset <= 6; offset++)
+  it.effect(`offline restart keeps all 695 saved identities offset=${offset}`, () =>
+    Effect.gen(function* () {
+      const f = fake();
+      yield* Effect.gen(function* () {
+        const cache = yield* Offline;
+        for (let number = 1; number <= 695; number++) yield* cache.enqueue({ number, offset });
+        yield* idle(cache);
+        expect((yield* cache.snapshot).saved).toBe(695);
+      }).pipe(Effect.provide(f.layer));
+      f.calls.length = 0;
+      f.control.networkFails = true;
+      yield* Effect.gen(function* () {
+        const cache = yield* Offline;
+        const faults: number[] = [];
+        for (let number = 1; number <= 695; number++) {
+          const id = { number, offset };
+          if (Option.isNone(yield* cache.local(id))) faults.push(number);
+          yield* cache.enqueue(id);
+        }
+        yield* idle(cache);
+        expect(faults.slice(0, 10)).toEqual([]);
+        expect(f.calls.length).toBe(0);
+        expect((yield* cache.snapshot).bytes).toBe(8340);
+        yield* cache.deleteAll;
+        expect(f.files.size).toBe(0);
+      }).pipe(Effect.provide(f.layer));
+    }),
+  );
+
+for (let offset = -5; offset <= 6; offset++)
   it.effect(`offline identity phases and joins for all 695 hymns offset=${offset}`, () =>
     Effect.gen(function* () {
       const f = fake();

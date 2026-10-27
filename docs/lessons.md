@@ -51,6 +51,16 @@ The form of an entry, each field on its own line:
 
 ## Process and tooling
 
+### offline-native-progress-value
+
+- **Date:** 2026-10-27
+- **Kind:** review
+- **Said:** "Native Text does not forward numeric ARIA values; use an accessible View for progress."
+- **Source:** hymnapp/playbulk/p5-self-check.md F1; native probe1
+- **Wrong:** Download progress used numeric ARIA props on Text. Web exposed them, while the native drive could not read the completed count.
+- **Cause:** React Native's Text handles the label but does not translate numeric ARIA props as View does. The shared DOM test host cannot prove this native mapping.
+- **Guard:** skill: native accessibility requires the simulator surface. Carried by `.claude/skills/verify-hymnal/features/offline.md`: "On iOS, verify the completed count and 695 in the progress accessibility value."
+
 ### hymn-swap-native-rejection-schedules
 
 - **Date:** 2026-10-27

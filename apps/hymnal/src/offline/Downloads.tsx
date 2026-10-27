@@ -27,15 +27,18 @@ export function Downloads() {
       </Text>
       <View style={styles.group}>
         <View style={styles.summary}>
-          <Text
+          <View
             testID="downloads-progress"
+            accessible
             role="progressbar"
             aria-label="Downloaded printed-key recordings"
             aria-valuemin={0}
             aria-valuemax={695}
             aria-valuenow={state.printed}
-            style={styles.label}
-          >{`${state.printed} of 695 recordings`}</Text>
+            aria-valuetext={`${state.printed} of 695 recordings`}
+          >
+            <Text aria-hidden style={styles.label}>{`${state.printed} of 695 recordings`}</Text>
+          </View>
           <Text
             testID="downloads-size"
             style={styles.detail}

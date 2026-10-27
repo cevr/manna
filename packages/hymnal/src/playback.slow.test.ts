@@ -581,11 +581,11 @@ for (const [from, to] of [
               .join(';')} count=${faults.length}`,
           );
         expect(faults.slice(0, 30)).toEqual([]);
-        expect(checked).toBeGreaterThan(40000);
+        expect(checked).toBeGreaterThan(50000);
         expect(occurrences).toBeGreaterThan(5000);
-        expect(melismas).toBeGreaterThan(2000);
+        expect(melismas).toBeGreaterThan(3000);
         expect(shared).toBeGreaterThan(0);
-        expect(plain).toBeGreaterThan(0);
+        expect(plain).toBeGreaterThanOrEqual(4);
       }),
   );
 

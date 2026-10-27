@@ -36,7 +36,7 @@ const idle = (cache: typeof Offline.Service) =>
   );
 const device = () => {
   const calls: { uri: string; at: number; number: number; offset: number }[] = [];
-  const control = { failLocal: false, failKey: false };
+  const control = { failLocal: false, failKey: false, failRemote: false };
   const status: Status = { state: 'playing', positionMs: 32000, durationMs: 120000 };
   const api: PlaybackApi = {
     play: (uri, at, options) =>
@@ -49,12 +49,16 @@ const device = () => {
         });
         if (
           (control.failLocal && uri.startsWith('file:')) ||
-          (control.failKey && options?.recording?.offset !== 0)
+          (control.failKey && options?.recording?.offset !== 0) ||
+          (control.failRemote && uri.startsWith('https:'))
         )
           return yield* PlaybackError.make({ operation: 'play', message: 'synthetic unavailable' });
         return { ...status, positionMs: at };
       }),
-    status: Effect.succeed(status),
+    status: Effect.suspend(() => {
+      if (control.failRemote) return Effect.succeed({ ...status, state: 'failed' });
+      return Effect.succeed(status);
+    }),
     pause: Effect.succeed({ ...status, state: 'paused' }),
     resume: Effect.succeed(status),
     seek: (at) => Effect.succeed({ ...status, positionMs: at }),
@@ -66,6 +70,38 @@ const device = () => {
   return { api, calls, control };
 };
 const timeline = { first: 5000, end: 240000, lines: [] };
+
+it.effect('offline missing media keeps the public player failure and retry path', () =>
+  Effect.gen(function* () {
+    const f = fake(),
+      d = device();
+    f.control.networkFails = true;
+    d.control.failRemote = true;
+    const on = yield* SubscriptionRef.make(true);
+    const layer = savingOn(
+      soundOn(
+        recordingsOn(localOn(Layer.succeed(Playback, d.api)).pipe(Layer.provide(f.layer))),
+        () => Option.some(timeline),
+        on,
+      ),
+    ).pipe(Layer.provide(f.layer));
+    const player = playerOn(layer, 250);
+    const registry = yield* Effect.acquireRelease(
+      Effect.sync(() => AtomRegistry.make()),
+      (r) => Effect.sync(() => r.dispose()),
+    );
+    registry.mount(player.send);
+    registry.set(player.send, Command.Start({ track: { number: 100, title: 'Hymn 100' } }));
+    for (let n = 0; n < 40; n++) yield* Effect.yieldNow;
+    expect(registry.get(player.state)._tag).toBe('Failed');
+    expect(d.calls.map((c) => c.uri)).toEqual([audioUrl(100)]);
+    d.control.failRemote = false;
+    f.control.networkFails = false;
+    registry.set(player.send, Command.Resume());
+    for (let n = 0; n < 40; n++) yield* Effect.yieldNow;
+    expect(d.calls.map((c) => c.uri)).toEqual([audioUrl(100), audioUrl(100)]);
+  }).pipe(Effect.scoped),
+);
 
 it.effect(
   'offline real score clock selects local key files and keeps explicit identity and place',

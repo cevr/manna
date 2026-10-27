@@ -14,7 +14,7 @@ export const offlineLive = offlineLayer.pipe(
   Layer.provide(mediaLayer),
   Layer.provide(httpLayer(origin())),
 );
-export const runtime = Atom.runtime(offlineLive);
+const runtime = Atom.runtime(offlineLive);
 export const progress = runtime
   .atom(Stream.unwrap(Effect.map(Offline, (cache) => cache.changes)), { initialValue: empty })
   .pipe(Atom.withServerValue(() => AsyncResult.success(empty)));
@@ -35,4 +35,5 @@ export const send = runtime.fn(
       Delete: () => cache.deleteAll,
     });
   }),
+  { concurrent: true },
 );

@@ -1,6 +1,6 @@
 /* oxlint-disable effect/noAsyncFunction, effect/noTryCatch, eslint/no-await-in-loop -- One filesystem adapter: close native file handles in the same Promise operation as their read/write, wrapped once by Effect.tryPromise. */
 /** Native media uses application support, never the platform's evictable cache. */
-import { Effect, Layer, Schema } from 'effect';
+import { Effect, Layer, Option, Schema } from 'effect';
 import { One } from 'one';
 import { Entry, Identity, identityKey, Media, OfflineError, storageName } from './cache';
 
@@ -10,14 +10,25 @@ const decode = Schema.decodeUnknownOption(Schema.fromJsonString(Entry));
 const encode = Schema.encodeSync(Schema.fromJsonString(Entry));
 export const mediaLayer = Layer.sync(Media, () => {
   const fs = One.FileSystem;
-  const root = `${fs.getDirectories().applicationSupport.replace(/\/$/, '')}/${storageName}/`;
-  const path = (id: Identity, ext: string) => `${root}${identityKey(id)}.${ext}`;
-  const ready = () => fs.makeDirectory(root, true);
+  let base = Option.none<string>();
+  // Resolve the native directory within an operation's typed Promise boundary.
+  // A missing filesystem must not prevent the online player from starting.
+  const root = () =>
+    Option.match(base, {
+      onSome: (uri) => uri,
+      onNone: () => {
+        const uri = `${fs.getDirectories().applicationSupport.replace(/\/$/, '')}/${storageName}/`;
+        base = Option.some(uri);
+        return uri;
+      },
+    });
+  const path = (id: Identity, ext: string) => `${root()}${identityKey(id)}.${ext}`;
+  const ready = () => fs.makeDirectory(root(), true);
   return Media.of({
     list: call(async () => {
       await ready();
       const found = new Map<string, Entry>();
-      for (const file of await fs.readDirectory(root)) {
+      for (const file of await fs.readDirectory(root())) {
         const match = /^(\d+)_(0|-?[1-6])\.(json|mp3)$/.exec(file.name);
         if (!match) continue;
         const id = { number: Number(match[1]), offset: Number(match[2]) };

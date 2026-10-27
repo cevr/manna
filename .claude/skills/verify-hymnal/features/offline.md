@@ -31,13 +31,14 @@ downloads play locally first. R2 remains the source for missing recordings.
 1. Open 100 without Play. Observe one printed-key request. Open Settings. A cut response leaves the completed count unchanged and shows a retry notice.
 2. Press `Download all recordings`. Observe a count between zero and 695, with at most two active saves. Press `Cancel download`. The count then stops increasing.
 3. Relaunch into Settings. Completed counts and bytes remain. Press `Download all recordings` again. Matching partials resume at their durable byte offset; a changed validator restarts the file. The final default count is 695.
-4. Open 100 again. Its completed default set makes no fetch. Open its player, change Key, read Sound as off, and press Play once. The saved count includes the additional key after completion. Capo adds no request.
+4. Open 100 again. Its completed default set makes no fetch. Hold its Key button if chords are off, then tap Key to open the dials. Change Key, read Sound as off, and press Play once. The saved count includes the additional key after completion. Capo adds no request.
 5. Block the fake origin. Repeat the saved-key action. Saved counts remain correct and no save request is sent. The fake-device adapter check proves local dispatch; Sound-off UI alone proves only the silent clock and controls.
 6. Press `Delete downloads`. Count and size become zero. Wait for former work to finish. They remain zero. Leave and return to Settings and relaunch; they remain zero.
 
 ## Gotchas
 
 - `downloads-progress`, `downloads-size` and `downloads-active` are the numeric observation targets. Do not retain a full DOM or AX tree.
+- On iOS, verify the completed count and 695 in the progress accessibility value. Visible text alone does not prove that native numeric ARIA values reached the accessibility tree.
 - The Download all button keeps the accessible name `Download all recordings` while its visible text offers Resume after cancellation or failure.
 - Silent Play does not call the recording device. Keep native recording output unverified under a hard silence rule. Never use Sound-off proof as audio evidence.
 - Downloads live in application support on native and origin-private files on web. The browser's HTTP cache and settings KVS hold no media blobs. Platform storage settings can clear app data.
