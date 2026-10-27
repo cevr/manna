@@ -9,7 +9,7 @@
  */
 
 import { Option } from 'effect';
-import { readPlayback } from '@manna/hymnal/playback/build';
+import { readPlayback, readPlacementPatches } from '@manna/hymnal/playback/build';
 import type { Hymn } from '@manna/hymnal/hymn';
 
 import { encodeHymn } from '../src/hymns/chords';
@@ -25,14 +25,15 @@ export const readPlaybackHymns = (): readonly Hymn[] => {
 };
 
 export const readChords = (): ReadonlyArray<readonly [number, string]> => {
-  if (Option.isNone(chords))
+  if (Option.isNone(chords)) {
+    const placements = readPlacementPatches(readPlaybackHymns());
     chords = Option.some(
       readPlaybackHymns().map(
         (hymn) =>
           [
             hymn.number,
             Option.getOrThrowWith(
-              encodeHymn(hymn),
+              encodeHymn(hymn, placements.get(hymn.number)),
               () =>
                 new Error(
                   `hymnal: hymn ${hymn.number} has a syllable the chord encoding cannot carry`,
@@ -41,6 +42,7 @@ export const readChords = (): ReadonlyArray<readonly [number, string]> => {
           ] as const,
       ),
     );
+  }
   return Option.getOrThrow(chords);
 };
 

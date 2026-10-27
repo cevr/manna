@@ -14,6 +14,8 @@
 
 import * as Chord from '@manna/hymnal/chord';
 import type { Hymn, Part } from '@manna/hymnal/hymn';
+import { Placements, type PlacementPatch } from '@manna/hymnal/playback';
+import type { Placement } from '@manna/hymnal/placement';
 import { Array as Arr, Effect, Option, Schema } from 'effect';
 
 import type { HymnText, Section } from './text';
@@ -176,6 +178,7 @@ const EncodedHymn = Schema.Tuple([
   Schema.Boolean,
   Schema.Array(EncodedPart),
   EncodedPart,
+  Schema.optionalKey(Placements),
 ]);
 type EncodedPart = typeof EncodedPart.Type;
 const encodeEncoded = Schema.encodeOption(Schema.fromJsonString(EncodedHymn));
@@ -221,7 +224,7 @@ const encodePart = (part: Part): Option.Option<EncodedPart> => {
 };
 
 /** `hymn`'s chords as the bundle carries them; none for a syllable the encoding cannot carry. */
-export const encodeHymn = (hymn: Hymn): Option.Option<string> =>
+export const encodeHymn = (hymn: Hymn, placements?: Placements): Option.Option<string> =>
   Option.all({
     stanzas: Option.all(hymn.stanzas.map(encodePart)),
     refrain: Option.match(Option.fromUndefinedOr(hymn.refrain), {
@@ -230,7 +233,12 @@ export const encodeHymn = (hymn: Hymn): Option.Option<string> =>
     }),
   }).pipe(
     Option.flatMap(({ stanzas, refrain }) =>
-      encodeEncoded([hymn.number, hymn.key.tonic, hymn.key.minor, stanzas, refrain]),
+      Option.match(Option.fromUndefinedOr(placements), {
+        onNone: () =>
+          encodeEncoded([hymn.number, hymn.key.tonic, hymn.key.minor, stanzas, refrain]),
+        onSome: (modes) =>
+          encodeEncoded([hymn.number, hymn.key.tonic, hymn.key.minor, stanzas, refrain, modes]),
+      }),
     ),
   );
 
@@ -292,15 +300,70 @@ const decodePart = (part: EncodedPart): Option.Option<PartChords> => {
 };
 
 /** A hymn's chords from its bundled string; none for a string that does not decode. */
-export const decodeHymn = (encoded: string): Option.Option<HymnChords> =>
-  Option.flatMap(decodeEncoded(encoded), ([number, tonic, minor, stanzas, refrain]) => {
+export const decodeHymn = (
+  encoded: string,
+  placement: Placement = 'beat',
+): Option.Option<HymnChords> =>
+  Option.flatMap(decodeEncoded(encoded), ([number, tonic, minor, stanzas, refrain, placements]) => {
     const key = { tonic, minor };
     if (!isKey(key)) return Option.none();
     return Option.all({
       stanzas: Option.all(stanzas.map(decodePart)),
       refrain: decodeRefrain(refrain),
-    }).pipe(Option.map(({ stanzas, refrain }) => ({ number, key, stanzas, refrain })));
+    }).pipe(
+      Option.map(({ stanzas, refrain }) => ({ number, key, stanzas, refrain })),
+      Option.flatMap((hymn) => {
+        if (placement === 'beat') return Option.some(hymn);
+        return Option.match(Option.fromUndefinedOr(placements), {
+          onNone: () => Option.some(hymn),
+          onSome: (modes) => placed(hymn, modes[placement]),
+        });
+      }),
+    );
   });
+
+/** Apply numeric alternatives before Simple/Advanced spelling, retaining every word and box. */
+const placed = (
+  hymn: HymnChords,
+  patches: readonly PlacementPatch[],
+): Option.Option<HymnChords> => {
+  const parts = [...hymn.stanzas, ...Option.toArray(hymn.refrain)];
+  for (const [p, l, k] of patches) {
+    const part = parts[p];
+    if (part?._tag !== 'Sung' || !part.lines[l]?.flat()[k]) return Option.none();
+  }
+  const at = new Map(patches.map(([p, l, k, changes]) => [`${p}:${l}:${k}`, changes]));
+  const apply = (part: PartChords, p: number): PartChords => {
+    if (part._tag === 'Plain') return part;
+    return {
+      ...part,
+      lines: part.lines.map((line, l) => {
+        let k = 0;
+        return line.map((word) =>
+          word.map((box) => {
+            const changes = at.get(`${p}:${l}:${k++}`);
+            if (!changes) return box;
+            return {
+              text: box.text,
+              chords: changes
+                .toSorted((a, b) => a[3] - b[3])
+                .map(([root, quality, bass]): Chord.Chord => {
+                  const chord = { root, quality: Arr.getUnsafe(Chord.Quality.literals, quality) };
+                  if (bass < 0) return chord;
+                  return { ...chord, bass };
+                }),
+            };
+          }),
+        );
+      }),
+    };
+  };
+  return Option.some({
+    ...hymn,
+    stanzas: hymn.stanzas.map(apply),
+    refrain: Option.map(hymn.refrain, (part) => apply(part, hymn.stanzas.length)),
+  });
+};
 
 /** The refrain's part, none (decoded) for a hymn with no refrain. */
 const decodeRefrain = (refrain: EncodedPart): Option.Option<Option.Option<PartChords>> => {
@@ -315,21 +378,23 @@ const decodeRefrain = (refrain: EncodedPart): Option.Option<Option.Option<PartCh
  */
 export const chordBook = (bundled: ReadonlyArray<readonly [number, string]>) => {
   const encoded = new Map(bundled);
-  const kept = new Map<number, Option.Option<HymnChords>>();
+  const kept = new Map<string, Option.Option<HymnChords>>();
   let decodes = 0;
-  const decode = (number: number): Option.Option<HymnChords> => {
+  const decode = (number: number, placement: Placement): Option.Option<HymnChords> => {
     decodes += 1;
-    const chords = Option.flatMap(Option.fromUndefinedOr(encoded.get(number)), decodeHymn);
+    const chords = Option.flatMap(Option.fromUndefinedOr(encoded.get(number)), (text) =>
+      decodeHymn(text, placement),
+    );
     if (Option.isNone(chords))
       Effect.runSync(Effect.logWarning(`[hymnal] chords.decode.failed number=${number}`));
     return chords;
   };
   return {
     /** The chords of hymn `number`, none when the bundle has none that decode. */
-    of: (number: number): Option.Option<HymnChords> =>
-      Option.getOrElse(Option.fromUndefinedOr(kept.get(number)), () => {
-        const chords = decode(number);
-        kept.set(number, chords);
+    of: (number: number, placement: Placement = 'beat'): Option.Option<HymnChords> =>
+      Option.getOrElse(Option.fromUndefinedOr(kept.get(`${number}:${placement}`)), () => {
+        const chords = decode(number, placement);
+        kept.set(`${number}:${placement}`, chords);
         return chords;
       }),
     decodes: () => decodes,

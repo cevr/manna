@@ -14,7 +14,7 @@
 import { createContext, use } from 'react';
 
 /** A dial a detent belongs to: the twelve keys, the capo's frets, the text sizes. */
-export type DialName = 'key' | 'capo' | 'size';
+export type DialName = 'key' | 'capo' | 'size' | 'placement';
 
 /** The cues that carry nothing but their name. */
 export type PlainCue =

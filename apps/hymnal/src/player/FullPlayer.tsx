@@ -49,6 +49,7 @@ import { TitleGo, titleGoes } from './title';
 import { Toggle } from './Toggle';
 import { RecordingNotice } from './RecordingNotice';
 import { PlayPage } from './PlayPage';
+import { PlacementDial } from './PlacementDial';
 
 export function FullPlayer() {
   return Option.match(usePlayer(), {
@@ -255,6 +256,7 @@ function ChordSection({ number }: { readonly number: number }) {
         <DialPanel>
           <Dials thumb={thumb} printed={printed} />
         </DialPanel>
+        <PlacementDial key={number} number={number} />
       </View>
     ),
   });

@@ -36,7 +36,7 @@ describe('the Settings route', () => {
       radios: radiosOf(page),
     }).toEqual({
       heading: true,
-      groups: ['Appearance', 'Chord style'],
+      groups: ['Appearance', 'Chord style', 'Chord placement'],
       chords: true,
       radios: [
         { label: 'System', checked: true },
@@ -44,6 +44,9 @@ describe('the Settings route', () => {
         { label: 'Dark', checked: false },
         { label: 'Simple', checked: true },
         { label: 'Advanced', checked: false },
+        { label: 'On the beat', checked: true },
+        { label: 'Simpler', checked: false },
+        { label: 'As the file plays', checked: false },
       ],
     });
   });
@@ -64,6 +67,15 @@ describe('the Settings route', () => {
       [...page.matchAll(/<div (?=[^>]*role="radio")(?=[^>]*aria-label="([^"]+)")/g)].map(
         ([, label]) => label,
       ),
-    ).toEqual(['System', 'Light', 'Dark', 'Simple', 'Advanced']);
+    ).toEqual([
+      'System',
+      'Light',
+      'Dark',
+      'Simple',
+      'Advanced',
+      'On the beat',
+      'Simpler',
+      'As the file plays',
+    ]);
   });
 });

@@ -1,9 +1,11 @@
 # Settings and about
 
-The Settings tab holds two choices, each a check beside the one chosen:
+The Settings tab holds choices, each a check beside the one chosen:
 the appearance, `System`, `Light` or `Dark`, which the app draws every
 screen in at once; and the chord style under `Chords`, `Simple` (the
-default) or `Advanced`, which every hymn's chords are shown in. Then the
+default) or `Advanced`, which every hymn's chords are shown in. `Chord placement`
+chooses `On the beat` (the default), `Simpler` or `As the file plays` for
+every hymn that uses the global choice. Then the
 switch `Sounds and haptics`, on at first: off, no control is felt or
 heard. Below them, the heading `About` credits the instruments the recordings are
 played on, as their licences ask; the app's version is not shown.
@@ -12,6 +14,8 @@ played on, as their licences ask; the app's version is not shown.
 
 - `settings-appearance`: a radio group `Appearance` of `System`, `Light`, `Dark`; a press chooses one.
 - `settings-kept`: the choice holds after leaving the tab and after a relaunch.
+- `chords-placement-global`: the radio group `Chord placement` offers `On the beat`, `Simpler`, `As the file plays`; `On the beat` is checked on a fresh install. A change applies immediately to every inheriting hymn.
+- `chords-placement-kept`: the global choice and each hymn override survive a relaunch. A hymn with an override keeps it when the global choice changes.
 - `settings-chords`: under the heading `Chords`, a radio group `Chord style` of `Simple`, `Advanced`, `Simple` checked at first; a press chooses one, hymns show their chords in it, and it holds after a relaunch.
 - `settings-feel`: the switch `Sounds and haptics`, after `Chord style` and before `About`, on at first; a press turns it off, and it stays off after a relaunch (`feel.md` for what it silences).
 - `about`: the heading `About`, then the credits: `Salamander Grand Piano` by `Alexander Holm`, `CC BY 3.0` (a link to the licence), and `VS Chamber Orchestra 2` by `Versilian Studios`, `CC0`.
@@ -39,6 +43,8 @@ played on, as their licences ask; the app's version is not shown.
 8. **Sounds and haptics (`settings-feel`).** `sim open settings --expect "label=Sounds and haptics"`. → the snapshot holds the switch `Sounds and haptics` after `Advanced` and before `About`, on (iOS `[checked]` or value 1; web `checked`). `sim tap "label=Sounds and haptics"`. → off. Relaunch (iOS `xcrun simctl terminate verify-hymnal im.cvr.hymnal`; web a reload), `sim open settings --expect "label=Sounds and haptics"`. → still off. `sim tap "label=Sounds and haptics"`. → on again.
 
 ## Gotchas
+
+- Placement journey: on Settings select each placement by its radio label; leave and return, then relaunch and return. On 373 and 388 open `Open player` and read the adjustable `Chord placement` value. An explicit override stays while a different hymn inherits. Clear through `Use global chord placement`, change the global value again and check the cleared hymn follows it. Finish with global `On the beat` and both hymns using global. Keep Sound off before every Play. Retain only control values, numeric chord IDs and counts; no images or hymn text. The per-hymn and in-play rows are in `chords-and-capo.md`. `src/player/placement.slow.test.tsx` covers the 8,340 persistence combinations and corrupt values.
 
 - On iOS the radios read as `other` elements with `[checked]`/`[unchecked]`; on the web as `radio` with `aria-checked`. Tap by label on both.
 - `Settings` names the tab and the screen title on iOS: use `role=button`.

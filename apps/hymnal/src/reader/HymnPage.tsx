@@ -28,7 +28,8 @@
 import type * as Chord from '@manna/hymnal/chord';
 import { useAtomValue } from '@effect/atom-react';
 import { Option } from 'effect';
-import type * as Atom from 'effect/reactivity/Atom';
+import * as Atom from 'effect/reactivity/Atom';
+import type { Placement } from '@manna/hymnal/placement';
 import { memo, type ReactNode, useCallback, useMemo, useRef } from 'react';
 import {
   ScrollView,
@@ -76,6 +77,8 @@ import { readingStyle } from './reading';
 export interface ChordReader {
   readonly chords: Atom.Writable<boolean>;
   readonly style: Atom.Atom<ChordStyle>;
+  readonly placement: Atom.Writable<Placement>;
+  readonly placementFor: (number: number) => Atom.Writable<'inherit' | Placement>;
   readonly move: (number: number) => Atom.Writable<Move>;
   readonly book: ChordBook;
   readonly reading: ReadingSettings;
@@ -94,8 +97,21 @@ export const HymnPage = memo(function HymnPage({
   const on = useAtomValue(reader.chords);
   const style = useAtomValue(reader.style);
   const move = useAtomValue(reader.move(hymn.number));
+  const placementAtom = useMemo(
+    () =>
+      Atom.make((get) => {
+        const own = get(reader.placementFor(hymn.number));
+        if (own === 'inherit') return get(reader.placement);
+        return own;
+      }),
+    [reader, hymn.number],
+  );
+  const placement = useAtomValue(placementAtom);
   // The hymn's syllables are drawn with chords on or off, so its string is decoded once it is shown.
-  const book = useMemo(() => reader.book.of(hymn.number), [reader.book, hymn.number]);
+  const book = useMemo(
+    () => reader.book.of(hymn.number, placement),
+    [reader.book, hymn.number, placement],
+  );
   const chords = useMemo(
     () =>
       book.pipe(

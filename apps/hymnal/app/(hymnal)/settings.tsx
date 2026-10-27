@@ -16,6 +16,7 @@ import type { ChordStyle } from '~/hymns/simple';
 import type { Appearance } from '~/settings';
 import { settings } from '~/store';
 import { color, useAccent } from '~/color';
+import { placements } from '@manna/hymnal/placement';
 
 interface Choice<A extends string> {
   readonly value: A;
@@ -44,6 +45,8 @@ export default function Settings() {
       <Choices label="Appearance" value={settings.appearance} choices={appearances} />
       <Heading style={styles.section}>Chords</Heading>
       <Choices label="Chord style" value={settings.chordStyle} choices={chordStyles} />
+      <Heading style={styles.section}>Chord placement</Heading>
+      <Choices label="Chord placement" value={settings.placement} choices={placements} />
       <FeelSwitch />
       <About />
     </ScrollView>
