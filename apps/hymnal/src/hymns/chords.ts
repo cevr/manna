@@ -370,8 +370,8 @@ const decodeRefrain = (refrain: EncodedPart): Option.Option<Option.Option<PartCh
 };
 
 /**
- * The bundled chords, each hymn decoded the first time it is asked for and
- * kept. A hymn whose string does not decode has none, logged once
+ * The bundled chords, each hymn and placement decoded on first use and
+ * kept. A failed hymn and placement has no chords, logged once
  * (`chords.decode.failed`); `decodes` counts the strings decoded.
  */
 export const chordBook = (bundled: ReadonlyArray<readonly [number, string]>) => {
@@ -384,7 +384,9 @@ export const chordBook = (bundled: ReadonlyArray<readonly [number, string]>) => 
       decodeHymn(text, placement),
     );
     if (Option.isNone(chords))
-      Effect.runSync(Effect.logWarning(`[hymnal] chords.decode.failed number=${number}`));
+      Effect.runSync(
+        Effect.logWarning(`[hymnal] chords.decode.failed number=${number} placement=${placement}`),
+      );
     return chords;
   };
   return {

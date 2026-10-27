@@ -24,6 +24,15 @@ import { DEFAULT_SIZE, Font, Size, Spacing } from './reader/reading';
 export const Appearance = Schema.Literals(['system', 'light', 'dark']);
 export type Appearance = typeof Appearance.Type;
 
+export const PlacementOverride = Schema.Literals(['inherit', ...Placement.literals]);
+export type PlacementOverride = typeof PlacementOverride.Type;
+/** Long accessible labels and compact marks belong to the app's controls. */
+export const placements = [
+  { value: 'beat', label: 'On the beat', mark: 'Beat' },
+  { value: 'simpler', label: 'Simpler', mark: 'Simpler' },
+  { value: 'file', label: 'As the file plays', mark: 'File' },
+] as const satisfies ReadonlyArray<{ value: Placement; label: string; mark: string }>;
+
 /** The reading settings, each its own stored atom. */
 export type ReadingSettings = ReturnType<typeof settingsOn>['reading'];
 
@@ -38,6 +47,20 @@ export const settingsOn = (store: Layer.Layer<KeyValueStore.KeyValueStore>) => {
       Atom.kvs({ runtime, key, schema, defaultValue: () => initial, mode: 'sync' }),
       () => initial,
     );
+  const placement = setting('chords.placement', Placement, 'beat');
+  const placementFor = Atom.family((number: number) =>
+    setting(`chords.placement.${number}`, PlacementOverride, 'inherit'),
+  );
+  const effectivePlacement = Atom.family((number: number) =>
+    Atom.withServerValue(
+      Atom.make((get) => {
+        const own = get(placementFor(number));
+        if (own === 'inherit') return get(placement);
+        return own;
+      }),
+      (): Placement => 'beat',
+    ),
+  );
   return {
     /** A hymn shows its words alone until the reader turns chords on. */
     chords: setting('chords', Schema.Boolean, false),
@@ -48,14 +71,9 @@ export const settingsOn = (store: Layer.Layer<KeyValueStore.KeyValueStore>) => {
      */
     chordStyle: setting('chords.style', ChordStyle, 'simple'),
     /** Global chord anchors; a hymn inherits until it has an explicit override. */
-    placement: setting('chords.placement', Placement, 'beat'),
-    placementFor: Atom.family((number: number) =>
-      setting(
-        `chords.placement.${number}`,
-        Schema.Literals(['inherit', ...Placement.literals]),
-        'inherit',
-      ),
-    ),
+    placement,
+    placementFor,
+    effectivePlacement,
     appearance: setting('appearance', Appearance, 'system'),
     /**
      * Whether Play sounds the recording, the switch beside Play: the same

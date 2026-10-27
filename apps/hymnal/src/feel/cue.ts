@@ -13,7 +13,7 @@
 
 import { createContext, use } from 'react';
 
-/** A dial a detent belongs to: the twelve keys, the capo's frets, the text sizes. */
+/** A dial a detent belongs to: keys, capo frets, text sizes or chord placement. */
 export type DialName = 'key' | 'capo' | 'size' | 'placement';
 
 /** The cues that carry nothing but their name. */

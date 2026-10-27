@@ -30,11 +30,6 @@ import { Schema } from 'effect';
 /** Placement changes anchors; chord spelling is a separate reader choice. */
 export const Placement = Schema.Literals(['beat', 'simpler', 'file']);
 export type Placement = typeof Placement.Type;
-export const placements: ReadonlyArray<{ readonly value: Placement; readonly label: string }> = [
-  { value: 'beat', label: 'On the beat' },
-  { value: 'simpler', label: 'Simpler' },
-  { value: 'file', label: 'As the file plays' },
-];
 
 export interface Syllable {
   /** When it is sung, in ticks. */

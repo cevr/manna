@@ -28,7 +28,7 @@
 import type * as Chord from '@manna/hymnal/chord';
 import { useAtomValue } from '@effect/atom-react';
 import { Option } from 'effect';
-import * as Atom from 'effect/reactivity/Atom';
+import type * as Atom from 'effect/reactivity/Atom';
 import type { Placement } from '@manna/hymnal/placement';
 import { memo, type ReactNode, useCallback, useMemo, useRef } from 'react';
 import {
@@ -53,7 +53,7 @@ import {
 } from '~/hymns/chords';
 import type { HymnText, Section } from '~/hymns/hymns';
 import { type ChordStyle, styled } from '~/hymns/simple';
-import type { ReadingSettings } from '~/settings';
+import type { PlacementOverride, ReadingSettings } from '~/settings';
 import { color, useAccent } from '~/color';
 
 import { FollowProvider, useFollow } from '~/follow/follow';
@@ -78,7 +78,8 @@ export interface ChordReader {
   readonly chords: Atom.Writable<boolean>;
   readonly style: Atom.Atom<ChordStyle>;
   readonly placement: Atom.Writable<Placement>;
-  readonly placementFor: (number: number) => Atom.Writable<'inherit' | Placement>;
+  readonly placementFor: (number: number) => Atom.Writable<PlacementOverride>;
+  readonly effectivePlacement: (number: number) => Atom.Atom<Placement>;
   readonly move: (number: number) => Atom.Writable<Move>;
   readonly book: ChordBook;
   readonly reading: ReadingSettings;
@@ -97,19 +98,8 @@ export const HymnPage = memo(function HymnPage({
   const on = useAtomValue(reader.chords);
   const style = useAtomValue(reader.style);
   const move = useAtomValue(reader.move(hymn.number));
-  const placementAtom = useMemo(
-    () =>
-      Atom.withServerValue(
-        Atom.make((get) => {
-          const own = get(reader.placementFor(hymn.number));
-          if (own === 'inherit') return get(reader.placement);
-          return own;
-        }),
-        (): Placement => 'beat',
-      ),
-    [reader, hymn.number],
-  );
-  const placement = useAtomValue(placementAtom);
+  const placement = useAtomValue(reader.effectivePlacement(hymn.number));
+  const wordsBook = useMemo(() => reader.book.of(hymn.number), [reader.book, hymn.number]);
   // The hymn's syllables are drawn with chords on or off, so its string is decoded once it is shown.
   const book = useMemo(
     () => reader.book.of(hymn.number, placement),
@@ -176,7 +166,7 @@ export const HymnPage = memo(function HymnPage({
           <PlayedKeyProvider value={played}>
             <FollowProvider value={follow.follow}>
               <ChordTapProvider value={tap}>
-                <Sections hymn={hymn} book={book} chords={chords} />
+                <Sections hymn={hymn} book={wordsBook} chords={chords} />
               </ChordTapProvider>
             </FollowProvider>
           </PlayedKeyProvider>

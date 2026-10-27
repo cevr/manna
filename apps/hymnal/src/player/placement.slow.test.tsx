@@ -1,5 +1,5 @@
 import { RegistryContext } from '@effect/atom-react';
-import { placements, type Placement } from '@manna/hymnal/placement';
+import type { Placement } from '@manna/hymnal/placement';
 import * as Chord from '@manna/hymnal/chord';
 import { expect, test } from 'bun:test';
 import { it } from 'effect-bun-test';
@@ -10,7 +10,7 @@ import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { settingsOn } from '~/settings';
+import { placements, settingsOn } from '~/settings';
 import { hymnAt } from '~/hymns/hymns';
 import { chordBook, sectionsOf } from '~/hymns/chords';
 import { styled } from '~/hymns/simple';
@@ -49,7 +49,12 @@ test('server placement rendering uses its default without opening the device sto
     }),
   );
   const own = settingsOn(store);
-  const reader = { ...readerOn(), placement: own.placement, placementFor: own.placementFor };
+  const reader = {
+    ...readerOn(),
+    placement: own.placement,
+    placementFor: own.placementFor,
+    effectivePlacement: own.effectivePlacement,
+  };
   const registry = AtomRegistry.make();
   renderToStaticMarkup(
     <RegistryContext value={registry}>
@@ -142,6 +147,35 @@ test('placement serializes every global, override and hymn combination and rejec
     registry.dispose();
   }
 });
+
+for (const changed of ['inherit', 'beat', 'simpler', 'file'] as const)
+  test(`a ${changed} override changes only its hymn across seeded assignments and restart`, () => {
+    const values = ['inherit', 'beat', 'simpler', 'file'] as const;
+    // A fixed, non-uniform assignment exposes aliased keys (including n % 100).
+    const expected = Array.from(
+      { length: 695 },
+      (_, i) => values[((i + 1) * 17 + Math.floor(i / 7) + 41) % 4] ?? 'inherit',
+    );
+    const device = new Map<string, string>();
+    const first = readerOn(device),
+      registry = AtomRegistry.make();
+    expected.forEach((value, i) => registry.set(first.placementFor(i + 1), value));
+    registry.dispose();
+    const again = readerOn(device),
+      reopened = AtomRegistry.make();
+    const all = () => expected.map((_, i) => reopened.get(again.placementFor(i + 1)));
+    expect(all()).toEqual(expected);
+    for (let n = 1; n <= 695; n++) {
+      reopened.set(again.placementFor(n), changed);
+      expected[n - 1] = changed;
+      expect(all()).toEqual(expected);
+    }
+    reopened.dispose();
+    const last = readerOn(device),
+      restarted = AtomRegistry.make();
+    expect(expected.map((_, i) => restarted.get(last.placementFor(i + 1)))).toEqual(expected);
+    restarted.dispose();
+  });
 
 const mount = (number: number, controlled = true, pageVisible = true) => {
   const hymn = Option.getOrThrow(hymnAt(String(number)));
@@ -246,6 +280,13 @@ test('web sheet exposes placement for its named hymn without a mounted reader', 
   expect(page.trace()).toEqual(before);
 });
 
+test('a chordless hymn sheet exposes no placement control or override', () => {
+  using page = mount(126, true, false);
+  expect(page.host.querySelector('[aria-label="Chord placement"]')).toBeNull();
+  expect(page.host.querySelector('[aria-label="Use global chord placement"]')).toBeNull();
+  expect(page.registry.get(page.reader.placementFor(126))).toBe('inherit');
+});
+
 test('placement updates real reader anchors in every player state without playback commands', () => {
   for (const number of [373, 388]) {
     using page = mount(number);
@@ -264,7 +305,10 @@ test('placement updates real reader anchors in every player state without playba
     for (const state of states) {
       act(() => page.registry.set(page.state, state));
       const before = page.trace();
-      for (const style of ['simple', 'advanced'] as const) {
+      // Player states cross modes; styles cross modes once below.
+      const styles: Array<'simple' | 'advanced'> = ['advanced'];
+      if (state._tag === 'Idle') styles.unshift('simple');
+      for (const style of styles) {
         act(() => page.registry.set(page.reader.style, style));
         for (const mode of placements.map((p) => p.value)) {
           page.choose(mode);
@@ -283,6 +327,12 @@ test('placement updates real reader anchors in every player state without playba
 test('Use global clears a hymn override, follows later defaults, and retires a fling owner', () => {
   using page = mount(388);
   page.choose('file');
+  expect(page.get('[aria-label="Use global chord placement"]').hasAttribute('aria-selected')).toBe(
+    false,
+  );
+  expect(page.get('[aria-label="Use global chord placement"]').getAttribute('aria-pressed')).toBe(
+    'false',
+  );
   expect(page.registry.get(page.reader.placementFor(373))).toBe('inherit');
   holdAnimations();
   using _held = { [Symbol.dispose]: () => act(() => landAnimations()) };
@@ -301,6 +351,9 @@ test('Use global clears a hymn override, follows later defaults, and retires a f
   act(() => old.onUpdate?.({ x: -104, translationX: 104 }));
   act(() => owed(2));
   expect(page.registry.get(page.reader.placementFor(388))).toBe('inherit');
+  expect(page.get('[aria-label="Use global chord placement"]').getAttribute('aria-pressed')).toBe(
+    'true',
+  );
   act(() => page.registry.set(page.reader.placement, 'simpler'));
   expect(
     page.get('[role="slider"][aria-label="Chord placement"]').getAttribute('aria-valuetext'),

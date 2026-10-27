@@ -142,8 +142,15 @@ const FADE = 3.6;
 /** How long the notch stretches and settles on each detent, in milliseconds. */
 const NOTCH = 140;
 
-/** The widest dial name: the name column of every dial is as wide as it, drawn, so the notches line up. */
-const WIDEST = 'CAPO';
+/** All dial names participate in the shared column, including placement. */
+const TITLES = { key: 'KEY', capo: 'CAPO', size: 'SIZE', placement: 'PLACE' } satisfies Record<
+  DialName,
+  string
+>;
+const WIDEST = Object.values(TITLES).reduce((widest, title) => {
+  if (title.length > widest.length) return title;
+  return widest;
+}, '');
 
 function Dial<A>(props: DialProps<A>) {
   const { dial, label, title, stops, index, wrap, said, drawStop, testID, resets = 0 } = props;

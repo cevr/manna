@@ -16,7 +16,7 @@ import type { ChordStyle } from '~/hymns/simple';
 import type { Appearance } from '~/settings';
 import { settings } from '~/store';
 import { color, useAccent } from '~/color';
-import { placements } from '@manna/hymnal/placement';
+import { placements } from '~/settings';
 
 interface Choice<A extends string> {
   readonly value: A;

@@ -1,26 +1,24 @@
-import { useAtom } from '@effect/atom-react';
-import { placements } from '@manna/hymnal/placement';
-import { Match } from 'effect';
+import { useAtom, useAtomValue } from '@effect/atom-react';
+import { Option } from 'effect';
 import { memo, use, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { color } from '~/color';
 import { plain, useCue } from '~/feel/cue';
+import { hasChords } from '~/hymns/chords';
+import { placements } from '~/settings';
 import { ChordReaderContext } from './Dials';
 import { DialPanel } from './DialPanel';
 import { DialView, MOST_SCALE } from './DialView';
 
-const marks = ['Beat', 'Simpler', 'File'];
+const marks = placements.map((choice) => choice.mark);
 
 /** One hymn's anchors; an explicit clear resumes the global choice. No player subscription. */
 export const PlacementDial = memo(function PlacementDial({ number }: { readonly number: number }) {
   const reader = use(ChordReaderContext);
-  const [global] = useAtom(reader.placement);
+  const global = useAtomValue(reader.placement);
   const [own, setOwn] = useAtom(reader.placementFor(number));
-  const effective = Match.value(own).pipe(
-    Match.when('inherit', () => global),
-    Match.orElse((mode) => mode),
-  );
+  const effective = useAtomValue(reader.effectivePlacement(number));
   const index = placements.findIndex((choice) => choice.value === effective);
   const selected = placements[index] ?? placements[0];
   const globalLabel = placements.find((choice) => choice.value === global)?.label;
@@ -36,6 +34,7 @@ export const PlacementDial = memo(function PlacementDial({ number }: { readonly 
     setOwn('inherit');
     cue(plain('reset'));
   };
+  if (!Option.exists(reader.book.of(number), hasChords)) return <></>;
   return (
     <View style={styles.section}>
       <Text role="heading" aria-level={2} style={styles.heading}>
@@ -55,6 +54,8 @@ export const PlacementDial = memo(function PlacementDial({ number }: { readonly 
           drawStop={(label, current) => (
             <Text
               aria-hidden
+              numberOfLines={1}
+              adjustsFontSizeToFit
               maxFontSizeMultiplier={MOST_SCALE}
               style={[styles.mark, current && styles.current]}
             >
@@ -72,7 +73,8 @@ export const PlacementDial = memo(function PlacementDial({ number }: { readonly 
       <Pressable
         role="button"
         aria-label="Use global chord placement"
-        accessibilityState={{ selected: own === 'inherit' }}
+        aria-pressed={own === 'inherit'}
+        accessibilityState={Platform.select({ web: {}, default: { selected: own === 'inherit' } })}
         onPress={inherit}
         style={({ pressed }) => [styles.inherit, pressed && styles.pressed]}
       >

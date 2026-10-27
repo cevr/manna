@@ -39,6 +39,7 @@ export const readerOn = (
     style: settings.chordStyle,
     placement: settings.placement,
     placementFor: settings.placementFor,
+    effectivePlacement: settings.effectivePlacement,
     move: settings.move,
     book: chordBook(bundled),
     reading: settings.reading,
