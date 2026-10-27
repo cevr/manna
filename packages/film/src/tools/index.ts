@@ -50,3 +50,11 @@ export { CACHE } from './review-file.ts';
 export { runFillPicks } from './fill-picks.ts';
 export type { TracePart, TracePt, TraceSheet, TraceSheetView } from '../core/trace.ts';
 export type { LabelTable } from '../core/label.ts';
+export {
+  type PartCut,
+  type PartCutOptions,
+  type PartRule,
+  cutParts,
+  paintHidden,
+  recompose,
+} from '../core/part-sheet.ts';
