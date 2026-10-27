@@ -15,13 +15,17 @@ bun packages/scripts/src/webster-compiler/kjv-domain.ts
 ```
 
 The fixture records a source SHA-256, verse count, frequency, a context reference,
-and a reviewed dictionary lemma or `none` for every form. It is an oracle, not
-the output of the production lookup. All candidate stems and collision
-definitions were reviewed. Past-tense stems return their verb lemma; names and
-headings must not become unrelated common words. Missing dictionary lemmas
-remain `none`, including meet, meddle, hasten and repay. British spelling and
-consonant-y forms use verified existing headwords. The `show` entry explicitly
-states that it is also written `shew`, which supports shewest/sheweth → show.
+and an expected dictionary lemma or `none` for every form. Headword spelling
+alone cannot establish verb identity. The slow property checks each verb
+result's original source HTML for a verb label or explicit grammatical entry,
+independently of the expected lemma. Past-tense stems return their verb lemma;
+names and headings must not become unrelated common words. Missing dictionary
+lemmas remain `none`, including meet, meddle, hasten, repay, sow, swallow, till and leave.
+The last four keys contain unrelated nouns: the swine, the bird, a vetch and
+permission. Their seven KJV verb forms retain the verb in `canonical` and must
+return no entries. British spelling and consonant-y forms use verified existing
+headwords. The `show` entry explicitly states that it is also written `shew`,
+which supports shewest/sheweth → show.
 
 Exact matching remains first. The source has grammar entries for `dost`, `hast`,
 `art` and `wast`. Their `lemma` is that valid exact entry; `canonical` records do,
@@ -35,5 +39,13 @@ candidate and resolved-headword vocabulary needed by the fast fixture-only
 test. It includes collision words (doe, saye, aile, frett, mourne, robbe, singe,
 springe, stepp, swimm, tri, warre) so a wrong stem can fail without a full DB.
 The slow test checks every expected result against the actual SQLite and checks
-that the source census still matches. The generic suffix rule applies only
-after the audited aliases; it is not evidence of correctness for unseen words.
+that the source census still matches. Its separate verb-source property covers
+all `kind: "verb"` rows, including those with `lemma: "none"`; changing the
+expected headword cannot make a noun homograph pass. `verbSourceExceptions`
+records only the round-two review's exceptions: same-word water, haste, sorrow,
+smooth, drop and challenge; prose auxiliary shall; abbreviated ought;
+cross-reference enquire; and the known malformed proceed and loathe rows.
+The source also uses italic `v.`, plain `v.`, `VT` and explicit second-person or
+past-tense grammar entries. These are verb markers, not spelling evidence.
+The generic suffix rule applies only after the audited aliases; it is not
+evidence of correctness for unseen words.

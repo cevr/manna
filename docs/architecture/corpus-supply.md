@@ -28,11 +28,16 @@ definition terms with AND, rank and id tie-breaking. Exact lookup wins before
 the reviewed KJV alias table, then the bounded `-eth` / `-est` fallback.
 The complete repository KJV domain is committed in
 `packages/core/src/webster/fixtures/kjv-endings.json`: 962 suffix words, plus eight
-explicit irregular/noun guard forms, with frequencies and reviewed resolutions.
+explicit irregular/noun guard forms, with frequencies and expected resolutions.
+An independent real-SQLite property checks every verb result's source HTML for
+verb labels or explicit grammar entries, with the review's documented exceptions
+in the fixture. A headword-string match alone does not establish verb identity.
 Aliases cover irregulars, spelling changes, colliding stems and explicit
-nonverb exclusions. Missing alias targets stop; an unrelated candidate never
-substitutes for them. The generic fallback rejects one-letter stems. The
-response distinguishes audited aliases from generic heuristic matches.
+nonverb exclusions. The missing SOW, SWALLOW, TILL and LEAVE verbs explicitly
+resolve to none, preserving their canonical verbs in the fixture instead of
+returning the unrelated noun homographs. Missing alias targets stop; an unrelated
+candidate never substitutes for them. The generic fallback rejects one-letter
+stems. The response distinguishes audited aliases from generic heuristic matches.
 Exact grammar entries for dost/hast/art/wast remain exact; the fixture also
 records their canonical do/have/be/be forms. This does not claim universal KJV
 lemmatization, irregular spelling resolution or verse-aware glosses.

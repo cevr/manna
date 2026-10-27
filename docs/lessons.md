@@ -3937,6 +3937,16 @@ The form of an entry, each field on its own line:
 - **Cause:** Lexical existence was treated as evidence of the intended KJV lemma. Lookup now uses an audited alias table before generic guesses and stops when an alias target is absent.
 - **Guard:** code: `packages/core/src/webster/kjv.test.ts` `resolves every audited KJV form to its reviewed entry or none with real collision vocabulary`
 
+### webster-kjv-verb-source
+
+- **Date:** 2026-10-26
+- **Kind:** review
+- **Said:** "Seven KJV verb forms resolve to an unrelated noun homograph."
+- **Source:** hymnapp/webster/round-1-findings.md F1; recurrence hymnapp/webster/round-2-findings.md B1; orchestrator round-3 amendment
+- **Wrong:** SOW, SWALLOW, TILL and LEAVE passed a headword-only oracle despite containing only unrelated nouns for these KJV verbs.
+- **Cause:** Matching the expected spelling was treated as proof of verb identity. The complete KJV verb domain now checks source labels independently, with only the review's explicit exceptions. Missing verbs resolve to none.
+- **Guard:** code: `packages/core/src/webster/kjv.slow.test.ts` `every KJV verb form resolves to a source-marked verb or no entry`
+
 ### webster-bare-before-undoubled
 
 - **Date:** 2026-10-26

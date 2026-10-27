@@ -5,6 +5,19 @@
   "tokenPattern": "[a-z]+(?:['’-][a-z]+)*",
   "suffixForms": 962,
   "extraForms": ["art", "breast", "dost", "doth", "hast", "hath", "saith", "wast"],
+  "verbSourceExceptions": {
+    "water": "Same-word noun; the verb entry is absent.",
+    "haste": "Same-word noun; the verb entry is absent.",
+    "sorrow": "Same-word noun with verbal glosses and examples.",
+    "smooth": "Same-word adjective with verbal senses.",
+    "drop": "Same-word noun; the verb entry is absent.",
+    "challenge": "Same-word noun and verb; the source uses VT.",
+    "shall": "Auxiliary explained in prose without a part-of-speech label.",
+    "ought": "The source uses v. imperfect rather than an italic verb label.",
+    "enquire": "Cross-reference to inquire and its derivatives.",
+    "proceed": "Known malformed source row: only PROCEEDER's definition remains.",
+    "loathe": "Known malformed source row: only the headword remains."
+  },
   "forms": [
     {
       "form": "abhorrest",
@@ -3773,7 +3786,7 @@
     {
       "form": "leaveth",
       "frequency": 6,
-      "lemma": "leave",
+      "lemma": "none",
       "canonical": "leave",
       "kind": "verb",
       "reference": "Job 39:14"
@@ -3789,7 +3802,7 @@
     {
       "form": "leftest",
       "frequency": 1,
-      "lemma": "leave",
+      "lemma": "none",
       "canonical": "leave",
       "kind": "verb",
       "reference": "Nehemiah 9:28"
@@ -6382,7 +6395,7 @@
     {
       "form": "sowest",
       "frequency": 3,
-      "lemma": "sow",
+      "lemma": "none",
       "canonical": "sow",
       "kind": "verb",
       "reference": "1 Corinthians 15:36"
@@ -6390,7 +6403,7 @@
     {
       "form": "soweth",
       "frequency": 15,
-      "lemma": "sow",
+      "lemma": "none",
       "canonical": "sow",
       "kind": "verb",
       "reference": "Proverbs 6:14"
@@ -6758,7 +6771,7 @@
     {
       "form": "swalloweth",
       "frequency": 2,
-      "lemma": "swallow",
+      "lemma": "none",
       "canonical": "swallow",
       "kind": "verb",
       "reference": "Job 5:5"
@@ -7041,7 +7054,7 @@
     {
       "form": "tillest",
       "frequency": 1,
-      "lemma": "till",
+      "lemma": "none",
       "canonical": "till",
       "kind": "verb",
       "reference": "Genesis 4:12"
@@ -7049,7 +7062,7 @@
     {
       "form": "tilleth",
       "frequency": 2,
-      "lemma": "till",
+      "lemma": "none",
       "canonical": "till",
       "kind": "verb",
       "reference": "Proverbs 12:11"

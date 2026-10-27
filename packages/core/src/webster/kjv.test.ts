@@ -26,6 +26,11 @@ for (const [form, expected] of [
     expect(lookup(form).entries.map((entry) => entry.headword)).toEqual([expected]);
   });
 
+for (const form of ['soweth', 'sowest', 'swalloweth', 'tilleth', 'tillest', 'leaveth', 'leftest'])
+  it(`returns no entry for KJV ${form} when the source has only an unrelated noun homograph`, () => {
+    expect(lookup(form).entries).toEqual([]);
+  });
+
 it('resolves every audited KJV form to its reviewed entry or none with real collision vocabulary', () => {
   const failures = Effect.runSync(
     WebsterService.use((service) =>

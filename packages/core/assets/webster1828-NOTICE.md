@@ -21,7 +21,13 @@ work-in-progress file. That file is excluded. Earlier transcription lineage is
 not fully documented. This snapshot is not a complete critical edition.
 KJV lookup uses exact entries, then an audited alias table, then a bounded
 suffix heuristic. The complete repository KJV ending-word census is committed
-with frequencies and reviewed resolutions, including explicit no-match cases.
+with frequencies and expected resolutions, including explicit no-match cases.
+Verb results are checked against source part-of-speech labels, with the
+documented same-word and malformed-source exceptions in the KJV fixture.
+Headword spelling alone does not establish verb identity. Missing verb entries
+include MEET, MEDDLE, HASTEN, REPAY, SOW, SWALLOW, TILL and LEAVE. The last four
+keys contain unrelated nouns (swine, bird, vetch and permission); their KJV
+verb forms return no entries.
 The source lacks `shew`; the aliases for shewest/sheweth use `show`, whose entry
 explicitly lists that spelling. Unseen forms still carry no universal guarantee.
 
