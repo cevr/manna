@@ -80,8 +80,8 @@ const turned = ([x, y]: Pt, by: number): Pt => [
   x * Math.sin(by) + y * Math.cos(by),
 ];
 
-/** A hand the sheet lays at a point, sheet pixels: which arm's. */
-type Reach = readonly ['near' | 'far', Pt];
+/** A hand the sheet lays at a point, sheet pixels: which arm's, and where its elbow bends (`armReach`; at rest's side unless given). */
+type Reach = readonly ['near' | 'far', Pt] | readonly ['near' | 'far', Pt, 'out'];
 
 /** One kept view as the render draws it. */
 interface ViewSpec {
@@ -110,9 +110,9 @@ interface ViewSpec {
 const view = (v: ViewSpec): CastView => {
   const scale = SHEETS[v.member][v.kind].scale;
   const reached = Object.fromEntries(
-    v.reach.flatMap(([side, p]) => {
+    v.reach.flatMap(([side, p, elbow]) => {
       const units = turned([(p[0] - v.at[0]) / scale, (p[1] - v.at[1]) / scale], -v.lean);
-      const r = armReach(v.composed.arms[side], units);
+      const r = armReach(v.composed.arms[side], units, elbow);
       return [
         [`${side}Arm`, r.turn],
         [`${side}Elbow`, r.bend],
@@ -247,10 +247,11 @@ export const CAST = castTable({
         RIGS.leadFeastThreeQuarterLeftProp,
         {
           lean: 0,
-          numbers: { mouth: 3 },
+          // His head rolled 8° toward the bottle, as the sheet draws it.
+          numbers: { mouth: 3, tilt: 0.14 },
           reach: [['near', [62, 392]]],
-          // The bottle held: over his sleeve, under his hand round its middle.
-          props: [{ name: 'bottle', draw: bottle([-86, -290], 0.9), layer: 'held' }],
+          // The bottle held: over his sleeve, under his hand round its foot, standing above it as tall as his head is wide.
+          props: [{ name: 'bottle', draw: bottle([-86, -312], 1.1), layer: 'held' }],
         },
       ),
       // In profile to the left, both hands up, his head tipped back, the plate at his mouth.
@@ -261,12 +262,13 @@ export const CAST = castTable({
         RIGS.leadFeastProfileLeftProp,
         {
           lean: 0,
-          numbers: { tilt: 0.35, mouth: 0 },
+          numbers: { tilt: 0.45, mouth: 0 },
           reach: [
             ['near', [404, 360]],
             ['far', [366, 344]],
           ],
-          props: [{ name: 'plate', draw: plate([-41, -377], 0.55) }],
+          // The plate's rim at his lips, the dish out before his face, his mouth clear of it; held: over his sleeves, under his hands.
+          props: [{ name: 'plate', draw: plate([-60, -360], 0.55), layer: 'held' }],
         },
       ),
       // Seated on the stool, three-quarters left, his near hand at his chin, his far hand on his lap.
@@ -278,11 +280,10 @@ export const CAST = castTable({
         {
           lean: 0,
           numbers: {},
-          reach: [
-            ['near', LEAD_SEATED.HAND_NEAR.at],
-            ['far', LEAD_SEATED.HAND_FAR.at],
-          ],
-          props: [{ name: 'stool', draw: stool(68, 134, -97), layer: 'behind' }],
+          // His near arm is the raised sleeve the sheet draws, its hand at his chin as traced (`leadFeastSeated`): it reaches nowhere.
+          reach: [['far', LEAD_SEATED.HAND_FAR.at]],
+          // The stool's seat runs in under his robe, as the sheet's does.
+          props: [{ name: 'stool', draw: stool(43, 134, -97), layer: 'behind' }],
         },
       ),
       // Three-quarters left, leaning to the low table, his near hand on the bottle there, his head bowed to it.
@@ -294,7 +295,8 @@ export const CAST = castTable({
         {
           lean: -0.1,
           numbers: { nod: 6, tilt: -0.1, mouth: 3 },
-          reach: [['near', [985, 590]]],
+          // His elbow out from him: the sheet's arm runs near straight from his shoulder down to the bottle.
+          reach: [['near', [985, 590], 'out']],
           props: [
             { name: 'table', draw: table(-152, -78, -157, -120), layer: 'behind' },
             { name: 'bottle', draw: bottle([-114, -157]), layer: 'behind' },
@@ -345,7 +347,8 @@ export const CAST = castTable({
         LEAD.leadFeastThreeQuarterLeft,
         RIGS.leadFeastThreeQuarterLeftProp,
         {
-          tilt: 0.12,
+          // Rolled 13°, as the sheet's head is.
+          tilt: 0.22,
           browTilt: 0.4,
           mouth: -2.5,
         },
@@ -368,7 +371,7 @@ export const CAST = castTable({
         RIGS.leadFeastFrontProp,
         WINCE,
       ),
-      // His front: glad, his eyes shut in a smile, his head lifted on a long neck (nod -12 lifts it 20 px off the bust's place, where the sheet draws his eyes).
+      // His front: glad, his eyes shut in a smile and the glad mark's wide smile in place of his mouth's line, his head lifted on a long neck (nod -12 lifts it 20 px off the bust's place, where the sheet draws his eyes).
       'heads-6': bust(
         [1276, 313, 1519, 650],
         [1399, 445.5],
@@ -379,7 +382,7 @@ export const CAST = castTable({
           glad: 1,
           nod: -12,
           eyes: 0,
-          mouth: 4.5,
+          mouthLine: 0,
         },
       ),
     },

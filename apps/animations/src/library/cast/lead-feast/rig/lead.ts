@@ -81,6 +81,8 @@ interface LeadViewSpec {
   readonly face: Omit<TracedFigureSpec['face'], 'gaze'>;
   /** Which sleeve each arm is in: his right arm's is cream (`creamAcross` where it crosses his cream tunic whole, seated), his left's teal. */
   readonly sleeves: { readonly near: keyof typeof SLEEVE; readonly far: keyof typeof SLEEVE };
+  /** His near arm as the view draws it raised: where it turns, sheet pixels (`TracedArmSpec.pivot`); seated, his elbow on his knee. */
+  readonly nearArm?: { readonly pivot: Pt };
 }
 
 /** A tone of `color` on `pts` (none drawn where it has no pieces). */
@@ -149,6 +151,7 @@ const leadView = (t: LeadTable, v: LeadViewSpec) =>
         hand: t.HAND_NEAR,
         paper: SLEEVE[v.sleeves.near],
         edge: SLEEVE_EDGE[v.sleeves.near],
+        ...v.nearArm,
       },
       far: {
         outline: t.ARM_FAR,
@@ -211,13 +214,13 @@ export const leadFeastThreeQuarterLeft = leadView(THREE_QUARTER_LEFT, {
   sleeves: { near: 'cream', far: 'teal' },
 });
 
-/** In profile to screen left: one eye, his ear behind his cheek, his teal left sleeve hanging over his side. */
+/** In profile to screen left: one eye, his ear behind his cheek, his teal left sleeve hanging over his side, his cream right sleeve beyond him (it shows raised, poses-2). */
 export const leadFeastProfileLeft = leadView(PROFILE_LEFT, {
   sheet: 'turnaround',
   head: { view: 'side' },
   ears: { near: PROFILE_LEFT.EAR_NEAR },
   face: { ...AT_REST, marks: PROFILE_LEFT.MARKS },
-  sleeves: { near: 'teal', far: 'teal' },
+  sleeves: { near: 'teal', far: 'cream' },
 });
 
 /** From behind: his curls over his whole head, his ears either side; his teal left sleeve on screen left, his cream right on screen right; his face, under his hair, is the front's. */
@@ -253,14 +256,20 @@ export const leadFeastThreeQuarterRight = leadView(THREE_QUARTER_RIGHT, {
   sleeves: { near: 'cream', far: 'teal' },
 });
 
+/** How far his seated hand at his chin is laid down onto his raised sleeve's top, sheet pixels. */
+const SEATED_WRIST = 4;
+
 /**
- * His three-quarter-left arms laid on his seated view: each arm's outline and
- * hand taken from the turnaround's pixels to the poses sheet's (one scale
- * each, the same units) about his head's centre, so they hang from his
- * shoulders as they do standing. The seated sheet draws one sleeve raised to
- * his chin and the other on his lap, the upper sleeve hidden, so neither
- * traces as an arm cut at its elbow; his standing arms, posed by their
- * numbers, reach there (`rigs/cast.ts`).
+ * His arms on his seated view. His far arm is his three-quarter-left one,
+ * its outline and hand taken from the turnaround's pixels to the poses
+ * sheet's (one scale each, the same units) about his head's centre, so it
+ * hangs from his shoulder as it does standing and, posed by its numbers,
+ * reaches his lap (`rigs/cast.ts`). His near arm is the raised sleeve the
+ * seated sheet draws, from his elbow on his knee up to his hand at his chin,
+ * its upper sleeve hidden behind it: traced in place and turned about his
+ * elbow (`nearArm`), so it is drawn as the sheet draws it and never
+ * reaches (a standing arm folded up to his chin is half the length the
+ * sheet's is).
  */
 const seatedArms = () => {
   const k = SHEETS.turnaround.scale / SHEETS.poses.scale;
@@ -269,14 +278,18 @@ const seatedArms = () => {
   const moved = ([x, y]: Pt): Pt => [tx + (x - fx) * k, ty + (y - fy) * k];
   const hand = (h: { readonly at: Pt; readonly r: number }) => ({ at: moved(h.at), r: h.r * k });
   return {
-    ARM_NEAR: THREE_QUARTER_LEFT.ARM_NEAR.map(moved),
+    ARM_NEAR: SEATED.ARM_NEAR,
     ARM_FAR: THREE_QUARTER_LEFT.ARM_FAR.map(moved),
-    HAND_NEAR: hand(THREE_QUARTER_LEFT.HAND_NEAR),
+    // His hand at his chin 4 px down onto his wrist: the sheet's hand hides the sleeve's top, so the traced sleeve stops short of it.
+    HAND_NEAR: {
+      ...SEATED.HAND_NEAR,
+      at: [SEATED.HAND_NEAR.at[0], SEATED.HAND_NEAR.at[1] + SEATED_WRIST] satisfies Pt,
+    },
     HAND_FAR: hand(THREE_QUARTER_LEFT.HAND_FAR),
   };
 };
 
-/** Seated on a low stool, three-quarters to screen left (poses-3): his robe over his knees, his sandals under its hem; his arms his standing ones. */
+/** Seated on a low stool, three-quarters to screen left (poses-3): his robe over his knees, his sandals under its hem; his near sleeve raised to his chin as the sheet draws it, his far arm his standing one. */
 export const leadFeastSeated = leadView(
   { ...SEATED, ...seatedArms() },
   {
@@ -285,5 +298,7 @@ export const leadFeastSeated = leadView(
     ears: { near: SEATED.EAR_NEAR },
     face: { ...AT_REST, marks: SEATED.MARKS, extra: WITH_EXTRA },
     sleeves: { near: 'creamAcross', far: 'teal' },
+    // His elbow on his knee, the raised sleeve's lowest middle.
+    nearArm: { pivot: [692, 622] },
   },
 );

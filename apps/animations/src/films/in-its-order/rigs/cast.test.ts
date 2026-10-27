@@ -8,6 +8,8 @@
 
 import { describe, expect, test } from 'bun:test';
 import LEAD_FEAST from '../../../library/cast/lead-feast/cast-sheet/cast-sheet.json' with { type: 'json' };
+import * as LEAD from '../../../library/cast/lead-feast/rig/lead.ts';
+import * as LEAD_SEATED from '../../../library/cast/lead-feast/rig/seated-traced.ts';
 import { CAST, SHEETS } from './cast.ts';
 import { ARTBOARDS } from './figures.ts';
 
@@ -63,5 +65,17 @@ describe("IIO's cast render table", () => {
         }
       }
     }
+  });
+
+  test('seated, his near hand is drawn at his chin as the sheet lays it, his raised sleeve turning about his elbow below it', () => {
+    const arm = LEAD.leadFeastSeated.arms.near;
+    expect(arm.pivot[1]).toBeGreaterThan(arm.hand[1] + 40);
+    const seated = CAST['lead-feast'].poses['poses-3'];
+    const scale = SHEETS['lead-feast'].poses.scale;
+    const [hx, hy] = LEAD_SEATED.HAND_NEAR.at;
+    const drawn = seated.with?.[1]?.at ?? [0, 0];
+    expect(
+      Math.hypot(drawn[0] - (hx - seated.at[0]) / scale, drawn[1] - (hy - seated.at[1]) / scale),
+    ).toBeLessThan(4);
   });
 });

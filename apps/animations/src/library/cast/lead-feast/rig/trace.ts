@@ -35,42 +35,60 @@ export const rect = (x0: number, y0: number, x1: number, y1: number): TracePt[] 
   [x0, y1],
 ];
 
-/** A disc as a polygon of 16 points. */
-const disc = (cx: number, cy: number, r: number): TracePt[] =>
+/** An oval as a polygon of 16 points, `rx` across and `ry` down from its middle. */
+const oval = (cx: number, cy: number, rx: number, ry: number): TracePt[] =>
   Array.from({ length: 16 }, (_, i): TracePt => [
-    Math.round((cx + r * Math.cos((i / 16) * 2 * Math.PI)) * 2) / 2,
-    Math.round((cy + r * Math.sin((i / 16) * 2 * Math.PI)) * 2) / 2,
+    Math.round((cx + rx * Math.cos((i / 16) * 2 * Math.PI)) * 2) / 2,
+    Math.round((cy + ry * Math.sin((i / 16) * 2 * Math.PI)) * 2) / 2,
   ]);
 
-/** `pts` grown `by` pixels away from their middle, each way. */
-const grownBy = (pts: TracePt[], by: number): TracePt[] => {
-  const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length;
-  const cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
-  return pts.map(([x, y]) => [x + Math.sign(x - cx) * by, y + Math.sign(y - cy) * by]);
-};
+/** `pts` moved by `by`. */
+const shifted = (pts: ReadonlyArray<TracePt>, by: TracePt): TracePt[] =>
+  pts.map(([x, y]) => [x + by[0], y + by[1]]);
 
-/** The sash as the sheet paints it on a view: its band across the waist, its two ends, and its knot where the view shows one. */
+/** Where the sheet lays the sash's rose shade: each piece again, this far to its right and down, under it. */
+const SASH_SHADE: TracePt = [4, 2];
+
+/** How far the knot's shade, 2 px wider than it all round, lies to its right and down. */
+const KNOT_SHADE: TracePt = [1, 2];
+
+/** A hanging end of the sash: its left and right edges and its row where it leaves the knot, and again where it ends, sheet pixels. */
+interface SashEnd {
+  readonly top: readonly [left: number, right: number, row: number];
+  readonly bottom: readonly [left: number, right: number, row: number];
+}
+
+/** A hanging end as the quad it is: it narrows or widens, and leans, from its top to its end. */
+const endOf = ({ top, bottom }: SashEnd): TracePt[] => [
+  [top[0], top[2]],
+  [top[1], top[2]],
+  [bottom[1], bottom[2]],
+  [bottom[0], bottom[2]],
+];
+
+/** The sash as the sheet paints it on a view: its band across the waist, its two ends, and its knot (an oval: its middle, its half-width and half-height) where the view shows one. */
 interface Sash {
   readonly band: readonly [number, number, number, number];
-  readonly ends: ReadonlyArray<readonly [number, number, number, number]>;
-  readonly knots: ReadonlyArray<readonly [number, number, number]>;
+  readonly ends: ReadonlyArray<SashEnd>;
+  readonly knots: ReadonlyArray<readonly [number, number, number, number]>;
 }
 
 /**
  * The sash's tones: its band and ends, each the silhouette cut to its
  * polygon on his garment, as one; then its knot over them; each with its rose
- * shade, the same pieces two pixels wider, laid under it.
+ * shade, the same piece moved `SASH_SHADE` to its right and down, laid under
+ * it, as the sheet lights it.
  */
 const sashParts = (s: Sash) => {
-  const pieces = [rect(...s.band), ...s.ends.map((e) => rect(...e))];
+  const pieces = [rect(...s.band), ...s.ends.map(endOf)];
   const piece = (clip: TracePt[]) =>
     ({ silhouette: true, clip, inside: 'body', grow: 0, as: 'none' }) satisfies TracePart;
   const names = pieces.map((_, i) => `sashPiece${i}`);
   const shades = pieces.map((_, i) => `sashShadePiece${i}`);
-  const knot = (doc: string, by: number) =>
+  const knot = (doc: string, by: TracePt, grow: number) =>
     ({
       silhouette: true,
-      clip: s.knots.flatMap(([x, y, r]) => disc(x, y, r + by)),
+      clip: s.knots.flatMap(([x, y, rx, ry]) => shifted(oval(x, y, rx + grow, ry + grow), by)),
       inside: 'body',
       grow: 0,
       as: 'tones',
@@ -81,7 +99,7 @@ const sashParts = (s: Sash) => {
     ...Object.fromEntries(
       pieces.flatMap((pts, i) => [
         [`sashPiece${i}`, piece(pts)],
-        [`sashShadePiece${i}`, piece(grownBy(pts, 2))],
+        [`sashShadePiece${i}`, piece(shifted(pts, SASH_SHADE))],
       ]),
     ),
     sashShade: {
@@ -98,8 +116,9 @@ const sashParts = (s: Sash) => {
       min: 20,
       doc: 'The cream sash: its band and its ends.',
     },
-    knotShade: knot("The knot's rose shade round its edge.", 2),
-    knot: knot("The sash's knot, over its band.", 0),
+    // The knot's shade rims it all round, deepest under it to its right: the bulge the sheet paints on the band.
+    knotShade: knot("The knot's rose shade, round it and under it to its right.", KNOT_SHADE, 2),
+    knot: knot("The sash's knot, over its band.", [0, 0], 0),
   } satisfies Record<string, TracePart>;
 };
 
@@ -221,10 +240,12 @@ export const standing = (v: Standing): TraceSheetView => {
         plus: ['face', 'hairMass', 'neckSkin', ...Object.keys(ears)],
         // A hand raised to the chin is its own circle, never the head's skin.
         minus: ['handNearPaper', 'handFarPaper'],
-        // Opened 2 px: a sliver a hand at his chin leaves of his skin is none of his head.
-        open: 2,
+        // Never opened: an ear joins his head by a neck thinner than his ear's line, and opening it parts the ear off.
+        open: 0,
         // Closed 5 px: the notch an ear's own line leaves where it meets his outline is filled.
         close: 5,
+        // Smoothed 4 px each way: the brush's grain on his line's inner edge is no corner of his jaw.
+        smooth: 4,
         sharp: v.sharp,
         grow: 3,
         doc: chin.doc,
@@ -232,8 +253,8 @@ export const standing = (v: Standing): TraceSheetView => {
       hair: {
         within: 'hairMass',
         grow: 4,
-        // Opened 3 px: the wedge his hair leaves between an ear and his head's line is no lock of it.
-        open: 3,
+        // Opened 2 px: the band of hair the sheet draws behind an ear is his, the hairline tip it ends in is not.
+        open: 2,
         inside: 'head',
         minus: Object.keys(ears),
         doc: 'His hair, the whole mass of curls over his head.',
@@ -453,10 +474,10 @@ export const TRACE = {
       beside: [],
       sash: {
         band: [83, 539, 198, 562],
-        knots: [[140, 552, 14]],
+        knots: [[142, 552, 16, 13]],
         ends: [
-          [118, 552, 138, 670],
-          [145, 552, 175, 730],
+          { top: [128, 141, 560], bottom: [117, 139, 672] },
+          { top: [145, 160, 560], bottom: [146, 172, 728] },
         ],
       },
       hem: 808,
@@ -515,10 +536,10 @@ export const TRACE = {
       beside: [],
       sash: {
         band: [340, 540, 437, 562],
-        knots: [[380, 552, 14]],
+        knots: [[378, 552, 16, 13]],
         ends: [
-          [352, 552, 372, 670],
-          [372, 552, 392, 685],
+          { top: [364, 376, 560], bottom: [350, 370, 672] },
+          { top: [379, 392, 560], bottom: [376, 400, 706] },
         ],
       },
       hem: 808,
@@ -572,7 +593,11 @@ export const TRACE = {
       arms: 'onGarment',
       necks: [],
       beside: [],
-      sash: { band: [560, 540, 615, 562], knots: [[572, 552, 13]], ends: [[560, 552, 580, 680]] },
+      sash: {
+        band: [560, 540, 615, 562],
+        knots: [[572, 552, 13, 12]],
+        ends: [{ top: [560, 580, 560], bottom: [560, 580, 680] }],
+      },
       hem: 808,
       split: 640,
     }),
@@ -668,8 +693,8 @@ export const TRACE = {
       beside: [],
       sash: {
         band: [1165, 540, 1225, 562],
-        knots: [[1207, 550, 13]],
-        ends: [[1193, 552, 1213, 670]],
+        knots: [[1207, 550, 13, 12]],
+        ends: [{ top: [1193, 1213, 560], bottom: [1193, 1213, 670] }],
       },
       hem: 808,
       split: 1140,
@@ -727,10 +752,10 @@ export const TRACE = {
       beside: [],
       sash: {
         band: [1343, 540, 1450, 562],
-        knots: [[1405, 552, 15]],
+        knots: [[1403, 552, 16, 13]],
         ends: [
-          [1380, 552, 1400, 670],
-          [1400, 552, 1430, 730],
+          { top: [1390, 1403, 560], bottom: [1377, 1400, 672] },
+          { top: [1407, 1419, 560], bottom: [1406, 1431, 727] },
         ],
       },
       hem: 808,
