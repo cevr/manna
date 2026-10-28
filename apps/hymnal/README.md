@@ -376,6 +376,8 @@ excluded from iCloud backup on iOS, origin-private files on web, namespaced
 by recording set. Web requests persistent storage for Download all; the UI
 states that a browser may remove downloads. Startup indexing runs in the
 background; playback can use remote while an entry is not yet indexed.
+Save intentions wait for discovery so they join retained files, and Cancel
+retires intentions still waiting for that index.
 Media bytes never enter settings KVS or the browser HTTP cache. A completed
 file resolves locally first. A failed local read invalidates it and attempts
 the original remote URL once. Missing sets retain the normal Retry behavior.

@@ -25,7 +25,7 @@ downloads play locally first. R2 remains the source for missing recordings.
 ## Driving it with sim
 
 - **Preconditions:** a loopback fake recording origin for bulk work. Never download all from R2 for a test. Sound off before every Play. Use the owned simulator and muted browser from SKILL.md.
-- The fake origin's CORS equals `infra/bucket.ts`: only `range` is allowed. Reject `If-Range` on every follow-up range. Include a synthetic file larger than the 2 MiB range bound. The HTTP guard must fail on an adapter that sends `If-Range`.
+- The fake origin's CORS equals `infra/bucket.ts`: only `range` is allowed. Reject author-requested `If-Range` in preflights. Browsers may add their own cache validator without that preflight; do not reject it at the server. Include a synthetic file larger than the 2 MiB range bound. The HTTP guard must fail on an adapter that sends `If-Range`.
 - **States:** empty, downloading, cancelled, complete, retained after relaunch, failed, retried and deleted. Check compact and regular widths and both appearances. Use control states and numeric bounds; no hymn text, images or recordings.
 - **Regression:** `src/offline/cache.slow.test.ts`, `src/offline/http.slow.test.ts`, `src/player/offline.slow.test.ts`, and existing player, seek and sound suites.
 

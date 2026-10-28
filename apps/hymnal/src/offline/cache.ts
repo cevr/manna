@@ -345,37 +345,63 @@ export const offlineLayer = Layer.effect(Offline)(
             Effect.andThen(
               Effect.suspend(() => {
                 if (owner !== viewing) return Effect.void;
-                return locked(add({ number, offset: 0 }).pipe(Effect.andThen(publish)));
+                return Deferred.await(indexed).pipe(
+                  Effect.andThen(
+                    locked(
+                      Effect.suspend(() => {
+                        if (owner !== viewing) return Effect.void;
+                        return add({ number, offset: 0 }).pipe(Effect.andThen(publish));
+                      }),
+                    ),
+                  ),
+                );
               }),
             ),
             Effect.forkIn(scope),
           );
         }),
-      enqueue: (id) => locked(add(id).pipe(Effect.andThen(publish))),
-      downloadAll: Deferred.await(indexed).pipe(
-        Effect.andThen(media.protect),
-        Effect.andThen(
-          locked(
-            Effect.gen(function* () {
-              storage = false;
-              paused = false;
-              const retries = [...resume.values(), ...failed.values()];
-              resume.clear();
-              for (const id of retries) yield* add(id);
-              for (let number = 1; number <= 695; number++) yield* add({ number, offset: 0 });
-              yield* publish;
-            }),
+      enqueue: (id) =>
+        Effect.suspend(() => {
+          const requested = epoch;
+          return Deferred.await(indexed).pipe(
+            Effect.andThen(
+              locked(
+                Effect.suspend(() => {
+                  if (requested !== epoch) return Effect.void;
+                  return add(id).pipe(Effect.andThen(publish));
+                }),
+              ),
+            ),
+          );
+        }),
+      downloadAll: Effect.suspend(() => {
+        const requested = epoch;
+        return Deferred.await(indexed).pipe(
+          Effect.andThen(media.protect),
+          Effect.andThen(
+            locked(
+              Effect.gen(function* () {
+                if (requested !== epoch) return;
+                storage = false;
+                paused = false;
+                const retries = [...resume.values(), ...failed.values()];
+                resume.clear();
+                for (const id of retries) yield* add(id);
+                for (let number = 1; number <= 695; number++) yield* add({ number, offset: 0 });
+                yield* publish;
+              }),
+            ),
           ),
-        ),
-        Effect.catchCause(() =>
-          locked(
-            Effect.gen(function* () {
-              storage = true;
-              yield* cancelOwned;
-            }),
+          Effect.catchCause(() =>
+            locked(
+              Effect.gen(function* () {
+                storage = true;
+                yield* cancelOwned;
+              }),
+            ),
           ),
-        ),
-      ),
+        );
+      }),
       cancel,
       deleteAll: cancel.pipe(
         Effect.andThen(

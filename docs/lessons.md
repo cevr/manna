@@ -4496,6 +4496,7 @@ The form of an entry, each field on its own line:
 - **Wrong:** A session Play rejection deleted intact media. Player construction waited for the entire saved index. Queue sharing was implicit and tests waited for an arbitrary number of yields.
 - **Cause:** A device failure was treated as a file failure and disk discovery was part of layer construction.
 - **Guard:** code: `apps/hymnal/src/player/offline.slow.test.ts` `offline a session play rejection keeps an intact saved recording`, `offline a hung storage index cannot delay public Start`, `offline live playback and Downloads share exactly one queue in their registry`
+- **Guard:** code: `apps/hymnal/src/offline/repairs.slow.test.ts` `offline a save requested during discovery joins the retained file`, `offline Cancel retires save intentions waiting for discovery`
 
 ### hymnal-downloaded-storage-limits
 

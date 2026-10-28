@@ -1,4 +1,5 @@
-import { Deferred, Effect, Option, References, Stream } from 'effect';
+/* oxlint-disable effect/noInlineProvide -- restart programs deliberately close and rebuild their real layer over the same synthetic disk. */
+import { Deferred, Effect, Fiber, Option, References, Stream } from 'effect';
 import { expect, it } from 'effect-bun-test';
 import { TestClock } from 'effect/testing';
 import { Offline, identityKey } from './cache';
@@ -10,6 +11,66 @@ const idle = (cache: typeof Offline.Service) =>
     Stream.take(1),
     Stream.runDrain,
   );
+
+it.effect('offline a save requested during discovery joins the retained file', () => {
+  const f = fake(),
+    id = { number: 100, offset: 0 };
+  return Effect.gen(function* () {
+    yield* Effect.gen(function* () {
+      const cache = yield* Offline;
+      yield* cache.enqueue(id);
+      yield* idle(cache);
+    }).pipe(Effect.provide(f.layer));
+    f.calls.length = 0;
+    const entered = yield* Deferred.make<boolean>(),
+      release = yield* Deferred.make<boolean>();
+    f.control.listing = Deferred.succeed(entered, true).pipe(
+      Effect.andThen(Deferred.await(release)),
+      Effect.asVoid,
+    );
+    yield* Effect.gen(function* () {
+      const cache = yield* Offline;
+      yield* Deferred.await(entered);
+      const pending = yield* cache.enqueue(id).pipe(Effect.forkChild);
+      yield* TestClock.adjust(0);
+      expect(f.calls.length).toBe(0);
+      expect(Option.isNone(yield* cache.local(id))).toBe(true);
+      yield* Deferred.succeed(release, true);
+      yield* Fiber.join(pending);
+      yield* idle(cache);
+      expect(f.calls.length).toBe(0);
+      expect(Option.isSome(yield* cache.local(id))).toBe(true);
+      expect((yield* cache.snapshot).saved).toBe(1);
+    }).pipe(Effect.provide(f.layer));
+  });
+});
+
+it.effect('offline Cancel retires save intentions waiting for discovery', () => {
+  const f = fake();
+  return Effect.gen(function* () {
+    const entered = yield* Deferred.make<boolean>(),
+      release = yield* Deferred.make<boolean>();
+    f.control.listing = Deferred.succeed(entered, true).pipe(
+      Effect.andThen(Deferred.await(release)),
+      Effect.asVoid,
+    );
+    const program = Effect.gen(function* () {
+      const cache = yield* Offline;
+      yield* Deferred.await(entered);
+      const single = yield* cache.enqueue({ number: 100, offset: 0 }).pipe(Effect.forkChild);
+      const all = yield* cache.downloadAll.pipe(Effect.forkChild);
+      yield* cache.shown(100);
+      yield* TestClock.adjust(750);
+      yield* cache.cancel;
+      yield* Deferred.succeed(release, true);
+      yield* Fiber.join(single);
+      yield* Fiber.join(all);
+      yield* idle(cache);
+      expect(f.calls.length).toBe(0);
+    });
+    yield* program.pipe(Effect.provide(f.layer));
+  });
+});
 
 it.effect('offline quick page turns and Cancel retire pending open saves', () => {
   const f = fake();
