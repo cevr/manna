@@ -1,8 +1,80 @@
 /* oxlint-disable effect/noGlobals -- owned loopback HTTP fixture; Bun.serve is the host boundary tested by the actual fetch adapter. */
-import { Context, Effect, Exit, Layer } from 'effect';
+import { Context, Effect, Exit, Layer, Stream } from 'effect';
 import { expect, it } from 'effect-bun-test';
-import { Http } from './cache';
+import { CHUNK, Http, Offline, offlineLayer } from './cache';
 import { httpLayer } from './http';
+import { fake } from './fixture';
+
+it.effect('offline multi-range requests obey the deployed bucket CORS headers', () =>
+  Effect.gen(function* () {
+    const bucket = yield* Effect.promise(() =>
+      Bun.file(new URL('../../infra/bucket.ts', import.meta.url)).text(),
+    );
+    const allowed = [
+      ...(bucket.match(/allowedHeaders:\s*\[([^\]]+)\]/)?.[1] ?? '').matchAll(/'([^']+)'/g),
+    ].map((m) => m[1]);
+    expect(allowed).toEqual(['range']);
+    const rejected: string[] = [];
+    let requests = 0;
+    const server = yield* Effect.acquireRelease(
+      Effect.sync(() =>
+        Bun.serve({
+          hostname: '127.0.0.1',
+          port: 0,
+          fetch(request) {
+            requests++;
+            // Bun is not a browser: enforce the browser's non-safelisted request
+            // header check as well as returning the deployed CORS allow list.
+            for (const name of ['range', 'if-range'])
+              if (request.headers.has(name) && !allowed.includes(name)) rejected.push(name);
+            if (rejected.length) return new Response('', { status: 403 });
+            const match = /bytes=(\d+)-(\d+)/.exec(request.headers.get('Range') ?? '');
+            const at = Number(match?.[1]),
+              last = Math.min(Number(match?.[2]), CHUNK + 7);
+            const bytes = new Uint8Array(last - at + 1);
+            if (at === 0) {
+              bytes[0] = 255;
+              bytes[1] = 251;
+            }
+            return new Response(bytes, {
+              status: 206,
+              headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': allowed.join(','),
+                'Access-Control-Expose-Headers': 'content-length,content-range,etag,accept-ranges',
+                'Content-Type': 'audio/mpeg',
+                'Content-Range': `bytes ${at}-${last}/${CHUNK + 8}`,
+                ETag: '"v1"',
+              },
+            });
+          },
+        }),
+      ),
+      (server) => Effect.promise(() => server.stop(true)),
+    );
+    const f = fake();
+    yield* Effect.gen(function* () {
+      const cache = yield* Offline;
+      yield* cache.enqueue({ number: 100, offset: 0 });
+      yield* cache.changes.pipe(
+        Stream.filter((s) => s.active + s.queued === 0),
+        Stream.take(1),
+        Stream.runDrain,
+      );
+      expect(rejected).toEqual([]);
+      expect(requests).toBe(2);
+      expect((yield* cache.snapshot).saved).toBe(1);
+      // oxlint-disable-next-line effect/noInlineProvide -- this test boundary owns its dynamic loopback server and storage fixture.
+    }).pipe(
+      Effect.provide(
+        offlineLayer.pipe(
+          Layer.provide(f.media),
+          Layer.provide(httpLayer(`http://127.0.0.1:${server.port}`)),
+        ),
+      ),
+    );
+  }).pipe(Effect.scoped),
+);
 
 class Origin extends Context.Service<Origin, { readonly url: string; readonly paths: string[] }>()(
   'test/OfflineOrigin',
@@ -52,7 +124,7 @@ for (const mode of ['good', 'truncated', 'overflow', 'html', 'ignored', 'changed
       let at = 0;
       if (mode === 'changed') at = 8;
       const result = yield* Effect.exit(
-        http.range({ number: 100, offset: -5 }, at, at + 262143, '"old"'),
+        http.range({ number: 100, offset: -5 }, at, at + CHUNK - 1),
       );
       if (mode === 'good' || mode === 'changed') {
         expect(Exit.isSuccess(result)).toBe(true);

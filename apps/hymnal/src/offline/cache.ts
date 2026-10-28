@@ -1,5 +1,6 @@
 /** One scoped queue owns durable recording publication. Media bytes never enter settings. */
 import {
+  Cause,
   Context,
   Deferred,
   Effect,
@@ -34,7 +35,7 @@ export class OfflineError extends Schema.TaggedError<OfflineError>()('OfflineErr
   code: Schema.Literals(['network', 'storage', 'invalid']),
 }) {}
 export const identityKey = (id: Identity) => `${id.number}_${soundingOffset(id.offset)}`;
-export const CHUNK = 256 * 1024;
+export const CHUNK = 2 * 1024 * 1024;
 
 /** Platform media storage: append at an exact offset; save commits metadata atomically. */
 export class Media extends Context.Service<
@@ -62,12 +63,7 @@ export interface Range {
 export class Http extends Context.Service<
   Http,
   {
-    readonly range: (
-      id: Identity,
-      at: number,
-      end: number,
-      etag?: string,
-    ) => Effect.Effect<Range, OfflineError>;
+    readonly range: (id: Identity, at: number, end: number) => Effect.Effect<Range, OfflineError>;
   }
 >()('hymnal/offline/Http') {}
 
@@ -80,6 +76,8 @@ export interface Snapshot {
   readonly partialBytes: number;
   readonly failed: number;
   readonly paused: boolean;
+  readonly storage: boolean;
+  readonly indexing: boolean;
 }
 export const empty: Snapshot = {
   saved: 0,
@@ -90,6 +88,8 @@ export const empty: Snapshot = {
   partialBytes: 0,
   failed: 0,
   paused: false,
+  storage: false,
+  indexing: true,
 };
 export class Offline extends Context.Service<
   Offline,
@@ -111,7 +111,7 @@ interface Job {
   readonly cancelled: Deferred.Deferred<boolean>;
   active: boolean;
 }
-const mediaHeader = (b: Uint8Array) =>
+export const mediaHeader = (b: Uint8Array) =>
   (b[0] === 73 && b[1] === 68 && b[2] === 51) || (b[0] === 255 && ((b[1] ?? 0) & 224) === 224);
 
 export const offlineLayer = Layer.effect(Offline)(
@@ -123,9 +123,13 @@ export const offlineLayer = Layer.effect(Offline)(
     const state = yield* SubscriptionRef.make(empty);
     const entries = new Map<string, Entry>();
     const jobs = new Map<string, Job>();
-    const failed = new Set<string>();
+    const failed = new Map<string, Identity>();
+    const resume = new Map<string, Identity>();
+    const touched = new Set<string>();
     let epoch = 0;
     let paused = false;
+    let storage = false;
+    let indexing = true;
     const publish = Effect.suspend(() => {
       const rows = [...entries.values()];
       const done = rows.filter((e) => e.complete);
@@ -139,41 +143,68 @@ export const offlineLayer = Layer.effect(Offline)(
         partialBytes: rows.filter((e) => !e.complete).reduce((n, e) => n + e.bytes, 0),
         failed: failed.size,
         paused,
+        storage,
+        indexing,
       });
     });
-    // No partial download is published after restart. Its exact offset and
-    // validator are checked again by the worker before a range is appended.
-    yield* media.list.pipe(
-      Effect.flatMap((rows) =>
-        Effect.forEach(
-          rows,
-          (row) =>
-            Effect.gen(function* () {
-              if (
-                row.complete &&
-                (row.bytes !== row.total || (yield* media.size(row)) !== row.bytes)
-              ) {
-                failed.add(identityKey(row));
-                yield* media.remove(row);
-                return;
-              }
-              entries.set(identityKey(row), row);
-              if (!row.complete) failed.add(identityKey(row));
-            }),
-          { discard: true },
-        ),
-      ),
-      Effect.catch(() =>
-        Effect.sync(() => {
-          failed.add('storage');
-        }),
-      ),
-    );
-    yield* publish;
     const owns = (job: Job) => job.epoch === epoch && jobs.get(identityKey(job.id)) === job;
     // Cancellation cannot cut a platform write in half and race a later delete.
     const locked = <A, E>(work: Effect.Effect<A, E>) =>
       mutex.withPermit(work).pipe(Effect.uninterruptible);
+    const cancelOwned = Effect.gen(function* () {
+      epoch++;
+      paused = true;
+      for (const [key, job] of jobs) {
+        resume.set(key, job.id);
+        yield* Deferred.succeed(job.cancelled, true);
+      }
+      jobs.clear();
+      yield* publish;
+    });
+    const cancel = locked(cancelOwned);
+    const indexed = yield* Deferred.make<boolean>();
+    // Index discovery never holds playback or the mutation lock. A key touched
+    // since startup belongs to the current session, not this older disk view.
+    yield* Effect.gen(function* () {
+      const rows = yield* media.list;
+      for (const row of rows) {
+        const key = identityKey(row);
+        if (touched.has(key)) continue;
+        const size = yield* media.size(row);
+        yield* locked(
+          Effect.gen(function* () {
+            if (touched.has(key)) return;
+            if (row.complete && (row.bytes !== row.total || size !== row.bytes)) {
+              failed.set(key, row);
+              yield* media.remove(row);
+            } else {
+              entries.set(key, row);
+              if (!row.complete) {
+                resume.set(key, row);
+                paused = true;
+              }
+            }
+            yield* publish;
+          }),
+        );
+      }
+    }).pipe(
+      Effect.catchCause(() =>
+        locked(
+          Effect.gen(function* () {
+            storage = true;
+            yield* cancelOwned;
+          }),
+        ),
+      ),
+      Effect.ensuring(
+        Effect.suspend(() => {
+          indexing = false;
+          return publish.pipe(Effect.andThen(Deferred.succeed(indexed, true)));
+        }),
+      ),
+      Effect.forkScoped,
+    );
     const run = Effect.fn('Offline.save')(function* (job: Job) {
       const key = identityKey(job.id);
       const start = yield* locked(
@@ -196,10 +227,13 @@ export const offlineLayer = Layer.effect(Offline)(
         const previous = entries.get(key);
         if (previous?.complete) break;
         const at = previous?.bytes ?? 0;
-        const response = yield* http.range(job.id, at, at + CHUNK - 1, previous?.etag);
+        const response = yield* http.range(job.id, at, at + CHUNK - 1);
         complete = yield* locked(
           Effect.gen(function* () {
             if (!owns(job)) return true;
+            // Invalidation may remove a partial while this range is in flight.
+            // Restart instead of appending past a now-missing prefix.
+            if (entries.get(key) !== previous) return false;
             // A changed entity never receives bytes from its former version.
             if (
               previous &&
@@ -236,8 +270,9 @@ export const offlineLayer = Layer.effect(Offline)(
             if ((yield* media.size(job.id)) !== entry.bytes)
               return yield* OfflineError.make({ code: 'storage' });
             yield* media.save(entry);
-            failed.delete('storage');
+            storage = false;
             entries.set(key, entry);
+            resume.delete(key);
             yield* publish;
             return entry.complete;
           }),
@@ -246,16 +281,21 @@ export const offlineLayer = Layer.effect(Offline)(
     });
     const work = (job: Job) =>
       Effect.raceFirst(run(job), Deferred.await(job.cancelled).pipe(Effect.asVoid)).pipe(
-        Effect.catch((error) =>
+        Effect.catchCause((cause) =>
           locked(
             Effect.gen(function* () {
               if (!owns(job)) return;
-              failed.add(identityKey(job.id));
+              const error = Option.getOrUndefined(Cause.findErrorOption(cause));
+              failed.set(identityKey(job.id), job.id);
+              if (error?.code === 'storage') {
+                storage = true;
+                yield* cancelOwned;
+              }
               yield* Effect.logWarning('offline.save.failed').pipe(
                 Effect.annotateLogs({
                   hymn: job.id.number,
                   offset: job.id.offset,
-                  code: error.code,
+                  code: error?.code ?? 'defect',
                 }),
               );
             }),
@@ -276,34 +316,35 @@ export const offlineLayer = Layer.effect(Offline)(
       const id = { number: input.number, offset: soundingOffset(input.offset) };
       if (!Schema.is(Identity)(id)) return;
       const key = identityKey(id);
+      touched.add(key);
       if (entries.get(key)?.complete || jobs.has(key)) return;
       const job: Job = { id, epoch, cancelled: yield* Deferred.make<boolean>(), active: false };
       jobs.set(key, job);
       failed.delete(key);
-      paused = false;
       yield* Queue.offer(queue, job);
     });
-    const cancel = locked(
-      Effect.gen(function* () {
-        epoch++;
-        paused = true;
-        for (const job of jobs.values()) yield* Deferred.succeed(job.cancelled, true);
-        jobs.clear();
-        yield* publish;
-      }),
-    );
     const invalidate = Effect.fn('Offline.invalidate')(function* (id: Identity) {
+      touched.add(identityKey(id));
       entries.delete(identityKey(id));
-      failed.add(identityKey(id));
+      failed.set(identityKey(id), id);
       yield* media.remove(id).pipe(Effect.ensuring(publish));
     });
     return Offline.of({
       enqueue: (id) => locked(add(id).pipe(Effect.andThen(publish))),
-      downloadAll: locked(
-        Effect.gen(function* () {
-          for (let number = 1; number <= 695; number++) yield* add({ number, offset: 0 });
-          yield* publish;
-        }),
+      downloadAll: Deferred.await(indexed).pipe(
+        Effect.andThen(
+          locked(
+            Effect.gen(function* () {
+              storage = false;
+              paused = false;
+              const retries = [...resume.values(), ...failed.values()];
+              resume.clear();
+              for (const id of retries) yield* add(id);
+              for (let number = 1; number <= 695; number++) yield* add({ number, offset: 0 });
+              yield* publish;
+            }),
+          ),
+        ),
       ),
       cancel,
       deleteAll: cancel.pipe(
@@ -315,11 +356,14 @@ export const offlineLayer = Layer.effect(Offline)(
               for (const row of new Map(
                 [...entries.values(), ...disk].map((row) => [identityKey(row), row]),
               ).values()) {
+                touched.add(identityKey(row));
                 yield* media.remove(row);
                 entries.delete(identityKey(row));
               }
               entries.clear();
               failed.clear();
+              resume.clear();
+              storage = false;
               paused = false;
               yield* publish;
             }).pipe(Effect.ensuring(publish)),

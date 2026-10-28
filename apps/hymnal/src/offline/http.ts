@@ -26,11 +26,10 @@ export const httpLayer = (origin = HYMNS_ORIGIN) =>
   Layer.succeed(
     Http,
     Http.of({
-      range: Effect.fn('Offline.range')(function* (id, at, end, etag) {
+      range: Effect.fn('Offline.range')(function* (id, at, end) {
         return yield* Effect.tryPromise({
           try: async (signal): Promise<Range> => {
             const headers = new Headers({ Range: `bytes=${at}-${end}` });
-            if (etag) headers.set('If-Range', etag);
             const uri = audioUrl(id.number, id.offset).replace(HYMNS_ORIGIN, origin);
             let response = await fetch(uri, { headers, signal });
             if (at > 0 && (response.status === 200 || response.status === 416)) {

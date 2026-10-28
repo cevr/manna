@@ -58,6 +58,11 @@ for (let offset = -5; offset <= 6; offset++)
       yield* Effect.gen(function* () {
         const cache = yield* Offline;
         const faults: number[] = [];
+        yield* cache.changes.pipe(
+          Stream.filter((s) => !s.indexing),
+          Stream.take(1),
+          Stream.runDrain,
+        );
         for (let number = 1; number <= 695; number++) {
           const id = { number, offset };
           if (Option.isNone(yield* cache.local(id))) faults.push(number);
@@ -199,14 +204,19 @@ it.effect('offline interruption resumes only a matching validator and exact dura
     f.control.before = () => Effect.void;
     yield* Effect.gen(function* () {
       const cache = yield* Offline;
-      expect((yield* cache.snapshot).failed).toBe(1);
+      yield* cache.changes.pipe(
+        Stream.filter((s) => !s.indexing),
+        Stream.take(1),
+        Stream.runDrain,
+      );
+      expect((yield* cache.snapshot).failed).toBe(0);
+      expect((yield* cache.snapshot).paused).toBe(true);
       yield* cache.enqueue(id);
       yield* idle(cache);
       expect((yield* cache.snapshot).saved).toBe(1);
       expect((yield* cache.snapshot).bytes).toBe(16);
     }).pipe(Effect.provide(f.layer));
     expect(f.calls.at(-1)?.at).toBe(8);
-    expect(Option.getOrUndefined(f.calls.at(-1)?.etag ?? Option.none())).toBe('"v1"');
   }),
 );
 

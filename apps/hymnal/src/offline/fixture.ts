@@ -1,5 +1,5 @@
 /** Synthetic external boundaries for controlled storage/HTTP schedules. No media is fetched. */
-import { Effect, Layer, Option } from 'effect';
+import { Effect, Layer } from 'effect';
 import {
   type Entry,
   Http,
@@ -14,7 +14,7 @@ import {
 export const fake = () => {
   const entries = new Map<string, Entry>();
   const files = new Map<string, Uint8Array>();
-  const calls: { id: Identity; at: number; etag: Option.Option<string> }[] = [];
+  const calls: { id: Identity; at: number }[] = [];
   const control = {
     readFails: false,
     writeFails: false,
@@ -30,16 +30,20 @@ export const fake = () => {
     maxActive: 0,
     before: (_id: Identity, _at: number): Effect.Effect<void> => Effect.void,
     writing: Effect.void,
+    listing: Effect.void,
   };
   const fail = () => OfflineError.make({ code: 'storage' });
   const media = Layer.succeed(
     Media,
     Media.of({
-      list: Effect.sync(() => [...entries.values()]),
+      list: Effect.suspend(() => control.listing).pipe(
+        Effect.andThen(Effect.sync(() => [...entries.values()])),
+      ),
       size: (id) => Effect.sync(() => files.get(identityKey(id))?.length ?? 0),
       append: (id, at, bytes) =>
         Effect.gen(function* () {
           if (control.writeFails) return yield* fail();
+          if (at > 0 && (files.get(identityKey(id))?.length ?? 0) !== at) return yield* fail();
           const data = new Uint8Array(at + bytes.length);
           data.set(files.get(identityKey(id))?.subarray(0, at) ?? []);
           data.set(bytes, at);
@@ -67,11 +71,11 @@ export const fake = () => {
   const http = Layer.succeed(
     Http,
     Http.of({
-      range: Effect.fn('Fake.range')(function* (id, at, _end, etag): Effect.fn.Return<
+      range: Effect.fn('Fake.range')(function* (id, at, _end): Effect.fn.Return<
         Range,
         OfflineError
       > {
-        calls.push({ id, at, etag: Option.fromUndefinedOr(etag) });
+        calls.push({ id, at });
         control.active++;
         control.maxActive = Math.max(control.maxActive, control.active);
         return yield* Effect.gen(function* () {
