@@ -64,7 +64,9 @@ describe('the pinned topic row under a layer over the list’s top', () => {
   it('holds still through a frame where the cover moves as the list does: the next row meets it at the same place', () => {
     // A field sliding in by 6 pt as the list scrolls up 6 pt: the pin's line
     // stays on the same content point, so the topic and its push are unchanged.
-    expect(pinnedAt(starts, 170, 36, 20)).toEqual(pinnedAt(starts, 164, 36, 26));
+    // At the push, 4 pt above the next topic's row: the row sits 32 pt up both times.
+    expect(pinnedAt(starts, 200, 36, 20)).toEqual({ index: 0, y: -32 });
+    expect(pinnedAt(starts, 194, 36, 26)).toEqual({ index: 0, y: -32 });
   });
 });
 
