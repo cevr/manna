@@ -44,7 +44,8 @@ Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>`
 | webster    | —                              | .rifts/manna/webster      | codex 01a17a57, r3 codex 01a17acc                                                                                   | merged 0f610564c                        |
 | selahone   | oneup                          |                           |                                                                                                                     |                                         |
 | playbulk   | chordbulk, feel                | .rifts/manna/playbulk     | P1 codex 01a17b31/01a17bea, P2 01a17c78, P3 01a17d2b/01a17dba/01a17dd7, P4 01a17e03/01a17ec8, P5 01a17f6a + opus r3 | merged e256414e8                        |
-| findbulk   | feel, topicdata, playbulk      | .rifts/manna/findbulk     | P1 opus implementor                                                                                                 |                                         |
+| findbulk   | feel, topicdata, playbulk      | .rifts/manna/findbulk     | P1–P3 done (verified iOS); P6 readers (opus max, 63 tasks, 4 at once)                                               |                                         |
+| argent     | —                              |                           | trial after the P6 readers                                                                                          |                                         |
 | checkbulk  | chordbulk, feel                |                           |                                                                                                                     |                                         |
 | barmisc    | barfix                         |                           |                                                                                                                     | folded into polishbulk                  |
 | hymnbrand  | barfix, ftbbrand               |                           |                                                                                                                     | folded into polishbulk                  |
@@ -369,6 +370,8 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 - Tried Gold is deleted (owner 2026-10-27: "Let's delete tried gold"; chose code and live site). The prod Worker was destroyed with Alchemy (plan: 1 to delete, Site) and the code removed in 46aaa9a9e. The triedgold.com domain and its DNS records stay (owner 2026-10-28: "keep them").
 
 - The hymnal-try web server on 8095 is retired (owner 2026-10-27: "Yeah, I don't need the hymnal try either"). Stopped by PID; its worktree removed; its commit cfec43318 stays on local branch hymnapp/glass.
+
+- 2026-10-28 argent (owner: "https://github.com/software-mansion/argent seems useful for us"): a carried tooling trial. Argent 0.30.1 (Apache-2.0 source, proprietary per-platform binaries, telemetry opt-out, an MCP server over stdio; `init` writes MCP config, skills and an allowlist into the editor config). The trial runs from a scratch install with a scratch HOME and telemetry disabled, never `init` into the owner's config; it drives the hymnal on the iOS simulator against the `sim.ts` driver of verify-hymnal for: tap and read by accessibility, React render counts (P3 r1 M1 was a redraw), Hermes profiling of the real app (P2/P3 timed a desktop Hermes stand-in), logs. It ends with adopt or drop, measured; adopting it (a project `.mcp.json`, a verify-hymnal section) is the owner's yes. Principle: carried tooling first, measure don't ask.
 
 ## Owner questions
 
