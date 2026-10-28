@@ -55,7 +55,13 @@ function AboutSheet({ hymn }: { readonly hymn: Option.Option<HymnText> }) {
             <Text style={styles.name} dynamicTypeRamp="footnote">
               {`${shown.number} ${shown.title}`}
             </Text>
-            <Text role="heading" aria-level={2} style={styles.heading} dynamicTypeRamp="footnote">
+            <Text
+              role="heading"
+              aria-level={2}
+              aria-label="More like this"
+              style={styles.heading}
+              dynamicTypeRamp="footnote"
+            >
               More like this
             </Text>
             <View style={styles.group}>

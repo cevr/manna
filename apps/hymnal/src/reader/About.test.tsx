@@ -51,7 +51,10 @@ describe('About this hymn', () => {
   it('lists under More like this the hymns nearest the hymn, nearest first', () => {
     using _route = routeTo('100');
     const html = renderToStaticMarkup(<AboutRoute />);
-    expect(html).toContain('More like this');
+    // The heading is drawn in capitals; its label, which VoiceOver reads and the drive matches, is not.
+    expect(html).toMatch(
+      /role="heading"[^>]*aria-label="More like this"|aria-label="More like this"[^>]*role="heading"/,
+    );
     expect(likeRows(html)).toEqual([...moreLike(100, MORE_LIKE)]);
   });
 

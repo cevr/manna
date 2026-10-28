@@ -37,5 +37,6 @@ nothing goes over the network.
 ## Gotchas
 
 - The button's label is `About this hymn`, its value the topic: `label=` matches the button, not the topic's words.
+- The heading `More like this` is drawn in capitals; its label is `More like this` (an uppercase style alone would make the label `MORE LIKE THIS`).
 - The first sheet of a launch reads the table (about 90 ms in Hermes 0.12 on a Mac); later sheets do not.
 - A row's name holds the hymn's title: match it by its leading `<n>, ` and keep titles out of logs.
