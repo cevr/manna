@@ -125,11 +125,16 @@ describe('a hymn page', () => {
     const html = page(15);
     const { number, title, topic } = hymn(15);
     const head = html.slice(0, html.indexOf('role="group"'));
+    const aboutAt = head.lastIndexOf('<', head.indexOf('data-testid="hymn-about"'));
     const topicAt = head.lastIndexOf('<', head.indexOf('data-testid="hymn-topic"'));
     const nameAt = head.lastIndexOf('<', head.indexOf('data-testid="hymn-name"'));
-    // The topic is its own line above the row, apart from the heading.
+    // The topic is its own line above the row, apart from the heading: the
+    // button `About this hymn`, its topic and a chevron.
     expect(textOf(head.slice(0, topicAt))).toBe('');
-    expect(textOf(head.slice(topicAt, nameAt))).toBe(topic);
+    expect(textOf(head.slice(topicAt, nameAt))).toBe(`${topic} ›`);
+    const button = head.slice(aboutAt, head.indexOf('>', aboutAt));
+    expect(button).toContain('role="button"');
+    expect(button).toContain('aria-label="About this hymn"');
     // The row lays its pieces side by side (the class a row View draws with): the number, then the title.
     const row = head.slice(nameAt);
     expect(row.slice(0, row.indexOf('>'))).toContain(rowClass);

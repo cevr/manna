@@ -33,6 +33,7 @@ import type * as Atom from 'effect/reactivity/Atom';
 import type { Placement } from '@manna/hymnal/placement';
 import { memo, type ReactNode, useCallback, useMemo, useRef } from 'react';
 import {
+  type ColorValue,
   Pressable,
   ScrollView,
   type StyleProp,
@@ -145,26 +146,7 @@ export const HymnPage = memo(function HymnPage({
       >
         <KeepAwake on={reader.reading.awake} />
         <View style={styles.head}>
-          <Pressable
-            testID="hymn-about"
-            role="button"
-            aria-label="About this hymn"
-            aria-valuetext={hymn.topic}
-            onPress={() => router.push(aboutHref(hymn.number))}
-            hitSlop={8}
-            style={styles.about}
-          >
-            {({ pressed }) => (
-              <Text
-                testID="hymn-topic"
-                style={[styles.topic, pressed && styles.pressed]}
-                dynamicTypeRamp="footnote"
-              >
-                {hymn.topic}
-                <Text style={{ color: accent }}>{'  ›'}</Text>
-              </Text>
-            )}
-          </Pressable>
+          <AboutLine number={hymn.number} topic={hymn.topic} accent={accent} />
           <View testID="hymn-name" style={styles.name}>
             <View style={styles.words}>
               <Text
@@ -198,6 +180,45 @@ export const HymnPage = memo(function HymnPage({
         </View>
       )}
     </View>
+  );
+});
+
+/**
+ * The page's quiet head line: the hymn's topic, a button `About this hymn`
+ * that opens the sheet of hymns like it. Drawn again only when its hymn,
+ * topic or accent change, never with the page around it.
+ */
+const AboutLine = memo(function AboutLine({
+  number,
+  topic,
+  accent,
+}: {
+  readonly number: number;
+  readonly topic: string;
+  readonly accent: ColorValue;
+}) {
+  const router = useRouter();
+  return (
+    <Pressable
+      testID="hymn-about"
+      role="button"
+      aria-label="About this hymn"
+      aria-valuetext={topic}
+      onPress={() => router.push(aboutHref(number))}
+      hitSlop={8}
+      style={styles.about}
+    >
+      {({ pressed }) => (
+        <Text
+          testID="hymn-topic"
+          style={[styles.topic, pressed && styles.pressed]}
+          dynamicTypeRamp="footnote"
+        >
+          {topic}
+          <Text style={{ color: accent }}>{'  ›'}</Text>
+        </Text>
+      )}
+    </Pressable>
   );
 });
 
