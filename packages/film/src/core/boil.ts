@@ -37,8 +37,10 @@ const phaseOf = (i: number, j: number, k: number) => {
 
 /**
  * The field at boil tick `tick` over a lattice `cols` × `rows` whose first
- * node is node (`i0`, `j0`): each node's (dx, dy), px, row by row. A
- * function of the tick (taken round the loop) and the nodes alone.
+ * node is node (`i0`, `j0`), each node wandering at most `amp` px (the house
+ * `BOIL_AMP` unless given; 0 holds every node still): each node's (dx, dy),
+ * px, row by row. A function of the tick (taken round the loop), the nodes
+ * and the amplitude alone.
  */
 export const boilField = (
   tick: number,
@@ -46,6 +48,7 @@ export const boilField = (
   j0: number,
   cols: number,
   rows: number,
+  amp: number = BOIL_AMP,
 ): Float32Array => {
   const t = (((Math.floor(tick) % BOIL_TICKS) + BOIL_TICKS) % BOIL_TICKS) / BOIL_TICKS;
   const out = new Float32Array(cols * rows * 2);
@@ -57,7 +60,7 @@ export const boilField = (
           const [cycles, share] = CRAWL[k] ?? [0, 0];
           v += share * Math.sin(2 * Math.PI * (cycles * t + phaseOf(i0 + c, j0 + r, axis * 3 + k)));
         }
-        out[(r * cols + c) * 2 + axis] = BOIL_AMP * v;
+        out[(r * cols + c) * 2 + axis] = amp * v;
       }
   return out;
 };

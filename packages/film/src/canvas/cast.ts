@@ -11,6 +11,7 @@
 // props (a bottle, a stool), each a plain canvas piece. Pure: the table is
 // data a test reads in Bun, and only its props' draws touch a canvas.
 
+import { BOIL_AMP } from '../core/boil.ts';
 import type { FitBar, FitBarName, FitClass, FitProbe } from '../core/fit-rows.ts';
 import type { LabelTable } from '../core/label.ts';
 import type { PuppetLook, PuppetPose, PuppetSpec } from './puppet.ts';
@@ -184,9 +185,23 @@ export const easePage = (film: string, member: string) => `${film}/cast/${member
 /** The scene id of an ease from `from` to `to`. */
 export const easeScene = (from: string, to: string) => `${from}-${to}`;
 
-/** The page name of `member`'s cast render in `film`, drawn by `figure`: what the player mounts and `film concept render` opens. */
-export const castPage = (film: string, member: string, figure: CastFigure = 'rig') =>
-  figure === 'rig' ? `${film}/cast/${member}` : `${film}/cast/${member}/cutout`;
+/**
+ * The boils a cut-out page draws its stills at, px: the house boil
+ * (`BOIL_AMP`, its page `<film>/cast/<member>/cutout`) and none (its page
+ * `…/cutout/boil-0`), the rest read without the boil's softening.
+ */
+export const CUTOUT_BOILS: ReadonlyArray<number> = [BOIL_AMP, 0];
+
+/** The page name of `member`'s cast render in `film`, drawn by `figure`, a cut-out's at boil `boil` px (one of `CUTOUT_BOILS`): what the player mounts and `film concept render` opens. */
+export const castPage = (
+  film: string,
+  member: string,
+  figure: CastFigure = 'rig',
+  boil: number = BOIL_AMP,
+) =>
+  figure === 'rig'
+    ? `${film}/cast/${member}`
+    : `${film}/cast/${member}/cutout${boil === BOIL_AMP ? '' : `/boil-${boil}`}`;
 
 /** A film's cast render table, checked by its type: every view of every kind of every member. */
 export const castTable = <const T extends CastTable>(table: T): T => table;

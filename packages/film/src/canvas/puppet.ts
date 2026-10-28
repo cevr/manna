@@ -16,6 +16,7 @@
 // drawn (Bun, `check --draw`) the puppet is still posed and its figure
 // declared (`probeFigure`), as a rig's is.
 
+import { BOIL_AMP } from '../core/boil.ts';
 import type { ConceptRef } from '../core/match.ts';
 import {
   type Puppet,
@@ -68,6 +69,8 @@ export interface PuppetPlace {
  */
 export interface PuppetLook {
   readonly boil: number;
+  /** How far the boil moves the figure, px: the house `BOIL_AMP` unless given; 0 turns it off. */
+  readonly amp?: number;
   readonly swap?: {
     readonly part: string;
     readonly drawing: string;
@@ -252,6 +255,7 @@ const passOf = (
     swap: swap && { part: swapped, drawing: swap.drawing },
     held: held && { drawing: held.drawing, at: layer.at(held.at), quiet: held.quiet * scale },
     boil: look.boil,
+    amp: look.amp ?? BOIL_AMP,
     origin: layer.at(spec.origin),
     line: spec.line && { width: spec.line.width * scale, ink: spec.line.ink },
     scale,

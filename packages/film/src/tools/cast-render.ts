@@ -32,9 +32,11 @@ import {
   type CastFigure,
   type CastModule,
   type CastView,
+  CUTOUT_BOILS,
   CUTOUT_MARGIN,
   castPage,
 } from '../canvas/cast.ts';
+import { BOIL_AMP } from '../core/boil.ts';
 import { deltaE, labsOf } from '../core/cast-sheet-pixels.ts';
 import {
   type CastRender,
@@ -105,6 +107,8 @@ interface CastRenderAsk {
   readonly fitOnly: boolean;
   /** What draws each view: its rig (`CAST`, by default), or its puppet (`CUTOUT`). */
   readonly figure?: CastFigure;
+  /** How far a cut-out's boil moves its figure, px: one of `CUTOUT_BOILS`, the house `BOIL_AMP` unless given. */
+  readonly boil?: number;
 }
 
 /** The render folder of `member` in `film`'s outputs. */
@@ -550,6 +554,12 @@ export const renderCast = Effect.fn('Cast.render')(function* (
       reason: `no kept view ${unknown.join(', ')} (kept: ${kept.join(', ')})`,
     });
   const figure = ask.figure ?? 'rig';
+  const boil = ask.boil ?? BOIL_AMP;
+  if (!CUTOUT_BOILS.includes(boil))
+    return yield* CastRenderRefused.make({
+      member,
+      reason: `a cut-out page boils at ${CUTOUT_BOILS.join(' or ')} px, not ${boil}`,
+    });
   const kinds = Arr.filter(
     SheetKind.literals,
     (k) =>
@@ -567,7 +577,7 @@ export const renderCast = Effect.fn('Cast.render')(function* (
     onTrue: () => Effect.succeed({ n: 0, dir: root }),
     onFalse: () => reserveNumbered(root),
   });
-  const pool = yield* (yield* Pages).open(castPage(film, member, figure), {
+  const pool = yield* (yield* Pages).open(castPage(film, member, figure, boil), {
     workers: 1,
     captions: false,
     server: Option.none(),
@@ -610,6 +620,7 @@ export const renderCast = Effect.fn('Cast.render')(function* (
     at: DateTime.formatIso(yield* DateTime.now),
     riv,
     figure,
+    ...{ rig: {}, cutout: { boil } }[figure],
     kinds: sheets,
     views,
   };

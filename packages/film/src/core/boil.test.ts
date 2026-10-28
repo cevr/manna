@@ -14,6 +14,14 @@ describe('the boil field', () => {
     expect(boilField(1, 0, 0, 4, 4)).not.toEqual(boilField(0, 0, 0, 4, 4));
   });
 
+  test('wanders as far as its amplitude: 0 holds every node still, the house amplitude by default', () => {
+    expect(boilField(5, 0, 0, 3, 3, 0).every((v) => v === 0)).toBe(true);
+    const house = boilField(5, 0, 0, 3, 3);
+    expect(boilField(5, 0, 0, 3, 3, BOIL_AMP)).toEqual(house);
+    const half = boilField(5, 0, 0, 3, 3, BOIL_AMP / 2);
+    for (let i = 0; i < house.length; i++) expect(half[i]!).toBeCloseTo(house[i]! / 2, 6);
+  });
+
   test("a node's field is its own, wherever the lattice it is read in starts", () => {
     const whole = boilField(9, 0, 0, 4, 4);
     const part = boilField(9, 2, 1, 2, 2);

@@ -215,6 +215,8 @@ export interface PuppetPass {
   readonly swap: { readonly part: number; readonly drawing: string } | undefined;
   readonly held: { readonly drawing: string; readonly at: Pt; readonly quiet: number } | undefined;
   readonly boil: number;
+  /** How far the boil moves a node, px: 0 draws the figure unmoved. */
+  readonly amp: number;
   readonly origin: Pt;
   readonly line:
     | { readonly width: number; readonly ink: readonly [number, number, number] }
@@ -686,7 +688,7 @@ const passBoil = (
     0,
     gl.RG,
     gl.FLOAT,
-    boilField(pass.boil, i0, j0, cols, rows),
+    boilField(pass.boil, i0, j0, cols, rows, pass.amp),
   );
   gl.useProgram(passes.boil);
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);

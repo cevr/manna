@@ -81,6 +81,8 @@ export const CastRender = Schema.Struct({
   riv: Schema.String,
   /** What drew each view: its rig (`CAST`), or its puppet (`CUTOUT`, `--figure cutout`). A render made before it drew rigs. */
   figure: Schema.optionalKey(Schema.Literals(['rig', 'cutout'])),
+  /** How far a cut-out's boil moved its figure, px (`--boil`; 0 drew it unboiled). A rig's render, or one made before it, has none. */
+  boil: Schema.optionalKey(Schema.Finite),
   kinds: Schema.Record(
     Schema.String,
     Schema.Struct({

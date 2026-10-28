@@ -15,6 +15,7 @@ import {
   type CastModule,
   type CastSheet,
   type CastView,
+  CUTOUT_BOILS,
   CUTOUT_MARGIN,
   type CutoutView,
   clipCast,
@@ -101,16 +102,16 @@ const castFilm = (film: string, member: string, m: CastModule): Film => {
  * A cut-out still's look: the boil's tick 0, the tick an ease starts on, so
  * a still is its ease's first frame where nothing has moved.
  */
-const STILL = { boil: 0 } as const;
+const STILL_TICK = 0;
 
-/** One cut-out view drawn on its sheet beside `views`: clipped as a rig's view is, its puppet's origin at `at`, at the sheet's own pixels, the sheet standing `CUTOUT_MARGIN` into the page. */
-const drawCutout = (f: Frame, view: CutoutView, views: ReadonlyArray<CutoutView>) => {
+/** One cut-out view drawn on its sheet beside `views`: clipped as a rig's view is, its puppet's origin at `at`, at the sheet's own pixels, the sheet standing `CUTOUT_MARGIN` into the page, boiling `amp` px. */
+const drawCutout = (f: Frame, view: CutoutView, views: ReadonlyArray<CutoutView>, amp: number) => {
   const { ctx } = f;
   ctx.save();
   ctx.translate(CUTOUT_MARGIN[0], CUTOUT_MARGIN[1]);
   clipCast(ctx, view, views, CLIP_MARGIN);
   ctx.translate(view.at[0], view.at[1]);
-  f.puppet(view.puppet.key, view.pose, STILL);
+  f.puppet(view.puppet.key, view.pose, { boil: STILL_TICK, amp });
   ctx.restore();
 };
 
@@ -125,8 +126,8 @@ const cutoutCanvas = (film: string, member: string, m: CastModule, kind: string)
   };
 };
 
-/** `member`'s cut-out render as a film: a scene each kind his `CUTOUT` views are of, each the size of the sheet grown by `CUTOUT_MARGIN`, each view drawn by its puppet. */
-const cutoutFilm = (film: string, member: string, m: CastModule): Film => {
+/** `member`'s cut-out render as a film: a scene each kind his `CUTOUT` views are of, each the size of the sheet grown by `CUTOUT_MARGIN`, each view drawn by its puppet, boiling `amp` px. */
+const cutoutFilm = (film: string, member: string, m: CastModule, amp: number): Film => {
   const kinds = m.CUTOUT?.[member];
   if (kinds === undefined)
     throw new Error(`${film}'s rigs/cast.ts has no cut-out of ${member} (CUTOUT)`);
@@ -149,7 +150,7 @@ const cutoutFilm = (film: string, member: string, m: CastModule): Film => {
       puppets,
       draw: (f: Frame) => {
         const views = Object.values(kinds[kind] ?? {});
-        for (const view of views) drawCutout(f, view, views);
+        for (const view of views) drawCutout(f, view, views, amp);
       },
     })),
   });
@@ -209,9 +210,10 @@ const easeFilm = (film: string, member: string, m: CastModule): Film => {
 };
 
 /**
- * The player's entries for a film's cast renders, three pages a member: his
+ * The player's entries for a film's cast renders, its pages a member: his
  * rigs under `<film>/cast/<member>`, and his puppets (`CUTOUT`) under
- * `<film>/cast/<member>/cutout`, and his eases (`EASES`) under
+ * `<film>/cast/<member>/cutout` (at the house boil; at none under
+ * `…/cutout/boil-0`, `CUTOUT_BOILS`), and his eases (`EASES`) under
  * `<film>/cast/<member>/ease`. Spread them, beside the films, into the
  * pages the app mounts. A page loads its member's table (`load`, the film's
  * `rigs/cast.ts`) and the rigs or puppets it draws, through `rive` (the
@@ -243,16 +245,16 @@ export const castPages = (
           ),
         ),
       ],
-      [
-        castPage(film, member, 'cutout'),
+      ...CUTOUT_BOILS.map((amp) => [
+        castPage(film, member, 'cutout', amp),
         Effect.flatMap(page.contextEffect, (services) =>
           Effect.promise(load).pipe(
-            Effect.map((m) => cutoutFilm(film, member, m)),
+            Effect.map((m) => cutoutFilm(film, member, m, amp)),
             Effect.flatMap(loadPuppets),
             Effect.provideContext(services),
           ),
         ),
-      ],
+      ]),
       [
         easePage(film, member),
         Effect.flatMap(page.contextEffect, (services) =>
