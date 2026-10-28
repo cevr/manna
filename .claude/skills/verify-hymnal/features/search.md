@@ -25,7 +25,7 @@ and brings the list back where it was.
 - `search-matched-line`: on a phone, a result found by a line other than its title shows that line under the title in the muted colour, one line long, in a taller row; VoiceOver reads it after the title. A result found by its title or its number shows the title alone. The home list's rows stay one line.
 - `search-open`: a result opens the hymn, with a back button `Hymns`.
 - `search-empty`: a query with no match shows the empty message.
-- `search-hermes`: each keystroke's search runs under 4 ms at the 95th percentile and under 8 ms at most in Hermes (`hermes-engine-cli` 0.12.0, the research harness over the app's own `src/hymns/search.ts`), and its index is built on the first query typed, never at the app's start.
+- `search-hermes`: each keystroke's search runs under 4 ms at the 95th percentile and under 8 ms at most in Hermes (`hermes-engine-cli` 0.12.0, the research harness over the app's own `src/hymns/search.ts`), and its index is built as search mode opens, never at the app's start.
 
 ## How to get to it (user POV)
 

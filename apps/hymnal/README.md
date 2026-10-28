@@ -65,8 +65,8 @@ under its number, and the refrain written out each time it is sung.
   word for an old one or the other way (`you` and `thee`). A title query
   lists the hymns whose title holds it first, in number order. On a phone a
   result found by a line other than its title shows that line under the
-  title, quiet, in a taller row. Its index is built in memory on the first
-  query typed, never at the app's start; `search.property.slow.test.ts`
+  title, quiet, in a taller row. Its index is built in memory as search mode
+  opens, never at the app's start; `search.property.slow.test.ts`
   sweeps it over the whole hymnal.
 - One's web navigators are headless, so `src/web/` draws a small header and
   search field on the web, and the web's home screen shows the search field

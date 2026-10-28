@@ -27,7 +27,7 @@
  * found by a line other than its title carries that line (`Found.line`).
  *
  * The index (`indexOf`) is built once from the hymns, in memory; the app
- * builds it on its first search (`hymnIndex`), never at start. Its search
+ * builds it as search mode opens (`hymnIndex`), never at start. Its search
  * keeps each word's matches and scores for the next keystroke, which
  * changes only the last word. It runs on the JavaScript thread a keystroke
  * at a time, so it works on flat typed arrays, not objects per word.
@@ -605,7 +605,7 @@ export const find = (index: SearchIndex, query: string): ReadonlyArray<Found> =>
 export const search = (index: SearchIndex, query: string): ReadonlyArray<HymnText> =>
   rankedOf(index, query).flatMap(({ h }) => index.hymns.slice(h, h + 1));
 
-/** The app's index of every hymn, built on the first search and kept. */
+/** The app's index of every hymn, built the first time it is asked for and kept. */
 export const hymnIndex: () => SearchIndex = (() => {
   let built = Option.none<SearchIndex>();
   return () =>

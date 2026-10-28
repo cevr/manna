@@ -252,14 +252,16 @@ function FieldButton({
 
 /**
  * Search mode: the focused field and Cancel over the hymns the query finds,
- * each found by a line other than its title showing that line. The first
- * query builds the search's index (`hymnIndex`), not the app's start.
+ * each found by a line other than its title showing that line. Search mode
+ * builds the search's index (`hymnIndex`) once it is on screen, while the
+ * keyboard comes up, so the first keystroke does not wait on it; the app's
+ * start never does.
  */
 function Search({ onCancel }: { readonly onCancel: () => void }) {
   const [query, setQuery] = useAtom(searchQuery);
   const shown = useDeferredValue(query);
   const results = useMemo(() => {
-    // No index is built until the reader types.
+    // An empty query lists nothing here: the list beneath shows instead.
     const found = Option.match(
       Option.liftPredicate(shown, (q) => q !== ''),
       {
@@ -280,6 +282,9 @@ function Search({ onCancel }: { readonly onCancel: () => void }) {
     Keyboard.dismiss();
     onCancel();
   };
+  useEffect(() => {
+    hymnIndex();
+  }, []);
   const navigation = useNavigation();
   useEffect(() => {
     const back = BackHandler.addEventListener(
