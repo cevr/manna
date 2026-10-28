@@ -1,11 +1,13 @@
 /**
  * Search over the whole compiled hymnal, swept: every hymn by each form of
- * its number, every title and first line typed whole, the line shown for
- * a line typed whole, and seeded half-remembered lines (a typo, a word left
- * out, two words swapped, a modern word for an old one). Each query is made
+ * its number, every title and first line typed whole, every word of 4
+ * letters or more typed alone (its holders before the hymns a typo of it
+ * finds), the line shown for a line typed whole, and seeded half-remembered
+ * lines (a typo, a word left out, two words swapped, a modern word for an
+ * old one). Each query is made
  * here from the hymns, and each check and message holds numbers only: no
- * hymn's words are written in this file or printed by it. The fast cases
- * are `search.test.ts`.
+ * hymn's words are written in this file or printed by it. The fast cases,
+ * on a small hymnal of invented words, are `search.test.ts`.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -153,6 +155,9 @@ describe('search swept over the hymnal', () => {
       `hymn ${n}`,
       `Hymn #${n}`,
       `number ${n}`,
+      `hymn no. ${n}`,
+      `(${n})`,
+      `${n}.`,
     ];
     const misses = hymns.filter((hymn) =>
       forms(hymn.number).some((q) => numbers(q)[0] !== hymn.number),
