@@ -12,6 +12,7 @@
 // table to the members' records: every kept view, no other, each in its kept
 // box. Pure.
 
+import { type CutoutView, cutoutTable } from '@manna/film/canvas';
 import { type CastProp, type CastView, castTable } from '@manna/film/rive';
 import {
   HAND_ART,
@@ -21,6 +22,11 @@ import {
   tracedHands,
   type tracedFigure,
 } from '@manna/film/style';
+import {
+  BOXES as LEAD_BOXES,
+  PUPPETS as LEAD_PUPPETS,
+} from '../../../library/cast/lead-feast/cutout/puppets.ts';
+import { SKELETONS as LEAD_SKELETONS } from '../../../library/cast/lead-feast/cutout/skeleton.ts';
 import * as LEAD_BACK from '../../../library/cast/lead-feast/rig/back-traced.ts';
 import * as LEAD_DRINKING from '../../../library/cast/lead-feast/rig/drinking-traced.ts';
 import * as LEAD_FRONT from '../../../library/cast/lead-feast/rig/front-traced.ts';
@@ -645,6 +651,36 @@ export const CAST = castTable({
           },
         ),
       ),
+    },
+  },
+});
+
+/** A cut-out view of the lead: his puppet of the view at rest, its origin at the kept box's corner, held to the view's own fit rows. */
+const cutout = (fit: ViewFit, view: keyof typeof LEAD_PUPPETS): CutoutView => {
+  const box = LEAD_BOXES[view];
+  return {
+    box,
+    at: [box[0], box[1]],
+    puppet: LEAD_PUPPETS[view],
+    pose: { numbers: {}, root: LEAD_SKELETONS[view].root, scale: 1 },
+    fit,
+  };
+};
+
+/**
+ * The views a member has a puppet for (`film concept render --figure
+ * cutout`): each his part sheet's puppet at rest, standing where the kept
+ * view stands, held to the same fit rows as his rig's view. `CAST` is the
+ * rigs' table, unchanged beside it.
+ */
+export const CUTOUT = cutoutTable({
+  'lead-feast': {
+    turnaround: {
+      front: cutout(LEAD_FIT.turnaround.front, 'front'),
+      threeQuarterLeft: cutout(LEAD_FIT.turnaround.threeQuarterLeft, 'threeQuarterLeft'),
+    },
+    heads: {
+      'heads-4': cutout(LEAD_FIT.heads['heads-4'], 'heads-4'),
     },
   },
 });
