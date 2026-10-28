@@ -1,6 +1,6 @@
 // The lead's raise: his front cut-out from rest to poses-1 (the bottle raised)
 // in 48 frames at 24 fps, a big move drawn from keys (`raise/record.json`):
-// his own sleeve at rest, then K2-K6 drawn by okra over clip B's frames, each
+// his own sleeve at rest, then K2-K6 drawn over clip B's frames (`raise-cut.ts`), each
 // laid in place of his `armRight` and turned about its pivot as clip B's motion
 // says (`raise/motion.json`: each frame's key and turn, on twos); the kept hand
 // and bottle of poses-1 laid over at the key's hand, turned with it; the boil
