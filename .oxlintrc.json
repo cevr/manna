@@ -631,11 +631,12 @@
       // its edges (`core/fit.ts`) and a cast render's fit rows
       // (`core/fit-rows.ts`) read points the same way, and so do a puppet's
       // meshes, weights, CPU raster and un-matted rim (`core/puppet.ts`,
-      // `core/unmatte.ts`) and its draw's
+      // `core/unmatte.ts`), the fit of its pose (`core/pose-fit.ts`) and its draw's
       // vertex buffers (`canvas/puppet.ts`, `canvas/puppet-gl.ts`).
       "files": [
         "**/packages/film/src/core/puppet.ts",
         "**/packages/film/src/core/unmatte.ts",
+        "**/packages/film/src/core/pose-fit.ts",
         "**/packages/film/src/canvas/puppet.ts",
         "**/packages/film/src/canvas/puppet-gl.ts",
         "**/packages/film/src/core/figure.ts",
