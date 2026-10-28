@@ -706,8 +706,19 @@ export const parts = Command.make(
       ['record.json', new TextEncoder().encode(`${recordText}\n`)],
     ];
     if (input.check) {
+      // the record is held as its formatter leaves it, so it is read and written again before it is compared
+      const held = (file: string): Effect.Effect<Uint8Array, unknown> =>
+        Bool.match(file === 'record.json', {
+          onTrue: () =>
+            fs.readFileString(path.join(dir, file)).pipe(
+              Effect.flatMap(Schema.decodeEffect(PartSheetRecordJson)),
+              Effect.flatMap(Schema.encodeEffect(PartSheetRecordJson)),
+              Effect.map((text) => new TextEncoder().encode(`${text}\n`)),
+            ),
+          onFalse: () => fs.readFile(path.join(dir, file)),
+        });
       const differs = yield* Effect.filter(files, ([file, bytes]) =>
-        fs.readFile(path.join(dir, file)).pipe(
+        held(file).pipe(
           Effect.map((held) => held.length !== bytes.length || held.some((b, i) => b !== bytes[i])),
           Effect.orElseSucceed(() => true),
         ),
