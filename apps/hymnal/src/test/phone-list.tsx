@@ -282,8 +282,42 @@ const foundOf = async (fontScale: number) => {
   return rows;
 };
 
+/**
+ * Seven results of a search and two hymns about it, one of them among the
+ * strongest five: the rows in the order drawn, a hymn's as its number, a
+ * section's as its name, and each section row's height.
+ */
+const aboutOf = async () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host);
+  await act(async () => {
+    root.render(
+      createElement(HymnList, {
+        hymns: hymns.slice(0, 7),
+        hrefOf: hrefs.first,
+        offset,
+        about: [hymns[9], hymns[2]].filter((h) => h !== undefined),
+      }),
+    );
+  });
+  const drawn = [...host.querySelectorAll('[role="heading"], [role="link"]')];
+  const rows = drawn.map((row) =>
+    row.getAttribute('role') === 'heading'
+      ? String(row.getAttribute('aria-label'))
+      : Number(/^(\d+),/.exec(String(row.getAttribute('aria-label')))?.[1]),
+  );
+  const sections = drawn
+    .filter((row) => row.getAttribute('role') === 'heading')
+    .map((row) => (row instanceof HTMLElement ? row.style.height : ''));
+  act(() => root.unmount());
+  host.remove();
+  return { rows, sections };
+};
+
 process.stdout.write(
   JSON.stringify({
+    about: await aboutOf(),
     scheme: await observe('scheme'),
     fontScale: await observe('fontScale'),
     hrefOf: await observe('hrefOf'),

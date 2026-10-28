@@ -13,6 +13,10 @@
  * thread from the topics' fixed places (`pin.ts`), not the list's sticky
  * headers: those wait on the JS thread at each handoff, and a fast drag
  * showed the row missing or out of place for a frame.
+ * A search's results given the hymns `about` its query show them under the
+ * strongest matches, in a section `Hymns about this`, then the rest of the
+ * matches under `More matches` (`resultRowsOf`); a section's row is a
+ * topic's row, unpinned (a search's results pin none).
  * After its last row the list keeps `ListEnd`, the end space over the bottom
  * inset it meets, so the row ends clear of the home indicator, or of the
  * bar docked under the stack while it shows.
@@ -59,7 +63,7 @@ import { ListEnd } from './ListEnd';
 import { dismissal } from './keyboard';
 import { pinnedAt, topicStarts } from './pin';
 import { pagesFrom } from './place';
-import { plainRowsOf, type Row, rowsOf } from './rows';
+import { resultRowsOf, type Row, rowsOf } from './rows';
 
 /** A hymn row's line of text, and the space above and below it, at the reader's usual text size. */
 const line = 22;
@@ -144,13 +148,17 @@ export function HymnList({
   favourites,
   pullDown,
   lines,
-}: HymnListProps) {
+  about,
+}: HymnListProps & {
+  /** A search's hymns about its query, nearest first: a section under its strongest matches (`resultRowsOf`). */
+  readonly about?: ReadonlyArray<HymnText>;
+}) {
   const { fontScale } = useWindowDimensions();
   const accent = useAccent();
   const { rows, sticky } = useMemo(() => {
     if (byTopic) return rowsOf(hymns, shelves, favourites);
-    return plainRowsOf(hymns, favourites, lines);
-  }, [hymns, byTopic, shelves, favourites, lines]);
+    return resultRowsOf(hymns, about ?? [], favourites, lines);
+  }, [hymns, byTopic, shelves, favourites, lines, about]);
   const hymnHeight = heightOf('hymn', fontScale);
   const foundHeight = heightOf('found', fontScale);
   const topicHeight = heightOf('topic', fontScale);

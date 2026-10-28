@@ -50,6 +50,10 @@ const run = Bun.spawnSync(['bun', Bun.resolveSync('../test/phone-list.tsx', impo
 const seen: Partial<Record<Change, Seen>> & {
   readonly end?: ReadonlyArray<End>;
   readonly found?: ReadonlyArray<ReadonlyArray<Found>>;
+  readonly about?: {
+    readonly rows: ReadonlyArray<number | string>;
+    readonly sections: ReadonlyArray<string>;
+  };
 } = JSON.parse(run.stdout.toString() || '{}');
 
 /** The rows of `kind` on screen both live and fresh, by label, as each draws them. */
@@ -68,7 +72,7 @@ const empty: Rows = { hymns: {}, topics: {} };
 describe('the phones’ hymn list, changed while mounted', () => {
   it('mounts and changes with nothing on its error stream', () => {
     expect(run.stderr.toString()).toBe('');
-    expect(Object.keys(seen)).toEqual(['scheme', 'fontScale', 'hrefOf', 'end', 'found']);
+    expect(Object.keys(seen)).toEqual(['about', 'scheme', 'fontScale', 'hrefOf', 'end', 'found']);
   });
 
   it.each<Change>(['scheme', 'fontScale', 'hrefOf'])(
@@ -175,5 +179,14 @@ describe('a search’s results on a phone', () => {
   it('scale both lines of a found row with the reader’s text size', () => {
     // At 150%: 33 + 22 for a plain row, 33 + 27 + 16 for a found one.
     expect(large.map((row) => row.height)).toEqual(['55px', '76px', '55px']);
+  });
+});
+
+describe('a search’s results with the hymns about it', () => {
+  it('draw the strongest five, then Hymns about this without the one among them, then More matches, each section a topic’s height', () => {
+    expect(seen.about).toEqual({
+      rows: [1, 2, 3, 4, 5, 'Hymns about this', 10, 'More matches', 6, 7],
+      sections: ['36px', '36px'],
+    });
   });
 });

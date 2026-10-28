@@ -8,7 +8,7 @@ import { describe, expect, it } from 'bun:test';
 
 import { meaning } from '../../assets/meaning/meaning.js';
 import { hymns } from './hymns';
-import { about, moreLike } from './meaning';
+import { ABOUT, about, aboutQuery, moreLike } from './meaning';
 
 const numbers = new Set(hymns.map((hymn) => hymn.number));
 const distinctHymns = (found: ReadonlyArray<number>) =>
@@ -42,6 +42,19 @@ describe('about', () => {
 
   it('weighs a word the hymns hold everywhere at little', () => {
     expect(about('the and peace', 5)).toEqual(about('peace', 5));
+  });
+});
+
+describe('search mode’s hymns about a query', () => {
+  it('are about’s ten for a query of words', () => {
+    expect(aboutQuery('comfort in sorrow')).toEqual(about('comfort in sorrow', ABOUT));
+    expect(ABOUT).toBe(10);
+  });
+
+  it('are none for a number asked for, or a word still under three letters', () => {
+    expect(['no 100', 'hymn #12', '100', 'pe', ' a b '].map((q) => aboutQuery(q).length)).toEqual([
+      0, 0, 0, 0, 0,
+    ]);
   });
 });
 

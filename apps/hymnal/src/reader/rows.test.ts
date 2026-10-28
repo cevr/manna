@@ -7,11 +7,11 @@
  */
 
 import { describe, expect, it } from 'bun:test';
-import { Option } from 'effect';
+import { Match, Option } from 'effect';
 
 import { hymns } from '~/hymns/hymns';
 
-import { type Row, plainRowsOf, rowsOf } from './rows';
+import { type Row, plainRowsOf, resultRowsOf, rowsOf, STRONG } from './rows';
 
 /** A seeded generator in [0, 1) (mulberry32), as the player's world draws. */
 const rng = (seed: number) => () => {
@@ -255,5 +255,72 @@ describe('a search’s result rows', () => {
     );
     const lines = rows.flatMap((row) => [row].filter((r) => r.kind === 'hymn').map((r) => r.line));
     expect(lines.map(Option.isNone)).toEqual([true, true, true]);
+  });
+});
+
+describe('a search’s result rows with the hymns about it', () => {
+  const hymn = (number: number) => ({ number, topic: 'A' });
+  type Rows = ReadonlyArray<Row<{ readonly number: number }>>;
+  /** Each row as its hymn's number, `about:` before one in the about section, or a section's name. */
+  const seen = (rows: Rows) =>
+    rows.map((row) =>
+      Match.value(row).pipe(
+        Match.when({ kind: 'hymn' }, (r) => r.key.replace('hymn:', '')),
+        Match.orElse((r) => r.name),
+      ),
+    );
+  const hymnRowsOf = (rows: Rows) =>
+    rows.flatMap((row) =>
+      Match.value(row).pipe(
+        Match.when({ kind: 'hymn' }, (r) => [r]),
+        Match.orElse(() => []),
+      ),
+    );
+
+  it('put the strongest matches first, then Hymns about this, then the rest under More matches', () => {
+    const found = [1, 2, 3, 4, 5, 6, 7].map(hymn);
+    const { rows, sticky } = resultRowsOf(found, [3, 9, 8].map(hymn));
+    expect(STRONG).toBe(5);
+    expect(seen(rows)).toEqual([
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      'Hymns about this',
+      'about:9',
+      'about:8',
+      'More matches',
+      '6',
+      '7',
+    ]);
+    expect(sticky).toEqual([]);
+  });
+
+  it('give every row the hymns in the order shown, each once, and a key of its own', () => {
+    const { rows } = resultRowsOf([1, 2, 3, 4, 5, 6, 9].map(hymn), [9, 8].map(hymn));
+    const hymnRows = hymnRowsOf(rows);
+    expect(hymnRows.map((row) => row.source)).toEqual(hymnRows.map(() => [1, 2, 3, 4, 5, 9, 8, 6]));
+    expect(new Set(rows.map((row) => row.key)).size).toBe(rows.length);
+  });
+
+  it('show the section alone when the words match nothing, and no section for no hymn about it', () => {
+    expect(seen(resultRowsOf([], [4, 2].map(hymn)).rows)).toEqual([
+      'Hymns about this',
+      'about:4',
+      'about:2',
+    ]);
+    expect(seen(resultRowsOf([1, 2].map(hymn), [1, 2].map(hymn)).rows)).toEqual(['1', '2']);
+    expect(seen(resultRowsOf([1, 2].map(hymn), []).rows)).toEqual(['1', '2']);
+  });
+
+  it('keep each match’s found line, and none on a hymn about the query', () => {
+    const { rows } = resultRowsOf(
+      [1].map(hymn),
+      [7].map(hymn),
+      new Set(),
+      new Map([[1, 'a line']]),
+    );
+    expect(hymnRowsOf(rows).map((row) => Option.isSome(row.line))).toEqual([true, false]);
   });
 });

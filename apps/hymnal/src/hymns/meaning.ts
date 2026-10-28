@@ -159,6 +159,23 @@ export const about = (query: string, count = 10): ReadonlyArray<number> => {
   });
 };
 
+/** How long search mode waits after the last keystroke before it looks for the hymns about the query, in ms. */
+export const PAUSE = 150;
+
+/** How many hymns about a query search mode shows. */
+export const ABOUT = 10;
+
+/**
+ * The hymns search mode shows about `query`: none for a query that holds a
+ * digit (a number asked for, `no 100`) or has under three letters (a word
+ * still being typed), else `about`'s `ABOUT`.
+ */
+export const aboutQuery = (query: string): ReadonlyArray<number> => {
+  const folded = fold(query);
+  if (/\d/.test(folded) || folded.replace(/ /g, '').length < 3) return [];
+  return about(folded, ABOUT);
+};
+
 /** The hymns most like hymn `number`, `count` at most, the nearest first; none for a number the table lacks. */
 export const moreLike = (number: number, count = 10): ReadonlyArray<number> => {
   const t = table();

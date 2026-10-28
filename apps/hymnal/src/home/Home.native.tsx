@@ -27,7 +27,7 @@
 
 import { useAtom } from '@effect/atom-react';
 import { Link, useLinkTo, useNavigation, useSafeAreaInsets } from 'one';
-import { Option } from 'effect';
+import { Duration, Effect, Fiber, Option } from 'effect';
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import {
   BackHandler,
@@ -50,8 +50,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { hymnAt } from '~/hymns/hymns';
+import { aboutQuery, PAUSE } from '~/hymns/meaning';
 import { find, hymnIndex } from '~/hymns/search';
-import { HymnList } from '~/reader/HymnList';
+import { HymnList } from '~/reader/HymnList.native';
 import { searchOffset, searchQuery } from '~/reader/place';
 import { color, useAccent } from '~/color';
 
@@ -276,6 +278,21 @@ function Search({ onCancel }: { readonly onCancel: () => void }) {
       ),
     };
   }, [shown]);
+  // The hymns about the query wait for a pause in the typing, and show only for the query shown.
+  const [asked, setAsked] = useState('');
+  useEffect(() => {
+    const pause = Effect.runFork(
+      Effect.sleep(Duration.millis(PAUSE)).pipe(Effect.andThen(Effect.sync(() => setAsked(query)))),
+    );
+    return () => {
+      Effect.runFork(Fiber.interrupt(pause));
+    };
+  }, [query]);
+  const near = useMemo(
+    () => aboutQuery(asked).flatMap((n) => Option.toArray(hymnAt(String(n)))),
+    [asked],
+  );
+  const about = useMemo(() => near.filter(() => asked === shown), [near, asked, shown]);
   const accent = useAccent();
   const cancel = () => {
     setQuery('');
@@ -320,6 +337,7 @@ function Search({ onCancel }: { readonly onCancel: () => void }) {
           key={shown}
           hymns={results.hymns}
           lines={results.lines}
+          about={about}
           hrefOf={(n) => `/hymns/${n}`}
           offset={searchOffset}
           empty={`No hymn matches “${shown}”.`}
