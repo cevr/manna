@@ -531,8 +531,11 @@ export const poseMesh = <O extends Float64Array | Float32Array>(
   return out;
 };
 
-/** Each part's vertices posed at `pose` (flat x, y), in its mesh's vertex order. */
-const posedVertices = (puppet: Puppet, pose: PuppetPose): ReadonlyArray<Float64Array> => {
+/**
+ * Each part's vertices posed at `pose` (flat x, y), in its mesh's vertex order.
+ * Exported as the skinning's contract seam: the unit's acceptance reads the posed mesh through it.
+ */
+export const posedVertices = (puppet: Puppet, pose: PuppetPose): ReadonlyArray<Float64Array> => {
   const m = boneTransforms(puppet.bones, pose.numbers);
   return puppet.parts.map((p) =>
     poseMesh(p.mesh, m, puppet.root, pose, new Float64Array(p.mesh.vertices.length)),
