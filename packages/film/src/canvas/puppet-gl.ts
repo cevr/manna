@@ -172,6 +172,8 @@ void main() {
 /** One part (or drawing) on one context: its texture, its vertex array, its buffers and its index count. */
 interface PartGl {
   readonly texture: WebGLTexture;
+  /** What the part shows once a part in front of it moves away (`PuppetPart.uncovered`); a drawing's is its texture. */
+  readonly uncovered: WebGLTexture;
   readonly vao: WebGLVertexArrayObject;
   readonly pos: WebGLBuffer;
   readonly buffers: ReadonlyArray<WebGLBuffer>;
@@ -327,7 +329,8 @@ const madeOn = (
     const texture = textureOf(gl, part.pixels);
     const src = Float32Array.from(part.mesh.vertices);
     const mesh = meshOn(gl, state.positions[k]!.byteLength, src, part.mesh.triangles);
-    return { texture, ...mesh, count: part.mesh.triangles.length };
+    const uncovered = textureOf(gl, part.uncovered);
+    return { texture, uncovered, ...mesh, count: part.mesh.triangles.length };
   });
   const rests = puppet.parts.map((part, k): RestGl => {
     const mesh = meshOn(
@@ -343,7 +346,7 @@ const madeOn = (
     const texture = textureOf(gl, pixels);
     const [w, h] = [pixels.width, pixels.height];
     const mesh = meshOn(gl, 32, Float32Array.from([0, 0, w, 0, w, h, 0, h]), QUAD_TRIANGLES);
-    drawings.set(name, { texture, ...mesh, count: 6 });
+    drawings.set(name, { texture, uncovered: texture, ...mesh, count: 6 });
   }
   return Result.succeed({
     program,
@@ -362,6 +365,7 @@ export const freePuppetGl = (state: PuppetGl) => {
     if (gl.isContextLost()) continue;
     for (const p of [...on.parts, ...on.drawings.values()]) {
       gl.deleteTexture(p.texture);
+      if (p.uncovered !== p.texture) gl.deleteTexture(p.uncovered);
       gl.deleteVertexArray(p.vao);
       for (const b of p.buffers) gl.deleteBuffer(b);
     }
@@ -527,7 +531,10 @@ const drawPart = (
 ) => {
   const p = on.parts[k]!;
   if (k !== pass.swap?.part) {
-    if (p.count > 0) drawMesh(gl, p.vao, p.pos, state.positions[k]!, p.texture, p.count);
+    // a part a moving part in front of it has uncovered shows the paint hidden under that part's rim
+    const open = pass.moving.some((j) => j < k);
+    const texture = [p.texture, p.uncovered][Number(open)]!;
+    if (p.count > 0) drawMesh(gl, p.vao, p.pos, state.positions[k]!, texture, p.count);
     return;
   }
   const key = on.drawings.get(pass.swap.drawing);

@@ -158,6 +158,45 @@ describe('a puppet', () => {
     ).toBe(true);
   });
 
+  test("gives back, uncovered, the paint the un-matte cleared behind a front part's rim", () => {
+    // a sleeve over a light body box, cut from a paper; the sleeve's rim, reached from the ground through the body, lies over its hidden paint
+    const paper = [250, 240, 220] as const;
+    const arm = new Uint8Array(W * H * 4);
+    const body = new Uint8Array(W * H * 4);
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++) {
+        const i = (y * W + x) * 4;
+        if (y >= 6 && y < 22 && x >= 20 && x < 44) body.set([200, 190, 160, 255], i);
+        if (y >= 8 && y < 16 && x >= 2 && x < 62) arm.set([40, 30, 20, 255], i);
+        // the sleeve's rim row: half paper, half ink, over the body
+        if (y === 8 && x >= 2 && x < 62) arm.set([145, 135, 120, 255], i);
+      }
+    const sheet: PuppetSheet = {
+      width: W,
+      height: H,
+      paper,
+      parts: [
+        { name: 'arm', pixels: { width: W, height: H, rgba: arm } },
+        { name: 'body', pixels: { width: W, height: H, rgba: body } },
+      ],
+    };
+    const p = made(sheet, {
+      ...TWO_BONES,
+      skin: { arm: ['shoulderRight', 'elbowRight'], body: [] },
+    });
+    const at = (r: Uint8Array, x: number, y: number) => [
+      ...r.subarray((y * W + x) * 4, (y * W + x) * 4 + 4),
+    ];
+    const back = p.parts[1]!;
+    // at rest the body's paint under the rim is cleared; uncovered it is the body's own
+    expect(at(back.pixels.rgba, 30, 8)).toEqual([0, 0, 0, 0]);
+    expect(at(back.uncovered.rgba, 30, 8)).toEqual([200, 190, 160, 255]);
+    // the body's own pixels elsewhere are its pixels in both
+    expect(at(back.uncovered.rgba, 30, 18)).toEqual(at(back.pixels.rgba, 30, 18));
+    // a front part's own pixels are never given back
+    expect(p.parts[0]!.uncovered.rgba).toEqual(p.parts[0]!.pixels.rgba);
+  });
+
   test('is deterministic: the same pose gives the same raster', () => {
     const p = made(SLEEVE, TWO_BONES);
     const pose = { ...restPose(p), numbers: { shoulderRight: 12.5, elbowRight: -20 } };
