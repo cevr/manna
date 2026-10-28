@@ -1,15 +1,15 @@
 import { describe, expect, test } from 'bun:test';
 import { Result } from 'effect';
 import {
-  MESH_STEP,
   type Puppet,
-  type PuppetSheet,
   type Skeleton,
   posedVertices,
   puppetOf,
   rasterOf,
   restPose,
 } from './puppet.ts';
+
+type PuppetSheet = Parameters<typeof puppetOf>[0];
 
 const [W, H] = [64, 24];
 
@@ -79,7 +79,8 @@ describe('a puppet', () => {
       for (const e of w) expect(['shoulderRight', 'elbowRight']).toContain(e.bone);
     }
     // the vertices are the grid's points over the part's cells
-    for (const v of mesh.vertices) expect(v % MESH_STEP).toBe(0);
+    // the mesh grid is 3 px (`MESH_STEP`)
+    for (const v of mesh.vertices) expect(v % 3).toBe(0);
   });
 
   test('at rest is its bind pose, and its raster the sheet byte for byte', () => {

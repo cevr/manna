@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { Result } from 'effect';
 import { fitPose } from './pose-fit.ts';
-import { type PuppetSheet, puppetOf, rasterOf, restPose } from './puppet.ts';
+import { puppetOf, rasterOf, restPose } from './puppet.ts';
+
+type PuppetSheet = Parameters<typeof puppetOf>[0];
 import type { Raster } from './raster.ts';
 
 const [W, H] = [40, 32];

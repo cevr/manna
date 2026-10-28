@@ -14,7 +14,7 @@ export const BOIL_CELL = 24;
 export const BOIL_AMP = 0.6;
 
 /** The boil's loop, ticks (four seconds at twelve a second). */
-export const BOIL_TICKS = 48;
+const BOIL_TICKS = 48;
 
 /** Its harmonics: cycles a loop and share of the wander, so a node moves at most about 0.21 of `BOIL_AMP` a tick. */
 const CRAWL = [
@@ -63,28 +63,4 @@ export const boilField = (
         out[(r * cols + c) * 2 + axis] = amp * v;
       }
   return out;
-};
-
-/** The displacement at `(x, y)` px from the lattice's origin, the nodes about it blended by a smoothstep each way (the shader's own blend, `canvas/puppet-gl.ts`). */
-export const boilAt = (
-  field: Float32Array,
-  cols: number,
-  rows: number,
-  x: number,
-  y: number,
-): readonly [number, number] => {
-  const [gx, gy] = [x / BOIL_CELL, y / BOIL_CELL];
-  const [c0, r0] = [Math.floor(gx), Math.floor(gy)];
-  const s = (f: number) => f * f * (3 - 2 * f);
-  const [sx, sy] = [s(gx - c0), s(gy - r0)];
-  const node = (c: number, r: number, axis: number) =>
-    field[
-      (Math.min(rows - 1, Math.max(0, r)) * cols + Math.min(cols - 1, Math.max(0, c))) * 2 + axis
-    ] ?? 0;
-  const at = (axis: number) => {
-    const a = node(c0, r0, axis) + (node(c0 + 1, r0, axis) - node(c0, r0, axis)) * sx;
-    const b = node(c0, r0 + 1, axis) + (node(c0 + 1, r0 + 1, axis) - node(c0, r0 + 1, axis)) * sx;
-    return a + (b - a) * sy;
-  };
-  return [at(0), at(1)];
 };

@@ -45,7 +45,7 @@ import { unmatte } from './unmatte.ts';
 type Pt = readonly [number, number];
 
 /** The grid a part's mesh is laid on, px. */
-export const MESH_STEP = 3;
+const MESH_STEP = 3;
 
 /** How far either side of a joint two bones share a vertex, px (at most half the shorter bone). */
 const BLEND = 18;
@@ -127,7 +127,7 @@ export interface Puppet {
 }
 
 /** What a puppet is made from: a part sheet's size and parts, front to back, and the paper they were cut from, if their edges are to be un-matted from it (`core/unmatte.ts`). */
-export interface PuppetSheet {
+interface PuppetSheet {
   readonly width: number;
   readonly height: number;
   readonly parts: ReadonlyArray<{ readonly name: string; readonly pixels: Raster }>;

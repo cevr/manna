@@ -1,9 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import { BOIL_AMP, BOIL_TICKS, boilAt, boilField } from './boil.ts';
+import { BOIL_AMP, boilField } from './boil.ts';
 
 describe('the boil field', () => {
   test('the boil field loops at 48 ticks', () => {
-    expect(BOIL_TICKS).toBe(48);
     for (const tick of [0, 7, 31]) {
       const a = boilField(tick, -3, 2, 6, 5);
       expect(boilField(tick + 48, -3, 2, 6, 5)).toEqual(a);
@@ -39,12 +38,5 @@ describe('the boil field', () => {
     }
     expect(most).toBeLessThanOrEqual(BOIL_AMP + 1e-6);
     expect(step).toBeLessThanOrEqual(0.21);
-  });
-
-  test('is read between nodes by a smoothstep, each node standing on its own point', () => {
-    const f = boilField(3, 0, 0, 3, 3);
-    expect(boilAt(f, 3, 3, 24, 24)).toEqual([f[8]!, f[9]!]);
-    const [mx] = boilAt(f, 3, 3, 12, 0);
-    expect(mx).toBeCloseTo((f[0]! + f[2]!) / 2, 6);
   });
 });
