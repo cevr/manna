@@ -355,7 +355,7 @@ export const inkOf = (r: Raster, at: (i: number) => boolean): Option.Option<Rgb>
 };
 
 /** The sRGB bytes of a Lab colour (D65), `labOf`'s inverse, each channel held to 0-255. */
-const rgbOfLab = (lab: Rgb): Rgb => {
+export const rgbOfLab = (lab: Rgb): Rgb => {
   const fy = (lab[0] + 16) / 116;
   const inv = (t: number) => {
     if (t ** 3 > 216 / 24389) return t ** 3;

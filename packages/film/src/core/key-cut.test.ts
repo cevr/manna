@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import { cutLimb, fitKey, handPast, keyInFrame } from './key-cut.ts';
+import { Option } from 'effect';
+import { labOf } from './cast-sheet-pixels.ts';
+import { INK_WIDTH, cutLimb, fitKey, handPast, keyInFrame } from './key-cut.ts';
 import type { Raster } from './raster.ts';
 
 const PAPER = [250, 246, 238] as const;
@@ -71,5 +73,91 @@ describe('a drawn key cut into the sheet frame', () => {
     const [x, y] = handPast([30, 320], [60, 280], 25);
     expect([x, y]).toEqual([75, 260]);
     expect(Math.hypot(x - 60, y - 280)).toBeCloseTo(25, 9);
+  });
+});
+
+describe("a drawn key's silhouette inked at the house width", () => {
+  // an arm across the frame, its sleeve rows 30-70 inked `drawn` px deep at top and bottom; its
+  // bones from (40, 50.5) to (130, 50.5), so the capsules cut it through at both ends
+  const arm = (drawn: number) => {
+    const r = paper(160, 100);
+    fill(r, [4, 30, 156, 71], INK);
+    fill(r, [4, 30 + drawn, 156, 71 - drawn], SLEEVE);
+    return cutLimb(
+      r,
+      PAPER,
+      { root: [40, 50.5], elbow: [85, 50.5], wrist: [130, 50.5], rUpper: 22, rFore: 22 },
+      Option.some(labOf(INK)),
+    );
+  };
+  const lPx = (r: Raster, x: number, y: number) => {
+    const i = (y * r.width + x) * 4;
+    return labOf([r.rgba[i] ?? 0, r.rgba[i + 1] ?? 0, r.rgba[i + 2] ?? 0])[0];
+  };
+  // L* bilinear at a point, px centres at +0.5, the clear px read as their bytes (black)
+  const lAt = (r: Raster, x: number, y: number) => {
+    const [u, v] = [Math.max(0, Math.min(r.width - 1.001, x - 0.5)), y - 0.5];
+    const [x0, y0] = [Math.floor(u), Math.max(0, Math.min(r.height - 2, Math.floor(v)))];
+    const [tx, ty] = [u - x0, Math.max(0, Math.min(1, v - y0))];
+    const row = (yy: number) => lPx(r, x0, yy) * (1 - tx) + lPx(r, x0 + 1, yy) * tx;
+    return row(y0) * (1 - ty) + row(y0 + 1) * ty;
+  };
+  // the run of ink (L* < 40) from the alpha edge inward on 0.25 px steps, from (x, y) out along dy
+  const inkAcross = (r: Raster, x: number, y: number, dy: 1 | -1) => {
+    const isFig = (yy: number) =>
+      yy >= 0 &&
+      yy < r.height &&
+      r.rgba[(Math.floor(yy) * r.width + Math.floor(x)) * 4 + 3] === 255;
+    let d = 0;
+    while (isFig(y + dy * (d + 0.25))) d += 0.25;
+    let [start, last] = [-1, 0];
+    for (let k = 0; k <= 24; k += 0.25) {
+      if (lAt(r, x, y + dy * (d - k)) >= 40) {
+        if (start >= 0) break;
+        continue;
+      }
+      if (start < 0) start = k;
+      last = k;
+    }
+    return last - start + 0.25;
+  };
+
+  test('a thin drawn outline comes out the house width, read across the edge at sub-pixel steps', () => {
+    const { raster } = arm(2);
+    const widths = [30.1, 47.3, 60.5, 71.75, 88.9].flatMap((x) =>
+      [0, 0.1, 0.2].flatMap((o) => [
+        inkAcross(raster, x, 20 + o, -1),
+        inkAcross(raster, x, 20 + o, 1),
+      ]),
+    );
+    for (const w of widths) expect(Math.abs(w - INK_WIDTH)).toBeLessThanOrEqual(0.25);
+    expect(widths.toSorted((a, b) => a - b)[widths.length >> 1]).toBe(INK_WIDTH);
+  });
+
+  test("the drawing inside the line is untouched, and the capsules' cut ends take no line", () => {
+    const { raster, at } = arm(2);
+    const row = 50 - at[1];
+    // deeper than the line from the top and bottom edges: the sleeve as drawn
+    for (let y = 40 - at[1]; y <= 60 - at[1]; y++)
+      for (let x = 30; x <= 80; x += 5)
+        expect([
+          ...raster.rgba.subarray((y * raster.width + x) * 4, (y * raster.width + x) * 4 + 4),
+        ]).toEqual([...SLEEVE, 255]);
+    // the shoulder's end and the wrist's, at the bone: sleeve to the cut
+    const opaque = (x: number) => raster.rgba[(row * raster.width + x) * 4 + 3] === 255;
+    const ends = [0, raster.width - 1].map((x) => [
+      ...raster.rgba.subarray((row * raster.width + x) * 4, (row * raster.width + x) * 4 + 3),
+    ]);
+    expect([opaque(0), opaque(raster.width - 1)]).toEqual([true, true]);
+    expect(ends).toEqual([[...SLEEVE], [...SLEEVE]]);
+  });
+
+  test('a drawn outline wider than the house line is taken into it: one line, no ink behind it', () => {
+    const { raster } = arm(11);
+    for (const x of [30.4, 60.5, 88.2]) {
+      expect(Math.abs(inkAcross(raster, x, 20, -1) - INK_WIDTH)).toBeLessThanOrEqual(0.25);
+      // the second line it would leave: none, sleeve from past the line to the middle
+      for (let y = 10; y <= 20; y++) expect(lPx(raster, Math.floor(x), y)).toBeGreaterThan(40);
+    }
   });
 });

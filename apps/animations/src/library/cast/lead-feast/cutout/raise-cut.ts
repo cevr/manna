@@ -3,8 +3,9 @@
 // his kept front by the parts the raise leaves still (`fitKey`: the viewer's
 // right half and the legs), laid in his front part sheet's frame (`frames.ts`)
 // padded `PAD` px on the left, where a raised sleeve runs out past the kept
-// box, and its arm cut out on the record's joints (`cutLimb`). The cut takes
-// the kept front's ink (`inkTo`), is written to `raise/keys/<id>.png`, and its
+// box, and its arm cut out on the record's joints (`cutLimb`) with its
+// silhouette inked at the house width. The cut takes the kept front's ink
+// (`inkTo`), is written to `raise/keys/<id>.png`, and its
 // place in the sheet frame goes back into the record. The cut keeps no drawn
 // hand, so each key's hand (where `raise.ts` lays the kept hand) goes back too:
 // on its forearm past the wrist as far as the rest key's hand is past its
@@ -111,13 +112,18 @@ const recut = Effect.gen(function* () {
     const wrist = yield* present(Option.fromUndefinedOr(key.wrist), key.id, 'no wrist');
     const drawn = yield* readPng(`${RAISE}/${call.out}`);
     const fit = fitKey(drawn, front, still);
-    const cut = cutLimb(keyInFrame(drawn, fit, frame, origin), fit.ground, {
-      root: canvas(key.pivot),
-      elbow: canvas(elbow),
-      wrist: canvas(wrist),
-      rUpper: R_UPPER,
-      rFore: R_FORE,
-    });
+    const cut = cutLimb(
+      keyInFrame(drawn, fit, frame, origin),
+      fit.ground,
+      {
+        root: canvas(key.pivot),
+        elbow: canvas(elbow),
+        wrist: canvas(wrist),
+        rUpper: R_UPPER,
+        rFore: R_FORE,
+      },
+      Option.some(kept),
+    );
     yield* fs.writeFile(`${RAISE}/${key.png}`, encodePng(inkTo(cut.raster, kept)));
     yield* Console.log(
       `${key.id}: fit s ${fit.s.toFixed(4)} dx ${fit.dx.toFixed(1)} dy ${fit.dy.toFixed(1)} error ${fit.error.toFixed(2)}; ${cut.raster.width}x${cut.raster.height} at ${cut.at[0] - PAD},${cut.at[1]}`,
