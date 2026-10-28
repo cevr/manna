@@ -56,6 +56,33 @@ const holders = (phrase: string) => {
     .map((hymn) => hymn.number);
 };
 
+/** Each hymn's words (its title's and every line's), folded once per hymn. */
+const wordSets = new Map(
+  hymns.map((hymn, h) => [hymn.number, new Set(wordsOf(raw[h] ?? ''))] as const),
+);
+/** Every word the hymns hold, sorted, for the words a prefix starts. */
+const vocabulary = [...new Set([...wordSets.values()].flatMap((set) => [...set]))].toSorted();
+
+/** The words the hymns hold that start with `prefix`. */
+const startingWith = (prefix: string) => {
+  let low = 0;
+  let high = vocabulary.length;
+  while (low < high) {
+    const middle = (low + high) >> 1;
+    if ((vocabulary[middle] ?? '') < prefix) low = middle + 1;
+    else high = middle;
+  }
+  const out: Array<string> = [];
+  for (let i = low; (vocabulary[i] ?? '').startsWith(prefix); i++) out.push(vocabulary[i] ?? '');
+  return out;
+};
+
+/** The hymns that hold `word` with no typo: the word itself, a word it starts, or its kin. */
+const sureHolders = (word: string) => {
+  const forms = [...(KIN.find((group) => group.includes(word)) ?? []), ...startingWith(word)];
+  return hymns.map((hymn) => hymn.number).filter((n) => forms.some((w) => wordSets.get(n)?.has(w)));
+};
+
 const inFirst = (query: string, targets: ReadonlyArray<number>, k: number) =>
   numbers(query)
     .slice(0, k)
@@ -79,9 +106,17 @@ describe('search by number', () => {
       `Hymn #${n}`,
       `number ${n}`,
       ` NUMBER ${n} `,
+      `hymn no. ${n}`,
+      `hymn no ${n}`,
+      `${n}.`,
+      `${n},`,
+      `(${n})`,
+      `#${n}.`,
+      `n° ${n}`,
     ];
     for (const n of [1, 42, 100, 695])
       expect(forms(n).map((q) => numbers(q)[0])).toEqual(forms(n).map(() => n));
+    expect(numbers('(100)')).toEqual([100]);
   });
 
   it('carries no line for a hymn found by number', () => {
@@ -101,8 +136,67 @@ describe('search by words', () => {
     const found = find(index, word);
     const titled = found.filter((f) => wordsOf(f.hymn.title).some((w) => w.startsWith(word)));
     expect(titled.length).toBeGreaterThanOrEqual(count);
-    expect(found.slice(0, titled.length)).toEqual(titled);
+    expect(found.slice(0, titled.length).map((f) => f.hymn.number)).toEqual(
+      titled.map((f) => f.hymn.number),
+    );
     expect(titled.every((f) => Option.isNone(f.line))).toBe(true);
+  });
+
+  it('ranks the hymns that hold a word typed alone above the hymns a typo of it finds', () => {
+    // Every 200th word of 4 letters or more, in sorted order: 25 words.
+    const words = vocabulary.filter((w) => w.length >= 4).filter((_, i) => i % 200 === 0);
+    const misses = words.filter((word) => {
+      const holders = sureHolders(word);
+      const found = numbers(word);
+      return (
+        !found.slice(0, holders.length).every((n) => holders.includes(n)) ||
+        found.length < holders.length
+      );
+    });
+    expect({ words: words.length, misses: misses.length }).toEqual({ words: 25, misses: 0 });
+  });
+
+  it('finds the words a word being typed starts', () => {
+    // The first 3 letters of a word of 6 letters or more that no hymn holds as a word.
+    const stubs = vocabulary
+      .filter((w) => w.length >= 6 && !wordSets.values().some((set) => set.has(w.slice(0, 3))))
+      .filter((_, i) => i % 50 === 0)
+      .map((w) => w.slice(0, 3));
+    expect(stubs.length).toBeGreaterThan(5);
+    const misses = stubs.filter((stub) => {
+      const holders = sureHolders(stub);
+      return (
+        numbers(stub)
+          .toSorted((a, b) => a - b)
+          .join() !== holders.join()
+      );
+    });
+    expect(misses.length).toBe(0);
+  });
+
+  it('finds a title as its last word is typed, among the titles that hold what is typed', () => {
+    const titles = hymns
+      .filter((hymn) => {
+        const ws = wordsOf(hymn.title);
+        return ws.length >= 3 && (ws.at(-1)?.length ?? 0) >= 5;
+      })
+      .filter((_, i) => i % 20 === 0);
+    expect(titles.length).toBeGreaterThan(5);
+    const misses = titles.filter((hymn) => {
+      const ws = wordsOf(hymn.title);
+      const typed = [...ws.slice(0, -1), ws.at(-1)?.slice(0, 3) ?? ''];
+      // The titles that hold every word typed, the last as a word it starts.
+      const titled = hymns.filter((other) => {
+        const title = wordsOf(other.title);
+        return (
+          typed.slice(0, -1).every((w) => title.includes(w)) &&
+          title.some((w) => w.startsWith(typed.at(-1) ?? ''))
+        );
+      }).length;
+      const at = numbers(typed.join(' ')).indexOf(hymn.number);
+      return at < 0 || at >= titled;
+    });
+    expect(misses.map((hymn) => hymn.number)).toEqual([]);
   });
 
   it('finds a word no title holds, and shows the line that holds it', () => {
@@ -122,9 +216,9 @@ describe('search by words', () => {
     const query = words.join(' ');
     const found = find(index, query);
     expect(holders(query)).toContain(found[0]?.hymn.number ?? -1);
-    expect(Option.map(found[0]?.line ?? Option.none(), (line) => wordsOf(line).join(' '))).toEqual(
-      Option.some(query),
-    );
+    expect(
+      Option.map(found[0]?.line ?? Option.none(), (line) => wordsOf(line).join(' ') === query),
+    ).toEqual(Option.some(true));
     expect(hymn).toBeGreaterThan(0);
   });
 

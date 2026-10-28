@@ -20,7 +20,8 @@
  * Ranking: the hymns whose title holds every word come first, in the
  * hymnal's order (the word itself, its prefix or its kin, never a typo), as
  * the home list orders them; then by how many words a
- * hymn holds, how rare they are (weighted by where they are: the title, the
+ * hymn holds, how many of them it holds with no typo (a hymn that holds a
+ * word comes before one a typo of it finds), how rare they are (weighted by where they are: the title, the
  * first line, the refrain, then the rest), the longest run of them in one
  * line (in order, up to two words left out between them, or two side by
  * side swapped), and a title or first line that starts with them. Each hymn
@@ -89,14 +90,13 @@ const SCORES_KEPT = 500;
 /** The most query words a search reads: one bit each. */
 const MOST = 30;
 
-/** A strength above any measured one: a hymn whose title holds the query has it, less its number. */
-const TITLED = 1e6;
-
 interface Scores {
-  /** Per hymn, the word's best score in it. */
+  /** Per hymn, the word's best score in it: its best with no typo, when it holds one. */
   readonly score: Float32Array;
   /** Per hymn, the line that best score is in. */
   readonly line: Int32Array;
+  /** Per hymn, 1 when it holds the word with no typo (itself, its kin or a word it starts). */
+  readonly sure: Uint8Array;
 }
 
 export interface SearchIndex {
@@ -366,28 +366,40 @@ const expand = (index: SearchIndex, term: string, last: boolean): ReadonlyMap<nu
     return out;
   });
 
-/** Each hymn's best score for a query word, and the line it is in. */
+/**
+ * Each hymn's best score for a query word, and the line it is in. A match
+ * with no typo outscores any typo in the same hymn: the hymn holds the word,
+ * so a word one edit from it there says nothing more.
+ */
 const scoresOf = (index: SearchIndex, term: string, last: boolean): Scores =>
   memoized(index.scored, SCORES_KEPT, keyOf(term, last), () => {
     const N = index.hymns.length;
     const score = new Float32Array(N);
     const line = new Int32Array(N);
+    const sure = new Uint8Array(N);
     expand(index, term, last).forEach((quality, id) => {
       const weight = (index.idf[id] ?? 0) * quality;
+      const strong = Number(quality >= PREFIX);
       for (let p = index.postStart[id] ?? 0; p < (index.postStart[id + 1] ?? 0); p++) {
         const h = index.postHymn[p] ?? 0;
         const value = weight * (index.postWeight[p] ?? 0);
-        if (value > (score[h] ?? 0)) {
+        const was = sure[h] ?? 0;
+        if (strong > was || (strong === was && value > (score[h] ?? 0))) {
           score[h] = value;
           line[h] = index.postLine[p] ?? 0;
+          sure[h] = strong;
         }
       }
     });
-    return { score, line };
+    return { score, line, sure };
   });
 
-/** A number in any form a reader types one: its digits. */
-const NUMBER = /^\s*(?:(?:hymn|number|no|n[º°])\s*\.?\s*)?(?:#\s*)?(\d+)\s*$/i;
+/**
+ * A number in any form a reader types one, its digits: after any of the
+ * words `hymn`, `number`, `no`, `n°` (`hymn no. 100`), with punctuation and
+ * spaces around it ignored (`#100`, `(100)`, `100.`).
+ */
+const NUMBER = /^[\s\p{P}]*(?:(?:hymn|number|no|n[º°])[\s\p{P}]*)*(\d+)[\s\p{P}]*$/iu;
 
 const byNumber = (index: SearchIndex, digits: string): ReadonlyArray<Ranked> => {
   const exact: Array<Ranked> = [];
@@ -438,19 +450,21 @@ const unmark = (index: SearchIndex, marked: ReadonlyArray<number>) => {
   }
 };
 
-/** Per hymn, how many of the query words it holds, and their scores' sum. */
+/** Per hymn, how many of the query words it holds, how many of them with no typo, and their scores' sum. */
 const coverOf = (N: number, scores: ReadonlyArray<Scores>) => {
   const cover = new Int32Array(N);
+  const sure = new Int32Array(N);
   const total = new Float32Array(N);
-  for (const { score } of scores)
+  for (const scored of scores)
     for (let h = 0; h < N; h++) {
-      const s = score[h] ?? 0;
+      const s = scored.score[h] ?? 0;
       if (s > 0) {
         cover[h] = (cover[h] ?? 0) + 1;
+        sure[h] = (sure[h] ?? 0) + (scored.sure[h] ?? 0);
         total[h] = (total[h] ?? 0) + s;
       }
     }
-  return { cover, total };
+  return { cover, sure, total };
 };
 
 /** Whether hymn `h`'s title holds each of the first `count` query words, as itself, its kin or its start. */
@@ -571,7 +585,7 @@ const byWords = (index: SearchIndex, terms: ReadonlyArray<string>): ReadonlyArra
   const chosenBy = T - Number(T > 1 && (terms[T - 1]?.length ?? 0) < 2);
   const marked = mark(index, terms);
   const scores = terms.slice(0, chosenBy).map((term, t) => scoresOf(index, term, t === T - 1));
-  const { cover, total } = coverOf(N, scores);
+  const { cover, sure, total } = coverOf(N, scores);
   const need = Math.min(chosenBy, Math.max(2, Math.ceil(chosenBy * 0.6)));
   const titled = new Uint8Array(N);
   const candidates: Array<number> = [];
@@ -580,15 +594,16 @@ const byWords = (index: SearchIndex, terms: ReadonlyArray<string>): ReadonlyArra
       candidates.push(h);
       titled[h] = Number(titleHolds(index, h, chosenBy));
     }
-  // The hymns whose title holds the query first, in the hymnal's order; then the rest by strength.
-  candidates.sort(
-    (a, b) =>
-      (titled[b] ?? 0) - (titled[a] ?? 0) ||
-      (titled[a] ?? 0) * (a - b) ||
-      (cover[b] ?? 0) - (cover[a] ?? 0) ||
-      (total[b] ?? 0) - (total[a] ?? 0) ||
-      a - b,
-  );
+  // The hymns whose title holds the query first, in the hymnal's order;
+  // then the rest by how many words they hold, how many of them with no
+  // typo (so a hymn that holds a word comes before one a typo of it finds),
+  // and the measures after these.
+  const before = (a: number, b: number) =>
+    (titled[b] ?? 0) - (titled[a] ?? 0) ||
+    (titled[a] ?? 0) * (a - b) ||
+    (cover[b] ?? 0) - (cover[a] ?? 0) ||
+    (sure[b] ?? 0) - (sure[a] ?? 0);
+  candidates.sort((a, b) => before(a, b) || (total[b] ?? 0) - (total[a] ?? 0) || a - b);
   // Runs are measured for the strongest only: at most `HEAD`, each holding
   // at most one query word fewer than the most any hymn holds.
   const most = cover[candidates[0] ?? 0] ?? 0;
@@ -597,12 +612,11 @@ const byWords = (index: SearchIndex, terms: ReadonlyArray<string>): ReadonlyArra
   const head = candidates.slice(0, heads).map((h) => {
     const { run, line } = runIn(index, h, T);
     const start = startOf(index, h, T);
-    const measured = (cover[h] ?? 0) * 100 + (total[h] ?? 0) + (run / T) * 30 + start * 10;
-    const strength = (titled[h] ?? 0) * (TITLED - h) + (1 - (titled[h] ?? 0)) * measured;
-    return { h, strength, line, plain: titled[h] === 1 };
+    const measured = (total[h] ?? 0) + (run / T) * 30 + start * 10;
+    return { h, measured, line, plain: titled[h] === 1 };
   });
   unmark(index, marked);
-  head.sort((a, b) => b.strength - a.strength || a.h - b.h);
+  head.sort((a, b) => before(a.h, b.h) || b.measured - a.measured || a.h - b.h);
   const rest = candidates
     .slice(heads)
     .map((h) => ({ h, line: strongestLine(index, scores, h), plain: titled[h] === 1 }));

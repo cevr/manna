@@ -57,6 +57,41 @@ const own = new Map(
 const holders = (phrase: ReadonlyArray<string>) =>
   [...own].filter(([, ls]) => ls.some((l) => l.includes(spaced(phrase)))).map(([n]) => n);
 
+/** Each word the hymns hold (in a title or any line, folded), to the hymns that hold it. */
+const hymnsOf = new Map<string, Set<number>>();
+for (const hymn of hymns)
+  for (const line of [hymn.title, ...hymn.sections.flatMap((section) => section.lines)])
+    for (const word of wordsOf(line))
+      hymnsOf.set(word, (hymnsOf.get(word) ?? new Set<number>()).add(hymn.number));
+const vocabulary = [...hymnsOf.keys()].toSorted();
+
+/** Every word of 4 letters or more the hymns hold, once. */
+const wordsOfFourOrMore = vocabulary.filter((word) => word.length >= 4);
+
+/** The hymns that hold `word` with no typo: the word itself, a word it starts, or its kin. */
+const holdersOf = (word: string): ReadonlySet<number> => {
+  const out = new Set<number>();
+  const kin = KIN.find((group) => group.includes(word)) ?? [];
+  for (const w of [...kin, ...vocabulary.filter((v) => v.startsWith(word))])
+    for (const n of hymnsOf.get(w) ?? []) out.add(n);
+  return out;
+};
+
+/**
+ * Whether `found`, for `word` typed alone, lists every hymn that holds it
+ * with no typo, all of them before any hymn found by a typo alone.
+ */
+const holdersFirst = (
+  found: ReadonlyArray<{ readonly hymn: { readonly number: number } }>,
+  word: string,
+) => {
+  const holders = holdersOf(word);
+  const order = found.map((f) => holders.has(f.hymn.number));
+  return (
+    order.slice(0, holders.size).every(Boolean) && order.filter(Boolean).length === holders.size
+  );
+};
+
 /** The share of `queries` with a hymn of its targets among the first `k` found, in tenths of a percent. */
 const hitRate = (
   queries: ReadonlyArray<{ q: string; targets: ReadonlyArray<number> }>,
@@ -141,6 +176,14 @@ describe('search swept over the hymnal', () => {
       targets: holders(wordsOf(hymn.firstLine)),
     }));
     expect(hitRate(queries, 5)).toBe(100);
+  });
+
+  it('ranks every hymn holding a word typed alone above every hymn a typo alone finds, for every word of 4 letters or more', () => {
+    const misses = wordsOfFourOrMore.filter((word) => !holdersFirst(find(index, word), word));
+    expect({ words: wordsOfFourOrMore.length, misses: misses.length }).toEqual({
+      words: wordsOfFourOrMore.length,
+      misses: 0,
+    });
   });
 
   it(`shows under a right first result the line typed, unless its title holds every word (seed ${seed})`, () => {
