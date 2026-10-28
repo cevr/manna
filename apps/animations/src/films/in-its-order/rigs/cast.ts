@@ -27,6 +27,7 @@ import {
   PUPPETS as LEAD_PUPPETS,
 } from '../../../library/cast/lead-feast/cutout/puppets.ts';
 import { SKELETONS as LEAD_SKELETONS } from '../../../library/cast/lead-feast/cutout/skeleton.ts';
+import { RAISE as LEAD_RAISE } from '../../../library/cast/lead-feast/cutout/raise.ts';
 import * as LEAD_BACK from '../../../library/cast/lead-feast/rig/back-traced.ts';
 import * as LEAD_DRINKING from '../../../library/cast/lead-feast/rig/drinking-traced.ts';
 import * as LEAD_FRONT from '../../../library/cast/lead-feast/rig/front-traced.ts';
@@ -684,3 +685,8 @@ export const CUTOUT = cutoutTable({
     },
   },
 });
+
+/** Each member's eases (`film concept ease`): the lead's bottle raise, drawn from keys. */
+export const EASES = {
+  'lead-feast': { raise: LEAD_RAISE },
+};

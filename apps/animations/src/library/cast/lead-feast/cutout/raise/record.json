@@ -1,0 +1,187 @@
+{
+  "view": "front",
+  "note": "keys from world-proto r5c (0 new okra calls: its three answers reused); built by tmp/orchestrate/p5/cutout/round-9-receipts/raise-build.ts",
+  "keys": [
+    {
+      "id": "rest",
+      "u": 0,
+      "png": "keys/rest.png",
+      "place": {
+        "s": 1,
+        "dx": 0,
+        "dy": 240
+      },
+      "pivot": [46, 253],
+      "elbow": [40, 338],
+      "hand": [32.5, 432],
+      "source": {
+        "kept": "front",
+        "s": 1,
+        "dx": 3,
+        "dy": -237
+      }
+    },
+    {
+      "id": "early",
+      "u": 0.15,
+      "png": "keys/early.png",
+      "place": {
+        "s": 1,
+        "dx": -28,
+        "dy": 213
+      },
+      "pivot": [46, 253],
+      "elbow": [27.1539, 326.1822],
+      "hand": [-9.5, 394.5],
+      "source": {
+        "okra": 2
+      }
+    },
+    {
+      "id": "quarter",
+      "u": 0.25,
+      "png": "keys/quarter.png",
+      "place": {
+        "s": 1,
+        "dx": -61,
+        "dy": 213
+      },
+      "pivot": [46, 253],
+      "elbow": [17.72135, 325.17814999999996],
+      "hand": [-44.5, 377.5],
+      "source": {
+        "okra": 1
+      }
+    },
+    {
+      "id": "half",
+      "u": 0.5,
+      "png": "keys/half.png",
+      "place": {
+        "s": 1,
+        "dx": -91,
+        "dy": 212
+      },
+      "pivot": [46, 253],
+      "elbow": [-0.37614999999999554, 310.77995000000004],
+      "hand": [-75, 306],
+      "source": {
+        "okra": 3
+      }
+    },
+    {
+      "id": "three-quarter",
+      "u": 0.75,
+      "png": "keys/three-quarter.png",
+      "place": {
+        "s": 1,
+        "dx": -86,
+        "dy": 176
+      },
+      "pivot": [46, 253],
+      "elbow": [-12.535693999999992, 292.3224475],
+      "hand": [-70.5, 242],
+      "source": {
+        "okra": 3
+      }
+    },
+    {
+      "id": "raised",
+      "u": 1,
+      "png": "keys/raised.png",
+      "place": {
+        "s": 1,
+        "dx": -41,
+        "dy": 137
+      },
+      "pivot": [46, 253],
+      "elbow": [-2.3333333333333357, 274.25333333333333],
+      "hand": [-12.386666666666667, 199.24],
+      "source": {
+        "kept": "poses-1",
+        "s": 0.7733333333333333,
+        "dx": 0,
+        "dy": -70
+      }
+    }
+  ],
+  "held": [
+    {
+      "id": "poses-1",
+      "png": "held/poses-1.png",
+      "c": [28.61333333333333, 62.24000000000001],
+      "r": 29,
+      "source": {
+        "kept": "poses-1",
+        "s": 0.7733333333333333,
+        "dx": 0,
+        "dy": -70
+      }
+    }
+  ],
+  "okra": {
+    "calls": [
+      {
+        "n": 1,
+        "command": [
+          "okra",
+          "image",
+          "Redraw the three viewer-left cream sleeves and hands in the FIRST image as finished drawn animation keys. Return the FULL three-figure triptych, exactly 1536x1024, same framing, torso, face, other arm, scale and pose as the first guide. Every magenta pixel is temporary guide paint and MUST disappear into the appropriate cream sleeve or plain paper background. Redraw the WHOLE moving cream arm coherently, not as a repair patch. Keep the shoulder, elbow, hand and bottle in the same places as the guide. Do not change angles, pose or body proportions.\n\nThe sleeve's cuff closes round a PLAIN CIRCLE HAND holding the bottle. NO THUMB. NO FINGERS. NO FINGER LINES. NO MITTEN. NO BARE WRIST OR FOREARM. The hand is a smooth featureless peach paper circle BEHIND the bottle, just like the kept front circle and the kept poses-1 round hand in the hand-reference image. The cuff is soft cream cloth, reaches the circle, and ends with one uninterrupted warm-black curved cuff line from one side of the sleeve to the other against the hand. No gap, notch, zigzag, jagged edge, detached line, pale repair patch, ghost hand or leftover magenta. A cuff is a single clean continuous drawn opening embracing the circle, never a tube with a rectangular pasted patch.\n\nUse the kept figures as the EXACT visual language: warm-black confident organic outline, gentle warm cream cut-paper paint with fine grain, simple softly rounded cloth folds. At this triptych's 1.3x sheet scale, outline is about 11px. Each plain circle hand is 68px in diameter on this image (52px at native sheet scale), deliberately a little smaller than the kept front reference. The final kept hand will cover it. Keep the baby's bottle upright, the exact kept bottle shape, no extra object. The bottle and hand positions are fixed by the guide. Do not enlarge the hands. No loose flesh, peach wrist triangles, fingers, thumbs or skin outside the circular disc. Within 8px native around the hand, show only sleeve, clean outline, or background, never skin fragments or pale remnants.\n\nMake the cuff and sleeve a single natural artist's drawing with consistent ink thickness and paint. Keep the upper sleeves' width and the guide's rounded elbow silhouettes. The first figure is the low bent arm; the second has a near-horizontal forearm; the third has the bottle near shoulder height. Preserve their distinct poses. No text, labels or guide marks. Only the finished full triptych on the paper.\n",
+          "--ref",
+          "okra/guide-middle.png",
+          "--ref",
+          "okra/kept-hands-reference.png",
+          "--ref",
+          "apps/animations/src/library/cast/lead-feast/cast-sheet/views/front.png",
+          "--ref",
+          "apps/animations/src/library/cast/lead-feast/cast-sheet/views/poses-1.png",
+          "--size",
+          "1536x1024",
+          "-o",
+          "okra/okra-middle.png"
+        ],
+        "out": "okra/okra-middle.png"
+      },
+      {
+        "n": 2,
+        "command": [
+          "okra",
+          "image",
+          "Redraw the two viewer-left cream sleeves and hands in the FIRST image as finished drawn animation keys. Return the FULL two-figure diptych, exactly 1536x1024, same framing, torso, face, other arm, scale and pose as the first guide. The LEFT figure has the early lift, its hand still low by the hip. The RIGHT figure is the fully raised bottle pose. Preserve both poses precisely. Redraw the WHOLE moving cream arm coherently, not as a repair patch. Every magenta pixel is temporary guide paint and MUST disappear into the appropriate cream sleeve or plain paper background. Keep the shoulder, elbow, hand and upright bottle at the guide coordinates. Do not change angles or proportions.\n\nThe sleeve's cuff closes round a PLAIN CIRCLE HAND holding the bottle. NO THUMB. NO FINGERS. NO FINGER LINES. NO MITTEN. NO BARE WRIST OR FOREARM. The hand is a smooth featureless peach paper circle BEHIND the bottle, exactly the house hand design shown by the kept front circle and the kept poses-1 bottle hand in the reference crop. Sleeve cloth reaches the circle and closes against it with one uninterrupted warm-black curved cuff line from sleeve edge to sleeve edge. No open notch, gap, zigzag, jagged edge, detached line, pale patch, ghost hand, stray skin or magenta. The cuff opening is one confident natural drawn curve, never a rectangular patch or repaired tube.\n\nUse the kept figures' visual language: warm-black organic outline, soft warm cream cut-paper paint with fine grain, simple rounded cloth folds. At this diptych's 1.4x native sheet scale, outline is about 12px. Each plain circle hand is 73px diameter on this image (52px native), deliberately a little smaller than the kept front circle because the final kept 58px hand will cover it. Do not enlarge the hand. Make the sleeve's cuff close directly round it, with no skin outside the disc. Within 8px native around the hand, show only the sleeve, its clean ink, or the background. Keep the bottle upright in the same place and the exact kept bottle shape.\n\nMake each entire arm one coherent drawing with natural cloth volume and the same upper sleeve widths as the guide. No text, labels, diagrams, guide marks or extra figures. Return only the finished two full figures on their paper.\n",
+          "--ref",
+          "okra/guide-ends.png",
+          "--ref",
+          "okra/kept-hands-reference.png",
+          "--ref",
+          "apps/animations/src/library/cast/lead-feast/cast-sheet/views/front.png",
+          "--ref",
+          "apps/animations/src/library/cast/lead-feast/cast-sheet/views/poses-1.png",
+          "--size",
+          "1536x1024",
+          "-o",
+          "okra/okra-ends.png"
+        ],
+        "out": "okra/okra-ends.png"
+      },
+      {
+        "n": 3,
+        "command": [
+          "okra",
+          "image",
+          "Finish the three full figures in this guide, same 1536x1024 triptych and exactly the same body framing, scale, arm positions and sleeve widths. Replace ALL magenta with a single coherent artist-drawn cream sleeve or clean paper background. Redraw each whole moving sleeve so its cuff is naturally finished at the shown hand. This is a source drawing, never a patch.\n\nCRITICAL: KEEP the hand and baby bottle already shown in the guide in EXACTLY their positions, shapes and sizes. Do NOT reinterpret or enlarge them. Each hand is a PLAIN CIRCLE, NO THUMB, NO FINGERS, NO FINGER LINES, NO BARE WRIST. The kept hand reference defines the exact design. The sleeve must end against that circle with a CLOSED CONTINUOUS DARK CUFF HEM. The hem is OUTSIDE the hand circle and remains visible all the way across the BACK of the circle, toward the elbow. Draw a clear uninterrupted curved black cuff line 8.58px wide at native scale (11px on this 1.3x image), in a radius about 32–36 native pixels from the hand centre, just outside its 29.75px radius. Both sleeve side outlines must meet that cuff arc with smooth rounded joins. There must be no pale notch, jagged cuff, disconnected edge, ghost hand, extra bottle contour, repair rectangle or leftover skin. No pale non-sleeve paint beside the disc. The cuff must still be closed when the kept hand circle is laid on top of it.\n\nLeft figure: near-horizontal forearm. Middle: hand at shoulder height. Right: fully raised bottle. Keep these guide angles. The upper sleeve widths in native scale are approximately 60px, 70px and 71px respectively; keep those widths. Use the kept style: soft warm cream cut-paper cloth, subtle grain, natural rounded drawn folds, confident organic warm-black ink. No stiff tube or geometry-shaped patch. Keep all faces, hair, torsos, sashes, other arms and feet unchanged. No text or labels. Return only the complete finished triptych on its paper.\n",
+          "--ref",
+          "okra/guide-final.png",
+          "--ref",
+          "okra/kept-hands-reference.png",
+          "--ref",
+          "apps/animations/src/library/cast/lead-feast/cast-sheet/views/front.png",
+          "--size",
+          "1536x1024",
+          "-o",
+          "okra/okra-final.png"
+        ],
+        "out": "okra/okra-final.png"
+      }
+    ]
+  }
+}
