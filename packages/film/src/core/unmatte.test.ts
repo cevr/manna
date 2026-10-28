@@ -52,7 +52,7 @@ describe('unmatte', () => {
     for (const x of [5, 6, 7, 10, 15]) expect(at(out!, x)).toEqual(at(src, x));
   });
 
-  test('clears light paint behind a rim px it un-mattes, and keeps a rim px with ink behind it', () => {
+  test('clears light paint behind a rim px it un-mattes, and keeps ink behind it (a hidden outline)', () => {
     const front = part();
     const light = part();
     const inked = part();
@@ -60,7 +60,42 @@ describe('unmatte', () => {
     const [, behind] = unmatte([front, light], W, H, PAPER);
     expect(at(behind!, 3)[3]).toBe(0);
     const [kept, back] = unmatte([front, inked], W, H, PAPER);
-    expect(at(kept!, 3)).toEqual(at(front, 3));
+    expect(Math.abs(at(kept!, 3)[3]! - 0.4 * 255)).toBeLessThanOrEqual(2);
     expect(at(back!, 3)).toEqual(at(inked, 3));
+  });
+
+  test('clears a pocket of paper the box cuts off from the ground at its corners, to its ink', () => {
+    // columns 0..2 the sheet's paper on the frame's left border, 3 ink, then fill: no ground anywhere
+    const cols: ReadonlyArray<Rgb> = [
+      ...Array.from({ length: 3 }, (): Rgb => [250, 244, 236]),
+      INK,
+      ...Array.from({ length: W - 4 }, () => FILL),
+    ];
+    const src = new Uint8Array(W * H * 4);
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++) src.set([...cols[x]!, 255], (y * W + x) * 4);
+    const [out] = unmatte([src], W, H, PAPER);
+    for (const x of [0, 1, 2]) expect(at(out!, x)[3]).toBe(0);
+    for (const x of [3, 4, 10]) expect(at(out!, x)).toEqual(at(src, x));
+  });
+
+  test('clears paper a part holds 6 px deep outside its ink, and still un-mattes the ink edge past it', () => {
+    // columns 0..2 ground, 3..8 the sheet's paper (bluer than its flat colour), then the 40 % mix, ink and fill
+    const [w, h] = [32, 8];
+    const cols: ReadonlyArray<Rgb> = [
+      ...Array.from({ length: 6 }, (): Rgb => [250, 244, 236]),
+      ...COLUMNS.slice(0, 1),
+      ...COLUMNS.slice(2),
+    ];
+    const src = new Uint8Array(w * h * 4);
+    for (let y = 0; y < h; y++)
+      for (let x = 3; x < w; x++)
+        src.set([...cols[Math.min(x - 3, cols.length - 1)]!, 255], (y * w + x) * 4);
+    const [out] = unmatte([src], w, h, PAPER);
+    const px = (x: number) => [...out!.subarray((4 * w + x) * 4, (4 * w + x) * 4 + 4)];
+    for (let x = 3; x <= 8; x++) expect(px(x)[3]).toBe(0);
+    expect(Math.abs(px(9)[3]! - 0.4 * 255)).toBeLessThanOrEqual(2);
+    for (const x of [10, 11, 12, 20])
+      expect(px(x)).toEqual([...src.subarray((4 * w + x) * 4, (4 * w + x) * 4 + 4)]);
   });
 });

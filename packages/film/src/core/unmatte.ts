@@ -23,6 +23,8 @@ const INK_REACH = 5;
 /** A pixel at or under this luma (0..255) is ink: the rim stops at it. */
 const INK_LUMA = 110;
 
+const BLACK: Rgb = [0, 0, 0];
+
 /** The parts as one view: each pixel's frontmost holder (-1 for ground) and its colour there. */
 interface Holders {
   readonly front: Int16Array;
@@ -51,9 +53,9 @@ const holdersOf = (parts: ReadonlyArray<Uint8Array>, width: number, height: numb
  * The part textures (RGBA, `width` × `height`, front to back) with each
  * rim pixel un-matted against `paper`: an opaque pixel reached from the
  * ground (where no part has a pixel) within `UNMATTE_BAND` steps through
- * pixels lighter than ink, the view's own at rest (no part behind it holds
- * ink there; paint lighter than ink behind it is paper, and goes). Every
- * other pixel is kept byte for byte.
+ * pixels lighter than ink (paint behind it lighter than ink is paper, and
+ * goes; ink behind it stays, and shows at rest where the rim pixel gives
+ * way). Every other pixel is kept byte for byte.
  */
 export const unmatte = (
   parts: ReadonlyArray<Uint8Array>,
@@ -62,14 +64,18 @@ export const unmatte = (
   paper: Rgb,
 ): ReadonlyArray<Uint8Array> => {
   const holders = holdersOf(parts, width, height);
-  const rim = rimOf(holders);
+  const rim = rimOf(
+    holders,
+    (i) => solved(holders.colourAt(i), inkNear(holders, i, paper), paper)[3] === 0,
+  );
   const out = parts.map((p) => Uint8Array.from(p));
   for (const i of rim) {
     const k = holders.front[i]!;
     if (parts[k]![i * 4 + 3] !== 255) continue;
-    const behind = parts.slice(k + 1).filter((p) => p[i * 4 + 3]! > 0);
-    if (behind.some((p) => lumaOf(rgbOf(p, i)) <= INK_LUMA)) continue;
-    for (let b = k + 1; b < parts.length; b++) out[b]!.fill(0, i * 4, i * 4 + 4);
+    // paint behind it lighter than ink is paper too, and goes; ink behind it stays (a hidden outline)
+    for (let b = k + 1; b < parts.length; b++)
+      if (parts[b]![i * 4 + 3]! > 0 && lumaOf(rgbOf(parts[b]!, i)) > INK_LUMA)
+        out[b]!.fill(0, i * 4, i * 4 + 4);
     out[k]!.set(solved(holders.colourAt(i), inkNear(holders, i, paper), paper), i * 4);
   }
   return out;
@@ -103,27 +109,60 @@ const neighbours = (i: number, width: number, height: number) => {
 /**
  * The rim: each figure pixel reached from the ground within `UNMATTE_BAND`
  * 8-neighbour steps, each step from the ground or from a rim pixel lighter
- * than ink (an ink pixel is reached, and stops the walk). The frame's border
- * is not ground.
+ * than ink (an ink pixel is reached, and stops the walk). A pixel that is
+ * paper (`isPaper`: it solves to no alpha) costs no step, so a part that
+ * holds the sheet's paper deeper than the band is cleared to its ink, and
+ * the walk still reaches `UNMATTE_BAND` into the ink's anti-aliased edge.
+ * The frame's border is not ground; a pocket of the sheet's paper the
+ * view's box cuts off from the ground is added after (`pocketsOf`).
  */
-const rimOf = ({ front, colourAt, width, height }: Holders) => {
+const rimOf = ({ front, colourAt, width, height }: Holders, isPaper: (i: number) => boolean) => {
   const rim: number[] = [];
   const seen = Uint8Array.from(front, (k) => (k === -1 ? 1 : 0));
   let from = [...front.keys()].filter((i) => front[i] === -1);
-  for (let step = 1; step <= UNMATTE_BAND; step++) {
+  for (let step = 1; step <= UNMATTE_BAND && from.length > 0; step++) {
     const next: number[] = [];
-    for (const j of from.flatMap((i) => neighbours(i, width, height))) {
-      if (seen[j] === 1) continue;
-      seen[j] = 1;
-      rim.push(j);
-      if (lumaOf(colourAt(j)) > INK_LUMA) next.push(j);
-    }
+    // `from` grows as paper is reached: paper walks on within this step
+    for (let f = 0; f < from.length; f++)
+      for (const j of neighbours(from[f]!, width, height)) {
+        if (seen[j] === 1) continue;
+        seen[j] = 1;
+        rim.push(j);
+        if (lumaOf(colourAt(j)) <= INK_LUMA) continue;
+        if (isPaper(j)) from.push(j);
+        else next.push(j);
+      }
     from = next;
   }
-  return rim;
+  return [...rim, ...pocketsOf(seen, isPaper, width, height)];
 };
 
-/** The view's colour within `INK_REACH` of pixel `i` that lies farthest from `paper`. */
+/**
+ * The paper pixels the walk did not reach that join a corner of the frame
+ * through paper alone: a pocket of the sheet's paper the view's box cuts
+ * off between his ink and the box's corner. Only paper is walked, so no
+ * colour of his is reached, and only from a corner: paper on an edge of the
+ * box may be inside him (a highlight where a bust's tunic leaves the box).
+ */
+const pocketsOf = (
+  seen: Uint8Array,
+  isPaper: (i: number) => boolean,
+  width: number,
+  height: number,
+) => {
+  const pocket: number[] = [];
+  const take = (i: number) => {
+    if (seen[i] === 1) return;
+    seen[i] = 1;
+    if (isPaper(i)) pocket.push(i);
+  };
+  for (const i of [0, width - 1, (height - 1) * width, height * width - 1]) take(i);
+  for (let f = 0; f < pocket.length; f++)
+    for (const j of neighbours(pocket[f]!, width, height)) take(j);
+  return pocket;
+};
+
+/** The view's colour within `INK_REACH` of pixel `i` that lies farthest from `paper`: black where none there is ink (paper held deeper than the reach). */
 const inkNear = ({ front, colourAt, width, height }: Holders, i: number, paper: Rgb): Rgb => {
   const [x, y] = [i % width, Math.floor(i / width)];
   let best: Rgb = paper;
@@ -136,5 +175,5 @@ const inkNear = ({ front, colourAt, width, height }: Holders, i: number, paper: 
       const d = (c[0] - paper[0]) ** 2 + (c[1] - paper[1]) ** 2 + (c[2] - paper[2]) ** 2;
       if (d > far) [far, best] = [d, c];
     }
-  return best;
+  return lumaOf(best) > INK_LUMA ? BLACK : best;
 };
