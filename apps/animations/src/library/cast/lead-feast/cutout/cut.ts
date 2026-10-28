@@ -10,9 +10,16 @@
 // three-quarter view's are read new. A sleeve takes its cap (a disc round its
 // shoulder) above its shoulder, the rest of the shoulder the torso's; below the
 // hem the sandals, and the ground shadow behind them is a part of its own. The
-// paper between his sandals is the view's ground, owned by no part. Pure.
+// paper between his sandals is the view's ground, owned by no part. A hand
+// takes its whole ink ring, so no piece of it stays behind when the arm moves.
+// His bust (heads-4) is two parts, his head over the rest; its figure is read
+// with the foot of the view closed (`cutOptionsFor`). Each view names the
+// parts a pose moves, and the words okra repaints what they hide by
+// (`HIDDEN`, read by `film concept parts`, which writes `sheets/<view>/`).
+// Pure.
 
-import type { PartCut, PartCutOptions, PartRule } from '@manna/film/tools';
+import { cutParts, type PartCut, type PartCutOptions, type PartRule } from '@manna/film/tools';
+import { Result } from 'effect';
 import { LABELS } from '../rig/labels.ts';
 import { CLASSES } from '../rig/trace.ts';
 
@@ -292,13 +299,41 @@ const THREE_QUARTER_LEFT: PartCut = {
   parts: [
     {
       name: 'armRight',
-      take: [...turnedRight.take, { label: 'handNear' }, { disc: { c: [21.5, 429], r: 24 } }],
+      take: [
+        ...turnedRight.take,
+        { label: 'handNear' },
+        // his near hand's ink ring, taller than wide, read off an 8x crop: out to its outer edge, short of his robe's teal beside it
+        {
+          polygon: [
+            [-1, 410],
+            [8, 403],
+            [20, 401],
+            [32, 403],
+            [38, 408],
+            [41, 416],
+            [41, 442],
+            [38, 450],
+            [32, 455],
+            [22, 458],
+            [12, 456],
+            [4, 450],
+            [-1, 444],
+          ],
+        },
+      ],
       unless: turnedRight.unless,
       pivot: JOINTS.threeQuarterLeft.shoulderRight,
     },
     {
       name: 'armLeft',
-      take: [...turnedLeft.take, { label: 'handFar' }, { disc: { c: [183.5, 429], r: 24.5 } }],
+      // his far hand's ink ring, read off 7x and 9x crops, out to its outer edge; the cuff's end each side of it, and the ring's far edge
+      take: [
+        ...turnedLeft.take,
+        { label: 'handFar' },
+        { disc: { c: [184, 430], r: 27 } },
+        box(151, 405, FAR, 419),
+        box(190, 405, FAR, 452),
+      ],
       unless: turnedLeft.unless,
       pivot: JOINTS.threeQuarterLeft.shoulderLeft,
     },
@@ -368,14 +403,121 @@ const THREE_QUARTER_LEFT: PartCut = {
   ],
 };
 
-/** Each kept view's cut, by the view's name in his turnaround. */
+/**
+ * His bust facing the viewer (heads-4), read off 4x and 8x crops: his head
+ * (hair, face and ears) above the row where his jaw's ink meets his neck's
+ * outline, with the dark shadow his chin casts on his neck between those
+ * outlines, so the shadow turns with his chin; his neck below it, his
+ * collar and garments.
+ */
+const HEADS_4: PartCut = {
+  parts: [
+    {
+      name: 'head',
+      take: [
+        {
+          polygon: [
+            [-1, -1],
+            [FAR, -1],
+            [FAR, 214],
+            [155, 214],
+            [155, 233],
+            [90, 233],
+            [90, 214],
+            [-1, 214],
+          ],
+        },
+      ],
+      pivot: [120, 232],
+    },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR * 2)] },
+  ],
+};
+
+/** Each kept view's cut, by the view's name in his sheets' views. */
 export const CUTS = {
   front: FRONT,
   threeQuarterLeft: THREE_QUARTER_LEFT,
+  'heads-4': HEADS_4,
 } as const satisfies Readonly<Record<string, PartCut>>;
 
-/** What each view's label rules read: his colour classes and the view's part labels. */
+/** A view of his, by its name in his sheets' views. */
+type CutView = keyof typeof CUTS;
+
+/** What each turnaround view's label rules read: his colour classes and the view's part labels. */
 export const CUT_OPTIONS = {
   front: { classes: CLASSES, labels: LABELS.front },
   threeQuarterLeft: { classes: CLASSES, labels: LABELS.threeQuarterLeft },
-} as const satisfies Readonly<Record<keyof typeof CUTS, PartCutOptions>>;
+} as const satisfies Readonly<Record<string, PartCutOptions>>;
+
+type View = Parameters<typeof cutParts>[0];
+
+/** His sheets' ink, for the row that closes a bust's foot. */
+const INK = [42, 30, 24, 255] as const;
+
+/**
+ * A bust's figure: his heads views run off their foot, where his cream
+ * tunic meets the view's edge and reads as ground to a flood from the
+ * border. Read with a row of ink under the view, the foot is closed, and
+ * the figure is the cut's own reading (enclosed paper less) of what the
+ * border does not reach.
+ */
+const bustFigure = (view: View): Uint8Array => {
+  const n = view.width * view.height;
+  const rgba = new Uint8Array((n + view.width) * 4);
+  rgba.set(view.rgba);
+  for (let x = 0; x < view.width; x++) rgba.set(INK, (n + x) * 4);
+  const closed = { width: view.width, height: view.height + 1, rgba };
+  const all: PartCut = { parts: [{ name: 'figure', take: [box(-1, -1, FAR * 2, FAR * 2)] }] };
+  return Result.match(cutParts(closed, all), {
+    onSuccess: (sheet) => sheet.owner.slice(0, n),
+    onFailure: () => new Uint8Array(n),
+  });
+};
+
+/** What a view's cut reads beside the view: a turnaround view's labels, a bust's figure with its foot closed. */
+export const cutOptionsFor = (name: CutView, view: View): PartCutOptions => OPTIONS_FOR[name](view);
+
+const OPTIONS_FOR: Readonly<Record<CutView, (view: View) => PartCutOptions>> = {
+  front: () => CUT_OPTIONS.front,
+  threeQuarterLeft: () => CUT_OPTIONS.threeQuarterLeft,
+  'heads-4': (view) => ({ figure: bustFigure(view) }),
+};
+
+/** The okra repaint's opening: the picture and what was cut away. */
+const CUT_AWAY =
+  'Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where';
+
+/** Where his body's sides run under his arms: out to his shoulders and robe, not in at the sleeves' inner edges. */
+const SIDES =
+  'Each side of his body runs straight down from the outer end of his shoulder to the outer edge of his robe below, so his body under the arms is as wide as his shoulders and his robe, and the tunic and mantle fill everything inside that line with the same soft shade and fine paper grain the sheet paints beside each arm.';
+
+/** The shade his arms cast on his body stays, and runs on under them. */
+const SHADE =
+  'Keep the soft shade each arm casts on his body beside it exactly as it is, and carry that same shade on under where the arm was.';
+
+/** The repaint's close: nothing else moves. */
+const KEEP_REST =
+  'Keep every other pixel exactly as it is: the same size, position and framing, and every part that is not magenta unchanged.';
+
+/**
+ * Each view's moving parts (what a pose moves, whose areas are painted
+ * magenta and repainted beneath), and the words okra repaints them by: what
+ * lies under them, in the sheet's own style.
+ */
+export const HIDDEN = {
+  front: {
+    moving: ['armRight', 'armLeft'],
+    prompt: `${CUT_AWAY} his two arms (sleeves and round hands) were cut away to make a cut-out puppet. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading (cream tunic on the viewer's left side, the teal-blue mantle on the viewer's right side, the white sash running round to each side of his waist). ${SIDES} There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, face, hair, robe, sash, feet, size, position and framing.`,
+  },
+  threeQuarterLeft: {
+    moving: ['armRight', 'armLeft'],
+    prompt: `${CUT_AWAY} his two arms (sleeves and round hands) were cut away to make a cut-out puppet. He is turned three-quarters to the viewer's left. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading (the cream tunic on the viewer's left side, the teal-blue mantle on the viewer's right side, the white sash running round his waist). ${SIDES} ${SHADE} There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, face, hair, robe, sash, feet, size, position and framing.`,
+  },
+  'heads-4': {
+    moving: ['head'],
+    prompt: `${CUT_AWAY} his head (his hair, face and ears) was cut away to make a cut-out puppet. Repaint ONLY the magenta area, as what lies behind his head: his neck rising straight up from his collar as a plain column of skin to about where his mouth was, its two sides closed by the same thick dark brown-black outline as the rest of him, its top simply rounded and closed by the same outline (no opening, no rim, no dark band), in exactly the same skin colour, soft shading and fine paper grain as his neck below. Everywhere else in the magenta area becomes the plain cream paper. There is no head now: no hair, no face, no ears, nothing magenta left. ${KEEP_REST}`,
+  },
+} as const satisfies Readonly<
+  Record<CutView, { readonly moving: ReadonlyArray<string>; readonly prompt: string }>
+>;
