@@ -15,7 +15,7 @@
 import type { Rgb } from './cast-sheet-pixels.ts';
 
 /** How far in from the ground the rim reaches: this many px (8-neighbour steps), through pixels lighter than ink. */
-export const UNMATTE_BAND = 4;
+const UNMATTE_BAND = 4;
 
 /** How far around a rim pixel its ink is looked for, px. */
 const INK_REACH = 5;

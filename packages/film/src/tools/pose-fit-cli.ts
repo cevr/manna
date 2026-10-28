@@ -37,7 +37,7 @@ import { FilmFolder, filmNamed, importFilmModule } from './film-repo.ts';
 import { decodePng } from './png.ts';
 
 /** A fit that cannot be made: an unknown view or puppet, a table or sheet that does not load. */
-export class FitRefused extends Schema.TaggedError<FitRefused>()('FitRefused', {
+class FitRefused extends Schema.TaggedError<FitRefused>()('FitRefused', {
   member: Schema.String,
   reason: Schema.String,
 }) {

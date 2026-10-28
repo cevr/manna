@@ -8,8 +8,8 @@
 //   number (degrees, positive from +x toward +y, as a canvas turns) is
 //   relative to its parent. A bone a pose does not name stays at 0, so the
 //   rest pose is the bind pose. The shared control names are the bones'
-//   names (`PUPPET_CONTROLS`): `lean`, `neck`, `head`, and `shoulder`,
-//   `elbow`, `wrist` by side, named from the character's own side.
+//   names: `lean`, `neck`, `head`, and `shoulder`, `elbow`, `wrist` by side
+//   (`shoulderRight`, `shoulderLeft`), named from the character's own side.
 // - **Mesh.** A part's mesh is a 3 px grid (`MESH_STEP`) over the cells that
 //   hold any pixel of it, two triangles a cell; a vertex is a grid point.
 // - **Weights.** A vertex lies on at most two bones, only those its part's
@@ -44,19 +44,6 @@ import { unmatte } from './unmatte.ts';
 
 type Pt = readonly [number, number];
 
-/** The control names every skeleton shares, by side where a body has two: the bones a pose turns. */
-export const PUPPET_CONTROLS = [
-  'lean',
-  'neck',
-  'head',
-  'shoulderRight',
-  'elbowRight',
-  'wristRight',
-  'shoulderLeft',
-  'elbowLeft',
-  'wristLeft',
-] as const;
-
 /** The grid a part's mesh is laid on, px. */
 export const MESH_STEP = 3;
 
@@ -67,7 +54,7 @@ const BLEND = 18;
 const FLAP_REACH = 34;
 
 /** A bone: its name, its parent's, the joint it turns about and the end it points to, sheet px. */
-export interface PuppetBone {
+interface PuppetBone {
   readonly name: string;
   readonly parent?: string;
   readonly pivot: Pt;
@@ -81,7 +68,7 @@ export interface PuppetBone {
  * lie from `bone`'s pivot, 0 within `cap` px, 1 at `reach` px, above the
  * pivot along `bone`.
  */
-export interface PuppetFlap {
+interface PuppetFlap {
   readonly part: string;
   readonly from: string;
   readonly bone: string;
@@ -113,7 +100,7 @@ interface PuppetWeight {
 }
 
 /** A part's mesh: its vertices (flat x, y, sheet px), its triangles (flat, three vertex indices each), each vertex's weights and the same as bone indices and amounts (two a vertex, -1 none). */
-export interface PuppetMesh {
+interface PuppetMesh {
   readonly vertices: Float64Array;
   readonly triangles: Uint32Array;
   readonly weights: ReadonlyArray<ReadonlyArray<PuppetWeight>>;
@@ -122,7 +109,7 @@ export interface PuppetMesh {
 }
 
 /** A part of a puppet: its name, its pixels (its texture), what each part in front of it hides, and its mesh. */
-export interface PuppetPart {
+interface PuppetPart {
   readonly name: string;
   readonly pixels: Raster;
   /** By each part in front of it: the paint the un-matte cleared behind that part's rim (hidden at rest), shown once that part moves away; none where nothing was cleared. */
@@ -324,7 +311,7 @@ const meshOf = (
 };
 
 /** Why a skeleton cannot skin a sheet: a bone named twice or before its parent, a skin or flap naming what is not there. */
-export class PuppetRefused extends Schema.TaggedError<PuppetRefused>()('PuppetRefused', {
+class PuppetRefused extends Schema.TaggedError<PuppetRefused>()('PuppetRefused', {
   reason: Schema.String,
 }) {
   override get message() {

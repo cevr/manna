@@ -31,17 +31,7 @@ export {
 } from './synth/graph/presets.ts';
 export { defineStore } from './store.ts';
 export { stagingVoice } from './staging-voice.ts';
-export {
-  type Puppet,
-  type PuppetPose,
-  type PuppetSheet,
-  type Skeleton,
-  PUPPET_CONTROLS,
-  posedVertices,
-  puppetOf,
-  rasterOf,
-  restPose,
-} from './puppet.ts';
+export { type Skeleton, rasterOf, restPose } from './puppet.ts';
 export { boxStart, fitPose } from './pose-fit.ts';
 export { labOf } from './cast-sheet-pixels.ts';
 export { figureOf } from './fit-rows.ts';

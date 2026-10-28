@@ -53,7 +53,7 @@ export interface PuppetSpec {
 }
 
 /** A drawing laid by a similarity, drawing px to sheet px: `s · p + (dx, dy)`. */
-export interface PuppetPlace {
+interface PuppetPlace {
   readonly s: number;
   readonly dx: number;
   readonly dy: number;

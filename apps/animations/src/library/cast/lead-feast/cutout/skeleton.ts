@@ -7,7 +7,7 @@
 // ground shadow stand with the root; each sleeve takes its shoulder's flap
 // of torso (the torso's own pixels beside its cap, above its pivot and
 // outside its inner edge), resting on his lean. His bust (heads-4) is a lean
-// and a head. Bone names are the shared control names (`PUPPET_CONTROLS`).
+// and a head. Bone names are the shared control names (`core/puppet.ts`).
 // Pure data.
 
 import type { Skeleton } from '@manna/film/core';

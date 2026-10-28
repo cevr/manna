@@ -24,7 +24,7 @@ type Pt = readonly [number, number];
 const jsonOf = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
 /** An ease that cannot be drawn: none from `from` to `to`, a length its seconds do not give, segments that do not cover it. */
-export class EaseRefused extends Schema.TaggedError<EaseRefused>()('EaseRefused', {
+class EaseRefused extends Schema.TaggedError<EaseRefused>()('EaseRefused', {
   member: Schema.String,
   reason: Schema.String,
 }) {
@@ -34,7 +34,7 @@ export class EaseRefused extends Schema.TaggedError<EaseRefused>()('EaseRefused'
 }
 
 /** What an ease render asks: its poses, its length, its segments (each drawn in its own page; none, one of the whole) and its order. */
-export interface EaseAsk {
+interface EaseAsk {
   readonly from: string;
   readonly to: string;
   readonly seconds: number;
@@ -55,7 +55,7 @@ const isCastModule = (u: unknown): u is CastModule =>
   Predicate.hasProperty(u, 'CAST') && Predicate.hasProperty(u, 'SHEETS');
 
 /** `0..count-1` shuffled by `seed` (an LCG, Fisher-Yates). */
-export const shuffled = (count: number, seed: number) => {
+const shuffled = (count: number, seed: number) => {
   const order = Arr.makeBy(count, (i) => i);
   let s = seed >>> 0;
   for (let i = count - 1; i > 0; i--) {

@@ -2660,8 +2660,8 @@ where a file differs, and `--dry-run` writes the magenta input under
 ### The puppet: a part sheet on a skeleton
 
 A puppet (`core/puppet.ts`) is a part sheet on a skeleton
-(`<member>/cutout/skeleton.ts`: bones named by the shared controls,
-`PUPPET_CONTROLS`, each turning about its pivot after its parent; each
+(`<member>/cutout/skeleton.ts`: bones named by the shared controls (`lean`,
+`neck`, `head`, `shoulder`, `elbow` and `wrist` by side), each turning about its pivot after its parent; each
 part's skin, the bones it lies on; each sleeve's shoulder flap). Each part
 is a mesh of its own pixels on a 3 px grid, each vertex on at most two of
 its skin's bones (the nearest, shared with the bone across a joint by a

@@ -22,7 +22,7 @@ import { type Puppet, type PuppetPose, rasterOf } from './puppet.ts';
 import type { Raster } from './raster.ts';
 
 /** What a fit searches: the bones it turns (none unless named), from where, against which paper. */
-export interface PoseFitOptions {
+interface PoseFitOptions {
   readonly bones?: ReadonlyArray<string>;
   readonly start?: PuppetPose;
   readonly paper?: Rgb;
@@ -31,7 +31,7 @@ export interface PoseFitOptions {
 }
 
 /** A fitted pose, its loss (lower is nearer the view) and how many rasters the search drew. */
-export interface PoseFit extends PuppetPose {
+interface PoseFit extends PuppetPose {
   readonly loss: number;
   readonly rasters: number;
 }
