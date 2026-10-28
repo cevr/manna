@@ -81,7 +81,12 @@ under its number, and the refrain written out each time it is sung.
   file from the pinned model (fetched by checksum into a cache outside the
   repository), the same bytes each time. The table is a Gemma model
   derivative: Settings → About carries the notice the Gemma Terms of Use
-  ask for, and `assets/meaning/NOTICE` beside the file.
+  ask for, and `assets/meaning/NOTICE` beside the file. On a phone, search
+  mode looks for the hymns about the query after a pause of 150 ms in the
+  typing (`aboutQuery`: none for a query with a digit or under three
+  letters) and shows them under the five strongest matches, in a section
+  `Hymns about this`, then the rest under `More matches`
+  (`src/reader/rows.ts`, `resultRowsOf`).
 - A hymn page's quiet topic line is a button, `About this hymn`, that opens
   a sheet (`/about?hymn=<n>`, `src/reader/About.tsx`): first `More like
   this`, the 8 hymns nearest by meaning, each a row that closes the sheet

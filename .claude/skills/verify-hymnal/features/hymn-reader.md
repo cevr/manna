@@ -13,7 +13,7 @@ later rows sit one indent right of its first.
 
 ## Sub-features
 
-- `reader-head`: the topic above, then the number and the title side by side, the number left of the title.
+- `reader-head`: the topic above (a button, `About this hymn`, that opens the sheet of hymns like it: `about.md`), then the number and the title side by side, the number left of the title.
 - `reader-words`: stanzas in order, each a group named `Stanza <n>`, the refrain a group named `Refrain` after each stanza.
 - `reader-syllables`: with chords off, a sung line shows its syllables, a muted hyphen between the syllables of a word and the words a space apart, each word kept on one row; the line reads as one element named by its whole words. A Plain part shows its words alone.
 - `reader-scroll`: the words scroll to the last stanza and back, inside a page as tall as the pager on every page, the open one and its neighbours.
