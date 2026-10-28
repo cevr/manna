@@ -51,8 +51,8 @@ const EXPOSED = [
   { id: 'raised', png: raised, from: 36 },
 ] as const;
 
-/** How far round the held hand the line is left as the drawings draw it, sheet px: its radius and 13 (world-proto r5c's 42). */
-const QUIET = 42;
+/** How far round the held hand the line is left as the drawings draw it, sheet px: 0, since each key keeps its own lower line up to the cuff and the L3 line closes on the held ring. */
+const QUIET = 0;
 
 const COUNT = 48;
 

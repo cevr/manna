@@ -1,6 +1,6 @@
 {
   "view": "front",
-  "note": "keys from world-proto r5c (0 new okra calls: its three answers reused); built by tmp/orchestrate/p5/cutout/round-9-receipts/raise-build.ts",
+  "note": "keys from world-proto r5c (0 new okra calls: its three answers reused); the raised key kept poses-1 at the sheets' scale 1.06",
   "keys": [
     {
       "id": "rest",
@@ -27,12 +27,12 @@
       "png": "keys/early.png",
       "place": {
         "s": 1,
-        "dx": -27,
+        "dx": -15,
         "dy": 213
       },
       "pivot": [46, 253],
       "elbow": [27.1539, 326.1822],
-      "hand": [-5.337815237729757, 394.45662861663357],
+      "hand": [-9.5, 394],
       "source": {
         "okra": 2
       }
@@ -43,12 +43,12 @@
       "png": "keys/quarter.png",
       "place": {
         "s": 1,
-        "dx": -48,
+        "dx": -37,
         "dy": 213
       },
       "pivot": [46, 253],
       "elbow": [17.72135, 325.17814999999996],
-      "hand": [-35.47955758080916, 378.9422872113147],
+      "hand": [-44, 377.5],
       "source": {
         "okra": 1
       }
@@ -59,12 +59,12 @@
       "png": "keys/half.png",
       "place": {
         "s": 1,
-        "dx": -80,
+        "dx": -74,
         "dy": 212
       },
       "pivot": [46, 253],
       "elbow": [-0.37614999999999554, 310.77995000000004],
-      "hand": [-67.69013168527911, 311.44735378694446],
+      "hand": [-75, 306.5],
       "source": {
         "okra": 3
       }
@@ -75,12 +75,12 @@
       "png": "keys/three-quarter.png",
       "place": {
         "s": 1,
-        "dx": -77,
+        "dx": -83,
         "dy": 211
       },
       "pivot": [46, 253],
       "elbow": [-12.535693999999992, 292.3224475],
-      "hand": [-64.59001561702199, 250.16648368557168],
+      "hand": [-70.5, 242],
       "source": {
         "okra": 3
       }
@@ -91,17 +91,17 @@
       "png": "keys/raised.png",
       "place": {
         "s": 1,
-        "dx": -41,
-        "dy": 137
+        "dx": -59,
+        "dy": 207
       },
       "pivot": [46, 253],
-      "elbow": [-2.3333333333333357, 274.25333333333333],
-      "hand": [-12.386666666666667, 199.24],
+      "elbow": [-22.119999999999997, 272.88],
+      "hand": [-32.79633390593274, 198.14566265847083],
       "source": {
         "kept": "poses-1",
-        "s": 0.7733333333333333,
-        "dx": 0,
-        "dy": -70
+        "s": 1.06,
+        "dx": -14,
+        "dy": -197
       }
     }
   ],

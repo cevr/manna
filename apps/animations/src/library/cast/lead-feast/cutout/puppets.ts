@@ -55,7 +55,7 @@ const puppet = (view: FramedView, parts: ReadonlyArray<readonly [string, string]
  * across it, its soft edge and the boil's resample taken, is that, in the
  * sheet's ink.
  */
-export const LINE = { width: 8.5, ink: [43, 38, 34] } as const;
+export const LINE = { width: 8.5, ink: [31, 17, 9] } as const;
 
 /** Each cut view's paper, the median of its kept view's border ground (its rim is un-matted from it, `core/unmatte.ts`). */
 export const PAPERS = {
