@@ -363,7 +363,7 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 
 - Owner, 2026-10-27: "Sure, file them." Filed on One: onejs/one#1065 (managed players cannot own Now Playing or remote commands, so a crossfade loses the lock screen) and onejs/one#1066 (load the global session paused at a position). When either lands, a follow-up unit revisits playbulk P1's gap (crossfade) and F6 (opening sample). (playbulk)
 
-- Hymnal verification is iOS only; no web drive or browser journey for any hymnal unit (owner 2026-10-27: "You don't need to verify on the web"). Unit tests still cover web code. playbulk P5 r3 on.
+- The web is not a product target for the hymnal or Heartseed; only marketing sites matter on the web (owner 2026-10-27: "The web is not a target we care about. The only thing we would care about the web would be the marketing side of anything"; earlier: "You don't need to verify on the web"). Verification runs on iOS only; web-only findings and follow-ups are dropped; the web build and its unit tests stay green but get no new work. playbulk P5 r3 on.
 
 ## Owner questions
 
