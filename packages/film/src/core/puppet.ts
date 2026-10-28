@@ -365,12 +365,23 @@ export const puppetOf = (
       ? part.pixels.rgba
       : withFlap(part.pixels, from.pixels, flap.region);
   });
-  const textures = sheet.paper === undefined ? withFlaps : unmatte(withFlaps, W, H, sheet.paper);
+  const { paper } = sheet;
+  const textures = paper === undefined ? withFlaps : unmatte(withFlaps, W, H, paper);
+  // the parts un-matted with part j gone: what each part behind j shows once j moves away
+  const without = new Map<number, ReadonlyArray<Uint8Array>>();
+  const unmattedWithout = (j: number) => {
+    const known = without.get(j);
+    if (known !== undefined) return known;
+    const gone = withFlaps.map((p, n) => (n === j ? new Uint8Array(p.length) : p));
+    const made = paper === undefined ? gone : unmatte(gone, W, H, paper);
+    without.set(j, made);
+    return made;
+  };
   const parts = sheet.parts.map((part, k): PuppetPart => {
     const skin = (skeleton.skin[part.name] ?? []).map((b) => at.get(b)!);
     const flap = skeleton.flaps?.find((f) => f.part === part.name);
     const rgba = textures[k]!;
-    const revealed = revealedOf(withFlaps, textures, k);
+    const revealed = revealedOf(withFlaps, textures, k, unmattedWithout);
     // its mesh holds what it shows at rest and all it can reveal
     const covers = (i: number) =>
       rgba[i * 4 + 3]! > 0 || revealed.some((r) => r !== undefined && r[i * 4 + 3]! > 0);
@@ -407,15 +418,18 @@ export const puppetOf = (
 
 /**
  * The paint the un-matte cleared from part `k` behind each part in front of
- * it, given back from `before` (its pixels before the un-matte): for each
- * front part `j`, `k`'s pixels where `j` is the frontmost holder, `k`'s
- * pixel was cleared, and it had one (else none, where nothing was cleared
- * behind `j`). What a pose shows of `k` once `j` moves away from there.
+ * it, given back as `k` shows with that part gone: for each front part `j`,
+ * at `k`'s pixels where `j` is the frontmost holder, `k`'s pixel was
+ * cleared, and it had one, `k`'s pixel un-matted with `j` gone (`without`),
+ * so its own rim there (the sheet's paper outside its line) is un-matted as
+ * any rim is; none where nothing was given back behind `j`. What a pose
+ * shows of `k` once `j` moves away from there.
  */
 const revealedOf = (
   before: ReadonlyArray<Uint8Array>,
   after: ReadonlyArray<Uint8Array>,
   k: number,
+  without: (j: number) => ReadonlyArray<Uint8Array>,
 ): ReadonlyArray<Uint8Array | undefined> => {
   const own = before[k]!;
   const out: Array<Uint8Array | undefined> = before.map(() => undefined);
@@ -423,8 +437,10 @@ const revealedOf = (
     if (after[k]![i] !== 0 || own[i] === 0) continue;
     const j = before.findIndex((p, n) => n < k && p[i]! > 0);
     if (j < 0) continue;
+    const shown = without(j)[k]!;
+    if (shown[i] === 0) continue;
     const layer = out[j] ?? new Uint8Array(own.length);
-    layer.set(own.subarray(i - 3, i + 1), i - 3);
+    layer.set(shown.subarray(i - 3, i + 1), i - 3);
     out[j] = layer;
   }
   return out;

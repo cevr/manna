@@ -31,6 +31,35 @@ const TWO_BONES: Skeleton = {
   skin: { arm: ['shoulderRight', 'elbowRight'] },
 };
 
+/** A body box inked round its edge with a strip of its sheet's paper outside its line, and a sleeve over it whose rim row is half paper, half ink. */
+const CLEAR = [0, 0, 0, 0] as const;
+const rimSheet = () => {
+  const painted = (colourAt: (x: number, y: number) => readonly number[]) => {
+    const rgba = new Uint8Array(W * H * 4);
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++) {
+        rgba.set(colourAt(x, y), (y * W + x) * 4);
+      }
+    return rgba;
+  };
+  const inBox = (x: number, y: number) => y >= 7 && y < 22 && x >= 20 && x < 44;
+  const onEdge = (x: number, y: number) => y === 7 || x === 20 || x === 43;
+  const body = painted((x, y) => {
+    if (inBox(x, y) && onEdge(x, y)) return [40, 30, 20, 255];
+    if (inBox(x, y)) return [200, 190, 160, 255];
+    // the sheet's paper the body's cut kept outside its line, under the sleeve's rim
+    if (y === 8 && x >= 10 && x < 13) return [250, 240, 220, 255];
+    return CLEAR;
+  });
+  const arm = painted((x, y) => {
+    if (x < 2 || x >= 62 || y < 8 || y >= 16) return CLEAR;
+    // the sleeve's rim row: half paper, half ink, over the body
+    if (y === 8) return [145, 135, 120, 255];
+    return [40, 30, 20, 255];
+  });
+  return { arm, body };
+};
+
 const made = (sheet: PuppetSheet, skeleton: Skeleton): Puppet =>
   Result.getOrThrow(puppetOf(sheet, skeleton));
 
@@ -159,18 +188,9 @@ describe('a puppet', () => {
   });
 
   test("keeps, revealed by the part in front, the paint the un-matte cleared behind that part's rim", () => {
-    // a sleeve over a light body box, cut from a paper; the sleeve's rim, reached from the ground through the body, lies over its hidden paint
+    // a sleeve over a light body box inked round its edge, cut from a paper; the sleeve's rim, reached from the ground through the body, lies over its hidden paint
     const paper = [250, 240, 220] as const;
-    const arm = new Uint8Array(W * H * 4);
-    const body = new Uint8Array(W * H * 4);
-    for (let y = 0; y < H; y++)
-      for (let x = 0; x < W; x++) {
-        const i = (y * W + x) * 4;
-        if (y >= 6 && y < 22 && x >= 20 && x < 44) body.set([200, 190, 160, 255], i);
-        if (y >= 8 && y < 16 && x >= 2 && x < 62) arm.set([40, 30, 20, 255], i);
-        // the sleeve's rim row: half paper, half ink, over the body
-        if (y === 8 && x >= 2 && x < 62) arm.set([145, 135, 120, 255], i);
-      }
+    const { arm, body } = rimSheet();
     const sheet: PuppetSheet = {
       width: W,
       height: H,
@@ -189,8 +209,12 @@ describe('a puppet', () => {
     ];
     const back = p.parts[1]!;
     // at rest the body's paint under the rim is cleared; revealed by the sleeve it is the body's own
-    expect(at(back.pixels.rgba, 30, 8)).toEqual([0, 0, 0, 0]);
-    expect(at(back.revealed[0]!.rgba, 30, 8)).toEqual([200, 190, 160, 255]);
+    expect(at(back.pixels.rgba, 22, 8)).toEqual([0, 0, 0, 0]);
+    expect(at(back.revealed[0]!.rgba, 22, 8)).toEqual([200, 190, 160, 255]);
+
+    // the paper outside the body's line is the body's rim once the sleeve is gone: un-matted to nothing, not given back as paint
+    expect(at(back.pixels.rgba, 11, 8)).toEqual([0, 0, 0, 0]);
+    expect(at(back.revealed[0]!.rgba, 11, 8)).toEqual([0, 0, 0, 0]);
 
     // nothing else: the body's own pixels are its texture's
     expect(at(back.revealed[0]!.rgba, 30, 18)).toEqual([0, 0, 0, 0]);
