@@ -5,7 +5,9 @@
  * content is known before the list draws (`topicStarts`). The pinned row
  * then follows the scroll offset on the UI thread (`pinnedAt`, a worklet):
  * no state of the JS thread is read in the frame, so a fast drag cannot
- * show the row at a place the list has not caught up with.
+ * show the row at a place the list has not caught up with. A layer over
+ * the list's top (`cover`, the home list's search field) moves the pin's
+ * line down under it, in the same frame.
  */
 
 import type { Row } from './rows';
@@ -29,24 +31,35 @@ export const topicStarts = <Hymn>(
 export interface Pinned {
   /** The topic's place among the topics; -1 while the first topic is still below the list's top. */
   readonly index: number;
-  /** How far above the list's top the pinned row sits: 0 at rest, down to -`height` as the next pushes it. */
+  /** How far above the pin's line the pinned row sits: 0 at rest, down to -`height` as the next pushes it. */
   readonly y: number;
 }
 
-/** The topic pinned at scroll offset `scroll`, its rows `height` tall, over the topics' `starts` (ascending). */
-export const pinnedAt = (starts: ReadonlyArray<number>, scroll: number, height: number): Pinned => {
+/**
+ * The topic pinned at scroll offset `scroll`, its rows `height` tall, over
+ * the topics' `starts` (ascending), under a layer `cover` points tall over
+ * the list's top: the pin's line is the layer's bottom, and the pinned row
+ * is drawn that far down.
+ */
+export const pinnedAt = (
+  starts: ReadonlyArray<number>,
+  scroll: number,
+  height: number,
+  cover = 0,
+): Pinned => {
   'worklet';
-  // The last topic whose top has reached the list's top.
+  const line = scroll + cover;
+  // The last topic whose top has reached the pin's line.
   let low = 0;
   let high = starts.length;
   while (low < high) {
     const middle = Math.floor((low + high) / 2);
-    if ((starts[middle] ?? Infinity) <= scroll) low = middle + 1;
+    if ((starts[middle] ?? Infinity) <= line) low = middle + 1;
     else high = middle;
   }
   const index = low - 1;
   // The last topic has no next to push it.
   const next = starts[index + 1] ?? Infinity;
   if (index < 0) return { index, y: 0 };
-  return { index, y: Math.min(0, next - scroll - height) };
+  return { index, y: Math.min(0, next - line - height) };
 };

@@ -67,6 +67,8 @@ export interface PullDown {
   readonly height: number;
   readonly rest: number;
   readonly scroll: SharedValue<number>;
+  /** How many points of a layer over the list's top (the search field shown again) cover it: the pinned topic row sits under them. */
+  readonly cover?: SharedValue<number>;
 }
 
 export function HymnList({ hymns, hrefOf, offset, empty }: HymnListProps) {

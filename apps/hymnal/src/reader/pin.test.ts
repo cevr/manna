@@ -38,6 +38,36 @@ describe('the pinned topic row', () => {
   });
 });
 
+describe('the pinned topic row under a layer over the list’s top', () => {
+  // A 52 pt field over the list's top: the pin's line is 52 pt down.
+  const cover = 52;
+
+  it('pins the topic whose row has reached the layer’s bottom, not the list’s top', () => {
+    // The second topic's row (at 224) is 52 pt below the top at 172: it takes the pin there.
+    expect(pinnedAt(starts, 171.5, 36, cover).index).toBe(0);
+    expect(pinnedAt(starts, 172, 36, cover)).toEqual({ index: 1, y: 0 });
+    // The first topic pins once its row meets the layer, 52 pt before it meets the top.
+    expect(pinnedAt(starts, 47.5, 36, cover).index).toBe(-1);
+    expect(pinnedAt(starts, 48, 36, cover)).toEqual({ index: 0, y: 0 });
+  });
+
+  it('lets the next topic push the pinned row up from the layer’s bottom', () => {
+    // The next topic's top is 10 pt below the pin's line: the row sits 26 pt up.
+    expect(pinnedAt(starts, 162, 36, cover)).toEqual({ index: 0, y: -26 });
+  });
+
+  it('is the uncovered pin at a cover of 0', () => {
+    for (const scroll of [0, 99.5, 100, 150, 188, 214, 224, 10_000])
+      expect(pinnedAt(starts, scroll, 36, 0)).toEqual(pinnedAt(starts, scroll, 36));
+  });
+
+  it('holds still through a frame where the cover moves as the list does: the next row meets it at the same place', () => {
+    // A field sliding in by 6 pt as the list scrolls up 6 pt: the pin's line
+    // stays on the same content point, so the topic and its push are unchanged.
+    expect(pinnedAt(starts, 170, 36, 20)).toEqual(pinnedAt(starts, 164, 36, 26));
+  });
+});
+
 describe('a shelf above the topics', () => {
   it('is no pinned row: the first topic starts below its header and its hymns, and nothing pins until it reaches the top', () => {
     const shelved = rowsOf(

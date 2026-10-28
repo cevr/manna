@@ -153,7 +153,9 @@ export function HymnList({
     [rows, sticky, header, topicHeight, hymnHeight],
   );
   const own = useSharedValue(0);
+  const uncovered = useSharedValue(0);
   const scroll = pullDown?.scroll ?? own;
+  const cover = pullDown?.cover ?? uncovered;
   const rest = pullDown?.rest ?? 0;
   // When the rows change under a reader scrolled into the list (a hymn opened
   // from it joins Recent above), the rows in view keep their place. At the
@@ -199,6 +201,7 @@ export function HymnList({
           starts={topics.starts}
           height={topicHeight}
           scroll={scroll}
+          cover={cover}
         />
       )}
     </View>
@@ -216,20 +219,26 @@ const names = (row: Row<HymnText>): ReadonlyArray<string> => {
  * under the top shows, pushed up as the next topic's row meets it. Screen
  * readers read the list's own topic rows, so the copy is hidden from them,
  * and touches pass through it to the list. A topic taking the pin gives a
- * `section` cue with its place among the topics.
+ * `section` cue with its place among the topics. Under a layer over the
+ * list's top (`cover`), the strip's line is the layer's bottom, read in
+ * the same frame as the offset, so the row sits flush under the layer as
+ * it slides.
  */
 function PinnedTopic({
   names: topics,
   starts,
   height,
   scroll,
+  cover,
 }: {
   readonly names: ReadonlyArray<string>;
   readonly starts: ReadonlyArray<number>;
   readonly height: number;
   readonly scroll: SharedValue<number>;
+  readonly cover: SharedValue<number>;
 }) {
-  const pinned = useDerivedValue(() => pinnedAt(starts, scroll.value, height));
+  const pinned = useDerivedValue(() => pinnedAt(starts, scroll.value, height, cover.value));
+  const line = useAnimatedStyle(() => ({ transform: [{ translateY: cover.value }] }));
   const cue = useCue();
   const section = (place: number) => cue({ _tag: 'section', place });
   // A topic taking the pin is felt; the first call, as the list mounts, is not.
@@ -248,12 +257,12 @@ function PinnedTopic({
     transform: [{ translateY: -Math.max(0, pinned.value.index) * height }],
   }));
   return (
-    <View
+    <Animated.View
       pointerEvents="none"
       aria-hidden
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      style={[styles.pin, { height }]}
+      style={[styles.pin, { height }, line]}
     >
       <Animated.View style={[{ height }, styles.clip, place]}>
         <Animated.View style={strip}>
@@ -263,7 +272,7 @@ function PinnedTopic({
           ))}
         </Animated.View>
       </Animated.View>
-    </View>
+    </Animated.View>
   );
 }
 

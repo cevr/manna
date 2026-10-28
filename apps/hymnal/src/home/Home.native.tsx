@@ -12,6 +12,12 @@
  * top down. The title's text takes no touch, so a drag that starts on it
  * scrolls the list.
  *
+ * Deep in the list, an upward scroll brings the field back over the list's
+ * top under the status bar, and a downward one sends it away (`reveal.ts`,
+ * `ShownField`): a layer, so the list's content and offset never move for
+ * it, with the pinned topic row under it (`PullDown.cover`). The title,
+ * coming back down as the list nears its top, covers it.
+ *
  * Tapping the field enters search mode: a bar with the focused text field
  * and Cancel, over the results. The list stays mounted beneath, untouchable
  * and hidden from assistive technology, so it keeps its place. Cancel, or
@@ -33,10 +39,15 @@ import {
   View,
 } from 'react-native';
 import Animated, {
+  Easing,
   type SharedValue,
+  useAnimatedReaction,
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
+  withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { hymns } from '~/hymns/hymns';
 import { indexOf, search } from '~/hymns/search';
@@ -48,11 +59,16 @@ import { searchBack } from './back';
 import { Browse } from './Browse';
 import { Gear } from './Gear';
 import { searchLabel } from './Results';
+import { hidden, revealAt, shownHeight } from './reveal';
 
 const index = indexOf(hymns);
 
-/** The list beneath search mode: kept in place, untouchable and unseen by assistive technology. */
-const underSearch = {
+/**
+ * A layer out of reach, untouchable and unseen by assistive technology: the
+ * list beneath search mode (kept in place), and the shown field while it is
+ * off screen.
+ */
+const outOfReach = {
   pointerEvents: 'none',
   accessibilityElementsHidden: true,
   importantForAccessibility: 'no-hide-descendants',
@@ -74,23 +90,27 @@ export function Home() {
   const title = Math.ceil(titleLine * fontScale) + titleSpace;
   const field = Math.ceil(fieldLine * fontScale) + 2 * fieldPadding + 2 * fieldMargin;
   const scroll = useSharedValue(field);
+  const cover = useShownHeight(scroll, field, field);
+  const enter = () => setSearching(true);
   return (
     <View style={styles.screen}>
       <View style={[styles.below, { marginTop: insets.top }]}>
-        <View style={styles.fill} {...(searching && underSearch)}>
+        <View style={styles.fill} {...(searching && outOfReach)}>
           <Browse
             pullDown={{
               node: (
                 <View style={{ height: title + field }}>
                   <View style={{ height: title }} />
-                  <FieldButton height={field} onPress={() => setSearching(true)} />
+                  <FieldButton height={field} onPress={enter} />
                 </View>
               ),
               height: title + field,
               rest: field,
               scroll,
+              cover,
             }}
           />
+          <ShownField height={field} cover={cover} onPress={enter} />
           <Title height={title} rest={field} scroll={scroll} />
         </View>
         {searching && <Search onCancel={() => setSearching(false)} />}
@@ -135,6 +155,61 @@ function Title({
       >
         <Gear />
       </Pressable>
+    </Animated.View>
+  );
+}
+
+/** The field's slide in or out over the list's top: quick out of the way, as a toolbar's. */
+const slide = { duration: 200, easing: Easing.out(Easing.cubic) };
+
+/**
+ * How many points of the search field show over the list's top, on the UI
+ * thread from the list's offset: `revealAt` turns the field on each frame's
+ * offset, a turn slides it in or out, and `shownHeight` keeps it at 0 at
+ * and above the list's resting place `rest`.
+ */
+function useShownHeight(scroll: SharedValue<number>, rest: number, height: number) {
+  const state = useSharedValue(hidden(rest));
+  const progress = useSharedValue(0);
+  useAnimatedReaction(
+    () => scroll.value,
+    (now) => {
+      const next = revealAt(state.value, now, rest);
+      if (next.shown !== state.value.shown) progress.value = withTiming(Number(next.shown), slide);
+      state.value = next;
+    },
+  );
+  return useDerivedValue(() => shownHeight(progress.value, height, scroll.value, rest));
+}
+
+/**
+ * The search field shown again over the list's top, under the status bar,
+ * once the reader scrolls up deep in the list (`useShownHeight`): a layer
+ * on the ground, so the rows pass under it and the list's content and
+ * offset never move for it. Its slide runs on the UI thread; React hears
+ * only when it comes on screen and when it leaves, to let touches and
+ * VoiceOver reach it only while it shows.
+ */
+function ShownField({
+  height,
+  cover,
+  onPress,
+}: {
+  readonly height: number;
+  readonly cover: SharedValue<number>;
+  readonly onPress: () => void;
+}) {
+  const [shown, setShown] = useState(false);
+  useAnimatedReaction(
+    () => cover.value > 0,
+    (now, before) => {
+      if (now !== before) scheduleOnRN(setShown, now);
+    },
+  );
+  const place = useAnimatedStyle(() => ({ transform: [{ translateY: cover.value - height }] }));
+  return (
+    <Animated.View {...(!shown && outOfReach)} style={[styles.shown, { height }, place]}>
+      <FieldButton height={height} onPress={onPress} />
     </Animated.View>
   );
 }
@@ -242,6 +317,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
   },
   pressed: { opacity: 0.6 },
+  shown: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: color.ground },
   fieldFrame: { paddingHorizontal: 16, paddingVertical: fieldMargin },
   field: {
     flex: 1,
