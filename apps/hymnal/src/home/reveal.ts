@@ -51,3 +51,22 @@ export const shownHeight = (
   'worklet';
   return Math.max(0, Math.min(progress * height, scroll - rest));
 };
+
+/**
+ * Whether the shown field can take a touch and VoiceOver's focus: only
+ * while some of its box shows below the title. Its box ends `margin` above
+ * the layer's bottom (`cover`), and the title's bottom is `title` points
+ * down, less what the list has scrolled past its resting place. Near the
+ * list's top the title covers the field, and a drag there must reach the
+ * list, as it does on the title.
+ */
+export const reachable = (
+  cover: number,
+  scroll: number,
+  rest: number,
+  title: number,
+  margin: number,
+): boolean => {
+  'worklet';
+  return cover - margin > Math.max(0, title - (scroll - rest));
+};

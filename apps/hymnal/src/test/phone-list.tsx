@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noAsyncFunction -- a script at Bun's boundary: the list is imported only once the phone's stand-ins are registered (`phone.ts`), and it prints its report on stdout. */
+/* oxlint-disable effect/noGlobals, effect/noAsyncFunction, eslint/no-await-in-loop, effect/noNullish, effect/noTernary -- a script at Bun's boundary: the list is imported only once the phone's stand-ins are registered (`phone.ts`), it drives React one step after another and reads the elements the document holds, and it prints its report on stdout. */
 
 /**
  * Mounts the phones' hymn list (`HymnList.native.tsx`) as an iPhone draws
@@ -9,11 +9,38 @@
  * `hrefOf` (a new link for each row), on the phone `phone.ts` stands in
  * for. It also prints, under `end`, the space each list keeps after its
  * last row at a bottom inset.
+ *
+ * Run as `bun phone-list.tsx cover`, it mounts the home list's top instead
+ * (`pullDown`, with its `scroll` and `cover` shared values) under the
+ * Reanimated stand-in (`reanimated.tsx`), where a style reads the values
+ * as they are set, scrolls it to a topic's end, then covers its top by 0,
+ * 26 and 52 points, and prints under `cover` each step's values and the
+ * pinned row's place: its line's offset, its topic and how far it is
+ * pushed up.
  */
+
+import { plugin } from 'bun';
 
 import { phone } from './phone';
 
 const { device } = phone();
+const covering = process.argv.includes('cover');
+if (covering) {
+  const reanimated = Bun.resolveSync('./reanimated.tsx', import.meta.dir);
+  plugin({
+    name: 'hymnal-phone-reanimated',
+    setup(build) {
+      build.module('react-native-reanimated', () => ({
+        contents: `export * from ${JSON.stringify(reanimated)}; export { default } from ${JSON.stringify(reanimated)};`,
+        loader: 'js',
+      }));
+      build.module('react-native-worklets', () => ({
+        contents: `export { scheduleOnRN, runOnJS } from ${JSON.stringify(reanimated)};`,
+        loader: 'js',
+      }));
+    },
+  });
+}
 
 const { act, createElement } = await import('react');
 const { createRoot } = await import('react-dom/client');
@@ -162,6 +189,65 @@ const endOf = async (
   safeArea.bottom = 0;
   return result;
 };
+
+/** The translateY of an element's own style, in points. */
+const shift = (element: Element | null | undefined) =>
+  element instanceof HTMLElement
+    ? Number.parseFloat(/translateY\((-?[\d.]+)px\)/.exec(element.style.transform)?.[1] ?? '0')
+    : Number.NaN;
+
+/**
+ * The home list's top over forty hymns (a header 100 pt tall, resting at
+ * 50), scrolled to 990, 26 pt above the second topic's row, then covered
+ * by each of `covers` in turn: each step's values and where the pinned
+ * row is drawn.
+ */
+const coverOf = async (covers: ReadonlyArray<number>) => {
+  const { makeMutable } = await import('react-native-reanimated');
+  const scroll = makeMutable(0);
+  const cover = makeMutable(0);
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host);
+  await act(async () => {
+    root.render(
+      createElement(HymnList, {
+        hymns,
+        hrefOf: hrefs.first,
+        offset,
+        byTopic: true,
+        pullDown: { node: createElement('div'), height: 100, rest: 50, scroll, cover },
+      }),
+    );
+  });
+  await act(async () => {
+    scroll.value = 990;
+  });
+  const steps = [];
+  for (const covered of covers) {
+    await act(async () => {
+      cover.value = covered;
+    });
+    const pin = host.querySelector('[aria-hidden="true"]');
+    const place = pin?.firstElementChild;
+    const strip = place?.firstElementChild;
+    steps.push({
+      scroll: scroll.value,
+      cover: cover.value,
+      line: shift(pin),
+      y: shift(place),
+      topic: -shift(strip) / 36,
+    });
+  }
+  act(() => root.unmount());
+  host.remove();
+  return steps;
+};
+
+if (covering) {
+  process.stdout.write(JSON.stringify({ cover: await coverOf([0, 26, 52]) }));
+  process.exit(0);
+}
 
 process.stdout.write(
   JSON.stringify({

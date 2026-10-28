@@ -15,6 +15,16 @@
  * line within one topic row under rest, and the first line one topic row
  * above that line (± 1 pt).
  *
+ * Deep in the list the search field can show over the list's top, and the
+ * pinned row then rests flush under it: its rest place is that much lower.
+ * `coverIn` reads how far the field reaches from a third column, through
+ * the field's soft box right of its placeholder, where the box is one even
+ * band of grey: its bottom is the field's margin above the layer's. While
+ * the field slides its first or last few points, its box is gone above the
+ * list's top though the layer still covers that much: a frame with no box
+ * within `SLIDE` frames of one with a box (`coversOf`) rests anywhere from
+ * the bare rest down by that margin; any other frame with no box rests bare.
+ *
  * A frame where a hymn page covers the list (the `push` pass) is not the
  * list's to judge. `listShows` finds the list by a second column, right of
  * the hymn titles, where the list draws only its rows' separators and topic
@@ -32,6 +42,8 @@ export interface Layout {
   readonly topic: number;
   /** A hymn row's height: `ceil(22 × fontScale) + 22`. */
   readonly hymn: number;
+  /** The search field shown over the list's top: its layer's height, `ceil(22 × fontScale) + 30`. */
+  readonly field: number;
 }
 
 /** No line under the list's top: the pinned row is not in the column. */
@@ -95,25 +107,95 @@ export const linesIn = (
 };
 
 /**
- * The pinned hairline's rest place: the last pixel row of the topic row
- * that ends at the list's top plus one topic row, as a line centre.
+ * The pinned hairline's rest place under `cover` points of the shown field:
+ * the last pixel row of the topic row that ends at the list's top plus the
+ * cover and one topic row, as a line centre.
  */
-export const restOf = (layout: Layout) =>
-  round2((Math.round((layout.top + layout.topic) * layout.scale) - 1) / layout.scale);
+export const restOf = (layout: Layout, cover = 0) =>
+  round2((Math.round((layout.top + cover + layout.topic) * layout.scale) - 1) / layout.scale);
+
+/** The space between the shown field's box and its layer's bottom, in points. */
+export const FIELD_MARGIN = 8;
 
 /**
- * Judge one frame's lines. The first line at or under the list's top is the
- * pinned row's hairline. When a later line lies within one topic row under
- * rest, the next topic row is pushing: the pinned hairline belongs one topic
- * row above the line that fits it best. Lines between the two (a hymn
- * separator crossing the column) are passed over.
+ * How many points of the list's top the shown field covers in one frame,
+ * from the field column's grey values (one per pixel row, as `linesIn`
+ * takes them): the first even band off the ground, thicker than a line,
+ * that begins at the list's top or within the field's margin under it, is
+ * the field's box, and the layer ends a margin under the box. None when the
+ * column shows no box.
  */
-export const judge = (lines: ReadonlyArray<number>, layout: Layout): Verdict => {
-  const rest = restOf(layout);
+export const coverIn = (
+  rows: ReadonlyArray<number>,
+  layout: Layout,
+  threshold = 5,
+): Option.Option<number> => {
+  const ground = median(rows);
+  const from = Math.max(0, Math.floor(layout.top * layout.scale) - 1);
+  const latest = Math.ceil((layout.top + FIELD_MARGIN + TOLERANCE) * layout.scale);
+  const off = (y: number) => Math.abs((rows[y] ?? ground) - ground) > threshold;
+  let start = from;
+  while (start < rows.length && start <= latest && !off(start)) start++;
+  if (start > latest || start >= rows.length) return Option.none();
+  const band = rows[start] ?? ground;
+  let end = start;
+  while (
+    end + 1 < rows.length &&
+    off(end + 1) &&
+    Math.abs((rows[end + 1] ?? ground) - band) <= threshold
+  )
+    end++;
+  if (end - start + 1 <= 2 * layout.scale) return Option.none();
+  const bottom = (end + 1) / layout.scale;
+  return Option.some(
+    round2(Math.min(layout.field, Math.max(0, bottom - layout.top + FIELD_MARGIN))),
+  );
+};
+
+/** How many frames on either side of a frame with the field's box the field may still be sliding: its 200 ms slide at 60 frames a second. */
+export const SLIDE = 12;
+
+/**
+ * Each frame's cover for `judge`, from each frame's box (`coverIn`): the
+ * box's cover where one shows; none (somewhere in the field's margin) in a
+ * frame within `SLIDE` frames of a box; else 0.
+ */
+export const coversOf = (
+  boxes: ReadonlyArray<Option.Option<number>>,
+): ReadonlyArray<Option.Option<number>> =>
+  boxes.map((box, frame) => {
+    if (Option.isSome(box)) return box;
+    const near = boxes
+      .slice(Math.max(0, frame - SLIDE), frame + SLIDE + 1)
+      .some((other) => Option.isSome(other));
+    if (near) return Option.none();
+    return Option.some(0);
+  });
+
+/**
+ * Judge one frame's lines, under the field's `cover` (`coversOf`).
+ * The first line at or under the list's top is the pinned row's hairline.
+ * When a later line lies within one topic row under rest, the next topic
+ * row is pushing: the pinned hairline belongs one topic row above the line
+ * that fits it best. Lines between the two (a hymn separator crossing the
+ * column) are passed over. A cover of none (a slide's last points, the
+ * header above) is the one within the field's margin that fits the hairline
+ * best.
+ */
+export const judge = (
+  lines: ReadonlyArray<number>,
+  layout: Layout,
+  cover: Option.Option<number> = Option.some(0),
+): Verdict => {
   const [first, ...later] = lines.filter((line) => line >= layout.top);
   return Option.match(Option.fromUndefinedOr(first), {
     onNone: (): Verdict => ({ _tag: 'Missing' }),
     onSome: (pinned): Verdict => {
+      const bare = restOf(layout);
+      const rest = restOf(
+        layout,
+        Option.getOrElse(cover, () => Math.min(FIELD_MARGIN, Math.max(0, pinned - bare))),
+      );
       const pushedPlace = Arr.head(
         later
           .filter((line) => line < rest + layout.topic + TOLERANCE)

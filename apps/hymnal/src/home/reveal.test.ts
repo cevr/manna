@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 
-import { hidden, type Reveal, revealAt, shownHeight, travel } from './reveal';
+import { hidden, reachable, type Reveal, revealAt, shownHeight, travel } from './reveal';
 
 /** The list resting with its field 52 pt down, as the home list does at the reader's usual text size. */
 const rest = 52;
@@ -70,5 +70,32 @@ describe('how much of the field shows', () => {
     expect(
       [rest + 60, rest + 20, rest, rest - 30].map((s) => shownHeight(1, height, s, rest)),
     ).toEqual([52, 20, 0, 0]);
+  });
+});
+
+describe('when the shown field takes a touch', () => {
+  /** The home list's title (49 pt) and the field's margin (8 pt) at the reader's usual text size. */
+  const title = 49;
+  const margin = 8;
+  const at = (cover: number, scroll: number) => reachable(cover, scroll, rest, title, margin);
+
+  it('never while the field is off screen', () => {
+    expect(at(0, 3000)).toBe(false);
+  });
+
+  it('deep in the list, once any of its box shows', () => {
+    expect([52, 9, 8].map((cover) => at(cover, 3000))).toEqual([true, true, false]);
+  });
+
+  it('not near the top, where the title covers the whole field', () => {
+    // 20 pt past rest: the field shows 20 pt, its box ends at 12, the title's bottom is at 29.
+    expect(at(20, rest + 20)).toBe(false);
+    expect(at(28, rest + 28)).toBe(false);
+  });
+
+  it('as the box comes out from under the title', () => {
+    // 29 pt past rest the box ends at 21, the title at 20.
+    expect(at(29, rest + 29)).toBe(true);
+    expect(at(52, rest + 52)).toBe(true);
   });
 });

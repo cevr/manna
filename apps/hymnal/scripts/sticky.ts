@@ -7,7 +7,9 @@
  * screen (`xcrun simctl io recordVideo --codec h264`) while it drives the
  * list through agent-device, then reads every frame's column left of the
  * hymn rows' separators and judges where the pinned row's hairline sits
- * (`sticky/frames.ts`). It prints one JSON line per pass and run,
+ * (`sticky/frames.ts`), flush under the search field while an upward scroll
+ * shows it over the list's top (a column through the field's box reads how
+ * far it reaches). It prints one JSON line per pass and run,
  * `{pass, run, frames, judged, missing, off, worst}`, and exits 0 only when
  * every pass of every run holds: no frame off by more than 1 pt, and at
  * least 95% of the frames that show the list judged.
@@ -24,7 +26,7 @@
  *
  * Run from `apps/hymnal`, on a Release build (`--app` installs one first).
  * The defaults are the iPhone 18 Pro's at the default text size: 3 px per
- * pt, list top 62 pt, topic row 36 pt, hymn row 44 pt. The app is never played: no pass
+ * pt, list top 62 pt, topic row 36 pt, hymn row 44 pt, the shown field 52 pt. The app is never played: no pass
  * presses Play.
  */
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
@@ -35,6 +37,8 @@ import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
 import { attempt, succeed } from './sim/tools.ts';
 import {
+  coverIn,
+  coversOf,
   holds,
   judge,
   type Layout,
@@ -69,6 +73,7 @@ const Record = Schema.Struct({
     top: Schema.Finite,
     topic: Schema.Finite,
     hymn: Schema.Finite,
+    field: Schema.Finite,
   }),
   verdicts: Schema.Array(
     Schema.Union([
@@ -107,6 +112,13 @@ const cropX = { left: (px: number) => `${px}`, right: (px: number) => `iw-${px}`
 
 /** The column the check judges, in points: left of the hymn rows' separators. */
 const PINNED: Column = { edge: 'left', x: 4, width: 8, band: 260 };
+
+/**
+ * The column that reads how far the search field shown over the list's top
+ * reaches (`coverIn`), in points from the right edge: through the field's
+ * soft box, right of its placeholder and clear of its rounded corners.
+ */
+const FIELD: Column = { edge: 'right', x: 40, width: 8, band: 140 };
 
 /**
  * The column that tells whether the list stands, in points from the right
@@ -266,9 +278,11 @@ const check = Effect.fn('Sticky.check')(function* (
   yield* Effect.ignore(device(['close']));
   const pinned = yield* columns(video, layout, PINNED);
   const shows = yield* shownIn(video, layout, pass, pinned.length);
+  const field = yield* columns(video, layout, FIELD);
+  const covers = coversOf(field.map((rows) => coverIn(rows, layout)));
   const verdicts = pinned.map((rows, frame): Verdict => {
     if (shows[frame] !== true) return { _tag: 'Covered' };
-    return judge(linesIn(rows, layout.scale), layout);
+    return judge(linesIn(rows, layout.scale), layout, covers[frame] ?? Option.some(0));
   });
   const summary = summarize(verdicts);
   yield* fs.writeFileString(
@@ -304,6 +318,12 @@ const sticky = Command.make(
       Flag.withDefault(44),
       Flag.withDescription("a hymn row's height in pt: ceil(22 × fontScale) + 22"),
     ),
+    field: Flag.Finite('field').pipe(
+      Flag.withDefault(52),
+      Flag.withDescription(
+        "the search field's layer over the list's top in pt: ceil(22 × fontScale) + 30",
+      ),
+    ),
   },
   (flags) =>
     Effect.gen(function* () {
@@ -320,6 +340,7 @@ const sticky = Command.make(
         top: flags.top,
         topic: flags.topic,
         hymn: flags.hymn,
+        field: flags.field,
       };
       const passes = PASSES.filter((pass) => flags.pass === 'all' || flags.pass === pass);
       let held = true;

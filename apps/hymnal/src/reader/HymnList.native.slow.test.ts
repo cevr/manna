@@ -10,6 +10,9 @@
 
 import { describe, expect, it } from 'bun:test';
 
+import { pinnedAt, topicStarts } from './pin';
+import { rowsOf } from './rows';
+
 interface Rows {
   readonly hymns: Readonly<
     Record<string, { readonly href: string; readonly colour: string; readonly height: string }>
@@ -75,6 +78,50 @@ describe('the phones’ hymn list, changed while mounted', () => {
       expect(hymns.live.filter((row, i) => Bun.deepEquals(row, hymns.before[i]))).toEqual([]);
     },
   );
+});
+
+describe('the home list’s pinned row under the field shown over its top', () => {
+  const covered = Bun.spawnSync(
+    ['bun', Bun.resolveSync('../test/phone-list.tsx', import.meta.dir), 'cover'],
+    { stderr: 'pipe' },
+  );
+  const steps: ReadonlyArray<{
+    readonly scroll: number;
+    readonly cover: number;
+    readonly line: number;
+    readonly y: number;
+    readonly topic: number;
+  }> = JSON.parse(covered.stdout.toString() || '{}').cover ?? [];
+  // The script's forty hymns in two topics, under a header 100 pt tall.
+  const fixture = Array.from({ length: 40 }, (_, i) => ({
+    number: i + 1,
+    topic: `Topic ${Math.floor(i / 20) + 1}`,
+  }));
+  const starts = topicStarts(
+    rowsOf(fixture).rows,
+    100,
+    (kind) => ({ topic: 36, shelf: 36, hymn: 44 })[kind],
+  );
+
+  it('mounts and covers with nothing on its error stream', () => {
+    expect(covered.stderr.toString()).toBe('');
+    expect(steps.map((step) => [step.scroll, step.cover])).toEqual([
+      [990, 0],
+      [990, 26],
+      [990, 52],
+    ]);
+  });
+
+  it('draws the pin’s line at the cover’s bottom, its topic and push as the pin’s rule gives them there', () => {
+    // At 990 the second topic's row is 26 pt under the bare top: the cover alone moves the pin onto it.
+    expect(steps.map((step) => step.line)).toEqual([0, 26, 52]);
+    for (const step of steps) {
+      const pinned = pinnedAt(starts, step.scroll, 36, step.cover);
+      expect([step.topic, step.y]).toEqual([pinned.index, pinned.y]);
+    }
+    expect(steps.map((step) => step.topic)).toEqual([0, 1, 1]);
+    expect(steps[0]?.y).toBe(-10);
+  });
 });
 
 describe('the phones’ hymn list, at its end', () => {

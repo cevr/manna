@@ -7,9 +7,21 @@
 
 import { describe, expect, it } from 'bun:test';
 
-import { holds, judge, linesIn, listShows, restOf, summarize } from './sticky/frames';
+import { Option } from 'effect';
 
-const layout = { scale: 3, top: 62, topic: 36, hymn: 44 };
+import {
+  coverIn,
+  coversOf,
+  holds,
+  judge,
+  linesIn,
+  listShows,
+  restOf,
+  SLIDE,
+  summarize,
+} from './sticky/frames';
+
+const layout = { scale: 3, top: 62, topic: 36, hymn: 44, field: 52 };
 const BAND = 260;
 const GROUND = 20;
 const LINE = 60;
@@ -118,5 +130,75 @@ describe('the frames where the list shows', () => {
     const shown = Array.from({ length: 30 }, () => frame(98, 230));
     const covered = Array.from({ length: 60 }, () => ({ _tag: 'Covered' }) as const);
     expect(holds(summarize([...shown, frame(116), ...covered]), 0.2)).toBe(false);
+  });
+});
+
+describe('the pinned row under the search field shown over the list top', () => {
+  const SOFT = 34;
+  const FIELD_BAND = 140;
+
+  /** The field column: the field's box as an even band from `from` to `to` points, clipped at the list top; then any hairlines. */
+  const fieldColumn = (from: number, to: number, ...lines: ReadonlyArray<number>) => {
+    const rows = Array.from({ length: FIELD_BAND * layout.scale }, () => GROUND);
+    for (let y = Math.round(Math.max(from, layout.top) * layout.scale); y < to * layout.scale; y++)
+      rows[y] = SOFT;
+    for (const line of lines) rows[Math.round(line * layout.scale) - 1] = LINE;
+    return rows;
+  };
+
+  it('reads the whole field from its box: 8 pt down to 8 pt above the layer’s bottom', () => {
+    expect(coverIn(fieldColumn(62 + 8, 62 + 44), layout)).toEqual(Option.some(52));
+  });
+
+  it('reads a field part way in, its box clipped at the list top', () => {
+    expect(coverIn(fieldColumn(40, 62 + 20), layout)).toEqual(Option.some(28));
+  });
+
+  it('reads no field from a bare column, a lone hairline, or a band that starts lower down', () => {
+    expect(coverIn(fieldColumn(0, 0), layout)).toEqual(Option.none());
+    expect(coverIn(fieldColumn(0, 0, 98), layout)).toEqual(Option.none());
+    expect(coverIn(fieldColumn(62 + 20, 62 + 40), layout)).toEqual(Option.none());
+  });
+
+  it('judges the pinned row flush under the shown field at rest, and off by the field without it', () => {
+    const under = linesIn(column(98 + 52, 230), layout.scale);
+    expect(judge(under, layout, Option.some(52))).toMatchObject({
+      _tag: 'Seen',
+      pushed: false,
+      deviation: 0,
+    });
+    expect(judge(under, layout, Option.some(0))).toMatchObject({ _tag: 'Seen', deviation: 52 });
+  });
+
+  it('judges the pinned row pushed by the next topic row under the shown field', () => {
+    const lines = linesIn(column(98 + 52 - 20, 98 + 52 + 16, 240), layout.scale);
+    expect(judge(lines, layout, Option.some(52))).toMatchObject({ pushed: true, deviation: 0 });
+  });
+
+  it('flags a pinned row left at the bare rest while the field shows', () => {
+    const lines = linesIn(column(98, 230), layout.scale);
+    expect(judge(lines, layout, Option.some(52))).toMatchObject({ deviation: -52 });
+  });
+
+  it('lets a frame near a slide rest anywhere in the field’s margin, and no lower', () => {
+    expect(judge(linesIn(column(98 + 5), layout.scale), layout, Option.none())).toMatchObject({
+      deviation: 0,
+    });
+    expect(judge(linesIn(column(98 + 18), layout.scale), layout, Option.none())).toMatchObject({
+      deviation: 10,
+    });
+  });
+
+  it('gives a frame with no box the margin only within a slide of a frame with one', () => {
+    const box = Option.some(40);
+    const frames = [
+      ...Array.from({ length: SLIDE + 2 }, () => Option.none<number>()),
+      box,
+      ...Array.from({ length: SLIDE + 2 }, () => Option.none<number>()),
+    ];
+    const covers = coversOf(frames);
+    expect(covers[SLIDE + 2]).toEqual(box);
+    expect([covers[2], covers[SLIDE * 2 + 2]]).toEqual([Option.none(), Option.none()]);
+    expect([covers[0], covers[SLIDE * 2 + 4]]).toEqual([Option.some(0), Option.some(0)]);
   });
 });

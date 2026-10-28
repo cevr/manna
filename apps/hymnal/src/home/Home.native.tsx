@@ -59,7 +59,7 @@ import { searchBack } from './back';
 import { Browse } from './Browse';
 import { Gear } from './Gear';
 import { searchLabel } from './Results';
-import { hidden, revealAt, shownHeight } from './reveal';
+import { hidden, reachable, revealAt, shownHeight } from './reveal';
 
 const index = indexOf(hymns);
 
@@ -110,7 +110,14 @@ export function Home() {
               cover,
             }}
           />
-          <ShownField height={field} cover={cover} onPress={enter} />
+          <ShownField
+            height={field}
+            cover={cover}
+            scroll={scroll}
+            rest={field}
+            title={title}
+            onPress={enter}
+          />
           <Title height={title} rest={field} scroll={scroll} />
         </View>
         {searching && <Search onCancel={() => setSearching(false)} />}
@@ -187,21 +194,28 @@ function useShownHeight(scroll: SharedValue<number>, rest: number, height: numbe
  * once the reader scrolls up deep in the list (`useShownHeight`): a layer
  * on the ground, so the rows pass under it and the list's content and
  * offset never move for it. Its slide runs on the UI thread; React hears
- * only when it comes on screen and when it leaves, to let touches and
- * VoiceOver reach it only while it shows.
+ * only when its box comes out below the title (near the list's top the
+ * title covers it) and when it goes, to let touches and VoiceOver reach it
+ * only while some of the box shows (`reachable`).
  */
 function ShownField({
   height,
   cover,
+  scroll,
+  rest,
+  title,
   onPress,
 }: {
   readonly height: number;
   readonly cover: SharedValue<number>;
+  readonly scroll: SharedValue<number>;
+  readonly rest: number;
+  readonly title: number;
   readonly onPress: () => void;
 }) {
   const [shown, setShown] = useState(false);
   useAnimatedReaction(
-    () => cover.value > 0,
+    () => reachable(cover.value, scroll.value, rest, title, fieldMargin),
     (now, before) => {
       if (now !== before) scheduleOnRN(setShown, now);
     },
