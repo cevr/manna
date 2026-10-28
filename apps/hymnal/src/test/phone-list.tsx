@@ -249,6 +249,39 @@ if (covering) {
   process.exit(0);
 }
 
+/**
+ * Three results of a search, the second found by a line other than its
+ * title, at text size `fontScale`: each row's name, height and whether it
+ * draws a found line.
+ */
+const foundOf = async (fontScale: number) => {
+  device.set({ scheme: 'light', fontScale });
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host);
+  await act(async () => {
+    root.render(
+      createElement(HymnList, {
+        hymns: hymns.slice(0, 3),
+        hrefOf: hrefs.first,
+        offset,
+        lines: new Map([[2, 'A line found']]),
+      }),
+    );
+  });
+  const rows = [...host.querySelectorAll('[role="link"]')].map((row) => ({
+    name: String(row.getAttribute('aria-label')),
+    height: elements([row])
+      .map((view) => view.style.height)
+      .join(),
+    line: row.querySelectorAll('[data-testid="row-line"]').length,
+  }));
+  act(() => root.unmount());
+  host.remove();
+  device.set({ fontScale: 1 });
+  return rows;
+};
+
 process.stdout.write(
   JSON.stringify({
     scheme: await observe('scheme'),
@@ -259,6 +292,7 @@ process.stdout.write(
       await endOf(0, hymns, true),
       await endOf(34, hymns.slice(0, 3), false),
     ],
+    found: [await foundOf(1), await foundOf(1.5)],
   }),
 );
 process.exit(0);

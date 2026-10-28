@@ -54,6 +54,8 @@ export interface HymnListProps {
   readonly favourites?: ReadonlySet<number>;
   /** Phones only: what the list holds above its rows, and where it rests (`PullDown`). */
   readonly pullDown?: PullDown;
+  /** Phones only, a search's results: the line each hymn was found by, shown under its title. The web shows none. */
+  readonly lines?: ReadonlyMap<number, string>;
 }
 
 /**

@@ -27,7 +27,8 @@
 
 import { useAtom } from '@effect/atom-react';
 import { Link, useLinkTo, useNavigation, useSafeAreaInsets } from 'one';
-import { useDeferredValue, useEffect, useState } from 'react';
+import { Option } from 'effect';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import {
   BackHandler,
   Keyboard,
@@ -49,8 +50,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { hymns } from '~/hymns/hymns';
-import { indexOf, search } from '~/hymns/search';
+import { find, hymnIndex } from '~/hymns/search';
 import { HymnList } from '~/reader/HymnList';
 import { searchOffset, searchQuery } from '~/reader/place';
 import { color, useAccent } from '~/color';
@@ -60,8 +60,6 @@ import { Browse } from './Browse';
 import { Gear } from './Gear';
 import { searchLabel } from './Results';
 import { hidden, reachable, revealAt, shownHeight } from './reveal';
-
-const index = indexOf(hymns);
 
 /**
  * A layer out of reach, untouchable and unseen by assistive technology: the
@@ -252,10 +250,30 @@ function FieldButton({
   );
 }
 
-/** Search mode: the focused field and Cancel over the hymns the query finds. */
+/**
+ * Search mode: the focused field and Cancel over the hymns the query finds,
+ * each found by a line other than its title showing that line. The first
+ * query builds the search's index (`hymnIndex`), not the app's start.
+ */
 function Search({ onCancel }: { readonly onCancel: () => void }) {
   const [query, setQuery] = useAtom(searchQuery);
   const shown = useDeferredValue(query);
+  const results = useMemo(() => {
+    // No index is built until the reader types.
+    const found = Option.match(
+      Option.liftPredicate(shown, (q) => q !== ''),
+      {
+        onNone: () => [],
+        onSome: (q) => find(hymnIndex(), q),
+      },
+    );
+    return {
+      hymns: found.map((f) => f.hymn),
+      lines: new Map(
+        found.flatMap((f) => Option.toArray(f.line).map((line) => [f.hymn.number, line] as const)),
+      ),
+    };
+  }, [shown]);
   const accent = useAccent();
   const cancel = () => {
     setQuery('');
@@ -295,7 +313,8 @@ function Search({ onCancel }: { readonly onCancel: () => void }) {
         // A new query's results open at their top.
         <HymnList
           key={shown}
-          hymns={search(index, shown)}
+          hymns={results.hymns}
+          lines={results.lines}
           hrefOf={(n) => `/hymns/${n}`}
           offset={searchOffset}
           empty={`No hymn matches “${shown}”.`}

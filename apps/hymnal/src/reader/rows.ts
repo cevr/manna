@@ -13,8 +13,12 @@
  * row carries the hymns a press on it pages through (`source`): every hymn
  * of the list under the topics, in its order, a shelf's rows too (a shelf
  * pages through its own hymns only from its own screen). A hymn row of one of the
- * reader's `favourites` is starred (`favourite`), wherever it shows.
+ * reader's `favourites` is starred (`favourite`), wherever it shows. A
+ * search's result found by a line other than its title carries that line
+ * (`line`), which its row shows under the title; every other row has none.
  */
+
+import { Option } from 'effect';
 
 import type { Shelf } from './lists';
 
@@ -27,6 +31,7 @@ export type Row<Hymn> =
       readonly hymn: Hymn;
       readonly source: ReadonlyArray<number>;
       readonly favourite: boolean;
+      readonly line: Option.Option<string>;
     };
 
 export interface Rows<Hymn> {
@@ -37,6 +42,9 @@ export interface Rows<Hymn> {
 
 /** No favourites: a list drawn without the reader's lists. */
 const none: ReadonlySet<number> = new Set();
+
+/** No found lines: a list that is not a search's results. */
+const noLines: ReadonlyMap<number, string> = new Map();
 
 export const rowsOf = <Hymn extends { readonly number: number; readonly topic: string }>(
   hymns: ReadonlyArray<Hymn>,
@@ -55,6 +63,7 @@ export const rowsOf = <Hymn extends { readonly number: number; readonly topic: s
         hymn,
         source,
         favourite: favourites.has(hymn.number),
+        line: Option.none(),
       });
   }
   hymns.forEach((hymn, i) => {
@@ -68,15 +77,21 @@ export const rowsOf = <Hymn extends { readonly number: number; readonly topic: s
       hymn,
       source,
       favourite: favourites.has(hymn.number),
+      line: Option.none(),
     });
   });
   return { rows, sticky };
 };
 
-/** A list with no topic rows, such as a search's results: a row per hymn, each paging through them all. */
+/**
+ * A list with no topic rows, such as a search's results: a row per hymn,
+ * each paging through them all, each carrying the line `lines` gives its
+ * hymn (the line a search found it by).
+ */
 export const plainRowsOf = <Hymn extends { readonly number: number }>(
   hymns: ReadonlyArray<Hymn>,
   favourites: ReadonlySet<number> = none,
+  lines: ReadonlyMap<number, string> = noLines,
 ): Rows<Hymn> => {
   const source = hymns.map((hymn) => hymn.number);
   return {
@@ -86,6 +101,7 @@ export const plainRowsOf = <Hymn extends { readonly number: number }>(
       hymn,
       source,
       favourite: favourites.has(hymn.number),
+      line: Option.fromUndefinedOr(lines.get(hymn.number)),
     })),
     sticky: [],
   };

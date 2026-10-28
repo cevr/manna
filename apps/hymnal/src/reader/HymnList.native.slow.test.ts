@@ -28,6 +28,13 @@ interface Seen {
 
 type Change = 'scheme' | 'fontScale' | 'hrefOf';
 
+/** A search result's row: its name, its height, and how many found lines it draws. */
+interface Found {
+  readonly name: string;
+  readonly height: string;
+  readonly line: number;
+}
+
 /** A list's end at a bottom inset: its rows' frame, the last row drawn, and the space after them. */
 interface End {
   readonly bottom: number;
@@ -40,9 +47,10 @@ interface End {
 const run = Bun.spawnSync(['bun', Bun.resolveSync('../test/phone-list.tsx', import.meta.dir)], {
   stderr: 'pipe',
 });
-const seen: Partial<Record<Change, Seen>> & { readonly end?: ReadonlyArray<End> } = JSON.parse(
-  run.stdout.toString() || '{}',
-);
+const seen: Partial<Record<Change, Seen>> & {
+  readonly end?: ReadonlyArray<End>;
+  readonly found?: ReadonlyArray<ReadonlyArray<Found>>;
+} = JSON.parse(run.stdout.toString() || '{}');
 
 /** The rows of `kind` on screen both live and fresh, by label, as each draws them. */
 const shared = (rows: Seen, kind: keyof Rows) => {
@@ -60,7 +68,7 @@ const empty: Rows = { hymns: {}, topics: {} };
 describe('the phones’ hymn list, changed while mounted', () => {
   it('mounts and changes with nothing on its error stream', () => {
     expect(run.stderr.toString()).toBe('');
-    expect(Object.keys(seen)).toEqual(['scheme', 'fontScale', 'hrefOf', 'end']);
+    expect(Object.keys(seen)).toEqual(['scheme', 'fontScale', 'hrefOf', 'end', 'found']);
   });
 
   it.each<Change>(['scheme', 'fontScale', 'hrefOf'])(
@@ -148,5 +156,24 @@ describe('the phones’ hymn list, at its end', () => {
 
   it('keeps the same space for the same inset, whatever the list holds', () => {
     expect(ends[0]?.space).toEqual(ends[2]?.space ?? []);
+  });
+});
+
+describe('a search’s results on a phone', () => {
+  const [usual = [], large = []] = seen.found ?? [];
+
+  it('draw the line a result was found by under its title, in a taller row, and name it last', () => {
+    expect(usual.map((row) => [row.line, row.height])).toEqual([
+      [0, '44px'],
+      [1, '56px'],
+      [0, '44px'],
+    ]);
+    expect(usual[1]?.name).toBe('2, Hymn 2, A line found');
+    expect(usual[0]?.name).toBe('1, Hymn 1');
+  });
+
+  it('scale both lines of a found row with the reader’s text size', () => {
+    // At 150%: 33 + 22 for a plain row, 33 + 27 + 16 for a found one.
+    expect(large.map((row) => row.height)).toEqual(['55px', '76px', '55px']);
   });
 });

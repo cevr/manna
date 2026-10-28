@@ -11,13 +11,10 @@ import type { Href } from 'one';
 import { type ReactNode, useDeferredValue } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { hymns } from '~/hymns/hymns';
-import { indexOf, search } from '~/hymns/search';
+import { hymnIndex, search } from '~/hymns/search';
 import { HymnList } from '~/reader/HymnList';
 import { searchOffset, searchQuery } from '~/reader/place';
 import { SearchField } from '~/web/SearchField';
-
-const index = indexOf(hymns);
 
 /** The search field's label and placeholder. */
 export const searchLabel = 'Number, title or first line';
@@ -36,7 +33,7 @@ export function Results({
       <SearchField label={searchLabel} value={query} onChangeText={setQuery} />
       {(shown === '' && idle) || (
         <HymnList
-          hymns={search(index, shown)}
+          hymns={search(hymnIndex(), shown)}
           hrefOf={hrefOf}
           offset={searchOffset}
           empty={`No hymn matches “${shown}”.`}

@@ -67,9 +67,23 @@ const padding = 11;
 const topicLine = 20;
 const topicPadding = 8;
 
+/** A found line's line of text under a result's title, and the space above and below the two. */
+const foundLine = 18;
+const foundPadding = 8;
+
+/** What draws a row, and so its height: a found result has its line under its title. */
+type Drawn = Row<HymnText>['kind'] | 'found';
+
+const drawnAs = (row: Row<HymnText>): Drawn => {
+  if (row.kind === 'hymn' && Option.isSome(row.line)) return 'found';
+  return row.kind;
+};
+
 /** A row's height at the reader's text size (`fontScale`), as its text scales: a shelf's header is a topic's height. */
-const heightOf = (kind: Row<HymnText>['kind'], fontScale: number) => {
-  if (kind === 'hymn') return Math.ceil(line * fontScale) + 2 * padding;
+const heightOf = (drawn: Drawn, fontScale: number) => {
+  if (drawn === 'hymn') return Math.ceil(line * fontScale) + 2 * padding;
+  if (drawn === 'found')
+    return Math.ceil(line * fontScale) + Math.ceil(foundLine * fontScale) + 2 * foundPadding;
   return Math.ceil(topicLine * fontScale) + 2 * topicPadding;
 };
 
@@ -81,6 +95,7 @@ const heightOf = (kind: Row<HymnText>['kind'], fontScale: number) => {
 interface Look {
   readonly accent: ColorValue;
   readonly hymnHeight: number;
+  readonly foundHeight: number;
   readonly topicHeight: number;
   readonly hrefOf: HymnListProps['hrefOf'];
 }
@@ -108,7 +123,11 @@ const drawRow = ({
       href={extraData.hrefOf(item.hymn.number)}
       source={item.source}
       favourite={item.favourite}
-      height={extraData.hymnHeight}
+      line={item.line}
+      height={Option.match(item.line, {
+        onNone: () => extraData.hymnHeight,
+        onSome: () => extraData.foundHeight,
+      })}
       accent={extraData.accent}
     />
   );
@@ -122,23 +141,26 @@ export function HymnList({
   shelves,
   favourites,
   pullDown,
+  lines,
 }: HymnListProps) {
   const { fontScale } = useWindowDimensions();
   const accent = useAccent();
   const { rows, sticky } = useMemo(() => {
     if (byTopic) return rowsOf(hymns, shelves, favourites);
-    return plainRowsOf(hymns, favourites);
-  }, [hymns, byTopic, shelves, favourites]);
+    return plainRowsOf(hymns, favourites, lines);
+  }, [hymns, byTopic, shelves, favourites, lines]);
   const hymnHeight = heightOf('hymn', fontScale);
+  const foundHeight = heightOf('found', fontScale);
   const topicHeight = heightOf('topic', fontScale);
   const look = useMemo(
     (): Look => ({
       accent,
       hymnHeight,
+      foundHeight,
       topicHeight,
       hrefOf,
     }),
-    [accent, hymnHeight, topicHeight, hrefOf],
+    [accent, hymnHeight, foundHeight, topicHeight, hrefOf],
   );
   const header = pullDown?.height ?? 0;
   const topics = useMemo(
@@ -169,9 +191,10 @@ export function HymnList({
       <AnimatedLegendList
         data={rows}
         keyExtractor={(row) => row.key}
-        getItemType={(row) => row.kind}
-        getFixedItemSize={(_, __, kind) => {
-          if (kind === 'hymn') return hymnHeight;
+        getItemType={drawnAs}
+        getFixedItemSize={(_, __, drawn) => {
+          if (drawn === 'hymn') return hymnHeight;
+          if (drawn === 'found') return foundHeight;
           return topicHeight;
         }}
         estimatedItemSize={hymnHeight}
@@ -324,13 +347,16 @@ function ShelfHeader({
  * the pager the hymns of the list it sits in (`source`, `rows.ts`), so a
  * swipe on the hymn moves through them. A favourite's row ends with a
  * star at the number's size, after its title, so a long title's ellipsis
- * comes before the star; its name ends `, favourite`.
+ * comes before the star; its name ends `, favourite`. A search's result
+ * found by another line shows that `line` under its title, quiet, one line
+ * long, and VoiceOver reads it last.
  */
 function HymnRow({
   hymn,
   href,
   source,
   favourite,
+  line: found,
   height,
   accent,
 }: {
@@ -338,6 +364,7 @@ function HymnRow({
   readonly href: Href;
   readonly source: ReadonlyArray<number>;
   readonly favourite: boolean;
+  readonly line: Option.Option<string>;
   readonly height: number;
   readonly accent: ColorValue;
 }) {
@@ -348,20 +375,37 @@ function HymnRow({
     link.onPress(event);
   };
   return (
-    <Pressable {...link} onPress={onPress} aria-label={nameOf(hymn, favourite)}>
+    <Pressable {...link} onPress={onPress} aria-label={nameOf(hymn, favourite, found)}>
       {({ pressed }) => (
         <View style={[styles.row, { height }, pressed && styles.pressed]}>
-          <Text testID="row-number" style={[styles.number, { color: accent }]} numberOfLines={1}>
+          <Text
+            testID="row-number"
+            style={[
+              styles.number,
+              Option.isSome(found) && styles.numberOverLine,
+              { color: accent },
+            ]}
+            numberOfLines={1}
+          >
             {hymn.number}
           </Text>
-          <Text testID="row-title" style={styles.title} numberOfLines={1}>
-            {hymn.title}
-          </Text>
-          {favourite && (
-            <Text testID="row-star" style={[styles.star, { color: accent }]}>
-              ★
-            </Text>
-          )}
+          <View style={styles.words}>
+            <View style={styles.titleLine}>
+              <Text testID="row-title" style={styles.title} numberOfLines={1}>
+                {hymn.title}
+              </Text>
+              {favourite && (
+                <Text testID="row-star" style={[styles.star, { color: accent }]}>
+                  ★
+                </Text>
+              )}
+            </View>
+            {Option.toArray(found).map((text) => (
+              <Text key="line" testID="row-line" style={styles.found} numberOfLines={1}>
+                {text}
+              </Text>
+            ))}
+          </View>
           <View style={styles.separator} />
         </View>
       )}
@@ -369,11 +413,13 @@ function HymnRow({
   );
 }
 
-/** A hymn row's name as VoiceOver reads it: its number and title, and `favourite` when it is one. */
-const nameOf = (hymn: HymnText, favourite: boolean) => {
-  if (favourite) return `${hymn.number}, ${hymn.title}, favourite`;
-  return `${hymn.number}, ${hymn.title}`;
-};
+/** A hymn row's name as VoiceOver reads it: its number and title, `favourite` when it is one, then the line a search found it by. */
+const nameOf = (hymn: HymnText, favourite: boolean, found: Option.Option<string>) =>
+  [
+    `${hymn.number}, ${hymn.title}`,
+    ...['favourite'].filter(() => favourite),
+    ...Option.toArray(found),
+  ].join(', ');
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
@@ -395,7 +441,11 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
     textAlign: 'right',
   },
+  numberOverLine: { alignSelf: 'flex-start', paddingTop: foundPadding },
+  words: { flex: 1 },
+  titleLine: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   title: { flex: 1, fontSize: 17, lineHeight: line, color: color.ink },
+  found: { fontSize: 15, lineHeight: foundLine, color: color.muted },
   star: { fontSize: 17, lineHeight: line },
   topic: {
     justifyContent: 'center',

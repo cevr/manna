@@ -7,6 +7,7 @@
  */
 
 import { describe, expect, it } from 'bun:test';
+import { Option } from 'effect';
 
 import { hymns } from '~/hymns/hymns';
 
@@ -226,5 +227,33 @@ describe('a favourite’s rows', () => {
       [4, false, [4, 9]],
       [9, true, [4, 9]],
     ]);
+  });
+});
+
+describe('a search’s result rows', () => {
+  it('carry the line each hymn was found by, and no line where it has none', () => {
+    const found = [
+      { number: 4, topic: 'A' },
+      { number: 9, topic: 'B' },
+      { number: 2, topic: 'A' },
+    ];
+    const { rows } = plainRowsOf(found, new Set(), new Map([[9, 'a line found']]));
+    expect(rows.map((row) => row.kind === 'hymn' && [row.hymn.number, row.line])).toEqual([
+      [4, Option.none()],
+      [9, Option.some('a line found')],
+      [2, Option.none()],
+    ]);
+  });
+
+  it('are never carried by the topics’ rows or a shelf’s', () => {
+    const { rows } = rowsOf(
+      [
+        { number: 1, topic: 'A' },
+        { number: 2, topic: 'B' },
+      ],
+      [{ name: 'Recent', href: '/recent', hymns: [{ number: 2, topic: 'B' }] }],
+    );
+    const lines = rows.flatMap((row) => [row].filter((r) => r.kind === 'hymn').map((r) => r.line));
+    expect(lines.map(Option.isNone)).toEqual([true, true, true]);
   });
 });
