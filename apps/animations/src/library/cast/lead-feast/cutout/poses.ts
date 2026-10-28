@@ -30,9 +30,9 @@ const Source = Schema.Struct({
 /** A held drawing: its id, its hand's centre (drawing px) and its source. */
 const Held = Schema.Struct({ id: Schema.String, c: Point, source: Source });
 
-/** The raise's record, as far as a pose view reads it: its keys' and held drawings' ids and sources. */
+/** The raise's record, as far as a pose view reads it: the pose views' own arms and the held drawings, each its id and source. */
 const RaiseSources = Schema.Struct({
-  keys: Schema.Array(Schema.Struct({ id: Schema.String, pivot: Point, source: Schema.Unknown })),
+  views: Schema.Array(Schema.Struct({ id: Schema.String, source: Source })),
   held: Schema.Array(Held),
 });
 
@@ -81,10 +81,10 @@ const sheetOf = (root: Pt, pose: PuppetPose, [x, y]: Pt): Pt => [
   root[1] + (y - pose.root[1]) / pose.scale,
 ];
 
-/** The drawing `id` of the raise: its source on its kept view. */
+/** The pose view's own drawing `id`: its source on its kept view. */
 const sourceOf = (id: string) => {
-  const key = RAISE.keys.find((k) => k.id === id);
-  return Schema.decodeUnknownSync(Source)(key?.source);
+  const view = RAISE.views.find((v) => v.id === id);
+  return Schema.decodeUnknownSync(Source)(view?.source);
 };
 
 /**
