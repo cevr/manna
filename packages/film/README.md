@@ -2694,6 +2694,29 @@ pixels), its record's `figure: 'cutout'`, each view's `deltaE` against
 the kept view and each sheet's `drawMs` (the page's draw of the frame,
 median of 7).
 
+A puppet is drawn with a look (`PuppetLook`, `canvas/puppet.ts`): the boil
+tick and its amplitude (`core/boil.ts` `boilField`, the house `BOIL_AMP`
+unless `amp` is given, 0 still), a drawn key swapped in for a part (`swap`:
+its drawing, its place and its turn about the part's pivot), and a held
+drawing laid where the hand stands (`held`: the kept hand and its prop, so
+the circle hand is the sheet's own); a look's drawings follow the pose's
+root and scale. `--boil <px>` renders the cut-out at one of `CUTOUT_BOILS`
+(the house boil, or 0 for the still the fit rows compare), each on its own
+page (`<film>/cast/<member>/cutout`, `…/cutout/boil-0`), its record's
+`boil` the amplitude. `film concept ease <film> <member> --from <pose> --to
+<pose> --seconds <s> [--segment <a>-<b> ...] [--shuffle <seed>]`
+(`tools/ease-cli.ts`) draws one of the member's eases (`EASES`, the film's
+`rigs/cast.ts`: a big move drawn from keys, each held on twos, the boil
+ticking twelve a second) frame by frame on the real draw path, into
+`out/<film>/cast/<member>/ease/<n>/` with its `ease.json`; a segment or a
+shuffled order draws the same frames. `film concept fit <film> <member>
+--view <kind>-<view> --from <view> ... [--bone <name> ...]`
+(`tools/pose-fit-cli.ts`, `core/pose-fit.ts` `fitPose`) fits a kept pose
+view from the member's puppets: each started where its rest figure fills
+the view's figure box (`boxStart`), its root, its one scale and the bones
+named searched by halving steps (16° to 0.0625°, no bone past 15°), the
+lower loss kept, into the member's `cutout/poses/<kind>-<view>.json`.
+
 ### The review: `film review`, and keep needs evidence
 
 `film review <film> --set <name> --scene <id> --at <place> --at <place>
