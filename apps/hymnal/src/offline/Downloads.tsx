@@ -5,23 +5,16 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { color, useAccent } from '~/color';
 import { plain, useCue } from '~/feel/cue';
 import bundled from 'virtual:hymnal-timing';
-import { Option, Schema } from 'effect';
+import { Option } from 'effect';
 import { empty } from './cache';
+import { estimateMegabytes } from './estimate';
 import { Action, progress, send } from './live';
 
-const duration = Schema.decodeUnknownOption(
-  Schema.fromJsonString(Schema.Struct({ end: Schema.Finite })),
-);
+// Decoded once, on the first Settings open, not at app start.
 let estimated = Option.none<number>();
 const estimateTotal = () =>
   Option.getOrElse(estimated, () => {
-    let seconds = 0;
-    for (const [, encoded] of bundled)
-      seconds += Option.getOrElse(
-        Option.map(duration(encoded), (t) => t.end / 1000 + 4),
-        () => 0,
-      );
-    const value = Math.ceil((seconds * 24000) / 1_000_000);
+    const value = estimateMegabytes(bundled);
     estimated = Option.some(value);
     return value;
   });
@@ -35,7 +28,6 @@ export function Downloads() {
   const cue = useCue();
   const busy = state.active + state.queued > 0;
   const [confirming, confirm] = useState(false);
-  // The set uses 192 kb/s. Estimate durations without decoding the follow book.
   const estimate = estimateTotal();
   const megabytes = (bytes: number) => (bytes / 1_000_000).toFixed(2);
   let failure =
@@ -77,6 +69,11 @@ export function Downloads() {
               aria-label={`${state.active} downloading · ${state.queued} queued · ${state.partialBytes.toLocaleString()} partial bytes · ${megabytes(state.partialBytes)} MB`}
               style={styles.detail}
             >{`${state.active} downloading · ${state.queued} queued · ${megabytes(state.partialBytes)} MB partial`}</Text>
+          )}
+          {state.indexing && (
+            <Text testID="downloads-indexing" style={styles.detail}>
+              Checking saved recordings. Download all recordings starts when the check ends.
+            </Text>
           )}
           {state.paused && (
             <Text style={styles.detail}>
