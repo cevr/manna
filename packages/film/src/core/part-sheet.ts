@@ -374,27 +374,55 @@ const rgbOfLab = (lab: Rgb): Rgb => {
   ];
 };
 
+/** Each pixel that is a visible ink pixel (alpha above 0, L* under 40) or touches one, the eight around it. */
+const nearInk = (key: Raster, ls: Float64Array): Uint8Array => {
+  const { width: w, height: h } = key;
+  const near = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      if ((key.rgba[i * 4 + 3] ?? 0) === 0 || (ls[i] ?? INK_L) >= INK_L) continue;
+      for (let yy = Math.max(0, y - 1); yy <= Math.min(h - 1, y + 1); yy++)
+        for (let xx = Math.max(0, x - 1); xx <= Math.min(w - 1, x + 1); xx++) near[yy * w + xx] = 1;
+    }
+  return near;
+};
+
 /**
  * A drawn key with its ink moved to `ink` (a Lab colour, the kept view's own
- * ink, `inkOf`): each ink pixel of the key (L* under 40) moves by the key's
- * ink median's distance to `ink`, so that the key's ink median lands on it,
- * and each pixel on the ink side of an antialiased edge (L* 40 to 60) moves
- * by that share of it falling to none at L* 60. The drawing stays the
- * drawing's: no alpha changes, and a pixel the move would carry across L* 40
- * (into or out of the ink) keeps its own colour, so the ink is the same
- * pixels before and after. A key with no ink comes back as it was.
+ * ink, `inkOf`), every ink edge where it was. Lightness: each pixel that is
+ * ink or touches ink (any alpha) takes L* 40 + s (L* - 40), s the ratio of
+ * `ink`'s and the key's ink median's depths under 40, so the key's ink median
+ * lands on `ink`'s L* and every L* 40 crossing a bilinear read finds (any
+ * read whose 2x2 cell holds ink) stays where it was: the ink's width does not
+ * change at any sub-pixel step. Colour: each ink pixel's a* and b* move by
+ * the key's ink median's distance to `ink`, and each pixel up to L* 60 by
+ * that share of it falling to none at 60. A pixel neither ink nor beside ink
+ * is not touched; no alpha changes; a pixel whose bytes would round across
+ * L* 40 keeps its own colour, so the ink is the same pixels before and after.
+ * A key with no ink comes back as it was.
  */
 export const inkTo = (key: Raster, ink: Rgb): Raster => {
   const own = inkOf(key, (i) => key.rgba[i * 4 + 3] === 255);
   if (Option.isNone(own)) return key;
-  const d = [ink[0] - own.value[0], ink[1] - own.value[1], ink[2] - own.value[2]] as const;
+  const s = Math.max(0, INK_L - ink[0]) / (INK_L - own.value[0]);
+  const d = [ink[1] - own.value[1], ink[2] - own.value[2]] as const;
+  const n = key.width * key.height;
+  const labs = Array.from({ length: n }, (_, i) => labOf(rgbAt(key, i)));
+  const near = nearInk(
+    key,
+    Float64Array.from(labs, (lab) => lab[0]),
+  );
   const rgba = Uint8Array.from(key.rgba);
-  for (let i = 0; i < key.width * key.height; i++) {
-    if ((key.rgba[i * 4 + 3] ?? 0) === 0) continue;
-    const lab = labOf(rgbAt(key, i));
+  for (let i = 0; i < n; i++) {
+    if (near[i] === 0) continue;
+    const lab = labs[i] ?? ([100, 0, 0] as const);
     const share = Math.max(0, Math.min(1, (INK_EDGE_L - lab[0]) / (INK_EDGE_L - INK_L)));
-    if (share === 0) continue;
-    const rgb = rgbOfLab([lab[0] + share * d[0], lab[1] + share * d[1], lab[2] + share * d[2]]);
+    const rgb = rgbOfLab([
+      INK_L + s * (lab[0] - INK_L),
+      lab[1] + share * d[0],
+      lab[2] + share * d[1],
+    ]);
     if (labOf(rgb)[0] < INK_L !== lab[0] < INK_L) continue;
     rgba.set(rgb, i * 4);
   }

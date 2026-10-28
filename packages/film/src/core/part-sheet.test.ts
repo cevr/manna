@@ -276,7 +276,34 @@ describe('a key inked as the kept view', () => {
     expect(deltaE(Option.getOrThrow(inkOf(out, opaque(out))), KEPT)).toBeLessThan(1);
   });
 
-  test('the ink is the same pixels, every alpha the same, and the paint untouched', () => {
+  test('the ink is as wide as it was, read bilinear at every 0.05 px across the stroke', () => {
+    // L* between pixel centres, as the cast checks read a stroke's width (pixel (x, y) centred at x + 0.5, y + 0.5)
+    const lAt = (r: Raster, x: number, y: number) => {
+      const [u, v] = [
+        Math.min(r.width - 1.001, Math.max(0, x - 0.5)),
+        Math.min(r.height - 1.001, Math.max(0, y - 0.5)),
+      ];
+      const [x0, y0, tx, ty] = [Math.floor(u), Math.floor(v), u - Math.floor(u), v - Math.floor(v)];
+      const at = (xx: number, yy: number) => labOf(rgbAt(r, yy * r.width + xx))[0];
+      return (
+        (at(x0, y0) * (1 - tx) + at(x0 + 1, y0) * tx) * (1 - ty) +
+        (at(x0, y0 + 1) * (1 - tx) + at(x0 + 1, y0 + 1) * tx) * ty
+      );
+    };
+    // down five columns between and on pixel centres, where the read is ink (L* under 40), every 0.05 px
+    const inkEdges = (r: Raster) =>
+      [2.3, 5.5, 7.85, 10.1, 15.6].map((x) =>
+        Array.from({ length: 321 }, (_, k) => Number(lAt(r, x, k * 0.05) < 40)).join(''),
+      );
+    // a kept ink well lighter than the key's, so that the move is one a shifted lightness would show
+    const out = inkTo(KEY, labOf([80, 60, 52]));
+    expect(labOf(rgbAt(out, 2 * KEY.width + 1))[0]).toBeGreaterThan(
+      labOf(rgbAt(KEY, 2 * KEY.width + 1))[0] + 8,
+    );
+    expect(inkEdges(out)).toEqual(inkEdges(KEY));
+  });
+
+  test('the ink is the same pixels, every alpha the same, and the paint away from the ink untouched', () => {
     const out = inkTo(KEY, KEPT);
     expect(isInk(out)).toEqual(isInk(KEY));
     expect(isInk(KEY).filter(Boolean).length).toBeGreaterThan(0);
