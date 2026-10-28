@@ -17,8 +17,10 @@
 //   rim there takes the ink at its coverage; everywhere else every pixel is
 //   the figure's own. Where a skinned part lies over another, its edge is
 //   inked at 0.8 of the width, but not about its moving bone's pivot (the
-//   shoulder's flap). A drawn key carries its own line. Near a held hand the
-//   line is left as the drawings draw it.
+//   shoulder's flap). A drawn key carries its own line, and the body's ink
+//   within the line's width of it takes its nearest pixel's colour, so its
+//   cut end hides the body's outline under it (`core/key-join.ts`, the same
+//   rule on the CPU). Near a held hand the line is left as the drawings draw it.
 // - **The held hand** is laid over the figure.
 // - **The boil.** The figure is resampled bilinearly through the boil's
 //   displacement field at the frame's tick (`core/boil.ts`), its lattice
@@ -35,6 +37,7 @@
 
 import { Result } from 'effect';
 import { BOIL_CELL, boilField } from '../core/boil.ts';
+import { KEY_JOIN_INK } from '../core/key-join.ts';
 import type { Puppet } from '../core/puppet.ts';
 import type { Raster } from '../core/raster.ts';
 import { glCanvas } from './gl.ts';
@@ -63,9 +66,9 @@ void main() {
   gl_Position = vec4(pos.x / size.x * 2.0 - 1.0, 1.0 - pos.y / size.y * 2.0, 0.0, 1.0);
 }`;
 
-/** A texture's premultiplied bilinear sample at `uv` (texel px), as `rasterOf` takes it; `mask` writes its coverage in place of its colour. */
+/** A texture's premultiplied bilinear sample at `uv` (texel px), as `rasterOf` takes it; `mask` writes its coverage in place of its colour, in the channels it names. */
 const FRAGMENT = `${HEAD}
-in vec2 uv; uniform sampler2D tex; uniform int mode; uniform vec2 mask; out vec4 o;
+in vec2 uv; uniform sampler2D tex; uniform int mode; uniform vec3 mask; out vec4 o;
 void main() {
   vec2 b = floor(uv - 0.5); vec2 f = uv - 0.5 - b; vec4 acc = vec4(0);
   ivec2 n = textureSize(tex, 0);
@@ -78,7 +81,7 @@ void main() {
     acc += vec4(t.rgb * t.a, t.a) * wt;
   }
   if (acc.a <= 0.0) discard;
-  o = mode == 1 ? vec4(mask * acc.a, 0.0, 0.0) : acc;
+  o = mode == 1 ? vec4(mask * acc.a, 0.0) : acc;
 }`;
 
 /** A full-screen triangle: each pass reads and writes pixel for pixel. */
@@ -87,7 +90,7 @@ void main() { gl_Position = vec4(P[gl_VertexID], 0, 1); }`;
 
 const NONE = -32768;
 
-/** The flood's seeds: the outside (coverage under a half), what moved (now or at rest), and the figure that did not move. */
+/** The flood's seeds: the outside (coverage under a half), what moved (now or at rest), the figure that did not move, and the drawn key (coverage a half or more). */
 const SEED = `${HEAD}
 uniform sampler2D fig; uniform sampler2D moved; uniform ivec4 box; layout(location = 0) out ivec4 j0; layout(location = 1) out ivec4 j1;
 void main() {
@@ -96,7 +99,7 @@ void main() {
   ivec2 none = ivec2(${NONE});
   bool inside = c.a >= 0.5;
   j0 = ivec4(inside ? none : o, (m.r > 0.0 || m.g > 0.0) ? o : none);
-  j1 = ivec4((inside && m.r < 0.5) ? o : none, none);
+  j1 = ivec4((inside && m.r < 0.5) ? o : none, m.b >= 0.5 ? o : none);
 }`;
 
 /** One jump of the flood: each seed the nearest of its own and its neighbours' `step` away, read only inside the box. */
@@ -113,18 +116,18 @@ ivec2 best(ivec2 me, ivec2 cur, ivec2 cand) {
 void main() {
   ivec2 o = ivec2(gl_FragCoord.xy);
   ivec4 a = texelFetch(j0, o, 0); ivec4 b = texelFetch(j1, o, 0);
-  ivec2 s0 = a.xy, s1 = a.zw, s2 = b.xy;
+  ivec2 s0 = a.xy, s1 = a.zw, s2 = b.xy, s3 = b.zw;
   for (int dy = -1; dy <= 1; dy++) for (int dx = -1; dx <= 1; dx++) {
     if (dx == 0 && dy == 0) continue;
     ivec2 q = o + ivec2(dx, dy) * step;
     if (q.x < box.x || q.y < box.y || q.x >= box.z || q.y >= box.w) continue;
     ivec4 qa = texelFetch(j0, q, 0); ivec4 qb = texelFetch(j1, q, 0);
-    s0 = best(o, s0, qa.xy); s1 = best(o, s1, qa.zw); s2 = best(o, s2, qb.xy);
+    s0 = best(o, s0, qa.xy); s1 = best(o, s1, qa.zw); s2 = best(o, s2, qb.xy); s3 = best(o, s3, qb.zw);
   }
-  o0 = ivec4(s0, s1); o1 = ivec4(s2, ivec2(${NONE}));
+  o0 = ivec4(s0, s1); o1 = ivec4(s2, s3);
 }`;
 
-/** L3: the union's line near what moved, the rim there inked at its coverage, a skinned part's edge over another; else the figure's own pixel. */
+/** L3: the body's ink under a drawn key's reach given the key's colour (`core/key-join.ts`); the union's line near what moved, the rim there inked at its coverage, a skinned part's edge over another; else the figure's own pixel. */
 const INK = `${HEAD}
 uniform sampler2D fig; uniform sampler2D moved; uniform isampler2D j0; uniform isampler2D j1;
 uniform float L; uniform float IL; uniform float reach; uniform vec3 ink; uniform int interior;
@@ -135,10 +138,12 @@ void main() {
   ivec2 p = ivec2(gl_FragCoord.xy);
   vec4 c = texelFetch(fig, p, 0); vec4 m = texelFetch(moved, p, 0);
   ivec4 a = texelFetch(j0, p, 0); ivec4 b = texelFetch(j1, p, 0);
-  float dOut = dist(p, a.xy); float dMove = dist(p, a.zw); float dEdge = dist(p, b.xy);
+  float dOut = dist(p, a.xy); float dMove = dist(p, a.zw); float dEdge = dist(p, b.xy); float dKey = dist(p, b.zw);
   vec2 xy = vec2(p) + 0.5;
   bool hushed = quiet.z > 0.0 && distance(xy, quiet.xy) < quiet.z;
   vec3 ink3 = ink / 255.0;
+  if (m.b < 0.5 && c.a >= 0.5 && dKey <= L && distance(c.rgb / c.a, ink3) * 255.0 <= ${KEY_JOIN_INK}.0)
+    c = vec4(texelFetch(fig, b.zw, 0).rgb / max(texelFetch(fig, b.zw, 0).a, 1e-4) * c.a, c.a);
   float k = 0.0;
   if (!hushed && dMove <= reach) {
     if (c.a >= 0.5) k = clamp(L + 0.5 - dOut, 0.0, 1.0);
@@ -572,9 +577,10 @@ const passFigure = (
   for (const k of pass.moving) {
     const p = on.parts[k]!;
     const r = on.rests[k]!;
-    gl.uniform2f(on.mask, 0, 1);
+    gl.uniform3f(on.mask, 0, 1, 0);
     drawMesh(gl, r.vao, r.pos, state.restPositions[k]!, p.texture, p.count);
-    gl.uniform2f(on.mask, 1, 0);
+    // a drawn key's coverage now in blue too, the seed of the body's ink it hides
+    gl.uniform3f(on.mask, 1, 0, Number(k === pass.swap?.part));
     drawPart(gl, on, state, pass, k);
   }
   gl.blendEquation(gl.FUNC_ADD);
