@@ -2613,6 +2613,38 @@ its fit rows at the top, the failing first. A
 finding is answered on the render that found it, `--render <n> --finding
 <kind>-<view>/<id> --stands <why>`; a fix is a new render.
 
+### The part sheet: `film concept parts`
+
+A member drawn as a cut-out is made of his kept views' own pixels. His cut
+table (`<member>/cutout/cut.ts`: `CUTS`, `cutOptionsFor`, `HIDDEN`) splits a
+view into named parts, front to back (`cutParts`, `core/part-sheet.ts`).
+`film concept parts <film> <member> --view <kind>-<view> [--dry-run]
+[--reuse] [--check]` (`tools/part-sheet-cli.ts`) paints what the view's
+moving parts hide. Each moving part's area goes flat magenta on the whole
+view, padded to the image route's portrait (`PORTRAIT`, `editRequest` in
+`tools/image-route.ts`), and okra repaints the magenta alone on its Codex
+route, the subscription; never `--model`, the paid API. The answer is laid
+back over the view by one similarity fitted on colour where it still shows
+the view (`fitSimilarity`, `core/register.ts`: a coordinate descent with
+halving steps on the scale and shift, each view pixel the answer's mean over
+its footprint). Its paint is the answer less the paper the view's ground
+reaches. Each painted pixel goes under the nearest part that does not move,
+in that part's tone (each piece shifted by its mean step to the pixels the
+part keeps beside it), and only through `paintHidden`, so paint never shows
+at rest. Each answer is measured: the seam (ΔE76 of paint against the
+pixels its part keeps beside it, ≤ 10), the drift (the laid answer against
+the view over the parts that take paint, ≤ 5) and the grain (G less its 5×5
+mean, a robust std, within ±0.5 of the part's kept pixels near the paint).
+The answer that misses the fewest bars, then with the lowest seam, is kept.
+The part PNGs, `sheet.png`, `sheet-painted.png` (each painted pixel half
+magenta) and `record.json` land in `<member>/cutout/sheets/<view>/`. Each
+call's input (named by its bytes' hash), prompt and answer land under its
+`okra/`. An answer drawn from another input (the cut has moved since) is
+stale: the record keeps it, and it is never laid. A view takes at most three
+calls. `--reuse` lays the answers already drawn, `--check` lays them and
+fails where a file differs, and `--dry-run` writes the magenta input under
+`out/<film>/cast/<member>/parts/<view>/`; none of the three calls okra.
+
 ### The review: `film review`, and keep needs evidence
 
 `film review <film> --set <name> --scene <id> --at <place> --at <place>

@@ -103,6 +103,7 @@ import { FilmFolder, filmNamed } from './film-repo.ts';
 import { ImageRoute } from './image-route.ts';
 import { trace } from './trace-cli.ts';
 import { render } from './cast-render-cli.ts';
+import { parts as partSheet } from './part-sheet-cli.ts';
 import type { Pages } from './pages.ts';
 import { decodePng, encodePng } from './png.ts';
 
@@ -568,6 +569,7 @@ export const concept = <E, R>(
       critique(rules),
       keep,
       render(pages, rules),
+      partSheet,
       trace,
     ]),
   );
