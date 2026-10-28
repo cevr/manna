@@ -363,6 +363,8 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 
 - Owner, 2026-10-27: "Sure, file them." Filed on One: onejs/one#1065 (managed players cannot own Now Playing or remote commands, so a crossfade loses the lock screen) and onejs/one#1066 (load the global session paused at a position). When either lands, a follow-up unit revisits playbulk P1's gap (crossfade) and F6 (opening sample). (playbulk)
 
+- Hymnal verification is iOS only; no web drive or browser journey for any hymnal unit (owner 2026-10-27: "You don't need to verify on the web"). Unit tests still cover web code. playbulk P5 r3 on.
+
 ## Owner questions
 
 - Clicks in silent mode (feel): keep them muted under the silent switch, as iOS keyboard clicks are (recommended: the phone stays quiet at worship), or play them even in silent mode (a new sound path, checked against the hymn audio session). Asked 2026-10-25. Answer (owner, 2026-10-25): "Yeah, the clicks, that's fine. Stay muted in silent mode". No change. (feel)
