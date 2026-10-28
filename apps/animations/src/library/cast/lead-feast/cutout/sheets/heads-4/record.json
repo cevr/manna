@@ -27,6 +27,11 @@
       "dx": 0,
       "dy": -11.951457664946297
     },
+    "budget": {
+      "calls": 3,
+      "allowance": null,
+      "used": 3
+    },
     "calls": [
       {
         "n": 1,
@@ -43,7 +48,7 @@
         ],
         "input": "okra/input-f1e5094fdcd5.png",
         "out": "okra/answer-1.png",
-        "stale": true
+        "state": "stale"
       },
       {
         "n": 2,
@@ -60,7 +65,7 @@
         ],
         "input": "okra/input-2e55f1b8e287.png",
         "out": "okra/answer-2.png",
-        "stale": false,
+        "state": "laid",
         "fit": {
           "s": 0.23445216655478449,
           "dx": 0.005626899835746713,
@@ -68,19 +73,41 @@
           "score": 10.490570047078734
         },
         "measures": {
-          "seamDeltaE": 6.17,
-          "seamPairs": 81,
-          "driftDeltaE": 2.29,
-          "grain": {
-            "painted": 1.3,
-            "kept": 0.77,
-            "paintedPx": 4470
+          "seam": {
+            "deltaE": 6.17,
+            "pairs": 81
           },
+          "drift": {
+            "deltaE": 2.29,
+            "px": 21677
+          },
+          "grain": [
+            {
+              "part": "torso",
+              "painted": {
+                "robust": 0.99,
+                "plain": 1.39,
+                "n": 4760
+              },
+              "kept": {
+                "robust": 0.66,
+                "plain": 4.54,
+                "n": 1868
+              },
+              "verdict": "within"
+            }
+          ],
+          "paintUnder": [
+            {
+              "part": "head",
+              "px": 6269
+            }
+          ],
           "paintedPx": 6269,
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": ["grain"]
+        "missed": []
       },
       {
         "n": 3,
@@ -97,7 +124,7 @@
         ],
         "input": "okra/input-2e55f1b8e287.png",
         "out": "okra/answer-3.png",
-        "stale": false,
+        "state": "laid",
         "fit": {
           "s": 0.23437892314130285,
           "dx": 0.043544274499979,
@@ -105,14 +132,36 @@
           "score": 25.501890372472804
         },
         "measures": {
-          "seamDeltaE": 3.56,
-          "seamPairs": 58,
-          "driftDeltaE": 4.34,
-          "grain": {
-            "painted": 0.83,
-            "kept": 0.77,
-            "paintedPx": 5553
+          "seam": {
+            "deltaE": 3.56,
+            "pairs": 58
           },
+          "drift": {
+            "deltaE": 4.34,
+            "px": 21677
+          },
+          "grain": [
+            {
+              "part": "torso",
+              "painted": {
+                "robust": 0.66,
+                "plain": 2.24,
+                "n": 5885
+              },
+              "kept": {
+                "robust": 0.66,
+                "plain": 4.54,
+                "n": 1868
+              },
+              "verdict": "within"
+            }
+          ],
+          "paintUnder": [
+            {
+              "part": "head",
+              "px": 7752
+            }
+          ],
           "paintedPx": 7752,
           "visibleAtRest": 0,
           "recomposeByteEqual": true
@@ -129,14 +178,36 @@
     }
   },
   "measures": {
-    "seamDeltaE": 3.56,
-    "seamPairs": 58,
-    "driftDeltaE": 4.34,
-    "grain": {
-      "painted": 0.83,
-      "kept": 0.77,
-      "paintedPx": 5553
+    "seam": {
+      "deltaE": 3.56,
+      "pairs": 58
     },
+    "drift": {
+      "deltaE": 4.34,
+      "px": 21677
+    },
+    "grain": [
+      {
+        "part": "torso",
+        "painted": {
+          "robust": 0.66,
+          "plain": 2.24,
+          "n": 5885
+        },
+        "kept": {
+          "robust": 0.66,
+          "plain": 4.54,
+          "n": 1868
+        },
+        "verdict": "within"
+      }
+    ],
+    "paintUnder": [
+      {
+        "part": "head",
+        "px": 7752
+      }
+    ],
     "paintedPx": 7752,
     "visibleAtRest": 0,
     "recomposeByteEqual": true
@@ -145,7 +216,9 @@
     "seamDeltaE": 10,
     "driftDeltaE": 5,
     "grainWithin": 0.5,
-    "visibleAtRest": 0
+    "visibleAtRest": 0,
+    "leastSeamPairs": 20,
+    "leastGrainWindows": 90
   },
   "missed": []
 }

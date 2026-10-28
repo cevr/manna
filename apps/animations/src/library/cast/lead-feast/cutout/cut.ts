@@ -18,7 +18,13 @@
 // (`HIDDEN`, read by `film concept parts`, which writes `sheets/<view>/`).
 // Pure.
 
-import { cutParts, type PartCut, type PartCutOptions, type PartRule } from '@manna/film/tools';
+import {
+  cutParts,
+  type HiddenEntry,
+  type PartCut,
+  type PartCutOptions,
+  type PartRule,
+} from '@manna/film/tools';
 import { Result } from 'effect';
 import { LABELS } from '../rig/labels.ts';
 import { CLASSES } from '../rig/trace.ts';
@@ -503,7 +509,8 @@ const KEEP_REST =
 /**
  * Each view's moving parts (what a pose moves, whose areas are painted
  * magenta and repainted beneath), and the words okra repaints them by: what
- * lies under them, in the sheet's own style.
+ * lies under them, in the sheet's own style; and any calls granted beyond
+ * the three a view takes, with who granted them, when and why.
  */
 export const HIDDEN = {
   front: {
@@ -513,11 +520,15 @@ export const HIDDEN = {
   threeQuarterLeft: {
     moving: ['armRight', 'armLeft'],
     prompt: `${CUT_AWAY} his two arms (sleeves and round hands) were cut away to make a cut-out puppet. He is turned three-quarters to the viewer's left. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading (the cream tunic on the viewer's left side, the teal-blue mantle on the viewer's right side, the white sash running round his waist). ${SIDES} ${SHADE} There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, face, hair, robe, sash, feet, size, position and framing.`,
+    allowance: {
+      calls: 3,
+      by: 'coordinator',
+      on: '2026-10-27',
+      why: 'its three calls were drawn on a hand cut that gave the arms body pixels; the cut was fixed after them (hands as rings), and the fixed cut had never been asked',
+    },
   },
   'heads-4': {
     moving: ['head'],
     prompt: `${CUT_AWAY} his head (his hair, face and ears) was cut away to make a cut-out puppet. Repaint ONLY the magenta area, as what lies behind his head: his neck rising straight up from his collar as a plain column of skin to about where his mouth was, its two sides closed by the same thick dark brown-black outline as the rest of him, its top simply rounded and closed by the same outline (no opening, no rim, no dark band), in exactly the same skin colour, soft shading and fine paper grain as his neck below. Everywhere else in the magenta area becomes the plain cream paper. There is no head now: no hair, no face, no ears, nothing magenta left. ${KEEP_REST}`,
   },
-} as const satisfies Readonly<
-  Record<CutView, { readonly moving: ReadonlyArray<string>; readonly prompt: string }>
->;
+} as const satisfies Readonly<Record<CutView, HiddenEntry>>;
