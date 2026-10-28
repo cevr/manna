@@ -94,6 +94,8 @@ export interface CutoutView {
   readonly at: Pt;
   readonly puppet: PuppetSpec;
   readonly pose: PuppetPose;
+  /** What the view draws beyond its pose: a drawn key in place of a part, a held hand (`PuppetLook`); its boil is the page's. */
+  readonly look?: Omit<PuppetLook, 'boil' | 'amp'>;
   readonly fit?: CastFit;
 }
 

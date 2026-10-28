@@ -28,6 +28,7 @@ import {
 } from '../../../library/cast/lead-feast/cutout/puppets.ts';
 import { SKELETONS as LEAD_SKELETONS } from '../../../library/cast/lead-feast/cutout/skeleton.ts';
 import { RAISE as LEAD_RAISE } from '../../../library/cast/lead-feast/cutout/raise.ts';
+import { poses1View as leadPoses1 } from '../../../library/cast/lead-feast/cutout/poses.ts';
 import * as LEAD_BACK from '../../../library/cast/lead-feast/rig/back-traced.ts';
 import * as LEAD_DRINKING from '../../../library/cast/lead-feast/rig/drinking-traced.ts';
 import * as LEAD_FRONT from '../../../library/cast/lead-feast/rig/front-traced.ts';
@@ -679,6 +680,9 @@ export const CUTOUT = cutoutTable({
     turnaround: {
       front: cutout(LEAD_FIT.turnaround.front, 'front'),
       threeQuarterLeft: cutout(LEAD_FIT.turnaround.threeQuarterLeft, 'threeQuarterLeft'),
+    },
+    poses: {
+      'poses-1': leadPoses1(LEAD_FIT.poses['poses-1']),
     },
     heads: {
       'heads-4': cutout(LEAD_FIT.heads['heads-4'], 'heads-4'),

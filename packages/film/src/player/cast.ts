@@ -111,7 +111,7 @@ const drawCutout = (f: Frame, view: CutoutView, views: ReadonlyArray<CutoutView>
   ctx.translate(CUTOUT_MARGIN[0], CUTOUT_MARGIN[1]);
   clipCast(ctx, view, views, CLIP_MARGIN);
   ctx.translate(view.at[0], view.at[1]);
-  f.puppet(view.puppet.key, view.pose, { boil: STILL_TICK, amp });
+  f.puppet(view.puppet.key, view.pose, { ...view.look, boil: STILL_TICK, amp });
   ctx.restore();
 };
 

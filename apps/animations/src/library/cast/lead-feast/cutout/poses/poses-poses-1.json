@@ -1,0 +1,10 @@
+{
+  "view": "poses-poses-1",
+  "box": [22, 226, 310, 828],
+  "from": "threeQuarterLeft",
+  "bones": [],
+  "pose": { "numbers": {}, "root": [187.946588, 332.404952], "scale": 0.8938 },
+  "scores": { "front": 17202.253143, "threeQuarterLeft": 16935.429882 },
+  "ms": 2757,
+  "rasters": 109
+}

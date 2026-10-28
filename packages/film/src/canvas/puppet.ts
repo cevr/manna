@@ -64,8 +64,9 @@ export interface PuppetPlace {
  * drawing laid in place of a part (a drawn key: laid by `place`, then turned
  * `theta` degrees about `pivot`, sheet px); and a drawing laid over the
  * figure once its line is drawn (a held hand: its centre `c`, drawing px,
- * laid at `at`, sheet px, unturned and unscaled), within `quiet` px of which
- * the line is left as the drawings draw it.
+ * laid at `at`, sheet px, unturned, sized by `s`), within `quiet` px of which
+ * the line is left as the drawings draw it. Both are then moved and sized
+ * with the pose's root and scale, as the parts are.
  */
 export interface PuppetLook {
   readonly boil: number;
@@ -83,6 +84,8 @@ export interface PuppetLook {
     readonly c: Pt;
     readonly at: Pt;
     readonly quiet: number;
+    /** Sheet px a drawing px: 1 unless given. */
+    readonly s?: number;
   };
 }
 
@@ -217,22 +220,31 @@ const layQuad = (
   return true;
 };
 
-/** A look's drawings laid: its drawn key by its place, turned about its pivot, and its held hand centred where it is held. Why not, for a drawing not loaded. */
-const layDrawings = (loaded: LoadedPuppet, layer: Layer, look: PuppetLook) => {
+/** Where a sheet point stands at `pose`: moved with its root and sized by its scale, as the parts are (a look's drawings turn no bone). */
+const posedAt = (puppet: Puppet, pose: PuppetPose, [x, y]: Pt): Pt => [
+  pose.root[0] + pose.scale * (x - puppet.root[0]),
+  pose.root[1] + pose.scale * (y - puppet.root[1]),
+];
+
+/** A look's drawings laid at `pose`'s root and scale: its drawn key by its place, turned about its pivot, and its held hand centred where it is held. Why not, for a drawing not loaded. */
+const layDrawings = (loaded: LoadedPuppet, layer: Layer, pose: PuppetPose, look: PuppetLook) => {
   const { swap, held } = look;
+  const at = (p: Pt) => posedAt(loaded.puppet, pose, p);
   if (swap !== undefined) {
     const a = (swap.theta * Math.PI) / 180;
     const [c, s] = [Math.cos(a), Math.sin(a)];
     const { place, pivot } = swap;
     const to = (x: number, y: number): Pt => {
       const [qx, qy] = [place.s * x + place.dx - pivot[0], place.s * y + place.dy - pivot[1]];
-      return [pivot[0] + c * qx - s * qy, pivot[1] + s * qx + c * qy];
+      return at([pivot[0] + c * qx - s * qy, pivot[1] + s * qx + c * qy]);
     };
     if (!layQuad(loaded, layer, swap.drawing, loaded.gl.swapPositions, to))
       return `no drawing ${swap.drawing} loaded`;
   }
   if (held === undefined) return undefined;
-  const to = (x: number, y: number): Pt => [x - held.c[0] + held.at[0], y - held.c[1] + held.at[1]];
+  const k = held.s ?? 1;
+  const to = (x: number, y: number): Pt =>
+    at([held.at[0] + k * (x - held.c[0]), held.at[1] + k * (y - held.c[1])]);
   return layQuad(loaded, layer, held.drawing, loaded.gl.heldPositions, to)
     ? undefined
     : `no drawing ${held.drawing} loaded`;
@@ -243,6 +255,7 @@ const passOf = (
   spec: PuppetSpec,
   loaded: LoadedPuppet,
   layer: Layer,
+  pose: PuppetPose,
   look: PuppetLook,
   moving: ReadonlyArray<number>,
   swapped: number,
@@ -253,7 +266,11 @@ const passOf = (
   return {
     moving,
     swap: swap && { part: swapped, drawing: swap.drawing },
-    held: held && { drawing: held.drawing, at: layer.at(held.at), quiet: held.quiet * scale },
+    held: held && {
+      drawing: held.drawing,
+      at: layer.at(posedAt(loaded.puppet, pose, held.at)),
+      quiet: held.quiet * scale * pose.scale,
+    },
     boil: look.boil,
     amp: look.amp ?? BOIL_AMP,
     origin: layer.at(spec.origin),
@@ -287,7 +304,7 @@ export const drawPuppet = (
   if (look?.swap !== undefined && swapped < 0)
     return `puppet ${spec.key}: no part ${look.swap.part} to lay a drawing in place of`;
   const moving = layParts(loaded, layer, m, pose, swapped, look !== undefined);
-  const missing = look && layDrawings(loaded, layer, look);
+  const missing = look && layDrawings(loaded, layer, pose, look);
   if (missing !== undefined) return `puppet ${spec.key}: ${missing}`;
   const [left, top, right, bottom] = layer.figure;
   if (probesFigures(ctx) && left <= right)
@@ -309,7 +326,7 @@ export const drawPuppet = (
   const y1 = Math.min(ctx.canvas.height, Math.ceil(maxY) + margin);
   if (x1 <= x0 || y1 <= y0) return undefined;
   const pass =
-    look && passOf(spec, loaded, layer, look, moving, swapped, turnedPivots(puppet, m, pose));
+    look && passOf(spec, loaded, layer, pose, look, moving, swapped, turnedPivots(puppet, m, pose));
   const why = paintPuppetGl(ctx, loaded, [x0, y0, x1, y1], pass);
   return why && `puppet ${spec.key}: ${why}`;
 };
