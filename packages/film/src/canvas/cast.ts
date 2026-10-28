@@ -13,6 +13,7 @@
 
 import type { FitBar, FitBarName, FitClass, FitProbe } from '../core/fit-rows.ts';
 import type { LabelTable } from '../core/label.ts';
+import type { PuppetPose, PuppetSpec } from './puppet.ts';
 import type { PoseOf, RivePropSpec } from './rive.ts';
 
 type Pt = readonly [number, number];
@@ -76,6 +77,46 @@ export interface CastView {
   readonly fit?: CastFit;
 }
 
+/** What a view's clip reads: its kept box. */
+interface Boxed {
+  readonly box: SheetBox;
+}
+
+/**
+ * One kept view drawn by a puppet cut from it (`canvas/puppet.ts`): its kept
+ * box, where the puppet's origin stands in the sheet's pixels (its own
+ * pixels are the sheet's, so it is drawn at scale 1), its pose, and what its
+ * fit rows hold beyond the house's.
+ */
+export interface CutoutView {
+  readonly box: SheetBox;
+  readonly at: Pt;
+  readonly puppet: PuppetSpec;
+  readonly pose: PuppetPose;
+  readonly fit?: CastFit;
+}
+
+/** A film's cut-out table, beside its cast render table: member, kind, kept view name, each a view with a part sheet. */
+type CutoutTable = Readonly<
+  Record<string, Readonly<Record<string, Readonly<Record<string, CutoutView>>>>>
+>;
+
+/** A film's cut-out table, checked by its type. */
+export const cutoutTable = <const T extends CutoutTable>(table: T): T => table;
+
+/** Every puppet a member's cut-out views draw, by key: what its page declares and loads. */
+export const cutoutPuppets = (
+  member: Readonly<Record<string, Readonly<Record<string, CutoutView>>>>,
+) => {
+  const puppets: Record<string, PuppetSpec> = {};
+  for (const views of Object.values(member))
+    for (const v of Object.values(views)) puppets[v.puppet.key] = v.puppet;
+  return puppets;
+};
+
+/** Which figure a cast render draws: each view's rig (`CAST`), or its puppet (`CUTOUT`). */
+export type CastFigure = 'rig' | 'cutout';
+
 /** A film's cast render table: member, kind (`turnaround`, `poses`, `heads`), kept view name. */
 type CastTable = Readonly<
   Record<string, Readonly<Record<string, Readonly<Record<string, CastView>>>>>
@@ -94,13 +135,16 @@ type CastSheets = Readonly<Record<string, Readonly<Record<string, CastSheet>>>>;
 /** What a film's `rigs/cast.ts` gives the cast render: its table, its sheets, the paper its page lays them on, and each member's colour classes for his fit rows (none, no class rows). */
 export interface CastModule {
   readonly CAST: CastTable;
+  /** The views each member has a puppet for (`--figure cutout`): none when he has none. */
+  readonly CUTOUT?: CutoutTable;
   readonly SHEETS: CastSheets;
   readonly PAPER: { readonly base: string; readonly tone: string; readonly seed: number };
   readonly FIT_CLASSES?: Readonly<Record<string, Readonly<Record<string, FitClass>>>>;
 }
 
-/** The page name of `member`'s cast render in `film`: what the player mounts and `film concept render` opens. */
-export const castPage = (film: string, member: string) => `${film}/cast/${member}`;
+/** The page name of `member`'s cast render in `film`, drawn by `figure`: what the player mounts and `film concept render` opens. */
+export const castPage = (film: string, member: string, figure: CastFigure = 'rig') =>
+  figure === 'rig' ? `${film}/cast/${member}` : `${film}/cast/${member}/cutout`;
 
 /** A film's cast render table, checked by its type: every view of every kind of every member. */
 export const castTable = <const T extends CastTable>(table: T): T => table;
@@ -152,7 +196,7 @@ interface CastClip {
  * there but what lies in its own. A view's crop by its box then holds its
  * own drawing alone, never a neighbour's ink that ran over into it.
  */
-const castClip = (view: CastView, views: ReadonlyArray<CastView>, margin: number): CastClip => {
+const castClip = (view: Boxed, views: ReadonlyArray<Boxed>, margin: number): CastClip => {
   const [x0, y0, x1, y1] = view.box;
   const box: SheetBox = [x0 - margin, y0 - margin, x1 + margin, y1 + margin];
   const [bx0, by0, bx1, by1] = box;
@@ -179,8 +223,8 @@ type CastClipContext = Pick<CanvasRenderingContext2D, 'beginPath' | 'rect' | 'cl
  */
 export const clipCast = (
   ctx: CastClipContext,
-  view: CastView,
-  views: ReadonlyArray<CastView>,
+  view: Boxed,
+  views: ReadonlyArray<Boxed>,
   margin: number,
 ) => {
   const clip = castClip(view, views, margin);

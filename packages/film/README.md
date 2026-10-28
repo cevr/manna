@@ -2569,7 +2569,7 @@ is written as a disc on each lobe, the curls `Hair.Curls` cuts. A mark with
 no ink of its own to read is refused, never thrown.
 
 `film concept render <film> <member> [--kind <kind>] [--view <kind>-<view>]
-[--no-critique] [--fit-only]`
+[--figure rig|cutout] [--no-critique] [--fit-only]`
 (`tools/cast-render.ts`, its record in `core/cast-render.ts`) draws every
 view the member's record keeps by its rig. The film's `rigs/cast.ts` is the
 table (`CastTable`, `canvas/cast.ts`, through `@manna/film/rive`): for each
@@ -2656,6 +2656,37 @@ stale: the record keeps it, it is never laid, and it still counts.
 `--reuse` lays the answers already drawn, `--check` lays them and fails
 where a file differs, and `--dry-run` writes the magenta input under
 `out/<film>/cast/<member>/parts/<view>/`; none of the three calls okra.
+
+### The puppet: a part sheet on a skeleton
+
+A puppet (`core/puppet.ts`) is a part sheet on a skeleton
+(`<member>/cutout/skeleton.ts`: bones named by the shared controls,
+`PUPPET_CONTROLS`, each turning about its pivot after its parent; each
+part's skin, the bones it lies on; each sleeve's shoulder flap). Each part
+is a mesh of its own pixels on a 3 px grid, each vertex on at most two of
+its skin's bones (the nearest, shared with the bone across a joint by a
+smoothstep 18 px either side), skinned by linear blend; a pose is
+`{ numbers, root, scale }`, degrees a bone. `rasterOf` is the CPU
+reference: each pixel inverse-mapped through the posed triangle that holds
+its centre, sampled bilinear on premultiplied texels, so the rest pose is
+the sheet byte for byte. In a page a drawing declares its puppets beside
+its rigs (`drawing({ puppets })`), the film loads them before its first
+frame (`loadPuppets`, `src/puppet/load.ts`: each part PNG fetched and its
+decode awaited in the load, through `PuppetImages`), and a frame draws one
+with `f.puppet(name, pose)` (`canvas/puppet.ts`): the vertices posed on the
+CPU and written whole, the meshes drawn with WebGL 2 on the page's one
+puppet canvas (`canvas/puppet-gl.ts`, in the context budget of
+`canvas/gl.ts`), the box copied into the frame. In Bun a puppet is posed
+and declares its figure (`probeFigure`), and draws nothing. A puppet's
+module imports its part PNGs, so a scene that draws it is keyed by their
+bytes (`tools/stamp.ts`). A film's `rigs/cast.ts` gives its puppets in
+`CUTOUT` beside `CAST`, and `film concept render <film> <member> --figure
+cutout` renders each view `CUTOUT` has on its page
+`<film>/cast/<member>/cutout`, held to the same fit rows (its classes read
+by their sheet samples, since a cut-out is painted with the sheet's own
+pixels), its record's `figure: 'cutout'`, each view's `deltaE` against
+the kept view and each sheet's `drawMs` (the page's draw of the frame,
+median of 7).
 
 ### The review: `film review`, and keep needs evidence
 

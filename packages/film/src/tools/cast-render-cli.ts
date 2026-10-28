@@ -1,7 +1,8 @@
 // `film concept render <film> <member> [--kind turnaround|poses|heads ...]
-// [--view <kind>-<view> ...] [--no-critique] [--fit-only]`: the member's cast
+// [--view <kind>-<view> ...] [--figure rig|cutout] [--no-critique] [--fit-only]`: the member's cast
 // render (`cast-render.ts`), each kept view asked (every view of every kind
-// kept when none) drawn by its rig from the film's `rigs/cast.ts`, laid
+// kept when none) drawn by its rig from the film's `rigs/cast.ts` (or, with
+// `--figure cutout`, each view its `CUTOUT` table has, by its puppet), laid
 // beside its kept view, held to its fit rows and critiqued once every row
 // passes; a line a view, its flagged rows, its fit and findings under it.
 // `--fit-only` prints each view's fit rows and writes nothing: the fast loop.
@@ -60,6 +61,12 @@ export const render = <E, R>(pages: Layer.Layer<Pages, E, R>, rules: ReadonlyArr
           'show each view whose fit rows all pass to a fresh model (--no-critique skips it, written as skipped)',
         ),
       ),
+      figure: Flag.Literals('figure', ['rig', 'cutout'] as const).pipe(
+        Flag.withDefault('rig' as const),
+        Flag.withDescription(
+          'what draws each view: its rig (rigs/cast.ts CAST, the default) or its puppet cut from the kept sheet (CUTOUT)',
+        ),
+      ),
       fitOnly: Flag.Boolean('fit-only').pipe(
         Flag.withDefault(false),
         Flag.withDescription("print each view's fit rows alone: no critique, nothing written"),
@@ -97,6 +104,7 @@ export const render = <E, R>(pages: Layer.Layer<Pages, E, R>, rules: ReadonlyArr
           views: input.view,
           critique: input.critique,
           fitOnly: input.fitOnly,
+          figure: input.figure,
         }),
       );
       yield* Console.log(

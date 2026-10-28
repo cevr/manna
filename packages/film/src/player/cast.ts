@@ -15,12 +15,17 @@ import {
   type CastModule,
   type CastSheet,
   type CastView,
+  type CutoutView,
   clipCast,
   castDrawOrder,
   castPage,
   castRigs,
+  cutoutPuppets,
 } from '../canvas/cast.ts';
 import { type Film, type Frame, createFilm } from '../canvas/film.ts';
+import type { PuppetUnloadable } from '../puppet/images.ts';
+import { PuppetImagesBrowser } from '../puppet/images-browser.ts';
+import { loadPuppets } from '../puppet/load.ts';
 import { loadRigs } from '../rive/load.ts';
 import type { RiveRuntime } from '../rive/runtime.ts';
 import { RiveRuntimeBrowser } from '../rive/runtime-browser.ts';
@@ -89,12 +94,61 @@ const castFilm = (film: string, member: string, m: CastModule): Film => {
   });
 };
 
+/** One cut-out view drawn on its sheet beside `views`: clipped as a rig's view is, its puppet's origin at `at`, at the sheet's own pixels. */
+const drawCutout = (f: Frame, view: CutoutView, views: ReadonlyArray<CutoutView>) => {
+  const { ctx } = f;
+  ctx.save();
+  clipCast(ctx, view, views, CLIP_MARGIN);
+  ctx.translate(view.at[0], view.at[1]);
+  f.puppet(view.puppet.key, view.pose);
+  ctx.restore();
+};
+
+/** `member`'s cut-out render as a film: a scene each kind his `CUTOUT` views are of, each the size of the sheet, each view drawn by its puppet. */
+const cutoutFilm = (film: string, member: string, m: CastModule): Film => {
+  const kinds = m.CUTOUT?.[member];
+  const sheets = m.SHEETS[member];
+  if (kinds === undefined || sheets === undefined)
+    throw new Error(`${film}'s rigs/cast.ts has no cut-out of ${member} (CUTOUT)`);
+  const sized = Object.keys(kinds).map((kind) => {
+    const sheet = sheets[kind];
+    if (sheet === undefined)
+      throw new Error(`${film}'s rigs/cast.ts gives ${member}'s ${kind} sheet no size`);
+    return [kind, sheet] as const;
+  });
+  const [first] = sized;
+  if (first === undefined) throw new Error(`${film}'s CUTOUT draws no sheet of ${member}`);
+  const { width, height } = first[1];
+  const puppets = cutoutPuppets(kinds);
+  return createFilm({
+    title: `${member}'s cut-out render`,
+    width,
+    height,
+    fps: FPS,
+    paper: m.PAPER,
+    shade: m.PAPER.base,
+    finish: { vignette: 0, grain: 0 },
+    scenes: sized.map(([kind]) => ({
+      id: kind,
+      min: 1,
+      drift: 0 as const,
+      puppets,
+      draw: (f: Frame) => {
+        const views = Object.values(kinds[kind] ?? {});
+        for (const view of views) drawCutout(f, view, views);
+      },
+    })),
+  });
+};
+
 /**
- * The player's entries for a film's cast renders, one page each under
- * `<film>/cast/<member>`: spread them, beside the films, into the pages the
- * app mounts. A page loads its member's table (`load`, the film's
- * `rigs/cast.ts`) and the rigs it draws, through `rive` (the page's Rive
- * runtimes unless given), into the scope its load runs in.
+ * The player's entries for a film's cast renders, two pages a member: his
+ * rigs under `<film>/cast/<member>`, and his puppets (`CUTOUT`) under
+ * `<film>/cast/<member>/cutout`. Spread them, beside the films, into the
+ * pages the app mounts. A page loads its member's table (`load`, the film's
+ * `rigs/cast.ts`) and the rigs or puppets it draws, through `rive` (the
+ * page's Rive runtimes unless given) or the page's image decoder, into the
+ * scope its load runs in.
  */
 export const castPages = (
   film: string,
@@ -102,18 +156,35 @@ export const castPages = (
   load: () => Promise<CastModule>,
   http: Layer.Layer<HttpClient.HttpClient> = FetchHttpClient.layer,
   rive: Layer.Layer<RiveRuntime, never, HttpClient.HttpClient> = RiveRuntimeBrowser,
-): Record<string, Effect.Effect<Film, RigUnloadable | RigNameMissing, Scope.Scope>> => {
-  const page = ManagedRuntime.make(Layer.provideMerge(rive, http));
+): Record<
+  string,
+  Effect.Effect<Film, RigUnloadable | RigNameMissing | PuppetUnloadable, Scope.Scope>
+> => {
+  const page = ManagedRuntime.make(
+    Layer.mergeAll(rive, PuppetImagesBrowser).pipe(Layer.provideMerge(http)),
+  );
   return Object.fromEntries(
-    members.map((member) => [
-      castPage(film, member),
-      Effect.flatMap(page.contextEffect, (services) =>
-        Effect.promise(load).pipe(
-          Effect.map((m) => castFilm(film, member, m)),
-          Effect.flatMap(loadRigs),
-          Effect.provideContext(services),
+    members.flatMap((member) => [
+      [
+        castPage(film, member),
+        Effect.flatMap(page.contextEffect, (services) =>
+          Effect.promise(load).pipe(
+            Effect.map((m) => castFilm(film, member, m)),
+            Effect.flatMap(loadRigs),
+            Effect.provideContext(services),
+          ),
         ),
-      ),
+      ],
+      [
+        castPage(film, member, 'cutout'),
+        Effect.flatMap(page.contextEffect, (services) =>
+          Effect.promise(load).pipe(
+            Effect.map((m) => cutoutFilm(film, member, m)),
+            Effect.flatMap(loadPuppets),
+            Effect.provideContext(services),
+          ),
+        ),
+      ],
     ]),
   );
 };
