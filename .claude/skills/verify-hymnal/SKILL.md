@@ -160,7 +160,7 @@ What the drivers do that a step does not show:
 
 ## Argent
 
-[Argent](https://github.com/software-mansion/argent) 0.30.1 reads what `sim` cannot: React render counts and durations, a Hermes CPU profile of the app itself (not a desktop Hermes stand-in), the React component tree, the JS console, and Instruments traces. Its skills are vendored beside this one (`argent-ios-simulator-setup`, `argent-device-interact`, `argent-react-native-profiler`, `argent-react-native-optimization`, `argent-native-profiler`, `argent-metro-debugger`, `argent-react-native-app-workflow`). On One, which serves its bundle from its own dev server rather than Metro, the debugger and profiler tools are not yet proven; a run that cannot attach says so and falls back to `sim`. `sim` stays the journey driver.
+[Argent](https://github.com/software-mansion/argent) 0.30.1 reads what `sim` cannot: React render counts and durations, a Hermes CPU profile of the app itself (not a desktop Hermes stand-in), the React component tree, the JS console, and Instruments traces. Its skills are vendored beside this one (`argent-ios-simulator-setup`, `argent-device-interact`, `argent-react-native-profiler`, `argent-react-native-optimization`, `argent-native-profiler`, `argent-metro-debugger`, `argent-react-native-app-workflow`). It reads beside `sim` and never drives: `sim` stays the journey driver. Measured on One 2.11.1 (`tmp/orchestrate/hymnapp/argent/report.md`, 2026-10-28): it attaches, names components, profiles heavy transitions, samples the CPU, reads the console and the accessibility tree; it places no taps and counts no renders in smooth interactions.
 
 - **Install.** The `argent` binary, installed once per machine with Bun: `bun add -g @swmansion/argent@0.30.1`, then `bun pm -g trust tree-sitter tree-sitter-typescript tree-sitter-javascript @fails-components/webtransport-transport-http3-quiche` (Bun blocks their native install scripts, and argent needs them). Check with `argent --version` (`~/.bun/bin/argent`). Never run it through `npx` inside this repo: npm reads the root `package.json`, refuses its Bun catalog override (`EOVERRIDE`), and the server never starts.
 - **Reach it.** In a session that loads the project's `.mcp.json` (it runs `argent mcp`), as the `mcp__argent__*` tools. Elsewhere (orchestrate workers have no MCP servers), as `DO_NOT_TRACK=1 argent run <tool> --help`, then the call; `argent tools` lists the tools.
@@ -170,6 +170,13 @@ What the drivers do that a step does not show:
 - **Only the `verify-hymnal` simulator.** Take its udid from `list-devices` and pass it on every call. Never target an entry of kind `"device"` (the owner's iPhone is one over USB), and never boot, erase or drive another simulator.
 - **No sound.** `boot-device` boots muted unless asked; never pass `sound: true`, and never enable the `boot-sound` flag.
 - **Read, never steer.** `debugger-evaluate` may read state for a measure; it never writes storage or calls the app's atoms to reach a state (Drive).
+- **Attach to One's dev server.** Pass `--port $PORT` (argent defaults to Metro's 8081) and the simulator's udid as `--device_id` to the `debugger-*` and profiler tools.
+- **No tap points on One.** `debugger-component-tree` names components but gives no tap points, and `onScreenOnly` filters nothing: argent reads the screen size through Metro's `__r`, which One's Rolldown bundle lacks. Tap by `sim` targets.
+- **Hot commits only.** The React profiler keeps per-component detail only for commits of 16 ms or more: profile a heavy transition (opening a hymn), not a smooth scroll. `react-profiler-renders` counts live components, not renders.
+- **Analyze needs the root.** `react-profiler-analyze` takes `--project_root <checkout>/apps/hymnal --platform ios`.
+- **The CPU profile is coarse.** About one sample per 12 ms on a dev bundle, with dev-only frames: a share under a few samples is a guess.
+- **`describe` shows testIDs** (`row-number`, `row-title`) that `sim`'s snapshot does not.
+- **Trash argent's files after a run.** It writes profiles to `$TMPDIR/argent-profiler-cwd/` (commit files may hold props, so hymn words) and logs to `~/.argent/tmp/`; neither may reach evidence or the repo.
 
 ## Evidence
 
