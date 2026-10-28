@@ -25,6 +25,7 @@
     "playback": "bun scripts/playback.ts",
     "compile:db": "bun scripts/compile-db.ts",
     "golden": "bun scripts/golden.ts",
+    "indexes": "bun scripts/indexes.ts",
     "meaning": "bun scripts/meaning/build.ts --out ../../apps/hymnal/assets/meaning/meaning.js",
     "render": "bun scripts/render/render.ts",
     "split": "bun scripts/split.ts",
