@@ -6,6 +6,7 @@ import {
   Media,
   OfflineError,
   identityKey,
+  mediaHeader,
   offlineLayer,
   type Identity,
   type Range,
@@ -36,6 +37,8 @@ export const fake = () => {
   const media = Layer.succeed(
     Media,
     Media.of({
+      removeOld: Effect.void,
+      protect: Effect.void,
       list: Effect.suspend(() => control.listing).pipe(
         Effect.andThen(Effect.sync(() => [...entries.values()])),
       ),
@@ -64,6 +67,7 @@ export const fake = () => {
       local: (entry) =>
         Effect.gen(function* () {
           if (control.readFails) return yield* fail();
+          if (!mediaHeader(files.get(identityKey(entry)) ?? new Uint8Array())) return yield* fail();
           return `file:///synthetic/${identityKey(entry)}`;
         }),
     }),

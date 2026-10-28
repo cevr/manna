@@ -1,7 +1,16 @@
 /* oxlint-disable effect/noAsyncFunction, effect/noTryCatch, effect/noThrowStatement, eslint/no-await-in-loop -- OPFS adapter: keep writable-stream close/abort and DOMException handling at the host boundary; every public operation enters Effect.tryPromise. */
 /** Browser media lives in OPFS, apart from the HTTP cache and synchronous settings. */
 import { Effect, Layer, Schema } from 'effect';
-import { Entry, Identity, identityKey, Media, OfflineError, storageName } from './cache';
+import {
+  Entry,
+  Identity,
+  identityKey,
+  mediaHeader,
+  Media,
+  OfflineError,
+  recordingStorage,
+  storageName,
+} from './cache';
 
 const call = <A>(run: () => Promise<A>) =>
   Effect.tryPromise({ try: run, catch: () => OfflineError.make({ code: 'storage' }) });
@@ -22,6 +31,16 @@ export const mediaLayer = Layer.effect(Media)(
       }),
     );
     return Media.of({
+      protect: call(async () => {
+        // A refusal is normal. Downloads keeps the browser eviction limit visible.
+        if (navigator.storage.persist) await navigator.storage.persist();
+      }),
+      removeOld: call(async () => {
+        const parent = await navigator.storage.getDirectory();
+        for await (const [name, handle] of parent.entries())
+          if (handle.kind === 'directory' && name !== storageName && recordingStorage(name))
+            await parent.removeEntry(name, { recursive: true });
+      }),
       list: call(async () => {
         const found = new Map<string, Entry>();
         const dir = await root();
@@ -52,9 +71,9 @@ export const mediaLayer = Layer.effect(Media)(
         }),
       append: (id, at, bytes) =>
         call(async () => {
-          const writer = await (
-            await file(id, 'bin', true)
-          ).createWritable({ keepExistingData: at > 0 });
+          const target = await file(id, 'bin', true);
+          if ((await target.getFile()).size !== at) throw OfflineError.make({ code: 'storage' });
+          const writer = await target.createWritable({ keepExistingData: at > 0 });
           try {
             await writer.seek(at);
             await writer.write(new Uint8Array(bytes));
@@ -96,6 +115,8 @@ export const mediaLayer = Layer.effect(Media)(
           const key = identityKey(entry);
           const blob = await (await file(entry, 'bin')).getFile();
           if (blob.size !== entry.bytes) throw OfflineError.make({ code: 'storage' });
+          if (!mediaHeader(new Uint8Array(await blob.slice(0, 3).arrayBuffer())))
+            throw OfflineError.make({ code: 'storage' });
           const old = urls.get(key);
           if (old) return old;
           const url = URL.createObjectURL(blob.slice(0, blob.size, 'audio/mpeg'));

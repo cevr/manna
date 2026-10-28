@@ -17,6 +17,7 @@ import { RECORDING_SET } from '@manna/hymnal/recordings';
 
 /** A later immutable recording set must not resolve files from an earlier set. */
 export const storageName = `hymnal-recordings-${RECORDING_SET}-v1`;
+export const recordingStorage = (name: string) => /^hymnal-recordings-[a-z0-9-]+-v\d+$/.test(name);
 
 export const Identity = Schema.Struct({
   number: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 695 })),
@@ -50,6 +51,8 @@ export class Media extends Context.Service<
     ) => Effect.Effect<void, OfflineError>;
     readonly save: (entry: Entry) => Effect.Effect<void, OfflineError>;
     readonly remove: (id: Identity) => Effect.Effect<void, OfflineError>;
+    readonly removeOld: Effect.Effect<void, OfflineError>;
+    readonly protect: Effect.Effect<void, OfflineError>;
     readonly local: (entry: Entry) => Effect.Effect<string, OfflineError>;
   }
 >()('hymnal/offline/Media') {}
@@ -212,8 +215,8 @@ export const offlineLayer = Layer.effect(Offline)(
           if (!owns(job)) return false;
           job.active = true;
           const row = entries.get(key);
-          if (row && (yield* media.size(row)) !== row.bytes) {
-            yield* media.remove(row);
+          if ((yield* media.size(job.id)) !== (row?.bytes ?? 0)) {
+            yield* media.remove(job.id);
             entries.delete(key);
           }
           yield* publish;
@@ -332,6 +335,7 @@ export const offlineLayer = Layer.effect(Offline)(
     return Offline.of({
       enqueue: (id) => locked(add(id).pipe(Effect.andThen(publish))),
       downloadAll: Deferred.await(indexed).pipe(
+        Effect.andThen(media.protect),
         Effect.andThen(
           locked(
             Effect.gen(function* () {
@@ -342,6 +346,14 @@ export const offlineLayer = Layer.effect(Offline)(
               for (const id of retries) yield* add(id);
               for (let number = 1; number <= 695; number++) yield* add({ number, offset: 0 });
               yield* publish;
+            }),
+          ),
+        ),
+        Effect.catchCause(() =>
+          locked(
+            Effect.gen(function* () {
+              storage = true;
+              yield* cancelOwned;
             }),
           ),
         ),
@@ -361,6 +373,7 @@ export const offlineLayer = Layer.effect(Offline)(
                 entries.delete(identityKey(row));
               }
               entries.clear();
+              yield* media.removeOld;
               failed.clear();
               resume.clear();
               storage = false;

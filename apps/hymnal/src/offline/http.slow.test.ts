@@ -64,8 +64,8 @@ it.effect('offline multi-range requests obey the deployed bucket CORS headers', 
       expect(rejected).toEqual([]);
       expect(requests).toBe(2);
       expect((yield* cache.snapshot).saved).toBe(1);
-      // oxlint-disable-next-line effect/noInlineProvide -- this test boundary owns its dynamic loopback server and storage fixture.
     }).pipe(
+      // oxlint-disable-next-line effect/noInlineProvide -- this test boundary owns its dynamic loopback server and storage fixture.
       Effect.provide(
         offlineLayer.pipe(
           Layer.provide(f.media),

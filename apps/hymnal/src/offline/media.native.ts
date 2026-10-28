@@ -1,8 +1,19 @@
-/* oxlint-disable effect/noAsyncFunction, effect/noTryCatch, eslint/no-await-in-loop -- One filesystem adapter: close native file handles in the same Promise operation as their read/write, wrapped once by Effect.tryPromise. */
+/* oxlint-disable effect/noAsyncFunction, effect/noTryCatch, effect/noThrowStatement, eslint/no-await-in-loop -- One filesystem adapter: close native file handles and check storage invariants within the same Promise operation, wrapped once by Effect.tryPromise. */
 /** Native media uses application support, never the platform's evictable cache. */
 import { Effect, Layer, Option, Schema } from 'effect';
 import { One } from 'one';
-import { Entry, Identity, identityKey, Media, OfflineError, storageName } from './cache';
+import {
+  CHUNK,
+  Entry,
+  Identity,
+  identityKey,
+  mediaHeader,
+  Media,
+  OfflineError,
+  recordingStorage,
+  storageName,
+} from './cache';
+import { protectDirectory } from './backup';
 
 const call = <A>(run: () => Promise<A>) =>
   Effect.tryPromise({ try: run, catch: () => OfflineError.make({ code: 'storage' }) });
@@ -10,6 +21,7 @@ const decode = Schema.decodeUnknownOption(Schema.fromJsonString(Entry));
 const encode = Schema.encodeSync(Schema.fromJsonString(Entry));
 export const mediaLayer = Layer.sync(Media, () => {
   const fs = One.FileSystem;
+  let protectedDirectory = false;
   let base = Option.none<string>();
   // Resolve the native directory within an operation's typed Promise boundary.
   // A missing filesystem must not prevent the online player from starting.
@@ -23,8 +35,26 @@ export const mediaLayer = Layer.sync(Media, () => {
       },
     });
   const path = (id: Identity, ext: string) => `${root()}${identityKey(id)}.${ext}`;
-  const ready = () => fs.makeDirectory(root(), true);
+  const ready = async () => {
+    await fs.makeDirectory(root(), true);
+    if (!protectedDirectory) {
+      protectDirectory(root());
+      for (const file of await fs.readDirectory(fs.getDirectories().applicationSupport))
+        if (file.isDirectory && recordingStorage(file.name)) protectDirectory(file.uri);
+      protectedDirectory = true;
+    }
+  };
   return Media.of({
+    protect: call(async () => {
+      await ready();
+      if (fs.Paths.availableDiskSpace < 2 * CHUNK) throw OfflineError.make({ code: 'storage' });
+    }),
+    removeOld: call(async () => {
+      const parent = fs.getDirectories().applicationSupport;
+      for (const file of await fs.readDirectory(parent))
+        if (file.isDirectory && file.name !== storageName && recordingStorage(file.name))
+          await fs.delete(file.uri);
+    }),
     list: call(async () => {
       await ready();
       const found = new Map<string, Entry>();
@@ -48,6 +78,9 @@ export const mediaLayer = Layer.sync(Media, () => {
       call(async () => {
         await ready();
         const file = new fs.File(path(id, 'mp3'));
+        const info = await fs.getInfo(file.uri);
+        if ((info.size ?? 0) !== at || fs.Paths.availableDiskSpace < bytes.length)
+          throw OfflineError.make({ code: 'storage' });
         if (!(await fs.getInfo(file.uri)).exists) file.create();
         let mode: typeof fs.FileMode.ReadWrite | typeof fs.FileMode.Truncate =
           fs.FileMode.ReadWrite;
@@ -78,7 +111,7 @@ export const mediaLayer = Layer.sync(Media, () => {
         const file = new fs.File(path(entry, 'mp3'));
         const handle = file.open(fs.FileMode.ReadOnly);
         try {
-          await handle.readBytes(1);
+          if (!mediaHeader(await handle.readBytes(3))) throw OfflineError.make({ code: 'storage' });
         } finally {
           handle.close();
         }
