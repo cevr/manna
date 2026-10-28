@@ -388,7 +388,7 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 
 - chordsimp (2026-10-23): Simple shows the first chord of each stack, so 1,171 stacks lose a final seventh (for example a G then G7 over one syllable shows G). Options: (1, recommended) keep the first chord, as merged, since the seventh is a passing colour and Advanced keeps it; (2) show the last chord of the stack in Simple; (3) keep a seventh when it is the last chord of the stack. Answer: (1), as merged. The owner checked build d34ce0021 on the phone (hymn 3 in Simple among the four checks) and said "It all looks good." (2026-10-23); read as keeping the merged behaviour, reversible.
 
-- findbulk P6 needs the 49 back-matter index photos (2026-10-20, likely IMG_1198–IMG_1246). `tmp/orchestrate/hymnapp/compile/indexes/` no longer exists (measured 2026-10-28). Ask: AirDrop them to `~/Downloads/hymnal-indexes/` (made), or photograph the index pages again. Recommendation: AirDrop. P1–P5 run meanwhile. (findbulk)
+- findbulk P6 needs the 49 back-matter index photos (2026-10-20, likely IMG_1198–IMG_1246). `tmp/orchestrate/hymnapp/compile/indexes/` no longer exists (measured 2026-10-28). Ask: AirDrop them to `~/Downloads/hymnal-indexes/` (made), or photograph the index pages again. Recommendation: AirDrop. P1–P5 run meanwhile. (findbulk) Answer (owner 2026-10-28): "ok photos are there"; 49 HEIC copied read-only to `tmp/orchestrate/hymnapp/findbulk/photos/`, checksums identical.
 
 ## Follow-ups
 
