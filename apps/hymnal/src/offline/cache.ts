@@ -278,6 +278,7 @@ export const offlineLayer = Layer.effect(Offline)(
               return yield* OfflineError.make({ code: 'storage' });
             yield* media.save(entry);
             storage = false;
+            failed.delete(key);
             entries.set(key, entry);
             resume.delete(key);
             yield* publish;

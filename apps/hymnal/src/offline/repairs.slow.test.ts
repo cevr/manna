@@ -117,6 +117,7 @@ for (const offset of [-5, 0, 6])
           yield* Deferred.succeed(release, true);
           yield* idle(cache);
           expect((yield* cache.snapshot).saved).toBe(1);
+          expect((yield* cache.snapshot).failed).toBe(0);
           expect(Array.from(f.files.get(identityKey(id))?.slice(0, 2) ?? [])).toEqual([255, 251]);
           expect(f.calls.filter((c) => c.at === 0).length).toBe(2);
           expect(Option.isSome(yield* cache.local(id))).toBe(true);
