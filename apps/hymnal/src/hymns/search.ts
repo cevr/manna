@@ -107,8 +107,8 @@ export interface SearchIndex {
   readonly sorted: ReadonlyArray<string>;
   /** Each word and every word one letter shorter than it, to the words they come from (SymSpell). */
   readonly deletes: ReadonlyMap<string, ReadonlyArray<number>>;
-  /** Each word of `KIN` to the others of its group. */
-  readonly kin: ReadonlyMap<number, ReadonlyArray<number>>;
+  /** Each word of `KIN`, held or not, to the others of its group the hymns hold. */
+  readonly kin: ReadonlyMap<string, ReadonlyArray<number>>;
   /** Per hymn, its first line's place; one more at the end. */
   readonly hymnLine: Int32Array;
   /** Per line, its first word's place in `lineWords`; one more at the end. */
@@ -253,17 +253,20 @@ const deletesOf = (vocabList: ReadonlyArray<string>) => {
   return deletes;
 };
 
-/** Each word of `KIN` the hymns hold, to the others of its group they hold. */
+/**
+ * Each word of `KIN`, to the others of its group the hymns hold: a word no
+ * hymn holds (`thou` in a hymnal of `you`) still finds the ones they do.
+ */
 const kinOf = (vocab: ReadonlyMap<string, number>) => {
-  const kin = new Map<number, ReadonlyArray<number>>();
-  for (const group of KIN) {
-    const ids = group.flatMap((word) => Option.toArray(Option.fromUndefinedOr(vocab.get(word))));
-    for (const id of ids)
+  const kin = new Map<string, ReadonlyArray<number>>();
+  for (const group of KIN)
+    for (const word of group)
       kin.set(
-        id,
-        ids.filter((other) => other !== id),
+        word,
+        group
+          .filter((other) => other !== word)
+          .flatMap((other) => Option.toArray(Option.fromUndefinedOr(vocab.get(other)))),
       );
-  }
   return kin;
 };
 
@@ -357,10 +360,7 @@ const expand = (index: SearchIndex, term: string, last: boolean): ReadonlyMap<nu
     };
     const exact = Option.toArray(Option.fromUndefinedOr(index.vocab.get(term)));
     put(exact, EXACT);
-    put(
-      exact.flatMap((id) => index.kin.get(id) ?? []),
-      EXACT,
-    );
+    put(index.kin.get(term) ?? [], EXACT);
     if (last) put(startingWith(index, term), PREFIX);
     if (term.length >= 4) put(typosOf(index, term), TYPO);
     return out;
@@ -609,8 +609,13 @@ const byWords = (index: SearchIndex, terms: ReadonlyArray<string>): ReadonlyArra
   const most = cover[candidates[0] ?? 0] ?? 0;
   // A prefix: the titled come first, each holding every word, then the rest by cover.
   const heads = candidates.filter((h, i) => i < HEAD && (cover[h] ?? 0) >= most - 1).length;
+  // One word runs no longer than itself: its line is the one it scores best in.
+  const runOf = (h: number) => {
+    if (T === 1) return { run: 1, line: strongestLine(index, scores, h) };
+    return runIn(index, h, T);
+  };
   const head = candidates.slice(0, heads).map((h) => {
-    const { run, line } = runIn(index, h, T);
+    const { run, line } = runOf(h);
     const start = startOf(index, h, T);
     const measured = (total[h] ?? 0) + (run / T) * 30 + start * 10;
     return { h, measured, line, plain: titled[h] === 1 };
