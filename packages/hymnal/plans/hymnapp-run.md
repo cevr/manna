@@ -365,6 +365,9 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 
 - The web is not a product target for the hymnal or Heartseed; only marketing sites matter on the web (owner 2026-10-27: "The web is not a target we care about. The only thing we would care about the web would be the marketing side of anything"; earlier: "You don't need to verify on the web"). Verification runs on iOS only; web-only findings and follow-ups are dropped; the web build and its unit tests stay green but get no new work. playbulk P5 r3 on.
 
+- The hymnal web preview on 8191 is retired (owner 2026-10-27: "And the web preview for the hymnal. We don't really need it"). Merges update the phone build only; reader1 is removed.
+- Tried Gold is deleted (owner 2026-10-27: "Let's delete tried gold"; chose code and live site). The prod Worker was destroyed with Alchemy (plan: 1 to delete, Site) and the code removed in 46aaa9a9e. The triedgold.com domain and its DNS records stay with the owner.
+
 ## Owner questions
 
 - Clicks in silent mode (feel): keep them muted under the silent switch, as iOS keyboard clicks are (recommended: the phone stays quiet at worship), or play them even in silent mode (a new sound path, checked against the hymn audio session). Asked 2026-10-25. Answer (owner, 2026-10-25): "Yeah, the clicks, that's fine. Stay muted in silent mode". No change. (feel)
