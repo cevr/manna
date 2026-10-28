@@ -6,6 +6,7 @@ import {
   Fiber,
   Layer,
   Option,
+  Predicate,
   Stream,
   SubscriptionRef,
 } from 'effect';
@@ -16,7 +17,8 @@ import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
 import { Offline } from '~/offline/cache';
 import { fake } from '~/offline/fixture';
 import { audioUrl } from '~/remote';
-import { localOver, localOn, savingOn } from './offline';
+import { cachedPlayback, localOver, localOn, savingOn } from './offline';
+import { downloadsOn } from '~/offline/live';
 import {
   Command,
   Playback,
@@ -36,7 +38,7 @@ const idle = (cache: typeof Offline.Service) =>
   );
 const device = () => {
   const calls: { uri: string; at: number; number: number; offset: number }[] = [];
-  const control = { failLocal: false, failKey: false, failRemote: false };
+  const control = { failLocal: false, failKey: false, failRemote: false, played: Effect.void };
   const status: Status = { state: 'playing', positionMs: 32000, durationMs: 120000 };
   const api: PlaybackApi = {
     play: (uri, at, options) =>
@@ -47,6 +49,7 @@ const device = () => {
           number: options?.recording?.number ?? 0,
           offset: options?.recording?.offset ?? 0,
         });
+        yield* control.played;
         if (
           (control.failLocal && uri.startsWith('file:')) ||
           (control.failKey && options?.recording?.offset !== 0) ||
@@ -70,6 +73,91 @@ const device = () => {
   return { api, calls, control };
 };
 const timeline = { first: 5000, end: 240000, lines: [] };
+const starting = Predicate.or(Predicate.isTagged('Loading'), Predicate.isTagged('Playing'));
+
+it.effect('offline a session play rejection keeps an intact saved recording', () => {
+  const f = fake(),
+    d = device(),
+    id = { number: 100, offset: 2 };
+  return Effect.gen(function* () {
+    const cache = yield* Offline;
+    yield* cache.enqueue(id);
+    yield* idle(cache);
+    d.control.failLocal = true;
+    const api = localOver(d.api, cache);
+    expect(
+      Exit.isFailure(
+        yield* Effect.exit(
+          api.play(audioUrl(100, 2), 32000, { recording: id, ready: false, continuous: false }),
+        ),
+      ),
+    ).toBe(true);
+    expect((yield* cache.snapshot).saved).toBe(1);
+    expect(d.calls.map((c) => c.uri)).toEqual(['file:///synthetic/100_2']);
+    d.control.failLocal = false;
+    yield* api.play(audioUrl(100, 2), 32000, { recording: id, ready: false, continuous: false });
+    expect(d.calls.map((c) => c.uri)).toEqual([
+      'file:///synthetic/100_2',
+      'file:///synthetic/100_2',
+    ]);
+    // The platform read boundary also validates media bytes, not just size.
+    const bytes = f.files.get('100_2');
+    if (bytes) bytes[0] = 0;
+    yield* api.play(audioUrl(100, 2), 32000, { recording: id, ready: false, continuous: false });
+    expect(d.calls.at(-1)?.uri).toBe(audioUrl(100, 2));
+    expect((yield* cache.snapshot).saved).toBe(0);
+  }).pipe(Effect.provide(f.layer));
+});
+
+it.effect('offline a hung storage index cannot delay public Start', () => {
+  const f = fake(),
+    d = device();
+  f.control.listing = Effect.never;
+  return Effect.gen(function* () {
+    const called = yield* Deferred.make<boolean>();
+    d.control.played = Deferred.succeed(called, true).pipe(Effect.asVoid);
+    const sound = yield* SubscriptionRef.make(true);
+    const player = playerOn(
+      cachedPlayback(Layer.succeed(Playback, d.api), () => Option.some(timeline), sound, f.layer),
+      250,
+    );
+    const registry = yield* Effect.acquireRelease(
+      Effect.sync(() => AtomRegistry.make()),
+      (r) => Effect.sync(() => r.dispose()),
+    );
+    registry.mount(player.send);
+    registry.set(player.send, Command.Start({ track: { number: 100, title: 'Hymn 100' } }));
+    yield* Deferred.await(called);
+    expect(d.calls.map((c) => c.uri)).toEqual([audioUrl(100)]);
+  }).pipe(Effect.scoped);
+});
+
+it.effect('offline live playback and Downloads share exactly one queue in their registry', () => {
+  const f = fake(),
+    d = device();
+  return Effect.gen(function* () {
+    const sound = yield* SubscriptionRef.make(true);
+    const player = playerOn(
+      cachedPlayback(Layer.succeed(Playback, d.api), () => Option.some(timeline), sound, f.layer),
+      250,
+    );
+    const downloads = downloadsOn(f.layer);
+    const registry = yield* Effect.acquireRelease(
+      Effect.sync(() => AtomRegistry.make()),
+      (r) => Effect.sync(() => r.dispose()),
+    );
+    registry.mount(downloads.progress);
+    registry.mount(player.send);
+    registry.set(player.send, Command.Start({ track: { number: 100, title: 'Hymn 100' } }));
+    yield* AtomRegistry.toStreamResult(registry, downloads.progress).pipe(
+      Stream.filter((s) => s.saved === 1),
+      Stream.take(1),
+      Stream.runDrain,
+    );
+    expect(f.control.lists).toBe(1);
+    expect(f.calls.length).toBe(1);
+  }).pipe(Effect.scoped);
+});
 
 for (const continuous of [true, false])
   it.effect(`offline pending lookup keeps pause and resume time continuous=${continuous}`, () => {
@@ -117,8 +205,10 @@ it.effect('offline local read failure retries remote at the provider retained po
     const failed: PlaybackApi = {
       ...d.api,
       play: (uri, at, options) => {
-        if (uri.startsWith('file:'))
+        if (uri.startsWith('file:')) {
+          f.control.readFails = true;
           return PlaybackError.make({ operation: 'play', message: 'synthetic', positionMs: 57000 });
+        }
         return d.api.play(uri, at, options);
       },
     };
@@ -163,6 +253,7 @@ it.effect('offline Pause during a failed local prepare stays paused on the remot
       .pipe(Effect.forkChild);
     yield* Deferred.await(entered);
     yield* api.pause;
+    f.control.readFails = true;
     yield* Deferred.fail(
       reply,
       PlaybackError.make({ operation: 'play', message: 'synthetic', positionMs: 32000 }),
@@ -184,17 +275,21 @@ it.effect('offline a former invalidation cannot start remote after a newer Play'
       release = yield* Deferred.make<boolean>();
     const delayed = {
       ...cache,
-      invalidate: () =>
-        Deferred.succeed(entered, true).pipe(
+      local: (selected: { number: number; offset: number }) => {
+        if (selected.number !== 100 || !f.control.readFails) return cache.local(selected);
+        return Deferred.succeed(entered, true).pipe(
           Effect.andThen(Deferred.await(release)),
-          Effect.asVoid,
-        ),
+          Effect.as(Option.none<string>()),
+        );
+      },
     };
     const failed: PlaybackApi = {
       ...d.api,
       play: (uri, at, options) => {
-        if (uri.startsWith('file:'))
+        if (uri.startsWith('file:')) {
+          f.control.readFails = true;
           return PlaybackError.make({ operation: 'play', message: 'synthetic' });
+        }
         return d.api.play(uri, at, options);
       },
     };
@@ -235,13 +330,19 @@ it.effect('offline missing media keeps the public player failure and retry path'
     );
     registry.mount(player.send);
     registry.set(player.send, Command.Start({ track: { number: 100, title: 'Hymn 100' } }));
-    for (let n = 0; n < 40; n++) yield* Effect.yieldNow;
+    yield* AtomRegistry.toStream(registry, player.state).pipe(
+      Stream.filter((s) => s._tag === 'Failed'),
+      Stream.take(1),
+      Stream.runDrain,
+    );
     expect(registry.get(player.state)._tag).toBe('Failed');
     expect(d.calls.map((c) => c.uri)).toEqual([audioUrl(100)]);
     d.control.failRemote = false;
     f.control.networkFails = false;
+    const retried = yield* Deferred.make<boolean>();
+    d.control.played = Deferred.succeed(retried, true).pipe(Effect.asVoid);
     registry.set(player.send, Command.Resume());
-    for (let n = 0; n < 40; n++) yield* Effect.yieldNow;
+    yield* Deferred.await(retried);
     expect(d.calls.map((c) => c.uri)).toEqual([audioUrl(100), audioUrl(100)]);
   }).pipe(Effect.scoped),
 );
@@ -274,17 +375,7 @@ it.effect(
       ]);
       expect(f.calls.length).toBe(before);
       expect(status.recording?.number).toBe(100);
-      d.control.failLocal = true;
-      yield* clock.play(audioUrl(100, 2), 35000, {
-        recording: id,
-        ready: false,
-        continuous: false,
-      });
-      expect(d.calls.slice(-2).map((c) => c.uri)).toEqual([
-        'file:///synthetic/100_2',
-        audioUrl(100, 2),
-      ]);
-      expect(Option.isNone(yield* cache.local(id))).toBe(true);
+      expect((yield* cache.snapshot).saved).toBe(1);
     }).pipe(Effect.provide(f.layer), Effect.scoped);
   },
 );
@@ -385,15 +476,26 @@ it.effect(
       registry.mount(player.keys);
       registry.set(player.send, Command.Start({ track: { number: 100, title: 'Hymn 100' } }));
       yield* Deferred.await(reached);
-      for (let n = 0; n < 20; n++) yield* Effect.yieldNow;
+      yield* AtomRegistry.toStream(registry, player.state).pipe(
+        Stream.filter(starting),
+        Stream.take(1),
+        Stream.runDrain,
+      );
       yield* clock.adjust(250);
-      for (let n = 0; n < 20; n++) yield* Effect.yieldNow;
       yield* clock.adjust(250);
-      for (let n = 0; n < 20; n++) yield* Effect.yieldNow;
-      expect(registry.get(player.state)._tag).toBe('Playing');
+      yield* AtomRegistry.toStream(registry, player.state).pipe(
+        Stream.filter(starting),
+        Stream.take(1),
+        Stream.runDrain,
+      );
+      expect(['Loading', 'Playing'].includes(registry.get(player.state)._tag)).toBe(true);
       expect(d.calls.length).toBe(0);
       registry.set(moves(100), { transpose: 2, capo: 11 });
-      for (let n = 0; n < 20; n++) yield* Effect.yieldNow;
+      yield* AtomRegistry.toStream(registry, moves(100)).pipe(
+        Stream.filter((m) => m.capo === 11),
+        Stream.take(1),
+        Stream.runDrain,
+      );
       expect(f.calls.length).toBe(1);
       expect(f.calls[0]?.id).toEqual({ number: 100, offset: 2 });
       yield* Deferred.succeed(release, true);

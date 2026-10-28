@@ -98,6 +98,7 @@ export class Offline extends Context.Service<
   Offline,
   {
     readonly enqueue: (id: Identity) => Effect.Effect<void>;
+    readonly shown: (number: number) => Effect.Effect<void>;
     readonly downloadAll: Effect.Effect<void>;
     readonly cancel: Effect.Effect<void>;
     readonly deleteAll: Effect.Effect<void, OfflineError>;
@@ -121,6 +122,8 @@ export const offlineLayer = Layer.effect(Offline)(
   Effect.gen(function* () {
     const media = yield* Media;
     const http = yield* Http;
+    const scope = yield* Effect.scope;
+    let viewing = 0;
     const mutex = yield* Semaphore.make(1);
     const queue = yield* Queue.unbounded<Job>();
     const state = yield* SubscriptionRef.make(empty);
@@ -155,6 +158,7 @@ export const offlineLayer = Layer.effect(Offline)(
     const locked = <A, E>(work: Effect.Effect<A, E>) =>
       mutex.withPermit(work).pipe(Effect.uninterruptible);
     const cancelOwned = Effect.gen(function* () {
+      viewing++;
       epoch++;
       paused = true;
       for (const [key, job] of jobs) {
@@ -333,6 +337,20 @@ export const offlineLayer = Layer.effect(Offline)(
       yield* media.remove(id).pipe(Effect.ensuring(publish));
     });
     return Offline.of({
+      shown: (number) =>
+        Effect.gen(function* () {
+          const owner = ++viewing;
+          if (number < 1 || number > 695) return;
+          yield* Effect.sleep('750 millis').pipe(
+            Effect.andThen(
+              Effect.suspend(() => {
+                if (owner !== viewing) return Effect.void;
+                return locked(add({ number, offset: 0 }).pipe(Effect.andThen(publish)));
+              }),
+            ),
+            Effect.forkIn(scope),
+          );
+        }),
       enqueue: (id) => locked(add(id).pipe(Effect.andThen(publish))),
       downloadAll: Deferred.await(indexed).pipe(
         Effect.andThen(media.protect),

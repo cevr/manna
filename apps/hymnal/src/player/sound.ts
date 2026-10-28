@@ -438,11 +438,11 @@ export const scoreClock = (
   });
 
 /** The player's playback: the score clock over `device`'s (`LivePlayer.tsx`). */
-export const soundOn = (
-  device: Layer.Layer<Playback>,
+export const soundOn = <R>(
+  device: Layer.Layer<Playback, never, R>,
   timelineFor: (hymn: number) => Option.Option<Timeline>,
   sound: SubscriptionRef.SubscriptionRef<boolean>,
-): Layer.Layer<Playback> =>
+): Layer.Layer<Playback, never, R> =>
   Layer.effect(Playback)(
     Effect.gen(function* () {
       return yield* scoreClock(yield* Playback, timelineFor, sound);

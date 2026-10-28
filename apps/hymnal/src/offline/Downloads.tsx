@@ -1,10 +1,30 @@
 import { useAtomSet, useAtomValue } from '@effect/atom-react';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { color, useAccent } from '~/color';
 import { plain, useCue } from '~/feel/cue';
+import bundled from 'virtual:hymnal-timing';
+import { Option, Schema } from 'effect';
 import { empty } from './cache';
 import { Action, progress, send } from './live';
+
+const duration = Schema.decodeUnknownOption(
+  Schema.fromJsonString(Schema.Struct({ end: Schema.Finite })),
+);
+let estimated = Option.none<number>();
+const estimateTotal = () =>
+  Option.getOrElse(estimated, () => {
+    let seconds = 0;
+    for (const [, encoded] of bundled)
+      seconds += Option.getOrElse(
+        Option.map(duration(encoded), (t) => t.end / 1000 + 4),
+        () => 0,
+      );
+    const value = Math.ceil((seconds * 24000) / 1_000_000);
+    estimated = Option.some(value);
+    return value;
+  });
 
 /** Progress redraws only this leaf, never Settings or the hymn pager. */
 export function Downloads() {
@@ -14,8 +34,15 @@ export function Downloads() {
   const accent = useAccent();
   const cue = useCue();
   const busy = state.active + state.queued > 0;
-  let allLabel = 'Download all recordings';
-  if (state.paused || state.failed > 0) allLabel = 'Resume download';
+  const [confirming, confirm] = useState(false);
+  // The set uses 192 kb/s. Estimate durations without decoding the follow book.
+  const estimate = estimateTotal();
+  const megabytes = (bytes: number) => (bytes / 1_000_000).toFixed(2);
+  let failure =
+    'Some recordings could not be saved. Check the connection, then choose Download all recordings to retry.';
+  if (state.storage)
+    failure =
+      'Downloads stopped because storage is unavailable. Free space, then choose Download all recordings to retry.';
   const action = (event: Action) => {
     cue(plain('choose'));
     ask(event);
@@ -41,33 +68,49 @@ export function Downloads() {
           </View>
           <Text
             testID="downloads-size"
+            aria-label={`${state.saved} saved · ${state.bytes.toLocaleString()} bytes · ${megabytes(state.bytes)} MB`}
             style={styles.detail}
-          >{`${state.saved} saved · ${state.bytes.toLocaleString()} bytes`}</Text>
+          >{`${state.saved} saved · ${megabytes(state.bytes)} MB`}</Text>
           {busy && (
             <Text
               testID="downloads-active"
+              aria-label={`${state.active} downloading · ${state.queued} queued · ${state.partialBytes.toLocaleString()} partial bytes · ${megabytes(state.partialBytes)} MB`}
               style={styles.detail}
-            >{`${state.active} downloading · ${state.queued} queued · ${state.partialBytes.toLocaleString()} partial bytes`}</Text>
+            >{`${state.active} downloading · ${state.queued} queued · ${megabytes(state.partialBytes)} MB partial`}</Text>
           )}
           {state.paused && (
             <Text style={styles.detail}>
-              Download cancelled. Resume to keep completed recordings.
+              Download paused. Download all recordings resumes unfinished saves and keeps completed
+              recordings.
             </Text>
           )}
-          {(state.failed > 0 || AsyncResult.isFailure(result)) && (
+          {(state.failed > 0 || state.storage || AsyncResult.isFailure(result)) && (
             <Text role="alert" style={styles.detail}>
-              Some recordings could not be saved. Check storage and connection, then retry.
+              {failure}
+            </Text>
+          )}
+          <Text
+            style={styles.detail}
+          >{`Estimated total: ${estimate.toLocaleString()} MB for 695 recordings. Actual size varies. Downloads use mobile data on mobile networks.`}</Text>
+          {Platform.OS === 'web' && (
+            <Text style={styles.detail}>
+              Your browser may remove downloaded recordings. Storage protection is requested when
+              you choose Download all recordings. You can download them again if needed.
+            </Text>
+          )}
+          {Platform.OS === 'ios' && (
+            <Text style={styles.detail}>
+              Downloaded recordings stay on this device and are excluded from iCloud backup.
             </Text>
           )}
         </View>
         <Pressable
           role="button"
           aria-label="Download all recordings"
-          disabled={busy}
           onPress={() => action(Action.All())}
           style={({ pressed }) => [styles.row, pressed && styles.pressed]}
         >
-          <Text style={[styles.label, { color: accent }]}>{allLabel}</Text>
+          <Text style={[styles.label, { color: accent }]}>Download all recordings</Text>
         </Pressable>
         {busy && (
           <Pressable
@@ -82,11 +125,37 @@ export function Downloads() {
         <Pressable
           role="button"
           aria-label="Delete downloads"
-          onPress={() => action(Action.Delete())}
+          onPress={() => confirm(true)}
           style={({ pressed }) => [styles.row, pressed && styles.pressed]}
         >
           <Text style={[styles.label, { color: accent }]}>Delete downloads</Text>
         </Pressable>
+        {confirming && (
+          <View style={styles.summary}>
+            <Text style={styles.detail}>
+              Delete all downloaded recordings and partial saves from this app?
+            </Text>
+            <Pressable
+              role="button"
+              aria-label="Confirm delete downloads"
+              onPress={() => {
+                confirm(false);
+                action(Action.Delete());
+              }}
+              style={styles.row}
+            >
+              <Text style={[styles.label, { color: accent }]}>Confirm delete downloads</Text>
+            </Pressable>
+            <Pressable
+              role="button"
+              aria-label="Keep downloads"
+              onPress={() => confirm(false)}
+              style={styles.row}
+            >
+              <Text style={[styles.label, { color: accent }]}>Keep downloads</Text>
+            </Pressable>
+          </View>
+        )}
       </View>
     </View>
   );

@@ -14,10 +14,6 @@ export const offlineLive = offlineLayer.pipe(
   Layer.provide(mediaLayer),
   Layer.provide(httpLayer(origin())),
 );
-const runtime = Atom.runtime(offlineLive);
-export const progress = runtime
-  .atom(Stream.unwrap(Effect.map(Offline, (cache) => cache.changes)), { initialValue: empty })
-  .pipe(Atom.withServerValue(() => AsyncResult.success(empty)));
 export type Action = Data.TaggedEnum<{
   Open: { readonly number: number };
   All: {};
@@ -25,15 +21,24 @@ export type Action = Data.TaggedEnum<{
   Delete: {};
 }>;
 export const Action = Data.taggedEnum<Action>();
-export const send = runtime.fn(
-  Effect.fn('Offline.command')(function* (action: Action) {
-    const cache = yield* Offline;
-    return yield* Action.$match(action, {
-      Open: ({ number }) => cache.enqueue({ number, offset: 0 }),
-      All: () => cache.downloadAll,
-      Cancel: () => cache.cancel,
-      Delete: () => cache.deleteAll,
-    });
-  }),
-  { concurrent: true },
-);
+/** The progress and player runtimes share this exact layer in one registry. */
+export const downloadsOn = (layer: Layer.Layer<Offline>) => {
+  const runtime = Atom.runtime(layer);
+  const progress = runtime
+    .atom(Stream.unwrap(Effect.map(Offline, (cache) => cache.changes)), { initialValue: empty })
+    .pipe(Atom.withServerValue(() => AsyncResult.success(empty)));
+  const send = runtime.fn(
+    Effect.fn('Offline.command')(function* (action: Action) {
+      const cache = yield* Offline;
+      return yield* Action.$match(action, {
+        Open: ({ number }) => cache.shown(number),
+        All: () => cache.downloadAll,
+        Cancel: () => cache.cancel,
+        Delete: () => cache.deleteAll,
+      });
+    }),
+    { concurrent: true },
+  );
+  return { progress, send };
+};
+export const { progress, send } = downloadsOn(offlineLive);

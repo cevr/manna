@@ -2,6 +2,8 @@
 import { Clock, Effect, Layer, Option } from 'effect';
 import { Offline } from '~/offline/cache';
 import { clockAt, placeOf, type Clock as Run } from '~/follow/clock';
+import { recordingsOn } from './recording';
+import { soundOn } from './sound';
 import { Playback, PlaybackError, type PlaybackApi, type PlayOptions, type Intent } from './player';
 
 export const localOver = (device: PlaybackApi, cache: typeof Offline.Service): PlaybackApi => {
@@ -65,16 +67,11 @@ export const localOver = (device: PlaybackApi, cache: typeof Offline.Service): P
               if (owner !== generation || error.operation === 'superseded') return yield* error;
               if (error.operation !== 'play' && error.operation !== 'local-read')
                 return yield* error;
-              yield* cache
-                .invalidate(id)
-                .pipe(
-                  Effect.catch((error) =>
-                    Effect.logWarning('offline.invalidate.failed').pipe(
-                      Effect.annotateLogs({ code: error.code }),
-                    ),
-                  ),
-                );
+              // A device/session error does not imply corrupt media. Recheck
+              // the storage boundary; only its failed validation invalidates.
+              const intact = yield* cache.local(id);
               if (owner !== generation) return yield* stale();
+              if (Option.isSome(intact)) return yield* error;
               // One remote retry only; the existing recording wrapper owns key fallback.
               return yield* attempt(
                 uri,
@@ -109,7 +106,7 @@ export const localOn = (device: Layer.Layer<Playback>) =>
     }),
   ).pipe(Layer.provide(device));
 
-export const savingOn = (device: Layer.Layer<Playback>) =>
+export const savingOn = <R>(device: Layer.Layer<Playback, never, R>) =>
   Layer.effect(Playback)(
     Effect.gen(function* () {
       const cache = yield* Offline;
@@ -126,3 +123,11 @@ export const savingOn = (device: Layer.Layer<Playback>) =>
       });
     }),
   ).pipe(Layer.provide(device));
+
+/** One offline provision surrounds selection, silent clock and acquisition. */
+export const cachedPlayback = (
+  device: Layer.Layer<Playback>,
+  timeline: Parameters<typeof soundOn>[1],
+  sound: Parameters<typeof soundOn>[2],
+  cache: Layer.Layer<Offline>,
+) => savingOn(soundOn(recordingsOn(localOn(device)), timeline, sound)).pipe(Layer.provide(cache));

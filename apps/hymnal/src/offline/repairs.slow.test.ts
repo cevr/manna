@@ -1,5 +1,6 @@
 import { Deferred, Effect, Option, References, Stream } from 'effect';
 import { expect, it } from 'effect-bun-test';
+import { TestClock } from 'effect/testing';
 import { Offline, identityKey } from './cache';
 import { fake } from './fixture';
 
@@ -9,6 +10,23 @@ const idle = (cache: typeof Offline.Service) =>
     Stream.take(1),
     Stream.runDrain,
   );
+
+it.effect('offline quick page turns and Cancel retire pending open saves', () => {
+  const f = fake();
+  return Effect.gen(function* () {
+    const cache = yield* Offline;
+    yield* cache.shown(100);
+    yield* cache.shown(3);
+    yield* TestClock.adjust(750);
+    yield* idle(cache);
+    expect(f.calls.map((c) => c.id.number)).toEqual([3]);
+    yield* cache.shown(100);
+    yield* cache.cancel;
+    yield* TestClock.adjust(750);
+    yield* idle(cache);
+    expect(f.calls.map((c) => c.id.number)).toEqual([3]);
+  }).pipe(Effect.provide(f.layer));
+});
 
 for (const offset of [-5, 0, 6])
   for (const removalAt of [8, 16])

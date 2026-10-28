@@ -13,7 +13,7 @@ export function SaveShown() {
   );
   const ask = useAtomSet(send);
   useEffect(() => {
-    if (number > 0) ask(Action.Open({ number }));
+    ask(Action.Open({ number }));
   }, [number, ask]);
   return <></>;
 }

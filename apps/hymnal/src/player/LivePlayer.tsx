@@ -6,7 +6,7 @@
  */
 
 import { useAtomMount, useAtomValue } from '@effect/atom-react';
-import { Effect, Layer, Option, SubscriptionRef } from 'effect';
+import { Effect, Option, SubscriptionRef } from 'effect';
 import { type ReactNode, useEffect } from 'react';
 
 import { book } from '~/follow/book';
@@ -16,20 +16,14 @@ import { settings } from '~/store';
 import { PlayerContext } from './context';
 import { playbackLive } from './playback.live';
 import { playerOn, statusEvery } from './player';
-import { soundOn } from './sound';
-import { recordingsOn } from './recording';
-import { localOn, savingOn } from './offline';
+import { cachedPlayback } from './offline';
 import { offlineLive } from '~/offline/live';
 import { SaveShown } from '~/offline/Open';
 
 /** Whether the recording sounds, as the score clock reads it: the Sound setting, set at mount. */
 const sound = Effect.runSync(SubscriptionRef.make(true));
 const player = playerOn(
-  counted(
-    savingOn(
-      soundOn(recordingsOn(localOn(playbackLive).pipe(Layer.provide(offlineLive))), book.of, sound),
-    ).pipe(Layer.provide(offlineLive)),
-  ),
+  counted(cachedPlayback(playbackLive, book.of, sound, offlineLive)),
   statusEvery,
   settings.move,
 );

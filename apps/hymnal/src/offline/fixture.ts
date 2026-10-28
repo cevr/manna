@@ -32,6 +32,7 @@ export const fake = () => {
     before: (_id: Identity, _at: number): Effect.Effect<void> => Effect.void,
     writing: Effect.void,
     listing: Effect.void,
+    lists: 0,
   };
   const fail = () => OfflineError.make({ code: 'storage' });
   const media = Layer.succeed(
@@ -39,9 +40,10 @@ export const fake = () => {
     Media.of({
       removeOld: Effect.void,
       protect: Effect.void,
-      list: Effect.suspend(() => control.listing).pipe(
-        Effect.andThen(Effect.sync(() => [...entries.values()])),
-      ),
+      list: Effect.suspend(() => {
+        control.lists++;
+        return control.listing;
+      }).pipe(Effect.andThen(Effect.sync(() => [...entries.values()]))),
       size: (id) => Effect.sync(() => files.get(identityKey(id))?.length ?? 0),
       append: (id, at, bytes) =>
         Effect.gen(function* () {

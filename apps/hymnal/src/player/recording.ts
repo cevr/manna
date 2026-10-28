@@ -143,5 +143,7 @@ export const recordingsOver = (device: PlaybackApi): PlaybackApi => {
   };
 };
 
-export const recordingsOn = (device: Layer.Layer<Playback>): Layer.Layer<Playback> =>
+export const recordingsOn = <R>(
+  device: Layer.Layer<Playback, never, R>,
+): Layer.Layer<Playback, never, R> =>
   Layer.effect(Playback)(Effect.map(Playback, recordingsOver)).pipe(Layer.provide(device));

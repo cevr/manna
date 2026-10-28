@@ -4476,3 +4476,33 @@ The form of an entry, each field on its own line:
 - **Wrong:** Init replaced main bytes while committed pages belonged to an outgoing WAL. The first ledger entry also attributed the orchestrator's refusal decision to the owner without an owner quote.
 - **Cause:** Replacement treated a destination as one file, and optional-source error handling could hide refusal. One core metadata check now covers the destination and resolved path before activation. Every install stages and renames; all refusals fail the final command after unaffected work finishes. This entry retracts the unsupported owner attribution and records the actual orchestrator decision.
 - **Guard:** code: `packages/cli/test/commands/init.test.ts` `forced init refuses every non-empty WAL and reports all refusals without touching destinations`; `packages/cli/test/commands/init.test.ts` `forced init refuses live WALs beside all four resolved symlink targets`; `packages/cli/test/commands/init.test.ts` `forced init permits empty and absent WALs at the CLI pre-check and fails closed on stat errors`; `packages/core/src/platform-bun/file-corpus-lifecycle.test.ts` `refuses non-empty destination WALs at activation and permits empty or absent WALs`
+
+### hymnal-offline-origin-and-owned-writes
+
+- **Date:** 2026-10-28
+- **Kind:** correction
+- **Said:** "Resume valid partials only when response validators/range semantics agree."
+- **Source:** hymnapp/playbulk/p5-round-1-findings.md M1, m1, m2, m6, o2
+- **Wrong:** The fake origin allowed a header that R2 refused. Removal during a range could publish a gap. A storage failure drained the entire bulk queue; a job defect killed a worker; Resume omitted failed changed keys.
+- **Cause:** The fake CORS contract was wider than production and ownership was checked before, rather than after, network work. Storage, job and resume states did not share one boundary.
+- **Guard:** code: `apps/hymnal/src/offline/http.slow.test.ts` `offline multi-range requests obey the deployed bucket CORS headers`; `apps/hymnal/src/offline/repairs.slow.test.ts` `offline removal during range restarts the whole file offset=0 at=8`, `offline full storage halts the bulk after at most two ranges`, `offline Cancel stays paused after Open and All retries failed changed keys`, `offline a defect in one job leaves both workers available`
+
+### hymnal-offline-start-and-intact-media
+
+- **Date:** 2026-10-28
+- **Kind:** correction
+- **Said:** "Saved sets resolve locally first."
+- **Source:** hymnapp/playbulk/p5-round-1-findings.md m3, m4, o1, T3
+- **Wrong:** A session Play rejection deleted intact media. Player construction waited for the entire saved index. Queue sharing was implicit and tests waited for an arbitrary number of yields.
+- **Cause:** A device failure was treated as a file failure and disk discovery was part of layer construction.
+- **Guard:** code: `apps/hymnal/src/player/offline.slow.test.ts` `offline a session play rejection keeps an intact saved recording`, `offline a hung storage index cannot delay public Start`, `offline live playback and Downloads share exactly one queue in their registry`
+
+### hymnal-downloaded-storage-limits
+
+- **Date:** 2026-10-28
+- **Kind:** correction
+- **Said:** "Offline must use durable app-owned media storage."
+- **Source:** hymnapp/playbulk/p5-round-1-findings.md m7
+- **Wrong:** OPFS alone did not grant persistence and iOS application support was eligible for backup.
+- **Cause:** Platform directories were treated as a complete durability policy.
+- **Guard:** skill: `.claude/skills/verify-hymnal/features/offline.md` — check iOS backup exclusion through the native setter/readback boundary; request web persistence and keep its eviction limit visible.
