@@ -158,6 +158,18 @@ What the drivers do that a step does not show:
   Fit the knob's `x` to the clock to prove the seeker moves on time
   (`player-spring`, `chords-sound`).
 
+## Argent
+
+[Argent](https://github.com/software-mansion/argent) 0.30.1 reads what `sim` cannot: React render counts and durations, a Hermes CPU profile of the app itself (not a desktop Hermes stand-in), the React component tree, the JS console, and Instruments traces. Its skills are vendored beside this one (`argent-ios-simulator-setup`, `argent-device-interact`, `argent-react-native-profiler`, `argent-react-native-optimization`, `argent-native-profiler`, `argent-metro-debugger`, `argent-react-native-app-workflow`). On One, which serves its bundle from its own dev server rather than Metro, the debugger and profiler tools are not yet proven; a run that cannot attach says so and falls back to `sim`. `sim` stays the journey driver.
+
+- **Reach it.** In a session that loads the project's `.mcp.json`, as the `mcp__argent__*` tools. Elsewhere (orchestrate workers have no MCP servers), as `DO_NOT_TRACK=1 npx -y @swmansion/argent@0.30.1 run <tool> --help`, then the call; `npx -y @swmansion/argent@0.30.1 tools` lists the tools.
+- **Telemetry** stays off: `.mcp.json` sets `DO_NOT_TRACK`, and every CLI call above sets it too.
+- **No screenshots.** The project flag in `.argent/flags.json` (`disable-auto-screenshot`) stops the screenshot argent takes after each action; read the accessibility tree it returns instead. Never call its `screenshot`, `screenshot-diff` or screen-recording tools on a hymn page.
+- **The tree holds hymn words.** `describe` and the component tree carry what the screen shows: match by hymn number, testID and accessibility handle, as `sim` does, and copy no text from them into evidence, logs or reports.
+- **Only the `verify-hymnal` simulator.** Take its udid from `list-devices` and pass it on every call. Never target an entry of kind `"device"` (the owner's iPhone is one over USB), and never boot, erase or drive another simulator.
+- **No sound.** `boot-device` boots muted unless asked; never pass `sound: true`, and never enable the `boot-sound` flag.
+- **Read, never steer.** `debugger-evaluate` may read state for a measure; it never writes storage or calls the app's atoms to reach a state (Drive).
+
 ## Evidence
 
 All of it goes under `$EVIDENCE`, outside the checkout's tracked files:

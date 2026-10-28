@@ -209,3 +209,7 @@ packages/cli/.bible/
 # The First the Blade prerender's server build (apps/firsttheblade/.prerender),
 # written by its `build` script and read once to draw the pages.
 .prerender/
+
+# argent: only the project flags are tracked (recordings, e2e runs and logs stay local)
+.argent/*
+!.argent/flags.json
