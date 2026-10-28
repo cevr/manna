@@ -1,0 +1,102 @@
+/**
+ * Meaning search over the shipped table: what it returns, never how well
+ * (the acceptance's theme queries measure that). Queries are plain English
+ * made here; each check compares hymn numbers or counts.
+ */
+
+import { describe, expect, it } from 'bun:test';
+
+import { meaning } from '../../assets/meaning/meaning.js';
+import { hymns } from './hymns';
+import { about, moreLike } from './meaning';
+
+const numbers = new Set(hymns.map((hymn) => hymn.number));
+const distinctHymns = (found: ReadonlyArray<number>) =>
+  new Set(found).size === found.length && found.every((n) => numbers.has(n));
+
+describe('the shipped table', () => {
+  it('holds a vector for every hymn of the app, in number order', () => {
+    expect(meaning().hymns.split(' ').map(Number)).toEqual(hymns.map((hymn) => hymn.number));
+  });
+});
+
+describe('about', () => {
+  it('lists distinct hymns, at most as many as asked, ten by default', () => {
+    const found = about('comfort in sorrow');
+    expect({ count: found.length, distinct: distinctHymns(found) }).toEqual({
+      count: 10,
+      distinct: true,
+    });
+    expect(about('comfort in sorrow', 3)).toEqual(found.slice(0, 3));
+  });
+
+  it('finds no hymn for a query of words the table lacks', () => {
+    expect(about('qzxv vvqz')).toEqual([]);
+    expect(about('')).toEqual([]);
+  });
+
+  it('reads past the words a reader adds to ask, and the case and accents of the rest', () => {
+    expect(about('Hymns about PEACE')).toEqual(about('peace'));
+    expect(about('songs about péace')).toEqual(about('peace'));
+  });
+
+  it('weighs a word the hymns hold everywhere at little', () => {
+    expect(about('the and peace', 5)).toEqual(about('peace', 5));
+  });
+});
+
+describe('the ranking', () => {
+  /** The file decoded with Node's base64, apart from the module's own decoder. */
+  const file = meaning();
+  const bytes = (text: string) => new Uint8Array(Buffer.from(text, 'base64'));
+  const words = file.words.split(' ');
+  const weights = new Float32Array(bytes(file.weights).buffer);
+  const table = bytes(file.table);
+  const vectors = new Int8Array(bytes(file.vectors).buffer);
+  const order = file.hymns.split(' ').map(Number);
+  const D = file.dims;
+  /** Each value of word `w`'s row, times its weight. */
+  const rowOf = (w: number) =>
+    Array.from({ length: D }, (_, c) => {
+      const byte = table[(w * D + c) >> 1] ?? 0;
+      return (([byte >> 4, byte & 15][c % 2] ?? 0) - 8) * (weights[w] ?? 0);
+    });
+  const vectorOf = (h: number) => Array.from({ length: D }, (_, c) => vectors[h * D + c] ?? 0);
+  const cosineTop = (query: ReadonlyArray<number>, count: number, skip: number) => {
+    const length = (v: ReadonlyArray<number>) => Math.hypot(...v);
+    const scored = order.map((n, h) => {
+      const v = vectorOf(h);
+      return { n, score: v.reduce((s, x, c) => s + x * (query[c] ?? 0), 0) / length(v) };
+    });
+    return scored
+      .filter(({ n }) => n !== skip)
+      .toSorted((a, b) => b.score - a.score)
+      .slice(0, count)
+      .map(({ n }) => n);
+  };
+
+  it('ranks the hymns about a word as the cosine of its row and their vectors does', () => {
+    const w = words.indexOf('peace');
+    expect(about('peace', 10)).toEqual(cosineTop(rowOf(w), 10, 0));
+  });
+
+  it('ranks the hymns like a hymn as the cosine of their vectors does', () => {
+    expect(moreLike(100, 10)).toEqual(cosineTop(vectorOf(order.indexOf(100)), 10, 100));
+  });
+});
+
+describe('more like', () => {
+  it('lists the hymns nearest a hymn, never the hymn itself', () => {
+    const found = moreLike(100, 8);
+    expect({
+      count: found.length,
+      distinct: distinctHymns(found),
+      self: found.includes(100),
+    }).toEqual({ count: 8, distinct: true, self: false });
+  });
+
+  it('finds none for a number the hymnal lacks', () => {
+    expect(moreLike(0)).toEqual([]);
+    expect(moreLike(9999)).toEqual([]);
+  });
+});
