@@ -44,7 +44,15 @@ const puppet = (
   skeleton: SKELETONS[view],
   origin: [0, 0],
   concept: { image: { cast: 'lead-feast', sheet }, box },
+  paper: PAPERS[view],
 });
+
+/** Each cut view's paper, the median of its kept view's border ground (its rim is un-matted from it, `core/unmatte.ts`). */
+export const PAPERS = {
+  front: [253, 241, 218],
+  threeQuarterLeft: [253, 242, 220],
+  'heads-4': [254, 242, 218],
+} as const satisfies Readonly<Record<keyof typeof SKELETONS, readonly [number, number, number]>>;
 
 /** Each cut view's kept box on its sheet (`cast-sheet.json`). */
 export const BOXES = {
