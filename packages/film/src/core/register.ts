@@ -109,6 +109,29 @@ export const drawSimilar = (
   fit: Similarity,
 ): Raster => drawSummed(summedOf(picture), width, height, fit);
 
+/**
+ * `picture` drawn into a `width` × `height` view by `fit`, each view pixel
+ * the one picture pixel under its centre (held inside the picture): no
+ * averaging, so the picture's own grain stays in each pixel it gives.
+ */
+export const drawPoint = (
+  picture: Raster,
+  width: number,
+  height: number,
+  fit: Similarity,
+): Raster => {
+  const rgba = new Uint8Array(width * height * 4);
+  const [pw, ph] = [picture.width, picture.height];
+  for (let i = 0; i < width * height; i++) {
+    const [x, y] = [i % width, Math.floor(i / width)];
+    const u = Math.min(pw - 1, Math.max(0, Math.floor((x + 0.5 - fit.dx) / fit.s)));
+    const v = Math.min(ph - 1, Math.max(0, Math.floor((y + 0.5 - fit.dy) / fit.s)));
+    rgba.set(picture.rgba.subarray((v * pw + u) * 4, (v * pw + u) * 4 + 3), i * 4);
+    rgba[i * 4 + 3] = 255;
+  }
+  return { width, height, rgba };
+};
+
 /** The most a fit's shift step starts at, pixels, and its scale step, a part of the scale. */
 const SHIFT_STEP = 4;
 const SCALE_STEP = 0.02;

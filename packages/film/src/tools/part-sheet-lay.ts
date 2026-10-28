@@ -1,8 +1,9 @@
 // An okra answer laid into a view's part sheet, and measured. The answer is
 // laid back over the view by one similarity fitted on colour where it still
-// shows the view (`core/register.ts`). Its paint is the answer less the
-// paper the view's own ground reaches; each painted pixel goes under the
-// nearest part that does not move, in that part's tone, and only through
+// shows the view (`core/register.ts`). Its paint, each pixel the one answer
+// pixel under its centre (`drawPoint`, so okra's grain is not averaged),
+// is the answer less the paper the view's own ground reaches; each painted
+// pixel goes under the nearest part that does not move, in that part's tone, and only through
 // `paintHidden`, so paint never shows at rest. The measures are read on
 // domains the sheet fixes before any answer is read: the drift over the
 // pixels kept by the parts the hidden areas lie on, the seam and each such
@@ -15,7 +16,7 @@ import { componentsOf, deltaE, labOf, rgbAt } from '../core/cast-sheet-pixels.ts
 import { grainOf } from '../core/grain.ts';
 import { type cutParts, paintHidden, recompose } from '../core/part-sheet.ts';
 import type { Raster } from '../core/raster.ts';
-import { drawSimilar, fitSimilarity } from '../core/register.ts';
+import { drawPoint, drawSimilar, fitSimilarity } from '../core/register.ts';
 
 /** A view's part sheet, as `cutParts` gives it. */
 export type Sheet = ReturnType<typeof cutParts> extends Result.Result<infer A, unknown> ? A : never;
@@ -430,8 +431,10 @@ export const layAnswer = (target: LayTarget, answer: Raster) => {
   const k = (portrait.width / answer.width + portrait.height / answer.height) / 2;
   const fit = fitSimilarity(view, answer, where, { s: pad.s * k, dx: pad.dx, dy: pad.dy });
   const laid = drawSimilar(answer, view.width, view.height, fit);
-  const painted = paintedOf(sheet, hidden, laid);
-  return Result.map(layHidden(view, sheet, domain.behind, painted, laid), (made) => ({
+  // the paint takes one answer pixel each, so okra's grain is not averaged away; the drift reads the footprint mean
+  const point = drawPoint(answer, view.width, view.height, fit);
+  const painted = paintedOf(sheet, hidden, point);
+  return Result.map(layHidden(view, sheet, domain.behind, painted, point), (made) => ({
     fit,
     made,
     measures: measureHidden(view, made, domain, target.moving, laid),

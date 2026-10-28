@@ -2627,10 +2627,11 @@ route, the subscription; never `--model`, the paid API. The answer is laid
 back over the view by one similarity fitted on colour where it still shows
 the view (`fitSimilarity`, `core/register.ts`: a coordinate descent with
 halving steps on the scale and shift, each view pixel the answer's mean over
-its footprint). Its paint is the answer less the paper the view's ground
-reaches. Each painted pixel goes under the nearest part that does not move,
-in that part's tone (each piece shifted by its mean step to the pixels the
-part keeps beside it), and only through `paintHidden`, so paint never shows
+its footprint). Its paint, each pixel the one answer pixel under its centre
+(`drawPoint`, so okra's grain is not averaged away), is the answer less
+the paper the view's ground reaches. Each painted pixel goes under the
+nearest part that does not move, in that part's tone (each piece shifted
+by its mean step to the pixels the part keeps beside it), and only through `paintHidden`, so paint never shows
 at rest (`tools/part-sheet-lay.ts`). Each answer is measured on domains
 the sheet fixes before any answer is read: the drift (the laid answer
 against the view over the pixels kept by the parts the hidden areas lie on,

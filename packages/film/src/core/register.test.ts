@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { Raster } from './raster.ts';
-import { drawSimilar, fitSimilarity, padInto } from './register.ts';
+import { drawPoint, drawSimilar, fitSimilarity, padInto } from './register.ts';
 
 type Similarity = Parameters<typeof drawSimilar>[3];
 
@@ -54,5 +54,14 @@ describe('register', () => {
       if (i % 4 !== 3) worst = Math.max(worst, Math.abs((back.rgba[i] ?? 0) - (view.rgba[i] ?? 0)));
     expect(worst).toBeLessThan(40);
     expect(picture.rgba.subarray(0, 4)).toEqual(new Uint8Array([240, 230, 210, 255]));
+  });
+
+  test('a point draw gives each view pixel the one picture pixel under its centre, unaveraged', () => {
+    // the picture's every other pixel, each its own colour: the point draw at half scale picks them alone
+    const back = drawPoint(PICTURE, 32, 32, { s: 0.5, dx: 0, dy: 0 });
+    const at = (r: Raster, x: number, y: number, w: number) =>
+      r.rgba.subarray((y * w + x) * 4, (y * w + x) * 4 + 4);
+    expect(at(back, 5, 7, 32)).toEqual(at(PICTURE, 11, 15, 64));
+    expect(at(back, 31, 0, 32)).toEqual(at(PICTURE, 63, 1, 64));
   });
 });
