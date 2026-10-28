@@ -1,5 +1,6 @@
-// The series lead's skeletons, one a cut view (`core/puppet.ts`), view
-// pixels: his lean from his sash's knot to the base of his neck, his neck
+// The series lead's skeletons, one a cut view (`core/puppet.ts`), read in
+// view pixels and moved into its part sheet's frame (`frames.ts`): his lean
+// from his sash's knot to the base of his neck, his neck
 // and head above it, and each arm's shoulder, elbow and wrist on the joints
 // his cut records (`joints.ts`), the wrist at the cuff and its tip at his
 // circle hand's middle. His torso and sash lean; his robe, sandals and
@@ -10,6 +11,8 @@
 // Pure data.
 
 import type { Skeleton } from '@manna/film/core';
+import { Option } from 'effect';
+import { type FramedView, keptAt } from './frames.ts';
 import { JOINTS } from './joints.ts';
 
 type Pt = readonly [number, number];
@@ -90,44 +93,68 @@ const standing = (s: Standing): Skeleton & { readonly root: Pt } => ({
   root: s.hip,
 });
 
-/** Each cut view's skeleton, by the view's name in his sheets' views. */
+/** A skeleton read in the kept view's pixels, moved into its part sheet's frame (`frames.ts`): every joint, tip, flap and the root by the pad's left and top. */
+const framed = (
+  view: FramedView,
+  s: Skeleton & { readonly root: Pt },
+): Skeleton & { readonly root: Pt } => {
+  const [dx, dy] = keptAt(view);
+  const at = (p: Pt): Pt => [p[0] + dx, p[1] + dy];
+  return {
+    bones: s.bones.map((b) => ({ ...b, pivot: at(b.pivot), tip: at(b.tip) })),
+    skin: s.skin,
+    flaps: Option.getOrElse(Option.fromUndefinedOr(s.flaps), () => []).map((f) => ({
+      ...f,
+      region: f.region.map(at),
+    })),
+    root: at(s.root),
+  };
+};
+
+/** Each cut view's skeleton in its part sheet's frame, by the view's name in his sheets' views. */
 export const SKELETONS = {
-  front: standing({
-    hip: [123, 360],
-    neck: [123, 205],
-    chin: [122, 185],
-    crown: [120, 20],
-    ...JOINTS.front,
-    wristRight: [31, 405],
-    handRight: [29.5, 429],
-    wristLeft: [215, 405],
-    handLeft: [216.5, 428.5],
-    flapRight: 51,
-    flapLeft: 199,
-    capRight: 13,
-    capLeft: 13,
-  }),
-  threeQuarterLeft: standing({
-    hip: [110, 360],
-    neck: [107, 215],
-    chin: [106, 195],
-    crown: [100, 20],
-    ...JOINTS.threeQuarterLeft,
-    wristRight: [22, 405],
-    handRight: [20, 430],
-    wristLeft: [183, 405],
-    handLeft: [184, 430],
-    flapRight: 45,
-    flapLeft: 152,
-    capRight: 11,
-    capLeft: 13,
-  }),
-  'heads-4': {
+  front: framed(
+    'front',
+    standing({
+      hip: [123, 360],
+      neck: [123, 205],
+      chin: [122, 185],
+      crown: [120, 20],
+      ...JOINTS.front,
+      wristRight: [31, 405],
+      handRight: [29.5, 429],
+      wristLeft: [215, 405],
+      handLeft: [216.5, 428.5],
+      flapRight: 51,
+      flapLeft: 199,
+      capRight: 13,
+      capLeft: 13,
+    }),
+  ),
+  threeQuarterLeft: framed(
+    'threeQuarterLeft',
+    standing({
+      hip: [110, 360],
+      neck: [107, 215],
+      chin: [106, 195],
+      crown: [100, 20],
+      ...JOINTS.threeQuarterLeft,
+      wristRight: [22, 405],
+      handRight: [20, 430],
+      wristLeft: [183, 405],
+      handLeft: [184, 430],
+      flapRight: 45,
+      flapLeft: 152,
+      capRight: 11,
+      capLeft: 13,
+    }),
+  ),
+  'heads-4': framed('heads-4', {
     bones: [
       { name: 'lean', pivot: [120, 336], tip: [120, 232] },
       { name: 'head', parent: 'lean', pivot: [120, 232], tip: [120, 30] },
     ],
     skin: { head: ['head'], torso: ['lean'] },
     root: [120, 336],
-  },
-} as const satisfies Readonly<Record<string, Skeleton>>;
+  }),
+} as const satisfies Readonly<Record<FramedView, Skeleton>>;

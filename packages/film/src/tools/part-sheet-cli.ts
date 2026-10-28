@@ -40,7 +40,7 @@ import {
 } from 'effect';
 import { SheetKind } from '../core/cast-sheet.ts';
 import { type PartCut, type PartCutOptions, cutParts } from '../core/part-sheet.ts';
-import type { Raster } from '../core/raster.ts';
+import { type Raster, cropRaster } from '../core/raster.ts';
 import { padInto } from '../core/register.ts';
 import { castFolder } from './cast-library.ts';
 import { sha256Hex } from './digest.ts';
@@ -119,6 +119,15 @@ interface CutModule {
   readonly CUTS: Readonly<Record<string, PartCut>>;
   readonly cutOptionsFor: (view: string, raster: Raster) => PartCutOptions;
   readonly HIDDEN: Readonly<Record<string, HiddenEntry>>;
+  /** Each view's frame on its kept sheet, where its part sheet is cut from the kept box padded: the sheet, the kept box and the pad (left, top, right, bottom). A view with none is cut from its kept view (`views/<view>.png`). */
+  readonly FRAMES?: Readonly<Record<string, ViewFrame>>;
+}
+
+/** A view's frame on its kept sheet (`kept/<sheet>.png`): its kept box and the pixels its part sheet pads it by. */
+interface ViewFrame {
+  readonly sheet: string;
+  readonly kept: readonly [number, number, number, number];
+  readonly pad: readonly [number, number, number, number];
 }
 
 const isCutModule = (u: unknown): u is CutModule =>
@@ -159,6 +168,8 @@ const PartSheetRecord = Schema.Struct({
   view: Schema.String,
   kind: Schema.String,
   size: Schema.Array(Schema.Int),
+  /** The part sheet's frame on the kept sheet, sheet px (`[x0, y0, x1, y1]`): its kept box padded, where the cut table pads it. */
+  box: Schema.optional(Schema.Array(Schema.Int)),
   command: Schema.String,
   parts: Schema.Array(
     Schema.Struct({ name: Schema.String, kept: Schema.Int, painted: Schema.Int }),
@@ -231,7 +242,13 @@ const cutTableOf = (file: string, name: string, refuse: (reason: string) => Part
     ]);
     return yield* Option.match(found, {
       onNone: () => refuse(`the cut table has no cut and HIDDEN entry for ${name}`),
-      onSome: ([cut, hidden]) => Effect.succeed({ cut, hidden, optionsFor: loaded.cutOptionsFor }),
+      onSome: ([cut, hidden]) =>
+        Effect.succeed({
+          cut,
+          hidden,
+          optionsFor: loaded.cutOptionsFor,
+          frame: Option.fromUndefinedOr(loaded.FRAMES?.[name]),
+        }),
     });
   });
 
@@ -260,7 +277,69 @@ interface PartsJob {
   readonly dir: string;
   readonly mode: 'call' | 'reuse' | 'check';
   readonly portrait: { readonly width: number; readonly height: number };
+  /**
+   * Where the kept box lies in a padded view (its left and top, and its
+   * size), and the padded frame's box on the kept sheet: okra is asked, and
+   * its answer laid, on the kept box alone, so an answer drawn for the kept
+   * view lays on its padded part sheet, and the paint is laid into the
+   * padded sheet there.
+   */
+  readonly frame: Option.Option<{
+    readonly at: readonly [number, number];
+    readonly size: readonly [number, number];
+    readonly box: readonly [number, number, number, number];
+  }>;
 }
+
+/** `sheet` cut to the box at `at` of `size`: each part's pixels and the owners there. */
+const cropSheet = (
+  sheet: Sheet,
+  at: readonly [number, number],
+  size: readonly [number, number],
+): Sheet => {
+  const box = [at[0], at[1], at[0] + size[0], at[1] + size[1]] as const;
+  const owner = new Uint8Array(size[0] * size[1]);
+  for (let y = 0; y < size[1]; y++)
+    owner.set(
+      sheet.owner.subarray((at[1] + y) * sheet.width + at[0], (at[1] + y) * sheet.width + box[2]),
+      y * size[0],
+    );
+  return {
+    width: size[0],
+    height: size[1],
+    owner,
+    parts: sheet.parts.map((p) => ({ ...p, pixels: cropRaster(p.pixels, box) })),
+  };
+};
+
+/** What okra is asked on, and its answer laid on: a padded view's kept box alone, else the whole view. */
+const askedOf = (view: Raster, sheet: Sheet, frame: PartsJob['frame']) =>
+  Option.match(frame, {
+    onNone: () => ({ view, sheet }),
+    onSome: (f) => ({
+      view: cropRaster(view, [f.at[0], f.at[1], f.at[0] + f.size[0], f.at[1] + f.size[1]]),
+      sheet: cropSheet(sheet, f.at, f.size),
+    }),
+  });
+
+/** `whole`'s parts with `inner`'s (a sheet cut from it at `at`, its paint laid, its parts in the same order) laid back at `at`, and each part's painted pixels counted again. */
+const laidInto = (whole: Sheet, inner: Sheet, at: readonly [number, number]): Sheet => ({
+  ...whole,
+  parts: Arr.zipWith(whole.parts, inner.parts, (p, q) => {
+    const rgba = Uint8Array.from(p.pixels.rgba);
+    const from = q.pixels;
+    for (let y = 0; y < from.height; y++)
+      rgba.set(
+        from.rgba.subarray(y * from.width * 4, (y + 1) * from.width * 4),
+        ((at[1] + y) * whole.width + at[0]) * 4,
+      );
+    const k = whole.parts.indexOf(p) + 1;
+    let painted = 0;
+    for (let i = 0; i < whole.owner.length; i++)
+      if (Number(rgba[i * 4 + 3]) > 0 && whole.owner[i] !== k) painted++;
+    return { ...p, pixels: { width: whole.width, height: whole.height, rgba }, painted };
+  }),
+});
 
 /** The view's ledger of calls (none before its first); how many it has used: each ledger entry, and each answer file under `okra/` the ledger lacks; and the next unused call number. */
 const ledgerOf = (dir: string) =>
@@ -313,7 +392,8 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const refuse = (reason: string) => PartsUnmade.make({ view: `${job.kind}-${job.name}`, reason });
-  const { dir, sheet, view, label } = job;
+  const { dir, label } = job;
+  const { view, sheet } = askedOf(job.view, job.sheet, job.frame);
   const made = inputOf(view, sheet, job.hidden.moving, job.portrait);
   // the input named by its bytes, so an answer is laid only on the cut it was drawn for
   const inputName = `okra/input-${sha256Hex(made.bytes).slice(0, 12)}.png`;
@@ -407,12 +487,21 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
       `no okra answer on its present input lays (${calls.length} calls, ${budget - used} left of ${budget}); run it without --reuse`,
     );
   const best = found.value;
+  // the paint laid on the kept box, laid back into the padded sheet
+  const whole = Option.match(job.frame, {
+    onNone: () => best.made,
+    onSome: (f) => laidInto(job.sheet, best.made, f.at),
+  });
   const record: typeof PartSheetRecord.Type = {
     view: job.name,
     kind: job.kind,
-    size: [view.width, view.height],
+    size: [job.view.width, job.view.height],
+    ...Option.match(job.frame, {
+      onNone: () => ({}),
+      onSome: (f) => ({ box: [...f.box] }),
+    }),
     command: job.command,
-    parts: best.made.parts.map((p) => ({ name: p.name, kept: p.kept, painted: p.painted })),
+    parts: whole.parts.map((p) => ({ name: p.name, kept: p.kept, painted: p.painted })),
     moving: job.hidden.moving,
     hiddenPx: made.hidden.reduce((a, b) => a + b, 0),
     carried: [],
@@ -435,9 +524,9 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
     Effect.mapError((e) => refuse(e.message)),
   );
   const files: ReadonlyArray<readonly [string, Uint8Array]> = [
-    ...best.made.parts.map((p) => [`${p.name}.png`, encodePng(p.pixels)] as const),
-    ['sheet.png', encodePng(sheetStrip(best.made, made.ground, false))],
-    ['sheet-painted.png', encodePng(sheetStrip(best.made, made.ground, true))],
+    ...whole.parts.map((p) => [`${p.name}.png`, encodePng(p.pixels)] as const),
+    ['sheet.png', encodePng(sheetStrip(whole, made.ground, false))],
+    ['sheet-painted.png', encodePng(sheetStrip(whole, made.ground, true))],
     [inputName, made.bytes],
     ['okra/prompt.txt', new TextEncoder().encode(`${job.hidden.prompt}\n`)],
     ['record.json', new TextEncoder().encode(`${recordText}\n`)],
@@ -509,9 +598,28 @@ export const parts = Command.make(
     const folder = yield* castFolder(film, input.member);
     const memberDir = path.dirname(folder);
     const table = yield* cutTableOf(path.join(memberDir, 'cutout', 'cut.ts'), name, refuse);
-    const view = yield* pngAt(path.join(folder, 'views', `${name}.png`)).pipe(
-      Effect.mapError(refuse),
-    );
+    // a framed view is its kept sheet cut at the kept box padded; else the kept view
+    const frame = Option.map(table.frame, (f) => {
+      const box = [
+        f.kept[0] - f.pad[0],
+        f.kept[1] - f.pad[1],
+        f.kept[2] + f.pad[2],
+        f.kept[3] + f.pad[3],
+      ] as const;
+      return {
+        sheet: f.sheet,
+        box,
+        at: [f.pad[0], f.pad[1]] as const,
+        size: [f.kept[2] - f.kept[0], f.kept[3] - f.kept[1]] as const,
+      };
+    });
+    const view = yield* Option.match(frame, {
+      onNone: () => pngAt(path.join(folder, 'views', `${name}.png`)),
+      onSome: (f) =>
+        pngAt(path.join(folder, 'kept', `${f.sheet}.png`)).pipe(
+          Effect.map((sheet) => cropRaster(sheet, f.box)),
+        ),
+    }).pipe(Effect.mapError(refuse));
     const started = yield* Clock.currentTimeMillis;
     const sheet = yield* Effect.fromResult(
       Result.mapError(cutParts(view, table.cut, table.optionsFor(name, view)), (e) =>
@@ -520,8 +628,10 @@ export const parts = Command.make(
     );
     const cutMs = (yield* Clock.currentTimeMillis) - started;
     const label = `${input.member}.${input.view}`;
+    const framed = Option.map(frame, (f) => ({ at: f.at, size: f.size, box: f.box }));
     if (input.dryRun) {
-      const made = inputOf(view, sheet, table.hidden.moving, PORTRAIT);
+      const asked = askedOf(view, sheet, framed);
+      const made = inputOf(asked.view, asked.sheet, table.hidden.moving, PORTRAIT);
       const out = path.join(
         (yield* FilmFolder).paths(film).out,
         'cast',
@@ -552,6 +662,7 @@ export const parts = Command.make(
       dir: path.join(memberDir, 'cutout', 'sheets', name),
       mode: modes.find(([, on]) => on)?.[0] ?? 'check',
       portrait: PORTRAIT,
+      frame: framed,
     });
   }),
 ).pipe(

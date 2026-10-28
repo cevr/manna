@@ -12,6 +12,7 @@ import { describe, expect, it } from 'effect-bun-test';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import sharp from 'sharp';
 import { CUTS, HIDDEN, cutOptionsFor } from './cut.ts';
+import { FRAMES, type FramedView, boxOf } from './frames.ts';
 
 const HERE = import.meta.dir;
 const APP = `${HERE}/../../../../..`;
@@ -31,6 +32,24 @@ const rgbaOf = (file: string) =>
       rgba: new Uint8Array(data),
     })),
   );
+
+/** His kept sheet cut at a view's part sheet frame (`frames.ts`): the kept box padded. */
+const framedOf = (view: FramedView) => {
+  const [x0, y0, x1, y1] = boxOf(view);
+  return Effect.promise(() =>
+    sharp(`${HERE}/../cast-sheet/kept/${FRAMES[view].sheet}.png`)
+      .extract({ left: x0, top: y0, width: x1 - x0, height: y1 - y0 })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true }),
+  ).pipe(
+    Effect.map(({ data, info }) => ({
+      width: info.width,
+      height: info.height,
+      rgba: new Uint8Array(data),
+    })),
+  );
+};
 
 /** The part names and painted counts a sheet's record holds. */
 const RecordJson = Schema.fromJsonString(
@@ -103,7 +122,7 @@ describe("the series lead's part sheets", () => {
       () =>
         Effect.gen(function* () {
           const fs = yield* FileSystem.FileSystem;
-          const view = yield* rgbaOf(`${HERE}/../cast-sheet/views/${name}.png`);
+          const view = yield* framedOf(name);
           const sheet = Result.getOrThrow(cutParts(view, CUTS[name], cutOptionsFor(name, view)));
           const record = yield* fs
             .readFileString(`${HERE}/sheets/${name}/record.json`)

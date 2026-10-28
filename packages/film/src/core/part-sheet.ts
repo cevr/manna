@@ -102,7 +102,7 @@ const PAPER_ACROSS = 8;
  * the feet, with its grain and its rim). A hole of a garment's pale cream (a
  * knot's highlight) holds none, and stays the figure's.
  */
-const figureIn = (view: Raster): Uint8Array => {
+export const cutFigureOf = (view: Raster): Uint8Array => {
   const { width: w, height: h } = view;
   const { figure, holes, ground } = figureOf(view);
   const paperLike = Uint8Array.from(holes, (m, i) =>
@@ -250,7 +250,7 @@ export const cutParts = (
   if (Option.isSome(wrong)) return refuse(wrong.value);
   const masks = masksFor(view, cut, options);
   if (Result.isFailure(masks)) return refuse(masks.failure);
-  const figure = options.figure ?? figureIn(view);
+  const figure = options.figure ?? cutFigureOf(view);
   const { owner, untaken, first } = ownersOf(view, cut, figure, masks.success);
   if (untaken > 0)
     return refuse(

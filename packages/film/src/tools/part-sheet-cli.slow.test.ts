@@ -158,6 +158,7 @@ const run = (
     hidden: options.hidden ?? HIDDEN,
     dir: DIR,
     mode: options.mode ?? 'call',
+    frame: Option.none(),
     portrait: PORTRAIT,
   }).pipe(
     Effect.map((record) => Result.succeed(record)),

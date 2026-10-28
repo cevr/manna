@@ -7,14 +7,20 @@ import { cutParts, recompose } from '@manna/film/tools';
 import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import sharp from 'sharp';
-import { CUTS, CUT_OPTIONS, JOINTS } from './cut.ts';
+import { CUTS, JOINTS, cutOptionsFor } from './cut.ts';
+import { FRAMES, type FramedView, boxOf, keptAt } from './frames.ts';
 
-const VIEWS = `${import.meta.dir}/../cast-sheet/views`;
+const KEPT = `${import.meta.dir}/../cast-sheet/kept`;
 
-/** A kept view's RGBA bytes. */
-const viewOf = (name: string) =>
-  Effect.promise(() =>
-    sharp(`${VIEWS}/${name}.png`).ensureAlpha().raw().toBuffer({ resolveWithObject: true }),
+/** A kept view's RGBA bytes in its part sheet's frame (`frames.ts`): his kept sheet cut at the kept box padded. */
+const viewOf = (name: FramedView) => {
+  const [x0, y0, x1, y1] = boxOf(name);
+  return Effect.promise(() =>
+    sharp(`${KEPT}/${FRAMES[name].sheet}.png`)
+      .extract({ left: x0, top: y0, width: x1 - x0, height: y1 - y0 })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true }),
   ).pipe(
     Effect.map(({ data, info }) => ({
       width: info.width,
@@ -22,6 +28,7 @@ const viewOf = (name: string) =>
       rgba: new Uint8Array(data),
     })),
   );
+};
 
 /** sRGB as CIE Lab (D65). */
 const labOf = (r: number, g: number, b: number) => {
@@ -93,7 +100,7 @@ describe("the series lead's cut", () => {
       () =>
         Effect.gen(function* () {
           const view = yield* viewOf(name);
-          const sheet = Result.getOrThrow(cutParts(view, CUTS[name], CUT_OPTIONS[name]));
+          const sheet = Result.getOrThrow(cutParts(view, CUTS[name], cutOptionsFor(name, view)));
           expect(sheet.parts.map((p) => p.name)).toEqual([
             'armRight',
             'armLeft',
@@ -115,7 +122,10 @@ describe("the series lead's cut", () => {
               (p) => p.name === `arm${['Left', 'Right'][Number(joint.endsWith('Right'))]}`,
             ) + 1;
           for (const [joint, [x, y]] of Object.entries(JOINTS[name]))
-            expect([joint, sheet.owner[y * view.width + x]]).toEqual([joint, arm(joint)]);
+            expect([
+              joint,
+              sheet.owner[(y + keptAt(name)[1]) * view.width + x + keptAt(name)[0]],
+            ]).toEqual([joint, arm(joint)]);
         }),
     );
 });

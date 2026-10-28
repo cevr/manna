@@ -1,4 +1,5 @@
-// The lead's puppets against his kept views (`cast-sheet/views/`): each
+// The lead's puppets against his kept views, each cut at its part sheet's
+// frame (`frames.ts`, the kept box padded): each
 // view's declared paper is its kept ground's; at rest every pixel the cut
 // left opaque is the kept pixel byte for byte, and the rim the un-matte
 // solved (`core/unmatte.ts`) is the kept view within ΔE 1 on the mean over
@@ -12,6 +13,7 @@
 import { figureOf, labOf, rasterOf, restPose } from '@manna/film/core';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
+import { FRAMES, type FramedView, boxOf, keptAt } from './frames.ts';
 import { puppetFor } from './puppet.ts';
 import { PAPERS } from './puppets.ts';
 import sharp from 'sharp';
@@ -27,9 +29,12 @@ const HERE = import.meta.dir;
 const PAGE: Rgb = [238, 221, 200];
 const VIEWS = ['front', 'threeQuarterLeft', 'heads-4'] as const;
 
-const keptOf = (view: string) =>
-  Effect.promise(() =>
-    sharp(`${HERE}/../cast-sheet/views/${view}.png`)
+/** His kept sheet cut at `view`'s part sheet frame (`frames.ts`): the kept box padded. */
+const keptOf = (view: FramedView) => {
+  const [x0, y0, x1, y1] = boxOf(view);
+  return Effect.promise(() =>
+    sharp(`${HERE}/../cast-sheet/kept/${FRAMES[view].sheet}.png`)
+      .extract({ left: x0, top: y0, width: x1 - x0, height: y1 - y0 })
       .ensureAlpha()
       .raw()
       .toBuffer({ resolveWithObject: true }),
@@ -40,6 +45,24 @@ const keptOf = (view: string) =>
       rgba: new Uint8Array(data),
     })),
   );
+};
+
+/** The kept box alone, cut from its padded frame. */
+const innerOf = (framed: Raster, view: FramedView): Raster => {
+  const [x0, y0, x1, y1] = FRAMES[view].kept;
+  const [w, h] = [x1 - x0, y1 - y0];
+  const [ax, ay] = keptAt(view);
+  const rgba = new Uint8Array(w * h * 4);
+  for (let y = 0; y < h; y++)
+    rgba.set(
+      framed.rgba.subarray(
+        ((y + ay) * framed.width + ax) * 4,
+        ((y + ay) * framed.width + ax + w) * 4,
+      ),
+      y * w * 4,
+    );
+  return { width: w, height: h, rgba };
+};
 
 const rgbAt = (r: Raster, i: number): Rgb => [
   r.rgba[i * 4]!,
@@ -137,7 +160,9 @@ describe("the lead's puppets", () => {
           const { width: w, height: h } = kept;
           const paper = PAPERS[view];
           const figure = figureOf(kept).figure;
-          borderPaper(kept, figure).forEach((v, c) =>
+          // the declared paper is the kept box's border ground (the pad's bottom rows hold the shadow)
+          const inner = innerOf(kept, view);
+          borderPaper(inner, figureOf(inner).figure).forEach((v, c) =>
             expect(Math.abs(v - paper[c]!)).toBeLessThanOrEqual(1),
           );
           const held = new Uint8Array(w * h);

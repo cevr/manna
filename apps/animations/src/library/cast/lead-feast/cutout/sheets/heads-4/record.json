@@ -1,17 +1,18 @@
 {
   "view": "heads-4",
   "kind": "heads",
-  "size": [240, 336],
+  "size": [246, 339],
+  "box": [771, 311, 1017, 650],
   "command": "film concept parts in-its-order lead-feast --view heads-heads-4",
   "parts": [
     {
       "name": "head",
-      "kept": 36369,
+      "kept": 36430,
       "painted": 0
     },
     {
       "name": "torso",
-      "kept": 21677,
+      "kept": 21770,
       "painted": 7645
     }
   ],

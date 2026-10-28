@@ -3,7 +3,8 @@
 // parts front to back as the sheet's record lists them, each PNG imported
 // by its module so a scene that draws him is keyed by its bytes
 // (`tools/stamp.ts`), on the view's skeleton (`skeleton.ts`), with his origin
-// at the sheet's top-left corner: his pixels are the sheet's, drawn at its
+// at the kept box's top-left corner in the padded part sheet (`frames.ts`):
+// his pixels are the sheet's, drawn at its
 // one scale. Each declares the kept view it is held to (`concept`). Pure.
 
 import type { PuppetSpec } from '@manna/film/canvas';
@@ -27,25 +28,24 @@ import tqRobe from './sheets/threeQuarterLeft/robe.png' with { type: 'file' };
 import tqSash from './sheets/threeQuarterLeft/sash.png' with { type: 'file' };
 import tqShadow from './sheets/threeQuarterLeft/shadow.png' with { type: 'file' };
 import tqTorso from './sheets/threeQuarterLeft/torso.png' with { type: 'file' };
+import { FRAMES, type FramedView, boxOf, keptAt } from './frames.ts';
 import { SKELETONS } from './skeleton.ts';
 
 type Box = readonly [number, number, number, number];
 
-/** A puppet of his on `sheet`'s view held to its kept `box`, its parts front to back. */
-const puppet = (
-  view: keyof typeof SKELETONS,
-  sheet: 'turnaround' | 'heads',
-  box: Box,
-  parts: ReadonlyArray<readonly [string, string]>,
-): PuppetSpec => ({
-  key: `lead-feast/cutout/${view}`,
-  size: [box[2] - box[0], box[3] - box[1]],
-  parts: parts.map(([name, png]) => ({ name, png })),
-  skeleton: SKELETONS[view],
-  origin: [0, 0],
-  concept: { image: { cast: 'lead-feast', sheet }, box },
-  paper: PAPERS[view],
-});
+/** A puppet of his on his view `view`, its parts front to back: its part sheet the kept box padded (`frames.ts`), his origin at the kept box's top-left corner, held to the kept box. */
+const puppet = (view: FramedView, parts: ReadonlyArray<readonly [string, string]>): PuppetSpec => {
+  const frame = boxOf(view);
+  return {
+    key: `lead-feast/cutout/${view}`,
+    size: [frame[2] - frame[0], frame[3] - frame[1]],
+    parts: parts.map(([name, png]) => ({ name, png })),
+    skeleton: SKELETONS[view],
+    origin: keptAt(view),
+    concept: { image: { cast: 'lead-feast', sheet: FRAMES[view].sheet }, box: BOXES[view] },
+    paper: PAPERS[view],
+  };
+};
 
 /** Each cut view's paper, the median of its kept view's border ground (its rim is un-matted from it, `core/unmatte.ts`). */
 export const PAPERS = {
@@ -54,16 +54,16 @@ export const PAPERS = {
   'heads-4': [254, 242, 218],
 } as const satisfies Readonly<Record<keyof typeof SKELETONS, readonly [number, number, number]>>;
 
-/** Each cut view's kept box on its sheet (`cast-sheet.json`). */
-export const BOXES = {
-  front: [18, 194, 265, 857],
-  threeQuarterLeft: [292, 194, 511, 857],
-  'heads-4': [774, 314, 1014, 650],
-} as const satisfies Readonly<Record<keyof typeof SKELETONS, Box>>;
+/** Each cut view's kept box on its sheet (`cast-sheet.json`, `frames.ts`). */
+export const BOXES: Readonly<Record<FramedView, Box>> = {
+  front: FRAMES.front.kept,
+  threeQuarterLeft: FRAMES.threeQuarterLeft.kept,
+  'heads-4': FRAMES['heads-4'].kept,
+};
 
 /** Each cut view's puppet, by the view's name in his sheets' views. */
 export const PUPPETS = {
-  front: puppet('front', 'turnaround', BOXES.front, [
+  front: puppet('front', [
     ['armRight', frontArmRight],
     ['armLeft', frontArmLeft],
     ['head', frontHead],
@@ -74,7 +74,7 @@ export const PUPPETS = {
     ['robe', frontRobe],
     ['torso', frontTorso],
   ]),
-  threeQuarterLeft: puppet('threeQuarterLeft', 'turnaround', BOXES.threeQuarterLeft, [
+  threeQuarterLeft: puppet('threeQuarterLeft', [
     ['armRight', tqArmRight],
     ['armLeft', tqArmLeft],
     ['head', tqHead],
@@ -85,7 +85,7 @@ export const PUPPETS = {
     ['robe', tqRobe],
     ['torso', tqTorso],
   ]),
-  'heads-4': puppet('heads-4', 'heads', BOXES['heads-4'], [
+  'heads-4': puppet('heads-4', [
     ['head', heads4Head],
     ['torso', heads4Torso],
   ]),

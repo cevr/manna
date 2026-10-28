@@ -1,22 +1,23 @@
 {
   "view": "front",
   "kind": "turnaround",
-  "size": [247, 663],
+  "size": [253, 678],
+  "box": [15, 191, 268, 869],
   "command": "film concept parts in-its-order lead-feast --view turnaround-front",
   "parts": [
     {
       "name": "armRight",
-      "kept": 10447,
+      "kept": 10553,
       "painted": 0
     },
     {
       "name": "armLeft",
-      "kept": 10241,
+      "kept": 10419,
       "painted": 0
     },
     {
       "name": "head",
-      "kept": 27287,
+      "kept": 27318,
       "painted": 0
     },
     {
@@ -26,17 +27,17 @@
     },
     {
       "name": "footRight",
-      "kept": 3414,
+      "kept": 3166,
       "painted": 0
     },
     {
       "name": "footLeft",
-      "kept": 3534,
+      "kept": 3282,
       "painted": 0
     },
     {
       "name": "shadow",
-      "kept": 1116,
+      "kept": 2992,
       "painted": 0
     },
     {

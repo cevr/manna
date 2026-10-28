@@ -9,28 +9,33 @@
 // front's lines are the world-proto round 2 cut's (`src/r2/parts.ts`), the
 // three-quarter view's are read new. A sleeve takes its cap (a disc round its
 // shoulder) above its shoulder, the rest of the shoulder the torso's; below the
-// hem the sandals, and the ground shadow behind them is a part of its own. The
+// hem the sandals, and the ground shadow behind them is a part of its own,
+// with its lavender under each sole (a sandal ends at its sole's ink). The
 // paper between his sandals is the view's ground, owned by no part. A hand
 // takes its whole ink ring, so no piece of it stays behind when the arm moves.
 // His bust (heads-4) is two parts, his head over the rest; its figure is read
 // with the foot of the view closed (`cutOptionsFor`). Each view names the
 // parts a pose moves, and the words okra repaints what they hide by
 // (`HIDDEN`, read by `film concept parts`, which writes `sheets/<view>/`).
-// Pure.
+// The lines are read in the kept view's pixels and the cuts laid in each
+// view's part sheet frame, its kept box padded (`frames.ts`); a standing
+// view's figure in the kept box is the kept view's own reading. Pure.
 
 import {
+  cutFigureOf,
   cutParts,
   type HiddenEntry,
   type PartCut,
   type PartCutOptions,
   type PartRule,
 } from '@manna/film/tools';
-import { Result } from 'effect';
+import { Match, Option, Result } from 'effect';
 import { LABELS } from '../rig/labels.ts';
 import { CLASSES } from '../rig/trace.ts';
+import { FRAMES } from './frames.ts';
 import { JOINTS } from './joints.ts';
 
-export { JOINTS };
+export { FRAMES, JOINTS };
 
 type Pt = readonly [number, number];
 
@@ -109,6 +114,34 @@ const belowHem = (hem: number, middle: number, drop: number, reach: number): Par
   ],
 });
 
+/** A sole's lowest ink by columns: `[first, last, row]`, each run of columns whose lowest dark pixel (L* < 60) lies on `row`, read off the kept view. */
+type SoleRuns = ReadonlyArray<readonly [number, number, number]>;
+
+/**
+ * Under a sandal's sole: every pixel below its column's lowest ink, and
+ * every column past the sole's ends. The ground shadow's lavender there is
+ * the shadow's, so a lifted foot carries none of it. A step at each column's
+ * edge, so no pixel centre lies on it.
+ */
+const underSole = (runs: SoleRuns): PartRule => {
+  const first = runs[0]?.[0] ?? 0;
+  const last = (runs[runs.length - 1]?.[1] ?? 0) + 1;
+  return {
+    polygon: [
+      [-FAR, -FAR],
+      [first, -FAR],
+      ...runs.flatMap(([a, b, row]): Pt[] => [
+        [a, row + 1],
+        [b + 1, row + 1],
+      ]),
+      [last, -FAR],
+      [FAR, -FAR],
+      [FAR, FAR * 2],
+      [-FAR, FAR * 2],
+    ],
+  };
+};
+
 /** Above the hem: every row over it. */
 const aboveHem = (hem: number, middle: number, drop: number, reach: number): PartRule => ({
   polygon: [
@@ -158,6 +191,48 @@ const FRONT_LEFT: Sleeve = {
 };
 const frontRight = sleeve(FRONT_RIGHT);
 const frontLeft = sleeve(FRONT_LEFT);
+const FRONT_SOLES = {
+  right: [
+    [21, 21, 651],
+    [22, 22, 654],
+    [23, 23, 656],
+    [24, 25, 657],
+    [26, 28, 658],
+    [29, 33, 659],
+    [34, 39, 660],
+    [40, 74, 661],
+    [75, 82, 660],
+    [83, 88, 659],
+    [89, 92, 658],
+    [93, 97, 657],
+    [98, 100, 656],
+    [101, 103, 655],
+    [104, 104, 654],
+    [105, 105, 653],
+    [106, 106, 651],
+  ],
+  left: [
+    [137, 137, 651],
+    [138, 138, 653],
+    [139, 140, 654],
+    [141, 142, 655],
+    [143, 145, 656],
+    [146, 148, 657],
+    [149, 152, 658],
+    [153, 157, 659],
+    [158, 163, 660],
+    [164, 171, 661],
+    [172, 198, 662],
+    [199, 206, 661],
+    [207, 212, 660],
+    [213, 216, 659],
+    [217, 219, 658],
+    [220, 220, 657],
+    [221, 221, 656],
+    [222, 222, 655],
+    [223, 223, 653],
+  ],
+} as const satisfies Readonly<Record<string, SoleRuns>>;
 
 const FRONT: PartCut = {
   parts: [
@@ -226,7 +301,7 @@ const FRONT: PartCut = {
           ],
         },
       ],
-      unless: [aboveHem(...FRONT_HEM)],
+      unless: [aboveHem(...FRONT_HEM), underSole(FRONT_SOLES.right)],
     },
     {
       name: 'footLeft',
@@ -245,7 +320,7 @@ const FRONT: PartCut = {
           ],
         },
       ],
-      unless: [aboveHem(...FRONT_HEM)],
+      unless: [aboveHem(...FRONT_HEM), underSole(FRONT_SOLES.left)],
     },
     { name: 'shadow', take: [belowHem(...FRONT_HEM)] },
     { name: 'robe', take: [box(-1, 369, FAR, FAR * 2)] },
@@ -287,6 +362,46 @@ const TURNED_LEFT: Sleeve = {
 };
 const turnedRight = sleeve(TURNED_RIGHT);
 const turnedLeft = sleeve(TURNED_LEFT);
+const TURNED_SOLES = {
+  right: [
+    [6, 6, 652],
+    [7, 7, 654],
+    [8, 9, 656],
+    [10, 11, 657],
+    [12, 16, 658],
+    [17, 25, 659],
+    [26, 54, 660],
+    [55, 67, 659],
+    [68, 76, 658],
+    [77, 82, 657],
+    [83, 88, 656],
+    [89, 93, 655],
+    [94, 94, 654],
+    [95, 95, 653],
+    [96, 96, 652],
+    [97, 97, 650],
+  ],
+  left: [
+    [120, 120, 655],
+    [121, 121, 656],
+    [122, 122, 657],
+    [123, 124, 658],
+    [125, 127, 659],
+    [128, 131, 660],
+    [132, 138, 661],
+    [139, 152, 662],
+    [153, 164, 663],
+    [165, 178, 662],
+    [179, 187, 661],
+    [188, 192, 660],
+    [193, 196, 659],
+    [197, 198, 658],
+    [199, 199, 657],
+    [200, 200, 656],
+    [201, 201, 655],
+    [202, 202, 654],
+  ],
+} as const satisfies Readonly<Record<string, SoleRuns>>;
 
 const THREE_QUARTER_LEFT: PartCut = {
   parts: [
@@ -370,7 +485,7 @@ const THREE_QUARTER_LEFT: PartCut = {
           ],
         },
       ],
-      unless: [aboveHem(...TURNED_HEM)],
+      unless: [aboveHem(...TURNED_HEM), underSole(TURNED_SOLES.right)],
     },
     {
       name: 'footLeft',
@@ -388,7 +503,7 @@ const THREE_QUARTER_LEFT: PartCut = {
           ],
         },
       ],
-      unless: [aboveHem(...TURNED_HEM)],
+      unless: [aboveHem(...TURNED_HEM), underSole(TURNED_SOLES.left)],
     },
     { name: 'shadow', take: [belowHem(...TURNED_HEM)] },
     { name: 'robe', take: [box(-1, 369, FAR, FAR * 2)] },
@@ -427,11 +542,48 @@ const HEADS_4: PartCut = {
   ],
 };
 
-/** Each kept view's cut, by the view's name in his sheets' views. */
+/** A point read in the kept view's pixels, in its part sheet's (`by` the pad's left and top); a coordinate at or past -1 (a rule's edge past the view's) stays past the padded sheet's. */
+const moved = (p: Pt, by: Pt): Pt => [
+  Math.max(-FAR, (p[0] + by[0]) * Number(p[0] > -1) - FAR * Number(p[0] <= -1)),
+  Math.max(-FAR, (p[1] + by[1]) * Number(p[1] > -1) - FAR * Number(p[1] <= -1)),
+];
+
+const movedRule = (r: PartRule, by: Pt): PartRule =>
+  Match.value(r).pipe(
+    Match.when({ polygon: Match.defined }, (q) => ({
+      polygon: q.polygon.map((p) => moved(p, by)),
+    })),
+    Match.when({ disc: Match.defined }, (q) => ({
+      disc: { c: moved(q.disc.c, by), r: q.disc.r },
+    })),
+    Match.orElse((q) => q),
+  );
+
+/** A cut read in the kept view's pixels, moved into its part sheet's frame. */
+const padded = (cut: PartCut, view: keyof typeof FRAMES): PartCut => {
+  const by: Pt = [FRAMES[view].pad[0], FRAMES[view].pad[1]];
+  return {
+    parts: cut.parts.map((p) => {
+      const part = {
+        name: p.name,
+        take: p.take.map((r) => movedRule(r, by)),
+        unless: Option.getOrElse(Option.fromUndefinedOr(p.unless), () => []).map((r) =>
+          movedRule(r, by),
+        ),
+      };
+      return Option.match(Option.fromUndefinedOr(p.pivot), {
+        onNone: () => part,
+        onSome: (pivot) => ({ ...part, pivot: moved(pivot, by) }),
+      });
+    }),
+  };
+};
+
+/** Each kept view's cut in its part sheet's frame (`FRAMES`), by the view's name in his sheets' views. */
 export const CUTS = {
-  front: FRONT,
-  threeQuarterLeft: THREE_QUARTER_LEFT,
-  'heads-4': HEADS_4,
+  front: padded(FRONT, 'front'),
+  threeQuarterLeft: padded(THREE_QUARTER_LEFT, 'threeQuarterLeft'),
+  'heads-4': padded(HEADS_4, 'heads-4'),
 } as const satisfies Readonly<Record<string, PartCut>>;
 
 /** A view of his, by its name in his sheets' views. */
@@ -471,9 +623,40 @@ const bustFigure = (view: View): Uint8Array => {
 /** What a view's cut reads beside the view: a turnaround view's labels, a bust's figure with its foot closed. */
 export const cutOptionsFor = (name: CutView, view: View): PartCutOptions => OPTIONS_FOR[name](view);
 
+/**
+ * A standing view's figure in its padded frame: the kept box read as the
+ * kept view alone, so its cut (and the paint okra drew for it) is the kept
+ * view's, and the pad read on the padded view (his crown's and cuffs' outer
+ * ink, the ground shadow's rows below his soles). The padded view's border
+ * holds the shadow's lavender, which moves its reading of the paper a little
+ * and so a rim pixel's.
+ */
+const framedFigure = (name: CutView, view: View): Uint8Array => {
+  const { kept, pad } = FRAMES[name];
+  const [w, h] = [kept[2] - kept[0], kept[3] - kept[1]];
+  const rgba = new Uint8Array(w * h * 4);
+  for (let y = 0; y < h; y++)
+    rgba.set(
+      view.rgba.subarray(
+        ((y + pad[1]) * view.width + pad[0]) * 4,
+        ((y + pad[1]) * view.width + pad[0] + w) * 4,
+      ),
+      y * w * 4,
+    );
+  const inner = cutFigureOf({ width: w, height: h, rgba });
+  return Uint8Array.from(cutFigureOf(view), (f, i) => {
+    const [x, y] = [(i % view.width) - pad[0], Math.floor(i / view.width) - pad[1]];
+    const kept = x >= 0 && y >= 0 && x < w && y < h;
+    return Number((kept && inner[y * w + x] === 1) || (!kept && f === 1));
+  });
+};
+
 const OPTIONS_FOR: Readonly<Record<CutView, (view: View) => PartCutOptions>> = {
-  front: () => CUT_OPTIONS.front,
-  threeQuarterLeft: () => CUT_OPTIONS.threeQuarterLeft,
+  front: (view) => ({ ...CUT_OPTIONS.front, figure: framedFigure('front', view) }),
+  threeQuarterLeft: (view) => ({
+    ...CUT_OPTIONS.threeQuarterLeft,
+    figure: framedFigure('threeQuarterLeft', view),
+  }),
   'heads-4': (view) => ({ figure: bustFigure(view) }),
 };
 
