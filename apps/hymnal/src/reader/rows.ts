@@ -114,9 +114,10 @@ export const STRONG = 5;
  * A search's results with the hymns about it (`about`, nearest first): the
  * strongest matches, at most `STRONG`, then a section `Hymns about this`
  * holding the hymns about the query that are not among those, then the rest
- * of the matches under a section `More matches`. A section with no hymn has
- * no row. With no hymns about the query the results are `plainRowsOf`'s.
- * Every row pages through the hymns in the order shown, each once.
+ * of the matches, but those the section shows, under a section `More
+ * matches`. Each hymn shows once, and a section with no hymn has no row.
+ * With no hymns about the query the results are `plainRowsOf`'s. Every row
+ * pages through the hymns in the order shown.
  */
 export const resultRowsOf = <Hymn extends { readonly number: number }>(
   found: ReadonlyArray<Hymn>,
@@ -127,8 +128,8 @@ export const resultRowsOf = <Hymn extends { readonly number: number }>(
   const strong = found.slice(0, STRONG);
   const near = about.filter((hymn) => !strong.some((s) => s.number === hymn.number));
   if (near.length === 0) return plainRowsOf(found, favourites, lines);
-  const rest = found.slice(STRONG);
-  const source = [...new Set([...strong, ...near, ...rest].map((hymn) => hymn.number))];
+  const rest = found.slice(STRONG).filter((hymn) => !near.some((n) => n.number === hymn.number));
+  const source = [...strong, ...near, ...rest].map((hymn) => hymn.number);
   const hymnRow = (hymn: Hymn, group: string, line: Option.Option<string>): Row<Hymn> => ({
     kind: 'hymn',
     key: `${group}:${hymn.number}`,

@@ -297,10 +297,26 @@ describe('a search’s result rows with the hymns about it', () => {
     expect(sticky).toEqual([]);
   });
 
-  it('give every row the hymns in the order shown, each once, and a key of its own', () => {
-    const { rows } = resultRowsOf([1, 2, 3, 4, 5, 6, 9].map(hymn), [9, 8].map(hymn));
+  it('show each hymn once, a match the section holds under it alone, and page through the rows in their order', () => {
+    // 9 and 7 are both matches past the strongest and hymns about the query.
+    const { rows } = resultRowsOf([1, 2, 3, 4, 5, 7, 6, 9].map(hymn), [9, 8, 7].map(hymn));
     const hymnRows = hymnRowsOf(rows);
-    expect(hymnRows.map((row) => row.source)).toEqual(hymnRows.map(() => [1, 2, 3, 4, 5, 9, 8, 6]));
+    const shown = hymnRows.map((row) => row.hymn.number);
+    expect(seen(rows)).toEqual([
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      'Hymns about this',
+      'about:9',
+      'about:8',
+      'about:7',
+      'More matches',
+      '6',
+    ]);
+    expect(new Set(shown).size).toBe(shown.length);
+    expect(hymnRows.map((row) => row.source)).toEqual(hymnRows.map(() => shown));
     expect(new Set(rows.map((row) => row.key)).size).toBe(rows.length);
   });
 
