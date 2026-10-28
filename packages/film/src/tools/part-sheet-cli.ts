@@ -16,8 +16,9 @@
 // the painted pixels, and `record.json`, under `<member>/cutout/sheets/<view>/`;
 // each call's input (named by its bytes' hash), the prompt and the answers
 // under its `okra/`. An answer drawn from another input is stale: kept in
-// the record, never laid. A view takes at most three calls. `--reuse` lays
-// the answers already drawn; `--check` lays them, writes nothing and fails
+// the record, never laid. A view takes at most three calls on one input:
+// a cut that moves asks again. `--reuse` lays the answers already drawn;
+// `--check` lays them, writes nothing and fails
 // where a file differs; `--dry-run` writes the magenta input under
 // `out/<film>/cast/<member>/parts/<view>/`. None of the three calls okra.
 
@@ -69,7 +70,7 @@ class PartsUnmade extends Schema.TaggedError<PartsUnmade>()('PartsUnmade', {
   }
 }
 
-/** The most okra calls one view takes. */
+/** The most okra calls one view takes on one input. */
 const MOST_CALLS = 3;
 
 /** The flat colour the moving parts' areas are painted for okra. */
@@ -619,9 +620,10 @@ export const parts = Command.make(
     const relative = (arg: string) => arg.split(`${dir}${path.sep}`).join('');
     const calls: CallRecord[] = [...prior];
     if (!input.reuse && !input.check) {
-      if (calls.length >= MOST_CALLS)
+      const asked = calls.filter((c) => c.input === inputName).length;
+      if (asked >= MOST_CALLS)
         return yield* refuse(
-          `it has had ${calls.length} okra calls, the most a view takes; --reuse lays them again`,
+          `it has had ${asked} okra calls on its present input, the most a view takes; --reuse lays them again`,
         );
       yield* fs.makeDirectory(path.join(dir, 'okra'), { recursive: true });
       yield* fs.writeFile(path.join(dir, inputName), inputBytes);
@@ -637,7 +639,7 @@ export const parts = Command.make(
     const fresh = calls.filter((c) => c.input === inputName);
     if (fresh.length === 0)
       return yield* refuse(
-        `no okra answer was drawn from its present input (${calls.length} stale, ${MOST_CALLS - calls.length} calls left); run it without --reuse`,
+        `no okra answer was drawn from its present input (${calls.length} stale, ${MOST_CALLS} calls left); run it without --reuse`,
       );
     const tried = yield* Effect.forEach(fresh, (call) =>
       Effect.gen(function* () {

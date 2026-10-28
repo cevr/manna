@@ -2641,8 +2641,9 @@ magenta) and `record.json` land in `<member>/cutout/sheets/<view>/`. Each
 call's input (named by its bytes' hash), prompt and answer land under its
 `okra/`. An answer drawn from another input (the cut has moved since) is
 stale: the record keeps it, and it is never laid. A view takes at most three
-calls. `--reuse` lays the answers already drawn, `--check` lays them and
-fails where a file differs, and `--dry-run` writes the magenta input under
+calls on one input, so a moved cut asks again. `--reuse` lays the answers
+already drawn, `--check` lays them and fails where a file differs, and
+`--dry-run` writes the magenta input under
 `out/<film>/cast/<member>/parts/<view>/`; none of the three calls okra.
 
 ### The review: `film review`, and keep needs evidence
