@@ -53,9 +53,8 @@ const holdersOf = (parts: ReadonlyArray<Uint8Array>, width: number, height: numb
  * The part textures (RGBA, `width` × `height`, front to back) with each
  * rim pixel un-matted against `paper`: an opaque pixel reached from the
  * ground (where no part has a pixel) within `UNMATTE_BAND` steps through
- * pixels lighter than ink (paint behind it lighter than ink is paper, and
- * goes; ink behind it stays, and shows at rest where the rim pixel gives
- * way). Every other pixel is kept byte for byte.
+ * pixels lighter than ink, the paint behind it (hidden at rest) cleared, so
+ * the rest pose over the paper is the view there. Every other pixel is kept byte for byte.
  */
 export const unmatte = (
   parts: ReadonlyArray<Uint8Array>,
@@ -72,10 +71,8 @@ export const unmatte = (
   for (const i of rim) {
     const k = holders.front[i]!;
     if (parts[k]![i * 4 + 3] !== 255) continue;
-    // paint behind it lighter than ink is paper too, and goes; ink behind it stays (a hidden outline)
-    for (let b = k + 1; b < parts.length; b++)
-      if (parts[b]![i * 4 + 3]! > 0 && lumaOf(rgbOf(parts[b]!, i)) > INK_LUMA)
-        out[b]!.fill(0, i * 4, i * 4 + 4);
+    // the view shows this px, the sheet's paper mixed in: paint behind it, hidden at rest, goes too
+    for (let b = k + 1; b < parts.length; b++) out[b]!.fill(0, i * 4, i * 4 + 4);
     out[k]!.set(solved(holders.colourAt(i), inkNear(holders, i, paper), paper), i * 4);
   }
   return out;

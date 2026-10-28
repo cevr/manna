@@ -52,16 +52,17 @@ describe('unmatte', () => {
     for (const x of [5, 6, 7, 10, 15]) expect(at(out!, x)).toEqual(at(src, x));
   });
 
-  test('clears light paint behind a rim px it un-mattes, and keeps ink behind it (a hidden outline)', () => {
+  test('clears the paint behind a rim px it un-mattes, light or ink, so the rest over the paper is the view', () => {
     const front = part();
-    const light = part();
     const inked = part();
     for (let y = 0; y < H; y++) inked.set([...INK, 255], (y * W + 3) * 4);
-    const [, behind] = unmatte([front, light], W, H, PAPER);
-    expect(at(behind!, 3)[3]).toBe(0);
-    const [kept, back] = unmatte([front, inked], W, H, PAPER);
-    expect(Math.abs(at(kept!, 3)[3]! - 0.4 * 255)).toBeLessThanOrEqual(2);
-    expect(at(back!, 3)).toEqual(at(inked, 3));
+    for (const behind of [part(), inked]) {
+      const [out, back] = unmatte([front, behind], W, H, PAPER);
+      expect(Math.abs(at(out!, 3)[3]! - 0.4 * 255)).toBeLessThanOrEqual(2);
+      expect(at(back!, 3)[3]).toBe(0);
+      // the ink past the rim's first ink px, held by both, is kept in both
+      expect(at(back!, 6)).toEqual(at(behind, 6));
+    }
   });
 
   test('clears a pocket of paper the box cuts off from the ground at its corners, to its ink', () => {
