@@ -58,3 +58,4 @@ export {
   paintHidden,
   recompose,
 } from '../core/part-sheet.ts';
+export type { HiddenEntry } from './part-sheet-cli.ts';

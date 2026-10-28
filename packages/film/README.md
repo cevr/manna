@@ -2631,19 +2631,29 @@ its footprint). Its paint is the answer less the paper the view's ground
 reaches. Each painted pixel goes under the nearest part that does not move,
 in that part's tone (each piece shifted by its mean step to the pixels the
 part keeps beside it), and only through `paintHidden`, so paint never shows
-at rest. Each answer is measured: the seam (ΔE76 of paint against the
-pixels its part keeps beside it, ≤ 10), the drift (the laid answer against
-the view over the parts that take paint, ≤ 5) and the grain (G less its 5×5
-mean, a robust std, within ±0.5 of the part's kept pixels near the paint).
-The answer that misses the fewest bars, then with the lowest seam, is kept.
-The part PNGs, `sheet.png`, `sheet-painted.png` (each painted pixel half
-magenta) and `record.json` land in `<member>/cutout/sheets/<view>/`. Each
-call's input (named by its bytes' hash), prompt and answer land under its
-`okra/`. An answer drawn from another input (the cut has moved since) is
-stale: the record keeps it, and it is never laid. A view takes at most three
-calls on one input, so a moved cut asks again. `--reuse` lays the answers
-already drawn, `--check` lays them and fails where a file differs, and
-`--dry-run` writes the magenta input under
+at rest (`tools/part-sheet-lay.ts`). Each answer is measured on domains
+the sheet fixes before any answer is read: the drift (the laid answer
+against the view over the pixels kept by the parts the hidden areas lie on,
+≤ 5), the seam (ΔE76 of paint against the pixels its part keeps beside it,
+≤ 10, read on 20 pairs or more) and each such part's grain (`grainOf`,
+`core/grain.ts`: G less its 3×3 mean, its robust std within ±0.5 of the
+part's kept pixels near the paint, read on 90 windows a side or more, else
+that part is `unverified`; the plain std is recorded beside it). A measure
+with too few samples misses its bar, at least one part's grain must be
+read, and every moving part must hide some paint. An answer that leaves a
+moving part unpainted ranks after every one that paints them all, then by
+bars missed, then by seam; the best is kept. The part PNGs, `sheet.png`,
+`sheet-painted.png` (each painted pixel half magenta) and `record.json`
+land in `<member>/cutout/sheets/<view>/`. Each call's input (named by its
+bytes' hash), prompt and answer land under its `okra/`. A view takes three
+calls in all, and more only by an allowance its cut table records
+(`HIDDEN[view].allowance`: how many, who granted them, when and why). Each
+call is written to the view's ledger, `okra/calls.json`, before the route
+is asked, so a call whose answer fails to arrive, decode or lay still
+counts. An answer drawn from another input (the cut has moved since) is
+stale: the record keeps it, it is never laid, and it still counts.
+`--reuse` lays the answers already drawn, `--check` lays them and fails
+where a file differs, and `--dry-run` writes the magenta input under
 `out/<film>/cast/<member>/parts/<view>/`; none of the three calls okra.
 
 ### The review: `film review`, and keep needs evidence
