@@ -12,7 +12,7 @@
     {
       "name": "torso",
       "kept": 21677,
-      "painted": 7752
+      "painted": 7645
     }
   ],
   "moving": ["head"],
@@ -74,8 +74,8 @@
         },
         "measures": {
           "seam": {
-            "deltaE": 6.17,
-            "pairs": 81
+            "deltaE": 6.42,
+            "pairs": 82
           },
           "drift": {
             "deltaE": 2.29,
@@ -85,29 +85,29 @@
             {
               "part": "torso",
               "painted": {
-                "robust": 0.99,
-                "plain": 1.39,
-                "n": 4760
+                "robust": 2.31,
+                "plain": 2.29,
+                "n": 4764
               },
               "kept": {
                 "robust": 0.66,
                 "plain": 4.54,
                 "n": 1868
               },
-              "verdict": "within"
+              "verdict": "outside"
             }
           ],
           "paintUnder": [
             {
               "part": "head",
-              "px": 6269
+              "px": 6215
             }
           ],
-          "paintedPx": 6269,
+          "paintedPx": 6215,
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": []
+        "missed": ["grain"]
       },
       {
         "n": 3,
@@ -133,7 +133,7 @@
         },
         "measures": {
           "seam": {
-            "deltaE": 3.56,
+            "deltaE": 3.6,
             "pairs": 58
           },
           "drift": {
@@ -144,9 +144,9 @@
             {
               "part": "torso",
               "painted": {
-                "robust": 0.66,
-                "plain": 2.24,
-                "n": 5885
+                "robust": 0.99,
+                "plain": 2.02,
+                "n": 5890
               },
               "kept": {
                 "robust": 0.66,
@@ -159,10 +159,10 @@
           "paintUnder": [
             {
               "part": "head",
-              "px": 7752
+              "px": 7645
             }
           ],
-          "paintedPx": 7752,
+          "paintedPx": 7645,
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
@@ -179,7 +179,7 @@
   },
   "measures": {
     "seam": {
-      "deltaE": 3.56,
+      "deltaE": 3.6,
       "pairs": 58
     },
     "drift": {
@@ -190,9 +190,9 @@
       {
         "part": "torso",
         "painted": {
-          "robust": 0.66,
-          "plain": 2.24,
-          "n": 5885
+          "robust": 0.99,
+          "plain": 2.02,
+          "n": 5890
         },
         "kept": {
           "robust": 0.66,
@@ -205,10 +205,10 @@
     "paintUnder": [
       {
         "part": "head",
-        "px": 7752
+        "px": 7645
       }
     ],
-    "paintedPx": 7752,
+    "paintedPx": 7645,
     "visibleAtRest": 0,
     "recomposeByteEqual": true
   },

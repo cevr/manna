@@ -22,7 +22,7 @@
     {
       "name": "sash",
       "kept": 10214,
-      "painted": 1382
+      "painted": 1367
     },
     {
       "name": "footRight",
@@ -42,12 +42,12 @@
     {
       "name": "robe",
       "kept": 31714,
-      "painted": 4434
+      "painted": 4390
     },
     {
       "name": "torso",
       "kept": 16284,
-      "painted": 6277
+      "painted": 6235
     }
   ],
   "moving": ["armRight", "armLeft"],
@@ -148,7 +148,7 @@
         },
         "measures": {
           "seam": {
-            "deltaE": 8.77,
+            "deltaE": 8.67,
             "pairs": 219
           },
           "drift": {
@@ -159,9 +159,9 @@
             {
               "part": "sash",
               "painted": {
-                "robust": 0.66,
-                "plain": 3.64,
-                "n": 664
+                "robust": 0.82,
+                "plain": 3.62,
+                "n": 662
               },
               "kept": {
                 "robust": 1.48,
@@ -173,9 +173,9 @@
             {
               "part": "robe",
               "painted": {
-                "robust": 3.13,
-                "plain": 8.92,
-                "n": 36
+                "robust": 4.78,
+                "plain": 4,
+                "n": 40
               },
               "kept": {
                 "robust": 1.48,
@@ -187,8 +187,8 @@
             {
               "part": "torso",
               "painted": {
-                "robust": 0.66,
-                "plain": 6.19,
+                "robust": 0.82,
+                "plain": 5.57,
                 "n": 537
               },
               "kept": {
@@ -196,20 +196,20 @@
                 "plain": 3.62,
                 "n": 4906
               },
-              "verdict": "outside"
+              "verdict": "within"
             }
           ],
           "paintUnder": [
             {
               "part": "armRight",
-              "px": 2860
+              "px": 2818
             },
             {
               "part": "armLeft",
-              "px": 9233
+              "px": 9174
             }
           ],
-          "paintedPx": 12093,
+          "paintedPx": 11992,
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
@@ -226,7 +226,7 @@
   },
   "measures": {
     "seam": {
-      "deltaE": 8.77,
+      "deltaE": 8.67,
       "pairs": 219
     },
     "drift": {
@@ -237,9 +237,9 @@
       {
         "part": "sash",
         "painted": {
-          "robust": 0.66,
-          "plain": 3.64,
-          "n": 664
+          "robust": 0.82,
+          "plain": 3.62,
+          "n": 662
         },
         "kept": {
           "robust": 1.48,
@@ -251,9 +251,9 @@
       {
         "part": "robe",
         "painted": {
-          "robust": 3.13,
-          "plain": 8.92,
-          "n": 36
+          "robust": 4.78,
+          "plain": 4,
+          "n": 40
         },
         "kept": {
           "robust": 1.48,
@@ -265,8 +265,8 @@
       {
         "part": "torso",
         "painted": {
-          "robust": 0.66,
-          "plain": 6.19,
+          "robust": 0.82,
+          "plain": 5.57,
           "n": 537
         },
         "kept": {
@@ -274,20 +274,20 @@
           "plain": 3.62,
           "n": 4906
         },
-        "verdict": "outside"
+        "verdict": "within"
       }
     ],
     "paintUnder": [
       {
         "part": "armRight",
-        "px": 2860
+        "px": 2818
       },
       {
         "part": "armLeft",
-        "px": 9233
+        "px": 9174
       }
     ],
-    "paintedPx": 12093,
+    "paintedPx": 11992,
     "visibleAtRest": 0,
     "recomposeByteEqual": true
   },
