@@ -45,6 +45,11 @@ const hymnal: ReadonlyArray<HymnText> = [
   hymn(371, 'Merrow Tanvil', ['You merrow tanvil ostre']),
   // Accents, an apostrophe, capitals.
   hymn(380, 'O’ervalen Dúmbra', ['Fenno gristal hape']),
+  // Two words in a later line, and a title holding the one and a typo of the other.
+  hymn(400, 'Ostrel Vane', ['Ostrel vane pibbo', 'Gurn bravick lummond sefto']),
+  hymn(401, 'Bravick Lummend', ['Tarro hesk quindle']),
+  // A word in a later line, and a word one edit from it in the same hymn's title.
+  hymn(410, 'Grindal Pesh', ['Wosk umbry tolp', 'Hent grindel moaf']),
 ];
 const index = indexOf(hymnal);
 const numbers = (query: string) => search(index, query).map((h) => h.number);
@@ -106,6 +111,15 @@ describe('search by words', () => {
     const found = numbers('zorvan');
     expect(found.slice(2, 4).toSorted((a, b) => a - b)).toEqual([305, 330]);
     expect(found.slice(4)).toEqual([320]);
+  });
+
+  it('ranks a hymn holding every word of a longer query above one holding a word only by a typo', () => {
+    // 401's title holds both, one by a typo: a heavier field, a tighter start, but a typo.
+    expect(numbers('bravick lummond').slice(0, 2)).toEqual([400, 401]);
+  });
+
+  it('shows the line a hymn holds the word in, not a heavier line one edit from it', () => {
+    expect(lineOf('grindel', 410)).toEqual(Option.some('hent grindel moaf'));
   });
 
   it('finds a word no title holds, and shows the line that holds it', () => {

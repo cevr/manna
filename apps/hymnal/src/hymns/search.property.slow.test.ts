@@ -191,6 +191,39 @@ describe('search swept over the hymnal', () => {
     });
   });
 
+  it(`ranks every hymn holding each word of a run of 2 or 3 words above every hymn a typo finds one in (seed ${seed})`, () => {
+    const r = rng(seed);
+    const draw = drawOf(r, () => true);
+    /** The hymns holding `word` as itself or its kin, or, as the last word, a word it starts. */
+    const heldBy = (word: string, last: boolean) =>
+      new Set([
+        ...(KIN.find((group) => group.includes(word)) ?? [word]).flatMap((w) => [
+          ...(hymnsOf.get(w) ?? []),
+        ]),
+        ...[word].filter(() => last).flatMap((w) => [...holdersOf(w)]),
+      ]);
+    // A last word of one letter is still being typed and chooses no hymn: runs end in a word of 2 or more.
+    const runs = [2, 3]
+      .flatMap((size) =>
+        Array.from({ length: 1000 }, () => {
+          const { words } = draw();
+          const at = Math.floor(r() * (words.length - size + 1));
+          return words.slice(at, at + size);
+        }),
+      )
+      .filter((run) => (run.at(-1)?.length ?? 0) >= 2);
+    const misses = runs.filter((run) => {
+      const sets = run.map((word, i) => heldBy(word, i === run.length - 1));
+      const all = [...(sets[0] ?? [])].filter((n) => sets.every((set) => set.has(n)));
+      const sure = new Set(all);
+      const order = find(index, run.join(' ')).map((f) => sure.has(f.hymn.number));
+      return !(
+        order.slice(0, sure.size).every(Boolean) && order.filter(Boolean).length === sure.size
+      );
+    });
+    expect({ most: runs.length > 1800, misses: misses.length }).toEqual({ most: true, misses: 0 });
+  });
+
   it(`shows under a right first result the line typed, unless its title holds every word (seed ${seed})`, () => {
     const draw = drawOf(rng(seed), () => true);
     /** The words a query word stands for: itself and its kin. */
