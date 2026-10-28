@@ -362,6 +362,57 @@
           "apps/animations/src/library/cast/lead-feast/cutout/raise/okra/k6b-r11.png"
         ],
         "out": "okra/k6b-r11.png"
+      },
+      {
+        "n": 16,
+        "command": [
+          "okra",
+          "image",
+          "Draw this same man again: the first image is his kept front view and sets the style; the second image is one frame of his motion and sets the pose of his right arm (the arm on the viewer's left). Return the full figure, head to sandals, facing the viewer, standing straight, centred on the page, the same proportions, face, curly hair, cream robe, blue sash, white belt with its knot and tails, and sandals as the first image. Only his right arm (viewer's left) moves, posed as in the second image. His other arm (viewer's right) hangs at his side exactly as in the first image. Style: flat cut-paper cartoon exactly as the first image. Cream sleeve and robe in the same light warm cream as the first image, with its soft warm shading; skin the same peach. One bold, even outline around every shape in the same dark warm brown-black ink as the first image (about RGB 49, 33, 27), as thick as the first image's outline: 7 to 8 px when the figure is 247 px wide. No thin lines, no sketchy or doubled lines. The hand is a plain rounded circle mitten hand like the first image's hands, empty: no bottle, no cup, no object in it. Plain flat cream paper background, no shadow, no ground, no frame, no text. Pose of the right arm (viewer's left), as in the second image: the upper arm hangs at his side, lifted a little and shortened; the elbow is folded tight and the forearm is folded toward the viewer, strongly foreshortened, pointing up and in; the empty circle hand up in front of his upper chest just below the chin. The sleeve bunches at the elbow fold with three or four clear crease lines in the bend. Redraw, fixing what failed in three drawings: the elbow's fold measured 89 px, then 149 px, then 151 px of ink where it needs more than 155; the sleeve's outline now measures the cast sheet's line, 7.75 px, and must stay so. (1) Outline the whole sleeve all round, the upper arm and the forearm, at the cast sheet's heavy line, 8 px, never thinner than the first image's outline, one even line. (2) Draw the elbow's fold as a heavy inked crease: one bold ink line as thick as the outline along the whole fold where the forearm folds over the upper arm, plus three or four heavy crease lines in the bend, each as thick as the outline and long, as heavy as the sheet's other folds; more ink in the fold than the last drawing. (3) Every line in the first image's dark warm brown ink (about RGB 49, 33, 27), not neutral black. Keep the pose exactly as the second image shows it: the shoulder, the upper arm, the elbow, the forearm and the hand stay exactly where they are; do not move the hand or the arm.",
+          "--ref",
+          "apps/animations/src/library/cast/lead-feast/cast-sheet/views/front.png",
+          "--ref",
+          "apps/animations/src/library/cast/lead-feast/cutout/raise/clip/f036.png",
+          "--size",
+          "1024x1536",
+          "-o",
+          "apps/animations/src/library/cast/lead-feast/cutout/raise/okra/k5c-r11.png"
+        ],
+        "out": "okra/k5c-r11.png"
+      },
+      {
+        "n": 17,
+        "command": [
+          "okra",
+          "image",
+          "Draw this same man again: the first image is his kept front view and sets the style; the second image is one frame of his motion and sets the pose of his right arm (the arm on the viewer's left). Return the full figure, head to sandals, facing the viewer, standing straight, centred on the page, the same proportions, face, curly hair, cream robe, blue sash, white belt with its knot and tails, and sandals as the first image. Only his right arm (viewer's left) moves, posed as in the second image. His other arm (viewer's right) hangs at his side exactly as in the first image. Style: flat cut-paper cartoon exactly as the first image. Cream sleeve and robe in the same light warm cream as the first image, with its soft warm shading; skin the same peach. One bold, even outline around every shape in the same dark warm brown-black ink as the first image (about RGB 49, 33, 27), as thick as the first image's outline: 7 to 8 px when the figure is 247 px wide. No thin lines, no sketchy or doubled lines. The hand is a plain rounded circle mitten hand like the first image's hands, empty: no bottle, no cup, no object in it. Plain flat cream paper background, no shadow, no ground, no frame, no text. Pose of the right arm (viewer's left), as in the second image: the elbow is down and a little out from his side, the upper arm shortened; the forearm rises from the elbow straight up in front of his shoulder, coming slightly toward the viewer, as long as his hanging forearm in the first image; the empty circle hand is raised in front of his shoulder beside his cheek, as if lifting a cup to drink, in front of his body. The sleeve bunches at the elbow fold with three or four clear crease lines in the bend. Redraw, fixing what failed in two drawings: the sleeve's outline measured 2.00 px and then 3.50 px wide where the cast sheet's line is 7.75 px, and the elbow's fold 3 px and then 17 px of ink where it needs more than 155. (1) The wrist and the raised forearm lie over his chest and shoulder, inward of his shoulder's outer edge, in front of the robe, the hand at his jaw as in the second image; never out beside the body or beside the face. (2) Outline the sleeve all round at the cast sheet's heavy line: one bold even outline, 8 px, on every edge of the upper arm and the raised forearm, the inner edge against his chest as heavy as the outer edge, as heavy as the kept arm's outline in the first image; no thin line anywhere on the sleeve; the upper arm from the shoulder down to the elbow stays visible with its own outline. (3) Draw the elbow's fold as a heavy inked crease: one bold ink line, as thick as the outline, along the whole fold where the forearm folds over the upper arm, plus three heavy crease lines in the bend, each as thick as the outline. (4) Every line in the first image's dark warm brown ink (about RGB 49, 33, 27), not neutral black. Keep the pose exactly as the second image shows it: the shoulder, the upper arm, the elbow, the forearm and the hand stay exactly where they are; do not move the hand or the arm.",
+          "--ref",
+          "apps/animations/src/library/cast/lead-feast/cast-sheet/views/front.png",
+          "--ref",
+          "apps/animations/src/library/cast/lead-feast/cutout/raise/clip/f044.png",
+          "--size",
+          "1024x1536",
+          "-o",
+          "apps/animations/src/library/cast/lead-feast/cutout/raise/okra/k6c-r11.png"
+        ],
+        "out": "okra/k6c-r11.png"
+      },
+      {
+        "n": 15,
+        "command": [
+          "okra",
+          "image",
+          "Draw this same man again: the first image is his kept front view and sets the style; the second image is one frame of his motion and sets the pose of his right arm (the arm on the viewer's left). Return the full figure, head to sandals, facing the viewer, standing straight, centred on the page, the same proportions, face, curly hair, cream robe, blue sash, white belt with its knot and tails, and sandals as the first image. Only his right arm (viewer's left) moves, posed as in the second image. His other arm (viewer's right) hangs at his side exactly as in the first image. Style: flat cut-paper cartoon exactly as the first image. Cream sleeve and robe in the same light warm cream as the first image, with its soft warm shading; skin the same peach. One bold, even outline around every shape in the same dark warm brown-black ink as the first image (about RGB 49, 33, 27), as thick as the first image's outline: 7 to 8 px when the figure is 247 px wide. No thin lines, no sketchy or doubled lines. The hand is a plain rounded circle mitten hand like the first image's hands, empty: no bottle, no cup, no object in it. Plain flat cream paper background, no shadow, no ground, no frame, no text. Pose of the right arm (viewer's left), as in the second image: the upper arm hangs down from the shoulder and swings a little out from the body; the elbow bends about 40 degrees so the forearm angles down and in toward his hip; the empty circle hand rests at his hip. The full sleeve reads from shoulder to cuff, a soft crease at the inside of the elbow. Redraw, fixing what failed: the last drawing opened a gap of about 601 px of background paper between the arm and the waist, a triangle of paper showing inside the bent elbow, where the second image shows none. (1) Draw the arm exactly as in the second image: the inner edge of the sleeve lies against his side and the robe from the armpit down past the elbow to the hand at his hip, so no paper and no background shows between the arm and the waist anywhere the second image shows none; where the sleeve meets the robe there is only the shared ink outline and a soft shadow, never an opening. (2) Keep the sleeve's outline at the cast sheet's line width, 8 px, as heavy as the kept arm's outline in the first image, every edge of the sleeve and cuff, in the first image's dark warm brown ink (about RGB 49, 33, 27), not neutral black. Keep the pose exactly as the second image shows it: the shoulder, the upper arm, the elbow, the forearm and the hand stay exactly where they are; do not move the hand or the arm.",
+          "--ref",
+          "apps/animations/src/library/cast/lead-feast/cast-sheet/views/front.png",
+          "--ref",
+          "apps/animations/src/library/cast/lead-feast/cutout/raise/clip/f016.png",
+          "--size",
+          "1024x1536",
+          "-o",
+          "apps/animations/src/library/cast/lead-feast/cutout/raise/okra/k2c-r11.png"
+        ],
+        "out": "okra/k2c-r11.png"
       }
     ],
     "failed": [
