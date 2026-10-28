@@ -53,9 +53,9 @@ const PoseFit = Schema.Struct({
 const RAISE = Schema.decodeUnknownSync(RaiseSources)(RAISE_JSON);
 const FIT1 = Schema.decodeUnknownSync(PoseFit)(POSES1_JSON);
 
-/** Each fitted pose view: the puppet it was fitted from, the pose, every puppet's loss (lower is nearer) and the fit's time, ms. */
+/** Each fitted pose view: the puppet it was fitted from, the pose, every puppet's loss (lower is nearer), the fit's time, ms, and the kept box it was fitted on. */
 export const POSES = {
-  'poses-1': { from: FIT1.from, pose: FIT1.pose, scores: FIT1.scores, ms: FIT1.ms },
+  'poses-1': { from: FIT1.from, pose: FIT1.pose, scores: FIT1.scores, ms: FIT1.ms, box: FIT1.box },
 } as const;
 
 /**

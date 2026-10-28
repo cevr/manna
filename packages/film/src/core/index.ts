@@ -42,5 +42,6 @@ export {
   rasterOf,
   restPose,
 } from './puppet.ts';
+export { boxStart, fitPose } from './pose-fit.ts';
 export { labOf } from './cast-sheet-pixels.ts';
 export { figureOf } from './fit-rows.ts';
