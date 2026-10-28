@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { Option, Result } from 'effect';
-import { type PartCut, cutParts, paintHidden, recompose } from './part-sheet.ts';
+import { labOf, deltaE, rgbAt } from './cast-sheet-pixels.ts';
+import { type PartCut, cutParts, inkOf, inkTo, paintHidden, recompose } from './part-sheet.ts';
 import type { Raster } from './raster.ts';
 
 type Rgba = readonly [number, number, number, number];
@@ -231,5 +232,78 @@ describe('part sheet', () => {
       0, 1, 1, 0,
     ]);
     expect(sheet.parts[0]?.kept).toBe(sheet.owner.filter((o) => o === 1).length);
+  });
+});
+
+describe('a key inked as the kept view', () => {
+  // a drawn key's arm: a cream sleeve inside an off-colour (purple) outline, a soft antialiased step between them, clear past it
+  const OFF: Rgba = [62, 18, 70, 255];
+  const shade = (t: number): Rgba =>
+    [0, 1, 2]
+      .map((c) => Math.round(OFF[c]! + t * (CREAM[c]! - OFF[c]!)))
+      .concat(255) as unknown as Rgba;
+  const KEY: Raster = (() => {
+    const [w, h] = [24, 16];
+    const rgba = new Uint8Array(w * h * 4);
+    // rows 0-1 clear; 2-3 ink (with a darker vein); 4 and 5 the edge, 45 % and 75 % of the way to cream; 6-9 cream
+    const colourAt = (x: number, d: number): Option.Option<Rgba> => {
+      if (d > 5.5) return Option.none();
+      if (d > 3.5 && x % 5 === 0) return Option.some([40, 10, 46, 255]);
+      if (d > 3.5) return Option.some(OFF);
+      if (d > 2.5) return Option.some(shade(0.45));
+      if (d > 1.5) return Option.some(shade(0.75));
+      return Option.some(CREAM);
+    };
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        const c = colourAt(x, Math.abs(y - 7.5));
+        if (Option.isSome(c)) rgba.set(c.value, (y * w + x) * 4);
+      }
+    return { width: w, height: h, rgba };
+  })();
+  const KEPT = labOf([49, 33, 27]);
+  const isInk = (r: Raster) =>
+    Array.from(
+      { length: r.width * r.height },
+      (_, i) => r.rgba[i * 4 + 3] === 255 && labOf(rgbAt(r, i))[0] < 40,
+    );
+  const opaque = (r: Raster) => (i: number) => r.rgba[i * 4 + 3] === 255;
+
+  test("the key's ink comes out in the kept ink, its median within dE 1", () => {
+    const before = Option.getOrThrow(inkOf(KEY, opaque(KEY)));
+    expect(deltaE(before, KEPT)).toBeGreaterThan(10);
+    const out = inkTo(KEY, KEPT);
+    expect(deltaE(Option.getOrThrow(inkOf(out, opaque(out))), KEPT)).toBeLessThan(1);
+  });
+
+  test('the ink is the same pixels, every alpha the same, and the paint untouched', () => {
+    const out = inkTo(KEY, KEPT);
+    expect(isInk(out)).toEqual(isInk(KEY));
+    expect(isInk(KEY).filter(Boolean).length).toBeGreaterThan(0);
+    const alpha = (r: Raster) => r.rgba.filter((_, k) => k % 4 === 3);
+    expect(alpha(out)).toEqual(alpha(KEY));
+    const cream = Array.from({ length: KEY.width * KEY.height }, (_, i) => i).filter(
+      (i) => labOf(rgbAt(KEY, i))[0] >= 60,
+    );
+    expect(cream.length).toBeGreaterThan(0);
+    expect(cream.map((i) => rgbAt(out, i))).toEqual(cream.map((i) => rgbAt(KEY, i)));
+  });
+
+  test('the ink side of the edge moves the way the ink moves, by less', () => {
+    const out = inkTo(KEY, KEPT);
+    const own = Option.getOrThrow(inkOf(KEY, opaque(KEY)));
+    const edge = 4 * KEY.width + 3; // row 4: 45 % of the way to cream, the ink side of the edge
+    const [before, after] = [labOf(rgbAt(KEY, edge)), labOf(rgbAt(out, edge))];
+    expect(before[0]).toBeGreaterThanOrEqual(40);
+    for (const c of [1, 2]) {
+      const [moved, inkMoved] = [after[c]! - before[c]!, KEPT[c]! - own[c]!];
+      expect(Math.sign(moved)).toBe(Math.sign(inkMoved));
+      expect(Math.abs(moved)).toBeLessThan(Math.abs(inkMoved));
+    }
+  });
+
+  test('a key with no ink comes back as it was', () => {
+    const plain: Raster = { width: 2, height: 1, rgba: Uint8Array.from([...CREAM, ...CREAM]) };
+    expect(inkTo(plain, KEPT)).toBe(plain);
   });
 });

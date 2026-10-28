@@ -17,7 +17,7 @@
 // its view back byte for byte. Pure.
 
 import { Array as Arr, Option, Result, Schema } from 'effect';
-import { componentsOf, deltaE, labOf, rgbAt } from './cast-sheet-pixels.ts';
+import { type Rgb, componentsOf, deltaE, labOf, rgbAt } from './cast-sheet-pixels.ts';
 import { figureOf } from './fit-rows.ts';
 import type { LabelTable } from './label.ts';
 import type { Raster } from './raster.ts';
@@ -333,4 +333,70 @@ export const paintHidden = (
     return { ...p, pixels: { ...p.pixels, rgba }, painted };
   });
   return Result.succeed({ ...sheet, parts });
+};
+
+/** The L* under which a pixel is ink, as the cast checks read it. */
+const INK_L = 40;
+/** The L* where an antialiased edge reaches its paint's side: from INK_L up to it a pixel's ink share falls to none. */
+const INK_EDGE_L = 60;
+
+/** The median Lab, channel by channel, of the ink pixels (L* under 40) among those `at` picks; none when it picks no ink. */
+export const inkOf = (r: Raster, at: (i: number) => boolean): Option.Option<Rgb> => {
+  const inks: Rgb[] = [];
+  for (let i = 0; i < r.width * r.height; i++) {
+    if (!at(i)) continue;
+    const lab = labOf(rgbAt(r, i));
+    if (lab[0] < INK_L) inks.push(lab);
+  }
+  if (inks.length === 0) return Option.none();
+  const median = (c: 0 | 1 | 2) =>
+    inks.map((lab) => lab[c]).sort((x, y) => x - y)[inks.length >> 1] ?? 0;
+  return Option.some([median(0), median(1), median(2)] as const);
+};
+
+/** The sRGB bytes of a Lab colour (D65), `labOf`'s inverse, each channel held to 0-255. */
+const rgbOfLab = (lab: Rgb): Rgb => {
+  const fy = (lab[0] + 16) / 116;
+  const inv = (t: number) => {
+    if (t ** 3 > 216 / 24389) return t ** 3;
+    return (116 * t - 16) / (24389 / 27);
+  };
+  const [X, Y, Z] = [0.95047 * inv(fy + lab[1] / 500), inv(fy), 1.08883 * inv(fy - lab[2] / 200)];
+  const gamma = (v: number) => {
+    const byte = (s: number) => Math.max(0, Math.min(255, Math.round(s * 255)));
+    if (v <= 0.0031308) return byte(12.92 * v);
+    return byte(1.055 * v ** (1 / 2.4) - 0.055);
+  };
+  return [
+    gamma(3.2406 * X - 1.5372 * Y - 0.4986 * Z),
+    gamma(-0.9689 * X + 1.8758 * Y + 0.0415 * Z),
+    gamma(0.0557 * X - 0.204 * Y + 1.057 * Z),
+  ];
+};
+
+/**
+ * A drawn key with its ink moved to `ink` (a Lab colour, the kept view's own
+ * ink, `inkOf`): each ink pixel of the key (L* under 40) moves by the key's
+ * ink median's distance to `ink`, so that the key's ink median lands on it,
+ * and each pixel on the ink side of an antialiased edge (L* 40 to 60) moves
+ * by that share of it falling to none at L* 60. The drawing stays the
+ * drawing's: no alpha changes, and a pixel the move would carry across L* 40
+ * (into or out of the ink) keeps its own colour, so the ink is the same
+ * pixels before and after. A key with no ink comes back as it was.
+ */
+export const inkTo = (key: Raster, ink: Rgb): Raster => {
+  const own = inkOf(key, (i) => key.rgba[i * 4 + 3] === 255);
+  if (Option.isNone(own)) return key;
+  const d = [ink[0] - own.value[0], ink[1] - own.value[1], ink[2] - own.value[2]] as const;
+  const rgba = Uint8Array.from(key.rgba);
+  for (let i = 0; i < key.width * key.height; i++) {
+    if ((key.rgba[i * 4 + 3] ?? 0) === 0) continue;
+    const lab = labOf(rgbAt(key, i));
+    const share = Math.max(0, Math.min(1, (INK_EDGE_L - lab[0]) / (INK_EDGE_L - INK_L)));
+    if (share === 0) continue;
+    const rgb = rgbOfLab([lab[0] + share * d[0], lab[1] + share * d[1], lab[2] + share * d[2]]);
+    if (labOf(rgb)[0] < INK_L !== lab[0] < INK_L) continue;
+    rgba.set(rgb, i * 4);
+  }
+  return { ...key, rgba };
 };
