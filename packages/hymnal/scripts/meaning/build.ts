@@ -1,5 +1,3 @@
-/* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals, effect/noThrowStatement, effect/noNewError, effect/noAsyncFunction, eslint/no-await-in-loop, node/no-process-env -- a build-time host script: it fetches the model into its cache, installs the pinned runtime there, runs the model a batch at a time, and fails naming what is wrong. */
-
 /**
  * Builds the meaning table the app ships (`table.ts` says the format): the
  * pinned EmbeddingGemma run on every word of the table alone, and on every
