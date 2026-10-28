@@ -285,3 +285,14 @@ export const cutLimb = (r: Raster, ground: Rgb, limb: Limb): LimbCut => {
   for (let i = 0; i < mask.length; i++) if (!outside[i] && cap[i] && !skin[i]) mask[i] = 1;
   return cropped(r, mask);
 };
+
+/**
+ * Where a circle hand stands on a limb: `reach` px past the wrist along elbow to wrist, so the
+ * hand meets the cuff at the same distance in every pose. (The drawn key keeps no hand: the cut
+ * stops at the wrist, and the kept hand is laid over at this point.)
+ */
+export const handPast = (elbow: KeyPt, wrist: KeyPt, reach: number): KeyPt => {
+  const [dx, dy] = [wrist[0] - elbow[0], wrist[1] - elbow[1]];
+  const n = Math.hypot(dx, dy) || 1;
+  return [wrist[0] + (reach * dx) / n, wrist[1] + (reach * dy) / n];
+};

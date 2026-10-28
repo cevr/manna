@@ -5,13 +5,25 @@
 // padded `PAD` px on the left, where a raised sleeve runs out past the kept
 // box, and its arm cut out on the record's joints (`cutLimb`). The cut takes
 // the kept front's ink (`inkTo`), is written to `raise/keys/<id>.png`, and its
-// place in the sheet frame goes back into the record. Run it from the repo
-// root with `bun apps/animations/src/library/cast/lead-feast/cutout/raise-cut.ts`.
+// place in the sheet frame goes back into the record. The cut keeps no drawn
+// hand, so each key's hand (where `raise.ts` lays the kept hand) goes back too:
+// on its forearm past the wrist as far as the rest key's hand is past its
+// wrist (`handPast`), so the hand meets the cuff in every key. Run it from the
+// repo root with `bun apps/animations/src/library/cast/lead-feast/cutout/raise-cut.ts`.
 
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { figureOf } from '@manna/film/core';
-import { cutLimb, decodePng, encodePng, fitKey, inkOf, inkTo, keyInFrame } from '@manna/film/tools';
+import {
+  cutLimb,
+  decodePng,
+  encodePng,
+  fitKey,
+  handPast,
+  inkOf,
+  inkTo,
+  keyInFrame,
+} from '@manna/film/tools';
 import { Array as Arr, Console, Effect, FileSystem, Option, Schema } from 'effect';
 import { boxOf, keptAt } from './frames.ts';
 
@@ -38,8 +50,11 @@ const Key = Kept({
   pivot: Pt,
   elbow: Schema.optional(Pt),
   wrist: Schema.optional(Pt),
+  hand: Pt,
   source: Kept({ okra: Schema.optional(Schema.Finite) }),
 });
+/** What a recut writes back into a key: its place in the sheet frame and its hand. */
+type Cut = Pick<typeof Key.Type, 'place' | 'hand'>;
 /** The record's JSON text, two-space indented as it is kept. */
 const RecordJson = Schema.fromJsonString(
   Kept({
@@ -107,19 +122,34 @@ const recut = Effect.gen(function* () {
     yield* Console.log(
       `${key.id}: fit s ${fit.s.toFixed(4)} dx ${fit.dx.toFixed(1)} dy ${fit.dy.toFixed(1)} error ${fit.error.toFixed(2)}; ${cut.raster.width}x${cut.raster.height} at ${cut.at[0] - PAD},${cut.at[1]}`,
     );
-    return { s: 1, dx: cut.at[0] - PAD, dy: cut.at[1] };
+    const [hx, hy] = handPast(elbow, wrist, reach);
+    const tenth = (v: number) => Math.round(v * 10) / 10;
+    const out: Cut = {
+      place: { s: 1, dx: cut.at[0] - PAD, dy: cut.at[1] },
+      hand: [tenth(hx), tenth(hy)],
+    };
+    return out;
   });
 
-  const places = yield* Effect.forEach(record.keys, (key) =>
+  // how far past the wrist the rest key's hand stands
+  const rest = yield* present(
+    Arr.findFirst(record.keys, (k) => k.id === 'rest'),
+    'rest',
+    'no rest key',
+  );
+  const restWrist = yield* present(Option.fromUndefinedOr(rest.wrist), 'rest', 'no wrist');
+  const reach = Math.hypot(rest.hand[0] - restWrist[0], rest.hand[1] - restWrist[1]);
+
+  const cuts = yield* Effect.forEach(record.keys, (key) =>
     Option.match(Option.fromUndefinedOr(key.source.okra), {
-      onNone: () => Effect.succeed(key.place),
+      onNone: () => Effect.succeed<Cut>({ place: key.place, hand: key.hand }),
       onSome: (n) => recutKey(key, n),
     }),
   );
-  // the record as it was read, field order kept, with each key's place the only change
+  // the record as it was read, field order kept, with each key's place and hand the only change
   const raw = yield* Schema.decodeEffect(RawJson)(text);
   const rawKeys = yield* Schema.decodeUnknownEffect(Schema.Array(Fields))(raw['keys']);
-  const keys = rawKeys.map((key, i) => ({ ...key, place: places[i] }));
+  const keys = rawKeys.map((key, i) => ({ ...key, ...cuts[i] }));
   yield* fs.writeFileString(
     `${RAISE}/record.json`,
     `${yield* Schema.encodeEffect(RawJson)({ ...raw, keys })}\n`,

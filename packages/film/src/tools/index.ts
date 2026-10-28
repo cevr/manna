@@ -67,6 +67,7 @@ export {
   type LimbCut,
   cutLimb,
   fitKey,
+  handPast,
   keyInFrame,
 } from '../core/key-cut.ts';
 export type { Raster } from '../core/raster.ts';

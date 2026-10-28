@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { cutLimb, fitKey, keyInFrame } from './key-cut.ts';
+import { cutLimb, fitKey, handPast, keyInFrame } from './key-cut.ts';
 import type { Raster } from './raster.ts';
 
 const PAPER = [250, 246, 238] as const;
@@ -62,5 +62,14 @@ describe('a drawn key cut into the sheet frame', () => {
     ];
     expect(at(10, 5)).toEqual([...SLEEVE, 255]);
     expect(at(10, 0)).toEqual([...INK, 255]);
+  });
+
+  test('the hand stands the same reach past the wrist along the forearm, whichever way it points', () => {
+    // hanging down, as at rest
+    expect(handPast([40, 300], [40, 370], 24)).toEqual([40, 394]);
+    // raised, the forearm up and out: 24 px on from the wrist, not back at the cuff or off the line
+    const [x, y] = handPast([30, 320], [60, 280], 25);
+    expect([x, y]).toEqual([75, 260]);
+    expect(Math.hypot(x - 60, y - 280)).toBeCloseTo(25, 9);
   });
 });
