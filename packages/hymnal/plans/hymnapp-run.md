@@ -375,6 +375,8 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 
 - 2026-10-28 argent set up for the project (owner: "All right, yeah, let's use that up, that project."): a9e6d1880 pins `@swmansion/argent@0.30.1` in `.mcp.json` with `DO_NOT_TRACK`, sets the project flag `disable-auto-screenshot` in `.argent/flags.json`, vendors seven iOS and React Native skills under `.claude/skills/argent-*` (Apache-2.0, `SOURCE.md` each), and adds verify-hymnal's **Argent** section (the verify-hymnal simulator only, never a device, no screenshots of hymn pages, no hymn words in evidence, no sound, read-only evaluate). Global telemetry is off (`argent telemetry disable`). Left: prove the debugger and profiler attach on One's dev server (not Metro); until then `sim` stays the driver.
 
+- 2026-10-28 findbulk P6 content witness (owner: "We can verify doubts by reading both the verses and the hymn, like the Bible verses and the hymn verses, to see if they align"): stage 2 adds check C12, which scores each Scriptural entry's KJV passage against its hymn's text and against the hymns its look-alike numbers name (3↔8 and the like), and flags a better-aligned sibling for the judge; the judge may read both texts in memory and keeps only numbers and a reason class. Readers stay blind; a clear glyph wins; no hymn words in any record.
+
 ## Owner questions
 
 - Clicks in silent mode (feel): keep them muted under the silent switch, as iOS keyboard clicks are (recommended: the phone stays quiet at worship), or play them even in silent mode (a new sound path, checked against the hymn audio session). Asked 2026-10-25. Answer (owner, 2026-10-25): "Yeah, the clicks, that's fine. Stay muted in silent mode". No change. (feel)
