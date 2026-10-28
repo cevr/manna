@@ -1,5 +1,6 @@
 /**
- * A hymn's words in the order it is sung: its topic as a quiet line, its
+ * A hymn's words in the order it is sung: its topic as a quiet line (a
+ * button, `About this hymn`, that opens the sheet of hymns like it), its
  * number and title in one row (the number first, the `Favourite` button
  * last), a notice while chords are on and the hymn has none, then each stanza under its number and the refrain, marked,
  * each time it is sung. The theme's ink on its ground, set as the reader
@@ -32,6 +33,7 @@ import type * as Atom from 'effect/reactivity/Atom';
 import type { Placement } from '@manna/hymnal/placement';
 import { memo, type ReactNode, useCallback, useMemo, useRef } from 'react';
 import {
+  Pressable,
   ScrollView,
   type StyleProp,
   StyleSheet,
@@ -61,6 +63,7 @@ import { ResumeFollow } from '~/follow/ResumeFollow';
 import { RISE } from '~/player/bar';
 
 import { ChordLines, ChordNotice, PlayedKeyProvider } from './Chords';
+import { aboutHref } from './About';
 import { chordHref, ChordTapProvider } from './ChordSheet';
 import { FavouriteButton } from './FavouriteButton';
 import { HangingLine } from './HangingLine';
@@ -142,9 +145,26 @@ export const HymnPage = memo(function HymnPage({
       >
         <KeepAwake on={reader.reading.awake} />
         <View style={styles.head}>
-          <Text testID="hymn-topic" style={styles.topic} dynamicTypeRamp="footnote">
-            {hymn.topic}
-          </Text>
+          <Pressable
+            testID="hymn-about"
+            role="button"
+            aria-label="About this hymn"
+            aria-valuetext={hymn.topic}
+            onPress={() => router.push(aboutHref(hymn.number))}
+            hitSlop={8}
+            style={styles.about}
+          >
+            {({ pressed }) => (
+              <Text
+                testID="hymn-topic"
+                style={[styles.topic, pressed && styles.pressed]}
+                dynamicTypeRamp="footnote"
+              >
+                {hymn.topic}
+                <Text style={{ color: accent }}>{'  ›'}</Text>
+              </Text>
+            )}
+          </Pressable>
           <View testID="hymn-name" style={styles.name}>
             <View style={styles.words}>
               <Text
@@ -367,7 +387,10 @@ const styles = StyleSheet.create({
   overBar: { position: 'absolute', left: 0, right: 0, top: 0, bottom: RISE },
   page: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 48, gap: 24 },
   head: { gap: 4 },
+  // The quiet line is a button as wide as its words, so a tap beside it does nothing.
+  about: { alignSelf: 'flex-start' },
   topic: { fontSize: 13, color: color.muted },
+  pressed: { opacity: 0.5 },
   // The number and title share a baseline; the Favourite button sits at the
   // row's top, level with their first line.
   name: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },

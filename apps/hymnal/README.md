@@ -71,6 +71,21 @@ under its number, and the refrain written out each time it is sung.
   sweeps it over the whole hymnal. A test over the real hymnal asserts on
   hymn numbers, counts and booleans, never on a hymn, a `Found` or a string
   of its words, so a red run prints no hymn words.
+- Meaning search (`src/hymns/meaning.ts`) finds the hymns about a query,
+  and the hymns like a hymn, with no model at run time: a word table
+  distilled from EmbeddingGemma (each word's vector at 4 bits) and each
+  hymn's vector (8 bits), 13 MB in `assets/meaning/meaning.js`, a module
+  whose strings are read on the first meaning search, never at start. A
+  query is the sum of its words' rows, rare words weighted more; the hymns
+  are ranked by cosine. `packages/hymnal`'s `bun run meaning` rebuilds the
+  file from the pinned model (fetched by checksum into a cache outside the
+  repository), the same bytes each time. The table is a Gemma model
+  derivative: Settings → About carries the notice the Gemma Terms of Use
+  ask for, and `assets/meaning/NOTICE` beside the file.
+- A hymn page's quiet topic line is a button, `About this hymn`, that opens
+  a sheet (`/about?hymn=<n>`, `src/reader/About.tsx`): first `More like
+  this`, the 8 hymns nearest by meaning, each a row that closes the sheet
+  and opens its page.
 - One's web navigators are headless, so `src/web/` draws a small header and
   search field on the web, and the web's home screen shows the search field
   above the list, with no topic rows. A phone never renders them.

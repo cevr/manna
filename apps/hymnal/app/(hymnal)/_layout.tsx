@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { LivePlayer } from '~/player/LivePlayer';
 import { PlayerBar } from '~/player/PlayerBar';
 import { StackBottom } from '~/player/StackBottom';
+import { aboutSheetOptions } from '~/reader/About';
 import { chordSheetOptions } from '~/reader/ChordSheet';
 import { stackHeaders } from '~/reader/screen';
 import { useStackOptions } from '~/stack';
@@ -14,8 +15,9 @@ import { webOnly } from '~/web/webOnly';
 /**
  * The app's one stack: the home screen, which draws its own title (no
  * native header), each hymn and the Recent list pushed over it, and Settings
- * the player sheet (which holds the reader's settings too) and the chord
- * sheet (how to play a tapped chord) as sheets.
+ * the player sheet (which holds the reader's settings too), the chord
+ * sheet (how to play a tapped chord) and About this hymn (the hymns like
+ * it) as sheets.
  * The player plays on across every screen; while it holds a hymn its bar is
  * docked under the stack, above the home indicator (`PlayerBar`): the stack
  * ends on the bar's resting height, and the bar, its spring and its dials lie
@@ -55,6 +57,7 @@ export default function HymnalLayout() {
                 }}
               />
               <Stack.Screen name="chord" options={chordSheetOptions} />
+              <Stack.Screen name="about" options={aboutSheetOptions} />
               {webOnly(<WebStackHeader root="/" title="Hymns" />)}
             </Stack>
           </StackBottom>
