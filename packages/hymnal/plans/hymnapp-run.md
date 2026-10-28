@@ -366,7 +366,7 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 - The web is not a product target for the hymnal or Heartseed; only marketing sites matter on the web (owner 2026-10-27: "The web is not a target we care about. The only thing we would care about the web would be the marketing side of anything"; earlier: "You don't need to verify on the web"). Verification runs on iOS only; web-only findings and follow-ups are dropped; the web build and its unit tests stay green but get no new work. playbulk P5 r3 on.
 
 - The hymnal web preview on 8191 is retired (owner 2026-10-27: "And the web preview for the hymnal. We don't really need it"). Merges update the phone build only; reader1 is removed.
-- Tried Gold is deleted (owner 2026-10-27: "Let's delete tried gold"; chose code and live site). The prod Worker was destroyed with Alchemy (plan: 1 to delete, Site) and the code removed in 46aaa9a9e. The triedgold.com domain and its DNS records stay with the owner.
+- Tried Gold is deleted (owner 2026-10-27: "Let's delete tried gold"; chose code and live site). The prod Worker was destroyed with Alchemy (plan: 1 to delete, Site) and the code removed in 46aaa9a9e. The triedgold.com domain and its DNS records stay (owner 2026-10-28: "keep them").
 
 - The hymnal-try web server on 8095 is retired (owner 2026-10-27: "Yeah, I don't need the hymnal try either"). Stopped by PID; its worktree removed; its commit cfec43318 stays on local branch hymnapp/glass.
 
@@ -388,7 +388,7 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 
 - chordsimp (2026-10-23): Simple shows the first chord of each stack, so 1,171 stacks lose a final seventh (for example a G then G7 over one syllable shows G). Options: (1, recommended) keep the first chord, as merged, since the seventh is a passing colour and Advanced keeps it; (2) show the last chord of the stack in Simple; (3) keep a seventh when it is the last chord of the stack. Answer: (1), as merged. The owner checked build d34ce0021 on the phone (hymn 3 in Simple among the four checks) and said "It all looks good." (2026-10-23); read as keeping the merged behaviour, reversible.
 
-- findbulk P6 needs the 49 back-matter index photos (2026-10-20, likely IMG_1198–IMG_1246). `tmp/orchestrate/hymnapp/compile/indexes/` no longer exists (measured 2026-10-28). Ask: AirDrop them to `~/Downloads/hymnal-indexes/` (made), or photograph the index pages again. Recommendation: AirDrop. P1–P5 run meanwhile. (findbulk)
+- findbulk P6 needs the 49 back-matter index photos (2026-10-20, likely IMG_1198–IMG_1246). `tmp/orchestrate/hymnapp/compile/indexes/` no longer exists (measured 2026-10-28). Ask: AirDrop them to `~/Downloads/hymnal-indexes/` (made), or photograph the index pages again. Recommendation: AirDrop. P1–P5 run meanwhile. (findbulk) Answer (owner 2026-10-28): "ok photos are there"; 49 HEIC copied read-only to `tmp/orchestrate/hymnapp/findbulk/photos/`, checksums identical.
 
 ## Follow-ups
 
