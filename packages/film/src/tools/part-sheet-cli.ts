@@ -312,6 +312,20 @@ const cropSheet = (
   };
 };
 
+/**
+ * An answer's fit as the record keeps it: answer px to the part sheet's px.
+ * It is laid on the kept box alone, so a padded sheet's fit is moved by
+ * where the kept box lies in it.
+ */
+const inSheet = <F extends { readonly dx: number; readonly dy: number }>(
+  fit: F,
+  frame: PartsJob['frame'],
+): F =>
+  Option.match(frame, {
+    onNone: () => fit,
+    onSome: (f) => ({ ...fit, dx: fit.dx + f.at[0], dy: fit.dy + f.at[1] }),
+  });
+
 /** What okra is asked on, and its answer laid on: a padded view's kept box alone, else the whole view. */
 const askedOf = (view: Raster, sheet: Sheet, frame: PartsJob['frame']) =>
   Option.match(frame, {
@@ -460,7 +474,7 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
       onSuccess: (l) => ({
         ...call,
         state: 'laid' as const,
-        fit: l.fit,
+        fit: inSheet(l.fit, job.frame),
         measures: l.measures,
         missed: missedBars(l.measures),
       }),
@@ -513,7 +527,7 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
       budget: { calls: budget, allowance: Option.getOrNull(allowance), used },
       calls: records,
       chosen: best.call.n,
-      fit: best.fit,
+      fit: inSheet(best.fit, job.frame),
     },
     measures: best.measures,
     bars: BARS,
