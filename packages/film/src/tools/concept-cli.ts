@@ -56,6 +56,8 @@
 //
 //   film concept ease <film> <member> --from <pose> --to <pose> --seconds <s> [--segment a-b] [--shuffle seed]
 //     a member's ease drawn frame by frame (`ease.ts`).
+//   film concept fit <film> <member> --view <kind>-<view> --from <view> ... [--bone <name> ...]
+//     a kept view's pose fitted from the member's cut-out puppets (`pose-fit-cli.ts`).
 //   film concept render <film> <member> [--kind turnaround|poses|heads] [--no-critique]
 //   film concept render <film> <member> --render <n> --finding <kind>-<view>/<id> --stands <why>
 //     the member's cast render (`cast-render.ts`): every kept view of his
@@ -106,6 +108,7 @@ import { ImageRoute } from './image-route.ts';
 import { trace } from './trace-cli.ts';
 import { render } from './cast-render-cli.ts';
 import { ease } from './ease-cli.ts';
+import { fit } from './pose-fit-cli.ts';
 import { parts as partSheet } from './part-sheet-cli.ts';
 import type { Pages } from './pages.ts';
 import { decodePng, encodePng } from './png.ts';
@@ -573,6 +576,7 @@ export const concept = <E, R>(
       keep,
       render(pages, rules),
       ease(pages),
+      fit,
       partSheet,
       trace,
     ]),

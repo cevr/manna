@@ -14,7 +14,8 @@
 //   and a step down; take a move only when it lowers the loss, and sweep
 //   again until a sweep moves nothing; then halve every step, from 16° (8
 //   px, 0.04 of scale) down to 1/256 of that (0.0625°). The same input
-//   gives the same pose.
+//   gives the same pose. A bone turns no further from its start than
+//   `reach`, when given.
 
 import type { Rgb } from './cast-sheet-pixels.ts';
 import { type Puppet, type PuppetPose, rasterOf } from './puppet.ts';
@@ -25,6 +26,8 @@ export interface PoseFitOptions {
   readonly bones?: ReadonlyArray<string>;
   readonly start?: PuppetPose;
   readonly paper?: Rgb;
+  /** How far a bone may turn from its start, degrees: any turn unless given. */
+  readonly reach?: number;
 }
 
 /** A fitted pose, its loss (lower is nearer the view) and how many rasters the search drew. */
@@ -105,9 +108,14 @@ export const fitPose = (puppet: Puppet, target: Raster, options: PoseFitOptions 
   const size = [target.width, target.height] as const;
   const up = forebearsOf(puppet, bones);
   let rasters = 0;
+  const reach = options.reach ?? Infinity;
   const score = (at: Coords) => {
+    const pose = poseOf(bones, up, at, start);
+    // a pose past the reach is no pose: its loss is never lower
+    if (bones.some((b) => Math.abs((pose.numbers[b] ?? 0) - (start.numbers[b] ?? 0)) > reach))
+      return Infinity;
     rasters++;
-    return lossOf(target, rasterOf(puppet, poseOf(bones, up, at, start), size), paper);
+    return lossOf(target, rasterOf(puppet, pose, size), paper);
   };
   const turns = bones.map(() => FIRST.turn);
   // The bones first, the root and scale held at the start; then all together.
@@ -157,10 +165,10 @@ const descend = (
   return best;
 };
 
-/** The box `[x0, y0, x1, y1]` of the px of `r` that `on` holds (by the px's byte offset). */
-const boxOf = (r: Raster, on: (i: number) => boolean) => {
+/** The box `[x0, y0, x1, y1]` of the px of `r` that `on` holds (by the px's byte offset), in rows from `from` down. */
+const boxOf = (r: Raster, on: (i: number) => boolean, from = 0) => {
   const box: [number, number, number, number] = [Infinity, Infinity, -Infinity, -Infinity];
-  for (let y = 0; y < r.height; y++)
+  for (let y = Math.max(0, Math.floor(from)); y < r.height; y++)
     for (let x = 0; x < r.width; x++)
       if (on((y * r.width + x) * 4)) {
         box[0] = Math.min(box[0], x);
@@ -174,22 +182,27 @@ const boxOf = (r: Raster, on: (i: number) => boolean) => {
 /** How far a px of the view lies off its paper, summed over RGB, to be its figure's. */
 const OFF_PAPER = 24;
 
+/** The share of a figure's height, from its bottom, that holds its feet. */
+const FEET = 0.1;
+
 /**
  * A start for a fit to a view that draws the figure at another size: the
  * rest pose scaled and moved so its figure's box (the raster's alpha) fills
  * `target`'s figure box (px off its paper by more than `OFF_PAPER`) in
- * height, their bottoms and centres met.
+ * height, their bottoms met and their feet (the box of their lowest
+ * `FEET` of rows) centred on each other: a raised arm moves no foot.
  */
 export const boxStart = (puppet: Puppet, target: Raster, paper?: Rgb): PuppetPose => {
   const p: Rgb = paper ?? [target.rgba[0]!, target.rgba[1]!, target.rgba[2]!];
   const t = target.rgba;
   const rest = rasterOf(puppet, { numbers: {}, root: puppet.root, scale: 1 });
-  const [tx0, ty0, tx1, ty1] = boxOf(
-    target,
-    (i) =>
-      Math.abs(t[i]! - p[0]) + Math.abs(t[i + 1]! - p[1]) + Math.abs(t[i + 2]! - p[2]) > OFF_PAPER,
-  );
-  const [rx0, ry0, rx1, ry1] = boxOf(rest, (i) => rest.rgba[i + 3]! > 0);
+  const onTarget = (i: number) =>
+    Math.abs(t[i]! - p[0]) + Math.abs(t[i + 1]! - p[1]) + Math.abs(t[i + 2]! - p[2]) > OFF_PAPER;
+  const onRest = (i: number) => rest.rgba[i + 3]! > 0;
+  const [, ty0, , ty1] = boxOf(target, onTarget);
+  const [, ry0, , ry1] = boxOf(rest, onRest);
+  const [tx0, , tx1] = boxOf(target, onTarget, ty1 - FEET * (ty1 - ty0));
+  const [rx0, , rx1] = boxOf(rest, onRest, ry1 - FEET * (ry1 - ry0));
   const scale = (ty1 - ty0) / (ry1 - ry0);
   const [px, py] = puppet.root;
   return {
