@@ -75,39 +75,48 @@ const device = () => {
 const timeline = { first: 5000, end: 240000, lines: [] };
 const starting = Predicate.or(Predicate.isTagged('Loading'), Predicate.isTagged('Playing'));
 
-it.effect('offline a session play rejection keeps an intact saved recording', () => {
-  const f = fake(),
-    d = device(),
-    id = { number: 100, offset: 2 };
-  return Effect.gen(function* () {
-    const cache = yield* Offline;
-    yield* cache.enqueue(id);
-    yield* idle(cache);
-    d.control.failLocal = true;
-    const api = localOver(d.api, cache);
-    expect(
-      Exit.isFailure(
-        yield* Effect.exit(
-          api.play(audioUrl(100, 2), 32000, { recording: id, ready: false, continuous: false }),
+it.effect(
+  'offline a session play rejection keeps an intact saved recording and retries remote once',
+  () => {
+    const f = fake(),
+      d = device(),
+      id = { number: 100, offset: 2 };
+    return Effect.gen(function* () {
+      const cache = yield* Offline;
+      yield* cache.enqueue(id);
+      yield* idle(cache);
+      d.control.failLocal = true;
+      const api = localOver(d.api, cache);
+      yield* api.play(audioUrl(100, 2), 32000, { recording: id, ready: false, continuous: false });
+      expect((yield* cache.snapshot).saved).toBe(1);
+      expect(d.calls.map((c) => c.uri)).toEqual(['file:///synthetic/100_2', audioUrl(100, 2)]);
+      // A remote that also fails ends the attempt: one retry, no more.
+      d.control.failRemote = true;
+      expect(
+        Exit.isFailure(
+          yield* Effect.exit(
+            api.play(audioUrl(100, 2), 32000, { recording: id, ready: false, continuous: false }),
+          ),
         ),
-      ),
-    ).toBe(true);
-    expect((yield* cache.snapshot).saved).toBe(1);
-    expect(d.calls.map((c) => c.uri)).toEqual(['file:///synthetic/100_2']);
-    d.control.failLocal = false;
-    yield* api.play(audioUrl(100, 2), 32000, { recording: id, ready: false, continuous: false });
-    expect(d.calls.map((c) => c.uri)).toEqual([
-      'file:///synthetic/100_2',
-      'file:///synthetic/100_2',
-    ]);
-    // The platform read boundary also validates media bytes, not just size.
-    const bytes = f.files.get('100_2');
-    if (bytes) bytes[0] = 0;
-    yield* api.play(audioUrl(100, 2), 32000, { recording: id, ready: false, continuous: false });
-    expect(d.calls.at(-1)?.uri).toBe(audioUrl(100, 2));
-    expect((yield* cache.snapshot).saved).toBe(0);
-  }).pipe(Effect.provide(f.layer));
-});
+      ).toBe(true);
+      expect(d.calls.slice(2).map((c) => c.uri)).toEqual([
+        'file:///synthetic/100_2',
+        audioUrl(100, 2),
+      ]);
+      expect((yield* cache.snapshot).saved).toBe(1);
+      d.control.failLocal = false;
+      d.control.failRemote = false;
+      yield* api.play(audioUrl(100, 2), 32000, { recording: id, ready: false, continuous: false });
+      expect(d.calls.at(-1)?.uri).toBe('file:///synthetic/100_2');
+      // The platform read boundary also validates media bytes, not just size.
+      const bytes = f.files.get('100_2');
+      if (bytes) bytes[0] = 0;
+      yield* api.play(audioUrl(100, 2), 32000, { recording: id, ready: false, continuous: false });
+      expect(d.calls.at(-1)?.uri).toBe(audioUrl(100, 2));
+      expect((yield* cache.snapshot).saved).toBe(0);
+    }).pipe(Effect.provide(f.layer));
+  },
+);
 
 it.effect('offline a hung storage index cannot delay public Start', () => {
   const f = fake(),

@@ -68,11 +68,11 @@ export const localOver = (device: PlaybackApi, cache: typeof Offline.Service): P
               if (error.operation !== 'play' && error.operation !== 'local-read')
                 return yield* error;
               // A device/session error does not imply corrupt media. Recheck
-              // the storage boundary; only its failed validation invalidates.
-              const intact = yield* cache.local(id);
+              // the storage boundary; only its failed validation invalidates,
+              // so an intact file stays saved for the next Play.
+              yield* cache.local(id);
               if (owner !== generation) return yield* stale();
-              if (Option.isSome(intact)) return yield* error;
-              // One remote retry only; the existing recording wrapper owns key fallback.
+              // One remote retry either way; the existing recording wrapper owns key fallback.
               return yield* attempt(
                 uri,
                 error.positionMs ?? Option.getOrElse(yield* position, () => at),
