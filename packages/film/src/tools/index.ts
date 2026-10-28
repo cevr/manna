@@ -56,8 +56,20 @@ export {
   type PartRule,
   cutFigureOf,
   cutParts,
+  inkOf,
+  inkTo,
   recompose,
 } from '../core/part-sheet.ts';
 export type { HiddenEntry } from './part-sheet-cli.ts';
+export {
+  type KeyFit,
+  type Limb,
+  type LimbCut,
+  cutLimb,
+  fitKey,
+  keyInFrame,
+} from '../core/key-cut.ts';
+export type { Raster } from '../core/raster.ts';
+export { decodePng, encodePng } from './png.ts';
 export { PuppetImagesBun } from '../puppet/images-bun.ts';
 export { puppetFrom } from '../puppet/load.ts';
