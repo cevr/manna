@@ -75,6 +75,29 @@ const CUT = {
   ],
 };
 
+/** A figure whose arm reaches past his body's side onto the paper (x 18-30): its hidden area meets the ground. */
+const reachAt = (x: number, y: number): Rgba => {
+  const layers: ReadonlyArray<readonly [boolean, Rgba]> = [
+    [inBox(x, y, 19, 9, 29, 39), TEAL],
+    [inBox(x, y, 18, 8, 30, 40), INK],
+  ];
+  return layers.find(([on]) => on)?.[1] ?? figureAt(x, y, false, []);
+};
+const REACH = {
+  view: rasterOf(W, H, reachAt),
+  figure: Uint8Array.from({ length: W * H }, (_, i) => {
+    const [x, y] = [i % W, Math.floor(i / W)];
+    return Number(inBox(x, y, 4, 4, 27, 45) || inBox(x, y, 18, 8, 30, 40));
+  }),
+  cut: {
+    parts: [
+      { name: 'arm', take: [box(18, 8, 31, 41)] },
+      { name: 'torso', take: [box(0, 0, W, 24)] },
+      { name: 'robe', take: [box(0, 24, W, H)] },
+    ],
+  },
+};
+
 /** The portrait the route is asked at: the view twice over, so a drawn answer lays back pixel for pixel. */
 const PORTRAIT = { width: 2 * W, height: 2 * H };
 
@@ -116,10 +139,14 @@ const run = (
     readonly view?: Raster;
     readonly hidden?: HiddenEntry;
     readonly mode?: 'call' | 'reuse';
+    readonly figure?: Uint8Array;
+    readonly cut?: typeof CUT;
   } = {},
 ) => {
   const view = options.view ?? VIEW;
-  const sheet = Result.getOrThrow(cutParts(view, CUT, { figure: FIGURE }));
+  const sheet = Result.getOrThrow(
+    cutParts(view, options.cut ?? CUT, { figure: options.figure ?? FIGURE }),
+  );
   const route = ImageRoute.fake(() => answers.shift() ?? NOT_A_PNG);
   return runParts({
     label: 'f.front',
@@ -180,6 +207,24 @@ describe('film concept parts', () => {
   );
 
   it.effect(
+    'misses an all-paper answer whose paper the ground reaches: its arm hides no paint, its seam is unread',
+    () =>
+      Effect.gen(function* () {
+        // the arm reaches onto the paper, so the ground's flood takes the whole paper answer: no pixel is painted
+        const record = Result.getOrThrow(
+          yield* run(new Map(), [answerOf(rasterOf(W, H, () => PAPER))], {
+            view: REACH.view,
+            figure: REACH.figure,
+            cut: REACH.cut,
+          }),
+        );
+        expect(record.measures.paintedPx).toBe(0);
+        expect(record.measures.seam.pairs).toBe(0);
+        expect(record.missed).toEqual(['paint', 'seam', 'drift', 'grain']);
+      }),
+  );
+
+  it.effect(
     "reads each painted part's grain on its own: paint without grain misses on its part alone",
     () =>
       Effect.gen(function* () {
@@ -229,10 +274,13 @@ describe('film concept parts', () => {
     () =>
       Effect.gen(function* () {
         const files = new Map<string, Uint8Array>();
-        for (let k = 0; k < 3; k++) Result.getOrThrow(yield* run(files, [UNDER([])]));
-        // one pixel of the arm repainted: another input, another hash
+        const first = Result.getOrThrow(yield* run(files, [UNDER([])]));
+        for (let k = 0; k < 2; k++) Result.getOrThrow(yield* run(files, [UNDER([])]));
+        // one robe pixel the magenta leaves showing, repainted: another input, another hash
         const moved = { ...VIEW, rgba: Uint8Array.from(VIEW.rgba) };
-        moved.rgba.set([95, 150, 150, 255], (20 * W + 15) * 4);
+        moved.rgba.set([121, 158, 201, 255], (30 * W + 7) * 4);
+        const elsewhere = Result.getOrThrow(yield* run(new Map(), [UNDER([])], { view: moved }));
+        expect(elsewhere.okra.input).not.toBe(first.okra.input);
         const refused = yield* run(files, [UNDER([])], { view: moved });
         expect(Result.isFailure(refused)).toBe(true);
         expect(ledgerOf(files)).toEqual([1, 2, 3]);
@@ -248,6 +296,26 @@ describe('film concept parts', () => {
         });
         expect(Result.isFailure(past)).toBe(true);
         expect(ledgerOf(files)).toEqual([1, 2, 3, 4]);
+      }),
+  );
+
+  it.effect(
+    'counts answer files the ledger lacks beside its entries, and numbers a call past them',
+    () =>
+      Effect.gen(function* () {
+        const files = new Map<string, Uint8Array>([
+          [`${DIR}/okra/answer-1.png`, UNDER([])],
+          [`${DIR}/okra/answer-2.png`, UNDER([])],
+        ]);
+        // a prompt naming an address: the route refuses it, after the call is in the ledger
+        const failed = yield* run(files, [UNDER([])], {
+          hidden: { ...HIDDEN, prompt: 'Repaint the magenta for a@b.co.' },
+        });
+        expect(Result.isFailure(failed)).toBe(true);
+        expect(ledgerOf(files)).toEqual([3]);
+        const refused = yield* run(files, [UNDER([])]);
+        expect(Result.isFailure(refused)).toBe(true);
+        expect(ledgerOf(files)).toEqual([3]);
       }),
   );
 

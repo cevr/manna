@@ -79,7 +79,7 @@ const MOST_CALLS = 3;
 const LEDGER = 'okra/calls.json';
 
 /** An answer file the route writes, under `okra/`. */
-const ANSWER_FILE = /^answer-\d+\.png$/;
+const ANSWER_FILE = /^answer-(\d+)\.png$/;
 
 /** More calls a view's cut table grants it: how many, who granted them, on which day and why. */
 const Allowance = Schema.Struct({
@@ -262,7 +262,7 @@ interface PartsJob {
   readonly portrait: { readonly width: number; readonly height: number };
 }
 
-/** The view's ledger of calls (none before its first), and how many it has used: its entries, or the answer files under `okra/` where more. */
+/** The view's ledger of calls (none before its first); how many it has used: each ledger entry, and each answer file under `okra/` the ledger lacks; and the next unused call number. */
 const ledgerOf = (dir: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -281,11 +281,18 @@ const ledgerOf = (dir: string) =>
       onTrue: () => fs.readDirectory(okra),
       onFalse: () => Effect.succeed<ReadonlyArray<string>>([]),
     });
+    // an answer file the ledger does not list is an attempt it lost: it counts on its own
+    const listed = new Set(calls.map((c) => path.basename(c.out)));
+    const orphans = answers.filter((f) => ANSWER_FILE.test(f) && !listed.has(f));
     return {
       calls,
-      used: Math.max(calls.length, answers.filter((f) => ANSWER_FILE.test(f)).length),
+      used: calls.length + orphans.length,
+      next: Math.max(0, ...calls.map((c) => c.n), ...orphans.map(numberOf)) + 1,
     };
   });
+
+/** An answer file's call number. */
+const numberOf = (file: string) => Number(ANSWER_FILE.exec(file)?.[1] ?? 0);
 
 /** A laid call's line: its measures, or its state and why. */
 const callLine = (label: string, c: CallLaid) =>
@@ -325,7 +332,7 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
       );
     yield* fs.makeDirectory(path.join(dir, 'okra'), { recursive: true });
     yield* fs.writeFile(path.join(dir, inputName), made.bytes);
-    const n = used + 1;
+    const n = prior.next;
     const out = path.join(dir, 'okra', `answer-${n}.png`);
     const request = editRequest(job.hidden.prompt, path.join(dir, inputName), out);
     calls.push({
@@ -334,7 +341,7 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
       input: inputName,
       out: relative(out),
     });
-    used = n;
+    used += 1;
     // the call is in the ledger before the route is asked: it counts whatever follows
     const ledger = yield* Schema.encodeEffect(LedgerJson)({ calls });
     yield* fs.writeFileString(path.join(dir, LEDGER), `${ledger}\n`);
