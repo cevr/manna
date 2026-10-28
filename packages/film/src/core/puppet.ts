@@ -121,12 +121,12 @@ export interface PuppetMesh {
   readonly amounts: Float64Array;
 }
 
-/** A part of a puppet: its name, its pixels (its texture), what it shows uncovered, and its mesh. */
+/** A part of a puppet: its name, its pixels (its texture), what each part in front of it hides, and its mesh. */
 export interface PuppetPart {
   readonly name: string;
   readonly pixels: Raster;
-  /** Its pixels once a part in front of it moves away: the paint the un-matte cleared behind a front part's rim (hidden at rest) given back, else its pixels. */
-  readonly uncovered: Raster;
+  /** By each part in front of it: the paint the un-matte cleared behind that part's rim (hidden at rest), shown once that part moves away; none where nothing was cleared. */
+  readonly revealed: ReadonlyArray<Raster | undefined>;
   readonly mesh: PuppetMesh;
 }
 
@@ -383,7 +383,10 @@ export const puppetOf = (
     const skin = (skeleton.skin[part.name] ?? []).map((b) => at.get(b)!);
     const flap = skeleton.flaps?.find((f) => f.part === part.name);
     const rgba = textures[k]!;
-    const open = uncoveredOf(withFlaps, textures, k);
+    const revealed = revealedOf(withFlaps, textures, k);
+    // its mesh holds what it shows at rest and all it can reveal
+    const covers = (i: number) =>
+      rgba[i * 4 + 3]! > 0 || revealed.some((r) => r !== undefined && r[i * 4 + 3]! > 0);
     const weigh =
       flap === undefined
         ? (p: Pt) => weightsAt(p, skin, bones)
@@ -402,9 +405,8 @@ export const puppetOf = (
     return {
       name: part.name,
       pixels: { width: W, height: H, rgba },
-      uncovered: { width: W, height: H, rgba: open },
-      // its mesh holds what it shows uncovered, which holds what it shows at rest
-      mesh: meshOf(W, H, (x, y) => open[(y * W + x) * 4 + 3]! > 0, weigh, bones),
+      revealed: revealed.map((r) => r && { width: W, height: H, rgba: r }),
+      mesh: meshOf(W, H, (x, y) => covers(y * W + x), weigh, bones),
     };
   });
   return Result.succeed({
@@ -417,23 +419,26 @@ export const puppetOf = (
 };
 
 /**
- * Part `k`'s texture with the paint the un-matte cleared behind a front
- * part's rim given back from `before` (its pixels before the un-matte):
- * where `k` is not the frontmost holder, its pixel was cleared, and it had
- * one. What a pose shows once the part in front moves away.
+ * The paint the un-matte cleared from part `k` behind each part in front of
+ * it, given back from `before` (its pixels before the un-matte): for each
+ * front part `j`, `k`'s pixels where `j` is the frontmost holder, `k`'s
+ * pixel was cleared, and it had one (else none, where nothing was cleared
+ * behind `j`). What a pose shows of `k` once `j` moves away from there.
  */
-const uncoveredOf = (
+const revealedOf = (
   before: ReadonlyArray<Uint8Array>,
   after: ReadonlyArray<Uint8Array>,
   k: number,
-) => {
+): ReadonlyArray<Uint8Array | undefined> => {
   const own = before[k]!;
-  const out = Uint8Array.from(after[k]!);
-  for (let i = 3; i < out.length; i += 4) {
-    if (out[i] !== 0 || own[i] === 0) continue;
-    let behind = false;
-    for (let j = 0; j < k && !behind; j++) behind = before[j]![i]! > 0;
-    if (behind) out.set(own.subarray(i - 3, i + 1), i - 3);
+  const out: Array<Uint8Array | undefined> = before.map(() => undefined);
+  for (let i = 3; i < own.length; i += 4) {
+    if (after[k]![i] !== 0 || own[i] === 0) continue;
+    const j = before.findIndex((p, n) => n < k && p[i]! > 0);
+    if (j < 0) continue;
+    const layer = out[j] ?? new Uint8Array(own.length);
+    layer.set(own.subarray(i - 3, i + 1), i - 3);
+    out[j] = layer;
   }
   return out;
 };

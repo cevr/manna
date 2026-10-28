@@ -158,7 +158,7 @@ describe('a puppet', () => {
     ).toBe(true);
   });
 
-  test("gives back, uncovered, the paint the un-matte cleared behind a front part's rim", () => {
+  test("keeps, revealed by the part in front, the paint the un-matte cleared behind that part's rim", () => {
     // a sleeve over a light body box, cut from a paper; the sleeve's rim, reached from the ground through the body, lies over its hidden paint
     const paper = [250, 240, 220] as const;
     const arm = new Uint8Array(W * H * 4);
@@ -188,13 +188,15 @@ describe('a puppet', () => {
       ...r.subarray((y * W + x) * 4, (y * W + x) * 4 + 4),
     ];
     const back = p.parts[1]!;
-    // at rest the body's paint under the rim is cleared; uncovered it is the body's own
+    // at rest the body's paint under the rim is cleared; revealed by the sleeve it is the body's own
     expect(at(back.pixels.rgba, 30, 8)).toEqual([0, 0, 0, 0]);
-    expect(at(back.uncovered.rgba, 30, 8)).toEqual([200, 190, 160, 255]);
-    // the body's own pixels elsewhere are its pixels in both
-    expect(at(back.uncovered.rgba, 30, 18)).toEqual(at(back.pixels.rgba, 30, 18));
+    expect(at(back.revealed[0]!.rgba, 30, 8)).toEqual([200, 190, 160, 255]);
+
+    // nothing else: the body's own pixels are its texture's
+    expect(at(back.revealed[0]!.rgba, 30, 18)).toEqual([0, 0, 0, 0]);
+    expect(back.revealed[1]).toBeUndefined();
     // a front part's own pixels are never given back
-    expect(p.parts[0]!.uncovered.rgba).toEqual(p.parts[0]!.pixels.rgba);
+    expect(p.parts[0]!.revealed.filter(Boolean)).toEqual([]);
   });
 
   test('is deterministic: the same pose gives the same raster', () => {
