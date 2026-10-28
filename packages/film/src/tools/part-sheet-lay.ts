@@ -247,11 +247,12 @@ export const HiddenMeasures = Schema.Struct({
 });
 export type HiddenMeasures = typeof HiddenMeasures.Type;
 
-/** A grain over a mask, rounded. */
-const grainRead = (r: Raster, at: Uint8Array) => {
-  const g = grainOf(r, at);
-  return { robust: round2(g.robust), plain: round2(g.plain), n: g.n };
-};
+/** A grain read, rounded for the record. */
+const rounded = (g: { readonly robust: number; readonly plain: number; readonly n: number }) => ({
+  robust: round2(g.robust),
+  plain: round2(g.plain),
+  n: g.n,
+});
 
 /** The grain of part `id`'s paint and of its kept paint within reach of it, each over paint lighter than the ink. */
 const partGrain = (view: Raster, sheet: Sheet, at: Uint8Array, composite: Raster, id: number) => {
@@ -267,8 +268,8 @@ const partGrain = (view: Raster, sheet: Sheet, at: Uint8Array, composite: Raster
         GRAIN_STEPS.some((a) => GRAIN_STEPS.some((b) => reaches(a, b))),
     );
   });
-  const painted = grainRead(composite, paint);
-  const kept = grainRead(view, near);
+  const painted = grainOf(composite, paint);
+  const kept = grainOf(view, near);
   const read = painted.n >= LEAST_GRAIN_WINDOWS && kept.n >= LEAST_GRAIN_WINDOWS;
   const within = Math.abs(painted.robust - kept.robust) <= BARS.grainWithin;
   const verdict = Bool.match(read, {
@@ -276,7 +277,13 @@ const partGrain = (view: Raster, sheet: Sheet, at: Uint8Array, composite: Raster
       Bool.match(within, { onTrue: () => 'within' as const, onFalse: () => 'outside' as const }),
     onFalse: () => 'unverified' as const,
   });
-  return { part: sheet.parts[id - 1]?.name ?? '', painted, kept, verdict };
+  // the bar is read on the grains as measured; the record keeps them rounded
+  return {
+    part: sheet.parts[id - 1]?.name ?? '',
+    painted: rounded(painted),
+    kept: rounded(kept),
+    verdict,
+  };
 };
 
 /** Each painted pixel's part (k + 1, 0 for none), the seam pairs, and the painted pixels no opaque part in front hides. */
