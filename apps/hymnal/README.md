@@ -63,11 +63,14 @@ under its number, and the refrain written out each time it is sung.
   or by any line of any stanza or refrain half remembered: a typo or two in
   its longer words, a word or two left out, two words swapped, a modern
   word for an old one or the other way (`you` and `thee`). A title query
-  lists the hymns whose title holds it first, in number order. On a phone a
+  lists the hymns whose title holds it first, in number order, and a hymn
+  that holds a word comes before one a typo of it finds. On a phone a
   result found by a line other than its title shows that line under the
   title, quiet, in a taller row. Its index is built in memory as search mode
   opens, never at the app's start; `search.property.slow.test.ts`
-  sweeps it over the whole hymnal.
+  sweeps it over the whole hymnal. A test over the real hymnal asserts on
+  hymn numbers, counts and booleans, never on a hymn, a `Found` or a string
+  of its words, so a red run prints no hymn words.
 - One's web navigators are headless, so `src/web/` draws a small header and
   search field on the web, and the web's home screen shows the search field
   above the list, with no topic rows. A phone never renders them.

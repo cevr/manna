@@ -15,8 +15,8 @@ and brings the list back where it was.
 ## Sub-features
 
 - `search-number`: a number finds that hymn first, then the hymns whose number starts with it.
-- `search-number-forms`: `100`, `#100`, `# 100`, `no 100`, `no. 100`, `No.100`, `hymn 100`, `Hymn #100` and `number 100` each find hymn 100 first.
-- `search-text`: words of a title find the hymns whose title holds them first, in number order, then the hymns whose lines hold them.
+- `search-number-forms`: `100`, `#100`, `# 100`, `no 100`, `no. 100`, `No.100`, `hymn 100`, `Hymn #100`, `hymn no. 100` and `number 100` each find hymn 100 first, and so do they with punctuation around the number (`100.`, `(100)`).
+- `search-text`: words of a title find the hymns whose title holds them first, in number order, then the hymns whose lines hold them, and only then the hymns a typo of a word finds. The last word may be half typed: it finds the words it starts.
 - `search-line`: any line of any stanza or refrain, typed whole, finds its hymn first or among the first five.
 - `search-typo`: the line with one or two typos (a letter dropped, doubled, swapped or mistyped) in words of 4 letters or more still finds it.
 - `search-dropped`: the line with one or two words left out still finds it.

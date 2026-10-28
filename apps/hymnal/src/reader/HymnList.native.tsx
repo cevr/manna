@@ -16,9 +16,11 @@
  * After its last row the list keeps `ListEnd`, the end space over the bottom
  * inset it meets, so the row ends clear of the home indicator, or of the
  * bar docked under the stack while it shows.
- * Every row is one line of one height, scaled with the reader's text size,
- * so the list knows each row's size before it draws it (`getFixedItemSize`)
- * and reuses a row's view for the next row it shows (`recycleItems`).
+ * Each kind of row has one height, scaled with the reader's text size: a
+ * hymn and a topic one line, a search result found by a line two (its title,
+ * then that line). So the list knows each row's size before it draws it
+ * (`getFixedItemSize`) and reuses a row's view for the next row of its kind
+ * (`recycleItems`, `getItemType`).
  *
  * A phone never mounts the list anew under a pushed hymn or a sheet, so it
  * keeps its own place, and `offset` is the web's alone. Rows added above
