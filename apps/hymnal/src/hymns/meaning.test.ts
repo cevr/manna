@@ -64,16 +64,18 @@ describe('the ranking', () => {
   const bytes = (text: string) => new Uint8Array(Buffer.from(text, 'base64'));
   const words = file.words.split(' ');
   const weights = new Float32Array(bytes(file.weights).buffer);
-  const table = bytes(file.table);
   const vectors = new Int8Array(bytes(file.vectors).buffer);
   const order = file.hymns.split(' ').map(Number);
   const D = file.dims;
   /** Each value of word `w`'s row, times its weight. */
-  const rowOf = (w: number) =>
-    Array.from({ length: D }, (_, c) => {
-      const byte = table[(w * D + c) >> 1] ?? 0;
+  const rowOf = (w: number) => {
+    // A row is its own run of base64, `D * 2 / 3` characters.
+    const row = bytes(file.table.slice((w * D * 2) / 3, ((w + 1) * D * 2) / 3));
+    return Array.from({ length: D }, (_, c) => {
+      const byte = row[c >> 1] ?? 0;
       return (([byte >> 4, byte & 15][c % 2] ?? 0) - 8) * (weights[w] ?? 0);
     });
+  };
   const vectorOf = (h: number) => Array.from({ length: D }, (_, c) => vectors[h * D + c] ?? 0);
   const cosineTop = (query: ReadonlyArray<number>, count: number, skip: number) => {
     const length = (v: ReadonlyArray<number>) => Math.hypot(...v);
