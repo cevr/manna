@@ -8,8 +8,8 @@ downloads play locally first. R2 remains the source for missing recordings.
 
 - `offline-open-default`: open 100 without Play. Its printed-key save starts once. The page remains usable. A neighbouring pager page starts no save.
 - `offline-play-key`: change Key and press Play. The changed-key set becomes saved only after all its bytes arrive.
-- `offline-local-first`: a completed set resolves locally with the remote origin blocked. A local read failure invalidates it and tries remote once. A missing recording retains the player's Retry path.
-- `offline-download-all`: Settings has `Downloads` and `Download all recordings`. This action saves the 695 printed-key recordings. Other keys are saved when used.
+- `offline-local-first`: a completed set resolves locally with the remote origin blocked. A local read or device play failure tries remote once. Only a failed storage size, header or read check invalidates the saved file. A missing recording retains the player's Retry path.
+- `offline-download-all`: Settings has `Downloads` and `Download all recordings`. This action saves the 695 printed-key recordings. Other keys are saved when used. The size estimate reads about 2,471 MB for 695 recordings, never 0 MB. While saved media is still indexed, `Checking saved recordings.` shows, and a Download all press starts after the check.
 - `offline-progress`: the count advances only after a recording is complete. Active, queued and partial-byte counts remain separate.
 - `offline-size`: the saved count and exact byte size include completed recordings in every saved key.
 - `offline-delete`: `Delete downloads`, then `Confirm delete downloads`, removes this app's downloaded recordings and partials, including retired recording sets. `Keep downloads` preserves them. Counts and bytes become zero. A cancelled save cannot restore them.
@@ -44,6 +44,6 @@ downloads play locally first. R2 remains the source for missing recordings.
 - Silent Play does not call the recording device. Keep native recording output unverified under a hard silence rule. Never use Sound-off proof as audio evidence.
 - Downloads live in application support on native and origin-private files on web. On iOS the adapter sets and reads back `isExcludedFromBackupKey` before any media write, including for retired app-owned folders. Verify that native saves succeed through that boundary; a missing binding or refused flag must stop saving. No native filesystem-provider patch is needed: the existing Foundation facade exposes the resource setter.
 - Web requests persistent storage when Download all is pressed. A refusal is normal. Keep the browser eviction limit visible in the Downloads copy; OPFS alone is not a permanence guarantee. Platform storage settings can clear app data. Saved copies live outside the browser HTTP cache; settings KVS holds no media blobs. The browser may also cache HTTP responses independently.
-- A device Play/session rejection alone must keep a good saved file. Only a failed storage size/header/read check invalidates it. A blocked storage index must not block public Start.
+- A device Play/session rejection alone must keep a good saved file, and still makes one remote attempt. Only a failed storage size/header/read check invalidates it. A blocked storage index must not block public Start.
 - Download all remains enabled during a page-open save and keeps the same visible and accessible name. Pause/resume state belongs in the notice. Storage failure stops the bulk after at most the two already active ranges. Resume retries changed-key failures as well as defaults; partials discovered at launch are paused, not failed.
 - A development launch may set `VITE_HYMNAL_RECORDINGS_ORIGIN` to a loopback fixture. Release builds always use R2.

@@ -4479,7 +4479,7 @@ The form of an entry, each field on its own line:
 
 ### hymnal-offline-origin-and-owned-writes
 
-- **Date:** 2026-10-28
+- **Date:** 2026-10-27
 - **Kind:** correction
 - **Said:** "Resume valid partials only when response validators/range semantics agree."
 - **Source:** hymnapp/playbulk/p5-round-1-findings.md M1, m1, m2, m6, o2
@@ -4489,7 +4489,7 @@ The form of an entry, each field on its own line:
 
 ### hymnal-offline-start-and-intact-media
 
-- **Date:** 2026-10-28
+- **Date:** 2026-10-27
 - **Kind:** correction
 - **Said:** "Saved sets resolve locally first."
 - **Source:** hymnapp/playbulk/p5-round-1-findings.md m3, m4, o1, T3
@@ -4500,7 +4500,7 @@ The form of an entry, each field on its own line:
 
 ### hymnal-downloaded-storage-limits
 
-- **Date:** 2026-10-28
+- **Date:** 2026-10-27
 - **Kind:** correction
 - **Said:** "Offline must use durable app-owned media storage."
 - **Source:** hymnapp/playbulk/p5-round-1-findings.md m7
