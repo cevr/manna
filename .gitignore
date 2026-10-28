@@ -206,10 +206,6 @@ design-language/mocks/stills/
 # Written by the CLI tests (a local .bible home).
 packages/cli/.bible/
 
-# The Tried Gold site build (apps/triedgold/build), written by `react-router build`
-# and deployed as the Cloudflare Worker and its assets by apps/triedgold/alchemy.run.ts.
-apps/triedgold/build/
-
 # The First the Blade prerender's server build (apps/firsttheblade/.prerender),
 # written by its `build` script and read once to draw the pages.
 .prerender/

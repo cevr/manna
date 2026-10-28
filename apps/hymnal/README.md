@@ -511,7 +511,7 @@ connected to it. If a step fails on scopes, the owner runs
 (recommended). With Custom, he chooses at least `memberships.read`,
 `zone.read`, `dns.read`, `dns.write`, `workers-r2.write` and
 `workers-r2-bucket-item.write`, plus the scopes that the other stacks
-(`apps/egw-search`, `apps/triedgold`, `apps/animations`) already use.
+(`apps/egw-search`, `apps/firsttheblade`, `apps/animations`) already use.
 `--add Cloudflare` is only for a profile that has no Cloudflare yet: on a
 connected profile, Alchemy refuses it ("already connected").
 
