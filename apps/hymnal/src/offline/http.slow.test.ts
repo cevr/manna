@@ -14,6 +14,8 @@ it.effect('offline multi-range requests obey the deployed bucket CORS headers', 
       ...(bucket.match(/allowedHeaders:\s*\[([^\]]+)\]/)?.[1] ?? '').matchAll(/'([^']+)'/g),
     ].map((m) => m[1]);
     expect(allowed).toEqual(['range']);
+    const agent = ['host', 'connection', 'user-agent', 'accept-encoding'];
+    const safelisted = ['accept', 'accept-language', 'content-language', 'content-type'];
     const rejected: string[] = [];
     let requests = 0;
     const server = yield* Effect.acquireRelease(
@@ -23,10 +25,12 @@ it.effect('offline multi-range requests obey the deployed bucket CORS headers', 
           port: 0,
           fetch(request) {
             requests++;
-            // Bun is not a browser: enforce the browser's non-safelisted request
-            // header check as well as returning the deployed CORS allow list.
-            for (const name of ['range', 'if-range'])
-              if (request.headers.has(name) && !allowed.includes(name)) rejected.push(name);
+            // Bun is not a browser: enforce the browser's preflight check. Every
+            // request header must be one the agent sets itself, CORS-safelisted,
+            // or in the deployed allow list.
+            for (const name of request.headers.keys())
+              if (!agent.includes(name) && !safelisted.includes(name) && !allowed.includes(name))
+                rejected.push(name);
             if (rejected.length) return new Response('', { status: 403 });
             const match = /bytes=(\d+)-(\d+)/.exec(request.headers.get('Range') ?? '');
             const at = Number(match?.[1]),
