@@ -8,6 +8,7 @@
 // resolves from the package) and served on loopback for the scope.
 
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
+import type { PuppetLook } from '../../canvas/puppet.ts';
 import type { PuppetPose } from '../../core/puppet.ts';
 import type { Raster } from '../../core/raster.ts';
 import { launchArgs } from '../../tools/browser.ts';
@@ -20,10 +21,13 @@ export interface PuppetAt {
   readonly key?: string;
 }
 
-/** The page's calls: a pose drawn and read back, and the ms of each of `poses` drawn into a 1920 × 1080 frame. */
+/** The page's calls: a pose drawn (with a look when given) and read back, and the ms of each of `poses` drawn into a 1920 × 1080 frame. */
 export interface PuppetPage {
-  readonly draw: (pose: PuppetPose) => Effect.Effect<Raster>;
-  readonly time: (poses: ReadonlyArray<PuppetPose>) => Effect.Effect<ReadonlyArray<number>>;
+  readonly draw: (pose: PuppetPose, look?: PuppetLook) => Effect.Effect<Raster>;
+  readonly time: (
+    poses: ReadonlyArray<PuppetPose>,
+    look?: PuppetLook,
+  ) => Effect.Effect<ReadonlyArray<number>>;
   readonly renderer: string;
 }
 
@@ -32,11 +36,15 @@ const FILM = new URL('../..', import.meta.url).pathname;
 /** `v` as a JavaScript literal in the page's source. */
 const literal = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
+/** A look as the page's source passes it: `undefined` for none. */
+const lookOf = (look?: PuppetLook) =>
+  Option.match(Option.fromUndefinedOr(look), { onNone: () => 'undefined', onSome: literal });
+
 const entry = (at: PuppetAt) => `
 import { Effect, Layer } from 'effect';
 import { FetchHttpClient } from 'effect/http';
 import * as M from ${literal(at.module)};
-import { puppetFrom } from ${literal(`${FILM}puppet/load.ts`)};
+import { drawingsFrom, puppetFrom } from ${literal(`${FILM}puppet/load.ts`)};
 import { PuppetImagesBrowser } from ${literal(`${FILM}puppet/images-browser.ts`)};
 import { drawPuppet } from ${literal(`${FILM}canvas/puppet.ts`)};
 import { puppetGl } from ${literal(`${FILM}canvas/puppet-gl.ts`)};
@@ -49,10 +57,10 @@ const base64Of = (bytes) => {
   return btoa(s);
 };
 try {
-  const puppet = await Effect.runPromise(
-    puppetFrom(spec).pipe(Effect.provide(PuppetImagesBrowser.pipe(Layer.provide(FetchHttpClient.layer)))),
-  );
-  const loaded = { puppet, paints: true, gl: puppetGl(puppet) };
+  const images = PuppetImagesBrowser.pipe(Layer.provide(FetchHttpClient.layer));
+  const puppet = await Effect.runPromise(puppetFrom(spec).pipe(Effect.provide(images)));
+  const drawings = await Effect.runPromise(drawingsFrom(spec).pipe(Effect.provide(images)));
+  const loaded = { puppet, drawings, paints: true, gl: puppetGl(puppet) };
   const [W, H] = spec.size;
   const sheet = document.createElement('canvas');
   sheet.width = W;
@@ -62,8 +70,8 @@ try {
   frame.width = 1920;
   frame.height = 1080;
   const fctx = frame.getContext('2d', { willReadFrequently: true });
-  const draw = (c, pose) => {
-    const why = drawPuppet(c, spec, loaded, pose);
+  const draw = (c, pose, look) => {
+    const why = drawPuppet(c, spec, loaded, pose, look ?? undefined);
     if (why !== undefined) throw new Error(why);
   };
   window.probe = {
@@ -72,20 +80,20 @@ try {
       const gl = document.createElement('canvas').getContext('webgl2');
       return gl ? String(gl.getParameter(gl.RENDERER)) : 'none';
     })(),
-    draw: (pose) => {
+    draw: (pose, look) => {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, W, H);
-      draw(ctx, pose);
+      draw(ctx, pose, look);
       return base64Of(new Uint8Array(ctx.getImageData(0, 0, W, H).data.buffer));
     },
-    time: (poses) =>
+    time: (poses, look) =>
       poses.map((pose) => {
         const t0 = performance.now();
         fctx.setTransform(1, 0, 0, 1, 0, 0);
         fctx.fillStyle = '#f2eada';
         fctx.fillRect(0, 0, 1920, 1080);
         fctx.translate(Math.floor((1920 - W) / 2), Math.floor((1080 - H) / 2));
-        draw(fctx, pose);
+        draw(fctx, pose, look);
         fctx.getImageData(0, 0, 1, 1);
         return performance.now() - t0;
       }),
@@ -159,16 +167,20 @@ export const puppetPage = Effect.fn('test.puppetPage')(function* (at: PuppetAt) 
   const renderer = yield* Effect.promise(() => view.evaluate<string>('window.probe.renderer'));
   const page: PuppetPage = {
     renderer,
-    draw: (pose) =>
-      Effect.promise(() => view.evaluate<string>(`window.probe.draw(${literal(pose)})`)).pipe(
+    draw: (pose, look) =>
+      Effect.promise(() =>
+        view.evaluate<string>(`window.probe.draw(${literal(pose)}, ${lookOf(look)})`),
+      ).pipe(
         Effect.map((b64): Raster => ({
           width,
           height,
           rgba: Uint8Array.from(Buffer.from(b64, 'base64')),
         })),
       ),
-    time: (poses) =>
-      Effect.promise(() => view.evaluate<number[]>(`window.probe.time(${literal(poses)})`)),
+    time: (poses, look) =>
+      Effect.promise(() =>
+        view.evaluate<number[]>(`window.probe.time(${literal(poses)}, ${lookOf(look)})`),
+      ),
   };
   return page;
 });

@@ -64,6 +64,82 @@ const lay = (dir: string, tint = 0) =>
     yield* fs.writeFileString(path.join(dir, 'spec.ts'), SPEC_MODULE);
   });
 
+const [LW, LH] = [200, 140];
+
+/** A larger fixture for the line: a sleeve band from (24, 40) to (104, 54) over a body box, each with a 3 px ink edge, once with the sheet's line declared and once bare. */
+const LINED_MODULE = `import arm from './arm.png' with { type: 'file' };
+import body from './body.png' with { type: 'file' };
+const base = {
+  size: [${LW}, ${LH}],
+  parts: [{ name: 'arm', png: arm }, { name: 'body', png: body }],
+  skeleton: {
+    bones: [
+      { name: 'lean', pivot: [80, 120], tip: [80, 60] },
+      { name: 'shoulderRight', parent: 'lean', pivot: [100, 47], tip: [24, 47] },
+    ],
+    skin: { arm: ['shoulderRight'], body: ['lean'] },
+    root: [80, 120],
+  },
+  origin: [0, 0],
+};
+export const LINED = { ...base, key: 'fixture/lined', line: { width: 3, ink: [30, 24, 20] } };
+export const BARE = { ...base, key: 'fixture/bare' };
+`;
+
+/** Each part's paint (sleeve, body), then the ink of its edge. */
+const INK_OR = [
+  [
+    [236, 226, 200, 255],
+    [70, 120, 150, 255],
+  ],
+  [
+    [30, 24, 20, 255],
+    [30, 24, 20, 255],
+  ],
+] as const;
+
+const layLined = (dir: string) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const arm = new Uint8Array(LW * LH * 4);
+    const body = new Uint8Array(LW * LH * 4);
+    const inked = (x: number, y: number, b: readonly [number, number, number, number]) =>
+      x < b[0] + 3 || x >= b[2] - 3 || y < b[1] + 3 || y >= b[3] - 3;
+    const armBox = [24, 40, 104, 54] as const;
+    const bodyBox = [50, 44, 150, 130] as const;
+    for (let y = 0; y < LH; y++)
+      for (let x = 0; x < LW; x++) {
+        const i = (y * LW + x) * 4;
+        if (x >= armBox[0] && x < armBox[2] && y >= armBox[1] && y < armBox[3])
+          arm.set(INK_OR[Number(inked(x, y, armBox))]![0], i);
+        else if (x >= bodyBox[0] && x < bodyBox[2] && y >= bodyBox[1] && y < bodyBox[3])
+          body.set(INK_OR[Number(inked(x, y, bodyBox))]![1], i);
+      }
+    yield* fs.writeFile(path.join(dir, 'arm.png'), encodePng({ width: LW, height: LH, rgba: arm }));
+    yield* fs.writeFile(
+      path.join(dir, 'body.png'),
+      encodePng({ width: LW, height: LH, rgba: body }),
+    );
+    yield* fs.writeFileString(path.join(dir, 'spec.ts'), LINED_MODULE);
+  });
+
+/** `m` (`LW` × `LH`) grown by `k` px (Euclidean, brute force over the disc). */
+const grown = (m: Uint8Array, k: number) => {
+  const out = new Uint8Array(m.length);
+  for (let y = 0; y < LH; y++)
+    for (let x = 0; x < LW; x++) {
+      if (!m[y * LW + x]) continue;
+      for (let dy = -k; dy <= k; dy++)
+        for (let dx = -k; dx <= k; dx++) {
+          const [X, Y] = [x + dx, y + dy];
+          if (X >= 0 && Y >= 0 && X < LW && Y < LH && dx * dx + dy * dy <= k * k)
+            out[Y * LW + X] = 1;
+        }
+    }
+  return out;
+};
+
 const rng = (seed: number) => {
   let s = seed >>> 0;
   return () => {
@@ -141,6 +217,45 @@ describe('a puppet in the page', () => {
           expect(new Set(inOrder).size).toBe(30);
         }),
       ).pipe(Effect.provide(Layer.provideMerge(PuppetImagesBun, BunServices.layer))),
+  );
+
+  it.live('the L3 pass leaves every pixel farther than 16 px from a moved part unchanged', () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const dir = yield* fs.makeTempDirectoryScoped();
+        yield* layLined(dir);
+        const module = path.join(dir, 'spec.ts');
+        const { BARE } = yield* Effect.promise(() => import(module));
+        const lined = yield* puppetPage({ module, name: 'LINED' });
+        const bare = yield* puppetPage({ module, name: 'BARE' });
+        const pose: PuppetPose = { numbers: { shoulderRight: -35 }, root: [80, 120], scale: 1 };
+        const look = { boil: 5 };
+        const [a, b] = [yield* lined.draw(pose, look), yield* bare.draw(pose, look)];
+        // what moved, now and at rest: the sleeve's own coverage on the CPU
+        const puppet = yield* puppetFrom(BARE);
+        const sleeve = { ...puppet, parts: puppet.parts.filter((p) => p.name === 'arm') };
+        const [now, rest] = [rasterOf(sleeve, pose), rasterOf(sleeve, { ...pose, numbers: {} })];
+        const moved = (i: number) => now.rgba[i * 4 + 3]! > 0 || rest.rgba[i * 4 + 3]! > 0;
+        const near = Uint8Array.from({ length: LW * LH }, (_, i) => Number(moved(i)));
+        // the boil moves a pixel's sample by under 1 px: 16 and the sample's reach
+        const within = grown(near, 17);
+        let [changed, far] = [0, 0];
+        for (let i = 0; i < LW * LH; i++) {
+          const differs = [0, 1, 2, 3].some((c) => a.rgba[i * 4 + c] !== b.rgba[i * 4 + c]);
+          changed += Number(differs);
+          far += Number(differs && within[i] === 0);
+        }
+        expect(changed).toBeGreaterThan(50);
+        expect(far).toBe(0);
+        // the page draws the far figure, not nothing
+        let farFigure = 0;
+        for (let i = 0; i < LW * LH; i++)
+          farFigure += Number(within[i] === 0 && a.rgba[i * 4 + 3]! > 0);
+        expect(farFigure).toBeGreaterThan(1000);
+      }),
+    ).pipe(Effect.provide(Layer.provideMerge(PuppetImagesBun, BunServices.layer))),
   );
 
   it.live("changes the key of a beat that draws it when a part PNG's bytes change", () =>

@@ -66,7 +66,13 @@ import {
   floodBox,
 } from './card.ts';
 import { type LoadedRig, type PoseOf, type RivePropSpec, drawRig } from './rive.ts';
-import { type LoadedPuppet, type PuppetPose, type PuppetSpec, drawPuppet } from './puppet.ts';
+import {
+  type LoadedPuppet,
+  type PuppetLook,
+  type PuppetPose,
+  type PuppetSpec,
+  drawPuppet,
+} from './puppet.ts';
 import { seedOf } from '../core/random.ts';
 import { CLOCK_EPSILON, type Key, clamp, ease, heardAtOrAfter, justBefore } from '../core/time.ts';
 
@@ -157,10 +163,12 @@ export interface Frame<
   /**
    * Draw a puppet the drawing declares (`puppets: { lead: … }`) at the origin
    * under the canvas's transform, its bones at `pose`'s numbers: the frame's
-   * own pose, nothing kept from the frame before. Throws, naming it, for a
+   * own pose, nothing kept from the frame before; with `look`, a drawn key
+   * laid in place of a part, its line drawn again near what moved, a held
+   * hand laid over it and its boil at the look's tick. Throws, naming it, for a
    * puppet the film has not loaded.
    */
-  puppet<N extends keyof P & string>(name: N, pose: PuppetPose): void;
+  puppet<N extends keyof P & string>(name: N, pose: PuppetPose, look?: PuppetLook): void;
   /** The spoken words, scene-local. */
   readonly words: ReadonlyArray<Word>;
   /**
@@ -1141,7 +1149,7 @@ export const createFilm = (spec: FilmSpec): Film => {
         const why = drawRig(ctx, spec, rig, pose);
         if (why !== undefined) throw new Error(`scene ${p.spec.id}: ${why}`);
       },
-      puppet: (name, pose) => {
+      puppet: (name, pose, look) => {
         const spec = p.spec.puppets?.[name];
         if (spec === undefined) throw new Error(`scene ${p.spec.id} has no puppet "${name}"`);
         const loaded = puppetsStanding.get(spec);
@@ -1149,7 +1157,7 @@ export const createFilm = (spec: FilmSpec): Film => {
           throw new Error(
             `scene ${p.spec.id}: puppet "${name}" (${spec.key}) is not loaded: a film's puppets load with it, before its first frame (loadPuppets)`,
           );
-        const why = drawPuppet(ctx, spec, loaded, pose);
+        const why = drawPuppet(ctx, spec, loaded, pose, look);
         if (why !== undefined) throw new Error(`scene ${p.spec.id}: ${why}`);
       },
       hand: (key) => sceneHand(p.spec.id, key, boil),

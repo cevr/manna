@@ -14,6 +14,7 @@ import type { Film } from '../canvas/film.ts';
 import type { LoadedPuppet, PuppetSpec } from '../canvas/puppet.ts';
 import { freePuppetGl, puppetGl } from '../canvas/puppet-gl.ts';
 import { type Puppet, puppetOf } from '../core/puppet.ts';
+import type { Raster } from '../core/raster.ts';
 import { PuppetImages, PuppetUnloadable } from './images.ts';
 
 /** `spec`'s puppet: each part PNG read and decoded, checked against its declared size, skinned on its skeleton. */
@@ -37,15 +38,30 @@ export const puppetFrom = Effect.fn('Puppet.from')(function* (spec: PuppetSpec) 
   return made.success satisfies Puppet;
 });
 
-/** One declared puppet, loaded, its GL state freed with the scope. */
+/** `spec`'s drawings (its drawn keys and held hands), each PNG read and decoded, by name. */
+export const drawingsFrom = Effect.fn('Puppet.drawings')(function* (spec: PuppetSpec) {
+  const images = yield* PuppetImages;
+  const read = yield* Effect.forEach(spec.drawings ?? [], (d) =>
+    images.read(d.png).pipe(
+      Effect.mapError((e) =>
+        PuppetUnloadable.make({ puppet: spec.key, reason: `${d.name}: ${e.reason}` }),
+      ),
+      Effect.map((pixels) => [d.name, pixels] as const),
+    ),
+  );
+  return new Map(read) satisfies ReadonlyMap<string, Raster>;
+});
+
+/** One declared puppet, loaded with its drawings, its GL state freed with the scope. */
 const loadPuppet = Effect.fn('Puppet.load')(function* (spec: PuppetSpec) {
   const images = yield* PuppetImages;
   const puppet = yield* puppetFrom(spec);
+  const drawings = yield* drawingsFrom(spec);
   const gl = yield* Effect.acquireRelease(
     Effect.sync(() => puppetGl(puppet)),
     (state) => Effect.sync(() => freePuppetGl(state)),
   );
-  return { puppet, paints: images.paints, gl } satisfies LoadedPuppet;
+  return { puppet, drawings, paints: images.paints, gl } satisfies LoadedPuppet;
 });
 
 /**
