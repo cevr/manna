@@ -502,6 +502,10 @@ const SIDES =
 const SHADE =
   'Keep the soft shade each arm casts on his body beside it exactly as it is, and carry that same shade on under where the arm was.';
 
+/** The paper grain his sheet shows on his sash and torso, carried into the paint under his arms. */
+const GRAIN =
+  'Paint the white sash and the tunic and mantle of his body with the same fine paper grain the sheet shows on them beside the arms: a fine, even speckle through every flat area of colour, never smooth flat colour.';
+
 /** The repaint's close: nothing else moves. */
 const KEEP_REST =
   'Keep every other pixel exactly as it is: the same size, position and framing, and every part that is not magenta unchanged.';
@@ -519,13 +523,22 @@ export const HIDDEN = {
   },
   threeQuarterLeft: {
     moving: ['armRight', 'armLeft'],
-    prompt: `${CUT_AWAY} his two arms (sleeves and round hands) were cut away to make a cut-out puppet. He is turned three-quarters to the viewer's left. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading (the cream tunic on the viewer's left side, the teal-blue mantle on the viewer's right side, the white sash running round his waist). ${SIDES} ${SHADE} There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, face, hair, robe, sash, feet, size, position and framing.`,
+    prompt: `${CUT_AWAY} his two arms (sleeves and round hands) were cut away to make a cut-out puppet. He is turned three-quarters to the viewer's left. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading (the cream tunic on the viewer's left side, the teal-blue mantle on the viewer's right side, the white sash running round his waist). ${SIDES} ${SHADE} ${GRAIN} There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, face, hair, robe, sash, feet, size, position and framing.`,
     allowance: {
       calls: 3,
       by: 'coordinator',
       on: '2026-10-27',
       why: 'its three calls were drawn on a hand cut that gave the arms body pixels; the cut was fixed after them (hands as rings), and the fixed cut had never been asked',
     },
+    named: [
+      {
+        bar: 'grain',
+        part: 'sash',
+        by: 'coordinator',
+        on: '2026-10-27',
+        why: "okra paints the sash under his arms flatter than the sheet's paper grain on it, under both the box and the point lay and after a call that asked for the grain; every other bar holds",
+      },
+    ],
   },
   'heads-4': {
     moving: ['head'],
