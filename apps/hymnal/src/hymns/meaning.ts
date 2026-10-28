@@ -15,7 +15,7 @@
  * start; a query decodes only its own words' rows.
  */
 
-import { Option } from 'effect';
+import { Duration, Effect, Option } from 'effect';
 
 import { meaning } from '../../assets/meaning/meaning.js';
 import { fold } from './search';
@@ -61,27 +61,21 @@ const decodeAll = (text: string): Uint8Array => {
 
 const tableOf = (): Table => {
   const file = meaning();
-  const dims = file.dims;
-  const vectors = new Int8Array(decodeAll(file.vectors).buffer);
-  const numbers = file.hymns.split(' ').map(Number);
-  // One over each hymn's length, so its sum against a query is a cosine.
-  const lengths = Float32Array.from(numbers, (_, h) => {
-    let squares = 0;
-    for (let c = h * dims; c < (h + 1) * dims; c++) squares += (vectors[c] ?? 0) ** 2;
-    return 1 / (Math.sqrt(squares) || 1);
-  });
   return {
-    dims,
+    dims: file.dims,
     words: file.words.split(' '),
     weights: new Float32Array(decodeAll(file.weights).buffer),
     rows: file.table,
-    numbers,
-    vectors,
-    lengths,
+    numbers: file.hymns.split(' ').map(Number),
+    vectors: new Int8Array(decodeAll(file.vectors).buffer),
+    lengths: new Float32Array(decodeAll(file.lengths).buffer),
   };
 };
 
-/** The table, read the first time it is asked for and kept. */
+/**
+ * The table, read the first time it is asked for and kept. Search mode
+ * reads it as it opens (`readMeaning`), so no keystroke's pause pays for it.
+ */
 const table: () => Table = (() => {
   let read = Option.none<Table>();
   return () =>
@@ -91,6 +85,9 @@ const table: () => Table = (() => {
       return made;
     });
 })();
+
+/** Reads the table now, if it is not read yet, so the next meaning search does not. */
+export const readMeaning = (): void => void table();
 
 /** Word `word`'s place in the sorted words, when the table knows it. */
 const placeOf = (words: ReadonlyArray<string>, word: string): Option.Option<number> => {
@@ -107,7 +104,11 @@ const placeOf = (words: ReadonlyArray<string>, word: string): Option.Option<numb
 /** The words a reader adds to say what they want, not what it is about. */
 const ASKING = new Set(['hymn', 'hymns', 'song', 'songs', 'about']);
 
-/** A query's vector: its words' rows, weighted, summed; none when the table knows none of its words. */
+/**
+ * A query's vector: its words' rows, weighted, summed; none when the table
+ * knows none of its words but those it weighs at 0 (the commonest words of
+ * the hymnal, which say nothing of what a query is about).
+ */
 const queryOf = (t: Table, query: string): Option.Option<Float32Array> => {
   const vector = new Float32Array(t.dims);
   const bytes = new Uint8Array(t.dims / 2);
@@ -115,7 +116,8 @@ const queryOf = (t: Table, query: string): Option.Option<Float32Array> => {
   const known = fold(query)
     .split(' ')
     .filter((word) => !ASKING.has(word))
-    .flatMap((word) => Option.toArray(placeOf(t.words, word)));
+    .flatMap((word) => Option.toArray(placeOf(t.words, word)))
+    .filter((w) => (t.weights[w] ?? 0) > 0);
   for (const w of known) {
     decode(t.rows, w * width, (w + 1) * width, bytes);
     const weight = t.weights[w] ?? 0;
@@ -164,6 +166,29 @@ export const PAUSE = 150;
 
 /** How many hymns about a query search mode shows. */
 export const ABOUT = 10;
+
+/**
+ * `query`, once it has stood `PAUSE` ms: search mode runs it on each
+ * keystroke and interrupts the one before, so only a pause in the typing
+ * asks for the hymns about the query.
+ */
+export const afterPause = (query: string): Effect.Effect<string> =>
+  Effect.as(Effect.sleep(Duration.millis(PAUSE)), query);
+
+/**
+ * The hymns about `asked` that search mode shows under the results of
+ * `shown`: none while the two differ, so an older query's hymns never stand
+ * under a newer query's matches.
+ */
+export const aboutShown = <A>(
+  asked: string,
+  shown: string,
+  hymns: ReadonlyArray<A>,
+): ReadonlyArray<A> =>
+  Option.getOrElse(
+    Option.liftPredicate(hymns, () => asked === shown),
+    () => [],
+  );
 
 /**
  * The hymns search mode shows about `query`: none for a query that holds a

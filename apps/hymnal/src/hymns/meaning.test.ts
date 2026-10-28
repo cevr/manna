@@ -5,10 +5,14 @@
  */
 
 import { describe, expect, it } from 'bun:test';
+import { Effect, Fiber, Option } from 'effect';
+import { it as itEffect } from 'effect-bun-test';
+import { TestClock } from 'effect/testing';
 
 import { meaning } from '../../assets/meaning/meaning.js';
 import { hymns } from './hymns';
-import { ABOUT, about, aboutQuery, moreLike } from './meaning';
+import { ABOUT, about, aboutQuery, aboutShown, afterPause, moreLike, PAUSE } from './meaning';
+import { fold } from './search';
 
 const numbers = new Set(hymns.map((hymn) => hymn.number));
 const distinctHymns = (found: ReadonlyArray<number>) =>
@@ -17,6 +21,12 @@ const distinctHymns = (found: ReadonlyArray<number>) =>
 describe('the shipped table', () => {
   it('holds a vector for every hymn of the app, in number order', () => {
     expect(meaning().hymns.split(' ').map(Number)).toEqual(hymns.map((hymn) => hymn.number));
+  });
+
+  it('holds its words as search folds them, so a query folded by search finds them', () => {
+    // The build folds with a copy of search's fold: every word is one the app's fold leaves as it is.
+    const { words } = meaning();
+    expect(fold(words) === words).toBe(true);
   });
 });
 
@@ -40,8 +50,9 @@ describe('about', () => {
     expect(about('songs about péace')).toEqual(about('peace'));
   });
 
-  it('weighs a word the hymns hold everywhere at little', () => {
+  it('counts nothing for the words the hymns hold everywhere, and finds no hymn for those alone', () => {
     expect(about('the and peace', 5)).toEqual(about('peace', 5));
+    expect([about('the'), about('and the'), about('of my')]).toEqual([[], [], []]);
   });
 });
 
@@ -54,6 +65,36 @@ describe('search mode’s hymns about a query', () => {
   it('are none for a number asked for, or a word still under three letters', () => {
     expect(['no 100', 'hymn #12', '100', 'pe', ' a b '].map((q) => aboutQuery(q).length)).toEqual([
       0, 0, 0, 0, 0,
+    ]);
+  });
+
+  itEffect.effect(
+    'are asked for only once the query has stood a pause, and a keystroke before then asks for none',
+    () =>
+      Effect.gen(function* () {
+        const typed = yield* Effect.forkChild(afterPause('pea'));
+        yield* TestClock.adjust(PAUSE - 1);
+        const early = Option.isSome(Option.fromUndefinedOr(typed.pollUnsafe()));
+        // The next keystroke interrupts the pause before it ends; its own pause runs from there.
+        yield* Fiber.interrupt(typed);
+        const next = yield* Effect.forkChild(afterPause('peace'));
+        yield* TestClock.adjust(PAUSE - 1);
+        const nextEarly = Option.isSome(Option.fromUndefinedOr(next.pollUnsafe()));
+        yield* TestClock.adjust(1);
+        const asked = yield* Fiber.join(next);
+        expect({ PAUSE, early, nextEarly, asked }).toEqual({
+          PAUSE: 150,
+          early: false,
+          nextEarly: false,
+          asked: 'peace',
+        });
+      }),
+  );
+
+  it('show under a query’s matches only the hymns about that query, none of an older one', () => {
+    expect([aboutShown('peace', 'peace', [3, 4]), aboutShown('pea', 'peace', [3, 4])]).toEqual([
+      [3, 4],
+      [],
     ]);
   });
 });
@@ -93,6 +134,13 @@ describe('the ranking', () => {
   it('ranks the hymns about a word as the cosine of its row and their vectors does', () => {
     const w = words.indexOf('peace');
     expect(about('peace', 10)).toEqual(cosineTop(rowOf(w), 10, 0));
+  });
+
+  it('ranks the hymns about several words as the cosine of their weighted rows’ sum does', () => {
+    const query = ['comfort', 'sorrow', 'night'];
+    const rows = query.map((word) => rowOf(words.indexOf(word)));
+    const sum = Array.from({ length: D }, (_, c) => rows.reduce((s, row) => s + (row[c] ?? 0), 0));
+    expect(about(query.join(' '), 10)).toEqual(cosineTop(sum, 10, 0));
   });
 
   it('ranks the hymns like a hymn as the cosine of their vectors does', () => {

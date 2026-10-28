@@ -27,7 +27,7 @@
 
 import { useAtom } from '@effect/atom-react';
 import { Link, useLinkTo, useNavigation, useSafeAreaInsets } from 'one';
-import { Duration, Effect, Fiber, Option } from 'effect';
+import { Effect, Fiber, Option } from 'effect';
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import {
   BackHandler,
@@ -51,7 +51,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { hymnAt } from '~/hymns/hymns';
-import { aboutQuery, PAUSE } from '~/hymns/meaning';
+import { aboutQuery, aboutShown, afterPause, readMeaning } from '~/hymns/meaning';
 import { find, hymnIndex } from '~/hymns/search';
 import { HymnList } from '~/reader/HymnList.native';
 import { searchOffset, searchQuery } from '~/reader/place';
@@ -255,9 +255,11 @@ function FieldButton({
 /**
  * Search mode: the focused field and Cancel over the hymns the query finds,
  * each found by a line other than its title showing that line. Search mode
- * builds the search's index (`hymnIndex`) once it is on screen, while the
- * keyboard comes up, so the first keystroke does not wait on it; the app's
- * start never does.
+ * builds the search's index (`hymnIndex`) and reads the meaning table
+ * (`readMeaning`) once it is on screen, while the keyboard comes up, so
+ * neither the first keystroke nor the first pause waits on them; the app's
+ * start never does. After a pause in the typing (`afterPause`), the hymns
+ * about the query stand under its strongest matches.
  */
 function Search({ onCancel }: { readonly onCancel: () => void }) {
   const [query, setQuery] = useAtom(searchQuery);
@@ -282,7 +284,7 @@ function Search({ onCancel }: { readonly onCancel: () => void }) {
   const [asked, setAsked] = useState('');
   useEffect(() => {
     const pause = Effect.runFork(
-      Effect.sleep(Duration.millis(PAUSE)).pipe(Effect.andThen(Effect.sync(() => setAsked(query)))),
+      afterPause(query).pipe(Effect.tap((paused) => Effect.sync(() => setAsked(paused)))),
     );
     return () => {
       Effect.runFork(Fiber.interrupt(pause));
@@ -292,7 +294,7 @@ function Search({ onCancel }: { readonly onCancel: () => void }) {
     () => aboutQuery(asked).flatMap((n) => Option.toArray(hymnAt(String(n)))),
     [asked],
   );
-  const about = useMemo(() => near.filter(() => asked === shown), [near, asked, shown]);
+  const about = useMemo(() => aboutShown(asked, shown, near), [near, asked, shown]);
   const accent = useAccent();
   const cancel = () => {
     setQuery('');
@@ -301,6 +303,7 @@ function Search({ onCancel }: { readonly onCancel: () => void }) {
   };
   useEffect(() => {
     hymnIndex();
+    readMeaning();
   }, []);
   const navigation = useNavigation();
   useEffect(() => {

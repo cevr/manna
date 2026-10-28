@@ -75,18 +75,22 @@ under its number, and the refrain written out each time it is sung.
   and the hymns like a hymn, with no model at run time: a word table
   distilled from EmbeddingGemma (each word's vector at 4 bits) and each
   hymn's vector (8 bits), 13 MB in `assets/meaning/meaning.js`, a module
-  whose strings are read on the first meaning search, never at start. A
-  query is the sum of its words' rows, rare words weighted more; the hymns
-  are ranked by cosine. `packages/hymnal`'s `bun run meaning` rebuilds the
+  whose strings are read when search mode opens or the sheet first asks,
+  never at start. A query is the sum of its words' rows, rare words
+  weighted more and the fifteen commonest words of the hymnal not at all;
+  the hymns are ranked by cosine. `packages/hymnal`'s `bun run meaning` rebuilds the
   file from the pinned model (fetched by checksum into a cache outside the
   repository), the same bytes each time. The table is a Gemma model
-  derivative: Settings → About carries the notice the Gemma Terms of Use
-  ask for, and `assets/meaning/NOTICE` beside the file. On a phone, search
+  derivative, so `assets/meaning/` is under the Gemma Terms of Use, not the
+  repository's MIT (its `LICENSE`, with their use restrictions as a
+  condition), with their `NOTICE` and a copy of the Terms
+  (`gemma-terms.js`); Settings → About carries the notice and shows the
+  Terms on a press. On a phone, search
   mode looks for the hymns about the query after a pause of 150 ms in the
   typing (`aboutQuery`: none for a query with a digit or under three
   letters) and shows them under the five strongest matches, in a section
-  `Hymns about this`, then the rest under `More matches`
-  (`src/reader/rows.ts`, `resultRowsOf`).
+  `Hymns about this`, then the rest of the matches under `More matches`,
+  each hymn once (`src/reader/rows.ts`, `resultRowsOf`).
 - A hymn page's quiet topic line is a button, `About this hymn`, that opens
   a sheet (`/about?hymn=<n>`, `src/reader/About.tsx`): first `More like
   this`, the 8 hymns nearest by meaning, each a row that closes the sheet

@@ -7,7 +7,16 @@
 import { describe, expect, it } from 'bun:test';
 
 import { DIMS } from './pins';
-import { int4Row, int8Row, meaningFileOf, textOf, vocabularyOf, weightsOf } from './table';
+import {
+  FLOOR,
+  int4Row,
+  int8Row,
+  meaningFileOf,
+  NOTICE_LINES,
+  textOf,
+  vocabularyOf,
+  weightsOf,
+} from './table';
 
 const bytesOf = (base64: string) => new Uint8Array(Buffer.from(base64, 'base64'));
 
@@ -28,11 +37,27 @@ describe('the words', () => {
       ['rare', 'common', 'absent'],
       new Map([
         ['rare', 1],
-        ['common', 999],
+        ['common', 1_000],
+        ['filler', 2_000_000],
       ]),
     );
     expect(weights[0]).toBeGreaterThan(weights[1] ?? 1);
+    expect(weights[1]).toBeGreaterThan(FLOOR);
     expect(weights[2]).toBe(1);
+  });
+
+  it('weighs a word at 0 when it is so common its weight falls under the floor', () => {
+    // 1 word in 50 of the hymnal: SIF / (SIF + 0.02) is about 0.048, under 0.1.
+    const [common, rare] = weightsOf(
+      ['common', 'rare'],
+      new Map([
+        ['common', 2],
+        ['rare', 0],
+        ['other', 98],
+      ]),
+    );
+    expect(FLOOR).toBe(0.1);
+    expect({ common, rarePositive: (rare ?? 0) > 0 }).toEqual({ common: 0, rarePositive: true });
   });
 });
 
@@ -85,11 +110,14 @@ describe('the file', () => {
     expect(weights[1]).toBeCloseTo((peace ?? 0) * (0.5 / 7), 6);
   });
 
-  it('keeps each hymn’s number and 8-bit row in the same order', () => {
+  it('keeps each hymn’s number, 8-bit row and one over its length in the same order', () => {
     expect(file.hymns).toBe('7 9');
     expect([...new Int8Array(bytesOf(file.vectors).buffer)]).toEqual([
       127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -127,
     ]);
+    const lengths = [...new Float32Array(bytesOf(file.lengths).buffer)];
+    expect(lengths).toHaveLength(2);
+    for (const length of lengths) expect(length).toBeCloseTo(1 / 127, 8);
   });
 
   it('writes a module that makes the file when called, a long string on the line after its key', () => {
@@ -97,7 +125,23 @@ describe('the file', () => {
     expect(text).toContain('export const meaning = () => ({\n');
     expect(text).toContain(`  table:\n    '${'A'.repeat(200)}',\n`);
     expect(text).toContain(`  dims: 6,\n`);
+    expect(text).toContain(`  lengths: '${file.lengths}',\n`);
     expect(() => textOf({ ...file, source: "the hymnal's" })).toThrow();
+  });
+
+  it('opens the module with the notice that it is modified from EmbeddingGemma, under the Gemma Terms', () => {
+    const text = textOf(file);
+    const head = text.slice(0, text.indexOf('export const meaning'));
+    expect(head).toBe(`${NOTICE_LINES.join('\n')}\n`);
+    const said = head.replace(/\s*\n\s*\*\s*/g, ' ');
+    for (const words of [
+      'Modified from EmbeddingGemma',
+      'Gemma is provided under and subject to the Gemma Terms of Use found at ai.google.dev/gemma/terms',
+      'gemma-terms.js',
+      'not the repository',
+      'section 3.2 use restrictions',
+    ])
+      expect(said).toContain(words);
   });
 
   it('pins the model’s full width, which keeps a word row a whole run of base64', () => {

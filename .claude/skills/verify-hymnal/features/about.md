@@ -32,11 +32,11 @@ nothing goes over the network.
 2. **The rows.** Read the sheet's rows from the tree in memory (`agent-device snapshot --json`): the labels that start `<n>, `. → 8 rows, none `100, `; their numbers equal `moreLike(100, 8)` from the checkout (`apps/hymnal/src/hymns/meaning.ts`) run in Bun with the app's test preload. Print the numbers only.
 3. **Open a row.** `sim tap` the first row by its leading number. → the sheet is gone and the reader shows that hymn (`id=hymn-number` reads its number); `sim back`. → hymn 100.
 4. **Close.** Open the sheet again, then `sim tap label=Done`. → hymn 100's page, scrolled where it was.
-5. **Size** (`search-about-size`). `du -sk` of the base and head Release `Hymnal.app` (or the two `main.jsbundle` files when the native inputs are the same). → head minus base ≤ 20 MB. Time `aboutQuery` over the research's 48 theme queries in `hermes-engine-cli` 0.12.0 (`hermes -O`, the bundle made as `search-hermes` makes its own). → each query under 30 ms.
+5. **Size** (`search-about-size`). `du -sk` of the base and head Release `Hymnal.app` (or the two `main.jsbundle` files when the native inputs are the same). → head minus base ≤ 20 MB. Time `aboutQuery` over the research's 48 theme queries in `hermes-engine-cli` 0.12.0 (`hermes -O`, the bundle made as `search-hermes` makes its own). → each query under 30 ms, the first of a launch too (search mode reads the table as it opens, `readMeaning`, so the first pause does not).
 
 ## Gotchas
 
 - The button's label is `About this hymn`, its value the topic: `label=` matches the button, not the topic's words.
 - The heading `More like this` is drawn in capitals; its label is `More like this` (an uppercase style alone would make the label `MORE LIKE THIS`).
-- The first sheet of a launch reads the table (about 90 ms in Hermes 0.12 on a Mac); later sheets do not.
+- Search mode reads the table as it opens (about 60 ms in Hermes 0.12 on a Mac, beside the search index; the first query then takes about 13 ms); a sheet opened before any search reads it then. Later reads do not.
 - A row's name holds the hymn's title: match it by its leading `<n>, ` and keep titles out of logs.

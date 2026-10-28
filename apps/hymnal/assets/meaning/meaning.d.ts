@@ -7,4 +7,5 @@ export declare const meaning: () => {
   readonly table: string;
   readonly hymns: string;
   readonly vectors: string;
+  readonly lengths: string;
 };
