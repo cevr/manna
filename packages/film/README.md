@@ -2669,7 +2669,13 @@ smoothstep 18 px either side), skinned by linear blend; a pose is
 `{ numbers, root, scale }`, degrees a bone. `rasterOf` is the CPU
 reference: each pixel inverse-mapped through the posed triangle that holds
 its centre, sampled bilinear on premultiplied texels, so the rest pose is
-the sheet byte for byte. In a page a drawing declares its puppets beside
+the sheet byte for byte. A puppet that names the paper its parts were cut
+from (`PuppetSpec.paper`, the kept view's ground) has its rim un-matted
+from it once as it is made (`core/unmatte.ts`): each pixel between the
+ground and the ink is given the alpha of its distance from that paper
+along the line to the ink, and a pixel off that line (the sheet's paper,
+lighter or bluer at the rim) goes to the paper, so on another paper the
+figure carries no ring of the sheet's. In a page a drawing declares its puppets beside
 its rigs (`drawing({ puppets })`), the film loads them before its first
 frame (`loadPuppets`, `src/puppet/load.ts`: each part PNG fetched and its
 decode awaited in the load, through `PuppetImages`), and a frame draws one

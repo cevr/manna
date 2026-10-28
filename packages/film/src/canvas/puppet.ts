@@ -39,6 +39,8 @@ export interface PuppetSpec {
   readonly skeleton: Skeleton;
   readonly origin: Pt;
   readonly concept?: ConceptRef;
+  /** The paper the parts were cut from: their edge pixels are un-matted from it as the puppet is made (`core/unmatte.ts`). */
+  readonly paper?: readonly [number, number, number];
 }
 
 /** A puppet as its load leaves it: made from its parts' pixels, whether this host paints, and its GL state. */

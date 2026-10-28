@@ -32,9 +32,15 @@
 //   its centre to the part's texture, sampled bilinear on premultiplied
 //   texels, each pixel once a part. At rest every pixel maps to its own
 //   texel's centre, so the raster is the sheet's recompose byte for byte.
+// - **Paper.** A sheet that names the paper its parts were cut from has its
+//   edge pixels un-matted from it once, here (`core/unmatte.ts`): the rest
+//   raster laid over that paper is then the sheet's recompose within 1 a
+//   channel, and on another paper the figure carries no ring of the sheet's.
 
 import { Result, Schema } from 'effect';
+import type { Rgb } from './cast-sheet-pixels.ts';
 import type { Raster } from './raster.ts';
+import { unmatte } from './unmatte.ts';
 
 type Pt = readonly [number, number];
 
@@ -131,11 +137,12 @@ export interface Puppet {
   readonly root: Pt;
 }
 
-/** What a puppet is made from: a part sheet's size and parts, front to back. */
+/** What a puppet is made from: a part sheet's size and parts, front to back, and the paper they were cut from, if their edges are to be un-matted from it (`core/unmatte.ts`). */
 export interface PuppetSheet {
   readonly width: number;
   readonly height: number;
   readonly parts: ReadonlyArray<{ readonly name: string; readonly pixels: Raster }>;
+  readonly paper?: Rgb;
 }
 
 const smooth = (e0: number, e1: number, x: number) => {
@@ -362,14 +369,18 @@ export const puppetOf = (
   const { bones } = skeleton;
   const at = new Map(bones.map((b, k) => [b.name, k]));
   const { width: W, height: H } = sheet;
-  const parts = sheet.parts.map((part): PuppetPart => {
-    const skin = (skeleton.skin[part.name] ?? []).map((b) => at.get(b)!);
+  const withFlaps = sheet.parts.map((part) => {
     const flap = skeleton.flaps?.find((f) => f.part === part.name);
     const from = sheet.parts.find((p) => p.name === flap?.from);
-    const rgba =
-      flap === undefined || from === undefined
-        ? part.pixels.rgba
-        : withFlap(part.pixels, from.pixels, flap.region);
+    return flap === undefined || from === undefined
+      ? part.pixels.rgba
+      : withFlap(part.pixels, from.pixels, flap.region);
+  });
+  const textures = sheet.paper === undefined ? withFlaps : unmatte(withFlaps, W, H, sheet.paper);
+  const parts = sheet.parts.map((part, k): PuppetPart => {
+    const skin = (skeleton.skin[part.name] ?? []).map((b) => at.get(b)!);
+    const flap = skeleton.flaps?.find((f) => f.part === part.name);
+    const rgba = textures[k]!;
     const weigh =
       flap === undefined
         ? (p: Pt) => weightsAt(p, skin, bones)
