@@ -377,6 +377,8 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 
 - 2026-10-28 findbulk P6 content witness (owner: "We can verify doubts by reading both the verses and the hymn, like the Bible verses and the hymn verses, to see if they align"): stage 2 adds check C12, which scores each Scriptural entry's KJV passage against its hymn's text and against the hymns its look-alike numbers name (3↔8 and the like), and flags a better-aligned sibling for the judge; the judge may read both texts in memory and keeps only numbers and a reason class. Readers stay blind; a clear glyph wins; no hymn words in any record.
 
+- 2026-10-28 findbulk P6 takes no Index of Titles (owner: "Do we need an index of titles? I feel like we have all the titles and we have all first verse"): the compiled hymnal holds every title and line, and search finds a hymn by any line; P6 covers pages 776–824, and the optional retake of page 825 on is dropped.
+
 ## Owner questions
 
 - Clicks in silent mode (feel): keep them muted under the silent switch, as iOS keyboard clicks are (recommended: the phone stays quiet at worship), or play them even in silent mode (a new sound path, checked against the hymn audio session). Asked 2026-10-25. Answer (owner, 2026-10-25): "Yeah, the clicks, that's fine. Stay muted in silent mode". No change. (feel)
