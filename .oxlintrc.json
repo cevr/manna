@@ -244,8 +244,6 @@
     "**/lint/fixtures/**",
     "**/.alchemy/**",
     "**/.prerender/**",
-    "apps/triedgold/build/**",
-    "apps/triedgold/.react-router/**",
     "apps/hymnal/dist/**",
     "apps/hymnal/react-native.config.cjs"
   ],
