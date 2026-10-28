@@ -1,13 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { Result } from 'effect';
-import {
-  type Puppet,
-  type Skeleton,
-  posedVertices,
-  puppetOf,
-  rasterOf,
-  restPose,
-} from './puppet.ts';
+import { type Puppet, type Skeleton, puppetOf, rasterOf, restPose } from './puppet.ts';
 
 type PuppetSheet = Parameters<typeof puppetOf>[0];
 
@@ -83,41 +76,48 @@ describe('a puppet', () => {
     for (const v of mesh.vertices) expect(v % 3).toBe(0);
   });
 
-  test('at rest is its bind pose, and its raster the sheet byte for byte', () => {
+  test('at rest draws the sheet byte for byte', () => {
     const p = made(SLEEVE, TWO_BONES);
-    const rest = restPose(p);
-    expect([...posedVertices(p, rest)[0]!]).toEqual([...p.parts[0]!.mesh.vertices]);
-    expect(rasterOf(p, rest).rgba).toEqual(SLEEVE.parts[0]!.pixels.rgba);
+    expect(rasterOf(p, restPose(p)).rgba).toEqual(SLEEVE.parts[0]!.pixels.rgba);
   });
 
   test('turns a two-bone sleeve as computed by hand: shoulder 30°, elbow 45°', () => {
     const p = made(SLEEVE, TWO_BONES);
-    const posed = posedVertices(p, {
-      ...restPose(p),
-      numbers: { shoulderRight: 30, elbowRight: 45 },
-    })[0]!;
-    const { vertices, weights } = p.parts[0]!.mesh;
+    const size = [W, 64] as const;
+    const raster = rasterOf(
+      p,
+      { ...restPose(p), numbers: { shoulderRight: 30, elbowRight: 45 } },
+      size,
+    );
     const e = R(30, E[0] - S[0], E[1] - S[1]);
-    const [eAt0, eAt1] = [S[0] + e[0], S[1] + e[1]];
+    const eAt = [S[0] + e[0], S[1] + e[1]] as const;
+    // Each drawn pixel's centre taken back to the sleeve by hand: the upper arm turned 30° about the
+    // shoulder, the forearm 75° about the moved elbow. The sleeve's colour is linear in x and y, so the
+    // pixel holds the colour at that point (texel centres at +0.5).
+    const held = (X: number, Y: number, rest: readonly [number, number]) => {
+      const i = (Y * size[0] + X) * 4;
+      const got = [...raster.rgba.subarray(i, i + 4)];
+      const want = [4 * (rest[0] - 0.5), 255 - 3 * (rest[0] - 0.5), 9 * (rest[1] - 0.5), 255];
+      for (let c = 0; c < 4; c++) expect(Math.abs(got[c]! - want[c]!)).toBeLessThanOrEqual(1);
+    };
     let [upper, fore] = [0, 0];
-    for (let i = 0; i < vertices.length / 2; i++) {
-      const [x, y] = [vertices[2 * i]!, vertices[2 * i + 1]!];
-      const got = [posed[2 * i]!, posed[2 * i + 1]!];
-      if (x <= 12) {
-        upper++;
-        expect(weights[i]).toEqual([{ bone: 'shoulderRight', weight: 1 }]);
-        const q = R(30, x - S[0], y - S[1]);
-        expect(Math.hypot(got[0]! - S[0] - q[0], got[1]! - S[1] - q[1])).toBeLessThan(1e-9);
+    for (let Y = 0; Y < size[1]; Y++)
+      for (let X = 0; X < size[0]; X++) {
+        const u = R(-30, X + 0.5 - S[0], Y + 0.5 - S[1]);
+        const f = R(-75, X + 0.5 - eAt[0], Y + 0.5 - eAt[1]);
+        const up = [S[0] + u[0], S[1] + u[1]] as const;
+        const fo = [E[0] + f[0], E[1] + f[1]] as const;
+        if (up[0] >= 3 && up[0] <= 11 && up[1] >= 9 && up[1] <= 15) {
+          upper++;
+          held(X, Y, up);
+        }
+        if (fo[0] >= 52 && fo[0] <= 61 && fo[1] >= 9 && fo[1] <= 15) {
+          fore++;
+          held(X, Y, fo);
+        }
       }
-      if (x >= 51) {
-        fore++;
-        expect(weights[i]).toEqual([{ bone: 'elbowRight', weight: 1 }]);
-        const q = R(75, x - E[0], y - E[1]);
-        expect(Math.hypot(got[0]! - eAt0 - q[0], got[1]! - eAt1 - q[1])).toBeLessThan(1e-9);
-      }
-    }
-    expect(upper).toBeGreaterThanOrEqual(3);
-    expect(fore).toBeGreaterThanOrEqual(3);
+    expect(upper).toBeGreaterThanOrEqual(30);
+    expect(fore).toBeGreaterThanOrEqual(30);
   });
 
   test("gives a shoulder flap's vertices to the body: 0 within the cap, 1 at its reach above the pivot", () => {

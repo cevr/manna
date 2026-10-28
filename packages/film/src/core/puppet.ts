@@ -1,6 +1,6 @@
 // A puppet: a part sheet (`core/part-sheet.ts`) on a skeleton, each part a
 // mesh of its own pixels skinned on the bones its skin names, posed by bone
-// numbers (`puppetOf`, `posedVertices`, `rasterOf`). It is the CPU reference
+// numbers (`puppetOf`, `rasterOf`). It is the CPU reference
 // the page's draw (`canvas/puppet.ts`) is held to, and what a fitter searches
 // with in Bun. Pure.
 //
@@ -532,7 +532,7 @@ export const poseMesh = <O extends Float64Array | Float32Array>(
 };
 
 /** Each part's vertices posed at `pose` (flat x, y), in its mesh's vertex order. */
-export const posedVertices = (puppet: Puppet, pose: PuppetPose): ReadonlyArray<Float64Array> => {
+const posedVertices = (puppet: Puppet, pose: PuppetPose): ReadonlyArray<Float64Array> => {
   const m = boneTransforms(puppet.bones, pose.numbers);
   return puppet.parts.map((p) =>
     poseMesh(p.mesh, m, puppet.root, pose, new Float64Array(p.mesh.vertices.length)),
