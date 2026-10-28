@@ -368,6 +368,8 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 - The hymnal web preview on 8191 is retired (owner 2026-10-27: "And the web preview for the hymnal. We don't really need it"). Merges update the phone build only; reader1 is removed.
 - Tried Gold is deleted (owner 2026-10-27: "Let's delete tried gold"; chose code and live site). The prod Worker was destroyed with Alchemy (plan: 1 to delete, Site) and the code removed in 46aaa9a9e. The triedgold.com domain and its DNS records stay with the owner.
 
+- The hymnal-try web server on 8095 is retired (owner 2026-10-27: "Yeah, I don't need the hymnal try either"). Stopped by PID; its worktree removed; its commit cfec43318 stays on local branch hymnapp/glass.
+
 ## Owner questions
 
 - Clicks in silent mode (feel): keep them muted under the silent switch, as iOS keyboard clicks are (recommended: the phone stays quiet at worship), or play them even in silent mode (a new sound path, checked against the hymn audio session). Asked 2026-10-25. Answer (owner, 2026-10-25): "Yeah, the clicks, that's fine. Stay muted in silent mode". No change. (feel)
