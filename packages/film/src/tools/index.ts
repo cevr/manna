@@ -59,3 +59,6 @@ export {
   recompose,
 } from '../core/part-sheet.ts';
 export type { HiddenEntry } from './part-sheet-cli.ts';
+export { PuppetImagesBun } from '../puppet/images-bun.ts';
+export { PuppetImages, PuppetUnloadable } from '../puppet/images.ts';
+export { puppetFrom } from '../puppet/load.ts';

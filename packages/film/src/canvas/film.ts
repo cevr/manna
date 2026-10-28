@@ -66,6 +66,7 @@ import {
   floodBox,
 } from './card.ts';
 import { type LoadedRig, type PoseOf, type RivePropSpec, drawRig } from './rive.ts';
+import { type LoadedPuppet, type PuppetPose, type PuppetSpec, drawPuppet } from './puppet.ts';
 import { seedOf } from '../core/random.ts';
 import { CLOCK_EPSILON, type Key, clamp, ease, heardAtOrAfter, justBefore } from '../core/time.ts';
 
@@ -83,10 +84,25 @@ type Rigs = Readonly<Record<string, RivePropSpec | undefined>>;
 type NoRigs = Record<never, RivePropSpec>;
 
 /**
- * One instant of one scene. `C` names the scene's cues, `K` its knobs and `R`
- * its rigs, when its drawing declares them.
+ * A drawing's puppets (cut-out figures, `canvas/puppet.ts`), by the names its
+ * draw poses them by (`f.puppet`): what the film loads before its first frame
+ * (`Film.puppets`), beside its rigs.
  */
-export interface Frame<C extends string = string, K extends Knobs = Knobs, R extends Rigs = Rigs> {
+type Puppets = Readonly<Record<string, PuppetSpec | undefined>>;
+
+/** No puppets: every `f.puppet` name is a compile error. */
+type NoPuppets = Record<never, PuppetSpec>;
+
+/**
+ * One instant of one scene. `C` names the scene's cues, `K` its knobs, `R`
+ * its rigs and `P` its puppets, when its drawing declares them.
+ */
+export interface Frame<
+  C extends string = string,
+  K extends Knobs = Knobs,
+  R extends Rigs = Rigs,
+  P extends Puppets = Puppets,
+> {
   readonly ctx: CanvasRenderingContext2D;
   readonly w: number;
   readonly h: number;
@@ -138,6 +154,13 @@ export interface Frame<C extends string = string, K extends Knobs = Knobs, R ext
    * or a pose that names what the rig lacks.
    */
   rive<N extends keyof R & string>(name: N, pose: PoseOf<R[N]>): void;
+  /**
+   * Draw a puppet the drawing declares (`puppets: { lead: … }`) at the origin
+   * under the canvas's transform, its bones at `pose`'s numbers: the frame's
+   * own pose, nothing kept from the frame before. Throws, naming it, for a
+   * puppet the film has not loaded.
+   */
+  puppet<N extends keyof P & string>(name: N, pose: PuppetPose): void;
   /** The spoken words, scene-local. */
   readonly words: ReadonlyArray<Word>;
   /**
@@ -202,6 +225,8 @@ export interface SceneSpec extends Timed {
   readonly draw: (f: Frame) => Box | void;
   /** The Rive rigs its draw poses by name (`f.rive`): the film loads each before its first frame. */
   readonly rigs?: Rigs;
+  /** The puppets its draw poses by name (`f.puppet`): the film loads each before its first frame. */
+  readonly puppets?: Puppets;
   /**
    * How this scene breathes (`Drift`), in place of the film's `DRIFT`: `0`
    * holds it still (an end card), a `Drift` sets its own size. `DRIFT` when
@@ -270,22 +295,27 @@ type NoKnobs = Record<never, Knob>;
 /**
  * Declare a drawing with a timeline, knobs and rigs, so `after` and `with` in
  * the timeline, `f.cue` and `f.at` in `draw` accept only the cue names it
- * declares, `f.knob` only its knob names, typed as declared, and `f.rive` only
- * its rig names, posed as each rig declares. An identity: the result is an
- * ordinary scene drawing.
+ * declares, `f.knob` only its knob names, typed as declared, `f.rive` only
+ * its rig names, posed as each rig declares, and `f.puppet` only its puppet
+ * names. An identity: the result is an ordinary scene drawing.
  */
 export const drawing = <
   const T extends Timeline,
   const K extends Knobs = NoKnobs,
   const R extends Rigs = NoRigs,
+  const P extends Puppets = NoPuppets,
 >(
-  d: Omit<SceneSpec, 'id' | 'say' | 'timeline' | 'knobs' | 'rigs' | 'draw' | 'light' | 'cards'> & {
+  d: Omit<
+    SceneSpec,
+    'id' | 'say' | 'timeline' | 'knobs' | 'rigs' | 'puppets' | 'draw' | 'light' | 'cards'
+  > & {
     readonly timeline: T & Closed<T>;
     readonly knobs?: K;
     readonly rigs?: R;
-    readonly draw: (f: Frame<keyof T & string, K, R>) => Box | void;
-    readonly light?: Light | ((f: Frame<keyof T & string, K, R>) => Light);
-    readonly cards?: ReadonlyArray<CardSpec<keyof T & string, Frame<keyof T & string, K, R>>>;
+    readonly puppets?: P;
+    readonly draw: (f: Frame<keyof T & string, K, R, P>) => Box | void;
+    readonly light?: Light | ((f: Frame<keyof T & string, K, R, P>) => Light);
+    readonly cards?: ReadonlyArray<CardSpec<keyof T & string, Frame<keyof T & string, K, R, P>>>;
   },
 ) => d;
 
@@ -585,6 +615,19 @@ export interface Film {
   render(ctx: CanvasRenderingContext2D, T: number, opts?: RenderOptions): void;
   /** The Rive rigs its scenes' drawings declare, and the loaded ones it draws with. */
   readonly rigs: FilmRigs;
+  /** The puppets its scenes' drawings declare, and the loaded ones it draws with. */
+  readonly puppets: FilmPuppets;
+}
+
+/**
+ * A film's puppets, as its rigs: every one its drawings declare
+ * (`drawing({ puppets })`), each once; and where the loader (`loadPuppets`,
+ * src/puppet) stands the loaded ones for its draws.
+ */
+interface FilmPuppets {
+  readonly declared: ReadonlyArray<PuppetSpec>;
+  /** Draw with `loaded` from now on; what it returns stands them down again (the load's scope closing). */
+  readonly stand: (loaded: ReadonlyMap<PuppetSpec, LoadedPuppet>) => () => void;
 }
 
 /**
@@ -989,6 +1032,29 @@ export const createFilm = (spec: FilmSpec): Film => {
     },
   };
 
+  /** The puppets, as the rigs: every one the scenes declare, and the latest load still standing. */
+  const declaredPuppets = [
+    ...new Set(
+      placed.flatMap((q) =>
+        Object.values(q.spec.puppets ?? {}).filter((r): r is PuppetSpec => r !== undefined),
+      ),
+    ),
+  ];
+  const noPuppets: ReadonlyMap<PuppetSpec, LoadedPuppet> = new Map();
+  let puppetStands: ReadonlyArray<ReadonlyMap<PuppetSpec, LoadedPuppet>> = [];
+  let puppetsStanding = noPuppets;
+  const puppets: FilmPuppets = {
+    declared: declaredPuppets,
+    stand: (loaded) => {
+      puppetStands = [...puppetStands, loaded];
+      puppetsStanding = loaded;
+      return () => {
+        puppetStands = puppetStands.filter((up) => up !== loaded);
+        puppetsStanding = puppetStands.at(-1) ?? noPuppets;
+      };
+    },
+  };
+
   /**
    * Each scene's captions, built once from its words when the film has a
    * caption style: a captioned frame only finds its line.
@@ -1073,6 +1139,17 @@ export const createFilm = (spec: FilmSpec): Film => {
             `scene ${p.spec.id}: rig "${name}" (${spec.key}) is not loaded: a film's rigs load with it, before its first frame (loadRigs)`,
           );
         const why = drawRig(ctx, spec, rig, pose);
+        if (why !== undefined) throw new Error(`scene ${p.spec.id}: ${why}`);
+      },
+      puppet: (name, pose) => {
+        const spec = p.spec.puppets?.[name];
+        if (spec === undefined) throw new Error(`scene ${p.spec.id} has no puppet "${name}"`);
+        const loaded = puppetsStanding.get(spec);
+        if (loaded === undefined)
+          throw new Error(
+            `scene ${p.spec.id}: puppet "${name}" (${spec.key}) is not loaded: a film's puppets load with it, before its first frame (loadPuppets)`,
+          );
+        const why = drawPuppet(ctx, spec, loaded, pose);
         if (why !== undefined) throw new Error(`scene ${p.spec.id}: ${why}`);
       },
       hand: (key) => sceneHand(p.spec.id, key, boil),
@@ -1508,6 +1585,7 @@ export const createFilm = (spec: FilmSpec): Film => {
     cardAt: (T) => carded(sceneAt(T), T) !== undefined,
     render,
     rigs,
+    puppets,
   };
 };
 
