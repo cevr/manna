@@ -13,6 +13,10 @@ when the reader opens a hymn and comes back, or switches tabs and returns.
 - `list-place`: back from a hymn, or back to the tab, the list is where it was.
 - `list-favourites`: on a phone, a hymn starred on its page (the head's `Favourite` button) shows a star at the row's end, after its title and the size of its number, in each of its rows, under `Recent`, under its topic and on the Recent screen; a long title's ellipsis comes before the star, and a row with no star keeps the title's full width; and VoiceOver reads the row as `<n>, <title>, favourite`. The list has no `Favourites` row. Kept across launches (`lists.favourites`).
 - `list-recent`: on a phone, the hymns opened last show first under a `Recent` header, most recent first, at most 5 there; Recent keeps the latest 50, across launches (`lists.recent`). A row pressed under `Recent` opens its hymn, and a swipe there pages in number order, as from any home row.
+- `list-search-reveal`: on a phone, deep in the list (past the search field's resting place under the title), an upward scroll of 8 pt or more, a drag or its glide, slides the search field `Number, title or first line` in over the list's top, under the status bar, as Safari's toolbar comes back. The list's rows and offset do not move for it.
+- `list-search-hide`: once shown, a downward scroll of 8 pt or more slides it away again; while hidden it is out of VoiceOver's reach and takes no touch. While shown a tap on it enters search mode, as the field at the top does, and Cancel brings the list back where it was, the field still shown.
+- `list-search-top`: at the list's top the field sits where it always has, under the title (pull down to bring it out); the shown field goes under the title as the list nears its top, and is never a second field there.
+- `list-search-pin`: the pinned topic row sits flush under the shown field, moves down and up with it as it slides, and never jumps or hides under it.
 - `list-recent-all`: the `Recent` header is a button, named `Recent, see all` and showing `See all ›`; it pushes the Recent screen (`/recent`, title `Recent`), every hymn Recent keeps, most recent first, a favourite starred. A row there opens its hymn, a swipe pages through that whole list, and a pan from the left edge goes back to it; its back button `Hymns` goes home. With nothing opened it says `The hymns you open show here.`
 
 ## How to get to it (user POV)
@@ -27,7 +31,7 @@ when the reader opens a hymn and comes back, or switches tabs and returns.
 
 - **Preconditions:** none beyond the baseline.
 - **States:** default. Focus-visible, open, loading, empty and error are n/a (the hymns are compiled in).
-- **Regression:** `apps/hymnal/test/browser/list.slow.test.ts`, `apps/hymnal/src/reader/back.test.tsx`; the lists: `apps/hymnal/src/reader/pager.slow.test.ts` (the reader's lists, the Recent header and screen), `apps/hymnal/src/reader/lists.test.ts`, `apps/hymnal/src/reader/rows.test.ts`, `apps/hymnal/src/settings.test.ts`, `apps/hymnal/src/feel/feel.slow.test.tsx` (the `section` cue as a topic takes the pin, and `Favourite`'s chimes).
+- **Regression:** `apps/hymnal/test/browser/list.slow.test.ts`, `apps/hymnal/src/reader/back.test.tsx`; the lists: `apps/hymnal/src/reader/pager.slow.test.ts` (the reader's lists, the Recent header and screen), `apps/hymnal/src/reader/lists.test.ts`, `apps/hymnal/src/reader/rows.test.ts`, `apps/hymnal/src/settings.test.ts`, the field over the list's top: `apps/hymnal/src/home/reveal.test.ts` (when it turns) and `apps/hymnal/src/reader/pin.test.ts` (the pin under it), `apps/hymnal/src/feel/feel.slow.test.tsx` (the `section` cue as a topic takes the pin, and `Favourite`'s chimes).
 - **Steps 6 to 14 change the app's data:** the lists stay on the simulator until the app is reinstalled or erased.
 
 1. **First screen.** `sim open / --expect "role=link label=1, Praise to the Lord"`. → `ok`; the snapshot lists rows `1, Praise to the Lord`, `2, All Creatures of Our God and King`.
@@ -44,6 +48,11 @@ when the reader opens a hymn and comes back, or switches tabs and returns.
 12. **See all.** From the top, `sim tap "role=button label=Recent, see all"`. → the header reads `Recent`; the rows are every hymn opened in steps 6 to 11, most recent first (after step 8 alone: `6`, `5`, `4`, `2`, `1`, `3, …, favourite`), hymn 3 starred.
 13. **The Recent screen's pager.** Press its `4, …` row (`role=link label=4, …`), swipe left (`agent-device gesture pan 350 450 -300 0 250 --session verify-hymnal`). → the page is hymn 2, the next in the full list. Swipe again twice: hymn 1, then hymn 3, which the home shelf no longer shows.
 14. **Back to Recent, then home.** Pan from the left edge (`agent-device gesture pan 1 450 300 0 250 --session verify-hymnal`). → the Recent screen, its order now led by the hymn last shown. `sim back`. → the home list, its `Recent` five rows.
+
+15. **The field over the list (phone).** `sim open / --expect "label=Hymns"`, `sim scroll "label=Number, title or first line" up`. → one node named `Number, title or first line`, under the title. `sim scroll screen down` four times. → no node of that name (`agent-device snapshot --json`): the list's own field scrolled away, the shown one is out of reach. `sim scroll screen up`. → one node of that name, its `y` just under the status bar (about 70 on an iPhone 17 Pro); the first hymn row's `y` is below its bottom.
+16. **Away again.** `sim scroll screen down`. → no node of that name.
+17. **Tap and place.** `sim scroll screen up`, read the first hymn row under the field, `sim tap "role=button label=Number, title or first line"`. → search mode (the search box, `Cancel`). `sim tap label=Cancel`. → the same first row, the field still shown. Open that row, `sim back`. → the same first row.
+18. **The pin under it.** On a Release build, `bun scripts/sticky.ts` (SKILL.md, Helpers) after an upward scroll: the pinned topic row is off by no more than 1 pt in any frame. Without a recording, `pin.test.ts` holds the rule.
 
 ## Gotchas
 

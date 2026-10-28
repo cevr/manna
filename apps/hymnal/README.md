@@ -54,6 +54,10 @@ under its number, and the refrain written out each time it is sung.
   each row of a kind has one height from the text size, the topic rows
   stick under the status bar, and the search field sits above the first
   row, the list opening scrolled past it (`src/home/Home.native.tsx`).
+  Deep in the list, an upward scroll of 8 pt brings the field back over the
+  list's top and a downward one sends it away (`src/home/reveal.ts`), a
+  layer moved on the UI thread with the pinned topic row under it
+  (`src/reader/pin.ts`), so the list's rows and offset never move for it.
 - One's web navigators are headless, so `src/web/` draws a small header and
   search field on the web, and the web's home screen shows the search field
   above the list, with no topic rows. A phone never renders them.
