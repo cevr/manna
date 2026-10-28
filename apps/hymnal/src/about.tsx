@@ -4,13 +4,16 @@
  * so its credit names the work, the author and the licence with its address;
  * a licence with an address opens it when pressed. The meaning table is
  * made from EmbeddingGemma, so it carries the notice the Gemma Terms of Use
- * ask for (`GemmaNotice`).
+ * ask for (`GemmaNotice`) and the Terms themselves, shown on a press
+ * (`GemmaTerms`).
  */
 
 import { RECORDING_CREDITS, type CreditLine } from '@manna/hymnal/recordings';
 import { Option } from 'effect';
-import { Linking, StyleSheet, Text, View, type ColorValue } from 'react-native';
+import { useState } from 'react';
+import { Linking, Pressable, StyleSheet, Text, View, type ColorValue } from 'react-native';
 
+import { gemmaTerms } from '../assets/meaning/gemma-terms.js';
 import { color, useAccent } from '~/color';
 
 function Credit({ line, accent }: { readonly line: CreditLine; readonly accent: ColorValue }) {
@@ -57,6 +60,36 @@ function GemmaNotice({ accent }: { readonly accent: ColorValue }) {
   );
 }
 
+/**
+ * The Gemma Terms of Use, word for word, the copy section 3.1 asks to be
+ * given with the meaning table: a button that shows them in place, and
+ * hides them again.
+ */
+function GemmaTerms({ accent }: { readonly accent: ColorValue }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Pressable
+        testID="gemma-terms"
+        role="button"
+        aria-label="Gemma Terms of Use"
+        aria-expanded={open}
+        onPress={() => setOpen((was) => !was)}
+        hitSlop={8}
+      >
+        <Text style={[styles.credit, { color: accent }]} dynamicTypeRamp="body">
+          Gemma Terms of Use
+        </Text>
+      </Pressable>
+      {open && (
+        <Text testID="gemma-terms-text" selectable style={styles.terms} dynamicTypeRamp="footnote">
+          {gemmaTerms}
+        </Text>
+      )}
+    </>
+  );
+}
+
 export function About() {
   const accent = useAccent();
   return (
@@ -72,6 +105,7 @@ export function About() {
           <Credit key={line.part} line={line} accent={accent} />
         ))}
         <GemmaNotice accent={accent} />
+        <GemmaTerms accent={accent} />
       </View>
     </>
   );
@@ -95,4 +129,5 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   credit: { fontSize: 15, color: color.ink },
+  terms: { fontSize: 13, color: color.ink },
 });

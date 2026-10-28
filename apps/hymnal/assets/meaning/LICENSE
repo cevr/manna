@@ -1,0 +1,9 @@
+The files in this folder are not under the licence of the rest of this repository (MIT). They are under the Gemma Terms of Use.
+
+meaning.js is a Model Derivative of EmbeddingGemma, a Gemma model by Google, which this repository modified (NOTICE says how). It is distributed under and subject to the Gemma Terms of Use; gemma-terms.js in this folder is a copy of them, word for word as published at https://ai.google.dev/gemma/terms (last modified April 1, 2026). meaning.d.ts describes meaning.js and is under the same terms. gemma-terms.js and gemma-terms.d.ts are Google's text and its type.
+
+As a condition of any use, reproduction or distribution of meaning.js, alone or in a work that holds it (such as the hymnal app), these use restrictions apply (section 3.2 of the Gemma Terms of Use). You must not use it:
+- for the restricted uses set forth in the Gemma Prohibited Use Policy at https://ai.google.dev/gemma/prohibited_use_policy; or
+- in violation of applicable laws and regulations.
+
+Anyone who distributes meaning.js further must include these use restrictions as an enforceable provision in any agreement governing its use or distribution, give notice of them to the people they distribute it to, give them a copy of the Gemma Terms of Use, and keep the NOTICE file with it (section 3.1).
