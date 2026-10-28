@@ -537,13 +537,17 @@ export const posedVertices = (puppet: Puppet, pose: PuppetPose): ReadonlyArray<F
 };
 
 /**
- * `puppet` drawn at `pose` in its sheet's frame over transparent ground: the
+ * `puppet` drawn at `pose` in its sheet's frame (or a frame `size` px from the same origin) over transparent ground: the
  * parts back to front, each pixel whose centre a posed triangle holds
  * inverse-mapped to the part's texture, sampled bilinear on premultiplied
  * texels, laid over what lies under it once a part.
  */
-export const rasterOf = (puppet: Puppet, pose: PuppetPose): Raster => {
-  const { width: W, height: H } = puppet;
+export const rasterOf = (
+  puppet: Puppet,
+  pose: PuppetPose,
+  size: readonly [number, number] = [puppet.width, puppet.height],
+): Raster => {
+  const [W, H] = size;
   // Premultiplied, colour in 0..255 and alpha in 0..1.
   const acc = new Float64Array(W * H * 4);
   const seen = new Int32Array(W * H).fill(-1);
@@ -552,7 +556,7 @@ export const rasterOf = (puppet: Puppet, pose: PuppetPose): Raster => {
     const part = puppet.parts[k]!;
     const t = part.mesh.triangles;
     for (let i = 0; i < t.length; i += 3)
-      layTriangle(acc, seen, k, part, posed[k]!, [t[i]!, t[i + 1]!, t[i + 2]!]);
+      layTriangle(acc, seen, k, part, posed[k]!, [t[i]!, t[i + 1]!, t[i + 2]!], [W, H]);
   }
   return unpremultiplied(acc, W, H);
 };
@@ -590,8 +594,8 @@ const layTriangle = (
   part: PuppetPart,
   q: Float64Array,
   [ia, ib, ic]: readonly [number, number, number],
+  [W, H]: readonly [number, number],
 ) => {
-  const { width: W, height: H } = part.pixels;
   const src = part.mesh.vertices;
   const [ax, ay, bx, by, cx, cy] = [
     q[2 * ia]!,
