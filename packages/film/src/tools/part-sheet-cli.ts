@@ -49,6 +49,7 @@ import { ImageRoute, PORTRAIT, editRequest, okraCommand } from './image-route.ts
 import {
   BARS,
   HiddenMeasures,
+  PartGrain,
   type Sheet,
   domainOf,
   groundOf,
@@ -88,12 +89,30 @@ const Allowance = Schema.Struct({
   why: Schema.String,
 });
 
-/** A view's entry in its member's `HIDDEN`: its moving parts, okra's words, and any allowance of calls. */
+/** A part's grain miss accepted by name: the part, who accepted it, when and why. */
+const NamedMiss = Schema.Struct({
+  bar: Schema.Literal('grain'),
+  part: Schema.String,
+  by: Schema.String,
+  on: Schema.String,
+  why: Schema.String,
+});
+
+/** A view's entry in its member's `HIDDEN`: its moving parts, okra's words, any allowance of calls, and any miss accepted by name. */
 export interface HiddenEntry {
   readonly moving: ReadonlyArray<string>;
   readonly prompt: string;
   readonly allowance?: typeof Allowance.Type;
+  readonly named?: ReadonlyArray<typeof NamedMiss.Type>;
 }
+
+/** The named misses the kept answer holds, each with its part's grain both sides: a named part read within its bar holds no miss. */
+const namedOf = (hidden: HiddenEntry, measures: HiddenMeasures) =>
+  (hidden.named ?? []).flatMap((miss) =>
+    measures.grain
+      .filter((g) => g.part === miss.part && g.verdict === 'outside')
+      .map((g) => ({ ...miss, grain: g })),
+  );
 
 /** What a member's cut table exports: its cuts, each view's options, each view's hidden entry. */
 interface CutModule {
@@ -172,6 +191,8 @@ const PartSheetRecord = Schema.Struct({
     leastGrainWindows: Schema.Int,
   }),
   missed: Schema.Array(Schema.String),
+  /** The misses its cut table accepts by name, each with its numbers. */
+  named: Schema.Array(Schema.Struct({ ...NamedMiss.fields, grain: PartGrain })),
 });
 const PartSheetRecordJson = Schema.fromJsonString(PartSheetRecord, { space: 2 });
 
@@ -401,6 +422,7 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
     measures: best.measures,
     bars: BARS,
     missed: missedBars(best.measures),
+    named: namedOf(job.hidden, best.measures),
   };
   const recordText = yield* Schema.encodeEffect(PartSheetRecordJson)(record).pipe(
     Effect.mapError((e) => refuse(e.message)),

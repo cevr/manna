@@ -224,7 +224,7 @@ const layHidden = (
 const GrainRead = Schema.Struct({ robust: Schema.Finite, plain: Schema.Finite, n: Schema.Int });
 
 /** One part's grain beside its paint: read (both sides have enough windows) within the bar or outside it, or unverified. */
-const PartGrain = Schema.Struct({
+export const PartGrain = Schema.Struct({
   part: Schema.String,
   painted: GrainRead,
   kept: GrainRead,

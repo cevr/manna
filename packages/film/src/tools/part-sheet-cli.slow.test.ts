@@ -194,6 +194,37 @@ describe('film concept parts', () => {
   );
 
   it.effect(
+    'records a grain miss its cut table names, with both numbers, and the miss stays a miss',
+    () =>
+      Effect.gen(function* () {
+        const named = [
+          {
+            bar: 'grain' as const,
+            part: 'torso',
+            by: 'the coordinator',
+            on: '2026-10-27',
+            why: 'a test',
+          },
+        ];
+        const record = Result.getOrThrow(
+          yield* run(new Map(), [UNDER(['torso'])], { hidden: { ...HIDDEN, named } }),
+        );
+        expect(record.missed).toEqual(['grain']);
+        expect(
+          record.named.map((m) => [
+            m.part,
+            m.grain.verdict,
+            m.grain.painted.robust < m.grain.kept.robust,
+          ]),
+        ).toEqual([['torso', 'outside', true]]);
+        const held = Result.getOrThrow(
+          yield* run(new Map(), [UNDER([])], { hidden: { ...HIDDEN, named } }),
+        );
+        expect(held.named).toEqual([]);
+      }),
+  );
+
+  it.effect(
     'refuses a call past the budget, a moved cut renewing none of it, and grants an allowance its table records',
     () =>
       Effect.gen(function* () {
