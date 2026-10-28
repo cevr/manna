@@ -13,7 +13,7 @@
 
 import type { FitBar, FitBarName, FitClass, FitProbe } from '../core/fit-rows.ts';
 import type { LabelTable } from '../core/label.ts';
-import type { PuppetPose, PuppetSpec } from './puppet.ts';
+import type { PuppetLook, PuppetPose, PuppetSpec } from './puppet.ts';
 import type { PoseOf, RivePropSpec } from './rive.ts';
 
 type Pt = readonly [number, number];
@@ -140,7 +140,49 @@ export interface CastModule {
   readonly SHEETS: CastSheets;
   readonly PAPER: { readonly base: string; readonly tone: string; readonly seed: number };
   readonly FIT_CLASSES?: Readonly<Record<string, Readonly<Record<string, FitClass>>>>;
+  /** Each member's eases (`film concept ease`), by name: none when he has none. */
+  readonly EASES?: Readonly<Record<string, Readonly<Record<string, CutoutEase>>>>;
 }
+
+/**
+ * How far a cut-out's page reaches past its sheet each way, px (x, y): a
+ * drawn key swings an arm past the sheet's edge (the front's raised hand
+ * stands left of it), so the page is the sheet grown by this on every side,
+ * the sheet drawn inside it, and its paper the same for a still and an ease.
+ */
+export const CUTOUT_MARGIN: Pt = [160, 40];
+
+/** One frame of an ease: its pose and look, and what it shows (its key, that key's turn, its held drawing). */
+export interface CutoutEaseFrame {
+  readonly pose: PuppetPose;
+  readonly look: PuppetLook;
+  readonly key: string;
+  readonly theta: number;
+  readonly held: string;
+}
+
+/**
+ * An ease of a cut-out view, from one pose to another: the view it moves
+ * (kind and name in `CUTOUT`, whose place it stands at), its puppet with the
+ * drawings it lays, its rate and length, and each frame a function of its
+ * index alone.
+ */
+export interface CutoutEase {
+  readonly kind: string;
+  readonly view: string;
+  readonly from: string;
+  readonly to: string;
+  readonly fps: number;
+  readonly count: number;
+  readonly puppet: PuppetSpec;
+  readonly frame: (i: number) => CutoutEaseFrame;
+}
+
+/** The page name of `member`'s eases in `film`: a scene an ease, its frames the ease's (`film concept ease`). */
+export const easePage = (film: string, member: string) => `${film}/cast/${member}/ease`;
+
+/** The scene id of an ease from `from` to `to`. */
+export const easeScene = (from: string, to: string) => `${from}-${to}`;
 
 /** The page name of `member`'s cast render in `film`, drawn by `figure`: what the player mounts and `film concept render` opens. */
 export const castPage = (film: string, member: string, figure: CastFigure = 'rig') =>

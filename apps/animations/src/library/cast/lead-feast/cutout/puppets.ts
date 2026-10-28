@@ -44,8 +44,16 @@ const puppet = (view: FramedView, parts: ReadonlyArray<readonly [string, string]
     origin: keptAt(view),
     concept: { image: { cast: 'lead-feast', sheet: FRAMES[view].sheet }, box: BOXES[view] },
     paper: PAPERS[view],
+    line: LINE,
   };
 };
+
+/**
+ * His sheet's line, which a look draws again near what moved (L3): the
+ * kept front's arm read across its outline (the median run of ink, L* < 40,
+ * acceptance leg 4.6) is 7.75 px, in the sheet's ink.
+ */
+export const LINE = { width: 7.75, ink: [43, 38, 34] } as const;
 
 /** Each cut view's paper, the median of its kept view's border ground (its rim is un-matted from it, `core/unmatte.ts`). */
 export const PAPERS = {

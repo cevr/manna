@@ -15,12 +15,15 @@ import {
   type CastModule,
   type CastSheet,
   type CastView,
+  CUTOUT_MARGIN,
   type CutoutView,
   clipCast,
   castDrawOrder,
   castPage,
   castRigs,
   cutoutPuppets,
+  easePage,
+  easeScene,
 } from '../canvas/cast.ts';
 import { type Film, type Frame, createFilm } from '../canvas/film.ts';
 import type { PuppetUnloadable } from '../puppet/images.ts';
@@ -94,31 +97,42 @@ const castFilm = (film: string, member: string, m: CastModule): Film => {
   });
 };
 
-/** One cut-out view drawn on its sheet beside `views`: clipped as a rig's view is, its puppet's origin at `at`, at the sheet's own pixels. */
+/**
+ * A cut-out still's look: the boil's tick 0, the tick an ease starts on, so
+ * a still is its ease's first frame where nothing has moved.
+ */
+const STILL = { boil: 0 } as const;
+
+/** One cut-out view drawn on its sheet beside `views`: clipped as a rig's view is, its puppet's origin at `at`, at the sheet's own pixels, the sheet standing `CUTOUT_MARGIN` into the page. */
 const drawCutout = (f: Frame, view: CutoutView, views: ReadonlyArray<CutoutView>) => {
   const { ctx } = f;
   ctx.save();
+  ctx.translate(CUTOUT_MARGIN[0], CUTOUT_MARGIN[1]);
   clipCast(ctx, view, views, CLIP_MARGIN);
   ctx.translate(view.at[0], view.at[1]);
-  f.puppet(view.puppet.key, view.pose);
+  f.puppet(view.puppet.key, view.pose, STILL);
   ctx.restore();
 };
 
-/** `member`'s cut-out render as a film: a scene each kind his `CUTOUT` views are of, each the size of the sheet, each view drawn by its puppet. */
+/** `member`'s `kind` sheet as a cut-out page lays it: the sheet grown by `CUTOUT_MARGIN` each side. */
+const cutoutCanvas = (film: string, member: string, m: CastModule, kind: string) => {
+  const sheet = m.SHEETS[member]?.[kind];
+  if (sheet === undefined)
+    throw new Error(`${film}'s rigs/cast.ts gives ${member}'s ${kind} sheet no size`);
+  return {
+    width: sheet.width + 2 * CUTOUT_MARGIN[0],
+    height: sheet.height + 2 * CUTOUT_MARGIN[1],
+  };
+};
+
+/** `member`'s cut-out render as a film: a scene each kind his `CUTOUT` views are of, each the size of the sheet grown by `CUTOUT_MARGIN`, each view drawn by its puppet. */
 const cutoutFilm = (film: string, member: string, m: CastModule): Film => {
   const kinds = m.CUTOUT?.[member];
-  const sheets = m.SHEETS[member];
-  if (kinds === undefined || sheets === undefined)
+  if (kinds === undefined)
     throw new Error(`${film}'s rigs/cast.ts has no cut-out of ${member} (CUTOUT)`);
-  const sized = Object.keys(kinds).map((kind) => {
-    const sheet = sheets[kind];
-    if (sheet === undefined)
-      throw new Error(`${film}'s rigs/cast.ts gives ${member}'s ${kind} sheet no size`);
-    return [kind, sheet] as const;
-  });
-  const [first] = sized;
+  const [first] = Object.keys(kinds);
   if (first === undefined) throw new Error(`${film}'s CUTOUT draws no sheet of ${member}`);
-  const { width, height } = first[1];
+  const { width, height } = cutoutCanvas(film, member, m, first);
   const puppets = cutoutPuppets(kinds);
   return createFilm({
     title: `${member}'s cut-out render`,
@@ -128,7 +142,7 @@ const cutoutFilm = (film: string, member: string, m: CastModule): Film => {
     paper: m.PAPER,
     shade: m.PAPER.base,
     finish: { vignette: 0, grain: 0 },
-    scenes: sized.map(([kind]) => ({
+    scenes: Object.keys(kinds).map((kind) => ({
       id: kind,
       min: 1,
       drift: 0 as const,
@@ -141,10 +155,64 @@ const cutoutFilm = (film: string, member: string, m: CastModule): Film => {
   });
 };
 
+/** The rate an ease page is laid at: every ease's own, checked. */
+const EASE_FPS = 24;
+
 /**
- * The player's entries for a film's cast renders, two pages a member: his
+ * `member`'s eases as a film: a scene an ease (`easeScene`), its frames the
+ * ease's, each drawn from its index alone, the view it moves standing where
+ * the cut-out page stands it, on the same canvas and paper, unclipped (a
+ * raised arm reaches past its box).
+ */
+const easeFilm = (film: string, member: string, m: CastModule): Film => {
+  const eases = Object.values(m.EASES?.[member] ?? {});
+  const [first] = eases;
+  if (first === undefined)
+    throw new Error(`${film}'s rigs/cast.ts has no ease of ${member} (EASES)`);
+  const placed = eases.map((ease) => {
+    const view = m.CUTOUT?.[member]?.[ease.kind]?.[ease.view];
+    if (view === undefined)
+      throw new Error(
+        `${member}'s ease ${ease.from} to ${ease.to} moves ${ease.kind} ${ease.view}, which CUTOUT lacks`,
+      );
+    if (ease.fps !== EASE_FPS)
+      throw new Error(
+        `${member}'s ease ${ease.from} to ${ease.to} is ${ease.fps} fps; an ease page is ${EASE_FPS}`,
+      );
+    return { ease, view };
+  });
+  const { width, height } = cutoutCanvas(film, member, m, first.kind);
+  return createFilm({
+    title: `${member}'s eases`,
+    width,
+    height,
+    fps: EASE_FPS,
+    paper: m.PAPER,
+    shade: m.PAPER.base,
+    finish: { vignette: 0, grain: 0 },
+    scenes: placed.map(({ ease, view }) => ({
+      id: easeScene(ease.from, ease.to),
+      min: ease.count / ease.fps,
+      drift: 0 as const,
+      puppets: { [ease.puppet.key]: ease.puppet },
+      draw: (f: Frame) => {
+        const i = Math.min(ease.count - 1, Math.max(0, Math.round(f.t * ease.fps)));
+        const at = ease.frame(i);
+        const { ctx } = f;
+        ctx.save();
+        ctx.translate(CUTOUT_MARGIN[0] + view.at[0], CUTOUT_MARGIN[1] + view.at[1]);
+        f.puppet(ease.puppet.key, at.pose, at.look);
+        ctx.restore();
+      },
+    })),
+  });
+};
+
+/**
+ * The player's entries for a film's cast renders, three pages a member: his
  * rigs under `<film>/cast/<member>`, and his puppets (`CUTOUT`) under
- * `<film>/cast/<member>/cutout`. Spread them, beside the films, into the
+ * `<film>/cast/<member>/cutout`, and his eases (`EASES`) under
+ * `<film>/cast/<member>/ease`. Spread them, beside the films, into the
  * pages the app mounts. A page loads its member's table (`load`, the film's
  * `rigs/cast.ts`) and the rigs or puppets it draws, through `rive` (the
  * page's Rive runtimes unless given) or the page's image decoder, into the
@@ -180,6 +248,16 @@ export const castPages = (
         Effect.flatMap(page.contextEffect, (services) =>
           Effect.promise(load).pipe(
             Effect.map((m) => cutoutFilm(film, member, m)),
+            Effect.flatMap(loadPuppets),
+            Effect.provideContext(services),
+          ),
+        ),
+      ],
+      [
+        easePage(film, member),
+        Effect.flatMap(page.contextEffect, (services) =>
+          Effect.promise(load).pipe(
+            Effect.map((m) => easeFilm(film, member, m)),
             Effect.flatMap(loadPuppets),
             Effect.provideContext(services),
           ),

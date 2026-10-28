@@ -28,7 +28,13 @@ import {
   Result,
   Schema,
 } from 'effect';
-import { type CastFigure, type CastModule, type CastView, castPage } from '../canvas/cast.ts';
+import {
+  type CastFigure,
+  type CastModule,
+  type CastView,
+  CUTOUT_MARGIN,
+  castPage,
+} from '../canvas/cast.ts';
 import { deltaE, labsOf } from '../core/cast-sheet-pixels.ts';
 import {
   type CastRender,
@@ -63,6 +69,18 @@ const SHEET_VIEW = { mode: 'plain', captions: false, format: 'image/png' } as co
 
 /** The gap round and between the two crops of a side-by-side, pixels. */
 const SIDE_GAP = 16;
+
+/** Where each figure's page stands the sheet: a cut-out's page is the sheet grown by `CUTOUT_MARGIN`. */
+const PAGE_OFFSET: Readonly<Record<CastFigure, readonly [number, number]>> = {
+  rig: [0, 0],
+  cutout: CUTOUT_MARGIN,
+};
+
+/** A sheet box where `figure`'s page draws it. */
+const onPage = (box: readonly [number, number, number, number], figure: CastFigure) => {
+  const [dx, dy] = PAGE_OFFSET[figure];
+  return [box[0] + dx, box[1] + dy, box[2] + dx, box[3] + dy] as const;
+};
 
 /** A cast render that cannot be made: the film's table, its record or its page do not give what it needs. */
 class CastRenderRefused extends Schema.TaggedError<CastRenderRefused>()('CastRenderRefused', {
@@ -473,7 +491,7 @@ const renderKind = Effect.fn('Cast.renderKind')(function* (at: RenderAt, kind: S
     .filter((v) => drawnViews(at.table, member, kind, at.figure).includes(v.name))
     .map((v): Cut => {
       const concept = cropRaster(keptSheet, v.box);
-      const render = cropRaster(drawn, v.box);
+      const render = cropRaster(drawn, onPage(v.box, at.figure));
       return {
         v,
         stem: `${kind}-${v.name}`,
