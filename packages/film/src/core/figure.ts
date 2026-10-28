@@ -2035,18 +2035,31 @@ const bodyWidths = (rows: ReadonlyArray<BodyRow>, head: Head, edge: number, sink
   }
 };
 
-/** The body's shade, from every other pixel of its rows. */
+/**
+ * How far inside the body's own edge a pixel lies, at least, to be read for
+ * its shade. Nearer, it is the rim: the anti-aliased blend of the outline with
+ * the paper behind it, which moves with the paper and is not the garment's
+ * shade. The ground region itself lies past the outline and the seal, never
+ * this near a body pixel, so the distance is taken from any pixel not the body's.
+ */
+const SHADE_OFF_GROUND = 3;
+
+/** The body's shade, from every other pixel of its rows at least `SHADE_OFF_GROUND` pixels inside its edge. */
 const bodyShadingOf = (
   read: Read,
   fills: Labelled,
   ids: ReadonlySet<number>,
   rows: ReadonlyArray<BodyRow>,
 ) => {
+  const body = (i: number) => ids.has(fills.labels[i]!);
+  const offBody = distanceTo(read.w, read.h, (i) => !body(i));
   const pixels: Array<Pixel> = [];
   for (const row of rows)
-    for (let x = row.lo + (row.y % 2); x <= row.hi; x += 2)
-      if (ids.has(fills.labels[row.y * read.w + x]!))
-        pixels.push({ c: rgbAt(read.r, row.y * read.w + x), x, y: row.y });
+    for (let x = row.lo + (row.y % 2); x <= row.hi; x += 2) {
+      const i = row.y * read.w + x;
+      if (body(i) && offBody[i]! >= SHADE_OFF_GROUND ** 2)
+        pixels.push({ c: rgbAt(read.r, i), x, y: row.y });
+    }
   return shadingOf(pixels);
 };
 
