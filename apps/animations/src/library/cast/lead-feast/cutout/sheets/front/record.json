@@ -126,7 +126,7 @@
                 "plain": 2.75,
                 "n": 2710
               },
-              "verdict": "outside"
+              "verdict": "within"
             },
             {
               "part": "torso",
@@ -157,7 +157,7 @@
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": ["grain"]
+        "missed": []
       },
       {
         "n": 2,
@@ -217,7 +217,7 @@
                 "plain": 2.81,
                 "n": 2816
               },
-              "verdict": "outside"
+              "verdict": "within"
             },
             {
               "part": "torso",
@@ -231,7 +231,7 @@
                 "plain": 3.71,
                 "n": 3886
               },
-              "verdict": "outside"
+              "verdict": "within"
             }
           ],
           "paintUnder": [
@@ -295,7 +295,7 @@
           "plain": 2.75,
           "n": 2710
         },
-        "verdict": "outside"
+        "verdict": "within"
       },
       {
         "part": "torso",
@@ -334,5 +334,5 @@
     "leastSeamPairs": 20,
     "leastGrainWindows": 90
   },
-  "missed": ["grain"]
+  "missed": []
 }
