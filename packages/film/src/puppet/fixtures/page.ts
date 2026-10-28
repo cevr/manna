@@ -83,6 +83,8 @@ try {
     draw: (pose, look) => {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, W, H);
+      // the puppet's origin where it stands in its sheet, so the canvas is the sheet's frame
+      ctx.translate(spec.origin[0], spec.origin[1]);
       draw(ctx, pose, look);
       return base64Of(new Uint8Array(ctx.getImageData(0, 0, W, H).data.buffer));
     },
