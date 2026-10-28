@@ -10,9 +10,9 @@ import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
 import { hymns } from './hymns';
-import { find, fold, indexOf, KIN, oneEdit, search } from './search';
+import { find, fold, hymnIndex, KIN, oneEdit, search } from './search';
 
-const index = indexOf(hymns);
+const index = hymnIndex();
 const numbers = (query: string) => search(index, query).map((h) => h.number);
 const wordsOf = (text: string) => fold(text).split(' ').filter(Boolean);
 type Hymn = (typeof hymns)[number];

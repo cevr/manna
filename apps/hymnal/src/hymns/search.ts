@@ -136,17 +136,31 @@ const linesOf = (hymn: HymnText): ReadonlyArray<string> => {
   return [hymn.title, hymn.firstLine, refrain, ...rest];
 };
 
+/**
+ * `fold` of each line, one pass over a hymn's lines joined by line breaks:
+ * the same words a line at a time, at a fraction of the cost. A line break
+ * inside a line is a space, as `fold` makes it.
+ */
+const foldLines = (lines: ReadonlyArray<string>): ReadonlyArray<string> =>
+  lines
+    .map((line) => line.replace(/\n/g, ' '))
+    .join('\n')
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/['’‘`]/g, '')
+    .replace(/[^\p{L}\p{N}\n]+/gu, ' ')
+    .split('\n');
+
 /** Every word once, numbered, and every line as the numbers of its words. */
 const vocabularyOf = (all: ReadonlyArray<HymnText>) => {
   const vocab = new Map<string, number>();
   const vocabList: Array<string> = [];
-  const idOf = (word: string) => {
-    if (!vocab.has(word)) {
-      vocab.set(word, vocabList.length);
-      vocabList.push(word);
-    }
-    return vocab.get(word) ?? 0;
+  const add = (word: string) => {
+    vocab.set(word, vocabList.length);
+    return vocabList.push(word) - 1;
   };
+  const idOf = (word: string) => vocab.get(word) ?? add(word);
   const hymnLine: Array<number> = [];
   const lineStart: Array<number> = [];
   const lineWords: Array<number> = [];
@@ -154,11 +168,14 @@ const vocabularyOf = (all: ReadonlyArray<HymnText>) => {
   const lineField: Array<number> = [];
   for (const hymn of all) {
     hymnLine.push(lineStart.length);
-    linesOf(hymn).forEach((text, place) => {
+    const lines = linesOf(hymn);
+    const folded = foldLines(lines);
+    lines.forEach((text, place) => {
       lineStart.push(lineWords.length);
       lineText.push(text);
       lineField.push(Math.min(place, 3));
-      for (const word of words(text)) lineWords.push(idOf(word));
+      for (const word of (folded[place] ?? '').split(' '))
+        if (word !== '') lineWords.push(idOf(word));
     });
   }
   hymnLine.push(lineStart.length);
@@ -166,7 +183,11 @@ const vocabularyOf = (all: ReadonlyArray<HymnText>) => {
   return { vocab, vocabList, hymnLine, lineStart, lineWords, lineText, lineField };
 };
 
-/** Each word's postings: per hymn that has it, its best weight there and the first line with that weight. */
+/**
+ * Each word's postings: per hymn that has it, in hymn order, its best weight
+ * there and the first line with that weight. A hymn's lines run from the
+ * heaviest field to the lightest, so a word's first place in a hymn is its best.
+ */
 const postingsOf = ({
   vocabList,
   hymnLine,
@@ -176,37 +197,44 @@ const postingsOf = ({
 }: ReturnType<typeof vocabularyOf>) => {
   const N = hymnLine.length - 1;
   const V = vocabList.length;
-  const best = Array.from({ length: V }, () => new Map<number, readonly [number, number]>());
+  // Each word's first place in each hymn, as its word, hymn and line, and each word's count of them.
+  const seenIn = new Int32Array(V).fill(-1);
+  const count = new Int32Array(V);
+  const firstWord: Array<number> = [];
+  const firstHymn: Array<number> = [];
+  const firstLine: Array<number> = [];
   for (let h = 0; h < N; h++)
-    for (let l = hymnLine[h] ?? 0; l < (hymnLine[h + 1] ?? 0); l++) {
-      const weight = FIELD_WEIGHT[lineField[l] ?? 3] ?? 1;
+    for (let l = hymnLine[h] ?? 0; l < (hymnLine[h + 1] ?? 0); l++)
       for (let k = lineStart[l] ?? 0; k < (lineStart[l + 1] ?? 0); k++) {
-        const of = best[lineWords[k] ?? 0] ?? new Map();
-        if ((of.get(h)?.[0] ?? 0) < weight) of.set(h, [weight, l]);
+        const id = lineWords[k] ?? 0;
+        if (seenIn[id] === h) continue;
+        seenIn[id] = h;
+        count[id] = (count[id] ?? 0) + 1;
+        firstWord.push(id);
+        firstHymn.push(h);
+        firstLine.push(l);
       }
-    }
   const postStart = new Int32Array(V + 1);
-  const postHymn: Array<number> = [];
-  const postWeight: Array<number> = [];
-  const postLine: Array<number> = [];
   const idf = new Float32Array(V);
-  best.forEach((of, id) => {
-    postStart[id] = postHymn.length;
-    of.forEach(([weight, line], h) => {
-      postHymn.push(h);
-      postWeight.push(weight);
-      postLine.push(line);
-    });
-    idf[id] = Math.log(1 + (N - of.size + 0.5) / (of.size + 0.5));
+  for (let id = 0; id < V; id++) {
+    const size = count[id] ?? 0;
+    postStart[id + 1] = (postStart[id] ?? 0) + size;
+    idf[id] = Math.log(1 + (N - size + 0.5) / (size + 0.5));
+  }
+  const total = postStart[V] ?? 0;
+  const postHymn = new Int32Array(total);
+  const postWeight = new Float32Array(total);
+  const postLine = new Int32Array(total);
+  const next = postStart.slice(0, V);
+  firstWord.forEach((id, i) => {
+    const at = next[id] ?? 0;
+    next[id] = at + 1;
+    const line = firstLine[i] ?? 0;
+    postHymn[at] = firstHymn[i] ?? 0;
+    postWeight[at] = FIELD_WEIGHT[lineField[line] ?? 3] ?? 1;
+    postLine[at] = line;
   });
-  postStart[V] = postHymn.length;
-  return {
-    postStart,
-    postHymn: Int32Array.from(postHymn),
-    postWeight: Float32Array.from(postWeight),
-    postLine: Int32Array.from(postLine),
-    idf,
-  };
+  return { postStart, postHymn, postWeight, postLine, idf };
 };
 
 /** Each word of 3 letters or more, and each of it with one letter dropped, to the words it comes from. */
