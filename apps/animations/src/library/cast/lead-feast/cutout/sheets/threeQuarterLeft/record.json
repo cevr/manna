@@ -6,12 +6,12 @@
   "parts": [
     {
       "name": "armRight",
-      "kept": 6829,
+      "kept": 6913,
       "painted": 0
     },
     {
       "name": "armLeft",
-      "kept": 12074,
+      "kept": 12788,
       "painted": 0
     },
     {
@@ -22,7 +22,7 @@
     {
       "name": "sash",
       "kept": 10214,
-      "painted": 1065
+      "painted": 1382
     },
     {
       "name": "footRight",
@@ -41,21 +41,21 @@
     },
     {
       "name": "robe",
-      "kept": 32512,
-      "painted": 3386
+      "kept": 31714,
+      "painted": 4434
     },
     {
       "name": "torso",
       "kept": 16284,
-      "painted": 5450
+      "painted": 6277
     }
   ],
   "moving": ["armRight", "armLeft"],
-  "hiddenPx": 18903,
+  "hiddenPx": 19701,
   "carried": [],
   "okra": {
     "route": "subscription (okra image, Codex route; no --model)",
-    "input": "okra/input.png",
+    "input": "okra/input-7c312af2ee3f.png",
     "prompt": "okra/prompt.txt",
     "pad": {
       "s": 0.4317965874874539,
@@ -76,28 +76,9 @@
           "-o",
           "okra/answer-1.png"
         ],
+        "input": "okra/input-2c9f8c0db231.png",
         "out": "okra/answer-1.png",
-        "fit": {
-          "s": 0.4315941195987933,
-          "dx": -111.3334393403422,
-          "dy": 0.037114423708715094,
-          "score": 26.850433564979525
-        },
-        "measures": {
-          "seamDeltaE": 4.63,
-          "seamPairs": 106,
-          "driftDeltaE": 6.33,
-          "grain": {
-            "painted": 0.77,
-            "kept": 1.42,
-            "paintedPx": 180
-          },
-          "paintedPx": 6277,
-          "visibleAtRest": 0,
-          "recomposeByteEqual": true
-        },
-        "missed": ["drift", "grain"],
-        "input": "okra/input-2c9f8c0db231.png"
+        "stale": true
       },
       {
         "n": 2,
@@ -112,28 +93,9 @@
           "-o",
           "okra/answer-2.png"
         ],
+        "input": "okra/input-2c9f8c0db231.png",
         "out": "okra/answer-2.png",
-        "fit": {
-          "s": 0.4315941195987933,
-          "dx": -111.23967957776894,
-          "dy": 0.09954604907881048,
-          "score": 24.664648951041162
-        },
-        "measures": {
-          "seamDeltaE": 6.19,
-          "seamPairs": 191,
-          "driftDeltaE": 5.82,
-          "grain": {
-            "painted": 1.54,
-            "kept": 1.54,
-            "paintedPx": 497
-          },
-          "paintedPx": 9901,
-          "visibleAtRest": 0,
-          "recomposeByteEqual": true
-        },
-        "missed": ["drift"],
-        "input": "okra/input-2c9f8c0db231.png"
+        "stale": true
       },
       {
         "n": 3,
@@ -148,48 +110,66 @@
           "-o",
           "okra/answer-3.png"
         ],
+        "input": "okra/input-2c9f8c0db231.png",
         "out": "okra/answer-3.png",
+        "stale": true
+      },
+      {
+        "n": 4,
+        "command": [
+          "okra",
+          "image",
+          "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where his two arms (sleeves and round hands) were cut away to make a cut-out puppet. He is turned three-quarters to the viewer's left. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading (the cream tunic on the viewer's left side, the teal-blue mantle on the viewer's right side, the white sash running round his waist). Each side of his body runs straight down from the outer end of his shoulder to the outer edge of his robe below, so his body under the arms is as wide as his shoulders and his robe, and the tunic and mantle fill everything inside that line with the same soft shade and fine paper grain the sheet paints beside each arm. Keep the soft shade each arm casts on his body beside it exactly as it is, and carry that same shade on under where the arm was. There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, face, hair, robe, sash, feet, size, position and framing.",
+          "--size",
+          "1024x1536",
+          "--ref",
+          "okra/input-7c312af2ee3f.png",
+          "-o",
+          "okra/answer-4.png"
+        ],
+        "input": "okra/input-7c312af2ee3f.png",
+        "out": "okra/answer-4.png",
+        "stale": false,
         "fit": {
-          "s": 0.4314589512827404,
-          "dx": -111.10956043194572,
-          "dy": 0.33273510905570447,
-          "score": 24.651576268318525
+          "s": 0.4315941195987933,
+          "dx": -111.1774975764294,
+          "dy": 0.06793977495982517,
+          "score": 16.790582109922475
         },
         "measures": {
-          "seamDeltaE": 8.42,
-          "seamPairs": 256,
-          "driftDeltaE": 5.69,
+          "seamDeltaE": 8.77,
+          "seamPairs": 219,
+          "driftDeltaE": 3.78,
           "grain": {
-            "painted": 0.95,
+            "painted": 1.19,
             "kept": 1.54,
-            "paintedPx": 1025
+            "paintedPx": 820
           },
-          "paintedPx": 11523,
+          "paintedPx": 12093,
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": ["drift", "grain"],
-        "input": "okra/input-2c9f8c0db231.png"
+        "missed": []
       }
     ],
-    "chosen": 2,
+    "chosen": 4,
     "fit": {
       "s": 0.4315941195987933,
-      "dx": -111.23967957776894,
-      "dy": 0.09954604907881048,
-      "score": 24.664648951041162
+      "dx": -111.1774975764294,
+      "dy": 0.06793977495982517,
+      "score": 16.790582109922475
     }
   },
   "measures": {
-    "seamDeltaE": 6.19,
-    "seamPairs": 191,
-    "driftDeltaE": 5.82,
+    "seamDeltaE": 8.77,
+    "seamPairs": 219,
+    "driftDeltaE": 3.78,
     "grain": {
-      "painted": 1.54,
+      "painted": 1.19,
       "kept": 1.54,
-      "paintedPx": 497
+      "paintedPx": 820
     },
-    "paintedPx": 9901,
+    "paintedPx": 12093,
     "visibleAtRest": 0,
     "recomposeByteEqual": true
   },
@@ -199,5 +179,5 @@
     "grainWithin": 0.5,
     "visibleAtRest": 0
   },
-  "missed": ["drift"]
+  "missed": []
 }
