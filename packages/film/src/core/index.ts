@@ -31,3 +31,14 @@ export {
 } from './synth/graph/presets.ts';
 export { defineStore } from './store.ts';
 export { stagingVoice } from './staging-voice.ts';
+export {
+  type Puppet,
+  type PuppetPose,
+  type PuppetSheet,
+  type Skeleton,
+  PUPPET_CONTROLS,
+  posedVertices,
+  puppetOf,
+  rasterOf,
+  restPose,
+} from './puppet.ts';

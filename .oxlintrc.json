@@ -629,8 +629,13 @@
       // pixel branches with a ternary, as the mix's sample loops do; the
       // measure stays pure, RGBA in, numbers out. The tracer, the fit of
       // its edges (`core/fit.ts`) and a cast render's fit rows
-      // (`core/fit-rows.ts`) read points the same way.
+      // (`core/fit-rows.ts`) read points the same way, and so do a puppet's
+      // meshes, weights and CPU raster (`core/puppet.ts`) and its draw's
+      // vertex buffers (`canvas/puppet.ts`, `canvas/puppet-gl.ts`).
       "files": [
+        "**/packages/film/src/core/puppet.ts",
+        "**/packages/film/src/canvas/puppet.ts",
+        "**/packages/film/src/canvas/puppet-gl.ts",
         "**/packages/film/src/core/figure.ts",
         "**/packages/film/src/core/render-artifacts.ts",
         "**/packages/film/src/core/raster.ts",
@@ -1167,7 +1172,9 @@
                   "!**/browser/host-browser.ts",
                   "!**/browser/storage-browser.ts",
                   // A film's page load (player/narrated.ts) defaults to the page's Rive runtimes, as it defaults to the page's fetch client.
-                  "!**/rive/runtime-browser.ts"
+                  "!**/rive/runtime-browser.ts",
+                  // A cast page's puppets load through the page's image decoder (player/cast.ts), as its rigs through the Rive runtimes.
+                  "!**/puppet/images-browser.ts"
                 ],
                 "message": "a page reaches the host through its services: only a page's mount builds the host (`BrowserHost`, browser/host-browser.ts), and the stores are storage-browser.ts's."
               },
