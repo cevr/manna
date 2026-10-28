@@ -379,6 +379,8 @@ Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `i
 
 - 2026-10-28 findbulk P6 takes no Index of Titles (owner: "Do we need an index of titles? I feel like we have all the titles and we have all first verse"): the compiled hymnal holds every title and line, and search finds a hymn by any line; P6 covers pages 776–824, and the optional retake of page 825 on is dropped.
 
+- 2026-10-28 playbulk on the phone (owner: "playbulk loooks good"): the owner tried the Release build of e256414e8 and found nothing wrong; the owner item is closed. 2026-10-28 argent MCP connected after ab0df93fe and ce83c4ed8 (global Bun install, `argent mcp`); its attach trial on One takes the next free agent slot (brief `tmp/orchestrate/hymnapp/argent/brief.md`).
+
 ## Owner questions
 
 - Clicks in silent mode (feel): keep them muted under the silent switch, as iOS keyboard clicks are (recommended: the phone stays quiet at worship), or play them even in silent mode (a new sound path, checked against the hymn audio session). Asked 2026-10-25. Answer (owner, 2026-10-25): "Yeah, the clicks, that's fine. Stay muted in silent mode". No change. (feel)
