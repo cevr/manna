@@ -37,16 +37,22 @@ const raw = hymns.map((hymn) =>
   [hymn.title, ...hymn.sections.flatMap((section) => section.lines)].join('\n').toLowerCase(),
 );
 
+/** Each hymn's title and lines folded, each between spaces, made once per hymn as `holders` asks. */
+const spaced = new Map<number, ReadonlyArray<string>>();
+const spacedOf = (hymn: Hymn): ReadonlyArray<string> => {
+  const made =
+    spaced.get(hymn.number) ??
+    [wordsOf(hymn.title), ...linesOf(hymn)].map((ws) => ` ${ws.join(' ')} `);
+  spaced.set(hymn.number, made);
+  return made;
+};
+
 /** The hymns that hold `phrase` as whole words in a line or the title. */
 const holders = (phrase: string) => {
   const longest = phrase.split(' ').toSorted((a, b) => b.length - a.length)[0] ?? '';
   return hymns
     .filter((hymn, h) => raw[h]?.includes(longest))
-    .filter((hymn) =>
-      [wordsOf(hymn.title), ...linesOf(hymn)].some((ws) =>
-        ` ${ws.join(' ')} `.includes(` ${phrase} `),
-      ),
-    )
+    .filter((hymn) => spacedOf(hymn).some((line) => line.includes(` ${phrase} `)))
     .map((hymn) => hymn.number);
 };
 
