@@ -10,8 +10,10 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import Settings from '../app/(hymnal)/settings';
 
 describe('Settings', () => {
+  // One render serves both checks.
+  const html = renderToStaticMarkup(<Settings />);
+
   it('credits the piano and the strings under About', () => {
-    const html = renderToStaticMarkup(<Settings />);
     expect(html).toContain('About');
     for (const words of [
       'Salamander Grand Piano',
@@ -25,7 +27,6 @@ describe('Settings', () => {
   });
 
   it('gives the notice the Gemma Terms of Use ask of the meaning table', () => {
-    const html = renderToStaticMarkup(<Settings />);
     for (const words of [
       'EmbeddingGemma',
       'modified',
