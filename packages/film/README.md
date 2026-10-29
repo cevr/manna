@@ -2626,8 +2626,11 @@ the standing and framed skeletons (`skeleton.ts`), the frames (`framesOf`,
 pose fitted from a turnaround puppet (`own`, `fitted`, `poses.ts`). A
 member's `library/cast/<member>/cutout/` folder is data passed to those
 builders. A view is added in one order: its data, this tool (`--dry-run`
-first), the film table's `CUTOUT` and `SHEETS` entries, `film concept render
---figure cutout` until its fit rows pass, and a review of the render against
+first), the film table's `CUTOUT`, `SHEETS` and `FIT_CLASSES` entries (at
+least three colour classes sampled on the kept sheet; with none, no class
+rows), the member's name in the film's `castPages` list
+(`apps/animations/src/films/index.ts`, else no render page), `film concept
+render --figure cutout` until its fit rows pass, and a review of the render against
 the kept crop at 1:1. The film skill (`.claude/skills/film/SKILL.md`, "A
 cut-out member") keeps the cut lessons and what a member with poses alone can
 and cannot get. His cut table (`<member>/cutout/cut.ts`: `CUTS`,

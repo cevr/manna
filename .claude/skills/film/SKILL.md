@@ -62,13 +62,13 @@ No scene is drawn on a member before his cast render is kept: the render, matche
 
 1. Data: `frames.ts` (the kept box, its pad), `joints.ts`, `skeleton.ts`, `cut.ts` (the view's parts, its `HIDDEN` prompt), `puppets.ts` (the part PNGs, the view's paper, `keep`, `thin`), `puppet.ts`; `poses.ts` only for poses fitted from a turnaround puppet.
 2. `bun run concept parts <film> <member> --view <kind>-<view> --dry-run`, read its magenta input at 1:1, then the same without `--dry-run` (okra on the subscription route only, three calls a view, more only by an allowance the cut table records). `--check` holds each committed sheet to what it lays.
-3. The film's `rigs/cast.ts`: his `CUTOUT[<member>]` entry (`own(fit, PUPPETS.<view>)`) and his `SHEETS[<member>]`.
+3. The film's `rigs/cast.ts`: his `CUTOUT[<member>]` entry (`own(fit, PUPPETS.<view>)`), his `SHEETS[<member>]`, and his `FIT_CLASSES[<member>]`, at least three colour classes each sampled on the kept sheet (a member with none gets no class rows, silently). His name joins the film's `castPages` list in `src/films/index.ts`, else his render page does not exist.
 4. `bun run concept render <film> <member> --figure cutout`, until every fit row of the view passes.
 5. The art review: the render against the kept crop at 1:1 finds no off-model or wrong-pose fault. A seam, line-weight or flicker fault is a named gap, carried to the scene renders.
 
 Cut lessons, each paid for once:
 
-- **Torso strips.** okra paints a hidden pixel into the nearest still part, and head, first in order, has nothing in front of it: give torso a strip between head and each sleeve's corner, above and inside.
+- **Torso strips.** okra paints a hidden pixel into the nearest still part, so the paint under a moving part needs a still part behind that part to own it: give torso a strip between head and each sleeve's corner, above and inside.
 - **`keep`** names his cloth lighter than the paper, which the un-matte would otherwise clear as paper.
 - **`thin`** names his specks (seed), whose rim keeps its hue only when un-matted as a thin part.
 - **One paper per view.** A view's paper, which its rim is un-matted from, is the median of its kept crop's border ground; any other paper is labelled a calibration in his `cutout/puppets.ts`, with its border median and the reason it differs.

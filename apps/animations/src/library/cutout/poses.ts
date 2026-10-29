@@ -9,6 +9,9 @@
 // scale, in the pose view's crop's frame), with the drawings the raise lays
 // (`raise/`): the pose view's own drawn key in place of one of his parts, and
 // its hand with what it holds, each laid where the pose view draws it.
+//
+// What a member with poses alone can and cannot get: the film skill
+// (`.claude/skills/film/SKILL.md`, "A cut-out member").
 
 import type { CutoutView, PuppetLook, PuppetPose } from '@manna/film/canvas';
 import { Record as Records, Schema } from 'effect';

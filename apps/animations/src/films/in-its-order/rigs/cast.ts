@@ -112,7 +112,7 @@ const SOWER_CLASSES = {
  * darker than luma 90, so it reads as their line and is no class. The
  * shadow's pale feathered edge is not a sample: the cool white halo round
  * their outline (#d9d1c5 to #f2f0f1, which the un-matte clears) lies nearer
- * it than the linen, so with it the kept crop read that halo as shadow
+ * it than the linen, so samples there would class that halo as shadow
  * (measured: 58 px on the toddler's poses-1, which has no ground shadow).
  */
 const CHILD_CLASSES = {
