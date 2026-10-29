@@ -7,7 +7,7 @@
 import { Argument, Command, Flag } from 'effect/cli';
 import { BunServices } from '@effect/platform-bun';
 import type { CategoryId, HymnId, HymnVerse } from '@manna/core/hymnal';
-import { HymnalService, isRefrain } from '@manna/core/hymnal';
+import { HymnalService, HymnIndexes, isRefrain } from '@manna/core/hymnal';
 import { layerHymnalBun } from '@manna/core/hymnal/bun';
 import { Console, Effect, Layer, Option, Schema, SchemaGetter } from 'effect';
 
@@ -18,6 +18,8 @@ const JsonString = Schema.Unknown.pipe(
   }),
 );
 const encodeJson = Schema.encodeUnknownEffect(JsonString);
+// The printed indexes' JSON shape: a passage carries no `_tag`.
+const encodeIndexes = Schema.encodeEffect(HymnIndexes);
 
 const jsonFlag = Flag.Boolean('json').pipe(
   Flag.withDescription('Output JSON instead of formatted text'),
@@ -74,6 +76,29 @@ function formatHymnFull(hymn: {
   return lines.join('\n');
 }
 
+/** The topic, tune and metre names the back-matter indexes give a hymn, one line each, empty ones left out. */
+function formatIndexes(indexes: HymnIndexes): readonly string[] {
+  const lines: string[] = [];
+  const add = (label: string, names: readonly string[]) => {
+    if (names.length > 0) lines.push(`${label}: ${names.join('; ')}`);
+  };
+  add(
+    'Topics',
+    indexes.topics.map((topic) =>
+      Option.match(Option.fromUndefinedOr(topic.parent), {
+        onNone: () => topic.name,
+        onSome: (parent) => `${parent}, ${topic.name}`,
+      }),
+    ),
+  );
+  add(
+    'Tunes',
+    indexes.tunes.map((tune) => tune.name),
+  );
+  add('Metres', indexes.metres);
+  return lines;
+}
+
 function formatHymnSummary(hymn: {
   id: number;
   name: string;
@@ -112,12 +137,32 @@ const getCommand = Command.make('get', { hymnNumber, json: jsonFlag }, (args) =>
       return;
     }
 
+    // Readings (696-920) stand in no back-matter index, and a hymnal.db built
+    // before the index tables has none: both print as no indexes, so a get
+    // that worked on an installed legacy database still works.
+    const indexes = yield* service.getHymnIndexes(args.hymnNumber as HymnId).pipe(
+      Effect.asSome,
+      Effect.catchTag('HymnNotFoundError', () => Effect.succeedNone),
+      Effect.catchIf(
+        (error) => error._tag === 'HymnalError' && error.operation === 'indexes',
+        () => Effect.succeedNone,
+      ),
+    );
+
     if (args.json) {
-      yield* Console.log(yield* encodeJson(hymn.value));
+      const encoded = yield* Option.match(indexes, {
+        onNone: () => Effect.succeedNone,
+        onSome: (value) => Effect.asSome(encodeIndexes(value)),
+      });
+      yield* Console.log(yield* encodeJson({ ...hymn.value, indexes: Option.getOrNull(encoded) }));
       return;
     }
 
     yield* Console.log(formatHymnFull(hymn.value));
+    if (Option.isSome(indexes)) {
+      const lines = formatIndexes(indexes.value);
+      if (lines.length > 0) yield* Console.log(lines.join('\n'));
+    }
   }).pipe(Effect.scoped, Effect.provide(HymnalLive)),
 );
 

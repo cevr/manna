@@ -8,7 +8,7 @@ import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 import { describe, expect, it } from 'effect-bun-test';
 
-import { HymnalService, HymnId } from '@manna/core/hymnal';
+import { HymnalService, HymnId, HymnIndexes } from '@manna/core/hymnal';
 import { layerHymnalBun } from '@manna/core/hymnal/bun';
 import { init } from '../../src/commands/init.js';
 
@@ -252,6 +252,73 @@ describe('hymns CLI corpus contract', () => {
       );
       expect(decoded.id).toBe(921);
     }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+
+  it.effect(
+    'gives a hymn its back-matter indexes in JSON and text, and none to a reading or a legacy database',
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const dir = yield* fs.makeTempDirectoryScoped();
+        const normalized = `${dir}/normalized.db`,
+          legacy = `${dir}/legacy.db`;
+        yield* fs.copyFile(ARTIFACT, normalized);
+        const service = Context.get(
+          yield* Layer.build(
+            layerHymnalBun.pipe(
+              Layer.provide(
+                ConfigProvider.layer(
+                  ConfigProvider.fromUnknown({ HOME: dir, HYMNAL_DB_PATH: normalized }),
+                ),
+              ),
+              Layer.provide(BunServices.layer),
+            ),
+          ),
+          HymnalService,
+        );
+        const WithIndexes = Schema.Struct({ id: Schema.Int, indexes: Schema.Unknown });
+        const indexesOf = (text: string) =>
+          Schema.decodeEffect(Schema.fromJsonString(WithIndexes))(text).pipe(
+            Effect.map((decoded) => decoded.indexes),
+            Effect.mapError(() => CliProofError.make({ operation: 'decode-indexes' })),
+          );
+
+        for (const id of [2, 100, 695]) {
+          const expected = yield* service.getHymnIndexes(HymnId.make(id));
+          expect(expected.topics.length > 0 && expected.metres.length > 0, `${id}:indexed`).toBe(
+            true,
+          );
+          const result = yield* cli(dir, normalized, ['get', String(id), '--json']);
+          expect(result.code, `${id}:json:exit`).toBe(0);
+          expect(json(yield* indexesOf(result.stdout)), `${id}:json:indexes`).toBe(
+            json(yield* Schema.encodeEffect(HymnIndexes)(expected)),
+          );
+
+          const text = yield* cli(dir, normalized, ['get', String(id)]);
+          expect(text.code, `${id}:text:exit`).toBe(0);
+          const line = (label: string) =>
+            text.stdout.split('\n').find((l) => l.startsWith(`${label}: `)) ?? '';
+          expect(
+            expected.topics.every((topic) => line('Topics').includes(topic.name)) &&
+              expected.tunes.every((tune) => line('Tunes').includes(tune.name)) &&
+              expected.metres.every((metre) => line('Metres').includes(metre)),
+            `${id}:text:names`,
+          ).toBe(true);
+        }
+
+        const reading = yield* cli(dir, normalized, ['get', '696', '--json']);
+        expect(reading.code, 'reading:exit').toBe(0);
+        expect(json(yield* indexesOf(reading.stdout)), 'reading:indexes').toBe('null');
+
+        yield* legacyFixture(legacy, [yield* service.getHymn(HymnId.make(2))]);
+        const old = yield* cli(dir, legacy, ['get', '2', '--json']);
+        expect(old.code, 'legacy:exit').toBe(0);
+        expect(json(yield* indexesOf(old.stdout)), 'legacy:indexes').toBe('null');
+        const oldText = yield* cli(dir, legacy, ['get', '2']);
+        expect(oldText.code === 0 && !oldText.stdout.includes('Topics: '), 'legacy:text').toBe(
+          true,
+        );
+      }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
 
   it.effect(
