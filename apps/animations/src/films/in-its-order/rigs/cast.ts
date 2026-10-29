@@ -27,6 +27,7 @@ import { PUPPETS as SOWER_PUPPETS } from '../../../library/cast/sower/cutout/pup
 import { PUPPETS as CHILD_PUPPETS } from '../../../library/cast/villager-child/cutout/puppets.ts';
 import { PUPPETS as TODDLER_PUPPETS } from '../../../library/cast/villager-toddler/cutout/puppets.ts';
 import { PUPPETS as FEAST_MOTHER_PUPPETS } from '../cast/feast-mother/cutout/puppets.ts';
+import { PUPPETS as IDEA_VILLAGERS_PUPPETS } from '../cast/idea-villagers/cutout/puppets.ts';
 import { own } from '../../../library/cutout/poses.ts';
 import { RAISE as LEAD_RAISE } from '../../../library/cast/lead-feast/cutout/raise.ts';
 import { poses1View as leadPoses1 } from '../../../library/cast/lead-feast/cutout/poses.ts';
@@ -197,6 +198,62 @@ const TODDLER_CLASSES = {
 } as const;
 
 /**
+ * The IDEA villagers' colour classes, each sample the 3 by 3 median of their
+ * kept views' own pixels (`cast-sheet/views/<view>.png`, x,y in the view):
+ * their linen, the grown villager's headcloth and tunic with the baby's wrap,
+ * lit and in its warm shade (poses-3 181,13 191,9 189,11 213,19 145,25
+ * 225,165; poses-4 75,123 67,117 123,121; poses-6 109,9 93,9 139,19 141,19
+ * 133,21), the linen's far side turned toward violet with the baby's violet
+ * ground shadow (poses-3 215,163 209,163 215,169; poses-4 107,117 51,195
+ * 9,191; poses-6 133,151 177,205 155,299), and their skin, lit and shaded
+ * (poses-3 199,59 183,59 201,59; poses-4 87,23 109,19 85,19 101,21; poses-6
+ * 101,55 91,55 109,55). Every view holds all three. Their hair, beard and the
+ * sandals' leather lie at or under luma 90, so they read as the line and are
+ * no class; the baby's small brown tuft counts as its nearest.
+ */
+const IDEA_VILLAGERS_CLASSES = {
+  linen: [
+    '#f1d3ae',
+    '#f6dfb8',
+    '#eecda4',
+    '#debca1',
+    '#fde1ba',
+    '#e5c6b3',
+    '#eccaa5',
+    '#f4d6b3',
+    '#ddb9ae',
+    '#f4d9bd',
+    '#f6e8c8',
+    '#d9beb2',
+    '#d5b9ae',
+    '#dec2b2',
+  ],
+  violet: [
+    '#c7a8ac',
+    '#c9acb3',
+    '#d1b0b2',
+    '#c1a3af',
+    '#c2b7de',
+    '#ccbdd9',
+    '#c3a7b0',
+    '#bea1b3',
+    '#bba2b1',
+  ],
+  skin: [
+    '#f8a26d',
+    '#f19b68',
+    '#faa470',
+    '#f6ab75',
+    '#f7a66b',
+    '#fcbd7e',
+    '#f59f66',
+    '#fca16b',
+    '#f39760',
+    '#fda66f',
+  ],
+} as const;
+
+/**
  * Each member's colour classes for his fit rows (`film concept render`): a
  * class's samples on his kept sheets, and the papers and tones that paint it
  * on his rigs. His hair and its brown read as his line (darker than luma
@@ -247,6 +304,11 @@ export const FIT_CLASSES = {
     cream: { sheet: FEAST_MOTHER_CLASSES.cream, paper: FEAST_MOTHER_CLASSES.cream },
     skin: { sheet: FEAST_MOTHER_CLASSES.skin, paper: FEAST_MOTHER_CLASSES.skin },
   },
+  'idea-villagers': {
+    linen: { sheet: IDEA_VILLAGERS_CLASSES.linen, paper: IDEA_VILLAGERS_CLASSES.linen },
+    violet: { sheet: IDEA_VILLAGERS_CLASSES.violet, paper: IDEA_VILLAGERS_CLASSES.violet },
+    skin: { sheet: IDEA_VILLAGERS_CLASSES.skin, paper: IDEA_VILLAGERS_CLASSES.skin },
+  },
   sower: {
     linen: { sheet: SOWER_CLASSES.linen, paper: SOWER_CLASSES.linen },
     olive: { sheet: SOWER_CLASSES.olive, paper: SOWER_CLASSES.olive },
@@ -288,6 +350,9 @@ const FEAST_MOTHER_TURNAROUND = 600 / 440;
 /** The feast mother on her poses: poses-3, her front standing with the baby, ink crown to soles 814 rows (97 to 910), 440 units. */
 const FEAST_MOTHER_POSES = 814 / 440;
 
+/** The IDEA villagers on their poses sheet: poses-6, the grown villager standing at rest, ink crown to soles 512 rows (248 to 759, his kept box), 440 units. */
+const IDEA_VILLAGERS_POSES = 512 / 440;
+
 /**
  * Each member's sheets: their size and one scale, sheet pixels a canon unit,
  * each read off the sheet's anchor view. The lead's poses: poses-5, his
@@ -305,6 +370,9 @@ export const SHEETS = {
   'feast-mother': {
     turnaround: { ...SHEET, scale: FEAST_MOTHER_TURNAROUND },
     poses: { ...SHEET, scale: FEAST_MOTHER_POSES },
+  },
+  'idea-villagers': {
+    poses: { ...SHEET, scale: IDEA_VILLAGERS_POSES },
   },
   sower: {
     turnaround: { ...SHEET, scale: SOWER_TURNAROUND },
@@ -868,6 +936,13 @@ export const CUTOUT = cutoutTable({
       'poses-1': own(undefined, FEAST_MOTHER_PUPPETS['poses-1']),
       'poses-2': own(undefined, FEAST_MOTHER_PUPPETS['poses-2']),
       'poses-3': own(undefined, FEAST_MOTHER_PUPPETS['poses-3']),
+    },
+  },
+  'idea-villagers': {
+    poses: {
+      'poses-3': own(undefined, IDEA_VILLAGERS_PUPPETS['poses-3']),
+      'poses-4': own(undefined, IDEA_VILLAGERS_PUPPETS['poses-4']),
+      'poses-6': own(undefined, IDEA_VILLAGERS_PUPPETS['poses-6']),
     },
   },
   sower: {

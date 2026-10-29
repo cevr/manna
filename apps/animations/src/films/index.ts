@@ -42,7 +42,7 @@ export const pages = {
   ),
   ...castPages(
     'in-its-order',
-    ['lead-feast', 'feast-mother', 'sower', 'villager-child', 'villager-toddler'],
+    ['lead-feast', 'feast-mother', 'idea-villagers', 'sower', 'villager-child', 'villager-toddler'],
     inItsOrderCast,
   ),
 } satisfies Films;
