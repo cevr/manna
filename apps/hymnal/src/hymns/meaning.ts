@@ -88,14 +88,22 @@ const table: () => Table = (() => {
 })();
 
 /**
- * Reads the table in a task of its own after the one that asks, if it is not
- * read yet, so the next meaning search does not. The task that asks never
- * holds the thread for the read (about 55 ms in Hermes), and a frame can run
- * between them. Returns the cancel, for an effect's cleanup.
+ * Lets the thread go before the read: a timer of 1 ms is a task of its own.
+ * `Effect.sleep(Duration.zero)` is `Effect.yieldNow`, which runs on
+ * `setImmediate`, and React Native runs `setImmediate` as a microtask of the
+ * same task, so it would let no frame run.
+ */
+const READ_AFTER = Duration.millis(1);
+
+/**
+ * Reads the table in a timer task after the one that asks, if it is not read
+ * yet, so the next meaning search does not. The task that asks never holds the
+ * thread for the read (about 55 ms in Hermes), and a frame can run between
+ * them. Returns the cancel, for an effect's cleanup.
  */
 export const readMeaningSoon = (): (() => void) => {
   const read = Effect.runFork(
-    Effect.sleep(Duration.zero).pipe(Effect.andThen(Effect.sync(() => void table()))),
+    Effect.sleep(READ_AFTER).pipe(Effect.andThen(Effect.sync(() => void table()))),
   );
   return () => void Effect.runFork(Fiber.interrupt(read));
 };
