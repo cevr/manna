@@ -5,7 +5,7 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Schema } from 'effect';
 import type { CastModule, CutoutView } from '../canvas/cast.ts';
 import { CastSheetRecord } from '../core/cast-record.ts';
-import { renderedKinds } from './cast-render.ts';
+import { renderedKinds } from './cast-kinds.ts';
 
 /** A cut-out view with one bare part: enough for the table to name it. */
 const view: CutoutView = {
