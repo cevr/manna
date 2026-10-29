@@ -13,16 +13,23 @@ import {
   sung,
   type Topics,
 } from './hymn.js';
+import {
+  diffIndexTables,
+  type IndexSources,
+  readIndexTables,
+  writeIndexTables,
+} from './index-tables.js';
 import { KEY_TRANSPOSES, keySet, recordingKey } from './recordings.js';
 
 export const SCHEMA_VERSION = 2;
-export const BUILDER_VERSION = '1';
+export const BUILDER_VERSION = '2';
 const META_KEYS = [
   'book',
   'builder_version',
   'census_sha256',
   'compiled_sha256',
   'format_version',
+  'indexes_sha256',
   'input_sha256',
   'metres_sha256',
   'recording_credits',
@@ -59,7 +66,7 @@ export const CensusEvidence = Schema.Struct({
 });
 export type CensusEvidence = typeof CensusEvidence.Type;
 
-export interface DatabaseSources {
+export interface DatabaseSources extends IndexSources {
   readonly source: SourceText;
   readonly hymns: readonly Hymn[];
   readonly index: Index;
@@ -270,6 +277,7 @@ export const populateDatabase = Effect.fn('CorpusDatabase.populate')(function* (
         for (const reading of sources.source.hymns.filter((h) => h.number > 695))
           writeReading(db, sources, writer, reading);
         writeEvidence(db, sources);
+        writeIndexTables(db, sources);
         db.exec("INSERT INTO hymns_fts(hymns_fts) VALUES('optimize')");
       })();
     },
@@ -502,8 +510,26 @@ const writeEvidence = (db: Database, sources: DatabaseSources) => {
       );
 };
 
-/** Run on the closed/reopened candidate too, before atomic publication. */
-export const checkDatabase = Effect.fn('CorpusDatabase.check')((db: Database) =>
+/**
+ * Run on the closed/reopened candidate too, before atomic publication. The
+ * `index_*` tables must read back as the decoded index files they were built
+ * from; the first index that differs names the failure (`indexes:<name>`).
+ */
+export const checkDatabase = Effect.fn('CorpusDatabase.check')(function* (
+  db: Database,
+  expected: IndexSources,
+) {
+  yield* checkIntegrity(db);
+  const actual = yield* Effect.try({
+    try: () => readIndexTables(db),
+    catch: (cause) => CorpusDatabaseError.fromSqlite('indexes', cause),
+  });
+  const [differs] = diffIndexTables(expected, actual);
+  if (differs !== undefined)
+    return yield* CorpusDatabaseError.make({ operation: `indexes:${differs}` });
+});
+
+const checkIntegrity = (db: Database) =>
   Effect.try({
     try: () => {
       const valid =
@@ -518,5 +544,4 @@ export const checkDatabase = Effect.fn('CorpusDatabase.check')((db: Database) =>
     Effect.flatMap((valid) =>
       valid ? Effect.void : Effect.fail(CorpusDatabaseError.make({ operation: 'integrity' })),
     ),
-  ),
-);
+  );

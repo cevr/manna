@@ -14,6 +14,8 @@ import {
   MetreEvidence,
 } from '../src/database.js';
 import { Hymn, Index, Topics } from '../src/hymn.js';
+import { IndexesSchema } from '../src/index-tables.js';
+import { IndexName, Rulings } from '../src/indexes.js';
 import {
   KEY_TRANSPOSES,
   RECORDING_CREDITS,
@@ -26,6 +28,8 @@ import { decodeSourceText } from './source-text.js';
 export const DATA = new URL('../data/', import.meta.url).pathname;
 export const OUTPUT = new URL('../../core/data/hymnal.db', import.meta.url).pathname;
 const sha256 = (text: string) => new Bun.CryptoHasher('sha256').update(text).digest('hex');
+/** Index files fail on any key their schema does not name, as `indexes.ts` reads them. */
+const STRICT = { onExcessProperty: 'error' } as const;
 
 const decodeJson = <A, I>(schema: Schema.Codec<A, I>, text: string, operation: string) =>
   Schema.decodeEffect(Schema.fromJsonString(schema))(text).pipe(
@@ -69,6 +73,19 @@ export const readDatabaseSources = Effect.fn('CorpusDatabase.readSources')(funct
   const topics = yield* decodeJson(Topics, topicsText, 'decode:topics');
   const metres = yield* decodeJson(MetreEvidence, metreText, 'decode:shapes');
   const census = yield* decodeJson(CensusEvidence, censusText, 'decode:census');
+  const indexTexts: Array<[IndexName | 'rulings', string]> = [];
+  for (const name of [...IndexName.literals, 'rulings' as const].toSorted())
+    indexTexts.push([name, yield* read(`indexes/${name}.json`)]);
+  const parsed = new Map<string, unknown>();
+  for (const [name, text] of indexTexts)
+    parsed.set(name, yield* decodeJson(Schema.Unknown, text, `decode:${name}`));
+  const indexFiles = Object.fromEntries(IndexName.literals.map((name) => [name, parsed.get(name)]));
+  const indexes = yield* Schema.decodeEffect(IndexesSchema)(indexFiles, STRICT).pipe(
+    Effect.mapError(() => CorpusDatabaseError.make({ operation: 'decode:indexes' })),
+  );
+  const rulings = yield* Schema.decodeUnknownEffect(Rulings)(parsed.get('rulings'), STRICT).pipe(
+    Effect.mapError(() => CorpusDatabaseError.make({ operation: 'decode:rulings' })),
+  );
   const recordings = JSON.stringify({
     set: RECORDING_SET,
     credits: RECORDING_CREDITS,
@@ -84,6 +101,9 @@ export const readDatabaseSources = Effect.fn('CorpusDatabase.readSources')(funct
     topics_sha256: sha256(topicsText),
     metres_sha256: sha256(metreText),
     census_sha256: sha256(censusText),
+    indexes_sha256: sha256(
+      indexTexts.map(([name, text]) => `${name}.json:${sha256(text)}`).join('\n'),
+    ),
     recordings_sha256: sha256(recordings),
   };
   const sources: DatabaseSources = {
@@ -93,6 +113,8 @@ export const readDatabaseSources = Effect.fn('CorpusDatabase.readSources')(funct
     topics,
     metres,
     census,
+    indexes,
+    rulings,
     meta: {
       book: 'sdah-1985',
       builder_version: BUILDER_VERSION,
@@ -135,7 +157,7 @@ export const buildDatabase = Effect.fn('CorpusDatabase.build')(function* (
   yield* Effect.scoped(
     Effect.gen(function* () {
       const db = yield* open;
-      yield* checkDatabase(db);
+      yield* checkDatabase(db, sources);
     }),
   );
   yield* fs.rename(temporary, out);

@@ -721,6 +721,7 @@ it.effect('rejects malformed parts and source references before replacing a vali
     const input = `${dir}/inputs`;
     yield* fs.makeDirectory(input);
     yield* fs.copy(`${DATA}/sdah-1985`, `${input}/sdah-1985`);
+    yield* fs.copy(`${DATA}/indexes`, `${input}/indexes`);
     for (const name of ['source-text.json', 'shapes.json', 'census.json'])
       yield* fs.copyFile(`${DATA}/${name}`, `${input}/${name}`);
     const sources = yield* readDatabaseSources();
