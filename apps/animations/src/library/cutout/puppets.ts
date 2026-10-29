@@ -7,7 +7,7 @@
 // at its one scale. Each declares the kept view it is held to (`concept`).
 
 import type { PuppetSpec } from '@manna/film/canvas';
-import { Record as Records } from 'effect';
+import { Record as Records, Struct } from 'effect';
 import { keptCorner, paddedBox } from './frames.ts';
 import type { Rooted } from './skeleton.ts';
 import type { CutFrame, KeptSheet } from './table.ts';
@@ -29,20 +29,26 @@ export type CutPuppet = PuppetSpec & {
 /** A view's parts front to back, each its name and its imported PNG. */
 export type Parts = ReadonlyArray<readonly [name: string, png: string]>;
 
+/**
+ * The un-matte's options a member names once for all his views, each passed
+ * to every view's puppet as `PuppetSpec` names it (`core/unmatte.ts`): `keep`,
+ * his light cloth colours, which a rim pixel the line does not reach is his
+ * when it lies nearer; `thin`, his thin parts by name, whose rim keeps its
+ * hue on another paper; `open`, the sheet's box edges his figure leaves
+ * through, past which paper the box cuts off is not un-matted.
+ */
+const SHEET = ['keep', 'thin', 'open'] as const satisfies ReadonlyArray<keyof PuppetSpec>;
+
 /** What a member's puppets are made from, by his views' names. */
-export interface PuppetMember<V extends string> {
+export interface PuppetMember<V extends string> extends Pick<PuppetSpec, (typeof SHEET)[number]> {
   /** His name in the cast (`library/cast/<cast>/`). */
   readonly cast: string;
   readonly frames: Readonly<Record<V, CutFrame>>;
   readonly skeletons: Readonly<Record<V, Rooted>>;
   /** Each view's paper, the median of its kept view's border ground (its rim is un-matted from it, `core/unmatte.ts`). */
   readonly papers: Readonly<Record<V, Rgb>>;
-  /** His light cloth colours: a rim pixel the un-matte's line does not reach is his, not paper, when it lies nearer one of them (`core/unmatte.ts`, `keep`). */
-  readonly keep?: ReadonlyArray<Rgb>;
-  /** His thin parts by name, whose rim keeps its hue on another paper (`core/unmatte.ts`, `thin`). */
-  readonly thin?: ReadonlyArray<string>;
   /** His sheet's line, which a look draws again near what moved. */
-  readonly line: { readonly width: number; readonly ink: Rgb };
+  readonly line: NonNullable<PuppetSpec['line']>;
   readonly parts: Readonly<Record<V, Parts>>;
 }
 
@@ -61,8 +67,7 @@ export const puppetsOf = <V extends string>(
       origin: keptCorner(frame),
       concept: { image: { cast: member.cast, sheet: frame.sheet }, box: frame.kept },
       paper: member.papers[view],
-      keep: member.keep,
-      thin: member.thin,
+      ...Struct.pick(member, SHEET),
       line: member.line,
     };
   });
