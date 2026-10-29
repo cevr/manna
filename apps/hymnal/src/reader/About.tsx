@@ -80,7 +80,7 @@ function AboutSheet({ hymn }: { readonly hymn: Option.Option<HymnText> }) {
   };
   const search = (query: string) => {
     setQuery(query);
-    setSearching(true);
+    setSearching('about');
     const { dismiss, replace } = homeSteps(navigation.getState());
     if (dismiss) router.dismissAll();
     if (replace) router.replace('/');

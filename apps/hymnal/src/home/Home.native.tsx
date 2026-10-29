@@ -20,7 +20,7 @@
  *
  * Tapping the field enters search mode: a bar with the focused text field
  * and Cancel, over the results. A topic or passage tapped in `About this
- * hymn` enters it too, with its query (`searchOpen`). The list stays mounted beneath, untouchable
+ * hymn` enters it too, with its query and the keyboard down (`searchOpen`). The list stays mounted beneath, untouchable
  * and hidden from assistive technology, so it keeps its place. Cancel, or
  * Android's Back while the home screen is in focus (`searchBack`), clears
  * the query and shows the list as it was.
@@ -55,7 +55,7 @@ import { hymnAt } from '~/hymns/hymns';
 import { aboutQuery, aboutShown, afterPause, readMeaningSoon } from '~/hymns/meaning';
 import { find, hymnIndex } from '~/hymns/search';
 import { HymnList } from '~/reader/HymnList.native';
-import { searchOffset, searchOpen, searchQuery } from '~/reader/place';
+import { type SearchMode, searchOffset, searchOpen, searchQuery } from '~/reader/place';
 import { color, useAccent } from '~/color';
 
 import { searchBack } from './back';
@@ -87,12 +87,13 @@ const fieldMargin = 8;
 export function Home() {
   const insets = useSafeAreaInsets();
   const { fontScale } = useWindowDimensions();
-  const [searching, setSearching] = useAtom(searchOpen);
+  const [mode, setMode] = useAtom(searchOpen);
+  const searching = mode !== 'off';
   const title = Math.ceil(titleLine * fontScale) + titleSpace;
   const field = Math.ceil(fieldLine * fontScale) + 2 * fieldPadding + 2 * fieldMargin;
   const scroll = useSharedValue(field);
   const cover = useShownHeight(scroll, field, field);
-  const enter = () => setSearching(true);
+  const enter = () => setMode('field');
   return (
     <View style={styles.screen}>
       <View style={[styles.below, { marginTop: insets.top }]}>
@@ -121,7 +122,7 @@ export function Home() {
           />
           <Title height={title} rest={field} scroll={scroll} />
         </View>
-        {searching && <Search onCancel={() => setSearching(false)} />}
+        {mode !== 'off' && <Search cause={mode} onCancel={() => setMode('off')} />}
       </View>
       {/* The status bar's ground: rows and the title pass under it unseen. */}
       <View style={[styles.scrim, { height: insets.top }]} />
@@ -263,7 +264,13 @@ function FieldButton({
  * never does. After a pause in the typing (`afterPause`), the hymns
  * about the query stand under its strongest matches.
  */
-function Search({ onCancel }: { readonly onCancel: () => void }) {
+function Search({
+  cause,
+  onCancel,
+}: {
+  readonly cause: Exclude<SearchMode, 'off'>;
+  readonly onCancel: () => void;
+}) {
   const [query, setQuery] = useAtom(searchQuery);
   const shown = useDeferredValue(query);
   const results = useMemo(() => {
@@ -319,7 +326,7 @@ function Search({ onCancel }: { readonly onCancel: () => void }) {
     <View style={styles.search}>
       <View style={styles.bar}>
         <TextInput
-          autoFocus
+          autoFocus={cause === 'field'}
           role="searchbox"
           aria-label={searchLabel}
           placeholder={searchLabel}

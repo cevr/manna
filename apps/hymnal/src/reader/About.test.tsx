@@ -160,7 +160,7 @@ describe('About this hymn', () => {
       routed,
       query: registry.get(searchQuery),
       searching: registry.get(searchOpen),
-    }).toEqual({ routed: ['dismissAll'], query: topicsOf(100)[0]?.name ?? '', searching: true });
+    }).toEqual({ routed: ['dismissAll'], query: topicsOf(100)[0]?.name ?? '', searching: 'about' });
   });
 
   it('searches for a passage by where it begins', () => {
@@ -175,7 +175,7 @@ describe('About this hymn', () => {
     }).toEqual({
       routed: ['dismissAll'],
       query: passageQuery(first),
-      searching: true,
+      searching: 'about',
     });
   });
 
@@ -185,7 +185,7 @@ describe('About this hymn', () => {
     const registry = clickIn(<AboutRoute />, '[data-testid="about-topic-0"]');
     expect({ routed, searching: registry.get(searchOpen) }).toEqual({
       routed: ['dismissAll', 'replace /'],
-      searching: true,
+      searching: 'about',
     });
   });
 
@@ -195,7 +195,7 @@ describe('About this hymn', () => {
     const registry = clickIn(<AboutRoute />, '[data-testid="about-scripture-0"]');
     expect({ routed, searching: registry.get(searchOpen) }).toEqual({
       routed: ['replace /'],
-      searching: true,
+      searching: 'about',
     });
   });
 
