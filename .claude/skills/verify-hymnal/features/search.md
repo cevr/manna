@@ -18,6 +18,15 @@ query of known words with no text match: it shows `Hymns about this`
 alone, with no empty message. Cancel clears the query
 and brings the list back where it was.
 
+The field also finds hymns by the hymnal's back-matter indexes: a Bible
+reference (`John 3:16`, `Ps 23`, `Psalm 23:1`: any book name or
+abbreviation of the canon) lists first the hymns the Scriptural index
+gives that verse, then the rest of that chapter's by verse distance, then
+the word results; a topic's name lists the hymns whose title holds its
+words, then the hymns the Topical index lists under it, then the word
+results. `About this hymn` opens
+search with a topic's name or where a passage begins (`about.md`).
+
 ## Sub-features
 
 - `search-number`: a number finds that hymn first, then the hymns whose number starts with it.
@@ -30,6 +39,8 @@ and brings the list back where it was.
 - `search-order`: the line with two words swapped still finds it.
 - `search-matched-line`: on a phone, a result found by a line other than its title shows that line under the title in the muted colour, one line long, in a taller row; VoiceOver reads it after the title. A result found by its title or its number shows the title alone. The home list's rows stay one line.
 - `search-about`: on a phone, a query of words (`hymns about the second coming`) shows, after a pause of about 150 ms, the heading `Hymns about this` under at most five matches, its hymns by meaning (none of the five above it), then `More matches` over the rest of the matches, each hymn once in the results; a number (`no 100`) shows no such heading. No model runs on the phone (`about.md`, `search-about-size`).
+- `search-topic`: a topic's name finds the hymns whose title holds its words, then every hymn the Topical index lists under it, each once; `About this hymn`'s `Topics` row (`about-topics`) opens search mode with that name as the query.
+- `search-scripture`: a reference finds first the hymns the Scriptural index gives that verse (a range from its first verse, a chapter from verse 1), then the rest of the chapter's by verse distance; a book alone gives no reference hits. `About this hymn`'s `Scripture` row (`about-scripture`) opens search mode with where its passage begins as the query, its hymn among the first results.
 - `search-open`: a result opens the hymn, with a back button `Hymns`.
 - `search-empty`: a query with no match shows the empty message. On a phone a query of known words with no text match shows `Hymns about this` alone instead; a made-up word such as `zzzz` knows no hymn by meaning and shows the empty message.
 - `search-hermes`: each keystroke's search runs under 4 ms at the 95th percentile and under 8 ms at most in Hermes (`hermes-engine-cli` 0.12.0, the research harness over the app's own `src/hymns/search.ts`), and its index is built as search mode opens, never at the app's start.
@@ -43,7 +54,7 @@ and brings the list back where it was.
 
 - **Preconditions:** the home list, not in search mode (`sim open / --expect "label=Hymns"`).
 - **States:** default, empty, focus-visible (the search box). Open, loading and error are n/a.
-- **Regression:** `apps/hymnal/src/hymns/search.test.ts`, `apps/hymnal/src/hymns/search.property.slow.test.ts` (every hymn by number and title, seeded half-remembered lines), `apps/hymnal/src/reader/rows.test.ts` and `apps/hymnal/src/reader/HymnList.native.slow.test.ts` (the found line in a result's row, and `Hymns about this` under the strongest five), `apps/hymnal/src/hymns/meaning.test.ts`, `apps/hymnal/test/browser/list.slow.test.ts`.
+- **Regression:** `apps/hymnal/src/hymns/search.test.ts`, `apps/hymnal/src/hymns/search.property.slow.test.ts` (every hymn by number and title, seeded half-remembered lines), `apps/hymnal/src/reader/rows.test.ts` and `apps/hymnal/src/reader/HymnList.native.slow.test.ts` (the found line in a result's row, and `Hymns about this` under the strongest five), `apps/hymnal/src/hymns/meaning.test.ts`, `apps/hymnal/test/browser/list.slow.test.ts`, the acceptance's `topic` and `scripture` rows (`search-topic`, `search-scripture`).
 - **Words:** a step that types a line builds it from the reader's own tree read in memory (`agent-device snapshot --json`, as `drive.ts` reads it) and prints numbers only; never write a hymn's words into a log, a note or a command line kept in evidence.
 
 1. **Enter search.** `sim tap "role=button label=Number, title or first line"`. → `ok`; the snapshot holds the search box and `Cancel`.
@@ -52,8 +63,10 @@ and brings the list back where it was.
 4. **A title.** Type the first word of hymn 100's title, read from its row's name in memory. → the first results are the hymns whose titles hold that word, in number order, each a one-line row.
 5. **Open a result.** `sim tap` the first result's row. → the reader shows `Stanza 1`; the back button is `Hymns`. `sim back`. → search mode with the query kept.
 6. **Hymns about this** (`search-about`). `sim fill "label=Number, title or first line" "hymns about the second coming"`, then wait for `label=Hymns about this` (`sim tap` it with a timeout, or `--expect`). → the heading is in the tree after at most five result rows; the rows after it, to `More matches`, are none of those five, and no hymn number shows twice in the results. `sim fill` with `no 100`. → no `Hymns about this`.
-7. **Empty.** `sim fill "label=Number, title or first line" "zzzz"`. → the snapshot holds `No hymn matches “zzzz”.`
-8. **Cancel.** `sim tap label=Cancel`. → the home list where it was.
+7. **A reference** (`search-scripture`). `sim fill "label=Number, title or first line" "Psalm 23"`. → the first result rows' numbers, in order, equal the first numbers of `onVerse(19, 23, 1)` from the checkout (`apps/hymnal/src/hymns/indexes.ts`), printed as numbers only.
+8. **A topic** (`search-topic`). Read the first topic of hymn 100 (`topicsOf(100)`, the same way) and fill it. → every hymn the topic lists is among the results, after the hymns whose title holds its words. From a hymn's sheet the same query arrives through `about-topic-0` (`about.md`, step 6).
+9. **Empty.** `sim fill "label=Number, title or first line" "zzzz"`. → the snapshot holds `No hymn matches “zzzz”.`
+10. **Cancel.** `sim tap label=Cancel`. → the home list where it was.
 
 ## Gotchas
 
