@@ -979,10 +979,15 @@ const P1_SEEDS = [
 
 const POSES_1: PartCut = {
   parts: [
-    // above the sleeve's top ink; the face and beard over its root, down to the beard's lower ink; the headcloth's tail over his left sleeve's top
+    // above the far sleeve's top ink, but for a 10 px band over it and an 8 px column of the beard's left edge beside its root that torso takes, so the paint laid under the sleeve's root has a part behind it (torso), never head; the face and beard over its root, down to the beard's lower ink; the headcloth's tail over his left sleeve's top
     {
       name: 'head',
-      take: [box(-1, -1, FAR * 2, 170), box(178, 170, 311, 184), box(308, 145, 360, 191)],
+      take: [
+        box(-1, -1, FAR * 2, 160),
+        box(186, 160, FAR * 2, 170),
+        box(186, 170, 311, 184),
+        box(308, 145, 360, 191),
+      ],
     },
     {
       name: 'armLeft',
