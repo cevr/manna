@@ -142,4 +142,24 @@ export const SKELETONS = {
       capRight: 14,
     }),
   ),
+  // turned to the viewer's right: his right arm the near one, on the viewer's left; his left arm's flap reaches the sheet's right edge
+  threeQuarterRight: framed(
+    keptAt('threeQuarterRight'),
+    standing(BODY, {
+      facing: 'front',
+      hip: [137, 320],
+      neck: [130, 185],
+      chin: [165, 172],
+      crown: [124, 0],
+      ...JOINTS.threeQuarterRight,
+      wristRight: [31, 344],
+      handRight: [34, 369],
+      wristLeft: [207, 343],
+      handLeft: [205.5, 368],
+      flapRight: 69.5,
+      flapLeft: 180,
+      capRight: 14,
+      capLeft: 12,
+    }),
+  ),
 } as const satisfies Readonly<Record<FramedView, Skeleton>>;

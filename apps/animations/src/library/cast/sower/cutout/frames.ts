@@ -12,9 +12,10 @@ import type { CutFrame } from '../../../cutout/table.ts';
  * Each cut view's frame: the kept sheet it is on, its kept box, and the
  * pixels its part sheet pads it by (left, top, right, bottom). A standing
  * view takes 12 rows below, where the shadow fades, and 3 each other side;
- * the three-quarter view takes 18, as its shadow runs 17 rows past his soles, and
- * the back view 21, as its shadow runs 20 rows past them, and each profile
- * 21, as its shadow runs 18 rows past them.
+ * the three-quarter view to the viewer's left takes 18, as its shadow runs 17
+ * rows past his soles, the back view 21, as its shadow runs 20 rows past them,
+ * each profile 21, as its shadow runs 18 rows past them, and the three-quarter
+ * view to the viewer's right 23, as its shadow runs 21 rows past them.
  */
 export const FRAMES = {
   front: { sheet: 'turnaround', kept: [28, 227, 283, 776], pad: [3, 3, 3, 12] },
@@ -22,6 +23,7 @@ export const FRAMES = {
   back: { sheet: 'turnaround', kept: [775, 226, 1028, 776], pad: [3, 3, 3, 21] },
   profileLeft: { sheet: 'turnaround', kept: [568, 227, 743, 776], pad: [3, 3, 3, 21] },
   profileRight: { sheet: 'turnaround', kept: [1057, 226, 1221, 776], pad: [3, 3, 3, 21] },
+  threeQuarterRight: { sheet: 'turnaround', kept: [1264, 227, 1492, 776], pad: [3, 3, 3, 23] },
 } as const satisfies Readonly<Record<string, CutFrame>>;
 
 /** A cut view, by its name in his sheets' views. */
