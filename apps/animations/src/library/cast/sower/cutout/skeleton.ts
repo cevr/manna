@@ -66,4 +66,24 @@ export const SKELETONS = {
       capLeft: 8,
     }),
   ),
+  // from behind: his right arm on the viewer's right, so its flap runs out from its edge and his left arm's to the sheet's left edge
+  back: framed(
+    keptAt('back'),
+    standing(BODY, {
+      facing: 'back',
+      hip: [127, 320],
+      neck: [127, 200],
+      chin: [127, 190],
+      crown: [129, 0],
+      ...JOINTS.back,
+      wristRight: [226, 344],
+      handRight: [225.5, 369.5],
+      wristLeft: [28, 344],
+      handLeft: [29, 370],
+      flapRight: 199,
+      flapLeft: 57,
+      capRight: 14,
+      capLeft: 14,
+    }),
+  ),
 } as const satisfies Readonly<Record<FramedView, Skeleton>>;

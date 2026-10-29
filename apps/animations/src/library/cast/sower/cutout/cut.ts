@@ -311,6 +311,174 @@ const THREE_QUARTER_LEFT: PartCut = {
   ],
 };
 
+/**
+ * The back view, the parts named from his own side: from behind, his right
+ * arm hangs on the viewer's right and his left on the viewer's left, its hand
+ * over the seed bag. The headcloth hangs over his neck and both sleeves' tops;
+ * the olive mantle covers his back. The hem's line, column by column from the
+ * sheet's left edge: the tunic's side, the hem over his left sandal, between
+ * his feet, over his right sandal, the tunic's side.
+ */
+const BACK_HEM = {
+  left: [
+    [40, 510],
+    [57, 518],
+    [58, 529],
+    [62, 527],
+    [70, 533],
+    [85, 523],
+    [101, 536],
+    [108, 525],
+  ],
+  right: [
+    [148, 525],
+    [155, 537],
+    [170, 522],
+    [185, 528],
+    [195, 537],
+    [197, 529],
+    [198, 518],
+    [216, 510],
+  ],
+} as const;
+const BACK_RIGHT: Sleeve = {
+  // his right sleeve (the viewer's right): its inner edge, the olive-to-linen crease, to the cuff
+  inner: [
+    [200, 200],
+    [200, 210],
+    [199, 220],
+    [199, 230],
+    [199, 240],
+    [198.5, 250],
+    [199.5, 260],
+    [199.5, 270],
+    [200, 280],
+    [200, 290],
+    [201, 300],
+    [200.5, 310],
+    [201.5, 320],
+    [202.5, 330],
+    [204, 340],
+    [205, 348],
+  ],
+  shoulder: JOINTS.back.shoulderRight,
+  cap: 14,
+  side: 'right',
+};
+const BACK_LEFT: Sleeve = {
+  // his left sleeve (the viewer's left): its inner edge, the linen-to-olive crease; the seed bag's left ink lies beside it below y 318
+  inner: [
+    [56, 200],
+    [56, 210],
+    [56.5, 220],
+    [56.5, 250],
+    [57, 260],
+    [56.5, 270],
+    [56, 280],
+    [56, 320],
+    [53, 330],
+    [52, 336],
+    [50, 342],
+    [50, 348],
+  ],
+  shoulder: JOINTS.back.shoulderLeft,
+  cap: 14,
+  side: 'left',
+};
+const backRight = sleeve(BACK_RIGHT);
+const backLeft = sleeve(BACK_LEFT);
+const BACK_SOLES = {
+  left: [
+    [41, 41, 545],
+    [42, 42, 546],
+    [43, 43, 547],
+    [44, 45, 548],
+    [46, 107, 549],
+    [108, 108, 548],
+    [109, 109, 547],
+    [110, 110, 546],
+  ],
+  right: [
+    [146, 146, 545],
+    [147, 148, 547],
+    [149, 150, 548],
+    [151, 211, 549],
+    [212, 213, 548],
+    [214, 214, 547],
+    [215, 215, 546],
+  ],
+} as const satisfies Readonly<Record<string, SoleRuns>>;
+
+const BACK: PartCut = {
+  parts: [
+    // the headcloth, above its bottom ink, which lies over both sleeves' tops and the strap's
+    {
+      name: 'head',
+      take: [
+        {
+          polygon: [
+            [-1, -1],
+            [FAR, -1],
+            [FAR, 183],
+            [200, 183],
+            [194, 193],
+            [183, 193],
+            [177, 203],
+            [166, 203],
+            [159, 213],
+            [90, 213],
+            [81, 203],
+            [68, 203],
+            [62, 193],
+            [-1, 193],
+          ],
+        },
+      ],
+    },
+    {
+      name: 'armRight',
+      take: [...backRight.take, { disc: { c: [225.5, 369.5], r: 23.5 } }],
+      unless: backRight.unless,
+      pivot: JOINTS.back.shoulderRight,
+    },
+    {
+      name: 'armLeft',
+      // the disc reaches the ring's right ink, which it shares with the seed bag's left edge
+      take: [...backLeft.take, { disc: { c: [29, 370], r: 24 } }],
+      unless: backLeft.unless,
+      pivot: JOINTS.back.shoulderLeft,
+    },
+    {
+      name: 'footRight',
+      take: [{ polygon: [[128, 525], ...BACK_HEM.right, [226, 510], [226, 580], [128, 580]] }],
+      unless: [underSole(BACK_SOLES.right)],
+    },
+    {
+      name: 'footLeft',
+      take: [{ polygon: [[25, 510], ...BACK_HEM.left, [128, 525], [128, 580], [25, 580]] }],
+      unless: [underSole(BACK_SOLES.left)],
+    },
+    {
+      name: 'shadow',
+      take: [
+        {
+          polygon: [
+            [-1, 510],
+            ...BACK_HEM.left,
+            ...BACK_HEM.right,
+            [FAR, 510],
+            [FAR, FAR * 2],
+            [-1, FAR * 2],
+          ],
+        },
+      ],
+    },
+    // below his hip's row, as in the front, but the seed bag
+    { name: 'robe', take: [box(-1, 331, FAR, FAR * 2)], unless: [box(32, 316, 112, 427)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR * 2)] },
+  ],
+};
+
 /** His outline's ink: the median of his views' dark pixels (measured on the three-quarter and back views). */
 const INK = [34, 16, 8, 255] as const;
 
@@ -334,6 +502,10 @@ const HIDDEN_ENTRIES = {
     moving: ['armRight', 'armLeft'],
     prompt: `${CUT_AWAY} his two arms (sleeves and round hands) were cut away to make a cut-out puppet. He is turned three-quarters to the viewer's left. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading as his body beside each arm (the olive mantle with its walnut-brown edge band on the viewer's left side, the olive mantle and the walnut seed bag on the viewer's right side, the linen tunic, the belt round his waist). ${SIDES} ${shade('his')} ${GRAIN} There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, headcloth and its tail, face, beard, tunic, mantle, walnut strap, belt, walnut seed bag, feet, size, position and framing.`,
   },
+  back: {
+    moving: ['armRight', 'armLeft'],
+    prompt: `${CUT_AWAY} his two arms (sleeves and round hands) were cut away to make a cut-out puppet. He is seen from behind. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading as his body beside each arm (the olive mantle over his back, the walnut seed bag on the viewer's left side, the linen tunic below the mantle). ${SIDES} ${shade('his')} ${GRAIN} There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same headcloth, mantle, walnut strap, walnut seed bag, tunic, feet, size, position and framing.`,
+  },
 } as const satisfies Readonly<Record<CutView, HiddenEntry>>;
 
 /** His cut table: each view's cut and how its figure is read. */
@@ -342,6 +514,7 @@ export const { CUTS, cutOptionsFor, HIDDEN } = cutTable({
   views: {
     front: { cut: FRONT, figure: 'framed' },
     threeQuarterLeft: { cut: THREE_QUARTER_LEFT, figure: 'framed' },
+    back: { cut: BACK, figure: 'framed' },
   },
   hidden: HIDDEN_ENTRIES,
   ink: INK,

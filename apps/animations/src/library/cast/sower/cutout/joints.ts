@@ -18,4 +18,10 @@ export const JOINTS = {
     shoulderLeft: [182, 212],
     elbowLeft: [191, 280],
   },
+  back: {
+    shoulderRight: [210, 220],
+    elbowRight: [219, 282],
+    shoulderLeft: [44, 220],
+    elbowLeft: [36, 282],
+  },
 } as const satisfies Readonly<Record<string, Readonly<Record<string, Pt>>>>;
