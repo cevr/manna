@@ -140,6 +140,22 @@ describe('unmatte', () => {
     const [thin] = unmatte([src], W, H, PAPER, { thin: [0] });
     const [plain] = unmatte([src], W, H, PAPER, { thin: [1] });
     over(at(thin!, 3)).forEach((v, c) => expect(Math.abs(v - OCHRE[c]!)).toBeLessThanOrEqual(1));
+    // the least alpha that solves every channel in 0..255, in closed form: a channel darker than the paper needs (paper − c) / paper of it, a lighter one (c − paper) / (255 − paper); the other form is negative
+    const least = Math.ceil(
+      255 *
+        Math.max(
+          ...OCHRE.flatMap((v, c) => [
+            (PAPER[c]! - v) / PAPER[c]!,
+            (v - PAPER[c]!) / (255 - PAPER[c]!),
+          ]),
+        ),
+    );
+    expect(least).toBe(126);
+    expect(at(thin!, 3)[3]).toBe(least);
+    // one step less, the blue channel solves below 0
+    const solved = (a: number) => OCHRE.map((v, c) => (v * 255 - PAPER[c]! * (255 - a)) / a);
+    expect(Math.min(...solved(least - 1))).toBeLessThan(0);
+    expect(Math.min(...solved(least))).toBeGreaterThanOrEqual(0);
     // a part not named thin keeps the line's alpha, its blue clamped: over the paper it goes grey
     expect(over(at(plain!, 3))[2]! - OCHRE[2]).toBeGreaterThan(10);
   });
