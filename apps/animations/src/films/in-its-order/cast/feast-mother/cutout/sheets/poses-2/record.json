@@ -1,0 +1,239 @@
+{
+  "view": "poses-2",
+  "kind": "poses",
+  "size": [422, 741],
+  "box": [576, 173, 998, 914],
+  "command": "film concept parts in-its-order feast-mother --view poses-poses-2",
+  "parts": [
+    {
+      "name": "armRight",
+      "kept": 23238,
+      "painted": 0
+    },
+    {
+      "name": "armLeft",
+      "kept": 10041,
+      "painted": 0
+    },
+    {
+      "name": "baby",
+      "kept": 23321,
+      "painted": 7463
+    },
+    {
+      "name": "head",
+      "kept": 53592,
+      "painted": 0
+    },
+    {
+      "name": "stool",
+      "kept": 20579,
+      "painted": 0
+    },
+    {
+      "name": "robe",
+      "kept": 87231,
+      "painted": 8542
+    },
+    {
+      "name": "torso",
+      "kept": 18361,
+      "painted": 14105
+    }
+  ],
+  "moving": ["armRight", "armLeft"],
+  "hiddenPx": 33279,
+  "carried": [],
+  "okra": {
+    "route": "subscription (okra image, Codex route; no --model)",
+    "input": "okra/input-0b53425fb423.png",
+    "prompt": "okra/prompt.txt",
+    "pad": {
+      "s": 0.47861337365607176,
+      "dx": -36.853229771517526,
+      "dy": 0
+    },
+    "budget": {
+      "calls": 3,
+      "allowance": null,
+      "used": 1
+    },
+    "calls": [
+      {
+        "n": 1,
+        "command": [
+          "okra",
+          "image",
+          "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where her two arms (blue sleeves and round hands) were cut away to make a cut-out puppet. She is a young mother in a long blue robe, a white veil over her head and shoulders, seated on a wooden stool with her baby, who is wrapped in a white swaddle, on her lap. Repaint ONLY the magenta areas, as what lies underneath her arms: where the magenta lay over the baby, his white swaddle with its soft folds; elsewhere her body and lap in her blue robe below the veil's hem, each side closed by the same thick dark brown-black outline as the rest of her, painted in exactly the same style, colours and soft shading as her robe beside each arm. Keep the soft shade each arm casts on her body beside it exactly as it is, and carry that same shade on under where the arm was. Paint the blue robe of her body with the same fine paper grain the sheet shows on them beside the arms: a fine, even speckle through every flat area of colour, never smooth flat colour. The baby, his face and the stool stay exactly as they are. There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside her body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same white veil and its hem, face, robe, feet, ground line, size, position and framing.",
+          "--size",
+          "1024x1536",
+          "--ref",
+          "okra/input-0b53425fb423.png",
+          "-o",
+          "okra/answer-1.png"
+        ],
+        "input": "okra/input-0b53425fb423.png",
+        "out": "okra/answer-1.png",
+        "state": "laid",
+        "fit": {
+          "s": 0.47853859031643803,
+          "dx": -33.940689464510996,
+          "dy": 3.0956990443368113,
+          "score": 19.934364151799127
+        },
+        "measures": {
+          "seam": {
+            "deltaE": 10.21,
+            "pairs": 636
+          },
+          "drift": {
+            "deltaE": 5.66,
+            "px": 127990
+          },
+          "grain": [
+            {
+              "part": "baby",
+              "painted": {
+                "robust": 1.32,
+                "plain": 2.89,
+                "n": 5144
+              },
+              "kept": {
+                "robust": 0.99,
+                "plain": 2.56,
+                "n": 5194
+              },
+              "verdict": "within"
+            },
+            {
+              "part": "robe",
+              "painted": {
+                "robust": 1.81,
+                "plain": 2.08,
+                "n": 5405
+              },
+              "kept": {
+                "robust": 1.48,
+                "plain": 1.89,
+                "n": 6342
+              },
+              "verdict": "within"
+            },
+            {
+              "part": "torso",
+              "painted": {
+                "robust": 1.81,
+                "plain": 2.22,
+                "n": 8142
+              },
+              "kept": {
+                "robust": 0.99,
+                "plain": 1.83,
+                "n": 5442
+              },
+              "verdict": "outside"
+            }
+          ],
+          "paintUnder": [
+            {
+              "part": "armRight",
+              "px": 22003
+            },
+            {
+              "part": "armLeft",
+              "px": 8107
+            }
+          ],
+          "paintedPx": 30110,
+          "visibleAtRest": 0,
+          "recomposeByteEqual": true
+        },
+        "missed": ["seam", "drift", "grain"]
+      }
+    ],
+    "chosen": 1,
+    "fit": {
+      "s": 0.47853859031643803,
+      "dx": -33.940689464510996,
+      "dy": 3.0956990443368113,
+      "score": 19.934364151799127
+    }
+  },
+  "measures": {
+    "seam": {
+      "deltaE": 10.21,
+      "pairs": 636
+    },
+    "drift": {
+      "deltaE": 5.66,
+      "px": 127990
+    },
+    "grain": [
+      {
+        "part": "baby",
+        "painted": {
+          "robust": 1.32,
+          "plain": 2.89,
+          "n": 5144
+        },
+        "kept": {
+          "robust": 0.99,
+          "plain": 2.56,
+          "n": 5194
+        },
+        "verdict": "within"
+      },
+      {
+        "part": "robe",
+        "painted": {
+          "robust": 1.81,
+          "plain": 2.08,
+          "n": 5405
+        },
+        "kept": {
+          "robust": 1.48,
+          "plain": 1.89,
+          "n": 6342
+        },
+        "verdict": "within"
+      },
+      {
+        "part": "torso",
+        "painted": {
+          "robust": 1.81,
+          "plain": 2.22,
+          "n": 8142
+        },
+        "kept": {
+          "robust": 0.99,
+          "plain": 1.83,
+          "n": 5442
+        },
+        "verdict": "outside"
+      }
+    ],
+    "paintUnder": [
+      {
+        "part": "armRight",
+        "px": 22003
+      },
+      {
+        "part": "armLeft",
+        "px": 8107
+      }
+    ],
+    "paintedPx": 30110,
+    "visibleAtRest": 0,
+    "recomposeByteEqual": true
+  },
+  "bars": {
+    "seamDeltaE": 10,
+    "driftDeltaE": 5,
+    "grainWithin": 0.5,
+    "visibleAtRest": 0,
+    "leastSeamPairs": 20,
+    "leastGrainWindows": 90
+  },
+  "missed": ["seam", "drift", "grain"],
+  "named": []
+}
