@@ -1457,6 +1457,183 @@ const POSES_3: PartCut = {
   ],
 };
 
+const P4_RIGHT: Sleeve = {
+  // his right sleeve (the viewer's left): a crease with no ink above row 310, then its inner ink's inner side down the cuff and round the hand's ring
+  inner: [
+    [73, 185],
+    [73, 310],
+    [71.5, 325],
+    [70.5, 340],
+    [69, 350],
+    [68.5, 360],
+    [67.5, 375],
+    [64, 390],
+    [62.5, 397],
+    [58, 403],
+  ],
+  shoulder: JOINTS['poses-4'].shoulderRight,
+  cap: 24,
+  side: 'left',
+};
+const P4_LEFT: Sleeve = {
+  // his left sleeve (the viewer's right): a crease with no ink above row 270, then its inner ink's inner side down to the cuff, which meets the seed bag's top, and round the hand's ring in front of the bag
+  inner: [
+    [232.5, 185],
+    [232.5, 270],
+    [233.5, 280],
+    [235.5, 300],
+    [236.5, 320],
+    [238.5, 340],
+    [239.5, 350],
+    [236, 358],
+    [234, 364],
+    [246, 366],
+    [246.5, 380],
+    [249, 392],
+    [252, 398],
+    [256, 404],
+  ],
+  shoulder: JOINTS['poses-4'].shoulderLeft,
+  cap: 27,
+  side: 'right',
+};
+const p4Right = sleeve(P4_RIGHT);
+const p4Left = sleeve(P4_LEFT);
+// a band about 4 px below each headcloth tail's lower edge, over each shoulder, that no sleeve takes: torso, so the tails stay on his body and torso parts head from each sleeve's cap
+const P4_BANDS = {
+  right: {
+    polygon: [
+      [-1, 170],
+      [118, 170],
+      [113, 175],
+      [98, 180],
+      [90, 185],
+      [82, 190],
+      [76, 195],
+      [71, 199],
+      [52, 200],
+      [-1, 200],
+    ],
+  },
+  left: {
+    polygon: [
+      [190, 170],
+      [FAR, 170],
+      [FAR, 200],
+      [258, 200],
+      [245, 198],
+      [240, 195],
+      [232, 190],
+      [223, 185],
+      [215, 180],
+      [205, 175],
+      [195, 171],
+    ],
+  },
+} as const satisfies Readonly<Record<string, PartRule>>;
+// the robe's hem over each foot (measured at x64-96, x105-112, x189-202 and x218-228) and between the feet (rows 559-560), with the robe's sides above them
+const P4_HEM = {
+  right: [
+    [62, 535],
+    [64, 574],
+    [97, 574],
+    [104, 570],
+    [113, 570],
+    [120, 561],
+  ],
+  left: [
+    [180, 561],
+    [188, 570],
+    [203, 570],
+    [210, 566],
+    [217, 570],
+    [229, 570],
+    [240, 560],
+    [247, 535],
+  ],
+} as const;
+// each sole's lowest rows, column runs [first, last, row] (rows 580-586, lowest 586 at x68-87 and x224-241, measured; the runs between are inferred)
+const P4_SOLES = {
+  right: [
+    [47, 50, 580],
+    [51, 55, 582],
+    [56, 62, 584],
+    [63, 67, 585],
+    [68, 87, 586],
+    [88, 100, 585],
+    [101, 115, 584],
+    [116, 125, 582],
+    [126, 131, 580],
+  ],
+  left: [
+    [179, 185, 580],
+    [186, 195, 582],
+    [196, 210, 584],
+    [211, 223, 585],
+    [224, 241, 586],
+    [242, 250, 585],
+    [251, 256, 583],
+    [257, 262, 580],
+  ],
+} as const satisfies Readonly<Record<string, SoleRuns>>;
+
+/**
+ * His kept pose standing from the front (poses-4, on his kept poses sheet),
+ * cut as drawn. His right arm (the viewer's left) hangs at his side, its hand
+ * at the view's left edge; his left (the viewer's right) hangs beside the seed
+ * bag on his left hip, its hand over the bag's top right, at the view's right
+ * edge. The headcloth's tails over his shoulders are torso's below row 170, as
+ * his beard's foot is head's. His sheet's ink is [48, 30, 15] (measured); a
+ * framed cut reads none.
+ */
+const POSES_4: PartCut = {
+  parts: [
+    // above the headcloth's lower edges, and his beard to its foot
+    { name: 'head', take: [box(-1, -1, FAR, 170), box(118, 170, 194, 184)] },
+    {
+      name: 'armLeft',
+      // the disc lies over the seed bag's top right, as the hand does
+      take: [...p4Left.take, { disc: { c: [278, 381], r: 29 } }],
+      unless: [...p4Left.unless, P4_BANDS.left],
+      pivot: JOINTS['poses-4'].shoulderLeft,
+    },
+    {
+      name: 'armRight',
+      take: [...p4Right.take, { disc: { c: [33, 379], r: 30 } }],
+      unless: [...p4Right.unless, P4_BANDS.right],
+      pivot: JOINTS['poses-4'].shoulderRight,
+    },
+    {
+      name: 'footLeft',
+      take: [{ polygon: [[155, 561], ...P4_HEM.left, [280, 535], [280, 620], [155, 620]] }],
+      unless: [underSole(P4_SOLES.left)],
+    },
+    {
+      name: 'footRight',
+      take: [{ polygon: [[30, 535], ...P4_HEM.right, [155, 561], [155, 620], [30, 620]] }],
+      unless: [underSole(P4_SOLES.right)],
+    },
+    {
+      name: 'shadow',
+      take: [
+        {
+          polygon: [
+            [-1, 535],
+            ...P4_HEM.right,
+            ...P4_HEM.left,
+            [FAR, 535],
+            [FAR, FAR * 2],
+            [-1, FAR * 2],
+          ],
+        },
+      ],
+    },
+    // below the belt, but the seed bag at his left hip
+    { name: 'robe', take: [box(-1, 335, FAR, FAR * 2)], unless: [box(168, 335, 276, 458)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR * 2)] },
+  ],
+};
+
 /**
  * His outline's ink: the median of his views' dark pixels (measured on the
  * three-quarter and back views). His kept poses sheet's is [48, 30, 15]
@@ -1518,6 +1695,10 @@ const HIDDEN_ENTRIES = {
     moving: ['armRight', 'armLeft'],
     prompt: `${CUT_AWAY} his two arms (sleeves and round hands) were cut away to make a cut-out puppet. He is turned three-quarters to the viewer's left, reaching into his seed bag: his right arm was bent across his body, its sleeve down his front and its forearm and hand reaching across his chest into the mouth of the seed bag, and his left arm hung at his side beside the bag. Repaint ONLY the magenta areas, as what lies underneath his arms: on the viewer's left, his body's front outline from under the headcloth down to the robe, and across his chest the olive mantle, the walnut strap running down from his shoulder to the bag, the linen tunic, and the top of the walnut seed bag, now whole where the hand lay in its mouth; on the viewer's right, the side of his body from the armpit down to the robe, closed by the same thick dark brown-black outline as the rest of him, the olive mantle and the walnut seed bag's right edge, now whole where the hand lay beside it. Paint each in exactly the same style, colours and soft shading as his body beside the arms. ${SIDES} ${shade('his')} ${GRAIN} There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, headcloth and its tail, face, beard, tunic, mantle, walnut strap, belt, walnut seed bag, feet, size, position and framing.`,
   },
+  'poses-4': {
+    moving: ['armRight', 'armLeft'],
+    prompt: `${CUT_AWAY} his two arms (sleeves and round hands) were cut away to make a cut-out puppet. He stands facing the viewer, his arms hanging at his sides: his left arm (on the viewer's right) hung beside the walnut seed bag on his left hip, its hand over the bag's top right. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading as his body beside each arm (the linen tunic, the olive mantle with its walnut-brown edge band, the belt round his waist), and on the viewer's right the walnut seed bag's top and right edge, now whole where the hand lay over it. ${SIDES} ${shade('his')} ${GRAIN} There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, headcloth and its tails over his shoulders, face, beard, tunic, mantle, walnut strap, belt, walnut seed bag, feet, size, position and framing.`,
+  },
 } as const satisfies Readonly<Record<CutView, HiddenEntry>>;
 
 /** His cut table: each view's cut and how its figure is read. */
@@ -1533,6 +1714,7 @@ export const { CUTS, cutOptionsFor, HIDDEN } = cutTable({
     'poses-1': { cut: POSES_1, figure: 'framed' },
     'poses-2': { cut: POSES_2, figure: 'framed' },
     'poses-3': { cut: POSES_3, figure: 'framed' },
+    'poses-4': { cut: POSES_4, figure: 'framed' },
   },
   hidden: HIDDEN_ENTRIES,
   ink: INK,

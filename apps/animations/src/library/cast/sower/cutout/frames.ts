@@ -20,7 +20,9 @@ import type { CutFrame } from '../../../cutout/table.ts';
  * shadow runs 15 rows past its kept box's bottom row, and his kept pose
  * standing from behind (poses-2, on the same sheet) 15, as its shadow runs 9
  * rows past it, and his kept pose reaching into the seed bag (poses-3, on the
- * same sheet) 15, as its shadow runs 14 rows past it.
+ * same sheet) 15, as its shadow runs 14 rows past it, and his kept pose
+ * standing from the front (poses-4, on the same sheet) 15, as its shadow runs
+ * 14 rows past it.
  */
 export const FRAMES = {
   front: { sheet: 'turnaround', kept: [28, 227, 283, 776], pad: [3, 3, 3, 12] },
@@ -32,6 +34,7 @@ export const FRAMES = {
   'poses-1': { sheet: 'poses', kept: [52, 249, 450, 834], pad: [3, 3, 3, 15] },
   'poses-2': { sheet: 'poses', kept: [488, 249, 784, 838], pad: [3, 3, 3, 15] },
   'poses-3': { sheet: 'poses', kept: [853, 250, 1125, 835], pad: [3, 3, 3, 15] },
+  'poses-4': { sheet: 'poses', kept: [1178, 249, 1488, 835], pad: [3, 3, 3, 15] },
 } as const satisfies Readonly<Record<string, CutFrame>>;
 
 /** A cut view, by its name in his sheets' views. */

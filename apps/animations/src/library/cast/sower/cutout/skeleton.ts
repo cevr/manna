@@ -8,7 +8,8 @@
 // with the root; each sleeve takes its shoulder's flap of torso. His kept pose
 // scattering seed (poses-1) and his kept pose reaching into the seed bag
 // (poses-3) are cut as drawn, their skeletons written out; his kept pose
-// standing from behind (poses-2) stands as `back` does. Pure data.
+// standing from behind (poses-2) stands as `back` does, and his kept pose
+// standing from the front (poses-4) as `front` does. Pure data.
 
 import type { Skeleton } from '@manna/film/core';
 import { type Body, framed, standing } from '../../../cutout/skeleton.ts';
@@ -319,4 +320,24 @@ export const SKELETONS = {
     ],
     root: [160, 335],
   }),
+  // standing from the front, as `front`: his right arm on the viewer's left, its flap out from its inner crease to the sheet's left edge
+  'poses-4': framed(
+    keptAt('poses-4'),
+    standing(BODY, {
+      facing: 'front',
+      hip: [155, 335],
+      neck: [155, 195],
+      chin: [155, 183],
+      crown: [155, 0],
+      ...JOINTS['poses-4'],
+      wristRight: [33, 350],
+      handRight: [32, 380],
+      wristLeft: [275, 352],
+      handLeft: [278, 381],
+      flapRight: 73,
+      flapLeft: 233,
+      capRight: 24,
+      capLeft: 27,
+    }),
+  ),
 } as const satisfies Readonly<Record<FramedView, Skeleton>>;
