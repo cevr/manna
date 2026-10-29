@@ -6,6 +6,12 @@
  * one: `100`, `#100`, `# 100`, `no 100`, `no. 100`, `No.100`, `hymn 100`,
  * `Hymn #100`, `number 100`.
  *
+ * A Scripture reference (`John 3:16`, `Ps 23`, `Psalm 23:1`: any book name
+ * or abbreviation of core's canon) finds the hymns the Scriptural index
+ * lists on that verse first, then the rest of that chapter's by verse
+ * distance. A topic's name finds the hymns the Topical index lists under
+ * it, after the hymns whose title holds its words.
+ *
  * Words find the hymns whose title, first line, refrain or any line of any
  * stanza holds them. A query word matches its own word; the word it starts,
  * while it is the last one typed; a word one edit away (a letter dropped,
@@ -34,10 +40,12 @@
  * at a time, so it works on flat typed arrays, not objects per word.
  */
 
+import { parseBibleQuery } from '@manna/core/bible';
 import { fold } from '@manna/hymnal/fold';
 import { Option } from 'effect';
 
 import { hymns } from './hymns';
+import { type Lookups, lookups } from './indexes';
 import type { HymnText } from './text';
 
 const words = (text: string) => fold(text).split(' ').filter(Boolean);
@@ -93,6 +101,10 @@ interface Scores {
 export interface SearchIndex {
   readonly hymns: ReadonlyArray<HymnText>;
   readonly numbers: ReadonlyArray<string>;
+  /** Each hymn's number to its place among the hymns. */
+  readonly places: ReadonlyMap<number, number>;
+  /** The back-matter indexes: the hymns of a topic, and of a verse. */
+  readonly lookups: Lookups;
   readonly vocab: ReadonlyMap<string, number>;
   readonly vocabList: ReadonlyArray<string>;
   readonly sorted: ReadonlyArray<string>;
@@ -261,12 +273,18 @@ const kinOf = (vocab: ReadonlyMap<string, number>) => {
   return kin;
 };
 
-export const indexOf = (all: ReadonlyArray<HymnText>): SearchIndex => {
+/** The index of `all`, searching the back-matter indexes `indexes` (the bundled ones by default). */
+export const indexOf = (
+  all: ReadonlyArray<HymnText>,
+  indexes: Lookups = lookups(),
+): SearchIndex => {
   const vocabulary = vocabularyOf(all);
   const { vocab, vocabList } = vocabulary;
   return {
     hymns: all,
     numbers: all.map((hymn) => String(hymn.number)),
+    places: new Map(all.map((hymn, h) => [hymn.number, h])),
+    lookups: indexes,
     vocab,
     vocabList,
     sorted: vocabList.toSorted(),
@@ -619,14 +637,71 @@ const byWords = (index: SearchIndex, terms: ReadonlyArray<string>): ReadonlyArra
   return [...head, ...rest];
 };
 
-/** The ranked hymns of a query, found by words or by number, or every hymn for an empty one. */
+/** The hymns of these numbers, in their order, each a plain row. */
+const placed = (index: SearchIndex, numbers: ReadonlyArray<number>): ReadonlyArray<Ranked> =>
+  numbers.flatMap((number) =>
+    Option.match(Option.fromUndefinedOr(index.places.get(number)), {
+      onNone: () => [],
+      onSome: (h) => [{ h, line: 0, plain: true }],
+    }),
+  );
+
+/**
+ * The hymns on the verse a query names (`John 3:16`, `Ps 23`, `Psalm 23:1`,
+ * read by core's canon), then the rest of its chapter by verse distance. A
+ * chapter is read from its first verse, a range of verses from its first, a
+ * range of chapters chapter by chapter. A book alone names no verse.
+ */
+const byReference = (index: SearchIndex, query: string): ReadonlyArray<number> => {
+  const parsed = parseBibleQuery(query);
+  const { onVerse } = index.lookups;
+  switch (parsed._tag) {
+    case 'single':
+      return onVerse(parsed.ref.book, parsed.ref.chapter, parsed.ref.verse);
+    case 'verseRange':
+      return onVerse(parsed.ref.start.book, parsed.ref.start.chapter, parsed.ref.start.verse);
+    case 'chapter':
+      return onVerse(parsed.ref.book, parsed.ref.chapter, 1);
+    case 'chapterRange': {
+      const { book } = parsed.start;
+      const length = parsed.end.chapter - parsed.start.chapter + 1;
+      return Array.from({ length }, (_, i) => onVerse(book, parsed.start.chapter + i, 1)).flat();
+    }
+    default:
+      return [];
+  }
+};
+
+/** The rows of every list in order, each hymn at its first place. */
+const firstOf = (lists: ReadonlyArray<ReadonlyArray<Ranked>>): ReadonlyArray<Ranked> => {
+  const seen = new Set<number>();
+  return lists.flat().filter(({ h }) => !seen.has(h) && Boolean(seen.add(h)));
+};
+
+/**
+ * The ranked hymns of a query, found by number, or every hymn for an empty
+ * one. Else the hymns of the verse it names come first; then the hymns
+ * whose title holds its words; then the hymns of the topic it names; then
+ * the rest its words find.
+ */
 const rankedOf = (index: SearchIndex, query: string): ReadonlyArray<Ranked> =>
   Option.match(Option.fromNullishOr(NUMBER.exec(query)), {
     onSome: (number) => byNumber(index, String(Number(number[1]))),
     onNone: () => {
       const terms = words(query).slice(0, MOST);
       if (terms.length === 0) return index.hymns.map((_, h) => ({ h, line: 0, plain: true }));
-      return byWords(index, terms);
+      const found = byWords(index, terms);
+      const titled = found.findIndex(({ plain }) => !plain);
+      const split = Option.getOrElse(
+        Option.liftPredicate(titled, (at) => at >= 0),
+        () => found.length,
+      );
+      return firstOf([
+        placed(index, byReference(index, query)),
+        found.slice(0, split),
+        placed(index, index.lookups.topicHymns(query)),
+        found.slice(split),
+      ]);
     },
   });
 

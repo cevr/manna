@@ -186,7 +186,7 @@ export const lookupsOf = (indexes: HymnIndexes): Lookups => {
 let built = Option.none<Lookups>();
 
 /** The lookups over the bundled indexes, built on the first call. */
-const lookups = (): Lookups =>
+export const lookups = (): Lookups =>
   Option.getOrElse(built, () => {
     const made = lookupsOf(bundled);
     built = Option.some(made);
