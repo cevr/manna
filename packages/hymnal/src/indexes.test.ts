@@ -18,6 +18,7 @@ import {
   measureOrder,
   normalMetre,
   parseReference,
+  passageFaults,
   type Problem,
   problemLine,
   seeHymnOf,
@@ -357,6 +358,15 @@ describe('each mutation is caught, at every entry it applies to', () => {
         expect({ name, missed: result.missed }).toEqual({ name, missed: [] });
       }
     });
+
+  it('a single verse past its chapter is one fault, a range past it one, both ends past it two', () => {
+    expect(passageFaults(at(1, 1, [12, 12]), ctx)).toEqual(['from: verse 12 is past 1:10']);
+    expect(passageFaults(at(1, 1, [9, 12]), ctx)).toEqual(['to: verse 12 is past 1:10']);
+    expect(passageFaults(at(1, 1, [11, 12]), ctx)).toEqual([
+      'from: verse 11 is past 1:10',
+      'to: verse 12 is past 1:10',
+    ]);
+  });
 
   it('a stanza letter one past the hymn’s stanzas', () => {
     for (const name of ['scriptural', 'scriptural-by-hymn'] as const) {

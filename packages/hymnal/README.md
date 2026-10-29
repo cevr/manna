@@ -664,7 +664,7 @@ committed files. Each check needs no reader:
 
 - C1 `decode`: each file decodes through its schema, and an excess key is refused.
 - C2 `range`: a hymn number is 1-695, and a reading's number is 696-920.
-- C3 `scripture`: each book, chapter and verse is one the KJV has, and `from` is not after `to`.
+- C3 `scripture`: each book, chapter and verse is one the KJV has, and `from` is not after `to`. A single verse past its chapter is one failure, not a `from` and a `to` failure.
 - C4 `order`: the entries keep the printed order, by each rule of `scripts/indexes.ts` `ORDER_RULES`. A rule holds a list only where the committed data breaks at most 2% of its neighbouring pairs, each break a printed ruling (`bun run indexes --measure`). The young list, each sentences group and each canons group go by compiled title (145, 101 and 10 pairs, none broken; by number they break about half), each composer's hymns ascend (375 pairs, none broken), and so do each author's (322 pairs; the one break, the run 156, 261, 242 on page 810, is ruled as printed from its strip). The readings of a topic are left out: by number 110 of their 239 pairs break (46.03%), and the readings are not compiled, so no title rule can hold them.
 - C5 `stanza`: a stanza letter names a stanza of the compiled hymn, or its refrain.
 - C6 `sections`: the topic of each printed section lists every hymn of the section.

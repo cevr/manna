@@ -294,7 +294,8 @@ export const passageFaults = (p: Passage, ctx: Context): ReadonlyArray<string> =
     else
       for (const v of p.verses) {
         verse(p.chapter, v.from, 'from');
-        verse(p.chapter, v.to, 'to');
+        // A single verse is one fault, not a `from` and a `to` fault of the same misprint.
+        if (v.to !== v.from) verse(p.chapter, v.to, 'to');
         if (v.from > v.to) faults.push(`range ${v.from}-${v.to} runs backwards`);
       }
   } else {
