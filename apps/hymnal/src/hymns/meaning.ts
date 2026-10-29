@@ -16,7 +16,7 @@
  */
 
 import { fold } from '@manna/hymnal/fold';
-import { Duration, Effect, Option } from 'effect';
+import { Duration, Effect, Fiber, Option } from 'effect';
 
 import { meaning } from '../../assets/meaning/meaning.js';
 
@@ -73,8 +73,9 @@ const tableOf = (): Table => {
 };
 
 /**
- * The table, read the first time it is asked for and kept. Search mode
- * reads it as it opens (`readMeaning`), so no keystroke's pause pays for it.
+ * The table, read the first time it is asked for and kept. Search mode and
+ * the hymn page read it soon after they open (`readMeaningSoon`), so
+ * neither a keystroke's pause nor the About sheet pays for it.
  */
 const table: () => Table = (() => {
   let read = Option.none<Table>();
@@ -86,8 +87,18 @@ const table: () => Table = (() => {
     });
 })();
 
-/** Reads the table now, if it is not read yet, so the next meaning search does not. */
-export const readMeaning = (): void => void table();
+/**
+ * Reads the table in a task of its own after the one that asks, if it is not
+ * read yet, so the next meaning search does not. The task that asks never
+ * holds the thread for the read (about 55 ms in Hermes), and a frame can run
+ * between them. Returns the cancel, for an effect's cleanup.
+ */
+export const readMeaningSoon = (): (() => void) => {
+  const read = Effect.runFork(
+    Effect.sleep(Duration.zero).pipe(Effect.andThen(Effect.sync(() => void table()))),
+  );
+  return () => void Effect.runFork(Fiber.interrupt(read));
+};
 
 /** Word `word`'s place in the sorted words, when the table knows it. */
 const placeOf = (words: ReadonlyArray<string>, word: string): Option.Option<number> => {

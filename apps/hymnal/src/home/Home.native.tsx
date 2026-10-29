@@ -51,7 +51,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { hymnAt } from '~/hymns/hymns';
-import { aboutQuery, aboutShown, afterPause, readMeaning } from '~/hymns/meaning';
+import { aboutQuery, aboutShown, afterPause, readMeaningSoon } from '~/hymns/meaning';
 import { find, hymnIndex } from '~/hymns/search';
 import { HymnList } from '~/reader/HymnList.native';
 import { searchOffset, searchQuery } from '~/reader/place';
@@ -255,10 +255,11 @@ function FieldButton({
 /**
  * Search mode: the focused field and Cancel over the hymns the query finds,
  * each found by a line other than its title showing that line. Search mode
- * builds the search's index (`hymnIndex`) and reads the meaning table
- * (`readMeaning`) once it is on screen, while the keyboard comes up, so
- * neither the first keystroke nor the first pause waits on them; the app's
- * start never does. After a pause in the typing (`afterPause`), the hymns
+ * builds the search's index (`hymnIndex`) once it is on screen, while the
+ * keyboard comes up, and reads the meaning table in a task of its own after it
+ * (`readMeaningSoon`), so neither the first keystroke nor the first pause
+ * waits on them and no one task holds the thread for both; the app's start
+ * never does. After a pause in the typing (`afterPause`), the hymns
  * about the query stand under its strongest matches.
  */
 function Search({ onCancel }: { readonly onCancel: () => void }) {
@@ -303,7 +304,7 @@ function Search({ onCancel }: { readonly onCancel: () => void }) {
   };
   useEffect(() => {
     hymnIndex();
-    readMeaning();
+    return readMeaningSoon();
   }, []);
   const navigation = useNavigation();
   useEffect(() => {

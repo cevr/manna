@@ -46,6 +46,7 @@ import {
 } from 'react-native';
 
 import { hymnAt, type HymnText, hymns } from '~/hymns/hymns';
+import { readMeaningSoon } from '~/hymns/meaning';
 import { PageBar } from '~/player/PlayerBar';
 
 import { HymnPage, NoHymn } from './HymnPage';
@@ -75,6 +76,9 @@ function Pager({ shown }: { readonly shown: HymnText }) {
   // The list a row handed over is this screen's alone: a hymn opened next by
   // a link pages through every hymn.
   useEffect(() => taken(Option.none()), [taken]);
+  // The About sheet's `More like this` reads the meaning table: read it once
+  // the page has opened, so the sheet's first slide does not.
+  useEffect(() => readMeaningSoon(), []);
   const { width } = useWindowDimensions();
   const [height, setHeight] = useState(Option.none<number>());
   // A layout of the same height keeps the height as it was, so no page draws again for it.
