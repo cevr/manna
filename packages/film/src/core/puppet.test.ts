@@ -63,13 +63,17 @@ const R = (deg: number, x: number, y: number) => {
 
 describe('a puppet', () => {
   test('weighs each vertex on at most two bones its skin names, totalling 1', () => {
-    const { mesh } = made(SLEEVE, TWO_BONES).parts[0]!;
+    const p = made(SLEEVE, TWO_BONES);
+    const { mesh } = p.parts[0]!;
     expect(mesh.vertices.length).toBeGreaterThan(0);
-    for (const w of mesh.weights) {
-      expect(w.length).toBeGreaterThanOrEqual(1);
-      expect(w.length).toBeLessThanOrEqual(2);
-      expect(Math.abs(w.reduce((s, e) => s + e.weight, 0) - 1)).toBeLessThan(1e-12);
-      for (const e of w) expect(['shoulderRight', 'elbowRight']).toContain(e.bone);
+    for (let i = 0; i < mesh.vertices.length / 2; i++) {
+      const on = [0, 1].filter((j) => mesh.bones[2 * i + j]! >= 0);
+      expect(on.length).toBeGreaterThanOrEqual(1);
+      expect(Math.abs(on.reduce((s, j) => s + mesh.amounts[2 * i + j]!, 0) - 1)).toBeLessThan(
+        1e-12,
+      );
+      for (const j of on)
+        expect(['shoulderRight', 'elbowRight']).toContain(p.bones[mesh.bones[2 * i + j]!]!.name);
     }
     // the vertices are the grid's points over the part's cells
     // the mesh grid is 3 px (`MESH_STEP`)
@@ -160,12 +164,15 @@ describe('a puppet', () => {
         },
       ],
     });
-    const { vertices, weights } = p.parts[0]!.mesh;
+    const { vertices, bones, amounts } = p.parts[0]!.mesh;
+    const lean = p.bones.findIndex((b) => b.name === 'lean');
     const leanAt = (x: number, y: number) => {
       const i = [...Array(vertices.length / 2).keys()].find(
         (k) => vertices[2 * k] === x && vertices[2 * k + 1] === y,
       )!;
-      return weights[i]!.find((e) => e.bone === 'lean')?.weight ?? 0;
+      return [0, 1]
+        .filter((k) => bones[2 * i + k] === lean)
+        .reduce((sum, k) => sum + amounts[2 * i + k]!, 0);
     };
     expect(leanAt(9, 39)).toBe(0);
     expect(leanAt(9, 3)).toBe(1);
@@ -186,6 +193,44 @@ describe('a puppet', () => {
     expect(
       refused({ bones: [{ name: 'a', parent: 'b', pivot: [0, 0], tip: [1, 0] }], skin: {} }),
     ).toBe(true);
+  });
+
+  test('two flaps on one part are refused', () => {
+    const [w, h] = [16, 16];
+    const pixels = { width: w, height: h, rgba: new Uint8Array(w * h * 4).fill(255) };
+    const sheet: PuppetSheet = {
+      width: w,
+      height: h,
+      parts: [
+        { name: 'arm', pixels },
+        { name: 'body', pixels },
+      ],
+    };
+    const flap = {
+      part: 'arm',
+      from: 'body',
+      bone: 'shoulderRight',
+      body: 'lean',
+      cap: 2,
+      reach: 8,
+      region: [
+        [0, 0],
+        [8, 0],
+        [8, 8],
+        [0, 8],
+      ],
+    } as const;
+    const skeleton: Skeleton = {
+      bones: [
+        { name: 'lean', pivot: [8, 15], tip: [8, 0] },
+        { name: 'shoulderRight', parent: 'lean', pivot: [4, 8], tip: [4, 15] },
+      ],
+      skin: { arm: ['shoulderRight', 'lean'], body: ['lean'] },
+      flaps: [flap],
+    };
+    expect(Result.isSuccess(puppetOf(sheet, skeleton))).toBe(true);
+    const twice = puppetOf(sheet, { ...skeleton, flaps: [flap, { ...flap, cap: 3 }] });
+    expect(Result.isFailure(twice)).toBe(true);
   });
 
   test("keeps, revealed by the part in front, the paint the un-matte cleared behind that part's rim", () => {

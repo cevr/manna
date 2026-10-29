@@ -241,7 +241,7 @@ export const puppetGl = (puppet: Puppet): PuppetGl => ({
   heldPositions: new Float32Array(8),
 });
 
-/** A program linked on `gl` from its two shaders, or why not (a lost context makes no program). */
+/** A program linked on `gl` from its two shaders, or why not (a lost context makes no program). The shaders are freed once linked, and the program too when it fails. */
 const link = (
   gl: WebGL2RenderingContext,
   vertex: string,
@@ -249,23 +249,30 @@ const link = (
   attributes: ReadonlyArray<string>,
 ): Result.Result<WebGLProgram, string> => {
   const program = gl.createProgram();
+  const shaders: Array<WebGLShader> = [];
+  const freed = <A>(result: Result.Result<A, string>) => {
+    for (const s of shaders) gl.deleteShader(s);
+    if (Result.isFailure(result)) gl.deleteProgram(program);
+    return result;
+  };
   for (const [type, source] of [
     [gl.VERTEX_SHADER, vertex],
     [gl.FRAGMENT_SHADER, fragment],
   ] as const) {
     const s = gl.createShader(type);
-    if (s === null) return Result.fail('no shader could be made');
+    if (s === null) return freed(Result.fail('no shader could be made'));
+    shaders.push(s);
     gl.shaderSource(s, source);
     gl.compileShader(s);
     if (gl.getShaderParameter(s, gl.COMPILE_STATUS) !== true)
-      return Result.fail(gl.getShaderInfoLog(s) ?? 'a shader does not compile');
+      return freed(Result.fail(gl.getShaderInfoLog(s) ?? 'a shader does not compile'));
     gl.attachShader(program, s);
   }
   for (const [k, name] of attributes.entries()) gl.bindAttribLocation(program, k, name);
   gl.linkProgram(program);
   if (gl.getProgramParameter(program, gl.LINK_STATUS) !== true)
-    return Result.fail(gl.getProgramInfoLog(program) ?? 'the program does not link');
-  return Result.succeed(program);
+    return freed(Result.fail(gl.getProgramInfoLog(program) ?? 'the program does not link'));
+  return freed(Result.succeed(program));
 };
 
 /** A texture of `pixels` (RGBA bytes, rows top down), sampled by `texelFetch`. */

@@ -1,7 +1,9 @@
 // A puppet drawn by the page's draw path (`drawPuppet`, WebGL 2) against its
 // CPU reference (`rasterOf`): a fixture puppet (a two-bone sleeve over a
 // body, each pixel its own colour) at rest byte for byte, at 20 seeded poses
-// within ΔE 1 and IoU 0.99; 60 frames drawn in a shuffled order equal to the
+// within ΔE 1 and IoU 0.99; the fold pose (the forearm turned 150° back
+// over the upper arm, one part's triangles over one pixel) within ΔE 1 on
+// average and 2 at any pixel; 60 frames drawn in a shuffled order equal to the
 // same frames in order; and a part PNG's bytes in the key of a beat whose
 // scene imports the puppet (`tools/stamp.ts`). Each case opens Chrome or
 // writes a film, so they run in the slow suite.
@@ -166,16 +168,18 @@ const against = (a: Raster, b: Raster) => {
       [0, 1, 2].map((c) => r.rgba[i * 4 + c]! * al + P[c]! * (1 - al)) as [number, number, number],
     );
   };
-  let [both, any, sum] = [0, 0, 0];
+  let [both, any, sum, worst] = [0, 0, 0, 0];
   for (let i = 0; i < a.width * a.height; i++) {
     const [fa, fb] = [a.rgba[i * 4 + 3]! >= 128, b.rgba[i * 4 + 3]! >= 128];
     if (!fa && !fb) continue;
     any++;
     if (fa && fb) both++;
     const [p, q] = [over(a, i), over(b, i)];
-    sum += Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+    const d = Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+    sum += d;
+    worst = Math.max(worst, d);
   }
-  return { deltaE: sum / Math.max(1, any), iou: both / Math.max(1, any) };
+  return { deltaE: sum / Math.max(1, any), iou: both / Math.max(1, any), worst };
 };
 
 const hashOf = (r: Raster) => new Bun.CryptoHasher('sha256').update(r.rgba).digest('hex');
@@ -217,6 +221,28 @@ describe('a puppet in the page', () => {
           expect(new Set(inOrder).size).toBe(30);
         }),
       ).pipe(Effect.provide(Layer.provideMerge(PuppetImagesBun, BunServices.layer))),
+  );
+
+  it.live('the fold pose elbowRight 150 draws alike on the CPU and the GL', () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const dir = yield* fs.makeTempDirectoryScoped();
+        yield* lay(dir);
+        const module = path.join(dir, 'spec.ts');
+        const { SPEC } = yield* Effect.promise(() => import(module));
+        const puppet = yield* puppetFrom(SPEC);
+        const page = yield* puppetPage({ module, name: 'SPEC' });
+        // the forearm turned back over the upper arm: two triangles of one part over one pixel, laid in turn on both paths
+        const pose: PuppetPose = { numbers: { elbowRight: 150 }, root: [45, 60], scale: 1 };
+        const m = against(yield* page.draw(pose), rasterOf(puppet, pose));
+        expect(m.deltaE).toBeLessThanOrEqual(1);
+        expect(m.iou).toBeGreaterThanOrEqual(0.99);
+        // every pixel, the fold's among them: measured 1.04 at most (2026-10-28)
+        expect(m.worst).toBeLessThanOrEqual(2);
+      }),
+    ).pipe(Effect.provide(Layer.provideMerge(PuppetImagesBun, BunServices.layer))),
   );
 
   it.live('the L3 pass leaves every pixel farther than 16 px from a moved part unchanged', () =>

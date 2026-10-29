@@ -250,16 +250,16 @@ export class Stamps extends Context.Service<Stamps, StampsService>()('@manna/fil
         return workspace(spec, from);
       };
 
-      /** `file` hashed, and its imports resolved to the files they name (none for a non-source file). */
+      /** `file`'s bytes hashed, and its imports resolved to the files they name (none for a non-source file, which is never decoded). */
       const readOnce = Effect.fn('Stamps.read')(function* (file: string) {
-        const source = yield* fs.readFileString(file);
+        const bytes = yield* fs.readFile(file);
         const imports: Array<string> = [];
         if (SOURCE.includes(path.extname(file)))
-          for (const spec of importsOf(file, source)) {
+          for (const spec of importsOf(file, new TextDecoder().decode(bytes))) {
             const to = yield* resolve(spec, file);
             if (Option.isSome(to)) imports.push(to.value);
           }
-        return { hash: sha256Hex(source), imports } satisfies Read;
+        return { hash: sha256Hex(bytes), imports } satisfies Read;
       });
 
       /**

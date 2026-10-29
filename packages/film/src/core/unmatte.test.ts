@@ -80,6 +80,23 @@ describe('unmatte', () => {
     for (const x of [3, 4, 10]) expect(at(out!, x)).toEqual(at(src, x));
   });
 
+  test('un-matte keeps paper on a non-corner box edge', () => {
+    // a fill to every edge of the box, and on its bottom edge (x 6..9) a highlight of the sheet's paper inked round above and beside it: no ground, and no corner the paper joins
+    const src = new Uint8Array(W * H * 4);
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++) {
+        const highlight = y === H - 1 && x >= 6 && x < 10;
+        const inked = !highlight && x >= 5 && x < 11 && y >= H - 2;
+        let c: Rgb = FILL;
+        if (inked) c = INK;
+        if (highlight) c = [250, 244, 236];
+        src.set([...c, 255], (y * W + x) * 4);
+      }
+    const [out] = unmatte([src], W, H, PAPER);
+    for (const x of [6, 7, 8, 9]) expect(at(out!, x, H - 1)).toEqual(at(src, x, H - 1));
+    for (const x of [0, 15]) expect(at(out!, x, 0)).toEqual(at(src, x, 0));
+  });
+
   test('clears paper a part holds 6 px deep outside its ink, and still un-mattes the ink edge past it', () => {
     // columns 0..2 ground, 3..8 the sheet's paper (bluer than its flat colour), then the 40 % mix, ink and fill
     const [w, h] = [32, 8];

@@ -206,9 +206,9 @@ const counting = Layer.unwrap(
         const reads = yield* Reads;
         return FileSystem.FileSystem.of({
           ...real,
-          readFileString: (file, encoding) => {
+          readFile: (file) => {
             reads.set(file, (reads.get(file) ?? 0) + 1);
-            return real.readFileString(file, encoding);
+            return real.readFile(file);
           },
         });
       }),
@@ -288,6 +288,23 @@ describe.concurrent('beat keys in memory', () => {
       const was = Object.fromEntries((yield* stamps.scenes(inMemoryFilm, placed)).beats);
       files.set('/films/f/script.ts', scriptOf(1));
       const now = Object.fromEntries((yield* stamps.scenes(inMemoryFilm, placed)).beats);
+      expect(changed(was, now)).toEqual(['hand', 'beta', 'built', 'plain']);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.effect('stamp keys two byte-distinct files apart', () => {
+    const { files, layer } = inMemory(0);
+    // two bytes that are not UTF-8, which a decode reads alike (U+FFFD)
+    const withByte = (b: number) => Uint8Array.from([...scriptOf(0), ...text('// '), b, 10]);
+    return Effect.gen(function* () {
+      const stamps = yield* Stamps;
+      files.set('/films/f/script.ts', withByte(0xfe));
+      const was = Object.fromEntries((yield* stamps.scenes(inMemoryFilm, placed)).beats);
+      files.set('/films/f/script.ts', withByte(0xff));
+      const now = Object.fromEntries((yield* stamps.scenes(inMemoryFilm, placed)).beats);
+      expect(new TextDecoder().decode(withByte(0xfe))).toBe(
+        new TextDecoder().decode(withByte(0xff)),
+      );
       expect(changed(was, now)).toEqual(['hand', 'beta', 'built', 'plain']);
     }).pipe(Effect.provide(layer));
   });

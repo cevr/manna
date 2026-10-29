@@ -30,7 +30,8 @@
 // - **Raster.** `rasterOf` lays the parts back to front over transparent
 //   ground, each pixel inverse-mapped through the posed triangle that holds
 //   its centre to the part's texture, sampled bilinear on premultiplied
-//   texels, each pixel once a part. At rest every pixel maps to its own
+//   texels, every triangle laid in turn under a top-left fill rule, as the
+//   GL path draws them (`canvas/puppet-gl.ts`). At rest every pixel maps to its own
 //   texel's centre, so the raster is the sheet's recompose byte for byte.
 // - **Paper.** A sheet that names the paper its parts were cut from has its
 //   edge pixels un-matted from it once, here (`core/unmatte.ts`): the rest
@@ -93,17 +94,10 @@ export interface PuppetPose {
   readonly scale: number;
 }
 
-/** A vertex's share of a bone. */
-interface PuppetWeight {
-  readonly bone: string;
-  readonly weight: number;
-}
-
-/** A part's mesh: its vertices (flat x, y, sheet px), its triangles (flat, three vertex indices each), each vertex's weights and the same as bone indices and amounts (two a vertex, -1 none). */
+/** A part's mesh: its vertices (flat x, y, sheet px), its triangles (flat, three vertex indices each), and each vertex's weights as bone indices and amounts (two a vertex, -1 none). */
 interface PuppetMesh {
   readonly vertices: Float64Array;
   readonly triangles: Uint32Array;
-  readonly weights: ReadonlyArray<ReadonlyArray<PuppetWeight>>;
   readonly bones: Int16Array;
   readonly amounts: Float64Array;
 }
@@ -264,7 +258,6 @@ const meshOf = (
   height: number,
   alpha: (x: number, y: number) => boolean,
   weigh: (p: Pt) => Array<[number, number]>,
-  bones: ReadonlyArray<PuppetBone>,
 ): PuppetMesh => {
   const cols = Math.ceil(width / MESH_STEP);
   const rows = Math.ceil(height / MESH_STEP);
@@ -292,10 +285,8 @@ const meshOf = (
   const n = xs.length / 2;
   const boneOf = new Int16Array(n * 2).fill(-1);
   const amounts = new Float64Array(n * 2);
-  const weights: PuppetWeight[][] = [];
   for (let i = 0; i < n; i++) {
     const w = weigh([xs[2 * i]!, xs[2 * i + 1]!]);
-    weights.push(w.map(([k, amount]) => ({ bone: bones[k]!.name, weight: amount })));
     w.forEach(([k, amount], j) => {
       boneOf[2 * i + j] = k;
       amounts[2 * i + j] = amount;
@@ -304,7 +295,6 @@ const meshOf = (
   return {
     vertices: Float64Array.from(xs),
     triangles: Uint32Array.from(tris),
-    weights,
     bones: boneOf,
     amounts,
   };
@@ -319,7 +309,7 @@ class PuppetRefused extends Schema.TaggedError<PuppetRefused>()('PuppetRefused',
   }
 }
 
-/** Why `skeleton` cannot skin `sheet`, if it cannot: a bone named twice or before its parent, a skin or flap naming a part or bone that is not there, a flap resting on a bone its arm's skin does not name. */
+/** Why `skeleton` cannot skin `sheet`, if it cannot: a bone named twice or before its parent, a skin or flap naming a part or bone that is not there, two flaps on one part, a flap resting on a bone its arm's skin does not name. */
 const refusal = (sheet: PuppetSheet, skeleton: Skeleton): string | undefined => {
   const seen = new Set<string>();
   for (const b of skeleton.bones) {
@@ -334,9 +324,21 @@ const refusal = (sheet: PuppetSheet, skeleton: Skeleton): string | undefined => 
     const missing = skin.find((b) => !seen.has(b));
     if (missing !== undefined) return `${part}'s skin names no bone ${missing}`;
   }
+  return flapRefusal(skeleton, names, seen);
+};
+
+/** Why `skeleton`'s flaps cannot skin a sheet of the parts `names` with the bones `seen`, if they cannot. */
+const flapRefusal = (
+  skeleton: Skeleton,
+  names: ReadonlySet<string>,
+  seen: ReadonlySet<string>,
+): string | undefined => {
+  const hasFlap = new Set<string>();
   for (const f of skeleton.flaps ?? []) {
     if (!names.has(f.part) || !names.has(f.from))
       return `a flap names no part ${f.part} or ${f.from} of the sheet`;
+    if (hasFlap.has(f.part)) return `two flaps name part ${f.part}`;
+    hasFlap.add(f.part);
     if (!seen.has(f.bone)) return `${f.part}'s flap names no bone ${f.bone}`;
     if (!(skeleton.skin[f.part] ?? []).includes(f.body))
       return `${f.part}'s flap rests on ${f.body}, which its skin does not name`;
@@ -358,8 +360,10 @@ export const puppetOf = (
   const { bones } = skeleton;
   const at = new Map(bones.map((b, k) => [b.name, k]));
   const { width: W, height: H } = sheet;
+  // at most one flap a part (`refusal`)
+  const flapOf = new Map((skeleton.flaps ?? []).map((f) => [f.part, f]));
   const withFlaps = sheet.parts.map((part) => {
-    const flap = skeleton.flaps?.find((f) => f.part === part.name);
+    const flap = flapOf.get(part.name);
     const from = sheet.parts.find((p) => p.name === flap?.from);
     return flap === undefined || from === undefined
       ? part.pixels.rgba
@@ -379,7 +383,7 @@ export const puppetOf = (
   };
   const parts = sheet.parts.map((part, k): PuppetPart => {
     const skin = (skeleton.skin[part.name] ?? []).map((b) => at.get(b)!);
-    const flap = skeleton.flaps?.find((f) => f.part === part.name);
+    const flap = flapOf.get(part.name);
     const rgba = textures[k]!;
     const revealed = revealedOf(withFlaps, textures, k, unmattedWithout);
     // its mesh holds what it shows at rest and all it can reveal
@@ -404,7 +408,7 @@ export const puppetOf = (
       name: part.name,
       pixels: { width: W, height: H, rgba },
       revealed: revealed.map((r) => r && { width: W, height: H, rgba: r }),
-      mesh: meshOf(W, H, (x, y) => covers(y * W + x), weigh, bones),
+      mesh: meshOf(W, H, (x, y) => covers(y * W + x), weigh),
     };
   });
   return Result.succeed({
@@ -546,7 +550,10 @@ export const posedVertices = (puppet: Puppet, pose: PuppetPose): ReadonlyArray<F
  * `puppet` drawn at `pose` in its sheet's frame (or a frame `size` px from the same origin) over transparent ground: the
  * parts back to front, each pixel whose centre a posed triangle holds
  * inverse-mapped to the part's texture, sampled bilinear on premultiplied
- * texels, laid over what lies under it once a part.
+ * texels, laid over what lies under it. Each triangle is laid in turn, in its
+ * mesh's order, so where a fold turns two triangles of one part over one pixel
+ * the later lies over the earlier, as the GL path's blend lays them; a pixel
+ * centre on an edge two triangles share goes to one of them (`edgeHolds`).
  */
 export const rasterOf = (
   puppet: Puppet,
@@ -556,13 +563,12 @@ export const rasterOf = (
   const [W, H] = size;
   // Premultiplied, colour in 0..255 and alpha in 0..1.
   const acc = new Float64Array(W * H * 4);
-  const seen = new Int32Array(W * H).fill(-1);
   const posed = posedVertices(puppet, pose);
   for (let k = puppet.parts.length - 1; k >= 0; k--) {
     const part = puppet.parts[k]!;
     const t = part.mesh.triangles;
     for (let i = 0; i < t.length; i += 3)
-      layTriangle(acc, seen, k, part, posed[k]!, [t[i]!, t[i + 1]!, t[i + 2]!], [W, H]);
+      layTriangle(acc, part, posed[k]!, [t[i]!, t[i + 1]!, t[i + 2]!], [W, H]);
   }
   return unpremultiplied(acc, W, H);
 };
@@ -592,11 +598,41 @@ const sampleAt = (tex: Raster, sx: number, sy: number, into: Float64Array) => {
 /** One sample's scratch, rewritten whole by each `sampleAt`. */
 const SAMPLE = new Float64Array(4);
 
-/** Part `k`'s posed triangle `tri` laid over `acc`: each pixel whose centre it holds (and no other triangle of the part has laid) inverse-mapped to the part's texture. */
+/** An edge's function `a·x + b·y + c`, positive inside its triangle, and whether a point on it (0) is the triangle's. */
+interface Edge {
+  readonly a: number;
+  readonly b: number;
+  readonly c: number;
+  readonly tie: boolean;
+}
+
+/**
+ * The edge `u`–`v` of a triangle whose signed area has sign `s`. Its function
+ * is made from the lower-indexed end, so the two triangles that share an edge
+ * hold exact negations of one another; a point on the edge itself goes to the
+ * triangle whose inward normal `(a, b)` points down, or right when the edge
+ * lies flat: a top-left fill rule.
+ */
+const edgeOf = (q: Float64Array, u: number, v: number, s: number): Edge => {
+  const [lo, hi, f] = u < v ? [u, v, s] : [v, u, -s];
+  const lx = q[2 * lo]!;
+  const ly = q[2 * lo + 1]!;
+  const dx = q[2 * hi]! - lx;
+  const dy = q[2 * hi + 1]! - ly;
+  const a = -f * dy;
+  const b = f * dx;
+  return { a, b, c: f * (dy * lx - dx * ly), tie: b > 0 || (b === 0 && a > 0) };
+};
+
+/** The weight `(px, py)` has from the vertex across `e`: its edge function, or `NaN` outside. */
+const edgeHolds = (e: Edge, px: number, py: number): number => {
+  const w = e.a * px + e.b * py + e.c;
+  return w > 0 || (w === 0 && e.tie) ? w : Number.NaN;
+};
+
+/** A part's posed triangle `tri` laid over `acc`: each pixel whose centre it holds inverse-mapped to the part's texture. */
 const layTriangle = (
   acc: Float64Array,
-  seen: Int32Array,
-  k: number,
   part: PuppetPart,
   q: Float64Array,
   [ia, ib, ic]: readonly [number, number, number],
@@ -613,19 +649,27 @@ const layTriangle = (
   ];
   const area = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
   if (area === 0) return;
+  const [s, size] = [Math.sign(area), Math.abs(area)];
   const x0 = Math.max(0, Math.floor(Math.min(ax, bx, cx) - 0.5));
   const x1 = Math.min(W - 1, Math.ceil(Math.max(ax, bx, cx) - 0.5));
   const y0 = Math.max(0, Math.floor(Math.min(ay, by, cy) - 0.5));
   const y1 = Math.min(H - 1, Math.ceil(Math.max(ay, by, cy) - 0.5));
+  const ea = edgeOf(q, ib, ic, s);
+  const eb = edgeOf(q, ic, ia, s);
+  const ec = edgeOf(q, ia, ib, s);
   for (let y = y0; y <= y1; y++)
     for (let x = x0; x <= x1; x++) {
       const p = y * W + x;
-      const [px, py] = [x + 0.5, y + 0.5];
-      const l0 = ((bx - px) * (cy - py) - (by - py) * (cx - px)) / area;
-      const l1 = ((cx - px) * (ay - py) - (cy - py) * (ax - px)) / area;
+      const px = x + 0.5;
+      const py = y + 0.5;
+      const wa = edgeHolds(ea, px, py);
+      const wb = edgeHolds(eb, px, py);
+      const wc = edgeHolds(ec, px, py);
+      // NaN is outside: every comparison with it is false
+      if (!(wa >= 0 && wb >= 0 && wc >= 0)) continue;
+      const l0 = wa / size;
+      const l1 = wb / size;
       const l2 = 1 - l0 - l1;
-      if (seen[p] === k || l0 < 0 || l1 < 0 || l2 < 0) continue;
-      seen[p] = k;
       const sx = l0 * src[2 * ia]! + l1 * src[2 * ib]! + l2 * src[2 * ic]!;
       const sy = l0 * src[2 * ia + 1]! + l1 * src[2 * ib + 1]! + l2 * src[2 * ic + 1]!;
       sampleAt(part.pixels, sx, sy, SAMPLE);
