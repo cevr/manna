@@ -9,8 +9,20 @@ import type { PartRule } from '@manna/film/tools';
 /** A point of a kept view, pixels. */
 export type Pt = readonly [number, number];
 
-/** Wider than any view: a polygon's edge past the view's own. */
-export const FAR = 400;
+/**
+ * A polygon's edge marker past the view's far edge (its right or bottom), in
+ * units of `k * FAR`; a coordinate at or below -1 marks its near edge (left or
+ * top). No view's pixel lies at `FAR`, so a marker is never a point of the
+ * view. The table (`table.ts`) resolves each against the view's frame: `REACH`
+ * pixels past its near edge, `k * REACH` past its far edge when the padded
+ * view is `REACH` or narrower, and past a wider view by as much as it is wider.
+ * The fixed distances keep each slanted edge to a marker at the slope it was
+ * cut with.
+ */
+export const FAR = 100_000;
+
+/** The distance in pixels a marker resolves to: wider than every view the members' cuts were drawn on. */
+export const REACH = 400;
 
 /** A box as a polygon, its right and bottom edges outside it. */
 export const box = (x0: number, y0: number, x1: number, y1: number): PartRule => ({

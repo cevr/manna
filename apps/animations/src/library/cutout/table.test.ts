@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { type PartCut, cutFigureOf, cutParts } from '@manna/film/tools';
 import { Match, Result } from 'effect';
 import { grain, shade, sides } from './prompts.ts';
-import { FAR, box } from './rules.ts';
+import { FAR, REACH, box, sleeve, underSole } from './rules.ts';
 import { type CutFrame, bustFigure, cutTable, framedFigure, padded } from './table.ts';
 
 type Rgba = readonly [number, number, number, number];
@@ -69,7 +69,7 @@ describe('padded', () => {
       take: [
         {
           polygon: [
-            [-FAR, 9],
+            [-REACH, 9],
             [9, 9],
             [9, 14],
           ],
@@ -79,9 +79,9 @@ describe('padded', () => {
       unless: [
         {
           polygon: [
-            [5, -FAR],
-            [FAR + 3, -FAR],
-            [FAR + 3, 8],
+            [5, -REACH],
+            [REACH + 3, -REACH],
+            [REACH + 3, 8],
           ],
         },
       ],
@@ -92,10 +92,10 @@ describe('padded', () => {
       take: [
         {
           polygon: [
-            [-FAR, -FAR],
-            [FAR + 3, -FAR],
-            [FAR + 3, FAR * 2 + 5],
-            [-FAR, FAR * 2 + 5],
+            [-REACH, -REACH],
+            [REACH + 3, -REACH],
+            [REACH + 3, REACH * 2 + 5],
+            [-REACH, REACH * 2 + 5],
           ],
         },
       ],
@@ -111,18 +111,58 @@ describe('padded', () => {
       ],
     };
     const square: CutFrame = { sheet: 'turnaround', kept: [0, 0, 20, 20], pad: [3, 3, 3, 3] };
-    const laid = padded(hand, square);
-    expect(laid.parts[0]?.take).toEqual([{ disc: { c: [1, 13], r: 4 } }]);
-    expect(laid.parts[0]?.pivot).toEqual([0, 8]);
-    const owner = Result.match(
-      cutParts(
-        raster(26, 26, () => INK),
-        laid,
-        { figure: new Uint8Array(26 * 26).fill(1) },
-      ),
-      { onSuccess: (sheet) => sheet.owner[13 * 26 + 1] ?? -1, onFailure: () => -1 },
-    );
-    expect(owner).toBe(1);
+    const [moved] = padded(hand, square).parts;
+    expect(moved?.take).toEqual([{ disc: { c: [1, 13], r: 4 } }]);
+    expect(moved?.pivot).toEqual([0, 8]);
+    expect(ownerAt(padded(hand, square), 26, 26, 1, 13)).toBe(1);
+  });
+});
+
+/** The owner of pixel (x, y) when `cut` lays a `width` by `height` view whose every pixel is the figure's (0 the ground, k + 1 the part at k), or -1 if the cut refuses. */
+const ownerAt = (cut: PartCut, width: number, height: number, x: number, y: number) =>
+  Result.match(
+    cutParts(
+      raster(width, height, () => INK),
+      cut,
+      { figure: new Uint8Array(width * height).fill(1) },
+    ),
+    { onSuccess: (sheet) => sheet.owner[y * width + x] ?? -1, onFailure: () => -1 },
+  );
+
+describe('rules', () => {
+  // a view wider and taller than 400 px, its kept box unpadded
+  const wide: CutFrame = { sheet: 'turnaround', kept: [0, 0, 600, 480], pad: [0, 0, 0, 0] };
+  const cut: PartCut = {
+    parts: [
+      {
+        name: 'arm',
+        ...sleeve({
+          inner: [
+            [450, 0],
+            [450, 300],
+          ],
+          shoulder: [460, 10],
+          cap: 5,
+          side: 'right',
+        }),
+      },
+      { name: 'foot', take: [box(480, 400, FAR, FAR)], unless: [underSole([[490, 510, 420]])] },
+      { name: 'rest', take: [box(-1, -1, FAR, FAR)] },
+    ],
+  };
+  const at = (x: number, y: number) => ownerAt(padded(cut, wide), 600, 480, x, y);
+
+  test('a sleeve takes its side of the inner edge out to the view’s edge, past x = 400', () => {
+    expect(at(500, 30)).toBe(1);
+    expect(at(599, 200)).toBe(1);
+    expect(at(440, 200)).toBe(3);
+  });
+
+  test('under a sole, the ground below it and past its ends is not the foot’s, past x = 400', () => {
+    expect(at(500, 410)).toBe(2);
+    expect(at(500, 470)).toBe(3);
+    expect(at(550, 470)).toBe(3);
+    expect(at(550, 410)).toBe(3);
   });
 });
 

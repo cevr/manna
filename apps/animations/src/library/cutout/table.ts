@@ -18,7 +18,7 @@ import {
 } from '@manna/film/tools';
 import type { PuppetSpec } from '@manna/film/canvas';
 import { Match, Option, Record as Records, Result } from 'effect';
-import { FAR, type Pt, box } from './rules.ts';
+import { FAR, type Pt, REACH, box } from './rules.ts';
 
 /** A box on a kept sheet: left, top, right, bottom. */
 type Box = readonly [number, number, number, number];
@@ -65,19 +65,31 @@ export interface CutMember<V extends string> {
   readonly ink: Rgba;
 }
 
-/** A point read in the kept view's pixels, in its part sheet's (`by` the pad's left and top); a coordinate at or past -1 (a rule's edge past the view's) stays past the padded sheet's. */
-const moved = (p: Pt, by: Pt): Pt => [
-  Math.max(-FAR, (p[0] + by[0]) * Number(p[0] > -1) - FAR * Number(p[0] <= -1)),
-  Math.max(-FAR, (p[1] + by[1]) * Number(p[1] > -1) - FAR * Number(p[1] <= -1)),
-];
-
 /** A disc's centre or a part's pivot read in the kept view's pixels, in its part sheet's: moved by the pad alone, so a centre left of or above the kept box keeps its place. */
 const shifted = (p: Pt, by: Pt): Pt => [p[0] + by[0], p[1] + by[1]];
 
-const movedRule = (r: PartRule, by: Pt): PartRule =>
+/** A polygon's coordinate on an axis whose padded view is `size` pixels long: a near marker (at or below -1) `REACH` before the view, a far marker (`k * FAR`) `k * REACH` past the pad's start and past a view wider than `REACH` by the excess, any other moved by the pad. */
+const onAxis = (v: number, by: number, size: number): number =>
+  Match.value(v).pipe(
+    Match.when(
+      (u) => u <= -1,
+      () => -REACH,
+    ),
+    Match.when(
+      (u) => u >= FAR,
+      (u) => Math.max((u / FAR) * REACH + by, size + 1),
+    ),
+    Match.orElse((u) => u + by),
+  );
+
+/** A rule in a frame `size` pixels: its polygon's edge markers resolved and its other points moved by `by`; a disc's centre and a pivot are points of the view, never markers. */
+const onFrame = (r: PartRule, by: Pt, size: Pt): PartRule =>
   Match.value(r).pipe(
     Match.when({ polygon: Match.defined }, (q) => ({
-      polygon: q.polygon.map((p) => moved(p, by)),
+      polygon: q.polygon.map((p): Pt => [
+        onAxis(p[0], by[0], size[0]),
+        onAxis(p[1], by[1], size[1]),
+      ]),
     })),
     Match.when({ disc: Match.defined }, (q) => ({
       disc: { c: shifted(q.disc.c, by), r: q.disc.r },
@@ -85,16 +97,18 @@ const movedRule = (r: PartRule, by: Pt): PartRule =>
     Match.orElse((q) => q),
   );
 
-/** A cut read in the kept view's pixels, moved into its part sheet's frame. */
+/** A cut read in the kept view's pixels, moved into its part sheet's frame, its edge markers on the frame's edges. */
 export const padded = (cut: PartCut, frame: CutFrame): PartCut => {
-  const by: Pt = [frame.pad[0], frame.pad[1]];
+  const { kept, pad } = frame;
+  const by: Pt = [pad[0], pad[1]];
+  const size: Pt = [kept[2] - kept[0] + pad[0] + pad[2], kept[3] - kept[1] + pad[1] + pad[3]];
   return {
     parts: cut.parts.map((p) => {
       const part = {
         name: p.name,
-        take: p.take.map((r) => movedRule(r, by)),
+        take: p.take.map((r) => onFrame(r, by, size)),
         unless: Option.getOrElse(Option.fromUndefinedOr(p.unless), () => []).map((r) =>
-          movedRule(r, by),
+          onFrame(r, by, size),
         ),
       };
       return Option.match(Option.fromUndefinedOr(p.pivot), {
@@ -117,7 +131,9 @@ export const bustFigure = (view: View, ink: Rgba): Uint8Array => {
   rgba.set(view.rgba);
   for (let x = 0; x < view.width; x++) rgba.set(ink, (n + x) * 4);
   const closed = { width: view.width, height: view.height + 1, rgba };
-  const all: PartCut = { parts: [{ name: 'figure', take: [box(-1, -1, FAR * 2, FAR * 2)] }] };
+  const all: PartCut = {
+    parts: [{ name: 'figure', take: [box(-1, -1, closed.width + 1, closed.height + 1)] }],
+  };
   return Result.match(cutParts(closed, all), {
     onSuccess: (sheet) => sheet.owner.slice(0, n),
     onFailure: () => new Uint8Array(n),
