@@ -10,7 +10,9 @@
  *   decoded only for a hymn shown with chords on;
  * - `virtual:hymnal-timing` exports when each hymn's sung lines and words
  *   come, one string per hymn (about 600 KB), made by `timing.ts`, and
- *   decoded only for a hymn the player follows.
+ *   decoded only for a hymn the player follows;
+ * - `virtual:hymnal-indexes` exports the book's topical, Scripture, metre
+ *   and tune indexes as numbers and names only, made by `indexes.ts`.
  * The web and the native bundle both take them from this plugin, so the app
  * reads its hymns offline. Chords and timing join the versioned numeric
  * sidecars in `packages/hymnal/data/playback` onto the read-only words.
@@ -26,6 +28,7 @@ const modules = new Map([
   ['virtual:hymnal', fileURLToPath(new URL('./words.ts', import.meta.url))],
   ['virtual:hymnal-chords', fileURLToPath(new URL('./chords.ts', import.meta.url))],
   ['virtual:hymnal-timing', fileURLToPath(new URL('./timing.ts', import.meta.url))],
+  ['virtual:hymnal-indexes', fileURLToPath(new URL('./indexes.ts', import.meta.url))],
 ]);
 
 const derived = new Map<string, string>();

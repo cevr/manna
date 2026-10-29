@@ -7,8 +7,9 @@
  * router would provide them:
  * - `react-native` is react-native-web, as on the web;
  * - `virtual:hymnal` is the same words the bundler plugin derives (`vite/words.ts`),
- *   `virtual:hymnal-chords` the same chords (`vite/chords.ts`), and
- *   `virtual:hymnal-timing` the same timing (`vite/timing.ts`);
+ *   `virtual:hymnal-chords` the same chords (`vite/chords.ts`),
+ *   `virtual:hymnal-timing` the same timing (`vite/timing.ts`), and
+ *   `virtual:hymnal-indexes` the same indexes (`vite/indexes.ts`);
  * - `one` is `src/test/one.tsx`: a link opens its href in the app, a screen's options are dropped;
  * - `react-native-gesture-handler` is `src/test/gesture.tsx`: a test plays a gesture's touch;
  * - `react-native-reanimated` and `react-native-worklets` are `src/test/reanimated.tsx`:
@@ -19,6 +20,7 @@ import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { plugin } from 'bun';
 
 import { readChords } from '../../vite/chords';
+import { readIndexes } from '../../vite/indexes';
 import { readTiming } from '../../vite/timing';
 import { readWords } from '../../vite/words';
 
@@ -66,6 +68,10 @@ plugin({
     }));
     build.module('virtual:hymnal-timing', () => ({
       contents: `export default ${JSON.stringify(readTiming())};`,
+      loader: 'js',
+    }));
+    build.module('virtual:hymnal-indexes', () => ({
+      contents: `export default ${JSON.stringify(readIndexes())};`,
       loader: 'js',
     }));
   },

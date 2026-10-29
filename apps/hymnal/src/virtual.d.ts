@@ -14,3 +14,9 @@ declare module 'virtual:hymnal-timing' {
   const timing: ReadonlyArray<readonly [number, string]>;
   export default timing;
 }
+
+declare module 'virtual:hymnal-indexes' {
+  /** The book's topical, Scripture, metre and tune indexes, numbers and names only (`vite/indexes.ts`). */
+  const indexes: import('./hymns/indexes').HymnIndexes;
+  export default indexes;
+}
