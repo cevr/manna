@@ -4574,9 +4574,19 @@ The form of an entry, each field on its own line:
 - **Kind:** review
 - **Said:** "The joint blend's weight drops to 0 at the edge of its box on a limb that is bent at rest."
 - **Source:** puppet-engine/round-1-review.md R1
-- **Wrong:** On a limb bent at rest, the child's weight inside the joint's blend read the child's axis alone, so it was 0.5 to 0.9 at the parent-side edge of the blend and 0 just past it; an elbow turn parted two neighbouring vertices 3 px apart by up to 14.9 px and tore the sleeve.
+- **Wrong:** On a limb bent at rest, the child's weight inside the joint's blend read the child's axis alone, so it was 0.29 at 73°, 0.5 at 90° and 0.9 at 135° at the parent-side edge of the blend and 0 just past it; an elbow turn parted two neighbouring vertices 3 px apart by up to 14.9 px and tore the sleeve.
 - **Cause:** The blend was a box on the two bones' axes with a weight from one of them, and its test skipped the vertices near the elbow, so no case saw the weight at the box's edge.
 - **Guard:** code: `packages/film/src/core/puppet.test.ts` `an elbow turn tears no mesh edge on a limb bent at rest 90° or 135°`
+
+### puppet-joint-blends-overlap
+
+- **Date:** 2026-10-29
+- **Kind:** review
+- **Said:** "Where two joints' blends overlap on one bone, the weight jumps where the joint chosen flips."
+- **Source:** puppet-engine/round-2-review.md R7
+- **Wrong:** A vertex held at most two weights, so where the elbow's and the wrist's blends overlapped on a short forearm it kept one joint's k and dropped the other's; at the line where the choice flipped, a 60° elbow turn parted 3 px neighbours by up to 32 px (villager-child poses-5 armLeft).
+- **Cause:** The tear test's fixtures had two bones, so no case put two joints' blends on one bone.
+- **Guard:** code: `packages/film/src/core/puppet.test.ts` `an elbow turn tears no mesh edge on a limb bent at rest 90° or 135°` (its 3-bone case)
 
 ### unmatte-revealed-when-back-part-moves
 
