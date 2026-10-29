@@ -18,17 +18,36 @@ import frontArmRight from './sheets/front/armRight.png' with { type: 'file' };
 import frontHead from './sheets/front/head.png' with { type: 'file' };
 import frontRobe from './sheets/front/robe.png' with { type: 'file' };
 import frontTorso from './sheets/front/torso.png' with { type: 'file' };
+import plArmLeft from './sheets/profileLeft/armLeft.png' with { type: 'file' };
+import plHead from './sheets/profileLeft/head.png' with { type: 'file' };
+import plRobe from './sheets/profileLeft/robe.png' with { type: 'file' };
+import plTorso from './sheets/profileLeft/torso.png' with { type: 'file' };
+import prArmRight from './sheets/profileRight/armRight.png' with { type: 'file' };
+import prHead from './sheets/profileRight/head.png' with { type: 'file' };
+import prRobe from './sheets/profileRight/robe.png' with { type: 'file' };
+import prTorso from './sheets/profileRight/torso.png' with { type: 'file' };
 import tqlArmLeft from './sheets/threeQuarterLeft/armLeft.png' with { type: 'file' };
 import tqlArmRight from './sheets/threeQuarterLeft/armRight.png' with { type: 'file' };
 import tqlHead from './sheets/threeQuarterLeft/head.png' with { type: 'file' };
 import tqlRobe from './sheets/threeQuarterLeft/robe.png' with { type: 'file' };
 import tqlTorso from './sheets/threeQuarterLeft/torso.png' with { type: 'file' };
+import tqrArmLeft from './sheets/threeQuarterRight/armLeft.png' with { type: 'file' };
+import tqrArmRight from './sheets/threeQuarterRight/armRight.png' with { type: 'file' };
+import tqrHead from './sheets/threeQuarterRight/head.png' with { type: 'file' };
+import tqrRobe from './sheets/threeQuarterRight/robe.png' with { type: 'file' };
+import tqrTorso from './sheets/threeQuarterRight/torso.png' with { type: 'file' };
 import { puppetsOf } from '../../../../../library/cutout/puppets.ts';
 import { FRAMES } from './frames.ts';
 import { SKELETONS } from './skeleton.ts';
 
 /** Her turnaround's cut views, drawn on one sheet in one ink. */
-type TurnaroundView = 'front' | 'threeQuarterLeft' | 'back';
+type TurnaroundView =
+  | 'front'
+  | 'threeQuarterLeft'
+  | 'back'
+  | 'profileLeft'
+  | 'profileRight'
+  | 'threeQuarterRight';
 
 /**
  * Her sheet's line, which a look draws again near what moved: the median run
@@ -41,13 +60,17 @@ const TURNAROUND_LINE = { width: 9.5, ink: [12, 2, 0] } as const;
 
 /**
  * Each cut view's paper, the median of its kept view's border ground (its rim
- * is un-matted from it, `core/unmatte.ts`): 252,241,221 on all three, the
- * ground each view's dry-run pads its part sheet with.
+ * is un-matted from it, `core/unmatte.ts`): 252,241,221 on all but
+ * profileRight, whose ground is 252,242,222, the ground each view's dry-run
+ * pads its part sheet with.
  */
 const TURNAROUND_PAPERS = {
   front: [252, 241, 221],
   threeQuarterLeft: [252, 241, 221],
   back: [252, 241, 221],
+  profileLeft: [252, 241, 221],
+  profileRight: [252, 242, 222],
+  threeQuarterRight: [252, 241, 221],
 } as const satisfies Readonly<Record<TurnaroundView, readonly [number, number, number]>>;
 
 /** Her turnaround's puppets, by the view's name in her sheets' views (`library/cutout/puppets.ts`). */
@@ -78,6 +101,25 @@ const TURNAROUND = puppetsOf<TurnaroundView>({
       ['head', backHead],
       ['robe', backRobe],
       ['torso', backTorso],
+    ],
+    profileLeft: [
+      ['armLeft', plArmLeft],
+      ['head', plHead],
+      ['robe', plRobe],
+      ['torso', plTorso],
+    ],
+    profileRight: [
+      ['armRight', prArmRight],
+      ['head', prHead],
+      ['robe', prRobe],
+      ['torso', prTorso],
+    ],
+    threeQuarterRight: [
+      ['armRight', tqrArmRight],
+      ['armLeft', tqrArmLeft],
+      ['head', tqrHead],
+      ['robe', tqrRobe],
+      ['torso', tqrTorso],
     ],
   },
 });
