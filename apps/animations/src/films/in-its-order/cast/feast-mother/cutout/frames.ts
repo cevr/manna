@@ -14,6 +14,10 @@ export const FRAMES = {
   profileLeft: { sheet: 'turnaround', kept: [557, 191, 751, 794], pad: [3, 3, 3, 3] },
   profileRight: { sheet: 'turnaround', kept: [1024, 191, 1223, 794], pad: [3, 3, 3, 3] },
   threeQuarterRight: { sheet: 'turnaround', kept: [1267, 194, 1486, 794], pad: [3, 3, 3, 3] },
+  // her poses, each holding the baby: standing with his cup, seated on a stool, standing
+  'poses-1': { sheet: 'poses', kept: [80, 97, 456, 915], pad: [3, 3, 3, 3] },
+  'poses-2': { sheet: 'poses', kept: [579, 176, 995, 911], pad: [3, 3, 3, 3] },
+  'poses-3': { sheet: 'poses', kept: [1101, 96, 1436, 911], pad: [3, 3, 3, 3] },
 } as const satisfies Readonly<Record<string, CutFrame>>;
 
 /** A view of hers that is framed, by its name in her sheets' views. */

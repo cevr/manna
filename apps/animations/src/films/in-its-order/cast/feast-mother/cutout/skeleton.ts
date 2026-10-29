@@ -46,6 +46,22 @@ const PROFILE_RIGHT: Body<{ readonly right: string }> = {
   band: { above: 50, below: 12, reach: 60 },
 };
 
+/** Her body in a pose holding the baby: he rides her lean, and the stool (poses-2) rides the root as her robe does. */
+const HOLDING: Body = {
+  skin: { ...BODY.skin, baby: ['lean'] },
+  arms: BODY.arms,
+  from: 'torso',
+  band: BODY.band,
+};
+
+/** Her body in poses-1, the baby's cup on her lean with him. */
+const HOLDING_CUP: Body = {
+  skin: { ...HOLDING.skin, cup: ['lean'] },
+  arms: BODY.arms,
+  from: 'torso',
+  band: BODY.band,
+};
+
 /** Each cut view's skeleton in its part sheet's frame, by the view's name in her sheets' views. */
 export const SKELETONS = {
   front: framed(
@@ -155,6 +171,66 @@ export const SKELETONS = {
       handLeft: [199, 372],
       flapRight: 92,
       flapLeft: 168,
+      capRight: 8,
+      capLeft: 8,
+    }),
+  ),
+  // the baby on her right arm, her left hand holding his cup at his mouth
+  'poses-1': framed(
+    keptAt('poses-1'),
+    standing(HOLDING_CUP, {
+      facing: 'front',
+      hip: [190, 445],
+      neck: [190, 255],
+      chin: [190, 238],
+      crown: [195, 0],
+      ...JOINTS['poses-1'],
+      wristRight: [80, 400],
+      handRight: [112, 391],
+      wristLeft: [235, 320],
+      handLeft: [206, 293],
+      flapRight: 85,
+      flapLeft: 280,
+      capRight: 8,
+      capLeft: 8,
+    }),
+  ),
+  // seated, the baby on her lap and both hands under him
+  'poses-2': framed(
+    keptAt('poses-2'),
+    standing(HOLDING, {
+      facing: 'front',
+      hip: [200, 445],
+      neck: [200, 260],
+      chin: [200, 240],
+      crown: [200, 0],
+      ...JOINTS['poses-2'],
+      wristRight: [150, 432],
+      handRight: [181, 437],
+      wristLeft: [295, 420],
+      handLeft: [262, 410],
+      flapRight: 100,
+      flapLeft: 310,
+      capRight: 8,
+      capLeft: 8,
+    }),
+  ),
+  // standing, the baby on her left arm and her right hand under him
+  'poses-3': framed(
+    keptAt('poses-3'),
+    standing(HOLDING, {
+      facing: 'front',
+      hip: [170, 445],
+      neck: [165, 250],
+      chin: [165, 232],
+      crown: [160, 0],
+      ...JOINTS['poses-3'],
+      wristRight: [130, 440],
+      handRight: [165, 435],
+      wristLeft: [255, 410],
+      handLeft: [221, 397],
+      flapRight: 95,
+      flapLeft: 290,
       capRight: 8,
       capLeft: 8,
     }),

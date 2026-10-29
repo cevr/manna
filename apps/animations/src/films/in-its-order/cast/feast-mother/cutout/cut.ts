@@ -13,7 +13,8 @@
 // by (`HIDDEN`, read by `film concept parts`, which writes `sheets/<view>/`).
 // The lines are read in the kept view's pixels; the shared cut table
 // (`library/cutout/table.ts`) lays them in each view's part sheet frame. Data:
-// the rules and the table are the library's.
+// the rules and the table are the library's. Her poses, holding the baby, are
+// cut by each arm's own outline instead (see `POSES_1`).
 
 import type { HiddenEntry, PartCut, PartRule } from '@manna/film/tools';
 import { CUT_AWAY, grain, shade, sides } from '../../../../../library/cutout/prompts.ts';
@@ -27,8 +28,11 @@ export { FRAMES, JOINTS };
 /** A view of hers, by its name in her sheets' views. */
 type CutView = keyof typeof FRAMES;
 
-/** A view that shows both her arms: in profile only the near one shows, and her veil hangs behind it. */
-type TwoArmView = Exclude<CutView, 'profileLeft' | 'profileRight'>;
+/** A view of hers holding the baby, whose arms are cut by their own outlines rather than by a sleeve's edge. */
+type PoseView = 'poses-1' | 'poses-2' | 'poses-3';
+
+/** A turnaround view that shows both her arms: in profile only the near one shows, and her veil hangs behind it. */
+type TwoArmView = Exclude<CutView, 'profileLeft' | 'profileRight' | PoseView>;
 
 /** Each view's veil: every pixel above its hem, the hem's ink with it, which no sleeve takes. */
 const VEIL = {
@@ -453,6 +457,373 @@ const PROFILE_RIGHT: PartCut = {
 };
 
 /** Her sheet's outline ink (measured on the turnaround: 11,2,0 to 13,3,1). */
+/** Her hip's row in each pose (below her hands' reach, standing or seated): the robe is every row below it that her arms, the baby and the stool leave. */
+const POSE_HIP = 445;
+
+// Her poses hold the baby. Each arm is its sleeve's own outline and its round
+// hand (a disc), the hand in front taken first; the baby (his head and his
+// white swaddle) and his cup are still parts on her lean, cut along the ink
+// they share with her face, so neither face is cut; the poses-2 stool is a
+// still part on the root, its two ends where they leave her robe. No pose sets
+// `open`: with none the un-matte seeds from the corners only, so the stool that
+// leaves the box on the left and the right stays.
+
+const POSES_1: PartCut = {
+  parts: [
+    // her right arm round the baby, its hand under his swaddle
+    {
+      name: 'armRight',
+      take: [
+        {
+          polygon: [
+            [-1, 296],
+            [66, 296],
+            [60, 308],
+            [54, 316],
+            [54, 350],
+            [74, 360],
+            [74, 425],
+            [100, 432],
+            [100, 439],
+            [50, 439],
+            [26, 425],
+            [10, 410],
+            [-1, 395],
+          ],
+        },
+        { disc: { c: [112, 391], r: 42 } },
+      ],
+      pivot: JOINTS['poses-1'].shoulderRight,
+    },
+    // her left arm, its hand holding the cup at his mouth
+    {
+      name: 'armLeft',
+      take: [
+        { disc: { c: [206, 293], r: 41 } },
+        {
+          polygon: [
+            [243, 262],
+            [266, 296],
+            [280, 296],
+            [280, 250],
+            [300, 250],
+            [314, 280],
+            [322, 300],
+            [330, 325],
+            [333, 360],
+            [332, 385],
+            [314, 410],
+            [244, 410],
+            [224, 395],
+            [210, 380],
+            [196, 365],
+            [186, 350],
+            [178, 334],
+          ],
+        },
+      ],
+      pivot: JOINTS['poses-1'].shoulderLeft,
+    },
+    {
+      name: 'cup',
+      take: [
+        {
+          polygon: [
+            [122, 262],
+            [150, 244],
+            [180, 248],
+            [182, 300],
+            [150, 304],
+            [124, 290],
+          ],
+        },
+      ],
+    },
+    // his head, its right edge the ink it shares with her jaw, and his swaddle
+    {
+      name: 'baby',
+      take: [
+        {
+          polygon: [
+            [-1, 320],
+            [-1, 236],
+            [18, 212],
+            [40, 190],
+            [66, 176],
+            [100, 169],
+            [134, 178],
+            [140, 196],
+            [147, 206],
+            [152, 214],
+            [156, 222],
+            [160, 232],
+            [168, 242],
+            [150, 244],
+            [122, 262],
+            [124, 290],
+            [110, 305],
+            [60, 305],
+          ],
+        },
+        {
+          polygon: [
+            [50, 300],
+            [200, 330],
+            [230, 385],
+            [250, 410],
+            [240, 440],
+            [200, 465],
+            [100, 468],
+            [60, 440],
+          ],
+        },
+      ],
+    },
+    // above her chin, the veil's top with it
+    { name: 'head', take: [box(-1, -1, FAR, 238)] },
+    { name: 'robe', take: [box(-1, POSE_HIP, FAR, FAR)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
+  ],
+};
+
+const POSES_2: PartCut = {
+  parts: [
+    // her right arm out at her side, its hand under the baby
+    {
+      name: 'armRight',
+      take: [
+        {
+          polygon: [
+            [56, 282],
+            [66, 266],
+            [90, 258],
+            [112, 258],
+            [114, 342],
+            [124, 372],
+            [150, 388],
+            [175, 398],
+            [150, 476],
+            [115, 471],
+            [78, 457],
+            [44, 446],
+            [25, 430],
+            [24, 400],
+            [25, 352],
+            [40, 336],
+            [48, 316],
+          ],
+        },
+        { disc: { c: [181, 437], r: 40 } },
+      ],
+      pivot: JOINTS['poses-2'].shoulderRight,
+    },
+    {
+      name: 'armLeft',
+      take: [
+        { disc: { c: [262, 410], r: 40 } },
+        {
+          polygon: [
+            [312, 340],
+            [322, 330],
+            [340, 326],
+            [357, 345],
+            [357, 425],
+            [350, 440],
+            [298, 440],
+            [290, 445],
+            [304, 378],
+            [310, 362],
+            [315, 346],
+          ],
+        },
+      ],
+      pivot: JOINTS['poses-2'].shoulderLeft,
+    },
+    // his head, its left edge the ink it shares with her jaw, and his swaddle
+    {
+      name: 'baby',
+      take: [
+        {
+          polygon: [
+            [248, 205],
+            [300, 199],
+            [332, 213],
+            [348, 233],
+            [357, 256],
+            [357, 292],
+            [346, 312],
+            [338, 326],
+            [330, 350],
+            [325, 380],
+            [320, 400],
+            [300, 420],
+            [262, 430],
+            [200, 440],
+            [160, 440],
+            [150, 420],
+            [155, 380],
+            [175, 350],
+            [200, 330],
+            [225, 318],
+            [216, 304],
+            [212, 286],
+            [212, 266],
+            [214, 252],
+            [219, 244],
+            [226, 236],
+            [233, 226],
+            [240, 215],
+          ],
+        },
+      ],
+    },
+    { name: 'head', take: [box(-1, -1, FAR, 240)] },
+    // the stool's two ends, each from her robe's edge out past the box
+    {
+      name: 'stool',
+      take: [
+        {
+          polygon: [
+            [-1, 520],
+            [36, 520],
+            [48, 532],
+            [66, 545],
+            [92, 550],
+            [104, 560],
+            [107, 580],
+            [102, 605],
+            [96, 630],
+            [90, 655],
+            [90, 712],
+            [-1, 712],
+          ],
+        },
+        {
+          polygon: [
+            [378, 520],
+            [FAR, 520],
+            [FAR, 712],
+            [392, 712],
+            [392, 660],
+            [388, 630],
+            [385, 600],
+            [382, 570],
+            [378, 540],
+          ],
+        },
+      ],
+    },
+    { name: 'robe', take: [box(-1, POSE_HIP, FAR, FAR)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
+  ],
+};
+
+const POSES_3: PartCut = {
+  parts: [
+    // her right hand under the baby, in front of her left
+    {
+      name: 'armRight',
+      take: [
+        { disc: { c: [165, 435], r: 39 } },
+        {
+          polygon: [
+            [56, 286],
+            [64, 268],
+            [86, 256],
+            [104, 254],
+            [104, 355],
+            [112, 380],
+            [128, 386],
+            [148, 398],
+            [150, 474],
+            [100, 472],
+            [70, 472],
+            [52, 458],
+            [33, 440],
+            [24, 410],
+            [26, 365],
+            [36, 350],
+            [44, 330],
+            [50, 312],
+            [58, 290],
+          ],
+        },
+      ],
+      pivot: JOINTS['poses-3'].shoulderRight,
+    },
+    // her left arm round the baby, its hand on his swaddle
+    {
+      name: 'armLeft',
+      take: [
+        { disc: { c: [221, 397], r: 39 } },
+        {
+          polygon: [
+            [292, 302],
+            [312, 296],
+            [322, 312],
+            [328, 330],
+            [334, 350],
+            [337, 375],
+            [337, 395],
+            [333, 410],
+            [322, 425],
+            [304, 440],
+            [286, 448],
+            [250, 450],
+          ],
+        },
+      ],
+      pivot: JOINTS['poses-3'].shoulderLeft,
+    },
+    // his head, its left edge the ink it shares with her cheek and jaw, and his swaddle
+    {
+      name: 'baby',
+      take: [
+        {
+          polygon: [
+            [236, 172],
+            [292, 166],
+            [310, 180],
+            [322, 196],
+            [330, 212],
+            [336, 228],
+            [337, 262],
+            [330, 282],
+            [322, 296],
+            [312, 300],
+            [305, 320],
+            [300, 350],
+            [292, 365],
+            [260, 370],
+            [240, 362],
+            [200, 370],
+            [170, 385],
+            [140, 392],
+            [140, 370],
+            [160, 345],
+            [185, 320],
+            [212, 298],
+            [204, 284],
+            [198, 268],
+            [194, 252],
+            [190, 240],
+            [195, 226],
+            [203, 218],
+            [209, 210],
+            [214, 203],
+            [220, 196],
+            [226, 189],
+            [232, 182],
+          ],
+        },
+      ],
+    },
+    { name: 'head', take: [box(-1, -1, FAR, 232)] },
+    { name: 'robe', take: [box(-1, POSE_HIP, FAR, FAR)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
+  ],
+};
+
 const INK = [12, 2, 0, 255] as const;
 
 /** Where her body's sides run under her arms: out to her shoulders and robe, not in at the sleeves' inner edges. */
@@ -494,6 +865,18 @@ const HIDDEN_ENTRIES = {
     moving: ['armRight', 'armLeft'],
     prompt: `${CUT_AWAY} her two arms (blue sleeves and round hands) were cut away to make a cut-out puppet. She is a young mother in a long blue robe, a white veil over her head and shoulders, standing turned three-quarters to the viewer's right with her arms hanging straight at her sides. Repaint ONLY the magenta areas, as what lies underneath her arms: the sides of her body below the veil's hem, down to her robe, each side closed by the same thick dark brown-black outline as the rest of her, painted in exactly the same style, colours and soft shading as her robe beside each arm (her front on the viewer's right, her near side on the viewer's left, her far side and its deeper shade on the viewer's right). ${SIDES} ${shade('her')} ${GRAIN} There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside her body, it becomes the plain cream paper. ${KEEP}`,
   },
+  'poses-1': {
+    moving: ['armRight', 'armLeft'],
+    prompt: `${CUT_AWAY} her two arms (blue sleeves and round hands) were cut away to make a cut-out puppet. She is a young mother in a long blue robe, a white veil over her head and shoulders, standing and holding her baby, who is wrapped in a white swaddle, against her; a small cup is at his mouth. Repaint ONLY the magenta areas, as what lies underneath her arms: where the magenta lay over the baby, his white swaddle with its soft folds; elsewhere her body in her blue robe below the veil's hem, each side closed by the same thick dark brown-black outline as the rest of her, painted in exactly the same style, colours and soft shading as her robe beside each arm. ${shade('her')} ${GRAIN} The baby, his face and the cup stay exactly as they are. There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside her body, it becomes the plain cream paper. ${KEEP}`,
+  },
+  'poses-2': {
+    moving: ['armRight', 'armLeft'],
+    prompt: `${CUT_AWAY} her two arms (blue sleeves and round hands) were cut away to make a cut-out puppet. She is a young mother in a long blue robe, a white veil over her head and shoulders, seated on a wooden stool with her baby, who is wrapped in a white swaddle, on her lap. Repaint ONLY the magenta areas, as what lies underneath her arms: where the magenta lay over the baby, his white swaddle with its soft folds; elsewhere her body and lap in her blue robe below the veil's hem, each side closed by the same thick dark brown-black outline as the rest of her, painted in exactly the same style, colours and soft shading as her robe beside each arm. ${shade('her')} ${GRAIN} The baby, his face and the stool stay exactly as they are. There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside her body, it becomes the plain cream paper. ${KEEP}`,
+  },
+  'poses-3': {
+    moving: ['armRight', 'armLeft'],
+    prompt: `${CUT_AWAY} her two arms (blue sleeves and round hands) were cut away to make a cut-out puppet. She is a young mother in a long blue robe, a white veil over her head and shoulders, standing and holding her baby, who is wrapped in a white swaddle, high against her shoulder. Repaint ONLY the magenta areas, as what lies underneath her arms: where the magenta lay over the baby, his white swaddle with its soft folds; elsewhere her body in her blue robe below the veil's hem, each side closed by the same thick dark brown-black outline as the rest of her, painted in exactly the same style, colours and soft shading as her robe beside each arm. ${shade('her')} ${GRAIN} The baby and his face stay exactly as they are. There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside her body, it becomes the plain cream paper. ${KEEP}`,
+  },
 } as const satisfies Readonly<Record<CutView, HiddenEntry>>;
 
 export const { CUTS, cutOptionsFor, HIDDEN } = cutTable({
@@ -505,6 +888,9 @@ export const { CUTS, cutOptionsFor, HIDDEN } = cutTable({
     profileLeft: { cut: PROFILE_LEFT, figure: 'framed' },
     profileRight: { cut: PROFILE_RIGHT, figure: 'framed' },
     threeQuarterRight: { cut: THREE_QUARTER_RIGHT, figure: 'framed' },
+    'poses-1': { cut: POSES_1, figure: 'framed' },
+    'poses-2': { cut: POSES_2, figure: 'framed' },
+    'poses-3': { cut: POSES_3, figure: 'framed' },
   },
   hidden: HIDDEN_ENTRIES,
   ink: INK,
