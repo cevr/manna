@@ -1,0 +1,20 @@
+{
+  "calls": [
+    {
+      "n": 1,
+      "command": [
+        "okra",
+        "image",
+        "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where his two small arms (sleeves of his wrap and round hands) were cut away to make a cut-out puppet. He is a baby sitting with his knees up, wrapped in plain linen, a small tuft on his round head. Repaint ONLY the magenta areas, as what lies underneath his arms: his chest and the wrap over his lap between his knees, closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading as the wrap beside each arm. Keep the soft shade each arm casts on his body beside it exactly as it is, and carry that same shade on under where the arm was. Paint the linen wrap of his body with the same fine paper grain the sheet shows on them beside the arms: a fine, even speckle through every flat area of colour, never smooth flat colour. There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, face, knees, feet, size, position and framing.",
+        "--size",
+        "1024x1536",
+        "--ref",
+        "okra/input-6d1aa318dee8.png",
+        "-o",
+        "okra/answer-1.png"
+      ],
+      "input": "okra/input-6d1aa318dee8.png",
+      "out": "okra/answer-1.png"
+    }
+  ]
+}

@@ -1,0 +1,196 @@
+{
+  "view": "poses-4",
+  "kind": "poses",
+  "size": [178, 208],
+  "box": [806, 557, 984, 765],
+  "command": "film concept parts in-its-order idea-villagers --view poses-poses-4",
+  "parts": [
+    {
+      "name": "armRight",
+      "kept": 2214,
+      "painted": 0
+    },
+    {
+      "name": "armLeft",
+      "kept": 2273,
+      "painted": 0
+    },
+    {
+      "name": "head",
+      "kept": 12630,
+      "painted": 655
+    },
+    {
+      "name": "torso",
+      "kept": 7526,
+      "painted": 3822
+    }
+  ],
+  "moving": ["armRight", "armLeft"],
+  "hiddenPx": 4487,
+  "carried": [],
+  "okra": {
+    "route": "subscription (okra image, Codex route; no --model)",
+    "input": "okra/input-6d1aa318dee8.png",
+    "prompt": "okra/prompt.txt",
+    "pad": {
+      "s": 0.16794114519387862,
+      "dx": 0,
+      "dy": -27.878230102183853
+    },
+    "budget": {
+      "calls": 3,
+      "allowance": null,
+      "used": 1
+    },
+    "calls": [
+      {
+        "n": 1,
+        "command": [
+          "okra",
+          "image",
+          "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where his two small arms (sleeves of his wrap and round hands) were cut away to make a cut-out puppet. He is a baby sitting with his knees up, wrapped in plain linen, a small tuft on his round head. Repaint ONLY the magenta areas, as what lies underneath his arms: his chest and the wrap over his lap between his knees, closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading as the wrap beside each arm. Keep the soft shade each arm casts on his body beside it exactly as it is, and carry that same shade on under where the arm was. Paint the linen wrap of his body with the same fine paper grain the sheet shows on them beside the arms: a fine, even speckle through every flat area of colour, never smooth flat colour. There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, face, knees, feet, size, position and framing.",
+          "--size",
+          "1024x1536",
+          "--ref",
+          "okra/input-6d1aa318dee8.png",
+          "-o",
+          "okra/answer-1.png"
+        ],
+        "input": "okra/input-6d1aa318dee8.png",
+        "out": "okra/answer-1.png",
+        "state": "laid",
+        "fit": {
+          "s": 0.1678886307850006,
+          "dx": 3.090408013168286,
+          "dy": -24.80479925300459,
+          "score": 24.78066101136113
+        },
+        "measures": {
+          "seam": {
+            "deltaE": 5.68,
+            "pairs": 259
+          },
+          "drift": {
+            "deltaE": 5.39,
+            "px": 19672
+          },
+          "grain": [
+            {
+              "part": "head",
+              "painted": {
+                "robust": 1.98,
+                "plain": 2.22,
+                "n": 403
+              },
+              "kept": {
+                "robust": 1.48,
+                "plain": 4.78,
+                "n": 933
+              },
+              "verdict": "within"
+            },
+            {
+              "part": "torso",
+              "painted": {
+                "robust": 2.8,
+                "plain": 4.33,
+                "n": 2995
+              },
+              "kept": {
+                "robust": 1.32,
+                "plain": 3.19,
+                "n": 1472
+              },
+              "verdict": "outside"
+            }
+          ],
+          "paintUnder": [
+            {
+              "part": "armRight",
+              "px": 2208
+            },
+            {
+              "part": "armLeft",
+              "px": 2269
+            }
+          ],
+          "paintedPx": 4477,
+          "visibleAtRest": 0,
+          "recomposeByteEqual": true
+        },
+        "missed": ["drift", "grain"]
+      }
+    ],
+    "chosen": 1,
+    "fit": {
+      "s": 0.1678886307850006,
+      "dx": 3.090408013168286,
+      "dy": -24.80479925300459,
+      "score": 24.78066101136113
+    }
+  },
+  "measures": {
+    "seam": {
+      "deltaE": 5.68,
+      "pairs": 259
+    },
+    "drift": {
+      "deltaE": 5.39,
+      "px": 19672
+    },
+    "grain": [
+      {
+        "part": "head",
+        "painted": {
+          "robust": 1.98,
+          "plain": 2.22,
+          "n": 403
+        },
+        "kept": {
+          "robust": 1.48,
+          "plain": 4.78,
+          "n": 933
+        },
+        "verdict": "within"
+      },
+      {
+        "part": "torso",
+        "painted": {
+          "robust": 2.8,
+          "plain": 4.33,
+          "n": 2995
+        },
+        "kept": {
+          "robust": 1.32,
+          "plain": 3.19,
+          "n": 1472
+        },
+        "verdict": "outside"
+      }
+    ],
+    "paintUnder": [
+      {
+        "part": "armRight",
+        "px": 2208
+      },
+      {
+        "part": "armLeft",
+        "px": 2269
+      }
+    ],
+    "paintedPx": 4477,
+    "visibleAtRest": 0,
+    "recomposeByteEqual": true
+  },
+  "bars": {
+    "seamDeltaE": 10,
+    "driftDeltaE": 5,
+    "grainWithin": 0.5,
+    "visibleAtRest": 0,
+    "leastSeamPairs": 20,
+    "leastGrainWindows": 90
+  },
+  "missed": ["drift", "grain"],
+  "named": []
+}
