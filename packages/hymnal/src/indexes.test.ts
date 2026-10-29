@@ -497,6 +497,13 @@ describe('each mutation is caught, at every entry it applies to', () => {
   it('a tune that bears its hymn’s title may stay out of the alphabetical index', () => {
     const b = book();
     const alpha = arr(b.tunes, 'tunes');
+    // the alphabetical index names hymn 3's tune Alder (alias Elm), the metres by its title
+    const [first] = arr(b.metrical, 'metres') as Array<Json>;
+    (first as Json)['tunes'] = [
+      { name: 'Alder', hymns: refs(21, [1, 2, 4, 5, 6]) },
+      { name: word(3), hymns: refs(21, [3]) },
+    ];
+    expect(problemsOf(b).filter((p) => p.check === 'tunes')).toEqual([]);
     b.tunes['tunes'] = alpha
       .filter((t) => t['name'] !== 'Elm')
       .map((t) =>

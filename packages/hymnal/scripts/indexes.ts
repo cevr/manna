@@ -31,7 +31,9 @@
  * - `tunes` (C7): the alphabetical and the metrical index name the same
  *   (tune, hymn) pairs, a name with and without its `(qualifier)` one tune
  *   and an alias another name of the tune at its hymn. A tune that bears its
- *   hymn's title (`titledTune`) need not be in the alphabetical index.
+ *   hymn's title (`titledTune`) need not be in the alphabetical index, and
+ *   where the metres name a hymn's tune so, the alphabetical index may name
+ *   it otherwise.
  * - `metre` (C8): a hymn's metre heading is the metre its page prints
  *   (`data/shapes.json`), after `normalMetre`.
  * - `coverage` (C9): every hymn is in the tunes (or under a metre by a tune
@@ -827,6 +829,20 @@ export const titledTune = (name: string, n: number, ctx: Context): boolean => {
   );
 };
 
+/** The hymns the metres name by a tune that bears the hymn's title. */
+const titledHymns = (
+  metreTunes: ReadonlyArray<{
+    readonly name: string;
+    readonly hymns: ReadonlyArray<{ readonly number: number }>;
+  }>,
+  ctx: Context,
+): ReadonlySet<number> =>
+  new Set(
+    metreTunes.flatMap((t) =>
+      t.hymns.filter((h) => titledTune(t.name, h.number, ctx)).map((h) => h.number),
+    ),
+  );
+
 const tunePairs = (
   rows: ReadonlyArray<{
     readonly name: string;
@@ -859,6 +875,9 @@ const tuneRows = (
  * C7: a main tune's pair is under its metre, by its name or an alias at the
  * same hymn (an alias's hymn under any), and each metre's pair is in the
  * alphabetical index, by a main name or an alias; names match by `tuneKey`.
+ * A metre's pair that bears its hymn's title (`titledTune`) needs no
+ * alphabetical row, and stands for any name the alphabetical index gives the
+ * tune at that hymn.
  */
 const tuneProblems = (tunes: Tunes, metrical: Metrical, ctx: Context): Array<Problem> => {
   const listed = tunePairs(tunes.tunes);
@@ -866,9 +885,11 @@ const tuneProblems = (tunes: Tunes, metrical: Metrical, ctx: Context): Array<Pro
   const metre = tunePairs(metreTunes);
   const metreHymns = new Set(metreTunes.flatMap((t) => t.hymns.map((h) => h.number)));
   const aliased = tunePairs(tunes.tunes.filter((t) => t.alias === true));
-  /** The metre names the tune at the pair's hymn by one of its names: this one or an alias at that hymn. */
+  const titled = titledHymns(metreTunes, ctx);
+  /** The metre names the tune at the pair's hymn by one of its names: this one, an alias at that hymn or its title. */
   const metred = (r: { readonly key: string; readonly number: number }) =>
     metre.has(r.key) ||
+    titled.has(r.number) ||
     metreTunes.some((t) =>
       t.hymns.some((h) => h.number === r.number && aliased.has(`${tuneKey(t.name)} ${r.number}`)),
     );
@@ -945,14 +966,7 @@ const metreProblems = (metrical: Metrical, ctx: Context): Array<Problem> => {
 
 const coverageProblems = (indexes: Indexes, ctx: Context): Array<Problem> => {
   const out: Array<Problem> = [];
-  /** The hymns a metre names by a tune that bears the hymn's title. */
-  const titled = new Set(
-    (indexes.metrical?.metres ?? []).flatMap((m) =>
-      m.tunes.flatMap((t) =>
-        t.hymns.filter((h) => titledTune(t.name, h.number, ctx)).map((h) => h.number),
-      ),
-    ),
-  );
+  const titled = titledHymns(indexes.metrical?.metres.flatMap((m) => m.tunes) ?? [], ctx);
   const hold = (name: IndexName, what: string, also: ReadonlySet<number> = new Set()) => {
     const file = indexes[name];
     if (!file) return;
