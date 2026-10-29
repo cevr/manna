@@ -2682,8 +2682,11 @@ A puppet (`core/puppet.ts`) is a part sheet on a skeleton
 `neck`, `head`, `shoulder`, `elbow` and `wrist` by side), each turning about its pivot after its parent; each
 part's skin, the bones it lies on; each sleeve's shoulder flap). Each part
 is a mesh of its own pixels on a 3 px grid, each vertex on at most two of
-its skin's bones (the nearest, shared with the bone across a joint by a
-smoothstep 18 px either side), skinned by linear blend; a pose is
+its skin's bones: the bone whose segment lies nearest holds it, unless it
+lies within a joint's blend (18 px of the joint, at most half the shorter
+bone, along both bones' axes), where the two share it by a smoothstep; so
+where a limb bends, the parent's far paint stays on the parent. It is
+skinned by linear blend; a pose is
 `{ numbers, root, scale }`, degrees a bone. `rasterOf` is the CPU
 reference: each pixel inverse-mapped through the posed triangle that holds
 its centre, sampled bilinear on premultiplied texels, so the rest pose is
@@ -2693,10 +2696,20 @@ from it once as it is made (`core/unmatte.ts`): each pixel between the
 ground and the ink is given the alpha of its distance from that paper
 along the line to the ink, and a pixel off that line (the sheet's paper,
 lighter or bluer at the rim) goes to the paper, so on another paper the
-figure carries no ring of the sheet's. In a page a drawing declares its puppets beside
-its rigs (`drawing({ puppets })`), the film loads them before its first
-frame (`loadPuppets`, `src/puppet/load.ts`: each part PNG fetched and its
-decode awaited in the load, through `PuppetImages`), and a frame draws one
+figure carries no ring of the sheet's. Paper the box cuts off from the
+figure is cleared from the box's four corners, or, when the puppet names
+the edges its figure leaves through (`PuppetSpec.open`, a bust's `bottom`;
+`UnmatteOptions.open`), from every pixel of every other edge. Paint the
+un-matte clears from behind a front part's rim is kept on the part behind
+(`PuppetPart.revealed`) and laid by one rule (`revealedShown`, beside
+`sealsShown`) in every draw: `rasterOf`, the plain GL pass and the look
+pass show it where the part in front has moved away, and a still figure
+draws its textures alone. A drawing declares its puppets beside
+its rigs (`drawing({ puppets })`), and both of a film's loads load them
+before its first frame, the page's (`narratedFilms`) and `check --draw`'s
+(`drawLeg`) (`loadPuppets`, `src/puppet/load.ts`: each part PNG read and
+decoded in the load, through `PuppetImages`, a decode's bitmap closed
+however the read ends), and a frame draws one
 with `f.puppet(name, pose)` (`canvas/puppet.ts`): the vertices posed on the
 CPU and written whole, the meshes drawn with WebGL 2 on the page's one
 puppet canvas (`canvas/puppet-gl.ts`, in the context budget of
@@ -2706,6 +2719,8 @@ module imports its part PNGs, so a scene that draws it is keyed by their
 bytes (`tools/stamp.ts`). A film's `rigs/cast.ts` gives its puppets in
 `CUTOUT`, beside `CAST` or without it, and `film concept render <film>
 <member> --figure cutout` renders each view `CUTOUT` has on its page (a
+kind or view the ask names that `CUTOUT` draws none of is refused,
+`CastRenderRefused` naming it, by `renderedKinds`; a
 member with no `CAST` entry is drawn so by default, `defaultFigure` in
 `canvas/cast.ts`)
 `<film>/cast/<member>/cutout`, held to the same fit rows (its classes read
@@ -3075,7 +3090,9 @@ cast leg (`castLeg`: the cast library, FileSystem and FilmFolder), the
 sound leg (`soundLeg`: the mix, Mixer), and the
 layout and look legs (`layoutLeg`: the browser, Checker and Looker), and the
 draw leg (`drawLeg`, `tools/draw-check.ts`: the film's `film.ts` built from
-its committed timings and each scene drawn in this process into the stand-in
+its committed timings, its rigs and puppets loaded as a page loads them (a
+puppet's part PNGs read by `PuppetImagesBun`, one that cannot load failing
+the leg by name), and each scene drawn in this process into the stand-in
 context at its moments, as `tools/talk.slow.test.ts` runs it in `test:slow`).
 `--static` runs the static leg alone, with no mix and no browser: it is what
 the lab runs after each write; with `--folder v<n>` it checks that version
@@ -3804,7 +3821,7 @@ the checks stay ours.
 - **Owned by whoever loaded it.** The consumer that loads a film owns its
   rigs and closes them: a film's load is a scoped Effect (`Films`,
   `player/main.ts`: `Effect<Film, FilmUnloadable, Scope>`; `narratedFilms`
-  loads the rigs into the scope it runs in, a short's page into its
+  loads the rigs and puppets into the scope it runs in, a short's page into its
   film's), run on the consumer's own fiber, so no lifetime crosses a
   Promise and stopping the consumer stops the load where it is. The
   player's page (`stageFilm`) runs it in the page's own scope, which lives

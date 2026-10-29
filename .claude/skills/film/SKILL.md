@@ -71,6 +71,7 @@ Cut lessons, each paid for once:
 - **Torso strips.** okra paints a hidden pixel into the nearest still part, so the paint under a moving part needs a still part behind that part to own it: give torso a strip between head and each sleeve's corner, above and inside.
 - **`keep`** names his cloth lighter than the paper, which the un-matte would otherwise clear as paper.
 - **`thin`** names his specks (seed), whose rim keeps its hue only when un-matted as a thin part.
+- **Paper the box cuts off.** The un-matte clears paper that the kept box cuts off from his figure starting at the box's four corners only, unless his puppet names the edges his figure leaves through (`PuppetSpec.open`, a bust's `bottom`; `core/unmatte.ts`): then it starts at every pixel of every other edge. The shared builder (`cutout/puppets.ts`) names no edge yet; a pocket of paper left at the middle of an edge is the sign a member needs one.
 - **One paper per view.** A view's paper, which its rim is un-matted from, is the median of its kept crop's border ground; any other paper is labelled a calibration in his `cutout/puppets.ts`, with its border median and the reason it differs.
 - **Skeletons.** A view that draws one arm names only that arm to `standing`; an arm outside `standing`'s band is a literal `framed` skeleton on the measured joints.
 

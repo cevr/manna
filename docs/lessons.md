@@ -4507,3 +4507,63 @@ The form of an entry, each field on its own line:
 - **Wrong:** OPFS alone did not grant persistence and iOS application support was eligible for backup.
 - **Cause:** Platform directories were treated as a complete durability policy.
 - **Guard:** skill: `.claude/skills/verify-hymnal/features/offline.md` — check iOS backup exclusion through the native setter/readback boundary; request web persistence and keep its eviction limit visible.
+
+### film-loads-declared-puppets
+
+- **Date:** 2026-10-29
+- **Kind:** review
+- **Said:** "Normal film loads never load declared puppets."
+- **Source:** cutout/round-8-findings.md F1 (the review's M1)
+- **Wrong:** A drawing could declare a puppet and call `f.puppet`, but the page's load (`player/narrated.ts`) and the draw leg (`tools/draw-check.ts`) loaded only rigs, so its first draw threw "puppet … is not loaded". Only cast pages, which call `loadPuppets` themselves, drew one.
+- **Cause:** Puppets were added beside rigs in the cast page's load alone; nothing drew a declared puppet through a film's own entry points.
+- **Guard:** code: `packages/film/src/player/narrated.test.ts` `a declared puppet loads with the film and draws`; `packages/film/src/tools/draw-check.test.ts` `drawFindings loads a declared puppet and draws it`
+
+### puppet-weight-nearest-bone
+
+- **Date:** 2026-10-29
+- **Kind:** review
+- **Said:** "Child-axis projection overrides the nearest bone outside the joint blend."
+- **Source:** cutout/round-8-findings.md F2 (the review's M2)
+- **Wrong:** On a bent bind skeleton a vertex lying on the upper bone took the forearm's whole weight, so turning only the elbow moved the shoulder.
+- **Cause:** The weight chose a bone by which side of the child's axis a vertex lay on, not by the nearest segment, and blended across the whole limb instead of near the joint. The acceptance checked supplied weights, never how they were chosen.
+- **Guard:** code: `packages/film/src/core/puppet.test.ts` `a vertex nearest the upper bone does not follow the elbow`
+
+### unmatte-keeps-revealed-paint
+
+- **Date:** 2026-10-29
+- **Kind:** review
+- **Said:** "Un-matting permanently destroys hidden paint needed after movement."
+- **Source:** cutout/round-8-findings.md F3 (the review's M3)
+- **Wrong:** The un-matte cleared the backing part's paint beneath a front part's ink. The look pass drew the revealed textures, but `rasterOf` and the plain GL pass did not, so a turned part left a hole in what it had covered.
+- **Cause:** Revealed paint was a rule of one draw pass, not of the puppet; rest comparisons cannot see a hole that only movement opens.
+- **Guard:** code: `packages/film/src/core/puppet.test.ts` `rasterOf lays revealed paint where a turned part moved away`
+
+### cast-render-refuses-asked-kind
+
+- **Date:** 2026-10-29
+- **Kind:** review
+- **Said:** "An explicitly requested kind can disappear before coverage validation."
+- **Source:** cutout/round-8-findings.md F6 (the review's m1)
+- **Wrong:** Asking `turnaround-front` and `poses-poses-1` with `--figure cutout` dropped `poses`, which the table cut no view of, before the coverage check, so the render succeeded with half of what was asked.
+- **Cause:** The kinds were filtered to the ones the table draws before the ask was checked against them.
+- **Guard:** code: `packages/film/src/tools/cast-render.test.ts` `an asked kind with no cut-out views refuses`, `a kind asked by name with no cut-out views refuses`
+
+### unmatte-open-edges
+
+- **Date:** 2026-10-29
+- **Kind:** review
+- **Said:** "Exterior paper touching a non-corner edge survives."
+- **Source:** cutout/round-8-findings.md F8 (the review's m3)
+- **Wrong:** A frame held whole, with ink at its corners and a paper pocket touching only the middle of an edge, kept that sheet paper and carried it onto another background.
+- **Cause:** The un-matte seeded the exterior only at the four corners; nothing let a puppet name an edge the box cuts the figure off at.
+- **Guard:** code: `packages/film/src/core/unmatte.test.ts` `un-matte clears paper that touches a frame edge between the corners`
+
+### puppet-bitmap-owned-release
+
+- **Date:** 2026-10-29
+- **Kind:** review
+- **Said:** "ImageBitmap release occurs only on success."
+- **Source:** cutout/round-8-findings.md F10 (the review's m5)
+- **Wrong:** The browser's part reader closed a decoded bitmap only when the canvas read succeeded; a missing 2D context, a throwing read or an interruption left it open.
+- **Cause:** The bitmap was closed by a line after the read, not by the scope that acquired it.
+- **Guard:** code: `packages/film/src/puppet/images-browser.test.ts` `a failed read closes the decoded bitmap`
