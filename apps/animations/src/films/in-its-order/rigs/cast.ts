@@ -26,6 +26,7 @@ import { PUPPETS as LEAD_PUPPETS } from '../../../library/cast/lead-feast/cutout
 import { PUPPETS as SOWER_PUPPETS } from '../../../library/cast/sower/cutout/puppets.ts';
 import { PUPPETS as CHILD_PUPPETS } from '../../../library/cast/villager-child/cutout/puppets.ts';
 import { PUPPETS as TODDLER_PUPPETS } from '../../../library/cast/villager-toddler/cutout/puppets.ts';
+import { PUPPETS as FEAST_MOTHER_PUPPETS } from '../cast/feast-mother/cutout/puppets.ts';
 import { own } from '../../../library/cutout/poses.ts';
 import { RAISE as LEAD_RAISE } from '../../../library/cast/lead-feast/cutout/raise.ts';
 import { poses1View as leadPoses1 } from '../../../library/cast/lead-feast/cutout/poses.ts';
@@ -96,6 +97,63 @@ const SOWER_CLASSES = {
     '#e49f6a',
     '#d59265',
   ],
+} as const;
+
+/**
+ * The feast mother's colour classes, each sample the 3 by 3 median of her
+ * kept views' own pixels (`cast-sheet/views/<view>.png`, x,y in the view):
+ * her dusty-blue robe and sleeves, lit and shaded (front 60,300 40,450 80,520
+ * 150,350 160,450 120,500; back 108,450 60,450 160,450; poses-1 30,380 280,380
+ * 280,450; poses-3 100,600 230,650 120,300 260,550), her cream veil with the
+ * baby's swaddle, and the veil's warm shade (front 28,200 45,140 190,220
+ * 60,170 170,170; back 108,150 60,200 150,200; poses-1 100,350 170,440
+ * 300,240; poses-3 200,350 250,340 180,340 270,330 70,250 60,280), and her
+ * skin with the baby's (front 100,120 120,110 28,380 186,375 70,100; poses-3
+ * 250,240 150,150 225,410). The veil and the swaddle are one class: their
+ * colours lie within a few units of each other (#f8e4c7 against #f6ddbd), so
+ * two classes would split one colour. Her hair (#291309) is darker than luma
+ * 90, so it reads as her line and is no class; the clay cup of poses-1 is
+ * too small a patch for a class of its own and counts as its nearest.
+ */
+const FEAST_MOTHER_CLASSES = {
+  blue: [
+    '#5f94b9',
+    '#70a5c8',
+    '#557ca6',
+    '#547aa7',
+    '#4d6394',
+    '#5378a4',
+    '#4e6999',
+    '#5d8bb3',
+    '#4f6899',
+    '#6998bc',
+    '#4777a2',
+    '#4f6893',
+    '#5f8eb1',
+    '#526e99',
+    '#5889af',
+    '#536f9a',
+  ],
+  cream: [
+    '#f8e4c7',
+    '#f7e0c3',
+    '#e2c6b7',
+    '#c1a18e',
+    '#e6cdbd',
+    '#f7e2c3',
+    '#f7e0c1',
+    '#e6cfbe',
+    '#f6dbb9',
+    '#e4c9b1',
+    '#e2c2be',
+    '#f6ddbd',
+    '#f1d7b9',
+    '#fef7e3',
+    '#e3cdbe',
+    '#f2d8bc',
+    '#f0d5bb',
+  ],
+  skin: ['#fec086', '#fdb981', '#fdb77d', '#fdb67c', '#fdc084', '#febb82', '#feb880', '#ef9f70'],
 } as const;
 
 /**
@@ -184,6 +242,11 @@ export const FIT_CLASSES = {
       ],
     },
   },
+  'feast-mother': {
+    blue: { sheet: FEAST_MOTHER_CLASSES.blue, paper: FEAST_MOTHER_CLASSES.blue },
+    cream: { sheet: FEAST_MOTHER_CLASSES.cream, paper: FEAST_MOTHER_CLASSES.cream },
+    skin: { sheet: FEAST_MOTHER_CLASSES.skin, paper: FEAST_MOTHER_CLASSES.skin },
+  },
   sower: {
     linen: { sheet: SOWER_CLASSES.linen, paper: SOWER_CLASSES.linen },
     olive: { sheet: SOWER_CLASSES.olive, paper: SOWER_CLASSES.olive },
@@ -219,6 +282,12 @@ const SOWER_POSES = 586 / 440;
 /** The villagers on their one poses sheet: its view 6, the grown villager standing at rest, ink crown to soles 516 rows (250 to 765), 440 units. */
 const VILLAGER_POSES = 516 / 440;
 
+/** The feast mother on her turnaround: her front's ink, crown to soles, is 600 rows (194 to 793), 440 units. */
+const FEAST_MOTHER_TURNAROUND = 600 / 440;
+
+/** The feast mother on her poses: poses-3, her front standing with the baby, ink crown to soles 814 rows (97 to 910), 440 units. */
+const FEAST_MOTHER_POSES = 814 / 440;
+
 /**
  * Each member's sheets: their size and one scale, sheet pixels a canon unit,
  * each read off the sheet's anchor view. The lead's poses: poses-5, his
@@ -232,6 +301,10 @@ export const SHEETS = {
     turnaround: { ...SHEET, scale: LEAD_TURNAROUND },
     poses: { ...SHEET, scale: 1 / LEAD.SHEETS.poses.scale },
     heads: { ...SHEET, scale: LEAD_TURNAROUND * 1.13 },
+  },
+  'feast-mother': {
+    turnaround: { ...SHEET, scale: FEAST_MOTHER_TURNAROUND },
+    poses: { ...SHEET, scale: FEAST_MOTHER_POSES },
   },
   sower: {
     turnaround: { ...SHEET, scale: SOWER_TURNAROUND },
@@ -780,6 +853,21 @@ export const CUTOUT = cutoutTable({
     },
     heads: {
       'heads-4': own(LEAD_FIT.heads['heads-4'], LEAD_PUPPETS['heads-4']),
+    },
+  },
+  'feast-mother': {
+    turnaround: {
+      front: own(undefined, FEAST_MOTHER_PUPPETS.front),
+      threeQuarterLeft: own(undefined, FEAST_MOTHER_PUPPETS.threeQuarterLeft),
+      back: own(undefined, FEAST_MOTHER_PUPPETS.back),
+      profileLeft: own(undefined, FEAST_MOTHER_PUPPETS.profileLeft),
+      profileRight: own(undefined, FEAST_MOTHER_PUPPETS.profileRight),
+      threeQuarterRight: own(undefined, FEAST_MOTHER_PUPPETS.threeQuarterRight),
+    },
+    poses: {
+      'poses-1': own(undefined, FEAST_MOTHER_PUPPETS['poses-1']),
+      'poses-2': own(undefined, FEAST_MOTHER_PUPPETS['poses-2']),
+      'poses-3': own(undefined, FEAST_MOTHER_PUPPETS['poses-3']),
     },
   },
   sower: {
