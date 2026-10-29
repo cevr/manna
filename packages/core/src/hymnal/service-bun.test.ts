@@ -13,8 +13,15 @@ import { ConfigProvider, Effect, FileSystem, Layer, Result, Schema } from 'effec
 
 import { CategoryId, HymnId, VerseId } from '../types/ids.js';
 import { HymnVerse, isRefrain } from './schemas.js';
-import { HymnalService } from './service.js';
+import { type HymnalError, HymnalService, type HymnNotFoundError } from './service.js';
 import { layerHymnalBun } from './service-bun.js';
+
+/** The operation a call failed in, `false` for another error, or `succeeded`. */
+const failedOperation = <A>(call: Effect.Effect<A, HymnalError | HymnNotFoundError>) =>
+  Effect.match(call, {
+    onFailure: (error) => error._tag === 'HymnalError' && error.operation,
+    onSuccess: () => 'succeeded',
+  });
 
 const encodeVerses = Schema.encodeSync(Schema.fromJsonString(Schema.Array(HymnVerse)));
 
@@ -81,9 +88,63 @@ describe('layerHymnalBun', () => {
   );
 });
 
-/** Independent synthetic schema fixtures avoid reading either corpus or owner state in fast tests. */
-const writeSynthetic = (file: string, mode: 'normalized' | 'unknown' | 'decode' | 'storage') => {
+/**
+ * Made-up index tables, the columns the reader reads. Two topics, two tunes
+ * and two metres share a name, so the first-by-name and all-by-name rules show.
+ */
+const writeIndexes = (file: string) => {
   const db = new Database(file);
+  db.exec(`CREATE TABLE index_files(name TEXT PRIMARY KEY,title TEXT,note TEXT);
+    CREATE TABLE index_topics(topic INTEGER PRIMARY KEY,name TEXT,parent TEXT);
+    CREATE TABLE index_topic_refs(topic INTEGER,kind TEXT,ordinal INTEGER,number INTEGER,page INTEGER);
+    CREATE TABLE index_passages(source TEXT,ordinal INTEGER,number INTEGER,stanza TEXT,page INTEGER,
+      kind TEXT,book INTEGER,chapter INTEGER,verse INTEGER,to_chapter INTEGER,to_verse INTEGER);
+    CREATE TABLE index_passage_verses(source TEXT,ordinal INTEGER,piece INTEGER,from_verse INTEGER,to_verse INTEGER);
+    CREATE TABLE index_passage_see(ordinal INTEGER PRIMARY KEY,hymn INTEGER,see INTEGER,page INTEGER);
+    CREATE TABLE index_people(role TEXT,person INTEGER,name TEXT,source INTEGER,see TEXT);
+    CREATE TABLE index_person_hymns(role TEXT,person INTEGER,ordinal INTEGER,number INTEGER,page INTEGER);
+    CREATE TABLE index_tunes(tune INTEGER PRIMARY KEY,name TEXT,alias INTEGER);
+    CREATE TABLE index_tune_hymns(tune INTEGER,ordinal INTEGER,number INTEGER,page INTEGER);
+    CREATE TABLE index_metres(metre INTEGER PRIMARY KEY,name TEXT,gloss TEXT);
+    CREATE TABLE index_metre_tune_hymns(metre INTEGER,tune INTEGER,ordinal INTEGER,number INTEGER,page INTEGER);
+    INSERT INTO index_files VALUES('topical','Topical',NULL);
+    INSERT INTO index_topics VALUES(1,'Topic A',NULL),(2,'Topic B','Topic A'),(3,'Topic A',NULL);
+    INSERT INTO index_topic_refs VALUES(1,'hymn',0,5,10),(1,'hymn',1,7,12),(1,'reading',0,700,800),
+      (2,'hymn',0,7,12),(3,'hymn',0,9,14);
+    INSERT INTO index_passages VALUES
+      ('scriptural-by-hymn',0,7,'2',12,'chapter',19,23,NULL,NULL,NULL),
+      ('scriptural-by-hymn',1,7,NULL,12,'span',40,5,3,6,2),
+      ('scriptural-by-hymn',2,5,NULL,10,'chapter',1,1,NULL,NULL,NULL),
+      ('scriptural',0,5,NULL,10,'chapter',19,23,NULL,NULL,NULL),
+      ('scriptural',1,7,'2',12,'chapter',19,23,NULL,NULL,NULL),
+      ('scriptural',2,9,NULL,14,'span',19,22,30,23,2),
+      ('scriptural',3,11,NULL,16,'chapter',19,24,NULL,NULL,NULL),
+      ('scriptural',4,13,NULL,18,'chapter',20,23,NULL,NULL,NULL);
+    INSERT INTO index_passage_verses VALUES('scriptural-by-hymn',0,1,4,6),('scriptural-by-hymn',0,0,1,3),
+      ('scriptural',1,0,4,6);
+    INSERT INTO index_passage_see VALUES(0,7,9,12),(1,7,5,12);
+    INSERT INTO index_people VALUES('author',1,'Person P',0,NULL),('author',2,'Person Q',0,NULL),
+      ('composer',1,'Person R',0,NULL);
+    INSERT INTO index_person_hymns VALUES('author',1,0,7,12),('author',2,0,5,10),('composer',1,0,7,12);
+    INSERT INTO index_tunes VALUES(1,'Tune X',0),(2,'Tune Y',1),(3,'Tune X',0);
+    INSERT INTO index_tune_hymns VALUES(1,0,7,12),(1,1,5,10),(2,0,7,12),(3,0,9,14);
+    INSERT INTO index_metres VALUES(1,'8.7.8.7',NULL),(2,'C.M.',NULL),(3,'8.7.8.7',NULL);
+    INSERT INTO index_metre_tune_hymns VALUES(1,1,0,5,10),(1,0,1,3,8),(1,0,0,7,12),(2,0,0,7,12),(3,0,0,11,16);`);
+  db.close();
+};
+
+/** Independent synthetic schema fixtures avoid reading either corpus or owner state in fast tests. */
+const writeSynthetic = (
+  file: string,
+  mode: 'normalized' | 'indexes' | 'unknown' | 'decode' | 'storage',
+) => {
+  const db = new Database(file);
+  if (mode === 'indexes') {
+    db.close();
+    writeSynthetic(file, 'normalized');
+    writeIndexes(file);
+    return;
+  }
   if (mode === 'normalized') {
     db.exec(`PRAGMA user_version=2;
       CREATE TABLE topics(id INTEGER PRIMARY KEY,name TEXT);
@@ -190,6 +251,101 @@ describe('versioned corpus reader', () => {
         expect((yield* service.searchHymns('alpha', -1)).map((h) => Number(h.id))).toEqual([1, 2]);
         expect((yield* service.searchHymns('', 920)).map((h) => Number(h.id))).toEqual([1, 2]);
       }).pipe(Effect.provide(syntheticLayer('normalized'))),
+  );
+  it.effect('reads where a hymn stands in each index, in printed order', () =>
+    Effect.gen(function* () {
+      const service = yield* HymnalService;
+      expect(yield* service.getHymnIndexes(HymnId.make(7))).toEqual({
+        number: 7,
+        topics: [{ name: 'Topic A' }, { name: 'Topic B', parent: 'Topic A' }],
+        passages: [
+          {
+            passage: {
+              _tag: 'Chapter',
+              book: 19,
+              chapter: 23,
+              verses: [
+                { from: 1, to: 3 },
+                { from: 4, to: 6 },
+              ],
+            },
+            stanza: '2',
+          },
+          {
+            passage: {
+              _tag: 'Span',
+              book: 40,
+              from: { chapter: 5, verse: 3 },
+              to: { chapter: 6, verse: 2 },
+            },
+          },
+        ],
+        see: [9, 5],
+        tunes: [
+          { name: 'Tune X', alias: false },
+          { name: 'Tune Y', alias: true },
+        ],
+        metres: ['8.7.8.7', 'C.M.'],
+        authors: ['Person P'],
+        composers: ['Person R'],
+      });
+      expect(yield* service.getHymnIndexes(HymnId.make(600))).toEqual({
+        number: 600,
+        topics: [],
+        passages: [],
+        see: [],
+        tunes: [],
+        metres: [],
+        authors: [],
+        composers: [],
+      });
+      const outside = yield* Effect.result(service.getHymnIndexes(HymnId.make(696)));
+      expect(Result.isFailure(outside) && outside.failure._tag === 'HymnNotFoundError').toBe(true);
+    }).pipe(Effect.provide(syntheticLayer('indexes'))),
+  );
+  it.effect('lists a topic, tune or metre by name, and an unknown name has none', () =>
+    Effect.gen(function* () {
+      const service = yield* HymnalService;
+      const numbers = (refs: readonly { number: number }[]) => refs.map((ref) => ref.number);
+      expect(yield* service.getTopicHymns('Topic A')).toEqual([
+        { number: 5, page: 10 },
+        { number: 7, page: 12 },
+      ]);
+      expect(numbers(yield* service.getTuneHymns('Tune X'))).toEqual([7, 5, 9]);
+      expect(numbers(yield* service.getMetreHymns('8.7.8.7'))).toEqual([7, 3, 5]);
+      expect(yield* service.getTopicHymns('Topic Z')).toEqual([]);
+      expect(yield* service.getTuneHymns('Tune Z')).toEqual([]);
+      expect(yield* service.getMetreHymns('9.9.9')).toEqual([]);
+    }).pipe(Effect.provide(syntheticLayer('indexes'))),
+  );
+  it.effect('finds the scriptural entries that reach a verse or a chapter', () =>
+    Effect.gen(function* () {
+      const service = yield* HymnalService;
+      const numbers = (refs: readonly { number: number }[]) => refs.map((ref) => ref.number);
+      expect(yield* service.getPassageHymns({ book: 19, chapter: 23, verse: 5 })).toEqual([
+        { number: 5, page: 10 },
+        { number: 7, page: 12, stanza: '2' },
+      ]);
+      expect(numbers(yield* service.getPassageHymns({ book: 19, chapter: 23, verse: 1 }))).toEqual([
+        5, 9,
+      ]);
+      expect(numbers(yield* service.getPassageHymns({ book: 19, chapter: 23 }))).toEqual([5, 7, 9]);
+      expect(numbers(yield* service.getPassageHymns({ book: 19, chapter: 22 }))).toEqual([9]);
+      expect(numbers(yield* service.getPassageHymns({ book: 19, chapter: 25 }))).toEqual([]);
+    }).pipe(Effect.provide(syntheticLayer('indexes'))),
+  );
+  it.effect('fails each index method over a database without the index tables', () =>
+    Effect.gen(function* () {
+      const service = yield* HymnalService;
+      const operations = yield* Effect.all([
+        failedOperation(service.getHymnIndexes(HymnId.make(7))),
+        failedOperation(service.getTopicHymns('Topic A')),
+        failedOperation(service.getTuneHymns('Tune X')),
+        failedOperation(service.getMetreHymns('8.7.8.7')),
+        failedOperation(service.getPassageHymns({ book: 19, chapter: 23 })),
+      ]);
+      expect(new Set(operations)).toEqual(new Set(['indexes']));
+    }).pipe(Effect.provide(syntheticLayer('normalized'))),
   );
   for (const mode of ['unknown', 'decode', 'storage'] as const)
     it.effect(`reports ${mode} failures as corpus errors`, () =>

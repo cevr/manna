@@ -1,6 +1,16 @@
 import type { PlatformError } from 'effect/PlatformError';
 import { Database } from 'bun:sqlite';
-import { Config, Effect, FileSystem, Layer, Option, Path, Predicate, Schema } from 'effect';
+import {
+  Config,
+  Effect,
+  FileSystem,
+  Layer,
+  Option,
+  Path,
+  Predicate,
+  Record as Records,
+  Schema,
+} from 'effect';
 
 import { CategoryId, HymnId } from '../types/ids.js';
 import {
@@ -9,10 +19,21 @@ import {
   HymnSummary,
   HymnVerse,
   hymnFirstLine,
+  passageReaches,
   type CategoryRow,
+  type HymnIndexes,
   HymnRow,
+  type IndexPassage,
+  type IndexRef,
+  type PassageQuery,
 } from './schemas.js';
-import { HymnalError, HymnalService, HymnNotFoundError } from './service.js';
+import {
+  HymnalError,
+  HymnalService,
+  HymnNotFoundError,
+  isIndexedHymn,
+  noIndexesError,
+} from './service.js';
 
 const HymnVersesJson = Schema.fromJsonString(Schema.Array(HymnVerse));
 const decodeHymnVerses = Schema.decodeUnknownSync(HymnVersesJson);
@@ -139,6 +160,151 @@ const normalizedReader = (db: Database) => {
   };
 };
 
+const IndexRefRow = Schema.Struct({
+  number: Schema.Int,
+  page: Schema.Int,
+  stanza: Schema.OptionFromNullOr(Schema.String),
+});
+const PassageRow = Schema.Struct({
+  source: Schema.String,
+  ordinal: Schema.Int,
+  number: Schema.Int,
+  page: Schema.Int,
+  stanza: Schema.OptionFromNullOr(Schema.String),
+  kind: Schema.Literals(['chapter', 'span']),
+  book: Schema.Int,
+  chapter: Schema.Int,
+  verse: Schema.NullOr(Schema.Int),
+  to_chapter: Schema.NullOr(Schema.Int),
+  to_verse: Schema.NullOr(Schema.Int),
+});
+const PieceRow = Schema.Struct({ from_verse: Schema.Int, to_verse: Schema.Int });
+const TopicRow = Schema.Struct({
+  name: Schema.String,
+  parent: Schema.OptionFromNullOr(Schema.String),
+});
+const TuneRow = Schema.Struct({ name: Schema.String, alias: Schema.Int });
+const NameRow = Schema.Struct({ name: Schema.String });
+const SeeRow = Schema.Struct({ see: Schema.Int });
+
+const decodeRows = <S extends Schema.Decoder<unknown>>(schema: S) =>
+  Schema.decodeUnknownSync(Schema.Array(schema));
+
+/** A row's optional column as an optional key: present when the column holds a value. */
+const present = <K extends string>(
+  key: K,
+  value: Option.Option<string>,
+): { readonly [P in K]?: string } =>
+  Option.match(value, {
+    onNone: () => ({}),
+    onSome: (held) => Records.singleton(key, held),
+  });
+
+const toRef = (row: typeof IndexRefRow.Type): IndexRef => ({
+  number: row.number,
+  page: row.page,
+  ...present('stanza', row.stanza),
+});
+
+/** The index tables' queries, each in the printed order its index gives. */
+const indexReader = (db: Database) => {
+  const pieces = db.query(
+    'SELECT from_verse, to_verse FROM index_passage_verses WHERE source=? AND ordinal=? ORDER BY piece',
+  );
+  const passage = (row: typeof PassageRow.Type): IndexPassage => {
+    if (row.kind === 'chapter')
+      return {
+        _tag: 'Chapter',
+        book: row.book,
+        chapter: row.chapter,
+        verses: decodeRows(PieceRow)(pieces.all(row.source, row.ordinal)).map((piece) => ({
+          from: piece.from_verse,
+          to: piece.to_verse,
+        })),
+      };
+    return {
+      _tag: 'Span',
+      book: row.book,
+      from: { chapter: row.chapter, verse: row.verse ?? 1 },
+      to: { chapter: row.to_chapter ?? row.chapter, verse: row.to_verse ?? 1 },
+    };
+  };
+  const passages = (where: string, ...params: (string | number)[]) =>
+    decodeRows(PassageRow)(
+      db.query(`SELECT * FROM index_passages WHERE ${where} ORDER BY ordinal`).all(...params),
+    );
+  const refs = (sql: string, ...params: (string | number)[]) =>
+    decodeRows(IndexRefRow)(db.query(sql).all(...params)).map(toRef);
+  const names = (sql: string, ...params: (string | number)[]) =>
+    decodeRows(NameRow)(db.query(sql).all(...params)).map((row) => row.name);
+  const people = (role: 'author' | 'composer', id: number) =>
+    names(
+      `SELECT name FROM index_people p WHERE role=? AND EXISTS (SELECT 1 FROM index_person_hymns r
+       WHERE r.role=p.role AND r.person=p.person AND r.number=?) ORDER BY person`,
+      role,
+      id,
+    );
+
+  return {
+    hymn: (id: number): HymnIndexes => ({
+      number: id,
+      topics: decodeRows(TopicRow)(
+        db
+          .query(`SELECT name, parent FROM index_topics t WHERE EXISTS (SELECT 1 FROM index_topic_refs r
+            WHERE r.topic=t.topic AND r.kind='hymn' AND r.number=?) ORDER BY topic`)
+          .all(id),
+      ).map((row) => ({ name: row.name, ...present('parent', row.parent) })),
+      passages: passages("source='scriptural-by-hymn' AND number=?", id).map((row) => ({
+        passage: passage(row),
+        ...present('stanza', row.stanza),
+      })),
+      see: decodeRows(SeeRow)(
+        db.query('SELECT see FROM index_passage_see WHERE hymn=? ORDER BY ordinal').all(id),
+      ).map((row) => row.see),
+      tunes: decodeRows(TuneRow)(
+        db
+          .query(`SELECT name, alias FROM index_tunes t WHERE EXISTS (SELECT 1 FROM index_tune_hymns r
+            WHERE r.tune=t.tune AND r.number=?) ORDER BY tune`)
+          .all(id),
+      ).map((row) => ({ name: row.name, alias: row.alias === 1 })),
+      metres: names(
+        `SELECT name FROM index_metres m WHERE EXISTS (SELECT 1 FROM index_metre_tune_hymns r
+         WHERE r.metre=m.metre AND r.number=?) ORDER BY metre`,
+        id,
+      ),
+      authors: people('author', id),
+      composers: people('composer', id),
+    }),
+    topic: (name: string) =>
+      refs(
+        `SELECT number, page, NULL AS stanza FROM index_topic_refs WHERE kind='hymn' AND topic=
+         (SELECT min(topic) FROM index_topics WHERE name=?) ORDER BY ordinal`,
+        name,
+      ),
+    tune: (name: string) =>
+      refs(
+        `SELECT r.number, r.page, NULL AS stanza FROM index_tune_hymns r JOIN index_tunes t
+         ON t.tune=r.tune WHERE t.name=? ORDER BY r.tune, r.ordinal`,
+        name,
+      ),
+    metre: (name: string) =>
+      refs(
+        `SELECT number, page, NULL AS stanza FROM index_metre_tune_hymns WHERE metre=
+         (SELECT min(metre) FROM index_metres WHERE name=?) ORDER BY tune, ordinal`,
+        name,
+      ),
+    passage: (query: PassageQuery) =>
+      passages("source='scriptural' AND book=?", query.book)
+        .filter((row) => passageReaches(passage(row), query))
+        .map(toRef),
+  };
+};
+
+const hasIndexes = (db: Database) =>
+  !Predicate.isNull(
+    db.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='index_files'").get(),
+  );
+
 export const layerHymnalBun: Layer.Layer<
   HymnalService,
   HymnalError | Config.ConfigError | PlatformError,
@@ -252,6 +418,49 @@ export const layerHymnalBun: Layer.Layer<
       }),
     );
 
-    return HymnalService.of({ getHymn, getCategories, getHymnsByCategory, searchHymns });
+    const indexes = yield* Effect.try({
+      try: () => Option.map(Option.liftPredicate(db, hasIndexes), indexReader),
+      catch: (cause) => HymnalError.make({ operation: 'indexes', cause }),
+    });
+    const fromIndexes = <A>(read: (index: ReturnType<typeof indexReader>) => A) =>
+      Option.match(indexes, {
+        onNone: () => Effect.fail(noIndexesError()),
+        onSome: (index) =>
+          Effect.try({
+            try: () => read(index),
+            catch: (cause) => HymnalError.make({ operation: 'indexes', cause }),
+          }),
+      });
+
+    const getHymnIndexes = Effect.fn('HymnalService.getHymnIndexes')(function* (id: HymnId) {
+      if (Option.isSome(indexes) && !isIndexedHymn(id)) {
+        return yield* HymnNotFoundError.make({ id });
+      }
+      return yield* fromIndexes((index) => index.hymn(id));
+    });
+    const getTopicHymns = Effect.fn('HymnalService.getTopicHymns')((name: string) =>
+      fromIndexes((index) => index.topic(name)),
+    );
+    const getTuneHymns = Effect.fn('HymnalService.getTuneHymns')((name: string) =>
+      fromIndexes((index) => index.tune(name)),
+    );
+    const getMetreHymns = Effect.fn('HymnalService.getMetreHymns')((metre: string) =>
+      fromIndexes((index) => index.metre(metre)),
+    );
+    const getPassageHymns = Effect.fn('HymnalService.getPassageHymns')((query: PassageQuery) =>
+      fromIndexes((index) => index.passage(query)),
+    );
+
+    return HymnalService.of({
+      getHymn,
+      getCategories,
+      getHymnsByCategory,
+      searchHymns,
+      getHymnIndexes,
+      getTopicHymns,
+      getTuneHymns,
+      getMetreHymns,
+      getPassageHymns,
+    });
   }),
 );

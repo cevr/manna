@@ -4,7 +4,7 @@
  * Domain models for hymnal data using Schema.Class for serialization.
  */
 
-import { Schema } from 'effect';
+import { Predicate, Schema } from 'effect';
 
 import { CategoryId, HymnId, VerseId } from '../types/ids.js';
 
@@ -59,6 +59,88 @@ export class HymnSummary extends Schema.Class<HymnSummary>('HymnSummary')({
   category: Schema.String,
   firstLine: Schema.String,
 }) {}
+
+// ============================================================================
+// Back-matter indexes
+// ============================================================================
+
+const Positive = Schema.Int.check(Schema.isGreaterThanOrEqualTo(1));
+const VerseSpan = Schema.Struct({ from: Positive, to: Positive });
+const Place = Schema.Struct({ chapter: Positive, verse: Positive });
+
+/**
+ * A Scripture passage as the printed indexes give it: a book (1-66) and a
+ * chapter with its verse pieces (none is the whole chapter), or a passage
+ * that crosses chapters, from a place to a place. The shape of
+ * `@manna/hymnal/indexes`'s `Passage`: its JSON carries no tag.
+ */
+export const IndexPassage = Schema.Union([
+  Schema.Struct({
+    _tag: Schema.tagDefaultOmit('Chapter'),
+    book: Positive,
+    chapter: Positive,
+    verses: Schema.Array(VerseSpan),
+  }),
+  Schema.Struct({ _tag: Schema.tagDefaultOmit('Span'), book: Positive, from: Place, to: Place }),
+]);
+export type IndexPassage = typeof IndexPassage.Type;
+
+/** A hymn or reading number, the page that prints it, and the stanza an entry names. */
+export const IndexRef = Schema.Struct({
+  number: Positive,
+  page: Positive,
+  stanza: Schema.optionalKey(Schema.String),
+});
+export interface IndexRef extends Schema.Schema.Type<typeof IndexRef> {}
+
+/** A place in Scripture to look a passage up by: a chapter, or one verse of it. */
+export const PassageQuery = Schema.Struct({
+  book: Positive,
+  chapter: Positive,
+  verse: Schema.optionalKey(Positive),
+});
+export interface PassageQuery extends Schema.Schema.Type<typeof PassageQuery> {}
+
+/** Where one hymn (1-695) stands in each back-matter index, in the printed order. */
+export const HymnIndexes = Schema.Struct({
+  number: Positive,
+  topics: Schema.Array(
+    Schema.Struct({ name: Schema.String, parent: Schema.optionalKey(Schema.String) }),
+  ),
+  passages: Schema.Array(
+    Schema.Struct({ passage: IndexPassage, stanza: Schema.optionalKey(Schema.String) }),
+  ),
+  see: Schema.Array(Positive),
+  tunes: Schema.Array(Schema.Struct({ name: Schema.String, alias: Schema.Boolean })),
+  metres: Schema.Array(Schema.String),
+  authors: Schema.Array(Schema.String),
+  composers: Schema.Array(Schema.String),
+});
+export interface HymnIndexes extends Schema.Schema.Type<typeof HymnIndexes> {}
+
+const placeKey = (chapter: number, verse: number) => chapter * 1000 + verse;
+
+/**
+ * Whether a passage reaches a query: a chapter with no pieces covers each of
+ * its verses, a piece covers `from..to`, and a span every place from `from`
+ * to `to`. With no verse, any passage that touches the chapter reaches it.
+ */
+export const passageReaches = (passage: IndexPassage, query: PassageQuery): boolean => {
+  if (passage.book !== query.book) return false;
+  const { chapter, verse } = query;
+  if (passage._tag === 'Chapter') {
+    if (passage.chapter !== chapter) return false;
+    if (Predicate.isUndefined(verse) || passage.verses.length === 0) return true;
+    return passage.verses.some((piece) => piece.from <= verse && verse <= piece.to);
+  }
+  if (Predicate.isUndefined(verse))
+    return passage.from.chapter <= chapter && chapter <= passage.to.chapter;
+  const at = placeKey(chapter, verse);
+  return (
+    placeKey(passage.from.chapter, passage.from.verse) <= at &&
+    at <= placeKey(passage.to.chapter, passage.to.verse)
+  );
+};
 
 // ============================================================================
 // Database Row Types (internal)
