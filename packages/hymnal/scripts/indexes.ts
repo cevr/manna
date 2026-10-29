@@ -40,7 +40,9 @@
  * - `rulings` (C11): every ruling settles a failure printed now, and names a
  *   judge record that exists (with `--judges`).
  * - `directions` (C12): the Scripture allusions indexed by reference and by
- *   hymn number list the same (passage, hymn, stanza) entries.
+ *   hymn number list the same allusions: each entry has a twin of the same
+ *   hymn and book, an agreeing stanza (no stanza is the whole hymn) and an
+ *   overlapping passage; a `See N` row lends its hymn the passages of hymn N.
  */
 
 import { getBibleBook, getBibleBookByName } from '@manna/core/bible';
@@ -874,13 +876,31 @@ const tuneProblems = (tunes: Tunes, metrical: Metrical): Array<Problem> => {
   return [...unmetred, ...unlisted];
 };
 
-/** A metre written for comparison: no spaces or full stops, lower case, `with Refrain` as `ref`. */
-export const normalMetre = (m: string): string =>
-  m
+/**
+ * A metre written for comparison: lower case, its words and numbers joined by
+ * single stops (no spaces or commas).
+ * The book writes a refrain as `with Refrain`, `Refrain`, `Ref.` or a bare `R`
+ * after the numbers (a cut-off `Re…` too), all `ref`; `Amens` and
+ * `Alleluias` with or without `with` (a cut-off `Allelui…` too) as `amen` and
+ * `alleluia`; and numbers written out twice as the half with `D` (doubled).
+ */
+export const normalMetre = (m: string): string => {
+  const words = m
     .toLowerCase()
+    .trim()
     .replace(/with\s*refrain|refrain|ref\.?/g, 'ref')
-    .replace(/with\s*alleluias?/g, 'alleluia')
-    .replace(/[\s.]/g, '');
+    .replace(/(?<=[.\d])r$|\bre…?$/, 'ref')
+    .replace(/(with\s*)?amens?/g, 'amen')
+    .replace(/(with\s*)?allelui\w*…?/g, 'alleluia')
+    .split(/[\s.,…]+/)
+    .filter(Boolean);
+  const numbers = words.findIndex((w) => !/^\d+$/.test(w));
+  const n = numbers === -1 ? words.length : numbers;
+  const half = words.slice(0, n / 2);
+  const doubled =
+    n >= 2 && n % 2 === 0 && words[n] !== 'd' && half.join('.') === words.slice(n / 2, n).join('.');
+  return (doubled ? [...half, 'd', ...words.slice(n)] : words).join('.');
+};
 
 const metreProblems = (metrical: Metrical, ctx: Context): Array<Problem> => {
   const out: Array<Problem> = [];
@@ -989,46 +1009,56 @@ const pageProblems = (indexes: Indexes): Array<Problem> => {
   return out;
 };
 
-/** A passage's pieces as keys, one per verse range, so `98:4, 6` and two entries `98:4`, `98:6` compare alike. */
-const pieceKeys = (p: Passage): ReadonlyArray<string> =>
-  'verses' in p
+/** A passage as spans of (chapter, verse) places; a chapter with no verse pieces spans the whole chapter. */
+const spansOf = (p: Passage): ReadonlyArray<readonly [number, number]> => {
+  const at = (chapter: number, verse: number) => chapter * 1000 + verse;
+  return 'verses' in p
     ? p.verses.length === 0
-      ? [`${p.book}:${p.chapter}`]
-      : p.verses.map((v) => `${p.book}:${p.chapter}:${v.from}-${v.to}`)
-    : [`${p.book}:${p.from.chapter}:${p.from.verse}-${p.to.chapter}:${p.to.verse}`];
+      ? [[at(p.chapter, 0), at(p.chapter, 999)]]
+      : p.verses.map((v) => [at(p.chapter, v.from), at(p.chapter, v.to)] as const)
+    : [[at(p.from.chapter, p.from.verse), at(p.to.chapter, p.to.verse)]];
+};
 
+/** Two passages of one book that share a verse (a whole chapter shares each of its verses). */
+const overlaps = (a: Passage, b: Passage): boolean =>
+  a.book === b.book &&
+  spansOf(a).some(([from, to]) => spansOf(b).some(([f, t]) => from <= t && f <= to));
+
+interface Direction {
+  readonly passage: Passage;
+  readonly hymn: number;
+  readonly stanza?: string;
+}
+
+/**
+ * Each entry of one Scripture index has a twin in the other: the same hymn, a
+ * stanza that agrees (the same letter, or none on either side: an entry with
+ * no stanza is the whole hymn), the same book, and a passage that overlaps
+ * (the two print one allusion differently: `98:4, 6` as one entry or two,
+ * `5:1-3` or `5:2`). A by-hymn `See N` row gives its hymn the passages of
+ * hymn N.
+ */
 const directionProblems = (
   scriptural: Scriptural,
   byHymn: ScripturalByHymn,
   ctx: Context,
 ): Array<Problem> => {
-  const keysOf = (e: {
-    readonly passage: Passage;
-    readonly hymn: number;
-    readonly stanza?: string;
-  }) => pieceKeys(e.passage).map((k) => `${k} ${e.hymn}${e.stanza ?? ''}`);
-  const count = (
-    entries: ReadonlyArray<{
-      readonly passage: Passage;
-      readonly hymn: number;
-      readonly stanza?: string;
-    }>,
-  ) => {
-    const m = new Map<string, number>();
-    for (const e of entries) for (const k of keysOf(e)) m.set(k, (m.get(k) ?? 0) + 1);
+  const byNumber = (entries: ReadonlyArray<Direction>) => {
+    const m = new Map<number, Array<Direction>>();
+    for (const e of entries) {
+      const list = m.get(e.hymn) ?? [];
+      list.push(e);
+      m.set(e.hymn, list);
+    }
     return m;
   };
-  const a = count(scriptural.entries);
-  const b = count(byHymn.entries);
+  const sees = new Map((byHymn.see ?? []).map((s) => [s.hymn, s.see]));
   const out: Array<Problem> = [];
   const hold = (
     name: 'scriptural' | 'scriptural-by-hymn',
-    entries: ReadonlyArray<{
-      readonly passage: Passage;
-      readonly hymn: number;
-      readonly stanza?: string;
-    }>,
-    other: Map<string, number>,
+    entries: ReadonlyArray<Direction>,
+    other: Map<number, Array<Direction>>,
+    hymnsOf: (hymn: number) => ReadonlyArray<number>,
     otherName: string,
   ) => {
     const items = itemsOf(
@@ -1036,24 +1066,42 @@ const directionProblems = (
       name,
     );
     entries.forEach((e, i) => {
+      const twin = hymnsOf(e.hymn).some((h) =>
+        (other.get(h) ?? []).some(
+          (t) =>
+            (t.stanza === undefined || e.stanza === undefined || t.stanza === e.stanza) &&
+            overlaps(t.passage, e.passage),
+        ),
+      );
+      if (twin) return;
       const it = items[i];
-      for (const k of keysOf(e)) {
-        const left = other.get(k) ?? 0;
-        if (left > 0) other.set(k, left - 1);
-        else
-          out.push({
-            index: name,
-            page: it?.page ?? 0,
-            at: it?.at ?? '-',
-            check: 'directions',
-            what: `not in the index ${otherName}`,
-            value: `${passageText(e.passage, ctx.bookName)} ${e.hymn}${e.stanza ?? ''}`,
-          });
-      }
+      out.push({
+        index: name,
+        page: it?.page ?? 0,
+        at: it?.at ?? '-',
+        check: 'directions',
+        what: `not in the index ${otherName}`,
+        value: `${passageText(e.passage, ctx.bookName)} ${e.hymn}${e.stanza ?? ''}`,
+      });
     });
   };
-  hold('scriptural', scriptural.entries, b, 'by hymn number');
-  hold('scriptural-by-hymn', byHymn.entries, a, 'by Scripture reference');
+  hold(
+    'scriptural',
+    scriptural.entries,
+    byNumber(byHymn.entries),
+    (h) => {
+      const see = sees.get(h);
+      return see === undefined ? [h] : [h, see];
+    },
+    'by hymn number',
+  );
+  hold(
+    'scriptural-by-hymn',
+    byHymn.entries,
+    byNumber(scriptural.entries),
+    (h) => [h],
+    'by Scripture reference',
+  );
   return out;
 };
 

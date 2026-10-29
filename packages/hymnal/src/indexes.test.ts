@@ -71,7 +71,7 @@ const at = (book: number, chapter: number, ...verses: ReadonlyArray<[number, num
   chapter,
   verses: verses.map(([from, to]) => ({ from, to })),
 });
-const across = { book: 1, from: { chapter: 1, verse: 9 }, to: { chapter: 2, verse: 2 } };
+const across = () => ({ book: 1, from: { chapter: 1, verse: 9 }, to: { chapter: 2, verse: 2 } });
 
 /** The made-up book's indexes, consistent with `ctx`. */
 const book = (): Record<IndexName, Json> => ({
@@ -108,7 +108,7 @@ const book = (): Record<IndexName, Json> => ({
     entries: [
       { passage: at(1, 1, [1, 1]), hymn: 2, stanza: 'a', page: 13 },
       { passage: at(1, 1, [1, 1]), hymn: 5, stanza: 'b', page: 13 },
-      { passage: across, hymn: 7, page: 13 },
+      { passage: across(), hymn: 7, page: 13 },
       { passage: at(1, 2, [3, 3]), hymn: 3, stanza: 'r', page: 14 },
       { passage: at(2, 1, [5, 5], [6, 6]), hymn: 4, stanza: 'c', page: 14 },
     ],
@@ -123,7 +123,7 @@ const book = (): Record<IndexName, Json> => ({
       { hymn: 3, stanza: 'r', passage: at(1, 2, [3, 3]), page: 14 },
       { hymn: 4, stanza: 'c', passage: at(2, 1, [5, 5], [6, 6]), page: 14 },
       { hymn: 5, stanza: 'b', passage: at(1, 1, [1, 1]), page: 15 },
-      { hymn: 7, passage: across, page: 15 },
+      { hymn: 7, passage: across(), page: 15 },
     ],
   },
   sentences: {
@@ -517,6 +517,57 @@ describe('each mutation is caught, at every entry it applies to', () => {
   });
 });
 
+describe('a Scripture direction and its twin in the other index', () => {
+  /** Each direction problem as [index, its hymn and stanza]. */
+  const unmatched = (b: ReturnType<typeof book>) =>
+    problemsOf(b)
+      .filter((p) => p.check === 'directions')
+      .map((p) => [p.index, p.value.split(' ').at(-1)]);
+  const byHymn = (b: ReturnType<typeof book>, hymn: number) =>
+    arr(b['scriptural-by-hymn'], 'entries').find((e) => e['hymn'] === hymn) as Json;
+
+  it('match when the hymn and stanza agree and the passages overlap, in one piece or two', () => {
+    const b = book();
+    byHymn(b, 4)['passage'] = at(2, 1, [5, 6]);
+    byHymn(b, 2)['passage'] = at(1, 1, [1, 3]);
+    expect(unmatched(b)).toEqual([]);
+  });
+
+  it('match when either side names no stanza: the whole hymn', () => {
+    const b = book();
+    delete byHymn(b, 5)['stanza'];
+    expect(unmatched(b)).toEqual([]);
+  });
+
+  it('differ when the book, the stanza or the verses differ', () => {
+    // each: the mutation, then the entry left unmatched in each index
+    const cases: ReadonlyArray<[string, (b: ReturnType<typeof book>) => void, string, string]> = [
+      ['another book', (b) => (byHymn(b, 2)['passage'] = at(2, 1, [1, 1])), '2a', '2a'],
+      ['another stanza', (b) => (byHymn(b, 3)['stanza'] = 'a'), '3r', '3a'],
+      ['verses apart', (b) => (byHymn(b, 4)['passage'] = at(2, 1, [7, 8])), '4c', '4c'],
+    ];
+    for (const [label, mutate, mine, twin] of cases) {
+      const b = book();
+      mutate(b);
+      expect({ label, found: unmatched(b) }).toEqual({
+        label,
+        found: [
+          ['scriptural', mine],
+          ['scriptural-by-hymn', twin],
+        ],
+      });
+    }
+  });
+
+  it('a hymn the by-hymn index sends to another (`See N`) takes that hymn’s passages', () => {
+    const b = book();
+    arr(b.scriptural, 'entries').push({ passage: at(1, 1, [1, 1]), hymn: 9, page: 14 });
+    expect(unmatched(b)).toEqual([['scriptural', '9']]);
+    b['scriptural-by-hymn']['see'] = [{ hymn: 9, see: 2, page: 15 }];
+    expect(unmatched(b)).toEqual([]);
+  });
+});
+
 describe('rulings', () => {
   const b = book();
   (arr(b.metrical, 'metres')[1] as Json)['metre'] = 'L. M.';
@@ -655,7 +706,36 @@ describe('reading a printed reference', () => {
       normalMetre('C. M. with Refrain'),
       normalMetre('C.M. Ref'),
       normalMetre('8.7.8.7.D.'),
-    ]).toEqual(['cmref', 'cmref', '8787d']);
+    ]).toEqual(['c.m.ref', 'c.m.ref', '8.7.8.7.d']);
+  });
+
+  it('reads a metre as the book prints it: a bare or cut refrain, amens, alleluias, doubled', () => {
+    const same = [
+      ['4.5.4.5.R', '4.5.4.5. with Refrain'],
+      ['S.M.R', 'S. M. with Refrain'],
+      ['4.5.4.5.D.R', '4.5.4.5.D. with Refrain'],
+      ['4.5.4.5. Re', '4.5.4.5. with Refrain'],
+      ['4.5.4.5.Re…', '4.5.4.5. Refrain'],
+      ['Irregular, Ref.', 'Irregular with Refrain'],
+      ['4.5. Amens', '4.5 with Amens'],
+      ['4.5.4.5. Alleluias', '4.5.4.5. with Alleluias'],
+      ['4.5.4.5.Allelui…', '4.5.4.5. with Alleluias'],
+      ['4.5.4.5.4.5.4.5.', '4.5.4.5.D.'],
+      ['12.3.12.3.', '12.3.D.'],
+    ];
+    expect(same.filter(([a, b]) => normalMetre(a as string) !== normalMetre(b as string))).toEqual(
+      [],
+    );
+    const different = [
+      ['4.5.4.5.', '4.5.4.5.D.'],
+      ['4.5.4.5.4.5.', '4.5.4.5.D.'],
+      ['12.3.12.3.', '1.23.1.23.'],
+      ['4.5.4.5. Ref.', '4.5.4.5.'],
+      ['Irregular', 'Irregular with Refrain'],
+    ];
+    expect(
+      different.filter(([a, b]) => normalMetre(a as string) === normalMetre(b as string)),
+    ).toEqual([]);
   });
 
   it('sorts word by word, `St.` as `Saint`, a qualifier left out and an apostrophe inside its word', () => {
