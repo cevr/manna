@@ -19,7 +19,8 @@
  * coming back down as the list nears its top, covers it.
  *
  * Tapping the field enters search mode: a bar with the focused text field
- * and Cancel, over the results. The list stays mounted beneath, untouchable
+ * and Cancel, over the results. A topic or passage tapped in `About this
+ * hymn` enters it too, with its query (`searchOpen`). The list stays mounted beneath, untouchable
  * and hidden from assistive technology, so it keeps its place. Cancel, or
  * Android's Back while the home screen is in focus (`searchBack`), clears
  * the query and shows the list as it was.
@@ -54,7 +55,7 @@ import { hymnAt } from '~/hymns/hymns';
 import { aboutQuery, aboutShown, afterPause, readMeaningSoon } from '~/hymns/meaning';
 import { find, hymnIndex } from '~/hymns/search';
 import { HymnList } from '~/reader/HymnList.native';
-import { searchOffset, searchQuery } from '~/reader/place';
+import { searchOffset, searchOpen, searchQuery } from '~/reader/place';
 import { color, useAccent } from '~/color';
 
 import { searchBack } from './back';
@@ -86,7 +87,7 @@ const fieldMargin = 8;
 export function Home() {
   const insets = useSafeAreaInsets();
   const { fontScale } = useWindowDimensions();
-  const [searching, setSearching] = useState(false);
+  const [searching, setSearching] = useAtom(searchOpen);
   const title = Math.ceil(titleLine * fontScale) + titleSpace;
   const field = Math.ceil(fieldLine * fontScale) + 2 * fieldPadding + 2 * fieldMargin;
   const scroll = useSharedValue(field);

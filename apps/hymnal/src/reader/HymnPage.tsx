@@ -1,6 +1,6 @@
 /**
- * A hymn's words in the order it is sung: its topic as a quiet line (a
- * button, `About this hymn`, that opens the sheet of hymns like it), its
+ * A hymn's words in the order it is sung: its section and first passage as a
+ * quiet line (a button, `About this hymn`, that opens the hymn's sheet), its
  * number and title in one row (the number first, the `Favourite` button
  * last), a notice while chords are on and the hymn has none, then each stanza under its number and the refrain, marked,
  * each time it is sung. The theme's ink on its ground, set as the reader
@@ -28,7 +28,7 @@
 
 import type * as Chord from '@manna/hymnal/chord';
 import { useAtomValue } from '@effect/atom-react';
-import { Option } from 'effect';
+import { Array as Arr, Option } from 'effect';
 import type * as Atom from 'effect/reactivity/Atom';
 import type { Placement } from '@manna/hymnal/placement';
 import { memo, type ReactNode, useCallback, useMemo, useRef } from 'react';
@@ -55,6 +55,7 @@ import {
   sectionsOf,
 } from '~/hymns/chords';
 import type { HymnText, Section } from '~/hymns/hymns';
+import { type Passage, passageText, referencesOf } from '~/hymns/indexes';
 import { type ChordStyle, styled } from '~/hymns/simple';
 import type { PlacementOverride, ReadingSettings } from '~/settings';
 import { color, useAccent } from '~/color';
@@ -183,11 +184,24 @@ export const HymnPage = memo(function HymnPage({
   );
 });
 
+/** The head line's words: the section, and the first passage with how many more follow it. */
+const headLine = (section: string, passages: ReadonlyArray<Passage>) =>
+  Option.match(Arr.head(passages), {
+    onNone: () => section,
+    onSome: (first) => {
+      if (passages.length === 1) return `${section} · ${passageText(first)}`;
+      return `${section} · ${passageText(first)} +${passages.length - 1}`;
+    },
+  });
+
 /**
- * The page's quiet head line: the hymn's topic, a button `About this hymn`
- * that opens the sheet of hymns like it. Drawn again only when its hymn,
- * topic or accent change, never with the page around it.
+ * The page's quiet head line: the hymn's section, then the first passage the
+ * Scriptural index gives it (`+N` for the rest), a button `About this hymn`
+ * that opens the sheet of its topics, passages and the hymns like it. Drawn
+ * again only when its hymn, section or accent change, never with the page
+ * around it.
  */
+
 const AboutLine = memo(function AboutLine({
   number,
   topic,
@@ -198,12 +212,13 @@ const AboutLine = memo(function AboutLine({
   readonly accent: ColorValue;
 }) {
   const router = useRouter();
+  const line = headLine(topic, referencesOf(number));
   return (
     <Pressable
       testID="hymn-about"
       role="button"
       aria-label="About this hymn"
-      aria-valuetext={topic}
+      aria-valuetext={line}
       onPress={() => router.push(aboutHref(number))}
       hitSlop={8}
       style={styles.about}
@@ -214,7 +229,7 @@ const AboutLine = memo(function AboutLine({
           style={[styles.topic, pressed && styles.pressed]}
           dynamicTypeRamp="footnote"
         >
-          {topic}
+          {line}
           <Text style={{ color: accent }}>{'  ›'}</Text>
         </Text>
       )}

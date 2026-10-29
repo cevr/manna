@@ -1,21 +1,34 @@
 /**
- * The sheet `About this hymn` opens from a hymn's page: first `More like
- * this`, the hymns whose meaning lies nearest the hymn's (`moreLike`, from
- * the shipped vectors), each a row that closes the sheet and opens that
- * hymn's page over the one it came from.
+ * The sheet `About this hymn` opens from a hymn's page: `More like this`,
+ * the hymns whose meaning lies nearest the hymn's (`moreLike`, from the
+ * shipped vectors); `Topics`, the Topical index's topics the hymn is listed
+ * under; `Scripture`, the passages the Scriptural index gives it; and `Sing
+ * to another tune`, the other hymns of its metre (`indexes.ts`). A section
+ * the indexes give nothing for is left out.
+ *
+ * A hymn row closes the sheet and opens that hymn's page over the one it
+ * came from. A topic or a passage closes the sheet and the pages under it
+ * and searches the hymns for it on the home screen (`searchQuery`,
+ * `searchOpen`): a topic by its name, a passage by where it begins
+ * (`passageQuery`).
  *
  * The sheet is a route, `/about?hymn=<number>`, presented as a native form
  * sheet with a grabber (`aboutSheetOptions`), of one family with the player
  * and chord sheets: a drag down closes it, as does `Done`.
  */
 
+import { useAtomSet } from '@effect/atom-react';
 import { Option } from 'effect';
+import type { ReactNode } from 'react';
 import { type ColorValue, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { type Href, type StackScreenOptions, useParams, useRouter } from 'one';
 
 import { color, useAccent } from '~/color';
 import { hymnAt, type HymnText } from '~/hymns/hymns';
+import { passageQuery, passageText, referencesOf, sameMetre, topicsOf } from '~/hymns/indexes';
 import { moreLike } from '~/hymns/meaning';
+
+import { searchOpen, searchQuery } from './place';
 
 /** How many hymns `More like this` lists. */
 export const MORE_LIKE = 8;
@@ -41,6 +54,17 @@ export function AboutScreen() {
 function AboutSheet({ hymn }: { readonly hymn: Option.Option<HymnText> }) {
   const accent = useAccent();
   const router = useRouter();
+  const setQuery = useAtomSet(searchQuery);
+  const setSearching = useAtomSet(searchOpen);
+  const openHymn = (number: number) => {
+    router.back();
+    router.push(`/hymns/${number}`);
+  };
+  const search = (query: string) => {
+    setQuery(query);
+    setSearching(true);
+    router.dismissAll();
+  };
   return (
     <View testID="about-sheet" style={styles.sheet}>
       <View style={styles.head}>
@@ -55,30 +79,34 @@ function AboutSheet({ hymn }: { readonly hymn: Option.Option<HymnText> }) {
             <Text style={styles.name} dynamicTypeRamp="footnote">
               {`${shown.number} ${shown.title}`}
             </Text>
-            <Text
-              role="heading"
-              aria-level={2}
-              aria-label="More like this"
-              style={styles.heading}
-              dynamicTypeRamp="footnote"
-            >
-              More like this
-            </Text>
-            <View style={styles.group}>
-              {moreLike(shown.number, MORE_LIKE).flatMap((number) =>
-                Option.toArray(hymnAt(String(number))).map((like) => (
-                  <LikeRow
-                    key={like.number}
-                    hymn={like}
-                    accent={accent}
-                    onPress={() => {
-                      router.back();
-                      router.push(`/hymns/${like.number}`);
-                    }}
-                  />
-                )),
-              )}
-            </View>
+            <Group name="More like this">
+              {hymnRows(moreLike(shown.number, MORE_LIKE), 'about-like', accent, openHymn)}
+            </Group>
+            <Group name="Topics">
+              {topicsOf(shown.number).map((topic, i) => (
+                <SearchRow
+                  key={`${i}`}
+                  testID={`about-topic-${i}`}
+                  label={topic.name}
+                  detail={topic.parent}
+                  onPress={() => search(topic.name)}
+                />
+              ))}
+            </Group>
+            <Group name="Scripture">
+              {referencesOf(shown.number).map((passage, i) => (
+                <SearchRow
+                  key={`${i}`}
+                  testID={`about-scripture-${i}`}
+                  label={passageText(passage)}
+                  detail={Option.none()}
+                  onPress={() => search(passageQuery(passage))}
+                />
+              ))}
+            </Group>
+            <Group name="Sing to another tune">
+              {hymnRows(sameMetre(shown.number), 'about-tune', accent, openHymn)}
+            </Group>
           </ScrollView>
         ),
       })}
@@ -86,19 +114,60 @@ function AboutSheet({ hymn }: { readonly hymn: Option.Option<HymnText> }) {
   );
 }
 
-/** A hymn like this one: its number and title, a press away from its page. */
-function LikeRow({
+/** A section of the sheet under its heading, or nothing when it has no rows. */
+function Group({ name, children }: { readonly name: string; readonly children: Array<ReactNode> }) {
+  if (children.length === 0) return <></>;
+  return (
+    <>
+      {/* The heading is drawn in capitals; its label, which VoiceOver reads and the drive matches, is not. */}
+      <Text
+        role="heading"
+        aria-level={2}
+        aria-label={name}
+        style={styles.heading}
+        dynamicTypeRamp="footnote"
+      >
+        {name}
+      </Text>
+      <View style={styles.group}>{children}</View>
+    </>
+  );
+}
+
+/** A row for each of `numbers` that is a hymn, its test id `<prefix>-<number>`. */
+const hymnRows = (
+  numbers: ReadonlyArray<number>,
+  prefix: string,
+  accent: ColorValue,
+  open: (number: number) => void,
+) =>
+  numbers.flatMap((number) =>
+    Option.toArray(hymnAt(String(number))).map((hymn) => (
+      <HymnRow
+        key={hymn.number}
+        testID={`${prefix}-${hymn.number}`}
+        hymn={hymn}
+        accent={accent}
+        onPress={() => open(hymn.number)}
+      />
+    )),
+  );
+
+/** A hymn: its number and title, a press away from its page. */
+function HymnRow({
+  testID,
   hymn,
   accent,
   onPress,
 }: {
+  readonly testID: string;
   readonly hymn: HymnText;
   readonly accent: ColorValue;
   readonly onPress: () => void;
 }) {
   return (
     <Pressable
-      testID={`about-like-${hymn.number}`}
+      testID={testID}
       role="link"
       aria-label={`${hymn.number}, ${hymn.title}`}
       onPress={onPress}
@@ -111,6 +180,39 @@ function LikeRow({
           <Text style={styles.title} numberOfLines={1} dynamicTypeRamp="body">
             {hymn.title}
           </Text>
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+/** A topic or a passage: its name, a quiet detail after it, a press away from its search. */
+function SearchRow({
+  testID,
+  label,
+  detail,
+  onPress,
+}: {
+  readonly testID: string;
+  readonly label: string;
+  readonly detail: Option.Option<string>;
+  readonly onPress: () => void;
+}) {
+  return (
+    <Pressable testID={testID} role="link" aria-label={label} onPress={onPress}>
+      {({ pressed }) => (
+        <View style={[styles.row, pressed && styles.pressed]}>
+          <Text style={styles.title} numberOfLines={1} dynamicTypeRamp="body">
+            {label}
+          </Text>
+          {Option.match(detail, {
+            onNone: () => <></>,
+            onSome: (text) => (
+              <Text style={styles.detail} numberOfLines={1} dynamicTypeRamp="footnote">
+                {text}
+              </Text>
+            ),
+          })}
         </View>
       )}
     </Pressable>
@@ -147,5 +249,6 @@ const styles = StyleSheet.create({
   pressed: { backgroundColor: color.soft },
   number: { minWidth: 32, fontSize: 15, fontVariant: ['tabular-nums'], textAlign: 'right' },
   title: { flex: 1, fontSize: 17, color: color.ink },
+  detail: { flexShrink: 1, fontSize: 13, color: color.muted },
   note: { fontSize: 13, color: color.muted, paddingHorizontal: 20 },
 });

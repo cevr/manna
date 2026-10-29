@@ -13,6 +13,14 @@ import * as Atom from 'effect/reactivity/Atom';
 /** The search field's text. */
 export const searchQuery = Atom.make('').pipe(Atom.keepAlive);
 
+/**
+ * Whether the phone's home screen is in search mode (`Home.native.tsx`): a
+ * tap on its field turns it on, Cancel off, and `About this hymn` turns it on
+ * with a query (a topic or a passage). The web's home has no mode: its
+ * results show while the query has text.
+ */
+export const searchOpen = Atom.make(false).pipe(Atom.keepAlive);
+
 /** The Hymns list's scroll offset, in points from its top. */
 export const hymnsOffset = Atom.make(0).pipe(Atom.keepAlive);
 
