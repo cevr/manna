@@ -52,4 +52,24 @@ describe('a swap joins its drawn key to the body', () => {
     expect(rgbAt(joined, 9, 13)).toEqual([...SKIN]);
     expect(alphaAt(joined, 9, 10)).toBe(255);
   });
+
+  test("the cut end hides the line's anti-aliased rim with it", () => {
+    // The shoulder join of poses-1 (render 30, row 220): the torso's line
+    // has a rim of 72 % ink (90,76,61) beside the key's cut end, 104 from
+    // the ink here, past KEY_JOIN_INK, then its core, then the torso's paint.
+    const RIM: Rgb = [90, 76, 61];
+    const rimmed = (_x: number, y: number): Rgb | 'clear' => {
+      if (y < 10) return 'clear';
+      if (y === 10) return RIM;
+      if (y === 11) return INK;
+      return SKIN;
+    };
+    const out = keyJoin(raster(20, 20, rimmed), raster(20, 20, keyAt), INK, 3);
+    expect(rgbAt(out, 9, 10)).toEqual([...SLEEVE]);
+    expect(rgbAt(out, 9, 11)).toEqual([...SLEEVE]);
+    // the paint beyond the line stands nearer the key's colour than the ink: kept
+    expect(rgbAt(out, 9, 12)).toEqual([...SKIN]);
+    // a rim farther than the line's width from the key stands
+    expect(rgbAt(out, 2, 10)).toEqual([...RIM]);
+  });
 });

@@ -18,7 +18,8 @@
 //   the figure's own. Where a skinned part lies over another, its edge is
 //   inked at 0.8 of the width, but not about its moving bone's pivot (the
 //   shoulder's flap). A drawn key carries its own line, and the body's ink
-//   within the line's width of it takes its nearest pixel's colour, so its
+//   within the line's width of it takes its nearest pixel's colour, the
+//   line's anti-aliased rim with it, so its
 //   cut end hides the body's outline under it (`core/key-join.ts`, the same
 //   rule on the CPU). Near a held hand the line is left as the drawings draw it.
 // - **The held hand** is laid over the figure.
@@ -134,6 +135,16 @@ uniform float L; uniform float IL; uniform float reach; uniform vec3 ink; unifor
 uniform vec3 quiet; uniform vec3 joints[4]; uniform int njoints;
 out vec4 o;
 float dist(ivec2 p, ivec2 s) { if (s.x == ${NONE}) return 1e9; vec2 d = vec2(s - p); return sqrt(dot(d, d)); }
+// one of p's eight neighbours an opaque body pixel the key does not cover that reads as ink; p is opaque, so its neighbours lie in the box
+bool besideInk(ivec2 p, vec3 ink3) {
+  for (int dy = -1; dy <= 1; dy++) for (int dx = -1; dx <= 1; dx++) {
+    if (dx == 0 && dy == 0) continue;
+    ivec2 q = p + ivec2(dx, dy);
+    vec4 f = texelFetch(fig, q, 0);
+    if (texelFetch(moved, q, 0).b < 0.5 && f.a >= 0.5 && distance(f.rgb / f.a, ink3) * 255.0 <= ${KEY_JOIN_INK}.0) return true;
+  }
+  return false;
+}
 void main() {
   ivec2 p = ivec2(gl_FragCoord.xy);
   vec4 c = texelFetch(fig, p, 0); vec4 m = texelFetch(moved, p, 0);
@@ -142,8 +153,11 @@ void main() {
   vec2 xy = vec2(p) + 0.5;
   bool hushed = quiet.z > 0.0 && distance(xy, quiet.xy) < quiet.z;
   vec3 ink3 = ink / 255.0;
-  if (m.b < 0.5 && c.a >= 0.5 && dKey <= L && distance(c.rgb / c.a, ink3) * 255.0 <= ${KEY_JOIN_INK}.0)
-    c = vec4(texelFetch(fig, b.zw, 0).rgb / max(texelFetch(fig, b.zw, 0).a, 1e-4) * c.a, c.a);
+  if (m.b < 0.5 && c.a >= 0.5 && dKey <= L) {
+    vec3 own = c.rgb / c.a; vec4 kc = texelFetch(fig, b.zw, 0); vec3 to = kc.rgb / max(kc.a, 1e-4);
+    float dInk = distance(own, ink3) * 255.0;
+    if (dInk <= ${KEY_JOIN_INK}.0 || (dInk < distance(own, to) * 255.0 && besideInk(p, ink3))) c = vec4(to * c.a, c.a);
+  }
   float k = 0.0;
   if (!hushed && dMove <= reach) {
     if (c.a >= 0.5) k = clamp(L + 0.5 - dOut, 0.0, 1.0);

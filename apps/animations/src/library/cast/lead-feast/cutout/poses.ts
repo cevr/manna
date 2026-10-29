@@ -59,13 +59,36 @@ export const POSES = {
 } as const;
 
 /**
- * The fit rows each pose view's cut-out fails, each no worse than the
- * traced rig's same row, and why (`name/band/part`).
+ * The fit rows each pose view's cut-out fails that the kept poses sheet's
+ * own proportions explain (`name/band/part`), why, and the proportion
+ * measured on the kept poses sheet and on the kept turnaround view the
+ * puppet is fitted from. Each pair is read by the fit rows' ground mask
+ * over the whole figure, its height H the first to the last figure row.
  */
 export const NAMED: Readonly<
-  Record<keyof typeof POSES, ReadonlyArray<{ readonly row: string; readonly why: string }>>
+  Record<
+    keyof typeof POSES,
+    ReadonlyArray<{
+      readonly row: string;
+      readonly why: string;
+      readonly measure: { readonly poses: number; readonly turnaround: number };
+    }>
+  >
 > = {
-  'poses-1': [],
+  'poses-1': [
+    {
+      row: 'silhouette.edge/body/figure',
+      why: "the kept poses sheet draws the robe's hem wider than the turnaround the puppet is cut from; the error lies on the hem's left edge",
+      // the widest figure row in the bottom 15 % of H, over H
+      measure: { poses: 0.4053, turnaround: 0.3303 },
+    },
+    {
+      row: 'silhouette.iou/figure/figure',
+      why: 'the kept poses sheet draws a fuller figure than the turnaround the puppet is cut from, the robe most',
+      // the figure's px over H squared
+      measure: { poses: 0.3172, turnaround: 0.2671 },
+    },
+  ],
 };
 
 /** How far round the held hand the line is left as the drawings draw it, sheet px (the raise's). */
