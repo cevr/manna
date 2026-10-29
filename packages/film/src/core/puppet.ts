@@ -149,11 +149,11 @@ const segmentDistance = (p: Pt, a: Pt, b: Pt) => {
   return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy);
 };
 
-/** `p` along bone `b`'s axis from its pivot, px. */
-const along = (p: Pt, b: PuppetBone) => {
+/** `p` along bone `b`'s axis from `from` (its pivot unless given), px. */
+const along = (p: Pt, b: PuppetBone, from: Pt = b.pivot) => {
   const [dx, dy] = [b.tip[0] - b.pivot[0], b.tip[1] - b.pivot[1]];
   const len = Math.hypot(dx, dy) || 1;
-  return ((p[0] - b.pivot[0]) * dx + (p[1] - b.pivot[1]) * dy) / len;
+  return ((p[0] - from[0]) * dx + (p[1] - from[1]) * dy) / len;
 };
 
 const boneLength = (b: PuppetBone) => Math.hypot(b.tip[0] - b.pivot[0], b.tip[1] - b.pivot[1]);
@@ -178,15 +178,24 @@ const weightsAt = (
   if (skin.length === 1) return [[skin[0]!, 1]];
   const near = nearestBone(p, skin, bones);
   const joints = jointsOf(near, skin, bones);
-  // The joint whose blend holds `p` nearest its middle, if any.
+  // The joint whose blend holds `p` nearest its middle, if any. A joint's blend
+  // lies within its reach of the joint along both bones' axes, so where a limb
+  // bends, the parent's far paint is not in the child's band across its axis.
   let joint: [number, number] | undefined;
   let at = Infinity;
   for (const [pa, ch] of joints) {
-    const s = along(p, bones[ch]!);
-    if (Math.abs(s) < blendOf(bones[pa]!, bones[ch]!) && Math.abs(s) < Math.abs(at))
+    const [parent, child] = [bones[pa]!, bones[ch]!];
+    const r = blendOf(parent, child);
+    const s = along(p, child);
+    if (
+      Math.abs(s) < r &&
+      Math.abs(along(p, parent, child.pivot)) < r &&
+      Math.abs(s) < Math.abs(at)
+    )
       [joint, at] = [[pa, ch], s];
   }
-  if (joint === undefined) return [[sideOf(p, near, joints, bones), 1]];
+  // Outside every blend, the bone whose segment lies nearest owns the vertex.
+  if (joint === undefined) return [[near, 1]];
   const [pa, ch] = joint;
   const r = blendOf(bones[pa]!, bones[ch]!);
   const h = smooth(-r, r, at);
@@ -221,22 +230,6 @@ const jointsOf = (near: number, skin: ReadonlyArray<number>, bones: ReadonlyArra
 /** How far either side of the joint of `parent` and `child` they share a vertex: `BLEND`, at most half the shorter bone. */
 const blendOf = (parent: PuppetBone, child: PuppetBone) =>
   Math.min(BLEND, 0.5 * Math.min(boneLength(parent), boneLength(child)));
-
-/** Outside every blend: the side of the nearest joint `p` lies on (the child's past it), else `near` itself. */
-const sideOf = (
-  p: Pt,
-  near: number,
-  joints: ReadonlyArray<[number, number]>,
-  bones: ReadonlyArray<PuppetBone>,
-) => {
-  let side = near;
-  let far = Infinity;
-  for (const [pa, ch] of joints) {
-    const s = along(p, bones[ch]!);
-    if (Math.abs(s) < far) [far, side] = [Math.abs(s), s > 0 ? ch : pa];
-  }
-  return side;
-};
 
 /** The weights of a flap's vertex at `p`: its arm weights shared with the body by how far it lies from the shoulder. */
 const flapped = (
@@ -709,11 +702,25 @@ export const sealsShown = <T>(
 };
 
 /**
+ * The revealed paint laid over part `k` this frame (`PuppetPart.revealed`, as
+ * each draw path holds it): what each moving part in front of `k` hid under
+ * its rim, laid on `k`'s own mesh where that part has moved away. None while
+ * nothing in front of `k` moves, so a still figure draws its textures alone.
+ * The one rule every draw path follows.
+ */
+export const revealedShown = <T>(
+  revealed: ReadonlyArray<T | undefined>,
+  k: number,
+  moving: (n: number) => boolean,
+): ReadonlyArray<T> => revealed.filter((r, j): r is T => r !== undefined && j < k && moving(j));
+
+/**
  * `puppet` drawn at `pose` in its sheet's frame (or a frame `size` px from the same origin) over transparent ground: the
  * parts back to front, each pixel whose centre a posed triangle holds
  * inverse-mapped to the part's texture, sampled bilinear on premultiplied
  * texels, laid over what lies under it, then each seal it shows
- * (`sealsShown`) over it on the same triangles. Each triangle is laid in turn, in its
+ * (`sealsShown`) and each revealed paint it shows (`revealedShown`) over it on
+ * the same triangles. Each triangle is laid in turn, in its
  * mesh's order, so where a fold turns two triangles of one part over one pixel
  * the later lies over the earlier, as the GL path's blend lays them; a pixel
  * centre on an edge two triangles share goes to one of them (`edgeHolds`).
@@ -732,7 +739,11 @@ export const rasterOf = (
   for (let k = puppet.parts.length - 1; k >= 0; k--) {
     const part = puppet.parts[k]!;
     const t = part.mesh.triangles;
-    for (const tex of [part.pixels, ...sealsShown(part.seals, k, moving)])
+    for (const tex of [
+      part.pixels,
+      ...sealsShown(part.seals, k, moving),
+      ...revealedShown(part.revealed, k, moving),
+    ])
       for (let i = 0; i < t.length; i += 3)
         layTriangle(acc, tex, part.mesh.vertices, posed[k]!, [t[i]!, t[i + 1]!, t[i + 2]!], [W, H]);
   }

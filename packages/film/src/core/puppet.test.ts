@@ -1,6 +1,13 @@
 import { describe, expect, test } from 'bun:test';
 import { Result } from 'effect';
-import { type Puppet, type Skeleton, puppetOf, rasterOf, restPose } from './puppet.ts';
+import {
+  type Puppet,
+  type Skeleton,
+  posedVertices,
+  puppetOf,
+  rasterOf,
+  restPose,
+} from './puppet.ts';
 
 type PuppetSheet = Parameters<typeof puppetOf>[0];
 
@@ -55,6 +62,20 @@ const rimSheet = () => {
 
 const made = (sheet: PuppetSheet, skeleton: Skeleton): Puppet =>
   Result.getOrThrow(puppetOf(sheet, skeleton));
+
+/** The distance from `p` to the segment `a`–`b`, worked here apart from the module's own. */
+const segmentGap = (
+  p: readonly [number, number],
+  a: readonly [number, number],
+  b: readonly [number, number],
+) => {
+  const [dx, dy] = [b[0] - a[0], b[1] - a[1]];
+  const t = Math.max(
+    0,
+    Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy)),
+  );
+  return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy);
+};
 
 const R = (deg: number, x: number, y: number) => {
   const t = (deg * Math.PI) / 180;
@@ -333,6 +354,59 @@ describe('a puppet', () => {
     // and still, the seal is what closes the line
     const still = { numbers: {}, root: [0, 0] as const, scale: 0.9 };
     expect(rasterOf(p, still).rgba).not.toEqual(rasterOf(stripped, still).rgba);
+  });
+
+  test('a vertex nearest the upper bone does not follow the elbow', () => {
+    // an arm bent back on itself: the upper arm along y = 6, the forearm from the elbow back under it
+    const [N, U0, EL, F1] = [48, [6, 6], [36, 6], [6, 36]] as const;
+    const rgba = new Uint8Array(N * N * 4);
+    for (let y = 0; y < N; y++)
+      for (let x = 0; x < N; x++) {
+        const c = [x + 0.5, y + 0.5] as const;
+        const d = Math.min(segmentGap(c, U0, EL), segmentGap(c, EL, F1));
+        if (d <= 3) rgba.set([120, 80, 60, 255], (y * N + x) * 4);
+      }
+    const p = made(
+      { width: N, height: N, parts: [{ name: 'arm', pixels: { width: N, height: N, rgba } }] },
+      {
+        bones: [
+          { name: 'upper', pivot: U0, tip: EL },
+          { name: 'forearm', parent: 'upper', pivot: EL, tip: F1 },
+        ],
+        skin: { arm: ['upper', 'forearm'] },
+      },
+    );
+    const rest = posedVertices(p, restPose(p))[0]!;
+    const bent = posedVertices(p, { ...restPose(p), numbers: { forearm: 90 } })[0]!;
+    const held: number[] = [];
+    for (let i = 0; i < rest.length / 2; i++) {
+      const v = [rest[2 * i]!, rest[2 * i + 1]!] as const;
+      const nearerUpper = segmentGap(v, EL, F1) - segmentGap(v, U0, EL) > 2;
+      if (!nearerUpper || Math.hypot(v[0] - EL[0], v[1] - EL[1]) <= 16) continue;
+      held.push(Math.hypot(bent[2 * i]! - v[0], bent[2 * i + 1]! - v[1]));
+    }
+    expect(held.length).toBeGreaterThan(0);
+    expect(Math.max(...held)).toBeLessThan(0.5);
+  });
+
+  test('rasterOf lays revealed paint where a turned part moved away', () => {
+    const { arm, body } = rimSheet();
+    const p = made(
+      {
+        width: W,
+        height: H,
+        paper: [250, 240, 220],
+        parts: [
+          { name: 'arm', pixels: { width: W, height: H, rgba: arm } },
+          { name: 'body', pixels: { width: W, height: H, rgba: body } },
+        ],
+      },
+      { ...TWO_BONES, skin: { arm: ['shoulderRight', 'elbowRight'], body: [] } },
+    );
+    // the sleeve swung up off the body: the body's paint its rim hid shows where it lay
+    const r = rasterOf(p, { ...restPose(p), numbers: { shoulderRight: 90 } }).rgba;
+    const i = (8 * W + 22) * 4;
+    expect([...r.subarray(i, i + 4)]).toEqual([200, 190, 160, 255]);
   });
 
   test('is deterministic: the same pose gives the same raster', () => {

@@ -39,7 +39,7 @@
 import { Result } from 'effect';
 import { BOIL_CELL, boilField } from '../core/boil.ts';
 import { KEY_JOIN_INK } from '../core/key-join.ts';
-import { type Puppet, sealsShown } from '../core/puppet.ts';
+import { type Puppet, revealedShown, sealsShown } from '../core/puppet.ts';
 import type { Raster } from '../core/raster.ts';
 import { glCanvas } from './gl.ts';
 
@@ -555,19 +555,21 @@ const JUMPS = [32, 16, 8, 4, 2, 1, 1];
 /** A box in GL px: `[x0, y0, x1, y1)`, rows bottom up. */
 type GlBox = readonly [number, number, number, number];
 
-/** Over part `k` (its `PartGl` `p`, its positions `positions`), each seal it shows while the parts `moving` move (`sealsShown`), on its own mesh. */
-const drawSeals = (
+/**
+ * Each of `textures` laid in turn on part `p`'s own mesh at `positions`. The
+ * passes hand it the part's texture, then the seals (`sealsShown`) and the
+ * revealed paint (`revealedShown`) it shows, the layers `rasterOf` lays.
+ */
+const drawLayers = (
   gl: WebGL2RenderingContext,
   p: PartGl,
   positions: Float32Array,
-  k: number,
-  moving: ReadonlyArray<number>,
+  textures: ReadonlyArray<WebGLTexture>,
 ) => {
-  for (const seal of sealsShown(p.seals, k, (n) => moving.includes(n)))
-    drawMesh(gl, p.vao, p.pos, positions, seal, p.count);
+  for (const tex of textures) drawMesh(gl, p.vao, p.pos, positions, tex, p.count);
 };
 
-/** Draw part `k` of the figure: the drawn key where it stands in for the part, else the part's mesh and its seals. */
+/** Draw part `k` of the figure: the drawn key where it stands in for the part, else the part's mesh, its seals and its revealed paint. */
 const drawPart = (
   gl: WebGL2RenderingContext,
   on: PuppetOnGl,
@@ -578,13 +580,12 @@ const drawPart = (
   const p = on.parts[k]!;
   if (k !== pass.swap?.part) {
     if (p.count === 0) return;
-    drawMesh(gl, p.vao, p.pos, state.positions[k]!, p.texture, p.count);
-    drawSeals(gl, p, state.positions[k]!, k, pass.moving);
-    // and, behind each moving part in front of it, the paint that part's rim hid at rest
-    for (const j of pass.moving) {
-      const shown = j < k ? p.revealed[j] : undefined;
-      if (shown !== undefined) drawMesh(gl, p.vao, p.pos, state.positions[k]!, shown, p.count);
-    }
+    const moves = (n: number) => pass.moving.includes(n);
+    drawLayers(gl, p, state.positions[k]!, [
+      p.texture,
+      ...sealsShown(p.seals, k, moves),
+      ...revealedShown(p.revealed, k, moves),
+    ]);
     return;
   }
   const key = on.drawings.get(pass.swap.drawing);
@@ -779,7 +780,7 @@ const passLook = (
   gl.disable(gl.SCISSOR_TEST);
 };
 
-/** With no look: the box cleared on the puppet canvas and the parts drawn onto it back to front, each with the seals it shows while the parts `moving` move. */
+/** With no look: the box cleared on the puppet canvas and the parts drawn onto it back to front, each with the seals and revealed paint it shows while the parts `moving` move. */
 const passPlain = (
   gl: WebGL2RenderingContext,
   on: PuppetOnGl,
@@ -789,6 +790,7 @@ const passPlain = (
   box: readonly [number, number, number, number],
 ) => {
   const [x0, y0, x1, y1] = box;
+  const moves = (n: number) => moving.includes(n);
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   gl.viewport(0, 0, width, height);
   gl.enable(gl.SCISSOR_TEST);
@@ -805,8 +807,11 @@ const passPlain = (
   for (let k = on.parts.length - 1; k >= 0; k--) {
     const p = on.parts[k]!;
     if (p.count === 0) continue;
-    drawMesh(gl, p.vao, p.pos, state.positions[k]!, p.texture, p.count);
-    drawSeals(gl, p, state.positions[k]!, k, moving);
+    drawLayers(gl, p, state.positions[k]!, [
+      p.texture,
+      ...sealsShown(p.seals, k, moves),
+      ...revealedShown(p.revealed, k, moves),
+    ]);
   }
   gl.bindVertexArray(null);
   gl.disable(gl.SCISSOR_TEST);
@@ -817,7 +822,7 @@ const passPlain = (
  * Draw `loaded`'s puppet, its parts' vertices placed at its positions
  * (canvas px of `ctx`), within the box `[x0, y0, x1, y1)`, onto `ctx` there:
  * the box cleared on the puppet canvas, the parts drawn back to front, each
- * with the seals it shows while the parts `moving` move (and, with a look's
+ * with the seals and revealed paint it shows while the parts `moving` move (and, with a look's
  * `pass`, its key, line, held hand and boil), then copied over the frame
  * (whole pixels, under `ctx`'s clip and alpha). Why not, where no WebGL 2
  * context can be made.
