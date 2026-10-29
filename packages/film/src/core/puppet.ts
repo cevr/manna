@@ -370,7 +370,13 @@ export const puppetOf = (
       : withFlap(part.pixels, from.pixels, flap.region);
   });
   const { paper } = sheet;
-  const textures = paper === undefined ? withFlaps : unmatte(withFlaps, W, H, paper);
+  const unmatted = paper === undefined ? withFlaps : unmatte(withFlaps, W, H, paper);
+  const textures = sealed(
+    unmatted,
+    sheet.parts.map((p) => [...(skeleton.skin[p.name] ?? [])].sort().join(' ')),
+    W,
+    H,
+  );
   // the parts un-matted with part j gone: what each part behind j shows once j moves away
   const without = new Map<number, ReadonlyArray<Uint8Array>>();
   const unmattedWithout = (j: number) => {
@@ -447,6 +453,80 @@ const revealedOf = (
     layer.set(shown.subarray(i - 3, i + 1), i - 3);
     out[j] = layer;
   }
+  return out;
+};
+
+/**
+ * Each part's texture sealed under the parts in front of it that move with
+ * it (the same skin, `skins` a key a part): one px more of its own paint
+ * where it has none and such a front part is opaque (`sealOf`). Two parts
+ * cut along one line hold complementary hard edges there; drawn at a
+ * fractional scale, each edge's bilinear sample covers part of the pixel the
+ * line crosses and `over` leaves a light seam along it. The seal fills it
+ * from behind, and at rest the front part hides it.
+ */
+const sealed = (
+  textures: ReadonlyArray<Uint8Array>,
+  skins: ReadonlyArray<string>,
+  W: number,
+  H: number,
+): ReadonlyArray<Uint8Array> =>
+  textures.map((own, k) => {
+    const fronts = textures.filter((_, j) => j < k && skins[j] === skins[k]);
+    const seal = sealOf(own, (i) => fronts.some((f) => f[i + 3] === 255), W, H);
+    if (seal === undefined) return own;
+    const out = Uint8Array.from(own);
+    for (let i = 3; i < seal.length; i += 4)
+      if (seal[i] !== 0) out.set(seal.subarray(i - 3, i + 1), i - 3);
+    return out;
+  });
+
+/** The four pixels beside one, as `[dx, dy]`. */
+const BESIDE = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+] as const;
+
+/** The rounded mean colour, opaque, of `own`'s opaque pixels beside `(x, y)` (4-way); none where none is. */
+const meanBeside = (own: Uint8Array, x: number, y: number, W: number, H: number) => {
+  const sum = [0, 0, 0];
+  let n = 0;
+  for (const [dx, dy] of BESIDE) {
+    const [u, v] = [x + dx, y + dy];
+    if (u < 0 || v < 0 || u >= W || v >= H) continue;
+    const o = (v * W + u) * 4;
+    if (own[o + 3] !== 255) continue;
+    for (let c = 0; c < 3; c++) sum[c]! += own[o + c]!;
+    n++;
+  }
+  if (n === 0) return undefined;
+  return [...sum.map((s) => Math.round(s / n)), 255];
+};
+
+/**
+ * One px more of `own`'s paint, alone: at each pixel (byte offset `i`) where
+ * `own` has none, `holds(i)`, and an opaque pixel of its own lies beside it,
+ * the mean of those beside it (`meanBeside`); clear elsewhere. None where it
+ * seals nothing.
+ */
+const sealOf = (
+  own: Uint8Array,
+  holds: (i: number) => boolean,
+  W: number,
+  H: number,
+): Uint8Array | undefined => {
+  let out: Uint8Array | undefined;
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4;
+      if (own[i + 3] !== 0) continue;
+      const mean = meanBeside(own, x, y, W, H);
+      if (mean === undefined || !holds(i)) continue;
+      out ??= new Uint8Array(own.length);
+      out.set(mean, i);
+    }
   return out;
 };
 
