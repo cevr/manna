@@ -19,7 +19,7 @@
 import { type Rgb, deltaE, labOf } from './cast-sheet-pixels.ts';
 
 /** What a member's cut-out asks of its un-matte beyond its paper; neither is asked by default. */
-export interface UnmatteOptions {
+interface UnmatteOptions {
   /** His cloth colours: a pixel the line does not reach is his, kept whole, when it lies nearer one of them than the paper (ΔE76), not paper. */
   readonly keep?: ReadonlyArray<Rgb>;
   /** His thin parts, by their index front to back: a rim pixel a thin part holds takes the least alpha at or over its solved one that gives a colour in 0..255, never a clamped colour. */
