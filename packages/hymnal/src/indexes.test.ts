@@ -14,6 +14,7 @@ import {
   type Context,
   decodeIndexes,
   decodeRulings,
+  lookAlikes,
   measureOrder,
   normalMetre,
   parseReference,
@@ -832,6 +833,24 @@ describe('reading a printed reference', () => {
       'Zed Quay',
       'Zedbury',
     ]);
+  });
+
+  it("rewrites each digit to this print's look-alikes, each pair both ways, never to a leading zero", () => {
+    const pairs: ReadonlyArray<readonly [number, number]> = [
+      [0, 8],
+      [1, 7],
+      [3, 8],
+      [3, 9],
+      [5, 6],
+      [6, 8],
+      [8, 9],
+    ];
+    const expected = (d: number) =>
+      pairs.flatMap(([a, b]) => (a === d ? [b] : b === d ? [a] : [])).sort((a, b) => a - b);
+    for (const d of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]) {
+      expect(lookAlikes(d).sort((a, b) => a - b)).toEqual(expected(d));
+    }
+    expect(lookAlikes(83).sort((a, b) => a - b)).toEqual([33, 63, 88, 89, 93]);
   });
 
   it('measures each order rule over the made-up book with no pair broken', () => {

@@ -1317,15 +1317,15 @@ export const summaryLine = (
 const LOOK_ALIKES = new Map<string, ReadonlyArray<string>>([
   ['0', ['8']],
   ['1', ['7']],
-  ['3', ['8']],
+  ['3', ['8', '9']],
   ['5', ['6']],
   ['6', ['8', '5']],
   ['7', ['1']],
   ['8', ['3', '6', '9', '0']],
-  ['9', ['8']],
+  ['9', ['8', '3']],
 ]);
 
-/** Every number one look-alike digit away from `n` (3↔8, 6↔8, 9↔8, 5↔6, 0↔8, 1↔7), with no leading zero. */
+/** Every number one look-alike digit away from `n` (3↔8, 3↔9, 6↔8, 9↔8, 5↔6, 0↔8, 1↔7), with no leading zero. */
 export const lookAlikes = (n: number): Array<number> => {
   const s = `${n}`;
   return [...s].flatMap((d, i) =>
