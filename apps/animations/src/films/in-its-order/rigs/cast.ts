@@ -23,6 +23,7 @@ import {
   type tracedFigure,
 } from '@manna/film/style';
 import { PUPPETS as LEAD_PUPPETS } from '../../../library/cast/lead-feast/cutout/puppets.ts';
+import { PUPPETS as SOWER_PUPPETS } from '../../../library/cast/sower/cutout/puppets.ts';
 import { own } from '../../../library/cutout/poses.ts';
 import { RAISE as LEAD_RAISE } from '../../../library/cast/lead-feast/cutout/raise.ts';
 import { poses1View as leadPoses1 } from '../../../library/cast/lead-feast/cutout/poses.ts';
@@ -66,6 +67,34 @@ const coloursOf = (
     ...(p.shade === undefined ? [] : [p.shade]),
     ...(p.light === undefined ? [] : [p.light]),
   ]);
+
+/**
+ * The sower's colour classes, each sample the 3 by 3 median of his kept
+ * views' own pixels (`cast-sheet/views/<view>.png`, x,y in the view): his
+ * linen tunic (front 127,420 127,480 35,300 127,230 100,500; poses-1 120,215
+ * 220,450 330,250), his olive mantle, lit and shaded (front 70,300 75,370
+ * 160,285 170,300 185,260 200,300; poses-1 185,300 275,300), his walnut bag
+ * and strap (front 195,380 180,400; poses-1 285,410 300,390 320,400 225,240
+ * 250,300) and his skin (front 100,95 128,70 30,360 228,365 160,100; poses-1
+ * 30,210 360,360 200,130 225,110). His belt (#684430) is darker than luma 90,
+ * so it reads as his line and is no class.
+ */
+const SOWER_CLASSES = {
+  linen: ['#dfc6ab', '#d8bfa4', '#ead0b1', '#e3c9a9', '#e6cbaa', '#dfbc97', '#e0bc96', '#dfbc98'],
+  olive: ['#787456', '#797454', '#736f52', '#747055', '#645f58', '#615a52', '#8e7b4e', '#88784d'],
+  walnut: ['#946452', '#b87d58', '#ad7750', '#b17951', '#b07a53', '#82593b', '#a17351'],
+  skin: [
+    '#eaad7b',
+    '#ebac78',
+    '#e8ab7a',
+    '#e09e78',
+    '#e9ac7c',
+    '#e29d6c',
+    '#dc9768',
+    '#e49f6a',
+    '#d59265',
+  ],
+} as const;
 
 /**
  * Each member's colour classes for his fit rows (`film concept render`): a
@@ -113,6 +142,12 @@ export const FIT_CLASSES = {
       ],
     },
   },
+  sower: {
+    linen: { sheet: SOWER_CLASSES.linen, paper: SOWER_CLASSES.linen },
+    olive: { sheet: SOWER_CLASSES.olive, paper: SOWER_CLASSES.olive },
+    walnut: { sheet: SOWER_CLASSES.walnut, paper: SOWER_CLASSES.walnut },
+    skin: { sheet: SOWER_CLASSES.skin, paper: SOWER_CLASSES.skin },
+  },
 } as const;
 
 /** Every kept sheet is drawn 1536 by 1024. */
@@ -120,6 +155,12 @@ const SHEET = { width: 1536, height: 1024 } as const;
 
 /** The series lead on his turnaround: his front, hair to soles 440 units (`lead.ts`). */
 const LEAD_TURNAROUND = 1 / LEAD.SHEETS.turnaround.scale;
+
+/** The sower on his turnaround: his front's ink, crown to soles, is 549 rows, 440 units. */
+const SOWER_TURNAROUND = 549 / 440;
+
+/** The sower on his poses: poses-4, his front standing, crown to soles 586 rows, 440 units. */
+const SOWER_POSES = 586 / 440;
 
 /**
  * Each member's sheets: their size and one scale, sheet pixels a canon unit,
@@ -134,6 +175,10 @@ export const SHEETS = {
     turnaround: { ...SHEET, scale: LEAD_TURNAROUND },
     poses: { ...SHEET, scale: 1 / LEAD.SHEETS.poses.scale },
     heads: { ...SHEET, scale: LEAD_TURNAROUND * 1.13 },
+  },
+  sower: {
+    turnaround: { ...SHEET, scale: SOWER_TURNAROUND },
+    poses: { ...SHEET, scale: SOWER_POSES },
   },
 } as const;
 
@@ -672,6 +717,22 @@ export const CUTOUT = cutoutTable({
     },
     heads: {
       'heads-4': own(LEAD_FIT.heads['heads-4'], LEAD_PUPPETS['heads-4']),
+    },
+  },
+  sower: {
+    turnaround: {
+      front: own(undefined, SOWER_PUPPETS.front),
+      threeQuarterLeft: own(undefined, SOWER_PUPPETS.threeQuarterLeft),
+      back: own(undefined, SOWER_PUPPETS.back),
+      profileLeft: own(undefined, SOWER_PUPPETS.profileLeft),
+      profileRight: own(undefined, SOWER_PUPPETS.profileRight),
+      threeQuarterRight: own(undefined, SOWER_PUPPETS.threeQuarterRight),
+    },
+    poses: {
+      'poses-1': own(undefined, SOWER_PUPPETS['poses-1']),
+      'poses-2': own(undefined, SOWER_PUPPETS['poses-2']),
+      'poses-3': own(undefined, SOWER_PUPPETS['poses-3']),
+      'poses-4': own(undefined, SOWER_PUPPETS['poses-4']),
     },
   },
 });
