@@ -10,7 +10,8 @@
  * came from. A topic or a passage closes the sheet and the pages under it
  * and searches the hymns for it on the home screen (`searchQuery`,
  * `searchOpen`): a topic by its name, a passage by where it begins
- * (`passageQuery`).
+ * (`passageQuery`). When home is not the stack's first screen (a link
+ * opened the hymn or the sheet), home replaces it (`homeSteps`).
  *
  * The sheet is a route, `/about?hymn=<number>`, presented as a native form
  * sheet with a grabber (`aboutSheetOptions`), of one family with the player
@@ -18,17 +19,33 @@
  */
 
 import { useAtomSet } from '@effect/atom-react';
-import { Option } from 'effect';
+import { Array as Arr, Option } from 'effect';
 import type { ReactNode } from 'react';
 import { type ColorValue, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { type Href, type StackScreenOptions, useParams, useRouter } from 'one';
+import { type Href, type StackScreenOptions, useNavigation, useParams, useRouter } from 'one';
 
 import { color, useAccent } from '~/color';
 import { hymnAt, type HymnText } from '~/hymns/hymns';
 import { passageQuery, passageText, referencesOf, sameMetre, topicsOf } from '~/hymns/indexes';
 import { moreLike } from '~/hymns/meaning';
+import type { StackState } from '~/player/title';
 
 import { searchOpen, searchQuery } from './place';
+
+/** The home route's file name, as the stack names its screens. */
+const homeRoute = 'index';
+
+/**
+ * The steps that take the stack shown in `state` (the sheet on top) to the
+ * home screen: the screens over the stack's first are closed when there are
+ * any, and the first is replaced by home when it is not home (a hymn or the
+ * sheet opened by a link, with nothing under it). Closing to a first screen
+ * that is home keeps the home screen as it was.
+ */
+const homeSteps = (state: StackState) => ({
+  dismiss: state.index > 0,
+  replace: !Arr.head(state.routes).pipe(Option.exists((route) => route.name === homeRoute)),
+});
 
 /** How many hymns `More like this` lists. */
 export const MORE_LIKE = 8;
@@ -54,6 +71,7 @@ export function AboutScreen() {
 function AboutSheet({ hymn }: { readonly hymn: Option.Option<HymnText> }) {
   const accent = useAccent();
   const router = useRouter();
+  const navigation = useNavigation();
   const setQuery = useAtomSet(searchQuery);
   const setSearching = useAtomSet(searchOpen);
   const openHymn = (number: number) => {
@@ -63,7 +81,9 @@ function AboutSheet({ hymn }: { readonly hymn: Option.Option<HymnText> }) {
   const search = (query: string) => {
     setQuery(query);
     setSearching(true);
-    router.dismissAll();
+    const { dismiss, replace } = homeSteps(navigation.getState());
+    if (dismiss) router.dismissAll();
+    if (replace) router.replace('/');
   };
   return (
     <View testID="about-sheet" style={styles.sheet}>

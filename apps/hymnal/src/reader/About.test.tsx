@@ -13,7 +13,7 @@ import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import AboutRoute from '../../app/(hymnal)/about';
-import { params, routed } from '../test/one';
+import { params, routed, stack } from '../test/one';
 import { readerOn } from '../test/reader';
 import { hymnAt } from '~/hymns/hymns';
 import { passageQuery, passageText, referencesOf, sameMetre, topicsOf } from '~/hymns/indexes';
@@ -33,6 +33,21 @@ const routeTo = (hymn: string) => {
   routed.splice(0);
   return { [Symbol.dispose]: () => void delete params['hymn'] };
 };
+
+/**
+ * The stack under the sheet: `under`, then the sheet, shown; the stack is
+ * emptied again when the test's `using` ends.
+ */
+const sheetOver = (under: ReadonlyArray<{ readonly name: string; readonly params?: object }>) => {
+  stack.state = {
+    routes: [...under, { name: 'about', params: { hymn: '100' } }],
+    index: under.length,
+  };
+  return { [Symbol.dispose]: () => void (stack.state = { routes: [], index: 0 }) };
+};
+
+/** Home, then hymn 100's page: the stack a tap on a hymn in the list leaves. */
+const fromHome = [{ name: 'index' }, { name: 'hymns/[number]', params: { number: '100' } }];
 
 /**
  * `node` mounted in the document over a registry of its own, a click on the
@@ -139,6 +154,7 @@ describe('About this hymn', () => {
 
   it('closes the sheet and the pages under it and searches for a topic by its name', () => {
     using _route = routeTo('100');
+    using _stack = sheetOver(fromHome);
     const registry = clickIn(<AboutRoute />, '[data-testid="about-topic-0"]');
     expect({
       routed,
@@ -149,6 +165,7 @@ describe('About this hymn', () => {
 
   it('searches for a passage by where it begins', () => {
     using _route = routeTo('100');
+    using _stack = sheetOver(fromHome);
     const first = Option.getOrThrow(Arr.head(referencesOf(100)));
     const registry = clickIn(<AboutRoute />, '[data-testid="about-scripture-0"]');
     expect({
@@ -158,6 +175,26 @@ describe('About this hymn', () => {
     }).toEqual({
       routed: ['dismissAll'],
       query: passageQuery(first),
+      searching: true,
+    });
+  });
+
+  it('puts home in place of a hymn a link opened, with nothing under it, and searches there', () => {
+    using _route = routeTo('100');
+    using _stack = sheetOver([{ name: 'hymns/[number]', params: { number: '100' } }]);
+    const registry = clickIn(<AboutRoute />, '[data-testid="about-topic-0"]');
+    expect({ routed, searching: registry.get(searchOpen) }).toEqual({
+      routed: ['dismissAll', 'replace /'],
+      searching: true,
+    });
+  });
+
+  it('puts home in place of a sheet a link opened, with no screen under it', () => {
+    using _route = routeTo('100');
+    using _stack = sheetOver([]);
+    const registry = clickIn(<AboutRoute />, '[data-testid="about-scripture-0"]');
+    expect({ routed, searching: registry.get(searchOpen) }).toEqual({
+      routed: ['replace /'],
       searching: true,
     });
   });
