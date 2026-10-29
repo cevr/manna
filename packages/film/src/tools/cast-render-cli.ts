@@ -2,7 +2,8 @@
 // [--view <kind>-<view> ...] [--figure rig|cutout] [--boil <px>] [--no-critique] [--fit-only]`: the member's cast
 // render (`cast-render.ts`), each kept view asked (every view of every kind
 // kept when none) drawn by its rig from the film's `rigs/cast.ts` (or, with
-// `--figure cutout`, each view its `CUTOUT` table has, by its puppet, its boil
+// `--figure cutout`, or by default for a member the film has no rig of, each
+// view its `CUTOUT` table has, by its puppet, its boil
 // `--boil` px: the house 0.6 or 0, written in the record), laid
 // beside its kept view, held to its fit rows and critiqued once every row
 // passes; a line a view, its flagged rows, its fit and findings under it.
@@ -64,9 +65,9 @@ export const render = <E, R>(pages: Layer.Layer<Pages, E, R>, rules: ReadonlyArr
         ),
       ),
       figure: Flag.Literals('figure', ['rig', 'cutout'] as const).pipe(
-        Flag.withDefault('rig' as const),
+        Flag.optional,
         Flag.withDescription(
-          'what draws each view: its rig (rigs/cast.ts CAST, the default) or its puppet cut from the kept sheet (CUTOUT)',
+          'what draws each view: its rig (rigs/cast.ts CAST) or its puppet cut from the kept sheet (CUTOUT); by default his rig, or his puppet when the film has no rig of him',
         ),
       ),
       boil: Flag.Finite('boil').pipe(
@@ -112,7 +113,7 @@ export const render = <E, R>(pages: Layer.Layer<Pages, E, R>, rules: ReadonlyArr
           views: input.view,
           critique: input.critique,
           fitOnly: input.fitOnly,
-          figure: input.figure,
+          ...Option.match(input.figure, { onNone: () => ({}), onSome: (figure) => ({ figure }) }),
           boil: input.boil,
         }),
       );

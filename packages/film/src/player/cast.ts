@@ -61,10 +61,12 @@ const drawView = (f: Frame, view: CastView, views: ReadonlyArray<CastView>, shee
 
 /** `member`'s cast render as a film: a scene a kind of his sheets, each the size of the sheet. */
 const castFilm = (film: string, member: string, m: CastModule): Film => {
-  const kinds = m.CAST[member];
+  const kinds = m.CAST?.[member];
   const sheets = m.SHEETS[member];
   if (kinds === undefined || sheets === undefined)
-    throw new Error(`${film}'s rigs/cast.ts has no cast render of ${member}`);
+    throw new Error(
+      `${film}'s rigs/cast.ts has no rigs of ${member} (CAST)${m.CUTOUT?.[member] === undefined ? '' : `: his figure is his cut-out, ${castPage(film, member, 'cutout')}`}`,
+    );
   const sized = Object.keys(kinds).map((kind) => {
     const sheet = sheets[kind];
     if (sheet === undefined)

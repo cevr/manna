@@ -23,11 +23,10 @@ import {
   Option,
   Order,
   Path,
-  Predicate,
   Result,
   Schema,
 } from 'effect';
-import type { CastModule } from '../canvas/cast.ts';
+import { isCastModule } from '../canvas/cast.ts';
 import { boxStart, fitPose } from '../core/pose-fit.ts';
 import { cropRaster } from '../core/raster.ts';
 import { PuppetImagesBun } from '../puppet/images-bun.ts';
@@ -48,9 +47,6 @@ class FitRefused extends Schema.TaggedError<FitRefused>()('FitRefused', {
 
 /** How far a fit turns a bone, degrees: the most a mesh bends; a bigger move is a drawn key. */
 const REACH = 15;
-
-const isCastModule = (u: unknown): u is CastModule =>
-  Predicate.hasProperty(u, 'CAST') && Predicate.hasProperty(u, 'SHEETS');
 
 const jsonOf = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
@@ -90,7 +86,7 @@ export const fit = Command.make(
     const dash = input.view.indexOf('-');
     const [kind, name] = [input.view.slice(0, dash), input.view.slice(dash + 1)];
     const target = Option.fromUndefinedOr(
-      table.CUTOUT?.[input.member]?.[kind]?.[name] ?? table.CAST[input.member]?.[kind]?.[name],
+      table.CUTOUT?.[input.member]?.[kind]?.[name] ?? table.CAST?.[input.member]?.[kind]?.[name],
     );
     if (Option.isNone(target)) return yield* refuse(`no ${input.view} in CUTOUT or CAST`);
     const folder = yield* castFolder(film, input.member);

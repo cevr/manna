@@ -24,7 +24,6 @@ import {
   FileSystem,
   Option,
   Path,
-  Predicate,
   Result,
   Schema,
 } from 'effect';
@@ -35,6 +34,8 @@ import {
   CUTOUT_BOILS,
   CUTOUT_MARGIN,
   castPage,
+  defaultFigure,
+  isCastModule,
 } from '../canvas/cast.ts';
 import { BOIL_AMP } from '../core/boil.ts';
 import { deltaE, labsOf } from '../core/cast-sheet-pixels.ts';
@@ -105,7 +106,7 @@ interface CastRenderAsk {
   readonly views: ReadonlyArray<string>;
   readonly critique: boolean;
   readonly fitOnly: boolean;
-  /** What draws each view: its rig (`CAST`, by default), or its puppet (`CUTOUT`). */
+  /** What draws each view: its rig (`CAST`), or its puppet (`CUTOUT`); by default his rig, or his puppet when the film has no rig of him (`defaultFigure`). */
   readonly figure?: CastFigure;
   /** How far a cut-out's boil moves its figure, px: one of `CUTOUT_BOILS`, the house `BOIL_AMP` unless given. */
   readonly boil?: number;
@@ -126,14 +127,6 @@ const measured = (concept: Raster, render: Raster) => {
   if (Result.isFailure(r)) return Result.fail(`the render reads no figure: ${r.failure.message}`);
   return Result.succeed(compareFigures(c.success, r.success));
 };
-
-/** Whether `u` reads as a film's cast render module: its table, its sheets and its paper. */
-const isCastModule = (u: unknown): u is CastModule =>
-  Predicate.hasProperty(u, 'CAST') &&
-  Predicate.hasProperty(u, 'SHEETS') &&
-  Predicate.hasProperty(u, 'PAPER') &&
-  Predicate.isObject(u.CAST) &&
-  Predicate.isObject(u.SHEETS);
 
 /** One kept view cut from the kept sheet and from the render, its rows and its fit rows. */
 interface Cut {
@@ -220,14 +213,14 @@ const tableOf = Effect.fn('Cast.table')(function* (member: string, file: string)
   if (!isCastModule(loaded))
     return yield* CastRenderRefused.make({
       member,
-      reason: `${file} exports no CAST, SHEETS and PAPER`,
+      reason: `${file} exports no SHEETS and PAPER beside a CAST or CUTOUT`,
     });
   return loaded;
 });
 
 /** `member`'s views of `kind` in the table: none when it draws none. */
 const tableViews = (table: CastModule, member: string, kind: SheetKind) =>
-  Option.fromUndefinedOr(table.CAST[member]).pipe(
+  Option.fromUndefinedOr(table.CAST?.[member]).pipe(
     Option.flatMap((kinds) => Option.fromUndefinedOr(kinds[kind])),
     Option.getOrElse((): Readonly<Record<string, CastView>> => ({})),
   );
@@ -553,7 +546,7 @@ export const renderCast = Effect.fn('Cast.render')(function* (
       member,
       reason: `no kept view ${unknown.join(', ')} (kept: ${kept.join(', ')})`,
     });
-  const figure = ask.figure ?? 'rig';
+  const figure = ask.figure ?? defaultFigure(table, member);
   const boil = ask.boil ?? BOIL_AMP;
   if (!CUTOUT_BOILS.includes(boil))
     return yield* CastRenderRefused.make({

@@ -1,5 +1,13 @@
 import { describe, expect, test } from 'bun:test';
-import { type CastProp, type CastView, castDrawOrder, clipCast } from './cast.ts';
+import {
+  type CastModule,
+  type CastProp,
+  type CastView,
+  castDrawOrder,
+  clipCast,
+  defaultFigure,
+  isCastModule,
+} from './cast.ts';
 import type { RivePropSpec } from './rive.ts';
 
 /** A rectangle as a path takes it: its corner, its width and its height. */
@@ -90,5 +98,32 @@ describe('a cast view', () => {
     expect(crop(right, right)).toBe(100 * 100);
     // Above both boxes, the left's crown still shows: no view lies there.
     expect(each(0, 112, -12, 0).every((p) => laid(left, p))).toBe(true);
+  });
+});
+
+describe("a film's cast module", () => {
+  const sheets = {
+    SHEETS: { lead: {}, sower: {} },
+    PAPER: { base: '#fff', tone: '#eee', seed: 1 },
+  };
+  const cutOnly: CastModule = { ...sheets, CUTOUT: { sower: { turnaround: {} } } };
+  const both: CastModule = {
+    ...sheets,
+    CAST: { lead: { turnaround: {} } },
+    CUTOUT: { lead: { turnaround: {} }, sower: { turnaround: {} } },
+  };
+
+  test('reads with a cut-out table and no rigs, and not with neither table', () => {
+    expect(isCastModule(cutOnly)).toBe(true);
+    expect(isCastModule(both)).toBe(true);
+    expect(isCastModule(sheets)).toBe(false);
+    expect(isCastModule({ ...cutOnly, PAPER: undefined })).toBe(false);
+  });
+
+  test('draws a member by his rig when the film has one of him, else by his cut-out', () => {
+    expect(defaultFigure(cutOnly, 'sower')).toBe('cutout');
+    expect(defaultFigure(both, 'lead')).toBe('rig');
+    expect(defaultFigure(both, 'sower')).toBe('cutout');
+    expect(defaultFigure(both, 'nobody')).toBe('rig');
   });
 });

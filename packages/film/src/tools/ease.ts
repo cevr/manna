@@ -7,12 +7,13 @@
 // and the order). A frame is a function of its index alone, so any split
 // into segments and any order give the same bytes.
 
-import { Array as Arr, Effect, FileSystem, Option, Path, Predicate, Schema } from 'effect';
+import { Array as Arr, Effect, FileSystem, Option, Path, Schema } from 'effect';
 import {
   CUTOUT_MARGIN,
   type CastModule,
   type CutoutEase,
   easePage,
+  isCastModule,
   easeScene,
 } from '../canvas/cast.ts';
 import { FilmFolder, type FilmName, importFilmModule } from './film-repo.ts';
@@ -50,9 +51,6 @@ interface EaseFrameJson {
   readonly held: string;
   readonly hand: Pt;
 }
-
-const isCastModule = (u: unknown): u is CastModule =>
-  Predicate.hasProperty(u, 'CAST') && Predicate.hasProperty(u, 'SHEETS');
 
 /** `0..count-1` shuffled by `seed` (an LCG, Fisher-Yates). */
 const shuffled = (count: number, seed: number) => {

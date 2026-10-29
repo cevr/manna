@@ -11,6 +11,7 @@
 // props (a bottle, a stool), each a plain canvas piece. Pure: the table is
 // data a test reads in Bun, and only its props' draws touch a canvas.
 
+import { Predicate } from 'effect';
 import { BOIL_AMP } from '../core/boil.ts';
 import type { FitBar, FitBarName, FitClass, FitProbe } from '../core/fit-rows.ts';
 import type { LabelTable } from '../core/label.ts';
@@ -135,9 +136,10 @@ export interface CastSheet {
 /** Each member's sheets, by kind: what the render's canvas and scale are. */
 type CastSheets = Readonly<Record<string, Readonly<Record<string, CastSheet>>>>;
 
-/** What a film's `rigs/cast.ts` gives the cast render: its table, its sheets, the paper its page lays them on, and each member's colour classes for his fit rows (none, no class rows). */
+/** What a film's `rigs/cast.ts` gives the cast render: its rigs' table, its cut-outs' table, its sheets, the paper its page lays them on, and each member's colour classes for his fit rows (none, no class rows). A film gives one table or both; a member drawn only by his cut-out has no rigs. */
 export interface CastModule {
-  readonly CAST: CastTable;
+  /** The views each member has a rig for (`--figure rig`): none when the film draws its cast by cut-outs only. */
+  readonly CAST?: CastTable;
   /** The views each member has a puppet for (`--figure cutout`): none when he has none. */
   readonly CUTOUT?: CutoutTable;
   readonly SHEETS: CastSheets;
@@ -146,6 +148,19 @@ export interface CastModule {
   /** Each member's eases (`film concept ease`), by name: none when he has none. */
   readonly EASES?: Readonly<Record<string, Readonly<Record<string, CutoutEase>>>>;
 }
+
+/** Whether `u` reads as a film's cast module: its sheets, its paper, and its rigs' table or its cut-outs' table. */
+export const isCastModule = (u: unknown): u is CastModule =>
+  Predicate.hasProperty(u, 'SHEETS') &&
+  Predicate.hasProperty(u, 'PAPER') &&
+  Predicate.isObject(u.SHEETS) &&
+  Predicate.isObject(u.PAPER) &&
+  ((Predicate.hasProperty(u, 'CAST') && Predicate.isObject(u.CAST)) ||
+    (Predicate.hasProperty(u, 'CUTOUT') && Predicate.isObject(u.CUTOUT)));
+
+/** The figure a member's page draws when none is asked: his rig when the film has one of him, else his cut-out. */
+export const defaultFigure = (m: CastModule, member: string): CastFigure =>
+  m.CAST?.[member] === undefined && m.CUTOUT?.[member] !== undefined ? 'cutout' : 'rig';
 
 /**
  * How far a cut-out's page reaches past its sheet each way, px (x, y): a
