@@ -160,8 +160,8 @@ const FRONT: PartCut = {
     },
     { name: 'shadow', take: [belowHem(...FRONT_HEM)] },
     // below the belt, but the seed bag
-    { name: 'robe', take: [box(-1, 331, FAR, FAR * 2)], unless: [box(157, 309, 206, 413)] },
-    { name: 'torso', take: [box(-1, -1, FAR, FAR * 2)] },
+    { name: 'robe', take: [box(-1, 331, FAR, FAR)], unless: [box(157, 309, 206, 413)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
@@ -299,15 +299,15 @@ const THREE_QUARTER_LEFT: PartCut = {
             ...TQL_HEM.right,
             ...TQL_HEM.left,
             [FAR, 512],
-            [FAR, FAR * 2],
-            [-1, FAR * 2],
+            [FAR, FAR],
+            [-1, FAR],
           ],
         },
       ],
     },
     // below the belt, but the seed bag
-    { name: 'robe', take: [box(-1, 330, FAR, FAR * 2)], unless: [box(132, 304, 202, 418)] },
-    { name: 'torso', take: [box(-1, -1, FAR, FAR * 2)] },
+    { name: 'robe', take: [box(-1, 330, FAR, FAR)], unless: [box(132, 304, 202, 418)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
@@ -467,15 +467,15 @@ const BACK: PartCut = {
             ...BACK_HEM.left,
             ...BACK_HEM.right,
             [FAR, 510],
-            [FAR, FAR * 2],
-            [-1, FAR * 2],
+            [FAR, FAR],
+            [-1, FAR],
           ],
         },
       ],
     },
     // below his hip's row, as in the front, but the seed bag
-    { name: 'robe', take: [box(-1, 331, FAR, FAR * 2)], unless: [box(32, 316, 112, 427)] },
-    { name: 'torso', take: [box(-1, -1, FAR, FAR * 2)] },
+    { name: 'robe', take: [box(-1, 331, FAR, FAR)], unless: [box(32, 316, 112, 427)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
@@ -587,20 +587,13 @@ const PROFILE_LEFT: PartCut = {
       name: 'shadow',
       take: [
         {
-          polygon: [
-            [-1, 510],
-            ...PL_HEM.left,
-            ...PL_HEM.right,
-            [FAR, 512],
-            [FAR, FAR * 2],
-            [-1, FAR * 2],
-          ],
+          polygon: [[-1, 510], ...PL_HEM.left, ...PL_HEM.right, [FAR, 512], [FAR, FAR], [-1, FAR]],
         },
       ],
     },
     // below the belt, but the seed bag
-    { name: 'robe', take: [box(-1, 330, FAR, FAR * 2)], unless: [box(78, 328, 165, 428)] },
-    { name: 'torso', take: [box(-1, -1, FAR, FAR * 2)] },
+    { name: 'robe', take: [box(-1, 330, FAR, FAR)], unless: [box(78, 328, 165, 428)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
@@ -725,15 +718,15 @@ const PROFILE_RIGHT: PartCut = {
             ...PR_HEM.left,
             ...PR_HEM.right,
             [FAR, 513],
-            [FAR, FAR * 2],
-            [-1, FAR * 2],
+            [FAR, FAR],
+            [-1, FAR],
           ],
         },
       ],
     },
     // below the belt; the seed bag hangs on his far hip and does not show
-    { name: 'robe', take: [box(-1, 331, FAR, FAR * 2)] },
-    { name: 'torso', take: [box(-1, -1, FAR, FAR * 2)] },
+    { name: 'robe', take: [box(-1, 331, FAR, FAR)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
@@ -884,15 +877,15 @@ const THREE_QUARTER_RIGHT: PartCut = {
             ...TQR_HEM.right,
             ...TQR_HEM.left,
             [FAR, 508],
-            [FAR, FAR * 2],
-            [-1, FAR * 2],
+            [FAR, FAR],
+            [-1, FAR],
           ],
         },
       ],
     },
     // below the belt, but the seed bag on his far hip
-    { name: 'robe', take: [box(-1, 330, FAR, FAR * 2)], unless: [box(160, 322, 200, 420)] },
-    { name: 'torso', take: [box(-1, -1, FAR, FAR * 2)] },
+    { name: 'robe', take: [box(-1, 330, FAR, FAR)], unless: [box(160, 322, 200, 420)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
@@ -983,8 +976,8 @@ const POSES_1: PartCut = {
     {
       name: 'head',
       take: [
-        box(-1, -1, FAR * 2, 160),
-        box(186, 160, FAR * 2, 170),
+        box(-1, -1, FAR, 160),
+        box(186, 160, FAR, 170),
         box(186, 170, 311, 184),
         box(308, 145, 360, 191),
       ],
@@ -1025,27 +1018,20 @@ const POSES_1: PartCut = {
     },
     {
       name: 'footLeft',
-      take: [{ polygon: [[255, 557], ...P1_HEM.left, [FAR * 2, 522], [FAR * 2, 620], [255, 620]] }],
+      take: [{ polygon: [[255, 557], ...P1_HEM.left, [FAR, 522], [FAR, 620], [255, 620]] }],
       unless: [underSole(P1_SOLES.left)],
     },
     {
       name: 'shadow',
       take: [
         {
-          polygon: [
-            [-1, 571],
-            ...P1_HEM.right,
-            ...P1_HEM.left,
-            [FAR * 2, 522],
-            [FAR * 2, FAR * 2],
-            [-1, FAR * 2],
-          ],
+          polygon: [[-1, 571], ...P1_HEM.right, ...P1_HEM.left, [FAR, 522], [FAR, FAR], [-1, FAR]],
         },
       ],
     },
     // below the belt, but the seed bag on his near hip
-    { name: 'robe', take: [box(-1, 330, FAR * 2, FAR * 2)], unless: [box(249, 330, 374, 453)] },
-    { name: 'torso', take: [box(-1, -1, FAR * 2, FAR * 2)] },
+    { name: 'robe', take: [box(-1, 330, FAR, FAR)], unless: [box(249, 330, 374, 453)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
@@ -1252,20 +1238,13 @@ const POSES_2: PartCut = {
       name: 'shadow',
       take: [
         {
-          polygon: [
-            [-1, 540],
-            ...P2_HEM.left,
-            ...P2_HEM.right,
-            [FAR, 540],
-            [FAR, FAR * 2],
-            [-1, FAR * 2],
-          ],
+          polygon: [[-1, 540], ...P2_HEM.left, ...P2_HEM.right, [FAR, 540], [FAR, FAR], [-1, FAR]],
         },
       ],
     },
     // below his hip's row, as in the back view, but the seed bag
-    { name: 'robe', take: [box(-1, 345, FAR, FAR * 2)], unless: [box(32, 331, 135, 456)] },
-    { name: 'torso', take: [box(-1, -1, FAR, FAR * 2)] },
+    { name: 'robe', take: [box(-1, 345, FAR, FAR)], unless: [box(32, 331, 135, 456)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
@@ -1440,20 +1419,13 @@ const POSES_3: PartCut = {
       name: 'shadow',
       take: [
         {
-          polygon: [
-            [-1, 500],
-            ...P3_HEM.right,
-            ...P3_HEM.left,
-            [FAR, 545],
-            [FAR, FAR * 2],
-            [-1, FAR * 2],
-          ],
+          polygon: [[-1, 500], ...P3_HEM.right, ...P3_HEM.left, [FAR, 545], [FAR, FAR], [-1, FAR]],
         },
       ],
     },
     // below the belt, but the seed bag at his front
-    { name: 'robe', take: [box(-1, 335, FAR, FAR * 2)], unless: [box(110, 340, 232, 456)] },
-    { name: 'torso', take: [box(-1, -1, FAR, FAR * 2)] },
+    { name: 'robe', take: [box(-1, 335, FAR, FAR)], unless: [box(110, 340, 232, 456)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
@@ -1617,20 +1589,13 @@ const POSES_4: PartCut = {
       name: 'shadow',
       take: [
         {
-          polygon: [
-            [-1, 535],
-            ...P4_HEM.right,
-            ...P4_HEM.left,
-            [FAR, 535],
-            [FAR, FAR * 2],
-            [-1, FAR * 2],
-          ],
+          polygon: [[-1, 535], ...P4_HEM.right, ...P4_HEM.left, [FAR, 535], [FAR, FAR], [-1, FAR]],
         },
       ],
     },
     // below the belt, but the seed bag at his left hip
-    { name: 'robe', take: [box(-1, 335, FAR, FAR * 2)], unless: [box(168, 335, 276, 458)] },
-    { name: 'torso', take: [box(-1, -1, FAR, FAR * 2)] },
+    { name: 'robe', take: [box(-1, 335, FAR, FAR)], unless: [box(168, 335, 276, 458)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 

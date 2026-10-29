@@ -214,8 +214,8 @@ const FRONT: PartCut = {
       unless: [aboveHem(...FRONT_HEM), underSole(FRONT_SOLES.left)],
     },
     { name: 'shadow', take: [belowHem(...FRONT_HEM)] },
-    { name: 'robe', take: [box(-1, 369, FAR, FAR * 2)] },
-    { name: 'torso', take: [box(-1, -1, FAR, FAR * 2)] },
+    { name: 'robe', take: [box(-1, 369, FAR, FAR)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
@@ -397,8 +397,8 @@ const THREE_QUARTER_LEFT: PartCut = {
       unless: [aboveHem(...TURNED_HEM), underSole(TURNED_SOLES.left)],
     },
     { name: 'shadow', take: [belowHem(...TURNED_HEM)] },
-    { name: 'robe', take: [box(-1, 369, FAR, FAR * 2)] },
-    { name: 'torso', take: [box(-1, -1, FAR, FAR * 2)] },
+    { name: 'robe', take: [box(-1, 369, FAR, FAR)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
@@ -429,7 +429,7 @@ const HEADS_4: PartCut = {
       ],
       pivot: [120, 232],
     },
-    { name: 'torso', take: [box(-1, -1, FAR, FAR * 2)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 

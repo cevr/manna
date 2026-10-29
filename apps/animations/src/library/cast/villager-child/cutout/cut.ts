@@ -112,7 +112,7 @@ const POSES_5: PartCut = {
       ],
       pivot: JOINTS['poses-5'].shoulderLeft,
     },
-    { name: 'torso', take: [box(-1, -1, FAR, FAR * 2)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 

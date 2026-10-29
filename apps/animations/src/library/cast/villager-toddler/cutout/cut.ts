@@ -99,8 +99,8 @@ const POSES_1: PartCut = {
         {
           polygon: [
             [154, -1],
-            [FAR * 2, -1],
-            [FAR * 2, 160],
+            [FAR, -1],
+            [FAR, 160],
             [182, 160],
             [178, 158],
             [164, 158],
@@ -145,7 +145,7 @@ const POSES_1: PartCut = {
     },
     {
       name: 'footLeft',
-      take: [{ polygon: [...P1_HEM.slice(0, 7), [72, FAR * 2], [-1, FAR * 2]] }],
+      take: [{ polygon: [...P1_HEM.slice(0, 7), [72, FAR], [-1, FAR]] }],
       unless: [underSole(P1_SOLES.left)],
     },
     {
@@ -154,9 +154,9 @@ const POSES_1: PartCut = {
         {
           polygon: [
             [188, 190],
-            [FAR * 2, 190],
-            [FAR * 2, FAR * 2],
-            [188, FAR * 2],
+            [FAR, 190],
+            [FAR, FAR],
+            [188, FAR],
           ],
         },
       ],
@@ -166,7 +166,7 @@ const POSES_1: PartCut = {
       name: 'shadow',
       take: [
         {
-          polygon: [...P1_HEM, [188, 190], [FAR * 2, 190], [FAR * 2, FAR * 2], [-1, FAR * 2]],
+          polygon: [...P1_HEM, [188, 190], [FAR, 190], [FAR, FAR], [-1, FAR]],
         },
       ],
     },
@@ -176,9 +176,9 @@ const POSES_1: PartCut = {
         {
           polygon: [
             [-1, -1],
-            [FAR * 2, -1],
-            [FAR * 2, FAR * 2],
-            [-1, FAR * 2],
+            [FAR, -1],
+            [FAR, FAR],
+            [-1, FAR],
           ],
         },
       ],
@@ -274,7 +274,7 @@ const POSES_2: PartCut = {
     // above the strips under the jaw, and the neck between them down to its lowest skin
     { name: 'head', take: [box(-1, -1, FAR, 122), box(70, 122, 98, 137)] },
     // their tunic, legs, sandals and the ground shadow: none of them moves in this pose
-    { name: 'torso', take: [box(-1, -1, FAR, FAR * 2)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
