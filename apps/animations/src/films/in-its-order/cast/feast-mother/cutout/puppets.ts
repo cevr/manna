@@ -100,6 +100,18 @@ const CLOTH = [
 ] as const;
 
 /**
+ * Her paper's grain, luma (`core/unmatte.ts`, `grain`): the 95th percentile of
+ * how far her kept sheets' own ground runs darker than its paper, 2.04 (the
+ * poses; the turnaround's is 0.89, and the larger serves both). A rim pixel
+ * of hers darker than the paper by more than this is no paper, so the
+ * un-matte keeps it whole: the grey-cream cloth of her veil, swaddle and the
+ * bench leg in the poses, which the line to her ink barely reaches and would
+ * otherwise solve to a few alpha, leaving holes the film's paper shows
+ * through.
+ */
+const GRAIN = 2.04;
+
+/**
  * Each cut view's paper, the median of its kept view's border ground (its rim
  * is un-matted from it, `core/unmatte.ts`): 252,241,221 on all but
  * profileRight, whose ground is 252,242,222, the ground each view's dry-run
@@ -122,6 +134,7 @@ const TURNAROUND = puppetsOf<TurnaroundView>({
   papers: TURNAROUND_PAPERS,
   line: TURNAROUND_LINE,
   keep: CLOTH,
+  grain: GRAIN,
   parts: {
     front: [
       ['armRight', frontArmRight],
@@ -192,6 +205,7 @@ const POSES = puppetsOf<PoseView>({
   papers: POSES_PAPERS,
   line: POSES_LINE,
   keep: CLOTH,
+  grain: GRAIN,
   parts: {
     'poses-1': [
       ['armRight', p1ArmRight],
