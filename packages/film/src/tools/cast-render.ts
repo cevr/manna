@@ -265,7 +265,7 @@ const keptViews = (record: CastSheetRecord, kind: SheetKind) =>
 /**
  * Refused unless the table draws every kept view of each kind asked (each
  * view asked, for a cut-out: a member has puppets only for the views cut),
- * and gives each sheet its scale.
+ * draws at least one view of it, and gives each sheet its scale.
  */
 const coveredBy = (
   member: string,
@@ -285,15 +285,43 @@ const coveredBy = (
         member,
         reason: {
           rig: `rigs/cast.ts draws no ${missing.map((v) => `${kind} ${v.name}`).join(', ')}: every kept view needs a rig and a pose`,
-          cutout: `rigs/cast.ts has no puppet for ${missing.map((v) => `${kind} ${v.name}`).join(', ')} (CUTOUT)`,
+          cutout: `rigs/cast.ts has no puppet for ${missing.map((v) => `${kind}-${v.name}`).join(', ')} (CUTOUT)`,
         }[figure],
       });
+    if (views.length === 0)
+      return CastRenderRefused.make({ member, reason: `rigs/cast.ts draws no ${kind} view` });
     if (Option.isNone(tableSheet(table, member, kind)))
       return CastRenderRefused.make({
         member,
         reason: `rigs/cast.ts gives the ${kind} sheet no scale`,
       });
     return Effect.void;
+  });
+
+/** The kinds a render of `member` draws for `ask`, each covered by the table (`coveredBy`), or why it cannot draw them. */
+export const renderedKinds = (
+  member: string,
+  table: CastModule,
+  record: CastSheetRecord,
+  ask: Pick<CastRenderAsk, 'kinds' | 'views'>,
+  figure: CastFigure,
+) =>
+  Effect.gen(function* () {
+    const viewAsked = (k: SheetKind) => ask.views.some((v) => v.startsWith(`${k}-`));
+    // A kind the table draws none of is left out only when the ask did not
+    // name it; a named one goes on to `coveredBy`, which refuses it.
+    const kinds = Arr.filter(
+      SheetKind.literals,
+      (k) =>
+        keptViews(record, k).length > 0 &&
+        (ask.kinds.length === 0 || ask.kinds.includes(k)) &&
+        (ask.views.length === 0 || viewAsked(k)) &&
+        (drawnViews(table, member, k, figure).length > 0 || ask.kinds.includes(k) || viewAsked(k)),
+    );
+    if (kinds.length === 0)
+      return yield* CastRenderRefused.make({ member, reason: 'no kind asked is kept' });
+    yield* coveredBy(member, table, record, kinds, ask.views, figure);
+    return kinds;
   });
 
 /** Each cut's files written into `dir`: its two crops, its side-by-side at 1:1 and its table. */
@@ -553,17 +581,7 @@ export const renderCast = Effect.fn('Cast.render')(function* (
       member,
       reason: `a cut-out page boils at ${CUTOUT_BOILS.join(' or ')} px, not ${boil}`,
     });
-  const kinds = Arr.filter(
-    SheetKind.literals,
-    (k) =>
-      keptViews(record, k).length > 0 &&
-      drawnViews(table, member, k, figure).length > 0 &&
-      (ask.kinds.length === 0 || ask.kinds.includes(k)) &&
-      (ask.views.length === 0 || ask.views.some((v) => v.startsWith(`${k}-`))),
-  );
-  if (kinds.length === 0)
-    return yield* CastRenderRefused.make({ member, reason: 'no kind asked is kept' });
-  yield* coveredBy(member, table, record, kinds, ask.views, figure);
+  const kinds = yield* renderedKinds(member, table, record, ask, figure);
   const root = yield* renderRoot(film, member);
   // A read of the fit rows alone writes nothing: no render folder is taken.
   const { n, dir } = yield* Bool.match(ask.fitOnly, {
