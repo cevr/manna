@@ -12,13 +12,15 @@
 //   (`shoulderRight`, `shoulderLeft`), named from the character's own side.
 // - **Mesh.** A part's mesh is a 3 px grid (`MESH_STEP`) over the cells that
 //   hold any pixel of it, two triangles a cell; a vertex is a grid point.
-// - **Weights.** A vertex lies on at most two bones, only those its part's
-//   skin names. At a joint its nearest bone shares with another its skin
-//   names, the child's weight is a smoothstep of how much nearer the child's
-//   segment the vertex lies than the parent's: 0 at `blend` px nearer the
-//   parent (narrowed by how tightly the joint is folded at rest, `spread`),
-//   1 at `blend` px nearer the child. So the weight is continuous across
-//   the whole blend and is the nearest bone's alone outside it. A part
+// - **Weights.** A vertex lies only on bones its part's skin names. Each
+//   joint of the skin has a k: a smoothstep of how much nearer the child's
+//   segments (its own and its descendants' on the skin) the vertex lies
+//   than the parent's: 0 at `blend` px nearer the parent (narrowed by how
+//   tightly the joint is folded at rest, `spread`), 1 at `blend` px nearer
+//   the child. The weights compose the k from the skin's root down (on an
+//   arm: upper 1 - k1, forearm k1 (1 - k2), hand k1 k2), so they are
+//   continuous everywhere, also where two joints' blends overlap on a short
+//   bone, and are the nearest bone's alone outside every blend. A part
 //   whose skin names no bone moves with the root alone.
 // - **Shoulder flap.** A flap gives an arm the body's pixels round its cap
 //   (`PuppetFlap.region`): they join the arm's texture, and the vertices
@@ -53,6 +55,9 @@ const MESH_STEP = 3;
 
 /** How much nearer one bone than the other a vertex at a joint may lie and still be shared by both, px (at most half the shorter bone). */
 const BLEND = 18;
+
+/** How many weights a mesh holds a vertex: a chain of four bones (a body bone, shoulder, elbow, wrist) may share one vertex at once. A vertex with more keeps its heaviest, scaled to total 1. */
+const WEIGHTS = 4;
 
 /** How far from a shoulder's pivot a flap's vertex lies wholly on the body, px. */
 const FLAP_REACH = 34;
@@ -97,7 +102,7 @@ export interface PuppetPose {
   readonly scale: number;
 }
 
-/** A part's mesh: its vertices (flat x, y, sheet px), its triangles (flat, three vertex indices each), and each vertex's weights as bone indices and amounts (two a vertex, -1 none). */
+/** A part's mesh: its vertices (flat x, y, sheet px), its triangles (flat, three vertex indices each), and each vertex's weights as bone indices and amounts (`WEIGHTS` a vertex, -1 none). */
 interface PuppetMesh {
   readonly vertices: Float64Array;
   readonly triangles: Uint32Array;
@@ -109,7 +114,7 @@ interface PuppetMesh {
 interface PuppetPart {
   readonly name: string;
   readonly pixels: Raster;
-  /** By each part in front of it: the paint the un-matte cleared behind that part's rim (hidden at rest), shown once that part moves away; none where nothing was cleared. */
+  /** By each part in front of it: the paint the un-matte cleared behind that part's rim (hidden at rest), shown once either of the two parts moves; none where nothing was cleared. */
   readonly revealed: ReadonlyArray<Raster | undefined>;
   /** By each part in front of it of another skin: the seal laid over this part along the line it shares with that part, shown while neither moves (`sealsShown`); none where it seals nothing. */
   readonly seals: ReadonlyArray<Raster | undefined>;
@@ -172,7 +177,14 @@ const inside = (poly: ReadonlyArray<Pt>, x: number, y: number) => {
   return c;
 };
 
-/** The weights of a vertex at `p` on `skin` (bone indices into `bones`), at most two, totalling 1. */
+/**
+ * The weights of a vertex at `p` on `skin` (bone indices into `bones`), totalling 1: the
+ * joints of the skin's tree that holds the nearest bone, composed from its root down. A
+ * bone keeps the share that reaches it less what its child joints pass on, each child's k
+ * of it (scaled down where they total over 1), so on a chain each weight is a product of
+ * its joints' k (upper 1 - k1, forearm k1 (1 - k2), hand k1 k2). Each k is continuous in
+ * `p`, so the weights are too, where two joints' blends overlap on one bone as anywhere.
+ */
 const weightsAt = (
   p: Pt,
   skin: ReadonlyArray<number>,
@@ -180,27 +192,27 @@ const weightsAt = (
 ): Array<[number, number]> => {
   if (skin.length === 0) return [];
   if (skin.length === 1) return [[skin[0]!, 1]];
-  const near = nearestBone(p, skin, bones);
-  const joints = jointsOf(near, skin, bones);
-  let joint: [number, number] | undefined;
-  let h = 0;
-  for (const [pa, ch] of joints) {
-    const [parent, child] = [bones[pa]!, bones[ch]!];
-    const r = blendOf(parent, child);
-    const d =
-      segmentDistance(p, parent.pivot, parent.tip) - segmentDistance(p, child.pivot, child.tip);
-    const k = smooth(-r * spread(parent, child), r, d);
-    if (k > 0 && k < 1 && (joint === undefined || Math.abs(k - 0.5) < Math.abs(h - 0.5)))
-      [joint, h] = [[pa, ch], k];
-  }
-  if (joint === undefined) return [[near, 1]];
-  const [pa, ch] = joint;
-  if (h <= 0) return [[pa, 1]];
-  if (h >= 1) return [[ch, 1]];
-  return [
-    [pa, 1 - h],
-    [ch, h],
-  ];
+  const parentOf = (k: number) => skin.find((j) => bones[j]!.name === bones[k]!.parent);
+  const childrenOf = (k: number) => skin.filter((j) => bones[j]!.parent === bones[k]!.name);
+  const distance = (k: number) => segmentDistance(p, bones[k]!.pivot, bones[k]!.tip);
+  // the distance to the nearest segment of `k` and its descendants on the skin
+  const reach = (k: number): number => Math.min(distance(k), ...childrenOf(k).map(reach));
+  let root = nearestBone(p, skin, bones);
+  for (let up = parentOf(root); up !== undefined; up = parentOf(root)) root = up;
+  const weights: Array<[number, number]> = [];
+  const pass = (k: number, share: number) => {
+    const ks = childrenOf(k).map((c): [number, number] => {
+      const [parent, child] = [bones[k]!, bones[c]!];
+      const r = blendOf(parent, child);
+      return [c, smooth(-r * spread(parent, child), r, distance(k) - reach(c))];
+    });
+    const total = ks.reduce((s, [, x]) => s + x, 0);
+    const scale = total > 1 ? 1 / total : 1;
+    if (total * scale < 1) weights.push([k, share * (1 - total * scale)]);
+    for (const [c, x] of ks) if (x > 0) pass(c, share * x * scale);
+  };
+  pass(root, 1);
+  return weights;
 };
 
 /** The bone of `skin` whose segment lies nearest `p`. */
@@ -212,15 +224,6 @@ const nearestBone = (p: Pt, skin: ReadonlyArray<number>, bones: ReadonlyArray<Pu
     if (d < best) [best, near] = [d, k];
   }
   return near;
-};
-
-/** The joints `near` shares with another bone of `skin`: its parent's (at its own pivot) and each child's (at theirs), as (parent, child). */
-const jointsOf = (near: number, skin: ReadonlyArray<number>, bones: ReadonlyArray<PuppetBone>) => {
-  const joints: Array<[parent: number, child: number]> = [];
-  const parent = skin.find((k) => bones[k]!.name === bones[near]!.parent);
-  if (parent !== undefined) joints.push([parent, near]);
-  for (const k of skin) if (bones[k]!.parent === bones[near]!.name) joints.push([near, k]);
-  return joints;
 };
 
 /** The blend of the joint of `parent` and `child`: `BLEND`, at most half the shorter bone. */
@@ -293,13 +296,15 @@ const meshOf = (
       tris.push(a, b, d, a, d, e);
     }
   const n = xs.length / 2;
-  const boneOf = new Int16Array(n * 2).fill(-1);
-  const amounts = new Float64Array(n * 2);
+  const boneOf = new Int16Array(n * WEIGHTS).fill(-1);
+  const amounts = new Float64Array(n * WEIGHTS);
   for (let i = 0; i < n; i++) {
-    const w = weigh([xs[2 * i]!, xs[2 * i + 1]!]);
+    const all = weigh([xs[2 * i]!, xs[2 * i + 1]!]);
+    const w = all.length > WEIGHTS ? all.toSorted((a, b) => b[1] - a[1]).slice(0, WEIGHTS) : all;
+    const total = w.reduce((s, [, amount]) => s + amount, 0);
     w.forEach(([k, amount], j) => {
-      boneOf[2 * i + j] = k;
-      amounts[2 * i + j] = amount;
+      boneOf[WEIGHTS * i + j] = k;
+      amounts[WEIGHTS * i + j] = w === all ? amount : amount / total;
     });
   }
   return {
@@ -682,14 +687,14 @@ export const poseMesh = <O extends Float64Array | Float32Array>(
   for (let i = 0; i < n; i++) {
     const [x, y] = [v[2 * i]!, v[2 * i + 1]!];
     let [px, py] = [x, y];
-    const b0 = mesh.bones[2 * i]!;
+    const b0 = mesh.bones[WEIGHTS * i]!;
     if (b0 >= 0) {
       px = 0;
       py = 0;
-      for (let j = 0; j < 2; j++) {
-        const b = mesh.bones[2 * i + j]!;
+      for (let j = 0; j < WEIGHTS; j++) {
+        const b = mesh.bones[WEIGHTS * i + j]!;
         if (b < 0) continue;
-        const w = mesh.amounts[2 * i + j]!;
+        const w = mesh.amounts[WEIGHTS * i + j]!;
         const o = b * 6;
         px += w * (m[o]! * x + m[o + 2]! * y + m[o + 4]!);
         py += w * (m[o + 1]! * x + m[o + 3]! * y + m[o + 5]!);

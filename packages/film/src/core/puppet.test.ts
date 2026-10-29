@@ -128,14 +128,21 @@ describe('a puppet', () => {
     const p = made(SLEEVE, TWO_BONES);
     const { mesh } = p.parts[0]!;
     expect(mesh.vertices.length).toBeGreaterThan(0);
+    // the weight slots a vertex has
+    const slots = mesh.bones.length / (mesh.vertices.length / 2);
     for (let i = 0; i < mesh.vertices.length / 2; i++) {
-      const on = [0, 1].filter((j) => mesh.bones[2 * i + j]! >= 0);
+      const on = Array.from({ length: slots }, (_, j) => j).filter(
+        (j) => mesh.bones[slots * i + j]! >= 0,
+      );
       expect(on.length).toBeGreaterThanOrEqual(1);
-      expect(Math.abs(on.reduce((s, j) => s + mesh.amounts[2 * i + j]!, 0) - 1)).toBeLessThan(
+      expect(on.length).toBeLessThanOrEqual(2);
+      expect(Math.abs(on.reduce((s, j) => s + mesh.amounts[slots * i + j]!, 0) - 1)).toBeLessThan(
         1e-12,
       );
       for (const j of on)
-        expect(['shoulderRight', 'elbowRight']).toContain(p.bones[mesh.bones[2 * i + j]!]!.name);
+        expect(['shoulderRight', 'elbowRight']).toContain(
+          p.bones[mesh.bones[slots * i + j]!]!.name,
+        );
     }
     // the vertices are the grid's points over the part's cells
     // the mesh grid is 3 px (`MESH_STEP`)
@@ -228,13 +235,15 @@ describe('a puppet', () => {
     });
     const { vertices, bones, amounts } = p.parts[0]!.mesh;
     const lean = p.bones.findIndex((b) => b.name === 'lean');
+    // the weight slots a vertex has
+    const slots = bones.length / (vertices.length / 2);
     const leanAt = (x: number, y: number) => {
       const i = [...Array(vertices.length / 2).keys()].find(
         (k) => vertices[2 * k] === x && vertices[2 * k + 1] === y,
       )!;
-      return [0, 1]
-        .filter((k) => bones[2 * i + k] === lean)
-        .reduce((sum, k) => sum + amounts[2 * i + k]!, 0);
+      return [...Array(slots).keys()]
+        .filter((k) => bones[slots * i + k] === lean)
+        .reduce((sum, k) => sum + amounts[slots * i + k]!, 0);
     };
     expect(leanAt(9, 39)).toBe(0);
     expect(leanAt(9, 3)).toBe(1);
@@ -390,28 +399,71 @@ describe('a puppet', () => {
   });
 
   test('an elbow turn tears no mesh edge on a limb bent at rest 90° or 135°', () => {
-    // the upper arm along y = 6 to the elbow, the forearm bent down (90°) or back under it (135°);
-    // `fold` is the angle the two bones make at the elbow, radians
-    const [N, U0, EL, TURN] = [48, [6, 6], [36, 6], 60] as const;
-    for (const [F1, fold] of [
-      [[36, 36], Math.PI / 2],
-      [[6, 36], Math.PI / 4],
-    ] as const) {
+    type Pt = readonly [number, number];
+    // `fold` is the angle the upper arm and forearm make at the elbow, radians
+    const TURN = 60;
+    const s = Math.SQRT1_2;
+    const cases: ReadonlyArray<{
+      N: number;
+      half: number;
+      joints: ReadonlyArray<Pt>;
+      fold: number;
+    }> = [
+      // the upper arm along y = 6 to the elbow, the forearm bent down (90°) or back under it (135°)
+      {
+        N: 48,
+        half: 4,
+        joints: [
+          [6, 6],
+          [36, 6],
+          [36, 36],
+        ],
+        fold: Math.PI / 2,
+      },
+      {
+        N: 48,
+        half: 4,
+        joints: [
+          [6, 6],
+          [36, 6],
+          [6, 36],
+        ],
+        fold: Math.PI / 4,
+      },
+      // a 40 px forearm folded back 135° and a 30 px hand straight on from it: the elbow's and
+      // the wrist's blends overlap on the forearm, and the weights stay continuous there
+      {
+        N: 160,
+        half: 6,
+        joints: [
+          [20, 100],
+          [100, 100],
+          [100 - 40 * s, 100 + 40 * s],
+          [100 - 70 * s, 100 + 70 * s],
+        ],
+        fold: Math.PI / 4,
+      },
+    ];
+    const names = ['upper', 'forearm', 'hand'];
+    for (const { N, half, joints, fold } of cases) {
+      const segments = joints.slice(1).map((tip, i) => [joints[i]!, tip] as const);
       const rgba = new Uint8Array(N * N * 4);
       for (let y = 0; y < N; y++)
         for (let x = 0; x < N; x++) {
           const c = [x + 0.5, y + 0.5] as const;
-          const d = Math.min(segmentGap(c, U0, EL), segmentGap(c, EL, F1));
-          if (d <= 4) rgba.set([120, 80, 60, 255], (y * N + x) * 4);
+          const d = Math.min(...segments.map(([a, b]) => segmentGap(c, a, b)));
+          if (d <= half) rgba.set([120, 80, 60, 255], (y * N + x) * 4);
         }
       const p = made(
         { width: N, height: N, parts: [{ name: 'arm', pixels: { width: N, height: N, rgba } }] },
         {
-          bones: [
-            { name: 'upper', pivot: U0, tip: EL },
-            { name: 'forearm', parent: 'upper', pivot: EL, tip: F1 },
-          ],
-          skin: { arm: ['upper', 'forearm'] },
+          bones: segments.map(([pivot, tip], i) => ({
+            name: names[i]!,
+            ...(i > 0 && { parent: names[i - 1]! }),
+            pivot,
+            tip,
+          })),
+          skin: { arm: names.slice(0, segments.length) },
         },
       );
       const rest = posedVertices(p, restPose(p))[0]!;
