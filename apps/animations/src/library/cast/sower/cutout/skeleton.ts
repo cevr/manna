@@ -6,8 +6,9 @@
 // the cuff and its tip at his circle hand's middle. His torso (with the seed
 // bag that hangs from it) leans; his robe, sandals and ground shadow stand
 // with the root; each sleeve takes its shoulder's flap of torso. His kept pose
-// scattering seed (poses-1) is cut as drawn, its skeleton written out; his kept
-// pose standing from behind (poses-2) stands as `back` does. Pure data.
+// scattering seed (poses-1) and his kept pose reaching into the seed bag
+// (poses-3) are cut as drawn, their skeletons written out; his kept pose
+// standing from behind (poses-2) stands as `back` does. Pure data.
 
 import type { Skeleton } from '@manna/film/core';
 import { type Body, framed, standing } from '../../../cutout/skeleton.ts';
@@ -248,4 +249,74 @@ export const SKELETONS = {
       capLeft: 24,
     }),
   ),
+  // reaching into the seed bag, three-quarters to the viewer's left: his right arm bent across his body, outside `standing`'s band, so its flap is the sleeve's own area over the mantle and strap; his left arm's flap as `'front'` takes it
+  'poses-3': framed(keptAt('poses-3'), {
+    bones: [
+      { name: 'lean', pivot: [160, 335], tip: [120, 192] },
+      { name: 'neck', parent: 'lean', pivot: [120, 192], tip: [104, 182] },
+      { name: 'head', parent: 'neck', pivot: [104, 182], tip: [125, 0] },
+      {
+        name: 'shoulderRight',
+        parent: 'lean',
+        pivot: JOINTS['poses-3'].shoulderRight,
+        tip: JOINTS['poses-3'].elbowRight,
+      },
+      {
+        name: 'elbowRight',
+        parent: 'shoulderRight',
+        pivot: JOINTS['poses-3'].elbowRight,
+        tip: [112, 328],
+      },
+      { name: 'wristRight', parent: 'elbowRight', pivot: [112, 328], tip: [136, 325] },
+      {
+        name: 'shoulderLeft',
+        parent: 'lean',
+        pivot: JOINTS['poses-3'].shoulderLeft,
+        tip: JOINTS['poses-3'].elbowLeft,
+      },
+      {
+        name: 'elbowLeft',
+        parent: 'shoulderLeft',
+        pivot: JOINTS['poses-3'].elbowLeft,
+        tip: [240, 348],
+      },
+      { name: 'wristLeft', parent: 'elbowLeft', pivot: [240, 348], tip: [241, 380] },
+    ],
+    skin: BODY.skin,
+    flaps: [
+      {
+        part: 'armRight',
+        from: 'torso',
+        bone: 'shoulderRight',
+        body: 'lean',
+        cap: 12,
+        region: [
+          [-1, 174],
+          [48, 174],
+          [78, 261],
+          [157, 299],
+          [170, 304],
+          [170, 353],
+          [104, 357],
+          [85, 363],
+          [21, 317],
+          [-1, 317],
+        ],
+      },
+      {
+        part: 'armLeft',
+        from: 'torso',
+        bone: 'shoulderLeft',
+        body: 'lean',
+        cap: 12,
+        region: [
+          [205, 155],
+          [290, 155],
+          [290, 217],
+          [205, 217],
+        ],
+      },
+    ],
+    root: [160, 335],
+  }),
 } as const satisfies Readonly<Record<FramedView, Skeleton>>;

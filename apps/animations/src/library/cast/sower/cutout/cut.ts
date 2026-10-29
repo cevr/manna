@@ -1270,6 +1270,194 @@ const POSES_2: PartCut = {
 };
 
 /**
+ * His kept pose reaching into the seed bag (poses-3, on his kept poses sheet),
+ * turned three-quarters to the viewer's left, cut as drawn. His right arm (the
+ * far one, on the viewer's left) is bent across his body: its sleeve runs
+ * from under the headcloth down his front outline to the elbow, then its
+ * forearm back across the mantle and strap to the round hand in the bag's
+ * mouth. Its edge with the mantle above the forearm has no ink; the forearm's
+ * top ink and the hand's ring bound it there. The fingers stay with the arm:
+ * its take runs to row 353 under the hand, so the bag's top lip (row 350) is
+ * the arm's where the hand lies over it. His left arm (the near one) hangs
+ * beside the bag; its inner edge is the sleeve's inner ink, a crease above it.
+ * The headcloth's tail lies over its top. The hem's line, column by column:
+ * the robe's front lifting over his leading foot, the hem over it, between
+ * his feet, over his trailing foot. His leading foot (the viewer's left) is
+ * taken as his right, the trailing one as his left. This sheet's outline ink
+ * is [48, 30, 15] (measured); a framed view's cut reads none, so `INK` below
+ * stays the turnaround's.
+ */
+const P3_HEM = {
+  right: [
+    [10, 500],
+    [19, 539],
+    [20, 569],
+    [48, 569],
+    [63, 571],
+    [69, 571],
+    [86, 559],
+  ],
+  left: [
+    [137, 559],
+    [149, 570],
+    [170, 570],
+    [179, 572],
+    [198, 572],
+    [205, 552],
+    [222, 552],
+    [230, 545],
+  ],
+} as const;
+const P3_LEFT: Sleeve = {
+  // his left sleeve (the viewer's right, the near one): a crease above its inner ink, then the ink's left edge down to the cuff
+  inner: [
+    [205, 200],
+    [204.5, 250],
+    [201.5, 260],
+    [202.5, 270],
+    [202.5, 290],
+    [203.5, 310],
+    [204.5, 325],
+    [208.5, 345],
+  ],
+  shoulder: JOINTS['poses-3'].shoulderLeft,
+  cap: 12,
+  side: 'right',
+};
+const p3Left = sleeve(P3_LEFT);
+// a band from the headcloth tail's lower edge to row 202 that his left sleeve does not take: torso, so torso parts head from the sleeve's top and every pixel cut away from it lies nearer torso than head
+const P3_BAND: PartRule = {
+  polygon: [
+    [180, 184],
+    [FAR, 184],
+    [FAR, 202],
+    [196, 202],
+    [180, 192],
+  ],
+};
+const P3_SOLES = {
+  right: [
+    [0, 16, 582],
+    [17, 55, 584],
+    [56, 85, 582],
+  ],
+  left: [
+    [138, 150, 578],
+    [151, 168, 582],
+    [169, 216, 584],
+    [217, 226, 580],
+  ],
+} as const satisfies Readonly<Record<string, SoleRuns>>;
+
+const POSES_3: PartCut = {
+  parts: [
+    // above row 166 on the viewer's left, so torso keeps an 8 px band over the far sleeve's top; the face and beard down to the beard's lower ink; the headcloth's tail down to row 184, its lower edge torso's (`P3_BAND`)
+    {
+      name: 'head',
+      take: [
+        {
+          polygon: [
+            [-1, -1],
+            [FAR, -1],
+            [FAR, 184],
+            [140, 184],
+            [128, 178],
+            [115, 183],
+            [104, 189],
+            [98, 189],
+            [84, 182],
+            [71, 177],
+            [64, 166],
+            [-1, 166],
+          ],
+        },
+      ],
+    },
+    {
+      name: 'armLeft',
+      // the cuff under the sleeve's last inner ink, and the hand's disc over its whole ink ring (x210-271, y352-407)
+      take: [...p3Left.take, box(212, 345, FAR, 358), { disc: { c: [241, 380], r: 32 } }],
+      unless: [...p3Left.unless, P3_BAND],
+      pivot: JOINTS['poses-3'].shoulderLeft,
+    },
+    {
+      name: 'armRight',
+      // from row 174 down his front outline; along the sleeve's edge with the mantle, the forearm's top ink (3 px past it) and the hand's ring to row 353 under the hand; back along the forearm's lower ink (3 px under it) to the sleeve's corner on his front outline
+      take: [
+        {
+          polygon: [
+            [-1, 174],
+            [48, 174],
+            [50, 180],
+            [57, 195],
+            [63, 213],
+            [66, 228],
+            [69, 240],
+            [72, 252],
+            [78, 261],
+            [90, 262],
+            [101, 265],
+            [109, 270],
+            [117, 275],
+            [132, 280],
+            [135, 285],
+            [139, 290],
+            [147, 295],
+            [157, 299],
+            [164, 301],
+            [170, 304],
+            [170, 353],
+            [110, 353],
+            [104, 357],
+            [99, 364],
+            [85, 363],
+            [76, 357],
+            [68, 352],
+            [61, 347],
+            [54, 342],
+            [48, 337],
+            [42, 332],
+            [36, 327],
+            [31, 322],
+            [21, 317],
+            [-1, 317],
+          ],
+        },
+      ],
+      pivot: JOINTS['poses-3'].shoulderRight,
+    },
+    {
+      name: 'footRight',
+      take: [{ polygon: [[-1, 500], ...P3_HEM.right, [112, 559], [112, 620], [-1, 620]] }],
+      unless: [underSole(P3_SOLES.right)],
+    },
+    {
+      name: 'footLeft',
+      take: [{ polygon: [[112, 559], ...P3_HEM.left, [FAR, 545], [FAR, 620], [112, 620]] }],
+      unless: [underSole(P3_SOLES.left)],
+    },
+    {
+      name: 'shadow',
+      take: [
+        {
+          polygon: [
+            [-1, 500],
+            ...P3_HEM.right,
+            ...P3_HEM.left,
+            [FAR, 545],
+            [FAR, FAR * 2],
+            [-1, FAR * 2],
+          ],
+        },
+      ],
+    },
+    // below the belt, but the seed bag at his front
+    { name: 'robe', take: [box(-1, 335, FAR, FAR * 2)], unless: [box(110, 340, 232, 456)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR * 2)] },
+  ],
+};
+
+/**
  * His outline's ink: the median of his views' dark pixels (measured on the
  * three-quarter and back views). His kept poses sheet's is [48, 30, 15]
  * (measured), but a framed cut reads no ink, so his poses take none.
@@ -1326,6 +1514,10 @@ const HIDDEN_ENTRIES = {
       why: "its three calls were drawn on cuts where head bordered the sleeves' caps, so okra's paint beside the cape fell to head; the cut now parts them with a torso band (P2_BANDS), and that cut had never been asked",
     },
   },
+  'poses-3': {
+    moving: ['armRight', 'armLeft'],
+    prompt: `${CUT_AWAY} his two arms (sleeves and round hands) were cut away to make a cut-out puppet. He is turned three-quarters to the viewer's left, reaching into his seed bag: his right arm was bent across his body, its sleeve down his front and its forearm and hand reaching across his chest into the mouth of the seed bag, and his left arm hung at his side beside the bag. Repaint ONLY the magenta areas, as what lies underneath his arms: on the viewer's left, his body's front outline from under the headcloth down to the robe, and across his chest the olive mantle, the walnut strap running down from his shoulder to the bag, the linen tunic, and the top of the walnut seed bag, now whole where the hand lay in its mouth; on the viewer's right, the side of his body from the armpit down to the robe, closed by the same thick dark brown-black outline as the rest of him, the olive mantle and the walnut seed bag's right edge, now whole where the hand lay beside it. Paint each in exactly the same style, colours and soft shading as his body beside the arms. ${SIDES} ${shade('his')} ${GRAIN} There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, headcloth and its tail, face, beard, tunic, mantle, walnut strap, belt, walnut seed bag, feet, size, position and framing.`,
+  },
 } as const satisfies Readonly<Record<CutView, HiddenEntry>>;
 
 /** His cut table: each view's cut and how its figure is read. */
@@ -1340,6 +1532,7 @@ export const { CUTS, cutOptionsFor, HIDDEN } = cutTable({
     threeQuarterRight: { cut: THREE_QUARTER_RIGHT, figure: 'framed' },
     'poses-1': { cut: POSES_1, figure: 'framed' },
     'poses-2': { cut: POSES_2, figure: 'framed' },
+    'poses-3': { cut: POSES_3, figure: 'framed' },
   },
   hidden: HIDDEN_ENTRIES,
   ink: INK,
