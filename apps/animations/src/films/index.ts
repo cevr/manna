@@ -40,5 +40,5 @@ export const pages = {
     films['righteousness-by-faith'],
     righteousnessByFaithShorts,
   ),
-  ...castPages('in-its-order', ['lead-feast', 'feast-mother'], inItsOrderCast),
+  ...castPages('in-its-order', ['lead-feast', 'feast-mother', 'sower'], inItsOrderCast),
 } satisfies Films;
