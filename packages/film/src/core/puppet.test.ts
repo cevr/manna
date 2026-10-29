@@ -61,6 +61,47 @@ const R = (deg: number, x: number, y: number) => {
   return [Math.cos(t) * x - Math.sin(t) * y, Math.sin(t) * x + Math.cos(t) * y] as const;
 };
 
+/** `y0..y1` of x 8..56 painted `paint`, the rest clear: a part cut along a row. */
+const cut = (y0: number, y1: number, paint: ReadonlyArray<number>) => {
+  const rgba = new Uint8Array(W * H * 4);
+  for (let y = y0; y < y1; y++) for (let x = 8; x < 56; x++) rgba.set(paint, (y * W + x) * 4);
+  return { width: W, height: H, rgba };
+};
+
+/** A skirt (front) and a shirt (behind) cut along y = 12, hard edges both sides. */
+const CUT_SHEET: PuppetSheet = {
+  width: W,
+  height: H,
+  parts: [
+    { name: 'skirt', pixels: cut(12, 20, [40, 60, 200, 255]) },
+    { name: 'shirt', pixels: cut(4, 12, [200, 60, 40, 255]) },
+  ],
+};
+
+const LEAN = [{ name: 'lean', pivot: [32, 12] as const, tip: [32, 2] as const }];
+
+/** `CUT_SHEET`'s puppet on `skin`, and the least alpha it draws, still at scale 0.9, about the line. */
+const seamless = (skin: Skeleton['skin']) => {
+  const p = made(CUT_SHEET, { bones: LEAN, skin, root: [0, 0] });
+  const r = rasterOf(p, { numbers: {}, root: [0, 0], scale: 0.9 });
+  // the pixels the seam crosses (y 10.8), well inside the two parts' 7.2..50.4 x 3.6..18
+  const alphas: number[] = [];
+  for (let y = 9; y <= 12; y++)
+    for (let x = 10; x <= 48; x++) alphas.push(r.rgba[(y * W + x) * 4 + 3]!);
+  return { p, min: Math.min(...alphas) };
+};
+
+/** At rest the skirt still hides what seals the shirt: `CUT_SHEET` drawn byte for byte. */
+const expectSheetAtRest = (p: Puppet) => {
+  const rest = rasterOf(p, restPose(p)).rgba;
+  for (let i = 0; i < W * H; i++) {
+    const front = Number(CUT_SHEET.parts[0]!.pixels.rgba[i * 4 + 3] === 0);
+    expect([...rest.subarray(i * 4, i * 4 + 4)]).toEqual([
+      ...CUT_SHEET.parts[front]!.pixels.rgba.subarray(i * 4, i * 4 + 4),
+    ]);
+  }
+};
+
 describe('a puppet', () => {
   test('weighs each vertex on at most two bones its skin names, totalling 1', () => {
     const p = made(SLEEVE, TWO_BONES);
@@ -270,45 +311,28 @@ describe('a puppet', () => {
   });
 
   test('leaves no seam at a fractional scale between two parts cut along one line that move together', () => {
-    // a skirt (front) and a shirt (behind) cut along y = 12, hard edges both sides
-    const cut = (y0: number, y1: number, paint: ReadonlyArray<number>) => {
-      const rgba = new Uint8Array(W * H * 4);
-      for (let y = y0; y < y1; y++) for (let x = 8; x < 56; x++) rgba.set(paint, (y * W + x) * 4);
-      return { width: W, height: H, rgba };
-    };
-    const sheet: PuppetSheet = {
-      width: W,
-      height: H,
-      parts: [
-        { name: 'skirt', pixels: cut(12, 20, [40, 60, 200, 255]) },
-        { name: 'shirt', pixels: cut(4, 12, [200, 60, 40, 255]) },
-      ],
-    };
-    const bones = [{ name: 'lean', pivot: [32, 12] as const, tip: [32, 2] as const }];
-    const seamless = (skin: Skeleton['skin']) => {
-      const p = made(sheet, { bones, skin, root: [0, 0] });
-      const r = rasterOf(p, { numbers: {}, root: [0, 0], scale: 0.9 });
-      // the pixels the seam crosses (y 10.8), well inside the two parts' 7.2..50.4 x 3.6..18
-      const alphas: number[] = [];
-      for (let y = 9; y <= 12; y++)
-        for (let x = 10; x <= 48; x++) alphas.push(r.rgba[(y * W + x) * 4 + 3]!);
-      return { p, min: Math.min(...alphas) };
-    };
     const together = seamless({ skirt: ['lean'], shirt: ['lean'] });
     expect(together.min).toBe(255);
-    // at rest the skirt still hides the shirt's seal: the sheet drawn byte for byte
-    const rest = rasterOf(together.p, restPose(together.p)).rgba;
-    for (let i = 0; i < W * H; i++) {
-      const front = Number(sheet.parts[0]!.pixels.rgba[i * 4 + 3] === 0);
-      expect([...rest.subarray(i * 4, i * 4 + 4)]).toEqual([
-        ...sheet.parts[front]!.pixels.rgba.subarray(i * 4, i * 4 + 4),
-      ]);
-    }
+    expectSheetAtRest(together.p);
 
-    // a part that moves on its own is not sealed under: the shirt keeps its cut, and the seam shows
+    // a part that moves on its own is not sealed under in its texture: the shirt keeps its cut
     const apart = seamless({ skirt: ['lean'], shirt: [] });
-    expect(apart.p.parts[1]!.pixels.rgba).toEqual(sheet.parts[1]!.pixels.rgba);
-    expect(apart.min).toBeLessThan(255);
+    expect(apart.p.parts[1]!.pixels.rgba).toEqual(CUT_SHEET.parts[1]!.pixels.rgba);
+  });
+
+  test('leaves no seam at a fractional scale between two parts of different skins cut along one line while still, and shows no seal where the front part moved', () => {
+    const { p, min } = seamless({ skirt: ['lean'], shirt: [] });
+    expect(min).toBe(255);
+    expect(p.parts[1]!.seals[0]).toBeDefined();
+    expectSheetAtRest(p);
+
+    // the skirt turned: the line opens, and the shirt shows no seal, as if it had none
+    const stripped: Puppet = { ...p, parts: p.parts.map((part) => ({ ...part, seals: [] })) };
+    const turned = { numbers: { lean: 30 }, root: [0, 0] as const, scale: 0.9 };
+    expect(rasterOf(p, turned).rgba).toEqual(rasterOf(stripped, turned).rgba);
+    // and still, the seal is what closes the line
+    const still = { numbers: {}, root: [0, 0] as const, scale: 0.9 };
+    expect(rasterOf(p, still).rgba).not.toEqual(rasterOf(stripped, still).rgba);
   });
 
   test('is deterministic: the same pose gives the same raster', () => {

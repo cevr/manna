@@ -245,6 +245,29 @@ describe('a puppet in the page', () => {
     ).pipe(Effect.provide(Layer.provideMerge(PuppetImagesBun, BunServices.layer))),
   );
 
+  it.live(
+    'still at scale 0.9 draws alike on the CPU and the GL, the seals under the lines among them',
+    () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const fs = yield* FileSystem.FileSystem;
+          const path = yield* Path.Path;
+          const dir = yield* fs.makeTempDirectoryScoped();
+          yield* lay(dir);
+          const module = path.join(dir, 'spec.ts');
+          const { SPEC } = yield* Effect.promise(() => import(module));
+          const puppet = yield* puppetFrom(SPEC);
+          const page = yield* puppetPage({ module, name: 'SPEC' });
+          // no part turned, at a fractional scale: each seal drawn under the line it closes, on both paths
+          const pose: PuppetPose = { numbers: {}, root: [45, 60], scale: 0.9 };
+          const m = against(yield* page.draw(pose), rasterOf(puppet, pose));
+          expect(m.deltaE).toBeLessThanOrEqual(1);
+          expect(m.iou).toBeGreaterThanOrEqual(0.99);
+          expect(m.worst).toBeLessThanOrEqual(2);
+        }),
+      ).pipe(Effect.provide(Layer.provideMerge(PuppetImagesBun, BunServices.layer))),
+  );
+
   it.live('the L3 pass leaves every pixel farther than 16 px from a moved part unchanged', () =>
     Effect.scoped(
       Effect.gen(function* () {

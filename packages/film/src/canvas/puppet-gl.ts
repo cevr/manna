@@ -38,7 +38,7 @@
 import { Result } from 'effect';
 import { BOIL_CELL, boilField } from '../core/boil.ts';
 import { KEY_JOIN_INK } from '../core/key-join.ts';
-import type { Puppet } from '../core/puppet.ts';
+import { type Puppet, sealsShown } from '../core/puppet.ts';
 import type { Raster } from '../core/raster.ts';
 import { glCanvas } from './gl.ts';
 
@@ -179,6 +179,8 @@ interface PartGl {
   readonly texture: WebGLTexture;
   /** By each part in front of it, what this part shows once that part moves away (`PuppetPart.revealed`); a drawing has none. */
   readonly revealed: ReadonlyArray<WebGLTexture | undefined>;
+  /** By each part in front of it of another skin, the seal laid over this part while neither moves (`PuppetPart.seals`, `sealsShown`); a drawing has none. */
+  readonly seals: ReadonlyArray<WebGLTexture | undefined>;
   readonly vao: WebGLVertexArrayObject;
   readonly pos: WebGLBuffer;
   readonly buffers: ReadonlyArray<WebGLBuffer>;
@@ -344,7 +346,8 @@ const madeOn = (
     const src = Float32Array.from(part.mesh.vertices);
     const mesh = meshOn(gl, state.positions[k]!.byteLength, src, part.mesh.triangles);
     const revealed = part.revealed.map((r) => r && textureOf(gl, r));
-    return { texture, revealed, ...mesh, count: part.mesh.triangles.length };
+    const seals = part.seals.map((s) => s && textureOf(gl, s));
+    return { texture, revealed, seals, ...mesh, count: part.mesh.triangles.length };
   });
   const rests = puppet.parts.map((part, k): RestGl => {
     const mesh = meshOn(
@@ -360,7 +363,7 @@ const madeOn = (
     const texture = textureOf(gl, pixels);
     const [w, h] = [pixels.width, pixels.height];
     const mesh = meshOn(gl, 32, Float32Array.from([0, 0, w, 0, w, h, 0, h]), QUAD_TRIANGLES);
-    drawings.set(name, { texture, revealed: [], ...mesh, count: 6 });
+    drawings.set(name, { texture, revealed: [], seals: [], ...mesh, count: 6 });
   }
   return Result.succeed({
     program,
@@ -373,16 +376,19 @@ const madeOn = (
   });
 };
 
+/** Free one part's or drawing's textures, vertex array and buffers on `gl`. */
+const freePartGl = (gl: WebGL2RenderingContext, p: PartGl) => {
+  gl.deleteTexture(p.texture);
+  for (const t of [...p.revealed, ...p.seals]) if (t !== undefined) gl.deleteTexture(t);
+  gl.deleteVertexArray(p.vao);
+  for (const b of p.buffers) gl.deleteBuffer(b);
+};
+
 /** Free what `state` holds on every context still live. */
 export const freePuppetGl = (state: PuppetGl) => {
   for (const [gl, on] of state.on) {
     if (gl.isContextLost()) continue;
-    for (const p of [...on.parts, ...on.drawings.values()]) {
-      gl.deleteTexture(p.texture);
-      for (const t of p.revealed) if (t !== undefined) gl.deleteTexture(t);
-      gl.deleteVertexArray(p.vao);
-      for (const b of p.buffers) gl.deleteBuffer(b);
-    }
+    for (const p of [...on.parts, ...on.drawings.values()]) freePartGl(gl, p);
     for (const r of on.rests) gl.deleteVertexArray(r.vao);
     gl.deleteProgram(on.program);
   }
@@ -535,7 +541,19 @@ const JUMPS = [32, 16, 8, 4, 2, 1, 1];
 /** A box in GL px: `[x0, y0, x1, y1)`, rows bottom up. */
 type GlBox = readonly [number, number, number, number];
 
-/** Draw part `k` of the figure: the drawn key where it stands in for the part, else the part's mesh. */
+/** Over part `k` (its `PartGl` `p`, its positions `positions`), each seal it shows while the parts `moving` move (`sealsShown`), on its own mesh. */
+const drawSeals = (
+  gl: WebGL2RenderingContext,
+  p: PartGl,
+  positions: Float32Array,
+  k: number,
+  moving: ReadonlyArray<number>,
+) => {
+  for (const seal of sealsShown(p.seals, k, (n) => moving.includes(n)))
+    drawMesh(gl, p.vao, p.pos, positions, seal, p.count);
+};
+
+/** Draw part `k` of the figure: the drawn key where it stands in for the part, else the part's mesh and its seals. */
 const drawPart = (
   gl: WebGL2RenderingContext,
   on: PuppetOnGl,
@@ -547,6 +565,7 @@ const drawPart = (
   if (k !== pass.swap?.part) {
     if (p.count === 0) return;
     drawMesh(gl, p.vao, p.pos, state.positions[k]!, p.texture, p.count);
+    drawSeals(gl, p, state.positions[k]!, k, pass.moving);
     // and, behind each moving part in front of it, the paint that part's rim hid at rest
     for (const j of pass.moving) {
       const shown = j < k ? p.revealed[j] : undefined;
@@ -746,13 +765,13 @@ const passLook = (
   gl.disable(gl.SCISSOR_TEST);
 };
 
-/** With no look: the box cleared on the puppet canvas and the parts drawn onto it back to front. */
+/** With no look: the box cleared on the puppet canvas and the parts drawn onto it back to front, each with the seals it shows while the parts `moving` move. */
 const passPlain = (
   gl: WebGL2RenderingContext,
   on: PuppetOnGl,
   state: PuppetGl,
-  width: number,
-  height: number,
+  moving: ReadonlyArray<number>,
+  [width, height]: readonly [number, number],
   box: readonly [number, number, number, number],
 ) => {
   const [x0, y0, x1, y1] = box;
@@ -771,7 +790,9 @@ const passPlain = (
   gl.activeTexture(gl.TEXTURE0);
   for (let k = on.parts.length - 1; k >= 0; k--) {
     const p = on.parts[k]!;
-    if (p.count > 0) drawMesh(gl, p.vao, p.pos, state.positions[k]!, p.texture, p.count);
+    if (p.count === 0) continue;
+    drawMesh(gl, p.vao, p.pos, state.positions[k]!, p.texture, p.count);
+    drawSeals(gl, p, state.positions[k]!, k, moving);
   }
   gl.bindVertexArray(null);
   gl.disable(gl.SCISSOR_TEST);
@@ -781,10 +802,11 @@ const passPlain = (
 /**
  * Draw `loaded`'s puppet, its parts' vertices placed at its positions
  * (canvas px of `ctx`), within the box `[x0, y0, x1, y1)`, onto `ctx` there:
- * the box cleared on the puppet canvas, the parts drawn back to front (and,
- * with a look's `pass`, its key, line, held hand and boil), then copied over
- * the frame (whole pixels, under `ctx`'s clip and alpha). Why not, where no
- * WebGL 2 context can be made.
+ * the box cleared on the puppet canvas, the parts drawn back to front, each
+ * with the seals it shows while the parts `moving` move (and, with a look's
+ * `pass`, its key, line, held hand and boil), then copied over the frame
+ * (whole pixels, under `ctx`'s clip and alpha). Why not, where no WebGL 2
+ * context can be made.
  */
 export const paintPuppetGl = (
   ctx: CanvasRenderingContext2D,
@@ -794,6 +816,7 @@ export const paintPuppetGl = (
     readonly gl: PuppetGl;
   },
   box: readonly [number, number, number, number],
+  moving: ReadonlyArray<number>,
   pass?: PuppetPass,
 ): string | undefined => {
   const { width, height } = ctx.canvas;
@@ -810,7 +833,7 @@ export const paintPuppetGl = (
     on = made.success;
     state.on.set(gl, on);
   }
-  if (pass === undefined) passPlain(gl, on, state, width, height, box);
+  if (pass === undefined) passPlain(gl, on, state, moving, [width, height], box);
   else {
     const passes = passesOn(gl, width, height);
     if (Result.isFailure(passes)) return passes.failure;

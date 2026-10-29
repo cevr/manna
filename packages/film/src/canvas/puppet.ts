@@ -23,6 +23,7 @@ import {
   type PuppetPose,
   type Skeleton,
   boneTransforms,
+  partTurned,
   poseMesh,
 } from '../core/puppet.ts';
 import type { Raster } from '../core/raster.ts';
@@ -100,17 +101,6 @@ export interface LoadedPuppet {
 /** A puppet's pose: its bone numbers in degrees, where its root stands and its one scale (`core/puppet.ts`). */
 export type { PuppetPose };
 
-/** Whether part `k`'s mesh lies on a bone `m` turns away from the bind pose. */
-const turned = (puppet: Puppet, k: number, m: Float64Array) => {
-  const bones = puppet.parts[k]!.mesh.bones;
-  const id = [1, 0, 0, 1, 0, 0];
-  for (let i = 0; i < bones.length; i++) {
-    const b = bones[i]!;
-    if (b >= 0 && id.some((v, j) => Math.abs(m[b * 6 + j]! - v) > 1e-9)) return true;
-  }
-  return false;
-};
-
 /** Where each bone turned from rest has its pivot at `pose`, sheet px: its parent's transform `m` carries it, its own turn holds it. */
 const turnedPivots = (puppet: Puppet, m: Float64Array, pose: PuppetPose): ReadonlyArray<Pt> =>
   puppet.bones.flatMap((b, k): ReadonlyArray<Pt> => {
@@ -169,8 +159,8 @@ type Layer = ReturnType<typeof layerOf>;
 
 /**
  * Every part posed at `pose` into its buffer, and, with a look, each part
- * that moved (a turned bone's, or the one a drawing stands in for) laid
- * where it stood at rest too: the moving parts' indices.
+ * that moved laid where it stood at rest too: the moving parts' indices (a
+ * turned bone's, or the one a drawing stands in for), with a look or not.
  */
 const layParts = (
   loaded: LoadedPuppet,
@@ -188,8 +178,9 @@ const layParts = (
     const out = gl.positions[k]!;
     poseMesh(part.mesh, m, puppet.root, pose, out);
     for (let i = 0; i < out.length; i += 2) layer.lay(out[i]!, out[i + 1]!, out, i, k !== swapped);
-    if (!look || (k !== swapped && !turned(puppet, k, m))) continue;
+    if (k !== swapped && !partTurned(puppet, k, m)) continue;
     moving.push(k);
+    if (!look) continue;
     const at = gl.restPositions[k]!;
     poseMesh(part.mesh, rest, puppet.root, restPose, at);
     for (let i = 0; i < at.length; i += 2) layer.lay(at[i]!, at[i + 1]!, at, i, false);
@@ -327,6 +318,6 @@ export const drawPuppet = (
   if (x1 <= x0 || y1 <= y0) return undefined;
   const pass =
     look && passOf(spec, loaded, layer, pose, look, moving, swapped, turnedPivots(puppet, m, pose));
-  const why = paintPuppetGl(ctx, loaded, [x0, y0, x1, y1], pass);
+  const why = paintPuppetGl(ctx, loaded, [x0, y0, x1, y1], moving, pass);
   return why && `puppet ${spec.key}: ${why}`;
 };

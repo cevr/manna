@@ -39,6 +39,7 @@
 //   channel, and on another paper the figure carries no ring of the sheet's.
 
 import { Result, Schema } from 'effect';
+import { IDENTITY } from './affine.ts';
 import type { Rgb } from './cast-sheet-pixels.ts';
 import type { Raster } from './raster.ts';
 import { unmatte } from './unmatte.ts';
@@ -108,6 +109,8 @@ interface PuppetPart {
   readonly pixels: Raster;
   /** By each part in front of it: the paint the un-matte cleared behind that part's rim (hidden at rest), shown once that part moves away; none where nothing was cleared. */
   readonly revealed: ReadonlyArray<Raster | undefined>;
+  /** By each part in front of it of another skin: the seal laid over this part along the line it shares with that part, shown while neither moves (`sealsShown`); none where it seals nothing. */
+  readonly seals: ReadonlyArray<Raster | undefined>;
   readonly mesh: PuppetMesh;
 }
 
@@ -371,12 +374,8 @@ export const puppetOf = (
   });
   const { paper } = sheet;
   const unmatted = paper === undefined ? withFlaps : unmatte(withFlaps, W, H, paper);
-  const textures = sealed(
-    unmatted,
-    sheet.parts.map((p) => [...(skeleton.skin[p.name] ?? [])].sort().join(' ')),
-    W,
-    H,
-  );
+  const skins = sheet.parts.map((p) => [...(skeleton.skin[p.name] ?? [])].sort().join(' '));
+  const textures = sealed(unmatted, skins, W, H);
   // the parts un-matted with part j gone: what each part behind j shows once j moves away
   const without = new Map<number, ReadonlyArray<Uint8Array>>();
   const unmattedWithout = (j: number) => {
@@ -392,9 +391,11 @@ export const puppetOf = (
     const flap = flapOf.get(part.name);
     const rgba = textures[k]!;
     const revealed = revealedOf(withFlaps, textures, k, unmattedWithout);
-    // its mesh holds what it shows at rest and all it can reveal
-    const covers = (i: number) =>
-      rgba[i * 4 + 3]! > 0 || revealed.some((r) => r !== undefined && r[i * 4 + 3]! > 0);
+    const seals = sealsOf(unmatted, textures, skins, k, W, H);
+    // its mesh holds what it shows at rest, all it can reveal and its seals
+    const holds = (layers: ReadonlyArray<Uint8Array | undefined>, i: number) =>
+      layers.some((r) => r !== undefined && r[i * 4 + 3]! > 0);
+    const covers = (i: number) => rgba[i * 4 + 3]! > 0 || holds(revealed, i) || holds(seals, i);
     const weigh =
       flap === undefined
         ? (p: Pt) => weightsAt(p, skin, bones)
@@ -414,6 +415,7 @@ export const puppetOf = (
       name: part.name,
       pixels: { width: W, height: H, rgba },
       revealed: revealed.map((r) => r && { width: W, height: H, rgba: r }),
+      seals: seals.map((s) => s && { width: W, height: H, rgba: s }),
       mesh: meshOf(W, H, (x, y) => covers(y * W + x), weigh),
     };
   });
@@ -480,6 +482,50 @@ const sealed = (
       if (seal[i] !== 0) out.set(seal.subarray(i - 3, i + 1), i - 3);
     return out;
   });
+
+/**
+ * The seals laid over part `k` by each part in front of it of another skin,
+ * by that front part: one px more of `k`'s paint where it has none and the
+ * frontmost opaque part there is of another skin (`sealOf`: `k`'s colour, so
+ * drawn over `k` and under the front part the line blends as one paint's),
+ * with `k`'s own opaque pixels beside each, so the bilinear sample along the
+ * line is opaque. At rest the front part hides the seal and the opaque pixels
+ * lie on themselves; once either part moves the line opens, so a seal shows
+ * only while neither does (`sealsShown`). Two skins' parts move apart, so
+ * this cannot go into `k`'s texture as `sealed` does for one skin's.
+ */
+const sealsOf = (
+  unmatted: ReadonlyArray<Uint8Array>,
+  textures: ReadonlyArray<Uint8Array>,
+  skins: ReadonlyArray<string>,
+  k: number,
+  W: number,
+  H: number,
+): ReadonlyArray<Uint8Array | undefined> => {
+  const own = textures[k]!;
+  const out: Array<Uint8Array | undefined> = unmatted.map(() => undefined);
+  const holder = (i: number) => unmatted.findIndex((f, j) => j < k && f[i + 3] === 255);
+  const holds = (i: number) => {
+    const h = holder(i);
+    return h >= 0 && skins[h] !== skins[k] && own[i + 3] === 0;
+  };
+  const seal = sealOf(unmatted[k]!, holds, W, H);
+  if (seal === undefined) return out;
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4;
+      if (seal[i + 3] === 0) continue;
+      const layer = (out[holder(i)] ??= new Uint8Array(own.length));
+      layer.set(seal.subarray(i, i + 4), i);
+      for (const [dx, dy] of BESIDE) {
+        const [u, v] = [x + dx, y + dy];
+        const o = (v * W + u) * 4;
+        if (u >= 0 && v >= 0 && u < W && v < H && own[o + 3] === 255)
+          layer.set(own.subarray(o, o + 4), o);
+      }
+    }
+  return out;
+};
 
 /** The four pixels beside one, as `[dx, dy]`. */
 const BESIDE = [
@@ -627,10 +673,39 @@ export const posedVertices = (puppet: Puppet, pose: PuppetPose): ReadonlyArray<F
 };
 
 /**
+ * Whether part `k`'s mesh lies on a bone `m` (`boneTransforms`) turns away from the bind pose.
+ * Exact: a bone at 0 under still parents is the identity to the bit (cos 0 is 1, sin 0 is 0).
+ */
+export const partTurned = (puppet: Puppet, k: number, m: Float64Array): boolean => {
+  const bones = puppet.parts[k]!.mesh.bones;
+  for (let i = 0; i < bones.length; i++) {
+    const b = bones[i]!;
+    if (b >= 0 && IDENTITY.some((v, j) => m[b * 6 + j] !== v)) return true;
+  }
+  return false;
+};
+
+/**
+ * The seals laid over part `k` this frame (`PuppetPart.seals`, as each draw
+ * path holds them): those of front parts that do not move, and none once `k`
+ * moves itself, since a seal closes the line two still parts share. The one
+ * rule both draw paths follow.
+ */
+export const sealsShown = <T>(
+  seals: ReadonlyArray<T | undefined>,
+  k: number,
+  moving: (n: number) => boolean,
+): ReadonlyArray<T> => {
+  if (moving(k)) return [];
+  return seals.filter((s, j): s is T => s !== undefined && !moving(j));
+};
+
+/**
  * `puppet` drawn at `pose` in its sheet's frame (or a frame `size` px from the same origin) over transparent ground: the
  * parts back to front, each pixel whose centre a posed triangle holds
  * inverse-mapped to the part's texture, sampled bilinear on premultiplied
- * texels, laid over what lies under it. Each triangle is laid in turn, in its
+ * texels, laid over what lies under it, then each seal it shows
+ * (`sealsShown`) over it on the same triangles. Each triangle is laid in turn, in its
  * mesh's order, so where a fold turns two triangles of one part over one pixel
  * the later lies over the earlier, as the GL path's blend lays them; a pixel
  * centre on an edge two triangles share goes to one of them (`edgeHolds`).
@@ -644,11 +719,14 @@ export const rasterOf = (
   // Premultiplied, colour in 0..255 and alpha in 0..1.
   const acc = new Float64Array(W * H * 4);
   const posed = posedVertices(puppet, pose);
+  const m = boneTransforms(puppet.bones, pose.numbers);
+  const moving = (n: number) => partTurned(puppet, n, m);
   for (let k = puppet.parts.length - 1; k >= 0; k--) {
     const part = puppet.parts[k]!;
     const t = part.mesh.triangles;
-    for (let i = 0; i < t.length; i += 3)
-      layTriangle(acc, part, posed[k]!, [t[i]!, t[i + 1]!, t[i + 2]!], [W, H]);
+    for (const tex of [part.pixels, ...sealsShown(part.seals, k, moving)])
+      for (let i = 0; i < t.length; i += 3)
+        layTriangle(acc, tex, part.mesh.vertices, posed[k]!, [t[i]!, t[i + 1]!, t[i + 2]!], [W, H]);
   }
   return unpremultiplied(acc, W, H);
 };
@@ -710,15 +788,15 @@ const edgeHolds = (e: Edge, px: number, py: number): number => {
   return w > 0 || (w === 0 && e.tie) ? w : Number.NaN;
 };
 
-/** A part's posed triangle `tri` laid over `acc`: each pixel whose centre it holds inverse-mapped to the part's texture. */
+/** A part's posed triangle `tri` (bind vertices `src`, posed `q`) laid over `acc`: each pixel whose centre it holds inverse-mapped to `tex`, the part's texture or one of its seals. */
 const layTriangle = (
   acc: Float64Array,
-  part: PuppetPart,
+  tex: Raster,
+  src: Float64Array,
   q: Float64Array,
   [ia, ib, ic]: readonly [number, number, number],
   [W, H]: readonly [number, number],
 ) => {
-  const src = part.mesh.vertices;
   const [ax, ay, bx, by, cx, cy] = [
     q[2 * ia]!,
     q[2 * ia + 1]!,
@@ -752,7 +830,7 @@ const layTriangle = (
       const l2 = 1 - l0 - l1;
       const sx = l0 * src[2 * ia]! + l1 * src[2 * ib]! + l2 * src[2 * ic]!;
       const sy = l0 * src[2 * ia + 1]! + l1 * src[2 * ib + 1]! + l2 * src[2 * ic + 1]!;
-      sampleAt(part.pixels, sx, sy, SAMPLE);
+      sampleAt(tex, sx, sy, SAMPLE);
       if (SAMPLE[3]! > 0) over(acc, p * 4, SAMPLE);
     }
 };
