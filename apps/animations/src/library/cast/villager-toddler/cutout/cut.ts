@@ -290,8 +290,11 @@ const GRAIN = grain('the linen tunic of their body');
 /**
  * Each view's moving parts (what a pose moves, whose areas are painted
  * magenta and repainted beneath), and the words okra repaints them by: what
- * lies under them, in the sheet's own style. The shared prompt sentences take
- * `his` or `her`, so their sides and shade are written here with `their`.
+ * lies under them, in the sheet's own style. Their sides and shade are
+ * written here for each pose (their back's one curve, the lavender far side),
+ * not by the shared `sides` and `shade` (which take `their` too): those say
+ * other things, and the prompts okra repainted these sheets by stay as sent
+ * (`film concept parts --check`).
  */
 const HIDDEN_ENTRIES = {
   'poses-1': {

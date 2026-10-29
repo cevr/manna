@@ -7,8 +7,8 @@
 export const CUT_AWAY =
   'Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where';
 
-/** The member's possessive pronoun, as the prompts name his or her body. */
-export type Pronoun = 'his' | 'her';
+/** The member's possessive pronoun, as the prompts name his, her or their body. */
+export type Pronoun = 'his' | 'her' | 'their';
 
 /** Where a body's sides run under the arms: out to the shoulders and the garment below (`lower`), not in at the sleeves' inner edges, with `cloth` filling them. */
 export const sides = (wear: {
