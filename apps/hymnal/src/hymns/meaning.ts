@@ -15,10 +15,10 @@
  * start; a query decodes only its own words' rows.
  */
 
+import { fold } from '@manna/hymnal/fold';
 import { Duration, Effect, Option } from 'effect';
 
 import { meaning } from '../../assets/meaning/meaning.js';
-import { fold } from './search';
 
 interface Table {
   readonly dims: number;

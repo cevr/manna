@@ -10,11 +10,12 @@
  * on a small hymnal of invented words, are `search.test.ts`.
  */
 
+import { fold } from '@manna/hymnal/fold';
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
 import { hymns } from './hymns';
-import { find, fold, indexOf, KIN, search } from './search';
+import { find, indexOf, KIN, search } from './search';
 
 const index = indexOf(hymns);
 const numbers = (query: string) => search(index, query).map((h) => h.number);

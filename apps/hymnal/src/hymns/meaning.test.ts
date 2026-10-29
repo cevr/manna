@@ -4,6 +4,7 @@
  * made here; each check compares hymn numbers or counts.
  */
 
+import { fold } from '@manna/hymnal/fold';
 import { describe, expect, it } from 'bun:test';
 import { Effect, Fiber, Option } from 'effect';
 import { it as itEffect } from 'effect-bun-test';
@@ -12,7 +13,6 @@ import { TestClock } from 'effect/testing';
 import { meaning } from '../../assets/meaning/meaning.js';
 import { hymns } from './hymns';
 import { ABOUT, about, aboutQuery, aboutShown, afterPause, moreLike, PAUSE } from './meaning';
-import { fold } from './search';
 
 const numbers = new Set(hymns.map((hymn) => hymn.number));
 const distinctHymns = (found: ReadonlyArray<number>) =>
@@ -24,7 +24,7 @@ describe('the shipped table', () => {
   });
 
   it('holds its words as search folds them, so a query folded by search finds them', () => {
-    // The build folds with a copy of search's fold: every word is one the app's fold leaves as it is.
+    // The build folds with search's fold (`@manna/hymnal/fold`): a table built before a change to it holds words the fold now changes.
     const { words } = meaning();
     expect(fold(words) === words).toBe(true);
   });

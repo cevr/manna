@@ -29,16 +29,9 @@
  * model (`NOTICE_LINES`); `apps/hymnal/assets/meaning/LICENSE` says the rest.
  */
 
-/** The fold search uses (`apps/hymnal/src/hymns/search.ts`): lower case, no accents, apostrophes joined, other punctuation a space. */
-export const fold = (text: string): string =>
-  text
-    .normalize('NFD')
-    .replace(/\p{M}/gu, '')
-    .toLowerCase()
-    .replace(/['’‘`]/g, '')
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim();
+import { fold } from '../../src/fold.js';
 
+/** A text's words, folded as the app's search folds them. */
 export const wordsOf = (text: string): ReadonlyArray<string> =>
   fold(text).split(' ').filter(Boolean);
 

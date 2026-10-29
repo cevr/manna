@@ -7,10 +7,11 @@
  * counts and booleans.
  */
 
+import { fold } from '@manna/hymnal/fold';
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
-import { find, fold, indexOf, oneEdit, search } from './search';
+import { find, indexOf, oneEdit, search } from './search';
 import type { HymnText } from './text';
 
 /** A hymn of one stanza, its first line the stanza's first. */

@@ -34,20 +34,11 @@
  * at a time, so it works on flat typed arrays, not objects per word.
  */
 
+import { fold } from '@manna/hymnal/fold';
 import { Option } from 'effect';
 
 import { hymns } from './hymns';
 import type { HymnText } from './text';
-
-/** Lower case, accents dropped, apostrophes joined, other punctuation a space. */
-export const fold = (text: string): string =>
-  text
-    .normalize('NFD')
-    .replace(/\p{M}/gu, '')
-    .toLowerCase()
-    .replace(/['’‘`]/g, '')
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim();
 
 const words = (text: string) => fold(text).split(' ').filter(Boolean);
 
