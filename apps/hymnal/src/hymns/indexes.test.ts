@@ -5,9 +5,17 @@
  */
 
 import { describe, expect, it } from 'bun:test';
+import { parseBibleQuery } from '@manna/core/bible';
 import { Option } from 'effect';
 
-import { type HymnIndexes, lookupsOf, sameMetre } from './indexes';
+import {
+  type HymnIndexes,
+  lookupsOf,
+  passageQuery,
+  passageText,
+  referencesOf,
+  sameMetre,
+} from './indexes';
 
 const indexes: HymnIndexes = {
   topics: [
@@ -108,10 +116,54 @@ describe('topicHymns', () => {
   });
 });
 
+describe('a passage as text and as a query', () => {
+  const pieces = {
+    _tag: 'Chapter',
+    book: 19,
+    chapter: 98,
+    verses: [
+      { from: 4, to: 4 },
+      { from: 6, to: 8 },
+    ],
+  } as const;
+  const whole = { _tag: 'Chapter', book: 19, chapter: 23, verses: [] } as const;
+  const span = {
+    _tag: 'Span',
+    book: 1,
+    from: { chapter: 1, verse: 30 },
+    to: { chapter: 2, verse: 3 },
+  } as const;
+
+  it('names the book, the chapter and every verse piece, or the span', () => {
+    expect([pieces, whole, span].map(passageText)).toEqual([
+      'Psalms 98:4, 6–8',
+      'Psalms 23',
+      'Genesis 1:30–2:3',
+    ]);
+  });
+
+  it('asks the search for where the passage begins, in a form it parses', () => {
+    const queries = [pieces, whole, span].map(passageQuery);
+    expect(queries).toEqual(['Psalms 98:4', 'Psalms 23', 'Genesis 1:30']);
+    expect(queries.map((q) => parseBibleQuery(q)._tag)).toEqual(['single', 'chapter', 'single']);
+    expect(passageQuery({ ...pieces, verses: [{ from: 6, to: 8 }] })).toBe('Psalms 98:6-8');
+    expect(parseBibleQuery('Psalms 98:6-8')._tag).toBe('verseRange');
+  });
+});
+
 describe('the bundled indexes', () => {
   it('answers from the app bundle: other hymns only, and some hymn shares its metre', () => {
     const all = Array.from({ length: 695 }, (_, i) => i + 1);
     expect(all.some((n) => sameMetre(n).length > 0)).toBe(true);
     expect(all.every((n) => sameMetre(n).every((m) => m >= 1 && m <= 695 && m !== n))).toBe(true);
+  });
+
+  it('gives each hymn’s references a query the search reads as a verse, a range or a chapter', () => {
+    const all = Array.from({ length: 695 }, (_, i) => i + 1);
+    const unread = all
+      .flatMap((n) => referencesOf(n))
+      .map(passageQuery)
+      .filter((q) => !['single', 'verseRange', 'chapter'].includes(parseBibleQuery(q)._tag));
+    expect(unread).toEqual([]);
   });
 });
