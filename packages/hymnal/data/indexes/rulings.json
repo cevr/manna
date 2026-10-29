@@ -22,24 +22,6 @@
     },
     {
       "index": "topical",
-      "page": 776,
-      "at": "section Love of God",
-      "check": "sections",
-      "value": "Love of God",
-      "judge": "F23",
-      "why": "f003 p776 (no strip) (third look F23): The p776 strips p776-c1-0700 to p776-c2-4100 and the page copy print no topic heading or see-line named Love of God, and the see-lines on p776-c2-3250 name Love for One Another and Love in the Home, so the book prints no such heading. | first side (F01): p776-c1-0700 to p776-c1-4100 and p776-c2-0700 to p776-c2-4100: no topic heading or see-line on these strips names Love of God, so the book lists no such topic on this page."
-    },
-    {
-      "index": "topical",
-      "page": 776,
-      "at": "section Faithfulness of God",
-      "check": "sections",
-      "value": "Faithfulness of God",
-      "judge": "F01",
-      "why": "f004 p776 (no strip): p776-c1-0700 to p776-c1-4100 and p776-c2-0700 to p776-c2-4100: no topic heading or see-line on these strips names Faithfulness of God, so the book lists no such topic on this page."
-    },
-    {
-      "index": "topical",
       "page": 777,
       "at": "section Close of Worship",
       "check": "sections",

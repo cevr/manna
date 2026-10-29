@@ -9,6 +9,7 @@
  *   bun run indexes --dir <dir>          # the files in another folder (a reconciled draft)
  *   bun run indexes --judges <dir>       # and each ruling's judge record exists in <dir>
  *   bun run indexes --measure            # and each order rule's broken pairs (C4's measurement)
+ *   bun run indexes --reach              # and how many look-alike digit misreadings the checks catch, per index
  *
  * It prints one line per file, `indexes <index> pages=<first>-<last>
  * entries=<n> ruled=<r> problems=<p>`, then `indexes files=<k> entries=<N>
@@ -103,7 +104,12 @@ export interface Context {
   readonly hymn: (
     n: number,
   ) => { readonly title: string; readonly stanzas: number; readonly refrain: boolean } | undefined;
-  /** The printed sections (`data/sdah-1985/topics.json`), each a run of hymn numbers. */
+  /**
+   * The printed sections (`data/sdah-1985/topics.json`), each a run of hymn
+   * numbers: the 62 hymn sections. The six reading sections (source
+   * categories 63–68, readings 696–920) are not in it: the Topical index
+   * files readings under subject topics, never under those six names.
+   */
   readonly sections: ReadonlyArray<{
     readonly name: string;
     readonly first: number;
@@ -182,12 +188,29 @@ const numbered = (
   });
 };
 
-type Row = { readonly page: number; readonly number: number; readonly kind: 'hymn' | 'reading' };
+/** A numbered entry, the decoded row that holds it and the key its number sits at (what `--reach` rewrites). */
+type Row = {
+  readonly page: number;
+  readonly number: number;
+  readonly kind: 'hymn' | 'reading';
+  readonly holder: object;
+  readonly key: 'number' | 'hymn' | 'reading';
+};
 
 const hymn = (h: { readonly page: number; readonly number: number }): Row => ({
   page: h.page,
   number: h.number,
   kind: 'hymn',
+  holder: h,
+  key: 'number',
+});
+
+const byHymn = (e: { readonly page: number; readonly hymn: number }): Row => ({
+  page: e.page,
+  number: e.hymn,
+  kind: 'hymn',
+  holder: e,
+  key: 'hymn',
 });
 
 /** Each index's numbered entries, in file order. */
@@ -195,19 +218,20 @@ const ROWS = {
   topical: (x: Indexes) =>
     (x.topical?.topics ?? []).flatMap((t) => [
       ...t.hymns.map(hymn),
-      ...t.readings.map((h) => ({ page: h.page, number: h.number, kind: 'reading' as const })),
+      ...t.readings.map((h): Row => ({ ...hymn(h), kind: 'reading' })),
     ]),
   'worship-aids': (x: Indexes) =>
-    (x['worship-aids']?.entries ?? []).map((e) => ({
+    (x['worship-aids']?.entries ?? []).map((e): Row => ({
       page: e.page,
       number: e.reading,
-      kind: 'reading' as const,
+      kind: 'reading',
+      holder: e,
+      key: 'reading',
     })),
-  scriptural: (x: Indexes) =>
-    (x.scriptural?.entries ?? []).map((e) => hymn({ page: e.page, number: e.hymn })),
+  scriptural: (x: Indexes) => (x.scriptural?.entries ?? []).map(byHymn),
   'scriptural-by-hymn': (x: Indexes) =>
     [...(x['scriptural-by-hymn']?.entries ?? []), ...(x['scriptural-by-hymn']?.see ?? [])].map(
-      (e) => hymn({ page: e.page, number: e.hymn }),
+      byHymn,
     ),
   sentences: (x: Indexes) => (x.sentences?.groups ?? []).flatMap((g) => g.hymns.map(hymn)),
   canons: (x: Indexes) => (x.canons?.groups ?? []).flatMap((g) => g.hymns.map(hymn)),
@@ -728,9 +752,14 @@ const stanzaProblems = (indexes: Indexes, ctx: Context): Array<Problem> => {
 /**
  * Sections whose topic the Topical index prints under another name, by the
  * section's folded name: each the topic paths (`PARENT: name` or `NAME`)
- * that list its hymns. None is listed while no reading of the pages names one.
+ * that list its hymns. The Topical index has no topic named Love of God or
+ * Faithfulness of God; the subtopics of GOD THE FATHER of those names list
+ * every hymn of the two sections.
  */
-export const SECTION_TOPICS: ReadonlyMap<string, ReadonlyArray<string>> = new Map();
+export const SECTION_TOPICS: ReadonlyMap<string, ReadonlyArray<string>> = new Map([
+  ['loveofgod', ['GOD THE FATHER: Love']],
+  ['faithfulnessofgod', ['GOD THE FATHER: Faithfulness']],
+]);
 
 /**
  * The targets of a printed cross-reference: `See GOD THE FATHER: Majesty and
@@ -1133,12 +1162,10 @@ export const checkIndexes = (
     : []),
 ];
 
-const sameFailure = (p: Problem, r: Rulings['rulings'][number]) =>
-  p.index === r.index &&
-  p.page === r.page &&
-  p.at === r.at &&
-  p.check === r.check &&
-  p.value === r.value;
+/** A failure's identity: a ruling settles the problem with the same key. */
+const failureKey = (
+  f: Pick<Problem, 'index' | 'page' | 'at' | 'value'> & { readonly check: string },
+): string => JSON.stringify([f.index, f.page, f.at, f.check, f.value]);
 
 /**
  * Settles the failures the rulings name (C11): the failures left open, the
@@ -1150,10 +1177,12 @@ export const settle = (
   rulings: Rulings['rulings'],
   judgeExists?: (judge: string) => boolean,
 ) => {
-  const open = problems.filter((p) => !rulings.some((r) => sameFailure(p, r)));
-  const ruled = problems.filter((p) => rulings.some((r) => sameFailure(p, r)));
+  const ruledKeys = new Set(rulings.map(failureKey));
+  const printedKeys = new Set(problems.map(failureKey));
+  const open = problems.filter((p) => !ruledKeys.has(failureKey(p)));
+  const ruled = problems.filter((p) => ruledKeys.has(failureKey(p)));
   const stale = rulings.flatMap((r): Array<Problem> => [
-    ...(problems.some((p) => sameFailure(p, r))
+    ...(printedKeys.has(failureKey(r))
       ? []
       : [
           {
@@ -1196,6 +1225,80 @@ export const summaryLine = (
   const first = file?.pages[0].page ?? 0;
   const last = file?.pages[file.pages.length - 1]?.page ?? 0;
   return `indexes ${name} pages=${first}-${last} entries=${itemsOf(indexes, name).length} ruled=${ruled} problems=${problems}`;
+};
+
+// ---------------------------------------------------------------- look-alike reach
+
+const LOOK_ALIKES = new Map<string, ReadonlyArray<string>>([
+  ['0', ['8']],
+  ['1', ['7']],
+  ['3', ['8']],
+  ['5', ['6']],
+  ['6', ['8', '5']],
+  ['7', ['1']],
+  ['8', ['3', '6', '9', '0']],
+  ['9', ['8']],
+]);
+
+/** Every number one look-alike digit away from `n` (3↔8, 6↔8, 9↔8, 5↔6, 0↔8, 1↔7), with no leading zero. */
+export const lookAlikes = (n: number): Array<number> => {
+  const s = `${n}`;
+  return [...s].flatMap((d, i) =>
+    (LOOK_ALIKES.get(d) ?? [])
+      .map((r) => `${s.slice(0, i)}${r}${s.slice(i + 1)}`)
+      .filter((t) => !(t.length > 1 && t.startsWith('0')))
+      .map(Number),
+  );
+};
+
+/**
+ * How many look-alike misreadings of each index's numbers the checks catch
+ * (`--reach`): a measurement, not a check. Each number is rewritten to its
+ * k-th look-alike in batches of every third entry; a variant counts as caught
+ * when a new open problem sits at its place (or, for order, at the next one),
+ * names its old hymn, or the variant is 0 (which the schema refuses). Two
+ * variants in one batch can mask or catch for each other, so the counts are
+ * approximate.
+ */
+export const reach = (indexes: Indexes, ctx: Context, rulings: Rulings['rulings']) => {
+  const work = structuredClone(indexes);
+  const openOf = () =>
+    settle(checkIndexes(work, ctx), rulings).open.filter((p) => p.check !== 'rulings');
+  const key = (p: Problem) => `${p.index}|${p.page}|${p.at}|${p.check}|${p.value}`;
+  const base = new Set(openOf().map(key));
+  return NAMES.filter((name) => work[name] !== undefined).map((name) => {
+    const rows = ROWS[name](work);
+    const places = itemsOf(work, name);
+    const variants = rows.map((r) => lookAlikes(r.number));
+    const at = (i: number) => (p: Problem) => p.page === places[i]?.page && p.at === places[i]?.at;
+    let [total, caught] = [0, 0];
+    const most = Math.max(0, ...variants.map((v) => v.length));
+    for (let k = 0; k < most; k++)
+      for (let offset = 0; offset < 3; offset++) {
+        const hit = rows.flatMap((r, i) => {
+          const v = variants[i]?.[k];
+          if (i % 3 !== offset || v === undefined) return [];
+          Reflect.set(r.holder, r.key, v);
+          return [{ i, r, v }];
+        });
+        if (hit.length === 0) continue;
+        const found = openOf().filter((p) => !base.has(key(p)));
+        for (const h of hit) {
+          Reflect.set(h.r.holder, h.r.key, h.r.number);
+          total++;
+          if (
+            h.v === 0 ||
+            found.some(
+              (p) =>
+                (p.index === name && (at(h.i)(p) || (p.check === 'order' && at(h.i + 1)(p)))) ||
+                p.at === `hymn ${h.r.number}`,
+            )
+          )
+            caught++;
+        }
+      }
+    return { index: name, caught, total };
+  });
 };
 
 // ---------------------------------------------------------------- the CLI
@@ -1283,6 +1386,9 @@ if (import.meta.main) {
   if (args.includes('--measure'))
     for (const m of measureOrder(decoded.indexes, ctx))
       console.log(`order ${m.rule}: pairs=${m.pairs} broken=${m.broken}`);
+  if (args.includes('--reach'))
+    for (const r of reach(decoded.indexes, ctx, rulings.rulings))
+      console.log(`reach ${r.index}: caught=${r.caught} variants=${r.total}`);
   let files = 0;
   let entries = 0;
   for (const name of NAMES) {
