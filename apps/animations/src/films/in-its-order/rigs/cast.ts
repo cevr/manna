@@ -28,6 +28,7 @@ import { PUPPETS as CHILD_PUPPETS } from '../../../library/cast/villager-child/c
 import { PUPPETS as TODDLER_PUPPETS } from '../../../library/cast/villager-toddler/cutout/puppets.ts';
 import { PUPPETS as FEAST_MOTHER_PUPPETS } from '../cast/feast-mother/cutout/puppets.ts';
 import { PUPPETS as IDEA_VILLAGERS_PUPPETS } from '../cast/idea-villagers/cutout/puppets.ts';
+import { PUPPETS as PAUL_PUPPETS } from '../../../library/cast/paul/cutout/puppets.ts';
 import { own } from '../../../library/cutout/poses.ts';
 import { RAISE as LEAD_RAISE } from '../../../library/cast/lead-feast/cutout/raise.ts';
 import { poses1View as leadPoses1 } from '../../../library/cast/lead-feast/cutout/poses.ts';
@@ -254,6 +255,90 @@ const IDEA_VILLAGERS_CLASSES = {
 } as const;
 
 /**
+ * Paul's colour classes, each sample the 3 by 3 median of his kept heads
+ * views' own pixels (`library/cast/paul/cast-sheet/views/heads-<n>.png`,
+ * x,y in the view, heads-1 to heads-6 in order). Every view holds all four.
+ * Line is luma under 90 (his outline and his eyes), so it is no class.
+ * - `skin`: his face and bald crown, lit, in shade, and the crown's light
+ *   (125,13 153,17 107,11; 109,11 123,19 79,15; 109,11 137,25 95,13; 129,13
+ *   157,29 119,13; 131,13 147,21 99,13; 133,13 163,31 113,13).
+ * - `mantle`: his slate-blue cloak over the shoulders, lit and its far side
+ *   turned toward violet (61,247 179,221; 59,247 193,219; 65,255 173,227;
+ *   63,247 181,239; 59,257 181,241; 69,251 189,247).
+ * - `tunic`: the linen V at his collar, lit and in shade (81,261 133,267;
+ *   101,253 137,261; 79,267 129,269; 83,265 133,275; 83,263 139,277; 83,259
+ *   103,275).
+ * - `hair`: his grey-brown beard and the brown hair at the sides of his head
+ *   (57,157 193,135; 83,183 17,109; 41,165 31,45; 53,153 81,17; 57,149
+ *   49,137; 53,139 109,11). Both lie above luma 100, so they are not line, and
+ *   without their own class each pixel would count as the cloak's or skin's.
+ */
+const PAUL_CLASSES = {
+  skin: [
+    '#e8ae78',
+    '#de9d6d',
+    '#f5ce9c',
+    '#ebaf7b',
+    '#dd9d6e',
+    '#f8c994',
+    '#ebae7d',
+    '#df9e6e',
+    '#fbcb95',
+    '#eaac77',
+    '#de9d6c',
+    '#facd9b',
+    '#ecae7b',
+    '#df9e6f',
+    '#f7c795',
+    '#ebac79',
+    '#de9c6e',
+    '#fdc894',
+  ],
+  mantle: [
+    '#86898f',
+    '#616072',
+    '#81838e',
+    '#64637d',
+    '#898a8f',
+    '#646378',
+    '#83858a',
+    '#64637d',
+    '#8a898f',
+    '#68667f',
+    '#86858b',
+    '#65647d',
+  ],
+  tunic: [
+    '#efd6ad',
+    '#e6c9a0',
+    '#eed2a5',
+    '#e8cba0',
+    '#ecd1a6',
+    '#e7cba1',
+    '#eccfa4',
+    '#e5c597',
+    '#eccea2',
+    '#e6c79c',
+    '#edd0a4',
+    '#eccda1',
+  ],
+  hair: [
+    '#8c6f56',
+    '#8e6041',
+    '#82664e',
+    '#8f6642',
+    '#876c54',
+    '#8b6644',
+    '#886e57',
+    '#896a4e',
+    '#896d55',
+    '#82664d',
+    '#856954',
+    '#8a6342',
+  ],
+} as const;
+
+/**
  * Each member's colour classes for his fit rows (`film concept render`): a
  * class's samples on his kept sheets, and the papers and tones that paint it
  * on his rigs. His hair and its brown read as his line (darker than luma
@@ -309,6 +394,12 @@ export const FIT_CLASSES = {
     violet: { sheet: IDEA_VILLAGERS_CLASSES.violet, paper: IDEA_VILLAGERS_CLASSES.violet },
     skin: { sheet: IDEA_VILLAGERS_CLASSES.skin, paper: IDEA_VILLAGERS_CLASSES.skin },
   },
+  paul: {
+    skin: { sheet: PAUL_CLASSES.skin, paper: PAUL_CLASSES.skin },
+    mantle: { sheet: PAUL_CLASSES.mantle, paper: PAUL_CLASSES.mantle },
+    tunic: { sheet: PAUL_CLASSES.tunic, paper: PAUL_CLASSES.tunic },
+    hair: { sheet: PAUL_CLASSES.hair, paper: PAUL_CLASSES.hair },
+  },
   sower: {
     linen: { sheet: SOWER_CLASSES.linen, paper: SOWER_CLASSES.linen },
     olive: { sheet: SOWER_CLASSES.olive, paper: SOWER_CLASSES.olive },
@@ -354,6 +445,14 @@ const FEAST_MOTHER_POSES = 814 / 440;
 const IDEA_VILLAGERS_POSES = 512 / 440;
 
 /**
+ * Paul on his heads sheet: busts with no rig, so no view of his is a canon
+ * anchor. He takes the lead's heads scale, the bust framing his kept heads
+ * sheet shares (each bust crown to cut 297 to 313 rows). The cut-out page
+ * reads only the sheet's size.
+ */
+const PAUL_HEADS = LEAD_TURNAROUND * 1.13;
+
+/**
  * Each member's sheets: their size and one scale, sheet pixels a canon unit,
  * each read off the sheet's anchor view. The lead's poses: poses-5, his
  * front at rest, hair (row 225) to soles (row 829) 440 units. His heads, busts
@@ -373,6 +472,9 @@ export const SHEETS = {
   },
   'idea-villagers': {
     poses: { ...SHEET, scale: IDEA_VILLAGERS_POSES },
+  },
+  paul: {
+    heads: { ...SHEET, scale: PAUL_HEADS },
   },
   sower: {
     turnaround: { ...SHEET, scale: SOWER_TURNAROUND },
@@ -943,6 +1045,16 @@ export const CUTOUT = cutoutTable({
       'poses-3': own(undefined, IDEA_VILLAGERS_PUPPETS['poses-3']),
       'poses-4': own(undefined, IDEA_VILLAGERS_PUPPETS['poses-4']),
       'poses-6': own(undefined, IDEA_VILLAGERS_PUPPETS['poses-6']),
+    },
+  },
+  paul: {
+    heads: {
+      'heads-1': own(undefined, PAUL_PUPPETS['heads-1']),
+      'heads-2': own(undefined, PAUL_PUPPETS['heads-2']),
+      'heads-3': own(undefined, PAUL_PUPPETS['heads-3']),
+      'heads-4': own(undefined, PAUL_PUPPETS['heads-4']),
+      'heads-5': own(undefined, PAUL_PUPPETS['heads-5']),
+      'heads-6': own(undefined, PAUL_PUPPETS['heads-6']),
     },
   },
   sower: {
