@@ -84,10 +84,20 @@ const TURNAROUND_LINE = { width: 9.5, ink: [12, 2, 0] } as const;
  * swaddle and the cream under the stool are lighter than her paper (RGB
  * 11 to 25 from it), so with no cloth named they solve to no alpha and the
  * un-matte clears them (7678 px of poses-2, 386 of threeQuarterLeft and 191
- * of back show the film's paper through her). Named, they stay hers: 8, 58
- * and 2 px remain, those nearer the paper than this cream.
+ * of back show the film's paper through her). Named, they stay hers.
+ *
+ * The second colour, 255,249,211, is the yellower cream of her veil's edge in
+ * the turnarounds (the cleared px there lie +2,+4,-5 RGB from the paper; this
+ * is twice that step), so its half-way line to the paper keeps the farther
+ * half of them and no paper pocket's px. A colour nearer the paper (the
+ * cleared median itself) keeps them all but fills 8 to 88 px of real paper
+ * pockets in five views, so the px nearer the paper than either colour
+ * remain cleared.
  */
-const CLOTH = [[254, 247, 230]] as const;
+const CLOTH = [
+  [254, 247, 230],
+  [255, 249, 211],
+] as const;
 
 /**
  * Each cut view's paper, the median of its kept view's border ground (its rim
