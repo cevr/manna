@@ -450,6 +450,10 @@ export const ORDER_RULES = [
   'metrical: tunes alphabetical within a metre',
   'topical: topics alphabetical',
   'topical: hymns by compiled title within a topic',
+  'sentences: hymns by compiled title within a group',
+  'canons: hymns by compiled title within a group',
+  'young: hymns by compiled title',
+  'composers: the hymns of one name ascending',
 ] as const;
 export type OrderRule = (typeof ORDER_RULES)[number];
 
@@ -617,6 +621,83 @@ const topicalOrder = (topical: Topical, ctx: Context): Array<Pair> => {
   return [...alphabetical('topical: topics alphabetical', 'topical', top), ...titled];
 };
 
+type Placed = { readonly n: number; readonly page: number; readonly at: string };
+
+/** Each list's hymns in file order, each placed at its numbered entry (`items`, the lists' entries end to end). */
+const placedLists = (
+  items: ReadonlyArray<Item>,
+  lists: ReadonlyArray<ReadonlyArray<{ readonly number: number }>>,
+): Array<Array<Placed>> => {
+  let i = 0;
+  return lists.map((hymns) =>
+    hymns.map((h) => {
+      const placed = { n: h.number, ...pick(items[i] ?? NOWHERE) };
+      i += 1;
+      return placed;
+    }),
+  );
+};
+
+/** The pairs of each list judged by compiled title; a number with no compiled hymn is left out. */
+const titledLists = (
+  rule: OrderRule,
+  index: IndexName,
+  ctx: Context,
+  lists: ReadonlyArray<ReadonlyArray<Placed>>,
+): Array<Pair> =>
+  lists.flatMap((list) =>
+    neighbours(
+      rule,
+      index,
+      list.flatMap((r) => {
+        const title = ctx.hymn(r.n)?.title;
+        return title === undefined ? [] : [{ ...r, title }];
+      }),
+      (a, b) => sortKey(a.title) > sortKey(b.title),
+      (a, b) => `${a.n} > ${b.n}`,
+    ),
+  );
+
+/** The young list, each sentences or canons group, and each composer's hymns. */
+const listOrders = (indexes: Indexes, ctx: Context): Array<Pair> => [
+  ...titledLists(
+    'sentences: hymns by compiled title within a group',
+    'sentences',
+    ctx,
+    placedLists(
+      itemsOf(indexes, 'sentences'),
+      (indexes.sentences?.groups ?? []).map((g) => g.hymns),
+    ),
+  ),
+  ...titledLists(
+    'canons: hymns by compiled title within a group',
+    'canons',
+    ctx,
+    placedLists(
+      itemsOf(indexes, 'canons'),
+      (indexes.canons?.groups ?? []).map((g) => g.hymns),
+    ),
+  ),
+  ...titledLists(
+    'young: hymns by compiled title',
+    'young',
+    ctx,
+    placedLists(itemsOf(indexes, 'young'), [indexes.young?.hymns ?? []]),
+  ),
+  ...placedLists(
+    itemsOf(indexes, 'composers'),
+    (indexes.composers?.people ?? []).map((p) => p.hymns),
+  ).flatMap((list) =>
+    neighbours(
+      'composers: the hymns of one name ascending',
+      'composers',
+      list,
+      (a, b) => a.n > b.n,
+      (a, b) => `${a.n} > ${b.n}`,
+    ),
+  ),
+];
+
 /** Every neighbouring pair each order rule judges, broken or not. */
 export const orderPairs = (indexes: Indexes, ctx: Context): ReadonlyArray<Pair> => [
   ...scriptureOrder(indexes, ctx, 'scriptural'),
@@ -624,6 +705,7 @@ export const orderPairs = (indexes: Indexes, ctx: Context): ReadonlyArray<Pair> 
   ...byHymnOrder(indexes),
   ...nameOrders(indexes),
   ...(indexes.topical ? topicalOrder(indexes.topical, ctx) : []),
+  ...listOrders(indexes, ctx),
 ];
 
 const topicPath = (t: Topical['topics'][number]) =>
