@@ -4526,7 +4526,7 @@ The form of an entry, each field on its own line:
 - **Source:** cutout/round-8-findings.md F2 (the review's M2)
 - **Wrong:** On a bent bind skeleton a vertex lying on the upper bone took the forearm's whole weight, so turning only the elbow moved the shoulder.
 - **Cause:** The weight chose a bone by which side of the child's axis a vertex lay on, not by the nearest segment, and blended across the whole limb instead of near the joint. The acceptance checked supplied weights, never how they were chosen.
-- **Guard:** code: `packages/film/src/core/puppet.test.ts` `a vertex nearest the upper bone does not follow the elbow`
+- **Guard:** code: `packages/film/src/core/puppet.test.ts` `a vertex nearest the upper bone does not follow the elbow`; `packages/film/src/core/puppet.test.ts` `an elbow turn tears no mesh edge on a limb bent at rest 90° or 135°`
 
 ### unmatte-keeps-revealed-paint
 
@@ -4567,3 +4567,23 @@ The form of an entry, each field on its own line:
 - **Wrong:** The browser's part reader closed a decoded bitmap only when the canvas read succeeded; a missing 2D context, a throwing read or an interruption left it open.
 - **Cause:** The bitmap was closed by a line after the read, not by the scope that acquired it.
 - **Guard:** code: `packages/film/src/puppet/images-browser.test.ts` `a failed read closes the decoded bitmap`
+
+### puppet-joint-blend-continuous
+
+- **Date:** 2026-10-29
+- **Kind:** review
+- **Said:** "The joint blend's weight drops to 0 at the edge of its box on a limb that is bent at rest."
+- **Source:** puppet-engine/round-1-review.md R1
+- **Wrong:** On a limb bent at rest, the child's weight inside the joint's blend read the child's axis alone, so it was 0.5 to 0.9 at the parent-side edge of the blend and 0 just past it; an elbow turn parted two neighbouring vertices 3 px apart by up to 14.9 px and tore the sleeve.
+- **Cause:** The blend was a box on the two bones' axes with a weight from one of them, and its test skipped the vertices near the elbow, so no case saw the weight at the box's edge.
+- **Guard:** code: `packages/film/src/core/puppet.test.ts` `an elbow turn tears no mesh edge on a limb bent at rest 90° or 135°`
+
+### unmatte-revealed-when-back-part-moves
+
+- **Date:** 2026-10-29
+- **Kind:** review
+- **Said:** "A back part that turns out from under a still front part shows a hole."
+- **Source:** puppet-engine/round-1-review.md R2
+- **Wrong:** Revealed paint showed only when the part in front moved; a back part turning out from under a still front part showed, as a hole, the paint the un-matte had cleared under the front part's rim.
+- **Cause:** The rule asked whether the part in front moved, not whether the two parts moved apart, and its test moved only the front part.
+- **Guard:** code: `packages/film/src/core/puppet.test.ts` `rasterOf shows no hole where a turned back part moves out from under a still front part`

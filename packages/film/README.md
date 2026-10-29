@@ -2682,10 +2682,12 @@ A puppet (`core/puppet.ts`) is a part sheet on a skeleton
 `neck`, `head`, `shoulder`, `elbow` and `wrist` by side), each turning about its pivot after its parent; each
 part's skin, the bones it lies on; each sleeve's shoulder flap). Each part
 is a mesh of its own pixels on a 3 px grid, each vertex on at most two of
-its skin's bones: the bone whose segment lies nearest holds it, unless it
-lies within a joint's blend (18 px of the joint, at most half the shorter
-bone, along both bones' axes), where the two share it by a smoothstep; so
-where a limb bends, the parent's far paint stays on the parent. It is
+its skin's bones: at a joint of two of them, the child's weight is a
+smoothstep of how much nearer the child's segment the vertex lies than the
+parent's, across the joint's blend (18 px, at most half the shorter bone,
+narrowed on the parent's side by how tightly the joint is folded at rest),
+and outside it the nearest bone holds it alone; so the weight is continuous
+where a limb bends, and the parent's far paint stays on the parent. It is
 skinned by linear blend; a pose is
 `{ numbers, root, scale }`, degrees a bone. `rasterOf` is the CPU
 reference: each pixel inverse-mapped through the posed triangle that holds
@@ -2703,8 +2705,8 @@ the edges its figure leaves through (`PuppetSpec.open`, a bust's `bottom`;
 un-matte clears from behind a front part's rim is kept on the part behind
 (`PuppetPart.revealed`) and laid by one rule (`revealedShown`, beside
 `sealsShown`) in every draw: `rasterOf`, the plain GL pass and the look
-pass show it where the part in front has moved away, and a still figure
-draws its textures alone. A drawing declares its puppets beside
+pass show it whenever the part behind or the part in front moves, so no
+hole opens either way, and a still figure draws its textures alone. A drawing declares its puppets beside
 its rigs (`drawing({ puppets })`), and both of a film's loads load them
 before its first frame, the page's (`narratedFilms`) and `check --draw`'s
 (`drawLeg`) (`loadPuppets`, `src/puppet/load.ts`: each part PNG read and
