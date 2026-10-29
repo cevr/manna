@@ -79,6 +79,17 @@ type TurnaroundView =
 const TURNAROUND_LINE = { width: 9.5, ink: [12, 2, 0] } as const;
 
 /**
+ * Her cream cloth, kept whole by the un-matte (`core/unmatte.ts`, `keep`):
+ * the median of the veil's lining in poses-2, 254,247,230. The lining, the
+ * swaddle and the cream under the stool are lighter than her paper (RGB
+ * 11 to 25 from it), so with no cloth named they solve to no alpha and the
+ * un-matte clears them (7678 px of poses-2, 386 of threeQuarterLeft and 191
+ * of back show the film's paper through her). Named, they stay hers: 8, 58
+ * and 2 px remain, those nearer the paper than this cream.
+ */
+const CLOTH = [[254, 247, 230]] as const;
+
+/**
  * Each cut view's paper, the median of its kept view's border ground (its rim
  * is un-matted from it, `core/unmatte.ts`): 252,241,221 on all but
  * profileRight, whose ground is 252,242,222, the ground each view's dry-run
@@ -100,6 +111,7 @@ const TURNAROUND = puppetsOf<TurnaroundView>({
   skeletons: SKELETONS,
   papers: TURNAROUND_PAPERS,
   line: TURNAROUND_LINE,
+  keep: CLOTH,
   parts: {
     front: [
       ['armRight', frontArmRight],
@@ -169,6 +181,7 @@ const POSES = puppetsOf<PoseView>({
   skeletons: SKELETONS,
   papers: POSES_PAPERS,
   line: POSES_LINE,
+  keep: CLOTH,
   parts: {
     'poses-1': [
       ['armRight', p1ArmRight],
