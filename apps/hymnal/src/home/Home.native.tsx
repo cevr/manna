@@ -255,10 +255,10 @@ function FieldButton({
 }
 
 /**
- * Search mode: the focused field and Cancel over the hymns the query finds,
- * each found by a line other than its title showing that line. Search mode
- * builds the search's index (`hymnIndex`) once it is on screen, while the
- * keyboard comes up, and reads the meaning table in a timer task after it
+ * Search mode: the field (focused when the reader tapped it) and Cancel over
+ * the hymns the query finds, each found by a line other than its title
+ * showing that line. Search mode builds the search's index (`hymnIndex`)
+ * once it is on screen, while a tapped field's keyboard comes up, and reads the meaning table in a timer task after it
  * (`readMeaningSoon`), so neither the first keystroke nor the first pause
  * waits on them and no one task holds the thread for both; the app's start
  * never does. After a pause in the typing (`afterPause`), the hymns

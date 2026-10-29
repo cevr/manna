@@ -156,6 +156,7 @@ describe('About this hymn', () => {
     const bare = Array.from({ length: 695 }, (_, i) => i + 1).find(
       (n) => referencesOf(n).length === 0,
     );
+    expect(bare).toBeDefined();
     using _route = routeTo(String(bare));
     const html = renderToStaticMarkup(<AboutRoute />);
     expect({
@@ -240,6 +241,7 @@ describe('the head line of a hymn’s page', () => {
     const one = Array.from({ length: 695 }, (_, i) => i + 1).find(
       (n) => referencesOf(n).length === 1,
     );
+    expect(one).toBeDefined();
     const hymn = Option.getOrThrow(hymnAt(String(one)));
     const only = Option.getOrThrow(Arr.head(referencesOf(hymn.number)));
     const html = renderToStaticMarkup(<HymnPage hymn={hymn} reader={readerOn()} />);
