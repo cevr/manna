@@ -43,10 +43,12 @@
  *   begins the next.
  * - `rulings` (C11): every ruling settles a failure printed now, and names a
  *   judge record that exists (with `--judges`).
- * - `directions` (C12): the Scripture allusions indexed by reference and by
- *   hymn number list the same allusions: each entry has a twin of the same
- *   hymn and book, an agreeing stanza (no stanza is the whole hymn) and an
- *   overlapping passage; a `See N` row lends its hymn the passages of hymn N.
+ * - `directions` (C12): each allusion the index by Scripture reference lists
+ *   has a twin in the index by hymn number, of the same hymn and book, an
+ *   agreeing stanza (no stanza is the whole hymn) and an overlapping passage;
+ *   a `See N` row lends its hymn the passages of hymn N. The book's index by
+ *   reference leaves out about one in twenty of the passages its index by
+ *   hymn number gives, so the other direction is not checked.
  */
 
 import { getBibleBook, getBibleBookByName } from '@manna/core/bible';
@@ -1065,85 +1067,50 @@ const overlaps = (a: Passage, b: Passage): boolean =>
   a.book === b.book &&
   spansOf(a).some(([from, to]) => spansOf(b).some(([f, t]) => from <= t && f <= to));
 
-interface Direction {
-  readonly passage: Passage;
-  readonly hymn: number;
-  readonly stanza?: string;
-}
-
 /**
- * Each entry of one Scripture index has a twin in the other: the same hymn, a
- * stanza that agrees (the same letter, or none on either side: an entry with
- * no stanza is the whole hymn), the same book, and a passage that overlaps
- * (the two print one allusion differently: `98:4, 6` as one entry or two,
- * `5:1-3` or `5:2`). A by-hymn `See N` row gives its hymn the passages of
- * hymn N.
+ * Each entry of the index by Scripture reference has a twin in the index by
+ * hymn number: the same hymn, a stanza that agrees (the same letter, or none
+ * on either side: an entry with no stanza is the whole hymn), the same book,
+ * and a passage that overlaps (the two print one allusion differently:
+ * `98:4, 6` as one entry or two, `5:1-3` or `5:2`). A by-hymn `See N` row
+ * gives its hymn the passages of hymn N. A by-hymn entry needs no twin: the
+ * book's index by reference leaves out about one in twenty of them.
  */
 const directionProblems = (
   scriptural: Scriptural,
   byHymn: ScripturalByHymn,
   ctx: Context,
 ): Array<Problem> => {
-  const byNumber = (entries: ReadonlyArray<Direction>) => {
-    const m = new Map<number, Array<Direction>>();
-    for (const e of entries) {
-      const list = m.get(e.hymn) ?? [];
-      list.push(e);
-      m.set(e.hymn, list);
-    }
-    return m;
-  };
+  const byNumber = new Map<number, Array<ScripturalByHymn['entries'][number]>>();
+  for (const e of byHymn.entries) {
+    const list = byNumber.get(e.hymn) ?? [];
+    list.push(e);
+    byNumber.set(e.hymn, list);
+  }
   const sees = new Map((byHymn.see ?? []).map((s) => [s.hymn, s.see]));
-  const out: Array<Problem> = [];
-  const hold = (
-    name: 'scriptural' | 'scriptural-by-hymn',
-    entries: ReadonlyArray<Direction>,
-    other: Map<number, Array<Direction>>,
-    hymnsOf: (hymn: number) => ReadonlyArray<number>,
-    otherName: string,
-  ) => {
-    const items = itemsOf(
-      name === 'scriptural' ? { scriptural } : { 'scriptural-by-hymn': byHymn },
-      name,
+  const items = itemsOf({ scriptural }, 'scriptural');
+  return scriptural.entries.flatMap((e, i): Array<Problem> => {
+    const see = sees.get(e.hymn);
+    const twin = (see === undefined ? [e.hymn] : [e.hymn, see]).some((h) =>
+      (byNumber.get(h) ?? []).some(
+        (t) =>
+          (t.stanza === undefined || e.stanza === undefined || t.stanza === e.stanza) &&
+          overlaps(t.passage, e.passage),
+      ),
     );
-    entries.forEach((e, i) => {
-      const twin = hymnsOf(e.hymn).some((h) =>
-        (other.get(h) ?? []).some(
-          (t) =>
-            (t.stanza === undefined || e.stanza === undefined || t.stanza === e.stanza) &&
-            overlaps(t.passage, e.passage),
-        ),
-      );
-      if (twin) return;
-      const it = items[i];
-      out.push({
-        index: name,
+    if (twin) return [];
+    const it = items[i];
+    return [
+      {
+        index: 'scriptural',
         page: it?.page ?? 0,
         at: it?.at ?? '-',
         check: 'directions',
-        what: `not in the index ${otherName}`,
+        what: 'not in the index by hymn number',
         value: `${passageText(e.passage, ctx.bookName)} ${e.hymn}${e.stanza ?? ''}`,
-      });
-    });
-  };
-  hold(
-    'scriptural',
-    scriptural.entries,
-    byNumber(byHymn.entries),
-    (h) => {
-      const see = sees.get(h);
-      return see === undefined ? [h] : [h, see];
-    },
-    'by hymn number',
-  );
-  hold(
-    'scriptural-by-hymn',
-    byHymn.entries,
-    byNumber(scriptural.entries),
-    (h) => [h],
-    'by Scripture reference',
-  );
-  return out;
+      },
+    ];
+  });
 };
 
 /** Every check over the decoded indexes (C2-C10, C12), in check order. */

@@ -572,23 +572,28 @@ describe('a Scripture direction and its twin in the other index', () => {
   });
 
   it('differ when the book, the stanza or the verses differ', () => {
-    // each: the mutation, then the entry left unmatched in each index
-    const cases: ReadonlyArray<[string, (b: ReturnType<typeof book>) => void, string, string]> = [
-      ['another book', (b) => (byHymn(b, 2)['passage'] = at(2, 1, [1, 1])), '2a', '2a'],
-      ['another stanza', (b) => (byHymn(b, 3)['stanza'] = 'a'), '3r', '3a'],
-      ['verses apart', (b) => (byHymn(b, 4)['passage'] = at(2, 1, [7, 8])), '4c', '4c'],
+    // each: the mutation, then the reference entry left with no twin
+    const cases: ReadonlyArray<[string, (b: ReturnType<typeof book>) => void, string]> = [
+      ['another book', (b) => (byHymn(b, 2)['passage'] = at(2, 1, [1, 1])), '2a'],
+      ['another stanza', (b) => (byHymn(b, 3)['stanza'] = 'a'), '3r'],
+      ['verses apart', (b) => (byHymn(b, 4)['passage'] = at(2, 1, [7, 8])), '4c'],
     ];
-    for (const [label, mutate, mine, twin] of cases) {
+    for (const [label, mutate, mine] of cases) {
       const b = book();
       mutate(b);
-      expect({ label, found: unmatched(b) }).toEqual({
-        label,
-        found: [
-          ['scriptural', mine],
-          ['scriptural-by-hymn', twin],
-        ],
-      });
+      expect({ label, found: unmatched(b) }).toEqual({ label, found: [['scriptural', mine]] });
     }
+  });
+
+  it('a by-hymn entry the index by reference leaves out is no problem', () => {
+    const b = book();
+    arr(b['scriptural-by-hymn'], 'entries').push({
+      passage: at(2, 1, [9, 9]),
+      hymn: 4,
+      stanza: 'c',
+      page: 15,
+    });
+    expect(unmatched(b)).toEqual([]);
   });
 
   it('a hymn the by-hymn index sends to another (`See N`) takes that hymn’s passages', () => {
