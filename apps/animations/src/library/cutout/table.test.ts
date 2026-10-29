@@ -116,6 +116,21 @@ describe('padded', () => {
     expect(moved?.pivot).toEqual([0, 8]);
     expect(ownerAt(padded(hand, square), 26, 26, 1, 13)).toBe(1);
   });
+
+  test('lays a far marker past the padded view, so a 398 px kept view padded 3 + 3 keeps its last column', () => {
+    // padded to 404 px, its far edge 405; the kept width alone would end it at 403
+    const narrow: CutFrame = { sheet: 'turnaround', kept: [0, 0, 398, 40], pad: [3, 3, 3, 3] };
+    const sides: PartCut = {
+      parts: [
+        { name: 'right', take: [box(300, -1, FAR, FAR)], unless: [box(-1, 30, FAR, FAR)] },
+        { name: 'rest', take: [box(-1, -1, FAR, FAR)] },
+      ],
+    };
+    const at = (x: number, y: number) => ownerAt(padded(sides, narrow), 404, 46, x, y);
+    expect(at(403, 10)).toBe(1);
+    expect(at(403, 45)).toBe(2);
+    expect(at(10, 10)).toBe(2);
+  });
 });
 
 /** The owner of pixel (x, y) when `cut` lays a `width` by `height` view whose every pixel is the figure's (0 the ground, k + 1 the part at k), or -1 if the cut refuses. */
