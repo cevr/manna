@@ -111,12 +111,18 @@ type PosesView = 'poses-1' | 'poses-2' | 'poses-3' | 'poses-4';
 const TURNAROUND_LINE = { width: 9.5, ink: [35, 17, 8] } as const;
 const POSES_LINE = { width: 9.5, ink: [48, 30, 15] } as const;
 
-/** Each cut view's paper, the median of its kept view's border ground (its rim is un-matted from it, `core/unmatte.ts`). */
+/**
+ * Each cut view's paper, the median of its kept view's border ground (its rim
+ * is un-matted from it, `core/unmatte.ts`). The left profile's sheet glows
+ * lighter beside his outline (251,243,228 outside his ink) than at its border,
+ * and that glow, nearer his linen than the border's paper, stayed on as thin
+ * paper strips; its paper is the glow, so the rim clears it.
+ */
 const TURNAROUND_PAPERS = {
   front: [250, 237, 217],
   threeQuarterLeft: [250, 236, 216],
   back: [249, 236, 216],
-  profileLeft: [250, 237, 217],
+  profileLeft: [252, 245, 230],
   profileRight: [250, 237, 217],
   threeQuarterRight: [250, 236, 216],
 } as const satisfies Readonly<Record<TurnaroundView, readonly [number, number, number]>>;
