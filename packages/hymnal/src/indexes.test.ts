@@ -69,11 +69,17 @@ const head = (index: IndexName, title: string, pages: ReadonlyArray<[number, num
 });
 const refs = (page: number, ns: ReadonlyArray<number>) => ns.map((number) => ({ number, page }));
 const at = (book: number, chapter: number, ...verses: ReadonlyArray<[number, number]>) => ({
+  _tag: 'Chapter' as const,
   book,
   chapter,
   verses: verses.map(([from, to]) => ({ from, to })),
 });
-const across = () => ({ book: 1, from: { chapter: 1, verse: 9 }, to: { chapter: 2, verse: 2 } });
+const across = () => ({
+  _tag: 'Span' as const,
+  book: 1,
+  from: { chapter: 1, verse: 9 },
+  to: { chapter: 2, verse: 2 },
+});
 
 /** The made-up book's indexes, consistent with `ctx`. */
 const book = (): Record<IndexName, Json> => ({
@@ -268,6 +274,19 @@ const everyMutant = (
 describe('the made-up book', () => {
   it('decodes, and every check finds nothing', () => {
     expect(problemsOf(book()).map(problemLine)).toEqual([]);
+  });
+
+  it('tags each passage by its shape, from stored text that carries no tag', () => {
+    const stored = text(book().scriptural ?? {}).replaceAll(/"_tag":"(?:Chapter|Span)",/g, '');
+    expect(stored).not.toContain('_tag');
+    const { indexes, problems } = decodeIndexes({ scriptural: stored });
+    expect(problems).toEqual([]);
+    const tags = (indexes.scriptural?.entries ?? []).map(({ passage }) => [
+      passage._tag,
+      'verses' in passage ? 'Chapter' : 'Span',
+    ]);
+    expect(tags.every(([tag, kind]) => tag === kind)).toBe(true);
+    expect(new Set(tags.map(([tag]) => tag))).toEqual(new Set(['Chapter', 'Span']));
   });
 
   it('refuses an excess key', () => {
@@ -691,6 +710,7 @@ describe('reading a printed reference', () => {
   it('splits comma pieces, crosses chapters and takes a whole chapter', () => {
     expect(parseReference(19, '98:4, 6')).toEqual([
       {
+        _tag: 'Chapter',
         book: 19,
         chapter: 98,
         verses: [
@@ -700,15 +720,18 @@ describe('reading a printed reference', () => {
       },
     ]);
     expect(parseReference(1, '1:1-2:3')).toEqual([
-      { book: 1, from: { chapter: 1, verse: 1 }, to: { chapter: 2, verse: 3 } },
+      { _tag: 'Span', book: 1, from: { chapter: 1, verse: 1 }, to: { chapter: 2, verse: 3 } },
     ]);
-    expect(parseReference(19, '23')).toEqual([{ book: 19, chapter: 23, verses: [] }]);
+    expect(parseReference(19, '23')).toEqual([
+      { _tag: 'Chapter', book: 19, chapter: 23, verses: [] },
+    ]);
     expect(parseReference(66, '21:4, 22:5')).toEqual([
-      { book: 66, chapter: 21, verses: [{ from: 4, to: 4 }] },
-      { book: 66, chapter: 22, verses: [{ from: 5, to: 5 }] },
+      { _tag: 'Chapter', book: 66, chapter: 21, verses: [{ from: 4, to: 4 }] },
+      { _tag: 'Chapter', book: 66, chapter: 22, verses: [{ from: 5, to: 5 }] },
     ]);
     expect(parseReference(1, '16:8-11, 14')).toEqual([
       {
+        _tag: 'Chapter',
         book: 1,
         chapter: 16,
         verses: [
@@ -719,6 +742,7 @@ describe('reading a printed reference', () => {
     ]);
     expect(parseReference(66, '15:3, 4; 19:1, 2')).toEqual([
       {
+        _tag: 'Chapter',
         book: 66,
         chapter: 15,
         verses: [
@@ -727,6 +751,7 @@ describe('reading a printed reference', () => {
         ],
       },
       {
+        _tag: 'Chapter',
         book: 66,
         chapter: 19,
         verses: [

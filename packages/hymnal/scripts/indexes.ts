@@ -251,7 +251,7 @@ export const itemsOf = (indexes: Indexes, name: IndexName): Array<Item> =>
 
 /** The pieces of a passage, written out: `Psalms 98:4, 6`, `Genesis 1:1-2:3`, `Psalms 23` for a whole chapter. */
 export const passageText = (p: Passage, bookName: (book: number) => string): string => {
-  if ('verses' in p) {
+  if (p._tag === 'Chapter') {
     const verses = p.verses
       .map((v) => (v.from === v.to ? `${v.from}` : `${v.from}-${v.to}`))
       .join(', ');
@@ -262,7 +262,7 @@ export const passageText = (p: Passage, bookName: (book: number) => string): str
 
 /** A passage's sort key: canonical book place, chapter, first verse. */
 const passageKey = (p: Passage): [number, number, number] =>
-  'verses' in p
+  p._tag === 'Chapter'
     ? [p.book, p.chapter, p.verses[0]?.from ?? 0]
     : [p.book, p.from.chapter, p.from.verse];
 
@@ -288,7 +288,7 @@ export const passageFaults = (p: Passage, ctx: Context): ReadonlyArray<string> =
     if (last === undefined) faults.push(`${what}: chapter ${chapter} is past the book's last`);
     else if (v > last) faults.push(`${what}: verse ${v} is past ${chapter}:${last}`);
   };
-  if ('verses' in p) {
+  if (p._tag === 'Chapter') {
     if (ctx.lastVerse(p.book, p.chapter) === undefined)
       faults.push(`chapter ${p.chapter} is past the book's last`);
     else
@@ -388,16 +388,21 @@ export const parseReference = (book: number, text: string): ReadonlyArray<Passag
   // numbers with no colon are whole chapters (`23`, `24, 25`)
   if (!printed.includes(':') && pieces.every((p) => p?._tag === 'verses' && p.from === p.to))
     return pieces.flatMap((p): Array<Passage> =>
-      p?._tag === 'verses' ? [{ book, chapter: p.from, verses: [] }] : [],
+      p?._tag === 'verses' ? [{ _tag: 'Chapter', book, chapter: p.from, verses: [] }] : [],
     );
   const out: Array<Passage> = [];
   for (const piece of pieces) {
     const last = out[out.length - 1];
     if (piece === undefined) return undefined;
-    if (piece._tag === 'cross') out.push({ book, from: piece.from, to: piece.to });
+    if (piece._tag === 'cross') out.push({ _tag: 'Span', book, from: piece.from, to: piece.to });
     else if (piece._tag === 'chapter')
-      out.push({ book, chapter: piece.chapter, verses: [{ from: piece.from, to: piece.to }] });
-    else if (last && 'verses' in last)
+      out.push({
+        _tag: 'Chapter',
+        book,
+        chapter: piece.chapter,
+        verses: [{ from: piece.from, to: piece.to }],
+      });
+    else if (last && last._tag === 'Chapter')
       out[out.length - 1] = {
         ...last,
         verses: [...last.verses, { from: piece.from, to: piece.to }],
@@ -1170,7 +1175,7 @@ const pageProblems = (indexes: Indexes): Array<Problem> => {
 /** A passage as spans of (chapter, verse) places; a chapter with no verse pieces spans the whole chapter. */
 const spansOf = (p: Passage): ReadonlyArray<readonly [number, number]> => {
   const at = (chapter: number, verse: number) => chapter * 1000 + verse;
-  return 'verses' in p
+  return p._tag === 'Chapter'
     ? p.verses.length === 0
       ? [[at(p.chapter, 0), at(p.chapter, 999)]]
       : p.verses.map((v) => [at(p.chapter, v.from), at(p.chapter, v.to)] as const)

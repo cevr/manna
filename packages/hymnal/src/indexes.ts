@@ -67,11 +67,18 @@ const Place = Schema.Struct({ chapter: Positive, verse: Positive });
 /**
  * A Scripture passage: a book (1-66, in canonical order) and a chapter with
  * its verse pieces (`98:4, 6` is two pieces; none is the whole chapter), or
- * a passage that crosses chapters, from a place to a place.
+ * a passage that crosses chapters, from a place to a place. The stored JSON
+ * carries no tag: decoding adds `_tag` (`Chapter` or `Span`) from the shape,
+ * and encoding leaves it out.
  */
 const Passage = Schema.Union([
-  Schema.Struct({ book: Positive, chapter: Positive, verses: Schema.Array(Verses) }),
-  Schema.Struct({ book: Positive, from: Place, to: Place }),
+  Schema.Struct({
+    _tag: Schema.tagDefaultOmit('Chapter'),
+    book: Positive,
+    chapter: Positive,
+    verses: Schema.Array(Verses),
+  }),
+  Schema.Struct({ _tag: Schema.tagDefaultOmit('Span'), book: Positive, from: Place, to: Place }),
 ]);
 export type Passage = typeof Passage.Type;
 

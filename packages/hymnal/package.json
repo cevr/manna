@@ -8,6 +8,7 @@
     "./chord": "./src/chord.ts",
     "./fold": "./src/fold.ts",
     "./hymn": "./src/hymn.ts",
+    "./indexes": "./src/indexes.ts",
     "./recordings": "./src/recordings.ts",
     "./recording-manifest": "./src/recording-manifest.ts",
     "./timing": "./src/timing.ts",
