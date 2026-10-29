@@ -453,6 +453,7 @@ export const ORDER_RULES = [
   'sentences: hymns by compiled title within a group',
   'canons: hymns by compiled title within a group',
   'young: hymns by compiled title',
+  'authors: the hymns of one name ascending',
   'composers: the hymns of one name ascending',
 ] as const;
 export type OrderRule = (typeof ORDER_RULES)[number];
@@ -658,7 +659,7 @@ const titledLists = (
     ),
   );
 
-/** The young list, each sentences or canons group, and each composer's hymns. */
+/** The young list, each sentences or canons group, and each author's or composer's hymns. */
 const listOrders = (indexes: Indexes, ctx: Context): Array<Pair> => [
   ...titledLists(
     'sentences: hymns by compiled title within a group',
@@ -684,16 +685,18 @@ const listOrders = (indexes: Indexes, ctx: Context): Array<Pair> => [
     ctx,
     placedLists(itemsOf(indexes, 'young'), [indexes.young?.hymns ?? []]),
   ),
-  ...placedLists(
-    itemsOf(indexes, 'composers'),
-    (indexes.composers?.people ?? []).map((p) => p.hymns),
-  ).flatMap((list) =>
-    neighbours(
-      'composers: the hymns of one name ascending',
-      'composers',
-      list,
-      (a, b) => a.n > b.n,
-      (a, b) => `${a.n} > ${b.n}`,
+  ...(['authors', 'composers'] as const).flatMap((who) =>
+    placedLists(
+      itemsOf(indexes, who),
+      (indexes[who]?.people ?? []).map((p) => p.hymns),
+    ).flatMap((list) =>
+      neighbours(
+        `${who}: the hymns of one name ascending`,
+        who,
+        list,
+        (a, b) => a.n > b.n,
+        (a, b) => `${a.n} > ${b.n}`,
+      ),
     ),
   ),
 ];

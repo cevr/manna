@@ -2020,6 +2020,15 @@
     },
     {
       "index": "authors",
+      "page": 810,
+      "at": "#100",
+      "check": "order",
+      "value": "261 > 242",
+      "judge": "orchestrator strip read 2026-10-29",
+      "why": "p810-c4-3320: the Bernard of Clairvaux entry prints its hymns as 156, 261, 242, the 242 on the turn line, every digit sharp, so the book prints this order; both blind readers (A and B p810) read the same run."
+    },
+    {
+      "index": "authors",
       "page": 811,
       "at": "#200",
       "check": "order",

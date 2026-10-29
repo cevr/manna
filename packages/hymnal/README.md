@@ -665,7 +665,7 @@ committed files. Each check needs no reader:
 - C1 `decode`: each file decodes through its schema, and an excess key is refused.
 - C2 `range`: a hymn number is 1-695, and a reading's number is 696-920.
 - C3 `scripture`: each book, chapter and verse is one the KJV has, and `from` is not after `to`.
-- C4 `order`: the entries keep the printed order, by each rule of `scripts/indexes.ts` `ORDER_RULES`. A rule holds a list only where the committed data breaks at most 2% of its neighbouring pairs, each break a printed ruling (`bun run indexes --measure`). The young list, each sentences group and each canons group go by compiled title (145, 101 and 10 pairs, none broken; by number they break about half), and each composer's hymns ascend (375 pairs, none broken). The readings of a topic are left out: by number 110 of their 239 pairs break (46.03%), and the readings are not compiled, so no title rule can hold them.
+- C4 `order`: the entries keep the printed order, by each rule of `scripts/indexes.ts` `ORDER_RULES`. A rule holds a list only where the committed data breaks at most 2% of its neighbouring pairs, each break a printed ruling (`bun run indexes --measure`). The young list, each sentences group and each canons group go by compiled title (145, 101 and 10 pairs, none broken; by number they break about half), each composer's hymns ascend (375 pairs, none broken), and so do each author's (322 pairs; the one break, the run 156, 261, 242 on page 810, is ruled as printed from its strip). The readings of a topic are left out: by number 110 of their 239 pairs break (46.03%), and the readings are not compiled, so no title rule can hold them.
 - C5 `stanza`: a stanza letter names a stanza of the compiled hymn, or its refrain.
 - C6 `sections`: the topic of each printed section lists every hymn of the section.
 - C7 `tunes`: the alphabetical and the metrical index name the same tune at each hymn (`scripts/indexes.ts` `titledTune` allows a tune that bears its hymn's title).
@@ -685,11 +685,11 @@ The book itself breaks some rules: a stanza letter the hymn does not have,
 an allusion with no twin, a tune named two ways. `data/indexes/rulings.json`
 holds each such failure as the page prints it. A ruling has `index`, `page`,
 `at` (the entry's place among the entries that name its page, `#3`, or a
-topic, section or hymn), `check`, `value`, `judge` (the fix task whose
+topic, section or hymn), `check`, `value`, `judge` (the fix task or strip read whose
 record ruled it) and `why`. A failure a ruling settles is counted as
-`ruled`, not as a problem. The file holds 367 rulings: scriptural 159,
+`ruled`, not as a problem. The file holds 368 rulings: scriptural 159,
 metrical 86, scriptural-by-hymn 56, tunes 44, topical 9, composers 4,
-worship-aids 3, sentences 3 and authors 3. The canons and the young
+authors 4, worship-aids 3 and sentences 3. The canons and the young
 worshipers' index have none.
 
 A fact gets into the files this way:

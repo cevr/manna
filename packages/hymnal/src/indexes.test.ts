@@ -419,6 +419,7 @@ describe('each mutation is caught, at every entry it applies to', () => {
       ],
       ['a canons group’s hymns', (b) => arr(arr(b.canons, 'groups')[0], 'hymns'), swapKeepPages],
       ['a composer’s hymns', (b) => arr(arr(b.composers, 'people')[0], 'hymns'), swapKeepPages],
+      ['an author’s hymns', (b) => arr(arr(b.authors, 'people')[0], 'hymns'), swapKeepPages],
     ];
     for (const [label, rows, mutate] of lists) {
       const result = everyMutant(
