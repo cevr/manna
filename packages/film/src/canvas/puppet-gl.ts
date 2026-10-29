@@ -17,11 +17,13 @@
 //   rim there takes the ink at its coverage; everywhere else every pixel is
 //   the figure's own. Where a skinned part lies over another, its edge is
 //   inked at 0.8 of the width, but not about its moving bone's pivot (the
-//   shoulder's flap). A drawn key carries its own line, and the body's ink
-//   within the line's width of it takes its nearest pixel's colour, the
-//   line's anti-aliased rim with it, so its
-//   cut end hides the body's outline under it (`core/key-join.ts`, the same
-//   rule on the CPU). Near a held hand the line is left as the drawings draw it.
+//   shoulder's flap). A drawn key carries its own line: every pixel it
+//   covers, its rim with it, is left as drawn, since a line drawn again over
+//   a key's light halo doubles its own. The body's ink within the line's
+//   width of it takes its nearest pixel's colour, the line's anti-aliased
+//   rim with it, so its cut end hides the body's outline under it
+//   (`core/key-join.ts`, the same rule on the CPU). Near a held hand the line
+//   is left as the drawings draw it.
 // - **The held hand** is laid over the figure.
 // - **The boil.** The figure is resampled bilinearly through the boil's
 //   displacement field at the frame's tick (`core/boil.ts`), its lattice
@@ -128,7 +130,7 @@ void main() {
   o0 = ivec4(s0, s1); o1 = ivec4(s2, s3);
 }`;
 
-/** L3: the body's ink under a drawn key's reach given the key's colour (`core/key-join.ts`); the union's line near what moved, the rim there inked at its coverage, a skinned part's edge over another; else the figure's own pixel. */
+/** L3: the body's ink under a drawn key's reach given the key's colour (`core/key-join.ts`); a drawn key's pixels as drawn; the union's line near what moved, the rim there inked at its coverage, a skinned part's edge over another; else the figure's own pixel. */
 const INK = `${HEAD}
 uniform sampler2D fig; uniform sampler2D moved; uniform isampler2D j0; uniform isampler2D j1;
 uniform float L; uniform float IL; uniform float reach; uniform vec3 ink; uniform int interior;
@@ -158,6 +160,8 @@ void main() {
     float dInk = distance(own, ink3) * 255.0;
     if (dInk <= ${KEY_JOIN_INK}.0 || (dInk < distance(own, to) * 255.0 && besideInk(p, ink3))) c = vec4(to * c.a, c.a);
   }
+  // a drawn key carries its own line: what it covers, its rim with it, is left as drawn
+  if (m.b > 0.0) { o = c; return; }
   float k = 0.0;
   if (!hushed && dMove <= reach) {
     if (c.a >= 0.5) k = clamp(L + 0.5 - dOut, 0.0, 1.0);

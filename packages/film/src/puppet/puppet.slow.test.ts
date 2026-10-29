@@ -4,7 +4,9 @@
 // within ΔE 1 and IoU 0.99; the fold pose (the forearm turned 150° back
 // over the upper arm, one part's triangles over one pixel) within ΔE 1 on
 // average and 2 at any pixel; 60 frames drawn in a shuffled order equal to the
-// same frames in order; and a part PNG's bytes in the key of a beat whose
+// same frames in order; the L3 pass's reach; a turned drawn key's pixels, its
+// light rim with them, left as drawn under the sheet's line (as the frame
+// without a line draws them); and a part PNG's bytes in the key of a beat whose
 // scene imports the puppet (`tools/stamp.ts`). Each case opens Chrome or
 // writes a film, so they run in the slow suite.
 
@@ -68,12 +70,14 @@ const lay = (dir: string, tint = 0) =>
 
 const [LW, LH] = [200, 140];
 
-/** A larger fixture for the line: a sleeve band from (24, 40) to (104, 54) over a body box, each with a 3 px ink edge, once with the sheet's line declared and once bare. */
+/** A larger fixture for the line: a sleeve band from (24, 40) to (104, 54) over a body box, each with a 3 px ink edge, once with the sheet's line declared and once bare; and a drawn key of the sleeve, a 2 px light rim outside its 3 px ink edge, as a drawn key's halo stands. */
 const LINED_MODULE = `import arm from './arm.png' with { type: 'file' };
 import body from './body.png' with { type: 'file' };
+import key from './key.png' with { type: 'file' };
 const base = {
   size: [${LW}, ${LH}],
   parts: [{ name: 'arm', png: arm }, { name: 'body', png: body }],
+  drawings: [{ name: 'key', png: key }],
   skeleton: {
     bones: [
       { name: 'lean', pivot: [80, 120], tip: [80, 60] },
@@ -100,25 +104,38 @@ const INK_OR = [
   ],
 ] as const;
 
+const ARM_BOX = [24, 40, 104, 54] as const;
+const BODY_BOX = [50, 44, 150, 130] as const;
+/** The drawn key's light rim, outside its ink. */
+const KEY_HALO = [250, 244, 230, 255] as const;
+
 const layLined = (dir: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const arm = new Uint8Array(LW * LH * 4);
     const body = new Uint8Array(LW * LH * 4);
+    const key = new Uint8Array(LW * LH * 4);
+    const within = (
+      x: number,
+      y: number,
+      b: readonly [number, number, number, number],
+      k: number,
+    ) => x >= b[0] + k && x < b[2] - k && y >= b[1] + k && y < b[3] - k;
     const inked = (x: number, y: number, b: readonly [number, number, number, number]) =>
-      x < b[0] + 3 || x >= b[2] - 3 || y < b[1] + 3 || y >= b[3] - 3;
-    const armBox = [24, 40, 104, 54] as const;
-    const bodyBox = [50, 44, 150, 130] as const;
+      !within(x, y, b, 3);
     for (let y = 0; y < LH; y++)
       for (let x = 0; x < LW; x++) {
         const i = (y * LW + x) * 4;
-        if (x >= armBox[0] && x < armBox[2] && y >= armBox[1] && y < armBox[3])
-          arm.set(INK_OR[Number(inked(x, y, armBox))]![0], i);
-        else if (x >= bodyBox[0] && x < bodyBox[2] && y >= bodyBox[1] && y < bodyBox[3])
-          body.set(INK_OR[Number(inked(x, y, bodyBox))]![1], i);
+        if (within(x, y, ARM_BOX, 0)) {
+          arm.set(INK_OR[Number(inked(x, y, ARM_BOX))]![0], i);
+          if (within(x, y, ARM_BOX, 2)) key.set(INK_OR[Number(!within(x, y, ARM_BOX, 5))]![0], i);
+          else key.set(KEY_HALO, i);
+        } else if (within(x, y, BODY_BOX, 0))
+          body.set(INK_OR[Number(inked(x, y, BODY_BOX))]![1], i);
       }
     yield* fs.writeFile(path.join(dir, 'arm.png'), encodePng({ width: LW, height: LH, rgba: arm }));
+    yield* fs.writeFile(path.join(dir, 'key.png'), encodePng({ width: LW, height: LH, rgba: key }));
     yield* fs.writeFile(
       path.join(dir, 'body.png'),
       encodePng({ width: LW, height: LH, rgba: body }),
@@ -303,6 +320,50 @@ describe('a puppet in the page', () => {
         for (let i = 0; i < LW * LH; i++)
           farFigure += Number(within[i] === 0 && a.rgba[i * 4 + 3]! > 0);
         expect(farFigure).toBeGreaterThan(1000);
+      }),
+    ).pipe(Effect.provide(Layer.provideMerge(PuppetImagesBun, BunServices.layer))),
+  );
+
+  it.live("leaves a turned drawn key's pixels, its light rim with them, as drawn", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const dir = yield* fs.makeTempDirectoryScoped();
+        yield* layLined(dir);
+        const module = path.join(dir, 'spec.ts');
+        const lined = yield* puppetPage({ module, name: 'LINED' });
+        const bare = yield* puppetPage({ module, name: 'BARE' });
+        const pose: PuppetPose = { numbers: {}, root: [80, 120], scale: 1 };
+        const [pivot, theta] = [[100, 47] as const, 10];
+        const look = {
+          boil: 0,
+          amp: 0,
+          swap: { part: 'arm', drawing: 'key', place: { s: 1, dx: 0, dy: 0 }, pivot, theta },
+        };
+        const [a, b] = [yield* lined.draw(pose, look), yield* bare.draw(pose, look)];
+        // the key's own pixels in the frame, each a px inside its edge, off the body
+        const [c, s] = [Math.cos((theta * Math.PI) / 180), Math.sin((theta * Math.PI) / 180)];
+        let [covered, rim, differs] = [0, 0, 0];
+        for (let y = 0; y < LH; y++)
+          for (let x = 0; x < LW; x++) {
+            const [qx, qy] = [x + 0.5 - pivot[0], y + 0.5 - pivot[1]];
+            const [u, v] = [pivot[0] + c * qx + s * qy, pivot[1] - s * qx + c * qy];
+            const inside =
+              u >= ARM_BOX[0] + 1 &&
+              u < ARM_BOX[2] - 1 &&
+              v >= ARM_BOX[1] + 1 &&
+              v < ARM_BOX[3] - 1;
+            const onBody = x >= BODY_BOX[0] && y >= BODY_BOX[1];
+            if (!inside || onBody) continue;
+            covered++;
+            const i = y * LW + x;
+            rim += Number([0, 1, 2].every((k) => Math.abs(a.rgba[i * 4 + k]! - KEY_HALO[k]!) <= 2));
+            differs += Number([0, 1, 2, 3].some((k) => a.rgba[i * 4 + k] !== b.rgba[i * 4 + k]));
+          }
+        expect(covered).toBeGreaterThan(400);
+        expect(rim).toBeGreaterThan(60);
+        expect(differs).toBe(0);
       }),
     ).pipe(Effect.provide(Layer.provideMerge(PuppetImagesBun, BunServices.layer))),
   );
