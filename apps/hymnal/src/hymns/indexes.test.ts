@@ -50,6 +50,14 @@ const indexes: HymnIndexes = {
     },
     { metre: 'B', tunes: [{ name: 'Three', hymns: [1, 7, 800] }] },
     { metre: 'C', tunes: [{ name: 'Four', hymns: [6] }] },
+    { metre: 'Irregular', tunes: [{ name: 'Five', hymns: [20, 21] }] },
+    {
+      metre: 'IRREGULAR with Refrain',
+      tunes: [
+        { name: 'Six', hymns: [22] },
+        { name: 'Seven', hymns: [23, 7] },
+      ],
+    },
   ],
   tunes: [
     { name: 'One', hymns: [5, 1] },
@@ -68,6 +76,12 @@ describe('sameMetre', () => {
   it('gives none for a hymn alone under its heading or under none', () => {
     expect(lookups.sameMetre(6)).toEqual([]);
     expect(lookups.sameMetre(42)).toEqual([]);
+  });
+
+  it('gives none from a heading that begins with Irregular, in any case: it names no metre', () => {
+    expect(lookups.sameMetre(20)).toEqual([]);
+    expect(lookups.sameMetre(22)).toEqual([]);
+    expect(lookups.sameMetre(7)).toEqual([1]);
   });
 });
 

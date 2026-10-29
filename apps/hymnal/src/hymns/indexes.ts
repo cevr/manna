@@ -111,10 +111,17 @@ const none: ReadonlyArray<never> = [];
 
 type Reference = HymnIndexes['references'][number];
 
-/** Per hymn, the other hymns of its metre headings, ascending. */
+const isIrregular = (metre: string): boolean => fold(metre).startsWith('irregular');
+
+/**
+ * Per hymn, the other hymns of its metre headings, ascending. A heading that
+ * begins with `Irregular` names no metre (its hymns share no line pattern),
+ * so it groups no hymns.
+ */
 const metreTable = (metres: HymnIndexes['metres']): ReadonlyMap<number, ReadonlyArray<number>> => {
   const groups = new Map<number, Set<number>>();
   for (const metre of metres) {
+    if (isIrregular(metre.metre)) continue;
     const listed = metre.tunes.flatMap((tune) => tune.hymns).filter(isHymn);
     for (const hymn of listed) {
       const group = groups.get(hymn) ?? new Set<number>();
