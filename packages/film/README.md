@@ -2571,7 +2571,8 @@ no ink of its own to read is refused, never thrown.
 `film concept render <film> <member> [--kind <kind>] [--view <kind>-<view>]
 [--figure rig|cutout] [--no-critique] [--fit-only]`
 (`tools/cast-render.ts`, its record in `core/cast-render.ts`) draws every
-view the member's record keeps by its rig. The film's `rigs/cast.ts` is the
+view the member's record keeps by its rig, or by its cut-out (The part
+sheet, below). The film's `rigs/cast.ts` is the
 table (`CastTable`, `canvas/cast.ts`, through `@manna/film/rive`): for each
 kept view, its box, where the rig's feet stand on the sheet, its rig, its
 pose's numbers, the circle hands drawn with it and the props the sheet lays
@@ -2615,9 +2616,23 @@ finding is answered on the render that found it, `--render <n> --finding
 
 ### The part sheet: `film concept parts`
 
-A member drawn as a cut-out is made of his kept views' own pixels. His cut
-table (`<member>/cutout/cut.ts`: `CUTS`, `cutOptionsFor`, `HIDDEN`) splits a
-view into named parts, front to back (`cutParts`, `core/part-sheet.ts`).
+A member drawn as a cut-out is made of his kept views' own pixels, through
+one pipeline every member shares: `apps/animations/src/library/cutout/`
+holds the cut rules (`rules.ts`), the cut table that yields the contract this
+tool reads (`cutTable`, `table.ts`), okra's prompt fragments (`prompts.ts`),
+the standing and framed skeletons (`skeleton.ts`), the frames (`framesOf`,
+`frames.ts`), the puppet builder and its loader (`puppetsOf`, `puppets.ts`;
+`puppetLoader`, `load.ts`) and the two pose forms, a view's own fit and a
+pose fitted from a turnaround puppet (`own`, `fitted`, `poses.ts`). A
+member's `library/cast/<member>/cutout/` folder is data passed to those
+builders. A view is added in one order: its data, this tool (`--dry-run`
+first), the film table's `CUTOUT` and `SHEETS` entries, `film concept render
+--figure cutout` until its fit rows pass, and a review of the render against
+the kept crop at 1:1. The film skill (`.claude/skills/film/SKILL.md`, "A
+cut-out member") keeps the cut lessons and what a member with poses alone can
+and cannot get. His cut table (`<member>/cutout/cut.ts`: `CUTS`,
+`cutOptionsFor`, `HIDDEN`) splits a view into named parts, front to back
+(`cutParts`, `core/part-sheet.ts`).
 `film concept parts <film> <member> --view <kind>-<view> [--dry-run]
 [--reuse] [--check]` (`tools/part-sheet-cli.ts`) paints what the view's
 moving parts hide. Each moving part's area goes flat magenta on the whole
@@ -2686,8 +2701,10 @@ puppet canvas (`canvas/puppet-gl.ts`, in the context budget of
 and declares its figure (`probeFigure`), and draws nothing. A puppet's
 module imports its part PNGs, so a scene that draws it is keyed by their
 bytes (`tools/stamp.ts`). A film's `rigs/cast.ts` gives its puppets in
-`CUTOUT` beside `CAST`, and `film concept render <film> <member> --figure
-cutout` renders each view `CUTOUT` has on its page
+`CUTOUT`, beside `CAST` or without it, and `film concept render <film>
+<member> --figure cutout` renders each view `CUTOUT` has on its page (a
+member with no `CAST` entry is drawn so by default, `defaultFigure` in
+`canvas/cast.ts`)
 `<film>/cast/<member>/cutout`, held to the same fit rows (its classes read
 by their sheet samples, since a cut-out is painted with the sheet's own
 pixels), its record's `figure: 'cutout'`, each view's `deltaE` against
