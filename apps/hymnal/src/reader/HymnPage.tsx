@@ -147,7 +147,7 @@ export const HymnPage = memo(function HymnPage({
       >
         <KeepAwake on={reader.reading.awake} />
         <View style={styles.head}>
-          <AboutLine number={hymn.number} topic={hymn.topic} accent={accent} />
+          <AboutLine number={hymn.number} section={hymn.topic} accent={accent} />
           <View testID="hymn-name" style={styles.name}>
             <View style={styles.words}>
               <Text
@@ -201,18 +201,17 @@ const headLine = (section: string, passages: ReadonlyArray<Passage>) =>
  * again only when its hymn, section or accent change, never with the page
  * around it.
  */
-
 const AboutLine = memo(function AboutLine({
   number,
-  topic,
+  section,
   accent,
 }: {
   readonly number: number;
-  readonly topic: string;
+  readonly section: string;
   readonly accent: ColorValue;
 }) {
   const router = useRouter();
-  const line = headLine(topic, referencesOf(number));
+  const line = headLine(section, referencesOf(number));
   return (
     <Pressable
       testID="hymn-about"
