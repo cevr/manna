@@ -456,7 +456,6 @@ const PROFILE_RIGHT: PartCut = {
   ],
 };
 
-/** Her sheet's outline ink (measured on the turnaround: 11,2,0 to 13,3,1). */
 /** Her hip's row in each pose (below her hands' reach, standing or seated): the robe is every row below it that her arms, the baby and the stool leave. */
 const POSE_HIP = 445;
 
@@ -824,6 +823,7 @@ const POSES_3: PartCut = {
   ],
 };
 
+/** Her sheet's outline ink (measured on the turnaround: 11,2,0 to 13,3,1). */
 const INK = [12, 2, 0, 255] as const;
 
 /** Where her body's sides run under her arms: out to her shoulders and robe, not in at the sleeves' inner edges. */

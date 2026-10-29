@@ -101,8 +101,10 @@ const CLOTH = [
 
 /**
  * Her paper's grain, luma (`core/unmatte.ts`, `grain`): the 95th percentile of
- * how far her kept sheets' own ground runs darker than its paper, 2.04 (the
- * poses; the turnaround's is 0.89, and the larger serves both). A rim pixel
+ * how far her kept ground runs darker than its paper, sampled on two views,
+ * poses-1 (2.043) and turnaround-front (0.886). Other views differ
+ * (profileRight 2.516); the larger of the two sampled is one calibration that
+ * both her puppet members, turnaround and poses, share. A rim pixel
  * of hers darker than the paper by more than this is no paper, so the
  * un-matte keeps it whole: the grey-cream cloth of her veil, swaddle and the
  * bench leg in the poses, which the line to her ink barely reaches and would
