@@ -12,7 +12,7 @@ import { keptCorner, paddedBox } from './frames.ts';
 import type { Rooted } from './skeleton.ts';
 import type { CutFrame, KeptSheet } from './table.ts';
 
-type Pt = readonly [number, number];
+import type { Pt } from './rules.ts';
 type Box = readonly [number, number, number, number];
 type Rgb = readonly [number, number, number];
 

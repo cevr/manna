@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { type PartCut, cutFigureOf } from '@manna/film/tools';
 import { Match } from 'effect';
-import { grain, sides } from './prompts.ts';
+import { grain, shade, sides } from './prompts.ts';
 import { FAR, box } from './rules.ts';
 import { type CutFrame, bustFigure, cutTable, framedFigure, padded } from './table.ts';
 
@@ -176,8 +176,12 @@ describe('bustFigure', () => {
 
 describe('prompts', () => {
   test('a member’s clothes fill the sides and grain fragments', () => {
-    expect(sides({ lower: 'robe', cloth: 'the tunic and mantle' })).toBe(
+    expect(sides({ pronoun: 'his', lower: 'robe', cloth: 'the tunic and mantle' })).toBe(
       'Each side of his body runs straight down from the outer end of his shoulder to the outer edge of his robe below, so his body under the arms is as wide as his shoulders and his robe, and the tunic and mantle fill everything inside that line with the same soft shade and fine paper grain the sheet paints beside each arm.',
+    );
+    expect(sides({ pronoun: 'her', lower: 'skirt', cloth: 'the dress' })).not.toContain('his');
+    expect(shade('her')).toBe(
+      'Keep the soft shade each arm casts on her body beside it exactly as it is, and carry that same shade on under where the arm was.',
     );
     expect(grain('the white sash and the tunic and mantle of his body')).toBe(
       'Paint the white sash and the tunic and mantle of his body with the same fine paper grain the sheet shows on them beside the arms: a fine, even speckle through every flat area of colour, never smooth flat colour.',

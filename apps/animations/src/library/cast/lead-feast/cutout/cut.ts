@@ -23,7 +23,7 @@
 // kept view's own. Data: the rules and the table are the shared module's.
 
 import type { HiddenEntry, PartCut } from '@manna/film/tools';
-import { CUT_AWAY, KEEP_REST, SHADE, grain, sides } from '../../../cutout/prompts.ts';
+import { CUT_AWAY, KEEP_REST, grain, shade, sides } from '../../../cutout/prompts.ts';
 import {
   FAR,
   type Hem,
@@ -437,7 +437,7 @@ const HEADS_4: PartCut = {
 const INK = [42, 30, 24, 255] as const;
 
 /** Where his body's sides run under his arms: out to his shoulders and robe, not in at the sleeves' inner edges. */
-const SIDES = sides({ lower: 'robe', cloth: 'the tunic and mantle' });
+const SIDES = sides({ pronoun: 'his', lower: 'robe', cloth: 'the tunic and mantle' });
 
 /** The paper grain his sheet shows on his sash and torso, carried into the paint under his arms. */
 const GRAIN = grain('the white sash and the tunic and mantle of his body');
@@ -455,7 +455,7 @@ const HIDDEN_ENTRIES = {
   },
   threeQuarterLeft: {
     moving: ['armRight', 'armLeft'],
-    prompt: `${CUT_AWAY} his two arms (sleeves and round hands) were cut away to make a cut-out puppet. He is turned three-quarters to the viewer's left. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading (the cream tunic on the viewer's left side, the teal-blue mantle on the viewer's right side, the white sash running round his waist). ${SIDES} ${SHADE} ${GRAIN} There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, face, hair, robe, sash, feet, size, position and framing.`,
+    prompt: `${CUT_AWAY} his two arms (sleeves and round hands) were cut away to make a cut-out puppet. He is turned three-quarters to the viewer's left. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading (the cream tunic on the viewer's left side, the teal-blue mantle on the viewer's right side, the white sash running round his waist). ${SIDES} ${shade('his')} ${GRAIN} There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, face, hair, robe, sash, feet, size, position and framing.`,
     allowance: {
       calls: 3,
       by: 'coordinator',

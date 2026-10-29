@@ -19,7 +19,7 @@
 // module's.
 
 import type { HiddenEntry, PartCut } from '@manna/film/tools';
-import { CUT_AWAY, SHADE, grain, sides } from '../../../cutout/prompts.ts';
+import { CUT_AWAY, grain, shade, sides } from '../../../cutout/prompts.ts';
 import {
   FAR,
   type Hem,
@@ -169,7 +169,7 @@ const FRONT: PartCut = {
 const INK = [42, 30, 24, 255] as const;
 
 /** Where his body's sides run under his arms: out to his shoulders and robe, not in at the sleeves' inner edges. */
-const SIDES = sides({ lower: 'robe', cloth: 'the linen tunic and olive mantle' });
+const SIDES = sides({ pronoun: 'his', lower: 'robe', cloth: 'the linen tunic and olive mantle' });
 
 /** The paper grain his sheet shows on his body, carried into the paint under his arms. */
 const GRAIN = grain('the linen tunic and olive mantle of his body');
@@ -182,7 +182,7 @@ const GRAIN = grain('the linen tunic and olive mantle of his body');
 const HIDDEN_ENTRIES = {
   front: {
     moving: ['armRight', 'armLeft'],
-    prompt: `${CUT_AWAY} his two arms (sleeves and round hands) were cut away to make a cut-out puppet. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading as his body beside each arm (the linen tunic, the olive mantle with its walnut-brown edge band, the belt round his waist). ${SIDES} ${SHADE} ${GRAIN} There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, headcloth, face, beard, tunic, mantle, walnut strap, belt, walnut seed bag, feet, size, position and framing.`,
+    prompt: `${CUT_AWAY} his two arms (sleeves and round hands) were cut away to make a cut-out puppet. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading as his body beside each arm (the linen tunic, the olive mantle with its walnut-brown edge band, the belt round his waist). ${SIDES} ${shade('his')} ${GRAIN} There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, headcloth, face, beard, tunic, mantle, walnut strap, belt, walnut seed bag, feet, size, position and framing.`,
   },
 } as const satisfies Readonly<Record<CutView, HiddenEntry>>;
 

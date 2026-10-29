@@ -14,7 +14,7 @@ import type { CutoutView, PuppetLook, PuppetPose } from '@manna/film/canvas';
 import { Record as Records, Schema } from 'effect';
 import type { CutPuppet } from './puppets.ts';
 
-type Pt = readonly [number, number];
+import type { Pt } from './rules.ts';
 
 /** A view of a member's puppet at rest, its origin at the kept box's corner, held to `fit`, the view's own fit rows. */
 export const own = (fit: CutoutView['fit'], puppet: CutPuppet): CutoutView => {
@@ -99,7 +99,7 @@ const sheetOf = (root: Pt, pose: PuppetPose, [x, y]: Pt): Pt => [
  * draws it; standing on the poses sheet where the kept view's crop does.
  */
 export const fitted = <V extends string>(made: Fitted<V>) => {
-  const views = Records.keys(made.puppets).filter((v): v is V => Object.hasOwn(made.puppets, v));
+  const views = Records.keys(made.puppets);
   const record = Schema.decodeUnknownSync(PoseFit(views))(made.fit);
   const raise = Schema.decodeUnknownSync(RaiseSources)(made.raise);
   const view = (fit: CutoutView['fit']): CutoutView => {
