@@ -16,15 +16,22 @@ import {
   type PartCutOptions,
   type PartRule,
 } from '@manna/film/tools';
+import type { PuppetSpec } from '@manna/film/canvas';
 import { Match, Option, Record as Records, Result } from 'effect';
 import { FAR, type Pt, box } from './rules.ts';
 
 /** A box on a kept sheet: left, top, right, bottom. */
 type Box = readonly [number, number, number, number];
 
+/** A member's kept sheet a cut view is on, as a puppet's concept names it (`cast/<member>/kept/<sheet>.png`). */
+export type KeptSheet = Extract<
+  NonNullable<PuppetSpec['concept']>['image'],
+  { readonly cast: string }
+>['sheet'];
+
 /** A view's frame on its kept sheet: the sheet it is on, its kept box, and the pixels its part sheet pads it by (left, top, right, bottom). */
 export interface CutFrame {
-  readonly sheet: string;
+  readonly sheet: KeptSheet;
   readonly kept: Box;
   readonly pad: Box;
 }

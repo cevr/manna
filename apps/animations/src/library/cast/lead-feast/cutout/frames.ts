@@ -3,9 +3,11 @@
 // cuffs' outer ink, which runs a pixel or two past the kept box, and the
 // ground shadow, which runs on below his soles and fades past it, are whole.
 // His cut (`cut.ts`), part sheets (`sheets/<view>/`), skeletons
-// (`skeleton.ts`) and puppets (`puppets.ts`) are in this frame. Pure data.
+// (`skeleton.ts`) and puppets (`puppets.ts`) are in this frame
+// (`library/cutout/frames.ts`). Pure data.
 
-type Pt = readonly [number, number];
+import { framesOf } from '../../../cutout/frames.ts';
+
 type Box = readonly [number, number, number, number];
 
 /**
@@ -25,11 +27,5 @@ export const FRAMES = {
 /** A cut view, by its name in his sheets' views. */
 export type FramedView = keyof typeof FRAMES;
 
-/** A view's part sheet frame on its kept sheet: its kept box padded. */
-export const boxOf = (view: FramedView): Box => {
-  const { kept, pad } = FRAMES[view];
-  return [kept[0] - pad[0], kept[1] - pad[1], kept[2] + pad[2], kept[3] + pad[3]];
-};
-
-/** Where the kept box's top-left corner lies in a view's part sheet: the pad's left and top. */
-export const keptAt = (view: FramedView): Pt => [FRAMES[view].pad[0], FRAMES[view].pad[1]];
+/** A view's part sheet frame on its kept sheet (its kept box padded, `boxOf`), and where the kept box's top-left corner lies in it (`keptAt`). */
+export const { boxOf, keptAt } = framesOf(FRAMES);
