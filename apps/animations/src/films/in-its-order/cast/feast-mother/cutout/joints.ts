@@ -26,4 +26,21 @@ export const JOINTS = {
     shoulderLeft: [36, 235],
     elbowLeft: [26, 300],
   },
+  // in profile to the viewer's left only her left arm shows; her veil hangs behind it, off the shoulder
+  profileLeft: {
+    shoulderLeft: [90, 215],
+    elbowLeft: [86, 290],
+  },
+  // in profile to the viewer's right only her right arm shows
+  profileRight: {
+    shoulderRight: [112, 215],
+    elbowRight: [115, 290],
+  },
+  // turned to the viewer's right: her near right arm on the viewer's left, her far left arm on the viewer's right
+  threeQuarterRight: {
+    shoulderRight: [62, 238],
+    elbowRight: [62, 300],
+    shoulderLeft: [186, 238],
+    elbowLeft: [192, 300],
+  },
 } as const satisfies Readonly<Record<string, Readonly<Record<string, Pt>>>>;

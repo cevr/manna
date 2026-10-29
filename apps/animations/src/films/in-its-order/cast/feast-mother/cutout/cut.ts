@@ -27,6 +27,9 @@ export { FRAMES, JOINTS };
 /** A view of hers, by its name in her sheets' views. */
 type CutView = keyof typeof FRAMES;
 
+/** A view that shows both her arms: in profile only the near one shows, and her veil hangs behind it. */
+type TwoArmView = Exclude<CutView, 'profileLeft' | 'profileRight'>;
+
 /** Each view's veil: every pixel above its hem, the hem's ink with it, which no sleeve takes. */
 const VEIL = {
   front: {
@@ -79,7 +82,25 @@ const VEIL = {
       [-1, 240],
     ],
   },
-} as const satisfies Readonly<Record<CutView, PartRule>>;
+  // her veil runs lower on her far side's front (the viewer's left), its hem's corner below her right sleeve's top
+  threeQuarterRight: {
+    polygon: [
+      [-1, -1],
+      [FAR, -1],
+      [FAR, 234],
+      [214, 236],
+      [206, 244],
+      [196, 248],
+      [52, 248],
+      [50, 252],
+      [46, 264],
+      [25, 265],
+      [12, 256],
+      [4, 247],
+      [-1, 240],
+    ],
+  },
+} as const satisfies Readonly<Record<TwoArmView, PartRule>>;
 
 /** Her hip's row in each view: the robe is every row below it that her arms and hands leave. */
 const HIP = 330;
@@ -174,7 +195,137 @@ const SLEEVES = {
       side: 'left',
     },
   },
-} as const satisfies Readonly<Record<CutView, { readonly right: Sleeve; readonly left: Sleeve }>>;
+  // turned to the viewer's right: her near right sleeve's inner edge is the crease's far side, her far left sleeve's the crease before it
+  threeQuarterRight: {
+    right: {
+      inner: [
+        [93, 238],
+        [93, 350],
+        [88, 360],
+        [87, 372],
+        [85, 385],
+        [78, 395],
+      ],
+      shoulder: JOINTS.threeQuarterRight.shoulderRight,
+      cap: 8,
+      side: 'left',
+    },
+    left: {
+      inner: [
+        [166, 238],
+        [167, 250],
+        [170, 270],
+        [171, 290],
+        [175, 302],
+        [172, 320],
+        [175, 340],
+        [176, 350],
+        [179, 360],
+        [179, 382],
+        [184, 392],
+        [188, 397],
+      ],
+      shoulder: JOINTS.threeQuarterRight.shoulderLeft,
+      cap: 8,
+      side: 'right',
+    },
+  },
+} as const satisfies Readonly<
+  Record<TwoArmView, { readonly right: Sleeve; readonly left: Sleeve }>
+>;
+
+/**
+ * In profile to the viewer's left, her left sleeve's back edge: a soft crease
+ * from her lighter back, then out round the cuff's ink.
+ */
+const PL_LEFT: Sleeve = {
+  inner: [
+    [102, 190],
+    [105, 200],
+    [107, 210],
+    [108, 220],
+    [109, 230],
+    [109, 270],
+    [107, 295],
+    [105, 320],
+    [103, 340],
+    [110, 350],
+    [118, 357],
+  ],
+  shoulder: JOINTS.profileLeft.shoulderLeft,
+  cap: 10,
+  side: 'left',
+};
+/** Before her left sleeve's front crease, which stays with the sleeve: her body's front, down past her hand. */
+const PL_FRONT = {
+  polygon: [
+    [-1, 195],
+    [76, 195],
+    [74, 215],
+    [69, 230],
+    [69, 250],
+    [67, 260],
+    [65, 280],
+    [63, 300],
+    [61, 310],
+    [61, 320],
+    [59, 330],
+    [58, 340],
+    [57, 352],
+    [59, 360],
+    [60, 380],
+    [62, 388],
+    [70, 397],
+    [76, 404],
+    [76, 410],
+    [-1, 410],
+  ],
+} as const;
+
+/** In profile to the viewer's right, her right sleeve's back edge: where her lighter back meets the sleeve's mid blue, then out round the cuff. */
+const PR_RIGHT: Sleeve = {
+  inner: [
+    [99, 190],
+    [96, 200],
+    [94, 210],
+    [93, 220],
+    [93, 270],
+    [94, 295],
+    [95, 320],
+    [94, 340],
+    [90, 350],
+    [85, 357],
+  ],
+  shoulder: JOINTS.profileRight.shoulderRight,
+  cap: 10,
+  side: 'right',
+};
+/** Past her right sleeve's front crease, which stays with the sleeve: her body's front, down past her hand. */
+const PR_FRONT = {
+  polygon: [
+    [FAR, 195],
+    [126, 195],
+    [128, 215],
+    [132, 225],
+    [134, 235],
+    [136, 250],
+    [138, 265],
+    [140, 280],
+    [142, 295],
+    [143, 310],
+    [145, 325],
+    [146, 340],
+    [147, 352],
+    [144, 358],
+    [142, 365],
+    [142, 382],
+    [138, 388],
+    [134, 395],
+    [127, 402],
+    [127, 410],
+    [FAR, 410],
+  ],
+} as const;
 
 const frontRight = sleeve(SLEEVES.front.right);
 const frontLeft = sleeve(SLEEVES.front.left);
@@ -182,6 +333,10 @@ const quarterRight = sleeve(SLEEVES.threeQuarterLeft.right);
 const quarterLeft = sleeve(SLEEVES.threeQuarterLeft.left);
 const backRight = sleeve(SLEEVES.back.right);
 const backLeft = sleeve(SLEEVES.back.left);
+const nearRight = sleeve(SLEEVES.threeQuarterRight.right);
+const farLeft = sleeve(SLEEVES.threeQuarterRight.left);
+const plLeft = sleeve(PL_LEFT);
+const prRight = sleeve(PR_RIGHT);
 
 const FRONT: PartCut = {
   parts: [
@@ -245,6 +400,58 @@ const BACK: PartCut = {
   ],
 };
 
+const THREE_QUARTER_RIGHT: PartCut = {
+  parts: [
+    {
+      name: 'armRight',
+      take: nearRight.take,
+      unless: [...nearRight.unless, VEIL.threeQuarterRight],
+      pivot: JOINTS.threeQuarterRight.shoulderRight,
+    },
+    {
+      name: 'armLeft',
+      take: farLeft.take,
+      unless: [...farLeft.unless, VEIL.threeQuarterRight],
+      pivot: JOINTS.threeQuarterRight.shoulderLeft,
+    },
+    // above her chin's underside ink
+    { name: 'head', take: [box(-1, -1, FAR, 176)] },
+    { name: 'robe', take: [box(-1, HIP, FAR, FAR)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
+  ],
+};
+
+// In profile her veil hangs behind her, off the shoulder, so no veil bounds her
+// one sleeve: its back edge does, and her body's front before its front crease.
+const PROFILE_LEFT: PartCut = {
+  parts: [
+    {
+      name: 'armLeft',
+      // her round hand, whose ink crosses the sleeve's back edge
+      take: [...plLeft.take, { disc: { c: [87, 375], r: 26 } }],
+      unless: [...plLeft.unless, PL_FRONT],
+      pivot: JOINTS.profileLeft.shoulderLeft,
+    },
+    { name: 'head', take: [box(-1, -1, FAR, 164)] },
+    { name: 'robe', take: [box(-1, HIP, FAR, FAR)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
+  ],
+};
+
+const PROFILE_RIGHT: PartCut = {
+  parts: [
+    {
+      name: 'armRight',
+      take: [...prRight.take, { disc: { c: [114.5, 374], r: 26 } }],
+      unless: [...prRight.unless, PR_FRONT],
+      pivot: JOINTS.profileRight.shoulderRight,
+    },
+    { name: 'head', take: [box(-1, -1, FAR, 164)] },
+    { name: 'robe', take: [box(-1, HIP, FAR, FAR)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
+  ],
+};
+
 /** Her sheet's outline ink (measured on the turnaround: 11,2,0 to 13,3,1). */
 const INK = [12, 2, 0, 255] as const;
 
@@ -275,6 +482,18 @@ const HIDDEN_ENTRIES = {
     moving: ['armRight', 'armLeft'],
     prompt: `${CUT_AWAY} her two arms (blue sleeves and round hands) were cut away to make a cut-out puppet. She is a young mother in a long blue robe, a white veil over her head and shoulders, seen from behind, with her arms hanging straight at her sides. Repaint ONLY the magenta areas, as what lies underneath her arms: the sides of her back below the veil's hem, down to her robe, each side closed by the same thick dark brown-black outline as the rest of her, painted in exactly the same style, colours and soft shading as her robe beside each arm. ${SIDES} ${shade('her')} ${GRAIN} There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside her body, it becomes the plain cream paper. ${KEEP}`,
   },
+  profileLeft: {
+    moving: ['armLeft'],
+    prompt: `${CUT_AWAY} her left arm (its blue sleeve and round hand) was cut away to make a cut-out puppet. She is a young mother in a long blue robe, a white veil over her head that hangs down her back, seen in profile facing the viewer's left, with her arm hanging straight at her side; her other arm does not show. Repaint ONLY the magenta areas, as what lies underneath her arm: the side of her body from the armpit down to her robe, between her back and her front, closed by the same thick dark brown-black outline as the rest of her where it meets the paper, painted in exactly the same style, colours and soft shading as her robe beside the arm. ${shade('her')} ${GRAIN} There is no arm now: no sleeve, no hand, nothing magenta left. Where the magenta lay outside her body, it becomes the plain cream paper. ${KEEP}`,
+  },
+  profileRight: {
+    moving: ['armRight'],
+    prompt: `${CUT_AWAY} her right arm (its blue sleeve and round hand) was cut away to make a cut-out puppet. She is a young mother in a long blue robe, a white veil over her head that hangs down her back, seen in profile facing the viewer's right, with her arm hanging straight at her side; her other arm does not show. Repaint ONLY the magenta areas, as what lies underneath her arm: the side of her body from the armpit down to her robe, between her back and her front, closed by the same thick dark brown-black outline as the rest of her where it meets the paper, painted in exactly the same style, colours and soft shading as her robe beside the arm. ${shade('her')} ${GRAIN} There is no arm now: no sleeve, no hand, nothing magenta left. Where the magenta lay outside her body, it becomes the plain cream paper. ${KEEP}`,
+  },
+  threeQuarterRight: {
+    moving: ['armRight', 'armLeft'],
+    prompt: `${CUT_AWAY} her two arms (blue sleeves and round hands) were cut away to make a cut-out puppet. She is a young mother in a long blue robe, a white veil over her head and shoulders, standing turned three-quarters to the viewer's right with her arms hanging straight at her sides. Repaint ONLY the magenta areas, as what lies underneath her arms: the sides of her body below the veil's hem, down to her robe, each side closed by the same thick dark brown-black outline as the rest of her, painted in exactly the same style, colours and soft shading as her robe beside each arm (her front on the viewer's right, her near side on the viewer's left, her far side and its deeper shade on the viewer's right). ${SIDES} ${shade('her')} ${GRAIN} There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside her body, it becomes the plain cream paper. ${KEEP}`,
+  },
 } as const satisfies Readonly<Record<CutView, HiddenEntry>>;
 
 export const { CUTS, cutOptionsFor, HIDDEN } = cutTable({
@@ -283,6 +502,9 @@ export const { CUTS, cutOptionsFor, HIDDEN } = cutTable({
     front: { cut: FRONT, figure: 'framed' },
     threeQuarterLeft: { cut: THREE_QUARTER_LEFT, figure: 'framed' },
     back: { cut: BACK, figure: 'framed' },
+    profileLeft: { cut: PROFILE_LEFT, figure: 'framed' },
+    profileRight: { cut: PROFILE_RIGHT, figure: 'framed' },
+    threeQuarterRight: { cut: THREE_QUARTER_RIGHT, figure: 'framed' },
   },
   hidden: HIDDEN_ENTRIES,
   ink: INK,

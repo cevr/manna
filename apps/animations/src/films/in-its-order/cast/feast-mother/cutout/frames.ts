@@ -11,6 +11,9 @@ export const FRAMES = {
   front: { sheet: 'turnaround', kept: [43, 194, 262, 794], pad: [3, 3, 3, 3] },
   threeQuarterLeft: { sheet: 'turnaround', kept: [304, 192, 520, 794], pad: [3, 3, 3, 3] },
   back: { sheet: 'turnaround', kept: [781, 191, 998, 794], pad: [3, 3, 3, 3] },
+  profileLeft: { sheet: 'turnaround', kept: [557, 191, 751, 794], pad: [3, 3, 3, 3] },
+  profileRight: { sheet: 'turnaround', kept: [1024, 191, 1223, 794], pad: [3, 3, 3, 3] },
+  threeQuarterRight: { sheet: 'turnaround', kept: [1267, 194, 1486, 794], pad: [3, 3, 3, 3] },
 } as const satisfies Readonly<Record<string, CutFrame>>;
 
 /** A view of hers that is framed, by its name in her sheets' views. */
