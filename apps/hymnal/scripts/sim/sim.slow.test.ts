@@ -301,6 +301,36 @@ describe('sim commands', () => {
     }).pipe(Effect.provide(Host)),
   );
 
+  it.scoped('a scroll before any open starts the app session, then scrolls', () =>
+    Effect.gen(function* () {
+      const devices = encodeJson({
+        devices: { ios: [{ name: 'verify-hymnal', udid: UDID, state: 'Booted' }] },
+      });
+      let opened = false;
+      const answers = standIn((line) => {
+        if (line.startsWith('xcrun simctl list devices')) return ok(devices);
+        if (line.startsWith('agent-device open')) opened = true;
+        if (line.startsWith('agent-device scroll') && !opened)
+          return failed('SESSION_NOT_FOUND: no session named verify-hymnal');
+        return ok();
+      });
+      const { exit, printed } = yield* sim(
+        ['scroll', 'screen', 'down'],
+        answers,
+        Option.some('ios'),
+      );
+      expect(Exit.isSuccess(exit)).toBe(true);
+      expect(printed[0]).toMatchObject({ ok: true, command: 'scroll' });
+      expect(
+        answers.runs.filter((run) => run.line.startsWith('agent-device')).map((run) => run.line),
+      ).toEqual([
+        'agent-device scroll down --settle --session verify-hymnal',
+        `agent-device open im.cvr.hymnal --platform ios --udid ${UDID} --session verify-hymnal`,
+        'agent-device scroll down --settle --session verify-hymnal',
+      ]);
+    }).pipe(Effect.provide(Host)),
+  );
+
   it.scoped('a target with a role clicks only elements of that role', () =>
     Effect.gen(function* () {
       const answers = standIn(() => ok());

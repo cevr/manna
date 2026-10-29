@@ -365,6 +365,25 @@ const webSelector = (target: Target) => {
 
 const device = (args: ReadonlyArray<string>, limit = short) =>
   succeed('agent-device', [...args, '--session', DRIVER_SESSION], limit);
+
+/** The driver's app session: the app comes forward, or launches. */
+const openApp = (udid: string, limit = short) =>
+  device(['open', BUNDLE_ID, '--platform', 'ios', '--udid', udid], limit);
+
+/**
+ * An app step on iOS (`scroll`, `back`). agent-device runs these only in an
+ * app session an `open` started, and answers SESSION_NOT_FOUND before one
+ * (a drive whose first step is not `sim open` or `sim install`); the step
+ * then opens the session and runs once more.
+ */
+const inApp = (udid: string, args: ReadonlyArray<string>, limit = short) =>
+  device(args, limit).pipe(
+    Effect.catchTag('ToolFailed', (failed) => {
+      if (!failed.output.includes('SESSION_NOT_FOUND')) return Effect.fail(failed);
+      return Effect.andThen(openApp(udid, limit), device(args, limit));
+    }),
+  );
+
 /** The browser's launch flags: a drive never plays sound through the host's speakers. */
 const MUTED = '--mute-audio,--disable-audio-output';
 const browser = (args: ReadonlyArray<string>, limit = short) =>
@@ -617,10 +636,7 @@ export const open = Effect.fn('Sim.open')(function* (
     // The driver's app session: `install` opens it, and a drive of an app
     // installed before this boot opens it here (the app comes forward, or
     // launches).
-    yield* device(
-      ['open', BUNDLE_ID, '--platform', 'ios', '--udid', udid],
-      Duration.seconds(seconds),
-    );
+    yield* openApp(udid, Duration.seconds(seconds));
     yield* succeed('xcrun', ['simctl', 'openurl', udid, url], short);
     prompts = yield* confirmOpen(session);
   } else yield* browser(['open', url], Duration.seconds(seconds));
@@ -665,8 +681,8 @@ export const fill = Effect.fn('Sim.fill')(function* (
 export const back = Effect.fn('Sim.back')(function* (place: Place) {
   const session = yield* readSession(place);
   if (session.platform === 'ios') {
-    yield* booted(session);
-    yield* device(['back', '--in-app', '--settle']);
+    const udid = yield* booted(session);
+    yield* inApp(udid, ['back', '--in-app', '--settle']);
   } else yield* browser(['back']);
   return outcome(session.platform, {}, {});
 });
@@ -712,21 +728,19 @@ export const scroll = Effect.fn('Sim.scroll')(function* (
   seconds: number,
 ) {
   const session = yield* readSession(place);
-  if (session.platform === 'ios') yield* booted(session);
-  if (text === 'screen') {
-    if (session.platform === 'ios') yield* device(['scroll', direction, '--settle']);
-    else yield* browser(['eval', scrollScript(direction)]);
-    return outcome(session.platform, {}, { target: text, direction });
-  }
-  const target = parseTarget(text);
-  if (session.platform === 'ios')
-    yield* device(
-      ['scroll', direction, '--until', iosSelector(target)],
-      Duration.seconds(seconds + 30),
-    ).pipe(Effect.catchTag('ToolFailed', missingFrom(session, text)));
+  if (session.platform === 'ios') {
+    const udid = yield* booted(session);
+    if (text === 'screen') yield* inApp(udid, ['scroll', direction, '--settle']);
+    else
+      yield* inApp(
+        udid,
+        ['scroll', direction, '--until', iosSelector(parseTarget(text))],
+        Duration.seconds(seconds + 30),
+      ).pipe(Effect.catchTag('ToolFailed', missingFrom(session, text)));
+  } else if (text === 'screen') yield* browser(['eval', scrollScript(direction)]);
   else {
     yield* present(session, text, seconds);
-    yield* browser(['scrollintoview', webSelector(target)]);
+    yield* browser(['scrollintoview', webSelector(parseTarget(text))]);
   }
   return outcome(session.platform, {}, { target: text, direction });
 });
