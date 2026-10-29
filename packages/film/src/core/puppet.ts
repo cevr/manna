@@ -13,10 +13,12 @@
 // - **Mesh.** A part's mesh is a 3 px grid (`MESH_STEP`) over the cells that
 //   hold any pixel of it, two triangles a cell; a vertex is a grid point.
 // - **Weights.** A vertex lies on at most two bones, only those its part's
-//   skin names. Its nearest bone (by distance to the bone's segment) holds
-//   it, unless it lies within the blend of a joint that bone shares with
-//   another its skin names: there the two share it by a smoothstep along the
-//   child bone's axis, across `blend` px either side of the joint. A part
+//   skin names. At a joint its nearest bone shares with another its skin
+//   names, the child's weight is a smoothstep of how much nearer the child's
+//   segment the vertex lies than the parent's: 0 at `blend` px nearer the
+//   parent (narrowed by how tightly the joint is folded at rest, `spread`),
+//   1 at `blend` px nearer the child. So the weight is continuous across
+//   the whole blend and is the nearest bone's alone outside it. A part
 //   whose skin names no bone moves with the root alone.
 // - **Shoulder flap.** A flap gives an arm the body's pixels round its cap
 //   (`PuppetFlap.region`): they join the arm's texture, and the vertices
@@ -49,7 +51,7 @@ type Pt = readonly [number, number];
 /** The grid a part's mesh is laid on, px. */
 const MESH_STEP = 3;
 
-/** How far either side of a joint two bones share a vertex, px (at most half the shorter bone). */
+/** How much nearer one bone than the other a vertex at a joint may lie and still be shared by both, px (at most half the shorter bone). */
 const BLEND = 18;
 
 /** How far from a shoulder's pivot a flap's vertex lies wholly on the body, px. */
@@ -180,27 +182,19 @@ const weightsAt = (
   if (skin.length === 1) return [[skin[0]!, 1]];
   const near = nearestBone(p, skin, bones);
   const joints = jointsOf(near, skin, bones);
-  // The joint whose blend holds `p` nearest its middle, if any. A joint's blend
-  // lies within its reach of the joint along both bones' axes, so where a limb
-  // bends, the parent's far paint is not in the child's band across its axis.
   let joint: [number, number] | undefined;
-  let at = Infinity;
+  let h = 0;
   for (const [pa, ch] of joints) {
     const [parent, child] = [bones[pa]!, bones[ch]!];
     const r = blendOf(parent, child);
-    const s = along(p, child);
-    if (
-      Math.abs(s) < r &&
-      Math.abs(along(p, parent, child.pivot)) < r &&
-      Math.abs(s) < Math.abs(at)
-    )
-      [joint, at] = [[pa, ch], s];
+    const d =
+      segmentDistance(p, parent.pivot, parent.tip) - segmentDistance(p, child.pivot, child.tip);
+    const k = smooth(-r * spread(parent, child), r, d);
+    if (k > 0 && k < 1 && (joint === undefined || Math.abs(k - 0.5) < Math.abs(h - 0.5)))
+      [joint, h] = [[pa, ch], k];
   }
-  // Outside every blend, the bone whose segment lies nearest owns the vertex.
   if (joint === undefined) return [[near, 1]];
   const [pa, ch] = joint;
-  const r = blendOf(bones[pa]!, bones[ch]!);
-  const h = smooth(-r, r, at);
   if (h <= 0) return [[pa, 1]];
   if (h >= 1) return [[ch, 1]];
   return [
@@ -229,9 +223,23 @@ const jointsOf = (near: number, skin: ReadonlyArray<number>, bones: ReadonlyArra
   return joints;
 };
 
-/** How far either side of the joint of `parent` and `child` they share a vertex: `BLEND`, at most half the shorter bone. */
+/** The blend of the joint of `parent` and `child`: `BLEND`, at most half the shorter bone. */
 const blendOf = (parent: PuppetBone, child: PuppetBone) =>
   Math.min(BLEND, 0.5 * Math.min(boneLength(parent), boneLength(child)));
+
+/**
+ * How much of the blend a joint keeps on its parent's side: (1 - cos α) / 2 of the
+ * angle α its bones make at rest (1 straight, 1/2 at a right angle, about 0.15 folded
+ * to 45°), at least 0.05. In a fold the parent's paint lies beside the child's, so a
+ * wide blend there would carry the parent's own paint with the child.
+ */
+const spread = (parent: PuppetBone, child: PuppetBone) => {
+  const e = child.pivot;
+  const [ax, ay] = [parent.pivot[0] - e[0], parent.pivot[1] - e[1]];
+  const [bx, by] = [child.tip[0] - e[0], child.tip[1] - e[1]];
+  const cos = (ax * bx + ay * by) / (Math.hypot(ax, ay) * Math.hypot(bx, by) || 1);
+  return Math.max(0.05, (1 - cos) / 2);
+};
 
 /** The weights of a flap's vertex at `p`: its arm weights shared with the body by how far it lies from the shoulder. */
 const flapped = (

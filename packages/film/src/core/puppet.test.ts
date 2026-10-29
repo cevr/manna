@@ -389,6 +389,58 @@ describe('a puppet', () => {
     expect(Math.max(...held)).toBeLessThan(0.5);
   });
 
+  test('an elbow turn tears no mesh edge on a limb bent at rest 90° or 135°', () => {
+    // the upper arm along y = 6 to the elbow, the forearm bent down (90°) or back under it (135°);
+    // `fold` is the angle the two bones make at the elbow, radians
+    const [N, U0, EL, TURN] = [48, [6, 6], [36, 6], 60] as const;
+    for (const [F1, fold] of [
+      [[36, 36], Math.PI / 2],
+      [[6, 36], Math.PI / 4],
+    ] as const) {
+      const rgba = new Uint8Array(N * N * 4);
+      for (let y = 0; y < N; y++)
+        for (let x = 0; x < N; x++) {
+          const c = [x + 0.5, y + 0.5] as const;
+          const d = Math.min(segmentGap(c, U0, EL), segmentGap(c, EL, F1));
+          if (d <= 4) rgba.set([120, 80, 60, 255], (y * N + x) * 4);
+        }
+      const p = made(
+        { width: N, height: N, parts: [{ name: 'arm', pixels: { width: N, height: N, rgba } }] },
+        {
+          bones: [
+            { name: 'upper', pivot: U0, tip: EL },
+            { name: 'forearm', parent: 'upper', pivot: EL, tip: F1 },
+          ],
+          skin: { arm: ['upper', 'forearm'] },
+        },
+      );
+      const rest = posedVertices(p, restPose(p))[0]!;
+      const bent = posedVertices(p, { ...restPose(p), numbers: { forearm: TURN } })[0]!;
+      const tris = p.parts[0]!.mesh.triangles;
+      // An edge turned rigidly changes by 2 · sin(turn / 2) of its length. Across the crease the
+      // weights cross from one bone to the other round the fold's arc, which adds a shear of the
+      // turn's change over the share of the arc they cross on; a tight fold leaves less arc, so
+      // more shear, and no weights avoid it. Crossing on two fifths of the arc or more bounds the
+      // shear by 1 / (0.4 · fold) of the rigid change; a weight that jumps tears past it.
+      const bound = 2 * Math.sin((TURN * Math.PI) / 360) * (1 + 1 / (0.4 * fold));
+      let worst = 0;
+      for (let t = 0; t < tris.length; t += 3)
+        for (const [i, j] of [
+          [tris[t]!, tris[t + 1]!],
+          [tris[t + 1]!, tris[t + 2]!],
+          [tris[t + 2]!, tris[t]!],
+        ] as const) {
+          const [rx, ry] = [rest[2 * i]! - rest[2 * j]!, rest[2 * i + 1]! - rest[2 * j + 1]!];
+          const change = Math.hypot(
+            bent[2 * i]! - bent[2 * j]! - rx,
+            bent[2 * i + 1]! - bent[2 * j + 1]! - ry,
+          );
+          worst = Math.max(worst, change / Math.hypot(rx, ry));
+        }
+      expect(worst).toBeLessThan(bound);
+    }
+  });
+
   test('rasterOf lays revealed paint where a turned part moved away', () => {
     const { arm, body } = rimSheet();
     const p = made(
