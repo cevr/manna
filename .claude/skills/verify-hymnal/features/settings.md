@@ -49,6 +49,7 @@ played on, as their licences ask; the app's version is not shown.
 
 - On iOS the radios read as `other` elements with `[checked]`/`[unchecked]`; on the web as `radio` with `aria-checked`. Tap by label on both.
 - `Settings` names the tab and the screen title on iOS: use `role=button`.
+- On iOS Settings is a form sheet: `sim back` does not close it. Drag it down before you leave, or the next deep link stacks over it.
 - A run that leaves `Dark` chosen changes the next run's screenshots: always end at `System`.
 - A run that leaves `Advanced` chosen changes the chords every later run reads: always end at `Simple`.
 - A run that leaves `Sounds and haptics` off silences every later run's `feel.md` steps: always end with it on.

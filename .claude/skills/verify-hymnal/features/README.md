@@ -10,6 +10,9 @@ recipe.
   then `bun run --cwd apps/hymnal sim install` (iOS), or `--platform web`
   (SKILL.md, Launch). Never ports 8191 or 8095, the owner's previews.
 - `bun run --cwd apps/hymnal sim doctor` passes before the first drive.
+- A hymn opened by deep link (`sim open hymns/100`) has no back button,
+  so `sim back` finds nothing there. Go back with the edge pan or
+  `sim open /` (`hymn-reader.md`, Gotchas).
 - The recipes write `bun run --cwd apps/hymnal sim` as `sim`. A step's
   "→" is its observable result: the JSON line's `ok`, and what the
   snapshot or screenshot shows.

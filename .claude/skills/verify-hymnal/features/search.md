@@ -13,7 +13,9 @@ the five strongest matches are followed by a section `Hymns about this`
 (up to 10 hymns by meaning, not among those five), then the rest of the
 matches under `More matches`, each hymn once; a query that holds a digit, or is under
 three letters, has no such section. A press opens the hymn, with a back button `Hymns`. A query
-with no match says `No hymn matches “<query>”.` Cancel clears the query
+with no match says `No hymn matches “<query>”.`, except on a phone a
+query of known words with no text match: it shows `Hymns about this`
+alone, with no empty message. Cancel clears the query
 and brings the list back where it was.
 
 ## Sub-features
@@ -29,7 +31,7 @@ and brings the list back where it was.
 - `search-matched-line`: on a phone, a result found by a line other than its title shows that line under the title in the muted colour, one line long, in a taller row; VoiceOver reads it after the title. A result found by its title or its number shows the title alone. The home list's rows stay one line.
 - `search-about`: on a phone, a query of words (`hymns about the second coming`) shows, after a pause of about 150 ms, the heading `Hymns about this` under at most five matches, its hymns by meaning (none of the five above it), then `More matches` over the rest of the matches, each hymn once in the results; a number (`no 100`) shows no such heading. No model runs on the phone (`about.md`, `search-about-size`).
 - `search-open`: a result opens the hymn, with a back button `Hymns`.
-- `search-empty`: a query with no match shows the empty message.
+- `search-empty`: a query with no match shows the empty message. On a phone a query of known words with no text match shows `Hymns about this` alone instead; a made-up word such as `zzzz` knows no hymn by meaning and shows the empty message.
 - `search-hermes`: each keystroke's search runs under 4 ms at the 95th percentile and under 8 ms at most in Hermes (`hermes-engine-cli` 0.12.0, the research harness over the app's own `src/hymns/search.ts`), and its index is built as search mode opens, never at the app's start.
 
 ## How to get to it (user POV)
