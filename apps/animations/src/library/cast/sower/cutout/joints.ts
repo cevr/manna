@@ -40,4 +40,11 @@ export const JOINTS = {
     shoulderLeft: [190, 212],
     elbowLeft: [200, 282],
   },
+  // scattering seed: his right arm (far, the viewer's left) flung out level, his left (near) hanging to the seed bag
+  'poses-1': {
+    shoulderRight: [175, 212],
+    elbowRight: [110, 223],
+    shoulderLeft: [322, 205],
+    elbowLeft: [343, 270],
+  },
 } as const satisfies Readonly<Record<string, Readonly<Record<string, Pt>>>>;

@@ -896,6 +896,154 @@ const THREE_QUARTER_RIGHT: PartCut = {
   ],
 };
 
+/**
+ * His kept pose scattering seed (poses-1, on his kept poses sheet), turned
+ * three-quarters to the viewer's left, cut as drawn. His right arm (the far
+ * one, on the viewer's left) is flung out level: its sleeve, cuff and round
+ * hand fill the band from above its top ink to below its lower ink, out to
+ * the sheet's left edge, its root on his body's front outline. His left arm
+ * (the near one) hangs, its hand over the seed bag; its inner edge is the
+ * sleeve's inner ink, a crease above it. The ten seeds falling from his far
+ * hand stand free on the paper, one part. The hem's line, column by column:
+ * the robe's front lifting over his leading foot, the hem over it, between
+ * his feet, over his trailing foot, the robe's back. His leading foot (the
+ * viewer's left) is taken as his right, the trailing one as his left. This
+ * sheet's outline ink is [48, 30, 15] (measured); a framed view's cut reads
+ * none, so `INK` below stays the turnaround's. The view is 398 px wide, so its right edges
+ * run to twice `FAR`, past its pad.
+ */
+const P1_HEM = {
+  right: [
+    [153, 571],
+    [173, 521],
+    [192, 552],
+    [221, 561],
+    [233, 557],
+  ],
+  left: [
+    [277, 558],
+    [289, 567],
+    [321, 567],
+    [325, 561],
+    [342, 552],
+    [361, 542],
+    [367, 540],
+    [397, 522],
+  ],
+} as const;
+const P1_LEFT: Sleeve = {
+  // his left sleeve (the viewer's right, the near one): a crease above its inner ink, then the ink's left edge down to the cuff
+  inner: [
+    [300, 190],
+    [300.5, 235],
+    [301.5, 250],
+    [304.5, 265],
+    [307.5, 280],
+    [311.5, 295],
+    [313.5, 310],
+    [315.5, 325],
+    [316.5, 335],
+    [309.5, 346],
+  ],
+  shoulder: JOINTS['poses-1'].shoulderLeft,
+  cap: 12,
+  side: 'right',
+};
+const p1Left = sleeve(P1_LEFT);
+const P1_SOLES = {
+  right: [
+    [142, 163, 584],
+    [164, 189, 585],
+    [190, 233, 584],
+  ],
+  left: [
+    [278, 303, 584],
+    [304, 310, 585],
+    [311, 339, 584],
+    [340, 360, 582],
+  ],
+} as const satisfies Readonly<Record<string, SoleRuns>>;
+/** The ten seeds' boxes (measured), each padded 2 px. */
+const P1_SEEDS = [
+  box(17, 288, 31, 311),
+  box(47, 308, 62, 330),
+  box(-1, 326, 9, 349),
+  box(31, 348, 46, 371),
+  box(68, 366, 85, 386),
+  box(12, 389, 27, 411),
+  box(57, 407, 75, 428),
+  box(44, 448, 61, 468),
+  box(94, 451, 114, 470),
+  box(91, 493, 112, 512),
+];
+
+const POSES_1: PartCut = {
+  parts: [
+    // above the sleeve's top ink; the face and beard over its root, down to the beard's lower ink; the headcloth's tail over his left sleeve's top
+    {
+      name: 'head',
+      take: [box(-1, -1, FAR * 2, 170), box(178, 170, 311, 184), box(308, 145, 360, 191)],
+    },
+    {
+      name: 'armLeft',
+      // the hand's disc takes its whole ink ring (x329-392, y337-392)
+      take: [...p1Left.take, { disc: { c: [360.5, 361], r: 32 } }],
+      unless: p1Left.unless,
+      pivot: JOINTS['poses-1'].shoulderLeft,
+    },
+    { name: 'seed', take: P1_SEEDS },
+    {
+      name: 'armRight',
+      // above its top ink, along its lower ink (3 px under the knots, past the ink) out past the cuff, its root on his body's front outline; the hand ring (x0-63, y184-247) lies inside
+      take: [
+        {
+          polygon: [
+            [-1, 170],
+            [178, 170],
+            [178, 253],
+            [162, 259],
+            [150, 262],
+            [138, 265],
+            [125, 268],
+            [110, 271],
+            [60, 274],
+            [-1, 274],
+          ],
+        },
+      ],
+      pivot: JOINTS['poses-1'].shoulderRight,
+    },
+    {
+      name: 'footRight',
+      take: [{ polygon: [[130, 571], ...P1_HEM.right, [255, 557], [255, 620], [130, 620]] }],
+      unless: [underSole(P1_SOLES.right)],
+    },
+    {
+      name: 'footLeft',
+      take: [{ polygon: [[255, 557], ...P1_HEM.left, [FAR * 2, 522], [FAR * 2, 620], [255, 620]] }],
+      unless: [underSole(P1_SOLES.left)],
+    },
+    {
+      name: 'shadow',
+      take: [
+        {
+          polygon: [
+            [-1, 571],
+            ...P1_HEM.right,
+            ...P1_HEM.left,
+            [FAR * 2, 522],
+            [FAR * 2, FAR * 2],
+            [-1, FAR * 2],
+          ],
+        },
+      ],
+    },
+    // below the belt, but the seed bag on his near hip
+    { name: 'robe', take: [box(-1, 330, FAR * 2, FAR * 2)], unless: [box(249, 330, 374, 453)] },
+    { name: 'torso', take: [box(-1, -1, FAR * 2, FAR * 2)] },
+  ],
+};
+
 /** His outline's ink: the median of his views' dark pixels (measured on the three-quarter and back views). */
 const INK = [34, 16, 8, 255] as const;
 
@@ -935,6 +1083,10 @@ const HIDDEN_ENTRIES = {
     moving: ['armRight', 'armLeft'],
     prompt: `${CUT_AWAY} his two arms (sleeves and round hands) were cut away to make a cut-out puppet. He is turned three-quarters to the viewer's right. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading as his body beside each arm (his back's outline and the olive mantle with its walnut-brown edge band on the viewer's left side, the olive mantle and the walnut seed bag at his hip on the viewer's right side, the linen tunic, the belt round his waist). ${SIDES} ${shade('his')} ${GRAIN} There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, headcloth and its tail, face, beard, tunic, mantle, walnut strap, belt, walnut seed bag, feet, size, position and framing.`,
   },
+  'poses-1': {
+    moving: ['armRight', 'armLeft'],
+    prompt: `${CUT_AWAY} his two arms (sleeves and round hands) were cut away to make a cut-out puppet. He is turned three-quarters to the viewer's left, striding and scattering seed: his right arm was flung out level towards the viewer's left, over the plain paper, and his left arm hung at his side with its hand on the seed bag. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading as his body beside each arm (the olive mantle and his body's front outline on the viewer's left side; the olive mantle, the walnut strap, the belt round his waist and the walnut seed bag at his hip on the viewer's right side, the bag now whole where the hand lay over it). ${SIDES} ${shade('his')} ${GRAIN} There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, headcloth and its tail, face, beard, tunic, mantle, walnut strap, belt, walnut seed bag, the falling seeds, feet, size, position and framing.`,
+  },
 } as const satisfies Readonly<Record<CutView, HiddenEntry>>;
 
 /** His cut table: each view's cut and how its figure is read. */
@@ -947,6 +1099,7 @@ export const { CUTS, cutOptionsFor, HIDDEN } = cutTable({
     profileLeft: { cut: PROFILE_LEFT, figure: 'framed' },
     profileRight: { cut: PROFILE_RIGHT, figure: 'framed' },
     threeQuarterRight: { cut: THREE_QUARTER_RIGHT, figure: 'framed' },
+    'poses-1': { cut: POSES_1, figure: 'framed' },
   },
   hidden: HIDDEN_ENTRIES,
   ink: INK,
