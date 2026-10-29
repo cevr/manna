@@ -77,4 +77,42 @@ describe('a standing skeleton', () => {
     expect(xs(right?.region ?? [])).toEqual([70, 110]);
     expect(xs(left?.region ?? [])).toEqual([-1, 30]);
   });
+
+  test('draws only the arm a profile shows: no bones, flap or skin for the other', () => {
+    const profile: Body<{ readonly left: string }> = {
+      skin: {
+        head: ['neck', 'head'],
+        body: ['lean'],
+        sleeveLeft: ['shoulderLeft', 'elbowLeft', 'wristLeft', 'lean'],
+      },
+      arms: { left: 'sleeveLeft' },
+      from: 'body',
+      band: BODY.band,
+    };
+    const { shoulderLeft, elbowLeft, wristLeft, handLeft, flapLeft, capLeft } = at('front');
+    const made = standing(profile, {
+      facing: 'front',
+      hip: [50, 150],
+      neck: [50, 80],
+      chin: [50, 70],
+      crown: [50, 10],
+      shoulderLeft,
+      elbowLeft,
+      wristLeft,
+      handLeft,
+      flapLeft,
+      capLeft,
+    });
+    const bones = made.bones.map((b) => b.name);
+    expect(bones).toEqual(['lean', 'neck', 'head', 'shoulderLeft', 'elbowLeft', 'wristLeft']);
+    expect(
+      Object.values(made.skin)
+        .flat()
+        .filter((b) => !bones.includes(b)),
+    ).toEqual([]);
+    expect((made.flaps ?? []).map((f) => [f.part, f.from, f.bone])).toEqual([
+      ['sleeveLeft', 'body', 'shoulderLeft'],
+    ]);
+    expect(xs(made.flaps?.[0]?.region ?? [])).toEqual([70, 110]);
+  });
 });
