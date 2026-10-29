@@ -46,4 +46,24 @@ export const SKELETONS = {
       capLeft: 14,
     }),
   ),
+  // turned to the viewer's left: his right arm still on the viewer's left
+  threeQuarterLeft: framed(
+    keptAt('threeQuarterLeft'),
+    standing(BODY, {
+      facing: 'front',
+      hip: [96, 320],
+      neck: [100, 185],
+      chin: [80, 166],
+      crown: [108, 0],
+      ...JOINTS.threeQuarterLeft,
+      wristRight: [22, 344],
+      handRight: [21.5, 369],
+      wristLeft: [200, 344],
+      handLeft: [199.5, 369.5],
+      flapRight: 49,
+      flapLeft: 167,
+      capRight: 12,
+      capLeft: 8,
+    }),
+  ),
 } as const satisfies Readonly<Record<FramedView, Skeleton>>;
