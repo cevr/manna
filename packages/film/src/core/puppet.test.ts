@@ -461,6 +461,42 @@ describe('a puppet', () => {
     expect([...r.subarray(i, i + 4)]).toEqual([200, 190, 160, 255]);
   });
 
+  test('rasterOf shows no hole where a turned back part moves out from under a still front part', () => {
+    const { arm, body } = rimSheet();
+    const built = (paper?: readonly [number, number, number]) =>
+      made(
+        {
+          width: W,
+          height: H,
+          ...(paper && { paper }),
+          parts: [
+            { name: 'arm', pixels: { width: W, height: H, rgba: arm } },
+            { name: 'body', pixels: { width: W, height: H, rgba: body } },
+          ],
+        },
+        {
+          bones: [{ name: 'turn', pivot: S, tip: E }],
+          skin: { arm: [], body: ['turn'] },
+        },
+      );
+    const [unmatted, plain] = [built([250, 240, 220]), built()];
+    for (const turn of [-15, -10]) {
+      const pose = (p: Puppet) => ({ ...restPose(p), numbers: { turn } });
+      const [a, b] = [rasterOf(unmatted, pose(unmatted)).rgba, rasterOf(plain, pose(plain)).rgba];
+      // above the still sleeve, the body's paint its rim hid turns into view: the band
+      // over the box's top edge, short of the paper strip (x < 20), which the un-matte
+      // clears as a rim, and of the box's lower right corner (x > 40), whose light
+      // paint it reaches from the box's open bottom
+      let lost = 0;
+      for (let y = 0; y < 8; y++)
+        for (let x = 20; x <= 40; x++) {
+          const i = (y * W + x) * 4 + 3;
+          lost = Math.max(lost, b[i]! - a[i]!);
+        }
+      expect(lost).toBe(0);
+    }
+  });
+
   test('is deterministic: the same pose gives the same raster', () => {
     const p = made(SLEEVE, TWO_BONES);
     const pose = { ...restPose(p), numbers: { shoulderRight: 12.5, elbowRight: -20 } };

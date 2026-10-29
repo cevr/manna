@@ -402,7 +402,7 @@ export const puppetOf = (
     const skin = (skeleton.skin[part.name] ?? []).map((b) => at.get(b)!);
     const flap = flapOf.get(part.name);
     const rgba = textures[k]!;
-    const revealed = revealedOf(withFlaps, textures, k, unmattedWithout);
+    const revealed = revealedOf(withFlaps, textures, k, unmattedWithout, W, H);
     const seals = sealsOf(unmatted, textures, skins, k, W, H);
     // its mesh holds what it shows at rest, all it can reveal and its seals
     const holds = (layers: ReadonlyArray<Uint8Array | undefined>, i: number) =>
@@ -454,6 +454,8 @@ const revealedOf = (
   after: ReadonlyArray<Uint8Array>,
   k: number,
   without: (j: number) => ReadonlyArray<Uint8Array>,
+  W: number,
+  H: number,
 ): ReadonlyArray<Uint8Array | undefined> => {
   const own = before[k]!;
   const out: Array<Uint8Array | undefined> = before.map(() => undefined);
@@ -467,7 +469,28 @@ const revealedOf = (
     layer.set(shown.subarray(i - 3, i + 1), i - 3);
     out[j] = layer;
   }
+  for (const layer of out) if (layer !== undefined) borderOf(layer, after[k]!, W, H);
   return out;
+};
+
+/**
+ * Lays `texture`'s opaque pixels round each pixel `layer` gives back into
+ * `layer`, so the bilinear sample along the line between the two is opaque
+ * rather than two partial covers `over` leaves light. Each such pixel lies
+ * on the same pixel of the texture drawn under it, so it changes nothing else.
+ */
+const borderOf = (layer: Uint8Array, texture: Uint8Array, W: number, H: number) => {
+  const given = Uint8Array.from(layer);
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      if (given[(y * W + x) * 4 + 3] === 0) continue;
+      for (const [dx, dy] of AROUND) {
+        const [u, v] = [x + dx, y + dy];
+        const o = (v * W + u) * 4;
+        if (u >= 0 && v >= 0 && u < W && v < H && given[o + 3] === 0 && texture[o + 3] === 255)
+          layer.set(texture.subarray(o, o + 4), o);
+      }
+    }
 };
 
 /**
@@ -538,6 +561,11 @@ const sealsOf = (
     }
   return out;
 };
+
+/** The eight pixels round one, as `[dx, dy]`: the texels a bilinear sample beside it can reach. */
+const AROUND = [-1, 0, 1].flatMap((dy) =>
+  [-1, 0, 1].flatMap((dx) => (dx === 0 && dy === 0 ? [] : [[dx, dy] as const])),
+);
 
 /** The four pixels beside one, as `[dx, dy]`. */
 const BESIDE = [
@@ -714,16 +742,20 @@ export const sealsShown = <T>(
 
 /**
  * The revealed paint laid over part `k` this frame (`PuppetPart.revealed`, as
- * each draw path holds it): what each moving part in front of `k` hid under
- * its rim, laid on `k`'s own mesh where that part has moved away. None while
- * nothing in front of `k` moves, so a still figure draws its textures alone.
- * The one rule every draw path follows.
+ * each draw path holds it): what each part in front of `k` hid under its
+ * rim, laid on `k`'s own mesh, shown once either of the two moves, since
+ * either move can carry that paint out from under the rim. None while
+ * neither moves, so a still figure draws its textures alone. The one rule
+ * every draw path follows.
  */
 export const revealedShown = <T>(
   revealed: ReadonlyArray<T | undefined>,
   k: number,
   moving: (n: number) => boolean,
-): ReadonlyArray<T> => revealed.filter((r, j): r is T => r !== undefined && j < k && moving(j));
+): ReadonlyArray<T> => {
+  const self = moving(k);
+  return revealed.filter((r, j): r is T => r !== undefined && (self || moving(j)));
+};
 
 /**
  * `puppet` drawn at `pose` in its sheet's frame (or a frame `size` px from the same origin) over transparent ground: the
