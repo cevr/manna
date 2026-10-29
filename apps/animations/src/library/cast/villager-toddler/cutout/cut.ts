@@ -19,7 +19,7 @@
 
 import type { HiddenEntry, PartCut } from '@manna/film/tools';
 import { CUT_AWAY, grain } from '../../../cutout/prompts.ts';
-import { FAR, type SoleRuns, underSole } from '../../../cutout/rules.ts';
+import { box, FAR, type Sleeve, type SoleRuns, sleeve, underSole } from '../../../cutout/rules.ts';
 import { cutTable } from '../../../cutout/table.ts';
 import { FRAMES } from './frames.ts';
 import { JOINTS } from './joints.ts';
@@ -187,6 +187,98 @@ const POSES_1: PartCut = {
 };
 
 /**
+ * Sitting on the ground facing the viewer, legs out in front, on their kept
+ * poses sheet: the big bald head with its tuft and ears above, its jaw's
+ * lower ink on y128 (x43-64 and x104-127), the neck's skin x68-101 below it.
+ * Both sleeves hang from under the jaw, their outer ink running down and out
+ * to the round hands beside the lap (rings x20-61 and x109-148, y168-202);
+ * the sleeves have no inner ink, so their inner edges (x56 and x110) are
+ * guesses. The sandals' tops meet each hand's lower ink (left foot x0-60, its
+ * top from y196; right foot x120-165, from about y194); the ground shadow
+ * runs on past both sides of the box.
+ */
+const P2_RIGHT: Sleeve = {
+  // their right sleeve (the viewer's left): a crease with no ink down to the cuff's ink (x29-53, y168)
+  inner: [
+    [56, 118],
+    [56, 160],
+    [56, 166],
+  ],
+  shoulder: JOINTS['poses-2'].shoulderRight,
+  cap: 14,
+  side: 'left',
+};
+const P2_LEFT: Sleeve = {
+  // their left sleeve (the viewer's right): a crease with no ink down to the cuff (x120-144, y168)
+  inner: [
+    [110, 118],
+    [110, 160],
+    [112, 166],
+  ],
+  shoulder: JOINTS['poses-2'].shoulderLeft,
+  cap: 14,
+  side: 'right',
+};
+const p2Right = sleeve(P2_RIGHT);
+const p2Left = sleeve(P2_LEFT);
+/** Each round hand and the sleeve's lower end, from the cuff's row to 1-2 px under the hand's lower ink and above the sandal's top. */
+const P2_HANDS = {
+  right: {
+    polygon: [
+      [-1, 166],
+      [64, 166],
+      [64, 196],
+      [59, 201],
+      [50, 204],
+      [36, 204],
+      [27, 202],
+      [23, 197],
+      [16, 195],
+      [-1, 195],
+    ],
+  },
+  left: {
+    polygon: [
+      [106, 166],
+      [FAR, 166],
+      [FAR, 193],
+      [146, 193],
+      [141, 198],
+      [134, 203],
+      [120, 204],
+      [111, 201],
+      [106, 196],
+    ],
+  },
+} as const;
+// a strip under the jaw over each shoulder, between the head and the sleeve's corner, that no sleeve takes: torso, so the paint okra lays under each sleeve's root has torso behind it, never head
+const P2_BANDS = {
+  right: box(43, 122, 70, 141),
+  left: box(98, 122, 128, 141),
+} as const;
+
+const POSES_2: PartCut = {
+  parts: [
+    {
+      name: 'armRight',
+      take: [...p2Right.take, P2_HANDS.right],
+      unless: [...p2Right.unless, P2_BANDS.right],
+      pivot: JOINTS['poses-2'].shoulderRight,
+    },
+    {
+      name: 'armLeft',
+      take: [...p2Left.take, P2_HANDS.left],
+      unless: [...p2Left.unless, P2_BANDS.left],
+      pivot: JOINTS['poses-2'].shoulderLeft,
+    },
+    // above the strips under the jaw, and the neck between them down to its lowest skin
+    { name: 'head', take: [box(-1, -1, FAR, 122), box(70, 122, 98, 137)] },
+    // their tunic, legs, sandals and the ground shadow: none of them moves in this pose
+    { name: 'torso', take: [box(-1, -1, FAR, FAR * 2)] },
+  ],
+};
+
+/**
  * Their outline is [29, 14, 5] (measured); a framed cut reads no ink, so
  * their poses take none.
  */
@@ -206,6 +298,10 @@ const HIDDEN_ENTRIES = {
     moving: ['armLeft'],
     prompt: `${CUT_AWAY} their left arm (its sleeve and round hand) was cut away to make a cut-out puppet. The toddler is seen from the side, running towards the viewer's left and leaning forward, and their other arm does not show: their left arm was stretched out level behind them, from their shoulder under the ear to the round hand at the right edge, over the plain paper. Repaint ONLY the magenta areas, as what lies underneath the arm: their back, from behind their neck down to the tunic, closed by the same thick dark brown-black outline as the rest of them, painted in exactly the same style, colours and soft shading as their body beside the arm (the cream linen tunic, and the soft lavender shade of its far side below the arm). Their back runs down from their neck in one smooth curve to the tunic's back edge: out to their shoulder and tunic, not in at the sleeve's edge. Shade with colour, as the sheet does: the side away from the light in the soft lavender, never grey or black. ${GRAIN} There is no arm now: no sleeve, no hand, nothing magenta left. Where the magenta lay outside their body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, tuft of hair, ear, face, tunic, legs, sandals, ground shadow, size, position and framing.`,
   },
+  'poses-2': {
+    moving: ['armRight', 'armLeft'],
+    prompt: `${CUT_AWAY} their two arms (both sleeves and both round hands) were cut away to make a cut-out puppet. The toddler sits on the ground facing the viewer, legs out in front of them, and their arms hung down at their sides from under the jaw, with the round hands resting beside their lap. Repaint ONLY the magenta areas, as what lies underneath the arms: the two sides of their body, from under each ear down past each armpit to the tunic's hem at their lap, closed by the same thick dark brown-black outline as the rest of them, painted in exactly the same style, colours and soft shading as their body between the arms (the cream linen tunic, the soft lavender shade at its sides, and the lavender sash across their lap). Each side runs down from under their jaw in one smooth curve to the tunic's hem: out to their shoulders and tunic, not in at the sleeves' edges. Shade with colour, as the sheet does: the sides away from the light in the soft lavender, never grey or black. ${GRAIN} There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside their body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, tuft of hair, ears, face, tunic, sash, legs, sandals, ground shadow, size, position and framing.`,
+  },
 } as const satisfies Readonly<Record<CutView, HiddenEntry>>;
 
 /** Their cut table: each view's cut and how its figure is read. */
@@ -213,6 +309,7 @@ export const { CUTS, cutOptionsFor, HIDDEN } = cutTable({
   frames: FRAMES,
   views: {
     'poses-1': { cut: POSES_1, figure: 'framed' },
+    'poses-2': { cut: POSES_2, figure: 'framed' },
   },
   hidden: HIDDEN_ENTRIES,
   ink: INK,

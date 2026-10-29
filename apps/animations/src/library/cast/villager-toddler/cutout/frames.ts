@@ -10,11 +10,14 @@ import type { CutFrame } from '../../../cutout/table.ts';
 
 /**
  * Each cut view's sheet and kept box (measured), and its pad `[left, top,
- * right, bottom]`: 3 px on three sides, and below the kept box the ground
- * shadow's rows (y286-308 of the view, 23 rows).
+ * right, bottom]`. Running (poses-1): 3 px on three sides, and below the kept
+ * box the ground shadow's rows (y286-308 of the view, 23 rows). Sitting
+ * (poses-2): the ground shadow's sides past the box (8 px on the left, 11 on
+ * the right), 3 px above, and its rows below the box (5).
  */
 export const FRAMES = {
   'poses-1': { sheet: 'poses', kept: [35, 461, 277, 747], pad: [3, 3, 3, 23] },
+  'poses-2': { sheet: 'poses', kept: [323, 523, 489, 768], pad: [8, 3, 11, 5] },
 } as const satisfies Readonly<Record<string, CutFrame>>;
 
 /** A cut view, by its name in their sheets' views. */
