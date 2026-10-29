@@ -461,6 +461,31 @@ describe('each mutation is caught, at every entry it applies to', () => {
     }
   });
 
+  it('a section the index prints under another topic name is held to that topic’s hymns', () => {
+    // `Love of God` is a section of SECTION_TOPICS: the topic `GOD THE FATHER: Love` holds it
+    const sectionsOf = (b: ReturnType<typeof book>) => {
+      const decoded = decodeOne('topical', text(b.topical));
+      const named: Context = {
+        ...ctx,
+        sections: [
+          { name: 'Love of God', first: 1, last: 4 },
+          { name: 'Quiet Hills', first: 5, last: 12 },
+        ],
+      };
+      return checkIndexes(decoded.indexes as Parameters<typeof checkIndexes>[0], named)
+        .filter((p) => p.check === 'sections')
+        .map((p) => p.what);
+    };
+    const b = book();
+    const topic = arr(b.topical, 'topics')[0] ?? {};
+    Object.assign(topic, { name: 'Love', parent: 'GOD THE FATHER' });
+    expect(sectionsOf(b)).toEqual([]);
+    arr(topic, 'hymns').splice(1, 1);
+    expect(sectionsOf(b)).toEqual(['hymn 2 of section Love of God is not under its topic']);
+    topic['name'] = 'Mercy';
+    expect(sectionsOf(b)).toEqual(['no topic lists section Love of God']);
+  });
+
   it('an entry dropped from its page', () => {
     for (const name of NAMES) {
       const result = everyMutant(
