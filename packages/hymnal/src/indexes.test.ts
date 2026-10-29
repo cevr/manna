@@ -139,8 +139,8 @@ const book = (): Record<IndexName, Json> => ({
     ],
   },
   canons: {
-    ...head('canons', 'MADE-UP ROUNDS', [[16, 1]]),
-    groups: [{ name: 'ROUNDS', hymns: refs(16, [8]) }],
+    ...head('canons', 'MADE-UP ROUNDS', [[16, 2]]),
+    groups: [{ name: 'ROUNDS', hymns: refs(16, [8, 10]) }],
   },
   young: {
     ...head('young', 'MADE-UP YOUNG', [[17, 2]]),
@@ -158,9 +158,9 @@ const book = (): Record<IndexName, Json> => ({
     ],
   },
   composers: {
-    ...head('composers', 'MADE-UP COMPOSERS', [[19, 2]]),
+    ...head('composers', 'MADE-UP COMPOSERS', [[19, 3]]),
     people: [
-      { name: 'Cedar, Cal', hymns: refs(19, [4]) },
+      { name: 'Cedar, Cal', hymns: refs(19, [4, 11]) },
       { name: 'Dale, Dee', hymns: refs(19, [5]) },
     ],
   },
@@ -411,6 +411,14 @@ describe('each mutation is caught, at every entry it applies to', () => {
       ],
       ['a topic’s hymns', (b) => arr(arr(b.topical, 'topics')[0], 'hymns'), swapKeepPages],
       ['the topics', (b) => arr(b.topical, 'topics'), swap],
+      ['the young hymns', (b) => arr(b.young, 'hymns'), swapKeepPages],
+      [
+        'a sentences group’s hymns',
+        (b) => arr(arr(b.sentences, 'groups')[0], 'hymns'),
+        swapKeepPages,
+      ],
+      ['a canons group’s hymns', (b) => arr(arr(b.canons, 'groups')[0], 'hymns'), swapKeepPages],
+      ['a composer’s hymns', (b) => arr(arr(b.composers, 'people')[0], 'hymns'), swapKeepPages],
     ];
     for (const [label, rows, mutate] of lists) {
       const result = everyMutant(
