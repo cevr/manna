@@ -152,6 +152,21 @@ describe('About this hymn', () => {
     });
   });
 
+  it('leaves out the Scripture section for a hymn the Scriptural index gives no passage', () => {
+    const bare = Array.from({ length: 695 }, (_, i) => i + 1).find(
+      (n) => referencesOf(n).length === 0,
+    );
+    using _route = routeTo(String(bare));
+    const html = renderToStaticMarkup(<AboutRoute />);
+    expect({
+      heading: hasHeading(html, 'Scripture'),
+      rows: rows(html, 'about-scripture'),
+    }).toEqual({
+      heading: false,
+      rows: [],
+    });
+  });
+
   it('closes the sheet and the pages under it and searches for a topic by its name', () => {
     using _route = routeTo('100');
     using _stack = sheetOver(fromHome);
@@ -219,6 +234,16 @@ describe('the head line of a hymn’s page', () => {
     expect(html).toContain(
       `aria-valuetext="${hymn.topic} · ${passageText(first)} +${passages.length - 1}"`,
     );
+  });
+
+  it('gives the section and the passage, with no count, for a hymn with one passage', () => {
+    const one = Array.from({ length: 695 }, (_, i) => i + 1).find(
+      (n) => referencesOf(n).length === 1,
+    );
+    const hymn = Option.getOrThrow(hymnAt(String(one)));
+    const only = Option.getOrThrow(Arr.head(referencesOf(hymn.number)));
+    const html = renderToStaticMarkup(<HymnPage hymn={hymn} reader={readerOn()} />);
+    expect(html).toContain(`aria-valuetext="${hymn.topic} · ${passageText(only)}"`);
   });
 
   it('gives the section alone for a hymn the Scriptural index gives no passage', () => {
