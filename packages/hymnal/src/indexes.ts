@@ -126,6 +126,10 @@ const ScripturalByHymn = Schema.Struct({
       page: Positive,
     }),
   ),
+  /** A hymn that prints `See N` in the reference place: it alludes to what hymn N does. */
+  see: Schema.optionalKey(
+    Schema.Array(Schema.Struct({ hymn: Positive, see: Positive, page: Positive })),
+  ),
 });
 export type ScripturalByHymn = typeof ScripturalByHymn.Type;
 

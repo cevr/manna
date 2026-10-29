@@ -19,8 +19,10 @@ import {
   parseReference,
   type Problem,
   problemLine,
+  seeHymnOf,
   seeTargets,
   settle,
+  sortKey,
 } from '../scripts/indexes.js';
 import type { IndexName } from './indexes.js';
 
@@ -473,6 +475,25 @@ describe('each mutation is caught, at every entry it applies to', () => {
     }
   });
 
+  it('a tune printed with and without its qualifier or article, or by its alias, is one tune', () => {
+    const b = book();
+    const metre = arr(b.metrical, 'metres')[0] as Json;
+    metre['tunes'] = [
+      { name: 'The Alder (Second)', hymns: refs(21, [1, 2, 4, 5, 6]) },
+      { name: 'Elm', hymns: refs(21, [3]) },
+    ];
+    expect(problemsOf(b).filter((p) => p.check === 'tunes')).toEqual([]);
+    metre['tunes'] = [
+      { name: 'Alder', hymns: refs(21, [1, 2, 4, 5, 6]) },
+      { name: 'Oak', hymns: refs(21, [3]) },
+    ];
+    expect(
+      problemsOf(b)
+        .filter((p) => p.check === 'tunes')
+        .map((p) => p.value),
+    ).toEqual(['Alder 3', 'Oak 3']);
+  });
+
   it('a metre the hymn’s page does not print', () => {
     const b = book();
     (arr(b.metrical, 'metres')[1] as Json)['metre'] = 'L. M.';
@@ -584,6 +605,27 @@ describe('reading a printed reference', () => {
     expect(parseReference(1, 'see 4')).toBeUndefined();
   });
 
+  it('reads a reference as the pages print it: a closing stop, a part verse, a list of chapters, a book of one chapter', () => {
+    const verses = (chapter: number, ...vs: ReadonlyArray<[number, number]>) =>
+      at(42, chapter, ...vs);
+    expect(parseReference(42, '3:4, 9.')).toEqual([verses(3, [4, 4], [9, 9])]);
+    expect(parseReference(42, '3:1-6a')).toEqual([verses(3, [1, 6])]);
+    expect(parseReference(42, '3:2b, 5')).toEqual([verses(3, [2, 2], [5, 5])]);
+    expect(parseReference(19, '40, 41')).toEqual([at(19, 40), at(19, 41)]);
+    expect(parseReference(65, '20, 21')).toEqual([at(65, 1, [20, 20], [21, 21])]);
+    expect(parseReference(31, '3-5')).toEqual([at(31, 1, [3, 5])]);
+    expect(parseReference(42, '3:4x')).toBeUndefined();
+  });
+
+  it('reads a hymn’s `See N` in the reference place', () => {
+    expect([
+      seeHymnOf('See 12'),
+      seeHymnOf('see 7.'),
+      seeHymnOf('See MEADOWS'),
+      seeHymnOf('3:4'),
+    ]).toEqual([12, 7, undefined, undefined]);
+  });
+
   it('names a book from its printed heading or abbreviation', () => {
     expect([
       bookOf('PSALMS'),
@@ -591,8 +633,9 @@ describe('reading a printed reference', () => {
       bookOf('1 THESS.'),
       bookOf('S.S.'),
       bookOf('Philem'),
+      bookOf('Is'),
       bookOf('Nowhere'),
-    ]).toEqual([19, 19, 52, 22, 57, undefined]);
+    ]).toEqual([19, 19, 52, 22, 57, 23, undefined]);
   });
 
   it('reads a cross-reference’s targets', () => {
@@ -613,6 +656,31 @@ describe('reading a printed reference', () => {
       normalMetre('C.M. Ref'),
       normalMetre('8.7.8.7.D.'),
     ]).toEqual(['cmref', 'cmref', '8787d']);
+  });
+
+  it('sorts word by word, `St.` as `Saint`, a qualifier left out and an apostrophe inside its word', () => {
+    const printed = [
+      'Zed Quay',
+      'Zedbury',
+      'Saint Alder',
+      'St. Birch',
+      'Salt Marsh',
+      'Quill (Second)',
+      'Quill Road',
+      "Quill's End",
+      'Quillby',
+    ];
+    expect([...printed].sort((a, b) => (sortKey(a) < sortKey(b) ? -1 : 1))).toEqual([
+      'Quill (Second)',
+      'Quill Road',
+      'Quillby',
+      "Quill's End",
+      'Saint Alder',
+      'St. Birch',
+      'Salt Marsh',
+      'Zed Quay',
+      'Zedbury',
+    ]);
   });
 
   it('measures each order rule over the made-up book with no pair broken', () => {

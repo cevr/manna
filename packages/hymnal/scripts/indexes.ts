@@ -29,7 +29,8 @@
  * - `sections` (C6): the topic of each printed section's name (or the topics
  *   its cross-reference names) lists every hymn of the section.
  * - `tunes` (C7): the alphabetical and the metrical index name the same
- *   (tune, hymn) pairs.
+ *   (tune, hymn) pairs, a name with and without its `(qualifier)` one tune
+ *   and an alias another name of the tune at its hymn.
  * - `metre` (C8): a hymn's metre heading is the metre its page prints
  *   (`data/shapes.json`), after `normalMetre`.
  * - `coverage` (C9): every hymn is in the tunes, the metres and a topic.
@@ -197,7 +198,9 @@ const ROWS = {
   scriptural: (x: Indexes) =>
     (x.scriptural?.entries ?? []).map((e) => hymn({ page: e.page, number: e.hymn })),
   'scriptural-by-hymn': (x: Indexes) =>
-    (x['scriptural-by-hymn']?.entries ?? []).map((e) => hymn({ page: e.page, number: e.hymn })),
+    [...(x['scriptural-by-hymn']?.entries ?? []), ...(x['scriptural-by-hymn']?.see ?? [])].map(
+      (e) => hymn({ page: e.page, number: e.hymn }),
+    ),
   sentences: (x: Indexes) => (x.sentences?.groups ?? []).flatMap((g) => g.hymns.map(hymn)),
   canons: (x: Indexes) => (x.canons?.groups ?? []).flatMap((g) => g.hymns.map(hymn)),
   young: (x: Indexes) => (x.young?.hymns ?? []).map(hymn),
@@ -271,8 +274,9 @@ export const passageFaults = (p: Passage, ctx: Context): ReadonlyArray<string> =
   return faults;
 };
 
-/** The printed book names the core canon does not know (`S.S.`, `Philem`), folded. */
+/** The printed book names the core canon does not know (`S.S.`, `Philem`, `Is`), folded. */
 const PRINTED_BOOKS: ReadonlyMap<string, number> = new Map([
+  ['is', 23],
   ['ss', 22],
   ['songofsolomon', 22],
   ['philem', 57],
@@ -329,16 +333,30 @@ const pieceOf = (piece: string): Piece | undefined => {
     : undefined;
 };
 
+/** The hymn a `See N` reference sends the reader to; undefined for any other text. */
+export const seeHymnOf = (text: string): number | undefined => {
+  const m = /^see\s+(\d+)\.?$/i.exec(text.trim());
+  return m ? Number(m[1]) : undefined;
+};
+
+/** Obadiah, Philemon, 2 and 3 John, Jude: one chapter each. */
+const ONE_CHAPTER: ReadonlySet<number> = new Set([31, 57, 63, 64, 65]);
+
 export const parseReference = (book: number, text: string): ReadonlyArray<Passage> | undefined => {
-  const pieces = text
+  const printed = text
     .replace(/\s+/g, '')
     .replace(/[–—]/g, '-')
-    .split(/[,;]/)
-    .map(pieceOf);
-  const only = pieces[0];
-  // a lone number with no colon is a whole chapter
-  if (pieces.length === 1 && only?._tag === 'verses' && only.from === only.to)
-    return [{ book, chapter: only.from, verses: [] }];
+    // the pages end a reference with a stop (`2:7, 13.`) and mark a part verse (`1-7a`)
+    .replace(/\.$/, '')
+    .replace(/(\d)[a-d](?=$|[,;-])/g, '$1');
+  // a book of one chapter prints its verses alone (`JUDE 24, 25`)
+  if (ONE_CHAPTER.has(book) && !printed.includes(':')) return parseReference(book, `1:${printed}`);
+  const pieces = printed.split(/[,;]/).map(pieceOf);
+  // numbers with no colon are whole chapters (`23`, `24, 25`)
+  if (!printed.includes(':') && pieces.every((p) => p?._tag === 'verses' && p.from === p.to))
+    return pieces.flatMap((p): Array<Passage> =>
+      p?._tag === 'verses' ? [{ book, chapter: p.from, verses: [] }] : [],
+    );
   const out: Array<Passage> = [];
   for (const piece of pieces) {
     const last = out[out.length - 1];
@@ -364,6 +382,24 @@ export const fold = (s: string): string =>
     .toLowerCase()
     .normalize('NFD')
     .replace(/[^a-z]/g, '');
+
+/**
+ * The key the book's alphabetical indexes sort by: word by word, so a
+ * shorter word sorts before a longer one it begins (`nothing before
+ * something`); `St.` read as `Saint`; a parenthesised qualifier left out;
+ * an apostrophe joins its word (`--measure` breaks fewer pairs so than with
+ * it ending one). Words are letters; anything else ends a word.
+ */
+export const sortKey = (s: string): string =>
+  s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/['’]/g, '')
+    .replace(/(^|[^a-z])st\.?(?=\s)/g, '$1saint')
+    .split(/[^a-z]+/)
+    .filter((w) => w.length > 0)
+    .join(' ');
 
 /**
  * The order rules C4 holds. A rule that more than 2% of an index's
@@ -483,7 +519,7 @@ const alphabetical = (
     rule,
     index,
     rows,
-    (a, b) => fold(a.name) > fold(b.name),
+    (a, b) => sortKey(a.name) > sortKey(b.name),
     (a, b) => `${a.name} > ${b.name}`,
   );
 
@@ -542,7 +578,7 @@ const topicalOrder = (topical: Topical, ctx: Context): Array<Pair> => {
       'topical: hymns by compiled title within a topic',
       'topical',
       rows,
-      (a, b) => fold(a.title) > fold(b.title),
+      (a, b) => sortKey(a.title) > sortKey(b.title),
       (a, b) => `${a.n} > ${b.n}`,
     );
   });
@@ -761,12 +797,21 @@ const sectionProblems = (topical: Topical, ctx: Context): Array<Problem> => {
   return out;
 };
 
+/**
+ * A tune's name for matching across the two tune indexes: its sort key
+ * (a `(qualifier)` left out, `St.` as `Saint`) with a leading or trailing
+ * `The` left out, since one index prints `Ash Grove` where the other prints
+ * `The Ash Grove`.
+ */
+export const tuneKey = (name: string): string =>
+  sortKey(name).replace(/^the /, '').replace(/ the$/, '').replace(/ /g, '');
+
 const tunePairs = (
   rows: ReadonlyArray<{
     readonly name: string;
     readonly hymns: ReadonlyArray<{ readonly number: number }>;
   }>,
-) => new Set(rows.flatMap((t) => t.hymns.map((h) => `${fold(t.name)} ${h.number}`)));
+) => new Set(rows.flatMap((t) => t.hymns.map((h) => `${tuneKey(t.name)} ${h.number}`)));
 
 /** Each tune-and-hymn pair of `rows` with its item, in file order. */
 const tuneRows = (
@@ -783,20 +828,31 @@ const tuneRows = (
       name: t.name,
       alias: t.alias === true,
       number: h.number,
-      key: `${fold(t.name)} ${h.number}`,
+      key: `${tuneKey(t.name)} ${h.number}`,
       ...pick(items[i++] ?? NOWHERE),
     })),
   );
 };
 
-/** C7: a main tune's pair is under its metre (an alias's hymn under any), and each metre's pair is in the alphabetical index. */
+/**
+ * C7: a main tune's pair is under its metre, by its name or an alias at the
+ * same hymn (an alias's hymn under any), and each metre's pair is in the
+ * alphabetical index, by a main name or an alias; names match by `tuneKey`.
+ */
 const tuneProblems = (tunes: Tunes, metrical: Metrical): Array<Problem> => {
   const listed = tunePairs(tunes.tunes);
   const metreTunes = metrical.metres.flatMap((m) => m.tunes);
   const metre = tunePairs(metreTunes);
   const metreHymns = new Set(metreTunes.flatMap((t) => t.hymns.map((h) => h.number)));
+  const aliased = tunePairs(tunes.tunes.filter((t) => t.alias === true));
+  /** The metre names the tune at the pair's hymn by one of its names: this one or an alias at that hymn. */
+  const metred = (r: { readonly key: string; readonly number: number }) =>
+    metre.has(r.key) ||
+    metreTunes.some((t) =>
+      t.hymns.some((h) => h.number === r.number && aliased.has(`${tuneKey(t.name)} ${r.number}`)),
+    );
   const unmetred = tuneRows(tunes.tunes, itemsOf({ tunes }, 'tunes'))
-    .filter((r) => !metre.has(r.key) && !(r.alias && metreHymns.has(r.number)))
+    .filter((r) => !metred(r) && !(r.alias && metreHymns.has(r.number)))
     .map((r): Problem => ({
       index: 'tunes',
       page: r.page,
