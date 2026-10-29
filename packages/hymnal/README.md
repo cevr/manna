@@ -617,3 +617,107 @@ corpus binding or word cuts, with the reason and regenerate command above.
 A dedicated
 single-voice track is retained, including legato; an earlier polyphonic
 accompaniment uses the keyboard soprano. Both compilers use that selection.
+
+## The back-matter indexes
+
+The book's pages 776-824 print eleven indexes. Each index is one file under
+`data/indexes/`, and its schema is in `src/indexes.ts`. The facts are hymn
+and reading numbers, stanza letters, topic and section names, tune and metre
+names, people's names and Scripture references. No file holds hymn text: a
+hymn's number is the fact. The eleven files hold 9,221 entries.
+
+Every file has the same header: `version`, `book` (always `sdah-1985`),
+`index` (the file's name), `title` (the heading as the page prints it),
+`note` (the printed legend, where the page prints one) and `pages` (each
+printed page with `page` and `entries`, the count of the entries that name
+it). Every entry names its `page`. A hymn or reading reference is a `number`
+and its `page`. A `passage` is a `book` (1-66, in canonical order) with a
+`chapter` and its `verses` (each a `from` and a `to` verse; no pieces is the
+whole chapter), or a `book` with a `from` and a `to` place (`chapter`,
+`verse`) when it runs across chapters. A hymn number is 1-695; a Scripture
+reading's number is 696-920.
+
+| File                                   | Printed heading                            | Pages   | Entries | Rulings | Fields                                                                                                                                                                                       |
+| -------------------------------------- | ------------------------------------------ | ------- | ------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data/indexes/topical.json`            | TOPICAL INDEX OF HYMNS AND READINGS        | 776-788 | 1,180   | 9       | `topics`: `name`; `parent`, the heading a subtopic is printed under; `see`, each cross-reference as printed; `hymns`, the roman entries; `readings`, the italic entries (Scripture readings) |
+| `data/indexes/worship-aids.json`       | SCRIPTURAL INDEX OF WORSHIP AIDS           | 789-791 | 333     | 3       | `entries`: `passage`, `reading`, `page`                                                                                                                                                      |
+| `data/indexes/scriptural.json`         | SCRIPTURAL ALLUSIONS IN HYMNS              | 791-799 | 2,285   | 159     | `entries`, one for each hymn a reference lists: `passage`, `hymn`, `stanza`, `page`                                                                                                          |
+| `data/indexes/scriptural-by-hymn.json` | Indexed by Hymn Number                     | 799-807 | 2,305   | 56      | `entries`, one for each reference a hymn lists: `hymn`, `stanza`, `passage`, `page`; `see`, a hymn that prints See N in place of a reference: `hymn`, `see`, `page`                          |
+| `data/indexes/sentences.json`          | HYMNS SUITABLE FOR SENTENCES AND RESPONSES | 807-808 | 105     | 3       | `groups`: `name`; `hymns`, each `number`, `stanzas` (the letters printed; none is the whole hymn) and `page`                                                                                 |
+| `data/indexes/canons.json`             | CANONS (OR ROUNDS)                         | 808     | 12      | 0       | `groups`: `name`, `hymns`                                                                                                                                                                    |
+| `data/indexes/young.json`              | HYMNS SUITABLE FOR YOUNG WORSHIPERS        | 809-810 | 146     | 0       | `hymns`: `number`; `starred`, the page marks the hymn with an asterisk (suggested for young children); `page`                                                                                |
+| `data/indexes/authors.json`            | AUTHORS, TRANSLATORS, AND SOURCES OF TEXTS | 810-813 | 791     | 3       | `people`: `name`; `source`, the name is printed in italics (a book or a tradition, not a person); `see`, the name a cross-reference points to; `hymns`                                       |
+| `data/indexes/composers.json`          | COMPOSERS, ARRANGERS, AND SOURCES OF TUNES | 813-816 | 813     | 4       | `people`, as in the authors                                                                                                                                                                  |
+| `data/indexes/tunes.json`              | ALPHABETICAL INDEX OF TUNES                | 816-818 | 564     | 44      | `tunes`: `name`; `alias`, an indented name (another name of the tune at that number); `hymns`                                                                                                |
+| `data/indexes/metrical.json`           | METRICAL INDEX OF TUNES                    | 819-824 | 687     | 86      | `metres`: `metre`, the heading; `gloss`, its printed gloss; `tunes`, each `name` and `hymns`                                                                                                 |
+
+The two Scripture indexes are one printed index, SCRIPTURAL ALLUSIONS IN
+HYMNS, in two directions: by reference, then by hymn number. A stanza letter
+follows a hymn number. The book prints the legend so: "The letter a
+following a hymn number indicates stanza 1; the letter b indicates stanza 2,
+et cetera; r indicates refrain." An entry with no letter is the whole hymn.
+
+### The checks
+
+`bun run indexes` runs `scripts/indexes.ts` `checkIndexes` over the
+committed files. Each check needs no reader:
+
+- C1 `decode`: each file decodes through its schema, and an excess key is refused.
+- C2 `range`: a hymn number is 1-695, and a reading's number is 696-920.
+- C3 `scripture`: each book, chapter and verse is one the KJV has, and `from` is not after `to`.
+- C4 `order`: the entries keep the printed order, by each rule of `scripts/indexes.ts` `ORDER_RULES`.
+- C5 `stanza`: a stanza letter names a stanza of the compiled hymn, or its refrain.
+- C6 `sections`: the topic of each printed section lists every hymn of the section.
+- C7 `tunes`: the alphabetical and the metrical index name the same tune at each hymn (`scripts/indexes.ts` `titledTune` allows a tune that bears its hymn's title).
+- C8 `metre`: a hymn's metre heading is the metre its page prints in `data/shapes.json`, after `scripts/indexes.ts` `normalMetre`.
+- C9 `coverage`: every hymn is in the tunes, the metres and a topic.
+- C10 `pages`: each index's pages run with no gap, each page's count is the count of entries that name it, and a page in two indexes ends one and begins the next.
+- C11 `rulings`: every ruling settles a failure the checks print now, and with `--judges` names a judge record that exists.
+- C12 `directions`: each allusion of the index by reference has a twin in the index by hymn number, with the same hymn and book, an agreeing stanza and an overlapping passage. The book leaves out about one in twenty of the by-hymn passages from the by-reference side, so the other direction is not checked.
+
+No check can see two readings that agree on the same misread. The checks
+also cannot see a printed ruling's fact: each ruling rests on the strip of
+the page its judge read.
+
+### Printed rulings
+
+The book itself breaks some rules: a stanza letter the hymn does not have,
+an allusion with no twin, a tune named two ways. `data/indexes/rulings.json`
+holds each such failure as the page prints it. A ruling has `index`, `page`,
+`at` (the entry's place among the entries that name its page, `#3`, or a
+topic, section or hymn), `check`, `value`, `judge` (the fix task whose
+record ruled it) and `why`. A failure a ruling settles is counted as
+`ruled`, not as a problem. The file holds 367 rulings: scriptural 159,
+metrical 86, scriptural-by-hymn 56, tunes 44, topical 9, composers 4,
+worship-aids 3, sentences 3 and authors 3. The canons and the young
+worshipers' index have none.
+
+A fact gets into the files this way:
+
+1. Two readers read each page blind, from the owner's photos cut into
+   strips: an Opus reader and a local vision model, or two Opus readers on
+   the 19 pages where the vision model's reading scored under 90 percent.
+2. A reconcile aligns the two readings line by line and lists each
+   difference.
+3. A judge rules each difference on the page's strips: one side, a new
+   value, printed as read, or unreadable (a line for the owner to retake).
+4. The checks run over the settled files.
+5. A fix judge reads each failure on its strip: a misread becomes an
+   override of the line, and a fact the book prints so becomes a printed
+   ruling. The same fact at its other place (the second side, such as the
+   other direction of the Scripture index) is read too, and a third look
+   settles the cases where the two sides disagree. A line still unreadable
+   is read on the owner's retake of its page.
+6. The checks run again, until no problem is open.
+
+### Commands
+
+```bash
+bun run indexes                  # every file and every check: one line per index, then the total
+bun run indexes --measure        # also each order rule's broken pairs (how C4 was measured)
+bun run indexes --reach          # also how many look-alike digit misreadings the checks catch, per index
+```
+
+`bun run indexes` prints `indexes <index> pages=<first>-<last>
+entries=<n> ruled=<r> problems=<p>` for each index, then `indexes files=11
+entries=9221 problems=0`, and exits 1 when a problem is open.
