@@ -22,7 +22,9 @@ The field also finds hymns by the hymnal's back-matter indexes: a Bible
 reference (`John 3:16`, `Ps 23`, `Psalm 23:1`: any book name or
 abbreviation of the canon) lists first the hymns the Scriptural index
 gives that verse, then the rest of that chapter's by verse distance, then
-the word results; a topic's name lists the hymns whose title holds its
+the word results; a chapter alone (`Psalm 23`) ranks as its verse 1
+does, so a hymn on verse 1 leads one that takes the whole chapter (known,
+accepted for now); a topic's name lists the hymns whose title holds its
 words, then the hymns the Topical index lists under it, then the word
 results. `About this hymn` opens
 search with a topic's name or where a passage begins (`about.md`).
