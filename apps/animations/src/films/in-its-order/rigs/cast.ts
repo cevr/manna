@@ -24,6 +24,8 @@ import {
 } from '@manna/film/style';
 import { PUPPETS as LEAD_PUPPETS } from '../../../library/cast/lead-feast/cutout/puppets.ts';
 import { PUPPETS as SOWER_PUPPETS } from '../../../library/cast/sower/cutout/puppets.ts';
+import { PUPPETS as CHILD_PUPPETS } from '../../../library/cast/villager-child/cutout/puppets.ts';
+import { PUPPETS as TODDLER_PUPPETS } from '../../../library/cast/villager-toddler/cutout/puppets.ts';
 import { own } from '../../../library/cutout/poses.ts';
 import { RAISE as LEAD_RAISE } from '../../../library/cast/lead-feast/cutout/raise.ts';
 import { poses1View as leadPoses1 } from '../../../library/cast/lead-feast/cutout/poses.ts';
@@ -97,6 +99,46 @@ const SOWER_CLASSES = {
 } as const;
 
 /**
+ * The villagers' colour classes, read off their kept poses sheet (the child's
+ * poses-5, the toddler's poses-1 and poses-2; x,y in the view's crop): their
+ * linen tunic and its warm shade (child 156,281 199,140 120,290 104,326
+ * 87,202; toddler poses-1 177,196 156,146 145,128 105,138 87,178, poses-2
+ * 80,194 117,154 60,221 65,146), their skin (child 59,271 97,52 95,91 70,95
+ * 124,117; toddler poses-1 227,115 104,53 35,52, poses-2 126,44 86,43 46,82),
+ * the lavender of their ground shadow (child 112,386 109,387 119,385 189,384
+ * 195,385; toddler poses-2 101,241 80,240 68,239 160,230) and their sandals'
+ * lit leather (child 133,370 131,369 143,354; toddler poses-1 216,233 215,233
+ * 214,267, poses-2 30,203 132,207 41,209). Their hair (#341c15, #312218) is
+ * darker than luma 90, so it reads as their line and is no class. The
+ * shadow's pale feathered edge is not a sample: the cool white halo round
+ * their outline (#d9d1c5 to #f2f0f1, which the un-matte clears) lies nearer
+ * it than the linen, so with it the kept crop read that halo as shadow
+ * (measured: 58 px on the toddler's poses-1, which has no ground shadow).
+ */
+const CHILD_CLASSES = {
+  linen: ['#cdaca4', '#d2b4aa', '#dbbca7', '#f0d2af', '#f4d7b1'],
+  skin: ['#ea976e', '#f9a873', '#faac77', '#fdae76', '#fdb37d'],
+  lavender: ['#b5a5cc', '#bcaacf', '#bcadd4', '#c7b2ca'],
+  sandal: ['#8f4c2e', '#935131', '#c2714c'],
+} as const;
+const TODDLER_CLASSES = {
+  linen: [
+    '#cca9a8',
+    '#d5b6b3',
+    '#e8c9b5',
+    '#f0d1ae',
+    '#f7dab8',
+    '#c29e90',
+    '#cfada5',
+    '#eed1ab',
+    '#f0d3b0',
+  ],
+  skin: ['#e79066', '#fcae7a', '#fdb37a', '#e9956f', '#fcaf78', '#fdb67d'],
+  lavender: ['#ae99c9', '#bba7cd', '#beacd2'],
+  sandal: ['#b36243', '#b56646', '#b36a49', '#965225', '#a5562b', '#a86942'],
+} as const;
+
+/**
  * Each member's colour classes for his fit rows (`film concept render`): a
  * class's samples on his kept sheets, and the papers and tones that paint it
  * on his rigs. His hair and its brown read as his line (darker than luma
@@ -148,6 +190,18 @@ export const FIT_CLASSES = {
     walnut: { sheet: SOWER_CLASSES.walnut, paper: SOWER_CLASSES.walnut },
     skin: { sheet: SOWER_CLASSES.skin, paper: SOWER_CLASSES.skin },
   },
+  'villager-child': {
+    linen: { sheet: CHILD_CLASSES.linen, paper: CHILD_CLASSES.linen },
+    skin: { sheet: CHILD_CLASSES.skin, paper: CHILD_CLASSES.skin },
+    lavender: { sheet: CHILD_CLASSES.lavender, paper: CHILD_CLASSES.lavender },
+    sandal: { sheet: CHILD_CLASSES.sandal, paper: CHILD_CLASSES.sandal },
+  },
+  'villager-toddler': {
+    linen: { sheet: TODDLER_CLASSES.linen, paper: TODDLER_CLASSES.linen },
+    skin: { sheet: TODDLER_CLASSES.skin, paper: TODDLER_CLASSES.skin },
+    lavender: { sheet: TODDLER_CLASSES.lavender, paper: TODDLER_CLASSES.lavender },
+    sandal: { sheet: TODDLER_CLASSES.sandal, paper: TODDLER_CLASSES.sandal },
+  },
 } as const;
 
 /** Every kept sheet is drawn 1536 by 1024. */
@@ -161,6 +215,9 @@ const SOWER_TURNAROUND = 549 / 440;
 
 /** The sower on his poses: poses-4, his front standing, crown to soles 586 rows, 440 units. */
 const SOWER_POSES = 586 / 440;
+
+/** The villagers on their one poses sheet: its view 6, the grown villager standing at rest, ink crown to soles 516 rows (250 to 765), 440 units. */
+const VILLAGER_POSES = 516 / 440;
 
 /**
  * Each member's sheets: their size and one scale, sheet pixels a canon unit,
@@ -179,6 +236,12 @@ export const SHEETS = {
   sower: {
     turnaround: { ...SHEET, scale: SOWER_TURNAROUND },
     poses: { ...SHEET, scale: SOWER_POSES },
+  },
+  'villager-child': {
+    poses: { ...SHEET, scale: VILLAGER_POSES },
+  },
+  'villager-toddler': {
+    poses: { ...SHEET, scale: VILLAGER_POSES },
   },
 } as const;
 
@@ -733,6 +796,17 @@ export const CUTOUT = cutoutTable({
       'poses-2': own(undefined, SOWER_PUPPETS['poses-2']),
       'poses-3': own(undefined, SOWER_PUPPETS['poses-3']),
       'poses-4': own(undefined, SOWER_PUPPETS['poses-4']),
+    },
+  },
+  'villager-child': {
+    poses: {
+      'poses-5': own(undefined, CHILD_PUPPETS['poses-5']),
+    },
+  },
+  'villager-toddler': {
+    poses: {
+      'poses-1': own(undefined, TODDLER_PUPPETS['poses-1']),
+      'poses-2': own(undefined, TODDLER_PUPPETS['poses-2']),
     },
   },
 });
