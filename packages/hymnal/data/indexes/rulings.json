@@ -1,0 +1,3327 @@
+{
+  "version": 1,
+  "book": "sdah-1985",
+  "rulings": [
+    {
+      "index": "topical",
+      "page": 776,
+      "at": "topic CHILD DEDICATION",
+      "check": "order",
+      "value": "CHILDREN'S HYMNS > CHILD DEDICATION",
+      "judge": "F01",
+      "why": "f001 p776 (no strip): p776-c2-4100: the book prints the CHILDREN'S HYMNS heading with its see-line above the CHILD DEDICATION heading (146, 379), so the order is the book's own."
+    },
+    {
+      "index": "topical",
+      "page": 776,
+      "at": "topic ADORATION AND PRAISE 38",
+      "check": "order",
+      "value": "23 > 38",
+      "judge": "F01",
+      "why": "f002 p776 (no strip): p776-c1-0700: under ADORATION AND PRAISE the book prints 23 on the line before 38, so the order within the topic is the book's own. | twin t001 p776-c1-0700.7 (F14): Twin strip p776-c1-0700 line 7 prints 23 as read, and the first side's strip p776-c1-0700 (f002) prints the other value, so the book's two places disagree. | twin t002 p776-c1-0700.8 (F14): Twin strip p776-c1-0700 line 8 prints 38 as read, and the first side's strip p776-c1-0700 (f002) prints the other value, so the book's two places disagree."
+    },
+    {
+      "index": "topical",
+      "page": 776,
+      "at": "section Love of God",
+      "check": "sections",
+      "value": "Love of God",
+      "judge": "F23",
+      "why": "f003 p776 (no strip) (third look F23): The p776 strips p776-c1-0700 to p776-c2-4100 and the page copy print no topic heading or see-line named Love of God, and the see-lines on p776-c2-3250 name Love for One Another and Love in the Home, so the book prints no such heading. | first side (F01): p776-c1-0700 to p776-c1-4100 and p776-c2-0700 to p776-c2-4100: no topic heading or see-line on these strips names Love of God, so the book lists no such topic on this page."
+    },
+    {
+      "index": "topical",
+      "page": 776,
+      "at": "section Faithfulness of God",
+      "check": "sections",
+      "value": "Faithfulness of God",
+      "judge": "F01",
+      "why": "f004 p776 (no strip): p776-c1-0700 to p776-c1-4100 and p776-c2-0700 to p776-c2-4100: no topic heading or see-line on these strips names Faithfulness of God, so the book lists no such topic on this page."
+    },
+    {
+      "index": "topical",
+      "page": 777,
+      "at": "section Close of Worship",
+      "check": "sections",
+      "value": "66",
+      "judge": "F01",
+      "why": "f006 p777 (no strip): p777-c1-3370: under CLOSE OF WORSHIP the book prints 65, 64, 69, 67, 68 and no 66, so hymn 66 is not under this topic in the book."
+    },
+    {
+      "index": "topical",
+      "page": 783,
+      "at": "section Second Advent",
+      "check": "sections",
+      "value": "221",
+      "judge": "F01",
+      "why": "f009 p783 (no strip): p783-c1-2000, p783-c2-0300 and p783-c2-1150: the Second Advent lists hold no 221 and no number one look-alike digit from it, so the book leaves hymn 221 out of that topic."
+    },
+    {
+      "index": "topical",
+      "page": 785,
+      "at": "topic NEW YEAR 342",
+      "check": "order",
+      "value": "23 > 342",
+      "judge": "F01",
+      "why": "f010 p785 (no strip): p785-c2-2730: under NEW YEAR the book prints 23, 342, 23, 105, 760 in that order, so 23 before 342 is the book's own order. | twin t003 p785-c2-2730.5 (F14): Twin strip p785-c2-2730 line 5 prints 23 as read, and the first side's strip p785-c2-2730 (f010) prints the other value, so the book's two places disagree. | twin t004 p785-c2-2730.6 (F14): Twin strip p785-c2-2730 line 6 prints 342 as read, and the first side's strip p785-c2-2730 (f010) prints the other value, so the book's two places disagree. | twin t005 p785-c2-2730.7 (F14): Twin strip p785-c2-2730 line 7 prints 23 as read, and the first side's strip p785-c2-2730 (f010) prints the other value, so the book's two places disagree."
+    },
+    {
+      "index": "topical",
+      "page": 786,
+      "at": "section Pilgrimage",
+      "check": "sections",
+      "value": "631",
+      "judge": "F01",
+      "why": "f011 p786 (no strip): p786-c1-2940 (628 to 623) and p786-c2-0390 (444 to 818) under PILGRIMAGE hold no 631; the 621 has a clear 2 and the 630 a clear 0, so the book leaves 631 out."
+    },
+    {
+      "index": "topical",
+      "page": 787,
+      "at": "topic SALVATION AND REDEMPTION",
+      "check": "order",
+      "value": "SANCTUARY > SALVATION AND REDEMPTION",
+      "judge": "F01",
+      "why": "f012 p787 (no strip): p787-c1-1470: the book prints SANCTIFICATION, then SANCTUARY, then SALVATION AND REDEMPTION (334), so the topic order is the book's own."
+    },
+    {
+      "index": "topical",
+      "page": 787,
+      "at": "topic SENTENCES AND RESPONSES 671",
+      "check": "order",
+      "value": "663 > 671",
+      "judge": "F01",
+      "why": "f013 p787 (no strip): p787-c2-1470: under SENTENCES AND RESPONSES the book prints 665, 693, 663, 671 in that order, and the last digit of 663 is a 3 unlike the 5 of 665. | twin t006 p787-c2-1470.4 (F14): Twin strip p787-c2-1470 line 4 prints 663 as read, and the first side's strip p787-c2-1470 (f013) prints the other value, so the book's two places disagree. | twin t007 p787-c2-1470.5 (F14): Twin strip p787-c2-1470 line 5 prints 671 as read, and the first side's strip p787-c2-1470 (f013) prints the other value, so the book's two places disagree."
+    },
+    {
+      "index": "topical",
+      "page": 788,
+      "at": "topic THANKFULNESS",
+      "check": "order",
+      "value": "TITHE > THANKFULNESS",
+      "judge": "F01",
+      "why": "f014 p788 (no strip): p788-c1-2190: the book prints TITHE (see Stewardship) above THANKFULNESS (556, 562), so the topic order is the book's own."
+    },
+    {
+      "index": "worship-aids",
+      "page": 789,
+      "at": "#56",
+      "check": "order",
+      "value": "Psalms 65:1-4 853 > Psalms 65 803",
+      "judge": "F23",
+      "why": "f015 p789-c2-0340.13 (third look F23): p789-c2-0340 line 12 prints 65:1-4 853 and line 13 prints the bare key 65 with 803, its 3s flat-topped like the 3 in 883 on the same strip. | first side (F01): p789-c2-0340 lines 12 and 13: the book prints 65:1-4 853 and then the bare chapter 65 803, so the chapter-only entry after 65:1-4 is the book's own order. | twin t008 p789-c2-0340.12 (F14): Twin strip p789-c2-0340 line 12 prints key 65:1-4 with 853 as read, and the first side's strip p789-c2-0340 line 13 (f015) prints key 65 with 803, so the book's two places disagree."
+    },
+    {
+      "index": "worship-aids",
+      "page": 789,
+      "at": "#109",
+      "check": "order",
+      "value": "Proverbs 8:9 899 > Proverbs 3:13-18 794",
+      "judge": "F01",
+      "why": "f016 p789-c3-0340.9: p789-c3-0340 line 9: under PROVERBS, between 3:1-6 828 and 3:13-18 794, the first glyph of 8:9 899 has closed upper and lower left loops like the 8 of 18 on the next line, unlike the open-left 3s, so the book prints 8:9 there. | twin t009 p789-c3-0340.8 (F14): Twin strip p789-c3-0340 line 8 prints 8:9 with 899 (closed-loop 8, unlike the open 3s on lines 7 and 9), and the first side's strip p789-c3-0340 (f016) prints the other value, so the book's two places disagree."
+    },
+    {
+      "index": "worship-aids",
+      "page": 791,
+      "at": "#17",
+      "check": "range",
+      "value": "922",
+      "judge": "F21",
+      "why": "f017 p791-c2-0500.12 (third look F21): p791-c2-0500 line 12 prints JUDE 24, 25 with 922, whose first digit is a clear 9 unlike the 8 of 824 on line 11. | first side (F01): p791-c2-0500 line 12: JUDE 24, 25 922, the first digit has the open lower left of a 9, unlike the 8 of 824 above, so the book prints 922."
+    },
+    {
+      "index": "scriptural",
+      "page": 791,
+      "at": "#4",
+      "check": "directions",
+      "value": "Genesis 1:1-3 382b",
+      "judge": "F21",
+      "why": "f018 p791-c4-1420.7 (third look F21): p791-c4-1420 line 7 prints Gen 1:1-3 with 382b, whose middle digit has two closed loops like the 8s of 88a and 88b, and the alt strip p791-alt-IMG_1212-1250 agrees. | first side (F01): p791-c4-1420 line 7: under 1:1-3 the book prints 47a, 85c, 87a, 382b, and 382b is clear."
+    },
+    {
+      "index": "scriptural",
+      "page": 791,
+      "at": "#10",
+      "check": "directions",
+      "value": "Genesis 1:27 97a",
+      "judge": "F21",
+      "why": "f019 p791-c4-1420.13 (third look F21): p791-c4-1420 line 13 prints 1:27 with 97a and the alt strip p791-alt-IMG_1212-1250 agrees, while the twin strip p800-c2-1810 line 15 prints 97c for Gen 1:27, so the book's two places differ. | first side (F01): p791-c4-1420 line 13: 1:27 97a, the stanza letter is a clear a. | twin t042 p800-c2-1810.15 (F15): Twin strip p800-c2-1810 line 15 prints 97c under Gen 1:27, while the first side's strip p791-c4-1420 line 13 gives 97a, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 791,
+      "at": "#30",
+      "check": "directions",
+      "value": "Genesis 28:10-18 627a",
+      "judge": "F21",
+      "why": "f020 p791-c4-2270.15 (third look F21): p791-c4-2270 line 15 prints 627a under 28:10-18 with a clear 7 and the alt strip 2100 agrees, while the twin strip p806-c4-2210 line 11 shows 628a for Gen 28:12, so the two places differ. | first side (F01): p791-c4-2270 line 15: under 28:10-18 the book prints 473, 627a, 628a, 629c, 688a, and 627 is clear; the alt strip p791-alt-IMG_1212-2100 shows the same. | twin t114 p806-c4-2210.11 (F17): The book's two places disagree, as twin p806-c4-2210 line 11 clearly prints 628 a with Gen 28:12 while first side p791-c4-2270 line 15 lists 627a under 28:10-18 and 627 a on the twin page is Ex 28:12."
+    },
+    {
+      "index": "scriptural",
+      "page": 791,
+      "at": "#32",
+      "check": "directions",
+      "value": "Genesis 28:10-18 629c",
+      "judge": "F21",
+      "why": "f021 p791-c4-2270.17 (third look F21): p791-c4-2270 line 17 prints 629c with a lowercase c that has no ascender and the alt strip 2100 agrees, while the twin strip p806-c4-3060 line 1 has 629d, so the two places differ. | first side (F01): p791-c4-2270 line 17: 629c, the stanza letter is a clear c; the alt strip p791-alt-IMG_1212-2100 shows the same. | twin t115 p806-c4-3060.1 (F17): The book's two places disagree, as twin p806-c4-3060 line 1 prints Gen 28:12 under 629 d while first side p791-c4-2270 line 17 clearly prints 629c."
+    },
+    {
+      "index": "scriptural",
+      "page": 791,
+      "at": "#36",
+      "check": "order",
+      "value": "Exodus 3:8 429 > Exodus 3:8 11",
+      "judge": "F21",
+      "why": "f022 p791-c4-2270.22 (third look F21): p791-c4-2270 line 22 prints 11a after 429a on line 21 of the same strip (the twin p791-c4-2270 line 21), and the alt strip 2950 agrees. | first side (F01): p791-c4-2270 line 22: under EXODUS 3:8 the book prints 429a and then 11a, both clear. | twin t010 p791-c4-2270.21 (F14): Twin strip p791-c4-2270 line 21 prints 3:8 with 429a as read, and the first side's strip p791-c4-2270 line 22 (f022) prints 11a, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 791,
+      "at": "#36",
+      "check": "directions",
+      "value": "Exodus 3:8 11a",
+      "judge": "F21",
+      "why": "f023 p791-c4-2270.22 (third look F21): p791-c4-2270 line 22 prints Exodus 3:8 with 11a, the key's last digit has two closed loops of an 8, and the alt strip 2950 agrees. | first side (F01): p791-c4-2270 line 22: under EXODUS 3:8 the book prints 429a and then 11a, both clear."
+    },
+    {
+      "index": "scriptural",
+      "page": 791,
+      "at": "#49",
+      "check": "order",
+      "value": "Exodus 20:8-11 392 > Exodus 20:8-11 388",
+      "judge": "F21",
+      "why": "f024 p791-c5-1420.9 (third look F21): p791-c5-1420 line 9 prints 388a after 392b on the twin line p791-c5-1420 line 8, with the same digit shapes as 388b on line 2. | first side (F01): p791-c5-1420 line 9: under 20:8-11 the book prints 381a, 392b, 388a, 393a, so 388a after 392b is the book's own order. | twin t011 p791-c5-1420.8 (F14): Twin strip p791-c5-1420 line 8 prints 392b as read, and the first side's strip p791-c5-1420 line 9 (f024) prints the other value, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 791,
+      "at": "#54",
+      "check": "scripture",
+      "value": "Exodus 32:49",
+      "judge": "F21",
+      "why": "f025 p791-c5-1420.14 (third look F21): p791-c5-1420 line 14 prints 32:49 with 673a between 32:29 572b and 33:20 78c, and its 4 matches the 4 of 34:29. | first side (F01): p791-c5-1420 line 14: between 32:29 572b and 33:20 78c the book prints 32:49 673a, both digits of 49 sharp, so the reference is the book's own."
+    },
+    {
+      "index": "scriptural",
+      "page": 791,
+      "at": "#54",
+      "check": "directions",
+      "value": "Exodus 32:49 673a",
+      "judge": "F21",
+      "why": "f026 p791-c5-1420.14 (third look F21): p791-c5-1420 line 14 prints 32:49 with 673a between 32:29 572b and 33:20 78c, and its digits match the clear 4, 7 and 3 elsewhere on the strip. | first side (F01): p791-c5-1420 line 14: the book prints 32:49 673a between 32:29 572b and 33:20 78c, read right."
+    },
+    {
+      "index": "scriptural",
+      "page": 791,
+      "at": "#60",
+      "check": "directions",
+      "value": "Leviticus 23:10 556a",
+      "judge": "F21",
+      "why": "f027 p791-c5-2270.2 (third look F21): p791-c5-2270 line 2 prints 23:10 with 556a, the 3 round-topped like 23:32 and unlike the flat 5 of 25:10, while the twin strip p805-c4-2925 line 9 lists 556a under Lev 25:10, so the two places differ. | first side (F01): p791-c5-2270 line 2: under LEVITICUS, above 23:32 381c, the book prints 23:10 556a, every digit clear. | twin t106 p805-c4-2925.9 (F17): The book's two places disagree as read, as twin p805-c4-2925 line 9 prints 556 a with Lev 25:10 while first side p791-c5-2270 line 2 clearly prints 23:10 556a."
+    },
+    {
+      "index": "scriptural",
+      "page": 791,
+      "at": "#68",
+      "check": "directions",
+      "value": "Numbers 10:2, 3 382c",
+      "judge": "F21",
+      "why": "f028 p791-c5-2270.11 (third look F21): p791-c5-2270 line 11 prints NUMBERS 10:2, 3 with 382c, whose middle digit is a doubled 8 like the 8 of 18:29. | first side (F01): p791-c5-2270 line 11: under NUMBERS the book prints 10:2, 3 with 382c, and 382c is clear."
+    },
+    {
+      "index": "scriptural",
+      "page": 791,
+      "at": "#89",
+      "check": "directions",
+      "value": "1 Samuel 7:12 334b",
+      "judge": "F21",
+      "why": "f029 p791-c6-1420.12 (third look F21): p791-c6-1420 line 12 prints 7:12 with 334b, the letter having an ascender like 645b below, while the twin strip p803-c2-1225 line 9 lists 1 Sam 7:12 under 334a, so the two places differ. | first side (F01): p791-c6-1420 line 12: 7:12 334b, both 3s have the flat top of a 3 and the stanza letter is a clear b. | twin t076 p803-c2-1225.9 (F16): The book's two places disagree, as twin p803-c2-1225 line 9 prints 1 Sam 7:12 under 334 a (hymn 334 has no b line) while first side p791-c6-1420 line 12 clearly prints 7:12 334b."
+    },
+    {
+      "index": "scriptural",
+      "page": 791,
+      "at": "#106",
+      "check": "directions",
+      "value": "2 Chronicles 29:31 508b",
+      "judge": "F21",
+      "why": "f031 p791-c6-2270.16 (third look F21): p791-c6-2270 line 16 prints 2 CHRONICLES 29:31 with 508b, whose third digit has two stacked loops like the 8 of 108a and 538b, not the open top of the 6s of 665a. | first side (F01): p791-c6-2270 line 16: 2 CHRONICLES 29:31, the third digit of 508b has a closed top loop, an 8, not the open top of a 6, so 508b as side a reads."
+    },
+    {
+      "index": "scriptural",
+      "page": 791,
+      "at": "#142",
+      "check": "directions",
+      "value": "Psalms 19:3 96b",
+      "judge": "F21",
+      "why": "f035 p791-c7-2270.13 (third look F21): p791-c7-2270 line 13 prints 19:3 with 96b between 96a and 28b, the letter having an ascender like the b of 28b and unlike the c of 327c, while the twin strip p800-c2-1810 line 12 prints 96c for Ps 19:3, so the two places differ. | first side (F01): p791-c7-2270 line 13: 19:3 96b, between 96a and 28b, the stanza letter is a clear b. | twin t041 p800-c2-1810.12 (F15): Twin strip p800-c2-1810 line 12 prints 96c under Ps 19:3, while the first side's strip p791-c7-2270 line 13 gives 96b, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#28",
+      "check": "directions",
+      "value": "Psalms 25:3 666a",
+      "judge": "F20",
+      "why": "f043 p792-c1-1370.3 (third look F20): p792-c1-1370 line 3 prints 666a under 25:3 above the 25:5 482a line, and twin p807-c3-0359 line 17 prints 666 a with this passage, so the settled 666a stands. | first side (F02): p792-c1-1370 line 3: under 25:3 the third digit has the flat top bar of a 5, unlike a 6, so 665a. | twin t120 p807-c3-0359.17 (F17): The book's two places disagree as read, as twin p807-c3-0359 line 17 prints 25:5 under 666 a while first side p792-c1-1370 line 3 reads 25:3 666a just above its own 25:5 line with 482a. | recheck F25 k028: p792r-c1 rows 626-654 (line 28): sharp print shows 666a beside 25:3"
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#45",
+      "check": "directions",
+      "value": "Psalms 29:11 84a",
+      "judge": "F22",
+      "why": "f049 p792-c1-1370.20 (third look F22): p792-c1-1370 line 20: 84a, the first digit has two closed loops, unlike the open-top 6 of 6d on line 21. | first side (F02): p792-c1-1370 line 20: 29:11 84a, both digits and the letter clear. | recheck F26 k045: p792r-c1 rows 977-1004 (line 45): sharp print shows 84a beside 29:11"
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#47",
+      "check": "stanza",
+      "value": "37d",
+      "judge": "F22",
+      "why": "f050 p792-c1-1370.22 (third look F22): p792-c1-1370 line 22: 37d, the letter has a right ascender like the d of 6d on line 21. | first side (F02): p792-c1-1370 line 22: under 30:5 the letter of 37d has the tall ascender of the d of 6d on line 21, so 37d. | recheck F26 k047: p792r-c1 rows 1017-1045 (line 47, after 30:5 6d): the stanza letter is a sharp d with a tall ascender, the same as the d of 6d above, so 37d"
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#47",
+      "check": "directions",
+      "value": "Psalms 30:5 37d",
+      "judge": "F22",
+      "why": "f051 p792-c1-1370.22 (third look F22): p792-c1-1370 line 22 prints 37d with a right ascender like 6d on line 21; the book's two places disagree, as the twin p799-c7-2490 line 3 lists Psalms 30:5 under hymn 37b. | first side (F02): p792-c1-1370 line 22: under 30:5 the letter of 37d has the tall ascender of the d of 6d on line 21, so 37d. | twin t031 p799-c7-2490.3 (F14): Twin strip p799-c7-2490 line 3 prints 30:5 under hymn 37 letter b as read, and the first side's strip p792-c1-1370 line 22 (f051) prints 30:5 with 37d, so the book's two places disagree. | recheck F26 k047: p792r-c1 rows 1017-1045 (line 47, after 30:5 6d): the stanza letter is a sharp d with a tall ascender, the same as the d of 6d above, so 37d"
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#82",
+      "check": "scripture",
+      "value": "Psalms 45:26",
+      "judge": "F22",
+      "why": "f057 p792-c2-0520.8 (third look F22): p792-c2-0520 line 8: 240b, the first digit is a 2 like the 2 of 42:5 on line 3. | first side (F02): p792-c2-0520 line 8: the key 45:26 is clear on every digit, and 240b is clear, so the book prints 45:26 240b. | recheck F27 k082: p792r-c2 rows 166-195 (line 7 of the column): the key prints 45:26 with no hyphen, both verse digits sharp, and the number 240b, so the settled line is what the book prints"
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#90",
+      "check": "scripture",
+      "value": "Psalms 46:16",
+      "judge": "F22",
+      "why": "f059 p792-c2-0520.16 (third look F22): p792-c2-0520 line 16: 109b, the key 46:16 ends in an open-top 6 like 46:10 above and sits between 46:10 and 48:14. | first side (F02): p792-c2-0520 line 16: the key's second digit is doubled but has the hooked open top of the 6 at the end of 16 on the same line and of 46:2 on line 13, unlike the 8 of 48:14 on line 17, so the book prints 46:16 with 109b. | recheck F27 k090: p792r-c2 rows 335-364 (line 15 of the column): the chapter reads 46, its second digit open at the top like the 6 of 46:10 above and unlike the closed 8 of 48:14 below; the verse is 16 and the number 109b, all sharp"
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#111",
+      "check": "directions",
+      "value": "Psalms 53:1 53a",
+      "judge": "F22",
+      "why": "f066 p792-c2-1370.10 (third look F22): p792-c2-1370 line 10: the key sits between 52:9 on line 8 and 55:6 on line 11, and its second digit has the notched flat top of the 3 of 53a; the book's two places disagree, as the twin p799-c8-1640 line 15 prints 59:1. | first side (F02): p792-c2-1370 line 10: the key 53:1 and the number 53a are clear on every digit, so the book prints 53:1 53a. | twin t033 p799-c8-1640.15 (F14): Twin strip p799-c8-1640 line 15 prints hymn 53 letter a Ps 59:1 (closed-loop 9, unlike the open 3 in 53), and the first side's strip p792-c2-1370 line 10 (f066) prints 53:1 with 53a, so the book's two places disagree. | recheck F27 k111: p792r-c2 rows 775-802 (line 36 of the column): the key 53:1 and the number 53a are sharp, every digit and the letter clear"
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#120",
+      "check": "stanza",
+      "value": "621d",
+      "judge": "F22",
+      "why": "f072 p792-c2-1370.19 (third look F22): p792-c2-1370 line 19: 621d is clear, the letter has its bowl on the left and its ascender on the right. | first side (F03): p792-c2-1370 line 19 (60:4): zoomed, the number is 621 and the letter is a clear d with its ascender, so the book prints 621d. | recheck F28 k120: p792r-c2 (flagged): the key 60:4 and the number 621d are sharp; the stanza letter is a d with its tall stem, like the d of 524d and 569d in the column"
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#120",
+      "check": "directions",
+      "value": "Psalms 60:4 621d",
+      "judge": "F22",
+      "why": "f073 p792-c2-1370.19 (third look F22): p792-c2-1370 line 19 prints 621d with a clear right ascender; the book's two places disagree, as the twin p806-c4-1360 line 6 prints 621b. | first side (F03): p792-c2-1370 line 19 (60:4): zoomed, 621 is followed by a d with a tall ascender, not a or c, so the line is read right as 621d. | twin t111 p806-c4-1360.6 (F17): The book's two places disagree, as twin p806-c4-1360 line 6 clearly prints 621 b with Ps 60:4 while first side p792-c2-1370 line 19 prints 60:4 621d. | recheck F28 k120: p792r-c2 (flagged): the key 60:4 and the number 621d are sharp; the stanza letter is a d with its tall stem, like the d of 524d and 569d in the column"
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#221",
+      "check": "stanza",
+      "value": "622c",
+      "judge": "F22",
+      "why": "f081 p792-c3-2220.19 (third look F22): p792-c3-2220 line 19: 622c, the letter is round with no ascender, unlike the tall b of 84b on line 20. | first side (F03): p792-c3-2220 line 19 (103:19): at 8x the number is 622 and the letter is an open c with no ascender, so the book prints 622c. | recheck F30 k221: p792r-c3 rows 1485-1513 (line 70 of the column): zoomed, the sharp retake shows 103:19 622c, the verse's second digit a 9 with a closed top bowl; the book prints it above 103:17 out of verse order"
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#221",
+      "check": "directions",
+      "value": "Psalms 103:19 622c",
+      "judge": "F22",
+      "why": "f082 p792-c3-2220.19 (third look F22): p792-c3-2220 line 19 prints 622c, the letter with no ascender unlike 84b on line 20; the book's two places disagree, as the twin p806-c4-1360 line 13 prints 622b. | first side (F03): p792-c3-2220 line 19 (103:19): the letter after 622 is a c at 8x, not a or b, so the line is read right as 622c. | twin t113 p806-c4-1360.13 (F17): The book's two places disagree as read, as twin p806-c4-1360 line 13 clearly prints 622 b with Ps 103:19 while first side p792-c3-2220 line 19 reads 622c in doubled print. | recheck F30 k221: p792r-c3 rows 1485-1513 (line 70 of the column): zoomed, the sharp retake shows 103:19 622c, the verse's second digit a 9 with a closed top bowl; the book prints it above 103:17 out of verse order"
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#222",
+      "check": "order",
+      "value": "Psalms 103:19 622 > Psalms 103:17 84",
+      "judge": "F22",
+      "why": "f083 p792-c3-2220.20 (third look F22): p792-c3-2220 line 20: the key 103:17 ends in a 7 with a flat bar, while the key 103:19 on line 19 ends in a round closed 9 like 103:9 on line 14, so the book prints 103:19 622c before 103:17 84b, and 84b has the two closed loops of an 8. | first side (F03): p792-c3-2220 lines 19 and 20: at 6x the key on line 19 ends in a looped 9 (103:19) and the key on line 20 ends in a flat-topped 7 (103:17), so the book prints 103:19 above 103:17 with 84b. | twin t015 p792-c3-2220.19 (F14): Twin strip p792-c3-2220 line 19 prints 103:19 with 622c as read, and the first side's strip p792-c3-2220 line 20 (f083) prints 103:17 with 84b, so the book's two places disagree. | recheck F30 k222: p792r-c3 rows 1506-1534 (line 71 of the column): the sharp retake shows 103:17 84b, every digit and the letter clear"
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#227",
+      "check": "directions",
+      "value": "Psalms 104:3 84a",
+      "judge": "F22",
+      "why": "f085 p792-c3-2220.25 (third look F22): p792-c3-2220 line 25: 84a, the 8 has two closed loops and the 4 is clear, like 84b on line 20. | first side (F03): p792-c3-2220 line 25 (104:3): the number is 84 and the letter a, plain at strip size, so the book prints 84a. | recheck F30 k227: p792r-c3 rows 1609-1638 (line 76 of the column): the sharp retake shows 104:3 84a, every digit and the letter clear"
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#246",
+      "check": "directions",
+      "value": "Psalms 119:11 603d",
+      "judge": "F20",
+      "why": "f088 p792-c4-0520.20 (third look F20): p792-c4-0520 line 20 prints the key 119:11 between 119:10 and 119:18 with 603d, and twin p806-c3-1360 line 3 prints 603 d with Ps 119:111, so the number 603d stands and the book's two places disagree on the key. | first side (F03): Only the alt strip p792-alt-IMG_1215-1650 settles it: on the 119:11 line the third digit has the open left of the 3 in 326a above, so 603d. | twin t110 p806-c3-1360.3 (F17): The book's two places disagree as read, as twin p806-c3-1360 line 3 clearly prints 603 d with Ps 119:111 while first side p792-c4-0520 line 20 reads 119:11 603d in doubled print. | recheck F31 k246: p792r-c4 rows 397-427 (line 19 of the column): the sharp retake shows 603d beside 119:11, the last digit the flat-topped 3 of this face, as settled"
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#248",
+      "check": "directions",
+      "value": "Psalms 119:19 45a",
+      "judge": "F22",
+      "why": "f090 p792-c4-0520.22 (third look F22): p792-c4-0520 line 22: 45a; the alt strip p792-alt-IMG_1215-1650 shows 45a sharply. | first side (F03): p792-alt-IMG_1215-1650 shows 45a on the 119:19 line sharply, as p792-c4-0520 line 22 does, so the book prints 45a. | recheck F31 k248: p792r-c4 rows 441-469 (line 21 of the column): the sharp retake shows 45a beside 119:19, as settled"
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#249",
+      "check": "directions",
+      "value": "Psalms 119:57-59 273a",
+      "judge": "F22",
+      "why": "f091 p792-c4-0520.23 (third look F22): p792-c4-0520 line 23 is doubled and reads like 275a, and only the alt strip p792-alt-IMG_1215-1650 settles it: the third digit has the round top of the 3 of 326a, not the flat top of the 5 of 45a just above, so 273a. | first side (F03): Only the alt strip p792-alt-IMG_1215-1650 settles it: on the 119:57-59 line the third digit has the open left of a 3, unlike the 5 of 275a lower on that strip, so 273a. | recheck F31 k249: p792r-c4 rows 461-491 (line 22 of the column): the sharp retake shows 273a beside 119:57-59, as settled"
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#286",
+      "check": "scripture",
+      "value": "Psalms 137:31",
+      "judge": "F22",
+      "why": "f099 p792-c4-2220.8 (third look F22): p792-c4-2220 line 8, between 136:26 4a and 138:2: the key reads 137:31, a 3 like the 3 of 137 and a clear 1, as wide as 136:26, and the number is 55d, its d drawn like an 8 as in 112d on line 7, which the alt strip p792-alt-IMG_1215-3350 shows as 112d. | first side (F03): p792-c4-2220 line 8: at 6x the key reads 137:31, its second digit a flat-topped 3 like the 3 after the colon and not an oval 0, and the line sits in chapter order between 136:26 and 138:2, so the book prints 137:31."
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#294",
+      "check": "directions",
+      "value": "Psalms 143:8 685a",
+      "judge": "F22",
+      "why": "f102 p792-c4-2220.16 (third look F22): p792-c4-2220 line 16: 685a; only the alt strip p792-alt-IMG_1215-4200 settles it, and it shows 685a clearly. | first side (F03): The alt strip p792-alt-IMG_1215-4200 shows 685a on the 143:8 line sharply, as p792-c4-2220 line 16 does, so the book prints 685a. | recheck F32 k294: p792r-c4 rows 1412-1441 (line 67 of the column): the sharp retake shows 685a beside 143:8, as settled"
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#15",
+      "check": "order",
+      "value": "Psalms 148:9 23 > Psalms 148:7-13 560",
+      "judge": "F04",
+      "why": "f103 p793-c1-0780.16: p793-c1-0780 line 16: zoomed, the key reads 148:7-13 with a 7 shaped like the 7s of 148:7 and 148:7, 11 above, and it sits after 148:9 23a with 560b, so the book prints this order. | twin t016 p793-c1-0780.15 (F14): Twin strip p793-c1-0780 line 15 prints 148:9 with 23a as read, and the first side's strip p793-c1-0780 (f103) prints 148:7-13 with 560b, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#19",
+      "check": "scripture",
+      "value": "Psalms 148:15, 16",
+      "judge": "F04",
+      "why": "f104 p793-c1-1630.4: p793-c1-1630 line 4: the key 148:15, 16 and the number 35c are clear at strip size, so the book prints 148:15, 16 35c."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#20",
+      "check": "scripture",
+      "value": "Psalms 148:18",
+      "judge": "F04",
+      "why": "f105 p793-c1-1630.5: p793-c1-1630 line 5: the key 148:18 and the number 35d are clear at strip size, so the book prints 148:18 35d."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#21",
+      "check": "scripture",
+      "value": "Psalms 148:20",
+      "judge": "F04",
+      "why": "f106 p793-c1-1630.6: p793-c1-1630 line 6: the key 148:20 and the number 35e are clear at strip size, so the book prints 148:20 35e."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#31",
+      "check": "directions",
+      "value": "Proverbs 3:17 648b",
+      "judge": "F04",
+      "why": "f107 p793-c1-2480.2: p793-c1-2480 line 2: zoomed, the key 3:17 and the number 648b are sharp, so the book prints Proverbs 3:17 648b. | twin t118 p807-c2-0359.15 (F17): The book's two places disagree, as twin p807-c2-0359 line 15 clearly prints Prov 8:17 under 648 b while first side p793-c1-2480 line 2 clearly prints 3:17 648b."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#38",
+      "check": "order",
+      "value": "Proverbs 3:24 508 > Proverbs 3:24 110",
+      "judge": "F04",
+      "why": "f108 p793-c1-2480.9: p793-c1-2480 line 9: zoomed, no key is printed before 110d, which follows 508c under 3:24 with sharp digits, so the book prints 110d after 508c. | twin t017 p793-c1-2480.8 (F14): Twin strip p793-c1-2480 line 8 prints 3:24 with 508c as read, and the first side's strip p793-c1-2480 line 9 (f108) prints 110d, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#38",
+      "check": "directions",
+      "value": "Proverbs 3:24 110d",
+      "judge": "F04",
+      "why": "f109 p793-c1-2480.9: p793-c1-2480 line 9: the number 110d under the key 3:24 is sharp, so the book prints 3:24 110d."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#39",
+      "check": "directions",
+      "value": "Proverbs 3:24 192a",
+      "judge": "F04",
+      "why": "f110 p793-c1-2480.10: p793-c1-2480 line 10: the number 192a under the key 3:24 is sharp, so the book prints 3:24 192a."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#64",
+      "check": "directions",
+      "value": "Ecclesiastes 11:7 110a",
+      "judge": "F04",
+      "why": "f111 p793-c1-4180.4: p793-c1-4180 line 4 (Ecclesiastes 11:7): at 4x the letter after 110 is an a, the same shape as the a of 369a and 566a on the strip, so the book prints 110a. | twin t045 p800-c3-0960.4 (F15): Twin strip p800-c3-0960 line 4 prints 110b under Eccl 11:7, while the first side's strip p793-c1-4180 line 4 gives 110a, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#85",
+      "check": "order",
+      "value": "Isaiah 6:8 573 > Isaiah 6:2, 3 30",
+      "judge": "F04",
+      "why": "f112 p793-c2-1630.3: p793-c2-1630 line 3: at 3x the key above is 6:8 (its 8 is closed on the left, unlike the open 3 of 6:3), and 6:2, 3 with 30b follows it, so the book prints 6:2, 3 30b after 6:8 573r. | twin t018 p793-c2-1630.2 (F14): Twin strip p793-c2-1630 line 2 prints Isaiah 6:8 with 573r as read, and the first side's strip p793-c2-1630 line 3 (f112) prints 6:2, 3 with 30b, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#88",
+      "check": "scripture",
+      "value": "Isaiah 6:19",
+      "judge": "F04",
+      "why": "f113 p793-c2-1630.6: p793-c2-1630 line 6: the key 6:19 and the number 419b are sharp, so the book prints Isaiah 6:19 419b."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#102",
+      "check": "stanza",
+      "value": "622c",
+      "judge": "F04",
+      "why": "f114 p793-c2-2480.3: p793-c2-2480 line 3: at 3x the letter after 622 is a clear c under the key 11:9, so the book prints 11:9 622c as reading a has it."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#102",
+      "check": "directions",
+      "value": "Isaiah 11:9 622c",
+      "judge": "F04",
+      "why": "f115 p793-c2-2480.3: p793-c2-2480 line 3: at 3x the number 622 and its letter c are clear, so the book prints 11:9 622c. | twin t112 p806-c4-1360.12 (F17): The book's two places disagree, as twin p806-c4-1360 line 12 clearly prints 622 b with Isa 11:9 while first side p793-c2-2480 line 3 clearly prints 11:9 622c."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#108",
+      "check": "directions",
+      "value": "Isaiah 21:12 610c",
+      "judge": "F04",
+      "why": "f116 p793-c2-2480.9: p793-c2-2480 line 9: at 3x the letter after 610 is a clear c under the key 21:12, so the book prints 21:12 610c."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#125",
+      "check": "stanza",
+      "value": "610d",
+      "judge": "F04",
+      "why": "f117 p793-c2-3330.9: p793-c2-3330 line 9: at 2x the number 610 and its letter d with a tall ascender are sharp under 35:6 after 405b, so the book prints 610d."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#130",
+      "check": "directions",
+      "value": "Isaiah 40:8 242a",
+      "judge": "F04",
+      "why": "f118 p793-c2-3330.14: p793-c2-3330 line 14: at 2x each key sits about 40 px below its first number (35:6 by 405b, 35:10 by 12a), so 40:7 goes with 21c and 40:8 with 242a, and the a of 242a is clear, so the book prints 40:8 242a. | twin t070 p802-c2-0830.9 (F16): The book's two places disagree, as twin p802-c2-0830 line 9 clearly prints 242 b with Isa 40:8 while first side p793-c2-3330 line 14 prints 40:8 242a."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#136",
+      "check": "scripture",
+      "value": "Isaiah 40:45",
+      "judge": "F04",
+      "why": "f119 p793-c2-4180.3: p793-c2-4180 line 3: the key 40:45 is sharp at strip size, its 4 and 5 matching the 4 of 40:26 and the 5 of 645a, and it pairs with 206c, so the book prints 40:45 206c."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#152",
+      "check": "order",
+      "value": "Isaiah 49:26 515 > Isaiah 49:26 78",
+      "judge": "F23",
+      "why": "f120 p793-c3-0780.9 (third look F23): p793-c3-0780 line 9 prints 78b with no key, under line 8 49:26 515d and before line 10 50:4 502c, and the twin on the same strip at line 8 reads as printed. | first side (F04): p793-c3-0780 line 9: under 49:26 the strip shows 515d and then 78b on the next line with no key, so the book prints 78b after 515d. | twin t019 p793-c3-0780.8 (F14): Twin strip p793-c3-0780 line 8 prints 49:26 with 515d as read, and the first side's strip p793-c3-0780 line 9 (f120) prints 78b, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#153",
+      "check": "directions",
+      "value": "Isaiah 50:4 502c",
+      "judge": "F23",
+      "why": "f121 p793-c3-0780.10 (third look F23): p793-c3-0780 line 10 prints 50:4 502c while the twin p805-c2-1225 line 14 prints d. Isa 50:4 under 502, so the book's two places disagree. | first side (F04): p793-c3-0780 line 10: the key 50:4 and the number 502c are clear at strip size, the letter an open c, so the book prints 50:4 502c. | twin t096 p805-c2-1225.14 (F17): The book's two places disagree, as twin p805-c2-1225 line 14 prints 502 d with Isa 50:4 while first side p793-c3-0780 line 10 clearly prints 50:4 502c."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#197",
+      "check": "directions",
+      "value": "Isaiah 66:23 24a",
+      "judge": "F04",
+      "why": "f122 p793-c3-3330.5: p793-c3-3330 line 5: at 3x the last digit of 66:23 has the open left of the 3 in 66:13, unlike the closed 8 of 66:18, and the number is 24a, so the book prints 66:23 24a. | twin t029 p799-c6-2490.11 (F14): Twin strip p799-c6-2490 line 11 prints hymn 24 letter a Isa 6:23 (a single 6) as reader a read, and the first side's strip p793-c3-3330 line 5 (f122) prints 66:23 with 24a, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#203",
+      "check": "stanza",
+      "value": "18e",
+      "judge": "F04",
+      "why": "f123 p793-c3-3330.12: p793-c3-3330 line 12: at 5x the letter after 18 has a crossbar, an e and not a c, under 31:3 after 10b, so the book prints 18e."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#220",
+      "check": "directions",
+      "value": "Ezekiel 34:26 184b",
+      "judge": "F04",
+      "why": "f124 p793-c4-0780.6: p793-c4-0780 line 6: under 34:26 the strip shows 107b and then 184b with sharp digits and a clear b, so the book prints 34:26 184b. | twin t055 p801-c2-1280.12 (F15): Twin strip p801-c2-1280 line 12 prints 184b under Eze 36:26, while the first side's strip p793-c4-0780 line 6 gives 184b under Ezek 34:26, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#240",
+      "check": "directions",
+      "value": "Daniel 12:4 213c",
+      "judge": "F23",
+      "why": "f125 p793-c4-1630.14 (third look F23): p793-c4-1630 line 14 prints 12:4 213c, its c shaped like the c in 417c on the same strip, while the twin p801-c4-1280 line 18 prints Dan 12:4 under e. of 213, so the book's two places disagree. | first side (F04): p793-c4-1630 line 14: at 3x the key 12:4 and the number 213c are sharp, the letter an open c like the c of 417c below, so the book prints 12:4 213c. | twin t060 p801-c4-1280.18 (F15): Twin strip p801-c4-1280 line 18 prints Dan 12:4 under 213e, while the first side's strip p793-c4-1630 line 14 gives 213c, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#247",
+      "check": "stanza",
+      "value": "571r",
+      "judge": "F04",
+      "why": "f126 p793-c4-2480.7: p793-c4-2480 line 7: at 3x the key under MICAH is 6:8 and the number is 571 with a clear r, so the book prints 6:8 571r."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#247",
+      "check": "directions",
+      "value": "Micah 6:8 571r",
+      "judge": "F04",
+      "why": "f127 p793-c4-2480.7: p793-c4-2480 line 7: at 3x the key 6:8 has a closed 8 and the number 571r is sharp, so the book prints Micah 6:8 571r. | twin t107 p806-c1-2210.12 (F17): The book's two places disagree, as twin p806-c1-2210 line 12 clearly prints 571 r with Micah 5:8 while first side p793-c4-2480 line 7 clearly prints Micah 6:8 571r."
+    },
+    {
+      "index": "scriptural",
+      "page": 793,
+      "at": "#250",
+      "check": "directions",
+      "value": "Habakkuk 2:14 316b",
+      "judge": "F04",
+      "why": "f128 p793-c4-2480.12: p793-c4-2480 line 12: at 3x the line under 2:14 225a is 316b, its first digit the open-left 3 of 366a above, so the book prints Habakkuk 2:14 316b."
+    },
+    {
+      "index": "scriptural",
+      "page": 794,
+      "at": "#5",
+      "check": "scripture",
+      "value": "Matthew 1:29",
+      "judge": "F05",
+      "why": "f129 p794-c1-0410.7: p794-c1-0410 line 7: zoomed, the key is a sharp 1:29 (2 and 9 match other 2s and 9s on the strip) over hymn 507b, so the book prints Matthew 1:29."
+    },
+    {
+      "index": "scriptural",
+      "page": 794,
+      "at": "#29",
+      "check": "directions",
+      "value": "Matthew 2:11 141c",
+      "judge": "F23",
+      "why": "f130 p794-c1-1260.8 (third look F23): p794-c1-1260 line 8 prints 141c with a blank key column under Matt 2:11, while the twin p800-c4-1810 line 11 prints c. Matt 2:12 under 141, so the book's two places disagree. | first side (F05): p794-c1-1260 line 8: 141c is clear, with no key printed between 2:11 and it, so the book lists 141c under Matthew 2:11. | twin t050 p800-c4-1810.11 (F15): Twin strip p800-c4-1810 line 11 prints 141c under Matt 2:12, while the first side's strip p794-c1-1260 line 8 gives 141c under Matt 2:11, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 794,
+      "at": "#72",
+      "check": "scripture",
+      "value": "Matthew 6:44",
+      "judge": "F05",
+      "why": "f131 p794-c1-2960.5: p794-c1-2960 line 5: the key 6:44 is sharp and sits between 6:33 and 7:7, over 304c, so the book prints Matthew 6:44."
+    },
+    {
+      "index": "scriptural",
+      "page": 794,
+      "at": "#77",
+      "check": "stanza",
+      "value": "367d",
+      "judge": "F05",
+      "why": "f132 p794-c2-0410.3: p794-c2-0410 line 3: the stanza letter after 367 is a clear d, so the book prints 367d."
+    },
+    {
+      "index": "scriptural",
+      "page": 794,
+      "at": "#85",
+      "check": "directions",
+      "value": "Matthew 8:26, 30 93a",
+      "judge": "F05",
+      "why": "f133 p794-c2-0410.11: p794-c2-0410 line 11: the 3 of 30 and of 93 have the open left of a 3, unlike the closed 8 of 8:26, so the book prints 8:26, 30 93a. | twin t040 p800-c2-1810.2 (F15): Twin strip p800-c2-1810 line 2 prints 93a under Matt 6:26, 30, while the first side's strip p794-c2-0410 line 11 gives 93a under Matt 8:26, 30, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 794,
+      "at": "#122",
+      "check": "order",
+      "value": "Matthew 13:25 557 > Matthew 13:16, 17 317",
+      "judge": "F05",
+      "why": "f134 p794-c2-2110.3: p794-c2-2110 line 3: zoomed, 13:25 (its 2 matches the 2 of 326b) with 357b and 557b comes before 13:16, 17 317a, so the book prints this order. | twin t020 p794-c2-2110.2 (F14): Twin strip p794-c2-2110 line 2 prints Matthew 13:25 with 557b as read, and the first side's strip p794-c2-2110 line 3 (f134) prints 13:16, 17 with 317a, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 794,
+      "at": "#122",
+      "check": "directions",
+      "value": "Matthew 13:16, 17 317a",
+      "judge": "F05",
+      "why": "f135 p794-c2-2110.3: p794-c2-2110 line 3: key 13:16, 17 and hymn 317a are sharp, so the line is read right."
+    },
+    {
+      "index": "scriptural",
+      "page": 794,
+      "at": "#143",
+      "check": "stanza",
+      "value": "322d",
+      "judge": "F05",
+      "why": "f136 p794-c2-2960.1: p794-c2-2960 line 1: 16:24 322d, the d is clear, so the book prints 322d."
+    },
+    {
+      "index": "scriptural",
+      "page": 794,
+      "at": "#152",
+      "check": "directions",
+      "value": "Matthew 18:3 224c",
+      "judge": "F05",
+      "why": "f137 p794-c3-0410.2: p794-c3-0410 line 2: 18:3 224c, the c is open and clear, so the book prints 224c. | twin t064 p802-c1-0830.15 (F16): The book's two places disagree, as twin p802-c1-0830 line 15 prints 18:3 under 224 e while first side p794-c3-0410 line 2 prints 18:3 224c."
+    },
+    {
+      "index": "scriptural",
+      "page": 794,
+      "at": "#167",
+      "check": "directions",
+      "value": "Matthew 20:6 557c",
+      "judge": "F05",
+      "why": "f138 p794-c3-0410.17: p794-c3-0410 line 17: 20:6 557c, the last digit is a 7 like the 7 of nearby numbers and unlike the 8 of 558b above, so the book prints 557c. | twin t108 p806-c1-3060.15 (F17): The book's two places disagree, as twin p806-c1-3060 line 15 clearly prints 577 c with Matt 20:6 while first side p794-c3-0410 line 17 clearly prints 20:6 557c."
+    },
+    {
+      "index": "scriptural",
+      "page": 794,
+      "at": "#177",
+      "check": "directions",
+      "value": "Matthew 22:10 351c",
+      "judge": "F05",
+      "why": "f139 p794-c3-1260.4: p794-c3-1260 line 4: 22:10 351c, the c is clear, so the book prints 351c. | twin t079 p803-c3-1225.3 (F16): The book's two places disagree, as twin p803-c3-1225 line 3 prints 351 b with Matt 22:10 while first side p794-c3-1260 line 4 clearly prints 22:10 351c."
+    },
+    {
+      "index": "scriptural",
+      "page": 794,
+      "at": "#183",
+      "check": "directions",
+      "value": "Matthew 22:37 226c",
+      "judge": "F05",
+      "why": "f140 p794-c3-1260.10: p794-c3-1260 line 10: the last digit of 226c has the hooked top of a 6, like the 6 of 186b above, so the book prints 226c under 22:37. | twin t073 p802-c3-1680.3 (F16): The book's two places disagree, as twin p802-c3-1680 line 3 prints 266 c with Matt 22:37 while first side p794-c3-1260 line 10 clearly prints 226c (zoomed)."
+    },
+    {
+      "index": "scriptural",
+      "page": 794,
+      "at": "#195",
+      "check": "stanza",
+      "value": "149e",
+      "judge": "F05",
+      "why": "f141 p794-c3-1260.22: p794-c3-1260 line 22: 24:30 149e, the letter has the cross bar of an e, so the book prints 149e."
+    },
+    {
+      "index": "scriptural",
+      "page": 794,
+      "at": "#199",
+      "check": "order",
+      "value": "Matthew 24:30 647 > Matthew 24:30 213",
+      "judge": "F05",
+      "why": "f142 p794-c3-2110.4: p794-c3-2110 line 4: under 24:30 the book prints 149e, 209a, 433d, 647a, then 213b and 215b, all digits sharp, so 213b after 647a is the book's own order. | twin t021 p794-c3-2110.3 (F14): Twin strip p794-c3-2110 line 3 prints 24:30 with 647a as read, and the first side's strip p794-c3-2110 line 4 (f142) prints 213b, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 794,
+      "at": "#219",
+      "check": "stanza",
+      "value": "357d",
+      "judge": "F05",
+      "why": "f143 p794-c3-2960.1: p794-c3-2960 line 1: 357d, the d is clear, so the book prints 357d."
+    },
+    {
+      "index": "scriptural",
+      "page": 794,
+      "at": "#222",
+      "check": "stanza",
+      "value": "600d",
+      "judge": "F05",
+      "why": "f144 p794-c3-2960.4: p794-c3-2960 line 4: 600d, the d is clear, so the book prints 600d."
+    },
+    {
+      "index": "scriptural",
+      "page": 794,
+      "at": "#225",
+      "check": "stanza",
+      "value": "617e",
+      "judge": "F05",
+      "why": "f145 p794-c3-2960.7: p794-c3-2960 line 7: at 6x the letter after 617 is closed with a bar, an e, unlike the open c of 602c above, so the book prints 617e."
+    },
+    {
+      "index": "scriptural",
+      "page": 794,
+      "at": "#237",
+      "check": "stanza",
+      "value": "322d",
+      "judge": "F05",
+      "why": "f146 p794-c4-0410.11: p794-c4-0410 line 11: 26:41 322d, the d is clear, and alt strip p794-alt-IMG_1217-0300 shows the same 322d."
+    },
+    {
+      "index": "scriptural",
+      "page": 794,
+      "at": "#271",
+      "check": "stanza",
+      "value": "258r",
+      "judge": "F05",
+      "why": "f147 p794-c4-2110.3: p794-c4-2110 line 3: zoomed, Mark 1:8 reads 258 with two closed loops in the 8 (like 258c below) and the letter r, shaped like the r of 322r above, so the book prints 258r."
+    },
+    {
+      "index": "scriptural",
+      "page": 795,
+      "at": "#66",
+      "check": "directions",
+      "value": "Luke 2:11 120c",
+      "judge": "F23",
+      "why": "f149 p795-c1-2810.1 (third look F23): p795-c1-2810 line 1 prints 2:11 120c while the twin p800-c3-2660 line 6 prints d. Luke 2:11 under 120, so the book's two places disagree. | first side (F05): p795-c1-2810 line 1: 2:11 120c, the c is clear, and alt strip p795-alt-IMG_1216-2100 shows the same 120c under 2:11. | twin t049 p800-c3-2660.6 (F15): Twin strip p800-c3-2660 line 6 prints 120d under Luke 2:11, while the first side's strip p795-c1-2810 line 1 gives 120c, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 795,
+      "at": "#104",
+      "check": "directions",
+      "value": "Luke 3:2-4 379a",
+      "judge": "F05",
+      "why": "f150 p795-c2-1110.9: p795-c2-1110 line 9: zoomed, the third digit under 3:2-4 has a closed top loop and a tail like the 9 of 149c above, so the book prints 379a, not 373a."
+    },
+    {
+      "index": "scriptural",
+      "page": 795,
+      "at": "#108",
+      "check": "order",
+      "value": "Luke 4:1, 2 152 > Luke 4:1, 2 148",
+      "judge": "F05",
+      "why": "f152 p795-c2-1110.13: p795-c2-1110 line 13: under 4:1, 2 the book prints 152b, 148b, 150b in that order, all digits sharp, so 148b after 152b is the book's own order. | twin t022 p795-c2-1110.12 (F14): Twin strip p795-c2-1110 line 12 prints Luke 4:1, 2 with 152b as read, and the first side's strip p795-c2-1110 line 13 (f152) prints 148b, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 795,
+      "at": "#117",
+      "check": "order",
+      "value": "Luke 7:38 572 > Luke 7:34 187",
+      "judge": "F05",
+      "why": "f154 p795-c2-1110.22: p795-c2-1110 line 22: 7:38 572b (closed 8) is printed above 7:34 187a (open 3, clear 4), so the book prints this order. | twin t023 p795-c2-1110.21 (F14): Twin strip p795-c2-1110 line 21 prints key 7:38 (closed-loop 8 like 6:38) with 572b as reader b read, and the first side's strip p795-c2-1110 line 22 (f154) prints 7:34 with 187a, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 795,
+      "at": "#167",
+      "check": "directions",
+      "value": "Luke 21:28, 27 594c",
+      "judge": "F23",
+      "why": "f155 p795-c3-0260.19 (third look F23): p795-c3-0260 line 19 prints 21:28, 27 594c, its c matching the other c glyphs on the strip, while the twin p806-c2-2210 line 12 prints Luke 21:28, 27 under e. of 594, so the book's two places disagree. | first side (F05): p795-c3-0260 line 19: 21:28, 27 594c, the c is clear, so the book prints 594c. | twin t109 p806-c2-2210.12 (F17): The book's two places disagree, as twin p806-c2-2210 line 12 clearly prints 594 e with Luke 21:28, 27 while first side p795-c3-0260 line 19 clearly prints 21:28, 27 594c."
+    },
+    {
+      "index": "scriptural",
+      "page": 795,
+      "at": "#183",
+      "check": "directions",
+      "value": "Luke 23:33 491b",
+      "judge": "F05",
+      "why": "f156 p795-c3-1110.13: p795-c3-1110 line 13: 491b sits under 23:33 after 144c, 159b, 288a with no key of its own, so the book lists 491b under Luke 23:33. | twin t093 p805-c2-0375.3 (F17): The book's two places disagree, as twin p805-c2-0375 line 3 prints 491 b with Luke 23:39 while first side p795-c3-1110 line 13 clearly prints 23:33 491b."
+    },
+    {
+      "index": "scriptural",
+      "page": 795,
+      "at": "#197",
+      "check": "directions",
+      "value": "Luke 24:32 17c",
+      "judge": "F05",
+      "why": "f157 p795-c3-1960.4: p795-c3-1960 line 4: at 8x the letter after 17 under 24:32 is an open c with no bar, so the book prints 17c. | twin t027 p799-c6-1640.8 (F14): Twin strip p799-c6-1640 line 8 prints Luke 24:32 under hymn 17 letter e as read; the first side's strip p795-c3-1960 line 4 also prints 24:32 with 17e, so the first side's settled 17c is the misread there."
+    },
+    {
+      "index": "scriptural",
+      "page": 795,
+      "at": "#276",
+      "check": "directions",
+      "value": "John 8:36 117b",
+      "judge": "F23",
+      "why": "f158 p795-c4-1960.9 (third look F23): p795-c4-1960 line 9 prints 8:36 117b while the twin p800-c3-1810 line 6 prints a. John 8:36 under 117, so the book's two places disagree. | first side (F05): p795-c4-1960 line 9: 8:36 117b, the b is clear, so the book prints 117b. | twin t046 p800-c3-1810.6 (F15): Twin strip p800-c3-1810 line 6 prints 117a under John 8:36, while the first side's strip p795-c4-1960 line 9 gives 117b, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 795,
+      "at": "#294",
+      "check": "stanza",
+      "value": "30d",
+      "judge": "F05",
+      "why": "f159 p795-c4-2810.3: p795-c4-2810 line 3: under 10:30 the first digit has the open left of a 3 and the letter is a clear d, so the book prints 30d."
+    },
+    {
+      "index": "scriptural",
+      "page": 796,
+      "at": "#45",
+      "check": "directions",
+      "value": "John 14:27 471a",
+      "judge": "F06",
+      "why": "f160 p796-c1-2290.11: p796-c1-2290 line 11: 471a is clear and sits under 14:27 after 397d with no key of its own, so the book lists 471a under John 14:27. | twin t043 p800-c2-2660.10 (F15): Twin strip p800-c2-2660 line 10 prints 100c under John 14:27, while the first side's strip p796-c1-2290 line 11 gives 471a, so the book's two places disagree. | twin t084 p804-c1-1180.22 (F16): The book's two places disagree, as twin p804-c1-1180 line 22 clearly prints 397 d with John 14:27 and no 14:27 under 471 while first side p796-c1-2290 line 11 lists 397d and 471a under 14:27."
+    },
+    {
+      "index": "scriptural",
+      "page": 796,
+      "at": "#60",
+      "check": "directions",
+      "value": "John 16:7 148d",
+      "judge": "F06",
+      "why": "f161 p796-c1-3140.8: p796-c1-3140 line 8: 16:7 148d, the digits and the d are clear, so the book prints 148d under John 16:7. | twin t051 p800-c4-2660.14 (F15): Twin strip p800-c4-2660 line 14 prints 16:7 under 148c, while the first side's strip p796-c1-3140 line 8 gives 148d, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 796,
+      "at": "#68",
+      "check": "directions",
+      "value": "John 17:10 421e",
+      "judge": "F23",
+      "why": "f162 p796-c1-3140.16 (third look F23): p796-c1-3140 line 16 prints 17:10 421e while the twin p804-c2-2030 line 18 prints a. John 17:10 under 421, so the book's two places disagree. | first side (F06): p796-c1-3140 line 16: zoomed, the letter after 421 is closed with a bar, an e, unlike the open c of 514c above, so the book prints 421e under John 17:10. | twin t086 p804-c2-2030.18 (F16): The book's two places disagree, as twin p804-c2-2030 line 18 prints 421 a with John 17:10 (zoomed, so reading a holds and reading b missed the line) while first side p796-c1-3140 line 16 clearly prints 17:10 421e."
+    },
+    {
+      "index": "scriptural",
+      "page": 796,
+      "at": "#105",
+      "check": "directions",
+      "value": "Acts 2:1 382b",
+      "judge": "F06",
+      "why": "f163 p796-c2-1440.15: p796-c2-1440 line 15: Acts 2:1 382b, the 3 is open on the left and the 8 is closed, and the b is clear, so the book prints 382b."
+    },
+    {
+      "index": "scriptural",
+      "page": 796,
+      "at": "#130",
+      "check": "stanza",
+      "value": "229e",
+      "judge": "F06",
+      "why": "f164 p796-c2-3140.5: p796-c2-3140 line 5: 10:36 229e, the letter has the cross bar of an e, so the book prints 229e."
+    },
+    {
+      "index": "scriptural",
+      "page": 796,
+      "at": "#133",
+      "check": "directions",
+      "value": "Acts 10:43 116c",
+      "judge": "F23",
+      "why": "f165 p796-c2-3140.8 (third look F23): p796-c2-3140 line 8 prints 10:43 116c clearly, out of order between 10:38 and 10:37, so the book prints it there. | first side (F06): p796-c2-3140 line 8: 10:43 116c, the digits and the open c are clear, so the book prints Acts 10:43 116c."
+    },
+    {
+      "index": "scriptural",
+      "page": 796,
+      "at": "#134",
+      "check": "order",
+      "value": "Acts 10:43 116 > Acts 10:37 276",
+      "judge": "F06",
+      "why": "f166 p796-c2-3140.9: p796-c2-3140 lines 8 and 9: 10:43 116c is printed above 10:37 276d, all digits sharp (the 3 of 10:37 open on the left like the 3 of 10:34), so this order is the book's own. | twin t024 p796-c2-3140.8 (F14): Twin strip p796-c2-3140 line 8 prints Acts 10:43 with 116c as read, and the first side's strip p796-c2-3140 line 9 (f166) prints 10:37 with 276d, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 796,
+      "at": "#134",
+      "check": "stanza",
+      "value": "276d",
+      "judge": "F06",
+      "why": "f167 p796-c2-3140.9: p796-c2-3140 line 9: 10:37 276d, the d is clear, so the book prints 276d."
+    },
+    {
+      "index": "scriptural",
+      "page": 796,
+      "at": "#144",
+      "check": "directions",
+      "value": "Romans 3:10 496a",
+      "judge": "F06",
+      "why": "f168 p796-c2-3990.3: p796-c2-3990 line 3: Romans 3:10 496a, the digits and the a are clear, so the book prints 496a."
+    },
+    {
+      "index": "scriptural",
+      "page": 796,
+      "at": "#164",
+      "check": "stanza",
+      "value": "276e",
+      "judge": "F06",
+      "why": "f169 p796-c3-1440.1: p796-c3-1440 line 1: 8:16 276e, the letter has the cross bar of an e, unlike the open c of 468c above, so the book prints 276e."
+    },
+    {
+      "index": "scriptural",
+      "page": 796,
+      "at": "#203",
+      "check": "directions",
+      "value": "1 Corinthians 3:12 353a",
+      "judge": "F23",
+      "why": "f170 p796-c3-3140.5 (third look F23): p796-c3-3140 line 5 prints 3:12 353a between 3:11 348a and 3:16 3b, while the twin p803-c3-1225 line 5 prints a. 1 Cor 3:10 under 353, so the book's two places disagree. | first side (F06): p796-c3-3140 line 5: zoomed, 3:12 353a has both 3s open on the left, and the key 3:12 is sharp between 3:11 and 3:16, so the book prints 1 Corinthians 3:12 353a. | twin t080 p803-c3-1225.5 (F16): The book's two places disagree, as twin p803-c3-1225 line 5 prints 353 a with 1 Cor 3:10 (zoomed) while first side p796-c3-3140 line 5 clearly prints 3:12 353a."
+    },
+    {
+      "index": "scriptural",
+      "page": 796,
+      "at": "#213",
+      "check": "directions",
+      "value": "1 Corinthians 5:8 353d",
+      "judge": "F06",
+      "why": "f171 p796-c3-3140.15: p796-c3-3140 line 15: 5:8 353d, the digits and the d are clear, so the book prints 1 Corinthians 5:8 353d."
+    },
+    {
+      "index": "scriptural",
+      "page": 796,
+      "at": "#214",
+      "check": "scripture",
+      "value": "1 Corinthians 5:15",
+      "judge": "F06",
+      "why": "f172 p796-c3-3140.16: p796-c3-3140 line 16: zoomed, the key 5:15 is sharp between 5:8 and 6:19, over 164a, so the book prints 1 Corinthians 5:15."
+    },
+    {
+      "index": "scriptural",
+      "page": 796,
+      "at": "#217",
+      "check": "directions",
+      "value": "1 Corinthians 6:20 239a",
+      "judge": "F06",
+      "why": "f173 p796-c3-3990.1: p796-c3-3990 line 1: 6:20 239a, the 3 open on the left and the 9 with a closed top loop, so the book prints 1 Corinthians 6:20 239a."
+    },
+    {
+      "index": "scriptural",
+      "page": 796,
+      "at": "#222",
+      "check": "stanza",
+      "value": "593r",
+      "judge": "F06",
+      "why": "f174 p796-c4-0590.2: p796-c4-0590 line 2: 10:10 593r, the letter is an r like the r of the other refrain entries on the strip, so the book prints 593r."
+    },
+    {
+      "index": "scriptural",
+      "page": 796,
+      "at": "#259",
+      "check": "stanza",
+      "value": "172e",
+      "judge": "F06",
+      "why": "f175 p796-c4-2290.4: p796-c4-2290 line 4: 172e under 15:55, the letter has the cross bar of an e, unlike the open c of 42c below, so the book prints 172e."
+    },
+    {
+      "index": "scriptural",
+      "page": 796,
+      "at": "#261",
+      "check": "stanza",
+      "value": "335e",
+      "judge": "F06",
+      "why": "f176 p796-c4-2290.6: p796-c4-2290 line 6: 335e under 15:57, the letter has the cross bar of an e, unlike the open c of 343c below, so the book prints 335e."
+    },
+    {
+      "index": "scriptural",
+      "page": 796,
+      "at": "#274",
+      "check": "directions",
+      "value": "2 Corinthians 5:7 67b",
+      "judge": "F06",
+      "why": "f177 p796-c4-3140.2: p796-c4-3140 line 2: the key 5:7 is sharp between 4:17 and 5:14, over 67b, so the book prints 2 Corinthians 5:7 67b. | twin t034 p800-c1-0960.4 (F15): Twin strip p800-c1-0960 line 4 prints 67b under 2 Cor 5:17, while the first side's strip p796-c4-3140 line 2 prints 67b under 2 Cor 5:7, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 796,
+      "at": "#280",
+      "check": "directions",
+      "value": "2 Corinthians 5:19 110b",
+      "judge": "F06",
+      "why": "f178 p796-c4-3140.8: p796-c4-3140 line 8: 5:19 110b, the three digits 1, 1, 0 and the b are clear, so the book prints 2 Corinthians 5:19 110b. | twin t053 p801-c2-0430.22 (F15): Twin strip p801-c2-0430 line 22 prints 180b under 2 Cor 5:19, while the first side's strip p796-c4-3140 line 8 prints 110b, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 796,
+      "at": "#294",
+      "check": "stanza",
+      "value": "30d",
+      "judge": "F06",
+      "why": "f179 p796-c4-3990.4: p796-c4-3990 line 4: zoomed, the first digit of 30d under 13:14 is open on the left, a 3 unlike the closed 8 of 184a above, and the d is clear, so the book prints 30d."
+    },
+    {
+      "index": "scriptural",
+      "page": 797,
+      "at": "#19",
+      "check": "directions",
+      "value": "Ephesians 1:7 109b",
+      "judge": "F07",
+      "why": "f180 p797-c1-1590.6: p797-c1-1590 line 6: the book clearly prints 109b under key 1:7, as settled. | twin t044 p800-c2-3510.13 (F15): Twin strip p800-c2-3510 line 13 prints 108b under Eph 1:7, while the first side's strip p797-c1-1590 line 6 gives 109b, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 797,
+      "at": "#60",
+      "check": "stanza",
+      "value": "357d",
+      "judge": "F07",
+      "why": "f182 p797-c1-3290.15: p797-c1-3290 line 15: the book clearly prints 357d under key 5:16, as settled."
+    },
+    {
+      "index": "scriptural",
+      "page": 797,
+      "at": "#60",
+      "check": "directions",
+      "value": "Ephesians 5:16 357d",
+      "judge": "F07",
+      "why": "f183 p797-c1-3290.15: p797-c1-3290 line 15: the book prints 357d under key 5:16 with a clear d, as settled. | twin t081 p803-c3-1225.17 (F16): The book's two places disagree, as twin p803-c3-1225 line 17 prints 357 c with Eph 5:16 while first side p797-c1-3290 line 15 clearly prints 5:16 357d."
+    },
+    {
+      "index": "scriptural",
+      "page": 797,
+      "at": "#80",
+      "check": "directions",
+      "value": "Philippians 2:7 117b",
+      "judge": "F07",
+      "why": "f184 p797-c2-0740.9: p797-c2-0740 line 9: the book clearly prints 117b under key 2:7, as settled. | twin t047 p800-c3-1810.7 (F15): Twin strip p800-c3-1810 line 7 prints Phil 2:7 under 117a, while the first side's strip p797-c2-0740 line 9 gives 117b, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 797,
+      "at": "#103",
+      "check": "directions",
+      "value": "Philippians 3:14 633b",
+      "judge": "F07",
+      "why": "f185 p797-c2-2440.1: p797-c2-2440 line 1: the book prints 633b with no key on its line, so key 3:14 carries down, as settled. | twin t116 p806-c4-3060.9 (F17): The book's two places disagree, as twin p806-c4-3060 line 9 clearly prints Phil 3:14 under 633 d while first side p797-c2-2440 line 1 clearly prints 3:14 633b."
+    },
+    {
+      "index": "scriptural",
+      "page": 797,
+      "at": "#106",
+      "check": "directions",
+      "value": "Philippians 4:4 221c",
+      "judge": "F07",
+      "why": "f186 p797-c2-2440.4: p797-c2-2440 line 4: the book clearly prints 221c under key 4:4, as settled. | twin t062 p801-c4-2130.18 (F15): Twin strip p801-c4-2130 line 18 prints Phil 4:4 under 221a, while the first side's strip p797-c2-2440 line 4 gives 221c, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 797,
+      "at": "#108",
+      "check": "stanza",
+      "value": "456r",
+      "judge": "F07",
+      "why": "f187 p797-c2-2440.6: p797-c2-2440 line 6: zoomed, the book prints 456r under key 4:7 (flat-topped 5, open-topped 6, clear r), as settled."
+    },
+    {
+      "index": "scriptural",
+      "page": 797,
+      "at": "#108",
+      "check": "directions",
+      "value": "Philippians 4:7 456r",
+      "judge": "F07",
+      "why": "f188 p797-c2-2440.6: p797-c2-2440 line 6: zoomed, the book prints 456r under key 4:7 with a clear r, as settled. | twin t091 p805-c1-0375.5 (F17): The book's two places disagree, as twin p805-c1-0375 line 5 prints 466 r with Phil 4:7 while first side p797-c2-2440 line 6 clearly prints 4:7 456r."
+    },
+    {
+      "index": "scriptural",
+      "page": 797,
+      "at": "#127",
+      "check": "order",
+      "value": "Colossians 3:11 308 > Colossians 3:11 271",
+      "judge": "F07",
+      "why": "f189 p797-c2-3290.10: p797-c2-3290 line 10: zoomed, the book prints 271b after 295c and 308c under key 3:11 with a clear 2, so it prints the number out of order. | twin t025 p797-c2-3290.9 (F14): Twin strip p797-c2-3290 line 9 prints Colossians 3:11 with 308c as read, and the first side's strip p797-c2-3290 line 10 (f189) prints 271b, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 797,
+      "at": "#155",
+      "check": "stanza",
+      "value": "209d",
+      "judge": "F07",
+      "why": "f190 p797-c3-0740.13: p797-c3-0740 line 13: the book clearly prints 209d under key 5:6, as settled."
+    },
+    {
+      "index": "scriptural",
+      "page": 797,
+      "at": "#155",
+      "check": "directions",
+      "value": "1 Thessalonians 5:6 209d",
+      "judge": "F07",
+      "why": "f191 p797-c3-0740.13: p797-c3-0740 line 13: the book prints 209d under key 5:6 with a clear d, as settled."
+    },
+    {
+      "index": "scriptural",
+      "page": 797,
+      "at": "#181",
+      "check": "directions",
+      "value": "1 Timothy 6:17 57c",
+      "judge": "F07",
+      "why": "f192 p797-c3-2440.10: p797-c3-2440 line 10: the book clearly prints 57c under key 6:17, as settled."
+    },
+    {
+      "index": "scriptural",
+      "page": 797,
+      "at": "#205",
+      "check": "stanza",
+      "value": "600d",
+      "judge": "F07",
+      "why": "f193 p797-c3-4140.1: p797-c3-4140 line 1: the book clearly prints 600d after 442a, as settled."
+    },
+    {
+      "index": "scriptural",
+      "page": 797,
+      "at": "#223",
+      "check": "directions",
+      "value": "Hebrews 2:15 156c",
+      "judge": "F07",
+      "why": "f194 p797-c4-0740.13: p797-c4-0740 line 13: the book clearly prints 156c under key 2:15, as settled."
+    },
+    {
+      "index": "scriptural",
+      "page": 797,
+      "at": "#226",
+      "check": "stanza",
+      "value": "382d",
+      "judge": "F07",
+      "why": "f195 p797-c4-1590.1: p797-c4-1590 line 1: zoomed, the book prints 382d under carried key 4:9 (closed 8; 882 is past the hymnal), as settled."
+    },
+    {
+      "index": "scriptural",
+      "page": 797,
+      "at": "#226",
+      "check": "directions",
+      "value": "Hebrews 4:9 382d",
+      "judge": "F07",
+      "why": "f196 p797-c4-1590.1: p797-c4-1590 line 1: zoomed, the book prints 382d with a clear d under carried key 4:9, as settled. | twin t083 p803-c4-2925.1 (F16): The book's two places disagree, as twin p803-c4-2925 line 1 prints 382 c with Heb 4:9 while first side p797-c4-1590 line 1 clearly prints 4:9 382d."
+    },
+    {
+      "index": "scriptural",
+      "page": 797,
+      "at": "#242",
+      "check": "directions",
+      "value": "Hebrews 4:16 527e",
+      "judge": "F07",
+      "why": "f197 p797-c4-1590.17: p797-c4-1590 line 17: zoomed, the book prints 527e with a clear e under key 4:16, as settled. | twin t099 p805-c3-2075.20 (F17): The book's two places disagree, as twin p805-c3-2075 line 20 clearly prints 527 c with Heb 4:16 while first side p797-c4-1590 line 17 clearly prints 4:16 527e."
+    },
+    {
+      "index": "scriptural",
+      "page": 797,
+      "at": "#270",
+      "check": "stanza",
+      "value": "159d",
+      "judge": "F07",
+      "why": "f198 p797-c4-3290.9: p797-c4-3290 line 9: zoomed, the book clearly prints 159d under key 12:2, as settled."
+    },
+    {
+      "index": "scriptural",
+      "page": 797,
+      "at": "#283",
+      "check": "stanza",
+      "value": "18e",
+      "judge": "F07",
+      "why": "f199 p797-c4-4140.3: p797-c4-4140 line 3: zoomed, the book prints 18e under key 13:8 with a barred e like 347e below, so side a is right."
+    },
+    {
+      "index": "scriptural",
+      "page": 797,
+      "at": "#285",
+      "check": "stanza",
+      "value": "5e",
+      "judge": "F07",
+      "why": "f200 p797-c4-4140.5: p797-c4-4140 line 5: zoomed, the book prints 5e under key 13:15 with a barred e, as settled."
+    },
+    {
+      "index": "scriptural",
+      "page": 798,
+      "at": "#24",
+      "check": "stanza",
+      "value": "544d",
+      "judge": "F07",
+      "why": "f201 p798-c1-1280.13: p798-c1-1280 line 13: the book clearly prints 544d under key 2:2, as settled."
+    },
+    {
+      "index": "scriptural",
+      "page": 798,
+      "at": "#24",
+      "check": "directions",
+      "value": "1 Peter 2:2 544d",
+      "judge": "F07",
+      "why": "f202 p798-c1-1280.13: p798-c1-1280 line 13: the book prints 544d under key 2:2 with a clear d, as settled. | twin t101 p805-c4-2075.2 (F17): The book's two places disagree, as twin p805-c4-2075 line 2 clearly prints 544 a with 1 Pet 2:22 while first side p798-c1-1280 line 13 clearly prints 2:2 544d."
+    },
+    {
+      "index": "scriptural",
+      "page": 798,
+      "at": "#75",
+      "check": "directions",
+      "value": "2 Peter 1:21 404b",
+      "judge": "F23",
+      "why": "f203 p798-c2-0430.5 (third look F23): p798-c2-0430 line 5 prints 404b with no key under 1:21 275b in the 2 PETER section that heads at the foot of p798-c1-3830, while the twin p804-c1-2030 line 17 prints b. 1 Pet 1:21 under 404, so the book's two places disagree. | first side (F07): p798-c2-0430 line 5: the book prints only 404b after 275b under key 1:21, with no second number, as settled. | twin t085 p804-c1-2030.17 (F16): The book's two places disagree, as twin p804-c1-2030 line 17 prints 404 b with 1 Pet 1:21 (zoomed, narrow 1) while first side p798-c2-0430 line 5 lists 1:21 404b under 2 Peter."
+    },
+    {
+      "index": "scriptural",
+      "page": 798,
+      "at": "#80",
+      "check": "stanza",
+      "value": "454f",
+      "judge": "F07",
+      "why": "f204 p798-c2-0430.10: p798-c2-0430 line 10: zoomed, the book prints 454f under key 3:18 with a clear f, as settled."
+    },
+    {
+      "index": "scriptural",
+      "page": 798,
+      "at": "#80",
+      "check": "directions",
+      "value": "2 Peter 3:18 454f",
+      "judge": "F07",
+      "why": "f205 p798-c2-0430.10: p798-c2-0430 line 10: zoomed, the book prints 454f under key 3:18, as settled."
+    },
+    {
+      "index": "scriptural",
+      "page": 798,
+      "at": "#81",
+      "check": "directions",
+      "value": "1 John 1:5 76a",
+      "judge": "F07",
+      "why": "f206 p798-c2-0430.12: p798-c2-0430 line 12: the book clearly prints 76a under key 1:5, as settled. | twin t035 p800-c1-1810.17 (F15): Twin strip p800-c1-1810 line 17 prints 76b under 1 John 1:5, while the first side's strip p798-c2-0430 line 12 prints 76a, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 798,
+      "at": "#90",
+      "check": "stanza",
+      "value": "624r",
+      "judge": "F07",
+      "why": "f207 p798-c2-1280.7: p798-c2-1280 line 7: the book clearly prints 624r under key 2:6, as settled."
+    },
+    {
+      "index": "scriptural",
+      "page": 798,
+      "at": "#112",
+      "check": "stanza",
+      "value": "458r",
+      "judge": "F23",
+      "why": "f208 p798-c2-2130.10 (third look F23): p798-c2-2130 line 10 prints 4:17 458r between 4:16 313e and 4:18 77c. | first side (F07): p798-c2-2130 line 10: the book clearly prints 458r under key 4:17, as settled."
+    },
+    {
+      "index": "scriptural",
+      "page": 798,
+      "at": "#157",
+      "check": "stanza",
+      "value": "600d",
+      "judge": "F07",
+      "why": "f209 p798-c3-0430.16: p798-c3-0430 line 16: the book clearly prints 600d under key 2:25, as settled."
+    },
+    {
+      "index": "scriptural",
+      "page": 798,
+      "at": "#172",
+      "check": "stanza",
+      "value": "600d",
+      "judge": "F07",
+      "why": "f210 p798-c3-1280.14: p798-c3-1280 line 14: the book clearly prints 600d under carried key 3:21 after 228c, as settled."
+    },
+    {
+      "index": "scriptural",
+      "page": 798,
+      "at": "#215",
+      "check": "stanza",
+      "value": "612e",
+      "judge": "F07",
+      "why": "f211 p798-c3-3830.5: p798-c3-3830 line 5: the book clearly prints 612e under carried key 5:13 after 609f, as settled."
+    },
+    {
+      "index": "scriptural",
+      "page": 798,
+      "at": "#216",
+      "check": "scripture",
+      "value": "Revelation 5:19",
+      "judge": "F07",
+      "why": "f212 p798-c3-3830.6: p798-c3-3830 line 6: zoomed, the book clearly prints key 5:19 with 341b, between 5:13 and 6:10, so the impossible verse is the book's."
+    },
+    {
+      "index": "scriptural",
+      "page": 798,
+      "at": "#221",
+      "check": "stanza",
+      "value": "530d",
+      "judge": "F07",
+      "why": "f213 p798-c4-0430.5: p798-c4-0430 line 5: zoomed, the book clearly prints 530d under key 6:14, as settled."
+    },
+    {
+      "index": "scriptural",
+      "page": 798,
+      "at": "#241",
+      "check": "stanza",
+      "value": "628d",
+      "judge": "F07",
+      "why": "f214 p798-c4-1280.8: p798-c4-1280 line 8: the book clearly prints 628d under key 11:12, as settled."
+    },
+    {
+      "index": "scriptural",
+      "page": 798,
+      "at": "#248",
+      "check": "stanza",
+      "value": "213e",
+      "judge": "F07",
+      "why": "f215 p798-c4-1280.15: p798-c4-1280 line 15: the book clearly prints 213e under key 11:18, as settled."
+    },
+    {
+      "index": "scriptural",
+      "page": 798,
+      "at": "#275",
+      "check": "stanza",
+      "value": "172e",
+      "judge": "F07",
+      "why": "f216 p798-c4-2980.7: p798-c4-2980 line 7: the book clearly prints 172e under carried key 19:1 after 166a, as settled."
+    },
+    {
+      "index": "scriptural",
+      "page": 798,
+      "at": "#285",
+      "check": "directions",
+      "value": "Revelation 19:6 226a",
+      "judge": "F07",
+      "why": "f217 p798-c4-2980.17: p798-c4-2980 line 17: zoomed, the book clearly prints 226a after 173a under carried key 19:6, so the mismatch with the hymn-number index is the book's. | twin t065 p802-c1-0830.18 (F16): The book's two places disagree, as twin p802-c1-0830 line 18 prints Rev 19:16 under 226 a while first side p798-c4-2980 line 17 shows 226a under key 19:6."
+    },
+    {
+      "index": "scriptural",
+      "page": 799,
+      "at": "#6",
+      "check": "scripture",
+      "value": "Revelation 19:16, 23",
+      "judge": "F21",
+      "why": "f218 p799-c1-0580.7 (third look F21): p799-c1-0580 line 7 prints 19:16, 23 with 199b, the last digit of 23 having the same flat-topped 3 as 20:3 on line 8, and the alt strip p799-alt-IMG_1220-0400 shows the same 23. | first side (F08): p799-c1-0580 line 7: the key reads 19:16, 23 with 199b, both digits of 23 sharp; the alt strip p799-alt-IMG_1220-0400 shows the same 23, so the book prints it so"
+    },
+    {
+      "index": "scriptural",
+      "page": 799,
+      "at": "#10",
+      "check": "directions",
+      "value": "Revelation 20:6 117c",
+      "judge": "F21",
+      "why": "f219 p799-c1-0580.11 (third look F21): p799-c1-0580 line 11 prints 20:6 with 117c, the key's last digit having the open top of a 6 unlike the two-loop 8 of 20:8 on line 12, and the alt strip 0400 agrees, while the twin strip p800-c3-1810 line 9 prints 117c under Rev 20:8, so the two places differ. | first side (F08): p799-c1-0580 line 11: 20:6 with 117c is clear, every digit sharp | twin t048 p800-c3-1810.9 (F15): Twin strip p800-c3-1810 line 9 prints 117c under Rev 20:8 with a clear 8, while the first side's strip p799-c1-0580 line 11 gives 117c under Rev 20:6, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 799,
+      "at": "#13",
+      "check": "directions",
+      "value": "Revelation 20:11 212c",
+      "judge": "F21",
+      "why": "f220 p799-c1-0580.14 (third look F21): p799-c1-0580 line 14 prints 212c under 20:11, its middle digit a thin 1 like the 1s of 211c on line 13, and the alt strip 0400 agrees, while the twin strips p801-c4-1280 line 2 (20:11 under 211c) and p801-c4-2130 line 27 (20:11 under 222c) differ. | first side (F08): p799-c1-0580 line 14: 212c follows 211c under 20:11, clear; the alt strip p799-alt-IMG_1220-0400 agrees | twin t058 p801-c4-1280.2 (F15): Twin strip p801-c4-1280 line 2 prints Rev 20:11 under 211c, while the first side's strip p799-c1-0580 line 14 gives 212c, so the book's two places disagree. | twin t063 p801-c4-2130.27 (F15): Twin strip p801-c4-2130 line 27 prints Rev 20:11 under 222c, while the first side's strip p799-c1-0580 line 14 gives 212c, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 799,
+      "at": "#16",
+      "check": "stanza",
+      "value": "444d",
+      "judge": "F21",
+      "why": "f221 p799-c1-0580.17 (third look F21): p799-c1-0580 line 17 prints 20:15 with 444d, the letter having the ascender and bowl of a d, and the alt strip 0400 agrees. | first side (F08): p799-c1-0580 line 17: 444d under 20:15 is clear; the alt strip p799-alt-IMG_1220-0400 agrees"
+    },
+    {
+      "index": "scriptural",
+      "page": 799,
+      "at": "#19",
+      "check": "directions",
+      "value": "Revelation 21:2 210c",
+      "judge": "F21",
+      "why": "f222 p799-c1-0580.20 (third look F21): p799-c1-0580 line 20 prints 210c under 21:2 after 18b and the alt strip p799-alt-IMG_1220-1250 agrees, while the twin strip p801-c4-0430 line 18 prints 210c under Rev 21:21, so the two places differ. | first side (F08): p799-c1-0580 line 20: 210c under 21:2, after 18b, is clear | twin t057 p801-c4-0430.18 (F15): Twin strip p801-c4-0430 line 18 prints 210c under Rev 21:21 with the final 1 readable, while the first side's strip p799-c1-0580 line 20 gives 210c under Rev 21:2, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 799,
+      "at": "#20",
+      "check": "directions",
+      "value": "Revelation 21:2 219a",
+      "judge": "F21",
+      "why": "f223 p799-c1-0580.21 (third look F21): p799-c1-0580 line 21 prints 219a, the letter shaped like the a of 617a with no ascender, and the alt strip 1250 agrees, while the twin strip p801-c4-2130 line 13 prints 21:2 under 219d, so the two places differ. | first side (F08): p799-c1-0580 line 21: 219a after 210c is clear | twin t061 p801-c4-2130.13 (F15): Twin strip p801-c4-2130 line 13 prints Rev 21:2 under 219d, while the first side's strip p799-c1-0580 line 21 gives 219a, so the book's two places disagree."
+    },
+    {
+      "index": "scriptural",
+      "page": 799,
+      "at": "#30",
+      "check": "stanza",
+      "value": "217f",
+      "judge": "F21",
+      "why": "f224 p799-c2-0580.11 (third look F21): p799-c2-0580 line 11 prints 217f between 209c and 385c, the letter having the tall hooked stem of an f unlike the r of 427r and 632r, and the witness fits hymn 217. | first side (F08): p799-c2-0580 line 11: 217f, the f clear between 209c and 385c"
+    },
+    {
+      "index": "scriptural",
+      "page": 799,
+      "at": "#36",
+      "check": "directions",
+      "value": "Revelation 21:4 434c",
+      "judge": "F20",
+      "why": "f225 p799-c2-0580.17 (third look F20): p799-c2-0580 line 17 prints 434c under 21:4 between 434b and 437a with the same first digit 4 as 434b, while twin p804-c3-2030 line 2 prints 434 b with Rev 21:4 and 434 c with Rev 21:2, so the settled 434c stands and the book's two places disagree. | first side (F08): p799-c2-0580 line 17: zoomed, the number between 434b and 437a has a clear 4 as first digit, so 434c, not 194c | twin t089 p804-c3-2030.2 (F16): The book's two places disagree on the c row, as twin p804-c3-2030 line 2 clearly prints 434 b with Rev 21:4 and 434 c with Rev 21:2 while first side p799-c2-0580 lists both 434b and 434c under 21:4."
+    },
+    {
+      "index": "scriptural",
+      "page": 799,
+      "at": "#40",
+      "check": "directions",
+      "value": "Revelation 21:4 459a",
+      "judge": "F21",
+      "why": "f226 p799-c2-0580.21 (third look F21): p799-c2-0580 line 21 prints 459a under 21:4, the last digit having the closed top loop and open tail of a 9 unlike the two-loop 8 of 208b, while the twin strip p804-c4-2030 line 14 prints 459a for Rev 21:2, so the two places differ. | first side (F08): p799-c2-0580 line 21: 459a, the last number under 21:4, is clear | twin t090 p804-c4-2030.14 (F16): The book's two places disagree, as twin p804-c4-2030 line 14 clearly prints 459 a with Rev 21:2 while first side p799-c2-0580 line 21 lists 459a under 21:4 and 450a under 21:2."
+    },
+    {
+      "index": "scriptural",
+      "page": 799,
+      "at": "#78",
+      "check": "stanza",
+      "value": "444f",
+      "judge": "F21",
+      "why": "f228 p799-c4-0580.19 (third look F21): p799-c4-0580 line 19 prints 22:3 with 444f before 636b, the letter having a hooked top and no bowl unlike the b of 444b and the d of 189d. | first side (F08): p799-c4-0580 line 19: 444f under 22:3, before 636b, is clear"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 799,
+      "at": "#20",
+      "check": "stanza",
+      "value": "5e",
+      "judge": "F21",
+      "why": "f229 p799-c5-1640.20 (third look F21): p799-c5-1640 line 20 prints hymn 5 with letter e for Heb 13:15, the e having a crossbar unlike the c on line 18. | first side (F08): p799-c5-1640 line 20: hymn 5 letter e with Heb 13:15 is printed clearly"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 799,
+      "at": "#59",
+      "check": "stanza",
+      "value": "18e",
+      "judge": "F21",
+      "why": "f230 p799-c6-1640.14 (third look F21): p799-c6-1640 line 14 prints 18e for Heb 13:8, with a clear e, a flat-topped 3 and an 8 of two round loops. | first side (F08): p799-c6-1640 line 14: 18e Heb 13:8 is printed; hymn 18 prints letters a, b, c, d, e"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 799,
+      "at": "#60",
+      "check": "stanza",
+      "value": "18e",
+      "judge": "F21",
+      "why": "f231 p799-c6-1640.15 (third look F21): p799-c6-1640 line 15 prints Jer 31:3 with no letter under 18e, and both 3s have the same flat-topped shape. | first side (F08): p799-c6-1640 line 15: Jer 31:3 is printed with no letter, under 18e"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 799,
+      "at": "#61",
+      "check": "stanza",
+      "value": "18e",
+      "judge": "F21",
+      "why": "f232 p799-c6-1640.16 (third look F21): p799-c6-1640 line 16 prints Ps 24:10 with no letter under 18e, with the same clear digits as the rest of the strip. | first side (F08): p799-c6-1640 line 16: Ps 24:10 is printed with no letter, carrying under 18e"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 799,
+      "at": "#79",
+      "check": "scripture",
+      "value": "Isaiah 6:23",
+      "judge": "F21",
+      "why": "f233 p799-c6-2490.11 (third look F21): p799-c6-2490 line 11 prints hymn 24 with letter a and key Isa 6:23, a distinct 2 and a 3 the same as the 3 of hymn 23 above. | first side (F08): p799-c6-2490 line 11: zoomed, 24a Isa 6:23 has a distinct 2 and a flat-topped 3, so the book prints 6:23"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 799,
+      "at": "#97",
+      "check": "stanza",
+      "value": "30d",
+      "judge": "F21",
+      "why": "f234 p799-c7-1640.6 (third look F21): p799-c7-1640 line 6 prints 30d for 2 Cor 13:14, the second chapter digit matching the flat-topped 3 of Isa 6:2, 3 on line 5 and 10:30 on line 7, not the round 8s of 148 lower down. | first side (F08): p799-c7-1640 line 6: 30d 2 Cor 13:14, the second chapter digit matching the 3 of Isa 6:2, 3 on the line above and not the round-topped 8s of 148:18 below; hymn 30 prints a, b, d"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 799,
+      "at": "#98",
+      "check": "stanza",
+      "value": "30d",
+      "judge": "F21",
+      "why": "f235 p799-c7-1640.7 (third look F21): p799-c7-1640 line 7 prints John 10:30 under 30d, with the same flat-topped 3 as line 5. | first side (F08): p799-c7-1640 line 7: John 10:30 is printed with no letter under 30d"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 799,
+      "at": "#110",
+      "check": "scripture",
+      "value": "Psalms 148:15, 16",
+      "judge": "F21",
+      "why": "f236 p799-c7-1640.19 (third look F21): p799-c7-1640 line 19 prints 35c for Ps 148:15, 16, the third digit having two loops like the 8 of 147:8 on line 18, unlike the 7 of 147. | first side (F08): p799-c7-1640 line 19: 35c Ps 148:15, 16 is printed clearly"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 799,
+      "at": "#111",
+      "check": "scripture",
+      "value": "Psalms 148:18",
+      "judge": "F21",
+      "why": "f237 p799-c7-1640.20 (third look F21): p799-c7-1640 line 20 prints 35d for Ps 148:18, with the same two-loop 8 as 147:8 on line 18. | first side (F08): p799-c7-1640 line 20: 35d Ps 148:18 is printed clearly"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 799,
+      "at": "#112",
+      "check": "scripture",
+      "value": "Psalms 148:20",
+      "judge": "F21",
+      "why": "f238 p799-c7-1640.21 (third look F21): p799-c7-1640 line 21 prints 35e for Ps 148:20, with the same two-loop 8 as 147:8 on line 18. | first side (F08): p799-c7-1640 line 21: 35e Ps 148:20 is printed clearly"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 800,
+      "at": "#55",
+      "check": "scripture",
+      "value": "Revelation 104:3",
+      "judge": "F08",
+      "why": "f239 p800-c1-2660.19: p800-c1-2660 line 19: 104:3 is printed with no book name, indented under 84 a Rev 19:6"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 800,
+      "at": "#56",
+      "check": "scripture",
+      "value": "Revelation 29:11",
+      "judge": "F08",
+      "why": "f240 p800-c1-3510.1: p800-c1-3510 line 1: 29:11 is printed with no book name, under 104:3 under 84a Rev 19:6"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 800,
+      "at": "#66",
+      "check": "scripture",
+      "value": "Psalms 137:31",
+      "judge": "F23",
+      "why": "f241 p800-c1-3510.11 (third look F23): p800-c1-3510 line 11 prints d. Ps 137:31 under 85, its middle digit a flat-topped 3 unlike the round 0 in 107:28 above it. | first side (F08): p800-c1-3510 line 11: zoomed, 85d Ps 137:31 has a flat-topped 3 as middle digit, unlike the round 0 of Ps 107:28 four lines above"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 800,
+      "at": "#143",
+      "check": "scripture",
+      "value": "Psalms 46:16",
+      "judge": "F08",
+      "why": "f242 p800-c2-3510.16: p800-c2-3510 line 16: 109 b Ps 46:16 is sharp, both digits of 16 clear, below 109 a Rom 5:20"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 800,
+      "at": "#270",
+      "check": "stanza",
+      "value": "149e",
+      "judge": "F08",
+      "why": "f243 p800-c4-2660.18: p800-c4-2660 line 18: hymn 149 prints letters a, c, e, and e Matt 24:30 is clear above 150a"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 801,
+      "at": "#16",
+      "check": "stanza",
+      "value": "159d",
+      "judge": "F08",
+      "why": "f244 p801-c1-0430.18: p801-c1-0430 line 18: hymn 159 prints letters a, b, c, d, and d Heb 12:2 is clear above 160a"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 801,
+      "at": "#25",
+      "check": "scripture",
+      "value": "1 Corinthians 5:15",
+      "judge": "F08",
+      "why": "f245 p801-c1-1280.5: p801-c1-1280 line 5: 164 a 1 Cor 5:15 is clear; the 18 reading b adds is the next column's number at the strip edge, not part of the key"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 801,
+      "at": "#62",
+      "check": "stanza",
+      "value": "172e",
+      "judge": "F08",
+      "why": "f246 p801-c1-2130.20: p801-c1-2130 line 20: hymn 172 prints letters b, c, e, and e 1 Cor 15:55 is clear"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 801,
+      "at": "#63",
+      "check": "stanza",
+      "value": "172e",
+      "judge": "F08",
+      "why": "f247 p801-c1-2130.21: p801-c1-2130 line 21: Rev 19:1 is printed with no letter under 172e, above 173 a."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 801,
+      "at": "#182",
+      "check": "scripture",
+      "value": "Revelation 19:16, 23",
+      "judge": "F08",
+      "why": "f248 p801-c3-1280.17: p801-c3-1280 line 17: 199 b Rev 19:16, 23 is sharp, the 23 clear, below Rev 19:12 and above 200r"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 801,
+      "at": "#214",
+      "check": "scripture",
+      "value": "Isaiah 40:45",
+      "judge": "F08",
+      "why": "f249 p801-c3-2130.26: p801-c3-2130 line 26: zoomed, a small c sits at the left of Isa 40:45 between 206b and 206d, and 40:45 is sharp"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 801,
+      "at": "#255",
+      "check": "stanza",
+      "value": "213e",
+      "judge": "F08",
+      "why": "f250 p801-c4-1280.17: p801-c4-1280 line 17: zoomed, the letter before Rev 11:18 follows d Luke 21:10, 11 and has the closed bowl of an e, unlike the open c of Ps 98:7 two lines up, so 213e"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 801,
+      "at": "#256",
+      "check": "stanza",
+      "value": "213e",
+      "judge": "F08",
+      "why": "f251 p801-c4-1280.18: p801-c4-1280 line 18: Dan 12:4 is printed with no letter under 213e Rev 11:18, above 214a"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 801,
+      "at": "#267",
+      "check": "stanza",
+      "value": "217e",
+      "judge": "F08",
+      "why": "f252 p801-c4-2130.5: p801-c4-2130 line 5: hymn 217 prints letters b, d, e, f, and e Rev 22:4 is clear"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 801,
+      "at": "#268",
+      "check": "stanza",
+      "value": "217f",
+      "judge": "F08",
+      "why": "f253 p801-c4-2130.6: p801-c4-2130 line 6: f Rev 21:4 is clear under 217e, above 218a"
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 802,
+      "at": "#32",
+      "check": "stanza",
+      "value": "229e",
+      "judge": "F09",
+      "why": "f254 p802-c1-1680.13: p802-c1-1680 line 13: under 229 the stanza letters run a to e and the e before Acts 10:36 is sharp, so the book prints 229e."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 802,
+      "at": "#76",
+      "check": "scripture",
+      "value": "Psalms 45:26",
+      "judge": "F23",
+      "why": "f255 p802-c2-0830.5 (third look F23): p802-c2-0830 line 5 prints b. Ps 45:26 under 240, with a clear 2 and 6. | first side (F09): p802-c2-0830 line 5: under 240 b. the reference reads Ps 45:26 with both verse digits sharp, 2 and 6, so the book prints 45:26."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 802,
+      "at": "#201",
+      "check": "stanza",
+      "value": "276d",
+      "judge": "F09",
+      "why": "f256 p802-c3-2530.17: p802-c3-2530 line 17: under 276 the letter d before Acts 10:37 is sharp, so the book prints 276d."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 802,
+      "at": "#202",
+      "check": "stanza",
+      "value": "276e",
+      "judge": "F23",
+      "why": "f257 p802-c3-2530.18 (third look F23): p802-c3-2530 line 18 prints e. Rom 8:16 under 276 after d. Acts 10:37, and the 2 of reading b is the edge of the next column. | first side (F09): p802-c3-2530 line 18: under 276 the letter e before Rom 8:16 is sharp after d, so the book prints 276e."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 802,
+      "at": "#287",
+      "check": "scripture",
+      "value": "Matthew 6:44",
+      "judge": "F09",
+      "why": "f258 p802-c4-3380.11: p802-c4-3380 line 11: under 304 c. the reference reads Matt 6:44 with both 4s sharp, so the book prints 6:44."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 803,
+      "at": "#32",
+      "check": "scripture",
+      "value": "Hebrews 2:20",
+      "judge": "F09",
+      "why": "f259 p803-c1-1225.15: p803-c1-1225 line 15: under 316 b. a zoomed crop shows Heb 2:20 with the 2 and 0 sharp, so the book prints Heb 2:20."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 803,
+      "at": "#58",
+      "check": "stanza",
+      "value": "322d",
+      "judge": "F09",
+      "why": "f260 p803-c1-2925.2: p803-c1-2925 line 2: the letter d before Matt 26:41 under 322 matches the d of 323 and 324 below, so the book prints 322d."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 803,
+      "at": "#59",
+      "check": "stanza",
+      "value": "322d",
+      "judge": "F09",
+      "why": "f261 p803-c1-2925.3: p803-c1-2925 line 3: the reference 16:24 sits under 322 d. with no new letter, so the book prints it under 322d."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 803,
+      "at": "#105",
+      "check": "stanza",
+      "value": "335e",
+      "judge": "F09",
+      "why": "f262 p803-c2-1225.16: p803-c2-1225 line 16: under 335 the letters a, b, c, e and r are sharp, and the e is before 1 Cor 15:57, so the book prints 335e."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 803,
+      "at": "#121",
+      "check": "scripture",
+      "value": "Revelation 5:19",
+      "judge": "F09",
+      "why": "f263 p803-c2-2075.13: p803-c2-2075 line 13: under 341 b. the reference reads Rev 5:19 with the 1 and 9 sharp, so the book prints 5:19."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 803,
+      "at": "#178",
+      "check": "stanza",
+      "value": "357d",
+      "judge": "F09",
+      "why": "f264 p803-c3-1225.18: p803-c3-1225 line 18: under 357 the letter d before Matt 25:21 is sharp, so the book prints 357d."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 803,
+      "at": "#217",
+      "check": "stanza",
+      "value": "366d",
+      "judge": "F09",
+      "why": "f265 p803-c4-0375.3: p803-c4-0375 line 3: the letter d before Ps 126:6 continues hymn 366 from the previous column and is sharp, so the book prints 366d."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 803,
+      "at": "#221",
+      "check": "stanza",
+      "value": "367d",
+      "judge": "F09",
+      "why": "f266 p803-c4-0375.7: p803-c4-0375 line 7: under 367 the letter d before Matt 7:14 is sharp, so the book prints 367d."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 804,
+      "at": "#126",
+      "check": "scripture",
+      "value": "Isaiah 6:19",
+      "judge": "F09",
+      "why": "f267 p804-c2-2030.9: p804-c2-2030 line 9: under 419 b. the reference reads Isa 6:19 with the 1 and 9 sharp, so the book prints 6:19."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 804,
+      "at": "#233",
+      "check": "stanza",
+      "value": "444d",
+      "judge": "F09",
+      "why": "f268 p804-c4-0330.17: p804-c4-0330 line 17: under 444 the letter d before Rev 20:15 is sharp, so the book prints 444d."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 804,
+      "at": "#234",
+      "check": "stanza",
+      "value": "444f",
+      "judge": "F09",
+      "why": "f269 p804-c4-0330.18: p804-c4-0330 line 18: under 444 the letter f before Rev 22:3 is sharp, so the book prints 444f."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 804,
+      "at": "#275",
+      "check": "stanza",
+      "value": "458r",
+      "judge": "F09",
+      "why": "f270 p804-c4-2030.13: p804-c4-2030 line 13: under 458 the letter r before 1 John 4:17 matches the r of 457 above, so the book prints 458r."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 805,
+      "at": "#113",
+      "check": "scripture",
+      "value": "Matthew 1:29",
+      "judge": "F09",
+      "why": "f271 p805-c2-2075.6: p805-c2-2075 line 6: under 507 b. the reference reads Matt 1:29 with the 2 and 9 sharp, so the book prints 1:29."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 805,
+      "at": "#215",
+      "check": "stanza",
+      "value": "530d",
+      "judge": "F09",
+      "why": "f272 p805-c3-2925.12: p805-c3-2925 line 12: under 530 the letter d before Rev 6:14 is sharp, so the book prints 530d."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 806,
+      "at": "#45",
+      "check": "stanza",
+      "value": "571r",
+      "judge": "F09",
+      "why": "f273 p806-c1-2210.12: p806-c1-2210 line 12: under 571 the letter r before Micah 5:8 matches the r of other refrain lines on the strip, so the book prints 571r."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 806,
+      "at": "#61",
+      "check": "scripture",
+      "value": "2 Timothy 6:17",
+      "judge": "F09",
+      "why": "f274 p806-c1-3060.12: p806-c1-3060 line 12: under 576 c. the reference reads 2 Tim 6:17 with the 6 sharp, so the book prints chapter 6."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 806,
+      "at": "#110",
+      "check": "stanza",
+      "value": "593r",
+      "judge": "F23",
+      "why": "f275 p806-c2-2210.6 (third look F23): p806-c2-2210 line 6 prints r. 1 Cor 10:10 under 593. | first side (F09): p806-c2-2210 line 6: under 593 the letter r before 1 Cor 10:10 is sharp after a and b, so the book prints 593r."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 806,
+      "at": "#146",
+      "check": "stanza",
+      "value": "600d",
+      "judge": "F09",
+      "why": "f276 p806-c3-0510.3: p806-c3-0510 line 3: the letter d before Tit 2:13 is sharp and sits above 601, so the book prints 600d."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 806,
+      "at": "#147",
+      "check": "stanza",
+      "value": "600d",
+      "judge": "F09",
+      "why": "f277 p806-c3-0510.4: p806-c3-0510 line 4: Rev 2:25 sits under 600 d. with no new letter, above 601, so the book prints it under 600d."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 806,
+      "at": "#148",
+      "check": "stanza",
+      "value": "600d",
+      "judge": "F09",
+      "why": "f278 p806-c3-0510.5: p806-c3-0510 line 5: Matt 25:21 sits under 600 d. with no new letter, above 601, so the book prints it under 600d."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 806,
+      "at": "#149",
+      "check": "stanza",
+      "value": "600d",
+      "judge": "F09",
+      "why": "f279 p806-c3-0510.6: p806-c3-0510 line 6: Rev 3:21 sits under 600 d. with no new letter, directly above 601, so the book prints it under 600d."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 806,
+      "at": "#186",
+      "check": "stanza",
+      "value": "610d",
+      "judge": "F09",
+      "why": "f280 p806-c3-2210.10: p806-c3-2210 line 10: under 610 the letters a to d and r are sharp, and the d is before Isa 35:6, so the book prints 610d."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 806,
+      "at": "#196",
+      "check": "stanza",
+      "value": "612e",
+      "judge": "F09",
+      "why": "f281 p806-c3-3060.3: p806-c3-3060 line 3: under 612 the letters a to e are sharp, and the e is before Rev 5:13, so the book prints 612e."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 806,
+      "at": "#218",
+      "check": "stanza",
+      "value": "617e",
+      "judge": "F09",
+      "why": "f282 p806-c4-0510.2: p806-c4-0510 line 2: the letter e before Matt 25:21 is sharp and sits above 618, continuing hymn 617, so the book prints 617e."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 806,
+      "at": "#250",
+      "check": "stanza",
+      "value": "624r",
+      "judge": "F23",
+      "why": "f283 p806-c4-2210.1 (third look F23): p806-c4-2210 line 1 prints 624. r. 1 John 2:6. | first side (F09): p806-c4-2210 line 1: hymn 624 has only the letter r, sharp, before 1 John 2:6, so the book prints 624r."
+    },
+    {
+      "index": "scriptural-by-hymn",
+      "page": 806,
+      "at": "#261",
+      "check": "stanza",
+      "value": "628d",
+      "judge": "F09",
+      "why": "f284 p806-c4-2210.12: p806-c4-2210 line 12: under 628 the letter d before Rev 11:12 is sharp after a., so the book prints 628d."
+    },
+    {
+      "index": "sentences",
+      "page": 808,
+      "at": "#56",
+      "check": "stanza",
+      "value": "320e",
+      "judge": "F23",
+      "why": "f285 p808-c2-1300.7 (third look F23): p808-c2-1300 line 7 prints 320d, e between 226e and 97g. | first side (F09): p808-c2-1300 line 7, between 226e and 97g: the number reads 320d, e with both letters sharp, so the book prints 320d, e."
+    },
+    {
+      "index": "sentences",
+      "page": 808,
+      "at": "#57",
+      "check": "stanza",
+      "value": "97g",
+      "judge": "F09",
+      "why": "f286 p808-c2-1300.8: p808-c2-1300 line 8, between 320d, e and 363c: the number reads 97g with a sharp descender on the g, so the book prints 97g."
+    },
+    {
+      "index": "sentences",
+      "page": 808,
+      "at": "#64",
+      "check": "stanza",
+      "value": "174e",
+      "judge": "F09",
+      "why": "f287 p808-c2-1300.15: p808-c2-1300 line 15, between 407a, b and 209a: the number reads 174a, e with both letters sharp, so the book prints 174a, e."
+    },
+    {
+      "index": "authors",
+      "page": 811,
+      "at": "#200",
+      "check": "order",
+      "value": "Hofford, M. Lowrie > Hoffman, Elisha A.",
+      "judge": "F09",
+      "why": "f288 p811-c3-1890.14: p811-c3-1890 line 14: the Hofford entry with 46 is printed above the Hoffman entry with 335, 469, 485, so the book prints this order. | twin t121 p811-c3-1890.13 (F17): Twin p811-c3-1890 line 13 clearly prints Hofford, M. Lowrie 46 directly above line 14 Hoffman, so the book itself sets this order."
+    },
+    {
+      "index": "authors",
+      "page": 812,
+      "at": "#253",
+      "check": "order",
+      "value": "Smith, Walter C. > Smith, Uriah",
+      "judge": "F23",
+      "why": "f289 p812-c3-3030.17 (third look F23): p812-c3-3030 line 16 prints Smith, Walter C. 21 directly above Smith, Uriah 602, and the twin t122 is the same strip and line, so the book sets this order. | first side (F09): p812-c3-3030 line 17: the Smith, Walter entry with 21 is printed above Smith, Uriah 602, so the book prints this order. | twin t122 p812-c3-3030.16 (F17): Twin p812-c3-3030 line 16 clearly prints Smith, Walter C. 21 directly above line 17 Smith, Uriah 602, so the book itself sets this order."
+    },
+    {
+      "index": "authors",
+      "page": 813,
+      "at": "#113",
+      "check": "order",
+      "value": "Whitfield, Frederick > Whitefield, George",
+      "judge": "F09",
+      "why": "f290 p813-c3-0390.5: p813-c3-0390 line 5: Whitfield, Frederick 248, 484 is printed above Whitefield, George 71, so the book prints this order. | twin t123 p813-c3-0390.4 (F17): Twin p813-c3-0390 line 4 clearly prints Whitfield, Frederick 248, 484 directly above line 5 Whitefield, George 71, so the book itself sets this order."
+    },
+    {
+      "index": "composers",
+      "page": 813,
+      "at": "#42",
+      "check": "order",
+      "value": "Bach, Johann Christoph > Bach, J. S.",
+      "judge": "F09",
+      "why": "f291 p813-c5-2330.6: p813-c5-2330 line 6: Bach, Johann Christoph 646 is printed above the Bach, J S entry with 18, 57, 128, 134, 156, 210, 239, 345, so the book prints this order and both readings hold the printed numbers. | twin t124 p813-c5-2330.5 (F17): Twin p813-c5-2330 line 5 clearly prints Bach, Johann Christoph 646 directly above line 6 Bach, J. S., so the book itself sets this order."
+    },
+    {
+      "index": "composers",
+      "page": 814,
+      "at": "#81",
+      "check": "order",
+      "value": "D'Vrhon, Chretier > Dutch Folk Tune",
+      "judge": "F09",
+      "why": "f292 p814-c1-3270.7: p814-c1-3270 line 7: D'Vrhon, Chretier 484 is printed above Dutch Folk Tune 637, so the book prints this order. | twin t125 p814-c1-3270.6 (F17): Twin p814-c1-3270 line 6 clearly prints D'Vrhon, Chretier 484 directly above line 7 Dutch Folk Tune 637, so the book itself sets this order."
+    },
+    {
+      "index": "composers",
+      "page": 814,
+      "at": "#186",
+      "check": "order",
+      "value": "Grenoble Antiphoner > Greiter, Matthaus",
+      "judge": "F24",
+      "why": "f293 p814-c2-3270.11 (third look F24): p814-c2-3270 lines 10 and 11 print Grenoble Antiphoner 404 before Greiter, Matthaus 89, so the composers order fault at line 11 is the book's own | first side (F09): p814-c2-3270 line 11: Grenoble Antiphoner 404 is printed above Greiter, Matthaus 89, and 106 belongs to Griffiths, Vernon on the next line, so the book prints this order with 89 only, as side a and the settled line hold. | twin t126 p814-c2-3270.10 (F17): Twin p814-c2-3270 line 10 prints Grenoble Antiphoner 404 in italic type as reading a has it, directly above line 11 Greiter, so the book itself sets this order."
+    },
+    {
+      "index": "composers",
+      "page": 815,
+      "at": "#273",
+      "check": "order",
+      "value": "Teschner, Melchior > Terry, Richard",
+      "judge": "F23",
+      "why": "f294 p815-c3-2170.16 (third look F23): p815-c3-2170 line 15 prints Teschner, Melchior 230 directly above Terry, Richard 364, and the twin t127 is the same strip and line, so the book sets this order. | first side (F10): p815-c3-2170 line 16: Teschner, Melchior 230 is printed directly above Terry, Richard 364, so the book prints this order. | twin t127 p815-c3-2170.15 (F17): Twin p815-c3-2170 line 15 clearly prints Teschner, Melchior 230 directly above line 16 Terry, Richard 364, so the book itself sets this order."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "#7",
+      "check": "tunes",
+      "value": "Adeste fideles 132",
+      "judge": "F10",
+      "why": "f295 p816-c4-1430.8: p816-c4-1430 line 8: the name Adeste fideles and the number 132 are sharp with no metre heading, so the book prints this tune line as read. | twin t169 p820-c1-1030.16 (F19): p820-c1-1030 line 16 prints Adeste fidelis 132 and p816-c4-1430 line 8 prints Adeste fideles 132, so the number agrees and the book's two places spell the tune differently."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "#48",
+      "check": "tunes",
+      "value": "Birmingham 666",
+      "judge": "F10",
+      "why": "f297 p816-c5-1430.12: p816-c5-1430 line 12: the name Birmingham and the number 666 are sharp, so the book prints this tune line as read."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "#61",
+      "check": "tunes",
+      "value": "Bullinger 585",
+      "judge": "F24",
+      "why": "f298 p816-c5-2280.6 (third look F24): p816-c5-2280 line 6 prints Bullinger 585 while the metrical index p821-c3-1110 line 2 prints 535 for the same tune, so the book's two places disagree and 585 stands as printed | first side (F10): p816-c5-2280 line 6, zoomed: the middle digit of the Bullinger number has the closed top loop of an 8, so the book prints 585, not 535. | twin t163 p819-c2-0450.9 (F19): p819-c2-0450 line 9 prints St Botolph 585 while p816-c5-2280 line 6 prints Bullinger 585, so the book's two places give hymn 585 different tune names."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "#80",
+      "check": "tunes",
+      "value": "Choral Blessing 669",
+      "judge": "F10",
+      "why": "f299 p816-c6-1430.5: p816-c6-1430 line 5: the name Choral Blessing and the number 669 are sharp, so the book prints this tune line as read."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "#91",
+      "check": "order",
+      "value": "Consolation > Consalator",
+      "judge": "F10",
+      "why": "f300 p816-c6-1430.16: p816-c6-1430 line 16: Consalator 477, spelled with an a, is printed below the indented Consolation 104 and above Contrast 434, so the book prints this order. | twin t132 p816-c6-1430.15 (F18): p816-c6-1430 line 15 prints Consolation 104 (indented) and line 16 prints Consalator 477 after it, so the book itself prints this order out of alphabetical sequence."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "#91",
+      "check": "tunes",
+      "value": "Consalator 477",
+      "judge": "F10",
+      "why": "f301 p816-c6-1430.16: p816-c6-1430 line 16: the name is spelled Consalator and the number 477 is sharp, so the book prints this tune line as read. | twin t192 p823-c3-2930.7 (F19): p823-c3-2930 line 7 prints Consolation (Webbe) 477 and p816-c6-1430 line 16 prints Consalator 477, so the number agrees and the book's two places name the tune differently."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "#101",
+      "check": "tunes",
+      "value": "Cuddesdon 360",
+      "judge": "F10",
+      "why": "f302 p816-c6-2280.7: p816-c6-2280 line 7: the name Cuddesdon and the number 360 are sharp, so the book prints this tune line as read. | twin t170 p820-c2-0180.16 (F19): p820-c2-0180 line 16 prints Cuddeson 360 and p816-c6-2280 line 7 prints Cuddesdon 360, so the number agrees and the book's two places spell the tune differently."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "#114",
+      "check": "tunes",
+      "value": "Diademata 228",
+      "judge": "F10",
+      "why": "f303 p816-c6-2280.17: p816-c6-2280 line 17, zoomed: Diademata reads 228, 616 with a closed-loop 8 as the third digit, so the book prints this tune line as read. | twin t167 p819-c3-3000.6 (F19): p819-c3-3000 line 6 prints Lasst uns erfreuen 91, 228 while p816-c6-2280 line 17 prints Diademata 228, 616, so the book's two places give hymn 228 different tune names. | twin t188 p822-c3-1161.11 (F19): p822-c3-1161 line 11 prints Lasst uns erfreuen 91, 228 while p816-c6-2280 line 17 prints Diademata 228, 616, so the book's two places give hymn 228 different tune names."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "hymn 12",
+      "check": "coverage",
+      "value": "12",
+      "judge": "F10",
+      "why": "f304 p816 (no strip): Searched p816-c4-1430, p816-c4-2280, p816-c5-1430, p816-c5-2280, p816-c6-1430 and p816-c6-2280 and no tune line holds 12 or a look-alike of it, so the book leaves hymn 12 out of the tune index. | twin t183 p822-c1-2011.19 (F19): p822-c1-2011 line 19 prints Hymn to Joy 12 (two digits only), while the tune index gives 112 (no first strip), so the book's two indexes disagree, 12 against 112."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "hymn 91",
+      "check": "coverage",
+      "value": "91",
+      "judge": "F23",
+      "why": "f305 p816 (no strip) (third look F23): The strips p816-c4-1430, p816-c4-2280, p816-c5-1430, p816-c5-2280, p816-c6-1430 and p816-c6-2280 run A to D only, and the tune index p817-c2-2710 line 13 prints Lasst uns erfreuen 2, 92, 228 with a clear 92, while the twins p819-c3-3000 line 6 and p822-c3-1161 line 11 print 91, so the book's indexes disagree. | first side (F10): Searched p816-c4-1430, p816-c4-2280, p816-c5-1430, p816-c5-2280, p816-c6-1430 and p816-c6-2280 and no tune line holds 91 or a look-alike of it, so the book leaves hymn 91 out of the tune index. | twin t168 p819-c3-3000.6 (F19): p819-c3-3000 line 6 prints Lasst uns erfreuen 91, 228 (zoom: 91 clear), and the tune index gives 92 there, not 91 (no first strip), so the book's two indexes disagree, 91 against 92. | twin t189 p822-c3-1161.11 (F19): p822-c3-1161 line 11 prints Lasst uns erfreuen 91, 228 (zoom: 91 clear), and the tune index gives 92 there, not 91 (no first strip), so the book's two indexes disagree, 91 against 92."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "hymn 223",
+      "check": "coverage",
+      "value": "223",
+      "judge": "F23",
+      "why": "f306 p816 (no strip) (third look F23): p816-c6-2280 line 17 prints Diademata 228, 616 with a round-topped 8 as third digit, while the twin p819-c1-1300 line 8 prints Diademata 223, 616, so the book's two indexes disagree. | first side (F10): Searched the six p816 strips p816-c4-1430 to p816-c6-2280; the nearest look-alike, Diademata 228 on p816-c6-2280 line 17, has a closed-loop 8 when zoomed, so the book leaves hymn 223 out of the tune index. | twin t161 p819-c1-1300.8 (F19): p819-c1-1300 line 8 prints Diademata 223, 616 (zoom: flat-topped 3), and the tune index has no 223 for it (no first strip), so the book's two indexes disagree, 223 against 228."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "hymn 471",
+      "check": "coverage",
+      "value": "471",
+      "judge": "F10",
+      "why": "f307 p816 (no strip): Searched the six p816 strips p816-c4-1430 to p816-c6-2280; Consalator 477 on p816-c6-1430 line 16 has two clear 7s and Bethany reads 473, so the book leaves hymn 471 out of the tune index."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "hymn 535",
+      "check": "coverage",
+      "value": "535",
+      "judge": "F10",
+      "why": "f308 p816 (no strip): Searched the six p816 strips p816-c4-1430 to p816-c6-2280; Bullinger reads 585 and Cwm Rhondda ends 538 with a closed-loop 8, so the book leaves hymn 535 out of the tune index. | twin t180 p821-c3-1110.2 (F19): p821-c3-1110 line 2 prints Bullinger 535 (zoom: flat-topped 3) while the tune index p816-c5-2280 line 6 prints Bullinger 585 (no first strip), so the book's two indexes disagree, 535 against 585."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "hymn 663",
+      "check": "coverage",
+      "value": "663",
+      "judge": "F23",
+      "why": "f309 p816 (no strip) (third look F23): p816-c5-1430 line 5 prints Bemerton 683 with a closed-loop 8, and no line on the six p816 strips prints 663. | first side (F10): Searched the six p816 strips p816-c4-1430 to p816-c6-2280; Bemerton reads 683 with a clear middle 8, so no line holds 663 and the book leaves this response out of the tune index."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "hymn 664",
+      "check": "coverage",
+      "value": "664",
+      "judge": "F10",
+      "why": "f310 p816 (no strip): Searched the six p816 strips p816-c4-1430 to p816-c6-2280 and no tune line holds 664 or a look-alike of it, so the book leaves this response out of the tune index."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "hymn 665",
+      "check": "coverage",
+      "value": "665",
+      "judge": "F10",
+      "why": "f311 p816 (no strip): Searched the six p816 strips p816-c4-1430 to p816-c6-2280; Birmingham reads 666 and Benediction (Ledington) 667, so no line holds 665 and the book leaves this response out of the tune index."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "hymn 672",
+      "check": "coverage",
+      "value": "672",
+      "judge": "F10",
+      "why": "f312 p816 (no strip): Searched the six p816 strips p816-c4-1430 to p816-c6-2280 and no tune line holds 672 or a look-alike of it, so the book leaves this response out of the tune index."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "hymn 675",
+      "check": "coverage",
+      "value": "675",
+      "judge": "F10",
+      "why": "f313 p816 (no strip): Searched the six p816 strips p816-c4-1430 to p816-c6-2280 and no tune line holds 675 or a look-alike of it, so the book leaves this response out of the tune index."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "hymn 676",
+      "check": "coverage",
+      "value": "676",
+      "judge": "F10",
+      "why": "f314 p816 (no strip): Searched the six p816 strips p816-c4-1430 to p816-c6-2280 and no tune line holds 676 or a look-alike of it, so the book leaves this response out of the tune index."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "hymn 677",
+      "check": "coverage",
+      "value": "677",
+      "judge": "F10",
+      "why": "f315 p816 (no strip): Searched the six p816 strips p816-c4-1430 to p816-c6-2280 and no tune line holds 677 or a look-alike of it, so the book leaves this response out of the tune index."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "hymn 679",
+      "check": "coverage",
+      "value": "679",
+      "judge": "F10",
+      "why": "f316 p816 (no strip): Searched the six p816 strips p816-c4-1430 to p816-c6-2280 and no tune line holds 679 or a look-alike of it, so the book leaves this response out of the tune index."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "hymn 684",
+      "check": "coverage",
+      "value": "684",
+      "judge": "F10",
+      "why": "f317 p816 (no strip): Searched the six p816 strips p816-c4-1430 to p816-c6-2280; Bemerton reads 683 with a clear last 3, so no line holds 684 and the book leaves this response out of the tune index."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "hymn 685",
+      "check": "coverage",
+      "value": "685",
+      "judge": "F10",
+      "why": "f318 p816 (no strip): Searched the six p816 strips p816-c4-1430 to p816-c6-2280 and no tune line holds 685 or a look-alike of it, so the book leaves this response out of the tune index."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "hymn 687",
+      "check": "coverage",
+      "value": "687",
+      "judge": "F10",
+      "why": "f319 p816 (no strip): Searched the six p816 strips p816-c4-1430 to p816-c6-2280 and no tune line holds 687 or a look-alike of it, so the book leaves this response out of the tune index."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "hymn 691",
+      "check": "coverage",
+      "value": "691",
+      "judge": "F10",
+      "why": "f320 p816 (no strip): Searched the six p816 strips p816-c4-1430 to p816-c6-2280; Benediction (Froom) reads 690, so no line holds 691 and the book leaves this response out of the tune index."
+    },
+    {
+      "index": "tunes",
+      "page": 816,
+      "at": "hymn 693",
+      "check": "coverage",
+      "value": "693",
+      "judge": "F10",
+      "why": "f321 p816 (no strip): Searched the six p816 strips p816-c4-1430 to p816-c6-2280; Bemerton reads 683 with a clear middle 8, so no line holds 693 and the book leaves this response out of the tune index."
+    },
+    {
+      "index": "tunes",
+      "page": 817,
+      "at": "#34",
+      "check": "tunes",
+      "value": "Evans 380",
+      "judge": "F10",
+      "why": "f322 p817-c1-1010.14: p817-c1-1010 line 14: the name Evans and the number 380 are sharp, so the book prints this tune line as read. | twin t176 p821-c2-0260.15 (F19): p821-c2-0260 line 15 prints Mercy 268, 380 while p817-c1-1010 line 14 prints Evans 380, so the book's two places give hymn 380 different tune names."
+    },
+    {
+      "index": "tunes",
+      "page": 817,
+      "at": "#73",
+      "check": "tunes",
+      "value": "Gloria Patri 660",
+      "judge": "F10",
+      "why": "f323 p817-c1-2710.12: p817-c1-2710 line 12: the name Gloria Patri and the number 660 are sharp, so the book prints this tune line as read."
+    },
+    {
+      "index": "tunes",
+      "page": 817,
+      "at": "#74",
+      "check": "tunes",
+      "value": "God Be in My Head 678",
+      "judge": "F10",
+      "why": "f324 p817-c1-2710.13: p817-c1-2710 line 13: the tune name God Be in My Head and the number 678 are sharp, so the book prints this tune line as read."
+    },
+    {
+      "index": "tunes",
+      "page": 817,
+      "at": "#78",
+      "check": "tunes",
+      "value": "Gott is die Liebe 78",
+      "judge": "F10",
+      "why": "f325 p817-c1-2710.17: p817-c1-2710 line 17: the name is spelled Gott is die Liebe and the number 78 is sharp, so the book prints this tune line as read. | twin t191 p823-c2-1230.10 (F19): p823-c2-1230 line 10 prints Gott ist die Liebe 78 and p817-c1-2710 line 17 prints Gott is die Liebe 78, so the number agrees and the book's two places spell the tune differently."
+    },
+    {
+      "index": "tunes",
+      "page": 817,
+      "at": "#85",
+      "check": "tunes",
+      "value": "Guilford Cathedral 589",
+      "judge": "F24",
+      "why": "f326 p817-c2-0160.6 (third look F24): p817-c2-0160 line 6 prints Guilford Cathedral 589 and the metrical index p821-c2-0260 line 3 prints Guildford Cathedral 589, so the fault between the two indexes is the book's own | first side (F10): p817-c2-0160 line 6: Guilford Cathedral is followed by 589 alone with no 1 before it, so side b's extra 1 is not printed. | twin t175 p821-c2-0260.3 (F19): p821-c2-0260 line 3 prints Guildford Cathedral 589 and p817-c2-0160 line 6 prints Guilford Cathedral 589, so the number agrees and the book's two places spell the tune differently."
+    },
+    {
+      "index": "tunes",
+      "page": 817,
+      "at": "#96",
+      "check": "tunes",
+      "value": "Henise 536",
+      "judge": "F10",
+      "why": "f327 p817-c2-1010.1: p817-c2-1010 line 1: Henise 536 is sharp and sits below Hendon 330, so the book prints this tune line as read. | twin t182 p822-c1-2011.17 (F19): p822-c1-2011 line 17 prints Henisee 536 and p817-c2-1010 line 1 prints Henise 536, so the number agrees and the book's two places spell the tune differently."
+    },
+    {
+      "index": "tunes",
+      "page": 817,
+      "at": "#111",
+      "check": "tunes",
+      "value": "Hymn to Joy 112",
+      "judge": "F10",
+      "why": "f328 p817-c2-1010.15: p817-c2-1010 line 15: the name Hymn to Joy and the number 112 are sharp, so the book prints this tune line as read. | twin t177 p821-c2-1110.1 (F19): p821-c2-1110 line 1 prints Monkland 112 while p817-c2-1010 line 15 prints Hymn to Joy 112, so the book's two places give hymn 112 different tune names."
+    },
+    {
+      "index": "tunes",
+      "page": 817,
+      "at": "#136",
+      "check": "order",
+      "value": "King's Weston > Kingley Vale",
+      "judge": "F10",
+      "why": "f329 p817-c2-2710.2: p817-c2-2710 line 2: Kingley Vale 408 is printed directly below King's Weston 232, 581 and above Kings of Orient 137, so the book prints this order. | twin t146 p817-c2-2710.1 (F18): p817-c2-2710 line 1 prints King's Weston 232, 581 and line 2 prints Kingley Vale 408 after it, so the book itself prints this order out of alphabetical sequence."
+    },
+    {
+      "index": "tunes",
+      "page": 817,
+      "at": "#151",
+      "check": "tunes",
+      "value": "Lasst uns erfreuen 92",
+      "judge": "F10",
+      "why": "f330 p817-c2-2710.13: p817-c2-2710 line 13, zoomed: Lasst uns erfreuen reads 2, 92, 228 with every digit sharp, so the book prints this tune line as read. | twin t162 p819-c1-1300.10 (F19): p819-c1-1300 line 10 prints Terra beata 92 while p817-c2-2710 line 13 prints Lasst uns erfreuen 2, 92, 228, so the book's two places give hymn 92 different tune names."
+    },
+    {
+      "index": "tunes",
+      "page": 818,
+      "at": "#22",
+      "check": "tunes",
+      "value": "Orientis partibus 549",
+      "judge": "F23",
+      "why": "f331 p818-c1-1080.1 (third look F23): p818-c1-1080 line 1 prints Orientis partibus 549 clearly while the twin p821-c2-1110 line 2 prints Orientus partibus 549 clearly, so the book's two places spell the tune differently. | first side (F11): p818-c1-1080 line 1: the tune index prints Orientis partibus 549 in sharp type, the 5, 4 and 9 all clear, so the line is read right and the missing metre is the book's own gap or another page's. | twin t178 p821-c2-1110.2 (F19): p821-c2-1110 line 2 prints Orientus partibus 549 and p818-c1-1080 line 1 prints Orientis partibus 549, so the number agrees and the book's two places spell the tune differently."
+    },
+    {
+      "index": "tunes",
+      "page": 818,
+      "at": "#23",
+      "check": "tunes",
+      "value": "Palestrina 172",
+      "judge": "F11",
+      "why": "f332 p818-c1-1080.2: p818-c1-1080 line 2: the tune index prints Palestrina 172 sharply (the 7 matches the 7 of 17 on the Park Street line below), so the line is read right; 172 also stands under Victory in column 3 of the page copy. | twin t187 p822-c3-0311.8 (F19): p822-c3-0311 line 8 prints Victory 172 while p818-c1-1080 line 2 prints Palestrina 172, so the book's two places give hymn 172 different tune names."
+    },
+    {
+      "index": "tunes",
+      "page": 818,
+      "at": "#45",
+      "check": "tunes",
+      "value": "Quam dilecta 692",
+      "judge": "F11",
+      "why": "f333 p818-c1-1930.5: p818-c1-1930 line 5: the tune index prints Quam dilecta 692 on its own line between Purpose 225 and Randolph 66, and no metre line on p819 holds 692, so the book prints the tune with no metre on this page."
+    },
+    {
+      "index": "tunes",
+      "page": 818,
+      "at": "#102",
+      "check": "tunes",
+      "value": "St. Louis 135",
+      "judge": "F11",
+      "why": "f334 p818-c2-1080.12: p818-c2-1080 line 12: the tune index prints St Louis 135, the 3 open on its left like the 3 of 303 above and the 5 flat-topped, so the line is read right. | twin t181 p821-c3-1960.7 (F19): p821-c3-1960 line 7 prints St Louis 185 while p818-c2-1080 line 12 prints St Louis 135, so the book's two places disagree, 185 against 135."
+    },
+    {
+      "index": "tunes",
+      "page": 818,
+      "at": "#145",
+      "check": "tunes",
+      "value": "Tallis' Cannon 53",
+      "judge": "F11",
+      "why": "f335 p818-c2-2780.12: p818-c2-2780 line 12: the tune index prints the name with a double n, Tallis' Cannon 53, while p819-c3-1300 prints Tallis' Canon 53, so the two spellings are the book's own. | twin t164 p819-c3-1300.15 (F19): p819-c3-1300 line 15 prints Tallis' Canon 53 and p818-c2-2780 line 12 prints Tallis' Cannon 53, so the number agrees and the book's two places spell the tune differently."
+    },
+    {
+      "index": "tunes",
+      "page": 818,
+      "at": "#166",
+      "check": "tunes",
+      "value": "Tryggare kan ingen vara 101",
+      "judge": "F11",
+      "why": "f336 p818-c3-0230.16: p818-c3-0230 line 16: the tune index prints Tryggare kan ingen vara with a double g and the numbers 101, then 153 wrapped onto the next line, as settled; p819-c3-1300 prints Trygare with one g, so the mismatch is the book's. | twin t165 p819-c3-1300.17 (F19): p819-c3-1300 line 17 prints Trygare kan ingen vara 101, 153 and p818-c3-0230 line 16 prints Tryggare kan ingen vara 101, 153, so the numbers agree and the book's two places spell the tune differently."
+    },
+    {
+      "index": "tunes",
+      "page": 818,
+      "at": "#167",
+      "check": "tunes",
+      "value": "Tryggare kan ingen vara 153",
+      "judge": "F11",
+      "why": "f337 p818-c3-0230.16: p818-c3-0230 line 16: the wrapped second number under Tryggare kan ingen vara is printed 153 (flat-topped 5, open 3), as settled; the metre index on p819-c3-1300 spells the tune Trygare, so the mismatch is the book's. | twin t166 p819-c3-1300.17 (F19): p819-c3-1300 line 17 prints Trygare kan ingen vara 101, 153 with 153 read right and p818-c3-0230 line 16 prints Tryggare kan ingen vara 101, 153, so the book's two places spell the tune differently."
+    },
+    {
+      "index": "tunes",
+      "page": 818,
+      "at": "#197",
+      "check": "tunes",
+      "value": "Westminister Abbey 607",
+      "judge": "F11",
+      "why": "f338 p818-c3-1930.9: p818-c3-1930 line 9: the tune index spells the name Westminister Abbey, with the extra i before ster, and the number 607 is sharp, so the book prints it so. | twin t186 p822-c2-2011.14 (F19): p822-c2-2011 line 14 prints Westminster Abbey 607 and p818-c3-1930 line 9 prints Westminister Abbey 607, so the number agrees and the book's two places spell the tune differently."
+    },
+    {
+      "index": "tunes",
+      "page": 818,
+      "at": "#216",
+      "check": "tunes",
+      "value": "Yigdal 11",
+      "judge": "F11",
+      "why": "f339 p818-c3-2780.10: p818-c3-2780 line 10: the first letter is a Y with two arms and a stem, matching the Y of You Yangs below, so Yigdal 11 is printed and side b's Vigdal is the misread; settled holds Yigdal. | twin t171 p820-c3-0180.9 (F19): p820-c3-0180 line 9 prints Leoni 11 while p818-c3-2780 line 10 prints Yigdal 11, so the book's two places give hymn 11 different tune names."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "#22",
+      "check": "tunes",
+      "value": "Diademata 223",
+      "judge": "F11",
+      "why": "f340 p819-c1-1300.8: p819-c1-1300 line 8: under S. M. D. the metre index prints Diademata 223, 616 sharply, so the line is read right and its absence from the tune index pages is not on this page. | twin t135 p816-c6-2280.17 (F18): p816-c6-2280 line 17 prints Diademata 228, 616 (zoom: closed 8) while p819-c1-1300 line 8 prints Diademata 223, 616 (zoom: flat-topped 3), so the book's two places disagree, 228 against 223. | twin t136 p816-c6-2280.17 (F18): p816-c6-2280 line 17 prints Diademata 228, 616 with 616 read right, while p819-c1-1300 line 8 prints Diademata 223, 616, so the book's two places disagree on the entry's other number, 228 against 223."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "#58",
+      "check": "metre",
+      "value": "C. M. 576",
+      "judge": "F11",
+      "why": "f341 p819-c2-0450.3: p819-c2-0450 line 3: column 2 continues C. M. from column 1 and prints Morning Song 215, 576 sharply (the 7 matches the 7 of 77 below), so the book lists 576 under C. M."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "#108",
+      "check": "metre",
+      "value": "C. M. D. 46",
+      "judge": "F11",
+      "why": "f342 p819-c2-3000.1: p819-c2-3000: Welcome Guest 46 sits as the last line under C. M. D., just above the C. M. D. with Refrain heading, so the book lists 46 under C. M. D. without the refrain."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "#149",
+      "check": "tunes",
+      "value": "Tallis' Canon 53",
+      "judge": "F11",
+      "why": "f343 p819-c3-1300.15: p819-c3-1300 line 15: the metre index prints Tallis' Canon 53 with a single n, while the tune index on p818-c2-2780 prints Cannon, so both spellings are the book's own. | twin t157 p818-c2-2780.12 (F18): p818-c2-2780 line 12 prints Tallis' Cannon 53 (readings a and b agree on 53) and p819-c3-1300 line 15 prints Tallis' Canon 53, so the number agrees and the book's two places spell the tune differently."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "#152",
+      "check": "tunes",
+      "value": "Trygare kan ingen vara 101",
+      "judge": "F11",
+      "why": "f344 p819-c3-1300.17: p819-c3-1300 line 17: the metre index prints Trygare with one g before are (101, with 153 wrapped), while p818-c3-0230 prints Tryggare, so the mismatch is the book's. | twin t158 p818-c3-0230.16 (F18): p818-c3-0230 line 16 prints Tryggare kan ingen vara 101, 153 with 153 wrapped to the next line (reading a is right) and p819-c3-1300 line 17 prints Trygare kan ingen vara 101, 153, so the book's two places spell the tune differently."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "#153",
+      "check": "tunes",
+      "value": "Trygare kan ingen vara 153",
+      "judge": "F11",
+      "why": "f345 p819-c3-1300.17: p819-c3-1300 line 17: the wrapped 153 under Trygare kan ingen vara is sharp, and the single-g spelling is printed, while the tune index p818-c3-0230 prints Tryggare, so the mismatch is the book's. | twin t159 p818-c3-0230.16 (F18): p818-c3-0230 line 16 prints Tryggare kan ingen vara 101, 153 with 153 on the wrapped line (reading a is right) and p819-c3-1300 line 17 prints Trygare kan ingen vara 101, 153, so the book's two places spell the tune differently."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "#175",
+      "check": "tunes",
+      "value": "Lasst uns erfreuen 91",
+      "judge": "F23",
+      "why": "f346 p819-c3-3000.6 (third look F23): p819-c3-3000 line 6 prints Lasst uns erfreuen 2, 91 with 228 wrapped and a clear 91, while the twin p817-c2-2710 line 13 prints 2, 92, 228 with a clear 92, so the book's two places disagree. | first side (F11): p819-c3-3000 line 6: under L. M. with Alleluias the metre index prints Lasst uns erfreuen 2, 91, then 228 wrapped, so the line is read right; its tune-index entry lies on no page of this task. | twin t147 p817-c2-2710.13 (F18): p817-c2-2710 line 13 prints Lasst uns erfreuen 2, 92, 228 with 2 read right, while p819-c3-3000 line 6 prints Lasst uns erfreuen 91, 228, so the book's two places disagree on the entry's numbers. | twin t148 p817-c2-2710.13 (F18): p817-c2-2710 line 13 prints Lasst uns erfreuen 2, 92, 228 (zoom: 92 clear) while p819-c3-3000 line 6 prints Lasst uns erfreuen 91, 228 (zoom: 91 clear), so the book's two places disagree, 92 against 91. | twin t149 p817-c2-2710.13 (F18): p817-c2-2710 line 13 prints Lasst uns erfreuen 2, 92, 228 with 228 read right, while p819-c3-3000 line 6 prints Lasst uns erfreuen 91, 228, so the book's two places disagree on the other numbers, 92 against 91."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "#174",
+      "check": "metre",
+      "value": "L. M. with Alleluias 2",
+      "judge": "F11",
+      "why": "f347 p819-c3-3000.6: p819-c3-3000 line 6: the heading over Lasst uns erfreuen is printed L. M. with Alleluias and the first number is a clear 2, so the book files hymn 2 under that heading."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "#175",
+      "check": "metre",
+      "value": "L. M. with Alleluias 91",
+      "judge": "F11",
+      "why": "f348 p819-c3-3000.6: p819-c3-3000 line 6: the second number after Lasst uns erfreuen is a clear 91 under the heading L. M. with Alleluias, so the book files hymn 91 there."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "hymn 135",
+      "check": "coverage",
+      "value": "135",
+      "judge": "F23",
+      "why": "f349 p819 (no strip) (third look F23): The twelve strips p819-c1-0450 to p819-c3-3000 print no line for 135, and the metrical index prints this tune on p821-c3-1960 line 7, after Pisgah 464, as 185 with a closed-loop 8 like the 8 in 386, while the twin p818-c2-1080 line 12 prints 135, so the book's two indexes disagree. | first side (F11): Searched all twelve p819 strips (c1-0450 to c3-3000) and the page copy: no metre line prints 135 or a look-alike; the nearest, Rockingham Old 155 on p819-c3-1300, matches the tune index p818 Rockingham Old 155, so the book lists no metre for 135 on this page. | twin t156 p818-c2-1080.12 (F18): p818-c2-1080 line 12 prints St Louis 135 (clear 1, 3, 5), and the metrical index gives no line for 135 (no first strip), so the book's two indexes disagree on coverage of 135."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "hymn 471",
+      "check": "coverage",
+      "value": "471",
+      "judge": "F11",
+      "why": "f350 p819 (no strip): Searched all twelve p819 strips, p819-c1-0450 to p819-c3-3000: no line prints 471; the nearest look-alike, Day of Praise 411 on p819-c1-2150, has two plain 1s unlike the 7 of 107 below it, and Sweet Hour 478 on p819-c3-3000 is a sharp 8, so the book leaves 471 out here."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "hymn 660",
+      "check": "coverage",
+      "value": "660",
+      "judge": "F11",
+      "why": "f351 p819 (no strip): Searched all twelve p819 strips, p819-c1-0450 to p819-c3-3000: no line prints 660 or a look-alike (the responses printed are 655, 667, 670, 681, 686, 694, 695), so the book leaves 660 out of this page. | twin t139 p817-c1-2710.12 (F18): p817-c1-2710 line 12 prints the tune for 660 as read, and the metrical index gives no line for 660 (no first strip), so the book's two indexes disagree on coverage of 660."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "hymn 663",
+      "check": "coverage",
+      "value": "663",
+      "judge": "F11",
+      "why": "f352 p819 (no strip): Searched all twelve p819 strips, p819-c1-0450 to p819-c3-3000: no line prints 663 or 668, so the book leaves 663 out of this page."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "hymn 664",
+      "check": "coverage",
+      "value": "664",
+      "judge": "F11",
+      "why": "f353 p819 (no strip): Searched all twelve p819 strips, p819-c1-0450 to p819-c3-3000: no line prints 664; the nearest, Bishopthorpe 644 on p819-c1-2150, has two sharp 4s, so the book leaves 664 out of this page."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "hymn 665",
+      "check": "coverage",
+      "value": "665",
+      "judge": "F11",
+      "why": "f354 p819 (no strip): Searched all twelve p819 strips, p819-c1-0450 to p819-c3-3000: no line prints 665; St Agnes 241, 269, 655 on p819-c2-0450 matches the tune index p818 St Agnes 655, so the book leaves 665 out of this page."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "hymn 666",
+      "check": "coverage",
+      "value": "666",
+      "judge": "F11",
+      "why": "f355 p819 (no strip): Searched all twelve p819 strips, p819-c1-0450 to p819-c3-3000: no line prints 666; Canonbury 541, 548, 686 on p819-c3-0450 has a closed 8 in the middle like the 8 of 548, so the book leaves 666 out of this page. | twin t129 p816-c5-1430.12 (F18): p816-c5-1430 line 12 prints Birmingham 666 clearly, and the metrical index gives no line for 666 (no first strip), so the book's two indexes disagree on coverage of 666."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "hymn 669",
+      "check": "coverage",
+      "value": "669",
+      "judge": "F11",
+      "why": "f356 p819 (no strip): Searched all twelve p819 strips, p819-c1-0450 to p819-c3-3000: no line prints 669; St Columba 639 on p819-c2-0450 matches the tune index p818-c2-1080 St Columba 639, so the book leaves 669 out of this page. | twin t131 p816-c6-1430.5 (F18): p816-c6-1430 line 5 prints Choral Blessing 669 clearly, and the metrical index gives no line for 669 (no first strip), so the book's two indexes disagree on coverage of 669."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "hymn 672",
+      "check": "coverage",
+      "value": "672",
+      "judge": "F11",
+      "why": "f357 p819 (no strip): Searched all twelve p819 strips, p819-c1-0450 to p819-c3-3000: no line prints 672 or a look-alike, so the book leaves 672 out of this page."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "hymn 675",
+      "check": "coverage",
+      "value": "675",
+      "judge": "F11",
+      "why": "f358 p819 (no strip): Searched all twelve p819 strips, p819-c1-0450 to p819-c3-3000: no line prints 675 or a look-alike, so the book leaves 675 out of this page."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "hymn 676",
+      "check": "coverage",
+      "value": "676",
+      "judge": "F11",
+      "why": "f359 p819 (no strip): Searched all twelve p819 strips, p819-c1-0450 to p819-c3-3000: no line prints 676; Schumann 409, 670 in the metre index matches the tune index p818 Schumann 409, 670, so the book leaves 676 out of this page."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "hymn 677",
+      "check": "coverage",
+      "value": "677",
+      "judge": "F11",
+      "why": "f360 p819 (no strip): Searched all twelve p819 strips, p819-c1-0450 to p819-c3-3000: no line prints 677; Benediction (Ledington) 667 on p819-c1-2150 has two round 6s unlike the 7 of 107 below, so the book leaves 677 out of this page."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "hymn 678",
+      "check": "coverage",
+      "value": "678",
+      "judge": "F11",
+      "why": "f361 p819 (no strip): Searched all twelve p819 strips, p819-c1-0450 to p819-c3-3000: no line prints 678; Schumann 670 matches the tune index p818 Schumann 670, so the book leaves 678 out of this page. | twin t140 p817-c1-2710.13 (F18): p817-c1-2710 line 13 prints the tune for 678 as read, and the metrical index gives no line for 678 (no first strip), so the book's two indexes disagree on coverage of 678."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "hymn 679",
+      "check": "coverage",
+      "value": "679",
+      "judge": "F11",
+      "why": "f362 p819 (no strip): Searched all twelve p819 strips, p819-c1-0450 to p819-c3-3000: no line prints 679 or a look-alike, so the book leaves 679 out of this page."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "hymn 684",
+      "check": "coverage",
+      "value": "684",
+      "judge": "F11",
+      "why": "f363 p819 (no strip): Searched all twelve p819 strips, p819-c1-0450 to p819-c3-3000: no line prints 684; Old Hundredth 16, 694, 695 on p819-c3-1300 matches the tune index p818 Old Hundredth 16, 694, 695, so the book leaves 684 out of this page."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "hymn 685",
+      "check": "coverage",
+      "value": "685",
+      "judge": "F11",
+      "why": "f364 p819 (no strip): Searched all twelve p819 strips, p819-c1-0450 to p819-c3-3000: no line prints 685; Old Hundredth 695 on p819-c3-1300 matches the tune index p818 Old Hundredth 695, so the book leaves 685 out of this page."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "hymn 687",
+      "check": "coverage",
+      "value": "687",
+      "judge": "F11",
+      "why": "f365 p819 (no strip): Searched all twelve p819 strips, p819-c1-0450 to p819-c3-3000: no line prints 687; Twenty-Fourth 406, 681 on p819-c2-0450 matches the tune index p818-c3-0230 Twenty-Fourth 406, 681, so the book leaves 687 out of this page."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "hymn 691",
+      "check": "coverage",
+      "value": "691",
+      "judge": "F11",
+      "why": "f366 p819 (no strip): Searched all twelve p819 strips, p819-c1-0450 to p819-c3-3000: no line prints 691 or a look-alike, so the book leaves 691 out of this page."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "hymn 692",
+      "check": "coverage",
+      "value": "692",
+      "judge": "F11",
+      "why": "f367 p819 (no strip): Searched all twelve p819 strips, p819-c1-0450 to p819-c3-3000: no line prints 692, and the tune index p818-c1-1930 prints Quam dilecta 692, a tune with no metre line on this page, so the book leaves 692 out here. | twin t155 p818-c1-1930.5 (F18): p818-c1-1930 line 5 prints Quam dilecta 692 clearly, and the metrical index gives no line for 692 (no first strip), so the book's two indexes disagree on coverage of 692."
+    },
+    {
+      "index": "metrical",
+      "page": 819,
+      "at": "hymn 693",
+      "check": "coverage",
+      "value": "693",
+      "judge": "F11",
+      "why": "f368 p819 (no strip): Searched all twelve p819 strips, p819-c1-0450 to p819-c3-3000: no line prints 693; Old Hundredth 695 on p819-c3-1300 matches the tune index p818 Old Hundredth 695, so the book leaves 693 out of this page."
+    },
+    {
+      "index": "metrical",
+      "page": 820,
+      "at": "#7",
+      "check": "metre",
+      "value": "Irregular 149",
+      "judge": "F12",
+      "why": "f369 p820-c1-0180.9: p820-c1-0180 line 9: Irby 149 is printed sharply under the heading Irregular, so the heading over 149 is the book's own convention and not a misread."
+    },
+    {
+      "index": "metrical",
+      "page": 820,
+      "at": "#13",
+      "check": "metre",
+      "value": "Irregular 140",
+      "judge": "F12",
+      "why": "f370 p820-c1-0180.15: p820-c1-0180 line 15: Margaret 140 is printed sharply under the heading Irregular, so the metre convention is the book's own."
+    },
+    {
+      "index": "metrical",
+      "page": 820,
+      "at": "#29",
+      "check": "tunes",
+      "value": "Adeste fidelis 132",
+      "judge": "F12",
+      "why": "f371 p820-c1-1030.16: p820-c1-1030 line 16: the tune is printed Adeste fidelis 132 under Irregular with Refrain, the spelling and the 132 both clear, so the book prints it so. | twin t128 p816-c4-1430.8 (F18): p816-c4-1430 line 8 prints Adeste fideles 132 and p820-c1-1030 line 16 prints Adeste fidelis 132, so the number agrees and the book's two places spell the tune differently. | twin t154 p818-c1-1080.16 (F18): p818-c1-1080 line 16 prints Portuguese Hymn 132 (indented) while p820-c1-1030 line 16 prints Adeste fidelis 132, so the book's two places give hymn 132 different tune names."
+    },
+    {
+      "index": "metrical",
+      "page": 820,
+      "at": "#31",
+      "check": "metre",
+      "value": "3.3.11.8.8.11. 220",
+      "judge": "F12",
+      "why": "f372 p820-c1-1880.1: p820-c1-1880 line 1: David 220 is printed sharply under the heading 3.3.11.8.8.11., so the book files 220 under that metre."
+    },
+    {
+      "index": "metrical",
+      "page": 820,
+      "at": "#36",
+      "check": "metre",
+      "value": "5.5.6.5.6.5.6.5. 171",
+      "judge": "F12",
+      "why": "f373 p820-c1-1880.11: p820-c1-1880 line 11: Judas Maccabeus 171 is printed under the heading 5.5.6.5.6.5.6.5., every digit clear, so the metre is the book's own."
+    },
+    {
+      "index": "metrical",
+      "page": 820,
+      "at": "#52",
+      "check": "tunes",
+      "value": "Cuddeson 360",
+      "judge": "F12",
+      "why": "f374 p820-c2-0180.16: p820-c2-0180 line 16: Cuddeson 360 is printed sharply under the heading 6.5.6.5.D., so the book files 360 under that metre. | twin t134 p816-c6-2280.7 (F18): p816-c6-2280 line 7 prints Cuddesdon 360 and p820-c2-0180 line 16 prints Cuddeson 360, so the number agrees and the book's two places spell the tune differently."
+    },
+    {
+      "index": "metrical",
+      "page": 820,
+      "at": "#53",
+      "check": "metre",
+      "value": "6.5.6.5.D. 577",
+      "judge": "F12",
+      "why": "f375 p820-c2-1030.1: p820-c2-1030 line 1: Heart of Jesus 577 is printed sharply under the heading 6.5.6.5.D., so the metre is the book's own."
+    },
+    {
+      "index": "metrical",
+      "page": 820,
+      "at": "#69",
+      "check": "metre",
+      "value": "6.6.6.D. 10",
+      "judge": "F12",
+      "why": "f376 p820-c2-1880.4: p820-c2-1880 line 4: Madrid 10 sits under a heading printed 6.6.6.D. with three 6s, so the short heading is the book's own slip."
+    },
+    {
+      "index": "metrical",
+      "page": 820,
+      "at": "#74",
+      "check": "metre",
+      "value": "6.6.6.6.3.4.5. 203",
+      "judge": "F12",
+      "why": "f377 p820-c2-1880.13: p820-c2-1880 line 13: Challenge 203 is printed sharply under the heading 6.6.6.6.3.4.5., so the book files 203 under that metre."
+    },
+    {
+      "index": "metrical",
+      "page": 820,
+      "at": "#93",
+      "check": "order",
+      "value": "Nun danket > Darmstadt",
+      "judge": "F12",
+      "why": "f378 p820-c3-1030.6: p820-c3-1030 line 6: Darmstadt 345 is printed after Nun danket 559 under the heading 6.7.6.7.6.6.6.6., so the order and the metre are the book's own. | twin t172 p820-c3-1030.5 (F19): p820-c3-1030 line 5 prints Nun danket 559 and line 6 prints Darmstadt 345 after it, so the book itself prints this order out of alphabetical sequence."
+    },
+    {
+      "index": "metrical",
+      "page": 820,
+      "at": "#94",
+      "check": "metre",
+      "value": "7.4.7.4.D. 243",
+      "judge": "F12",
+      "why": "f379 p820-c3-1030.8: p820-c3-1030 line 8: Gwalchmai 243 is printed sharply under the heading 7.4.7.4.D., so the metre is the book's own."
+    },
+    {
+      "index": "metrical",
+      "page": 820,
+      "at": "#96",
+      "check": "metre",
+      "value": "7.4.7.4.D. 176",
+      "judge": "F12",
+      "why": "f380 p820-c3-1030.9: p820-c3-1030 line 9: Llanfair 25, 176 is printed sharply under the heading 7.4.7.4.D., so the book files both hymns under that metre."
+    },
+    {
+      "index": "metrical",
+      "page": 820,
+      "at": "#97",
+      "check": "metre",
+      "value": "7.5.7.5.7.7.7.5. 652",
+      "judge": "F12",
+      "why": "f381 p820-c3-1030.11: p820-c3-1030 line 11: Love at Home 652 is printed sharply under the heading 7.5.7.5.7.7.7.5., so the metre is the book's own."
+    },
+    {
+      "index": "metrical",
+      "page": 820,
+      "at": "#106",
+      "check": "metre",
+      "value": "7.6.7.6.D. 630",
+      "judge": "F23",
+      "why": "f382 p820-c3-1880.10 (third look F23): p820-c3-1880 line 10 prints Amsterdam 630 clearly, directly under the head 7.6.7.6.D. after Royal Oak 93. | first side (F12): p820-c3-1880 line 10: Amsterdam 630 is printed under the heading 7.6.7.6.D., the 3 open on its left, so the line is read right and the metre is the book's own."
+    },
+    {
+      "index": "metrical",
+      "page": 821,
+      "at": "#2",
+      "check": "order",
+      "value": "St. Kevin > St. Hilda",
+      "judge": "F12",
+      "why": "f383 p821-c1-0260.3: p821-c1-0260 line 3 (and p821-c1-0209): St Kevin 169 is printed above St Hilda 283 at the top of the page, so the order is the book's own. | twin t174 p821-c1-0260.2 (F19): p821-c1-0260 line 2 prints St Kevin 169 and line 3 prints St Hilda 283 after it, so the book itself prints this order out of alphabetical sequence."
+    },
+    {
+      "index": "metrical",
+      "page": 821,
+      "at": "#10",
+      "check": "metre",
+      "value": "7.6.7.6.D. 339",
+      "judge": "F12",
+      "why": "f384 p821-c1-0260.11: p821-c1-0260 line 11: the tune Wie lieblich ist der Maien 339 is printed over two lines as the last entry before the heading 7.6.7.6.D. with Refrain, so the line matches side a and the metre convention is the book's."
+    },
+    {
+      "index": "metrical",
+      "page": 821,
+      "at": "#16",
+      "check": "metre",
+      "value": "7.6.7.6.6.6.7.6. 131",
+      "judge": "F12",
+      "why": "f385 p821-c1-1110.6: p821-c1-1110 line 6: the heading over Es ist ein Ros 131 is printed with eight groups, 7.6.7.6.6.6.7.6., and the 131 is clear, so the metre is the book's own."
+    },
+    {
+      "index": "metrical",
+      "page": 821,
+      "at": "#26",
+      "check": "metre",
+      "value": "7.6.8.6.8.6.8.6. 33",
+      "judge": "F24",
+      "why": "f386 p821-c1-2810.1 (third look F24): p821-c1-2810 line 1 prints Onslow Square 33 under 7.6.8.6.8.6.8.6. and the tunes index p818-c1-0230 line 17 prints Onslow Square 33, so the earlier override to 93 was wrong and the metre fault for 33 is the book's own | first side (F12): p821-c1-2810 line 1 under 7.6.8.6.8.6.8.6.: at zoom the first digit has a closed top bowl with a falling tail, unlike the three open-left 3s of 303 on line 2, and the second digit matches those 3s, so 93, not 33; the second view p821-c1-2759 cuts off at the number."
+    },
+    {
+      "index": "metrical",
+      "page": 821,
+      "at": "#33",
+      "check": "tunes",
+      "value": "Guildford Cathedral 589",
+      "judge": "F12",
+      "why": "f387 p821-c2-0260.3: p821-c2-0260 line 3: Guildford Cathedral 589 is printed sharply under the heading 7.7.7.5., so the metre is the book's own. | twin t142 p817-c2-0160.6 (F18): p817-c2-0160 line 6 prints Guilford Cathedral 589 with no number before 589 (reading a is right, reading b's leading 1 is a misread) and p821-c2-0260 line 3 prints Guildford Cathedral 589, so the book's two places spell the tune differently."
+    },
+    {
+      "index": "metrical",
+      "page": 821,
+      "at": "#43",
+      "check": "tunes",
+      "value": "Mercy 380",
+      "judge": "F12",
+      "why": "f389 p821-c2-0260.15: p821-c2-0260 line 15: Mercy 268, 380 is printed clearly under 7.7.7.7., so the book files both hymns there. | twin t138 p817-c1-1010.14 (F18): p817-c1-1010 line 14 prints Evans 380 while p821-c2-0260 line 15 prints Mercy 268, 380, so the book's two places give hymn 380 different tune names."
+    },
+    {
+      "index": "metrical",
+      "page": 821,
+      "at": "#45",
+      "check": "tunes",
+      "value": "Orientus partibus 549",
+      "judge": "F12",
+      "why": "f390 p821-c2-1110.2: p821-c2-1110 line 2: the metre index prints Orientus partibus 549 with a u, while the tune index on page 818 prints Orientis, so the mismatch is the book's own. | twin t153 p818-c1-1080.1 (F18): p818-c1-1080 line 1 prints Orientis partibus 549 and p821-c2-1110 line 2 prints Orientus partibus 549, so the number agrees and the book's two places spell the tune differently."
+    },
+    {
+      "index": "metrical",
+      "page": 821,
+      "at": "#55",
+      "check": "order",
+      "value": "I Will Sing of Jesus' Love > Bradbury",
+      "judge": "F12",
+      "why": "f391 p821-c2-1110.13: p821-c2-1110 line 13: Bradbury 190 is printed after the 183 line under 7.7.7.7. with Refrain, so the order is the book's own. | twin t179 p821-c2-1110.12 (F19): p821-c2-1110 line 12 prints a key that wraps over two lines with 183 on the wrapped line (reading a takes the full key, b only the wrapped word) and line 13 prints Bradbury 190 after it, so the order is as the book prints it."
+    },
+    {
+      "index": "metrical",
+      "page": 821,
+      "at": "#63",
+      "check": "metre",
+      "value": "7.7.7.7. with Alleluias 25",
+      "judge": "F12",
+      "why": "f392 p821-c2-1960.9: p821-c2-1960 line 9: Llanfair 25, 176 is printed sharply under the heading 7.7.7.7. with Alleluias, so the book lists the tune there as well."
+    },
+    {
+      "index": "metrical",
+      "page": 821,
+      "at": "#69",
+      "check": "metre",
+      "value": "7.7.7.7.7. 330",
+      "judge": "F12",
+      "why": "f393 p821-c2-2810.3: p821-c2-2810 line 3: Hendon 330 is printed under the heading 7.7.7.7.7. with five 7s, and p821-c2-0260 also prints Hendon 330 under 7.7.7.7., so the book lists it twice."
+    },
+    {
+      "index": "metrical",
+      "page": 821,
+      "at": "#85",
+      "check": "metre",
+      "value": "8.4.8.4.8.8.4. 47",
+      "judge": "F12",
+      "why": "f394 p821-c3-0260.12: p821-c3-0260 line 12: Ar hyd y nos 47 is printed under the heading 8.4.8.4.8.8.4., every digit clear, so the metre is the book's own."
+    },
+    {
+      "index": "metrical",
+      "page": 821,
+      "at": "#87",
+      "check": "tunes",
+      "value": "Bullinger 535",
+      "judge": "F12",
+      "why": "f395 p821-c3-1110.2: p821-c3-1110 line 2: Bullinger 535 is printed under the heading 8.5.8.3., the 3 open on its left like the 3 of 543 below, so the line is read right and the metre is the book's. | twin t130 p816-c5-2280.6 (F18): p816-c5-2280 line 6 prints Bullinger 585 (zoom: closed round-topped 8) while p821-c3-1110 line 2 prints Bullinger 535 (flat-topped 3), so the book's two places disagree, 585 against 535, and reading a (585) is the right read of this strip."
+    },
+    {
+      "index": "metrical",
+      "page": 821,
+      "at": "#97",
+      "check": "tunes",
+      "value": "St. Louis 185",
+      "judge": "F12",
+      "why": "f396 p821-c3-1960.7: p821-c3-1960 line 7: at zoom the middle digit of St Louis 185 is a closed 8 on this strip and on the second view p821-c3-1909, while the tune index on page 818 prints 135, so the mismatch is the book's own. | twin t137 p817-c1-1010.3 (F18): p817-c1-1010 line 3 prints Elizabeth 185 while p821-c3-1960 line 7 prints St Louis 185, so the book's two places give hymn 185 different tune names."
+    },
+    {
+      "index": "metrical",
+      "page": 821,
+      "at": "#97",
+      "check": "metre",
+      "value": "8.6.8.6.7.6.8.6. 185",
+      "judge": "F12",
+      "why": "f397 p821-c3-1960.7: p821-c3-1960 line 7: St Louis is printed 185 with a closed middle 8 (also on p821-c3-1909) under the heading 8.6.8.6.7.6.8.6., so the heading and number are read right and the metre is the book's own."
+    },
+    {
+      "index": "metrical",
+      "page": 821,
+      "at": "#99",
+      "check": "metre",
+      "value": "8.6.8.6.8.6. 215",
+      "judge": "F12",
+      "why": "f398 p821-c3-1960.10: p821-c3-1960 line 10: Morning Song 215, 576 is printed under 8.6.8.6.8.6., and page 819 also prints it under C. M., so the book lists the tune under both headings."
+    },
+    {
+      "index": "metrical",
+      "page": 821,
+      "at": "#101",
+      "check": "metre",
+      "value": "8.6.8.7.8.8.7.7. 98",
+      "judge": "F23",
+      "why": "f399 p821-c3-1960.12 (third look F23): p821-c3-1960 line 12 prints a tune entry wrapped over two lines ending in a clear 98, under the head 8.6.8.7.8.8.7.7. after Morning Song 215, 576 and before the head 8.6.8.8.6, so the value stands. | first side (F12): p821-c3-1960 line 12: the heading over the tune numbered 98 is printed 8.6.8.7.8.8.7.7. and the tune name runs over two lines, so the line matches side a and the heading is the book's own."
+    },
+    {
+      "index": "metrical",
+      "page": 822,
+      "at": "#35",
+      "check": "metre",
+      "value": "8.7.8.7.D. 34",
+      "judge": "F23",
+      "why": "f400 p822-c1-2011.8 (third look F23): p822-c1-2011 line 8 prints Anniversary Song (Sherwin) 34 under the head 8.7.8.7.D., its 3 flat-topped like the 3 in 363 on the same strip. | first side (F13): Strip p822-c1-2011 line 8 prints Anniversary Song (Sherwin) 34 under the heading 8.7.8.7.D. printed above it, with the digits 34 clear."
+    },
+    {
+      "index": "metrical",
+      "page": 822,
+      "at": "#43",
+      "check": "metre",
+      "value": "8.7.8.7.D. 359",
+      "judge": "F23",
+      "why": "f401 p822-c1-2011.14 (third look F23): p822-c1-2011 line 14 prints Fillmore 359 under the head 8.7.8.7.D., its 3 flat-topped like the 3 in 325 above it. | first side (F13): Strip p822-c1-2011 line 14 prints Fillmore 359 under the heading 8.7.8.7.D., with each digit clear."
+    },
+    {
+      "index": "metrical",
+      "page": 822,
+      "at": "#45",
+      "check": "metre",
+      "value": "8.7.8.7.D. 447",
+      "judge": "F13",
+      "why": "f402 p822-c1-2011.16: Strip p822-c1-2011 line 16 prints Greenville 447 under the heading 8.7.8.7.D., with each digit clear."
+    },
+    {
+      "index": "metrical",
+      "page": 822,
+      "at": "#46",
+      "check": "tunes",
+      "value": "Henisee 536",
+      "judge": "F13",
+      "why": "f403 p822-c1-2011.17: Strip p822-c1-2011 line 17 prints the tune name spelled Henisee with the number 536 clear, so the book prints this name in the metrical index. | twin t144 p817-c2-1010.1 (F18): p817-c2-1010 line 1 prints Henise 536 and p822-c1-2011 line 17 prints Henisee 536, so the number agrees and the book's two places spell the tune differently."
+    },
+    {
+      "index": "metrical",
+      "page": 822,
+      "at": "#49",
+      "check": "tunes",
+      "value": "Hymn to Joy 12",
+      "judge": "F13",
+      "why": "f404 p822-c1-2011.19: Strip p822-c1-2011 line 19 prints Hymn to Joy 12 under the heading 8.7.8.7.D., with the digits 12 clear. | twin t145 p817-c2-1010.15 (F18): p817-c2-1010 line 15 prints Hymn to Joy 112 while p822-c1-2011 line 19 prints Hymn to Joy 12, so the book's two places disagree, 112 against 12."
+    },
+    {
+      "index": "metrical",
+      "page": 822,
+      "at": "#51",
+      "check": "order",
+      "value": "I've Found a Friend > In Babilone",
+      "judge": "F13",
+      "why": "f405 p822-c1-2011.21: Strip p822-c1-2011 lines 20 to 21 print I've Found a Friend 186 above In Babilone 637, so the book itself prints this order. | twin t184 p822-c1-2011.20 (F19): p822-c1-2011 line 20 prints the key for 186 and line 21 prints In Babilone 637 after it, so the book itself prints this order out of alphabetical sequence."
+    },
+    {
+      "index": "metrical",
+      "page": 822,
+      "at": "#53",
+      "check": "order",
+      "value": "Nos Galan > Nettleton",
+      "judge": "F13",
+      "why": "f406 p822-c2-0311.2: Strip p822-c2-0311 line 2 prints Nettleton 334 directly after Nos Galan 23 at the foot of column 1 (strip p822-c1-2011 line 22), so the book prints this order. | twin t185 p822-c1-2011.22 (F19): p822-c1-2011 line 22 prints Nos Galan 23 (readings a and b agree) and p822-c2-0311 line 2 prints Nettleton 334 after it, so the book itself prints this order across the two strips."
+    },
+    {
+      "index": "metrical",
+      "page": 822,
+      "at": "#66",
+      "check": "metre",
+      "value": "8.7.8.7.4.4.4.7.7. 165",
+      "judge": "F13",
+      "why": "f407 p822-c2-1161.1: Strip p822-c2-1161 prints the heading 8.7.8.7.4.4.4.7.7. with three 4s and two 7s above Bryn Calfaria 165 on line 1."
+    },
+    {
+      "index": "metrical",
+      "page": 822,
+      "at": "#77",
+      "check": "metre",
+      "value": "8.7.8.7.7.7.7.8.6. 222",
+      "judge": "F13",
+      "why": "f408 p822-c2-2011.1: Strip p822-c2-2011 prints the heading 8.7.8.7.7.7.7.8.6. with four 7s after 8.7.8 above Harwell 222 on line 1."
+    },
+    {
+      "index": "metrical",
+      "page": 822,
+      "at": "#87",
+      "check": "metre",
+      "value": "8.7.8.7.8.7. 45",
+      "judge": "F13",
+      "why": "f409 p822-c2-2011.13: Strip p822-c2-2011 line 13 prints Unser Herrscher 45, 418 under the heading 8.7.8.7.8.7., with each digit clear."
+    },
+    {
+      "index": "metrical",
+      "page": 822,
+      "at": "#89",
+      "check": "tunes",
+      "value": "Westminster Abbey 607",
+      "judge": "F13",
+      "why": "f410 p822-c2-2011.14: Strip p822-c2-2011 line 14 prints Westminster Abbey 607 under the heading 8.7.8.7.8.7., with each digit clear. | twin t160 p818-c3-1930.9 (F18): p818-c3-1930 line 9 prints Westminister Abbey 607 and p822-c2-2011 line 14 prints Westminster Abbey 607, so the number agrees and the book's two places spell the tune differently."
+    },
+    {
+      "index": "metrical",
+      "page": 822,
+      "at": "#92",
+      "check": "metre",
+      "value": "8.7.8.7.8.7.7. 538",
+      "judge": "F13",
+      "why": "f411 p822-c2-2011.16: Strip p822-c2-2011 line 16 prints Cwm Rhondda 201, 415, 538 under the heading 8.7.8.7.8.7.7., with each digit clear."
+    },
+    {
+      "index": "metrical",
+      "page": 822,
+      "at": "#93",
+      "check": "metre",
+      "value": "8.7.8.7.8.7.7. 116",
+      "judge": "F13",
+      "why": "f412 p822-c2-2011.17: Strip p822-c2-2011 line 17 prints Divinum mysterium 116 under the heading 8.7.8.7.8.7.7., with each digit clear."
+    },
+    {
+      "index": "metrical",
+      "page": 822,
+      "at": "#109",
+      "check": "tunes",
+      "value": "Lasst uns erfreuen 91",
+      "judge": "F13",
+      "why": "f413 p822-c3-1161.11: Strip p822-c3-1161 line 11 prints Lasst uns erfreuen 91, 228 under its heading, so the book prints this name and these numbers in the metrical index. | twin t150 p817-c2-2710.13 (F18): p817-c2-2710 line 13 prints Lasst uns erfreuen 2, 92, 228 with 2 read right, while p822-c3-1161 line 11 prints Lasst uns erfreuen 91, 228, so the book's two places disagree on the entry's numbers. | twin t151 p817-c2-2710.13 (F18): p817-c2-2710 line 13 prints Lasst uns erfreuen 2, 92, 228 (zoom: 92 clear) while p822-c3-1161 line 11 prints Lasst uns erfreuen 91, 228, so the book's two places disagree, 92 against 91. | twin t152 p817-c2-2710.13 (F18): p817-c2-2710 line 13 prints Lasst uns erfreuen 2, 92, 228 with 228 read right, while p822-c3-1161 line 11 prints Lasst uns erfreuen 91, 228, so the book's two places disagree on the other numbers, 92 against 91."
+    },
+    {
+      "index": "metrical",
+      "page": 822,
+      "at": "#109",
+      "check": "metre",
+      "value": "8.8.8.8.8. with Refrain 91",
+      "judge": "F13",
+      "why": "f414 p822-c3-1161.11: Strip p822-c3-1161 prints the heading 8.8.8.8.8. with Refrain with five 8s above Lasst uns erfreuen 91, 228 on line 11."
+    },
+    {
+      "index": "metrical",
+      "page": 822,
+      "at": "#120",
+      "check": "metre",
+      "value": "8.8.8.8.8.8. with Alleluias 2",
+      "judge": "F23",
+      "why": "f415 p822-c3-2011.7 (third look F23): p822-c3-2011 line 7 prints Lasst uns erfreuen 2 under the head 8.8.8.8.8.8. with Alleluias, with six clear 8s. | first side (F13): Strip p822-c3-2011 line 7 prints Lasst uns erfreuen 2 under the heading 8.8.8.8.8.8. with Alleluias, with six 8s clear."
+    },
+    {
+      "index": "metrical",
+      "page": 822,
+      "at": "#123",
+      "check": "metre",
+      "value": "8.9.10.7. with Refrain 487",
+      "judge": "F13",
+      "why": "f416 p822-c3-2011.13: Strip p822-c3-2011 line 13 prints In the Garden 487 under the heading 8.9.10.7. with Refrain, with each digit clear."
+    },
+    {
+      "index": "metrical",
+      "page": 823,
+      "at": "#2",
+      "check": "metre",
+      "value": "9.7.9.7.D. 180",
+      "judge": "F13",
+      "why": "f417 p823-c1-0380.5: Strip p823-c1-0380 line 5 prints the tune line for 180 under the heading 9.7.9.7.D., with each digit clear."
+    },
+    {
+      "index": "metrical",
+      "page": 823,
+      "at": "#27",
+      "check": "metre",
+      "value": "9.9.10.8. with Refrain 181",
+      "judge": "F13",
+      "why": "f418 p823-c1-2930.5: Strip p823-c1-2930 line 5 prints the tune line for 181 under the heading 9.9.10.8. with Refrain, whose second digit matches the first 9 and not the final 8, as strip p823-c1-2887 also shows."
+    },
+    {
+      "index": "metrical",
+      "page": 823,
+      "at": "#31",
+      "check": "order",
+      "value": "Sweet, Sweet Spirit > I'm a Pilgrim",
+      "judge": "F23",
+      "why": "f419 p823-c2-0380.4 (third look F23): p823-c2-0380 line 3 prints the key for 262 and line 4 the key for 444 under the head 9.11. with Refrain, so the book sets this order, as the twin t190 on the same strip line 3 shows. | first side (F13): Strip p823-c2-0380 lines 3 to 4 print Sweet, Sweet Spirit 262 above I'm a Pilgrim 444, so the book itself prints this order. | twin t190 p823-c2-0380.3 (F19): p823-c2-0380 line 3 prints the key for 262 and line 4 prints the key for 444 after it, so the book itself prints this order out of alphabetical sequence."
+    },
+    {
+      "index": "metrical",
+      "page": 823,
+      "at": "#31",
+      "check": "metre",
+      "value": "9.11. with Refrain 444",
+      "judge": "F13",
+      "why": "f420 p823-c2-0380.4: Strip p823-c2-0380 prints the heading 9.11. with Refrain above I'm a Pilgrim 444 on line 4, with both digits of 11 clear."
+    },
+    {
+      "index": "metrical",
+      "page": 823,
+      "at": "#40",
+      "check": "metre",
+      "value": "10.8.10.8.7.7.7.10.8. 214",
+      "judge": "F13",
+      "why": "f421 p823-c2-1230.6: Strip p823-c2-1230 prints the heading 10.8.10.8.7.7.7.10.8. with three 7s above General Conference 214 on line 6."
+    },
+    {
+      "index": "metrical",
+      "page": 823,
+      "at": "#42",
+      "check": "tunes",
+      "value": "Gott ist die Liebe 78",
+      "judge": "F13",
+      "why": "f422 p823-c2-1230.10: Strip p823-c2-1230 line 10 prints Gott ist die Liebe 78 under the heading 10.9. with Refrain, with each digit clear. | twin t141 p817-c1-2710.17 (F18): p817-c1-2710 line 17 prints Gott is die Liebe 78 and p823-c2-1230 line 10 prints Gott ist die Liebe 78, so the number agrees and the book's two places spell the tune differently."
+    },
+    {
+      "index": "metrical",
+      "page": 823,
+      "at": "#91",
+      "check": "tunes",
+      "value": "Consolation (Webbe) 477",
+      "judge": "F13",
+      "why": "f423 p823-c3-2930.7: Strip p823-c3-2930 line 7 prints Consolation (Webbe) 477 under the heading 11.10.11.10., below Consolation (Mendelssohn) 498, so the book prints this name and number here. | twin t133 p816-c6-1430.16 (F18): p816-c6-1430 line 16 prints Consalator 477 (zoom confirmed) and p823-c3-2930 line 7 prints Consolation (Webbe) 477, so the number agrees and the book's two places name the tune differently."
+    },
+    {
+      "index": "metrical",
+      "page": 824,
+      "at": "#3",
+      "check": "metre",
+      "value": "11.10.11.10. 175",
+      "judge": "F13",
+      "why": "f424 p824-c1-0770.4: Strip p824-c1-0770 line 4 prints Noel Nouvelet 175 in the group headed 11.10.11.10. (the next heading is 11.10.11.10. with Refrain), so the index prints this metre for 175."
+    },
+    {
+      "index": "metrical",
+      "page": 824,
+      "at": "#42",
+      "check": "metre",
+      "value": "11.12.12.10. 73",
+      "judge": "F23",
+      "why": "f425 p824-c2-1620.9 (third look F23): p824-c2-1620 line 9 prints Nicaea 73 under the head 11.12.12.10. after For You I Am Praying 284, with a clear 10 at the end of the head. | first side (F13): Strip p824-c2-1620 line 9 prints Nicaea 73 under the heading 11.12.12.10., with the final 10 clear, so the index prints this metre for 73."
+    },
+    {
+      "index": "metrical",
+      "page": 824,
+      "at": "#56",
+      "check": "metre",
+      "value": "13.12.13.7.6. 501",
+      "judge": "F13",
+      "why": "f426 p824-c3-1620.8: Strip p824-c3-1620 lines 7 to 8 print the tune line for 501 wrapped over two lines, its key as reading a has it, under the heading 13.12.13.7.6., and reading b took only the second line as the key."
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#27",
+      "check": "stanza",
+      "value": "18e",
+      "judge": "F24",
+      "why": "r042 p792-c1-1370.2 (third look F24): p792-c1-1370 line 2 prints Ps 24:10 under 18e and the by-hymn strip p799-c6-1640 line 16 prints 18 e too, so the stanza fault, stanza 5 against a count of 4, is the book's own | recheck F25 k027: p792r-c1 rows 606-634 (line 27): sharp print shows 18e beside 24:10"
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#136",
+      "check": "stanza",
+      "value": "227e",
+      "judge": "F28",
+      "why": "k136 p792-c2-2220.10 on p792r-c2 (recheck F28, override): p792r-c2 rows 1293-1321 (line 61 of the column): the key 72:17, 19 and the number 227 are sharp; the stanza letter has a closed bowl with a crossbar, an e, unlike the open c of 227c beside 72:11 two lines above"
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#163",
+      "check": "stanza",
+      "value": "5e",
+      "judge": "F29",
+      "why": "k163 p792-c3-0520.13 on p792r-c3 (recheck F29, override): p792r-c3 rows 255-279 (line 12 of the column, between 529r and 618a): zoomed, the letter after 5 is a closed bowl with a cross bar, an e, unlike the open c of 103c and 529c on the same strip, so 5e, not 5c"
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#275",
+      "check": "stanza",
+      "value": "366d",
+      "judge": "F32",
+      "why": "k275 p792-c4-1370.23 on p792r-c4 (recheck F32, printed): p792r-c4 rows 1013-1042 (line 48 of the column): the sharp retake, no finger over it, shows 366d beside 126:6; the first digit is a flat-topped 3 with an open left, the same as the 3 of 358c above and 369c below, and the letter is d, so 366d as settled"
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#49",
+      "check": "directions",
+      "value": "Psalms 31:3 335c",
+      "judge": "F26",
+      "why": "k049 p792-c1-1370.24 on p792r-c1 (recheck F26, override): p792r-c1 rows 1061-1089 (line 49, between 348c and 32:7 238c): the first and middle digits both have the round top of a 3, as the 3 of 348c above, and only the last digit has the square flag of a 5, as in 535b at line 30, so 335c, not 535c or 555c"
+    },
+    {
+      "index": "scriptural",
+      "page": 792,
+      "at": "#163",
+      "check": "directions",
+      "value": "Psalms 92:5 5e",
+      "judge": "F29",
+      "why": "k163 p792-c3-0520.13 on p792r-c3 (recheck F29, override): p792r-c3 rows 255-279 (line 12 of the column, between 529r and 618a): zoomed, the letter after 5 is a closed bowl with a cross bar, an e, unlike the open c of 103c and 529c on the same strip, so 5e, not 5c"
+    }
+  ]
+}

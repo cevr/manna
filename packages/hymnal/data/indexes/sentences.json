@@ -1,0 +1,564 @@
+{
+  "version": 1,
+  "book": "sdah-1985",
+  "index": "sentences",
+  "title": "HYMNS SUITABLE FOR SENTENCES AND RESPONSES",
+  "note": "In addition to hymns listed under “Sentences and Responses” in the Topical Index, many others contain stanzas that can be used for calls to worship, invitations and responses to prayer, before or after the offering, or benedictions and “maranatha” (“the Lord is coming”) sentences for the closing of worship. For the latter, all hymns listed under “Closing of Worship” in the Topical Index may also be used. The following is a partial list. The letter a following a hymn number indicates stanza 1; the letter b indicates stanza 2, et cetera; r indicates refrain.",
+  "pages": [
+    {
+      "page": 807,
+      "entries": 35
+    },
+    {
+      "page": 808,
+      "entries": 70
+    }
+  ],
+  "groups": [
+    {
+      "name": "Call to Worship",
+      "hymns": [
+        {
+          "number": 16,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 113,
+          "stanzas": ["d"],
+          "page": 807
+        },
+        {
+          "number": 123,
+          "stanzas": ["a", "b"],
+          "page": 807
+        },
+        {
+          "number": 82,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 634,
+          "stanzas": ["a", "d"],
+          "page": 807
+        },
+        {
+          "number": 10,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 71,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 106,
+          "stanzas": ["a", "b"],
+          "page": 807
+        },
+        {
+          "number": 3,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 61,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 349,
+          "stanzas": ["a", "b"],
+          "page": 807
+        },
+        {
+          "number": 22,
+          "stanzas": ["a", "b"],
+          "page": 807
+        },
+        {
+          "number": 173,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 30,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 73,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 12,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 89,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 112,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 39,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 320,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 42,
+          "stanzas": ["a", "d"],
+          "page": 807
+        },
+        {
+          "number": 63,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 250,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 405,
+          "stanzas": ["a", "b"],
+          "page": 807
+        },
+        {
+          "number": 77,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 20,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 83,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 6,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 116,
+          "stanzas": ["b", "c"],
+          "page": 807
+        },
+        {
+          "number": 45,
+          "stanzas": [],
+          "page": 807
+        },
+        {
+          "number": 4,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 25,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 1,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 70,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 221,
+          "stanzas": ["a"],
+          "page": 807
+        },
+        {
+          "number": 27,
+          "stanzas": ["a"],
+          "page": 808
+        },
+        {
+          "number": 29,
+          "stanzas": ["a"],
+          "page": 808
+        },
+        {
+          "number": 105,
+          "stanzas": ["a"],
+          "page": 808
+        },
+        {
+          "number": 203,
+          "stanzas": ["a"],
+          "page": 808
+        },
+        {
+          "number": 43,
+          "stanzas": ["a", "b"],
+          "page": 808
+        }
+      ]
+    },
+    {
+      "name": "Invitation or Response to Prayer",
+      "hymns": [
+        {
+          "number": 113,
+          "stanzas": ["a"],
+          "page": 808
+        },
+        {
+          "number": 265,
+          "stanzas": [],
+          "page": 808
+        },
+        {
+          "number": 259,
+          "stanzas": ["a"],
+          "page": 808
+        },
+        {
+          "number": 496,
+          "stanzas": ["a", "b"],
+          "page": 808
+        },
+        {
+          "number": 566,
+          "stanzas": ["d"],
+          "page": 808
+        },
+        {
+          "number": 299,
+          "stanzas": ["a", "d"],
+          "page": 808
+        },
+        {
+          "number": 293,
+          "stanzas": ["a"],
+          "page": 808
+        },
+        {
+          "number": 260,
+          "stanzas": ["r"],
+          "page": 808
+        },
+        {
+          "number": 226,
+          "stanzas": ["e"],
+          "page": 808
+        },
+        {
+          "number": 492,
+          "stanzas": ["a"],
+          "page": 808
+        },
+        {
+          "number": 39,
+          "stanzas": ["a"],
+          "page": 808
+        },
+        {
+          "number": 320,
+          "stanzas": ["b", "c"],
+          "page": 808
+        },
+        {
+          "number": 405,
+          "stanzas": ["a", "b"],
+          "page": 808
+        },
+        {
+          "number": 77,
+          "stanzas": ["a"],
+          "page": 808
+        },
+        {
+          "number": 326,
+          "stanzas": ["a"],
+          "page": 808
+        },
+        {
+          "number": 45,
+          "stanzas": [],
+          "page": 808
+        },
+        {
+          "number": 153,
+          "stanzas": ["a", "c"],
+          "page": 808
+        },
+        {
+          "number": 193,
+          "stanzas": ["a"],
+          "page": 808
+        },
+        {
+          "number": 266,
+          "stanzas": ["a"],
+          "page": 808
+        },
+        {
+          "number": 498,
+          "stanzas": ["a"],
+          "page": 808
+        },
+        {
+          "number": 479,
+          "stanzas": ["a"],
+          "page": 808
+        }
+      ]
+    },
+    {
+      "name": "Offering Response",
+      "hymns": [
+        {
+          "number": 376,
+          "stanzas": ["a"],
+          "page": 808
+        },
+        {
+          "number": 556,
+          "stanzas": ["a", "c"],
+          "page": 808
+        },
+        {
+          "number": 123,
+          "stanzas": ["c"],
+          "page": 808
+        },
+        {
+          "number": 634,
+          "stanzas": ["b"],
+          "page": 808
+        },
+        {
+          "number": 562,
+          "stanzas": ["a", "d"],
+          "page": 808
+        },
+        {
+          "number": 635,
+          "stanzas": ["a"],
+          "page": 808
+        },
+        {
+          "number": 15,
+          "stanzas": [],
+          "page": 808
+        },
+        {
+          "number": 637,
+          "stanzas": ["b"],
+          "page": 808
+        }
+      ]
+    },
+    {
+      "name": "Benediction/Maranatha",
+      "hymns": [
+        {
+          "number": 397,
+          "stanzas": ["d"],
+          "page": 808
+        },
+        {
+          "number": 628,
+          "stanzas": ["r"],
+          "page": 808
+        },
+        {
+          "number": 123,
+          "stanzas": ["d"],
+          "page": 808
+        },
+        {
+          "number": 350,
+          "stanzas": ["a", "d"],
+          "page": 808
+        },
+        {
+          "number": 265,
+          "stanzas": [],
+          "page": 808
+        },
+        {
+          "number": 201,
+          "stanzas": ["a"],
+          "page": 808
+        },
+        {
+          "number": 90,
+          "stanzas": ["d"],
+          "page": 808
+        },
+        {
+          "number": 550,
+          "stanzas": ["c"],
+          "page": 808
+        },
+        {
+          "number": 482,
+          "stanzas": ["a"],
+          "page": 808
+        },
+        {
+          "number": 613,
+          "stanzas": [],
+          "page": 808
+        },
+        {
+          "number": 106,
+          "stanzas": ["d"],
+          "page": 808
+        },
+        {
+          "number": 349,
+          "stanzas": ["c"],
+          "page": 808
+        },
+        {
+          "number": 87,
+          "stanzas": ["c"],
+          "page": 808
+        },
+        {
+          "number": 99,
+          "stanzas": ["a"],
+          "page": 808
+        },
+        {
+          "number": 621,
+          "stanzas": [],
+          "page": 808
+        },
+        {
+          "number": 202,
+          "stanzas": ["c", "r"],
+          "page": 808
+        },
+        {
+          "number": 442,
+          "stanzas": ["r"],
+          "page": 808
+        },
+        {
+          "number": 624,
+          "stanzas": ["a"],
+          "page": 808
+        },
+        {
+          "number": 553,
+          "stanzas": ["a", "c"],
+          "page": 808
+        },
+        {
+          "number": 362,
+          "stanzas": ["a"],
+          "page": 808
+        },
+        {
+          "number": 226,
+          "stanzas": ["e"],
+          "page": 808
+        },
+        {
+          "number": 320,
+          "stanzas": ["d", "e"],
+          "page": 808
+        },
+        {
+          "number": 97,
+          "stanzas": ["g"],
+          "page": 808
+        },
+        {
+          "number": 363,
+          "stanzas": ["c"],
+          "page": 808
+        },
+        {
+          "number": 244,
+          "stanzas": ["c"],
+          "page": 808
+        },
+        {
+          "number": 404,
+          "stanzas": ["b", "d"],
+          "page": 808
+        },
+        {
+          "number": 103,
+          "stanzas": ["e"],
+          "page": 808
+        },
+        {
+          "number": 77,
+          "stanzas": ["d"],
+          "page": 808
+        },
+        {
+          "number": 407,
+          "stanzas": ["a", "b"],
+          "page": 808
+        },
+        {
+          "number": 174,
+          "stanzas": ["a", "e"],
+          "page": 808
+        },
+        {
+          "number": 209,
+          "stanzas": ["a"],
+          "page": 808
+        },
+        {
+          "number": 217,
+          "stanzas": ["d"],
+          "page": 808
+        },
+        {
+          "number": 215,
+          "stanzas": ["e"],
+          "page": 808
+        },
+        {
+          "number": 200,
+          "stanzas": ["a"],
+          "page": 808
+        },
+        {
+          "number": 203,
+          "stanzas": ["c"],
+          "page": 808
+        },
+        {
+          "number": 214,
+          "stanzas": [],
+          "page": 808
+        }
+      ]
+    }
+  ]
+}

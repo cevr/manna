@@ -1,0 +1,7083 @@
+{
+  "version": 1,
+  "book": "sdah-1985",
+  "index": "metrical",
+  "title": "METRICAL INDEX OF TUNES",
+  "pages": [
+    {
+      "page": 819,
+      "entries": 176
+    },
+    {
+      "page": 820,
+      "entries": 126
+    },
+    {
+      "page": 821,
+      "entries": 109
+    },
+    {
+      "page": 822,
+      "entries": 125
+    },
+    {
+      "page": 823,
+      "entries": 91
+    },
+    {
+      "page": 824,
+      "entries": 60
+    }
+  ],
+  "metres": [
+    {
+      "metre": "S. M.",
+      "gloss": "(Short Meter - 6.6.8.6.)",
+      "tunes": [
+        {
+          "name": "Dennis",
+          "hymns": [
+            {
+              "number": 350,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "El Kader",
+          "hymns": [
+            {
+              "number": 15,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Festal Song",
+          "hymns": [
+            {
+              "number": 117,
+              "page": 819
+            },
+            {
+              "number": 615,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Garden City",
+          "hymns": [
+            {
+              "number": 217,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Garelochside",
+          "hymns": [
+            {
+              "number": 597,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Laban",
+          "hymns": [
+            {
+              "number": 605,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "No Sorrow There",
+          "hymns": [
+            {
+              "number": 443,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Paraclete",
+          "hymns": [
+            {
+              "number": 265,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "St. Bride",
+          "hymns": [
+            {
+              "number": 519,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "St. Thomas",
+          "hymns": [
+            {
+              "number": 344,
+              "page": 819
+            },
+            {
+              "number": 372,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Schumann",
+          "hymns": [
+            {
+              "number": 409,
+              "page": 819
+            },
+            {
+              "number": 670,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Southwell",
+          "hymns": [
+            {
+              "number": 504,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Trentham",
+          "hymns": [
+            {
+              "number": 390,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "United Man",
+          "hymns": [
+            {
+              "number": 419,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Woolwich",
+          "hymns": [
+            {
+              "number": 488,
+              "page": 819
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "S. M. with Refrain",
+      "tunes": [
+        {
+          "name": "I Hear Thy Welcome Voice",
+          "hymns": [
+            {
+              "number": 282,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Marching to Zion",
+          "hymns": [
+            {
+              "number": 422,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Marion",
+          "hymns": [
+            {
+              "number": 27,
+              "page": 819
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "S. M. D.",
+      "gloss": "(Short Meter Double - 6.6.8.6.6.6.8.6.)",
+      "tunes": [
+        {
+          "name": "Diademata",
+          "hymns": [
+            {
+              "number": 223,
+              "page": 819
+            },
+            {
+              "number": 616,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Leominster",
+          "hymns": [
+            {
+              "number": 568,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Terra beata",
+          "hymns": [
+            {
+              "number": 92,
+              "page": 819
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "C. M.",
+      "gloss": "(Common Meter - 8.6.8.6.)",
+      "tunes": [
+        {
+          "name": "Antioch",
+          "hymns": [
+            {
+              "number": 125,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Arlington",
+          "hymns": [
+            {
+              "number": 609,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Azmon",
+          "hymns": [
+            {
+              "number": 250,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Beatitudo",
+          "hymns": [
+            {
+              "number": 323,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Bedford",
+          "hymns": [
+            {
+              "number": 35,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Benediction (Ledington)",
+          "hymns": [
+            {
+              "number": 667,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Bishopthorpe",
+          "hymns": [
+            {
+              "number": 644,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Cascadel",
+          "hymns": [
+            {
+              "number": 379,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Chesterfield",
+          "hymns": [
+            {
+              "number": 611,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Coronation",
+          "hymns": [
+            {
+              "number": 229,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Crimond",
+          "hymns": [
+            {
+              "number": 552,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Day of Praise",
+          "hymns": [
+            {
+              "number": 411,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Detroit",
+          "hymns": [
+            {
+              "number": 299,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Dove of Peace",
+          "hymns": [
+            {
+              "number": 400,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Dundee",
+          "hymns": [
+            {
+              "number": 107,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Dunfermline",
+          "hymns": [
+            {
+              "number": 649,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Exhortation",
+          "hymns": [
+            {
+              "number": 440,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Gräfenberg",
+          "hymns": [
+            {
+              "number": 267,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Horsley",
+          "hymns": [
+            {
+              "number": 164,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "I Do Believe",
+          "hymns": [
+            {
+              "number": 486,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Irish",
+          "hymns": [
+            {
+              "number": 63,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Jeg er saa glad",
+          "hymns": [
+            {
+              "number": 586,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "La Sierra",
+          "hymns": [
+            {
+              "number": 179,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Land of Rest",
+          "hymns": [
+            {
+              "number": 420,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Lobt Gott ihr Christen",
+          "hymns": [
+            {
+              "number": 105,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Maitland",
+          "hymns": [
+            {
+              "number": 328,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Manoah",
+          "hymns": [
+            {
+              "number": 315,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Martyrdom",
+          "hymns": [
+            {
+              "number": 113,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "McKee",
+          "hymns": [
+            {
+              "number": 62,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Mear",
+          "hymns": [
+            {
+              "number": 39,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Meditation",
+          "hymns": [
+            {
+              "number": 405,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Morning Song",
+          "hymns": [
+            {
+              "number": 215,
+              "page": 819
+            },
+            {
+              "number": 576,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "New Britain",
+          "hymns": [
+            {
+              "number": 108,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Northfield",
+          "hymns": [
+            {
+              "number": 533,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Perry",
+          "hymns": [
+            {
+              "number": 399,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "St. Agnes",
+          "hymns": [
+            {
+              "number": 241,
+              "page": 819
+            },
+            {
+              "number": 269,
+              "page": 819
+            },
+            {
+              "number": 655,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "St. Anne",
+          "hymns": [
+            {
+              "number": 103,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "St. Botolph",
+          "hymns": [
+            {
+              "number": 585,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "St. Columba",
+          "hymns": [
+            {
+              "number": 639,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "St. Magnus",
+          "hymns": [
+            {
+              "number": 19,
+              "page": 819
+            },
+            {
+              "number": 199,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "St. Peter",
+          "hymns": [
+            {
+              "number": 238,
+              "page": 819
+            },
+            {
+              "number": 587,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "San Rocco",
+          "hymns": [
+            {
+              "number": 97,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Serenity",
+          "hymns": [
+            {
+              "number": 455,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Stracathro",
+          "hymns": [
+            {
+              "number": 392,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Twenty-Fourth",
+          "hymns": [
+            {
+              "number": 406,
+              "page": 819
+            },
+            {
+              "number": 681,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Vandeman",
+          "hymns": [
+            {
+              "number": 77,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Wetherby",
+          "hymns": [
+            {
+              "number": 273,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Winchester Old",
+          "hymns": [
+            {
+              "number": 139,
+              "page": 819
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "C. M. with Refrain",
+      "tunes": [
+        {
+          "name": "At the Cross",
+          "hymns": [
+            {
+              "number": 163,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "God Will Take Care of You",
+          "hymns": [
+            {
+              "number": 99,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "I Know Whom I Have Believed",
+          "hymns": [
+            {
+              "number": 511,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "I Would Be Like Jesus",
+          "hymns": [
+            {
+              "number": 311,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Lead Me to Calvary",
+          "hymns": [
+            {
+              "number": 317,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Near to the Heart of God",
+          "hymns": [
+            {
+              "number": 495,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Never Part Again",
+          "hymns": [
+            {
+              "number": 449,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "New Jerusalem",
+          "hymns": [
+            {
+              "number": 446,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "No Other Plea",
+          "hymns": [
+            {
+              "number": 523,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "O, How I Love Jesus",
+          "hymns": [
+            {
+              "number": 248,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Only Trust Him",
+          "hymns": [
+            {
+              "number": 279,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Promised Land",
+          "hymns": [
+            {
+              "number": 620,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "The Cleansing Wave",
+          "hymns": [
+            {
+              "number": 332,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "There's Sunshine in My Soul",
+          "hymns": [
+            {
+              "number": 470,
+              "page": 819
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "C. M. D.",
+      "gloss": "(Common Meter Double - 8.6.8.6.8.6.8.6.)",
+      "tunes": [
+        {
+          "name": "Balm in Gilead",
+          "hymns": [
+            {
+              "number": 475,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Carol",
+          "hymns": [
+            {
+              "number": 130,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Clonmel",
+          "hymns": [
+            {
+              "number": 642,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Forest Green",
+          "hymns": [
+            {
+              "number": 90,
+              "page": 819
+            },
+            {
+              "number": 168,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Halifax",
+          "hymns": [
+            {
+              "number": 497,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Hymn of Praise",
+          "hymns": [
+            {
+              "number": 564,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Kingsfold",
+          "hymns": [
+            {
+              "number": 144,
+              "page": 819
+            },
+            {
+              "number": 465,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Regwal",
+          "hymns": [
+            {
+              "number": 556,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Resignation",
+          "hymns": [
+            {
+              "number": 104,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Soll's sein",
+          "hymns": [
+            {
+              "number": 261,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "There Is a Fountain",
+          "hymns": [
+            {
+              "number": 336,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Varina",
+          "hymns": [
+            {
+              "number": 88,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Welcome Guest",
+          "hymns": [
+            {
+              "number": 46,
+              "page": 819
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "C. M. D. with Refrain",
+      "tunes": [
+        {
+          "name": "Faith Is the Victory",
+          "hymns": [
+            {
+              "number": 608,
+              "page": 819
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "L. M.",
+      "gloss": "(Long Meter - 8.8.8.8.)",
+      "tunes": [
+        {
+          "name": "Abends",
+          "hymns": [
+            {
+              "number": 242,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Angelus",
+          "hymns": [
+            {
+              "number": 94,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Beautiful Zion",
+          "hymns": [
+            {
+              "number": 450,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Bluebonnet",
+          "hymns": [
+            {
+              "number": 278,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Cannock",
+          "hymns": [
+            {
+              "number": 160,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Canonbury",
+          "hymns": [
+            {
+              "number": 541,
+              "page": 819
+            },
+            {
+              "number": 548,
+              "page": 819
+            },
+            {
+              "number": 686,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Conditor alme",
+          "hymns": [
+            {
+              "number": 72,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Deus tuorum militum",
+          "hymns": [
+            {
+              "number": 404,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Duke Street",
+          "hymns": [
+            {
+              "number": 82,
+              "page": 819
+            },
+            {
+              "number": 227,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Dunedin",
+          "hymns": [
+            {
+              "number": 106,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Gardiner",
+          "hymns": [
+            {
+              "number": 177,
+              "page": 819
+            },
+            {
+              "number": 355,
+              "page": 819
+            },
+            {
+              "number": 376,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Gonfalon Royal",
+          "hymns": [
+            {
+              "number": 41,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Hamburg",
+          "hymns": [
+            {
+              "number": 154,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Hursley",
+          "hymns": [
+            {
+              "number": 502,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "I Want Jesus to Walk With Me",
+          "hymns": [
+            {
+              "number": 624,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Infinite Love",
+          "hymns": [
+            {
+              "number": 148,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Janice",
+          "hymns": [
+            {
+              "number": 410,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Laurel",
+          "hymns": [
+            {
+              "number": 42,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Maryton",
+          "hymns": [
+            {
+              "number": 574,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "McCabe",
+          "hymns": [
+            {
+              "number": 401,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Melrose",
+          "hymns": [
+            {
+              "number": 588,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Mendon",
+          "hymns": [
+            {
+              "number": 264,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Old Hundredth",
+          "hymns": [
+            {
+              "number": 16,
+              "page": 819
+            },
+            {
+              "number": 694,
+              "page": 819
+            },
+            {
+              "number": 695,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Ombersley",
+          "hymns": [
+            {
+              "number": 79,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Park Street",
+          "hymns": [
+            {
+              "number": 17,
+              "page": 819
+            },
+            {
+              "number": 393,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Pentecost",
+          "hymns": [
+            {
+              "number": 613,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Puer nobis",
+          "hymns": [
+            {
+              "number": 333,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Retreat",
+          "hymns": [
+            {
+              "number": 527,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Rockingham Old",
+          "hymns": [
+            {
+              "number": 155,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Russia",
+          "hymns": [
+            {
+              "number": 252,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Suantrai",
+          "hymns": [
+            {
+              "number": 352,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Tallis' Canon",
+          "hymns": [
+            {
+              "number": 53,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Truro",
+          "hymns": [
+            {
+              "number": 182,
+              "page": 819
+            },
+            {
+              "number": 378,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Trygare kan ingen vara",
+          "hymns": [
+            {
+              "number": 101,
+              "page": 819
+            },
+            {
+              "number": 153,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Wareham",
+          "hymns": [
+            {
+              "number": 174,
+              "page": 819
+            },
+            {
+              "number": 226,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Woodworth",
+          "hymns": [
+            {
+              "number": 314,
+              "page": 819
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "L. M. with Refrain",
+      "tunes": [
+        {
+          "name": "A Shelter in the Time of Storm",
+          "hymns": [
+            {
+              "number": 528,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Hark! 'Tis the Shepherd's Voice",
+          "hymns": [
+            {
+              "number": 361,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "He Leadeth Me",
+          "hymns": [
+            {
+              "number": 537,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Higher Ground",
+          "hymns": [
+            {
+              "number": 625,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "I Need the Prayers",
+          "hymns": [
+            {
+              "number": 505,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "I'm Going Home",
+          "hymns": [
+            {
+              "number": 437,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Montrose",
+          "hymns": [
+            {
+              "number": 111,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "More About Jesus",
+          "hymns": [
+            {
+              "number": 245,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "The Solid Rock",
+          "hymns": [
+            {
+              "number": 200,
+              "page": 819
+            },
+            {
+              "number": 522,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Watch, Ye Saints",
+          "hymns": [
+            {
+              "number": 598,
+              "page": 819
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "L. M. D.",
+      "gloss": "(Long Meter Double - 8.8.8.8.8.8.8.8.)",
+      "tunes": [
+        {
+          "name": "Contrast",
+          "hymns": [
+            {
+              "number": 434,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Creation",
+          "hymns": [
+            {
+              "number": 96,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Duane Street",
+          "hymns": [
+            {
+              "number": 441,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Finally",
+          "hymns": [
+            {
+              "number": 417,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Jerusalem",
+          "hymns": [
+            {
+              "number": 80,
+              "page": 819
+            }
+          ]
+        },
+        {
+          "name": "Sweet Hour",
+          "hymns": [
+            {
+              "number": 478,
+              "page": 819
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "L. M. with Alleluias",
+      "tunes": [
+        {
+          "name": "Lasst uns erfreuen",
+          "hymns": [
+            {
+              "number": 2,
+              "page": 819
+            },
+            {
+              "number": 91,
+              "page": 819
+            },
+            {
+              "number": 228,
+              "page": 819
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "Irregular",
+      "tunes": [
+        {
+          "name": "All Is Well",
+          "hymns": [
+            {
+              "number": 622,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "As We Come to You in Prayer",
+          "hymns": [
+            {
+              "number": 671,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "As You Have Promised, Lord",
+          "hymns": [
+            {
+              "number": 682,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "East Horndon",
+          "hymns": [
+            {
+              "number": 146,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Elizabeth",
+          "hymns": [
+            {
+              "number": 185,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Fill My Cup, Lord",
+          "hymns": [
+            {
+              "number": 493,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Irby",
+          "hymns": [
+            {
+              "number": 149,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Jesus, I Come",
+          "hymns": [
+            {
+              "number": 292,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Joy by and by",
+          "hymns": [
+            {
+              "number": 430,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Kremser",
+          "hymns": [
+            {
+              "number": 8,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Laurel",
+          "hymns": [
+            {
+              "number": 550,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Luckington",
+          "hymns": [
+            {
+              "number": 9,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Margaret",
+          "hymns": [
+            {
+              "number": 140,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "My Shepherd",
+          "hymns": [
+            {
+              "number": 192,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Nyt ylös, sieluni",
+          "hymns": [
+            {
+              "number": 38,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Open My Eyes",
+          "hymns": [
+            {
+              "number": 326,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Purpose",
+          "hymns": [
+            {
+              "number": 225,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Sabbath Hymn",
+          "hymns": [
+            {
+              "number": 395,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Shalom",
+          "hymns": [
+            {
+              "number": 674,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Sleepers, Wake",
+          "hymns": [
+            {
+              "number": 210,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Stille Nacht",
+          "hymns": [
+            {
+              "number": 143,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "This Little Light of Mine",
+          "hymns": [
+            {
+              "number": 580,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Uinta",
+          "hymns": [
+            {
+              "number": 126,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "W zlobie lezy",
+          "hymns": [
+            {
+              "number": 127,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Wachet auf",
+          "hymns": [
+            {
+              "number": 210,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "We Have Heard",
+          "hymns": [
+            {
+              "number": 453,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Wie schön leuchtet",
+          "hymns": [
+            {
+              "number": 18,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Wonder of It All",
+          "hymns": [
+            {
+              "number": 75,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "Irregular with Refrain",
+      "tunes": [
+        {
+          "name": "Adeste fidelis",
+          "hymns": [
+            {
+              "number": 132,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "The First Noel",
+          "hymns": [
+            {
+              "number": 118,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "3.3.11.8.8.11.",
+      "tunes": [
+        {
+          "name": "David",
+          "hymns": [
+            {
+              "number": 220,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "4.10.10.10.4.",
+      "tunes": [
+        {
+          "name": "Ora labora",
+          "hymns": [
+            {
+              "number": 357,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "5.5.5.4.D",
+      "tunes": [
+        {
+          "name": "Bunessan",
+          "hymns": [
+            {
+              "number": 44,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "5.5.5.5.6.5.6.5.",
+      "tunes": [
+        {
+          "name": "Laudate Dominum",
+          "hymns": [
+            {
+              "number": 20,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "5.5.6.5 with Refrain",
+      "tunes": [
+        {
+          "name": "Baptize Us Anew",
+          "hymns": [
+            {
+              "number": 258,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "5.5.6.5.6.5.6.5.",
+      "tunes": [
+        {
+          "name": "Judas Maccabeus",
+          "hymns": [
+            {
+              "number": 171,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "5.5.8.8.5.5.",
+      "tunes": [
+        {
+          "name": "Seelenbräutigam",
+          "hymns": [
+            {
+              "number": 553,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "5.6.8.5.5.8.",
+      "tunes": [
+        {
+          "name": "Crusader's Hymn",
+          "hymns": [
+            {
+              "number": 240,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "5.8.8.5.5.",
+      "tunes": [
+        {
+          "name": "All Kinds of Light",
+          "hymns": [
+            {
+              "number": 566,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.4.6.4. with Refrain",
+      "tunes": [
+        {
+          "name": "I Need Thee Every Hour",
+          "hymns": [
+            {
+              "number": 483,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.4.6.4.D.",
+      "tunes": [
+        {
+          "name": "Bread of Life",
+          "hymns": [
+            {
+              "number": 271,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.4.6.4.6.6.6.4.",
+      "tunes": [
+        {
+          "name": "Bethany",
+          "hymns": [
+            {
+              "number": 473,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "More Love to Thee",
+          "hymns": [
+            {
+              "number": 458,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Oak",
+          "hymns": [
+            {
+              "number": 445,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Robinson",
+          "hymns": [
+            {
+              "number": 653,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "St. Edmund",
+          "hymns": [
+            {
+              "number": 582,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.5.6.5.",
+      "tunes": [
+        {
+          "name": "Bemerton",
+          "hymns": [
+            {
+              "number": 683,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Ernstein",
+          "hymns": [
+            {
+              "number": 680,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Merrial",
+          "hymns": [
+            {
+              "number": 52,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.5.6.5. with Refrain",
+      "tunes": [
+        {
+          "name": "Tread Softly",
+          "hymns": [
+            {
+              "number": 479,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.5.6.5.D.",
+      "tunes": [
+        {
+          "name": "Bjorklund",
+          "hymns": [
+            {
+              "number": 575,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Cuddeson",
+          "hymns": [
+            {
+              "number": 360,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Heart of Jesus",
+          "hymns": [
+            {
+              "number": 577,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Holy, Holy, Holy (Shubert)",
+          "hymns": [
+            {
+              "number": 661,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "King's Weston",
+          "hymns": [
+            {
+              "number": 232,
+              "page": 820
+            },
+            {
+              "number": 581,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Penitence",
+          "hymns": [
+            {
+              "number": 491,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Ruth",
+          "hymns": [
+            {
+              "number": 110,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Take Time to Be Holy",
+          "hymns": [
+            {
+              "number": 500,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Wye Valley",
+          "hymns": [
+            {
+              "number": 74,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.5.6.5.D. with Refrain",
+      "tunes": [
+        {
+          "name": "Hermas",
+          "hymns": [
+            {
+              "number": 68,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "St. Gertrude",
+          "hymns": [
+            {
+              "number": 612,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.5.10.6.5.10. with Refrain",
+      "tunes": [
+        {
+          "name": "Rescue the Perishing",
+          "hymns": [
+            {
+              "number": 367,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.6.4.6.6.6.4.",
+      "tunes": [
+        {
+          "name": "Italian Hymn",
+          "hymns": [
+            {
+              "number": 71,
+              "page": 820
+            },
+            {
+              "number": 370,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Kirby Bedon",
+          "hymns": [
+            {
+              "number": 555,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Olivet",
+          "hymns": [
+            {
+              "number": 517,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.6.5.D.7.8.6.",
+      "tunes": [
+        {
+          "name": "Jesu, meine Freude",
+          "hymns": [
+            {
+              "number": 239,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.6.6.D.",
+      "tunes": [
+        {
+          "name": "Madrid",
+          "hymns": [
+            {
+              "number": 10,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.6.3.6.6.6.6.6.3.",
+      "tunes": [
+        {
+          "name": "Wondrous Love",
+          "hymns": [
+            {
+              "number": 162,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.6.6.6. with Refrain",
+      "tunes": [
+        {
+          "name": "Deeper Yet",
+          "hymns": [
+            {
+              "number": 302,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Jesus Paid It All",
+          "hymns": [
+            {
+              "number": 184,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.6.6.6.3.3.6.",
+      "tunes": [
+        {
+          "name": "Sharpthorne",
+          "hymns": [
+            {
+              "number": 571,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.6.6.6.3.4.5.",
+      "tunes": [
+        {
+          "name": "Challenge",
+          "hymns": [
+            {
+              "number": 203,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.6.6.6.6.6.",
+      "tunes": [
+        {
+          "name": "Laudes Domini",
+          "hymns": [
+            {
+              "number": 43,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Lord, Make Us More Holy",
+          "hymns": [
+            {
+              "number": 69,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "White",
+          "hymns": [
+            {
+              "number": 281,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.6.6.6.8.8.",
+      "tunes": [
+        {
+          "name": "Darwall's 148th",
+          "hymns": [
+            {
+              "number": 221,
+              "page": 820
+            },
+            {
+              "number": 377,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Love Unknown",
+          "hymns": [
+            {
+              "number": 188,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.6.6.6.8.8.8.",
+      "tunes": [
+        {
+          "name": "Rhosymedre",
+          "hymns": [
+            {
+              "number": 650,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.6.6.6.12.12.",
+      "tunes": [
+        {
+          "name": "Christmas Song",
+          "hymns": [
+            {
+              "number": 120,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.6.7.6.6.7.",
+      "tunes": [
+        {
+          "name": "Phos hilaron",
+          "hymns": [
+            {
+              "number": 54,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.6.7.7.7.8.5.5.",
+      "tunes": [
+        {
+          "name": "In dulci jubilo",
+          "hymns": [
+            {
+              "number": 136,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.6.8.4.D.",
+      "tunes": [
+        {
+          "name": "Leoni",
+          "hymns": [
+            {
+              "number": 11,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.6.8.6.6.8.3.3.6.6.",
+      "tunes": [
+        {
+          "name": "Wunderbarer König",
+          "hymns": [
+            {
+              "number": 3,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.6.8.6.8.6",
+      "tunes": [
+        {
+          "name": "A Quiet Place",
+          "hymns": [
+            {
+              "number": 503,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.6.9.6.6.9. with Refrain",
+      "tunes": [
+        {
+          "name": "Trust and Obey",
+          "hymns": [
+            {
+              "number": 590,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.6.11.6.6.11.",
+      "tunes": [
+        {
+          "name": "Down Ampney",
+          "hymns": [
+            {
+              "number": 257,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "The Ash Grove",
+          "hymns": [
+            {
+              "number": 407,
+              "page": 820
+            },
+            {
+              "number": 560,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "6.7.6.7.6.6.6.6.",
+      "tunes": [
+        {
+          "name": "Nun danket",
+          "hymns": [
+            {
+              "number": 559,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Darmstadt",
+          "hymns": [
+            {
+              "number": 345,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.4.7.4.D.",
+      "tunes": [
+        {
+          "name": "Gwalchmai",
+          "hymns": [
+            {
+              "number": 243,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Llanfair",
+          "hymns": [
+            {
+              "number": 25,
+              "page": 820
+            },
+            {
+              "number": 176,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.5.7.5.7.7.7.5.",
+      "tunes": [
+        {
+          "name": "Love at Home",
+          "hymns": [
+            {
+              "number": 652,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.6.7.5.D.",
+      "tunes": [
+        {
+          "name": "Work Song",
+          "hymns": [
+            {
+              "number": 375,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.6.7.6.",
+      "tunes": [
+        {
+          "name": "Bradley",
+          "hymns": [
+            {
+              "number": 298,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Lebendige Gemeinde",
+          "hymns": [
+            {
+              "number": 562,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Vulpius",
+          "hymns": [
+            {
+              "number": 629,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.6.7.6. with Refrain",
+      "tunes": [
+        {
+          "name": "Go, Tell It on the Mountain",
+          "hymns": [
+            {
+              "number": 121,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Near the Cross",
+          "hymns": [
+            {
+              "number": 312,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "No Night There",
+          "hymns": [
+            {
+              "number": 427,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Royal Oak",
+          "hymns": [
+            {
+              "number": 93,
+              "page": 820
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.6.7.6.D.",
+      "tunes": [
+        {
+          "name": "Amsterdam",
+          "hymns": [
+            {
+              "number": 630,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Angel's Story",
+          "hymns": [
+            {
+              "number": 331,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Aurelia",
+          "hymns": [
+            {
+              "number": 316,
+              "page": 820
+            },
+            {
+              "number": 348,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Ave virgo",
+          "hymns": [
+            {
+              "number": 170,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Cherokee Lane",
+          "hymns": [
+            {
+              "number": 209,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Ellacombe",
+          "hymns": [
+            {
+              "number": 382,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Ely Cathedral",
+          "hymns": [
+            {
+              "number": 424,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Emerald Gates",
+          "hymns": [
+            {
+              "number": 631,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Ewing",
+          "hymns": [
+            {
+              "number": 429,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Greenland",
+          "hymns": [
+            {
+              "number": 599,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Lancashire",
+          "hymns": [
+            {
+              "number": 619,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Mendebras",
+          "hymns": [
+            {
+              "number": 383,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Munich",
+          "hymns": [
+            {
+              "number": 274,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Norwick",
+          "hymns": [
+            {
+              "number": 219,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Nyland",
+          "hymns": [
+            {
+              "number": 67,
+              "page": 820
+            },
+            {
+              "number": 244,
+              "page": 820
+            },
+            {
+              "number": 513,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Passion Chorale",
+          "hymns": [
+            {
+              "number": 156,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "Rutherford",
+          "hymns": [
+            {
+              "number": 484,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "St. George's, Bolton",
+          "hymns": [
+            {
+              "number": 40,
+              "page": 820
+            }
+          ]
+        },
+        {
+          "name": "St. Kevin",
+          "hymns": [
+            {
+              "number": 169,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "St. Hilda",
+          "hymns": [
+            {
+              "number": 283,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "St. Theodulph",
+          "hymns": [
+            {
+              "number": 230,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Stokesay Castle",
+          "hymns": [
+            {
+              "number": 231,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Tempus adest floridum",
+          "hymns": [
+            {
+              "number": 95,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "The Homeland",
+          "hymns": [
+            {
+              "number": 436,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Thornbury",
+          "hymns": [
+            {
+              "number": 351,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Tyrolese",
+          "hymns": [
+            {
+              "number": 638,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Webb",
+          "hymns": [
+            {
+              "number": 618,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Wie lieblich ist der Maien",
+          "hymns": [
+            {
+              "number": 339,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.6.7.6.D. with Refrain",
+      "tunes": [
+        {
+          "name": "A Song of Heaven and Homeland",
+          "hymns": [
+            {
+              "number": 472,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "I Love to Tell the Story",
+          "hymns": [
+            {
+              "number": 457,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Tell Me the Old, Old Story",
+          "hymns": [
+            {
+              "number": 196,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Wir pflügen",
+          "hymns": [
+            {
+              "number": 561,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.6.7.6.6.6.4.4.6.",
+      "tunes": [
+        {
+          "name": "Oasis",
+          "hymns": [
+            {
+              "number": 460,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.6.7.6.6.6.7.6.",
+      "tunes": [
+        {
+          "name": "Es ist ein Ros",
+          "hymns": [
+            {
+              "number": 131,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.6.7.6.7.6.7.4. with Refrain",
+      "tunes": [
+        {
+          "name": "He Lives",
+          "hymns": [
+            {
+              "number": 251,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.6.7.6.7.7.7.6.",
+      "tunes": [
+        {
+          "name": "Jesus Saves",
+          "hymns": [
+            {
+              "number": 340,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.6.7.6.8.8.7.7.",
+      "tunes": [
+        {
+          "name": "Name of Jesus",
+          "hymns": [
+            {
+              "number": 658,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.6.7.7.",
+      "tunes": [
+        {
+          "name": "Puer nobis nascitur",
+          "hymns": [
+            {
+              "number": 129,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.6.7.7. with Refrain",
+      "tunes": [
+        {
+          "name": "Over Yonder",
+          "hymns": [
+            {
+              "number": 431,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.6.8.6.D.",
+      "tunes": [
+        {
+          "name": "Alford",
+          "hymns": [
+            {
+              "number": 433,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "The Lord in Zion Reigneth",
+          "hymns": [
+            {
+              "number": 7,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.6.8.6. with Refrain",
+      "tunes": [
+        {
+          "name": "'Tis Love That Makes Us Happy",
+          "hymns": [
+            {
+              "number": 579,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.6.8.6.8.6.7.4.",
+      "tunes": [
+        {
+          "name": "My Lord and I",
+          "hymns": [
+            {
+              "number": 456,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.6.8.6.8.6.8.6.",
+      "tunes": [
+        {
+          "name": "Onslow Square",
+          "hymns": [
+            {
+              "number": 33,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "St. Christopher",
+          "hymns": [
+            {
+              "number": 303,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.7.6.5.8.",
+      "tunes": [
+        {
+          "name": "Sing a New Song to the Lord",
+          "hymns": [
+            {
+              "number": 33,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.7.6.7.7.8.",
+      "tunes": [
+        {
+          "name": "Innsbruck",
+          "hymns": [
+            {
+              "number": 57,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.7.7.3.",
+      "tunes": [
+        {
+          "name": "Vigilate",
+          "hymns": [
+            {
+              "number": 603,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.7.7.3. with Refrain",
+      "tunes": [
+        {
+          "name": "Worthy",
+          "hymns": [
+            {
+              "number": 246,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.7.7.4. with Refrain",
+      "tunes": [
+        {
+          "name": "Give Me Jesus",
+          "hymns": [
+            {
+              "number": 305,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.7.7.5.",
+      "tunes": [
+        {
+          "name": "Guildford Cathedral",
+          "hymns": [
+            {
+              "number": 589,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.7.7.6.",
+      "tunes": [
+        {
+          "name": "Song 13",
+          "hymns": [
+            {
+              "number": 374,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.7.7.6. with Refrain",
+      "tunes": [
+        {
+          "name": "Like Jesus",
+          "hymns": [
+            {
+              "number": 492,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.7.7.7.",
+      "tunes": [
+        {
+          "name": "Aletta",
+          "hymns": [
+            {
+              "number": 521,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Aus der Tiefe",
+          "hymns": [
+            {
+              "number": 293,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Come, My Way",
+          "hymns": [
+            {
+              "number": 247,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Gentle Jesus",
+          "hymns": [
+            {
+              "number": 540,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Hendon",
+          "hymns": [
+            {
+              "number": 330,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Lauds",
+          "hymns": [
+            {
+              "number": 584,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Mercy",
+          "hymns": [
+            {
+              "number": 268,
+              "page": 821
+            },
+            {
+              "number": 380,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Monkland",
+          "hymns": [
+            {
+              "number": 112,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Orientus partibus",
+          "hymns": [
+            {
+              "number": 549,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Pleyel's Hymn",
+          "hymns": [
+            {
+              "number": 391,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Posen",
+          "hymns": [
+            {
+              "number": 482,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Savior, Teach Me",
+          "hymns": [
+            {
+              "number": 193,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Seymour",
+          "hymns": [
+            {
+              "number": 48,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Song 13",
+          "hymns": [
+            {
+              "number": 263,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.7.7.7. with Refrain",
+      "tunes": [
+        {
+          "name": "Gloria",
+          "hymns": [
+            {
+              "number": 142,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Holy Sabbath Day",
+          "hymns": [
+            {
+              "number": 381,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "I Am Coming to the Cross",
+          "hymns": [
+            {
+              "number": 307,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "I Will Sing of Jesus' Love",
+          "hymns": [
+            {
+              "number": 183,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Bradbury",
+          "hymns": [
+            {
+              "number": 190,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.7.7.7.D.",
+      "tunes": [
+        {
+          "name": "Aberystwyth",
+          "hymns": [
+            {
+              "number": 592,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Hollingside",
+          "hymns": [
+            {
+              "number": 490,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Martyn",
+          "hymns": [
+            {
+              "number": 489,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Refuge",
+          "hymns": [
+            {
+              "number": 297,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Riley",
+          "hymns": [
+            {
+              "number": 145,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "St. George's, Windsor",
+          "hymns": [
+            {
+              "number": 557,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "See Saw Saccara Down",
+          "hymns": [
+            {
+              "number": 288,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.7.7.7. with Alleluias",
+      "tunes": [
+        {
+          "name": "Llanfair",
+          "hymns": [
+            {
+              "number": 25,
+              "page": 821
+            },
+            {
+              "number": 176,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Worgan",
+          "hymns": [
+            {
+              "number": 166,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.7.7.7.D. with Refrain",
+      "tunes": [
+        {
+          "name": "Mendelssohn",
+          "hymns": [
+            {
+              "number": 122,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.7.7.7.3.3.",
+      "tunes": [
+        {
+          "name": "Sabbath",
+          "hymns": [
+            {
+              "number": 387,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.7.7.7.4. with Refrain",
+      "tunes": [
+        {
+          "name": "Chautauqua",
+          "hymns": [
+            {
+              "number": 51,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.7.7.7.7.",
+      "tunes": [
+        {
+          "name": "Hendon",
+          "hymns": [
+            {
+              "number": 330,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.7.7.7.7.7.",
+      "tunes": [
+        {
+          "name": "Arfon",
+          "hymns": [
+            {
+              "number": 161,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Dix",
+          "hymns": [
+            {
+              "number": 123,
+              "page": 821
+            },
+            {
+              "number": 565,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Gethsemane",
+          "hymns": [
+            {
+              "number": 157,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Pilot",
+          "hymns": [
+            {
+              "number": 551,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Ratisbon",
+          "hymns": [
+            {
+              "number": 233,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Rosslyn",
+          "hymns": [
+            {
+              "number": 591,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Sabbath (Mason)",
+          "hymns": [
+            {
+              "number": 384,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Spanish Hymn",
+          "hymns": [
+            {
+              "number": 295,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Toplady",
+          "hymns": [
+            {
+              "number": 300,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.7.8.8. with Refrain",
+      "tunes": [
+        {
+          "name": "Resonet in laudibus",
+          "hymns": [
+            {
+              "number": 150,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.8.7.8. with Alleluias",
+      "tunes": [
+        {
+          "name": "Feniton",
+          "hymns": [
+            {
+              "number": 147,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.8.7.8.7.7.",
+      "tunes": [
+        {
+          "name": "Grosser Gott",
+          "hymns": [
+            {
+              "number": 30,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Hinchman",
+          "hymns": [
+            {
+              "number": 389,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "7.8.7.8.8.8.",
+      "tunes": [
+        {
+          "name": "Liebster Jesu",
+          "hymns": [
+            {
+              "number": 60,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.4.8.4.8.8.4.",
+      "tunes": [
+        {
+          "name": "Ar hyd y nos",
+          "hymns": [
+            {
+              "number": 47,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "East Acklam",
+          "hymns": [
+            {
+              "number": 558,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.5.8.3.",
+      "tunes": [
+        {
+          "name": "Bullinger",
+          "hymns": [
+            {
+              "number": 535,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Simonside",
+          "hymns": [
+            {
+              "number": 543,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.5.8.5. with Refrain",
+      "tunes": [
+        {
+          "name": "Lord, I'm Coming Home",
+          "hymns": [
+            {
+              "number": 296,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Pass Me Not",
+          "hymns": [
+            {
+              "number": 569,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.6 with Amens",
+      "tunes": [
+        {
+          "name": "Let Us Praise the Name",
+          "hymns": [
+            {
+              "number": 14,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.6.8.3.3.3.8.3",
+      "tunes": [
+        {
+          "name": "Lord, I Want to Be a Christian",
+          "hymns": [
+            {
+              "number": 319,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.6.8.5. with Refrain",
+      "tunes": [
+        {
+          "name": "When He Cometh",
+          "hymns": [
+            {
+              "number": 218,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.6.8.6.5.8.6.8.6.",
+      "tunes": [
+        {
+          "name": "Wallowa",
+          "hymns": [
+            {
+              "number": 386,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.6.8.6.6.6. with Refrain",
+      "tunes": [
+        {
+          "name": "Wonderful Words of Life",
+          "hymns": [
+            {
+              "number": 286,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.6.8.6.6.6.8.6.",
+      "tunes": [
+        {
+          "name": "Pisgah",
+          "hymns": [
+            {
+              "number": 464,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.6.8.6.7.6.8.6.",
+      "tunes": [
+        {
+          "name": "St. Louis",
+          "hymns": [
+            {
+              "number": 185,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.6.8.6.8.6.",
+      "tunes": [
+        {
+          "name": "Brother James' Air",
+          "hymns": [
+            {
+              "number": 546,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Morning Song",
+          "hymns": [
+            {
+              "number": 215,
+              "page": 821
+            },
+            {
+              "number": 576,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.6.8.7.8.8.7.7.",
+      "tunes": [
+        {
+          "name": "Can You Count the Stars?",
+          "hymns": [
+            {
+              "number": 98,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.6.8.8.6",
+      "tunes": [
+        {
+          "name": "Repton",
+          "hymns": [
+            {
+              "number": 480,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Rest",
+          "hymns": [
+            {
+              "number": 481,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.6.9.6. with Refrain",
+      "tunes": [
+        {
+          "name": "Burdens Are Lifted at Calvary",
+          "hymns": [
+            {
+              "number": 476,
+              "page": 821
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.7.8.7.",
+      "tunes": [
+        {
+          "name": "All for Jesus",
+          "hymns": [
+            {
+              "number": 414,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Birabus",
+          "hymns": [
+            {
+              "number": 356,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Dominus regit me",
+          "hymns": [
+            {
+              "number": 197,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Evening Prayer",
+          "hymns": [
+            {
+              "number": 49,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Galilee",
+          "hymns": [
+            {
+              "number": 285,
+              "page": 821
+            }
+          ]
+        },
+        {
+          "name": "Rathbun",
+          "hymns": [
+            {
+              "number": 237,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Shipston",
+          "hymns": [
+            {
+              "number": 55,
+              "page": 822
+            },
+            {
+              "number": 544,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Stuttgart",
+          "hymns": [
+            {
+              "number": 659,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Wellesley",
+          "hymns": [
+            {
+              "number": 114,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.7.8.7. with Refrain",
+      "tunes": [
+        {
+          "name": "All That Thrills My Soul",
+          "hymns": [
+            {
+              "number": 189,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Face to Face",
+          "hymns": [
+            {
+              "number": 206,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Far and Near the Fields Are Teeming",
+          "hymns": [
+            {
+              "number": 358,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Greensleeves",
+          "hymns": [
+            {
+              "number": 141,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Holy Manna",
+          "hymns": [
+            {
+              "number": 187,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Hover O'er Me, Holy Spirit",
+          "hymns": [
+            {
+              "number": 260,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "I Surrender All",
+          "hymns": [
+            {
+              "number": 309,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "I Will Early Seek the Savior",
+          "hymns": [
+            {
+              "number": 539,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "I Will Follow Thee",
+          "hymns": [
+            {
+              "number": 623,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "I Will Sing of My Redeemer",
+          "hymns": [
+            {
+              "number": 343,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "I Would Draw Nearer to Jesus",
+          "hymns": [
+            {
+              "number": 310,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Let Every Lamp Be Burning",
+          "hymns": [
+            {
+              "number": 595,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Restoration",
+          "hymns": [
+            {
+              "number": 280,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Shall We Gather at the River",
+          "hymns": [
+            {
+              "number": 432,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Showers of Blessing",
+          "hymns": [
+            {
+              "number": 195,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Take the Name of Jesus With You",
+          "hymns": [
+            {
+              "number": 474,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Take the World, but Give Me Jesus",
+          "hymns": [
+            {
+              "number": 329,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "The Great Physician",
+          "hymns": [
+            {
+              "number": 254,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "The Unveiled Christ",
+          "hymns": [
+            {
+              "number": 178,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "There's No Other Name Like Jesus",
+          "hymns": [
+            {
+              "number": 253,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "'Tis So Sweet to Trust in Jesus",
+          "hymns": [
+            {
+              "number": 524,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Warrenton",
+          "hymns": [
+            {
+              "number": 454,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Watchman, Blow the Gospel Trumpet",
+          "hymns": [
+            {
+              "number": 368,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "What a Wonderful Savior",
+          "hymns": [
+            {
+              "number": 335,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "When We All Get to Heaven",
+          "hymns": [
+            {
+              "number": 633,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.7.8.7.D.",
+      "tunes": [
+        {
+          "name": "Abbot's Leigh",
+          "hymns": [
+            {
+              "number": 61,
+              "page": 822
+            },
+            {
+              "number": 583,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "All the Way",
+          "hymns": [
+            {
+              "number": 516,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "An die Freude",
+          "hymns": [
+            {
+              "number": 26,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Anniversary Song (Sherwin)",
+          "hymns": [
+            {
+              "number": 34,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Austria",
+          "hymns": [
+            {
+              "number": 423,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Beach Spring",
+          "hymns": [
+            {
+              "number": 363,
+              "page": 822
+            },
+            {
+              "number": 634,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Beecher",
+          "hymns": [
+            {
+              "number": 191,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Converse",
+          "hymns": [
+            {
+              "number": 499,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Ellesdie",
+          "hymns": [
+            {
+              "number": 325,
+              "page": 822
+            },
+            {
+              "number": 621,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Fillmore",
+          "hymns": [
+            {
+              "number": 359,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Geneva",
+          "hymns": [
+            {
+              "number": 194,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Greenville",
+          "hymns": [
+            {
+              "number": 447,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Henisee",
+          "hymns": [
+            {
+              "number": 536,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Hyfrydol",
+          "hymns": [
+            {
+              "number": 167,
+              "page": 822
+            },
+            {
+              "number": 204,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Hymn to Joy",
+          "hymns": [
+            {
+              "number": 12,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "I've Found a Friend",
+          "hymns": [
+            {
+              "number": 186,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "In Babilone",
+          "hymns": [
+            {
+              "number": 637,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Nos Galan",
+          "hymns": [
+            {
+              "number": 23,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Nettleton",
+          "hymns": [
+            {
+              "number": 334,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Rustington",
+          "hymns": [
+            {
+              "number": 636,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Shepherd",
+          "hymns": [
+            {
+              "number": 545,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "The Alarm",
+          "hymns": [
+            {
+              "number": 617,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Ton-y-Botel",
+          "hymns": [
+            {
+              "number": 413,
+              "page": 822
+            },
+            {
+              "number": 606,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.7.8.7.D. with Refrain",
+      "tunes": [
+        {
+          "name": "Barnard",
+          "hymns": [
+            {
+              "number": 572,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Holy, Holy Is What the Angels Sing",
+          "hymns": [
+            {
+              "number": 425,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Lift Him Up",
+          "hymns": [
+            {
+              "number": 371,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Tell Me the Story of Jesus",
+          "hymns": [
+            {
+              "number": 152,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.7.8.7.3.3.7.",
+      "tunes": [
+        {
+          "name": "Michael",
+          "hymns": [
+            {
+              "number": 5,
+              "page": 822
+            },
+            {
+              "number": 59,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.7.8.7.4.4.7.",
+      "tunes": [
+        {
+          "name": "Union Seminary",
+          "hymns": [
+            {
+              "number": 259,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.7.8.7.4.4.4.7.7.",
+      "tunes": [
+        {
+          "name": "Bryn Calfaria",
+          "hymns": [
+            {
+              "number": 165,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.7.8.7.4.7.",
+      "tunes": [
+        {
+          "name": "Kingley Vale",
+          "hymns": [
+            {
+              "number": 408,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Sicilian Mariners",
+          "hymns": [
+            {
+              "number": 64,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Wylde Green",
+          "hymns": [
+            {
+              "number": 276,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Zion",
+          "hymns": [
+            {
+              "number": 601,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.7.8.7.6.",
+      "tunes": [
+        {
+          "name": "Bridegroom",
+          "hymns": [
+            {
+              "number": 459,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.7.8.7.6.6.6.6.7.",
+      "tunes": [
+        {
+          "name": "Ein' feste Burg",
+          "hymns": [
+            {
+              "number": 506,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.7.8.7.6.7.",
+      "tunes": [
+        {
+          "name": "Every Star",
+          "hymns": [
+            {
+              "number": 24,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.7.8.7.7.7.",
+      "tunes": [
+        {
+          "name": "Holy Book",
+          "hymns": [
+            {
+              "number": 277,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Jewel",
+          "hymns": [
+            {
+              "number": 385,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "St. Leonard",
+          "hymns": [
+            {
+              "number": 646,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.7.8.7.7.7.7.8.6.",
+      "tunes": [
+        {
+          "name": "Harwell",
+          "hymns": [
+            {
+              "number": 222,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.7.8.7.8.6.",
+      "tunes": [
+        {
+          "name": "Hark! the Vesper Hymn Is Stealing",
+          "hymns": [
+            {
+              "number": 58,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.7.8.7.8.7.",
+      "tunes": [
+        {
+          "name": "Eden Church",
+          "hymns": [
+            {
+              "number": 235,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Holywood",
+          "hymns": [
+            {
+              "number": 211,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Lauda anima",
+          "hymns": [
+            {
+              "number": 4,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Litherop",
+          "hymns": [
+            {
+              "number": 467,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "New Malden",
+          "hymns": [
+            {
+              "number": 87,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Picardy",
+          "hymns": [
+            {
+              "number": 662,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Regent Square",
+          "hymns": [
+            {
+              "number": 119,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Tender Song",
+          "hymns": [
+            {
+              "number": 542,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Unser Herrscher",
+          "hymns": [
+            {
+              "number": 45,
+              "page": 822
+            },
+            {
+              "number": 418,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Westminster Abbey",
+          "hymns": [
+            {
+              "number": 607,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.7.8.7.8.7.7.",
+      "tunes": [
+        {
+          "name": "Cwm Rhondda",
+          "hymns": [
+            {
+              "number": 201,
+              "page": 822
+            },
+            {
+              "number": 415,
+              "page": 822
+            },
+            {
+              "number": 538,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Divinum mysterium",
+          "hymns": [
+            {
+              "number": 116,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.7.8.7.8.8.7.",
+      "tunes": [
+        {
+          "name": "Finland",
+          "hymns": [
+            {
+              "number": 37,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Mit Freuden zart",
+          "hymns": [
+            {
+              "number": 29,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.7.8.7.8.8.7.7.",
+      "tunes": [
+        {
+          "name": "Ermuntre dich",
+          "hymns": [
+            {
+              "number": 128,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.8.6.D.",
+      "tunes": [
+        {
+          "name": "Old 113th",
+          "hymns": [
+            {
+              "number": 89,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.8.8. with Alleluias",
+      "tunes": [
+        {
+          "name": "Gelobt sei Gott",
+          "hymns": [
+            {
+              "number": 173,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Victory",
+          "hymns": [
+            {
+              "number": 172,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.8.8.4.",
+      "tunes": [
+        {
+          "name": "Anticipation",
+          "hymns": [
+            {
+              "number": 402,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.8.8.5.",
+      "tunes": [
+        {
+          "name": "Jacob's Ladder",
+          "hymns": [
+            {
+              "number": 627,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.8.8.5. with Refrain",
+      "tunes": [
+        {
+          "name": "Old Church Yard",
+          "hymns": [
+            {
+              "number": 438,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.8.8.6.",
+      "tunes": [
+        {
+          "name": "Just as I Am",
+          "hymns": [
+            {
+              "number": 324,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Saffron Walden",
+          "hymns": [
+            {
+              "number": 313,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.8.8.6. with Refrain",
+      "tunes": [
+        {
+          "name": "Kings of Orient",
+          "hymns": [
+            {
+              "number": 137,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.8.8.6.D.",
+      "tunes": [
+        {
+          "name": "'Tis Midnight Hour",
+          "hymns": [
+            {
+              "number": 439,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.8.8.7.",
+      "tunes": [
+        {
+          "name": "Charing",
+          "hymns": [
+            {
+              "number": 643,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.8.8.8.6.",
+      "tunes": [
+        {
+          "name": "St. Margaret",
+          "hymns": [
+            {
+              "number": 76,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.8.8.8.8. with Refrain",
+      "tunes": [
+        {
+          "name": "Lasst uns erfreuen",
+          "hymns": [
+            {
+              "number": 91,
+              "page": 822
+            },
+            {
+              "number": 228,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.8.8.8.8.8.",
+      "tunes": [
+        {
+          "name": "Kirken den er et",
+          "hymns": [
+            {
+              "number": 347,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Melita",
+          "hymns": [
+            {
+              "number": 85,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Morton",
+          "hymns": [
+            {
+              "number": 554,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "O Jesulein süss",
+          "hymns": [
+            {
+              "number": 134,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Ryburn",
+          "hymns": [
+            {
+              "number": 396,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "St. Catherine",
+          "hymns": [
+            {
+              "number": 304,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "St. Chrysostom",
+          "hymns": [
+            {
+              "number": 291,
+              "page": 822
+            }
+          ]
+        },
+        {
+          "name": "Veni Emmanuel",
+          "hymns": [
+            {
+              "number": 115,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.8.8.8.8.8. with Refrain",
+      "tunes": [
+        {
+          "name": "Sagina",
+          "hymns": [
+            {
+              "number": 198,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.8.8.8.8.8. with Alleluias",
+      "tunes": [
+        {
+          "name": "Lasst uns erfreuen",
+          "hymns": [
+            {
+              "number": 2,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.8.10.8.",
+      "tunes": [
+        {
+          "name": "Jesus Walked This Lonesome Valley",
+          "hymns": [
+            {
+              "number": 151,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.9.8.9. with Refrain",
+      "tunes": [
+        {
+          "name": "Canaan",
+          "hymns": [
+            {
+              "number": 451,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.9.10.7. with Refrain",
+      "tunes": [
+        {
+          "name": "In the Garden",
+          "hymns": [
+            {
+              "number": 487,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "8.10.8.8.",
+      "tunes": [
+        {
+          "name": "Il est ne´",
+          "hymns": [
+            {
+              "number": 133,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "9.6.8.9. with Refrain",
+      "tunes": [
+        {
+          "name": "'Tis Almost Time for the Lord to Come",
+          "hymns": [
+            {
+              "number": 212,
+              "page": 822
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "9.6.9.5. with Refrain",
+      "tunes": [
+        {
+          "name": "Wholly Thine",
+          "hymns": [
+            {
+              "number": 308,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "9.7.9.7.D.",
+      "tunes": [
+        {
+          "name": "What Did He Do?",
+          "hymns": [
+            {
+              "number": 180,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "9.7.9.7.D. with Refrain",
+      "tunes": [
+        {
+          "name": "I'll Go Where You Want Me to Go",
+          "hymns": [
+            {
+              "number": 573,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "9.8.8.9.",
+      "tunes": [
+        {
+          "name": "Randolph",
+          "hymns": [
+            {
+              "number": 66,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Surely, Surely",
+          "hymns": [
+            {
+              "number": 688,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "9.8.8.9. with Refrain",
+      "tunes": [
+        {
+          "name": "God Be With You",
+          "hymns": [
+            {
+              "number": 65,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "9.8.9.7. with Refrain",
+      "tunes": [
+        {
+          "name": "We'll Build on the Rock",
+          "hymns": [
+            {
+              "number": 531,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "9.8.9.8.",
+      "tunes": [
+        {
+          "name": "Communion",
+          "hymns": [
+            {
+              "number": 398,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Dronfield",
+          "hymns": [
+            {
+              "number": 342,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "O Waly Waly",
+          "hymns": [
+            {
+              "number": 397,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "St. Clement",
+          "hymns": [
+            {
+              "number": 56,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "9.8.9.8. with Refrain",
+      "tunes": [
+        {
+          "name": "Ada",
+          "hymns": [
+            {
+              "number": 338,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Redeemed",
+          "hymns": [
+            {
+              "number": 337,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Turn Your Eyes Upon Jesus",
+          "hymns": [
+            {
+              "number": 290,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "9.8.9.8.D.",
+      "tunes": [
+        {
+          "name": "Rendez à Dieu",
+          "hymns": [
+            {
+              "number": 13,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "9.8.9.8.8.8.",
+      "tunes": [
+        {
+          "name": "Wer nur den lieben gott",
+          "hymns": [
+            {
+              "number": 510,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "9.8.9.8.9.8.",
+      "tunes": [
+        {
+          "name": "Fragrance",
+          "hymns": [
+            {
+              "number": 28,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "9.8.9.12. with Refrain",
+      "tunes": [
+        {
+          "name": "Resurrection",
+          "hymns": [
+            {
+              "number": 526,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "9.9.8.10. with Refrain",
+      "tunes": [
+        {
+          "name": "In Times Like These",
+          "hymns": [
+            {
+              "number": 593,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "9.9.9.6.",
+      "tunes": [
+        {
+          "name": "Lois",
+          "hymns": [
+            {
+              "number": 270,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "9.9.9.6. with Refrain",
+      "tunes": [
+        {
+          "name": "Just When I Need Him",
+          "hymns": [
+            {
+              "number": 512,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "9.9.9.9.",
+      "tunes": [
+        {
+          "name": "Adelaide",
+          "hymns": [
+            {
+              "number": 567,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Benediction (Froom)",
+          "hymns": [
+            {
+              "number": 690,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "9.9.9.9. with Refrain",
+      "tunes": [
+        {
+          "name": "Cover With His Life",
+          "hymns": [
+            {
+              "number": 412,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Marvelous Grace",
+          "hymns": [
+            {
+              "number": 109,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Sweet By and By",
+          "hymns": [
+            {
+              "number": 428,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "9.9.10.8. with Refrain",
+      "tunes": [
+        {
+          "name": "Does Jesus Care?",
+          "hymns": [
+            {
+              "number": 181,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "9.10.9.9. with Refrain",
+      "tunes": [
+        {
+          "name": "Blessed Assurance",
+          "hymns": [
+            {
+              "number": 462,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "9.10.9.10.10.",
+      "tunes": [
+        {
+          "name": "Morris",
+          "hymns": [
+            {
+              "number": 301,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "9.11. with Refrain",
+      "tunes": [
+        {
+          "name": "Sweet, Sweet Spirit",
+          "hymns": [
+            {
+              "number": 262,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "I'm a Pilgrim",
+          "hymns": [
+            {
+              "number": 444,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.4.10.4.10.10.",
+      "tunes": [
+        {
+          "name": "You Yangs",
+          "hymns": [
+            {
+              "number": 102,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.5.10.5. with Refrain",
+      "tunes": [
+        {
+          "name": "Gleams of the Golden Morning",
+          "hymns": [
+            {
+              "number": 205,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.5.10.6. with Refrain",
+      "tunes": [
+        {
+          "name": "Hail Him the King of Glory",
+          "hymns": [
+            {
+              "number": 202,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.7.10.7. with Refrain",
+      "tunes": [
+        {
+          "name": "Draw Me Nearer",
+          "hymns": [
+            {
+              "number": 306,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "I Shall See the King",
+          "hymns": [
+            {
+              "number": 426,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Jesus Is Coming Again",
+          "hymns": [
+            {
+              "number": 213,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Rise Up, Shepherd, and Follow",
+          "hymns": [
+            {
+              "number": 138,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.7.10.7.8.7.10.7.",
+      "tunes": [
+        {
+          "name": "Janelle",
+          "hymns": [
+            {
+              "number": 81,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.8.10.8.7.7.7.10.8.",
+      "tunes": [
+        {
+          "name": "General Conference",
+          "hymns": [
+            {
+              "number": 214,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.8.10.9. with Refrain",
+      "tunes": [
+        {
+          "name": "Sound the Battle Cry",
+          "hymns": [
+            {
+              "number": 614,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.9. with Refrain",
+      "tunes": [
+        {
+          "name": "Gott ist die Liebe",
+          "hymns": [
+            {
+              "number": 78,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.9.10.8. with Refrain",
+      "tunes": [
+        {
+          "name": "Power in the Blood",
+          "hymns": [
+            {
+              "number": 294,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.9.10.9. with Refrain",
+      "tunes": [
+        {
+          "name": "I Must Tell Jesus",
+          "hymns": [
+            {
+              "number": 485,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Leaning on the Everlasting Arms",
+          "hymns": [
+            {
+              "number": 469,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Nothing Between",
+          "hymns": [
+            {
+              "number": 322,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Seeking the Lost",
+          "hymns": [
+            {
+              "number": 373,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Will Your Anchor Hold",
+          "hymns": [
+            {
+              "number": 534,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.9.10.9.D.",
+      "tunes": [
+        {
+          "name": "Blott en Dag",
+          "hymns": [
+            {
+              "number": 532,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.10.",
+      "tunes": [
+        {
+          "name": "Pax tecum",
+          "hymns": [
+            {
+              "number": 463,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.10.4. with Refrain",
+      "tunes": [
+        {
+          "name": "Let Us Break Bread Together",
+          "hymns": [
+            {
+              "number": 403,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.10.8.",
+      "tunes": [
+        {
+          "name": "Lobet und preiset",
+          "hymns": [
+            {
+              "number": 563,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.10.9.10.",
+      "tunes": [
+        {
+          "name": "Slane",
+          "hymns": [
+            {
+              "number": 547,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.10.10. with Alleluias",
+      "tunes": [
+        {
+          "name": "Sine Nomine",
+          "hymns": [
+            {
+              "number": 421,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.10.10.4.",
+      "tunes": [
+        {
+          "name": "Engelberg",
+          "hymns": [
+            {
+              "number": 32,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.10.10.7. with Refrain",
+      "tunes": [
+        {
+          "name": "There'll Be No Dark Valley",
+          "hymns": [
+            {
+              "number": 208,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.10.10.9.5.",
+      "tunes": [
+        {
+          "name": "May God Be With You",
+          "hymns": [
+            {
+              "number": 673,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.10.10.10.",
+      "tunes": [
+        {
+          "name": "Crucifer",
+          "hymns": [
+            {
+              "number": 362,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Eventide",
+          "hymns": [
+            {
+              "number": 50,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Morecambe",
+          "hymns": [
+            {
+              "number": 266,
+              "page": 823
+            },
+            {
+              "number": 668,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Morestead",
+          "hymns": [
+            {
+              "number": 31,
+              "page": 823
+            },
+            {
+              "number": 635,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "National Hymn",
+          "hymns": [
+            {
+              "number": 645,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Sly Park",
+          "hymns": [
+            {
+              "number": 657,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.10.10.10. with Refrain",
+      "tunes": [
+        {
+          "name": "Look for the Waymarks",
+          "hymns": [
+            {
+              "number": 596,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Moment by Moment",
+          "hymns": [
+            {
+              "number": 507,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "O Where Are the Reapers",
+          "hymns": [
+            {
+              "number": 366,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "The Glory Song",
+          "hymns": [
+            {
+              "number": 435,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.10.10.10.10.",
+      "tunes": [
+        {
+          "name": "Old 124th",
+          "hymns": [
+            {
+              "number": 22,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.10.10.10.10.10.",
+      "tunes": [
+        {
+          "name": "Finlandia",
+          "hymns": [
+            {
+              "number": 461,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.10.11.11.",
+      "tunes": [
+        {
+          "name": "Hanover",
+          "hymns": [
+            {
+              "number": 256,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Lyons",
+          "hymns": [
+            {
+              "number": 83,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.10.11.11. with Refrain",
+      "tunes": [
+        {
+          "name": "The Lord Is My Light",
+          "hymns": [
+            {
+              "number": 515,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.10.14.10.",
+      "tunes": [
+        {
+          "name": "Were You There?",
+          "hymns": [
+            {
+              "number": 158,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.11.10.11.",
+      "tunes": [
+        {
+          "name": "Slane",
+          "hymns": [
+            {
+              "number": 320,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.11.10.11. with Refrain",
+      "tunes": [
+        {
+          "name": "A Child of the King",
+          "hymns": [
+            {
+              "number": 468,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Hold Fast Till I Come",
+          "hymns": [
+            {
+              "number": 600,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "10.11.11.6.",
+      "tunes": [
+        {
+          "name": "Christe sanctorum",
+          "hymns": [
+            {
+              "number": 234,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "11.7.11.7. with Refrain",
+      "tunes": [
+        {
+          "name": "Softly and Tenderly",
+          "hymns": [
+            {
+              "number": 287,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "The Savior Is Waiting",
+          "hymns": [
+            {
+              "number": 289,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "11.8.9.7. with Refrain",
+      "tunes": [
+        {
+          "name": "The Judgment Has Set",
+          "hymns": [
+            {
+              "number": 416,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "11.8.11.8.",
+      "tunes": [
+        {
+          "name": "Beloved",
+          "hymns": [
+            {
+              "number": 36,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "11.8.11.8. with Refrain",
+      "tunes": [
+        {
+          "name": "He Hideth My Soul",
+          "hymns": [
+            {
+              "number": 520,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "11.8.11.8.D.",
+      "tunes": [
+        {
+          "name": "O Brother Be Faithful",
+          "hymns": [
+            {
+              "number": 602,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "11.8.11.9. with Refrain",
+      "tunes": [
+        {
+          "name": "It Is Well With My Soul",
+          "hymns": [
+            {
+              "number": 530,
+              "page": 823
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "11.10.11.10.",
+      "tunes": [
+        {
+          "name": "Atkinson",
+          "hymns": [
+            {
+              "number": 275,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Bolton",
+          "hymns": [
+            {
+              "number": 570,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Charterhouse",
+          "hymns": [
+            {
+              "number": 654,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Consolation (Mendelssohn)",
+          "hymns": [
+            {
+              "number": 498,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Consolation (Webbe)",
+          "hymns": [
+            {
+              "number": 477,
+              "page": 823
+            }
+          ]
+        },
+        {
+          "name": "Eternal Love",
+          "hymns": [
+            {
+              "number": 496,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Highwood",
+          "hymns": [
+            {
+              "number": 364,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Noël Nouvelet",
+          "hymns": [
+            {
+              "number": 175,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Northbrook",
+          "hymns": [
+            {
+              "number": 354,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "O Perfect Love",
+          "hymns": [
+            {
+              "number": 656,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Pevensey",
+          "hymns": [
+            {
+              "number": 394,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Rodman",
+          "hymns": [
+            {
+              "number": 594,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Russian Hymn",
+          "hymns": [
+            {
+              "number": 84,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Seventh and James",
+          "hymns": [
+            {
+              "number": 346,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Wallog",
+          "hymns": [
+            {
+              "number": 641,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "We Would See Jesus",
+          "hymns": [
+            {
+              "number": 494,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Welwyn",
+          "hymns": [
+            {
+              "number": 651,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "11.10.11.10. with Refrain",
+      "tunes": [
+        {
+          "name": "Give Me the Bible",
+          "hymns": [
+            {
+              "number": 272,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Great Is Thy Faithfulness",
+          "hymns": [
+            {
+              "number": 100,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "O store Gud",
+          "hymns": [
+            {
+              "number": 86,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "So Send I You",
+          "hymns": [
+            {
+              "number": 578,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Tidings",
+          "hymns": [
+            {
+              "number": 365,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Under His Wings",
+          "hymns": [
+            {
+              "number": 529,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Until Then",
+          "hymns": [
+            {
+              "number": 632,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "11.10.11.10.11.10.11.12.",
+      "tunes": [
+        {
+          "name": "Londonderry Air",
+          "hymns": [
+            {
+              "number": 255,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "11.11.9.",
+      "tunes": [
+        {
+          "name": "Day by Day, Dear Lord",
+          "hymns": [
+            {
+              "number": 689,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "11.11.11.5.",
+      "tunes": [
+        {
+          "name": "Cloisters",
+          "hymns": [
+            {
+              "number": 514,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Flemming",
+          "hymns": [
+            {
+              "number": 70,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "11.11.11.9. with Refrain",
+      "tunes": [
+        {
+          "name": "Standing on the Promises",
+          "hymns": [
+            {
+              "number": 518,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "11.11.11.10. with Refrain",
+      "tunes": [
+        {
+          "name": "I’d Rather Have Jesus",
+          "hymns": [
+            {
+              "number": 327,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "11.11.11.11.",
+      "tunes": [
+        {
+          "name": "Anniversary Song (Marshall)",
+          "hymns": [
+            {
+              "number": 640,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Cradle Song",
+          "hymns": [
+            {
+              "number": 124,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Cranham",
+          "hymns": [
+            {
+              "number": 224,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Foundation",
+          "hymns": [
+            {
+              "number": 509,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Gordon",
+          "hymns": [
+            {
+              "number": 321,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "I Love Thee",
+          "hymns": [
+            {
+              "number": 236,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "St. Denio",
+          "hymns": [
+            {
+              "number": 21,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Whitworth",
+          "hymns": [
+            {
+              "number": 353,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "11.11.11.11. with Refrain",
+      "tunes": [
+        {
+          "name": "Anywhere With Jesus",
+          "hymns": [
+            {
+              "number": 508,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Hiding in Thee",
+          "hymns": [
+            {
+              "number": 525,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Jacob’s Ladder",
+          "hymns": [
+            {
+              "number": 628,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Stand Like the Brave",
+          "hymns": [
+            {
+              "number": 610,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "To God Be the Glory",
+          "hymns": [
+            {
+              "number": 341,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Whiter Than Snow",
+          "hymns": [
+            {
+              "number": 318,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "11.11.12.11.",
+      "tunes": [
+        {
+          "name": "Heavenly Music",
+          "hymns": [
+            {
+              "number": 452,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "11.11.12.11. with Refrain",
+      "tunes": [
+        {
+          "name": "For You I Am Praying",
+          "hymns": [
+            {
+              "number": 284,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "11.12.12.10.",
+      "tunes": [
+        {
+          "name": "Nicaea",
+          "hymns": [
+            {
+              "number": 73,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "12.8.12.8. with Refrain",
+      "tunes": [
+        {
+          "name": "Bonnie Eloise",
+          "hymns": [
+            {
+              "number": 442,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "The Old Rugged Cross",
+          "hymns": [
+            {
+              "number": 159,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "12.9.12.9. with Refrain",
+      "tunes": [
+        {
+          "name": "In a Little While We’re Going Home",
+          "hymns": [
+            {
+              "number": 626,
+              "page": 824
+            }
+          ]
+        },
+        {
+          "name": "Wonderful Peace",
+          "hymns": [
+            {
+              "number": 466,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "12.10.12.10.",
+      "tunes": [
+        {
+          "name": "Southampton",
+          "hymns": [
+            {
+              "number": 6,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "12.10.12.10.11.10. with Refrain",
+      "tunes": [
+        {
+          "name": "Praise Him, Praise Him",
+          "hymns": [
+            {
+              "number": 249,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "12.11.12.11. with Refrain",
+      "tunes": [
+        {
+          "name": "Bringing in the Sheaves",
+          "hymns": [
+            {
+              "number": 369,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "12.11.12.11.D.",
+      "tunes": [
+        {
+          "name": "The Ash Grove",
+          "hymns": [
+            {
+              "number": 560,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "12.12.12.6. with Refrain",
+      "tunes": [
+        {
+          "name": "We Know Not the Hour",
+          "hymns": [
+            {
+              "number": 604,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "12.12.12.7. with Refrain",
+      "tunes": [
+        {
+          "name": "It May Be at Morn",
+          "hymns": [
+            {
+              "number": 207,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "12.13.13.13. with Refrain",
+      "tunes": [
+        {
+          "name": "Don’t Forget the Sabbath",
+          "hymns": [
+            {
+              "number": 388,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "13.11.13.11. with Refrain",
+      "tunes": [
+        {
+          "name": "Morning Trumpet",
+          "hymns": [
+            {
+              "number": 448,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "13.12.12.12.12.",
+      "tunes": [
+        {
+          "name": "Ubi caritas",
+          "hymns": [
+            {
+              "number": 349,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "13.12.13.7.6.",
+      "tunes": [
+        {
+          "name": "’Tis the Blessed Hour of Prayer",
+          "hymns": [
+            {
+              "number": 501,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "13.13.13.13.13.13.",
+      "tunes": [
+        {
+          "name": "Thaxted",
+          "hymns": [
+            {
+              "number": 648,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "14.14.4.7.8.",
+      "tunes": [
+        {
+          "name": "Lobe den Herren",
+          "hymns": [
+            {
+              "number": 1,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "15.11.15.11. with Refrain",
+      "tunes": [
+        {
+          "name": "When the Roll Is Called",
+          "hymns": [
+            {
+              "number": 216,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metre": "15.15.15.6. with Refrain",
+      "tunes": [
+        {
+          "name": "Battle Hymn",
+          "hymns": [
+            {
+              "number": 647,
+              "page": 824
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

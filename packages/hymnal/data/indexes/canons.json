@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "book": "sdah-1985",
+  "index": "canons",
+  "title": "CANONS (OR ROUNDS)",
+  "pages": [
+    {
+      "page": 808,
+      "entries": 12
+    }
+  ],
+  "groups": [
+    {
+      "name": "CANONS (OR ROUNDS)",
+      "hymns": [
+        {
+          "number": 471,
+          "page": 808
+        },
+        {
+          "number": 471,
+          "page": 808
+        },
+        {
+          "number": 58,
+          "page": 808
+        },
+        {
+          "number": 14,
+          "page": 808
+        },
+        {
+          "number": 563,
+          "page": 808
+        },
+        {
+          "number": 674,
+          "page": 808
+        }
+      ]
+    },
+    {
+      "name": "Hymns That May Be Sung as Canons",
+      "hymns": [
+        {
+          "number": 53,
+          "page": 808
+        },
+        {
+          "number": 550,
+          "page": 808
+        },
+        {
+          "number": 589,
+          "page": 808
+        },
+        {
+          "number": 509,
+          "page": 808
+        },
+        {
+          "number": 104,
+          "page": 808
+        },
+        {
+          "number": 42,
+          "page": 808
+        }
+      ]
+    }
+  ]
+}

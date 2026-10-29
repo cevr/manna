@@ -1,0 +1,5478 @@
+{
+  "version": 1,
+  "book": "sdah-1985",
+  "index": "worship-aids",
+  "title": "SCRIPTURAL INDEX OF WORSHIP AIDS",
+  "pages": [
+    {
+      "page": 789,
+      "entries": 148
+    },
+    {
+      "page": 790,
+      "entries": 153
+    },
+    {
+      "page": 791,
+      "entries": 32
+    }
+  ],
+  "entries": [
+    {
+      "passage": {
+        "book": 1,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          },
+          {
+            "from": 31,
+            "to": 31
+          }
+        ]
+      },
+      "reading": 760,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 1,
+        "chapter": 2,
+        "verses": [
+          {
+            "from": 1,
+            "to": 3
+          }
+        ]
+      },
+      "reading": 769,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 1,
+        "chapter": 2,
+        "verses": [
+          {
+            "from": 15,
+            "to": 15
+          }
+        ]
+      },
+      "reading": 822,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 1,
+        "chapter": 2,
+        "verses": [
+          {
+            "from": 18,
+            "to": 18
+          },
+          {
+            "from": 22,
+            "to": 22
+          },
+          {
+            "from": 23,
+            "to": 23
+          }
+        ]
+      },
+      "reading": 830,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 1,
+        "chapter": 3,
+        "verses": [
+          {
+            "from": 19,
+            "to": 19
+          }
+        ]
+      },
+      "reading": 822,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 1,
+        "chapter": 31,
+        "verses": [
+          {
+            "from": 49,
+            "to": 49
+          }
+        ]
+      },
+      "reading": 907,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 2,
+        "chapter": 15,
+        "verses": [
+          {
+            "from": 1,
+            "to": 18
+          }
+        ]
+      },
+      "reading": 831,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 2,
+        "chapter": 20,
+        "verses": [
+          {
+            "from": 1,
+            "to": 17
+          }
+        ]
+      },
+      "reading": 775,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 2,
+        "chapter": 20,
+        "verses": [
+          {
+            "from": 8,
+            "to": 11
+          }
+        ]
+      },
+      "reading": 769,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 2,
+        "chapter": 20,
+        "verses": [
+          {
+            "from": 9,
+            "to": 9
+          }
+        ]
+      },
+      "reading": 822,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 2,
+        "chapter": 31,
+        "verses": [
+          {
+            "from": 17,
+            "to": 17
+          }
+        ]
+      },
+      "reading": 770,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 3,
+        "chapter": 27,
+        "verses": [
+          {
+            "from": 30,
+            "to": 30
+          }
+        ]
+      },
+      "reading": 820,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 4,
+        "chapter": 6,
+        "verses": [
+          {
+            "from": 24,
+            "to": 27
+          }
+        ]
+      },
+      "reading": 908,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 5,
+        "chapter": 4,
+        "verses": [
+          {
+            "from": 9,
+            "to": 9
+          },
+          {
+            "from": 23,
+            "to": 23
+          }
+        ]
+      },
+      "reading": 815,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 5,
+        "chapter": 6,
+        "verses": [
+          {
+            "from": 5,
+            "to": 7
+          }
+        ]
+      },
+      "reading": 826,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 5,
+        "chapter": 29,
+        "verses": [
+          {
+            "from": 29,
+            "to": 29
+          }
+        ]
+      },
+      "reading": 754,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 6,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 8,
+            "to": 8
+          }
+        ]
+      },
+      "reading": 797,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 6,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 9,
+            "to": 9
+          }
+        ]
+      },
+      "reading": 909,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 13,
+        "chapter": 29,
+        "verses": [
+          {
+            "from": 11,
+            "to": 13
+          }
+        ]
+      },
+      "reading": 894,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 16,
+        "chapter": 9,
+        "verses": [
+          {
+            "from": 6,
+            "to": 6
+          },
+          {
+            "from": 14,
+            "to": 14
+          }
+        ]
+      },
+      "reading": 769,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 18,
+        "chapter": 19,
+        "verses": [
+          {
+            "from": 25,
+            "to": 27
+          }
+        ]
+      },
+      "reading": 780,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 1,
+        "verses": []
+      },
+      "reading": 784,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 8,
+        "verses": []
+      },
+      "reading": 714,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 15,
+        "verses": []
+      },
+      "reading": 813,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 16,
+        "verses": [
+          {
+            "from": 5,
+            "to": 11
+          }
+        ]
+      },
+      "reading": 792,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 19,
+        "verses": [
+          {
+            "from": 1,
+            "to": 6
+          },
+          {
+            "from": 1,
+            "to": 1
+          }
+        ]
+      },
+      "reading": 717,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 19,
+        "verses": [
+          {
+            "from": 7,
+            "to": 14
+          }
+        ]
+      },
+      "reading": 774,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 19,
+        "verses": [
+          {
+            "from": 14,
+            "to": 14
+          }
+        ]
+      },
+      "reading": 797,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 19,
+        "verses": [
+          {
+            "from": 14,
+            "to": 14
+          }
+        ]
+      },
+      "reading": 910,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 23,
+        "verses": []
+      },
+      "reading": 726,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 24,
+        "verses": []
+      },
+      "reading": 785,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 25,
+        "verses": [
+          {
+            "from": 8,
+            "to": 10
+          }
+        ]
+      },
+      "reading": 802,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 27,
+        "verses": [
+          {
+            "from": 1,
+            "to": 6
+          },
+          {
+            "from": 10,
+            "to": 10
+          },
+          {
+            "from": 11,
+            "to": 11
+          },
+          {
+            "from": 14,
+            "to": 14
+          }
+        ]
+      },
+      "reading": 727,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 29,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          },
+          {
+            "from": 2,
+            "to": 2
+          }
+        ]
+      },
+      "reading": 845,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 32,
+        "verses": [
+          {
+            "from": 1,
+            "to": 8
+          }
+        ]
+      },
+      "reading": 758,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 32,
+        "verses": [
+          {
+            "from": 8,
+            "to": 8
+          }
+        ]
+      },
+      "reading": 802,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 33,
+        "verses": [
+          {
+            "from": 1,
+            "to": 9
+          }
+        ]
+      },
+      "reading": 718,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 33,
+        "verses": [
+          {
+            "from": 18,
+            "to": 18
+          }
+        ]
+      },
+      "reading": 796,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 34,
+        "verses": [
+          {
+            "from": 1,
+            "to": 9
+          },
+          {
+            "from": 17,
+            "to": 17
+          },
+          {
+            "from": 18,
+            "to": 18
+          },
+          {
+            "from": 21,
+            "to": 21
+          },
+          {
+            "from": 22,
+            "to": 22
+          }
+        ]
+      },
+      "reading": 696,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 37,
+        "verses": [
+          {
+            "from": 1,
+            "to": 11
+          }
+        ]
+      },
+      "reading": 799,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 40,
+        "verses": [
+          {
+            "from": 1,
+            "to": 5
+          },
+          {
+            "from": 8,
+            "to": 8
+          },
+          {
+            "from": 10,
+            "to": 10
+          },
+          {
+            "from": 11,
+            "to": 11
+          }
+        ]
+      },
+      "reading": 801,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 42,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          },
+          {
+            "from": 2,
+            "to": 2
+          }
+        ]
+      },
+      "reading": 846,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 43,
+        "verses": [
+          {
+            "from": 3,
+            "to": 3
+          },
+          {
+            "from": 4,
+            "to": 4
+          }
+        ]
+      },
+      "reading": 847,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 46,
+        "verses": []
+      },
+      "reading": 720,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 47,
+        "verses": [
+          {
+            "from": 5,
+            "to": 7
+          }
+        ]
+      },
+      "reading": 848,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 48,
+        "verses": [
+          {
+            "from": 9,
+            "to": 11
+          },
+          {
+            "from": 14,
+            "to": 14
+          }
+        ]
+      },
+      "reading": 849,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 50,
+        "verses": [
+          {
+            "from": 9,
+            "to": 9
+          },
+          {
+            "from": 10,
+            "to": 10
+          },
+          {
+            "from": 14,
+            "to": 14
+          }
+        ]
+      },
+      "reading": 895,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 51,
+        "verses": [
+          {
+            "from": 1,
+            "to": 17
+          }
+        ]
+      },
+      "reading": 756,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 52,
+        "verses": [
+          {
+            "from": 8,
+            "to": 8
+          },
+          {
+            "from": 9,
+            "to": 9
+          }
+        ]
+      },
+      "reading": 850,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 54,
+        "verses": [
+          {
+            "from": 6,
+            "to": 6
+          }
+        ]
+      },
+      "reading": 896,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 55,
+        "verses": [
+          {
+            "from": 22,
+            "to": 22
+          }
+        ]
+      },
+      "reading": 882,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 56,
+        "verses": [
+          {
+            "from": 12,
+            "to": 12
+          },
+          {
+            "from": 13,
+            "to": 13
+          }
+        ]
+      },
+      "reading": 897,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 57,
+        "verses": [
+          {
+            "from": 9,
+            "to": 11
+          }
+        ]
+      },
+      "reading": 851,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 63,
+        "verses": [
+          {
+            "from": 1,
+            "to": 5
+          }
+        ]
+      },
+      "reading": 852,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 65,
+        "verses": [
+          {
+            "from": 1,
+            "to": 4
+          }
+        ]
+      },
+      "reading": 853,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 65,
+        "verses": []
+      },
+      "reading": 803,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 66,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          },
+          {
+            "from": 2,
+            "to": 2
+          },
+          {
+            "from": 8,
+            "to": 14
+          },
+          {
+            "from": 16,
+            "to": 20
+          }
+        ]
+      },
+      "reading": 697,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 67,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          },
+          {
+            "from": 2,
+            "to": 2
+          },
+          {
+            "from": 4,
+            "to": 4
+          },
+          {
+            "from": 7,
+            "to": 7
+          }
+        ]
+      },
+      "reading": 854,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 68,
+        "verses": [
+          {
+            "from": 19,
+            "to": 19
+          },
+          {
+            "from": 20,
+            "to": 20
+          }
+        ]
+      },
+      "reading": 883,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 84,
+        "verses": [
+          {
+            "from": 1,
+            "to": 4
+          },
+          {
+            "from": 10,
+            "to": 12
+          }
+        ]
+      },
+      "reading": 698,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 86,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          },
+          {
+            "from": 5,
+            "to": 7
+          },
+          {
+            "from": 10,
+            "to": 17
+          }
+        ]
+      },
+      "reading": 710,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 89,
+        "verses": [
+          {
+            "from": 9,
+            "to": 9
+          },
+          {
+            "from": 11,
+            "to": 11
+          },
+          {
+            "from": 13,
+            "to": 15
+          }
+        ]
+      },
+      "reading": 855,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 90,
+        "verses": []
+      },
+      "reading": 721,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 91,
+        "verses": []
+      },
+      "reading": 722,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 92,
+        "verses": [
+          {
+            "from": 1,
+            "to": 5
+          }
+        ]
+      },
+      "reading": 856,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 95,
+        "verses": [
+          {
+            "from": 1,
+            "to": 7
+          }
+        ]
+      },
+      "reading": 699,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 95,
+        "verses": [
+          {
+            "from": 6,
+            "to": 6
+          },
+          {
+            "from": 7,
+            "to": 7
+          }
+        ]
+      },
+      "reading": 857,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 96,
+        "verses": []
+      },
+      "reading": 700,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 96,
+        "verses": [
+          {
+            "from": 8,
+            "to": 8
+          }
+        ]
+      },
+      "reading": 898,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 96,
+        "verses": [
+          {
+            "from": 8,
+            "to": 8
+          },
+          {
+            "from": 9,
+            "to": 9
+          }
+        ]
+      },
+      "reading": 858,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 98,
+        "verses": []
+      },
+      "reading": 859,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 99,
+        "verses": [
+          {
+            "from": 5,
+            "to": 5
+          }
+        ]
+      },
+      "reading": 860,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 100,
+        "verses": []
+      },
+      "reading": 701,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 100,
+        "verses": [
+          {
+            "from": 2,
+            "to": 2
+          },
+          {
+            "from": 4,
+            "to": 4
+          },
+          {
+            "from": 5,
+            "to": 5
+          }
+        ]
+      },
+      "reading": 861,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 103,
+        "verses": [
+          {
+            "from": 1,
+            "to": 5
+          },
+          {
+            "from": 8,
+            "to": 8
+          },
+          {
+            "from": 10,
+            "to": 12
+          },
+          {
+            "from": 22,
+            "to": 22
+          }
+        ]
+      },
+      "reading": 711,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 103,
+        "verses": [
+          {
+            "from": 2,
+            "to": 2
+          },
+          {
+            "from": 5,
+            "to": 5
+          }
+        ]
+      },
+      "reading": 828,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 103,
+        "verses": [
+          {
+            "from": 6,
+            "to": 6
+          },
+          {
+            "from": 7,
+            "to": 7
+          },
+          {
+            "from": 12,
+            "to": 22
+          }
+        ]
+      },
+      "reading": 742,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 103,
+        "verses": [
+          {
+            "from": 8,
+            "to": 8
+          },
+          {
+            "from": 10,
+            "to": 12
+          }
+        ]
+      },
+      "reading": 887,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 105,
+        "verses": [
+          {
+            "from": 1,
+            "to": 8
+          }
+        ]
+      },
+      "reading": 702,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 107,
+        "verses": [
+          {
+            "from": 1,
+            "to": 15
+          }
+        ]
+      },
+      "reading": 723,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 107,
+        "verses": [
+          {
+            "from": 21,
+            "to": 37
+          },
+          {
+            "from": 43,
+            "to": 43
+          }
+        ]
+      },
+      "reading": 728,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 107,
+        "verses": [
+          {
+            "from": 31,
+            "to": 31
+          },
+          {
+            "from": 32,
+            "to": 32
+          }
+        ]
+      },
+      "reading": 862,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 111,
+        "verses": []
+      },
+      "reading": 715,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 113,
+        "verses": []
+      },
+      "reading": 703,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 117,
+        "verses": []
+      },
+      "reading": 863,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 118,
+        "verses": [
+          {
+            "from": 19,
+            "to": 21
+          }
+        ]
+      },
+      "reading": 865,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 118,
+        "verses": [
+          {
+            "from": 24,
+            "to": 24
+          }
+        ]
+      },
+      "reading": 866,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 118,
+        "verses": [
+          {
+            "from": 24,
+            "to": 24
+          },
+          {
+            "from": 26,
+            "to": 26
+          }
+        ]
+      },
+      "reading": 864,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 119,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          },
+          {
+            "from": 2,
+            "to": 2
+          },
+          {
+            "from": 29,
+            "to": 29
+          },
+          {
+            "from": 30,
+            "to": 30
+          },
+          {
+            "from": 35,
+            "to": 35
+          },
+          {
+            "from": 37,
+            "to": 37
+          },
+          {
+            "from": 105,
+            "to": 105
+          }
+        ]
+      },
+      "reading": 802,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 119,
+        "verses": [
+          {
+            "from": 9,
+            "to": 9
+          },
+          {
+            "from": 10,
+            "to": 10
+          }
+        ]
+      },
+      "reading": 828,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 119,
+        "verses": [
+          {
+            "from": 9,
+            "to": 16
+          },
+          {
+            "from": 18,
+            "to": 18
+          },
+          {
+            "from": 105,
+            "to": 105
+          },
+          {
+            "from": 130,
+            "to": 130
+          },
+          {
+            "from": 160,
+            "to": 160
+          },
+          {
+            "from": 165,
+            "to": 165
+          }
+        ]
+      },
+      "reading": 753,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 119,
+        "verses": [
+          {
+            "from": 11,
+            "to": 11
+          },
+          {
+            "from": 15,
+            "to": 15
+          },
+          {
+            "from": 16,
+            "to": 16
+          },
+          {
+            "from": 48,
+            "to": 48
+          },
+          {
+            "from": 55,
+            "to": 55
+          },
+          {
+            "from": 97,
+            "to": 99
+          },
+          {
+            "from": 147,
+            "to": 147
+          },
+          {
+            "from": 148,
+            "to": 148
+          }
+        ]
+      },
+      "reading": 797,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 121,
+        "verses": []
+      },
+      "reading": 704,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 122,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          }
+        ]
+      },
+      "reading": 866,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 126,
+        "verses": []
+      },
+      "reading": 818,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 128,
+        "verses": []
+      },
+      "reading": 793,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 130,
+        "verses": []
+      },
+      "reading": 832,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 133,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          }
+        ]
+      },
+      "reading": 811,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 134,
+        "verses": []
+      },
+      "reading": 867,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 135,
+        "verses": [
+          {
+            "from": 1,
+            "to": 3
+          }
+        ]
+      },
+      "reading": 868,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 136,
+        "verses": [
+          {
+            "from": 1,
+            "to": 9
+          },
+          {
+            "from": 23,
+            "to": 26
+          }
+        ]
+      },
+      "reading": 712,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 139,
+        "verses": [
+          {
+            "from": 1,
+            "to": 14
+          },
+          {
+            "from": 23,
+            "to": 23
+          },
+          {
+            "from": 24,
+            "to": 24
+          }
+        ]
+      },
+      "reading": 724,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 142,
+        "verses": []
+      },
+      "reading": 819,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 145,
+        "verses": [
+          {
+            "from": 1,
+            "to": 4
+          },
+          {
+            "from": 7,
+            "to": 7
+          },
+          {
+            "from": 8,
+            "to": 8
+          },
+          {
+            "from": 13,
+            "to": 21
+          }
+        ]
+      },
+      "reading": 705,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 148,
+        "verses": []
+      },
+      "reading": 706,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 19,
+        "chapter": 150,
+        "verses": []
+      },
+      "reading": 707,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 20,
+        "chapter": 3,
+        "verses": [
+          {
+            "from": 1,
+            "to": 6
+          }
+        ]
+      },
+      "reading": 828,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 20,
+        "chapter": 8,
+        "verses": [
+          {
+            "from": 9,
+            "to": 9
+          }
+        ]
+      },
+      "reading": 899,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 20,
+        "chapter": 3,
+        "verses": [
+          {
+            "from": 13,
+            "to": 18
+          }
+        ]
+      },
+      "reading": 794,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 20,
+        "chapter": 20,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          }
+        ]
+      },
+      "reading": 823,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 20,
+        "chapter": 20,
+        "verses": [
+          {
+            "from": 11,
+            "to": 11
+          }
+        ]
+      },
+      "reading": 828,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 20,
+        "chapter": 23,
+        "verses": [
+          {
+            "from": 29,
+            "to": 32
+          }
+        ]
+      },
+      "reading": 823,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 20,
+        "chapter": 31,
+        "verses": [
+          {
+            "from": 10,
+            "to": 13
+          },
+          {
+            "from": 15,
+            "to": 15
+          },
+          {
+            "from": 17,
+            "to": 17
+          },
+          {
+            "from": 20,
+            "to": 20
+          },
+          {
+            "from": 25,
+            "to": 28
+          }
+        ]
+      },
+      "reading": 829,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 21,
+        "chapter": 5,
+        "verses": [
+          {
+            "from": 12,
+            "to": 12
+          }
+        ]
+      },
+      "reading": 822,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 21,
+        "chapter": 9,
+        "verses": [
+          {
+            "from": 10,
+            "to": 10
+          }
+        ]
+      },
+      "reading": 822,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 21,
+        "chapter": 12,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          }
+        ]
+      },
+      "reading": 828,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 21,
+        "chapter": 12,
+        "verses": [
+          {
+            "from": 13,
+            "to": 13
+          },
+          {
+            "from": 14,
+            "to": 14
+          }
+        ]
+      },
+      "reading": 810,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 18,
+            "to": 18
+          },
+          {
+            "from": 19,
+            "to": 19
+          }
+        ]
+      },
+      "reading": 884,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 6,
+        "verses": [
+          {
+            "from": 3,
+            "to": 3
+          }
+        ]
+      },
+      "reading": 833,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 12,
+        "verses": [
+          {
+            "from": 4,
+            "to": 6
+          }
+        ]
+      },
+      "reading": 869,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 25,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          },
+          {
+            "from": 4,
+            "to": 4
+          },
+          {
+            "from": 8,
+            "to": 8
+          },
+          {
+            "from": 9,
+            "to": 9
+          }
+        ]
+      },
+      "reading": 751,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 30,
+        "verses": [
+          {
+            "from": 21,
+            "to": 21
+          }
+        ]
+      },
+      "reading": 802,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 35,
+        "verses": []
+      },
+      "reading": 748,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 40,
+        "verses": [
+          {
+            "from": 1,
+            "to": 5
+          },
+          {
+            "from": 9,
+            "to": 11
+          }
+        ]
+      },
+      "reading": 729,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 41,
+        "verses": [
+          {
+            "from": 10,
+            "to": 10
+          }
+        ]
+      },
+      "reading": 796,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 41,
+        "verses": [
+          {
+            "from": 10,
+            "to": 10
+          }
+        ]
+      },
+      "reading": 885,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 42,
+        "verses": [
+          {
+            "from": 5,
+            "to": 5
+          }
+        ]
+      },
+      "reading": 719,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 42,
+        "verses": [
+          {
+            "from": 5,
+            "to": 12
+          }
+        ]
+      },
+      "reading": 716,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 42,
+        "verses": [
+          {
+            "from": 10,
+            "to": 12
+          }
+        ]
+      },
+      "reading": 870,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 43,
+        "verses": [
+          {
+            "from": 1,
+            "to": 7
+          }
+        ]
+      },
+      "reading": 740,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 45,
+        "verses": [
+          {
+            "from": 5,
+            "to": 5
+          },
+          {
+            "from": 6,
+            "to": 6
+          },
+          {
+            "from": 8,
+            "to": 8
+          },
+          {
+            "from": 18,
+            "to": 18
+          },
+          {
+            "from": 22,
+            "to": 22
+          }
+        ]
+      },
+      "reading": 719,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 53,
+        "verses": []
+      },
+      "reading": 733,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 55,
+        "verses": [
+          {
+            "from": 1,
+            "to": 9
+          }
+        ]
+      },
+      "reading": 755,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 55,
+        "verses": [
+          {
+            "from": 6,
+            "to": 6
+          },
+          {
+            "from": 7,
+            "to": 7
+          }
+        ]
+      },
+      "reading": 871,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 58,
+        "verses": [
+          {
+            "from": 13,
+            "to": 13
+          },
+          {
+            "from": 14,
+            "to": 14
+          }
+        ]
+      },
+      "reading": 770,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 60,
+        "verses": [
+          {
+            "from": 1,
+            "to": 5
+          },
+          {
+            "from": 15,
+            "to": 15
+          }
+        ]
+      },
+      "reading": 806,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 60,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          },
+          {
+            "from": 19,
+            "to": 19
+          }
+        ]
+      },
+      "reading": 911,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 61,
+        "verses": [
+          {
+            "from": 1,
+            "to": 3
+          },
+          {
+            "from": 10,
+            "to": 10
+          },
+          {
+            "from": 11,
+            "to": 11
+          }
+        ]
+      },
+      "reading": 807,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 63,
+        "verses": [
+          {
+            "from": 7,
+            "to": 7
+          }
+        ]
+      },
+      "reading": 872,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 65,
+        "verses": [
+          {
+            "from": 17,
+            "to": 17
+          },
+          {
+            "from": 18,
+            "to": 18
+          }
+        ]
+      },
+      "reading": 760,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 23,
+        "chapter": 66,
+        "verses": [
+          {
+            "from": 22,
+            "to": 22
+          },
+          {
+            "from": 23,
+            "to": 23
+          }
+        ]
+      },
+      "reading": 770,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 24,
+        "chapter": 15,
+        "verses": [
+          {
+            "from": 16,
+            "to": 16
+          }
+        ]
+      },
+      "reading": 754,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 24,
+        "chapter": 29,
+        "verses": [
+          {
+            "from": 12,
+            "to": 12
+          },
+          {
+            "from": 13,
+            "to": 13
+          }
+        ]
+      },
+      "reading": 873,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 26,
+        "chapter": 20,
+        "verses": [
+          {
+            "from": 20,
+            "to": 20
+          }
+        ]
+      },
+      "reading": 770,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 26,
+        "chapter": 34,
+        "verses": [
+          {
+            "from": 11,
+            "to": 16
+          }
+        ]
+      },
+      "reading": 741,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 27,
+        "chapter": 7,
+        "verses": [
+          {
+            "from": 9,
+            "to": 9
+          },
+          {
+            "from": 10,
+            "to": 10
+          }
+        ]
+      },
+      "reading": 779,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 27,
+        "chapter": 9,
+        "verses": [
+          {
+            "from": 4,
+            "to": 7
+          },
+          {
+            "from": 9,
+            "to": 9
+          },
+          {
+            "from": 10,
+            "to": 10
+          },
+          {
+            "from": 12,
+            "to": 12
+          },
+          {
+            "from": 13,
+            "to": 13
+          },
+          {
+            "from": 15,
+            "to": 15
+          },
+          {
+            "from": 18,
+            "to": 18
+          },
+          {
+            "from": 19,
+            "to": 19
+          }
+        ]
+      },
+      "reading": 804,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 28,
+        "chapter": 14,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          },
+          {
+            "from": 2,
+            "to": 2
+          },
+          {
+            "from": 4,
+            "to": 4
+          }
+        ]
+      },
+      "reading": 814,
+      "page": 789
+    },
+    {
+      "passage": {
+        "book": 33,
+        "chapter": 6,
+        "verses": [
+          {
+            "from": 6,
+            "to": 8
+          }
+        ]
+      },
+      "reading": 814,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 33,
+        "chapter": 7,
+        "verses": [
+          {
+            "from": 18,
+            "to": 18
+          },
+          {
+            "from": 19,
+            "to": 19
+          }
+        ]
+      },
+      "reading": 814,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 35,
+        "chapter": 2,
+        "verses": [
+          {
+            "from": 20,
+            "to": 20
+          }
+        ]
+      },
+      "reading": 874,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 39,
+        "chapter": 3,
+        "verses": [
+          {
+            "from": 8,
+            "to": 12
+          }
+        ]
+      },
+      "reading": 820,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 39,
+        "chapter": 3,
+        "verses": [
+          {
+            "from": 10,
+            "to": 10
+          }
+        ]
+      },
+      "reading": 900,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 40,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 18,
+            "to": 18
+          },
+          {
+            "from": 20,
+            "to": 20
+          },
+          {
+            "from": 21,
+            "to": 21
+          }
+        ]
+      },
+      "reading": 730,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 40,
+        "chapter": 2,
+        "verses": [
+          {
+            "from": 1,
+            "to": 11
+          }
+        ]
+      },
+      "reading": 731,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 40,
+        "chapter": 5,
+        "verses": [
+          {
+            "from": 3,
+            "to": 16
+          }
+        ]
+      },
+      "reading": 795,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 40,
+        "chapter": 5,
+        "verses": [
+          {
+            "from": 16,
+            "to": 16
+          }
+        ]
+      },
+      "reading": 901,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 40,
+        "chapter": 6,
+        "verses": [
+          {
+            "from": 5,
+            "to": 8
+          },
+          {
+            "from": 14,
+            "to": 14
+          },
+          {
+            "from": 15,
+            "to": 15
+          }
+        ]
+      },
+      "reading": 798,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 40,
+        "chapter": 6,
+        "verses": [
+          {
+            "from": 9,
+            "to": 13
+          }
+        ]
+      },
+      "reading": 834,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 40,
+        "chapter": 6,
+        "verses": [
+          {
+            "from": 14,
+            "to": 14
+          }
+        ]
+      },
+      "reading": 886,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 40,
+        "chapter": 6,
+        "verses": [
+          {
+            "from": 24,
+            "to": 33
+          }
+        ]
+      },
+      "reading": 791,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 40,
+        "chapter": 7,
+        "verses": [
+          {
+            "from": 7,
+            "to": 7
+          },
+          {
+            "from": 8,
+            "to": 8
+          }
+        ]
+      },
+      "reading": 888,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 40,
+        "chapter": 7,
+        "verses": [
+          {
+            "from": 7,
+            "to": 11
+          }
+        ]
+      },
+      "reading": 798,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 40,
+        "chapter": 11,
+        "verses": [
+          {
+            "from": 28,
+            "to": 30
+          }
+        ]
+      },
+      "reading": 875,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 40,
+        "chapter": 12,
+        "verses": [
+          {
+            "from": 11,
+            "to": 11
+          },
+          {
+            "from": 12,
+            "to": 12
+          }
+        ]
+      },
+      "reading": 770,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 40,
+        "chapter": 18,
+        "verses": [
+          {
+            "from": 20,
+            "to": 20
+          }
+        ]
+      },
+      "reading": 876,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 40,
+        "chapter": 19,
+        "verses": [
+          {
+            "from": 5,
+            "to": 5
+          },
+          {
+            "from": 6,
+            "to": 6
+          }
+        ]
+      },
+      "reading": 830,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 40,
+        "chapter": 24,
+        "verses": [
+          {
+            "from": 3,
+            "to": 7
+          },
+          {
+            "from": 9,
+            "to": 9
+          },
+          {
+            "from": 14,
+            "to": 14
+          },
+          {
+            "from": 21,
+            "to": 21
+          },
+          {
+            "from": 24,
+            "to": 24
+          },
+          {
+            "from": 29,
+            "to": 29
+          },
+          {
+            "from": 31,
+            "to": 31
+          }
+        ]
+      },
+      "reading": 746,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 40,
+        "chapter": 24,
+        "verses": [
+          {
+            "from": 42,
+            "to": 46
+          }
+        ]
+      },
+      "reading": 747,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 40,
+        "chapter": 27,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          },
+          {
+            "from": 2,
+            "to": 2
+          },
+          {
+            "from": 22,
+            "to": 22
+          },
+          {
+            "from": 23,
+            "to": 23
+          },
+          {
+            "from": 26,
+            "to": 26
+          },
+          {
+            "from": 31,
+            "to": 31
+          },
+          {
+            "from": 50,
+            "to": 50
+          },
+          {
+            "from": 51,
+            "to": 51
+          },
+          {
+            "from": 54,
+            "to": 54
+          }
+        ]
+      },
+      "reading": 734,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 40,
+        "chapter": 28,
+        "verses": [
+          {
+            "from": 1,
+            "to": 9
+          }
+        ]
+      },
+      "reading": 735,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 40,
+        "chapter": 28,
+        "verses": [
+          {
+            "from": 19,
+            "to": 19
+          },
+          {
+            "from": 20,
+            "to": 20
+          }
+        ]
+      },
+      "reading": 759,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 40,
+        "chapter": 28,
+        "verses": [
+          {
+            "from": 19,
+            "to": 19
+          },
+          {
+            "from": 20,
+            "to": 20
+          }
+        ]
+      },
+      "reading": 768,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 41,
+        "chapter": 2,
+        "verses": [
+          {
+            "from": 27,
+            "to": 27
+          },
+          {
+            "from": 28,
+            "to": 28
+          }
+        ]
+      },
+      "reading": 769,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 41,
+        "chapter": 11,
+        "verses": [
+          {
+            "from": 9,
+            "to": 9
+          },
+          {
+            "from": 10,
+            "to": 10
+          }
+        ]
+      },
+      "reading": 833,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 41,
+        "chapter": 13,
+        "verses": [
+          {
+            "from": 33,
+            "to": 33
+          },
+          {
+            "from": 37,
+            "to": 37
+          }
+        ]
+      },
+      "reading": 815,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 41,
+        "chapter": 16,
+        "verses": [
+          {
+            "from": 19,
+            "to": 19
+          }
+        ]
+      },
+      "reading": 736,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 42,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 46,
+            "to": 55
+          }
+        ]
+      },
+      "reading": 835,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 42,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 68,
+            "to": 79
+          }
+        ]
+      },
+      "reading": 836,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 42,
+        "chapter": 2,
+        "verses": [
+          {
+            "from": 8,
+            "to": 14
+          }
+        ]
+      },
+      "reading": 730,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 42,
+        "chapter": 2,
+        "verses": [
+          {
+            "from": 29,
+            "to": 32
+          }
+        ]
+      },
+      "reading": 837,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 42,
+        "chapter": 4,
+        "verses": [
+          {
+            "from": 16,
+            "to": 16
+          }
+        ]
+      },
+      "reading": 770,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 42,
+        "chapter": 15,
+        "verses": [
+          {
+            "from": 3,
+            "to": 10
+          }
+        ]
+      },
+      "reading": 743,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 42,
+        "chapter": 15,
+        "verses": [
+          {
+            "from": 11,
+            "to": 24
+          }
+        ]
+      },
+      "reading": 757,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 42,
+        "chapter": 24,
+        "verses": [
+          {
+            "from": 5,
+            "to": 5
+          }
+        ]
+      },
+      "reading": 735,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 43,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          },
+          {
+            "from": 4,
+            "to": 4
+          },
+          {
+            "from": 14,
+            "to": 14
+          }
+        ]
+      },
+      "reading": 760,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 43,
+        "chapter": 3,
+        "verses": [
+          {
+            "from": 5,
+            "to": 5
+          }
+        ]
+      },
+      "reading": 759,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 43,
+        "chapter": 3,
+        "verses": [
+          {
+            "from": 16,
+            "to": 16
+          },
+          {
+            "from": 17,
+            "to": 17
+          }
+        ]
+      },
+      "reading": 782,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 43,
+        "chapter": 3,
+        "verses": [
+          {
+            "from": 17,
+            "to": 17
+          }
+        ]
+      },
+      "reading": 713,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 43,
+        "chapter": 4,
+        "verses": [
+          {
+            "from": 23,
+            "to": 23
+          },
+          {
+            "from": 24,
+            "to": 24
+          }
+        ]
+      },
+      "reading": 876,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 43,
+        "chapter": 5,
+        "verses": [
+          {
+            "from": 39,
+            "to": 39
+          }
+        ]
+      },
+      "reading": 754,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 43,
+        "chapter": 6,
+        "verses": [
+          {
+            "from": 35,
+            "to": 40
+          },
+          {
+            "from": 47,
+            "to": 58
+          }
+        ]
+      },
+      "reading": 771,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 43,
+        "chapter": 10,
+        "verses": [
+          {
+            "from": 1,
+            "to": 5
+          },
+          {
+            "from": 7,
+            "to": 16
+          }
+        ]
+      },
+      "reading": 744,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 43,
+        "chapter": 10,
+        "verses": [
+          {
+            "from": 27,
+            "to": 29
+          }
+        ]
+      },
+      "reading": 782,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 43,
+        "chapter": 13,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          },
+          {
+            "from": 4,
+            "to": 6
+          },
+          {
+            "from": 8,
+            "to": 10
+          },
+          {
+            "from": 12,
+            "to": 12
+          },
+          {
+            "from": 15,
+            "to": 15
+          },
+          {
+            "from": 17,
+            "to": 17
+          }
+        ]
+      },
+      "reading": 772,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 43,
+        "chapter": 14,
+        "verses": [
+          {
+            "from": 1,
+            "to": 3
+          }
+        ]
+      },
+      "reading": 747,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 43,
+        "chapter": 14,
+        "verses": [
+          {
+            "from": 16,
+            "to": 18
+          },
+          {
+            "from": 26,
+            "to": 26
+          }
+        ]
+      },
+      "reading": 752,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 43,
+        "chapter": 15,
+        "verses": [
+          {
+            "from": 1,
+            "to": 10
+          }
+        ]
+      },
+      "reading": 800,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 43,
+        "chapter": 15,
+        "verses": [
+          {
+            "from": 26,
+            "to": 26
+          }
+        ]
+      },
+      "reading": 752,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 43,
+        "chapter": 16,
+        "verses": [
+          {
+            "from": 7,
+            "to": 11
+          },
+          {
+            "from": 13,
+            "to": 13
+          },
+          {
+            "from": 14,
+            "to": 14
+          }
+        ]
+      },
+      "reading": 752,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 43,
+        "chapter": 16,
+        "verses": [
+          {
+            "from": 13,
+            "to": 13
+          }
+        ]
+      },
+      "reading": 802,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 43,
+        "chapter": 17,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          },
+          {
+            "from": 3,
+            "to": 3
+          },
+          {
+            "from": 6,
+            "to": 6
+          },
+          {
+            "from": 9,
+            "to": 11
+          },
+          {
+            "from": 13,
+            "to": 13
+          },
+          {
+            "from": 15,
+            "to": 15
+          },
+          {
+            "from": 17,
+            "to": 19
+          },
+          {
+            "from": 20,
+            "to": 20
+          },
+          {
+            "from": 21,
+            "to": 21
+          },
+          {
+            "from": 23,
+            "to": 23
+          },
+          {
+            "from": 24,
+            "to": 24
+          }
+        ]
+      },
+      "reading": 732,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 44,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 3,
+            "to": 11
+          }
+        ]
+      },
+      "reading": 737,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 44,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 10,
+            "to": 10
+          },
+          {
+            "from": 11,
+            "to": 11
+          }
+        ]
+      },
+      "reading": 747,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 45,
+        "chapter": 3,
+        "verses": [
+          {
+            "from": 22,
+            "to": 26
+          }
+        ]
+      },
+      "reading": 761,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 45,
+        "chapter": 3,
+        "verses": [
+          {
+            "from": 23,
+            "to": 23
+          },
+          {
+            "from": 24,
+            "to": 24
+          }
+        ]
+      },
+      "reading": 760,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 45,
+        "chapter": 4,
+        "verses": [
+          {
+            "from": 25,
+            "to": 25
+          }
+        ]
+      },
+      "reading": 762,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 45,
+        "chapter": 5,
+        "verses": [
+          {
+            "from": 1,
+            "to": 11
+          }
+        ]
+      },
+      "reading": 762,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 45,
+        "chapter": 5,
+        "verses": [
+          {
+            "from": 2,
+            "to": 5
+          }
+        ]
+      },
+      "reading": 796,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 45,
+        "chapter": 6,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          },
+          {
+            "from": 2,
+            "to": 2
+          },
+          {
+            "from": 7,
+            "to": 15
+          },
+          {
+            "from": 22,
+            "to": 22
+          },
+          {
+            "from": 23,
+            "to": 23
+          }
+        ]
+      },
+      "reading": 786,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 45,
+        "chapter": 6,
+        "verses": [
+          {
+            "from": 3,
+            "to": 7
+          }
+        ]
+      },
+      "reading": 759,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 45,
+        "chapter": 8,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          }
+        ]
+      },
+      "reading": 889,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 45,
+        "chapter": 8,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          },
+          {
+            "from": 2,
+            "to": 2
+          },
+          {
+            "from": 31,
+            "to": 33
+          }
+        ]
+      },
+      "reading": 761,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 45,
+        "chapter": 8,
+        "verses": [
+          {
+            "from": 18,
+            "to": 21
+          },
+          {
+            "from": 28,
+            "to": 28
+          },
+          {
+            "from": 31,
+            "to": 31
+          },
+          {
+            "from": 32,
+            "to": 32
+          }
+        ]
+      },
+      "reading": 725,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 45,
+        "chapter": 8,
+        "verses": [
+          {
+            "from": 31,
+            "to": 31
+          },
+          {
+            "from": 34,
+            "to": 39
+          }
+        ]
+      },
+      "reading": 745,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 45,
+        "chapter": 11,
+        "verses": [
+          {
+            "from": 33,
+            "to": 36
+          }
+        ]
+      },
+      "reading": 838,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 45,
+        "chapter": 12,
+        "verses": [
+          {
+            "from": 4,
+            "to": 4
+          },
+          {
+            "from": 5,
+            "to": 5
+          }
+        ]
+      },
+      "reading": 767,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 45,
+        "chapter": 12,
+        "verses": [
+          {
+            "from": 6,
+            "to": 8
+          }
+        ]
+      },
+      "reading": 902,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 45,
+        "chapter": 12,
+        "verses": [
+          {
+            "from": 9,
+            "to": 21
+          }
+        ]
+      },
+      "reading": 787,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 45,
+        "chapter": 12,
+        "verses": [
+          {
+            "from": 11,
+            "to": 11
+          }
+        ]
+      },
+      "reading": 822,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 45,
+        "chapter": 13,
+        "verses": [
+          {
+            "from": 1,
+            "to": 8
+          }
+        ]
+      },
+      "reading": 825,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 45,
+        "chapter": 14,
+        "verses": [
+          {
+            "from": 9,
+            "to": 9
+          }
+        ]
+      },
+      "reading": 781,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 45,
+        "chapter": 14,
+        "verses": [
+          {
+            "from": 10,
+            "to": 12
+          }
+        ]
+      },
+      "reading": 778,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 45,
+        "chapter": 14,
+        "verses": [
+          {
+            "from": 19,
+            "to": 19
+          }
+        ]
+      },
+      "reading": 801,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 45,
+        "chapter": 15,
+        "verses": [
+          {
+            "from": 13,
+            "to": 13
+          }
+        ]
+      },
+      "reading": 796,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 45,
+        "chapter": 15,
+        "verses": [
+          {
+            "from": 13,
+            "to": 13
+          }
+        ]
+      },
+      "reading": 912,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 46,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 10,
+            "to": 10
+          }
+        ]
+      },
+      "reading": 811,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 46,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 30,
+            "to": 30
+          }
+        ]
+      },
+      "reading": 761,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 46,
+        "chapter": 2,
+        "verses": [
+          {
+            "from": 6,
+            "to": 16
+          }
+        ]
+      },
+      "reading": 839,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 46,
+        "chapter": 6,
+        "verses": [
+          {
+            "from": 9,
+            "to": 11
+          }
+        ]
+      },
+      "reading": 763,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 46,
+        "chapter": 6,
+        "verses": [
+          {
+            "from": 19,
+            "to": 19
+          },
+          {
+            "from": 20,
+            "to": 20
+          }
+        ]
+      },
+      "reading": 824,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 46,
+        "chapter": 9,
+        "verses": [
+          {
+            "from": 25,
+            "to": 25
+          }
+        ]
+      },
+      "reading": 823,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 46,
+        "chapter": 10,
+        "verses": [
+          {
+            "from": 31,
+            "to": 31
+          }
+        ]
+      },
+      "reading": 824,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 46,
+        "chapter": 11,
+        "verses": [
+          {
+            "from": 23,
+            "to": 28
+          }
+        ]
+      },
+      "reading": 773,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 46,
+        "chapter": 12,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          },
+          {
+            "from": 4,
+            "to": 12
+          }
+        ]
+      },
+      "reading": 776,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 46,
+        "chapter": 12,
+        "verses": [
+          {
+            "from": 13,
+            "to": 13
+          }
+        ]
+      },
+      "reading": 759,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 46,
+        "chapter": 12,
+        "verses": [
+          {
+            "from": 13,
+            "to": 13
+          },
+          {
+            "from": 14,
+            "to": 14
+          },
+          {
+            "from": 18,
+            "to": 22
+          },
+          {
+            "from": 25,
+            "to": 27
+          }
+        ]
+      },
+      "reading": 767,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 46,
+        "chapter": 13,
+        "verses": []
+      },
+      "reading": 788,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 46,
+        "chapter": 15,
+        "verses": [
+          {
+            "from": 14,
+            "to": 14
+          },
+          {
+            "from": 20,
+            "to": 20
+          }
+        ]
+      },
+      "reading": 736,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 46,
+        "chapter": 15,
+        "verses": [
+          {
+            "from": 19,
+            "to": 22
+          },
+          {
+            "from": 51,
+            "to": 51
+          },
+          {
+            "from": 52,
+            "to": 52
+          },
+          {
+            "from": 57,
+            "to": 57
+          }
+        ]
+      },
+      "reading": 781,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 47,
+        "chapter": 4,
+        "verses": [
+          {
+            "from": 16,
+            "to": 18
+          }
+        ]
+      },
+      "reading": 840,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 47,
+        "chapter": 5,
+        "verses": [
+          {
+            "from": 10,
+            "to": 10
+          }
+        ]
+      },
+      "reading": 810,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 47,
+        "chapter": 5,
+        "verses": [
+          {
+            "from": 14,
+            "to": 21
+          }
+        ]
+      },
+      "reading": 764,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 47,
+        "chapter": 5,
+        "verses": [
+          {
+            "from": 17,
+            "to": 17
+          }
+        ]
+      },
+      "reading": 760,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 47,
+        "chapter": 8,
+        "verses": [
+          {
+            "from": 3,
+            "to": 3
+          },
+          {
+            "from": 5,
+            "to": 5
+          }
+        ]
+      },
+      "reading": 903,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 47,
+        "chapter": 8,
+        "verses": [
+          {
+            "from": 7,
+            "to": 7
+          },
+          {
+            "from": 9,
+            "to": 9
+          },
+          {
+            "from": 12,
+            "to": 12
+          }
+        ]
+      },
+      "reading": 820,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 47,
+        "chapter": 8,
+        "verses": [
+          {
+            "from": 9,
+            "to": 9
+          }
+        ]
+      },
+      "reading": 904,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 47,
+        "chapter": 9,
+        "verses": [
+          {
+            "from": 6,
+            "to": 6
+          },
+          {
+            "from": 7,
+            "to": 7
+          }
+        ]
+      },
+      "reading": 905,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 47,
+        "chapter": 9,
+        "verses": [
+          {
+            "from": 6,
+            "to": 8
+          },
+          {
+            "from": 10,
+            "to": 15
+          }
+        ]
+      },
+      "reading": 821,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 47,
+        "chapter": 9,
+        "verses": [
+          {
+            "from": 13,
+            "to": 13
+          },
+          {
+            "from": 15,
+            "to": 15
+          }
+        ]
+      },
+      "reading": 906,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 47,
+        "chapter": 13,
+        "verses": [
+          {
+            "from": 11,
+            "to": 11
+          }
+        ]
+      },
+      "reading": 811,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 47,
+        "chapter": 13,
+        "verses": [
+          {
+            "from": 14,
+            "to": 14
+          }
+        ]
+      },
+      "reading": 913,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 48,
+        "chapter": 4,
+        "verses": [
+          {
+            "from": 6,
+            "to": 6
+          },
+          {
+            "from": 7,
+            "to": 7
+          }
+        ]
+      },
+      "reading": 745,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 48,
+        "chapter": 6,
+        "verses": [
+          {
+            "from": 1,
+            "to": 10
+          }
+        ]
+      },
+      "reading": 808,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 49,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 3,
+            "to": 14
+          }
+        ]
+      },
+      "reading": 841,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 49,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 3,
+            "to": 3
+          },
+          {
+            "from": 7,
+            "to": 7
+          },
+          {
+            "from": 8,
+            "to": 8
+          },
+          {
+            "from": 13,
+            "to": 13
+          },
+          {
+            "from": 14,
+            "to": 14
+          }
+        ]
+      },
+      "reading": 709,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 49,
+        "chapter": 2,
+        "verses": [
+          {
+            "from": 1,
+            "to": 10
+          }
+        ]
+      },
+      "reading": 765,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 49,
+        "chapter": 2,
+        "verses": [
+          {
+            "from": 13,
+            "to": 13
+          },
+          {
+            "from": 17,
+            "to": 17
+          }
+        ]
+      },
+      "reading": 709,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 49,
+        "chapter": 3,
+        "verses": [
+          {
+            "from": 20,
+            "to": 20
+          },
+          {
+            "from": 21,
+            "to": 21
+          }
+        ]
+      },
+      "reading": 914,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 49,
+        "chapter": 4,
+        "verses": [
+          {
+            "from": 1,
+            "to": 8
+          },
+          {
+            "from": 11,
+            "to": 16
+          }
+        ]
+      },
+      "reading": 777,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 49,
+        "chapter": 4,
+        "verses": [
+          {
+            "from": 4,
+            "to": 6
+          }
+        ]
+      },
+      "reading": 709,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 49,
+        "chapter": 4,
+        "verses": [
+          {
+            "from": 31,
+            "to": 31
+          },
+          {
+            "from": 32,
+            "to": 32
+          }
+        ]
+      },
+      "reading": 827,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 49,
+        "chapter": 5,
+        "verses": [
+          {
+            "from": 1,
+            "to": 4
+          },
+          {
+            "from": 8,
+            "to": 8
+          },
+          {
+            "from": 19,
+            "to": 19
+          },
+          {
+            "from": 20,
+            "to": 20
+          }
+        ]
+      },
+      "reading": 827,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 49,
+        "chapter": 5,
+        "verses": [
+          {
+            "from": 21,
+            "to": 21
+          },
+          {
+            "from": 22,
+            "to": 22
+          },
+          {
+            "from": 25,
+            "to": 29
+          }
+        ]
+      },
+      "reading": 830,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 49,
+        "chapter": 6,
+        "verses": [
+          {
+            "from": 1,
+            "to": 4
+          }
+        ]
+      },
+      "reading": 826,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 49,
+        "chapter": 6,
+        "verses": [
+          {
+            "from": 1,
+            "to": 10
+          }
+        ]
+      },
+      "reading": 817,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 50,
+        "chapter": 2,
+        "verses": [
+          {
+            "from": 1,
+            "to": 6
+          },
+          {
+            "from": 8,
+            "to": 8
+          },
+          {
+            "from": 12,
+            "to": 15
+          }
+        ]
+      },
+      "reading": 805,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 50,
+        "chapter": 2,
+        "verses": [
+          {
+            "from": 6,
+            "to": 11
+          }
+        ]
+      },
+      "reading": 842,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 50,
+        "chapter": 4,
+        "verses": [
+          {
+            "from": 6,
+            "to": 8
+          }
+        ]
+      },
+      "reading": 824,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 50,
+        "chapter": 4,
+        "verses": [
+          {
+            "from": 8,
+            "to": 8
+          },
+          {
+            "from": 9,
+            "to": 9
+          }
+        ]
+      },
+      "reading": 916,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 51,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 13,
+            "to": 13
+          },
+          {
+            "from": 14,
+            "to": 14
+          }
+        ]
+      },
+      "reading": 745,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 51,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 15,
+            "to": 20
+          }
+        ]
+      },
+      "reading": 843,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 51,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 16,
+            "to": 16
+          }
+        ]
+      },
+      "reading": 769,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 51,
+        "chapter": 2,
+        "verses": [
+          {
+            "from": 6,
+            "to": 8
+          }
+        ]
+      },
+      "reading": 815,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 51,
+        "chapter": 3,
+        "verses": [
+          {
+            "from": 1,
+            "to": 11
+          }
+        ]
+      },
+      "reading": 789,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 51,
+        "chapter": 3,
+        "verses": [
+          {
+            "from": 12,
+            "to": 17
+          }
+        ]
+      },
+      "reading": 812,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 52,
+        "chapter": 4,
+        "verses": [
+          {
+            "from": 15,
+            "to": 18
+          }
+        ]
+      },
+      "reading": 781,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 52,
+        "chapter": 5,
+        "verses": [
+          {
+            "from": 2,
+            "to": 11
+          }
+        ]
+      },
+      "reading": 816,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 52,
+        "chapter": 5,
+        "verses": [
+          {
+            "from": 12,
+            "to": 23
+          }
+        ]
+      },
+      "reading": 809,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 53,
+        "chapter": 2,
+        "verses": [
+          {
+            "from": 15,
+            "to": 15
+          }
+        ]
+      },
+      "reading": 815,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 53,
+        "chapter": 3,
+        "verses": [
+          {
+            "from": 10,
+            "to": 10
+          }
+        ]
+      },
+      "reading": 822,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 54,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 17,
+            "to": 17
+          }
+        ]
+      },
+      "reading": 917,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 54,
+        "chapter": 5,
+        "verses": [
+          {
+            "from": 8,
+            "to": 8
+          }
+        ]
+      },
+      "reading": 822,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 54,
+        "chapter": 6,
+        "verses": [
+          {
+            "from": 18,
+            "to": 18
+          },
+          {
+            "from": 19,
+            "to": 19
+          }
+        ]
+      },
+      "reading": 810,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 55,
+        "chapter": 3,
+        "verses": [
+          {
+            "from": 15,
+            "to": 17
+          }
+        ]
+      },
+      "reading": 754,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 56,
+        "chapter": 2,
+        "verses": [
+          {
+            "from": 1,
+            "to": 4
+          },
+          {
+            "from": 6,
+            "to": 6
+          },
+          {
+            "from": 11,
+            "to": 13
+          }
+        ]
+      },
+      "reading": 823,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 56,
+        "chapter": 2,
+        "verses": [
+          {
+            "from": 11,
+            "to": 14
+          }
+        ]
+      },
+      "reading": 768,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 56,
+        "chapter": 3,
+        "verses": [
+          {
+            "from": 1,
+            "to": 7
+          }
+        ]
+      },
+      "reading": 763,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 56,
+        "chapter": 3,
+        "verses": [
+          {
+            "from": 8,
+            "to": 8
+          },
+          {
+            "from": 14,
+            "to": 14
+          }
+        ]
+      },
+      "reading": 810,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 57,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 3,
+            "to": 3
+          }
+        ]
+      },
+      "reading": 918,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 58,
+        "chapter": 2,
+        "verses": [
+          {
+            "from": 9,
+            "to": 9
+          },
+          {
+            "from": 17,
+            "to": 17
+          },
+          {
+            "from": 18,
+            "to": 18
+          }
+        ]
+      },
+      "reading": 738,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 58,
+        "chapter": 2,
+        "verses": [
+          {
+            "from": 11,
+            "to": 11
+          }
+        ]
+      },
+      "reading": 763,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 58,
+        "chapter": 4,
+        "verses": [
+          {
+            "from": 12,
+            "to": 12
+          }
+        ]
+      },
+      "reading": 754,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 58,
+        "chapter": 4,
+        "verses": [
+          {
+            "from": 14,
+            "to": 16
+          }
+        ]
+      },
+      "reading": 738,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 58,
+        "chapter": 4,
+        "verses": [
+          {
+            "from": 14,
+            "to": 14
+          },
+          {
+            "from": 16,
+            "to": 16
+          }
+        ]
+      },
+      "reading": 877,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 58,
+        "chapter": 6,
+        "verses": [
+          {
+            "from": 19,
+            "to": 19
+          }
+        ]
+      },
+      "reading": 736,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 58,
+        "chapter": 8,
+        "verses": [
+          {
+            "from": 1,
+            "to": 4
+          }
+        ]
+      },
+      "reading": 739,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 58,
+        "chapter": 9,
+        "verses": [
+          {
+            "from": 11,
+            "to": 11
+          },
+          {
+            "from": 12,
+            "to": 12
+          },
+          {
+            "from": 24,
+            "to": 28
+          }
+        ]
+      },
+      "reading": 739,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 58,
+        "chapter": 10,
+        "verses": [
+          {
+            "from": 19,
+            "to": 22
+          }
+        ]
+      },
+      "reading": 878,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 58,
+        "chapter": 10,
+        "verses": [
+          {
+            "from": 23,
+            "to": 25
+          }
+        ]
+      },
+      "reading": 879,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 58,
+        "chapter": 13,
+        "verses": [
+          {
+            "from": 20,
+            "to": 20
+          },
+          {
+            "from": 21,
+            "to": 21
+          }
+        ]
+      },
+      "reading": 919,
+      "page": 790
+    },
+    {
+      "passage": {
+        "book": 59,
+        "chapter": 3,
+        "verses": [
+          {
+            "from": 17,
+            "to": 17
+          },
+          {
+            "from": 18,
+            "to": 18
+          }
+        ]
+      },
+      "reading": 811,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 60,
+        "chapter": 2,
+        "verses": [
+          {
+            "from": 9,
+            "to": 9
+          }
+        ]
+      },
+      "reading": 768,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 60,
+        "chapter": 5,
+        "verses": [
+          {
+            "from": 8,
+            "to": 8
+          },
+          {
+            "from": 9,
+            "to": 9
+          }
+        ]
+      },
+      "reading": 815,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 61,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 19,
+            "to": 19
+          },
+          {
+            "from": 20,
+            "to": 20
+          }
+        ]
+      },
+      "reading": 754,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 61,
+        "chapter": 3,
+        "verses": [
+          {
+            "from": 18,
+            "to": 18
+          }
+        ]
+      },
+      "reading": 920,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 62,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 1,
+            "to": 4
+          }
+        ]
+      },
+      "reading": 844,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 62,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 9,
+            "to": 9
+          }
+        ]
+      },
+      "reading": 890,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 62,
+        "chapter": 2,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          },
+          {
+            "from": 2,
+            "to": 2
+          }
+        ]
+      },
+      "reading": 778,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 62,
+        "chapter": 2,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          },
+          {
+            "from": 2,
+            "to": 2
+          }
+        ]
+      },
+      "reading": 891,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 62,
+        "chapter": 3,
+        "verses": [
+          {
+            "from": 1,
+            "to": 11
+          }
+        ]
+      },
+      "reading": 790,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 62,
+        "chapter": 3,
+        "verses": [
+          {
+            "from": 14,
+            "to": 14
+          },
+          {
+            "from": 15,
+            "to": 15
+          }
+        ]
+      },
+      "reading": 893,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 62,
+        "chapter": 4,
+        "verses": [
+          {
+            "from": 4,
+            "to": 4
+          },
+          {
+            "from": 10,
+            "to": 10
+          },
+          {
+            "from": 11,
+            "to": 11
+          },
+          {
+            "from": 16,
+            "to": 16
+          },
+          {
+            "from": 20,
+            "to": 20
+          },
+          {
+            "from": 21,
+            "to": 21
+          }
+        ]
+      },
+      "reading": 713,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 62,
+        "chapter": 5,
+        "verses": [
+          {
+            "from": 11,
+            "to": 13
+          }
+        ]
+      },
+      "reading": 782,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 62,
+        "chapter": 5,
+        "verses": [
+          {
+            "from": 11,
+            "to": 19
+          }
+        ]
+      },
+      "reading": 892,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 62,
+        "chapter": 5,
+        "verses": [
+          {
+            "from": 14,
+            "to": 14
+          }
+        ]
+      },
+      "reading": 745,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 64,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 2,
+            "to": 2
+          }
+        ]
+      },
+      "reading": 824,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 65,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 24,
+            "to": 24
+          },
+          {
+            "from": 25,
+            "to": 25
+          }
+        ]
+      },
+      "reading": 922,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 66,
+        "chapter": 1,
+        "verses": [
+          {
+            "from": 13,
+            "to": 18
+          }
+        ]
+      },
+      "reading": 736,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 66,
+        "chapter": 4,
+        "verses": [
+          {
+            "from": 8,
+            "to": 8
+          },
+          {
+            "from": 11,
+            "to": 11
+          }
+        ]
+      },
+      "reading": 708,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 66,
+        "chapter": 7,
+        "verses": [
+          {
+            "from": 9,
+            "to": 17
+          }
+        ]
+      },
+      "reading": 749,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 66,
+        "chapter": 7,
+        "verses": [
+          {
+            "from": 12,
+            "to": 12
+          }
+        ]
+      },
+      "reading": 708,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 66,
+        "chapter": 12,
+        "verses": [
+          {
+            "from": 7,
+            "to": 12
+          }
+        ]
+      },
+      "reading": 766,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 66,
+        "chapter": 14,
+        "verses": [
+          {
+            "from": 6,
+            "to": 12
+          }
+        ]
+      },
+      "reading": 780,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 66,
+        "chapter": 15,
+        "verses": [
+          {
+            "from": 3,
+            "to": 3
+          },
+          {
+            "from": 4,
+            "to": 4
+          }
+        ]
+      },
+      "reading": 708,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 66,
+        "chapter": 19,
+        "verses": [
+          {
+            "from": 1,
+            "to": 1
+          },
+          {
+            "from": 2,
+            "to": 2
+          }
+        ]
+      },
+      "reading": 708,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 66,
+        "chapter": 20,
+        "verses": [
+          {
+            "from": 12,
+            "to": 12
+          }
+        ]
+      },
+      "reading": 779,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 66,
+        "chapter": 21,
+        "verses": [
+          {
+            "from": 1,
+            "to": 3
+          }
+        ]
+      },
+      "reading": 779,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 66,
+        "chapter": 21,
+        "verses": [
+          {
+            "from": 1,
+            "to": 5
+          }
+        ]
+      },
+      "reading": 783,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 66,
+        "chapter": 21,
+        "verses": [
+          {
+            "from": 6,
+            "to": 6
+          },
+          {
+            "from": 7,
+            "to": 7
+          }
+        ]
+      },
+      "reading": 750,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 66,
+        "chapter": 22,
+        "verses": [
+          {
+            "from": 1,
+            "to": 5
+          }
+        ]
+      },
+      "reading": 750,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 66,
+        "chapter": 22,
+        "verses": [
+          {
+            "from": 12,
+            "to": 12
+          }
+        ]
+      },
+      "reading": 779,
+      "page": 791
+    },
+    {
+      "passage": {
+        "book": 66,
+        "chapter": 22,
+        "verses": [
+          {
+            "from": 17,
+            "to": 17
+          }
+        ]
+      },
+      "reading": 880,
+      "page": 791
+    }
+  ]
+}

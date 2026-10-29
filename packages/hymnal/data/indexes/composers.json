@@ -1,0 +1,5501 @@
+{
+  "version": 1,
+  "book": "sdah-1985",
+  "index": "composers",
+  "title": "COMPOSERS, ARRANGERS, AND SOURCES OF TUNES",
+  "pages": [
+    {
+      "page": 813,
+      "entries": 117
+    },
+    {
+      "page": 814,
+      "entries": 287
+    },
+    {
+      "page": 815,
+      "entries": 281
+    },
+    {
+      "page": 816,
+      "entries": 128
+    }
+  ],
+  "people": [
+    {
+      "name": "Abbott's Pocket Companion",
+      "source": true,
+      "hymns": [
+        {
+          "number": 454,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Ackley, Alfred",
+      "hymns": [
+        {
+          "number": 251,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Ackley, B. D.",
+      "hymns": [
+        {
+          "number": 311,
+          "page": 813
+        },
+        {
+          "number": 426,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Ahle, Johann R.",
+      "hymns": [
+        {
+          "number": 60,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Ahnfelt, Oscar",
+      "hymns": [
+        {
+          "number": 532,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Akers, Doris",
+      "hymns": [
+        {
+          "number": 262,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Allen, Chester",
+      "hymns": [
+        {
+          "number": 249,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Allen, George",
+      "hymns": [
+        {
+          "number": 328,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Allen, Hugh P.",
+      "hymns": [
+        {
+          "number": 408,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Alsatian Canon",
+      "hymns": [
+        {
+          "number": 563,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "American Melody",
+      "hymns": [
+        {
+          "number": 248,
+          "page": 813
+        },
+        {
+          "number": 280,
+          "page": 813
+        },
+        {
+          "number": 400,
+          "page": 813
+        },
+        {
+          "number": 420,
+          "page": 813
+        },
+        {
+          "number": 434,
+          "page": 813
+        },
+        {
+          "number": 464,
+          "page": 813
+        },
+        {
+          "number": 622,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "American Negro Spiritual",
+      "hymns": [
+        {
+          "number": 69,
+          "page": 813
+        },
+        {
+          "number": 121,
+          "page": 813
+        },
+        {
+          "number": 138,
+          "page": 813
+        },
+        {
+          "number": 158,
+          "page": 813
+        },
+        {
+          "number": 305,
+          "page": 813
+        },
+        {
+          "number": 319,
+          "page": 813
+        },
+        {
+          "number": 403,
+          "page": 813
+        },
+        {
+          "number": 475,
+          "page": 813
+        },
+        {
+          "number": 580,
+          "page": 813
+        },
+        {
+          "number": 624,
+          "page": 813
+        },
+        {
+          "number": 627,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "American White Spiritual",
+      "hymns": [
+        {
+          "number": 151,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Anderson, John",
+      "hymns": [
+        {
+          "number": 381,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Anonymous",
+      "hymns": [
+        {
+          "number": 15,
+          "page": 813
+        },
+        {
+          "number": 26,
+          "page": 813
+        },
+        {
+          "number": 631,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Antes, John",
+      "hymns": [
+        {
+          "number": 112,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Arne, Thomas A.",
+      "hymns": [
+        {
+          "number": 609,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Ashton, J. Bruce",
+      "hymns": [
+        {
+          "number": 402,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Atkinson, Frederick C.",
+      "hymns": [
+        {
+          "number": 266,
+          "page": 813
+        },
+        {
+          "number": 668,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Aufranc, D.A.R.",
+      "hymns": [
+        {
+          "number": 394,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Bach, Johann Christoph",
+      "hymns": [
+        {
+          "number": 646,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Bach, J. S.",
+      "hymns": [
+        {
+          "number": 18,
+          "page": 813
+        },
+        {
+          "number": 57,
+          "page": 813
+        },
+        {
+          "number": 128,
+          "page": 813
+        },
+        {
+          "number": 134,
+          "page": 813
+        },
+        {
+          "number": 156,
+          "page": 813
+        },
+        {
+          "number": 210,
+          "page": 813
+        },
+        {
+          "number": 239,
+          "page": 813
+        },
+        {
+          "number": 345,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Bain, J. L. MacBeth",
+      "hymns": [
+        {
+          "number": 546,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Barnard, Charlotte A.",
+      "hymns": [
+        {
+          "number": 572,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Barnard, John",
+      "hymns": [
+        {
+          "number": 255,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Barnby, Joseph",
+      "hymns": [
+        {
+          "number": 43,
+          "page": 813
+        },
+        {
+          "number": 52,
+          "page": 813
+        },
+        {
+          "number": 291,
+          "page": 813
+        },
+        {
+          "number": 324,
+          "page": 813
+        },
+        {
+          "number": 514,
+          "page": 813
+        },
+        {
+          "number": 656,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Barnes, Edward S.",
+      "hymns": [
+        {
+          "number": 142,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Barnes, Edwin",
+      "hymns": [
+        {
+          "number": 6,
+          "page": 813
+        },
+        {
+          "number": 554,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Batastini, Roert",
+      "hymns": [
+        {
+          "number": 108,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Beach, Perry",
+      "hymns": [
+        {
+          "number": 179,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Beethoven, Ludwig van",
+      "hymns": [
+        {
+          "number": 12,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Belden, F. E.",
+      "hymns": [
+        {
+          "number": 183,
+          "page": 813
+        },
+        {
+          "number": 253,
+          "page": 813
+        },
+        {
+          "number": 308,
+          "page": 813
+        },
+        {
+          "number": 359,
+          "page": 813
+        },
+        {
+          "number": 412,
+          "page": 813
+        },
+        {
+          "number": 416,
+          "page": 813
+        },
+        {
+          "number": 430,
+          "page": 813
+        },
+        {
+          "number": 494,
+          "page": 813
+        },
+        {
+          "number": 528,
+          "page": 813
+        },
+        {
+          "number": 531,
+          "page": 813
+        },
+        {
+          "number": 579,
+          "page": 813
+        },
+        {
+          "number": 595,
+          "page": 813
+        },
+        {
+          "number": 596,
+          "page": 813
+        },
+        {
+          "number": 600,
+          "page": 813
+        },
+        {
+          "number": 604,
+          "page": 813
+        },
+        {
+          "number": 653,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Beltz, Oliver S.",
+      "hymns": [
+        {
+          "number": 687,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Bennard, George",
+      "hymns": [
+        {
+          "number": 159,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Binder, A. W.",
+      "hymns": [
+        {
+          "number": 387,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Bingham, James",
+      "hymns": [
+        {
+          "number": 54,
+          "page": 813
+        },
+        {
+          "number": 81,
+          "page": 813
+        },
+        {
+          "number": 102,
+          "page": 813
+        },
+        {
+          "number": 148,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Bischoff, Dr. J.W.",
+      "hymns": [
+        {
+          "number": 515,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Black, J. M.",
+      "hymns": [
+        {
+          "number": 216,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Blackmon, Alma",
+      "hymns": [
+        {
+          "number": 69,
+          "page": 813
+        },
+        {
+          "number": 138,
+          "page": 813
+        },
+        {
+          "number": 305,
+          "page": 813
+        },
+        {
+          "number": 580,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Blanchard, Richard",
+      "hymns": [
+        {
+          "number": 493,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Bliss, Philip P.",
+      "hymns": [
+        {
+          "number": 286,
+          "page": 813
+        },
+        {
+          "number": 530,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Bohemian Brethren's Kirkengesänge",
+      "source": true,
+      "hymns": [
+        {
+          "number": 29,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Bolton, Fannie E.",
+      "hymns": [
+        {
+          "number": 570,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Bortnianski, D.",
+      "hymns": [
+        {
+          "number": 252,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Bourgeois, Louis",
+      "hymns": [
+        {
+          "number": 16,
+          "page": 813
+        },
+        {
+          "number": 694,
+          "page": 813
+        },
+        {
+          "number": 695,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Boyd, William",
+      "hymns": [
+        {
+          "number": 618,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Bradbury, William",
+      "hymns": [
+        {
+          "number": 190,
+          "page": 813
+        },
+        {
+          "number": 200,
+          "page": 813
+        },
+        {
+          "number": 314,
+          "page": 813
+        },
+        {
+          "number": 388,
+          "page": 813
+        },
+        {
+          "number": 478,
+          "page": 813
+        },
+        {
+          "number": 521,
+          "page": 813
+        },
+        {
+          "number": 522,
+          "page": 813
+        },
+        {
+          "number": 537,
+          "page": 813
+        },
+        {
+          "number": 545,
+          "page": 813
+        },
+        {
+          "number": 610,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Broadwood, Lucy",
+      "hymns": [
+        {
+          "number": 144,
+          "page": 813
+        },
+        {
+          "number": 465,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Brown, Arthur H.",
+      "hymns": [
+        {
+          "number": 313,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Brown, Charles F.",
+      "hymns": [
+        {
+          "number": 346,
+          "page": 813
+        }
+      ]
+    },
+    {
+      "name": "Buchanan, Annabel M.",
+      "hymns": [
+        {
+          "number": 420,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Buck, Percy",
+      "hymns": [
+        {
+          "number": 41,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Bullinger, Ethelbert W.",
+      "hymns": [
+        {
+          "number": 535,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Bunnett, Edward",
+      "hymns": [
+        {
+          "number": 555,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Burleigh, Harry T.",
+      "hymns": [
+        {
+          "number": 62,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Burnap, Uzziah C.",
+      "hymns": [
+        {
+          "number": 389,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Butler, A. L.",
+      "hymns": [
+        {
+          "number": 193,
+          "page": 814
+        },
+        {
+          "number": 338,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Cabena, H. Barrie",
+      "hymns": [
+        {
+          "number": 275,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Caldbeck, George T.",
+      "hymns": [
+        {
+          "number": 463,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Camp Meeting Song",
+      "hymns": [
+        {
+          "number": 647,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Campbell, Thomas",
+      "hymns": [
+        {
+          "number": 198,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Cantica Laudis",
+      "source": true,
+      "hymns": [
+        {
+          "number": 409,
+          "page": 814
+        },
+        {
+          "number": 670,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Cantus Diversi, J. F. Wade's",
+      "source": true,
+      "hymns": [
+        {
+          "number": 132,
+          "page": 814
+        },
+        {
+          "number": 211,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Carmichael, Ralph",
+      "hymns": [
+        {
+          "number": 289,
+          "page": 814
+        },
+        {
+          "number": 503,
+          "page": 814
+        },
+        {
+          "number": 671,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Carr, Benjamin",
+      "hymns": [
+        {
+          "number": 295,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Carter, R. Kelso",
+      "hymns": [
+        {
+          "number": 518,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Carter, Sydney",
+      "hymns": [
+        {
+          "number": 24,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Chapin, Lucius",
+      "hymns": [
+        {
+          "number": 406,
+          "page": 814
+        },
+        {
+          "number": 681,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Clark, Jeremiah",
+      "hymns": [
+        {
+          "number": 19,
+          "page": 814
+        },
+        {
+          "number": 199,
+          "page": 814
+        },
+        {
+          "number": 644,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Clemm, J. B. O.",
+      "hymns": [
+        {
+          "number": 358,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Cocker, Norman",
+      "hymns": [
+        {
+          "number": 396,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Coleman, T.",
+      "hymns": [
+        {
+          "number": 460,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Coles, George",
+      "hymns": [
+        {
+          "number": 441,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Columbian Harmony",
+      "source": true,
+      "hymns": [
+        {
+          "number": 187,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Conkey, Ithamar",
+      "hymns": [
+        {
+          "number": 237,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Converse, Charles C.",
+      "hymns": [
+        {
+          "number": 499,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Coombs, Lorayne",
+      "hymns": [
+        {
+          "number": 679,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Cooper, W. G.",
+      "hymns": [
+        {
+          "number": 466,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Copes, V. Earl",
+      "hymns": [
+        {
+          "number": 71,
+          "page": 814
+        },
+        {
+          "number": 89,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Corner, David G.",
+      "hymns": [
+        {
+          "number": 261,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Croft, William",
+      "hymns": [
+        {
+          "number": 103,
+          "page": 814
+        },
+        {
+          "number": 256,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Crüger, Johann",
+      "hymns": [
+        {
+          "number": 239,
+          "page": 814
+        },
+        {
+          "number": 267,
+          "page": 814
+        },
+        {
+          "number": 559,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Cummings, William H.",
+      "hymns": [
+        {
+          "number": 122,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Cutts, Peter",
+      "hymns": [
+        {
+          "number": 276,
+          "page": 814
+        },
+        {
+          "number": 342,
+          "page": 814
+        },
+        {
+          "number": 356,
+          "page": 814
+        },
+        {
+          "number": 459,
+          "page": 814
+        },
+        {
+          "number": 467,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Damon's Psalms",
+      "source": true,
+      "hymns": [
+        {
+          "number": 504,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Danks, H. P.",
+      "hymns": [
+        {
+          "number": 7,
+          "page": 814
+        },
+        {
+          "number": 427,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Darwall, John",
+      "hymns": [
+        {
+          "number": 221,
+          "page": 814
+        },
+        {
+          "number": 377,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Davies, H. Walford",
+      "hymns": [
+        {
+          "number": 641,
+          "page": 814
+        },
+        {
+          "number": 678,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Davies, Hugh",
+      "hymns": [
+        {
+          "number": 161,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Day, George",
+      "hymns": [
+        {
+          "number": 194,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "de Fluiter, Henry",
+      "hymns": [
+        {
+          "number": 202,
+          "page": 814
+        },
+        {
+          "number": 431,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "de Giardini, Felice",
+      "hymns": [
+        {
+          "number": 71,
+          "page": 814
+        },
+        {
+          "number": 370,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Doane, William H.",
+      "hymns": [
+        {
+          "number": 196,
+          "page": 814
+        },
+        {
+          "number": 306,
+          "page": 814
+        },
+        {
+          "number": 312,
+          "page": 814
+        },
+        {
+          "number": 341,
+          "page": 814
+        },
+        {
+          "number": 367,
+          "page": 814
+        },
+        {
+          "number": 458,
+          "page": 814
+        },
+        {
+          "number": 474,
+          "page": 814
+        },
+        {
+          "number": 479,
+          "page": 814
+        },
+        {
+          "number": 501,
+          "page": 814
+        },
+        {
+          "number": 569,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Douglas, Winfred C.",
+      "hymns": [
+        {
+          "number": 72,
+          "page": 814
+        },
+        {
+          "number": 136,
+          "page": 814
+        },
+        {
+          "number": 497,
+          "page": 814
+        },
+        {
+          "number": 576,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Drese, Adam",
+      "hymns": [
+        {
+          "number": 553,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Dunbar, E. W.",
+      "hymns": [
+        {
+          "number": 443,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "D'Vrhon, Chretier",
+      "hymns": [
+        {
+          "number": 484,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Dutch Folk Tune",
+      "hymns": [
+        {
+          "number": 637,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Dyer, Samuel",
+      "hymns": [
+        {
+          "number": 264,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Dykes, John B.",
+      "hymns": [
+        {
+          "number": 73,
+          "page": 814
+        },
+        {
+          "number": 85,
+          "page": 814
+        },
+        {
+          "number": 197,
+          "page": 814
+        },
+        {
+          "number": 241,
+          "page": 814
+        },
+        {
+          "number": 269,
+          "page": 814
+        },
+        {
+          "number": 323,
+          "page": 814
+        },
+        {
+          "number": 433,
+          "page": 814
+        },
+        {
+          "number": 490,
+          "page": 814
+        },
+        {
+          "number": 655,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Edson, Lewis",
+      "hymns": [
+        {
+          "number": 434,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Edwards, John D.",
+      "hymns": [
+        {
+          "number": 650,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Elginburg, James Lawson",
+      "hymns": [
+        {
+          "number": 623,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Elvey, George J.",
+      "hymns": [
+        {
+          "number": 223,
+          "page": 814
+        },
+        {
+          "number": 557,
+          "page": 814
+        },
+        {
+          "number": 616,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "English Melody",
+      "hymns": [
+        {
+          "number": 55,
+          "page": 814
+        },
+        {
+          "number": 90,
+          "page": 814
+        },
+        {
+          "number": 93,
+          "page": 814
+        },
+        {
+          "number": 141,
+          "page": 814
+        },
+        {
+          "number": 144,
+          "page": 814
+        },
+        {
+          "number": 146,
+          "page": 814
+        },
+        {
+          "number": 168,
+          "page": 814
+        },
+        {
+          "number": 255,
+          "page": 814
+        },
+        {
+          "number": 544,
+          "page": 814
+        },
+        {
+          "number": 591,
+          "page": 814
+        },
+        {
+          "number": 628,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Este's Psalter",
+      "source": true,
+      "hymns": [
+        {
+          "number": 139,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Evans, David",
+      "hymns": [
+        {
+          "number": 10,
+          "page": 814
+        },
+        {
+          "number": 67,
+          "page": 814
+        },
+        {
+          "number": 244,
+          "page": 814
+        },
+        {
+          "number": 392,
+          "page": 814
+        },
+        {
+          "number": 513,
+          "page": 814
+        },
+        {
+          "number": 547,
+          "page": 814
+        },
+        {
+          "number": 654,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Ewing, Alexander",
+      "hymns": [
+        {
+          "number": 429,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Exner, Max",
+      "hymns": [
+        {
+          "number": 58,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Ferguson, William H.",
+      "hymns": [
+        {
+          "number": 360,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Filitz, Friedrich",
+      "hymns": [
+        {
+          "number": 683,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Fillmore, Fred A.",
+      "hymns": [
+        {
+          "number": 539,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Finlay, Kenneth G.",
+      "hymns": [
+        {
+          "number": 597,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Finnish Melody",
+      "hymns": [
+        {
+          "number": 37,
+          "page": 814
+        },
+        {
+          "number": 38,
+          "page": 814
+        },
+        {
+          "number": 67,
+          "page": 814
+        },
+        {
+          "number": 244,
+          "page": 814
+        },
+        {
+          "number": 513,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Fischer, William G.",
+      "hymns": [
+        {
+          "number": 307,
+          "page": 814
+        },
+        {
+          "number": 318,
+          "page": 814
+        },
+        {
+          "number": 457,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Flemming, Friedrich",
+      "hymns": [
+        {
+          "number": 70,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Forrest, C. H.",
+      "hymns": [
+        {
+          "number": 577,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Foster, Allen W.",
+      "hymns": [
+        {
+          "number": 151,
+          "page": 814
+        },
+        {
+          "number": 203,
+          "page": 814
+        },
+        {
+          "number": 298,
+          "page": 814
+        },
+        {
+          "number": 417,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "French Carol",
+      "hymns": [
+        {
+          "number": 28,
+          "page": 814
+        },
+        {
+          "number": 133,
+          "page": 814
+        },
+        {
+          "number": 142,
+          "page": 814
+        },
+        {
+          "number": 175,
+          "page": 814
+        },
+        {
+          "number": 662,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "French Melody",
+      "hymns": [
+        {
+          "number": 549,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "French Processional",
+      "hymns": [
+        {
+          "number": 115,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Friedell, Harold",
+      "hymns": [
+        {
+          "number": 259,
+          "page": 814
+        },
+        {
+          "number": 689,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Frischmann, Charles G.",
+      "hymns": [
+        {
+          "number": 400,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Fritsch, Ahasuerus",
+      "hymns": [
+        {
+          "number": 345,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Froom, Leroy E.",
+      "hymns": [
+        {
+          "number": 690,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Funk's Genuine Church Music",
+      "source": true,
+      "hymns": [
+        {
+          "number": 509,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Gabriel, Charles H.",
+      "hymns": [
+        {
+          "number": 435,
+          "page": 814
+        },
+        {
+          "number": 512,
+          "page": 814
+        },
+        {
+          "number": 625,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Gaelic Melody",
+      "hymns": [
+        {
+          "number": 44,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Gaither, William",
+      "hymns": [
+        {
+          "number": 526,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Gardiner's Sacred Melodies",
+      "source": true,
+      "hymns": [
+        {
+          "number": 177,
+          "page": 814
+        },
+        {
+          "number": 355,
+          "page": 814
+        },
+        {
+          "number": 376,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Gauntlett, Henry J.",
+      "hymns": [
+        {
+          "number": 149,
+          "page": 814
+        },
+        {
+          "number": 659,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Geer, Harold E.",
+      "hymns": [
+        {
+          "number": 134,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Gehann, Horst",
+      "hymns": [
+        {
+          "number": 562,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Geistliche Nachtigal, Vienna",
+      "source": true,
+      "hymns": [
+        {
+          "number": 261,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Genevan Psalter",
+      "source": true,
+      "hymns": [
+        {
+          "number": 16,
+          "page": 814
+        },
+        {
+          "number": 22,
+          "page": 814
+        },
+        {
+          "number": 695,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "German Carol",
+      "hymns": [
+        {
+          "number": 136,
+          "page": 814
+        },
+        {
+          "number": 150,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "German Folk Tune",
+      "hymns": [
+        {
+          "number": 98,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Gesangbuch der Herzogl",
+      "source": true,
+      "hymns": [
+        {
+          "number": 382,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Gibbons, Orlando",
+      "hymns": [
+        {
+          "number": 263,
+          "page": 814
+        },
+        {
+          "number": 374,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Gladstone, William H.",
+      "hymns": [
+        {
+          "number": 79,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Glaser, Carl G.",
+      "hymns": [
+        {
+          "number": 250,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Gordon, A. J.",
+      "hymns": [
+        {
+          "number": 321,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Goss, John",
+      "hymns": [
+        {
+          "number": 4,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Gottschalk, Louis M.",
+      "hymns": [
+        {
+          "number": 268,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Goudinel, C.",
+      "hymns": [
+        {
+          "number": 13,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Gould, John E.",
+      "hymns": [
+        {
+          "number": 551,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Gower, John H.",
+      "hymns": [
+        {
+          "number": 405,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Graham, S. J.",
+      "hymns": [
+        {
+          "number": 205,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Grape, John T.",
+      "hymns": [
+        {
+          "number": 184,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Grauman, Max",
+      "hymns": [
+        {
+          "number": 395,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Greatorex, Henry W.",
+      "hymns": [
+        {
+          "number": 315,
+          "page": 814
+        },
+        {
+          "number": 660,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Grenoble Antiphoner",
+      "source": true,
+      "hymns": [
+        {
+          "number": 404,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Greiter, Matthaus",
+      "hymns": [
+        {
+          "number": 89,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Griffiths, Vernon",
+      "hymns": [
+        {
+          "number": 106,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Gruber, Franz",
+      "hymns": [
+        {
+          "number": 143,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Hakes, D. S.",
+      "hymns": [
+        {
+          "number": 371,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Hall, J. Lincoln",
+      "hymns": [
+        {
+          "number": 181,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Hamblen, Stuart",
+      "hymns": [
+        {
+          "number": 632,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Handel, George F.",
+      "hymns": [
+        {
+          "number": 125,
+          "page": 814
+        },
+        {
+          "number": 171,
+          "page": 814
+        },
+        {
+          "number": 497,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Harker, Joseph",
+      "hymns": [
+        {
+          "number": 265,
+          "page": 814
+        },
+        {
+          "number": 543,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Harkness, Robert",
+      "hymns": [
+        {
+          "number": 310,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Harrington, Karl P.",
+      "hymns": [
+        {
+          "number": 120,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Harris, Thoro",
+      "hymns": [
+        {
+          "number": 189,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Hartsough, L.",
+      "hymns": [
+        {
+          "number": 282,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Harwood, Basil",
+      "hymns": [
+        {
+          "number": 9,
+          "page": 814
+        },
+        {
+          "number": 351,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Hassler, Hans Leo",
+      "hymns": [
+        {
+          "number": 156,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Hastings, Thomas",
+      "hymns": [
+        {
+          "number": 300,
+          "page": 814
+        },
+        {
+          "number": 527,
+          "page": 814
+        },
+        {
+          "number": 601,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Hatton, John",
+      "hymns": [
+        {
+          "number": 82,
+          "page": 814
+        },
+        {
+          "number": 227,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Havergal, Frances R.",
+      "hymns": [
+        {
+          "number": 68,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Haweis, Thomas",
+      "hymns": [
+        {
+          "number": 611,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Haydn, F. Joseph",
+      "hymns": [
+        {
+          "number": 96,
+          "page": 814
+        },
+        {
+          "number": 423,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Haydn, J. Michael",
+      "hymns": [
+        {
+          "number": 599,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Haynes, Donald",
+      "hymns": [
+        {
+          "number": 449,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Hemy, Henri F.",
+      "hymns": [
+        {
+          "number": 304,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Herbst, Martin",
+      "hymns": [
+        {
+          "number": 293,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Herman, Nicolas",
+      "hymns": [
+        {
+          "number": 105,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Herrell, N. B.",
+      "hymns": [
+        {
+          "number": 178,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Hewitt, Eliza",
+      "hymns": [
+        {
+          "number": 626,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Hibbard, S.",
+      "hymns": [
+        {
+          "number": 440,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Hine, Stuart K.",
+      "hymns": [
+        {
+          "number": 86,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Hoffman, Elisha A.",
+      "hymns": [
+        {
+          "number": 335,
+          "page": 814
+        },
+        {
+          "number": 485,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Holbrook, Joseph P.",
+      "hymns": [
+        {
+          "number": 297,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Holden, Oliver",
+      "hymns": [
+        {
+          "number": 229,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Holst, Gustav",
+      "hymns": [
+        {
+          "number": 224,
+          "page": 814
+        },
+        {
+          "number": 648,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Hooper, Wayne",
+      "hymns": [
+        {
+          "number": 23,
+          "page": 814
+        },
+        {
+          "number": 126,
+          "page": 814
+        },
+        {
+          "number": 133,
+          "page": 814
+        },
+        {
+          "number": 187,
+          "page": 814
+        },
+        {
+          "number": 214,
+          "page": 814
+        },
+        {
+          "number": 220,
+          "page": 814
+        },
+        {
+          "number": 322,
+          "page": 814
+        },
+        {
+          "number": 379,
+          "page": 814
+        },
+        {
+          "number": 385,
+          "page": 814
+        },
+        {
+          "number": 410,
+          "page": 814
+        },
+        {
+          "number": 438,
+          "page": 814
+        },
+        {
+          "number": 450,
+          "page": 814
+        },
+        {
+          "number": 454,
+          "page": 814
+        },
+        {
+          "number": 464,
+          "page": 814
+        },
+        {
+          "number": 492,
+          "page": 814
+        },
+        {
+          "number": 542,
+          "page": 814
+        },
+        {
+          "number": 560,
+          "page": 814
+        },
+        {
+          "number": 673,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Hopkins, John H.",
+      "hymns": [
+        {
+          "number": 137,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Horsley, William",
+      "hymns": [
+        {
+          "number": 164,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Howard, Samuel",
+      "hymns": [
+        {
+          "number": 519,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Howells, Herbert",
+      "hymns": [
+        {
+          "number": 5,
+          "page": 814
+        },
+        {
+          "number": 59,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Hudson, Ralph E.",
+      "hymns": [
+        {
+          "number": 163,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Hughes, John",
+      "hymns": [
+        {
+          "number": 201,
+          "page": 814
+        },
+        {
+          "number": 415,
+          "page": 814
+        },
+        {
+          "number": 538,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Husband, Edward",
+      "hymns": [
+        {
+          "number": 283,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Hutcheson, Charles",
+      "hymns": [
+        {
+          "number": 392,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Hutson, Wihla",
+      "hymns": [
+        {
+          "number": 676,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Hymns and Tunes",
+      "source": true,
+      "hymns": [
+        {
+          "number": 631,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Ingall's Christian Harmony",
+      "source": true,
+      "hymns": [
+        {
+          "number": 236,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Ingalls, Jeremiah",
+      "hymns": [
+        {
+          "number": 533,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Ireland, John",
+      "hymns": [
+        {
+          "number": 188,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Irish Melody",
+      "hymns": [
+        {
+          "number": 63,
+          "page": 814
+        },
+        {
+          "number": 255,
+          "page": 814
+        },
+        {
+          "number": 320,
+          "page": 814
+        },
+        {
+          "number": 547,
+          "page": 814
+        },
+        {
+          "number": 639,
+          "page": 814
+        },
+        {
+          "number": 642,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Irvine, Jessie S.",
+      "hymns": [
+        {
+          "number": 552,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Isaak, Heinrich",
+      "hymns": [
+        {
+          "number": 57,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Italian Air",
+      "hymns": [
+        {
+          "number": 444,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Iverson, Daniel",
+      "hymns": [
+        {
+          "number": 672,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Ives, Grayston",
+      "hymns": [
+        {
+          "number": 589,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Jackson, Francis",
+      "hymns": [
+        {
+          "number": 558,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Jackson, Robert",
+      "hymns": [
+        {
+          "number": 390,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Jacob, Gordon P.",
+      "hymns": [
+        {
+          "number": 80,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Jewish Melody",
+      "hymns": [
+        {
+          "number": 11,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Jones, Joseph D.",
+      "hymns": [
+        {
+          "number": 243,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Jones, Lewis E.",
+      "hymns": [
+        {
+          "number": 294,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Jones, Ruth Caye",
+      "hymns": [
+        {
+          "number": 593,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Joseph, Georg",
+      "hymns": [
+        {
+          "number": 94,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Jude, William H.",
+      "hymns": [
+        {
+          "number": 285,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Katholisches Gesangbuch, Vienna",
+      "source": true,
+      "hymns": [
+        {
+          "number": 30,
+          "page": 814
+        },
+        {
+          "number": 502,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Kentucky Harmony",
+      "source": true,
+      "hymns": [
+        {
+          "number": 215,
+          "page": 814
+        },
+        {
+          "number": 576,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Kettle, C. E.",
+      "hymns": [
+        {
+          "number": 488,
+          "page": 814
+        }
+      ]
+    },
+    {
+      "name": "Kirkpatrick, William J.",
+      "hymns": [
+        {
+          "number": 124,
+          "page": 814
+        },
+        {
+          "number": 296,
+          "page": 815
+        },
+        {
+          "number": 302,
+          "page": 815
+        },
+        {
+          "number": 317,
+          "page": 815
+        },
+        {
+          "number": 337,
+          "page": 815
+        },
+        {
+          "number": 340,
+          "page": 815
+        },
+        {
+          "number": 368,
+          "page": 815
+        },
+        {
+          "number": 520,
+          "page": 815
+        },
+        {
+          "number": 524,
+          "page": 815
+        },
+        {
+          "number": 534,
+          "page": 815
+        },
+        {
+          "number": 598,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Knapp, Mrs. Joseph",
+      "hymns": [
+        {
+          "number": 332,
+          "page": 815
+        },
+        {
+          "number": 462,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Knapp, William",
+      "hymns": [
+        {
+          "number": 174,
+          "page": 815
+        },
+        {
+          "number": 226,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Knecht, Justin H.",
+      "hymns": [
+        {
+          "number": 283,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Knight, G. H.",
+      "hymns": [
+        {
+          "number": 628,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Knudsen, Peter",
+      "hymns": [
+        {
+          "number": 586,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Kocher, Conrad",
+      "hymns": [
+        {
+          "number": 123,
+          "page": 815
+        },
+        {
+          "number": 565,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Kremser, Edward",
+      "hymns": [
+        {
+          "number": 8,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Kruger, Johann",
+      "hymns": [
+        {
+          "number": 267,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "La Forme des Prieres",
+      "source": true,
+      "hymns": [
+        {
+          "number": 13,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Lane, Spencer",
+      "hymns": [
+        {
+          "number": 491,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Ledington, Stanley",
+      "hymns": [
+        {
+          "number": 398,
+          "page": 815
+        },
+        {
+          "number": 667,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Lee, George E.",
+      "hymns": [
+        {
+          "number": 213,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Leech, Bryan J.",
+      "hymns": [
+        {
+          "number": 270,
+          "page": 815
+        },
+        {
+          "number": 575,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Leisentritt's Gesangbuch",
+      "source": true,
+      "hymns": [
+        {
+          "number": 170,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Lemmel, Helen",
+      "hymns": [
+        {
+          "number": 290,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Lewis, Freeman",
+      "hymns": [
+        {
+          "number": 36,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Lindeman, Ludvig M.",
+      "hymns": [
+        {
+          "number": 347,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Lorenz, E. S.",
+      "hymns": [
+        {
+          "number": 272,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Lowry, Robert",
+      "hymns": [
+        {
+          "number": 422,
+          "page": 815
+        },
+        {
+          "number": 432,
+          "page": 815
+        },
+        {
+          "number": 483,
+          "page": 815
+        },
+        {
+          "number": 516,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Luther, Martin",
+      "hymns": [
+        {
+          "number": 506,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Lutkin, Peter",
+      "hymns": [
+        {
+          "number": 669,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Lwoff, Alexis",
+      "hymns": [
+        {
+          "number": 84,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Lyon, Meyer",
+      "hymns": [
+        {
+          "number": 11,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Lyrica Davidica",
+      "source": true,
+      "hymns": [
+        {
+          "number": 166,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "MacMillan, Ernest",
+      "hymns": [
+        {
+          "number": 95,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "MacNutt, Walter",
+      "hymns": [
+        {
+          "number": 353,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Main, Hubert P.",
+      "hymns": [
+        {
+          "number": 36,
+          "page": 815
+        },
+        {
+          "number": 325,
+          "page": 815
+        },
+        {
+          "number": 456,
+          "page": 815
+        },
+        {
+          "number": 621,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Maker, Frederick C.",
+      "hymns": [
+        {
+          "number": 303,
+          "page": 815
+        },
+        {
+          "number": 481,
+          "page": 815
+        },
+        {
+          "number": 588,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Malan, H. A. C.",
+      "hymns": [
+        {
+          "number": 330,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Mann, Arthur H.",
+      "hymns": [
+        {
+          "number": 331,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Marsh, Simeon B.",
+      "hymns": [
+        {
+          "number": 489,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Marshall, Jane",
+      "hymns": [
+        {
+          "number": 640,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Martin, George W.",
+      "hymns": [
+        {
+          "number": 568,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Martin, W. Stillman",
+      "hymns": [
+        {
+          "number": 99,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Mason, Lowell",
+      "hymns": [
+        {
+          "number": 125,
+          "page": 815
+        },
+        {
+          "number": 154,
+          "page": 815
+        },
+        {
+          "number": 222,
+          "page": 815
+        },
+        {
+          "number": 336,
+          "page": 815
+        },
+        {
+          "number": 350,
+          "page": 815
+        },
+        {
+          "number": 375,
+          "page": 815
+        },
+        {
+          "number": 383,
+          "page": 815
+        },
+        {
+          "number": 384,
+          "page": 815
+        },
+        {
+          "number": 445,
+          "page": 815
+        },
+        {
+          "number": 473,
+          "page": 815
+        },
+        {
+          "number": 517,
+          "page": 815
+        },
+        {
+          "number": 594,
+          "page": 815
+        },
+        {
+          "number": 605,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Matthews,Timothy R.",
+      "hymns": [
+        {
+          "number": 140,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "McAfee, C. B.",
+      "hymns": [
+        {
+          "number": 495,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "McCarthy, David",
+      "hymns": [
+        {
+          "number": 87,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "McDonald, William",
+      "hymns": [
+        {
+          "number": 437,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "McGranahan, James",
+      "hymns": [
+        {
+          "number": 195,
+          "page": 815
+        },
+        {
+          "number": 207,
+          "page": 815
+        },
+        {
+          "number": 343,
+          "page": 815
+        },
+        {
+          "number": 511,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "McNaughton, John H.",
+      "hymns": [
+        {
+          "number": 652,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Mendelssohn, Felix",
+      "hymns": [
+        {
+          "number": 122,
+          "page": 815
+        },
+        {
+          "number": 498,
+          "page": 815
+        },
+        {
+          "number": 666,
+          "page": 815
+        },
+        {
+          "number": 693,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Merrell, Abraham D.",
+      "hymns": [
+        {
+          "number": 446,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Messiter, Arthur H.",
+      "hymns": [
+        {
+          "number": 27,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Micklem, Caryl",
+      "hymns": [
+        {
+          "number": 566,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Miles, C. Austin",
+      "hymns": [
+        {
+          "number": 487,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Millard, Harrison",
+      "hymns": [
+        {
+          "number": 46,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Miller, Edward",
+      "hymns": [
+        {
+          "number": 155,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Miller, Harold A.",
+      "hymns": [
+        {
+          "number": 492,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Miller, William",
+      "hymns": [
+        {
+          "number": 437,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Minor, George A.",
+      "hymns": [
+        {
+          "number": 369,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Monk, William H.",
+      "hymns": [
+        {
+          "number": 50,
+          "page": 815
+        },
+        {
+          "number": 233,
+          "page": 815
+        },
+        {
+          "number": 603,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Moore, John M.",
+      "hymns": [
+        {
+          "number": 476,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Moore, William",
+      "hymns": [
+        {
+          "number": 187,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Morris, Mrs. C. H.",
+      "hymns": [
+        {
+          "number": 301,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Mountain, James",
+      "hymns": [
+        {
+          "number": 74,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Mozart, Wolfgang Amadeus",
+      "hymns": [
+        {
+          "number": 325,
+          "page": 815
+        },
+        {
+          "number": 621,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Murray, A. Gregory",
+      "hymns": [
+        {
+          "number": 349,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Naegeli, Johann G.",
+      "hymns": [
+        {
+          "number": 350,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Nares, James",
+      "hymns": [
+        {
+          "number": 630,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Neander, Joachim",
+      "hymns": [
+        {
+          "number": 3,
+          "page": 815
+        },
+        {
+          "number": 45,
+          "page": 815
+        },
+        {
+          "number": 418,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Nelson, Ronald",
+      "hymns": [
+        {
+          "number": 682,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Netherlands Folk Song",
+      "hymns": [
+        {
+          "number": 8,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Nettleton, Asahel",
+      "hymns": [
+        {
+          "number": 334,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Neumark, George",
+      "hymns": [
+        {
+          "number": 510,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Neuvermehrtes Meiningisches Gesangbuch",
+      "source": true,
+      "hymns": [
+        {
+          "number": 274,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Nicholson, Sydney",
+      "hymns": [
+        {
+          "number": 147,
+          "page": 815
+        },
+        {
+          "number": 362,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Nicolai, Philip",
+      "hymns": [
+        {
+          "number": 18,
+          "page": 815
+        },
+        {
+          "number": 210,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Noble, T. Tertius",
+      "hymns": [
+        {
+          "number": 357,
+          "page": 815
+        },
+        {
+          "number": 424,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Norwegian Melody",
+      "hymns": [
+        {
+          "number": 523,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Oakeley, Herbert S.",
+      "hymns": [
+        {
+          "number": 242,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Ogden, W. A.",
+      "hymns": [
+        {
+          "number": 258,
+          "page": 815
+        },
+        {
+          "number": 361,
+          "page": 815
+        },
+        {
+          "number": 373,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Osterman, Eurydice",
+      "hymns": [
+        {
+          "number": 536,
+          "page": 815
+        },
+        {
+          "number": 624,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Owen, Blythe",
+      "hymns": [
+        {
+          "number": 277,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Owen, William",
+      "hymns": [
+        {
+          "number": 165,
+          "page": 815
+        },
+        {
+          "number": 180,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Palestrina, Giovanni",
+      "hymns": [
+        {
+          "number": 172,
+          "page": 815
+        },
+        {
+          "number": 471,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Paris Antiphoner",
+      "source": true,
+      "hymns": [
+        {
+          "number": 234,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Parker, Edwin P.",
+      "hymns": [
+        {
+          "number": 268,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Parker, Horatio",
+      "hymns": [
+        {
+          "number": 217,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Parry, Charles H. H.",
+      "hymns": [
+        {
+          "number": 20,
+          "page": 815
+        },
+        {
+          "number": 80,
+          "page": 815
+        },
+        {
+          "number": 480,
+          "page": 815
+        },
+        {
+          "number": 636,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Parry, Joseph",
+      "hymns": [
+        {
+          "number": 592,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Peace, Albert L.",
+      "hymns": [
+        {
+          "number": 76,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Peterson, John W.",
+      "hymns": [
+        {
+          "number": 111,
+          "page": 815
+        },
+        {
+          "number": 578,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Philipps, Philip",
+      "hymns": [
+        {
+          "number": 610,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Piae Cantiones",
+      "source": true,
+      "hymns": [
+        {
+          "number": 95,
+          "page": 815
+        },
+        {
+          "number": 129,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Plainsong",
+      "hymns": [
+        {
+          "number": 116,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Pleyel, Ignace",
+      "hymns": [
+        {
+          "number": 391,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Pocket Companion",
+      "source": true,
+      "hymns": [
+        {
+          "number": 454,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Polish Carol",
+      "hymns": [
+        {
+          "number": 127,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Praetorius, Michael",
+      "hymns": [
+        {
+          "number": 131,
+          "page": 815
+        },
+        {
+          "number": 333,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Praxis Pietatis Melica",
+      "hymns": [
+        {
+          "number": 1,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Pritchard, Rowland H.",
+      "hymns": [
+        {
+          "number": 167,
+          "page": 815
+        },
+        {
+          "number": 204,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Proctor, Kenneth S.",
+      "hymns": [
+        {
+          "number": 496,
+          "page": 815
+        },
+        {
+          "number": 564,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Proulx, Richard",
+      "hymns": [
+        {
+          "number": 162,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Psalmodia Evangelica",
+      "source": true,
+      "hymns": [
+        {
+          "number": 182,
+          "page": 815
+        },
+        {
+          "number": 378,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Purcell, Henry",
+      "hymns": [
+        {
+          "number": 607,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Ramsay, Robert",
+      "hymns": [
+        {
+          "number": 663,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Read, John",
+      "hymns": [
+        {
+          "number": 278,
+          "page": 815
+        },
+        {
+          "number": 677,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Redhead, Richard",
+      "hymns": [
+        {
+          "number": 157,
+          "page": 815
+        },
+        {
+          "number": 549,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Redner, Louis H.",
+      "hymns": [
+        {
+          "number": 135,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Reinagle, Alexander R.",
+      "hymns": [
+        {
+          "number": 238,
+          "page": 815
+        },
+        {
+          "number": 587,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Reynolds, William J.",
+      "hymns": [
+        {
+          "number": 642,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Rimbault, Edward F.",
+      "hymns": [
+        {
+          "number": 484,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Roberts, John",
+      "hymns": [
+        {
+          "number": 25,
+          "page": 815
+        },
+        {
+          "number": 176,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Root, George F.",
+      "hymns": [
+        {
+          "number": 88,
+          "page": 815
+        },
+        {
+          "number": 218,
+          "page": 815
+        },
+        {
+          "number": 366,
+          "page": 815
+        },
+        {
+          "number": 692,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Rounsefell, Carrie E.",
+      "hymns": [
+        {
+          "number": 573,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Rousseau, Jean J.",
+      "hymns": [
+        {
+          "number": 447,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Routley, Erik",
+      "hymns": [
+        {
+          "number": 571,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Runyan, William L.",
+      "hymns": [
+        {
+          "number": 100,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Russell, Studley L.",
+      "hymns": [
+        {
+          "number": 643,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Sacred Harp",
+      "source": true,
+      "hymns": [
+        {
+          "number": 299,
+          "page": 815
+        },
+        {
+          "number": 363,
+          "page": 815
+        },
+        {
+          "number": 448,
+          "page": 815
+        },
+        {
+          "number": 622,
+          "page": 815
+        },
+        {
+          "number": 634,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Sankey, Ira D.",
+      "hymns": [
+        {
+          "number": 208,
+          "page": 815
+        },
+        {
+          "number": 284,
+          "page": 815
+        },
+        {
+          "number": 472,
+          "page": 815
+        },
+        {
+          "number": 525,
+          "page": 815
+        },
+        {
+          "number": 529,
+          "page": 815
+        },
+        {
+          "number": 608,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Sarum Plainsong",
+      "hymns": [
+        {
+          "number": 72,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Sateren, Leland",
+      "hymns": [
+        {
+          "number": 407,
+          "page": 815
+        },
+        {
+          "number": 556,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Scholefield, Clement C.",
+      "hymns": [
+        {
+          "number": 56,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Schop, Johann",
+      "hymns": [
+        {
+          "number": 128,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Schubert, Franz",
+      "hymns": [
+        {
+          "number": 661,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Schulz, Johann A. P.",
+      "hymns": [
+        {
+          "number": 561,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Schulz-Widmar, Russell",
+      "hymns": [
+        {
+          "number": 13,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Schumann, Robert",
+      "hymns": [
+        {
+          "number": 541,
+          "page": 815
+        },
+        {
+          "number": 548,
+          "page": 815
+        },
+        {
+          "number": 686,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Scott, Clara",
+      "hymns": [
+        {
+          "number": 326,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Scott-Gatty, Alfred",
+      "hymns": [
+        {
+          "number": 651,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Scottish Psalter",
+      "source": true,
+      "hymns": [
+        {
+          "number": 107,
+          "page": 815
+        },
+        {
+          "number": 649,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Sederquist, G. W.",
+      "hymns": [
+        {
+          "number": 212,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Shaw, Geoffrey",
+      "hymns": [
+        {
+          "number": 129,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Shaw, Martin",
+      "hymns": [
+        {
+          "number": 28,
+          "page": 815
+        },
+        {
+          "number": 93,
+          "page": 815
+        },
+        {
+          "number": 145,
+          "page": 815
+        },
+        {
+          "number": 175,
+          "page": 815
+        },
+        {
+          "number": 225,
+          "page": 815
+        },
+        {
+          "number": 540,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Shea, George B.",
+      "hymns": [
+        {
+          "number": 75,
+          "page": 815
+        },
+        {
+          "number": 327,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Sheppard, Franklin L.",
+      "hymns": [
+        {
+          "number": 92,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Sherwin, William",
+      "hymns": [
+        {
+          "number": 34,
+          "page": 815
+        },
+        {
+          "number": 51,
+          "page": 815
+        },
+        {
+          "number": 271,
+          "page": 815
+        },
+        {
+          "number": 614,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Showalter, A. J.",
+      "hymns": [
+        {
+          "number": 469,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Sibelius, Jean",
+      "hymns": [
+        {
+          "number": 461,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Slater, Gordon",
+      "hymns": [
+        {
+          "number": 585,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Smart, Henry",
+      "hymns": [
+        {
+          "number": 119,
+          "page": 815
+        },
+        {
+          "number": 619,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Smith, Alexander B.",
+      "hymns": [
+        {
+          "number": 247,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Smith, H. Percy",
+      "hymns": [
+        {
+          "number": 574,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Smith, Robert A.",
+      "hymns": [
+        {
+          "number": 113,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Smith, Samuel",
+      "hymns": [
+        {
+          "number": 110,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Southern Harmony",
+      "source": true,
+      "hymns": [
+        {
+          "number": 104,
+          "page": 815
+        },
+        {
+          "number": 162,
+          "page": 815
+        },
+        {
+          "number": 620,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Sowerby, Leo",
+      "hymns": [
+        {
+          "number": 399,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Stainer, John",
+      "hymns": [
+        {
+          "number": 414,
+          "page": 815
+        },
+        {
+          "number": 664,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Stanford, Charles V.",
+      "hymns": [
+        {
+          "number": 32,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Stanton, Walter K.",
+      "hymns": [
+        {
+          "number": 160,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Stebbins, George",
+      "hymns": [
+        {
+          "number": 49,
+          "page": 815
+        },
+        {
+          "number": 186,
+          "page": 815
+        },
+        {
+          "number": 292,
+          "page": 815
+        },
+        {
+          "number": 436,
+          "page": 815
+        },
+        {
+          "number": 500,
+          "page": 815
+        },
+        {
+          "number": 567,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Steggall, Charles",
+      "hymns": [
+        {
+          "number": 411,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Steinel, I. A.",
+      "hymns": [
+        {
+          "number": 380,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Steurlein, J.",
+      "hymns": [
+        {
+          "number": 339,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Stier, Alfred",
+      "hymns": [
+        {
+          "number": 14,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Stockton, J. H.",
+      "hymns": [
+        {
+          "number": 254,
+          "page": 815
+        },
+        {
+          "number": 279,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Strange, Charles",
+      "hymns": [
+        {
+          "number": 288,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Strattner, George C.",
+      "hymns": [
+        {
+          "number": 482,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Strom, Ralph A.",
+      "hymns": [
+        {
+          "number": 658,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Sullivan, Arthur",
+      "hymns": [
+        {
+          "number": 169,
+          "page": 815
+        },
+        {
+          "number": 568,
+          "page": 815
+        },
+        {
+          "number": 582,
+          "page": 815
+        },
+        {
+          "number": 612,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Sumner, John B.",
+      "hymns": [
+        {
+          "number": 468,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Swedish Folk Melody",
+      "hymns": [
+        {
+          "number": 86,
+          "page": 815
+        },
+        {
+          "number": 101,
+          "page": 815
+        },
+        {
+          "number": 153,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Sweney, John R.",
+      "hymns": [
+        {
+          "number": 152,
+          "page": 815
+        },
+        {
+          "number": 245,
+          "page": 815
+        },
+        {
+          "number": 260,
+          "page": 815
+        },
+        {
+          "number": 329,
+          "page": 815
+        },
+        {
+          "number": 425,
+          "page": 815
+        },
+        {
+          "number": 470,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Swift, James",
+      "hymns": [
+        {
+          "number": 680,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Tallis, Thomas",
+      "hymns": [
+        {
+          "number": 53,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Taylor, Cyril V.",
+      "hymns": [
+        {
+          "number": 61,
+          "page": 815
+        },
+        {
+          "number": 583,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Teschner, Melchior",
+      "hymns": [
+        {
+          "number": 230,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Terry, Richard",
+      "hymns": [
+        {
+          "number": 364,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Thatcher, Reginald S.",
+      "hymns": [
+        {
+          "number": 354,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "The New Universal Psalmodist",
+      "source": true,
+      "hymns": [
+        {
+          "number": 344,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Thiman, Eric",
+      "hymns": [
+        {
+          "number": 231,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Thomas, John R.",
+      "hymns": [
+        {
+          "number": 442,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Thompson, Will L.",
+      "hymns": [
+        {
+          "number": 185,
+          "page": 815
+        },
+        {
+          "number": 287,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Thomson, Virgil",
+      "hymns": [
+        {
+          "number": 104,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Thuringer Melody",
+      "hymns": [
+        {
+          "number": 78,
+          "page": 815
+        }
+      ]
+    },
+    {
+      "name": "Tindley, Charles A.",
+      "hymns": [
+        {
+          "number": 322,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Tomer, William G.",
+      "hymns": [
+        {
+          "number": 65,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Tourjee, Lizzie S.",
+      "hymns": [
+        {
+          "number": 114,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Towner, D. B.",
+      "hymns": [
+        {
+          "number": 109,
+          "page": 816
+        },
+        {
+          "number": 508,
+          "page": 816
+        },
+        {
+          "number": 590,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Tullar, Grant C.",
+      "hymns": [
+        {
+          "number": 206,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Tyrolese Carol",
+      "hymns": [
+        {
+          "number": 638,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Unknown",
+      "hymns": [
+        {
+          "number": 246,
+          "page": 816
+        },
+        {
+          "number": 248,
+          "page": 816
+        },
+        {
+          "number": 439,
+          "page": 816
+        },
+        {
+          "number": 453,
+          "page": 816
+        },
+        {
+          "number": 486,
+          "page": 816
+        },
+        {
+          "number": 617,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Vaughan, James D.",
+      "hymns": [
+        {
+          "number": 505,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Vaughan Williams, R.",
+      "hymns": [
+        {
+          "number": 2,
+          "page": 816
+        },
+        {
+          "number": 66,
+          "page": 816
+        },
+        {
+          "number": 90,
+          "page": 816
+        },
+        {
+          "number": 91,
+          "page": 816
+        },
+        {
+          "number": 144,
+          "page": 816
+        },
+        {
+          "number": 146,
+          "page": 816
+        },
+        {
+          "number": 168,
+          "page": 816
+        },
+        {
+          "number": 228,
+          "page": 816
+        },
+        {
+          "number": 232,
+          "page": 816
+        },
+        {
+          "number": 257,
+          "page": 816
+        },
+        {
+          "number": 421,
+          "page": 816
+        },
+        {
+          "number": 465,
+          "page": 816
+        },
+        {
+          "number": 581,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Venua, Frederick M. A.",
+      "hymns": [
+        {
+          "number": 17,
+          "page": 816
+        },
+        {
+          "number": 393,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Virginia Harmony",
+      "source": true,
+      "hymns": [
+        {
+          "number": 108,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Vulpius, Melchior",
+      "hymns": [
+        {
+          "number": 173,
+          "page": 816
+        },
+        {
+          "number": 629,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Wade's Cantus Diversi",
+      "source": true,
+      "hymns": [
+        {
+          "number": 132,
+          "page": 816
+        },
+        {
+          "number": 211,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Walch, James",
+      "hymns": [
+        {
+          "number": 40,
+          "page": 816
+        },
+        {
+          "number": 365,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Walker's Southern Harmony",
+      "source": true,
+      "hymns": [
+        {
+          "number": 620,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Wallace, William V.",
+      "hymns": [
+        {
+          "number": 455,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Walter, William",
+      "hymns": [
+        {
+          "number": 117,
+          "page": 816
+        },
+        {
+          "number": 615,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Warren, George W.",
+      "hymns": [
+        {
+          "number": 645,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Warren, Norman L.",
+      "hymns": [
+        {
+          "number": 419,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Watson, Sydney",
+      "hymns": [
+        {
+          "number": 31,
+          "page": 816
+        },
+        {
+          "number": 635,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Weaving, T. H.",
+      "hymns": [
+        {
+          "number": 352,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Webb, George J.",
+      "hymns": [
+        {
+          "number": 618,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Webbe, Samuel",
+      "hymns": [
+        {
+          "number": 477,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Weber, von, Carl M.",
+      "hymns": [
+        {
+          "number": 48,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Webster, J. P.",
+      "hymns": [
+        {
+          "number": 428,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Weeden, W. S.",
+      "hymns": [
+        {
+          "number": 309,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Welsh Melody",
+      "hymns": [
+        {
+          "number": 21,
+          "page": 816
+        },
+        {
+          "number": 23,
+          "page": 816
+        },
+        {
+          "number": 47,
+          "page": 816
+        },
+        {
+          "number": 161,
+          "page": 816
+        },
+        {
+          "number": 407,
+          "page": 816
+        },
+        {
+          "number": 560,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Wesley, Samuel",
+      "hymns": [
+        {
+          "number": 273,
+          "page": 816
+        },
+        {
+          "number": 316,
+          "page": 816
+        },
+        {
+          "number": 348,
+          "page": 816
+        },
+        {
+          "number": 691,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "West, Melvin",
+      "hymns": [
+        {
+          "number": 14,
+          "page": 816
+        },
+        {
+          "number": 44,
+          "page": 816
+        },
+        {
+          "number": 58,
+          "page": 816
+        },
+        {
+          "number": 104,
+          "page": 816
+        },
+        {
+          "number": 123,
+          "page": 816
+        },
+        {
+          "number": 153,
+          "page": 816
+        },
+        {
+          "number": 165,
+          "page": 816
+        },
+        {
+          "number": 167,
+          "page": 816
+        },
+        {
+          "number": 199,
+          "page": 816
+        },
+        {
+          "number": 200,
+          "page": 816
+        },
+        {
+          "number": 209,
+          "page": 816
+        },
+        {
+          "number": 215,
+          "page": 816
+        },
+        {
+          "number": 227,
+          "page": 816
+        },
+        {
+          "number": 278,
+          "page": 816
+        },
+        {
+          "number": 280,
+          "page": 816
+        },
+        {
+          "number": 320,
+          "page": 816
+        },
+        {
+          "number": 375,
+          "page": 816
+        },
+        {
+          "number": 386,
+          "page": 816
+        },
+        {
+          "number": 404,
+          "page": 816
+        },
+        {
+          "number": 448,
+          "page": 816
+        },
+        {
+          "number": 451,
+          "page": 816
+        },
+        {
+          "number": 509,
+          "page": 816
+        },
+        {
+          "number": 563,
+          "page": 816
+        },
+        {
+          "number": 616,
+          "page": 816
+        },
+        {
+          "number": 620,
+          "page": 816
+        },
+        {
+          "number": 627,
+          "page": 816
+        },
+        {
+          "number": 634,
+          "page": 816
+        },
+        {
+          "number": 638,
+          "page": 816
+        },
+        {
+          "number": 657,
+          "page": 816
+        },
+        {
+          "number": 663,
+          "page": 816
+        },
+        {
+          "number": 674,
+          "page": 816
+        },
+        {
+          "number": 675,
+          "page": 816
+        },
+        {
+          "number": 685,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Wheale, William",
+      "hymns": [
+        {
+          "number": 35,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Whelpton, George",
+      "hymns": [
+        {
+          "number": 684,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "White, James Edson",
+      "hymns": [
+        {
+          "number": 281,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Whittle, Mary",
+      "hymns": [
+        {
+          "number": 507,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Widdemer, E. S.",
+      "hymns": [
+        {
+          "number": 401,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Widmar, Russell-Schulz",
+      "hymns": [
+        {
+          "number": 13,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Wilkes, John B.",
+      "hymns": [
+        {
+          "number": 112,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "William Sandy's Christmas Carols",
+      "source": true,
+      "hymns": [
+        {
+          "number": 118,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Williams, Aaron",
+      "hymns": [
+        {
+          "number": 39,
+          "page": 816
+        },
+        {
+          "number": 344,
+          "page": 816
+        },
+        {
+          "number": 372,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Williams, Derek",
+      "hymns": [
+        {
+          "number": 97,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Williams, Robert",
+      "hymns": [
+        {
+          "number": 25,
+          "page": 816
+        },
+        {
+          "number": 176,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Williams, T. J.",
+      "hymns": [
+        {
+          "number": 413,
+          "page": 816
+        },
+        {
+          "number": 606,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Willis, Richard",
+      "hymns": [
+        {
+          "number": 130,
+          "page": 816
+        },
+        {
+          "number": 240,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Wilson, David",
+      "hymns": [
+        {
+          "number": 33,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Wilson, Emily D.",
+      "hymns": [
+        {
+          "number": 633,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Wilson, Hugh",
+      "hymns": [
+        {
+          "number": 113,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Wilson, John",
+      "hymns": [
+        {
+          "number": 397,
+          "page": 816
+        },
+        {
+          "number": 584,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Wood, Dale",
+      "hymns": [
+        {
+          "number": 42,
+          "page": 816
+        },
+        {
+          "number": 235,
+          "page": 816
+        },
+        {
+          "number": 550,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Woods, Bertram E.",
+      "hymns": [
+        {
+          "number": 219,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Work, Herbert",
+      "hymns": [
+        {
+          "number": 192,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Work, John W., III",
+      "hymns": [
+        {
+          "number": 121,
+          "page": 816
+        },
+        {
+          "number": 580,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Wren, Brian",
+      "hymns": [
+        {
+          "number": 342,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Wright, Eleanor",
+      "hymns": [
+        {
+          "number": 688,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Young, Gordon",
+      "hymns": [
+        {
+          "number": 77,
+          "page": 816
+        }
+      ]
+    },
+    {
+      "name": "Zundel, John",
+      "hymns": [
+        {
+          "number": 191,
+          "page": 816
+        }
+      ]
+    }
+  ]
+}

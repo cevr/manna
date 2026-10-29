@@ -1,0 +1,5678 @@
+{
+  "version": 1,
+  "book": "sdah-1985",
+  "index": "topical",
+  "title": "TOPICAL INDEX OF HYMNS AND READINGS",
+  "note": "Entries in italics refer to Scripture Readings",
+  "pages": [
+    {
+      "page": 776,
+      "entries": 70
+    },
+    {
+      "page": 777,
+      "entries": 86
+    },
+    {
+      "page": 778,
+      "entries": 83
+    },
+    {
+      "page": 779,
+      "entries": 95
+    },
+    {
+      "page": 780,
+      "entries": 101
+    },
+    {
+      "page": 781,
+      "entries": 90
+    },
+    {
+      "page": 782,
+      "entries": 111
+    },
+    {
+      "page": 783,
+      "entries": 112
+    },
+    {
+      "page": 784,
+      "entries": 87
+    },
+    {
+      "page": 785,
+      "entries": 101
+    },
+    {
+      "page": 786,
+      "entries": 70
+    },
+    {
+      "page": 787,
+      "entries": 97
+    },
+    {
+      "page": 788,
+      "entries": 77
+    }
+  ],
+  "topics": [
+    {
+      "name": "ADORATION AND PRAISE",
+      "see": [],
+      "hymns": [
+        {
+          "number": 2,
+          "page": 776
+        },
+        {
+          "number": 5,
+          "page": 776
+        },
+        {
+          "number": 16,
+          "page": 776
+        },
+        {
+          "number": 23,
+          "page": 776
+        },
+        {
+          "number": 38,
+          "page": 776
+        },
+        {
+          "number": 10,
+          "page": 776
+        },
+        {
+          "number": 90,
+          "page": 776
+        },
+        {
+          "number": 24,
+          "page": 776
+        },
+        {
+          "number": 3,
+          "page": 776
+        },
+        {
+          "number": 22,
+          "page": 776
+        },
+        {
+          "number": 30,
+          "page": 776
+        },
+        {
+          "number": 86,
+          "page": 776
+        },
+        {
+          "number": 21,
+          "page": 776
+        },
+        {
+          "number": 227,
+          "page": 776
+        },
+        {
+          "number": 12,
+          "page": 776
+        },
+        {
+          "number": 9,
+          "page": 776
+        },
+        {
+          "number": 14,
+          "page": 776
+        },
+        {
+          "number": 17,
+          "page": 776
+        },
+        {
+          "number": 15,
+          "page": 776
+        },
+        {
+          "number": 94,
+          "page": 776
+        },
+        {
+          "number": 13,
+          "page": 776
+        },
+        {
+          "number": 18,
+          "page": 776
+        },
+        {
+          "number": 20,
+          "page": 776
+        },
+        {
+          "number": 19,
+          "page": 776
+        },
+        {
+          "number": 37,
+          "page": 776
+        },
+        {
+          "number": 36,
+          "page": 776
+        },
+        {
+          "number": 6,
+          "page": 776
+        },
+        {
+          "number": 4,
+          "page": 776
+        },
+        {
+          "number": 25,
+          "page": 776
+        },
+        {
+          "number": 26,
+          "page": 776
+        },
+        {
+          "number": 1,
+          "page": 776
+        },
+        {
+          "number": 28,
+          "page": 776
+        },
+        {
+          "number": 27,
+          "page": 776
+        },
+        {
+          "number": 33,
+          "page": 776
+        },
+        {
+          "number": 29,
+          "page": 776
+        },
+        {
+          "number": 31,
+          "page": 776
+        },
+        {
+          "number": 11,
+          "page": 776
+        },
+        {
+          "number": 7,
+          "page": 776
+        },
+        {
+          "number": 34,
+          "page": 776
+        },
+        {
+          "number": 8,
+          "page": 776
+        },
+        {
+          "number": 32,
+          "page": 776
+        },
+        {
+          "number": 35,
+          "page": 776
+        }
+      ],
+      "readings": [
+        {
+          "number": 702,
+          "page": 776
+        },
+        {
+          "number": 833,
+          "page": 776
+        },
+        {
+          "number": 698,
+          "page": 776
+        },
+        {
+          "number": 705,
+          "page": 776
+        },
+        {
+          "number": 696,
+          "page": 776
+        },
+        {
+          "number": 704,
+          "page": 776
+        },
+        {
+          "number": 706,
+          "page": 776
+        },
+        {
+          "number": 728,
+          "page": 776
+        },
+        {
+          "number": 699,
+          "page": 776
+        },
+        {
+          "number": 707,
+          "page": 776
+        },
+        {
+          "number": 700,
+          "page": 776
+        },
+        {
+          "number": 708,
+          "page": 776
+        },
+        {
+          "number": 703,
+          "page": 776
+        },
+        {
+          "number": 859,
+          "page": 776
+        },
+        {
+          "number": 718,
+          "page": 776
+        },
+        {
+          "number": 701,
+          "page": 776
+        },
+        {
+          "number": 697,
+          "page": 776
+        },
+        {
+          "number": 785,
+          "page": 776
+        },
+        {
+          "number": 742,
+          "page": 776
+        },
+        {
+          "number": 841,
+          "page": 776
+        }
+      ]
+    },
+    {
+      "name": "ADVENT",
+      "see": ["See EARLY ADVENT; JESUS CHRIST: First Advent, Second Advent"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "ASCENSION",
+      "see": ["See JESUS CHRIST: Resurrection and Ascension"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "ASSURANCE",
+      "see": [
+        "See FAITH AND TRUST; GUIDANCE; HOPE AND COMFORT; JOY AND PEACE; SALVATION AND REDEMPTION"
+      ],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "BAPTISM",
+      "see": [],
+      "hymns": [
+        {
+          "number": 258,
+          "page": 776
+        },
+        {
+          "number": 297,
+          "page": 776
+        },
+        {
+          "number": 333,
+          "page": 776
+        },
+        {
+          "number": 332,
+          "page": 776
+        },
+        {
+          "number": 318,
+          "page": 776
+        }
+      ],
+      "readings": [
+        {
+          "number": 759,
+          "page": 776
+        }
+      ]
+    },
+    {
+      "name": "BIBLE",
+      "see": ["See HOLY SCRIPTURES"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "BIRTH OF CHRIST",
+      "see": ["See JESUS CHRIST: Birth"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "BROTHERHOOD",
+      "see": ["See LOVE FOR ONE ANOTHER"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "CANONS",
+      "see": ["See separate index"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "CAROLS",
+      "see": ["See JESUS CHRIST: First Advent, Birth"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "CHILDREN",
+      "see": ["See LOVE IN THE HOME"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "CHILDREN'S HYMNS",
+      "see": ["See separate index"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "CHILD DEDICATION",
+      "see": [],
+      "hymns": [
+        {
+          "number": 146,
+          "page": 776
+        },
+        {
+          "number": 379,
+          "page": 776
+        }
+      ],
+      "readings": []
+    },
+    {
+      "name": "CHRISTIAN HOME",
+      "see": ["See LOVE IN THE HOME; MARRIAGE"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "CHRISTIAN LIFE",
+      "see": [],
+      "hymns": [],
+      "readings": [
+        {
+          "number": 784,
+          "page": 777
+        },
+        {
+          "number": 787,
+          "page": 777
+        },
+        {
+          "number": 789,
+          "page": 777
+        },
+        {
+          "number": 788,
+          "page": 777
+        },
+        {
+          "number": 790,
+          "page": 777
+        },
+        {
+          "number": 785,
+          "page": 777
+        },
+        {
+          "number": 786,
+          "page": 777
+        }
+      ]
+    },
+    {
+      "name": "CHRISTIAN WARFARE",
+      "see": [],
+      "hymns": [
+        {
+          "number": 506,
+          "page": 777
+        },
+        {
+          "number": 609,
+          "page": 777
+        },
+        {
+          "number": 611,
+          "page": 777
+        },
+        {
+          "number": 608,
+          "page": 777
+        },
+        {
+          "number": 613,
+          "page": 777
+        },
+        {
+          "number": 607,
+          "page": 777
+        },
+        {
+          "number": 99,
+          "page": 777
+        },
+        {
+          "number": 485,
+          "page": 777
+        },
+        {
+          "number": 619,
+          "page": 777
+        },
+        {
+          "number": 322,
+          "page": 777
+        },
+        {
+          "number": 606,
+          "page": 777
+        },
+        {
+          "number": 612,
+          "page": 777
+        },
+        {
+          "number": 615,
+          "page": 777
+        },
+        {
+          "number": 616,
+          "page": 777
+        },
+        {
+          "number": 614,
+          "page": 777
+        },
+        {
+          "number": 610,
+          "page": 777
+        },
+        {
+          "number": 618,
+          "page": 777
+        },
+        {
+          "number": 617,
+          "page": 777
+        }
+      ],
+      "readings": [
+        {
+          "number": 817,
+          "page": 777
+        },
+        {
+          "number": 840,
+          "page": 777
+        }
+      ]
+    },
+    {
+      "name": "CHRISTMAS",
+      "see": ["See JESUS CHRIST: First Advent, Birth"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "CHURCH",
+      "see": ["See COMMUNITY IN CHRIST; MISSION OF THE CHURCH"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "CHURCH DEDICATION",
+      "see": [],
+      "hymns": [
+        {
+          "number": 376,
+          "page": 777
+        },
+        {
+          "number": 235,
+          "page": 777
+        },
+        {
+          "number": 59,
+          "page": 777
+        },
+        {
+          "number": 348,
+          "page": 777
+        }
+      ],
+      "readings": []
+    },
+    {
+      "name": "CLOSE OF WORSHIP",
+      "see": [],
+      "hymns": [
+        {
+          "number": 65,
+          "page": 777
+        },
+        {
+          "number": 64,
+          "page": 777
+        },
+        {
+          "number": 69,
+          "page": 777
+        },
+        {
+          "number": 67,
+          "page": 777
+        },
+        {
+          "number": 68,
+          "page": 777
+        }
+      ],
+      "readings": []
+    },
+    {
+      "name": "COMFORT",
+      "see": ["See HOPE AND COMFORT"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "COMMITMENT",
+      "see": ["See LOVING SERVICE"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "COMMUNION",
+      "see": [],
+      "hymns": [
+        {
+          "number": 397,
+          "page": 777
+        },
+        {
+          "number": 399,
+          "page": 777
+        },
+        {
+          "number": 398,
+          "page": 777
+        },
+        {
+          "number": 402,
+          "page": 777
+        },
+        {
+          "number": 400,
+          "page": 777
+        },
+        {
+          "number": 401,
+          "page": 777
+        },
+        {
+          "number": 409,
+          "page": 777
+        },
+        {
+          "number": 403,
+          "page": 777
+        },
+        {
+          "number": 408,
+          "page": 777
+        },
+        {
+          "number": 396,
+          "page": 777
+        },
+        {
+          "number": 406,
+          "page": 777
+        },
+        {
+          "number": 404,
+          "page": 777
+        },
+        {
+          "number": 405,
+          "page": 777
+        },
+        {
+          "number": 407,
+          "page": 777
+        },
+        {
+          "number": 411,
+          "page": 777
+        },
+        {
+          "number": 410,
+          "page": 777
+        }
+      ],
+      "readings": [
+        {
+          "number": 733,
+          "page": 777
+        },
+        {
+          "number": 734,
+          "page": 777
+        },
+        {
+          "number": 771,
+          "page": 777
+        },
+        {
+          "number": 772,
+          "page": 777
+        },
+        {
+          "number": 773,
+          "page": 777
+        }
+      ]
+    },
+    {
+      "name": "COMMUNITY IN CHRIST",
+      "see": [],
+      "hymns": [
+        {
+          "number": 350,
+          "page": 777
+        },
+        {
+          "number": 347,
+          "page": 777
+        },
+        {
+          "number": 345,
+          "page": 777
+        },
+        {
+          "number": 353,
+          "page": 777
+        },
+        {
+          "number": 349,
+          "page": 777
+        },
+        {
+          "number": 344,
+          "page": 777
+        },
+        {
+          "number": 403,
+          "page": 777
+        },
+        {
+          "number": 346,
+          "page": 777
+        },
+        {
+          "number": 348,
+          "page": 777
+        },
+        {
+          "number": 352,
+          "page": 777
+        },
+        {
+          "number": 351,
+          "page": 777
+        },
+        {
+          "number": 354,
+          "page": 777
+        },
+        {
+          "number": 585,
+          "page": 777
+        }
+      ],
+      "readings": [
+        {
+          "number": 777,
+          "page": 777
+        },
+        {
+          "number": 767,
+          "page": 777
+        }
+      ]
+    },
+    {
+      "name": "CONSECRATION",
+      "see": [],
+      "hymns": [
+        {
+          "number": 547,
+          "page": 777
+        },
+        {
+          "number": 303,
+          "page": 777
+        },
+        {
+          "number": 334,
+          "page": 777
+        },
+        {
+          "number": 302,
+          "page": 777
+        },
+        {
+          "number": 306,
+          "page": 777
+        },
+        {
+          "number": 304,
+          "page": 777
+        },
+        {
+          "number": 305,
+          "page": 777
+        },
+        {
+          "number": 567,
+          "page": 777
+        },
+        {
+          "number": 307,
+          "page": 777
+        },
+        {
+          "number": 486,
+          "page": 777
+        },
+        {
+          "number": 298,
+          "page": 777
+        },
+        {
+          "number": 309,
+          "page": 777
+        },
+        {
+          "number": 311,
+          "page": 777
+        },
+        {
+          "number": 310,
+          "page": 777
+        },
+        {
+          "number": 327,
+          "page": 778
+        },
+        {
+          "number": 593,
+          "page": 778
+        },
+        {
+          "number": 325,
+          "page": 778
+        },
+        {
+          "number": 184,
+          "page": 778
+        },
+        {
+          "number": 313,
+          "page": 778
+        },
+        {
+          "number": 314,
+          "page": 778
+        },
+        {
+          "number": 324,
+          "page": 778
+        },
+        {
+          "number": 317,
+          "page": 778
+        },
+        {
+          "number": 316,
+          "page": 778
+        },
+        {
+          "number": 319,
+          "page": 778
+        },
+        {
+          "number": 69,
+          "page": 778
+        },
+        {
+          "number": 320,
+          "page": 778
+        },
+        {
+          "number": 363,
+          "page": 778
+        },
+        {
+          "number": 507,
+          "page": 778
+        },
+        {
+          "number": 328,
+          "page": 778
+        },
+        {
+          "number": 517,
+          "page": 778
+        },
+        {
+          "number": 321,
+          "page": 778
+        },
+        {
+          "number": 312,
+          "page": 778
+        },
+        {
+          "number": 301,
+          "page": 778
+        },
+        {
+          "number": 322,
+          "page": 778
+        },
+        {
+          "number": 404,
+          "page": 778
+        },
+        {
+          "number": 315,
+          "page": 778
+        },
+        {
+          "number": 323,
+          "page": 778
+        },
+        {
+          "number": 331,
+          "page": 778
+        },
+        {
+          "number": 76,
+          "page": 778
+        },
+        {
+          "number": 574,
+          "page": 778
+        },
+        {
+          "number": 326,
+          "page": 778
+        },
+        {
+          "number": 138,
+          "page": 778
+        },
+        {
+          "number": 330,
+          "page": 778
+        },
+        {
+          "number": 329,
+          "page": 778
+        },
+        {
+          "number": 154,
+          "page": 778
+        },
+        {
+          "number": 155,
+          "page": 778
+        },
+        {
+          "number": 318,
+          "page": 778
+        },
+        {
+          "number": 308,
+          "page": 778
+        }
+      ],
+      "readings": [
+        {
+          "number": 786,
+          "page": 778
+        }
+      ]
+    },
+    {
+      "name": "CREATION",
+      "see": ["See GOD THE FATHER: Power in Nature"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "DEATH",
+      "see": ["See HOPE AND COMFORT; ETERNAL LIFE"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "DEATH OF CHRIST",
+      "see": ["See JESUS CHRIST: Sufferings and Death"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "DEDICATION",
+      "see": ["See CHILD DEDICATION; CHURCH DEDICATION; CONSECRATION"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "DISCIPLESHIP",
+      "see": ["See LOVING SERVICE; MISSION OF THE CHURCH; OBEDIENCE"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "DOCTRINES",
+      "see": ["See individual doctrines"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "DUTIES",
+      "see": ["See LOVING SERVICE; MISSION OF THE CHURCH"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "EARLY ADVENT",
+      "see": [],
+      "hymns": [
+        {
+          "number": 450,
+          "page": 778
+        },
+        {
+          "number": 454,
+          "page": 778
+        },
+        {
+          "number": 440,
+          "page": 778
+        },
+        {
+          "number": 439,
+          "page": 778
+        },
+        {
+          "number": 442,
+          "page": 778
+        },
+        {
+          "number": 441,
+          "page": 778
+        },
+        {
+          "number": 444,
+          "page": 778
+        },
+        {
+          "number": 445,
+          "page": 778
+        },
+        {
+          "number": 446,
+          "page": 778
+        },
+        {
+          "number": 447,
+          "page": 778
+        },
+        {
+          "number": 449,
+          "page": 778
+        },
+        {
+          "number": 448,
+          "page": 778
+        },
+        {
+          "number": 443,
+          "page": 778
+        },
+        {
+          "number": 451,
+          "page": 778
+        },
+        {
+          "number": 453,
+          "page": 778
+        },
+        {
+          "number": 452,
+          "page": 778
+        },
+        {
+          "number": 438,
+          "page": 778
+        }
+      ],
+      "readings": []
+    },
+    {
+      "name": "EASTER",
+      "see": ["See JESUS CHRIST: Resurrection and Ascension"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "ETERNAL LIFE",
+      "see": [],
+      "hymns": [
+        {
+          "number": 450,
+          "page": 778
+        },
+        {
+          "number": 421,
+          "page": 778
+        },
+        {
+          "number": 424,
+          "page": 778
+        },
+        {
+          "number": 423,
+          "page": 778
+        },
+        {
+          "number": 425,
+          "page": 778
+        },
+        {
+          "number": 426,
+          "page": 778
+        },
+        {
+          "number": 437,
+          "page": 778
+        },
+        {
+          "number": 420,
+          "page": 778
+        },
+        {
+          "number": 429,
+          "page": 778
+        },
+        {
+          "number": 430,
+          "page": 778
+        },
+        {
+          "number": 422,
+          "page": 778
+        },
+        {
+          "number": 449,
+          "page": 778
+        },
+        {
+          "number": 427,
+          "page": 778
+        },
+        {
+          "number": 431,
+          "page": 778
+        },
+        {
+          "number": 432,
+          "page": 778
+        },
+        {
+          "number": 428,
+          "page": 778
+        },
+        {
+          "number": 433,
+          "page": 778
+        },
+        {
+          "number": 435,
+          "page": 778
+        },
+        {
+          "number": 436,
+          "page": 778
+        },
+        {
+          "number": 453,
+          "page": 778
+        },
+        {
+          "number": 434,
+          "page": 778
+        },
+        {
+          "number": 452,
+          "page": 778
+        },
+        {
+          "number": 464,
+          "page": 778
+        },
+        {
+          "number": 633,
+          "page": 778
+        }
+      ],
+      "readings": [
+        {
+          "number": 783,
+          "page": 778
+        },
+        {
+          "number": 749,
+          "page": 778
+        },
+        {
+          "number": 782,
+          "page": 778
+        },
+        {
+          "number": 751,
+          "page": 778
+        },
+        {
+          "number": 750,
+          "page": 778
+        },
+        {
+          "number": 748,
+          "page": 778
+        },
+        {
+          "number": 840,
+          "page": 778
+        }
+      ]
+    },
+    {
+      "name": "EVENING WORSHIP",
+      "see": [],
+      "hymns": [
+        {
+          "number": 50,
+          "page": 779
+        },
+        {
+          "number": 46,
+          "page": 779
+        },
+        {
+          "number": 53,
+          "page": 779
+        },
+        {
+          "number": 51,
+          "page": 779
+        },
+        {
+          "number": 47,
+          "page": 779
+        },
+        {
+          "number": 58,
+          "page": 779
+        },
+        {
+          "number": 55,
+          "page": 779
+        },
+        {
+          "number": 57,
+          "page": 779
+        },
+        {
+          "number": 52,
+          "page": 779
+        },
+        {
+          "number": 54,
+          "page": 779
+        },
+        {
+          "number": 49,
+          "page": 779
+        },
+        {
+          "number": 48,
+          "page": 779
+        },
+        {
+          "number": 502,
+          "page": 779
+        },
+        {
+          "number": 56,
+          "page": 779
+        }
+      ],
+      "readings": []
+    },
+    {
+      "name": "FAITH AND TRUST",
+      "see": [],
+      "hymns": [
+        {
+          "number": 506,
+          "page": 779
+        },
+        {
+          "number": 528,
+          "page": 779
+        },
+        {
+          "number": 516,
+          "page": 779
+        },
+        {
+          "number": 508,
+          "page": 779
+        },
+        {
+          "number": 526,
+          "page": 779
+        },
+        {
+          "number": 532,
+          "page": 779
+        },
+        {
+          "number": 521,
+          "page": 779
+        },
+        {
+          "number": 85,
+          "page": 779
+        },
+        {
+          "number": 608,
+          "page": 779
+        },
+        {
+          "number": 304,
+          "page": 779
+        },
+        {
+          "number": 527,
+          "page": 779
+        },
+        {
+          "number": 519,
+          "page": 779
+        },
+        {
+          "number": 100,
+          "page": 779
+        },
+        {
+          "number": 520,
+          "page": 779
+        },
+        {
+          "number": 525,
+          "page": 779
+        },
+        {
+          "number": 509,
+          "page": 779
+        },
+        {
+          "number": 535,
+          "page": 779
+        },
+        {
+          "number": 511,
+          "page": 779
+        },
+        {
+          "number": 510,
+          "page": 779
+        },
+        {
+          "number": 513,
+          "page": 779
+        },
+        {
+          "number": 530,
+          "page": 779
+        },
+        {
+          "number": 512,
+          "page": 779
+        },
+        {
+          "number": 514,
+          "page": 779
+        },
+        {
+          "number": 507,
+          "page": 779
+        },
+        {
+          "number": 523,
+          "page": 779
+        },
+        {
+          "number": 517,
+          "page": 779
+        },
+        {
+          "number": 522,
+          "page": 779
+        },
+        {
+          "number": 104,
+          "page": 779
+        },
+        {
+          "number": 533,
+          "page": 779
+        },
+        {
+          "number": 192,
+          "page": 779
+        },
+        {
+          "number": 518,
+          "page": 779
+        },
+        {
+          "number": 515,
+          "page": 779
+        },
+        {
+          "number": 546,
+          "page": 779
+        },
+        {
+          "number": 552,
+          "page": 779
+        },
+        {
+          "number": 524,
+          "page": 779
+        },
+        {
+          "number": 590,
+          "page": 779
+        },
+        {
+          "number": 529,
+          "page": 779
+        },
+        {
+          "number": 531,
+          "page": 779
+        },
+        {
+          "number": 534,
+          "page": 779
+        }
+      ],
+      "readings": [
+        {
+          "number": 799,
+          "page": 779
+        },
+        {
+          "number": 698,
+          "page": 779
+        },
+        {
+          "number": 800,
+          "page": 779
+        }
+      ]
+    },
+    {
+      "name": "FAMILY",
+      "see": ["See LOVE IN THE HOME; MARRIAGE"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "FELLOWSHIP",
+      "see": ["See COMMUNITY IN CHRIST; LOVE FOR ONE ANOTHER"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "FORGIVENESS",
+      "see": [],
+      "hymns": [
+        {
+          "number": 299,
+          "page": 779
+        },
+        {
+          "number": 297,
+          "page": 779
+        },
+        {
+          "number": 298,
+          "page": 779
+        },
+        {
+          "number": 300,
+          "page": 779
+        }
+      ],
+      "readings": [
+        {
+          "number": 758,
+          "page": 779
+        },
+        {
+          "number": 762,
+          "page": 779
+        },
+        {
+          "number": 711,
+          "page": 779
+        },
+        {
+          "number": 798,
+          "page": 779
+        },
+        {
+          "number": 761,
+          "page": 779
+        },
+        {
+          "number": 742,
+          "page": 779
+        },
+        {
+          "number": 814,
+          "page": 779
+        }
+      ]
+    },
+    {
+      "name": "FUNERALS",
+      "see": ["See JESUS CHRIST: Resurrection and Ascension; HOPE AND COMFORT; ETERNAL LIFE"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "GLORY AND PRAISE",
+      "see": ["See ADORATION AND PRAISE; JESUS CHRIST: Glory and Praise"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "GOD THE FATHER",
+      "see": [],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "Faithfulness",
+      "parent": "GOD THE FATHER",
+      "see": [],
+      "hymns": [
+        {
+          "number": 461,
+          "page": 779
+        },
+        {
+          "number": 101,
+          "page": 779
+        },
+        {
+          "number": 99,
+          "page": 779
+        },
+        {
+          "number": 100,
+          "page": 779
+        },
+        {
+          "number": 190,
+          "page": 779
+        },
+        {
+          "number": 104,
+          "page": 779
+        },
+        {
+          "number": 103,
+          "page": 779
+        },
+        {
+          "number": 37,
+          "page": 779
+        },
+        {
+          "number": 80,
+          "page": 779
+        },
+        {
+          "number": 195,
+          "page": 779
+        },
+        {
+          "number": 102,
+          "page": 779
+        }
+      ],
+      "readings": [
+        {
+          "number": 740,
+          "page": 779
+        },
+        {
+          "number": 720,
+          "page": 779
+        },
+        {
+          "number": 725,
+          "page": 779
+        },
+        {
+          "number": 722,
+          "page": 779
+        },
+        {
+          "number": 801,
+          "page": 779
+        },
+        {
+          "number": 696,
+          "page": 779
+        },
+        {
+          "number": 715,
+          "page": 779
+        },
+        {
+          "number": 704,
+          "page": 779
+        },
+        {
+          "number": 721,
+          "page": 779
+        },
+        {
+          "number": 723,
+          "page": 779
+        },
+        {
+          "number": 751,
+          "page": 779
+        },
+        {
+          "number": 724,
+          "page": 779
+        },
+        {
+          "number": 701,
+          "page": 779
+        },
+        {
+          "number": 727,
+          "page": 779
+        },
+        {
+          "number": 726,
+          "page": 779
+        }
+      ]
+    },
+    {
+      "name": "Grace and Mercy",
+      "parent": "GOD THE FATHER",
+      "see": [],
+      "hymns": [
+        {
+          "number": 108,
+          "page": 779
+        },
+        {
+          "number": 113,
+          "page": 779
+        },
+        {
+          "number": 477,
+          "page": 780
+        },
+        {
+          "number": 521,
+          "page": 780
+        },
+        {
+          "number": 527,
+          "page": 780
+        },
+        {
+          "number": 106,
+          "page": 780
+        },
+        {
+          "number": 107,
+          "page": 780
+        },
+        {
+          "number": 110,
+          "page": 780
+        },
+        {
+          "number": 111,
+          "page": 780
+        },
+        {
+          "number": 112,
+          "page": 780
+        },
+        {
+          "number": 109,
+          "page": 780
+        },
+        {
+          "number": 105,
+          "page": 780
+        },
+        {
+          "number": 31,
+          "page": 780
+        },
+        {
+          "number": 114,
+          "page": 780
+        }
+      ],
+      "readings": [
+        {
+          "number": 710,
+          "page": 780
+        },
+        {
+          "number": 765,
+          "page": 780
+        },
+        {
+          "number": 725,
+          "page": 780
+        },
+        {
+          "number": 722,
+          "page": 780
+        },
+        {
+          "number": 728,
+          "page": 780
+        },
+        {
+          "number": 832,
+          "page": 780
+        },
+        {
+          "number": 727,
+          "page": 780
+        },
+        {
+          "number": 726,
+          "page": 780
+        },
+        {
+          "number": 831,
+          "page": 780
+        }
+      ]
+    },
+    {
+      "name": "Love",
+      "parent": "GOD THE FATHER",
+      "see": [],
+      "hymns": [
+        {
+          "number": 78,
+          "page": 780
+        },
+        {
+          "number": 74,
+          "page": 780
+        },
+        {
+          "number": 148,
+          "page": 780
+        },
+        {
+          "number": 79,
+          "page": 780
+        },
+        {
+          "number": 77,
+          "page": 780
+        },
+        {
+          "number": 76,
+          "page": 780
+        },
+        {
+          "number": 80,
+          "page": 780
+        },
+        {
+          "number": 75,
+          "page": 780
+        },
+        {
+          "number": 114,
+          "page": 780
+        },
+        {
+          "number": 81,
+          "page": 780
+        }
+      ],
+      "readings": [
+        {
+          "number": 710,
+          "page": 780
+        },
+        {
+          "number": 712,
+          "page": 780
+        },
+        {
+          "number": 713,
+          "page": 780
+        },
+        {
+          "number": 711,
+          "page": 780
+        },
+        {
+          "number": 703,
+          "page": 780
+        },
+        {
+          "number": 798,
+          "page": 780
+        }
+      ]
+    },
+    {
+      "name": "Majesty and Power",
+      "parent": "GOD THE FATHER",
+      "see": [],
+      "hymns": [
+        {
+          "number": 82,
+          "page": 780
+        },
+        {
+          "number": 85,
+          "page": 780
+        },
+        {
+          "number": 90,
+          "page": 780
+        },
+        {
+          "number": 84,
+          "page": 780
+        },
+        {
+          "number": 87,
+          "page": 780
+        },
+        {
+          "number": 86,
+          "page": 780
+        },
+        {
+          "number": 88,
+          "page": 780
+        },
+        {
+          "number": 21,
+          "page": 780
+        },
+        {
+          "number": 12,
+          "page": 780
+        },
+        {
+          "number": 89,
+          "page": 780
+        },
+        {
+          "number": 83,
+          "page": 780
+        },
+        {
+          "number": 29,
+          "page": 780
+        },
+        {
+          "number": 35,
+          "page": 780
+        },
+        {
+          "number": 91,
+          "page": 780
+        }
+      ],
+      "readings": [
+        {
+          "number": 715,
+          "page": 780
+        },
+        {
+          "number": 714,
+          "page": 780
+        },
+        {
+          "number": 838,
+          "page": 780
+        },
+        {
+          "number": 716,
+          "page": 780
+        }
+      ]
+    },
+    {
+      "name": "Power in Nature",
+      "parent": "GOD THE FATHER",
+      "see": [],
+      "hymns": [
+        {
+          "number": 2,
+          "page": 780
+        },
+        {
+          "number": 93,
+          "page": 780
+        },
+        {
+          "number": 98,
+          "page": 780
+        },
+        {
+          "number": 640,
+          "page": 780
+        },
+        {
+          "number": 565,
+          "page": 780
+        },
+        {
+          "number": 88,
+          "page": 780
+        },
+        {
+          "number": 111,
+          "page": 780
+        },
+        {
+          "number": 89,
+          "page": 780
+        },
+        {
+          "number": 97,
+          "page": 780
+        },
+        {
+          "number": 94,
+          "page": 780
+        },
+        {
+          "number": 63,
+          "page": 780
+        },
+        {
+          "number": 95,
+          "page": 780
+        },
+        {
+          "number": 96,
+          "page": 780
+        },
+        {
+          "number": 92,
+          "page": 780
+        },
+        {
+          "number": 35,
+          "page": 780
+        }
+      ],
+      "readings": [
+        {
+          "number": 712,
+          "page": 780
+        },
+        {
+          "number": 706,
+          "page": 780
+        },
+        {
+          "number": 714,
+          "page": 780
+        },
+        {
+          "number": 719,
+          "page": 780
+        },
+        {
+          "number": 803,
+          "page": 780
+        },
+        {
+          "number": 718,
+          "page": 780
+        },
+        {
+          "number": 785,
+          "page": 780
+        },
+        {
+          "number": 717,
+          "page": 780
+        },
+        {
+          "number": 769,
+          "page": 780
+        },
+        {
+          "number": 760,
+          "page": 780
+        }
+      ]
+    },
+    {
+      "name": "GOSPEL",
+      "see": ["See JESUS CHRIST; INVITATION; FORGIVENESS; SALVATION AND REDEMPTION"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "GRACE AND MERCY OF GOD",
+      "see": ["See GOD THE FATHER: Grace and Mercy"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "GUIDANCE",
+      "see": [],
+      "hymns": [
+        {
+          "number": 547,
+          "page": 780
+        },
+        {
+          "number": 550,
+          "page": 780
+        },
+        {
+          "number": 482,
+          "page": 780
+        },
+        {
+          "number": 540,
+          "page": 780
+        },
+        {
+          "number": 536,
+          "page": 780
+        },
+        {
+          "number": 538,
+          "page": 780
+        },
+        {
+          "number": 537,
+          "page": 780
+        },
+        {
+          "number": 539,
+          "page": 780
+        },
+        {
+          "number": 543,
+          "page": 780
+        },
+        {
+          "number": 542,
+          "page": 780
+        },
+        {
+          "number": 553,
+          "page": 780
+        },
+        {
+          "number": 551,
+          "page": 780
+        },
+        {
+          "number": 544,
+          "page": 780
+        },
+        {
+          "number": 541,
+          "page": 780
+        },
+        {
+          "number": 549,
+          "page": 780
+        },
+        {
+          "number": 548,
+          "page": 780
+        },
+        {
+          "number": 554,
+          "page": 780
+        },
+        {
+          "number": 545,
+          "page": 780
+        },
+        {
+          "number": 555,
+          "page": 780
+        },
+        {
+          "number": 546,
+          "page": 780
+        },
+        {
+          "number": 552,
+          "page": 780
+        }
+      ],
+      "readings": [
+        {
+          "number": 802,
+          "page": 781
+        },
+        {
+          "number": 801,
+          "page": 781
+        },
+        {
+          "number": 721,
+          "page": 781
+        },
+        {
+          "number": 724,
+          "page": 781
+        },
+        {
+          "number": 716,
+          "page": 781
+        },
+        {
+          "number": 726,
+          "page": 781
+        }
+      ]
+    },
+    {
+      "name": "HEALTH AND WHOLENESS",
+      "see": [],
+      "hymns": [
+        {
+          "number": 643,
+          "page": 781
+        },
+        {
+          "number": 644,
+          "page": 781
+        },
+        {
+          "number": 333,
+          "page": 781
+        },
+        {
+          "number": 642,
+          "page": 781
+        }
+      ],
+      "readings": [
+        {
+          "number": 824,
+          "page": 781
+        },
+        {
+          "number": 822,
+          "page": 781
+        },
+        {
+          "number": 711,
+          "page": 781
+        },
+        {
+          "number": 823,
+          "page": 781
+        }
+      ]
+    },
+    {
+      "name": "HEAVEN",
+      "see": ["See ETERNAL LIFE; JESUS CHRIST: Kingdom and Reign"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "HOLY SCRIPTURES",
+      "see": [],
+      "hymns": [
+        {
+          "number": 271,
+          "page": 781
+        },
+        {
+          "number": 277,
+          "page": 781
+        },
+        {
+          "number": 272,
+          "page": 781
+        },
+        {
+          "number": 273,
+          "page": 781
+        },
+        {
+          "number": 278,
+          "page": 781
+        },
+        {
+          "number": 275,
+          "page": 781
+        },
+        {
+          "number": 274,
+          "page": 781
+        },
+        {
+          "number": 276,
+          "page": 781
+        },
+        {
+          "number": 286,
+          "page": 781
+        }
+      ],
+      "readings": [
+        {
+          "number": 753,
+          "page": 781
+        },
+        {
+          "number": 754,
+          "page": 781
+        }
+      ]
+    },
+    {
+      "name": "HOLY SPIRIT",
+      "see": [],
+      "hymns": [
+        {
+          "number": 258,
+          "page": 781
+        },
+        {
+          "number": 265,
+          "page": 781
+        },
+        {
+          "number": 257,
+          "page": 781
+        },
+        {
+          "number": 269,
+          "page": 781
+        },
+        {
+          "number": 259,
+          "page": 781
+        },
+        {
+          "number": 263,
+          "page": 781
+        },
+        {
+          "number": 268,
+          "page": 781
+        },
+        {
+          "number": 260,
+          "page": 781
+        },
+        {
+          "number": 264,
+          "page": 781
+        },
+        {
+          "number": 270,
+          "page": 781
+        },
+        {
+          "number": 326,
+          "page": 781
+        },
+        {
+          "number": 267,
+          "page": 781
+        },
+        {
+          "number": 266,
+          "page": 781
+        },
+        {
+          "number": 262,
+          "page": 781
+        },
+        {
+          "number": 261,
+          "page": 781
+        }
+      ],
+      "readings": [
+        {
+          "number": 776,
+          "page": 781
+        },
+        {
+          "number": 839,
+          "page": 781
+        },
+        {
+          "number": 737,
+          "page": 781
+        },
+        {
+          "number": 752,
+          "page": 781
+        }
+      ]
+    },
+    {
+      "name": "HOME",
+      "see": ["See LOVE IN THE HOME; MARRIAGE"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "HOPE AND COMFORT",
+      "see": [],
+      "hymns": [
+        {
+          "number": 472,
+          "page": 781
+        },
+        {
+          "number": 475,
+          "page": 781
+        },
+        {
+          "number": 476,
+          "page": 781
+        },
+        {
+          "number": 477,
+          "page": 781
+        },
+        {
+          "number": 181,
+          "page": 781
+        },
+        {
+          "number": 525,
+          "page": 781
+        },
+        {
+          "number": 473,
+          "page": 781
+        },
+        {
+          "number": 301,
+          "page": 781
+        },
+        {
+          "number": 315,
+          "page": 781
+        },
+        {
+          "number": 498,
+          "page": 781
+        },
+        {
+          "number": 474,
+          "page": 781
+        },
+        {
+          "number": 529,
+          "page": 781
+        },
+        {
+          "number": 494,
+          "page": 781
+        },
+        {
+          "number": 631,
+          "page": 781
+        }
+      ],
+      "readings": [
+        {
+          "number": 782,
+          "page": 781
+        },
+        {
+          "number": 796,
+          "page": 781
+        },
+        {
+          "number": 832,
+          "page": 781
+        },
+        {
+          "number": 745,
+          "page": 781
+        },
+        {
+          "number": 726,
+          "page": 781
+        },
+        {
+          "number": 729,
+          "page": 781
+        }
+      ]
+    },
+    {
+      "name": "HUMILITY",
+      "see": [],
+      "hymns": [
+        {
+          "number": 567,
+          "page": 781
+        },
+        {
+          "number": 313,
+          "page": 781
+        },
+        {
+          "number": 314,
+          "page": 781
+        },
+        {
+          "number": 568,
+          "page": 781
+        },
+        {
+          "number": 570,
+          "page": 781
+        },
+        {
+          "number": 569,
+          "page": 781
+        },
+        {
+          "number": 571,
+          "page": 781
+        }
+      ],
+      "readings": [
+        {
+          "number": 804,
+          "page": 781
+        },
+        {
+          "number": 805,
+          "page": 781
+        }
+      ]
+    },
+    {
+      "name": "INCARNATION",
+      "see": ["See JESUS CHRIST: Birth, First Advent"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "INVITATION",
+      "see": [],
+      "hymns": [
+        {
+          "number": 476,
+          "page": 781
+        },
+        {
+          "number": 280,
+          "page": 781
+        },
+        {
+          "number": 284,
+          "page": 781
+        },
+        {
+          "number": 288,
+          "page": 781
+        },
+        {
+          "number": 281,
+          "page": 781
+        },
+        {
+          "number": 282,
+          "page": 781
+        },
+        {
+          "number": 285,
+          "page": 781
+        },
+        {
+          "number": 283,
+          "page": 781
+        },
+        {
+          "number": 180,
+          "page": 781
+        },
+        {
+          "number": 279,
+          "page": 781
+        },
+        {
+          "number": 287,
+          "page": 781
+        },
+        {
+          "number": 289,
+          "page": 781
+        },
+        {
+          "number": 290,
+          "page": 781
+        },
+        {
+          "number": 286,
+          "page": 781
+        }
+      ],
+      "readings": [
+        {
+          "number": 755,
+          "page": 781
+        },
+        {
+          "number": 744,
+          "page": 781
+        }
+      ]
+    },
+    {
+      "name": "JESUS CHRIST",
+      "see": [],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "Ascension",
+      "parent": "JESUS CHRIST",
+      "see": ["See Resurrection and Ascension"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "Birth",
+      "parent": "JESUS CHRIST",
+      "see": [],
+      "hymns": [
+        {
+          "number": 119,
+          "page": 781
+        },
+        {
+          "number": 142,
+          "page": 782
+        },
+        {
+          "number": 129,
+          "page": 782
+        },
+        {
+          "number": 123,
+          "page": 782
+        },
+        {
+          "number": 124,
+          "page": 782
+        },
+        {
+          "number": 128,
+          "page": 782
+        },
+        {
+          "number": 121,
+          "page": 782
+        },
+        {
+          "number": 136,
+          "page": 782
+        },
+        {
+          "number": 122,
+          "page": 782
+        },
+        {
+          "number": 126,
+          "page": 782
+        },
+        {
+          "number": 127,
+          "page": 782
+        },
+        {
+          "number": 130,
+          "page": 782
+        },
+        {
+          "number": 125,
+          "page": 782
+        },
+        {
+          "number": 131,
+          "page": 782
+        },
+        {
+          "number": 133,
+          "page": 782
+        },
+        {
+          "number": 132,
+          "page": 782
+        },
+        {
+          "number": 134,
+          "page": 782
+        },
+        {
+          "number": 135,
+          "page": 782
+        },
+        {
+          "number": 138,
+          "page": 782
+        },
+        {
+          "number": 143,
+          "page": 782
+        },
+        {
+          "number": 118,
+          "page": 782
+        },
+        {
+          "number": 120,
+          "page": 782
+        },
+        {
+          "number": 140,
+          "page": 782
+        },
+        {
+          "number": 137,
+          "page": 782
+        },
+        {
+          "number": 141,
+          "page": 782
+        },
+        {
+          "number": 139,
+          "page": 782
+        }
+      ],
+      "readings": [
+        {
+          "number": 842,
+          "page": 782
+        },
+        {
+          "number": 837,
+          "page": 782
+        },
+        {
+          "number": 730,
+          "page": 782
+        },
+        {
+          "number": 843,
+          "page": 782
+        },
+        {
+          "number": 731,
+          "page": 782
+        }
+      ]
+    },
+    {
+      "name": "First Advent",
+      "parent": "JESUS CHRIST",
+      "see": [],
+      "hymns": [
+        {
+          "number": 204,
+          "page": 782
+        },
+        {
+          "number": 115,
+          "page": 782
+        },
+        {
+          "number": 116,
+          "page": 782
+        },
+        {
+          "number": 117,
+          "page": 782
+        }
+      ],
+      "readings": [
+        {
+          "number": 729,
+          "page": 782
+        },
+        {
+          "number": 835,
+          "page": 782
+        },
+        {
+          "number": 836,
+          "page": 782
+        }
+      ]
+    },
+    {
+      "name": "Glory and Praise",
+      "parent": "JESUS CHRIST",
+      "see": [],
+      "hymns": [
+        {
+          "number": 228,
+          "page": 782
+        },
+        {
+          "number": 230,
+          "page": 782
+        },
+        {
+          "number": 229,
+          "page": 782
+        },
+        {
+          "number": 232,
+          "page": 782
+        },
+        {
+          "number": 231,
+          "page": 782
+        },
+        {
+          "number": 235,
+          "page": 782
+        },
+        {
+          "number": 234,
+          "page": 782
+        },
+        {
+          "number": 147,
+          "page": 782
+        },
+        {
+          "number": 233,
+          "page": 782
+        },
+        {
+          "number": 252,
+          "page": 782
+        },
+        {
+          "number": 247,
+          "page": 782
+        },
+        {
+          "number": 24,
+          "page": 782
+        },
+        {
+          "number": 240,
+          "page": 782
+        },
+        {
+          "number": 251,
+          "page": 782
+        },
+        {
+          "number": 238,
+          "page": 782
+        },
+        {
+          "number": 255,
+          "page": 782
+        },
+        {
+          "number": 236,
+          "page": 782
+        },
+        {
+          "number": 237,
+          "page": 782
+        },
+        {
+          "number": 239,
+          "page": 782
+        },
+        {
+          "number": 241,
+          "page": 782
+        },
+        {
+          "number": 242,
+          "page": 782
+        },
+        {
+          "number": 243,
+          "page": 782
+        },
+        {
+          "number": 245,
+          "page": 782
+        },
+        {
+          "number": 244,
+          "page": 782
+        },
+        {
+          "number": 250,
+          "page": 782
+        },
+        {
+          "number": 248,
+          "page": 782
+        },
+        {
+          "number": 249,
+          "page": 782
+        },
+        {
+          "number": 254,
+          "page": 782
+        },
+        {
+          "number": 253,
+          "page": 782
+        },
+        {
+          "number": 162,
+          "page": 782
+        },
+        {
+          "number": 246,
+          "page": 782
+        },
+        {
+          "number": 256,
+          "page": 782
+        }
+      ],
+      "readings": [
+        {
+          "number": 843,
+          "page": 782
+        },
+        {
+          "number": 751,
+          "page": 782
+        },
+        {
+          "number": 842,
+          "page": 782
+        },
+        {
+          "number": 736,
+          "page": 782
+        },
+        {
+          "number": 841,
+          "page": 782
+        },
+        {
+          "number": 735,
+          "page": 782
+        }
+      ]
+    },
+    {
+      "name": "Kingdom and Reign",
+      "parent": "JESUS CHRIST",
+      "see": [],
+      "hymns": [
+        {
+          "number": 223,
+          "page": 782
+        },
+        {
+          "number": 225,
+          "page": 782
+        },
+        {
+          "number": 222,
+          "page": 782
+        },
+        {
+          "number": 227,
+          "page": 782
+        },
+        {
+          "number": 226,
+          "page": 782
+        },
+        {
+          "number": 221,
+          "page": 782
+        },
+        {
+          "number": 224,
+          "page": 782
+        }
+      ],
+      "readings": [
+        {
+          "number": 783,
+          "page": 782
+        },
+        {
+          "number": 749,
+          "page": 782
+        },
+        {
+          "number": 750,
+          "page": 782
+        },
+        {
+          "number": 748,
+          "page": 782
+        }
+      ]
+    },
+    {
+      "name": "Life and Ministry",
+      "parent": "JESUS CHRIST",
+      "see": [],
+      "hymns": [
+        {
+          "number": 147,
+          "page": 782
+        },
+        {
+          "number": 255,
+          "page": 782
+        },
+        {
+          "number": 146,
+          "page": 782
+        },
+        {
+          "number": 151,
+          "page": 782
+        },
+        {
+          "number": 148,
+          "page": 782
+        },
+        {
+          "number": 144,
+          "page": 782
+        },
+        {
+          "number": 333,
+          "page": 782
+        },
+        {
+          "number": 149,
+          "page": 782
+        },
+        {
+          "number": 153,
+          "page": 782
+        },
+        {
+          "number": 145,
+          "page": 782
+        },
+        {
+          "number": 152,
+          "page": 782
+        },
+        {
+          "number": 150,
+          "page": 782
+        }
+      ],
+      "readings": [
+        {
+          "number": 732,
+          "page": 782
+        },
+        {
+          "number": 842,
+          "page": 782
+        }
+      ]
+    },
+    {
+      "name": "Love for Us",
+      "parent": "JESUS CHRIST",
+      "see": [],
+      "hymns": [
+        {
+          "number": 189,
+          "page": 782
+        },
+        {
+          "number": 198,
+          "page": 782
+        },
+        {
+          "number": 182,
+          "page": 782
+        },
+        {
+          "number": 532,
+          "page": 782
+        },
+        {
+          "number": 181,
+          "page": 782
+        },
+        {
+          "number": 539,
+          "page": 782
+        },
+        {
+          "number": 183,
+          "page": 782
+        },
+        {
+          "number": 186,
+          "page": 782
+        },
+        {
+          "number": 185,
+          "page": 782
+        },
+        {
+          "number": 190,
+          "page": 782
+        },
+        {
+          "number": 184,
+          "page": 782
+        },
+        {
+          "number": 187,
+          "page": 783
+        },
+        {
+          "number": 191,
+          "page": 783
+        },
+        {
+          "number": 188,
+          "page": 783
+        },
+        {
+          "number": 248,
+          "page": 783
+        },
+        {
+          "number": 18,
+          "page": 783
+        },
+        {
+          "number": 192,
+          "page": 783
+        },
+        {
+          "number": 193,
+          "page": 783
+        },
+        {
+          "number": 195,
+          "page": 783
+        },
+        {
+          "number": 194,
+          "page": 783
+        },
+        {
+          "number": 196,
+          "page": 783
+        },
+        {
+          "number": 199,
+          "page": 783
+        },
+        {
+          "number": 197,
+          "page": 783
+        }
+      ],
+      "readings": [
+        {
+          "number": 782,
+          "page": 783
+        },
+        {
+          "number": 740,
+          "page": 783
+        },
+        {
+          "number": 713,
+          "page": 783
+        },
+        {
+          "number": 772,
+          "page": 783
+        },
+        {
+          "number": 743,
+          "page": 783
+        },
+        {
+          "number": 745,
+          "page": 783
+        },
+        {
+          "number": 744,
+          "page": 783
+        },
+        {
+          "number": 742,
+          "page": 783
+        },
+        {
+          "number": 807,
+          "page": 783
+        },
+        {
+          "number": 741,
+          "page": 783
+        },
+        {
+          "number": 800,
+          "page": 783
+        }
+      ]
+    },
+    {
+      "name": "Priesthood",
+      "parent": "JESUS CHRIST",
+      "see": [],
+      "hymns": [
+        {
+          "number": 177,
+          "page": 783
+        },
+        {
+          "number": 39,
+          "page": 783
+        },
+        {
+          "number": 180,
+          "page": 783
+        },
+        {
+          "number": 178,
+          "page": 783
+        },
+        {
+          "number": 179,
+          "page": 783
+        }
+      ],
+      "readings": [
+        {
+          "number": 739,
+          "page": 783
+        },
+        {
+          "number": 778,
+          "page": 783
+        },
+        {
+          "number": 738,
+          "page": 783
+        }
+      ]
+    },
+    {
+      "name": "Resurrection and Ascension",
+      "parent": "JESUS CHRIST",
+      "see": [],
+      "hymns": [
+        {
+          "number": 228,
+          "page": 783
+        },
+        {
+          "number": 167,
+          "page": 783
+        },
+        {
+          "number": 168,
+          "page": 783
+        },
+        {
+          "number": 526,
+          "page": 783
+        },
+        {
+          "number": 166,
+          "page": 783
+        },
+        {
+          "number": 169,
+          "page": 783
+        },
+        {
+          "number": 170,
+          "page": 783
+        },
+        {
+          "number": 173,
+          "page": 783
+        },
+        {
+          "number": 176,
+          "page": 783
+        },
+        {
+          "number": 165,
+          "page": 783
+        },
+        {
+          "number": 175,
+          "page": 783
+        },
+        {
+          "number": 174,
+          "page": 783
+        },
+        {
+          "number": 172,
+          "page": 783
+        },
+        {
+          "number": 171,
+          "page": 783
+        }
+      ],
+      "readings": [
+        {
+          "number": 737,
+          "page": 783
+        },
+        {
+          "number": 785,
+          "page": 783
+        },
+        {
+          "number": 736,
+          "page": 783
+        },
+        {
+          "number": 735,
+          "page": 783
+        }
+      ]
+    },
+    {
+      "name": "Second Advent",
+      "parent": "JESUS CHRIST",
+      "see": [],
+      "hymns": [
+        {
+          "number": 201,
+          "page": 783
+        },
+        {
+          "number": 415,
+          "page": 783
+        },
+        {
+          "number": 204,
+          "page": 783
+        },
+        {
+          "number": 454,
+          "page": 783
+        },
+        {
+          "number": 206,
+          "page": 783
+        },
+        {
+          "number": 205,
+          "page": 783
+        },
+        {
+          "number": 202,
+          "page": 783
+        },
+        {
+          "number": 626,
+          "page": 783
+        },
+        {
+          "number": 207,
+          "page": 783
+        },
+        {
+          "number": 213,
+          "page": 783
+        },
+        {
+          "number": 211,
+          "page": 783
+        },
+        {
+          "number": 602,
+          "page": 783
+        },
+        {
+          "number": 19,
+          "page": 783
+        },
+        {
+          "number": 448,
+          "page": 783
+        },
+        {
+          "number": 630,
+          "page": 783
+        },
+        {
+          "number": 174,
+          "page": 783
+        },
+        {
+          "number": 209,
+          "page": 783
+        },
+        {
+          "number": 117,
+          "page": 783
+        },
+        {
+          "number": 217,
+          "page": 783
+        },
+        {
+          "number": 215,
+          "page": 783
+        },
+        {
+          "number": 200,
+          "page": 783
+        },
+        {
+          "number": 208,
+          "page": 783
+        },
+        {
+          "number": 203,
+          "page": 783
+        },
+        {
+          "number": 212,
+          "page": 783
+        },
+        {
+          "number": 210,
+          "page": 783
+        },
+        {
+          "number": 598,
+          "page": 783
+        },
+        {
+          "number": 592,
+          "page": 783
+        },
+        {
+          "number": 214,
+          "page": 783
+        },
+        {
+          "number": 604,
+          "page": 783
+        },
+        {
+          "number": 220,
+          "page": 783
+        },
+        {
+          "number": 218,
+          "page": 783
+        },
+        {
+          "number": 219,
+          "page": 783
+        },
+        {
+          "number": 216,
+          "page": 783
+        },
+        {
+          "number": 438,
+          "page": 783
+        }
+      ],
+      "readings": [
+        {
+          "number": 747,
+          "page": 783
+        },
+        {
+          "number": 751,
+          "page": 783
+        },
+        {
+          "number": 816,
+          "page": 783
+        },
+        {
+          "number": 746,
+          "page": 783
+        },
+        {
+          "number": 737,
+          "page": 783
+        },
+        {
+          "number": 781,
+          "page": 783
+        },
+        {
+          "number": 729,
+          "page": 783
+        }
+      ]
+    },
+    {
+      "name": "Sufferings and Death",
+      "parent": "JESUS CHRIST",
+      "see": [],
+      "hymns": [
+        {
+          "number": 163,
+          "page": 783
+        },
+        {
+          "number": 157,
+          "page": 783
+        },
+        {
+          "number": 288,
+          "page": 783
+        },
+        {
+          "number": 156,
+          "page": 783
+        },
+        {
+          "number": 160,
+          "page": 783
+        },
+        {
+          "number": 159,
+          "page": 783
+        },
+        {
+          "number": 164,
+          "page": 783
+        },
+        {
+          "number": 161,
+          "page": 783
+        },
+        {
+          "number": 158,
+          "page": 783
+        },
+        {
+          "number": 154,
+          "page": 783
+        },
+        {
+          "number": 155,
+          "page": 783
+        },
+        {
+          "number": 162,
+          "page": 783
+        }
+      ],
+      "readings": [
+        {
+          "number": 733,
+          "page": 783
+        },
+        {
+          "number": 734,
+          "page": 783
+        },
+        {
+          "number": 842,
+          "page": 783
+        }
+      ]
+    },
+    {
+      "name": "JOY AND PEACE",
+      "see": [],
+      "hymns": [
+        {
+          "number": 468,
+          "page": 783
+        },
+        {
+          "number": 472,
+          "page": 783
+        },
+        {
+          "number": 461,
+          "page": 783
+        },
+        {
+          "number": 462,
+          "page": 783
+        },
+        {
+          "number": 471,
+          "page": 783
+        },
+        {
+          "number": 465,
+          "page": 783
+        },
+        {
+          "number": 237,
+          "page": 783
+        },
+        {
+          "number": 530,
+          "page": 784
+        },
+        {
+          "number": 239,
+          "page": 784
+        },
+        {
+          "number": 469,
+          "page": 784
+        },
+        {
+          "number": 467,
+          "page": 784
+        },
+        {
+          "number": 463,
+          "page": 784
+        },
+        {
+          "number": 470,
+          "page": 784
+        },
+        {
+          "number": 464,
+          "page": 784
+        },
+        {
+          "number": 631,
+          "page": 784
+        },
+        {
+          "number": 466,
+          "page": 784
+        }
+      ],
+      "readings": [
+        {
+          "number": 758,
+          "page": 784
+        },
+        {
+          "number": 784,
+          "page": 784
+        },
+        {
+          "number": 793,
+          "page": 784
+        },
+        {
+          "number": 796,
+          "page": 784
+        },
+        {
+          "number": 811,
+          "page": 784
+        },
+        {
+          "number": 757,
+          "page": 784
+        },
+        {
+          "number": 748,
+          "page": 784
+        },
+        {
+          "number": 743,
+          "page": 784
+        },
+        {
+          "number": 795,
+          "page": 784
+        },
+        {
+          "number": 807,
+          "page": 784
+        },
+        {
+          "number": 792,
+          "page": 784
+        },
+        {
+          "number": 818,
+          "page": 784
+        },
+        {
+          "number": 794,
+          "page": 784
+        }
+      ]
+    },
+    {
+      "name": "JUDGMENT",
+      "see": [],
+      "hymns": [
+        {
+          "number": 415,
+          "page": 784
+        },
+        {
+          "number": 418,
+          "page": 784
+        },
+        {
+          "number": 19,
+          "page": 784
+        },
+        {
+          "number": 417,
+          "page": 784
+        },
+        {
+          "number": 416,
+          "page": 784
+        }
+      ],
+      "readings": [
+        {
+          "number": 779,
+          "page": 784
+        },
+        {
+          "number": 778,
+          "page": 784
+        },
+        {
+          "number": 780,
+          "page": 784
+        }
+      ]
+    },
+    {
+      "name": "JUSTIFICATION",
+      "see": ["See SALVATION AND REDEMPTION; FORGIVENESS"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "KINGDOM AND REIGN",
+      "see": ["See JESUS CHRIST: Kingdom and Reign"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "LAW AND GRACE",
+      "see": [],
+      "hymns": [
+        {
+          "number": 412,
+          "page": 784
+        }
+      ],
+      "readings": [
+        {
+          "number": 753,
+          "page": 784
+        },
+        {
+          "number": 797,
+          "page": 784
+        },
+        {
+          "number": 774,
+          "page": 784
+        },
+        {
+          "number": 775,
+          "page": 784
+        }
+      ]
+    },
+    {
+      "name": "LIFE AND MINISTRY",
+      "see": ["See JESUS CHRIST: Life and Ministry"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "LORD'S SUPPER",
+      "see": ["See COMMUNION"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "LOVE FOR ONE ANOTHER",
+      "see": [],
+      "hymns": [
+        {
+          "number": 589,
+          "page": 784
+        },
+        {
+          "number": 587,
+          "page": 784
+        },
+        {
+          "number": 12,
+          "page": 784
+        },
+        {
+          "number": 588,
+          "page": 784
+        },
+        {
+          "number": 586,
+          "page": 784
+        },
+        {
+          "number": 585,
+          "page": 784
+        }
+      ],
+      "readings": [
+        {
+          "number": 809,
+          "page": 784
+        },
+        {
+          "number": 812,
+          "page": 784
+        },
+        {
+          "number": 787,
+          "page": 784
+        },
+        {
+          "number": 808,
+          "page": 784
+        },
+        {
+          "number": 805,
+          "page": 784
+        },
+        {
+          "number": 732,
+          "page": 784
+        },
+        {
+          "number": 813,
+          "page": 784
+        },
+        {
+          "number": 713,
+          "page": 784
+        },
+        {
+          "number": 811,
+          "page": 784
+        },
+        {
+          "number": 790,
+          "page": 784
+        },
+        {
+          "number": 827,
+          "page": 784
+        }
+      ]
+    },
+    {
+      "name": "LOVE IN THE HOME",
+      "see": [],
+      "hymns": [
+        {
+          "number": 655,
+          "page": 784
+        },
+        {
+          "number": 651,
+          "page": 784
+        },
+        {
+          "number": 653,
+          "page": 784
+        },
+        {
+          "number": 467,
+          "page": 784
+        },
+        {
+          "number": 654,
+          "page": 784
+        },
+        {
+          "number": 652,
+          "page": 784
+        },
+        {
+          "number": 650,
+          "page": 784
+        },
+        {
+          "number": 579,
+          "page": 784
+        },
+        {
+          "number": 379,
+          "page": 784
+        }
+      ],
+      "readings": [
+        {
+          "number": 829,
+          "page": 784
+        },
+        {
+          "number": 826,
+          "page": 784
+        },
+        {
+          "number": 793,
+          "page": 784
+        },
+        {
+          "number": 827,
+          "page": 784
+        },
+        {
+          "number": 828,
+          "page": 784
+        }
+      ]
+    },
+    {
+      "name": "LOVE OF CHRIST FOR US",
+      "see": ["See JESUS CHRIST: Love for Us"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "LOVE OF COUNTRY",
+      "see": [],
+      "hymns": [
+        {
+          "number": 645,
+          "page": 784
+        },
+        {
+          "number": 648,
+          "page": 784
+        },
+        {
+          "number": 649,
+          "page": 784
+        },
+        {
+          "number": 647,
+          "page": 784
+        },
+        {
+          "number": 646,
+          "page": 784
+        }
+      ],
+      "readings": [
+        {
+          "number": 825,
+          "page": 784
+        }
+      ]
+    },
+    {
+      "name": "LOVING SERVICE",
+      "see": [],
+      "hymns": [
+        {
+          "number": 576,
+          "page": 784
+        },
+        {
+          "number": 357,
+          "page": 784
+        },
+        {
+          "number": 572,
+          "page": 784
+        },
+        {
+          "number": 236,
+          "page": 784
+        },
+        {
+          "number": 573,
+          "page": 784
+        },
+        {
+          "number": 577,
+          "page": 784
+        },
+        {
+          "number": 575,
+          "page": 784
+        },
+        {
+          "number": 363,
+          "page": 784
+        },
+        {
+          "number": 574,
+          "page": 784
+        },
+        {
+          "number": 578,
+          "page": 784
+        },
+        {
+          "number": 584,
+          "page": 784
+        },
+        {
+          "number": 580,
+          "page": 784
+        },
+        {
+          "number": 579,
+          "page": 784
+        },
+        {
+          "number": 571,
+          "page": 784
+        },
+        {
+          "number": 581,
+          "page": 784
+        },
+        {
+          "number": 582,
+          "page": 785
+        },
+        {
+          "number": 583,
+          "page": 785
+        }
+      ],
+      "readings": [
+        {
+          "number": 806,
+          "page": 785
+        },
+        {
+          "number": 809,
+          "page": 785
+        },
+        {
+          "number": 787,
+          "page": 785
+        },
+        {
+          "number": 808,
+          "page": 785
+        },
+        {
+          "number": 813,
+          "page": 785
+        },
+        {
+          "number": 743,
+          "page": 785
+        },
+        {
+          "number": 795,
+          "page": 785
+        },
+        {
+          "number": 844,
+          "page": 785
+        },
+        {
+          "number": 807,
+          "page": 785
+        },
+        {
+          "number": 814,
+          "page": 785
+        },
+        {
+          "number": 810,
+          "page": 785
+        }
+      ]
+    },
+    {
+      "name": "MAJESTY AND POWER OF GOD",
+      "see": ["See GOD THE FATHER: Majesty and Power"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "MARRIAGE",
+      "see": [],
+      "hymns": [
+        {
+          "number": 658,
+          "page": 785
+        },
+        {
+          "number": 659,
+          "page": 785
+        },
+        {
+          "number": 657,
+          "page": 785
+        },
+        {
+          "number": 656,
+          "page": 785
+        }
+      ],
+      "readings": [
+        {
+          "number": 830,
+          "page": 785
+        }
+      ]
+    },
+    {
+      "name": "MEDITATION AND PRAYER",
+      "see": [],
+      "hymns": [
+        {
+          "number": 503,
+          "page": 785
+        },
+        {
+          "number": 460,
+          "page": 785
+        },
+        {
+          "number": 488,
+          "page": 785
+        },
+        {
+          "number": 480,
+          "page": 785
+        },
+        {
+          "number": 481,
+          "page": 785
+        },
+        {
+          "number": 496,
+          "page": 785
+        },
+        {
+          "number": 482,
+          "page": 785
+        },
+        {
+          "number": 493,
+          "page": 785
+        },
+        {
+          "number": 293,
+          "page": 785
+        },
+        {
+          "number": 486,
+          "page": 785
+        },
+        {
+          "number": 485,
+          "page": 785
+        },
+        {
+          "number": 505,
+          "page": 785
+        },
+        {
+          "number": 483,
+          "page": 785
+        },
+        {
+          "number": 484,
+          "page": 785
+        },
+        {
+          "number": 487,
+          "page": 785
+        },
+        {
+          "number": 491,
+          "page": 785
+        },
+        {
+          "number": 489,
+          "page": 785
+        },
+        {
+          "number": 490,
+          "page": 785
+        },
+        {
+          "number": 241,
+          "page": 785
+        },
+        {
+          "number": 492,
+          "page": 785
+        },
+        {
+          "number": 504,
+          "page": 785
+        },
+        {
+          "number": 495,
+          "page": 785
+        },
+        {
+          "number": 497,
+          "page": 785
+        },
+        {
+          "number": 498,
+          "page": 785
+        },
+        {
+          "number": 502,
+          "page": 785
+        },
+        {
+          "number": 478,
+          "page": 785
+        },
+        {
+          "number": 500,
+          "page": 785
+        },
+        {
+          "number": 501,
+          "page": 785
+        },
+        {
+          "number": 479,
+          "page": 785
+        },
+        {
+          "number": 494,
+          "page": 785
+        },
+        {
+          "number": 499,
+          "page": 785
+        }
+      ],
+      "readings": [
+        {
+          "number": 804,
+          "page": 785
+        },
+        {
+          "number": 797,
+          "page": 785
+        },
+        {
+          "number": 798,
+          "page": 785
+        },
+        {
+          "number": 834,
+          "page": 785
+        }
+      ]
+    },
+    {
+      "name": "MINISTRY OF JESUS",
+      "see": ["See JESUS CHRIST: Life and Ministry; Priesthood"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "MISSION OF THE CHURCH",
+      "see": [],
+      "hymns": [
+        {
+          "number": 356,
+          "page": 785
+        },
+        {
+          "number": 369,
+          "page": 785
+        },
+        {
+          "number": 370,
+          "page": 785
+        },
+        {
+          "number": 357,
+          "page": 785
+        },
+        {
+          "number": 358,
+          "page": 785
+        },
+        {
+          "number": 360,
+          "page": 785
+        },
+        {
+          "number": 359,
+          "page": 785
+        },
+        {
+          "number": 361,
+          "page": 785
+        },
+        {
+          "number": 372,
+          "page": 785
+        },
+        {
+          "number": 288,
+          "page": 785
+        },
+        {
+          "number": 457,
+          "page": 785
+        },
+        {
+          "number": 374,
+          "page": 785
+        },
+        {
+          "number": 362,
+          "page": 785
+        },
+        {
+          "number": 371,
+          "page": 785
+        },
+        {
+          "number": 654,
+          "page": 785
+        },
+        {
+          "number": 363,
+          "page": 785
+        },
+        {
+          "number": 364,
+          "page": 785
+        },
+        {
+          "number": 366,
+          "page": 785
+        },
+        {
+          "number": 365,
+          "page": 785
+        },
+        {
+          "number": 367,
+          "page": 785
+        },
+        {
+          "number": 615,
+          "page": 785
+        },
+        {
+          "number": 373,
+          "page": 785
+        },
+        {
+          "number": 368,
+          "page": 785
+        },
+        {
+          "number": 355,
+          "page": 785
+        },
+        {
+          "number": 375,
+          "page": 785
+        }
+      ],
+      "readings": [
+        {
+          "number": 806,
+          "page": 785
+        },
+        {
+          "number": 759,
+          "page": 785
+        },
+        {
+          "number": 776,
+          "page": 785
+        },
+        {
+          "number": 768,
+          "page": 785
+        },
+        {
+          "number": 737,
+          "page": 785
+        },
+        {
+          "number": 729,
+          "page": 785
+        },
+        {
+          "number": 780,
+          "page": 785
+        },
+        {
+          "number": 800,
+          "page": 785
+        }
+      ]
+    },
+    {
+      "name": "MORNING WORSHIP",
+      "see": [],
+      "hymns": [
+        {
+          "number": 233,
+          "page": 785
+        },
+        {
+          "number": 3,
+          "page": 785
+        },
+        {
+          "number": 39,
+          "page": 785
+        },
+        {
+          "number": 44,
+          "page": 785
+        },
+        {
+          "number": 42,
+          "page": 785
+        },
+        {
+          "number": 41,
+          "page": 785
+        },
+        {
+          "number": 45,
+          "page": 785
+        },
+        {
+          "number": 498,
+          "page": 785
+        },
+        {
+          "number": 40,
+          "page": 785
+        },
+        {
+          "number": 43,
+          "page": 785
+        }
+      ],
+      "readings": []
+    },
+    {
+      "name": "NEW YEAR",
+      "see": [],
+      "hymns": [
+        {
+          "number": 23,
+          "page": 785
+        },
+        {
+          "number": 342,
+          "page": 785
+        },
+        {
+          "number": 23,
+          "page": 785
+        },
+        {
+          "number": 105,
+          "page": 785
+        }
+      ],
+      "readings": [
+        {
+          "number": 760,
+          "page": 785
+        }
+      ]
+    },
+    {
+      "name": "OBEDIENCE",
+      "see": [],
+      "hymns": [
+        {
+          "number": 591,
+          "page": 786
+        },
+        {
+          "number": 590,
+          "page": 786
+        }
+      ],
+      "readings": [
+        {
+          "number": 789,
+          "page": 786
+        },
+        {
+          "number": 813,
+          "page": 786
+        },
+        {
+          "number": 822,
+          "page": 786
+        },
+        {
+          "number": 763,
+          "page": 786
+        },
+        {
+          "number": 791,
+          "page": 786
+        },
+        {
+          "number": 814,
+          "page": 786
+        },
+        {
+          "number": 775,
+          "page": 786
+        },
+        {
+          "number": 800,
+          "page": 786
+        },
+        {
+          "number": 828,
+          "page": 786
+        }
+      ]
+    },
+    {
+      "name": "OFFERINGS",
+      "see": ["See STEWARDSHIP"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "OPENING OF WORSHIP",
+      "see": [],
+      "hymns": [
+        {
+          "number": 60,
+          "page": 786
+        },
+        {
+          "number": 61,
+          "page": 786
+        },
+        {
+          "number": 59,
+          "page": 786
+        },
+        {
+          "number": 62,
+          "page": 786
+        },
+        {
+          "number": 63,
+          "page": 786
+        }
+      ],
+      "readings": []
+    },
+    {
+      "name": "ORDINATION",
+      "see": [],
+      "hymns": [
+        {
+          "number": 639,
+          "page": 786
+        },
+        {
+          "number": 377,
+          "page": 786
+        },
+        {
+          "number": 378,
+          "page": 786
+        },
+        {
+          "number": 541,
+          "page": 786
+        },
+        {
+          "number": 578,
+          "page": 786
+        }
+      ],
+      "readings": []
+    },
+    {
+      "name": "OUR LOVE FOR GOD",
+      "see": [],
+      "hymns": [
+        {
+          "number": 459,
+          "page": 786
+        },
+        {
+          "number": 460,
+          "page": 786
+        },
+        {
+          "number": 457,
+          "page": 786
+        },
+        {
+          "number": 455,
+          "page": 786
+        },
+        {
+          "number": 458,
+          "page": 786
+        },
+        {
+          "number": 456,
+          "page": 786
+        },
+        {
+          "number": 638,
+          "page": 786
+        }
+      ],
+      "readings": [
+        {
+          "number": 791,
+          "page": 786
+        }
+      ]
+    },
+    {
+      "name": "PATRIOTISM",
+      "see": ["See LOVE OF COUNTRY"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "PEACE",
+      "see": ["See JOY AND PEACE"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "PILGRIMAGE",
+      "see": [],
+      "hymns": [
+        {
+          "number": 628,
+          "page": 786
+        },
+        {
+          "number": 622,
+          "page": 786
+        },
+        {
+          "number": 621,
+          "page": 786
+        },
+        {
+          "number": 538,
+          "page": 786
+        },
+        {
+          "number": 625,
+          "page": 786
+        },
+        {
+          "number": 440,
+          "page": 786
+        },
+        {
+          "number": 442,
+          "page": 786
+        },
+        {
+          "number": 441,
+          "page": 786
+        },
+        {
+          "number": 624,
+          "page": 786
+        },
+        {
+          "number": 623,
+          "page": 786
+        },
+        {
+          "number": 444,
+          "page": 786
+        },
+        {
+          "number": 445,
+          "page": 786
+        },
+        {
+          "number": 626,
+          "page": 786
+        },
+        {
+          "number": 627,
+          "page": 786
+        },
+        {
+          "number": 151,
+          "page": 786
+        },
+        {
+          "number": 447,
+          "page": 786
+        },
+        {
+          "number": 422,
+          "page": 786
+        },
+        {
+          "number": 629,
+          "page": 786
+        },
+        {
+          "number": 620,
+          "page": 786
+        },
+        {
+          "number": 630,
+          "page": 786
+        },
+        {
+          "number": 451,
+          "page": 786
+        },
+        {
+          "number": 632,
+          "page": 786
+        },
+        {
+          "number": 633,
+          "page": 786
+        }
+      ],
+      "readings": [
+        {
+          "number": 819,
+          "page": 786
+        },
+        {
+          "number": 818,
+          "page": 786
+        }
+      ]
+    },
+    {
+      "name": "POWER OF GOD IN NATURE",
+      "see": ["See GOD THE FATHER: Power in Nature"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "PROPHECY",
+      "see": ["See individual topics"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "PROVIDENCE OF GOD",
+      "see": ["See FAITH AND TRUST; GOD THE FATHER; GUIDANCE; HOPE AND COMFORT; JOY AND PEACE"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "REDEMPTION",
+      "see": ["See JESUS CHRIST; SALVATION AND REDEMPTION"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "REPENTANCE",
+      "see": [],
+      "hymns": [
+        {
+          "number": 295,
+          "page": 786
+        },
+        {
+          "number": 293,
+          "page": 786
+        },
+        {
+          "number": 292,
+          "page": 786
+        },
+        {
+          "number": 296,
+          "page": 786
+        },
+        {
+          "number": 569,
+          "page": 786
+        },
+        {
+          "number": 294,
+          "page": 786
+        },
+        {
+          "number": 291,
+          "page": 786
+        }
+      ],
+      "readings": [
+        {
+          "number": 756,
+          "page": 786
+        },
+        {
+          "number": 757,
+          "page": 786
+        },
+        {
+          "number": 743,
+          "page": 786
+        },
+        {
+          "number": 755,
+          "page": 786
+        }
+      ]
+    },
+    {
+      "name": "RESPONSES",
+      "see": ["See SENTENCES AND RESPONSES"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "RESURRECTION AND ASCENSION",
+      "see": ["See JESUS CHRIST: Resurrection and Ascension"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "RESURRECTION OF THE SAINTS",
+      "see": [],
+      "hymns": [
+        {
+          "number": 418,
+          "page": 786
+        },
+        {
+          "number": 442,
+          "page": 786
+        },
+        {
+          "number": 419,
+          "page": 786
+        }
+      ],
+      "readings": [
+        {
+          "number": 771,
+          "page": 786
+        },
+        {
+          "number": 781,
+          "page": 786
+        }
+      ]
+    },
+    {
+      "name": "REWARD OF THE SAINTS",
+      "see": ["See ETERNAL LIFE; JESUS CHRIST: Kingdom and Reign"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "SABBATH",
+      "see": [],
+      "hymns": [
+        {
+          "number": 395,
+          "page": 787
+        },
+        {
+          "number": 387,
+          "page": 787
+        },
+        {
+          "number": 385,
+          "page": 787
+        },
+        {
+          "number": 392,
+          "page": 787
+        },
+        {
+          "number": 388,
+          "page": 787
+        },
+        {
+          "number": 394,
+          "page": 787
+        },
+        {
+          "number": 381,
+          "page": 787
+        },
+        {
+          "number": 389,
+          "page": 787
+        },
+        {
+          "number": 393,
+          "page": 787
+        },
+        {
+          "number": 382,
+          "page": 787
+        },
+        {
+          "number": 383,
+          "page": 787
+        },
+        {
+          "number": 384,
+          "page": 787
+        },
+        {
+          "number": 40,
+          "page": 787
+        },
+        {
+          "number": 56,
+          "page": 787
+        },
+        {
+          "number": 386,
+          "page": 787
+        },
+        {
+          "number": 390,
+          "page": 787
+        },
+        {
+          "number": 380,
+          "page": 787
+        },
+        {
+          "number": 391,
+          "page": 787
+        }
+      ],
+      "readings": [
+        {
+          "number": 769,
+          "page": 787
+        },
+        {
+          "number": 770,
+          "page": 787
+        }
+      ]
+    },
+    {
+      "name": "SANCTIFICATION",
+      "see": ["See SALVATION AND REDEMPTION; also individual attributes"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "SANCTUARY",
+      "see": ["See JESUS CHRIST: Priesthood; JUDGMENT"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "SALVATION AND REDEMPTION",
+      "see": [],
+      "hymns": [
+        {
+          "number": 334,
+          "page": 787
+        },
+        {
+          "number": 339,
+          "page": 787
+        },
+        {
+          "number": 520,
+          "page": 787
+        },
+        {
+          "number": 281,
+          "page": 787
+        },
+        {
+          "number": 343,
+          "page": 787
+        },
+        {
+          "number": 342,
+          "page": 787
+        },
+        {
+          "number": 340,
+          "page": 787
+        },
+        {
+          "number": 430,
+          "page": 787
+        },
+        {
+          "number": 97,
+          "page": 787
+        },
+        {
+          "number": 180,
+          "page": 787
+        },
+        {
+          "number": 67,
+          "page": 787
+        },
+        {
+          "number": 431,
+          "page": 787
+        },
+        {
+          "number": 337,
+          "page": 787
+        },
+        {
+          "number": 338,
+          "page": 787
+        },
+        {
+          "number": 336,
+          "page": 787
+        },
+        {
+          "number": 341,
+          "page": 787
+        },
+        {
+          "number": 335,
+          "page": 787
+        }
+      ],
+      "readings": [
+        {
+          "number": 749,
+          "page": 787
+        },
+        {
+          "number": 806,
+          "page": 787
+        },
+        {
+          "number": 782,
+          "page": 787
+        },
+        {
+          "number": 739,
+          "page": 787
+        },
+        {
+          "number": 765,
+          "page": 787
+        },
+        {
+          "number": 789,
+          "page": 787
+        },
+        {
+          "number": 696,
+          "page": 787
+        },
+        {
+          "number": 715,
+          "page": 787
+        },
+        {
+          "number": 843,
+          "page": 787
+        },
+        {
+          "number": 762,
+          "page": 787
+        },
+        {
+          "number": 778,
+          "page": 787
+        },
+        {
+          "number": 719,
+          "page": 787
+        },
+        {
+          "number": 859,
+          "page": 787
+        },
+        {
+          "number": 764,
+          "page": 787
+        },
+        {
+          "number": 761,
+          "page": 787
+        },
+        {
+          "number": 763,
+          "page": 787
+        },
+        {
+          "number": 745,
+          "page": 787
+        },
+        {
+          "number": 766,
+          "page": 787
+        },
+        {
+          "number": 716,
+          "page": 787
+        },
+        {
+          "number": 807,
+          "page": 787
+        },
+        {
+          "number": 841,
+          "page": 787
+        },
+        {
+          "number": 760,
+          "page": 787
+        }
+      ]
+    },
+    {
+      "name": "SECOND ADVENT",
+      "see": ["See JESUS CHRIST: Second Advent"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "SENTENCES AND RESPONSES",
+      "see": [],
+      "hymns": [
+        {
+          "number": 665,
+          "page": 787
+        },
+        {
+          "number": 693,
+          "page": 787
+        },
+        {
+          "number": 663,
+          "page": 787
+        },
+        {
+          "number": 671,
+          "page": 787
+        },
+        {
+          "number": 682,
+          "page": 787
+        },
+        {
+          "number": 686,
+          "page": 787
+        },
+        {
+          "number": 666,
+          "page": 787
+        },
+        {
+          "number": 685,
+          "page": 787
+        },
+        {
+          "number": 689,
+          "page": 787
+        },
+        {
+          "number": 690,
+          "page": 787
+        },
+        {
+          "number": 660,
+          "page": 787
+        },
+        {
+          "number": 678,
+          "page": 787
+        },
+        {
+          "number": 679,
+          "page": 787
+        },
+        {
+          "number": 66,
+          "page": 787
+        },
+        {
+          "number": 684,
+          "page": 787
+        },
+        {
+          "number": 677,
+          "page": 787
+        },
+        {
+          "number": 661,
+          "page": 787
+        },
+        {
+          "number": 680,
+          "page": 787
+        },
+        {
+          "number": 683,
+          "page": 787
+        },
+        {
+          "number": 691,
+          "page": 787
+        },
+        {
+          "number": 662,
+          "page": 787
+        },
+        {
+          "number": 667,
+          "page": 787
+        },
+        {
+          "number": 673,
+          "page": 787
+        },
+        {
+          "number": 675,
+          "page": 787
+        },
+        {
+          "number": 668,
+          "page": 787
+        },
+        {
+          "number": 694,
+          "page": 787
+        },
+        {
+          "number": 695,
+          "page": 787
+        },
+        {
+          "number": 664,
+          "page": 787
+        },
+        {
+          "number": 674,
+          "page": 787
+        },
+        {
+          "number": 672,
+          "page": 787
+        },
+        {
+          "number": 688,
+          "page": 787
+        },
+        {
+          "number": 669,
+          "page": 787
+        },
+        {
+          "number": 687,
+          "page": 787
+        },
+        {
+          "number": 692,
+          "page": 787
+        },
+        {
+          "number": 681,
+          "page": 787
+        },
+        {
+          "number": 676,
+          "page": 787
+        },
+        {
+          "number": 670,
+          "page": 787
+        }
+      ],
+      "readings": []
+    },
+    {
+      "name": "SPIRITUAL GIFTS",
+      "see": [],
+      "hymns": [
+        {
+          "number": 414,
+          "page": 787
+        },
+        {
+          "number": 413,
+          "page": 788
+        },
+        {
+          "number": 192,
+          "page": 788
+        }
+      ],
+      "readings": [
+        {
+          "number": 777,
+          "page": 788
+        },
+        {
+          "number": 776,
+          "page": 788
+        }
+      ]
+    },
+    {
+      "name": "SPIRITUALS",
+      "see": [],
+      "hymns": [
+        {
+          "number": 475,
+          "page": 788
+        },
+        {
+          "number": 305,
+          "page": 788
+        },
+        {
+          "number": 121,
+          "page": 788
+        },
+        {
+          "number": 624,
+          "page": 788
+        },
+        {
+          "number": 627,
+          "page": 788
+        },
+        {
+          "number": 151,
+          "page": 788
+        },
+        {
+          "number": 403,
+          "page": 788
+        },
+        {
+          "number": 319,
+          "page": 788
+        },
+        {
+          "number": 69,
+          "page": 788
+        },
+        {
+          "number": 138,
+          "page": 788
+        },
+        {
+          "number": 580,
+          "page": 788
+        },
+        {
+          "number": 158,
+          "page": 788
+        }
+      ],
+      "readings": []
+    },
+    {
+      "name": "STEWARDSHIP",
+      "see": [],
+      "hymns": [
+        {
+          "number": 639,
+          "page": 788
+        },
+        {
+          "number": 634,
+          "page": 788
+        },
+        {
+          "number": 640,
+          "page": 788
+        },
+        {
+          "number": 572,
+          "page": 788
+        },
+        {
+          "number": 641,
+          "page": 788
+        },
+        {
+          "number": 636,
+          "page": 788
+        },
+        {
+          "number": 635,
+          "page": 788
+        },
+        {
+          "number": 105,
+          "page": 788
+        },
+        {
+          "number": 637,
+          "page": 788
+        },
+        {
+          "number": 638,
+          "page": 788
+        },
+        {
+          "number": 670,
+          "page": 788
+        }
+      ],
+      "readings": [
+        {
+          "number": 821,
+          "page": 788
+        },
+        {
+          "number": 700,
+          "page": 788
+        },
+        {
+          "number": 820,
+          "page": 788
+        }
+      ]
+    },
+    {
+      "name": "SUFFERINGS AND DEATH",
+      "see": ["See JESUS CHRIST: Sufferings and Death"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "TITHE",
+      "see": ["See STEWARDSHIP"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "THANKFULNESS",
+      "see": [],
+      "hymns": [
+        {
+          "number": 556,
+          "page": 788
+        },
+        {
+          "number": 562,
+          "page": 788
+        },
+        {
+          "number": 557,
+          "page": 788
+        },
+        {
+          "number": 566,
+          "page": 788
+        },
+        {
+          "number": 564,
+          "page": 788
+        },
+        {
+          "number": 565,
+          "page": 788
+        },
+        {
+          "number": 558,
+          "page": 788
+        },
+        {
+          "number": 560,
+          "page": 788
+        },
+        {
+          "number": 559,
+          "page": 788
+        },
+        {
+          "number": 68,
+          "page": 788
+        },
+        {
+          "number": 563,
+          "page": 788
+        },
+        {
+          "number": 27,
+          "page": 788
+        },
+        {
+          "number": 145,
+          "page": 788
+        },
+        {
+          "number": 561,
+          "page": 788
+        }
+      ],
+      "readings": [
+        {
+          "number": 702,
+          "page": 788
+        },
+        {
+          "number": 712,
+          "page": 788
+        },
+        {
+          "number": 728,
+          "page": 788
+        },
+        {
+          "number": 723,
+          "page": 788
+        },
+        {
+          "number": 803,
+          "page": 788
+        },
+        {
+          "number": 711,
+          "page": 788
+        },
+        {
+          "number": 859,
+          "page": 788
+        }
+      ]
+    },
+    {
+      "name": "TRINITY",
+      "see": [],
+      "hymns": [
+        {
+          "number": 235,
+          "page": 788
+        },
+        {
+          "number": 234,
+          "page": 788
+        },
+        {
+          "number": 71,
+          "page": 788
+        },
+        {
+          "number": 72,
+          "page": 788
+        },
+        {
+          "number": 73,
+          "page": 788
+        },
+        {
+          "number": 116,
+          "page": 788
+        },
+        {
+          "number": 70,
+          "page": 788
+        }
+      ],
+      "readings": [
+        {
+          "number": 709,
+          "page": 788
+        }
+      ]
+    },
+    {
+      "name": "UNITY",
+      "see": ["See COMMUNITY IN CHRIST; LOVE FOR ONE ANOTHER"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "WATCHFULNESS",
+      "see": [],
+      "hymns": [
+        {
+          "number": 603,
+          "page": 788
+        },
+        {
+          "number": 594,
+          "page": 788
+        },
+        {
+          "number": 600,
+          "page": 788
+        },
+        {
+          "number": 593,
+          "page": 788
+        },
+        {
+          "number": 595,
+          "page": 788
+        },
+        {
+          "number": 596,
+          "page": 788
+        },
+        {
+          "number": 605,
+          "page": 788
+        },
+        {
+          "number": 602,
+          "page": 788
+        },
+        {
+          "number": 599,
+          "page": 788
+        },
+        {
+          "number": 598,
+          "page": 788
+        },
+        {
+          "number": 592,
+          "page": 788
+        },
+        {
+          "number": 601,
+          "page": 788
+        },
+        {
+          "number": 604,
+          "page": 788
+        },
+        {
+          "number": 597,
+          "page": 788
+        }
+      ],
+      "readings": [
+        {
+          "number": 746,
+          "page": 788
+        },
+        {
+          "number": 816,
+          "page": 788
+        },
+        {
+          "number": 746,
+          "page": 788
+        },
+        {
+          "number": 815,
+          "page": 788
+        }
+      ]
+    },
+    {
+      "name": "WITNESS",
+      "see": ["See LOVING SERVICE; MISSION OF THE CHURCH"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "WORK",
+      "see": ["See LOVING SERVICE; MISSION OF THE CHURCH"],
+      "hymns": [],
+      "readings": []
+    },
+    {
+      "name": "WORSHIP",
+      "see": [
+        "See ADORATION AND PRAISE; CLOSE OF WORSHIP; COMMUNION; EVENING WORSHIP; GOD THE FATHER; HOLY SCRIPTURES; HOLY SPIRIT; JESUS CHRIST; MORNING WORSHIP; OPENING OF WORSHIP; TRINITY"
+      ],
+      "hymns": [],
+      "readings": []
+    }
+  ]
+}
