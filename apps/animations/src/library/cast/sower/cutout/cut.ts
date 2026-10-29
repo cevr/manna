@@ -604,6 +604,139 @@ const PROFILE_LEFT: PartCut = {
   ],
 };
 
+/**
+ * In profile to the viewer's right: only his right arm shows, the near one,
+ * over his body's side, with the body on both sides of it (his back and the
+ * headcloth's tail behind its back edge, the mantle's front panel and the
+ * strap before its front edge). The hem's line, column by column from the
+ * sheet's left edge: the tunic's back side, the hem over his trailing sandal,
+ * between his feet, over his leading sandal, the tunic's front side. Which
+ * sandal is his right is read from the turn: the near, leading one.
+ */
+const PR_HEM = {
+  back: [
+    [13, 509],
+    [21, 515],
+    [22, 516],
+  ],
+  left: [
+    [31, 518],
+    [36, 534],
+    [40, 521],
+    [41, 520],
+    [66, 523],
+    [72, 538],
+    [86, 527],
+    [101, 532],
+  ],
+  right: [
+    [102, 522],
+    [123, 523],
+    [130, 537],
+    [144, 527],
+    [145, 518],
+    [157, 513],
+  ],
+} as const;
+const PR_RIGHT: Sleeve = {
+  // his right sleeve's back edge, at its ink's outer side: from the shoulder's curve down the ink beside the headcloth's tail, then where it meets his back's outline, in to the cuff and down round its ink, whose lower corner runs to y356
+  inner: [
+    [46, 180],
+    [38, 190],
+    [35, 195],
+    [33, 200],
+    [31, 210],
+    [29, 220],
+    [27, 230],
+    [25, 240],
+    [23, 260],
+    [20, 300],
+    [28, 320],
+    [31, 330],
+    [31, 345],
+    [29, 350],
+    [30, 357],
+  ],
+  shoulder: JOINTS.profileRight.shoulderRight,
+  cap: 14,
+  side: 'right',
+};
+const prRight = sleeve(PR_RIGHT);
+/** Past the sleeve's front edge (its shoulder ink, then the crease, then the cuff's ink): the strap, the mantle's front panel, his belt and his body's front, down past the cuff. */
+const PR_FRONT = {
+  polygon: [
+    [FAR, 170],
+    [90, 170],
+    [90, 180],
+    [98, 190],
+    [101, 195],
+    [97.5, 200],
+    [97.5, 340],
+    [102, 342],
+    [102, 358],
+    [FAR, 358],
+  ],
+} as const;
+const PR_SOLES = {
+  left: [
+    [27, 27, 545],
+    [28, 28, 546],
+    [29, 29, 547],
+    [30, 34, 548],
+    [35, 101, 549],
+  ],
+  right: [
+    [102, 158, 549],
+    [159, 161, 548],
+    [162, 162, 547],
+    [163, 163, 546],
+  ],
+} as const satisfies Readonly<Record<string, SoleRuns>>;
+
+const PROFILE_RIGHT: PartCut = {
+  parts: [
+    {
+      name: 'armRight',
+      // the hand's disc takes its whole ink ring (x47-102, y345-394)
+      take: [...prRight.take, { disc: { c: [74.5, 369], r: 28 } }],
+      unless: [...prRight.unless, PR_FRONT],
+      pivot: JOINTS.profileRight.shoulderRight,
+    },
+    // above the chin, and the headcloth's tail that hangs behind his right sleeve's top
+    { name: 'head', take: [box(-1, -1, FAR, 169), box(-1, 150, 40, 233)] },
+    {
+      name: 'footRight',
+      take: [{ polygon: [...PR_HEM.right, [165, 513], [165, 575], [102, 575]] }],
+      unless: [underSole(PR_SOLES.right)],
+    },
+    {
+      name: 'footLeft',
+      // the tunic's back side (x13-26) has no sandal under it
+      take: [{ polygon: [[27, 517], ...PR_HEM.left, [102, 532], [102, 575], [27, 575]] }],
+      unless: [underSole(PR_SOLES.left)],
+    },
+    {
+      name: 'shadow',
+      take: [
+        {
+          polygon: [
+            [-1, 509],
+            ...PR_HEM.back,
+            ...PR_HEM.left,
+            ...PR_HEM.right,
+            [FAR, 513],
+            [FAR, FAR * 2],
+            [-1, FAR * 2],
+          ],
+        },
+      ],
+    },
+    // below the belt; the seed bag hangs on his far hip and does not show
+    { name: 'robe', take: [box(-1, 331, FAR, FAR * 2)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR * 2)] },
+  ],
+};
+
 /** His outline's ink: the median of his views' dark pixels (measured on the three-quarter and back views). */
 const INK = [34, 16, 8, 255] as const;
 
@@ -635,6 +768,10 @@ const HIDDEN_ENTRIES = {
     moving: ['armLeft'],
     prompt: `${CUT_AWAY} his left arm (its sleeve and round hand) was cut away to make a cut-out puppet. He is seen in profile, facing the viewer's left, and his other arm does not show. Repaint ONLY the magenta areas, as what lies underneath his arm: the side of his body from the armpit down to the robe, painted in exactly the same style, colours and soft shading as his body round the arm (the olive mantle's front panel before it, the walnut-brown edge band and the olive mantle of his back behind it, the walnut strap, the belt round his waist, the linen tunic, and the walnut seed bag at his hip, now whole where the hand lay over it). ${SIDES} ${shade('his')} ${GRAIN} There is no arm now: no sleeve, no hand, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, headcloth and its tail, face, beard, tunic, mantle, walnut strap, belt, walnut seed bag, feet, size, position and framing.`,
   },
+  profileRight: {
+    moving: ['armRight'],
+    prompt: `${CUT_AWAY} his right arm (its sleeve and round hand) was cut away to make a cut-out puppet. He is seen in profile, facing the viewer's right, and his other arm does not show. Repaint ONLY the magenta areas, as what lies underneath his arm: the side of his body from the armpit down to the robe, painted in exactly the same style, colours and soft shading as his body round the arm (his back's outline and the walnut-brown edge band of the olive mantle behind it, the olive mantle over his side, its front panel and the walnut strap before it, the belt round his waist, the linen tunic below). No seed bag shows on this side: paint none. ${SIDES} ${shade('his')} ${GRAIN} There is no arm now: no sleeve, no hand, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, headcloth and its tail, face, beard, tunic, mantle, walnut strap, belt, feet, size, position and framing.`,
+  },
 } as const satisfies Readonly<Record<CutView, HiddenEntry>>;
 
 /** His cut table: each view's cut and how its figure is read. */
@@ -645,6 +782,7 @@ export const { CUTS, cutOptionsFor, HIDDEN } = cutTable({
     threeQuarterLeft: { cut: THREE_QUARTER_LEFT, figure: 'framed' },
     back: { cut: BACK, figure: 'framed' },
     profileLeft: { cut: PROFILE_LEFT, figure: 'framed' },
+    profileRight: { cut: PROFILE_RIGHT, figure: 'framed' },
   },
   hidden: HIDDEN_ENTRIES,
   ink: INK,
