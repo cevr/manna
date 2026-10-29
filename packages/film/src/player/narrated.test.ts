@@ -14,36 +14,10 @@ import { createFilm } from '../canvas/film.ts';
 import { armFilm, armRig, armScene } from '../canvas/fixtures/arm.ts';
 import { countedRive } from '../canvas/fixtures/rive-counted.ts';
 import { recorder, standInDom } from '../canvas/fixtures/stand-in.ts';
-import type { PuppetSpec } from '../canvas/puppet.ts';
-import { PuppetImages } from '../puppet/images.ts';
+import { BLOCK, blockImages } from '../puppet/fixtures/block.ts';
 import { NO_TAKES, type Narrated, loadNarrated, narratedFilms, narrationUrls } from './narrated.ts';
 
 const TIMINGS = '{"voice":"v","scenes":{}}';
-
-/** A cut-out of one part on one bone: an 8 px square painted in a 16 px sheet. */
-const BLOCK: PuppetSpec = {
-  key: 'fixtures/block',
-  size: [16, 16],
-  parts: [{ name: 'body', png: 'block/body.png' }],
-  skeleton: { bones: [{ name: 'spine', pivot: [8, 12], tip: [8, 4] }], skin: { body: ['spine'] } },
-  origin: [8, 12],
-};
-
-/** The page's images read from memory, never fetched or decoded, and the PNGs asked for. */
-const blockImages = () => {
-  const rgba = new Uint8Array(16 * 16 * 4);
-  for (let y = 4; y < 12; y++)
-    for (let x = 4; x < 12; x++) rgba.set([120, 80, 60, 255], (y * 16 + x) * 4);
-  const read: Array<string> = [];
-  const layer = Layer.succeed(
-    PuppetImages,
-    PuppetImages.of({
-      read: (png) => Effect.sync(() => (read.push(png), { width: 16, height: 16, rgba })),
-      paints: false,
-    }),
-  );
-  return { read, layer };
-};
 
 /**
  * A client on a stand-in page: bun has no `location`, so a page-relative URL
