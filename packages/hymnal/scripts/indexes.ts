@@ -30,10 +30,12 @@
  *   its cross-reference names) lists every hymn of the section.
  * - `tunes` (C7): the alphabetical and the metrical index name the same
  *   (tune, hymn) pairs, a name with and without its `(qualifier)` one tune
- *   and an alias another name of the tune at its hymn.
+ *   and an alias another name of the tune at its hymn. A tune that bears its
+ *   hymn's title (`titledTune`) need not be in the alphabetical index.
  * - `metre` (C8): a hymn's metre heading is the metre its page prints
  *   (`data/shapes.json`), after `normalMetre`.
- * - `coverage` (C9): every hymn is in the tunes, the metres and a topic.
+ * - `coverage` (C9): every hymn is in the tunes (or under a metre by a tune
+ *   that bears its title), the metres and a topic.
  * - `pages` (C10): each index's pages run with no gap, each page's count is
  *   the count of entries that name it, and a page in two indexes ends one and
  *   begins the next.
@@ -805,8 +807,25 @@ const sectionProblems = (topical: Topical, ctx: Context): Array<Problem> => {
  * `The` left out, since one index prints `Ash Grove` where the other prints
  * `The Ash Grove`.
  */
-export const tuneKey = (name: string): string =>
-  sortKey(name).replace(/^the /, '').replace(/ the$/, '').replace(/ /g, '');
+export const tuneKey = (name: string): string => tuneWords(name).replace(/ /g, '');
+
+const tuneWords = (name: string): string => sortKey(name).replace(/^the /, '').replace(/ the$/, '');
+
+/**
+ * Whether the tune at hymn `n` bears the hymn's title: the same words, or the
+ * one's words the first words of the other. The alphabetical index leaves
+ * most such tunes out (the metres name them), so a metre's pair named so need
+ * not be in it, nor its hymn among the alphabetical index's hymns.
+ */
+export const titledTune = (name: string, n: number, ctx: Context): boolean => {
+  const title = ctx.hymn(n)?.title;
+  if (title === undefined) return false;
+  const [tune, words] = [tuneWords(name), tuneWords(title)];
+  return (
+    tune.length > 0 &&
+    (tune === words || words.startsWith(`${tune} `) || tune.startsWith(`${words} `))
+  );
+};
 
 const tunePairs = (
   rows: ReadonlyArray<{
@@ -841,7 +860,7 @@ const tuneRows = (
  * same hymn (an alias's hymn under any), and each metre's pair is in the
  * alphabetical index, by a main name or an alias; names match by `tuneKey`.
  */
-const tuneProblems = (tunes: Tunes, metrical: Metrical): Array<Problem> => {
+const tuneProblems = (tunes: Tunes, metrical: Metrical, ctx: Context): Array<Problem> => {
   const listed = tunePairs(tunes.tunes);
   const metreTunes = metrical.metres.flatMap((m) => m.tunes);
   const metre = tunePairs(metreTunes);
@@ -864,7 +883,7 @@ const tuneProblems = (tunes: Tunes, metrical: Metrical): Array<Problem> => {
       value: `${r.name} ${r.number}`,
     }));
   const unlisted = tuneRows(metreTunes, itemsOf({ metrical }, 'metrical'))
-    .filter((r) => !listed.has(r.key))
+    .filter((r) => !listed.has(r.key) && !titledTune(r.name, r.number, ctx))
     .map((r): Problem => ({
       index: 'metrical',
       page: r.page,
@@ -926,12 +945,20 @@ const metreProblems = (metrical: Metrical, ctx: Context): Array<Problem> => {
 
 const coverageProblems = (indexes: Indexes, ctx: Context): Array<Problem> => {
   const out: Array<Problem> = [];
-  const hold = (name: IndexName, what: string) => {
+  /** The hymns a metre names by a tune that bears the hymn's title. */
+  const titled = new Set(
+    (indexes.metrical?.metres ?? []).flatMap((m) =>
+      m.tunes.flatMap((t) =>
+        t.hymns.filter((h) => titledTune(t.name, h.number, ctx)).map((h) => h.number),
+      ),
+    ),
+  );
+  const hold = (name: IndexName, what: string, also: ReadonlySet<number> = new Set()) => {
     const file = indexes[name];
     if (!file) return;
     const has = new Set(itemsOf(indexes, name).map((it) => it.number));
     for (let n = HYMNS.first; n <= ctx.hymnCount; n++)
-      if (!has.has(n))
+      if (!has.has(n) && !also.has(n))
         out.push({
           index: name,
           page: file.pages[0].page,
@@ -941,7 +968,7 @@ const coverageProblems = (indexes: Indexes, ctx: Context): Array<Problem> => {
           value: `${n}`,
         });
   };
-  hold('tunes', 'tune');
+  hold('tunes', 'tune', titled);
   hold('metrical', 'metre');
   hold('topical', 'topic');
   return out;
@@ -1116,7 +1143,7 @@ export const checkIndexes = (
   ...orderProblems(indexes, ctx, rules),
   ...stanzaProblems(indexes, ctx),
   ...(indexes.topical ? sectionProblems(indexes.topical, ctx) : []),
-  ...(indexes.tunes && indexes.metrical ? tuneProblems(indexes.tunes, indexes.metrical) : []),
+  ...(indexes.tunes && indexes.metrical ? tuneProblems(indexes.tunes, indexes.metrical, ctx) : []),
   ...(indexes.metrical ? metreProblems(indexes.metrical, ctx) : []),
   ...coverageProblems(indexes, ctx),
   ...pageProblems(indexes),

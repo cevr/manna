@@ -494,6 +494,31 @@ describe('each mutation is caught, at every entry it applies to', () => {
     ).toEqual(['Alder 3', 'Oak 3']);
   });
 
+  it('a tune that bears its hymn’s title may stay out of the alphabetical index', () => {
+    const b = book();
+    const alpha = arr(b.tunes, 'tunes');
+    b.tunes['tunes'] = alpha
+      .filter((t) => t['name'] !== 'Elm')
+      .map((t) =>
+        t['name'] === 'Alder'
+          ? { ...t, hymns: arr(t, 'hymns').filter((h) => h['number'] !== 3) }
+          : t,
+      );
+    const metre = arr(b.metrical, 'metres')[0] as Json;
+    const named = (name: string) => {
+      metre['tunes'] = [
+        { name: 'Alder', hymns: refs(21, [1, 2, 4, 5, 6]) },
+        { name, hymns: refs(21, [3]) },
+      ];
+      return problemsOf(b)
+        .filter((p) => p.check === 'tunes' || p.check === 'coverage')
+        .map((p) => `${p.check} ${p.value ?? p.what}`);
+    };
+    expect(named(word(3))).toEqual([]);
+    expect(named(`The ${word(3)}`)).toEqual([]);
+    expect(named('Oak')).toEqual(['tunes Oak 3', 'coverage 3']);
+  });
+
   it('a metre the hymn’s page does not print', () => {
     const b = book();
     (arr(b.metrical, 'metres')[1] as Json)['metre'] = 'L. M.';
