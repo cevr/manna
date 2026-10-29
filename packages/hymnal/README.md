@@ -225,7 +225,7 @@ work when the generated artifact is absent. Page corrections belong in
 `data/fixes`, then run `scripts/hymnal-fixes.ts`; it updates captured verses,
 recompiles JSON and invokes the same SQLite writer. `compile(source)` remains pure.
 
-SQLite `user_version` is 2; builder version is 1. Ordered normalized tables hold
+SQLite `user_version` is 2; builder version is 2. Ordered normalized tables hold
 stanzas/refrains, lines, syllables, both chord levels and every placement,
 topics/memberships, keys/recordings, census/metre evidence and timelines/tempos/
 sung line occurrences/syllable starts. Child ordinals start at zero. `stanzas.verse_id`
@@ -244,11 +244,14 @@ availability; hash, bytes, duration and measurements are null. Descriptors do
 not prove an upload. `hymn_metres` holds the 500 unchanged printed metre readings
 with reader and image provenance. It is incomplete evidence, distinct from
 the musical time signature. `hymn_census` retains all 695 states and compact
-page/source/digest/read-count/commit provenance. No author, composer, tune,
-Scripture, fine-topic or inferred metrical index is supplied.
+page/source/digest/read-count/commit provenance. The `index_*` tables hold the
+book's 11 printed back-matter indexes and their rulings from `data/indexes/`:
+topical, worship aids, Scripture (by passage and by hymn), sentences, canons,
+young, authors, composers, tunes and metrical, read back by `readIndexTables`
+and checked against the files at every build. No inferred index is supplied.
 
 `corpus_meta` has this fixed key set: `book`, `builder_version`, `format_version`,
-`input_sha256`, `source_text_sha256`, `compiled_sha256`, `topics_sha256`,
+`indexes_sha256`, `input_sha256`, `source_text_sha256`, `compiled_sha256`, `topics_sha256`,
 `metres_sha256`, `census_sha256`, `recordings_sha256`, `recording_credits`.
 Digests cover input bytes and committed recording descriptors; the combined
 digest covers the named input fingerprints. Metadata excludes timestamps,

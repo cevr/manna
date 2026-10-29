@@ -436,6 +436,27 @@ const assertNoFaults = (faults: readonly string[]) => {
   expect(faults.length === 0, faults.slice(0, 8).join(',')).toBe(true);
 };
 
+/** One row per entry of each index file, as `writeIndexTables` folds them. */
+const indexCounts = ({ indexes: ix, rulings }: DatabaseSources) => {
+  const n = (...lists: Array<readonly unknown[] | undefined>) =>
+    lists.reduce((sum: number, list) => sum + (list?.length ?? 0), 0);
+  return {
+    index_files: Object.keys(ix).length,
+    index_topics: n(ix.topical?.topics),
+    index_passages: n(
+      ix['worship-aids']?.entries,
+      ix.scriptural?.entries,
+      ix['scriptural-by-hymn']?.entries,
+    ),
+    index_groups: n(ix.sentences?.groups, ix.canons?.groups),
+    index_young: n(ix.young?.hymns),
+    index_people: n(ix.authors?.people, ix.composers?.people),
+    index_tunes: n(ix.tunes?.tunes),
+    index_metres: n(ix.metrical?.metres),
+    index_rulings: rulings.rulings.length,
+  };
+};
+
 const auditMetadata = (db: Database, sources: DatabaseSources) => {
   const check = (ok: boolean, label: string) => expect(ok, label).toBe(true);
   const metadata = rows(db, 'SELECT key,value FROM corpus_meta ORDER BY key');
@@ -475,6 +496,7 @@ const auditMetadata = (db: Database, sources: DatabaseSources) => {
       0,
     ),
     hymns_fts: sources.hymns.length + readings.length,
+    ...indexCounts(sources),
   };
   for (const [table, count] of Object.entries(expected))
     check(rows(db, `SELECT count(*) AS n FROM ${table}`)[0]?.n === count, `${table}:count`);
