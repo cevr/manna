@@ -18,7 +18,7 @@
 // kept box padded (`frames.ts`). Data: the rules and the table are the shared
 // module's.
 
-import type { HiddenEntry, PartCut } from '@manna/film/tools';
+import type { HiddenEntry, PartCut, PartRule } from '@manna/film/tools';
 import { CUT_AWAY, grain, shade, sides } from '../../../cutout/prompts.ts';
 import {
   FAR,
@@ -1049,7 +1049,231 @@ const POSES_1: PartCut = {
   ],
 };
 
-/** His outline's ink: the median of his views' dark pixels (measured on the three-quarter and back views). */
+/**
+ * Standing from behind, on his kept poses sheet: as the back view, his left
+ * arm hangs on the viewer's left, its hand over the seed bag, and his right on
+ * the viewer's right. The headcloth hangs as a cape over both sleeves' tops to
+ * a point under which the strap runs; the olive mantle covers his back. The
+ * hem's line, column by column, is the hem ink's lowest row: over his left
+ * sandal, between his feet at column 147, over his right sandal.
+ */
+const P2_HEM = {
+  left: [
+    [48, 540],
+    [56, 547],
+    [64, 552],
+    [72, 554],
+    [88, 556],
+    [100, 557],
+    [120, 557],
+  ],
+  right: [
+    [147, 557],
+    [176, 557],
+    [200, 557],
+    [216, 554],
+    [224, 553],
+    [232, 552],
+    [241, 540],
+  ],
+} as const;
+const P2_RIGHT: Sleeve = {
+  // his right sleeve (the viewer's right): its inner ink's inner side, a crease with no ink above row 270, to the cuff
+  inner: [
+    [222, 200],
+    [222, 270],
+    [223.5, 310],
+    [226.5, 345],
+    [227.5, 356],
+  ],
+  shoulder: JOINTS['poses-2'].shoulderRight,
+  cap: 26,
+  side: 'right',
+};
+const P2_LEFT: Sleeve = {
+  // his left sleeve (the viewer's left): its inner ink's inner side, a crease with no ink above row 270, to the cuff over the seed bag's top
+  inner: [
+    [77, 200],
+    [77, 270],
+    [76, 285],
+    [75, 300],
+    [74, 315],
+    [73, 330],
+    [72, 340],
+    [71, 348],
+  ],
+  shoulder: JOINTS['poses-2'].shoulderLeft,
+  cap: 24,
+  side: 'left',
+};
+const p2Right = sleeve(P2_RIGHT);
+const p2Left = sleeve(P2_LEFT);
+// the cape's lower corners, where its side ink meets each sleeve's outer ink: the sleeve's, as okra closes the cape's side over the body when the arm is cut away
+const P2_CORNERS = {
+  left: {
+    polygon: [
+      [-1, 176],
+      [62, 176],
+      [64, 199],
+      [64, 206],
+      [-1, 206],
+    ],
+  },
+  right: {
+    polygon: [
+      [234, 176],
+      [FAR, 176],
+      [FAR, 206],
+      [229, 206],
+      [229, 200],
+    ],
+  },
+} as const satisfies Readonly<Record<string, PartRule>>;
+// a band about 5 px out from each of the headcloth's side edges, down to below its lower corner, that no sleeve takes: torso, so torso parts head from each sleeve's cap and corner, and every pixel cut away from a sleeve lies nearer torso than head
+const P2_BANDS = {
+  left: {
+    polygon: [
+      [60, 170],
+      [76, 170],
+      [76, 198],
+      [88, 203],
+      [88, 215],
+      [76, 215],
+      [70, 211],
+      [65, 201],
+      [63, 176],
+    ],
+  },
+  right: {
+    polygon: [
+      [222, 170],
+      [236, 170],
+      [234, 176],
+      [229, 200],
+      [228, 212],
+      [212, 214],
+      [212, 203],
+      [220, 200],
+    ],
+  },
+} as const satisfies Readonly<Record<string, PartRule>>;
+const P2_SOLES = {
+  left: [
+    [75, 75, 578],
+    [76, 76, 580],
+    [77, 78, 581],
+    [79, 81, 582],
+    [82, 84, 583],
+    [85, 88, 584],
+    [89, 92, 585],
+    [93, 96, 586],
+    [97, 102, 587],
+    [103, 133, 588],
+    [134, 139, 587],
+    [140, 142, 586],
+    [143, 144, 585],
+    [145, 146, 584],
+  ],
+  right: [
+    [147, 147, 582],
+    [148, 148, 581],
+    [149, 149, 579],
+    [150, 151, 581],
+    [152, 153, 582],
+    [154, 160, 583],
+    [161, 175, 584],
+    [176, 185, 585],
+    [186, 204, 584],
+    [205, 212, 583],
+    [213, 218, 582],
+    [219, 219, 581],
+    [220, 220, 580],
+    [221, 221, 579],
+    [222, 222, 578],
+  ],
+} as const satisfies Readonly<Record<string, SoleRuns>>;
+
+const POSES_2: PartCut = {
+  parts: [
+    // the headcloth, a row or two below its lower edges' ink, which lies over both sleeves' tops and the strap's; where each edge meets its sleeve's outer ink, the cape's corner from row 176 down is the sleeve's (`P2_CORNERS`), so okra may close the cape's side there; a band between each side edge and its sleeve (`P2_BANDS`) is torso's, so torso, not head, is the still part nearest okra's paint
+    {
+      name: 'head',
+      take: [
+        {
+          polygon: [
+            [-1, -1],
+            [FAR, -1],
+            [FAR, 170],
+            [230, 170],
+            [228, 176],
+            [223, 200],
+            [222, 208],
+            [209, 212],
+            [200, 222],
+            [190, 232],
+            [182, 239],
+            [173, 238],
+            [138, 225],
+            [111, 215],
+            [88, 205],
+            [76, 207],
+            [70, 199],
+            [68, 176],
+            [66, 170],
+            [-1, 170],
+          ],
+        },
+      ],
+    },
+    {
+      name: 'armLeft',
+      // the disc lies over the seed bag's left edge, as the hand does
+      take: [...p2Left.take, { disc: { c: [31, 378], r: 31 } }, P2_CORNERS.left],
+      unless: [...p2Left.unless, P2_BANDS.left],
+      pivot: JOINTS['poses-2'].shoulderLeft,
+    },
+    {
+      name: 'armRight',
+      take: [...p2Right.take, { disc: { c: [263, 378], r: 31 } }, P2_CORNERS.right],
+      unless: [...p2Right.unless, P2_BANDS.right],
+      pivot: JOINTS['poses-2'].shoulderRight,
+    },
+    {
+      name: 'footLeft',
+      take: [{ polygon: [[30, 540], ...P2_HEM.left, [147, 557], [147, 610], [30, 610]] }],
+      unless: [underSole(P2_SOLES.left)],
+    },
+    {
+      name: 'footRight',
+      take: [{ polygon: [...P2_HEM.right, [260, 540], [260, 610], [147, 610]] }],
+      unless: [underSole(P2_SOLES.right)],
+    },
+    {
+      name: 'shadow',
+      take: [
+        {
+          polygon: [
+            [-1, 540],
+            ...P2_HEM.left,
+            ...P2_HEM.right,
+            [FAR, 540],
+            [FAR, FAR * 2],
+            [-1, FAR * 2],
+          ],
+        },
+      ],
+    },
+    // below his hip's row, as in the back view, but the seed bag
+    { name: 'robe', take: [box(-1, 345, FAR, FAR * 2)], unless: [box(32, 331, 135, 456)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR * 2)] },
+  ],
+};
+
+/**
+ * His outline's ink: the median of his views' dark pixels (measured on the
+ * three-quarter and back views). His kept poses sheet's is [48, 30, 15]
+ * (measured), but a framed cut reads no ink, so his poses take none.
+ */
 const INK = [34, 16, 8, 255] as const;
 
 /** Where his body's sides run under his arms: out to his shoulders and robe, not in at the sleeves' inner edges. */
@@ -1092,6 +1316,16 @@ const HIDDEN_ENTRIES = {
     moving: ['armRight', 'armLeft'],
     prompt: `${CUT_AWAY} his two arms (sleeves and round hands) were cut away to make a cut-out puppet. He is turned three-quarters to the viewer's left, striding and scattering seed: his right arm was flung out level towards the viewer's left, over the plain paper, and his left arm hung at his side with its hand on the seed bag. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading as his body beside each arm (the olive mantle and his body's front outline on the viewer's left side; the olive mantle, the walnut strap, the belt round his waist and the walnut seed bag at his hip on the viewer's right side, the bag now whole where the hand lay over it). ${SIDES} ${shade('his')} ${GRAIN} There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, headcloth and its tail, face, beard, tunic, mantle, walnut strap, belt, walnut seed bag, the falling seeds, feet, size, position and framing.`,
   },
+  'poses-2': {
+    moving: ['armRight', 'armLeft'],
+    prompt: `${CUT_AWAY} his two arms (sleeves and round hands) were cut away to make a cut-out puppet. He is seen from behind, standing, and the headcloth hangs as a cape over his shoulders to a point. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit under the cape down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading as his body beside each arm (the olive mantle over his back, the walnut seed bag on the viewer's left side, now whole where the hand lay over it, the linen tunic below the mantle). ${SIDES} ${shade('his')} ${GRAIN} There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same headcloth and its cape, mantle, walnut strap, walnut seed bag, tunic, feet, size, position and framing.`,
+    allowance: {
+      calls: 3,
+      by: 'orchestrator',
+      on: '2026-10-29',
+      why: "its three calls were drawn on cuts where head bordered the sleeves' caps, so okra's paint beside the cape fell to head; the cut now parts them with a torso band (P2_BANDS), and that cut had never been asked",
+    },
+  },
 } as const satisfies Readonly<Record<CutView, HiddenEntry>>;
 
 /** His cut table: each view's cut and how its figure is read. */
@@ -1105,6 +1339,7 @@ export const { CUTS, cutOptionsFor, HIDDEN } = cutTable({
     profileRight: { cut: PROFILE_RIGHT, figure: 'framed' },
     threeQuarterRight: { cut: THREE_QUARTER_RIGHT, figure: 'framed' },
     'poses-1': { cut: POSES_1, figure: 'framed' },
+    'poses-2': { cut: POSES_2, figure: 'framed' },
   },
   hidden: HIDDEN_ENTRIES,
   ink: INK,

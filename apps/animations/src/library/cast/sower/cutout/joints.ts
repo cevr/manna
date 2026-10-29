@@ -47,4 +47,11 @@ export const JOINTS = {
     shoulderLeft: [322, 205],
     elbowLeft: [343, 270],
   },
+  // standing from behind: his left arm on the viewer's left, its hand over the seed bag, his right on the viewer's right
+  'poses-2': {
+    shoulderRight: [228, 205],
+    elbowRight: [250, 280],
+    shoulderLeft: [70, 205],
+    elbowLeft: [45, 280],
+  },
 } as const satisfies Readonly<Record<string, Readonly<Record<string, Pt>>>>;

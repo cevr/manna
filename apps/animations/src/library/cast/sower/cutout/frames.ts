@@ -17,7 +17,9 @@ import type { CutFrame } from '../../../cutout/table.ts';
  * each profile 21, as its shadow runs 18 rows past them, and the three-quarter
  * view to the viewer's right 23, as its shadow runs 21 rows past them. His
  * kept pose scattering seed (poses-1, on his kept poses sheet) takes 15, as its
- * shadow runs 15 rows past its kept box's bottom row.
+ * shadow runs 15 rows past its kept box's bottom row, and his kept pose
+ * standing from behind (poses-2, on the same sheet) 15, as its shadow runs 9
+ * rows past it.
  */
 export const FRAMES = {
   front: { sheet: 'turnaround', kept: [28, 227, 283, 776], pad: [3, 3, 3, 12] },
@@ -27,6 +29,7 @@ export const FRAMES = {
   profileRight: { sheet: 'turnaround', kept: [1057, 226, 1221, 776], pad: [3, 3, 3, 21] },
   threeQuarterRight: { sheet: 'turnaround', kept: [1264, 227, 1492, 776], pad: [3, 3, 3, 23] },
   'poses-1': { sheet: 'poses', kept: [52, 249, 450, 834], pad: [3, 3, 3, 15] },
+  'poses-2': { sheet: 'poses', kept: [488, 249, 784, 838], pad: [3, 3, 3, 15] },
 } as const satisfies Readonly<Record<string, CutFrame>>;
 
 /** A cut view, by its name in his sheets' views. */
