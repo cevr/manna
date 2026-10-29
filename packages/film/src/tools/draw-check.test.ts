@@ -3,8 +3,10 @@
 // the film in this process into the stand-in context.
 
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, Option } from 'effect';
+import { Effect, Layer, Option } from 'effect';
 import { type SceneSpec, createFilm } from '../canvas/film.ts';
+import type { PuppetSpec } from '../canvas/puppet.ts';
+import { PuppetImages } from '../puppet/images.ts';
 import { stroke } from '../canvas/ink.ts';
 import { probeFace } from '../canvas/probe.ts';
 import { standInDom } from '../canvas/fixtures/stand-in.ts';
@@ -34,6 +36,31 @@ const roped: SceneSpec['draw'] = (f) => {
     { color: '#000000', width: 6 },
     f.hand('rope'),
   );
+};
+
+/** A cut-out of one part on one bone: an 8 px square painted in a 16 px sheet. */
+const BLOCK: PuppetSpec = {
+  key: 'fixtures/block',
+  size: [16, 16],
+  parts: [{ name: 'body', png: 'block/body.png' }],
+  skeleton: { bones: [{ name: 'spine', pivot: [8, 12], tip: [8, 4] }], skin: { body: ['spine'] } },
+  origin: [8, 12],
+};
+
+/** The block's part read from memory, never decoded from a file, and the PNGs asked for. */
+const blockImages = () => {
+  const rgba = new Uint8Array(16 * 16 * 4);
+  for (let y = 4; y < 12; y++)
+    for (let x = 4; x < 12; x++) rgba.set([120, 80, 60, 255], (y * 16 + x) * 4);
+  const read: Array<string> = [];
+  const layer = Layer.succeed(
+    PuppetImages,
+    PuppetImages.of({
+      read: (png) => Effect.sync(() => (read.push(png), { width: 16, height: 16, rgba })),
+      paints: false,
+    }),
+  );
+  return { read, layer };
 };
 
 describe('the draw leg', () => {
@@ -83,7 +110,7 @@ describe('the draw leg', () => {
       expect(new Set(tagged('FrameImpure'))).toEqual(new Set(['eased']));
       expect(tagged('InkOverFace')).toEqual(['roof']);
       expect(found.filter((f) => f.scene === 'still')).toEqual([]);
-    }).pipe(Effect.scoped),
+    }).pipe(Effect.scoped, Effect.provide(blockImages().layer)),
   );
 
   it.effect('lists ink over faces in film order, a mid-cue finding in its own place', () =>
@@ -110,7 +137,7 @@ describe('the draw leg', () => {
       );
       const faces = found.filter((f) => f._tag === 'InkOverFace');
       expect(faces.map((f) => f.scene)).toEqual(['knotted', 'roof']);
-    }).pipe(Effect.scoped),
+    }).pipe(Effect.scoped, Effect.provide(blockImages().layer)),
   );
 
   it.effect('draws only the scenes it is given, and each at several moments', () =>
@@ -122,7 +149,7 @@ describe('the draw leg', () => {
       const counts = momentCounts(build());
       expect(counts.moments).toBeGreaterThanOrEqual(2 * 3);
       expect(counts.pure).toBeGreaterThanOrEqual(2);
-    }).pipe(Effect.scoped),
+    }).pipe(Effect.scoped, Effect.provide(blockImages().layer)),
   );
 
   it.effect('poses a declared Rive rig through Bun, its face at its face node', () =>
@@ -158,7 +185,7 @@ describe('the draw leg', () => {
       expect(faces[0]?.y).toBeCloseTo(540 + HANGING_FACE[1], 3);
       expect(faces[0]?.size).toBe(24);
       expect(found.filter((f) => f._tag === 'FrameImpure')).toEqual([]);
-    }).pipe(Effect.scoped),
+    }).pipe(Effect.scoped, Effect.provide(blockImages().layer)),
   );
 
   it.effect('fails, naming it, a rig the film cannot load: never a silent fallback', () =>
@@ -173,6 +200,26 @@ describe('the draw leg', () => {
         ),
       );
       expect(error.message).toBe('rig fixtures/arm/webgl2 has no artboard "Leg"; it has Arm');
-    }).pipe(Effect.scoped),
+    }).pipe(Effect.scoped, Effect.provide(blockImages().layer)),
   );
+
+  it.effect('drawFindings loads a declared puppet and draws it', () => {
+    const { read, layer } = blockImages();
+    return Effect.gen(function* () {
+      const found = yield* drawFindings(() =>
+        armFilm([
+          {
+            id: 'block',
+            min: 4,
+            timeline: {},
+            puppets: { block: BLOCK },
+            draw: (f) => f.puppet('block', { numbers: { spine: 10 }, root: [960, 540], scale: 1 }),
+          },
+        ]),
+      );
+      // Its one part was read once, as the film loaded, and every moment drew it without a throw.
+      expect(read).toEqual(['block/body.png']);
+      expect(found).toEqual([]);
+    }).pipe(Effect.scoped, Effect.provide(layer));
+  });
 });

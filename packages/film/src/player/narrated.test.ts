@@ -13,9 +13,37 @@ import { HttpClient, HttpClientError, HttpClientRequest, HttpClientResponse } fr
 import { createFilm } from '../canvas/film.ts';
 import { armFilm, armRig, armScene } from '../canvas/fixtures/arm.ts';
 import { countedRive } from '../canvas/fixtures/rive-counted.ts';
+import { recorder, standInDom } from '../canvas/fixtures/stand-in.ts';
+import type { PuppetSpec } from '../canvas/puppet.ts';
+import { PuppetImages } from '../puppet/images.ts';
 import { NO_TAKES, type Narrated, loadNarrated, narratedFilms, narrationUrls } from './narrated.ts';
 
 const TIMINGS = '{"voice":"v","scenes":{}}';
+
+/** A cut-out of one part on one bone: an 8 px square painted in a 16 px sheet. */
+const BLOCK: PuppetSpec = {
+  key: 'fixtures/block',
+  size: [16, 16],
+  parts: [{ name: 'body', png: 'block/body.png' }],
+  skeleton: { bones: [{ name: 'spine', pivot: [8, 12], tip: [8, 4] }], skin: { body: ['spine'] } },
+  origin: [8, 12],
+};
+
+/** The page's images read from memory, never fetched or decoded, and the PNGs asked for. */
+const blockImages = () => {
+  const rgba = new Uint8Array(16 * 16 * 4);
+  for (let y = 4; y < 12; y++)
+    for (let x = 4; x < 12; x++) rgba.set([120, 80, 60, 255], (y * 16 + x) * 4);
+  const read: Array<string> = [];
+  const layer = Layer.succeed(
+    PuppetImages,
+    PuppetImages.of({
+      read: (png) => Effect.sync(() => (read.push(png), { width: 16, height: 16, rgba })),
+      paints: false,
+    }),
+  );
+  return { read, layer };
+};
 
 /**
  * A client on a stand-in page: bun has no `location`, so a page-relative URL
@@ -213,5 +241,45 @@ describe('narratedFilms', () => {
         expect(counts.deletes).toBe(counts.artboards);
         yield* Scope.close(scope, Exit.void);
       }),
+  );
+
+  it.live('a declared puppet loads with the film and draws', () =>
+    Effect.gen(function* () {
+      const { read, layer } = blockImages();
+      const films = narratedFilms(
+        {
+          block: () =>
+            Promise.resolve({
+              fps: 30,
+              film: () =>
+                armFilm([
+                  {
+                    id: 'block',
+                    min: 4,
+                    timeline: {},
+                    puppets: { block: BLOCK },
+                    draw: (f) =>
+                      f.puppet('block', { numbers: { spine: 10 }, root: [960, 540], scale: 1 }),
+                  },
+                ]),
+            }),
+        },
+        Effect.void,
+        answering(404).layer,
+        countedRive().layer,
+        layer,
+      );
+      yield* standInDom();
+      const scope = yield* Scope.make();
+      const film = yield* Scope.provide(films.block, scope);
+      // Its one part was read as the film loaded, through the page's images, and a frame draws it.
+      expect(read).toEqual(['block/body.png']);
+      film.render(recorder().ctx, 1);
+      // Closing the scope it was loaded into lets it go: a frame drawn after names it unloaded.
+      yield* Scope.close(scope, Exit.void);
+      expect(() => film.render(recorder().ctx, 1)).toThrow(
+        'puppet "block" (fixtures/block) is not loaded',
+      );
+    }).pipe(Effect.scoped),
   );
 });

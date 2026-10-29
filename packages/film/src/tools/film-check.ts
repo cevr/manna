@@ -27,6 +27,7 @@ import {
 import type { Film } from '../canvas/film.ts';
 import { createTalk } from '../canvas/talk.ts';
 import { type Narrated, narrationUrls } from '../player/narrated.ts';
+import { PuppetImagesBun } from '../puppet/images-bun.ts';
 import { drawFindings } from './draw-check.ts';
 import { FilmModuleInvalid } from './errors.ts';
 import { type Address, type AddressError, type Scope, resolveAddress } from '../core/address.ts';
@@ -315,7 +316,7 @@ export const drawLeg = Effect.fn('check.draw')(function* (
     onSome: ({ talk, takes, cut }) =>
       Effect.scoped(drawFindings((): Film => createTalk(talk, takes, cut), scenes)),
   });
-});
+}, Effect.provide(PuppetImagesBun));
 
 /**
  * `check --short`: the short resolved on the film's frames, at the rate the

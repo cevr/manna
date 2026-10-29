@@ -1,7 +1,9 @@
 // A puppet's part PNGs in a page (`PuppetImagesBrowser`): each fetched
 // through the page's `HttpClient`, decoded (`createImageBitmap`, no colour
 // conversion, no premultiplying) and awaited inside the load, then read back
-// as RGBA bytes from a 2D canvas. A part's pixels are opaque or clear (its
+// as RGBA bytes from a 2D canvas. The bitmap is held in the read's own scope,
+// so it is closed once the read ends, whether it succeeded, failed or was
+// interrupted. A part's pixels are opaque or clear (its
 // sheet's own bytes, or none), so the 2D canvas gives them back as they are.
 
 import { Effect, Layer, Option } from 'effect';
@@ -24,14 +26,17 @@ export const PuppetImagesBrowser = Layer.effect(
           Effect.mapError(res.arrayBuffer, (error) => unreadable(error.message)),
         ),
         Effect.flatMap((bytes) =>
-          Effect.tryPromise({
-            try: () =>
-              createImageBitmap(new Blob([bytes], { type: 'image/png' }), {
-                colorSpaceConversion: 'none',
-                premultiplyAlpha: 'none',
-              }),
-            catch: (cause) => unreadable(`does not decode: ${String(cause)}`),
-          }),
+          Effect.acquireRelease(
+            Effect.tryPromise({
+              try: () =>
+                createImageBitmap(new Blob([bytes], { type: 'image/png' }), {
+                  colorSpaceConversion: 'none',
+                  premultiplyAlpha: 'none',
+                }),
+              catch: (cause) => unreadable(`does not decode: ${String(cause)}`),
+            }),
+            (bitmap) => Effect.sync(() => bitmap.close()),
+          ),
         ),
         Effect.flatMap((bitmap) => {
           const canvas = document.createElement('canvas');
@@ -44,7 +49,6 @@ export const PuppetImagesBrowser = Layer.effect(
             Effect.map((ctx) => {
               ctx.drawImage(bitmap, 0, 0);
               const data = ctx.getImageData(0, 0, bitmap.width, bitmap.height).data;
-              bitmap.close();
               return {
                 width: canvas.width,
                 height: canvas.height,
@@ -53,6 +57,7 @@ export const PuppetImagesBrowser = Layer.effect(
             }),
           );
         }),
+        Effect.scoped,
       );
     };
     return PuppetImages.of({ read, paints: true });
