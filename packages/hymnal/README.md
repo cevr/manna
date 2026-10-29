@@ -675,9 +675,11 @@ committed files. Each check needs no reader:
 - C11 `rulings`: every ruling settles a failure the checks print now, and with `--judges` names a judge record that exists.
 - C12 `directions`: each allusion of the index by reference has a twin in the index by hymn number, with the same hymn and book, an agreeing stanza and an overlapping passage. The book leaves out about one in twenty of the by-hymn passages from the by-reference side, so the other direction is not checked.
 
-No check can see two readings that agree on the same misread. The checks
-also cannot see a printed ruling's fact: each ruling rests on the strip of
-the page its judge read.
+The checks catch a misread both readers agree on only when it breaks a
+rule: the order, sections, tunes, metre and directions checks.
+`bun run indexes --reach` counts how many look-alike misreads they catch.
+The other misreads rest on the readers. The checks also cannot see a printed
+ruling's fact: each ruling rests on the strip of the page its judge read.
 
 ### Printed rulings
 
