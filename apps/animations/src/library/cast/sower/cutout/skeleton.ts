@@ -25,6 +25,18 @@ const BODY: Body = {
   band: { above: 50, below: 12, reach: 60 },
 };
 
+/** His body in a profile to the viewer's left, which draws his left arm only: its flap reaches 25 past the shoulder, to the sleeve's back edge, where the torso behind it begins. */
+const PROFILE_LEFT: Body<{ readonly left: string }> = {
+  skin: {
+    head: ['neck', 'head'],
+    torso: ['lean'],
+    armLeft: ['shoulderLeft', 'elbowLeft', 'wristLeft', 'lean'],
+  },
+  arms: { left: 'armLeft' },
+  from: 'torso',
+  band: { above: 50, below: 12, reach: 25 },
+};
+
 /** Each cut view's skeleton in its part sheet's frame, by the view's name in his sheets' views. */
 export const SKELETONS = {
   front: framed(
@@ -84,6 +96,22 @@ export const SKELETONS = {
       flapLeft: 57,
       capRight: 14,
       capLeft: 14,
+    }),
+  ),
+  // in profile to the viewer's left: his left arm the near one, its flap from its front edge back to the sleeve's back edge
+  profileLeft: framed(
+    keptAt('profileLeft'),
+    standing(PROFILE_LEFT, {
+      facing: 'front',
+      hip: [88, 318],
+      neck: [82, 180],
+      chin: [56, 166],
+      crown: [78, 0],
+      ...JOINTS.profileLeft,
+      wristLeft: [95, 345],
+      handLeft: [92.5, 369],
+      flapLeft: 63,
+      capLeft: 12,
     }),
   ),
 } as const satisfies Readonly<Record<FramedView, Skeleton>>;

@@ -24,4 +24,9 @@ export const JOINTS = {
     shoulderLeft: [44, 220],
     elbowLeft: [36, 282],
   },
+  // his left arm only: a profile to the viewer's left shows no right arm
+  profileLeft: {
+    shoulderLeft: [110, 190],
+    elbowLeft: [101, 282],
+  },
 } as const satisfies Readonly<Record<string, Readonly<Record<string, Pt>>>>;

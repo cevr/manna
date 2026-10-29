@@ -479,6 +479,131 @@ const BACK: PartCut = {
   ],
 };
 
+/**
+ * In profile to the viewer's left: only his left arm shows, the near one,
+ * over his body's side, with the body on both sides of it (the mantle's front
+ * panel before its front edge, the mantle's edge band and his back behind its
+ * back edge). The hem's line, column by column from the sheet's left edge:
+ * the tunic's front side, the hem over his leading sandal, the hem between
+ * his feet, over his trailing sandal, the tunic's back side. Which sandal is
+ * his left is read from the turn: the near, leading one.
+ */
+const PL_HEM = {
+  left: [
+    [10, 510],
+    [22, 515],
+    [23, 525],
+    [39, 537],
+    [43, 519],
+    [56, 521],
+    [68, 522],
+  ],
+  right: [
+    [71, 527],
+    [100, 538],
+    [105, 520],
+    [137, 522],
+    [142, 534],
+    [147, 518],
+    [161, 512],
+  ],
+} as const;
+const PL_LEFT: Sleeve = {
+  // his left sleeve's back edge: the ink it shares with the headcloth's tail, then a linen-to-walnut crease, then thin ink down to the cuff's slant
+  inner: [
+    [124, 182],
+    [130, 190],
+    [133, 200],
+    [133, 225],
+    [133.5, 230],
+    [133.5, 290],
+    [135, 294],
+    [135, 330],
+    [131, 336],
+    [132, 351],
+  ],
+  shoulder: JOINTS.profileLeft.shoulderLeft,
+  cap: 12,
+  side: 'left',
+};
+const plLeft = sleeve(PL_LEFT);
+/** Before the sleeve's front edge: the mantle's front panel, his belt and his body's front, down past the cuff. */
+const PL_FRONT = {
+  polygon: [
+    [-1, 170],
+    [92, 170],
+    [88, 182],
+    [86, 188],
+    [82, 194],
+    [80, 200],
+    [73, 240],
+    [71, 260],
+    [66, 300],
+    [62, 310],
+    [65, 320],
+    [63, 340],
+    [63, 352],
+    [-1, 352],
+  ],
+} as const;
+const PL_SOLES = {
+  left: [
+    [0, 0, 545],
+    [1, 1, 546],
+    [2, 2, 547],
+    [3, 68, 548],
+  ],
+  right: [
+    [69, 147, 548],
+    [148, 149, 547],
+    [150, 150, 546],
+    [151, 151, 545],
+    [152, 152, 544],
+  ],
+} as const satisfies Readonly<Record<string, SoleRuns>>;
+
+const PROFILE_LEFT: PartCut = {
+  parts: [
+    {
+      name: 'armLeft',
+      // the hand's disc stops at its right ink, which lies on the seed bag
+      take: [...plLeft.take, { disc: { c: [92.5, 369], r: 26 } }],
+      unless: [...plLeft.unless, PL_FRONT],
+      pivot: JOINTS.profileLeft.shoulderLeft,
+    },
+    // above the chin, and the headcloth's tail that hangs behind his left sleeve's top
+    { name: 'head', take: [box(-1, -1, FAR, 169), box(112, 150, 175, 228)] },
+    {
+      name: 'footLeft',
+      take: [{ polygon: [[-1, 510], ...PL_HEM.left, [69, 522], [69, 575], [-1, 575]] }],
+      unless: [underSole(PL_SOLES.left)],
+    },
+    {
+      name: 'footRight',
+      take: [{ polygon: [[69, 522], ...PL_HEM.right, [175, 512], [175, 575], [69, 575]] }],
+      unless: [underSole(PL_SOLES.right)],
+    },
+    {
+      name: 'shadow',
+      take: [
+        {
+          polygon: [
+            [-1, 510],
+            ...PL_HEM.left,
+            ...PL_HEM.right,
+            [FAR, 512],
+            [FAR, FAR * 2],
+            [-1, FAR * 2],
+          ],
+        },
+      ],
+    },
+    // below the belt, but the seed bag
+    { name: 'robe', take: [box(-1, 330, FAR, FAR * 2)], unless: [box(78, 328, 165, 428)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR * 2)] },
+  ],
+};
+
 /** His outline's ink: the median of his views' dark pixels (measured on the three-quarter and back views). */
 const INK = [34, 16, 8, 255] as const;
 
@@ -506,6 +631,10 @@ const HIDDEN_ENTRIES = {
     moving: ['armRight', 'armLeft'],
     prompt: `${CUT_AWAY} his two arms (sleeves and round hands) were cut away to make a cut-out puppet. He is seen from behind. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading as his body beside each arm (the olive mantle over his back, the walnut seed bag on the viewer's left side, the linen tunic below the mantle). ${SIDES} ${shade('his')} ${GRAIN} There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same headcloth, mantle, walnut strap, walnut seed bag, tunic, feet, size, position and framing.`,
   },
+  profileLeft: {
+    moving: ['armLeft'],
+    prompt: `${CUT_AWAY} his left arm (its sleeve and round hand) was cut away to make a cut-out puppet. He is seen in profile, facing the viewer's left, and his other arm does not show. Repaint ONLY the magenta areas, as what lies underneath his arm: the side of his body from the armpit down to the robe, painted in exactly the same style, colours and soft shading as his body round the arm (the olive mantle's front panel before it, the walnut-brown edge band and the olive mantle of his back behind it, the walnut strap, the belt round his waist, the linen tunic, and the walnut seed bag at his hip, now whole where the hand lay over it). ${SIDES} ${shade('his')} ${GRAIN} There is no arm now: no sleeve, no hand, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, headcloth and its tail, face, beard, tunic, mantle, walnut strap, belt, walnut seed bag, feet, size, position and framing.`,
+  },
 } as const satisfies Readonly<Record<CutView, HiddenEntry>>;
 
 /** His cut table: each view's cut and how its figure is read. */
@@ -515,6 +644,7 @@ export const { CUTS, cutOptionsFor, HIDDEN } = cutTable({
     front: { cut: FRONT, figure: 'framed' },
     threeQuarterLeft: { cut: THREE_QUARTER_LEFT, figure: 'framed' },
     back: { cut: BACK, figure: 'framed' },
+    profileLeft: { cut: PROFILE_LEFT, figure: 'framed' },
   },
   hidden: HIDDEN_ENTRIES,
   ink: INK,
