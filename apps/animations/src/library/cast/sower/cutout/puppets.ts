@@ -113,10 +113,12 @@ const POSES_LINE = { width: 9.5, ink: [48, 30, 15] } as const;
 
 /**
  * Each cut view's paper, the median of its kept view's border ground (its rim
- * is un-matted from it, `core/unmatte.ts`). The left profile's sheet glows
- * lighter beside his outline (251,243,228 outside his ink) than at its border,
- * and that glow, nearer his linen than the border's paper, stayed on as thin
- * paper strips; its paper is the glow, so the rim clears it.
+ * is un-matted from it, `core/unmatte.ts`), but the left profile's. His is a
+ * calibration: his border's median is 250,237,217, but his sheet glows
+ * lighter beside his outline (251,243,228 outside his ink), nearer his linen
+ * than the border's paper, and un-matted from the border's paper that glow
+ * keeps as thin paper strips. 252,245,230 is the paper whose un-matte, run
+ * on his view, clears his slivers and holes fit rows, read by simulation.
  */
 const TURNAROUND_PAPERS = {
   front: [250, 237, 217],
