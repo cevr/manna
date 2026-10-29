@@ -142,6 +142,8 @@ interface PuppetSheet {
   readonly thin?: ReadonlyArray<string>;
   /** The sheet's box edges his figure leaves through: when given, paper the box cuts off on any other edge is un-matted (`UnmatteOptions.open`). */
   readonly open?: ReadonlyArray<BoxEdge>;
+  /** His paper's grain, luma: a rim pixel darker than the paper by more than it is kept whole (`UnmatteOptions.grain`). */
+  readonly grain?: number;
 }
 
 const smooth = (e0: number, e1: number, x: number) => {
@@ -389,6 +391,7 @@ export const puppetOf = (
     keep: sheet.keep,
     thin: sheet.parts.flatMap((p, k) => (sheet.thin?.includes(p.name) === true ? [k] : [])),
     open: sheet.open,
+    grain: sheet.grain,
   };
   const unmatted = paper === undefined ? withFlaps : unmatte(withFlaps, W, H, paper, options);
   const skins = sheet.parts.map((p) => [...(skeleton.skin[p.name] ?? [])].sort().join(' '));

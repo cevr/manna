@@ -10,13 +10,15 @@
 // does not reach (the sheet's paper, lighter or bluer than its flat colour
 // at the rim) is paper: it keeps no alpha, so another paper shows there,
 // and over the sheet's flat paper it differs from the kept pixel by its own
-// distance from that paper. A member's cut-out may ask three things more of
+// distance from that paper. A member's cut-out may ask four things more of
 // it (`UnmatteOptions`): his cloth colours, so a light cloth the line does
 // not reach is his and not paper; his thin parts, whose alpha is raised
 // until the colour that closes the sum is in range, so a speck keeps its
-// hue on another paper; and the box's open edges, so paper the box cuts off
-// anywhere on its other edges is cleared, not only at its corners. Asked
-// none, it is as above. Pure.
+// hue on another paper; the box's open edges, so paper the box cuts off
+// anywhere on its other edges is cleared, not only at its corners; and his
+// paper's grain, so a rim pixel darker than the paper by more than the
+// sheet's own ground varies is his cloth, kept whole. Asked none, it is as
+// above. Pure.
 
 import { type Rgb, deltaE, labOf } from './cast-sheet-pixels.ts';
 
@@ -31,6 +33,8 @@ interface UnmatteOptions {
   readonly thin?: ReadonlyArray<number>;
   /** The box's edges his figure leaves through (a bust's bottom edge), where paper may be his (a highlight): when given, a pocket of paper is cleared from every pixel of every other edge; when not, from the box's four corners only. */
   readonly open?: ReadonlyArray<BoxEdge>;
+  /** His paper's grain, luma (0..255): a rim pixel darker than the paper by more than it is his cloth, kept whole at its colour and alpha 255, not solved toward the paper. The sheet's own ground runs this far darker than its median paper, so a pixel darker still is no paper. */
+  readonly grain?: number;
 }
 
 /** How far in from the ground the rim reaches: this many px (8-neighbour steps), through pixels lighter than ink. */
@@ -102,13 +106,21 @@ export const unmatte = (
       thin.has(holders.front[i]!),
     );
   const rim = rimOf(holders, (i) => solve(i)[3] === 0, options.open);
+  const { grain } = options;
+  const paperLuma = lumaOf(paper);
+  // a solved px darker than the paper by more than its grain: his cloth, kept whole
+  const floored = (i: number, s: ReturnType<typeof solve>) => {
+    if (grain === undefined || s[3] === 255) return s;
+    const c = holders.colourAt(i);
+    return paperLuma - lumaOf(c) > grain ? ([c[0], c[1], c[2], 255] as const) : s;
+  };
   const out = parts.map((p) => Uint8Array.from(p));
   for (const i of rim) {
     const k = holders.front[i]!;
     if (parts[k]![i * 4 + 3] !== 255) continue;
     // the view shows this px, the sheet's paper mixed in: paint behind it, hidden at rest, goes too
     for (let b = k + 1; b < parts.length; b++) out[b]!.fill(0, i * 4, i * 4 + 4);
-    out[k]!.set(solve(i), i * 4);
+    out[k]!.set(floored(i, solve(i)), i * 4);
   }
   return out;
 };

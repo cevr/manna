@@ -42,6 +42,7 @@ export const puppetFrom = Effect.fn('Puppet.from')(function* (spec: PuppetSpec) 
       keep: spec.keep,
       thin: spec.thin,
       open: spec.open,
+      grain: spec.grain,
     },
     spec.skeleton,
   );

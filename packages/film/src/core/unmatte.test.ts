@@ -183,4 +183,26 @@ describe('unmatte', () => {
     // a part not named thin keeps the line's alpha, its blue clamped: over the paper it goes grey
     expect(over(at(plain!, 3))[2]! - OCHRE[2]).toBeGreaterThan(10);
   });
+
+  // a cool grey cloth px 3.46 luma darker than the paper, which the line to the ink barely reaches
+  const GREY: Rgb = [244, 236, 226];
+
+  test('keeps a rim px darker than the paper by more than its grain whole, colour and alpha', () => {
+    const [out] = unmatte([partWith(4, GREY)], W, H, PAPER, { grain: 2 });
+    expect(at(out!, 4)).toEqual([...GREY, 255]);
+  });
+
+  test('solves that px along the line to the ink when no grain is given', () => {
+    const [out] = unmatte([partWith(4, GREY)], W, H, PAPER);
+    expect(at(out!, 4)[3]).toBeLessThan(10);
+  });
+
+  test('still solves a px within the grain, and clears the paper itself, when a grain is given', () => {
+    const NEAR: Rgb = [249, 239, 220];
+    const [near] = unmatte([partWith(4, NEAR)], W, H, PAPER, { grain: 2 });
+    const [solved] = unmatte([partWith(4, NEAR)], W, H, PAPER);
+    expect(at(near!, 4)).toEqual(at(solved!, 4));
+    const [paper] = unmatte([partWith(4, PAPER)], W, H, PAPER, { grain: 2 });
+    expect(at(paper!, 4)[3]).toBe(0);
+  });
 });
