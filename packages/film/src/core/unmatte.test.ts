@@ -116,4 +116,31 @@ describe('unmatte', () => {
     for (const x of [10, 11, 12, 20])
       expect(px(x)).toEqual([...src.subarray((4 * w + x) * 4, (4 * w + x) * 4 + 4)]);
   });
+
+  /** `part()` with column `x` painted `colour`. */
+  const partWith = (x: number, colour: Rgb) => {
+    const rgba = part();
+    for (let y = 0; y < H; y++) rgba.set([...colour, 255], (y * W + x) * 4);
+    return rgba;
+  };
+
+  test('keeps a light cloth px the line does not reach whole when it lies nearer a kept cloth colour than the paper', () => {
+    const [out] = unmatte([part()], W, H, PAPER, { keep: [[252, 246, 238]] });
+    expect(at(out!, 4)).toEqual([250, 244, 236, 255]);
+  });
+
+  test('still clears the paper itself when cloth colours are kept', () => {
+    const [out] = unmatte([partWith(4, PAPER)], W, H, PAPER, { keep: [[252, 246, 238]] });
+    expect(at(out!, 4)[3]).toBe(0);
+  });
+
+  test("raises a thin part's rim alpha until its colour is in range, so a saturated speck keeps its hue", () => {
+    const OCHRE: Rgb = [216, 171, 112];
+    const src = partWith(3, OCHRE);
+    const [thin] = unmatte([src], W, H, PAPER, { thin: [0] });
+    const [plain] = unmatte([src], W, H, PAPER, { thin: [1] });
+    over(at(thin!, 3)).forEach((v, c) => expect(Math.abs(v - OCHRE[c]!)).toBeLessThanOrEqual(1));
+    // a part not named thin keeps the line's alpha, its blue clamped: over the paper it goes grey
+    expect(over(at(plain!, 3))[2]! - OCHRE[2]).toBeGreaterThan(10);
+  });
 });

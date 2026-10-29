@@ -129,6 +129,10 @@ interface PuppetSheet {
   readonly height: number;
   readonly parts: ReadonlyArray<{ readonly name: string; readonly pixels: Raster }>;
   readonly paper?: Rgb;
+  /** His cloth colours, which the un-matte keeps where its line does not reach them (`UnmatteOptions.keep`). */
+  readonly keep?: ReadonlyArray<Rgb>;
+  /** His thin parts by name, whose rim keeps its hue (`UnmatteOptions.thin`). */
+  readonly thin?: ReadonlyArray<string>;
 }
 
 const smooth = (e0: number, e1: number, x: number) => {
@@ -373,7 +377,11 @@ export const puppetOf = (
       : withFlap(part.pixels, from.pixels, flap.region);
   });
   const { paper } = sheet;
-  const unmatted = paper === undefined ? withFlaps : unmatte(withFlaps, W, H, paper);
+  const options = {
+    keep: sheet.keep,
+    thin: sheet.parts.flatMap((p, k) => (sheet.thin?.includes(p.name) === true ? [k] : [])),
+  };
+  const unmatted = paper === undefined ? withFlaps : unmatte(withFlaps, W, H, paper, options);
   const skins = sheet.parts.map((p) => [...(skeleton.skin[p.name] ?? [])].sort().join(' '));
   const textures = sealed(unmatted, skins, W, H);
   // the parts un-matted with part j gone: what each part behind j shows once j moves away
@@ -382,7 +390,7 @@ export const puppetOf = (
     const known = without.get(j);
     if (known !== undefined) return known;
     const gone = withFlaps.map((p, n) => (n === j ? new Uint8Array(p.length) : p));
-    const made = paper === undefined ? gone : unmatte(gone, W, H, paper);
+    const made = paper === undefined ? gone : unmatte(gone, W, H, paper, options);
     without.set(j, made);
     return made;
   };

@@ -10,9 +10,21 @@
 // does not reach (the sheet's paper, lighter or bluer than its flat colour
 // at the rim) is paper: it keeps no alpha, so another paper shows there,
 // and over the sheet's flat paper it differs from the kept pixel by its own
-// distance from that paper. Pure.
+// distance from that paper. A member's cut-out may ask two things more of
+// it (`UnmatteOptions`): his cloth colours, so a light cloth the line does
+// not reach is his and not paper, and his thin parts, whose alpha is raised
+// until the colour that closes the sum is in range, so a speck keeps its
+// hue on another paper. Asked neither, it is as above. Pure.
 
-import type { Rgb } from './cast-sheet-pixels.ts';
+import { type Rgb, deltaE, labOf } from './cast-sheet-pixels.ts';
+
+/** What a member's cut-out asks of its un-matte beyond its paper; neither is asked by default. */
+export interface UnmatteOptions {
+  /** His cloth colours: a pixel the line does not reach is his, kept whole, when it lies nearer one of them than the paper (ΔE76), not paper. */
+  readonly keep?: ReadonlyArray<Rgb>;
+  /** His thin parts, by their index front to back: a rim pixel a thin part holds takes the least alpha at or over its solved one that gives a colour in 0..255, never a clamped colour. */
+  readonly thin?: ReadonlyArray<number>;
+}
 
 /** How far in from the ground the rim reaches: this many px (8-neighbour steps), through pixels lighter than ink. */
 const UNMATTE_BAND = 4;
@@ -61,37 +73,81 @@ export const unmatte = (
   width: number,
   height: number,
   paper: Rgb,
+  options: UnmatteOptions = {},
 ): ReadonlyArray<Uint8Array> => {
   const holders = holdersOf(parts, width, height);
-  const rim = rimOf(
-    holders,
-    (i) => solved(holders.colourAt(i), inkNear(holders, i, paper), paper)[3] === 0,
-  );
+  const paperLab = labOf(paper);
+  const keep = (options.keep ?? []).map(labOf);
+  // a px the line does not reach: his cloth when it lies nearer a kept cloth colour than the paper
+  const isCloth = (c: Rgb) => {
+    if (keep.length === 0) return false;
+    const lab = labOf(c);
+    const fromPaper = deltaE(lab, paperLab);
+    return keep.some((k) => deltaE(lab, k) < fromPaper);
+  };
+  const thin = new Set(options.thin);
+  const solve = (i: number) =>
+    solved(
+      holders.colourAt(i),
+      inkNear(holders, i, paper),
+      paper,
+      isCloth,
+      thin.has(holders.front[i]!),
+    );
+  const rim = rimOf(holders, (i) => solve(i)[3] === 0);
   const out = parts.map((p) => Uint8Array.from(p));
   for (const i of rim) {
     const k = holders.front[i]!;
     if (parts[k]![i * 4 + 3] !== 255) continue;
     // the view shows this px, the sheet's paper mixed in: paint behind it, hidden at rest, goes too
     for (let b = k + 1; b < parts.length; b++) out[b]!.fill(0, i * 4, i * 4 + 4);
-    out[k]!.set(solved(holders.colourAt(i), inkNear(holders, i, paper), paper), i * 4);
+    out[k]!.set(solve(i), i * 4);
   }
   return out;
 };
 
-/** `c`'s colour and alpha (RGBA) over `paper`, its alpha along the line from `paper` to `ink`. */
-const solved = (c: Rgb, ink: Rgb, paper: Rgb): readonly [number, number, number, number] => {
+/**
+ * `c`'s colour and alpha (RGBA) over `paper`, its alpha along the line from
+ * `paper` to `ink`. A pixel the line does not reach is paper (no alpha)
+ * unless it `isCloth`, then kept whole; a `thin` part's alpha is raised to
+ * the least that gives a colour in 0..255 (`inGamut`).
+ */
+const solved = (
+  c: Rgb,
+  ink: Rgb,
+  paper: Rgb,
+  isCloth: (c: Rgb) => boolean,
+  thin: boolean,
+): readonly [number, number, number, number] => {
   const d = [ink[0] - paper[0], ink[1] - paper[1], ink[2] - paper[2]] as const;
   const len2 = d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
   const along =
     len2 === 0
       ? 1
       : ((c[0] - paper[0]) * d[0] + (c[1] - paper[1]) * d[1] + (c[2] - paper[2]) * d[2]) / len2;
-  const a = Math.round(Math.max(0, Math.min(1, along)) * 255);
-  if (a === 0) return [0, 0, 0, 0];
+  const reached = Math.round(Math.max(0, Math.min(1, along)) * 255);
+  if (reached === 0) return isCloth(c) ? [c[0], c[1], c[2], 255] : [0, 0, 0, 0];
+  const a = thin ? inGamut(c, paper, reached) : reached;
   const t = a / 255;
   const channel = (j: 0 | 1 | 2) =>
     Math.max(0, Math.min(255, Math.round((c[j] - paper[j] * (1 - t)) / t)));
   return [channel(0), channel(1), channel(2), a];
+};
+
+/**
+ * The least alpha (0..255), from `from` up, at which a colour closes `c`
+ * over `paper` with each channel in 0..255: colour·a = c·255 − paper·(255 − a),
+ * held in whole numbers so no rounding decides it.
+ */
+const inGamut = (c: Rgb, paper: Rgb, from: number) => {
+  const out = (a: number) =>
+    [0, 1, 2].some((j) => {
+      const v = c[j]! * 255 - paper[j]! * (255 - a);
+      return v < 0 || v > 255 * a;
+    });
+  let a = from;
+  while (a < 255 && out(a)) a++;
+  return a;
 };
 
 /** The in-frame 8-neighbours of pixel `i`. */

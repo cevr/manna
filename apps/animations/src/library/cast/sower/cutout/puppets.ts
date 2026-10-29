@@ -127,12 +127,30 @@ const POSES_PAPERS = {
   'poses-4': [249, 234, 212],
 } as const satisfies Readonly<Record<PosesView, readonly [number, number, number]>>;
 
+/**
+ * His linen's lit rim, lighter than his papers, so the un-matte's line from
+ * the paper to his ink does not reach it: kept as his, not cleared as paper
+ * (`core/unmatte.ts`, `keep`). Read from the kept crops' tunic beside his
+ * outline on the front and back.
+ */
+const LINEN = [
+  [253, 243, 220],
+  [253, 238, 210],
+  [247, 240, 226],
+  [252, 249, 228],
+] as const satisfies ReadonlyArray<readonly [number, number, number]>;
+
+/** His seed: specks thinner than the un-matte's band, which keep their ochre on another paper (`core/unmatte.ts`, `thin`). */
+const THIN = ['seed'] as const;
+
 /** His turnaround's puppets, by the view's name in his sheets' views (`library/cutout/puppets.ts`). */
 const TURNAROUND = puppetsOf<TurnaroundView>({
   cast: 'sower',
   frames: FRAMES,
   skeletons: SKELETONS,
   papers: TURNAROUND_PAPERS,
+  keep: LINEN,
+  thin: THIN,
   line: TURNAROUND_LINE,
   parts: {
     front: [
@@ -202,6 +220,8 @@ const POSES = puppetsOf<PosesView>({
   frames: FRAMES,
   skeletons: SKELETONS,
   papers: POSES_PAPERS,
+  keep: LINEN,
+  thin: THIN,
   line: POSES_LINE,
   parts: {
     'poses-1': [

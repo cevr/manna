@@ -47,6 +47,10 @@ export interface PuppetSpec {
   readonly concept?: ConceptRef;
   /** The paper the parts were cut from: their edge pixels are un-matted from it as the puppet is made (`core/unmatte.ts`). */
   readonly paper?: readonly [number, number, number];
+  /** His cloth colours, which the un-matte keeps where its line does not reach them (`core/unmatte.ts`, `keep`). */
+  readonly keep?: ReadonlyArray<readonly [number, number, number]>;
+  /** His thin parts by name, whose rim keeps its hue (`core/unmatte.ts`, `thin`). */
+  readonly thin?: ReadonlyArray<string>;
   /** The drawings a look lays with it (drawn keys and held hands), each a PNG, loaded with its parts. */
   readonly drawings?: ReadonlyArray<{ readonly name: string; readonly png: string }>;
   /** The sheet's line: its width, sheet px, and its ink, which a look's L3 pass draws near what moved. */

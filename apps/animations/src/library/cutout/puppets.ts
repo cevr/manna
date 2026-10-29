@@ -37,6 +37,10 @@ export interface PuppetMember<V extends string> {
   readonly skeletons: Readonly<Record<V, Rooted>>;
   /** Each view's paper, the median of its kept view's border ground (its rim is un-matted from it, `core/unmatte.ts`). */
   readonly papers: Readonly<Record<V, Rgb>>;
+  /** His light cloth colours: a rim pixel the un-matte's line does not reach is his, not paper, when it lies nearer one of them (`core/unmatte.ts`, `keep`). */
+  readonly keep?: ReadonlyArray<Rgb>;
+  /** His thin parts by name, whose rim keeps its hue on another paper (`core/unmatte.ts`, `thin`). */
+  readonly thin?: ReadonlyArray<string>;
   /** His sheet's line, which a look draws again near what moved. */
   readonly line: { readonly width: number; readonly ink: Rgb };
   readonly parts: Readonly<Record<V, Parts>>;
@@ -57,6 +61,8 @@ export const puppetsOf = <V extends string>(
       origin: keptCorner(frame),
       concept: { image: { cast: member.cast, sheet: frame.sheet }, box: frame.kept },
       paper: member.papers[view],
+      keep: member.keep,
+      thin: member.thin,
       line: member.line,
     };
   });
