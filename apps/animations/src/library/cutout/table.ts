@@ -71,13 +71,16 @@ const moved = (p: Pt, by: Pt): Pt => [
   Math.max(-FAR, (p[1] + by[1]) * Number(p[1] > -1) - FAR * Number(p[1] <= -1)),
 ];
 
+/** A disc's centre or a part's pivot read in the kept view's pixels, in its part sheet's: moved by the pad alone, so a centre left of or above the kept box keeps its place. */
+const shifted = (p: Pt, by: Pt): Pt => [p[0] + by[0], p[1] + by[1]];
+
 const movedRule = (r: PartRule, by: Pt): PartRule =>
   Match.value(r).pipe(
     Match.when({ polygon: Match.defined }, (q) => ({
       polygon: q.polygon.map((p) => moved(p, by)),
     })),
     Match.when({ disc: Match.defined }, (q) => ({
-      disc: { c: moved(q.disc.c, by), r: q.disc.r },
+      disc: { c: shifted(q.disc.c, by), r: q.disc.r },
     })),
     Match.orElse((q) => q),
   );
@@ -96,7 +99,7 @@ export const padded = (cut: PartCut, frame: CutFrame): PartCut => {
       };
       return Option.match(Option.fromUndefinedOr(p.pivot), {
         onNone: () => part,
-        onSome: (pivot) => ({ ...part, pivot: moved(pivot, by) }),
+        onSome: (pivot) => ({ ...part, pivot: shifted(pivot, by) }),
       });
     }),
   };

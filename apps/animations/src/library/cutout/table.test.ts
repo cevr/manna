@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { type PartCut, cutFigureOf } from '@manna/film/tools';
-import { Match } from 'effect';
+import { type PartCut, cutFigureOf, cutParts } from '@manna/film/tools';
+import { Match, Result } from 'effect';
 import { grain, shade, sides } from './prompts.ts';
 import { FAR, box } from './rules.ts';
 import { type CutFrame, bustFigure, cutTable, framedFigure, padded } from './table.ts';
@@ -101,6 +101,28 @@ describe('padded', () => {
       ],
       unless: [],
     });
+  });
+
+  test('moves a disc centre and a pivot left of the kept box by the pad, so a cropped hand keeps its visible pixels', () => {
+    const hand: PartCut = {
+      parts: [
+        { name: 'hand', take: [{ disc: { c: [-2, 10], r: 4 } }], pivot: [-3, 5] },
+        { name: 'rest', take: [box(-1, -1, FAR, FAR)] },
+      ],
+    };
+    const square: CutFrame = { sheet: 'turnaround', kept: [0, 0, 20, 20], pad: [3, 3, 3, 3] };
+    const laid = padded(hand, square);
+    expect(laid.parts[0]?.take).toEqual([{ disc: { c: [1, 13], r: 4 } }]);
+    expect(laid.parts[0]?.pivot).toEqual([0, 8]);
+    const owner = Result.match(
+      cutParts(
+        raster(26, 26, () => INK),
+        laid,
+        { figure: new Uint8Array(26 * 26).fill(1) },
+      ),
+      { onSuccess: (sheet) => sheet.owner[13 * 26 + 1] ?? -1, onFailure: () => -1 },
+    );
+    expect(owner).toBe(1);
   });
 });
 
