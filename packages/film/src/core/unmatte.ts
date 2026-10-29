@@ -10,20 +10,27 @@
 // does not reach (the sheet's paper, lighter or bluer than its flat colour
 // at the rim) is paper: it keeps no alpha, so another paper shows there,
 // and over the sheet's flat paper it differs from the kept pixel by its own
-// distance from that paper. A member's cut-out may ask two things more of
+// distance from that paper. A member's cut-out may ask three things more of
 // it (`UnmatteOptions`): his cloth colours, so a light cloth the line does
-// not reach is his and not paper, and his thin parts, whose alpha is raised
+// not reach is his and not paper; his thin parts, whose alpha is raised
 // until the colour that closes the sum is in range, so a speck keeps its
-// hue on another paper. Asked neither, it is as above. Pure.
+// hue on another paper; and the box's open edges, so paper the box cuts off
+// anywhere on its other edges is cleared, not only at its corners. Asked
+// none, it is as above. Pure.
 
 import { type Rgb, deltaE, labOf } from './cast-sheet-pixels.ts';
 
-/** What a member's cut-out asks of its un-matte beyond its paper; neither is asked by default. */
+/** An edge of the view's box. */
+export type BoxEdge = 'top' | 'right' | 'bottom' | 'left';
+
+/** What a member's cut-out asks of its un-matte beyond its paper; none is asked by default. */
 interface UnmatteOptions {
   /** His cloth colours: a pixel the line does not reach is his, kept whole, when it lies nearer one of them than the paper (ΔE76), not paper. */
   readonly keep?: ReadonlyArray<Rgb>;
   /** His thin parts, by their index front to back: a rim pixel a thin part holds takes the least alpha at or over its solved one that gives a colour in 0..255, never a clamped colour. */
   readonly thin?: ReadonlyArray<number>;
+  /** The box's edges his figure leaves through (a bust's bottom edge), where paper may be his (a highlight): when given, a pocket of paper is cleared from every pixel of every other edge; when not, from the box's four corners only. */
+  readonly open?: ReadonlyArray<BoxEdge>;
 }
 
 /** How far in from the ground the rim reaches: this many px (8-neighbour steps), through pixels lighter than ink. */
@@ -94,7 +101,7 @@ export const unmatte = (
       isCloth,
       thin.has(holders.front[i]!),
     );
-  const rim = rimOf(holders, (i) => solve(i)[3] === 0);
+  const rim = rimOf(holders, (i) => solve(i)[3] === 0, options.open);
   const out = parts.map((p) => Uint8Array.from(p));
   for (const i of rim) {
     const k = holders.front[i]!;
@@ -169,7 +176,11 @@ const neighbours = (i: number, width: number, height: number) => {
  * The frame's border is not ground; a pocket of the sheet's paper the
  * view's box cuts off from the ground is added after (`pocketsOf`).
  */
-const rimOf = ({ front, colourAt, width, height }: Holders, isPaper: (i: number) => boolean) => {
+const rimOf = (
+  { front, colourAt, width, height }: Holders,
+  isPaper: (i: number) => boolean,
+  open: ReadonlyArray<BoxEdge> | undefined,
+) => {
   const rim: number[] = [];
   const seen = Uint8Array.from(front, (k) => (k === -1 ? 1 : 0));
   let from = [...front.keys()].filter((i) => front[i] === -1);
@@ -187,21 +198,41 @@ const rimOf = ({ front, colourAt, width, height }: Holders, isPaper: (i: number)
       }
     from = next;
   }
-  return [...rim, ...pocketsOf(seen, isPaper, width, height)];
+  return [...rim, ...pocketsOf(seen, isPaper, width, height, open)];
+};
+
+/** The pixels on an edge of the box and on no `open` edge (a corner lies on two edges, and is left out when either is open). */
+const closedEdgeOf = (width: number, height: number, open: ReadonlyArray<BoxEdge>) => {
+  const perimeter = new Set<number>();
+  for (let x = 0; x < width; x++) perimeter.add(x).add((height - 1) * width + x);
+  for (let y = 0; y < height; y++) perimeter.add(y * width).add(y * width + width - 1);
+  const isOpen = (i: number) => {
+    const [x, y] = [i % width, Math.floor(i / width)];
+    return (
+      (y === 0 && open.includes('top')) ||
+      (x === width - 1 && open.includes('right')) ||
+      (y === height - 1 && open.includes('bottom')) ||
+      (x === 0 && open.includes('left'))
+    );
+  };
+  return [...perimeter].filter((i) => !isOpen(i));
 };
 
 /**
- * The paper pixels the walk did not reach that join a corner of the frame
+ * The paper pixels the walk did not reach that join the frame's seeds
  * through paper alone: a pocket of the sheet's paper the view's box cuts
- * off between his ink and the box's corner. Only paper is walked, so no
- * colour of his is reached, and only from a corner: paper on an edge of the
- * box may be inside him (a highlight where a bust's tunic leaves the box).
+ * off between his ink and the box. Only paper is walked, so no colour of
+ * his is reached. With `open` given, every pixel of every edge not open
+ * seeds the walk; without it, the four corners only, since paper on an edge
+ * of the box may be inside him (a highlight where a bust's tunic leaves the
+ * box) and no edge is named open.
  */
 const pocketsOf = (
   seen: Uint8Array,
   isPaper: (i: number) => boolean,
   width: number,
   height: number,
+  open: ReadonlyArray<BoxEdge> | undefined,
 ) => {
   const pocket: number[] = [];
   const take = (i: number) => {
@@ -209,7 +240,11 @@ const pocketsOf = (
     seen[i] = 1;
     if (isPaper(i)) pocket.push(i);
   };
-  for (const i of [0, width - 1, (height - 1) * width, height * width - 1]) take(i);
+  const seeds =
+    open === undefined
+      ? [0, width - 1, (height - 1) * width, height * width - 1]
+      : closedEdgeOf(width, height, open);
+  for (const i of seeds) take(i);
   for (let f = 0; f < pocket.length; f++)
     for (const j of neighbours(pocket[f]!, width, height)) take(j);
   return pocket;

@@ -34,7 +34,15 @@ export const puppetFrom = Effect.fn('Puppet.from')(function* (spec: PuppetSpec) 
     ),
   );
   const made = puppetOf(
-    { width: w, height: h, parts, paper: spec.paper, keep: spec.keep, thin: spec.thin },
+    {
+      width: w,
+      height: h,
+      parts,
+      paper: spec.paper,
+      keep: spec.keep,
+      thin: spec.thin,
+      open: spec.open,
+    },
     spec.skeleton,
   );
   if (Result.isFailure(made)) return yield* unloadable(made.failure.reason);

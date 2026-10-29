@@ -42,7 +42,7 @@ import { Result, Schema } from 'effect';
 import { IDENTITY } from './affine.ts';
 import type { Rgb } from './cast-sheet-pixels.ts';
 import type { Raster } from './raster.ts';
-import { unmatte } from './unmatte.ts';
+import { type BoxEdge, unmatte } from './unmatte.ts';
 
 type Pt = readonly [number, number];
 
@@ -133,6 +133,8 @@ interface PuppetSheet {
   readonly keep?: ReadonlyArray<Rgb>;
   /** His thin parts by name, whose rim keeps its hue (`UnmatteOptions.thin`). */
   readonly thin?: ReadonlyArray<string>;
+  /** The sheet's box edges his figure leaves through: when given, paper the box cuts off on any other edge is un-matted (`UnmatteOptions.open`). */
+  readonly open?: ReadonlyArray<BoxEdge>;
 }
 
 const smooth = (e0: number, e1: number, x: number) => {
@@ -373,6 +375,7 @@ export const puppetOf = (
   const options = {
     keep: sheet.keep,
     thin: sheet.parts.flatMap((p, k) => (sheet.thin?.includes(p.name) === true ? [k] : [])),
+    open: sheet.open,
   };
   const unmatted = paper === undefined ? withFlaps : unmatte(withFlaps, W, H, paper, options);
   const skins = sheet.parts.map((p) => [...(skeleton.skin[p.name] ?? [])].sort().join(' '));
