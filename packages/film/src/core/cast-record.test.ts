@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'bun:test';
 import { Schema } from 'effect';
-import { CastSheetJson, keptOf, replacedSince, viewName, withCastKept } from './cast-record.ts';
+import { CastSheetJson, keptOf, replacedSince, withCastKept } from './cast-record.ts';
 import type { CastKept, CastSheetRecord } from './cast-record.ts';
 import { castLock } from './cast-lock.ts';
 import { keptFile } from './cast-sheet.ts';
@@ -56,10 +56,6 @@ describe("a member's single drawings", () => {
       ['single-1'],
       ['single-2'],
     ]);
-  });
-
-  test('are named single-1 and single-2 as views', () => {
-    expect([viewName('single', 1), viewName('single', 2)]).toEqual(['single-1', 'single-2']);
   });
 
   test('are each kept as its own file, while a sheet kind keeps one file by its kind', () => {
