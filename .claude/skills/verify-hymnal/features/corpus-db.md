@@ -12,7 +12,7 @@ phone reads compiled JSON; this feature has no app route.
 - `corpus-db-search`: Unicode FTS and literal, bounded substring search.
 - `corpus-db-cli`: get/search/categories/category/missing contracts and isolated init acquisition.
 - `corpus-db-legacy`: read-only compatibility with installed version-0 databases.
-- `corpus-db-indexes`: `manna hymns get <n> --json` gives a hymn's back-matter indexes (`indexes`, the `HymnIndexes` shape) from the `index_*` tables; a reading (696-920) and a database with no index tables give `indexes: null`, and the text form adds `Topics:`, `Tunes:` and `Metres:` lines under the hymn.
+- `corpus-db-indexes`: `manna hymns get <n> --json` gives a hymn's back-matter indexes (`indexes`, the `HymnIndexes` shape) from the `index_*` tables; a reading (696-920) and a database with no index tables give `indexes: null` (exit 0); for the second alone stderr carries `note: this hymnal.db has no indexes; run manna init to replace it`, and default `manna init` replaces such a database (a `hymns` table, an absent index table) without `--force`; an index row that does not decode exits non-zero with no note; and the text form adds `Topics:`, `Tunes:` and `Metres:` lines under the hymn.
 - `corpus-init-empty`: full init installs all four databases in an empty scratch HOME.
 - `corpus-init-preserve`: default init preserves existing files, including offline and legacy installs.
 - `corpus-init-wal`: closed WAL artifacts and live WAL commits survive acquisition and verification.
@@ -107,7 +107,8 @@ phone reads compiled JSON; this feature has no app route.
    → exit 0, `{"number":2,"topics":2,"passages":3,"tunes":1,"metres":2}`. The same
    command for `696` prints `.indexes` as `null`, and the text form (`hymns get 2`)
    has one `Topics:`, one `Tunes:` and one `Metres:` line. The regression is the
-   indexes case of `packages/cli/test/commands/hymns.slow.test.ts`. Trash the
+   indexes case of `packages/cli/test/commands/hymns.slow.test.ts`; the replacement
+   of an unindexed hymnal.db is a case of `packages/cli/test/commands/init.test.ts`. Trash the
    scratch db after the run.
 
 ## Gotchas
