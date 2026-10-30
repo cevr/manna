@@ -542,9 +542,8 @@ const SINGLE_1: PartCut = {
  * pale grain on his right sleeve's shoulder; the sash's band and knot; and
  * its two ends with their pale grain. A seed names a pocket whole, whatever
  * its shape, where a box would take the ink or cloth beside it. The paper
- * between his feet, closed by his hem above and his ground shadow below, is
- * his as the shadow is: cut out, the un-matte clears its pale rim past what
- * the drawing holds as paper. The two specks beside his hem stay the ground's.
+ * between his feet is the ground he stands on, not a thing he holds, so it
+ * stays cut; so do the two specks beside his hem.
  */
 const SINGLE_1_HELD: ReadonlyArray<Pt> = [
   [84, 258],
@@ -567,7 +566,6 @@ const SINGLE_1_HELD: ReadonlyArray<Pt> = [
   [287, 819],
   [293, 857],
   [286, 898],
-  [318, 1221],
 ];
 
 /** His sheets' ink, for the row that closes a bust's foot. */
