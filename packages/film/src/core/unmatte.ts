@@ -146,11 +146,18 @@ const SHEET_GROUND = 4.25;
 /** A clear region or kept hole holding this many paper px (within `PAPER_CORE`) is a pocket of the sheet's paper inside him: a clear region that holds one, or any px of a kept hole that is one, stays cleared. */
 const POCKET = 9;
 
-/** Whether part `p` holds no ink (no opaque px at or under `INK_LUMA`): a shadow on the ground, which walls nothing in. */
-const inkless = (p: Uint8Array) => {
+/** A part whose opaque px are ink (at or under `INK_LUMA`) at most this share is a shadow on the ground: a shadow's darkest grain is a few specks of its px, where every part of the figure carries an outline. */
+const SHADOW_INK = 0.035;
+
+/** Whether part `p` is a shadow on the ground, which walls nothing in: so few of its opaque px are ink that they are specks of the shadow's own grain, not an outline. */
+const shadowOf = (p: Uint8Array) => {
+  let [opaque, ink] = [0, 0];
   for (let i = 0; i < p.length; i += 4)
-    if (p[i + 3] === 255 && lumaOf([p[i]!, p[i + 1]!, p[i + 2]!]) <= INK_LUMA) return false;
-  return true;
+    if (p[i + 3] === 255) {
+      opaque++;
+      if (lumaOf([p[i]!, p[i + 1]!, p[i + 2]!]) <= INK_LUMA) ink++;
+    }
+  return ink <= opaque * SHADOW_INK;
 };
 
 const onFrame = (i: number, width: number, height: number) => {
@@ -248,10 +255,14 @@ const sides = (i: number, width: number, height: number) => {
  * cleared is a hole in him. The outside is what floods (8-connected) from
  * the ground and the frame's border past his walls: a px his inked parts
  * hold at view alpha `FENCE` or more, so his shadow on the ground walls
- * nothing in. A px is enclosed when the outside does not reach it, and its
+ * nothing in: a part is his shadow when at most `SHADOW_INK` of its opaque
+ * px are ink (`shadowOf`), since its darkest grain is specks and not an
+ * outline. A px is enclosed when the outside does not reach it, and its
  * clear region (4-connected) is taken back but for three things that stay
- * cleared: a region holding `POCKET` px of paper or any px of a sheet pocket
- * (`sheetPocketsOf`), each px of paper itself (within `PAPER_CORE`), which
+ * cleared: a region holding `POCKET` px of paper, or any px of the sheet's
+ * open paper or of a sheet pocket (`sheetPocketsOf`), since a gap the sheet
+ * shows open to the ground is no hole in him; each px of paper itself
+ * (within `PAPER_CORE`), which
  * kept would show as a halo, and each px beside the outside or on the frame,
  * which kept would show as a fleck on his outline.
  */
@@ -267,7 +278,7 @@ const restoreEnclosed = (
   const fromPaper = paperDistance(holders, paperLab);
   const isCore = (i: number) => fromPaper(i) <= PAPER_CORE;
   const alpha = viewAlphaOf(out, n);
-  const inked = out.filter((_, k) => !inkless(parts[k]!));
+  const inked = out.filter((_, k) => !shadowOf(parts[k]!));
   const wallAlpha = inked.length === out.length ? alpha : viewAlphaOf(inked, n);
   const step8 = (i: number) => neighbours(i, width, height);
   const step4 = (i: number) => sides(i, width, height);
@@ -280,13 +291,13 @@ const restoreEnclosed = (
   const besideOutside = (i: number) =>
     onFrame(i, width, height) || step8(i).some((j) => outside[j] === 1);
   const enclosed = (i: number) => outside[i] === 0 && alpha[i]! < FENCE && front[i] !== -1;
-  let pockets: Uint8Array | undefined;
+  let sheet: ReturnType<typeof sheetPocketsOf> | undefined;
   for (const region of regionsOf(n, enclosed, step4)) {
     if (!region.some((i) => changed[i] === 1)) continue;
     if (region.filter(isCore).length >= POCKET) continue;
-    pockets ??= sheetPocketsOf(holders, fromPaper);
-    const inPocket = pockets;
-    if (region.some((i) => inPocket[i] === 1)) continue;
+    sheet ??= sheetPocketsOf(holders, fromPaper);
+    const { open, pockets } = sheet;
+    if (region.some((i) => open[i] === 1 || pockets[i] === 1)) continue;
     for (const i of region)
       if (changed[i] === 1 && !isCore(i) && !besideOutside(i))
         for (let k = 0; k < parts.length; k++)
@@ -295,10 +306,12 @@ const restoreEnclosed = (
 };
 
 /**
- * The sheet's pockets of paper, 1 at each px: each kept hole (a 4-connected
- * run of held px within `SHEET_GROUND` of the paper that no such run, nor
- * the ground, joins to the ground or the frame's border) holding `POCKET`
- * px of paper (within `PAPER_CORE`) or more, as the cut reads its pockets.
+ * The sheet's open paper and its pockets, 1 at each px. `open` is the run
+ * (4-connected) of the ground and held px within `SHEET_GROUND` of the paper
+ * that joins the ground or the frame's border: a gap the sheet shows open. A
+ * pocket is each kept hole (such a run that `open` does not reach) holding
+ * `POCKET` px of paper (within `PAPER_CORE`) or more, as the cut reads its
+ * pockets.
  */
 const sheetPocketsOf = ({ front, width, height }: Holders, fromPaper: (i: number) => number) => {
   const n = width * height;
@@ -309,7 +322,7 @@ const sheetPocketsOf = ({ front, width, height }: Holders, fromPaper: (i: number
   for (const hole of regionsOf(n, (i) => open[i] === 0 && groundLike(i), step4))
     if (hole.filter((i) => fromPaper(i) <= PAPER_CORE).length >= POCKET)
       for (const i of hole) pockets[i] = 1;
-  return pockets;
+  return { open, pockets };
 };
 
 /**

@@ -222,11 +222,12 @@ describe('unmatte, a light px the figure encloses', () => {
   const NEAR: Rgb = [252, 243, 224];
   const MIX = COLUMNS[0]!;
 
-  /** A square figure on x, y 3..16 of a 20 × 20 frame, its outline a 40 % ink mix round tan, with `paint` laid over it. */
+  /** A square figure on x, y 3..16 of a 20 × 20 frame, its outline a 40 % ink mix round tan and ink along its foot (an inked part, not a shadow), with `paint` laid over it. */
   const figure = (paint: ReadonlyArray<readonly [number, number, Rgb]>) => {
     const rgba = new Uint8Array(S * S * 4);
     for (let y = 3; y <= 16; y++)
       for (let x = 3; x <= 16; x++) rgba.set([...MIX, 255], (y * S + x) * 4);
+    for (let x = 3; x <= 16; x++) rgba.set([...INK, 255], (16 * S + x) * 4);
     for (let y = 4; y <= 15; y++)
       for (let x = 4; x <= 15; x++) rgba.set([...TAN, 255], (y * S + x) * 4);
     for (const [x, y, c] of paint) rgba.set([...c, 255], (y * S + x) * 4);
@@ -366,7 +367,7 @@ describe('unmatte, a light px the figure encloses', () => {
   test('clears a light gap between his feet that only an inkless part (his shadow) closes below', () => {
     const body = paint(new Uint8Array(S * S * 4), [5, 12], [3, 14], INK);
     paint(body, [8, 9], [8, 14], LIGHT);
-    const shadow = paint(new Uint8Array(S * S * 4), [3, 14], [15, 16], [215, 205, 190]);
+    const shadow = paint(new Uint8Array(S * S * 4), [1, 18], [15, 18], [215, 205, 190]);
     const [out] = unmatte([body, shadow], S, S, PAPER);
     for (const [x, y] of [
       [8, 13],
@@ -375,6 +376,23 @@ describe('unmatte, a light px the figure encloses', () => {
       [9, 14],
     ] as const)
       expect(px(out!, x, y)[3]).toBe(0);
+  });
+
+  test("clears a light gap between his legs whose mouth row is the sheet's grain, which a grain keeps whole", () => {
+    // the sheet's grain at its coarsest (ΔE 3.67): darker than the paper by more than a 2.25 grain, so kept whole
+    const GRAIN: Rgb = [239, 230, 212];
+    const src = paint(legs(16), [8, 9], [16, 16], GRAIN);
+    const [out] = unmatte([src], S, S, PAPER, { grain: 2.25 });
+    for (const [x, y] of gap(15)) expect(px(out!, x, y)[3]).toBe(0);
+  });
+
+  test('clears a light gap between his feet that a shadow closes below, though one shadow px is as dark as ink', () => {
+    const body = paint(new Uint8Array(S * S * 4), [5, 12], [3, 14], INK);
+    paint(body, [8, 9], [8, 14], LIGHT);
+    const shadow = paint(new Uint8Array(S * S * 4), [1, 18], [15, 18], [215, 205, 190]);
+    paint(shadow, [3, 3], [16, 16], [90, 85, 80]);
+    const [out] = unmatte([body, shadow], S, S, PAPER);
+    for (const x of [8, 9]) for (const y of [13, 14]) expect(px(out!, x, y)[3]).toBe(0);
   });
 
   test('clears a light px that opens on ground the figure holds inside his outline', () => {
