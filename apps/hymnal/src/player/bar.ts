@@ -10,10 +10,14 @@
  * Where it is drawn: while the player holds a hymn, docked under the stack
  * (`dockedBar`); while it holds none, in the hymn page itself (`pageBar`), so
  * a back moves it out with the page.
+ *
+ * The bar holds a `#` (`FIND_LABEL`) that opens the find drums over it on
+ * the bar's hymn's number (`Find`); a second press closes them.
  */
 
 import { Data, Option, Predicate } from 'effect';
 
+import { FIRST, held } from './drums';
 import { Player, type Track, trackOf } from './player';
 import { clock } from './time';
 
@@ -123,6 +127,37 @@ export const toldPlace = (state: Player): Option.Option<string> =>
       Option.map(length, (whole) => `${clock(at)} of ${clock(whole)}`),
     ),
   );
+
+/** What VoiceOver names the bar's `#` by, and a test finds it by. */
+export const FIND_LABEL = 'Find a hymn by number';
+
+/** The find drums over the bar: closed, or open on the number they dial (`drums.ts`). */
+export type Find = Data.TaggedEnum<{
+  Closed: {};
+  Open: { readonly number: number };
+}>;
+export const Find = Data.taggedEnum<Find>();
+
+/** The number the drums open on: the bar's hymn while the bar shows one, else the book's first. */
+export const openAt = (bar: Bar): number =>
+  Bar.$match(bar, {
+    Hidden: () => FIRST,
+    Shown: ({ track }) => held(track.number),
+  });
+
+/** The `#` pressed: closed drums open on `openAt(bar)`, open ones close. */
+export const toggleFind = (find: Find, bar: Bar): Find =>
+  Find.$match(find, {
+    Closed: () => Find.Open({ number: openAt(bar) }),
+    Open: () => Find.Closed(),
+  });
+
+/** A drum turned to dial `number`: open drums hold it, held to the book; closed ones stay closed. */
+export const dialFind = (find: Find, number: number): Find =>
+  Find.$match(find, {
+    Closed: () => find,
+    Open: () => Find.Open({ number: held(number) }),
+  });
 
 /**
  * The bottom inset the stack's screens meet, for a device's bottom inset of

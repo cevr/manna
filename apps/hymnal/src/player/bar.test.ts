@@ -7,7 +7,19 @@
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
-import { Bar, barFor, dockedBar, pageBar, playedShare, stackBottom, toldPlace } from './bar';
+import {
+  Bar,
+  barFor,
+  dialFind,
+  dockedBar,
+  Find,
+  openAt,
+  pageBar,
+  playedShare,
+  stackBottom,
+  toggleFind,
+  toldPlace,
+} from './bar';
 import { Player, type Track } from './player';
 
 const three: Track = { number: 3, title: 'Three' };
@@ -119,5 +131,32 @@ describe('stackBottom', () => {
     }
     // A hymn page's own bar lies in the page: the stack reaches the window's edge.
     expect(stackBottom(dockedBar(Player.Idle(), Option.some(four)), 34)).toBe(34);
+  });
+});
+
+describe('the find drums', () => {
+  const shown = barFor(Player.Idle(), Option.some(four));
+
+  it('open on the bar’s hymn, or on the first hymn while the bar shows none', () => {
+    expect(openAt(shown)).toBe(4);
+    expect(openAt(barFor(holding(three).Playing, Option.some(four)))).toBe(3);
+    expect(openAt(Bar.Hidden())).toBe(1);
+  });
+
+  it('open on a press of the `#` and close on the next', () => {
+    const open = toggleFind(Find.Closed(), shown);
+    expect(open).toEqual(Find.Open({ number: 4 }));
+    expect(toggleFind(open, shown)).toEqual(Find.Closed());
+  });
+
+  it('hold the number the drums dial to the book, while open', () => {
+    const open = Find.Open({ number: 4 });
+    expect(dialFind(open, 312)).toEqual(Find.Open({ number: 312 }));
+    expect(dialFind(open, 0)).toEqual(Find.Open({ number: 1 }));
+    expect(dialFind(open, 700)).toEqual(Find.Open({ number: 695 }));
+  });
+
+  it('take no dial while closed', () => {
+    expect(dialFind(Find.Closed(), 312)).toEqual(Find.Closed());
   });
 });
