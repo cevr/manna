@@ -218,24 +218,66 @@ export const HASH_GAP = 8;
  * Where the `#` stands: over the bar while the bar shows; alone where the
  * bar docks while it is hidden on the home list, so the number path never
  * waits on a hymn; nowhere on any other screen with no bar, so no bar comes
- * back there.
+ * back there. While a control rises over the bar (the key, capo and
+ * placement dials' popover) the `#` gives way (`Yielded`): it would lie over
+ * the popover's lowest row and take its touches.
  */
 export type FindAt = Data.TaggedEnum<{
   Nowhere: {};
   OverBar: { readonly state: Player };
   Docked: {};
+  Yielded: {};
 }>;
 export const FindAt = Data.taggedEnum<FindAt>();
 
-/** Where the `#` stands for `bar`, on the home list (`home`) or another screen. */
-export const findAt = (bar: Bar, home: boolean): FindAt =>
+/**
+ * Where the `#` stands for `bar`, on the home list (`home`) or another
+ * screen, while a control over the bar is open (`raised`) or none is. Only a
+ * shown bar has controls to raise.
+ */
+export const findAt = (
+  bar: Bar,
+  { home, raised }: { readonly home: boolean; readonly raised: boolean },
+): FindAt =>
   Bar.$match(bar, {
     Hidden: () => {
       if (home) return FindAt.Docked();
       return FindAt.Nowhere();
     },
-    Shown: ({ state }) => FindAt.OverBar({ state }),
+    Shown: ({ state }) => {
+      if (raised) return FindAt.Yielded();
+      return FindAt.OverBar({ state });
+    },
   });
+
+/**
+ * How many controls over the bar are open (`useRaised`): the key dials'
+ * popover of each bar drawn. While any is, the `#` gives way (`findAt`).
+ */
+export const raised = Atom.make(0).pipe(Atom.keepAlive);
+
+/** Where the reader is, for the find drums: the route shown, and where the `#` stands on it. */
+export interface FindPlace {
+  readonly path: string;
+  readonly at: FindAt;
+}
+
+/** Whether a `#` stands at `at`, to press and to open the drums over. */
+export const hashStands: (at: FindAt) => boolean = Predicate.or(
+  FindAt.$is('OverBar'),
+  FindAt.$is('Docked'),
+);
+
+/**
+ * The drums after the reader moved from `before` to `after`: they stay open
+ * only on the same route while a `#` still stands there. They close on a
+ * move to another screen, and where the `#` gives way or stands nowhere, so
+ * they never come back open on a later screen.
+ */
+export const findMoved = (find: Find, before: FindPlace, after: FindPlace): Find => {
+  if (before.path === after.path && hashStands(after.at)) return find;
+  return Find.Closed();
+};
 
 /** The docked `#`'s bottom over the device's bottom inset: centred in the resting bar's height. */
 export const DOCKED_LIFT = (REST - HASH) / 2;
@@ -250,6 +292,8 @@ export const findRoom = (at: FindAt, inset: number): number =>
   FindAt.$match(at, {
     Nowhere: () => 0,
     OverBar: () => HASH_GAP + HASH,
+    // Kept while the `#` gives way, so no list's end moves under the dials.
+    Yielded: () => HASH_GAP + HASH,
     Docked: () => Math.max(0, inset) + DOCKED_LIFT + HASH,
   });
 

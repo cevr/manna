@@ -50,7 +50,7 @@ import { plain, useCue } from '~/feel/cue';
 import { settings } from '~/store';
 
 import { Bar, dockedBar, pageBar, placeOf, REST, SOUNDING, toldPlace } from './bar';
-import { usePlayer } from './context';
+import { usePlayer, useRaised } from './context';
 import { useShownPage } from './page';
 import { Command, type HymnPlayer, Player, type Track } from './player';
 import { BarMark } from './BarMark';
@@ -184,6 +184,8 @@ function Overlay({ drawing }: { readonly drawing: Drawing }) {
   );
   const thumb = Option.map(drawing.shown, () => model);
   const open = Option.filter(thumb, (bound) => bound.state.open);
+  // The bar's `#` gives way while the dials stand over the bar.
+  useRaised(Option.isSome(open));
   const dials = Option.flatMap(thumb, (bound) =>
     Option.map(bound.printed, (printed) => ({ bound, printed })),
   );

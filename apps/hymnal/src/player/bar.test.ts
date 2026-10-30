@@ -16,6 +16,7 @@ import {
   FindAct,
   FindAt,
   findAt,
+  findMoved,
   FindPress,
   findRoom,
   HASH,
@@ -236,13 +237,31 @@ describe('where the `#` stands', () => {
   const shown = barFor(Player.Idle(), Option.some(four));
 
   it('over the bar while it shows, on any screen', () => {
-    expect(findAt(shown, true)).toEqual(FindAt.OverBar({ state: Player.Idle() }));
-    expect(findAt(shown, false)).toEqual(FindAt.OverBar({ state: Player.Idle() }));
+    expect(findAt(shown, { home: true, raised: false })).toEqual(
+      FindAt.OverBar({ state: Player.Idle() }),
+    );
+    expect(findAt(shown, { home: false, raised: false })).toEqual(
+      FindAt.OverBar({ state: Player.Idle() }),
+    );
   });
 
   it('docked alone on the home list with the bar hidden, and nowhere elsewhere', () => {
-    expect(findAt(Bar.Hidden(), true)).toEqual(FindAt.Docked());
-    expect(findAt(Bar.Hidden(), false)).toEqual(FindAt.Nowhere());
+    expect(findAt(Bar.Hidden(), { home: true, raised: false })).toEqual(FindAt.Docked());
+    expect(findAt(Bar.Hidden(), { home: false, raised: false })).toEqual(FindAt.Nowhere());
+  });
+
+  // The key, capo and placement dials stand on one popover over the bar: one open state.
+  it.each([
+    ['the page’s own bar, at rest', pageBar(Player.Idle(), four)],
+    ['the docked bar, paused', dockedBar(holding(four).Paused, Option.some(four))],
+    ['the docked bar, sounding tall', dockedBar(holding(four).Playing, Option.some(four))],
+    [
+      'the docked bar, another hymn sounding over the page',
+      dockedBar(holding(three).Playing, Option.some(four)),
+    ],
+  ])('gives way to the key dials open over %s, on any screen', (_, bar) => {
+    expect(findAt(bar, { home: false, raised: true })).toEqual(FindAt.Yielded());
+    expect(findAt(bar, { home: true, raised: true })).toEqual(FindAt.Yielded());
   });
 
   it('keeps a list’s end clear of it by its height over the screen’s bottom', () => {
@@ -250,5 +269,45 @@ describe('where the `#` stands', () => {
     expect(findRoom(FindAt.OverBar({ state: Player.Idle() }), 34)).toBe(HASH_GAP + HASH);
     expect(findRoom(FindAt.Docked(), 34)).toBe(34 + (REST - HASH) / 2 + HASH);
     expect(findRoom(FindAt.Docked(), -1)).toBe((REST - HASH) / 2 + HASH);
+  });
+
+  it('keeps its room over the bar while it gives way, so no list moves under the dials', () => {
+    expect(findRoom(FindAt.Yielded(), 34)).toBe(
+      findRoom(FindAt.OverBar({ state: Player.Idle() }), 34),
+    );
+  });
+});
+
+describe('the find drums as the reader moves', () => {
+  const over = FindAt.OverBar({ state: Player.Idle() });
+  const open = Find.Open({ number: 312 });
+  const at = (path: string, place: FindAt) => ({ path, at: place });
+
+  it('stay open while the `#` stands on the same screen', () => {
+    expect(findMoved(open, at('/', FindAt.Docked()), at('/', over))).toEqual(open);
+    expect(
+      findMoved(open, at('/', over), at('/', FindAt.OverBar({ state: holding(four).Playing }))),
+    ).toEqual(open);
+  });
+
+  it('close where no `#` stands, so they never come back open on a later screen', () => {
+    expect(findMoved(open, at('/recent', over), at('/recent', FindAt.Nowhere()))).toEqual(
+      Find.Closed(),
+    );
+  });
+
+  it('close when the key dials open over the bar', () => {
+    expect(findMoved(open, at('/hymns/4', over), at('/hymns/4', FindAt.Yielded()))).toEqual(
+      Find.Closed(),
+    );
+  });
+
+  it('close on a move to another screen, though a `#` stands there too', () => {
+    expect(findMoved(open, at('/', FindAt.Docked()), at('/hymns/4', over))).toEqual(Find.Closed());
+    expect(findMoved(open, at('/hymns/4', over), at('/player', over))).toEqual(Find.Closed());
+  });
+
+  it('stay closed', () => {
+    expect(findMoved(Find.Closed(), at('/', over), at('/', over))).toEqual(Find.Closed());
   });
 });

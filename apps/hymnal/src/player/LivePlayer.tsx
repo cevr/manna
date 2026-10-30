@@ -7,13 +7,14 @@
  * Over the screens it draws the bar's `#` (`FIND_LABEL`) where `findAt`
  * puts it, just above the bar while the bar shows, and the find drums it
  * opens (`FindDrums.tsx`), with their `Open` and `Play` (`pressFind`). It
- * tells the lists the room the `#` takes (`FindRoom`).
+ * tells the lists the room the `#` takes (`FindRoom`). The drums close on a
+ * move to another screen or where the `#` leaves (`findMoved`).
  */
 
 import { useAtom, useAtomMount, useAtomSet, useAtomValue } from '@effect/atom-react';
 import { Effect, Option, SubscriptionRef } from 'effect';
 import { usePathname, useRouter, useSafeAreaInsets } from 'one';
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   GestureDetector,
@@ -37,12 +38,16 @@ import {
   FindAct,
   FindAt,
   findAt,
+  findMoved,
+  type FindPlace,
   FIND_LABEL,
   FindPress,
   findRoom,
   HASH,
   HASH_GAP,
+  hashStands,
   pressFind,
+  raised,
   swipedDown,
 } from './bar';
 import { FindRoom, PlayerContext } from './context';
@@ -86,13 +91,26 @@ export function LivePlayer({ children }: { readonly children: ReactNode }) {
 /** The screens, told the room the `#` takes, with the `#` over them where `findAt` puts it. */
 function Finding({ children }: { readonly children: ReactNode }) {
   const bar = barFor(useAtomValue(player.state), useShownPage());
-  const at = findAt(bar, usePathname() === '/');
+  const path = usePathname();
+  const at = findAt(bar, { home: path === '/', raised: useAtomValue(raised) > 0 });
   const inset = Math.max(useSafeAreaInsets().bottom, 0);
+  // The drums close on a move to another screen, or where the `#` leaves.
+  const setFind = useAtomSet(find);
+  const stands = hashStands(at);
+  const place: FindPlace = { path, at };
+  const was = useRef(place);
+  // Only a new route, or the `#` standing or leaving, moves the drums; not each status the bar shows.
+  useEffect(() => {
+    const before = was.current;
+    was.current = place;
+    setFind((state) => findMoved(state, before, place));
+  }, [path, stands, setFind]);
   return (
     <FindRoom value={findRoom(at, inset)}>
       {children}
       {FindAt.$match(at, {
         Nowhere: () => <></>,
+        Yielded: () => <></>,
         OverBar: ({ state }) => (
           <FindNumber bar={bar} bottom={inset + heightOf(state) + HASH_GAP} />
         ),
