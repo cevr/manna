@@ -1,0 +1,112 @@
+{
+  "feature": "browse",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "browse-tabs",
+      "action": "open",
+      "link": "/",
+      "expect": [
+        { "shows": "label=Sections" },
+        { "shows": "label=Lists" },
+        { "shows": "label=Topics" },
+        { "shows": "label=Metres" },
+        { "shows": "label=Scripture" }
+      ]
+    },
+    {
+      "name": "browse-topics",
+      "action": "tap",
+      "target": "label=Topics",
+      "expect": [{ "shows": "label=Topics" }]
+    },
+    {
+      "name": "browse-metres",
+      "action": "tap",
+      "target": "label=Metres",
+      "expect": [{ "shows": "label=Metres" }]
+    },
+    {
+      "name": "browse-scripture",
+      "action": "tap",
+      "target": "label=Scripture",
+      "expect": [{ "shows": "label=Scripture" }]
+    },
+    {
+      "name": "browse-lists",
+      "action": "tap",
+      "target": "label=Lists",
+      "expect": [{ "shows": "label=Lists" }]
+    },
+    {
+      "name": "browse-sections",
+      "action": "tap",
+      "target": "label=Sections",
+      "expect": [{ "shows": "label=Sections" }]
+    },
+    {
+      "name": "browse-all-at-once",
+      "action": "tap",
+      "target": "role=button label=All at once",
+      "expect": [{ "shows": "label=Sections, all at once" }, { "shows": "label=Done" }]
+    },
+    {
+      "name": "all-at-once-done",
+      "action": "tap",
+      "target": "label=Done",
+      "expect": [{ "shows": "label=Sections" }, { "hides": "label=Sections, all at once" }]
+    },
+    {
+      "name": "browse-number",
+      "action": "tap",
+      "target": "label=Find a hymn by number",
+      "expect": [
+        { "shows": "label=Hundreds" },
+        { "shows": "label=Tens" },
+        { "shows": "label=Ones" },
+        { "shows": "id=find-open" },
+        { "shows": "id=find-play" }
+      ]
+    },
+    {
+      "name": "drums-close",
+      "action": "tap",
+      "target": "label=Find a hymn by number",
+      "expect": [{ "hides": "label=Hundreds" }]
+    },
+    {
+      "name": "drums-again",
+      "action": "tap",
+      "target": "label=Find a hymn by number",
+      "expect": [{ "shows": "id=find-open" }]
+    },
+    {
+      "name": "browse-number-open",
+      "action": "tap",
+      "target": "id=find-open",
+      "expect": [{ "shows": "label=Stanza 1" }, { "hides": "label=Hundreds" }]
+    },
+    {
+      "name": "back-home",
+      "action": "back",
+      "expect": [{ "shows": "label=Sections" }]
+    },
+    {
+      "name": "tab-topics",
+      "action": "tap",
+      "target": "label=Topics",
+      "expect": [{ "shows": "label=Topics" }]
+    },
+    {
+      "name": "browse-tab-kept",
+      "action": "relaunch",
+      "expect": [{ "shows": "label=Topics" }]
+    },
+    {
+      "name": "tab-put-back",
+      "action": "tap",
+      "target": "label=Sections",
+      "expect": [{ "shows": "label=Sections" }]
+    }
+  ]
+}

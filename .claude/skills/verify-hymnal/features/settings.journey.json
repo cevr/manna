@@ -1,0 +1,81 @@
+{
+  "feature": "settings",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "settings",
+      "action": "open",
+      "link": "settings",
+      "expect": [
+        { "shows": "label=Appearance" },
+        { "shows": "label=Dark" },
+        { "shows": "label=System" }
+      ]
+    },
+    {
+      "name": "dark",
+      "action": "tap",
+      "target": "label=Dark",
+      "expect": [{ "shows": "label=Dark" }]
+    },
+    {
+      "name": "leave",
+      "action": "tap",
+      "target": "role=button label=Hymns",
+      "expect": [{ "shows": "role=button label=Settings" }]
+    },
+    {
+      "name": "second-view",
+      "action": "tap",
+      "target": "role=button label=Settings",
+      "expect": [{ "shows": "label=Dark" }]
+    },
+    {
+      "name": "system",
+      "action": "tap",
+      "target": "label=System",
+      "expect": [{ "shows": "label=System" }]
+    },
+    {
+      "name": "about",
+      "action": "scroll",
+      "target": "screen",
+      "direction": "down",
+      "expect": [{ "shows": "label=Sounds and haptics" }]
+    },
+    {
+      "name": "settings-chords",
+      "action": "tap",
+      "target": "label=Advanced",
+      "expect": [{ "shows": "label=Advanced" }]
+    },
+    {
+      "name": "settings-feel",
+      "action": "tap",
+      "target": "label=Sounds and haptics",
+      "expect": [{ "shows": "label=Sounds and haptics" }]
+    },
+    {
+      "name": "relaunch",
+      "action": "relaunch"
+    },
+    {
+      "name": "kept",
+      "action": "open",
+      "link": "settings",
+      "expect": [{ "shows": "label=Advanced" }, { "shows": "label=Sounds and haptics" }]
+    },
+    {
+      "name": "style-put-back",
+      "action": "tap",
+      "target": "label=Simple",
+      "expect": [{ "shows": "label=Simple" }]
+    },
+    {
+      "name": "feel-put-back",
+      "action": "tap",
+      "target": "label=Sounds and haptics",
+      "expect": [{ "shows": "label=Sounds and haptics" }]
+    }
+  ]
+}

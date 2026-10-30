@@ -1,0 +1,100 @@
+{
+  "feature": "chords-and-capo",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "off",
+      "action": "open",
+      "link": "hymns/100",
+      "expect": [{ "shows": "id=key-button" }, { "hides": "id=chord-1-1-1" }]
+    },
+    {
+      "name": "chords",
+      "action": "hold",
+      "target": "id=key-button",
+      "settle": 2,
+      "expect": [{ "shows": "id=chord-1-1-1" }]
+    },
+    {
+      "name": "chords-key",
+      "action": "tap",
+      "target": "id=key-button",
+      "expect": [
+        { "shows": "id=dial-key" },
+        { "shows": "id=dial-capo" },
+        { "hides": "label=Reset" }
+      ]
+    },
+    {
+      "name": "transpose",
+      "action": "gesture",
+      "from": "id=dial-key",
+      "dx": -52,
+      "dy": 0,
+      "expect": [{ "shows": "label=Reset" }]
+    },
+    {
+      "name": "chords-reset",
+      "action": "tap",
+      "target": "label=Reset",
+      "expect": [{ "shows": "id=chord-1-1-1" }]
+    },
+    {
+      "name": "reset-home",
+      "action": "tap",
+      "target": "id=key-button",
+      "expect": [{ "shows": "id=dial-key" }, { "hides": "label=Reset" }]
+    },
+    {
+      "name": "dials-close",
+      "action": "tap",
+      "target": "id=key-button",
+      "expect": [{ "shows": "id=chord-1-1-1" }]
+    },
+    {
+      "name": "chords-kept",
+      "action": "relaunch"
+    },
+    {
+      "name": "kept-after-relaunch",
+      "action": "open",
+      "link": "hymns/100",
+      "expect": [{ "shows": "id=chord-1-1-1" }]
+    },
+    {
+      "name": "chords-levels",
+      "action": "open",
+      "link": "hymns/126",
+      "expect": [{ "shows": "label=No chords for this hymn yet." }, { "hides": "id=chord-1-1-1" }]
+    },
+    {
+      "name": "chords-simple",
+      "action": "open",
+      "link": "hymns/3",
+      "expect": [{ "shows": "id=chord-1-1-5" }, { "hides": "id=chord-1-1-6" }]
+    },
+    {
+      "name": "chords-tap",
+      "action": "tap",
+      "target": "id=chord-1-1-1",
+      "expect": [
+        { "shows": "id=chord-sheet" },
+        { "shows": "id=chord-box-0" },
+        { "shows": "label=Done" }
+      ]
+    },
+    {
+      "name": "chord-sheet-done",
+      "action": "tap",
+      "target": "label=Done",
+      "expect": [{ "shows": "id=key-button" }, { "hides": "id=chord-sheet" }]
+    },
+    {
+      "name": "chords-off",
+      "action": "hold",
+      "target": "id=key-button",
+      "settle": 2,
+      "expect": [{ "hides": "id=chord-1-1-1" }]
+    }
+  ]
+}

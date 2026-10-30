@@ -1,0 +1,50 @@
+{
+  "feature": "follow",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "hymn",
+      "action": "open",
+      "link": "hymns/100",
+      "expect": [{ "shows": "label=Play hymn 100" }, { "shows": "label=Sound" }]
+    },
+    {
+      "name": "sound-off",
+      "action": "tap",
+      "target": "label=Sound",
+      "expect": [{ "shows": "label=Play hymn 100" }]
+    },
+    {
+      "name": "follow-play",
+      "action": "tap",
+      "target": "label=Play hymn 100",
+      "timeout": 30,
+      "expect": [{ "shows": "label=Pause hymn 100" }, { "shows": "id=line" }]
+    },
+    {
+      "name": "follow-hand",
+      "action": "scroll",
+      "target": "screen",
+      "direction": "down",
+      "expect": [{ "shows": "label=Resume follow" }, { "shows": "label=Pause hymn 100" }]
+    },
+    {
+      "name": "follow-resume",
+      "action": "tap",
+      "target": "label=Resume follow",
+      "expect": [{ "shows": "label=Pause hymn 100" }, { "hides": "label=Resume follow" }]
+    },
+    {
+      "name": "pause",
+      "action": "tap",
+      "target": "label=Pause hymn 100",
+      "expect": [{ "shows": "label=Play hymn 100" }]
+    },
+    {
+      "name": "sound-put-back",
+      "action": "tap",
+      "target": "label=Sound",
+      "expect": [{ "shows": "label=Play hymn 100" }]
+    }
+  ]
+}
