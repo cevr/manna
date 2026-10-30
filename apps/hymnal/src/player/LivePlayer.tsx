@@ -26,6 +26,7 @@ import { color } from '~/color';
 import { plain, useCue } from '~/feel/cue';
 import { book } from '~/follow/book';
 import { counted } from '~/follow/seeks';
+import { hymnHref } from '~/home/Browse';
 import { hymnAt } from '~/hymns/hymns';
 import { settings } from '~/store';
 
@@ -131,7 +132,7 @@ function FindNumber({ bar, bottom }: { readonly bar: Bar; readonly bottom: numbe
     setFind(next);
     FindAct.$match(act, {
       Stay: () => {},
-      Open: ({ number }) => router.push(`/hymns/${number}`),
+      Open: ({ number }) => router.push(hymnHref(number)),
       // Playbulk's Start alone starts a hymn, in place of the one held.
       Play: ({ number }) =>
         Option.match(hymnAt(String(number)), {
