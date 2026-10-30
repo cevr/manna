@@ -2773,8 +2773,10 @@ look view keep the page crop. Four rules make that reading true:
   (ΔE 3), after the strips are found, since taking it out first cuts a
   light cloth into new strips; `holes` skips a pixel the kept crop holds
   within its ground's `reach`, the farthest of its own ground pixels (ΔE
-  3.3 to 4.5 on the in-its-order cast), short of light cloth, which starts
-  at ΔE 8.3. A see-through edge pixel (alpha 1 to 254), the ground showing
+  3.3 to 4.5 on the in-its-order cast). Light cloth starts at ΔE 8.3, but
+  its grain can lie within `near`: the kept crop reads that grain as kept
+  holes, each a pocket, so a hole cut through such cloth falls within
+  `POCKET_REACH` of a pocket and is excused. A see-through edge pixel (alpha 1 to 254), the ground showing
   through, leaves the class and `slivers` rows.
 
 A puppet is drawn with a look (`PuppetLook`, `canvas/puppet.ts`): the boil

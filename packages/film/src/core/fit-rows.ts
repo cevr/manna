@@ -45,6 +45,7 @@
 // figure's art: its pixels are ground on both crops, so no row reads them.
 // Pure: RGBA in, rows out, the same rows for the same crops.
 
+import { Option } from 'effect';
 import { type Rgb, componentsOf, deltaE, labOf, lumaOf, rgbAt } from './cast-sheet-pixels.ts';
 import { type LabelRegion, type LabelTable, labelRegions, touchingIn } from './label.ts';
 import type { Raster } from './raster.ts';
@@ -422,6 +423,26 @@ export const overGround = (posed: Raster, ground: Rgb): Raster => {
   return { width: posed.width, height: posed.height, rgba };
 };
 
+/**
+ * A `w` x `h` neighbour mask cut from `still` at `at`: 1 where the still holds
+ * art (alpha above 0). None when the box leaves the still, since a row index
+ * past its edge would read the next or previous row.
+ */
+export const neighbourMask = (
+  still: Raster,
+  at: readonly [number, number],
+  w: number,
+  h: number,
+): Option.Option<Uint8Array> => {
+  const [nx, ny] = at;
+  if (nx < 0 || ny < 0 || nx + w > still.width || ny + h > still.height) return Option.none();
+  const mask = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++)
+      if ((still.rgba[((y + ny) * still.width + x + nx) * 4 + 3] ?? 0) > 0) mask[y * w + x] = 1;
+  return Option.some(mask);
+};
+
 /** Whether a pixel of `of` lies within `within` (ΔE76) of the kept crop `c`'s ground colour. */
 const groundNear = (c: Read, of: Raster, within: number) => (i: number) =>
   deltaE(labOf(rgbAt(of, i)), c.lab) <= within;
@@ -433,18 +454,15 @@ const POCKET_REACH = 4;
  * A cut-out render's holes: the clear pixels (alpha 0) of each enclosed
  * component of see-through pixels (alpha under 128, four ways, not touching
  * the crop's border), where the kept crop reads figure that is not its hole
- * (a neighbour's pixels are its ground, `readCrop`). A component that overlaps a kept hole is that pocket
- * cut wider: its pixels within `POCKET_REACH` of the kept holes it overlaps
- * are excused. Any other component counts whole, even beside a pocket.
- * Partly see-through pixels (a seam's speck) never count, nor do pixels the
- * kept crop holds as near its ground as its own ground's pixels lie
- * (`reach`): a speck of the sheet's paper the kept crop's figure closes
- * round, which the cut cleared as paper. Measured on the
- * in-its-order cut-out views (`p2-pick.md`): no base-pass view fails, 200/200
- * planted 12 px blocks and 60/60 planted 2 x 24 px holes 3 px inside the
- * line are caught (44/50 at 1 px in). Counting alpha under 128 instead fails
- * sower's 10 views; a per-pixel 4 px reach round every kept hole misses
- * 5/60 thin holes.
+ * (a neighbour's pixels are its ground, `readCrop`). A pocket is a kept
+ * hole, where the sheet's paper shows through the figure. A component that
+ * overlaps a pocket is that pocket cut wider: its pixels within
+ * `POCKET_REACH` of the pockets it overlaps are excused. Any other
+ * component counts whole, even beside a pocket. Partly
+ * see-through pixels (a seam's speck) never count, nor do pixels the kept
+ * crop holds as near its ground as its own ground's pixels lie (`reach`):
+ * a speck of the sheet's paper the kept crop's figure closes round, which
+ * the cut cleared as paper.
  */
 const cutHolesOf = (c: Read, render: Raster) => {
   const { w, h } = c;

@@ -8,6 +8,7 @@ import {
   fitPasses,
   fitRows,
   measuringGround,
+  neighbourMask,
   overGround,
 } from './fit-rows.ts';
 import { CREAM, INK, RENDER_GROUND, SHEET_GROUND, W, H, paint } from './fixtures/fit/figure.ts';
@@ -431,5 +432,18 @@ describe('fitRows over a cut-out crop', () => {
     const beside = crop(SHEET_PAPER, CREAM, head);
     expect(fitRows(beside, posed, { classes })).not.toEqual(alone);
     expect(fitRows(beside, posed, { classes, neighbour })).toEqual(alone);
+  });
+
+  test('a neighbour still a box reads 1 px past its width gives no mask', () => {
+    // 4 x 2 still: art only in its last column, so a wrapped read would find it.
+    const rgba = Uint8Array.from(
+      { length: 4 * 2 * 4 },
+      (_, i) => Number(i % 4 === 3 && Math.floor(i / 4) % 4 === 3) * 255,
+    );
+    const still: Raster = { width: 4, height: 2, rgba };
+    expect(neighbourMask(still, [1, 0], 3, 2)).toEqual(
+      Option.some(Uint8Array.from([0, 0, 1, 0, 0, 1])),
+    );
+    expect(neighbourMask(still, [2, 0], 3, 2)).toEqual(Option.none());
   });
 });

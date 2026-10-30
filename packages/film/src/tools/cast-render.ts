@@ -57,6 +57,7 @@ import {
   figureOf,
   fitRows,
   measuringGround,
+  neighbourMask,
   overGround,
 } from '../core/fit-rows.ts';
 import type { SceneTimes } from '../core/easel.ts';
@@ -385,12 +386,14 @@ const neighbourOf = Effect.fn('Cast.neighbourOf')(function* (
     ),
   );
   const [w, h] = [box[2] - box[0], box[3] - box[1]];
-  const [nx, ny] = [box[0] - record.box[0], box[1] - record.box[1]];
-  const mask = new Uint8Array(w * h);
-  for (let y = 0; y < h; y++)
-    for (let x = 0; x < w; x++)
-      if ((still.rgba[((y + ny) * still.width + x + nx) * 4 + 3] ?? 0) > 0) mask[y * w + x] = 1;
-  return Option.some(mask);
+  const at = [box[0] - record.box[0], box[1] - record.box[1]] as const;
+  const mask = neighbourMask(still, at, w, h);
+  if (Option.isNone(mask))
+    return yield* FileInvalid.make({
+      file,
+      reason: `the view's box ${w}x${h} at ${at[0]},${at[1]} leaves the ${still.width}x${still.height} still`,
+    });
+  return mask;
 });
 
 /** `v`'s posed figure cut at its kept box: the puppet's origin stands at sheet point `at`, so the box sits at `origin + box - at` in its raster. */
