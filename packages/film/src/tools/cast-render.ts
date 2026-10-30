@@ -271,6 +271,15 @@ const writeCut = Effect.fn('Cast.writeCut')(function* (
   yield* fs.writeFileString(path.join(dir, `${cut.stem}.md`), tableText);
 });
 
+/** An open page and the scenes it draws. */
+interface KindPage {
+  readonly pool: ExportPages;
+  readonly scenes: ReadonlyArray<SceneTimes>;
+}
+
+/** The page that draws `kind`: its own when it has one, else the member's. */
+const pageOf = (at: RenderAt, kind: SheetKind): KindPage => at.own.get(kind) ?? at;
+
 /** Where one render is drawn and written: its member's record, sheet folder and table, its page, its folder and number, the views asked, whether it critiques and whether it writes. */
 interface RenderAt {
   readonly member: string;
@@ -279,6 +288,8 @@ interface RenderAt {
   readonly table: CastModule;
   readonly pool: ExportPages;
   readonly scenes: ReadonlyArray<SceneTimes>;
+  /** The page of each kind the member's page does not draw: a cut-out kind of another sheet size, drawn alone at its own (`castPage`'s `kind`). */
+  readonly own: ReadonlyMap<SheetKind, KindPage>;
   readonly root: string;
   readonly dir: string;
   readonly n: number;
@@ -528,11 +539,12 @@ const COST_DRAWS = 7;
 
 /** The median ms the page takes to draw `kind`'s frame (`drawTimes`: the draw alone, rastered, no encoder). */
 const drawCost = Effect.fn('Cast.drawCost')(function* (at: RenderAt, kind: SheetKind) {
-  const scene = Arr.findFirst(at.scenes, (s) => s.id === kind);
+  const { pool, scenes } = pageOf(at, kind);
+  const scene = Arr.findFirst(scenes, (s) => s.id === kind);
   if (Option.isNone(scene)) return 0;
-  const i = Math.floor((scene.value.start + scene.value.dur / 2) * at.pool.info.fps);
+  const i = Math.floor((scene.value.start + scene.value.dur / 2) * pool.info.fps);
   const times = [
-    ...(yield* at.pool.call(
+    ...(yield* pool.call(
       'drawTimes',
       Array.from({ length: COST_DRAWS }, () => i),
     )),
@@ -546,14 +558,15 @@ const renderKind = Effect.fn('Cast.renderKind')(function* (at: RenderAt, kind: S
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const { member, record, dir } = at;
-  const scene = yield* Effect.fromOption(Arr.findFirst(at.scenes, (s) => s.id === kind)).pipe(
+  const { pool, scenes } = pageOf(at, kind);
+  const scene = yield* Effect.fromOption(Arr.findFirst(scenes, (s) => s.id === kind)).pipe(
     Effect.mapError(() =>
       CastRenderRefused.make({ member, reason: `its page draws no ${kind} scene` }),
     ),
   );
-  const png = yield* at.pool.call(
+  const png = yield* pool.call(
     'still',
-    Math.floor((scene.start + scene.dur / 2) * at.pool.info.fps),
+    Math.floor((scene.start + scene.dur / 2) * pool.info.fps),
     SHEET_VIEW,
   );
   if (at.write) yield* fs.writeFile(path.join(dir, `${kind}.render.png`), png);
@@ -651,12 +664,24 @@ export const renderCast = Effect.fn('Cast.render')(function* (
     onTrue: () => Effect.succeed({ n: 0, dir: root }),
     onFalse: () => reserveNumbered(root),
   });
-  const pool = yield* (yield* Pages).open(castPage(film, member, figure, boil), {
-    workers: 1,
-    captions: false,
-    server: Option.none(),
+  const pages = yield* Pages;
+  const open = Effect.fn('Cast.openPage')(function* (kind?: SheetKind) {
+    const pool = yield* pages.open(castPage(film, member, figure, boil, kind), {
+      workers: 1,
+      captions: false,
+      server: Option.none(),
+    });
+    return { pool, scenes: yield* pool.call('scenes') };
   });
-  const scenes = yield* pool.call('scenes');
+  const { pool, scenes } = yield* open();
+  // A page is one canvas: a cut-out kind whose sheet is not the size of the
+  // member's first is drawn by a page of its own, at its own size.
+  const own = new Map(
+    yield* Effect.forEach(
+      kinds.filter((kind) => figure === 'cutout' && !scenes.some((s) => s.id === kind)),
+      (kind) => Effect.map(open(kind), (page) => [kind, page] as const),
+    ),
+  );
   const cutout = yield* Bool.match(figure === 'cutout', {
     onTrue: () => Effect.asSome(cutoutReading(table, member, path.dirname(folder))),
     onFalse: () => Effect.succeed(Option.none<CutoutReading>()),
@@ -668,6 +693,7 @@ export const renderCast = Effect.fn('Cast.render')(function* (
     table,
     pool,
     scenes,
+    own,
     root,
     dir,
     n,

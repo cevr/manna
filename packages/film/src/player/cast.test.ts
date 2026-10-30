@@ -1,7 +1,13 @@
 import { describe, expect, test } from 'bun:test';
 import { Cause, Effect, Exit, Layer } from 'effect';
 import { HttpClient, HttpClientResponse } from 'effect/http';
-import { CUTOUT_MARGIN, type CastModule, type CutoutView, castPage } from '../canvas/cast.ts';
+import {
+  CUTOUT_BOILS,
+  CUTOUT_MARGIN,
+  type CastModule,
+  type CutoutView,
+  castPage,
+} from '../canvas/cast.ts';
 import { castPages } from './cast.ts';
 
 /** A film whose one member, the sower, has a cut-out (`CUTOUT`) and no rig (`CAST`). */
@@ -74,6 +80,46 @@ describe("a cut-out member's cast pages", () => {
     if (Exit.isSuccess(exit)) throw new Error('the rig page of a member with no rig opened');
     expect(Cause.pretty(exit.cause)).toContain(
       "film's rigs/cast.ts has no rigs of sower (CAST): his figure is his cut-out, film/cast/sower/cutout",
+    );
+  });
+});
+
+/** The sower again, with a portrait single drawing beside his landscape turnaround. */
+const portrait: CastModule = {
+  ...cutOnly,
+  SHEETS: { sower: { ...cutOnly.SHEETS['sower'], single: { width: 30, height: 70, scale: 1 } } },
+  CUTOUT: { sower: { turnaround: {}, single: {} } },
+};
+
+describe('a cut-out member whose sheets are of two sizes', () => {
+  const sized = castPages('film', ['sower'], () => Promise.resolve(portrait));
+  const film = async (key: string) => {
+    const page = sized[key];
+    if (page === undefined) throw new Error(`no page ${key}`);
+    const exit = await Effect.runPromiseExit(Effect.scoped(page));
+    if (!Exit.isSuccess(exit)) throw new Error(Cause.pretty(exit.cause));
+    return {
+      size: [exit.value.width, exit.value.height],
+      scenes: exit.value.placed.map((p) => p.spec.id),
+    };
+  };
+
+  test('his cut-out page draws only the kinds the size of his first, on their canvas', async () => {
+    expect(await film(castPage('film', 'sower', 'cutout'))).toEqual({
+      size: [40 + 2 * CUTOUT_MARGIN[0], 60 + 2 * CUTOUT_MARGIN[1]],
+      scenes: ['turnaround'],
+    });
+  });
+
+  test('a kind of another size draws on its own page, at its own sheet size, at each boil', async () => {
+    const drawn = await Promise.all(
+      CUTOUT_BOILS.map((boil) => film(castPage('film', 'sower', 'cutout', boil, 'single'))),
+    );
+    expect(drawn).toEqual(
+      CUTOUT_BOILS.map(() => ({
+        size: [30 + 2 * CUTOUT_MARGIN[0], 70 + 2 * CUTOUT_MARGIN[1]],
+        scenes: ['single'],
+      })),
     );
   });
 });

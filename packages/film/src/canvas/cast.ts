@@ -209,16 +209,23 @@ export const easeScene = (from: string, to: string) => `${from}-${to}`;
  */
 export const CUTOUT_BOILS: ReadonlyArray<number> = [BOIL_AMP, 0];
 
-/** The page name of `member`'s cast render in `film`, drawn by `figure`, a cut-out's at boil `boil` px (one of `CUTOUT_BOILS`): what the player mounts and `film concept render` opens. */
+/**
+ * The page name of `member`'s cast render in `film`, drawn by `figure`, a
+ * cut-out's at boil `boil` px (one of `CUTOUT_BOILS`): what the player mounts
+ * and `film concept render` opens. A page is one canvas, so a cut-out page
+ * draws the kinds whose sheet is the size of his first kind's, and `kind`
+ * names the page that draws that kind alone, at its own sheet's size.
+ */
 export const castPage = (
   film: string,
   member: string,
   figure: CastFigure = 'rig',
   boil: number = BOIL_AMP,
+  kind?: string,
 ) =>
   figure === 'rig'
     ? `${film}/cast/${member}`
-    : `${film}/cast/${member}/cutout${boil === BOIL_AMP ? '' : `/boil-${boil}`}`;
+    : `${film}/cast/${member}/cutout${boil === BOIL_AMP ? '' : `/boil-${boil}`}${kind === undefined ? '' : `/${kind}`}`;
 
 /** A film's cast render table, checked by its type: every view of every kind of every member. */
 export const castTable = <const T extends CastTable>(table: T): T => table;

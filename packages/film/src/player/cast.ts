@@ -10,6 +10,7 @@
 
 import { Effect, Layer, ManagedRuntime, type Scope } from 'effect';
 import { FetchHttpClient, type HttpClient } from 'effect/http';
+import { SheetKind } from '../core/cast-sheet.ts';
 import type { RigNameMissing, RigUnloadable } from '../core/errors.ts';
 import {
   type CastModule,
@@ -128,14 +129,38 @@ const cutoutCanvas = (film: string, member: string, m: CastModule, kind: string)
   };
 };
 
-/** `member`'s cut-out render as a film: a scene each kind his `CUTOUT` views are of, each the size of the sheet grown by `CUTOUT_MARGIN`, each view drawn by its puppet, boiling `amp` px. */
-const cutoutFilm = (film: string, member: string, m: CastModule, amp: number): Film => {
-  const kinds = m.CUTOUT?.[member];
-  if (kinds === undefined)
+/**
+ * `member`'s cut-out render as a film: a scene each kind his `CUTOUT` views
+ * are of whose sheet is the size of `only`'s (his first kind's when none),
+ * on a canvas that size grown by `CUTOUT_MARGIN`, each view drawn by its
+ * puppet, boiling `amp` px. A page is one canvas, so a kind of another size
+ * is drawn by its own page (`only`), never on a canvas not its size.
+ */
+const cutoutFilm = (
+  film: string,
+  member: string,
+  m: CastModule,
+  amp: number,
+  only?: string,
+): Film => {
+  const all = m.CUTOUT?.[member];
+  if (all === undefined)
     throw new Error(`${film}'s rigs/cast.ts has no cut-out of ${member} (CUTOUT)`);
-  const [first] = Object.keys(kinds);
-  if (first === undefined) throw new Error(`${film}'s CUTOUT draws no sheet of ${member}`);
-  const { width, height } = cutoutCanvas(film, member, m, first);
+  const lead = only ?? Object.keys(all)[0];
+  if (lead === undefined || all[lead] === undefined)
+    throw new Error(`${film}'s CUTOUT draws no ${only ?? ''} sheet of ${member}`);
+  const { width, height } = cutoutCanvas(film, member, m, lead);
+  const onCanvas = (kind: string) => {
+    const sheet = m.SHEETS[member]?.[kind];
+    return (
+      sheet !== undefined &&
+      sheet.width + 2 * CUTOUT_MARGIN[0] === width &&
+      sheet.height + 2 * CUTOUT_MARGIN[1] === height
+    );
+  };
+  const kinds = Object.fromEntries(
+    Object.entries(all).filter(([kind]) => (only === undefined && onCanvas(kind)) || kind === only),
+  );
   const puppets = cutoutPuppets(kinds);
   return createFilm({
     title: `${member}'s cut-out render`,
@@ -215,7 +240,8 @@ const easeFilm = (film: string, member: string, m: CastModule): Film => {
  * The player's entries for a film's cast renders, its pages a member: his
  * rigs under `<film>/cast/<member>`, and his puppets (`CUTOUT`) under
  * `<film>/cast/<member>/cutout` (at the house boil; at none under
- * `…/cutout/boil-0`, `CUTOUT_BOILS`), and his eases (`EASES`) under
+ * `…/cutout/boil-0`, `CUTOUT_BOILS`; each kind alone at its own sheet's
+ * size under `…/<kind>`), and his eases (`EASES`) under
  * `<film>/cast/<member>/ease`. Spread them, beside the films, into the
  * pages the app mounts. A page loads its member's table (`load`, the film's
  * `rigs/cast.ts`) and the rigs or puppets it draws, through `rive` (the
@@ -247,16 +273,18 @@ export const castPages = (
           ),
         ),
       ],
-      ...CUTOUT_BOILS.map((amp) => [
-        castPage(film, member, 'cutout', amp),
-        Effect.flatMap(page.contextEffect, (services) =>
-          Effect.promise(load).pipe(
-            Effect.map((m) => cutoutFilm(film, member, m, amp)),
-            Effect.flatMap(loadPuppets),
-            Effect.provideContext(services),
+      ...CUTOUT_BOILS.flatMap((amp) =>
+        [undefined, ...SheetKind.literals].map((only) => [
+          castPage(film, member, 'cutout', amp, only),
+          Effect.flatMap(page.contextEffect, (services) =>
+            Effect.promise(load).pipe(
+              Effect.map((m) => cutoutFilm(film, member, m, amp, only)),
+              Effect.flatMap(loadPuppets),
+              Effect.provideContext(services),
+            ),
           ),
-        ),
-      ]),
+        ]),
+      ),
       [
         easePage(film, member),
         Effect.flatMap(page.contextEffect, (services) =>
