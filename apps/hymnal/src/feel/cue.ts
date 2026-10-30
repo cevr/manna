@@ -31,6 +31,8 @@ export type PlainCue =
   | 'press'
   | 'choose'
   | 'tab'
+  | 'zoom-out'
+  | 'zoom-in'
   | 'sheet-open'
   | 'seek-grab'
   | 'seek-tick'

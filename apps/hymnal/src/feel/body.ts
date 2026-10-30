@@ -36,42 +36,36 @@ const felt = (haptic: Haptic): Body => ({ haptic, sound: Option.none() });
 
 const mod = (n: number, by: number) => ((n % by) + by) % by;
 
+/** The haptic each cue but a dial's detent is felt by. */
+const FELT: Record<Exclude<Cue['_tag'], 'detent'>, Haptic> = {
+  section: light,
+  wall: impact('rigid'),
+  reset: impact('medium'),
+  'chords-on': light,
+  play: light,
+  'switch-on': light,
+  'chords-off': light,
+  pause: light,
+  'switch-off': light,
+  'favourite-on': { _tag: 'notification', type: 'success' },
+  'favourite-off': light,
+  press: selection,
+  choose: selection,
+  tab: selection,
+  'zoom-out': impact('soft'),
+  'zoom-in': light,
+  'sheet-open': light,
+  'seek-grab': selection,
+  'seek-tick': selection,
+  'seek-release': impact('soft'),
+};
+
 /** The body cue `cue` is given. */
 export const bodyOf = (cue: Cue): Body => {
-  switch (cue._tag) {
-    case 'detent':
-      if (cue.dial === 'key')
-        return { haptic: selection, sound: Option.some<SoundName>(`key-${mod(cue.at, 12)}`) };
-      return { haptic: selection, sound: Option.some('thock') };
-    case 'section':
-      return felt(light);
-    case 'wall':
-      return felt(impact('rigid'));
-    case 'reset':
-      return felt(impact('medium'));
-    case 'chords-on':
-    case 'play':
-    case 'switch-on':
-    case 'chords-off':
-    case 'pause':
-    case 'switch-off':
-      return felt(light);
-    case 'favourite-on':
-      return felt({ _tag: 'notification', type: 'success' });
-    case 'favourite-off':
-      return felt(light);
-    case 'press':
-    case 'choose':
-    case 'tab':
-      return felt(selection);
-    case 'sheet-open':
-      return felt(light);
-    case 'seek-grab':
-    case 'seek-tick':
-      return felt(selection);
-    case 'seek-release':
-      return felt(impact('soft'));
-  }
+  if (cue._tag !== 'detent') return felt(FELT[cue._tag]);
+  if (cue.dial === 'key')
+    return { haptic: selection, sound: Option.some<SoundName>(`key-${mod(cue.at, 12)}`) };
+  return { haptic: selection, sound: Option.some('thock') };
 };
 
 /** Whether a cue is a tick: its haptic keeps the floor (`FLOOR`) from the last tick's. */

@@ -13,6 +13,7 @@
  *
  * A tab read from the indexes is there only when its index has an entry, and
  * a group lists each hymn once; a hymn may be in several groups of a tab.
+ * `All at once` shows each group of a tab as a tile (`tilesOf`).
  */
 
 import { getBibleBook } from '@manna/core/bible';
@@ -121,6 +122,69 @@ export const openingOffset = (
   name: TabName,
   now: number,
 ): number => kept.get(name) ?? now;
+
+/** How many equal stretches a tile's strip cuts the hymnal (1 to 695) into. */
+export const STRIP_STEPS = 48;
+
+/** A stretch of a tile's strip, as fractions of its width from its start (hymn 1). */
+export interface Span {
+  readonly start: number;
+  readonly end: number;
+}
+
+/**
+ * A group's tile in `All at once`: its place among the tab's groups, its
+ * name, how many hymns it holds, where they lie in the hymnal, and whether
+ * it holds the hymn the player has (`playing`).
+ */
+export interface Tile {
+  readonly index: number;
+  readonly name: string;
+  readonly count: number;
+  readonly spans: ReadonlyArray<Span>;
+  readonly playing: boolean;
+}
+
+/**
+ * Where `hymns` lie in the hymnal: the strip cut into `STRIP_STEPS` equal
+ * stretches, each run of stretches that holds a hymn one span.
+ */
+export const spansOf = (hymns: ReadonlyArray<number>): ReadonlyArray<Span> => {
+  const filled = new Set(
+    hymns.filter(isHymn).map((n) => Math.floor(((n - FIRST) * STRIP_STEPS) / (LAST - FIRST + 1))),
+  );
+  const spans: Array<Span> = [];
+  let from = -1;
+  for (let step = 0; step <= STRIP_STEPS; step++) {
+    if (filled.has(step) && from < 0) from = step;
+    if (!filled.has(step) && from >= 0) {
+      spans.push({ start: from / STRIP_STEPS, end: step / STRIP_STEPS });
+      from = -1;
+    }
+  }
+  return spans;
+};
+
+/** A tile for each of `tab`'s groups, in its order; `playing` is the number of the hymn the player has. */
+export const tilesOf = (tab: Tab, playing: Option.Option<number>): ReadonlyArray<Tile> =>
+  tab.groups.map((group, index) => ({
+    index,
+    name: group.name,
+    count: group.hymns.length,
+    spans: spansOf(group.hymns),
+    playing: Option.match(playing, { onNone: () => false, onSome: (n) => group.hymns.includes(n) }),
+  }));
+
+/**
+ * The group whose row is at or above the list's top at `offset`, given the
+ * offset that puts each group's row at the top (`starts`, in order), to
+ * within a point; the first group above them all.
+ */
+export const groupAt = (starts: ReadonlyArray<number>, offset: number): number =>
+  Math.max(
+    0,
+    starts.findLastIndex((start) => start <= offset + 1),
+  );
 
 /** The tab named `name`, or `Sections` (always there) when the tabs have none by that name. */
 export const tabNamed = (tabs: ReadonlyArray<Tab>, name: TabName): Tab =>

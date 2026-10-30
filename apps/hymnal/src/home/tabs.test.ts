@@ -6,9 +6,20 @@
 
 import { describe, expect, it } from 'bun:test';
 
+import { Option } from 'effect';
+
 import type { HymnIndexes } from '~/hymns/indexes';
 
-import { openingOffset, type TabName, tabNamed, tabsOf } from './tabs';
+import {
+  groupAt,
+  openingOffset,
+  spansOf,
+  STRIP_STEPS,
+  type TabName,
+  tabNamed,
+  tabsOf,
+  tilesOf,
+} from './tabs';
 
 const hymns = [
   { number: 1, topic: 'Worship' },
@@ -110,5 +121,40 @@ describe('a chosen tab', () => {
     expect([openingOffset(kept, 'Topics', 80), openingOffset(kept, 'Metres', 80)]).toEqual([
       240, 80,
     ]);
+  });
+});
+
+describe('All at once', () => {
+  const at = (stretch: number) => stretch / STRIP_STEPS;
+
+  it("draws a group's hymns on its strip, a run of neighbouring stretches as one span", () => {
+    expect(spansOf([])).toEqual([]);
+    expect(spansOf([1])).toEqual([{ start: 0, end: at(1) }]);
+    expect(spansOf([695])).toEqual([{ start: at(47), end: 1 }]);
+    expect(spansOf([1, 20])).toEqual([{ start: 0, end: at(2) }]);
+    expect(spansOf([100, 1, 900])).toEqual([
+      { start: 0, end: at(1) },
+      { start: at(6), end: at(7) },
+    ]);
+  });
+
+  it('gives each group a tile with its count, outlining the one with the playing hymn', () => {
+    const topics = tabNamed(tabsOf({ hymns, favourites: [], recent: [], indexes }), 'Topics');
+    const tiles = (playing: Option.Option<number>) =>
+      tilesOf(topics, playing).map((tile) => [tile.index, tile.name, tile.count, tile.playing]);
+    expect(tiles(Option.some(4))).toEqual([
+      [0, 'Joy', 2, true],
+      [1, 'Rest', 1, false],
+    ]);
+    expect(tiles(Option.some(3)).map((tile) => tile[3])).toEqual([false, false]);
+    expect(tiles(Option.none()).map((tile) => tile[3])).toEqual([false, false]);
+  });
+
+  it('opens at the group whose row is at or above the list top', () => {
+    const starts = [100, 300, 500];
+    expect([0, 99, 100, 299.5, 301, 900].map((offset) => groupAt(starts, offset))).toEqual([
+      0, 0, 0, 1, 1, 2,
+    ]);
+    expect(groupAt([], 40)).toBe(0);
   });
 });

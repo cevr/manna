@@ -42,6 +42,8 @@ const plainRows: ReadonlyArray<readonly [PlainCue, Haptic]> = [
   ['press', selection],
   ['choose', selection],
   ['tab', selection],
+  ['zoom-out', impact('soft')],
+  ['zoom-in', impact('light')],
   ['sheet-open', impact('light')],
   ['seek-grab', selection],
   ['seek-tick', selection],
