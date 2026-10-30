@@ -392,7 +392,12 @@ const orderBatch = (name: IndexName, mutate: (file: Json) => ReadonlyArray<Probl
 const scriptureSwap = (name: 'scriptural' | 'worship-aids') => (file: Json) => {
   const n = name === 'scriptural' ? 'hymn' : 'reading';
   const entries = list(file.entries);
-  const text = (e: Json) => passageText(e.passage as Passage, String);
+  // The stored JSON carries no `_tag`; decoding adds it from the shape, as here.
+  const passageOf = (e: Json) => {
+    const p = e.passage as Json;
+    return { ...p, _tag: 'verses' in p ? 'Chapter' : 'Span' } as Passage;
+  };
+  const text = (e: Json) => passageText(passageOf(e), String);
   const keyOf3 = (e: Json) => {
     const p = e.passage as Json;
     return 'verses' in p
@@ -403,7 +408,7 @@ const scriptureSwap = (name: 'scriptural' | 'worship-aids') => (file: Json) => {
     text(a) === text(b) ? num(a[n]) < num(b[n]) : order2(keyOf3(a), keyOf3(b)) < 0,
   ).map((i) => {
     const [a, b] = [entries[i] as Json, entries[i + 1] as Json];
-    const value = `${passageText(b.passage as Passage, ctx.bookName)} ${num(b[n])} > ${passageText(a.passage as Passage, ctx.bookName)} ${num(a[n])}`;
+    const value = `${passageText(passageOf(b), ctx.bookName)} ${num(b[n])} > ${passageText(passageOf(a), ctx.bookName)} ${num(a[n])}`;
     swapContent(a, b);
     return value;
   });
