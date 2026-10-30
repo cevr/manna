@@ -382,6 +382,18 @@ sound and logs each `[feel] play sound=<name> skipped=simulator`. A tick
 plays no closer than 30 ms after the last; the web gets no body, and
 Android haptics only.
 
+## Tuner
+
+- `src/tuner/pitch.ts` finds a guitar string's pitch in one frame of
+  samples (`detect`, McLeod's NSDF over an FFT autocorrelation, 60 to
+  1200 Hz), or none in silence and noise. A key at half the period gives
+  way to the key at its double lag when that stands higher, so a pluck
+  with strong even partials reads at its fundamental, not an octave up.
+- `src/tuner/tuning.ts` reads a pitch (`reading`): the nearest note and
+  octave from A4 = 440 Hz, the nearest standard string (E2 A2 D3 G3 B3
+  E4), its signed cents, and in tune within 5 cents. The tuner plays no
+  sound.
+
 ## App icon
 
 The app is named Hymnal, and its icon is one blade of wheat:
