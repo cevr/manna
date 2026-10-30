@@ -81,18 +81,18 @@ const holdersOf = (word: string): ReadonlySet<number> => {
 };
 
 /**
- * Whether `found`, for `word` typed alone, lists every hymn that holds it
- * with no typo, all of them before any hymn found by a typo alone.
+ * Whether `query` finds every hymn of `sure`, all of them before any hymn a
+ * typo alone finds. The hymns the Topical index lists under a topic the
+ * query names are found by that topic, not by a typo, and rank after the
+ * titles that hold its words, so they are set aside.
  */
-const holdersFirst = (
-  found: ReadonlyArray<{ readonly hymn: { readonly number: number } }>,
-  word: string,
-) => {
-  const holders = holdersOf(word);
-  const order = found.map((f) => holders.has(f.hymn.number));
-  return (
-    order.slice(0, holders.size).every(Boolean) && order.filter(Boolean).length === holders.size
-  );
+const sureFirst = (query: string, sure: ReadonlySet<number>) => {
+  const named = new Set(index.lookups.topicHymns(query));
+  const order = find(index, query)
+    .map((f) => f.hymn.number)
+    .filter((n) => sure.has(n) || !named.has(n))
+    .map((n) => sure.has(n));
+  return order.slice(0, sure.size).every(Boolean) && order.filter(Boolean).length === sure.size;
 };
 
 /** The share of `queries` with a hymn of its targets among the first `k` found, in tenths of a percent. */
@@ -185,7 +185,7 @@ describe('search swept over the hymnal', () => {
   });
 
   it('ranks every hymn holding a word typed alone above every hymn a typo alone finds, for every word of 4 letters or more', () => {
-    const misses = wordsOfFourOrMore.filter((word) => !holdersFirst(find(index, word), word));
+    const misses = wordsOfFourOrMore.filter((word) => !sureFirst(word, holdersOf(word)));
     expect({ words: wordsOfFourOrMore.length, misses: misses.length }).toEqual({
       words: wordsOfFourOrMore.length,
       misses: 0,
@@ -216,11 +216,7 @@ describe('search swept over the hymnal', () => {
     const misses = runs.filter((run) => {
       const sets = run.map((word, i) => heldBy(word, i === run.length - 1));
       const all = [...(sets[0] ?? [])].filter((n) => sets.every((set) => set.has(n)));
-      const sure = new Set(all);
-      const order = find(index, run.join(' ')).map((f) => sure.has(f.hymn.number));
-      return !(
-        order.slice(0, sure.size).every(Boolean) && order.filter(Boolean).length === sure.size
-      );
+      return !sureFirst(run.join(' '), new Set(all));
     });
     expect({ most: runs.length > 1800, misses: misses.length }).toEqual({ most: true, misses: 0 });
   });
