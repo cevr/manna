@@ -208,39 +208,44 @@ const showsOf = (expect: Expectation): Option.Option<string> => {
   return Option.none();
 };
 
-/** Run a step's action; how many of its expects the action checked itself (an open, its first `shows`). */
+/**
+ * Run a step's action; the index of the expect the action checked itself, if
+ * any: an open waits for its first `shows`, wherever it sits among the expects.
+ */
 const act = (d: DriveMembers, place: Place, step: Step) => {
   const seconds = step.timeout ?? STEP_SECONDS;
+  const none = Option.none<number>();
   switch (step.action) {
     case 'open': {
-      const shows = Option.flatMap(Option.fromNullishOr(step.expect[0]), showsOf);
+      const at = step.expect.findIndex((expect) => 'shows' in expect);
+      const shows = Option.flatMap(Option.fromNullishOr(step.expect[at]), showsOf);
       return openOnce(place, step.link, shows, step.timeout ?? OPEN_SECONDS).pipe(
-        Effect.as(Option.match(shows, { onNone: () => 0, onSome: () => 1 })),
+        Effect.as(Option.map(shows, () => at)),
       );
     }
     case 'tap':
-      return Effect.as(d.tap(place, step.target, seconds), 0);
+      return Effect.as(d.tap(place, step.target, seconds), none);
     case 'fill':
-      return Effect.as(d.fill(place, step.target, step.value, seconds), 0);
+      return Effect.as(d.fill(place, step.target, step.value, seconds), none);
     case 'back':
-      return Effect.as(d.back(place), 0);
+      return Effect.as(d.back(place), none);
     case 'scroll':
-      return Effect.as(d.scroll(place, step.target, step.direction, seconds), 0);
+      return Effect.as(d.scroll(place, step.target, step.direction, seconds), none);
     case 'gesture': {
       // The decoder refused every `from` that is neither a point nor a target.
       const from = Option.getOrElse(panStart(step.from), () => step.from);
       return Effect.as(
         d.gesture(place, { from, dx: step.dx, dy: step.dy, ms: step.ms ?? PAN_MS }),
-        0,
+        none,
       );
     }
     case 'hold':
       return Effect.as(
         d.hold(place, step.target, step.ms ?? HOLD_MS, step.settle ?? HOLD_SETTLE),
-        0,
+        none,
       );
     case 'relaunch':
-      return Effect.as(d.relaunch(place), 0);
+      return Effect.as(d.relaunch(place), none);
   }
 };
 
@@ -305,7 +310,8 @@ const runStep = (d: DriveMembers, place: Place, journey: Journey, step: Step, in
       hostFailed(
         Effect.gen(function* () {
           const checked = yield* act(d, place, step);
-          for (const expect of step.expect.slice(checked)) {
+          for (const [index, expect] of step.expect.entries()) {
+            if (Option.contains(checked, index)) continue;
             yield* meet(d, place, expect, step.timeout ?? STEP_SECONDS);
           }
         }),

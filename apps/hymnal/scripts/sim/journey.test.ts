@@ -232,6 +232,39 @@ describe('sim journey', () => {
   );
 
   it.scoped(
+    "passes an open's first shows to the open, even after a hides, and checks it once",
+    () =>
+      Effect.gen(function* () {
+        const opening = {
+          ...journey,
+          steps: [
+            {
+              name: 'open-100',
+              action: 'open',
+              link: 'hymnal://hymns/100',
+              expect: [{ hides: 'id=spinner' }, { shows: 'label=Stanza 1' }],
+              receipt: 'none',
+            },
+          ],
+        };
+        const run = yield* runJourney(
+          toJson(opening),
+          ['journey', 'chords', '--skip-video'],
+          ['id=spinner'],
+        );
+        expect(Exit.isSuccess(run.exit)).toBe(true);
+        // The open waits for the stanza itself; only the hides is checked after it.
+        expect(ops(run.calls)).toEqual(['open', 'sees']);
+        expect(run.calls[0]?.args.slice(0, 3)).toEqual([
+          'hymnal://hymns/100',
+          Option.some('label=Stanza 1'),
+          30,
+        ]);
+        expect(run.calls[1]?.args).toEqual(['id=spinner', 2]);
+      }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.scoped(
     'stops at the first failed expect, names it, keeps its receipts and stops the video',
     () =>
       Effect.gen(function* () {
