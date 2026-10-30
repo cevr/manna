@@ -93,7 +93,6 @@
       "name": "chords-off",
       "action": "hold",
       "target": "id=key-button",
-      "settle": 2,
       "expect": [{ "hides": "id=chord-1-1-1" }]
     }
   ]
