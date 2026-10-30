@@ -13,9 +13,10 @@
 // distance from that paper. A px so cleared, or left near-clear, that the
 // figure encloses (walled off from the ground and the frame by his inked
 // parts) is his light cloth, not paper: it takes the sheet's px back, unless
-// its clear region holds a pocket of the sheet's paper or touches paper the
-// sheet shows open to the ground; a px within the paper's core (ΔE 2) stays
-// cleared. A member's cut-out may ask four things more of it (`UnmatteOptions`): his cloth colours, so a light cloth the line does
+// its clear region holds a pocket of the sheet's paper or a px of the paper
+// the sheet shows open to the ground; a px within the paper's core (ΔE 2)
+// stays cleared. A member's cut-out may ask four things more of it
+// (`UnmatteOptions`): his cloth colours, so a light cloth the line does
 // not reach is his and not paper; his thin parts, whose alpha is raised
 // until the colour that closes the sum is in range, so a speck keeps its
 // hue on another paper; the box's open edges, so paper the box cuts off
@@ -309,7 +310,12 @@ const restoreEnclosed = (
  * the ground and held px within `SHEET_GROUND` of the paper that joins the
  * ground or the frame's border: a gap the sheet shows open. It is 8-connected,
  * as the outside is, since paper that touches paper at a corner shows through
- * on the sheet. A pocket is each kept hole (such a run that `open` does not
+ * on the sheet. So a hairline diagonal ink stroke (under about 0.6 px) or a
+ * hard 1-px one does not wall the open paper: the run steps across its
+ * corners, and light cloth past it stays cleared. The run must step there,
+ * because a 1-px light slit on a diagonal between ink is the same pattern
+ * with light and ink swapped, and the sheet shows it open. A pocket is each
+ * kept hole (such a run that `open` does not
  * reach) holding `POCKET` px of paper (within `PAPER_CORE`) or more, as the
  * cut reads its pockets.
  */
