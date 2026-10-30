@@ -14,6 +14,7 @@ import {
   FileSystem,
   Option,
   Path,
+  Predicate,
   Schema,
 } from 'effect';
 import { Argument, CliError, Command, Flag } from 'effect/cli';
@@ -25,6 +26,7 @@ import {
   type DriveMembers,
   type Outcome,
   type Place,
+  type Point,
   RECORD,
   serve,
 } from './drive.ts';
@@ -76,6 +78,67 @@ export const report = <R>(
           ),
       }),
     );
+  });
+
+/** The x, in points, an edge pan starts at: inside the screen's left edge. */
+const EDGE_X = 3;
+
+/** A whole-number flag above 0, `fallback` when not given. */
+const positive = (name: string, fallback: number, description: string) =>
+  Flag.Int(name).pipe(
+    Flag.withDefault(fallback),
+    Flag.filter(
+      (value) => value > 0,
+      (value) => `--${name} ${value} is not above 0`,
+    ),
+    Flag.withDescription(description),
+  );
+
+/** Text of digits, dots, commas and minus signs is meant as a point. */
+const POINTLIKE = /^[\d.,-]+$/;
+const POINT = /^(\d+(?:\.\d+)?),(\d+(?:\.\d+)?)$/;
+
+/** Where a pan starts: `x,y` in points, or any other text as a target; a malformed point is none. */
+const panStart = (text: string): Option.Option<Point | string> => {
+  if (text === '') return Option.none();
+  if (!POINTLIKE.test(text)) return Option.some(text);
+  return Option.map(Option.fromNullishOr(POINT.exec(text)), (point) => ({
+    x: Number(point[1]),
+    y: Number(point[2]),
+  }));
+};
+
+/**
+ * `down --clean`: stop the drive if one is booted (none is no failure),
+ * then delete the build output and check the stopped drive's port is free.
+ */
+const downClean = (d: DriveMembers, place: Place) =>
+  Effect.gen(function* () {
+    const stopped = yield* d.down(place).pipe(
+      Effect.asSome,
+      Effect.catchTag('NoSession', () => Effect.succeedNone),
+    );
+    const platform = Option.match(stopped, {
+      onNone: (): Outcome['platform'] => 'ios',
+      onSome: (done) => done.platform,
+    });
+    const port = Option.flatMap(stopped, (done) =>
+      Option.liftPredicate(done.detail['port'], Predicate.isNumber),
+    );
+    const cleaned = yield* d.clean(place, port, platform);
+    const before = Option.getOrElse(stopped, (): Outcome => ({ platform, paths: {}, detail: {} }));
+    return {
+      platform,
+      paths: { ...before.paths, ...cleaned.paths },
+      detail: { ...before.detail, ...cleaned.detail, stopped: Option.isSome(stopped) },
+    } satisfies Outcome;
+  });
+
+/** `down`, and with `--clean` the clean after it. */
+const downStep = (d: DriveMembers, place: Place, clean: boolean) =>
+  Effect.gen(function* () {
+    if (clean) return yield* downClean(d, place);
+    return yield* d.down(place);
   });
 
 /** Run a step of the `Drive` service. */
@@ -369,11 +432,116 @@ export const simCommand = (place: Place) => {
     ),
   ).pipe(Command.withDescription('Check, read only, that the booted drive is worth driving'));
 
-  const downCommand = Command.make('down', { state }, (flags) =>
+  const panCommand = Command.make(
+    'pan',
+    {
+      from: Argument.String('from').pipe(
+        Argument.filterMap(panStart, (from) => `${from} is no x,y point and no target`),
+        Argument.withDescription(
+          'x,y in points (10,20), or a target whose centre the pan starts at',
+        ),
+      ),
+      dx: Argument.Int('dx').pipe(Argument.withDescription('points to the right (negative: left)')),
+      dy: Argument.Int('dy').pipe(Argument.withDescription('points down (negative: up)')),
+      ms: positive('ms', 900, 'milliseconds the pan takes'),
+      state,
+    },
+    (flags) =>
+      report(
+        'gesture',
+        drive((d) =>
+          d.gesture(at(flags.state), {
+            from: flags.from,
+            dx: flags.dx,
+            dy: flags.dy,
+            ms: flags.ms,
+          }),
+        ),
+      ),
+  ).pipe(Command.withDescription('Pan from a point or a target by dx and dy (iOS)'));
+
+  const edgePanCommand = Command.make(
+    'edge-pan',
+    {
+      y: Flag.Int('y').pipe(
+        Flag.withDefault(437),
+        Flag.filter(
+          (y) => y >= 0,
+          (y) => `--y ${y} is above the screen`,
+        ),
+        Flag.withDescription('the height in points the pan starts at'),
+      ),
+      dx: Flag.Int('dx').pipe(
+        Flag.withDefault(200),
+        Flag.withDescription('points to the right the pan travels'),
+      ),
+      ms: positive('ms', 300, 'milliseconds the pan takes'),
+      state,
+    },
+    (flags) =>
+      report(
+        'gesture',
+        drive((d) =>
+          d.gesture(at(flags.state), {
+            from: { x: EDGE_X, y: flags.y },
+            dx: flags.dx,
+            dy: 0,
+            ms: flags.ms,
+          }),
+        ),
+      ),
+  ).pipe(Command.withDescription("Pan right from the screen's left edge: the back swipe (iOS)"));
+
+  const gestureCommand = Command.make('gesture').pipe(
+    Command.withDescription('Pan as a finger does (iOS)'),
+    Command.withSubcommands([panCommand, edgePanCommand]),
+  );
+
+  const holdCommand = Command.make(
+    'hold',
+    {
+      target,
+      ms: positive('ms', 900, 'milliseconds the press lasts'),
+      settle: Flag.Int('settle').pipe(
+        Flag.withDefault(10),
+        Flag.filter(
+          (settle) => settle >= 0,
+          (settle) => `--settle ${settle} is below 0`,
+        ),
+        Flag.withDescription('seconds to wait after the press for what it opens'),
+      ),
+      state,
+    },
+    (flags) =>
+      report(
+        'hold',
+        drive((d) => d.hold(at(flags.state), flags.target, flags.ms, flags.settle)),
+      ),
+  ).pipe(Command.withDescription('Press and hold a target, then let what it opens settle (iOS)'));
+
+  const relaunchCommand = Command.make('relaunch', { state }, (flags) =>
     report(
-      'down',
-      drive((d) => d.down(at(flags.state))),
+      'relaunch',
+      drive((d) => d.relaunch(at(flags.state))),
     ),
+  ).pipe(Command.withDescription('Start the app afresh, or reload the page on the web'));
+
+  const downCommand = Command.make(
+    'down',
+    {
+      clean: Flag.Boolean('clean').pipe(
+        Flag.withDefault(false),
+        Flag.withDescription(
+          'then delete ios/build, ios/Pods and dist for good and check the port is free, booted or not',
+        ),
+      ),
+      state,
+    },
+    (flags) =>
+      report(
+        'down',
+        drive((d) => downStep(d, at(flags.state), flags.clean)),
+      ),
   ).pipe(Command.withDescription('Shut down what boot started'));
 
   const serveCommand = Command.make(
@@ -397,6 +565,9 @@ export const simCommand = (place: Place) => {
       recordCommand,
       logCommand,
       doctorCommand,
+      gestureCommand,
+      holdCommand,
+      relaunchCommand,
       downCommand,
       serveCommand,
     ]),

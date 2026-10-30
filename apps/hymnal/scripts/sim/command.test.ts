@@ -3,6 +3,9 @@
  * step runs, `boot` on iOS hands the dev server a Hermes compiler (the one
  * `HERMESC_PATH` names, else the one react-native depends on), and `open`
  * retries once, terminating the app, when its target is missing on iOS.
+ * The journey's verbs read their arguments here: `gesture pan` and
+ * `gesture edge-pan`, `hold` with its press and settle, `relaunch`, and
+ * `down --clean`, which cleans whether or not a drive was booted.
  */
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
@@ -10,7 +13,7 @@ import { Console, Effect, Exit, FileSystem, Option, Path, Schema } from 'effect'
 
 import { runSim } from './command.ts';
 import { Drive, type DriveMembers, type Outcome, type Place } from './drive.ts';
-import { TargetMissing, ToolFailed } from './errors.ts';
+import { NoSession, TargetMissing, ToolFailed } from './errors.ts';
 import { Result } from './result.ts';
 
 interface Call {
@@ -25,7 +28,14 @@ const done = (platform: Outcome['platform']): Outcome => ({ platform, paths: {},
 /** How the stand-in's `open` answers each call in turn; past the end, it succeeds. */
 type OpenAnswer = 'ok' | 'missing-ios' | 'missing-web' | 'tool-failed';
 
-const standIn = (calls: Array<Call>, opens: ReadonlyArray<OpenAnswer>): DriveMembers => {
+/** How the stand-in's `down` answers: it stops a drive, or finds none booted. */
+type DownAnswer = 'ok' | 'no-session';
+
+const standIn = (
+  calls: Array<Call>,
+  opens: ReadonlyArray<OpenAnswer>,
+  downs: DownAnswer,
+): DriveMembers => {
   const step =
     (op: string) =>
     (...args: ReadonlyArray<unknown>) =>
@@ -35,7 +45,9 @@ const standIn = (calls: Array<Call>, opens: ReadonlyArray<OpenAnswer>): DriveMem
       });
   let opened = 0;
   return {
-    readSession: () => Effect.die('the commands under test read no session'),
+    // No drive is booted for the stand-in: a command that reads the session gets none.
+    readSession: () =>
+      Effect.fail(NoSession.make({ file: '/nonexistent/loop-probe-x/session.json' })),
     boot: step('boot'),
     install: step('install'),
     open: (...args) => {
@@ -62,12 +74,27 @@ const standIn = (calls: Array<Call>, opens: ReadonlyArray<OpenAnswer>): DriveMem
     record: step('record'),
     log: step('log'),
     doctor: step('doctor'),
-    down: step('down'),
+    down: (...args) => {
+      calls.push({ op: 'down', args });
+      if (downs === 'no-session')
+        return Effect.fail(NoSession.make({ file: '/nonexistent/loop-probe-x/session.json' }));
+      return Effect.succeed(done('ios'));
+    },
+    clean: step('clean'),
+    gesture: step('gesture'),
+    hold: step('hold'),
+    relaunch: step('relaunch'),
+    sees: (...args) => Effect.sync(() => void calls.push({ op: 'sees', args })),
   };
 };
 
 /** Run `sim <args>` at `place` over the stand-in: what it printed, its exit and the steps it called. */
-const sim = (place: Place, args: ReadonlyArray<string>, opens: ReadonlyArray<OpenAnswer> = []) =>
+const sim = (
+  place: Place,
+  args: ReadonlyArray<string>,
+  opens: ReadonlyArray<OpenAnswer> = [],
+  downs: DownAnswer = 'ok',
+) =>
   Effect.gen(function* () {
     const calls: Array<Call> = [];
     const printed: Array<string> = [];
@@ -79,7 +106,7 @@ const sim = (place: Place, args: ReadonlyArray<string>, opens: ReadonlyArray<Ope
     const exit = yield* Effect.exit(
       runSim(place, args).pipe(
         Effect.provideService(Console.Console, console),
-        Effect.provideService(Drive, standIn(calls, opens)),
+        Effect.provideService(Drive, standIn(calls, opens, downs)),
       ),
     );
     return { exit, calls, printed: printed.map((line) => decodeResult(line)) };
@@ -254,6 +281,127 @@ describe('sim commands over the Drive service', () => {
         expect(Exit.isFailure(exit)).toBe(true);
         expect(calls.filter((call) => call.op === 'open')).toHaveLength(1);
       }
+    }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  /** The arguments each step was called with, past the place. */
+  const driven = (calls: ReadonlyArray<Call>) =>
+    calls.map((call) => ({ op: call.op, args: call.args.slice(1) }));
+
+  it.scoped('gesture pan starts at a point or a target, 900 ms unless --ms says', () =>
+    Effect.gen(function* () {
+      const place = yield* coldPlace;
+      const cases = [
+        [
+          ['10,20', '-52', '0', '--ms', '1500'],
+          { from: { x: 10, y: 20 }, dx: -52, dy: 0, ms: 1500 },
+        ],
+        [['10,20', '-52', '0'], { from: { x: 10, y: 20 }, dx: -52, dy: 0, ms: 900 }],
+        [['id=key-button', '0', '120'], { from: 'id=key-button', dx: 0, dy: 120, ms: 900 }],
+      ] as const;
+      for (const [args, pan] of cases) {
+        const { exit, calls, printed } = yield* sim(place, ['gesture', 'pan', ...args]);
+        expect(Exit.isSuccess(exit)).toBe(true);
+        expect(driven(calls)).toEqual([{ op: 'gesture', args: [pan] }]);
+        expect(printed[0]?.ok === true && printed[0].command).toBe('gesture');
+      }
+    }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.scoped('gesture edge-pan pans right from the left edge, its defaults overridable', () =>
+    Effect.gen(function* () {
+      const place = yield* coldPlace;
+      const plain = yield* sim(place, ['gesture', 'edge-pan']);
+      expect(driven(plain.calls)).toEqual([
+        { op: 'gesture', args: [{ from: { x: 3, y: 437 }, dx: 200, dy: 0, ms: 300 }] },
+      ]);
+      const given = yield* sim(place, [
+        'gesture',
+        'edge-pan',
+        '--y',
+        '500',
+        '--dx',
+        '150',
+        '--ms',
+        '400',
+      ]);
+      expect(driven(given.calls)).toEqual([
+        { op: 'gesture', args: [{ from: { x: 3, y: 500 }, dx: 150, dy: 0, ms: 400 }] },
+      ]);
+    }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.scoped('hold presses 900 ms and settles 10 s unless told otherwise', () =>
+    Effect.gen(function* () {
+      const place = yield* coldPlace;
+      const cases = [
+        [['id=key-button'], ['id=key-button', 900, 10]],
+        [
+          ['label=Key', '--ms', '1200', '--settle', '4'],
+          ['label=Key', 1200, 4],
+        ],
+        [
+          ['id=key-button', '--settle', '0'],
+          ['id=key-button', 900, 0],
+        ],
+      ] as const;
+      for (const [args, held] of cases) {
+        const { exit, calls } = yield* sim(place, ['hold', ...args]);
+        expect(Exit.isSuccess(exit)).toBe(true);
+        expect(driven(calls)).toEqual([{ op: 'hold', args: [...held] }]);
+      }
+    }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.scoped('a bad gesture or hold is refused as BadArguments before any step', () =>
+    Effect.gen(function* () {
+      const place = yield* coldPlace;
+      for (const args of [
+        ['gesture', 'pan', '10,20', '-52'],
+        ['gesture', 'pan', '10,20', '-52', '0', '--ms', '0'],
+        ['gesture', 'pan', '10,20', '-52', '0', '--ms', '-5'],
+        ['gesture', 'pan', '10,20', 'left', '0'],
+        ['gesture', 'pan', '10,20', '1.5', '0'],
+        ['gesture', 'pan', '-5,20', '10', '0'],
+        ['gesture', 'edge-pan', '--ms', '0'],
+        ['gesture', 'swipe', '10,20', '1', '0'],
+        ['hold'],
+        ['hold', 'id=x', '--ms', '0'],
+        ['hold', 'id=x', '--settle', '-1'],
+      ]) {
+        const { exit, calls, printed } = yield* sim(place, args);
+        expect(Exit.isFailure(exit)).toBe(true);
+        expect(calls).toEqual([]);
+        expect(printed).toHaveLength(1);
+        expect(printed[0]?.ok === false && printed[0].error._tag).toBe('BadArguments');
+      }
+    }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.scoped('relaunch relaunches, and down --clean stops the drive before it cleans', () =>
+    Effect.gen(function* () {
+      const place = yield* coldPlace;
+      const relaunched = yield* sim(place, ['relaunch']);
+      expect(driven(relaunched.calls).map((call) => call.op)).toEqual(['relaunch']);
+      const cleaned = yield* sim(place, ['down', '--clean']);
+      expect(Exit.isSuccess(cleaned.exit)).toBe(true);
+      expect(cleaned.calls.map((call) => call.op)).toEqual(['down', 'clean']);
+      expect(cleaned.printed[0]?.ok === true && cleaned.printed[0].command).toBe('down');
+      expect(cleaned.printed[0]?.ok === true && cleaned.printed[0].detail['stopped']).toBe(true);
+    }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.scoped('down --clean with nothing booted still cleans; a plain down fails NoSession', () =>
+    Effect.gen(function* () {
+      const place = yield* coldPlace;
+      const cleaned = yield* sim(place, ['down', '--clean'], [], 'no-session');
+      expect(Exit.isSuccess(cleaned.exit)).toBe(true);
+      expect(cleaned.calls.map((call) => call.op)).toEqual(['down', 'clean']);
+      expect(cleaned.printed[0]?.ok === true && cleaned.printed[0].detail['stopped']).toBe(false);
+      const plain = yield* sim(place, ['down'], [], 'no-session');
+      expect(Exit.isFailure(plain.exit)).toBe(true);
+      expect(plain.calls.map((call) => call.op)).toEqual(['down']);
+      expect(plain.printed[0]?.ok === false && plain.printed[0].error._tag).toBe('NoSession');
     }).pipe(Effect.provide(BunServices.layer)),
   );
 });
