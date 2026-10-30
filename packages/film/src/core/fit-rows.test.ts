@@ -392,4 +392,18 @@ describe('fitRows over a cut-out crop', () => {
     expect(value(seen, 'silhouette.iou')).toBe(value(opaque, 'silhouette.iou'));
     expect(value(seen, 'silhouette.iou')).not.toBe(value(none, 'silhouette.iou'));
   });
+
+  test("a neighbour's art that only the kept crop holds changes no row", () => {
+    const art = [42, 48, 12, 30] as const;
+    const head = either(boxOf([44, 46, 14, 28], [...CREAM, 255]), boxOf(art, [...INK, 255]));
+    const neighbour = Uint8Array.from({ length: S * S }, (_, i) =>
+      Number(inside(i % S, art[0], art[1]) && inside(Math.floor(i / S), art[2], art[3])),
+    );
+    const posed = overOwn(crop(CLEAR, CREAM));
+    const classes = { cream: CLASSES.cream };
+    const alone = fitRows(crop(SHEET_PAPER, CREAM), posed, { classes });
+    const beside = crop(SHEET_PAPER, CREAM, head);
+    expect(fitRows(beside, posed, { classes })).not.toEqual(alone);
+    expect(fitRows(beside, posed, { classes, neighbour })).toEqual(alone);
+  });
 });

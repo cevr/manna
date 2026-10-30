@@ -41,7 +41,9 @@
 // The bands: `head`, the top 30% of the sheet's figure rows (the cast
 // canon's head share rounded up), `body` the rest, `figure` the whole. A
 // row passes exactly when its value, rounded to hundredths, lies inside its
-// bar. Pure: RGBA in, rows out, the same rows for the same crops.
+// bar. A cut-out view's neighbour (`FitSpec.neighbour`) is another
+// figure's art: its pixels are ground on both crops, so no row reads them.
+// Pure: RGBA in, rows out, the same rows for the same crops.
 
 import { type Rgb, componentsOf, deltaE, labOf, lumaOf, rgbAt } from './cast-sheet-pixels.ts';
 import { type LabelRegion, type LabelTable, labelRegions, touchingIn } from './label.ts';
@@ -155,7 +157,7 @@ export interface FitSpec {
   readonly labels?: LabelTable;
   readonly probes?: ReadonlyArray<FitProbe>;
   readonly bars?: Readonly<Partial<Record<FitBarName, FitBar>>>;
-  /** A cut-out view's neighbour: 1 where the kept crop holds another figure's art the puppet leaves out, which the holes row does not count. Crop-sized. */
+  /** A cut-out view's neighbour: 1 where the kept crop holds another figure's art the puppet leaves out. The cast page draws it with that figure's own puppet, so it is ground on both crops and no row reads it. Crop-sized. */
   readonly neighbour?: Uint8Array;
 }
 
@@ -415,8 +417,8 @@ const POCKET_REACH = 4;
 /**
  * A cut-out render's holes: the clear pixels (alpha 0) of each enclosed
  * component of see-through pixels (alpha under 128, four ways, not touching
- * the crop's border), where the kept crop reads figure that is neither its
- * hole nor `neighbour`. A component that overlaps a kept hole is that pocket
+ * the crop's border), where the kept crop reads figure that is not its hole
+ * (a neighbour's pixels are its ground, `readCrop`). A component that overlaps a kept hole is that pocket
  * cut wider: its pixels within `POCKET_REACH` of the kept holes it overlaps
  * are excused. Any other component counts whole, even beside a pocket.
  * Partly see-through pixels (a seam's speck) never count. Measured on the
@@ -426,14 +428,13 @@ const POCKET_REACH = 4;
  * sower's 10 views; a per-pixel 4 px reach round every kept hole misses
  * 5/60 thin holes.
  */
-const cutHolesOf = (c: Read, render: Raster, neighbour: Uint8Array | undefined) => {
+const cutHolesOf = (c: Read, render: Raster) => {
   const { w, h } = c;
   const alpha = (i: number) => render.rgba[i * 4 + 3] ?? 0;
   const clear = Uint8Array.from({ length: w * h }, (_, i) => Number(alpha(i) < 128));
   const comps = componentsOf(clear, w, h, false);
   const pockets = componentsOf(c.holes, w, h, false).labels;
-  const counts = (i: number) =>
-    alpha(i) === 0 && c.ground[i] === 0 && c.holes[i] === 0 && neighbour?.[i] !== 1;
+  const counts = (i: number) => alpha(i) === 0 && c.ground[i] === 0 && c.holes[i] === 0;
   const overlaps = comps.components.map(() => new Set<number>());
   for (let i = 0; i < w * h; i++) {
     const [l, p] = [comps.labels[i] ?? -1, pockets[i] ?? -1];
@@ -460,11 +461,12 @@ const cutHolesOf = (c: Read, render: Raster, neighbour: Uint8Array | undefined) 
   return n;
 };
 
-/** A crop read into its ground, figure, ink and paper; none when it holds no figure. */
-const readCrop = (r: Raster): Read | undefined => {
+/** A crop read into its ground, figure, ink and paper, the pixels `neighbour` holds as ground; none when it holds no figure. */
+const readCrop = (r: Raster, neighbour: Uint8Array | undefined): Read | undefined => {
   const { width: w, height: h } = r;
   const n = w * h;
   const { lab, like, ground } = groundOf(r);
+  if (neighbour !== undefined) for (let i = 0; i < n; i++) if (neighbour[i] === 1) ground[i] = 1;
   const holes = new Uint8Array(n);
   const ink = new Uint8Array(n);
   const paper = new Uint8Array(n);
@@ -1067,8 +1069,8 @@ export const fitRows = (
   render: Raster,
   spec: FitSpec = {},
 ): ReadonlyArray<FitRow> => {
-  const c = readCrop(concept);
-  const r = readCrop(render);
+  const c = readCrop(concept, spec.neighbour);
+  const r = readCrop(render, spec.neighbour);
   if (c === undefined || r === undefined || c.w !== r.w || c.h !== r.h) return [];
   const bar = (name: keyof typeof FIT_BARS, band: FitBand = 'figure', part = 'figure') =>
     barOf(spec, name, band, part);
@@ -1114,7 +1116,7 @@ export const fitRows = (
   // A cut-out's holes are counted where they lie (`cutHolesOf`), so the
   // kept crop's own holes elsewhere do not absorb them; a drawn render's
   // holes are the ground its figure closes round beyond the sheet's.
-  const [ch, rh] = [count(c.holes), cut ? cutHolesOf(c, render, spec.neighbour) : count(r.holes)];
+  const [ch, rh] = [count(c.holes), cut ? cutHolesOf(c, render) : count(r.holes)];
   rows.push(
     rowOf('holes', 'figure', 'figure', cut ? rh : Math.max(0, rh - ch), bar('holes'), {
       concept: ch,
