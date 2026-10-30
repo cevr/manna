@@ -55,6 +55,16 @@ export interface PuppetMember<V extends string> extends Pick<PuppetSpec, (typeof
   readonly parts: Readonly<Record<V, Parts>>;
 }
 
+/** A view's concept image: a single drawing is its own file, so its view names it; a sheet is named by its kind alone. */
+const conceptImage = (
+  cast: string,
+  sheet: KeptSheet,
+  view: string,
+): Extract<NonNullable<PuppetSpec['concept']>['image'], { readonly cast: string }> => {
+  if (sheet === 'single') return { cast, sheet, view };
+  return { cast, sheet };
+};
+
 /** Each of a member's views' puppet, by the view's name. */
 export const puppetsOf = <V extends string>(
   member: PuppetMember<V>,
@@ -69,8 +79,7 @@ export const puppetsOf = <V extends string>(
       skeleton: member.skeletons[view],
       origin: keptCorner(frame),
       concept: {
-        // A single drawing is its own file, so its view names it.
-        image: { cast: member.cast, sheet: frame.sheet, ...(frame.sheet === 'single' && { view }) },
+        image: conceptImage(member.cast, frame.sheet, view),
         box: frame.kept,
       },
       paper: member.papers[view],

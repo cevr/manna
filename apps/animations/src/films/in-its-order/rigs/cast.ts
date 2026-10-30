@@ -611,7 +611,8 @@ type Reach = readonly ['near' | 'far', Pt] | readonly ['near' | 'far', Pt, 'out'
 /** One kept view as the render draws it. */
 interface ViewSpec {
   readonly member: 'lead-feast';
-  readonly kind: keyof (typeof SHEETS)['lead-feast'];
+  /** A sheet's: the rig draws no single drawing. */
+  readonly kind: Exclude<keyof (typeof SHEETS)['lead-feast'], 'single'>;
   readonly box: Box;
   /** Where the rig's origin (his feet) stands, sheet pixels. */
   readonly at: Pt;
