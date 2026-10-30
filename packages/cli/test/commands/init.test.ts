@@ -7,6 +7,7 @@ import { expect, it } from 'effect-bun-test';
 
 import { init } from '../../src/commands/init.js';
 import { CorpusSupply, Target } from '@manna/core/corpus-supply';
+import { INDEX_TABLES } from '@manna/core/hymnal';
 import { layerNativeTopicsArtifacts } from '@manna/core/corpus-supply/bun';
 import { withSqliteRefresh } from '../../src/lib/sqlite-refresh.js';
 
@@ -402,4 +403,62 @@ it.scoped('default init preserves every existing database without HTTP or proven
       names.map((name) => `${name}.db`).sort(),
     );
   }).pipe(Effect.provide(BunServices.layer)),
+);
+
+it.scoped(
+  'default init replaces a hymnal.db that holds hymns without the index tables, and keeps a current one',
+  () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      for (const mode of ['stale', 'current'] as const) {
+        const home = yield* fs.makeTempDirectoryScoped({ prefix: `init-hymnal-${mode}-` });
+        const directory = `${home}/.bible`;
+        yield* fs.makeDirectory(directory);
+        for (const name of ['bible', 'topics', 'webster'])
+          yield* fs.writeFileString(`${directory}/${name}.db`, `prior-${name}`);
+        const destination = `${directory}/hymnal.db`;
+        const tables = { stale: [], current: INDEX_TABLES }[mode];
+        yield* Effect.acquireUseRelease(
+          Effect.sync(() => new Database(destination)),
+          (db) =>
+            Effect.sync(() =>
+              db.exec(
+                ['CREATE TABLE hymns(id INTEGER PRIMARY KEY)']
+                  .concat(tables.map((table) => `CREATE TABLE ${table}(x)`))
+                  .join(';'),
+              ),
+            ),
+          (db) => Effect.sync(() => db.close()),
+        );
+        const before = yield* fs.readFile(destination);
+        const output: string[] = [];
+        const console: Console.Console = {
+          ...Console.Console.defaultValue(),
+          log: (...parts) => {
+            output.push(parts.join(' '));
+          },
+        };
+        const requested: string[] = [];
+        const http = Layer.succeed(
+          HttpClient.HttpClient,
+          HttpClient.make((request) => {
+            requested.push(request.url);
+            return Effect.succeed(HttpClientResponse.fromWeb(request, new Response('replacement')));
+          }),
+        );
+        yield* runInit(home, console, http, []);
+        for (const name of ['bible', 'topics', 'webster'])
+          expect(yield* fs.readFileString(`${directory}/${name}.db`)).toBe(`prior-${name}`);
+        if (mode === 'stale') {
+          expect(yield* fs.readFileString(destination)).toBe('replacement');
+          expect(requested.length).toBe(1);
+          expect(output).toContain('↻ hymnal.db has no indexes; replacing it');
+          expect(output).toContain('✓ hymnal.db installed');
+        } else {
+          expect(yield* fs.readFile(destination)).toEqual(before);
+          expect(requested).toEqual([]);
+          expect(output.some((line) => line.startsWith('✓ hymnal.db ('))).toBe(true);
+        }
+      }
+    }).pipe(Effect.provide(BunServices.layer)),
 );

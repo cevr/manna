@@ -309,14 +309,39 @@ describe('hymns CLI corpus contract', () => {
         const reading = yield* cli(dir, normalized, ['get', '696', '--json']);
         expect(reading.code, 'reading:exit').toBe(0);
         expect(json(yield* indexesOf(reading.stdout)), 'reading:indexes').toBe('null');
+        expect(reading.stderr.includes('note:'), 'reading:no-note').toBe(false);
 
         yield* legacyFixture(legacy, [yield* service.getHymn(HymnId.make(2))]);
         const old = yield* cli(dir, legacy, ['get', '2', '--json']);
         expect(old.code, 'legacy:exit').toBe(0);
         expect(json(yield* indexesOf(old.stdout)), 'legacy:indexes').toBe('null');
+        expect(old.stderr.trim(), 'legacy:note').toBe(
+          'note: this hymnal.db has no indexes; run manna init to replace it',
+        );
         const oldText = yield* cli(dir, legacy, ['get', '2']);
         expect(oldText.code === 0 && !oldText.stdout.includes('Topics: '), 'legacy:text').toBe(
           true,
+        );
+
+        // An index row the reader cannot decode is an error, never the legacy `indexes: null`.
+        const corrupt = `${dir}/corrupt.db`;
+        yield* fs.copyFile(ARTIFACT, corrupt);
+        yield* Effect.acquireUseRelease(
+          Effect.sync(() => new Database(corrupt)),
+          (db) =>
+            Effect.sync(() =>
+              db.exec(`DROP TABLE index_passage_see;
+                CREATE TABLE index_passage_see(ordinal INTEGER PRIMARY KEY, hymn INTEGER, see TEXT, page INTEGER);
+                INSERT INTO index_passage_see VALUES(1, 2, 'x', 1);`),
+            ),
+          (db) => Effect.sync(() => db.close()),
+        );
+        const broken = yield* cli(dir, corrupt, ['get', '2', '--json']);
+        expect(broken.code === 0, 'corrupt:exit').toBe(false);
+        expect(broken.stderr.includes('note:'), 'corrupt:no-note').toBe(false);
+        // The CLI logger writes the failure to stdout when it is not a terminal.
+        expect(`${broken.stdout}${broken.stderr}`, 'corrupt:message').toContain(
+          "this hymnal.db's index tables could not be read",
         );
       }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );

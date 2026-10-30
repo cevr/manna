@@ -9,6 +9,7 @@ export {
   HymnalError,
   HymnNotFoundError,
   HymnalIndexesMissing,
+  INDEX_TABLES,
   type HymnalTestIndexes,
 } from './service.js';
 export {
