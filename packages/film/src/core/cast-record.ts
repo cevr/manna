@@ -171,7 +171,7 @@ export type CastSheetRecord = typeof CastSheetRecord.Type;
 /** The record as `cast-sheet.json` holds it. */
 export const CastSheetJson = repoJson(CastSheetRecord);
 
-/** A kind the record does not set up as asked: no entry, or poses and heads with no layout or slots, or an anchor off the sheet. */
+/** A kind the record does not set up as asked: no entry, or poses and heads with no layout or slots, or an anchor off the sheet; or a single drawing, which is kept by hand and never drawn. */
 class CastKindUnset extends Schema.TaggedError<CastKindUnset>()('CastKindUnset', {
   member: Schema.String,
   kind: SheetKind,
@@ -189,8 +189,25 @@ export interface CastKindPlan {
   readonly concepts: ReadonlyArray<CastConcept>;
 }
 
-/** The kind's plan: a turnaround's six house slots, or a poses or heads sheet's own. */
+/** The kind's plan: a turnaround's six house slots, or a poses or heads sheet's own. A single drawing has none: the owner keeps it by hand, so no tool draws or measures a try of one. */
 export const castKindPlan = (
+  record: CastSheetRecord,
+  kind: SheetKind,
+): Result.Result<CastKindPlan, CastKindUnset> =>
+  Bool.match(kind === 'single', {
+    onTrue: () =>
+      Result.fail(
+        CastKindUnset.make({
+          member: record.member,
+          kind,
+          reason: 'a single drawing is kept by hand, not drawn as a sheet',
+        }),
+      ),
+    onFalse: () => sheetPlan(record, kind),
+  });
+
+/** A sheet kind's plan, as `castKindPlan` reads it. */
+const sheetPlan = (
   record: CastSheetRecord,
   kind: SheetKind,
 ): Result.Result<CastKindPlan, CastKindUnset> => {

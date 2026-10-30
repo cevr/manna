@@ -380,7 +380,9 @@ describe('a hand that floats', () => {
             yield* fs.readFileString(`${folder}/cast-sheet.json`),
           );
           const look = yield* fs.readFileString(`${folder}/look.md`);
-          const kinds = SheetKind.literals.flatMap((kind) =>
+          // A single drawing is kept by hand and never briefed (`castKindPlan` refuses it).
+          const briefed = SheetKind.literals.filter((kind) => kind !== 'single');
+          const kinds = briefed.flatMap((kind) =>
             Option.toArray(
               Option.map(Option.fromUndefinedOr(record.sheets[kind]), (sheet) => ({ kind, sheet })),
             ),

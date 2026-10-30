@@ -571,8 +571,16 @@ const renderKind = Effect.fn('Cast.renderKind')(function* (at: RenderAt, kind: S
   );
   if (at.write) yield* fs.writeFile(path.join(dir, `${kind}.render.png`), png);
   const drawn = yield* Effect.fromResult(decodePng(png));
+  // The layout the kind was drawn from, a single drawing's too, which has no plan.
   const layout = Option.getOrElse(
-    Option.flatMap(Result.getSuccess(castKindPlan(record, kind)), (p) => p.layout),
+    Option.orElse(
+      Option.flatMap(Result.getSuccess(castKindPlan(record, kind)), (p) => p.layout),
+      () =>
+        Option.filter(
+          Option.fromUndefinedOr(record.sheets.single?.layout),
+          () => kind === 'single',
+        ),
+    ),
     () => turnaroundLayout(record.who),
   );
   const place = `${member}'s ${kind} sheet, render ${at.n}`;

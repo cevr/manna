@@ -4,8 +4,8 @@
 // prompt sends, as it was.
 
 import { describe, expect, test } from 'bun:test';
-import { Schema } from 'effect';
-import { CastSheetJson, keptOf, replacedSince, withCastKept } from './cast-record.ts';
+import { Result, Schema } from 'effect';
+import { CastSheetJson, castKindPlan, keptOf, replacedSince, withCastKept } from './cast-record.ts';
 import type { CastKept, CastSheetRecord } from './cast-record.ts';
 import { castLock } from './cast-lock.ts';
 import { keptFile } from './cast-sheet.ts';
@@ -56,6 +56,14 @@ describe("a member's single drawings", () => {
       ['single-1'],
       ['single-2'],
     ]);
+  });
+
+  test('are refused a plan, so no tool draws a try of one', () => {
+    const plan = castKindPlan(record, 'single');
+    expect(Result.isFailure(plan) && plan.failure._tag).toBe('CastKindUnset');
+    expect(Result.isFailure(plan) && plan.failure.reason).toBe(
+      'a single drawing is kept by hand, not drawn as a sheet',
+    );
   });
 
   test('are each kept as its own file, while a sheet kind keeps one file by its kind', () => {
