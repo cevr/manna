@@ -12,3 +12,8 @@ import type { HymnPlayer } from './player';
 export const PlayerContext = createContext<Option.Option<HymnPlayer>>(Option.none());
 
 export const usePlayer = () => use(PlayerContext);
+
+/** How far the bar's `#` stands over a list screen's bottom edge (`findRoom`), so a list's end clears it: none with no `#`. */
+export const FindRoom = createContext<number>(0);
+
+export const useFindRoom = () => use(FindRoom);
