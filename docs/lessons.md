@@ -4637,3 +4637,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** Feast-mother (4 views), idea-villagers (2) and Jeremiah (6) failed their fit rows as named gaps (holes up to 14606, linen `class.iou` 0.13 to 0.34), though at 1:1 they matched their sheets with no real loss.
 - **Cause:** The fit rows read a cut-out on the page, over `PAPER`, and cloth within ΔE 3.5 of it joined the crop's ground flood. A cut-out view's rows now read its posed raster over the member's measuring ground, the light colour farthest from his opaque pixels and samples.
 - **Guard:** code: `packages/film/src/core/fit-rows.test.ts` `cloth within ΔE 3.5 of the paper reads as figure over the measuring ground`, `packages/film/src/core/fit-rows.test.ts` `a 12 px hole in a light cloth is counted though the sheet's ground holds grain`
+
+### cutout-checked-only-over-paper
+
+- **Date:** 2026-10-30
+- **Kind:** retraction
+- **Said:** "The cast page draws PAPER behind a cut, so a px the un-matte cleared inside a figure looks right there"
+- **Source:** issue #41; cut-gaps/spec.md Goal; cut-gaps/acceptance-p4b-named.log, leg M
+- **Wrong:** The un-matte cleared light cloth px that the figure's ink and cloth enclose, and the cut-outs were checked only on the cast page, over PAPER, where a cleared px looks like the paper behind it. Over the night ground, 2063 light components inside the 8 in-its-order cut-out members showed as holes in their cloth.
+- **Cause:** The un-matte read every px near the paper's colour as paper, wherever it lay, and no check drew a cut-out over a ground other than the paper. A px the un-matte leaves clear or near clear that the figure encloses now takes the sheet's px back, unless its clear region holds a pocket (9 px within ΔE 2 of the paper) or it lies within ΔE 2 of the paper itself, so the sheet's own pockets still clear and show no halo.
+- **Guard:** code: `packages/film/src/core/unmatte.test.ts` `keeps a light cloth speck that the ink and the cloth enclose whole, alpha 255`, `packages/film/src/core/unmatte.test.ts` `keeps the near-clear fence round such a speck whole too`, `packages/film/src/core/unmatte.test.ts` `still clears a paper pocket the figure encloses, with the light px in it, and un-mattes the outline`, `packages/film/src/core/unmatte.test.ts` `leaves an enclosed px within ΔE 2 of the paper cleared, so the sheet's paper shows no halo`
