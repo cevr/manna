@@ -52,7 +52,7 @@ const CastMember = Schema.String.check(
 );
 
 /** A kind of cast sheet a member keeps. */
-const CastSheetKind = Schema.Literals(['turnaround', 'poses', 'heads']);
+const CastSheetKind = Schema.Literals(['turnaround', 'poses', 'heads', 'single']);
 
 /**
  * A concept image: a set's file (`out/<set>/<file>`: a kept concept, a model
@@ -64,7 +64,12 @@ const CastSheetKind = Schema.Literals(['turnaround', 'poses', 'heads']);
 export const ConceptImage = Schema.Union([
   Schema.Struct({ set: SetName, file: SetFile }),
   Schema.Struct({ board: BoardImage }),
-  Schema.Struct({ cast: CastMember, sheet: CastSheetKind }),
+  /** `view` names a single drawing, kept as its own file (`kept/<view>.png`). */
+  Schema.Struct({
+    cast: CastMember,
+    sheet: CastSheetKind,
+    view: Schema.optionalKey(Schema.String),
+  }),
 ]);
 export type ConceptImage = typeof ConceptImage.Type;
 
@@ -81,7 +86,10 @@ export const conceptImageName = (image: ConceptImage): string =>
   Match.value(image).pipe(
     Match.when({ set: Match.string }, (set) => `${set.set}/${set.file}`),
     Match.when({ board: Match.string }, (board) => `board/${board.board}`),
-    Match.when({ cast: Match.string }, (cast) => `cast/${cast.cast}/kept/${cast.sheet}.png`),
+    Match.when(
+      { cast: Match.string },
+      (cast) => `cast/${cast.cast}/kept/${cast.view ?? cast.sheet}.png`,
+    ),
     Match.exhaustive,
   );
 

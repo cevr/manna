@@ -27,6 +27,7 @@ import {
   Schema,
 } from 'effect';
 import { isCastModule } from '../canvas/cast.ts';
+import { keptFile, SheetKind } from '../core/cast-sheet.ts';
 import { boxStart, fitPose } from '../core/pose-fit.ts';
 import { cropRaster } from '../core/raster.ts';
 import { PuppetImagesBun } from '../puppet/images-bun.ts';
@@ -92,7 +93,17 @@ export const fit = Command.make(
     const folder = yield* castFolder(film, input.member);
     const sheet = yield* Effect.fromResult(
       Result.mapError(
-        decodePng(yield* fs.readFile(path.join(folder, 'kept', `${kind}.png`))),
+        decodePng(
+          yield* fs.readFile(
+            path.join(
+              folder,
+              Option.match(Schema.decodeUnknownOption(SheetKind)(kind), {
+                onNone: () => `kept/${kind}.png`,
+                onSome: (k) => keptFile(k, name),
+              }),
+            ),
+          ),
+        ),
         (e) => refuse(e.message),
       ),
     );

@@ -72,6 +72,7 @@ import {
   sceneBoxOf,
   sideBySide,
 } from '../core/match.ts';
+import { keptFile } from '../core/cast-sheet.ts';
 import { cropRaster } from '../core/raster.ts';
 import type { SourceRefused } from '../core/refusals.ts';
 import { Browser, type FramePage } from './browser.ts';
@@ -123,7 +124,7 @@ const conceptPath = (
     ),
     Match.when({ cast: Match.string }, (cast) =>
       castFolder(paths.name, cast.cast).pipe(
-        Effect.map((folder) => path.join(folder, 'kept', `${cast.sheet}.png`)),
+        Effect.map((folder) => path.join(folder, keptFile(cast.sheet, cast.view ?? cast.sheet))),
         Effect.mapError((e) => e.message),
       ),
     ),

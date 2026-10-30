@@ -38,7 +38,7 @@ import {
   Result,
   Schema,
 } from 'effect';
-import { SheetKind } from '../core/cast-sheet.ts';
+import { keptFile, SheetKind } from '../core/cast-sheet.ts';
 import { type PartCut, type PartCutOptions, cutParts } from '../core/part-sheet.ts';
 import { type Raster, cropRaster } from '../core/raster.ts';
 import { padInto } from '../core/register.ts';
@@ -630,9 +630,15 @@ export const parts = Command.make(
     const view = yield* Option.match(frame, {
       onNone: () => pngAt(path.join(folder, 'views', `${name}.png`)),
       onSome: (f) =>
-        pngAt(path.join(folder, 'kept', `${f.sheet}.png`)).pipe(
-          Effect.map((sheet) => cropRaster(sheet, f.box)),
-        ),
+        pngAt(
+          path.join(
+            folder,
+            Option.match(Schema.decodeUnknownOption(SheetKind)(f.sheet), {
+              onNone: () => `kept/${f.sheet}.png`,
+              onSome: (k) => keptFile(k, name),
+            }),
+          ),
+        ).pipe(Effect.map((sheet) => cropRaster(sheet, f.box))),
     }).pipe(Effect.mapError(refuse));
     const started = yield* Clock.currentTimeMillis;
     const sheet = yield* Effect.fromResult(

@@ -218,6 +218,15 @@ const sheetRules = (
       LIGHT,
       NO_LETTERING,
     ],
+    single: [
+      `${PAPER_GROUND}, one thin flat ground line in a slightly deeper cream under the figure, and a small soft violet contact shadow under it.`,
+      `The sheet draws the person once, standing about ${tall} heads tall.`,
+      OUTLINE,
+      ...hairBeard,
+      LIGHT,
+      HANDS,
+      NO_LETTERING,
+    ],
   }[kind];
 };
 

@@ -24,6 +24,7 @@ import {
   FileSystem,
   Option,
   Path,
+  Record as Rec,
   Result,
   Schema,
 } from 'effect';
@@ -48,7 +49,7 @@ import {
   fitHeld,
 } from '../core/cast-render.ts';
 import { CastSheetJson, type CastSheetRecord, castKindPlan } from '../core/cast-record.ts';
-import { SheetKind } from '../core/cast-sheet.ts';
+import { keptFile, SheetKind } from '../core/cast-sheet.ts';
 import type { CritiqueFinding } from '../core/critique.ts';
 import { measureFigure } from '../core/figure.ts';
 import {
@@ -557,18 +558,24 @@ const renderKind = Effect.fn('Cast.renderKind')(function* (at: RenderAt, kind: S
   );
   if (at.write) yield* fs.writeFile(path.join(dir, `${kind}.render.png`), png);
   const drawn = yield* Effect.fromResult(decodePng(png));
-  const keptSheet = yield* Effect.fromResult(
-    decodePng(yield* fs.readFile(path.join(at.folder, 'kept', `${kind}.png`))),
-  );
   const layout = Option.getOrElse(
     Option.flatMap(Result.getSuccess(castKindPlan(record, kind)), (p) => p.layout),
     () => turnaroundLayout(record.who),
   );
   const place = `${member}'s ${kind} sheet, render ${at.n}`;
-  const cuts = keptViews(record, kind)
+  const asked = keptViews(record, kind)
     .filter((v) => at.views.length === 0 || at.views.includes(`${kind}-${v.name}`))
-    .filter((v) => drawnViews(at.table, member, kind, at.figure).includes(v.name))
-    .map((v): Cut => {
+    .filter((v) => drawnViews(at.table, member, kind, at.figure).includes(v.name));
+  // Each kept file is read once: a sheet's views share it, a single drawing has its own.
+  const byFile = Rec.toEntries(Arr.groupBy(asked, (v) => keptFile(kind, v.name)));
+  const cuts = (yield* Effect.forEach(byFile, ([file, views]) =>
+    fs.readFile(path.join(at.folder, file)).pipe(
+      Effect.flatMap((bytes) => Effect.fromResult(decodePng(bytes))),
+      Effect.map((keptSheet) => views.map((v) => ({ v, keptSheet }))),
+    ),
+  ))
+    .flat()
+    .map(({ v, keptSheet }): Cut => {
       const concept = cropRaster(keptSheet, v.box);
       const render = cropRaster(drawn, onPage(v.box, at.figure));
       const fit = fitRead(at, kind, v.name, render);

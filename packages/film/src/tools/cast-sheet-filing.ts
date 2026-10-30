@@ -152,6 +152,10 @@ export const fileCastKeep = Effect.fn('Cast.file')(function* <E, R>(
     Effect.gen(function* () {
       const refused = (reason: string) =>
         SheetKept.make({ member: record.member, kind: keep.kind, reason });
+      if (keep.kind === 'single')
+        return yield* refused(
+          'a single drawing is kept by hand as kept/single-<n>.png, not filed from a sheet',
+        );
       const replace = yield* Effect.fromResult(
         Result.mapError(replacing(Option.fromUndefinedOr(record.kept?.[keep.kind]), keep), refused),
       );

@@ -92,8 +92,12 @@ export const TURNAROUND_SLOTS: ReadonlyArray<Slot> = [
   'right',
 ];
 
-export const SheetKind = Schema.Literals(['turnaround', 'poses', 'heads']);
+export const SheetKind = Schema.Literals(['turnaround', 'poses', 'heads', 'single']);
 export type SheetKind = typeof SheetKind.Type;
+
+/** The kept file a view is cut from, as the member's folder reaches it: a single drawing's own (`kept/single-<n>.png`), else its kind's sheet (`kept/<kind>.png`). */
+export const keptFile = (kind: SheetKind, view: string): string =>
+  (kind === 'single' && `kept/${view}.png`) || `kept/${kind}.png`;
 
 /** The cast's canon: Christ's 3.36 heads, the owner's one height for the whole cast (character-design, the height band). */
 export const CANON_HEADS = 3.36;

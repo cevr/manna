@@ -6,7 +6,7 @@
 
 import { Array as Arr, Effect, Option, Schema } from 'effect';
 import type { CastFigure, CastModule, CastView } from '../canvas/cast.ts';
-import type { CastKept, CastSheetRecord } from '../core/cast-record.ts';
+import { type CastSheetRecord, keptOf } from '../core/cast-record.ts';
 import { SheetKind } from '../core/cast-sheet.ts';
 
 /** A cast render that cannot be made: the film's table, its record or its page do not give what it needs. */
@@ -50,13 +50,9 @@ export const tableSheet = (table: CastModule, member: string, kind: SheetKind) =
     Option.flatMap((sheets) => Option.fromUndefinedOr(sheets[kind])),
   );
 
-/** The views the owner kept of `kind`: none when he kept no such sheet. */
+/** The views the owner kept of `kind`: none when he kept no such sheet, each kept single drawing's own for `single`. */
 export const keptViews = (record: CastSheetRecord, kind: SheetKind) =>
-  Option.fromUndefinedOr(record.kept).pipe(
-    Option.flatMap((kept) => Option.fromUndefinedOr(kept[kind])),
-    Option.map((k) => k.views),
-    Option.getOrElse((): CastKept['views'] => []),
-  );
+  keptOf(record, kind).flatMap((k) => k.views);
 
 /**
  * Refused unless the table draws every kept view of each kind asked (each

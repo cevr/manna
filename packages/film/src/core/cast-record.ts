@@ -19,6 +19,7 @@
 
 import { Array as Arr, Boolean as Bool, Option, Predicate, Result, Schema } from 'effect';
 import {
+  keptFile,
   SheetCheck,
   SheetKind,
   type SheetOptions,
@@ -149,6 +150,8 @@ export const CastSheetRecord = Schema.Struct({
     turnaround: Schema.optionalKey(CastSheetOf),
     poses: Schema.optionalKey(CastSheetOf),
     heads: Schema.optionalKey(CastSheetOf),
+    /** Single drawings, one figure each: each try is one drawing. */
+    single: Schema.optionalKey(CastSheetOf),
   }),
   /** Each kind the owner kept: never drawn again (an added view is drawn beside it), and replaced only on his answer to an ask. */
   kept: Schema.optionalKey(
@@ -156,6 +159,8 @@ export const CastSheetRecord = Schema.Struct({
       turnaround: Schema.optionalKey(CastKept),
       poses: Schema.optionalKey(CastKept),
       heads: Schema.optionalKey(CastKept),
+      /** Each single drawing kept, one view each (`single-<n>`), each its own file (`kept/single-<n>.png`). */
+      single: Schema.optionalKey(Schema.Array(CastKept)),
     }),
   ),
   /** Each keep the owner replaced, oldest first. */
@@ -274,15 +279,31 @@ export const viewName = (kind: SheetKind, view: number): string =>
     () => `${kind}-${view}`,
   );
 
-/** The record with the kind kept as `kept`. */
+/** The kind's keeps: a sheet kind's one keep, or each single drawing kept; none when the kind is not kept. */
+export const keptOf = (record: CastSheetRecord, kind: SheetKind): ReadonlyArray<CastKept> => {
+  if (kind === 'single') return record.kept?.single ?? [];
+  return Option.match(Option.fromUndefinedOr(record.kept?.[kind]), {
+    onNone: () => [],
+    onSome: (kept) => [kept],
+  });
+};
+
+/** The record with the kind kept as `kept`: a single drawing is added beside the others, or replaces the keep of the same view. */
 export const withCastKept = (
   record: CastSheetRecord,
   kind: SheetKind,
   kept: CastKept,
-): CastSheetRecord => ({
-  ...record,
-  kept: { ...record.kept, [kind]: kept },
-});
+): CastSheetRecord => {
+  if (kind !== 'single') return { ...record, kept: { ...record.kept, [kind]: kept } };
+  const names = new Set(kept.views.map((v) => v.name));
+  const same = (k: CastKept): boolean => k.views.some((v) => names.has(v.name));
+  const singles = keptOf(record, 'single');
+  const single = Bool.match(singles.some(same), {
+    onTrue: () => singles.map((k) => (same(k) && kept) || k),
+    onFalse: () => [...singles, kept],
+  });
+  return { ...record, kept: { ...record.kept, single } };
+};
 
 /** The record with `replaced.kind` kept as `kept` and the keep it replaced added to the history. */
 export const withCastReplaced = (
@@ -304,7 +325,9 @@ export const replacedSince = (record: CastSheetRecord, file: string, at: string)
   const since = (record.replaced ?? []).filter((r) => r.at > at);
   const [folder, name] = file.split('/');
   return Bool.match(folder === 'kept', {
-    onTrue: () => since.some((r) => `${r.kind}.png` === name),
+    onTrue: () =>
+      since.some((r) => r.kept.views.some((v) => keptFile(r.kind, v.name) === file)) ||
+      since.some((r) => r.kind !== 'single' && `${r.kind}.png` === name),
     onFalse: () =>
       folder === 'views' && since.some((r) => r.kept.views.some((v) => `${v.name}.png` === name)),
   });
