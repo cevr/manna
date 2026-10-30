@@ -29,10 +29,12 @@ import {
 } from './schemas.js';
 import {
   HymnalError,
+  type HymnalIndexesMissing,
   HymnalService,
   HymnNotFoundError,
+  INDEX_TABLES,
+  indexesMissing,
   isIndexedHymn,
-  noIndexesError,
 } from './service.js';
 
 const HymnVersesJson = Schema.fromJsonString(Schema.Array(HymnVerse));
@@ -165,19 +167,26 @@ const IndexRefRow = Schema.Struct({
   page: Schema.Int,
   stanza: Schema.OptionFromNullOr(Schema.String),
 });
-const PassageRow = Schema.Struct({
+const passageFields = {
   source: Schema.String,
   ordinal: Schema.Int,
   number: Schema.Int,
   page: Schema.Int,
   stanza: Schema.OptionFromNullOr(Schema.String),
-  kind: Schema.Literals(['chapter', 'span']),
   book: Schema.Int,
   chapter: Schema.Int,
-  verse: Schema.NullOr(Schema.Int),
-  to_chapter: Schema.NullOr(Schema.Int),
-  to_verse: Schema.NullOr(Schema.Int),
-});
+};
+/** A passage row: a chapter holds no verse columns, a span holds all three. */
+const PassageRow = Schema.Union([
+  Schema.Struct({ ...passageFields, kind: Schema.Literal('chapter') }),
+  Schema.Struct({
+    ...passageFields,
+    kind: Schema.Literal('span'),
+    verse: Schema.Int,
+    to_chapter: Schema.Int,
+    to_verse: Schema.Int,
+  }),
+]);
 const PieceRow = Schema.Struct({ from_verse: Schema.Int, to_verse: Schema.Int });
 const TopicRow = Schema.Struct({
   name: Schema.String,
@@ -208,25 +217,26 @@ const toRef = (row: typeof IndexRefRow.Type): IndexRef => ({
 
 /** The index tables' queries, each in the printed order its index gives. */
 const indexReader = (db: Database) => {
-  const pieces = db.query(
-    'SELECT from_verse, to_verse FROM index_passage_verses WHERE source=? AND ordinal=? ORDER BY piece',
-  );
+  const piecesSql =
+    'SELECT from_verse, to_verse FROM index_passage_verses WHERE source=? AND ordinal=? ORDER BY piece';
   const passage = (row: typeof PassageRow.Type): IndexPassage => {
     if (row.kind === 'chapter')
       return {
         _tag: 'Chapter',
         book: row.book,
         chapter: row.chapter,
-        verses: decodeRows(PieceRow)(pieces.all(row.source, row.ordinal)).map((piece) => ({
-          from: piece.from_verse,
-          to: piece.to_verse,
-        })),
+        verses: decodeRows(PieceRow)(db.query(piecesSql).all(row.source, row.ordinal)).map(
+          (piece) => ({
+            from: piece.from_verse,
+            to: piece.to_verse,
+          }),
+        ),
       };
     return {
       _tag: 'Span',
       book: row.book,
-      from: { chapter: row.chapter, verse: row.verse ?? 1 },
-      to: { chapter: row.to_chapter ?? row.chapter, verse: row.to_verse ?? 1 },
+      from: { chapter: row.chapter, verse: row.verse },
+      to: { chapter: row.to_chapter, verse: row.to_verse },
     };
   };
   const passages = (where: string, ...params: (string | number)[]) =>
@@ -300,10 +310,24 @@ const indexReader = (db: Database) => {
   };
 };
 
-const hasIndexes = (db: Database) =>
+const hasTable = (db: Database, name: string) =>
   !Predicate.isNull(
-    db.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='index_files'").get(),
+    db.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name),
   );
+
+/** The index tables `db` lacks, in `INDEX_TABLES` order. */
+const absentIndexTables = (db: Database) => INDEX_TABLES.filter((name) => !hasTable(db, name));
+
+/**
+ * Whether the hymnal database at `path` holds hymns but lacks an index table,
+ * so `manna init` replaces it. A file that does not open as one is kept: false.
+ */
+export const hymnalNeedsIndexes = (path: string): Effect.Effect<boolean> =>
+  Effect.acquireUseRelease(
+    Effect.try(() => new Database(path, { readonly: true })),
+    (db) => Effect.try(() => hasTable(db, 'hymns') && absentIndexTables(db).length > 0),
+    (db) => Effect.sync(() => db.close(false)),
+  ).pipe(Effect.orElseSucceed(() => false));
 
 export const layerHymnalBun: Layer.Layer<
   HymnalService,
@@ -418,25 +442,38 @@ export const layerHymnalBun: Layer.Layer<
       }),
     );
 
-    const indexes = yield* Effect.try({
-      try: () => Option.map(Option.liftPredicate(db, hasIndexes), indexReader),
-      catch: (cause) => HymnalError.make({ operation: 'indexes', cause }),
+    const absent = yield* Effect.try({
+      try: () => absentIndexTables(db),
+      catch: (cause) =>
+        HymnalError.make({
+          operation: 'indexes',
+          cause,
+          message: `this hymnal.db's tables could not be listed: ${String(cause)}`,
+        }),
     });
-    const fromIndexes = <A>(read: (index: ReturnType<typeof indexReader>) => A) =>
-      Option.match(indexes, {
-        onNone: () => Effect.fail(noIndexesError()),
-        onSome: (index) =>
+    const index = Option.liftPredicate(absent, (tables) => tables.length === 0).pipe(
+      Option.map(() => indexReader(db)),
+    );
+    const fromIndexes = <A>(
+      read: (index: ReturnType<typeof indexReader>) => A,
+    ): Effect.Effect<A, HymnalError | HymnalIndexesMissing> =>
+      Option.match(index, {
+        onNone: () => Effect.fail(indexesMissing(absent)),
+        onSome: (reader) =>
           Effect.try({
-            try: () => read(index),
-            catch: (cause) => HymnalError.make({ operation: 'indexes', cause }),
+            try: () => read(reader),
+            catch: (cause) =>
+              HymnalError.make({
+                operation: 'indexes',
+                cause,
+                message: `this hymnal.db's index tables could not be read: ${String(cause)}`,
+              }),
           }),
       });
 
     const getHymnIndexes = Effect.fn('HymnalService.getHymnIndexes')(function* (id: HymnId) {
-      if (Option.isSome(indexes) && !isIndexedHymn(id)) {
-        return yield* HymnNotFoundError.make({ id });
-      }
-      return yield* fromIndexes((index) => index.hymn(id));
+      if (!isIndexedHymn(id)) return yield* HymnNotFoundError.make({ id });
+      return yield* fromIndexes((reader) => reader.hymn(id));
     });
     const getTopicHymns = Effect.fn('HymnalService.getTopicHymns')((name: string) =>
       fromIndexes((index) => index.topic(name)),

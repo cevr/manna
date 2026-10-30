@@ -11,12 +11,22 @@ import {
   type IndexPassage,
   passageReaches,
 } from './schemas.js';
-import { type HymnalError, HymnalService, type HymnNotFoundError } from './service.js';
+import {
+  type HymnalError,
+  type HymnalIndexesMissing,
+  HymnalService,
+  type HymnNotFoundError,
+} from './service.js';
 
 /** The operation a call failed in, `false` for another error, or `succeeded`. */
-const failedOperation = <A>(call: Effect.Effect<A, HymnalError | HymnNotFoundError>) =>
+const failedOperation = <A>(
+  call: Effect.Effect<A, HymnalError | HymnalIndexesMissing | HymnNotFoundError>,
+) =>
   Effect.match(call, {
-    onFailure: (error) => error._tag === 'HymnalError' && error.operation,
+    onFailure: (error) => {
+      if (error._tag === 'HymnalIndexesMissing') return error.message;
+      return error._tag === 'HymnalError' && error.operation;
+    },
     onSuccess: () => 'succeeded',
   });
 
@@ -234,7 +244,7 @@ describe('HymnalService.Test indexes', () => {
       ]);
     }).pipe(Effect.provide(IndexedLayer)));
 
-  test('with no indexes, each index method fails operation indexes', () =>
+  test('with no indexes, each index method fails naming manna init', () =>
     Effect.gen(function* () {
       const service = yield* HymnalService;
       const operations = yield* Effect.all([
@@ -244,6 +254,8 @@ describe('HymnalService.Test indexes', () => {
         failedOperation(service.getMetreHymns('8.7.8.7')),
         failedOperation(service.getPassageHymns({ book: 19, chapter: 23 })),
       ]);
-      expect(new Set(operations)).toEqual(new Set(['indexes']));
+      expect(new Set(operations)).toEqual(
+        new Set(['this hymnal.db has no indexes; run manna init to replace it']),
+      );
     }).pipe(Effect.provide(TestLayer)));
 });

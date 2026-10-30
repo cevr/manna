@@ -13,13 +13,23 @@ import { ConfigProvider, Effect, FileSystem, Layer, Result, Schema } from 'effec
 
 import { CategoryId, HymnId, VerseId } from '../types/ids.js';
 import { HymnVerse, isRefrain } from './schemas.js';
-import { type HymnalError, HymnalService, type HymnNotFoundError } from './service.js';
+import {
+  type HymnalError,
+  type HymnalIndexesMissing,
+  HymnalService,
+  type HymnNotFoundError,
+} from './service.js';
 import { layerHymnalBun } from './service-bun.js';
 
 /** The operation a call failed in, `false` for another error, or `succeeded`. */
-const failedOperation = <A>(call: Effect.Effect<A, HymnalError | HymnNotFoundError>) =>
+const failedOperation = <A>(
+  call: Effect.Effect<A, HymnalError | HymnalIndexesMissing | HymnNotFoundError>,
+) =>
   Effect.match(call, {
-    onFailure: (error) => error._tag === 'HymnalError' && error.operation,
+    onFailure: (error) => {
+      if (error._tag === 'HymnalIndexesMissing') return error.message;
+      return error._tag === 'HymnalError' && error.operation;
+    },
     onSuccess: () => 'succeeded',
   });
 
@@ -136,13 +146,41 @@ const writeIndexes = (file: string) => {
 /** Independent synthetic schema fixtures avoid reading either corpus or owner state in fast tests. */
 const writeSynthetic = (
   file: string,
-  mode: 'normalized' | 'indexes' | 'unknown' | 'decode' | 'storage',
+  mode:
+    | 'normalized'
+    | 'indexes'
+    | 'partial'
+    | 'corrupt'
+    | 'spanNull'
+    | 'unknown'
+    | 'decode'
+    | 'storage',
 ) => {
   const db = new Database(file);
   if (mode === 'indexes') {
     db.close();
     writeSynthetic(file, 'normalized');
     writeIndexes(file);
+    return;
+  }
+  if (mode === 'partial') {
+    db.close();
+    writeSynthetic(file, 'normalized');
+    const partial = new Database(file);
+    partial.exec('CREATE TABLE index_files(name TEXT PRIMARY KEY,title TEXT,note TEXT)');
+    partial.close();
+    return;
+  }
+  if (mode === 'corrupt' || mode === 'spanNull') {
+    db.close();
+    writeSynthetic(file, 'indexes');
+    const indexed = new Database(file);
+    const rows = {
+      corrupt: "INSERT INTO index_topic_refs VALUES(1,'hymn',2,7,'page')",
+      spanNull: "INSERT INTO index_passages VALUES('scriptural',5,15,NULL,20,'span',30,1,NULL,2,4)",
+    };
+    indexed.exec(rows[mode]);
+    indexed.close();
     return;
   }
   if (mode === 'normalized') {
@@ -344,8 +382,38 @@ describe('versioned corpus reader', () => {
         failedOperation(service.getMetreHymns('8.7.8.7')),
         failedOperation(service.getPassageHymns({ book: 19, chapter: 23 })),
       ]);
-      expect(new Set(operations)).toEqual(new Set(['indexes']));
+      expect(new Set(operations)).toEqual(
+        new Set(['this hymnal.db has no indexes; run manna init to replace it']),
+      );
     }).pipe(Effect.provide(syntheticLayer('normalized'))),
+  );
+  it.effect('names the absent tables of a partly indexed database and still reads its hymns', () =>
+    Effect.gen(function* () {
+      const service = yield* HymnalService;
+      expect(yield* failedOperation(service.getTopicHymns('Topic A'))).toBe(
+        'this hymnal.db lacks the index tables index_topics, index_topic_refs, index_passages, ' +
+          'index_passage_verses, index_passage_see, index_people, index_person_hymns, index_tunes, ' +
+          'index_tune_hymns, index_metres, index_metre_tune_hymns; run manna init to replace it',
+      );
+      expect((yield* service.getHymn(HymnId.make(1))).id).toBe(HymnId.make(1));
+    }).pipe(Effect.provide(syntheticLayer('partial'))),
+  );
+  it.effect('reports an undecodable index row as a corpus error with a message', () =>
+    Effect.gen(function* () {
+      const service = yield* HymnalService;
+      const result = yield* Effect.result(service.getTopicHymns('Topic A'));
+      expect(Result.isFailure(result) && result.failure._tag).toBe('HymnalError');
+      expect(Result.isFailure(result) && result.failure.message).toStartWith(
+        "this hymnal.db's index tables could not be read: ",
+      );
+    }).pipe(Effect.provide(syntheticLayer('corrupt'))),
+  );
+  it.effect('fails a span row without its first verse rather than reading verse 1', () =>
+    Effect.gen(function* () {
+      const service = yield* HymnalService;
+      const result = yield* Effect.result(service.getPassageHymns({ book: 30, chapter: 1 }));
+      expect(Result.isFailure(result) && result.failure._tag).toBe('HymnalError');
+    }).pipe(Effect.provide(syntheticLayer('spanNull'))),
   );
   for (const mode of ['unknown', 'decode', 'storage'] as const)
     it.effect(`reports ${mode} failures as corpus errors`, () =>

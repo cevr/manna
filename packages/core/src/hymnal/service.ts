@@ -4,7 +4,16 @@
  * The portable hymnal capability. Host adapters provide storage layers.
  */
 
-import { Context, Effect, Layer, Option, Predicate, Record as Records, Schema } from 'effect';
+import {
+  Context,
+  Effect,
+  Layer,
+  Match,
+  Option,
+  Predicate,
+  Record as Records,
+  Schema,
+} from 'effect';
 
 import type { CategoryId, HymnId } from '../types/ids.js';
 import type {
@@ -28,13 +37,52 @@ export class HymnNotFoundError extends Schema.TaggedError<HymnNotFoundError>()(
   { id: Schema.Finite },
 ) {}
 
-/** The failure of every index method over a database built without the index tables. */
-export const noIndexesError = () =>
-  HymnalError.make({
-    operation: 'indexes',
-    cause: 'index_files',
-    message: 'this hymnal.db has no indexes; run manna init',
+/**
+ * The failure of every index method over a database that lacks index tables:
+ * one built before them (`absent` holds every table) or one with only some.
+ * `manna init` replaces such a database, so the message names it. A read or
+ * decode failure of tables that are present is a `HymnalError`, never this.
+ */
+export class HymnalIndexesMissing extends Schema.TaggedError<HymnalIndexesMissing>()(
+  'HymnalIndexesMissing',
+  {
+    /** The index tables the database lacks. */
+    absent: Schema.Array(Schema.String),
+    /** Whether the database holds some index tables, so it was built part way. */
+    partial: Schema.Boolean,
+    message: Schema.String,
+  },
+) {}
+
+/** The tables a database holds the indexes in: the index methods read every one. */
+export const INDEX_TABLES = [
+  'index_files',
+  'index_topics',
+  'index_topic_refs',
+  'index_passages',
+  'index_passage_verses',
+  'index_passage_see',
+  'index_people',
+  'index_person_hymns',
+  'index_tunes',
+  'index_tune_hymns',
+  'index_metres',
+  'index_metre_tune_hymns',
+] as const;
+
+/** The `HymnalIndexesMissing` for a database lacking `absent`, with the message a user reads. */
+export const indexesMissing = (absent: readonly string[] = INDEX_TABLES) => {
+  const partial = absent.length < INDEX_TABLES.length;
+  const lacks = Match.value(partial).pipe(
+    Match.when(true, () => `lacks the index tables ${absent.join(', ')}`),
+    Match.orElse(() => 'has no indexes'),
+  );
+  return HymnalIndexesMissing.make({
+    absent,
+    partial,
+    message: `this hymnal.db ${lacks}; run manna init to replace it`,
   });
+};
 
 /** The hymns (1-695) the back-matter indexes give numbers for. */
 export const isIndexedHymn = (id: number) => Number.isInteger(id) && id >= 1 && id <= 695;
@@ -60,17 +108,23 @@ interface HymnalServiceApi {
   /** A hymn's topics, passages, `see` hymns, tunes, metres, authors and composers. */
   readonly getHymnIndexes: (
     id: HymnId,
-  ) => Effect.Effect<HymnIndexes, HymnalError | HymnNotFoundError>;
+  ) => Effect.Effect<HymnIndexes, HymnalError | HymnalIndexesMissing | HymnNotFoundError>;
   /** A topic's hymns in printed order; an unknown topic has none. */
-  readonly getTopicHymns: (name: string) => Effect.Effect<readonly IndexRef[], HymnalError>;
+  readonly getTopicHymns: (
+    name: string,
+  ) => Effect.Effect<readonly IndexRef[], HymnalError | HymnalIndexesMissing>;
   /** A tune's hymns in printed order; an unknown tune has none. */
-  readonly getTuneHymns: (name: string) => Effect.Effect<readonly IndexRef[], HymnalError>;
+  readonly getTuneHymns: (
+    name: string,
+  ) => Effect.Effect<readonly IndexRef[], HymnalError | HymnalIndexesMissing>;
   /** A metre's hymns, its tunes' hymns in printed order; an unknown metre has none. */
-  readonly getMetreHymns: (metre: string) => Effect.Effect<readonly IndexRef[], HymnalError>;
+  readonly getMetreHymns: (
+    metre: string,
+  ) => Effect.Effect<readonly IndexRef[], HymnalError | HymnalIndexesMissing>;
   /** The scriptural index's hymns that reach a chapter or a verse, in printed order. */
   readonly getPassageHymns: (
     query: PassageQuery,
-  ) => Effect.Effect<readonly IndexRef[], HymnalError>;
+  ) => Effect.Effect<readonly IndexRef[], HymnalError | HymnalIndexesMissing>;
 }
 
 /** What `HymnalService.Test` answers the index methods from, keyed by name. */
@@ -97,9 +151,12 @@ const emptyIndexes = (number: number): HymnIndexes => ({
 const testIndexMethods = (config: { readonly indexes?: HymnalTestIndexes }) => {
   const { indexes } = config;
   if (Predicate.isUndefined(indexes)) {
-    const missing = () => Effect.fail(noIndexesError());
+    const missing = () => Effect.fail(indexesMissing());
     return {
-      getHymnIndexes: missing,
+      getHymnIndexes: (id: HymnId) => {
+        if (isIndexedHymn(id)) return missing();
+        return Effect.fail(HymnNotFoundError.make({ id }));
+      },
       getTopicHymns: missing,
       getTuneHymns: missing,
       getMetreHymns: missing,

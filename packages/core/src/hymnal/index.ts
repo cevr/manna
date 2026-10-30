@@ -8,7 +8,7 @@ export {
   HymnalService,
   HymnalError,
   HymnNotFoundError,
-  noIndexesError,
+  HymnalIndexesMissing,
   type HymnalTestIndexes,
 } from './service.js';
 export {
