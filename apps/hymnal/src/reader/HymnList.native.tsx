@@ -39,6 +39,10 @@
  * A home list (`pullDown`) follows the find drums: while they are open on a
  * number, it scrolls to that hymn's first row under its topic (`foundOffset`),
  * and stays where it is when the list holds no such row.
+ *
+ * The Sections list has a number rail in a gutter at its right edge
+ * (`Rail.tsx`). Every row, and the pinned topic, ends before the gutter
+ * (`Look.gutter`), so no row's control lies under the rail's touch.
  */
 
 import { useAtomSet, useAtomValue } from '@effect/atom-react';
@@ -46,7 +50,7 @@ import { AnimatedLegendList } from '@legendapp/list/reanimated';
 import { Option, Predicate } from 'effect';
 import { type Href, Link, useLinkTo } from 'one';
 import { useEffect, useMemo, useState } from 'react';
-import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   type SharedValue,
   scrollTo,
@@ -82,7 +86,7 @@ import { dismissal } from './keyboard';
 import { clampedStart, pinnedAt, topicStart, topicStarts } from './pin';
 import { pagesFrom } from './place';
 import { Rail, useRail } from './Rail';
-import { marksOf } from './rail-marks';
+import { GUTTER, marksOf } from './rail-marks';
 import { groupRowsOf, resultRowsOf, type Row, rowsOf } from './rows';
 
 /** A hymn row's line of text, and the space above and below it, at the reader's usual text size. */
@@ -123,6 +127,8 @@ interface Look {
   readonly hymnHeight: number;
   readonly foundHeight: number;
   readonly topicHeight: number;
+  /** The room at the right edge every row ends before: the rail's gutter, or 0 with no rail. */
+  readonly gutter: number;
   readonly hrefOf: HymnListProps['hrefOf'];
   readonly onGroup: Option.Option<() => void>;
 }
@@ -136,9 +142,16 @@ const drawRow = ({
 }) => {
   if (item.kind === 'topic')
     return Option.match(extraData.onGroup, {
-      onNone: () => <Topic name={item.name} height={extraData.topicHeight} />,
+      onNone: () => (
+        <Topic name={item.name} height={extraData.topicHeight} gutter={extraData.gutter} />
+      ),
       onSome: (onGroup) => (
-        <GroupHeader name={item.name} height={extraData.topicHeight} onPress={onGroup} />
+        <GroupHeader
+          name={item.name}
+          height={extraData.topicHeight}
+          gutter={extraData.gutter}
+          onPress={onGroup}
+        />
       ),
     });
   if (item.kind === 'shelf')
@@ -147,6 +160,7 @@ const drawRow = ({
         name={item.name}
         href={item.href}
         height={extraData.topicHeight}
+        gutter={extraData.gutter}
         accent={extraData.accent}
       />
     );
@@ -161,6 +175,7 @@ const drawRow = ({
         onNone: () => extraData.hymnHeight,
         onSome: () => extraData.foundHeight,
       })}
+      gutter={extraData.gutter}
       accent={extraData.accent}
     />
   );
@@ -245,17 +260,6 @@ export function HymnList({
   const hymnHeight = heightOf('hymn', fontScale);
   const foundHeight = heightOf('found', fontScale);
   const topicHeight = heightOf('topic', fontScale);
-  const look = useMemo(
-    (): Look => ({
-      accent,
-      hymnHeight,
-      foundHeight,
-      topicHeight,
-      hrefOf,
-      onGroup: Option.fromNullishOr(onGroup),
-    }),
-    [accent, hymnHeight, foundHeight, topicHeight, hrefOf, onGroup],
-  );
   const header = pullDown?.height ?? 0;
   const topics = useMemo(
     () => ({
@@ -276,10 +280,12 @@ export function HymnList({
   // The list's scroll view, for the rail to scroll from the UI thread.
   const scroller = useAnimatedRef<Animated.ScrollView>();
   // While the rail is held its ticks are the topics felt, so the pin gives no
-  // `section` cue of its own, and the list does not scroll under the finger.
+  // `section` cue of its own.
   const railing = useSharedValue(false);
   // The topic last felt, by its place, by the rail or the pin: a topic is felt once.
   const felt = useSharedValue(-1);
+  // The list's own scroll is off while the rail is held: a finger moving down
+  // the gutter drives the rail alone, and only the rail scrolls the list.
   const scrolling = useAnimatedProps(() => ({ scrollEnabled: !railing.value }));
   // The end the list keeps, clear of the bar or the `#`, as its last row (`ListEnd`) keeps it.
   const end = listEndSpace(useStackBottom(), useFindRoom());
@@ -317,6 +323,20 @@ export function HymnList({
     if (!byTopic) return [];
     return placed;
   }, [byTopic, placed]);
+  // The rows give the rail its gutter only where a rail is drawn: GUTTER with marks, else 0.
+  const gutter = GUTTER * Math.min(1, marks.length);
+  const look = useMemo(
+    (): Look => ({
+      accent,
+      hymnHeight,
+      foundHeight,
+      topicHeight,
+      gutter,
+      hrefOf,
+      onGroup: Option.fromNullishOr(onGroup),
+    }),
+    [accent, hymnHeight, foundHeight, topicHeight, gutter, hrefOf, onGroup],
+  );
   const dialled = useAtomValue(find);
   // The offset of the dialled hymn's row while the drums are open on a home list, else -1.
   const wanted = useSharedValue(-1);
@@ -340,8 +360,8 @@ export function HymnList({
   const railBottom = end;
   const rail = useRail({
     marks,
-    top: railTop,
-    bottom: railBottom,
+    scroll,
+    rest,
     quiet: railing,
     felt,
     onMark: (mark) => {
@@ -358,63 +378,62 @@ export function HymnList({
   );
   return (
     <GestureHandlerRootView style={styles.fill}>
-      <GestureDetector gesture={rail.gesture}>
-        <View style={styles.fill}>
-          <AnimatedLegendList
-            refScrollView={scroller}
-            animatedProps={scrolling}
-            data={rows}
-            keyExtractor={(row) => row.key}
-            getItemType={drawnAs}
-            getFixedItemSize={(_, __, drawn) => {
-              if (drawn === 'hymn') return hymnHeight;
-              if (drawn === 'found') return foundHeight;
-              return topicHeight;
-            }}
-            estimatedItemSize={hymnHeight}
-            recycleItems
-            ListHeaderComponent={pullDown?.node}
-            estimatedHeaderSize={pullDown?.height}
-            // The last row ends clear of the home indicator and the docked bar.
-            ListFooterComponent={<ListEnd />}
-            // The list opens with the search field tucked under the title, and a
-            // drag let go between there and the top settles at one or the other;
-            // past the field it scrolls freely.
-            initialScrollOffset={opening}
-            snapToOffsets={pullDown && [0, pullDown.rest]}
-            snapToEnd={false}
-            maintainVisibleContentPosition={anchoring}
-            sharedValues={{ scrollOffset: scroll }}
-            contentInsetAdjustmentBehavior="never"
-            keyboardShouldPersistTaps="handled"
-            {...dismissal}
-            ListEmptyComponent={<Text style={styles.empty}>{empty}</Text>}
-            extraData={look}
-            renderItem={drawRow}
+      <View style={styles.fill}>
+        <AnimatedLegendList
+          refScrollView={scroller}
+          animatedProps={scrolling}
+          data={rows}
+          keyExtractor={(row) => row.key}
+          getItemType={drawnAs}
+          getFixedItemSize={(_, __, drawn) => {
+            if (drawn === 'hymn') return hymnHeight;
+            if (drawn === 'found') return foundHeight;
+            return topicHeight;
+          }}
+          estimatedItemSize={hymnHeight}
+          recycleItems
+          ListHeaderComponent={pullDown?.node}
+          estimatedHeaderSize={pullDown?.height}
+          // The last row ends clear of the home indicator and the docked bar.
+          ListFooterComponent={<ListEnd />}
+          // The list opens with the search field tucked under the title, and a
+          // drag let go between there and the top settles at one or the other;
+          // past the field it scrolls freely.
+          initialScrollOffset={opening}
+          snapToOffsets={pullDown && [0, pullDown.rest]}
+          snapToEnd={false}
+          maintainVisibleContentPosition={anchoring}
+          sharedValues={{ scrollOffset: scroll }}
+          contentInsetAdjustmentBehavior="never"
+          keyboardShouldPersistTaps="handled"
+          {...dismissal}
+          ListEmptyComponent={<Text style={styles.empty}>{empty}</Text>}
+          extraData={look}
+          renderItem={drawRow}
+        />
+        {topics.names.length > 0 && (
+          <PinnedTopic
+            names={topics.names}
+            starts={topics.starts}
+            height={topicHeight}
+            scroll={scroll}
+            cover={cover}
+            onPress={look.onGroup}
+            quiet={railing}
+            felt={felt}
+            gutter={gutter}
           />
-          {topics.names.length > 0 && (
-            <PinnedTopic
-              names={topics.names}
-              starts={topics.starts}
-              height={topicHeight}
-              scroll={scroll}
-              cover={cover}
-              onPress={look.onGroup}
-              quiet={railing}
-              felt={felt}
-            />
-          )}
-          {marks.length > 0 && (
-            <Rail
-              hold={rail}
-              marks={marks}
-              sections={topics.names}
-              top={railTop}
-              bottom={railBottom}
-            />
-          )}
-        </View>
-      </GestureDetector>
+        )}
+        {marks.length > 0 && (
+          <Rail
+            hold={rail}
+            marks={marks}
+            sections={topics.names}
+            top={railTop}
+            bottom={railBottom}
+          />
+        )}
+      </View>
     </GestureHandlerRootView>
   );
 }
@@ -448,6 +467,7 @@ function PinnedTopic({
   onPress,
   quiet,
   felt,
+  gutter,
 }: {
   readonly names: ReadonlyArray<string>;
   readonly starts: ReadonlyArray<number>;
@@ -457,6 +477,8 @@ function PinnedTopic({
   readonly onPress: Option.Option<() => void>;
   readonly quiet: SharedValue<boolean>;
   readonly felt: SharedValue<number>;
+  /** The room at the right edge the pin ends before, as the rows do. */
+  readonly gutter: number;
 }) {
   const pinned = useDerivedValue(() => pinnedAt(starts, scroll.value, height, cover.value));
   const line = useAnimatedStyle(() => ({ transform: [{ translateY: cover.value }] }));
@@ -500,13 +522,13 @@ function PinnedTopic({
       aria-hidden
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      style={[styles.pin, { height }, line]}
+      style={[styles.pin, { height, right: gutter }, line]}
     >
       <Animated.View style={[{ height }, styles.clip, place]}>
         <Animated.View style={strip}>
           {topics.map((name, i) => (
             // A topic that comes back has the same name: its place is its key.
-            <Topic key={i} name={name} height={height} />
+            <Topic key={i} name={name} height={height} gutter={0} />
           ))}
         </Animated.View>
         {Option.getOrNull(
@@ -519,10 +541,26 @@ function PinnedTopic({
   );
 }
 
-/** A topic's row: its name, quiet, on the ground, so the rows under it pass unseen while it is pinned. */
-function Topic({ name, height }: { readonly name: string; readonly height: number }) {
+/**
+ * A topic's row: its name, quiet, on the ground, so the rows under it pass
+ * unseen while it is pinned. It ends `gutter` before the right edge.
+ */
+function Topic({
+  name,
+  height,
+  gutter,
+}: {
+  readonly name: string;
+  readonly height: number;
+  readonly gutter: number;
+}) {
   return (
-    <View accessible role="heading" aria-label={name} style={[styles.topic, { height }]}>
+    <View
+      accessible
+      role="heading"
+      aria-label={name}
+      style={[styles.topic, { height, marginRight: gutter }]}
+    >
       <Text style={styles.topicName} numberOfLines={1}>
         {name}
       </Text>
@@ -537,14 +575,17 @@ function Topic({ name, height }: { readonly name: string; readonly height: numbe
 function GroupHeader({
   name,
   height,
+  gutter,
   onPress,
 }: {
   readonly name: string;
   readonly height: number;
+  readonly gutter: number;
   readonly onPress: () => void;
 }) {
   return (
     <Pressable
+      style={{ marginRight: gutter }}
       role="heading"
       aria-label={name}
       accessibilityHint="Shows every group at once"
@@ -569,16 +610,23 @@ function ShelfHeader({
   name,
   href,
   height,
+  gutter,
   accent,
 }: {
   readonly name: string;
   readonly href: string;
   readonly height: number;
+  readonly gutter: number;
   readonly accent: ColorValue;
 }) {
   const link = useLinkTo({ href });
   return (
-    <Pressable {...link} role="button" aria-label={`${name}, see all`}>
+    <Pressable
+      {...link}
+      style={{ marginRight: gutter }}
+      role="button"
+      aria-label={`${name}, see all`}
+    >
       {({ pressed }) => (
         <View style={[styles.topic, styles.shelf, { height }, pressed && styles.pressed]}>
           <Text style={styles.topicName} numberOfLines={1}>
@@ -609,6 +657,7 @@ function HymnRow({
   favourite,
   line: found,
   height,
+  gutter,
   accent,
 }: {
   readonly hymn: HymnText;
@@ -617,6 +666,8 @@ function HymnRow({
   readonly favourite: boolean;
   readonly line: Option.Option<string>;
   readonly height: number;
+  /** The room at the right edge the row, its star and its separator end before. */
+  readonly gutter: number;
   readonly accent: ColorValue;
 }) {
   const link = useLinkTo({ href: Link.resolveHref(href) });
@@ -626,7 +677,12 @@ function HymnRow({
     link.onPress(event);
   };
   return (
-    <Pressable {...link} onPress={onPress} aria-label={nameOf(hymn, favourite, found)}>
+    <Pressable
+      {...link}
+      onPress={onPress}
+      style={{ marginRight: gutter }}
+      aria-label={nameOf(hymn, favourite, found)}
+    >
       {({ pressed }) => (
         <View style={[styles.row, { height }, pressed && styles.pressed]}>
           <Text
