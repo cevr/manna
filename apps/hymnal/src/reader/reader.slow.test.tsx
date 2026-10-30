@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'bun:test';
 import { type Hymn, sung } from '@manna/hymnal/hymn';
 import { RegistryProvider, useAtomSet } from '@effect/atom-react';
-import { Option } from 'effect';
+import { Array as Arr, Option } from 'effect';
 import type * as Atom from 'effect/reactivity/Atom';
 import { act, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -14,6 +14,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { hymnAt, hymns } from '~/hymns/hymns';
+import { passageText, referencesOf } from '~/hymns/indexes';
 import type { ChordStyle } from '~/hymns/simple';
 
 import { readerOn } from '../test/reader';
@@ -121,17 +122,23 @@ describe('a hymn page', () => {
     }
   });
 
-  it('heads hymn 15 with its topic as a quiet line, above its number and title in one row', () => {
+  it('heads hymn 15 with its topic and first passage as a quiet line, above its number and title in one row', () => {
     const html = page(15);
     const { number, title, topic } = hymn(15);
+    const passages = referencesOf(15);
+    const first = Option.getOrThrow(Arr.head(passages));
     const head = html.slice(0, html.indexOf('role="group"'));
     const aboutAt = head.lastIndexOf('<', head.indexOf('data-testid="hymn-about"'));
     const topicAt = head.lastIndexOf('<', head.indexOf('data-testid="hymn-topic"'));
     const nameAt = head.lastIndexOf('<', head.indexOf('data-testid="hymn-name"'));
     // The topic is its own line above the row, apart from the heading: the
-    // button `About this hymn`, its topic and a chevron.
+    // button `About this hymn`, its topic, its first passage with how many
+    // more follow, and a chevron.
+    expect(passages.length).toBeGreaterThan(1);
     expect(textOf(head.slice(0, topicAt))).toBe('');
-    expect(textOf(head.slice(topicAt, nameAt))).toBe(`${topic} ›`);
+    expect(textOf(head.slice(topicAt, nameAt))).toBe(
+      `${topic} · ${passageText(first)} +${passages.length - 1} ›`,
+    );
     const button = head.slice(aboutAt, head.indexOf('>', aboutAt));
     expect(button).toContain('role="button"');
     expect(button).toContain('aria-label="About this hymn"');
