@@ -12,10 +12,18 @@
 import { plugin } from 'bun';
 import { renderToString } from 'react-dom/server';
 
+import { readIndexes } from '../../vite/indexes';
 import { readWords } from '../../vite/words';
 
-/** Every hymn's words as JSON, read once: the server's render and the page's bundle both take them. */
-export const words = JSON.stringify(readWords());
+/**
+ * Each bundled data module as JSON, by its name: every hymn's words and the
+ * hymnal's back-matter indexes, read once. The server's render and the
+ * page's bundle both take them.
+ */
+export const data = {
+  'virtual:hymnal': JSON.stringify(readWords()),
+  'virtual:hymnal-indexes': JSON.stringify(readIndexes()),
+} satisfies Readonly<Record<string, string>>;
 
 plugin({
   name: 'hymnal-server-boundaries',
@@ -30,10 +38,11 @@ plugin({
       contents: `export * from ${JSON.stringify(one)};`,
       loader: 'js',
     }));
-    build.module('virtual:hymnal', () => ({
-      contents: `export default ${words};`,
-      loader: 'js',
-    }));
+    for (const [name, json] of Object.entries(data))
+      build.module(name, () => ({
+        contents: `export default ${json};`,
+        loader: 'js',
+      }));
   },
 });
 

@@ -61,29 +61,29 @@ const rowHeight = 44;
 /** A window of `height`: a phone's width, or a Mac window's when it is tall. */
 const windowOf = (height: number) => ({ width: height > 1000 ? 1024 : 402, height });
 
-/** The bundler boundaries, as `src/test/setup.ts` sets them for the other tests, with the hymns' `words` as JSON. */
-const boundaries = (words: string): BunPlugin => ({
+/** The bundler boundaries, as `src/test/setup.ts` sets them for the other tests, with each data module's JSON by its name. */
+const boundaries = (data: Readonly<Record<string, string>>): BunPlugin => ({
   name: 'hymnal-browser-boundaries',
   setup(build) {
     const web = Bun.resolveSync('react-native-web', import.meta.dir);
     const one = Bun.resolveSync('../../src/test/one.tsx', import.meta.dir);
     build.onResolve({ filter: /^react-native$/ }, () => ({ path: web }));
     build.onResolve({ filter: /^one$/ }, () => ({ path: one }));
-    build.onResolve({ filter: /^virtual:hymnal$/ }, () => ({
-      path: 'virtual:hymnal',
+    build.onResolve({ filter: /^virtual:hymnal(-indexes)?$/ }, ({ path }) => ({
+      path,
       namespace: 'hymnal',
     }));
-    build.onLoad({ filter: /.*/, namespace: 'hymnal' }, () => ({
-      contents: `export default ${words};`,
+    build.onLoad({ filter: /.*/, namespace: 'hymnal' }, ({ path }) => ({
+      contents: `export default ${data[path] ?? '{}'};`,
       loader: 'js',
     }));
   },
 });
 
-const bundle = async (words: string): Promise<string> => {
+const bundle = async (data: Readonly<Record<string, string>>): Promise<string> => {
   const output = await Bun.build({
     entrypoints: [`${import.meta.dir}/page.tsx`],
-    plugins: [boundaries(words)],
+    plugins: [boundaries(data)],
     target: 'browser',
     define: { 'process.env.NODE_ENV': '"development"' },
   });
@@ -359,8 +359,8 @@ beforeAll(async () => {
   const launching = chromium.launch({ args: ['--js-flags=--no-opt'] }).then((launched) => {
     browser = launched;
   });
-  const { render, words } = await import('./server');
-  const [script] = await Promise.all([bundle(words), launching]);
+  const { render, data } = await import('./server');
+  const [script] = await Promise.all([bundle(data), launching]);
   server = Bun.serve({
     port: 0,
     fetch: (request) => {
@@ -634,19 +634,19 @@ describe('a list comes back where the reader left it', () => {
   }
 
   it.concurrent('the search list, its results shorter than the window grown while he was away, draws every row once he clears the search', async () => {
-    // A small phone's window: the 13 results of "shepherd" scroll there.
+    // A small phone's window: the results of "shepherd" scroll there, and the whole hymnal's list is far longer.
     await using app = await open({ path: lists.search.path, height: 320 });
     await app.page.getByRole('searchbox').fill('shepherd');
     await app.page.waitForFunction(() => {
       const max = window.hymnal.place()?.max ?? 0;
-      return max > 0 && max < 13 * 44;
+      return max > 0 && max < 10_000;
     });
     const { max } = await app.place();
     const left = await app.scrollTo(max);
     await app.settle(150);
     const row = await app.press('search', 'later', left);
-    // Taller than the 13 results: the list comes back at its top.
-    await app.resize(874);
+    // Taller than the results by two rows: the list comes back at its top.
+    await app.resize(320 + max + 2 * rowHeight);
     await app.comeBack('search', row.label, () => app.page.goBack());
     const found = (await app.place()).top;
     await app.page.getByRole('searchbox').fill('');
