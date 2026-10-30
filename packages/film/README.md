@@ -2762,10 +2762,12 @@ look view keep the page crop. Four rules make that reading true:
   cloth's grain makes kept holes as large as a true pocket. A clear pixel
   within `POCKET_REACH` of a pocket is that pocket cut wider or shifted, or
   the pale rim the un-matte clears round it as paper, and is excused. The
-  reach covers that rim on the pocket's own side of its ink and stops short
-  of the ink's far side, so a hole in the next fill still counts; a speck of
-  a wider rim counts too. So a hole within `POCKET_REACH` of a true paper
-  pocket reads as a shifted pocket: a known limit. Cloth within about ΔE 8
+  reach is a distance and reads no ink: it covers a rim out to
+  `POCKET_REACH`, and a speck of a wider rim counts. Its value is the
+  widest that excused no pixel past an outline over the cast as measured
+  (2026-10-30). So a hole within `POCKET_REACH` of a true paper pocket reads
+  as a shifted pocket, past an outline thinner than the reach too: a known
+  limit. Cloth within about ΔE 8
   of the sheet's paper cannot be told from paper by colour. The reading
   prefers counting a paper speck as a hole to hiding a hole, so the paper
   core is held tight; still, such cloth's grain can hold a paper core, and

@@ -448,12 +448,13 @@ const groundNear = (c: Read, of: Raster, within: number) => (i: number) =>
   deltaE(labOf(rgbAt(of, i)), c.lab) <= within;
 
 /**
- * How far from a pocket a clear pixel is excused, Chebyshev pixels. The cut
- * clears a pocket wider than the sheet draws it: the un-matte takes the pale
- * rim between the pocket's paper and its ink as paper too, so the reach
- * covers that rim. It stops short of the ink's far side, since a pixel past
- * the line is the next fill's, and the reading would rather count a speck
- * of rim than excuse a hole there.
+ * How far from a pocket a clear pixel is excused, Chebyshev pixels, ink or
+ * no ink between. The cut clears a pocket wider than the sheet draws it: the
+ * un-matte takes the pale rim between the pocket's paper and its ink as
+ * paper too, and the reach covers that rim out to its distance. It is 7
+ * because, over the cast's cut-out views measured on 2026-10-30, 7 covered
+ * the widest floor-gap rims and excused no pixel past an outline. Past an
+ * outline thinner than the reach, a hole in the next fill is excused too.
  */
 const POCKET_REACH = 7;
 
