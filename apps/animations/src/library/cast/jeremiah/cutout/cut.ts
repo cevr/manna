@@ -19,9 +19,10 @@
 // his sheet (`frames.ts`), but heads-2's right pad and heads-3's left pad
 // share two sheet columns (x 534-535), and each view's figure reading holds
 // the cream paper there next to its own outline. A first, still `neighbour`
-// part takes the other view's side of those columns; the puppet leaves it out
-// of its parts, so each sheet pixel is drawn by one view only. Data: the
-// rules and the table are the shared module's.
+// part takes the pad beside the other view's outline: the two shared columns,
+// and in heads-3 one more column of its own pad's paper (x 536). The puppet
+// leaves it out of its parts, so no sheet pixel is drawn by two views. Data:
+// the rules and the table are the shared module's.
 
 import { bustCut, bustHidden } from '../../../cutout/bust.ts';
 import { FAR, box } from '../../../cutout/rules.ts';
@@ -94,7 +95,7 @@ const HEADS_2 = bustCut({
 
 /** His bust three-quarters to the viewer's left (heads-3). */
 const HEADS_3 = bustCut({
-  // the paper beside heads-2's right outline, in this box's left pad (sheet x 534-536, y 527-551): never drawn
+  // the paper beside heads-2's right outline, in this box's left pad (sheet x 534-536, y 527-551): never drawn here; heads-2 draws x 534-535, and x 536 is paper neither view draws
   neighbour: [box(-1, 210, 0, 235)],
   line: [
     [FAR, 297],

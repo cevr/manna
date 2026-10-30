@@ -37,7 +37,7 @@ export const LINE = { width: 10.5, ink: [25, 9, 2] } as const;
  * 1.914 (heads-1), 2.228 (heads-2, heads-4, heads-6) and 2.114 (heads-3,
  * heads-5); the largest, rounded up. With it his rim keeps 1695 to 2013 px
  * whole as cloth in each view, and fills none of the paper pockets his sheet
- * shows between his beard, headcloth and robe (542 to 843 px a view).
+ * shows between his beard, headcloth and robe (530 to 843 px a view).
  */
 const GRAIN = 2.25;
 
@@ -67,8 +67,10 @@ export const PAPERS = {
  * (`library/cutout/puppets.ts`).
  *
  * heads-2 and heads-3 leave their sheet's `neighbour` part out: it holds the
- * paper beside the other view's outline where their pads share two sheet
- * columns (`cut.ts`). The other view's puppet draws it, never this one.
+ * pad beside the other view's outline, the two sheet columns their pads share
+ * and, in heads-3, one more column of its own pad's paper (`cut.ts`). The
+ * other view's puppet draws the shared columns; neither draws that one more
+ * column.
  */
 export const PUPPETS = puppetsOf({
   cast: 'jeremiah',

@@ -38,8 +38,8 @@ export const LINE = { width: 11.5, ink: [42, 21, 7] } as const;
  * his paper: the lightest 5 % of his figure is at least 50.5 from its view's
  * paper (heads-6; 50.6 to 57.3 in the others), while his paper's grain is at
  * most 3.658 (the 95th percentile on heads-1). That distance is why the
- * un-matte needs neither, and render 1 bears it out: it lost 0 figure pixels
- * to the paper in each of his six views.
+ * un-matte needs neither, and his fit rows bear it out: they lose 0 figure
+ * pixels without them.
  */
 export const PAPERS = {
   'heads-1': [249, 232, 208],
