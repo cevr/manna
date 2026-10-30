@@ -446,6 +446,33 @@ describe('unmatte, a light px the figure encloses', () => {
     for (const x of [8, 9]) for (const y of [13, 14]) expect(px(out!, x, y)[3]).toBe(0);
   });
 
+  /** His feet (an ink body on x 5..12, y 3..14, a 2 px `LIGHT` gap at x 8..9, y 8..14), and below them a 72 px part of the shadow's paint with ink at the px `inks`. */
+  const feetOver = (inks: ReadonlyArray<readonly [number, number]>) => {
+    const body = paint(new Uint8Array(S * S * 4), [5, 12], [3, 14], INK);
+    paint(body, [8, 9], [8, 14], LIGHT);
+    const below = paint(new Uint8Array(S * S * 4), [1, 18], [15, 18], [215, 205, 190]);
+    for (const [x, y] of inks) paint(below, [x, x], [y, y], INK);
+    return unmatte([body, below], S, S, PAPER)[0]!;
+  };
+
+  test('clears a light gap between his feet that a shadow closes below, though 2 of its 72 px (2.8 %) are ink', () => {
+    const out = feetOver([
+      [3, 16],
+      [16, 16],
+    ]);
+    for (const x of [8, 9]) for (const y of [13, 14]) expect(px(out, x, y)[3]).toBe(0);
+  });
+
+  test('keeps a light gap between his feet whole when the part that closes it below has 3 of its 72 px (4.2 %) ink, an outline and not a shadow', () => {
+    const out = feetOver([
+      [2, 16],
+      [3, 16],
+      [16, 16],
+    ]);
+    for (const x of [8, 9])
+      for (const y of [13, 14]) expect(px(out, x, y)).toEqual([...LIGHT, 255]);
+  });
+
   test('clears a light px that opens on ground the figure holds inside his outline', () => {
     const src = figure([[8, 9, CLOTH], [8, 10, CLOTH], ...inkColumn(13)]);
     for (let y = 8; y <= 11; y++) src.fill(0, (y * S + 9) * 4, (y * S + 12) * 4);
