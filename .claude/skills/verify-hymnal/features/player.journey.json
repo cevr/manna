@@ -3,6 +3,11 @@
   "platform": "ios",
   "steps": [
     {
+      "name": "player-idle",
+      "action": "relaunch",
+      "expect": [{ "shows": "label=Find a hymn by number" }]
+    },
+    {
       "name": "player-bar",
       "action": "open",
       "link": "hymns/100",
@@ -11,14 +16,14 @@
         { "shows": "label=Open player" },
         { "shows": "label=Sound" },
         { "shows": "id=key-button" },
-        { "hides": "label=Recording" }
+        { "hides": "label=Position" }
       ]
     },
     {
       "name": "player-full",
       "action": "tap",
       "target": "label=Open player",
-      "expect": [{ "shows": "label=Recording" }, { "shows": "label=Position" }]
+      "expect": [{ "shows": "label=Sheet Grabber" }, { "shows": "label=Position" }]
     },
     {
       "name": "sheet-close",
@@ -42,10 +47,10 @@
       "name": "player-seek-bar",
       "action": "gesture",
       "from": "id=seek",
-      "dx": 60,
+      "dx": -60,
       "dy": 0,
       "ms": 500,
-      "expect": [{ "shows": "label=Pause hymn 100" }, { "hides": "label=Recording" }]
+      "expect": [{ "shows": "label=Pause hymn 100" }, { "hides": "label=Sheet Grabber" }]
     },
     {
       "name": "player-sheet-reader",
@@ -54,12 +59,27 @@
       "dx": 0,
       "dy": -120,
       "ms": 300,
-      "expect": [{ "shows": "label=Recording" }, { "shows": "label=Text size" }]
+      "expect": [
+        { "shows": "label=Sheet Grabber" },
+        { "shows": "label=Position" },
+        { "shows": "label=Pause hymn 100" }
+      ]
+    },
+    {
+      "name": "player-reading",
+      "action": "scroll",
+      "target": "label=Keep screen on",
+      "direction": "down",
+      "expect": [{ "shows": "label=Text size" }]
     },
     {
       "name": "sheet-close-again",
-      "action": "back",
-      "expect": [{ "shows": "label=Pause hymn 100" }]
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 760,
+      "ms": 400,
+      "expect": [{ "shows": "label=Pause hymn 100" }, { "hides": "label=Sheet Grabber" }]
     },
     {
       "name": "pause",
