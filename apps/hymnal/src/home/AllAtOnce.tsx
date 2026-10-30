@@ -27,9 +27,10 @@ import Animated, { Keyframe } from 'react-native-reanimated';
 
 import { color, useAccent } from '~/color';
 import { usePlayer } from '~/player/context';
-import { Player, trackOf } from '~/player/player';
+import { Player } from '~/player/player';
 import { ListEnd } from '~/reader/ListEnd';
 
+import { playingNumber } from './playing';
 import { type Tab, type Tile, tilesOf } from './tabs';
 
 /** Tiles in a row, and the space between and around them. */
@@ -66,13 +67,16 @@ const zoomIn = new Keyframe({
 
 const idle = Atom.make<Player>(Player.Idle());
 
-/** The number of the hymn the player has, in any state but idle. */
-const usePlaying = (): Option.Option<number> => {
-  const state = useAtomValue(
-    Option.match(usePlayer(), { onNone: () => idle, onSome: (player) => player.state }),
+/**
+ * The number of the hymn the player has, 0 while idle: it changes with the
+ * hymn alone, so a playback tick draws nothing here (`playingNumber`).
+ */
+const usePlaying = (): number =>
+  useAtomValue(
+    playingNumber(
+      Option.match(usePlayer(), { onNone: () => idle, onSome: (player) => player.state }),
+    ),
   );
-  return Option.map(trackOf(state), (track) => track.number);
-};
 
 export function AllAtOnce({
   tab,
@@ -89,9 +93,14 @@ export function AllAtOnce({
   const { fontScale } = useWindowDimensions();
   const accent = useAccent();
   const playing = usePlaying();
-  // The player's state changes several times a second while it plays; the tiles change only with its hymn.
-  const held = Option.match(playing, { onNone: () => 'idle', onSome: String });
-  const tiles = useMemo(() => tilesOf(tab, playing), [tab, held]);
+  const tiles = useMemo(
+    () =>
+      tilesOf(
+        tab,
+        Option.liftPredicate(playing, (number) => number > 0),
+      ),
+    [tab, playing],
+  );
   const height = tileHeight(fontScale);
   const firstRow = Math.floor(at / columns) * (height + gap);
   return (
