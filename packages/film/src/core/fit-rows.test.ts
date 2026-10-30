@@ -318,19 +318,25 @@ const hex = (c: Rgb) => `#${c.map((v) => v.toString(16).padStart(2, '0')).join('
 
 describe('fitRows over a cut-out crop', () => {
   test('a 12 px hole is counted though the kept crop has a larger false hole of its own', () => {
-    const concept = crop(SHEET_PAPER, CREAM, boxOf([10, 24, 10, 24], SHEET_PAPER));
+    const concept = crop(SHEET_PAPER, CREAM, boxOf([9, 22, 9, 22], SHEET_PAPER));
     const posed = crop(CLEAR, CREAM, boxOf([26, 38, 26, 38], CLEAR));
     const holes = rowNamed(fitRows(concept, overOwn(posed)), 'holes');
     expect(holes?.value).toBe(144);
     expect(holes?.pass).toBe(false);
   });
 
-  test('a 2 x 24 px hole 3 px inside the line is counted whole beside a kept hole', () => {
-    const concept = crop(SHEET_PAPER, CREAM, boxOf([16, 24, 12, 36], SHEET_PAPER));
+  test('a 2 x 24 px hole 3 px inside the line is counted whole 5 px beside a paper pocket', () => {
+    const concept = crop(SHEET_PAPER, CREAM, boxOf([18, 26, 12, 36], SHEET_PAPER));
     const posed = crop(CLEAR, CREAM, boxOf([12, 14, 12, 36], CLEAR));
     const holes = rowNamed(fitRows(concept, overOwn(posed)), 'holes');
     expect(holes?.value).toBe(48);
     expect(holes?.pass).toBe(false);
+  });
+
+  test("a hole within `POCKET_REACH` of a paper pocket reads as that pocket shifted, excused though they don't touch", () => {
+    const concept = crop(SHEET_PAPER, CREAM, boxOf([16, 24, 12, 36], SHEET_PAPER));
+    const posed = crop(CLEAR, CREAM, boxOf([12, 14, 12, 36], CLEAR));
+    expect(rowNamed(fitRows(concept, overOwn(posed)), 'holes')?.value).toBe(0);
   });
 
   test('a 1 px outline shift, a see-through seam speck and a kept hole drawn 1 px wider count no hole', () => {
@@ -418,6 +424,48 @@ describe('fitRows over a cut-out crop', () => {
     const concept = crop(SHEET_PAPER, cloth, GRAIN);
     const posed = crop(CLEAR, cloth, boxOf([14, 26, 14, 26], CLEAR));
     expect(rowNamed(fitRows(concept, overOwn(posed)), 'holes')?.value).toBe(144);
+  });
+
+  test("a 12 px hole in a light cloth is counted though the cloth's grain lies near the sheet's ground", () => {
+    const cloth: Rgb = [236, 232, 226];
+    const grain: At = (x, y) =>
+      Option.liftPredicate<Rgba>(
+        SHEET_PAPER,
+        () => inside(x, 9, 39) && inside(y, 9, 39) && x % 5 === 0 && y % 5 === 0,
+      );
+    const block = boxOf([14, 26, 14, 26], CLEAR);
+    const concept = crop(SHEET_PAPER, cloth, grain);
+    const posed = crop(CLEAR, cloth, either(block, grain));
+    expect(rowNamed(fitRows(concept, overOwn(posed)), 'holes')?.value).toBeGreaterThanOrEqual(100);
+  });
+
+  test("a 12 px hole through a light cloth's grain clumps, within `near` of the sheet's ground, is counted", () => {
+    const cloth: Rgb = [236, 232, 226];
+    const clumpColour: Rgb = [247, 235, 216];
+    expect(deltaE(labOf(clumpColour), labOf(SHEET_GROUND))).toBeLessThanOrEqual(3);
+    // Nine clumps, 4 to 8 px square at a 10 px pitch: 36 of their px lie under the block.
+    const clumps = Array.from({ length: 9 }, (_, k): At => {
+      const [x0, y0, s] = [
+        10 + (k % 3) * 10,
+        10 + Math.floor(k / 3) * 10,
+        4 + ((k % 3) + Math.floor(k / 3)),
+      ];
+      return boxOf([x0, x0 + s, y0, y0 + s], [...clumpColour, 255]);
+    });
+    const block = boxOf([16, 28, 16, 28], CLEAR);
+    const concept = crop(SHEET_PAPER, cloth, either(...clumps));
+    const posed = crop(CLEAR, cloth, either(block, ...clumps));
+    const holes = rowNamed(fitRows(concept, overOwn(posed)), 'holes');
+    expect(holes?.value).toBe(108);
+    expect(holes?.pass).toBe(false);
+  });
+
+  test("a hole cut 3 px off a kept pocket of the sheet's paper is that pocket, excused", () => {
+    const concept = crop(SHEET_PAPER, CREAM, boxOf([16, 28, 16, 28], SHEET_PAPER));
+    const posed = crop(CLEAR, CREAM, boxOf([19, 31, 19, 31], CLEAR));
+    const holes = rowNamed(fitRows(concept, overOwn(posed)), 'holes');
+    expect(holes?.value).toBe(0);
+    expect(holes?.pass).toBe(true);
   });
 
   test("a neighbour's art that only the kept crop holds changes no row", () => {

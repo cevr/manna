@@ -447,18 +447,61 @@ export const neighbourMask = (
 const groundNear = (c: Read, of: Raster, within: number) => (i: number) =>
   deltaE(labOf(rgbAt(of, i)), c.lab) <= within;
 
-/** How far from a kept hole a render hole that overlaps it is excused, Chebyshev pixels: the cut-out draws a kept hole up to 4 px wider than the sheet. */
+/** How far from a pocket a clear pixel is excused, Chebyshev pixels: the cut-out draws a pocket up to 4 px wider than the sheet. */
 const POCKET_REACH = 4;
+
+/**
+ * A pocket's paper core, ΔE76 to the kept crop's ground. A light cloth's
+ * grain lies as clumps of 24 to 287 px within `near` of the ground, as large
+ * as a true paper pocket (the feet gap is 179 px), so only colour tells them
+ * apart. Over the cast's planted views, of ΔE 2, 3 and 4 (each at 4, 6 and
+ * 9 px), ΔE 2 catches the most holes planted in light cloth (75 to 81 of
+ * 120; ΔE 3 and 4 make more of the grain pockets and catch 61 to 68), and
+ * every planted block and thin hole.
+ */
+const POCKET_CORE_DE = 2;
+
+/**
+ * The pixels within `POCKET_CORE_DE` a kept hole holds to be a pocket. At
+ * ΔE 2, 9 px catches 81 of the 120 light-cloth plants, 6 px 78 and 4 px 75;
+ * a true pocket holds far more (lead-feast's feet gap, 327).
+ */
+const POCKET_CORE = 9;
+
+/** The kept crop's pockets: each kept hole with a paper core (`POCKET_CORE`), where the sheet's paper shows through the figure. */
+const pocketsOf = (c: Read): Uint8Array => {
+  const kept = componentsOf(c.holes, c.w, c.h, false);
+  const core = new Uint32Array(kept.components.length);
+  kept.labels.forEach((l, i) => {
+    if (l >= 0 && deltaE(labOf(rgbAt(c.r, i)), c.lab) <= POCKET_CORE_DE)
+      core[l] = (core[l] ?? 0) + 1;
+  });
+  return Uint8Array.from(kept.labels, (l) => Number(l >= 0 && (core[l] ?? 0) >= POCKET_CORE));
+};
+
+/** `mask` grown by `by` pixels, Chebyshev: a row pass, then a column pass. */
+const grown = (mask: Uint8Array, w: number, h: number, by: number): Uint8Array => {
+  const across = new Uint8Array(w * h);
+  const out = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++)
+      if (mask[y * w + x] === 1)
+        for (let xx = Math.max(0, x - by); xx <= Math.min(w - 1, x + by); xx++)
+          across[y * w + xx] = 1;
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++)
+      if (across[y * w + x] === 1)
+        for (let yy = Math.max(0, y - by); yy <= Math.min(h - 1, y + by); yy++) out[yy * w + x] = 1;
+  return out;
+};
 
 /**
  * A cut-out render's holes: the clear pixels (alpha 0) of each enclosed
  * component of see-through pixels (alpha under 128, four ways, not touching
  * the crop's border), where the kept crop reads figure that is not its hole
- * (a neighbour's pixels are its ground, `readCrop`). A pocket is a kept
- * hole, where the sheet's paper shows through the figure. A component that
- * overlaps a pocket is that pocket cut wider: its pixels within
- * `POCKET_REACH` of the pockets it overlaps are excused. Any other
- * component counts whole, even beside a pocket. Partly
+ * (a neighbour's pixels are its ground, `readCrop`). A clear pixel within
+ * `POCKET_REACH` of a pocket (`pocketsOf`) is that pocket cut wider or
+ * shifted, and is excused, whichever component it lies in. Partly
  * see-through pixels (a seam's speck) never count, nor do pixels the kept
  * crop holds as near its ground as its own ground's pixels lie (`reach`):
  * a speck of the sheet's paper the kept crop's figure closes round, which
@@ -469,31 +512,16 @@ const cutHolesOf = (c: Read, render: Raster) => {
   const alpha = (i: number) => render.rgba[i * 4 + 3] ?? 0;
   const clear = Uint8Array.from({ length: w * h }, (_, i) => Number(alpha(i) < 128));
   const comps = componentsOf(clear, w, h, false);
-  const pockets = componentsOf(c.holes, w, h, false).labels;
   const sheetPaper = groundNear(c, c.r, c.reach);
+  const pocket = grown(pocketsOf(c), w, h, POCKET_REACH);
   const counts = (i: number) =>
-    alpha(i) === 0 && c.ground[i] === 0 && c.holes[i] === 0 && !sheetPaper(i);
-  const overlaps = comps.components.map(() => new Set<number>());
-  for (let i = 0; i < w * h; i++) {
-    const [l, p] = [comps.labels[i] ?? -1, pockets[i] ?? -1];
-    if (l >= 0 && p >= 0) overlaps[l]?.add(p);
-  }
-  const nearPocket = (i: number, of: Set<number>) => {
-    const [x, y] = [i % w, Math.floor(i / w)];
-    for (let yy = Math.max(0, y - POCKET_REACH); yy <= Math.min(h - 1, y + POCKET_REACH); yy++)
-      for (let xx = Math.max(0, x - POCKET_REACH); xx <= Math.min(w - 1, x + POCKET_REACH); xx++)
-        if (of.has(pockets[yy * w + xx] ?? -1)) return true;
-    return false;
-  };
+    alpha(i) === 0 && c.ground[i] === 0 && c.holes[i] === 0 && pocket[i] === 0 && !sheetPaper(i);
   let n = 0;
   for (let i = 0; i < w * h; i++) {
-    const l = comps.labels[i] ?? -1;
-    const comp = comps.components[l];
+    const comp = comps.components[comps.labels[i] ?? -1];
     if (comp === undefined || !counts(i)) continue;
     const [x0, y0, x1, y1] = comp.box;
     if (x0 === 0 || y0 === 0 || x1 === w || y1 === h) continue;
-    const of = overlaps[l] ?? new Set<number>();
-    if (of.size > 0 && nearPocket(i, of)) continue;
     n++;
   }
   return n;

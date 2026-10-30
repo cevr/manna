@@ -2756,11 +2756,17 @@ look view keep the page crop. Four rules make that reading true:
   as ground: twelve views of three members failed with no real loss.
 - **Holes.** A hole is the clear pixels (alpha 0) of an enclosed
   component, counted where the kept crop is figure and not its own hole. A
-  component that overlaps a kept hole is that pocket cut wider, and is
-  excused within 4 px of it (`POCKET_REACH`). Render holes less kept holes,
-  over `PAPER`, caught 88/200 planted 12 px holes, since a kept crop's false
-  holes absorbed them; the positional count catches 200/200, and 60/60
-  2 × 24 px holes 3 px inside the line.
+  pocket is a kept hole with a paper core: at least 9 px within ΔE 2 of the
+  kept crop's ground (`POCKET_CORE`, `POCKET_CORE_DE`). A light cloth's
+  grain lies as clumps of 24 to 287 px, as large as a true pocket, so only
+  colour tells them apart; at ΔE 2 the count catches 81 of 120 holes
+  planted in light cloth, against 61 to 68 at ΔE 3 and 4. A clear pixel
+  within 4 px of a pocket (`POCKET_REACH`) is that pocket cut wider or
+  shifted, and is excused. So a hole within `POCKET_REACH` of a true paper
+  pocket reads as a shifted pocket: a known limit. Render holes less kept
+  holes, over `PAPER`, caught 88/200 planted 12 px holes, since a kept
+  crop's false holes absorbed them; the positional count catches 200/200,
+  and 60/60 2 × 24 px holes 3 px inside the line.
 - **Neighbour.** A neighbour's pixels (`FitSpec.neighbour`, the view's
   `cutout/sheets/<view>/neighbour.png`) are ground on both crops, so no row
   reads them: the posed raster draws no neighbour, and its art on the kept
@@ -2775,8 +2781,7 @@ look view keep the page crop. Four rules make that reading true:
   within its ground's `reach`, the farthest of its own ground pixels (ΔE
   3.3 to 4.5 on the in-its-order cast). Light cloth starts at ΔE 8.3, but
   its grain can lie within `near`: the kept crop reads that grain as kept
-  holes, each a pocket, so a hole cut through such cloth falls within
-  `POCKET_REACH` of a pocket and is excused. A see-through edge pixel (alpha 1 to 254), the ground showing
+  holes, and only those with a paper core are pockets. A see-through edge pixel (alpha 1 to 254), the ground showing
   through, leaves the class and `slivers` rows.
 
 A puppet is drawn with a look (`PuppetLook`, `canvas/puppet.ts`): the boil
