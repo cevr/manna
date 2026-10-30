@@ -539,8 +539,9 @@ const SINGLE_1: PartCut = {
 /**
  * The white objects single-1's figure holds, a seed in each pocket the cut
  * reads as paper, read off the kept view: the bottle's cap band and body; the
- * pale grain on his right sleeve's shoulder; the sash's band and knot; and
- * its two ends with their pale grain. A seed names a pocket whole, whatever
+ * pale grain on his right sleeve's shoulder; the sash's band and knot; its
+ * two ends with their pale grain; and the lit cream of his robe inside the
+ * hem's left corner, closed by the hem's ink. A seed names a pocket whole, whatever
  * its shape, where a box would take the ink or cloth beside it. The paper
  * between his feet is the ground he stands on, not a thing he holds, so it
  * stays cut; so do the two specks beside his hem.
@@ -566,6 +567,7 @@ const SINGLE_1_HELD: ReadonlyArray<Pt> = [
   [287, 819],
   [293, 857],
   [286, 898],
+  [153, 1152],
 ];
 
 /** His sheets' ink, for the row that closes a bust's foot. */
