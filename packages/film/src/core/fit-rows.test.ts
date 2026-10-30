@@ -393,6 +393,15 @@ describe('fitRows over a cut-out crop', () => {
     expect(value(seen, 'silhouette.iou')).not.toBe(value(none, 'silhouette.iou'));
   });
 
+  test("a rim of the sheet's own ground the cut carries past the line is no sliver", () => {
+    const concept = crop(SHEET_PAPER, CREAM);
+    const plain = crop(CLEAR, CREAM);
+    const ground = measuringGround([plain]);
+    const rim = crop(CLEAR, CREAM, boxOf([42, 44, 10, 22], SHEET_PAPER));
+    const rows = fitRows(concept, overGround(rim, ground), { classes: { cream: CLASSES.cream } });
+    expect(rowNamed(rows, 'slivers')?.value).toBe(0);
+  });
+
   test("a neighbour's art that only the kept crop holds changes no row", () => {
     const art = [42, 48, 12, 30] as const;
     const head = either(boxOf([44, 46, 14, 28], [...CREAM, 255]), boxOf(art, [...INK, 255]));

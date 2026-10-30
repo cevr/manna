@@ -220,6 +220,8 @@ interface Read {
   readonly w: number;
   readonly h: number;
   readonly lab: Rgb;
+  /** How near `lab` a pixel is ground-like, ΔE76 (`groundColour`). */
+  readonly near: number;
   /** 1 where the border reaches through ground-like pixels. */
   readonly ground: Uint8Array;
   /** 1 where ground-like but closed in by the figure: a hole. */
@@ -308,7 +310,7 @@ const groundOf = (r: Raster) => {
   const kept = new Set(pieces.labels.filter((l, i) => strips[i] === 1));
   for (let i = 0; i < n; i++)
     if (specks[i] === 1 && !kept.has(pieces.labels[i] ?? -1)) ground[i] = 1;
-  return { lab, like, ground };
+  return { lab, near, like, ground };
 };
 
 /**
@@ -465,7 +467,7 @@ const cutHolesOf = (c: Read, render: Raster) => {
 const readCrop = (r: Raster, neighbour: Uint8Array | undefined): Read | undefined => {
   const { width: w, height: h } = r;
   const n = w * h;
-  const { lab, like, ground } = groundOf(r);
+  const { lab, near, like, ground } = groundOf(r);
   if (neighbour !== undefined) for (let i = 0; i < n; i++) if (neighbour[i] === 1) ground[i] = 1;
   const holes = new Uint8Array(n);
   const ink = new Uint8Array(n);
@@ -487,7 +489,7 @@ const readCrop = (r: Raster, neighbour: Uint8Array | undefined): Read | undefine
     }
   }
   if (top < 0) return undefined;
-  return { r, w, h, lab, ground, holes, ink, paper, left, right, top, bottom };
+  return { r, w, h, lab, near, ground, holes, ink, paper, left, right, top, bottom };
 };
 
 /** A row: its value kept to hundredths and held to its bar. */
@@ -1106,7 +1108,15 @@ export const fitRows = (
   const rc: Read = cut
     ? { ...r, paper: Uint8Array.from(r.paper, (p, i) => (p === 1 && !edge(i) ? 1 : 0)) }
     : r;
-  const [cs, rs] = [sliversOf(c), sliversOf(rc)];
+  // A cut keeps a pixel or so of the sheet past the line: the sheet's own
+  // ground, opaque. The kept crop reads it as ground; over the measuring
+  // ground it reads as paper. So a cut-out render's sliver count leaves
+  // out the pixels as near the kept crop's ground as its ground-like ones.
+  const sheetGround = (i: number) => deltaE(labOf(rgbAt(render, i)), c.lab) <= c.near;
+  const rcs: Read = cut
+    ? { ...rc, paper: Uint8Array.from(rc.paper, (p, i) => (p === 1 && !sheetGround(i) ? 1 : 0)) }
+    : rc;
+  const [cs, rs] = [sliversOf(c), sliversOf(rcs)];
   rows.push(
     rowOf('slivers', 'figure', 'figure', Math.max(0, rs - cs), bar('slivers'), {
       concept: cs,
