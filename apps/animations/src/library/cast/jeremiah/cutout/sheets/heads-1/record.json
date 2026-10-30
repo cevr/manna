@@ -1,0 +1,150 @@
+{
+  "view": "heads-1",
+  "kind": "heads",
+  "size": [258, 301],
+  "box": [21, 314, 279, 615],
+  "command": "film concept parts in-its-order jeremiah --view heads-heads-1",
+  "parts": [
+    {
+      "name": "head",
+      "kept": 46042,
+      "painted": 0
+    },
+    {
+      "name": "torso",
+      "kept": 14078,
+      "painted": 4627
+    }
+  ],
+  "moving": ["head"],
+  "hiddenPx": 45897,
+  "carried": [],
+  "okra": {
+    "route": "subscription (okra image, Codex route; no --model)",
+    "input": "okra/input-2e7801735e07.png",
+    "prompt": "okra/prompt.txt",
+    "pad": {
+      "s": 0.24608568563582622,
+      "dx": 0,
+      "dy": -39.86588107300385
+    },
+    "budget": {
+      "calls": 3,
+      "allowance": null,
+      "used": 1
+    },
+    "calls": [
+      {
+        "n": 1,
+        "command": [
+          "okra",
+          "image",
+          "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where his head (his linen headcloth with its olive band and the two sides of it that hung beside his face and neck down onto his shoulders, his face and his short dark beard) was cut away to make a cut-out puppet. He is turned three-quarters to the viewer's left. Repaint ONLY the magenta area, as what lies behind his head. His neck rises straight up from his collar as a plain column of skin to about where his mouth was, its two sides closed by the same thick dark brown-black outline as the rest of him, its top simply rounded and closed by the same outline (no opening, no rim, no dark band), in exactly the same skin colour, soft shading and fine paper grain as the skin of his neck below. Where the cloth hung over his shoulders, his shoulders continue as they are below it: the same linen tunic and olive mantle with its violet shade, their top edges closed by the same outline. Everywhere else in the magenta area becomes the plain cream paper. There is no head now: no headcloth, no hair, no beard, no face, no ears, nothing magenta left. Keep every other pixel exactly as it is: the same size, position and framing, and every part that is not magenta unchanged.",
+          "--size",
+          "1024x1536",
+          "--ref",
+          "okra/input-2e7801735e07.png",
+          "-o",
+          "okra/answer-1.png"
+        ],
+        "input": "okra/input-2e7801735e07.png",
+        "out": "okra/answer-1.png",
+        "state": "laid",
+        "fit": {
+          "s": 0.24585483617479073,
+          "dx": 3.079763604769923,
+          "dy": -36.33263963056095,
+          "score": 30.176927137086626
+        },
+        "measures": {
+          "seam": {
+            "deltaE": 6.65,
+            "pairs": 309
+          },
+          "drift": {
+            "deltaE": 4.52,
+            "px": 14077
+          },
+          "grain": [
+            {
+              "part": "torso",
+              "painted": {
+                "robust": 1.98,
+                "plain": 2.46,
+                "n": 2924
+              },
+              "kept": {
+                "robust": 1.65,
+                "plain": 3,
+                "n": 7556
+              },
+              "verdict": "within"
+            }
+          ],
+          "paintUnder": [
+            {
+              "part": "head",
+              "px": 4627
+            }
+          ],
+          "paintedPx": 4627,
+          "visibleAtRest": 0,
+          "recomposeByteEqual": true
+        },
+        "missed": []
+      }
+    ],
+    "chosen": 1,
+    "fit": {
+      "s": 0.24585483617479073,
+      "dx": 3.079763604769923,
+      "dy": -36.33263963056095,
+      "score": 30.176927137086626
+    }
+  },
+  "measures": {
+    "seam": {
+      "deltaE": 6.65,
+      "pairs": 309
+    },
+    "drift": {
+      "deltaE": 4.52,
+      "px": 14077
+    },
+    "grain": [
+      {
+        "part": "torso",
+        "painted": {
+          "robust": 1.98,
+          "plain": 2.46,
+          "n": 2924
+        },
+        "kept": {
+          "robust": 1.65,
+          "plain": 3,
+          "n": 7556
+        },
+        "verdict": "within"
+      }
+    ],
+    "paintUnder": [
+      {
+        "part": "head",
+        "px": 4627
+      }
+    ],
+    "paintedPx": 4627,
+    "visibleAtRest": 0,
+    "recomposeByteEqual": true
+  },
+  "bars": {
+    "seamDeltaE": 10,
+    "driftDeltaE": 5,
+    "grainWithin": 0.5,
+    "visibleAtRest": 0,
+    "leastSeamPairs": 20,
+    "leastGrainWindows": 90
+  },
+  "missed": [],
+  "named": []
+}

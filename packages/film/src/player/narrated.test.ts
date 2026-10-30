@@ -13,6 +13,8 @@ import { HttpClient, HttpClientError, HttpClientRequest, HttpClientResponse } fr
 import { createFilm } from '../canvas/film.ts';
 import { armFilm, armRig, armScene } from '../canvas/fixtures/arm.ts';
 import { countedRive } from '../canvas/fixtures/rive-counted.ts';
+import { recorder, standInDom } from '../canvas/fixtures/stand-in.ts';
+import { BLOCK, blockImages } from '../puppet/fixtures/block.ts';
 import { NO_TAKES, type Narrated, loadNarrated, narratedFilms, narrationUrls } from './narrated.ts';
 
 const TIMINGS = '{"voice":"v","scenes":{}}';
@@ -213,5 +215,45 @@ describe('narratedFilms', () => {
         expect(counts.deletes).toBe(counts.artboards);
         yield* Scope.close(scope, Exit.void);
       }),
+  );
+
+  it.live('a declared puppet loads with the film and draws', () =>
+    Effect.gen(function* () {
+      const { read, layer } = blockImages();
+      const films = narratedFilms(
+        {
+          block: () =>
+            Promise.resolve({
+              fps: 30,
+              film: () =>
+                armFilm([
+                  {
+                    id: 'block',
+                    min: 4,
+                    timeline: {},
+                    puppets: { block: BLOCK },
+                    draw: (f) =>
+                      f.puppet('block', { numbers: { spine: 10 }, root: [960, 540], scale: 1 }),
+                  },
+                ]),
+            }),
+        },
+        Effect.void,
+        answering(404).layer,
+        countedRive().layer,
+        layer,
+      );
+      yield* standInDom();
+      const scope = yield* Scope.make();
+      const film = yield* Scope.provide(films.block, scope);
+      // Its one part was read as the film loaded, through the page's images, and a frame draws it.
+      expect(read).toEqual(['block/body.png']);
+      film.render(recorder().ctx, 1);
+      // Closing the scope it was loaded into lets it go: a frame drawn after names it unloaded.
+      yield* Scope.close(scope, Exit.void);
+      expect(() => film.render(recorder().ctx, 1)).toThrow(
+        'puppet "block" (fixtures/block) is not loaded',
+      );
+    }).pipe(Effect.scoped),
   );
 });

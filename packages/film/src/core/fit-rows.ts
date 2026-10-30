@@ -285,8 +285,8 @@ const thinStrips = (mask: Uint8Array, w: number, h: number): Uint8Array => {
   return Uint8Array.from(labels, (l) => (long.has(l) ? 1 : 0));
 };
 
-/** A crop read into its ground, figure, ink and paper; none when it holds no figure. */
-const readCrop = (r: Raster): Read | undefined => {
+/** A crop's ground colour (Lab), its ground-like pixels (1 near that colour), and its ground: what its border reaches through them, the specks of grain the flood stepped round with it. */
+const groundOf = (r: Raster) => {
   const { width: w, height: h } = r;
   const n = w * h;
   const labs = Array.from({ length: n }, (_, i) => labOf(rgbAt(r, i)));
@@ -304,6 +304,28 @@ const readCrop = (r: Raster): Read | undefined => {
   const kept = new Set(pieces.labels.filter((l, i) => strips[i] === 1));
   for (let i = 0; i < n; i++)
     if (specks[i] === 1 && !kept.has(pieces.labels[i] ?? -1)) ground[i] = 1;
+  return { lab, like, ground };
+};
+
+/**
+ * A picture's figure as the fit rows read it (`silhouette.iou`): 1 where its
+ * ground does not reach, what the ink bounds, its holes too; its holes (1
+ * where ground-like but closed in by the figure); and its ground colour, Lab.
+ */
+export const figureOf = (r: Raster) => {
+  const { lab, like, ground } = groundOf(r);
+  return {
+    figure: Uint8Array.from(ground, (g) => 1 - g),
+    holes: Uint8Array.from(ground, (g, i) => Number(g === 0 && like[i] === 1)),
+    ground: lab,
+  };
+};
+
+/** A crop read into its ground, figure, ink and paper; none when it holds no figure. */
+const readCrop = (r: Raster): Read | undefined => {
+  const { width: w, height: h } = r;
+  const n = w * h;
+  const { lab, like, ground } = groundOf(r);
   const holes = new Uint8Array(n);
   const ink = new Uint8Array(n);
   const paper = new Uint8Array(n);

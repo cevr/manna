@@ -1,0 +1,216 @@
+{
+  "view": "threeQuarterRight",
+  "kind": "turnaround",
+  "size": [234, 575],
+  "box": [1261, 224, 1495, 799],
+  "command": "film concept parts in-its-order sower --view turnaround-threeQuarterRight",
+  "parts": [
+    {
+      "name": "head",
+      "kept": 23654,
+      "painted": 0
+    },
+    {
+      "name": "armRight",
+      "kept": 9401,
+      "painted": 0
+    },
+    {
+      "name": "armLeft",
+      "kept": 6129,
+      "painted": 0
+    },
+    {
+      "name": "footRight",
+      "kept": 1395,
+      "painted": 0
+    },
+    {
+      "name": "footLeft",
+      "kept": 1707,
+      "painted": 0
+    },
+    {
+      "name": "shadow",
+      "kept": 4153,
+      "painted": 0
+    },
+    {
+      "name": "robe",
+      "kept": 28125,
+      "painted": 2019
+    },
+    {
+      "name": "torso",
+      "kept": 22377,
+      "painted": 6480
+    }
+  ],
+  "moving": ["armRight", "armLeft"],
+  "hiddenPx": 15455,
+  "carried": [],
+  "okra": {
+    "route": "subscription (okra image, Codex route; no --model)",
+    "input": "okra/input-c2a24e2ce524.png",
+    "prompt": "okra/prompt.txt",
+    "pad": {
+      "s": 0.3573943209559296,
+      "dx": -68.97710394449442,
+      "dy": 0
+    },
+    "budget": {
+      "calls": 3,
+      "allowance": null,
+      "used": 1
+    },
+    "calls": [
+      {
+        "n": 1,
+        "command": [
+          "okra",
+          "image",
+          "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where his two arms (sleeves and round hands) were cut away to make a cut-out puppet. He is turned three-quarters to the viewer's right. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading as his body beside each arm (his back's outline and the olive mantle with its walnut-brown edge band on the viewer's left side, the olive mantle and the walnut seed bag at his hip on the viewer's right side, the linen tunic, the belt round his waist). Each side of his body runs straight down from the outer end of his shoulder to the outer edge of his robe below, so his body under the arms is as wide as his shoulders and his robe, and the linen tunic and olive mantle fill everything inside that line with the same soft shade and fine paper grain the sheet paints beside each arm. Keep the soft shade each arm casts on his body beside it exactly as it is, and carry that same shade on under where the arm was. Paint the linen tunic and olive mantle of his body with the same fine paper grain the sheet shows on them beside the arms: a fine, even speckle through every flat area of colour, never smooth flat colour. There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, headcloth and its tail, face, beard, tunic, mantle, walnut strap, belt, walnut seed bag, feet, size, position and framing.",
+          "--size",
+          "1024x1536",
+          "--ref",
+          "okra/input-c2a24e2ce524.png",
+          "-o",
+          "okra/answer-1.png"
+        ],
+        "input": "okra/input-c2a24e2ce524.png",
+        "out": "okra/answer-1.png",
+        "state": "laid",
+        "fit": {
+          "s": 0.3573943209559296,
+          "dx": -65.91460394449442,
+          "dy": 3.09375,
+          "score": 22.94938322115521
+        },
+        "measures": {
+          "seam": {
+            "deltaE": 10.54,
+            "pairs": 80
+          },
+          "drift": {
+            "deltaE": 4.47,
+            "px": 50477
+          },
+          "grain": [
+            {
+              "part": "robe",
+              "painted": {
+                "robust": 1.48,
+                "plain": 7.23,
+                "n": 955
+              },
+              "kept": {
+                "robust": 1.81,
+                "plain": 4.33,
+                "n": 1844
+              },
+              "verdict": "within"
+            },
+            {
+              "part": "torso",
+              "painted": {
+                "robust": 1.32,
+                "plain": 7.72,
+                "n": 2499
+              },
+              "kept": {
+                "robust": 1.81,
+                "plain": 4,
+                "n": 3134
+              },
+              "verdict": "within"
+            }
+          ],
+          "paintUnder": [
+            {
+              "part": "armRight",
+              "px": 6110
+            },
+            {
+              "part": "armLeft",
+              "px": 2389
+            }
+          ],
+          "paintedPx": 8499,
+          "visibleAtRest": 0,
+          "recomposeByteEqual": true
+        },
+        "missed": ["seam"]
+      }
+    ],
+    "chosen": 1,
+    "fit": {
+      "s": 0.3573943209559296,
+      "dx": -65.91460394449442,
+      "dy": 3.09375,
+      "score": 22.94938322115521
+    }
+  },
+  "measures": {
+    "seam": {
+      "deltaE": 10.54,
+      "pairs": 80
+    },
+    "drift": {
+      "deltaE": 4.47,
+      "px": 50477
+    },
+    "grain": [
+      {
+        "part": "robe",
+        "painted": {
+          "robust": 1.48,
+          "plain": 7.23,
+          "n": 955
+        },
+        "kept": {
+          "robust": 1.81,
+          "plain": 4.33,
+          "n": 1844
+        },
+        "verdict": "within"
+      },
+      {
+        "part": "torso",
+        "painted": {
+          "robust": 1.32,
+          "plain": 7.72,
+          "n": 2499
+        },
+        "kept": {
+          "robust": 1.81,
+          "plain": 4,
+          "n": 3134
+        },
+        "verdict": "within"
+      }
+    ],
+    "paintUnder": [
+      {
+        "part": "armRight",
+        "px": 6110
+      },
+      {
+        "part": "armLeft",
+        "px": 2389
+      }
+    ],
+    "paintedPx": 8499,
+    "visibleAtRest": 0,
+    "recomposeByteEqual": true
+  },
+  "bars": {
+    "seamDeltaE": 10,
+    "driftDeltaE": 5,
+    "grainWithin": 0.5,
+    "visibleAtRest": 0,
+    "leastSeamPairs": 20,
+    "leastGrainWindows": 90
+  },
+  "missed": ["seam"],
+  "named": []
+}

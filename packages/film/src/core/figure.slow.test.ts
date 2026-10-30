@@ -12,11 +12,68 @@ import {
   type Ratio,
   shadeKind,
 } from './figure.ts';
-import { drawFigure, type FigureSpec, headWidth, PLAIN } from './fixtures/figure.ts';
+import { drawFigure, type FigureSpec, headWidth, PAPER, PLAIN } from './fixtures/figure.ts';
 import { cropRaster, type Raster } from './raster.ts';
 
 const measured = (spec: FigureSpec): FigureMeasure =>
   Result.getOrThrow(measureFigure(drawFigure(spec)));
+
+type Paper = readonly [number, number, number];
+
+/** A robe shaded toward grey, the case the rim test draws. */
+const RIM_ROBE = { ...PLAIN, robeShade: [104, 118, 135] as const };
+
+/** How much of the paper a rim pixel carries, by its distance to the ink: the nearer, the more. */
+const RIM_BLEND: ReadonlyArray<readonly [number, number]> = [
+  [1.5, 0.4],
+  [2.5, 0.25],
+  [3.5, 0.12],
+];
+
+const sameRgb = (rgba: Uint8Array, i: number, c: ReadonlyArray<number>) =>
+  rgba[i * 4] === c[0] && rgba[i * 4 + 1] === c[1] && rgba[i * 4 + 2] === c[2];
+
+/** The distance from (x, y) to the nearest ink pixel within 3 px, Infinity when none is. */
+const inkDistance = (r: Raster, x: number, y: number) => {
+  let near = Infinity;
+  for (let dy = -3; dy <= 3; dy++)
+    for (let dx = -3; dx <= 3; dx++) {
+      const [ix, iy] = [x + dx, y + dy];
+      const inside = ix >= 0 && iy >= 0 && ix < r.width && iy < r.height;
+      if (inside && sameRgb(r.rgba, iy * r.width + ix, [58, 38, 28]))
+        near = Math.min(near, Math.hypot(dx, dy));
+    }
+  return near;
+};
+
+/** Each robe pixel near the ink, with the share of the paper it carries. */
+const rimBlends = (r: Raster, robeShade: ReadonlyArray<number>) => {
+  const blends: Array<readonly [number, number]> = [];
+  for (let y = 0; y < r.height; y++)
+    for (let x = 0; x < r.width; x++) {
+      const i = y * r.width + x;
+      if (!sameRgb(r.rgba, i, [92, 128, 170]) && !sameRgb(r.rgba, i, robeShade)) continue;
+      const near = inkDistance(r, x, y);
+      const share = RIM_BLEND.find(([d]) => near <= d);
+      if (share) blends.push([i, share[1]]);
+    }
+  return blends;
+};
+
+/**
+ * `spec` drawn on `paper`, its robe's rim blended toward the paper as an
+ * anti-aliased cut-out edge laid on a page is.
+ */
+const rimOnPaper = (spec: typeof RIM_ROBE, paper: Paper): Raster => {
+  const r = drawFigure(spec);
+  const blends = rimBlends(r, spec.robeShade);
+  for (let i = 0; i < r.width * r.height; i++)
+    if (sameRgb(r.rgba, i, PAPER)) for (let k = 0; k < 3; k++) r.rgba[i * 4 + k] = paper[k]!;
+  for (const [i, a] of blends)
+    for (let k = 0; k < 3; k++)
+      r.rgba[i * 4 + k] = Math.round((1 - a) * r.rgba[i * 4 + k]! + a * paper[k]!);
+  return r;
+};
 
 /** The ratio's value; NaN when it is missing, so the test's numbers fail on it. */
 const valueOf = (m: FigureMeasure, ratio: Ratio): number =>
@@ -128,6 +185,17 @@ describe('a drawn figure', () => {
   test('a robe shaded toward grey, its saturation halved and its hue kept, reads as grey', () => {
     // Near enough the robe's colour to be one fill with it (`STEP`), as a shade is.
     expect(measured({ ...PLAIN, robeShade: [104, 118, 135] }).bodyShading?.kind).toBe('grey');
+  });
+
+  test('a robe whose rim blends with the paper keeps its shade reading when the paper changes', () => {
+    // A cut-out's rim: the robe's pixels within 3 px of its line carry some of
+    // the paper behind it (as an anti-aliased edge re-blended on a page does).
+    const shadeOn = (paper: Paper) =>
+      Result.getOrThrow(measureFigure(rimOnPaper(RIM_ROBE, paper))).bodyShading;
+    const sheet = shadeOn([255, 242, 218]);
+    expect(sheet?.kind).toBe('grey');
+    expect(shadeOn([238, 221, 200])).toEqual(sheet);
+    expect(shadeOn([214, 200, 178])).toEqual(sheet);
   });
 
   test('reads its mouth open when it is a filled shape, closed when it is a line', () => {

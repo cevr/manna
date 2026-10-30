@@ -1,7 +1,10 @@
 // `film concept render <film> <member> [--kind turnaround|poses|heads ...]
-// [--view <kind>-<view> ...] [--no-critique] [--fit-only]`: the member's cast
+// [--view <kind>-<view> ...] [--figure rig|cutout] [--boil <px>] [--no-critique] [--fit-only]`: the member's cast
 // render (`cast-render.ts`), each kept view asked (every view of every kind
-// kept when none) drawn by its rig from the film's `rigs/cast.ts`, laid
+// kept when none) drawn by its rig from the film's `rigs/cast.ts` (or, with
+// `--figure cutout`, or by default for a member the film has no rig of, each
+// view its `CUTOUT` table has, by its puppet, its boil
+// `--boil` px: the house 0.6 or 0, written in the record), laid
 // beside its kept view, held to its fit rows and critiqued once every row
 // passes; a line a view, its flagged rows, its fit and findings under it.
 // `--fit-only` prints each view's fit rows and writes nothing: the fast loop.
@@ -15,6 +18,7 @@ import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
 import { Console, Effect, Layer, Option, Schema } from 'effect';
+import { BOIL_AMP } from '../core/boil.ts';
 import type { CritiqueRule } from '../core/critique.ts';
 import { castViewLines, fitRowLines } from '../core/cast-render.ts';
 import { SheetKind } from '../core/cast-sheet.ts';
@@ -60,6 +64,18 @@ export const render = <E, R>(pages: Layer.Layer<Pages, E, R>, rules: ReadonlyArr
           'show each view whose fit rows all pass to a fresh model (--no-critique skips it, written as skipped)',
         ),
       ),
+      figure: Flag.Literals('figure', ['rig', 'cutout'] as const).pipe(
+        Flag.optional,
+        Flag.withDescription(
+          'what draws each view: its rig (rigs/cast.ts CAST) or its puppet cut from the kept sheet (CUTOUT); by default his rig, or his puppet when the film has no rig of him',
+        ),
+      ),
+      boil: Flag.Finite('boil').pipe(
+        Flag.withDefault(BOIL_AMP),
+        Flag.withDescription(
+          `how far a cut-out's boil moves its figure, px: the house ${BOIL_AMP} by default, 0 for none (a rig ignores it)`,
+        ),
+      ),
       fitOnly: Flag.Boolean('fit-only').pipe(
         Flag.withDefault(false),
         Flag.withDescription("print each view's fit rows alone: no critique, nothing written"),
@@ -97,6 +113,8 @@ export const render = <E, R>(pages: Layer.Layer<Pages, E, R>, rules: ReadonlyArr
           views: input.view,
           critique: input.critique,
           fitOnly: input.fitOnly,
+          ...Option.match(input.figure, { onNone: () => ({}), onSome: (figure) => ({ figure }) }),
+          boil: input.boil,
         }),
       );
       yield* Console.log(

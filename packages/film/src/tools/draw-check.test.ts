@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Option } from 'effect';
 import { type SceneSpec, createFilm } from '../canvas/film.ts';
+import { BLOCK, blockImages } from '../puppet/fixtures/block.ts';
 import { stroke } from '../canvas/ink.ts';
 import { probeFace } from '../canvas/probe.ts';
 import { standInDom } from '../canvas/fixtures/stand-in.ts';
@@ -83,7 +84,7 @@ describe('the draw leg', () => {
       expect(new Set(tagged('FrameImpure'))).toEqual(new Set(['eased']));
       expect(tagged('InkOverFace')).toEqual(['roof']);
       expect(found.filter((f) => f.scene === 'still')).toEqual([]);
-    }).pipe(Effect.scoped),
+    }).pipe(Effect.scoped, Effect.provide(blockImages().layer)),
   );
 
   it.effect('lists ink over faces in film order, a mid-cue finding in its own place', () =>
@@ -110,7 +111,7 @@ describe('the draw leg', () => {
       );
       const faces = found.filter((f) => f._tag === 'InkOverFace');
       expect(faces.map((f) => f.scene)).toEqual(['knotted', 'roof']);
-    }).pipe(Effect.scoped),
+    }).pipe(Effect.scoped, Effect.provide(blockImages().layer)),
   );
 
   it.effect('draws only the scenes it is given, and each at several moments', () =>
@@ -122,7 +123,7 @@ describe('the draw leg', () => {
       const counts = momentCounts(build());
       expect(counts.moments).toBeGreaterThanOrEqual(2 * 3);
       expect(counts.pure).toBeGreaterThanOrEqual(2);
-    }).pipe(Effect.scoped),
+    }).pipe(Effect.scoped, Effect.provide(blockImages().layer)),
   );
 
   it.effect('poses a declared Rive rig through Bun, its face at its face node', () =>
@@ -158,7 +159,7 @@ describe('the draw leg', () => {
       expect(faces[0]?.y).toBeCloseTo(540 + HANGING_FACE[1], 3);
       expect(faces[0]?.size).toBe(24);
       expect(found.filter((f) => f._tag === 'FrameImpure')).toEqual([]);
-    }).pipe(Effect.scoped),
+    }).pipe(Effect.scoped, Effect.provide(blockImages().layer)),
   );
 
   it.effect('fails, naming it, a rig the film cannot load: never a silent fallback', () =>
@@ -173,6 +174,26 @@ describe('the draw leg', () => {
         ),
       );
       expect(error.message).toBe('rig fixtures/arm/webgl2 has no artboard "Leg"; it has Arm');
-    }).pipe(Effect.scoped),
+    }).pipe(Effect.scoped, Effect.provide(blockImages().layer)),
   );
+
+  it.effect('drawFindings loads a declared puppet and draws it', () => {
+    const { read, layer } = blockImages();
+    return Effect.gen(function* () {
+      const found = yield* drawFindings(() =>
+        armFilm([
+          {
+            id: 'block',
+            min: 4,
+            timeline: {},
+            puppets: { block: BLOCK },
+            draw: (f) => f.puppet('block', { numbers: { spine: 10 }, root: [960, 540], scale: 1 }),
+          },
+        ]),
+      );
+      // Its one part was read once, as the film loaded, and every moment drew it without a throw.
+      expect(read).toEqual(['block/body.png']);
+      expect(found).toEqual([]);
+    }).pipe(Effect.scoped, Effect.provide(layer));
+  });
 });

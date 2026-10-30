@@ -24,11 +24,20 @@ import {
   FileSystem,
   Option,
   Path,
-  Predicate,
   Result,
   Schema,
 } from 'effect';
-import { type CastModule, type CastView, castPage } from '../canvas/cast.ts';
+import {
+  type CastFigure,
+  type CastModule,
+  CUTOUT_BOILS,
+  CUTOUT_MARGIN,
+  castPage,
+  defaultFigure,
+  isCastModule,
+} from '../canvas/cast.ts';
+import { BOIL_AMP } from '../core/boil.ts';
+import { deltaE, labsOf } from '../core/cast-sheet-pixels.ts';
 import {
   type CastRender,
   CastRenderJson,
@@ -41,11 +50,19 @@ import { CastSheetJson, type CastSheetRecord, castKindPlan } from '../core/cast-
 import { SheetKind } from '../core/cast-sheet.ts';
 import type { CritiqueFinding } from '../core/critique.ts';
 import { measureFigure } from '../core/figure.ts';
-import { type FitRow, type FitSpec, fitRows } from '../core/fit-rows.ts';
+import { type FitRow, type FitSpec, figureOf, fitRows } from '../core/fit-rows.ts';
 import type { SceneTimes } from '../core/easel.ts';
 import { compareFigures, matchTable } from '../core/match.ts';
 import { type Raster, besideRaster, cropRaster } from '../core/raster.ts';
 
+import {
+  CastRenderRefused,
+  drawnViews,
+  keptViews,
+  renderedKinds,
+  tableSheet,
+  tableViews,
+} from './cast-kinds.ts';
 import { castFolder } from './cast-library.ts';
 import { askedOf } from './cast-sheet-critique.ts';
 import { turnaroundLayout } from './cast-sheet-brief.ts';
@@ -63,15 +80,17 @@ const SHEET_VIEW = { mode: 'plain', captions: false, format: 'image/png' } as co
 /** The gap round and between the two crops of a side-by-side, pixels. */
 const SIDE_GAP = 16;
 
-/** A cast render that cannot be made: the film's table, its record or its page do not give what it needs. */
-class CastRenderRefused extends Schema.TaggedError<CastRenderRefused>()('CastRenderRefused', {
-  member: Schema.String,
-  reason: Schema.String,
-}) {
-  override get message() {
-    return `${this.member}'s cast render: ${this.reason}`;
-  }
-}
+/** Where each figure's page stands the sheet: a cut-out's page is the sheet grown by `CUTOUT_MARGIN`. */
+const PAGE_OFFSET: Readonly<Record<CastFigure, readonly [number, number]>> = {
+  rig: [0, 0],
+  cutout: CUTOUT_MARGIN,
+};
+
+/** A sheet box where `figure`'s page draws it. */
+const onPage = (box: readonly [number, number, number, number], figure: CastFigure) => {
+  const [dx, dy] = PAGE_OFFSET[figure];
+  return [box[0] + dx, box[1] + dy, box[2] + dx, box[3] + dy] as const;
+};
 
 /**
  * What a render asks: the kinds to draw (every kind kept when none), the
@@ -84,6 +103,10 @@ interface CastRenderAsk {
   readonly views: ReadonlyArray<string>;
   readonly critique: boolean;
   readonly fitOnly: boolean;
+  /** What draws each view: its rig (`CAST`), or its puppet (`CUTOUT`); by default his rig, or his puppet when the film has no rig of him (`defaultFigure`). */
+  readonly figure?: CastFigure;
+  /** How far a cut-out's boil moves its figure, px: one of `CUTOUT_BOILS`, the house `BOIL_AMP` unless given. */
+  readonly boil?: number;
 }
 
 /** The render folder of `member` in `film`'s outputs. */
@@ -102,14 +125,6 @@ const measured = (concept: Raster, render: Raster) => {
   return Result.succeed(compareFigures(c.success, r.success));
 };
 
-/** Whether `u` reads as a film's cast render module: its table, its sheets and its paper. */
-const isCastModule = (u: unknown): u is CastModule =>
-  Predicate.hasProperty(u, 'CAST') &&
-  Predicate.hasProperty(u, 'SHEETS') &&
-  Predicate.hasProperty(u, 'PAPER') &&
-  Predicate.isObject(u.CAST) &&
-  Predicate.isObject(u.SHEETS);
-
 /** One kept view cut from the kept sheet and from the render, its rows and its fit rows. */
 interface Cut {
   readonly v: {
@@ -122,6 +137,7 @@ interface Cut {
   readonly render: Raster;
   readonly rows: Result.Result<ReadonlyArray<CastViewRendered['rows'][number]>, string>;
   readonly fit: ReadonlyArray<FitRow>;
+  readonly deltaE: number;
 }
 
 /** The measure's lines on a cut, as the critique is shown them. */
@@ -161,6 +177,7 @@ const renderedOf = (kind: string, cut: Cut, taken: CritiqueTaken): CastViewRende
     rows: Result.getOrElse(cut.rows, () => []),
     unmatched: Result.getFailure(cut.rows),
     fit: cut.fit,
+    deltaE: cut.deltaE,
     critique: Option.match(skipped, {
       onNone: () => 'taken' as const,
       onSome: () => 'skipped' as const,
@@ -193,54 +210,23 @@ const tableOf = Effect.fn('Cast.table')(function* (member: string, file: string)
   if (!isCastModule(loaded))
     return yield* CastRenderRefused.make({
       member,
-      reason: `${file} exports no CAST, SHEETS and PAPER`,
+      reason: `${file} exports no SHEETS and PAPER beside a CAST or CUTOUT`,
     });
   return loaded;
 });
 
-/** `member`'s views of `kind` in the table: none when it draws none. */
-const tableViews = (table: CastModule, member: string, kind: SheetKind) =>
-  Option.fromUndefinedOr(table.CAST[member]).pipe(
-    Option.flatMap((kinds) => Option.fromUndefinedOr(kinds[kind])),
-    Option.getOrElse((): Readonly<Record<string, CastView>> => ({})),
-  );
-
-/** `member`'s sheet of `kind` in the table: its size and scale. */
-const tableSheet = (table: CastModule, member: string, kind: SheetKind) =>
-  Option.fromUndefinedOr(table.SHEETS[member]).pipe(
-    Option.flatMap((sheets) => Option.fromUndefinedOr(sheets[kind])),
-  );
-
-/** The views the owner kept of `kind`: none when he kept no such sheet. */
-const keptViews = (record: CastSheetRecord, kind: SheetKind) =>
-  Option.fromUndefinedOr(record.kept).pipe(
-    Option.flatMap((kept) => Option.fromUndefinedOr(kept[kind])),
-    Option.map((k) => k.views),
-    Option.getOrElse((): ReadonlyArray<Cut['v']> => []),
-  );
-
-/** Refused unless the table draws every kept view of each kind asked, and gives each sheet its scale. */
-const coveredBy = (
-  member: string,
-  table: CastModule,
-  record: CastSheetRecord,
-  kinds: ReadonlyArray<SheetKind>,
-) =>
-  Effect.forEach(kinds, (kind) => {
-    const views = tableViews(table, member, kind);
-    const missing = keptViews(record, kind).filter((v) => !Predicate.hasProperty(views, v.name));
-    if (missing.length > 0)
-      return CastRenderRefused.make({
-        member,
-        reason: `rigs/cast.ts draws no ${missing.map((v) => `${kind} ${v.name}`).join(', ')}: every kept view needs a rig and a pose`,
-      });
-    if (Option.isNone(tableSheet(table, member, kind)))
-      return CastRenderRefused.make({
-        member,
-        reason: `rigs/cast.ts gives the ${kind} sheet no scale`,
-      });
-    return Effect.void;
-  });
+/** The mean ΔE76 of `render` against `concept` over the union of their figures (`figureOf`, the fit rows' reading). */
+const meanDeltaE = (concept: Raster, render: Raster) => {
+  const [a, b] = [figureOf(concept).figure, figureOf(render).figure];
+  const [la, lb] = [labsOf(concept), labsOf(render)];
+  let [sum, n] = [0, 0];
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] === 0 && b[i] === 0) continue;
+    sum += deltaE(la(i), lb(i));
+    n++;
+  }
+  return sum / Math.max(1, n);
+};
 
 /** Each cut's files written into `dir`: its two crops, its side-by-side at 1:1 and its table. */
 const writeCut = Effect.fn('Cast.writeCut')(function* (
@@ -284,15 +270,44 @@ interface RenderAt {
   readonly views: ReadonlyArray<string>;
   readonly critique: boolean;
   readonly write: boolean;
+  readonly figure: CastFigure;
 }
 
-/** What a view's fit rows hold it to: its member's colour classes, and its own part labels, probes and bars (`rigs/cast.ts`). */
-const fitSpecOf = (table: CastModule, member: string, kind: SheetKind, view: string): FitSpec => {
-  const fit = Option.flatMap(Option.fromUndefinedOr(tableViews(table, member, kind)[view]), (v) =>
-    Option.fromUndefinedOr(v.fit),
+/**
+ * What a view's fit rows hold it to: its member's colour classes, and its
+ * own part labels, probes and bars (`rigs/cast.ts`; a cut-out view's own,
+ * else its rig view's). A cut-out is painted with the sheet's own pixels,
+ * not the rig's papers, so its classes are read on the render by their
+ * sheet samples.
+ */
+const fitSpecOf = (
+  table: CastModule,
+  member: string,
+  kind: SheetKind,
+  view: string,
+  figure: CastFigure,
+): FitSpec => {
+  const rigFit = Option.flatMap(
+    Option.fromUndefinedOr(tableViews(table, member, kind)[view]),
+    (v) => Option.fromUndefinedOr(v.fit),
   );
+  const fit = {
+    rig: () => rigFit,
+    cutout: () =>
+      Option.orElse(
+        Option.fromUndefinedOr(table.CUTOUT?.[member]?.[kind]?.[view]?.fit),
+        () => rigFit,
+      ),
+  }[figure]();
+  const classes = Option.getOrElse(Option.fromUndefinedOr(table.FIT_CLASSES?.[member]), () => ({}));
   return {
-    classes: Option.getOrElse(Option.fromUndefinedOr(table.FIT_CLASSES?.[member]), () => ({})),
+    classes: {
+      rig: () => classes,
+      cutout: () =>
+        Object.fromEntries(
+          Object.entries(classes).map(([name, c]) => [name, { sheet: c.sheet, paper: c.sheet }]),
+        ),
+    }[figure](),
     labels: Option.getOrElse(
       Option.flatMap(fit, (f) => Option.fromUndefinedOr(f.labels)),
       () => ({}),
@@ -357,6 +372,24 @@ const critiqued = Effect.fn('Cast.critiqued')(function* (
   );
 });
 
+/** How many times a sheet's frame is drawn for its cost. */
+const COST_DRAWS = 7;
+
+/** The median ms the page takes to draw `kind`'s frame (`drawTimes`: the draw alone, rastered, no encoder). */
+const drawCost = Effect.fn('Cast.drawCost')(function* (at: RenderAt, kind: SheetKind) {
+  const scene = Arr.findFirst(at.scenes, (s) => s.id === kind);
+  if (Option.isNone(scene)) return 0;
+  const i = Math.floor((scene.value.start + scene.value.dur / 2) * at.pool.info.fps);
+  const times = [
+    ...(yield* at.pool.call(
+      'drawTimes',
+      Array.from({ length: COST_DRAWS }, () => i),
+    )),
+  ];
+  times.sort((a, b) => a - b);
+  return times[Math.floor(times.length / 2)] ?? 0;
+});
+
 /** One kind of the member's sheets drawn as one still, each kept view asked cut from it and from the kept sheet, held to its fit rows, written, critiqued once its rows pass. */
 const renderKind = Effect.fn('Cast.renderKind')(function* (at: RenderAt, kind: SheetKind) {
   const fs = yield* FileSystem.FileSystem;
@@ -384,16 +417,18 @@ const renderKind = Effect.fn('Cast.renderKind')(function* (at: RenderAt, kind: S
   const place = `${member}'s ${kind} sheet, render ${at.n}`;
   const cuts = keptViews(record, kind)
     .filter((v) => at.views.length === 0 || at.views.includes(`${kind}-${v.name}`))
+    .filter((v) => drawnViews(at.table, member, kind, at.figure).includes(v.name))
     .map((v): Cut => {
       const concept = cropRaster(keptSheet, v.box);
-      const render = cropRaster(drawn, v.box);
+      const render = cropRaster(drawn, onPage(v.box, at.figure));
       return {
         v,
         stem: `${kind}-${v.name}`,
         concept,
         render,
         rows: measured(concept, render),
-        fit: fitRows(concept, render, fitSpecOf(at.table, member, kind, v.name)),
+        fit: fitRows(concept, render, fitSpecOf(at.table, member, kind, v.name, at.figure)),
+        deltaE: meanDeltaE(concept, render),
       };
     });
   if (!at.write) return yield* critiqued(at, kind, cuts, place, layout);
@@ -443,23 +478,21 @@ export const renderCast = Effect.fn('Cast.render')(function* (
       member,
       reason: `no kept view ${unknown.join(', ')} (kept: ${kept.join(', ')})`,
     });
-  const kinds = Arr.filter(
-    SheetKind.literals,
-    (k) =>
-      keptViews(record, k).length > 0 &&
-      (ask.kinds.length === 0 || ask.kinds.includes(k)) &&
-      (ask.views.length === 0 || ask.views.some((v) => v.startsWith(`${k}-`))),
-  );
-  if (kinds.length === 0)
-    return yield* CastRenderRefused.make({ member, reason: 'no kind asked is kept' });
-  yield* coveredBy(member, table, record, kinds);
+  const figure = ask.figure ?? defaultFigure(table, member);
+  const boil = ask.boil ?? BOIL_AMP;
+  if (!CUTOUT_BOILS.includes(boil))
+    return yield* CastRenderRefused.make({
+      member,
+      reason: `a cut-out page boils at ${CUTOUT_BOILS.join(' or ')} px, not ${boil}`,
+    });
+  const kinds = yield* renderedKinds(member, table, record, ask, figure);
   const root = yield* renderRoot(film, member);
   // A read of the fit rows alone writes nothing: no render folder is taken.
   const { n, dir } = yield* Bool.match(ask.fitOnly, {
     onTrue: () => Effect.succeed({ n: 0, dir: root }),
     onFalse: () => reserveNumbered(root),
   });
-  const pool = yield* (yield* Pages).open(castPage(film, member), {
+  const pool = yield* (yield* Pages).open(castPage(film, member, figure, boil), {
     workers: 1,
     captions: false,
     server: Option.none(),
@@ -478,10 +511,12 @@ export const renderCast = Effect.fn('Cast.render')(function* (
     views: ask.views,
     critique: ask.critique && !ask.fitOnly,
     write: !ask.fitOnly,
+    figure,
   };
   const views = (yield* Effect.forEach(kinds, (kind) => renderKind(at, kind))).flat();
+  const drawMs = yield* Effect.forEach(kinds, (kind) => drawCost(at, kind));
   const sheets = Object.fromEntries(
-    kinds.map((kind) => [
+    kinds.map((kind, i) => [
       kind,
       {
         scale: Option.getOrElse(
@@ -489,6 +524,7 @@ export const renderCast = Effect.fn('Cast.render')(function* (
           () => 0,
         ),
         sheet: `${kind}.render.png`,
+        drawMs: drawMs[i] ?? 0,
       },
     ]),
   );
@@ -498,6 +534,8 @@ export const renderCast = Effect.fn('Cast.render')(function* (
     n,
     at: DateTime.formatIso(yield* DateTime.now),
     riv,
+    figure,
+    ...{ rig: {}, cutout: { boil } }[figure],
     kinds: sheets,
     views,
   };

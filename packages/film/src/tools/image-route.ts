@@ -21,6 +21,21 @@ interface ImageRequest {
 /** The size a board panel is drawn at: the film's 16:9 frame, as near as the route draws. */
 export const PANEL_SIZE = '1536x1024';
 
+/** The portrait size the route draws exactly (2:3): an edit of a standing figure's view, padded to it. */
+export const PORTRAIT = { width: 1024, height: 1536 } as const;
+
+/**
+ * An edit asked of the route: one reference image, the picture to edit, with
+ * the areas to repaint flat magenta in it (the route takes no mask of its
+ * own), drawn back at the portrait size.
+ */
+export const editRequest = (prompt: string, picture: string, out: string): ImageRequest => ({
+  prompt,
+  refs: [picture],
+  size: `${PORTRAIT.width}x${PORTRAIT.height}`,
+  out,
+});
+
 /** The longest one image may take before the call is stopped. */
 const IMAGE_LIMIT = Duration.minutes(6);
 
@@ -63,6 +78,12 @@ const okraArgs = (request: ImageRequest): ReadonlyArray<string> => [
   ...request.refs.flatMap((ref) => ['--ref', ref]),
   '-o',
   request.out,
+];
+
+/** The command line of one call, as the route runs it: what a record quotes. */
+export const okraCommand = (request: ImageRequest): ReadonlyArray<string> => [
+  'okra',
+  ...okraArgs(request),
 ];
 
 interface ImageRouteService {

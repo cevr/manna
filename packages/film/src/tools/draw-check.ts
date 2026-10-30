@@ -44,6 +44,8 @@ import type { Film } from '../canvas/film.ts';
 import type { ProbeSink } from '../canvas/probe.ts';
 import { isStandInCanvas, recorder, standInDom } from '../canvas/fixtures/stand-in.ts';
 import type { RigNameMissing, RigUnloadable } from '../core/errors.ts';
+import type { PuppetImages, PuppetUnloadable } from '../puppet/images.ts';
+import { loadPuppets } from '../puppet/load.ts';
 import { sceneMoments } from '../core/moments.ts';
 import { loadRigs } from '../rive/load.ts';
 import { RiveRuntimeBun } from '../rive/runtime-bun.ts';
@@ -350,16 +352,21 @@ const mergeFaces = (found: ReadonlyArray<DrawFinding>): ReadonlyArray<DrawFindin
  * canvases stand-ins too), each moment of its scenes named in `scenes`
  * (every one when empty) drawn: what threw, what is not pure and what ink
  * lies over a face. The film's rigs are loaded first, through Rive's Bun
- * runtime (`RiveRuntimeBun`), and posed for real: a rig that cannot load
- * fails the leg, naming it.
+ * runtime (`RiveRuntimeBun`), and posed for real, and its puppets through
+ * the `PuppetImages` the caller gives (`PuppetImagesBun` for `check --draw`):
+ * a rig or puppet that cannot load fails the leg, naming it.
  */
 export const drawFindings = (
   build: () => Film,
   scenes: ReadonlySet<string> = new Set(),
-): Effect.Effect<ReadonlyArray<DrawFinding>, RigUnloadable | RigNameMissing, Scope.Scope> =>
+): Effect.Effect<
+  ReadonlyArray<DrawFinding>,
+  RigUnloadable | RigNameMissing | PuppetUnloadable,
+  Scope.Scope | PuppetImages
+> =>
   Effect.gen(function* () {
     yield* standInDom(BLANK);
-    const film = yield* loadRigs(build());
+    const film = yield* loadPuppets(yield* loadRigs(build()));
     const moments = drawMoments(film).filter((m) => scenes.size === 0 || scenes.has(m.scene));
     const found = yield* Effect.forEach(moments, (m) => drawAt(film, m));
     return mergeFaces(found.flat());

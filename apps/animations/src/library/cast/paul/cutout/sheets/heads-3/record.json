@@ -1,0 +1,155 @@
+{
+  "view": "heads-3",
+  "kind": "heads",
+  "size": [239, 310],
+  "box": [529, 335, 768, 645],
+  "command": "film concept parts in-its-order paul --view heads-heads-3",
+  "parts": [
+    {
+      "name": "neighbour",
+      "kept": 96,
+      "painted": 0
+    },
+    {
+      "name": "head",
+      "kept": 38431,
+      "painted": 0
+    },
+    {
+      "name": "torso",
+      "kept": 15510,
+      "painted": 7678
+    }
+  ],
+  "moving": ["head"],
+  "hiddenPx": 38322,
+  "carried": [],
+  "okra": {
+    "route": "subscription (okra image, Codex route; no --model)",
+    "input": "okra/input-031a4b6cedaf.png",
+    "prompt": "okra/prompt.txt",
+    "pad": {
+      "s": 0.227557520857027,
+      "dx": 0,
+      "dy": -21.16284943970351
+    },
+    "budget": {
+      "calls": 3,
+      "allowance": null,
+      "used": 1
+    },
+    "calls": [
+      {
+        "n": 1,
+        "command": [
+          "okra",
+          "image",
+          "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where his head (his bald crown, the dark hair at its sides and back, his face, ears and long beard) was cut away to make a cut-out puppet. He is turned three-quarters to the viewer's left. Repaint ONLY the magenta area, as what lies behind his head: his neck rising straight up from his collar as a plain column of skin to about where his mouth was, its two sides closed by the same thick dark brown-black outline as the rest of him, its top simply rounded and closed by the same outline (no opening, no rim, no dark band), in exactly the same skin colour, soft shading and fine paper grain as the skin of his neck below. Everywhere else in the magenta area becomes the plain cream paper. There is no head now: no hair, no beard, no face, no ears, nothing magenta left. Keep every other pixel exactly as it is: the same size, position and framing, and every part that is not magenta unchanged.",
+          "--size",
+          "1024x1536",
+          "--ref",
+          "okra/input-031a4b6cedaf.png",
+          "-o",
+          "okra/answer-1.png"
+        ],
+        "input": "okra/input-031a4b6cedaf.png",
+        "out": "okra/answer-1.png",
+        "state": "laid",
+        "fit": {
+          "s": 0.22748641468736272,
+          "dx": 3.040553562645954,
+          "dy": -17.978347792502575,
+          "score": 10.607403545799167
+        },
+        "measures": {
+          "seam": {
+            "deltaE": 2.99,
+            "pairs": 119
+          },
+          "drift": {
+            "deltaE": 2.2,
+            "px": 15480
+          },
+          "grain": [
+            {
+              "part": "torso",
+              "painted": {
+                "robust": 1.48,
+                "plain": 2.27,
+                "n": 5853
+              },
+              "kept": {
+                "robust": 1.48,
+                "plain": 2.99,
+                "n": 3468
+              },
+              "verdict": "within"
+            }
+          ],
+          "paintUnder": [
+            {
+              "part": "head",
+              "px": 7678
+            }
+          ],
+          "paintedPx": 7678,
+          "visibleAtRest": 0,
+          "recomposeByteEqual": true
+        },
+        "missed": []
+      }
+    ],
+    "chosen": 1,
+    "fit": {
+      "s": 0.22748641468736272,
+      "dx": 3.040553562645954,
+      "dy": -17.978347792502575,
+      "score": 10.607403545799167
+    }
+  },
+  "measures": {
+    "seam": {
+      "deltaE": 2.99,
+      "pairs": 119
+    },
+    "drift": {
+      "deltaE": 2.2,
+      "px": 15480
+    },
+    "grain": [
+      {
+        "part": "torso",
+        "painted": {
+          "robust": 1.48,
+          "plain": 2.27,
+          "n": 5853
+        },
+        "kept": {
+          "robust": 1.48,
+          "plain": 2.99,
+          "n": 3468
+        },
+        "verdict": "within"
+      }
+    ],
+    "paintUnder": [
+      {
+        "part": "head",
+        "px": 7678
+      }
+    ],
+    "paintedPx": 7678,
+    "visibleAtRest": 0,
+    "recomposeByteEqual": true
+  },
+  "bars": {
+    "seamDeltaE": 10,
+    "driftDeltaE": 5,
+    "grainWithin": 0.5,
+    "visibleAtRest": 0,
+    "leastSeamPairs": 20,
+    "leastGrainWindows": 90
+  },
+  "missed": [],
+  "named": []
+}

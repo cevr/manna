@@ -83,11 +83,12 @@ const pages = (dxs: readonly [number, number]) =>
           info: { width: 2 * W, height: H, fps: 24, duration: 1, frames: 24 },
           title: 'm',
           use: () => Effect.die('no page use in this test'),
-          call: ((name: 'scenes' | 'still') =>
+          call: ((name: 'scenes' | 'still' | 'drawTimes', frames?: ReadonlyArray<number>) =>
             Effect.sync(() =>
               ({
                 scenes: () => [{ id: 'turnaround', start: 0, dur: 1, marks: {}, cues: {} }],
                 still: () => sheet([238, 221, 201], dxs),
+                drawTimes: () => (frames ?? []).map(() => 1),
               })[name](),
             )) as unknown as ExportPages['call'],
         }),

@@ -1,0 +1,201 @@
+{
+  "view": "threeQuarterRight",
+  "kind": "turnaround",
+  "size": [225, 606],
+  "box": [1264, 191, 1489, 797],
+  "command": "film concept parts in-its-order feast-mother --view turnaround-threeQuarterRight",
+  "parts": [
+    {
+      "name": "armRight",
+      "kept": 9046,
+      "painted": 0
+    },
+    {
+      "name": "armLeft",
+      "kept": 5508,
+      "painted": 0
+    },
+    {
+      "name": "head",
+      "kept": 25200,
+      "painted": 0
+    },
+    {
+      "name": "robe",
+      "kept": 41685,
+      "painted": 4869
+    },
+    {
+      "name": "torso",
+      "kept": 21334,
+      "painted": 6625
+    }
+  ],
+  "moving": ["armRight", "armLeft"],
+  "hiddenPx": 14470,
+  "carried": [],
+  "okra": {
+    "route": "subscription (okra image, Codex route; no --model)",
+    "input": "okra/input-6a4847687df1.png",
+    "prompt": "okra/prompt.txt",
+    "pad": {
+      "s": 0.39049962554830425,
+      "dx": -90.20541350165827,
+      "dy": 0
+    },
+    "budget": {
+      "calls": 3,
+      "allowance": null,
+      "used": 1
+    },
+    "calls": [
+      {
+        "n": 1,
+        "command": [
+          "okra",
+          "image",
+          "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where her two arms (blue sleeves and round hands) were cut away to make a cut-out puppet. She is a young mother in a long blue robe, a white veil over her head and shoulders, standing turned three-quarters to the viewer's right with her arms hanging straight at her sides. Repaint ONLY the magenta areas, as what lies underneath her arms: the sides of her body below the veil's hem, down to her robe, each side closed by the same thick dark brown-black outline as the rest of her, painted in exactly the same style, colours and soft shading as her robe beside each arm (her front on the viewer's right, her near side on the viewer's left, her far side and its deeper shade on the viewer's right). Each side of her body runs straight down from the outer end of her shoulder to the outer edge of her robe below, so her body under the arms is as wide as her shoulders and her robe, and the blue robe and its soft folds fill everything inside that line with the same soft shade and fine paper grain the sheet paints beside each arm. Keep the soft shade each arm casts on her body beside it exactly as it is, and carry that same shade on under where the arm was. Paint the blue robe of her body with the same fine paper grain the sheet shows on them beside the arms: a fine, even speckle through every flat area of colour, never smooth flat colour. There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside her body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same white veil and its hem, face, robe, feet, ground line, size, position and framing.",
+          "--size",
+          "1024x1536",
+          "--ref",
+          "okra/input-6a4847687df1.png",
+          "-o",
+          "okra/answer-1.png"
+        ],
+        "input": "okra/input-6a4847687df1.png",
+        "out": "okra/answer-1.png",
+        "state": "laid",
+        "fit": {
+          "s": 0.39049962554830425,
+          "dx": -87.08041350165827,
+          "dy": 3.15625,
+          "score": 20.768836014547276
+        },
+        "measures": {
+          "seam": {
+            "deltaE": 2.1,
+            "pairs": 248
+          },
+          "drift": {
+            "deltaE": 4.75,
+            "px": 62294
+          },
+          "grain": [
+            {
+              "part": "robe",
+              "painted": {
+                "robust": 1.15,
+                "plain": 1.7,
+                "n": 2860
+              },
+              "kept": {
+                "robust": 1.65,
+                "plain": 1.91,
+                "n": 4588
+              },
+              "verdict": "within"
+            },
+            {
+              "part": "torso",
+              "painted": {
+                "robust": 1.32,
+                "plain": 2.07,
+                "n": 3846
+              },
+              "kept": {
+                "robust": 1.48,
+                "plain": 1.93,
+                "n": 5890
+              },
+              "verdict": "within"
+            }
+          ],
+          "paintUnder": [
+            {
+              "part": "armRight",
+              "px": 8366
+            },
+            {
+              "part": "armLeft",
+              "px": 3128
+            }
+          ],
+          "paintedPx": 11494,
+          "visibleAtRest": 0,
+          "recomposeByteEqual": true
+        },
+        "missed": []
+      }
+    ],
+    "chosen": 1,
+    "fit": {
+      "s": 0.39049962554830425,
+      "dx": -87.08041350165827,
+      "dy": 3.15625,
+      "score": 20.768836014547276
+    }
+  },
+  "measures": {
+    "seam": {
+      "deltaE": 2.1,
+      "pairs": 248
+    },
+    "drift": {
+      "deltaE": 4.75,
+      "px": 62294
+    },
+    "grain": [
+      {
+        "part": "robe",
+        "painted": {
+          "robust": 1.15,
+          "plain": 1.7,
+          "n": 2860
+        },
+        "kept": {
+          "robust": 1.65,
+          "plain": 1.91,
+          "n": 4588
+        },
+        "verdict": "within"
+      },
+      {
+        "part": "torso",
+        "painted": {
+          "robust": 1.32,
+          "plain": 2.07,
+          "n": 3846
+        },
+        "kept": {
+          "robust": 1.48,
+          "plain": 1.93,
+          "n": 5890
+        },
+        "verdict": "within"
+      }
+    ],
+    "paintUnder": [
+      {
+        "part": "armRight",
+        "px": 8366
+      },
+      {
+        "part": "armLeft",
+        "px": 3128
+      }
+    ],
+    "paintedPx": 11494,
+    "visibleAtRest": 0,
+    "recomposeByteEqual": true
+  },
+  "bars": {
+    "seamDeltaE": 10,
+    "driftDeltaE": 5,
+    "grainWithin": 0.5,
+    "visibleAtRest": 0,
+    "leastSeamPairs": 20,
+    "leastGrainWindows": 90
+  },
+  "missed": [],
+  "named": []
+}

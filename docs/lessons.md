@@ -4507,3 +4507,113 @@ The form of an entry, each field on its own line:
 - **Wrong:** OPFS alone did not grant persistence and iOS application support was eligible for backup.
 - **Cause:** Platform directories were treated as a complete durability policy.
 - **Guard:** skill: `.claude/skills/verify-hymnal/features/offline.md` — check iOS backup exclusion through the native setter/readback boundary; request web persistence and keep its eviction limit visible.
+
+### film-loads-declared-puppets
+
+- **Date:** 2026-10-29
+- **Kind:** review
+- **Said:** "Normal film loads never load declared puppets."
+- **Source:** cutout/round-8-findings.md F1 (the review's M1)
+- **Wrong:** A drawing could declare a puppet and call `f.puppet`, but the page's load (`player/narrated.ts`) and the draw leg (`tools/draw-check.ts`) loaded only rigs, so its first draw threw "puppet … is not loaded". Only cast pages, which call `loadPuppets` themselves, drew one.
+- **Cause:** Puppets were added beside rigs in the cast page's load alone; nothing drew a declared puppet through a film's own entry points.
+- **Guard:** code: `packages/film/src/player/narrated.test.ts` `a declared puppet loads with the film and draws`; `packages/film/src/tools/draw-check.test.ts` `drawFindings loads a declared puppet and draws it`
+
+### puppet-weight-nearest-bone
+
+- **Date:** 2026-10-29
+- **Kind:** review
+- **Said:** "Child-axis projection overrides the nearest bone outside the joint blend."
+- **Source:** cutout/round-8-findings.md F2 (the review's M2)
+- **Wrong:** On a bent bind skeleton a vertex lying on the upper bone took the forearm's whole weight, so turning only the elbow moved the shoulder.
+- **Cause:** The weight chose a bone by which side of the child's axis a vertex lay on, not by the nearest segment, and blended across the whole limb instead of near the joint. The acceptance checked supplied weights, never how they were chosen.
+- **Guard:** code: `packages/film/src/core/puppet.test.ts` `a vertex nearest the upper bone does not follow the elbow`; `packages/film/src/core/puppet.test.ts` `an elbow turn tears no mesh edge on a limb bent at rest 90° or 135°`
+
+### unmatte-keeps-revealed-paint
+
+- **Date:** 2026-10-29
+- **Kind:** review
+- **Said:** "Un-matting permanently destroys hidden paint needed after movement."
+- **Source:** cutout/round-8-findings.md F3 (the review's M3)
+- **Wrong:** The un-matte cleared the backing part's paint beneath a front part's ink. The look pass drew the revealed textures, but `rasterOf` and the plain GL pass did not, so a turned part left a hole in what it had covered.
+- **Cause:** Revealed paint was a rule of one draw pass, not of the puppet; rest comparisons cannot see a hole that only movement opens.
+- **Guard:** code: `packages/film/src/core/puppet.test.ts` `rasterOf lays revealed paint where a turned part moved away`
+
+### cast-render-refuses-asked-kind
+
+- **Date:** 2026-10-29
+- **Kind:** review
+- **Said:** "An explicitly requested kind can disappear before coverage validation."
+- **Source:** cutout/round-8-findings.md F6 (the review's m1)
+- **Wrong:** Asking `turnaround-front` and `poses-poses-1` with `--figure cutout` dropped `poses`, which the table cut no view of, before the coverage check, so the render succeeded with half of what was asked.
+- **Cause:** The kinds were filtered to the ones the table draws before the ask was checked against them.
+- **Guard:** code: `packages/film/src/tools/cast-render.test.ts` `an asked kind with no cut-out views refuses`, `a kind asked by name with no cut-out views refuses`
+
+### unmatte-open-edges
+
+- **Date:** 2026-10-29
+- **Kind:** review
+- **Said:** "Exterior paper touching a non-corner edge survives."
+- **Source:** cutout/round-8-findings.md F8 (the review's m3)
+- **Wrong:** A frame held whole, with ink at its corners and a paper pocket touching only the middle of an edge, kept that sheet paper and carried it onto another background.
+- **Cause:** The un-matte seeded the exterior only at the four corners; nothing let a puppet name an edge the box cuts the figure off at.
+- **Guard:** code: `packages/film/src/core/unmatte.test.ts` `un-matte clears paper that touches a frame edge between the corners`
+
+### puppet-bitmap-owned-release
+
+- **Date:** 2026-10-29
+- **Kind:** review
+- **Said:** "ImageBitmap release occurs only on success."
+- **Source:** cutout/round-8-findings.md F10 (the review's m5)
+- **Wrong:** The browser's part reader closed a decoded bitmap only when the canvas read succeeded; a missing 2D context, a throwing read or an interruption left it open.
+- **Cause:** The bitmap was closed by a line after the read, not by the scope that acquired it.
+- **Guard:** code: `packages/film/src/puppet/images-browser.test.ts` `a failed read closes the decoded bitmap`
+
+### puppet-joint-blend-continuous
+
+- **Date:** 2026-10-29
+- **Kind:** review
+- **Said:** "The joint blend's weight drops to 0 at the edge of its box on a limb that is bent at rest."
+- **Source:** puppet-engine/round-1-review.md R1
+- **Wrong:** On a limb bent at rest, the child's weight inside the joint's blend read the child's axis alone, so it was 0.29 at 73°, 0.5 at 90° and 0.9 at 135° at the parent-side edge of the blend and 0 just past it; an elbow turn parted two neighbouring vertices 3 px apart by up to 14.9 px and tore the sleeve.
+- **Cause:** The blend was a box on the two bones' axes with a weight from one of them, and its test skipped the vertices near the elbow, so no case saw the weight at the box's edge.
+- **Guard:** code: `packages/film/src/core/puppet.test.ts` `an elbow turn tears no mesh edge on a limb bent at rest 90° or 135°`
+
+### puppet-joint-blends-overlap
+
+- **Date:** 2026-10-29
+- **Kind:** review
+- **Said:** "Where two joints' blends overlap on one bone, the weight jumps where the joint chosen flips."
+- **Source:** puppet-engine/round-2-review.md R7
+- **Wrong:** A vertex held at most two weights, so where the elbow's and the wrist's blends overlapped on a short forearm it kept one joint's k and dropped the other's; at the line where the choice flipped, a 60° elbow turn parted 3 px neighbours by up to 32 px (villager-child poses-5 armLeft).
+- **Cause:** The tear test's fixtures had two bones, so no case put two joints' blends on one bone.
+- **Guard:** code: `packages/film/src/core/puppet.test.ts` `an elbow turn tears no mesh edge on a limb bent at rest 90° or 135°` (its 3-bone case)
+
+### unmatte-revealed-when-back-part-moves
+
+- **Date:** 2026-10-29
+- **Kind:** review
+- **Said:** "A back part that turns out from under a still front part shows a hole."
+- **Source:** puppet-engine/round-1-review.md R2
+- **Wrong:** Revealed paint showed only when the part in front moved; a back part turning out from under a still front part showed, as a hole, the paint the un-matte had cleared under the front part's rim.
+- **Cause:** The rule asked whether the part in front moved, not whether the two parts moved apart, and its test moved only the front part.
+- **Guard:** code: `packages/film/src/core/puppet.test.ts` `rasterOf shows no hole where a turned back part moves out from under a still front part`
+
+### unmatte-grain-keeps-cream-cloth
+
+- **Date:** 2026-10-29
+- **Kind:** retraction
+- **Said:** chose: "U is built: an opt-in un-matte floor (a part's pixel darker than the paper by more than its grain keeps its alpha)" (orchestrator decision)
+- **Source:** castcut-2/spec.md Decided, "Residual: U, then named gaps"; castcut-2/residual-measure.md
+- **Wrong:** The feast mother's grey-cream cloth, a few luma darker than her paper, was solved along the line to the ink to an alpha near 0, so her render showed paper holes in her veil, swaddle and bench. `keep` colours closed only a few pixels a view, and a lighter keep colour filled the sheet's own paper pockets.
+- **Cause:** The un-matte read every rim pixel near the paper's colour as paper; `keep` names cloth lighter than the paper, and nothing kept cloth just darker than it.
+- **Guard:** code: `packages/film/src/core/unmatte.test.ts` `keeps a rim px darker than the paper by more than its grain whole, colour and alpha`; the film skill's "Cloth near the paper" line says when a member sets `grain`
+
+### cutout-neighbour-part
+
+- **Date:** 2026-10-29
+- **Kind:** retraction
+- **Said:** chose: "A neighbour on the cast page is the neighbour's own art" (orchestrator decision)
+- **Source:** castcut-2/spec.md Decided; castcut-2/blocked.md
+- **Wrong:** Where two kept views' boxes overlap on the sheet (the villagers' man and the baby's head, Paul's heads-1 and heads-2, Jeremiah's heads-2 and heads-3), a view's parts held its neighbour's pixels, so its puppet carried another figure's art, or two views drew the same sheet pixels.
+- **Cause:** A view's cut took every pixel of its box; nothing set apart the pixels another view's box also holds.
+- **Guard:** skill: the check that no two views draw the same sheet pixel is a unit's acceptance row, not a product check, and which pixels are a neighbour's is read on the sheet. Carried by `.claude/skills/film/SKILL.md`: "Where two views' boxes overlap on the sheet, a still `neighbour` part in the view's `cut.ts` takes the other view's pixels, and his `puppets.ts` leaves it out of the puppet, so no part of a view holds a neighbour's pixels."

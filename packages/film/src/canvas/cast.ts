@@ -11,8 +11,11 @@
 // props (a bottle, a stool), each a plain canvas piece. Pure: the table is
 // data a test reads in Bun, and only its props' draws touch a canvas.
 
+import { Predicate } from 'effect';
+import { BOIL_AMP } from '../core/boil.ts';
 import type { FitBar, FitBarName, FitClass, FitProbe } from '../core/fit-rows.ts';
 import type { LabelTable } from '../core/label.ts';
+import type { PuppetLook, PuppetPose, PuppetSpec } from './puppet.ts';
 import type { PoseOf, RivePropSpec } from './rive.ts';
 
 type Pt = readonly [number, number];
@@ -76,6 +79,48 @@ export interface CastView {
   readonly fit?: CastFit;
 }
 
+/** What a view's clip reads: its kept box. */
+interface Boxed {
+  readonly box: SheetBox;
+}
+
+/**
+ * One kept view drawn by a puppet cut from it (`canvas/puppet.ts`): its kept
+ * box, where the puppet's origin stands in the sheet's pixels (its own
+ * pixels are the sheet's, so it is drawn at scale 1), its pose, and what its
+ * fit rows hold beyond the house's.
+ */
+export interface CutoutView {
+  readonly box: SheetBox;
+  readonly at: Pt;
+  readonly puppet: PuppetSpec;
+  readonly pose: PuppetPose;
+  /** What the view draws beyond its pose: a drawn key in place of a part, a held hand (`PuppetLook`); its boil is the page's. */
+  readonly look?: Omit<PuppetLook, 'boil' | 'amp'>;
+  readonly fit?: CastFit;
+}
+
+/** A film's cut-out table, beside its cast render table: member, kind, kept view name, each a view with a part sheet. */
+type CutoutTable = Readonly<
+  Record<string, Readonly<Record<string, Readonly<Record<string, CutoutView>>>>>
+>;
+
+/** A film's cut-out table, checked by its type. */
+export const cutoutTable = <const T extends CutoutTable>(table: T): T => table;
+
+/** Every puppet a member's cut-out views draw, by key: what its page declares and loads. */
+export const cutoutPuppets = (
+  member: Readonly<Record<string, Readonly<Record<string, CutoutView>>>>,
+) => {
+  const puppets: Record<string, PuppetSpec> = {};
+  for (const views of Object.values(member))
+    for (const v of Object.values(views)) puppets[v.puppet.key] = v.puppet;
+  return puppets;
+};
+
+/** Which figure a cast render draws: each view's rig (`CAST`), or its puppet (`CUTOUT`). */
+export type CastFigure = 'rig' | 'cutout';
+
 /** A film's cast render table: member, kind (`turnaround`, `poses`, `heads`), kept view name. */
 type CastTable = Readonly<
   Record<string, Readonly<Record<string, Readonly<Record<string, CastView>>>>>
@@ -91,16 +136,89 @@ export interface CastSheet {
 /** Each member's sheets, by kind: what the render's canvas and scale are. */
 type CastSheets = Readonly<Record<string, Readonly<Record<string, CastSheet>>>>;
 
-/** What a film's `rigs/cast.ts` gives the cast render: its table, its sheets, the paper its page lays them on, and each member's colour classes for his fit rows (none, no class rows). */
+/** What a film's `rigs/cast.ts` gives the cast render: its rigs' table, its cut-outs' table, its sheets, the paper its page lays them on, and each member's colour classes for his fit rows (none, no class rows). A film gives one table or both; a member drawn only by his cut-out has no rigs. */
 export interface CastModule {
-  readonly CAST: CastTable;
+  /** The views each member has a rig for (`--figure rig`): none when the film draws its cast by cut-outs only. */
+  readonly CAST?: CastTable;
+  /** The views each member has a puppet for (`--figure cutout`): none when he has none. */
+  readonly CUTOUT?: CutoutTable;
   readonly SHEETS: CastSheets;
   readonly PAPER: { readonly base: string; readonly tone: string; readonly seed: number };
   readonly FIT_CLASSES?: Readonly<Record<string, Readonly<Record<string, FitClass>>>>;
+  /** Each member's eases (`film concept ease`), by name: none when he has none. */
+  readonly EASES?: Readonly<Record<string, Readonly<Record<string, CutoutEase>>>>;
 }
 
-/** The page name of `member`'s cast render in `film`: what the player mounts and `film concept render` opens. */
-export const castPage = (film: string, member: string) => `${film}/cast/${member}`;
+/** Whether `u` reads as a film's cast module: its sheets, its paper, and its rigs' table or its cut-outs' table. */
+export const isCastModule = (u: unknown): u is CastModule =>
+  Predicate.hasProperty(u, 'SHEETS') &&
+  Predicate.hasProperty(u, 'PAPER') &&
+  Predicate.isObject(u.SHEETS) &&
+  Predicate.isObject(u.PAPER) &&
+  ((Predicate.hasProperty(u, 'CAST') && Predicate.isObject(u.CAST)) ||
+    (Predicate.hasProperty(u, 'CUTOUT') && Predicate.isObject(u.CUTOUT)));
+
+/** The figure a member's page draws when none is asked: his rig when the film has one of him, else his cut-out. */
+export const defaultFigure = (m: CastModule, member: string): CastFigure =>
+  m.CAST?.[member] === undefined && m.CUTOUT?.[member] !== undefined ? 'cutout' : 'rig';
+
+/**
+ * How far a cut-out's page reaches past its sheet each way, px (x, y): a
+ * drawn key swings an arm past the sheet's edge (the front's raised hand
+ * stands left of it), so the page is the sheet grown by this on every side,
+ * the sheet drawn inside it, and its paper the same for a still and an ease.
+ */
+export const CUTOUT_MARGIN: Pt = [160, 40];
+
+/** One frame of an ease: its pose and look, and what it shows (its key, that key's turn, its held drawing). */
+export interface CutoutEaseFrame {
+  readonly pose: PuppetPose;
+  readonly look: PuppetLook;
+  readonly key: string;
+  readonly theta: number;
+  readonly held: string;
+}
+
+/**
+ * An ease of a cut-out view, from one pose to another: the view it moves
+ * (kind and name in `CUTOUT`, whose place it stands at), its puppet with the
+ * drawings it lays, its rate and length, and each frame a function of its
+ * index alone.
+ */
+export interface CutoutEase {
+  readonly kind: string;
+  readonly view: string;
+  readonly from: string;
+  readonly to: string;
+  readonly fps: number;
+  readonly count: number;
+  readonly puppet: PuppetSpec;
+  readonly frame: (i: number) => CutoutEaseFrame;
+}
+
+/** The page name of `member`'s eases in `film`: a scene an ease, its frames the ease's (`film concept ease`). */
+export const easePage = (film: string, member: string) => `${film}/cast/${member}/ease`;
+
+/** The scene id of an ease from `from` to `to`. */
+export const easeScene = (from: string, to: string) => `${from}-${to}`;
+
+/**
+ * The boils a cut-out page draws its stills at, px: the house boil
+ * (`BOIL_AMP`, its page `<film>/cast/<member>/cutout`) and none (its page
+ * `…/cutout/boil-0`), the rest read without the boil's softening.
+ */
+export const CUTOUT_BOILS: ReadonlyArray<number> = [BOIL_AMP, 0];
+
+/** The page name of `member`'s cast render in `film`, drawn by `figure`, a cut-out's at boil `boil` px (one of `CUTOUT_BOILS`): what the player mounts and `film concept render` opens. */
+export const castPage = (
+  film: string,
+  member: string,
+  figure: CastFigure = 'rig',
+  boil: number = BOIL_AMP,
+) =>
+  figure === 'rig'
+    ? `${film}/cast/${member}`
+    : `${film}/cast/${member}/cutout${boil === BOIL_AMP ? '' : `/boil-${boil}`}`;
 
 /** A film's cast render table, checked by its type: every view of every kind of every member. */
 export const castTable = <const T extends CastTable>(table: T): T => table;
@@ -152,7 +270,7 @@ interface CastClip {
  * there but what lies in its own. A view's crop by its box then holds its
  * own drawing alone, never a neighbour's ink that ran over into it.
  */
-const castClip = (view: CastView, views: ReadonlyArray<CastView>, margin: number): CastClip => {
+const castClip = (view: Boxed, views: ReadonlyArray<Boxed>, margin: number): CastClip => {
   const [x0, y0, x1, y1] = view.box;
   const box: SheetBox = [x0 - margin, y0 - margin, x1 + margin, y1 + margin];
   const [bx0, by0, bx1, by1] = box;
@@ -179,8 +297,8 @@ type CastClipContext = Pick<CanvasRenderingContext2D, 'beginPath' | 'rect' | 'cl
  */
 export const clipCast = (
   ctx: CastClipContext,
-  view: CastView,
-  views: ReadonlyArray<CastView>,
+  view: Boxed,
+  views: ReadonlyArray<Boxed>,
   margin: number,
 ) => {
   const clip = castClip(view, views, margin);

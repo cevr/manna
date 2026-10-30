@@ -1209,6 +1209,22 @@ export const traceView = (sheet: Raster, view: TraceView): Result.Result<Traced,
   return Result.succeed(traced);
 };
 
+/**
+ * Each label's region on `view` (the whole picture) as a mask, 1 on its
+ * pixels: the regions the tracer reads by `classes`, each picked by its label
+ * in `labels` (`core/label.ts`); with why each label it cannot read is refused.
+ */
+export const labelMasks = (view: Raster, classes: TraceView['classes'], labels: LabelTable) => {
+  const { rd } = readOf(view, { box: [0, 0, view.width, view.height], classes, parts: {}, labels });
+  const masks: Readonly<Record<string, Uint8Array>> = Object.fromEntries(
+    Object.entries(rd.labelled).map(([name, r]) => [
+      name,
+      Uint8Array.from(rd.label, (l) => Number(l === r.id)),
+    ]),
+  );
+  return { masks, refused: rd.refused };
+};
+
 /** A name as a table's constant: `armNear` as `ARM_NEAR`. */
 const constName = (name: string) => name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toUpperCase();
 

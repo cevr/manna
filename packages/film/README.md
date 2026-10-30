@@ -2569,9 +2569,10 @@ is written as a disc on each lobe, the curls `Hair.Curls` cuts. A mark with
 no ink of its own to read is refused, never thrown.
 
 `film concept render <film> <member> [--kind <kind>] [--view <kind>-<view>]
-[--no-critique] [--fit-only]`
+[--figure rig|cutout] [--no-critique] [--fit-only]`
 (`tools/cast-render.ts`, its record in `core/cast-render.ts`) draws every
-view the member's record keeps by its rig. The film's `rigs/cast.ts` is the
+view the member's record keeps by its rig, or by its cut-out (The part
+sheet, below). The film's `rigs/cast.ts` is the
 table (`CastTable`, `canvas/cast.ts`, through `@manna/film/rive`): for each
 kept view, its box, where the rig's feet stand on the sheet, its rig, its
 pose's numbers, the circle hands drawn with it and the props the sheet lays
@@ -2612,6 +2613,159 @@ each sheet's scale, each view's rows, fit rows and findings) and `render.md`,
 its fit rows at the top, the failing first. A
 finding is answered on the render that found it, `--render <n> --finding
 <kind>-<view>/<id> --stands <why>`; a fix is a new render.
+
+### The part sheet: `film concept parts`
+
+A member drawn as a cut-out is made of his kept views' own pixels, through
+one pipeline every member shares: `apps/animations/src/library/cutout/`
+holds the cut rules (`rules.ts`), the cut table that yields the contract this
+tool reads (`cutTable`, `table.ts`), okra's prompt fragments (`prompts.ts`),
+the standing and framed skeletons (`skeleton.ts`), the frames (`framesOf`,
+`frames.ts`), the puppet builder and its loader (`puppetsOf`, `puppets.ts`;
+`puppetLoader`, `load.ts`) and the two pose forms, a view's own fit and a
+pose fitted from a turnaround puppet (`own`, `fitted`, `poses.ts`). A
+member's `library/cast/<member>/cutout/` folder is data passed to those
+builders. A view is added in one order: its data, this tool (`--dry-run`
+first), the film table's `CUTOUT`, `SHEETS` and `FIT_CLASSES` entries (at
+least three colour classes sampled on the kept sheet; with none, no class
+rows), the member's name in the film's `castPages` list
+(`apps/animations/src/films/index.ts`, else no render page), `film concept
+render --figure cutout` until its fit rows pass, and a review of the render against
+the kept crop at 1:1. The film skill (`.claude/skills/film/SKILL.md`, "A
+cut-out member") keeps the cut lessons and what a member with poses alone can
+and cannot get. His cut table (`<member>/cutout/cut.ts`: `CUTS`,
+`cutOptionsFor`, `HIDDEN`) splits a view into named parts, front to back
+(`cutParts`, `core/part-sheet.ts`).
+`film concept parts <film> <member> --view <kind>-<view> [--dry-run]
+[--reuse] [--check]` (`tools/part-sheet-cli.ts`) paints what the view's
+moving parts hide. Each moving part's area goes flat magenta on the whole
+view, padded to the image route's portrait (`PORTRAIT`, `editRequest` in
+`tools/image-route.ts`), and okra repaints the magenta alone on its Codex
+route, the subscription; never `--model`, the paid API. The answer is laid
+back over the view by one similarity fitted on colour where it still shows
+the view (`fitSimilarity`, `core/register.ts`: a coordinate descent with
+halving steps on the scale and shift, each view pixel the answer's mean over
+its footprint). Its paint, each pixel the one answer pixel under its centre
+(`drawPoint`, so okra's grain is not averaged away), is the answer less
+the paper the view's ground reaches. Each painted pixel goes under the
+nearest part that does not move, in that part's tone (each piece shifted
+by its mean step to the pixels the part keeps beside it), and only through `paintHidden`, so paint never shows
+at rest (`tools/part-sheet-lay.ts`). Each answer is measured on domains
+the sheet fixes before any answer is read: the drift (the laid answer
+against the view over the pixels kept by the parts the hidden areas lie on,
+≤ 5), the seam (ΔE76 of paint against the pixels its part keeps beside it,
+≤ 10, read on 20 pairs or more) and each such part's grain (`grainOf`,
+`core/grain.ts`: G less its 3×3 mean, its robust std within ±0.5 of the
+part's kept pixels near the paint, read on 90 windows a side or more, else
+that part is `unverified`; the plain std is recorded beside it). A measure
+with too few samples misses its bar, at least one part's grain must be
+read, and every moving part must hide some paint. An answer that leaves a
+moving part unpainted ranks after every one that paints them all, then by
+bars missed, then by seam; the best is kept. The part PNGs, `sheet.png`,
+`sheet-painted.png` (each painted pixel half magenta) and `record.json`
+land in `<member>/cutout/sheets/<view>/`. Each call's input (named by its
+bytes' hash), prompt and answer land under its `okra/`. A view takes three
+calls in all, and more only by an allowance its cut table records
+(`HIDDEN[view].allowance`: how many, who granted them, when and why). Each
+call is written to the view's ledger, `okra/calls.json`, before the route
+is asked, so a call whose answer fails to arrive, decode or lay still
+counts. An answer drawn from another input (the cut has moved since) is
+stale: the record keeps it, it is never laid, and it still counts.
+`--reuse` lays the answers already drawn, `--check` lays them and fails
+where a file differs, and `--dry-run` writes the magenta input under
+`out/<film>/cast/<member>/parts/<view>/`; none of the three calls okra.
+
+### The puppet: a part sheet on a skeleton
+
+A puppet (`core/puppet.ts`) is a part sheet on a skeleton
+(`<member>/cutout/skeleton.ts`: bones named by the shared controls (`lean`,
+`neck`, `head`, `shoulder`, `elbow` and `wrist` by side), each turning about its pivot after its parent; each
+part's skin, the bones it lies on; each sleeve's shoulder flap). Each part
+is a mesh of its own pixels on a 3 px grid, each vertex on at most four of
+its skin's bones (`WEIGHTS`): each joint's k is a smoothstep of how much
+nearer the child's segment, or that of any bone below the child, the
+vertex lies than the parent's, across the joint's blend (18 px, at most half
+the shorter bone, narrowed on the parent's side by how tightly the joint is
+folded at rest), and the weights compose the k down the chain (upper 1 - k1,
+forearm k1 (1 - k2), hand k1 k2); outside every blend the nearest bone holds
+the vertex alone. So the weights are continuous where a limb bends, where two
+joints' blends overlap on a short bone too (a sleeve's shoulder flap scales
+only part of the weights, so its border still steps), and the parent's far
+paint stays on the parent. It is
+skinned by linear blend; a pose is
+`{ numbers, root, scale }`, degrees a bone. `rasterOf` is the CPU
+reference: each pixel inverse-mapped through the posed triangle that holds
+its centre, sampled bilinear on premultiplied texels, so the rest pose is
+the sheet byte for byte. A puppet that names the paper its parts were cut
+from (`PuppetSpec.paper`, the kept view's ground) has its rim un-matted
+from it once as it is made (`core/unmatte.ts`): each pixel between the
+ground and the ink is given the alpha of its distance from that paper
+along the line to the ink, and a pixel off that line (the sheet's paper,
+lighter or bluer at the rim) goes to the paper, so on another paper the
+figure carries no ring of the sheet's. Paper the box cuts off from the
+figure is cleared from the box's four corners, or, when the puppet names
+the edges its figure leaves through (`PuppetSpec.open`, a bust's `bottom`;
+`UnmatteOptions.open`), from every pixel of every other edge. Cloth near
+the paper's colour would be cleared as paper too, so a member whose
+lightest cloth lies within about 25 (RGB distance) of the paper sets two
+options. `keep` names his cloth colours: a pixel the line to the ink does
+not reach stays whole when it lies nearer one of them than the paper (a
+colour that fills any of the kept sheet's own paper pockets is dropped).
+`grain` is his paper's grain in luma (its p95 below the paper over the
+kept sheet's ground): a rim pixel darker than the paper by more than that
+keeps its colour at alpha 255. `grain` is off by default, so no pixel of a
+member that does not set it moves. Paint the
+un-matte clears from behind a front part's rim is kept on the part behind
+(`PuppetPart.revealed`) and laid by one rule (`revealedShown`, beside
+`sealsShown`) in every draw: `rasterOf`, the plain GL pass and the look
+pass show it whenever the part behind or the part in front moves, so no
+hole opens either way, and a still figure draws its textures alone. A drawing declares its puppets beside
+its rigs (`drawing({ puppets })`), and both of a film's loads load them
+before its first frame, the page's (`narratedFilms`) and `check --draw`'s
+(`drawLeg`) (`loadPuppets`, `src/puppet/load.ts`: each part PNG read and
+decoded in the load, through `PuppetImages`, a decode's bitmap closed
+however the read ends), and a frame draws one
+with `f.puppet(name, pose)` (`canvas/puppet.ts`): the vertices posed on the
+CPU and written whole, the meshes drawn with WebGL 2 on the page's one
+puppet canvas (`canvas/puppet-gl.ts`, in the context budget of
+`canvas/gl.ts`), the box copied into the frame. In Bun a puppet is posed
+and declares its figure (`probeFigure`), and draws nothing. A puppet's
+module imports its part PNGs, so a scene that draws it is keyed by their
+bytes (`tools/stamp.ts`). A film's `rigs/cast.ts` gives its puppets in
+`CUTOUT`, beside `CAST` or without it, and `film concept render <film>
+<member> --figure cutout` renders each view `CUTOUT` has on its page (a
+kind or view the ask names that `CUTOUT` draws none of is refused,
+`CastRenderRefused` naming it, by `renderedKinds`; a
+member with no `CAST` entry is drawn so by default, `defaultFigure` in
+`canvas/cast.ts`)
+`<film>/cast/<member>/cutout`, held to the same fit rows (its classes read
+by their sheet samples, since a cut-out is painted with the sheet's own
+pixels), its record's `figure: 'cutout'`, each view's `deltaE` against
+the kept view and each sheet's `drawMs` (the page's draw of the frame,
+median of 7).
+
+A puppet is drawn with a look (`PuppetLook`, `canvas/puppet.ts`): the boil
+tick and its amplitude (`core/boil.ts` `boilField`, the house `BOIL_AMP`
+unless `amp` is given, 0 still), a drawn key swapped in for a part (`swap`:
+its drawing, its place and its turn about the part's pivot), and a held
+drawing laid where the hand stands (`held`: the kept hand and its prop, so
+the circle hand is the sheet's own); a look's drawings follow the pose's
+root and scale. `--boil <px>` renders the cut-out at one of `CUTOUT_BOILS`
+(the house boil, or 0 for the still the fit rows compare), each on its own
+page (`<film>/cast/<member>/cutout`, `…/cutout/boil-0`), its record's
+`boil` the amplitude. `film concept ease <film> <member> --from <pose> --to
+<pose> --seconds <s> [--segment <a>-<b> ...] [--shuffle <seed>]`
+(`tools/ease-cli.ts`) draws one of the member's eases (`EASES`, the film's
+`rigs/cast.ts`: a big move drawn from keys, each held on twos, the boil
+ticking twelve a second) frame by frame on the real draw path, into
+`out/<film>/cast/<member>/ease/<n>/` with its `ease.json`; a segment or a
+shuffled order draws the same frames. `film concept fit <film> <member>
+--view <kind>-<view> --from <view> ... [--bone <name> ...]`
+(`tools/pose-fit-cli.ts`, `core/pose-fit.ts` `fitPose`) fits a kept pose
+view from the member's puppets: each started where its rest figure fills
+the view's figure box (`boxStart`), its root, its one scale and the bones
+named searched by halving steps (16° to 0.0625°, no bone past 15°), the
+lower loss kept, into the member's `cutout/poses/<kind>-<view>.json`.
 
 ### The review: `film review`, and keep needs evidence
 
@@ -2951,7 +3105,9 @@ cast leg (`castLeg`: the cast library, FileSystem and FilmFolder), the
 sound leg (`soundLeg`: the mix, Mixer), and the
 layout and look legs (`layoutLeg`: the browser, Checker and Looker), and the
 draw leg (`drawLeg`, `tools/draw-check.ts`: the film's `film.ts` built from
-its committed timings and each scene drawn in this process into the stand-in
+its committed timings, its rigs and puppets loaded as a page loads them (a
+puppet's part PNGs read by `PuppetImagesBun`, one that cannot load failing
+the leg by name), and each scene drawn in this process into the stand-in
 context at its moments, as `tools/talk.slow.test.ts` runs it in `test:slow`).
 `--static` runs the static leg alone, with no mix and no browser: it is what
 the lab runs after each write; with `--folder v<n>` it checks that version
@@ -3680,7 +3836,7 @@ the checks stay ours.
 - **Owned by whoever loaded it.** The consumer that loads a film owns its
   rigs and closes them: a film's load is a scoped Effect (`Films`,
   `player/main.ts`: `Effect<Film, FilmUnloadable, Scope>`; `narratedFilms`
-  loads the rigs into the scope it runs in, a short's page into its
+  loads the rigs and puppets into the scope it runs in, a short's page into its
   film's), run on the consumer's own fiber, so no lifetime crosses a
   Promise and stopping the consumer stops the load where it is. The
   player's page (`stageFilm`) runs it in the page's own scope, which lives

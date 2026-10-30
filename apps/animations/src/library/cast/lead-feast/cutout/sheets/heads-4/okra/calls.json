@@ -1,0 +1,52 @@
+{
+  "calls": [
+    {
+      "n": 1,
+      "command": [
+        "okra",
+        "image",
+        "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where his head (his hair, face and ears) was cut away to make a cut-out puppet. Repaint ONLY the magenta area, as what lies behind his head: his neck rising straight up from his collar, its two sides closed by the same thick dark brown-black outline as the rest of him, its top a rounded end a little above where his chin was, in exactly the same skin colour and soft shading as his neck below. Everywhere else in the magenta area becomes the plain cream paper. There is no head now: no hair, no face, no ears, nothing magenta left. Keep every other pixel exactly as it is: the same size, position and framing, and every part that is not magenta unchanged.",
+        "--size",
+        "1024x1536",
+        "--ref",
+        "okra/input.png",
+        "-o",
+        "okra/answer-1.png"
+      ],
+      "input": "okra/input-f1e5094fdcd5.png",
+      "out": "okra/answer-1.png"
+    },
+    {
+      "n": 2,
+      "command": [
+        "okra",
+        "image",
+        "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where his head (his hair, face and ears) was cut away to make a cut-out puppet. Repaint ONLY the magenta area, as what lies behind his head: his neck rising straight up from his collar as a plain column of skin to about where his mouth was, its two sides closed by the same thick dark brown-black outline as the rest of him, its top simply rounded and closed by the same outline (no opening, no rim, no dark band), in exactly the same skin colour, soft shading and fine paper grain as his neck below. Everywhere else in the magenta area becomes the plain cream paper. There is no head now: no hair, no face, no ears, nothing magenta left. Keep every other pixel exactly as it is: the same size, position and framing, and every part that is not magenta unchanged.",
+        "--size",
+        "1024x1536",
+        "--ref",
+        "okra/input.png",
+        "-o",
+        "okra/answer-2.png"
+      ],
+      "input": "okra/input-2e55f1b8e287.png",
+      "out": "okra/answer-2.png"
+    },
+    {
+      "n": 3,
+      "command": [
+        "okra",
+        "image",
+        "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where his head (his hair, face and ears) was cut away to make a cut-out puppet. Repaint ONLY the magenta area, as what lies behind his head: his neck rising straight up from his collar as a plain column of skin to about where his mouth was, its two sides closed by the same thick dark brown-black outline as the rest of him, its top simply rounded and closed by the same outline (no opening, no rim, no dark band), in exactly the same skin colour, soft shading and fine paper grain as his neck below. Everywhere else in the magenta area becomes the plain cream paper. There is no head now: no hair, no face, no ears, nothing magenta left. Keep every other pixel exactly as it is: the same size, position and framing, and every part that is not magenta unchanged.",
+        "--size",
+        "1024x1536",
+        "--ref",
+        "okra/input-2e55f1b8e287.png",
+        "-o",
+        "okra/answer-3.png"
+      ],
+      "input": "okra/input-2e55f1b8e287.png",
+      "out": "okra/answer-3.png"
+    }
+  ]
+}

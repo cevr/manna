@@ -1,0 +1,20 @@
+{
+  "calls": [
+    {
+      "n": 1,
+      "command": [
+        "okra",
+        "image",
+        "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where his two arms (linen sleeves and round hands) were cut away to make a cut-out puppet. He is a plain villager in an undyed linen tunic to the shins, a linen headcloth tied with a walnut band and a short dark beard, standing facing the viewer with his arms hanging at his sides. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body below the headcloth, down to his tunic, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading as his tunic beside each arm. Each side of his body runs straight down from the outer end of his shoulder to the outer edge of his tunic below, so his body under the arms is as wide as his shoulders and his tunic, and the undyed linen tunic and its soft folds fill everything inside that line with the same soft shade and fine paper grain the sheet paints beside each arm. Keep the soft shade each arm casts on his body beside it exactly as it is, and carry that same shade on under where the arm was. Paint the linen tunic of his body with the same fine paper grain the sheet shows on them beside the arms: a fine, even speckle through every flat area of colour, never smooth flat colour. There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same linen headcloth and its band, face, beard, tunic, sandals, size, position and framing.",
+        "--size",
+        "1024x1536",
+        "--ref",
+        "okra/input-1e9f34b59edf.png",
+        "-o",
+        "okra/answer-1.png"
+      ],
+      "input": "okra/input-1e9f34b59edf.png",
+      "out": "okra/answer-1.png"
+    }
+  ]
+}

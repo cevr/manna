@@ -1,0 +1,36 @@
+{
+  "calls": [
+    {
+      "n": 1,
+      "command": [
+        "okra",
+        "image",
+        "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where his two arms (sleeves and round hands) were cut away to make a cut-out puppet. He is turned three-quarters to the viewer's left. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading as his body beside each arm (the olive mantle with its walnut-brown edge band on the viewer's left side, the olive mantle and the walnut seed bag on the viewer's right side, the linen tunic, the belt round his waist). Each side of his body runs straight down from the outer end of his shoulder to the outer edge of his robe below, so his body under the arms is as wide as his shoulders and his robe, and the linen tunic and olive mantle fill everything inside that line with the same soft shade and fine paper grain the sheet paints beside each arm. Keep the soft shade each arm casts on his body beside it exactly as it is, and carry that same shade on under where the arm was. Paint the linen tunic and olive mantle of his body with the same fine paper grain the sheet shows on them beside the arms: a fine, even speckle through every flat area of colour, never smooth flat colour. There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, headcloth and its tail, face, beard, tunic, mantle, walnut strap, belt, walnut seed bag, feet, size, position and framing.",
+        "--size",
+        "1024x1536",
+        "--ref",
+        "okra/input-f128b93ea105.png",
+        "-o",
+        "okra/answer-1.png"
+      ],
+      "input": "okra/input-f128b93ea105.png",
+      "out": "okra/answer-1.png"
+    },
+    {
+      "n": 2,
+      "command": [
+        "okra",
+        "image",
+        "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where his two arms (sleeves and round hands) were cut away to make a cut-out puppet. He is turned three-quarters to the viewer's left. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading as his body beside each arm (the olive mantle with its walnut-brown edge band on the viewer's left side, the olive mantle and the walnut seed bag on the viewer's right side, the linen tunic, the belt round his waist). Each side of his body runs straight down from the outer end of his shoulder to the outer edge of his robe below, so his body under the arms is as wide as his shoulders and his robe, and the linen tunic and olive mantle fill everything inside that line with the same soft shade and fine paper grain the sheet paints beside each arm. Keep the soft shade each arm casts on his body beside it exactly as it is, and carry that same shade on under where the arm was. Paint the linen tunic and olive mantle of his body with the same fine paper grain the sheet shows on them beside the arms: a fine, even speckle through every flat area of colour, never smooth flat colour. There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, headcloth and its tail, face, beard, tunic, mantle, walnut strap, belt, walnut seed bag, feet, size, position and framing.",
+        "--size",
+        "1024x1536",
+        "--ref",
+        "okra/input-35abc410a5a6.png",
+        "-o",
+        "okra/answer-2.png"
+      ],
+      "input": "okra/input-35abc410a5a6.png",
+      "out": "okra/answer-2.png"
+    }
+  ]
+}

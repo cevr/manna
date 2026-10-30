@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "argent": {
+      "command": "argent",
+      "args": ["mcp"],
+      "env": { "DO_NOT_TRACK": "1", "ARGENT_TELEMETRY": "0" }
+    }
+  }
+}

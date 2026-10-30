@@ -62,6 +62,8 @@ const CastViewRendered = Schema.Struct({
   unmatched: Schema.OptionFromOptionalKey(Schema.String),
   /** Its fit rows (`fit-rows.ts`), each with its bar: the critique waits on every one passing. A render made before them has none. */
   fit: Schema.optionalKey(Schema.Array(CastFitRow)),
+  /** The mean ΔE76 of the render against its kept view over their figures' union (`figureOf`). A render made before it has none. */
+  deltaE: Schema.optionalKey(Schema.Finite),
   critique: Schema.Literals(['taken', 'skipped']),
   /** Why the critique was skipped: never a pass. */
   skipped: Schema.OptionFromOptionalKey(Schema.String),
@@ -77,9 +79,18 @@ export const CastRender = Schema.Struct({
   at: Schema.String,
   /** The sha256 of the figures file the render drew. */
   riv: Schema.String,
+  /** What drew each view: its rig (`CAST`), or its puppet (`CUTOUT`, `--figure cutout`). A render made before it drew rigs. */
+  figure: Schema.optionalKey(Schema.Literals(['rig', 'cutout'])),
+  /** How far a cut-out's boil moved its figure, px (`--boil`; 0 drew it unboiled). A rig's render, or one made before it, has none. */
+  boil: Schema.optionalKey(Schema.Finite),
   kinds: Schema.Record(
     Schema.String,
-    Schema.Struct({ scale: Schema.Finite, sheet: Schema.String }),
+    Schema.Struct({
+      scale: Schema.Finite,
+      sheet: Schema.String,
+      /** The median ms the page took to draw the sheet's frame, over a few draws (`drawTimes`). */
+      drawMs: Schema.optionalKey(Schema.Finite),
+    }),
   ),
   views: Schema.Array(CastViewRendered),
 });
@@ -253,8 +264,12 @@ export const castViewLines = (v: CastViewRendered): ReadonlyArray<string> => {
           }),
       })}`,
   });
+  const dE = Option.match(Option.fromUndefinedOr(v.deltaE), {
+    onNone: () => '',
+    onSome: (d) => ` dE=${d.toFixed(3)}`,
+  });
   return [
-    `${v.kind}-${v.view}: rows=${v.rows.length} flagged=${flagged}${unmatched}${fit} critique=${v.critique} findings=${v.findings.length}`,
+    `${v.kind}-${v.view}: rows=${v.rows.length} flagged=${flagged}${unmatched}${dE}${fit} critique=${v.critique} findings=${v.findings.length}`,
     ...v.findings.map((f) => `  ${findingRef(v, f)} ${f.aspect}: ${f.what}`),
   ];
 };
@@ -304,15 +319,35 @@ const fitSection = (render: CastRender): ReadonlyArray<string> => {
 };
 
 /** The render's summary: its fit rows (failing first), then a section a view, its side-by-side, its flagged rows, each finding and its answer. */
+/** What drew the render's views, as its summary says it: each view's puppet, or its rig at its sheet's one scale. */
+const drawnBy = (render: CastRender): string =>
+  Match.value(render.figure).pipe(
+    Match.when(
+      'cutout',
+      () =>
+        "Each view is drawn by its puppet (`CUTOUT`), cut from the kept sheet, at the sheet's own pixels",
+    ),
+    Match.orElse(
+      () =>
+        `Each view is drawn at its sheet's one scale (${Object.entries(render.kinds)
+          .map(([kind, k]) => `${kind} ${k.scale.toFixed(4)} px a unit`)
+          .join(', ')})`,
+    ),
+  );
+
 export const castRenderMarkdown = (render: CastRender): string =>
   [
     `# ${render.member}'s cast render ${render.n}`,
     '',
-    `${render.film}, ${render.at}. Figures file sha256 \`${render.riv}\`. Each view is drawn at its sheet's one scale (${Object.entries(
+    `${render.film}, ${render.at}. Figures file sha256 \`${render.riv}\`. ${drawnBy(render)}, its kept view on the left, the render on the right, at 1:1.${Object.entries(
       render.kinds,
     )
-      .map(([kind, k]) => `${kind} ${k.scale.toFixed(4)} px a unit`)
-      .join(', ')}), its kept view on the left, the render on the right, at 1:1.`,
+      .flatMap(([kind, k]) =>
+        Option.toArray(Option.fromUndefinedOr(k.drawMs)).map(
+          (ms) => ` ${kind} drew in ${ms.toFixed(2)} ms a frame.`,
+        ),
+      )
+      .join('')}`,
     '',
     ...fitSection(render),
     ...render.views.flatMap(viewSection),

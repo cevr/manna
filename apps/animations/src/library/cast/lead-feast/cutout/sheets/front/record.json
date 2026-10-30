@@ -1,0 +1,340 @@
+{
+  "view": "front",
+  "kind": "turnaround",
+  "size": [253, 678],
+  "box": [15, 191, 268, 869],
+  "command": "film concept parts in-its-order lead-feast --view turnaround-front",
+  "parts": [
+    {
+      "name": "armRight",
+      "kept": 10553,
+      "painted": 0
+    },
+    {
+      "name": "armLeft",
+      "kept": 10419,
+      "painted": 0
+    },
+    {
+      "name": "head",
+      "kept": 27318,
+      "painted": 0
+    },
+    {
+      "name": "sash",
+      "kept": 10123,
+      "painted": 128
+    },
+    {
+      "name": "footRight",
+      "kept": 3166,
+      "painted": 0
+    },
+    {
+      "name": "footLeft",
+      "kept": 3282,
+      "painted": 0
+    },
+    {
+      "name": "shadow",
+      "kept": 2992,
+      "painted": 0
+    },
+    {
+      "name": "robe",
+      "kept": 34846,
+      "painted": 1557
+    },
+    {
+      "name": "torso",
+      "kept": 21135,
+      "painted": 893
+    }
+  ],
+  "moving": ["armRight", "armLeft"],
+  "hiddenPx": 20688,
+  "carried": [],
+  "okra": {
+    "route": "subscription (okra image, Codex route; no --model)",
+    "input": "okra/input-ca8c1e8d4b10.png",
+    "prompt": "okra/prompt.txt",
+    "pad": {
+      "s": 0.43172938515319753,
+      "dx": -97.57084104462264,
+      "dy": 0
+    },
+    "budget": {
+      "calls": 3,
+      "allowance": null,
+      "used": 2
+    },
+    "calls": [
+      {
+        "n": 1,
+        "command": [
+          "okra",
+          "image",
+          "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where his two arms (sleeves and round hands) were cut away to make a cut-out puppet. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading (cream tunic on the viewer's left side, the teal-blue mantle on the viewer's right side, the white sash running round to each side of his waist). There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, face, hair, robe, sash, feet, size, position and framing.",
+          "--size",
+          "1024x1536",
+          "--ref",
+          "okra/input.png",
+          "-o",
+          "okra/answer-1.png"
+        ],
+        "input": "okra/input-ca8c1e8d4b10.png",
+        "out": "okra/answer-1.png",
+        "state": "laid",
+        "fit": {
+          "s": 0.43166192743676735,
+          "dx": -94.5051078272696,
+          "dy": 3.023798331479668,
+          "score": 23.230462240687675
+        },
+        "measures": {
+          "seam": {
+            "deltaE": 6.13,
+            "pairs": 100
+          },
+          "drift": {
+            "deltaE": 4.59,
+            "px": 66104
+          },
+          "grain": [
+            {
+              "part": "sash",
+              "painted": {
+                "robust": 0,
+                "plain": 0,
+                "n": 0
+              },
+              "kept": {
+                "robust": 1.48,
+                "plain": 7.34,
+                "n": 734
+              },
+              "verdict": "unverified"
+            },
+            {
+              "part": "robe",
+              "painted": {
+                "robust": 1.15,
+                "plain": 1.49,
+                "n": 121
+              },
+              "kept": {
+                "robust": 1.32,
+                "plain": 2.75,
+                "n": 2710
+              },
+              "verdict": "within"
+            },
+            {
+              "part": "torso",
+              "painted": {
+                "robust": 7.91,
+                "plain": 2.67,
+                "n": 2
+              },
+              "kept": {
+                "robust": 1.32,
+                "plain": 3.71,
+                "n": 3885
+              },
+              "verdict": "unverified"
+            }
+          ],
+          "paintUnder": [
+            {
+              "part": "armRight",
+              "px": 1621
+            },
+            {
+              "part": "armLeft",
+              "px": 957
+            }
+          ],
+          "paintedPx": 2578,
+          "visibleAtRest": 0,
+          "recomposeByteEqual": true
+        },
+        "missed": []
+      },
+      {
+        "n": 2,
+        "command": [
+          "okra",
+          "image",
+          "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where his two arms (sleeves and round hands) were cut away to make a cut-out puppet. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading (cream tunic on the viewer's left side, the teal-blue mantle on the viewer's right side, the white sash running round to each side of his waist). Each side of his body runs straight down from the outer end of his shoulder to the outer edge of his robe below, so his body under the arms is as wide as his shoulders and his robe, and the tunic and mantle fill everything inside that line with the same soft shade and fine paper grain the sheet paints beside each arm. There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, face, hair, robe, sash, feet, size, position and framing.",
+          "--size",
+          "1024x1536",
+          "--ref",
+          "okra/input.png",
+          "-o",
+          "okra/answer-2.png"
+        ],
+        "input": "okra/input-ca8c1e8d4b10.png",
+        "out": "okra/answer-2.png",
+        "state": "laid",
+        "fit": {
+          "s": 0.4315943853981916,
+          "dx": -94.50183150589484,
+          "dy": 3.047645929916712,
+          "score": 26.870413234454176
+        },
+        "measures": {
+          "seam": {
+            "deltaE": 7.72,
+            "pairs": 218
+          },
+          "drift": {
+            "deltaE": 5.86,
+            "px": 66104
+          },
+          "grain": [
+            {
+              "part": "sash",
+              "painted": {
+                "robust": 0.66,
+                "plain": 1.61,
+                "n": 529
+              },
+              "kept": {
+                "robust": 1.48,
+                "plain": 7.34,
+                "n": 734
+              },
+              "verdict": "outside"
+            },
+            {
+              "part": "robe",
+              "painted": {
+                "robust": 0.99,
+                "plain": 1.75,
+                "n": 1093
+              },
+              "kept": {
+                "robust": 1.32,
+                "plain": 2.81,
+                "n": 2816
+              },
+              "verdict": "within"
+            },
+            {
+              "part": "torso",
+              "painted": {
+                "robust": 0.99,
+                "plain": 4.63,
+                "n": 1303
+              },
+              "kept": {
+                "robust": 1.32,
+                "plain": 3.71,
+                "n": 3886
+              },
+              "verdict": "within"
+            }
+          ],
+          "paintUnder": [
+            {
+              "part": "armRight",
+              "px": 5272
+            },
+            {
+              "part": "armLeft",
+              "px": 4832
+            }
+          ],
+          "paintedPx": 10104,
+          "visibleAtRest": 0,
+          "recomposeByteEqual": true
+        },
+        "missed": ["drift", "grain"]
+      }
+    ],
+    "chosen": 1,
+    "fit": {
+      "s": 0.43166192743676735,
+      "dx": -94.5051078272696,
+      "dy": 3.023798331479668,
+      "score": 23.230462240687675
+    }
+  },
+  "measures": {
+    "seam": {
+      "deltaE": 6.13,
+      "pairs": 100
+    },
+    "drift": {
+      "deltaE": 4.59,
+      "px": 66104
+    },
+    "grain": [
+      {
+        "part": "sash",
+        "painted": {
+          "robust": 0,
+          "plain": 0,
+          "n": 0
+        },
+        "kept": {
+          "robust": 1.48,
+          "plain": 7.34,
+          "n": 734
+        },
+        "verdict": "unverified"
+      },
+      {
+        "part": "robe",
+        "painted": {
+          "robust": 1.15,
+          "plain": 1.49,
+          "n": 121
+        },
+        "kept": {
+          "robust": 1.32,
+          "plain": 2.75,
+          "n": 2710
+        },
+        "verdict": "within"
+      },
+      {
+        "part": "torso",
+        "painted": {
+          "robust": 7.91,
+          "plain": 2.67,
+          "n": 2
+        },
+        "kept": {
+          "robust": 1.32,
+          "plain": 3.71,
+          "n": 3885
+        },
+        "verdict": "unverified"
+      }
+    ],
+    "paintUnder": [
+      {
+        "part": "armRight",
+        "px": 1621
+      },
+      {
+        "part": "armLeft",
+        "px": 957
+      }
+    ],
+    "paintedPx": 2578,
+    "visibleAtRest": 0,
+    "recomposeByteEqual": true
+  },
+  "bars": {
+    "seamDeltaE": 10,
+    "driftDeltaE": 5,
+    "grainWithin": 0.5,
+    "visibleAtRest": 0,
+    "leastSeamPairs": 20,
+    "leastGrainWindows": 90
+  },
+  "missed": [],
+  "named": []
+}

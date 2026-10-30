@@ -73,3 +73,5 @@ export {
   verse,
 } from './card.ts';
 export { glCanvas } from './gl.ts';
+export { type CutoutEase, type CutoutEaseFrame, type CutoutView, cutoutTable } from './cast.ts';
+export { type PuppetLook, type PuppetPose, type PuppetSpec } from './puppet.ts';

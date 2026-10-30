@@ -1,0 +1,252 @@
+{
+  "clip": {
+    "path": "tmp/orchestrate/p5/world-proto/fal-raise/clip-b-first-only.mp4",
+    "sha256": "d7bf5f2ebe36974000a4069e68e6ee637b56d12152933b7d3fd12e007ea20376",
+    "frames": 124,
+    "fps": 24,
+    "endpoint": "minimax/h3-max/image-to-video",
+    "seed": 7,
+    "prompt": "Flat 2D cut-paper cartoon animation on a static paper background. The boy stands still and slowly raises his right hand (on the left side of the picture), lifting a small baby bottle from his side up to shoulder height beside his face, then holds the pose. Only the arm moves; body, feet and head stay in place. Locked camera, no zoom, no pan, same flat colours and thick dark outline throughout.",
+    "request": "01a182f9-9e48-7e53-8cc4-aff59501a583"
+  },
+  "fps": 24,
+  "count": 48,
+  "keys": [
+    {
+      "id": "rest",
+      "upper": 0,
+      "forearm": 0,
+      "frames": [0, 13],
+      "clipFrame": 0
+    },
+    {
+      "id": "k2",
+      "upper": 24,
+      "forearm": -39,
+      "frames": [14, 29],
+      "clipFrame": 16
+    },
+    {
+      "id": "k3",
+      "upper": 26,
+      "forearm": -67,
+      "frames": [30, 33],
+      "clipFrame": 31
+    },
+    {
+      "id": "k4",
+      "upper": 26,
+      "forearm": -104,
+      "frames": [34, 35],
+      "clipFrame": 34
+    },
+    {
+      "id": "k5",
+      "upper": 26,
+      "forearm": -137,
+      "frames": [36, 37],
+      "clipFrame": 36
+    },
+    {
+      "id": "k6",
+      "upper": 35,
+      "forearm": -163,
+      "frames": [38, 47],
+      "clipFrame": 44
+    }
+  ],
+  "frames": [
+    {
+      "key": "rest",
+      "theta": 0
+    },
+    {
+      "key": "rest",
+      "theta": 0
+    },
+    {
+      "key": "rest",
+      "theta": 0
+    },
+    {
+      "key": "rest",
+      "theta": 0
+    },
+    {
+      "key": "rest",
+      "theta": 0
+    },
+    {
+      "key": "rest",
+      "theta": 0
+    },
+    {
+      "key": "rest",
+      "theta": 0
+    },
+    {
+      "key": "rest",
+      "theta": 0
+    },
+    {
+      "key": "rest",
+      "theta": 0
+    },
+    {
+      "key": "rest",
+      "theta": 0
+    },
+    {
+      "key": "rest",
+      "theta": 1.5
+    },
+    {
+      "key": "rest",
+      "theta": 1.5
+    },
+    {
+      "key": "rest",
+      "theta": 1
+    },
+    {
+      "key": "rest",
+      "theta": 1
+    },
+    {
+      "key": "k2",
+      "theta": 5
+    },
+    {
+      "key": "k2",
+      "theta": 5
+    },
+    {
+      "key": "k2",
+      "theta": 0
+    },
+    {
+      "key": "k2",
+      "theta": 0
+    },
+    {
+      "key": "k2",
+      "theta": -3
+    },
+    {
+      "key": "k2",
+      "theta": -3
+    },
+    {
+      "key": "k2",
+      "theta": -4.5
+    },
+    {
+      "key": "k2",
+      "theta": -4.5
+    },
+    {
+      "key": "k2",
+      "theta": -5
+    },
+    {
+      "key": "k2",
+      "theta": -5
+    },
+    {
+      "key": "k2",
+      "theta": -4.5
+    },
+    {
+      "key": "k2",
+      "theta": -4.5
+    },
+    {
+      "key": "k2",
+      "theta": -3.5
+    },
+    {
+      "key": "k2",
+      "theta": -3.5
+    },
+    {
+      "key": "k2",
+      "theta": -3
+    },
+    {
+      "key": "k2",
+      "theta": -3
+    },
+    {
+      "key": "k3",
+      "theta": 5
+    },
+    {
+      "key": "k3",
+      "theta": 5
+    },
+    {
+      "key": "k3",
+      "theta": -5
+    },
+    {
+      "key": "k3",
+      "theta": -5
+    },
+    {
+      "key": "k4",
+      "theta": 0
+    },
+    {
+      "key": "k4",
+      "theta": 0
+    },
+    {
+      "key": "k5",
+      "theta": 0
+    },
+    {
+      "key": "k5",
+      "theta": 0
+    },
+    {
+      "key": "k6",
+      "theta": -14.5
+    },
+    {
+      "key": "k6",
+      "theta": -14.5
+    },
+    {
+      "key": "k6",
+      "theta": -14.5
+    },
+    {
+      "key": "k6",
+      "theta": -14.5
+    },
+    {
+      "key": "k6",
+      "theta": -8.5
+    },
+    {
+      "key": "k6",
+      "theta": -8.5
+    },
+    {
+      "key": "k6",
+      "theta": 0
+    },
+    {
+      "key": "k6",
+      "theta": 0
+    },
+    {
+      "key": "k6",
+      "theta": 0
+    },
+    {
+      "key": "k6",
+      "theta": 0
+    }
+  ]
+}

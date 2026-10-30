@@ -12,6 +12,7 @@
 // table to the members' records: every kept view, no other, each in its kept
 // box. Pure.
 
+import { cutoutTable } from '@manna/film/canvas';
 import { type CastProp, type CastView, castTable } from '@manna/film/rive';
 import {
   HAND_ART,
@@ -21,6 +22,17 @@ import {
   tracedHands,
   type tracedFigure,
 } from '@manna/film/style';
+import { PUPPETS as LEAD_PUPPETS } from '../../../library/cast/lead-feast/cutout/puppets.ts';
+import { PUPPETS as SOWER_PUPPETS } from '../../../library/cast/sower/cutout/puppets.ts';
+import { PUPPETS as CHILD_PUPPETS } from '../../../library/cast/villager-child/cutout/puppets.ts';
+import { PUPPETS as TODDLER_PUPPETS } from '../../../library/cast/villager-toddler/cutout/puppets.ts';
+import { PUPPETS as FEAST_MOTHER_PUPPETS } from '../cast/feast-mother/cutout/puppets.ts';
+import { PUPPETS as IDEA_VILLAGERS_PUPPETS } from '../cast/idea-villagers/cutout/puppets.ts';
+import { PUPPETS as PAUL_PUPPETS } from '../../../library/cast/paul/cutout/puppets.ts';
+import { PUPPETS as JEREMIAH_PUPPETS } from '../../../library/cast/jeremiah/cutout/puppets.ts';
+import { own } from '../../../library/cutout/poses.ts';
+import { RAISE as LEAD_RAISE } from '../../../library/cast/lead-feast/cutout/raise.ts';
+import { poses1View as leadPoses1 } from '../../../library/cast/lead-feast/cutout/poses.ts';
 import * as LEAD_BACK from '../../../library/cast/lead-feast/rig/back-traced.ts';
 import * as LEAD_DRINKING from '../../../library/cast/lead-feast/rig/drinking-traced.ts';
 import * as LEAD_FRONT from '../../../library/cast/lead-feast/rig/front-traced.ts';
@@ -61,6 +73,353 @@ const coloursOf = (
     ...(p.shade === undefined ? [] : [p.shade]),
     ...(p.light === undefined ? [] : [p.light]),
   ]);
+
+/**
+ * The sower's colour classes, each sample the 3 by 3 median of his kept
+ * views' own pixels (`cast-sheet/views/<view>.png`, x,y in the view): his
+ * linen tunic (front 127,420 127,480 35,300 127,230 100,500; poses-1 120,215
+ * 220,450 330,250), his olive mantle, lit and shaded (front 70,300 75,370
+ * 160,285 170,300 185,260 200,300; poses-1 185,300 275,300), his walnut bag
+ * and strap (front 195,380 180,400; poses-1 285,410 300,390 320,400 225,240
+ * 250,300) and his skin (front 100,95 128,70 30,360 228,365 160,100; poses-1
+ * 30,210 360,360 200,130 225,110). His belt (#684430) is darker than luma 90,
+ * so it reads as his line and is no class.
+ */
+const SOWER_CLASSES = {
+  linen: ['#dfc6ab', '#d8bfa4', '#ead0b1', '#e3c9a9', '#e6cbaa', '#dfbc97', '#e0bc96', '#dfbc98'],
+  olive: ['#787456', '#797454', '#736f52', '#747055', '#645f58', '#615a52', '#8e7b4e', '#88784d'],
+  walnut: ['#946452', '#b87d58', '#ad7750', '#b17951', '#b07a53', '#82593b', '#a17351'],
+  skin: [
+    '#eaad7b',
+    '#ebac78',
+    '#e8ab7a',
+    '#e09e78',
+    '#e9ac7c',
+    '#e29d6c',
+    '#dc9768',
+    '#e49f6a',
+    '#d59265',
+  ],
+} as const;
+
+/**
+ * The feast mother's colour classes, each sample the 3 by 3 median of her
+ * kept views' own pixels (`cast-sheet/views/<view>.png`, x,y in the view):
+ * her dusty-blue robe and sleeves, lit and shaded (front 60,300 40,450 80,520
+ * 150,350 160,450 120,500; back 108,450 60,450 160,450; poses-1 30,380 280,380
+ * 280,450; poses-3 100,600 230,650 120,300 260,550), her cream veil with the
+ * baby's swaddle, and the veil's warm shade (front 28,200 45,140 190,220
+ * 60,170 170,170; back 108,150 60,200 150,200; poses-1 100,350 170,440
+ * 300,240; poses-3 200,350 250,340 180,340 270,330 70,250 60,280), and her
+ * skin with the baby's (front 100,120 120,110 28,380 186,375 70,100; poses-3
+ * 250,240 150,150 225,410). The veil and the swaddle are one class: their
+ * colours lie within a few units of each other (#f8e4c7 against #f6ddbd), so
+ * two classes would split one colour. Her hair (#291309) is darker than luma
+ * 90, so it reads as her line and is no class; the clay cup of poses-1 is
+ * too small a patch for a class of its own and counts as its nearest.
+ */
+const FEAST_MOTHER_CLASSES = {
+  blue: [
+    '#5f94b9',
+    '#70a5c8',
+    '#557ca6',
+    '#547aa7',
+    '#4d6394',
+    '#5378a4',
+    '#4e6999',
+    '#5d8bb3',
+    '#4f6899',
+    '#6998bc',
+    '#4777a2',
+    '#4f6893',
+    '#5f8eb1',
+    '#526e99',
+    '#5889af',
+    '#536f9a',
+  ],
+  cream: [
+    '#f8e4c7',
+    '#f7e0c3',
+    '#e2c6b7',
+    '#c1a18e',
+    '#e6cdbd',
+    '#f7e2c3',
+    '#f7e0c1',
+    '#e6cfbe',
+    '#f6dbb9',
+    '#e4c9b1',
+    '#e2c2be',
+    '#f6ddbd',
+    '#f1d7b9',
+    '#fef7e3',
+    '#e3cdbe',
+    '#f2d8bc',
+    '#f0d5bb',
+  ],
+  skin: ['#fec086', '#fdb981', '#fdb77d', '#fdb67c', '#fdc084', '#febb82', '#feb880', '#ef9f70'],
+} as const;
+
+/**
+ * The villagers' colour classes, read off their kept poses sheet (the child's
+ * poses-5, the toddler's poses-1 and poses-2; x,y in the view's crop): their
+ * linen tunic and its warm shade (child 156,281 199,140 120,290 104,326
+ * 87,202; toddler poses-1 177,196 156,146 145,128 105,138 87,178, poses-2
+ * 80,194 117,154 60,221 65,146), their skin (child 59,271 97,52 95,91 70,95
+ * 124,117; toddler poses-1 227,115 104,53 35,52, poses-2 126,44 86,43 46,82),
+ * the lavender of their ground shadow (child 112,386 109,387 119,385 189,384
+ * 195,385; toddler poses-2 101,241 80,240 68,239 160,230) and their sandals'
+ * lit leather (child 133,370 131,369 143,354; toddler poses-1 216,233 215,233
+ * 214,267, poses-2 30,203 132,207 41,209). Their hair (#341c15, #312218) is
+ * darker than luma 90, so it reads as their line and is no class. The
+ * shadow's pale feathered edge is not a sample: the cool white halo round
+ * their outline (#d9d1c5 to #f2f0f1, which the un-matte clears) lies nearer
+ * it than the linen, so samples there would class that halo as shadow
+ * (measured: 58 px on the toddler's poses-1, which has no ground shadow).
+ */
+const CHILD_CLASSES = {
+  linen: ['#cdaca4', '#d2b4aa', '#dbbca7', '#f0d2af', '#f4d7b1'],
+  skin: ['#ea976e', '#f9a873', '#faac77', '#fdae76', '#fdb37d'],
+  lavender: ['#b5a5cc', '#bcaacf', '#bcadd4', '#c7b2ca'],
+  sandal: ['#8f4c2e', '#935131', '#c2714c'],
+} as const;
+const TODDLER_CLASSES = {
+  linen: [
+    '#cca9a8',
+    '#d5b6b3',
+    '#e8c9b5',
+    '#f0d1ae',
+    '#f7dab8',
+    '#c29e90',
+    '#cfada5',
+    '#eed1ab',
+    '#f0d3b0',
+  ],
+  skin: ['#e79066', '#fcae7a', '#fdb37a', '#e9956f', '#fcaf78', '#fdb67d'],
+  lavender: ['#ae99c9', '#bba7cd', '#beacd2'],
+  sandal: ['#b36243', '#b56646', '#b36a49', '#965225', '#a5562b', '#a86942'],
+} as const;
+
+/**
+ * The IDEA villagers' colour classes, each sample the 3 by 3 median of their
+ * kept views' own pixels (`cast-sheet/views/<view>.png`, x,y in the view):
+ * their linen, the grown villager's headcloth and tunic with the baby's wrap,
+ * lit and in its warm shade (poses-3 181,13 191,9 189,11 213,19 145,25
+ * 225,165; poses-4 75,123 67,117 123,121; poses-6 109,9 93,9 139,19 141,19
+ * 133,21), the linen's far side turned toward violet with the baby's violet
+ * ground shadow (poses-3 215,163 209,163 215,169; poses-4 107,117 51,195
+ * 9,191; poses-6 133,151 177,205 155,299), and their skin, lit and shaded
+ * (poses-3 199,59 183,59 201,59; poses-4 87,23 109,19 85,19 101,21; poses-6
+ * 101,55 91,55 109,55). Every view holds all three. Their hair, beard and the
+ * sandals' leather lie at or under luma 90, so they read as the line and are
+ * no class; the baby's small brown tuft counts as its nearest.
+ */
+const IDEA_VILLAGERS_CLASSES = {
+  linen: [
+    '#f1d3ae',
+    '#f6dfb8',
+    '#eecda4',
+    '#debca1',
+    '#fde1ba',
+    '#e5c6b3',
+    '#eccaa5',
+    '#f4d6b3',
+    '#ddb9ae',
+    '#f4d9bd',
+    '#f6e8c8',
+    '#d9beb2',
+    '#d5b9ae',
+    '#dec2b2',
+  ],
+  violet: [
+    '#c7a8ac',
+    '#c9acb3',
+    '#d1b0b2',
+    '#c1a3af',
+    '#c2b7de',
+    '#ccbdd9',
+    '#c3a7b0',
+    '#bea1b3',
+    '#bba2b1',
+  ],
+  skin: [
+    '#f8a26d',
+    '#f19b68',
+    '#faa470',
+    '#f6ab75',
+    '#f7a66b',
+    '#fcbd7e',
+    '#f59f66',
+    '#fca16b',
+    '#f39760',
+    '#fda66f',
+  ],
+} as const;
+
+/**
+ * Paul's colour classes, each sample the 3 by 3 median of his kept heads
+ * views' own pixels (`library/cast/paul/cast-sheet/views/heads-<n>.png`,
+ * x,y in the view, heads-1 to heads-6 in order). Every view holds all four.
+ * Line is luma under 90 (his outline and his eyes), so it is no class.
+ * - `skin`: his face and bald crown, lit, in shade, and the crown's light
+ *   (125,13 153,17 107,11; 109,11 123,19 79,15; 109,11 137,25 95,13; 129,13
+ *   157,29 119,13; 131,13 147,21 99,13; 133,13 163,31 113,13).
+ * - `mantle`: his slate-blue cloak over the shoulders, lit and its far side
+ *   turned toward violet (61,247 179,221; 59,247 193,219; 65,255 173,227;
+ *   63,247 181,239; 59,257 181,241; 69,251 189,247).
+ * - `tunic`: the linen V at his collar, lit and in shade (81,261 133,267;
+ *   101,253 137,261; 79,267 129,269; 83,265 133,275; 83,263 139,277; 83,259
+ *   103,275).
+ * - `hair`: his grey-brown beard and the brown hair at the sides of his head
+ *   (57,157 193,135; 83,183 17,109; 41,165 31,45; 53,153 81,17; 57,149
+ *   49,137; 53,139 109,11). Both lie above luma 100, so they are not line, and
+ *   without their own class each pixel would count as the cloak's or skin's.
+ */
+const PAUL_CLASSES = {
+  skin: [
+    '#e8ae78',
+    '#de9d6d',
+    '#f5ce9c',
+    '#ebaf7b',
+    '#dd9d6e',
+    '#f8c994',
+    '#ebae7d',
+    '#df9e6e',
+    '#fbcb95',
+    '#eaac77',
+    '#de9d6c',
+    '#facd9b',
+    '#ecae7b',
+    '#df9e6f',
+    '#f7c795',
+    '#ebac79',
+    '#de9c6e',
+    '#fdc894',
+  ],
+  mantle: [
+    '#86898f',
+    '#616072',
+    '#81838e',
+    '#64637d',
+    '#898a8f',
+    '#646378',
+    '#83858a',
+    '#64637d',
+    '#8a898f',
+    '#68667f',
+    '#86858b',
+    '#65647d',
+  ],
+  tunic: [
+    '#efd6ad',
+    '#e6c9a0',
+    '#eed2a5',
+    '#e8cba0',
+    '#ecd1a6',
+    '#e7cba1',
+    '#eccfa4',
+    '#e5c597',
+    '#eccea2',
+    '#e6c79c',
+    '#edd0a4',
+    '#eccda1',
+  ],
+  hair: [
+    '#8c6f56',
+    '#8e6041',
+    '#82664e',
+    '#8f6642',
+    '#876c54',
+    '#8b6644',
+    '#886e57',
+    '#896a4e',
+    '#896d55',
+    '#82664d',
+    '#856954',
+    '#8a6342',
+  ],
+} as const;
+
+/**
+ * Jeremiah's colour classes, each sample the 3 by 3 median of his kept heads
+ * views' own pixels (`library/cast/jeremiah/cast-sheet/views/heads-<n>.png`,
+ * x,y in the view, heads-1 to heads-6 in order). Every view holds all three.
+ * Line is luma under 90 (his outline, his eyes and his dark beard), so it is
+ * no class. His paper is 252,243,226; the headcloth's lightest edge lies
+ * within 15 of it, so no sample is taken there.
+ * - `linen`: his headcloth, lit and on its shaded hanging side, and the linen
+ *   V of his tunic at the collar (133,15 185,90 125,280; 121,15 185,90
+ *   125,280; 115,17 175,60 125,280; 123,15 185,90 125,280; 133,15 185,90
+ *   125,280; 113,15 185,90 125,280).
+ * - `skin`: his face, lit and in shade (77,79 123,91; 67,113 123,107; 61,75
+ *   127,97; 117,79 160,95; 117,69 160,95; 115,79 160,95).
+ * - `olive`: the grey-olive band round his headcloth, in shade and lit, and
+ *   his robe over the shoulders, lit and in shade. Band and robe are one
+ *   paint, so they are one class (95,39 79,47 75,229 197,249; 151,57 109,65
+ *   79,222 201,236; 115,43 91,39 71,228 169,240; 129,43 75,53 77,226 201,248;
+ *   119,35 91,35 67,232 201,250; 105,47 85,43 67,232 201,252).
+ */
+const JEREMIAH_CLASSES = {
+  linen: [
+    '#e3cdaf',
+    '#cab5a4',
+    '#e6cba9',
+    '#e0c9a9',
+    '#d4bfb1',
+    '#e5caa8',
+    '#e8cfae',
+    '#d0b6a3',
+    '#e6cdad',
+    '#e1c9ad',
+    '#d8c1af',
+    '#e6ccaa',
+    '#e5cdae',
+    '#d9c2af',
+    '#e6ccab',
+    '#e1c9ac',
+    '#d6c0ad',
+    '#e8ceb0',
+  ],
+  skin: [
+    '#e3a576',
+    '#d7946f',
+    '#e0a477',
+    '#d2906d',
+    '#e9a879',
+    '#d7956e',
+    '#e2a275',
+    '#d6926f',
+    '#e0a175',
+    '#d59270',
+    '#e1a279',
+    '#d59371',
+  ],
+  olive: [
+    '#7c775f',
+    '#807f61',
+    '#8f8566',
+    '#7e7867',
+    '#7b715e',
+    '#80765e',
+    '#908568',
+    '#756d5a',
+    '#7b7259',
+    '#867c61',
+    '#867d62',
+    '#8e8677',
+    '#7b725b',
+    '#8a7f63',
+    '#887d61',
+    '#868372',
+    '#7c735a',
+    '#887e61',
+    '#847a5f',
+    '#807a68',
+    '#7f765d',
+    '#897f64',
+    '#8e8569',
+    '#817b6c',
+  ],
+} as const;
 
 /**
  * Each member's colour classes for his fit rows (`film concept render`): a
@@ -108,6 +467,45 @@ export const FIT_CLASSES = {
       ],
     },
   },
+  'feast-mother': {
+    blue: { sheet: FEAST_MOTHER_CLASSES.blue, paper: FEAST_MOTHER_CLASSES.blue },
+    cream: { sheet: FEAST_MOTHER_CLASSES.cream, paper: FEAST_MOTHER_CLASSES.cream },
+    skin: { sheet: FEAST_MOTHER_CLASSES.skin, paper: FEAST_MOTHER_CLASSES.skin },
+  },
+  'idea-villagers': {
+    linen: { sheet: IDEA_VILLAGERS_CLASSES.linen, paper: IDEA_VILLAGERS_CLASSES.linen },
+    violet: { sheet: IDEA_VILLAGERS_CLASSES.violet, paper: IDEA_VILLAGERS_CLASSES.violet },
+    skin: { sheet: IDEA_VILLAGERS_CLASSES.skin, paper: IDEA_VILLAGERS_CLASSES.skin },
+  },
+  jeremiah: {
+    linen: { sheet: JEREMIAH_CLASSES.linen, paper: JEREMIAH_CLASSES.linen },
+    skin: { sheet: JEREMIAH_CLASSES.skin, paper: JEREMIAH_CLASSES.skin },
+    olive: { sheet: JEREMIAH_CLASSES.olive, paper: JEREMIAH_CLASSES.olive },
+  },
+  paul: {
+    skin: { sheet: PAUL_CLASSES.skin, paper: PAUL_CLASSES.skin },
+    mantle: { sheet: PAUL_CLASSES.mantle, paper: PAUL_CLASSES.mantle },
+    tunic: { sheet: PAUL_CLASSES.tunic, paper: PAUL_CLASSES.tunic },
+    hair: { sheet: PAUL_CLASSES.hair, paper: PAUL_CLASSES.hair },
+  },
+  sower: {
+    linen: { sheet: SOWER_CLASSES.linen, paper: SOWER_CLASSES.linen },
+    olive: { sheet: SOWER_CLASSES.olive, paper: SOWER_CLASSES.olive },
+    walnut: { sheet: SOWER_CLASSES.walnut, paper: SOWER_CLASSES.walnut },
+    skin: { sheet: SOWER_CLASSES.skin, paper: SOWER_CLASSES.skin },
+  },
+  'villager-child': {
+    linen: { sheet: CHILD_CLASSES.linen, paper: CHILD_CLASSES.linen },
+    skin: { sheet: CHILD_CLASSES.skin, paper: CHILD_CLASSES.skin },
+    lavender: { sheet: CHILD_CLASSES.lavender, paper: CHILD_CLASSES.lavender },
+    sandal: { sheet: CHILD_CLASSES.sandal, paper: CHILD_CLASSES.sandal },
+  },
+  'villager-toddler': {
+    linen: { sheet: TODDLER_CLASSES.linen, paper: TODDLER_CLASSES.linen },
+    skin: { sheet: TODDLER_CLASSES.skin, paper: TODDLER_CLASSES.skin },
+    lavender: { sheet: TODDLER_CLASSES.lavender, paper: TODDLER_CLASSES.lavender },
+    sandal: { sheet: TODDLER_CLASSES.sandal, paper: TODDLER_CLASSES.sandal },
+  },
 } as const;
 
 /** Every kept sheet is drawn 1536 by 1024. */
@@ -116,19 +514,72 @@ const SHEET = { width: 1536, height: 1024 } as const;
 /** The series lead on his turnaround: his front, hair to soles 440 units (`lead.ts`). */
 const LEAD_TURNAROUND = 1 / LEAD.SHEETS.turnaround.scale;
 
+/** The sower on his turnaround: his front's ink, crown to soles, is 549 rows, 440 units. */
+const SOWER_TURNAROUND = 549 / 440;
+
+/** The sower on his poses: poses-4, his front standing, crown to soles 586 rows, 440 units. */
+const SOWER_POSES = 586 / 440;
+
+/** The villagers on their one poses sheet: its view 6, the grown villager standing at rest, ink crown to soles 516 rows (250 to 765), 440 units. */
+const VILLAGER_POSES = 516 / 440;
+
+/** The feast mother on her turnaround: her front's ink, crown to soles, is 600 rows (194 to 793), 440 units. */
+const FEAST_MOTHER_TURNAROUND = 600 / 440;
+
+/** The feast mother on her poses: poses-3, her front standing with the baby, ink crown to soles 814 rows (97 to 910), 440 units. */
+const FEAST_MOTHER_POSES = 814 / 440;
+
+/** The IDEA villagers on their poses sheet: poses-6, the grown villager standing at rest, ink crown to soles 512 rows (248 to 759, his kept box), 440 units. */
+const IDEA_VILLAGERS_POSES = 512 / 440;
+
+/**
+ * The bust scale of a heads sheet, read off the lead's: his busts have no
+ * feet, so it is 1.13 of his turnaround's, the mean of his eyes' spacing (52
+ * px on heads-4 against 46.5 on the turnaround's front) and his head's width
+ * across his ears at his eyes' row (185 px against 162).
+ *
+ * Paul's heads sheet takes it too: his busts have no rig, so no view of his is
+ * a canon anchor, and his sheet shares the lead's bust framing (each bust
+ * crown to cut 297 to 313 rows). Jeremiah's heads sheet takes it as well: his
+ * busts have no rig either, so no view of his is a canon anchor. The cut-out
+ * page reads only the sheet's size.
+ */
+const HEADS_BUST = LEAD_TURNAROUND * 1.13;
+
 /**
  * Each member's sheets: their size and one scale, sheet pixels a canon unit,
  * each read off the sheet's anchor view. The lead's poses: poses-5, his
- * front at rest, hair (row 225) to soles (row 829) 440 units. His heads, busts
- * with no feet: 1.13 of his turnaround's, the mean of his eyes' spacing (52
- * px on heads-4 against 46.5 on the turnaround's front) and his head's width
- * across his ears at his eyes' row (185 px against 162).
+ * front at rest, hair (row 225) to soles (row 829) 440 units. His heads,
+ * Paul's and Jeremiah's: the bust scale (`HEADS_BUST`).
  */
 export const SHEETS = {
   'lead-feast': {
     turnaround: { ...SHEET, scale: LEAD_TURNAROUND },
     poses: { ...SHEET, scale: 1 / LEAD.SHEETS.poses.scale },
-    heads: { ...SHEET, scale: LEAD_TURNAROUND * 1.13 },
+    heads: { ...SHEET, scale: HEADS_BUST },
+  },
+  'feast-mother': {
+    turnaround: { ...SHEET, scale: FEAST_MOTHER_TURNAROUND },
+    poses: { ...SHEET, scale: FEAST_MOTHER_POSES },
+  },
+  'idea-villagers': {
+    poses: { ...SHEET, scale: IDEA_VILLAGERS_POSES },
+  },
+  jeremiah: {
+    heads: { ...SHEET, scale: HEADS_BUST },
+  },
+  paul: {
+    heads: { ...SHEET, scale: HEADS_BUST },
+  },
+  sower: {
+    turnaround: { ...SHEET, scale: SOWER_TURNAROUND },
+    poses: { ...SHEET, scale: SOWER_POSES },
+  },
+  'villager-child': {
+    poses: { ...SHEET, scale: VILLAGER_POSES },
+  },
+  'villager-toddler': {
+    poses: { ...SHEET, scale: VILLAGER_POSES },
   },
 } as const;
 
@@ -648,3 +1099,99 @@ export const CAST = castTable({
     },
   },
 });
+
+/**
+ * The views a member has a puppet for (`film concept render --figure
+ * cutout`): each kept view his part sheet's puppet at rest (`own`), standing
+ * where the kept view stands, and each pose view his fitted puppet
+ * (`fitted`), held to the same fit rows as his rig's view. `CAST` is the
+ * rigs' table, unchanged beside it.
+ */
+export const CUTOUT = cutoutTable({
+  'lead-feast': {
+    turnaround: {
+      front: own(LEAD_FIT.turnaround.front, LEAD_PUPPETS.front),
+      threeQuarterLeft: own(LEAD_FIT.turnaround.threeQuarterLeft, LEAD_PUPPETS.threeQuarterLeft),
+    },
+    poses: {
+      'poses-1': leadPoses1(LEAD_FIT.poses['poses-1']),
+    },
+    heads: {
+      'heads-4': own(LEAD_FIT.heads['heads-4'], LEAD_PUPPETS['heads-4']),
+    },
+  },
+  'feast-mother': {
+    turnaround: {
+      front: own(undefined, FEAST_MOTHER_PUPPETS.front),
+      threeQuarterLeft: own(undefined, FEAST_MOTHER_PUPPETS.threeQuarterLeft),
+      back: own(undefined, FEAST_MOTHER_PUPPETS.back),
+      profileLeft: own(undefined, FEAST_MOTHER_PUPPETS.profileLeft),
+      profileRight: own(undefined, FEAST_MOTHER_PUPPETS.profileRight),
+      threeQuarterRight: own(undefined, FEAST_MOTHER_PUPPETS.threeQuarterRight),
+    },
+    poses: {
+      'poses-1': own(undefined, FEAST_MOTHER_PUPPETS['poses-1']),
+      'poses-2': own(undefined, FEAST_MOTHER_PUPPETS['poses-2']),
+      'poses-3': own(undefined, FEAST_MOTHER_PUPPETS['poses-3']),
+    },
+  },
+  'idea-villagers': {
+    poses: {
+      'poses-3': own(undefined, IDEA_VILLAGERS_PUPPETS['poses-3']),
+      'poses-4': own(undefined, IDEA_VILLAGERS_PUPPETS['poses-4']),
+      'poses-6': own(undefined, IDEA_VILLAGERS_PUPPETS['poses-6']),
+    },
+  },
+  jeremiah: {
+    heads: {
+      'heads-1': own(undefined, JEREMIAH_PUPPETS['heads-1']),
+      'heads-2': own(undefined, JEREMIAH_PUPPETS['heads-2']),
+      'heads-3': own(undefined, JEREMIAH_PUPPETS['heads-3']),
+      'heads-4': own(undefined, JEREMIAH_PUPPETS['heads-4']),
+      'heads-5': own(undefined, JEREMIAH_PUPPETS['heads-5']),
+      'heads-6': own(undefined, JEREMIAH_PUPPETS['heads-6']),
+    },
+  },
+  paul: {
+    heads: {
+      'heads-1': own(undefined, PAUL_PUPPETS['heads-1']),
+      'heads-2': own(undefined, PAUL_PUPPETS['heads-2']),
+      'heads-3': own(undefined, PAUL_PUPPETS['heads-3']),
+      'heads-4': own(undefined, PAUL_PUPPETS['heads-4']),
+      'heads-5': own(undefined, PAUL_PUPPETS['heads-5']),
+      'heads-6': own(undefined, PAUL_PUPPETS['heads-6']),
+    },
+  },
+  sower: {
+    turnaround: {
+      front: own(undefined, SOWER_PUPPETS.front),
+      threeQuarterLeft: own(undefined, SOWER_PUPPETS.threeQuarterLeft),
+      back: own(undefined, SOWER_PUPPETS.back),
+      profileLeft: own(undefined, SOWER_PUPPETS.profileLeft),
+      profileRight: own(undefined, SOWER_PUPPETS.profileRight),
+      threeQuarterRight: own(undefined, SOWER_PUPPETS.threeQuarterRight),
+    },
+    poses: {
+      'poses-1': own(undefined, SOWER_PUPPETS['poses-1']),
+      'poses-2': own(undefined, SOWER_PUPPETS['poses-2']),
+      'poses-3': own(undefined, SOWER_PUPPETS['poses-3']),
+      'poses-4': own(undefined, SOWER_PUPPETS['poses-4']),
+    },
+  },
+  'villager-child': {
+    poses: {
+      'poses-5': own(undefined, CHILD_PUPPETS['poses-5']),
+    },
+  },
+  'villager-toddler': {
+    poses: {
+      'poses-1': own(undefined, TODDLER_PUPPETS['poses-1']),
+      'poses-2': own(undefined, TODDLER_PUPPETS['poses-2']),
+    },
+  },
+});
+
+/** Each member's eases (`film concept ease`): the lead's bottle raise, drawn from keys. */
+export const EASES = {
+  'lead-feast': { raise: LEAD_RAISE },
+};
