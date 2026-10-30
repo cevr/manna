@@ -20,8 +20,8 @@
  * coming back down as the list nears its top, covers it.
  *
  * Tapping the field enters search mode: a bar with the focused text field
- * and Cancel, over the results. A topic or passage tapped in `About this
- * hymn` enters it too, with its query and the keyboard down (`searchOpen`).
+ * and Cancel, over the results. A passage tapped in `About this hymn`
+ * enters it too, with its query and the keyboard down (`searchOpen`).
  * The list stays mounted beneath, untouchable and hidden from assistive
  * technology, so it keeps its place. Cancel, or
  * Android's Back while the home screen is in focus (`searchBack`), clears
