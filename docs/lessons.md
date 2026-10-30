@@ -4573,7 +4573,7 @@ The form of an entry, each field on its own line:
 - **Date:** 2026-10-29
 - **Kind:** review
 - **Said:** "The joint blend's weight drops to 0 at the edge of its box on a limb that is bent at rest."
-- **Source:** puppet-engine/round-1-review.md R1
+- **Source:** puppet-engine/round-1-review.md F1 (headed R1)
 - **Wrong:** On a limb bent at rest, the child's weight inside the joint's blend read the child's axis alone, so it was 0.29 at 73°, 0.5 at 90° and 0.9 at 135° at the parent-side edge of the blend and 0 just past it; an elbow turn parted two neighbouring vertices 3 px apart by up to 14.9 px and tore the sleeve.
 - **Cause:** The blend was a box on the two bones' axes with a weight from one of them, and its test skipped the vertices near the elbow, so no case saw the weight at the box's edge.
 - **Guard:** code: `packages/film/src/core/puppet.test.ts` `an elbow turn tears no mesh edge on a limb bent at rest 90° or 135°`
@@ -4583,7 +4583,7 @@ The form of an entry, each field on its own line:
 - **Date:** 2026-10-29
 - **Kind:** review
 - **Said:** "Where two joints' blends overlap on one bone, the weight jumps where the joint chosen flips."
-- **Source:** puppet-engine/round-2-review.md R7
+- **Source:** puppet-engine/round-2-review.md F7 (headed R7)
 - **Wrong:** A vertex held at most two weights, so where the elbow's and the wrist's blends overlapped on a short forearm it kept one joint's k and dropped the other's; at the line where the choice flipped, a 60° elbow turn parted 3 px neighbours by up to 32 px (villager-child poses-5 armLeft).
 - **Cause:** The tear test's fixtures had two bones, so no case put two joints' blends on one bone.
 - **Guard:** code: `packages/film/src/core/puppet.test.ts` `an elbow turn tears no mesh edge on a limb bent at rest 90° or 135°` (its 3-bone case)
@@ -4593,7 +4593,7 @@ The form of an entry, each field on its own line:
 - **Date:** 2026-10-29
 - **Kind:** review
 - **Said:** "A back part that turns out from under a still front part shows a hole."
-- **Source:** puppet-engine/round-1-review.md R2
+- **Source:** puppet-engine/round-1-review.md F2 (headed R2)
 - **Wrong:** Revealed paint showed only when the part in front moved; a back part turning out from under a still front part showed, as a hole, the paint the un-matte had cleared under the front part's rim.
 - **Cause:** The rule asked whether the part in front moved, not whether the two parts moved apart, and its test moved only the front part.
 - **Guard:** code: `packages/film/src/core/puppet.test.ts` `rasterOf shows no hole where a turned back part moves out from under a still front part`
