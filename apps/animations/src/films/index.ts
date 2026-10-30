@@ -47,6 +47,7 @@ export const pages = {
       'feast-mother',
       'idea-villagers',
       'paul',
+      'jeremiah',
       'sower',
       'villager-child',
       'villager-toddler',
