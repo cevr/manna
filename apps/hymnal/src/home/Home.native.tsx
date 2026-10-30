@@ -31,7 +31,15 @@
 import { useAtom, useAtomSet, useAtomSubscribe, useAtomValue } from '@effect/atom-react';
 import { Link, useLinkTo, useNavigation, useSafeAreaInsets } from 'one';
 import { Effect, Fiber, Option } from 'effect';
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type ReactNode,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   BackHandler,
   Keyboard,
@@ -83,14 +91,12 @@ import { groupAt, openingOffset, type TabName, tabNamed, tabsOf } from './tabs';
 
 /**
  * A layer out of reach, untouchable and unseen by assistive technology: the
- * list beneath search mode (kept in place), and the shown field while it is
- * off screen.
+ * list beneath search mode or `All at once` (kept in place), and the shown
+ * field while it is off screen. React Native turns `aria-hidden` into
+ * `accessibilityElementsHidden` on iOS and `no-hide-descendants` on Android,
+ * and the web's renderer writes it as the attribute.
  */
-const outOfReach = {
-  pointerEvents: 'none',
-  accessibilityElementsHidden: true,
-  importantForAccessibility: 'no-hide-descendants',
-} as const;
+const outOfReach = { pointerEvents: 'none', 'aria-hidden': true } as const;
 
 /** The title row's line (a large title) and the space under it, at the reader's usual text size. */
 const titleLine = 41;
@@ -135,16 +141,17 @@ export function Home() {
             zoom={zoom}
             onZoomOut={zoomOut}
             onZoomIn={zoomIn}
-          />
-          <ShownField
-            height={field}
-            cover={cover}
-            scroll={scroll}
-            rest={field}
-            title={title}
-            onPress={enter}
-          />
-          <Title height={title} rest={field} scroll={scroll} onZoomOut={zoomOut} />
+          >
+            <ShownField
+              height={field}
+              cover={cover}
+              scroll={scroll}
+              rest={field}
+              title={title}
+              onPress={enter}
+            />
+            <Title height={title} rest={field} scroll={scroll} onZoomOut={zoomOut} />
+          </TabList>
         </View>
         {mode !== 'off' && <Search cause={mode} onCancel={() => setMode('off')} />}
       </View>
@@ -168,6 +175,8 @@ export function Home() {
  * out to `All at once` over the list, its tiles opened at the group at the
  * list's top when it zoomed out (`zoom`, `groupAt`). A tile mounts the
  * tab's list afresh with that group's row at the top (`groupStarts`).
+ * While it shows, the list and the layers over it (`children`: the shown
+ * field and the title) are out of reach beneath it (`UnderTiles`).
  */
 function TabList({
   title,
@@ -178,6 +187,7 @@ function TabList({
   zoom,
   onZoomOut,
   onZoomIn,
+  children,
 }: {
   readonly title: number;
   readonly field: number;
@@ -188,6 +198,8 @@ function TabList({
   readonly zoom: Option.Option<number>;
   readonly onZoomOut: () => void;
   readonly onZoomIn: () => void;
+  /** The layers drawn over the list, out of reach with it while `All at once` shows. */
+  readonly children: ReactNode;
 }) {
   const { fontScale } = useWindowDimensions();
   const [chosen, setChosen] = useAtom(settings.home.tab);
@@ -256,7 +268,7 @@ function TabList({
     cover,
   };
   return (
-    <>
+    <UnderTiles tiles={Option.map(zoom, allAtOnce)}>
       <HymnList
         key={`${tab.name}:${visit}`}
         hymns={hymns}
@@ -269,7 +281,31 @@ function TabList({
         {...(tab.name === 'Sections' && { byTopic: true, shelves })}
         {...(tab.name !== 'Sections' && { grouped: tab, empty: 'No hymns here yet.' })}
       />
-      {Option.getOrNull(Option.map(zoom, allAtOnce))}
+      {children}
+    </UnderTiles>
+  );
+}
+
+/**
+ * The list and the layers over it (`children`), and `All at once` (`tiles`)
+ * over them while it shows. Beneath the tiles they stay mounted in place,
+ * untouchable and hidden from assistive technology, so VoiceOver reaches
+ * only the tiles' heading, Done and the tiles; once the tiles close, the
+ * list is in reach again.
+ */
+export function UnderTiles({
+  tiles,
+  children,
+}: {
+  readonly tiles: Option.Option<ReactNode>;
+  readonly children: ReactNode;
+}) {
+  return (
+    <>
+      <View style={styles.fill} {...(Option.isSome(tiles) && outOfReach)}>
+        {children}
+      </View>
+      {Option.getOrNull(tiles)}
     </>
   );
 }

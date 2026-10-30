@@ -335,6 +335,13 @@ export const FadeOut = layout;
 export const FadeInDown = layout;
 export const FadeOutDown = layout;
 
+/** A keyframe animation: its frames are dropped, and `duration` gives it again. */
+export class Keyframe {
+  duration(_ms: number) {
+    return this;
+  }
+}
+
 /** `react-native-worklets`: a function scheduled on React Native's thread runs at once. */
 export const scheduleOnRN = <A extends ReadonlyArray<unknown>>(
   run: (...args: A) => void,
