@@ -35,15 +35,12 @@ export const LINE = { width: 10.5, ink: [25, 9, 2] } as const;
  * His paper's grain, luma (`core/unmatte.ts`, `grain`): the 95th percentile of
  * how far his kept views' border ground runs darker than its median paper is
  * 1.914 (heads-1), 2.228 (heads-2, heads-4, heads-6) and 2.114 (heads-3,
- * heads-5). His grain sits half a luma step over the largest: the light rim
- * of his headcloth runs a little darker than the paper, and at 2.25 the
- * un-matte kept it whole round his head in heads-4 and heads-5, a light ring
- * 129 and 103 px outside his kept figure where the kept view has 94 and 66.
- * At 2.75 that rim is solved toward the paper (107 and 86 px), and, as a
- * larger grain keeps fewer px whole, it fills none of the paper pockets his
- * sheet shows between his beard, headcloth and robe.
+ * heads-5). His grain is the least quarter luma step over the largest that
+ * keeps each view's halo (paper kept round his outline) in its bound: a
+ * larger grain keeps fewer of his light cloth px whole, and each one solved
+ * toward the paper inside him opens as a hole.
  */
-const GRAIN = 2.75;
+const GRAIN = 2.25;
 
 /**
  * His linen's lightest fold, kept as his where it lies nearer it than the
