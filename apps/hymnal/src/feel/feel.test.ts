@@ -48,6 +48,7 @@ const plainRows: ReadonlyArray<readonly [PlainCue, Haptic]> = [
   ['seek-grab', selection],
   ['seek-tick', selection],
   ['seek-release', impact('soft')],
+  ['rail-tick', selection],
 ];
 
 const KEYS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] as const;
@@ -202,8 +203,12 @@ describe('the ticks’ floor', () => {
     { _tag: 'detent', dial: 'key', at: 3 },
     { _tag: 'detent', dial: 'capo', at: 2 },
     { _tag: 'seek-tick' },
+    { _tag: 'rail-tick' },
   ];
-  const tickLike = Predicate.or(Predicate.isTagged('detent'), Predicate.isTagged('seek-tick'));
+  const tickLike = Predicate.or(
+    Predicate.isTagged('detent'),
+    Predicate.or(Predicate.isTagged('seek-tick'), Predicate.isTagged('rail-tick')),
+  );
   const others: ReadonlyArray<Cue> = table.map(([cue]) => cue).filter((cue) => !tickLike(cue));
 
   it('feels ticks no closer than 30 ms, always feels one after a 30 ms gap, and always feels every other cue', () => {

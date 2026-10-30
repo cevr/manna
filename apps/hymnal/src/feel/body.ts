@@ -58,6 +58,7 @@ const FELT: Record<Exclude<Cue['_tag'], 'detent'>, Haptic> = {
   'seek-grab': selection,
   'seek-tick': selection,
   'seek-release': impact('soft'),
+  'rail-tick': selection,
 };
 
 /** The body cue `cue` is given. */
@@ -71,7 +72,7 @@ export const bodyOf = (cue: Cue): Body => {
 /** Whether a cue is a tick: its haptic keeps the floor (`FLOOR`) from the last tick's. */
 export const isTick: (cue: Cue) => boolean = Predicate.or(
   Predicate.isTagged('detent'),
-  Predicate.isTagged('seek-tick'),
+  Predicate.or(Predicate.isTagged('seek-tick'), Predicate.isTagged('rail-tick')),
 );
 
 /** The least time between two ticks' haptics, in milliseconds, so a fast fling is still felt as a ratchet. */

@@ -36,7 +36,8 @@ export type PlainCue =
   | 'sheet-open'
   | 'seek-grab'
   | 'seek-tick'
-  | 'seek-release';
+  | 'seek-release'
+  | 'rail-tick';
 
 /** A moment a control gives. */
 export type Cue =

@@ -39,9 +39,10 @@
 
 import { useAtomSet } from '@effect/atom-react';
 import { AnimatedLegendList } from '@legendapp/list/reanimated';
+import type { LegendListRef } from '@legendapp/list/react-native';
 import { Option } from 'effect';
 import { type Href, Link, useLinkTo } from 'one';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Animated, {
   type SharedValue,
   useAnimatedReaction,
@@ -60,14 +61,18 @@ import {
 } from 'react-native';
 
 import { useCue } from '~/feel/cue';
+import { useStackBottom } from '~/player/StackBottom';
 import type { HymnText } from '~/hymns/hymns';
 import { color, useAccent } from '~/color';
 
 import type { HymnListProps } from './HymnList';
+import { endSpace } from './end';
 import { ListEnd } from './ListEnd';
 import { dismissal } from './keyboard';
 import { pinnedAt, topicStart, topicStarts } from './pin';
 import { pagesFrom } from './place';
+import { Rail } from './Rail';
+import { marksOf } from './rail-marks';
 import { groupRowsOf, resultRowsOf, type Row, rowsOf } from './rows';
 
 /** A hymn row's line of text, and the space above and below it, at the reader's usual text size. */
@@ -258,6 +263,20 @@ export function HymnList({
   const scroll = pullDown?.scroll ?? own;
   const cover = pullDown?.cover ?? uncovered;
   const rest = pullDown?.rest ?? 0;
+  // oxlint-disable-next-line effect/noNullish -- a React ref starts empty as null.
+  const list = useRef<LegendListRef>(null);
+  // While the rail is held its ticks are the topics felt, so the pin gives no `section` cue of its own.
+  const railing = useSharedValue(false);
+  const stackBottom = useStackBottom();
+  // The Sections list alone has a rail: its hymns, under their topics.
+  const marks = useMemo(() => {
+    if (!byTopic) return [];
+    return marksOf(
+      rows,
+      header,
+      (kind) => ({ topic: topicHeight, shelf: topicHeight, hymn: hymnHeight })[kind],
+    );
+  }, [rows, byTopic, header, topicHeight, hymnHeight]);
   // When the rows change under a reader scrolled into the list (a hymn opened
   // from it joins Recent above), the rows in view keep their place. At the
   // list's top nothing holds, so a list that gains a hymn shows it.
@@ -268,6 +287,7 @@ export function HymnList({
   return (
     <View style={styles.fill}>
       <AnimatedLegendList
+        ref={list}
         data={rows}
         keyExtractor={(row) => row.key}
         getItemType={drawnAs}
@@ -305,6 +325,24 @@ export function HymnList({
           scroll={scroll}
           cover={cover}
           onPress={look.onGroup}
+          quiet={railing}
+        />
+      )}
+      {marks.length > 0 && (
+        <Rail
+          marks={marks}
+          sections={topics.names}
+          top={header - rest}
+          bottom={endSpace(stackBottom)}
+          onHold={(held) => {
+            railing.value = held;
+          }}
+          onMark={(mark) =>
+            list.current?.scrollToOffset({
+              offset: Math.max(0, mark.offset - cover.value),
+              animated: false,
+            })
+          }
         />
       )}
     </View>
@@ -323,7 +361,8 @@ const names = (row: Row<HymnText>): ReadonlyArray<string> => {
  * readers read the list's own topic rows, so the copy is hidden from them.
  * With `onPress` a tap on the shown copy is a tap on its group's row; with
  * none, and while no topic is pinned, touches pass through it to the list. A topic taking the pin gives a
- * `section` cue with its place among the topics. Under a layer over the
+ * `section` cue with its place among the topics, unless `quiet` (the
+ * rail is held, and its own ticks are the topics felt). Under a layer over the
  * list's top (`cover`), the strip's line is the layer's bottom, read in
  * the same frame as the offset, so the row sits flush under the layer as
  * it slides.
@@ -335,6 +374,7 @@ function PinnedTopic({
   scroll,
   cover,
   onPress,
+  quiet,
 }: {
   readonly names: ReadonlyArray<string>;
   readonly starts: ReadonlyArray<number>;
@@ -342,17 +382,18 @@ function PinnedTopic({
   readonly scroll: SharedValue<number>;
   readonly cover: SharedValue<number>;
   readonly onPress: Option.Option<() => void>;
+  readonly quiet: SharedValue<boolean>;
 }) {
   const pinned = useDerivedValue(() => pinnedAt(starts, scroll.value, height, cover.value));
   const line = useAnimatedStyle(() => ({ transform: [{ translateY: cover.value }] }));
   const cue = useCue();
   const section = (place: number) => cue({ _tag: 'section', place });
-  // A topic taking the pin is felt; the first call, as the list mounts, is not.
+  // A topic taking the pin is felt; the first call, as the list mounts, is not, nor one while `quiet` (the rail held).
   useAnimatedReaction(
     () => pinned.value.index,
     (now, before) => {
       // oxlint-disable-next-line effect/noNullish -- Reanimated gives a reaction's first call its previous value as null.
-      if (before !== null && now !== before && now >= 0) scheduleOnRN(section, now);
+      if (before !== null && now !== before && now >= 0 && !quiet.value) scheduleOnRN(section, now);
     },
   );
   const [shown, setShown] = useState(false);
