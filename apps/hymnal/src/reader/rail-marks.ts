@@ -45,12 +45,28 @@ export const marksOf = <Hymn extends { readonly number: number }>(
 
 /** The band under a touch at `y` on a rail `length` tall, cut into `count` bands: held to the first and last band past the ends. */
 export const markAt = (y: number, length: number, count: number): number => {
+  'worklet';
   if (count <= 0 || length <= 0) return 0;
   return Math.min(count - 1, Math.max(0, Math.floor((y / length) * count)));
 };
 
 /** The topics a drag passes going from topic place `before` to `now`: one tick each. */
-export const crossings = (before: number, now: number): number => Math.abs(now - before);
+export const crossings = (before: number, now: number): number => {
+  'worklet';
+  return Math.abs(now - before);
+};
+
+/**
+ * The rail's strip on the list's view, as a gesture's hit slop: `width` in
+ * from the right edge, and `top` and `bottom` in from the view's ends. A
+ * negative slop shrinks the view's own area to the strip.
+ */
+export const railStrip = (width: number, top: number, bottom: number) => ({
+  right: 0,
+  width,
+  top: -top,
+  bottom: -bottom,
+});
 
 /** `shown` places spread evenly from the first to the last of `count`, both ends included: the rail's labels. */
 export const labelsOf = (count: number, shown: number): ReadonlyArray<number> => {

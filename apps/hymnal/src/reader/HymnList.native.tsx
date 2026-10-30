@@ -39,13 +39,16 @@
 
 import { useAtomSet } from '@effect/atom-react';
 import { AnimatedLegendList } from '@legendapp/list/reanimated';
-import type { LegendListRef } from '@legendapp/list/react-native';
 import { Option } from 'effect';
 import { type Href, Link, useLinkTo } from 'one';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   type SharedValue,
+  scrollTo,
+  useAnimatedProps,
   useAnimatedReaction,
+  useAnimatedRef,
   useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
@@ -71,7 +74,7 @@ import { ListEnd } from './ListEnd';
 import { dismissal } from './keyboard';
 import { clampedStart, pinnedAt, topicStart, topicStarts } from './pin';
 import { pagesFrom } from './place';
-import { Rail } from './Rail';
+import { Rail, useRail } from './Rail';
 import { marksOf } from './rail-marks';
 import { groupRowsOf, resultRowsOf, type Row, rowsOf } from './rows';
 
@@ -263,10 +266,14 @@ export function HymnList({
   const scroll = pullDown?.scroll ?? own;
   const cover = pullDown?.cover ?? uncovered;
   const rest = pullDown?.rest ?? 0;
-  // oxlint-disable-next-line effect/noNullish -- a React ref starts empty as null.
-  const list = useRef<LegendListRef>(null);
-  // While the rail is held its ticks are the topics felt, so the pin gives no `section` cue of its own.
+  // The list's scroll view, for the rail to scroll from the UI thread.
+  const scroller = useAnimatedRef<Animated.ScrollView>();
+  // While the rail is held its ticks are the topics felt, so the pin gives no
+  // `section` cue of its own, and the list does not scroll under the finger.
   const railing = useSharedValue(false);
+  // The topic last felt, by its place, by the rail or the pin: a topic is felt once.
+  const felt = useSharedValue(-1);
+  const scrolling = useAnimatedProps(() => ({ scrollEnabled: !railing.value }));
   const stackBottom = useStackBottom();
   // A late topic asked for opens with the list's end at the screen's bottom, not past it.
   const opening = useMemo(
@@ -295,6 +302,19 @@ export function HymnList({
       (kind) => ({ topic: topicHeight, shelf: topicHeight, hymn: hymnHeight })[kind],
     );
   }, [rows, byTopic, header, topicHeight, hymnHeight]);
+  const railTop = header - rest;
+  const railBottom = endSpace(stackBottom);
+  const rail = useRail({
+    marks,
+    top: railTop,
+    bottom: railBottom,
+    quiet: railing,
+    felt,
+    onMark: (mark) => {
+      'worklet';
+      scrollTo(scroller, 0, Math.max(0, mark.offset - cover.value), false);
+    },
+  });
   // When the rows change under a reader scrolled into the list (a hymn opened
   // from it joins Recent above), the rows in view keep their place. At the
   // list's top nothing holds, so a list that gains a hymn shows it.
@@ -303,67 +323,65 @@ export function HymnList({
     [scroll, rest],
   );
   return (
-    <View style={styles.fill}>
-      <AnimatedLegendList
-        ref={list}
-        data={rows}
-        keyExtractor={(row) => row.key}
-        getItemType={drawnAs}
-        getFixedItemSize={(_, __, drawn) => {
-          if (drawn === 'hymn') return hymnHeight;
-          if (drawn === 'found') return foundHeight;
-          return topicHeight;
-        }}
-        estimatedItemSize={hymnHeight}
-        recycleItems
-        ListHeaderComponent={pullDown?.node}
-        estimatedHeaderSize={pullDown?.height}
-        // The last row ends clear of the home indicator and the docked bar.
-        ListFooterComponent={<ListEnd />}
-        // The list opens with the search field tucked under the title, and a
-        // drag let go between there and the top settles at one or the other;
-        // past the field it scrolls freely.
-        initialScrollOffset={opening}
-        snapToOffsets={pullDown && [0, pullDown.rest]}
-        snapToEnd={false}
-        maintainVisibleContentPosition={anchoring}
-        sharedValues={{ scrollOffset: scroll }}
-        contentInsetAdjustmentBehavior="never"
-        keyboardShouldPersistTaps="handled"
-        {...dismissal}
-        ListEmptyComponent={<Text style={styles.empty}>{empty}</Text>}
-        extraData={look}
-        renderItem={drawRow}
-      />
-      {topics.names.length > 0 && (
-        <PinnedTopic
-          names={topics.names}
-          starts={topics.starts}
-          height={topicHeight}
-          scroll={scroll}
-          cover={cover}
-          onPress={look.onGroup}
-          quiet={railing}
-        />
-      )}
-      {marks.length > 0 && (
-        <Rail
-          marks={marks}
-          sections={topics.names}
-          top={header - rest}
-          bottom={endSpace(stackBottom)}
-          onHold={(held) => {
-            railing.value = held;
-          }}
-          onMark={(mark) =>
-            list.current?.scrollToOffset({
-              offset: Math.max(0, mark.offset - cover.value),
-              animated: false,
-            })
-          }
-        />
-      )}
-    </View>
+    <GestureHandlerRootView style={styles.fill}>
+      <GestureDetector gesture={rail.gesture}>
+        <View style={styles.fill}>
+          <AnimatedLegendList
+            refScrollView={scroller}
+            animatedProps={scrolling}
+            data={rows}
+            keyExtractor={(row) => row.key}
+            getItemType={drawnAs}
+            getFixedItemSize={(_, __, drawn) => {
+              if (drawn === 'hymn') return hymnHeight;
+              if (drawn === 'found') return foundHeight;
+              return topicHeight;
+            }}
+            estimatedItemSize={hymnHeight}
+            recycleItems
+            ListHeaderComponent={pullDown?.node}
+            estimatedHeaderSize={pullDown?.height}
+            // The last row ends clear of the home indicator and the docked bar.
+            ListFooterComponent={<ListEnd />}
+            // The list opens with the search field tucked under the title, and a
+            // drag let go between there and the top settles at one or the other;
+            // past the field it scrolls freely.
+            initialScrollOffset={opening}
+            snapToOffsets={pullDown && [0, pullDown.rest]}
+            snapToEnd={false}
+            maintainVisibleContentPosition={anchoring}
+            sharedValues={{ scrollOffset: scroll }}
+            contentInsetAdjustmentBehavior="never"
+            keyboardShouldPersistTaps="handled"
+            {...dismissal}
+            ListEmptyComponent={<Text style={styles.empty}>{empty}</Text>}
+            extraData={look}
+            renderItem={drawRow}
+          />
+          {topics.names.length > 0 && (
+            <PinnedTopic
+              names={topics.names}
+              starts={topics.starts}
+              height={topicHeight}
+              scroll={scroll}
+              cover={cover}
+              onPress={look.onGroup}
+              quiet={railing}
+              felt={felt}
+            />
+          )}
+          {marks.length > 0 && (
+            <Rail
+              hold={rail}
+              marks={marks}
+              sections={topics.names}
+              top={railTop}
+              bottom={railBottom}
+            />
+          )}
+        </View>
+      </GestureDetector>
+    </GestureHandlerRootView>
   );
 }
 
@@ -380,7 +398,9 @@ const names = (row: Row<HymnText>): ReadonlyArray<string> => {
  * With `onPress` a tap on the shown copy is a tap on its group's row; with
  * none, and while no topic is pinned, touches pass through it to the list. A topic taking the pin gives a
  * `section` cue with its place among the topics, unless `quiet` (the
- * rail is held, and its own ticks are the topics felt). Under a layer over the
+ * rail is held, and its own ticks are the topics felt) or the topic is the
+ * one last `felt` (the rail felt it, and the list lands there after the
+ * last scroll, whenever that comes). Under a layer over the
  * list's top (`cover`), the strip's line is the layer's bottom, read in
  * the same frame as the offset, so the row sits flush under the layer as
  * it slides.
@@ -393,6 +413,7 @@ function PinnedTopic({
   cover,
   onPress,
   quiet,
+  felt,
 }: {
   readonly names: ReadonlyArray<string>;
   readonly starts: ReadonlyArray<number>;
@@ -401,17 +422,22 @@ function PinnedTopic({
   readonly cover: SharedValue<number>;
   readonly onPress: Option.Option<() => void>;
   readonly quiet: SharedValue<boolean>;
+  readonly felt: SharedValue<number>;
 }) {
   const pinned = useDerivedValue(() => pinnedAt(starts, scroll.value, height, cover.value));
   const line = useAnimatedStyle(() => ({ transform: [{ translateY: cover.value }] }));
   const cue = useCue();
   const section = (place: number) => cue({ _tag: 'section', place });
-  // A topic taking the pin is felt; the first call, as the list mounts, is not, nor one while `quiet` (the rail held).
+  // A topic taking the pin is felt; the first call, as the list mounts, is not, nor one while `quiet`
+  // (the rail held), nor the topic last felt (the rail's, as the list lands after its last scroll).
   useAnimatedReaction(
     () => pinned.value.index,
     (now, before) => {
+      const was = felt.value;
+      felt.value = now;
       // oxlint-disable-next-line effect/noNullish -- Reanimated gives a reaction's first call its previous value as null.
-      if (before !== null && now !== before && now >= 0 && !quiet.value) scheduleOnRN(section, now);
+      if (before !== null && now !== before && now >= 0 && now !== was && !quiet.value)
+        scheduleOnRN(section, now);
     },
   );
   const [shown, setShown] = useState(false);

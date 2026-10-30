@@ -23,14 +23,14 @@ and each tab opens where the reader left it in this run of the app.
 - `browse-metres`: `Metres` shows the Metrical index's headings, each over its hymns ascending.
 - `browse-scripture`: `Scripture` shows the Scriptural index's books in the canon's order, each over its hymns ascending.
 - `browse-all-at-once`: the title's `All at once` button, or a tap on a group's heading (its hint `Shows every group at once`), zooms out: a screen with the heading `<tab>, all at once` and `Done` over two columns of tiles, each a button `<group>, <n> hymns` (`1 hymn` for one; `, playing` after it for the group of the hymn the player has), with a strip of where its hymns lie from 1 to 695. The first row holds the group that was at the list's top. A tile zooms back in with its group's heading at the list's top; `Done` zooms back in where the list was. The zoom out and the zoom in are felt only (`zoom-out`, `zoom-in`). While it shows, the list beneath is out of VoiceOver's reach.
-- `browse-rail`: on `Sections`, a drag on the list's right edge (a 20 pt strip with six faint numbers from 1 to 695) shows the thumb in the accent and a bubble beside it with the hymn number and section under it; the list follows the thumb, and each section the drag crosses is one `rail-tick`, felt only. Release leaves the list there.
+- `browse-rail`: on `Sections`, a finger held 250 ms on the list's right edge (a 20 pt strip with six faint numbers from 1 to 695), then dragged, shows the thumb in the accent and a bubble beside it with the hymn number and section under it; the list follows the thumb, and each section the drag crosses is one `rail-tick`, felt only. Release leaves the list there. While the rail is held the list does not scroll under the finger. A tap or a flick in the strip, with no hold, is the list's: it reaches the row under it (a star, `See all`) or scrolls the list.
 - `browse-tab-kept`: the tab in use is a stored choice (`home.tab`, default `Sections`): a relaunch opens on it. Each tab's place is kept in memory only: back to a tab in the same run opens it where it was; a relaunch opens the kept tab at the list's top.
 
 ## How to get to it (user POV)
 
 - The home screen's tab row, under the search field at the list's top (`hymn-list.md`).
 - The title's `All at once` button, beside `Settings`; or a tap on a group's heading in any tab.
-- A drag on the right edge of the `Sections` list.
+- A hold, then a drag, on the right edge of the `Sections` list.
 - A topic row in `About this hymn` (`about.md`), which opens `Topics` at that topic.
 
 ## Driving it with sim
@@ -47,7 +47,7 @@ and each tab opens where the reader left it in this run of the app.
 5. **A row and its pager.** On `Metres`, tap a row by its leading number, then swipe left (`agent-device gesture pan 350 450 -300 0 250 --session verify-hymnal`). → the reader shows the next hymn by number, not the next row of the group.
 6. **All at once** (`browse-all-at-once`). `sim tap "role=button label=All at once"`. → `ok`; the snapshot shows the heading `<tab>, all at once`, `Done`, and buttons `<group>, <n> hymns`. `sim tap "label=Done"`. → the list where it was.
 7. **A tile.** Open `All at once` again from a group's heading (`sim tap "role=heading label=<group>"`), then tap another tile by its whole label. → the list with that tile's group heading at its top.
-8. **The rail** (`browse-rail`). On `Sections`, `agent-device gesture pan <width - 10> 200 0 400 1500 --session verify-hymnal`. → the list has moved down to a later section (`sim snapshot`), and the app log holds no `[feel] play` line for the ticks (felt only). The bubble cannot be read from the tree (Gotchas).
+8. **The rail** (`browse-rail`). On `Sections`, touch the strip at `<width - 10>`, hold it at least 250 ms without moving, then drag down 400 pt (a pan that moves at once is the list's, Gotchas). → the list has moved down to a later section (`sim snapshot`), and the app log holds no `[feel] play` line for the ticks (felt only). The bubble cannot be read from the tree (Gotchas).
 9. **The tab is kept** (`browse-tab-kept`). `sim tap "label=Topics"`, relaunch (`sim open /` after a `sim install`, or quit and open the app). → `Topics` `[selected]` at the list's top. Put `Sections` back.
 
 ## Gotchas
@@ -56,7 +56,7 @@ and each tab opens where the reader left it in this run of the app.
 - On iOS a tab is not a `tab` in the snapshot: React Native 0.88 gives the `tab` role no iOS trait (VoiceOver reads the role from the value), so the runner lists each tab as `other`, with `[selected]` on the one in use. `role=tab` answers `TargetMissing` there; match a tab by its label alone (`label=Lists`) or as `role=other label=Lists`. `role=tab` matches on the web.
 - The `Recent` heading under `Lists` and the Recent shelf's header share a name: match them as `role=heading label=Recent`.
 - The rail and its bubble are hidden from the accessibility tree, so `sim tap`, `sim snapshot` and VoiceOver never find them. Drive the rail with a pan by coordinates at the screen's right edge, and read where the list landed from the snapshot's rows. VoiceOver readers move through the hymns by the headings, the tabs and `All at once`.
-- The rail is 20 pt wide and sits over each row's right end: a pan that starts more than 20 pt from the edge scrolls the list instead. A plain tap on the rail jumps the list too.
+- The rail is 20 pt wide and sits over each row's right end: a pan that starts more than 20 pt from the edge scrolls the list instead. The rail takes a touch only after it has rested 250 ms in the strip: a plain tap there reaches the row under it, and a plain `agent-device gesture pan` there scrolls the list. `gesture pan` has no hold before it moves, and `gesture drag` holds only a selector, which the hidden rail is not, so a hold by coordinates needs another driver (not yet proven here).
 - A tile's label holds its count: match the whole label, `<group>, <n> hymns`, read from the snapshot first.
 - `All at once` covers the list: while it shows, the snapshot lists only its heading, `Done` and the tiles.
 - Topic, metre and book names hold no hymn words, but a row's label holds its title: match a row by its leading `<n>, ` and keep titles out of logs.

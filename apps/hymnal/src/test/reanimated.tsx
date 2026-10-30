@@ -314,6 +314,12 @@ const animated = <P extends object>(Plain: ComponentType<P>) =>
 /** An animated view's ref: a plain one. */
 export const useAnimatedRef = <T,>() => useRef<T | null>(null);
 
+/** A scroll from the UI thread: no scroll view runs under a test. */
+export const scrollTo = (_ref: unknown, _x: number, _y: number, _animated: boolean) => {};
+
+/** A view's animated props, read once as a style is. */
+export const useAnimatedProps = <P,>(props: () => P): P => props();
+
 /** A scroll view's offset written to a shared value: a test writes the value itself. */
 export const useScrollViewOffset = (_ref: unknown, _offset: SharedValue<number>) => {};
 

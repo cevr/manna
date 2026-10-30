@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 
-import { crossings, labelsOf, markAt, marksOf } from './rail-marks';
+import { crossings, labelsOf, markAt, marksOf, railStrip } from './rail-marks';
 import { rowsOf } from './rows';
 
 const hymn = (number: number, topic: string) => ({ number, topic });
@@ -68,5 +68,14 @@ describe('the rail’s labels', () => {
   it('labels every hymn of a list shorter than its labels, and none of an empty one', () => {
     expect(labelsOf(3, 6)).toEqual([0, 1, 2]);
     expect(labelsOf(0, 6)).toEqual([]);
+  });
+});
+
+describe('the rail’s strip', () => {
+  it('is the right edge’s width, cut in by the rail’s top and bottom', () => {
+    // On a view 390 wide and 800 tall, the strip is x 370 to 390 and y 80 to 680.
+    const slop = railStrip(20, 80, 120);
+    expect([390 - slop.right - slop.width, 390 - slop.right]).toEqual([370, 390]);
+    expect([0 - slop.top, 800 + slop.bottom]).toEqual([80, 680]);
   });
 });
