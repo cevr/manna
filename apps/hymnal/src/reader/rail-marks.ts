@@ -76,18 +76,6 @@ export const crossings = (before: number, now: number): number => {
   return Math.abs(now - before);
 };
 
-/**
- * The rail's strip on the list's view, as a gesture's hit slop: `width` in
- * from the right edge, and `top` and `bottom` in from the view's ends. A
- * negative slop shrinks the view's own area to the strip.
- */
-export const railStrip = (width: number, top: number, bottom: number) => ({
-  right: 0,
-  width,
-  top: -top,
-  bottom: -bottom,
-});
-
 /** `shown` places spread evenly from the first to the last of `count`, both ends included: the rail's labels. */
 export const labelsOf = (count: number, shown: number): ReadonlyArray<number> => {
   if (count <= 0 || shown <= 0) return [];

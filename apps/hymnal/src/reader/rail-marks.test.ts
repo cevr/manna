@@ -1,15 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 
-import {
-  crossings,
-  GUTTER,
-  labelAt,
-  labelsOf,
-  markAt,
-  marksOf,
-  railShift,
-  railStrip,
-} from './rail-marks';
+import { crossings, GUTTER, labelAt, labelsOf, markAt, marksOf, railShift } from './rail-marks';
 import { rowsOf } from './rows';
 
 const hymn = (number: number, topic: string) => ({ number, topic });
@@ -111,14 +102,5 @@ describe('a label’s place', () => {
 
   it('is the rail’s top when the rail has no bands', () => {
     expect(labelAt(0, 0)).toBe(0);
-  });
-});
-
-describe('the rail’s strip', () => {
-  it('is the right edge’s width, cut in by the rail’s top and bottom', () => {
-    // On a view 390 wide and 800 tall, the strip is x 370 to 390 and y 80 to 680.
-    const slop = railStrip(20, 80, 120);
-    expect([390 - slop.right - slop.width, 390 - slop.right]).toEqual([370, 390]);
-    expect([0 - slop.top, 800 + slop.bottom]).toEqual([80, 680]);
   });
 });
