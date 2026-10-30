@@ -1,7 +1,17 @@
 import { describe, expect, test } from 'bun:test';
 import { Option } from 'effect';
-import { FIT_BARS, type FitRow, type FitSpec, fitPasses, fitRows } from './fit-rows.ts';
-import { RENDER_GROUND, SHEET_GROUND, W, H, paint } from './fixtures/fit/figure.ts';
+import { type Rgb, deltaE, labOf, lumaOf } from './cast-sheet-pixels.ts';
+import {
+  FIT_BARS,
+  type FitRow,
+  type FitSpec,
+  fitPasses,
+  fitRows,
+  measuringGround,
+  overGround,
+} from './fit-rows.ts';
+import { CREAM, INK, RENDER_GROUND, SHEET_GROUND, W, H, paint } from './fixtures/fit/figure.ts';
+import { PAPER } from './fixtures/figure.ts';
 import type { Raster } from './raster.ts';
 
 const SHEET = paint({ ground: SHEET_GROUND });
@@ -248,5 +258,138 @@ describe('fitRows', () => {
       ['part.edge', false],
     ]);
     expect(rows[0]?.where).toContain('head picks no region (hair: no fit class)');
+  });
+});
+
+type Rgba = readonly [number, number, number, number];
+
+/** A cut-out's crop and a kept sheet's: 48 px square, a box figure `[6, 42)²` (moved `dx` right) inside a 3 px line of ink, its inside `cloth`, `at` painted over it, `outside` round it. */
+const S = 48;
+type At = (x: number, y: number) => Option.Option<Rgba>;
+const inside = (v: number, lo: number, hi: number) => v >= lo && v < hi;
+const boxPixel = (outside: Rgba, cloth: Rgb, x: number, y: number): Rgba => {
+  if (!inside(x, 6, 42) || !inside(y, 6, 42)) return outside;
+  if (!inside(x, 9, 39) || !inside(y, 9, 39)) return [...INK, 255];
+  return [...cloth, 255];
+};
+const crop = (outside: Rgba, cloth: Rgb, at: At = () => Option.none(), dx = 0): Raster => {
+  const rgba = new Uint8Array(S * S * 4);
+  for (let y = 0; y < S; y++)
+    for (let x = 0; x < S; x++)
+      rgba.set(
+        Option.getOrElse(at(x, y), () => boxPixel(outside, cloth, x - dx, y)),
+        (y * S + x) * 4,
+      );
+  return { width: S, height: S, rgba };
+};
+
+/** `at` for the box `[x0, x1) × [y0, y1)`: `px` inside it. */
+const boxOf =
+  ([x0, x1, y0, y1]: readonly [number, number, number, number], px: Rgba): At =>
+  (x, y) =>
+    Option.liftPredicate(px, () => inside(x, x0, x1) && inside(y, y0, y1));
+
+const either =
+  (...ats: ReadonlyArray<At>): At =>
+  (x, y) =>
+    Option.firstSomeOf(ats.map((a) => a(x, y)));
+
+const CLEAR: Rgba = [0, 0, 0, 0];
+const SHEET_PAPER: Rgba = [...SHEET_GROUND, 255];
+
+/** A posed crop read as the cut-out path reads it: over its own measuring ground. */
+const overOwn = (posed: Raster) => overGround(posed, measuringGround([posed]));
+
+/** The least ΔE76 from `c` to every opaque pixel of `r`. */
+const leastDeltaE = (c: Rgb, r: Raster) => {
+  let least = Infinity;
+  for (let i = 0; i < S * S; i++)
+    if ((r.rgba[i * 4 + 3] ?? 0) === 255) {
+      const px: Rgb = [r.rgba[i * 4] ?? 0, r.rgba[i * 4 + 1] ?? 0, r.rgba[i * 4 + 2] ?? 0];
+      least = Math.min(least, deltaE(labOf(c), labOf(px)));
+    }
+  return least;
+};
+
+const hex = (c: Rgb) => `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+
+describe('fitRows over a cut-out crop', () => {
+  test('a 12 px hole is counted though the kept crop has a larger false hole of its own', () => {
+    const concept = crop(SHEET_PAPER, CREAM, boxOf([10, 24, 10, 24], SHEET_PAPER));
+    const posed = crop(CLEAR, CREAM, boxOf([26, 38, 26, 38], CLEAR));
+    const holes = rowNamed(fitRows(concept, overOwn(posed)), 'holes');
+    expect(holes?.value).toBe(144);
+    expect(holes?.pass).toBe(false);
+  });
+
+  test('a 2 x 24 px hole 3 px inside the line is counted whole beside a kept hole', () => {
+    const concept = crop(SHEET_PAPER, CREAM, boxOf([16, 24, 12, 36], SHEET_PAPER));
+    const posed = crop(CLEAR, CREAM, boxOf([12, 14, 12, 36], CLEAR));
+    const holes = rowNamed(fitRows(concept, overOwn(posed)), 'holes');
+    expect(holes?.value).toBe(48);
+    expect(holes?.pass).toBe(false);
+  });
+
+  test('a 1 px outline shift, a see-through seam speck and a kept hole drawn 1 px wider count no hole', () => {
+    const concept = crop(SHEET_PAPER, CREAM, boxOf([26, 36, 26, 36], SHEET_PAPER));
+    const posed = crop(
+      CLEAR,
+      CREAM,
+      either(boxOf([20, 22, 20, 21], [...CREAM, 96]), boxOf([25, 37, 25, 37], CLEAR)),
+      1,
+    );
+    const holes = rowNamed(fitRows(concept, overOwn(posed)), 'holes');
+    expect(holes?.value).toBe(0);
+    expect(holes?.pass).toBe(true);
+  });
+
+  test('cloth within ΔE 3.5 of the paper reads as figure over the measuring ground', () => {
+    const cloth: Rgb = [236, 229, 216];
+    expect(deltaE(labOf(cloth), labOf(PAPER))).toBeLessThanOrEqual(3.5);
+    const concept = crop([200, 225, 250, 255], cloth);
+    const posed = crop(CLEAR, cloth);
+    const spec: FitSpec = { classes: { cloth: { sheet: [hex(cloth)], paper: [hex(cloth)] } } };
+    const iou = (rows: ReadonlyArray<FitRow>) => rowNamed(rows, 'class.iou')?.value ?? 0;
+    expect(iou(fitRows(concept, overGround(posed, PAPER), spec))).toBeLessThan(0.1);
+    const rows = fitRows(concept, overOwn(posed), spec);
+    expect(iou(rows)).toBe(1);
+    expect(failing(rows)).toEqual([]);
+  });
+
+  test('the measuring ground is light and lies farthest from every opaque pixel, not the clear ones', () => {
+    const posed = crop(CLEAR, CREAM);
+    const g = measuringGround([posed]);
+    expect(lumaOf(g)).toBeGreaterThanOrEqual(180);
+    const light: ReadonlyArray<Rgb> = [
+      [255, 255, 255],
+      PAPER,
+      RENDER_GROUND,
+      [255, 255, 0],
+      [0, 255, 255],
+      [90, 255, 30],
+    ];
+    for (const c of light)
+      expect(leastDeltaE(g, posed)).toBeGreaterThanOrEqual(leastDeltaE(c, posed));
+    const swatch = (a: number) => crop([...g, a], g, () => Option.some([...g, a]));
+    expect(measuringGround([posed, swatch(0)])).toEqual(g);
+    expect(measuringGround([posed, swatch(255)])).not.toEqual(g);
+    expect(measuringGround([posed], [hex(g)])).not.toEqual(g);
+  });
+
+  test('a see-through strip outside the line leaves the slivers and class rows, not the silhouette', () => {
+    const concept = crop(SHEET_PAPER, CREAM);
+    const plain = crop(CLEAR, CREAM);
+    const ground = measuringGround([plain]);
+    const strip = (a: number) => crop(CLEAR, CREAM, boxOf([42, 44, 10, 22], [...CREAM, a]));
+    const spec: FitSpec = { classes: { cream: CLASSES.cream } };
+    const read = (posed: Raster) => fitRows(concept, overGround(posed, ground), spec);
+    const value = (rows: ReadonlyArray<FitRow>, name: string) => rowNamed(rows, name)?.value;
+    const [none, opaque, seen] = [read(plain), read(strip(255)), read(strip(128))];
+    expect(failing(opaque)).toContain('slivers');
+    expect(failing(seen)).not.toContain('slivers');
+    expect(value(seen, 'class.iou')).toBe(value(none, 'class.iou'));
+    expect(value(opaque, 'class.iou')).not.toBe(value(none, 'class.iou'));
+    expect(value(seen, 'silhouette.iou')).toBe(value(opaque, 'silhouette.iou'));
+    expect(value(seen, 'silhouette.iou')).not.toBe(value(none, 'silhouette.iou'));
   });
 });

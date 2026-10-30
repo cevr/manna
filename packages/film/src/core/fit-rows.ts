@@ -155,6 +155,8 @@ export interface FitSpec {
   readonly labels?: LabelTable;
   readonly probes?: ReadonlyArray<FitProbe>;
   readonly bars?: Readonly<Partial<Record<FitBarName, FitBar>>>;
+  /** A cut-out view's neighbour: 1 where the kept crop holds another figure's art the puppet leaves out, which the holes row does not count. Crop-sized. */
+  readonly neighbour?: Uint8Array;
 }
 
 /**
@@ -319,6 +321,143 @@ export const figureOf = (r: Raster) => {
     holes: Uint8Array.from(ground, (g, i) => Number(g === 0 && like[i] === 1)),
     ground: lab,
   };
+};
+
+/** The measuring ground's least luma: a light paper, as a render's is. */
+const MEASURE_LUMA = 180;
+
+/** The measuring ground's RGB grid step: 18 levels a channel. */
+const MEASURE_STEP = 15;
+
+/** A pixel this opaque or more is a figure's colour the measuring ground keeps away from. */
+const OPAQUE = 250;
+
+const hexRgb = (hex: string): Rgb => [
+  Number.parseInt(hex.slice(1, 3), 16),
+  Number.parseInt(hex.slice(3, 5), 16),
+  Number.parseInt(hex.slice(5, 7), 16),
+];
+
+/**
+ * The ground a cut-out member's posed crops are read over: the light colour
+ * (luma 180 or more, on an RGB grid of step 15) whose least ΔE76 to every
+ * opaque pixel of `figures` (alpha 250 or more) and every colour of `extra`
+ * (hex, the member's sheet samples) is largest. The page's paper is a
+ * figure colour for a member whose cloth lies within ΔE 3.5 of it, and the
+ * crop's ground flood then eats that cloth; this ground lies far from all of
+ * them. Clear pixels are not the figure's, so they do not move it.
+ */
+export const measuringGround = (
+  figures: ReadonlyArray<Raster>,
+  extra: ReadonlyArray<string> = [],
+): Rgb => {
+  const labs = [...opaqueColours(figures), ...extra.map(hexRgb)].map(labOf);
+  let [best, bestD]: [Rgb, number] = [[255, 255, 255], -1];
+  for (const c of lightGrid()) {
+    const least = leastDeltaE(labOf(c), labs, bestD);
+    if (least > bestD) [best, bestD] = [c, least];
+  }
+  return best;
+};
+
+/** Each colour an opaque pixel of `figures` has, once. */
+const opaqueColours = (figures: ReadonlyArray<Raster>): Rgb[] => {
+  const packed = new Set<number>();
+  for (const f of figures)
+    for (let i = 0; i < f.width * f.height; i++)
+      if ((f.rgba[i * 4 + 3] ?? 0) >= OPAQUE) {
+        const [r, g, b] = rgbAt(f, i);
+        packed.add(r * 65536 + g * 256 + b);
+      }
+  return Array.from(packed, (p): Rgb => [
+    Math.floor(p / 65536),
+    Math.floor(p / 256) % 256,
+    p % 256,
+  ]);
+};
+
+/** The grid's colours light enough for a measuring ground. */
+const lightGrid = (): Rgb[] => {
+  const out: Rgb[] = [];
+  for (let r = 0; r <= 255; r += MEASURE_STEP)
+    for (let g = 0; g <= 255; g += MEASURE_STEP)
+      for (let b = 0; b <= 255; b += MEASURE_STEP)
+        if (lumaOf([r, g, b]) >= MEASURE_LUMA) out.push([r, g, b]);
+  return out;
+};
+
+/** The least ΔE76 from `lab` to `labs`, stopping once it is `stop` or less (a candidate that cannot win). */
+const leastDeltaE = (lab: Rgb, labs: ReadonlyArray<Rgb>, stop: number) => {
+  let least = Infinity;
+  for (const l of labs) {
+    least = Math.min(least, deltaE(lab, l));
+    if (least <= stop) break;
+  }
+  return least;
+};
+
+/** `posed` laid over `ground`, straight alpha: each pixel's colour mixed with the ground by its alpha, its alpha kept, so the fit rows read which pixels were see-through. */
+export const overGround = (posed: Raster, ground: Rgb): Raster => {
+  const rgba = Uint8Array.from(posed.rgba);
+  for (let i = 0; i < posed.width * posed.height; i++) {
+    const a = posed.rgba[i * 4 + 3] ?? 0;
+    for (let k = 0; k < 3; k++)
+      rgba[i * 4 + k] = Math.round(
+        ((posed.rgba[i * 4 + k] ?? 0) * a + (ground[k] ?? 0) * (255 - a)) / 255,
+      );
+  }
+  return { width: posed.width, height: posed.height, rgba };
+};
+
+/** How far from a kept hole a render hole that overlaps it is excused, Chebyshev pixels: the cut-out draws a kept hole up to 4 px wider than the sheet. */
+const POCKET_REACH = 4;
+
+/**
+ * A cut-out render's holes: the clear pixels (alpha 0) of each enclosed
+ * component of see-through pixels (alpha under 128, four ways, not touching
+ * the crop's border), where the kept crop reads figure that is neither its
+ * hole nor `neighbour`. A component that overlaps a kept hole is that pocket
+ * cut wider: its pixels within `POCKET_REACH` of the kept holes it overlaps
+ * are excused. Any other component counts whole, even beside a pocket.
+ * Partly see-through pixels (a seam's speck) never count. Measured on the
+ * in-its-order cut-out views (`p2-pick.md`): no base-pass view fails, 200/200
+ * planted 12 px blocks and 60/60 planted 2 x 24 px holes 3 px inside the
+ * line are caught (44/50 at 1 px in). Counting alpha under 128 instead fails
+ * sower's 10 views; a per-pixel 4 px reach round every kept hole misses
+ * 5/60 thin holes.
+ */
+const cutHolesOf = (c: Read, render: Raster, neighbour: Uint8Array | undefined) => {
+  const { w, h } = c;
+  const alpha = (i: number) => render.rgba[i * 4 + 3] ?? 0;
+  const clear = Uint8Array.from({ length: w * h }, (_, i) => Number(alpha(i) < 128));
+  const comps = componentsOf(clear, w, h, false);
+  const pockets = componentsOf(c.holes, w, h, false).labels;
+  const counts = (i: number) =>
+    alpha(i) === 0 && c.ground[i] === 0 && c.holes[i] === 0 && neighbour?.[i] !== 1;
+  const overlaps = comps.components.map(() => new Set<number>());
+  for (let i = 0; i < w * h; i++) {
+    const [l, p] = [comps.labels[i] ?? -1, pockets[i] ?? -1];
+    if (l >= 0 && p >= 0) overlaps[l]?.add(p);
+  }
+  const nearPocket = (i: number, of: Set<number>) => {
+    const [x, y] = [i % w, Math.floor(i / w)];
+    for (let yy = Math.max(0, y - POCKET_REACH); yy <= Math.min(h - 1, y + POCKET_REACH); yy++)
+      for (let xx = Math.max(0, x - POCKET_REACH); xx <= Math.min(w - 1, x + POCKET_REACH); xx++)
+        if (of.has(pockets[yy * w + xx] ?? -1)) return true;
+    return false;
+  };
+  let n = 0;
+  for (let i = 0; i < w * h; i++) {
+    const l = comps.labels[i] ?? -1;
+    const comp = comps.components[l];
+    if (comp === undefined || !counts(i)) continue;
+    const [x0, y0, x1, y1] = comp.box;
+    if (x0 === 0 || y0 === 0 || x1 === w || y1 === h) continue;
+    const of = overlaps[l] ?? new Set<number>();
+    if (of.size > 0 && nearPocket(i, of)) continue;
+    n++;
+  }
+  return n;
 };
 
 /** A crop read into its ground, figure, ink and paper; none when it holds no figure. */
@@ -953,16 +1092,31 @@ export const fitRows = (
     rowOf('silhouette.iou', 'figure', 'figure', iouOf(figure(c), figure(r)), bar('silhouette.iou')),
   );
   rows.push(rowOf('ink.edge', 'figure', 'figure', inkEdgeOf(c, r), bar('ink.edge')));
-  const [cs, rs] = [sliversOf(c), sliversOf(r)];
+  // A cut-out render (some pixel see-through) has its partly see-through
+  // edge left out of its paper for the sliver and class rows: an
+  // antialiased cut edge mixed with the ground is neither a sliver nor a
+  // class's paper. The silhouette, holes, part and probe rows read it whole.
+  const cut = render.rgba.some((v, k) => k % 4 === 3 && v < 255);
+  const edge = (i: number) => {
+    const a = render.rgba[i * 4 + 3] ?? 0;
+    return a > 0 && a < 255;
+  };
+  const rc: Read = cut
+    ? { ...r, paper: Uint8Array.from(r.paper, (p, i) => (p === 1 && !edge(i) ? 1 : 0)) }
+    : r;
+  const [cs, rs] = [sliversOf(c), sliversOf(rc)];
   rows.push(
     rowOf('slivers', 'figure', 'figure', Math.max(0, rs - cs), bar('slivers'), {
       concept: cs,
       render: rs,
     }),
   );
-  const [ch, rh] = [count(c.holes), count(r.holes)];
+  // A cut-out's holes are counted where they lie (`cutHolesOf`), so the
+  // kept crop's own holes elsewhere do not absorb them; a drawn render's
+  // holes are the ground its figure closes round beyond the sheet's.
+  const [ch, rh] = [count(c.holes), cut ? cutHolesOf(c, render, spec.neighbour) : count(r.holes)];
   rows.push(
-    rowOf('holes', 'figure', 'figure', Math.max(0, rh - ch), bar('holes'), {
+    rowOf('holes', 'figure', 'figure', cut ? rh : Math.max(0, rh - ch), bar('holes'), {
       concept: ch,
       render: rh,
     }),
@@ -973,7 +1127,7 @@ export const fitRows = (
     classifier(r, classes, (k) => k.paper),
   ];
   const kinds = [classesOf(c, classOf[0]), classesOf(r, classOf[1])] as const;
-  rows.push(...classRows(c, r, classes, kinds, bar));
+  rows.push(...classRows(c, rc, classes, cut ? [kinds[0], classesOf(rc, classOf[1])] : kinds, bar));
   const names = Object.keys(classes);
   rows.push(...partRows([c, r], kinds, names, spec.labels ?? {}, bar));
   for (const p of spec.probes ?? [])
