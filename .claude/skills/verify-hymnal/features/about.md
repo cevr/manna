@@ -43,13 +43,13 @@ runs on the phone and nothing goes over the network.
 - **States:** default, open. Focus-visible, loading, empty and error are n/a (a route naming no hymn says `No hymn`).
 - **Regression:** `apps/hymnal/src/reader/About.test.tsx` (the rows equal `moreLike`, `topicsOf`, `referencesOf` and `sameMetre`, an empty section is left out, the page's line opens the sheet and gives the section and first passage, a hymn row closes it and opens its hymn, a topic row opens the `Topics` tab at its topic with search mode off, a passage row sets the search query and search mode), `apps/hymnal/src/hymns/indexes.test.ts` (the lookups, `passageText`, `passageQuery`), `apps/hymnal/src/hymns/meaning.test.ts` (the ranking is the cosine over the shipped vectors), `packages/hymnal/scripts/meaning/table.test.ts` (the file's format), the acceptance's `find-meaning-theme`.
 
-**The journey:** `sim journey about`. It opens hymn 100 and its sheet (`about-sheet`), closes it with `Done`, scrolls the sheet to `Sing to another tune` (`about-tunes`), taps `id=about-topic-0` (`about-topics`), puts the tab back to `Sections`, then opens the sheet again and taps `id=about-scripture-0` (`about-scripture`) and `Cancel`. Its stored change, the `Topics` tab a topic row opens, is put back.
+**The journey:** `sim journey about`. It opens hymn 100 and its sheet (`about-sheet`), closes it with `Done` and waits until the sheet's grabber and rows are gone (`about-close`: a tap while the sheet still closes is lost), opens it again, scrolls the sheet to `Sing to another tune` (`about-tunes`), taps `id=about-topic-0` (`about-topics`), relaunches to the list's top with `Topics` kept (`tab-row`: no `Recent` shelf, which only `Sections` shows) and taps `Sections` (`tab-put-back`: the `Recent` shelf back), then opens the sheet again and taps `id=about-scripture-0` (`about-scripture`) and `Cancel`. Its stored change, the `Topics` tab a topic row opens, is put back.
 
 Read in the receipts:
 
 - `about-sheet`: the heading `More like this` over 8 rows `<n>, …`, none `100, `.
 - `about-tunes`: the headings `Topics`, `Scripture` and `Sing to another tune`; the `about-tune-<n>` numbers equal `sameMetre(100)` from the checkout (`apps/hymnal/src/hymns/indexes.ts`), printed as numbers only.
-- `about-topics`: the home list, not in search mode, `Topics` `[selected]`, the topic's heading at the list's top over its hymns.
+- `about-topics`: the home list, not in search mode, the topic's heading at the list's top over its hymns (`FAITH AND TRUST` for hymn 100's first topic, as the Topical index prints it). The tab row is scrolled away above it, and a scroll up does not reach it in 12 passes, so `tab-row` relaunches.
 - `about-scripture`: search mode with where the passage begins as the query, hymn 100 among the first results.
 
 By hand (a journey cannot compute them):
@@ -59,7 +59,8 @@ By hand (a journey cannot compute them):
 
 ## Gotchas
 
-- The button's label is `About this hymn`, its value the section and first passage: `label=` matches the button, not those words.
+- The button's label is `About this hymn`, its value the section and first passage: `label=` matches the button, not those words. iOS also gives the page's scroll area and its group that label, so a tap names `role=button label=About this hymn` (a bare `label=` tap is an `AMBIGUOUS_MATCH` of three). The sheet's group takes `Done`'s label the same way: tap `role=button label=Done`. Never settle the page with `sim scroll screen up` at its top: the page does not move, so the swipe is a press on `About this hymn` and opens the sheet again.
+- `tab-put-back` fails when the snapshot says `Simulator AX snapshot unavailable (circuit-disabled)`: in that XCTest tree the tab row's wrappers carry `Sections` as well, and `label=Sections` presses the row's centre, in `Topics`. Rerun the journey once the snapshot no longer says so, or tap the tab by hand.
 - The heading `More like this` is drawn in capitals; its label is `More like this` (an uppercase style alone would make the label `MORE LIKE THIS`).
 - The table is read once a launch, in a task of its own (about 55 ms in Hermes 0.12 on a Mac): a 1 ms timer after search mode or a hymn page opens (`readMeaningSoon`). A zero sleep (`Effect.yieldNow`) would not split them: Effect yields on `setImmediate`, which React Native 0.88 runs as a microtask of the same task. Search mode's open task builds the search index alone (about 180 ms). A sheet opened before that task runs reads the table in its render (about 70 ms); after it, the sheet's rows take about 13 ms, and so does the first query.
 - A row's name holds the hymn's title: match it by its leading `<n>, ` and keep titles out of logs.

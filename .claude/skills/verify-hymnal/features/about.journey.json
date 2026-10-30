@@ -11,19 +11,23 @@
     {
       "name": "about-sheet",
       "action": "tap",
-      "target": "label=About this hymn",
+      "target": "role=button label=About this hymn",
       "expect": [{ "shows": "label=Done" }, { "shows": "label=More like this" }]
     },
     {
       "name": "about-close",
       "action": "tap",
-      "target": "label=Done",
-      "expect": [{ "shows": "label=Stanza 1" }, { "hides": "label=More like this" }]
+      "target": "role=button label=Done",
+      "expect": [
+        { "shows": "label=Stanza 1" },
+        { "hides": "label=Sheet Grabber" },
+        { "hides": "label=More like this" }
+      ]
     },
     {
       "name": "sheet-again",
       "action": "tap",
-      "target": "label=About this hymn",
+      "target": "role=button label=About this hymn",
       "expect": [{ "shows": "label=More like this" }]
     },
     {
@@ -37,20 +41,18 @@
       "name": "about-topics",
       "action": "tap",
       "target": "id=about-topic-0",
-      "expect": [{ "shows": "label=Topics" }, { "hides": "label=More like this" }]
+      "expect": [{ "shows": "label=FAITH AND TRUST" }, { "hides": "label=More like this" }]
     },
     {
       "name": "tab-row",
-      "action": "scroll",
-      "target": "label=Sections",
-      "direction": "up",
-      "expect": [{ "shows": "label=Sections" }]
+      "action": "relaunch",
+      "expect": [{ "shows": "label=Sections" }, { "hides": "label=Recent, see all" }]
     },
     {
       "name": "tab-put-back",
       "action": "tap",
       "target": "label=Sections",
-      "expect": [{ "shows": "label=Number, title or first line" }]
+      "expect": [{ "shows": "label=Recent, see all" }]
     },
     {
       "name": "hymn-again",
@@ -61,7 +63,7 @@
     {
       "name": "sheet-third",
       "action": "tap",
-      "target": "label=About this hymn",
+      "target": "role=button label=About this hymn",
       "expect": [{ "shows": "label=More like this" }]
     },
     {
