@@ -447,8 +447,15 @@ export const neighbourMask = (
 const groundNear = (c: Read, of: Raster, within: number) => (i: number) =>
   deltaE(labOf(rgbAt(of, i)), c.lab) <= within;
 
-/** How far from a pocket a clear pixel is excused, Chebyshev pixels: the cut-out draws a pocket up to 4 px wider than the sheet. */
-const POCKET_REACH = 4;
+/**
+ * How far from a pocket a clear pixel is excused, Chebyshev pixels. The cut
+ * clears a pocket wider than the sheet draws it: the un-matte takes the pale
+ * rim between the pocket's paper and its ink as paper too, so the reach
+ * covers that rim. It stops short of the ink's far side, since a pixel past
+ * the line is the next fill's, and the reading would rather count a speck
+ * of rim than excuse a hole there.
+ */
+const POCKET_REACH = 7;
 
 /** How near the kept crop's ground a pocket's paper core lies, ΔE76: a light cloth's grain makes kept holes as large as a true pocket, so only colour tells them apart, and the farther the core reaches, the more of that grain it takes for pockets. */
 const POCKET_CORE_DE = 2;
@@ -489,7 +496,8 @@ const grown = (mask: Uint8Array, w: number, h: number, by: number): Uint8Array =
  * the crop's border), where the kept crop reads figure that is not its hole
  * (a neighbour's pixels are its ground, `readCrop`). A clear pixel within
  * `POCKET_REACH` of a pocket (`pocketsOf`) is that pocket cut wider or
- * shifted, and is excused, whichever component it lies in. Partly
+ * shifted, or its pale rim cleared, and is excused, whichever component it
+ * lies in. Partly
  * see-through pixels (a seam's speck) never count, nor do pixels the kept
  * crop holds as near its ground as its own ground's pixels lie (`reach`):
  * a speck of the sheet's paper the kept crop's figure closes round, which

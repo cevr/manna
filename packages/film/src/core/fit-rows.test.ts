@@ -318,15 +318,15 @@ const hex = (c: Rgb) => `#${c.map((v) => v.toString(16).padStart(2, '0')).join('
 
 describe('fitRows over a cut-out crop', () => {
   test('a 12 px hole is counted though the kept crop has a larger false hole of its own', () => {
-    const concept = crop(SHEET_PAPER, CREAM, boxOf([9, 22, 9, 22], SHEET_PAPER));
+    const concept = crop(SHEET_PAPER, CREAM, boxOf([9, 39, 9, 14], SHEET_PAPER));
     const posed = crop(CLEAR, CREAM, boxOf([26, 38, 26, 38], CLEAR));
     const holes = rowNamed(fitRows(concept, overOwn(posed)), 'holes');
     expect(holes?.value).toBe(144);
     expect(holes?.pass).toBe(false);
   });
 
-  test('a 2 x 24 px hole 3 px inside the line is counted whole 5 px beside a paper pocket', () => {
-    const concept = crop(SHEET_PAPER, CREAM, boxOf([18, 26, 12, 36], SHEET_PAPER));
+  test('a 2 x 24 px hole 3 px inside the line is counted whole 8 px beside a paper pocket', () => {
+    const concept = crop(SHEET_PAPER, CREAM, boxOf([21, 29, 12, 36], SHEET_PAPER));
     const posed = crop(CLEAR, CREAM, boxOf([12, 14, 12, 36], CLEAR));
     const holes = rowNamed(fitRows(concept, overOwn(posed)), 'holes');
     expect(holes?.value).toBe(48);
@@ -337,6 +337,16 @@ describe('fitRows over a cut-out crop', () => {
     const concept = crop(SHEET_PAPER, CREAM, boxOf([16, 24, 12, 36], SHEET_PAPER));
     const posed = crop(CLEAR, CREAM, boxOf([12, 14, 12, 36], CLEAR));
     expect(rowNamed(fitRows(concept, overOwn(posed)), 'holes')?.value).toBe(0);
+  });
+
+  test('a clear run out from a paper pocket, as its rim is cut, is excused out to the reach and counted one px past it', () => {
+    const reach = 7;
+    const pocket = boxOf([20, 28, 12, 36], SHEET_PAPER);
+    const concept = crop(SHEET_PAPER, CREAM, pocket);
+    const cleared = (wide: number) =>
+      overOwn(crop(CLEAR, CREAM, boxOf([20 - wide, 28, 12, 36], CLEAR)));
+    expect(rowNamed(fitRows(concept, cleared(reach)), 'holes')?.value).toBe(0);
+    expect(rowNamed(fitRows(concept, cleared(reach + 1)), 'holes')?.value).toBe(24);
   });
 
   test('a 1 px outline shift, a see-through seam speck and a kept hole drawn 1 px wider count no hole', () => {
@@ -472,7 +482,7 @@ describe('fitRows over a cut-out crop', () => {
   });
 
   test.each([
-    [9, 122],
+    [9, 84],
     [8, 144],
   ])(
     "a kept hole with %i px of the sheet's paper excuses a 12 px hole 2 px off it only from 9 px up: holes %i",
@@ -492,7 +502,7 @@ describe('fitRows over a cut-out crop', () => {
   );
 
   test.each([
-    [[252, 244, 220] as const, 1.9, 120],
+    [[252, 244, 220] as const, 1.9, 84],
     [[250, 242, 217] as const, 2.1, 144],
   ])(
     "a 4 x 4 kept hole of %j, ΔE %d off the sheet's ground, excuses a 12 px hole 2 px off it only within ΔE 2: holes %i",
