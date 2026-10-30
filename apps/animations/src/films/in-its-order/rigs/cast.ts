@@ -445,26 +445,28 @@ const FEAST_MOTHER_POSES = 814 / 440;
 const IDEA_VILLAGERS_POSES = 512 / 440;
 
 /**
- * Paul on his heads sheet: busts with no rig, so no view of his is a canon
- * anchor. He takes the lead's heads scale, the bust framing his kept heads
- * sheet shares (each bust crown to cut 297 to 313 rows). The cut-out page
- * reads only the sheet's size.
+ * The bust scale of a heads sheet, read off the lead's: his busts have no
+ * feet, so it is 1.13 of his turnaround's, the mean of his eyes' spacing (52
+ * px on heads-4 against 46.5 on the turnaround's front) and his head's width
+ * across his ears at his eyes' row (185 px against 162).
+ *
+ * Paul's heads sheet takes it too: his busts have no rig, so no view of his is
+ * a canon anchor, and his sheet shares the lead's bust framing (each bust
+ * crown to cut 297 to 313 rows). The cut-out page reads only the sheet's size.
  */
-const PAUL_HEADS = LEAD_TURNAROUND * 1.13;
+const HEADS_BUST = LEAD_TURNAROUND * 1.13;
 
 /**
  * Each member's sheets: their size and one scale, sheet pixels a canon unit,
  * each read off the sheet's anchor view. The lead's poses: poses-5, his
- * front at rest, hair (row 225) to soles (row 829) 440 units. His heads, busts
- * with no feet: 1.13 of his turnaround's, the mean of his eyes' spacing (52
- * px on heads-4 against 46.5 on the turnaround's front) and his head's width
- * across his ears at his eyes' row (185 px against 162).
+ * front at rest, hair (row 225) to soles (row 829) 440 units. His heads and
+ * Paul's: the bust scale (`HEADS_BUST`).
  */
 export const SHEETS = {
   'lead-feast': {
     turnaround: { ...SHEET, scale: LEAD_TURNAROUND },
     poses: { ...SHEET, scale: 1 / LEAD.SHEETS.poses.scale },
-    heads: { ...SHEET, scale: LEAD_TURNAROUND * 1.13 },
+    heads: { ...SHEET, scale: HEADS_BUST },
   },
   'feast-mother': {
     turnaround: { ...SHEET, scale: FEAST_MOTHER_TURNAROUND },
@@ -474,7 +476,7 @@ export const SHEETS = {
     poses: { ...SHEET, scale: IDEA_VILLAGERS_POSES },
   },
   paul: {
-    heads: { ...SHEET, scale: PAUL_HEADS },
+    heads: { ...SHEET, scale: HEADS_BUST },
   },
   sower: {
     turnaround: { ...SHEET, scale: SOWER_TURNAROUND },

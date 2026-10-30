@@ -37,8 +37,9 @@ export const LINE = { width: 11.5, ink: [42, 21, 7] } as const;
  * He names no `keep` colour and no `grain`. His lightest colours lie far from
  * his paper: the lightest 5 % of his figure is at least 50.5 from its view's
  * paper (heads-6; 50.6 to 57.3 in the others), while his paper's grain is at
- * most 3.658 (the 95th percentile on heads-1). No rim pixel of his is near
- * enough to paper to be taken for it, so the un-matte needs neither.
+ * most 3.658 (the 95th percentile on heads-1). That distance is why the
+ * un-matte needs neither, and render 1 bears it out: it lost 0 figure pixels
+ * to the paper in each of his six views.
  */
 export const PAPERS = {
   'heads-1': [249, 232, 208],

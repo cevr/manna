@@ -31,17 +31,18 @@ const bust = (line: readonly (readonly [number, number])[], pivot: readonly [num
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ] as const;
 
-// The heads views stand close on his sheet, so a padded box reaches into its
-// neighbour's: heads-1's right pad holds the edge of heads-2's head, heads-2's
-// left pad heads-1's shoulder and its right pad the edge of heads-3's head,
-// and heads-3's left pad heads-2's shoulder. The cutter refuses a figure pixel
+// The heads views stand close on his sheet, so a box, kept or padded, reaches
+// into its neighbour's: the edge of heads-2's head lies at heads-1's right
+// side, mostly inside heads-1's kept box (sheet x 275-281) and the rest in its
+// pad; heads-2's left pad holds heads-1's shoulder and its right pad the edge
+// of heads-3's head, and heads-3's left pad heads-2's shoulder. The cutter refuses a figure pixel
 // no part takes, so a first, still part takes those pixels; the puppet leaves
 // it out of its parts, so the render draws no figure but his own.
 
 /** His bust three-quarters to the viewer's left (heads-1), the line at the foot of his beard. */
 const HEADS_1: PartCut = {
   parts: [
-    // the edge of heads-2's head inside this box's right pad: never drawn
+    // the edge of heads-2's head at this box's right side, inside the kept box (sheet x 275-281) and its pad: never drawn
     { name: 'neighbour', take: [box(236, 40, FAR, 170)] },
     ...bust(
       [
