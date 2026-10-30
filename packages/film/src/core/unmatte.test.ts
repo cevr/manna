@@ -46,6 +46,11 @@ describe('unmatte', () => {
     for (const x of [3, 4]) expect(at(out!, x)[3]).toBe(0);
   });
 
+  test('drops a rim px the line to the ink does not reach (paper lighter or bluer than the flat paper), though his ink walls it in, since it runs to the frame', () => {
+    const [out] = unmatte([part()], W, H, PAPER);
+    expect(at(out!, 4)[3]).toBe(0);
+  });
+
   test('keeps the ink, and the fill inside it, byte for byte', () => {
     const src = part();
     const [out] = unmatte([src], W, H, PAPER);
@@ -286,5 +291,109 @@ describe('unmatte, a light px the figure encloses', () => {
     const [out] = unmatte([src], S, S, PAPER);
     expect(px(out!, 6, 9)).toEqual([...CLOTH, 255]);
     expect(px(out!, 7, 9)[3]).toBe(0);
+  });
+
+  test('keeps a light cloth speck whole when its clear region holds a few px of paper (4, under a pocket)', () => {
+    const near = [5, 6].flatMap((x) => [8, 11].map((y) => [x, y, NEAR] as const));
+    const cloth = [5, 6].flatMap((x) => [9, 10].map((y) => [x, y, CLOTH] as const));
+    const [out] = unmatte([figure([...near, ...cloth, ...inkColumn(8)])], S, S, PAPER);
+    for (const [x, y] of cloth) expect(px(out!, x, y)).toEqual([...CLOTH, 255]);
+  });
+
+  test("clears a light px beside a pocket of the sheet's paper (9 px within ΔE 2) though the rim clears only part of the pocket", () => {
+    // a paper a shade darker than the flat one (ΔE 1.05): the rim solves it near-clear but walks no further through it
+    const DIM: Rgb = [247, 237, 217];
+    const pocket = [6, 7, 8].flatMap((x) => [8, 9, 10].map((y) => [x, y, DIM] as const));
+    const cloth = [8, 9, 10].map((y) => [5, y, CLOTH] as const);
+    const [out] = unmatte([figure([...pocket, ...cloth, ...inkColumn(11)])], S, S, PAPER);
+    for (const [x, y] of cloth) expect(px(out!, x, y)[3]).toBe(0);
+  });
+
+  test("clears a light px beside a pocket whose paper a band of the sheet's coarser grain (ΔE 3.7) splits in two", () => {
+    const DIM: Rgb = [247, 237, 217];
+    // the sheet's grain at its coarsest, ΔE 3.67 from the paper: still its ground
+    const GRAIN: Rgb = [239, 230, 212];
+    const pocket = [6, 7, 8].flatMap((x) => [
+      [x, 8, DIM] as const,
+      [x, 9, GRAIN] as const,
+      [x, 10, DIM] as const,
+      [x, 11, DIM] as const,
+    ]);
+    const cloth = [8, 9, 10, 11].map((y) => [5, y, CLOTH] as const);
+    const [out] = unmatte([figure([...pocket, ...cloth, ...inkColumn(11)])], S, S, PAPER);
+    for (const [x, y] of cloth) expect(px(out!, x, y)[3]).toBe(0);
+  });
+
+  // lighter than the paper, ΔE 2.35 from it: the sheet's paper past PAPER_CORE, which the line does not reach
+  const LIGHT: Rgb = [252, 243, 227];
+  const paint = (
+    rgba: Uint8Array,
+    [x0, x1]: [number, number],
+    [y0, y1]: [number, number],
+    c: Rgb,
+  ) => {
+    for (let y = y0; y <= y1; y++)
+      for (let x = x0; x <= x1; x++) rgba.set([...c, 255], (y * S + x) * 4);
+    return rgba;
+  };
+  /** An ink body (x 6..11, y 3..11) on two legs of the ink mix (x 6..7, 10..11) to row `bottom`, a 2 px `LIGHT` gap (x 8..9) between them. */
+  const legs = (bottom: number) => {
+    const rgba = paint(new Uint8Array(S * S * 4), [6, 11], [3, 11], INK);
+    paint(rgba, [6, 7], [12, bottom], MIX);
+    paint(rgba, [10, 11], [12, bottom], MIX);
+    return paint(rgba, [8, 9], [12, bottom], LIGHT);
+  };
+  const gap = (bottom: number) =>
+    [8, 9].flatMap((x) => Array.from({ length: bottom - 11 }, (_, k) => [x, 12 + k] as const));
+
+  test('clears a 2 px gap of paper between his legs that opens on the ground below', () => {
+    const [out] = unmatte([legs(16)], S, S, PAPER);
+    for (const [x, y] of gap(16)) expect(px(out!, x, y)[3]).toBe(0);
+  });
+
+  test('clears a light gap between his legs that runs out through the crop frame', () => {
+    const [out] = unmatte([legs(S - 1)], S, S, PAPER);
+    for (const [x, y] of gap(S - 1)) expect(px(out!, x, y)[3]).toBe(0);
+  });
+
+  test('clears a light px in a 1 px notch of his outline that touches the ground only at a corner', () => {
+    const src = figure([[8, 4, LIGHT], ...inkColumn(10)]);
+    src.fill(0, (3 * S + 7) * 4, (3 * S + 7) * 4 + 4);
+    const [out] = unmatte([src], S, S, PAPER);
+    expect(px(out!, 8, 4)[3]).toBe(0);
+  });
+
+  test('clears a light gap between his feet that only an inkless part (his shadow) closes below', () => {
+    const body = paint(new Uint8Array(S * S * 4), [5, 12], [3, 14], INK);
+    paint(body, [8, 9], [8, 14], LIGHT);
+    const shadow = paint(new Uint8Array(S * S * 4), [3, 14], [15, 16], [215, 205, 190]);
+    const [out] = unmatte([body, shadow], S, S, PAPER);
+    for (const [x, y] of [
+      [8, 13],
+      [9, 13],
+      [8, 14],
+      [9, 14],
+    ] as const)
+      expect(px(out!, x, y)[3]).toBe(0);
+  });
+
+  test('clears a light px that opens on ground the figure holds inside his outline', () => {
+    const src = figure([[8, 9, CLOTH], [8, 10, CLOTH], ...inkColumn(13)]);
+    for (let y = 8; y <= 11; y++) src.fill(0, (y * S + 9) * 4, (y * S + 12) * 4);
+    const [out] = unmatte([src], S, S, PAPER);
+    expect(px(out!, 8, 9)[3]).toBe(0);
+    expect(px(out!, 8, 10)[3]).toBe(0);
+  });
+
+  test('keeps light cloth whole inside a faint outline (a 15 % ink mix, alpha about 38), which still walls it in', () => {
+    // 15 % of the ink over the paper
+    const FAINT: Rgb = [216, 206, 188];
+    const src = paint(new Uint8Array(S * S * 4), [3, 4], [3, 16], INK);
+    paint(src, [13, 14], [3, 16], INK);
+    paint(src, [7, 11], [7, 11], FAINT);
+    paint(src, [8, 10], [8, 10], CLOTH);
+    const [out] = unmatte([src], S, S, PAPER);
+    for (const x of [8, 9, 10])
+      for (const y of [8, 9, 10]) expect(px(out!, x, y)).toEqual([...CLOTH, 255]);
   });
 });
