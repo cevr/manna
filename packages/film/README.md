@@ -2589,7 +2589,7 @@ its fit rows (`core/fit-rows.ts` `fitRows`): the outer ink edge per band
 has not (`outline.turns`), the figure masks' overlap (`silhouette.iou`), the
 render's ink to the sheet's (`ink.edge`), paper slivers (a thin strip
 against the line or cut loose of it) and enclosed ground beyond the sheet's
-(`slivers`, `holes`), each colour class's overlap and colour (`class.iou`,
+(`slivers`, `holes`; a cut-out view reads both as below), each colour class's overlap and colour (`class.iou`,
 `class.colour`, from the member's `FIT_CLASSES`), each part the view's
 labels pick on both crops, the render's by the film's papers (`part.iou`,
 `part.edge`, the view's `fit.labels`: a label whose region the sheet runs on
@@ -2743,6 +2743,39 @@ by their sheet samples, since a cut-out is painted with the sheet's own
 pixels), its record's `figure: 'cutout'`, each view's `deltaE` against
 the kept view and each sheet's `drawMs` (the page's draw of the frame,
 median of 7).
+
+A cut-out view with no look is read for its fit rows from its posed raster,
+cut at the kept box (`fitRead`, `tools/cast-render.ts`); a rig view and a
+look view keep the page crop. Four rules make that reading true:
+
+- **Ground.** The rows read the posed raster over the member's measuring
+  ground (`measuringGround`, `overGround`): the light colour (luma 180 or
+  more) farthest in ΔE from his opaque pixels and his `FIT_CLASSES`
+  samples, kept in `render.json` as the view's `ground`. The page, its PNGs
+  and `deltaE` keep `PAPER`. Over `PAPER`, cloth within ΔE 3.5 of it read
+  as ground: twelve views of three members failed with no real loss.
+- **Holes.** A hole is the clear pixels (alpha 0) of an enclosed
+  component, counted where the kept crop is figure and not its own hole. A
+  component that overlaps a kept hole is that pocket cut wider, and is
+  excused within 4 px of it (`POCKET_REACH`). Render holes less kept holes,
+  over `PAPER`, caught 88/200 planted 12 px holes, since a kept crop's false
+  holes absorbed them; the positional count catches 200/200, and 60/60
+  2 × 24 px holes 3 px inside the line.
+- **Neighbour.** A neighbour's pixels (`FitSpec.neighbour`, the view's
+  `cutout/sheets/<view>/neighbour.png`) are ground on both crops, so no row
+  reads them: the posed raster draws no neighbour, and its art on the kept
+  crop alone read as a `silhouette.edge` of 26.
+- **Edges.** A cut carries a pixel or so of the sheet's own paper past the
+  line, and clears specks of it inside the figure. The kept crop reads both
+  as ground; over the measuring ground they read as paper and as holes. So
+  both rows skip a pixel by its colour against the kept crop's ground
+  (`groundNear`): `slivers` skips a strip pixel within the ground's `near`
+  (ΔE 3), after the strips are found, since taking it out first cuts a
+  light cloth into new strips; `holes` skips a pixel the kept crop holds
+  within its ground's `reach`, the farthest of its own ground pixels (ΔE
+  3.3 to 4.5 on the in-its-order cast), short of light cloth, which starts
+  at ΔE 8.3. A see-through edge pixel (alpha 1 to 254), the ground showing
+  through, leaves the class and `slivers` rows.
 
 A puppet is drawn with a look (`PuppetLook`, `canvas/puppet.ts`): the boil
 tick and its amplitude (`core/boil.ts` `boilField`, the house `BOIL_AMP`
