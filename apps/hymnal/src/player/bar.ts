@@ -12,10 +12,14 @@
  * a back moves it out with the page.
  *
  * The bar holds a `#` (`FIND_LABEL`) that opens the find drums over it on
- * the bar's hymn's number (`Find`); a second press closes them.
+ * the bar's hymn's number (`Find`); a second press, or a swipe down, closes
+ * them, and their `Open` and `Play` act on the dialled hymn (`pressFind`).
+ * With the bar hidden, the home list alone shows the `#`, where the bar
+ * docks (`findAt`).
  */
 
 import { Data, Option, Predicate } from 'effect';
+import * as Atom from 'effect/reactivity/Atom';
 
 import { FIRST, held } from './drums';
 import { Player, type Track, trackOf } from './player';
@@ -157,6 +161,96 @@ export const dialFind = (find: Find, number: number): Find =>
   Find.$match(find, {
     Closed: () => find,
     Open: () => Find.Open({ number: held(number) }),
+  });
+
+/** The find drums, app-wide: the `#` sets them and the home list follows their number. */
+export const find = Atom.make<Find>(Find.Closed()).pipe(Atom.keepAlive);
+
+/** What the reader does to the find drums: the `#`, a drum's detent, `Open`, `Play`, or a swipe down. */
+export type FindPress = Data.TaggedEnum<{
+  Hash: {};
+  Dial: { readonly number: number };
+  Open: {};
+  Play: {};
+  Swipe: {};
+}>;
+export const FindPress = Data.taggedEnum<FindPress>();
+
+/** What a press asks of the app besides the drums: nothing, the dialled hymn's page, or its start (playbulk's `Start`). */
+export type FindAct = Data.TaggedEnum<{
+  Stay: {};
+  Open: { readonly number: number };
+  Play: { readonly number: number };
+}>;
+export const FindAct = Data.taggedEnum<FindAct>();
+
+/**
+ * The drums after `press`, and what it asks of the app. `#` opens or closes
+ * them; a detent dials and asks nothing, so no detent ever starts a hymn;
+ * `Open` and `Play` act on the dialled number and close the drums; a swipe
+ * down closes them. With the drums closed, `Open` and `Play` ask nothing.
+ */
+export const pressFind = (find: Find, bar: Bar, press: FindPress): readonly [Find, FindAct] =>
+  FindPress.$match(press, {
+    Hash: () => [toggleFind(find, bar), FindAct.Stay()] as const,
+    Dial: ({ number }) => [dialFind(find, number), FindAct.Stay()] as const,
+    Open: () => acting(find, (number) => FindAct.Open({ number })),
+    Play: () => acting(find, (number) => FindAct.Play({ number })),
+    Swipe: () => [Find.Closed(), FindAct.Stay()] as const,
+  });
+
+const acting = (find: Find, act: (number: number) => FindAct): readonly [Find, FindAct] =>
+  Find.$match(find, {
+    Closed: () => [find, FindAct.Stay()] as const,
+    Open: ({ number }) => [Find.Closed(), act(number)] as const,
+  });
+
+/** A drag let go on the drums is a swipe down past 24 pt, or flung down faster than 400 pt/s: the bar's swipe, turned over. */
+export const swipedDown = (translationY: number, velocityY: number): boolean =>
+  translationY >= 24 || velocityY >= 400;
+
+/** The `#`'s side, in points. */
+export const HASH = 44;
+/** The space between the bar's top and the `#` over it, in points. */
+export const HASH_GAP = 8;
+
+/**
+ * Where the `#` stands: over the bar while the bar shows; alone where the
+ * bar docks while it is hidden on the home list, so the number path never
+ * waits on a hymn; nowhere on any other screen with no bar, so no bar comes
+ * back there.
+ */
+export type FindAt = Data.TaggedEnum<{
+  Nowhere: {};
+  OverBar: { readonly state: Player };
+  Docked: {};
+}>;
+export const FindAt = Data.taggedEnum<FindAt>();
+
+/** Where the `#` stands for `bar`, on the home list (`home`) or another screen. */
+export const findAt = (bar: Bar, home: boolean): FindAt =>
+  Bar.$match(bar, {
+    Hidden: () => {
+      if (home) return FindAt.Docked();
+      return FindAt.Nowhere();
+    },
+    Shown: ({ state }) => FindAt.OverBar({ state }),
+  });
+
+/** The docked `#`'s bottom over the device's bottom inset: centred in the resting bar's height. */
+export const DOCKED_LIFT = (REST - HASH) / 2;
+
+/**
+ * How far the `#`'s top stands over the bottom edge of a list's screen, for
+ * a device's bottom inset of `inset` points: the list's end clears it
+ * (`ListEnd`). Over the docked bar the screen ends on the bar's top; with
+ * the bar hidden it ends on the window's bottom edge.
+ */
+export const findRoom = (at: FindAt, inset: number): number =>
+  FindAt.$match(at, {
+    Nowhere: () => 0,
+    OverBar: () => HASH_GAP + HASH,
+    Docked: () => Math.max(0, inset) + DOCKED_LIFT + HASH,
   });
 
 /**

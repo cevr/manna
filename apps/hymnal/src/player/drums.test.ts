@@ -5,13 +5,14 @@
  */
 
 import { describe, expect, it } from 'bun:test';
+import { Option } from 'effect';
 
 import type { Haptic, SoundName } from '~/feel/body';
 import type { Cue } from '~/feel/cue';
 import { feelOver } from '~/feel/feel';
 
 import { DETENT, glide } from './dial';
-import { digitOf, digitsOf, DRUMS, drumTell, FIRST, held, LAST, turn } from './drums';
+import { digitOf, digitsOf, DRUMS, drumTell, FIRST, foundOffset, held, LAST, turn } from './drums';
 
 describe('the digits', () => {
   it('reads each drum’s digit of a number', () => {
@@ -134,5 +135,23 @@ describe('drumTell over the feel', () => {
     off.tell({ _tag: 'wall' });
     expect(off.heard).toEqual(['key-2']);
     expect(off.felt).toEqual([{ _tag: 'selection' }, { _tag: 'impact', style: 'rigid' }]);
+  });
+});
+
+describe('the dialled hymn’s row', () => {
+  const placed = [
+    { number: 12, offset: 300 },
+    { number: 4, offset: 340 },
+    { number: 12, offset: 900 },
+  ];
+
+  it('is the first row with the number, at its offset', () => {
+    expect(foundOffset(placed, 12)).toEqual(Option.some(300));
+    expect(foundOffset(placed, 4)).toEqual(Option.some(340));
+  });
+
+  it('is none when the list holds no row with the number', () => {
+    expect(foundOffset(placed, 695)).toEqual(Option.none());
+    expect(foundOffset([], 1)).toEqual(Option.none());
   });
 });

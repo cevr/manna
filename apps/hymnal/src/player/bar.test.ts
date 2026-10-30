@@ -13,10 +13,20 @@ import {
   dialFind,
   dockedBar,
   Find,
+  FindAct,
+  FindAt,
+  findAt,
+  FindPress,
+  findRoom,
+  HASH,
+  HASH_GAP,
   openAt,
   pageBar,
   playedShare,
+  pressFind,
+  REST,
   stackBottom,
+  swipedDown,
   toggleFind,
   toldPlace,
 } from './bar';
@@ -158,5 +168,87 @@ describe('the find drums', () => {
 
   it('take no dial while closed', () => {
     expect(dialFind(Find.Closed(), 312)).toEqual(Find.Closed());
+  });
+});
+
+describe('a press on the find drums', () => {
+  const shown = barFor(Player.Idle(), Option.some(four));
+  const open = Find.Open({ number: 312 });
+
+  it('opens and closes them on the `#`, asking nothing else', () => {
+    expect(pressFind(Find.Closed(), shown, FindPress.Hash())).toEqual([
+      Find.Open({ number: 4 }),
+      FindAct.Stay(),
+    ]);
+    expect(pressFind(open, shown, FindPress.Hash())).toEqual([Find.Closed(), FindAct.Stay()]);
+  });
+
+  it('dials on a detent, held to the book, and never opens or starts a hymn', () => {
+    expect(pressFind(open, shown, FindPress.Dial({ number: 13 }))).toEqual([
+      Find.Open({ number: 13 }),
+      FindAct.Stay(),
+    ]);
+    expect(pressFind(open, shown, FindPress.Dial({ number: 700 }))).toEqual([
+      Find.Open({ number: 695 }),
+      FindAct.Stay(),
+    ]);
+    expect(pressFind(Find.Closed(), shown, FindPress.Dial({ number: 13 }))).toEqual([
+      Find.Closed(),
+      FindAct.Stay(),
+    ]);
+  });
+
+  it('opens or plays the dialled hymn on `Open` or `Play`, and closes them', () => {
+    expect(pressFind(open, shown, FindPress.Open())).toEqual([
+      Find.Closed(),
+      FindAct.Open({ number: 312 }),
+    ]);
+    expect(pressFind(open, Bar.Hidden(), FindPress.Play())).toEqual([
+      Find.Closed(),
+      FindAct.Play({ number: 312 }),
+    ]);
+  });
+
+  it('asks nothing of `Open` or `Play` while closed', () => {
+    expect(pressFind(Find.Closed(), shown, FindPress.Open())).toEqual([
+      Find.Closed(),
+      FindAct.Stay(),
+    ]);
+    expect(pressFind(Find.Closed(), shown, FindPress.Play())).toEqual([
+      Find.Closed(),
+      FindAct.Stay(),
+    ]);
+  });
+
+  it('closes them on a swipe down', () => {
+    expect(pressFind(open, shown, FindPress.Swipe())).toEqual([Find.Closed(), FindAct.Stay()]);
+  });
+
+  it('counts a drag as a swipe down past 24 pt or faster than 400 pt/s', () => {
+    expect(swipedDown(24, 0)).toBe(true);
+    expect(swipedDown(23, 399)).toBe(false);
+    expect(swipedDown(2, 400)).toBe(true);
+    expect(swipedDown(-40, -900)).toBe(false);
+  });
+});
+
+describe('where the `#` stands', () => {
+  const shown = barFor(Player.Idle(), Option.some(four));
+
+  it('over the bar while it shows, on any screen', () => {
+    expect(findAt(shown, true)).toEqual(FindAt.OverBar({ state: Player.Idle() }));
+    expect(findAt(shown, false)).toEqual(FindAt.OverBar({ state: Player.Idle() }));
+  });
+
+  it('docked alone on the home list with the bar hidden, and nowhere elsewhere', () => {
+    expect(findAt(Bar.Hidden(), true)).toEqual(FindAt.Docked());
+    expect(findAt(Bar.Hidden(), false)).toEqual(FindAt.Nowhere());
+  });
+
+  it('keeps a list’s end clear of it by its height over the screen’s bottom', () => {
+    expect(findRoom(FindAt.Nowhere(), 34)).toBe(0);
+    expect(findRoom(FindAt.OverBar({ state: Player.Idle() }), 34)).toBe(HASH_GAP + HASH);
+    expect(findRoom(FindAt.Docked(), 34)).toBe(34 + (REST - HASH) / 2 + HASH);
+    expect(findRoom(FindAt.Docked(), -1)).toBe((REST - HASH) / 2 + HASH);
   });
 });

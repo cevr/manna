@@ -13,6 +13,8 @@
  * player's Sound switch is on (`drumTell`).
  */
 
+import { Option } from 'effect';
+
 import { type Cue, type DialName, plain, type Tell } from '~/feel/cue';
 
 import { type Detents, ownDetent } from './dial';
@@ -78,3 +80,17 @@ export const drumTell =
     if (cue._tag === 'detent' && isDrum(cue.dial) && !loud()) return tell(plain('rail-tick'));
     return tell(cue);
   };
+
+/**
+ * The scroll offset that shows the dialled hymn's row: the first of `placed` (the
+ * list's hymns in its order, each with its offset, as `marksOf` gives them)
+ * with `number`. None when the list has no such row, and it stays where it is.
+ */
+export const foundOffset = (
+  placed: ReadonlyArray<{ readonly number: number; readonly offset: number }>,
+  number: number,
+): Option.Option<number> =>
+  Option.map(
+    Option.fromNullishOr(placed.find((row) => row.number === number)),
+    (row) => row.offset,
+  );
