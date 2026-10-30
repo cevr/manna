@@ -16,7 +16,10 @@
  * The rail's top follows the header's bottom while the list is pulled past
  * its top (`railShift`), so the header's own controls never lie under it.
  * Each label sits at its band's middle as a percent of the rail (`labelAt`),
- * so the labels move with the rail's top and need no draw of their own.
+ * so the labels move with the rail's top and need no draw of their own. A
+ * label's box is as tall as its line at the reader's text size, its type
+ * capped at `LABEL_SCALE` (`labelHeight`), so a larger text size never cuts
+ * its digits and three digits still fit the gutter.
  *
  * The drag runs on the UI thread: the thumb and the bubble follow shared
  * values, and the list scrolls from the gesture's worklet (`onMark`), once
@@ -29,7 +32,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { GestureDetector, type PanGesture, usePanGesture } from 'react-native-gesture-handler';
 import Animated, {
   type SharedValue,
@@ -43,7 +46,19 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { color, useAccent } from '~/color';
 import { plain, useCue } from '~/feel/cue';
 
-import { crossings, GUTTER, labelAt, labelsOf, type Mark, markAt, railShift } from './rail-marks';
+import {
+  crossings,
+  GUTTER,
+  LABEL_LINE,
+  LABEL_SCALE,
+  LABEL_SIZE,
+  labelAt,
+  labelHeight,
+  labelsOf,
+  type Mark,
+  markAt,
+  railShift,
+} from './rail-marks';
 
 /** How many numbers the rail shows. */
 const LABELS = 6;
@@ -155,6 +170,8 @@ export function Rail({
   readonly bottom: number;
 }) {
   const accent = useAccent();
+  const { fontScale } = useWindowDimensions();
+  const box = labelHeight(fontScale);
   const shifted = useAnimatedStyle(() => ({ top: hold.shift.value }));
   const thumb = useAnimatedStyle(() => ({
     opacity: Math.min(1, hold.at.value + 1),
@@ -175,7 +192,15 @@ export function Rail({
         <GestureDetector gesture={hold.gesture}>
           <Animated.View testID="rail" style={[styles.rail, shifted]}>
             {labelsOf(marks.length, LABELS).map((index) => (
-              <Text key={index} style={[styles.label, { top: `${labelAt(index, marks.length)}%` }]}>
+              <Text
+                key={index}
+                numberOfLines={1}
+                maxFontSizeMultiplier={LABEL_SCALE}
+                style={[
+                  styles.label,
+                  { top: `${labelAt(index, marks.length)}%`, height: box, marginTop: -box / 2 },
+                ]}
+              >
                 {marks[index]?.number}
               </Text>
             ))}
@@ -229,7 +254,6 @@ function Bubble({
   );
 }
 
-const LABEL = 12;
 const THUMB = 10;
 
 const styles = StyleSheet.create({
@@ -239,10 +263,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    height: LABEL,
-    marginTop: -LABEL / 2,
-    fontSize: 10,
-    lineHeight: LABEL,
+    fontSize: LABEL_SIZE,
+    lineHeight: LABEL_LINE,
     textAlign: 'center',
     fontVariant: ['tabular-nums'],
     color: color.muted,

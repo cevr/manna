@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'bun:test';
 
-import { crossings, GUTTER, labelAt, labelsOf, markAt, marksOf, railShift } from './rail-marks';
+import {
+  crossings,
+  GUTTER,
+  LABEL_LINE,
+  LABEL_SCALE,
+  LABEL_SIZE,
+  labelAt,
+  labelHeight,
+  labelsOf,
+  markAt,
+  marksOf,
+  railShift,
+} from './rail-marks';
 import { rowsOf } from './rows';
 
 const hymn = (number: number, topic: string) => ({ number, topic });
@@ -86,7 +98,7 @@ describe('the rail’s top', () => {
     expect(railShift(120, -60)).toBe(180);
   });
 
-  it('moves up with the header as the list scrolls, and stops at the view’s top', () => {
+  it('moves up with the header as the list scrolls, and stops at the gutter’s top, where the header’s top rests', () => {
     expect(railShift(120, 50)).toBe(70);
     expect(railShift(120, 120)).toBe(0);
     expect(railShift(120, 900)).toBe(0);
@@ -102,5 +114,27 @@ describe('a label’s place', () => {
 
   it('is the rail’s top when the rail has no bands', () => {
     expect(labelAt(0, 0)).toBe(0);
+  });
+});
+
+describe('a label’s box', () => {
+  it('is its line at the default text size', () => {
+    expect(labelHeight(1)).toBe(LABEL_LINE);
+  });
+
+  it('holds the whole scaled line at every larger text size up to the cap, so no digit is cut', () => {
+    for (const scale of [0.82, 1, 1.118, 1.235, 1.353, 1.5, 1.79, 2]) {
+      expect(labelHeight(scale)).toBeGreaterThanOrEqual(LABEL_LINE * scale);
+    }
+  });
+
+  it('stops growing at the cap, where the label’s type stops growing too', () => {
+    expect(labelHeight(3.12)).toBe(labelHeight(LABEL_SCALE));
+    expect(labelHeight(LABEL_SCALE)).toBeGreaterThanOrEqual(LABEL_LINE * LABEL_SCALE);
+  });
+
+  it('fits three digits in the gutter at the cap', () => {
+    // A tabular digit of the system face is under 0.62 em wide.
+    expect(3 * 0.62 * LABEL_SIZE * LABEL_SCALE).toBeLessThanOrEqual(GUTTER);
   });
 });
