@@ -7,12 +7,15 @@
 // views of a sheet that draws other members too; one not kept yet is sent the
 // references its record names. Pure.
 
-import { Array as Arr, Boolean as Bool } from 'effect';
-import { type CastSheetRecord, keptOf } from './cast-record.ts';
-import { keptFile, type SheetKind, TURNAROUND_SLOTS } from './cast-sheet.ts';
+import { Array as Arr, Boolean as Bool, Option } from 'effect';
+import type { CastSheetRecord } from './cast-record.ts';
+import { type SheetKind, TURNAROUND_SLOTS } from './cast-sheet.ts';
+
+/** A kind sent in the lock: a sheet. A single drawing is one pose the owner kept, not sent as a reference until he decides it is. */
+type LockKind = Exclude<SheetKind, 'single'>;
 
 /** The kinds a kept member's sheets are sent in: the whole figure first, then the face, then the acting. */
-const LOCK_ORDER: ReadonlyArray<SheetKind> = ['turnaround', 'heads', 'poses', 'single'];
+const LOCK_ORDER: ReadonlyArray<LockKind> = ['turnaround', 'heads', 'poses'];
 
 /** A member's library reference: its images, each as its folder joins it, and what they are. */
 export interface CastLock {
@@ -47,33 +50,26 @@ const viewsOn = (record: CastSheetRecord, kind: SheetKind): number =>
  * sheet of several members (the villagers' six figures), of which the member
  * is the views its record keeps.
  */
-const cutFrom = (record: CastSheetRecord, kind: SheetKind): boolean => {
-  if (kind === 'single') return false;
+const cutFrom = (record: CastSheetRecord, kind: LockKind): boolean => {
   const views = record.kept?.[kind]?.views ?? [];
   return views.length > 0 && views.length < viewsOn(record, kind);
 };
 
-/** The views a kind keeps: a sheet's kept views, or every kept single drawing's own. */
-const keptViews = (record: CastSheetRecord, kind: SheetKind) =>
-  keptOf(record, kind).flatMap((k) => k.views);
-
 /**
- * The member's library reference: each kept sheet (`kept/<kind>.png`) and
- * each kept single drawing (`kept/single-<n>.png`) when any is kept, or the
- * member's own views of it (`views/<name>.png`) when the sheet draws other
- * members too; else the record's refs.
+ * The member's library reference: each kept sheet (`kept/<kind>.png`) when
+ * any is kept, or the member's own views of it (`views/<name>.png`) when the
+ * sheet draws other members too; else the record's refs. A kept single
+ * drawing is not sent.
  */
 export const castLock = (record: CastSheetRecord, folder: string): CastLock => {
-  const kept = LOCK_ORDER.filter((kind) => keptOf(record, kind).length > 0);
+  const kept = LOCK_ORDER.filter((kind) =>
+    Option.isSome(Option.fromUndefinedOr(record.kept?.[kind])),
+  );
   const cut = kept.filter((kind) => cutFrom(record, kind));
-  const filesOf = (kind: SheetKind): ReadonlyArray<string> =>
+  const filesOf = (kind: LockKind): ReadonlyArray<string> =>
     Bool.match(cut.includes(kind), {
-      onTrue: () => keptViews(record, kind).map((v) => `views/${v.name}.png`),
-      onFalse: () =>
-        Bool.match(kind === 'single', {
-          onTrue: () => keptViews(record, kind).map((v) => keptFile(kind, v.name)),
-          onFalse: () => [keptFile(kind, kind)],
-        }),
+      onTrue: () => (record.kept?.[kind]?.views ?? []).map((v) => `views/${v.name}.png`),
+      onFalse: () => [`kept/${kind}.png`],
     });
   const files = Arr.match(kept, {
     onEmpty: () => record.refs.map((ref) => ref.file),

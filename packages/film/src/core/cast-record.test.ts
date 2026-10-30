@@ -1,6 +1,7 @@
 // A member's single drawings: a `single` sheet holds any number of drawings,
 // each kept as its own file (`kept/single-<n>.png`) and its own view
-// (`single-<n>`), and keeping one leaves every other kind as it was.
+// (`single-<n>`), and keeping one leaves every other kind, and the lock a
+// prompt sends, as it was.
 
 import { describe, expect, test } from 'bun:test';
 import { Schema } from 'effect';
@@ -68,14 +69,10 @@ describe("a member's single drawings", () => {
     expect(keptFile('poses', 'poses-3')).toBe('kept/poses.png');
   });
 
-  test("are sent after the member's kept sheets, one file each", () => {
+  test("stay out of the member's lock, which sends his kept sheets as it did before", () => {
     const lock = castLock(record, '/c');
-    expect(lock.kept).toEqual(['turnaround', 'single']);
-    expect(lock.files).toEqual([
-      '/c/kept/turnaround.png',
-      '/c/kept/single-1.png',
-      '/c/kept/single-2.png',
-    ]);
+    expect(lock.kept).toEqual(['turnaround']);
+    expect(lock.files).toEqual(['/c/kept/turnaround.png']);
   });
 
   test('a third keep is added beside the others, and a keep of a drawing already kept replaces it alone', () => {
