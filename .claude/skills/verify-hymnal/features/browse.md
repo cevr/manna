@@ -1,0 +1,63 @@
+# Browse tabs
+
+On a phone, the home list has a row of tabs under its search field:
+`Sections`, `Lists`, `Topics`, `Metres` and `Scripture`. Each tab groups
+the hymns its own way, a heading over each group: `Sections` by the
+hymnal's sections (the list as it always was, under the `Recent` shelf),
+`Lists` by the reader's `Favourites` and `Recent`, and the other three by
+the back-matter indexes (`indexes.md`): the Topical index's topics, the
+Metrical index's headings and the Scriptural index's books. A row opens its
+hymn, and a swipe on its page pages the whole hymnal in number order, from
+any tab. `All at once` zooms the list out to one tile per group of the tab
+in use; a tile zooms back in at that group. On `Sections` a number rail on
+the list's right edge takes a drag to any hymn, with a bubble showing the
+number and section under the thumb. The tab in use is kept across launches,
+and each tab opens where the reader left it in this run of the app.
+
+## Sub-features
+
+- `browse-tabs`: under the field, a tab list of the five tabs, each a `tab` named by the tab (on iOS the snapshot lists it as `other`, Gotchas), the one in use `[selected]`; a tap on another tab shows its list with a `tab` cue (felt only), and a tap on the tab in use does nothing. A tab read from an index shows only when its index has an entry. At a large text size the row scrolls sideways. Each group's heading is a `heading` named by the group; under it each row is `<n>, <title>`, as in `hymn-list.md`.
+- `browse-sections`: `Sections` is the list of `hymn-list.md`: the `Recent` shelf, then each section's heading over its hymns in number order.
+- `browse-lists`: `Lists` shows the heading `Favourites` over the reader's favourites in number order, then `Recent` over the hymns opened last, newest first. A list with no hymn has no heading; the tab shows even when both are empty.
+- `browse-topics`: `Topics` shows the Topical index's topics in printed order, each over its hymns. A topic row in `About this hymn` opens this tab with that topic's heading at the list's top (`about.md`, `about-topics`).
+- `browse-metres`: `Metres` shows the Metrical index's headings, each over its hymns ascending.
+- `browse-scripture`: `Scripture` shows the Scriptural index's books in the canon's order, each over its hymns ascending.
+- `browse-all-at-once`: the title's `All at once` button, or a tap on a group's heading (its hint `Shows every group at once`), zooms out: a screen with the heading `<tab>, all at once` and `Done` over two columns of tiles, each a button `<group>, <n> hymns` (`1 hymn` for one; `, playing` after it for the group of the hymn the player has), with a strip of where its hymns lie from 1 to 695. The first row holds the group that was at the list's top. A tile zooms back in with its group's heading at the list's top; `Done` zooms back in where the list was. The zoom out and the zoom in are felt only (`zoom-out`, `zoom-in`). While it shows, the list beneath is out of VoiceOver's reach.
+- `browse-rail`: on `Sections`, a drag on the list's right edge (a 20 pt strip with six faint numbers from 1 to 695) shows the thumb in the accent and a bubble beside it with the hymn number and section under it; the list follows the thumb, and each section the drag crosses is one `rail-tick`, felt only. Release leaves the list there.
+- `browse-tab-kept`: the tab in use is a stored choice (`home.tab`, default `Sections`): a relaunch opens on it. Each tab's place is kept in memory only: back to a tab in the same run opens it where it was; a relaunch opens the kept tab at the list's top.
+
+## How to get to it (user POV)
+
+- The home screen's tab row, under the search field at the list's top (`hymn-list.md`).
+- The title's `All at once` button, beside `Settings`; or a tap on a group's heading in any tab.
+- A drag on the right edge of the `Sections` list.
+- A topic row in `About this hymn` (`about.md`), which opens `Topics` at that topic.
+
+## Driving it with sim
+
+- **Preconditions:** the list at its top, so the tab row is on screen (`sim open /` on a fresh launch); for `browse-lists`, one hymn starred and one opened (`hymn-list.md`, steps 6 and 8); `Sounds and haptics` on for the cue lines (`feel.md`).
+- **States:** default, open (`All at once`), empty (`Lists` with no hymn: no heading). Focus-visible, loading and error are n/a (the hymns and indexes are compiled in).
+- **Regression:** `apps/hymnal/src/home/tabs.test.ts` (every tab's groups, tiles, `groupAt`), `apps/hymnal/src/home/TabRow.test.tsx`, `apps/hymnal/src/home/open.test.ts` (a row of every tab opens its hymn and pages in number order), `apps/hymnal/src/reader/rail-marks.test.ts`, `apps/hymnal/src/reader/pin.test.ts` (`topicStart`), `apps/hymnal/src/reader/About.test.tsx` (a topic row opens `Topics`), `apps/hymnal/src/feel/feel.test.ts` (the `tab`, `zoom-out`, `zoom-in` and `rail-tick` cues).
+- **Step 9 changes a stored choice:** put `Sections` back at the end.
+
+1. **The tabs** (`browse-tabs`). `sim open /`, then `sim snapshot tabs`. → the snapshot lists `Sections` `[selected]`, `Lists`, `Topics`, `Metres`, `Scripture` in one row under the field (`other` elements on iOS, `tab` on the web).
+2. **Another tab** (`browse-topics`). `sim tap "label=Topics"`. → `ok`; the snapshot shows `Topics` `[selected]` and a `heading` named by the Topical index's first topic over rows `<n>, …`. Repeat with `Metres` and `Scripture` (`browse-metres`, `browse-scripture`): a `heading` named by a metre, then by a book.
+3. **Lists** (`browse-lists`). `sim tap "label=Lists"`. → `ok`; with the preconditions, the headings `Favourites` and `Recent`, each over its rows; on a fresh install, no heading.
+4. **Sections** (`browse-sections`). `sim tap "label=Sections"`. → `ok`; the snapshot shows the `Recent` shelf (when Recent has a hymn) and the first section's heading over `1, …`.
+5. **A row and its pager.** On `Metres`, tap a row by its leading number, then swipe left (`agent-device gesture pan 350 450 -300 0 250 --session verify-hymnal`). → the reader shows the next hymn by number, not the next row of the group.
+6. **All at once** (`browse-all-at-once`). `sim tap "role=button label=All at once"`. → `ok`; the snapshot shows the heading `<tab>, all at once`, `Done`, and buttons `<group>, <n> hymns`. `sim tap "label=Done"`. → the list where it was.
+7. **A tile.** Open `All at once` again from a group's heading (`sim tap "role=heading label=<group>"`), then tap another tile by its whole label. → the list with that tile's group heading at its top.
+8. **The rail** (`browse-rail`). On `Sections`, `agent-device gesture pan <width - 10> 200 0 400 1500 --session verify-hymnal`. → the list has moved down to a later section (`sim snapshot`), and the app log holds no `[feel] play` line for the ticks (felt only). The bubble cannot be read from the tree (Gotchas).
+9. **The tab is kept** (`browse-tab-kept`). `sim tap "label=Topics"`, relaunch (`sim open /` after a `sim install`, or quit and open the app). → `Topics` `[selected]` at the list's top. Put `Sections` back.
+
+## Gotchas
+
+- The tab row is part of the list's content, under the field: it scrolls away with the rows. Drive a tab from the list's top; deep in the list, a tab tap answers `TargetMissing`.
+- On iOS a tab is not a `tab` in the snapshot: React Native 0.88 gives the `tab` role no iOS trait (VoiceOver reads the role from the value), so the runner lists each tab as `other`, with `[selected]` on the one in use. `role=tab` answers `TargetMissing` there; match a tab by its label alone (`label=Lists`) or as `role=other label=Lists`. `role=tab` matches on the web.
+- The `Recent` heading under `Lists` and the Recent shelf's header share a name: match them as `role=heading label=Recent`.
+- The rail and its bubble are hidden from the accessibility tree, so `sim tap`, `sim snapshot` and VoiceOver never find them. Drive the rail with a pan by coordinates at the screen's right edge, and read where the list landed from the snapshot's rows. VoiceOver readers move through the hymns by the headings, the tabs and `All at once`.
+- The rail is 20 pt wide and sits over each row's right end: a pan that starts more than 20 pt from the edge scrolls the list instead. A plain tap on the rail jumps the list too.
+- A tile's label holds its count: match the whole label, `<group>, <n> hymns`, read from the snapshot first.
+- `All at once` covers the list: while it shows, the snapshot lists only its heading, `Done` and the tiles.
+- Topic, metre and book names hold no hymn words, but a row's label holds its title: match a row by its leading `<n>, ` and keep titles out of logs.
+- Android's Back does not close `All at once` (iOS is the target).

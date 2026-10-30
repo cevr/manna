@@ -6,7 +6,8 @@ detent of the key dial sounds a short tone at the pitch class of the key it
 names, and each detent of the capo and text-size dials a deep, unpitched
 thock, like a mechanical key. Every other cue (a dial's end, Reset, the
 switches, Play and Pause, `Favourite`, a tap on `Key` or a radio, the
-sheet opening, the seeker, the home list's topics) is felt only. A dial's
+sheet opening, the seeker, the home list's topics, its tabs, `All at
+once`'s zoom out and in, and the `Sections` rail's ticks) is felt only. A dial's
 sound starts only once the last one has ended, so a fast fling never
 stacks them. On iOS the sounds are system sounds: the ring/silent switch
 mutes them, the haptics stay, and they never dip or stop a hymn's
@@ -21,7 +22,7 @@ would have played.
 
 ## How to get to it (user POV)
 
-- Every screen: the bar's `Key`, its dials, `Sound`, Play and Pause, the seeker, the page's `Favourite`, the player sheet's `Chords` switch and reading radios, `Keep screen on`, and the home list's topics as they take the pin.
+- Every screen: the bar's `Key`, its dials, `Sound`, Play and Pause, the seeker, the page's `Favourite`, the player sheet's `Chords` switch and reading radios, `Keep screen on`, the home list's topics as they take the pin, its tabs (`browse.md`), `All at once` and its tiles, and a drag on the `Sections` rail.
 - The switch: Settings, `Sounds and haptics` (`settings.md`, `settings-feel`).
 
 ## Driving it with sim
