@@ -184,4 +184,11 @@ describe('fit rows in a cast render', () => {
       Schema.decodeSync(CastRenderJson)(Schema.encodeSync(CastRenderJson)(kept)).views[0]?.fit,
     ).toEqual([row('holes', 0, true)]);
   });
+
+  test('a cut-out view keeps the ground its fit rows read over, and a view without one has none', () => {
+    const kept = { ...RENDER, views: [{ ...FRONT, ground: [251, 246, 233] as const }, FRONT] };
+    const read = Schema.decodeSync(CastRenderJson)(Schema.encodeSync(CastRenderJson)(kept)).views;
+    expect(read.map((v) => 'ground' in v)).toEqual([true, false]);
+    expect(read[0]?.ground).toEqual([251, 246, 233]);
+  });
 });

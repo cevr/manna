@@ -62,6 +62,8 @@ const CastViewRendered = Schema.Struct({
   unmatched: Schema.OptionFromOptionalKey(Schema.String),
   /** Its fit rows (`fit-rows.ts`), each with its bar: the critique waits on every one passing. A render made before them has none. */
   fit: Schema.optionalKey(Schema.Array(CastFitRow)),
+  /** The ground a cut-out's fit rows read its posed figure over, RGB (`measuringGround`), so a reader can repeat them. A rig's view, a cut-out view that draws a look, and a render made before it have none. */
+  ground: Schema.optionalKey(Schema.Tuple([Schema.Int, Schema.Int, Schema.Int])),
   /** The mean ΔE76 of the render against its kept view over their figures' union (`figureOf`). A render made before it has none. */
   deltaE: Schema.optionalKey(Schema.Finite),
   critique: Schema.Literals(['taken', 'skipped']),

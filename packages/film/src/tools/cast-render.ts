@@ -32,12 +32,13 @@ import {
   type CastModule,
   CUTOUT_BOILS,
   CUTOUT_MARGIN,
+  type CutoutView,
   castPage,
   defaultFigure,
   isCastModule,
 } from '../canvas/cast.ts';
 import { BOIL_AMP } from '../core/boil.ts';
-import { deltaE, labsOf } from '../core/cast-sheet-pixels.ts';
+import { type Rgb, deltaE, labsOf } from '../core/cast-sheet-pixels.ts';
 import {
   type CastRender,
   CastRenderJson,
@@ -50,10 +51,19 @@ import { CastSheetJson, type CastSheetRecord, castKindPlan } from '../core/cast-
 import { SheetKind } from '../core/cast-sheet.ts';
 import type { CritiqueFinding } from '../core/critique.ts';
 import { measureFigure } from '../core/figure.ts';
-import { type FitRow, type FitSpec, figureOf, fitRows } from '../core/fit-rows.ts';
+import {
+  type FitRow,
+  type FitSpec,
+  figureOf,
+  fitRows,
+  measuringGround,
+  overGround,
+} from '../core/fit-rows.ts';
 import type { SceneTimes } from '../core/easel.ts';
 import { compareFigures, matchTable } from '../core/match.ts';
+import { rasterOf } from '../core/puppet.ts';
 import { type Raster, besideRaster, cropRaster } from '../core/raster.ts';
+import { puppetFrom } from '../puppet/load.ts';
 
 import {
   CastRenderRefused,
@@ -137,6 +147,8 @@ interface Cut {
   readonly render: Raster;
   readonly rows: Result.Result<ReadonlyArray<CastViewRendered['rows'][number]>, string>;
   readonly fit: ReadonlyArray<FitRow>;
+  /** The ground its fit rows read a cut-out's posed figure over, when they do (`CutoutReading`). */
+  readonly ground: Option.Option<Rgb>;
   readonly deltaE: number;
 }
 
@@ -177,6 +189,7 @@ const renderedOf = (kind: string, cut: Cut, taken: CritiqueTaken): CastViewRende
     rows: Result.getOrElse(cut.rows, () => []),
     unmatched: Result.getFailure(cut.rows),
     fit: cut.fit,
+    ...Option.match(cut.ground, { onNone: () => ({}), onSome: (ground) => ({ ground }) }),
     deltaE: cut.deltaE,
     critique: Option.match(skipped, {
       onNone: () => 'taken' as const,
@@ -271,6 +284,8 @@ interface RenderAt {
   readonly critique: boolean;
   readonly write: boolean;
   readonly figure: CastFigure;
+  /** What a cut-out's fit rows read, none for a rig (`cutoutReading`). */
+  readonly cutout: Option.Option<CutoutReading>;
 }
 
 /**
@@ -321,6 +336,138 @@ const fitSpecOf = (
       () => ({}),
     ),
   };
+};
+
+/** What a cut-out view's fit rows read: its posed figure cut at its kept box, and its neighbour mask when its sheet keeps one. */
+interface CutoutPosed {
+  readonly posed: Raster;
+  readonly neighbour: Option.Option<Uint8Array>;
+}
+
+/**
+ * What a member's cut-out fit rows read: each view's posed figure laid over
+ * one ground, measured once on the member's posed figures and his classes'
+ * sheet samples (`measuringGround`), so a hole the puppet leaves reads as the
+ * ground and not as a paper the art may share. The page, its PNGs and the
+ * deltaE still read the page, painted on PAPER.
+ */
+interface CutoutReading {
+  readonly ground: Rgb;
+  /** Each view's, by `<kind>-<view>`. */
+  readonly views: ReadonlyMap<string, CutoutPosed>;
+}
+
+/** A cut-out sheet's record: the box its part sheets were cut at. */
+const PartSheetBox = Schema.fromJsonString(
+  Schema.Struct({ box: Schema.Tuple([Schema.Int, Schema.Int, Schema.Int, Schema.Int]) }),
+);
+
+/**
+ * `view`'s neighbour mask, crop-sized at `box`: 1 where the still
+ * `neighbour.png` of its part sheets (`<member>/cutout/sheets/<view>/`, cut at
+ * its record's box) holds art, none when the sheet keeps no neighbour.
+ */
+const neighbourOf = Effect.fn('Cast.neighbourOf')(function* (
+  memberDir: string,
+  view: string,
+  box: readonly [number, number, number, number],
+) {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const dir = path.join(memberDir, 'cutout', 'sheets', view);
+  const file = path.join(dir, 'neighbour.png');
+  if (!(yield* fs.exists(file))) return Option.none<Uint8Array>();
+  const still = yield* Effect.fromResult(decodePng(yield* fs.readFile(file)));
+  const recordFile = path.join(dir, 'record.json');
+  const record = yield* Effect.fromResult(
+    Result.mapError(Schema.decodeResult(PartSheetBox)(yield* fs.readFileString(recordFile)), (e) =>
+      FileInvalid.make({ file: recordFile, reason: e.message }),
+    ),
+  );
+  const [w, h] = [box[2] - box[0], box[3] - box[1]];
+  const [nx, ny] = [box[0] - record.box[0], box[1] - record.box[1]];
+  const mask = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++)
+      if ((still.rgba[((y + ny) * still.width + x + nx) * 4 + 3] ?? 0) > 0) mask[y * w + x] = 1;
+  return Option.some(mask);
+});
+
+/** `v`'s posed figure cut at its kept box: the puppet's origin stands at sheet point `at`, so the box sits at `origin + box - at` in its raster. */
+const posedOf = Effect.fn('Cast.posedOf')(function* (v: CutoutView) {
+  const raster = rasterOf(yield* puppetFrom(v.puppet), v.pose);
+  const [ox, oy] = [
+    v.puppet.origin[0] + v.box[0] - v.at[0],
+    v.puppet.origin[1] + v.box[1] - v.at[1],
+  ];
+  return cropRaster(raster, [ox, oy, ox + v.box[2] - v.box[0], oy + v.box[3] - v.box[1]]);
+});
+
+/** `member`'s cut-out reading: every cut-out view of his posed and its neighbour read, and his ground measured on them all. */
+const cutoutReading = Effect.fn('Cast.cutoutReading')(function* (
+  table: CastModule,
+  member: string,
+  memberDir: string,
+) {
+  const kinds = Option.getOrElse(Option.fromUndefinedOr(table.CUTOUT?.[member]), () => ({}));
+  const entries = Object.entries(kinds).flatMap(([kind, views]) =>
+    Object.entries(views).map(([view, v]) => [kind, view, v] as const),
+  );
+  const views = yield* Effect.forEach(entries, ([kind, view, v]) =>
+    Effect.map(
+      Effect.all({ posed: posedOf(v), neighbour: neighbourOf(memberDir, view, v.box) }),
+      (read) => [`${kind}-${view}`, read] as const,
+    ),
+  );
+  const classes = Object.values(
+    Option.getOrElse(Option.fromUndefinedOr(table.FIT_CLASSES?.[member]), () => ({})),
+  );
+  return {
+    ground: measuringGround(
+      views.map(([, read]) => read.posed),
+      classes.flatMap((c) => c.sheet),
+    ),
+    views: new Map(views),
+  } satisfies CutoutReading;
+});
+
+/**
+ * What `stem`'s fit rows read and its ground: a cut-out view's posed figure
+ * over his ground, with its neighbour mask; the page's crop for a rig, and for
+ * a cut-out view that draws a look over its parts, which its posed figure
+ * leaves out.
+ */
+const fitRead = (
+  at: RenderAt,
+  kind: SheetKind,
+  view: string,
+  render: Raster,
+): { readonly read: Raster; readonly spec: FitSpec; readonly ground: Option.Option<Rgb> } => {
+  const spec = fitSpecOf(at.table, at.member, kind, view, at.figure);
+  const looks = Option.isSome(
+    Option.fromUndefinedOr(at.table.CUTOUT?.[at.member]?.[kind]?.[view]?.look),
+  );
+  return Option.match(
+    Option.flatMap(
+      Option.filter(at.cutout, () => !looks),
+      (c) =>
+        Option.map(Option.fromUndefinedOr(c.views.get(`${kind}-${view}`)), (v) => ({
+          ground: c.ground,
+          v,
+        })),
+    ),
+    {
+      onNone: () => ({ read: render, spec, ground: Option.none() }),
+      onSome: ({ ground, v }) => ({
+        read: overGround(v.posed, ground),
+        spec: Option.match(v.neighbour, {
+          onNone: () => spec,
+          onSome: (neighbour) => ({ ...spec, neighbour }),
+        }),
+        ground: Option.some(ground),
+      }),
+    },
+  );
 };
 
 /**
@@ -421,13 +568,15 @@ const renderKind = Effect.fn('Cast.renderKind')(function* (at: RenderAt, kind: S
     .map((v): Cut => {
       const concept = cropRaster(keptSheet, v.box);
       const render = cropRaster(drawn, onPage(v.box, at.figure));
+      const fit = fitRead(at, kind, v.name, render);
       return {
         v,
         stem: `${kind}-${v.name}`,
         concept,
         render,
         rows: measured(concept, render),
-        fit: fitRows(concept, render, fitSpecOf(at.table, member, kind, v.name, at.figure)),
+        fit: fitRows(concept, fit.read, fit.spec),
+        ground: fit.ground,
         deltaE: meanDeltaE(concept, render),
       };
     });
@@ -498,6 +647,10 @@ export const renderCast = Effect.fn('Cast.render')(function* (
     server: Option.none(),
   });
   const scenes = yield* pool.call('scenes');
+  const cutout = yield* Bool.match(figure === 'cutout', {
+    onTrue: () => Effect.asSome(cutoutReading(table, member, path.dirname(folder))),
+    onFalse: () => Effect.succeed(Option.none<CutoutReading>()),
+  });
   const at: RenderAt = {
     member,
     record,
@@ -512,6 +665,7 @@ export const renderCast = Effect.fn('Cast.render')(function* (
     critique: ask.critique && !ask.fitOnly,
     write: !ask.fitOnly,
     figure,
+    cutout,
   };
   const views = (yield* Effect.forEach(kinds, (kind) => renderKind(at, kind))).flat();
   const drawMs = yield* Effect.forEach(kinds, (kind) => drawCost(at, kind));

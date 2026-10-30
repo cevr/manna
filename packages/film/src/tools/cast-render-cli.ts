@@ -22,6 +22,7 @@ import { BOIL_AMP } from '../core/boil.ts';
 import type { CritiqueRule } from '../core/critique.ts';
 import { castViewLines, fitRowLines } from '../core/cast-render.ts';
 import { SheetKind } from '../core/cast-sheet.ts';
+import { PuppetImagesBun } from '../puppet/images-bun.ts';
 import { answerCast, renderCast } from './cast-render.ts';
 import { Counsel } from './counsel.ts';
 import { Critic } from './critique.ts';
@@ -125,7 +126,13 @@ export const render = <E, R>(pages: Layer.Layer<Pages, E, R>, rules: ReadonlyArr
         for (const line of made.render.views.flatMap(fitRowLines)) yield* Console.log(line);
     }),
   ).pipe(
-    Command.provide(Layer.mergeAll(pages, Critic.layer(rules).pipe(Layer.provide(Counsel.layer)))),
+    Command.provide(
+      Layer.mergeAll(
+        pages,
+        Critic.layer(rules).pipe(Layer.provide(Counsel.layer)),
+        PuppetImagesBun,
+      ),
+    ),
     Command.withDescription(
       "Render a cast member's rigs in every kept view of his sheets, each beside its kept view at 1:1, measured and critiqued (out/<film>/cast/<member>/render/<n>/); or answer a finding of a render, that it stands and why",
     ),

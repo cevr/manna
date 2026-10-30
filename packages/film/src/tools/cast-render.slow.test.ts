@@ -7,6 +7,7 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { ConfigProvider, Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
+import { PuppetImagesBun } from '../puppet/images-bun.ts';
 import type { ExportPages } from './pages.ts';
 import { CastSheetJson } from '../core/cast-record.ts';
 import type { Raster } from '../core/raster.ts';
@@ -140,6 +141,7 @@ const world = (dxs: readonly [number, number], shown: Array<ReadonlyArray<string
         FilmFolder.layer(films),
         pages(dxs),
         critic(shown),
+        PuppetImagesBun,
         ConfigProvider.layer(ConfigProvider.fromUnknown({ FILMS_OUT: path.join(root, 'out') })),
       );
     }),
