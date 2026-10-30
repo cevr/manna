@@ -70,12 +70,13 @@ import {
 import { useCue } from '~/feel/cue';
 import { Find, find } from '~/player/bar';
 import { foundOffset } from '~/player/drums';
+import { useFindRoom } from '~/player/context';
 import { useStackBottom } from '~/player/StackBottom';
 import type { HymnText } from '~/hymns/hymns';
 import { color, useAccent } from '~/color';
 
 import type { HymnListProps } from './HymnList';
-import { endSpace } from './end';
+import { listEndSpace } from './end';
 import { ListEnd } from './ListEnd';
 import { dismissal } from './keyboard';
 import { clampedStart, pinnedAt, topicStart, topicStarts } from './pin';
@@ -280,7 +281,8 @@ export function HymnList({
   // The topic last felt, by its place, by the rail or the pin: a topic is felt once.
   const felt = useSharedValue(-1);
   const scrolling = useAnimatedProps(() => ({ scrollEnabled: !railing.value }));
-  const stackBottom = useStackBottom();
+  // The end the list keeps, clear of the bar or the `#`, as its last row (`ListEnd`) keeps it.
+  const end = listEndSpace(useStackBottom(), useFindRoom());
   // A late topic asked for opens with the list's end at the screen's bottom, not past it.
   const opening = useMemo(
     () =>
@@ -292,12 +294,12 @@ export function HymnList({
             rows,
             header,
             (kind) => ({ topic: topicHeight, shelf: topicHeight, hymn: hymnHeight })[kind],
-            endSpace(stackBottom),
+            end,
             viewport,
             rest,
           ),
       }),
-    [start, pullDown?.rest, rows, header, topicHeight, hymnHeight, stackBottom, viewport, rest],
+    [start, pullDown?.rest, rows, header, topicHeight, hymnHeight, end, viewport, rest],
   );
   // Each hymn under a topic, at the offset that shows its row under the pin:
   // the rail's marks, and the rows a home list follows the find drums to.
@@ -335,7 +337,7 @@ export function HymnList({
     },
   );
   const railTop = header - rest;
-  const railBottom = endSpace(stackBottom);
+  const railBottom = end;
   const rail = useRail({
     marks,
     top: railTop,

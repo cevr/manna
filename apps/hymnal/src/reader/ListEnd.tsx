@@ -11,9 +11,9 @@ import { View } from 'react-native';
 import { useFindRoom } from '~/player/context';
 import { useStackBottom } from '~/player/StackBottom';
 
-import { endSpace } from './end';
+import { listEndSpace } from './end';
 
 export function ListEnd() {
-  const bottom = Math.max(useStackBottom(), useFindRoom());
-  return <View testID="list-end" style={{ height: endSpace(bottom) }} />;
+  const space = listEndSpace(useStackBottom(), useFindRoom());
+  return <View testID="list-end" style={{ height: space }} />;
 }
