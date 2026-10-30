@@ -1,7 +1,8 @@
 /**
  * The pitch of a frame and its reading, on fixed cases: each string's sine,
  * a plucked string, the plucks whose half period can read an octave up, the
- * high plucks whose keys must be read between samples, the frames with no pitch, and the
+ * high plucks whose keys must be read between samples, the frames with no
+ * pitch (resonant noise among them), a DC offset, the low strings at 96 kHz, and the
  * reading's note, string and in-tune window. The generated sweeps are in
  * `pitch.property.slow.test.ts` and the unit's acceptance file.
  */
@@ -160,6 +161,62 @@ describe('detect', () => {
     });
     expect(Option.isNone(detect(noise, 44_100))).toBe(true);
   });
+
+  // White noise rung through a two-pole resonance near 120 Hz (r 0.99) has a
+  // period-like NSDF peak. This draw's clearest peak lies between 0.55 and
+  // 0.65 (measured), so it reads only under a weakened `CLARITY`.
+  it('finds no pitch in noise rung through a resonance near 120 Hz', () => {
+    const rate = 44_100;
+    const theta = (2 * Math.PI * 120) / rate;
+    const settle = 4096;
+    let state = 28;
+    let [y1, y2] = [0, 0];
+    const rung = new Float32Array(FRAME);
+    for (let i = 0; i < settle + FRAME; i++) {
+      state = (Math.imul(state, 1_103_515_245) + 12_345) >>> 0;
+      const y = state / 2 ** 32 - 0.5 + 2 * 0.99 * Math.cos(theta) * y1 - 0.99 ** 2 * y2;
+      [y2, y1] = [y1, y];
+      if (i >= settle) rung[i - settle] = y;
+    }
+    const rms = Math.sqrt(rung.reduce((sum, x) => sum + x * x, 0) / FRAME);
+    expect(
+      Option.isNone(
+        detect(
+          rung.map((x) => (x / rms) * 0.2),
+          rate,
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  // The NSDF of an offset frame is the offset's, near 1 at every lag, unless
+  // the mean is removed first.
+  it('reads a pluck riding on a DC offset of 0.5 within 2 cents', () => {
+    const v = voice(110, 44_100, PLUCK, { phase: 1.1, decay: 1.2, start: 0.15, stiffness: 1e-4 });
+    const found = detect(
+      frameOf(v).map((x) => x + 0.5),
+      v.rate,
+    ).pipe(Option.getOrThrow);
+    expect(Math.abs(1200 * Math.log2(found / v.hz))).toBeLessThan(2);
+  });
+
+  // At 96 kHz a 2048-sample frame holds under two periods of the low E.
+  it.each([
+    ['E2', 82.407, 0],
+    ['E2', 82.407, -25],
+    ['A2', 110, 10],
+  ] as const)(
+    'reads a plucked %s string %d Hz %d cents off at 96 kHz within 2 cents',
+    (_, hz, by) => {
+      const v = voice(cents(hz, by), 96_000, PLUCK, {
+        phase: 1.1,
+        decay: 1.2,
+        start: 0.15,
+        stiffness: 1e-4,
+      });
+      expect(Math.abs(centsOff(v))).toBeLessThan(2);
+    },
+  );
 });
 
 describe('reading', () => {

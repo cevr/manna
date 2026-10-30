@@ -26,6 +26,15 @@ import { Array as Arr, Option } from 'effect';
 const MIN_HZ = 60;
 /** The highest pitch read: past the high E's 12th fret (659 Hz) with room. */
 const MAX_HZ = 1200;
+/**
+ * The longest lag read, as a share of the frame. A 2048-sample frame at
+ * 96 kHz holds under two periods of a low E, so half the frame (the lowest
+ * pitch `rate / 1024`, 94 Hz there) misses it; at 0.8 the lag reaches
+ * `rate / MIN_HZ` at every rate up to 98 kHz, and the NSDF normalises the
+ * shorter overlap. At 44.1 and 48 kHz `rate / MIN_HZ` is the shorter of the
+ * two, so the share changes nothing there.
+ */
+const LAG_SHARE = 0.8;
 /** A frame quieter than this RMS (full scale 1) is silence or a whisper. */
 const QUIET_RMS = 0.004;
 /** The highest NSDF peak must reach this, or the frame is noise. */
@@ -328,7 +337,7 @@ const periodKey = (keys: ReadonlyArray<Key>, minLag: number): Option.Option<Key>
 export const detect = (frame: Float32Array, sampleRate: number): Option.Option<number> => {
   const length = frame.length;
   if (length < 64 || !(sampleRate > 0)) return Option.none();
-  const maxLag = Math.min(Math.floor(sampleRate / MIN_HZ), Math.floor(length / 2));
+  const maxLag = Math.min(Math.floor(sampleRate / MIN_HZ), Math.floor(LAG_SHARE * length));
   const minLag = Math.max(2, Math.floor(sampleRate / MAX_HZ));
   if (maxLag <= minLag + 2) return Option.none();
 

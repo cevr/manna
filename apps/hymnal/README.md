@@ -386,7 +386,7 @@ Android haptics only.
 
 - `src/tuner/pitch.ts` finds a guitar string's pitch in one frame of
   samples (`detect`, McLeod's NSDF over an FFT autocorrelation, 60 to
-  1200 Hz), or none in silence and noise. A key at half the period gives
+  1200 Hz at 44.1, 48 and 96 kHz), or none in silence and noise. A key at half the period gives
   way to the key at its double lag when that stands higher, so a pluck
   with strong even partials reads at its fundamental, not an octave up.
 - `src/tuner/tuning.ts` reads a pitch (`reading`): the nearest note and
