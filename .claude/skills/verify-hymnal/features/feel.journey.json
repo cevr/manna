@@ -55,13 +55,29 @@
       "name": "settings",
       "action": "open",
       "link": "settings",
-      "expect": [{ "shows": "label=Sounds and haptics" }]
+      "expect": [{ "shows": "label=Appearance" }]
+    },
+    {
+      "name": "feel-switch",
+      "action": "scroll",
+      "target": "role=switch label=Sounds and haptics",
+      "direction": "down",
+      "expect": [{ "shows": "role=switch label=Sounds and haptics" }]
     },
     {
       "name": "feel-off",
       "action": "tap",
-      "target": "label=Sounds and haptics",
+      "target": "role=switch label=Sounds and haptics",
       "expect": [{ "shows": "label=Sounds and haptics" }]
+    },
+    {
+      "name": "settings-close",
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 760,
+      "ms": 400,
+      "expect": [{ "shows": "id=key-button" }, { "hides": "label=Sheet Grabber" }]
     },
     {
       "name": "hymn-off",
@@ -99,13 +115,29 @@
       "name": "settings-again",
       "action": "open",
       "link": "settings",
-      "expect": [{ "shows": "label=Sounds and haptics" }]
+      "expect": [{ "shows": "label=Appearance" }]
+    },
+    {
+      "name": "feel-switch-again",
+      "action": "scroll",
+      "target": "role=switch label=Sounds and haptics",
+      "direction": "down",
+      "expect": [{ "shows": "role=switch label=Sounds and haptics" }]
     },
     {
       "name": "feel-put-back",
       "action": "tap",
-      "target": "label=Sounds and haptics",
+      "target": "role=switch label=Sounds and haptics",
       "expect": [{ "shows": "label=Sounds and haptics" }]
+    },
+    {
+      "name": "close",
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 760,
+      "ms": 400,
+      "expect": [{ "shows": "id=key-button" }, { "hides": "label=Sheet Grabber" }]
     }
   ]
 }
