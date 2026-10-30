@@ -508,11 +508,17 @@ export const FIT_CLASSES = {
   },
 } as const;
 
-/** Every kept sheet is drawn 1536 by 1024. */
+/** Every kept sheet of many views is drawn 1536 by 1024. */
 const SHEET = { width: 1536, height: 1024 } as const;
+
+/** A kept single drawing, one figure on the page, is drawn 1024 by 1536. */
+const SINGLE = { width: 1024, height: 1536 } as const;
 
 /** The series lead on his turnaround: his front, hair to soles 440 units (`lead.ts`). */
 const LEAD_TURNAROUND = 1 / LEAD.SHEETS.turnaround.scale;
+
+/** The series lead on his single-1: his front, bottle raised, hair (row 109) to soles (row 1382, his kept box) 1273 rows, 440 units. */
+const LEAD_SINGLE = (1382 - 109) / 440;
 
 /** The sower on his turnaround: his front's ink, crown to soles, is 549 rows, 440 units. */
 const SOWER_TURNAROUND = 549 / 440;
@@ -557,6 +563,7 @@ export const SHEETS = {
     turnaround: { ...SHEET, scale: LEAD_TURNAROUND },
     poses: { ...SHEET, scale: 1 / LEAD.SHEETS.poses.scale },
     heads: { ...SHEET, scale: HEADS_BUST },
+    single: { ...SINGLE, scale: LEAD_SINGLE },
   },
   'feast-mother': {
     turnaround: { ...SHEET, scale: FEAST_MOTHER_TURNAROUND },

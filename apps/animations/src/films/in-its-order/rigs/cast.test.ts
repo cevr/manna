@@ -4,7 +4,9 @@
 // every rig it draws, its own and those drawn with it, is an artboard of the
 // film's figures file; and each view's rig is traced from a kept view of that
 // sheet (`concept`), so `film match` holds it there in a scene too. A view the
-// owner keeps later fails here until the table draws it.
+// owner keeps later fails here until the table draws it. A single drawing
+// (`kept.single`, a list of drawings) has no traced rig: the cut-out table
+// draws it, so the rig table leaves its kind out while `SHEETS` sizes it.
 
 import { describe, expect, test } from 'bun:test';
 import LEAD_FEAST from '../../../library/cast/lead-feast/cast-sheet/cast-sheet.json' with { type: 'json' };
@@ -16,20 +18,25 @@ import { ARTBOARDS } from './figures.ts';
 
 type Box = readonly [number, number, number, number];
 
-/** What of a record the table answers to: each kept sheet's views, by name and box. */
-interface Kept {
-  readonly kept: Readonly<
-    Record<
-      string,
-      {
-        readonly views: ReadonlyArray<{
-          readonly name: string;
-          readonly box: ReadonlyArray<number>;
-        }>;
-      }
-    >
-  >;
+/** One kept sheet's views, by name and box. */
+interface KeptSheet {
+  readonly views: ReadonlyArray<{
+    readonly name: string;
+    readonly box: ReadonlyArray<number>;
+  }>;
 }
+
+/** What of a record the table answers to: each kind's kept sheet, or its list of single drawings. */
+interface Kept {
+  readonly kept: Readonly<Record<string, KeptSheet | ReadonlyArray<KeptSheet>>>;
+}
+
+/** The kinds only the cut-out table draws: a single drawing has no traced rig. */
+const CUT_OUT_ONLY: ReadonlySet<string> = new Set(['single']);
+
+/** A kind's kept sheets as one sheet of all their views. */
+const keptViews = (kept: KeptSheet | ReadonlyArray<KeptSheet>): KeptSheet =>
+  'views' in kept ? kept : { views: kept.flatMap((sheet) => sheet.views) };
 
 /** Each member `cold` casts, by his record. */
 const RECORDS: Readonly<Record<keyof typeof CAST, Kept>> = { 'lead-feast': LEAD_FEAST };
@@ -44,11 +51,13 @@ describe("IIO's cast render table", () => {
     for (const [member, record] of Object.entries(RECORDS)) {
       const table: Readonly<Record<string, Readonly<Record<string, View>>>> =
         CAST[member as keyof typeof CAST];
-      expect(Object.keys(table).sort()).toEqual(Object.keys(record.kept).sort());
+      const rigged = Object.keys(record.kept).filter((kind) => !CUT_OUT_ONLY.has(kind));
+      expect(Object.keys(table).sort()).toEqual(rigged.sort());
       expect(Object.keys(SHEETS[member as keyof typeof SHEETS]).sort()).toEqual(
         Object.keys(record.kept).sort(),
       );
-      for (const [kind, kept] of Object.entries(record.kept)) {
+      for (const kind of rigged) {
+        const kept = keptViews(record.kept[kind] ?? []);
         const views = table[kind] ?? {};
         expect(Object.keys(views).sort()).toEqual(kept.views.map((v) => v.name).sort());
         const boxes = kept.views.map((v) => v.box.join(','));

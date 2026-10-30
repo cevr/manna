@@ -1446,6 +1446,27 @@
           "at": "2026-10-25T15:08:15.503Z"
         }
       ]
+    },
+    "single": {
+      "anchor": 1,
+      "layout": "A single character drawing for a narrated animated film, one more pose for the character sheet of the young man in images 1 and 2, drawn in exactly their art style: our own K1 paper-cut look made minimal. Every figure and prop is a few flat cut-paper shapes with a thick warm dark-brown ink outline and a thin light inner edge just inside it, creased once by a single straight diagonal line at the light's angle, its far side a deeper hue of its own colour turned toward violet, never grey and never black. Hands are plain round paper circles at the end of each arm in its sleeve, the sleeve running from the shoulder to the hand: never a bare arm, no thumbs, no fingers. The face is three marks only: short brows, two small dark ink oval eyes and a one-line small smile. A warm soft key light from the upper left, a soft paper grain on every piece, a small soft violet contact shadow under his feet, on the same plain warm cream paper ground as images 1 and 2. No white sticker border, no text, no labels.\n\nImage 1 is his kept turnaround; image 2 is his kept poses sheet. Keep everything of him exactly as they draw it: his head as large on his body as theirs (he stands about three and a third of his own heads tall), his grown face longer than it is wide with a firm jaw and a neck under the chin, his short curly brown hair close to his head with his ears showing, no beard, his skin, his cream tunic with long cream sleeves, his teal mantle over his left shoulder and left arm (the viewer's right), his knotted cream sash with its two hanging tails, his brown sandals, and all their colours and line weight. The bottle is the small plain cream baby's bottle with the warm amber teat that image 2's first pose holds.\n\nDraw him once, alone, standing facing the viewer straight on, exactly as the front view (the first figure) of image 1 stands: feet level, body square to us, head straight, the free left arm in its teal mantle sleeve hanging at his side with its round hand at hip height. Image 3 is a frame of a motion clip and is a pose reference only, never a look: take from it only the raised arm. His right arm (on the viewer's left), in its long cream sleeve, is raised holding the bottle upright in its round hand: the upper arm runs down and slightly out from the shoulder so it looks short, foreshortened, the elbow low beside his chest, and the forearm rises nearly straight up from the elbow to the hand. The round hand is higher, beside his cheek just clear of his face, and the bottle's teat stands at the top of his hair. Hopeful, showing it.",
+      "slots": ["front"],
+      "standing": [1],
+      "tries": [
+        {
+          "n": 1,
+          "file": "single-1.png",
+          "prompt": "A single character drawing for a narrated animated film, one more pose for the character sheet of the young man in images 1 and 2, drawn in exactly their art style: our own K1 paper-cut look made minimal. Every figure and prop is a few flat cut-paper shapes with a thick warm dark-brown ink outline and a thin light inner edge just inside it, creased once by a single straight diagonal line at the light's angle, its far side a deeper hue of its own colour turned toward violet, never grey and never black. Hands are plain round paper circles at the end of each arm in its sleeve, the sleeve running from the shoulder to the hand: never a bare arm, no thumbs, no fingers. The face is three marks only: short brows, two small dark ink oval eyes and a one-line small smile. A warm soft key light from the upper left, a soft paper grain on every piece, a small soft violet contact shadow under his feet, on the same plain warm cream paper ground as images 1 and 2. No white sticker border, no text, no labels.\n\nImage 1 is his kept turnaround; image 2 is his kept poses sheet. Keep everything of him exactly as they draw it: his head as large on his body as theirs (he stands about three and a third of his own heads tall), his grown face longer than it is wide with a firm jaw and a neck under the chin, his short curly brown hair close to his head with his ears showing, no beard, his skin, his cream tunic with long cream sleeves, his teal mantle over his left shoulder and left arm (the viewer's right), his knotted cream sash with its two hanging tails, his brown sandals, and all their colours and line weight. The bottle is the small plain cream baby's bottle with the warm amber teat that image 2's first pose holds.\n\nDraw him once, alone, standing facing the viewer straight on, exactly as the front view (the first figure) of image 1 stands: feet level, body square to us, head straight, the free left arm in its teal mantle sleeve hanging at his side with its round hand at hip height. Image 3 is a frame of a motion clip and is a pose reference only, never a look: take from it only the raised arm. His right arm (on the viewer's left), in its long cream sleeve, is raised holding the bottle upright in its round hand: the upper arm runs down and slightly out from the shoulder so it looks short, foreshortened, the elbow low beside his chest, and the forearm rises nearly straight up from the elbow to the hand. The round hand is higher, beside his cheek just clear of his face, and the bottle's teat stands at the top of his hair. Hopeful, showing it.",
+          "refs": [
+            "kept/turnaround.png",
+            "kept/poses.png",
+            "../../../../../../../tmp/orchestrate/p5/clip2pose/data/s7/clip-b-f045.png"
+          ],
+          "underlay": false,
+          "flags": [],
+          "at": "2026-10-30T11:22:46.689Z"
+        }
+      ]
     }
   },
   "kept": {
@@ -1554,7 +1575,21 @@
           "box": [1276, 313, 1519, 650]
         }
       ]
-    }
+    },
+    "single": [
+      {
+        "try": 1,
+        "why": "chose: \"cand-3 as it is\"",
+        "ask": "a93a4b6e7a8",
+        "views": [
+          {
+            "view": 1,
+            "name": "single-1",
+            "box": [191, 109, 742, 1382]
+          }
+        ]
+      }
+    ]
   },
   "replaced": [
     {

@@ -12,20 +12,35 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Boolean as Bool, Effect, FileSystem, Schema, Stream } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
-/** What of a `cast-sheet.json` names the files it can send. */
+/** A kept sheet's views, by name. */
+const KeptSheet = Schema.Struct({
+  views: Schema.optional(Schema.Array(Schema.Struct({ name: Schema.String }))),
+});
+
+/**
+ * What of a `cast-sheet.json` names the files it can send: each kind keeps one
+ * sheet (`kept/<kind>.png`), or, for single drawings, a list of them, each
+ * kept under its one view's name (`kept/<name>.png`).
+ */
 const SentBy = Schema.fromJsonString(
   Schema.Struct({
     refs: Schema.Array(Schema.Struct({ file: Schema.String })),
     kept: Schema.optional(
-      Schema.Record(
-        Schema.String,
-        Schema.Struct({
-          views: Schema.optional(Schema.Array(Schema.Struct({ name: Schema.String }))),
-        }),
-      ),
+      Schema.Record(Schema.String, Schema.Union([KeptSheet, Schema.Array(KeptSheet)])),
     ),
   }),
 );
+
+/** The files one kind's kept entry names, relative to its folder. */
+const keptFiles = (
+  kind: string,
+  kept: typeof KeptSheet.Type | ReadonlyArray<typeof KeptSheet.Type>,
+): ReadonlyArray<string> => {
+  const views = (sheet: typeof KeptSheet.Type) => (sheet.views ?? []).map((view) => view.name);
+  if ('length' in kept)
+    return kept.flatMap(views).flatMap((name) => [`kept/${name}.png`, `views/${name}.png`]);
+  return [`kept/${kind}.png`, ...views(kept).map((name) => `views/${name}.png`)];
+};
 
 /** The files git reports for `args`, after git's own exit code is checked. */
 const git = (args: ReadonlyArray<string>) =>
@@ -72,11 +87,7 @@ const named = (folder: string) =>
     const kept = Object.entries(record.kept ?? {});
     const files = Bool.match(kept.length === 0, {
       onTrue: () => record.refs.map((ref) => ref.file),
-      onFalse: () =>
-        kept.flatMap(([kind, sheet]) => [
-          `kept/${kind}.png`,
-          ...(sheet.views ?? []).map((view) => `views/${view.name}.png`),
-        ]),
+      onFalse: () => kept.flatMap(([kind, sheet]) => keptFiles(kind, sheet)),
     });
     return files.map((file) => `${folder}/${file}`);
   });
