@@ -35,8 +35,8 @@
  * slot of the window shows a key, in order.
  *
  * The name keeps one line at every text size, whole: its column is as wide
- * as the widest dial name drawn at the text size showing, and
- * `TITLE` points at the least, so the notches of every dial line up and
+ * as the widest name of its group (`COLUMN`) drawn at the text size showing,
+ * and `TITLE` points at the least, so the notches of a group's dials line up and
  * the column follows a change of the system's text size as the text does.
  * Every text in the row grows with Dynamic Type at most `MOST_SCALE` times,
  * as a fixed-height control's text does.
@@ -142,11 +142,22 @@ const FADE = 3.6;
 /** How long the notch stretches and settles on each detent, in milliseconds. */
 const NOTCH = 140;
 
-/** All dial names participate in the shared column, including placement. */
-const TITLES = { key: 'KEY', capo: 'CAPO', size: 'SIZE', placement: 'PLACE' } satisfies Record<
-  DialName,
-  string
->;
+/**
+ * The titles of the dials drawn one over another, so each one's title
+ * column is as wide as the widest of its own group: the player's and
+ * settings' dials share one column, the find drums (`Drums.tsx`) another.
+ */
+const PLAYER_TITLES = ['KEY', 'CAPO', 'SIZE', 'PLACE'] as const;
+const DRUM_TITLES = ['HUNDREDS', 'TENS', 'ONES'] as const;
+const COLUMN = {
+  key: PLAYER_TITLES,
+  capo: PLAYER_TITLES,
+  size: PLAYER_TITLES,
+  placement: PLAYER_TITLES,
+  hundreds: DRUM_TITLES,
+  tens: DRUM_TITLES,
+  ones: DRUM_TITLES,
+} satisfies Record<DialName, ReadonlyArray<string>>;
 
 function Dial<A>(props: DialProps<A>) {
   const { dial, label, title, stops, index, wrap, said, drawStop, testID, resets = 0 } = props;
@@ -359,7 +370,7 @@ function Dial<A>(props: DialProps<A>) {
         >
           <View style={styles.titleColumn} aria-hidden>
             <View style={styles.sizer}>
-              {Object.values(TITLES).map((name) => (
+              {COLUMN[dial].map((name) => (
                 <Text
                   key={name}
                   style={styles.title}
