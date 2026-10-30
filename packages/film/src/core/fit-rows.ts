@@ -1110,13 +1110,15 @@ export const fitRows = (
     : r;
   // A cut keeps a pixel or so of the sheet past the line: the sheet's own
   // ground, opaque. The kept crop reads it as ground; over the measuring
-  // ground it reads as paper. So a cut-out render's sliver count leaves
-  // out the pixels as near the kept crop's ground as its ground-like ones.
+  // ground it reads as paper. So a cut-out render's strips, found on its
+  // whole paper, leave uncounted the pixels as near the kept crop's ground
+  // as its ground-like ones. Taking them out before the strips are found
+  // would cut a light cloth near that colour into new strips.
   const sheetGround = (i: number) => deltaE(labOf(rgbAt(render, i)), c.lab) <= c.near;
-  const rcs: Read = cut
-    ? { ...rc, paper: Uint8Array.from(rc.paper, (p, i) => (p === 1 && !sheetGround(i) ? 1 : 0)) }
-    : rc;
-  const [cs, rs] = [sliversOf(c), sliversOf(rcs)];
+  const rs = count(
+    thinStrips(rc.paper, rc.w, rc.h).map((s, i) => (s === 1 && !(cut && sheetGround(i)) ? 1 : 0)),
+  );
+  const cs = sliversOf(c);
   rows.push(
     rowOf('slivers', 'figure', 'figure', Math.max(0, rs - cs), bar('slivers'), {
       concept: cs,
