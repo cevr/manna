@@ -386,6 +386,22 @@ describe('unmatte, a light px the figure encloses', () => {
     expect(slit.map(([x, y]) => px(out!, x, y)[3])).toEqual([0, 0, 0]);
   });
 
+  test("clears light cloth that a hard 1-px diagonal ink stroke parts from a mouth of the sheet's grain, since the open paper steps across the stroke's corners", () => {
+    const GRAIN: Rgb = [239, 230, 212];
+    // the stroke (9,4)-(8,5) parts the open px (8,4) from the patch, whose corner (9,5) meets it across the stroke
+    const patch = [9, 10, 11].flatMap((x) => [5, 6, 7].map((y) => [x, y, LIGHT] as const));
+    const src = figure([
+      [8, 3, GRAIN],
+      [8, 4, LIGHT],
+      [9, 4, INK],
+      [8, 5, INK],
+      ...patch,
+      ...inkColumn(13),
+    ]);
+    const [out] = unmatte([src], S, S, PAPER, { grain: 2.25 });
+    expect(patch.map(([x, y]) => px(out!, x, y)[3])).toEqual(Array(9).fill(0));
+  });
+
   test("keeps a light gap between his legs whole when a seam past the sheet's ground closes its mouth", () => {
     // ΔE 6.3 from the paper, darker by more than a 2.25 grain: kept whole, and no ground of the sheet's
     const SEAM: Rgb = [233, 222, 202];
