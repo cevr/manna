@@ -4625,8 +4625,8 @@ The form of an entry, each field on its own line:
 - **Said:** "enclosed ground beyond the sheet's"
 - **Source:** issue #39; fit-holes/spec.md Goal; fit-holes/acceptance-base.log, leg H
 - **Wrong:** A 12x12 alpha-0 hole planted in a cut-out view read 0 holes: over the in-its-order cut-out views, 88/200 planted holes were caught, and Jeremiah's heads-2 and heads-6 caught 1/5 each.
-- **Cause:** The `holes` row compared totals (render holes less kept holes), so a kept crop's own false holes absorbed a real one wherever it lay. A cut-out view now counts each enclosed clear component where the kept crop is figure, and excuses only a kept hole's pocket cut wider, within 4 px of it.
-- **Guard:** code: `packages/film/src/core/fit-rows.test.ts` `a 12 px hole is counted though the kept crop has a larger false hole of its own`, `packages/film/src/core/fit-rows.test.ts` `a 2 x 24 px hole 3 px inside the line is counted whole beside a kept hole`
+- **Cause:** The `holes` row compared totals (render holes less kept holes), so a kept crop's own false holes absorbed a real one wherever it lay. A cut-out view now counts each clear pixel where it lies, where the kept crop is figure. It excuses a clear pixel only within 4 px of a pocket: a kept hole with a paper core, at least 9 px within ΔE 2 of the kept crop's ground, since a light cloth's grain makes kept holes as large as a true pocket. In the plants of 2026-10-30, ΔE 2 and 9 px caught 81 of 120 holes planted in light cloth, against 61 to 68 at ΔE 3 and 4.
+- **Guard:** code: `packages/film/src/core/fit-rows.test.ts` `a 12 px hole is counted though the kept crop has a larger false hole of its own`, `packages/film/src/core/fit-rows.test.ts` `a 2 x 24 px hole 3 px inside the line is counted whole 5 px beside a paper pocket`
 
 ### fit-light-cloth-reads-as-ground
 

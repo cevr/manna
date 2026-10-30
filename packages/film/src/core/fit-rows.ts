@@ -450,22 +450,10 @@ const groundNear = (c: Read, of: Raster, within: number) => (i: number) =>
 /** How far from a pocket a clear pixel is excused, Chebyshev pixels: the cut-out draws a pocket up to 4 px wider than the sheet. */
 const POCKET_REACH = 4;
 
-/**
- * A pocket's paper core, ΔE76 to the kept crop's ground. A light cloth's
- * grain lies as clumps of 24 to 287 px within `near` of the ground, as large
- * as a true paper pocket (the feet gap is 179 px), so only colour tells them
- * apart. Over the cast's planted views, of ΔE 2, 3 and 4 (each at 4, 6 and
- * 9 px), ΔE 2 catches the most holes planted in light cloth (75 to 81 of
- * 120; ΔE 3 and 4 make more of the grain pockets and catch 61 to 68), and
- * every planted block and thin hole.
- */
+/** How near the kept crop's ground a pocket's paper core lies, ΔE76: a light cloth's grain makes kept holes as large as a true pocket, so only colour tells them apart, and the farther the core reaches, the more of that grain it takes for pockets. */
 const POCKET_CORE_DE = 2;
 
-/**
- * The pixels within `POCKET_CORE_DE` a kept hole holds to be a pocket. At
- * ΔE 2, 9 px catches 81 of the 120 light-cloth plants, 6 px 78 and 4 px 75;
- * a true pocket holds far more (lead-feast's feet gap, 327).
- */
+/** The pixels within `POCKET_CORE_DE` a kept hole holds to be a pocket: a light cloth's grain holds a few that near the ground, a true pocket far more. */
 const POCKET_CORE = 9;
 
 /** The kept crop's pockets: each kept hole with a paper core (`POCKET_CORE`), where the sheet's paper shows through the figure. */
