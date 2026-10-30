@@ -35,13 +35,17 @@
  * keeps its own place, and `offset` is the web's alone. Rows added above
  * (a hymn joining Recent) keep the rows in view where they were, unless the
  * list is at its top.
+ *
+ * A home list (`pullDown`) follows the find drums: while they are open on a
+ * number, it scrolls to that hymn's first row under its topic (`foundOffset`),
+ * and stays where it is when the list holds no such row.
  */
 
-import { useAtomSet } from '@effect/atom-react';
+import { useAtomSet, useAtomValue } from '@effect/atom-react';
 import { AnimatedLegendList } from '@legendapp/list/reanimated';
-import { Option } from 'effect';
+import { Option, Predicate } from 'effect';
 import { type Href, Link, useLinkTo } from 'one';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   type SharedValue,
@@ -64,6 +68,8 @@ import {
 } from 'react-native';
 
 import { useCue } from '~/feel/cue';
+import { Find, find } from '~/player/bar';
+import { foundOffset } from '~/player/drums';
 import { useStackBottom } from '~/player/StackBottom';
 import type { HymnText } from '~/hymns/hymns';
 import { color, useAccent } from '~/color';
@@ -293,15 +299,41 @@ export function HymnList({
       }),
     [start, pullDown?.rest, rows, header, topicHeight, hymnHeight, stackBottom, viewport, rest],
   );
-  // The Sections list alone has a rail: its hymns, under their topics.
-  const marks = useMemo(() => {
-    if (!byTopic) return [];
+  // Each hymn under a topic, at the offset that shows its row under the pin:
+  // the rail's marks, and the rows a home list follows the find drums to.
+  const following = Predicate.isNotUndefined(pullDown);
+  const placed = useMemo(() => {
+    if (!byTopic && !following) return [];
     return marksOf(
       rows,
       header,
       (kind) => ({ topic: topicHeight, shelf: topicHeight, hymn: hymnHeight })[kind],
     );
-  }, [rows, byTopic, header, topicHeight, hymnHeight]);
+  }, [rows, byTopic, following, header, topicHeight, hymnHeight]);
+  // The Sections list alone has a rail.
+  const marks = useMemo(() => {
+    if (!byTopic) return [];
+    return placed;
+  }, [byTopic, placed]);
+  const dialled = useAtomValue(find);
+  // The offset of the dialled hymn's row while the drums are open on a home list, else -1.
+  const wanted = useSharedValue(-1);
+  useEffect(() => {
+    if (!following) {
+      wanted.value = -1;
+      return;
+    }
+    wanted.value = Find.$match(dialled, {
+      Closed: () => -1,
+      Open: ({ number }) => Option.getOrElse(foundOffset(placed, number), () => -1),
+    });
+  }, [wanted, following, dialled, placed]);
+  useAnimatedReaction(
+    () => wanted.value,
+    (now, before) => {
+      if (now >= 0 && now !== before) scrollTo(scroller, 0, Math.max(0, now - cover.value), false);
+    },
+  );
   const railTop = header - rest;
   const railBottom = endSpace(stackBottom);
   const rail = useRail({
