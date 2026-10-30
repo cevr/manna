@@ -18,6 +18,7 @@ import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { plugin } from 'bun';
 
 import { readChords } from '../../vite/chords';
+import { readIndexes } from '../../vite/indexes';
 import { readTiming } from '../../vite/timing';
 import { readWords } from '../../vite/words';
 
@@ -133,6 +134,10 @@ export const phone = ({ nativeList = false }: { readonly nativeList?: boolean } 
       }));
       build.module('virtual:hymnal-timing', () => ({
         contents: `export default ${JSON.stringify(readTiming())};`,
+        loader: 'js',
+      }));
+      build.module('virtual:hymnal-indexes', () => ({
+        contents: `export default ${JSON.stringify(readIndexes())};`,
         loader: 'js',
       }));
       if (nativeList) {
