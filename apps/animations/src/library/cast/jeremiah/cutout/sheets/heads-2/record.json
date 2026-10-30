@@ -6,13 +6,18 @@
   "command": "film concept parts in-its-order jeremiah --view heads-heads-2",
   "parts": [
     {
+      "name": "neighbour",
+      "kept": 8,
+      "painted": 0
+    },
+    {
       "name": "head",
-      "kept": 45175,
+      "kept": 45169,
       "painted": 0
     },
     {
       "name": "torso",
-      "kept": 13266,
+      "kept": 13264,
       "painted": 5785
     }
   ],

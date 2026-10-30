@@ -15,9 +15,13 @@
 // writes `sheets/<view>/`). The lines are read in the kept view's pixels; the
 // shared cut table (`library/cutout/table.ts`) lays them in each view's part
 // sheet frame, its kept box padded (`frames.ts`), and reads each bust's
-// figure with the foot of the view closed. His views stand apart on his sheet
-// (`frames.ts`), so no view has a neighbour part. Data: the rules and the
-// table are the shared module's.
+// figure with the foot of the view closed. His kept boxes stand 4 px apart on
+// his sheet (`frames.ts`), but heads-2's right pad and heads-3's left pad
+// share two sheet columns (x 534-535), and each view's figure reading holds
+// the cream paper there next to its own outline. A first, still `neighbour`
+// part takes the other view's side of those columns; the puppet leaves it out
+// of its parts, so each sheet pixel is drawn by one view only. Data: the
+// rules and the table are the shared module's.
 
 import type { HiddenEntry, PartCut } from '@manna/film/tools';
 import { CUT_AWAY, KEEP_REST } from '../../../cutout/prompts.ts';
@@ -38,6 +42,11 @@ const bust = (line: readonly (readonly [number, number])[], pivot: readonly [num
       { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
     ],
   }) as const satisfies PartCut;
+
+/** A bust whose first, still part `neighbour` takes `take`: pixels the view beside it on the sheet draws, which its puppet leaves out. */
+const withNeighbour = (take: PartCut['parts'][number]['take'], cut: PartCut): PartCut => ({
+  parts: [{ name: 'neighbour', take }, ...cut.parts],
+});
 
 /** His bust three-quarters to the viewer's left (heads-1). */
 const HEADS_1 = bust(
@@ -66,59 +75,67 @@ const HEADS_1 = bust(
 );
 
 /** His bust with his head bowed down to the viewer's left (heads-2). */
-const HEADS_2 = bust(
-  [
-    [FAR, 293],
-    [213, 293],
-    [213, 243],
-    [210, 243],
-    [207, 239],
-    [201, 240],
-    [201, 235],
-    [174, 220],
-    [169, 215],
-    [168, 210],
-    [139, 210],
-    [125, 222],
-    [108, 229],
-    [96, 228],
-    [86, 221],
-    [82, 221],
-    [57, 230],
-    [41, 238],
-    [32, 246],
-    [30, 248],
-    [24, 253],
-    [16, 267],
-    [9, 292],
-    [-1, 293],
-  ],
-  [122, 225],
+const HEADS_2 = withNeighbour(
+  // the paper beside heads-3's left outline at the foot, in this box's right pad (sheet x 534-535, y 607-614): never drawn
+  [box(247, 286, FAR, FAR)],
+  bust(
+    [
+      [FAR, 293],
+      [213, 293],
+      [213, 243],
+      [210, 243],
+      [207, 239],
+      [201, 240],
+      [201, 235],
+      [174, 220],
+      [169, 215],
+      [168, 210],
+      [139, 210],
+      [125, 222],
+      [108, 229],
+      [96, 228],
+      [86, 221],
+      [82, 221],
+      [57, 230],
+      [41, 238],
+      [32, 246],
+      [30, 248],
+      [24, 253],
+      [16, 267],
+      [9, 292],
+      [-1, 293],
+    ],
+    [122, 225],
+  ),
 );
 
 /** His bust three-quarters to the viewer's left (heads-3). */
-const HEADS_3 = bust(
-  [
-    [FAR, 297],
-    [211, 297],
-    [208, 279],
-    [200, 261],
-    [187, 249],
-    [170, 240],
-    [151, 225],
-    [146, 205],
-    [117, 205],
-    [104, 213],
-    [89, 217],
-    [87, 224],
-    [59, 232],
-    [38, 243],
-    [20, 262],
-    [11, 284],
-    [9, 296],
-    [-1, 296],
-  ],
-  [118, 215],
+const HEADS_3 = withNeighbour(
+  // the paper beside heads-2's right outline, in this box's left pad (sheet x 534-536, y 527-551): never drawn
+  [box(-1, 210, 0, 235)],
+  bust(
+    [
+      [FAR, 297],
+      [211, 297],
+      [208, 279],
+      [200, 261],
+      [187, 249],
+      [170, 240],
+      [151, 225],
+      [146, 205],
+      [117, 205],
+      [104, 213],
+      [89, 217],
+      [87, 224],
+      [59, 232],
+      [38, 243],
+      [20, 262],
+      [11, 284],
+      [9, 296],
+      [-1, 296],
+    ],
+    [118, 215],
+  ),
 );
 
 /** His bust facing the viewer (heads-4). */

@@ -12,7 +12,8 @@ type Box = readonly [number, number, number, number];
  * Each cut view's frame: the kept sheet it is on, its kept box, and the
  * pixels its part sheet pads it by (left, top, right, bottom). Each view is a
  * bust whose foot is the crop's open edge, so it takes none below. His views
- * stand at least 4 px apart, so no pad reaches a neighbour's figure.
+ * stand at least 4 px apart; heads-2's and heads-3's pads share two sheet
+ * columns of paper, which `cut.ts` gives to one view each.
  */
 export const FRAMES = {
   'heads-1': { sheet: 'heads', kept: [24, 317, 276, 615], pad: [3, 3, 3, 0] },

@@ -64,8 +64,11 @@ export const PAPERS = {
  * Each cut view's puppet, by the view's name in his sheet's views: its parts
  * front to back, its part sheet the kept box padded (`frames.ts`), his origin
  * at the kept box's top-left corner, held to the kept box
- * (`library/cutout/puppets.ts`). His views stand apart on the heads sheet, so
- * no view has a `neighbour` part.
+ * (`library/cutout/puppets.ts`).
+ *
+ * heads-2 and heads-3 leave their sheet's `neighbour` part out: it holds the
+ * paper beside the other view's outline where their pads share two sheet
+ * columns (`cut.ts`). The other view's puppet draws it, never this one.
  */
 export const PUPPETS = puppetsOf({
   cast: 'jeremiah',
