@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 
-import { pinnedAt, topicStarts } from './pin';
+import { Option } from 'effect';
+
+import { pinnedAt, topicStart, topicStarts } from './pin';
 import { rowsOf } from './rows';
 
 const hymn = (number: number, topic: string) => ({ number, topic });
@@ -35,6 +37,16 @@ describe('the pinned topic row', () => {
 
   it('never pushes the last topic', () => {
     expect(pinnedAt(starts, 10_000, 36)).toEqual({ index: 2, y: 0 });
+  });
+
+  it('finds the offset that rests a topic named by its name at the top', () => {
+    const at = Option.getOrElse(topicStart(rows, 100, size, 'b'), () => Number.NaN);
+    expect(at).toBe(100 + 36 + 88);
+    expect(pinnedAt(starts, at, 36)).toEqual({ index: 1, y: 0 });
+  });
+
+  it('finds no offset for a name no topic row has', () => {
+    expect(topicStart(rows, 100, size, 'd')).toEqual(Option.none());
   });
 });
 

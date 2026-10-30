@@ -43,3 +43,11 @@ export const recentOffset = Atom.make(0).pipe(Atom.keepAlive);
  * pages through every hymn.
  */
 export const pagesFrom = Atom.make(Option.none<ReadonlyArray<number>>()).pipe(Atom.keepAlive);
+
+/**
+ * The topic a tap in `About this hymn` asks the phone's home list to show:
+ * the list takes it once (`Home.native.tsx`), opens its `Topics` tab with
+ * that topic's row at the top, and clears it. The web's home has no tabs and
+ * never reads it.
+ */
+export const openAtTopic = Atom.make(Option.none<string>()).pipe(Atom.keepAlive);

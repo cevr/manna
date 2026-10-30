@@ -28,7 +28,7 @@
  * the query and shows the list as it was.
  */
 
-import { useAtom, useAtomValue } from '@effect/atom-react';
+import { useAtom, useAtomSet, useAtomSubscribe, useAtomValue } from '@effect/atom-react';
 import { Link, useLinkTo, useNavigation, useSafeAreaInsets } from 'one';
 import { Effect, Fiber, Option } from 'effect';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
@@ -58,10 +58,11 @@ import bundled from 'virtual:hymnal-indexes';
 import { hymnAt, hymns } from '~/hymns/hymns';
 import { aboutQuery, aboutShown, afterPause, readMeaningSoon } from '~/hymns/meaning';
 import { find, hymnIndex } from '~/hymns/search';
-import { HymnList } from '~/reader/HymnList.native';
+import { groupOffset, HymnList } from '~/reader/HymnList.native';
 import { shelvesOf } from '~/reader/lists';
 import {
   hymnsOffset,
+  openAtTopic,
   type SearchMode,
   searchOffset,
   searchOpen,
@@ -137,7 +138,9 @@ export function Home() {
  * section over its hymns under the Recent shelf (`byTopic`); every other tab
  * names its groups (`grouped`). Each tab mounts its own list, and opens where
  * the reader left it in this run of the app, else where the list was when
- * the tab was chosen (`openingOffset`).
+ * the tab was chosen (`openingOffset`). A topic tapped in `About this hymn`
+ * (`openAtTopic`) mounts the Topics tab's list afresh with that topic's row
+ * at the top (`groupOffset`), even when Topics is already the tab in use.
  */
 function TabList({
   title,
@@ -165,15 +168,31 @@ function TabList({
   const starred = useMemo(() => new Set(favourites), [favourites]);
   const kept = useRef(new Map<TabName, number>());
   const [start, setStart] = useState<number>();
-  const choose = (name: TabName) => {
-    const now = scroll.value;
-    kept.current.set(tab.name, now);
-    const at = openingOffset(kept.current, name, now);
+  const [visit, setVisit] = useState(0);
+  const show = (name: TabName, at: number) => {
+    kept.current.set(tab.name, scroll.value);
     scroll.value = at;
     setStart(at);
     setChosen(name);
   };
+  const choose = (name: TabName) => show(name, openingOffset(kept.current, name, scroll.value));
   const tabRow = tabRowHeight(fontScale);
+  const setTopic = useAtomSet(openAtTopic);
+  useAtomSubscribe(
+    openAtTopic,
+    (topic) => {
+      if (Option.isNone(topic)) return;
+      setTopic(Option.none());
+      const top = title + field + tabRow;
+      const at = groupOffset(tabNamed(tabs, 'Topics'), hymns, topic.value, top, fontScale);
+      show(
+        'Topics',
+        Option.getOrElse(at, () => field),
+      );
+      setVisit((n) => n + 1);
+    },
+    { immediate: true },
+  );
   const pullDown = {
     node: (
       <View style={{ height: title + field + tabRow }}>
@@ -189,7 +208,7 @@ function TabList({
   };
   return (
     <HymnList
-      key={tab.name}
+      key={`${tab.name}:${visit}`}
       hymns={hymns}
       hrefOf={hymnHref}
       offset={hymnsOffset}

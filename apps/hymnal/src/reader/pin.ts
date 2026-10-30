@@ -10,6 +10,8 @@
  * line down under it, in the same frame.
  */
 
+import { Option } from 'effect';
+
 import type { Row } from './rows';
 
 /** Each topic row's top in the list's content: `top` (the list's header) plus every row above it. */
@@ -25,6 +27,25 @@ export const topicStarts = <Hymn>(
     at += heightOf(row.kind);
   }
   return starts;
+};
+
+/**
+ * The top of the first topic row named `name` in the list's content, as
+ * `topicStarts` places it: the scroll offset that puts that row at the
+ * list's top. None when no topic row has the name.
+ */
+export const topicStart = <Hymn>(
+  rows: ReadonlyArray<Row<Hymn>>,
+  top: number,
+  heightOf: (kind: Row<Hymn>['kind']) => number,
+  name: string,
+): Option.Option<number> => {
+  let at = top;
+  for (const row of rows) {
+    if (row.kind === 'topic' && row.name === name) return Option.some(at);
+    at += heightOf(row.kind);
+  }
+  return Option.none();
 };
 
 /** The pinned topic at a scroll offset: which one, and how far the next topic pushes it up. */

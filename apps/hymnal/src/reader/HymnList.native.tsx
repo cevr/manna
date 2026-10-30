@@ -65,7 +65,7 @@ import { color, useAccent } from '~/color';
 import type { HymnListProps } from './HymnList';
 import { ListEnd } from './ListEnd';
 import { dismissal } from './keyboard';
-import { pinnedAt, topicStarts } from './pin';
+import { pinnedAt, topicStart, topicStarts } from './pin';
 import { pagesFrom } from './place';
 import { groupRowsOf, resultRowsOf, type Row, rowsOf } from './rows';
 
@@ -148,6 +148,25 @@ export interface Grouped {
   readonly name: string;
   readonly groups: ReadonlyArray<{ readonly name: string; readonly hymns: ReadonlyArray<number> }>;
 }
+
+/**
+ * The offset that puts the row of `grouped`'s group named `name` at the top
+ * of its list under a `top`-tall header, its rows drawn at `fontScale`
+ * (`topicStart`). None when the group has no row.
+ */
+export const groupOffset = (
+  grouped: Grouped,
+  hymns: ReadonlyArray<HymnText>,
+  name: string,
+  top: number,
+  fontScale: number,
+): Option.Option<number> =>
+  topicStart(
+    groupRowsOf(grouped.name, grouped.groups, hymns).rows,
+    top,
+    (kind) => heightOf(kind, fontScale),
+    name,
+  );
 
 export function HymnList({
   hymns,

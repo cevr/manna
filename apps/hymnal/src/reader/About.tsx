@@ -8,10 +8,11 @@
  *
  * A hymn row closes the sheet and opens that hymn's page over the one it
  * came from. A topic or a passage closes the sheet and the pages under it
- * and searches the hymns for it on the home screen (`searchQuery`,
- * `searchOpen`): a topic by its name, a passage by where it begins
- * (`passageQuery`). When home is not the stack's first screen (a link
- * opened the hymn or the sheet), home replaces it (`homeSteps`).
+ * and shows home: a topic opens the home list's `Topics` tab at that topic
+ * (`openAtTopic`), and a passage searches the hymns for where it begins
+ * (`searchQuery`, `searchOpen`, `passageQuery`). When home is not the
+ * stack's first screen (a link opened the hymn or the sheet), home replaces
+ * it (`homeSteps`).
  *
  * The sheet is a route, `/about?hymn=<number>`, presented as a native form
  * sheet with a grabber (`aboutSheetOptions`), of one family with the player
@@ -30,7 +31,7 @@ import { passageQuery, passageText, referencesOf, sameMetre, topicsOf } from '~/
 import { moreLike } from '~/hymns/meaning';
 import type { StackState } from '~/player/title';
 
-import { searchOpen, searchQuery } from './place';
+import { openAtTopic, searchOpen, searchQuery } from './place';
 
 /** The home route's file name, as the stack names its screens. */
 const homeRoute = 'index';
@@ -78,12 +79,21 @@ function AboutSheet({ hymn }: { readonly hymn: Option.Option<HymnText> }) {
     router.back();
     router.push(`/hymns/${number}`);
   };
-  const search = (query: string) => {
-    setQuery(query);
-    setSearching('about');
+  const setTopic = useAtomSet(openAtTopic);
+  const home = () => {
     const { dismiss, replace } = homeSteps(navigation.getState());
     if (dismiss) router.dismissAll();
     if (replace) router.replace('/');
+  };
+  const search = (query: string) => {
+    setQuery(query);
+    setSearching('about');
+    home();
+  };
+  const openTopic = (name: string) => {
+    setTopic(Option.some(name));
+    setSearching('off');
+    home();
   };
   return (
     <View testID="about-sheet" style={styles.sheet}>
@@ -109,7 +119,7 @@ function AboutSheet({ hymn }: { readonly hymn: Option.Option<HymnText> }) {
                   testID={`about-topic-${i}`}
                   label={topic.name}
                   detail={topic.parent}
-                  onPress={() => search(topic.name)}
+                  onPress={() => openTopic(topic.name)}
                 />
               ))}
             </Group>
@@ -206,7 +216,7 @@ function HymnRow({
   );
 }
 
-/** A topic or a passage: its name, a quiet detail after it, a press away from its search. */
+/** A topic or a passage: its name, a quiet detail after it, a press away from its place on home. */
 function SearchRow({
   testID,
   label,

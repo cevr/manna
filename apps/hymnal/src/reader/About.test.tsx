@@ -21,7 +21,7 @@ import { moreLike } from '~/hymns/meaning';
 
 import { aboutHref, MORE_LIKE } from './About';
 import { HymnPage } from './HymnPage';
-import { searchOpen, searchQuery } from './place';
+import { openAtTopic, searchOpen, searchQuery } from './place';
 
 /** The hymn numbers of the rows `More like this` shows, in order. */
 const likeRows = (html: string) =>
@@ -168,15 +168,21 @@ describe('About this hymn', () => {
     });
   });
 
-  it('closes the sheet and the pages under it and searches for a topic by its name', () => {
+  it('closes the sheet and the pages under it and opens the Topics tab at a topic', () => {
     using _route = routeTo('100');
     using _stack = sheetOver(fromHome);
     const registry = clickIn(<AboutRoute />, '[data-testid="about-topic-0"]');
     expect({
       routed,
+      topic: registry.get(openAtTopic),
       query: registry.get(searchQuery),
       searching: registry.get(searchOpen),
-    }).toEqual({ routed: ['dismissAll'], query: topicsOf(100)[0]?.name ?? '', searching: 'about' });
+    }).toEqual({
+      routed: ['dismissAll'],
+      topic: Option.fromUndefinedOr(topicsOf(100)[0]?.name),
+      query: '',
+      searching: 'off',
+    });
   });
 
   it('searches for a passage by where it begins', () => {
@@ -195,13 +201,13 @@ describe('About this hymn', () => {
     });
   });
 
-  it('puts home in place of a hymn a link opened, with nothing under it, and searches there', () => {
+  it('puts home in place of a hymn a link opened, with nothing under it, and shows the topic there', () => {
     using _route = routeTo('100');
     using _stack = sheetOver([{ name: 'hymns/[number]', params: { number: '100' } }]);
     const registry = clickIn(<AboutRoute />, '[data-testid="about-topic-0"]');
-    expect({ routed, searching: registry.get(searchOpen) }).toEqual({
+    expect({ routed, topic: Option.isSome(registry.get(openAtTopic)) }).toEqual({
       routed: ['dismissAll', 'replace /'],
-      searching: 'about',
+      topic: true,
     });
   });
 
