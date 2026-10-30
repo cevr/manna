@@ -10,7 +10,11 @@
 // does not reach (the sheet's paper, lighter or bluer than its flat colour
 // at the rim) is paper: it keeps no alpha, so another paper shows there,
 // and over the sheet's flat paper it differs from the kept pixel by its own
-// distance from that paper. A member's cut-out may ask four things more of
+// distance from that paper. A px so cleared, or left near-clear, that the
+// figure encloses (walled off from the ground by his ink and cloth) is his
+// light cloth, not paper: it takes the sheet's px back, unless its clear
+// region holds a pocket of the sheet's paper, and a px within ΔE 2 of the
+// paper stays cleared. A member's cut-out may ask four things more of
 // it (`UnmatteOptions`): his cloth colours, so a light cloth the line does
 // not reach is his and not paper; his thin parts, whose alpha is raised
 // until the colour that closes the sum is in range, so a speck keeps its
@@ -77,7 +81,9 @@ const holdersOf = (parts: ReadonlyArray<Uint8Array>, width: number, height: numb
  * rim pixel un-matted against `paper`: an opaque pixel reached from the
  * ground (where no part has a pixel) within `UNMATTE_BAND` steps through
  * pixels lighter than ink, the paint behind it (hidden at rest) cleared, so
- * the rest pose over the paper is the view there. Every other pixel is kept byte for byte.
+ * the rest pose over the paper is the view there. A rim pixel so cleared
+ * that the figure encloses takes the sheet's own pixel back
+ * (`restoreEnclosed`). Every other pixel is kept byte for byte.
  */
 export const unmatte = (
   parts: ReadonlyArray<Uint8Array>,
@@ -115,14 +121,157 @@ export const unmatte = (
     return paperLuma - lumaOf(c) > grain ? ([c[0], c[1], c[2], 255] as const) : s;
   };
   const out = parts.map((p) => Uint8Array.from(p));
+  const changed = new Uint8Array(width * height);
   for (const i of rim) {
     const k = holders.front[i]!;
     if (parts[k]![i * 4 + 3] !== 255) continue;
     // the view shows this px, the sheet's paper mixed in: paint behind it, hidden at rest, goes too
     for (let b = k + 1; b < parts.length; b++) out[b]!.fill(0, i * 4, i * 4 + 4);
     out[k]!.set(floored(i, solve(i)), i * 4);
+    changed[i] = 1;
   }
+  restoreEnclosed(parts, out, holders, changed, (c) => deltaE(labOf(c), paperLab) <= PAPER_CORE);
   return out;
+};
+
+/** A view px under this alpha (0..255) reads as clear: the fence the cut's hole check reads, so both see one hole. */
+const FENCE = 16;
+
+/** The walls round a clear region are closed at this radius, px, as the cut's hole check closes them: a one-px slit in his ink is no way out. */
+const WALL_CLOSE = 1;
+
+/** A px within this ΔE76 of the paper is the sheet's paper or its grain: never taken back, since kept it shows as a halo on another paper. */
+const PAPER_CORE = 2;
+
+/** A clear region holding this many paper px (within `PAPER_CORE`) is a pocket of the sheet's paper inside him, and stays cleared. */
+const POCKET = 9;
+
+/** The view's alpha at rest (0..255): the parts composited front to back. */
+const viewAlphaOf = (parts: ReadonlyArray<Uint8Array>, n: number) => {
+  const alpha = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    let through = 1;
+    for (const p of parts) through *= 1 - p[i * 4 + 3]! / 255;
+    alpha[i] = Math.round(255 * (1 - through));
+  }
+  return alpha;
+};
+
+/** `mask` (1 set, 0 clear) dilated by a square of radius `r`; the frame's outside is clear. */
+const dilated = (mask: Uint8Array, width: number, height: number, r: number) => {
+  const out = new Uint8Array(width * height);
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < width; x++) {
+      let set = 0;
+      for (let v = Math.max(0, y - r); v <= Math.min(height - 1, y + r) && set === 0; v++)
+        for (let u = Math.max(0, x - r); u <= Math.min(width - 1, x + r) && set === 0; u++)
+          set = mask[v * width + u]!;
+      out[y * width + x] = set;
+    }
+  return out;
+};
+
+/** `mask` closed at radius `r`: dilated, then eroded (its complement dilated, complemented), so a gap of up to 2r px between its walls is shut. */
+const closedAt = (mask: Uint8Array, width: number, height: number, r: number) => {
+  const grown = dilated(mask, width, height, r);
+  const shrunk = dilated(
+    Uint8Array.from(grown, (g) => 1 - g),
+    width,
+    height,
+    r,
+  );
+  return Uint8Array.from(shrunk, (s) => 1 - s);
+};
+
+/** The in-frame 4-neighbours of pixel `i`. */
+const sides = (i: number, width: number, height: number) => {
+  const x = i % width;
+  const out: number[] = [];
+  if (x > 0) out.push(i - 1);
+  if (x < width - 1) out.push(i + 1);
+  if (i >= width) out.push(i - width);
+  if (i < width * (height - 1)) out.push(i + width);
+  return out;
+};
+
+/**
+ * Gives the sheet's own px back, in every part, to each px the rim un-matted
+ * (`changed`) to a clear or near-clear one (view alpha under `FENCE`) that
+ * the figure encloses: light cloth the line to the ink does not reach, which
+ * cleared is a hole in him. A px is enclosed when its clear region
+ * (4-connected) joins neither the ground nor the frame's border past his
+ * walls (view alpha `FENCE` or more, closed at `WALL_CLOSE`). A region
+ * holding `POCKET` px of paper (`isCore`) is a pocket of the sheet's paper
+ * and stays cleared, and so does each px of paper itself, which kept would
+ * show as a halo.
+ */
+const restoreEnclosed = (
+  parts: ReadonlyArray<Uint8Array>,
+  out: ReadonlyArray<Uint8Array>,
+  holders: Holders,
+  changed: Uint8Array,
+  isCore: (c: Rgb) => boolean,
+) => {
+  const { colourAt } = holders;
+  for (const region of enclosedRegions(out, holders)) {
+    if (region.filter((i) => isCore(colourAt(i))).length >= POCKET) continue;
+    for (const i of region)
+      if (changed[i] === 1 && !isCore(colourAt(i)))
+        for (let k = 0; k < parts.length; k++)
+          out[k]!.set(parts[k]!.subarray(i * 4, i * 4 + 4), i * 4);
+  }
+};
+
+/** The px the ground reaches past no wall: a flood from each non-wall px of the ground or the frame's border. */
+const groundReach = (wall: Uint8Array, { front, width, height }: Holders) => {
+  const reached = new Uint8Array(width * height);
+  const stack: number[] = [];
+  const onBorder = (i: number) => {
+    const [x, y] = [i % width, Math.floor(i / width)];
+    return x === 0 || y === 0 || x === width - 1 || y === height - 1;
+  };
+  for (let i = 0; i < reached.length; i++)
+    if (wall[i] === 0 && (front[i] === -1 || onBorder(i))) {
+      reached[i] = 1;
+      stack.push(i);
+    }
+  while (stack.length > 0)
+    for (const j of sides(stack.pop()!, width, height))
+      if (reached[j] === 0 && wall[j] === 0) {
+        reached[j] = 1;
+        stack.push(j);
+      }
+  return reached;
+};
+
+/** Each 4-connected region of held px under `FENCE` in the view `out` that the ground does not reach past his walls. */
+const enclosedRegions = (out: ReadonlyArray<Uint8Array>, holders: Holders) => {
+  const { front, width, height } = holders;
+  const n = width * height;
+  const alpha = viewAlphaOf(out, n);
+  const wall = closedAt(
+    Uint8Array.from(alpha, (a) => (a >= FENCE ? 1 : 0)),
+    width,
+    height,
+    WALL_CLOSE,
+  );
+  const reached = groundReach(wall, holders);
+  const enclosed = (i: number) => reached[i] === 0 && alpha[i]! < FENCE && front[i] !== -1;
+  const seen = new Uint8Array(n);
+  const regions: number[][] = [];
+  for (let s = 0; s < n; s++) {
+    if (seen[s] === 1 || !enclosed(s)) continue;
+    seen[s] = 1;
+    const region = [s];
+    for (let r = 0; r < region.length; r++)
+      for (const j of sides(region[r]!, width, height))
+        if (seen[j] === 0 && enclosed(j)) {
+          seen[j] = 1;
+          region.push(j);
+        }
+    regions.push(region);
+  }
+  return regions;
 };
 
 /**

@@ -41,9 +41,9 @@ describe('unmatte', () => {
     over(px).forEach((v, c) => expect(Math.abs(v - at(src, 3)[c]!)).toBeLessThanOrEqual(1));
   });
 
-  test('drops a rim px the line to the ink does not reach (paper lighter or bluer than the flat paper)', () => {
-    const [out] = unmatte([part()], W, H, PAPER);
-    expect(at(out!, 4)[3]).toBe(0);
+  test('drops a rim px the line to the ink does not reach (paper lighter or bluer than the flat paper) where it joins the ground', () => {
+    const [out] = unmatte([partWith(3, [250, 244, 236])], W, H, PAPER);
+    for (const x of [3, 4]) expect(at(out!, x)[3]).toBe(0);
   });
 
   test('keeps the ink, and the fill inside it, byte for byte', () => {
@@ -98,10 +98,10 @@ describe('unmatte', () => {
   });
 
   test('un-matte clears paper that touches a frame edge between the corners', () => {
-    // ink to every edge and corner of the box, and a pocket of the sheet's paper (x 0..1, y 3..4) on its left edge: no ground, and no corner the paper joins
+    // ink to every edge and corner of the box, and a pocket of the paper itself (x 0..1, y 3..4) on its left edge: no ground, and no corner the paper joins
     const src = new Uint8Array(W * H * 4);
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) src.set([...INK, 255], (y * W + x) * 4);
-    for (const y of [3, 4]) for (const x of [0, 1]) src.set([250, 244, 236, 255], (y * W + x) * 4);
+    for (const y of [3, 4]) for (const x of [0, 1]) src.set([...PAPER, 255], (y * W + x) * 4);
     const [closed] = unmatte([src], W, H, PAPER, { open: [] });
     for (const [x, y] of [
       [0, 3],
@@ -188,13 +188,13 @@ describe('unmatte', () => {
   const GREY: Rgb = [244, 236, 226];
 
   test('keeps a rim px darker than the paper by more than its grain whole, colour and alpha', () => {
-    const [out] = unmatte([partWith(4, GREY)], W, H, PAPER, { grain: 2 });
-    expect(at(out!, 4)).toEqual([...GREY, 255]);
+    const [out] = unmatte([partWith(3, GREY)], W, H, PAPER, { grain: 2 });
+    expect(at(out!, 3)).toEqual([...GREY, 255]);
   });
 
   test('solves that px along the line to the ink when no grain is given', () => {
-    const [out] = unmatte([partWith(4, GREY)], W, H, PAPER);
-    expect(at(out!, 4)[3]).toBeLessThan(10);
+    const [out] = unmatte([partWith(3, GREY)], W, H, PAPER);
+    expect(at(out!, 3)[3]).toBeLessThan(10);
   });
 
   test('still solves a px within the grain, and clears the paper itself, when a grain is given', () => {
@@ -204,5 +204,87 @@ describe('unmatte', () => {
     expect(at(near!, 4)).toEqual(at(solved!, 4));
     const [paper] = unmatte([partWith(4, PAPER)], W, H, PAPER, { grain: 2 });
     expect(at(paper!, 4)[3]).toBe(0);
+  });
+});
+
+describe('unmatte, a light px the figure encloses', () => {
+  const S = 20;
+  // light cloth, ΔE 5.4 from the paper, which the line to the ink does not reach
+  const CLOTH: Rgb = [248, 242, 232];
+  // a tan cloth the walk solves to a partial alpha: a wall round what it encloses
+  const TAN: Rgb = [200, 180, 150];
+  // paper's own grain, ΔE 1.2 from the paper
+  const NEAR: Rgb = [252, 243, 224];
+  const MIX = COLUMNS[0]!;
+
+  /** A square figure on x, y 3..16 of a 20 × 20 frame, its outline a 40 % ink mix round tan, with `paint` laid over it. */
+  const figure = (paint: ReadonlyArray<readonly [number, number, Rgb]>) => {
+    const rgba = new Uint8Array(S * S * 4);
+    for (let y = 3; y <= 16; y++)
+      for (let x = 3; x <= 16; x++) rgba.set([...MIX, 255], (y * S + x) * 4);
+    for (let y = 4; y <= 15; y++)
+      for (let x = 4; x <= 15; x++) rgba.set([...TAN, 255], (y * S + x) * 4);
+    for (const [x, y, c] of paint) rgba.set([...c, 255], (y * S + x) * 4);
+    return rgba;
+  };
+  const px = (r: Uint8Array, x: number, y: number) => [
+    ...r.subarray((y * S + x) * 4, (y * S + x) * 4 + 4),
+  ];
+  const inkColumn = (x: number) => [7, 8, 9, 10, 11, 12].map((y) => [x, y, INK] as const);
+
+  test('keeps a light cloth speck that the ink and the cloth enclose whole, alpha 255', () => {
+    const src = figure([
+      [6, 9, CLOTH],
+      [7, 9, CLOTH],
+      [6, 10, CLOTH],
+      [7, 10, CLOTH],
+      ...inkColumn(8),
+    ]);
+    const [out] = unmatte([src], S, S, PAPER);
+    for (const [x, y] of [
+      [6, 9],
+      [7, 9],
+      [6, 10],
+      [7, 10],
+    ] as const)
+      expect(px(out!, x, y)).toEqual([...CLOTH, 255]);
+  });
+
+  test('keeps the near-clear fence round such a speck whole too', () => {
+    const src = figure([
+      [6, 9, CLOTH],
+      [6, 10, CLOTH],
+      [7, 9, FILL],
+      [7, 10, FILL],
+      ...inkColumn(8),
+    ]);
+    const [out] = unmatte([src], S, S, PAPER);
+    expect(px(out!, 6, 9)).toEqual([...CLOTH, 255]);
+    expect(px(out!, 7, 10)).toEqual([...FILL, 255]);
+  });
+
+  test('still clears a paper pocket the figure encloses, with the light px in it, and un-mattes the outline', () => {
+    const pocket = [6, 7, 8].flatMap((x) => [8, 9, 10].map((y) => [x, y, PAPER] as const));
+    const src = figure([...pocket, [9, 9, CLOTH], ...inkColumn(10)]);
+    const [out] = unmatte([src], S, S, PAPER);
+    for (const [x, y] of [...pocket, [9, 9] as const]) expect(px(out!, x, y)[3]).toBe(0);
+    // the outline solves as it does with no pocket: partly clear, toward the ink
+    const [plain] = unmatte([figure(inkColumn(10))], S, S, PAPER);
+    expect(px(out!, 3, 9)).toEqual(px(plain!, 3, 9));
+    expect(px(out!, 3, 9)[3]).toBeGreaterThan(0);
+    expect(px(out!, 3, 9)[3]).toBeLessThan(255);
+  });
+
+  test("leaves an enclosed px within ΔE 2 of the paper cleared, so the sheet's paper shows no halo", () => {
+    const src = figure([
+      [6, 9, CLOTH],
+      [6, 10, CLOTH],
+      [7, 9, NEAR],
+      [7, 10, NEAR],
+      ...inkColumn(8),
+    ]);
+    const [out] = unmatte([src], S, S, PAPER);
+    expect(px(out!, 6, 9)).toEqual([...CLOTH, 255]);
+    expect(px(out!, 7, 9)[3]).toBe(0);
   });
 });
