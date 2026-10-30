@@ -294,6 +294,14 @@ describe('the made-up book', () => {
     (arr(b.scriptural, 'entries')[0] as Json)['firstLine'] = 'x';
     expect(problemsOf(b).map((p) => [p.index, p.check])).toEqual([['scriptural', 'decode']]);
   });
+
+  it('refuses a present but empty `see`, which the tables could not tell from an absent one', () => {
+    const b = book();
+    (b['scriptural-by-hymn'] as Json)['see'] = [];
+    expect(problemsOf(b).map((p) => [p.index, p.check])).toEqual([
+      ['scriptural-by-hymn', 'decode'],
+    ]);
+  });
 });
 
 describe('each mutation is caught, at every entry it applies to', () => {

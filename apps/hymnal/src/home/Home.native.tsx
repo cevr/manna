@@ -20,8 +20,9 @@
  *
  * Tapping the field enters search mode: a bar with the focused text field
  * and Cancel, over the results. A topic or passage tapped in `About this
- * hymn` enters it too, with its query and the keyboard down (`searchOpen`). The list stays mounted beneath, untouchable
- * and hidden from assistive technology, so it keeps its place. Cancel, or
+ * hymn` enters it too, with its query and the keyboard down (`searchOpen`).
+ * The list stays mounted beneath, untouchable and hidden from assistive
+ * technology, so it keeps its place. Cancel, or
  * Android's Back while the home screen is in focus (`searchBack`), clears
  * the query and shows the list as it was.
  */
@@ -258,8 +259,8 @@ function FieldButton({
  * Search mode: the field (focused when the reader tapped it) and Cancel over
  * the hymns the query finds, each found by a line other than its title
  * showing that line. Search mode builds the search's index (`hymnIndex`)
- * once it is on screen, while a tapped field's keyboard comes up, and reads the meaning table in a timer task after it
- * (`readMeaningSoon`), so neither the first keystroke nor the first pause
+ * once it is on screen, while a tapped field's keyboard comes up, and reads
+ * the meaning table in a timer task after it (`readMeaningSoon`), so neither the first keystroke nor the first pause
  * waits on them and no one task holds the thread for both; the app's start
  * never does. After a pause in the typing (`afterPause`), the hymns
  * about the query stand under its strongest matches.

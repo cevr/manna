@@ -254,7 +254,9 @@ and checked against the files at every build. No inferred index is supplied.
 `indexes_sha256`, `input_sha256`, `source_text_sha256`, `compiled_sha256`, `topics_sha256`,
 `metres_sha256`, `census_sha256`, `recordings_sha256`, `recording_credits`.
 Digests cover input bytes and committed recording descriptors; the combined
-digest covers the named input fingerprints. Metadata excludes timestamps,
+digest covers the named input fingerprints. `indexes_sha256` is the SHA-256 of
+one line per file of `data/indexes/` (the 11 indexes and `rulings.json`, in
+name order), each `<name>.json:<SHA-256 of its text>`, joined by newlines. Metadata excludes timestamps,
 machine paths and the database's own hash. Increment builder version when the
 projection format changes; introduce a new schema version for incompatible readers.
 

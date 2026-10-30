@@ -105,7 +105,8 @@ const generator = (random: () => number) => {
         passage: passage(),
         page: int(1, 999),
       })),
-      // An empty `see` has no rows to tell it from an absent one, so the draw is absent or non-empty.
+      // The schema refuses an empty `see` (its rows could not tell it from an absent
+      // one), so the draw is absent or non-empty.
       ...maybe('see', () =>
         Array.from({ length: int(1, 3) }, () => ({
           hymn: int(1, 695),
