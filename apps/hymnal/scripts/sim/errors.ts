@@ -107,8 +107,18 @@ export class Unhealthy extends Schema.TaggedError<Unhealthy>()('Unhealthy', {
   }
 }
 
+/** The helper ran in a warm checkout, the clean source worktrees are made from. */
+export class WarmCheckout extends Schema.TaggedError<WarmCheckout>()('WarmCheckout', {
+  checkout: Schema.String,
+}) {
+  override get message() {
+    return `${this.checkout} is a warm checkout, which no drive may build or write in; use a worktree`;
+  }
+}
+
 /** Any failure a command reports. */
 export const SimError = Schema.Union([
+  WarmCheckout,
   NoSession,
   SimulatorDown,
   ReadinessTimedOut,

@@ -12,10 +12,12 @@
 import {
   Array as Arr,
   Clock,
+  Context,
   DateTime,
   Duration,
   Effect,
   FileSystem,
+  Layer,
   Option,
   Path,
   Schema,
@@ -49,11 +51,17 @@ const DRIVER_SESSION = 'verify-hymnal';
 const short = Duration.seconds(30);
 const build = Duration.minutes(45);
 
-/** Where a drive lives: the app's folder, the state folder and this script. */
+/**
+ * Where a drive lives: the app's folder, the state folder, this script, the
+ * feature files the journeys sit beside, and the warm checkouts a drive
+ * refuses to run in.
+ */
 export interface Place {
   readonly app: string;
   readonly state: string;
   readonly script: string;
+  readonly features: string;
+  readonly warm: ReadonlyArray<string>;
 }
 
 /** What a step reports: the files it wrote and what it saw. */
@@ -250,6 +258,7 @@ const startServer = Effect.fn('Sim.startServer')(function* (
   place: Place,
   port: number,
   out: string,
+  hermesc: Option.Option<string>,
 ) {
   const args = [
     place.script,
@@ -262,7 +271,12 @@ const startServer = Effect.fn('Sim.startServer')(function* (
     place.state,
   ];
   const background = 'nohup "$0" "$@" >/dev/null 2>&1 & echo $!';
-  const pid = yield* succeed('/bin/sh', ['-c', background, 'bun', ...args], short);
+  // The dev server's iOS bundles compile with the Hermes compiler `boot` found.
+  const command = Option.match(hermesc, {
+    onNone: () => ['bun', ...args],
+    onSome: (compiler) => ['/usr/bin/env', `HERMESC_PATH=${compiler}`, 'bun', ...args],
+  });
+  const pid = yield* succeed('/bin/sh', ['-c', background, ...command], short);
   const parsed = Number.parseInt(pid.trim(), 10);
   if (!Number.isInteger(parsed))
     return yield* ToolFailed.make({ tool: '/bin/sh', args, exitCode: 0, output: `no pid: ${pid}` });
@@ -291,6 +305,7 @@ const serverUp = Effect.fn('Sim.serverUp')(function* (
   port: number,
   out: string,
   seconds: number,
+  hermesc: Option.Option<string>,
 ) {
   const taken = yield* Effect.isSuccess(answers(port));
   if (taken)
@@ -300,7 +315,7 @@ const serverUp = Effect.fn('Sim.serverUp')(function* (
       exitCode: -1,
       output: `port ${port} already answers; pick another of 8270-8279`,
     });
-  const pid = yield* startServer(place, port, out);
+  const pid = yield* startServer(place, port, out, hermesc);
   yield* ready(`the dev server on port ${port}`, seconds, answers(port)).pipe(
     Effect.onError(() => Effect.ignore(stopServer(pid))),
   );
@@ -422,6 +437,8 @@ export interface BootOptions {
   readonly port: number;
   readonly out: Option.Option<string>;
   readonly seconds: number;
+  /** The Hermes compiler the dev server builds iOS bundles with, as `HERMESC_PATH`. */
+  readonly hermesc: Option.Option<string>;
 }
 
 const stamp = Effect.map(DateTime.now, (now) => DateTime.formatIso(now));
@@ -433,7 +450,7 @@ export const boot = Effect.fn('Sim.boot')(function* (place: Place, options: Boot
     path.join(place.state, bootedAt.replaceAll(':', '-')),
   );
   const udid = yield* bootSimulatorFor(options);
-  const serverPid = yield* serverUp(place, options.port, out, options.seconds);
+  const serverPid = yield* serverUp(place, options.port, out, options.seconds, options.hermesc);
   const session: Session = {
     platform: options.platform,
     out,
@@ -451,7 +468,7 @@ export const boot = Effect.fn('Sim.boot')(function* (place: Place, options: Boot
   return outcome(
     options.platform,
     { session: sessionFile(place), out, server: `${out}/server.log` },
-    { udid, port: options.port, serverPid },
+    { udid, port: options.port, serverPid, hermesc: Option.getOrElse(options.hermesc, () => '') },
   );
 });
 
@@ -622,17 +639,27 @@ const confirmOpen = Effect.fn('Sim.confirmOpen')(function* (session: Session) {
   return answered;
 });
 
+/** How `open` opens: `terminate` stops the app first (iOS), so it launches afresh. */
+export interface OpenOptions {
+  readonly terminate?: boolean;
+}
+
 export const open = Effect.fn('Sim.open')(function* (
   place: Place,
   link: string,
   expect: Option.Option<string>,
   seconds: number,
+  options: OpenOptions = {},
 ) {
   const session = yield* readSession(place);
   const url = linkFor(session.platform, session.port, link);
   let prompts = 0;
   if (session.platform === 'ios') {
     const udid = yield* booted(session);
+    // A retried open starts the app afresh; an app that is not running has
+    // nothing to terminate, which is no failure.
+    if (options.terminate === true)
+      yield* Effect.ignore(succeed('xcrun', ['simctl', 'terminate', udid, BUNDLE_ID], short));
     // The driver's app session: `install` opens it, and a drive of an app
     // installed before this boot opens it here (the app comes forward, or
     // launches).
@@ -948,3 +975,67 @@ export const doctor = Effect.fn('Sim.doctor')(function* (place: Place) {
     },
   );
 });
+
+// ---------------------------------------------------------------------------
+// The drive as a service: the commands drive through `Drive`, so a test
+// stands a fake in its place and `sim.ts` provides `DriveLive`.
+
+/** What the live drive's steps need from the host. */
+type Host =
+  | ChildProcessSpawner.ChildProcessSpawner
+  | FileSystem.FileSystem
+  | Path.Path
+  | HttpClient.HttpClient;
+
+/** A step with its host requirements already met. */
+type Hosted<F> = F extends (...args: infer A) => Effect.Effect<infer X, infer E, Host>
+  ? (...args: A) => Effect.Effect<X, E>
+  : never;
+
+/** The drive's steps, each taking the place first. */
+export interface DriveMembers {
+  readonly readSession: Hosted<typeof readSession>;
+  readonly boot: Hosted<typeof boot>;
+  readonly install: Hosted<typeof install>;
+  readonly open: Hosted<typeof open>;
+  readonly tap: Hosted<typeof tap>;
+  readonly fill: Hosted<typeof fill>;
+  readonly back: Hosted<typeof back>;
+  readonly scroll: Hosted<typeof scroll>;
+  readonly shot: Hosted<typeof shot>;
+  readonly snapshot: Hosted<typeof snapshot>;
+  readonly record: Hosted<typeof record>;
+  readonly log: Hosted<typeof log>;
+  readonly doctor: Hosted<typeof doctor>;
+  readonly down: Hosted<typeof down>;
+}
+
+export class Drive extends Context.Service<Drive, DriveMembers>()('@manna/hymnal-app/sim/Drive') {}
+
+/** The drive on this host: the simulator, the browser and the dev server. */
+export const DriveLive = Layer.effect(
+  Drive,
+  Effect.gen(function* () {
+    const host = yield* Effect.context<Host>();
+    const hosted =
+      <A extends ReadonlyArray<unknown>, X, E>(step: (...args: A) => Effect.Effect<X, E, Host>) =>
+      (...args: A) =>
+        Effect.provideContext(step(...args), host);
+    return Drive.of({
+      readSession: hosted(readSession),
+      boot: hosted(boot),
+      install: hosted(install),
+      open: hosted(open),
+      tap: hosted(tap),
+      fill: hosted(fill),
+      back: hosted(back),
+      scroll: hosted(scroll),
+      shot: hosted(shot),
+      snapshot: hosted(snapshot),
+      record: hosted(record),
+      log: hosted(log),
+      doctor: hosted(doctor),
+      down: hosted(down),
+    });
+  }),
+);

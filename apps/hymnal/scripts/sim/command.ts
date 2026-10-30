@@ -1,35 +1,52 @@
 /**
  * `sim.ts`'s commands: each parses its arguments, runs its step of the
- * drive (`drive.ts`) and prints one JSON result (`result.ts`). A step that
- * fails prints its tagged error and fails the command, so the process exits
- * non-zero.
+ * drive (the `Drive` service, `drive.ts`) and prints one JSON result
+ * (`result.ts`). A step that fails prints its tagged error and fails the
+ * command, so the process exits non-zero.
  */
-import { Clock, Console, Effect, Exit, Option, Schema } from 'effect';
+import {
+  Clock,
+  Config,
+  ConfigProvider,
+  Console,
+  Effect,
+  Exit,
+  FileSystem,
+  Option,
+  Path,
+  Schema,
+} from 'effect';
 import { Argument, CliError, Command, Flag } from 'effect/cli';
 
 import {
-  back,
-  boot,
-  doctor,
-  RECORD,
-  record,
-  snapshot,
-  down,
-  fill,
-  install,
+  type BootOptions,
   DIRECTIONS,
-  log,
-  open,
+  Drive,
+  type DriveMembers,
   type Outcome,
   type Place,
-  scroll,
+  RECORD,
   serve,
-  shot,
-  tap,
 } from './drive.ts';
-import { BadArguments, HostFailed, type SimError } from './errors.ts';
+import {
+  BadArguments,
+  HostFailed,
+  type SimError,
+  type TargetMissing,
+  ToolMissing,
+  WarmCheckout,
+} from './errors.ts';
 import type { PlatformError } from 'effect/PlatformError';
 import { Failure, Platform, Success } from './result.ts';
+
+/**
+ * The warm checkouts: the clean sources worktrees are made from, on the
+ * laptop and on the workbox. No command builds, installs or writes in one.
+ */
+export const WARM_CHECKOUTS: ReadonlyArray<string> = [
+  '/Users/cvr/Developer/personal/manna',
+  '/workspaces/bible-tools',
+];
 
 const encodeSuccess = Schema.encodeSync(Schema.fromJsonString(Success));
 const encodeFailure = Schema.encodeSync(Schema.fromJsonString(Failure));
@@ -60,6 +77,72 @@ export const report = <R>(
       }),
     );
   });
+
+/** Run a step of the `Drive` service. */
+const drive = <A, E>(step: (drive: DriveMembers) => Effect.Effect<A, E>) =>
+  Effect.gen(function* () {
+    return yield* step(yield* Drive);
+  });
+
+/** The hermesc binary under the `hermes-compiler` package `from` resolves. */
+const compilerFrom = (path: Path.Path, from: string) =>
+  Effect.try({
+    try: () => Bun.resolveSync('hermes-compiler/package.json', from),
+    catch: () => ToolMissing.make({ tool: 'hermesc' }),
+  }).pipe(Effect.map((pkg) => path.join(path.dirname(pkg), 'hermesc', 'osx-bin', 'hermesc')));
+
+/**
+ * The Hermes compiler the dev server builds with: `HERMESC_PATH` when it
+ * names a file by an absolute path, else the one react-native depends on.
+ * The environment is read on each call, so a changed `HERMESC_PATH` counts.
+ */
+export const hermesCompiler = Effect.fn('Sim.hermesCompiler')(function* (place: Place) {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const given = yield* Effect.suspend(() =>
+    Effect.gen(function* () {
+      return yield* Config.option(Config.String('HERMESC_PATH'));
+    }).pipe(
+      Effect.provideService(ConfigProvider.ConfigProvider, ConfigProvider.fromEnv()),
+      Effect.orElseSucceed(() => Option.none<string>()),
+    ),
+  );
+  if (Option.isSome(given) && path.isAbsolute(given.value)) {
+    if (yield* fs.exists(given.value)) return given.value;
+  }
+  const native = yield* Effect.option(
+    fs.realPath(path.join(place.app, 'node_modules', 'react-native')),
+  );
+  return yield* Option.match(native, {
+    onNone: () => compilerFrom(path, place.app),
+    onSome: (dir) => compilerFrom(path, dir),
+  }).pipe(Effect.catchTag('ToolMissing', () => compilerFrom(path, place.app)));
+});
+
+/**
+ * Open `link`. On iOS a first open whose target does not show is tried once
+ * more after the app is terminated, which clears a launch that hung on the
+ * splash; the result says whether it was retried.
+ */
+export const openOnce = (
+  place: Place,
+  link: string,
+  expect: Option.Option<string>,
+  seconds: number,
+) =>
+  drive((d) =>
+    d.open(place, link, expect, seconds).pipe(
+      Effect.map((done): Outcome => ({ ...done, detail: { ...done.detail, retried: false } })),
+      Effect.catchTag('TargetMissing', (missing: TargetMissing) => {
+        if (missing.platform !== 'ios') return Effect.fail(missing);
+        return d
+          .open(place, link, expect, seconds, { terminate: true })
+          .pipe(
+            Effect.map((done): Outcome => ({ ...done, detail: { ...done.detail, retried: true } })),
+          );
+      }),
+    ),
+  );
 
 const seconds = (fallback: number) =>
   Flag.Int('timeout').pipe(
@@ -109,11 +192,17 @@ export const simCommand = (place: Place) => {
     (flags) =>
       report(
         'boot',
-        boot(at(flags.state), {
-          platform: flags.platform,
-          port: flags.port,
-          out: flags.out,
-          seconds: flags.timeout,
+        Effect.gen(function* () {
+          let hermesc = Option.none<string>();
+          if (flags.platform === 'ios') hermesc = Option.some(yield* hermesCompiler(place));
+          const options: BootOptions = {
+            platform: flags.platform,
+            port: flags.port,
+            out: flags.out,
+            seconds: flags.timeout,
+            hermesc,
+          };
+          return yield* drive((d) => d.boot(at(flags.state), options));
         }),
       ),
   ).pipe(Command.withDescription('Boot the simulator (or the web build) and the dev server'));
@@ -139,12 +228,14 @@ export const simCommand = (place: Place) => {
     (flags) =>
       report(
         'install',
-        install(at(flags.state), {
-          app: flags.app,
-          prebuild: flags.prebuild,
-          expect: flags.expect,
-          seconds: flags.timeout,
-        }),
+        drive((d) =>
+          d.install(at(flags.state), {
+            app: flags.app,
+            prebuild: flags.prebuild,
+            expect: flags.expect,
+            seconds: flags.timeout,
+          }),
+        ),
       ),
   ).pipe(Command.withDescription("Build this checkout's app, install it and launch it (iOS)"));
 
@@ -158,15 +249,25 @@ export const simCommand = (place: Place) => {
       timeout: seconds(30),
       state,
     },
-    (flags) => report('open', open(at(flags.state), flags.link, flags.expect, flags.timeout)),
-  ).pipe(Command.withDescription('Open a screen by deep link (iOS) or route (web)'));
+    (flags) => report('open', openOnce(at(flags.state), flags.link, flags.expect, flags.timeout)),
+  ).pipe(
+    Command.withDescription(
+      'Open a screen by deep link (iOS) or route (web); a missing target on iOS is retried once',
+    ),
+  );
 
   const tapCommand = Command.make('tap', { target, timeout: seconds(10), state }, (flags) =>
-    report('tap', tap(at(flags.state), flags.target, flags.timeout)),
+    report(
+      'tap',
+      drive((d) => d.tap(at(flags.state), flags.target, flags.timeout)),
+    ),
   ).pipe(Command.withDescription('Tap an element by accessibility id or label'));
 
   const backCommand = Command.make('back', { state }, (flags) =>
-    report('back', back(at(flags.state))),
+    report(
+      'back',
+      drive((d) => d.back(at(flags.state))),
+    ),
   ).pipe(
     Command.withDescription("Go back: the header's back button (iOS), the browser's Back (web)"),
   );
@@ -179,7 +280,11 @@ export const simCommand = (place: Place) => {
       timeout: seconds(10),
       state,
     },
-    (flags) => report('fill', fill(at(flags.state), flags.target, flags.value, flags.timeout)),
+    (flags) =>
+      report(
+        'fill',
+        drive((d) => d.fill(at(flags.state), flags.target, flags.value, flags.timeout)),
+      ),
   ).pipe(Command.withDescription('Type into a text field by accessibility id or label'));
 
   const scrollCommand = Command.make(
@@ -193,7 +298,10 @@ export const simCommand = (place: Place) => {
       state,
     },
     (flags) =>
-      report('scroll', scroll(at(flags.state), flags.target, flags.direction, flags.timeout)),
+      report(
+        'scroll',
+        drive((d) => d.scroll(at(flags.state), flags.target, flags.direction, flags.timeout)),
+      ),
   ).pipe(Command.withDescription('Scroll the screen, or until a target shows'));
 
   const shotCommand = Command.make(
@@ -205,7 +313,11 @@ export const simCommand = (place: Place) => {
       ),
       state,
     },
-    (flags) => report('shot', shot(at(flags.state), flags.name)),
+    (flags) =>
+      report(
+        'shot',
+        drive((d) => d.shot(at(flags.state), flags.name)),
+      ),
   ).pipe(Command.withDescription('Save a screenshot under <out>/shots'));
 
   const snapshotCommand = Command.make(
@@ -217,7 +329,11 @@ export const simCommand = (place: Place) => {
       ),
       state,
     },
-    (flags) => report('snapshot', snapshot(at(flags.state), flags.name)),
+    (flags) =>
+      report(
+        'snapshot',
+        drive((d) => d.snapshot(at(flags.state), flags.name)),
+      ),
   ).pipe(Command.withDescription("Save the screen's accessibility tree under <out>/snapshots"));
 
   const recordCommand = Command.make(
@@ -230,21 +346,34 @@ export const simCommand = (place: Place) => {
       ),
       state,
     },
-    (flags) => report('record', record(at(flags.state), flags.action, flags.name)),
+    (flags) =>
+      report(
+        'record',
+        drive((d) => d.record(at(flags.state), flags.action, flags.name)),
+      ),
   ).pipe(
     Command.withDescription('Start a video of the screen under <out>/video, or stop and save it'),
   );
 
   const logCommand = Command.make('log', { state }, (flags) =>
-    report('log', log(at(flags.state))),
+    report(
+      'log',
+      drive((d) => d.log(at(flags.state))),
+    ),
   ).pipe(Command.withDescription("Save the app's log since boot"));
 
   const doctorCommand = Command.make('doctor', { state }, (flags) =>
-    report('doctor', doctor(at(flags.state))),
+    report(
+      'doctor',
+      drive((d) => d.doctor(at(flags.state))),
+    ),
   ).pipe(Command.withDescription('Check, read only, that the booted drive is worth driving'));
 
   const downCommand = Command.make('down', { state }, (flags) =>
-    report('down', down(at(flags.state))),
+    report(
+      'down',
+      drive((d) => d.down(at(flags.state))),
+    ),
   ).pipe(Command.withDescription('Shut down what boot started'));
 
   const serveCommand = Command.make(
@@ -279,7 +408,23 @@ const badArguments = (error: unknown): error is CliError.ShowHelp =>
   CliError.isCliError(error) && error._tag === 'ShowHelp' && error.errors.length > 0;
 
 /**
- * Run `sim <args>` so stdout holds one JSON result and nothing else. The
+ * The warm checkout this checkout is, if it is one: the repository root
+ * above the app, matched against each warm checkout with symlinks resolved.
+ */
+const warmCheckout = Effect.fn('Sim.warmCheckout')(function* (place: Place) {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const real = (dir: string) => fs.realPath(dir).pipe(Effect.orElseSucceed(() => dir));
+  const root = yield* real(path.resolve(place.app, '..', '..'));
+  for (const warm of place.warm) {
+    if ((yield* real(warm)) === root) return Option.some(root);
+  }
+  return Option.none<string>();
+});
+
+/**
+ * Run `sim <args>` so stdout holds one JSON result and nothing else. A
+ * checkout that is warm is refused before the arguments are read. The
  * parser prints its help as it fails, so the run's console lines are held
  * until it ends: arguments that do not parse send the help to stderr and
  * print a `BadArguments` result; any other run prints its lines (a result,
@@ -288,6 +433,13 @@ const badArguments = (error: unknown): error is CliError.ShowHelp =>
 export const runSim = (place: Place, args: ReadonlyArray<string>) =>
   Console.consoleWith((console) =>
     Effect.gen(function* () {
+      const warm = yield* warmCheckout(place);
+      if (Option.isSome(warm)) {
+        return yield* report(
+          args[0] ?? 'sim',
+          Effect.fail(WarmCheckout.make({ checkout: warm.value })),
+        );
+      }
       const lines: Array<string> = [];
       const held: Console.Console = {
         ...console,
