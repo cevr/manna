@@ -67,6 +67,25 @@ export const SKELETONS = {
       capLeft: 13,
     }),
   ),
+  'single-1': framed(
+    keptAt('single-1'),
+    standing(BODY, {
+      facing: 'front',
+      hip: [300, 680],
+      neck: [310, 380],
+      chin: [310, 360],
+      crown: [300, 10],
+      ...JOINTS['single-1'],
+      wristRight: [72, 432],
+      handRight: [75, 385],
+      wristLeft: [485, 775],
+      handLeft: [488, 820],
+      flapRight: 205,
+      flapLeft: 430,
+      capRight: 13,
+      capLeft: 13,
+    }),
+  ),
   'heads-4': framed(keptAt('heads-4'), {
     bones: [
       { name: 'lean', pivot: [120, 336], tip: [120, 232] },

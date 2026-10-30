@@ -20,8 +20,13 @@ export const FRAMES = {
   front: { sheet: 'turnaround', kept: [18, 194, 265, 857], pad: [3, 3, 3, 12] },
   threeQuarterLeft: { sheet: 'turnaround', kept: [292, 194, 511, 857], pad: [3, 3, 3, 12] },
   'heads-4': { sheet: 'heads', kept: [774, 314, 1014, 650], pad: [3, 3, 3, 0] },
+  // his raised-bottle drawing, kept as its own file on the single sheet (`kept/single-1.png`)
+  'single-1': { sheet: 'single', kept: [191, 109, 742, 1382], pad: [3, 3, 3, 12] },
 } as const satisfies Readonly<
-  Record<string, { readonly sheet: 'turnaround' | 'heads'; readonly kept: Box; readonly pad: Box }>
+  Record<
+    string,
+    { readonly sheet: 'turnaround' | 'heads' | 'single'; readonly kept: Box; readonly pad: Box }
+  >
 >;
 
 /** A cut view, by its name in his sheets' views. */

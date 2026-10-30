@@ -18,6 +18,12 @@ import frontShadow from './sheets/front/shadow.png' with { type: 'file' };
 import frontTorso from './sheets/front/torso.png' with { type: 'file' };
 import heads4Head from './sheets/heads-4/head.png' with { type: 'file' };
 import heads4Torso from './sheets/heads-4/torso.png' with { type: 'file' };
+import single1ArmLeft from './sheets/single-1/armLeft.png' with { type: 'file' };
+import single1ArmRight from './sheets/single-1/armRight.png' with { type: 'file' };
+import single1Head from './sheets/single-1/head.png' with { type: 'file' };
+import single1Robe from './sheets/single-1/robe.png' with { type: 'file' };
+import single1Sash from './sheets/single-1/sash.png' with { type: 'file' };
+import single1Torso from './sheets/single-1/torso.png' with { type: 'file' };
 import tqArmLeft from './sheets/threeQuarterLeft/armLeft.png' with { type: 'file' };
 import tqArmRight from './sheets/threeQuarterLeft/armRight.png' with { type: 'file' };
 import tqFootLeft from './sheets/threeQuarterLeft/footLeft.png' with { type: 'file' };
@@ -45,6 +51,7 @@ export const PAPERS = {
   front: [253, 241, 218],
   threeQuarterLeft: [253, 242, 220],
   'heads-4': [254, 242, 218],
+  'single-1': [254, 242, 219],
 } as const satisfies Readonly<Record<keyof typeof SKELETONS, readonly [number, number, number]>>;
 
 /** Each cut view's puppet, by the view's name in his sheets' views: its parts front to back, its part sheet the kept box padded (`frames.ts`), his origin at the kept box's top-left corner, held to the kept box (`library/cutout/puppets.ts`). */
@@ -80,6 +87,14 @@ export const PUPPETS = puppetsOf({
     'heads-4': [
       ['head', heads4Head],
       ['torso', heads4Torso],
+    ],
+    'single-1': [
+      ['armRight', single1ArmRight],
+      ['armLeft', single1ArmLeft],
+      ['head', single1Head],
+      ['sash', single1Sash],
+      ['robe', single1Robe],
+      ['torso', single1Torso],
     ],
   },
 });

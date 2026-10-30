@@ -21,7 +21,8 @@ export type CutPuppet = PuppetSpec & {
   readonly skeleton: Rooted;
   readonly origin: Pt;
   readonly concept: {
-    readonly image: { readonly cast: string; readonly sheet: KeptSheet };
+    /** The kept image: the sheet's file, or on the single sheet the view's own (`kept/<view>.png`). */
+    readonly image: { readonly cast: string; readonly sheet: KeptSheet; readonly view?: string };
     readonly box: Box;
   };
 };
@@ -67,7 +68,11 @@ export const puppetsOf = <V extends string>(
       parts: parts.map(([name, png]) => ({ name, png })),
       skeleton: member.skeletons[view],
       origin: keptCorner(frame),
-      concept: { image: { cast: member.cast, sheet: frame.sheet }, box: frame.kept },
+      concept: {
+        // A single drawing is its own file, so its view names it.
+        image: { cast: member.cast, sheet: frame.sheet, ...(frame.sheet === 'single' && { view }) },
+        box: frame.kept,
+      },
       paper: member.papers[view],
       ...Struct.pick(member, SHEET),
       line: member.line,

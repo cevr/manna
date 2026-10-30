@@ -894,6 +894,10 @@ const LEAD_FIT = {
     // a4: the nod that cut his ears and raised his chin's line.
     'heads-6': { bars: BUST_BARS, probes: [CHIN_PROBE, EAR_PROBE] },
   },
+  // His single drawing, bottle raised: the member's bars as they stand, and no labels yet, so its rows are the silhouette's and the classes'.
+  single: {
+    'single-1': {},
+  },
 } satisfies Readonly<Record<string, Readonly<Record<string, ViewFit>>>>;
 
 /** `view` with its own fit (`CastView.fit`). */
@@ -1125,6 +1129,9 @@ export const CUTOUT = cutoutTable({
     },
     heads: {
       'heads-4': own(LEAD_FIT.heads['heads-4'], LEAD_PUPPETS['heads-4']),
+    },
+    single: {
+      'single-1': own(LEAD_FIT.single['single-1'], LEAD_PUPPETS['single-1']),
     },
   },
   'feast-mother': {

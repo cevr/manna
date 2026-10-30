@@ -433,6 +433,108 @@ const HEADS_4: PartCut = {
   ],
 };
 
+/** His left sleeve on his raised-bottle drawing (single-1, the viewer's right, under the mantle): its inner edge, a dark teal crease down to the cuff. */
+const SINGLE_1_LEFT: Sleeve = {
+  inner: [
+    [432, 455],
+    [420, 480],
+    [418, 560],
+    [416, 640],
+    [414, 700],
+    [418, 740],
+    [424, 775],
+  ],
+  shoulder: JOINTS['single-1'].shoulderLeft,
+  cap: 13,
+  side: 'right',
+};
+const single1Left = sleeve(SINGLE_1_LEFT);
+
+/**
+ * His raised-bottle drawing (single-1), read off 1-2x crops of the view: his
+ * right arm raised with its elbow tucked, the bottle in his hand beside his
+ * cheek, a polygon from the bottle's top down the upper arm's soft crease
+ * (no ink) to the sleeve's foot; his left arm hanging under the mantle, its
+ * sleeve on its dark teal crease and its hand to the hand's foot; his head
+ * above his chin and his neck's skin to the collar; the sash's band, knot
+ * and ends; the robe below the sash. His robe and sandals stand with the
+ * root, so they are one part.
+ */
+const SINGLE_1: PartCut = {
+  parts: [
+    {
+      name: 'armRight',
+      take: [
+        {
+          polygon: [
+            [-1, 190],
+            [143, 190],
+            [150, 230],
+            [150, 422],
+            [165, 405],
+            [185, 394],
+            [212, 382],
+            [212, 400],
+            [205, 445],
+            [201, 500],
+            [198, 545],
+            [186, 560],
+            [160, 585],
+            [-1, 590],
+          ],
+        },
+      ],
+      pivot: JOINTS['single-1'].shoulderRight,
+    },
+    {
+      name: 'armLeft',
+      take: [...single1Left.take, box(425, 770, FAR, 866)],
+      unless: single1Left.unless,
+      pivot: JOINTS['single-1'].shoulderLeft,
+    },
+    {
+      // above his chin, and his neck's skin down to the collar's V
+      name: 'head',
+      take: [
+        box(-1, -1, FAR, 362),
+        {
+          polygon: [
+            [255, 362],
+            [372, 362],
+            [372, 380],
+            [330, 415],
+            [310, 432],
+            [285, 420],
+            [255, 400],
+            [245, 385],
+          ],
+        },
+      ],
+    },
+    {
+      // the band's rows across his body, the knot and the two hanging ends
+      name: 'sash',
+      take: [
+        box(183, 651, 428, 697),
+        { disc: { c: [300, 680], r: 27 } },
+        {
+          polygon: [
+            [262, 695],
+            [336, 695],
+            [338, 910],
+            [296, 912],
+            [296, 880],
+            [255, 880],
+            [255, 760],
+          ],
+        },
+      ],
+    },
+    { name: 'robe', take: [box(-1, 697, FAR, FAR)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
+  ],
+};
+
 /** His sheets' ink, for the row that closes a bust's foot. */
 const INK = [42, 30, 24, 255] as const;
 
@@ -476,6 +578,10 @@ const HIDDEN_ENTRIES = {
     moving: ['head'],
     prompt: `${CUT_AWAY} his head (his hair, face and ears) was cut away to make a cut-out puppet. Repaint ONLY the magenta area, as what lies behind his head: his neck rising straight up from his collar as a plain column of skin to about where his mouth was, its two sides closed by the same thick dark brown-black outline as the rest of him, its top simply rounded and closed by the same outline (no opening, no rim, no dark band), in exactly the same skin colour, soft shading and fine paper grain as his neck below. Everywhere else in the magenta area becomes the plain cream paper. There is no head now: no hair, no face, no ears, nothing magenta left. ${KEEP_REST}`,
   },
+  'single-1': {
+    moving: ['armRight', 'armLeft'],
+    prompt: `${CUT_AWAY} his two arms were cut away to make a cut-out puppet: his right arm (on the viewer's left), raised with its elbow tucked against his side and its hand holding a baby bottle beside his cheek, and his left arm (on the viewer's right), hanging under the teal-blue mantle with its hand at his hip. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each shoulder and armpit down to the sash and robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading (the cream tunic on the viewer's left side, the teal-blue mantle over his left shoulder on the viewer's right side). ${SIDES} ${shade('his')} ${GRAIN} There are no arms now: no sleeves, no hands, no bottle, nothing magenta left. Where the magenta lay outside his body, beside his head and shoulders, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, face, hair, neck, sash, robe, feet, size, position and framing.`,
+  },
 } as const satisfies Readonly<Record<CutView, HiddenEntry>>;
 
 /** His cut table: each view's cut, how its figure is read, and what its label rules read (his colour classes and the view's part labels). */
@@ -493,6 +599,7 @@ export const { CUTS, cutOptionsFor, HIDDEN } = cutTable({
       reads: { classes: CLASSES, labels: LABELS.threeQuarterLeft },
     },
     'heads-4': { cut: HEADS_4, figure: 'bust' },
+    'single-1': { cut: SINGLE_1, figure: 'framed' },
   },
   hidden: HIDDEN_ENTRIES,
   ink: INK,
