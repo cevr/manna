@@ -10,8 +10,13 @@
 // does not reach (the sheet's paper, lighter or bluer than its flat colour
 // at the rim) is paper: it keeps no alpha, so another paper shows there,
 // and over the sheet's flat paper it differs from the kept pixel by its own
-// distance from that paper. A member's cut-out may ask four things more of
-// it (`UnmatteOptions`): his cloth colours, so a light cloth the line does
+// distance from that paper. A px so cleared, or left near-clear, that the
+// figure encloses (walled off from the ground and the frame by his inked
+// parts) is his light cloth, not paper: it takes the sheet's px back, unless
+// its clear region holds a pocket of the sheet's paper or a px of the paper
+// the sheet shows open to the ground; a px within the paper's core (ΔE 2)
+// stays cleared. A member's cut-out may ask four things more of it
+// (`UnmatteOptions`): his cloth colours, so a light cloth the line does
 // not reach is his and not paper; his thin parts, whose alpha is raised
 // until the colour that closes the sum is in range, so a speck keeps its
 // hue on another paper; the box's open edges, so paper the box cuts off
@@ -77,7 +82,9 @@ const holdersOf = (parts: ReadonlyArray<Uint8Array>, width: number, height: numb
  * rim pixel un-matted against `paper`: an opaque pixel reached from the
  * ground (where no part has a pixel) within `UNMATTE_BAND` steps through
  * pixels lighter than ink, the paint behind it (hidden at rest) cleared, so
- * the rest pose over the paper is the view there. Every other pixel is kept byte for byte.
+ * the rest pose over the paper is the view there. A rim pixel so cleared
+ * that the figure encloses takes the sheet's own pixel back
+ * (`restoreEnclosed`). Every other pixel is kept byte for byte.
  */
 export const unmatte = (
   parts: ReadonlyArray<Uint8Array>,
@@ -115,14 +122,218 @@ export const unmatte = (
     return paperLuma - lumaOf(c) > grain ? ([c[0], c[1], c[2], 255] as const) : s;
   };
   const out = parts.map((p) => Uint8Array.from(p));
+  const changed = new Uint8Array(width * height);
   for (const i of rim) {
     const k = holders.front[i]!;
     if (parts[k]![i * 4 + 3] !== 255) continue;
     // the view shows this px, the sheet's paper mixed in: paint behind it, hidden at rest, goes too
     for (let b = k + 1; b < parts.length; b++) out[b]!.fill(0, i * 4, i * 4 + 4);
     out[k]!.set(floored(i, solve(i)), i * 4);
+    changed[i] = 1;
   }
+  restoreEnclosed(parts, out, holders, changed, paperLab);
   return out;
+};
+
+/** A view px under this alpha (0..255) reads as clear: the fence the cut's hole check reads, so both see one hole. */
+const FENCE = 16;
+
+/** A px within this ΔE76 of the paper is the sheet's paper or its grain: never taken back, since kept it shows as a halo on another paper. */
+const PAPER_CORE = 2;
+
+/** A held px within this ΔE76 of the paper is the sheet's ground, as far as the cut's ground reading reaches on the cast's sheets (1.5 × a sheet's 90th-centile grain): a gap it opens to the ground is open paper, and where his outline closes round it, it is a kept hole. A px past it is his cloth or a seam, which closes a gap. */
+const SHEET_GROUND = 4.25;
+
+/** A clear region or kept hole holding this many paper px (within `PAPER_CORE`) is a pocket of the sheet's paper inside him: a clear region that holds one, or any px of a kept hole that is one, stays cleared. */
+const POCKET = 9;
+
+/** A part whose opaque px are ink (at or under `INK_LUMA`) at most this share is a shadow on the ground: a shadow's darkest grain is a few specks of its px, where every part of the figure carries an outline. */
+const SHADOW_INK = 0.035;
+
+/** Whether part `p` is a shadow on the ground, which walls nothing in: so few of its opaque px are ink that they are specks of the shadow's own grain, not an outline. */
+const shadowOf = (p: Uint8Array) => {
+  let [opaque, ink] = [0, 0];
+  for (let i = 0; i < p.length; i += 4)
+    if (p[i + 3] === 255) {
+      opaque++;
+      if (lumaOf([p[i]!, p[i + 1]!, p[i + 2]!]) <= INK_LUMA) ink++;
+    }
+  return ink <= opaque * SHADOW_INK;
+};
+
+const onFrame = (i: number, width: number, height: number) => {
+  const [x, y] = [i % width, Math.floor(i / width)];
+  return x === 0 || y === 0 || x === width - 1 || y === height - 1;
+};
+
+/** The px reached from each seed that `passes`, through px that pass, stepping to `next(i)`: 1 reached, 0 not. */
+const flood = (
+  n: number,
+  passes: (i: number) => boolean,
+  seed: (i: number) => boolean,
+  next: (i: number) => ReadonlyArray<number>,
+) => {
+  const reached = new Uint8Array(n);
+  const stack: number[] = [];
+  for (let i = 0; i < n; i++)
+    if (passes(i) && seed(i)) {
+      reached[i] = 1;
+      stack.push(i);
+    }
+  while (stack.length > 0)
+    for (const j of next(stack.pop()!))
+      if (reached[j] === 0 && passes(j)) {
+        reached[j] = 1;
+        stack.push(j);
+      }
+  return reached;
+};
+
+/** Each connected run of the px that `isIn`, stepping to `next(i)`. */
+const regionsOf = (
+  n: number,
+  isIn: (i: number) => boolean,
+  next: (i: number) => ReadonlyArray<number>,
+) => {
+  const seen = new Uint8Array(n);
+  const regions: number[][] = [];
+  for (let s = 0; s < n; s++) {
+    if (seen[s] === 1 || !isIn(s)) continue;
+    seen[s] = 1;
+    const region = [s];
+    for (let r = 0; r < region.length; r++)
+      for (const j of next(region[r]!))
+        if (seen[j] === 0 && isIn(j)) {
+          seen[j] = 1;
+          region.push(j);
+        }
+    regions.push(region);
+  }
+  return regions;
+};
+
+/** Each held px's distance from the paper (ΔE76) at its sheet colour, worked out once per colour. */
+const paperDistance = ({ colourAt }: Holders, paperLab: Rgb) => {
+  const byColour = new Map<number, number>();
+  return (i: number) => {
+    const c = colourAt(i);
+    const key = (c[0] << 16) | (c[1] << 8) | c[2];
+    let d = byColour.get(key);
+    if (d === undefined) {
+      d = deltaE(labOf(c), paperLab);
+      byColour.set(key, d);
+    }
+    return d;
+  };
+};
+
+/** The view's alpha at rest (0..255): the parts composited front to back. */
+const viewAlphaOf = (parts: ReadonlyArray<Uint8Array>, n: number) => {
+  const alpha = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    let through = 1;
+    for (const p of parts) through *= 1 - p[i * 4 + 3]! / 255;
+    alpha[i] = Math.round(255 * (1 - through));
+  }
+  return alpha;
+};
+
+/** The in-frame 4-neighbours of pixel `i`. */
+const sides = (i: number, width: number, height: number) => {
+  const x = i % width;
+  const out: number[] = [];
+  if (x > 0) out.push(i - 1);
+  if (x < width - 1) out.push(i + 1);
+  if (i >= width) out.push(i - width);
+  if (i < width * (height - 1)) out.push(i + width);
+  return out;
+};
+
+/**
+ * Gives the sheet's own px back, in every part, to each px the rim un-matted
+ * (`changed`) to a clear or near-clear one (view alpha under `FENCE`) that
+ * the figure encloses: light cloth the line to the ink does not reach, which
+ * cleared is a hole in him. The outside is what floods (8-connected) from
+ * the ground and the frame's border past his walls: a px his inked parts
+ * hold at view alpha `FENCE` or more, so his shadow on the ground walls
+ * nothing in: a part is his shadow when at most `SHADOW_INK` of its opaque
+ * px are ink (`shadowOf`), since its darkest grain is specks and not an
+ * outline. The flood steps diagonally, so a gap his outline leaves only at a
+ * corner is outside, and no px it does not reach lies beside the outside or
+ * on the frame: none taken back shows as a fleck on his outline. A px is
+ * enclosed when the outside does not reach it, and its clear region
+ * (4-connected) is taken back but for two things that stay cleared: a region
+ * holding `POCKET` px of paper, or any px of the sheet's open paper or of a
+ * sheet pocket (`sheetPocketsOf`), since a gap the sheet shows open to the
+ * ground is no hole in him; and each px of paper itself (within
+ * `PAPER_CORE`), which kept would show as a halo.
+ */
+const restoreEnclosed = (
+  parts: ReadonlyArray<Uint8Array>,
+  out: ReadonlyArray<Uint8Array>,
+  holders: Holders,
+  changed: Uint8Array,
+  paperLab: Rgb,
+) => {
+  const { front, width, height } = holders;
+  const n = width * height;
+  const fromPaper = paperDistance(holders, paperLab);
+  const isCore = (i: number) => fromPaper(i) <= PAPER_CORE;
+  const alpha = viewAlphaOf(out, n);
+  const inked = out.filter((_, k) => !shadowOf(parts[k]!));
+  const wallAlpha = inked.length === out.length ? alpha : viewAlphaOf(inked, n);
+  const step8 = (i: number) => neighbours(i, width, height);
+  const step4 = (i: number) => sides(i, width, height);
+  const outside = flood(
+    n,
+    (i) => wallAlpha[i]! < FENCE,
+    (i) => front[i] === -1 || onFrame(i, width, height),
+    step8,
+  );
+  const enclosed = (i: number) => outside[i] === 0 && alpha[i]! < FENCE;
+  let sheet: ReturnType<typeof sheetPocketsOf> | undefined;
+  for (const region of regionsOf(n, enclosed, step4)) {
+    if (!region.some((i) => changed[i] === 1)) continue;
+    if (region.filter(isCore).length >= POCKET) continue;
+    sheet ??= sheetPocketsOf(holders, fromPaper);
+    const { open, pockets } = sheet;
+    if (region.some((i) => open[i] === 1 || pockets[i] === 1)) continue;
+    for (const i of region)
+      if (changed[i] === 1 && !isCore(i))
+        for (let k = 0; k < parts.length; k++)
+          out[k]!.set(parts[k]!.subarray(i * 4, i * 4 + 4), i * 4);
+  }
+};
+
+/**
+ * The sheet's open paper and its pockets, 1 at each px. `open` is the run of
+ * the ground and held px within `SHEET_GROUND` of the paper that joins the
+ * ground or the frame's border: a gap the sheet shows open. It is 8-connected,
+ * as the outside is, since paper that touches paper at a corner shows through
+ * on the sheet. So a hairline diagonal ink stroke (under about 0.6 px) or a
+ * hard 1-px one does not wall the open paper: the run steps across its
+ * corners, and light cloth past it stays cleared. The run must step there,
+ * because a 1-px light slit on a diagonal between ink is the same pattern
+ * with light and ink swapped, and the sheet shows it open. A pocket is each
+ * kept hole (such a run that `open` does not
+ * reach) holding `POCKET` px of paper (within `PAPER_CORE`) or more, as the
+ * cut reads its pockets.
+ */
+const sheetPocketsOf = ({ front, width, height }: Holders, fromPaper: (i: number) => number) => {
+  const n = width * height;
+  const step4 = (i: number) => sides(i, width, height);
+  const groundLike = (i: number) => front[i] === -1 || fromPaper(i) <= SHEET_GROUND;
+  const open = flood(
+    n,
+    groundLike,
+    (i) => front[i] === -1 || onFrame(i, width, height),
+    (i) => neighbours(i, width, height),
+  );
+  const pockets = new Uint8Array(n);
+  for (const hole of regionsOf(n, (i) => open[i] === 0 && groundLike(i), step4))
+    if (hole.filter((i) => fromPaper(i) <= PAPER_CORE).length >= POCKET)
+      for (const i of hole) pockets[i] = 1;
+  return { open, pockets };
 };
 
 /**

@@ -32,12 +32,13 @@ import { SKELETONS } from './skeleton.ts';
 export const LINE = { width: 10.5, ink: [25, 9, 2] } as const;
 
 /**
- * His paper's grain, luma (`core/unmatte.ts`, `grain`): the 95th percentile of
- * how far his kept views' border ground runs darker than its median paper is
- * 1.914 (heads-1), 2.228 (heads-2, heads-4, heads-6) and 2.114 (heads-3,
- * heads-5); the largest, rounded up. With it his rim keeps 1695 to 2013 px
- * whole as cloth in each view, and fills none of the paper pockets his sheet
- * shows between his beard, headcloth and robe (530 to 843 px a view).
+ * His paper's grain, luma (`core/unmatte.ts`, `grain`): the least quarter
+ * luma step over the largest, across his kept views, of the 95th percentile
+ * of how far a view's border ground runs darker than its median paper. So
+ * the sheet's own ground reads as paper and each view's halo (paper kept
+ * round his outline) stays in its bound, while a rim px darker than that is
+ * his cloth, kept whole; a larger grain keeps fewer of his light cloth px
+ * whole.
  */
 const GRAIN = 2.25;
 
