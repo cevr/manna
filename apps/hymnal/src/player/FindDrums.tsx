@@ -33,7 +33,7 @@ const STOPS: Readonly<Record<Drum, ReadonlyArray<number>>> = {
 };
 
 /** The drums on `number`; `onDial` hears each number a turn dials, held to the book. */
-export function Drums({
+export function FindDrums({
   number,
   onDial,
 }: {
