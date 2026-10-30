@@ -2,12 +2,46 @@
 // value step taken from a measured crop of RBF's (`PARTED` in match.ts): the
 // rule flags a scene that runs together what its concept parts, never the
 // other way, parts by the edge or by the step alone, and says a side with no
-// beard without flagging it.
+// beard without flagging it. A cast member's concept image names a file its
+// record keeps: a sheet by its kind, a single drawing by its view.
 
 import { describe, expect, test } from 'bun:test';
-import { Array as Arr, Option } from 'effect';
+import { Array as Arr, Option, Result, Schema } from 'effect';
+import type { SheetKind } from './cast-sheet.ts';
 import type { FigureMeasure, HairBeard } from './figure.ts';
-import { compareFigures } from './match.ts';
+import { castConceptImage, compareFigures, ConceptImage, conceptImageName } from './match.ts';
+
+describe("a cast member's concept image", () => {
+  const decoded = Schema.decodeUnknownResult(ConceptImage);
+
+  test('a single drawing is named by its view, a sheet by its kind', () => {
+    const single = Result.getOrThrow(
+      decoded({ cast: 'lead-feast', sheet: 'single', view: 'single-1' }),
+    );
+    const poses = Result.getOrThrow(decoded({ cast: 'lead-feast', sheet: 'poses' }));
+    expect([conceptImageName(single), conceptImageName(poses)]).toEqual([
+      'cast/lead-feast/kept/single-1.png',
+      'cast/lead-feast/kept/poses.png',
+    ]);
+  });
+
+  test("a kept view's image, as a render's match table names it, is its own kept file", () => {
+    const named = (kind: SheetKind, view: string) =>
+      conceptImageName(castConceptImage('lead-feast', kind, view));
+    expect([named('single', 'single-1'), named('poses', 'poses-3')]).toEqual([
+      'cast/lead-feast/kept/single-1.png',
+      'cast/lead-feast/kept/poses.png',
+    ]);
+  });
+
+  test.each([
+    ['a view of a sheet, which keeps one file', { sheet: 'poses', view: 'poses-1' }],
+    ['a single drawing with no view, which has no file of its kind', { sheet: 'single' }],
+    ['a single drawing by a view of another kind', { sheet: 'single', view: 'poses-1' }],
+  ])('refuses %s', (_, image) => {
+    expect(Result.isFailure(decoded({ cast: 'lead-feast', ...image }))).toBe(true);
+  });
+});
 
 /** A figure measured with nothing to compare: no ratio, outline, artifact or beard. */
 const BARE: FigureMeasure = {

@@ -7,6 +7,7 @@
 // a painter and fails nothing. Pure.
 
 import { Array as Arr, Boolean as Bool, Match, Option, Order, Schema } from 'effect';
+import { keptFile, type SheetKind } from './cast-sheet.ts';
 import { ARTIFACT_KINDS, type ArtifactKind, type ArtifactMark } from './render-artifacts.ts';
 import {
   type FigureMeasure,
@@ -51,25 +52,29 @@ const CastMember = Schema.String.check(
   Schema.isPattern(new RegExp(`^${NAME}$`), { message: "a cast member's id: one name" }),
 );
 
-/** A kind of cast sheet a member keeps. */
-const CastSheetKind = Schema.Literals(['turnaround', 'poses', 'heads', 'single']);
+/** A kind of cast sheet a member keeps as one file, every view of it cut from that file. */
+const CastSheetKind = Schema.Literals(['turnaround', 'poses', 'heads']);
+
+/** A single drawing's view, as the record names it (`single-1`), kept as its own file. */
+const SingleView = Schema.String.check(
+  Schema.isPattern(/^single-[1-9]\d*$/, { message: "a single drawing's view: single-<n>" }),
+);
 
 /**
  * A concept image: a set's file (`out/<set>/<file>`: a kept concept, a model
  * sheet), a Board try of the film's own, by its file in the film's `board/`
  * folder (board.json's `tries[].file`), or a cast member's kept sheet of a
  * kind (`kept/<sheet>.png` in the member's record, the film's own role's
- * before the library's), which is tracked, so it reads in any checkout.
+ * before the library's) or a single drawing it keeps (`kept/<view>.png`),
+ * which is tracked, so it reads in any checkout.
  */
 export const ConceptImage = Schema.Union([
   Schema.Struct({ set: SetName, file: SetFile }),
   Schema.Struct({ board: BoardImage }),
-  /** `view` names a single drawing, kept as its own file (`kept/<view>.png`). */
-  Schema.Struct({
-    cast: CastMember,
-    sheet: CastSheetKind,
-    view: Schema.optionalKey(Schema.String),
-  }),
+  /** A sheet is one file, so it names no view. */
+  Schema.Struct({ cast: CastMember, sheet: CastSheetKind, view: Schema.optionalKey(Schema.Never) }),
+  /** A single drawing is named by its view, its own file (`kept/<view>.png`). */
+  Schema.Struct({ cast: CastMember, sheet: Schema.Literal('single'), view: SingleView }),
 ]);
 export type ConceptImage = typeof ConceptImage.Type;
 
@@ -81,14 +86,20 @@ export type ConceptImage = typeof ConceptImage.Type;
 export const ConceptRef = Schema.Struct({ image: ConceptImage, box: PixelBox });
 export type ConceptRef = typeof ConceptRef.Type;
 
-/** A concept image as a line names it: `<set>/<file>`, `board/<file>` or `cast/<member>/kept/<sheet>.png`. */
+/** A cast member's concept image of one kept view: its sheet by the kind, a single drawing by the view's name (`single-1`). */
+export const castConceptImage = (member: string, kind: SheetKind, view: string): ConceptImage => {
+  if (kind === 'single') return { cast: member, sheet: kind, view };
+  return { cast: member, sheet: kind };
+};
+
+/** A concept image as a line names it: `<set>/<file>`, `board/<file>` or `cast/<member>/kept/<sheet>.png` (`kept/<view>.png` for a single drawing). */
 export const conceptImageName = (image: ConceptImage): string =>
   Match.value(image).pipe(
     Match.when({ set: Match.string }, (set) => `${set.set}/${set.file}`),
     Match.when({ board: Match.string }, (board) => `board/${board.board}`),
     Match.when(
       { cast: Match.string },
-      (cast) => `cast/${cast.cast}/kept/${cast.view ?? cast.sheet}.png`,
+      (cast) => `cast/${cast.cast}/${keptFile(cast.sheet, cast.view ?? cast.sheet)}`,
     ),
     Match.exhaustive,
   );

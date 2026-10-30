@@ -62,7 +62,7 @@ import {
   overGround,
 } from '../core/fit-rows.ts';
 import type { SceneTimes } from '../core/easel.ts';
-import { compareFigures, matchTable } from '../core/match.ts';
+import { castConceptImage, compareFigures, matchTable } from '../core/match.ts';
 import { rasterOf } from '../core/puppet.ts';
 import { type Raster, besideRaster, cropRaster } from '../core/raster.ts';
 import { puppetFrom } from '../puppet/load.ts';
@@ -263,7 +263,7 @@ const writeCut = Effect.fn('Cast.writeCut')(function* (
     SIDE_GAP,
   );
   yield* fs.writeFile(path.join(dir, `${cut.stem}.side.png`), encodePng(side));
-  const conceptRef = { image: { cast: member, sheet: kind }, box: cut.v.box } as const;
+  const conceptRef = { image: castConceptImage(member, kind, cut.v.name), box: cut.v.box };
   const tableText = Result.match(cut.rows, {
     onFailure: (why) => `### ${cut.stem} (${place})\n\nUnmatched: ${why}\n`,
     onSuccess: (rows) => matchTable(cut.stem, conceptRef, rows, place),
