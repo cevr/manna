@@ -57,19 +57,23 @@ home list's `Topics` tab instead (`browse.md`).
 
 - **Preconditions:** the home list, not in search mode (`sim open / --expect "label=Hymns"`).
 - **States:** default, empty, focus-visible (the search box). Open, loading and error are n/a.
+- **Words:** a step that types a line builds it from the reader's own tree read in memory (`agent-device snapshot --json`, as `drive.ts` reads it) and prints numbers only; never write a hymn's words into a log, a note, a journey file or a command line kept in evidence.
 - **Regression:** `apps/hymnal/src/hymns/search.test.ts`, `apps/hymnal/src/hymns/search.property.slow.test.ts` (every hymn by number and title, seeded half-remembered lines), `apps/hymnal/src/reader/rows.test.ts` and `apps/hymnal/src/reader/HymnList.native.slow.test.ts` (the found line in a result's row, and `Hymns about this` under the strongest five), `apps/hymnal/src/hymns/meaning.test.ts`, `apps/hymnal/test/browser/list.slow.test.ts`, the acceptance's `topic` and `scripture` rows (`search-topic`, `search-scripture`).
-- **Words:** a step that types a line builds it from the reader's own tree read in memory (`agent-device snapshot --json`, as `drive.ts` reads it) and prints numbers only; never write a hymn's words into a log, a note or a command line kept in evidence.
 
-1. **Enter search.** `sim tap "role=button label=Number, title or first line"`. → `ok`; the snapshot holds the search box and `Cancel`.
-2. **Number forms.** `sim fill "label=Number, title or first line" "no 100"`. → the first result row is named `100, …`. Again with `#100`, `Hymn #100` and `number 100`: the same first row.
-3. **A line.** Open hymn 100 (`sim open hymns/100 --expect "label=Stanza 1"`), read the third line of `Stanza 2` from the tree in memory, go home, enter search and type it with one letter of its longest word dropped. → a result named `100, …` among the first five, and its row shows a second, quieter line under the title (the row is taller than its neighbours: its `height` in `agent-device snapshot --json`, about 56 at the usual text size against 44).
-4. **A title.** Type the first word of hymn 100's title, read from its row's name in memory. → the first results are the hymns whose titles hold that word, in number order, each a one-line row.
-5. **Open a result.** `sim tap` the first result's row. → the reader shows `Stanza 1`; the back button is `Hymns`. `sim back`. → search mode with the query kept.
-6. **Hymns about this** (`search-about`). `sim fill "label=Number, title or first line" "hymns about the second coming"`, then wait for `label=Hymns about this` (`sim tap` it with a timeout, or `--expect`). → the heading is in the tree after at most five result rows; the rows after it, to `More matches`, are none of those five, and no hymn number shows twice in the results. `sim fill` with `no 100`. → no `Hymns about this`.
-7. **A reference** (`search-scripture`). `sim fill "label=Number, title or first line" "Psalm 23"`. → the first result rows' numbers, in order, equal the first numbers of `onVerse(19, 23, 1)` from the checkout (`apps/hymnal/src/hymns/indexes.ts`), printed as numbers only.
-8. **A topic** (`search-topic`). Read the first topic of hymn 100 (`topicsOf(100)`, the same way) and fill it. → every hymn the topic lists is among the results, after the hymns whose title holds its words.
-9. **Empty.** `sim fill "label=Number, title or first line" "zzzz"`. → the snapshot holds `No hymn matches “zzzz”.`
-10. **Cancel.** `sim tap label=Cancel`. → the home list where it was.
+**The journey:** `sim journey search`. Search mode (`search`), the number forms `no 100`, `#100` and `Hymn #100` (`search-number`, `search-number-forms`), `hymns about the second coming` (`search-about`), `Psalm 23` (`search-scripture`), `no 100` again with no `Hymns about this`, open hymn 100 and back to the query (`search-open`, `query-kept`), `zzzz` (`search-empty`), `Cancel`.
+
+Read in the receipts:
+
+- `search-number`, `search-number-forms`, `search-number-hymn`: the first result row `100, …`.
+- `search-about`: the heading `Hymns about this` after at most five rows; the rows after it, to `More matches`, none of those five; no number twice.
+- `search-scripture`: the first rows' numbers, in order, equal the first numbers of `onVerse(19, 23, 1)` from the checkout (`apps/hymnal/src/hymns/indexes.ts`), printed as numbers only.
+- `search-open`: the back button is `Hymns`.
+
+By hand:
+
+1. **A line (`search-line`, `search-typo`, `search-matched-line`).** Read the third line of hymn 100's `Stanza 2` from the tree in memory, enter search and type it with one letter of its longest word dropped. → `100, …` among the first five, its row taller than its neighbours (its `height` about 56 against 44): the matched line under the title.
+2. **A title (`search-order`).** Type the first word of hymn 100's title, read from its row's name in memory. → the hymns whose titles hold it, in number order, each a one-line row.
+3. **A topic (`search-topic`).** Fill the first topic of hymn 100 (`topicsOf(100)`). → every hymn the topic lists among the results, after the hymns whose title holds its words.
 
 ## Gotchas
 

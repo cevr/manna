@@ -43,14 +43,19 @@ runs on the phone and nothing goes over the network.
 - **States:** default, open. Focus-visible, loading, empty and error are n/a (a route naming no hymn says `No hymn`).
 - **Regression:** `apps/hymnal/src/reader/About.test.tsx` (the rows equal `moreLike`, `topicsOf`, `referencesOf` and `sameMetre`, an empty section is left out, the page's line opens the sheet and gives the section and first passage, a hymn row closes it and opens its hymn, a topic row opens the `Topics` tab at its topic with search mode off, a passage row sets the search query and search mode), `apps/hymnal/src/hymns/indexes.test.ts` (the lookups, `passageText`, `passageQuery`), `apps/hymnal/src/hymns/meaning.test.ts` (the ranking is the cosine over the shipped vectors), `packages/hymnal/scripts/meaning/table.test.ts` (the file's format), the acceptance's `find-meaning-theme`.
 
-1. **Open the sheet.** `sim open hymns/100 --expect "label=Stanza 1"`, then `sim tap "label=About this hymn"`. → `ok`; the snapshot holds `Done` and the heading `More like this`.
-2. **The rows.** Read the sheet's rows from the tree in memory (`agent-device snapshot --json`): the labels that start `<n>, `. → 8 rows, none `100, `; their numbers equal `moreLike(100, 8)` from the checkout (`apps/hymnal/src/hymns/meaning.ts`) run in Bun with the app's test preload. Print the numbers only.
-3. **Open a row.** `sim tap` the first row by its leading number. → the sheet is gone and the reader shows that hymn (`id=hymn-number` reads its number); `sim back`. → hymn 100.
-4. **Close.** Open the sheet again, then `sim tap label=Done`. → hymn 100's page, scrolled where it was.
-5. **The index sections** (`about-topics`, `about-scripture`, `about-tunes`). Open the sheet again and scroll it down. → the headings `Topics`, `Scripture` and `Sing to another tune`; the `about-tune-<n>` row numbers equal `sameMetre(100)` from the checkout (`apps/hymnal/src/hymns/indexes.ts`), printed as numbers only. `sim tap` the first `about-tune-<n>` row. → that hymn's page; `sim back`. → hymn 100.
-6. **A topic** (`browse-topics`). Open the sheet, `sim tap` `id=about-topic-0`. → the home list, not in search mode, with the tab `Topics` `[selected]` and the topic's heading at the list's top over its hymns. `sim tap "label=Sections"` to put the tab back (on iOS a tab is matched by its label, `browse.md`, Gotchas).
-7. **A passage** (`search-scripture`). Open hymn 100 and its sheet, `sim tap` `id=about-scripture-0`. → search mode with where the passage begins as the query, hymn 100 among the first results. `sim tap label=Cancel`.
-8. **Size** (`search-about-size`). `du -sk` of the base and head Release `Hymnal.app` (or the two `main.jsbundle` files when the native inputs are the same). → head minus base ≤ 20 MB. Time `aboutQuery` over the research's 48 theme queries in `hermes-engine-cli` 0.12.0 (`hermes -O`, the bundle made as `search-hermes` makes its own). → each query under 30 ms, the first of a launch too (search mode reads the table in a task of its own after it opens, `readMeaningSoon`, so the first pause does not). Time `moreLike(100, 8)` the same way, cold (the first call of a launch) and after `readMeaningSoon` has run. → cold about 70 ms, after about 13 ms: the hymn page reads the table in a task of its own after it opens, so the sheet's first render is the 13 ms one.
+**The journey:** `sim journey about`. It opens hymn 100 and its sheet (`about-sheet`), closes it with `Done`, scrolls the sheet to `Sing to another tune` (`about-tunes`), taps `id=about-topic-0` (`about-topics`), puts the tab back to `Sections`, then opens the sheet again and taps `id=about-scripture-0` (`about-scripture`) and `Cancel`. Its stored change, the `Topics` tab a topic row opens, is put back.
+
+Read in the receipts:
+
+- `about-sheet`: the heading `More like this` over 8 rows `<n>, …`, none `100, `.
+- `about-tunes`: the headings `Topics`, `Scripture` and `Sing to another tune`; the `about-tune-<n>` numbers equal `sameMetre(100)` from the checkout (`apps/hymnal/src/hymns/indexes.ts`), printed as numbers only.
+- `about-topics`: the home list, not in search mode, `Topics` `[selected]`, the topic's heading at the list's top over its hymns.
+- `about-scripture`: search mode with where the passage begins as the query, hymn 100 among the first results.
+
+By hand (a journey cannot compute them):
+
+1. **The rows** (`about-more-like`). Read the sheet's rows from the tree in memory (`agent-device snapshot --json`): the labels that start `<n>, `. → 8 rows, none `100, `; their numbers equal `moreLike(100, 8)` from the checkout (`apps/hymnal/src/hymns/meaning.ts`) run in Bun with the app's test preload. Print the numbers only. `sim tap` the first row by its leading number. → the sheet is gone and `id=hymn-number` reads its number; `sim back`. → hymn 100. The same for the first `about-tune-<n>` row.
+2. **Size** (`search-about-size`). `du -sk` of the base and head Release `Hymnal.app` (or the two `main.jsbundle` files when the native inputs are the same). → head minus base ≤ 20 MB. Time `aboutQuery` over the research's 48 theme queries in `hermes-engine-cli` 0.12.0 (`hermes -O`, the bundle made as `search-hermes` makes its own). → each query under 30 ms, the first of a launch too (search mode reads the table in a task of its own after it opens, `readMeaningSoon`). Time `moreLike(100, 8)` the same way, cold and after `readMeaningSoon` has run. → cold about 70 ms, after about 13 ms.
 
 ## Gotchas
 

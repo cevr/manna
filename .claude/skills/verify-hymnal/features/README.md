@@ -27,15 +27,34 @@ recipe.
 
 ## Proof and skip reporting
 
-- Each journey records a video, `sim record start <feature>` to
-  `sim record stop`: `$EVIDENCE/video/<feature>.mp4` or `.webm`.
-- Each step appends its JSON line to `$EVIDENCE/results.jsonl` and saves
-  `sim snapshot <step>` and `sim shot <step>`.
+- `sim journey <feature>` runs `<feature>.journey.json` (iOS): it records
+  a video to `$EVIDENCE/video/<feature>.mp4` (`--skip-video` leaves it
+  out), prints one JSON line a step and a summary line, appends each to
+  `$EVIDENCE/results.jsonl`, saves each step's receipts as
+  `<feature>-<nn>-<step>`, and stops at the first failure.
+- A by-hand step (the recipe's "By hand") appends its JSON line to
+  `$EVIDENCE/results.jsonl` and saves `sim snapshot <step>` and
+  `sim shot <step>`.
 - A stored choice is proved by a second view: leave the screen and come
   back, or relaunch, and read it again.
 - An entry point that is not on main is reported as the `TargetMissing`
   line `sim tap` printed and the reason in its Gotchas. It never counts as
   verified through another path.
+
+## Journeys
+
+Each app-driven iOS feature has a journey, run with
+`sim journey <feature>`: about, browse, chords-and-capo, feel, follow,
+hymn-list, hymn-reader, player, search and settings
+(`<feature>.journey.json` here). The recipe says what to read in its
+receipts and what stays by hand. The rest have none:
+
+- offline: no journey: it needs a loopback fake recording origin, which
+  a journey cannot stand up.
+- app-icon: no journey: it reads SpringBoard and `simctl`, outside the
+  app the journey drives.
+- web-client, corpus-db and indexes: no journey: a browser, the CLI and
+  SQLite, not the iOS app.
 
 ## Entry contract
 
@@ -44,8 +63,10 @@ exactly these H2s in order:
 
 1. `Sub-features`: short ids, one line each.
 2. `How to get to it (user POV)`: every entry point a reader has.
-3. `Driving it with sim`: starts with three lines, then labeled steps that
-   pair a reader's action, an exact command and the observable result.
+3. `Driving it with sim`: starts with three lines, then, for a feature
+   with a journey, its `sim journey <feature>` line and what to read in
+   the receipts, then labeled by-hand steps that pair a reader's action,
+   an exact command and the observable result.
    - **Preconditions:** the state the steps need beyond the baseline.
    - **States:** which of default, focus-visible, open, loading, empty and
      error the steps exercise; mark the rest n/a.
