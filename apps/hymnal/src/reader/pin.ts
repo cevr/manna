@@ -48,6 +48,28 @@ export const topicStart = <Hymn>(
   return Option.none();
 };
 
+/**
+ * The offset a list opens at when asked for `start`: no further than its
+ * end allows, the last row's end space `tail` at the bottom of a
+ * `viewport`-tall list, so a late topic opens with the list's end at the
+ * screen's bottom, not past it. Never above `rest` (the offset the list
+ * rests at with its search field tucked away) when `start` asks for that
+ * far, so a short list keeps its field tucked.
+ */
+export const clampedStart = <Hymn>(
+  start: number,
+  rows: ReadonlyArray<Row<Hymn>>,
+  top: number,
+  heightOf: (kind: Row<Hymn>['kind']) => number,
+  tail: number,
+  viewport: number,
+  rest: number,
+): number => {
+  let end = top + tail;
+  for (const row of rows) end += heightOf(row.kind);
+  return Math.max(Math.min(start, end - viewport), Math.min(start, rest));
+};
+
 /** The pinned topic at a scroll offset: which one, and how far the next topic pushes it up. */
 export interface Pinned {
   /** The topic's place among the topics; -1 while the first topic is still below the list's top. */

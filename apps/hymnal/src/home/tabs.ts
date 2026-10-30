@@ -178,12 +178,14 @@ export const tilesOf = (tab: Tab, playing: Option.Option<number>): ReadonlyArray
 /**
  * The group whose row is at or above the list's top at `offset`, given the
  * offset that puts each group's row at the top (`starts`, in order), to
- * within a point; the first group above them all.
+ * within a point; the first group above them all. Under a layer `cover`
+ * points tall over the list's top, the line is the layer's bottom, as the
+ * pinned row's (`pinnedAt`), so it is the group pinned under the field.
  */
-export const groupAt = (starts: ReadonlyArray<number>, offset: number): number =>
+export const groupAt = (starts: ReadonlyArray<number>, offset: number, cover = 0): number =>
   Math.max(
     0,
-    starts.findLastIndex((start) => start <= offset + 1),
+    starts.findLastIndex((start) => start <= offset + cover + 1),
   );
 
 /** The tab named `name`, or `Sections` (always there) when the tabs have none by that name. */

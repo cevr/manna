@@ -117,13 +117,13 @@ export function Home() {
   const scroll = useSharedValue(field);
   const cover = useShownHeight(scroll, field, field);
   const enter = () => setMode('field');
-  // While `All at once` shows: the list's offset when it zoomed out.
-  const [zoom, setZoom] = useState<Option.Option<number>>(Option.none());
+  // While `All at once` shows: the list's offset and the field's cover when it zoomed out.
+  const [zoom, setZoom] = useState<Option.Option<Zoom>>(Option.none());
   const cue = useCue();
   const zoomOut = useCallback(() => {
     cue(plain('zoom-out'));
-    setZoom(Option.some(scroll.value));
-  }, [cue, scroll]);
+    setZoom(Option.some({ offset: scroll.value, cover: cover.value }));
+  }, [cue, scroll, cover]);
   const zoomIn = useCallback(() => {
     cue(plain('zoom-in'));
     setZoom(Option.none());
@@ -161,6 +161,12 @@ export function Home() {
   );
 }
 
+/** Where the list stood when it zoomed out: its offset, and how far the field covered its top. */
+interface Zoom {
+  readonly offset: number;
+  readonly cover: number;
+}
+
 /**
  * The hymn list of the tab in use (`settings.home.tab`, `tabNamed`), with
  * the tab row under the search field in the list's top. Sections names each
@@ -194,8 +200,8 @@ function TabList({
   readonly scroll: SharedValue<number>;
   readonly cover: SharedValue<number>;
   readonly onEnter: () => void;
-  /** The list's offset when it zoomed out to `All at once`, while that shows. */
-  readonly zoom: Option.Option<number>;
+  /** Where the list stood when it zoomed out to `All at once`, while that shows. */
+  readonly zoom: Option.Option<Zoom>;
   readonly onZoomOut: () => void;
   readonly onZoomIn: () => void;
   /** The layers drawn over the list, out of reach with it while `All at once` shows. */
@@ -239,7 +245,7 @@ function TabList({
     },
     { immediate: true },
   );
-  const allAtOnce = (offset: number) => {
+  const allAtOnce = (stood: Zoom) => {
     const starts = groupStarts(
       Option.liftPredicate(tab, (t) => t.name !== 'Sections'),
       hymns,
@@ -252,7 +258,14 @@ function TabList({
       show(tab.name, starts[index] ?? field);
       setVisit((n) => n + 1);
     };
-    return <AllAtOnce tab={tab} at={groupAt(starts, offset)} onPick={pick} onClose={onZoomIn} />;
+    return (
+      <AllAtOnce
+        tab={tab}
+        at={groupAt(starts, stood.offset, stood.cover)}
+        onPick={pick}
+        onClose={onZoomIn}
+      />
+    );
   };
   const pullDown = {
     node: (

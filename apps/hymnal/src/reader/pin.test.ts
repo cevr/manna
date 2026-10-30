@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 
 import { Option } from 'effect';
 
-import { pinnedAt, topicStart, topicStarts } from './pin';
+import { clampedStart, pinnedAt, topicStart, topicStarts } from './pin';
 import { rowsOf } from './rows';
 
 const hymn = (number: number, topic: string) => ({ number, topic });
@@ -79,6 +79,26 @@ describe('the pinned topic row under a layer over the list’s top', () => {
     // At the push, 4 pt above the next topic's row: the row sits 32 pt up both times.
     expect(pinnedAt(starts, 200, 36, 20)).toEqual({ index: 0, y: -32 });
     expect(pinnedAt(starts, 194, 36, 26)).toEqual({ index: 0, y: -32 });
+  });
+});
+
+describe('the offset a list opens at', () => {
+  // The content ends at 100 + 3 * 36 + 5 * 44 = 428, then 40 of end space.
+  const open = (start: number, viewport: number) =>
+    clampedStart(start, rows, 100, size, 40, viewport, 50);
+
+  it('is the asked start when the list reaches past the screen below it', () => {
+    expect(open(150, 300)).toBe(150);
+  });
+
+  it('opens a late topic with the end space at the screen’s bottom, not past the end', () => {
+    expect(starts[2]).toBe(348);
+    expect(open(348, 300)).toBe(468 - 300);
+  });
+
+  it('keeps a short list at rest with its field tucked, or at the top when asked', () => {
+    expect(open(348, 600)).toBe(50);
+    expect(open(0, 600)).toBe(0);
   });
 });
 

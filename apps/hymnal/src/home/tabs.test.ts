@@ -157,4 +157,9 @@ describe('All at once', () => {
     ]);
     expect(groupAt([], 40)).toBe(0);
   });
+
+  it('opens at the group pinned under the field when the field covers the list top', () => {
+    const starts = [100, 300, 500];
+    expect([0, 99, 250, 450].map((offset) => groupAt(starts, offset, 60))).toEqual([0, 0, 1, 2]);
+  });
 });

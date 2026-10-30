@@ -16,8 +16,8 @@
  * With a home tab's `grouped` hymns in place of `byTopic`, a pinned row
  * names each group of the tab and its hymns follow, a hymn in several groups
  * in each (`groupRowsOf`); the list opens at `start` when given (the tab's
- * kept place), else at `pullDown`'s rest. With `onGroup`, a tap on a
- * group's row, in the list or pinned, calls it (the tab's `All at once`).
+ * kept place), no further than its end allows (`clampedStart`), else at
+ * `pullDown`'s rest. With `onGroup`, a tap on a group's row, in the list or pinned, calls it (the tab's `All at once`).
  * A search's results given the hymns `about` its query show them under the
  * strongest matches, in a section `Hymns about this`, then the rest of the
  * matches under `More matches` (`resultRowsOf`); a section's row is a
@@ -69,7 +69,7 @@ import type { HymnListProps } from './HymnList';
 import { endSpace } from './end';
 import { ListEnd } from './ListEnd';
 import { dismissal } from './keyboard';
-import { pinnedAt, topicStart, topicStarts } from './pin';
+import { clampedStart, pinnedAt, topicStart, topicStarts } from './pin';
 import { pagesFrom } from './place';
 import { Rail } from './Rail';
 import { marksOf } from './rail-marks';
@@ -225,7 +225,7 @@ export function HymnList({
   /** A tap on a group's row, in the list or pinned: a home tab's `All at once`. */
   readonly onGroup?: () => void;
 }) {
-  const { fontScale } = useWindowDimensions();
+  const { fontScale, height: viewport } = useWindowDimensions();
   const accent = useAccent();
   const { rows, sticky } = useMemo(() => {
     if (grouped) return groupRowsOf(grouped.name, grouped.groups, hymns, favourites);
@@ -268,6 +268,24 @@ export function HymnList({
   // While the rail is held its ticks are the topics felt, so the pin gives no `section` cue of its own.
   const railing = useSharedValue(false);
   const stackBottom = useStackBottom();
+  // A late topic asked for opens with the list's end at the screen's bottom, not past it.
+  const opening = useMemo(
+    () =>
+      Option.match(Option.fromNullishOr(start), {
+        onNone: () => pullDown?.rest,
+        onSome: (at) =>
+          clampedStart(
+            at,
+            rows,
+            header,
+            (kind) => ({ topic: topicHeight, shelf: topicHeight, hymn: hymnHeight })[kind],
+            endSpace(stackBottom),
+            viewport,
+            rest,
+          ),
+      }),
+    [start, pullDown?.rest, rows, header, topicHeight, hymnHeight, stackBottom, viewport, rest],
+  );
   // The Sections list alone has a rail: its hymns, under their topics.
   const marks = useMemo(() => {
     if (!byTopic) return [];
@@ -305,7 +323,7 @@ export function HymnList({
         // The list opens with the search field tucked under the title, and a
         // drag let go between there and the top settles at one or the other;
         // past the field it scrolls freely.
-        initialScrollOffset={start ?? pullDown?.rest}
+        initialScrollOffset={opening}
         snapToOffsets={pullDown && [0, pullDown.rest]}
         snapToEnd={false}
         maintainVisibleContentPosition={anchoring}
