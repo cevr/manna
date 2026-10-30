@@ -3,6 +3,13 @@
   "platform": "ios",
   "steps": [
     {
+      "name": "home",
+      "action": "open",
+      "link": "/",
+      "expect": [{ "shows": "role=button label=Settings" }],
+      "receipt": "none"
+    },
+    {
       "name": "settings",
       "action": "open",
       "link": "settings",
@@ -20,9 +27,12 @@
     },
     {
       "name": "leave",
-      "action": "tap",
-      "target": "role=button label=Hymns",
-      "expect": [{ "shows": "role=button label=Settings" }]
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 400,
+      "ms": 300,
+      "expect": [{ "shows": "role=button label=Settings" }, { "hides": "label=Sheet Grabber" }]
     },
     {
       "name": "second-view",
@@ -52,7 +62,7 @@
     {
       "name": "settings-feel",
       "action": "tap",
-      "target": "label=Sounds and haptics",
+      "target": "role=switch label=Sounds and haptics",
       "expect": [{ "shows": "label=Sounds and haptics" }]
     },
     {
@@ -63,7 +73,7 @@
       "name": "kept",
       "action": "open",
       "link": "settings",
-      "expect": [{ "shows": "label=Advanced" }, { "shows": "label=Sounds and haptics" }]
+      "expect": [{ "shows": "label=Advanced" }]
     },
     {
       "name": "style-put-back",
@@ -72,10 +82,26 @@
       "expect": [{ "shows": "label=Simple" }]
     },
     {
+      "name": "kept-feel",
+      "action": "scroll",
+      "target": "role=switch label=Sounds and haptics",
+      "direction": "down",
+      "expect": [{ "shows": "label=Sounds and haptics" }]
+    },
+    {
       "name": "feel-put-back",
       "action": "tap",
-      "target": "label=Sounds and haptics",
+      "target": "role=switch label=Sounds and haptics",
       "expect": [{ "shows": "label=Sounds and haptics" }]
+    },
+    {
+      "name": "close",
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 760,
+      "ms": 400,
+      "expect": [{ "shows": "role=button label=Settings" }, { "hides": "label=Sheet Grabber" }]
     }
   ]
 }
