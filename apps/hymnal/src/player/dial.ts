@@ -4,7 +4,8 @@
  * wraps (the twelve keys: past the last comes the first) or stops at its
  * ends (the capo's frets, the text sizes). A dial's place is in points
  * along its row, detent `i` at `i * DETENT`; a finger dragged left brings
- * the higher detents to the notch.
+ * the higher detents to the notch, and on a drum (`Axis` `column`), a
+ * finger dragged up.
  *
  * Let go, a dial glides on at the speed it was flung (held under the fling
  * cap), slowing by `DECAY` each 16 ms frame until it creeps, and then snaps
@@ -69,6 +70,21 @@ export const ownDetent = (dial: Detents, n: number): number => {
   return Math.min(Math.max(n, 0), dial.count - 1);
 };
 
+/**
+ * Which way a dial's row runs: `row`, sideways (the key, capo, size and
+ * placement dials); `column`, up and down, a drum (the find drums). Either
+ * way the place runs along it, the higher detents after the lower: right of
+ * them on a row, below them on a column.
+ */
+export type Axis = 'row' | 'column';
+
+/** The part of a move, `x` sideways and `y` down, that runs along `axis`. */
+export const along = (axis: Axis, x: number, y: number): number => {
+  'worklet';
+  if (axis === 'column') return y;
+  return x;
+};
+
 /** The detent nearest a place on the row (unbounded). */
 export const detentAt = (place: number): number => {
   'worklet';
@@ -130,16 +146,16 @@ export const glide = (dial: Detents, place: number, speed: number): Rest => {
 
 /**
  * How long a wrapping dial's ring of drawn stops is, in points, for a
- * window `width` points wide: whole turns of its detents, the fewest that
- * reach past the window by a detent at each side, so a stop that wraps from
- * one end of the ring to the other is never in view. A stopping dial draws
- * no ring: 0.
+ * window `span` points along its axis (wide on a row, tall on a drum): whole
+ * turns of its detents, the fewest that reach past the window by a detent
+ * at each side, so a stop that wraps from one end of the ring to the other
+ * is never in view. A stopping dial draws no ring: 0.
  */
-export const ringOf = (dial: Detents, width: number): number => {
+export const ringOf = (dial: Detents, span: number): number => {
   'worklet';
   if (!dial.wrap) return 0;
   const turn = dial.count * DETENT;
-  return Math.max(1, Math.ceil((Math.max(width, 0) + 2 * DETENT) / turn)) * turn;
+  return Math.max(1, Math.ceil((Math.max(span, 0) + 2 * DETENT) / turn)) * turn;
 };
 
 /**

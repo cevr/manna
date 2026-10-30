@@ -1,20 +1,22 @@
 /**
  * The find drums: three dials, hundreds, tens and ones, that dial a hymn's
- * number in the book (`drums.ts`). Each is a `DialView`, so a finger turns
- * and flings it and VoiceOver turns it a step at a time (increment and
- * decrement). A drum's detent is felt always and heard only while the
- * player's Sound switch is on (`drumTell`).
+ * number in the book (`drums.ts`). They stand side by side in one row, left
+ * to right, each an equal share of the width, and each is a `DialView`
+ * standing as a vertical drum (`axis` `column`), so a finger swipes it up or
+ * down like a picker wheel and flings it, and VoiceOver turns it a step at a
+ * time (increment and decrement). A drum's detent is felt always and heard
+ * only while the player's Sound switch is on (`drumTell`).
  */
 
 import { RegistryContext, useAtomMount } from '@effect/atom-react';
 import { type ReactNode, use, useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { color } from '~/color';
 import { CueProvider, useCue } from '~/feel/cue';
 import { settings } from '~/store';
 
-import { PanelRow } from './DialPanel';
+import { PanelRow, ROW_GAP } from './DialPanel';
 import { DialView, MOST_SCALE } from './DialView';
 import { digitsOf, type Drum, DRUM_ORDER, DRUMS, drumTell, turn } from './drums';
 
@@ -48,23 +50,28 @@ export function FindDrums({
   const digits = digitsOf(number);
   return (
     <CueProvider value={tell}>
-      {DRUM_ORDER.map((drum, k) => (
-        <PanelRow key={drum} fromBottom={DRUM_ORDER.length - 1 - k}>
-          <DialView
-            dial={drum}
-            testID={`drum-${drum}`}
-            label={NAMES[drum].label}
-            title={NAMES[drum].title}
-            stops={STOPS[drum]}
-            index={digits[drum]}
-            wrap={DRUMS[drum].wrap}
-            // The whole number in `said` redraws every drum on each dial, so each `onTurn` holds it fresh.
-            said={`${digits[drum]}, number ${number}`}
-            drawStop={(digit, current) => <Digit digit={digit} current={current} />}
-            onTurn={(n) => onDial(turn(number, drum, n))}
-          />
-        </PanelRow>
-      ))}
+      <PanelRow fromBottom={0}>
+        <View style={styles.drums}>
+          {DRUM_ORDER.map((drum) => (
+            <View key={drum} style={styles.drum}>
+              <DialView
+                dial={drum}
+                axis="column"
+                testID={`drum-${drum}`}
+                label={NAMES[drum].label}
+                title={NAMES[drum].title}
+                stops={STOPS[drum]}
+                index={digits[drum]}
+                wrap={DRUMS[drum].wrap}
+                // The whole number in `said` redraws every drum on each dial, so each `onTurn` holds it fresh.
+                said={`${digits[drum]}, number ${number}`}
+                drawStop={(digit, current) => <Digit digit={digit} current={current} />}
+                onTurn={(n) => onDial(turn(number, drum, n))}
+              />
+            </View>
+          ))}
+        </View>
+      </PanelRow>
     </CueProvider>
   );
 }
@@ -83,6 +90,8 @@ function Digit({ digit, current }: { readonly digit: number; readonly current: b
 }
 
 const styles = StyleSheet.create({
+  drums: { flexDirection: 'row', gap: ROW_GAP },
+  drum: { flex: 1, minWidth: 0 },
   digit: { fontSize: 17, fontWeight: '600', color: color.muted },
   current: { color: color.chord },
 });

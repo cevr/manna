@@ -10,8 +10,10 @@ import { describe, expect, it } from 'bun:test';
 import { SIZES } from '~/reader/reading';
 
 import {
+  along,
   DETENT,
   type Detents,
+  detentAt,
   dragTo,
   FLING_CAP,
   glide,
@@ -191,6 +193,43 @@ it('wraps the key dial past its last key to its first', () => {
     [0, 1, 2, 3, 4, 5].slice(0, glide(keys, 11 * DETENT, 500).crossed.length),
   );
   expect(glide(keys, 11 * DETENT, 500).crossed[0]).toBe(0);
+});
+
+/**
+ * Which way a drag turns a dial, as DialView reads it: the place a finger
+ * drags to is the place it started from less the move along the dial
+ * (`along`), and the dial shows the detent nearest that place.
+ */
+describe('the way a drag turns a dial', () => {
+  const ones: Detents = { name: 'ones', count: 10, wrap: true };
+  const hundreds: Detents = { name: 'hundreds', count: 7, wrap: false };
+  const sideways = [-90, -DETENT, -1, 0, 1, DETENT, 90];
+
+  /** The detent a drag of `x`, `y` from detent `from` leaves the dial on. */
+  const dragged = (dial: Detents, axis: 'row' | 'column', from: number, x: number, y: number) =>
+    ownDetent(dial, detentAt(dragTo(dial, from * DETENT - along(axis, x, y)).place));
+
+  it('brings the next higher digit to a drum dragged up one detent, whatever the sideways part', () => {
+    for (const x of sideways) {
+      expect(dragged(ones, 'column', 4, x, -DETENT)).toBe(5);
+      expect(dragged(ones, 'column', 9, x, -DETENT)).toBe(0);
+      expect(dragged(hundreds, 'column', 2, x, -DETENT)).toBe(3);
+    }
+  });
+
+  it('brings the next lower digit to a drum dragged down one detent', () => {
+    for (const x of sideways) {
+      expect(dragged(ones, 'column', 4, x, DETENT)).toBe(3);
+      expect(dragged(hundreds, 'column', 0, x, DETENT)).toBe(0);
+    }
+  });
+
+  it('brings the next higher detent to a row dragged left, whatever the vertical part', () => {
+    for (const y of sideways) {
+      expect(dragged(ones, 'row', 4, -DETENT, y)).toBe(5);
+      expect(dragged(ones, 'row', 4, DETENT, y)).toBe(3);
+    }
+  });
 });
 
 /**

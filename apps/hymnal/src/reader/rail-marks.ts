@@ -8,9 +8,56 @@
  * band under the touch is its hymn (`markAt`), and the topics passed between
  * two hymns are the rail's ticks (`crossings`). The hymns of the reader's
  * lists above the topics (Recent) are not on the rail.
+ *
+ * The rail lies in a gutter `GUTTER` wide at the list's right edge. Its top
+ * follows the header, `rest` below the list's top, as the list scrolls or is
+ * pulled past its top (`railShift`), and each label sits at its band's
+ * middle, as a percent of the rail's height (`labelAt`), in a box as tall as
+ * its line at the reader's text size (`labelHeight`).
  */
 
 import type { Row } from './rows';
+
+/** The rail's gutter at the list's right edge, in pt: the room its labels take and the width its touch takes. */
+export const GUTTER = 44;
+
+/**
+ * How far the rail's top lies below the gutter's top, which the list places
+ * at the header's top at rest (`railTop`): `rest` at a scroll of 0, so the
+ * rail starts at the header's bottom; more while the list is pulled past its
+ * top; never less than 0, so the rail never rises above the gutter's top.
+ */
+export const railShift = (rest: number, scroll: number): number => {
+  'worklet';
+  return Math.max(0, rest - scroll);
+};
+
+/** The top of label `index` of `count`, as a percent of the rail's height: the middle of its band. */
+export const labelAt = (index: number, count: number): number => {
+  if (count <= 0) return 0;
+  return ((index + 0.5) / count) * 100;
+};
+
+/** A label's type size at a text size of 1, in pt. */
+export const LABEL_SIZE = 10;
+
+/** A label's line height at a text size of 1, in pt. */
+export const LABEL_LINE = 12;
+
+/**
+ * The most a label's type grows with the reader's text size: at this scale
+ * the widest label, three tabular digits, still fits the gutter's width.
+ */
+export const LABEL_SCALE = 2;
+
+/**
+ * A label's box height at the reader's text size (`fontScale`), in pt: its
+ * line as the text scales, up to `LABEL_SCALE`, rounded up so the scaled
+ * glyphs never overflow the box and are never cut. The label's top margin is
+ * minus half of it, so the label stays centred on its band (`labelAt`).
+ */
+export const labelHeight = (fontScale: number): number =>
+  Math.ceil(LABEL_LINE * Math.min(fontScale, LABEL_SCALE));
 
 /** A hymn on the rail: its number, its topic's place among the topics, and the scroll offset that shows it. */
 export interface Mark {
@@ -55,18 +102,6 @@ export const crossings = (before: number, now: number): number => {
   'worklet';
   return Math.abs(now - before);
 };
-
-/**
- * The rail's strip on the list's view, as a gesture's hit slop: `width` in
- * from the right edge, and `top` and `bottom` in from the view's ends. A
- * negative slop shrinks the view's own area to the strip.
- */
-export const railStrip = (width: number, top: number, bottom: number) => ({
-  right: 0,
-  width,
-  top: -top,
-  bottom: -bottom,
-});
 
 /** `shown` places spread evenly from the first to the last of `count`, both ends included: the rail's labels. */
 export const labelsOf = (count: number, shown: number): ReadonlyArray<number> => {
