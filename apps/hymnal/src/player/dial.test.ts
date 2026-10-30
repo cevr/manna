@@ -20,6 +20,7 @@ import {
   passed,
   ringOf,
   slotOf,
+  along,
 } from './dial';
 
 const dials: ReadonlyArray<readonly [string, Detents]> = [
@@ -191,6 +192,26 @@ it('wraps the key dial past its last key to its first', () => {
     [0, 1, 2, 3, 4, 5].slice(0, glide(keys, 11 * DETENT, 500).crossed.length),
   );
   expect(glide(keys, 11 * DETENT, 500).crossed[0]).toBe(0);
+});
+
+/**
+ * The part of a move that runs along a dial: over a grid of moves both ways
+ * on both axes, a row reads the sideways part and a drum the downward part.
+ */
+describe('the part of a move along a dial', () => {
+  const moves = Array.from({ length: 41 }, (_, k) => (k - 20) * 13.7).concat([0, -0, 1e6, -1e6]);
+
+  it('reads x on a row and y on a drum, whatever the other part is', () => {
+    const wrong: Array<string> = [];
+    for (const x of moves)
+      for (const y of moves) {
+        if (along('row', x, y) !== x) wrong.push(`row ${x},${y}`);
+        if (along('column', x, y) !== y) wrong.push(`column ${x},${y}`);
+      }
+    expect(wrong.slice(0, 5)).toEqual([]);
+    expect(along('row', 3, -40)).toBe(3);
+    expect(along('column', 3, -40)).toBe(-40);
+  });
 });
 
 /**

@@ -44,6 +44,13 @@
  * The drag is a gesture handler's pan that needs a sideways move to begin,
  * so a vertical scroll under the dial still scrolls, and the dial lies over
  * the page, outside the pager, so a drag on it never turns the page.
+ *
+ * A dial with `axis` `column` is a drum (the find drums): its name stands
+ * above a window `DRUM_WINDOW` tall, the detent at the notch with one above
+ * and one below, its stops run down the window, and its pan needs a
+ * vertical move to begin. A finger dragged up brings the higher detents to
+ * the notch, as on a picker wheel. Only the axis differs (`AXES`, `along`):
+ * the drag, glide, cues, ring and VoiceOver are the row's.
  */
 
 import { Array as Arr, Match, Option } from 'effect';
@@ -53,7 +60,9 @@ import {
   type LayoutChangeEvent,
   StyleSheet,
   Text,
+  type TextStyle,
   View,
+  type ViewStyle,
 } from 'react-native';
 import {
   GestureDetector,
@@ -79,6 +88,8 @@ import { color } from '~/color';
 import { type DialName, useCue } from '~/feel/cue';
 
 import {
+  along,
+  type Axis,
   DETENT,
   detentAt,
   dragTo,
@@ -121,6 +132,11 @@ export interface DialProps<A> {
    * new count is a reset, and the row turns home on the reset's curve.
    */
   readonly resets?: number;
+  /**
+   * Which way the dial runs: `row` (the default), sideways with its name at
+   * the left; `column`, a drum, up and down with its name above.
+   */
+  readonly axis?: Axis;
   readonly testID: string;
 }
 
@@ -142,6 +158,26 @@ const FADE = 3.6;
 /** How long the notch stretches and settles on each detent, in milliseconds. */
 const NOTCH = 140;
 
+/** How tall a drum's window is: the detent at the notch and one above and below it. */
+const DRUM_WINDOW = 3 * DETENT;
+
+/** How tall a drum's name above it is, in points. */
+const DRUM_TITLE = 24;
+
+/** A stop moved `by` points from the notch along `axis`. */
+const shifted = (axis: Axis, by: number) => {
+  'worklet';
+  if (axis === 'column') return { translateY: by };
+  return { translateX: by };
+};
+
+/** The notch stretched `by` times across `axis`: down from a row's top, right from a drum's left. */
+const stretched = (axis: Axis, by: number) => {
+  'worklet';
+  if (axis === 'column') return { scaleX: by };
+  return { scaleY: by };
+};
+
 /**
  * The titles of the dials drawn one over another, so each one's title
  * column is as wide as the widest of its own group: the player's and
@@ -160,7 +196,20 @@ const COLUMN = {
 } satisfies Record<DialName, ReadonlyArray<string>>;
 
 function Dial<A>(props: DialProps<A>) {
-  const { dial, label, title, stops, index, wrap, said, drawStop, testID, resets = 0 } = props;
+  const {
+    dial,
+    label,
+    title,
+    stops,
+    index,
+    wrap,
+    said,
+    drawStop,
+    testID,
+    resets = 0,
+    axis = 'row',
+  } = props;
+  const look = AXES[axis];
   const cue = useCue();
   const reduced = useReduceMotion();
   const detents = { name: dial, count: stops.length, wrap };
@@ -180,7 +229,7 @@ function Dial<A>(props: DialProps<A>) {
   // Whether the touch under way stopped such a turn: lifted with no drag, it lets the turn go on to its value.
   const stoppedFollow = useSharedValue(false);
   const stretch = useSharedValue(1);
-  const [width, setWidth] = useState(0);
+  const [span, setSpan] = useState(0);
   const live = useRef(props);
   live.current = props;
   const homed = useRef(resets);
@@ -271,8 +320,7 @@ function Dial<A>(props: DialProps<A>) {
 
   const pan = usePanGesture({
     testID: `${testID}-pan`,
-    activeOffsetX: [-6, 6],
-    failOffsetY: [-14, 14],
+    ...look.pan,
     maxPointers: 1,
     onBegin: () => {
       'worklet';
@@ -287,27 +335,27 @@ function Dial<A>(props: DialProps<A>) {
       dragged.value = false;
       scheduleOnRN(touch);
     },
-    onActivate: ({ translationX = 0 }) => {
+    onActivate: ({ translationX = 0, translationY = 0 }) => {
       'worklet';
       // A turn set from outside while the finger was down gives way to the drag, which starts where it stands.
       if (following.value) {
         cancelAnimation(place);
         following.value = false;
-        start.value = place.value + translationX;
+        start.value = place.value + along(axis, translationX, translationY);
       }
       driven.value = true;
       dragged.value = true;
     },
-    onUpdate: ({ translationX = 0 }) => {
+    onUpdate: ({ translationX = 0, translationY = 0 }) => {
       'worklet';
-      const to = dragTo(detents, start.value - translationX);
+      const to = dragTo(detents, start.value - along(axis, translationX, translationY));
       place.value = to.place;
       if (to.wall && !walled.value) scheduleOnRN(wall);
       walled.value = to.wall;
     },
-    onDeactivate: ({ velocityX = 0 }) => {
+    onDeactivate: ({ velocityX = 0, velocityY = 0 }) => {
       'worklet';
-      settle(-velocityX);
+      settle(-along(axis, velocityX, velocityY));
     },
     onFinalize: ({ canceled }) => {
       'worklet';
@@ -334,7 +382,7 @@ function Dial<A>(props: DialProps<A>) {
   });
   const gesture = useCompetingGestures(pan, twice);
 
-  const notch = useAnimatedStyle(() => ({ transform: [{ scaleY: stretch.value }] }));
+  const notch = useAnimatedStyle(() => ({ transform: [stretched(axis, stretch.value)] }));
 
   const act = ({ nativeEvent }: AccessibilityActionEvent) => {
     const by = (nativeEvent.actionName === 'increment' && 1) || -1;
@@ -349,7 +397,7 @@ function Dial<A>(props: DialProps<A>) {
   };
 
   // A wrapping row draws the whole turns of its ring once each; a stopping row, its stops.
-  const ring = ringOf(detents, width);
+  const ring = ringOf(detents, span);
   const drawn = Array.from({ length: Math.max(ring / DETENT, stops.length) }, (_, n) => ({
     n,
     stop: Arr.get(stops, ownDetent(detents, n)),
@@ -366,9 +414,9 @@ function Dial<A>(props: DialProps<A>) {
           accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
           onAccessibilityAction={act}
           testID={testID}
-          style={styles.dial}
+          style={look.dial}
         >
-          <View style={styles.titleColumn} aria-hidden>
+          <View style={look.title} aria-hidden>
             <View style={styles.sizer}>
               {COLUMN[dial].map((name) => (
                 <Text
@@ -382,7 +430,7 @@ function Dial<A>(props: DialProps<A>) {
               ))}
             </View>
             <Text
-              style={[styles.title, styles.name]}
+              style={[styles.title, look.name]}
               numberOfLines={1}
               maxFontSizeMultiplier={MOST_SCALE}
             >
@@ -390,13 +438,15 @@ function Dial<A>(props: DialProps<A>) {
             </Text>
           </View>
           <View
-            style={styles.window}
-            onLayout={(event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width)}
+            style={look.window}
+            onLayout={({ nativeEvent: { layout } }: LayoutChangeEvent) =>
+              setSpan(along(axis, layout.width, layout.height))
+            }
           >
             <View
               testID={`${testID}-row`}
               pointerEvents="none"
-              style={[styles.row, { left: width / 2 - DETENT / 2 }]}
+              style={[look.row, look.offset(span / 2 - DETENT / 2)]}
             >
               {drawn.map(({ n, stop }) => (
                 <Stop
@@ -405,6 +455,7 @@ function Dial<A>(props: DialProps<A>) {
                   own={ownDetent(detents, n)}
                   place={place}
                   ring={ring}
+                  axis={axis}
                   testID={testID}
                 >
                   {Option.match(stop, {
@@ -414,7 +465,7 @@ function Dial<A>(props: DialProps<A>) {
                 </Stop>
               ))}
             </View>
-            <Animated.View pointerEvents="none" style={[styles.notch, notch]} />
+            <Animated.View pointerEvents="none" style={[look.notch, notch]} />
           </View>
         </View>
       </GestureDetector>
@@ -434,6 +485,7 @@ function Stop({
   own,
   place,
   ring,
+  axis,
   testID,
   children,
 }: {
@@ -441,6 +493,7 @@ function Stop({
   readonly own: number;
   readonly place: SharedValue<number>;
   readonly ring: number;
+  readonly axis: Axis;
   readonly testID: string;
   readonly children: ReactNode;
 }) {
@@ -449,12 +502,12 @@ function Stop({
     const d = Math.abs(x / DETENT);
     return {
       opacity: 0.2 + 0.8 * Math.max(0, 1 - d / FADE),
-      transform: [{ translateX: x }, { scale: 1 + 0.3 * Math.max(0, 1 - d) }],
+      transform: [shifted(axis, x), { scale: 1 + 0.3 * Math.max(0, 1 - d) }],
     };
   });
   return (
-    <Animated.View testID={`${testID}-stop-${own}`} style={[styles.stop, drawn]}>
-      <View style={styles.tick} />
+    <Animated.View testID={`${testID}-stop-${own}`} style={[AXES[axis].stop, drawn]}>
+      <View style={AXES[axis].tick} />
       {children}
     </Animated.View>
   );
@@ -476,7 +529,8 @@ const same = <A,>(a: DialProps<A>, b: DialProps<A>) =>
   a.wrap === b.wrap &&
   a.said === b.said &&
   a.resets === b.resets &&
-  a.testID === b.testID;
+  a.testID === b.testID &&
+  a.axis === b.axis;
 
 // oxlint-disable-next-line effect/noAs -- memo erases a generic component's type parameter; this restores it.
 export const DialView = memo(Dial, same) as <A>(props: DialProps<A>) => ReactNode;
@@ -528,4 +582,92 @@ const styles = StyleSheet.create({
     transformOrigin: 'top',
     backgroundColor: color.chord,
   },
+  drum: {
+    borderRadius: DETENT / 2,
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    overflow: 'hidden',
+  },
+  drumTitle: { height: DRUM_TITLE, alignItems: 'center', justifyContent: 'center' },
+  drumName: { position: 'absolute', left: 0, right: 0, paddingLeft: 0, textAlign: 'center' },
+  drumWindow: { height: DRUM_WINDOW, overflow: 'hidden' },
+  drumRow: { position: 'absolute', top: 0, left: 0, right: 0, height: DETENT },
+  drumStop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: DETENT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  drumTick: {
+    position: 'absolute',
+    left: 3,
+    width: 5,
+    height: 1,
+    backgroundColor: color.edge,
+  },
+  drumNotch: {
+    position: 'absolute',
+    left: 0,
+    top: '50%',
+    marginTop: -1,
+    width: 9,
+    height: 2,
+    transformOrigin: 'left',
+    backgroundColor: color.chord,
+  },
 });
+
+/**
+ * What a dial draws and reads by its axis: a row's pan begins on a sideways
+ * move and fails on a vertical one, and a drum's the other way about; its
+ * stops are laid from the notch along the axis, by `offset` from the
+ * window's start.
+ */
+const AXES = {
+  row: {
+    pan: { activeOffsetX: [-6, 6], failOffsetY: [-14, 14] },
+    dial: styles.dial,
+    title: styles.titleColumn,
+    name: styles.name,
+    window: styles.window,
+    row: styles.row,
+    stop: styles.stop,
+    tick: styles.tick,
+    notch: styles.notch,
+    offset: (by: number) => ({ left: by }),
+  },
+  column: {
+    pan: { activeOffsetY: [-6, 6], failOffsetX: [-14, 14] },
+    dial: styles.drum,
+    title: styles.drumTitle,
+    name: styles.drumName,
+    window: styles.drumWindow,
+    row: styles.drumRow,
+    stop: styles.drumStop,
+    tick: styles.drumTick,
+    notch: styles.drumNotch,
+    offset: (by: number) => ({ top: by }),
+  },
+} satisfies Record<
+  Axis,
+  {
+    readonly pan: {
+      readonly activeOffsetX?: [number, number];
+      readonly activeOffsetY?: [number, number];
+      readonly failOffsetX?: [number, number];
+      readonly failOffsetY?: [number, number];
+    };
+    readonly dial: ViewStyle;
+    readonly title: ViewStyle;
+    readonly name: TextStyle;
+    readonly window: ViewStyle;
+    readonly row: ViewStyle;
+    readonly stop: ViewStyle;
+    readonly tick: ViewStyle;
+    readonly notch: ViewStyle;
+    readonly offset: (by: number) => ViewStyle;
+  }
+>;
