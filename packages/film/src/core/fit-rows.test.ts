@@ -442,7 +442,10 @@ describe('fitRows over a cut-out crop', () => {
   test("a 12 px hole through a light cloth's grain clumps, within `near` of the sheet's ground, is counted", () => {
     const cloth: Rgb = [236, 232, 226];
     const clumpColour: Rgb = [247, 235, 216];
-    expect(deltaE(labOf(clumpColour), labOf(SHEET_GROUND))).toBeLessThanOrEqual(3);
+    // Above the paper core's ΔE 2, so no clump is a pocket, and within the kept crop's `near` (ΔE 3), so each is a kept hole.
+    const clumpDe = deltaE(labOf(clumpColour), labOf(SHEET_GROUND));
+    expect(clumpDe).toBeGreaterThan(2);
+    expect(clumpDe).toBeLessThanOrEqual(3);
     // Nine clumps, 4 to 8 px square at a 10 px pitch: 36 of their px lie under the block.
     const clumps = Array.from({ length: 9 }, (_, k): At => {
       const [x0, y0, s] = [
@@ -467,6 +470,40 @@ describe('fitRows over a cut-out crop', () => {
     expect(holes?.value).toBe(0);
     expect(holes?.pass).toBe(true);
   });
+
+  test.each([
+    [9, 122],
+    [8, 144],
+  ])(
+    "a kept hole with %i px of the sheet's paper excuses a 12 px hole 2 px off it only from 9 px up: holes %i",
+    (paper, holes) => {
+      // The first `paper` px, row by row, of a 3 x 3 kept hole 2 px right of the hole; its other px stay cloth.
+      const pocket =
+        (px: Rgba): At =>
+        (x, y) =>
+          Option.liftPredicate(
+            px,
+            () => inside(x, 28, 31) && inside(y, 18, 21) && (y - 18) * 3 + (x - 28) < paper,
+          );
+      const concept = crop(SHEET_PAPER, CREAM, pocket(SHEET_PAPER));
+      const posed = crop(CLEAR, CREAM, either(boxOf([14, 26, 14, 26], CLEAR), pocket(CLEAR)));
+      expect(rowNamed(fitRows(concept, overOwn(posed)), 'holes')?.value).toBe(holes);
+    },
+  );
+
+  test.each([
+    [[252, 244, 220] as const, 1.9, 120],
+    [[250, 242, 217] as const, 2.1, 144],
+  ])(
+    "a 4 x 4 kept hole of %j, ΔE %d off the sheet's ground, excuses a 12 px hole 2 px off it only within ΔE 2: holes %i",
+    (paper, de, holes) => {
+      expect(deltaE(labOf(paper), labOf(SHEET_GROUND))).toBeCloseTo(de, 2);
+      const pocket = (px: Rgba) => boxOf([28, 32, 18, 22], px);
+      const concept = crop(SHEET_PAPER, CREAM, pocket([...paper, 255]));
+      const posed = crop(CLEAR, CREAM, either(boxOf([14, 26, 14, 26], CLEAR), pocket(CLEAR)));
+      expect(rowNamed(fitRows(concept, overOwn(posed)), 'holes')?.value).toBe(holes);
+    },
+  );
 
   test("a neighbour's art that only the kept crop holds changes no row", () => {
     const art = [42, 48, 12, 30] as const;
