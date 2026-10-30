@@ -8,9 +8,29 @@
  * band under the touch is its hymn (`markAt`), and the topics passed between
  * two hymns are the rail's ticks (`crossings`). The hymns of the reader's
  * lists above the topics (Recent) are not on the rail.
+ *
+ * The rail lies in a gutter `GUTTER` wide at the list's right edge. Its top
+ * follows the header, `rest` below the list's top, as the list scrolls or is
+ * pulled past its top (`railShift`), and each label sits at its band's
+ * middle, as a percent of the rail's height (`labelAt`).
  */
 
 import type { Row } from './rows';
+
+/** The rail's gutter at the list's right edge, in pt: the room its labels take and the width its touch takes. */
+export const GUTTER = 44;
+
+/** The rail's top on the list's view: the header's bottom, `rest` at a scroll of 0, lower while the list is pulled past its top and never above the view's top. */
+export const railShift = (rest: number, scroll: number): number => {
+  'worklet';
+  return Math.max(0, rest - scroll);
+};
+
+/** The top of label `index` of `count`, as a percent of the rail's height: the middle of its band. */
+export const labelAt = (index: number, count: number): number => {
+  if (count <= 0) return 0;
+  return ((index + 0.5) / count) * 100;
+};
 
 /** A hymn on the rail: its number, its topic's place among the topics, and the scroll offset that shows it. */
 export interface Mark {

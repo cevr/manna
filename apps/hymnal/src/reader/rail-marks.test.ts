@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'bun:test';
 
-import { crossings, labelsOf, markAt, marksOf, railStrip } from './rail-marks';
+import {
+  crossings,
+  GUTTER,
+  labelAt,
+  labelsOf,
+  markAt,
+  marksOf,
+  railShift,
+  railStrip,
+} from './rail-marks';
 import { rowsOf } from './rows';
 
 const hymn = (number: number, topic: string) => ({ number, topic });
@@ -68,6 +77,40 @@ describe('the rail’s labels', () => {
   it('labels every hymn of a list shorter than its labels, and none of an empty one', () => {
     expect(labelsOf(3, 6)).toEqual([0, 1, 2]);
     expect(labelsOf(0, 6)).toEqual([]);
+  });
+});
+
+describe('the rail’s gutter', () => {
+  it('is wide enough for a finger', () => {
+    expect(GUTTER).toBeGreaterThanOrEqual(44);
+  });
+});
+
+describe('the rail’s top', () => {
+  it('rests at the header’s bottom', () => {
+    expect(railShift(120, 0)).toBe(120);
+  });
+
+  it('moves down with the header while the list is pulled past its top', () => {
+    expect(railShift(120, -60)).toBe(180);
+  });
+
+  it('moves up with the header as the list scrolls, and stops at the view’s top', () => {
+    expect(railShift(120, 50)).toBe(70);
+    expect(railShift(120, 120)).toBe(0);
+    expect(railShift(120, 900)).toBe(0);
+  });
+});
+
+describe('a label’s place', () => {
+  it('is its band’s middle, as a percent of the rail', () => {
+    expect(labelAt(0, 4)).toBe(12.5);
+    expect(labelAt(3, 4)).toBe(87.5);
+    expect(labelAt(0, 1)).toBe(50);
+  });
+
+  it('is the rail’s top when the rail has no bands', () => {
+    expect(labelAt(0, 0)).toBe(0);
   });
 });
 
