@@ -17,6 +17,7 @@ import * as Atom from 'effect/reactivity/Atom';
 import { Move, still } from './hymns/chords';
 import { ChordStyle } from './hymns/simple';
 import { Placement } from '@manna/hymnal/placement';
+import { TAB_NAMES } from './home/tabs';
 import { Numbers } from './reader/lists';
 import { DEFAULT_SIZE, Font, Size, Spacing } from './reader/reading';
 
@@ -32,6 +33,9 @@ export const placements = [
   { value: 'simpler', label: 'Simpler', mark: 'Simpler' },
   { value: 'file', label: 'As the file plays', mark: 'File' },
 ] as const satisfies ReadonlyArray<{ value: Placement; label: string; mark: string }>;
+
+/** A home tab's name as kept. */
+const HomeTab = Schema.Literals(TAB_NAMES);
 
 /** The reading settings, each its own stored atom. */
 export type ReadingSettings = ReturnType<typeof settingsOn>['reading'];
@@ -112,6 +116,10 @@ export const settingsOn = (store: Layer.Layer<KeyValueStore.KeyValueStore>) => {
     lists: {
       favourites: setting('lists.favourites', Numbers, []),
       recent: setting('lists.recent', Numbers, []),
+    },
+    /** The home list's tab in use (`src/home/tabs.ts`), kept across launches. */
+    home: {
+      tab: setting('home.tab', HomeTab, 'Sections'),
     },
   };
 };

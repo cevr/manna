@@ -30,6 +30,7 @@ export type PlainCue =
   | 'favourite-off'
   | 'press'
   | 'choose'
+  | 'tab'
   | 'sheet-open'
   | 'seek-grab'
   | 'seek-tick'

@@ -240,3 +240,26 @@ describe('the reader’s lists', () => {
     expect(registry.get(settings.lists.recent)).toEqual([]);
   });
 });
+
+describe('the home tab', () => {
+  it('is Sections the first time', () => {
+    const { settings, registry } = launch(new Map());
+    expect(registry.get(settings.home.tab)).toBe('Sections');
+  });
+
+  it('is kept under its key when the app is opened again', () => {
+    const device = new Map<string, string>();
+    const first = launch(device);
+    first.registry.set(first.settings.home.tab, 'Topics');
+    first.registry.dispose();
+    expect([...device.keys()]).toEqual(['home.tab']);
+
+    const again = launch(device);
+    expect(again.registry.get(again.settings.home.tab)).toBe('Topics');
+  });
+
+  it('reads a stored tab it cannot decode as Sections', () => {
+    const { settings, registry } = launch(new Map([['home.tab', '"Tunes"']]));
+    expect(registry.get(settings.home.tab)).toBe('Sections');
+  });
+});

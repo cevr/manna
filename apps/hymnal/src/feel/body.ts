@@ -62,6 +62,7 @@ export const bodyOf = (cue: Cue): Body => {
       return felt(light);
     case 'press':
     case 'choose':
+    case 'tab':
       return felt(selection);
     case 'sheet-open':
       return felt(light);

@@ -84,6 +84,44 @@ export const rowsOf = <Hymn extends { readonly number: number; readonly topic: s
 };
 
 /**
+ * A home tab's list (`home/tabs.ts`): each group under a pinned row that
+ * names it, then its hymns. A hymn in several groups has a row in each, so a
+ * row's key names its tab, its group's place and its hymn. Every row pages
+ * through the whole hymnal in number order (`hymns`, as the home list holds
+ * them), whichever group it is in. A group number with no hymn in `hymns`
+ * has no row.
+ */
+export const groupRowsOf = <Hymn extends { readonly number: number }>(
+  tab: string,
+  groups: ReadonlyArray<{ readonly name: string; readonly hymns: ReadonlyArray<number> }>,
+  hymns: ReadonlyArray<Hymn>,
+  favourites: ReadonlySet<number> = none,
+): Rows<Hymn> => {
+  const byNumber = new Map(hymns.map((hymn) => [hymn.number, hymn]));
+  const source = hymns.map((hymn) => hymn.number).toSorted((a, b) => a - b);
+  const rows: Array<Row<Hymn>> = [];
+  const sticky: Array<number> = [];
+  groups.forEach((group, i) => {
+    const found = group.hymns.flatMap((n) =>
+      Option.toArray(Option.fromUndefinedOr(byNumber.get(n))),
+    );
+    if (found.length === 0) return;
+    sticky.push(rows.length);
+    rows.push({ kind: 'topic', key: `group:${tab}:${i}`, name: group.name });
+    for (const hymn of found)
+      rows.push({
+        kind: 'hymn',
+        key: `${tab}:${i}:${hymn.number}`,
+        hymn,
+        source,
+        favourite: favourites.has(hymn.number),
+        line: Option.none(),
+      });
+  });
+  return { rows, sticky };
+};
+
+/**
  * A list with no topic rows, such as a search's results: a row per hymn,
  * each paging through them all, each carrying the line `lines` gives its
  * hymn (the line a search found it by).

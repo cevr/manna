@@ -11,7 +11,7 @@ import { Match, Option } from 'effect';
 
 import { hymns } from '~/hymns/hymns';
 
-import { type Row, plainRowsOf, resultRowsOf, rowsOf, STRONG } from './rows';
+import { groupRowsOf, type Row, plainRowsOf, resultRowsOf, rowsOf, STRONG } from './rows';
 
 /** A seeded generator in [0, 1) (mulberry32), as the player's world draws. */
 const rng = (seed: number) => () => {
@@ -255,6 +255,52 @@ describe('a search’s result rows', () => {
     );
     const lines = rows.flatMap((row) => [row].filter((r) => r.kind === 'hymn').map((r) => r.line));
     expect(lines.map(Option.isNone)).toEqual([true, true, true]);
+  });
+});
+
+describe('a home tab’s group rows', () => {
+  const list = [5, 1, 3, 2, 4].map((number) => ({ number, topic: 'A' }));
+  const groups = [
+    { name: 'Joy', hymns: [3, 1] },
+    { name: 'Rest', hymns: [] },
+    { name: 'Hope', hymns: [1, 4, 9] },
+  ];
+
+  it('put each group under its pinned row, its hymns in the group’s order, and leave out an empty group', () => {
+    const { rows, sticky } = groupRowsOf('Topics', groups, list);
+    const seen = rows.map((row) =>
+      Match.value(row).pipe(
+        Match.when({ kind: 'hymn' }, (r) => r.hymn.number),
+        Match.orElse((r) => r.name),
+      ),
+    );
+    expect(seen).toEqual(['Joy', 3, 1, 'Hope', 1, 4]);
+    expect(sticky).toEqual([0, 3]);
+  });
+
+  it('give every row its own key when a hymn is in two groups', () => {
+    const { rows } = groupRowsOf('Topics', groups, list);
+    const keys = rows.map((row) => row.key);
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(groupRowsOf('Metres', groups, list).rows.map((row) => row.key)).not.toEqual(keys);
+  });
+
+  it('page every hymn row through the whole list in number order', () => {
+    const { rows } = groupRowsOf('Topics', groups, list, new Set([4]));
+    for (const row of rows)
+      if (row.kind === 'hymn') {
+        expect(row.source).toEqual([1, 2, 3, 4, 5]);
+        expect(row.favourite).toBe(row.hymn.number === 4);
+      }
+  });
+
+  it('page the real hymnal from a Topics row in number order', () => {
+    const { rows } = groupRowsOf('Topics', [{ name: 'All', hymns: [695, 1] }], hymns);
+    const first = rows.find((row) => row.kind === 'hymn');
+    expect(first?.kind === 'hymn' && first.source).toEqual(hymns.map((hymn) => hymn.number));
+    expect(hymns.map((hymn) => hymn.number)).toEqual(
+      Array.from({ length: hymns.length }, (_, i) => i + 1),
+    );
   });
 });
 
