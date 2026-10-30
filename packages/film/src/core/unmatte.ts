@@ -13,8 +13,8 @@
 // distance from that paper. A px so cleared, or left near-clear, that the
 // figure encloses (walled off from the ground and the frame by his inked
 // parts) is his light cloth, not paper: it takes the sheet's px back, unless
-// its clear region holds a pocket of the sheet's paper; a px within ΔE 2 of
-// the paper, or beside the outside, stays cleared. A member's cut-out may ask four things more of
+// its clear region holds a pocket of the sheet's paper; a px of the paper
+// itself, within its grain, stays cleared. A member's cut-out may ask four things more of
 // it (`UnmatteOptions`): his cloth colours, so a light cloth the line does
 // not reach is his and not paper; his thin parts, whose alpha is raised
 // until the colour that closes the sum is in range, so a speck keeps its
@@ -140,7 +140,7 @@ const FENCE = 16;
 /** A px within this ΔE76 of the paper is the sheet's paper or its grain: never taken back, since kept it shows as a halo on another paper. */
 const PAPER_CORE = 2;
 
-/** A held px within this ΔE76 of the paper is the sheet's ground, as far as the cut's ground reading reaches on the cast's sheets (1.5 × a sheet's 90th-centile grain, 4.23 at most): where his outline closes round it, it is a kept hole. */
+/** A held px within this ΔE76 of the paper is the sheet's ground, as far as the cut's ground reading reaches on the cast's sheets (1.5 × a sheet's 90th-centile grain): a gap it opens to the ground is open paper, and where his outline closes round it, it is a kept hole. A px past it is his cloth or a seam, which closes a gap. */
 const SHEET_GROUND = 4.25;
 
 /** A clear region or kept hole holding this many paper px (within `PAPER_CORE`) is a pocket of the sheet's paper inside him: a clear region that holds one, or any px of a kept hole that is one, stays cleared. */
@@ -257,14 +257,15 @@ const sides = (i: number, width: number, height: number) => {
  * hold at view alpha `FENCE` or more, so his shadow on the ground walls
  * nothing in: a part is his shadow when at most `SHADOW_INK` of its opaque
  * px are ink (`shadowOf`), since its darkest grain is specks and not an
- * outline. A px is enclosed when the outside does not reach it, and its
- * clear region (4-connected) is taken back but for three things that stay
- * cleared: a region holding `POCKET` px of paper, or any px of the sheet's
- * open paper or of a sheet pocket (`sheetPocketsOf`), since a gap the sheet
- * shows open to the ground is no hole in him; each px of paper itself
- * (within `PAPER_CORE`), which
- * kept would show as a halo, and each px beside the outside or on the frame,
- * which kept would show as a fleck on his outline.
+ * outline. The flood steps diagonally, so a gap his outline leaves only at a
+ * corner is outside, and no px it does not reach lies beside the outside or
+ * on the frame: none taken back shows as a fleck on his outline. A px is
+ * enclosed when the outside does not reach it, and its clear region
+ * (4-connected) is taken back but for two things that stay cleared: a region
+ * holding `POCKET` px of paper, or any px of the sheet's open paper or of a
+ * sheet pocket (`sheetPocketsOf`), since a gap the sheet shows open to the
+ * ground is no hole in him; and each px of paper itself (within
+ * `PAPER_CORE`), which kept would show as a halo.
  */
 const restoreEnclosed = (
   parts: ReadonlyArray<Uint8Array>,
@@ -288,9 +289,7 @@ const restoreEnclosed = (
     (i) => front[i] === -1 || onFrame(i, width, height),
     step8,
   );
-  const besideOutside = (i: number) =>
-    onFrame(i, width, height) || step8(i).some((j) => outside[j] === 1);
-  const enclosed = (i: number) => outside[i] === 0 && alpha[i]! < FENCE && front[i] !== -1;
+  const enclosed = (i: number) => outside[i] === 0 && alpha[i]! < FENCE;
   let sheet: ReturnType<typeof sheetPocketsOf> | undefined;
   for (const region of regionsOf(n, enclosed, step4)) {
     if (!region.some((i) => changed[i] === 1)) continue;
@@ -299,7 +298,7 @@ const restoreEnclosed = (
     const { open, pockets } = sheet;
     if (region.some((i) => open[i] === 1 || pockets[i] === 1)) continue;
     for (const i of region)
-      if (changed[i] === 1 && !isCore(i) && !besideOutside(i))
+      if (changed[i] === 1 && !isCore(i))
         for (let k = 0; k < parts.length; k++)
           out[k]!.set(parts[k]!.subarray(i * 4, i * 4 + 4), i * 4);
   }
