@@ -31,7 +31,7 @@
 import { useAtom, useAtomSet, useAtomSubscribe, useAtomValue } from '@effect/atom-react';
 import { Link, useLinkTo, useNavigation, useSafeAreaInsets } from 'one';
 import { Effect, Fiber, Option } from 'effect';
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BackHandler,
   Keyboard,
@@ -58,7 +58,7 @@ import bundled from 'virtual:hymnal-indexes';
 import { hymnAt, hymns } from '~/hymns/hymns';
 import { aboutQuery, aboutShown, afterPause, readMeaningSoon } from '~/hymns/meaning';
 import { find, hymnIndex } from '~/hymns/search';
-import { groupOffset, HymnList } from '~/reader/HymnList.native';
+import { groupOffset, groupStarts, HymnList } from '~/reader/HymnList.native';
 import { shelvesOf } from '~/reader/lists';
 import {
   hymnsOffset,
@@ -70,14 +70,16 @@ import {
 } from '~/reader/place';
 import { settings } from '~/store';
 import { color, useAccent } from '~/color';
+import { plain, useCue } from '~/feel/cue';
 
+import { AllAtOnce, GridMark } from './AllAtOnce';
 import { searchBack } from './back';
 import { hymnHref, hymnOf } from './Browse';
 import { Gear } from './Gear';
 import { searchLabel } from './Results';
 import { hidden, reachable, revealAt, shownHeight } from './reveal';
 import { TabRow, tabRowHeight } from './TabRow';
-import { openingOffset, type TabName, tabNamed, tabsOf } from './tabs';
+import { groupAt, openingOffset, type TabName, tabNamed, tabsOf } from './tabs';
 
 /**
  * A layer out of reach, untouchable and unseen by assistive technology: the
@@ -109,11 +111,31 @@ export function Home() {
   const scroll = useSharedValue(field);
   const cover = useShownHeight(scroll, field, field);
   const enter = () => setMode('field');
+  // While `All at once` shows: the list's offset when it zoomed out.
+  const [zoom, setZoom] = useState<Option.Option<number>>(Option.none());
+  const cue = useCue();
+  const zoomOut = useCallback(() => {
+    cue(plain('zoom-out'));
+    setZoom(Option.some(scroll.value));
+  }, [cue, scroll]);
+  const zoomIn = useCallback(() => {
+    cue(plain('zoom-in'));
+    setZoom(Option.none());
+  }, [cue]);
   return (
     <View style={styles.screen}>
       <View style={[styles.below, { marginTop: insets.top }]}>
         <View style={styles.fill} {...(searching && outOfReach)}>
-          <TabList title={title} field={field} scroll={scroll} cover={cover} onEnter={enter} />
+          <TabList
+            title={title}
+            field={field}
+            scroll={scroll}
+            cover={cover}
+            onEnter={enter}
+            zoom={zoom}
+            onZoomOut={zoomOut}
+            onZoomIn={zoomIn}
+          />
           <ShownField
             height={field}
             cover={cover}
@@ -122,7 +144,7 @@ export function Home() {
             title={title}
             onPress={enter}
           />
-          <Title height={title} rest={field} scroll={scroll} />
+          <Title height={title} rest={field} scroll={scroll} onZoomOut={zoomOut} />
         </View>
         {mode !== 'off' && <Search cause={mode} onCancel={() => setMode('off')} />}
       </View>
@@ -141,6 +163,11 @@ export function Home() {
  * the tab was chosen (`openingOffset`). A topic tapped in `About this hymn`
  * (`openAtTopic`) mounts the Topics tab's list afresh with that topic's row
  * at the top (`groupOffset`), even when Topics is already the tab in use.
+ *
+ * A tap on a group's row (`onZoomOut`, as the title's grid button) zooms
+ * out to `All at once` over the list, its tiles opened at the group at the
+ * list's top when it zoomed out (`zoom`, `groupAt`). A tile mounts the
+ * tab's list afresh with that group's row at the top (`groupStarts`).
  */
 function TabList({
   title,
@@ -148,12 +175,19 @@ function TabList({
   scroll,
   cover,
   onEnter,
+  zoom,
+  onZoomOut,
+  onZoomIn,
 }: {
   readonly title: number;
   readonly field: number;
   readonly scroll: SharedValue<number>;
   readonly cover: SharedValue<number>;
   readonly onEnter: () => void;
+  /** The list's offset when it zoomed out to `All at once`, while that shows. */
+  readonly zoom: Option.Option<number>;
+  readonly onZoomOut: () => void;
+  readonly onZoomIn: () => void;
 }) {
   const { fontScale } = useWindowDimensions();
   const [chosen, setChosen] = useAtom(settings.home.tab);
@@ -193,6 +227,21 @@ function TabList({
     },
     { immediate: true },
   );
+  const allAtOnce = (offset: number) => {
+    const starts = groupStarts(
+      Option.liftPredicate(tab, (t) => t.name !== 'Sections'),
+      hymns,
+      shelves,
+      title + field + tabRow,
+      fontScale,
+    );
+    const pick = (index: number) => {
+      onZoomIn();
+      show(tab.name, starts[index] ?? field);
+      setVisit((n) => n + 1);
+    };
+    return <AllAtOnce tab={tab} at={groupAt(starts, offset)} onPick={pick} onClose={onZoomIn} />;
+  };
   const pullDown = {
     node: (
       <View style={{ height: title + field + tabRow }}>
@@ -207,29 +256,35 @@ function TabList({
     cover,
   };
   return (
-    <HymnList
-      key={`${tab.name}:${visit}`}
-      hymns={hymns}
-      hrefOf={hymnHref}
-      offset={hymnsOffset}
-      favourites={starred}
-      pullDown={pullDown}
-      start={start}
-      {...(tab.name === 'Sections' && { byTopic: true, shelves })}
-      {...(tab.name !== 'Sections' && { grouped: tab, empty: 'No hymns here yet.' })}
-    />
+    <>
+      <HymnList
+        key={`${tab.name}:${visit}`}
+        hymns={hymns}
+        hrefOf={hymnHref}
+        offset={hymnsOffset}
+        favourites={starred}
+        pullDown={pullDown}
+        start={start}
+        onGroup={onZoomOut}
+        {...(tab.name === 'Sections' && { byTopic: true, shelves })}
+        {...(tab.name !== 'Sections' && { grouped: tab, empty: 'No hymns here yet.' })}
+      />
+      {Option.getOrNull(Option.map(zoom, allAtOnce))}
+    </>
   );
 }
 
-/** The title and the settings button, moved with the list's offset. */
+/** The title, the `All at once` button and the settings button, moved with the list's offset. */
 function Title({
   height,
   rest,
   scroll,
+  onZoomOut,
 }: {
   readonly height: number;
   readonly rest: number;
   readonly scroll: SharedValue<number>;
+  readonly onZoomOut: () => void;
 }) {
   const settings = useLinkTo({ href: Link.resolveHref('/settings') });
   const moved = useAnimatedStyle(() => {
@@ -246,6 +301,15 @@ function Title({
           Hymns
         </Text>
       </View>
+      <Pressable
+        role="button"
+        aria-label="All at once"
+        hitSlop={8}
+        onPress={onZoomOut}
+        style={({ pressed }) => [styles.settings, pressed && styles.pressed]}
+      >
+        <GridMark />
+      </Pressable>
       <Pressable
         {...settings}
         role="button"

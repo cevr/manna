@@ -16,7 +16,8 @@
  * With a home tab's `grouped` hymns in place of `byTopic`, a pinned row
  * names each group of the tab and its hymns follow, a hymn in several groups
  * in each (`groupRowsOf`); the list opens at `start` when given (the tab's
- * kept place), else at `pullDown`'s rest.
+ * kept place), else at `pullDown`'s rest. With `onGroup`, a tap on a
+ * group's row, in the list or pinned, calls it (the tab's `All at once`).
  * A search's results given the hymns `about` its query show them under the
  * strongest matches, in a section `Hymns about this`, then the rest of the
  * matches under `More matches` (`resultRowsOf`); a section's row is a
@@ -40,7 +41,7 @@ import { useAtomSet } from '@effect/atom-react';
 import { AnimatedLegendList } from '@legendapp/list/reanimated';
 import { Option } from 'effect';
 import { type Href, Link, useLinkTo } from 'one';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Animated, {
   type SharedValue,
   useAnimatedReaction,
@@ -108,6 +109,7 @@ interface Look {
   readonly foundHeight: number;
   readonly topicHeight: number;
   readonly hrefOf: HymnListProps['hrefOf'];
+  readonly onGroup: Option.Option<() => void>;
 }
 
 const drawRow = ({
@@ -117,7 +119,13 @@ const drawRow = ({
   readonly item: Row<HymnText>;
   readonly extraData: Look;
 }) => {
-  if (item.kind === 'topic') return <Topic name={item.name} height={extraData.topicHeight} />;
+  if (item.kind === 'topic')
+    return Option.match(extraData.onGroup, {
+      onNone: () => <Topic name={item.name} height={extraData.topicHeight} />,
+      onSome: (onGroup) => (
+        <GroupHeader name={item.name} height={extraData.topicHeight} onPress={onGroup} />
+      ),
+    });
   if (item.kind === 'shelf')
     return (
       <ShelfHeader
@@ -168,6 +176,27 @@ export const groupOffset = (
     name,
   );
 
+/**
+ * The offset that puts each group's row at the top of a home tab's list
+ * under a `top`-tall header, in the groups' order: `grouped`'s rows
+ * (`groupRowsOf`), or with none Sections' (`rowsOf`, under `shelves`).
+ */
+export const groupStarts = (
+  grouped: Option.Option<Grouped>,
+  hymns: ReadonlyArray<HymnText>,
+  shelves: HymnListProps['shelves'],
+  top: number,
+  fontScale: number,
+): ReadonlyArray<number> =>
+  topicStarts(
+    Option.match(grouped, {
+      onNone: () => rowsOf(hymns, shelves).rows,
+      onSome: (tab) => groupRowsOf(tab.name, tab.groups, hymns).rows,
+    }),
+    top,
+    (kind) => heightOf(kind, fontScale),
+  );
+
 export function HymnList({
   hymns,
   hrefOf,
@@ -180,6 +209,7 @@ export function HymnList({
   about,
   grouped,
   start,
+  onGroup,
 }: HymnListProps & {
   /** A search's hymns about its query, nearest first: a section under its strongest matches (`resultRowsOf`). */
   readonly about?: ReadonlyArray<HymnText>;
@@ -187,6 +217,8 @@ export function HymnList({
   readonly grouped?: Grouped;
   /** The offset the list opens at, when not at `pullDown`'s rest (a tab's kept place). */
   readonly start?: number;
+  /** A tap on a group's row, in the list or pinned: a home tab's `All at once`. */
+  readonly onGroup?: () => void;
 }) {
   const { fontScale } = useWindowDimensions();
   const accent = useAccent();
@@ -205,8 +237,9 @@ export function HymnList({
       foundHeight,
       topicHeight,
       hrefOf,
+      onGroup: Option.fromNullishOr(onGroup),
     }),
-    [accent, hymnHeight, foundHeight, topicHeight, hrefOf],
+    [accent, hymnHeight, foundHeight, topicHeight, hrefOf, onGroup],
   );
   const header = pullDown?.height ?? 0;
   const topics = useMemo(
@@ -271,6 +304,7 @@ export function HymnList({
           height={topicHeight}
           scroll={scroll}
           cover={cover}
+          onPress={look.onGroup}
         />
       )}
     </View>
@@ -286,8 +320,9 @@ const names = (row: Row<HymnText>): ReadonlyArray<string> => {
  * The topic row pinned at the list's top: every topic's row stacked in a
  * strip one row tall, moved on the UI thread so the topic whose hymns pass
  * under the top shows, pushed up as the next topic's row meets it. Screen
- * readers read the list's own topic rows, so the copy is hidden from them,
- * and touches pass through it to the list. A topic taking the pin gives a
+ * readers read the list's own topic rows, so the copy is hidden from them.
+ * With `onPress` a tap on the shown copy is a tap on its group's row; with
+ * none, and while no topic is pinned, touches pass through it to the list. A topic taking the pin gives a
  * `section` cue with its place among the topics. Under a layer over the
  * list's top (`cover`), the strip's line is the layer's bottom, read in
  * the same frame as the offset, so the row sits flush under the layer as
@@ -299,12 +334,14 @@ function PinnedTopic({
   height,
   scroll,
   cover,
+  onPress,
 }: {
   readonly names: ReadonlyArray<string>;
   readonly starts: ReadonlyArray<number>;
   readonly height: number;
   readonly scroll: SharedValue<number>;
   readonly cover: SharedValue<number>;
+  readonly onPress: Option.Option<() => void>;
 }) {
   const pinned = useDerivedValue(() => pinnedAt(starts, scroll.value, height, cover.value));
   const line = useAnimatedStyle(() => ({ transform: [{ translateY: cover.value }] }));
@@ -318,6 +355,13 @@ function PinnedTopic({
       if (before !== null && now !== before && now >= 0) scheduleOnRN(section, now);
     },
   );
+  const [shown, setShown] = useState(false);
+  useAnimatedReaction(
+    () => pinned.value.index >= 0,
+    (now, before) => {
+      if (now !== before) scheduleOnRN(setShown, now);
+    },
+  );
   const place = useAnimatedStyle(() => ({
     opacity: Math.min(1, pinned.value.index + 1),
     transform: [{ translateY: pinned.value.y }],
@@ -327,7 +371,13 @@ function PinnedTopic({
   }));
   return (
     <Animated.View
-      pointerEvents="none"
+      pointerEvents={Option.match(
+        Option.filter(onPress, () => shown),
+        {
+          onNone: () => 'none',
+          onSome: () => 'box-none',
+        },
+      )}
       aria-hidden
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
@@ -340,6 +390,11 @@ function PinnedTopic({
             <Topic key={i} name={name} height={height} />
           ))}
         </Animated.View>
+        {Option.getOrNull(
+          Option.map(onPress, (press) => (
+            <Pressable style={StyleSheet.absoluteFill} onPress={press} />
+          )),
+        )}
       </Animated.View>
     </Animated.View>
   );
@@ -353,6 +408,37 @@ function Topic({ name, height }: { readonly name: string; readonly height: numbe
         {name}
       </Text>
     </View>
+  );
+}
+
+/**
+ * A home tab's group row: a topic's row that a tap zooms out to every group
+ * at once (`onPress`); VoiceOver reads it as a heading it can activate.
+ */
+function GroupHeader({
+  name,
+  height,
+  onPress,
+}: {
+  readonly name: string;
+  readonly height: number;
+  readonly onPress: () => void;
+}) {
+  return (
+    <Pressable
+      role="heading"
+      aria-label={name}
+      accessibilityHint="Shows every group at once"
+      onPress={onPress}
+    >
+      {({ pressed }) => (
+        <View style={[styles.topic, { height }, pressed && styles.pressed]}>
+          <Text style={styles.topicName} numberOfLines={1}>
+            {name}
+          </Text>
+        </View>
+      )}
+    </Pressable>
   );
 }
 
