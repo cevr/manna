@@ -34,8 +34,12 @@ drive at a time per checkout, or give each its own `--state <dir>`.
 
 ## Launch
 
-1. `bun install --frozen-lockfile` once per checkout, and again only when
-   `bun.lock` changed.
+1. Work in a worktree of the commit under test. The helper refuses the
+   warm main checkout (`/Users/cvr/Developer/personal/manna`, and
+   `/workspaces/bible-tools` on the Workbox) with `WarmCheckout`, before it
+   reads any argument: never drive or `bun install` there. In the worktree,
+   `bun install --frozen-lockfile` once, and again only when `bun.lock`
+   changed.
 2. Check the host first: a 1-minute load at most 12 (`sysctl -n vm.loadavg`),
    swap below 8 GB (`sysctl -n vm.swapusage`) and at least 10 GB free
    (`df -h /System/Volumes/Data`). A cold iOS build takes about 15 minutes
@@ -90,73 +94,60 @@ that is not booted fails as `SimulatorDown`.
 
 ## Drive
 
-Each step is one `sim` command. The feature files write
-`bun run --cwd apps/hymnal sim` as `sim`.
+The feature files write `bun run --cwd apps/hymnal sim` as `sim`. Run a feature as its journey, in one call:
+`sim journey <feature> [--skip-video]`. It decodes `features/<feature>.journey.json`, records
+`video/<feature>.mp4` (none with `--skip-video`), and runs each step: its action, its expects, then its
+receipts (`snapshots/` and `shots/`, named `<feature>-<nn>-<step>`). It prints one JSON line per step and a
+summary, appends every line to `$EVIDENCE/results.jsonl`, and stops at the first failed step, which the
+summary names in `failedStep` and `failedName`. The journeys:
 
-- `sim open <link> --expect <target>`: a screen by its route, as in
-  `sim open hymns/100`. iOS opens `hymnal://hymns/100`, the web
-  `http://127.0.0.1:$PORT/hymns/100`. `--expect` waits for a target.
-- `sim tap <target>`, `sim fill <target> <text>`,
-  `sim scroll <target|screen> <up|down|left|right>`, and `sim back` (the
-  header's back button on iOS, the browser's Back on the web).
-- A target is `label=<accessible name>` (the `aria-label`, or the text of
-  a control) or `id=<testID>`, matched whole on both platforms. When a name
-  matches more than one element (on iOS a row's link and its group share
-  one name; the Search tab, its title and its back button share another),
-  put the role first: `role=link label=100, Great Is Thy Faithfulness`,
-  `role=button label=Search`. Never a coordinate or a style.
-- On iOS, `sim open` answers the system's "Open in “Hymnal”?" prompt with
-  Open, as a reader does; `detail.prompts` counts the prompts it answered.
-- Reach a state the way a reader does: a tap, a scroll, a deep link the
-  app answers. Never write the app's storage or call its atoms to get
-  there.
+- `features/about.journey.json`, `features/browse.journey.json`, `features/chords-and-capo.journey.json`,
+  `features/feel.journey.json`, `features/follow.journey.json`, `features/hymn-list.journey.json`,
+  `features/hymn-reader.journey.json`, `features/player.journey.json`, `features/search.journey.json`,
+  `features/settings.journey.json`.
 
-The journeys, one file per feature: [features/README.md](features/README.md).
+The recipe beside each says what to read in its receipts and which steps stay by hand
+([features/README.md](features/README.md)). A by-hand step is one `sim` command:
+
+- `sim open <link> --expect <target>`: `hymnal://hymns/100` on iOS, `http://127.0.0.1:$PORT/hymns/100` on
+  the web. On iOS it answers the "Open in “Hymnal”?" prompt with Open (`detail.prompts`).
+- `sim tap <target>`, `sim fill <target> <text>`, `sim back`, and
+  `sim scroll <target|screen> <up|down|left|right>` (`screen right` turns a hymn page on).
+- `sim gesture pan <from> <dx> <dy> [--ms 900]` pans from a target's centre. From `id=dial-key`,
+  `dx -52` at 900 ms turns one detent; 300 ms glides past two; 1500 ms stops surest.
+- `sim gesture edge-pan` is the back pan from the screen's left edge; a leftward swipe turns the pager on.
+- `sim hold <target> [--ms 900] [--settle 10]`: the press lands 5 to 9 s after it returns, so `--settle`
+  waits; leave 10 s between two holds, or they read as one. `sim relaunch` starts the app afresh.
+- A target is `label=<accessible name>` or `id=<testID>`, matched whole. Where a name matches twice, put
+  the role first: `role=link label=100, Great Is Thy Faithfulness`, `role=button label=Search`. Name a
+  target, never a coordinate or a style; the edge pan alone starts at a point.
+- Reach a state the way a reader does: a tap, a scroll, a deep link the app answers. Never write the
+  app's storage or call its atoms to get there.
 
 ## Tool notes
 
 What the drivers do that a step does not show:
 
-- **A clean checkout's dev server needs the pod hermesc.** With no Pods
-  folder in the app's generated ios folder (no prebuild yet), the iOS app shows the red box
-  "native iOS dev bytecode needs the pod hermesc". Boot with `HERMESC_PATH`
-  set to the hermesc of the checkout's own `hermes-compiler` package
-  (`find node_modules/.bun -path '*hermesc/osx-bin/hermesc'`):
-  `HERMESC_PATH=<that path> bun run --cwd apps/hymnal sim boot --platform ios --port $PORT --out "$EVIDENCE"`.
-- **The first `sim open` after `xcrun simctl terminate` fails its `--expect`:**
-  the home list lands first. Run the same `sim open` again.
-- **`agent-device longpress` returns before the touch lands.** Its effect
-  comes 5 to 9 s later. Read the state about 10 s after a hold, and leave
-  10 s between two holds, or two holds read as one.
-- **A one-detent pan.** `agent-device gesture pan <x> <y> -52 0 900` from a
-  dial's middle turns it one detent; a pan of 300 ms glides on past two or
-  more. For a turn that must stop at one detent, take 1500 ms or VoiceOver's
-  action.
-- **`sim tap label=Key` matches two elements** while chords are on (the
-  bar's button and the word inside it): use `sim tap id=key-button`.
-- **The back pan.** `agent-device gesture swipe left-edge` is a leftward
-  swipe that turns the pager on to the next hymn. Go back with the edge pan
-  `agent-device gesture pan 3 437 200 0 300 --session verify-hymnal`.
-- **The follow checker's `TIMING`** (`apps/hymnal/scripts/follow/samples.ts`)
-  lets a mark sit 1500 ms from its line's span, and assumes a snapshot of
-  about 1 s. When a snapshot takes 2 s (a loaded host), `adrift` is a coin
-  toss: read the snapshot's time in the JSON, and claim `adrift` only from a
-  run whose snapshots take about 1 s.
-- **The web client** (D3): run [Web client](features/web-client.md) after
-  `sim boot --platform web`, before any web step. `sim open hymns/100
-  --expect "label=Stanza 1"` must answer `ok`, but server HTML alone can
-  satisfy it. Also prove hydration, a home row click and Open player →
-  Reading, with no route-error overlay or raw RNW CommonJS requests.
-  Use the recipe's numeric/boolean proof instead of snapshots, images,
-  recordings or console dumps; keep hymn words out of evidence.
-- **Frame readers.** Two readers of a screen recording, from the repo
-  root, print one line per frame and read no words:
-  `bun .claude/skills/verify-hymnal/scripts/bartop.ts <video.mp4> [from] [to]`
-  prints the bar's height in points (its top hairline, the 3x screen of an
-  iPhone 17 Pro); `bun .claude/skills/verify-hymnal/scripts/knob.ts <video.mp4> [from] [to]`
-  prints the seeker knob's centre `x` in points while the bar stands tall.
-  Fit the knob's `x` to the clock to prove the seeker moves on time
-  (`player-spring`, `chords-sound`).
+- **The first open after a relaunch lands on the home list.** `sim open` and a journey's open terminate
+  the app and open once more on iOS `TargetMissing` (`detail.retried`), never a third time.
+- **The pod hermesc.** `sim boot` points the dev server at the checkout's own `hermes-compiler`
+  (`detail.hermesc`); a red box "native iOS dev bytecode needs the pod hermesc" means it did not.
+- **`label=Key` matches two elements** while chords are on (the bar's button and the word inside it):
+  tap `id=key-button`.
+- **The follow checker's `TIMING`** (`apps/hymnal/scripts/follow/samples.ts`) lets a mark sit 1500 ms
+  from its line's span and assumes a snapshot of about 1 s. When a snapshot takes 2 s (a loaded host),
+  `adrift` is a coin toss: read the snapshot's time in the JSON, and claim `adrift` only from a run
+  whose snapshots take about 1 s.
+- **The web client** (D3): run [Web client](features/web-client.md) after `sim boot --platform web`,
+  before any web step. Server HTML alone can satisfy `sim open hymns/100 --expect "label=Stanza 1"`:
+  also prove hydration, a home row click and Open player → Reading, with no route-error overlay or raw
+  RNW CommonJS requests, by the recipe's numeric and boolean proof; keep hymn words out of evidence.
+- **Frame readers** of a journey's video, from the repo root, print one line per frame and read no
+  words: `bun .claude/skills/verify-hymnal/scripts/bartop.ts <video.mp4> [from] [to]` prints the bar's
+  height in points (its top hairline, the 3x screen of an iPhone 17 Pro);
+  `bun .claude/skills/verify-hymnal/scripts/knob.ts <video.mp4> [from] [to]` prints the seeker knob's
+  centre `x` while the bar stands tall. Fit the knob's `x` to the clock to prove the seeker moves on
+  time (`player-spring`, `chords-sound`).
 
 ## Argent
 
@@ -182,13 +173,13 @@ What the drivers do that a step does not show:
 
 All of it goes under `$EVIDENCE`, outside the checkout's tracked files:
 
-- `sim record start <journey>` before a journey and `sim record stop` after
-  it: `video/<journey>.mp4` (iOS) or `.webm` (web, no sound: the browser is
-  muted). Prove it plays: `ffprobe` reports a duration above 0. Skip it
-  only when a run says why.
-- For each step, its JSON line appended to `$EVIDENCE/results.jsonl`, then
-  `sim snapshot <step>` (the accessibility tree, `snapshots/<step>.txt`)
-  and `sim shot <step>` (`shots/<step>.png`).
+- `sim journey` takes the video, the receipts and `results.jsonl` itself
+  (Drive). A by-hand step adds its own: `sim record start <name>` and
+  `sim record stop` around it (`video/<name>.mp4` on iOS, `.webm` on the
+  muted web), its JSON line appended to `$EVIDENCE/results.jsonl`, then
+  `sim snapshot <step>` (`snapshots/<step>.txt`) and `sim shot <step>`
+  (`shots/<step>.png`). Prove a video plays: `ffprobe` reports a duration
+  above 0. Skip it only when a run says why.
 - `sim log` at the end: `app.log` (the simulator's log for Hymnal since
   boot) or `console.log` (the page's console), beside `server.log`.
 - A choice the app keeps (a setting) is proved by a second view: leave the
@@ -203,13 +194,16 @@ All of it goes under `$EVIDENCE`, outside the checkout's tracked files:
 ## Cleanup
 
 ```bash
-bun run --cwd apps/hymnal sim down
+bun run --cwd apps/hymnal sim down --clean
 ```
 
-It closes the driver session, shuts down `verify-hymnal` (iOS), stops the
-dev server by its recorded PID (never by name), and moves the session file
-into `$EVIDENCE`. Then check that nothing listens on the port
-(`lsof -nP -iTCP:$PORT -sTCP:LISTEN` prints nothing). Evidence stays.
+`sim down` closes the driver session, shuts down `verify-hymnal` (iOS),
+stops the dev server by its recorded PID (never by name), and moves the
+session file into `$EVIDENCE`. `--clean` then deletes the app's build
+output (`ios/build`, `ios/Pods`, `dist` under `apps/hymnal`, each checked
+to lie inside the app first) and fails `Unhealthy` (`port-free`) while
+something still listens on the port. Plain `sim down` keeps the build for
+the next incremental one. Evidence stays.
 
 ## Helpers
 
@@ -217,14 +211,18 @@ into `$EVIDENCE`. Then check that nothing listens on the port
 `--help` on any command). Every command prints one JSON line on stdout,
 `{"ok":true,"command":…,"platform":…,"paths":{…},"detail":{…},"ms":…}`, and
 exits 0; or `{"ok":false,"command":…,"message":…,"error":{"_tag":…},"ms":…}`
-and exits 1. The tags: `NoSession`, `SimulatorDown`, `ReadinessTimedOut`,
-`TargetMissing` (with what the driver said), `ToolMissing`, `ToolFailed`,
-`NotOnPlatform`, `HostFailed`, `Unhealthy`, `BadArguments` (an unknown
-command or flag; the help goes to stderr). The commands: `boot`, `install`,
-`doctor`, `open`, `tap`, `back`, `fill`, `scroll`, `shot`, `snapshot`, `record`, `log`,
-`down`, and `serve` (the dev server's own process, which `boot` starts).
-Its tests: `apps/hymnal/scripts/sim/sim.slow.test.ts`, run by the hymnal's
-`test:slow`.
+and exits 1 (`journey` prints one line per step, then its summary). The
+tags: `WarmCheckout`, `NoSession`, `SimulatorDown`, `ReadinessTimedOut`,
+`TargetMissing` (with what the driver said), `TargetShown` (a `hides`
+expect still showed), `BadJourney` (a journey file that does not decode),
+`ToolMissing`, `ToolFailed`, `NotOnPlatform`, `HostFailed`, `Unhealthy`,
+`BadArguments` (an unknown command or flag; the help goes to stderr). The
+commands: `boot`, `install`, `doctor`, `journey`, `open`, `tap`, `back`,
+`fill`, `scroll`, `gesture`, `hold`, `relaunch`, `shot`, `snapshot`,
+`record`, `log`, `down`, and `serve` (the dev server's own process, which
+`boot` starts). Its tests: the unit tests beside it in
+`apps/hymnal/scripts/sim/` (a stand-in Drive, no host), and
+`sim.slow.test.ts`, run by the hymnal's `test:slow`.
 
 `apps/hymnal/scripts/sticky.ts` checks the home list's pinned topic row in
 every frame of a recording: from `apps/hymnal`, on a booted `verify-hymnal`
