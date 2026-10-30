@@ -89,7 +89,14 @@
     {
       "name": "back-home",
       "action": "back",
-      "expect": [{ "shows": "label=Sections" }]
+      "expect": [{ "shows": "label=Find a hymn by number" }]
+    },
+    {
+      "name": "list-top",
+      "action": "scroll",
+      "target": "label=Sections",
+      "direction": "up",
+      "expect": [{ "shows": "label=Sections" }, { "hides": "label=Stanza 1" }]
     },
     {
       "name": "tab-topics",
