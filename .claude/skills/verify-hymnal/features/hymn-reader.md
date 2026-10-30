@@ -36,12 +36,12 @@ later rows sit one indent right of its first.
 - **States:** default. Focus-visible, open, loading, empty and error are n/a.
 - **Regression:** `apps/hymnal/src/reader/reader.slow.test.tsx`; the pager and its left edge in `apps/hymnal/src/reader/pager.slow.test.ts`; the header on every way in, `apps/hymnal/src/reader/header.test.ts`; back on the web, `apps/hymnal/src/reader/back.test.tsx`; the reading sheet, the page's text, the hanging indent and keep-awake in `apps/hymnal/src/reader/reading.slow.test.tsx`.
 
-**The journey:** `sim journey hymn-reader`. Hymn 100 by deep link (`hymn-reader`), a scroll to `Stanza 3` and back, the player sheet's reading settings (`reading`), hymn 3 from the list, a swipe to 4 and back to 3 (`sim scroll screen right` and `left`), `sim back` to the list (`reader-back`), hymn 3 again and a pan from the left edge back to the list (`left-edge`), then hymn 100's syllables (`reader-syllables`).
+**The journey:** `sim journey hymn-reader`. Hymn 100 by deep link (`hymn-reader`), a scroll to `Stanza 3` and back, the player sheet (`reading`) scrolled down to its reading settings (`reading-controls`) and closed by its grabber (`reading-close`), a relaunch to the list (`list`), hymn 3 from the list, a swipe to 4 and back to 3 (`sim scroll screen right` and `left`), `sim back` to the list (`reader-back`), hymn 3 again and a pan from the left edge back to the list (`left-edge`), then hymn 100's syllables (`reader-syllables`).
 
 Read in the receipts:
 
 - `hymn-reader`: `100`, `Great Is Thy Faithfulness`, `Stanza 1`, `Refrain`; on iOS the open line's `detail.prompts` is 0 or 1.
-- `reading`: the group `Reading`: `Text size` `100%`, `Font` (`System` checked), `Line spacing` (`Normal` checked), `Keep screen on` off.
+- `reading-controls`: the group `Reading`: `Text size` `100%`, `Font` (`System` checked), `Line spacing` (`Normal` checked), `Keep screen on` off.
 - `swipe-next`: the header title and `id=hymn-number` read 4.
 - `reader-back` and `left-edge`: the Hymns list at its place, not hymn 3 or 4.
 - `reader-syllables`: `id=syllable-1-1-1` beneath a `line` (each word one text named by its first syllable); the shot shows muted hyphens inside words and no word split across rows.
@@ -60,7 +60,9 @@ By hand:
 
 - Hymn 100 has three stanzas, so `label=Stanza 4` is a `TargetMissing`, not a defect.
 - A deep link opened while an earlier iOS prompt is unanswered stacks prompts; `sim open` answers up to three. A snapshot that shows only the alert means a prompt is still up.
-- The sheet opens at 0.7 of the screen, which shows every row at the default system text size; at a larger one, drag its grabber up for the rest.
+- The player sheet opens at half the screen (detents 0.5 and 1, `app/(hymnal)/_layout.tsx`): the bar's controls, `Position`, `Chords` and the dials show, and the `Reading` group lies below the fold. Scroll to `Keep screen on` first (`reading-controls`); the scroll lifts the sheet to full height.
+- `sim back` does not close the player sheet at full height (`in-app back control is not available`): pan its grabber down, `sim gesture pan "role=button label=Sheet Grabber" 0 760 --ms 400`.
+- After `sim open hymns/100` and then `sim open /`, a hymn opened from the list has no `Hymns` back button on iOS, and `sim back` fails with `in-app back control is not available` (measured 2026-10-30). The journey reaches the list by `sim relaunch` instead; after it, the back button shows.
 - On iOS a line with chords over its syllables is not one element: its chords keep their `chord-<p>-<l>-<n>` ids at both alignment levels. Each boxed run reads its syllables' text without visual join or trailing hyphens, after its separately accessible chords. `apps/hymnal/src/reader/SyllableWords.test.tsx` holds that paragraph label and reading order, including iOS's fallback to all inline text. A line with chords off reads as one element named by the whole line.
 - Pages turn by `sim scroll screen right` and `left`, which drag mid-screen. A pan that starts within 20 pt of the left edge is the back pan (`sim gesture edge-pan`), so a swipe right starts mid-screen.
 - The web has no pager: one page per route, and a swipe does nothing there.

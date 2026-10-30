@@ -30,17 +30,27 @@
       "name": "reading",
       "action": "tap",
       "target": "label=Open player",
+      "expect": [{ "shows": "label=Position" }]
+    },
+    {
+      "name": "reading-controls",
+      "action": "scroll",
+      "target": "label=Keep screen on",
+      "direction": "down",
       "expect": [{ "shows": "label=Text size" }, { "shows": "label=Keep screen on" }]
     },
     {
       "name": "reading-close",
-      "action": "back",
-      "expect": [{ "shows": "label=Open player" }]
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 760,
+      "ms": 400,
+      "expect": [{ "shows": "label=Open player" }, { "hides": "label=Sheet Grabber" }]
     },
     {
       "name": "list",
-      "action": "open",
-      "link": "/",
+      "action": "relaunch",
       "expect": [{ "shows": "role=link label=3, God Himself Is With Us" }]
     },
     {
