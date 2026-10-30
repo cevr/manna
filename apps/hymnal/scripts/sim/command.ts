@@ -26,20 +26,21 @@ import {
   type DriveMembers,
   type Outcome,
   type Place,
-  type Point,
   RECORD,
   serve,
 } from './drive.ts';
-import {
-  BadArguments,
-  HostFailed,
-  type SimError,
-  type TargetMissing,
-  ToolMissing,
-  WarmCheckout,
-} from './errors.ts';
+import { BadArguments, HostFailed, type SimError, ToolMissing, WarmCheckout } from './errors.ts';
 import type { PlatformError } from 'effect/PlatformError';
-import { Failure, Platform, Success } from './result.ts';
+import {
+  HOLD_MS,
+  HOLD_SETTLE,
+  loadJourney,
+  openOnce,
+  PAN_MS,
+  panStart,
+  runJourney,
+} from './journey.ts';
+import { encodeFailure, Platform, Success } from './result.ts';
 
 /**
  * The warm checkouts: the clean sources worktrees are made from, on the
@@ -51,7 +52,17 @@ export const WARM_CHECKOUTS: ReadonlyArray<string> = [
 ];
 
 const encodeSuccess = Schema.encodeSync(Schema.fromJsonString(Success));
-const encodeFailure = Schema.encodeSync(Schema.fromJsonString(Failure));
+
+/** Run `step`; on its error, print the error as one JSON line and fail. */
+const refused = <A, R>(command: string, step: Effect.Effect<A, SimError | PlatformError, R>) =>
+  step.pipe(
+    Effect.catchTag('PlatformError', (error) =>
+      Effect.fail(HostFailed.make({ reason: error.message })),
+    ),
+    Effect.tapError((error) =>
+      Console.log(encodeFailure({ ok: false, command, message: error.message, error, ms: 0 })),
+    ),
+  );
 
 /** Run `step`, print its result as one JSON line, and fail on its error. */
 export const report = <R>(
@@ -93,20 +104,6 @@ const positive = (name: string, fallback: number, description: string) =>
     ),
     Flag.withDescription(description),
   );
-
-/** Text of digits, dots, commas and minus signs is meant as a point. */
-const POINTLIKE = /^[\d.,-]+$/;
-const POINT = /^(\d+(?:\.\d+)?),(\d+(?:\.\d+)?)$/;
-
-/** Where a pan starts: `x,y` in points, or any other text as a target; a malformed point is none. */
-const panStart = (text: string): Option.Option<Point | string> => {
-  if (text === '') return Option.none();
-  if (!POINTLIKE.test(text)) return Option.some(text);
-  return Option.map(Option.fromNullishOr(POINT.exec(text)), (point) => ({
-    x: Number(point[1]),
-    y: Number(point[2]),
-  }));
-};
 
 /**
  * `down --clean`: stop the drive if one is booted (none is no failure),
@@ -181,31 +178,6 @@ export const hermesCompiler = Effect.fn('Sim.hermesCompiler')(function* (place: 
     onSome: (dir) => compilerFrom(path, dir),
   }).pipe(Effect.catchTag('ToolMissing', () => compilerFrom(path, place.app)));
 });
-
-/**
- * Open `link`. On iOS a first open whose target does not show is tried once
- * more after the app is terminated, which clears a launch that hung on the
- * splash; the result says whether it was retried.
- */
-export const openOnce = (
-  place: Place,
-  link: string,
-  expect: Option.Option<string>,
-  seconds: number,
-) =>
-  drive((d) =>
-    d.open(place, link, expect, seconds).pipe(
-      Effect.map((done): Outcome => ({ ...done, detail: { ...done.detail, retried: false } })),
-      Effect.catchTag('TargetMissing', (missing: TargetMissing) => {
-        if (missing.platform !== 'ios') return Effect.fail(missing);
-        return d
-          .open(place, link, expect, seconds, { terminate: true })
-          .pipe(
-            Effect.map((done): Outcome => ({ ...done, detail: { ...done.detail, retried: true } })),
-          );
-      }),
-    ),
-  );
 
 const seconds = (fallback: number) =>
   Flag.Int('timeout').pipe(
@@ -443,7 +415,7 @@ export const simCommand = (place: Place) => {
       ),
       dx: Argument.Int('dx').pipe(Argument.withDescription('points to the right (negative: left)')),
       dy: Argument.Int('dy').pipe(Argument.withDescription('points down (negative: up)')),
-      ms: positive('ms', 900, 'milliseconds the pan takes'),
+      ms: positive('ms', PAN_MS, 'milliseconds the pan takes'),
       state,
     },
     (flags) =>
@@ -501,9 +473,9 @@ export const simCommand = (place: Place) => {
     'hold',
     {
       target,
-      ms: positive('ms', 900, 'milliseconds the press lasts'),
+      ms: positive('ms', HOLD_MS, 'milliseconds the press lasts'),
       settle: Flag.Int('settle').pipe(
-        Flag.withDefault(10),
+        Flag.withDefault(HOLD_SETTLE),
         Flag.filter(
           (settle) => settle >= 0,
           (settle) => `--settle ${settle} is below 0`,
@@ -544,6 +516,30 @@ export const simCommand = (place: Place) => {
       ),
   ).pipe(Command.withDescription('Shut down what boot started'));
 
+  const journeyCommand = Command.make(
+    'journey',
+    {
+      feature: Argument.String('feature').pipe(
+        Argument.withDescription('the feature whose features/<feature>.journey.json runs'),
+      ),
+      skipVideo: Flag.Boolean('skip-video').pipe(
+        Flag.withDefault(false),
+        Flag.withDescription('take no video of the journey'),
+      ),
+      state,
+    },
+    (flags) =>
+      Effect.gen(function* () {
+        const here = at(flags.state);
+        const { journey, session } = yield* refused('journey', loadJourney(here, flags.feature));
+        return yield* runJourney(here, journey, session, !flags.skipVideo);
+      }),
+  ).pipe(
+    Command.withDescription(
+      "Run a feature's journey (iOS): one JSON line per step, receipts, stop at the first failure",
+    ),
+  );
+
   const serveCommand = Command.make(
     'serve',
     { port: Flag.Int('port'), out: Flag.String('out'), state },
@@ -568,6 +564,7 @@ export const simCommand = (place: Place) => {
       gestureCommand,
       holdCommand,
       relaunchCommand,
+      journeyCommand,
       downCommand,
       serveCommand,
     ]),
