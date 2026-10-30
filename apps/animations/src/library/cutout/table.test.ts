@@ -237,6 +237,30 @@ describe('framedFigure', () => {
     expect(whole[at(11, 3)]).toBe(1);
     expect(figure[at(11, 3)]).toBe(1);
   });
+
+  test('fills back a held pocket the cut reads as paper; a pocket not named and the open ground stay cut', () => {
+    const [w, h] = [frame.kept[2] - frame.kept[0], frame.kept[3] - frame.kept[1]];
+    const [pw, ph] = [w + frame.pad[0] + frame.pad[2], h + frame.pad[1] + frame.pad[3]];
+    // two ink rings, each round a 10 x 10 pocket of paper wide enough for the cut to read as a gap
+    const [held, unnamed] = [ringed(5, 8, 16, 19, false), ringed(5, 22, 16, 33, false)];
+    const view = raster(pw, ph, (x, y) => [held, unnamed][Number(y >= 21)]!(x, y));
+    const at = (x: number, y: number) => y * pw + x;
+    const inPocket = (i: number) => {
+      const [x, y] = [i % pw, Math.floor(i / pw)];
+      return x >= 6 && x <= 15 && y >= 9 && y <= 18;
+    };
+    const bare = framedFigure(frame, view);
+    expect(bare[at(10, 13)]).toBe(0);
+    // a seed in the held pocket and one on the open ground, in the kept view's pixels
+    const seeds = [
+      [10 - frame.pad[0], 13 - frame.pad[1]],
+      [22 - frame.pad[0], 20 - frame.pad[1]],
+    ] as const;
+    const figure = framedFigure(frame, view, seeds);
+    expect(figure.every((f, i) => f === Math.max(Number(inPocket(i)), bare[i] ?? 0))).toBe(true);
+    expect(figure[at(10, 27)]).toBe(0);
+    expect(figure[at(22, 20)]).toBe(0);
+  });
 });
 
 describe('bustFigure', () => {

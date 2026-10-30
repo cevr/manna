@@ -54,6 +54,13 @@ export interface CutViewData {
   readonly cut: PartCut;
   readonly figure: FigureReading;
   readonly reads?: Pick<PartCutOptions, 'classes' | 'labels'>;
+  /**
+   * A `framed` view's held objects, a seed point in each, in the kept view's
+   * pixels: a white object the figure holds (a bottle, a sash knot) is the
+   * paper's colour inside an ink ring, so the cut reads it as a gap in the
+   * figure; its seed fills its pocket back.
+   */
+  readonly held?: ReadonlyArray<Pt>;
 }
 
 /** A member's cut data, by his views' names in his sheets' views. */
@@ -141,14 +148,54 @@ export const bustFigure = (view: View, ink: Rgba): Uint8Array => {
 };
 
 /**
+ * The pocket at a seed: the 4-connected run of non-figure pixels from it,
+ * empty when the run reaches the view's edge (the open ground, not a pocket)
+ * or the seed lies off the view or on the figure.
+ */
+const pocketAt = (figure: Uint8Array, w: number, h: number, [sx, sy]: Pt): ReadonlySet<number> => {
+  const inView = (x: number, y: number) => x >= 0 && y >= 0 && x < w && y < h;
+  if (!inView(sx, sy) || figure[sy * w + sx] === 1) return new Set();
+  const seen = new Set<number>([sy * w + sx]);
+  const queue = [sy * w + sx];
+  for (let k = 0; k < queue.length; k++) {
+    const i = queue[k] ?? 0;
+    const [x, y] = [i % w, Math.floor(i / w)];
+    if (x === 0 || y === 0 || x === w - 1 || y === h - 1) return new Set();
+    for (const [nx, ny] of [
+      [x - 1, y],
+      [x + 1, y],
+      [x, y - 1],
+      [x, y + 1],
+    ] as const) {
+      const j = ny * w + nx;
+      if (!inView(nx, ny) || figure[j] === 1 || seen.has(j)) continue;
+      seen.add(j);
+      queue.push(j);
+    }
+  }
+  return seen;
+};
+
+/** A figure with each held seed's pocket (`pocketAt`) filled back. */
+const heldIn = (figure: Uint8Array, w: number, h: number, held: ReadonlyArray<Pt>): Uint8Array => {
+  const out = Uint8Array.from(figure);
+  for (const seed of held) for (const i of pocketAt(out, w, h, seed)) out[i] = 1;
+  return out;
+};
+
+/**
  * A standing view's figure in its padded frame: the kept box read as the
  * kept view alone, so its cut (and the paint okra drew for it) is the kept
  * view's, and the pad read on the padded view (the crown's and cuffs' outer
  * ink, the ground shadow's rows below the soles). The padded view's border
  * holds the shadow's lavender, which moves its reading of the paper a little
- * and so a rim pixel's.
+ * and so a rim pixel's. Each held seed's pocket is the figure's again.
  */
-export const framedFigure = (frame: CutFrame, view: View): Uint8Array => {
+export const framedFigure = (
+  frame: CutFrame,
+  view: View,
+  held: ReadonlyArray<Pt> = [],
+): Uint8Array => {
   const { kept, pad } = frame;
   const [w, h] = [kept[2] - kept[0], kept[3] - kept[1]];
   const rgba = new Uint8Array(w * h * 4);
@@ -160,7 +207,7 @@ export const framedFigure = (frame: CutFrame, view: View): Uint8Array => {
       ),
       y * w * 4,
     );
-  const inner = cutFigureOf({ width: w, height: h, rgba });
+  const inner = heldIn(cutFigureOf({ width: w, height: h, rgba }), w, h, held);
   return Uint8Array.from(cutFigureOf(view), (f, i) => {
     const [x, y] = [(i % view.width) - pad[0], Math.floor(i / view.width) - pad[1]];
     const inKept = x >= 0 && y >= 0 && x < w && y < h;
@@ -180,7 +227,7 @@ export const cutTable = <V extends string>(member: CutMember<V>) => {
   );
   const figureOf = (name: V, view: View): Uint8Array =>
     Match.value(member.views[name].figure).pipe(
-      Match.when('framed', () => framedFigure(member.frames[name], view)),
+      Match.when('framed', () => framedFigure(member.frames[name], view, member.views[name].held)),
       Match.when('bust', () => bustFigure(view, member.ink)),
       Match.exhaustive,
     );

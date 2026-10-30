@@ -27,6 +27,7 @@ import { CUT_AWAY, KEEP_REST, grain, shade, sides } from '../../../cutout/prompt
 import {
   FAR,
   type Hem,
+  type Pt,
   type Sleeve,
   type SoleRuns,
   aboveHem,
@@ -535,6 +536,40 @@ const SINGLE_1: PartCut = {
   ],
 };
 
+/**
+ * The white objects single-1's figure holds, a seed in each pocket the cut
+ * reads as paper, read off the kept view: the bottle's cap band and body; the
+ * pale grain on his right sleeve's shoulder; the sash's band and knot; and
+ * its two ends with their pale grain. A seed names a pocket whole, whatever
+ * its shape, where a box would take the ink or cloth beside it. The paper
+ * between his feet, closed by his hem above and his ground shadow below, is
+ * his as the shadow is: cut out, the un-matte clears its pale rim past what
+ * the drawing holds as paper. The two specks beside his hem stay the ground's.
+ */
+const SINGLE_1_HELD: ReadonlyArray<Pt> = [
+  [84, 258],
+  [73, 319],
+  [241, 387],
+  [221, 395],
+  [191, 410],
+  [177, 421],
+  [160, 434],
+  [209, 671],
+  [299, 673],
+  [248, 665],
+  [365, 666],
+  [348, 676],
+  [225, 668],
+  [247, 679],
+  [260, 677],
+  [273, 798],
+  [327, 864],
+  [287, 819],
+  [293, 857],
+  [286, 898],
+  [318, 1221],
+];
+
 /** His sheets' ink, for the row that closes a bust's foot. */
 const INK = [42, 30, 24, 255] as const;
 
@@ -581,6 +616,12 @@ const HIDDEN_ENTRIES = {
   'single-1': {
     moving: ['armRight', 'armLeft'],
     prompt: `${CUT_AWAY} his two arms were cut away to make a cut-out puppet: his right arm (on the viewer's left), raised with its elbow tucked against his side and its hand holding a baby bottle beside his cheek, and his left arm (on the viewer's right), hanging under the teal-blue mantle with its hand at his hip. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each shoulder and armpit down to the sash and robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading (the cream tunic on the viewer's left side, the teal-blue mantle over his left shoulder on the viewer's right side). ${SIDES} ${shade('his')} ${GRAIN} There are no arms now: no sleeves, no hands, no bottle, nothing magenta left. Where the magenta lay outside his body, beside his head and shoulders, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, face, hair, neck, sash, robe, feet, size, position and framing.`,
+    allowance: {
+      calls: 2,
+      by: 'orchestrator',
+      on: '2026-10-30',
+      why: 'its three calls were drawn before the held bottle was part of the right arm; holding it changes the magenta input, so no kept answer lays on the present input',
+    },
   },
 } as const satisfies Readonly<Record<CutView, HiddenEntry>>;
 
@@ -599,7 +640,7 @@ export const { CUTS, cutOptionsFor, HIDDEN } = cutTable({
       reads: { classes: CLASSES, labels: LABELS.threeQuarterLeft },
     },
     'heads-4': { cut: HEADS_4, figure: 'bust' },
-    'single-1': { cut: SINGLE_1, figure: 'framed' },
+    'single-1': { cut: SINGLE_1, figure: 'framed', held: SINGLE_1_HELD },
   },
   hidden: HIDDEN_ENTRIES,
   ink: INK,
