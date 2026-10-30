@@ -107,8 +107,39 @@ export class Unhealthy extends Schema.TaggedError<Unhealthy>()('Unhealthy', {
   }
 }
 
+/** The helper ran in a warm checkout, the clean source worktrees are made from. */
+export class WarmCheckout extends Schema.TaggedError<WarmCheckout>()('WarmCheckout', {
+  checkout: Schema.String,
+}) {
+  override get message() {
+    return `${this.checkout} is a warm checkout, which no drive may build or write in; use a worktree`;
+  }
+}
+
+/** A journey file that cannot run: missing, not a journey, or for another feature. */
+export class BadJourney extends Schema.TaggedError<BadJourney>()('BadJourney', {
+  file: Schema.String,
+  issue: Schema.String,
+}) {
+  override get message() {
+    return `${this.file}: ${this.issue}`;
+  }
+}
+
+/** A target a journey expected gone still shows. */
+export class TargetShown extends Schema.TaggedError<TargetShown>()('TargetShown', {
+  target: Schema.String,
+}) {
+  override get message() {
+    return `${this.target} still shows`;
+  }
+}
+
 /** Any failure a command reports. */
 export const SimError = Schema.Union([
+  WarmCheckout,
+  BadJourney,
+  TargetShown,
   NoSession,
   SimulatorDown,
   ReadinessTimedOut,

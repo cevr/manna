@@ -36,30 +36,35 @@ later rows sit one indent right of its first.
 - **States:** default. Focus-visible, open, loading, empty and error are n/a.
 - **Regression:** `apps/hymnal/src/reader/reader.slow.test.tsx`; the pager and its left edge in `apps/hymnal/src/reader/pager.slow.test.ts`; the header on every way in, `apps/hymnal/src/reader/header.test.ts`; back on the web, `apps/hymnal/src/reader/back.test.tsx`; the reading sheet, the page's text, the hanging indent and keep-awake in `apps/hymnal/src/reader/reading.slow.test.tsx`.
 
-1. **Open by deep link.** `sim open hymns/100 --expect "label=Stanza 1"`. → `ok`; on iOS `detail.prompts` is 0 or 1; the snapshot holds `100`, `Great Is Thy Faithfulness`, `Stanza 1`, `Refrain`.
-2. **The head.** `sim open hymns/15 --expect "label=Stanza 1"`, then on iOS read the frames with `agent-device snapshot --json` (the `rect` of the topic, the number and the title). → the frames give `number.x + number.width <= title.x`, the number's and the title's vertical centres within half a line, and the topic's frame above both. Read the frames only; the snapshot holds the words, so trash it after.
-3. **Scroll to the end.** `sim open hymns/100 --expect "label=Stanza 1"`, then on iOS read the `rect` of every `hymn-scroll` with `agent-device snapshot --json --raw --observe-only --force-full --session verify-hymnal`. → each is as tall as its `pager-page` (670 pt on a 402 pt wide simulator with the bar under the pager), not as its words; a `hymn-scroll` taller than its page cannot scroll. Then `sim scroll "label=Stanza 3" down`. → `ok`; `Stanza 3` is on screen (`sim shot`).
-4. **Scroll back.** `sim scroll screen up` twice. → `ok`; `Stanza 1` is on screen again.
-5. **Back.** `sim back`. → `ok`; the Hymns list.
-6. **Proof.** `sim snapshot` and `sim shot` after each step.
-7. **The reading settings.** `sim open hymns/100 --expect "label=Stanza 1"`, then `sim tap "label=Open player"`. → `ok`; the sheet shows the group `Reading`: `Text size` reading `100%`, `Font` (`System` checked), `Line spacing` (`Normal` checked) and `Keep screen on` off.
-8. **Largest text.** Fling the `Text size` dial up (`agent-device gesture pan <x> <y> -300 0 200` from its middle). → it stops at `188%`; dismiss the sheet; the page's words and chords are larger.
-9. **Hanging indent.** At the largest size, `agent-device snapshot --json` on a hymn with a long line: the `rect` of the line's first word and of the first word of its next row. → the second row's x is at least one indent (40 pt at the largest size, before the system's text size) right of the first's. Read the frames only, then trash the snapshot.
-10. **Kept.** `sim tap Serif`, `sim tap Roomy`, then relaunch and open the player sheet again. → the same size, `Serif` and `Roomy` checked. Put each back (`Text size 100%`, `System`, `Normal`, `Keep screen on` off).
-11. **Swipe** (iOS). From the list, `sim tap "role=link label=3, God Himself Is With Us"`, then `agent-device gesture pan 350 450 -300 0 250 --session verify-hymnal` (a swipe left, mid-screen). → the header title and the page head (`id=hymn-number`) read 4, and the bar reads `Play hymn 4`. Two swipes right (`gesture pan 50 450 300 0 250`). → 3, then 2.
-12. **Back after swipes** (`reader-back`). `sim back`. → one press shows the Hymns list at its place, not hymn 3 or 4.
-13. **A search's pager.** Search `3`, open the second result (30), swipe left. → 31, the third result. Two swipes right give 30, then 3 (not 29: the results are the list). `sim back` → the results, with `3` kept.
-14. **The left edge** (the owner's rule: "if we swipe directly at the left edge, it should go back"). On a hymn opened from the list, `agent-device gesture pan 1 450 300 0 500 --session verify-hymnal`. → the list, not the hymn before. Again after two mid-screen swipes (4 → 3 → 2), on hymn 1 (the first page) with the pan low (`y` 750), on a deep link to 600 with the pan high (`y` 200), and with the bar docked (a hymn playing, Sound off) with the pan over the bar's row (`agent-device gesture pan 1 812 300 0 500 --session verify-hymnal`): each goes back. A pan from `x` 30 turns the page instead.
-15. **A link's pager.** `sim open hymns/600 --expect label=600`, then swipe left. → 601 at once, with no jump on the first frame.
-16. **Syllables, chords off (`reader-syllables`).** `sim open hymns/100 --expect "label=Stanza 1"` with chords off, `sim shot syllables`. → `id=syllable-1-1-1` is in the raw snapshot's tree beneath a `line` (on iOS each word is one text named by its first syllable, chords-and-capo.md); the shot shows muted hyphens inside words and no word split across rows. On the web, `agent-browser --session verify-hymnal eval` counts `[data-testid^="syllable-"]` (more than the 24 `line`s) and no `[data-testid^="chord-"]`.
+**The journey:** `sim journey hymn-reader`. Hymn 100 by deep link (`hymn-reader`), a scroll to `Stanza 3` and back, the player sheet (`reading`) scrolled down to its reading settings (`reading-controls`) and closed by its grabber (`reading-close`), a relaunch to the list (`list`), hymn 3 from the list, a swipe to 4 and back to 3 (`sim scroll screen right` and `left`), `sim back` to the list (`reader-back`), hymn 3 again and a pan from the left edge back to the list (`left-edge`), then hymn 100's syllables (`reader-syllables`).
+
+Read in the receipts:
+
+- `hymn-reader`: `100`, `Great Is Thy Faithfulness`, `Stanza 1`, `Refrain`; on iOS the open line's `detail.prompts` is 0 or 1.
+- `reading-controls`: the group `Reading`: `Text size` `100%`, `Font` (`System` checked), `Line spacing` (`Normal` checked), `Keep screen on` off.
+- `swipe-next`: the header title and `id=hymn-number` read 4.
+- `reader-back` and `left-edge`: the Hymns list at its place, not hymn 3 or 4.
+- `reader-syllables`: `id=syllable-1-1-1` beneath a `line` (each word one text named by its first syllable); the shot shows muted hyphens inside words and no word split across rows.
+
+By hand:
+
+1. **The head.** `sim open hymns/15 --expect "label=Stanza 1"`, then the frames from `agent-device snapshot --json` (the topic, the number, the title). → `number.x + number.width <= title.x`, their vertical centres within half a line, the topic above both. Read the frames only, then trash the snapshot.
+2. **Page height.** On hymn 100, the `rect` of every `hymn-scroll` from the raw snapshot. → each as tall as its `pager-page` (670 pt on a 402 pt wide simulator with the bar under the pager), not as its words.
+3. **Largest text.** In the player sheet, `sim gesture pan id=dial-size -300 0 --ms 200`. → `188%`; close the sheet; the page's words and chords larger. At that size, on a hymn with a long line, the second row's first word lies at least one indent (40 pt) right of the line's first word. Read the frames only.
+4. **Kept.** `sim tap Serif`, `sim tap Roomy`, `sim relaunch`, open the player sheet again. → the same size, `Serif` and `Roomy` checked. Put each back (`Text size 100%`, `System`, `Normal`, `Keep screen on` off).
+5. **A search's pager.** Search `3`, open the second result (30), `sim scroll screen right` → 31, the third result. `left` twice → 30, then 3 (not 29). `sim back` → the results, `3` kept.
+6. **The left edge, everywhere** (the owner's rule: "if we swipe directly at the left edge, it should go back"). `sim gesture edge-pan` after two swipes (4 → 3 → 2), on hymn 1 with `--y 750`, on a deep link to 600 with `--y 200`, and with the bar docked (a hymn playing, `Sound` off) with `--y 812`: each goes back. A pan from `x` 30 (`sim gesture pan 30,437 300 0 --ms 500`) turns the page instead.
+7. **A link's pager.** `sim open hymns/600 --expect label=600`, `sim scroll screen right` → 601 at once, no jump on the first frame.
 
 ## Gotchas
 
 - Hymn 100 has three stanzas, so `label=Stanza 4` is a `TargetMissing`, not a defect.
 - A deep link opened while an earlier iOS prompt is unanswered stacks prompts; `sim open` answers up to three. A snapshot that shows only the alert means a prompt is still up.
-- The sheet opens at 0.7 of the screen, which shows every row at the default system text size; at a larger one, drag its grabber up for the rest.
+- The player sheet opens at half the screen (detents 0.5 and 1, `app/(hymnal)/_layout.tsx`): the bar's controls, `Position`, `Chords` and the dials show, and the `Reading` group lies below the fold. Scroll to `Keep screen on` first (`reading-controls`); the scroll lifts the sheet to full height.
+- `sim back` does not close the player sheet at full height (`in-app back control is not available`): pan its grabber down, `sim gesture pan "role=button label=Sheet Grabber" 0 760 --ms 400`.
+- After `sim open hymns/100` and then `sim open /`, a hymn opened from the list has no `Hymns` back button on iOS, and `sim back` fails with `in-app back control is not available` (measured 2026-10-30). The journey reaches the list by `sim relaunch` instead; after it, the back button shows.
 - On iOS a line with chords over its syllables is not one element: its chords keep their `chord-<p>-<l>-<n>` ids at both alignment levels. Each boxed run reads its syllables' text without visual join or trailing hyphens, after its separately accessible chords. `apps/hymnal/src/reader/SyllableWords.test.tsx` holds that paragraph label and reading order, including iOS's fallback to all inline text. A line with chords off reads as one element named by the whole line.
-- `sim` has no swipe: pages turn by `agent-device gesture pan` on the drive's session. A pan that starts within 20 pt of the left edge is the back pan, so a swipe right starts mid-screen.
+- Pages turn by `sim scroll screen right` and `left`, which drag mid-screen. A pan that starts within 20 pt of the left edge is the back pan (`sim gesture edge-pan`), so a swipe right starts mid-screen.
 - The web has no pager: one page per route, and a swipe does nothing there.
 - A hymn opened by link has no back button and the header no other button: `sim back --in-app` there finds nothing to tap. Go back with the edge pan or a new `sim open /`.
 - On iOS a stanza's group is read as text named `Stanza <n>`; on the web it is a `group` with that `aria-label`. `label=` matches both.

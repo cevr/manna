@@ -25,7 +25,7 @@ import { HttpClient, HttpClientError } from 'effect/http';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
 import { runSim } from './command.ts';
-import type { Place } from './drive.ts';
+import { DriveLive, type Place } from './drive.ts';
 import { Result, type Session } from './result.ts';
 
 /** How the stand-in answers one run: its exit code and stdout, or a run that never ends. */
@@ -137,7 +137,13 @@ const sim = (
         path.join(state, 'session.json'),
         encodeJson(session(drive.value, out)),
       );
-    const place: Place = { app: '/app', state, script: '/app/scripts/sim.ts' };
+    const place: Place = {
+      app: '/app',
+      state,
+      script: '/app/scripts/sim.ts',
+      features: path.join(state, 'features'),
+      warm: [],
+    };
     const printed: Array<string> = [];
     const console: Console.Console = {
       ...globalThis.console,
@@ -150,7 +156,7 @@ const sim = (
       ),
     );
     return { exit, printed: printed.map((line) => decodeResult(line)) };
-  }).pipe(Effect.provide(Layer.mergeAll(answers.layer, ServerDown)));
+  }).pipe(Effect.provide(Layer.provideMerge(DriveLive, Layer.mergeAll(answers.layer, ServerDown))));
 
 const Host = BunServices.layer;
 

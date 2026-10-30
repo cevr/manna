@@ -32,31 +32,27 @@ when the reader opens a hymn and comes back, or switches tabs and returns.
 - **Preconditions:** none beyond the baseline.
 - **States:** default. Focus-visible, open, loading, empty and error are n/a (the hymns are compiled in).
 - **Regression:** `apps/hymnal/test/browser/list.slow.test.ts`, `apps/hymnal/src/reader/back.test.tsx`; the lists: `apps/hymnal/src/reader/pager.slow.test.ts` (the reader's lists, the Recent header and screen), `apps/hymnal/src/reader/lists.test.ts`, `apps/hymnal/src/reader/rows.test.ts`, `apps/hymnal/src/settings.test.ts`, the field over the list's top: `apps/hymnal/src/home/reveal.test.ts` (when it turns) and `apps/hymnal/src/reader/pin.test.ts` (the pin under it), `apps/hymnal/src/feel/feel.slow.test.tsx` (the `section` cue as a topic takes the pin, and `Favourite`'s chimes).
-- **Steps 6 to 14 change the app's data:** the lists stay on the simulator until the app is reinstalled or erased.
 
-1. **First screen.** `sim open / --expect "role=link label=1, Praise to the Lord"`. → `ok`; the snapshot lists rows `1, Praise to the Lord`, `2, All Creatures of Our God and King`.
-2. **Scroll.** `sim scroll "role=link label=31, Tell Out My Soul" down` (any row below the fold). → `ok`; the row is on screen.
-3. **Open a row.** `sim tap "role=link label=31, Tell Out My Soul"`. → `ok`; the reader shows `Stanza 1` (`sim snapshot`).
-4. **Back keeps the place.** `sim back`. → `ok`; the snapshot still shows the row of step 2, not `1, Praise to the Lord` at the top.
-5. **Proof.** `sim snapshot` and `sim shot` after steps 2 and 4: the same rows on screen.
-6. **Favourite.** Open hymn 3, `sim tap "role=button label=Favourite"`. → the snapshot shows `Favourite` `[selected]`. `sim back`. → the list starts `Recent`, then `3, …, favourite`; no row is named `Favourites`. Scroll to hymn 3 under its topic: its row is named `3, …, favourite` too, and `sim shot` shows a star at the row's right end, as tall as the number; a row next to it has no star.
-7. **Recent.** Open hymn 1, `sim back`. → `Recent` lists `1, …` then `3, …, favourite`.
-8. **Home shows five.** Open hymns 2, 4, 5 and 6 from the list, each followed by `sim back`. → `Recent` lists five rows, `6, …`, `5, …`, `4, …`, `2, …`, `1, …`; hymn 3, the first opened, is not among them, and its row under its topic keeps its star.
-9. **Kept.** `xcrun simctl terminate booted im.cvr.hymnal`, then `xcrun simctl launch booted im.cvr.hymnal`. → `Recent` as in step 8, and hymn 3's row still named `3, …, favourite`.
-10. **A list's pager.** Press the `5, …` row under `Recent` by its ref (`agent-device press @eN --session verify-hymnal`: the label also names the row under its topic), then swipe left (`agent-device gesture pan 350 450 -300 0 250 --session verify-hymnal`). → the page is hymn 6, the next in number order, not 4 (the next in Recent).
-11. **Place with a new Recent row.** Scroll deep, read a row's `y` (`agent-device snapshot --json`), open a hymn not yet in Recent, `sim back`. → the row's `y` is unchanged. From the top, the new hymn shows first under `Recent`.
-12. **See all.** From the top, `sim tap "role=button label=Recent, see all"`. → the header reads `Recent`; the rows are every hymn opened in steps 6 to 11, most recent first (after step 8 alone: `6`, `5`, `4`, `2`, `1`, `3, …, favourite`), hymn 3 starred.
-13. **The Recent screen's pager.** Press its `4, …` row (`role=link label=4, …`), swipe left (`agent-device gesture pan 350 450 -300 0 250 --session verify-hymnal`). → the page is hymn 2, the next in the full list. Swipe again twice: hymn 1, then hymn 3, which the home shelf no longer shows.
-14. **Back to Recent, then home.** Pan from the left edge (`agent-device gesture pan 1 450 300 0 250 --session verify-hymnal`). → the Recent screen, its order now led by the hymn last shown. `sim back`. → the home list, its `Recent` five rows.
+**The journey:** `sim journey hymn-list`. The first screen (`hymn-list`), a scroll to row 31, open it and come back to the same place (`back-keeps-place`), then the field over the list: to the top, four screens down until it is gone (`list-search-hide`), one up until it shows (`list-search-reveal`), a tap into search mode and `Cancel`. It opens hymn 31, which joins `Recent` (data, not a stored choice).
 
-15. **The field over the list (phone).** `sim open / --expect "label=Hymns"`, `sim scroll "label=Number, title or first line" up`. → one node named `Number, title or first line`, under the title. `sim scroll screen down` four times. → no node of that name (`agent-device snapshot --json`): the list's own field scrolled away, the shown one is out of reach. `sim scroll screen up`. → one node of that name, its `y` just under the status bar (about 70 on an iPhone 17 Pro); the first hymn row's `y` is below its bottom.
-16. **Away again.** `sim scroll screen down`. → no node of that name.
-17. **Tap and place.** `sim scroll screen up`, read the first hymn row under the field, `sim tap "role=button label=Number, title or first line"`. → search mode (the search box, `Cancel`). `sim tap label=Cancel`. → the same first row, the field still shown. Open that row, `sim back`. → the same first row.
-18. **The pin under it.** On a Release build, `bun scripts/sticky.ts` (SKILL.md, Helpers), whose `slow` and `fast` passes scroll up and so show the field: the pinned topic row is off by no more than 1 pt in any frame, flush under the shown field. The check reads how far the field reaches from a column through its box; a frame within a slide of a frame with the box may rest anywhere in the field's 8 pt margin under the bare place, where the box is gone but the layer is not. Without a recording, `pin.test.ts` holds the rule and `HymnList.native.slow.test.ts` holds the pin to the field's cover.
+Read in the receipts:
+
+- `scroll` and `back-keeps-place`: the same rows on screen; not `1, Praise to the Lord` at the top.
+- `list-search-reveal`: one node named `Number, title or first line`, its `y` just under the status bar (about 70 on an iPhone 17 Pro), the first row's `y` below its bottom.
+- `search-cancel`: the same first row as before the tap, the field still shown.
+
+By hand (these change the app's data; the lists stay until the app is reinstalled or erased):
+
+1. **Favourite.** Open hymn 3, `sim tap "role=button label=Favourite"` → `Favourite` `[selected]`. `sim back` → the list starts `Recent`, then `3, …, favourite`; no row named `Favourites`. Under its topic the row is `3, …, favourite` too, and `sim shot` shows a star at its right end, as tall as the number.
+2. **Recent, five.** Open hymns 1, 2, 4, 5 and 6 from the list, each with `sim back`. → `Recent` lists `6, …`, `5, …`, `4, …`, `2, …`, `1, …`; hymn 3 not among them, its row under its topic still starred. `sim relaunch` → the same.
+3. **A list's pager.** Press the `5, …` row under `Recent` by its ref (`agent-device press @eN --session verify-hymnal`: the label also names the row under its topic), then `sim scroll screen right`. → hymn 6, the next in number order, not 4.
+4. **Place with a new Recent row.** Deep in the list, read a row's `y`, open a hymn not yet in Recent, `sim back`. → the row's `y` unchanged; from the top, the new hymn first under `Recent`.
+5. **See all.** `sim tap "role=button label=Recent, see all"`. → the header `Recent`; every hymn opened, most recent first, hymn 3 starred. Press its `4, …` row, `sim scroll screen right` → hymn 2; twice more → 1, then 3. `sim gesture edge-pan` → the Recent screen, led by the hymn last shown. `sim back` → home.
+6. **The pin (`list-search-pin`).** On a Release build, `bun scripts/sticky.ts` (SKILL.md, Helpers): the pinned topic row off by no more than 1 pt in any frame, flush under the shown field. Without a recording, `pin.test.ts` holds the rule and `HymnList.native.slow.test.ts` holds the pin to the field's cover.
 
 ## Gotchas
 
-- A favourite's row name ends `, favourite`: a `--expect` on `label=<n>, <title>` alone misses it once the hymn is starred. Take the star off (step 6 again) at the end of the drive.
+- A favourite's row name ends `, favourite`: a `--expect` on `label=<n>, <title>` alone misses it once the hymn is starred. Take the star off (by hand 1 again) at the end of the drive.
 - On iOS a row's link and its group share one name: a target without `role=link` fails with `AMBIGUOUS_MATCH`.
 - On a hymn opened from the list, `Hymns` names both the back button and the tab (`role=button label=Hymns` is `AMBIGUOUS_MATCH` on iOS): go back with `sim back`, and use the tab only from another tab.
 - On the web a screen is mounted anew when the reader returns, so a place kept on the web is the app's own restore, not a cached view: check it after the list has drawn (`--expect`), never after a fixed sleep.

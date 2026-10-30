@@ -1,0 +1,112 @@
+{
+  "feature": "player",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "player-idle",
+      "action": "relaunch",
+      "expect": [{ "shows": "label=Find a hymn by number" }]
+    },
+    {
+      "name": "player-bar",
+      "action": "open",
+      "link": "hymns/100",
+      "expect": [
+        { "shows": "label=Play hymn 100" },
+        { "shows": "label=Open player" },
+        { "shows": "label=Sound" },
+        { "shows": "id=key-button" },
+        { "hides": "label=Position" }
+      ]
+    },
+    {
+      "name": "player-full",
+      "action": "tap",
+      "target": "label=Open player",
+      "expect": [{ "shows": "label=Sheet Grabber" }, { "shows": "label=Position" }]
+    },
+    {
+      "name": "sheet-close",
+      "action": "back",
+      "expect": [{ "shows": "label=Open player" }]
+    },
+    {
+      "name": "sound-off",
+      "action": "tap",
+      "target": "label=Sound",
+      "expect": [{ "shows": "label=Play hymn 100" }]
+    },
+    {
+      "name": "player-spring",
+      "action": "tap",
+      "target": "label=Play hymn 100",
+      "timeout": 30,
+      "expect": [{ "shows": "label=Pause hymn 100" }, { "shows": "id=seek" }]
+    },
+    {
+      "name": "player-seek-bar",
+      "action": "gesture",
+      "from": "id=seek",
+      "dx": -60,
+      "dy": 0,
+      "ms": 500,
+      "expect": [{ "shows": "label=Pause hymn 100" }, { "hides": "label=Sheet Grabber" }]
+    },
+    {
+      "name": "player-sheet-reader",
+      "action": "gesture",
+      "from": "label=Open player",
+      "dx": 0,
+      "dy": -120,
+      "ms": 300,
+      "expect": [
+        { "shows": "label=Sheet Grabber" },
+        { "shows": "label=Position" },
+        { "shows": "label=Pause hymn 100" }
+      ]
+    },
+    {
+      "name": "player-reading",
+      "action": "scroll",
+      "target": "label=Keep screen on",
+      "direction": "down",
+      "expect": [{ "shows": "label=Text size" }]
+    },
+    {
+      "name": "sheet-close-again",
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 760,
+      "ms": 400,
+      "expect": [{ "shows": "label=Pause hymn 100" }, { "hides": "label=Sheet Grabber" }]
+    },
+    {
+      "name": "pause",
+      "action": "tap",
+      "target": "label=Pause hymn 100",
+      "expect": [{ "shows": "label=Play hymn 100" }]
+    },
+    {
+      "name": "sound-put-back",
+      "action": "tap",
+      "target": "label=Sound",
+      "expect": [{ "shows": "label=Play hymn 100" }]
+    },
+    {
+      "name": "player-stack",
+      "action": "open",
+      "link": "hymns/3",
+      "expect": [{ "shows": "label=Play hymn 3" }]
+    },
+    {
+      "name": "stack-back",
+      "action": "gesture",
+      "from": "3,437",
+      "dx": 200,
+      "dy": 0,
+      "ms": 300,
+      "expect": [{ "shows": "label=Play hymn 100" }, { "hides": "label=Play hymn 3" }]
+    }
+  ]
+}

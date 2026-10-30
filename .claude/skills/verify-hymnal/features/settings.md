@@ -30,18 +30,20 @@ played on, as their licences ask; the app's version is not shown.
 
 ## Driving it with sim
 
-- **Preconditions:** the appearance is `System`, the chord style `Simple` and `Sounds and haptics` on (the defaults); put all three back at the end.
+- **Preconditions:** the appearance `System`, the chord style `Simple` and `Sounds and haptics` on (the defaults); the journey puts all three back.
 - **States:** default, open (the chosen radio). Focus-visible, loading, empty and error are n/a.
 - **Regression:** `apps/hymnal/src/settings.test.ts`, `apps/hymnal/src/home/settings.test.tsx`, `apps/hymnal/src/reader/reader.slow.test.tsx`, `apps/hymnal/src/theme.test.ts`, `apps/hymnal/src/about.test.tsx`, `apps/hymnal/src/feel/feel.slow.test.tsx` (the radios' `choose`, and `Sounds and haptics` off and on).
 
-1. **Open.** `sim open settings --expect label=Dark`. → `ok`; the snapshot holds `Appearance` and `System` checked.
-2. **Choose Dark.** `sim tap label=Dark`. → `ok`; the screenshot is dark, the snapshot has `Dark` checked.
-3. **Second view.** `sim tap "role=button label=Hymns"`, then `sim tap "role=button label=Settings"`. → `ok`; `Dark` still checked, the list was dark too (`sim shot`).
-4. **Put it back.** `sim tap label=System`. → `ok`; `System` checked.
-5. **About.** `sim snapshot about`. → the tree holds the heading `About`, `Salamander Grand Piano`, `CC BY 3.0` as a link, and `VS Chamber Orchestra 2`.
-6. **Chord style (`settings-chords`).** `sim open settings --expect label=Advanced`. → the radio group `Chord style`, `Simple` checked. `sim tap label=Advanced`. → `Advanced` checked. `sim open hymns/3 --expect "label=Stanza 1"`, chords on (if `id=key-button` reads `Chords off`, hold it: `agent-device longpress` at its middle, then read it about 10 s later; `label=Chords` now matches only the player sheet's switch). → `chord-1-1-5` reads `Dsus4 Dsus2`. Relaunch (iOS `xcrun simctl terminate verify-hymnal im.cvr.hymnal`; web a reload), `sim open settings --expect label=Advanced`. → `Advanced` still checked; on hymn 3 `chord-1-1-5` still reads `Dsus4 Dsus2`. Then the chords-and-capo steps 1 to 9 on hymn 100 read as they always have.
-7. **Put the style back.** `sim open settings --expect label=Simple`, `sim tap label=Simple`, chords off on a hymn. → `Simple` checked.
-8. **Sounds and haptics (`settings-feel`).** `sim open settings --expect "label=Sounds and haptics"`. → the snapshot holds the switch `Sounds and haptics` after `Advanced` and before `About`, on (iOS `[checked]` or value 1; web `checked`). `sim tap "label=Sounds and haptics"`. → off. Relaunch (iOS `xcrun simctl terminate verify-hymnal im.cvr.hymnal`; web a reload), `sim open settings --expect "label=Sounds and haptics"`. → still off. `sim tap "label=Sounds and haptics"`. → on again.
+**The journey:** `sim journey settings`. Settings (`settings`), `Dark`, the sheet dragged down by its grabber (`leave`) and `Settings` again (`second-view`), `System`, a scroll down to the credits (`about`), `Advanced` (`settings-chords`), `Sounds and haptics` off (`settings-feel`), `sim relaunch` and Settings again with `Advanced` (`kept`), then `Simple`, a scroll to `Sounds and haptics` still off (`kept-feel`), it on, and the sheet dragged down (`close`).
+
+Read in the receipts:
+
+- `settings`: `Appearance` with `System` checked. `dark`: the shot dark, `Dark` checked. `second-view`: `Dark` still checked, the shot dark.
+- `about`: the heading `About`, `Salamander Grand Piano`, `CC BY 3.0` as a link and `VS Chamber Orchestra 2`.
+- `settings-feel`: the switch `Sounds and haptics` after `Advanced` and before `About`, off (iOS value 0).
+- `leave` and `close`: no `Sheet Grabber`, the home screen. `kept`: `Advanced` checked after the relaunch; `kept-feel`: `Sounds and haptics` still off. `feel-put-back`: on (`[checked]` or value 1).
+
+By hand: **Chord style on a hymn (`settings-chords`).** With `Advanced` checked, `sim open hymns/3 --expect "label=Stanza 1"`, chords on (`sim hold id=key-button --settle 10` when `id=key-button` reads `Chords off`; `label=Chords` matches only the player sheet's switch). → `chord-1-1-5` reads `Dsus4 Dsus2`, and still after `sim relaunch`. Then chords-and-capo's journey reads as it always has. Put `Simple` back and chords off.
 
 ## Gotchas
 
@@ -49,7 +51,8 @@ played on, as their licences ask; the app's version is not shown.
 
 - On iOS the radios read as `other` elements with `[checked]`/`[unchecked]`; on the web as `radio` with `aria-checked`. Tap by label on both.
 - `Settings` names the tab and the screen title on iOS: use `role=button`.
-- On iOS Settings is a form sheet: `sim back` does not close it. Drag it down before you leave, or the next deep link stacks over it.
+- On iOS Settings is a form sheet with no header: `sim back` does not close it and no `Hymns` button shows. Drag it down by its grabber before you leave, or the next deep link stacks over it: `sim gesture pan "role=button label=Sheet Grabber" 0 400 --ms 300` at the half detent it opens at, `0 760 --ms 400` once a scroll has raised it to full (a pan that leaves the screen is refused, and a fast flick from full stops at half).
+- The switch reads as a cell and a switch both named `Sounds and haptics`: tap `role=switch label=Sounds and haptics`. Below the half detent it is not on screen: `sim scroll "label=Sounds and haptics" down` first.
 - A run that leaves `Dark` chosen changes the next run's screenshots: always end at `System`.
 - A run that leaves `Advanced` chosen changes the chords every later run reads: always end at `Simple`.
 - A run that leaves `Sounds and haptics` off silences every later run's `feel.md` steps: always end with it on.

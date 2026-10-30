@@ -1,0 +1,88 @@
+{
+  "feature": "search",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "home",
+      "action": "open",
+      "link": "/",
+      "expect": [{ "shows": "label=Number, title or first line" }]
+    },
+    {
+      "name": "search",
+      "action": "tap",
+      "target": "role=button label=Number, title or first line",
+      "expect": [{ "shows": "label=Cancel" }]
+    },
+    {
+      "name": "search-number",
+      "action": "fill",
+      "target": "label=Number, title or first line",
+      "value": "no 100",
+      "expect": [{ "shows": "label=100, Great Is Thy Faithfulness" }]
+    },
+    {
+      "name": "search-number-forms",
+      "action": "fill",
+      "target": "label=Number, title or first line",
+      "value": "#100",
+      "expect": [{ "shows": "label=100, Great Is Thy Faithfulness" }]
+    },
+    {
+      "name": "search-number-hymn",
+      "action": "fill",
+      "target": "label=Number, title or first line",
+      "value": "Hymn #100",
+      "expect": [{ "shows": "label=100, Great Is Thy Faithfulness" }]
+    },
+    {
+      "name": "search-about",
+      "action": "fill",
+      "target": "label=Number, title or first line",
+      "value": "hymns about the second coming",
+      "timeout": 15,
+      "expect": [{ "shows": "label=Hymns about this" }]
+    },
+    {
+      "name": "search-scripture",
+      "action": "fill",
+      "target": "label=Number, title or first line",
+      "value": "Psalm 23",
+      "expect": [{ "shows": "label=Cancel" }]
+    },
+    {
+      "name": "search-number-again",
+      "action": "fill",
+      "target": "label=Number, title or first line",
+      "value": "no 100",
+      "expect": [
+        { "shows": "label=100, Great Is Thy Faithfulness" },
+        { "hides": "label=Hymns about this" }
+      ]
+    },
+    {
+      "name": "search-open",
+      "action": "tap",
+      "target": "label=100, Great Is Thy Faithfulness",
+      "expect": [{ "shows": "label=Stanza 1" }]
+    },
+    {
+      "name": "query-kept",
+      "action": "back",
+      "expect": [{ "shows": "label=Cancel" }, { "shows": "label=100, Great Is Thy Faithfulness" }]
+    },
+    {
+      "name": "search-empty",
+      "action": "fill",
+      "target": "label=Number, title or first line",
+      "value": "zzzz",
+      "expect": [{ "shows": "label=No hymn matches “zzzz”." }]
+    },
+    {
+      "name": "search-cancel",
+      "action": "tap",
+      "target": "label=Cancel",
+      "expect": [{ "shows": "label=Number, title or first line" }, { "hides": "label=Cancel" }]
+    }
+  ]
+}

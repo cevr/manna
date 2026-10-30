@@ -1,0 +1,89 @@
+{
+  "feature": "about",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "hymn",
+      "action": "open",
+      "link": "hymns/100",
+      "expect": [{ "shows": "label=Stanza 1" }, { "shows": "label=About this hymn" }]
+    },
+    {
+      "name": "about-sheet",
+      "action": "tap",
+      "target": "role=button label=About this hymn",
+      "expect": [{ "shows": "label=Done" }, { "shows": "label=More like this" }]
+    },
+    {
+      "name": "about-close",
+      "action": "tap",
+      "target": "role=button label=Done",
+      "expect": [
+        { "shows": "label=Stanza 1" },
+        { "hides": "label=Sheet Grabber" },
+        { "hides": "label=More like this" }
+      ]
+    },
+    {
+      "name": "sheet-again",
+      "action": "tap",
+      "target": "role=button label=About this hymn",
+      "expect": [{ "shows": "label=More like this" }]
+    },
+    {
+      "name": "about-tunes",
+      "action": "scroll",
+      "target": "label=Sing to another tune",
+      "direction": "down",
+      "expect": [{ "shows": "label=Sing to another tune" }, { "shows": "id=about-topic-0" }]
+    },
+    {
+      "name": "about-topics",
+      "action": "tap",
+      "target": "id=about-topic-0",
+      "expect": [{ "shows": "label=FAITH AND TRUST" }, { "hides": "label=More like this" }]
+    },
+    {
+      "name": "tab-row",
+      "action": "relaunch",
+      "expect": [{ "shows": "label=Sections" }, { "hides": "label=Recent, see all" }]
+    },
+    {
+      "name": "tab-put-back",
+      "action": "tap",
+      "target": "label=Sections",
+      "expect": [{ "shows": "label=Recent, see all" }]
+    },
+    {
+      "name": "hymn-again",
+      "action": "open",
+      "link": "hymns/100",
+      "expect": [{ "shows": "label=About this hymn" }]
+    },
+    {
+      "name": "sheet-third",
+      "action": "tap",
+      "target": "role=button label=About this hymn",
+      "expect": [{ "shows": "label=More like this" }]
+    },
+    {
+      "name": "scripture-row",
+      "action": "scroll",
+      "target": "id=about-scripture-0",
+      "direction": "down",
+      "expect": [{ "shows": "id=about-scripture-0" }]
+    },
+    {
+      "name": "about-scripture",
+      "action": "tap",
+      "target": "id=about-scripture-0",
+      "expect": [{ "shows": "label=Cancel" }, { "hides": "label=More like this" }]
+    },
+    {
+      "name": "search-cancel",
+      "action": "tap",
+      "target": "label=Cancel",
+      "expect": [{ "shows": "label=Number, title or first line" }]
+    }
+  ]
+}

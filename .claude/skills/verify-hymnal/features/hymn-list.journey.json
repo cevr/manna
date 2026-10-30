@@ -1,0 +1,87 @@
+{
+  "feature": "hymn-list",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "hymn-list",
+      "action": "open",
+      "link": "/",
+      "expect": [
+        { "shows": "role=link label=1, Praise to the Lord" },
+        { "shows": "role=link label=2, All Creatures of Our God and King" }
+      ]
+    },
+    {
+      "name": "scroll",
+      "action": "scroll",
+      "target": "role=link label=31, Tell Out My Soul",
+      "direction": "down",
+      "expect": [{ "shows": "role=link label=31, Tell Out My Soul" }]
+    },
+    {
+      "name": "open-row",
+      "action": "tap",
+      "target": "role=link label=31, Tell Out My Soul",
+      "expect": [{ "shows": "label=Stanza 1" }, { "shows": "label=Play hymn 31" }]
+    },
+    {
+      "name": "back-keeps-place",
+      "action": "back",
+      "expect": [
+        { "shows": "role=link label=31, Tell Out My Soul" },
+        { "hides": "role=link label=1, Praise to the Lord" }
+      ]
+    },
+    {
+      "name": "list-top",
+      "action": "scroll",
+      "target": "label=Number, title or first line",
+      "direction": "up",
+      "expect": [{ "shows": "label=Number, title or first line" }]
+    },
+    {
+      "name": "down-1",
+      "action": "scroll",
+      "target": "screen",
+      "direction": "down"
+    },
+    {
+      "name": "down-2",
+      "action": "scroll",
+      "target": "screen",
+      "direction": "down"
+    },
+    {
+      "name": "down-3",
+      "action": "scroll",
+      "target": "screen",
+      "direction": "down"
+    },
+    {
+      "name": "list-search-hide",
+      "action": "scroll",
+      "target": "screen",
+      "direction": "down",
+      "expect": [{ "hides": "label=Number, title or first line" }]
+    },
+    {
+      "name": "list-search-reveal",
+      "action": "scroll",
+      "target": "screen",
+      "direction": "up",
+      "expect": [{ "shows": "label=Number, title or first line" }]
+    },
+    {
+      "name": "list-search-tap",
+      "action": "tap",
+      "target": "role=button label=Number, title or first line",
+      "expect": [{ "shows": "label=Cancel" }]
+    },
+    {
+      "name": "search-cancel",
+      "action": "tap",
+      "target": "label=Cancel",
+      "expect": [{ "shows": "label=Number, title or first line" }, { "hides": "label=Cancel" }]
+    }
+  ]
+}

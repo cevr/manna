@@ -12,12 +12,15 @@
 import {
   Array as Arr,
   Clock,
+  Context,
   DateTime,
   Duration,
   Effect,
   FileSystem,
+  Layer,
   Option,
   Path,
+  Predicate,
   Schema,
   Stream,
 } from 'effect';
@@ -49,11 +52,17 @@ const DRIVER_SESSION = 'verify-hymnal';
 const short = Duration.seconds(30);
 const build = Duration.minutes(45);
 
-/** Where a drive lives: the app's folder, the state folder and this script. */
+/**
+ * Where a drive lives: the app's folder, the state folder, this script, the
+ * feature files the journeys sit beside, and the warm checkouts a drive
+ * refuses to run in.
+ */
 export interface Place {
   readonly app: string;
   readonly state: string;
   readonly script: string;
+  readonly features: string;
+  readonly warm: ReadonlyArray<string>;
 }
 
 /** What a step reports: the files it wrote and what it saw. */
@@ -250,6 +259,7 @@ const startServer = Effect.fn('Sim.startServer')(function* (
   place: Place,
   port: number,
   out: string,
+  hermesc: Option.Option<string>,
 ) {
   const args = [
     place.script,
@@ -262,7 +272,12 @@ const startServer = Effect.fn('Sim.startServer')(function* (
     place.state,
   ];
   const background = 'nohup "$0" "$@" >/dev/null 2>&1 & echo $!';
-  const pid = yield* succeed('/bin/sh', ['-c', background, 'bun', ...args], short);
+  // The dev server's iOS bundles compile with the Hermes compiler `boot` found.
+  const command = Option.match(hermesc, {
+    onNone: () => ['bun', ...args],
+    onSome: (compiler) => ['/usr/bin/env', `HERMESC_PATH=${compiler}`, 'bun', ...args],
+  });
+  const pid = yield* succeed('/bin/sh', ['-c', background, ...command], short);
   const parsed = Number.parseInt(pid.trim(), 10);
   if (!Number.isInteger(parsed))
     return yield* ToolFailed.make({ tool: '/bin/sh', args, exitCode: 0, output: `no pid: ${pid}` });
@@ -291,6 +306,7 @@ const serverUp = Effect.fn('Sim.serverUp')(function* (
   port: number,
   out: string,
   seconds: number,
+  hermesc: Option.Option<string>,
 ) {
   const taken = yield* Effect.isSuccess(answers(port));
   if (taken)
@@ -300,7 +316,7 @@ const serverUp = Effect.fn('Sim.serverUp')(function* (
       exitCode: -1,
       output: `port ${port} already answers; pick another of 8270-8279`,
     });
-  const pid = yield* startServer(place, port, out);
+  const pid = yield* startServer(place, port, out, hermesc);
   yield* ready(`the dev server on port ${port}`, seconds, answers(port)).pipe(
     Effect.onError(() => Effect.ignore(stopServer(pid))),
   );
@@ -422,6 +438,8 @@ export interface BootOptions {
   readonly port: number;
   readonly out: Option.Option<string>;
   readonly seconds: number;
+  /** The Hermes compiler the dev server builds iOS bundles with, as `HERMESC_PATH`. */
+  readonly hermesc: Option.Option<string>;
 }
 
 const stamp = Effect.map(DateTime.now, (now) => DateTime.formatIso(now));
@@ -433,7 +451,7 @@ export const boot = Effect.fn('Sim.boot')(function* (place: Place, options: Boot
     path.join(place.state, bootedAt.replaceAll(':', '-')),
   );
   const udid = yield* bootSimulatorFor(options);
-  const serverPid = yield* serverUp(place, options.port, out, options.seconds);
+  const serverPid = yield* serverUp(place, options.port, out, options.seconds, options.hermesc);
   const session: Session = {
     platform: options.platform,
     out,
@@ -451,7 +469,7 @@ export const boot = Effect.fn('Sim.boot')(function* (place: Place, options: Boot
   return outcome(
     options.platform,
     { session: sessionFile(place), out, server: `${out}/server.log` },
-    { udid, port: options.port, serverPid },
+    { udid, port: options.port, serverPid, hermesc: Option.getOrElse(options.hermesc, () => '') },
   );
 });
 
@@ -622,17 +640,27 @@ const confirmOpen = Effect.fn('Sim.confirmOpen')(function* (session: Session) {
   return answered;
 });
 
+/** How `open` opens: `terminate` stops the app first (iOS), so it launches afresh. */
+export interface OpenOptions {
+  readonly terminate?: boolean;
+}
+
 export const open = Effect.fn('Sim.open')(function* (
   place: Place,
   link: string,
   expect: Option.Option<string>,
   seconds: number,
+  options: OpenOptions = {},
 ) {
   const session = yield* readSession(place);
   const url = linkFor(session.platform, session.port, link);
   let prompts = 0;
   if (session.platform === 'ios') {
     const udid = yield* booted(session);
+    // A retried open starts the app afresh; an app that is not running has
+    // nothing to terminate, which is no failure.
+    if (options.terminate === true)
+      yield* Effect.ignore(succeed('xcrun', ['simctl', 'terminate', udid, BUNDLE_ID], short));
     // The driver's app session: `install` opens it, and a drive of an app
     // installed before this boot opens it here (the app comes forward, or
     // launches).
@@ -861,7 +889,170 @@ export const down = Effect.fn('Sim.down')(function* (place: Place) {
   yield* fs.makeDirectory(session.out, { recursive: true });
   const kept = `${session.out}/session.json`;
   yield* fs.rename(sessionFile(place), kept);
-  return outcome(session.platform, { session: kept }, { serverPid: session.serverPid });
+  return outcome(
+    session.platform,
+    { session: kept },
+    { serverPid: session.serverPid, port: session.port },
+  );
+});
+
+// ---------------------------------------------------------------------------
+// The journey's steps: see a target, pan, hold, relaunch, and clean the build.
+
+/** What `down --clean` deletes under the app, for good: the native build, the pods, the web export. */
+export const CLEAN_PATHS: ReadonlyArray<string> = ['ios/build', 'ios/Pods', 'dist'];
+
+export interface Point {
+  readonly x: number;
+  readonly y: number;
+}
+
+/** A pan from a point, or from the centre of a target, by `dx` and `dy` points over `ms`. */
+export interface Pan {
+  readonly from: Point | string;
+  readonly dx: number;
+  readonly dy: number;
+  readonly ms: number;
+}
+
+/** The target shows within `seconds`, or the step fails as `TargetMissing`. */
+export const sees = Effect.fn('Sim.sees')(function* (place: Place, text: string, seconds: number) {
+  const session = yield* readSession(place);
+  if (session.platform === 'ios') yield* booted(session);
+  yield* present(session, text, seconds);
+});
+
+const Rect = Schema.Struct({
+  x: Schema.Finite,
+  y: Schema.Finite,
+  width: Schema.Finite,
+  height: Schema.Finite,
+});
+const isRect = Schema.is(Rect);
+const isJson = Schema.is(Schema.Json);
+const decodeJson = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Json));
+
+/** The first rect in a driver's JSON answer, searched depth first. */
+const rectIn = (value: Schema.Json): Option.Option<typeof Rect.Type> => {
+  if (isRect(value)) return Option.some(value);
+  if (!Predicate.isObject(value)) return Option.none();
+  for (const inner of Object.values(value).filter(isJson)) {
+    const found = rectIn(inner);
+    if (Option.isSome(found)) return found;
+  }
+  return Option.none();
+};
+
+/** The centre of the target's rect on screen, in points, read from agent-device. */
+const centreOf = Effect.fn('Sim.centreOf')(function* (session: Session, text: string) {
+  yield* present(session, text, 10);
+  const answer = yield* device(['get', 'attrs', iosSelector(parseTarget(text)), '--json']);
+  const rect = Option.flatMap(decodeJson(answer), rectIn);
+  if (Option.isNone(rect))
+    return yield* TargetMissing.make({
+      target: text,
+      platform: session.platform,
+      driver: `no rect in the driver's answer: ${answer.slice(0, 400)}`,
+    });
+  const { x, y, width, height } = rect.value;
+  return { x: Math.round(x + width / 2), y: Math.round(y + height / 2) } satisfies Point;
+});
+
+/** Pan as a finger does (iOS): from a point or a target's centre, by `dx` and `dy`. */
+export const gesture = Effect.fn('Sim.gesture')(function* (place: Place, pan: Pan) {
+  const session = yield* readSession(place);
+  if (session.platform !== 'ios')
+    return yield* NotOnPlatform.make({ command: 'gesture', platform: session.platform });
+  const udid = yield* booted(session);
+  let from = pan.from;
+  if (Predicate.isString(from)) from = yield* centreOf(session, from);
+  const numbers = [from.x, from.y, pan.dx, pan.dy, pan.ms].map(String);
+  yield* inApp(udid, ['gesture', 'pan', ...numbers]);
+  return outcome(
+    session.platform,
+    {},
+    { x: from.x, y: from.y, dx: pan.dx, dy: pan.dy, ms: pan.ms },
+  );
+});
+
+/** Press and hold the target for `ms` (iOS), then wait `settle` seconds for what it opens. */
+export const hold = Effect.fn('Sim.hold')(function* (
+  place: Place,
+  text: string,
+  ms: number,
+  settle: number,
+) {
+  const session = yield* readSession(place);
+  if (session.platform !== 'ios')
+    return yield* NotOnPlatform.make({ command: 'hold', platform: session.platform });
+  yield* booted(session);
+  yield* present(session, text, 10);
+  yield* device(['longpress', iosSelector(parseTarget(text)), String(ms)]);
+  yield* Effect.sleep(Duration.seconds(settle));
+  return outcome(session.platform, {}, { target: text, ms, settle });
+});
+
+/** Start the app afresh: terminate and launch it (iOS), or reload the page (web). */
+export const relaunch = Effect.fn('Sim.relaunch')(function* (place: Place) {
+  const session = yield* readSession(place);
+  if (session.platform === 'ios') {
+    const udid = yield* booted(session);
+    // An app that is not running has nothing to terminate, which is no failure.
+    yield* Effect.ignore(succeed('xcrun', ['simctl', 'terminate', udid, BUNDLE_ID], short));
+    yield* openApp(udid);
+  } else yield* browser(['reload']);
+  return outcome(session.platform, {}, {});
+});
+
+/** How many times, 500 ms apart, `clean` looks for the stopped server's port to come free. */
+const PORT_FREE_LOOKS = 10;
+
+/** The pids listening on `port`, as lsof lists them; empty when it is free. */
+const listenersOn = (port: number) =>
+  Effect.map(attempt('lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN', '-t'], short), (done) =>
+    done.output.trim(),
+  );
+
+/**
+ * Delete the build output under the app for good (`CLEAN_PATHS`), then
+ * check the stopped drive's port is free. A path whose real path is not
+ * that path under the app's real path (a symlink, here or above it) is
+ * refused before anything is deleted, never followed.
+ */
+export const clean = Effect.fn('Sim.clean')(function* (
+  place: Place,
+  port: Option.Option<number>,
+  platform: Platform,
+) {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const app = yield* fs.realPath(place.app);
+  const doomed: Record<string, string> = {};
+  for (const rel of CLEAN_PATHS) {
+    const full = path.join(place.app, rel);
+    if (!(yield* fs.exists(full))) continue;
+    const real = yield* fs.realPath(full);
+    if (real !== path.join(app, rel))
+      return yield* Unhealthy.make({
+        check: 'clean-path',
+        reason: `${full} resolves to ${real}, not to ${path.join(app, rel)}; nothing was deleted`,
+      });
+    doomed[rel] = full;
+  }
+  yield* Effect.forEach(Object.values(doomed), (full) => fs.remove(full, { recursive: true }));
+  if (Option.isSome(port)) {
+    let held = yield* listenersOn(port.value);
+    for (let look = 1; held !== '' && look < PORT_FREE_LOOKS; look += 1) {
+      yield* Effect.sleep(Duration.millis(500));
+      held = yield* listenersOn(port.value);
+    }
+    if (held !== '')
+      return yield* Unhealthy.make({
+        check: 'port-free',
+        reason: `port ${port.value} is still held by ${held.split('\n').join(', ')}`,
+      });
+  }
+  return outcome(platform, doomed, { removed: Object.keys(doomed).length });
 });
 
 // ---------------------------------------------------------------------------
@@ -948,3 +1139,77 @@ export const doctor = Effect.fn('Sim.doctor')(function* (place: Place) {
     },
   );
 });
+
+// ---------------------------------------------------------------------------
+// The drive as a service: the commands drive through `Drive`, so a test
+// stands a fake in its place and `sim.ts` provides `DriveLive`.
+
+/** What the live drive's steps need from the host. */
+type Host =
+  | ChildProcessSpawner.ChildProcessSpawner
+  | FileSystem.FileSystem
+  | Path.Path
+  | HttpClient.HttpClient;
+
+/** A step with its host requirements already met. */
+type Hosted<F> = F extends (...args: infer A) => Effect.Effect<infer X, infer E, Host>
+  ? (...args: A) => Effect.Effect<X, E>
+  : never;
+
+/** The drive's steps, each taking the place first. */
+export interface DriveMembers {
+  readonly readSession: Hosted<typeof readSession>;
+  readonly boot: Hosted<typeof boot>;
+  readonly install: Hosted<typeof install>;
+  readonly open: Hosted<typeof open>;
+  readonly tap: Hosted<typeof tap>;
+  readonly fill: Hosted<typeof fill>;
+  readonly back: Hosted<typeof back>;
+  readonly scroll: Hosted<typeof scroll>;
+  readonly shot: Hosted<typeof shot>;
+  readonly snapshot: Hosted<typeof snapshot>;
+  readonly record: Hosted<typeof record>;
+  readonly log: Hosted<typeof log>;
+  readonly doctor: Hosted<typeof doctor>;
+  readonly down: Hosted<typeof down>;
+  readonly sees: Hosted<typeof sees>;
+  readonly gesture: Hosted<typeof gesture>;
+  readonly hold: Hosted<typeof hold>;
+  readonly relaunch: Hosted<typeof relaunch>;
+  readonly clean: Hosted<typeof clean>;
+}
+
+export class Drive extends Context.Service<Drive, DriveMembers>()('@manna/hymnal-app/sim/Drive') {}
+
+/** The drive on this host: the simulator, the browser and the dev server. */
+export const DriveLive = Layer.effect(
+  Drive,
+  Effect.gen(function* () {
+    const host = yield* Effect.context<Host>();
+    const hosted =
+      <A extends ReadonlyArray<unknown>, X, E>(step: (...args: A) => Effect.Effect<X, E, Host>) =>
+      (...args: A) =>
+        Effect.provideContext(step(...args), host);
+    return Drive.of({
+      readSession: hosted(readSession),
+      boot: hosted(boot),
+      install: hosted(install),
+      open: hosted(open),
+      tap: hosted(tap),
+      fill: hosted(fill),
+      back: hosted(back),
+      scroll: hosted(scroll),
+      shot: hosted(shot),
+      snapshot: hosted(snapshot),
+      record: hosted(record),
+      log: hosted(log),
+      doctor: hosted(doctor),
+      down: hosted(down),
+      sees: hosted(sees),
+      gesture: hosted(gesture),
+      hold: hosted(hold),
+      relaunch: hosted(relaunch),
+      clean: hosted(clean),
+    });
+  }),
+);

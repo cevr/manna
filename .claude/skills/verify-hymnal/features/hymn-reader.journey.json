@@ -1,0 +1,106 @@
+{
+  "feature": "hymn-reader",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "hymn-reader",
+      "action": "open",
+      "link": "hymns/100",
+      "expect": [
+        { "shows": "label=Stanza 1" },
+        { "shows": "label=Refrain" },
+        { "shows": "id=hymn-number" }
+      ]
+    },
+    {
+      "name": "scroll-end",
+      "action": "scroll",
+      "target": "label=Stanza 3",
+      "direction": "down",
+      "expect": [{ "shows": "label=Stanza 3" }]
+    },
+    {
+      "name": "scroll-back",
+      "action": "scroll",
+      "target": "label=Stanza 1",
+      "direction": "up",
+      "expect": [{ "shows": "label=Stanza 1" }]
+    },
+    {
+      "name": "reading",
+      "action": "tap",
+      "target": "label=Open player",
+      "expect": [{ "shows": "label=Position" }]
+    },
+    {
+      "name": "reading-controls",
+      "action": "scroll",
+      "target": "label=Keep screen on",
+      "direction": "down",
+      "expect": [{ "shows": "label=Text size" }, { "shows": "label=Keep screen on" }]
+    },
+    {
+      "name": "reading-close",
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 760,
+      "ms": 400,
+      "expect": [{ "shows": "label=Open player" }, { "hides": "label=Sheet Grabber" }]
+    },
+    {
+      "name": "list",
+      "action": "relaunch",
+      "expect": [{ "shows": "role=link label=3, God Himself Is With Us" }]
+    },
+    {
+      "name": "from-list",
+      "action": "tap",
+      "target": "role=link label=3, God Himself Is With Us",
+      "expect": [{ "shows": "label=Play hymn 3" }]
+    },
+    {
+      "name": "swipe-next",
+      "action": "scroll",
+      "target": "screen",
+      "direction": "right",
+      "expect": [{ "shows": "label=Play hymn 4" }]
+    },
+    {
+      "name": "swipe-back",
+      "action": "scroll",
+      "target": "screen",
+      "direction": "left",
+      "expect": [{ "shows": "label=Play hymn 3" }]
+    },
+    {
+      "name": "reader-back",
+      "action": "back",
+      "expect": [
+        { "shows": "role=link label=3, God Himself Is With Us" },
+        { "hides": "label=Play hymn 3" }
+      ]
+    },
+    {
+      "name": "from-list-again",
+      "action": "tap",
+      "target": "role=link label=3, God Himself Is With Us",
+      "expect": [{ "shows": "label=Play hymn 3" }]
+    },
+    {
+      "name": "left-edge",
+      "action": "gesture",
+      "from": "3,437",
+      "dx": 200,
+      "dy": 0,
+      "ms": 300,
+      "expect": [{ "shows": "role=link label=3, God Himself Is With Us" }]
+    },
+    {
+      "name": "reader-syllables",
+      "action": "open",
+      "link": "hymns/100",
+      "expect": [{ "shows": "id=syllable-1-1-1" }, { "shows": "id=line" }]
+    }
+  ]
+}

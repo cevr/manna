@@ -51,6 +51,9 @@ export const Failure = Schema.Struct({
 });
 export interface Failure extends Schema.Schema.Type<typeof Failure> {}
 
+/** A failure as the one JSON line it prints. */
+export const encodeFailure = Schema.encodeSync(Schema.fromJsonString(Failure));
+
 /** One line of `sim.ts` output. */
 export const Result = Schema.Union([Success, Failure]);
 export type Result = typeof Result.Type;

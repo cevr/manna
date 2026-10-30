@@ -1,0 +1,143 @@
+{
+  "feature": "feel",
+  "platform": "ios",
+  "steps": [
+    {
+      "name": "feel-voice",
+      "action": "open",
+      "link": "hymns/100",
+      "expect": [{ "shows": "id=key-button" }]
+    },
+    {
+      "name": "chords-on",
+      "action": "hold",
+      "target": "id=key-button",
+      "settle": 2,
+      "expect": [{ "shows": "id=chord-1-1-1" }]
+    },
+    {
+      "name": "dials",
+      "action": "tap",
+      "target": "id=key-button",
+      "expect": [{ "shows": "id=dial-capo" }]
+    },
+    {
+      "name": "feel-cues",
+      "action": "gesture",
+      "from": "id=dial-capo",
+      "dx": -52,
+      "dy": 0,
+      "expect": [{ "shows": "label=Reset" }]
+    },
+    {
+      "name": "capo-down",
+      "action": "gesture",
+      "from": "id=dial-capo",
+      "dx": 52,
+      "dy": 0,
+      "expect": [{ "shows": "id=dial-capo" }]
+    },
+    {
+      "name": "key-up",
+      "action": "gesture",
+      "from": "id=dial-key",
+      "dx": -52,
+      "dy": 0,
+      "expect": [{ "shows": "label=Reset" }]
+    },
+    {
+      "name": "reset",
+      "action": "tap",
+      "target": "label=Reset",
+      "expect": [{ "shows": "id=key-button" }]
+    },
+    {
+      "name": "settings",
+      "action": "open",
+      "link": "settings",
+      "expect": [{ "shows": "label=Appearance" }]
+    },
+    {
+      "name": "feel-switch",
+      "action": "scroll",
+      "target": "role=switch label=Sounds and haptics",
+      "direction": "down",
+      "expect": [{ "shows": "role=switch label=Sounds and haptics" }]
+    },
+    {
+      "name": "feel-off",
+      "action": "tap",
+      "target": "role=switch label=Sounds and haptics",
+      "expect": [{ "shows": "label=Sounds and haptics" }]
+    },
+    {
+      "name": "settings-close",
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 760,
+      "ms": 400,
+      "expect": [{ "shows": "id=key-button" }, { "hides": "label=Sheet Grabber" }]
+    },
+    {
+      "name": "hymn-off",
+      "action": "open",
+      "link": "hymns/100",
+      "expect": [{ "shows": "id=chord-1-1-1" }]
+    },
+    {
+      "name": "dials-off",
+      "action": "tap",
+      "target": "id=key-button",
+      "expect": [{ "shows": "id=dial-capo" }]
+    },
+    {
+      "name": "capo-off",
+      "action": "gesture",
+      "from": "id=dial-capo",
+      "dx": -52,
+      "dy": 0,
+      "expect": [{ "shows": "label=Reset" }]
+    },
+    {
+      "name": "reset-off",
+      "action": "tap",
+      "target": "label=Reset",
+      "expect": [{ "shows": "id=key-button" }]
+    },
+    {
+      "name": "chords-put-back",
+      "action": "hold",
+      "target": "id=key-button",
+      "expect": [{ "hides": "id=chord-1-1-1" }]
+    },
+    {
+      "name": "settings-again",
+      "action": "open",
+      "link": "settings",
+      "expect": [{ "shows": "label=Appearance" }]
+    },
+    {
+      "name": "feel-switch-again",
+      "action": "scroll",
+      "target": "role=switch label=Sounds and haptics",
+      "direction": "down",
+      "expect": [{ "shows": "role=switch label=Sounds and haptics" }]
+    },
+    {
+      "name": "feel-put-back",
+      "action": "tap",
+      "target": "role=switch label=Sounds and haptics",
+      "expect": [{ "shows": "label=Sounds and haptics" }]
+    },
+    {
+      "name": "close",
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 760,
+      "ms": 400,
+      "expect": [{ "shows": "id=key-button" }, { "hides": "label=Sheet Grabber" }]
+    }
+  ]
+}
