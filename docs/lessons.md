@@ -4597,3 +4597,23 @@ The form of an entry, each field on its own line:
 - **Wrong:** Revealed paint showed only when the part in front moved; a back part turning out from under a still front part showed, as a hole, the paint the un-matte had cleared under the front part's rim.
 - **Cause:** The rule asked whether the part in front moved, not whether the two parts moved apart, and its test moved only the front part.
 - **Guard:** code: `packages/film/src/core/puppet.test.ts` `rasterOf shows no hole where a turned back part moves out from under a still front part`
+
+### unmatte-grain-keeps-cream-cloth
+
+- **Date:** 2026-10-29
+- **Kind:** retraction
+- **Said:** chose: "U is built: an opt-in un-matte floor (a part's pixel darker than the paper by more than its grain keeps its alpha)" (orchestrator decision)
+- **Source:** castcut-2/spec.md Decided, "Residual: U, then named gaps"; castcut-2/residual-measure.md
+- **Wrong:** The feast mother's grey-cream cloth, a few luma darker than her paper, was solved along the line to the ink to an alpha near 0, so her render showed paper holes in her veil, swaddle and bench. `keep` colours closed only a few pixels a view, and a lighter keep colour filled the sheet's own paper pockets.
+- **Cause:** The un-matte read every rim pixel near the paper's colour as paper; `keep` names cloth lighter than the paper, and nothing kept cloth just darker than it.
+- **Guard:** code: `packages/film/src/core/unmatte.test.ts` `keeps a rim px darker than the paper by more than its grain whole, colour and alpha`; the film skill's "Cloth near the paper" line says when a member sets `grain`
+
+### cutout-neighbour-part
+
+- **Date:** 2026-10-29
+- **Kind:** retraction
+- **Said:** chose: "A neighbour on the cast page is the neighbour's own art" (orchestrator decision)
+- **Source:** castcut-2/spec.md Decided; castcut-2/blocked.md
+- **Wrong:** Where two kept views' boxes overlap on the sheet (the villagers' man and the baby's head, Paul's heads-1 and heads-2, Jeremiah's heads-2 and heads-3), a view's parts held its neighbour's pixels, so its puppet carried another figure's art, or two views drew the same sheet pixels.
+- **Cause:** A view's cut took every pixel of its box; nothing set apart the pixels another view's box also holds.
+- **Guard:** skill: the check that no two views draw the same sheet pixel is a unit's acceptance row, not a product check, and which pixels are a neighbour's is read on the sheet. Carried by `.claude/skills/film/SKILL.md`: "Where two views' boxes overlap on the sheet, a still `neighbour` part in the view's `cut.ts` takes the other view's pixels, and his `puppets.ts` leaves it out of the puppet, so no part of a view holds a neighbour's pixels."

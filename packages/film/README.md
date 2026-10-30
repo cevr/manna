@@ -2705,7 +2705,16 @@ lighter or bluer at the rim) goes to the paper, so on another paper the
 figure carries no ring of the sheet's. Paper the box cuts off from the
 figure is cleared from the box's four corners, or, when the puppet names
 the edges its figure leaves through (`PuppetSpec.open`, a bust's `bottom`;
-`UnmatteOptions.open`), from every pixel of every other edge. Paint the
+`UnmatteOptions.open`), from every pixel of every other edge. Cloth near
+the paper's colour would be cleared as paper too, so a member whose
+lightest cloth lies within about 25 (RGB distance) of the paper sets two
+options. `keep` names his cloth colours: a pixel the line to the ink does
+not reach stays whole when it lies nearer one of them than the paper (a
+colour that fills any of the kept sheet's own paper pockets is dropped).
+`grain` is his paper's grain in luma (its p95 below the paper over the
+kept sheet's ground): a rim pixel darker than the paper by more than that
+keeps its colour at alpha 255. `grain` is off by default, so no pixel of a
+member that does not set it moves. Paint the
 un-matte clears from behind a front part's rim is kept on the part behind
 (`PuppetPart.revealed`) and laid by one rule (`revealedShown`, beside
 `sealsShown`) in every draw: `rasterOf`, the plain GL pass and the look
