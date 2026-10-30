@@ -12,7 +12,10 @@ any tab. `All at once` zooms the list out to one tile per group of the tab
 in use; a tile zooms back in at that group. On `Sections` a number rail on
 the list's right edge takes a drag to any hymn, with a bubble showing the
 number and section under the thumb. The tab in use is kept across launches,
-and each tab opens where the reader left it in this run of the app.
+and each tab opens where the reader left it in this run of the app. A `#`
+at the right of the floating bar (or alone where the bar docks, on the home
+list with no hymn held) opens three number drums: the list scrolls to the
+dialled hymn's row, `Open` opens it and `Play` plays it.
 
 ## Sub-features
 
@@ -25,6 +28,10 @@ and each tab opens where the reader left it in this run of the app.
 - `browse-all-at-once`: the title's `All at once` button, or a tap on a group's heading (its hint `Shows every group at once`), zooms out: a screen with the heading `<tab>, all at once` and `Done` over two columns of tiles, each a button `<group>, <n> hymns` (`1 hymn` for one; `, playing` after it for the group of the hymn the player has), with a strip of where its hymns lie from 1 to 695. The first row holds the group that was at the list's top. A tile zooms back in with its group's heading at the list's top; `Done` zooms back in where the list was. The zoom out and the zoom in are felt only (`zoom-out`, `zoom-in`). While it shows, the list beneath is out of VoiceOver's reach.
 - `browse-rail`: on `Sections`, a finger held 250 ms on the list's right edge (a 20 pt strip with six faint numbers from 1 to 695), then dragged, shows the thumb in the accent and a bubble beside it with the hymn number and section under it; the list follows the thumb, and each section the drag crosses is one `rail-tick`, felt only. Release leaves the list there. While the rail is held the list does not scroll under the finger. A tap or a flick in the strip, with no hold, is the list's: it reaches the row under it (a star, `See all`) or scrolls the list.
 - `browse-tab-kept`: the tab in use is a stored choice (`home.tab`, default `Sections`): a relaunch opens on it. Each tab's place is kept in memory only: back to a tab in the same run opens it where it was; a relaunch opens the kept tab at the list's top.
+- `browse-number`: a button `Find a hymn by number` (a `#`) sits at the right, over the floating bar while the bar shows (`player.md`, `player-bar`). A tap opens three drums over it, adjustables `Hundreds`, `Tens` and `Ones`, with `Open` and `Play` under them; the button's accessibility state is expanded while they show. The drums open on the bar's hymn, else on 1, and hold to 1–695: `Hundreds` stops at 0 and 6, `Tens` and `Ones` wrap. A drum is turned by a drag or a fling, as the key dial is (`chords-and-capo.md`, `chords-fling`), or by VoiceOver's swipe up and down, which says `<digit>, number <n>`. Each detent is the dial's thock and haptic (`feel.md`, `feel-cues`) while the player's `Sound` is on, and the haptic alone while it is off. While the drums show on the home list, the list scrolls to the dialled hymn's row (only an exact number; a number no row of the tab holds leaves the list where it is). `#` again, or a swipe down on the drums, closes them.
+- `browse-number-open`: `Open` opens the dialled hymn's page (`/hymns/<n>`) and closes the drums.
+- `browse-number-play`: `Play` starts the dialled hymn as the page's Play does (`player.md`, `player-swap-page`): it replaces the held hymn, sounds as `Sound` says, and closes the drums. A detent never starts a hymn.
+- `browse-number-idle`: with no hymn held, the home list shows the `#` alone at the right where the bar docks. No other screen shows it with no hymn held, and the list's end leaves room under it, so the last row is never under the `#`.
 
 ## How to get to it (user POV)
 
@@ -32,13 +39,15 @@ and each tab opens where the reader left it in this run of the app.
 - The title's `All at once` button, beside `Settings`; or a tap on a group's heading in any tab.
 - A hold, then a drag, on the right edge of the `Sections` list.
 - A topic row in `About this hymn` (`about.md`), which opens `Topics` at that topic.
+- `Find a hymn by number` at the right of the floating bar, or alone at the foot of the home list with no hymn held.
 
 ## Driving it with sim
 
 - **Preconditions:** the list at its top, so the tab row is on screen (`sim open /` on a fresh launch); for `browse-lists`, one hymn starred and one opened (`hymn-list.md`, steps 6 and 8); `Sounds and haptics` on for the cue lines (`feel.md`).
-- **States:** default, open (`All at once`), empty (`Lists` with no hymn: no heading). Focus-visible, loading and error are n/a (the hymns and indexes are compiled in).
-- **Regression:** `apps/hymnal/src/home/tabs.test.ts` (every tab's groups, tiles, `groupAt`), `apps/hymnal/src/home/TabRow.test.tsx`, `apps/hymnal/src/home/open.test.ts` (a row of every tab opens its hymn and pages in number order), `apps/hymnal/src/reader/rail-marks.test.ts`, `apps/hymnal/src/reader/pin.test.ts` (`topicStart`), `apps/hymnal/src/reader/About.test.tsx` (a topic row opens `Topics`), `apps/hymnal/src/feel/feel.test.ts` (the `tab`, `zoom-out`, `zoom-in` and `rail-tick` cues).
+- **States:** default, open (`All at once`, the drums), empty (`Lists` with no hymn: no heading). Focus-visible, loading and error are n/a (the hymns and indexes are compiled in).
+- **Regression:** `apps/hymnal/src/home/tabs.test.ts` (every tab's groups, tiles, `groupAt`), `apps/hymnal/src/home/TabRow.test.tsx`, `apps/hymnal/src/home/open.test.ts` (a row of every tab opens its hymn and pages in number order), `apps/hymnal/src/reader/rail-marks.test.ts`, `apps/hymnal/src/reader/pin.test.ts` (`topicStart`), `apps/hymnal/src/reader/About.test.tsx` (a topic row opens `Topics`), `apps/hymnal/src/feel/feel.test.ts` (the `tab`, `zoom-out`, `zoom-in` and `rail-tick` cues), `apps/hymnal/src/player/drums.test.ts` (each drum's digits, walls and wrap, the fling, a detent's thock or haptic by `Sound`, the dialled hymn's row), `apps/hymnal/src/player/bar.test.ts` (the find drums: `#`, a dial, `Open`, `Play` and the swipe down; where the `#` shows; the list end's room).
 - **Step 9 changes a stored choice:** put `Sections` back at the end.
+- **Sound:** steps 10 to 13 turn no drum and press no `Play` while the player's `Sound` is on; a drum's detent sounds with it on.
 
 1. **The tabs** (`browse-tabs`). `sim open /`, then `sim snapshot tabs`. → the snapshot lists `Sections` `[selected]`, `Lists`, `Topics`, `Metres`, `Scripture` in one row under the field (`other` elements on iOS, `tab` on the web).
 2. **Another tab** (`browse-topics`). `sim tap "label=Topics"`. → `ok`; the snapshot shows `Topics` `[selected]` and a `heading` named by the Topical index's first topic over rows `<n>, …`. Repeat with `Metres` and `Scripture` (`browse-metres`, `browse-scripture`): a `heading` named by a metre, then by a book.
@@ -49,6 +58,10 @@ and each tab opens where the reader left it in this run of the app.
 7. **A tile.** Open `All at once` again from a group's heading (`sim tap "role=heading label=<group>"`), then tap another tile by its whole label. → the list with that tile's group heading at its top.
 8. **The rail** (`browse-rail`). On `Sections`, touch the strip at `<width - 10>`, hold it at least 250 ms without moving, then drag down 400 pt (a pan that moves at once is the list's, Gotchas). → the list has moved down to a later section (`sim snapshot`), and the app log holds no `[feel] play` line for the ticks (felt only). The bubble cannot be read from the tree (Gotchas).
 9. **The tab is kept** (`browse-tab-kept`). `sim tap "label=Topics"`, relaunch (`sim open /` after a `sim install`, or quit and open the app). → `Topics` `[selected]` at the list's top. Put `Sections` back.
+10. **The `#` alone** (`browse-number-idle`). On a fresh install, with no hymn held, `sim open /`, then `sim snapshot number-idle`. → a button `Find a hymn by number` and no region `Player`. `sim scroll screen down` to the list's end. → the last row's `rect` ends above the button's. `sim open hymns/100`, then `sim back` with nothing played. → the home list's button again. `sim open settings --expect label=Dark`, then `sim snapshot`. → no button `Find a hymn by number`.
+11. **The drums** (`browse-number`). `sim open /`, then `sim tap "label=Find a hymn by number"`. → `ok`; the snapshot lists the adjustables `Hundreds`, `Tens` and `Ones` and the buttons `Open` and `Play`. `sim tap "label=Find a hymn by number"` again. → the drums are gone. To turn a drum, first turn the player's `Sound` off (`player.md`), then drag a drum or use VoiceOver's swipe up on it; → its value moves one digit a detent, and the list's rows move to the dialled hymn's row. Open the drums again and swipe down on them (`agent-device gesture pan <x> <y> 0 120 200 --session verify-hymnal`, from a drum's middle in the raw snapshot). → the drums are gone.
+12. **Open** (`browse-number-open`). Open the drums, then `sim tap "label=Open"`. → the reader shows `Stanza 1` of the dialled hymn (1 on a fresh install), and the drums are gone.
+13. **Play** (`browse-number-play`; once, with the player's `Sound` off). Turn `Sound` off first (the bar's `Sound` on a hymn page, `player.md`), back on the home list open the drums, then `sim tap "label=Play"`. → the bar shows `Pause hymn <n>` for the dialled hymn, and the drums are gone. `sim tap "label=Pause hymn <n>"` after.
 
 ## Gotchas
 
@@ -61,3 +74,5 @@ and each tab opens where the reader left it in this run of the app.
 - `All at once` covers the list: while it shows, the snapshot lists only its heading, `Done` and the tiles.
 - Topic, metre and book names hold no hymn words, but a row's label holds its title: match a row by its leading `<n>, ` and keep titles out of logs.
 - Android's Back does not close `All at once` (iOS is the target).
+- A drum's detent is the only touch on the drums that sounds: turn a drum or press `Play` only with the player's `Sound` off, and never on a shared room's speakers.
+- The `#` with no hymn held is on the home list only: on a hymn page it rides the page's own bar, and on `Settings` there is none. Read the home list for step 10.
