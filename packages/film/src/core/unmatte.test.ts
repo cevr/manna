@@ -369,6 +369,23 @@ describe('unmatte, a light px the figure encloses', () => {
     for (const [x, y] of slit) expect(px(out!, x, y)[3]).toBe(0);
   });
 
+  test("clears a light slit that runs diagonally from a mouth of the sheet's grain in his outline, its px joined only at corners", () => {
+    // darker than the paper by ΔE 3.67: the sheet's ground, which a 2.25 grain keeps whole
+    const GRAIN: Rgb = [239, 230, 212];
+    const slit = [
+      [8, 4],
+      [9, 5],
+      [10, 6],
+    ] as const;
+    const src = figure([
+      [8, 3, GRAIN],
+      ...slit.map(([x, y]) => [x, y, LIGHT] as const),
+      ...inkColumn(13),
+    ]);
+    const [out] = unmatte([src], S, S, PAPER, { grain: 2.25 });
+    expect(slit.map(([x, y]) => px(out!, x, y)[3])).toEqual([0, 0, 0]);
+  });
+
   test("keeps a light gap between his legs whole when a seam past the sheet's ground closes its mouth", () => {
     // ΔE 6.3 from the paper, darker by more than a 2.25 grain: kept whole, and no ground of the sheet's
     const SEAM: Rgb = [233, 222, 202];
@@ -377,7 +394,7 @@ describe('unmatte, a light px the figure encloses', () => {
     for (const [x, y] of gap(15)) expect(px(out!, x, y)).toEqual([...LIGHT, 255]);
   });
 
-  test('keeps an enclosed speck lighter than the paper by more than its grain (ΔE 2) whole', () => {
+  test("keeps an enclosed speck lighter than the paper by more than the paper's core (ΔE 2) whole", () => {
     const speck = [6, 7].flatMap((x) => [9, 10].map((y) => [x, y, LIGHT] as const));
     const [out] = unmatte([figure([...speck, ...inkColumn(8)])], S, S, PAPER);
     for (const [x, y] of speck) expect(px(out!, x, y)).toEqual([...LIGHT, 255]);

@@ -13,9 +13,9 @@
 // distance from that paper. A px so cleared, or left near-clear, that the
 // figure encloses (walled off from the ground and the frame by his inked
 // parts) is his light cloth, not paper: it takes the sheet's px back, unless
-// its clear region holds a pocket of the sheet's paper; a px of the paper
-// itself, within its grain, stays cleared. A member's cut-out may ask four things more of
-// it (`UnmatteOptions`): his cloth colours, so a light cloth the line does
+// its clear region holds a pocket of the sheet's paper or touches paper the
+// sheet shows open to the ground; a px within the paper's core (ΔE 2) stays
+// cleared. A member's cut-out may ask four things more of it (`UnmatteOptions`): his cloth colours, so a light cloth the line does
 // not reach is his and not paper; his thin parts, whose alpha is raised
 // until the colour that closes the sum is in range, so a speck keeps its
 // hue on another paper; the box's open edges, so paper the box cuts off
@@ -305,18 +305,24 @@ const restoreEnclosed = (
 };
 
 /**
- * The sheet's open paper and its pockets, 1 at each px. `open` is the run
- * (4-connected) of the ground and held px within `SHEET_GROUND` of the paper
- * that joins the ground or the frame's border: a gap the sheet shows open. A
- * pocket is each kept hole (such a run that `open` does not reach) holding
- * `POCKET` px of paper (within `PAPER_CORE`) or more, as the cut reads its
- * pockets.
+ * The sheet's open paper and its pockets, 1 at each px. `open` is the run of
+ * the ground and held px within `SHEET_GROUND` of the paper that joins the
+ * ground or the frame's border: a gap the sheet shows open. It is 8-connected,
+ * as the outside is, since paper that touches paper at a corner shows through
+ * on the sheet. A pocket is each kept hole (such a run that `open` does not
+ * reach) holding `POCKET` px of paper (within `PAPER_CORE`) or more, as the
+ * cut reads its pockets.
  */
 const sheetPocketsOf = ({ front, width, height }: Holders, fromPaper: (i: number) => number) => {
   const n = width * height;
   const step4 = (i: number) => sides(i, width, height);
   const groundLike = (i: number) => front[i] === -1 || fromPaper(i) <= SHEET_GROUND;
-  const open = flood(n, groundLike, (i) => front[i] === -1 || onFrame(i, width, height), step4);
+  const open = flood(
+    n,
+    groundLike,
+    (i) => front[i] === -1 || onFrame(i, width, height),
+    (i) => neighbours(i, width, height),
+  );
   const pockets = new Uint8Array(n);
   for (const hole of regionsOf(n, (i) => open[i] === 0 && groundLike(i), step4))
     if (hole.filter((i) => fromPaper(i) <= PAPER_CORE).length >= POCKET)
