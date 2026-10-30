@@ -222,6 +222,8 @@ interface Read {
   readonly lab: Rgb;
   /** How near `lab` a pixel is ground-like, ΔE76 (`groundColour`). */
   readonly near: number;
+  /** How near `lab` its own ground's pixels lie, its grain too, ΔE76: the farthest within `BORDER_GROUND`, never under `near`. */
+  readonly reach: number;
   /** 1 where the border reaches through ground-like pixels. */
   readonly ground: Uint8Array;
   /** 1 where ground-like but closed in by the figure: a hole. */
@@ -310,7 +312,14 @@ const groundOf = (r: Raster) => {
   const kept = new Set(pieces.labels.filter((l, i) => strips[i] === 1));
   for (let i = 0; i < n; i++)
     if (specks[i] === 1 && !kept.has(pieces.labels[i] ?? -1)) ground[i] = 1;
-  return { lab, near, like, ground };
+  // How far its own ground lies from its colour, grain and all: a farther
+  // speck in it (dust, a stray mark) is not the ground's colour.
+  let reach = near;
+  for (let i = 0; i < n; i++) {
+    const d = ground[i] === 1 ? deltaE(labs[i] ?? lab, lab) : 0;
+    if (d > reach && d <= BORDER_GROUND) reach = d;
+  }
+  return { lab, near, reach, like, ground };
 };
 
 /**
@@ -413,6 +422,10 @@ export const overGround = (posed: Raster, ground: Rgb): Raster => {
   return { width: posed.width, height: posed.height, rgba };
 };
 
+/** Whether a pixel of `of` lies within `within` (ΔE76) of the kept crop `c`'s ground colour. */
+const groundNear = (c: Read, of: Raster, within: number) => (i: number) =>
+  deltaE(labOf(rgbAt(of, i)), c.lab) <= within;
+
 /** How far from a kept hole a render hole that overlaps it is excused, Chebyshev pixels: the cut-out draws a kept hole up to 4 px wider than the sheet. */
 const POCKET_REACH = 4;
 
@@ -423,7 +436,10 @@ const POCKET_REACH = 4;
  * (a neighbour's pixels are its ground, `readCrop`). A component that overlaps a kept hole is that pocket
  * cut wider: its pixels within `POCKET_REACH` of the kept holes it overlaps
  * are excused. Any other component counts whole, even beside a pocket.
- * Partly see-through pixels (a seam's speck) never count. Measured on the
+ * Partly see-through pixels (a seam's speck) never count, nor do pixels the
+ * kept crop holds as near its ground as its own ground's pixels lie
+ * (`reach`): a speck of the sheet's paper the kept crop's figure closes
+ * round, which the cut cleared as paper. Measured on the
  * in-its-order cut-out views (`p2-pick.md`): no base-pass view fails, 200/200
  * planted 12 px blocks and 60/60 planted 2 x 24 px holes 3 px inside the
  * line are caught (44/50 at 1 px in). Counting alpha under 128 instead fails
@@ -436,7 +452,9 @@ const cutHolesOf = (c: Read, render: Raster) => {
   const clear = Uint8Array.from({ length: w * h }, (_, i) => Number(alpha(i) < 128));
   const comps = componentsOf(clear, w, h, false);
   const pockets = componentsOf(c.holes, w, h, false).labels;
-  const counts = (i: number) => alpha(i) === 0 && c.ground[i] === 0 && c.holes[i] === 0;
+  const sheetPaper = groundNear(c, c.r, c.reach);
+  const counts = (i: number) =>
+    alpha(i) === 0 && c.ground[i] === 0 && c.holes[i] === 0 && !sheetPaper(i);
   const overlaps = comps.components.map(() => new Set<number>());
   for (let i = 0; i < w * h; i++) {
     const [l, p] = [comps.labels[i] ?? -1, pockets[i] ?? -1];
@@ -467,7 +485,7 @@ const cutHolesOf = (c: Read, render: Raster) => {
 const readCrop = (r: Raster, neighbour: Uint8Array | undefined): Read | undefined => {
   const { width: w, height: h } = r;
   const n = w * h;
-  const { lab, near, like, ground } = groundOf(r);
+  const { lab, near, reach, like, ground } = groundOf(r);
   if (neighbour !== undefined) for (let i = 0; i < n; i++) if (neighbour[i] === 1) ground[i] = 1;
   const holes = new Uint8Array(n);
   const ink = new Uint8Array(n);
@@ -489,7 +507,7 @@ const readCrop = (r: Raster, neighbour: Uint8Array | undefined): Read | undefine
     }
   }
   if (top < 0) return undefined;
-  return { r, w, h, lab, near, ground, holes, ink, paper, left, right, top, bottom };
+  return { r, w, h, lab, near, reach, ground, holes, ink, paper, left, right, top, bottom };
 };
 
 /** A row: its value kept to hundredths and held to its bar. */
@@ -1114,7 +1132,7 @@ export const fitRows = (
   // whole paper, leave uncounted the pixels as near the kept crop's ground
   // as its ground-like ones. Taking them out before the strips are found
   // would cut a light cloth near that colour into new strips.
-  const sheetGround = (i: number) => deltaE(labOf(rgbAt(render, i)), c.lab) <= c.near;
+  const sheetGround = groundNear(c, render, c.near);
   const rs = count(
     thinStrips(rc.paper, rc.w, rc.h).map((s, i) => (s === 1 && !(cut && sheetGround(i)) ? 1 : 0)),
   );

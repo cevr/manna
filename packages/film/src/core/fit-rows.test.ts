@@ -296,6 +296,8 @@ const either =
 
 const CLEAR: Rgba = [0, 0, 0, 0];
 const SHEET_PAPER: Rgba = [...SHEET_GROUND, 255];
+/** A 2 px speck of the sheet's paper (ΔE 5.2 off its ground) in the ground: grain the flood steps round. */
+const GRAIN = boxOf([2, 4, 20, 22], [...PAPER, 255]);
 
 /** A posed crop read as the cut-out path reads it: over its own measuring ground. */
 const overOwn = (posed: Raster) => overGround(posed, measuringGround([posed]));
@@ -400,6 +402,21 @@ describe('fitRows over a cut-out crop', () => {
     const rim = crop(CLEAR, CREAM, boxOf([42, 44, 10, 22], SHEET_PAPER));
     const rows = fitRows(concept, overGround(rim, ground), { classes: { cream: CLASSES.cream } });
     expect(rowNamed(rows, 'slivers')?.value).toBe(0);
+  });
+
+  test("a speck of the sheet's paper inside the figure that the cut clears is no hole", () => {
+    const speck = [20, 23, 20, 23] as const;
+    const concept = crop(SHEET_PAPER, CREAM, either(GRAIN, boxOf(speck, [...PAPER, 255])));
+    const posed = crop(CLEAR, CREAM, boxOf(speck, CLEAR));
+    expect(rowNamed(fitRows(concept, overOwn(posed)), 'holes')?.value).toBe(0);
+  });
+
+  test("a 12 px hole in a light cloth is counted though the sheet's ground holds grain", () => {
+    const cloth: Rgb = [236, 232, 226];
+    expect(deltaE(labOf(cloth), labOf(SHEET_GROUND))).toBeLessThanOrEqual(15);
+    const concept = crop(SHEET_PAPER, cloth, GRAIN);
+    const posed = crop(CLEAR, cloth, boxOf([14, 26, 14, 26], CLEAR));
+    expect(rowNamed(fitRows(concept, overOwn(posed)), 'holes')?.value).toBe(144);
   });
 
   test("a neighbour's art that only the kept crop holds changes no row", () => {
