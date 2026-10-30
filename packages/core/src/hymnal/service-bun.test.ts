@@ -219,11 +219,25 @@ const writeSynthetic = (
   db.close();
 };
 
-const syntheticLayer = (mode: Parameters<typeof writeSynthetic>[1]) =>
+/**
+ * The service over a synthetic database: at a path `HYMNAL_DB_PATH` names (`override`),
+ * or at the default `~/.bible/hymnal.db` with no `HYMNAL_DB_PATH` set (`home`).
+ */
+const syntheticLayer = (
+  mode: Parameters<typeof writeSynthetic>[1],
+  at: 'override' | 'home' = 'override',
+) =>
   Layer.unwrap(
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const dir = yield* fs.makeTempDirectoryScoped({ prefix: 'hymnal-synthetic-' });
+      if (at === 'home') {
+        yield* fs.makeDirectory(`${dir}/.bible`);
+        writeSynthetic(`${dir}/.bible/hymnal.db`, mode);
+        return layerHymnalBun.pipe(
+          Layer.provide(ConfigProvider.layer(ConfigProvider.fromEnv({ env: { HOME: dir } }))),
+        );
+      }
       const file = `${dir}/corpus.db`;
       writeSynthetic(file, mode);
       const config = ConfigProvider.layer(
@@ -385,6 +399,15 @@ describe('versioned corpus reader', () => {
       expect(new Set(operations)).toEqual(
         new Set(['this hymnal.db has no indexes; run manna init to replace it']),
       );
+    }).pipe(Effect.provide(syntheticLayer('normalized', 'home'))),
+  );
+  it.effect('names the HYMNAL_DB_PATH file, which manna init does not replace', () =>
+    Effect.gen(function* () {
+      const service = yield* HymnalService;
+      const message = yield* failedOperation(service.getTopicHymns('Topic A'));
+      expect(message).toMatch(
+        /^the hymnal\.db at \/\S+\/corpus\.db has no indexes; replace that file, since manna init refreshes only ~\/\.bible\/hymnal\.db$/,
+      );
     }).pipe(Effect.provide(syntheticLayer('normalized'))),
   );
   it.effect('names the absent tables of a partly indexed database and still reads its hymns', () =>
@@ -396,7 +419,7 @@ describe('versioned corpus reader', () => {
           'index_tune_hymns, index_metres, index_metre_tune_hymns; run manna init to replace it',
       );
       expect((yield* service.getHymn(HymnId.make(1))).id).toBe(HymnId.make(1));
-    }).pipe(Effect.provide(syntheticLayer('partial'))),
+    }).pipe(Effect.provide(syntheticLayer('partial', 'home'))),
   );
   it.effect('reports an undecodable index row as a corpus error with a message', () =>
     Effect.gen(function* () {

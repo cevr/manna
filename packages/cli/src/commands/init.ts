@@ -23,7 +23,7 @@ import {
   type NativeFileArtifactSource,
   checkSqliteRefresh,
 } from '@manna/core/corpus-supply/bun';
-import { hymnalNeedsIndexes } from '@manna/core/hymnal/bun';
+import { hymnalIsIndexed, hymnalNeedsIndexes } from '@manna/core/hymnal/bun';
 import { Config, Console, Effect, FileSystem, Layer, Path, Schema } from 'effect';
 import { CliError, Command, Flag } from 'effect/cli';
 import { HttpClient, HttpClientResponse } from 'effect/http';
@@ -43,7 +43,7 @@ const DBS = {
     name: 'hymnal.db',
     url: `${GITHUB_RAW}/packages/core/data/hymnal.db`,
     description: 'SDA Hymnal (695 hymns and 225 readings)',
-    size: '~21 MiB',
+    size: '~22 MiB',
   },
 } as const;
 
@@ -72,6 +72,14 @@ const downloadFile = (url: string, dest: string, label: string) =>
           yield* file.writeAll(new Uint8Array(bytes));
         }),
       );
+      // A 200 whose body is not an indexed hymnal (a captive portal page, an old
+      // build) is removed with the staged file, and the database in place is kept.
+      if (!(yield* hymnalIsIndexed(building))) {
+        yield* Console.error(
+          `✗ the downloaded ${label} is not an indexed hymnal database; kept the one in place`,
+        );
+        return yield* InitError.make({ cause: `${url} is not an indexed hymnal database` });
+      }
       yield* checkSqliteRefresh(dest);
       yield* fs.rename(building, dest);
       staged = false;

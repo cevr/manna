@@ -329,6 +329,17 @@ export const hymnalNeedsIndexes = (path: string): Effect.Effect<boolean> =>
     (db) => Effect.sync(() => db.close(false)),
   ).pipe(Effect.orElseSucceed(() => false));
 
+/**
+ * Whether the file at `path` is an indexed hymnal database: it opens as SQLite and holds
+ * `hymns` and every index table. `manna init` installs a download only when it is one.
+ */
+export const hymnalIsIndexed = (path: string): Effect.Effect<boolean> =>
+  Effect.acquireUseRelease(
+    Effect.try(() => new Database(path, { readonly: true })),
+    (db) => Effect.try(() => hasTable(db, 'hymns') && absentIndexTables(db).length === 0),
+    (db) => Effect.sync(() => db.close(false)),
+  ).pipe(Effect.orElseSucceed(() => false));
+
 export const layerHymnalBun: Layer.Layer<
   HymnalService,
   HymnalError | Config.ConfigError | PlatformError,
@@ -458,7 +469,13 @@ export const layerHymnalBun: Layer.Layer<
       read: (index: ReturnType<typeof indexReader>) => A,
     ): Effect.Effect<A, HymnalError | HymnalIndexesMissing> =>
       Option.match(index, {
-        onNone: () => Effect.fail(indexesMissing(absent)),
+        onNone: () =>
+          Effect.fail(
+            indexesMissing(
+              absent,
+              Option.liftPredicate(dbPath, (path) => path !== defaultDbPath),
+            ),
+          ),
         onSome: (reader) =>
           Effect.try({
             try: () => read(reader),

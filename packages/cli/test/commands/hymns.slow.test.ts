@@ -8,13 +8,30 @@ import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 import { describe, expect, it } from 'effect-bun-test';
 
-import { HymnalService, HymnId, HymnIndexes } from '@manna/core/hymnal';
+import { HymnalService, HymnId, HymnIndexes, INDEX_TABLES } from '@manna/core/hymnal';
 import { layerHymnalBun } from '@manna/core/hymnal/bun';
 import { init } from '../../src/commands/init.js';
 
 const ARTIFACT = new URL('../../../core/data/hymnal.db', import.meta.url).pathname;
 const MAIN = new URL('../../src/main.ts', import.meta.url).pathname;
 const json = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
+
+/**
+ * The bytes of an indexed hymnal database, `hymns` and every index table each empty,
+ * with `user_version` set to `mark`, so each download body is a distinct indexed db.
+ */
+const indexedHymnal = (mark: number) => {
+  const db = new Database(':memory:');
+  db.exec(
+    [
+      ...['hymns', ...INDEX_TABLES].map((table) => `CREATE TABLE ${table}(x)`),
+      `PRAGMA user_version = ${mark}`,
+    ].join(';'),
+  );
+  const bytes = new Uint8Array(db.serialize());
+  db.close();
+  return bytes;
+};
 const ReturnedHymn = Schema.Struct({
   id: Schema.Int,
   name: Schema.String,
@@ -316,7 +333,7 @@ describe('hymns CLI corpus contract', () => {
         expect(old.code, 'legacy:exit').toBe(0);
         expect(json(yield* indexesOf(old.stdout)), 'legacy:indexes').toBe('null');
         expect(old.stderr.trim(), 'legacy:note').toBe(
-          'note: this hymnal.db has no indexes; run manna init to replace it',
+          `note: the hymnal.db at ${legacy} has no indexes; replace that file, since manna init refreshes only ~/.bible/hymnal.db`,
         );
         const oldText = yield* cli(dir, legacy, ['get', '2']);
         expect(oldText.code === 0 && !oldText.stdout.includes('Topics: '), 'legacy:text').toBe(
@@ -365,20 +382,20 @@ describe('hymns CLI corpus contract', () => {
               if (asked.length === 3) status = 503;
               return HttpClientResponse.fromWeb(
                 request,
-                new Response(new Uint8Array([42, asked.length]), { status }),
+                new Response(indexedHymnal(asked.length), { status }),
               );
             }),
           ),
         );
         yield* runInit(dir, false, client);
-        expect([...(yield* fs.readFile(file))]).toEqual([42, 1]);
+        expect(yield* fs.readFile(file)).toEqual(indexedHymnal(1));
         yield* runInit(dir, false, client);
         expect(asked.length).toBe(1);
         yield* runInit(dir, true, client);
-        expect([...(yield* fs.readFile(file))]).toEqual([42, 2]);
+        expect(yield* fs.readFile(file)).toEqual(indexedHymnal(2));
         const failed = yield* Effect.result(runInit(dir, true, client));
         expect(Result.isFailure(failed)).toBe(true);
-        expect([...(yield* fs.readFile(file))]).toEqual([42, 2]);
+        expect(yield* fs.readFile(file)).toEqual(indexedHymnal(2));
         expect(asked.length).toBe(3);
         expect(
           asked.every(

@@ -70,18 +70,26 @@ export const INDEX_TABLES = [
   'index_metre_tune_hymns',
 ] as const;
 
-/** The `HymnalIndexesMissing` for a database lacking `absent`, with the message a user reads. */
-export const indexesMissing = (absent: readonly string[] = INDEX_TABLES) => {
+/**
+ * The `HymnalIndexesMissing` for a database lacking `absent`, with the message a user reads.
+ * `override` is the path `HYMNAL_DB_PATH` names when it is not `~/.bible/hymnal.db`:
+ * `manna init` replaces only that default file, so the message names the file to replace.
+ */
+export const indexesMissing = (
+  absent: readonly string[] = INDEX_TABLES,
+  override: Option.Option<string> = Option.none(),
+) => {
   const partial = absent.length < INDEX_TABLES.length;
   const lacks = Match.value(partial).pipe(
     Match.when(true, () => `lacks the index tables ${absent.join(', ')}`),
     Match.orElse(() => 'has no indexes'),
   );
-  return HymnalIndexesMissing.make({
-    absent,
-    partial,
-    message: `this hymnal.db ${lacks}; run manna init to replace it`,
+  const message = Option.match(override, {
+    onNone: () => `this hymnal.db ${lacks}; run manna init to replace it`,
+    onSome: (path) =>
+      `the hymnal.db at ${path} ${lacks}; replace that file, since manna init refreshes only ~/.bible/hymnal.db`,
   });
+  return HymnalIndexesMissing.make({ absent, partial, message });
 };
 
 /** The hymns (1-695) the back-matter indexes give numbers for. */

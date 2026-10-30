@@ -11,6 +11,18 @@ import { INDEX_TABLES } from '@manna/core/hymnal';
 import { layerNativeTopicsArtifacts } from '@manna/core/corpus-supply/bun';
 import { withSqliteRefresh } from '../../src/lib/sqlite-refresh.js';
 
+/** The bytes of a SQLite database with the given tables, each empty. */
+const sqliteWith = (tables: readonly string[]) => {
+  const db = new Database(':memory:');
+  db.exec(tables.map((table) => `CREATE TABLE ${table}(x)`).join(';'));
+  const bytes = new Uint8Array(db.serialize());
+  db.close();
+  return bytes;
+};
+
+/** A download body `manna init` installs: `hymns` and every index table. */
+const indexedHymnal = sqliteWith(['hymns', ...INDEX_TABLES]);
+
 const stageWithOutgoingWal = (
   destination: string,
   source: string,
@@ -198,7 +210,7 @@ it.scoped(
           HttpClient.HttpClient,
           HttpClient.make((request) => {
             if (mode === 'stat-error') return Effect.die('uninspectable WAL requested HTTP');
-            return Effect.succeed(HttpClientResponse.fromWeb(request, new Response('replacement')));
+            return Effect.succeed(HttpClientResponse.fromWeb(request, new Response(indexedHymnal)));
           }),
         );
         const result = yield* Effect.result(runInit(home, console, http, ['--force']));
@@ -211,7 +223,7 @@ it.scoped(
             ),
           ).toBe(true);
         } else {
-          expect(yield* fs.readFileString(destination)).toBe('replacement');
+          expect(yield* fs.readFile(destination)).toEqual(indexedHymnal);
           expect(output.some((line) => line.startsWith('✓ hymnal.db installed'))).toBe(true);
         }
         if (mode === 'empty') expect(yield* fs.readFileString(`${destination}-wal`)).toBe('');
@@ -297,14 +309,14 @@ it.scoped('Hymnal stages and renames without writing through database or staging
       const http = Layer.succeed(
         HttpClient.HttpClient,
         HttpClient.make((request) =>
-          Effect.succeed(HttpClientResponse.fromWeb(request, new Response('replacement'))),
+          Effect.succeed(HttpClientResponse.fromWeb(request, new Response(indexedHymnal))),
         ),
       );
       expect(yield* Effect.result(runInit(home, console, http, ['--force']))).toMatchObject({
         _tag: 'Failure',
         failure: { _tag: 'UserError' },
       });
-      expect(yield* fs.readFileString(destination)).toBe('replacement');
+      expect(yield* fs.readFile(destination)).toEqual(indexedHymnal);
       expect(yield* fs.readFileString(external)).toBe('external-bytes');
       expect(output.some((line) => line.startsWith('✓ hymnal.db installed'))).toBe(true);
       expect((yield* fs.readDirectory(directory)).some((file) => file.includes('.building'))).toBe(
@@ -342,7 +354,7 @@ it.scoped(
             .writeFileString(`${directory}/hymnal.db-wal`, 'late')
             .pipe(
               Effect.orDie,
-              Effect.as(HttpClientResponse.fromWeb(request, new Response('replacement'))),
+              Effect.as(HttpClientResponse.fromWeb(request, new Response(indexedHymnal))),
             ),
         ),
       );
@@ -443,14 +455,14 @@ it.scoped(
           HttpClient.HttpClient,
           HttpClient.make((request) => {
             requested.push(request.url);
-            return Effect.succeed(HttpClientResponse.fromWeb(request, new Response('replacement')));
+            return Effect.succeed(HttpClientResponse.fromWeb(request, new Response(indexedHymnal)));
           }),
         );
         yield* runInit(home, console, http, []);
         for (const name of ['bible', 'topics', 'webster'])
           expect(yield* fs.readFileString(`${directory}/${name}.db`)).toBe(`prior-${name}`);
         if (mode === 'stale') {
-          expect(yield* fs.readFileString(destination)).toBe('replacement');
+          expect(yield* fs.readFile(destination)).toEqual(indexedHymnal);
           expect(requested.length).toBe(1);
           expect(output).toContain('↻ hymnal.db has no indexes; replacing it');
           expect(output).toContain('✓ hymnal.db installed');
@@ -459,6 +471,55 @@ it.scoped(
           expect(requested).toEqual([]);
           expect(output.some((line) => line.startsWith('✓ hymnal.db ('))).toBe(true);
         }
+      }
+    }).pipe(Effect.provide(BunServices.layer)),
+);
+
+it.scoped(
+  'init keeps the hymnal.db in place when the download is not an indexed hymnal database',
+  () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const bodies = {
+        page: new TextEncoder().encode('<html>sign in to the network</html>'),
+        unindexed: sqliteWith(['hymns']),
+      };
+      for (const body of ['page', 'unindexed'] as const) {
+        const home = yield* fs.makeTempDirectoryScoped({ prefix: `init-hymnal-${body}-` });
+        const directory = `${home}/.bible`;
+        yield* fs.makeDirectory(directory);
+        for (const name of ['bible', 'topics', 'webster'])
+          yield* fs.writeFileString(`${directory}/${name}.db`, `prior-${name}`);
+        const destination = `${directory}/hymnal.db`;
+        const before = sqliteWith(['hymns']);
+        yield* fs.writeFile(destination, before);
+        const output: string[] = [];
+        const capture = (...parts: unknown[]) => {
+          output.push(parts.join(' '));
+        };
+        const console: Console.Console = {
+          ...Console.Console.defaultValue(),
+          log: capture,
+          error: capture,
+        };
+        const http = Layer.succeed(
+          HttpClient.HttpClient,
+          HttpClient.make((request) =>
+            Effect.succeed(HttpClientResponse.fromWeb(request, new Response(bodies[body]))),
+          ),
+        );
+        const result = yield* Effect.result(runInit(home, console, http, []));
+        expect(result._tag, `${body}:exit`).toBe('Failure');
+        expect(yield* fs.readFile(destination), `${body}:kept`).toEqual(before);
+        expect(
+          output.some((line) => line.startsWith('✗ the downloaded hymnal.db')),
+          `${body}:line`,
+        ).toBe(true);
+        expect(output.includes('✓ hymnal.db installed'), `${body}:installed`).toBe(false);
+        expect(
+          (yield* fs.readDirectory(directory)).some((file) => file.includes('.building')),
+          `${body}:staged`,
+        ).toBe(false);
       }
     }).pipe(Effect.provide(BunServices.layer)),
 );
