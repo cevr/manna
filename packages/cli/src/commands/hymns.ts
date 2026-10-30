@@ -137,16 +137,17 @@ const getCommand = Command.make('get', { hymnNumber, json: jsonFlag }, (args) =>
       return;
     }
 
-    // Readings (696-920) stand in no back-matter index, and a hymnal.db built
-    // before the index tables has none: both print as no indexes, so a get
-    // that worked on an installed legacy database still works.
+    // Readings (696-920) stand in no back-matter index: they print as no
+    // indexes. A hymnal.db that lacks the index tables prints the hymn as no
+    // indexes too, with a note on stderr naming the command that replaces it.
+    // An index table that is present but cannot be read fails the command.
     const indexes = yield* service.getHymnIndexes(args.hymnNumber as HymnId).pipe(
       Effect.asSome,
-      Effect.catchTag('HymnNotFoundError', () => Effect.succeedNone),
-      Effect.catchIf(
-        (error) => error._tag === 'HymnalError' && error.operation === 'indexes',
-        () => Effect.succeedNone,
-      ),
+      Effect.catchTags({
+        HymnNotFoundError: () => Effect.succeedNone,
+        HymnalIndexesMissing: (missing) =>
+          Console.error(`note: ${missing.message}`).pipe(Effect.as(Option.none())),
+      }),
     );
 
     if (args.json) {

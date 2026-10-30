@@ -23,6 +23,7 @@ import {
   type NativeFileArtifactSource,
   checkSqliteRefresh,
 } from '@manna/core/corpus-supply/bun';
+import { hymnalNeedsIndexes } from '@manna/core/hymnal/bun';
 import { Config, Console, Effect, FileSystem, Layer, Path, Schema } from 'effect';
 import { CliError, Command, Flag } from 'effect/cli';
 import { HttpClient, HttpClientResponse } from 'effect/http';
@@ -90,9 +91,14 @@ const ensureHymnal = Effect.fn('Init.ensureHymnal')(function* (
 ) {
   const fs = yield* FileSystem.FileSystem;
   const db = DBS.hymnal;
-  if (!refresh && (yield* fs.exists(destination))) {
+  // A kept hymnal.db that holds hymns but lacks an index table is replaced:
+  // `hymns get` names this command for it. A file that does not open as one is kept.
+  const kept = !refresh && (yield* fs.exists(destination));
+  const stale = kept && (yield* hymnalNeedsIndexes(destination));
+  if (kept && !stale) {
     yield* Console.log(`✓ ${db.name} (${db.description})`);
   } else {
+    if (stale) yield* Console.log(`↻ ${db.name} has no indexes; replacing it`);
     yield* downloadFile(db.url, destination, `${db.name} ${db.size}`);
     yield* Console.log(`✓ ${db.name} installed`);
   }
