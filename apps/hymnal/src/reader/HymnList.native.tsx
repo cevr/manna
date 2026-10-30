@@ -13,6 +13,10 @@
  * thread from the topics' fixed places (`pin.ts`), not the list's sticky
  * headers: those wait on the JS thread at each handoff, and a fast drag
  * showed the row missing or out of place for a frame.
+ * With a home tab's `grouped` hymns in place of `byTopic`, a pinned row
+ * names each group of the tab and its hymns follow, a hymn in several groups
+ * in each (`groupRowsOf`); the list opens at `start` when given (the tab's
+ * kept place), else at `pullDown`'s rest.
  * A search's results given the hymns `about` its query show them under the
  * strongest matches, in a section `Hymns about this`, then the rest of the
  * matches under `More matches` (`resultRowsOf`); a section's row is a
@@ -63,7 +67,7 @@ import { ListEnd } from './ListEnd';
 import { dismissal } from './keyboard';
 import { pinnedAt, topicStarts } from './pin';
 import { pagesFrom } from './place';
-import { resultRowsOf, type Row, rowsOf } from './rows';
+import { groupRowsOf, resultRowsOf, type Row, rowsOf } from './rows';
 
 /** A hymn row's line of text, and the space above and below it, at the reader's usual text size. */
 const line = 22;
@@ -139,6 +143,12 @@ const drawRow = ({
   );
 };
 
+/** A home tab's groups (`home/tabs.ts`), each a name and its hymns' numbers. */
+export interface Grouped {
+  readonly name: string;
+  readonly groups: ReadonlyArray<{ readonly name: string; readonly hymns: ReadonlyArray<number> }>;
+}
+
 export function HymnList({
   hymns,
   hrefOf,
@@ -149,16 +159,23 @@ export function HymnList({
   pullDown,
   lines,
   about,
+  grouped,
+  start,
 }: HymnListProps & {
   /** A search's hymns about its query, nearest first: a section under its strongest matches (`resultRowsOf`). */
   readonly about?: ReadonlyArray<HymnText>;
+  /** A home tab's groups in place of `byTopic`'s topics: each under its pinned row (`groupRowsOf`). */
+  readonly grouped?: Grouped;
+  /** The offset the list opens at, when not at `pullDown`'s rest (a tab's kept place). */
+  readonly start?: number;
 }) {
   const { fontScale } = useWindowDimensions();
   const accent = useAccent();
   const { rows, sticky } = useMemo(() => {
+    if (grouped) return groupRowsOf(grouped.name, grouped.groups, hymns, favourites);
     if (byTopic) return rowsOf(hymns, shelves, favourites);
     return resultRowsOf(hymns, about ?? [], favourites, lines);
-  }, [hymns, byTopic, shelves, favourites, lines, about]);
+  }, [hymns, grouped, byTopic, shelves, favourites, lines, about]);
   const hymnHeight = heightOf('hymn', fontScale);
   const foundHeight = heightOf('found', fontScale);
   const topicHeight = heightOf('topic', fontScale);
@@ -216,7 +233,7 @@ export function HymnList({
         // The list opens with the search field tucked under the title, and a
         // drag let go between there and the top settles at one or the other;
         // past the field it scrolls freely.
-        initialScrollOffset={pullDown?.rest}
+        initialScrollOffset={start ?? pullDown?.rest}
         snapToOffsets={pullDown && [0, pullDown.rest]}
         snapToEnd={false}
         maintainVisibleContentPosition={anchoring}

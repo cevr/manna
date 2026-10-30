@@ -3,9 +3,10 @@
  * hymn list, with the search field pulled down from under the title, as
  * iOS's search controller hides its field.
  *
- * The list's content is a spacer the title's height, the field, then the
- * rows; the list opens scrolled by the field's height, so the field rests
- * under the title, which is a layer over the list on the ground. On the UI
+ * The list's content is a spacer the title's height, the field, the row of
+ * the list's tabs (`TabList`, `TabRow`), then the rows; the list opens
+ * scrolled by the field's height, so the field rests under the title, which
+ * is a layer over the list on the ground, and the tabs show under the title. On the UI
  * thread the title follows the list's offset: it stays put while the list
  * is between its top and the field's height (a pull brings the field out
  * under it), moves up with the rows past that, and follows a pull past the
@@ -27,10 +28,10 @@
  * the query and shows the list as it was.
  */
 
-import { useAtom } from '@effect/atom-react';
+import { useAtom, useAtomValue } from '@effect/atom-react';
 import { Link, useLinkTo, useNavigation, useSafeAreaInsets } from 'one';
 import { Effect, Fiber, Option } from 'effect';
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BackHandler,
   Keyboard,
@@ -52,18 +53,30 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { hymnAt } from '~/hymns/hymns';
+import bundled from 'virtual:hymnal-indexes';
+
+import { hymnAt, hymns } from '~/hymns/hymns';
 import { aboutQuery, aboutShown, afterPause, readMeaningSoon } from '~/hymns/meaning';
 import { find, hymnIndex } from '~/hymns/search';
 import { HymnList } from '~/reader/HymnList.native';
-import { type SearchMode, searchOffset, searchOpen, searchQuery } from '~/reader/place';
+import { shelvesOf } from '~/reader/lists';
+import {
+  hymnsOffset,
+  type SearchMode,
+  searchOffset,
+  searchOpen,
+  searchQuery,
+} from '~/reader/place';
+import { settings } from '~/store';
 import { color, useAccent } from '~/color';
 
 import { searchBack } from './back';
-import { Browse } from './Browse';
+import { hymnHref, hymnOf } from './Browse';
 import { Gear } from './Gear';
 import { searchLabel } from './Results';
 import { hidden, reachable, revealAt, shownHeight } from './reveal';
+import { TabRow, tabRowHeight } from './TabRow';
+import { openingOffset, type TabName, tabNamed, tabsOf } from './tabs';
 
 /**
  * A layer out of reach, untouchable and unseen by assistive technology: the
@@ -99,20 +112,7 @@ export function Home() {
     <View style={styles.screen}>
       <View style={[styles.below, { marginTop: insets.top }]}>
         <View style={styles.fill} {...(searching && outOfReach)}>
-          <Browse
-            pullDown={{
-              node: (
-                <View style={{ height: title + field }}>
-                  <View style={{ height: title }} />
-                  <FieldButton height={field} onPress={enter} />
-                </View>
-              ),
-              height: title + field,
-              rest: field,
-              scroll,
-              cover,
-            }}
-          />
+          <TabList title={title} field={field} scroll={scroll} cover={cover} onEnter={enter} />
           <ShownField
             height={field}
             cover={cover}
@@ -128,6 +128,77 @@ export function Home() {
       {/* The status bar's ground: rows and the title pass under it unseen. */}
       <View style={[styles.scrim, { height: insets.top }]} />
     </View>
+  );
+}
+
+/**
+ * The hymn list of the tab in use (`settings.home.tab`, `tabNamed`), with
+ * the tab row under the search field in the list's top. Sections names each
+ * section over its hymns under the Recent shelf (`byTopic`); every other tab
+ * names its groups (`grouped`). Each tab mounts its own list, and opens where
+ * the reader left it in this run of the app, else where the list was when
+ * the tab was chosen (`openingOffset`).
+ */
+function TabList({
+  title,
+  field,
+  scroll,
+  cover,
+  onEnter,
+}: {
+  readonly title: number;
+  readonly field: number;
+  readonly scroll: SharedValue<number>;
+  readonly cover: SharedValue<number>;
+  readonly onEnter: () => void;
+}) {
+  const { fontScale } = useWindowDimensions();
+  const [chosen, setChosen] = useAtom(settings.home.tab);
+  const favourites = useAtomValue(settings.lists.favourites);
+  const recent = useAtomValue(settings.lists.recent);
+  const tabs = useMemo(
+    () => tabsOf({ hymns, favourites, recent, indexes: bundled }),
+    [favourites, recent],
+  );
+  const tab = tabNamed(tabs, chosen);
+  const shelves = useMemo(() => shelvesOf(recent, hymnOf), [recent]);
+  const starred = useMemo(() => new Set(favourites), [favourites]);
+  const kept = useRef(new Map<TabName, number>());
+  const [start, setStart] = useState<number>();
+  const choose = (name: TabName) => {
+    const now = scroll.value;
+    kept.current.set(tab.name, now);
+    const at = openingOffset(kept.current, name, now);
+    scroll.value = at;
+    setStart(at);
+    setChosen(name);
+  };
+  const tabRow = tabRowHeight(fontScale);
+  const pullDown = {
+    node: (
+      <View style={{ height: title + field + tabRow }}>
+        <View style={{ height: title }} />
+        <FieldButton height={field} onPress={onEnter} />
+        <TabRow names={tabs.map((t) => t.name)} selected={tab.name} onSelect={choose} />
+      </View>
+    ),
+    height: title + field + tabRow,
+    rest: field,
+    scroll,
+    cover,
+  };
+  return (
+    <HymnList
+      key={tab.name}
+      hymns={hymns}
+      hrefOf={hymnHref}
+      offset={hymnsOffset}
+      favourites={starred}
+      pullDown={pullDown}
+      start={start}
+      {...(tab.name === 'Sections' && { byTopic: true, shelves })}
+      {...(tab.name !== 'Sections' && { grouped: tab, empty: 'No hymns here yet.' })}
+    />
   );
 }
 

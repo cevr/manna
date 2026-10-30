@@ -111,6 +111,17 @@ export const tabsOf = (input: TabsInput): ReadonlyArray<Tab> => {
   );
 };
 
+/**
+ * The offset a tab's list opens at when the reader chooses it, the list now
+ * at `now`: where the reader left that tab (`kept`), else `now`, so the
+ * tabs stay where the tap found them.
+ */
+export const openingOffset = (
+  kept: ReadonlyMap<TabName, number>,
+  name: TabName,
+  now: number,
+): number => kept.get(name) ?? now;
+
 /** The tab named `name`, or `Sections` (always there) when the tabs have none by that name. */
 export const tabNamed = (tabs: ReadonlyArray<Tab>, name: TabName): Tab =>
   tabs.find((tab) => tab.name === name) ??

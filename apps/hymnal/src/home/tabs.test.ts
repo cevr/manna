@@ -8,7 +8,7 @@ import { describe, expect, it } from 'bun:test';
 
 import type { HymnIndexes } from '~/hymns/indexes';
 
-import { type TabName, tabNamed, tabsOf } from './tabs';
+import { openingOffset, type TabName, tabNamed, tabsOf } from './tabs';
 
 const hymns = [
   { number: 1, topic: 'Worship' },
@@ -100,6 +100,15 @@ describe('the home tabs', () => {
     expect(groupsOf('Scripture')).toEqual([
       ['Genesis', [1]],
       ['Psalms', [2, 4]],
+    ]);
+  });
+});
+
+describe('a chosen tab', () => {
+  it('opens where the reader left it, else where the list is now', () => {
+    const kept = new Map<TabName, number>([['Topics', 240]]);
+    expect([openingOffset(kept, 'Topics', 80), openingOffset(kept, 'Metres', 80)]).toEqual([
+      240, 80,
     ]);
   });
 });
