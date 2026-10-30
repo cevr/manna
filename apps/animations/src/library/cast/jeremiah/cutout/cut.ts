@@ -23,8 +23,7 @@
 // of its parts, so each sheet pixel is drawn by one view only. Data: the
 // rules and the table are the shared module's.
 
-import type { HiddenEntry, PartCut } from '@manna/film/tools';
-import { CUT_AWAY, KEEP_REST } from '../../../cutout/prompts.ts';
+import { bustCut, bustHidden } from '../../../cutout/bust.ts';
 import { FAR, box } from '../../../cutout/rules.ts';
 import { cutTable } from '../../../cutout/table.ts';
 import { FRAMES } from './frames.ts';
@@ -34,23 +33,9 @@ export { FRAMES };
 /** A view of his, by its name in his sheet's views. */
 type CutView = keyof typeof FRAMES;
 
-/** His head above the line `line` (view pixels, right to left along his shoulders, neck and the foot of his beard), turning at `pivot`; then the rest of him. */
-const bust = (line: readonly (readonly [number, number])[], pivot: readonly [number, number]) =>
-  ({
-    parts: [
-      { name: 'head', take: [{ polygon: [[-1, -1], [FAR, -1], ...line] }], pivot },
-      { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
-    ],
-  }) as const satisfies PartCut;
-
-/** A bust whose first, still part `neighbour` takes `take`: pixels the view beside it on the sheet draws, which its puppet leaves out. */
-const withNeighbour = (take: PartCut['parts'][number]['take'], cut: PartCut): PartCut => ({
-  parts: [{ name: 'neighbour', take }, ...cut.parts],
-});
-
 /** His bust three-quarters to the viewer's left (heads-1). */
-const HEADS_1 = bust(
-  [
+const HEADS_1 = bustCut({
+  line: [
     [FAR, 297],
     [228, 296],
     [222, 272],
@@ -71,76 +56,72 @@ const HEADS_1 = bust(
     [9, 296],
     [-1, 297],
   ],
-  [125, 215],
-);
+  pivot: [125, 215],
+});
 
 /** His bust with his head bowed down to the viewer's left (heads-2). */
-const HEADS_2 = withNeighbour(
+const HEADS_2 = bustCut({
   // the paper beside heads-3's left outline at the foot, in this box's right pad (sheet x 534-535, y 607-614): never drawn
-  [box(247, 286, FAR, FAR)],
-  bust(
-    [
-      [FAR, 293],
-      [213, 293],
-      [213, 243],
-      [210, 243],
-      [207, 239],
-      [201, 240],
-      [201, 235],
-      [174, 220],
-      [169, 215],
-      [168, 210],
-      [139, 210],
-      [125, 222],
-      [108, 229],
-      [96, 228],
-      [86, 221],
-      [82, 221],
-      [57, 230],
-      [41, 238],
-      [32, 246],
-      [30, 248],
-      [24, 253],
-      [16, 267],
-      [9, 292],
-      [-1, 293],
-    ],
-    [122, 225],
-  ),
-);
+  neighbour: [box(247, 286, FAR, FAR)],
+  line: [
+    [FAR, 293],
+    [213, 293],
+    [213, 243],
+    [210, 243],
+    [207, 239],
+    [201, 240],
+    [201, 235],
+    [174, 220],
+    [169, 215],
+    [168, 210],
+    [139, 210],
+    [125, 222],
+    [108, 229],
+    [96, 228],
+    [86, 221],
+    [82, 221],
+    [57, 230],
+    [41, 238],
+    [32, 246],
+    [30, 248],
+    [24, 253],
+    [16, 267],
+    [9, 292],
+    [-1, 293],
+  ],
+  pivot: [122, 225],
+});
 
 /** His bust three-quarters to the viewer's left (heads-3). */
-const HEADS_3 = withNeighbour(
+const HEADS_3 = bustCut({
   // the paper beside heads-2's right outline, in this box's left pad (sheet x 534-536, y 527-551): never drawn
-  [box(-1, 210, 0, 235)],
-  bust(
-    [
-      [FAR, 297],
-      [211, 297],
-      [208, 279],
-      [200, 261],
-      [187, 249],
-      [170, 240],
-      [151, 225],
-      [146, 205],
-      [117, 205],
-      [104, 213],
-      [89, 217],
-      [87, 224],
-      [59, 232],
-      [38, 243],
-      [20, 262],
-      [11, 284],
-      [9, 296],
-      [-1, 296],
-    ],
-    [118, 215],
-  ),
-);
+  neighbour: [box(-1, 210, 0, 235)],
+  line: [
+    [FAR, 297],
+    [211, 297],
+    [208, 279],
+    [200, 261],
+    [187, 249],
+    [170, 240],
+    [151, 225],
+    [146, 205],
+    [117, 205],
+    [104, 213],
+    [89, 217],
+    [87, 224],
+    [59, 232],
+    [38, 243],
+    [20, 262],
+    [11, 284],
+    [9, 296],
+    [-1, 296],
+  ],
+  pivot: [118, 215],
+});
 
 /** His bust facing the viewer (heads-4). */
-const HEADS_4 = bust(
-  [
+const HEADS_4 = bustCut({
+  line: [
     [FAR, 293],
     [223, 293],
     [217, 267],
@@ -162,12 +143,12 @@ const HEADS_4 = bust(
     [7, 297],
     [-1, 297],
   ],
-  [120, 222],
-);
+  pivot: [120, 222],
+});
 
 /** His bust facing the viewer, his mouth open (heads-5). */
-const HEADS_5 = bust(
-  [
+const HEADS_5 = bustCut({
+  line: [
     [FAR, 297],
     [225, 297],
     [223, 295],
@@ -191,12 +172,12 @@ const HEADS_5 = bust(
     [9, 296],
     [-1, 297],
   ],
-  [120, 220],
-);
+  pivot: [120, 220],
+});
 
 /** His bust facing the viewer, smiling (heads-6). */
-const HEADS_6 = bust(
-  [
+const HEADS_6 = bustCut({
+  line: [
     [FAR, 298],
     [222, 298],
     [217, 274],
@@ -217,38 +198,32 @@ const HEADS_6 = bust(
     [8, 298],
     [-1, 298],
   ],
-  [116, 222],
-);
+  pivot: [116, 222],
+});
 
 /** His sheet's ink, for the row that closes a bust's foot. */
 const INK = [25, 9, 2, 255] as const;
 
-/** What lies behind his head once it is cut away, the same in every view but for how he is turned (`turn`). */
-const behindHead = (turn: string) =>
-  `${CUT_AWAY} his head (his linen headcloth with its olive band and the two sides of it that hung beside his face and neck down onto his shoulders, his face and his short dark beard) was cut away to make a cut-out puppet.${turn} Repaint ONLY the magenta area, as what lies behind his head. His neck rises straight up from his collar as a plain column of skin to about where his mouth was, its two sides closed by the same thick dark brown-black outline as the rest of him, its top simply rounded and closed by the same outline (no opening, no rim, no dark band), in exactly the same skin colour, soft shading and fine paper grain as the skin of his neck below. Where the cloth hung over his shoulders, his shoulders continue as they are below it: the same linen tunic and olive mantle with its violet shade, their top edges closed by the same outline. Everywhere else in the magenta area becomes the plain cream paper. There is no head now: no headcloth, no hair, no beard, no face, no ears, nothing magenta left. ${KEEP_REST}`;
-
 /**
- * Each view's moving parts (what a pose moves, whose areas are painted
- * magenta and repainted beneath), and the words okra repaints them by: what
- * lies under them, in the sheet's own style.
+ * His words for what lies behind his head once it is cut away, and how he is
+ * turned in each view. The shared bust moves only his head, so okra repaints
+ * only what it hid, in the sheet's own style.
  */
-const HIDDEN_ENTRIES = {
-  'heads-1': {
-    moving: ['head'],
-    prompt: behindHead(" He is turned three-quarters to the viewer's left."),
+const HIDDEN_ENTRIES = bustHidden(
+  {
+    head: 'his linen headcloth with its olive band and the two sides of it that hung beside his face and neck down onto his shoulders, his face and his short dark beard',
+    behind:
+      '. His neck rises straight up from his collar as a plain column of skin to about where his mouth was, its two sides closed by the same thick dark brown-black outline as the rest of him, its top simply rounded and closed by the same outline (no opening, no rim, no dark band), in exactly the same skin colour, soft shading and fine paper grain as the skin of his neck below. Where the cloth hung over his shoulders, his shoulders continue as they are below it: the same linen tunic and olive mantle with its violet shade, their top edges closed by the same outline. Everywhere else in the magenta area becomes the plain cream paper. There is no head now: no headcloth, no hair, no beard, no face, no ears, nothing magenta left.',
   },
-  'heads-2': {
-    moving: ['head'],
-    prompt: behindHead(" He is turned to the viewer's left, his head bowed."),
-  },
-  'heads-3': {
-    moving: ['head'],
-    prompt: behindHead(" He is turned three-quarters to the viewer's left."),
-  },
-  'heads-4': { moving: ['head'], prompt: behindHead(' He faces the viewer.') },
-  'heads-5': { moving: ['head'], prompt: behindHead(' He faces the viewer.') },
-  'heads-6': { moving: ['head'], prompt: behindHead(' He faces the viewer.') },
-} as const satisfies Readonly<Record<CutView, HiddenEntry>>;
+  {
+    'heads-1': " He is turned three-quarters to the viewer's left.",
+    'heads-2': " He is turned to the viewer's left, his head bowed.",
+    'heads-3': " He is turned three-quarters to the viewer's left.",
+    'heads-4': ' He faces the viewer.',
+    'heads-5': ' He faces the viewer.',
+    'heads-6': ' He faces the viewer.',
+  } satisfies Readonly<Record<CutView, string>>,
+);
 
 /** His cut table: each view's cut and how its figure is read. */
 export const { CUTS, cutOptionsFor, HIDDEN } = cutTable({
