@@ -393,6 +393,15 @@ Android haptics only.
   octave from A4 = 440 Hz, the nearest standard string (E2 A2 D3 G3 B3
   E4), its signed cents, and in tune within 5 cents. The tuner plays no
   sound.
+- `native/tuner/Listen.swift` takes the iOS microphone in 2048-sample
+  mono Float32 frames (session `.record`, mode `.measurement`; it gives
+  the audio back with `.notifyOthersOnDeactivation` on `stop()`) and
+  sends each to JavaScript; `onEnd` names why listening stopped
+  (`interruption`, `route`, `failure`, `stopped`). It asks for no
+  permission itself. `src/tuner/native.ios.ts` types it as `Listen`;
+  off iOS `src/tuner/native.ts` has none, so the tuner hides there. The
+  system's microphone prompt reads the `audio.microphone` text in
+  `vite/app.ts`.
 
 ## App icon
 
