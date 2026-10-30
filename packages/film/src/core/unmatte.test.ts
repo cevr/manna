@@ -357,11 +357,45 @@ describe('unmatte, a light px the figure encloses', () => {
     for (const [x, y] of gap(S - 1)) expect(px(out!, x, y)[3]).toBe(0);
   });
 
-  test('clears a light px in a 1 px notch of his outline that touches the ground only at a corner', () => {
-    const src = figure([[8, 4, LIGHT], ...inkColumn(10)]);
+  test('clears a light slit that runs diagonally from a notch in his outline, touching the ground only at corners', () => {
+    const slit = [
+      [8, 4],
+      [9, 5],
+      [10, 6],
+    ] as const;
+    const src = figure([...slit.map(([x, y]) => [x, y, LIGHT] as const), ...inkColumn(13)]);
     src.fill(0, (3 * S + 7) * 4, (3 * S + 7) * 4 + 4);
     const [out] = unmatte([src], S, S, PAPER);
-    expect(px(out!, 8, 4)[3]).toBe(0);
+    for (const [x, y] of slit) expect(px(out!, x, y)[3]).toBe(0);
+  });
+
+  test("keeps a light gap between his legs whole when a seam past the sheet's ground closes its mouth", () => {
+    // ΔE 6.3 from the paper, darker by more than a 2.25 grain: kept whole, and no ground of the sheet's
+    const SEAM: Rgb = [233, 222, 202];
+    const src = paint(legs(16), [8, 9], [16, 16], SEAM);
+    const [out] = unmatte([src], S, S, PAPER, { grain: 2.25 });
+    for (const [x, y] of gap(15)) expect(px(out!, x, y)).toEqual([...LIGHT, 255]);
+  });
+
+  test('keeps an enclosed speck lighter than the paper by more than its grain (ΔE 2) whole', () => {
+    const speck = [6, 7].flatMap((x) => [9, 10].map((y) => [x, y, LIGHT] as const));
+    const [out] = unmatte([figure([...speck, ...inkColumn(8)])], S, S, PAPER);
+    for (const [x, y] of speck) expect(px(out!, x, y)).toEqual([...LIGHT, 255]);
+  });
+
+  test('clears light cloth whose clear region holds a pocket of paper px, though the cloth splits them into runs too small to be a sheet pocket', () => {
+    const row = (y: number, c: Rgb) => [4, 5, 6].map((x) => [x, y, c] as const);
+    const near = [7, 9, 11].flatMap((y) => row(y, NEAR));
+    const cloth = [8, 10].flatMap((y) => row(y, CLOTH));
+    const [out] = unmatte([figure([...near, ...cloth, ...inkColumn(8)])], S, S, PAPER);
+    for (const [x, y] of cloth) expect(px(out!, x, y)[3]).toBe(0);
+  });
+
+  test("clears a light gap between his legs that the crop frame cuts through a row of the sheet's grain", () => {
+    const GRAIN: Rgb = [239, 230, 212];
+    const src = paint(legs(S - 1), [8, 9], [S - 1, S - 1], GRAIN);
+    const [out] = unmatte([src], S, S, PAPER, { grain: 2.25 });
+    for (const [x, y] of gap(S - 2)) expect(px(out!, x, y)[3]).toBe(0);
   });
 
   test('clears a light gap between his feet that only an inkless part (his shadow) closes below', () => {
