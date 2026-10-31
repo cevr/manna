@@ -70,6 +70,32 @@ export const keepAtMost = <K, V>(kept: Map<K, V>, key: K, value: V, most: number
   return value;
 };
 
+/**
+ * The noise pixels the paper's mottling and the grain's tiles are made of, by
+ * what they are computed from. They are a pure function of a seed and a
+ * size, about a million hashes a film, so every film with the same paper and
+ * grain (a short beside its film, a film made again on an edit) copies them
+ * rather than computing them again. Callers copy out of a kept array and
+ * never write into it.
+ */
+const noiseKept = new Map<string, Uint8ClampedArray>();
+
+/** The most noise arrays kept: a film's mottling and its six grain tiles, twice over (about 4 MB). */
+const NOISE_KEPT = 14;
+
+/** The `length` noise bytes under `key`, written by `fill` on the first ask. */
+const noisePixels = (
+  key: string,
+  length: number,
+  fill: (data: Uint8ClampedArray) => void,
+): Uint8ClampedArray => {
+  const have = noiseKept.get(key);
+  if (have !== undefined) return have;
+  const data = new Uint8ClampedArray(length);
+  fill(data);
+  return keepAtMost(noiseKept, key, data, NOISE_KEPT);
+};
+
 /** A full-frame sheet: base colour, soft mottling, fibres, and flecks. */
 export const makePaper = (w: number, h: number, style: PaperStyle): HTMLCanvasElement => {
   const { c, ctx } = offscreen(w, h);
@@ -81,17 +107,21 @@ export const makePaper = (w: number, h: number, style: PaperStyle): HTMLCanvasEl
   const lh = Math.ceil(h / 8);
   const low = offscreen(lw, lh);
   const img = low.ctx.createImageData(lw, lh);
-  for (let y = 0; y < lh; y++) {
-    for (let x = 0; x < lw; x++) {
-      const n = fbm(x / 28, y / 28, style.seed, 5);
-      const i = (y * lw + x) * 4;
-      const v = n > 0 ? 255 : 0;
-      img.data[i] = v;
-      img.data[i + 1] = v;
-      img.data[i + 2] = v;
-      img.data[i + 3] = Math.min(255, Math.abs(n) * 60);
-    }
-  }
+  img.data.set(
+    noisePixels(`mottle ${lw} ${lh} ${style.seed}`, lw * lh * 4, (data) => {
+      for (let y = 0; y < lh; y++) {
+        for (let x = 0; x < lw; x++) {
+          const n = fbm(x / 28, y / 28, style.seed, 5);
+          const i = (y * lw + x) * 4;
+          const v = n > 0 ? 255 : 0;
+          data[i] = v;
+          data[i + 1] = v;
+          data[i + 2] = v;
+          data[i + 3] = Math.min(255, Math.abs(n) * 60);
+        }
+      }
+    }),
+  );
   low.ctx.putImageData(img, 0, 0);
   ctx.save();
   ctx.imageSmoothingEnabled = true;
@@ -152,13 +182,17 @@ export interface Grain {
 const grainTile = (size: number, seed: number): HTMLCanvasElement => {
   const { c, ctx } = offscreen(size, size);
   const img = ctx.createImageData(size, size);
-  for (let i = 0; i < size * size; i++) {
-    const v = hash2(i, seed) * 255;
-    img.data[i * 4] = v;
-    img.data[i * 4 + 1] = v;
-    img.data[i * 4 + 2] = v;
-    img.data[i * 4 + 3] = 255;
-  }
+  img.data.set(
+    noisePixels(`grain ${size} ${seed}`, size * size * 4, (data) => {
+      for (let i = 0; i < size * size; i++) {
+        const v = hash2(i, seed) * 255;
+        data[i * 4] = v;
+        data[i * 4 + 1] = v;
+        data[i * 4 + 2] = v;
+        data[i * 4 + 3] = 255;
+      }
+    }),
+  );
   ctx.putImageData(img, 0, 0);
   return c;
 };
