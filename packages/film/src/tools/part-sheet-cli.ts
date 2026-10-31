@@ -19,7 +19,9 @@
 // kept in the record, never laid, and still counted. `--reuse` lays the
 // answers already drawn; `--check` lays them, writes nothing and fails
 // where a file differs; `--dry-run` writes the magenta input under
-// `out/<film>/cast/<member>/parts/<view>/`. None of the three calls okra.
+// `out/<film>/cast/<member>/parts/<view>/` and lists each piece of enclosed
+// paper the cut holds and each gap the view names (the table's `paperOf`).
+// None of the three calls okra.
 
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
@@ -114,13 +116,27 @@ const namedOf = (hidden: HiddenEntry, measures: HiddenMeasures) =>
       .map((g) => ({ ...miss, grain: g })),
   );
 
-/** What a member's cut table exports: its cuts, each view's options, each view's hidden entry. */
+/** What a member's cut table exports: its cuts, each view's options, each view's hidden entry, and, if it has them, its frames and its paper reader. */
 interface CutModule {
   readonly CUTS: Readonly<Record<string, PartCut>>;
   readonly cutOptionsFor: (view: string, raster: Raster) => PartCutOptions;
   readonly HIDDEN: Readonly<Record<string, HiddenEntry>>;
   /** Each view's frame on its kept sheet, where its part sheet is cut from the kept box padded: the sheet, the kept box and the pad (left, top, right, bottom). A view with none is cut from its kept view (`views/<view>.png`). */
   readonly FRAMES?: Readonly<Record<string, ViewFrame>>;
+  /** A view's enclosed paper in the kept view's pixels: the pieces its cut holds as cloth, and the pieces it leaves open as the gaps the view names. The dry run lists both, for the eye to check each held piece against the kept sheet. */
+  readonly paperOf?: (view: string, raster: Raster) => EnclosedPaper;
+}
+
+/** A piece of enclosed paper: its box in the kept view's pixels (the far edges exclusive) and its pixels. */
+interface PaperPiece {
+  readonly box: readonly [number, number, number, number];
+  readonly area: number;
+}
+
+/** A view's enclosed paper, held or open, as its cut table reads it. */
+interface EnclosedPaper {
+  readonly held: ReadonlyArray<PaperPiece>;
+  readonly open: ReadonlyArray<PaperPiece & { readonly why: string }>;
 }
 
 /** A view's frame on its kept sheet (`kept/<sheet>.png`): its kept box and the pixels its part sheet pads it by. */
@@ -248,6 +264,7 @@ const cutTableOf = (file: string, name: string, refuse: (reason: string) => Part
           hidden,
           optionsFor: loaded.cutOptionsFor,
           frame: Option.fromUndefinedOr(loaded.FRAMES?.[name]),
+          paperOf: Option.fromUndefinedOr(loaded.paperOf),
         }),
     });
   });
@@ -662,6 +679,19 @@ export const parts = Command.make(
       yield* fs.makeDirectory(out, { recursive: true });
       const mask = path.join(out, 'input.png');
       yield* fs.writeFile(mask, made.bytes);
+      const paper = Option.match(table.paperOf, {
+        onNone: () => [],
+        onSome: (of) => {
+          const { held, open } = of(name, view);
+          return [
+            ...held.map((p) => `parts ${label} paper held [${p.box.join(',')}] ${p.area}px`),
+            ...open.map(
+              (p) => `parts ${label} paper gap [${p.box.join(',')}] ${p.area}px: ${p.why}`,
+            ),
+          ];
+        },
+      });
+      for (const line of paper) yield* Console.log(line);
       return yield* Console.log(
         `parts ${label} dry-run parts=${sheet.parts.length} moving=${table.hidden.moving.join(',')} hidden=${made.hidden.reduce((a, b) => a + b, 0)}px cut=${cutMs}ms mask=${mask} okra=0`,
       );

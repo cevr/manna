@@ -137,7 +137,7 @@ const HIDDEN_ENTRIES = {
   },
 } as const satisfies Readonly<Record<'poses-5', HiddenEntry>>;
 
-export const { CUTS, cutOptionsFor, HIDDEN, GAPS } = cutTable({
+export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
   frames: FRAMES,
   views: {
     'poses-5': {

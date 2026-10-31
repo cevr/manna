@@ -1679,7 +1679,7 @@ const HIDDEN_ENTRIES = {
 const FEET = 'the ground between his feet';
 
 /** His cut table: each view's cut, how its figure is read, and its gaps. */
-export const { CUTS, cutOptionsFor, HIDDEN, GAPS } = cutTable({
+export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
   frames: FRAMES,
   views: {
     front: {

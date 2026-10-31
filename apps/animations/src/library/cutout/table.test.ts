@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { type PartCut, cutFigureOf, cutParts } from '@manna/film/tools';
+import { cutFigureOf } from '@manna/film/core';
+import { type PartCut, cutParts } from '@manna/film/tools';
 import { Match, Result } from 'effect';
 import { grain, shade, sides } from './prompts.ts';
 import { FAR, REACH, box, sleeve, underSole } from './rules.ts';
@@ -268,6 +269,61 @@ describe('framedFigure', () => {
     expect([figure[onView(10, 35)], figure[onView(10, 30)], figure[onView(5, 36)]]).toEqual([
       0, 0, 1,
     ]);
+  });
+});
+
+describe('paperOf', () => {
+  // the padded view is 30 x 37 px; the kept box is x 3 to 26 and y 5 to 34 on it
+  const [w, h] = [frame.kept[2] - frame.kept[0], frame.kept[3] - frame.kept[1]];
+  const [pw, ph] = [w + frame.pad[0] + frame.pad[2], h + frame.pad[1] + frame.pad[3]];
+  const between = { at: [7, 18] as const, box: [3, 14, 13, 23] as const, why: 'ground between' };
+  const below = { at: [3, 22] as const, box: [3, 22, 13, 31] as const, why: 'ground below' };
+  const table = cutTable({
+    frames: {
+      standing: frame,
+      foot: frame,
+      bust: { sheet: 'heads', kept: [0, 0, 24, 24], pad: [0, 0, 0, 0] },
+    },
+    views: {
+      standing: { cut, figure: 'framed', gaps: [between] },
+      foot: { cut, figure: 'framed', gaps: [below] },
+      bust: { cut, figure: 'bust', gaps: [{ at: [11, 20], box: [5, 7, 19, 24], why: 'neck' }] },
+    },
+    hidden: {
+      standing: { moving: ['arm'], prompt: 'standing' },
+      foot: { moving: ['arm'], prompt: 'foot' },
+      bust: { moving: ['arm'], prompt: 'bust' },
+    },
+    ink: INK,
+  });
+
+  test('lists each enclosed paper piece in the kept view’s pixels: held, or open as the gap the view names', () => {
+    const [cloth, gap] = [ringed(5, 6, 16, 16, false), ringed(5, 18, 16, 28, false)];
+    const view = raster(pw, ph, (x, y) => [cloth, gap][Number(y >= 17)]!(x, y));
+    expect(table.paperOf('standing', view)).toEqual({
+      held: [{ box: [3, 2, 13, 11], area: 90 }],
+      open: [{ box: [3, 14, 13, 23], area: 90, why: 'ground between' }],
+    });
+  });
+
+  test('lists a piece only the pad’s reading encloses, moved into the kept view’s pixels', () => {
+    const view = raster(pw, ph, ringed(5, 26, 16, 36, false));
+    expect(table.paperOf('foot', view)).toEqual({
+      held: [],
+      open: [{ box: [3, 22, 13, 31], area: 90, why: 'ground below' }],
+    });
+    expect(table.paperOf('standing', view)).toEqual({
+      held: [{ box: [3, 22, 13, 31], area: 90 }],
+      open: [],
+    });
+  });
+
+  test('reads a bust with its foot closed', () => {
+    const view = raster(24, 24, ringed(4, 6, 19, 23, true));
+    expect(table.paperOf('bust', view)).toEqual({
+      held: [],
+      open: [{ box: [5, 7, 19, 24], area: 238, why: 'neck' }],
+    });
   });
 });
 

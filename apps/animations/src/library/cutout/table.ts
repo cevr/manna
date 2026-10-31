@@ -1,6 +1,6 @@
 // A cast member's cut table, built from his data: the `concept parts`
 // contract @manna/film reads from `<member>/cutout/cut.ts` (`CUTS`,
-// `cutOptionsFor`, `HIDDEN`, `FRAMES`; `tools/part-sheet-cli.ts`). The member
+// `cutOptionsFor`, `HIDDEN`, `FRAMES`, `paperOf`; `tools/part-sheet-cli.ts`). The member
 // gives each view's cut in the kept view's pixels (parts front to back, laid
 // by the rules in `rules.ts`), the figure it is read with, its part labels if
 // he has a traced rig, and his hidden entries; the table moves each cut into
@@ -8,10 +8,10 @@
 // A member with no traced rig gives no labels: his parts are polygons, discs
 // and boxes on his figure. The table names no member. Pure.
 
-import { cutFigureOf } from '@manna/film/core';
+import { cutFigureOf, enclosedPaperOf } from '@manna/film/core';
 import type { cutParts, HiddenEntry, PartCut, PartCutOptions, PartRule } from '@manna/film/tools';
 import type { PuppetSpec } from '@manna/film/canvas';
-import { Match, Option, Record as Records } from 'effect';
+import { Array as Arr, Match, Option, Record as Records } from 'effect';
 import { FAR, type Pt, REACH } from './rules.ts';
 
 /** A box on a kept sheet: left, top, right, bottom. */
@@ -68,6 +68,18 @@ export interface CutViewData {
   readonly figure: FigureReading;
   readonly reads?: Pick<PartCutOptions, 'classes' | 'labels'>;
   readonly gaps?: ReadonlyArray<CutGap>;
+}
+
+/** A piece of enclosed paper a view's cut reads, in the kept view's pixels: its box (the far edges exclusive) and its pixels. */
+interface PaperPiece {
+  readonly box: Box;
+  readonly area: number;
+}
+
+/** A view's enclosed paper: the pieces its cut holds as cloth, and the pieces it leaves open as the gaps the view names, each with its why. */
+export interface CutPaper {
+  readonly held: ReadonlyArray<PaperPiece>;
+  readonly open: ReadonlyArray<PaperPiece & { readonly why: string }>;
 }
 
 /** A member's cut data, by his views' names in his sheets' views. */
@@ -134,6 +146,31 @@ export const padded = (cut: PartCut, frame: CutFrame): PartCut => {
   };
 };
 
+/** A bust view with a row of the member's ink under it, so its foot is closed. */
+const closedOf = (view: View, ink: Rgba): View => {
+  const n = view.width * view.height;
+  const rgba = new Uint8Array((n + view.width) * 4);
+  rgba.set(view.rgba);
+  for (let x = 0; x < view.width; x++) rgba.set(ink, (n + x) * 4);
+  return { width: view.width, height: view.height + 1, rgba };
+};
+
+/** The kept box of a padded view, read alone. */
+const keptOf = (frame: CutFrame, view: View): View => {
+  const { kept, pad } = frame;
+  const [w, h] = [kept[2] - kept[0], kept[3] - kept[1]];
+  const rgba = new Uint8Array(w * h * 4);
+  for (let y = 0; y < h; y++)
+    rgba.set(
+      view.rgba.subarray(
+        ((y + pad[1]) * view.width + pad[0]) * 4,
+        ((y + pad[1]) * view.width + pad[0] + w) * 4,
+      ),
+      y * w * 4,
+    );
+  return { width: w, height: h, rgba };
+};
+
 /**
  * A bust's figure: a heads view runs off its foot, where the garment meets
  * the view's edge and reads as ground to a flood from the border. Read with a
@@ -141,13 +178,8 @@ export const padded = (cut: PartCut, frame: CutFrame): PartCut => {
  * own reading (`cutFigureOf`, its gaps open) of what the border does not
  * reach. `gaps` are points of the view.
  */
-export const bustFigure = (view: View, ink: Rgba, gaps: ReadonlyArray<Pt> = []): Uint8Array => {
-  const n = view.width * view.height;
-  const rgba = new Uint8Array((n + view.width) * 4);
-  rgba.set(view.rgba);
-  for (let x = 0; x < view.width; x++) rgba.set(ink, (n + x) * 4);
-  return cutFigureOf({ width: view.width, height: view.height + 1, rgba }, gaps).slice(0, n);
-};
+export const bustFigure = (view: View, ink: Rgba, gaps: ReadonlyArray<Pt> = []): Uint8Array =>
+  cutFigureOf(closedOf(view, ink), gaps).slice(0, view.width * view.height);
 
 /**
  * A standing view's figure in its padded frame: the kept box read as the
@@ -165,16 +197,7 @@ export const framedFigure = (
 ): Uint8Array => {
   const { kept, pad } = frame;
   const [w, h] = [kept[2] - kept[0], kept[3] - kept[1]];
-  const rgba = new Uint8Array(w * h * 4);
-  for (let y = 0; y < h; y++)
-    rgba.set(
-      view.rgba.subarray(
-        ((y + pad[1]) * view.width + pad[0]) * 4,
-        ((y + pad[1]) * view.width + pad[0] + w) * 4,
-      ),
-      y * w * 4,
-    );
-  const inner = cutFigureOf({ width: w, height: h, rgba }, gaps);
+  const inner = cutFigureOf(keptOf(frame, view), gaps);
   const onView = gaps.map((g) => shifted(g, [pad[0], pad[1]]));
   return Uint8Array.from(cutFigureOf(view, onView), (f, i) => {
     const [x, y] = [(i % view.width) - pad[0], Math.floor(i / view.width) - pad[1]];
@@ -187,7 +210,8 @@ export const framedFigure = (
  * A member's cut table: each view's cut in its part sheet's frame (`CUTS`),
  * what each view's cut reads beside the view (`cutOptionsFor`: its classes
  * and labels if it has them, then its figure), his hidden entries (`HIDDEN`),
- * his frames (`FRAMES`) and each view's named gaps (`GAPS`).
+ * his frames (`FRAMES`), each view's named gaps (`GAPS`) and each view's
+ * enclosed paper, held or open (`paperOf`, which the dry run lists).
  */
 export const cutTable = <V extends string>(member: CutMember<V>) => {
   const CUTS: Readonly<Record<V, PartCut>> = Records.map(member.views, (view, name) =>
@@ -216,5 +240,47 @@ export const cutTable = <V extends string>(member: CutMember<V>) => {
     member.views,
     (view) => view.gaps ?? [],
   );
-  return { CUTS, cutOptionsFor, HIDDEN: member.hidden, FRAMES: member.frames, GAPS };
+  // the pieces of the reads its figure is made of, each in the kept view's pixels with the gap points in it
+  const piecesOf = (name: V, view: View) => {
+    const { kept, pad } = member.frames[name];
+    const by: Pt = [pad[0], pad[1]];
+    const gaps = GAPS[name].map((g) => g.at);
+    const onView = gaps.map((g) => shifted(g, by));
+    const back = (p: { box: Box; area: number; gaps: ReadonlyArray<Pt> }) => ({
+      box: [p.box[0] - by[0], p.box[1] - by[1], p.box[2] - by[0], p.box[3] - by[1]] as const,
+      area: p.area,
+      gaps: p.gaps.map((g) => shifted(g, [-by[0], -by[1]])),
+    });
+    const [w, h] = [kept[2] - kept[0], kept[3] - kept[1]];
+    const inPad = (p: { box: Box }) =>
+      p.box[0] < by[0] || p.box[1] < by[1] || p.box[2] > by[0] + w || p.box[3] > by[1] + h;
+    return Match.value(member.views[name].figure).pipe(
+      Match.when('framed', () => [
+        ...enclosedPaperOf(keptOf(member.frames[name], view), gaps).pieces,
+        ...enclosedPaperOf(view, onView).pieces.filter(inPad).map(back),
+      ]),
+      Match.when('bust', () =>
+        enclosedPaperOf(closedOf(view, member.ink), onView).pieces.map(back),
+      ),
+      Match.exhaustive,
+    );
+  };
+  /** A view's enclosed paper as its figure reads it: each piece held, or open as the gap it names. */
+  const paperOf = (name: V, view: View): CutPaper => {
+    const pieces = piecesOf(name, view).map((p) => ({
+      piece: { box: p.box, area: p.area },
+      gap: Arr.findFirst(GAPS[name], (g) =>
+        p.gaps.some((at) => at[0] === g.at[0] && at[1] === g.at[1]),
+      ),
+    }));
+    return {
+      held: pieces.flatMap((p) =>
+        Option.match(p.gap, { onNone: () => [p.piece], onSome: () => [] }),
+      ),
+      open: pieces.flatMap((p) =>
+        Option.match(p.gap, { onNone: () => [], onSome: (g) => [{ ...p.piece, why: g.why }] }),
+      ),
+    };
+  };
+  return { CUTS, cutOptionsFor, HIDDEN: member.hidden, FRAMES: member.frames, GAPS, paperOf };
 };

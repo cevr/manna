@@ -6,7 +6,7 @@
 // changed) fails here, where its view would otherwise hold the ground its
 // kept sheet shows open.
 
-import { enclosedPaperOf } from '@manna/film/tools';
+import { enclosedPaperOf } from '@manna/film/core';
 import { Glob } from 'bun';
 import { Effect, Option, Record as Records } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';

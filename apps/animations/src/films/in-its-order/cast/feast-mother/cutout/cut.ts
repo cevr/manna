@@ -879,7 +879,7 @@ const HIDDEN_ENTRIES = {
   },
 } as const satisfies Readonly<Record<CutView, HiddenEntry>>;
 
-export const { CUTS, cutOptionsFor, HIDDEN, GAPS } = cutTable({
+export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
   frames: FRAMES,
   views: {
     front: { cut: FRONT, figure: 'framed' },

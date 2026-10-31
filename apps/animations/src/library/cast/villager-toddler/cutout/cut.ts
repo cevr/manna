@@ -309,7 +309,7 @@ const HIDDEN_ENTRIES = {
 } as const satisfies Readonly<Record<CutView, HiddenEntry>>;
 
 /** Their cut table: each view's cut and how its figure is read. */
-export const { CUTS, cutOptionsFor, HIDDEN } = cutTable({
+export const { CUTS, cutOptionsFor, HIDDEN, paperOf } = cutTable({
   frames: FRAMES,
   views: {
     'poses-1': { cut: POSES_1, figure: 'framed' },
