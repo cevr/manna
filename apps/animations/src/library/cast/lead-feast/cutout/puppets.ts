@@ -34,6 +34,7 @@ import tqSash from './sheets/threeQuarterLeft/sash.png' with { type: 'file' };
 import tqShadow from './sheets/threeQuarterLeft/shadow.png' with { type: 'file' };
 import tqTorso from './sheets/threeQuarterLeft/torso.png' with { type: 'file' };
 import { puppetsOf } from '../../../cutout/puppets.ts';
+import { CUTS } from './cut.ts';
 import { FRAMES } from './frames.ts';
 import { SKELETONS } from './skeleton.ts';
 
@@ -58,6 +59,7 @@ export const PAPERS = {
 export const PUPPETS = puppetsOf({
   cast: 'lead-feast',
   frames: FRAMES,
+  cuts: CUTS,
   skeletons: SKELETONS,
   papers: PAPERS,
   line: LINE,

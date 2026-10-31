@@ -32,12 +32,13 @@ export type PartRule =
   | { readonly disc: { readonly c: PartPt; readonly r: number } }
   | { readonly label: string };
 
-/** One part of a cut: its name, the rules that take a pixel for it, those that leave a pixel to the parts behind it, and the joint it turns about, where it has one. */
+/** One part of a cut: its name, the rules that take a pixel for it, those that leave a pixel to the parts behind it, the joint it turns about, where it has one, and its role: `shadow` for his shadow on the ground, which the un-matte reads as no wall (`UnmatteOptions.shadow`). */
 interface PartCutEntry {
   readonly name: string;
   readonly take: ReadonlyArray<PartRule>;
   readonly unless?: ReadonlyArray<PartRule>;
   readonly pivot?: PartPt;
+  readonly role?: 'shadow';
 }
 
 /** A cut: a view's parts, front to back. */

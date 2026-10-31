@@ -158,7 +158,7 @@ const FRONT: PartCut = {
       ],
       unless: [underSole(FRONT_SOLES.left)],
     },
-    { name: 'shadow', take: [belowHem(...FRONT_HEM)] },
+    { name: 'shadow', role: 'shadow', take: [belowHem(...FRONT_HEM)] },
     // below the belt, but the seed bag
     { name: 'robe', take: [box(-1, 331, FAR, FAR)], unless: [box(157, 309, 206, 413)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
@@ -292,6 +292,7 @@ const THREE_QUARTER_LEFT: PartCut = {
     },
     {
       name: 'shadow',
+      role: 'shadow',
       take: [
         {
           polygon: [
@@ -460,6 +461,7 @@ const BACK: PartCut = {
     },
     {
       name: 'shadow',
+      role: 'shadow',
       take: [
         {
           polygon: [
@@ -585,6 +587,7 @@ const PROFILE_LEFT: PartCut = {
     },
     {
       name: 'shadow',
+      role: 'shadow',
       take: [
         {
           polygon: [[-1, 510], ...PL_HEM.left, ...PL_HEM.right, [FAR, 512], [FAR, FAR], [-1, FAR]],
@@ -710,6 +713,7 @@ const PROFILE_RIGHT: PartCut = {
     },
     {
       name: 'shadow',
+      role: 'shadow',
       take: [
         {
           polygon: [
@@ -870,6 +874,7 @@ const THREE_QUARTER_RIGHT: PartCut = {
     },
     {
       name: 'shadow',
+      role: 'shadow',
       take: [
         {
           polygon: [
@@ -1023,6 +1028,7 @@ const POSES_1: PartCut = {
     },
     {
       name: 'shadow',
+      role: 'shadow',
       take: [
         {
           polygon: [[-1, 571], ...P1_HEM.right, ...P1_HEM.left, [FAR, 522], [FAR, FAR], [-1, FAR]],
@@ -1236,6 +1242,7 @@ const POSES_2: PartCut = {
     },
     {
       name: 'shadow',
+      role: 'shadow',
       take: [
         {
           polygon: [[-1, 540], ...P2_HEM.left, ...P2_HEM.right, [FAR, 540], [FAR, FAR], [-1, FAR]],
@@ -1417,6 +1424,7 @@ const POSES_3: PartCut = {
     },
     {
       name: 'shadow',
+      role: 'shadow',
       take: [
         {
           polygon: [[-1, 500], ...P3_HEM.right, ...P3_HEM.left, [FAR, 545], [FAR, FAR], [-1, FAR]],
@@ -1587,6 +1595,7 @@ const POSES_4: PartCut = {
     },
     {
       name: 'shadow',
+      role: 'shadow',
       take: [
         {
           polygon: [[-1, 535], ...P4_HEM.right, ...P4_HEM.left, [FAR, 535], [FAR, FAR], [-1, FAR]],

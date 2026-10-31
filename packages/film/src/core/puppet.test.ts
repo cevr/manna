@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { Result } from 'effect';
+import { Option, Result } from 'effect';
 import {
   type Puppet,
   type Skeleton,
@@ -338,6 +338,50 @@ describe('a puppet', () => {
     expect(back.revealed[1]).toBeUndefined();
     // a front part's own pixels are never given back
     expect(p.parts[0]!.revealed.filter(Boolean)).toEqual([]);
+  });
+
+  test('un-mattes the light gap between his feet open when the sheet names the part that closes it below his shadow, and keeps it when it does not', () => {
+    // his feet, an ink block with a 2 px gap of near-paper light, over a part a third ink at its two ends
+    const [paper, light, ink, tan] = [
+      [250, 240, 220],
+      [252, 243, 227],
+      [20, 12, 8],
+      [215, 205, 190],
+    ] as const;
+    const painted = (colourAt: (x: number, y: number) => Option.Option<ReadonlyArray<number>>) => {
+      const rgba = new Uint8Array(W * H * 4);
+      for (let y = 0; y < H; y++)
+        for (let x = 0; x < W; x++) {
+          const c = colourAt(x, y);
+          if (Option.isSome(c)) rgba.set([...c.value, 255], (y * W + x) * 4);
+        }
+      return { width: W, height: H, rgba };
+    };
+    const feet = painted((x, y) => {
+      if (x < 20 || x > 27 || y < 3 || y > 14) return Option.none();
+      if (x >= 23 && x <= 24 && y >= 8) return Option.some(light);
+      return Option.some(ink);
+    });
+    const below = painted((x, y) => {
+      if (x < 16 || x > 33 || y < 15 || y > 18) return Option.none();
+      if (x <= 18 || x >= 31) return Option.some(ink);
+      return Option.some(tan);
+    });
+    const sheet = (shadow: ReadonlyArray<string>): PuppetSheet => ({
+      width: W,
+      height: H,
+      paper,
+      shadow,
+      parts: [
+        { name: 'feet', pixels: feet },
+        { name: 'shadow', pixels: below },
+      ],
+    });
+    const skeleton = { ...TWO_BONES, skin: { feet: [], shadow: [] } };
+    const alphaAt = (p: Puppet, x: number, y: number) =>
+      p.parts[0]!.pixels.rgba[(y * W + x) * 4 + 3];
+    expect(alphaAt(made(sheet(['shadow']), skeleton), 23, 14)).toBe(0);
+    expect(alphaAt(made(sheet([]), skeleton), 23, 14)).toBe(255);
   });
 
   test('leaves no seam at a fractional scale between two parts cut along one line that move together', () => {

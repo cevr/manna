@@ -2714,7 +2714,10 @@ colour that fills any of the kept sheet's own paper pockets is dropped).
 `grain` is his paper's grain in luma (its p95 below the paper over the
 kept sheet's ground): a rim pixel darker than the paper by more than that
 keeps its colour at alpha 255. `grain` is off by default, so no pixel of a
-member that does not set it moves. Paint the
+member that does not set it moves. A cleared pixel the figure walls in is
+his light cloth and takes the sheet's pixel back; his shadow on the ground
+walls nothing in, and the cut names it: a cut entry with `role: 'shadow'`
+gives `PuppetSpec.shadow` its part names (`UnmatteOptions.shadow`). Paint the
 un-matte clears from behind a front part's rim is kept on the part behind
 (`PuppetPart.revealed`) and laid by one rule (`revealedShown`, beside
 `sealsShown`) in every draw: `rasterOf`, the plain GL pass and the look

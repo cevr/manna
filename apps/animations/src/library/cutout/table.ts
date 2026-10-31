@@ -8,14 +8,8 @@
 // A member with no traced rig gives no labels: his parts are polygons, discs
 // and boxes on his figure. The table names no member. Pure.
 
-import {
-  cutFigureOf,
-  type cutParts,
-  type HiddenEntry,
-  type PartCut,
-  type PartCutOptions,
-  type PartRule,
-} from '@manna/film/tools';
+import { cutFigureOf } from '@manna/film/core';
+import type { cutParts, HiddenEntry, PartCut, PartCutOptions, PartRule } from '@manna/film/tools';
 import type { PuppetSpec } from '@manna/film/canvas';
 import { Match, Option, Record as Records } from 'effect';
 import { FAR, type Pt, REACH } from './rules.ts';
@@ -130,6 +124,7 @@ export const padded = (cut: PartCut, frame: CutFrame): PartCut => {
         unless: Option.getOrElse(Option.fromUndefinedOr(p.unless), () => []).map((r) =>
           onFrame(r, by, size),
         ),
+        role: p.role,
       };
       return Option.match(Option.fromUndefinedOr(p.pivot), {
         onNone: () => part,

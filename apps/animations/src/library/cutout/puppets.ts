@@ -7,7 +7,8 @@
 // at its one scale. Each declares the kept view it is held to (`concept`).
 
 import type { PuppetSpec } from '@manna/film/canvas';
-import { Record as Records, Struct } from 'effect';
+import type { PartCut } from '@manna/film/tools';
+import { Option, Record as Records, Struct } from 'effect';
 import { keptCorner, paddedBox } from './frames.ts';
 import type { Rooted } from './skeleton.ts';
 import type { CutFrame, KeptSheet } from './table.ts';
@@ -53,7 +54,23 @@ export interface PuppetMember<V extends string> extends Pick<PuppetSpec, (typeof
   /** His sheet's line, which a look draws again near what moved. */
   readonly line: NonNullable<PuppetSpec['line']>;
   readonly parts: Readonly<Record<V, Parts>>;
+  /**
+   * Each view's cut (`cut.ts`'s `CUTS`): the parts its cut gives the shadow
+   * role are the view's shadow, which the un-matte does not wall the paper
+   * with (`core/unmatte.ts`). A member with no cut here names no shadow.
+   */
+  readonly cuts?: Readonly<Record<V, PartCut>>;
 }
+
+/** The parts a view's cut gives the shadow role, by name; none when the member gives no cut. */
+const shadowOf = <V extends string>(
+  cuts: PuppetMember<V>['cuts'],
+  view: V,
+): ReadonlyArray<string> =>
+  Option.fromUndefinedOr(cuts).pipe(
+    Option.map((all) => all[view].parts.filter((p) => p.role === 'shadow').map((p) => p.name)),
+    Option.getOrElse((): ReadonlyArray<string> => []),
+  );
 
 /** A view's concept image: a single drawing is its own file, so its view names it; a sheet is named by its kind alone. */
 const conceptImage = (
@@ -84,6 +101,7 @@ export const puppetsOf = <V extends string>(
       },
       paper: member.papers[view],
       ...Struct.pick(member, SHEET),
+      shadow: shadowOf(member.cuts, view),
       line: member.line,
     };
   });

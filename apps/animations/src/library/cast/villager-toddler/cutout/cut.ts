@@ -164,6 +164,7 @@ const POSES_1: PartCut = {
     },
     {
       name: 'shadow',
+      role: 'shadow',
       take: [
         {
           polygon: [...P1_HEM, [188, 190], [FAR, 190], [FAR, FAR], [-1, FAR]],

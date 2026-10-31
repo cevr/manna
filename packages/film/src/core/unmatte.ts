@@ -15,15 +15,16 @@
 // parts) is his light cloth, not paper: it takes the sheet's px back, unless
 // its clear region holds a pocket of the sheet's paper or a px of the paper
 // the sheet shows open to the ground; a px within the paper's core (ΔE 2)
-// stays cleared. A member's cut-out may ask four things more of it
+// stays cleared. A member's cut-out may ask five things more of it
 // (`UnmatteOptions`): his cloth colours, so a light cloth the line does
 // not reach is his and not paper; his thin parts, whose alpha is raised
 // until the colour that closes the sum is in range, so a speck keeps its
-// hue on another paper; the box's open edges, so paper the box cuts off
+// hue on another paper; his shadow parts, his shadow on the ground, which
+// wall nothing in; the box's open edges, so paper the box cuts off
 // anywhere on its other edges is cleared, not only at its corners; and his
 // paper's grain, so a rim pixel darker than the paper by more than the
 // sheet's own ground varies is his cloth, kept whole. Asked none, it is as
-// above. Pure.
+// above, every part a wall. Pure.
 
 import { type Rgb, deltaE, labOf } from './cast-sheet-pixels.ts';
 
@@ -36,6 +37,8 @@ interface UnmatteOptions {
   readonly keep?: ReadonlyArray<Rgb>;
   /** His thin parts, by their index front to back: a rim pixel a thin part holds takes the least alpha at or over its solved one that gives a colour in 0..255, never a clamped colour. */
   readonly thin?: ReadonlyArray<number>;
+  /** His shadow parts, by their index front to back: his shadow on the ground, which walls nothing in (`restoreEnclosed`), however much ink its grain holds. */
+  readonly shadow?: ReadonlyArray<number>;
   /** The box's edges his figure leaves through (a bust's bottom edge), where paper may be his (a highlight): when given, a pocket of paper is cleared from every pixel of every other edge; when not, from the box's four corners only. */
   readonly open?: ReadonlyArray<BoxEdge>;
   /** His paper's grain, luma (0..255): a rim pixel darker than the paper by more than it is his cloth, kept whole at its colour and alpha 255, not solved toward the paper. The sheet's own ground runs this far darker than its median paper, so a pixel darker still is no paper. */
@@ -131,7 +134,7 @@ export const unmatte = (
     out[k]!.set(floored(i, solve(i)), i * 4);
     changed[i] = 1;
   }
-  restoreEnclosed(parts, out, holders, changed, paperLab);
+  restoreEnclosed(parts, out, holders, changed, paperLab, new Set(options.shadow));
   return out;
 };
 
@@ -146,20 +149,6 @@ const SHEET_GROUND = 4.25;
 
 /** A clear region or kept hole holding this many paper px (within `PAPER_CORE`) is a pocket of the sheet's paper inside him: a clear region that holds one, or any px of a kept hole that is one, stays cleared. */
 const POCKET = 9;
-
-/** A part whose opaque px are ink (at or under `INK_LUMA`) at most this share is a shadow on the ground: a shadow's darkest grain is a few specks of its px, where every part of the figure carries an outline. */
-const SHADOW_INK = 0.035;
-
-/** Whether part `p` is a shadow on the ground, which walls nothing in: so few of its opaque px are ink that they are specks of the shadow's own grain, not an outline. */
-const shadowOf = (p: Uint8Array) => {
-  let [opaque, ink] = [0, 0];
-  for (let i = 0; i < p.length; i += 4)
-    if (p[i + 3] === 255) {
-      opaque++;
-      if (lumaOf([p[i]!, p[i + 1]!, p[i + 2]!]) <= INK_LUMA) ink++;
-    }
-  return ink <= opaque * SHADOW_INK;
-};
 
 const onFrame = (i: number, width: number, height: number) => {
   const [x, y] = [i % width, Math.floor(i / width)];
@@ -254,11 +243,9 @@ const sides = (i: number, width: number, height: number) => {
  * (`changed`) to a clear or near-clear one (view alpha under `FENCE`) that
  * the figure encloses: light cloth the line to the ink does not reach, which
  * cleared is a hole in him. The outside is what floods (8-connected) from
- * the ground and the frame's border past his walls: a px his inked parts
- * hold at view alpha `FENCE` or more, so his shadow on the ground walls
- * nothing in: a part is his shadow when at most `SHADOW_INK` of its opaque
- * px are ink (`shadowOf`), since its darkest grain is specks and not an
- * outline. The flood steps diagonally, so a gap his outline leaves only at a
+ * the ground and the frame's border past his walls: a px the parts not in
+ * `shadow` hold at view alpha `FENCE` or more, so his shadow on the ground,
+ * which his cut names, walls nothing in. The flood steps diagonally, so a gap his outline leaves only at a
  * corner is outside, and no px it does not reach lies beside the outside or
  * on the frame: none taken back shows as a fleck on his outline. A px is
  * enclosed when the outside does not reach it, and its clear region
@@ -274,14 +261,15 @@ const restoreEnclosed = (
   holders: Holders,
   changed: Uint8Array,
   paperLab: Rgb,
+  shadow: ReadonlySet<number>,
 ) => {
   const { front, width, height } = holders;
   const n = width * height;
   const fromPaper = paperDistance(holders, paperLab);
   const isCore = (i: number) => fromPaper(i) <= PAPER_CORE;
   const alpha = viewAlphaOf(out, n);
-  const inked = out.filter((_, k) => !shadowOf(parts[k]!));
-  const wallAlpha = inked.length === out.length ? alpha : viewAlphaOf(inked, n);
+  const walls = out.filter((_, k) => !shadow.has(k));
+  const wallAlpha = walls.length === out.length ? alpha : viewAlphaOf(walls, n);
   const step8 = (i: number) => neighbours(i, width, height);
   const step4 = (i: number) => sides(i, width, height);
   const outside = flood(

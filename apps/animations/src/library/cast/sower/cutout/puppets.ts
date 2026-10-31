@@ -87,6 +87,7 @@ import tqrRobe from './sheets/threeQuarterRight/robe.png' with { type: 'file' };
 import tqrShadow from './sheets/threeQuarterRight/shadow.png' with { type: 'file' };
 import tqrTorso from './sheets/threeQuarterRight/torso.png' with { type: 'file' };
 import { puppetsOf } from '../../../cutout/puppets.ts';
+import { CUTS } from './cut.ts';
 import { FRAMES } from './frames.ts';
 import { SKELETONS } from './skeleton.ts';
 
@@ -155,6 +156,7 @@ const THIN = ['seed'] as const;
 const TURNAROUND = puppetsOf<TurnaroundView>({
   cast: 'sower',
   frames: FRAMES,
+  cuts: CUTS,
   skeletons: SKELETONS,
   papers: TURNAROUND_PAPERS,
   keep: LINEN,
@@ -226,6 +228,7 @@ const TURNAROUND = puppetsOf<TurnaroundView>({
 const POSES = puppetsOf<PosesView>({
   cast: 'sower',
   frames: FRAMES,
+  cuts: CUTS,
   skeletons: SKELETONS,
   papers: POSES_PAPERS,
   keep: LINEN,
