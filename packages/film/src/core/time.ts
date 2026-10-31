@@ -21,8 +21,13 @@ interface TimecodeParts {
  * counted as a whole one (non-drop-frame, NDF, as editors count 29.97), so
  * its timecode runs behind the wall clock by a frame in a thousand.
  */
-const countedWhole = (fps: number): boolean =>
-  [fps, (fps * 1001) / 1000].some((rate) => Math.abs(rate - Math.round(rate)) < GRID_NUDGE);
+const countedWhole = (fps: number): boolean => onGrid(fps) || onGrid((fps * 1001) / 1000);
+
+/** Whether `rate` is a whole number, within the grid's nudge. */
+const onGrid = (rate: number): boolean => Math.abs(rate - Math.round(rate)) < GRID_NUDGE;
+
+/** A timecode field: `n` in two digits at least. */
+const two = (n: number): string => (n < 10 ? `0${n}` : String(n));
 
 /**
  * The frame a clock at `seconds` reads at `fps`, the one its timecode says:
@@ -47,11 +52,13 @@ const timecodeParts = (seconds: number, fps: number): TimecodeParts => {
   const counted = countedWhole(fps);
   const firstFrameOf = (second: number) =>
     counted ? second * perSecond : frameAtOrAfter(second, fps);
-  // Within a second of the answer either way; each candidate is judged by its first frame.
+  // Within a second of the answer either way; each candidate, latest first,
+  // is judged by its first frame.
   const near = Math.floor(frames / (counted ? perSecond : fps));
-  const whole = [near + 1, near, near - 1].find((second) => firstFrameOf(second) <= frames) ?? 0;
+  let whole = near + 1;
+  while (whole >= near - 1 && firstFrameOf(whole) > frames) whole--;
+  if (whole < near - 1) whole = 0;
   const within = frames - firstFrameOf(whole);
-  const two = (n: number) => String(n).padStart(2, '0');
   return {
     negative: seconds < 0 && frames > 0,
     hh: two(Math.floor(whole / 3600)),
@@ -64,8 +71,7 @@ const timecodeParts = (seconds: number, fps: number): TimecodeParts => {
 /** Seconds as every time the studio shows them: `HH:MM:SS:FF` at `fps` (`00:01:05:12`), `−` before zero. */
 export const timecode = (seconds: number, fps: number): string => {
   const p = timecodeParts(seconds, fps);
-  const sign = ['−'].filter(() => p.negative).join('');
-  return `${sign}${p.hh}:${p.mm}:${p.ss}:${p.ff}`;
+  return `${p.negative ? '−' : ''}${p.hh}:${p.mm}:${p.ss}:${p.ff}`;
 };
 
 /**
