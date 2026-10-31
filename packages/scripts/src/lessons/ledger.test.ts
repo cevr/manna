@@ -180,9 +180,55 @@ describe('the lessons ledger', () => {
         'bad-date: date 19 Oct',
         'bad-kind: kind agent is none of owner, review, retraction',
         'unquoted: said is neither the words in quotes nor a choice',
-        'review-uncited: a review entry cites no finding (<unit>/<review file> F<n>)',
+        'review-uncited: a review entry cites no finding (<unit>/<review file> <id>, as F2 or m1)',
         'no-cause: no Cause',
       ]);
+    }),
+  );
+
+  it.effect('reads a finding cited by the id its review gives it, as F2, M1, m3, o2 or T3', () =>
+    Effect.gen(function* () {
+      expect(
+        yield* problemsOf(
+          entry('by-f', 'none: a reason', 'review', 'p6-x/review-1.md F2'),
+          entry('by-major', 'none: a reason', 'review', 'run/unit/p5-round-1-findings.md M1, m1'),
+          entry('by-optional', 'none: a reason', 'review', 'unit/round-1-findings.md o2, T3'),
+          entry('by-file-alone', 'none: a reason', 'review', 'unit/round-1-findings.md'),
+          entry('by-word', 'none: a reason', 'review', 'unit/spec.md Goal'),
+        ),
+      ).toEqual([
+        'by-file-alone: a review entry cites no finding (<unit>/<review file> <id>, as F2 or m1)',
+        'by-word: a review entry cites no finding (<unit>/<review file> <id>, as F2 or m1)',
+      ]);
+    }),
+  );
+
+  it.effect('holds each name a guard lists after its file, up to the next file', () =>
+    Effect.gen(function* () {
+      expect(
+        yield* problemsOf(
+          entry('names-held', 'code: `src/thing.ts` `held`, `refuses a thing`'),
+          entry('second-lost', 'code: `src/thing.ts` `held`, `refuses another`; `src/gone.ts` `x`'),
+          entry(
+            'next-file',
+            'code: `src/thing.ts` `held`, `lint/fixtures/own.ts` `RED film/own-rule`, `call()`',
+          ),
+          entry('proof-lost', 'lint:no-console, proof `src/thing.ts` `refuses a thing`, `unheld`'),
+        ),
+      ).toEqual([
+        'second-lost: src/thing.ts does not hold "refuses another"',
+        'second-lost: no file src/gone.ts',
+        'proof-lost: src/thing.ts does not hold "unheld"',
+      ]);
+    }),
+  );
+
+  it.effect('refuses a field given twice, since its reader keeps only the last', () =>
+    Effect.gen(function* () {
+      const fine = entry('twice', 'code: `src/thing.ts` `held`');
+      expect(
+        yield* problemsOf(fine.replace('- **Guard:**', '- **Guard:** none: lost\n- **Guard:**')),
+      ).toEqual(['twice: Guard is given twice']);
     }),
   );
 
