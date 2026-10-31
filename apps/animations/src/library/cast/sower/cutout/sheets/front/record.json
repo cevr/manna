@@ -7,7 +7,7 @@
   "parts": [
     {
       "name": "armRight",
-      "kept": 7475,
+      "kept": 8259,
       "painted": 0
     },
     {
@@ -17,7 +17,7 @@
     },
     {
       "name": "head",
-      "kept": 28247,
+      "kept": 28644,
       "painted": 0
     },
     {
@@ -37,21 +37,21 @@
     },
     {
       "name": "robe",
-      "kept": 28618,
-      "painted": 2831
+      "kept": 29355,
+      "painted": 2749
     },
     {
       "name": "torso",
-      "kept": 26492,
-      "painted": 6580
+      "kept": 26502,
+      "painted": 6938
     }
   ],
   "moving": ["armRight", "armLeft"],
-  "hiddenPx": 15060,
+  "hiddenPx": 15844,
   "carried": [],
   "okra": {
     "route": "subscription (okra image, Codex route; no --model)",
-    "input": "okra/input-78f7a74fa407.png",
+    "input": "okra/input-315ea3cd9255.png",
     "prompt": "okra/prompt.txt",
     "pad": {
       "s": 0.35753278245779363,
@@ -61,7 +61,7 @@
     "budget": {
       "calls": 3,
       "allowance": null,
-      "used": 1
+      "used": 2
     },
     "calls": [
       {
@@ -79,34 +79,51 @@
         ],
         "input": "okra/input-78f7a74fa407.png",
         "out": "okra/answer-1.png",
+        "state": "stale"
+      },
+      {
+        "n": 2,
+        "command": [
+          "okra",
+          "image",
+          "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where his two arms (sleeves and round hands) were cut away to make a cut-out puppet. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each armpit down to the robe, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading as his body beside each arm (the linen tunic, the olive mantle with its walnut-brown edge band, the belt round his waist). Each side of his body runs straight down from the outer end of his shoulder to the outer edge of his robe below, so his body under the arms is as wide as his shoulders and his robe, and the linen tunic and olive mantle fill everything inside that line with the same soft shade and fine paper grain the sheet paints beside each arm. Keep the soft shade each arm casts on his body beside it exactly as it is, and carry that same shade on under where the arm was. Paint the linen tunic and olive mantle of his body with the same fine paper grain the sheet shows on them beside the arms: a fine, even speckle through every flat area of colour, never smooth flat colour. There are no arms now: no sleeves, no hands, nothing magenta left. Where the magenta lay outside his body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, headcloth, face, beard, tunic, mantle, walnut strap, belt, walnut seed bag, feet, size, position and framing.",
+          "--size",
+          "1024x1536",
+          "--ref",
+          "okra/input-315ea3cd9255.png",
+          "-o",
+          "okra/answer-2.png"
+        ],
+        "input": "okra/input-315ea3cd9255.png",
+        "out": "okra/answer-2.png",
         "state": "laid",
         "fit": {
-          "s": 0.3571974558129963,
-          "dx": -52.21273381776905,
-          "dy": 3.268748869543117,
-          "score": 21.303229592247455
+          "s": 0.3574769005028792,
+          "dx": -52.326307736033954,
+          "dy": 2.9511574201100075,
+          "score": 25.550231812627135
         },
         "measures": {
           "seam": {
-            "deltaE": 10.46,
-            "pairs": 158
+            "deltaE": 10.93,
+            "pairs": 159
           },
           "drift": {
-            "deltaE": 3.77,
-            "px": 55106
+            "deltaE": 4.89,
+            "px": 55853
           },
           "grain": [
             {
               "part": "robe",
               "painted": {
                 "robust": 1.15,
-                "plain": 8.11,
-                "n": 1354
+                "plain": 6.43,
+                "n": 1330
               },
               "kept": {
                 "robust": 1.98,
                 "plain": 3.96,
-                "n": 2140
+                "n": 2141
               },
               "verdict": "outside"
             },
@@ -114,13 +131,13 @@
               "part": "torso",
               "painted": {
                 "robust": 0.99,
-                "plain": 6.18,
-                "n": 3689
+                "plain": 4.81,
+                "n": 3622
               },
               "kept": {
                 "robust": 1.98,
                 "plain": 3.92,
-                "n": 5064
+                "n": 5075
               },
               "verdict": "outside"
             }
@@ -128,49 +145,49 @@
           "paintUnder": [
             {
               "part": "armRight",
-              "px": 4915
+              "px": 5270
             },
             {
               "part": "armLeft",
-              "px": 4496
+              "px": 4417
             }
           ],
-          "paintedPx": 9411,
+          "paintedPx": 9687,
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
         "missed": ["seam", "grain"]
       }
     ],
-    "chosen": 1,
+    "chosen": 2,
     "fit": {
-      "s": 0.3571974558129963,
-      "dx": -52.21273381776905,
-      "dy": 3.268748869543117,
-      "score": 21.303229592247455
+      "s": 0.3574769005028792,
+      "dx": -52.326307736033954,
+      "dy": 2.9511574201100075,
+      "score": 25.550231812627135
     }
   },
   "measures": {
     "seam": {
-      "deltaE": 10.46,
-      "pairs": 158
+      "deltaE": 10.93,
+      "pairs": 159
     },
     "drift": {
-      "deltaE": 3.77,
-      "px": 55106
+      "deltaE": 4.89,
+      "px": 55853
     },
     "grain": [
       {
         "part": "robe",
         "painted": {
           "robust": 1.15,
-          "plain": 8.11,
-          "n": 1354
+          "plain": 6.43,
+          "n": 1330
         },
         "kept": {
           "robust": 1.98,
           "plain": 3.96,
-          "n": 2140
+          "n": 2141
         },
         "verdict": "outside"
       },
@@ -178,13 +195,13 @@
         "part": "torso",
         "painted": {
           "robust": 0.99,
-          "plain": 6.18,
-          "n": 3689
+          "plain": 4.81,
+          "n": 3622
         },
         "kept": {
           "robust": 1.98,
           "plain": 3.92,
-          "n": 5064
+          "n": 5075
         },
         "verdict": "outside"
       }
@@ -192,14 +209,14 @@
     "paintUnder": [
       {
         "part": "armRight",
-        "px": 4915
+        "px": 5270
       },
       {
         "part": "armLeft",
-        "px": 4496
+        "px": 4417
       }
     ],
-    "paintedPx": 9411,
+    "paintedPx": 9687,
     "visibleAtRest": 0,
     "recomposeByteEqual": true
   },
