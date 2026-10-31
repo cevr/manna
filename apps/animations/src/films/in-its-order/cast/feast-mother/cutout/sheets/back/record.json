@@ -17,18 +17,18 @@
     },
     {
       "name": "head",
-      "kept": 23034,
+      "kept": 25593,
       "painted": 0
     },
     {
       "name": "robe",
       "kept": 44677,
-      "painted": 2207
+      "painted": 2203
     },
     {
       "name": "torso",
-      "kept": 25376,
-      "painted": 1875
+      "kept": 26526,
+      "painted": 1876
     }
   ],
   "moving": ["armRight", "armLeft"],
@@ -67,9 +67,9 @@
         "state": "laid",
         "fit": {
           "s": 0.39267551716505983,
-          "dx": -89.17436974785188,
-          "dy": 2.820129279945604,
-          "score": 15.5497389838375
+          "dx": -89.17316431313547,
+          "dy": 2.8236574818460554,
+          "score": 15.216705342347955
         },
         "measures": {
           "seam": {
@@ -77,8 +77,8 @@
             "pairs": 33
           },
           "drift": {
-            "deltaE": 4.11,
-            "px": 69402
+            "deltaE": 4.08,
+            "px": 70552
           },
           "grain": [
             {
@@ -104,8 +104,8 @@
               },
               "kept": {
                 "robust": 1.15,
-                "plain": 1.93,
-                "n": 3148
+                "plain": 1.95,
+                "n": 3224
               },
               "verdict": "unverified"
             }
@@ -113,14 +113,14 @@
           "paintUnder": [
             {
               "part": "armRight",
-              "px": 1362
+              "px": 1346
             },
             {
               "part": "armLeft",
-              "px": 1446
+              "px": 1432
             }
           ],
-          "paintedPx": 2808,
+          "paintedPx": 2778,
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
@@ -144,9 +144,9 @@
         "state": "laid",
         "fit": {
           "s": 0.3925529018771063,
-          "dx": -89.17350754136721,
-          "dy": 3.0129592025728584,
-          "score": 19.864832465454466
+          "dx": -89.17311052887938,
+          "dy": 3.0141355149381184,
+          "score": 19.360274870070405
         },
         "measures": {
           "seam": {
@@ -154,8 +154,8 @@
             "pairs": 83
           },
           "drift": {
-            "deltaE": 4.39,
-            "px": 69402
+            "deltaE": 4.36,
+            "px": 70552
           },
           "grain": [
             {
@@ -181,8 +181,8 @@
               },
               "kept": {
                 "robust": 1.15,
-                "plain": 2.05,
-                "n": 3222
+                "plain": 2.07,
+                "n": 3298
               },
               "verdict": "within"
             }
@@ -190,14 +190,14 @@
           "paintUnder": [
             {
               "part": "armRight",
-              "px": 1899
+              "px": 1896
             },
             {
               "part": "armLeft",
               "px": 2183
             }
           ],
-          "paintedPx": 4082,
+          "paintedPx": 4079,
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
@@ -207,9 +207,9 @@
     "chosen": 2,
     "fit": {
       "s": 0.3925529018771063,
-      "dx": -89.17350754136721,
-      "dy": 3.0129592025728584,
-      "score": 19.864832465454466
+      "dx": -89.17311052887938,
+      "dy": 3.0141355149381184,
+      "score": 19.360274870070405
     }
   },
   "measures": {
@@ -218,8 +218,8 @@
       "pairs": 83
     },
     "drift": {
-      "deltaE": 4.39,
-      "px": 69402
+      "deltaE": 4.36,
+      "px": 70552
     },
     "grain": [
       {
@@ -245,8 +245,8 @@
         },
         "kept": {
           "robust": 1.15,
-          "plain": 2.05,
-          "n": 3222
+          "plain": 2.07,
+          "n": 3298
         },
         "verdict": "within"
       }
@@ -254,14 +254,14 @@
     "paintUnder": [
       {
         "part": "armRight",
-        "px": 1899
+        "px": 1896
       },
       {
         "part": "armLeft",
         "px": 2183
       }
     ],
-    "paintedPx": 4082,
+    "paintedPx": 4079,
     "visibleAtRest": 0,
     "recomposeByteEqual": true
   },

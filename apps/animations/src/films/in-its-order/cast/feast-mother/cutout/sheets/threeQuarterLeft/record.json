@@ -17,18 +17,18 @@
     },
     {
       "name": "head",
-      "kept": 27157,
+      "kept": 27700,
       "painted": 0
     },
     {
       "name": "robe",
       "kept": 41710,
-      "painted": 4116
+      "painted": 4104
     },
     {
       "name": "torso",
-      "kept": 21964,
-      "painted": 5352
+      "kept": 22240,
+      "painted": 5346
     }
   ],
   "moving": ["armRight", "armLeft"],
@@ -67,9 +67,9 @@
         "state": "laid",
         "fit": {
           "s": 0.39178700260238325,
-          "dx": -89.25875366169122,
-          "dy": 3.175215609797249,
-          "score": 20.86848441493815
+          "dx": -89.25898758208088,
+          "dy": 3.1744258009888995,
+          "score": 20.839243184250464
         },
         "measures": {
           "seam": {
@@ -78,7 +78,7 @@
           },
           "drift": {
             "deltaE": 4.88,
-            "px": 62939
+            "px": 63215
           },
           "grain": [
             {
@@ -104,8 +104,8 @@
               },
               "kept": {
                 "robust": 1.48,
-                "plain": 2.37,
-                "n": 5778
+                "plain": 2.39,
+                "n": 5794
               },
               "verdict": "within"
             }
@@ -113,14 +113,14 @@
           "paintUnder": [
             {
               "part": "armRight",
-              "px": 1703
+              "px": 1694
             },
             {
               "part": "armLeft",
-              "px": 7765
+              "px": 7756
             }
           ],
-          "paintedPx": 9468,
+          "paintedPx": 9450,
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
@@ -130,9 +130,9 @@
     "chosen": 1,
     "fit": {
       "s": 0.39178700260238325,
-      "dx": -89.25875366169122,
-      "dy": 3.175215609797249,
-      "score": 20.86848441493815
+      "dx": -89.25898758208088,
+      "dy": 3.1744258009888995,
+      "score": 20.839243184250464
     }
   },
   "measures": {
@@ -142,7 +142,7 @@
     },
     "drift": {
       "deltaE": 4.88,
-      "px": 62939
+      "px": 63215
     },
     "grain": [
       {
@@ -168,8 +168,8 @@
         },
         "kept": {
           "robust": 1.48,
-          "plain": 2.37,
-          "n": 5778
+          "plain": 2.39,
+          "n": 5794
         },
         "verdict": "within"
       }
@@ -177,14 +177,14 @@
     "paintUnder": [
       {
         "part": "armRight",
-        "px": 1703
+        "px": 1694
       },
       {
         "part": "armLeft",
-        "px": 7765
+        "px": 7756
       }
     ],
-    "paintedPx": 9468,
+    "paintedPx": 9450,
     "visibleAtRest": 0,
     "recomposeByteEqual": true
   },
