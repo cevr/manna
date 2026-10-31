@@ -3,9 +3,9 @@ pre-commit:
     # Budget: under 5 s. Only the staged files are linted (with fixes) and
     # formatted; stage_fixed re-stages what the tools rewrote. Then the
     # workspaces the staged files lie in are typechecked, incrementally
-    # (packages/scripts/src/precommit-typecheck.ts). The gate (lint and unit
-    # tests) runs by hand between units; builds and the slow tests are
-    # `bun run test:slow`.
+    # (packages/scripts/src/precommit-typecheck.ts), and the lessons ledger is
+    # checked. The gate (lint, the lessons ledger and unit tests) runs by hand
+    # between units; builds and the slow tests are `bun run test:slow`.
     - name: lint
       glob: '*.{ts,tsx,js,jsx,mts,cts}'
       run: bun x oxlint --fix --no-error-on-unmatched-pattern {staged_files}
@@ -17,6 +17,13 @@ pre-commit:
 
     - name: typecheck
       run: bun packages/scripts/src/precommit-typecheck.ts
+
+    # The lessons ledger (`docs/lessons.md`) held to the files its guards name
+    # (packages/scripts/src/lessons/check.ts), on every commit and not on a
+    # glob: a test renamed in any file can break an entry that names it. It
+    # reads the working tree, as the typecheck does, in about 0.15 s.
+    - name: lessons
+      run: bun packages/scripts/src/lessons/check.ts
 
     # Guard rail: a render carries the film's mix, and the mix carries the
     # generated score and effects, so no video (or m4a) is committed under the

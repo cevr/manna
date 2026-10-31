@@ -1,7 +1,7 @@
 // The gate and the slow suite as the root manifest, turbo's config, `gate.sh`
-// and `test-slow.sh` lay them. The gate is the lint's deterministic rules
-// beside every workspace's unit tests, each cached on its inputs, under no
-// lock. Everything else (typecheck, builds, slow tests, browser checks, the
+// and `test-slow.sh` lay them. The gate is the lint's deterministic rules and
+// the lessons ledger's check beside every workspace's unit tests, each cached
+// on its inputs, under no lock; the pre-commit checks the ledger too. Everything else (typecheck, builds, slow tests, browser checks, the
 // full lint) is the slow suite, run one task at a time under the host's test
 // lock, by hand and before each deploy.
 
@@ -93,16 +93,24 @@ const slowBeforeAlchemy = (name: string, script: string) => {
 const locks = (line: string) => /\b(flock|lockf)\b/.test(line) && !line.startsWith('#');
 
 describe('the gate', () => {
-  it.effect('is gate.sh: the lint in the background beside the unit tests, under no lock', () =>
-    Effect.gen(function* () {
-      const { scripts, gate } = yield* laid;
-      expect(commandsOf(scripts['gate'] ?? '')).toEqual([['sh', 'packages/scripts/src/gate.sh']]);
-      expect(gate).toContain('bun packages/scripts/src/lint-gate.ts &');
-      const runs = turboRuns(gate);
-      expect(runs).toHaveLength(1);
-      expect(runs[0]?.filter((word) => !word.startsWith('-'))).toEqual(['turbo', 'run', 'test']);
-      expect(gate.filter(locks)).toEqual([]);
-    }),
+  it.effect(
+    'is gate.sh: the lint and the lessons ledger in the background beside the unit tests, under no lock',
+    () =>
+      Effect.gen(function* () {
+        const { scripts, gate } = yield* laid;
+        expect(commandsOf(scripts['gate'] ?? '')).toEqual([['sh', 'packages/scripts/src/gate.sh']]);
+        expect(gate).toEqual(
+          expect.arrayContaining([
+            'bun packages/scripts/src/lint-gate.ts &',
+            'bun packages/scripts/src/lessons/check.ts &',
+            '[ "$lint" -eq 0 ] && [ "$ledger" -eq 0 ] && [ "$tests" -eq 0 ]',
+          ]),
+        );
+        const runs = turboRuns(gate);
+        expect(runs).toHaveLength(1);
+        expect(runs[0]?.filter((word) => !word.startsWith('-'))).toEqual(['turbo', 'run', 'test']);
+        expect(gate.filter(locks)).toEqual([]);
+      }),
   );
 
   it.effect("caches each workspace's tests on its inputs, and a test waits on no build", () =>
@@ -220,6 +228,17 @@ describe('the pre-commit', () => {
           ),
         );
         expect(plain).toEqual([]);
+      }),
+  );
+
+  it.effect(
+    'checks the lessons ledger on every commit, whatever files it stages, so a renamed test is red at its commit',
+    () =>
+      Effect.gen(function* () {
+        const { hooks } = yield* laid;
+        const at = hooks.indexOf('run: bun packages/scripts/src/lessons/check.ts');
+        expect(at).toBeGreaterThan(0);
+        expect(hooks[at - 1]).toBe('- name: lessons');
       }),
   );
 });

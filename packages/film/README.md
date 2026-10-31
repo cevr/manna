@@ -3519,8 +3519,8 @@ a commit hash, each outside a quoted literal and a URL. History told in words
 (what the code used to do, which pass changed it) is a review finding
 (`CLAUDE.md`, **Comments**), since no pattern can read it.
 **A mistake found once** becomes a check when the check is cheap, so the
-gate (`bun run gate`: oxlint's deterministic rules and the unit tests) finds
-it the next time: a mistake a syntax tree shows is a deterministic rule; one
+gate (`bun run gate`: oxlint's deterministic rules, the lessons ledger's
+check and the unit tests) finds it the next time: a mistake a syntax tree shows is a deterministic rule; one
 a small fast test shows is a unit test; one only a reader can see is a
 judged rule with its labelled corpus, run by `bun run test:slow`; one of
 taste or process that no item shows is a line in a skill. A mistake with no

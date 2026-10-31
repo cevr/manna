@@ -37,8 +37,9 @@ as `<unit>/<review file> F<n>`, or by the id a review in another form
 gives it (`M1`, `m3`, `o2`); a finding classed `none` needs no entry.
 `bun run merge-audit --review <file>`, an optional check, prints each
 finding `routed`, `declined` or `unrouted`, and fails on an unrouted one.
-`packages/scripts/src/lessons/ledger.slow.test.ts` holds every entry to its fields
-and every guard to what its file holds.
+`packages/scripts/src/lessons/check.ts` holds every entry to its fields and
+every guard to what its file holds, in `bun run gate` and at each commit's
+pre-commit.
 
 The form of an entry, each field on its own line:
 
@@ -1896,7 +1897,7 @@ The form of an entry, each field on its own line:
 - **Source:** p6-testspeed/findings.md F2
 - **Wrong:** The gate was red in 10 of 10 runs: a case took ten times its time alone (0.47 s alone, 6.1 s in the gate) past its 5 s limit.
 - **Cause:** `turbo run gate test` ran every workspace's tests in parallel beside the typechecks, builds and Selah's native gate, each test runner one worker per core.
-- **Guard:** code: `packages/scripts/src/gate.test.ts` `is gate.sh: the lint in the background beside the unit tests, under no lock` (the gate runs no typecheck, build or native gate beside the tests), `packages/scripts/src/gate.test.ts` `is test-slow.sh: typecheck, builds and each test:slow one at a time under the lock`
+- **Guard:** code: `packages/scripts/src/gate.test.ts` `is gate.sh: the lint and the lessons ledger in the background beside the unit tests, under no lock` (the gate runs no typecheck, build or native gate beside the tests), `packages/scripts/src/gate.test.ts` `is test-slow.sh: typecheck, builds and each test:slow one at a time under the lock`
 
 ### test-git-turns-maintenance-off
 
@@ -3576,7 +3577,7 @@ The form of an entry, each field on its own line:
 - **Source:** ftb-motion/rewrite-round-3-findings.md F4
 - **Wrong:** The ledger test gave 5 failures on a commit of the unit that renamed the tests its entries cite, and `merge-audit --each` said every commit was green.
 - **Cause:** `merge-audit --each` runs `bun run guard` on each commit, and the guard did not run the ledger test, `packages/scripts/src/lessons/ledger.slow.test.ts`.
-- **Guard:** code: `packages/scripts/package.json` `"test:slow": "bun test --parallel=4 .slow.test.`, the scripts workspace's `test:slow`, which runs the ledger test in `bun run test:slow`.
+- **Guard:** code: `packages/scripts/src/gate.test.ts` `checks the lessons ledger on every commit, whatever files it stages, so a renamed test is red at its commit`: the pre-commit runs the ledger's check (`packages/scripts/src/lessons/check.ts`) on each commit.
 
 ### images-ship-as-their-own-files
 
@@ -4025,8 +4026,8 @@ The form of an entry, each field on its own line:
 - **Said:** "the ledger's slow test is red at the head"
 - **Source:** in-its-order-2/review-r3.md F1
 - **Wrong:** The cast test was renamed, and the ledger entry `cast-reference-tracked` still named its old title, so the ledger's slow test and `test:slow` were red.
-- **Cause:** The rename changed the test file but not the entry whose guard names it, and the gate does not run the ledger's slow test.
-- **Guard:** code: `packages/scripts/src/lessons/ledger.slow.test.ts` `of the repo holds every entry to its fields and every guard to what its file holds`
+- **Cause:** The rename changed the test file but not the entry whose guard names it, and the gate did not run the ledger's slow test.
+- **Guard:** code: `packages/scripts/src/gate.test.ts` `is gate.sh: the lint and the lessons ledger in the background beside the unit tests, under no lock`, `checks the lessons ledger on every commit, whatever files it stages, so a renamed test is red at its commit`: the gate and the pre-commit run the ledger's check (`packages/scripts/src/lessons/check.ts`).
 
 ### review-finding-gets-its-entry
 
