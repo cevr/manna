@@ -33,7 +33,8 @@ redrawing** (`.claude/skills/film/SKILL.md`, "The lessons ledger"). A
 review states each finding as `### F<n> <severity>: <what>` with a `Guard
 class:` line (lint, judged, skill, code or none) and a `Cheapest guard:`
 line. A finding given a guard gets an entry, its Source citing the finding
-as `<unit>/<review file> F<n>`; a finding classed `none` needs no entry.
+as `<unit>/<review file> F<n>`, or by the id a review in another form
+gives it (`M1`, `m3`, `o2`); a finding classed `none` needs no entry.
 `bun run merge-audit --review <file>`, an optional check, prints each
 finding `routed`, `declined` or `unrouted`, and fails on an unrouted one.
 `packages/scripts/src/lessons/ledger.slow.test.ts` holds every entry to its fields
@@ -4312,10 +4313,10 @@ The form of an entry, each field on its own line:
 - **Date:** 2026-10-27
 - **Kind:** review
 - **Said:** "The sidecar shape is an unjustified repo and gate cost"
-- **Source:** hymnapp/playbulk/p3-round-1-findings.md F1 and hymnapp/playbulk/p3-round-2-findings.md F1 (Major M1, ledger ordinals)
+- **Source:** hymnapp/playbulk/p3-round-1-findings.md M1 and hymnapp/playbulk/p3-round-2-findings.md M1 (its repeat)
 - **Wrong:** Every compiler edit rewrote 695 global digests, formatting doubled the size, and checking global provenance made unrelated edits fail app builds.
 - **Cause:** Generation provenance was treated as a build prerequisite instead of leaving staleness to generation and the slow fresh-compile proof. Builds need only schema, corpus binding and valid word cuts.
-- **Guard:** code: `apps/hymnal/src/follow/staleness.slow.test.ts` `playback builds survive stale generation inputs`; `packages/hymnal/src/playback.test.ts` `playback sidecars stay one line, hymn-local and below 17 MB`
+- **Guard:** code: `apps/hymnal/src/follow/staleness.slow.test.ts` `playback builds survive real stale generation inputs: ${row.id}`; `packages/hymnal/src/playback.test.ts` `playback sidecars stay one line, hymn-local and below 17 MB`
 
 ### chord-placement-changes-only
 
@@ -4325,7 +4326,7 @@ The form of an entry, each field on its own line:
 - **Source:** hymnapp/playbulk/p4-round-1-findings.md M1
 - **Wrong:** Folding a short change left a redundant return to the chord still sounding.
 - **Cause:** The fold and its oracle both retained events without checking the resulting harmony.
-- **Guard:** code: `packages/hymnal/src/placement.test.ts` `length shows only changes after folding a brief return`, `strong+length shows only changes after folding a brief return`; `packages/hymnal/src/playback.test.ts` `playback sidecars stay one line, hymn-local and below 17 MB`
+- **Guard:** code: `packages/hymnal/src/placement.test.ts` `${rule} shows only changes after folding a brief return` (a case each for `length` and `strong+length`); `packages/hymnal/src/playback.test.ts` `playback sidecars stay one line, hymn-local and below 17 MB`
 
 ### chord-placement-controls
 
@@ -4480,33 +4481,32 @@ The form of an entry, each field on its own line:
 ### hymnal-offline-origin-and-owned-writes
 
 - **Date:** 2026-10-27
-- **Kind:** correction
-- **Said:** "Resume valid partials only when response validators/range semantics agree."
-- **Source:** hymnapp/playbulk/p5-round-1-findings.md M1, m1, m2, m6, o2
+- **Kind:** review
+- **Said:** "On web, R2 refuses every range after the first, so no recording saves."
+- **Source:** hymnapp/playbulk/p5-round-1-findings.md M1, m1, m2, m6, o2; the rule they broke, hymnapp/playbulk/spec.md: "Resume valid partials only when response validators/range semantics agree"
 - **Wrong:** The fake origin allowed a header that R2 refused. Removal during a range could publish a gap. A storage failure drained the entire bulk queue; a job defect killed a worker; Resume omitted failed changed keys.
 - **Cause:** The fake CORS contract was wider than production and ownership was checked before, rather than after, network work. Storage, job and resume states did not share one boundary.
-- **Guard:** code: `apps/hymnal/src/offline/http.slow.test.ts` `offline multi-range requests obey the deployed bucket CORS headers`; `apps/hymnal/src/offline/repairs.slow.test.ts` `offline removal during range restarts the whole file offset=0 at=8`, `offline full storage halts the bulk after at most two ranges`, `offline Cancel stays paused after Open and All retries failed changed keys`, `offline a defect in one job leaves both workers available`
+- **Guard:** code: `apps/hymnal/src/offline/http.slow.test.ts` `offline multi-range requests obey the deployed bucket CORS headers`; `apps/hymnal/src/offline/repairs.slow.test.ts` `offline removal during range restarts the whole file offset=${offset} at=${removalAt}`, `offline full storage halts the bulk after at most two ranges`, `offline Cancel stays paused after Open and All retries failed changed keys`, `offline a defect in one job leaves both workers available`
 
 ### hymnal-offline-start-and-intact-media
 
 - **Date:** 2026-10-27
-- **Kind:** correction
-- **Said:** "Saved sets resolve locally first."
-- **Source:** hymnapp/playbulk/p5-round-1-findings.md m3, m4, o1, T3
+- **Kind:** review
+- **Said:** "Any device `play` rejection deletes a good download."
+- **Source:** hymnapp/playbulk/p5-round-1-findings.md m3, m4, o1, T3; the rule they broke, hymnapp/playbulk/spec.md: "Saved sets resolve locally first."
 - **Wrong:** A session Play rejection deleted intact media. Player construction waited for the entire saved index. Queue sharing was implicit and tests waited for an arbitrary number of yields.
 - **Cause:** A device failure was treated as a file failure and disk discovery was part of layer construction.
-- **Guard:** code: `apps/hymnal/src/player/offline.slow.test.ts` `offline a session play rejection keeps an intact saved recording`, `offline a hung storage index cannot delay public Start`, `offline live playback and Downloads share exactly one queue in their registry`
-- **Guard:** code: `apps/hymnal/src/offline/repairs.slow.test.ts` `offline a save requested during discovery joins the retained file`, `offline Cancel retires save intentions waiting for discovery`
+- **Guard:** code: `apps/hymnal/src/player/offline.slow.test.ts` `offline a session play rejection keeps an intact saved recording`, `offline a hung storage index cannot delay public Start`, `offline live playback and Downloads share exactly one queue in their registry`; `apps/hymnal/src/offline/repairs.slow.test.ts` `offline a save requested during discovery joins the retained file`, `offline Cancel retires save intentions waiting for discovery`
 
 ### hymnal-downloaded-storage-limits
 
 - **Date:** 2026-10-27
-- **Kind:** correction
-- **Said:** "Offline must use durable app-owned media storage."
-- **Source:** hymnapp/playbulk/p5-round-1-findings.md m7
+- **Kind:** review
+- **Said:** "The saved files are not durable on web or kept out of the iCloud backup on iOS."
+- **Source:** hymnapp/playbulk/p5-round-1-findings.md m7; the rule it broke, hymnapp/playbulk/spec.md: "Offline must use durable app-owned media storage"
 - **Wrong:** OPFS alone did not grant persistence and iOS application support was eligible for backup.
 - **Cause:** Platform directories were treated as a complete durability policy.
-- **Guard:** skill: `.claude/skills/verify-hymnal/features/offline.md` — check iOS backup exclusion through the native setter/readback boundary; request web persistence and keep its eviction limit visible.
+- **Guard:** skill: whether a browser keeps its files or a device backs them up is the platform's policy, which no unit test can read, so the verify skill checks the iOS backup flag through its native setter and readback and keeps the web limit in view. Carried by `.claude/skills/verify-hymnal/features/offline.md`: "Web requests persistent storage when Download all is pressed. A refusal is normal. Keep the browser eviction limit visible in the Downloads copy; OPFS alone is not a permanence guarantee."
 
 ### film-loads-declared-puppets
 
@@ -4625,8 +4625,8 @@ The form of an entry, each field on its own line:
 - **Said:** "enclosed ground beyond the sheet's"
 - **Source:** issue #39; fit-holes/spec.md Goal; fit-holes/acceptance-base.log, leg H
 - **Wrong:** A 12x12 alpha-0 hole planted in a cut-out view read 0 holes: over the in-its-order cut-out views, 88/200 planted holes were caught, and Jeremiah's heads-2 and heads-6 caught 1/5 each.
-- **Cause:** The `holes` row compared totals (render holes less kept holes), so a kept crop's own false holes absorbed a real one wherever it lay. A cut-out view now counts each clear pixel where it lies, where the kept crop is figure. It excuses a clear pixel only within 4 px of a pocket: a kept hole with a paper core, at least 9 px within ΔE 2 of the kept crop's ground, since a light cloth's grain makes kept holes as large as a true pocket. In the plants of 2026-10-30, ΔE 2 and 9 px caught 81 of 120 holes planted in light cloth, against 61 to 68 at ΔE 3 and 4.
-- **Guard:** code: `packages/film/src/core/fit-rows.test.ts` `a 12 px hole is counted though the kept crop has a larger false hole of its own`, `packages/film/src/core/fit-rows.test.ts` `a 2 x 24 px hole 3 px inside the line is counted whole 5 px beside a paper pocket`
+- **Cause:** The `holes` row compared totals (render holes less kept holes), so a kept crop's own false holes absorbed a real one wherever it lay. A cut-out view now counts each clear pixel where it lies, where the kept crop is figure. It excuses a clear pixel only within the pocket reach (`POCKET_REACH` in `packages/film/src/core/fit-rows.ts`) of a pocket: a kept hole with a paper core, at least 9 px within ΔE 2 of the kept crop's ground, since a light cloth's grain makes kept holes as large as a true pocket. In the plants of 2026-10-30, ΔE 2 and 9 px caught 81 of 120 holes planted in light cloth, against 61 to 68 at ΔE 3 and 4.
+- **Guard:** code: `packages/film/src/core/fit-rows.test.ts` `a 12 px hole is counted though the kept crop has a larger false hole of its own`, `a 2 x 24 px hole 3 px inside the line is counted whole 8 px beside a paper pocket`
 
 ### fit-light-cloth-reads-as-ground
 
