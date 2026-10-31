@@ -176,6 +176,66 @@ const FOLDED = (() => {
   };
 })();
 
+/**
+ * How fast the weights may change across the limb, per px, on `bone` and the bones it
+ * carries: the sum over the limb's joints from its first bone down to `bone` of each joint's
+ * steepest slope. A joint's weight is a smoothstep (slope at most 1.5 over its width) of how
+ * much nearer one bone than the other a vertex lies (slope at most 2), and its width is the
+ * blend (18 px, at most half the shorter bone) times 1 + the spread its rest angle α keeps
+ * on the parent's side, (1 - cos α) / 2, at least 0.05.
+ */
+const slopeTo = (p: Puppet, bone: string) => {
+  const named = (name: string) => p.bones.find((b) => b.name === name)!;
+  const length = (b: Puppet['bones'][number]) =>
+    Math.hypot(b.tip[0] - b.pivot[0], b.tip[1] - b.pivot[1]);
+  let slope = 0;
+  for (let child = named(bone); LIMB.includes(child.parent ?? '');) {
+    const parent = named(child.parent!);
+    const blend = Math.min(18, 0.5 * Math.min(length(parent), length(child)));
+    const [ax, ay] = [parent.pivot[0] - child.pivot[0], parent.pivot[1] - child.pivot[1]];
+    const [bx, by] = [child.tip[0] - child.pivot[0], child.tip[1] - child.pivot[1]];
+    const cos = (ax * bx + ay * by) / (Math.hypot(ax, ay) * Math.hypot(bx, by));
+    slope += 3 / (blend * (1 + Math.max(0.05, (1 - cos) / 2)));
+    child = parent;
+  }
+  return slope;
+};
+
+/**
+ * The worst change of a mesh edge of part 0 over the most a 60° turn of `bone`, either way,
+ * may change it. A vertex at `v` moves by h(v) of the turn's move about the bone's pivot c,
+ * h its amount on the bone and the bones it carries; so an edge e whose nearer end lies rho
+ * from c changes by at most 2 sin(30°) |e| (1 + slope rho), `slope` bounding h's. A weight
+ * that jumps tears past it.
+ */
+const worstTear = (p: Puppet, bone: string, slope: number) => {
+  const c = p.bones.find((b) => b.name === bone)!.pivot;
+  const rest = posedVertices(p, restPose(p))[0]!;
+  const tris = p.parts[0]!.mesh.triangles;
+  let worst = 0;
+  for (const turn of [60, -60]) {
+    const bent = posedVertices(p, { ...restPose(p), numbers: { [bone]: turn } })[0]!;
+    for (let t = 0; t < tris.length; t += 3)
+      for (const [i, j] of [
+        [tris[t]!, tris[t + 1]!],
+        [tris[t + 1]!, tris[t + 2]!],
+        [tris[t + 2]!, tris[t]!],
+      ] as const) {
+        const [rx, ry] = [rest[2 * i]! - rest[2 * j]!, rest[2 * i + 1]! - rest[2 * j + 1]!];
+        const change = Math.hypot(
+          bent[2 * i]! - bent[2 * j]! - rx,
+          bent[2 * i + 1]! - bent[2 * j + 1]! - ry,
+        );
+        const rho = Math.min(
+          Math.hypot(rest[2 * i]! - c[0], rest[2 * i + 1]! - c[1]),
+          Math.hypot(rest[2 * j]! - c[0], rest[2 * j + 1]! - c[1]),
+        );
+        worst = Math.max(worst, change / (Math.hypot(rx, ry) * (1 + slope * rho)));
+      }
+  }
+  return worst;
+};
+
 /** `y0..y1` of x 8..56 painted `paint`, the rest clear: a part cut along a row. */
 const cut = (y0: number, y1: number, paint: ReadonlyArray<number>) => {
   const rgba = new Uint8Array(W * H * 4);
@@ -526,99 +586,50 @@ describe('a puppet', () => {
     expect(Math.max(...held)).toBeLessThan(0.5);
   });
 
+  // each edge held to the most its weights' slope lets an elbow turn change it, at any width
   test('an elbow turn tears no mesh edge on a limb bent at rest 90° or 135°', () => {
-    type Pt = readonly [number, number];
-    // `fold` is the angle the upper arm and forearm make at the elbow, radians
-    const TURN = 60;
     const s = Math.SQRT1_2;
-    const cases: ReadonlyArray<{
-      N: number;
-      half: number;
-      joints: ReadonlyArray<Pt>;
-      fold: number;
-    }> = [
-      // the upper arm along y = 6 to the elbow, the forearm bent down (90°) or back under it (135°)
-      {
-        N: 48,
-        half: 4,
-        joints: [
-          [6, 6],
-          [36, 6],
-          [36, 36],
-        ],
-        fold: Math.PI / 2,
-      },
-      {
-        N: 48,
-        half: 4,
-        joints: [
-          [6, 6],
-          [36, 6],
-          [6, 36],
-        ],
-        fold: Math.PI / 4,
-      },
-      // a 40 px forearm folded back 135° and a 30 px hand straight on from it: the elbow's and
-      // the wrist's blends overlap on the forearm, and the weights stay continuous there
-      {
-        N: 160,
-        half: 6,
-        joints: [
-          [20, 100],
-          [100, 100],
-          [100 - 40 * s, 100 + 40 * s],
-          [100 - 70 * s, 100 + 70 * s],
-        ],
-        fold: Math.PI / 4,
-      },
+    // a 40 px forearm folded back 135° from an 80 px upper arm, and a 30 px hand straight on
+    // from it: the elbow's and the wrist's blends overlap on the forearm
+    const chain: ReadonlyArray<Pt> = [
+      [14, 16],
+      [94, 16],
+      [94 - 40 * s, 16 + 40 * s],
+      [94 - 70 * s, 16 + 70 * s],
     ];
-    const names = ['upper', 'forearm', 'hand'];
-    for (const { N, half, joints, fold } of cases) {
-      const segments = joints.slice(1).map((tip, i) => [joints[i]!, tip] as const);
-      const rgba = new Uint8Array(N * N * 4);
-      for (let y = 0; y < N; y++)
-        for (let x = 0; x < N; x++) {
-          const c = [x + 0.5, y + 0.5] as const;
-          const d = Math.min(...segments.map(([a, b]) => segmentGap(c, a, b)));
-          if (d <= half) rgba.set([120, 80, 60, 255], (y * N + x) * 4);
-        }
+    const limbs = [
+      // the upper arm along y = 6 to the elbow, the forearm bent down (90°) or back under it (135°)
+      limb(48, 48, 4, [
+        [6, 6],
+        [36, 6],
+        [36, 36],
+      ]),
+      limb(48, 48, 4, [
+        [6, 6],
+        [36, 6],
+        [6, 36],
+      ]),
+      ...[6, 8, 12].map((half) => limb(108, 80, half, chain)),
+    ];
+    for (const { pixels, bones } of limbs) {
       const p = made(
-        { width: N, height: N, parts: [{ name: 'arm', pixels: { width: N, height: N, rgba } }] },
-        {
-          bones: segments.map(([pivot, tip], i) => ({
-            name: names[i]!,
-            ...(i > 0 && { parent: names[i - 1]! }),
-            pivot,
-            tip,
-          })),
-          skin: { arm: names.slice(0, segments.length) },
-        },
+        { width: pixels.width, height: pixels.height, parts: [{ name: 'arm', pixels }] },
+        { bones, skin: { arm: LIMB.slice(0, bones.length) } },
       );
-      const rest = posedVertices(p, restPose(p))[0]!;
-      const bent = posedVertices(p, { ...restPose(p), numbers: { forearm: TURN } })[0]!;
-      const tris = p.parts[0]!.mesh.triangles;
-      // An edge turned rigidly changes by 2 · sin(turn / 2) of its length. Across the crease the
-      // weights cross from one bone to the other round the fold's arc, which adds a shear of the
-      // turn's change over the share of the arc they cross on; a tight fold leaves less arc, so
-      // more shear, and no weights avoid it. Crossing on two fifths of the arc or more bounds the
-      // shear by 1 / (0.4 · fold) of the rigid change; a weight that jumps tears past it.
-      const bound = 2 * Math.sin((TURN * Math.PI) / 360) * (1 + 1 / (0.4 * fold));
-      let worst = 0;
-      for (let t = 0; t < tris.length; t += 3)
-        for (const [i, j] of [
-          [tris[t]!, tris[t + 1]!],
-          [tris[t + 1]!, tris[t + 2]!],
-          [tris[t + 2]!, tris[t]!],
-        ] as const) {
-          const [rx, ry] = [rest[2 * i]! - rest[2 * j]!, rest[2 * i + 1]! - rest[2 * j + 1]!];
-          const change = Math.hypot(
-            bent[2 * i]! - bent[2 * j]! - rx,
-            bent[2 * i + 1]! - bent[2 * j + 1]! - ry,
-          );
-          worst = Math.max(worst, change / Math.hypot(rx, ry));
-        }
-      expect(worst).toBeLessThan(bound);
+      expect(worstTear(p, 'forearm', slopeTo(p, 'forearm'))).toBeLessThanOrEqual(1 + 1e-9);
     }
+  });
+
+  test('a turn of any arm bone tears no mesh edge on an arm whose hand rests by the shoulder flap', () => {
+    const p = FOLDED.puppet;
+    const { cap, reach } = FOLDED.flap;
+    // the flap's share w slopes at most 1.5 / 8 along the arm and 1.5 / (reach - cap + 1) out
+    // from the pivot, and the body takes w of the upper arm's amount, whose slope is the
+    // joints' below it
+    const flap = 1.5 / 8 + 1.5 / (reach - cap + 1) + slopeTo(p, 'hand');
+    expect(worstTear(p, 'upper', flap)).toBeLessThanOrEqual(1 + 1e-9);
+    expect(worstTear(p, 'forearm', slopeTo(p, 'forearm'))).toBeLessThanOrEqual(1 + 1e-9);
+    expect(worstTear(p, 'hand', slopeTo(p, 'hand'))).toBeLessThanOrEqual(1 + 1e-9);
   });
 
   test('rasterOf lays revealed paint where a turned part moved away', () => {
