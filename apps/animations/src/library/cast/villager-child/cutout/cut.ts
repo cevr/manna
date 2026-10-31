@@ -137,9 +137,15 @@ const HIDDEN_ENTRIES = {
   },
 } as const satisfies Readonly<Record<'poses-5', HiddenEntry>>;
 
-export const { CUTS, cutOptionsFor, HIDDEN } = cutTable({
+export const { CUTS, cutOptionsFor, HIDDEN, GAPS } = cutTable({
   frames: FRAMES,
-  views: { 'poses-5': { cut: POSES_5, figure: 'framed' } },
+  views: {
+    'poses-5': {
+      cut: POSES_5,
+      figure: 'framed',
+      gaps: [{ at: [105, 365], box: [94, 360, 118, 371], why: 'the ground between the feet' }],
+    },
+  },
   hidden: HIDDEN_ENTRIES,
   ink: INK,
 });

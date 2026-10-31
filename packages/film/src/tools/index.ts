@@ -55,6 +55,7 @@ export {
   type PartCutOptions,
   type PartRule,
   cutFigureOf,
+  enclosedPaperOf,
   cutParts,
   inkOf,
   inkTo,

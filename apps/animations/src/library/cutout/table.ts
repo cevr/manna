@@ -10,15 +10,15 @@
 
 import {
   cutFigureOf,
-  cutParts,
+  type cutParts,
   type HiddenEntry,
   type PartCut,
   type PartCutOptions,
   type PartRule,
 } from '@manna/film/tools';
 import type { PuppetSpec } from '@manna/film/canvas';
-import { Match, Option, Record as Records, Result } from 'effect';
-import { FAR, type Pt, REACH, box } from './rules.ts';
+import { Match, Option, Record as Records } from 'effect';
+import { FAR, type Pt, REACH } from './rules.ts';
 
 /** A box on a kept sheet: left, top, right, bottom. */
 type Box = readonly [number, number, number, number];
@@ -49,18 +49,31 @@ type Rgba = readonly [number, number, number, number];
  */
 type FigureReading = 'framed' | 'bust';
 
-/** One view's data: its cut in the kept view's pixels, how its figure is read, and the colour classes and part labels its label rules pick by, if any. */
+/**
+ * A true gap in a view's figure: the ground its kept sheet shows through the
+ * figure, closed in by its ink (between the feet, between a bench leg and a
+ * skirt). `at` is a point inside it and `box` its piece's box (left, top,
+ * right, bottom, the far edges exclusive), both in the kept view's pixels;
+ * `why` says what the kept sheet shows there.
+ */
+export interface CutGap {
+  readonly at: Pt;
+  readonly box: Box;
+  readonly why: string;
+}
+
+/**
+ * One view's data: its cut in the kept view's pixels, how its figure is read,
+ * the colour classes and part labels its label rules pick by, if any, and its
+ * gaps. The cut holds every piece of paper the figure's ink encloses (a pale
+ * swaddle, a veil and a bottle read as paper too), so each gap the kept sheet
+ * shows open is named.
+ */
 export interface CutViewData {
   readonly cut: PartCut;
   readonly figure: FigureReading;
   readonly reads?: Pick<PartCutOptions, 'classes' | 'labels'>;
-  /**
-   * A `framed` view's held objects, a seed point in each, in the kept view's
-   * pixels: a white object the figure holds (a bottle, a sash knot) is the
-   * paper's colour inside an ink ring, so the cut reads it as a gap in the
-   * figure; its seed fills its pocket back.
-   */
-  readonly held?: ReadonlyArray<Pt>;
+  readonly gaps?: ReadonlyArray<CutGap>;
 }
 
 /** A member's cut data, by his views' names in his sheets' views. */
@@ -130,57 +143,15 @@ export const padded = (cut: PartCut, frame: CutFrame): PartCut => {
  * A bust's figure: a heads view runs off its foot, where the garment meets
  * the view's edge and reads as ground to a flood from the border. Read with a
  * row of ink under the view, the foot is closed, and the figure is the cut's
- * own reading (enclosed paper less) of what the border does not reach.
+ * own reading (`cutFigureOf`, its gaps open) of what the border does not
+ * reach. `gaps` are points of the view.
  */
-export const bustFigure = (view: View, ink: Rgba): Uint8Array => {
+export const bustFigure = (view: View, ink: Rgba, gaps: ReadonlyArray<Pt> = []): Uint8Array => {
   const n = view.width * view.height;
   const rgba = new Uint8Array((n + view.width) * 4);
   rgba.set(view.rgba);
   for (let x = 0; x < view.width; x++) rgba.set(ink, (n + x) * 4);
-  const closed = { width: view.width, height: view.height + 1, rgba };
-  const all: PartCut = {
-    parts: [{ name: 'figure', take: [box(-1, -1, closed.width + 1, closed.height + 1)] }],
-  };
-  return Result.match(cutParts(closed, all), {
-    onSuccess: (sheet) => sheet.owner.slice(0, n),
-    onFailure: () => new Uint8Array(n),
-  });
-};
-
-/**
- * The pocket at a seed: the 4-connected run of non-figure pixels from it,
- * empty when the run reaches the view's edge (the open ground, not a pocket)
- * or the seed lies off the view or on the figure.
- */
-const pocketAt = (figure: Uint8Array, w: number, h: number, [sx, sy]: Pt): ReadonlySet<number> => {
-  const inView = (x: number, y: number) => x >= 0 && y >= 0 && x < w && y < h;
-  if (!inView(sx, sy) || figure[sy * w + sx] === 1) return new Set();
-  const seen = new Set<number>([sy * w + sx]);
-  const queue = [sy * w + sx];
-  for (let k = 0; k < queue.length; k++) {
-    const i = queue[k] ?? 0;
-    const [x, y] = [i % w, Math.floor(i / w)];
-    if (x === 0 || y === 0 || x === w - 1 || y === h - 1) return new Set();
-    for (const [nx, ny] of [
-      [x - 1, y],
-      [x + 1, y],
-      [x, y - 1],
-      [x, y + 1],
-    ] as const) {
-      const j = ny * w + nx;
-      if (!inView(nx, ny) || figure[j] === 1 || seen.has(j)) continue;
-      seen.add(j);
-      queue.push(j);
-    }
-  }
-  return seen;
-};
-
-/** A figure with each held seed's pocket (`pocketAt`) filled back. */
-const heldIn = (figure: Uint8Array, w: number, h: number, held: ReadonlyArray<Pt>): Uint8Array => {
-  const out = Uint8Array.from(figure);
-  for (const seed of held) for (const i of pocketAt(out, w, h, seed)) out[i] = 1;
-  return out;
+  return cutFigureOf({ width: view.width, height: view.height + 1, rgba }, gaps).slice(0, n);
 };
 
 /**
@@ -189,12 +160,13 @@ const heldIn = (figure: Uint8Array, w: number, h: number, held: ReadonlyArray<Pt
  * view's, and the pad read on the padded view (the crown's and cuffs' outer
  * ink, the ground shadow's rows below the soles). The padded view's border
  * holds the shadow's lavender, which moves its reading of the paper a little
- * and so a rim pixel's. Each held seed's pocket is the figure's again.
+ * and so a rim pixel's. Each gap, a point of the kept view, is open on both
+ * reads, moved by the pad on the padded one.
  */
 export const framedFigure = (
   frame: CutFrame,
   view: View,
-  held: ReadonlyArray<Pt> = [],
+  gaps: ReadonlyArray<Pt> = [],
 ): Uint8Array => {
   const { kept, pad } = frame;
   const [w, h] = [kept[2] - kept[0], kept[3] - kept[1]];
@@ -207,8 +179,9 @@ export const framedFigure = (
       ),
       y * w * 4,
     );
-  const inner = heldIn(cutFigureOf({ width: w, height: h, rgba }), w, h, held);
-  return Uint8Array.from(cutFigureOf(view), (f, i) => {
+  const inner = cutFigureOf({ width: w, height: h, rgba }, gaps);
+  const onView = gaps.map((g) => shifted(g, [pad[0], pad[1]]));
+  return Uint8Array.from(cutFigureOf(view, onView), (f, i) => {
     const [x, y] = [(i % view.width) - pad[0], Math.floor(i / view.width) - pad[1]];
     const inKept = x >= 0 && y >= 0 && x < w && y < h;
     return Number((inKept && inner[y * w + x] === 1) || (!inKept && f === 1));
@@ -218,22 +191,35 @@ export const framedFigure = (
 /**
  * A member's cut table: each view's cut in its part sheet's frame (`CUTS`),
  * what each view's cut reads beside the view (`cutOptionsFor`: its classes
- * and labels if it has them, then its figure), his hidden entries (`HIDDEN`)
- * and his frames (`FRAMES`).
+ * and labels if it has them, then its figure), his hidden entries (`HIDDEN`),
+ * his frames (`FRAMES`) and each view's named gaps (`GAPS`).
  */
 export const cutTable = <V extends string>(member: CutMember<V>) => {
   const CUTS: Readonly<Record<V, PartCut>> = Records.map(member.views, (view, name) =>
     padded(view.cut, member.frames[name]),
   );
-  const figureOf = (name: V, view: View): Uint8Array =>
-    Match.value(member.views[name].figure).pipe(
-      Match.when('framed', () => framedFigure(member.frames[name], view, member.views[name].held)),
-      Match.when('bust', () => bustFigure(view, member.ink)),
+  const figureOf = (name: V, view: View): Uint8Array => {
+    const frame = member.frames[name];
+    const gaps = (member.views[name].gaps ?? []).map((g) => g.at);
+    return Match.value(member.views[name].figure).pipe(
+      Match.when('framed', () => framedFigure(frame, view, gaps)),
+      Match.when('bust', () =>
+        bustFigure(
+          view,
+          member.ink,
+          gaps.map((g) => shifted(g, [frame.pad[0], frame.pad[1]])),
+        ),
+      ),
       Match.exhaustive,
     );
+  };
   const cutOptionsFor = (name: V, view: View): PartCutOptions => ({
     ...member.views[name].reads,
     figure: figureOf(name, view),
   });
-  return { CUTS, cutOptionsFor, HIDDEN: member.hidden, FRAMES: member.frames };
+  const GAPS: Readonly<Record<V, ReadonlyArray<CutGap>>> = Records.map(
+    member.views,
+    (view) => view.gaps ?? [],
+  );
+  return { CUTS, cutOptionsFor, HIDDEN: member.hidden, FRAMES: member.frames, GAPS };
 };

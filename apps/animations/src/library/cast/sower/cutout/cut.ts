@@ -1666,17 +1666,40 @@ const HIDDEN_ENTRIES = {
   },
 } as const satisfies Readonly<Record<CutView, HiddenEntry>>;
 
-/** His cut table: each view's cut and how its figure is read. */
-export const { CUTS, cutOptionsFor, HIDDEN } = cutTable({
+/** What his kept sheets show through each of his named gaps. */
+const FEET = 'the ground between his feet';
+
+/** His cut table: each view's cut, how its figure is read, and its gaps. */
+export const { CUTS, cutOptionsFor, HIDDEN, GAPS } = cutTable({
   frames: FRAMES,
   views: {
-    front: { cut: FRONT, figure: 'framed' },
-    threeQuarterLeft: { cut: THREE_QUARTER_LEFT, figure: 'framed' },
-    back: { cut: BACK, figure: 'framed' },
+    front: {
+      cut: FRONT,
+      figure: 'framed',
+      gaps: [{ at: [125, 533], box: [107, 525, 145, 543], why: FEET }],
+    },
+    threeQuarterLeft: {
+      cut: THREE_QUARTER_LEFT,
+      figure: 'framed',
+      gaps: [{ at: [114, 534], box: [96, 526, 133, 543], why: FEET }],
+    },
+    back: {
+      cut: BACK,
+      figure: 'framed',
+      gaps: [{ at: [127, 534], box: [109, 526, 147, 544], why: FEET }],
+    },
     profileLeft: { cut: PROFILE_LEFT, figure: 'framed' },
     profileRight: { cut: PROFILE_RIGHT, figure: 'framed' },
-    threeQuarterRight: { cut: THREE_QUARTER_RIGHT, figure: 'framed' },
-    'poses-1': { cut: POSES_1, figure: 'framed' },
+    threeQuarterRight: {
+      cut: THREE_QUARTER_RIGHT,
+      figure: 'framed',
+      gaps: [{ at: [113, 534], box: [97, 526, 130, 543], why: FEET }],
+    },
+    'poses-1': {
+      cut: POSES_1,
+      figure: 'framed',
+      gaps: [{ at: [257, 563], box: [233, 559, 283, 568], why: FEET }],
+    },
     'poses-2': { cut: POSES_2, figure: 'framed' },
     'poses-3': { cut: POSES_3, figure: 'framed' },
     'poses-4': { cut: POSES_4, figure: 'framed' },

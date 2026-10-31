@@ -8,16 +8,16 @@
 // over the tracer's colour regions, `core/trace.ts`). Each figure pixel
 // belongs to the first part that takes it; a figure pixel no part takes
 // refuses the cut. The figure is what the fit rows read (`core/fit-rows.ts`):
-// what the view's border does not reach through ground-like pixels, less the
-// paper its ink encloses (a ground-coloured piece wide both ways, between a
-// figure's feet). A part holds the view's bytes where it owns a pixel and
-// nothing elsewhere, until paint is laid under a part in front of it
-// (`paintHidden`), where only motion shows it. `recompose` lays the parts back
-// to front, each held pixel replacing what lies under it, so the sheet gives
-// its view back byte for byte. Pure.
+// what the view's border does not reach through ground-like pixels, the paper
+// its ink encloses held, less the gaps the view names (a ground-coloured
+// piece between a figure's feet, `enclosedPaperOf`). A part holds the view's
+// bytes where it owns a pixel and nothing elsewhere, until paint is laid
+// under a part in front of it (`paintHidden`), where only motion shows it.
+// `recompose` lays the parts back to front, each held pixel replacing what
+// lies under it, so the sheet gives its view back byte for byte. Pure.
 
 import { Array as Arr, Option, Result, Schema } from 'effect';
-import { type Rgb, componentsOf, deltaE, labOf, rgbAt } from './cast-sheet-pixels.ts';
+import { type Box, type Rgb, componentsOf, deltaE, labOf, rgbAt } from './cast-sheet-pixels.ts';
 import { figureOf } from './fit-rows.ts';
 import type { LabelTable } from './label.ts';
 import type { Raster } from './raster.ts';
@@ -45,7 +45,7 @@ export interface PartCut {
   readonly parts: ReadonlyArray<PartCutEntry>;
 }
 
-/** What a cut reads beside the view: the figure (1 on its pixels; the fit rows' reading less enclosed paper unless given), and the member's colour classes and part labels its label rules pick by. */
+/** What a cut reads beside the view: the figure (1 on its pixels; `cutFigureOf` the view, naming no gap, unless given), and the member's colour classes and part labels its label rules pick by. */
 export interface PartCutOptions {
   readonly figure?: Uint8Array;
   readonly classes?: Readonly<Record<string, ReadonlyArray<string>>>;
@@ -96,13 +96,30 @@ const PAPER_DE = 3;
 const PAPER_LEAST = 24;
 const PAPER_ACROSS = 8;
 
+/** An enclosed paper piece: its box (px, the far edges exclusive), its pixels, and the gap points that lie in it. */
+interface PaperPiece {
+  readonly box: Box;
+  readonly area: number;
+  readonly gaps: ReadonlyArray<PartPt>;
+}
+
+/** A view's paper read: its figure (1 on its pixels) and its enclosed paper pieces. */
+interface PaperRead {
+  readonly figure: Uint8Array;
+  readonly pieces: ReadonlyArray<PaperPiece>;
+}
+
 /**
- * The view's figure: what the fit rows read, less each of its holes that
- * holds a piece of the ground's own colour wide both ways (the paper between
- * the feet, with its grain and its rim). A hole of a garment's pale cream (a
- * knot's highlight) holds none, and stays the figure's.
+ * The view's enclosed paper and its figure. A piece is one of the fit rows'
+ * holes that holds a run of the ground's own colour wide both ways, with its
+ * grain and its rim. A pale garment (a swaddle, a veil, a robe's highlight)
+ * reads so, as the ground between the feet does, and no pixel measure tells
+ * them apart, so the figure holds every piece but the ones a gap point lies
+ * in: the gaps a view names where its kept sheet shows the ground through. A
+ * hole of a garment's cream (a knot's highlight) is no piece. A gap point off
+ * every piece opens nothing.
  */
-export const cutFigureOf = (view: Raster): Uint8Array => {
+export const enclosedPaperOf = (view: Raster, gaps: ReadonlyArray<PartPt> = []): PaperRead => {
   const { width: w, height: h } = view;
   const { figure, holes, ground } = figureOf(view);
   const paperLike = Uint8Array.from(holes, (m, i) =>
@@ -119,12 +136,34 @@ export const cutFigureOf = (view: Raster): Uint8Array => {
       )
       .map((c) => c.id),
   );
-  const pieces = componentsOf(holes, w, h, false);
+  const all = componentsOf(holes, w, h, false);
   const paper = new Set<number>();
   for (let i = 0; i < holes.length; i++)
-    if (wide.has(cores.labels[i] ?? -1)) paper.add(pieces.labels[i] ?? -1);
-  return Uint8Array.from(figure, (f, i) => Number(f === 1 && !paper.has(pieces.labels[i] ?? -1)));
+    if (wide.has(cores.labels[i] ?? -1)) paper.add(all.labels[i] ?? -1);
+  const pieceAt = ([x, y]: PartPt): number =>
+    Option.liftPredicate(y * w + x, () => x >= 0 && y >= 0 && x < w && y < h).pipe(
+      Option.flatMap((i) => Option.fromUndefinedOr(all.labels[i])),
+      Option.getOrElse(() => -1),
+    );
+  const open = new Set(gaps.map(pieceAt).filter((id) => paper.has(id)));
+  return {
+    figure: Uint8Array.from(figure, (f, i) => Number(f === 1 && !open.has(all.labels[i] ?? -1))),
+    pieces: [...paper]
+      .toSorted((a, b) => a - b)
+      .flatMap((id) =>
+        Option.match(Option.fromUndefinedOr(all.components[id]), {
+          onNone: () => [],
+          onSome: (c) => [
+            { box: c.box, area: c.area, gaps: gaps.filter((g) => pieceAt(g) === id) },
+          ],
+        }),
+      ),
+  };
 };
+
+/** The view's figure: what the fit rows read, every enclosed paper piece held but the gaps a view names (`enclosedPaperOf`). */
+export const cutFigureOf = (view: Raster, gaps: ReadonlyArray<PartPt> = []): Uint8Array =>
+  enclosedPaperOf(view, gaps).figure;
 
 /** Whether point (`x`, `y`) lies inside `poly`, even-odd. */
 const insidePolygon = (poly: ReadonlyArray<PartPt>, x: number, y: number): boolean => {
