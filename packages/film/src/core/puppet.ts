@@ -22,6 +22,16 @@
 //   continuous everywhere, also where two joints' blends overlap on a short
 //   bone, and are the nearest bone's alone outside every blend. A part
 //   whose skin names no bone moves with the root alone.
+//   Continuous weights still shear where a limb folds its far end back
+//   beside its near one: weights that hold the near paint and turn the far
+//   cross 0 to 1 over the joint's ramp, blend × (1 + spread), so a turn t
+//   stretches an edge there by about 2 sin(t/2) of its length times its
+//   distance from the joint over the ramp. Sower's poses-3 right hand lies
+//   beside his upper arm 75 px from the elbow, over a 28.4 px ramp: a 60°
+//   elbow turn stretches an edge there by 21 px. A wider blend lowers it
+//   only by carrying the upper arm's own paint with the forearm, on every
+//   view, so that shear is a named gap: closing it needs a drawn key, or the
+//   hand cut as its own part.
 // - **Shoulder flap.** A flap gives an arm the body's pixels round its cap
 //   (`PuppetFlap.region`): they join the arm's texture. Each vertex of the
 //   arm lies on its arm weights, of which the flap's bone (the shoulder)
