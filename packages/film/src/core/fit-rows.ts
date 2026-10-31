@@ -208,6 +208,17 @@ const PROBE_RUN = 2;
 /** A value as the row keeps it: rounded to hundredths. */
 const kept = (v: number) => Math.round(v * 100) / 100;
 
+/**
+ * A mask `n` pixels long, pixel `i` set where `on(i)`. One loop over the
+ * index: a typed array's `from` with a map steps an iterator per pixel,
+ * the most of what a crop's read costs.
+ */
+const maskWhere = (n: number, on: (i: number) => boolean): Uint8Array => {
+  const out = new Uint8Array(n);
+  for (let i = 0; i < n; i++) if (on(i)) out[i] = 1;
+  return out;
+};
+
 const within = (v: number, bar: FitBar) =>
   (bar.min === undefined || v >= bar.min) && (bar.max === undefined || v <= bar.max);
 
@@ -265,7 +276,7 @@ const fromBorder = (mask: Uint8Array, w: number, h: number): Uint8Array => {
   for (let x = 0; x < w; x++) border.add(labels[x] ?? -1).add(labels[(h - 1) * w + x] ?? -1);
   for (let y = 0; y < h; y++) border.add(labels[y * w] ?? -1).add(labels[y * w + w - 1] ?? -1);
   border.delete(-1);
-  return Uint8Array.from(labels, (l) => (border.has(l) ? 1 : 0));
+  return maskWhere(labels.length, (i) => border.has(labels[i] ?? -1));
 };
 
 const count = (m: Uint8Array) => m.reduce((s, v) => s + v, 0);
@@ -291,7 +302,7 @@ const thinStrips = (mask: Uint8Array, w: number, h: number): Uint8Array => {
       .filter((c) => Math.max(c.box[2] - c.box[0], c.box[3] - c.box[1]) >= SLIVER_LONG)
       .map((c) => c.id),
   );
-  return Uint8Array.from(labels, (l) => (long.has(l) ? 1 : 0));
+  return maskWhere(labels.length, (i) => long.has(labels[i] ?? -1));
 };
 
 /** A crop's ground colour (Lab), its ground-like pixels (1 near that colour), and its ground: what its border reaches through them, the specks of grain the flood stepped round with it. */
@@ -300,14 +311,15 @@ const groundOf = (r: Raster) => {
   const n = w * h;
   const labs = Array.from({ length: n }, (_, i) => labOf(rgbAt(r, i)));
   const { lab, near } = groundColour(r, labs);
-  const like = Uint8Array.from(labs, (c) => (deltaE(c, lab) <= near ? 1 : 0));
+  const like = maskWhere(n, (i) => deltaE(labs[i] ?? lab, lab) <= near);
   const ground = fromBorder(like, w, h);
   // A speck the flood stepped round (the paper's grain) is ground; a speck
   // that is a thin strip, cut loose of the figure, stays a sliver of it.
-  const figure = Uint8Array.from(ground, (g) => 1 - g);
+  const figure = maskWhere(n, (i) => ground[i] === 0);
   const pieces = componentsOf(figure, w, h, true);
-  const specks = Uint8Array.from(pieces.labels, (l) =>
-    (pieces.components[l]?.area ?? SPECK) < SPECK ? 1 : 0,
+  const specks = maskWhere(
+    n,
+    (i) => (pieces.components[pieces.labels[i] ?? -1]?.area ?? SPECK) < SPECK,
   );
   const strips = thinStrips(specks, w, h);
   const kept = new Set(pieces.labels.filter((l, i) => strips[i] === 1));
@@ -331,8 +343,8 @@ const groundOf = (r: Raster) => {
 export const figureOf = (r: Raster) => {
   const { lab, like, ground } = groundOf(r);
   return {
-    figure: Uint8Array.from(ground, (g) => 1 - g),
-    holes: Uint8Array.from(ground, (g, i) => Number(g === 0 && like[i] === 1)),
+    figure: maskWhere(ground.length, (i) => ground[i] === 0),
+    holes: maskWhere(ground.length, (i) => ground[i] === 0 && like[i] === 1),
     ground: lab,
   };
 };
@@ -472,7 +484,10 @@ const pocketsOf = (c: Read): Uint8Array => {
     if (l >= 0 && deltaE(labOf(rgbAt(c.r, i)), c.lab) <= POCKET_CORE_DE)
       core[l] = (core[l] ?? 0) + 1;
   });
-  return Uint8Array.from(kept.labels, (l) => Number(l >= 0 && (core[l] ?? 0) >= POCKET_CORE));
+  return maskWhere(kept.labels.length, (i) => {
+    const l = kept.labels[i] ?? -1;
+    return l >= 0 && (core[l] ?? 0) >= POCKET_CORE;
+  });
 };
 
 /** `mask` grown by `by` pixels, Chebyshev: a row pass, then a column pass. */
@@ -507,7 +522,7 @@ const grown = (mask: Uint8Array, w: number, h: number, by: number): Uint8Array =
 const cutHolesOf = (c: Read, render: Raster) => {
   const { w, h } = c;
   const alpha = (i: number) => render.rgba[i * 4 + 3] ?? 0;
-  const clear = Uint8Array.from({ length: w * h }, (_, i) => Number(alpha(i) < 128));
+  const clear = maskWhere(w * h, (i) => alpha(i) < 128);
   const comps = componentsOf(clear, w, h, false);
   const sheetPaper = groundNear(c, c.r, c.reach);
   const pocket = grown(pocketsOf(c), w, h, POCKET_REACH);
@@ -656,7 +671,8 @@ const envelope = (f: Float64Array, n: number): Float64Array => {
 /** Each pixel's distance to the nearest set pixel of `mask`, squared: a column's envelope, then a row's. */
 const distancesTo = (mask: Uint8Array, w: number, h: number): Float64Array => {
   const FAR = (w + h) ** 2;
-  const d = Float64Array.from(mask, (m) => (m === 1 ? 0 : FAR));
+  const d = new Float64Array(mask.length).fill(FAR);
+  for (let i = 0; i < mask.length; i++) if (mask[i] === 1) d[i] = 0;
   const col = new Float64Array(h);
   for (let x = 0; x < w; x++) {
     for (let y = 0; y < h; y++) col[y] = d[y * w + x] ?? FAR;
@@ -730,7 +746,7 @@ const classRows = (
   bar: (name: keyof typeof FIT_BARS, band: FitBand, part: string) => FitBar,
 ): FitRow[] => {
   const [ck, rk] = kinds;
-  const maskOf = (of: Int8Array, k: number) => Uint8Array.from(of, (v) => (v === k ? 1 : 0));
+  const maskOf = (of: Int8Array, k: number) => maskWhere(of.length, (i) => of[i] === k);
   return Object.keys(classes).flatMap((name, k) => {
     const [a, b] = [maskOf(ck, k), maskOf(rk, k)];
     const [ca, cb] = [count(a), count(b)];
@@ -765,7 +781,7 @@ const regionsOf = (read: Read, kinds: Int8Array, names: ReadonlyArray<string>) =
   const regions: LabelRegion[] = [];
   names.forEach((name, k) => {
     const { components, labels } = componentsOf(
-      Uint8Array.from(kinds, (v) => (v === k ? 1 : 0)),
+      maskWhere(kinds.length, (i) => kinds[i] === k),
       w,
       h,
       false,
@@ -815,12 +831,12 @@ const unresolved = (
 
 /** The pixels of `mask` with a pixel off it four ways (or the crop's edge) beside them. */
 const edgeOfMask = (mask: Uint8Array, w: number, h: number) =>
-  Uint8Array.from(mask, (m, i) => {
-    if (m === 0) return 0;
+  maskWhere(mask.length, (i) => {
+    if (mask[i] === 0) return false;
     const [x, y] = [i % w, Math.floor(i / w)];
     const off = (nx: number, ny: number) =>
       nx < 0 || ny < 0 || nx >= w || ny >= h || mask[ny * w + nx] === 0;
-    return off(x - 1, y) || off(x + 1, y) || off(x, y - 1) || off(x, y + 1) ? 1 : 0;
+    return off(x - 1, y) || off(x + 1, y) || off(x, y - 1) || off(x, y + 1);
   });
 
 /** The mean distance from each edge pixel of `a` to the nearest of `b`'s, pixels. */
@@ -861,7 +877,7 @@ const partRows = (
     );
     const maskOf = (name: string) => {
       const id = picks.picked[name]?.id;
-      return Uint8Array.from(label, (l) => (id !== undefined && l === id ? 1 : 0));
+      return maskWhere(label.length, (i) => id !== undefined && label[i] === id);
     };
     const why = (name: string) => unresolved(table, picks.picked, names, name);
     return { maskOf, why };
@@ -1152,7 +1168,7 @@ export const fitRows = (
       }),
     );
   }
-  const figure = (read: Read) => Uint8Array.from(read.ground, (g) => 1 - g);
+  const figure = (read: Read) => maskWhere(read.ground.length, (i) => read.ground[i] === 0);
   rows.push(
     rowOf('silhouette.iou', 'figure', 'figure', iouOf(figure(c), figure(r)), bar('silhouette.iou')),
   );
@@ -1167,7 +1183,7 @@ export const fitRows = (
     return a > 0 && a < 255;
   };
   const rc: Read = cut
-    ? { ...r, paper: Uint8Array.from(r.paper, (p, i) => (p === 1 && !edge(i) ? 1 : 0)) }
+    ? { ...r, paper: maskWhere(r.paper.length, (i) => r.paper[i] === 1 && !edge(i)) }
     : r;
   // A cut keeps a pixel or so of the sheet past the line: the sheet's own
   // ground, opaque. The kept crop reads it as ground; over the measuring
