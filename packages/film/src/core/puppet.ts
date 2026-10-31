@@ -23,11 +23,15 @@
 //   bone, and are the nearest bone's alone outside every blend. A part
 //   whose skin names no bone moves with the root alone.
 // - **Shoulder flap.** A flap gives an arm the body's pixels round its cap
-//   (`PuppetFlap.region`): they join the arm's texture, and the vertices
-//   there lie on the arm's own bones and on the body's bone, the body's
-//   weight 0 at the cap and 1 at `reach` px (34) from the shoulder's pivot,
-//   above the pivot along the arm. At rest those pixels are the body's own,
-//   where no part in front shows paint, so the rest pose shows the sheet.
+//   (`PuppetFlap.region`): they join the arm's texture. Each vertex of the
+//   arm lies on its arm weights, of which the flap's bone (the shoulder)
+//   gives the body's bone a share w of its own amount: w is 0 at the cap and
+//   1 at `reach` px (34) from the shoulder's pivot, above the pivot along the
+//   arm. Every other arm bone keeps its amount, so a hand that rests by the
+//   shoulder turns whole with its forearm, and each weight stays continuous
+//   (a product of continuous terms). At rest those pixels are the body's
+//   own, where no part in front shows paint, so the rest pose shows the
+//   sheet.
 // - **Skinning.** Linear blend: a vertex is its bones' world transforms of
 //   it, by its weights; then the root moves it (`root` less the rest root)
 //   and the pose's one scale sizes it about the root.
@@ -246,25 +250,30 @@ const spread = (parent: PuppetBone, child: PuppetBone) => {
   return Math.max(0.05, (1 - cos) / 2);
 };
 
-/** The weights of a flap's vertex at `p`: its arm weights shared with the body by how far it lies from the shoulder. */
+/**
+ * The weights of a flap's vertex at `p`: its arm weights, the flap's bone (`flapBone`, an
+ * index into `bones`) giving the body `w` of its own amount, `w` the flap's share by how far
+ * `p` lies from that bone's pivot. Every other arm bone keeps its amount, so a hand that
+ * rests by the shoulder turns with its forearm, and each weight is continuous in `p`.
+ */
 const flapped = (
   p: Pt,
   arm: Array<[number, number]>,
   flap: PuppetFlap,
-  bone: PuppetBone,
+  bones: ReadonlyArray<PuppetBone>,
+  flapBone: number,
   body: number,
 ): Array<[number, number]> => {
+  const bone = bones[flapBone]!;
   const d = Math.hypot(p[0] - bone.pivot[0], p[1] - bone.pivot[1]);
   const w = smooth(2, -6, along(p, bone)) * smooth(flap.cap - 1, flap.reach ?? FLAP_REACH, d);
   if (w <= 0) return arm;
-  if (w >= 1) return [[body, 1]];
-  // The arm's bone that holds the most here keeps its share; the body takes the rest.
-  const [first] = [...arm].sort((a, b) => b[1] - a[1]);
-  if (first === undefined || first[0] === body) return [[body, 1]];
-  return [
-    [first[0], 1 - w],
-    [body, w],
-  ];
+  const own = arm.find(([k]) => k === flapBone)?.[1] ?? 0;
+  if (own === 0) return arm;
+  const kept = arm.flatMap(([k, a]): Array<[number, number]> =>
+    k !== flapBone ? [[k, a]] : w < 1 ? [[k, a * (1 - w)]] : [],
+  );
+  return [...kept, [body, own * w]];
 };
 
 /** A part's mesh over `alpha`'s cells, weighted on `skin`. */
@@ -428,7 +437,8 @@ export const puppetOf = (
                 bones,
               ),
               flap,
-              bones[at.get(flap.bone)!]!,
+              bones,
+              at.get(flap.bone)!,
               at.get(flap.body)!,
             );
     return {

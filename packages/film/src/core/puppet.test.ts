@@ -82,6 +82,100 @@ const R = (deg: number, x: number, y: number) => {
   return [Math.cos(t) * x - Math.sin(t) * y, Math.sin(t) * x + Math.cos(t) * y] as const;
 };
 
+type Pt = readonly [number, number];
+
+const LIMB = ['upper', 'forearm', 'hand'];
+
+/** A limb on `joints` (an upper arm from the first, then a forearm and a hand), painted within `half` px of its bones on a `w` × `h` sheet. */
+const limb = (w: number, h: number, half: number, joints: ReadonlyArray<Pt>) => {
+  const segments = joints.slice(1).map((tip, i) => [joints[i]!, tip] as const);
+  const rgba = new Uint8Array(w * h * 4);
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const c = [x + 0.5, y + 0.5] as const;
+      if (Math.min(...segments.map(([a, b]) => segmentGap(c, a, b))) <= half)
+        rgba.set([120, 80, 60, 255], (y * w + x) * 4);
+    }
+  const bones = segments.map(([pivot, tip], i) => ({
+    name: LIMB[i]!,
+    ...(i > 0 && { parent: LIMB[i - 1]! }),
+    pivot,
+    tip,
+  }));
+  return { pixels: { width: w, height: h, rgba }, bones };
+};
+
+/** Each mesh vertex of part `k`, by `x,y`, with its amount on each bone by name. */
+const amountsOf = (p: Puppet, k: number) => {
+  const { vertices, bones, amounts } = p.parts[k]!.mesh;
+  const slots = bones.length / (vertices.length / 2);
+  const out = new Map<string, Map<string, number>>();
+  for (let i = 0; i < vertices.length / 2; i++) {
+    const own = new Map<string, number>();
+    for (let s = 0; s < slots; s++) {
+      const b = bones[slots * i + s]!;
+      if (b >= 0)
+        own.set(p.bones[b]!.name, (own.get(p.bones[b]!.name) ?? 0) + amounts[slots * i + s]!);
+    }
+    out.set(`${vertices[2 * i]},${vertices[2 * i + 1]}`, own);
+  }
+  return out;
+};
+
+/**
+ * An arm half 8 px wide hanging from the shoulder (70, 30), its forearm folded up so the hand
+ * lies above the shoulder, where the shoulder's flap gives the body its whole share (its reach
+ * is 20 px), over a body box: a hand that rests on the chest. `alone` is the same arm with no
+ * flap and no body.
+ */
+const FOLDED = (() => {
+  const N = 140;
+  const arm = limb(N, N, 8, [
+    [70, 30],
+    [70, 100],
+    [86, 48],
+    [89, 20],
+  ]);
+  const body = new Uint8Array(N * N * 4);
+  for (let y = 10; y < N; y++)
+    for (let x = 10; x < 70; x++) body.set([40, 40, 200, 255], (y * N + x) * 4);
+  const lean = { name: 'lean', pivot: [40, 160] as const, tip: [40, 0] as const };
+  const bones = [lean, { ...arm.bones[0]!, parent: 'lean' }, ...arm.bones.slice(1)];
+  const flap = {
+    part: 'arm',
+    from: 'body',
+    bone: 'upper',
+    body: 'lean',
+    cap: 6,
+    reach: 20,
+    region: [
+      [54, 0],
+      [100, 0],
+      [100, 42],
+      [54, 42],
+    ] as ReadonlyArray<Pt>,
+  };
+  return {
+    flap,
+    puppet: made(
+      {
+        width: N,
+        height: N,
+        parts: [
+          { name: 'arm', pixels: arm.pixels },
+          { name: 'body', pixels: { width: N, height: N, rgba: body } },
+        ],
+      },
+      { bones, skin: { arm: [...LIMB, 'lean'], body: ['lean'] }, flaps: [flap] },
+    ),
+    alone: () =>
+      made(
+        { width: N, height: N, parts: [{ name: 'arm', pixels: arm.pixels }] },
+        { bones, skin: { arm: LIMB } },
+      ),
+  };
+})();
+
 /** `y0..y1` of x 8..56 painted `paint`, the rest clear: a part cut along a row. */
 const cut = (y0: number, y1: number, paint: ReadonlyArray<number>) => {
   const rgba = new Uint8Array(W * H * 4);
@@ -255,6 +349,40 @@ describe('a puppet', () => {
     for (let i = 0; i < arm.length; i += 4)
       if (arm[i + 3]! > 0) laid.set(arm.subarray(i, i + 4), i);
     expect(rasterOf(p, restPose(p)).rgba).toEqual(laid);
+  });
+
+  test("a shoulder flap gives the body only the flap bone's own share, so a hand folded up by the shoulder keeps its weights", () => {
+    const flapped = amountsOf(FOLDED.puppet, 0);
+    const alone = amountsOf(FOLDED.alone(), 0);
+    const of = (m: ReadonlyMap<string, number>, bone: string) => m.get(bone) ?? 0;
+    // Against the same arm with no flap: the upper arm's amount is what the upper arm and the
+    // body share here, and the forearm and the hand keep theirs.
+    // every vertex of the arm alone is a vertex of the flapped arm
+    expect([...alone.keys()].filter((at) => !flapped.has(at))).toEqual([]);
+    let [worst, part, whole, hands] = [0, 0, 0, 0];
+    for (const [at, own] of alone) {
+      const here = flapped.get(at) ?? new Map<string, number>();
+      worst = Math.max(
+        worst,
+        Math.abs(of(here, 'upper') + of(here, 'lean') - of(own, 'upper')),
+        Math.abs(of(here, 'forearm') - of(own, 'forearm')),
+        Math.abs(of(here, 'hand') - of(own, 'hand')),
+      );
+      const upper = of(own, 'upper');
+      if (upper > 0 && upper < 1 && of(here, 'lean') > 0)
+        if (of(here, 'upper') > 0) part++;
+        else whole++;
+      // the flap shares a vertex above the shoulder (70, 30) past its cap
+      const [x, y] = at.split(',').map(Number) as [number, number];
+      if (upper === 0 && y < 30 && Math.hypot(x - 70, y - 30) > FOLDED.flap.cap) hands++;
+    }
+    expect(worst).toBeLessThan(1e-9);
+    // the fixture reaches each case: a vertex the upper arm shares with the forearm, given to
+    // the body in part (inside the flap's reach) and in whole (past it), and the hand's own
+    // vertices where the flap shares
+    expect(part).toBeGreaterThan(0);
+    expect(whole).toBeGreaterThan(0);
+    expect(hands).toBeGreaterThan(0);
   });
 
   test('is refused for a skeleton that names what the sheet or itself lacks', () => {
