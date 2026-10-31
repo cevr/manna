@@ -63,7 +63,7 @@ export interface PuppetMember<V extends string> extends Pick<PuppetSpec, (typeof
 }
 
 /** The parts a view's cut gives the shadow role, by name; none when the member gives no cut. */
-const shadowOf = <V extends string>(
+const shadowNames = <V extends string>(
   cuts: PuppetMember<V>['cuts'],
   view: V,
 ): ReadonlyArray<string> =>
@@ -101,7 +101,7 @@ export const puppetsOf = <V extends string>(
       },
       paper: member.papers[view],
       ...Struct.pick(member, SHEET),
-      shadow: shadowOf(member.cuts, view),
+      shadow: shadowNames(member.cuts, view),
       line: member.line,
     };
   });
