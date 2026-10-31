@@ -19,7 +19,7 @@ tuner.
 
 - **Preconditions:** the baseline's boot; a load of at most 12 and 10 GB free before a cold build (SKILL.md, Launch).
 - **States:** default. Focus-visible, open, loading, empty and error are n/a.
-- **Regression:** `apps/hymnal/src/tuner/guard.test.ts` (the declaration equals the contract One derives from `Listen.swift`; the module names no output or player; the session is `.record` with `.measurement` and gives the audio back with `.notifyOthersOnDeactivation`), `apps/hymnal/src/tuner/pitch.test.ts` and `pitch.property.slow.test.ts` (the pitch reader and the reading).
+- **Regression:** `apps/hymnal/src/tuner/guard.test.ts` (the declaration equals the contract One derives from `Listen.swift`; the module names no output or player; the session is `.record` with `.measurement` and gives the audio back with `.notifyOthersOnDeactivation` in the category, mode and options it found, unless another owner took the session), `apps/hymnal/src/tuner/pitch.test.ts` and `pitch.property.slow.test.ts` (the pitch reader and the reading).
 
 1. **Build (`tuner-native-build`).** `sim install --prebuild` → `{"ok":true,"command":"install",…}` and the app shows `label=Hymns`.
 2. **Usage text.** `/usr/libexec/PlistBuddy -c 'Print :NSMicrophoneUsageDescription' apps/hymnal/ios/build/dd/Build/Products/Debug-iphonesimulator/Hymnal.app/Info.plist` → `Hymnal listens to your guitar to tune it. Nothing is recorded or kept.`

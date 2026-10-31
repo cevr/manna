@@ -15,7 +15,8 @@ import Foundation
 /// through `onFrame`.
 ///
 /// `stop` removes the tap, stops the engine and gives the session back with
-/// `.notifyOthersOnDeactivation`; a second call does nothing. Listening ends
+/// `.notifyOthersOnDeactivation`, in the category, mode and options `start`
+/// found, so a paused hymn's next Play sounds; a second call does nothing. Listening ends
 /// through `onEnd` with `stopped` (a `stop`), `interruption` (a call, Siri),
 /// `route` (an input came or went, or the engine's configuration changed)
 /// or `failure` (the media services were reset).
@@ -31,10 +32,12 @@ import Foundation
       throw Listen.failure("the microphone is not granted")
     }
     let session = AVAudioSession.sharedInstance()
+    before = Before(of: session)
     do {
       try session.setCategory(.record, mode: .measurement)
       try session.setActive(true)
     } catch {
+      release(session)
       NSLog("%@", "[tuner] listen.failed status=session")
       throw error
     }
@@ -90,6 +93,21 @@ import Foundation
   private var frameListener: ((Data) -> Void)?
   private var endListener: ((String) -> Void)?
   private var observers: [NSObjectProtocol] = []
+  /// The session's category, mode and options as `start` found them; nil
+  /// when the tuner holds no session.
+  private var before: Before?
+
+  private struct Before {
+    let category: AVAudioSession.Category
+    let mode: AVAudioSession.Mode
+    let options: AVAudioSession.CategoryOptions
+
+    init(of session: AVAudioSession) {
+      category = session.category
+      mode = session.mode
+      options = session.categoryOptions
+    }
+  }
 
   /// Sends a frame, unless listening ended while it waited for the main actor.
   private func send(_ frame: Data) {
@@ -110,11 +128,26 @@ import Foundation
     endListener?(reason)
   }
 
+  /// Gives the session back as `start` found it: deactivated with
+  /// `.notifyOthersOnDeactivation`, then the category, mode and options it
+  /// had before. One's `resume()` only calls the player's `play()`, so a
+  /// paused hymn sounds again only under its own category, never under
+  /// `.record`. A session no longer in `.record` was taken by another owner
+  /// while the tuner listened (a hymn's `play` sets its own category and
+  /// activates): it is left as it is, so that hymn keeps sounding.
   private func release(_ session: AVAudioSession) {
+    guard let before else { return }
+    self.before = nil
+    guard session.category == .record else { return }
     do {
       try session.setActive(false, options: .notifyOthersOnDeactivation)
     } catch {
-      NSLog("%@", "[tuner] listen.release failed")
+      NSLog("%@", "[tuner] listen.release failed step=deactivate")
+    }
+    do {
+      try session.setCategory(before.category, mode: before.mode, options: before.options)
+    } catch {
+      NSLog("%@", "[tuner] listen.release failed step=category")
     }
   }
 

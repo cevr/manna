@@ -394,8 +394,10 @@ Android haptics only.
   E4), its signed cents, and in tune within 5 cents. The tuner plays no
   sound.
 - `native/tuner/Listen.swift` takes the iOS microphone in 2048-sample
-  mono Float32 frames (session `.record`, mode `.measurement`; it gives
-  the audio back with `.notifyOthersOnDeactivation` on `stop()`) and
+  mono Float32 frames (session `.record`, mode `.measurement`; on its end
+  it gives the audio back with `.notifyOthersOnDeactivation` in the
+  category, mode and options it found, so a paused hymn's next Play
+  sounds, and leaves a session another owner took as it is) and
   sends each to JavaScript; `onEnd` names why listening stopped
   (`interruption`, `route`, `failure`, `stopped`). It asks for no
   permission itself. `src/tuner/native.ios.ts` types it as `Listen`;

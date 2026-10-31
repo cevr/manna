@@ -38,6 +38,36 @@ describe('the ear’s audio session', () => {
     expect(swift).toContain('setActive(false, options: .notifyOthersOnDeactivation)');
   });
 
+  it('gives the session back in the category, mode and options it found, unless another owner took it', () => {
+    // One's resume() only calls the player's play(): a paused hymn sounds again only when the
+    // tuner puts back the category it found, since `.record` silences playback.
+    const start = swift.slice(swift.indexOf('func start()'), swift.indexOf('func stop()'));
+    const saved = start.indexOf('before = Before(of: session)');
+    expect(saved).toBeGreaterThan(-1);
+    expect(start.indexOf('setCategory(.record, mode: .measurement)')).toBeGreaterThan(saved);
+    // The session's own failure path gives it back too.
+    const sessionFailed = start.slice(
+      start.indexOf('try session.setActive(true)'),
+      start.indexOf('status=session'),
+    );
+    expect(sessionFailed).toContain('release(session)');
+
+    const kept = swift.slice(swift.indexOf('private struct Before'));
+    for (const field of ['session.category', 'session.mode', 'session.categoryOptions'])
+      expect(kept.slice(0, kept.indexOf('\n  }\n'))).toContain(field);
+
+    const from = swift.indexOf('private func release(');
+    const release = swift.slice(from, swift.indexOf('\n  }\n', from));
+    const owned = release.indexOf('guard session.category == .record else { return }');
+    const deactivated = release.indexOf('setActive(false, options: .notifyOthersOnDeactivation)');
+    const restored = release.indexOf(
+      'setCategory(before.category, mode: before.mode, options: before.options)',
+    );
+    expect(owned).toBeGreaterThan(-1);
+    expect(deactivated).toBeGreaterThan(owned);
+    expect(restored).toBeGreaterThan(deactivated);
+  });
+
   it('cuts frames of 2048 samples, hop 2048', () => {
     expect(swift).toContain('static let size = 2048');
     expect(swift).toContain('bufferSize: AVAudioFrameCount(Framer.size)');
