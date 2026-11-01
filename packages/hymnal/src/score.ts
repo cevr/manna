@@ -49,13 +49,15 @@ const closingKey = (harmony: readonly Note[]): Chord.Key => {
 };
 
 /**
- * Splits the melody into an intro and `count` verses. Where the tune repeats
- * note for note, the verses are equal: `expected` (the text's verse count)
- * is tried first, then the most verses that repeat exactly. Otherwise a file
- * plays each verse in its own rhythm, a note split or joined for its words,
- * so the expected count's closest equal split only places each verse near
- * its start: the verse starts on the note nearby that opens as the first
- * verse does, after the longest pause (the end of a phrase).
+ * Splits the melody into an intro and verses. Where the tune repeats note
+ * for note, the verses are equal: `expected` (the text's verse count) is
+ * tried first, then the most verses that repeat exactly. A verse sung in its
+ * own rhythm, a note split or joined for its words, breaks the repeat: when
+ * fewer verses repeat exactly than the text has, the missing ones are found
+ * beside them (`fewer`). With no exact repeat, the expected count's closest
+ * equal split only places each verse near its start: the verse starts on the
+ * note nearby that opens as the first verse does, after the longest pause
+ * (the end of a phrase).
  */
 export const findVerses = (melody: readonly Note[], expected: number): Verses => {
   const keys = melody.map((note) => note.key);
@@ -92,27 +94,70 @@ export const findVerses = (melody: readonly Note[], expected: number): Verses =>
     }));
   const equal = (count: number, intro: number, length: number) =>
     spans(Array.from({ length: count }, (_, k) => intro + k * length));
-
-  const wanted = split(expected);
-  if (wanted?.share === 1)
-    return { spans: equal(expected, wanted.intro, wanted.length), exact: true };
-  for (let count = 8; count >= 2; count--) {
-    const found = count === expected ? undefined : split(count);
-    if (found?.share === 1) return { spans: equal(count, found.intro, found.length), exact: true };
-  }
-  if (wanted === undefined) return { spans: [{ start: 0, end }], exact: false };
-
   const REACH = 4;
   const OPENING = 8;
-  const nearby = (center: number, after: number) =>
+  /** The notes within `REACH` of `center`, after note `after` and before note `before`. */
+  const nearby = (center: number, after: number, before = keys.length) =>
     Array.from({ length: 2 * REACH + 1 }, (_, d) => center - REACH + d).filter(
-      (i) => i > after && i < keys.length,
+      (i) => i > after && i < before,
     );
   const best = (candidates: readonly number[], score: (i: number) => number, center: number) =>
     candidates.reduce((a, b) => {
       const [sa, sb] = [score(a), score(b)];
       return sb > sa || (sb === sa && Math.abs(b - center) < Math.abs(a - center)) ? b : a;
     }, candidates[0] ?? center);
+
+  /**
+   * `count` verses of `length` notes repeat exactly after `intro` notes, fewer than the text's
+   * stanzas: the missing stanzas are sung in their own rhythm, or the file plays fewer verses.
+   * Each verse found here starts on the note nearby that opens on the exact verses' first key,
+   * after the longest pause.
+   * - When the intro has room for the missing verses, they come first, each about a verse
+   *   before the next. The first exact verse may itself be the one in its own rhythm, its
+   *   opening key sung once more, so the keys repeat from a note late: it starts nearby too.
+   * - Else, when the text's count is a multiple of `count`, each exact span holds that many
+   *   stanzas, the alternate ones in a second rhythm.
+   * - Else the file plays `count` verses.
+   */
+  const fewer = (count: number, intro: number, length: number): Verses => {
+    const exact = Array.from({ length: count }, (_, k) => intro + k * length);
+    const missing = expected - count;
+    const opening = keys[intro];
+    const ranked = (i: number) => (keys[i] === opening ? end : 0) + Math.min(pause(i), end - 1);
+    const near = (center: number, after: number, before: number) =>
+      best(nearby(center, after, before), ranked, center);
+    if (missing > 0 && intro >= missing * length - REACH) {
+      const starts = [near(intro, -1, intro + length), ...exact.slice(1)];
+      for (let k = 0; k < missing; k++) {
+        const next = starts[0] ?? intro;
+        starts.unshift(near(next - length, -1, next));
+      }
+      return { spans: spans(starts), exact: false };
+    }
+    if (missing > 0 && expected % count === 0) {
+      const each = expected / count;
+      const starts: number[] = [];
+      for (const start of exact) {
+        starts.push(start);
+        for (let j = 1; j < each; j++)
+          starts.push(
+            near(Math.round(start + (j * length) / each), starts.at(-1) ?? start, start + length),
+          );
+      }
+      return { spans: spans(starts), exact: false };
+    }
+    return { spans: equal(count, intro, length), exact: true };
+  };
+
+  const wanted = split(expected);
+  if (wanted?.share === 1)
+    return { spans: equal(expected, wanted.intro, wanted.length), exact: true };
+  for (let count = 8; count >= 2; count--) {
+    const found = count === expected ? undefined : split(count);
+    if (found?.share === 1) return fewer(count, found.intro, found.length);
+  }
+  if (wanted === undefined) return { spans: [{ start: 0, end }], exact: false };
+
   const first = best(nearby(wanted.intro, -1), pause, wanted.intro);
   // How many of the first verse's opening keys this note begins with, in a row.
   const opens = (i: number) => {
