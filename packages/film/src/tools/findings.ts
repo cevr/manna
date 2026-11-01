@@ -677,6 +677,23 @@ export class TextOffPlate extends Schema.TaggedError<TextOffPlate>()('TextOffPla
   }
 }
 
+/**
+ * A painted plate's edge inside the frame (`f.painting`, `canvas/painting.ts`):
+ * at a drawn moment, the camera or the plane's move carries an edge the plate
+ * does not declare `open` into view, so the frame shows where the painting
+ * ends. The first moment it shows, and every such edge seen in the scene.
+ */
+export class PaintingEdge extends Schema.TaggedError<PaintingEdge>()('PaintingEdge', {
+  ...sampled,
+  /** The painting by its spec's key. */
+  painting: Schema.String,
+  edges: Schema.Array(Schema.Literals(['top', 'right', 'bottom', 'left'])),
+}) {
+  override get message() {
+    return `${where(this)}: painting ${this.painting} shows its ${this.edges.join(', ')} edge inside the frame (give it more margin, or declare the edge open)`;
+  }
+}
+
 /** A plate (a cutout smaller than the frame) carrying text, cut off by the frame's edge. */
 export class PlateOffFrame extends Schema.TaggedError<PlateOffFrame>()('PlateOffFrame', {
   ...sampled,
@@ -762,7 +779,7 @@ export type LayoutFinding = FrameFinding | StaticHold;
 /** What the look pass measures across the film (`look.ts`). */
 export type LookFinding = HeldShare | ColourScript | FaceSmall | HandJump | HandFar | HandHidden;
 /** What the draw leg (`check --draw`) finds, drawing each scene in-process at its moments. */
-export type DrawFinding = DrawThrew | FrameImpure | InkOverFace;
+export type DrawFinding = DrawThrew | FrameImpure | InkOverFace | PaintingEdge;
 /** What `check --short` finds on a short. */
 export type ShortFinding = ShortUnsafeText | ShortHook | ShortLoop | ShortLength;
 export type Finding =
@@ -851,6 +868,7 @@ export const levelOf = (finding: Finding, options: CheckOptions): Level => {
       DrawThrew: error,
       FrameImpure: error,
       InkOverFace: warning,
+      PaintingEdge: error,
       StaticHold: warning,
       HeldShare: warning,
       ColourScript: warning,
@@ -968,6 +986,7 @@ export const addressOf = (finding: Finding): FindingAddress => {
       DrawThrew: sampledAt,
       FrameImpure: sampledAt,
       InkOverFace: sampledAt,
+      PaintingEdge: sampledAt,
       StaticHold: span,
       HeldShare: span,
       ColourScript: (f): FindingAddress => ({ part: { _tag: 'Act', act: f.act } }),

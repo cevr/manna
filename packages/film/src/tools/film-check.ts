@@ -17,6 +17,7 @@ import {
   Array as Arr,
   Effect,
   FileSystem,
+  Layer,
   Match,
   Option,
   Path,
@@ -28,6 +29,7 @@ import type { Film } from '../canvas/film.ts';
 import { createTalk } from '../canvas/talk.ts';
 import { type Narrated, narrationUrls } from '../player/narrated.ts';
 import { PuppetImagesBun } from '../puppet/images-bun.ts';
+import { PaintingImagesBun } from '../painting/images-bun.ts';
 import { drawFindings } from './draw-check.ts';
 import { FilmModuleInvalid } from './errors.ts';
 import { type Address, type AddressError, type Scope, resolveAddress } from '../core/address.ts';
@@ -301,22 +303,22 @@ const drawnFindings = Effect.fnUntraced(function* (
  * from the committed timings; a talk's page over its edit, takes and cut,
  * `createTalk`, its footage left undrawn), every moment of the scenes `scope`
  * covers drawn in this process into the stand-in context (`draw-check.ts`):
- * a scene that throws, a frame that is not pure, ink over a face. No browser.
+ * a scene that throws, a frame that is not pure, ink over a face, a painted
+ * plate's edge in the frame. No browser.
  * With `swaps` (a wedge, `check --level`), a drawn film is the one those
  * files build, so a look the film does not play is drawn and checked.
  */
-export const drawLeg = Effect.fn('check.draw')(function* (
-  film: LoadedFilm,
-  scope: Scope,
-  swaps: ReadonlyMap<string, string>,
-) {
-  const scenes = new Set(scope.scenes.map((p) => p.spec.id));
-  return yield* Option.match(film.talk, {
-    onNone: () => drawnFindings(film, scenes, swaps),
-    onSome: ({ talk, takes, cut }) =>
-      Effect.scoped(drawFindings((): Film => createTalk(talk, takes, cut), scenes)),
-  });
-}, Effect.provide(PuppetImagesBun));
+export const drawLeg = Effect.fn('check.draw')(
+  function* (film: LoadedFilm, scope: Scope, swaps: ReadonlyMap<string, string>) {
+    const scenes = new Set(scope.scenes.map((p) => p.spec.id));
+    return yield* Option.match(film.talk, {
+      onNone: () => drawnFindings(film, scenes, swaps),
+      onSome: ({ talk, takes, cut }) =>
+        Effect.scoped(drawFindings((): Film => createTalk(talk, takes, cut), scenes)),
+    });
+  },
+  Effect.provide(Layer.mergeAll(PuppetImagesBun, PaintingImagesBun)),
+);
 
 /**
  * `check --short`: the short resolved on the film's frames, at the rate the

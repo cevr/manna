@@ -38,6 +38,12 @@
 // mostly opaque, centred on the frame) is found (`InkOverFace`). The stand-in sets
 // text a width from its font's size and a fixed height, so a line of text is
 // found over a face where its baseline strip crosses the face's core.
+//
+// The probe also collects each painted plate a frame paints (`f.painting`)
+// as its rectangle's four corners on screen, mapped by the transform the
+// draw uses, so a plate edge its spec does not declare open that lies inside
+// the frame is found (`PaintingEdge`). A scene that paints a plate is also
+// drawn at its breath peak, its midpoint, where the camera drifts furthest.
 
 import { Array as Arr, Effect, Option, Order, Predicate, type Scope } from 'effect';
 import type { Film } from '../canvas/film.ts';
@@ -46,13 +52,16 @@ import { isStandInCanvas, recorder, standInDom } from '../canvas/fixtures/stand-
 import type { RigNameMissing, RigUnloadable } from '../core/errors.ts';
 import type { PuppetImages, PuppetUnloadable } from '../puppet/images.ts';
 import { loadPuppets } from '../puppet/load.ts';
+import { EDGES, shownEdges } from '../canvas/painting.ts';
+import type { PaintingImages, PaintingUnloadable } from '../painting/images.ts';
+import { loadPaintings } from '../painting/load.ts';
 import { sceneMoments } from '../core/moments.ts';
 import { loadRigs } from '../rive/load.ts';
 import { RiveRuntimeBun } from '../rive/runtime-bun.ts';
 import { FNV_START, fnvStep, fnvText } from '../core/random.ts';
 import { framesOf, secondsAt } from '../core/time.ts';
 import { inkOverFace } from './check.ts';
-import { type DrawFinding, DrawThrew, FrameImpure, InkOverFace } from './findings.ts';
+import { type DrawFinding, DrawThrew, FrameImpure, InkOverFace, PaintingEdge } from './findings.ts';
 
 /** A font's size in px, when its shorthand names one. */
 const fontPx = (font: string): number =>
@@ -70,11 +79,12 @@ const BLANK = { record: false, measure } as const;
 /** A fresh stand-in context for one draw. */
 const blank = () => recorder(1920, 1080, BLANK).ctx;
 
-/** A probe's sink that collects faces as well as text and ink. */
-const sinkOf = (): Required<Pick<ProbeSink, 'texts' | 'inks' | 'faces'>> => ({
+/** A probe's sink that collects faces and painted plates as well as text and ink. */
+const sinkOf = (): Required<Pick<ProbeSink, 'texts' | 'inks' | 'faces' | 'paintings'>> => ({
   texts: [],
   inks: [],
   faces: [],
+  paintings: [],
 });
 
 /** What a frame asks of its context and never paints: factories and queries. */
@@ -288,10 +298,40 @@ const drawMoments = (film: Film): ReadonlyArray<DrawMoment> => {
           Math.min(last, Math.max(first, Math.round((p.start + (c.start + c.end) / 2) * fps))),
         ),
       );
-    return [at('start', first), at('end', last), ...mids];
+    // The breath peak (through 0.5, the scene's midpoint), where the camera's
+    // drift reaches furthest and a painted plate's margin is thinnest; only a
+    // scene that paints a plate is drawn there.
+    const moments = [at('start', first), at('end', last), ...mids];
+    if (Object.keys(p.spec.paintings ?? {}).length > 0)
+      moments.push(
+        at('breath peak', Math.min(last, Math.max(first, Math.round((p.start + p.dur / 2) * fps)))),
+      );
+    return moments;
   });
   return [...sampled, ...edges];
 };
+
+/** Each non-open edge of a plate the frame painted that shows inside the `width` × `height` frame. */
+const paintingEdges = (
+  sample: { readonly time: number; readonly at: string },
+  probe: ProbeSink,
+  frame: { readonly width: number; readonly height: number },
+): ReadonlyArray<PaintingEdge> =>
+  (probe.paintings ?? []).flatMap((mark) => {
+    const edges = shownEdges(mark.quad, frame.width, frame.height).filter(
+      (edge) => !mark.open.includes(edge),
+    );
+    if (edges.length === 0) return [];
+    return [
+      PaintingEdge.make({
+        scene: mark.scene,
+        time: sample.time,
+        at: sample.at,
+        painting: mark.key,
+        edges,
+      }),
+    ];
+  });
 
 /** Draw moment `m` (four draws where it is checked for purity, one elsewhere): what it found. */
 const drawAt = (film: Film, m: DrawMoment): Effect.Effect<ReadonlyArray<DrawFinding>> => {
@@ -302,12 +342,16 @@ const drawAt = (film: Film, m: DrawMoment): Effect.Effect<ReadonlyArray<DrawFind
   return Effect.sync((): ReadonlyArray<DrawFinding> => {
     if (!m.pure) {
       film.render(blank(), m.time, { captions: true, probe });
-      return inkOverFace(sample, probe, frame);
+      return [...inkOverFace(sample, probe, frame), ...paintingEdges(sample, probe, frame)];
     }
     const impure = Option.map(impureAt(film, m.frame, probe), (why) =>
       FrameImpure.make({ ...where, why }),
     );
-    return [...Option.toArray(impure), ...inkOverFace(sample, probe, frame)];
+    return [
+      ...Option.toArray(impure),
+      ...inkOverFace(sample, probe, frame),
+      ...paintingEdges(sample, probe, frame),
+    ];
   }).pipe(
     Effect.catchDefect((defect) =>
       Effect.succeed([DrawThrew.make({ ...where, why: String(defect) })]),
@@ -348,28 +392,50 @@ const mergeFaces = (found: ReadonlyArray<DrawFinding>): ReadonlyArray<DrawFindin
 };
 
 /**
+ * A painted plate's showing edges in many frames, as one finding per scene
+ * and painting: the first moment an edge shows (the moment the owner is sent
+ * to) and every edge seen at any moment, in film order.
+ */
+const mergeEdges = (found: ReadonlyArray<DrawFinding>): ReadonlyArray<DrawFinding> => {
+  const shown = found.filter((f) => f._tag === 'PaintingEdge');
+  const merged = Object.values(Arr.groupBy(shown, (f) => f.scene)).flatMap((scene) =>
+    Object.values(Arr.groupBy(scene, (f) => f.painting)).map((group) => {
+      const first = Arr.headNonEmpty(Arr.sortWith(group, (f) => f.time, Order.Number));
+      const seen = new Set(group.flatMap((f) => f.edges));
+      return PaintingEdge.make({ ...first, edges: EDGES.filter((edge) => seen.has(edge)) });
+    }),
+  );
+  return [
+    ...found.filter((f) => f._tag !== 'PaintingEdge'),
+    ...Arr.sortWith(merged, (f) => f.time, Order.Number),
+  ];
+};
+
+/**
  * The draw leg: under a stand-in document, the film `build` makes (its
  * canvases stand-ins too), each moment of its scenes named in `scenes`
  * (every one when empty) drawn: what threw, what is not pure and what ink
  * lies over a face. The film's rigs are loaded first, through Rive's Bun
  * runtime (`RiveRuntimeBun`), and posed for real, and its puppets through
- * the `PuppetImages` the caller gives (`PuppetImagesBun` for `check --draw`):
- * a rig or puppet that cannot load fails the leg, naming it.
+ * the `PuppetImages` the caller gives (`PuppetImagesBun` for `check --draw`),
+ * and its painted plates through the `PaintingImages` it gives
+ * (`PaintingImagesBun`): a rig, puppet or painting that cannot load fails
+ * the leg, naming it.
  */
 export const drawFindings = (
   build: () => Film,
   scenes: ReadonlySet<string> = new Set(),
 ): Effect.Effect<
   ReadonlyArray<DrawFinding>,
-  RigUnloadable | RigNameMissing | PuppetUnloadable,
-  Scope.Scope | PuppetImages
+  RigUnloadable | RigNameMissing | PuppetUnloadable | PaintingUnloadable,
+  Scope.Scope | PuppetImages | PaintingImages
 > =>
   Effect.gen(function* () {
     yield* standInDom(BLANK);
-    const film = yield* loadPuppets(yield* loadRigs(build()));
+    const film = yield* loadPaintings(yield* loadPuppets(yield* loadRigs(build())));
     const moments = drawMoments(film).filter((m) => scenes.size === 0 || scenes.has(m.scene));
     const found = yield* Effect.forEach(moments, (m) => drawAt(film, m));
-    return mergeFaces(found.flat());
+    return mergeEdges(mergeFaces(found.flat()));
   }).pipe(Effect.provide(RiveRuntimeBun));
 
 /** How many moments `drawFindings` draws in `film`, and how many it checks for purity. */
