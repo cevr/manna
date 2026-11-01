@@ -168,12 +168,12 @@
               "part": "head",
               "under": "armRight",
               "painted": {
-                "share": 0.024,
-                "px": 340
+                "share": 0.008,
+                "px": 247
               },
               "kept": {
-                "share": 0.057,
-                "px": 1012
+                "share": 0.017,
+                "px": 867
               },
               "verdict": "within"
             },
@@ -181,12 +181,12 @@
               "part": "head",
               "under": "armLeft",
               "painted": {
-                "share": 0.022,
-                "px": 315
+                "share": 0.009,
+                "px": 225
               },
               "kept": {
-                "share": 0.061,
-                "px": 1074
+                "share": 0.02,
+                "px": 910
               },
               "verdict": "within"
             },
@@ -194,12 +194,12 @@
               "part": "torso",
               "under": "armRight",
               "painted": {
-                "share": 0.027,
-                "px": 1868
+                "share": 0.006,
+                "px": 1622
               },
               "kept": {
-                "share": 0.038,
-                "px": 3721
+                "share": 0.012,
+                "px": 3186
               },
               "verdict": "within"
             },
@@ -207,13 +207,33 @@
               "part": "torso",
               "under": "armLeft",
               "painted": {
-                "share": 0.015,
-                "px": 1954
+                "share": 0.004,
+                "px": 1713
               },
               "kept": {
-                "share": 0.043,
-                "px": 3607
+                "share": 0.013,
+                "px": 3079
               },
+              "verdict": "within"
+            }
+          ],
+          "step": [
+            {
+              "part": "head",
+              "meets": "torso",
+              "under": "armRight",
+              "laid": 6.54,
+              "answer": 0.39,
+              "pairs": 55,
+              "verdict": "outside"
+            },
+            {
+              "part": "head",
+              "meets": "torso",
+              "under": "armLeft",
+              "laid": -3.2,
+              "answer": 0.53,
+              "pairs": 53,
               "verdict": "within"
             }
           ],
@@ -231,7 +251,7 @@
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": ["drift", "grain"]
+        "missed": ["drift", "grain", "step"]
       }
     ],
     "chosen": 1,
@@ -344,12 +364,12 @@
         "part": "head",
         "under": "armRight",
         "painted": {
-          "share": 0.024,
-          "px": 340
+          "share": 0.008,
+          "px": 247
         },
         "kept": {
-          "share": 0.057,
-          "px": 1012
+          "share": 0.017,
+          "px": 867
         },
         "verdict": "within"
       },
@@ -357,12 +377,12 @@
         "part": "head",
         "under": "armLeft",
         "painted": {
-          "share": 0.022,
-          "px": 315
+          "share": 0.009,
+          "px": 225
         },
         "kept": {
-          "share": 0.061,
-          "px": 1074
+          "share": 0.02,
+          "px": 910
         },
         "verdict": "within"
       },
@@ -370,12 +390,12 @@
         "part": "torso",
         "under": "armRight",
         "painted": {
-          "share": 0.027,
-          "px": 1868
+          "share": 0.006,
+          "px": 1622
         },
         "kept": {
-          "share": 0.038,
-          "px": 3721
+          "share": 0.012,
+          "px": 3186
         },
         "verdict": "within"
       },
@@ -383,13 +403,33 @@
         "part": "torso",
         "under": "armLeft",
         "painted": {
-          "share": 0.015,
-          "px": 1954
+          "share": 0.004,
+          "px": 1713
         },
         "kept": {
-          "share": 0.043,
-          "px": 3607
+          "share": 0.013,
+          "px": 3079
         },
+        "verdict": "within"
+      }
+    ],
+    "step": [
+      {
+        "part": "head",
+        "meets": "torso",
+        "under": "armRight",
+        "laid": 6.54,
+        "answer": 0.39,
+        "pairs": 55,
+        "verdict": "outside"
+      },
+      {
+        "part": "head",
+        "meets": "torso",
+        "under": "armLeft",
+        "laid": -3.2,
+        "answer": 0.53,
+        "pairs": 53,
         "verdict": "within"
       }
     ],
@@ -413,12 +453,14 @@
     "chromaDrop": 3,
     "grainWithin": 0.5,
     "speckOver": 0.04,
+    "stepWithin": 5,
     "visibleAtRest": 0,
     "leastSeamPairs": 20,
+    "leastStepPairs": 8,
     "leastGrainWindows": 90,
     "leastRegionPx": 100,
     "leastCellPx": 40
   },
-  "missed": ["drift", "grain"],
+  "missed": ["drift", "grain", "step"],
   "named": []
 }
