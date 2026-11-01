@@ -42,7 +42,11 @@ def canvas_of_video(frame: np.ndarray) -> np.ndarray:
 
 
 def mp4_frames(path: str):
+    if not os.path.isfile(path):
+        raise FileNotFoundError(f"no clip at {path}")
     cap = cv2.VideoCapture(path)
+    if not cap.isOpened():
+        raise FileNotFoundError(f"no frames in {path}: it does not open as a video")
     i = 0
     while True:
         ok, bgr = cap.read()
@@ -55,6 +59,8 @@ def mp4_frames(path: str):
 
 def png_frames(d: str, limit: int | None = None):
     ps = sorted(glob.glob(os.path.join(d, "*.png")))
+    if not ps:
+        raise FileNotFoundError(f"no PNGs in {d}")
     if limit and limit < len(ps):
         ps = [ps[int(i * len(ps) / limit)] for i in range(limit)]
     for p in ps:

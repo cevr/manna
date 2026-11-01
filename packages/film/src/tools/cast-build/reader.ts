@@ -98,10 +98,10 @@ runpy.run_path(folder + '/' + script + '.py', run_name='__main__')
 const READ_LIMIT = Duration.minutes(30);
 const TRAIN_LIMIT = Duration.hours(3);
 
-/** read.py's arguments for `frames`. */
-const frameArgs = (frames: Frames): ReadonlyArray<string> => {
-  if ('clip' in frames) return ['--mp4', frames.clip];
-  return ['--pngs', frames.pngs];
+/** read.py's arguments for `frames`, each made absolute by `resolve` (the scripts run in the reader's folder). */
+const frameArgs = (frames: Frames, resolve: (p: string) => string): ReadonlyArray<string> => {
+  if ('clip' in frames) return ['--mp4', resolve(frames.clip)];
+  return ['--pngs', resolve(frames.pngs)];
 };
 
 /** The last lines a run printed, for its failure. */
@@ -182,10 +182,19 @@ export class CastReader extends Context.Service<CastReader, CastReaderService>()
           Effect.gen(function* () {
             const scratch = yield* fs.makeTempDirectoryScoped();
             const out = path.join(scratch, 'read.json');
-            const source = frameArgs(frames);
+            const source = frameArgs(frames, (p) => path.resolve(p));
             yield* script(
               'read',
-              ['--ckpt', ckpt, ...source, '--out', out, '--device', 'cpu', '--all-probs'],
+              [
+                '--ckpt',
+                path.resolve(ckpt),
+                ...source,
+                '--out',
+                out,
+                '--device',
+                'cpu',
+                '--all-probs',
+              ],
               READ_LIMIT,
             );
             return yield* fs.readFileString(out);
@@ -212,7 +221,7 @@ export class CastReader extends Context.Service<CastReader, CastReaderService>()
             const evalOut = path.join(scratch, 'eval.json');
             yield* script(
               'read',
-              ['--ckpt', ckpt, '--pngs', held, '--out', readOut, '--device', 'cpu'],
+              ['--ckpt', path.resolve(ckpt), '--pngs', held, '--out', readOut, '--device', 'cpu'],
               READ_LIMIT,
             );
             yield* script(
