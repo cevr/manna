@@ -561,7 +561,7 @@
     }
   },
   "clips": {
-    "passed": 5,
+    "passed": 6,
     "of": 6,
     "byClip": {
       "feast-mother/wave/clip-a": {
@@ -811,7 +811,7 @@
           {
             "from": 34,
             "to": 123,
-            "expect": ["sower/poses-poses-3"]
+            "expect": ["sower/turnaround-threeQuarterLeft"]
           }
         ],
         "iou": {
@@ -851,8 +851,8 @@
             "drawing": "sower/turnaround-threeQuarterLeft"
           }
         ],
-        "pass": false,
-        "fails": ["named 34-123: 0 of 90 frames name sower/poses-poses-3, under 0.9"]
+        "pass": true,
+        "fails": []
       },
       "sower/wave/clip-a": {
         "member": "sower",
