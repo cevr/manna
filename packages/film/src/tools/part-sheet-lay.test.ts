@@ -1,9 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { Boolean as Bool, Option, Result } from 'effect';
+import { createHash } from 'node:crypto';
+import { Boolean as Bool, Option, Result, Schema } from 'effect';
 import { type PartCut, cutParts } from '../core/part-sheet.ts';
 import type { Raster } from '../core/raster.ts';
 import {
-  type HiddenMeasures,
+  HiddenMeasures,
   domainOf,
   hiddenOf,
   layAnswer,
@@ -67,12 +68,12 @@ type Paint = (x: number, y: number) => Rgb;
 type Still = { readonly name: string; readonly polygon: ReadonlyArray<readonly [number, number]> };
 
 /**
- * A torso of `cloth` (flat olive unless given), in a picture `h` px tall
- * (`W` unless given), cut into the `still` parts (one torso unless given),
- * with a cream arm in `arm` in front of it that moves, and okra's answer
- * laid on it: the view with the arm's place painted, the cloth at its edge
- * and `inner` more than `margin` px in from it (2 unless given, where the
- * seam never reads).
+ * A torso of `cloth` (flat olive unless given) on `paper` (flat unless
+ * given), in a picture `h` px tall (`W` unless given), cut into the `still`
+ * parts (one torso unless given), with a cream arm in `arm` in front of it
+ * that moves, and okra's answer laid on it: the view with the arm's place
+ * painted, the cloth or paper at its edge and `inner` more than `margin` px
+ * in from it (2 unless given, where the seam never reads).
  */
 const layOn =
   (
@@ -80,14 +81,21 @@ const layOn =
     {
       h = W,
       cloth = (): Rgb => OLIVE,
+      paper = (): Rgb => PAPER,
       margin = 2,
       still = [{ name: 'torso', polygon: corners(torsoOf(h)) }],
-    }: { h?: number; cloth?: Paint; margin?: number; still?: ReadonlyArray<Still> } = {},
+    }: {
+      h?: number;
+      cloth?: Paint;
+      paper?: Paint;
+      margin?: number;
+      still?: ReadonlyArray<Still>;
+    } = {},
   ) =>
   (inner: Paint) => {
     const body = torsoOf(h);
     const torso = (x: number, y: number) =>
-      Bool.match(inside(body, x, y), { onTrue: () => cloth(x, y), onFalse: () => PAPER });
+      Bool.match(inside(body, x, y), { onTrue: () => cloth(x, y), onFalse: () => paper(x, y) });
     const view = rasterOf(
       (x, y) => Bool.match(inside(arm, x, y), { onTrue: () => CREAM, onFalse: () => torso(x, y) }),
       W,
@@ -108,10 +116,15 @@ const layOn =
       h,
     );
     const figure = Uint8Array.from({ length: W * h }, (_, i) =>
-      Number(inside(body, i % W, Math.floor(i / W))),
+      Number(inside(body, i % W, Math.floor(i / W)) || inside(arm, i % W, Math.floor(i / W))),
     );
     return measuresOf(view, cut, figure, answer);
   };
+
+type Lay = Result.Result.Success<ReturnType<typeof layAnswer>>;
+
+/** Each measure `measuresOf` gave, with the whole lay it came from: the fit and the sheet made, for the golden digests. */
+const lays = new WeakMap<HiddenMeasures, Lay>();
 
 /** The measures of `answer` laid on `view`, cut by `cut` within `figure`, with the arm moving. */
 const measuresOf = (view: Raster, cut: PartCut, figure: Uint8Array, answer: Raster) => {
@@ -126,7 +139,22 @@ const measuresOf = (view: Raster, cut: PartCut, figure: Uint8Array, answer: Rast
     pad: { s: 1, dx: 0, dy: 0 },
     portrait: { width: view.width, height: view.height },
   };
-  return Result.getOrThrow(layAnswer(target, answer)).measures;
+  const lay = Result.getOrThrow(layAnswer(target, answer));
+  lays.set(lay.measures, lay);
+  return lay.measures;
+};
+
+/** A digest of the whole lay behind `measures`: its fit and measures to the last bit, and every byte of the sheet it made. */
+const digestOf = (measures: HiddenMeasures) => {
+  const lay = lays.get(measures);
+  const fit = lay?.fit ?? { s: 0, dx: 0, dy: 0, score: 0 };
+  const hash = createHash('sha256')
+    .update(new Uint8Array(Float64Array.of(fit.s, fit.dx, fit.dy, fit.score).buffer))
+    .update(Schema.encodeSync(Schema.fromJsonString(HiddenMeasures))(measures));
+  hash.update(lay?.made.owner ?? new Uint8Array());
+  for (const part of lay?.made.parts ?? [])
+    hash.update(`${part.name} ${part.kept} ${part.painted}`).update(part.pixels.rgba);
+  return hash.digest('hex').slice(0, 16);
 };
 
 /** The size of the strip `layStrip` lays: tall enough for its edge to cross eight rows of grain cells. */
@@ -249,17 +277,54 @@ const layBeside = (inner: Paint) => {
 
 const laid = layOn(ARM);
 const olive = () => OLIVE;
+/** The arm laid in smooth olive, the kept cloth: two tests read it and neither changes it. */
+const smoothArm = laid(olive);
+/** The arm laid with a cream pixel every 3 px across the paint, the sleeve's colour left in the torso: a test and the golden digests read it. */
+const fleckedArm = laid((x, y) =>
+  Bool.match((x - ARM.x0) % 3 === 2 && (y - ARM.y0) % 3 === 2, {
+    onTrue: () => CREAM,
+    onFalse: () => OLIVE,
+  }),
+);
+/** One pixel in 14, 5.3 L* lighter than the olive: fine grain the part's pooled grain reads as smooth. */
+const fineFleck = (x: number, y: number): Rgb =>
+  Bool.match((x + 5 * y) % 14 === 0, { onTrue: () => FLECK, onFalse: () => OLIVE });
+/** Fine grain painted beside a part's own outline: a test and the golden digests read it. */
+const grainyBeside = layBeside(fineFleck);
+
+/** A fixed scatter of each channel of `c` up to `k` either way, pixel by pixel: grain with no seed to keep. */
+const grained =
+  (c: Rgb, k: number): Paint =>
+  (x, y) => {
+    const at = (ch: number) => {
+      const scatter =
+        (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663) ^ Math.imul(ch + 1, 83492791)) >>>
+        0;
+      return Math.max(0, Math.min(255, (c[ch] ?? 0) + (scatter % (2 * k + 1)) - k));
+    };
+    return [at(0), at(1), at(2)];
+  };
+/** The arm across the torso's left edge, half on the paper. */
+const ACROSS: Box = { x0: 2, y0: 8, x1: 30, y1: 40 };
+/**
+ * For the golden digests only, the three reads the other lays never decide:
+ * a torso whose cloth runs more than the 24 px lattice reach past the paint;
+ * paint of 2 px cream stripes every 4 px, so a speck at its edge is read
+ * against an even count of neighbours, half cream; and the arm across the
+ * torso's edge onto paper grained 16 either way, the paper under it grained
+ * 40, so the paper's spread, not its floor, sets how far the ground reaches.
+ */
+const acrossTheEdge = layOn(ACROSS, { h: 72, paper: grained(PAPER, 16) })((x, y) =>
+  Bool.match(x < torsoOf(72).x0, {
+    onTrue: () => grained(PAPER, 40)(x, y),
+    onFalse: () => Bool.match(x % 4 < 2, { onTrue: () => CREAM, onFalse: () => OLIVE }),
+  }),
+);
 
 describe('the part sheet lay', () => {
   test('paint flecked with the kept sleeve misses the speck bar; smooth paint meets it', () => {
-    // a cream pixel every 3 px across the paint: the sleeve's colour left in the torso
-    const flecked = laid((x, y) =>
-      Bool.match((x - ARM.x0) % 3 === 2 && (y - ARM.y0) % 3 === 2, {
-        onTrue: () => CREAM,
-        onFalse: () => OLIVE,
-      }),
-    );
-    const smooth = laid(olive);
+    const flecked = fleckedArm;
+    const smooth = smoothArm;
     expect(flecked.speck).toEqual([
       expect.objectContaining({ part: 'torso', under: 'arm', verdict: 'outside' }),
     ]);
@@ -394,9 +459,7 @@ describe('the part sheet lay', () => {
   test("fine grain painted beside a part's own outline in its kept cloth misses the grain bar", () => {
     // the flecks of the tests above, about 7 % of a cell; the kept outline is no grain of the cloth, so
     // it lifts no cell's allowance over them (read as cloth, it is near 5 % of each cell's kept cloth)
-    const fleck = (x: number, y: number): Rgb =>
-      Bool.match((x + 5 * y) % 14 === 0, { onTrue: () => FLECK, onFalse: () => OLIVE });
-    const [grainy, smooth] = [layBeside(fleck), layBeside(olive)];
+    const [grainy, smooth] = [grainyBeside, layBeside(olive)];
     expect(grainy.grain).toEqual([expect.objectContaining({ part: 'torso', verdict: 'outside' })]);
     expect(missedBars(grainy)).toContain('grain');
     expect(smooth.grain).toEqual([expect.objectContaining({ part: 'torso', verdict: 'within' })]);
@@ -405,7 +468,7 @@ describe('the part sheet lay', () => {
 
   test('paint greyer than the cloth beside it misses the drift bar, though its seam matches', () => {
     const grey = laid(() => GREY);
-    const kept = laid(olive);
+    const kept = smoothArm;
     expect(grey.seam.deltaE._tag === 'Some' && grey.seam.deltaE.value).toBe(0);
     expect(grey.drift.chroma).toEqual([
       expect.objectContaining({ part: 'torso', under: 'arm', verdict: 'outside' }),
@@ -461,12 +524,15 @@ describe('the part sheet lay', () => {
     },
     { name: 'robe', polygon: corners({ x0: 6, y0: 26, x1: 30, y1: 44 }) },
   ];
+  /** Tunic paint under a torso and a robe, the torso's taking the vest beside it into its tone: a test and the golden digests read it. */
+  const steppedTunic = layOn(ARM, {
+    cloth: (x) => Bool.match(x >= 30, { onTrue: () => OLIVE, onFalse: () => TUNIC }),
+    still: torsoOverRobe,
+  })(() => TUNIC);
 
   test('paint toned into a step across a part line the answer paints flat misses the step bar', () => {
     // the torso's paint takes the vest beside it into its tone, the robe's does not
-    const cloth = (x: number): Rgb =>
-      Bool.match(x >= 30, { onTrue: () => OLIVE, onFalse: () => TUNIC });
-    const stepped = layOn(ARM, { cloth, still: torsoOverRobe })(() => TUNIC);
+    const stepped = steppedTunic;
     expect(stepped.step).toEqual([
       expect.objectContaining({
         part: 'torso',
@@ -487,6 +553,19 @@ describe('the part sheet lay', () => {
       expect.objectContaining({ part: 'torso', meets: 'robe', under: 'arm', verdict: 'within' }),
     ]);
     expect(missedBars(kept)).not.toContain('step');
+  });
+
+  test('the lays the tests above read are made to the bit as recorded', () => {
+    // a digest of each whole lay (fit, measures, the sheet's every byte), so no change to the lay goes unseen
+    expect(
+      [smoothArm, fleckedArm, grainyBeside, steppedTunic, acrossTheEdge].map(digestOf),
+    ).toEqual([
+      '6b9f3fa4127e079a',
+      'e165d6fe33336d3e',
+      '9f34941d23116793',
+      'caba15530cc12b3d',
+      'f05487e14884fdc7',
+    ]);
   });
 
   /** A part's fine grain read in two cells, its paint as grainy as its cloth. */

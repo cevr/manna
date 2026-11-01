@@ -4,9 +4,12 @@ import { Result } from 'effect';
 import { tracedModule, traceView } from './trace.ts';
 import { LEAST_GAP, VIEW, boxOf, sheet, type TraceView } from './fixtures/trace/view.ts';
 
+/** The test sheet traced through the house view, once for the file: two tests read it and neither changes it. */
+const housed = Result.getOrThrow(traceView(sheet(), VIEW));
+
 describe('traceView', () => {
   test("reads each part to the inner edge of its line, its points a coarse step apart, its head's centre and its feet", () => {
-    const t = Result.getOrThrow(traceView(sheet(), VIEW));
+    const t = housed;
     const head = t.outlines['head'] ?? [];
     const body = t.outlines['body'] ?? [];
     // The head's ink runs from 18 to 22 px out: its outline lies on the inner edge, since the house lays its line outside.
@@ -159,7 +162,7 @@ describe('traceView', () => {
     const source = tracedModule(
       ['Traced from a test sheet by `film concept trace`.'],
       VIEW,
-      Result.getOrThrow(traceView(sheet(), VIEW)),
+      housed,
     );
     expect(source).toContain('// Traced from a test sheet by `film concept trace`.');
     expect(source).toContain('export const HEAD: Pt[] = [');

@@ -162,6 +162,40 @@ describe('a hymn’s transpose and capo', () => {
   });
 });
 
+describe('a hymn’s tempo', () => {
+  it('is 100 until turned', () => {
+    const { settings, registry } = launch(new Map());
+    expect(registry.get(settings.tempo(100))).toBe(100);
+  });
+
+  it('is kept for its own hymn alone, under its key, when the app is opened again', () => {
+    const device = new Map<string, string>();
+    const first = launch(device);
+    first.registry.set(first.settings.tempo(100), 80);
+    expect(first.registry.get(first.settings.tempo(101))).toBe(100);
+    expect(device.get('tempo.100')).toBe('80');
+    first.registry.dispose();
+
+    const again = launch(device);
+    expect(again.registry.get(again.settings.tempo(100))).toBe(80);
+    expect(again.registry.get(again.settings.tempo(101))).toBe(100);
+  });
+
+  it('reads a stored tempo off the dial’s stops as 100', () => {
+    for (const stored of ['45', '155', '0', '-80', '82', '100.5', '"fast"', 'null']) {
+      const { settings, registry } = launch(new Map([['tempo.100', stored]]));
+      expect(registry.get(settings.tempo(100))).toBe(100);
+    }
+  });
+
+  it('reads every stop of the dial as stored', () => {
+    for (let tempo = 50; tempo <= 150; tempo += 5) {
+      const { settings, registry } = launch(new Map([['tempo.100', String(tempo)]]));
+      expect(registry.get(settings.tempo(100))).toBe(tempo);
+    }
+  });
+});
+
 describe('the reading settings', () => {
   it('start at the page as it has always been set, with the screen left to sleep', () => {
     const { settings, registry } = launch(new Map());

@@ -50,6 +50,7 @@ import { audioUrl, soundingOffset } from '~/remote';
 import { type Move, still } from '~/hymns/chords';
 
 import * as Proof from './proof';
+import { DEFAULT_TEMPO, rateOf } from './tempo';
 
 /** A hymn the player plays: its number names its recording. */
 export interface Track {
@@ -127,6 +128,11 @@ export interface Status {
   /** Musical place retained while the global session prepares a replacement. */
   readonly replacementMs?: number;
   readonly recording?: RecordingSelection;
+  /**
+   * Ms of the place for each ms of the host's clock while it plays: the score clock's tempo
+   * with Sound off (`sound.ts`); 1 when not told, as the device's recording plays.
+   */
+  readonly rate?: number;
 }
 
 /** A replacement follows musical time while the global recording loads. */
@@ -135,6 +141,11 @@ export interface PlayOptions {
   readonly ready: boolean;
   readonly intent?: Intent;
   readonly recording?: { readonly number: number; readonly offset: number };
+  /**
+   * The hymn's tempo, ms of the hymn for each ms, that the score clock (`sound.ts`) runs at
+   * with Sound off; 1 when not told. The score clock keeps it from the device.
+   */
+  readonly rate?: number;
 }
 
 /** Requested and effective sounding offsets; a fallback is never silently claimed as the chosen Key. */
@@ -195,6 +206,10 @@ export interface PlaybackApi {
   readonly resume: Effect.Effect<Status, PlaybackError>;
   readonly seek: (positionMs: number) => Effect.Effect<Status, PlaybackError>;
   readonly status: Effect.Effect<Status, PlaybackError>;
+  /** The held hymn's tempo changed: the place moves on at `rate` from where it stands. */
+  readonly setRate?: (rate: number) => Effect.Effect<void>;
+  /** The rate the place moves at, ms of the hymn for each ms: now, then at each change. */
+  readonly pace?: Stream.Stream<number>;
   /** Adopt a selection whose effective set already sounds, without a device load. */
   readonly selectRecording?: (selection: RecordingSelection) => Effect.Effect<void>;
   /** Let the recording go: nothing loads or plays, the lock screen shows nothing, and the status says `idle`. */
@@ -291,6 +306,21 @@ const lengthOf = (status: Status) =>
 const holdsRecording = (status: Status) =>
   status.state === 'loading' || status.state === 'playing' || status.state === 'paused';
 
+/** The rate a status's place moves at: its `rate` when that is a positive number, else 1. */
+const paceOf = (status: Status) => {
+  const rate = status.rate ?? 1;
+  if (!Number.isFinite(rate) || rate <= 0) return 1;
+  return rate;
+};
+
+/**
+ * The wait between two reads, so that a place moving at `pace` moves at most `every` from one
+ * to the next: the seeker and the follow see the hymn in the same steps at every tempo, and a
+ * Play shows its start within `every` of the place it started from. Whole ms, rounded down.
+ */
+const pollAt = (every: Duration.Input, pace: number) =>
+  Duration.millis(Math.max(1, Math.floor(Duration.toMillis(every) / pace)));
+
 /** The reader's place a let-go player keeps, in seconds. */
 const placeOf = (proof: Proof.Proof) => Option.map(proof.place, seconds);
 
@@ -313,19 +343,28 @@ interface Held {
   announced: number;
   offset: number;
   replacing: boolean;
+  /** The rate the latest read's place moves at (its status's `rate`, 1 when not told). */
+  pace: number;
 }
 
 const printed = Atom.make<Move>(still);
+const asWritten = Atom.make(DEFAULT_TEMPO);
 
-/** The player's atoms over the device's `playback`, reading its status every `every` while it moves. */
+/**
+ * The player's atoms over the device's `playback`, reading its status every `every` while it
+ * moves. `moveFor` gives a hymn's transpose and capo, `tempoFor` its tempo in percent.
+ */
 export const playerOn = (
   playback: Layer.Layer<Playback>,
   every: Duration.Input,
   moveFor: (number: number) => Atom.Atom<Move> = () => printed,
+  tempoFor: (number: number) => Atom.Atom<number> = () => asWritten,
 ) => {
   const keyFor = Atom.family((number: number) =>
     Atom.map(moveFor(number), (move) => soundingOffset(move.transpose)),
   );
+  /** A hymn's tempo as a rate, ms of the hymn for each ms; a tempo off the dial's stops is 1. */
+  const rateFor = Atom.family((number: number) => Atom.map(tempoFor(number), rateOf));
   const runtime = Atom.runtime(
     Layer.provideMerge(Layer.mergeAll(linkLayer, answersLayer), playback),
   );
@@ -353,6 +392,7 @@ export const playerOn = (
     announced: -1,
     offset: 0,
     replacing: false,
+    pace: 1,
   };
 
   const send = runtime
@@ -681,6 +721,7 @@ export const playerOn = (
           Effect.gen(function* () {
             const read = yield* readFresh;
             const status = read.status;
+            held.pace = paceOf(status);
             const next = Proof.readOf(held.proof, read, landable());
             held.proof = next.proof;
             const answer = yield* Effect.when(Deferred.await(answered), Deferred.isDone(answered));
@@ -737,16 +778,16 @@ export const playerOn = (
           );
         /**
          * Show the device's status while the ask is not `answered`, and after
-         * until its playback stops moving: a read every `every`, and one at
-         * once when the device answers.
+         * until its playback stops moving: a read every `every` of the place's
+         * time (`pollAt`), and one at once when the device answers.
          */
         const watch = (track: Track, answered: Deferred.Deferred<boolean>) =>
           Effect.gen(function* () {
-            /** Until the next read: `every`, or less once the device answers. */
+            /** Until the next read: `every` of the place's time, or less once the device answers. */
             const rest = Deferred.isDone(answered).pipe(
               Effect.flatMap((done) =>
                 Match.value(done).pipe(
-                  Match.when(true, () => Effect.sleep(every)),
+                  Match.when(true, () => Effect.sleep(pollAt(every, held.pace))),
                   Match.orElse(() =>
                     Deferred.await(answered).pipe(
                       Effect.asVoid,
@@ -848,6 +889,7 @@ export const playerOn = (
                 ready: offset !== 0 || continuous,
                 intent: held.wants,
                 recording: { number: track.number, offset },
+                rate: get.registry.get(rateFor(track.number)),
               })
               .pipe(
                 Effect.tap((status) =>
@@ -1260,7 +1302,40 @@ export const playerOn = (
     ),
   );
 
-  return { state, send, remote, keys, recording };
+  /**
+   * The rate the held hymn's place moves at, ms of the hymn for each ms, as the playback tells
+   * it (`pace`): the tempo with Sound off, 1 with the recording. The follow's clock runs at it
+   * between the player's reads, so it and the score clock keep one rate.
+   */
+  const rate = Atom.make(1).pipe(Atom.keepAlive);
+  /** The held hymn's tempo as a rate, 1 while no hymn is held. */
+  const heldRate = Atom.make((get) => {
+    const number = get(heldNumber);
+    if (number === 0) return 1;
+    return get(rateFor(number));
+  });
+  /**
+   * While mounted: each change of the held hymn's tempo told to the playback (a play tells its
+   * own), and the playback's pace kept in `rate`.
+   */
+  const tempos = runtime.atom((get) =>
+    Effect.gen(function* () {
+      const device = yield* Playback;
+      const told = get.stream(heldRate).pipe(
+        Stream.changes,
+        Stream.runForEach((to) => device.setRate?.(to) ?? Effect.void),
+      );
+      const paced = Stream.runForEach(device.pace ?? Stream.make(1), (to) =>
+        Effect.sync(() => get.set(rate, to)),
+      );
+      yield* Effect.all([told, paced], { concurrency: 'unbounded', discard: true });
+    }),
+  );
+
+  /** `rate` to the screens: the playback alone sets it. */
+  const shownRate: Atom.Atom<number> = rate;
+
+  return { state, send, remote, keys, recording, tempos, rate: shownRate };
 };
 
 /** A player's atoms: its state, the commands it takes and its lock-screen follower. */

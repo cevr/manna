@@ -65,6 +65,37 @@ const resultOf = (answered: Answered) =>
       McpSchema.CallToolResult.make({ structuredContent: answered.json, content: [...content] }),
   );
 
+/** A command's input and output as MCP lists them. */
+interface ListedSchemas {
+  readonly inputSchema: McpSchema.ToolJson;
+  readonly outputSchema: McpSchema.ToolOutputJson;
+}
+
+/**
+ * Each command's schemas as MCP lists them, derived the first time a server
+ * registers it and kept: a command's definition is fixed, and every server
+ * built in a process (each lab, each MCP test) lists the same JSON Schema.
+ */
+const listed = new WeakMap<LabCommand<InLabNeeds>, ListedSchemas>();
+
+const listedSchemas = (command: LabCommand<InLabNeeds>) =>
+  Option.match(Option.fromUndefinedOr(listed.get(command)), {
+    onSome: Effect.succeed,
+    onNone: () =>
+      Effect.gen(function* () {
+        const { tool } = command;
+        const inputSchema = yield* Schema.decodeUnknownEffect(McpSchema.ToolJson)(
+          objectSchema(tool.parametersSchema),
+        );
+        const outputSchema = yield* Schema.decodeUnknownEffect(McpSchema.ToolOutputJson)(
+          objectSchema(tool.successSchema),
+        );
+        const schemas = { inputSchema, outputSchema };
+        listed.set(command, schemas);
+        return schemas;
+      }).pipe(Effect.orDie),
+  });
+
 /**
  * `command` registered on the server, over `services`: its call read, run,
  * logged once, and answered as a toolkit answers. Input that does not read
@@ -74,12 +105,7 @@ const registered = (command: LabCommand<InLabNeeds>, services: Context.Context<I
   Effect.gen(function* () {
     const server = yield* McpServer.McpServer;
     const { tool, name } = command;
-    const inputSchema = yield* Schema.decodeUnknownEffect(McpSchema.ToolJson)(
-      objectSchema(tool.parametersSchema),
-    ).pipe(Effect.orDie);
-    const outputSchema = yield* Schema.decodeUnknownEffect(McpSchema.ToolOutputJson)(
-      objectSchema(tool.successSchema),
-    ).pipe(Effect.orDie);
+    const { inputSchema, outputSchema } = yield* listedSchemas(command);
     const run = logged(name, (_: CallParams, raw: Schema.Json) =>
       Effect.flatMap(command.call(raw), resultOf),
     );

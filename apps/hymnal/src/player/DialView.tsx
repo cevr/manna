@@ -180,7 +180,7 @@ const stretched = (axis: Axis, by: number) => {
  * is as wide as the widest of them: the player's and settings' dials, the
  * only rows, share one column.
  */
-const ROW_TITLES = ['KEY', 'CAPO', 'SIZE', 'PLACE'] as const;
+const ROW_TITLES = ['KEY', 'CAPO', 'SIZE', 'PLACE', 'TEMPO'] as const;
 
 function Dial<A>(props: DialProps<A>) {
   const {

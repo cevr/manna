@@ -125,14 +125,15 @@ const idle = Atom.make<Player>(Player.Idle());
 
 const away: Report = { _tag: 'Away' };
 
-const reportOf = (number: number, state: Player): Report => {
+/** The follower's report of `state` on hymn `number`, its place moving at `rate` (the player's `rate`). */
+const reportOf = (number: number, state: Player, rate: number): Report => {
   const here = (
     track: { readonly number: number },
     at: number,
     kind: 'playing' | 'waiting' | 'paused',
   ): Report => {
     if (track.number !== number) return away;
-    return { _tag: 'Here', at: at * 1000, state: kind };
+    return { _tag: 'Here', at: at * 1000, state: kind, rate };
   };
   return Player.$match(state, {
     Idle: () => away,
@@ -165,6 +166,7 @@ export const useIntro = () => {
 /** The page's follow: its marks for the lines and the scroll's handlers. */
 export const useFollow = (number: number) => {
   const state = usePlayerState();
+  const player = usePlayer();
   const registry = use(RegistryContext);
   /** The page's scroll, once drawn: React hands a ref over as nothing until then. */
   const scroll = useRef<Option.Option<ScrollViewInstance>>(Option.none());
@@ -212,9 +214,12 @@ export const useFollow = (number: number) => {
     [number, registry],
   );
 
+  // The rate is read as each state is reported, not reported on its own change: a report at an
+  // old place would set the clock back. The score clock's next read carries the new rate's place.
   useEffect(() => {
-    Option.map(follower, (f) => f.report(reportOf(number, state)));
-  }, [follower, number, state]);
+    const rate = Option.match(player, { onNone: () => 1, onSome: (it) => registry.get(it.rate) });
+    Option.map(follower, (f) => f.report(reportOf(number, state, rate)));
+  }, [follower, number, state, player, registry]);
   useEffect(
     () => () => Option.match(follower, { onNone: () => {}, onSome: (f) => f.stop() }),
     [follower],
