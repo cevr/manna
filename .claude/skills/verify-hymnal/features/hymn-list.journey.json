@@ -92,6 +92,13 @@
       "action": "tap",
       "target": "role=other label=Sections",
       "expect": [{ "shows": "role=other label=Sections" }]
+    },
+    {
+      "name": "list-tabs-gone",
+      "action": "scroll",
+      "target": "screen",
+      "direction": "down",
+      "expect": [{ "hides": "role=other label=Sections" }]
     }
   ]
 }
