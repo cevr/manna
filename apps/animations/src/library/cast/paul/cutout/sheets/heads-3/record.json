@@ -68,7 +68,23 @@
           },
           "drift": {
             "deltaE": 2.2,
-            "px": 15480
+            "px": 15480,
+            "chroma": [
+              {
+                "part": "torso",
+                "under": "head",
+                "painted": {
+                  "chroma": 32.17,
+                  "px": 136
+                },
+                "kept": {
+                  "chroma": 32.66,
+                  "px": 136
+                },
+                "cells": 5,
+                "verdict": "within"
+              }
+            ]
           },
           "grain": [
             {
@@ -82,6 +98,21 @@
                 "robust": 1.48,
                 "plain": 2.99,
                 "n": 3468
+              },
+              "verdict": "within"
+            }
+          ],
+          "speck": [
+            {
+              "part": "torso",
+              "under": "head",
+              "painted": {
+                "share": 0.02,
+                "px": 7678
+              },
+              "kept": {
+                "share": 0.018,
+                "px": 4812
               },
               "verdict": "within"
             }
@@ -114,7 +145,23 @@
     },
     "drift": {
       "deltaE": 2.2,
-      "px": 15480
+      "px": 15480,
+      "chroma": [
+        {
+          "part": "torso",
+          "under": "head",
+          "painted": {
+            "chroma": 32.17,
+            "px": 136
+          },
+          "kept": {
+            "chroma": 32.66,
+            "px": 136
+          },
+          "cells": 5,
+          "verdict": "within"
+        }
+      ]
     },
     "grain": [
       {
@@ -132,6 +179,21 @@
         "verdict": "within"
       }
     ],
+    "speck": [
+      {
+        "part": "torso",
+        "under": "head",
+        "painted": {
+          "share": 0.02,
+          "px": 7678
+        },
+        "kept": {
+          "share": 0.018,
+          "px": 4812
+        },
+        "verdict": "within"
+      }
+    ],
     "paintUnder": [
       {
         "part": "head",
@@ -145,10 +207,14 @@
   "bars": {
     "seamDeltaE": 10,
     "driftDeltaE": 5,
+    "chromaDrop": 3,
     "grainWithin": 0.5,
+    "speckOver": 0.04,
     "visibleAtRest": 0,
     "leastSeamPairs": 20,
-    "leastGrainWindows": 90
+    "leastGrainWindows": 90,
+    "leastRegionPx": 100,
+    "leastCellPx": 40
   },
   "missed": [],
   "named": []
