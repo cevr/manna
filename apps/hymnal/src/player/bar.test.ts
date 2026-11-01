@@ -225,6 +225,14 @@ describe('a press on the find drums', () => {
     expect(pressFind(open, shown, FindPress.Swipe())).toEqual([Find.Closed(), FindAct.Stay()]);
   });
 
+  it('closes them on a tap outside, asking nothing, so the tap reaches nothing behind', () => {
+    expect(pressFind(open, shown, FindPress.Outside())).toEqual([Find.Closed(), FindAct.Stay()]);
+    expect(pressFind(Find.Closed(), shown, FindPress.Outside())).toEqual([
+      Find.Closed(),
+      FindAct.Stay(),
+    ]);
+  });
+
   it('counts a drag as a swipe down past 24 pt or faster than 400 pt/s', () => {
     expect(swipedDown(24, 0)).toBe(true);
     expect(swipedDown(23, 399)).toBe(false);
