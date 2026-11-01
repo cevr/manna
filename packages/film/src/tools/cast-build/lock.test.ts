@@ -1,14 +1,15 @@
 // The lock stage over a fake trained graph, with the reader's test layer:
 // the lock's fields come from its inputs' outputs and the train's note; a
-// changed eval output changes the lock; a rerun with nothing changed writes
-// nothing, and a lock edited by hand is written again.
+// changed eval output changes the lock; a trained drawing with no held eval
+// fails it; a rerun with nothing changed writes nothing, and a lock edited by
+// hand is written again.
 
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, type FileSystem, Layer, Option, Path, Schema } from 'effect';
 import { sha256Hex } from '../digest.ts';
 import { memoryFileSystem, memoryLocks, text } from '../host/testing.ts';
 import { ContentStore } from '../content-store.ts';
-import { type Stage, buildGraph, fileInput, stageInput } from './graph.ts';
+import { type Stage, StageFailed, buildGraph, fileInput, stageInput } from './graph.ts';
 import { lockStage } from './lock.ts';
 import { CastReader } from './reader.ts';
 import { evalStage, trainStage } from './stages.ts';
@@ -93,9 +94,18 @@ const files = () =>
     ['/reader/model.py', text('model')],
   ]);
 
+/** `graph` with the trained drawing's eval failing. */
+const frontEvalFails = graph.map((stage): Stage<CastReader | FileSystem.FileSystem> => {
+  if (stage.id !== 'eval:front@m') return stage;
+  return {
+    ...stage,
+    run: () => Effect.fail(StageFailed.make({ reason: 'eval: the reader died' })),
+  };
+});
+
 /** `evaluate` is eval.py's JSON text, the same for every drawing. */
-const build = (disk: Disk, stdout = STDOUT, evaluate = jsonOf(EVAL)) =>
-  buildGraph<CastReader | FileSystem.FileSystem>([...graph, lock], {
+const build = (disk: Disk, stdout = STDOUT, evaluate = jsonOf(EVAL), stages = graph) =>
+  buildGraph<CastReader | FileSystem.FileSystem>([...stages, lock], {
     cache: '/cache',
     plan: false,
     touch: [],
@@ -194,6 +204,35 @@ describe('cast build: the reader lock', () => {
       expect(stateOf(report)['lock']).toBe('ran');
       expect(lockOf(disk)['untrained']).toEqual({});
       expect(lockOf(disk)['held']).toMatchObject({ drawings: 1, accuracy: 1 });
+    }),
+  );
+
+  it.effect(
+    'a trained drawing whose eval has no held samples fails the lock, which writes nothing',
+    () =>
+      Effect.gen(function* () {
+        const disk = files();
+        const report = yield* build(disk, STDOUT, '{"seen":null,"unseen":null}');
+        expect(stateOf(report)['eval:front@m']).toBe('ran');
+        expect(stateOf(report)['lock']).toBe('failed');
+        expect(report.stages.find((s) => s.id === 'lock')?.reason).toEqual(
+          Option.some('lock: eval:front@m has no held samples'),
+        );
+        expect(disk.has(LOCK)).toBe(false);
+      }),
+  );
+
+  it.effect('a trained drawing whose eval failed fails the lock, which writes nothing', () =>
+    Effect.gen(function* () {
+      const disk = files();
+      const report = yield* build(disk, STDOUT, jsonOf(EVAL), frontEvalFails);
+      expect(stateOf(report)['eval:front@m']).toBe('failed');
+      expect(stateOf(report)['eval:side@m']).toBe('ran');
+      expect(stateOf(report)['lock']).toBe('failed');
+      expect(report.stages.find((s) => s.id === 'lock')?.reason).toEqual(
+        Option.some('lock: no held eval for m/front'),
+      );
+      expect(disk.has(LOCK)).toBe(false);
     }),
   );
 
