@@ -1,29 +1,39 @@
 // The train and eval stages over a fake training set, with the reader's live
 // layer replaced: no Modal call without `--spend modal`; one train, then
 // each drawing's eval, when it is allowed; a rerun asks the reader nothing;
-// a change to one of the reader's source files is a new train.
+// a change to one of the reader's source files is a new train. Every file
+// is on an in-memory disk; the committed folder is read in
+// reader.slow.test.ts.
 
-import * as BunFileSystem from '@effect/platform-bun/BunFileSystem';
-import * as BunPath from '@effect/platform-bun/BunPath';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   ConfigProvider,
   Effect,
-  FileSystem,
+  type FileSystem,
   Layer,
+  Logger,
   Option,
   Path,
   Schema,
   Sink,
   Stream,
 } from 'effect';
-import { ChildProcessSpawner } from 'effect/process';
+import * as PlatformError from 'effect/PlatformError';
+import { type ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { sha256Hex } from '../digest.ts';
 import { memoryFileSystem, memoryLocks, text } from '../host/testing.ts';
 import { ContentStore } from '../content-store.ts';
 import { type Stage, buildGraph, fileInput, stageInput } from './graph.ts';
-import { CastReader } from './reader.ts';
-import { candidatesOf, evalStage, memberStages, trainStage, trainsetStage } from './stages.ts';
+import { CastReader, rolesOf, scanOf } from './reader.ts';
+import {
+  candidatesOf,
+  evalStage,
+  memberStages,
+  readsDirOf,
+  TRAIN,
+  trainStage,
+  trainsetStage,
+} from './stages.ts';
 
 /** What a build is asked with, as `buildGraph` takes it. */
 type BuildOptions = Parameters<typeof buildGraph>[1];
@@ -37,7 +47,12 @@ const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
   ...over,
 });
 
-const SOURCES = ['/reader/model.py', '/reader/uv.lock'];
+/** The reader's files by role, as `CastReader.sources` names them: model.py trains and reads; read.py, eval.py and the lock only read. */
+const ROLES = {
+  train: ['/reader/model.py'],
+  read: ['/reader/model.py', '/reader/read.py', '/reader/uv.lock'],
+  eval: ['/reader/eval.py', '/reader/model.py', '/reader/read.py', '/reader/uv.lock'],
+};
 /** The committed reader lock the train adopts from. */
 const LOCK = '/library/reader.lock.json';
 const VIEWS = ['front', 'side'];
@@ -55,16 +70,6 @@ const partsOutput = (parts: { readonly files: ReadonlyArray<string>; readonly re
       )(parts),
     ),
   );
-
-/** The train config's backbone and input, as its JSON names them. */
-const decodeTrainConfig = Schema.decodeUnknownSync(
-  Schema.fromJsonString(
-    Schema.Struct({
-      backbone: Schema.String,
-      inputSide: Schema.Struct({ width: Schema.Finite, height: Schema.Finite }),
-    }),
-  ),
-);
 
 /** Member `m`: a puppet entry per view, cut from its own sheet. */
 const MEMBER = {
@@ -116,7 +121,14 @@ const fitFile = (view: string) => `/in/${view}.fit.json`;
  * drawing's eval. When `sideCut` is on, the side's parts stage spends okra
  * and writes a passing record: the side is cut in the build.
  */
-const graph = (o: { readonly sideCut?: boolean } = {}): ReadonlyArray<Stage<CastReader>> => [
+const graph = (
+  o: {
+    readonly sideCut?: boolean;
+    readonly keepReader?: boolean;
+    /** The train files, `ROLES.train` unless named. */
+    readonly train?: ReadonlyArray<string>;
+  } = {},
+): ReadonlyArray<Stage<CastReader | FileSystem.FileSystem>> => [
   ...VIEWS.flatMap((v): ReadonlyArray<Stage<never>> => {
     const at = (kind: string) => `${kind}:${v}@m`;
     const cutInBuild = o.sideCut === true && v === 'side';
@@ -168,8 +180,8 @@ const graph = (o: { readonly sideCut?: boolean } = {}): ReadonlyArray<Stage<Cast
     ];
   }),
   trainsetStage(CANDIDATES),
-  trainStage(CANDIDATES, SOURCES, LOCK),
-  ...CANDIDATES.map((c) => evalStage(c.renders, [])),
+  trainStage(CANDIDATES, o.train ?? ROLES.train, LOCK, { keepReader: o.keepReader === true }),
+  ...CANDIDATES.map((c) => evalStage(c.renders, [], ROLES.eval)),
 ];
 
 const files = () =>
@@ -181,6 +193,8 @@ const files = () =>
     [fitFile('front'), fitRows(true)],
     [fitFile('side'), fitRows(true)],
     ['/reader/model.py', text('model')],
+    ['/reader/read.py', text('read')],
+    ['/reader/eval.py', text('eval')],
     ['/reader/uv.lock', text('lock')],
   ]);
 
@@ -188,8 +202,12 @@ const build = (
   disk: Map<string, Uint8Array>,
   asked: Array<string>,
   over: Partial<BuildOptions> = {},
-  stages: ReadonlyArray<Stage<CastReader>> = graph(),
-  reader: { readonly training?: Effect.Effect<void>; readonly promoteFails?: string } = {},
+  stages: ReadonlyArray<Stage<CastReader | FileSystem.FileSystem>> = graph(),
+  reader: {
+    readonly training?: Effect.Effect<void>;
+    readonly promoteFails?: string;
+    readonly evaluate?: (shard: string) => string;
+  } = {},
 ) =>
   buildGraph(stages, options(over)).pipe(
     Effect.provide(
@@ -197,7 +215,11 @@ const build = (
         ContentStore.layer.pipe(
           Layer.provideMerge([memoryFileSystem(disk), Path.layer, memoryLocks]),
         ),
-        CastReader.layerTest({ evaluate: '{"seen":{"accuracy":1}}', ...reader }, asked, SOURCES),
+        CastReader.layerTest(
+          { evaluate: () => '{"seen":{"accuracy":1}}', ...reader },
+          asked,
+          ROLES,
+        ),
       ),
     ),
   );
@@ -344,7 +366,7 @@ describe('cast build: train and eval', () => {
       }),
   );
 
-  it.effect('a change to a reader source file is a new train, and so new evals', () =>
+  it.effect('a change to a train file is a new train, and so new evals', () =>
     Effect.gen(function* () {
       const disk = files();
       yield* build(disk, [], { spend: new Set(['modal'] as const) });
@@ -354,6 +376,67 @@ describe('cast build: train and eval', () => {
       expect(state['train']).toBe('stale');
       expect(state['eval:front@m']).toBe('stale');
     }),
+  );
+
+  it.effect(
+    'a change to a file only a read or an eval runs leaves the train cached and re-runs every eval',
+    () =>
+      Effect.gen(function* () {
+        const disk = files();
+        yield* build(disk, [], { spend: new Set(['modal'] as const) });
+        for (const file of ['/reader/read.py', '/reader/eval.py', '/reader/uv.lock']) {
+          const state = stateOf(yield* build(disk, [], { plan: true, touch: [file] }));
+          expect([file, state['train'], state['eval:front@m'], state['eval:side@m']]).toEqual([
+            file,
+            'cached',
+            'stale',
+            'stale',
+          ]);
+        }
+      }),
+  );
+
+  it.effect(
+    "a clip's read is kept by the read files' hashes: a read edit misses it, a train-only edit does not",
+    () => {
+      const disk = new Map([
+        ['/ckpt.pt', text('ckpt')],
+        ['/clip.mp4', text('clip')],
+        ['/reader/model.py', text('model')],
+        ['/reader/read.py', text('read')],
+        ['/reader/uv.lock', text('lock')],
+        ['/reader/train.py', text('train')],
+      ]);
+      const dirOf = readsDirOf({
+        ckpt: '/ckpt.pt',
+        clip: '/clip.mp4',
+        map: { x0: 0, y0: 0, scale: 1 },
+        cache: '/cache',
+      });
+      return Effect.gen(function* () {
+        const first = yield* dirOf;
+        expect(first).toMatch(/^\/cache\/reads\/[0-9a-f]{64}$/);
+        disk.set('/reader/train.py', text('train, edited'));
+        expect(yield* dirOf).toBe(first);
+        for (const file of ROLES.read) {
+          const was = disk.get(file) ?? text('');
+          disk.set(file, text(`${file}, edited`));
+          expect([file, (yield* dirOf) === first]).toEqual([file, false]);
+          disk.set(file, was);
+        }
+        expect(yield* dirOf).toBe(first);
+      }).pipe(
+        Effect.provide([
+          memoryFileSystem(disk),
+          Path.layer,
+          CastReader.layerTest({}, [], {
+            train: ['/reader/model.py', '/reader/train.py'],
+            read: ROLES.read,
+            eval: [],
+          }),
+        ]),
+      );
+    },
   );
 
   it.effect('an entry missing only its bars, or with no record, joins the set it trains on', () =>
@@ -469,20 +552,6 @@ describe('cast build: train and eval', () => {
         ]);
       }),
   );
-
-  it.effect("the train config's backbone and input, in its key, are model.py's defaults", () =>
-    Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const model = yield* fs.readFileString(
-        new URL('../../../reader/model.py', import.meta.url).pathname,
-      );
-      // the config is the train key's (`graph.ts` keys every stage by its config)
-      const train = decodeTrainConfig(trainStage(CANDIDATES, SOURCES, LOCK).config ?? '');
-      expect(train.backbone).toBe('facebook/dinov2-small');
-      expect(model).toContain(`BACKBONE = "${train.backbone}"`);
-      expect(model).toContain(`IN_W, IN_H = ${train.inputSide.width}, ${train.inputSide.height}`);
-    }).pipe(Effect.provide(BunFileSystem.layer)),
-  );
 });
 
 describe('cast build: the train adopts the committed checkpoint', () => {
@@ -556,55 +625,599 @@ describe('cast build: the train adopts the committed checkpoint', () => {
   );
 });
 
-describe('the live reader', () => {
-  /** A spawner that records each command (program and arguments) and exits 0, printing nothing. */
-  const recording = (commands: Array<ReadonlyArray<string>>) =>
-    ChildProcessSpawner.make((command) => {
-      if (command._tag === 'StandardCommand') commands.push([command.command, ...command.args]);
-      return Effect.succeed(
-        ChildProcessSpawner.makeHandle({
-          pid: ChildProcessSpawner.ProcessId(0),
-          exitCode: Effect.succeed(ChildProcessSpawner.ExitCode(0)),
-          isRunning: Effect.succeed(false),
-          kill: () => Effect.void,
-          stdin: Sink.drain,
-          stdout: Stream.empty,
-          stderr: Stream.empty,
-          all: Stream.empty,
-          getInputFd: () => Sink.drain,
-          getOutputFd: () => Stream.empty,
-          unref: Effect.succeed(Effect.void),
-        }),
+describe('cast build: --keep-reader keeps the committed checkpoint across a key change', () => {
+  const jsonOf = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
+  const spend = { spend: new Set(['modal'] as const) };
+  /** The fake reader's checkpoint, as `layerTest` makes it. */
+  const CHECKPOINT = sha256Hex(new Uint8Array([1]));
+  const SIDE = sha256Hex(text('side shard'));
+  /** The fake set's hash: each drawing by its shard's hash, a line each, sorted. */
+  const TRAINSET = sha256Hex(
+    text([`m/front=${sha256Hex(text('front shard'))}`, `m/side=${SIDE}`].join('\n')),
+  );
+  /** A held line as the lock keeps it. */
+  const LINE = {
+    n: 12,
+    accuracy: 0.9,
+    angleDeg: { median: 3.1, p90: 9.4 },
+    jointPx: { median: 2.2, p90: 6.8 },
+  };
+  /** eval.py's JSON for a held line: its spreads also carry a count and a mean; it writes `null` for the side it has no samples on. */
+  const evalJson = (l: typeof LINE) =>
+    `{"seen":${jsonOf({
+      n: l.n,
+      accuracy: l.accuracy,
+      angle_deg: { ...l.angleDeg, mean: 4, n: l.n },
+      joint_px: { ...l.jointPx, mean: 3, n: l.n },
+    })},"unseen":null}`;
+  /** `side` for the side's shard, else `front`. */
+  const bySide = <A>(shard: string, side: A, front: A) =>
+    Option.match(
+      Option.liftPredicate(shard, (s) => s.includes(SIDE)),
+      { onNone: () => front, onSome: () => side },
+    );
+  /** Each shard's eval: the lock's line, or `side` for the side's shard. */
+  const scores =
+    (side: typeof LINE = LINE) =>
+    (shard: string) =>
+      evalJson(bySide(shard, side, LINE));
+  const keep = graph({ keepReader: true });
+  const evaluated = (asked: ReadonlyArray<string>) =>
+    asked.filter((a) => a.startsWith('evaluate')).length;
+  const trainedOrPromoted = (asked: ReadonlyArray<string>) =>
+    asked.filter((a) => a.startsWith('train') || a.startsWith('promote'));
+  /** The reason the report gives stage `id`, '' for none. */
+  const reasonOf = (
+    report: { stages: ReadonlyArray<{ id: string; reason: Option.Option<string> }> },
+    id: string,
+  ) =>
+    report.stages
+      .filter((s) => s.id === id)
+      .flatMap((s) => Option.toArray(s.reason))
+      .join('');
+
+  /** What a test sets in the committed lock over the train's own fields. */
+  type LockOver = Partial<{
+    readonly trainset: string;
+    readonly config: Omit<typeof TRAIN, 'steps'> & { readonly steps: number };
+    readonly held: {
+      readonly drawings: number;
+      readonly accuracy: number;
+      readonly byDrawing: Readonly<Record<string, typeof LINE>>;
+    };
+  }>;
+
+  /**
+   * A cache trained once with `--spend modal`, and a committed lock naming
+   * that train: its key, train files, set, config, checkpoint and held lines
+   * (`over` on top). Then, unless `edit` is off, model.py edited: the reader
+   * key moved.
+   */
+  const moved = (over: LockOver = {}, edit = true) =>
+    Effect.gen(function* () {
+      const disk = files();
+      const asked: Array<string> = [];
+      yield* build(disk, asked, spend, graph(), { evaluate: scores() });
+      const [{ key } = { key: '' }] = asked.filter((a) => a.startsWith('train')).map(trainOf);
+      disk.set(
+        LOCK,
+        text(
+          jsonOf({
+            reader: key,
+            trainer: { 'model.py': sha256Hex(text('model')) },
+            trainset: TRAINSET,
+            config: TRAIN,
+            checkpointSha256: CHECKPOINT,
+            train: { stageSec: 4361 },
+            held: { drawings: 2, accuracy: 0.9, byDrawing: { 'm/front': LINE, 'm/side': LINE } },
+            ...over,
+          }),
+        ),
       );
+      if (edit) disk.set('/reader/model.py', text('model, a comment added'));
+      return disk;
+    });
+
+  it.effect(
+    "it adopts once every held drawing reads exactly the lock's line: no train, no promote, no spend",
+    () =>
+      Effect.gen(function* () {
+        const disk = yield* moved();
+        const asked: Array<string> = [];
+        const report = yield* build(disk, asked, spend, keep, { evaluate: scores() });
+        expect(stateOf(report)['train']).toBe('ran');
+        expect(report.modalCalls).toBe(0);
+        expect(report.spendUsd).toBe(0);
+        expect(trainedOrPromoted(asked)).toEqual([]);
+        // the train read both held drawings, then each eval stage its own
+        expect(evaluated(asked)).toBe(4);
+        expect(stateOf(report)['eval:side@m']).toBe('ran');
+        // the flag is in no key: a plan after it, with or without it, reads the train cached
+        expect(stateOf(yield* build(disk, [], { plan: true }, keep))['train']).toBe('cached');
+        expect(stateOf(yield* build(disk, [], { plan: true }))['train']).toBe('cached');
+      }),
+  );
+
+  it.effect(
+    'a drawing that reads otherwise fails the train, naming it and its field; it trains nothing and is not cached',
+    () =>
+      Effect.gen(function* () {
+        const disk = yield* moved();
+        const asked: Array<string> = [];
+        const off = { ...LINE, jointPx: { median: 2.2, p90: 6.9 } };
+        const report = yield* build(disk, asked, spend, keep, { evaluate: scores(off) });
+        expect(stateOf(report)['train']).toBe('failed');
+        const reason = reasonOf(report, 'train');
+        expect(reason).toContain('m/side jointPx.p90 6.8 -> 6.9');
+        expect(reason).not.toContain('m/front');
+        expect(trainedOrPromoted(asked)).toEqual([]);
+        expect(report.modalCalls).toBe(0);
+        expect(evaluated(asked)).toBe(2);
+        // not cached: the next plan reads the train stale, and an equal read adopts
+        expect(stateOf(yield* build(disk, [], { plan: true }, keep))['train']).toBe('stale');
+        const again = yield* build(disk, [], {}, keep, { evaluate: scores() });
+        expect(stateOf(again)['train']).toBe('ran');
+      }),
+  );
+
+  it.effect(
+    'every field of every held drawing is compared: one field off in either drawing refuses',
+    () =>
+      Effect.gen(function* () {
+        const fields: ReadonlyArray<readonly [string, typeof LINE]> = [
+          ['n', { ...LINE, n: 13 }],
+          ['accuracy', { ...LINE, accuracy: 0.91 }],
+          ['angleDeg.median', { ...LINE, angleDeg: { median: 3.2, p90: 9.4 } }],
+          ['angleDeg.p90', { ...LINE, angleDeg: { median: 3.1, p90: 9.5 } }],
+          ['jointPx.median', { ...LINE, jointPx: { median: 2.3, p90: 6.8 } }],
+          ['jointPx.p90', { ...LINE, jointPx: { median: 2.2, p90: 6.9 } }],
+        ];
+        for (const [field, off] of fields) {
+          const report = yield* build(yield* moved(), [], {}, keep, { evaluate: scores(off) });
+          expect([field, stateOf(report)['train'], reasonOf(report, 'train')]).toEqual([
+            field,
+            'failed',
+            expect.stringContaining(`m/side ${field} `),
+          ]);
+        }
+        // the front, first in order, refuses too
+        const front = yield* build(yield* moved(), [], {}, keep, {
+          evaluate: (shard) => evalJson(bySide(shard, LINE, { ...LINE, n: 1 })),
+        });
+        expect(reasonOf(front, 'train')).toContain('m/front n 12 -> 1');
+        // a drawing the eval finds no held samples for refuses
+        const none = yield* build(yield* moved(), [], {}, keep, {
+          evaluate: (shard) => bySide(shard, '{"seen":null}', evalJson(LINE)),
+        });
+        expect(reasonOf(none, 'train')).toContain('m/side no held samples');
+      }),
+  );
+
+  it.effect(
+    "a set, config or held set not the lock's, a missing checkpoint or lock: it fails, naming which, and reads nothing",
+    () =>
+      Effect.gen(function* () {
+        const cases: ReadonlyArray<readonly [string, ReturnType<typeof moved>]> = [
+          ['the training set changed', moved({ trainset: '0'.repeat(64) })],
+          ["the train config is not the lock's", moved({ config: { ...TRAIN, steps: 1 } })],
+          [
+            "the lock's held drawings are not the training set's",
+            moved({ held: { drawings: 1, accuracy: 0.9, byDrawing: { 'm/front': LINE } } }),
+          ],
+          [
+            `the checkpoint ${CHECKPOINT} is not in the cache`,
+            Effect.map(moved(), (disk) => {
+              disk.delete(`/cache/objects/${CHECKPOINT}`);
+              return disk;
+            }),
+          ],
+          [
+            `no committed lock at ${LOCK}`,
+            Effect.map(moved(), (disk) => {
+              disk.delete(LOCK);
+              return disk;
+            }),
+          ],
+        ];
+        for (const [why, made] of cases) {
+          const asked: Array<string> = [];
+          const report = yield* build(yield* made, asked, spend, keep, { evaluate: scores() });
+          expect([why, stateOf(report)['train'], reasonOf(report, 'train'), asked]).toEqual([
+            why,
+            'failed',
+            expect.stringContaining(why),
+            [],
+          ]);
+        }
+      }),
+  );
+
+  it.effect(
+    'without the flag a moved key never adopts, though every held line would read the same; it logs what changed',
+    () => {
+      const lines: Array<string> = [];
+      // the rekeyed line kept, every other line dropped
+      const logged = Logger.layer([
+        Logger.make(({ message }) => {
+          const line = [message].flat().join(' ');
+          if (line.startsWith('cast.build.train rekeyed')) lines.push(line);
+        }),
+      ]);
+      return Effect.gen(function* () {
+        const disk = yield* moved();
+        lines.length = 0;
+        const asked: Array<string> = [];
+        const report = yield* build(disk, asked, {}, graph(), { evaluate: scores() });
+        expect(stateOf(report)['train']).toBe('waiting-spend');
+        expect(asked).toEqual([]);
+        expect(lines).toEqual([expect.stringMatching(/ changed=model\.py: .*--keep-reader/)]);
+      }).pipe(Effect.provide(logged));
+    },
+  );
+
+  it.effect(
+    "with the lock's key the flag changes nothing: it adopts and reads no held drawing",
+    () =>
+      Effect.gen(function* () {
+        const disk = yield* moved({}, false);
+        disk.delete('/cache/build.json');
+        const asked: Array<string> = [];
+        const report = yield* build(disk, asked, {}, keep, { evaluate: scores() });
+        expect(stateOf(report)['train']).toBe('ran');
+        expect(trainedOrPromoted(asked)).toEqual([]);
+        // only the two eval stages read
+        expect(evaluated(asked)).toBe(2);
+      }),
+  );
+});
+
+/** What a fake spawn answers: its exit code and what it prints. */
+interface Reply {
+  readonly exitCode?: number;
+  readonly stdout?: string;
+  readonly stderr?: string;
+}
+
+/** One command a fake spawner ran: its program and arguments, and what it read on stdin. */
+interface Spawned {
+  readonly argv: ReadonlyArray<string>;
+  readonly stdin: string;
+}
+
+/** The text a command's stdin carries, when it is a stream ('' else). */
+const stdinOf = (input: ChildProcess.CommandOptions['stdin']) => {
+  if (Stream.isStream(input)) return Stream.mkString(Stream.decodeText(Stream.orDie(input)));
+  return Effect.succeed('');
+};
+
+/**
+ * A spawner that records each command (program, arguments and stdin) in
+ * `spawned`, and answers it with `reply` of it: by default exit 0, printing
+ * nothing.
+ */
+const spawnerOf = (
+  spawned: Array<Spawned>,
+  reply: (run: Spawned) => Reply = () => ({}),
+): ChildProcessSpawner.ChildProcessSpawner['Service'] =>
+  ChildProcessSpawner.make((command) =>
+    Effect.gen(function* () {
+      const run = { argv: [] as Array<string>, stdin: '' };
+      if (command._tag === 'StandardCommand') {
+        run.argv = [command.command, ...command.args];
+        run.stdin = yield* stdinOf(command.options.stdin);
+      }
+      spawned.push(run);
+      const { exitCode = 0, stdout = '', stderr = '' } = reply(run);
+      const bytes = (s: string) => Stream.make(new TextEncoder().encode(s));
+      return ChildProcessSpawner.makeHandle({
+        pid: ChildProcessSpawner.ProcessId(0),
+        exitCode: Effect.succeed(ChildProcessSpawner.ExitCode(exitCode)),
+        isRunning: Effect.succeed(false),
+        kill: () => Effect.void,
+        stdin: Sink.drain,
+        stdout: bytes(stdout),
+        stderr: bytes(stderr),
+        all: Stream.empty,
+        getInputFd: () => Sink.drain,
+        getOutputFd: () => Stream.empty,
+        unref: Effect.succeed(Effect.void),
+      });
+    }),
+  );
+
+/** Whether a command is the reader's scan: `python3 -I -B -c <SCAN>`. */
+const isScan = (run: Spawned) => run.argv[0] === 'python3' && run.argv[3] === '-c';
+
+/** The scan's stdin, decoded: the files by name and text, and the folders. */
+const decodeJob = Schema.decodeUnknownSync(
+  Schema.fromJsonString(
+    Schema.Struct({
+      files: Schema.Record(Schema.String, Schema.String),
+      folders: Schema.Array(Schema.String),
+    }),
+  ),
+);
+
+describe("the reader's roles, derived from its imports", () => {
+  /** A reader folder's imports shaped as the committed one's: modal_app.py imports train and model inside its functions. */
+  const FOLDER: ReadonlyArray<readonly [string, ReadonlyArray<string>]> = [
+    ['eval.py', ['argparse', 'model', 'numpy']],
+    ['modal_app.py', ['json', 'modal', 'model', 'sys', 'train']],
+    ['model.py', ['torch', 'transformers']],
+    ['read.py', ['cv2', 'model']],
+    ['train.py', ['model', 'torch']],
+  ];
+  const rolesIn = (over: ReadonlyArray<readonly [string, ReadonlyArray<string>]> = []) =>
+    rolesOf(new Map([...FOLDER, ...over]));
+
+  it.effect('a role is its entries’ closure, a local role with the environment', () =>
+    Effect.gen(function* () {
+      expect(yield* rolesIn()).toEqual({
+        train: ['modal_app.py', 'model.py', 'train.py'],
+        read: ['model.py', 'pyproject.toml', 'read.py', 'uv.lock'],
+        eval: ['eval.py', 'model.py', 'pyproject.toml', 'read.py', 'uv.lock'],
+      });
+    }),
+  );
+
+  it.effect('the closure is transitive, and a module with no file in the folder is no edge', () =>
+    Effect.gen(function* () {
+      const roles = yield* rolesIn([
+        ['read.py', ['a', 'model', 'numpy']],
+        ['a.py', ['b', 'os']],
+        ['b.py', ['c']],
+        ['c.py', ['torch']],
+        ['unused.py', ['model']],
+      ]);
+      expect(roles.read).toEqual([
+        'a.py',
+        'b.py',
+        'c.py',
+        'model.py',
+        'pyproject.toml',
+        'read.py',
+        'uv.lock',
+      ]);
+      expect(roles.train).toEqual(['modal_app.py', 'model.py', 'train.py']);
+    }),
+  );
+
+  it.effect('a missing entry fails the scan, naming its role', () =>
+    Effect.gen(function* () {
+      const failed = yield* Effect.flip(
+        rolesOf(new Map(FOLDER.filter(([name]) => name !== 'eval.py'))),
+      );
+      expect([failed._tag, failed.file, failed.reason]).toEqual([
+        'ReaderScanFailed',
+        'eval.py',
+        expect.stringContaining('eval'),
+      ]);
+    }),
+  );
+
+  describe('the scan: one python3 spawn, the folder on its stdin', () => {
+    const PY = new Map([
+      ['model.py', 'import torch\n'],
+      ['read.py', 'from model import decode\n'],
+    ]);
+
+    it.effect(
+      'it runs python3 -I -B -c once, hands it every file and folder as JSON, and reads its answer',
+      () => {
+        const spawned: Array<Spawned> = [];
+        return Effect.gen(function* () {
+          const imports = yield* scanOf(PY, new Set(['tests', 'lib']));
+          expect([...imports]).toEqual([
+            ['model.py', ['torch']],
+            ['read.py', ['model']],
+          ]);
+          expect(spawned.length).toBe(1);
+          expect(spawned[0]?.argv.slice(0, 4)).toEqual(['python3', '-I', '-B', '-c']);
+          expect(decodeJob(spawned[0]?.stdin ?? '')).toEqual({
+            files: Object.fromEntries(PY),
+            folders: ['lib', 'tests'],
+          });
+        }).pipe(
+          Effect.provideService(
+            ChildProcessSpawner.ChildProcessSpawner,
+            spawnerOf(spawned, () => ({
+              stdout: '{"model.py": ["torch"], "read.py": ["model"]}\n',
+            })),
+          ),
+        );
+      },
+    );
+
+    it.effect(
+      'a fault of the scan fails with its file and its reason; python3 missing, a crash, an answer with no imports or one that leaves a file out fail naming python3',
+      () =>
+        Effect.gen(function* () {
+          const cases: ReadonlyArray<
+            readonly [ChildProcessSpawner.ChildProcessSpawner['Service'], string, string]
+          > = [
+            [
+              spawnerOf([], () => ({
+                exitCode: 1,
+                stdout: '{"file": "read.py", "reason": "line 3: a relative import"}\n',
+              })),
+              'read.py',
+              'line 3: a relative import',
+            ],
+            [
+              ChildProcessSpawner.make(() =>
+                Effect.fail(
+                  PlatformError.systemError({
+                    _tag: 'NotFound',
+                    module: 'ChildProcess',
+                    method: 'spawn',
+                  }),
+                ),
+              ),
+              'python3',
+              'no python3 on PATH',
+            ],
+            [
+              spawnerOf([], () => ({ exitCode: 1, stderr: 'Traceback\nMemoryError\n' })),
+              'python3',
+              'it exited 1: Traceback\nMemoryError',
+            ],
+            [
+              spawnerOf([], () => ({ stdout: '["model.py"]\n' })),
+              'python3',
+              'the scan answered no imports',
+            ],
+            [
+              spawnerOf([], () => ({ exitCode: 1, stdout: '{"file": "read.py"}\n' })),
+              'python3',
+              'it exited 1',
+            ],
+            [
+              spawnerOf([], () => ({ stdout: '{"model.py": ["torch"]}\n' })),
+              'python3',
+              'the scan answered for model.py, not for each file it was given',
+            ],
+          ];
+          for (const [spawner, file, reason] of cases) {
+            const failed = yield* Effect.flip(
+              scanOf(PY, new Set()).pipe(
+                Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
+              ),
+            );
+            expect([failed._tag, failed.file, failed.reason]).toEqual([
+              'ReaderScanFailed',
+              file,
+              expect.stringContaining(reason),
+            ]);
+          }
+        }),
+    );
+  });
+
+  /**
+   * The folder's imports with `over`, its roles, and a disk with the
+   * build's other files: each `.py` at `/reader/<name>`, the roles as paths
+   * there.
+   */
+  const scannedOver = (over: ReadonlyArray<readonly [string, ReadonlyArray<string>]>) =>
+    Effect.gen(function* () {
+      const folder = new Map([...FOLDER, ['helper.py', []] as const, ...over]);
+      const roles = yield* rolesOf(folder);
+      const at = (names: ReadonlyArray<string>) => names.map((n) => `/reader/${n}`);
+      const disk = files();
+      for (const name of folder.keys()) disk.set(`/reader/${name}`, text(`# ${name}\n`));
+      disk.set('/reader/pyproject.toml', text('[project]\n'));
+      disk.set('/ckpt.pt', text('ckpt'));
+      disk.set('/clip.mp4', text('clip'));
+      return {
+        roles,
+        disk,
+        sources: { train: at(roles.train), read: at(roles.read), eval: at(roles.eval) },
+      };
+    });
+  const editHelper = (disk: Map<string, Uint8Array>) =>
+    disk.set('/reader/helper.py', text('VALUE = 2\n'));
+
+  it.effect(
+    'a helper read.py imports is in the read closure, and its edit misses the clip read cache',
+    () => {
+      const { roles, disk, sources } = Effect.runSync(
+        scannedOver([['read.py', ['helper', 'model']]]),
+      );
+      const dirOf = readsDirOf({
+        ckpt: '/ckpt.pt',
+        clip: '/clip.mp4',
+        map: { x0: 0, y0: 0, scale: 1 },
+        cache: '/cache',
+      });
+      return Effect.gen(function* () {
+        expect(roles.read).toContain('helper.py');
+        const first = yield* dirOf;
+        editHelper(disk);
+        expect(yield* dirOf).not.toBe(first);
+      }).pipe(
+        Effect.provide([memoryFileSystem(disk), Path.layer, CastReader.layerTest({}, [], sources)]),
+      );
+    },
+  );
+
+  it.effect(
+    'a helper train.py imports is in the train closure, and its edit is a new train key',
+    () =>
+      Effect.gen(function* () {
+        const { roles, disk, sources } = yield* scannedOver([['train.py', ['helper', 'model']]]);
+        expect(roles.train).toEqual(['helper.py', 'modal_app.py', 'model.py', 'train.py']);
+        const spend = { spend: new Set(['modal'] as const) };
+        const asked: Array<string> = [];
+        const stages = graph({ train: sources.train });
+        yield* build(disk, asked, spend, stages);
+        editHelper(disk);
+        const plan = yield* build(disk, [], { plan: true }, stages);
+        expect(stateOf(plan)['train']).toBe('stale');
+        yield* build(disk, asked, spend, stages);
+        const keys = asked.filter((a) => a.startsWith('train')).map((a) => trainOf(a).key);
+        expect(keys.length).toBe(2);
+        expect(keys[0]).not.toBe(keys[1]);
+      }),
+  );
+});
+
+describe('the live reader', () => {
+  /** A reader folder of the live layer's: its entry scripts, its model, a helper, its tests' folder, and its lock. */
+  const FOLDER = {
+    'eval.py': 'from model import BONES\n',
+    'helper.py': '',
+    'modal_app.py': 'def fit():\n    from train import train\n',
+    'model.py': 'import torch\n',
+    'read.py': 'from model import decode\n',
+    'train.py': 'from model import Reader\nif True: import helper\n',
+    'tests/test_model.py': 'import model\n',
+    'pyproject.toml': '[project]\n',
+    'uv.lock': 'version = 1\n',
+  };
+  /** The folder's imports, as the scan answers them. */
+  const SCANNED = [
+    '{"eval.py": ["model"], "helper.py": [], "modal_app.py": ["train"], "model.py": ["torch"],',
+    ' "read.py": ["model"], "train.py": ["helper", "model"]}',
+  ].join('');
+  /** Where the folder and the reader's home lie, on the in-memory disk. */
+  const DIR = '/reader';
+  const HOME = '/reader-home';
+
+  /** A spawner that records each command and answers the scan with `SCANNED`, any other command with exit 0 and nothing. */
+  const recording = (spawned: Array<Spawned>) =>
+    spawnerOf(spawned, (run) => {
+      if (isScan(run)) return { stdout: SCANNED };
+      return {};
     });
 
   /**
-   * The live reader over `spawner`, in an environment made for it as the
-   * layer finds one: `venv-<uv.lock's hash>/bin/python` under a temporary
-   * FILM_READER_HOME.
+   * The live reader over `spawner`, of the folder on an in-memory disk, in
+   * an environment made for it as the layer finds one: `venv-<uv.lock's
+   * hash>/bin/python` under FILM_READER_HOME; `over` replaces or adds files.
    */
-  const liveOver = (spawner: ChildProcessSpawner.ChildProcessSpawner['Service']) =>
-    Layer.unwrap(
-      Effect.gen(function* () {
-        const fs = yield* FileSystem.FileSystem;
-        const home = yield* fs.makeTempDirectoryScoped();
-        const lock = yield* fs.readFile(
-          new URL('../../../reader/uv.lock', import.meta.url).pathname,
-        );
-        const bin = `${home}/venv-${sha256Hex(lock).slice(0, 12)}/bin`;
-        yield* fs.makeDirectory(bin, { recursive: true });
-        yield* fs.writeFileString(`${bin}/python`, '');
-        return CastReader.layer.pipe(
-          Layer.provide([
-            Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, spawner),
-            ConfigProvider.layer(ConfigProvider.fromUnknown({ FILM_READER_HOME: home })),
-          ]),
-        );
-      }),
-    ).pipe(Layer.provide([BunFileSystem.layer, BunPath.layer]));
+  const liveOver = (
+    spawner: ChildProcessSpawner.ChildProcessSpawner['Service'],
+    over: Readonly<Record<string, string>> = {},
+  ) => {
+    const disk = new Map(
+      Object.entries({ ...FOLDER, ...over }).map(([name, body]) => [`${DIR}/${name}`, text(body)]),
+    );
+    disk.set(
+      `${HOME}/venv-${sha256Hex(text(FOLDER['uv.lock'])).slice(0, 12)}/bin/python`,
+      text(''),
+    );
+    return CastReader.layerIn(DIR).pipe(
+      Layer.provide([
+        Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, spawner),
+        ConfigProvider.layer(ConfigProvider.fromUnknown({ FILM_READER_HOME: HOME })),
+        memoryFileSystem(disk),
+        Path.layer,
+      ]),
+    );
+  };
 
   it.effect("a train hands Modal the config's backbone and input side", () => {
-    const commands: Array<ReadonlyArray<string>> = [];
+    const spawned: Array<Spawned> = [];
     return Effect.gen(function* () {
       // the recording spawner writes no checkpoint, so the train itself fails after its call
       yield* Effect.exit(
@@ -625,11 +1238,60 @@ describe('the live reader', () => {
           },
         }),
       );
-      const train = commands.find((c) => c.some((a) => a.endsWith('modal_app.py::train')));
-      const flag = (name: string) => train?.[train.indexOf(name) + 1];
+      const train = spawned.find((c) => c.argv.some((a) => a.endsWith('modal_app.py::train')));
+      const flag = (name: string) => train?.argv[train.argv.indexOf(name) + 1];
       expect(flag('--backbone')).toBe('facebook/dinov2-base');
       expect(flag('--input-width')).toBe('896');
       expect(flag('--input-height')).toBe('1120');
-    }).pipe(Effect.provide(liveOver(recording(commands))));
+    }).pipe(Effect.provide(liveOver(recording(spawned))));
   });
+
+  it.effect(
+    "its sources are its folder's roles, as absolute paths, from one scan of the folder's .py files and folders",
+    () => {
+      const spawned: Array<Spawned> = [];
+      return Effect.gen(function* () {
+        const { sources } = yield* CastReader;
+        const at = (names: ReadonlyArray<string>) => names.map((n) => `${DIR}/${n}`);
+        expect(sources).toEqual({
+          train: at(['helper.py', 'modal_app.py', 'model.py', 'train.py']),
+          read: at(['model.py', 'pyproject.toml', 'read.py', 'uv.lock']),
+          eval: at(['eval.py', 'model.py', 'pyproject.toml', 'read.py', 'uv.lock']),
+        });
+        const scans = spawned.filter(isScan);
+        expect(scans.length).toBe(1);
+        const job = decodeJob(scans[0]?.stdin ?? '');
+        expect(Object.keys(job.files)).toEqual([
+          'eval.py',
+          'helper.py',
+          'modal_app.py',
+          'model.py',
+          'read.py',
+          'train.py',
+        ]);
+        expect(job.files['train.py']).toBe(FOLDER['train.py']);
+        expect(job.folders).toEqual(['tests']);
+      }).pipe(Effect.provide(liveOver(recording(spawned))));
+    },
+  );
+
+  it.effect('a scan fault fails the layer as it is made, naming the file and the reason', () =>
+    Effect.gen(function* () {
+      const failed = yield* Effect.flip(
+        Layer.build(
+          liveOver(
+            spawnerOf([], () => ({
+              exitCode: 1,
+              stdout: `{"file": "read.py", "reason": "line 1: it imports lib, a folder of the reader's"}`,
+            })),
+            { 'read.py': 'from lib import decode\n', 'lib/__init__.py': 'decode = None\n' },
+          ),
+        ),
+      );
+      expect([failed._tag, failed.message]).toEqual([
+        'ReaderScanFailed',
+        expect.stringContaining('read.py: line 1: it imports lib, a folder'),
+      ]);
+    }).pipe(Effect.scoped),
+  );
 });

@@ -35,6 +35,7 @@ import * as Command from 'effect/cli/Command';
 import {
   DateTime,
   Effect,
+  Equal,
   FileSystem,
   Option,
   Path,
@@ -585,15 +586,33 @@ const drawingsIn = (trainset: Uint8Array) =>
 const readerFailed = (id: string) => (e: ReaderError) =>
   StageFailed.make({ reason: `${id}: ${e.message}` });
 
-/** The training set read by the train stage: its bytes, its hash, and the reader's key over it, the config and `sources`. */
-export const trainKeyOf = (ctx: StageContext, sources: ReadonlyArray<string>) =>
+/**
+ * The training set read by the train stage: its bytes, its hash, the train
+ * files' hashes by basename (`trainer`), and the reader's key over the set,
+ * the config and those files (`trainFiles`, the reader's `train` role). The
+ * key names each file by its basename, sorted, so it holds across checkouts.
+ */
+export const trainKeyOf = (ctx: StageContext, trainFiles: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const set = yield* ctx.output('trainset');
     const trainset = sha256Hex(set);
-    const lines = [`trainset=${trainset}`, `config=${TRAIN_CONFIG}`];
-    for (const file of sources)
-      lines.push(`${file.split('/').at(-1)}=${sha256Hex(yield* ctx.file(file))}`);
-    return { set, trainset, key: sha256Hex(encoder.encode(lines.join('\n'))) };
+    const hashes = new Map<string, string>();
+    for (const file of trainFiles)
+      hashes.set(file.split('/').at(-1) ?? file, sha256Hex(yield* ctx.file(file)));
+    const trainer = [...hashes.keys()]
+      .toSorted()
+      .map((name) => [name, hashes.get(name) ?? ''] as const);
+    const lines = [
+      `trainset=${trainset}`,
+      `config=${TRAIN_CONFIG}`,
+      ...trainer.map(([name, sha]) => `${name}=${sha}`),
+    ];
+    return {
+      set,
+      trainset,
+      trainer: Object.fromEntries(trainer),
+      key: sha256Hex(encoder.encode(lines.join('\n'))),
+    };
   });
 
 /** The part of train.py's result the train notes: its steps, seconds per step and last loss. */
@@ -633,15 +652,80 @@ export const AdoptedNote = Schema.fromJsonString(
   }),
 );
 
-/** The part of the committed reader lock a train reads to adopt its checkpoint (extra keys ignored). */
+/** A spread of the median and the 90th percentile. */
+export const Spread = Schema.Struct({ median: Schema.Finite, p90: Schema.Finite });
+
+/** The part of an eval's output (eval.py's JSON) the lock reads: the trained drawing's held samples, or the untrained one's; eval.py writes `null` for the side it has no samples on. */
+export const EvalJson = Schema.fromJsonString(
+  Schema.Struct({
+    seen: Schema.optionalKey(
+      Schema.NullOr(
+        Schema.Struct({
+          n: Schema.Finite,
+          accuracy: Schema.Finite,
+          angle_deg: Spread,
+          joint_px: Spread,
+        }),
+      ),
+    ),
+    unseen: Schema.optionalKey(
+      Schema.NullOr(Schema.Struct({ n: Schema.Finite, angle_deg: Spread, joint_px: Spread })),
+    ),
+  }),
+);
+
+/** A trained drawing's held line, as the lock keeps it (`held.byDrawing`). */
+export const HeldLine = Schema.Struct({
+  n: Schema.Finite,
+  accuracy: Schema.Finite,
+  angleDeg: Spread,
+  jointPx: Spread,
+});
+
+/**
+ * The part of the committed reader lock a train reads (extra keys ignored):
+ * to adopt its checkpoint, its key, checkpoint, train lines and spend; to
+ * name what changed, its `trainer`; to keep it across a key change
+ * (`--keep-reader`), its set, config and held lines. A lock older than a
+ * field has none of it.
+ */
 const CommittedLock = Schema.fromJsonString(
   Schema.Struct({
     reader: Schema.String,
+    trainer: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
+    trainset: Schema.optionalKey(Schema.String),
+    config: Schema.optionalKey(Schema.Unknown),
     checkpointSha256: Schema.String,
     train: TrainLines,
+    held: Schema.optionalKey(Schema.Struct({ byDrawing: Schema.Record(Schema.String, HeldLine) })),
     spend: Schema.optionalKey(BuildSpend),
   }),
 );
+type Committed = typeof CommittedLock.Type;
+
+/**
+ * Each field of a held line that differs between `was` (the lock's) and
+ * `now` (eval.py's numbers for the same drawing), by its lock name: exact
+ * equality, as eval.py rounds them; none when they are the same.
+ */
+const heldDiffs = (
+  was: typeof HeldLine.Type,
+  now: Option.Option<NonNullable<(typeof EvalJson.Type)['seen']>>,
+): ReadonlyArray<string> =>
+  Option.match(now, {
+    onNone: () => ['no held samples'],
+    onSome: (s) =>
+      [
+        ['n', was.n, s.n],
+        ['accuracy', was.accuracy, s.accuracy],
+        ['angleDeg.median', was.angleDeg.median, s.angle_deg.median],
+        ['angleDeg.p90', was.angleDeg.p90, s.angle_deg.p90],
+        ['jointPx.median', was.jointPx.median, s.joint_px.median],
+        ['jointPx.p90', was.jointPx.p90, s.joint_px.p90],
+      ]
+        .filter(([, a, b]) => a !== b)
+        .map(([field, a, b]) => `${field} ${a} -> ${b}`),
+  });
 
 /** The fit summary of a train whose result is `result` (train.py's JSON), run in Modal app `app`, today. */
 const fitNote = (result: string, app: Option.Option<string>) =>
@@ -659,8 +743,9 @@ const fitNote = (result: string, app: Option.Option<string>) =>
 /**
  * The one reader trained on the training set, on Modal; it spends, so it
  * waits unless `--spend modal`. It reads the set, every shard in it and
- * the reader's source files (`sources`, every file a train ships), so a
- * change to any of them is a new reader. Its output is the checkpoint, with
+ * the reader's train files (`trainFiles`, the closure of what a train runs,
+ * `CastReader.sources.train`), so a change to any of them is a new reader;
+ * a read-only or eval-only file is not among them. Its output is the checkpoint, with
  * the fit's summary (`FitNote`) noted beside it in `build.json`; on
  * Modal the train writes it at `/runs/<key>/<the build's run>.pt`, and
  * `promote` copies it to `/readers/<key>.pt` (the key: the hash of those
@@ -674,62 +759,164 @@ const fitNote = (result: string, app: Option.Option<string>) =>
  * call; that checkpoint is already the key's on Modal, so its promote does
  * nothing. A stage key that moves while the reader's does not (a change in
  * how the build keys its inputs) so costs nothing.
+ *
+ * When the lock names another reader key, it trains (so waits on the
+ * spend) and logs the train files, set or config that changed since the
+ * lock. With `keepReader` (`--keep-reader`: the claim that the edit leaves
+ * what a train makes as it is) it instead keeps the committed checkpoint
+ * (`keep`), or fails; it never trains. The flag is in no key.
  */
 export const trainStage = (
   candidates: ReadonlyArray<Candidate>,
-  sources: ReadonlyArray<string>,
+  trainFiles: ReadonlyArray<string>,
   lock: string,
-): Stage<CastReader> => {
+  o: { readonly keepReader: boolean } = { keepReader: false },
+): Stage<CastReader | FileSystem.FileSystem> => {
   /** This process's runs that adopted rather than trained: they have nothing to promote. */
   const adopted = new Set<string>();
-  const trainOn = trainOnModal(candidates, sources);
-  /** The committed checkpoint and the lock's lines, when the lock names this reader key and the cache keeps its bytes. */
-  const adoptable = (ctx: StageContext, key: string) =>
+  const trainOn = trainOnModal(candidates, trainFiles);
+  /** The committed lock, when there is one that decodes. */
+  const committedOf = (ctx: StageContext) =>
     Effect.gen(function* () {
       const text = yield* ctx.file(lock).pipe(Effect.option);
-      const committed = yield* Effect.option(
+      return yield* Effect.option(
         Effect.flatMap(Effect.fromOption(text), (bytes) =>
           Schema.decodeEffect(CommittedLock)(new TextDecoder().decode(bytes)),
         ),
       );
-      if (Option.isNone(committed) || committed.value.reader !== key) return Option.none();
-      const c = committed.value;
-      const bytes = yield* ctx.object(c.checkpointSha256);
-      return Option.map(bytes, (checkpoint) => ({
-        checkpoint,
-        hash: c.checkpointSha256,
-        note: Struct.pick(c, ['train', 'spend']),
-      }));
     });
+  /** The committed checkpoint `checkpoint` as this run's output: the lock's train lines and spend noted, nothing to promote. */
+  const adopt = (
+    ctx: StageContext,
+    key: string,
+    c: Committed,
+    checkpoint: Uint8Array,
+    how: string,
+  ) =>
+    Effect.gen(function* () {
+      yield* ctx.note(
+        yield* Schema.encodeEffect(AdoptedNote)({
+          adopted: Struct.pick(c, ['train', 'spend']),
+        }).pipe(Effect.orDie),
+      );
+      yield* Effect.log(
+        `cast.build.train adopted${how} reader=${key} checkpoint=${c.checkpointSha256}`,
+      );
+      adopted.add(ctx.run);
+      return checkpoint;
+    });
+  const refused = (why: string) => StageFailed.make({ reason: `train: --keep-reader: ${why}` });
+  /**
+   * The committed checkpoint kept across a key change: only when the lock's
+   * set is this set, its config this config, its checkpoint in the cache,
+   * and every drawing of its held set, read by that checkpoint under this
+   * code (the eval stages' path, on this machine's CPU), scores exactly the
+   * lock's held line (`heldDiffs`). Anything else fails, naming why (each
+   * differing drawing and field); a failed stage is not cached.
+   */
+  const keep = (
+    ctx: StageContext,
+    t: Effect.Success<ReturnType<typeof trainKeyOf>>,
+    c: Committed,
+  ) =>
+    Effect.gen(function* () {
+      if (c.trainset !== t.trainset)
+        return yield* refused(
+          `the training set changed (lock ${c.trainset ?? 'none'}, this build ${t.trainset})`,
+        );
+      if (!Equal.equals(c.config, TRAIN))
+        return yield* refused("the train config is not the lock's");
+      const held = c.held?.byDrawing ?? {};
+      const drawings = Object.keys(held).toSorted();
+      if (!Equal.equals(drawings, drawingsIn(t.set).toSorted()))
+        return yield* refused("the lock's held drawings are not the training set's");
+      const checkpoint = yield* ctx.object(c.checkpointSha256);
+      if (Option.isNone(checkpoint))
+        return yield* refused(`the checkpoint ${c.checkpointSha256} is not in the cache`);
+      const reader = yield* CastReader;
+      const fs = yield* FileSystem.FileSystem;
+      const renders = new Map(candidates.map((one) => [one.drawing, one.renders]));
+      const diffs = yield* Effect.scoped(
+        Effect.gen(function* () {
+          const ckpt = `${yield* fs.makeTempDirectoryScoped()}/checkpoint.pt`;
+          yield* fs.writeFile(ckpt, checkpoint.value);
+          const out: Array<string> = [];
+          for (const [drawing, was] of Object.entries(held).toSorted(([a], [b]) =>
+            a.localeCompare(b),
+          )) {
+            const shard = yield* ctx.outputPath(renders.get(drawing) ?? `renders:${drawing}`);
+            const scored = yield* reader
+              .evaluate(ckpt, shard)
+              .pipe(Effect.mapError(readerFailed('train --keep-reader')));
+            const now = yield* Schema.decodeEffect(EvalJson)(scored).pipe(
+              Effect.mapError((e) => refused(`${drawing}'s eval: ${e.message}`)),
+            );
+            for (const diff of heldDiffs(was, Option.fromNullishOr(now.seen)))
+              out.push(`${drawing} ${diff}`);
+          }
+          return out;
+        }),
+      ).pipe(Effect.catchTag('PlatformError', (e) => Effect.fail(refused(e.message))));
+      if (diffs.length > 0)
+        return yield* refused(
+          `the committed checkpoint reads otherwise under this code: ${diffs.join('; ')}`,
+        );
+      return yield* adopt(
+        ctx,
+        t.key,
+        c,
+        checkpoint.value,
+        ` (keep-reader: ${drawings.length} held drawings equal)`,
+      );
+    });
+  /** The line a rekeyed train logs: what changed since the lock (its train files by `trainer`, the set, the config) and the keep path. */
+  const rekeyedLine = (t: Effect.Success<ReturnType<typeof trainKeyOf>>, c: Committed) => {
+    const files = Option.match(Option.fromUndefinedOr(c.trainer), {
+      onNone: () => ['the lock names no train files'],
+      onSome: (was) =>
+        [...new Set([...Object.keys(was), ...Object.keys(t.trainer)])]
+          .toSorted()
+          .filter((name) => was[name] !== t.trainer[name]),
+    });
+    const changed = [
+      ...files,
+      ...['trainset'].filter(() => c.trainset !== t.trainset),
+      ...['config'].filter(() => !Equal.equals(c.config, TRAIN)),
+    ];
+    return `cast.build.train rekeyed reader=${t.key} lock=${c.reader} changed=${changed.join(',')}: it trains (--spend modal); when the edit leaves what a train makes as it is, --keep-reader keeps the committed checkpoint once its held eval reads the same`;
+  };
   return {
     id: 'train',
     inputs: [
       // the set names each shard by its hash, so its shards are in its key
       stageInput('trainset'),
-      ...sources.map(fileInput),
+      ...trainFiles.map(fileInput),
     ],
     version: VERSION.train,
     config: TRAIN_CONFIG,
     run: (ctx) =>
       Effect.gen(function* () {
-        const { key } = yield* trainKeyOf(ctx, sources);
-        const found = yield* adoptable(ctx, key);
-        if (Option.isSome(found)) {
-          const a = found.value;
-          yield* ctx.note(
-            yield* Schema.encodeEffect(AdoptedNote)({ adopted: a.note }).pipe(Effect.orDie),
-          );
-          yield* Effect.log(`cast.build.train adopted reader=${key} checkpoint=${a.hash}`);
-          adopted.add(ctx.run);
-          return a.checkpoint;
+        const t = yield* trainKeyOf(ctx, trainFiles);
+        const committed = yield* committedOf(ctx);
+        if (Option.isSome(committed) && committed.value.reader === t.key) {
+          const c = committed.value;
+          const checkpoint = yield* ctx.object(c.checkpointSha256);
+          if (Option.isSome(checkpoint)) return yield* adopt(ctx, t.key, c, checkpoint.value, '');
+          return yield* trainOn(ctx);
         }
+        if (o.keepReader)
+          return yield* Option.match(committed, {
+            onNone: () => Effect.fail(refused(`no committed lock at ${lock}`)),
+            onSome: (c) => keep(ctx, t, c),
+          });
+        if (Option.isSome(committed)) yield* Effect.log(rekeyedLine(t, committed.value));
         return yield* trainOn(ctx);
       }),
     promote: (ctx) =>
       Effect.gen(function* () {
         if (adopted.has(ctx.run)) return;
         const reader = yield* CastReader;
-        const { key } = yield* trainKeyOf(ctx, sources);
+        const { key } = yield* trainKeyOf(ctx, trainFiles);
         yield* reader.promote(key, ctx.run).pipe(Effect.mapError(readerFailed('promote')));
       }),
   };
@@ -737,12 +924,13 @@ export const trainStage = (
 
 /** The paid train of `candidates` on Modal, when the build allows it. */
 const trainOnModal =
-  (candidates: ReadonlyArray<Candidate>, sources: ReadonlyArray<string>) => (ctx: StageContext) =>
+  (candidates: ReadonlyArray<Candidate>, trainFiles: ReadonlyArray<string>) =>
+  (ctx: StageContext) =>
     ctx.spend(
       'modal',
       Effect.gen(function* () {
         const reader = yield* CastReader;
-        const { set, trainset, key } = yield* trainKeyOf(ctx, sources);
+        const { set, trainset, key } = yield* trainKeyOf(ctx, trainFiles);
         const inSet = new Set(drawingsIn(set));
         const shards = yield* Effect.forEach(
           candidates.filter((c) => inSet.has(c.drawing)).map((c) => c.renders),
@@ -764,16 +952,27 @@ const trainOnModal =
       TRAIN_USD,
     );
 
-/** One drawing's held samples read by the trained reader and scored, by its renders stage's id. */
+/**
+ * One drawing's held samples read by the trained reader and scored, by its
+ * renders stage's id. It reads the eval's TS sources (`evalSources`) and the
+ * reader's eval files (`evalFiles`, `CastReader.sources.eval`: what a local
+ * read and score run), so a read or eval edit re-runs it with the train cached.
+ */
 export const evalStage = (
   rendersId: string,
   evalSources: ReadonlyArray<Input>,
+  evalFiles: ReadonlyArray<string>,
 ): Stage<CastReader> => {
   const id = rendersId.replace(/^renders:/, 'eval:');
   return {
     id,
     view: id.slice('eval:'.length).split('@')[0],
-    inputs: [stageInput('train'), stageInput(rendersId), ...evalSources],
+    inputs: [
+      stageInput('train'),
+      stageInput(rendersId),
+      ...evalSources,
+      ...evalFiles.map(fileInput),
+    ],
     version: VERSION.eval,
     run: (ctx) =>
       Effect.gen(function* () {
@@ -799,13 +998,39 @@ const puppetsOf = (memberDir: string, coverage: Coverage) => (drawing: string) =
   }).pipe(Effect.mapError((e) => ChainFailed.make({ reason: `puppet ${drawing}: ${String(e)}` })));
 
 /**
+ * The folder a clip's read is kept in: `<cache>/reads/<key>`, keyed by the
+ * checkpoint's and the clip's hashes, the map, the mapping's version and the
+ * hashes of the reader's read files (`CastReader.sources.read`, in its sorted
+ * order), so a read edit misses it and a train-only edit does not.
+ */
+export const readsDirOf = Effect.fn('cast.chain.readsDir')(function* (o: {
+  readonly ckpt: string;
+  readonly clip: string;
+  readonly map: ClipMap;
+  readonly cache: string;
+}) {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const reader = yield* CastReader;
+  const hashOf = (file: string) => Effect.map(fs.readFile(file), sha256Hex);
+  const key = sha256Hex(
+    yield* Schema.encodeEffect(ConfigJson)({
+      ckpt: yield* hashOf(o.ckpt),
+      clip: yield* hashOf(o.clip),
+      map: o.map,
+      mapping: MAPPING,
+      sources: yield* Effect.forEach(reader.sources.read, hashOf),
+    }),
+  );
+  return path.join(o.cache, 'reads', key);
+});
+
+/**
  * `clip` (an mp4) laid on the canvas at `map` (`clip-eval.ts`), read by the
  * checkpoint at `ckpt` and chained (`chain.ts`) with the member's puppets;
  * with the figure numbers of its canvases. The canvases, their figure
- * numbers and the read are kept in `<cache>/reads/<key>/` (`canvas/`,
- * `figure.json`, `read.json`), keyed by the checkpoint's and the clip's
- * hashes, the map, the mapping's version and the reader's source files'
- * hashes.
+ * numbers and the read are kept in `readsDirOf`'s folder (`canvas/`,
+ * `figure.json`, `read.json`).
  */
 export const chainClip = Effect.fn('cast.chain.clip')(function* (o: {
   readonly ckpt: string;
@@ -819,17 +1044,7 @@ export const chainClip = Effect.fn('cast.chain.clip')(function* (o: {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const reader = yield* CastReader;
-  const hashOf = (file: string) => Effect.map(fs.readFile(file), sha256Hex);
-  const key = sha256Hex(
-    yield* Schema.encodeEffect(ConfigJson)({
-      ckpt: yield* hashOf(o.ckpt),
-      clip: yield* hashOf(o.clip),
-      map: o.map,
-      mapping: MAPPING,
-      sources: yield* Effect.forEach(reader.sources, hashOf),
-    }),
-  );
-  const dir = path.join(o.cache, 'reads', key);
+  const dir = yield* readsDirOf(o);
   const readFile = path.join(dir, 'read.json');
   const figureFile = path.join(dir, 'figure.json');
   if (!(yield* fs.exists(readFile))) {
@@ -865,14 +1080,16 @@ export const chainClip = Effect.fn('cast.chain.clip')(function* (o: {
  * reader-lock entry (`clips.ts` `clipEntryOf`), pass or fail. It reads the
  * reader, the clip its clip-make stage adopted (`clip:<clip>@<member>`), the
  * provenance beside it (whose map lays it on the canvas), the training set
- * (whose shards stand for the cuts of the drawings it poses) and the
- * chain's source files, with the chain's settings and the clip's bands and
- * expected drawings as its config.
+ * (whose shards stand for the cuts of the drawings it poses), the chain's
+ * source files and the reader's read files (`readFiles`,
+ * `CastReader.sources.read`), with the chain's settings and the clip's bands
+ * and expected drawings as its config.
  */
 export const clipStages = (
   m: MemberStages,
   cache: string,
   chainSources: ReadonlyArray<Input>,
+  readFiles: ReadonlyArray<string>,
 ): ReadonlyArray<
   Stage<StageServices | CastReader | Media | ChildProcessSpawner.ChildProcessSpawner>
 > =>
@@ -888,6 +1105,7 @@ export const clipStages = (
         stageInput(made),
         fileInput(provenance),
         ...chainSources,
+        ...readFiles.map(fileInput),
         // the set's shards stand for the cuts of the drawings the reader was trained on
         stageInput('trainset'),
       ],

@@ -2896,7 +2896,7 @@ laid paint for a film frame. A fitted entry is never trainable: it yields
 no shard, as its parts and pose lie in its source view's.
 
 `film concept build <film> (<member> | --cast) [--plan] [--touch <path> …]
-[--spend okra,modal] [--json]` (`tools/cast-build/build-cli.ts`) builds
+[--spend okra,modal] [--keep-reader] [--json]` (`tools/cast-build/build-cli.ts`) builds
 each member's stages from his manifest (`tools/cast-build/stages.ts`):
 
 - per entry: `drawing` (the drawing's bytes; it waits on the owner while
@@ -2942,12 +2942,50 @@ file changed, and `--plan --spend modal` prints the key a train would run
 at. The training set it would read is the `trainset` stage's output: one
 `<member>/<drawing>=<shard hash>` line for each trainable drawing.
 
+The reader's Python files take three roles (`tools/cast-build/reader.ts`
+`rolesOf`), each derived from the files' local imports and followed through
+every file they import: `train` is what `modal_app.py` runs (`modal_app.py`,
+`model.py`, `train.py`); `read` is what `read.py` runs, with the local
+environment (`pyproject.toml`, `uv.lock`); `eval` is `read` with
+`eval.py`. The scan (`scanOf`) is CPython's `ast`: one `python3 -I -B -c`
+spawn reads every `.py` file of the folder, handed over on stdin as JSON,
+and names each file's imports wherever they stand (indented, in a
+function, in a one-line suite such as `if x: import y`), so no string,
+comment or f-string makes an edge or hides one. It fails closed, naming
+the file and the line: a file the python3 on PATH cannot parse, a
+relative import, a dynamic load (a name, attribute, string or imported name
+of `importlib`, `runpy`, `pkgutil`, `__import__` or `import_module`, or the
+builtins `exec`, `eval` and `compile`; each would hide an edge), and an
+import of one of the reader folder's own folders (a package it does not
+follow). A module name built at run time from none of these, such as a
+`sys.path` edit to a subfolder, is not seen; the reader folder holds none. No python3 on PATH, or an answer that leaves a file out, fails
+the scan too, never with an import left out. The closure and the roles
+are tested on an in-memory disk in `reader.test.ts`, with a fake spawner
+that answers as the scan does; the real scan, over every import form and
+every fault, and the committed folder's roles are read in
+`reader.slow.test.ts`. The reader key is the
+training set, the config and the `train` files, each named by its basename
+and hash; the lock names those files as `trainer`. Each `eval` stage reads
+the `eval` files, and each `eval:clip` stage and the clip read cache
+(`<cache>/reads/<key>`) the `read` files. So an edit to read.py, eval.py or
+the environment re-runs the evals and clips and leaves the train cached.
+
 Before it spends, the train adopts the committed checkpoint: when its
-reader key (the training set, the config and the reader's files) is the
-lock's `reader` and the cache keeps `objects/<checkpointSha256>` with bytes
-that hash to that name, it returns those bytes with no Modal call and no
-promote, and notes the lock's train lines and spend, which the lock keeps.
-So a stage key that moves while the reader key does not costs nothing.
+reader key is the lock's `reader` and the cache keeps
+`objects/<checkpointSha256>` with bytes that hash to that name, it returns
+those bytes with no Modal call and no promote, and notes the lock's train
+lines and spend, which the lock keeps. So a stage key that moves while the
+reader key does not costs nothing. When the reader key is not the lock's,
+the train waits on `--spend modal` and logs the train files, set or config
+that changed. `--keep-reader` is the claim that the edit leaves what a
+train makes as it is: the train then keeps the committed checkpoint, with
+no spend, only when the lock's training set and config are this build's,
+its checkpoint is cached, and that checkpoint, read under this code on this
+machine, scores every drawing of the lock's held set exactly as the lock's
+`held.byDrawing` line (each field). Otherwise the train fails, naming each
+differing drawing and field; a failed train is not cached and never falls
+through to a paid train. The flag is in no key, and it changes nothing when
+the reader key is the lock's.
 
 The cache is `FILM_CAST_CACHE`, else `~/.cache/bible-film/cast`: each
 stage's output kept as `objects/<sha256>`, and the manifest `build.json`

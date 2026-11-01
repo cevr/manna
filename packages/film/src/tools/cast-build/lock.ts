@@ -1,7 +1,7 @@
 // The reader lock: `reader.lock.json`, the record of the reader the cast
 // build trained, written by the build's last stage from its inputs' outputs
 // (`lockStage`). It names the reader's key on the volume, the train stage's
-// key, the training set (its hash and each drawing's shard), the train
+// key, the train files the reader's key hashed (`trainer`), the training set (its hash and each drawing's shard), the train
 // config, the checkpoint's SHA-256, the train's fit summary and spend as the
 // train noted them in `build.json` (absent for a train that noted none; a
 // train that adopted the committed checkpoint notes the lock's own, kept),
@@ -27,35 +27,17 @@ import {
   AdoptedNote,
   BuildSpend,
   type Candidate,
+  EvalJson,
   FitNote,
+  HeldLine,
+  Spread,
   TRAIN,
   TrainLines,
   trainKeyOf,
 } from './stages.ts';
 
-/** A spread of the median and the 90th percentile. */
-const Spread = Schema.Struct({ median: Schema.Finite, p90: Schema.Finite });
 /** A spread as the lock keeps it: eval.py's also carries its count and mean. */
 const spreadOf = (s: typeof Spread.Type) => ({ median: s.median, p90: s.p90 });
-
-/** The part of an eval's output (eval.py's JSON) the lock reads: the trained drawing's held samples, or the untrained one's; eval.py writes `null` for the side it has no samples on. */
-const EvalJson = Schema.fromJsonString(
-  Schema.Struct({
-    seen: Schema.optionalKey(
-      Schema.NullOr(
-        Schema.Struct({
-          n: Schema.Finite,
-          accuracy: Schema.Finite,
-          angle_deg: Spread,
-          joint_px: Spread,
-        }),
-      ),
-    ),
-    unseen: Schema.optionalKey(
-      Schema.NullOr(Schema.Struct({ n: Schema.Finite, angle_deg: Spread, joint_px: Spread })),
-    ),
-  }),
-);
 
 /** An eval:clip stage's output: the clip's lock entry (`clips.ts` `clipEntryOf`). */
 const ClipLockJson = Schema.fromJsonString(ClipLock);
@@ -70,6 +52,8 @@ const Clips = Schema.Struct({
 const Lock = Schema.Struct({
   reader: Schema.String,
   stageKey: Schema.String,
+  /** The reader's train files by basename, each file's SHA-256: what `reader` keys beside the set and the config. */
+  trainer: Schema.Record(Schema.String, Schema.String),
   trainset: Schema.String,
   drawings: Schema.Record(Schema.String, Schema.String),
   config: Schema.Struct({
@@ -87,15 +71,7 @@ const Lock = Schema.Struct({
   held: Schema.Struct({
     drawings: Schema.Finite,
     accuracy: Schema.Finite,
-    byDrawing: Schema.Record(
-      Schema.String,
-      Schema.Struct({
-        n: Schema.Finite,
-        accuracy: Schema.Finite,
-        angleDeg: Spread,
-        jointPx: Spread,
-      }),
-    ),
+    byDrawing: Schema.Record(Schema.String, HeldLine),
   }),
   untrained: Schema.Record(
     Schema.String,
@@ -193,13 +169,14 @@ const trainOf = (train: BuiltRecord) =>
  * numbers); an untrained one's joins when it has an output. Every clip
  * counts in `clips.of`; a clip whose eval has an output carries its entry,
  * pass or fail, and one with none (its stage failed) is left unpassed, so
- * the lock is written whatever the clips. `sources` are the reader's files,
- * which the reader's key reads.
+ * the lock is written whatever the clips. `trainFiles` are the reader's
+ * train files (`CastReader.sources.train`), which the reader's key reads and
+ * `trainer` names by their hashes.
  */
 export const lockStage = (o: {
   readonly file: string;
   readonly candidates: ReadonlyArray<Candidate>;
-  readonly sources: ReadonlyArray<string>;
+  readonly trainFiles: ReadonlyArray<string>;
   readonly clips: ReadonlyArray<LockClip>;
 }): Stage<FileSystem.FileSystem> => {
   const evalOf = (c: Candidate) => c.renders.replace(/^renders:/, 'eval:');
@@ -208,7 +185,7 @@ export const lockStage = (o: {
     inputs: [
       stageInput('trainset'),
       stageInput('train'),
-      ...o.sources.map(fileInput),
+      ...o.trainFiles.map(fileInput),
       ...o.candidates.map((c) => optionalInput(evalOf(c))),
       ...o.clips.map((c) => optionalInput(clipStageOf(c))),
     ],
@@ -216,7 +193,7 @@ export const lockStage = (o: {
     run: (ctx) =>
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
-        const { set, trainset, key } = yield* trainKeyOf(ctx, o.sources);
+        const { set, trainset, trainer, key } = yield* trainKeyOf(ctx, o.trainFiles);
         const train = yield* ctx.built('train');
         const drawings = new TextDecoder()
           .decode(set)
@@ -292,6 +269,7 @@ export const lockStage = (o: {
         const text = yield* Schema.encodeEffect(LockJson)({
           reader: key,
           stageKey: train.key,
+          trainer,
           trainset,
           drawings: Object.fromEntries(drawings),
           config: TRAIN,
