@@ -10,15 +10,7 @@ import { memoryFileSystem, memoryLocks, text } from '../host/testing.ts';
 import { ContentStore } from '../content-store.ts';
 import { type Stage, buildGraph, fileInput, stageInput } from './graph.ts';
 import { CastReader } from './reader.ts';
-import {
-  TRAIN,
-  candidateOf,
-  encodeParts,
-  evalStage,
-  statusStage,
-  trainStage,
-  trainsetStage,
-} from './stages.ts';
+import { candidatesOf, evalStage, memberStages, trainStage, trainsetStage } from './stages.ts';
 
 /** What a build is asked with, as `buildGraph` takes it. */
 type BuildOptions = Parameters<typeof buildGraph>[1];
@@ -33,7 +25,61 @@ const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
 
 const SOURCES = ['/reader/model.py', '/reader/uv.lock'];
 const VIEWS = ['front', 'side'];
-const CANDIDATES = VIEWS.map((v) => candidateOf(v, 'm'));
+/** A parts stage's output as the status stage reads it: the part files and the record, if any. */
+const partsOutput = (parts: { readonly files: ReadonlyArray<string>; readonly record?: string }) =>
+  Effect.succeed(
+    text(
+      Schema.encodeSync(
+        Schema.fromJsonString(
+          Schema.Struct({
+            files: Schema.Array(Schema.String),
+            record: Schema.optionalKey(Schema.String),
+          }),
+        ),
+      )(parts),
+    ),
+  );
+
+/** The train config's backbone and input, as its JSON names them. */
+const decodeTrainConfig = Schema.decodeUnknownSync(
+  Schema.fromJsonString(
+    Schema.Struct({
+      backbone: Schema.String,
+      inputSide: Schema.Struct({ width: Schema.Finite, height: Schema.Finite }),
+    }),
+  ),
+);
+
+/** Member `m`: a puppet entry per view, cut from its own sheet. */
+const MEMBER = {
+  film: 'f' as never,
+  member: 'm',
+  memberDir: '/m',
+  libraryPuppets: '/library/puppets.ts',
+  coverage: {
+    member: 'm',
+    entries: VIEWS.map((v) => ({ id: v, cut: 'puppet' as const, file: `${v}.png`, for: [] })),
+  },
+  facts: {},
+};
+const CANDIDATES = candidatesOf(MEMBER);
+/** Each view's status stage as the build makes it (no code sources, so no file of the build's is read). */
+const STATUS = Effect.runSync(
+  memberStages(MEMBER, {
+    stage: { parts: [], cut: [], fit: [], renders: [], eval: [], chain: [] },
+    filmCast: [],
+  }).pipe(
+    Effect.map((stages) => stages.filter((s) => s.id.startsWith('status:'))),
+    Effect.provide([memoryFileSystem(new Map()), Path.layer]),
+  ),
+);
+/**
+ * View `v`'s status stage. It reads only its inputs' outputs, so it needs
+ * none of the build's services; `memberStages` types its list by the
+ * services any of its stages needs, hence the cast.
+ */
+const statusOf = (v: string) =>
+  STATUS.filter((s) => s.id === `status:${v}@m`) as unknown as ReadonlyArray<Stage<never>>;
 
 type Ctx = Parameters<Stage<never>['run']>[0];
 const fitRows = (pass: boolean) =>
@@ -64,7 +110,7 @@ const graph = (
           id: at('parts'),
           inputs: [stageInput(at('drawing'))],
           version: '1',
-          run: (ctx: Ctx) => ctx.spend('okra', encodeParts({ files: [], record: RECORD.passing })),
+          run: (ctx: Ctx) => ctx.spend('okra', partsOutput({ files: [], record: RECORD.passing })),
         },
       ].filter(() => cutInBuild),
       ...[
@@ -74,7 +120,7 @@ const graph = (
           version: '1',
           run: (ctx: Ctx) =>
             Effect.flatMap(ctx.file(recordFile(v)), (bytes) =>
-              encodeParts(
+              partsOutput(
                 Option.match(
                   Option.liftPredicate(new TextDecoder().decode(bytes), (t) => t !== 'none'),
                   { onNone: () => ({ files: [] }), onSome: (r) => ({ files: [], record: r }) },
@@ -101,7 +147,7 @@ const graph = (
         version: '1',
         run: (ctx: Ctx) => ctx.file(`/in/${at('renders')}.tar`),
       },
-      statusStage(v, 'm'),
+      ...statusOf(v),
     ];
   }),
   trainsetStage(CANDIDATES),
@@ -324,11 +370,11 @@ describe('cast build: train and eval', () => {
       const model = yield* fs.readFileString(
         new URL('../../../reader/model.py', import.meta.url).pathname,
       );
-      expect(model).toContain(`BACKBONE = "${TRAIN.backbone}"`);
-      expect(model).toContain(`IN_W, IN_H = ${TRAIN.inputSide.width}, ${TRAIN.inputSide.height}`);
       // the config is the train key's (`graph.ts` keys every stage by its config)
-      expect(trainStage(CANDIDATES, SOURCES).config).toContain(TRAIN.backbone);
-      expect(trainStage(CANDIDATES, SOURCES).config).toContain('"inputSide":{"width":448');
+      const train = decodeTrainConfig(trainStage(CANDIDATES, SOURCES).config ?? '');
+      expect(train.backbone).toBe('facebook/dinov2-small');
+      expect(model).toContain(`BACKBONE = "${train.backbone}"`);
+      expect(model).toContain(`IN_W, IN_H = ${train.inputSide.width}, ${train.inputSide.height}`);
     }).pipe(Effect.provide(BunFileSystem.layer)),
   );
 });

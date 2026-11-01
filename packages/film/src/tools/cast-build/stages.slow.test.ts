@@ -15,7 +15,7 @@ import { memoryLocks } from '../host/testing.ts';
 import type { Coverage, EntryFacts } from './coverage.ts';
 import { type Input, type Stage, buildGraph } from './graph.ts';
 import { stageSources } from './sources.ts';
-import { clipStages, memberStages } from './stages.ts';
+import { buildSources, clipStages, memberStages } from './stages.ts';
 
 /** A stage kind's source files, as `stageSources` makes them its inputs. */
 const sourceFiles = (kind: keyof Effect.Success<typeof stageSources>) =>
@@ -81,14 +81,19 @@ const memberIn = (recorded: ReadonlyArray<string>) =>
   });
 
 const stagesOf = (dir: string, facts: Record<string, EntryFacts> = {}) =>
-  memberStages({
-    film: 'in-its-order' as never,
-    member: 'fake',
-    memberDir: dir,
-    libraryPuppets: `${dir}/library-puppets.ts`,
-    coverage: COVERAGE,
-    facts,
-  }).pipe(Effect.provide(FilmFolder.layer(`${dir}/films`)));
+  Effect.flatMap(buildSources('in-its-order' as never), (src) =>
+    memberStages(
+      {
+        film: 'in-its-order' as never,
+        member: 'fake',
+        memberDir: dir,
+        libraryPuppets: `${dir}/library-puppets.ts`,
+        coverage: COVERAGE,
+        facts,
+      },
+      src,
+    ),
+  ).pipe(Effect.provide(FilmFolder.layer(`${dir}/films`)));
 
 /** Each file from the packages folder: `film/src/...`. */
 const ends = (files: ReadonlyArray<string>) => files.map((f) => f.split('/packages/').at(-1));
@@ -222,14 +227,17 @@ const partsOver = <E>(
     const context = yield* Effect.context<Layer.Success<typeof partsLayer>>();
     const run = (spend: ReadonlySet<'okra'>) =>
       Effect.gen(function* () {
-        const stages = (yield* memberStages({
-          film: 'in-its-order' as never,
-          member: 'lead-feast',
-          memberDir: at.member,
-          libraryPuppets: `${at.member}/library-puppets.ts`,
-          coverage: { member: 'lead-feast', entries: [FRONT] },
-          facts: { [FRONT.id]: complete },
-        })).filter((s) => [`drawing:${FRONT.id}@lead-feast`, PARTS].includes(s.id));
+        const stages = (yield* memberStages(
+          {
+            film: 'in-its-order' as never,
+            member: 'lead-feast',
+            memberDir: at.member,
+            libraryPuppets: `${at.member}/library-puppets.ts`,
+            coverage: { member: 'lead-feast', entries: [FRONT] },
+            facts: { [FRONT.id]: complete },
+          },
+          yield* buildSources('in-its-order' as never),
+        )).filter((s) => [`drawing:${FRONT.id}@lead-feast`, PARTS].includes(s.id));
         const report = yield* buildGraph(stages, {
           cache: at.cache,
           plan: false,

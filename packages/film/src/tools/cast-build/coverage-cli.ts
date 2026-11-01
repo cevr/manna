@@ -32,7 +32,7 @@ import type { Pages } from '../pages.ts';
 import { castCache, measuredOf, memberOf } from './built.ts';
 import { CutKind, Requirement, coverageOf } from './coverage.ts';
 import { coverageFacts } from './coverage-facts.ts';
-import { memberStages } from './stages.ts';
+import { buildSources, memberStages } from './stages.ts';
 
 /** A member reported: his manifest's file (`null` in JSON when he has none), and what it lacks. */
 const MemberReport = Schema.Struct({
@@ -116,7 +116,10 @@ const reportOf = Effect.fn('film.cast.coverageReport')(function* (
   const { file, stages: m } = found.value;
   const cache = yield* castCache;
   const results = yield* toStderr(
-    measuredOf(yield* memberStages(m), m.coverage, member, { cache, run }),
+    measuredOf(yield* memberStages(m, yield* buildSources(film)), m.coverage, member, {
+      cache,
+      run,
+    }),
   );
   const facts = yield* coverageFacts(m.memberDir, m.coverage, results);
   return {

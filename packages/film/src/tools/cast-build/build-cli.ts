@@ -50,11 +50,11 @@ import {
   candidatesOf,
   clipStages,
   evalStage,
+  buildSources,
   memberStages,
   trainStage,
   trainsetStage,
 } from './stages.ts';
-import { stageSources } from './sources.ts';
 
 class BuildAsked extends Schema.TaggedError<BuildAsked>()('BuildAsked', {}) {
   override get message() {
@@ -181,9 +181,10 @@ export const build = <E, R>(
         }
         members.push(found.value.stages);
       }
-      const built = (yield* Effect.forEach(members, memberStages)).flat();
+      const src = yield* buildSources(film);
+      const built = (yield* Effect.forEach(members, (m) => memberStages(m, src))).flat();
       const candidates = members.flatMap(candidatesOf);
-      const sources = yield* stageSources;
+      const sources = src.stage;
       const reader = yield* CastReader;
       const cache = yield* castCache;
       const needs = ownerNeeds(members);

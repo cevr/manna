@@ -75,9 +75,9 @@ const VERSION = {
  * The reader's train: steps, batch, learning rate, seed, GPU, precision, its
  * backbone and the input it reads (width and height in px); a fixed step
  * count, no wall-clock stop. The backbone and input are `reader/model.py`'s
- * (`BACKBONE`, `IN_W, IN_H`), held equal by `reader.test.ts`.
+ * (`BACKBONE`, `IN_W, IN_H`), held equal by `reader.test.ts` through the train config.
  */
-export const TRAIN = {
+const TRAIN = {
   steps: 4800,
   batch: 32,
   lr: 1e-3,
@@ -119,7 +119,7 @@ const PartsJson = Schema.fromJsonString(
     record: Schema.optionalKey(Schema.String),
   }),
 );
-export const encodeParts = (parts: typeof PartsJson.Type) =>
+const encodeParts = (parts: typeof PartsJson.Type) =>
   Schema.encodeEffect(PartsJson)(parts).pipe(
     Effect.map((t) => encoder.encode(t)),
     Effect.mapError((e) => StageFailed.make({ reason: `parts output: ${String(e)}` })),
@@ -230,11 +230,28 @@ export interface MemberStages {
   readonly facts: Readonly<Record<string, EntryFacts>>;
 }
 
-/** One member's stages, in the order they build. */
-export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: MemberStages) {
+/** The code every member's stages are keyed by: each stage kind's sources, and the film's cast module's (`buildSources`). */
+interface BuildSources {
+  readonly stage: Effect.Success<typeof stageSources>;
+  readonly filmCast: ReadonlyArray<Input>;
+}
+
+/** The film's build sources, read once per build: each stage kind's import closure and its `rigs/cast.ts`'s. */
+export const buildSources = Effect.fn('cast.build.sources')(function* (film: FilmName) {
+  const stage = yield* stageSources;
+  // the fit render loads the film's cast module by its path (`STAGE_LOADS`)
+  const filmCast = yield* filmCastSources((yield* FilmFolder).paths(film).dir);
+  return { stage, filmCast } satisfies BuildSources;
+});
+
+/** One member's stages, in the order they build, keyed by the build's sources. */
+export const memberStages = Effect.fn('cast.build.memberStages')(function* (
+  m: MemberStages,
+  built: BuildSources,
+) {
   const path = yield* Path.Path;
   const sources = yield* specSources(m.memberDir, m.libraryPuppets);
-  const src = yield* stageSources;
+  const src = built.stage;
   /** An entry named in a stage id: `<entry>@<member>`, so `cut:<entry>` leads it and two members never share one. */
   const at = (id: string) => `${id}@${m.member}`;
   const factsOf = (id: string) => Option.fromNullishOr(m.facts[id]);
@@ -320,8 +337,7 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: M
     });
   }
   const fitted = yield* fittedFiles(m.memberDir);
-  // the fit render loads the film's cast module by its path (`STAGE_LOADS`)
-  const filmCast = yield* filmCastSources((yield* FilmFolder).paths(m.film).dir);
+  const { filmCast } = built;
   for (const entry of m.coverage.entries) {
     if (entry.cut !== 'puppet') continue;
     const cut = `cut:${at(entry.fitted ?? entry.id)}`;
@@ -417,7 +433,7 @@ const StatusJson = Schema.fromJsonString(
  * fit rows pass. Its inputs are those stages, so a record whose bars change
  * changes the verdict and every key that reads it.
  */
-export const statusStage = (entry: string, member: string): Stage<never> => {
+const statusStage = (entry: string, member: string): Stage<never> => {
   const ids = idsOf(entry, member);
   return {
     id: ids.status,
@@ -468,7 +484,7 @@ interface Candidate {
 }
 
 /** An entry's candidate: `<member>/<entry>` and its renders and status stage ids. */
-export const candidateOf = (entry: string, member: string): Candidate => {
+const candidateOf = (entry: string, member: string): Candidate => {
   const ids = idsOf(entry, member);
   return { drawing: `${member}/${entry}`, renders: ids.renders, status: ids.status };
 };
