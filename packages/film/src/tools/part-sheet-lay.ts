@@ -165,7 +165,8 @@ const bytesOf = (src: ArrayLike<number>, f: (v: number, i: number) => number): U
 const meanOf = (v: ReadonlyArray<number>) => v.reduce((a, b) => a + b, 0) / Math.max(1, v.length);
 
 /** The median of `v`'s values, 0 for none. */
-const medianOf = (v: ReadonlyArray<number>) => [...v].sort((a, b) => a - b)[v.length >> 1] ?? 0;
+// a typed array sorts numbers natively, with no comparator to call; the values are colour bytes, with no NaN or -0 to order apart
+const medianOf = (v: ReadonlyArray<number>) => Float64Array.from(v).sort()[v.length >> 1] ?? 0;
 
 const round2 = (v: number) => Math.round(v * 100) / 100;
 
@@ -228,7 +229,8 @@ const paintedOf = (sheet: Sheet, hidden: Uint8Array, answer: Seen): Uint8Array =
   const { width: w, height: h } = sheet;
   const ground = Arr.range(0, w * h - 1).filter((i) => sheet.owner[i] === 0);
   const lab = labOf(medianOver(answer, ground));
-  const spread = ground.map((i) => deltaE(answer.lab(i), lab)).sort((a, b) => a - b);
+  // distances are never NaN or -0, so the native numeric sort orders them as a comparator would
+  const spread = Float64Array.from(ground.map((i) => deltaE(answer.lab(i), lab))).sort();
   const near = Math.max(PAPER_NEAR, 1.5 * (spread[Math.floor(0.9 * (spread.length - 1))] ?? 0));
   const reached = new Uint8Array(w * h);
   const queue = [...ground];
