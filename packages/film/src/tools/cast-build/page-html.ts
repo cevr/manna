@@ -6,7 +6,7 @@
 import { Effect, Option, Schema } from 'effect';
 
 /** A page runs a script its HTML holds inline, so its closure cannot be whole. */
-export class PageInlineScript extends Schema.TaggedError<PageInlineScript>()('PageInlineScript', {
+class PageInlineScript extends Schema.TaggedError<PageInlineScript>()('PageInlineScript', {
   page: Schema.String,
 }) {
   override get message() {
