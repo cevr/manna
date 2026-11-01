@@ -12,6 +12,7 @@
     "./player.css": "./src/player/player.css",
     "./tokens.css": "./src/player/tokens.css",
     "./tools": "./src/tools/index.ts",
+    "./cast-build/sources": "./src/tools/cast-build/sources.ts",
     "./ask": "./src/lab/ask/mount.tsx",
     "./ask-server": "./src/lab/ask/server.tsx",
     "./solid-plugin": "./src/tools/solid-plugin.ts",

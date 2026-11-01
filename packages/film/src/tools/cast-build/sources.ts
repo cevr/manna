@@ -58,6 +58,9 @@ export type StageSources = { readonly [K in SourcedStage]: ReadonlyArray<Input> 
 
 const here = (s: string) => new URL(s, import.meta.url).pathname;
 
+/** A stage kind's entry modules, as absolute paths. */
+export const stageEntryFiles = (kind: SourcedStage) => STAGE_ENTRIES[kind].map(here);
+
 /** A stage kind's source files, as absolute paths, sorted; fails on an undeclared variable import. */
 export const sourceFiles = (
   kind: SourcedStage,
@@ -65,7 +68,7 @@ export const sourceFiles = (
   ReadonlyArray<string>,
   PlatformError | UndeclaredImport | ImportUnresolved,
   FileSystem.FileSystem | Path.Path
-> => declaredClosure(STAGE_ENTRIES[kind].map(here), STAGE_LOADS[kind].map(here));
+> => declaredClosure(stageEntryFiles(kind), STAGE_LOADS[kind].map(here));
 
 /** The film's `rigs/cast.ts` and every file it runs, which the fit render loads by its path. */
 export const filmCastSources = (filmDir: string) =>

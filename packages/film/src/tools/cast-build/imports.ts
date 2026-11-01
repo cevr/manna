@@ -2,7 +2,8 @@
 // literal dynamic imports, followed to files, transitively. A relative
 // specifier resolves as Bun resolves it: the file it names, its `.ts` file for
 // a `.js` name, or with `.ts`, `.tsx`, `.js` or an `index` file; one that names
-// no file fails the closure. A bare one (a package) is not followed, so
+// no file fails the closure. A workspace package (`@manna/*`) is followed to the
+// source file its `package.json` exports; another package is not followed, so
 // node_modules stays out. Type-only imports and re-exports run nothing and are not followed.
 // Only script files are read for further imports; a JSON or other file a
 // module imports is in the closure as itself.
@@ -98,16 +99,58 @@ const candidatesOf = (path: Path.Path, base: string) => {
   ];
 };
 
+/** A workspace package's specifier: `@manna/<name>`, then its export's subpath. */
+const WORKSPACE = /^(@manna\/[^/]+)(\/.*)?$/;
+
+const PackageExports = Schema.Struct({
+  exports: Schema.Record(Schema.String, Schema.String),
+});
+const decodeExports = Schema.decodeUnknownEffect(Schema.fromJsonString(PackageExports));
+
 /**
- * The file a specifier names from `file`'s folder: none for a package, the
- * file for a relative one, and `ImportUnresolved` for a relative one that
- * names no file.
+ * The source file a workspace specifier names, as Bun resolves it: the
+ * package's link in the nearest `node_modules` above `file`, followed to its
+ * folder, and the file its `package.json` exports at the subpath.
+ */
+const resolveWorkspace = (file: string, specifier: string, name: string, subpath: string) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const unresolved = ImportUnresolved.make({ file, specifier });
+    let dir = path.dirname(file);
+    for (;;) {
+      const link = path.join(dir, 'node_modules', name);
+      if (yield* fs.exists(link)) {
+        const folder = yield* fs.realPath(link);
+        const manifest = yield* fs.readFileString(path.join(folder, 'package.json'));
+        const { exports } = yield* decodeExports(manifest).pipe(Effect.mapError(() => unresolved));
+        const target = Option.fromNullishOr(
+          Object.entries(exports).find(([key]) => key === subpath),
+        );
+        if (Option.isNone(target)) return yield* unresolved;
+        return Option.some(path.join(folder, target.value[1]));
+      }
+      const up = path.dirname(dir);
+      if (up === dir) return yield* unresolved;
+      dir = up;
+    }
+  });
+
+/**
+ * The file a specifier names from `file`'s folder: the file for a relative
+ * one or a workspace package's (`@manna/*`), none for another package, and
+ * `ImportUnresolved` for one of ours that names no file.
  */
 const resolve = (file: string, specifier: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    if (!specifier.startsWith('.')) return Option.none<string>();
+    if (!specifier.startsWith('.')) {
+      const workspace = Option.fromNullishOr(WORKSPACE.exec(specifier));
+      if (Option.isNone(workspace)) return Option.none<string>();
+      const [, name = '', rest = ''] = workspace.value;
+      return yield* resolveWorkspace(file, specifier, name, `.${rest}`);
+    }
     for (const candidate of candidatesOf(path, path.resolve(path.dirname(file), specifier))) {
       const info = yield* fs.stat(candidate).pipe(Effect.option);
       if (Option.exists(info, (i) => i.type === 'File')) return Option.some(candidate);

@@ -102,6 +102,48 @@ describe('import closure', () => {
     ),
   );
 
+  it.effect(
+    'a workspace package is followed to the file its exports name; another package is not',
+    () =>
+      Effect.gen(function* () {
+        const { files } = yield* importClosure(['/w/app/a.ts']);
+        expect(files).toEqual([
+          '/w/app/a.ts',
+          '/w/node_modules/@manna/x/src/index.ts',
+          '/w/node_modules/@manna/x/src/tools/index.ts',
+          '/w/node_modules/@manna/x/src/tools/t.ts',
+        ]);
+        const error = yield* Effect.flip(importClosure(['/w/app/gone.ts']));
+        expect(error).toEqual(
+          ImportUnresolved.make({ file: '/w/app/gone.ts', specifier: '@manna/x/missing' }),
+        );
+      }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            memoryFileSystem(
+              new Map([
+                [
+                  '/w/app/a.ts',
+                  text(
+                    "import { Effect } from 'effect';\nimport { x } from '@manna/x';\nimport { t } from '@manna/x/tools';",
+                  ),
+                ],
+                ['/w/app/gone.ts', text("import { m } from '@manna/x/missing';")],
+                [
+                  '/w/node_modules/@manna/x/package.json',
+                  text('{"exports":{".":"./src/index.ts","./tools":"./src/tools/index.ts"}}'),
+                ],
+                ['/w/node_modules/@manna/x/src/index.ts', text('export const x = 1;')],
+                ['/w/node_modules/@manna/x/src/tools/index.ts', text("export * from './t.ts';")],
+                ['/w/node_modules/@manna/x/src/tools/t.ts', text('export const t = 1;')],
+              ]),
+            ),
+            Path.layer,
+          ),
+        ),
+      ),
+  );
+
   it.effect('records each dynamic import whose specifier is not a string literal', () =>
     Effect.sync(() => {
       expect(
