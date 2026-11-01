@@ -70,7 +70,7 @@ class CoverageAsked extends Schema.TaggedError<CoverageAsked>()('CoverageAsked',
 }
 
 /** Every member of `film`'s cast with a `cutout/` folder: the film's own, then the library's. */
-const cutoutMembers = Effect.fn('film.cast.cutoutMembers')(function* (film: FilmName) {
+export const cutoutMembers = Effect.fn('film.cast.cutoutMembers')(function* (film: FilmName) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const dir = (yield* FilmFolder).paths(film).dir;
@@ -86,7 +86,7 @@ const cutoutMembers = Effect.fn('film.cast.cutoutMembers')(function* (film: Film
 });
 
 /** The member's manifest, decoded, or none when his folder has no `cutout/coverage.ts`. */
-const manifestOf = Effect.fn('film.cast.manifest')(function* (memberDir: string) {
+export const manifestOf = Effect.fn('film.cast.manifest')(function* (memberDir: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const file = path.join(memberDir, 'cutout', 'coverage.ts');
@@ -99,7 +99,7 @@ const manifestOf = Effect.fn('film.cast.manifest')(function* (memberDir: string)
 const CoverageModule = Schema.Struct({ COVERAGE: Coverage });
 
 /** Stage output written to stderr, so `--json` keeps stdout to its report. */
-const toStderr = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+export const toStderr = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   Effect.gen(function* () {
     const current = yield* Console.Console;
     return yield* Effect.provideService(
