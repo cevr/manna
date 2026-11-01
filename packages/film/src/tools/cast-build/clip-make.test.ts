@@ -1,7 +1,8 @@
 // The clip-make stage over a fake checkout in memory: a clip not yet made
 // fails the build with its fal request as JSON (ClipMissing), a committed
-// clip whose provenance is that request is adopted and then cached, and the
-// stage's key is the request's content, the same in every checkout.
+// clip whose provenance is that request is adopted and then cached, a cached
+// clip is adopted again when its committed files change, and the stage's key
+// is the request's content, the same in every checkout.
 
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer, Option, Path, Schema } from 'effect';
@@ -140,6 +141,64 @@ describe('cast build: the clip-make stage', () => {
         expect(disk.get(`/cache/objects/${sha256Hex(MP4)}`)).toEqual(MP4);
         const again = only(yield* build(disk, '/one'));
         expect(again).toEqual({ ...ran, state: 'cached' });
+      }),
+  );
+
+  it.effect(
+    'ClipMissing: a cached clip whose committed provenance now names another seed is not read cached',
+    () =>
+      Effect.gen(function* () {
+        const disk = checkout('/one', {
+          'cast/m/cutout/raise/clip/clip-b.mp4': MP4,
+          'cast/m/cutout/raise/clip/clip-b.json': provenance(),
+        });
+        expect(only(yield* build(disk, '/one')).state).toBe('ran');
+        const other = clipRequestOf({
+          prompt: PROMPT,
+          seed: 11,
+          first: REQUEST.frames.first,
+          last: Option.none(),
+        });
+        disk.set('/one/cast/m/cutout/raise/clip/clip-b.json', provenance(other));
+        const s = only(yield* build(disk, '/one'));
+        expect(s.state).toBe('failed');
+        expect(s.reason).toContain('ClipMissing');
+        expect(s.reason).toContain(encodeJson(REQUEST));
+      }),
+  );
+
+  it.effect(
+    'a cached clip whose committed mp4 and provenance were replaced by a valid pair gives the new mp4',
+    () =>
+      Effect.gen(function* () {
+        const disk = checkout('/one', {
+          'cast/m/cutout/raise/clip/clip-b.mp4': MP4,
+          'cast/m/cutout/raise/clip/clip-b.json': provenance(),
+        });
+        const first = only(yield* build(disk, '/one'));
+        const NEW = text('the clip mp4, made again');
+        disk.set('/one/cast/m/cutout/raise/clip/clip-b.mp4', NEW);
+        disk.set('/one/cast/m/cutout/raise/clip/clip-b.json', provenance(REQUEST, NEW));
+        const again = only(yield* build(disk, '/one'));
+        expect(again.state).toBe('ran');
+        expect(again.key).toBe(first.key);
+        expect(disk.get(`/cache/objects/${sha256Hex(NEW)}`)).toEqual(NEW);
+      }),
+  );
+
+  it.effect(
+    'ClipMissing: a cached clip whose committed mp4 alone was replaced is not read cached',
+    () =>
+      Effect.gen(function* () {
+        const disk = checkout('/one', {
+          'cast/m/cutout/raise/clip/clip-b.mp4': MP4,
+          'cast/m/cutout/raise/clip/clip-b.json': provenance(),
+        });
+        expect(only(yield* build(disk, '/one')).state).toBe('ran');
+        disk.set('/one/cast/m/cutout/raise/clip/clip-b.mp4', text('another mp4'));
+        const s = only(yield* build(disk, '/one'));
+        expect(s.state).toBe('failed');
+        expect(s.reason).toContain('ClipMissing');
       }),
   );
 

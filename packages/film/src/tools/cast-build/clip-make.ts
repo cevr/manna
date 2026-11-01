@@ -9,9 +9,12 @@
 // This stage makes no fal call: it adopts the committed clip (`<stem>.mp4`,
 // with its provenance `<stem>.json`) when `adoptClip` takes it, and its
 // output is the mp4's bytes. Else it fails as `ClipMissing`, its reason
-// carrying the request as JSON, the call that would make the clip.
+// carrying the request as JSON, the call that would make the clip. A cached
+// output holds (`holds`) only while the committed clip is still adopted and
+// is the same bytes, so the files stay out of the key and a changed clip is
+// judged again.
 
-import { Effect, FileSystem, Option, Path, Schema } from 'effect';
+import { Effect, FileSystem, Option, Path, Result, Schema } from 'effect';
 import { sha256Hex } from '../digest.ts';
 import { type ClipRequest, adoptClip, clipRequestOf } from './clips.ts';
 import type { Clip, Coverage } from './coverage.ts';
@@ -53,6 +56,28 @@ const clipMakeStage = (o: {
   readonly request: ClipRequest;
 }): Stage<FileSystem.FileSystem | Path.Path> => {
   const id = `clip:${o.clip.id}@${o.member}`;
+  /** The committed clip as `adoptClip` judges it against the request: the mp4's bytes, or the reason the stage fails. */
+  const committed = Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const files = filesOf(path, o.memberDir, o.clip.file);
+    const provenance = Option.getOrUndefined(
+      Option.flatMap(
+        Option.getSuccess(yield* Effect.result(fs.readFileString(files.provenance))),
+        decodeJson,
+      ),
+    );
+    const mp4 = Option.getSuccess(yield* Effect.result(fs.readFile(files.mp4)));
+    const got = adoptClip(`${o.member}/${o.clip.id}`, o.request, {
+      provenance,
+      mp4Sha256: Option.getOrUndefined(Option.map(mp4, sha256Hex)),
+    });
+    if (got._tag === 'ClipMissing')
+      return Result.fail(
+        `${id}: ClipMissing: ${got.reason}; the fal request that makes it: ${got.request}`,
+      );
+    return Result.fromOption(mp4, () => `${id}: the adopted mp4 is gone`);
+  });
   return {
     id,
     view: o.clip.id,
@@ -61,9 +86,6 @@ const clipMakeStage = (o: {
     config: keyOf(o.request),
     run: () =>
       Effect.gen(function* () {
-        const fs = yield* FileSystem.FileSystem;
-        const path = yield* Path.Path;
-        const files = filesOf(path, o.memberDir, o.clip.file);
         const absent = [
           o.request.frames.first,
           ...Option.toArray(Option.fromUndefinedOr(o.request.frames.last)),
@@ -74,25 +96,22 @@ const clipMakeStage = (o: {
           return yield* StageFailed.make({
             reason: `${id}: no given frame at ${absent.join(', ')}; draw it before the clip is asked for`,
           });
-        const provenance = Option.getOrUndefined(
-          Option.flatMap(
-            Option.getSuccess(yield* Effect.result(fs.readFileString(files.provenance))),
-            decodeJson,
-          ),
-        );
-        const mp4 = Option.getSuccess(yield* Effect.result(fs.readFile(files.mp4)));
-        const got = adoptClip(`${o.member}/${o.clip.id}`, o.request, {
-          provenance,
-          mp4Sha256: Option.getOrUndefined(Option.map(mp4, sha256Hex)),
-        });
-        if (got._tag === 'ClipMissing')
-          return yield* StageFailed.make({
-            reason: `${id}: ClipMissing: ${got.reason}; the fal request that makes it: ${got.request}`,
-          });
-        return yield* Effect.fromOption(mp4).pipe(
-          Effect.mapError(() => StageFailed.make({ reason: `${id}: the adopted mp4 is gone` })),
-        );
+        const got = yield* committed;
+        if (Result.isFailure(got)) return yield* StageFailed.make({ reason: got.failure });
+        return got.success;
       }),
+    // the key reads the request only, so a cached mp4 answers it only while the
+    // committed clip is still adopted and is those same bytes; else the stage runs
+    // again, and adopts the new clip or fails as ClipMissing
+    holds: (output) =>
+      committed.pipe(
+        Effect.map((got) =>
+          Result.match(got, {
+            onFailure: () => false,
+            onSuccess: (mp4) => sha256Hex(mp4) === sha256Hex(output),
+          }),
+        ),
+      ),
   };
 };
 
