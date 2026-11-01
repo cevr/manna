@@ -71,6 +71,8 @@ export interface PullDown {
   readonly scroll: SharedValue<number>;
   /** How many points of a layer over the list's top (the search field shown again) cover it: the pinned topic row sits under them. */
   readonly cover?: SharedValue<number>;
+  /** The reader's finger met the list: a drag on it begins. */
+  readonly onTouch?: () => void;
 }
 
 export function HymnList({ hymns, hrefOf, offset, empty }: HymnListProps) {

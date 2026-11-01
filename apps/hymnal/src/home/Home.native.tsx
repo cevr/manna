@@ -146,7 +146,8 @@ export function Home() {
  * list's top under the status bar, and a downward one sends it away
  * (`reveal`, `PinnedTabs`); a tap on a pinned tab chooses it as the list's
  * own row does. A tab chosen or a tile picked moves the list for the app,
- * which turns the pinned row neither way (`jump`).
+ * which turns the pinned row neither way (`jump`): it holds as it was until
+ * the reader's drag on the list begins (`touch`).
  */
 function TabList({
   title,
@@ -241,6 +242,7 @@ function TabList({
     rest: 0,
     scroll,
     cover: reveal.cover,
+    onTouch: reveal.touch,
   };
   return (
     <UnderTiles tiles={Option.map(zoom, allAtOnce)}>

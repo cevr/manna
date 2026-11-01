@@ -411,6 +411,7 @@ export function HymnList({
           contentInsetAdjustmentBehavior="never"
           keyboardShouldPersistTaps="handled"
           {...dismissal}
+          onScrollBeginDrag={pullDown?.onTouch}
           ListEmptyComponent={<Text style={styles.empty}>{empty}</Text>}
           extraData={look}
           renderItem={drawRow}

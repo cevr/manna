@@ -28,7 +28,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { color } from '~/color';
 import { useReduceMotion } from '~/player/motion';
 
-import { hidden, jumped, type Reveal, revealAt, shownHeight } from './reveal';
+import { hidden, inReach, jumped, type Reveal, revealAt, shownHeight, touched } from './reveal';
 
 /** The row's slide in or out over the list's top: quick out of the way, as a toolbar's. */
 const slide = { duration: 200, easing: Easing.out(Easing.cubic) };
@@ -50,15 +50,21 @@ export interface TabReveal {
   readonly height: number;
   /** Whether the reader asks for reduced motion: the row then fades in place, with no slide. */
   readonly reduced: boolean;
-  /** Moves the list to `at` for the app (a tab chosen, a tile picked), which turns nothing. */
+  /** Moves the list to `at` for the app (a tab chosen, a tile picked), which turns nothing and holds the row. */
   readonly jump: (at: number) => void;
+  /** The reader's finger met the list: the app's move is over, and the next run counts from where the list stands. */
+  readonly touch: () => void;
+  /** The list's offset the row follows. */
+  readonly scroll: SharedValue<number>;
 }
 
 /**
  * The pinned row's turn and cover from the list's offset `scroll`: `revealAt`
  * turns it on each frame's offset, a turn slides it in or out, and at or
  * above the resting place `rest` it is hidden at once (the list's own row
- * stands where it would).
+ * stands where it would). From the app's move (`jump`) to the reader's touch
+ * (`touch`) the row is held: it keeps its slide, and shows where the list
+ * stands past the resting place.
  */
 export function useTabReveal(scroll: SharedValue<number>, rest: number, height: number): TabReveal {
   const reduced = useReduceMotion();
@@ -68,7 +74,8 @@ export function useTabReveal(scroll: SharedValue<number>, rest: number, height: 
     () => scroll.value,
     (now) => {
       const next = revealAt(state.value, now, rest);
-      if (now <= rest) {
+      // Held, the row neither turns nor slides.
+      if (!next.held && now <= rest) {
         if (progress.value !== 0) progress.value = 0;
       } else if (next.shown !== state.value.shown) {
         progress.value = withTiming(Number(next.shown), { ...slide, ...(reduced && fade) });
@@ -82,10 +89,15 @@ export function useTabReveal(scroll: SharedValue<number>, rest: number, height: 
     return shownHeight(progress.value, height, scroll.value, rest);
   });
   const jump = (at: number) => {
-    state.value = jumped(state.value, at, rest);
-    if (at <= rest) progress.value = 0;
+    state.value = jumped(state.value, at);
   };
-  return { state, progress, cover, rest, height, reduced, jump };
+  const touch = () => {
+    const next = touched(state.value, scroll.value, rest);
+    // Let go at or above the resting place, the row is hidden there, slid out.
+    if (state.value.shown && !next.shown) progress.value = 0;
+    state.value = next;
+  };
+  return { state, progress, cover, rest, height, reduced, jump, touch, scroll };
 }
 
 /** The pinned layer (`shown-tabs`): `children` is the tab row, drawn as the list's own. */
@@ -98,7 +110,7 @@ export function PinnedTabs({
 }) {
   const [shown, setShown] = useState(false);
   useAnimatedReaction(
-    () => reveal.state.value.shown,
+    () => inReach(reveal.state.value, reveal.scroll.value, reveal.rest),
     (now, before) => {
       if (now !== before) scheduleOnRN(setShown, now);
     },

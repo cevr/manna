@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'bun:test';
 
-import { hidden, jumped, type Reveal, revealAt, shownHeight, travel } from './reveal';
+import {
+  hidden,
+  inReach,
+  jumped,
+  type Reveal,
+  revealAt,
+  shownHeight,
+  touched,
+  travel,
+} from './reveal';
 
 /** The list's own tab row meets the list's top 49 pt down, under the title, at the reader's usual text size. */
 const rest = 49;
@@ -60,16 +69,42 @@ describe('the tab row pinned over the home list', () => {
 });
 
 describe('a jump the app makes', () => {
-  it('turns nothing, and counts the next run from where it landed', () => {
+  /** The row after the jump to `at`, the list's reports while it lands, then the reader's touch at the last. */
+  const landed = (start: Reveal, at: number, reports: ReadonlyArray<number>) => {
+    const held = through([at, ...reports], jumped(start, at));
+    return touched(held, reports.at(-1) ?? at, rest);
+  };
+
+  it('turns nothing, and holds the row through the list’s reports until the reader touches it', () => {
     const shown = through([3000, 2900]);
-    expect(jumped(shown, 5000, rest)).toEqual({ shown: true, from: 5000 });
-    expect(jumped(hidden(rest), 400, rest)).toEqual({ shown: false, from: 400 });
-    // The reader's scroll on from the landing turns it as from any offset.
-    expect(through([5000 + travel], jumped(shown, 5000, rest)).shown).toBe(false);
+    // The new list reports its top, a place above the rest, one on the way, then its landing.
+    expect(through([0, 20, 900, 5000], jumped(shown, 5000))).toEqual({
+      shown: true,
+      from: 5000,
+      held: true,
+    });
+    expect(landed(shown, 5000, [0, 20, 900, 5000])).toEqual({ shown: true, from: 5000 });
+    expect(landed(hidden(rest), 400, [0, 400])).toEqual({ shown: false, from: 400 });
   });
 
-  it('hides the row when it lands at or above the resting place', () => {
-    expect(jumped(through([3000, 2900]), rest, rest).shown).toBe(false);
+  it('after the touch, the reader’s scroll turns it as from any offset', () => {
+    const shown = landed(through([3000, 2900]), 5000, [0, 5000]);
+    expect(through([5000 + travel - 0.5], shown).shown).toBe(true);
+    expect(through([5000 + travel], shown).shown).toBe(false);
+    const hiddenThere = landed(hidden(rest), 5000, [0, 5000]);
+    expect(through([5000 - travel], hiddenThere).shown).toBe(true);
+  });
+
+  it('keeps a held row out of reach at or above the resting place, and hides it there at the touch', () => {
+    const held = through([0, rest], jumped(through([3000, 2900]), rest));
+    expect(inReach(held, rest, rest)).toBe(false);
+    expect(inReach(through([rest + 1], held), rest + 1, rest)).toBe(true);
+    expect(touched(held, rest, rest)).toEqual({ shown: false, from: rest });
+  });
+
+  it('a touch outside a hold changes nothing', () => {
+    const shown = through([3000, 2900]);
+    expect(touched(shown, 2950, rest)).toBe(shown);
   });
 });
 
