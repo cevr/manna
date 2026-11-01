@@ -49,7 +49,7 @@ const files = () =>
     ['/m/cutout/sheets/front/record.json', text('{"missed":[]}')],
   ]);
 
-const options = { cache: '/cache', plan: false, touch: [], spend: new Set<never>() };
+const options = { root: '/', cache: '/cache', plan: false, touch: [], spend: new Set<never>() };
 
 const services = (disk: Map<string, Uint8Array>) =>
   ContentStore.layer.pipe(Layer.provideMerge([memoryFileSystem(disk), Path.layer, memoryLocks]));
@@ -65,6 +65,7 @@ describe('coverage reads the build cache', () => {
           options,
         );
         const measured = yield* measuredOf(stagesOf(false), COVERAGE, 'm', {
+          root: '/',
           cache: '/cache',
           run: false,
         });
@@ -84,6 +85,7 @@ describe('coverage reads the build cache', () => {
   it.effect('a cache without them leaves them unmeasured; failing fit rows measure false', () =>
     Effect.gen(function* () {
       const empty = yield* measuredOf(stagesOf(false), COVERAGE, 'm', {
+        root: '/',
         cache: '/cache',
         run: false,
       });
@@ -91,8 +93,9 @@ describe('coverage reads the build cache', () => {
       const facts = yield* coverageFacts('/m', COVERAGE, empty);
       expect(facts['turnaround-front']?.unmeasured).toEqual(['cut', 'fit']);
       // measuring runs the free stages with no spend and keeps them, so a plan then reads them
-      yield* measuredOf(stagesOf(true), COVERAGE, 'm', { cache: '/cache', run: true });
+      yield* measuredOf(stagesOf(true), COVERAGE, 'm', { root: '/', cache: '/cache', run: true });
       const failing = yield* measuredOf(stagesOf(true), COVERAGE, 'm', {
+        root: '/',
         cache: '/cache',
         run: false,
       });

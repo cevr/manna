@@ -240,6 +240,8 @@ const partsOver = <E>(
           yield* buildSources('in-its-order' as never, RENDER_PAGE),
         )).filter((s) => [`drawing:${FRONT.id}@lead-feast`, PARTS].includes(s.id));
         const report = yield* buildGraph(stages, {
+          // the member lies in a scratch folder and the stage sources in the repo
+          root: '/',
           cache: at.cache,
           plan: false,
           touch: [],

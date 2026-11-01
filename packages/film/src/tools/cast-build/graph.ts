@@ -1,7 +1,8 @@
 // The cast build's stage graph and its cache. A stage is `{ id, view?,
 // inputs, version, config?, run }`; its key is the SHA-256 of its id, its
 // version, its config and the hash of each input, where an input is a file's
-// bytes or an upstream stage's output. A stage's output is bytes, kept in
+// bytes, named by its path from the checkout's root (so every checkout reads
+// the same keys), or an upstream stage's output. A stage's output is bytes, kept in
 // the cache as `objects/<sha256>`, and `build.json` (a `ContentStore`
 // manifest) maps each key to its output's hash and the stage's wall time,
 // with what the run noted (`ctx.note`) and the USD it counted, read
@@ -175,6 +176,12 @@ export interface Stage<R> {
 type StageError = WaitingSpend | WaitingOwner | StageFailed;
 
 interface BuildOptions {
+  /**
+   * The checkout's root: a file input is keyed by its path from here, so a
+   * key reads the same in every checkout and the one cache serves them all.
+   * A file input outside it is refused (`GraphInvalid`).
+   */
+  readonly root: string;
   /** The cache folder: `objects/` and `build.json`. */
   readonly cache: string;
   /** Run nothing; report what would run. */
@@ -289,6 +296,22 @@ const checkOrder = <R>(stages: ReadonlyArray<Stage<R>>) => {
   return Option.none<string>();
 };
 
+/** A file input's path from `root`, or none when it lies outside `root`. */
+const fromRoot = (path: Path.Path, root: string, file: string) => {
+  const relative = path.relative(path.resolve(root), path.resolve(file));
+  if (relative.startsWith('..') || path.isAbsolute(relative)) return Option.none<string>();
+  return Option.some(relative);
+};
+
+/** The root check: every file input lies under `root`, since its key names it from there. */
+const checkRoot = <R>(path: Path.Path, root: string, stages: ReadonlyArray<Stage<R>>) => {
+  for (const stage of stages)
+    for (const input of stage.inputs)
+      if (input._tag === 'File' && Option.isNone(fromRoot(path, root, input.path)))
+        return Option.some(`${stage.id} reads ${input.path}, outside the root ${root}`);
+  return Option.none<string>();
+};
+
 /** How long a build waits before it first decides again on a key another build runs. */
 const BUSY_FIRST = '100 millis';
 
@@ -375,10 +398,10 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
   stages: ReadonlyArray<Stage<R>>,
   options: BuildOptions,
 ) {
-  const invalid = checkOrder(stages);
-  if (Option.isSome(invalid)) return yield* GraphInvalid.make({ reason: invalid.value });
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
+  const invalid = Option.orElse(checkOrder(stages), () => checkRoot(path, options.root, stages));
+  if (Option.isSome(invalid)) return yield* GraphInvalid.make({ reason: invalid.value });
   const store = yield* ContentStore;
   const manifest = manifestIn(path, options.cache);
   const objects = path.join(options.cache, 'objects');
@@ -459,7 +482,11 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
     );
   const inputLine = (input: Input) => {
     if (input._tag === 'File')
-      return fileHash(input.path).pipe(Effect.map((h) => `file:${input.path}=${h}`));
+      // every file input lies under the root (`checkRoot`), so its line names no checkout
+      return Option.match(fromRoot(path, options.root, input.path), {
+        onNone: () => Effect.die(`${input.path} is outside the root ${options.root}`),
+        onSome: (named) => fileHash(input.path).pipe(Effect.map((h) => `file:${named}=${h}`)),
+      });
     return Effect.succeed(
       `${LINE[input._tag]}:${input.id}=${Option.getOrElse(outputOf(input.id), () => 'held')}`,
     );

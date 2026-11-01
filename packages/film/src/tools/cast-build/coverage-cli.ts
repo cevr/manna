@@ -29,7 +29,7 @@ import { Counsel } from '../counsel.ts';
 import { Critic } from '../critique.ts';
 import { FilmFolder, type FilmName, filmNamed } from '../film-repo.ts';
 import type { Pages } from '../pages.ts';
-import { castCache, measuredOf, memberOf } from './built.ts';
+import { castCache, castRoot, measuredOf, memberOf } from './built.ts';
 import { CutKind, Requirement, coverageOf } from './coverage.ts';
 import { coverageFacts } from './coverage-facts.ts';
 import { buildSources, memberStages } from './stages.ts';
@@ -119,6 +119,7 @@ const reportOf = Effect.fn('film.cast.coverageReport')(function* (
   const cache = yield* castCache;
   const results = yield* toStderr(
     measuredOf(yield* memberStages(m, yield* buildSources(film, renderPage)), m.coverage, member, {
+      root: castRoot,
       cache,
       run,
     }),

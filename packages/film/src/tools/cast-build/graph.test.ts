@@ -34,6 +34,7 @@ import {
 type BuildOptions = Parameters<typeof buildGraph>[1];
 
 const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
+  root: '/',
   cache: '/cache',
   plan: false,
   touch: [],
@@ -88,18 +89,18 @@ const countingTakes = (files: Map<string, Uint8Array>, takes: { n: number }) =>
 /**
  * drawing (reads /in/view.png) → parts (its bytes' length, so a same-length
  * change makes the same output) → cut; and a key that spends okra; each run
- * counted in `runs`.
+ * counted in `runs`. Its files lie under `checkout` (`/` by default).
  */
-const fakeGraph = (runs: Map<string, number>) => {
+const rootedGraph = (runs: Map<string, number>, checkout: string) => {
   const counted = (id: string, bytes: Effect.Effect<Uint8Array, StageFailed>) =>
     Effect.sync(() => runs.set(id, (runs.get(id) ?? 0) + 1)).pipe(Effect.andThen(bytes));
   const stages: ReadonlyArray<Stage<never>> = [
     {
       id: 'drawing:front',
       view: 'turnaround-front',
-      inputs: [fileInput('/in/view.png')],
+      inputs: [fileInput(`${checkout}/in/view.png`)],
       version: '1',
-      run: (ctx) => counted('drawing:front', ctx.file('/in/view.png')),
+      run: (ctx) => counted('drawing:front', ctx.file(`${checkout}/in/view.png`)),
     },
     {
       id: 'parts:front',
@@ -115,14 +116,14 @@ const fakeGraph = (runs: Map<string, number>) => {
     {
       id: 'cut:front',
       view: 'turnaround-front',
-      inputs: [stageInput('parts:front'), fileInput('/in/puppets.ts')],
+      inputs: [stageInput('parts:front'), fileInput(`${checkout}/in/puppets.ts`)],
       version: '1',
       run: (ctx) => counted('cut:front', ctx.output('parts:front')),
     },
     {
       id: 'parts:k2',
       view: 'raise/k2',
-      inputs: [fileInput('/in/k2.png')],
+      inputs: [fileInput(`${checkout}/in/k2.png`)],
       version: '1',
       run: (ctx) => ctx.spend('okra', counted('parts:k2', Effect.succeed(text('k2 parts')))),
     },
@@ -136,6 +137,7 @@ const fakeGraph = (runs: Map<string, number>) => {
   ];
   return stages;
 };
+const fakeGraph = (runs: Map<string, number>) => rootedGraph(runs, '');
 
 const seeded = () =>
   new Map<string, Uint8Array>([
@@ -322,6 +324,74 @@ describe('the cast build graph', () => {
           Option.some('raise/k7 not drawn'),
         );
         expect(runs.get('ask')).toBe(2);
+      }).pipe(Effect.provide(servicesOver(files)));
+    },
+  );
+
+  it.effect(
+    'a file input is keyed by its path from the root: the same tree in another checkout reads every stage cached',
+    () => {
+      const files = new Map<string, Uint8Array>();
+      const runs = new Map<string, number>();
+      for (const checkout of ['/one', '/two'])
+        for (const [file, bytes] of seeded()) files.set(`${checkout}${file}`, bytes);
+      return Effect.gen(function* () {
+        const first = yield* buildGraph(rootedGraph(runs, '/one'), options({ root: '/one' }));
+        expect(statesOf(first)['cut:front']).toBe('ran');
+        runs.clear();
+        const other = yield* buildGraph(
+          rootedGraph(runs, '/two'),
+          options({ root: '/two', plan: true }),
+        );
+        expect(statesOf(other)).toEqual({
+          'drawing:front': 'cached',
+          'parts:front': 'cached',
+          'cut:front': 'cached',
+          'parts:k2': 'waiting-spend',
+          'cut:k2': 'waiting-spend',
+        });
+        expect(other.stages.map((s) => s.key)).toEqual(first.stages.map((s) => s.key));
+        expect(runs.size).toBe(0);
+      }).pipe(Effect.provide(servicesOver(files)));
+    },
+  );
+
+  it.effect(
+    "two members' files whose paths differ only in the member never share a key, bytes equal",
+    () => {
+      const files = new Map<string, Uint8Array>([
+        ['/repo/cast/sower/cutout/coverage.ts', text('export const COVERAGE = {}')],
+        ['/repo/cast/feast-mother/cutout/coverage.ts', text('export const COVERAGE = {}')],
+      ]);
+      const reading = (member: string): ReadonlyArray<Stage<never>> => [
+        {
+          id: 'coverage',
+          inputs: [fileInput(`/repo/cast/${member}/cutout/coverage.ts`)],
+          version: '1',
+          run: () => Effect.succeed(text(member)),
+        },
+      ];
+      return Effect.gen(function* () {
+        const sower = yield* buildGraph(reading('sower'), options({ root: '/repo' }));
+        const mother = yield* buildGraph(reading('feast-mother'), options({ root: '/repo' }));
+        expect(statesOf(mother)).toEqual({ coverage: 'ran' });
+        expect(mother.stages[0]?.key).not.toEqual(sower.stages[0]?.key);
+      }).pipe(Effect.provide(servicesOver(files)));
+    },
+  );
+
+  it.effect(
+    'a file input outside the root is refused before any stage runs: its key would name the checkout',
+    () => {
+      const files = seeded();
+      const runs = new Map<string, number>();
+      return Effect.gen(function* () {
+        const error = yield* buildGraph(fakeGraph(runs), options({ root: '/repo' })).pipe(
+          Effect.flip,
+        );
+        expect(error._tag).toBe('GraphInvalid');
+        expect(error._tag === 'GraphInvalid' && error.reason).toContain('/in/view.png');
+        expect(runs.size).toBe(0);
       }).pipe(Effect.provide(servicesOver(files)));
     },
   );

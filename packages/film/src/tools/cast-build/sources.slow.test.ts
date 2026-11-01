@@ -9,6 +9,7 @@ import { Effect, FileSystem, Layer, Path } from 'effect';
 import { FetchHttpClient, HttpClient } from 'effect/http';
 import { ContentStore } from '../content-store.ts';
 import { memoryLocks, text } from '../host/testing.ts';
+import { castRoot } from './built.ts';
 import { type Input, type Stage, buildGraph } from './graph.ts';
 import { FILMS, RENDER_PAGE, serve } from '../../../../../apps/animations/server.ts';
 import { filmCastSources, pageSources, stageSources } from './sources.ts';
@@ -82,7 +83,7 @@ describe('stage sources', () => {
           run: () => Effect.succeed(text('shard')),
         },
       ];
-      const options = { cache, plan: false, touch: [], spend: new Set<never>() };
+      const options = { root: castRoot, cache, plan: false, touch: [], spend: new Set<never>() };
       const warm = yield* buildGraph(stages, options);
       expect(warm.stages.map((s) => s.state)).toEqual(['ran']);
       const again = yield* buildGraph(stages, { ...options, plan: true });
@@ -149,7 +150,7 @@ describe('stage sources', () => {
           run: () => Effect.succeed(text('rows')),
         },
       ];
-      const options = { cache, plan: false, touch: [], spend: new Set<never>() };
+      const options = { root: castRoot, cache, plan: false, touch: [], spend: new Set<never>() };
       expect((yield* buildGraph(stages, options)).stages.map((s) => s.state)).toEqual(['ran']);
       const stateAfter = (touch: ReadonlyArray<string>) =>
         Effect.map(buildGraph(stages, { ...options, plan: true, touch }), (r) =>

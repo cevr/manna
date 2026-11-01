@@ -23,6 +23,7 @@ import { DrawingSet, type OwnerNeed, askStage, drawStage, ownerNeeds } from './o
 type BuildOptions = Parameters<typeof buildGraph>[1];
 
 const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
+  root: '/',
   cache: '/cache',
   plan: false,
   touch: [],

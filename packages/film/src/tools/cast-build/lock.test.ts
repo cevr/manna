@@ -106,6 +106,7 @@ const frontEvalFails = graph.map((stage): Stage<CastReader | FileSystem.FileSyst
 /** `evaluate` is eval.py's JSON text, the same for every drawing. */
 const build = (disk: Disk, stdout = STDOUT, evaluate = jsonOf(EVAL), stages = graph) =>
   buildGraph<CastReader | FileSystem.FileSystem>([...stages, lock], {
+    root: '/',
     cache: '/cache',
     plan: false,
     touch: [],

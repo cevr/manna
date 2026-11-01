@@ -24,6 +24,13 @@ export const castCache = Effect.gen(function* () {
   );
 });
 
+/**
+ * The checkout's root, the folder holding `packages/film`: the build keys
+ * every file input by its path from here (`buildGraph`'s `root`), so each
+ * checkout of the repo reads the same keys from the one cache.
+ */
+export const castRoot = new URL('../../../../../', import.meta.url).pathname;
+
 const CoverageModule = Schema.Struct({ COVERAGE: Coverage });
 
 /** The member's manifest, decoded, or none when his folder has no `cutout/coverage.ts`. */
@@ -100,10 +107,11 @@ export const measuredOf = Effect.fn('cast.build.measured')(function* <R>(
   stages: ReadonlyArray<Stage<R>>,
   coverage: Coverage,
   member: string,
-  o: { readonly cache: string; readonly run: boolean },
+  o: { readonly root: string; readonly cache: string; readonly run: boolean },
 ) {
   const free = stages.filter((s) => FREE.some((prefix) => s.id.startsWith(prefix)));
   const report = yield* buildGraph(free, {
+    root: o.root,
     cache: o.cache,
     plan: !o.run,
     touch: [],

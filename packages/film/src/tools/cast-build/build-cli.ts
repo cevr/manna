@@ -23,7 +23,7 @@ import { FilmFolder, filmNamed } from '../film-repo.ts';
 import { ImageRoute } from '../image-route.ts';
 import type { Pages } from '../pages.ts';
 import type { AskStore } from '../ask-store.ts';
-import { castCache, memberOf, readerLockOf } from './built.ts';
+import { castCache, castRoot, memberOf, readerLockOf } from './built.ts';
 import { cutoutMembers, toStderr } from './coverage-cli.ts';
 import { viewOfId } from './coverage-facts.ts';
 import {
@@ -218,6 +218,7 @@ export const build = <E, R>(
       ];
       const report = yield* toStderr(
         buildGraph(stages, {
+          root: castRoot,
           cache,
           plan: input.plan,
           touch: input.touch,
