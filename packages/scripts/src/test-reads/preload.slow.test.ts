@@ -4,6 +4,8 @@ import { Effect, FileSystem, Path } from 'effect';
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 
+import { readsEnv } from './env.ts';
+
 /** A test that reads a file, imports a module and loads a native library. */
 const FIXTURE = `import { expect, test } from 'bun:test';
 
@@ -40,7 +42,7 @@ describe('the read recorder test:reads preloads', () => {
             const exit = yield* spawner.exitCode(
               ChildProcess.make('bun', ['test', mode, './reads.test.ts'], {
                 cwd: dir,
-                env: { BUN_OPTIONS: `--preload=${preload}`, MANNA_TEST_READS: log },
+                env: readsEnv(preload, log),
                 extendEnv: true,
                 forceKillAfter: '5 seconds',
               }),
@@ -56,6 +58,32 @@ describe('the read recorder test:reads preloads', () => {
           }
           expect(reads).not.toContain(preload);
         }
+      }).pipe(Effect.scoped),
+  );
+
+  it.effect.layer(BunServices.layer)(
+    'leaves nothing in the HOME of a bun process a test starts, as that process leaves without it',
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const spawner = yield* ChildProcessSpawner;
+        const dir = yield* fs.makeTempDirectoryScoped({ prefix: 'test-reads-home-' });
+        const home = path.join(dir, 'home');
+        yield* fs.makeDirectory(home);
+        yield* fs.writeFileString(path.join(dir, 'child.js'), 'console.log(1);\n');
+        const log = path.join(dir, 'child.reads');
+        yield* fs.writeFileString(log, '');
+        const exit = yield* spawner.exitCode(
+          ChildProcess.make('bun', [path.join(dir, 'child.js')], {
+            cwd: dir,
+            env: { ...readsEnv(path.join(import.meta.dir, 'preload.ts'), log), HOME: home },
+            extendEnv: true,
+            forceKillAfter: '5 seconds',
+          }),
+        );
+        expect(Number(exit)).toBe(0);
+        expect(yield* fs.readDirectory(home, { recursive: true })).toEqual([]);
       }).pipe(Effect.scoped),
   );
 });

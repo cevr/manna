@@ -24,6 +24,7 @@ import { Console, Effect, FileSystem, Path, Schema, Stream } from 'effect';
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 
+import { readsEnv } from './test-reads/env.js';
 import { hashedBy, unhashed } from './test-reads/unhashed.js';
 
 /** What this reads of turbo's dry run (`--dry=json`). */
@@ -71,7 +72,7 @@ Effect.gen(function* () {
           spawner.spawn(
             ChildProcess.make('bun', ['run', 'test'], {
               cwd: path.join(root, task.directory),
-              env: { BUN_OPTIONS: `--preload=${preload}`, MANNA_TEST_READS: log },
+              env: readsEnv(preload, log),
               extendEnv: true,
               forceKillAfter: '5 seconds',
             }),
