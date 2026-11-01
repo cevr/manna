@@ -1,3 +1,7 @@
+// A clip's given frames read off their pixels. Each frame is drawn at full
+// size (1066 x 1356, twice the canvas), about 100 ms a frame, so these checks
+// live in the slow suite, not the unit tests' budget.
+
 import { describe, expect, test } from 'bun:test';
 import { Result } from 'effect';
 import { type Puppet, puppetOf } from '../../core/puppet.ts';
