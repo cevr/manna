@@ -77,7 +77,7 @@ describe('the key model', () => {
       expect(step(printed, state, event)).toEqual({ state: { ...state, open: false }, cues: [] });
     }));
 
-  it('closes the dials once a resetâs turn home has been seen, the move and chords as they were, with no cue', () =>
+  it('closes the dials once a reset’s turn home has been seen, the move and chords as they were, with no cue', () =>
     each((printed, state, event) => {
       if (event._tag !== 'ResetShown') return;
       const next = step(printed, state, event);
@@ -159,7 +159,7 @@ describe('the key model', () => {
     }));
 });
 
-describe('the key button and the dialsâ detents', () => {
+describe('the key button and the dials’ detents', () => {
   const db: Chord.Key = { tonic: 'Db', minor: false };
 
   it('shows the key with no capo, the capo over the shapes with one, and nothing with chords off', () => {
@@ -176,7 +176,7 @@ describe('the key button and the dialsâ detents', () => {
     expect(faceOf(db, { chords: false, move: still, open: false })).toEqual({ _tag: 'Off' });
   });
 
-  it('marks the printed key among twelve, and the open shapes among the capoâs frets', () => {
+  it('marks the printed key among twelve, and the open shapes among the capo’s frets', () => {
     const keys = keyStops(db);
     expect(keys.map((stop) => stop.pitch)).toEqual(Array.from({ length: 12 }, (_, k) => k));
     expect(keys.filter((stop) => stop.printed).map((stop) => stop.name)).toEqual(['Db']);
