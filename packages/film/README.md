@@ -2901,9 +2901,27 @@ each member's stages from his manifest (`tools/cast-build/stages.ts`):
   reader, trained on Modal; it notes the fit's steps, seconds per step and
   final loss beside its checkpoint), `eval` (each drawing's held renders
   read and scored on this machine), `eval:clip` (each clip chained by the
-  reader), `lock` (the library's `cutout/reader.lock.json`, written from
-  those stages' outputs and the train's note, `tools/cast-build/lock.ts`)
-  and the owner's `ask` and `draw` (`tools/cast-build/owner-ask.ts`).
+  reader and judged), `lock` (the library's `cutout/reader.lock.json`,
+  written from those stages' outputs and the train's note,
+  `tools/cast-build/lock.ts`) and the owner's `ask` and `draw`
+  (`tools/cast-build/owner-ask.ts`).
+
+A clip is a fal motion reference a coverage manifest names (`clips`: its
+given drawings, its bands and the drawings each band expects). Its mp4 sits
+at `cutout/<motion>/clip/<id>.mp4` beside its given frames and its
+provenance `<id>.json` (the fal request, its output's hash and the `map`
+from video pixels to the reader's canvas). The clip stage adopts the
+committed mp4 only when the provenance matches the request and the mp4's
+hash; otherwise it fails with `ClipMissing`, which carries the request to
+make. The build makes no fal call: each paid call is made by hand and kept
+in `cutout/fal-ledger.json`, which `falSpendAllowed` holds to $5 a member
+and $15 a week (`tools/cast-build/clips.ts`). `eval:clip` decodes the mp4
+in this process, lays each frame on the reader's canvas at the map
+(`clip-eval.ts`, `clip-map.ts`) and judges the read against `CLIP_BARS`:
+the figure's height and feet line hold, each band's IoU, and each
+expecting band's share of frames named as one of its drawings. The lock
+keeps every clip's entry under `clips.byClip` with how many passed, and a
+build whose lock fails a clip exits with `ClipsFailed`.
 
 A stage spends only when `--spend` names what it spends: `okra` for a part
 sheet's call and a drawing's tries, `modal` for the train. Without it the
