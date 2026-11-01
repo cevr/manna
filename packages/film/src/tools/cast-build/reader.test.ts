@@ -4,8 +4,21 @@
 // a change to one of the reader's source files is a new train.
 
 import * as BunFileSystem from '@effect/platform-bun/BunFileSystem';
+import * as BunPath from '@effect/platform-bun/BunPath';
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
+import {
+  ConfigProvider,
+  Effect,
+  FileSystem,
+  Layer,
+  Option,
+  Path,
+  Schema,
+  Sink,
+  Stream,
+} from 'effect';
+import { ChildProcessSpawner } from 'effect/process';
+import { sha256Hex } from '../digest.ts';
 import { memoryFileSystem, memoryLocks, text } from '../host/testing.ts';
 import { ContentStore } from '../content-store.ts';
 import { type Stage, buildGraph, fileInput, stageInput } from './graph.ts';
@@ -419,7 +432,7 @@ describe('cast build: train and eval', () => {
       }),
   );
 
-  it.effect('the train config names the backbone and input model.py reads, in its key', () =>
+  it.effect("the train config's backbone and input, in its key, are model.py's defaults", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const model = yield* fs.readFileString(
@@ -432,4 +445,82 @@ describe('cast build: train and eval', () => {
       expect(model).toContain(`IN_W, IN_H = ${train.inputSide.width}, ${train.inputSide.height}`);
     }).pipe(Effect.provide(BunFileSystem.layer)),
   );
+});
+
+describe('the live reader', () => {
+  /** A spawner that records each command (program and arguments) and exits 0, printing nothing. */
+  const recording = (commands: Array<ReadonlyArray<string>>) =>
+    ChildProcessSpawner.make((command) => {
+      if (command._tag === 'StandardCommand') commands.push([command.command, ...command.args]);
+      return Effect.succeed(
+        ChildProcessSpawner.makeHandle({
+          pid: ChildProcessSpawner.ProcessId(0),
+          exitCode: Effect.succeed(ChildProcessSpawner.ExitCode(0)),
+          isRunning: Effect.succeed(false),
+          kill: () => Effect.void,
+          stdin: Sink.drain,
+          stdout: Stream.empty,
+          stderr: Stream.empty,
+          all: Stream.empty,
+          getInputFd: () => Sink.drain,
+          getOutputFd: () => Stream.empty,
+          unref: Effect.succeed(Effect.void),
+        }),
+      );
+    });
+
+  /**
+   * The live reader over `spawner`, in an environment made for it as the
+   * layer finds one: `venv-<uv.lock's hash>/bin/python` under a temporary
+   * FILM_READER_HOME.
+   */
+  const liveOver = (spawner: ChildProcessSpawner.ChildProcessSpawner['Service']) =>
+    Layer.unwrap(
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const home = yield* fs.makeTempDirectoryScoped();
+        const lock = yield* fs.readFile(
+          new URL('../../../reader/uv.lock', import.meta.url).pathname,
+        );
+        const bin = `${home}/venv-${sha256Hex(lock).slice(0, 12)}/bin`;
+        yield* fs.makeDirectory(bin, { recursive: true });
+        yield* fs.writeFileString(`${bin}/python`, '');
+        return CastReader.layer.pipe(
+          Layer.provide([
+            Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, spawner),
+            ConfigProvider.layer(ConfigProvider.fromUnknown({ FILM_READER_HOME: home })),
+          ]),
+        );
+      }),
+    ).pipe(Layer.provide([BunFileSystem.layer, BunPath.layer]));
+
+  it.effect("a train hands Modal the config's backbone and input side", () => {
+    const commands: Array<ReadonlyArray<string>> = [];
+    return Effect.gen(function* () {
+      // the recording spawner writes no checkpoint, so the train itself fails after its call
+      yield* Effect.exit(
+        (yield* CastReader).train({
+          trainset: 'set',
+          key: 'key',
+          run: 'run',
+          shards: ['/a.tar'],
+          config: {
+            steps: 10,
+            batch: 2,
+            lr: 0.001,
+            seed: 0,
+            gpu: 'L4',
+            precision: 'bf16',
+            backbone: 'facebook/dinov2-base',
+            inputSide: { width: 896, height: 1120 },
+          },
+        }),
+      );
+      const train = commands.find((c) => c.some((a) => a.endsWith('modal_app.py::train')));
+      const flag = (name: string) => train?.[train.indexOf(name) + 1];
+      expect(flag('--backbone')).toBe('facebook/dinov2-base');
+      expect(flag('--input-width')).toBe('896');
+      expect(flag('--input-height')).toBe('1120');
+    }).pipe(Effect.provide(liveOver(recording(commands))));
+  });
 });

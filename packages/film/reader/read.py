@@ -22,7 +22,7 @@ import cv2
 import numpy as np
 import torch
 
-from model import CANVAS, decode, input_to_canvas, letterbox_matrix, load_ckpt, normalize, read_rgb, to_input, world_of
+from model import CANVAS, decode, frame_of, input_to_canvas, letterbox_matrix, load_ckpt, normalize, read_rgb, to_input, world_of
 
 VIDEO_X0, VIDEO_Y0, VIDEO_SCALE = -182, 68, 2
 
@@ -72,7 +72,8 @@ def png_frames(d: str, limit: int | None = None):
 @torch.no_grad()
 def read(ckpt: str, frames, device: str = "cpu", batch: int = 16, bf16: bool = False, save_mapped: str | None = None, all_probs: bool = False) -> dict:
     model, ck = load_ckpt(ckpt, device)
-    joints, rest, classes, m = ck["joints"], ck["rest"], ck["classes"], letterbox_matrix()
+    joints, rest, classes, frame = ck["joints"], ck["rest"], ck["classes"], frame_of(ck)
+    m = letterbox_matrix(frame=frame)  # the frame the reader was trained on
     out, names, xs, t0, n = [], [], [], time.time(), 0
 
     def flush():
@@ -80,7 +81,7 @@ def read(ckpt: str, frames, device: str = "cpu", batch: int = 16, bf16: bool = F
         with torch.autocast(device_type=device.split(":")[0], dtype=torch.bfloat16, enabled=bf16):
             heat, logits = model(x)
         pts_in, conf = decode(heat)
-        pts = input_to_canvas(pts_in)
+        pts = input_to_canvas(pts_in, frame)
         prob = logits.float().softmax(-1).cpu() if logits is not None else None
         for k, name in enumerate(names):
             jd = {j: [round(float(pts[k, i, 0]), 2), round(float(pts[k, i, 1]), 2), round(float(conf[k, i]), 3)] for i, j in enumerate(joints)}
@@ -103,7 +104,7 @@ def read(ckpt: str, frames, device: str = "cpu", batch: int = 16, bf16: bool = F
         if save_mapped:
             os.makedirs(save_mapped, exist_ok=True)
             cv2.imwrite(os.path.join(save_mapped, name + ".png"), cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
-        names.append(name); xs.append(normalize(to_input(img, m))); n += 1
+        names.append(name); xs.append(normalize(to_input(img, m, frame))); n += 1
         if len(xs) == batch:
             flush()
     if xs:

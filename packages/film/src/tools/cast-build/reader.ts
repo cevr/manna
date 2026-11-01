@@ -275,7 +275,9 @@ export class CastReader extends Context.Service<CastReader, CastReaderService>()
                 ...['--shards', job.shards.join(',')],
                 ...['--out', out, '--steps', String(c.steps), '--batch', String(c.batch)],
                 ...['--lr', String(c.lr), '--seed', String(c.seed), '--gpu', c.gpu],
-                ...['--precision', c.precision],
+                ...['--precision', c.precision, '--backbone', c.backbone],
+                ...['--input-width', String(c.inputSide.width)],
+                ...['--input-height', String(c.inputSide.height)],
               ],
               TRAIN_LIMIT,
             );

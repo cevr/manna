@@ -3,7 +3,9 @@ import numpy as np
 import torch
 from transformers import Dinov2Config
 
-from model import HEAT_H, HEAT_W, IN_H, IN_W, JOINTS, STRIDE, Reader, decode, heat_targets, input_to_canvas, letterbox_matrix
+import pytest
+
+from model import FRAME, IN_H, IN_W, JOINTS, STRIDE, Frame, Reader, decode, heat_targets, input_to_canvas, letterbox_matrix
 
 
 def tiny() -> Dinov2Config:
@@ -15,8 +17,28 @@ def test_heads_shapes():
     model = Reader(n_classes=5, backbone=tiny()).eval()
     with torch.no_grad():
         heat, logits = model(torch.zeros(2, 3, IN_H, IN_W))
-    assert heat.shape == (2, len(JOINTS), HEAT_H, HEAT_W) == (2, 12, 160, 128)
+    assert heat.shape == (2, len(JOINTS), FRAME.heat_h, FRAME.heat_w) == (2, 12, 160, 128)
     assert logits.shape == (2, 5)
+
+
+def test_a_doubled_frame_reads_at_its_own_side():
+    frame = Frame(896, 1120)
+    model = Reader(n_classes=0, backbone=tiny()).eval()
+    with torch.no_grad():
+        heat, _ = model(torch.zeros(1, 3, frame.h, frame.w))
+    assert heat.shape[2:] == (frame.heat_h, frame.heat_w) == (320, 256)
+    m = letterbox_matrix(frame=frame)
+    canvas = np.array([[0.0, 0.0], [266.5, 339.0], [532.0, 677.0]], np.float32)
+    assert np.abs(canvas @ m[:, :2].T + m[:, 2] - canvas * 1120 / 678).max() < 1e-3
+    assert np.abs(input_to_canvas(canvas @ m[:, :2].T + m[:, 2], frame) - canvas).max() < 1e-3
+    assert heat_targets(np.array([[400.0, 500.0]], np.float32), frame)[0].shape == (1, 320, 256)
+
+
+def test_a_frame_the_model_cannot_read_is_refused():
+    with pytest.raises(ValueError, match="whole number of 14 px patches"):
+        Frame(450, 560)
+    with pytest.raises(ValueError, match="440.2 px wide"):
+        Frame(420, 560)
 
 
 def test_heatmap_only_reader_has_no_logits():

@@ -8,7 +8,10 @@ holds its key. The train's local entrypoint downloads its run's checkpoint to `-
 JSON on its last line. A run that stops before its step count fails.
 
   modal run modal_app.py::train --trainset <hash> --key <key> --run <run> --shards a.tar,b.tar --out <reader>.pt \
-    --steps 4800 --batch 32 --lr 0.001 --seed 0 --gpu L4 --precision bf16
+    --steps 4800 --batch 32 --lr 0.001 --seed 0 --gpu L4 --precision bf16 \
+    --backbone facebook/dinov2-small --input-width 448 --input-height 560
+
+The image holds dinov2-small's weights; a train on another backbone downloads its weights in the container.
   modal run modal_app.py::promote --key <key> --run <run>
 """
 from __future__ import annotations
@@ -53,7 +56,8 @@ def _stage(trainset: str) -> str:
 
 
 @app.function(gpu=GPU, timeout=2 * 60 * 60, cpu=8, memory=32768, volumes=VOLS)
-def fit(trainset: str, key: str, run_name: str, steps: int, batch: int, lr: float, seed: int, bf16: bool) -> dict:
+def fit(trainset: str, key: str, run_name: str, steps: int, batch: int, lr: float, seed: int, bf16: bool,
+        backbone: str, input_side: tuple[int, int]) -> dict:
     import sys
 
     sys.path.insert(0, "/root/reader")
@@ -63,7 +67,7 @@ def fit(trainset: str, key: str, run_name: str, steps: int, batch: int, lr: floa
     os.makedirs(os.path.dirname(out), exist_ok=True)
     r = run(_stage(trainset) + "/train", out, steps=steps, batch=batch, lr=lr, device="cuda", workers=6, cache=True,
             bf16=bf16, log_every=50, save_every=1000, log_file=out[:-3] + ".train.log.jsonl", on_save=ckpt_vol.commit,
-            seed=seed)
+            seed=seed, backbone=backbone, input_side=input_side)
     ckpt_vol.commit()
     if r["steps"] != steps:
         raise RuntimeError(f"the train stopped at step {r['steps']} of {steps}")
@@ -90,13 +94,18 @@ def _has(vol: modal.Volume, path: str) -> bool:
 
 @app.local_entrypoint()
 def train(trainset: str, key: str, run: str, shards: str, out: str, steps: int, batch: int, lr: float, seed: int,
-          gpu: str, precision: str):
+          gpu: str, precision: str, backbone: str, input_width: int, input_height: int):
+    import sys
     import tempfile
 
     if gpu != GPU:
         raise ValueError(f"the reader trains on {GPU} only, not {gpu}")
     if precision not in ("bf16", "fp32"):
         raise ValueError(f"precision {precision}: bf16 or fp32")
+    sys.path.insert(0, HERE)
+    from model import Frame
+
+    Frame(input_width, input_height)  # refuse a frame the model cannot read before any GPU starts
     remote = f"/sets/{trainset}.tar"
     if not _has(data_vol, remote):
         with tempfile.TemporaryDirectory() as tmp:
@@ -104,7 +113,7 @@ def train(trainset: str, key: str, run: str, shards: str, out: str, steps: int, 
             _set_tar(shards.split(","), tar)
             with data_vol.batch_upload() as b:
                 b.put_file(tar, remote)
-    r = fit.remote(trainset, key, run, steps, batch, lr, seed, precision == "bf16")
+    r = fit.remote(trainset, key, run, steps, batch, lr, seed, precision == "bf16", backbone, (input_width, input_height))
     os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
     with open(out, "wb") as f:
         for chunk in ckpt_vol.read_file(_run_path(key, run)):

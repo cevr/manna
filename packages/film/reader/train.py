@@ -14,19 +14,21 @@ import time
 import torch
 import torch.nn.functional as F
 
-from model import Reader, SynthSet, heat_loss, rest_angles, save_ckpt
+from model import BACKBONE, IN_H, IN_W, Frame, Reader, SynthSet, heat_loss, rest_angles, save_ckpt
 
 
 def train(data: str, out: str, steps: int = 8000, batch: int = 32, lr: float = 1e-3, backbone_lr_scale: float = 0.1,
           device: str = "cpu", limit: int | None = None, workers: int = 0, cache: bool = False, bf16: bool = False,
           log_every: int = 10, save_every: int = 1000, log_file: str | None = None, on_save=None, ce_weight: float = 1.0,
-          seed: int = 0) -> dict:
-    """Returns {'steps', 'first_loss', 'last_loss', 'zero_map_loss', 'first_ce', 'last_ce', 'classes', 'sec_per_step'}."""
+          seed: int = 0, backbone=BACKBONE, input_side: tuple[int, int] = (IN_W, IN_H)) -> dict:
+    """`backbone`: a pretrained model's name (or a config, for tests); `input_side`: the input frame's (width, height)
+    in px. Returns {'steps', 'first_loss', 'last_loss', 'zero_map_loss', 'first_ce', 'last_ce', 'classes', 'sec_per_step'}."""
     torch.manual_seed(seed)
-    ds = SynthSet(data, limit=limit, augment=True, cache=cache)
+    frame = Frame(*input_side)
+    ds = SynthSet(data, limit=limit, augment=True, cache=cache, frame=frame)
     dl = torch.utils.data.DataLoader(ds, batch_size=batch, shuffle=True, drop_last=True, num_workers=workers,
                                      persistent_workers=workers > 0, pin_memory=device.startswith("cuda"))
-    model = Reader(n_classes=len(ds.classes)).to(device).train()
+    model = Reader(n_classes=len(ds.classes), backbone=backbone).to(device).train()
     opt = torch.optim.AdamW([
         {"params": model.backbone.parameters(), "lr": lr * backbone_lr_scale},
         {"params": [*model.head.parameters(), *model.cls.parameters()], "lr": lr},
@@ -35,7 +37,7 @@ def train(data: str, out: str, steps: int = 8000, batch: int = 32, lr: float = 1
     sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: min(1.0, (s + 1) / warm) * 0.5 * (1 + math.cos(math.pi * min(s, steps) / steps)))
     rest = rest_angles(ds.truth)
     cfg = dict(data=data, steps=steps, batch=batch, lr=lr, backbone_lr_scale=backbone_lr_scale, limit=limit, bf16=bf16, n=len(ds),
-               ce_weight=ce_weight, seed=seed)
+               ce_weight=ce_weight, seed=seed, backbone=model.backbone_name, input=[frame.w, frame.h])
     log = open(log_file, "a") if log_file else None
     step, t0, losses, zeros, ces, first = 0, time.time(), [], [], [], None
     while step < steps:
@@ -63,7 +65,7 @@ def train(data: str, out: str, steps: int = 8000, batch: int = 32, lr: float = 1
                 if log:
                     log.write(json.dumps(rec) + "\n"); log.flush()
             if step % save_every == 0 or step == steps:
-                save_ckpt(out, model, rest, ds.classes, step, cfg)
+                save_ckpt(out, model, rest, ds.classes, step, cfg, frame)
                 if on_save:
                     on_save()
             if step >= steps:
@@ -92,7 +94,11 @@ if __name__ == "__main__":
     ap.add_argument("--log-file")
     ap.add_argument("--ce-weight", type=float, default=1.0)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--backbone", default=BACKBONE)
+    ap.add_argument("--input-width", type=int, default=IN_W)
+    ap.add_argument("--input-height", type=int, default=IN_H)
     a = ap.parse_args()
     r = train(a.data, a.out, a.steps, a.batch, a.lr, a.backbone_lr_scale, a.device, a.limit, a.workers, a.cache, a.bf16,
-              a.log_every, a.save_every, a.log_file, ce_weight=a.ce_weight, seed=a.seed)
+              a.log_every, a.save_every, a.log_file, ce_weight=a.ce_weight, seed=a.seed, backbone=a.backbone,
+              input_side=(a.input_width, a.input_height))
     print("result", json.dumps(r))

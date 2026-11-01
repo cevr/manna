@@ -1,10 +1,12 @@
-"""The reader: DINOv2-small with a heatmap head, one heatmap per joint of the synthetic set's truth, and a classifier
-head over the drawings seen in training (`<member>/<drawing>`).
+"""The reader: a DINOv2 backbone (BACKBONE, dinov2-small, unless the train names another) with a heatmap head, one
+heatmap per joint of the synthetic set's truth, and a classifier head over the drawings seen in training
+(`<member>/<drawing>`).
 
 Frames. The canvas is the synthetic set's (533x678 px, the lead-feast front sheet padded 140 px left and
-right, scale 1 = clip B's input scale; `src/core/pose-sample.ts`). The model's input is the canvas scaled by
-S = 560/678 into 440x560 px, placed top-left on a 448x560 paper (32x40 patches of 14 px). The head
-upsamples the 32x40 patch grid 4x into a 128x160 heatmap: one heat cell = 3.5 input px = 4.24 canvas px.
+right, scale 1 = clip B's input scale; `src/core/pose-sample.ts`). The model's input is its Frame, which the train
+names and the checkpoint keeps; the default is the canvas scaled by 560/678 into 440x560 px, placed top-left on a
+448x560 paper (32x40 patches of 14 px). The head upsamples the patch grid 4x into the heatmap (128x160 at the
+default): one heat cell = 3.5 input px (4.24 canvas px at the default).
 
 Joints: the union list JOINTS, the same names for every member (every member's puppet names its bones alike).
 A joint a drawing lacks is absent from its truth (`masked`) and weighs 0 in the loss, as an off-canvas joint does.
@@ -19,6 +21,7 @@ import glob
 import json
 import math
 import os
+from dataclasses import dataclass
 
 import cv2
 import numpy as np
@@ -29,10 +32,40 @@ import torch.nn.functional as F
 BACKBONE = "facebook/dinov2-small"
 CANVAS = (533, 678)  # w, h
 IN_W, IN_H = 448, 560
-S = IN_H / CANVAS[1]  # canvas -> input scale, 0.82596
-STRIDE = 3.5  # input px per heat cell
-HEAT_W, HEAT_H = int(IN_W / STRIDE), int(IN_H / STRIDE)  # 128, 160
+PATCH = 14  # the backbone's patch side, input px
+STRIDE = 3.5  # input px per heat cell: the head upsamples the patch grid 4x
 SIGMA = 2.0
+
+
+@dataclass(frozen=True)
+class Frame:
+    """The model's input, w x h px: the canvas scaled by s = h / canvas h, placed top-left on a w x h paper of whole
+    patches; its heatmap is heat_w x heat_h cells of STRIDE input px. A train names its frame; its checkpoint keeps it,
+    so a read takes the frame the reader was trained on."""
+    w: int = IN_W
+    h: int = IN_H
+
+    def __post_init__(self):
+        if self.w % PATCH or self.h % PATCH:
+            raise ValueError(f"input {self.w}x{self.h}: each side must be a whole number of {PATCH} px patches")
+        if CANVAS[0] * self.s > self.w:
+            raise ValueError(f"input {self.w}x{self.h}: the canvas scaled to it is {CANVAS[0] * self.s:.1f} px wide")
+
+    @property
+    def s(self) -> float:
+        """Canvas -> input scale: 0.82596 at 448x560."""
+        return self.h / CANVAS[1]
+
+    @property
+    def heat_w(self) -> int:
+        return int(self.w / STRIDE)
+
+    @property
+    def heat_h(self) -> int:
+        return int(self.h / STRIDE)
+
+
+FRAME = Frame()  # 448x560, heat 128x160
 MEAN = np.array([0.485, 0.456, 0.406], np.float32)
 STD = np.array([0.229, 0.224, 0.225], np.float32)
 
@@ -87,11 +120,11 @@ def world_of(joints: dict, rest: dict[str, float]) -> dict[str, float]:
 
 # ---------- images ----------
 
-def letterbox_matrix(scale: float = 1.0, shift=(0.0, 0.0)) -> np.ndarray:
-    """2x3 affine canvas px -> input px: scale about the canvas centre by `scale`, shift (canvas px), then S."""
-    cx, cy = CANVAS[0] / 2, CANVAS[1] / 2
-    a = S * scale
-    return np.array([[a, 0, S * (cx - scale * cx + shift[0])], [0, a, S * (cy - scale * cy + shift[1])]], np.float32)
+def letterbox_matrix(scale: float = 1.0, shift=(0.0, 0.0), frame: Frame = FRAME) -> np.ndarray:
+    """2x3 affine canvas px -> input px: scale about the canvas centre by `scale`, shift (canvas px), then frame.s."""
+    cx, cy, s = CANVAS[0] / 2, CANVAS[1] / 2, frame.s
+    a = s * scale
+    return np.array([[a, 0, s * (cx - scale * cx + shift[0])], [0, a, s * (cy - scale * cy + shift[1])]], np.float32)
 
 
 def paper_of(img: np.ndarray) -> tuple:
@@ -100,9 +133,9 @@ def paper_of(img: np.ndarray) -> tuple:
     return tuple(int(v) for v in np.median(border, 0))
 
 
-def to_input(img: np.ndarray, m: np.ndarray) -> np.ndarray:
-    """Canvas RGB uint8 -> input RGB uint8 (IN_H, IN_W) through m, padded with the paper tone."""
-    return cv2.warpAffine(img, m, (IN_W, IN_H), flags=cv2.INTER_AREA if m[0, 0] < 1 else cv2.INTER_LINEAR,
+def to_input(img: np.ndarray, m: np.ndarray, frame: Frame = FRAME) -> np.ndarray:
+    """Canvas RGB uint8 -> input RGB uint8 (frame.h, frame.w) through m, padded with the paper tone."""
+    return cv2.warpAffine(img, m, (frame.w, frame.h), flags=cv2.INTER_AREA if m[0, 0] < 1 else cv2.INTER_LINEAR,
                           borderMode=cv2.BORDER_CONSTANT, borderValue=paper_of(img))
 
 
@@ -130,29 +163,30 @@ def augment_color(x: np.ndarray, rng: np.random.Generator) -> np.ndarray:
     return x
 
 
-def heat_targets(pts_in: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """Input px joints (J, 2) -> Gaussian heatmaps (J, HEAT_H, HEAT_W) and visibility weights (J,)."""
+def heat_targets(pts_in: np.ndarray, frame: Frame = FRAME) -> tuple[np.ndarray, np.ndarray]:
+    """Input px joints (J, 2) -> Gaussian heatmaps (J, frame.heat_h, frame.heat_w) and visibility weights (J,)."""
     hx = (pts_in[:, 0] + 0.5) / STRIDE - 0.5
     hy = (pts_in[:, 1] + 0.5) / STRIDE - 0.5
-    xs = np.arange(HEAT_W, dtype=np.float32)[None, None, :]
-    ys = np.arange(HEAT_H, dtype=np.float32)[None, :, None]
+    xs = np.arange(frame.heat_w, dtype=np.float32)[None, None, :]
+    ys = np.arange(frame.heat_h, dtype=np.float32)[None, :, None]
     h = np.exp(-((xs - hx[:, None, None]) ** 2 + (ys - hy[:, None, None]) ** 2) / (2 * SIGMA**2)).astype(np.float32)
-    vis = ((hx >= 0) & (hx <= HEAT_W - 1) & (hy >= 0) & (hy <= HEAT_H - 1)).astype(np.float32)
+    vis = ((hx >= 0) & (hx <= frame.heat_w - 1) & (hy >= 0) & (hy <= frame.heat_h - 1)).astype(np.float32)
     return h, vis
 
 
 class SynthSet(torch.utils.data.Dataset):
     """The synthetic set: <id>.png + <id>.json. `augment` draws scale 0.92-1.08, shift +-24 canvas px and colour noise.
     `limit` takes that many files spread evenly over the sorted list (so a subset holds every drawing). Items:
-    (input, heatmaps, joint weights = in frame x present, drawing index in `classes`)."""
+    (input in `frame`, heatmaps, joint weights = in frame x present, drawing index in `classes`)."""
 
     def __init__(self, data_dir: str, limit: int | None = None, augment: bool = True, cache: bool = False,
-                 classes: list[str] | None = None):
+                 classes: list[str] | None = None, frame: Frame = FRAME):
         files = sorted(glob.glob(os.path.join(data_dir, "*.json")))
         if limit and limit < len(files):
             files = [files[int(i * len(files) / limit)] for i in range(limit)]
         self.files = files
         self.augment = augment
+        self.frame = frame
         self.cache = [read_rgb(f[:-5] + ".png") for f in self.files] if cache else None
         self.truth = [json.load(open(f)) for f in self.files]
         self.classes = classes if classes is not None else sorted({key_of(t) for t in self.truth})
@@ -166,31 +200,33 @@ class SynthSet(torch.utils.data.Dataset):
         rng = np.random.default_rng()
         img = self.cache[i] if self.cache is not None else read_rgb(self.files[i][:-5] + ".png")
         if self.augment:
-            m = letterbox_matrix(rng.uniform(0.92, 1.08), rng.uniform(-24, 24, 2))
+            m = letterbox_matrix(rng.uniform(0.92, 1.08), rng.uniform(-24, 24, 2), self.frame)
         else:
-            m = letterbox_matrix()
-        x = to_input(img, m)
+            m = letterbox_matrix(frame=self.frame)
+        x = to_input(img, m, self.frame)
         if self.augment:
             x = augment_color(x, rng)
         tj = self.truth[i]["joints"]
         present = np.array([j in tj for j in JOINTS], np.float32)
         pts = np.array([tj.get(j, (-1e4, -1e4)) for j in JOINTS], np.float32)  # a masked joint: far off the map, zero heat
         pts_in = pts @ m[:, :2].T + m[:, 2]
-        h, vis = heat_targets(pts_in)
+        h, vis = heat_targets(pts_in, self.frame)
         return normalize(x), torch.from_numpy(h), torch.from_numpy(vis * present), self.labels[i]
 
 
 # ---------- model ----------
 
 class Reader(nn.Module):
-    """`backbone`: a pretrained model's name, or a config (an untrained backbone of that shape, for tests)."""
+    """`backbone`: a pretrained model's name, or a config (an untrained backbone of that shape, for tests). The name
+    is the checkpoint's (`backbone_name`; None for a config)."""
 
     def __init__(self, n_joints: int = len(JOINTS), n_classes: int = 0, backbone=BACKBONE):
         super().__init__()
         from transformers import AutoModel
 
         self.backbone = AutoModel.from_pretrained(backbone) if isinstance(backbone, str) else AutoModel.from_config(backbone)
-        d = self.backbone.config.hidden_size  # 384
+        self.backbone_name = backbone if isinstance(backbone, str) else None
+        d = self.backbone.config.hidden_size  # 384 for dinov2-small
         self.head = nn.Sequential(
             nn.Conv2d(d, 256, 3, padding=1), nn.GroupNorm(32, 256), nn.GELU(),
             nn.ConvTranspose2d(256, 128, 4, 2, 1), nn.GroupNorm(16, 128), nn.GELU(),
@@ -239,23 +275,30 @@ def decode(heat: torch.Tensor) -> tuple[np.ndarray, np.ndarray]:
     return pts_in.numpy(), conf.cpu().numpy()
 
 
-def input_to_canvas(pts_in: np.ndarray) -> np.ndarray:
-    m = letterbox_matrix()
+def input_to_canvas(pts_in: np.ndarray, frame: Frame = FRAME) -> np.ndarray:
+    m = letterbox_matrix(frame=frame)
     return (pts_in - m[:, 2]) / m[0, 0]
 
 
-def save_ckpt(path: str, model: Reader, rest: dict, classes: list[str], step: int, cfg: dict):
-    """`rest`: {drawing key: {bone: rest angle}}; `classes`: the classifier's drawing keys, in logit order."""
+def save_ckpt(path: str, model: Reader, rest: dict, classes: list[str], step: int, cfg: dict, frame: Frame = FRAME):
+    """`rest`: {drawing key: {bone: rest angle}}; `classes`: the classifier's drawing keys, in logit order. The
+    checkpoint keeps the backbone's name and the input frame the model was trained on."""
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     torch.save({"state": model.state_dict(), "joints": JOINTS, "rest": rest, "classes": classes, "step": step, "cfg": cfg,
-                "input": [IN_W, IN_H], "canvas": list(CANVAS)}, path)
+                "backbone": model.backbone_name, "input": [frame.w, frame.h], "canvas": list(CANVAS)}, path)
+
+
+def frame_of(ck: dict) -> Frame:
+    """A checkpoint's input frame: the one it was trained on."""
+    return Frame(*ck["input"])
 
 
 def load_ckpt(path: str, device: str = "cpu") -> tuple[Reader, dict]:
-    """Loads a checkpoint with classes, or a heatmap-only one (no classes, one flat rest table: the lead-feast front's)."""
+    """Loads a checkpoint with classes, or a heatmap-only one (no classes, one flat rest table: the lead-feast front's).
+    The model is built on the checkpoint's backbone, else BACKBONE (a checkpoint from before it was kept)."""
     ck = torch.load(path, map_location="cpu", weights_only=False)
     if "classes" not in ck:
         ck["classes"], ck["rest"] = [], {"lead-feast/turnaround-front": ck["rest"]}
-    model = Reader(len(ck["joints"]), len(ck["classes"]))
+    model = Reader(len(ck["joints"]), len(ck["classes"]), ck.get("backbone") or BACKBONE)
     model.load_state_dict(ck["state"])
     return model.to(device).eval(), ck

@@ -75,8 +75,10 @@ const VERSION = {
 /**
  * The reader's train: steps, batch, learning rate, seed, GPU, precision, its
  * backbone and the input it reads (width and height in px); a fixed step
- * count, no wall-clock stop. The backbone and input are `reader/model.py`'s
- * (`BACKBONE`, `IN_W, IN_H`), held equal by `reader.test.ts` through the train config.
+ * count, no wall-clock stop. The train hands the backbone and input to
+ * Modal, and the checkpoint keeps them for every read; these are
+ * `reader/model.py`'s defaults (`BACKBONE`, `IN_W, IN_H`), held equal by
+ * `reader.test.ts`.
  */
 const TRAIN = {
   steps: 4800,
