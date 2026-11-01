@@ -35,16 +35,24 @@ const DARK_OLIVE: Rgb = [105, 95, 60];
 const DARK_FLECK: Rgb = [93, 83, 49];
 /** An ink of L* 20, drawn as an outline through the dark olive. */
 const DARK_INK: Rgb = [56, 47, 37];
+/** A brown cloth of L* 16.6: at the darkest tone a kept cloth of the cast is shaded. */
+const DEEP: Rgb = [48, 40, 28];
+/** The deep brown 6 L* lighter: a fleck of fine grain in it. */
+const DEEP_FLECK: Rgb = [62, 53, 38];
+/** An ink of L* 5: an outline's core. */
+const OUTLINE_INK: Rgb = [20, 16, 14];
+/** An outline's ramp into its cloth, L* 46. */
+const RAMP: Rgb = [118, 108, 96];
 
 const TORSO: Box = { x0: 6, y0: 4, x1: 42, y1: 44 };
 const ARM: Box = { x0: 18, y0: 8, x1: 30, y1: 40 };
 const inside = (b: Box, x: number, y: number) => x >= b.x0 && x < b.x1 && y >= b.y0 && y < b.y1;
 
-const rasterOf = (colour: (x: number, y: number) => Rgb): Raster => {
-  const rgba = new Uint8Array(W * W * 4);
-  for (let y = 0; y < W; y++)
-    for (let x = 0; x < W; x++) rgba.set([...colour(x, y), 255], (y * W + x) * 4);
-  return { width: W, height: W, rgba };
+const rasterOf = (colour: (x: number, y: number) => Rgb, w = W, h = W): Raster => {
+  const rgba = new Uint8Array(w * h * 4);
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) rgba.set([...colour(x, y), 255], (y * w + x) * 4);
+  return { width: w, height: h, rgba };
 };
 
 const FIGURE = Uint8Array.from({ length: W * W }, (_, i) =>
@@ -93,19 +101,83 @@ const layOn =
     const answer = rasterOf((x, y) =>
       Bool.match(inside(within, x, y), { onTrue: () => inner(x, y), onFalse: () => torso(x, y) }),
     );
-    const sheet = Result.getOrThrow(cutParts(view, cut, { figure: FIGURE }));
-    const hidden = hiddenOf(sheet, ['arm']);
-    const target = {
-      view,
-      sheet,
-      hidden,
-      domain: domainOf(sheet, hidden),
-      moving: ['arm'],
-      pad: { s: 1, dx: 0, dy: 0 },
-      portrait: { width: W, height: W },
-    };
-    return Result.getOrThrow(layAnswer(target, answer)).measures;
+    return measuresOf(view, cut, FIGURE, answer);
   };
+
+/** The measures of `answer` laid on `view`, cut by `cut` within `figure`, with the arm moving. */
+const measuresOf = (view: Raster, cut: PartCut, figure: Uint8Array, answer: Raster) => {
+  const sheet = Result.getOrThrow(cutParts(view, cut, { figure }));
+  const hidden = hiddenOf(sheet, ['arm']);
+  const target = {
+    view,
+    sheet,
+    hidden,
+    domain: domainOf(sheet, hidden),
+    moving: ['arm'],
+    pad: { s: 1, dx: 0, dy: 0 },
+    portrait: { width: view.width, height: view.height },
+  };
+  return Result.getOrThrow(layAnswer(target, answer)).measures;
+};
+
+/** The size of the strip `layStrip` lays: tall enough for its edge to cross eight rows of grain cells. */
+const STRIP = { w: 72, h: 192 } as const;
+/** The torso's left edge in the strip: one pixel out every four rows, from x 6. */
+const stripEdge = (y: number) => 6 + Math.floor(y / 4);
+/** The corners down the strip's edge, `d` px right of it. */
+const stairOf = (d: number): ReadonlyArray<readonly [number, number]> =>
+  Array.from({ length: STRIP.h / 4 }, (_, s) => [
+    [6 + s + d, 4 * s] as const,
+    [6 + s + d, 4 * s + 4] as const,
+  ]).flat();
+/** A patch the arm takes inside the torso, in grain cells of its own, the answer paints smooth. */
+const PATCH: Box = { x0: 50, y0: 8, x1: 66, y1: 72 };
+
+/**
+ * A torso of flat olive whose left edge slants (`stripEdge`), with a cream
+ * arm in front of that edge, 6 px over the ground and 7 px over the torso,
+ * and in `PATCH`; and okra's answer laid on it: the patch olive, and under
+ * the arm the paper to the edge, then `edge[d]` for the 7 px `d` in from it.
+ */
+const layStrip = (edge: ReadonlyArray<Rgb>) => {
+  const { w, h } = STRIP;
+  const ground = (x: number, y: number) => x < stripEdge(y) - 6 || x >= w - 4;
+  const armAt = (x: number, y: number) => x < stripEdge(y) + 7 || inside(PATCH, x, y);
+  const view = rasterOf(
+    (x, y) =>
+      Bool.match(ground(x, y), {
+        onTrue: () => PAPER,
+        onFalse: () => Bool.match(armAt(x, y), { onTrue: () => CREAM, onFalse: () => OLIVE }),
+      }),
+    w,
+    h,
+  );
+  const answer = rasterOf(
+    (x, y) =>
+      Bool.match(x < stripEdge(y) || x >= w - 4, {
+        onTrue: () => PAPER,
+        onFalse: () => edge[x - stripEdge(y)] ?? OLIVE,
+      }),
+    w,
+    h,
+  );
+  const cut: PartCut = {
+    parts: [
+      {
+        name: 'arm',
+        take: [
+          { polygon: [...stairOf(7), ...stairOf(-6).toReversed()] },
+          { polygon: corners(PATCH) },
+        ],
+      },
+      { name: 'torso', take: [{ polygon: [[w - 4, 0], [w - 4, h], ...stairOf(0).toReversed()] }] },
+    ],
+  };
+  const figure = Uint8Array.from({ length: w * h }, (_, i) =>
+    Number(!ground(i % w, Math.floor(i / w))),
+  );
+  return measuresOf(view, cut, figure, answer);
+};
 
 const laid = layOn(ARM);
 const olive = () => OLIVE;
@@ -210,6 +282,28 @@ describe('the part sheet lay', () => {
     expect(missedBars(lined)).not.toContain('grain');
     expect(smooth.grain).toEqual([expect.objectContaining({ part: 'torso', verdict: 'within' })]);
     expect(missedBars(smooth)).not.toContain('grain');
+  });
+
+  test('fine grain in cloth as dark as the darkest kept cloth misses the grain bar; smooth paint of it meets it', () => {
+    // the grain read leaves out only ink darker than any cloth, so the deep cloth and its flecks are read
+    const arm = { x0: 24, y0: 8, x1: 40, y1: 40 };
+    const deep = (): Rgb => DEEP;
+    const fleck = (x: number, y: number): Rgb =>
+      Bool.match((x + 5 * y) % 14 === 0, { onTrue: () => DEEP_FLECK, onFalse: deep });
+    const onDeep = layOn(arm, { margin: 0, cloth: deep });
+    const [grainy, smooth] = [onDeep(fleck), onDeep(deep)];
+    expect(grainy.grain).toEqual([expect.objectContaining({ part: 'torso', verdict: 'outside' })]);
+    expect(missedBars(grainy)).toContain('grain');
+    expect(smooth.grain).toEqual([expect.objectContaining({ part: 'torso', verdict: 'within' })]);
+    expect(missedBars(smooth)).not.toContain('grain');
+  });
+
+  test("a part's own outline along its edge, 4 px of ink, a ramp and 2 px of cloth, is not grain beside smooth kept cloth", () => {
+    // the edge slants a pixel every four rows, so the line rule takes none of the ink; read as cloth,
+    // the outline is grain in each of the six cells it crosses (lead-feast front's torso, art review 4)
+    const outlined = layStrip([...Array(4).fill(OUTLINE_INK), RAMP, OLIVE, OLIVE]);
+    expect(outlined.grain).toEqual([expect.objectContaining({ part: 'torso', verdict: 'within' })]);
+    expect(missedBars(outlined)).not.toContain('grain');
   });
 
   test('paint greyer than the cloth beside it misses the drift bar, though its seam matches', () => {

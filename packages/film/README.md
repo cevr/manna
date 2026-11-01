@@ -2680,7 +2680,10 @@ the part, so a patch of grain too fine for the specks shows in its cell
 where the pooled read hides it; both reads take the part's cloth at any
 lightness, off its edge ring, less the ink the specks' line rule below
 finds in it and the ring about that ink, so grain in dark cloth is read
-and an outline through it or round it is not grain; the part is outside
+and an outline through it or round it is not grain; the fine read also
+leaves out every pixel darker than L* 15 and the ring about it, since an
+outline is near-black ink and no cloth is shaded that dark, so a thick
+slanted outline the line rule misses is not grain; the part is outside
 when either read is,
 within when both are read, else `unverified`) and each painted region's specks (the share of its
 pixels off its 1 px edge ring, ink included, more than 12 L* from the

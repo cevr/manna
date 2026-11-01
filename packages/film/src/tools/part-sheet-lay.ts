@@ -38,6 +38,16 @@ const GRAIN_STEPS = Arr.range(-8, 8).map((k) => k * 3);
 /** Lighter than this L* is paint, not ink, for the seam, the step, the chroma and the specks' outlines (the grain finds its ink by the line rule, `clothOf`). */
 const INK_L = 45;
 
+/**
+ * Darker than this L* is an outline's ink, which the fine grain read leaves
+ * out. Outlines are near-black ink, and cloth is shaded with colour, never
+ * black (the film's CRAFT rules), so no cloth tone is this dark: the cast's
+ * darkest kept cloth lies above it. The line rule misses an outline as
+ * thick as 4 px that slants along a part's edge; read as cloth, its ink is
+ * grain.
+ */
+const OUTLINE_L = 15;
+
 /** The fewest seam pairs a seam is read on. */
 const LEAST_SEAM_PAIRS = 20;
 
@@ -478,14 +488,18 @@ const specksOf = (r: Raster, set: Uint8Array) => {
 
 /**
  * The cloth of `set` on `r`: its pixels less the ink the line rule finds in
- * it (`specksOf`'s outlines). The grain is read on it at any lightness, so
- * grain in cloth as dark as the ink's L* is read, and an outline drawn
- * through the cloth is not grain.
+ * it (`specksOf`'s outlines). The grain is read on it at any lightness a
+ * cloth is shaded, so grain in cloth as dark as `INK_L` is read, and an
+ * outline drawn through the cloth is not grain.
  */
 const clothOf = (r: Raster, set: Uint8Array) => {
   const { labels, outline } = specksOf(r, set);
   return Uint8Array.from(set, (s, i) => Number(s === 1 && outline[labels[i] ?? -1] !== true));
 };
+
+/** `set` less its pixels darker than `OUTLINE_L` on `r`: an outline's ink, which no cloth is as dark as. */
+const lessOutline = (r: Raster, set: Uint8Array) =>
+  Uint8Array.from(set, (s, i) => Number(s === 1 && labOf(rgbAt(r, i))[0] >= OUTLINE_L));
 
 /** Summed-area tables of a*, b* and count over the pixels `set` marks on `r`, and the sums over a box of them. */
 const summedAb = (r: Raster, set: Uint8Array) => {
@@ -532,7 +546,7 @@ const summedOf = (w: number, h: number, value: (i: number) => number) => {
  * A part's fine grain, read cell by cell (`GRAIN_CELL` px squares): in each
  * cell, the share of the paint's cloth off its edge ring (the ring about
  * an outline left out of it too) more than `GRAIN_L` from the median L*
- * of their 5 × 5 neighbours, at any lightness, against the same
+ * of their 5 × 5 neighbours, as `paint` and `kept` hold them, against the same
  * share of the part's kept cloth within `SPECK_REACH` of the cell, each read
  * on `LEAST_REGION_PX` pixels or more. Grain fine enough to pass the speck
  * read, in one patch, shows in its cell where the part's pooled grain hides
@@ -631,8 +645,10 @@ const verdictOf = (read: boolean, within: boolean) =>
 /**
  * The grain of part `id`'s paint against its kept cloth near it, each less
  * the ink the line rule finds in it (`clothOf`) and off its edge ring, at
- * any lightness: pooled over the part, and fine, cell by cell. The ring is
- * where a part's outline runs, so no read takes it (as the specks' read).
+ * any lightness: pooled over the part, and fine, cell by cell, the fine
+ * read less the ink darker than `OUTLINE_L` too (`lessOutline`), and so the
+ * ring about it. The ring is where a part's outline runs, so no read takes
+ * it (as the specks' read).
  */
 const partGrain = (view: Raster, sheet: Sheet, at: Uint8Array, composite: Raster, id: number) => {
   const { width: w, height: h } = view;
@@ -657,7 +673,7 @@ const partGrain = (view: Raster, sheet: Sheet, at: Uint8Array, composite: Raster
   const kept = grainOf(view, near);
   const pooledRead = painted.n >= LEAST_GRAIN_WINDOWS && kept.n >= LEAST_GRAIN_WINDOWS;
   const pooledOut = pooledRead && Math.abs(painted.robust - kept.robust) > BARS.grainWithin;
-  const fine = fineGrain(composite, view, paint, cloth);
+  const fine = fineGrain(composite, view, lessOutline(composite, paint), lessOutline(view, cloth));
   const unread = { share: 0, px: 0 };
   const [finePainted, fineKept] = Option.match(fine.furthest, {
     onNone: () => [unread, unread] as const,
