@@ -4,12 +4,14 @@
 // spend, or waits on the owner, holds every stage below it.
 
 import { describe, expect, it } from 'effect-bun-test';
-import { Deferred, Effect, Fiber, Layer, Logger, Option, Path } from 'effect';
+import { Deferred, Effect, Fiber, Layer, Logger, Option, Path, Schema } from 'effect';
+import { TestClock } from 'effect/testing';
 import { memoryFileSystem, memoryLocks, text } from '../host/testing.ts';
 import { ContentStore, Processes } from '../content-store.ts';
 import {
   type BuildOptions,
   type Stage,
+  RUNNING_LEASE_MS,
   type StageFailed,
   WaitingOwner,
   buildGraph,
@@ -25,6 +27,11 @@ const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
   spend: new Set(),
   ...over,
 });
+
+/** `build.json`'s running marks, as a test reads them. */
+const RunningMarks = Schema.fromJsonString(
+  Schema.Struct({ running: Schema.Record(Schema.String, Schema.Unknown) }),
+);
 
 const servicesOver = (files: Map<string, Uint8Array>) =>
   ContentStore.layer.pipe(Layer.provideMerge([memoryFileSystem(files), Path.layer, memoryLocks]));
@@ -321,6 +328,31 @@ describe('the cast build graph', () => {
       Effect.provide(servicesOver(seeded())),
     ),
   );
+
+  it.effect("another host's mark holds its key for the lease, and is taken over past it", () => {
+    const files = seeded();
+    const onHost = (host: string) =>
+      Effect.provideService(Processes, { host, alive: () => Effect.succeed(true) });
+    return Effect.gen(function* () {
+      const slow = yield* slowTrain;
+      const first = yield* Effect.forkChild(buildGraph(slow.stages, options()).pipe(onHost('a')));
+      yield* Deferred.await(slow.started);
+      // within the lease, a build on host b waits on a's mark
+      yield* TestClock.adjust(RUNNING_LEASE_MS - 60_000);
+      const waiting = yield* Effect.forkChild(buildGraph(slow.stages, options()).pipe(onHost('b')));
+      yield* TestClock.adjust('1 second');
+      expect(slow.runs()).toBe(1);
+      // past the lease, a's mark is taken as left by a build that died
+      yield* TestClock.adjust('2 minutes');
+      yield* Deferred.await(slow.restarted);
+      expect(slow.runs()).toBe(2);
+      yield* Deferred.succeed(slow.release, true);
+      yield* Fiber.join(first);
+      yield* Fiber.join(waiting);
+      const manifest = new TextDecoder().decode(files.get('/cache/build.json'));
+      expect((yield* Schema.decodeEffect(RunningMarks)(manifest)).running).toEqual({});
+    }).pipe(Effect.provide(servicesOver(files)));
+  });
 });
 
 /**

@@ -21,9 +21,10 @@
 // A stage is decided under the manifest's lock (`ContentStore.transact`),
 // runs outside it, and is recorded under it again, so a plan or another build
 // reads the manifest while a 29 min train runs. The decision to run marks the
-// key as running (by build and pid); a second build that finds the mark of a
+// key as running (by build, pid, host and time); a second build that finds the mark of a
 // live process waits and decides again, so two builds never run one stage. A
-// run that dies lets its mark go; a mark whose process is gone is taken over.
+// run that dies lets its mark go; a mark whose process is gone on this host,
+// or from another host older than `RUNNING_LEASE_MS`, is cleared and taken over.
 // An optional input (`optionalInput`) holds its stage only while it is stale in
 // a plan: a stage reading what this build made of a set (the training set) runs
 // over the inputs that did not wait or fail.
@@ -174,11 +175,12 @@ const Waited = Schema.Struct({
   reason: Schema.String,
 });
 
-/** A key a build runs now, outside the lock: which build, and its process. */
+/** A key a build runs now, outside the lock: which build, its process and host, and when it took the key (epoch ms). */
 const Running = Schema.Struct({
   build: Schema.String,
   pid: Schema.Finite,
   host: Schema.String,
+  at: Schema.optionalKey(Schema.Finite),
 });
 type Running = typeof Running.Type;
 
@@ -225,6 +227,14 @@ const checkOrder = <R>(stages: ReadonlyArray<Stage<R>>) => {
 
 /** How long a build waits before it decides again on a key another build runs. */
 const BUSY_SPACING = '100 millis';
+
+/**
+ * How long another host's mark holds its key: longer than the longest stage
+ * (the train, about 29 min, which Modal stops at 45), with a margin. Its pid
+ * cannot be asked on this host, so past this the mark is taken as left by a
+ * build that died.
+ */
+export const RUNNING_LEASE_MS = 60 * 60 * 1000;
 
 /** The manifest without `key`'s running mark, when `build` holds it. */
 const unmarked = (current: BuildManifest, key: string, build: string): BuildManifest => {
@@ -316,21 +326,31 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
     );
   };
   const processes = yield* Processes;
-  /** This build's mark on a key it runs. */
-  const self: Running = {
-    build: `${process.pid}-${yield* Random.nextIntBetween(0, 1e9)}`,
+  const build = `${process.pid}-${yield* Random.nextIntBetween(0, 1e9)}`;
+  /** This build's mark on a key it takes now. */
+  const selfAt = Effect.map(Clock.currentTimeMillis, (at): Running => ({
+    build,
     pid: process.pid,
     host: processes.host,
-  };
+    at,
+  }));
   /**
-   * Whether the build that marked a key runs it still: one in a process on
-   * this host that runs. A mark from another host is kept, as its pid means
-   * nothing here (the cache is the host's own).
+   * Whether the build that marked a key runs it still: on this host, its
+   * process runs; on another, whose pid means nothing here, its mark is
+   * younger than the lease (a mark with no time is older than the lease).
    */
   const runs = (mark: Running) => {
-    if (mark.host !== processes.host) return Effect.succeed(true);
-    return processes.alive(mark.pid);
+    if (mark.host === processes.host) return processes.alive(mark.pid);
+    return Effect.map(Clock.currentTimeMillis, (now) =>
+      Option.exists(Option.fromUndefinedOr(mark.at), (at) => now - at < RUNNING_LEASE_MS),
+    );
   };
+  /** The manifest's marks that still run: a stale one is cleared. */
+  const liveMarks = (current: BuildManifest) =>
+    Effect.map(
+      Effect.filter(Object.entries(current.running ?? {}), ([, mark]) => runs(mark)),
+      (live): BuildManifest => ({ ...current, running: Object.fromEntries(live) }),
+    );
   /** Run a stage outside the lock, then record what it made, or what it waited on, under it. */
   const runOutside = <R>(stage: Stage<R>, key: string, start: number) =>
     Effect.gen(function* () {
@@ -361,7 +381,7 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
         yield* store.writeFile(objectFile(output), ran.bytes);
         const ms = (yield* Clock.currentTimeMillis) - start;
         return yield* store.transact(manifest, (current) => {
-          const done = unmarked(current, key, self.build);
+          const done = unmarked(current, key, build);
           return Effect.succeed([
             { _tag: 'ran', output } satisfies Outcome,
             { ...done, stages: { ...done.stages, [key]: { id: stage.id, output, ms } } },
@@ -369,7 +389,7 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
         });
       }
       return yield* store.transact(manifest, (current) => {
-        const done = unmarked(current, key, self.build);
+        const done = unmarked(current, key, build);
         if (ran._tag !== 'waited') return Effect.succeed([ran, done] as const);
         return Effect.succeed([
           { _tag: ran.waited.state, reason: Option.some(ran.waited.reason) } satisfies Outcome,
@@ -381,7 +401,7 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
         if (Exit.isSuccess(exit)) return Effect.void;
         // a run that died or was interrupted lets its key go, so the next build runs it
         return store
-          .update(manifest, (current) => unmarked(current, key, self.build))
+          .update(manifest, (current) => unmarked(current, key, build))
           .pipe(Effect.ignore);
       }),
     );
@@ -462,12 +482,12 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
             current,
           ] as const;
         }
-        const mark = Option.fromUndefinedOr(current.running?.[key]);
-        if (Option.isSome(mark) && (yield* runs(mark.value)))
-          return [{ _tag: 'busy' } satisfies Decision, current] as const;
+        const live = yield* liveMarks(current);
+        if (Option.isSome(Option.fromUndefinedOr(live.running?.[key])))
+          return [{ _tag: 'busy' } satisfies Decision, live] as const;
         return [
           { _tag: 'run' } satisfies Decision,
-          { ...current, running: { ...current.running, [key]: self } },
+          { ...live, running: { ...live.running, [key]: yield* selfAt } },
         ] as const;
       }),
     );
