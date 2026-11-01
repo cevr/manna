@@ -21,6 +21,7 @@ import {
   type PlaybackApi,
   Player,
   playerOn,
+  type PlayOptions,
   type Status,
   statusEvery,
 } from './player';
@@ -212,6 +213,226 @@ describe('the score clock', () => {
 /** Let the player's fibers run what the clock's last move woke. */
 const settle = Effect.forEach(Array.from({ length: 10 }), () => Effect.yieldNow, {
   discard: true,
+});
+
+/** `device`, with the options of each play it was asked kept in `options`. */
+const optionsOf = (device: PlaybackApi) => {
+  const options = new Array<Option.Option<PlayOptions>>();
+  const kept: PlaybackApi = {
+    ...device,
+    play: (uri, fromMs, told) =>
+      Effect.suspend(() => {
+        options.push(Option.fromNullishOr(told));
+        return device.play(uri, fromMs, told);
+      }),
+  };
+  return { device: kept, options };
+};
+
+/** A play's options at `rate`, as the player asks it. */
+const at = (rate: number): PlayOptions => ({
+  continuous: false,
+  ready: false,
+  intent: 'play',
+  recording: { number: 100, offset: 0 },
+  rate,
+});
+
+/** The recording `at` names, as the score clock's status gives it back. */
+const selection = { number: 100, requested: 0, effective: 0 };
+
+describe('the score clock at a tempo', () => {
+  const place = (api: PlaybackApi) => Effect.map(api.status, (status) => status.positionMs);
+  const setRate = (api: PlaybackApi, rate: number) =>
+    Option.getOrThrow(Option.fromNullishOr(api.setRate))(rate);
+
+  it.effect('a tempo turned while paused moves nothing until Resume, then runs at it', () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const { device } = recording(600_000);
+        const { api } = yield* clockOver(device, false);
+        const { first } = timelineOf(100);
+        const started = yield* api.play(audioUrl(100), 0, at(0.8));
+        expect(started).toEqual({
+          state: 'playing',
+          positionMs: first,
+          durationMs: timelineOf(100).end,
+          rate: 0.8,
+          recording: selection,
+        });
+        yield* TestClock.adjust(1000);
+        expect(yield* place(api)).toBe(first + 800);
+        yield* api.pause;
+        yield* setRate(api, 1.2);
+        yield* TestClock.adjust(3000);
+        expect(yield* place(api)).toBe(first + 800);
+        expect((yield* api.status).rate).toBe(1.2);
+        yield* api.resume;
+        yield* TestClock.adjust(1000);
+        expect(yield* place(api)).toBe(first + 2000);
+      }),
+    ),
+  );
+
+  it.effect('a tempo turned while playing moves on from the place as it stands', () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const { device } = recording(600_000);
+        const { api } = yield* clockOver(device, false);
+        const { first } = timelineOf(100);
+        yield* api.play(audioUrl(100), 0, at(0.8));
+        yield* TestClock.adjust(2000);
+        yield* setRate(api, 1.5);
+        expect(yield* place(api)).toBe(first + 1600);
+        yield* TestClock.adjust(2000);
+        expect(yield* place(api)).toBe(first + 4600);
+      }),
+    ),
+  );
+
+  it.effect('a seek while playing at 0.8 runs on from the seek at 0.8', () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const { device } = recording(600_000);
+        const { api } = yield* clockOver(device, false);
+        const { first } = timelineOf(100);
+        yield* api.play(audioUrl(100), 0, at(0.8));
+        yield* TestClock.adjust(3000);
+        yield* api.seek(first + 20_000);
+        expect(yield* place(api)).toBe(first + 20_000);
+        yield* TestClock.adjust(1000);
+        expect(yield* place(api)).toBe(first + 20_800);
+      }),
+    ),
+  );
+
+  it.effect('reaches the timeline’s end at wall time (end - first) / rate, and ends there', () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const { device } = recording(600_000);
+        const { api } = yield* clockOver(device, false);
+        const { first, end } = timelineOf(100);
+        yield* api.play(audioUrl(100), 0, at(0.5));
+        const whole = (end - first) / 0.5;
+        yield* TestClock.adjust(whole - 1000);
+        const before = yield* api.status;
+        expect(before.state).toBe('playing');
+        expect(before.positionMs).toBe(end - 500);
+        yield* TestClock.adjust(1000);
+        expect(yield* api.status).toEqual({
+          state: 'ended',
+          positionMs: end,
+          durationMs: end,
+          rate: 0.5,
+          recording: selection,
+        });
+      }),
+    ),
+  );
+
+  it.effect('a play that names no tempo runs at 1000 ms a second after one that did', () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const { device } = recording(600_000);
+        const { api } = yield* clockOver(device, false);
+        const { first } = timelineOf(100);
+        yield* api.play(audioUrl(100), 0, at(0.5));
+        yield* api.stop;
+        yield* api.play(audioUrl(100), 0);
+        yield* TestClock.adjust(1000);
+        expect(yield* api.status).toEqual({
+          state: 'playing',
+          positionMs: first + 1000,
+          durationMs: timelineOf(100).end,
+        });
+      }),
+    ),
+  );
+
+  it.effect('Sound on → off runs on from the device’s place at the tempo', () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const { device: held, asked } = recording(600_000);
+        const { device, options } = optionsOf(held);
+        const { api, sound } = yield* clockOver(device, true);
+        yield* api.play(audioUrl(100), 0, at(0.5));
+        yield* TestClock.adjust(30_000);
+        // The recording plays at its own pace, and its play is told no tempo.
+        expect(yield* place(api)).toBe(30_000);
+        expect(options.map(Option.isSome)).toEqual([true]);
+        expect(options.map(Option.exists((it) => 'rate' in it))).toEqual([false]);
+        yield* SubscriptionRef.set(sound, false);
+        yield* settle;
+        expect(asked.pause).toBe(1);
+        expect(yield* place(api)).toBe(30_000);
+        yield* TestClock.adjust(10_000);
+        expect(yield* place(api)).toBe(35_000);
+      }),
+    ),
+  );
+
+  it.effect('Sound off → on hands the clock’s place to the device, which plays at 1×', () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const { device: held, asked } = recording(600_000);
+        const { device, options } = optionsOf(held);
+        const { api, sound } = yield* clockOver(device, false);
+        const { first } = timelineOf(100);
+        yield* api.play(audioUrl(100), 0, at(0.5));
+        yield* TestClock.adjust(10_000);
+        expect(yield* place(api)).toBe(first + 5000);
+        yield* SubscriptionRef.set(sound, true);
+        yield* settle;
+        expect(asked.play).toEqual([[audioUrl(100), first + 5000]]);
+        expect(options.filter(Option.exists((it) => 'rate' in it))).toEqual([]);
+        yield* TestClock.adjust(1000);
+        const on = yield* api.status;
+        expect(on.positionMs).toBe(first + 6000);
+        expect(on.rate).toBeUndefined();
+      }),
+    ),
+  );
+
+  it.effect('tells its pace: the tempo with Sound off, 1 with the recording, 1 once stopped', () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const { device } = recording(600_000);
+        const { api, sound } = yield* clockOver(device, false);
+        const seen = new Array<number>();
+        const pace = Option.getOrThrow(Option.fromNullishOr(api.pace));
+        yield* Stream.runForEach(pace, (rate) => Effect.sync(() => seen.push(rate))).pipe(
+          Effect.forkScoped,
+        );
+        yield* settle;
+        yield* api.play(audioUrl(100), 0, at(0.8));
+        yield* settle;
+        yield* SubscriptionRef.set(sound, true);
+        yield* settle;
+        yield* SubscriptionRef.set(sound, false);
+        yield* settle;
+        yield* setRate(api, 1.2);
+        yield* settle;
+        yield* api.stop;
+        yield* settle;
+        expect(seen).toEqual([1, 0.8, 1, 0.8, 1.2, 1]);
+      }),
+    ),
+  );
+
+  it.effect('a tempo off the dial (0, below, not a number) runs at 1000 ms a second', () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const { device } = recording(600_000);
+        const { api } = yield* clockOver(device, false);
+        const { first } = timelineOf(100);
+        for (const rate of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+          yield* api.play(audioUrl(100), 0, at(rate));
+          yield* TestClock.adjust(1000);
+          expect({ rate, at: yield* place(api) }).toEqual({ rate, at: first + 1000 });
+        }
+      }),
+    ),
+  );
 });
 
 /** The device's playback with a `play` that never answers: the device loads and says nothing more. */

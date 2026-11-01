@@ -32,11 +32,15 @@ export const LEAD = 600;
 export type Report =
   /** The player is not on this hymn, or has stopped or ended. */
   | { readonly _tag: 'Away' }
-  /** The player is on this hymn at `at` ms: playing, waiting on the network, or paused. */
+  /**
+   * The player is on this hymn at `at` ms: playing, waiting on the network, or paused. Its
+   * place moves `rate` ms of the hymn for each ms (the player's `rate`), 1 when not told.
+   */
   | {
       readonly _tag: 'Here';
       readonly at: number;
       readonly state: 'playing' | 'waiting' | 'paused';
+      readonly rate?: number;
     };
 
 export interface Host {
@@ -112,7 +116,8 @@ export const followerOf = (timeline: Timeline, host: Host) => {
     snap = false;
     if (!playing) return;
     const next = Math.min(place.nextAt, ahead.nextAt - LEAD);
-    if (Number.isFinite(next)) cancel = host.wake(Math.max(0, next - at), tick);
+    // The wait is in the host's ms: the hymn's ms to the next change, at the clock's rate.
+    if (Number.isFinite(next)) cancel = host.wake(Math.max(0, next - at) / clock.value.rate, tick);
   };
 
   const report = (told: Report) => {
@@ -130,12 +135,13 @@ export const followerOf = (timeline: Timeline, host: Host) => {
     }
     if (told.state === 'paused') held.set(false);
     const playing = told.state === 'playing';
+    const rate = told.rate ?? 1;
     clock = Option.some(
       Option.match(clock, {
-        onNone: () => clockAt(told.at, playing, now),
+        onNone: () => clockAt(told.at, playing, now, rate),
         onSome: (was) => {
           if (Math.abs(told.at - placeOf(was, now)) > SLACK) snap = true;
-          return observe(was, { at: told.at, playing, seek: false }, now);
+          return observe(was, { at: told.at, playing, seek: false, rate }, now);
         },
       }),
     );
