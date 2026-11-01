@@ -7,8 +7,19 @@ voices sound, named and placed on the melody note where it changes.
   meters and keys.
 - `Score.fromMidi` finds the harmony tracks, the melody, the key, and where
   the intro ends and each verse begins: equal verses where the tune repeats
-  note for note, else each verse at the phrase end where its opening recurs
-  (a file may play each verse in its own rhythm).
+  note for note, else each verse near its equal share, on the note that
+  follows the tune's ending and opens as verse 1 does, ties to the phrase end
+  (a file may play each verse in its own rhythm). There, an intro is none or
+  at least two bars of the first meter, and it ends where a note follows the
+  tune's ending, else at the longest pause. Where a later verse found so
+  neither follows the tune's ending nor opens as verse 1 does, in full, the
+  verses are split equally in
+  ticks instead, from the first verse 1 that puts each later verse after the
+  tune's ending and on verse 1's opening keys. When fewer verses repeat
+  exactly than the text has stanzas, the missing ones are found beside them:
+  before them when the intro has room (one verse in its own rhythm), else
+  inside each when the text's count is a multiple (alternate verses in a
+  second rhythm); otherwise the file plays fewer verses.
 - `Harmony.onNotes` gives each melody note of a verse its chord changes, at
   two levels: `full` (every chord of half a beat or more, inversions kept)
   and `guitar` (what a guitarist strums).

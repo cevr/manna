@@ -57,6 +57,7 @@ import tqrHead from './sheets/threeQuarterRight/head.png' with { type: 'file' };
 import tqrRobe from './sheets/threeQuarterRight/robe.png' with { type: 'file' };
 import tqrTorso from './sheets/threeQuarterRight/torso.png' with { type: 'file' };
 import { puppetsOf } from '../../../../../library/cutout/puppets.ts';
+import { CUTS } from './cut.ts';
 import { FRAMES } from './frames.ts';
 import { SKELETONS } from './skeleton.ts';
 
@@ -131,6 +132,7 @@ const TURNAROUND_PAPERS = {
 /** Her turnaround's puppets, by the view's name in her sheets' views (`library/cutout/puppets.ts`). */
 const TURNAROUND = puppetsOf<TurnaroundView>({
   cast: 'feast-mother',
+  cuts: CUTS,
   frames: FRAMES,
   skeletons: SKELETONS,
   papers: TURNAROUND_PAPERS,
@@ -202,6 +204,7 @@ const POSES_PAPERS = {
 /** Her poses' puppets: the baby, the cup and the stool are parts of their own behind her hands. */
 const POSES = puppetsOf<PoseView>({
   cast: 'feast-mother',
+  cuts: CUTS,
   frames: FRAMES,
   skeletons: SKELETONS,
   papers: POSES_PAPERS,

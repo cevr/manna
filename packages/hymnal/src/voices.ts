@@ -1,7 +1,7 @@
 /**
  * A hymn's four parts as the recordings play them, read from its MIDI file
- * through the score's own reading (`score.ts`): S the melody, B the bass,
- * A and T the inner voices.
+ * through the tracks and the tune the score reads (`melody.ts`): S the
+ * melody, B the bass, A and T the inner voices.
  *
  * - S is the melody: the top voice of the tune's own track (the first
  *   sounding track when it is not a harmony track, else the first harmony
@@ -13,12 +13,12 @@
  * - A note of A that doubles the melody (a unison setting) is dropped.
  *
  * Notes struck within a 64th (`ticksPerBeat / 16`) of each other are one
- * onset, as in `score.ts`. The file's own arrangement tracks (strings, bass,
+ * onset, as in `melody.ts`. The file's own arrangement tracks (strings, bass,
  * winds) play no part.
  */
 
 import type { Midi, Note } from './midi.js';
-import { harmonyTracks, melodyOf, topVoice } from './score.js';
+import { harmonyTracks, melodyOf, topVoice } from './melody.js';
 
 export interface Voices {
   /** The melody, in onset order. */

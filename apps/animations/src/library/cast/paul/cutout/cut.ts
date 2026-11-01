@@ -208,7 +208,7 @@ const HIDDEN_ENTRIES = bustHidden(
 );
 
 /** His cut table: each view's cut and how its figure is read. */
-export const { CUTS, cutOptionsFor, HIDDEN } = cutTable({
+export const { CUTS, cutOptionsFor, HIDDEN, paperOf } = cutTable({
   frames: FRAMES,
   views: {
     'heads-1': { cut: HEADS_1, figure: 'bust' },

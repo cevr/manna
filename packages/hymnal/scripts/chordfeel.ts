@@ -219,7 +219,7 @@ const relaid = (loaded: Loaded, lines: readonly Studied[]) => {
   const soprano: Score.Score = {
     ...score,
     melody,
-    verses: Score.findVerses(melody, hymn.stanzas.length),
+    verses: Score.findVerses(melody, hymn.stanzas.length, score.beatsPerBar * score.ticksPerBeat),
   };
   const text = (l: Studied) =>
     l.syllables

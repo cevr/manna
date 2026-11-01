@@ -2635,7 +2635,16 @@ the kept crop at 1:1. The film skill (`.claude/skills/film/SKILL.md`, "A
 cut-out member") keeps the cut lessons and what a member with poses alone can
 and cannot get. His cut table (`<member>/cutout/cut.ts`: `CUTS`,
 `cutOptionsFor`, `HIDDEN`) splits a view into named parts, front to back
-(`cutParts`, `core/part-sheet.ts`).
+(`cutParts`, `core/part-sheet.ts`). The figure the cut reads holds every
+piece of paper the view's ink encloses (`cutFigureOf(view, gaps)` and
+`enclosedPaperOf`, from `@manna/film/core`): a pale swaddle, veil or
+highlight reads as paper just as the ground between the feet does, and no
+pixel measure tells them apart. So a view names its true gaps, where its kept
+sheet shows the ground through, in its cut table's `gaps` (`CutViewData`: a
+point inside each, its piece's box in the kept view's pixels, and why), and
+the cut holds every other piece. A named gap whose point opens no piece, or no
+piece with its box, is stale: every run of the tool below refuses it and
+names the view, the gap and the boxes it opens.
 `film concept parts <film> <member> --view <kind>-<view> [--dry-run]
 [--reuse] [--check]` (`tools/part-sheet-cli.ts`) paints what the view's
 moving parts hide. Each moving part's area goes flat magenta on the whole
@@ -2653,15 +2662,57 @@ by its mean step to the pixels the part keeps beside it), and only through `pain
 at rest (`tools/part-sheet-lay.ts`). Each answer is measured on domains
 the sheet fixes before any answer is read: the drift (the laid answer
 against the view over the pixels kept by the parts the hidden areas lie on,
-≤ 5), the seam (ΔE76 of paint against the pixels its part keeps beside it,
-≤ 10, read on 20 pairs or more) and each such part's grain (`grainOf`,
-`core/grain.ts`: G less its 3×3 mean, its robust std within ±0.5 of the
-part's kept pixels near the paint, read on 90 windows a side or more, else
-that part is `unverified`; the plain std is recorded beside it). A measure
+≤ 5, and each painted region's chroma, the paint of one part under one
+moving part: each painted pixel lighter than the ink is held to the mean
+a*, b* of its part's kept pixels within 6 px of it, and in each 24 px cell
+with 40 such pixels the paint's chroma is at most 3 below its cloth's, so
+paint as light as the cloth but greyer misses it; a region with no such
+cell is `unverified`), the seam (ΔE76 of paint against
+the pixels its part keeps beside it, ≤ 10, read on 20 pairs or more), each
+such part's grain (`grainOf`, `core/grain.ts`: G less its 3×3 mean, its
+robust std within ±0.5 of the part's kept pixels near the paint, read on 90
+windows a side or more; the plain std is recorded beside it; and its fine
+grain, read in 24 px cells: the share of the paint's pixels off its edge
+ring more than 4 L* from the median of their 5×5 neighbours, at most 0.03
+above the same share of the part's kept cloth within 24 px of the cell, on
+100 pixels a side or more, the cell furthest above its cloth standing for
+the part, so a patch of grain too fine for the specks shows in its cell
+where the pooled read hides it; both reads take the part's cloth at any
+lightness, off its edge ring, less the ink the specks' line rule below
+finds in it and the ring about that ink, so grain in dark cloth is read
+and an outline through it or round it is not grain; the fine read also
+leaves out every pixel darker than L* 15 and the ring about it, since an
+outline is near-black ink and no cloth is shaded that dark, so a thick
+slanted outline the line rule misses is not grain; the part is outside
+when either read is,
+within when both are read, else `unverified`) and each painted region's specks (the share of its
+pixels off its 1 px edge ring, ink included, more than 12 L* from the
+median of their 5×5 neighbours of their own kind, at most 0.04 above the
+share of its part's kept cloth within 24 px: a fleck of a moving part's
+colour left in the paint; the ring, where the outline runs, is a neighbour
+but is not read, and specks joined eight ways into a line of 4 px or more,
+3 times as long as wide, with a mean L* of 45 or less (ink), are an outline,
+not speckle, while a lighter dash is speckle; read on fewer than
+100 pixels a side, it is `unverified`) and each line where two parts'
+paint meets under one moving part (its mean L* step across the line, read
+apart under each moving part, four ways and both lighter
+than the ink in the answer, within 5 of the answer's step at the same
+pixels: the lay tones each part's paint on its own, so a step the answer
+does not paint is the lay's; read on fewer than 8 pairs, it is
+`unverified`). A measure
 with too few samples misses its bar, at least one part's grain must be
 read, and every moving part must hide some paint. An answer that leaves a
 moving part unpainted ranks after every one that paints them all, then by
-bars missed, then by seam; the best is kept. The part PNGs, `sheet.png`,
+the weight of its misses, then by seam; the best is kept. A missed bar
+weighs 1, plus how far its furthest read lies past the bar in the bar's
+own allowance (seam 10, drift 5, chroma 3, grain 0.5 pooled and 0.03 fine,
+speck 0.04, step 5),
+so a read one allowance past its bar weighs as one more missed bar; a read
+too thin to size adds one allowance more (a miss no read sizes weighs 2),
+so a read near miss ranks ahead of an unread one, a read far one behind
+it, and an unread read never hides how far a read one lies (`missesOf`;
+each answer's line prints `missed=<bar>:<weight>`, and each part's grain as
+`<part>:<pooled painted>/<kept>|<fine painted>/<kept>/<cells>:<verdict>`). The part PNGs, `sheet.png`,
 `sheet-painted.png` (each painted pixel half magenta) and `record.json`
 land in `<member>/cutout/sheets/<view>/`. Each call's input (named by its
 bytes' hash), prompt and answer land under its `okra/`. A view takes three
@@ -2673,7 +2724,11 @@ counts. An answer drawn from another input (the cut has moved since) is
 stale: the record keeps it, it is never laid, and it still counts.
 `--reuse` lays the answers already drawn, `--check` lays them and fails
 where a file differs, and `--dry-run` writes the magenta input under
-`out/<film>/cast/<member>/parts/<view>/`; none of the three calls okra.
+`out/<film>/cast/<member>/parts/<view>/` and prints each piece of enclosed
+paper the cut holds (`paper held`, its box and pixels, only the part the
+view's figure holds) and each gap the view names (`paper gap`, with its why),
+for the eye to check each held piece against the kept sheet at 1:1 (the cut
+table's `paperOf`); none of the three calls okra.
 
 ### The puppet: a part sheet on a skeleton
 
@@ -2714,7 +2769,10 @@ colour that fills any of the kept sheet's own paper pockets is dropped).
 `grain` is his paper's grain in luma (its p95 below the paper over the
 kept sheet's ground): a rim pixel darker than the paper by more than that
 keeps its colour at alpha 255. `grain` is off by default, so no pixel of a
-member that does not set it moves. Paint the
+member that does not set it moves. A cleared pixel the figure walls in is
+his light cloth and takes the sheet's pixel back; his shadow on the ground
+walls nothing in, and the cut names it: a cut entry with `role: 'shadow'`
+gives `PuppetSpec.shadow` its part names (`UnmatteOptions.shadow`). Paint the
 un-matte clears from behind a front part's rim is kept on the part behind
 (`PuppetPart.revealed`) and laid by one rule (`revealedShown`, beside
 `sealsShown`) in every draw: `rasterOf`, the plain GL pass and the look

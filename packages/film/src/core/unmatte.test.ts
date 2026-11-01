@@ -431,11 +431,11 @@ describe('unmatte, a light px the figure encloses', () => {
     for (const [x, y] of gap(S - 2)) expect(px(out!, x, y)[3]).toBe(0);
   });
 
-  test('clears a light gap between his feet that only an inkless part (his shadow) closes below', () => {
+  test('clears a light gap between his feet that only his inkless shadow closes below', () => {
     const body = paint(new Uint8Array(S * S * 4), [5, 12], [3, 14], INK);
     paint(body, [8, 9], [8, 14], LIGHT);
     const shadow = paint(new Uint8Array(S * S * 4), [1, 18], [15, 18], [215, 205, 190]);
-    const [out] = unmatte([body, shadow], S, S, PAPER);
+    const [out] = unmatte([body, shadow], S, S, PAPER, { shadow: [1] });
     for (const [x, y] of [
       [8, 13],
       [9, 13],
@@ -453,38 +453,25 @@ describe('unmatte, a light px the figure encloses', () => {
     for (const [x, y] of gap(15)) expect(px(out!, x, y)[3]).toBe(0);
   });
 
-  test('clears a light gap between his feet that a shadow closes below, though one shadow px is as dark as ink', () => {
-    const body = paint(new Uint8Array(S * S * 4), [5, 12], [3, 14], INK);
-    paint(body, [8, 9], [8, 14], LIGHT);
-    const shadow = paint(new Uint8Array(S * S * 4), [1, 18], [15, 18], [215, 205, 190]);
-    paint(shadow, [3, 3], [16, 16], [90, 85, 80]);
-    const [out] = unmatte([body, shadow], S, S, PAPER);
-    for (const x of [8, 9]) for (const y of [13, 14]) expect(px(out!, x, y)[3]).toBe(0);
-  });
-
-  /** His feet (an ink body on x 5..12, y 3..14, a 2 px `LIGHT` gap at x 8..9, y 8..14), and below them a 72 px part of the shadow's paint with ink at the px `inks`. */
-  const feetOver = (inks: ReadonlyArray<readonly [number, number]>) => {
+  /** His feet (an ink body on x 5..12, y 3..14, a 2 px `LIGHT` gap at x 8..9, y 8..14), and below them a 72 px part of the shadow's paint, inked at both ends (x 1..3 and 16..18, a third of its px) when `inked`, un-matted with `shadow` named. */
+  const feetOver = (inked: boolean, shadow: ReadonlyArray<number>) => {
     const body = paint(new Uint8Array(S * S * 4), [5, 12], [3, 14], INK);
     paint(body, [8, 9], [8, 14], LIGHT);
     const below = paint(new Uint8Array(S * S * 4), [1, 18], [15, 18], [215, 205, 190]);
-    for (const [x, y] of inks) paint(below, [x, x], [y, y], INK);
-    return unmatte([body, below], S, S, PAPER)[0]!;
+    if (inked) {
+      paint(below, [1, 3], [15, 18], INK);
+      paint(below, [16, 18], [15, 18], INK);
+    }
+    return unmatte([body, below], S, S, PAPER, { shadow })[0]!;
   };
 
-  test('clears a light gap between his feet that a shadow closes below, though 2 of its 72 px (2.8 %) are ink', () => {
-    const out = feetOver([
-      [3, 16],
-      [16, 16],
-    ]);
+  test('clears a light gap between his feet that his named shadow closes below, though a third of its px are ink', () => {
+    const out = feetOver(true, [1]);
     for (const x of [8, 9]) for (const y of [13, 14]) expect(px(out, x, y)[3]).toBe(0);
   });
 
-  test('keeps a light gap between his feet whole when the part that closes it below has 3 of its 72 px (4.2 %) ink, an outline and not a shadow', () => {
-    const out = feetOver([
-      [2, 16],
-      [3, 16],
-      [16, 16],
-    ]);
+  test('keeps a light gap between his feet whole when an inkless part that is no shadow closes it below', () => {
+    const out = feetOver(false, []);
     for (const x of [8, 9])
       for (const y of [13, 14]) expect(px(out, x, y)).toEqual([...LIGHT, 255]);
   });

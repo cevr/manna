@@ -19,7 +19,9 @@
 // kept in the record, never laid, and still counted. `--reuse` lays the
 // answers already drawn; `--check` lays them, writes nothing and fails
 // where a file differs; `--dry-run` writes the magenta input under
-// `out/<film>/cast/<member>/parts/<view>/`. None of the three calls okra.
+// `out/<film>/cast/<member>/parts/<view>/` and lists each piece of enclosed
+// paper the cut holds and each gap the view names (the table's `paperOf`).
+// None of the three calls okra.
 
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
@@ -57,7 +59,8 @@ import {
   layAnswer,
   magentaOf,
   missedBars,
-  rankOf,
+  missesOf,
+  rankOrder,
   sheetStrip,
 } from './part-sheet-lay.ts';
 import { decodePng, encodePng } from './png.ts';
@@ -114,13 +117,32 @@ const namedOf = (hidden: HiddenEntry, measures: HiddenMeasures) =>
       .map((g) => ({ ...miss, grain: g })),
   );
 
-/** What a member's cut table exports: its cuts, each view's options, each view's hidden entry. */
+/** What a member's cut table exports: its cuts, each view's options, each view's hidden entry, its paper reader, and, if it has them, its frames. */
 interface CutModule {
   readonly CUTS: Readonly<Record<string, PartCut>>;
   readonly cutOptionsFor: (view: string, raster: Raster) => PartCutOptions;
   readonly HIDDEN: Readonly<Record<string, HiddenEntry>>;
   /** Each view's frame on its kept sheet, where its part sheet is cut from the kept box padded: the sheet, the kept box and the pad (left, top, right, bottom). A view with none is cut from its kept view (`views/<view>.png`). */
   readonly FRAMES?: Readonly<Record<string, ViewFrame>>;
+  /** A view's enclosed paper in the kept view's pixels: the pieces its cut holds as cloth, the pieces it leaves open as the gaps the view names, and the named gaps gone stale. The dry run lists the first two, for the eye to check each held piece against the kept sheet; every run refuses a stale gap. */
+  readonly paperOf: (view: string, raster: Raster) => EnclosedPaper;
+}
+
+/** A piece of enclosed paper: its box in the kept view's pixels (the far edges exclusive) and its pixels. */
+interface PaperPiece {
+  readonly box: readonly [number, number, number, number];
+  readonly area: number;
+}
+
+/** A view's enclosed paper, held or open, as its cut table reads it, and each named gap whose point opens no piece, or no piece with the box it names. */
+interface EnclosedPaper {
+  readonly held: ReadonlyArray<PaperPiece>;
+  readonly open: ReadonlyArray<PaperPiece & { readonly why: string }>;
+  readonly stale: ReadonlyArray<{
+    readonly at: readonly [number, number];
+    readonly box: PaperPiece['box'];
+    readonly opened: ReadonlyArray<PaperPiece['box']>;
+  }>;
 }
 
 /** A view's frame on its kept sheet (`kept/<sheet>.png`): its kept box and the pixels its part sheet pads it by. */
@@ -135,7 +157,9 @@ const isCutModule = (u: unknown): u is CutModule =>
   Predicate.hasProperty(u, 'CUTS') &&
   Predicate.hasProperty(u, 'HIDDEN') &&
   Predicate.hasProperty(u, 'cutOptionsFor') &&
-  Predicate.isFunction(u.cutOptionsFor);
+  Predicate.isFunction(u.cutOptionsFor) &&
+  Predicate.hasProperty(u, 'paperOf') &&
+  Predicate.isFunction(u.paperOf);
 
 const Similarity = Schema.Struct({ s: Schema.Finite, dx: Schema.Finite, dy: Schema.Finite });
 
@@ -196,10 +220,17 @@ const PartSheetRecord = Schema.Struct({
   bars: Schema.Struct({
     seamDeltaE: Schema.Finite,
     driftDeltaE: Schema.Finite,
+    chromaDrop: Schema.Finite,
     grainWithin: Schema.Finite,
+    grainCellOver: Schema.Finite,
+    speckOver: Schema.Finite,
+    stepWithin: Schema.Finite,
     visibleAtRest: Schema.Int,
     leastSeamPairs: Schema.Int,
+    leastStepPairs: Schema.Int,
     leastGrainWindows: Schema.Int,
+    leastRegionPx: Schema.Int,
+    leastCellPx: Schema.Int,
   }),
   missed: Schema.Array(Schema.String),
   /** The misses its cut table accepts by name, each with its numbers. */
@@ -235,7 +266,7 @@ const cutTableOf = (file: string, name: string, refuse: (reason: string) => Part
       catch: (e) => refuse(`${file} does not load: ${String(e)}`),
     });
     if (!isCutModule(loaded))
-      return yield* refuse(`${file} exports no CUTS, cutOptionsFor and HIDDEN`);
+      return yield* refuse(`${file} exports no CUTS, cutOptionsFor, HIDDEN and paperOf`);
     const found = Option.all([
       Option.fromUndefinedOr(loaded.CUTS[name]),
       Option.fromUndefinedOr(loaded.HIDDEN[name]),
@@ -248,6 +279,7 @@ const cutTableOf = (file: string, name: string, refuse: (reason: string) => Part
           hidden,
           optionsFor: loaded.cutOptionsFor,
           frame: Option.fromUndefinedOr(loaded.FRAMES?.[name]),
+          paperOf: loaded.paperOf,
         }),
     });
   });
@@ -393,14 +425,18 @@ const callLine = (label: string, c: CallLaid) =>
     onNone: () =>
       `parts ${label} answer ${c.n}: ${[c.state, ...Option.toArray(Option.fromUndefinedOr(c.reason))].join(' ')}`,
     onSome: (m) =>
-      `parts ${label} answer ${c.n}: seam=${Option.getOrElse(Option.map(m.seam.deltaE, String), () => 'unread')}/${m.seam.pairs} drift=${m.drift.deltaE} grain=${m.grain.map((g) => `${g.part}:${g.painted.robust}/${g.kept.robust}:${g.verdict}`).join(',')} painted=${m.paintedPx}px visible=${m.visibleAtRest} missed=${(c.missed ?? []).join(',') || 'none'}`,
+      `parts ${label} answer ${c.n}: seam=${Option.getOrElse(Option.map(m.seam.deltaE, String), () => 'unread')}/${m.seam.pairs} drift=${m.drift.deltaE} chroma=${m.drift.chroma.map((r) => `${r.part}<${r.under}:${r.painted.chroma}/${r.kept.chroma}:${r.verdict}`).join(',')} grain=${m.grain.map((g) => `${g.part}:${g.painted.robust}/${g.kept.robust}|${g.fine.painted.share}/${g.fine.kept.share}/${g.fine.cells}:${g.verdict}`).join(',')} speck=${m.speck.map((r) => `${r.part}<${r.under}:${r.painted.share}/${r.kept.share}:${r.verdict}`).join(',')} step=${m.step.map((s) => `${s.part}|${s.meets}<${s.under}:${s.laid}/${s.answer}/${s.pairs}:${s.verdict}`).join(',')} painted=${m.paintedPx}px visible=${m.visibleAtRest} missed=${
+        missesOf(m)
+          .map((x) => `${x.bar}:${x.weight.toFixed(2)}`)
+          .join(',') || 'none'
+      }`,
   });
 
 /**
  * A view's part sheet made, laid again or checked. With `call`, one more
  * okra call is written to the ledger and then asked, refused once the view
  * has used its budget. Every call on the present input is laid; the best
- * (`rankOf`) is kept.
+ * (`rankOrder`) is kept.
  */
 export const runParts = Effect.fn('film.concept.parts.run')(function* (job: PartsJob) {
   const fs = yield* FileSystem.FileSystem;
@@ -485,10 +521,7 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
   const tried = laid.flatMap(({ call, at }) =>
     Result.match(at, { onFailure: () => [], onSuccess: (l) => [{ call, ...l }] }),
   );
-  const byRank = Order.mapInput(
-    Order.Tuple([Order.Number, Order.Number, Order.Number]),
-    (t: (typeof tried)[number]) => rankOf(t.measures),
-  );
+  const byRank = Order.mapInput(rankOrder, (t: (typeof tried)[number]) => t.measures);
   // the best answer by rank, the first drawn on a tie
   const found = Arr.reduce(tried, Option.none<(typeof tried)[number]>(), (best, t) =>
     Option.match(best, {
@@ -640,6 +673,22 @@ export const parts = Command.make(
           ),
         ).pipe(Effect.map((sheet) => cropRaster(sheet, f.box))),
     }).pipe(Effect.mapError(refuse));
+    // a named gap the sheet or the paper read moved from would hold the ground it names open
+    const paper = table.paperOf(name, view);
+    const stale = paper.stale.map(
+      (g) =>
+        `the gap at [${g.at.join(',')}] names the box [${g.box.join(',')}] but opens ${Option.match(
+          Arr.head(g.opened),
+          {
+            onNone: () => 'no piece of enclosed paper',
+            onSome: () => g.opened.map((b) => `[${b.join(',')}]`).join(' and '),
+          },
+        )}`,
+    );
+    if (stale.length > 0)
+      return yield* refuse(
+        `${input.member}.${input.view}: ${stale.join('; ')}; name its box again in the view's gaps, or drop it`,
+      );
     const started = yield* Clock.currentTimeMillis;
     const sheet = yield* Effect.fromResult(
       Result.mapError(cutParts(view, table.cut, table.optionsFor(name, view)), (e) =>
@@ -662,6 +711,13 @@ export const parts = Command.make(
       yield* fs.makeDirectory(out, { recursive: true });
       const mask = path.join(out, 'input.png');
       yield* fs.writeFile(mask, made.bytes);
+      for (const line of [
+        ...paper.held.map((p) => `parts ${label} paper held [${p.box.join(',')}] ${p.area}px`),
+        ...paper.open.map(
+          (p) => `parts ${label} paper gap [${p.box.join(',')}] ${p.area}px: ${p.why}`,
+        ),
+      ])
+        yield* Console.log(line);
       return yield* Console.log(
         `parts ${label} dry-run parts=${sheet.parts.length} moving=${table.hidden.moving.join(',')} hidden=${made.hidden.reduce((a, b) => a + b, 0)}px cut=${cutMs}ms mask=${mask} okra=0`,
       );

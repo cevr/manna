@@ -3,13 +3,14 @@
  * melody, the meter and key, and where the intro ends and each verse begins.
  *
  * The hymnal's files play an intro (some bars of the tune) and then every
- * verse in full. The harmony is a keyboard part (program 5, else 4) on one
- * track per voice or one per pair of voices; a unison setting puts the
- * melody on its own track first.
+ * verse in full. The tracks and the tune come from `melody.ts`.
  */
 
 import * as Chord from './chord.js';
-import type { Midi, Note, TimeSignature, Track } from './midi.js';
+import { harmonyTracks, melodyOf } from './melody.js';
+import type { Midi, Note, TimeSignature } from './midi.js';
+
+export { harmonyTracks, melodyOf, topVoice } from './melody.js';
 
 /** Where one verse is played, in ticks: from its first note to the next verse's first note. */
 export interface Span {
@@ -38,61 +39,6 @@ export interface Score {
   readonly verses: Verses;
 }
 
-const KEYBOARDS = [5, 4];
-
-export const harmonyTracks = (midi: Midi): readonly Track[] => {
-  const sounding = midi.tracks.filter((track) => track.notes.length > 0);
-  for (const program of KEYBOARDS) {
-    const tracks = sounding.filter((track) => track.program === program);
-    if (tracks.length > 0) return tracks.slice(0, 4);
-  }
-  return sounding.slice(0, 4);
-};
-
-/**
- * The highest voice of a track: a note counts when it starts at or above
- * every note sounding then. Notes struck within `slack` ticks of each other
- * are one onset, as a unison part doubles each note a tick or two apart;
- * of two equal keys there, the shorter is the tune's (the other voice holds).
- */
-export const topVoice = (notes: readonly Note[], slack: number): Note[] => {
-  const onsets: number[][] = [];
-  for (const tick of [...new Set(notes.map((note) => note.start))].sort((a, b) => a - b)) {
-    const last = onsets.at(-1);
-    if (last !== undefined && tick - (last[0] ?? tick) <= slack) last.push(tick);
-    else onsets.push([tick]);
-  }
-  const melody: Note[] = [];
-  for (const ticks of onsets) {
-    const tick = ticks[0] ?? 0;
-    const starting = notes.filter((note) => ticks.includes(note.start));
-    const highest = starting.reduce((a, b) =>
-      b.key > a.key || (b.key === a.key && b.end - b.start < a.end - a.start) ? b : a,
-    );
-    const above = notes.some(
-      (note) => note.start < tick && note.end > tick + slack && note.key > highest.key,
-    );
-    if (!above) melody.push(highest);
-  }
-  return melody;
-};
-
-export const melodyOf = (midi: Midi, harmony: readonly Track[]): Note[] => {
-  const first = midi.tracks.find((track) => track.notes.length > 0);
-  const slack = midi.ticksPerBeat / 16;
-  // A dedicated tune has one voice. An earlier polyphonic accompaniment
-  // (388, for example) cannot displace the keyboard's soprano.
-  // Legato overlaps do not make a dedicated tune an accompaniment. Look
-  // for multiple pitches struck together, within the file's onset slack.
-  const single = !first?.notes.some((note, i, notes) =>
-    notes.some(
-      (other, j) => j < i && Math.abs(note.start - other.start) <= slack && note.key !== other.key,
-    ),
-  );
-  const own = first !== undefined && !harmony.includes(first) && single ? first : harmony[0];
-  return own === undefined ? [] : topVoice(own.notes, midi.ticksPerBeat / 16);
-};
-
 /** The key the closing chord's bass names, for files with no key signature. */
 const closingKey = (harmony: readonly Note[]): Chord.Key => {
   const end = Math.max(...harmony.map((note) => note.end));
@@ -103,19 +49,29 @@ const closingKey = (harmony: readonly Note[]): Chord.Key => {
 };
 
 /**
- * Splits the melody into an intro and `count` verses. Where the tune repeats
- * note for note, the verses are equal: `expected` (the text's verse count)
- * is tried first, then the most verses that repeat exactly. Otherwise a file
- * plays each verse in its own rhythm, a note split or joined for its words,
- * so the expected count's closest equal split only places each verse near
- * its start: the verse starts on the note nearby that opens as the first
- * verse does, after the longest pause (the end of a phrase).
+ * Splits the melody into an intro and verses. Where the tune repeats note
+ * for note, the verses are equal: `expected` (the text's verse count) is
+ * tried first, then the most verses that repeat exactly. A verse sung in its
+ * own rhythm, a note split or joined for its words, breaks the repeat: when
+ * fewer verses repeat exactly than the text has, the missing ones are found
+ * beside them (`fewer`). With no exact repeat, the expected count's closest
+ * equal split only places each verse near its start. Verse 1 starts on note
+ * 0 or at least two bars (`bar`, in ticks) in: where a note nearby follows
+ * the tune's last keys, the intro ends there, else after the longest pause.
+ * Each later verse starts on the note nearby that most follows the tune's
+ * last keys and opens as verse 1 does, ties to the longest pause (the end of
+ * a phrase), then to the nearest. When some later start found so neither
+ * follows the tune's last keys nor opens as verse 1 does, in full, the
+ * verses differ by more than a note
+ * near their starts, but they still play equal bars: the first verse 1 whose
+ * equal split in ticks puts every later verse after the tune's last keys and
+ * on verse 1's opening keys, in full, gives the read.
  */
-export const findVerses = (melody: readonly Note[], expected: number): Verses => {
+export const findVerses = (melody: readonly Note[], expected: number, bar: number): Verses => {
   const keys = melody.map((note) => note.key);
   const end = melody.at(-1)?.end ?? 0;
-  // The time from the note before to this one: a long note or a rest ends a phrase. The files
-  // play an intro first, so the first note is no verse's start.
+  // The time from the note before to this one: a long note or a rest ends a phrase. The first
+  // note follows no pause.
   const pause = (i: number) => {
     const [before, note] = [melody[i - 1], melody[i]];
     if (note === undefined) return Number.NEGATIVE_INFINITY;
@@ -146,40 +102,142 @@ export const findVerses = (melody: readonly Note[], expected: number): Verses =>
     }));
   const equal = (count: number, intro: number, length: number) =>
     spans(Array.from({ length: count }, (_, k) => intro + k * length));
-
-  const wanted = split(expected);
-  if (wanted?.share === 1)
-    return { spans: equal(expected, wanted.intro, wanted.length), exact: true };
-  for (let count = 8; count >= 2; count--) {
-    const found = count === expected ? undefined : split(count);
-    if (found?.share === 1) return { spans: equal(count, found.intro, found.length), exact: true };
-  }
-  if (wanted === undefined) return { spans: [{ start: 0, end }], exact: false };
-
   const REACH = 4;
   const OPENING = 8;
-  const nearby = (center: number, after: number) =>
+  /** The run of the tune's last keys that marks an intro's end. */
+  const ENDING = 4;
+  /** The notes within `REACH` of `center`, after note `after` and before note `before`. */
+  const nearby = (center: number, after: number, before = keys.length) =>
     Array.from({ length: 2 * REACH + 1 }, (_, d) => center - REACH + d).filter(
-      (i) => i > after && i < keys.length,
+      (i) => i > after && i < before,
     );
   const best = (candidates: readonly number[], score: (i: number) => number, center: number) =>
     candidates.reduce((a, b) => {
       const [sa, sb] = [score(a), score(b)];
       return sb > sa || (sb === sa && Math.abs(b - center) < Math.abs(a - center)) ? b : a;
     }, candidates[0] ?? center);
-  const first = best(nearby(wanted.intro, -1), pause, wanted.intro);
-  // How many of the first verse's opening keys this note begins with, in a row.
-  const opens = (i: number) => {
+
+  /**
+   * `count` verses of `length` notes repeat exactly after `intro` notes, fewer than the text's
+   * stanzas: the missing stanzas are sung in their own rhythm, or the file plays fewer verses.
+   * Each verse found here starts on the note nearby that opens on the exact verses' first key,
+   * after the longest pause.
+   * - When the intro has room for the missing verses, they come first, each about a verse
+   *   before the next. The first exact verse may itself be the one in its own rhythm, its
+   *   opening key sung once more, so the keys repeat from a note late: it starts nearby too.
+   * - Else, when the text's count is a multiple of `count`, each exact span holds that many
+   *   stanzas, the alternate ones in a second rhythm.
+   * - Else the file plays `count` verses.
+   */
+  const fewer = (count: number, intro: number, length: number): Verses => {
+    const exact = Array.from({ length: count }, (_, k) => intro + k * length);
+    const missing = expected - count;
+    const opening = keys[intro];
+    const ranked = (i: number) => (keys[i] === opening ? end : 0) + Math.min(pause(i), end - 1);
+    const near = (center: number, after: number, before: number) =>
+      best(nearby(center, after, before), ranked, center);
+    if (missing > 0 && intro >= missing * length - REACH) {
+      const starts = [near(intro, -1, intro + length), ...exact.slice(1)];
+      for (let k = 0; k < missing; k++) {
+        const next = starts[0] ?? intro;
+        starts.unshift(near(next - length, -1, next));
+      }
+      return { spans: spans(starts), exact: false };
+    }
+    if (missing > 0 && expected % count === 0) {
+      const each = expected / count;
+      const starts: number[] = [];
+      for (const start of exact) {
+        starts.push(start);
+        for (let j = 1; j < each; j++)
+          starts.push(
+            near(Math.round(start + (j * length) / each), starts.at(-1) ?? start, start + length),
+          );
+      }
+      return { spans: spans(starts), exact: false };
+    }
+    return { spans: equal(count, intro, length), exact: true };
+  };
+
+  const wanted = split(expected);
+  if (wanted?.share === 1)
+    return { spans: equal(expected, wanted.intro, wanted.length), exact: true };
+  for (let count = 8; count >= 2; count--) {
+    const found = count === expected ? undefined : split(count);
+    if (found?.share === 1) return fewer(count, found.intro, found.length);
+  }
+  if (wanted === undefined) return { spans: [{ start: 0, end }], exact: false };
+
+  /** The candidate whose ranks, compared in order, are highest; ties to the nearest `center`. */
+  const top = (
+    candidates: readonly number[],
+    ranks: (i: number) => readonly number[],
+    center: number,
+  ) => {
+    const ranked = (i: number) => [...ranks(i), -Math.abs(i - center)];
+    return candidates.reduce((a, b) => {
+      const [ra, rb] = [ranked(a), ranked(b)];
+      const d = rb.findIndex((r, k) => r !== ra[k]);
+      return d >= 0 && (rb[d] ?? 0) > (ra[d] ?? 0) ? b : a;
+    }, candidates[0] ?? center);
+  };
+  // How many keys right before note `i` are the melody's last keys, in a row: a verse starts
+  // where the one before it ended as the tune ends.
+  const ends = (i: number) => {
     let k = 0;
-    while (k < OPENING && keys[i + k] !== undefined && keys[i + k] === keys[first + k]) k++;
+    while (k < OPENING && i - 1 - k >= 0 && keys[i - 1 - k] === keys[keys.length - 1 - k]) k++;
+    return k;
+  };
+  // An intro is none or at least two bars: verse 1 starts on note 0 or two bars in.
+  const firsts = [...new Set([0, ...nearby(wanted.intro, -1)])].filter(
+    (i) => i === 0 || (melody[i]?.start ?? 0) >= 2 * bar,
+  );
+  // Where a note nearby ends as the tune ends, the intro ends there; else after the longest pause.
+  const ended = Math.max(...firsts.map(ends)) >= ENDING;
+  const first = top(firsts, (i) => (ended ? [ends(i), pause(i)] : [pause(i)]), wanted.intro);
+  // How many of verse 1's opening keys (verse 1 starting on note `from`) note `i` begins with,
+  // in a row.
+  const opens = (i: number, from = first) => {
+    let k = 0;
+    while (k < OPENING && keys[i + k] !== undefined && keys[i + k] === keys[from + k]) k++;
     return k;
   };
   const starts = [first];
   for (let k = 1; k < expected; k++) {
-    const center = (starts.at(-1) ?? first) + wanted.length;
     const after = starts.at(-1) ?? first;
-    const ranked = (i: number) => opens(i) * end + Math.min(pause(i), end - 1);
-    starts.push(best(nearby(center, after), ranked, center));
+    const center = after + wanted.length;
+    starts.push(top(nearby(center, after), (i) => [ends(i) + opens(i), pause(i)], center));
+  }
+  // The read stands where each later verse starts after the tune's last keys, or on verse 1's
+  // opening keys, in full.
+  const placed = (i: number) => ends(i) >= OPENING || opens(i) >= OPENING;
+  if (starts.slice(1).every(placed)) return { spans: spans(starts), exact: false };
+  // Else verses that differ by more than a note near each start still play equal bars: the first
+  // verse 1 (note 0 or two bars in, an intro of at most half) whose equal split in ticks of the
+  // rest of the file puts each later verse on the nearest note to that tick, after the tune's
+  // last keys and on verse 1's opening keys in full.
+  const nearest = (tick: number) => {
+    const next = melody.findIndex((note) => note.start >= tick);
+    if (next === -1) return melody.length - 1;
+    const before = melody[next - 1];
+    const after = melody[next]?.start ?? tick;
+    return before !== undefined && tick - before.start < after - tick ? next - 1 : next;
+  };
+  const timed = (from: number) => {
+    const tick = melody[from]?.start ?? end;
+    if (from > 0 && tick < 2 * bar) return undefined;
+    const length = (end - tick) / expected;
+    const read = [from];
+    for (let k = 1; k < expected; k++) {
+      const i = nearest(tick + k * length);
+      if (i <= (read.at(-1) ?? from) || ends(i) < OPENING || opens(i, from) < OPENING) return;
+      read.push(i);
+    }
+    return read;
+  };
+  for (let from = 0; from <= keys.length / 2; from++) {
+    const read = timed(from);
+    if (read !== undefined) return { spans: spans(read), exact: false };
   }
   return { spans: spans(starts), exact: false };
 };
@@ -191,9 +249,10 @@ export const fromMidi = (midi: Midi, expectedVerses: number): Score => {
   const melody = melodyOf(midi, tracks);
   const meter = midi.timeSignatures[0] ?? { numerator: 4, denominator: 4 };
   const signature = midi.keySignatures[0];
+  const beatsPerBar = (meter.numerator * 4) / meter.denominator;
   return {
     ticksPerBeat: midi.ticksPerBeat,
-    beatsPerBar: (meter.numerator * 4) / meter.denominator,
+    beatsPerBar,
     meter: { numerator: meter.numerator, denominator: meter.denominator },
     meters: [{ ...meter, tick: 0 }, ...midi.timeSignatures.slice(1)],
     key:
@@ -202,6 +261,6 @@ export const fromMidi = (midi: Midi, expectedVerses: number): Score => {
         : Chord.keyFromSignature(signature.fifths, signature.minor),
     harmony,
     melody,
-    verses: findVerses(melody, expectedVerses),
+    verses: findVerses(melody, expectedVerses, beatsPerBar * midi.ticksPerBeat),
   };
 };

@@ -17,10 +17,7 @@ type Source = Parameters<typeof compile>[0];
 
 /** Hymns held back as plain text, each with its reason. */
 export const HELD: ReadonlyMap<number, string> = new Map(
-  [126, 225, 262, 292, 403, 453, 580].map((n) => [
-    n,
-    'verse split misplaced, spot check 2026-10-17',
-  ]),
+  [225, 262, 403, 453, 580].map((n) => [n, 'verse split misplaced, spot check 2026-10-17']),
 );
 
 const Refrains = Schema.fromJsonString(

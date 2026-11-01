@@ -83,24 +83,67 @@
           },
           "drift": {
             "deltaE": 5.3,
-            "px": 17007
+            "px": 17007,
+            "chroma": [
+              {
+                "part": "torso",
+                "under": "armLeft",
+                "painted": {
+                  "chroma": 0,
+                  "px": 0
+                },
+                "kept": {
+                  "chroma": 0,
+                  "px": 0
+                },
+                "cells": 0,
+                "verdict": "unverified"
+              }
+            ]
           },
           "grain": [
             {
               "part": "torso",
               "painted": {
-                "robust": 1.81,
-                "plain": 2.28,
-                "n": 3
+                "robust": 0.82,
+                "plain": 13.63,
+                "n": 81
               },
               "kept": {
-                "robust": 1.48,
-                "plain": 2.61,
-                "n": 2193
+                "robust": 1.32,
+                "plain": 3.63,
+                "n": 2087
+              },
+              "fine": {
+                "painted": {
+                  "share": 0,
+                  "px": 0
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 0
+                },
+                "cells": 0
               },
               "verdict": "unverified"
             }
           ],
+          "speck": [
+            {
+              "part": "torso",
+              "under": "armLeft",
+              "painted": {
+                "share": 0.026,
+                "px": 154
+              },
+              "kept": {
+                "share": 0.001,
+                "px": 2243
+              },
+              "verdict": "within"
+            }
+          ],
+          "step": [],
           "paintUnder": [
             {
               "part": "armLeft",
@@ -129,24 +172,67 @@
     },
     "drift": {
       "deltaE": 5.3,
-      "px": 17007
+      "px": 17007,
+      "chroma": [
+        {
+          "part": "torso",
+          "under": "armLeft",
+          "painted": {
+            "chroma": 0,
+            "px": 0
+          },
+          "kept": {
+            "chroma": 0,
+            "px": 0
+          },
+          "cells": 0,
+          "verdict": "unverified"
+        }
+      ]
     },
     "grain": [
       {
         "part": "torso",
         "painted": {
-          "robust": 1.81,
-          "plain": 2.28,
-          "n": 3
+          "robust": 0.82,
+          "plain": 13.63,
+          "n": 81
         },
         "kept": {
-          "robust": 1.48,
-          "plain": 2.61,
-          "n": 2193
+          "robust": 1.32,
+          "plain": 3.63,
+          "n": 2087
+        },
+        "fine": {
+          "painted": {
+            "share": 0,
+            "px": 0
+          },
+          "kept": {
+            "share": 0,
+            "px": 0
+          },
+          "cells": 0
         },
         "verdict": "unverified"
       }
     ],
+    "speck": [
+      {
+        "part": "torso",
+        "under": "armLeft",
+        "painted": {
+          "share": 0.026,
+          "px": 154
+        },
+        "kept": {
+          "share": 0.001,
+          "px": 2243
+        },
+        "verdict": "within"
+      }
+    ],
+    "step": [],
     "paintUnder": [
       {
         "part": "armLeft",
@@ -160,10 +246,17 @@
   "bars": {
     "seamDeltaE": 10,
     "driftDeltaE": 5,
+    "chromaDrop": 3,
     "grainWithin": 0.5,
+    "grainCellOver": 0.03,
+    "speckOver": 0.04,
+    "stepWithin": 5,
     "visibleAtRest": 0,
     "leastSeamPairs": 20,
-    "leastGrainWindows": 90
+    "leastStepPairs": 8,
+    "leastGrainWindows": 90,
+    "leastRegionPx": 100,
+    "leastCellPx": 40
   },
   "missed": ["drift", "grain"],
   "named": []

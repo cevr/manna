@@ -158,7 +158,7 @@ const FRONT: PartCut = {
       ],
       unless: [underSole(FRONT_SOLES.left)],
     },
-    { name: 'shadow', take: [belowHem(...FRONT_HEM)] },
+    { name: 'shadow', role: 'shadow', take: [belowHem(...FRONT_HEM)] },
     // below the belt, but the seed bag
     { name: 'robe', take: [box(-1, 331, FAR, FAR)], unless: [box(157, 309, 206, 413)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
@@ -292,6 +292,7 @@ const THREE_QUARTER_LEFT: PartCut = {
     },
     {
       name: 'shadow',
+      role: 'shadow',
       take: [
         {
           polygon: [
@@ -460,6 +461,7 @@ const BACK: PartCut = {
     },
     {
       name: 'shadow',
+      role: 'shadow',
       take: [
         {
           polygon: [
@@ -585,6 +587,7 @@ const PROFILE_LEFT: PartCut = {
     },
     {
       name: 'shadow',
+      role: 'shadow',
       take: [
         {
           polygon: [[-1, 510], ...PL_HEM.left, ...PL_HEM.right, [FAR, 512], [FAR, FAR], [-1, FAR]],
@@ -710,6 +713,7 @@ const PROFILE_RIGHT: PartCut = {
     },
     {
       name: 'shadow',
+      role: 'shadow',
       take: [
         {
           polygon: [
@@ -870,6 +874,7 @@ const THREE_QUARTER_RIGHT: PartCut = {
     },
     {
       name: 'shadow',
+      role: 'shadow',
       take: [
         {
           polygon: [
@@ -1023,6 +1028,7 @@ const POSES_1: PartCut = {
     },
     {
       name: 'shadow',
+      role: 'shadow',
       take: [
         {
           polygon: [[-1, 571], ...P1_HEM.right, ...P1_HEM.left, [FAR, 522], [FAR, FAR], [-1, FAR]],
@@ -1236,6 +1242,7 @@ const POSES_2: PartCut = {
     },
     {
       name: 'shadow',
+      role: 'shadow',
       take: [
         {
           polygon: [[-1, 540], ...P2_HEM.left, ...P2_HEM.right, [FAR, 540], [FAR, FAR], [-1, FAR]],
@@ -1417,6 +1424,7 @@ const POSES_3: PartCut = {
     },
     {
       name: 'shadow',
+      role: 'shadow',
       take: [
         {
           polygon: [[-1, 500], ...P3_HEM.right, ...P3_HEM.left, [FAR, 545], [FAR, FAR], [-1, FAR]],
@@ -1587,6 +1595,7 @@ const POSES_4: PartCut = {
     },
     {
       name: 'shadow',
+      role: 'shadow',
       take: [
         {
           polygon: [[-1, 535], ...P4_HEM.right, ...P4_HEM.left, [FAR, 535], [FAR, FAR], [-1, FAR]],
@@ -1666,17 +1675,40 @@ const HIDDEN_ENTRIES = {
   },
 } as const satisfies Readonly<Record<CutView, HiddenEntry>>;
 
-/** His cut table: each view's cut and how its figure is read. */
-export const { CUTS, cutOptionsFor, HIDDEN } = cutTable({
+/** What his kept sheets show through each of his named gaps. */
+const FEET = 'the ground between his feet';
+
+/** His cut table: each view's cut, how its figure is read, and its gaps. */
+export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
   frames: FRAMES,
   views: {
-    front: { cut: FRONT, figure: 'framed' },
-    threeQuarterLeft: { cut: THREE_QUARTER_LEFT, figure: 'framed' },
-    back: { cut: BACK, figure: 'framed' },
+    front: {
+      cut: FRONT,
+      figure: 'framed',
+      gaps: [{ at: [125, 533], box: [107, 525, 145, 543], why: FEET }],
+    },
+    threeQuarterLeft: {
+      cut: THREE_QUARTER_LEFT,
+      figure: 'framed',
+      gaps: [{ at: [114, 534], box: [96, 526, 133, 543], why: FEET }],
+    },
+    back: {
+      cut: BACK,
+      figure: 'framed',
+      gaps: [{ at: [127, 534], box: [109, 526, 147, 544], why: FEET }],
+    },
     profileLeft: { cut: PROFILE_LEFT, figure: 'framed' },
     profileRight: { cut: PROFILE_RIGHT, figure: 'framed' },
-    threeQuarterRight: { cut: THREE_QUARTER_RIGHT, figure: 'framed' },
-    'poses-1': { cut: POSES_1, figure: 'framed' },
+    threeQuarterRight: {
+      cut: THREE_QUARTER_RIGHT,
+      figure: 'framed',
+      gaps: [{ at: [113, 534], box: [97, 526, 130, 543], why: FEET }],
+    },
+    'poses-1': {
+      cut: POSES_1,
+      figure: 'framed',
+      gaps: [{ at: [257, 563], box: [233, 559, 283, 568], why: FEET }],
+    },
     'poses-2': { cut: POSES_2, figure: 'framed' },
     'poses-3': { cut: POSES_3, figure: 'framed' },
     'poses-4': { cut: POSES_4, figure: 'framed' },

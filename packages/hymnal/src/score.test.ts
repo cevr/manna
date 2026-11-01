@@ -171,4 +171,32 @@ describe('Score.fromMidi', () => {
       expect(Score.fromMidi(midi, 1).key).toEqual({ tonic: 'F', minor: false });
     }),
   );
+  // Each verse's first melody note, measured by keys, rhythm, bar phase and syllables per stanza.
+  // Each is read inexactly: a note split or joined near a verse start (126 and 292 differ by
+  // more than a note there). 214 and 149 are controls; 149's verse 2 splits its final note.
+  const truths: ReadonlyArray<readonly [number, readonly number[]]> = [
+    [54, [15, 55, 95]],
+    [58, [0, 30]],
+    [126, [11, 54, 98]],
+    [132, [26, 88, 149]],
+    [288, [14, 72, 128, 187]],
+    [292, [15, 80, 145, 211]],
+    [475, [46, 104]],
+    [525, [23, 88, 155]],
+    [214, [19, 102]],
+    [149, [19, 73, 129, 183]],
+  ];
+  it.effect(
+    'reads the hymnal files whose verses differ near their starts at their true starts',
+    () =>
+      Effect.gen(function* () {
+        const read: Array<readonly [number, readonly number[]]> = [];
+        for (const [n, starts] of truths) {
+          const score = Score.fromMidi(yield* real(n), starts.length);
+          const ons = score.melody.map((note) => note.start);
+          read.push([n, score.verses.spans.map((span) => ons.indexOf(span.start))]);
+        }
+        expect(read).toEqual([...truths]);
+      }).pipe(Effect.provide(BunServices.layer)),
+  );
 });

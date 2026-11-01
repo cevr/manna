@@ -27,7 +27,6 @@ import { CUT_AWAY, KEEP_REST, grain, shade, sides } from '../../../cutout/prompt
 import {
   FAR,
   type Hem,
-  type Pt,
   type Sleeve,
   type SoleRuns,
   aboveHem,
@@ -214,7 +213,7 @@ const FRONT: PartCut = {
       ],
       unless: [aboveHem(...FRONT_HEM), underSole(FRONT_SOLES.left)],
     },
-    { name: 'shadow', take: [belowHem(...FRONT_HEM)] },
+    { name: 'shadow', role: 'shadow', take: [belowHem(...FRONT_HEM)] },
     { name: 'robe', take: [box(-1, 369, FAR, FAR)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
@@ -397,7 +396,7 @@ const THREE_QUARTER_LEFT: PartCut = {
       ],
       unless: [aboveHem(...TURNED_HEM), underSole(TURNED_SOLES.left)],
     },
-    { name: 'shadow', take: [belowHem(...TURNED_HEM)] },
+    { name: 'shadow', role: 'shadow', take: [belowHem(...TURNED_HEM)] },
     { name: 'robe', take: [box(-1, 369, FAR, FAR)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
@@ -536,40 +535,6 @@ const SINGLE_1: PartCut = {
   ],
 };
 
-/**
- * The white objects single-1's figure holds, a seed in each pocket the cut
- * reads as paper, read off the kept view: the bottle's cap band and body; the
- * pale grain on his right sleeve's shoulder; the sash's band and knot; its
- * two ends with their pale grain; and the lit cream of his robe inside the
- * hem's left corner, closed by the hem's ink. A seed names a pocket whole, whatever
- * its shape, where a box would take the ink or cloth beside it. The paper
- * between his feet is the ground he stands on, not a thing he holds, so it
- * stays cut; so do the two specks beside his hem.
- */
-const SINGLE_1_HELD: ReadonlyArray<Pt> = [
-  [84, 258],
-  [73, 319],
-  [241, 387],
-  [221, 395],
-  [191, 410],
-  [177, 421],
-  [160, 434],
-  [209, 671],
-  [299, 673],
-  [248, 665],
-  [365, 666],
-  [348, 676],
-  [225, 668],
-  [247, 679],
-  [260, 677],
-  [273, 798],
-  [327, 864],
-  [287, 819],
-  [293, 857],
-  [286, 898],
-  [153, 1152],
-];
-
 /** His sheets' ink, for the row that closes a bust's foot. */
 const INK = [42, 30, 24, 255] as const;
 
@@ -626,21 +591,34 @@ const HIDDEN_ENTRIES = {
 } as const satisfies Readonly<Record<CutView, HiddenEntry>>;
 
 /** His cut table: each view's cut, how its figure is read, and what its label rules read (his colour classes and the view's part labels). */
-export const { CUTS, cutOptionsFor, HIDDEN } = cutTable({
+export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
   frames: FRAMES,
   views: {
     front: {
       cut: FRONT,
       figure: 'framed',
       reads: { classes: CLASSES, labels: LABELS.front },
+      gaps: [{ at: [124, 634], box: [106, 624, 144, 645], why: 'the ground between his feet' }],
     },
     threeQuarterLeft: {
       cut: THREE_QUARTER_LEFT,
       figure: 'framed',
       reads: { classes: CLASSES, labels: LABELS.threeQuarterLeft },
+      gaps: [{ at: [109, 633], box: [92, 623, 128, 645], why: 'the ground between his feet' }],
     },
     'heads-4': { cut: HEADS_4, figure: 'bust' },
-    'single-1': { cut: SINGLE_1, figure: 'framed', held: SINGLE_1_HELD },
+    'single-1': {
+      cut: SINGLE_1,
+      figure: 'framed',
+      gaps: [
+        { at: [318, 1221], box: [286, 1203, 352, 1241], why: 'the ground between his feet' },
+        {
+          at: [166, 1187],
+          box: [159, 1181, 174, 1195],
+          why: 'the ground in the notch between his hem and his left foot',
+        },
+      ],
+    },
   },
   hidden: HIDDEN_ENTRIES,
   ink: INK,

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { type PartCut, cutFigureOf, cutParts } from '@manna/film/tools';
+import { cutFigureOf } from '@manna/film/core';
+import { type PartCut, cutParts } from '@manna/film/tools';
 import { Match, Result } from 'effect';
 import { grain, shade, sides } from './prompts.ts';
 import { FAR, REACH, box, sleeve, underSole } from './rules.ts';
@@ -238,28 +239,110 @@ describe('framedFigure', () => {
     expect(figure[at(11, 3)]).toBe(1);
   });
 
-  test('fills back a held pocket the cut reads as paper; a pocket not named and the open ground stay cut', () => {
-    const [w, h] = [frame.kept[2] - frame.kept[0], frame.kept[3] - frame.kept[1]];
-    const [pw, ph] = [w + frame.pad[0] + frame.pad[2], h + frame.pad[1] + frame.pad[3]];
-    // two ink rings, each round a 10 x 10 pocket of paper wide enough for the cut to read as a gap
-    const [held, unnamed] = [ringed(5, 8, 16, 19, false), ringed(5, 22, 16, 33, false)];
-    const view = raster(pw, ph, (x, y) => [held, unnamed][Number(y >= 21)]!(x, y));
-    const at = (x: number, y: number) => y * pw + x;
-    const inPocket = (i: number) => {
+  // the padded view is 30 x 37 px; the kept box is x 3 to 26 and y 5 to 34 on it
+  const [w, h] = [frame.kept[2] - frame.kept[0], frame.kept[3] - frame.kept[1]];
+  const [pw, ph] = [w + frame.pad[0] + frame.pad[2], h + frame.pad[1] + frame.pad[3]];
+  const onView = (x: number, y: number) => y * pw + x;
+  /** A point of the padded view, in the kept view's pixels. */
+  const kept = (x: number, y: number) => [x - frame.pad[0], y - frame.pad[1]] as const;
+
+  test('holds every pocket of paper its ink encloses but a named gap; a gap on the open ground opens nothing', () => {
+    // two ink rings, each round a 10 x 9 pocket of paper wide enough for the cut to read as paper
+    const [cloth, gap] = [ringed(5, 6, 16, 16, false), ringed(5, 18, 16, 28, false)];
+    const view = raster(pw, ph, (x, y) => [cloth, gap][Number(y >= 17)]!(x, y));
+    const held = framedFigure(frame, view);
+    expect([held[onView(10, 11)], held[onView(10, 23)]]).toEqual([1, 1]);
+    const figure = framedFigure(frame, view, [kept(10, 23), kept(22, 20)]);
+    const inGap = (i: number) => {
       const [x, y] = [i % pw, Math.floor(i / pw)];
-      return x >= 6 && x <= 15 && y >= 9 && y <= 18;
+      return x >= 6 && x <= 15 && y >= 19 && y <= 27;
     };
-    const bare = framedFigure(frame, view);
-    expect(bare[at(10, 13)]).toBe(0);
-    // a seed in the held pocket and one on the open ground, in the kept view's pixels
-    const seeds = [
-      [10 - frame.pad[0], 13 - frame.pad[1]],
-      [22 - frame.pad[0], 20 - frame.pad[1]],
-    ] as const;
-    const figure = framedFigure(frame, view, seeds);
-    expect(figure.every((f, i) => f === Math.max(Number(inPocket(i)), bare[i] ?? 0))).toBe(true);
-    expect(figure[at(10, 27)]).toBe(0);
-    expect(figure[at(22, 20)]).toBe(0);
+    expect(figure.every((f, i) => f === Math.min(Number(!inGap(i)), held[i] ?? 0))).toBe(true);
+  });
+
+  test('opens a named gap on the pad’s reading too, its point moved by the pad', () => {
+    // a pocket that runs out of the kept box's foot into the pad: open ground on the kept view
+    // alone, paper the padded view encloses below it; the point, unmoved, lies on the open ground
+    const view = raster(pw, ph, ringed(5, 26, 16, 36, false));
+    expect(framedFigure(frame, view)[onView(10, 35)]).toBe(1);
+    const figure = framedFigure(frame, view, [kept(6, 27)]);
+    expect([figure[onView(10, 35)], figure[onView(10, 30)], figure[onView(5, 36)]]).toEqual([
+      0, 0, 1,
+    ]);
+  });
+});
+
+describe('paperOf', () => {
+  // the padded view is 30 x 37 px; the kept box is x 3 to 26 and y 5 to 34 on it
+  const [w, h] = [frame.kept[2] - frame.kept[0], frame.kept[3] - frame.kept[1]];
+  const [pw, ph] = [w + frame.pad[0] + frame.pad[2], h + frame.pad[1] + frame.pad[3]];
+  const between = { at: [7, 18] as const, box: [3, 14, 13, 23] as const, why: 'ground between' };
+  const below = { at: [3, 22] as const, box: [3, 22, 13, 31] as const, why: 'ground below' };
+  const table = cutTable({
+    frames: {
+      standing: frame,
+      foot: frame,
+      bare: frame,
+      bust: { sheet: 'heads', kept: [0, 0, 24, 24], pad: [0, 0, 0, 0] },
+    },
+    views: {
+      standing: { cut, figure: 'framed', gaps: [between] },
+      foot: { cut, figure: 'framed', gaps: [below] },
+      bare: { cut, figure: 'framed' },
+      bust: { cut, figure: 'bust', gaps: [{ at: [11, 20], box: [5, 7, 19, 24], why: 'neck' }] },
+    },
+    hidden: {
+      standing: { moving: ['arm'], prompt: 'standing' },
+      foot: { moving: ['arm'], prompt: 'foot' },
+      bare: { moving: ['arm'], prompt: 'bare' },
+      bust: { moving: ['arm'], prompt: 'bust' },
+    },
+    ink: INK,
+  });
+
+  test('lists each enclosed paper piece in the kept view’s pixels: held, or open as the gap the view names', () => {
+    const [cloth, gap] = [ringed(5, 6, 16, 16, false), ringed(5, 18, 16, 28, false)];
+    const view = raster(pw, ph, (x, y) => [cloth, gap][Number(y >= 17)]!(x, y));
+    expect(table.paperOf('standing', view)).toEqual({
+      held: [{ box: [3, 2, 13, 11], area: 90 }],
+      open: [{ box: [3, 14, 13, 23], area: 90, why: 'ground between' }],
+      stale: [],
+    });
+  });
+
+  test('lists a piece only the pad’s reading encloses in the kept view’s pixels, held only where the pad holds it', () => {
+    // the pocket's rows 22 to 29 lie in the kept box, open ground on the kept view alone; its row 30 is the pad's
+    const view = raster(pw, ph, ringed(5, 26, 16, 36, false));
+    expect(table.paperOf('foot', view)).toEqual({
+      held: [],
+      open: [{ box: [3, 22, 13, 31], area: 90, why: 'ground below' }],
+      stale: [],
+    });
+    expect(table.paperOf('bare', view)).toEqual({
+      held: [{ box: [3, 30, 13, 31], area: 10 }],
+      open: [],
+      stale: [],
+    });
+  });
+
+  test('names each gap that opens no piece, or a piece whose box is not its own, as stale', () => {
+    // the pocket between grown two rows taller than the gap names: the sheet redrawn under it
+    const grown = raster(pw, ph, ringed(5, 18, 16, 30, false));
+    expect(table.paperOf('standing', grown).stale).toEqual([
+      { ...between, opened: [[3, 14, 13, 25]] },
+    ]);
+    // no pocket between: the paper read changed under it
+    const none = raster(pw, ph, ringed(5, 6, 16, 16, false));
+    expect(table.paperOf('standing', none).stale).toEqual([{ ...between, opened: [] }]);
+  });
+
+  test('reads a bust with its foot closed', () => {
+    const view = raster(24, 24, ringed(4, 6, 19, 23, true));
+    expect(table.paperOf('bust', view)).toEqual({
+      held: [],
+      open: [{ box: [5, 7, 19, 24], area: 238, why: 'neck' }],
+      stale: [],
+    });
   });
 });
 
@@ -272,6 +355,13 @@ describe('bustFigure', () => {
     expect(figure.length).toBe(24 * 24);
     expect(figure[inside]).toBe(1);
     expect(figure[2 * 24 + 2]).toBe(0);
+  });
+
+  test('a named gap, a point of the view, stays open', () => {
+    const view = raster(24, 24, ringed(4, 6, 19, 23, true));
+    expect(bustFigure(view, INK)[20 * 24 + 11]).toBe(1);
+    const figure = bustFigure(view, INK, [[11, 20]]);
+    expect([figure[20 * 24 + 11], figure[6 * 24 + 4]]).toEqual([0, 1]);
   });
 });
 

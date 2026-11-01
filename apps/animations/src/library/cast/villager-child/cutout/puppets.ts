@@ -7,6 +7,7 @@
 // drawn at its one scale. Pure data.
 
 import { puppetsOf } from '../../../cutout/puppets.ts';
+import { CUTS } from './cut.ts';
 import { FRAMES } from './frames.ts';
 import { SKELETONS } from './skeleton.ts';
 import armLeft from './sheets/poses-5/armLeft.png' with { type: 'file' };
@@ -32,6 +33,7 @@ const PAPERS = {
 
 export const PUPPETS = puppetsOf<View>({
   cast: 'villager-child',
+  cuts: CUTS,
   frames: FRAMES,
   skeletons: SKELETONS,
   papers: PAPERS,

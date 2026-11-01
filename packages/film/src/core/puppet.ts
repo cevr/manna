@@ -154,6 +154,8 @@ interface PuppetSheet {
   readonly keep?: ReadonlyArray<Rgb>;
   /** His thin parts by name, whose rim keeps its hue (`UnmatteOptions.thin`). */
   readonly thin?: ReadonlyArray<string>;
+  /** His shadow parts by name, which wall nothing in (`UnmatteOptions.shadow`). */
+  readonly shadow?: ReadonlyArray<string>;
   /** The sheet's box edges his figure leaves through: when given, paper the box cuts off on any other edge is un-matted (`UnmatteOptions.open`). */
   readonly open?: ReadonlyArray<BoxEdge>;
   /** His paper's grain, luma: a rim pixel darker than the paper by more than it is kept whole (`UnmatteOptions.grain`). */
@@ -409,6 +411,7 @@ export const puppetOf = (
   const options = {
     keep: sheet.keep,
     thin: sheet.parts.flatMap((p, k) => (sheet.thin?.includes(p.name) === true ? [k] : [])),
+    shadow: sheet.parts.flatMap((p, k) => (sheet.shadow?.includes(p.name) === true ? [k] : [])),
     open: sheet.open,
     grain: sheet.grain,
   };

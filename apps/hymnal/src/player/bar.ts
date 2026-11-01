@@ -12,8 +12,9 @@
  * a back moves it out with the page.
  *
  * The bar holds a `#` (`FIND_LABEL`) that opens the find drums over it on
- * the bar's hymn's number (`Find`); a second press, or a swipe down, closes
- * them, and their `Open` and `Play` act on the dialled hymn (`pressFind`).
+ * the bar's hymn's number (`Find`); a second press, a swipe down or a tap
+ * outside them closes them, and their `Open` and `Play` act on the dialled
+ * hymn (`pressFind`).
  * With the bar hidden, the home list alone shows the `#`, where the bar
  * docks (`findAt`).
  */
@@ -166,13 +167,17 @@ export const dialFind = (find: Find, number: number): Find =>
 /** The find drums, app-wide: the `#` sets them and the home list follows their number. */
 export const find = Atom.make<Find>(Find.Closed()).pipe(Atom.keepAlive);
 
-/** What the reader does to the find drums: the `#`, a drum's detent, `Open`, `Play`, or a swipe down. */
+/**
+ * What the reader does to the find drums: the `#`, a drum's detent, `Open`,
+ * `Play`, a swipe down, or a tap anywhere outside the drums' panel and the `#`.
+ */
 export type FindPress = Data.TaggedEnum<{
   Hash: {};
   Dial: { readonly number: number };
   Open: {};
   Play: {};
   Swipe: {};
+  Outside: {};
 }>;
 export const FindPress = Data.taggedEnum<FindPress>();
 
@@ -188,7 +193,9 @@ export const FindAct = Data.taggedEnum<FindAct>();
  * The drums after `press`, and what it asks of the app. `#` opens or closes
  * them; a detent dials and asks nothing, so no detent ever starts a hymn;
  * `Open` and `Play` act on the dialled number and close the drums; a swipe
- * down closes them. With the drums closed, `Open` and `Play` ask nothing.
+ * down, or a tap outside them, closes them and asks nothing, so the tap
+ * never reaches what lies behind. With the drums closed, `Open` and `Play`
+ * ask nothing.
  */
 export const pressFind = (find: Find, bar: Bar, press: FindPress): readonly [Find, FindAct] =>
   FindPress.$match(press, {
@@ -197,6 +204,7 @@ export const pressFind = (find: Find, bar: Bar, press: FindPress): readonly [Fin
     Open: () => acting(find, (number) => FindAct.Open({ number })),
     Play: () => acting(find, (number) => FindAct.Play({ number })),
     Swipe: () => [Find.Closed(), FindAct.Stay()] as const,
+    Outside: () => [Find.Closed(), FindAct.Stay()] as const,
   });
 
 const acting = (find: Find, act: (number: number) => FindAct): readonly [Find, FindAct] =>

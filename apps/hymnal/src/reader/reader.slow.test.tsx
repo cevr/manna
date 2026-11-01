@@ -417,9 +417,7 @@ describe('a hymn page with chords on', () => {
   });
 
   it('shows each hymn with no chords as its words and a notice, with no key control', () => {
-    const chordless = [
-      126, 181, 212, 220, 225, 262, 292, 305, 403, 453, 481, 580, 663, 664, 687, 693,
-    ];
+    const chordless = [181, 220, 225, 262, 403, 453, 481, 580, 663, 664, 687, 693];
     for (const n of chordless) {
       const words = (() => {
         using app = mount(<HymnPage hymn={hymn(n)} reader={readerOn()} />);

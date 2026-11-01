@@ -1,7 +1,16 @@
 import { describe, expect, test } from 'bun:test';
 import { Option, Result } from 'effect';
 import { labOf, deltaE, rgbAt } from './cast-sheet-pixels.ts';
-import { type PartCut, cutParts, inkOf, inkTo, paintHidden, recompose } from './part-sheet.ts';
+import {
+  type PartCut,
+  cutFigureOf,
+  cutParts,
+  enclosedPaperOf,
+  inkOf,
+  inkTo,
+  paintHidden,
+  recompose,
+} from './part-sheet.ts';
 import type { Raster } from './raster.ts';
 
 type Rgba = readonly [number, number, number, number];
@@ -207,8 +216,8 @@ describe('part sheet', () => {
     expect(a.parts.map((p) => p.pixels.rgba)).toEqual(b.parts.map((p) => p.pixels.rgba));
   });
 
-  test('the paper the ink encloses is ground, and no part owns it', () => {
-    // an inked ring round 12 × 12 px of paper, a cream band and an outer ring round it
+  describe('the paper the ink encloses', () => {
+    // an inked ring round 12 × 12 px of paper (x and y 14 to 25), a cream band and an outer ring round it
     const ring = [Option.none<Rgba>(), Option.some(INK), Option.some(CREAM), Option.some(INK)];
     const { view } = viewOf(40, 40, (x, y) => {
       const d = Math.max(Math.abs(x - 19.5), Math.abs(y - 19.5));
@@ -227,11 +236,54 @@ describe('part sheet', () => {
         },
       ],
     };
-    const sheet = Result.getOrThrow(cutParts(view, { parts: [all] }));
-    expect([20 * 40 + 20, 20 * 40 + 11, 20 * 40 + 6, 0].map((i) => sheet.owner[i])).toEqual([
-      0, 1, 1, 0,
-    ]);
-    expect(sheet.parts[0]?.kept).toBe(sheet.owner.filter((o) => o === 1).length);
+    const ownersAt = (figure?: Uint8Array) => {
+      const sheet = Result.getOrThrow(cutParts(view, { parts: [all] }, { figure }));
+      return [20 * 40 + 20, 14 * 40 + 14, 20 * 40 + 11, 20 * 40 + 6, 0].map((i) => sheet.owner[i]);
+    };
+
+    test('is held: a part owns the piece, as it owns the cloth round it', () => {
+      expect(ownersAt()).toEqual([1, 1, 1, 1, 0]);
+    });
+
+    test('a named gap stays open: no part owns the piece its point lies in', () => {
+      expect(ownersAt(cutFigureOf(view, [[20, 20]]))).toEqual([0, 0, 1, 1, 0]);
+    });
+
+    test('a gap point off every paper piece changes nothing', () => {
+      const held = cutFigureOf(view);
+      // on the open ground, on the cream band, and off the view
+      for (const at of [
+        [0, 0],
+        [11, 20],
+        [-3, 50],
+      ] as const)
+        expect(cutFigureOf(view, [at])).toEqual(held);
+    });
+
+    test('each piece is listed with its box, its pixels and the gap points in it', () => {
+      expect(
+        enclosedPaperOf(view, [
+          [20, 20],
+          [14, 25],
+          [11, 20],
+        ]).pieces,
+      ).toEqual([
+        {
+          box: [14, 14, 26, 26],
+          area: 144,
+          gaps: [
+            [20, 20],
+            [14, 25],
+          ],
+          // the 12 x 12 square at (14, 14), row by row
+          pixels: Array.from(
+            { length: 144 },
+            (_, k) => (14 + Math.floor(k / 12)) * view.width + 14 + (k % 12),
+          ),
+        },
+      ]);
+      expect(enclosedPaperOf(view).pieces.map((p) => p.gaps)).toEqual([[]]);
+    });
   });
 });
 

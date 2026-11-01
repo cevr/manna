@@ -2,7 +2,8 @@
  * The find drums: three dials, hundreds, tens and ones, that dial a hymn's
  * number in the book (`drums.ts`). They stand side by side in one row, left
  * to right, each an equal share of the width, and each is a `DialView`
- * standing as a vertical drum (`axis` `column`), so a finger swipes it up or
+ * standing as a vertical drum (`axis` `column`) that draws its digits and no
+ * name, so a finger swipes it up or
  * down like a picker wheel and flings it, and VoiceOver turns it a step at a
  * time (increment and decrement). A drum's detent is felt always and heard
  * only while the player's Sound switch is on (`drumTell`).
@@ -20,11 +21,11 @@ import { PanelRow, ROW_GAP } from './DialPanel';
 import { DialView, MOST_SCALE } from './DialView';
 import { digitsOf, type Drum, DRUM_ORDER, DRUMS, drumTell, turn } from './drums';
 
-/** Each drum's name, as VoiceOver says it and as the small word at its left. */
-const NAMES: Readonly<Record<Drum, { readonly label: string; readonly title: string }>> = {
-  hundreds: { label: 'Hundreds', title: '100s' },
-  tens: { label: 'Tens', title: '10s' },
-  ones: { label: 'Ones', title: '1s' },
+/** Each drum's name, as VoiceOver says it; a drum draws no name, only its digits. */
+const LABELS: Readonly<Record<Drum, string>> = {
+  hundreds: 'Hundreds',
+  tens: 'Tens',
+  ones: 'Ones',
 };
 
 /** Each drum's digits, in turn order. */
@@ -58,8 +59,7 @@ export function FindDrums({
                 dial={drum}
                 axis="column"
                 testID={`drum-${drum}`}
-                label={NAMES[drum].label}
-                title={NAMES[drum].title}
+                label={LABELS[drum]}
                 stops={STOPS[drum]}
                 index={digits[drum]}
                 wrap={DRUMS[drum].wrap}
