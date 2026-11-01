@@ -454,7 +454,7 @@ describe('a puppet', () => {
     ).toBe(true);
   });
 
-  test('two flaps on one part are refused', () => {
+  test('two flaps on one part, or a flap on an arm of more than 3 bones, are refused', () => {
     const [w, h] = [16, 16];
     const pixels = { width: w, height: h, rgba: new Uint8Array(w * h * 4).fill(255) };
     const sheet: PuppetSheet = {
@@ -490,6 +490,25 @@ describe('a puppet', () => {
     expect(Result.isSuccess(puppetOf(sheet, skeleton))).toBe(true);
     const twice = puppetOf(sheet, { ...skeleton, flaps: [flap, { ...flap, cap: 3 }] });
     expect(Result.isFailure(twice)).toBe(true);
+    // a vertex holds 4 weights: an arm of 3 bones and the body fit, a 4th arm bone would
+    // crowd the body's share out where it is small and step the weights at the flap's edge
+    const chain = ['lean', 'shoulderRight', 'elbowRight', 'wristRight', 'fingerRight'];
+    const arm = (n: number): Skeleton => ({
+      bones: [
+        { name: 'lean', pivot: [8, 15], tip: [8, 0] },
+        ...chain.slice(1, n + 1).map((name, i) => ({
+          name,
+          parent: chain[i]!,
+          pivot: [4, 8 + 2 * i] as const,
+          tip: [4, 10 + 2 * i] as const,
+        })),
+      ],
+      skin: { arm: chain.slice(0, n + 1), body: ['lean'] },
+      flaps: [flap],
+    });
+    expect(Result.isSuccess(puppetOf(sheet, arm(3)))).toBe(true);
+    const crowded = puppetOf(sheet, arm(4));
+    expect(Result.isFailure(crowded) && crowded.failure.reason).toContain('arm of 4 bones');
   });
 
   test("keeps, revealed by the part in front, the paint the un-matte cleared behind that part's rim", () => {
