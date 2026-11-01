@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { Array as Arr, Boolean as Bool, Option, Result } from 'effect';
+import { Boolean as Bool, Result } from 'effect';
 import { type PartCut, cutParts } from '../core/part-sheet.ts';
 import type { Raster } from '../core/raster.ts';
 import { domainOf, hiddenOf, layAnswer, missedBars, rankOf } from './part-sheet-lay.ts';
@@ -14,17 +14,14 @@ const OLIVE: Rgb = [150, 140, 100];
 const CREAM: Rgb = [217, 191, 165];
 /** A grey of the olive's lightness: shade with no colour. */
 const GREY: Rgb = [138, 138, 138];
+/** The ink of an outline drawn in the paint. */
+const INK: Rgb = [70, 58, 46];
+/** A skin beside the olive: a second material of the torso. */
+const SKIN: Rgb = [214, 160, 128];
 
 const TORSO: Box = { x0: 6, y0: 4, x1: 42, y1: 44 };
 const ARM: Box = { x0: 18, y0: 8, x1: 30, y1: 40 };
 const inside = (b: Box, x: number, y: number) => x >= b.x0 && x < b.x1 && y >= b.y0 && y < b.y1;
-
-/** The colour of the first box that holds the pixel, front to back; paper outside them all. */
-const colourAt = (x: number, y: number, boxes: ReadonlyArray<readonly [Box, Rgb]>) =>
-  Option.match(
-    Arr.findFirst(boxes, ([b]) => inside(b, x, y)),
-    { onNone: () => PAPER, onSome: ([, c]) => c },
-  );
 
 const rasterOf = (colour: (x: number, y: number) => Rgb): Raster => {
   const rgba = new Uint8Array(W * W * 4);
@@ -43,44 +40,46 @@ const corners = (b: Box): ReadonlyArray<readonly [number, number]> => [
   [b.x0, b.y1],
 ];
 
+type Paint = (x: number, y: number) => Rgb;
+
 /**
- * A flat olive torso with a cream arm in `arm` in front of it that moves, and
- * okra's answer laid on it: the view with the arm's place painted, olive at
- * its edge and `inner` more than 2 px in from it, where the seam never reads.
+ * A torso of `cloth` (flat olive unless given) with a cream arm in `arm` in
+ * front of it that moves, and okra's answer laid on it: the view with the
+ * arm's place painted, the cloth at its edge and `inner` more than `margin`
+ * px in from it (2 unless given, where the seam never reads).
  */
-const layOn = (arm: Box) => (inner: (x: number, y: number) => Rgb) => {
-  const view = rasterOf((x, y) =>
-    colourAt(x, y, [
-      [arm, CREAM],
-      [TORSO, OLIVE],
-    ]),
-  );
-  const cut: PartCut = {
-    parts: [
-      { name: 'arm', take: [{ polygon: corners(arm) }] },
-      { name: 'torso', take: [{ polygon: corners(TORSO) }] },
-    ],
+const layOn =
+  (arm: Box, { cloth = (): Rgb => OLIVE, margin = 2 }: { cloth?: Paint; margin?: number } = {}) =>
+  (inner: Paint) => {
+    const torso = (x: number, y: number) =>
+      Bool.match(inside(TORSO, x, y), { onTrue: () => cloth(x, y), onFalse: () => PAPER });
+    const view = rasterOf((x, y) =>
+      Bool.match(inside(arm, x, y), { onTrue: () => CREAM, onFalse: () => torso(x, y) }),
+    );
+    const cut: PartCut = {
+      parts: [
+        { name: 'arm', take: [{ polygon: corners(arm) }] },
+        { name: 'torso', take: [{ polygon: corners(TORSO) }] },
+      ],
+    };
+    const m = margin;
+    const within = { x0: arm.x0 + m, y0: arm.y0 + m, x1: arm.x1 - m, y1: arm.y1 - m };
+    const answer = rasterOf((x, y) =>
+      Bool.match(inside(within, x, y), { onTrue: () => inner(x, y), onFalse: () => torso(x, y) }),
+    );
+    const sheet = Result.getOrThrow(cutParts(view, cut, { figure: FIGURE }));
+    const hidden = hiddenOf(sheet, ['arm']);
+    const target = {
+      view,
+      sheet,
+      hidden,
+      domain: domainOf(sheet, hidden),
+      moving: ['arm'],
+      pad: { s: 1, dx: 0, dy: 0 },
+      portrait: { width: W, height: W },
+    };
+    return Result.getOrThrow(layAnswer(target, answer)).measures;
   };
-  const within = { x0: arm.x0 + 2, y0: arm.y0 + 2, x1: arm.x1 - 2, y1: arm.y1 - 2 };
-  const answer = rasterOf((x, y) =>
-    Bool.match(inside(within, x, y), {
-      onTrue: () => inner(x, y),
-      onFalse: () => colourAt(x, y, [[TORSO, OLIVE]]),
-    }),
-  );
-  const sheet = Result.getOrThrow(cutParts(view, cut, { figure: FIGURE }));
-  const hidden = hiddenOf(sheet, ['arm']);
-  const target = {
-    view,
-    sheet,
-    hidden,
-    domain: domainOf(sheet, hidden),
-    moving: ['arm'],
-    pad: { s: 1, dx: 0, dy: 0 },
-    portrait: { width: W, height: W },
-  };
-  return Result.getOrThrow(layAnswer(target, answer)).measures;
-};
 
 const laid = layOn(ARM);
 const olive = () => OLIVE;
@@ -105,6 +104,40 @@ describe('the part sheet lay', () => {
     expect(missedBars(smooth)).not.toContain('speck');
   });
 
+  test('paint clumped with the kept sleeve, 2 px across every 5 px, misses the speck bar', () => {
+    const clumped = laid((x, y) =>
+      Bool.match((x - ARM.x0) % 5 < 2 && (y - ARM.y0) % 5 < 2, {
+        onTrue: () => CREAM,
+        onFalse: () => OLIVE,
+      }),
+    );
+    expect(clumped.speck).toEqual([expect.objectContaining({ verdict: 'outside' })]);
+    expect(missedBars(clumped)).toContain('speck');
+  });
+
+  test('a thin outline in the paint, dotted along its edge or drawn across it, is not speckle', () => {
+    const edge = (x: number, y: number) =>
+      (x === ARM.x0 || x === ARM.x1 - 1 || y === ARM.y0 || y === ARM.y1 - 1) && (x + y) % 2 === 0;
+    // a steep line, one step across for every four down, from the top of the arm to its foot
+    const across = (x: number, y: number) => x === ARM.x0 + 2 + Math.floor((y - ARM.y0) / 4);
+    const outlined = layOn(ARM, { margin: 0 })((x, y) =>
+      Bool.match(edge(x, y) || across(x, y), { onTrue: () => INK, onFalse: () => OLIVE }),
+    );
+    expect(outlined.speck).toEqual([expect.objectContaining({ verdict: 'within' })]);
+    expect(missedBars(outlined)).not.toContain('speck');
+  });
+
+  test('paint of two materials, each matching its cloth, with a cell too sparse to read, meets the speck and drift bars', () => {
+    // the olive gives way to skin inside the first chroma cell; the arm's cells below y 24 hold 2 rows
+    const cloth = (x: number): Rgb =>
+      Bool.match(x < 21, { onTrue: () => OLIVE, onFalse: () => SKIN });
+    const mixed = layOn({ x0: 18, y0: 8, x1: 30, y1: 26 }, { cloth })((x) => cloth(x));
+    expect(mixed.speck).toEqual([expect.objectContaining({ verdict: 'within' })]);
+    expect(mixed.drift.chroma).toEqual([expect.objectContaining({ cells: 2, verdict: 'within' })]);
+    expect(missedBars(mixed)).not.toContain('speck');
+    expect(missedBars(mixed)).not.toContain('drift');
+  });
+
   test('paint greyer than the cloth beside it misses the drift bar, though its seam matches', () => {
     const grey = laid(() => GREY);
     const kept = laid(olive);
@@ -120,8 +153,9 @@ describe('the part sheet lay', () => {
   });
 
   test('a region with one pixel fewer than the speck floor misses the speck bar and ranks below one at the floor', () => {
-    const atFloor = layOn({ x0: 8, y0: 8, x1: 18, y1: 18 })(olive);
-    const under = layOn({ x0: 8, y0: 8, x1: 17, y1: 19 })(olive);
+    // the speck is read inside the region's edge ring: 10 × 10 px of a 12 × 12 region, 9 × 11 of 11 × 13
+    const atFloor = layOn({ x0: 8, y0: 8, x1: 20, y1: 20 })(olive);
+    const under = layOn({ x0: 8, y0: 8, x1: 19, y1: 21 })(olive);
     expect(atFloor.speck).toEqual([
       expect.objectContaining({ painted: { share: 0, px: 100 }, verdict: 'within' }),
     ]);

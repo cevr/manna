@@ -8,7 +8,7 @@
 // domains the sheet fixes before any answer is read: the drift over the
 // pixels kept by the parts the hidden areas lie on, the seam and each such
 // part's grain beside its paint, and each painted region's chroma and speck
-// share beside its part's kept cloth. A measure with too few samples to read is
+// share (inside its edge ring, outlines left out) beside its part's kept cloth. A measure with too few samples to read is
 // a missed bar, not a pass, and every moving part must hide some paint
 // (`film concept parts`, `part-sheet-cli.ts`, keeps the best answer).
 
@@ -48,6 +48,10 @@ const LEAST_REGION_PX = 100;
 /** A pixel is a speck when its L* lies further than this from the median L* of its 5 × 5 neighbours of its own kind. */
 const SPECK_L = 12;
 
+/** Specks that join into a line this many pixels long or more, this many times as long as wide, are an outline, not speckle. */
+const SPECK_LINE_PX = 4;
+const SPECK_LINE_LONG = 3;
+
 /** How far from its paint a part's kept pixels count beside it: for the specks (as the grain's reach), and for each painted pixel's chroma. */
 const SPECK_REACH = 24;
 const CHROMA_REACH = 6;
@@ -63,7 +67,8 @@ const LEAST_CELL_PX = 40;
  * The stage's bars: seam ΔE ≤ 10; drift ≤ 5, and in each read cell of a
  * painted region the paint's chroma at most 3 below the kept cloth's beside
  * it; each read part's paint grain within ±0.5 of its kept grain (robust
- * std); each read region's speck share at most 0.04 above the kept cloth's;
+ * std); each read region's speck share, off its edge ring and outlines left
+ * out, at most 0.04 above the kept cloth's;
  * no paint at rest.
  */
 export const BARS = {
@@ -376,21 +381,64 @@ const grown = (mask: Uint8Array, w: number, h: number, r: number): Uint8Array =>
   return pass(rows, h, w, (y, x) => y * w + x);
 };
 
-/** The share of `set`'s pixels whose L* lies more than `SPECK_L` from the median L* of their 5 × 5 neighbours in `set`, read on `r`. */
+/** Whether pixel `i` of `set` lies on its edge ring: a neighbour of the eight is outside `set` or the picture. */
+const onRing = (set: Uint8Array, i: number, w: number, h: number) => {
+  const [x, y] = [i % w, Math.floor(i / w)];
+  if (x === 0 || y === 0 || x === w - 1 || y === h - 1) return true;
+  for (let b = y - 1; b <= y + 1; b++)
+    for (let a = x - 1; a <= x + 1; a++) if (set[b * w + a] !== 1) return true;
+  return false;
+};
+
+/** How long `count` pixels at `sx … sxy` (sums of x, y, x², y², xy) are against their width: the root of their second moments' ratio, each pixel a unit square. */
+const elongationOf = (count: number, [sx, sy, sxx, syy, sxy]: ReadonlyArray<number>) => {
+  const [mx, my] = [(sx ?? 0) / count, (sy ?? 0) / count];
+  const cxx = (sxx ?? 0) / count - mx * mx + 1 / 12;
+  const cyy = (syy ?? 0) / count - my * my + 1 / 12;
+  const cxy = (sxy ?? 0) / count - mx * my;
+  const spread = Math.sqrt((cxx - cyy) ** 2 / 4 + cxy * cxy);
+  // each axis's 1/12 keeps the narrower moment at 1/12 or more, so the ratio is finite
+  return Math.sqrt(((cxx + cyy) / 2 + spread) / ((cxx + cyy) / 2 - spread));
+};
+
+/**
+ * The share of `set`'s pixels off its edge ring whose L* lies more than
+ * `SPECK_L` from the median L* of their 5 × 5 neighbours in `set`, read on
+ * `r`, and how many were read. The ring is the outline where the set meets
+ * another part, so it serves as neighbours but is not read; specks that join
+ * (eight ways) into a line of `SPECK_LINE_PX` or more, `SPECK_LINE_LONG`
+ * times as long as it is wide, are an outline drawn in the paint, not
+ * speckle.
+ */
 const speckShare = (r: Raster, set: Uint8Array) => {
   const { width: w, height: h } = r;
-  const at = Arr.range(0, w * h - 1).filter((i) => set[i] === 1);
+  const at = Arr.range(0, w * h - 1).filter((i) => set[i] === 1 && !onRing(set, i, w, h));
   const l = new Float32Array(w * h);
-  for (const i of at) l[i] = labOf(rgbAt(r, i))[0];
-  const specks = at.filter((i) => {
+  for (let i = 0; i < w * h; i++) if (set[i] === 1) l[i] = labOf(rgbAt(r, i))[0];
+  const speck = new Uint8Array(w * h);
+  for (const i of at) {
     const [x, y] = [i % w, Math.floor(i / w)];
     const around: number[] = [];
     for (let b = Math.max(0, y - 2); b <= Math.min(h - 1, y + 2); b++)
       for (let a = Math.max(0, x - 2); a <= Math.min(w - 1, x + 2); a++)
         if (set[b * w + a] === 1) around.push(l[b * w + a] ?? 0);
-    return Math.abs((l[i] ?? 0) - medianOf(around)) > SPECK_L;
-  });
-  return { share: specks.length / Math.max(1, at.length), px: at.length };
+    speck[i] = Number(Math.abs((l[i] ?? 0) - medianOf(around)) > SPECK_L);
+  }
+  const { components, labels } = componentsOf(speck, w, h, true);
+  const moments = components.map(() => [0, 0, 0, 0, 0]);
+  for (const i of at.filter((i) => speck[i] === 1)) {
+    const [x, y] = [i % w, Math.floor(i / w)];
+    const step = [x, y, x * x, y * y, x * y];
+    Option.map(Option.fromUndefinedOr(moments[labels[i] ?? -1]), (m) => {
+      for (let c = 0; c < 5; c++) m[c] = (m[c] ?? 0) + (step[c] ?? 0);
+    });
+  }
+  const specks = components
+    .filter(
+      (c, k) => c.area < SPECK_LINE_PX || elongationOf(c.area, moments[k] ?? []) < SPECK_LINE_LONG,
+    )
+    .reduce((n, c) => n + c.area, 0);
+  return { share: specks / Math.max(1, at.length), px: at.length };
 };
 
 /** Summed-area tables of a*, b* and count over the pixels `set` marks on `r`, and the sums over a box of them. */

@@ -2673,10 +2673,13 @@ such part's grain (`grainOf`, `core/grain.ts`: G less its 3×3 mean, its
 robust std within ±0.5 of the part's kept pixels near the paint, read on 90
 windows a side or more, else that part is `unverified`; the plain std is
 recorded beside it) and each painted region's specks (the share of its
-pixels, ink included, more than 12 L* from the median of their 5×5
-neighbours of their own kind, at most 0.04 above the share of its part's
-kept cloth within 24 px: a fleck of a moving part's colour left in the
-paint; read on fewer than 100 pixels a side, it is `unverified`). A measure
+pixels off its 1 px edge ring, ink included, more than 12 L* from the
+median of their 5×5 neighbours of their own kind, at most 0.04 above the
+share of its part's kept cloth within 24 px: a fleck of a moving part's
+colour left in the paint; the ring, where the outline runs, is a neighbour
+but is not read, and specks joined eight ways into a line of 4 px or more,
+3 times as long as wide, are an outline, not speckle; read on fewer than
+100 pixels a side, it is `unverified`). A measure
 with too few samples misses its bar, at least one part's grain must be
 read, and every moving part must hide some paint. An answer that leaves a
 moving part unpainted ranks after every one that paints them all, then by
