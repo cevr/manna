@@ -118,6 +118,17 @@
                 "plain": 2.7,
                 "n": 6634
               },
+              "fine": {
+                "painted": {
+                  "share": 0.018,
+                  "px": 225
+                },
+                "kept": {
+                  "share": 0.006,
+                  "px": 1756
+                },
+                "cells": 10
+              },
               "verdict": "within"
             }
           ],
@@ -130,7 +141,7 @@
                 "px": 3558
               },
               "kept": {
-                "share": 0.002,
+                "share": 0.003,
                 "px": 5363
               },
               "verdict": "within"
@@ -227,6 +238,17 @@
           "plain": 2.7,
           "n": 6634
         },
+        "fine": {
+          "painted": {
+            "share": 0.018,
+            "px": 225
+          },
+          "kept": {
+            "share": 0.006,
+            "px": 1756
+          },
+          "cells": 10
+        },
         "verdict": "within"
       }
     ],
@@ -239,7 +261,7 @@
           "px": 3558
         },
         "kept": {
-          "share": 0.002,
+          "share": 0.003,
           "px": 5363
         },
         "verdict": "within"
@@ -278,6 +300,7 @@
     "driftDeltaE": 5,
     "chromaDrop": 3,
     "grainWithin": 0.5,
+    "grainCellOver": 0.03,
     "speckOver": 0.04,
     "stepWithin": 5,
     "visibleAtRest": 0,

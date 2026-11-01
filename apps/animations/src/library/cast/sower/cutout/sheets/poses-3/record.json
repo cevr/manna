@@ -166,6 +166,17 @@
                 "plain": 3.4,
                 "n": 2118
               },
+              "fine": {
+                "painted": {
+                  "share": 0.01,
+                  "px": 101
+                },
+                "kept": {
+                  "share": 0.004,
+                  "px": 689
+                },
+                "cells": 3
+              },
               "verdict": "within"
             },
             {
@@ -179,6 +190,17 @@
                 "robust": 1.48,
                 "plain": 2.73,
                 "n": 7152
+              },
+              "fine": {
+                "painted": {
+                  "share": 0.002,
+                  "px": 407
+                },
+                "kept": {
+                  "share": 0.002,
+                  "px": 1333
+                },
+                "cells": 15
               },
               "verdict": "within"
             }
@@ -214,7 +236,7 @@
               "part": "torso",
               "under": "armLeft",
               "painted": {
-                "share": 0.019,
+                "share": 0.02,
                 "px": 4080
               },
               "kept": {
@@ -362,6 +384,17 @@
           "plain": 3.4,
           "n": 2118
         },
+        "fine": {
+          "painted": {
+            "share": 0.01,
+            "px": 101
+          },
+          "kept": {
+            "share": 0.004,
+            "px": 689
+          },
+          "cells": 3
+        },
         "verdict": "within"
       },
       {
@@ -375,6 +408,17 @@
           "robust": 1.48,
           "plain": 2.73,
           "n": 7152
+        },
+        "fine": {
+          "painted": {
+            "share": 0.002,
+            "px": 407
+          },
+          "kept": {
+            "share": 0.002,
+            "px": 1333
+          },
+          "cells": 15
         },
         "verdict": "within"
       }
@@ -410,7 +454,7 @@
         "part": "torso",
         "under": "armLeft",
         "painted": {
-          "share": 0.019,
+          "share": 0.02,
           "px": 4080
         },
         "kept": {
@@ -472,6 +516,7 @@
     "driftDeltaE": 5,
     "chromaDrop": 3,
     "grainWithin": 0.5,
+    "grainCellOver": 0.03,
     "speckOver": 0.04,
     "stepWithin": 5,
     "visibleAtRest": 0,

@@ -118,6 +118,17 @@
                 "plain": 1.91,
                 "n": 4112
               },
+              "fine": {
+                "painted": {
+                  "share": 0,
+                  "px": 119
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 603
+                },
+                "cells": 8
+              },
               "verdict": "outside"
             },
             {
@@ -131,6 +142,17 @@
                 "robust": 1.32,
                 "plain": 2.51,
                 "n": 6077
+              },
+              "fine": {
+                "painted": {
+                  "share": 0,
+                  "px": 364
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 1821
+                },
+                "cells": 11
               },
               "verdict": "within"
             }
@@ -157,7 +179,7 @@
                 "px": 4998
               },
               "kept": {
-                "share": 0.003,
+                "share": 0.004,
                 "px": 7695
               },
               "verdict": "within"
@@ -247,6 +269,17 @@
           "plain": 1.91,
           "n": 4112
         },
+        "fine": {
+          "painted": {
+            "share": 0,
+            "px": 119
+          },
+          "kept": {
+            "share": 0,
+            "px": 603
+          },
+          "cells": 8
+        },
         "verdict": "outside"
       },
       {
@@ -260,6 +293,17 @@
           "robust": 1.32,
           "plain": 2.51,
           "n": 6077
+        },
+        "fine": {
+          "painted": {
+            "share": 0,
+            "px": 364
+          },
+          "kept": {
+            "share": 0,
+            "px": 1821
+          },
+          "cells": 11
         },
         "verdict": "within"
       }
@@ -286,7 +330,7 @@
           "px": 4998
         },
         "kept": {
-          "share": 0.003,
+          "share": 0.004,
           "px": 7695
         },
         "verdict": "within"
@@ -318,6 +362,7 @@
     "driftDeltaE": 5,
     "chromaDrop": 3,
     "grainWithin": 0.5,
+    "grainCellOver": 0.03,
     "speckOver": 0.04,
     "stepWithin": 5,
     "visibleAtRest": 0,

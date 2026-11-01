@@ -99,7 +99,18 @@
                 "plain": 2.99,
                 "n": 3468
               },
-              "verdict": "within"
+              "fine": {
+                "painted": {
+                  "share": 0.072,
+                  "px": 138
+                },
+                "kept": {
+                  "share": 0.001,
+                  "px": 3009
+                },
+                "cells": 5
+              },
+              "verdict": "outside"
             }
           ],
           "speck": [
@@ -128,7 +139,7 @@
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": []
+        "missed": ["grain"]
       }
     ],
     "chosen": 1,
@@ -177,7 +188,18 @@
           "plain": 2.99,
           "n": 3468
         },
-        "verdict": "within"
+        "fine": {
+          "painted": {
+            "share": 0.072,
+            "px": 138
+          },
+          "kept": {
+            "share": 0.001,
+            "px": 3009
+          },
+          "cells": 5
+        },
+        "verdict": "outside"
       }
     ],
     "speck": [
@@ -211,6 +233,7 @@
     "driftDeltaE": 5,
     "chromaDrop": 3,
     "grainWithin": 0.5,
+    "grainCellOver": 0.03,
     "speckOver": 0.04,
     "stepWithin": 5,
     "visibleAtRest": 0,
@@ -220,6 +243,6 @@
     "leastRegionPx": 100,
     "leastCellPx": 40
   },
-  "missed": [],
+  "missed": ["grain"],
   "named": []
 }

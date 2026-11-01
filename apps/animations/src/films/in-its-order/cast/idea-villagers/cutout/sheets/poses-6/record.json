@@ -168,6 +168,17 @@
                 "plain": 3.24,
                 "n": 3469
               },
+              "fine": {
+                "painted": {
+                  "share": 0.01,
+                  "px": 291
+                },
+                "kept": {
+                  "share": 0.009,
+                  "px": 1495
+                },
+                "cells": 3
+              },
               "verdict": "within"
             },
             {
@@ -182,6 +193,17 @@
                 "plain": 3.95,
                 "n": 6916
               },
+              "fine": {
+                "painted": {
+                  "share": 0.038,
+                  "px": 312
+                },
+                "kept": {
+                  "share": 0.019,
+                  "px": 1568
+                },
+                "cells": 12
+              },
               "verdict": "within"
             }
           ],
@@ -194,7 +216,7 @@
                 "px": 821
               },
               "kept": {
-                "share": 0.005,
+                "share": 0.009,
                 "px": 1981
               },
               "verdict": "within"
@@ -207,7 +229,7 @@
                 "px": 849
               },
               "kept": {
-                "share": 0.002,
+                "share": 0.005,
                 "px": 2032
               },
               "verdict": "within"
@@ -216,11 +238,11 @@
               "part": "torso",
               "under": "armRight",
               "painted": {
-                "share": 0,
+                "share": 0.002,
                 "px": 2423
               },
               "kept": {
-                "share": 0.004,
+                "share": 0.008,
                 "px": 3992
               },
               "verdict": "within"
@@ -229,11 +251,11 @@
               "part": "torso",
               "under": "armLeft",
               "painted": {
-                "share": 0.003,
+                "share": 0.004,
                 "px": 2393
               },
               "kept": {
-                "share": 0.004,
+                "share": 0.009,
                 "px": 3978
               },
               "verdict": "within"
@@ -364,6 +386,17 @@
           "plain": 3.24,
           "n": 3469
         },
+        "fine": {
+          "painted": {
+            "share": 0.01,
+            "px": 291
+          },
+          "kept": {
+            "share": 0.009,
+            "px": 1495
+          },
+          "cells": 3
+        },
         "verdict": "within"
       },
       {
@@ -378,6 +411,17 @@
           "plain": 3.95,
           "n": 6916
         },
+        "fine": {
+          "painted": {
+            "share": 0.038,
+            "px": 312
+          },
+          "kept": {
+            "share": 0.019,
+            "px": 1568
+          },
+          "cells": 12
+        },
         "verdict": "within"
       }
     ],
@@ -390,7 +434,7 @@
           "px": 821
         },
         "kept": {
-          "share": 0.005,
+          "share": 0.009,
           "px": 1981
         },
         "verdict": "within"
@@ -403,7 +447,7 @@
           "px": 849
         },
         "kept": {
-          "share": 0.002,
+          "share": 0.005,
           "px": 2032
         },
         "verdict": "within"
@@ -412,11 +456,11 @@
         "part": "torso",
         "under": "armRight",
         "painted": {
-          "share": 0,
+          "share": 0.002,
           "px": 2423
         },
         "kept": {
-          "share": 0.004,
+          "share": 0.008,
           "px": 3992
         },
         "verdict": "within"
@@ -425,11 +469,11 @@
         "part": "torso",
         "under": "armLeft",
         "painted": {
-          "share": 0.003,
+          "share": 0.004,
           "px": 2393
         },
         "kept": {
-          "share": 0.004,
+          "share": 0.009,
           "px": 3978
         },
         "verdict": "within"
@@ -474,6 +518,7 @@
     "driftDeltaE": 5,
     "chromaDrop": 3,
     "grainWithin": 0.5,
+    "grainCellOver": 0.03,
     "speckOver": 0.04,
     "stepWithin": 5,
     "visibleAtRest": 0,

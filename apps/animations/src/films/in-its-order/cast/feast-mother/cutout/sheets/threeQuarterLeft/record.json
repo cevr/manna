@@ -151,6 +151,17 @@
                 "plain": 2.53,
                 "n": 4377
               },
+              "fine": {
+                "painted": {
+                  "share": 0,
+                  "px": 120
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 643
+                },
+                "cells": 5
+              },
               "verdict": "within"
             },
             {
@@ -165,6 +176,17 @@
                 "plain": 2.39,
                 "n": 5794
               },
+              "fine": {
+                "painted": {
+                  "share": 0,
+                  "px": 345
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 2837
+                },
+                "cells": 6
+              },
               "verdict": "within"
             }
           ],
@@ -177,7 +199,7 @@
                 "px": 593
               },
               "kept": {
-                "share": 0.002,
+                "share": 0.005,
                 "px": 2364
               },
               "verdict": "within"
@@ -190,7 +212,7 @@
                 "px": 3096
               },
               "kept": {
-                "share": 0.001,
+                "share": 0.002,
                 "px": 3141
               },
               "verdict": "within"
@@ -203,7 +225,7 @@
                 "px": 725
               },
               "kept": {
-                "share": 0.004,
+                "share": 0.005,
                 "px": 3212
               },
               "verdict": "within"
@@ -347,6 +369,17 @@
           "plain": 2.53,
           "n": 4377
         },
+        "fine": {
+          "painted": {
+            "share": 0,
+            "px": 120
+          },
+          "kept": {
+            "share": 0,
+            "px": 643
+          },
+          "cells": 5
+        },
         "verdict": "within"
       },
       {
@@ -361,6 +394,17 @@
           "plain": 2.39,
           "n": 5794
         },
+        "fine": {
+          "painted": {
+            "share": 0,
+            "px": 345
+          },
+          "kept": {
+            "share": 0,
+            "px": 2837
+          },
+          "cells": 6
+        },
         "verdict": "within"
       }
     ],
@@ -373,7 +417,7 @@
           "px": 593
         },
         "kept": {
-          "share": 0.002,
+          "share": 0.005,
           "px": 2364
         },
         "verdict": "within"
@@ -386,7 +430,7 @@
           "px": 3096
         },
         "kept": {
-          "share": 0.001,
+          "share": 0.002,
           "px": 3141
         },
         "verdict": "within"
@@ -399,7 +443,7 @@
           "px": 725
         },
         "kept": {
-          "share": 0.004,
+          "share": 0.005,
           "px": 3212
         },
         "verdict": "within"
@@ -457,6 +501,7 @@
     "driftDeltaE": 5,
     "chromaDrop": 3,
     "grainWithin": 0.5,
+    "grainCellOver": 0.03,
     "speckOver": 0.04,
     "stepWithin": 5,
     "visibleAtRest": 0,

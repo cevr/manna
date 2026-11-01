@@ -170,6 +170,17 @@
                 "plain": 2.84,
                 "n": 4993
               },
+              "fine": {
+                "painted": {
+                  "share": 0.017,
+                  "px": 119
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 2162
+                },
+                "cells": 5
+              },
               "verdict": "within"
             },
             {
@@ -184,6 +195,17 @@
                 "plain": 2.6,
                 "n": 3204
               },
+              "fine": {
+                "painted": {
+                  "share": 0,
+                  "px": 285
+                },
+                "kept": {
+                  "share": 0.001,
+                  "px": 1540
+                },
+                "cells": 3
+              },
               "verdict": "within"
             },
             {
@@ -197,6 +219,17 @@
                 "robust": 0.99,
                 "plain": 2.37,
                 "n": 6638
+              },
+              "fine": {
+                "painted": {
+                  "share": 0,
+                  "px": 298
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 2163
+                },
+                "cells": 19
               },
               "verdict": "within"
             }
@@ -245,11 +278,11 @@
               "part": "torso",
               "under": "armRight",
               "painted": {
-                "share": 0.002,
+                "share": 0.003,
                 "px": 11597
               },
               "kept": {
-                "share": 0.003,
+                "share": 0.004,
                 "px": 8510
               },
               "verdict": "within"
@@ -258,11 +291,11 @@
               "part": "torso",
               "under": "armLeft",
               "painted": {
-                "share": 0.003,
+                "share": 0.004,
                 "px": 3834
               },
               "kept": {
-                "share": 0.005,
+                "share": 0.009,
                 "px": 1045
               },
               "verdict": "within"
@@ -416,6 +449,17 @@
           "plain": 2.84,
           "n": 4993
         },
+        "fine": {
+          "painted": {
+            "share": 0.017,
+            "px": 119
+          },
+          "kept": {
+            "share": 0,
+            "px": 2162
+          },
+          "cells": 5
+        },
         "verdict": "within"
       },
       {
@@ -430,6 +474,17 @@
           "plain": 2.6,
           "n": 3204
         },
+        "fine": {
+          "painted": {
+            "share": 0,
+            "px": 285
+          },
+          "kept": {
+            "share": 0.001,
+            "px": 1540
+          },
+          "cells": 3
+        },
         "verdict": "within"
       },
       {
@@ -443,6 +498,17 @@
           "robust": 0.99,
           "plain": 2.37,
           "n": 6638
+        },
+        "fine": {
+          "painted": {
+            "share": 0,
+            "px": 298
+          },
+          "kept": {
+            "share": 0,
+            "px": 2163
+          },
+          "cells": 19
         },
         "verdict": "within"
       }
@@ -491,11 +557,11 @@
         "part": "torso",
         "under": "armRight",
         "painted": {
-          "share": 0.002,
+          "share": 0.003,
           "px": 11597
         },
         "kept": {
-          "share": 0.003,
+          "share": 0.004,
           "px": 8510
         },
         "verdict": "within"
@@ -504,11 +570,11 @@
         "part": "torso",
         "under": "armLeft",
         "painted": {
-          "share": 0.003,
+          "share": 0.004,
           "px": 3834
         },
         "kept": {
-          "share": 0.005,
+          "share": 0.009,
           "px": 1045
         },
         "verdict": "within"
@@ -562,6 +628,7 @@
     "driftDeltaE": 5,
     "chromaDrop": 3,
     "grainWithin": 0.5,
+    "grainCellOver": 0.03,
     "speckOver": 0.04,
     "stepWithin": 5,
     "visibleAtRest": 0,

@@ -99,6 +99,17 @@
                 "plain": 3.19,
                 "n": 3736
               },
+              "fine": {
+                "painted": {
+                  "share": 0,
+                  "px": 576
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 294
+                },
+                "cells": 6
+              },
               "verdict": "within"
             }
           ],
@@ -177,6 +188,17 @@
           "plain": 3.19,
           "n": 3736
         },
+        "fine": {
+          "painted": {
+            "share": 0,
+            "px": 576
+          },
+          "kept": {
+            "share": 0,
+            "px": 294
+          },
+          "cells": 6
+        },
         "verdict": "within"
       }
     ],
@@ -211,6 +233,7 @@
     "driftDeltaE": 5,
     "chromaDrop": 3,
     "grainWithin": 0.5,
+    "grainCellOver": 0.03,
     "speckOver": 0.04,
     "stepWithin": 5,
     "visibleAtRest": 0,

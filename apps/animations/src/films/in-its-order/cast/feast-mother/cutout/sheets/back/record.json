@@ -151,6 +151,17 @@
                 "plain": 3.42,
                 "n": 2215
               },
+              "fine": {
+                "painted": {
+                  "share": 0,
+                  "px": 0
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 0
+                },
+                "cells": 0
+              },
               "verdict": "unverified"
             },
             {
@@ -165,6 +176,17 @@
                 "plain": 1.95,
                 "n": 3224
               },
+              "fine": {
+                "painted": {
+                  "share": 0,
+                  "px": 0
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 0
+                },
+                "cells": 0
+              },
               "verdict": "unverified"
             }
           ],
@@ -177,7 +199,7 @@
                 "px": 619
               },
               "kept": {
-                "share": 0,
+                "share": 0.003,
                 "px": 2450
               },
               "verdict": "within"
@@ -203,7 +225,7 @@
                 "px": 408
               },
               "kept": {
-                "share": 0.005,
+                "share": 0.006,
                 "px": 2343
               },
               "verdict": "within"
@@ -351,6 +373,17 @@
                 "plain": 3.42,
                 "n": 2215
               },
+              "fine": {
+                "painted": {
+                  "share": 0,
+                  "px": 129
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 1136
+                },
+                "cells": 2
+              },
               "verdict": "outside"
             },
             {
@@ -365,7 +398,18 @@
                 "plain": 2.07,
                 "n": 3298
               },
-              "verdict": "within"
+              "fine": {
+                "painted": {
+                  "share": 0,
+                  "px": 0
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 0
+                },
+                "cells": 0
+              },
+              "verdict": "unverified"
             }
           ],
           "speck": [
@@ -377,7 +421,7 @@
                 "px": 860
               },
               "kept": {
-                "share": 0,
+                "share": 0.003,
                 "px": 2450
               },
               "verdict": "within"
@@ -547,6 +591,17 @@
           "plain": 3.42,
           "n": 2215
         },
+        "fine": {
+          "painted": {
+            "share": 0,
+            "px": 129
+          },
+          "kept": {
+            "share": 0,
+            "px": 1136
+          },
+          "cells": 2
+        },
         "verdict": "outside"
       },
       {
@@ -561,7 +616,18 @@
           "plain": 2.07,
           "n": 3298
         },
-        "verdict": "within"
+        "fine": {
+          "painted": {
+            "share": 0,
+            "px": 0
+          },
+          "kept": {
+            "share": 0,
+            "px": 0
+          },
+          "cells": 0
+        },
+        "verdict": "unverified"
       }
     ],
     "speck": [
@@ -573,7 +639,7 @@
           "px": 860
         },
         "kept": {
-          "share": 0,
+          "share": 0.003,
           "px": 2450
         },
         "verdict": "within"
@@ -657,6 +723,7 @@
     "driftDeltaE": 5,
     "chromaDrop": 3,
     "grainWithin": 0.5,
+    "grainCellOver": 0.03,
     "speckOver": 0.04,
     "stepWithin": 5,
     "visibleAtRest": 0,

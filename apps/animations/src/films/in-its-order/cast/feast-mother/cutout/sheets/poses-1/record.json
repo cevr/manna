@@ -161,6 +161,17 @@
                 "plain": 2.32,
                 "n": 648
               },
+              "fine": {
+                "painted": {
+                  "share": 0,
+                  "px": 0
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 0
+                },
+                "cells": 0
+              },
               "verdict": "unverified"
             },
             {
@@ -175,6 +186,17 @@
                 "plain": 2.79,
                 "n": 10469
               },
+              "fine": {
+                "painted": {
+                  "share": 0.005,
+                  "px": 561
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 2053
+                },
+                "cells": 11
+              },
               "verdict": "within"
             },
             {
@@ -188,6 +210,17 @@
                 "robust": 0.99,
                 "plain": 2.42,
                 "n": 5169
+              },
+              "fine": {
+                "painted": {
+                  "share": 0,
+                  "px": 576
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 227
+                },
+                "cells": 15
               },
               "verdict": "within"
             }
@@ -210,11 +243,11 @@
               "part": "baby",
               "under": "armRight",
               "painted": {
-                "share": 0.006,
+                "share": 0.008,
                 "px": 7451
               },
               "kept": {
-                "share": 0.003,
+                "share": 0.004,
                 "px": 9453
               },
               "verdict": "within"
@@ -384,6 +417,17 @@
                 "plain": 2.32,
                 "n": 648
               },
+              "fine": {
+                "painted": {
+                  "share": 0,
+                  "px": 0
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 0
+                },
+                "cells": 0
+              },
               "verdict": "unverified"
             },
             {
@@ -398,6 +442,17 @@
                 "plain": 2.79,
                 "n": 10469
               },
+              "fine": {
+                "painted": {
+                  "share": 0.002,
+                  "px": 485
+                },
+                "kept": {
+                  "share": 0.002,
+                  "px": 1114
+                },
+                "cells": 15
+              },
               "verdict": "within"
             },
             {
@@ -411,6 +466,17 @@
                 "robust": 0.99,
                 "plain": 2.42,
                 "n": 5169
+              },
+              "fine": {
+                "painted": {
+                  "share": 0.005,
+                  "px": 184
+                },
+                "kept": {
+                  "share": 0.003,
+                  "px": 704
+                },
+                "cells": 15
               },
               "verdict": "within"
             }
@@ -437,7 +503,7 @@
                 "px": 7565
               },
               "kept": {
-                "share": 0.003,
+                "share": 0.004,
                 "px": 9453
               },
               "verdict": "within"
@@ -459,7 +525,7 @@
               "part": "torso",
               "under": "armLeft",
               "painted": {
-                "share": 0.002,
+                "share": 0.003,
                 "px": 13000
               },
               "kept": {
@@ -594,6 +660,17 @@
           "plain": 2.32,
           "n": 648
         },
+        "fine": {
+          "painted": {
+            "share": 0,
+            "px": 0
+          },
+          "kept": {
+            "share": 0,
+            "px": 0
+          },
+          "cells": 0
+        },
         "verdict": "unverified"
       },
       {
@@ -608,6 +685,17 @@
           "plain": 2.79,
           "n": 10469
         },
+        "fine": {
+          "painted": {
+            "share": 0.002,
+            "px": 485
+          },
+          "kept": {
+            "share": 0.002,
+            "px": 1114
+          },
+          "cells": 15
+        },
         "verdict": "within"
       },
       {
@@ -621,6 +709,17 @@
           "robust": 0.99,
           "plain": 2.42,
           "n": 5169
+        },
+        "fine": {
+          "painted": {
+            "share": 0.005,
+            "px": 184
+          },
+          "kept": {
+            "share": 0.003,
+            "px": 704
+          },
+          "cells": 15
         },
         "verdict": "within"
       }
@@ -647,7 +746,7 @@
           "px": 7565
         },
         "kept": {
-          "share": 0.003,
+          "share": 0.004,
           "px": 9453
         },
         "verdict": "within"
@@ -669,7 +768,7 @@
         "part": "torso",
         "under": "armLeft",
         "painted": {
-          "share": 0.002,
+          "share": 0.003,
           "px": 13000
         },
         "kept": {
@@ -718,6 +817,7 @@
     "driftDeltaE": 5,
     "chromaDrop": 3,
     "grainWithin": 0.5,
+    "grainCellOver": 0.03,
     "speckOver": 0.04,
     "stepWithin": 5,
     "visibleAtRest": 0,

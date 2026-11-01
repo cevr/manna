@@ -146,6 +146,17 @@
                 "plain": 4.78,
                 "n": 933
               },
+              "fine": {
+                "painted": {
+                  "share": 0,
+                  "px": 101
+                },
+                "kept": {
+                  "share": 0.005,
+                  "px": 614
+                },
+                "cells": 2
+              },
               "verdict": "within"
             },
             {
@@ -159,6 +170,17 @@
                 "robust": 1.32,
                 "plain": 3.19,
                 "n": 1472
+              },
+              "fine": {
+                "painted": {
+                  "share": 0.06,
+                  "px": 537
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 686
+                },
+                "cells": 8
               },
               "verdict": "outside"
             }
@@ -198,7 +220,7 @@
                 "px": 1622
               },
               "kept": {
-                "share": 0.012,
+                "share": 0.013,
                 "px": 3186
               },
               "verdict": "within"
@@ -211,7 +233,7 @@
                 "px": 1713
               },
               "kept": {
-                "share": 0.013,
+                "share": 0.014,
                 "px": 3079
               },
               "verdict": "within"
@@ -342,6 +364,17 @@
           "plain": 4.78,
           "n": 933
         },
+        "fine": {
+          "painted": {
+            "share": 0,
+            "px": 101
+          },
+          "kept": {
+            "share": 0.005,
+            "px": 614
+          },
+          "cells": 2
+        },
         "verdict": "within"
       },
       {
@@ -355,6 +388,17 @@
           "robust": 1.32,
           "plain": 3.19,
           "n": 1472
+        },
+        "fine": {
+          "painted": {
+            "share": 0.06,
+            "px": 537
+          },
+          "kept": {
+            "share": 0,
+            "px": 686
+          },
+          "cells": 8
         },
         "verdict": "outside"
       }
@@ -394,7 +438,7 @@
           "px": 1622
         },
         "kept": {
-          "share": 0.012,
+          "share": 0.013,
           "px": 3186
         },
         "verdict": "within"
@@ -407,7 +451,7 @@
           "px": 1713
         },
         "kept": {
-          "share": 0.013,
+          "share": 0.014,
           "px": 3079
         },
         "verdict": "within"
@@ -452,6 +496,7 @@
     "driftDeltaE": 5,
     "chromaDrop": 3,
     "grainWithin": 0.5,
+    "grainCellOver": 0.03,
     "speckOver": 0.04,
     "stepWithin": 5,
     "visibleAtRest": 0,
