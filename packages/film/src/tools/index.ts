@@ -74,3 +74,4 @@ export type { Raster } from '../core/raster.ts';
 export { decodePng, encodePng } from './png.ts';
 export { PuppetImagesBun } from '../puppet/images-bun.ts';
 export { puppetFrom } from '../puppet/load.ts';
+export { Coverage as CoverageManifest } from './cast-build/coverage.ts';

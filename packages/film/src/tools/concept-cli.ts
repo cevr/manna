@@ -107,6 +107,7 @@ import { FilmFolder, filmNamed } from './film-repo.ts';
 import { ImageRoute } from './image-route.ts';
 import { trace } from './trace-cli.ts';
 import { render } from './cast-render-cli.ts';
+import { coverage } from './cast-build/coverage-cli.ts';
 import { ease } from './ease-cli.ts';
 import { fit } from './pose-fit-cli.ts';
 import { parts as partSheet } from './part-sheet-cli.ts';
@@ -575,6 +576,7 @@ export const concept = <E, R>(
       critique(rules),
       keep,
       render(pages, rules),
+      coverage(pages, rules),
       ease(pages),
       fit,
       partSheet,
