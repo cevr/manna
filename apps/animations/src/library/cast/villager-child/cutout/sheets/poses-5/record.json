@@ -126,12 +126,12 @@
               "part": "torso",
               "under": "armRight",
               "painted": {
-                "share": 0.022,
-                "px": 4011
+                "share": 0.002,
+                "px": 3558
               },
               "kept": {
-                "share": 0.016,
-                "px": 6161
+                "share": 0.002,
+                "px": 5363
               },
               "verdict": "within"
             },
@@ -139,16 +139,17 @@
               "part": "torso",
               "under": "armLeft",
               "painted": {
-                "share": 0.196,
-                "px": 102
+                "share": 0,
+                "px": 14
               },
               "kept": {
-                "share": 0.022,
-                "px": 2645
+                "share": 0.009,
+                "px": 2211
               },
-              "verdict": "outside"
+              "verdict": "unverified"
             }
           ],
+          "step": [],
           "paintUnder": [
             {
               "part": "armRight",
@@ -234,12 +235,12 @@
         "part": "torso",
         "under": "armRight",
         "painted": {
-          "share": 0.022,
-          "px": 4011
+          "share": 0.002,
+          "px": 3558
         },
         "kept": {
-          "share": 0.016,
-          "px": 6161
+          "share": 0.002,
+          "px": 5363
         },
         "verdict": "within"
       },
@@ -247,16 +248,17 @@
         "part": "torso",
         "under": "armLeft",
         "painted": {
-          "share": 0.196,
-          "px": 102
+          "share": 0,
+          "px": 14
         },
         "kept": {
-          "share": 0.022,
-          "px": 2645
+          "share": 0.009,
+          "px": 2211
         },
-        "verdict": "outside"
+        "verdict": "unverified"
       }
     ],
+    "step": [],
     "paintUnder": [
       {
         "part": "armRight",
@@ -277,8 +279,10 @@
     "chromaDrop": 3,
     "grainWithin": 0.5,
     "speckOver": 0.04,
+    "stepWithin": 5,
     "visibleAtRest": 0,
     "leastSeamPairs": 20,
+    "leastStepPairs": 8,
     "leastGrainWindows": 90,
     "leastRegionPx": 100,
     "leastCellPx": 40
