@@ -2886,7 +2886,7 @@ laid paint for a film frame. A fitted entry is never trainable: it yields
 no shard, as its parts and pose lie in its source view's.
 
 `film concept build <film> (<member> | --cast) [--plan] [--touch <path> …]
-[--spend okra,modal] [--json]` (`tools/cast-build/build-cli.ts`) builds
+[--spend okra,modal] [--keep-reader] [--json]` (`tools/cast-build/build-cli.ts`) builds
 each member's stages from his manifest (`tools/cast-build/stages.ts`):
 
 - per entry: `drawing` (the drawing's bytes; it waits on the owner while
@@ -2932,12 +2932,35 @@ file changed, and `--plan --spend modal` prints the key a train would run
 at. The training set it would read is the `trainset` stage's output: one
 `<member>/<drawing>=<shard hash>` line for each trainable drawing.
 
+The reader's Python files take three roles (`tools/cast-build/reader.ts`
+`rolesOf`), each derived from the files' local imports and followed through
+every file they import: `train` is what `modal_app.py` runs (`modal_app.py`,
+`model.py`, `train.py`); `read` is what `read.py` runs, with the local
+environment (`pyproject.toml`, `uv.lock`); `eval` is `read` with
+`eval.py`. A reader file that imports through `importlib`, `__import__` or
+`runpy` fails the scan, as its edge would be hidden. The reader key is the
+training set, the config and the `train` files, each named by its basename
+and hash; the lock names those files as `trainer`. Each `eval` stage reads
+the `eval` files, and each `eval:clip` stage and the clip read cache
+(`<cache>/reads/<key>`) the `read` files. So an edit to read.py, eval.py or
+the environment re-runs the evals and clips and leaves the train cached.
+
 Before it spends, the train adopts the committed checkpoint: when its
-reader key (the training set, the config and the reader's files) is the
-lock's `reader` and the cache keeps `objects/<checkpointSha256>` with bytes
-that hash to that name, it returns those bytes with no Modal call and no
-promote, and notes the lock's train lines and spend, which the lock keeps.
-So a stage key that moves while the reader key does not costs nothing.
+reader key is the lock's `reader` and the cache keeps
+`objects/<checkpointSha256>` with bytes that hash to that name, it returns
+those bytes with no Modal call and no promote, and notes the lock's train
+lines and spend, which the lock keeps. So a stage key that moves while the
+reader key does not costs nothing. When the reader key is not the lock's,
+the train waits on `--spend modal` and logs the train files, set or config
+that changed. `--keep-reader` is the claim that the edit leaves what a
+train makes as it is: the train then keeps the committed checkpoint, with
+no spend, only when the lock's training set and config are this build's,
+its checkpoint is cached, and that checkpoint, read under this code on this
+machine, scores every drawing of the lock's held set exactly as the lock's
+`held.byDrawing` line (each field). Otherwise the train fails, naming each
+differing drawing and field; a failed train is not cached and never falls
+through to a paid train. The flag is in no key, and it changes nothing when
+the reader key is the lock's.
 
 The cache is `FILM_CAST_CACHE`, else `~/.cache/bible-film/cast`: each
 stage's output kept as `objects/<sha256>`, and the manifest `build.json`
