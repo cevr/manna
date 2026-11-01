@@ -150,16 +150,22 @@ const LOCAL: ReadonlySet<keyof ReaderSources> = new Set(['read', 'eval']);
  * in a one-line suite), by its first name (`import a.b as c, d` names `a`
  * and `d`; `from x.y import z` names `x`). On a file's earliest fault it
  * prints `{"file", "reason"}` (the reason starts `line N:`) and exits 1: a
- * file CPython cannot parse; a relative import; a name of `importlib`,
- * `runpy` or `__import__`, or an import of one (a dynamic import hides an
- * edge); or an import of one of the folder's own folders (a package the
- * scan does not follow).
+ * file CPython cannot parse; a relative import; a dynamic load, which hides
+ * an edge (a name, attribute, string or imported name of `importlib`,
+ * `runpy`, `pkgutil`, `__import__` or `import_module`, or a bare name
+ * `exec`, `eval` or `compile`; an attribute `.eval()` is a method, not the
+ * builtin); or an import of one of the folder's own folders (a package the
+ * scan does not follow). A load whose module name is built at run time from
+ * no such name (a `sys.path` edit to a subfolder) is not seen; the folder
+ * holds none.
  */
 const SCAN = String.raw`
 import ast, json, sys, warnings
 
 warnings.simplefilter("ignore")
-DYNAMIC = {"importlib", "runpy", "__import__"}
+LOADERS = {"importlib", "runpy", "pkgutil", "__import__", "import_module"}
+BUILTINS = {"exec", "eval", "compile"}
+DYNAMIC = LOADERS | BUILTINS
 
 
 def fail(file, line, reason):
@@ -184,11 +190,17 @@ for file, text in sorted(job["files"].items()):
             firsts = [alias.name.split(".")[0] for alias in node.names]
         elif isinstance(node, ast.ImportFrom):
             firsts = [node.module.split(".")[0]]
+            for alias in node.names:
+                if alias.name in DYNAMIC:
+                    faults.append((node.lineno, "it imports %s, a dynamic import the scan cannot follow" % alias.name))
         elif isinstance(node, ast.Name) and node.id in DYNAMIC:
             faults.append((node.lineno, "it names %s, a dynamic import the scan cannot follow" % node.id))
             continue
-        elif isinstance(node, ast.Attribute) and node.attr in DYNAMIC:
+        elif isinstance(node, ast.Attribute) and node.attr in LOADERS:
             faults.append((node.lineno, "it names %s, a dynamic import the scan cannot follow" % node.attr))
+            continue
+        elif isinstance(node, ast.Constant) and isinstance(node.value, str) and node.value in LOADERS:
+            faults.append((node.lineno, "it holds the string %s, a dynamic import the scan cannot follow" % node.value))
             continue
         else:
             continue

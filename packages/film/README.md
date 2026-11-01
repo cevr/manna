@@ -2942,11 +2942,13 @@ spawn reads every `.py` file of the folder, handed over on stdin as JSON,
 and names each file's imports wherever they stand (indented, in a
 function, in a one-line suite such as `if x: import y`), so no string,
 comment or f-string makes an edge or hides one. It fails closed, naming
-the file and the line: a file CPython cannot parse (code valid in another
-Python version only fails too), a relative import, a name or an import of
-`importlib`, `__import__` or `runpy` (each would hide an edge), and an
+the file and the line: a file the python3 on PATH cannot parse, a
+relative import, a dynamic load (a name, attribute, string or imported name
+of `importlib`, `runpy`, `pkgutil`, `__import__` or `import_module`, or the
+builtins `exec`, `eval` and `compile`; each would hide an edge), and an
 import of one of the reader folder's own folders (a package it does not
-follow). No python3 on PATH, or an answer that leaves a file out, fails
+follow). A module name built at run time from none of these, such as a
+`sys.path` edit to a subfolder, is not seen; the reader folder holds none. No python3 on PATH, or an answer that leaves a file out, fails
 the scan too, never with an import left out. The closure and the roles
 are tested on an in-memory disk in `reader.test.ts`, with a fake spawner
 that answers as the scan does; the real scan, over every import form and
