@@ -378,4 +378,52 @@ describe('the part sheet lay', () => {
     expect(missedBars(both)).toEqual(['grain', 'step']);
     expect(rankOrder(both, step)).toBe(1);
   });
+
+  test("a miss 1.5 of its bar's allowances past weighs as a step miss 1.5 allowances past, on every bar", () => {
+    const grain = measured({}).grain[0];
+    // each bar's read 1.5 allowances past it: seam 10, drift 5, chroma 3, grain 0.5 pooled and 0.03 fine, speck 0.04
+    const misses: ReadonlyArray<readonly [string, HiddenMeasures]> = [
+      ['seam', measured({ seam: { deltaE: Option.some(25), pairs: 80 } })],
+      ['drift', measured({ drift: { deltaE: 12.5, px: 900, chroma: [] } })],
+      ['drift', measured({ drift: { deltaE: 3, px: 900, chroma: [robeChroma(10, 17.5)] } })],
+      [
+        'grain',
+        measured({
+          grain: [{ ...grain!, painted: { robust: 2.85, plain: 3, n: 200 }, verdict: 'outside' }],
+        }),
+      ],
+      [
+        'grain',
+        measured({
+          grain: [
+            {
+              ...grain!,
+              fine: { ...fineWithin, painted: { share: 0.085, px: 300 } },
+              verdict: 'outside',
+            },
+          ],
+        }),
+      ],
+      [
+        'speck',
+        measured({
+          speck: [
+            {
+              part: 'robe',
+              under: 'armRight',
+              painted: { share: 0.1, px: 300 },
+              kept: { share: 0, px: 900 },
+              verdict: 'outside',
+            },
+          ],
+        }),
+      ],
+    ];
+    // a step miss 0.5, 1.4 and 1.6 allowances past its bar of 5
+    const steps = [0.5, 1.4, 1.6].map((k) => measured({ step: [robeStep(5 + 5 * k, 0)] }));
+    for (const [bar, miss] of misses) {
+      expect(missedBars(miss)).toEqual([bar]);
+      expect(steps.map((step) => rankOrder(miss, step))).toEqual([1, 1, -1]);
+    }
+  });
 });
