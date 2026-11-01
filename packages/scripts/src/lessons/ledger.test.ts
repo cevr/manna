@@ -1,6 +1,8 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, FileSystem, Option, Path } from 'effect';
+import { Effect, FileSystem, Option, Path, Stream } from 'effect';
+import * as ChildProcess from 'effect/process/ChildProcess';
+import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 import { ledgerProblems, reviewRoutes } from './ledger.ts';
 
 /** An entry of a ledger, its Guard and its Kind as given, its other fields well formed. */
@@ -310,5 +312,50 @@ describe('the lessons ledger', () => {
           ]);
         }),
       ),
+  );
+});
+
+/** `bun check.ts <root>` over a scratch repo whose ledger holds `entries`: its stdout's lines and its exit code. */
+const checkRun = (...entries: ReadonlyArray<string>) =>
+  Effect.gen(function* () {
+    const path = yield* Path.Path;
+    const root = yield* repoWith(`# Lessons\n\n${entries.join('\n')}`);
+    const child = yield* (yield* ChildProcessSpawner).spawn(
+      ChildProcess.make('bun', [path.join(import.meta.dir, 'check.ts'), root], {
+        forceKillAfter: '5 seconds',
+      }),
+    );
+    const [out, code] = yield* Effect.all(
+      [Stream.mkString(Stream.decodeText(child.stdout)), child.exitCode],
+      { concurrency: 2 },
+    );
+    return { lines: out.trim().split('\n'), code: Number(code) };
+  }).pipe(Effect.scoped, Effect.provide(BunServices.layer));
+
+describe('the ledger check, as the gate and the pre-commit run it', () => {
+  it.effect('prints each problem by its entry, then the counts, and exits 1', () =>
+    Effect.gen(function* () {
+      const { lines, code } = yield* checkRun(
+        entry('held', 'code: `src/thing.ts` `held`'),
+        entry('code-no-file', 'code: `src/gone.ts` `held`'),
+        entry('review-uncited', 'none: a reason', 'review', 'hymnapp/playbulk/spec.md p5'),
+      );
+      expect(lines.slice(0, -1)).toEqual([
+        'lessons code-no-file: no file src/gone.ts',
+        'lessons review-uncited: a review entry cites no finding (<unit>/<review file> <id>, as F2 or m1)',
+      ]);
+      expect(lines.at(-1)).toMatch(/^lessons: 3 entries, 2 problem\(s\), \d+ ms$/);
+      expect(code).toBe(1);
+    }),
+  );
+
+  it.effect('prints the counts alone and exits 0 when every entry holds', () =>
+    Effect.gen(function* () {
+      const { lines, code } = yield* checkRun(entry('held', 'code: `src/thing.ts` `held`'));
+      expect(lines).toEqual([
+        expect.stringMatching(/^lessons: 1 entries, 0 problem\(s\), \d+ ms$/),
+      ]);
+      expect(code).toBe(0);
+    }),
   );
 });
