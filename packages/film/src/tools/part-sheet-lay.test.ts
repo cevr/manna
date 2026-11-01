@@ -27,6 +27,8 @@ const INK: Rgb = [70, 58, 46];
 const SKIN: Rgb = [214, 160, 128];
 /** A light tunic: the cloth the robe and most of the torso keep. */
 const TUNIC: Rgb = [225, 215, 190];
+/** The olive 5.3 L* lighter: a fleck of fine grain, under the speck's 12 L* and over the grain's 4. */
+const FLECK: Rgb = [164, 154, 114];
 
 const TORSO: Box = { x0: 6, y0: 4, x1: 42, y1: 44 };
 const ARM: Box = { x0: 18, y0: 8, x1: 30, y1: 40 };
@@ -156,6 +158,20 @@ describe('the part sheet lay', () => {
     expect(missedBars(mixed)).not.toContain('drift');
   });
 
+  test('paint with fine grain in a cell misses the grain bar over smooth cloth; paint as grainy as its cloth meets it', () => {
+    // one pixel in 14, 5.3 L* lighter than the olive: fine grain the part's pooled grain reads as smooth;
+    // the arm lies in the 24 px cells x 24..47, y 0..23 and y 24..47, 150 read pixels each
+    const fleck = (x: number, y: number): Rgb =>
+      Bool.match((x + 5 * y) % 14 === 0, { onTrue: () => FLECK, onFalse: () => OLIVE });
+    const arm = { x0: 24, y0: 8, x1: 36, y1: 40 };
+    const grainy = layOn(arm, { margin: 0 })(fleck);
+    const asCloth = layOn(arm, { margin: 0, cloth: fleck })(fleck);
+    expect(grainy.grain).toEqual([expect.objectContaining({ part: 'torso', verdict: 'outside' })]);
+    expect(missedBars(grainy)).toContain('grain');
+    expect(asCloth.grain).toEqual([expect.objectContaining({ part: 'torso', verdict: 'within' })]);
+    expect(missedBars(asCloth)).not.toContain('grain');
+  });
+
   test('paint greyer than the cloth beside it misses the drift bar, though its seam matches', () => {
     const grey = laid(() => GREY);
     const kept = laid(olive);
@@ -242,6 +258,12 @@ describe('the part sheet lay', () => {
     expect(missedBars(kept)).not.toContain('step');
   });
 
+  /** A part's fine grain read in two cells, its paint as grainy as its cloth. */
+  const fineWithin = {
+    painted: { share: 0.01, px: 300 },
+    kept: { share: 0.01, px: 900 },
+    cells: 2,
+  };
   /** A measure that meets every bar, with the reads `over` names. */
   const measured = (over: Partial<HiddenMeasures>): HiddenMeasures => ({
     seam: { deltaE: Option.some(4), pairs: 80 },
@@ -251,6 +273,7 @@ describe('the part sheet lay', () => {
         part: 'robe',
         painted: { robust: 1.5, plain: 2, n: 200 },
         kept: { robust: 1.6, plain: 2, n: 200 },
+        fine: fineWithin,
         verdict: 'within',
       },
     ],
@@ -313,6 +336,7 @@ describe('the part sheet lay', () => {
           part: 'robe',
           painted: { robust: 0.56, plain: 1, n: 200 },
           kept: { robust: 1.31, plain: 2, n: 200 },
+          fine: fineWithin,
           verdict: 'outside',
         },
       ],

@@ -42,8 +42,18 @@ const LEAST_SEAM_PAIRS = 20;
 /** The fewest 3 × 3 windows a part's grain is read on, painted and kept each: about ten windows that share no pixel. */
 const LEAST_GRAIN_WINDOWS = 90;
 
-/** The fewest pixels a painted region's specks are read on, painted and kept each. */
+/** The fewest pixels a painted region's specks, or a cell's fine grain, are read on, painted and kept each. */
 const LEAST_REGION_PX = 100;
+
+/** A light pixel is fine grain when its L* lies further than this from the median L* of its 5 × 5 neighbours of its own kind. */
+const GRAIN_L = 4;
+
+/**
+ * The side of the square cells a part's fine grain is read in: the chroma's
+ * cell. A speckled patch 14 × 18 px (sower poses-1's bag foot) fills a
+ * quarter of one; pooled over a part's whole paint it is under a point.
+ */
+const GRAIN_CELL = 24;
 
 /** A pixel is a speck when its L* lies further than this from the median L* of its 5 × 5 neighbours of its own kind. */
 const SPECK_L = 12;
@@ -70,7 +80,8 @@ const LEAST_CELL_PX = 40;
  * The stage's bars: seam ΔE ≤ 10; drift ≤ 5, and in each read cell of a
  * painted region the paint's chroma at most 3 below the kept cloth's beside
  * it; each read part's paint grain within ±0.5 of its kept grain (robust
- * std); each read region's speck share, off its edge ring and outlines left
+ * std), and in each read cell its fine grain share at most 0.03 above its
+ * kept cloth's; each read region's speck share, off its edge ring and outlines left
  * out, at most 0.04 above the kept cloth's; where two parts' paint meets, the
  * laid paint's mean L* step across the line within 5 of the answer's there;
  * no paint at rest.
@@ -80,6 +91,7 @@ export const BARS = {
   driftDeltaE: 5,
   chromaDrop: 3,
   grainWithin: 0.5,
+  grainCellOver: 0.03,
   speckOver: 0.04,
   stepWithin: 5,
   visibleAtRest: 0,
@@ -264,19 +276,26 @@ const layHidden = (
 /** A grain read: robust and plain std, and its windows. */
 const GrainRead = Schema.Struct({ robust: Schema.Finite, plain: Schema.Finite, n: Schema.Int });
 
-/** One part's grain beside its paint: read (both sides have enough windows) within the bar or outside it, or unverified. */
+/** A speck or fine grain read: the share of the pixels that are specks or grain, and the pixels read. */
+const SpeckRead = Schema.Struct({ share: Schema.Finite, px: Schema.Int });
+
+/**
+ * One part's grain beside its paint: pooled over the part (both sides have
+ * enough windows), and fine, the read cell whose fine grain share lies
+ * furthest above its kept cloth's, with how many cells were read (0, unread:
+ * shares and px 0). Outside when either read is outside its bar, within when
+ * both are read, else unverified.
+ */
 export const PartGrain = Schema.Struct({
   part: Schema.String,
   painted: GrainRead,
   kept: GrainRead,
+  fine: Schema.Struct({ painted: SpeckRead, kept: SpeckRead, cells: Schema.Int }),
   verdict: Schema.Literals(['within', 'outside', 'unverified']),
 });
 
 /** A region's verdict: read (both sides have enough pixels) within its bar or outside it, or unverified. */
 const RegionVerdict = Schema.Literals(['within', 'outside', 'unverified']);
-
-/** A speck read: the share of the pixels that are specks, and the pixels read. */
-const SpeckRead = Schema.Struct({ share: Schema.Finite, px: Schema.Int });
 
 /** A line where the paint of `part` meets the paint of `meets` under the moving part `under` (four ways, both lighter than the ink in the answer): the mean L* step across it, `part` less `meets`, of the laid paint and of the answer at the same pixels, and how many pairs it was read on. */
 export const PartStep = Schema.Struct({
@@ -343,38 +362,6 @@ const rounded = (g: { readonly robust: number; readonly plain: number; readonly 
   n: g.n,
 });
 
-/** The grain of part `id`'s paint and of its kept paint within reach of it, each over paint lighter than the ink. */
-const partGrain = (view: Raster, sheet: Sheet, at: Uint8Array, composite: Raster, id: number) => {
-  const { width: w, height: h } = view;
-  const paint = Uint8Array.from(at, (k, i) => Number(k === id && lightAt(composite, i)));
-  const near = Uint8Array.from(sheet.owner, (o, i) => {
-    const [x, y] = [i % w, Math.floor(i / w)];
-    const reaches = (a: number, b: number) =>
-      x + a >= 0 && y + b >= 0 && x + a < w && y + b < h && at[(y + b) * w + x + a] === id;
-    return Number(
-      o === id &&
-        lightAt(view, i) &&
-        GRAIN_STEPS.some((a) => GRAIN_STEPS.some((b) => reaches(a, b))),
-    );
-  });
-  const painted = grainOf(composite, paint);
-  const kept = grainOf(view, near);
-  const read = painted.n >= LEAST_GRAIN_WINDOWS && kept.n >= LEAST_GRAIN_WINDOWS;
-  const within = Math.abs(painted.robust - kept.robust) <= BARS.grainWithin;
-  const verdict = Bool.match(read, {
-    onTrue: () =>
-      Bool.match(within, { onTrue: () => 'within' as const, onFalse: () => 'outside' as const }),
-    onFalse: () => 'unverified' as const,
-  });
-  // the bar is read on the grains as measured; the record keeps them rounded
-  return {
-    part: sheet.parts[id - 1]?.name ?? '',
-    painted: rounded(painted),
-    kept: rounded(kept),
-    verdict,
-  };
-};
-
 /** `mask` grown by `r` pixels each way (a square reach), in two passes. */
 const grown = (mask: Uint8Array, w: number, h: number, r: number): Uint8Array => {
   const pass = (
@@ -421,28 +408,40 @@ const elongationOf = (count: number, [sx, sy, sxx, syy, sxy]: ReadonlyArray<numb
 };
 
 /**
- * The share of `set`'s pixels off its edge ring whose L* lies more than
- * `SPECK_L` from the median L* of their 5 × 5 neighbours in `set`, read on
- * `r`, and how many were read. The ring is the outline where the set meets
- * another part, so it serves as neighbours but is not read; specks that join
- * (eight ways) into a line of `SPECK_LINE_PX` or more, `SPECK_LINE_LONG`
- * times as long as it is wide, are an outline drawn in the paint, not
- * speckle.
+ * Each pixel of `set` off its edge ring, and how far its L* on `r` lies from
+ * the median L* of its 5 × 5 neighbours in `set` (0 off the read pixels):
+ * what the specks and the fine grain are read on. The ring is the outline
+ * where the set meets another part, so it serves as neighbours but is not
+ * read.
  */
-const speckShare = (r: Raster, set: Uint8Array) => {
+const offMedianOf = (r: Raster, set: Uint8Array) => {
   const { width: w, height: h } = r;
   const at = Arr.range(0, w * h - 1).filter((i) => set[i] === 1 && !onRing(set, i, w, h));
   const l = new Float32Array(w * h);
   for (let i = 0; i < w * h; i++) if (set[i] === 1) l[i] = labOf(rgbAt(r, i))[0];
-  const speck = new Uint8Array(w * h);
+  const off = new Float32Array(w * h);
   for (const i of at) {
     const [x, y] = [i % w, Math.floor(i / w)];
     const around: number[] = [];
     for (let b = Math.max(0, y - 2); b <= Math.min(h - 1, y + 2); b++)
       for (let a = Math.max(0, x - 2); a <= Math.min(w - 1, x + 2); a++)
         if (set[b * w + a] === 1) around.push(l[b * w + a] ?? 0);
-    speck[i] = Number(Math.abs((l[i] ?? 0) - medianOf(around)) > SPECK_L);
+    off[i] = Math.abs((l[i] ?? 0) - medianOf(around));
   }
+  return { at, off };
+};
+
+/**
+ * The share of `set`'s pixels off its edge ring whose L* lies more than
+ * `SPECK_L` from the median L* of their 5 × 5 neighbours in `set`, read on
+ * `r`, and how many were read. Specks that join (eight ways) into a line of
+ * `SPECK_LINE_PX` or more, `SPECK_LINE_LONG` times as long as it is wide,
+ * are an outline drawn in the paint, not speckle.
+ */
+const speckShare = (r: Raster, set: Uint8Array) => {
+  const { width: w, height: h } = r;
+  const { at, off } = offMedianOf(r, set);
+  const speck = Uint8Array.from(off, (d) => Number(d > SPECK_L));
   const { components, labels } = componentsOf(speck, w, h, true);
   const moments = components.map(() => [0, 0, 0, 0, 0]);
   for (const i of at.filter((i) => speck[i] === 1)) {
@@ -486,6 +485,66 @@ const summedAb = (r: Raster, set: Uint8Array) => {
     b: sum(b, x0, y0, x1, y1),
     n: sum(n, x0, y0, x1, y1),
   });
+};
+
+/** A summed-area table of `value` over a `w` × `h` picture, and the sum over a box of it. */
+const summedOf = (w: number, h: number, value: (i: number) => number) => {
+  const s = w + 1;
+  const t = new Float64Array(s * (h + 1));
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const j = (y + 1) * s + x + 1;
+      t[j] = value(y * w + x) + (t[j - 1] ?? 0) + (t[j - s] ?? 0) - (t[j - s - 1] ?? 0);
+    }
+  return (x0: number, y0: number, x1: number, y1: number) =>
+    (t[y1 * s + x1] ?? 0) - (t[y0 * s + x1] ?? 0) - (t[y1 * s + x0] ?? 0) + (t[y0 * s + x0] ?? 0);
+};
+
+/**
+ * A part's fine grain, read cell by cell (`GRAIN_CELL` px squares): in each
+ * cell, the share of the paint's pixels off its edge ring more than
+ * `GRAIN_L` from the median L* of their 5 × 5 neighbours, against the same
+ * share of the part's kept cloth within `SPECK_REACH` of the cell, each read
+ * on `LEAST_REGION_PX` pixels or more. Grain fine enough to pass the speck
+ * read, in one patch, shows in its cell where the part's pooled grain hides
+ * it. The cell furthest above its cloth stands for the part, with how many
+ * cells were read; none read leaves it unread.
+ */
+const fineGrain = (composite: Raster, view: Raster, paint: Uint8Array, kept: Uint8Array) => {
+  const { width: w, height: h } = view;
+  const painted = offMedianOf(composite, paint);
+  const near = offMedianOf(view, kept);
+  const keptRead = new Uint8Array(w * h);
+  for (const i of near.at) keptRead[i] = 1;
+  const keptPx = summedOf(w, h, (i) => keptRead[i] ?? 0);
+  const keptGrain = summedOf(w, h, (i) =>
+    Number(keptRead[i] === 1 && (near.off[i] ?? 0) > GRAIN_L),
+  );
+  const cells = new Map<number, { cx: number; cy: number; px: number; grain: number }>();
+  for (const i of painted.at) {
+    const [cx, cy] = [Math.floor((i % w) / GRAIN_CELL), Math.floor(Math.floor(i / w) / GRAIN_CELL)];
+    const cell = cells.get(cy * w + cx) ?? { cx, cy, px: 0, grain: 0 };
+    cells.set(cy * w + cx, cell);
+    cell.px += 1;
+    cell.grain += Number((painted.off[i] ?? 0) > GRAIN_L);
+  }
+  const read = [...cells.values()]
+    .map(({ cx, cy, px, grain }) => {
+      const box = [
+        Math.max(0, cx * GRAIN_CELL - SPECK_REACH),
+        Math.max(0, cy * GRAIN_CELL - SPECK_REACH),
+        Math.min(w, (cx + 1) * GRAIN_CELL + SPECK_REACH),
+        Math.min(h, (cy + 1) * GRAIN_CELL + SPECK_REACH),
+      ] as const;
+      const beside = keptPx(...box);
+      return {
+        painted: { share: grain / px, px },
+        kept: { share: keptGrain(...box) / Math.max(1, beside), px: beside },
+      };
+    })
+    .filter((c) => c.painted.px >= LEAST_REGION_PX && c.kept.px >= LEAST_REGION_PX);
+  const over = (c: (typeof read)[number]) => c.painted.share - c.kept.share;
+  return { furthest: Arr.head([...read].sort((x, y) => over(y) - over(x))), cells: read.length };
 };
 
 /**
@@ -539,6 +598,54 @@ const verdictOf = (read: boolean, within: boolean) =>
       Bool.match(within, { onTrue: () => 'within' as const, onFalse: () => 'outside' as const }),
     onFalse: () => 'unverified' as const,
   });
+
+/** The grain of part `id`'s paint against its kept paint near it, each lighter than the ink: pooled over the part, and fine, cell by cell. */
+const partGrain = (view: Raster, sheet: Sheet, at: Uint8Array, composite: Raster, id: number) => {
+  const { width: w, height: h } = view;
+  const paint = Uint8Array.from(at, (k, i) => Number(k === id && lightAt(composite, i)));
+  const near = Uint8Array.from(sheet.owner, (o, i) => {
+    const [x, y] = [i % w, Math.floor(i / w)];
+    const reaches = (a: number, b: number) =>
+      x + a >= 0 && y + b >= 0 && x + a < w && y + b < h && at[(y + b) * w + x + a] === id;
+    return Number(
+      o === id &&
+        lightAt(view, i) &&
+        GRAIN_STEPS.some((a) => GRAIN_STEPS.some((b) => reaches(a, b))),
+    );
+  });
+  const painted = grainOf(composite, paint);
+  const kept = grainOf(view, near);
+  const pooledRead = painted.n >= LEAST_GRAIN_WINDOWS && kept.n >= LEAST_GRAIN_WINDOWS;
+  const pooledOut = pooledRead && Math.abs(painted.robust - kept.robust) > BARS.grainWithin;
+  const fine = fineGrain(
+    composite,
+    view,
+    paint,
+    Uint8Array.from(sheet.owner, (o, i) => Number(o === id && lightAt(view, i))),
+  );
+  const unread = { share: 0, px: 0 };
+  const [finePainted, fineKept] = Option.match(fine.furthest, {
+    onNone: () => [unread, unread] as const,
+    onSome: (c) => [c.painted, c.kept] as const,
+  });
+  const fineOut = fine.cells > 0 && finePainted.share - fineKept.share > BARS.grainCellOver;
+  const verdict = Bool.match(pooledOut || fineOut, {
+    onTrue: () => 'outside' as const,
+    onFalse: () => verdictOf(pooledRead && fine.cells > 0, true),
+  });
+  // the bar is read on the grains as measured; the record keeps them rounded
+  return {
+    part: sheet.parts[id - 1]?.name ?? '',
+    painted: rounded(painted),
+    kept: rounded(kept),
+    fine: {
+      painted: { share: round3(finePainted.share), px: finePainted.px },
+      kept: { share: round3(fineKept.share), px: fineKept.px },
+      cells: fine.cells,
+    },
+    verdict,
+  };
+};
 
 /**
  * Each painted region (the paint of one part under one moving part), its
@@ -748,8 +855,8 @@ const outside = <A extends { readonly verdict: string }>(reads: ReadonlyArray<A>
 /**
  * Each bar a measure misses (as `missedBars` names them) and its weight:
  * 1, plus how far its furthest read lies past the bar in the bar's own
- * allowance (seam 10 ΔE, drift 5 ΔE, chroma 3, grain 0.5, speck 0.04, step
- * 5 L*). The allowance is how far the bar lets a read stray from the kept
+ * allowance (seam 10 ΔE, drift 5 ΔE, chroma 3, grain 0.5 pooled and 0.03
+ * of a cell's share fine, speck 0.04, step 5 L*). The allowance is how far the bar lets a read stray from the kept
  * view, so bars of other units weigh alike: a read one allowance past its
  * bar weighs as one more missed bar. A miss no read sizes (every read
  * outside it too thin, paint visible at rest, the view not recomposed)
@@ -786,7 +893,18 @@ export const missesOf = (
         m.grain.some((g) => g.verdict === 'within') &&
           m.grain.every((g) => g.verdict !== 'outside'),
         outside(m.grain).map((g) =>
-          pastBy(Math.abs(g.painted.robust - g.kept.robust) - BARS.grainWithin, BARS.grainWithin),
+          Math.max(
+            Number(g.painted.n >= LEAST_GRAIN_WINDOWS && g.kept.n >= LEAST_GRAIN_WINDOWS) *
+              pastBy(
+                Math.abs(g.painted.robust - g.kept.robust) - BARS.grainWithin,
+                BARS.grainWithin,
+              ),
+            Number(g.fine.cells > 0) *
+              pastBy(
+                g.fine.painted.share - g.fine.kept.share - BARS.grainCellOver,
+                BARS.grainCellOver,
+              ),
+          ),
         ),
       ],
       [

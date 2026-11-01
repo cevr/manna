@@ -222,6 +222,7 @@ const PartSheetRecord = Schema.Struct({
     driftDeltaE: Schema.Finite,
     chromaDrop: Schema.Finite,
     grainWithin: Schema.Finite,
+    grainCellOver: Schema.Finite,
     speckOver: Schema.Finite,
     stepWithin: Schema.Finite,
     visibleAtRest: Schema.Int,

@@ -2671,8 +2671,14 @@ cell is `unverified`), the seam (ΔE76 of paint against
 the pixels its part keeps beside it, ≤ 10, read on 20 pairs or more), each
 such part's grain (`grainOf`, `core/grain.ts`: G less its 3×3 mean, its
 robust std within ±0.5 of the part's kept pixels near the paint, read on 90
-windows a side or more, else that part is `unverified`; the plain std is
-recorded beside it) and each painted region's specks (the share of its
+windows a side or more; the plain std is recorded beside it; and its fine
+grain, read in 24 px cells: the share of the paint's pixels off its edge
+ring more than 4 L* from the median of their 5×5 neighbours, at most 0.03
+above the same share of the part's kept cloth within 24 px of the cell, on
+100 pixels a side or more, the cell furthest above its cloth standing for
+the part, so a patch of grain too fine for the specks shows in its cell
+where the pooled read hides it; the part is outside when either read is,
+within when both are read, else `unverified`) and each painted region's specks (the share of its
 pixels off its 1 px edge ring, ink included, more than 12 L* from the
 median of their 5×5 neighbours of their own kind, at most 0.04 above the
 share of its part's kept cloth within 24 px: a fleck of a moving part's
@@ -2691,7 +2697,8 @@ read, and every moving part must hide some paint. An answer that leaves a
 moving part unpainted ranks after every one that paints them all, then by
 the weight of its misses, then by seam; the best is kept. A missed bar
 weighs 1, plus how far its furthest read lies past the bar in the bar's
-own allowance (seam 10, drift 5, chroma 3, grain 0.5, speck 0.04, step 5),
+own allowance (seam 10, drift 5, chroma 3, grain 0.5 pooled and 0.03 fine,
+speck 0.04, step 5),
 so a read one allowance past its bar weighs as one more missed bar; a miss
 no read sizes (its reads too thin) counts as one allowance past, 2, so a
 read near miss ranks ahead of it and a read far one behind it (`missesOf`;
