@@ -954,6 +954,9 @@ describe("the reader's roles, derived from its imports", () => {
         ['s = f"{d["k"]:>{w}} {{import x}}"; import nested', ['nested']],
         ['"""\nimport in_a_docstring\n"""\nimport after', ['after']],
         ['x = [\n    1,  # a comment\n]\nimport later', ['later']],
+        ['s = f"{x:{\'>\'}3}"; import spec_field', ['spec_field']],
+        ["s = f\"{ {'k': 1}['k']:>3} {d[1:2]!r:^{w}}\"; import brackets", ['brackets']],
+        ['s = f"""{x # a comment\'s quote\n}"""; import field_comment', ['field_comment']],
       ];
       for (const [source, names] of forms)
         expect([source, yield* importsOf('f.py', source)]).toEqual([source, [...names]]);
@@ -975,7 +978,7 @@ describe("the reader's roles, derived from its imports", () => {
   );
 
   it.effect(
-    'the scan fails closed: an import keyword it cannot place, an import it cannot read, or a string that does not end',
+    'the scan fails closed: an import keyword it cannot place, an import it cannot read, a string that does not end, or a quote in a format spec',
     () =>
       Effect.gen(function* () {
         const cases: ReadonlyArray<readonly [string, string]> = [
@@ -983,7 +986,22 @@ describe("the reader's roles, derived from its imports", () => {
           ['import model\nfrom helper import a,\n', 'line 2: an import the scan cannot read'],
           ['import model\nfrom . import *\n', 'line 2: an import the scan cannot read'],
           ["import model\n'it ends nowhere\nimport helper\n", 'line 2: a string that does not end'],
-          ['s = f"{x:\'>10}"\nimport helper\n', 'line 1: a string that does not end'],
+          [
+            's = f"{x:\'>10}"\nimport helper\n',
+            "line 1: a quote in a formatted string's format spec",
+          ],
+          [
+            'a = f"{x:\'>3}"; import helper; b = f"{y:\'<3}"\n',
+            "line 1: a quote in a formatted string's format spec",
+          ],
+          [
+            "import model\nx = f\"{x:'''}\"\nimport helper\nf\"{x:'''}\"\n",
+            "line 2: a quote in a formatted string's format spec",
+          ],
+          [
+            'import model\ns = f"{x:{y:\'<\'}}"\nimport helper\nf"{y:{z:\'>\'}}"\n',
+            "line 2: a quote in a formatted string's format spec",
+          ],
         ];
         for (const [source, reason] of cases) {
           const failed = yield* Effect.flip(rolesIn([['read.py', source]]));

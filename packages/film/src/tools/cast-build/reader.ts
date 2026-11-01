@@ -132,7 +132,11 @@ const LOCAL: ReadonlySet<keyof ReaderSources> = new Set(['read', 'eval']);
 /** A word that names a dynamic import, which hides an edge from the scan. */
 const DYNAMIC = /\b(importlib|__import__|runpy)\b/;
 
-/** A Python file read for its imports: its text, the place reached, the line it is on, the bracket depth, and the code kept, each character with its line. */
+/**
+ * A Python file read for its imports: its text, the place reached, the line
+ * it is on, the bracket depth, the code kept, each character with its line,
+ * and the reason the read stopped, when it names one.
+ */
 interface Cursor {
   readonly text: string;
   i: number;
@@ -140,6 +144,7 @@ interface Cursor {
   depth: number;
   readonly code: Array<string>;
   readonly lines: Array<number>;
+  fault: Option.Option<string>;
 }
 
 /** A word that may stand before a quote as its string's prefix (`r`, `b`, `f`, `rb`, `fr`…); with `f` or `t`, a formatted string. */
@@ -171,25 +176,71 @@ const keep = (cur: Cursor, s: string) => {
   }
 };
 
+/** Past the comment whose `#` is at the cursor, to its line's end. */
+const pastComment = (cur: Cursor) => {
+  cur.i = cur.text.indexOf('\n', cur.i);
+  if (cur.i < 0) cur.i = cur.text.length;
+};
+
+/** How bracket character `c` moves the depth: an opening one 1, a closing one -1, any other 0. */
+const bracketStep = (c: string) => {
+  if ('([{'.includes(c)) return 1;
+  if (')]}'.includes(c)) return -1;
+  return 0;
+};
+
 /**
- * Past a formatted string's field, its `{` read: code, whose strings nest
- * and whose braces count. False when it, or a string in it, does not end.
+ * Past a formatted string's field, its `{` read: an expression, whose
+ * strings nest, whose comments run to the line's end and whose brackets
+ * count, then, after a `:` outside its brackets, its format spec
+ * (`pastSpec`). False when it, or a string in it, does not end, or its spec
+ * holds a quote.
  */
 const pastField = (cur: Cursor): boolean => {
-  let open = 1;
-  while (cur.i < cur.text.length && open > 0) {
+  let depth = 0;
+  while (cur.i < cur.text.length) {
     const c = cur.text.charAt(cur.i);
     if (isQuote(c)) {
       if (!pastString(cur)) return false;
       continue;
     }
-    if (c === '{') open++;
-    if (c === '}') open--;
+    if (c === '#') {
+      pastComment(cur);
+      continue;
+    }
     if (c === '\n') cur.line++;
     cur.i++;
+    if (depth === 0 && c === '}') return true;
+    if (depth === 0 && c === ':') return pastSpec(cur);
+    depth += bracketStep(c);
   }
-  return open === 0;
+  return false;
 };
+
+/**
+ * Past a formatted string's format spec, its `:` read: plain text up to the
+ * field's `}`, in which a `{` opens a nested field (`pastField`, whose
+ * strings are strings). A quote in the spec itself is a character to
+ * Python, which the scan does not read: it fails, naming the line, rather
+ * than take the quote for a string's and lose its place. False when the
+ * spec does not end, or holds a quote.
+ */
+function pastSpec(cur: Cursor): boolean {
+  while (cur.i < cur.text.length) {
+    const c = cur.text.charAt(cur.i);
+    if (isQuote(c)) {
+      cur.fault = Option.some(
+        `line ${cur.line}: a quote in a formatted string's format spec, which the scan does not read`,
+      );
+      return false;
+    }
+    if (c === '\n') cur.line++;
+    cur.i++;
+    if (c === '}') return true;
+    if (c === '{' && !pastField(cur)) return false;
+  }
+  return false;
+}
 
 /**
  * One step in a string's body: an escape (two characters), a newline
@@ -248,8 +299,7 @@ const keptAs = (c: string, depth: number) => {
 const codeStep = (cur: Cursor): boolean => {
   const c = cur.text.charAt(cur.i);
   if (c === '#') {
-    cur.i = cur.text.indexOf('\n', cur.i);
-    if (cur.i < 0) cur.i = cur.text.length;
+    pastComment(cur);
     return true;
   }
   if (c === '\\' && cur.text.charAt(cur.i + 1) === '\n') {
@@ -279,7 +329,8 @@ const codeStep = (cur: Cursor): boolean => {
  * string joining the next line, a newline inside brackets a space, and
  * each statement on its own line (`ENDS`). A string that does not end
  * fails the scan: it has lost its place, and an import may hide in what it
- * took for a string.
+ * took for a string. A quote in a format spec (`f"{x:'>3}"`) fails it too,
+ * before it can lose its place (`pastSpec`).
  */
 const codeOf = (file: string, src: string) =>
   Effect.gen(function* () {
@@ -290,13 +341,14 @@ const codeOf = (file: string, src: string) =>
       depth: 0,
       code: [],
       lines: [],
+      fault: Option.none(),
     };
     while (cur.i < cur.text.length) {
       const line = cur.line;
       if (!codeStep(cur))
         return yield* ReaderScanFailed.make({
           file,
-          reason: `line ${line}: a string that does not end`,
+          reason: Option.getOrElse(cur.fault, () => `line ${line}: a string that does not end`),
         });
     }
     return { code: cur.code.join(''), lines: cur.lines };
