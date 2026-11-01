@@ -1,15 +1,35 @@
 // The cast reader's Python, run as the build runs it: its pytest cases in
 // its uv environment (`uv.lock`'s, under `FILM_READER_HOME`); and, with no
 // environment there, a refusal that names the line making one; and the
-// committed folder's roles, as its imports derive them. Slow: it starts
-// Python and imports torch.
+// committed folder's roles, as its imports derive them; the train config
+// against model.py's defaults; and the unit tests' own file, which reads no
+// real folder. Slow: it starts Python and imports torch, and it reads the
+// repo's files.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
-import { ConfigProvider, Effect, Layer } from 'effect';
+import { ConfigProvider, Effect, FileSystem, Layer, Schema } from 'effect';
 import { CastReader } from './reader.ts';
+import { trainStage } from './stages.ts';
 
 const live = CastReader.layer.pipe(Layer.provideMerge(BunServices.layer));
+
+/** The train config's backbone and input, as its JSON names them. */
+const decodeTrainConfig = Schema.decodeUnknownSync(
+  Schema.fromJsonString(
+    Schema.Struct({
+      backbone: Schema.String,
+      inputSide: Schema.Struct({ width: Schema.Finite, height: Schema.Finite }),
+    }),
+  ),
+);
+
+/** A file of this folder's, read off disk. */
+const fileHere = (name: string) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    return yield* fs.readFileString(new URL(name, import.meta.url).pathname);
+  });
 
 describe('cast reader (Python)', () => {
   it.live(
@@ -62,5 +82,28 @@ describe('cast reader (Python)', () => {
           'uv.lock',
         ]);
       }).pipe(Effect.provide(live)),
+  );
+
+  it.effect("the train config's backbone and input, in its key, are model.py's defaults", () =>
+    Effect.gen(function* () {
+      const model = yield* fileHere('../../../reader/model.py');
+      // the config is the train key's (`graph.ts` keys every stage by its config)
+      const train = decodeTrainConfig(
+        trainStage([], [], '/nonexistent/reader.lock.json').config ?? '',
+      );
+      expect(train.backbone).toBe('facebook/dinov2-small');
+      expect(model).toContain(`BACKBONE = "${train.backbone}"`);
+      expect(model).toContain(`IN_W, IN_H = ${train.inputSide.width}, ${train.inputSide.height}`);
+    }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  // review reader-key r1 M3: the unit tests once wrote and read a host folder; they stay on an in-memory disk
+  it.effect(
+    'the cast reader unit tests read no real folder: reader.test.ts takes no Bun platform layer and names no file by its URL',
+    () =>
+      Effect.gen(function* () {
+        const unit = yield* fileHere('./reader.test.ts');
+        expect(unit).not.toMatch(/@effect\/platform-bun|node:fs|import\.meta/);
+      }).pipe(Effect.provide(BunServices.layer)),
   );
 });

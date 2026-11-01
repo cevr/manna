@@ -4713,3 +4713,33 @@ The form of an entry, each field on its own line:
 - **Wrong:** `test:slow` held for 2 h 30 min: `HymnList.native.slow.test.ts` ran `phone-list.tsx cover` with a bare `Bun.spawnSync` in a `describe` body, the child spun at 100% CPU, and the run waited on it with nothing to end it. The feel case's `list-feel.tsx` child went on spinning past its case's timeout.
 - **Cause:** A synchronous spawn blocks the event loop, so no case's timeout ends its child; the spawn had no limit of its own.
 - **Guard:** code: `apps/hymnal/src/test/script.test.ts` `every file test:slow runs spawns bun only through runScript, never with a bare Bun.spawnSync`
+
+### reader-scan-strings-and-comments-hide-no-import
+
+- **Date:** 2026-11-01
+- **Kind:** review
+- **Said:** "Strings and comments can hide real imports."
+- **Source:** reader-key/round-1-review.md M1
+- **Wrong:** The cast reader's import scan joined raw lines before it told strings and comments apart. A docstring holding `from example import (` swallowed the `import helper` after it, and a comment ending in a backslash joined the next line's import into itself, so `helper.py` left the read closure and an edit to it kept the clip read cache.
+- **Cause:** The scan matched import lines in the raw text; it had no tokenizer, so a string or a comment could open a continuation that consumed real code.
+- **Guard:** code: `packages/film/src/tools/cast-build/reader.test.ts` `after a docstring that reads as an open import`, `packages/film/src/tools/cast-build/reader.test.ts` `after a comment that ends in a backslash`
+
+### reader-scan-reads-one-line-suites-and-fails-closed
+
+- **Date:** 2026-11-01
+- **Kind:** review
+- **Said:** "Imports in one-line Python suites are missed, including training dependencies."
+- **Source:** reader-key/round-1-review.md M2
+- **Wrong:** The scan read an import only at a statement's start or after `;`, so `if True: import helper` and `def load(): from helper import VALUE` in train.py were no edge: an edit to the helper left the reader key as it was, and the train adopted the committed checkpoint for code it was not trained under.
+- **Cause:** The scan listed the places an import may stand instead of failing on an `import` keyword it could not place.
+- **Guard:** code: `packages/film/src/tools/cast-build/reader.test.ts` `in a one-line if`, `packages/film/src/tools/cast-build/reader.test.ts` `in a one-line def`, `packages/film/src/tools/cast-build/reader.test.ts` `the scan fails closed: an import keyword it cannot place, an import it cannot read, or a string that does not end`
+
+### cast-reader-unit-tests-stay-in-memory
+
+- **Date:** 2026-11-01
+- **Kind:** review
+- **Said:** "The new fast closure test uses the real filesystem."
+- **Source:** reader-key/round-1-review.md M3
+- **Wrong:** `reader.test.ts`, a unit test, wrote a reader folder to host temp folders and loaded it through `BunFileSystem.layer`, and read the committed `model.py` by its URL.
+- **Cause:** The live layer's test took the host file system for a folder the in-memory disk serves as well. A scoped `no-restricted-imports` ban was not taken: most film unit tests use a live file system by design, and oxlint gives a file the options of the last block that sets the rule, so the ban would repeat the tools block's list for one file.
+- **Guard:** code: `packages/film/src/tools/cast-build/reader.slow.test.ts` `the cast reader unit tests read no real folder: reader.test.ts takes no Bun platform layer and names no file by its URL`

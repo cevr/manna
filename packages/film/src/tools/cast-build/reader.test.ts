@@ -1,15 +1,15 @@
 // The train and eval stages over a fake training set, with the reader's live
 // layer replaced: no Modal call without `--spend modal`; one train, then
 // each drawing's eval, when it is allowed; a rerun asks the reader nothing;
-// a change to one of the reader's source files is a new train.
+// a change to one of the reader's source files is a new train. Every file
+// is on an in-memory disk; the committed folder is read in
+// reader.slow.test.ts.
 
-import * as BunFileSystem from '@effect/platform-bun/BunFileSystem';
-import * as BunPath from '@effect/platform-bun/BunPath';
 import { describe, expect, it } from 'effect-bun-test';
 import {
   ConfigProvider,
   Effect,
-  FileSystem,
+  type FileSystem,
   Layer,
   Logger,
   Option,
@@ -69,16 +69,6 @@ const partsOutput = (parts: { readonly files: ReadonlyArray<string>; readonly re
       )(parts),
     ),
   );
-
-/** The train config's backbone and input, as its JSON names them. */
-const decodeTrainConfig = Schema.decodeUnknownSync(
-  Schema.fromJsonString(
-    Schema.Struct({
-      backbone: Schema.String,
-      inputSide: Schema.Struct({ width: Schema.Finite, height: Schema.Finite }),
-    }),
-  ),
-);
 
 /** Member `m`: a puppet entry per view, cut from its own sheet. */
 const MEMBER = {
@@ -560,20 +550,6 @@ describe('cast build: train and eval', () => {
           expect.stringMatching(/ shards=1$/),
         ]);
       }),
-  );
-
-  it.effect("the train config's backbone and input, in its key, are model.py's defaults", () =>
-    Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const model = yield* fs.readFileString(
-        new URL('../../../reader/model.py', import.meta.url).pathname,
-      );
-      // the config is the train key's (`graph.ts` keys every stage by its config)
-      const train = decodeTrainConfig(trainStage(CANDIDATES, ROLES.train, LOCK).config ?? '');
-      expect(train.backbone).toBe('facebook/dinov2-small');
-      expect(model).toContain(`BACKBONE = "${train.backbone}"`);
-      expect(model).toContain(`IN_W, IN_H = ${train.inputSide.width}, ${train.inputSide.height}`);
-    }).pipe(Effect.provide(BunFileSystem.layer)),
   );
 });
 
@@ -1151,46 +1127,43 @@ describe('the live reader', () => {
       );
     });
 
-  /** A reader folder of the live layer's: its entry scripts, its model and its lock, written to a temporary folder. */
+  /** A reader folder of the live layer's: its entry scripts, its model, a helper in a one-line suite, and its lock. */
   const FOLDER = {
     'eval.py': 'from model import BONES\n',
+    'helper.py': '',
     'modal_app.py': 'def fit():\n    from train import train\n',
     'model.py': 'import torch\n',
     'read.py': 'from model import decode\n',
-    'train.py': 'from model import Reader\n',
+    'train.py': 'from model import Reader\nif True: import helper\n',
     'pyproject.toml': '[project]\n',
     'uv.lock': 'version = 1\n',
   };
+  /** Where the folder and the reader's home lie, on the in-memory disk. */
+  const DIR = '/reader';
+  const HOME = '/reader-home';
 
   /**
-   * The live reader over `spawner`, of a reader folder written to a
-   * temporary folder (`reader`), in an environment made for it as the layer
-   * finds one: `venv-<uv.lock's hash>/bin/python` under a temporary
-   * FILM_READER_HOME.
+   * The live reader over `spawner`, of the folder on an in-memory disk, in
+   * an environment made for it as the layer finds one: `venv-<uv.lock's
+   * hash>/bin/python` under FILM_READER_HOME.
    */
-  const liveOver = (
-    spawner: ChildProcessSpawner.ChildProcessSpawner['Service'],
-    reader: Array<string> = [],
-  ) =>
-    Layer.unwrap(
-      Effect.gen(function* () {
-        const fs = yield* FileSystem.FileSystem;
-        const home = yield* fs.makeTempDirectoryScoped();
-        const folder = yield* fs.makeTempDirectoryScoped();
-        for (const [name, body] of Object.entries(FOLDER))
-          yield* fs.writeFileString(`${folder}/${name}`, body);
-        reader.push(folder);
-        const bin = `${home}/venv-${sha256Hex(text(FOLDER['uv.lock'])).slice(0, 12)}/bin`;
-        yield* fs.makeDirectory(bin, { recursive: true });
-        yield* fs.writeFileString(`${bin}/python`, '');
-        return CastReader.layerIn(folder).pipe(
-          Layer.provide([
-            Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, spawner),
-            ConfigProvider.layer(ConfigProvider.fromUnknown({ FILM_READER_HOME: home })),
-          ]),
-        );
-      }),
-    ).pipe(Layer.provide([BunFileSystem.layer, BunPath.layer]));
+  const liveOver = (spawner: ChildProcessSpawner.ChildProcessSpawner['Service']) => {
+    const disk = new Map(
+      Object.entries(FOLDER).map(([name, body]) => [`${DIR}/${name}`, text(body)]),
+    );
+    disk.set(
+      `${HOME}/venv-${sha256Hex(text(FOLDER['uv.lock'])).slice(0, 12)}/bin/python`,
+      text(''),
+    );
+    return CastReader.layerIn(DIR).pipe(
+      Layer.provide([
+        Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, spawner),
+        ConfigProvider.layer(ConfigProvider.fromUnknown({ FILM_READER_HOME: HOME })),
+        memoryFileSystem(disk),
+        Path.layer,
+      ]),
+    );
+  };
 
   it.effect("a train hands Modal the config's backbone and input side", () => {
     const commands: Array<ReadonlyArray<string>> = [];
@@ -1222,17 +1195,15 @@ describe('the live reader', () => {
     }).pipe(Effect.provide(liveOver(recording(commands))));
   });
 
-  it.effect("its sources are its folder's roles, as absolute paths", () => {
-    const folder: Array<string> = [];
-    return Effect.gen(function* () {
+  it.effect("its sources are its folder's roles, as absolute paths", () =>
+    Effect.gen(function* () {
       const { sources } = yield* CastReader;
-      const [dir = ''] = folder;
-      const at = (names: ReadonlyArray<string>) => names.map((n) => `${dir}/${n}`);
+      const at = (names: ReadonlyArray<string>) => names.map((n) => `${DIR}/${n}`);
       expect(sources).toEqual({
-        train: at(['modal_app.py', 'model.py', 'train.py']),
+        train: at(['helper.py', 'modal_app.py', 'model.py', 'train.py']),
         read: at(['model.py', 'pyproject.toml', 'read.py', 'uv.lock']),
         eval: at(['eval.py', 'model.py', 'pyproject.toml', 'read.py', 'uv.lock']),
       });
-    }).pipe(Effect.provide(liveOver(recording([]), folder)));
-  });
+    }).pipe(Effect.provide(liveOver(recording([])))),
+  );
 });
