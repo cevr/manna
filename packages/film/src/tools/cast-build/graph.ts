@@ -281,6 +281,12 @@ type Outcome =
 /** What a build decides under the lock: an outcome, a key another build runs now, or the run to make. */
 type Decision = Outcome | { readonly _tag: 'busy' } | { readonly _tag: 'run' };
 
+/** A busy decision's poll: again every `BUSY_SPACING` until it is not busy. */
+const BUSY = {
+  schedule: Schedule.spaced(BUSY_SPACING),
+  until: (decision: Decision) => decision._tag !== 'busy',
+};
+
 /** The state a stage takes from the stages above it that hold it: a waiting or failed one before a stale one. */
 const heldBy = (states: ReadonlyArray<StageState>): Option.Option<StageState> =>
   Option.orElse(
@@ -555,13 +561,12 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
       }),
     );
     let decision = yield* decide;
-    if (decision._tag === 'busy')
+    if (decision._tag === 'busy') {
+      // another build's run: decide again every BUSY_SPACING until its output or its key is free
       yield* Effect.logInfo(
         `cast.build.busy stage=${stage.id} reason="another build runs it; waiting on its output"`,
       );
-    while (decision._tag === 'busy') {
-      yield* Effect.sleep(BUSY_SPACING);
-      decision = yield* decide;
+      decision = yield* decide.pipe(Effect.delay(BUSY_SPACING), Effect.repeat(BUSY));
     }
     const outcome = yield* settle(stage, key, start, decision);
     switch (outcome._tag) {
