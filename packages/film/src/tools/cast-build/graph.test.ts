@@ -158,9 +158,18 @@ describe('the cast build graph', () => {
           'drawing:front': 'cached',
           'parts:front': 'cached',
           'cut:front': 'stale',
-          'parts:k2': 'stale',
-          'cut:k2': 'stale',
+          'parts:k2': 'waiting-spend',
+          'cut:k2': 'waiting-spend',
         });
+        expect(touched.stages.find((s) => s.id === 'parts:k2')?.reason).toEqual(
+          Option.some('needs --spend okra'),
+        );
+        const granted = yield* buildGraph(
+          stages,
+          options({ plan: true, spend: new Set(['okra']) }),
+        );
+        expect(statesOf(granted)['parts:k2']).toBe('stale');
+        expect(statesOf(granted)['cut:front']).toBe('cached');
         expect(runs.size).toBe(0);
         const drawing = yield* buildGraph(stages, options({ plan: true, touch: ['/in/view.png'] }));
         expect(statesOf(drawing)['drawing:front']).toBe('stale');

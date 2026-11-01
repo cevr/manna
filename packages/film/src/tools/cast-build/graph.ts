@@ -11,11 +11,12 @@
 // A stage spends (okra, Modal) only through `ctx.spend`, which runs the
 // spend when the build's `spend` names it and otherwise fails the stage as
 // `waiting-spend`; a stage that needs the owner fails as `waiting-owner`.
-// Neither is cached, so the next build asks again. Every stage below a
-// waiting or failed stage takes its state without running. `plan` runs no
-// stage: one whose key is not in the manifest is `stale`, and so is every
-// stage below it, its output unknown; `touch` plans as if those files
-// changed. Each stage is decided and run under the manifest's lock
+// Neither is cached, so the next build asks again; the manifest keeps only
+// what it waited on, by key. Every stage below a waiting or failed stage
+// takes its state without running. `plan` runs no stage: one whose key is not
+// in the manifest is `stale`, and so is every stage below it, its output
+// unknown, unless it last waited at that key, when it waits again (a plan
+// granted its spend calls it stale); `touch` plans as if those files changed. Each stage is decided and run under the manifest's lock
 // (`ContentStore.transact`), so two builds never decide on one stage at once.
 
 import { Array as Arr, Clock, Effect, FileSystem, Option, Path, Schema } from 'effect';
@@ -129,7 +130,22 @@ const Built = Schema.Struct({
   ms: Schema.Finite,
 });
 
-const BuildManifest = Schema.Struct({ stages: Schema.Record(Schema.String, Built) });
+/**
+ * A stage whose last run at a key waited, by key: what it waited on, so a plan
+ * reports it waiting rather than stale. A build runs it again (the spend may be
+ * granted now, the owner may have answered).
+ */
+const Waited = Schema.Struct({
+  id: Schema.String,
+  state: Schema.Literals(['waiting-spend', 'waiting-owner']),
+  spend: Schema.optionalKey(Spend),
+  reason: Schema.String,
+});
+
+const BuildManifest = Schema.Struct({
+  stages: Schema.Record(Schema.String, Built),
+  waited: Schema.optionalKey(Schema.Record(Schema.String, Waited)),
+});
 type BuildManifest = typeof BuildManifest.Type;
 
 const manifestIn = (path: Path.Path, cache: string): Manifest<BuildManifest> => ({
@@ -281,28 +297,55 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
               current,
             ] as const;
         }
-        if (options.plan) return [{ _tag: 'stale' } satisfies Outcome, current] as const;
+        const waited = Option.fromUndefinedOr(current.waited?.[key]);
+        if (options.plan) {
+          // a stage that last waited at this key waits again, unless this plan grants its spend
+          const waits = Option.filter(
+            waited,
+            (w) => !Option.exists(Option.fromUndefinedOr(w.spend), (s) => options.spend.has(s)),
+          );
+          return [
+            Option.match(waits, {
+              onNone: (): Outcome => ({ _tag: 'stale' }),
+              onSome: (w): Outcome => ({ _tag: w.state, reason: Option.some(w.reason) }),
+            }),
+            current,
+          ] as const;
+        }
         const ran = yield* stage.run(ctx).pipe(
           Effect.map((bytes) => ({ _tag: 'made' as const, bytes })),
           Effect.catchTags({
             WaitingSpend: (e) =>
-              Effect.succeed<Outcome>({
-                _tag: 'waiting-spend',
-                reason: Option.some(`needs --spend ${e.spend}`),
+              Effect.succeed({
+                _tag: 'waited' as const,
+                waited: {
+                  id: stage.id,
+                  state: 'waiting-spend' as const,
+                  spend: e.spend,
+                  reason: `needs --spend ${e.spend}`,
+                },
               }),
             WaitingOwner: (e) =>
-              Effect.succeed<Outcome>({ _tag: 'waiting-owner', reason: Option.some(e.reason) }),
+              Effect.succeed({
+                _tag: 'waited' as const,
+                waited: { id: stage.id, state: 'waiting-owner' as const, reason: e.reason },
+              }),
             StageFailed: (e) =>
               Effect.succeed<Outcome>({ _tag: 'failed', reason: Option.some(e.reason) }),
           }),
         );
+        if (ran._tag === 'waited')
+          return [
+            { _tag: ran.waited.state, reason: Option.some(ran.waited.reason) } satisfies Outcome,
+            { ...current, waited: { ...current.waited, [key]: ran.waited } },
+          ] as const;
         if (ran._tag !== 'made') return [ran, current] as const;
         const output = sha256Hex(ran.bytes);
         yield* store.writeFile(objectFile(output), ran.bytes);
         const ms = (yield* Clock.currentTimeMillis) - start;
         return [
           { _tag: 'ran', output } satisfies Outcome,
-          { stages: { ...current.stages, [key]: { id: stage.id, output, ms } } },
+          { ...current, stages: { ...current.stages, [key]: { id: stage.id, output, ms } } },
         ] as const;
       }),
     );
