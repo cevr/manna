@@ -657,6 +657,27 @@ const verdictOf = (read: boolean, within: boolean) =>
   });
 
 /**
+ * Each pixel of a `w` × `h` picture a step of the `GRAIN_STEPS` lattice each
+ * way from a pixel `at` marks `id`. The lattice is the same steps across and
+ * down, so a pass along each row and then one down each column finds them.
+ */
+const latticeReach = (at: Uint8Array, id: number, w: number, h: number) => {
+  const across = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++)
+      across[y * w + x] = Number(
+        GRAIN_STEPS.some((a) => x + a >= 0 && x + a < w && at[y * w + x + a] === id),
+      );
+  const reach = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++)
+      reach[y * w + x] = Number(
+        GRAIN_STEPS.some((b) => y + b >= 0 && y + b < h && across[(y + b) * w + x] === 1),
+      );
+  return reach;
+};
+
+/**
  * The grain of part `id`'s paint against its kept cloth near it, each less
  * the ink the line rule finds in it (`clothOf`) and off its edge ring, at
  * any lightness: pooled over the part, and fine, cell by cell, the fine
@@ -677,12 +698,8 @@ const partGrain = (view: Raster, sheet: Sheet, at: Uint8Array, composite: Raster
   // the pooled read's windows lie off each cloth's edge ring, where its outline runs, as the fine read's pixels do
   const inner = (set: Uint8Array) =>
     Uint8Array.from(set, (s, i) => Number(s === 1 && !onRing(set, i, w, h)));
-  const near = Uint8Array.from(inner(cloth), (c, i) => {
-    const [x, y] = [i % w, Math.floor(i / w)];
-    const reaches = (a: number, b: number) =>
-      x + a >= 0 && y + b >= 0 && x + a < w && y + b < h && at[(y + b) * w + x + a] === id;
-    return Number(c === 1 && GRAIN_STEPS.some((a) => GRAIN_STEPS.some((b) => reaches(a, b))));
-  });
+  const reached = latticeReach(at, id, w, h);
+  const near = Uint8Array.from(inner(cloth), (c, i) => Number(c === 1 && reached[i] === 1));
   const painted = grainOf(composite, inner(paint));
   const kept = grainOf(view, near);
   const pooledRead = painted.n >= LEAST_GRAIN_WINDOWS && kept.n >= LEAST_GRAIN_WINDOWS;
