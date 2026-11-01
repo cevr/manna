@@ -3,14 +3,16 @@
 // shows the view (`core/register.ts`). Its paint, each pixel the one answer
 // pixel under its centre (`drawPoint`, so okra's grain is not averaged),
 // is the answer less the paper the view's own ground reaches; each painted
-// pixel goes under the nearest part that does not move, in that part's tone, and only through
-// `paintHidden`, so paint never shows at rest. The measures are read on
-// domains the sheet fixes before any answer is read: the drift over the
-// pixels kept by the parts the hidden areas lie on, the seam and each such
-// part's grain beside its paint, and each painted region's chroma and speck
-// share (inside its edge ring, outlines left out) beside its part's kept cloth. A measure with too few samples to read is
-// a missed bar, not a pass, and every moving part must hide some paint
-// (`film concept parts`, `part-sheet-cli.ts`, keeps the best answer).
+// pixel goes under the nearest part that does not move, in that part's
+// tone, and only through `paintHidden`, so paint never shows at rest. The
+// measures are read on domains the sheet fixes before any answer is read:
+// the drift over the pixels kept by the parts the hidden areas lie on, the
+// seam and each such part's grain beside its paint (pooled, and cell by
+// cell), and each painted region's chroma and speck share (inside its edge
+// ring, outlines left out) beside its part's kept cloth. A measure with too
+// few samples to read is a missed bar, not a pass, and every moving part
+// must hide some paint (`film concept parts`, `part-sheet-cli.ts`, keeps
+// the best answer).
 
 import { Array as Arr, Boolean as Bool, Option, Order, Result, Schema } from 'effect';
 import { componentsOf, deltaE, labOf, rgbAt } from '../core/cast-sheet-pixels.ts';
