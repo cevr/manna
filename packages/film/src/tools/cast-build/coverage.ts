@@ -10,7 +10,7 @@
 import { Option, Schema } from 'effect';
 
 /** What an entry needs, in the order a report names it. */
-export const REQUIREMENTS = ['drawn', 'kept', 'cut', 'bars', 'fit'] as const;
+const REQUIREMENTS = ['drawn', 'kept', 'cut', 'bars', 'fit'] as const;
 export const Requirement = Schema.Literals(REQUIREMENTS);
 export type Requirement = typeof Requirement.Type;
 
@@ -19,11 +19,11 @@ export const CutKind = Schema.Literals(['puppet', 'key']);
 export type CutKind = typeof CutKind.Type;
 
 /** Why a drawing is needed: a script and the beats of it that draw it. */
-export const Need = Schema.Struct({
+const Need = Schema.Struct({
   script: Schema.String,
   beats: Schema.Array(Schema.String),
 });
-export interface Need extends Schema.Schema.Type<typeof Need> {}
+interface Need extends Schema.Schema.Type<typeof Need> {}
 
 /**
  * One drawing a member needs. `id` is a puppet view's `<kind>-<view>` as
@@ -49,12 +49,12 @@ export interface Entry extends Schema.Schema.Type<typeof Entry> {}
  * chain`): its file, from the member's folder, and the bands of frames
  * (first and last, inclusive) its report means over beside the whole clip.
  */
-export const Clip = Schema.Struct({
+const Clip = Schema.Struct({
   id: Schema.String,
   file: Schema.String,
   bands: Schema.Array(Schema.Tuple([Schema.Finite, Schema.Finite])),
 });
-export interface Clip extends Schema.Schema.Type<typeof Clip> {}
+interface Clip extends Schema.Schema.Type<typeof Clip> {}
 
 /** A member's manifest: every drawing the pipeline needs of him, and the clips his reader is scored on. */
 export const Coverage = Schema.Struct({
@@ -69,21 +69,21 @@ export type EntryFacts = { readonly [R in Requirement]: boolean } & {
   readonly unmeasured?: ReadonlyArray<Requirement>;
 };
 
-export interface EntryReport {
+interface EntryReport {
   readonly id: string;
   readonly cut: CutKind;
   readonly missing: ReadonlyArray<Requirement>;
   readonly unmeasured: ReadonlyArray<Requirement>;
 }
 
-export interface CoverageReport {
+interface CoverageReport {
   readonly member: string;
   readonly complete: boolean;
   readonly entries: ReadonlyArray<EntryReport>;
 }
 
 /** The requirements an entry of this cut is held to. */
-export const requirementsOf = (cut: CutKind): ReadonlyArray<Requirement> => HELD_TO[cut];
+const requirementsOf = (cut: CutKind): ReadonlyArray<Requirement> => HELD_TO[cut];
 
 const HELD_TO = {
   key: ['drawn', 'kept'],

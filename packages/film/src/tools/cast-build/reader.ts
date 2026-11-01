@@ -23,10 +23,10 @@ import { sha256Hex } from '../digest.ts';
 import { collectWithin } from '../process.ts';
 
 /** The reader's Python project: `packages/film/reader/`. */
-export const READER_DIR = `${import.meta.dir}/../../../reader`;
+const READER_DIR = `${import.meta.dir}/../../../reader`;
 
 /** The reader's train settings: a fixed step count on one GPU type, no wall-clock stop. */
-export interface TrainConfig {
+interface TrainConfig {
   readonly steps: number;
   readonly batch: number;
   readonly lr: number;
@@ -38,7 +38,7 @@ export interface TrainConfig {
   readonly inputSide: { readonly width: number; readonly height: number };
 }
 
-export interface TrainJob {
+interface TrainJob {
   /** The training set's hash: its tar on the data volume is `/sets/<trainset>.tar`. */
   readonly trainset: string;
   /** The reader's key: its checkpoint on the volume is `/readers/<key>.pt`, once promoted. */
@@ -51,9 +51,9 @@ export interface TrainJob {
 }
 
 /** What a read reads: a clip (an mp4 mapped onto the canvas) or a folder of canvas PNGs. */
-export type Frames = { readonly clip: string } | { readonly pngs: string };
+type Frames = { readonly clip: string } | { readonly pngs: string };
 
-export class ReaderMissing extends Schema.TaggedError<ReaderMissing>()('ReaderMissing', {
+class ReaderMissing extends Schema.TaggedError<ReaderMissing>()('ReaderMissing', {
   venv: Schema.String,
   install: Schema.String,
 }) {
@@ -62,7 +62,7 @@ export class ReaderMissing extends Schema.TaggedError<ReaderMissing>()('ReaderMi
   }
 }
 
-export class ReaderFailed extends Schema.TaggedError<ReaderFailed>()('ReaderFailed', {
+class ReaderFailed extends Schema.TaggedError<ReaderFailed>()('ReaderFailed', {
   what: Schema.String,
   reason: Schema.String,
 }) {

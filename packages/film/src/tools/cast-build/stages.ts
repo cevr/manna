@@ -460,7 +460,7 @@ const completeIn = (bytes: Uint8Array) =>
  * A drawing that may join the training set: a puppet entry cut from its own
  * sheet, with its renders and status stages.
  */
-export interface Candidate {
+interface Candidate {
   /** `<member>/<entry>`. */
   readonly drawing: string;
   readonly renders: string;
@@ -604,7 +604,7 @@ export const evalStage = (
 };
 
 /** The puppet a reader's drawing (`<member>/<entry>`) is posed with: its entry's sheet's, its fitted entry's for a fitted pose. */
-export const puppetsOf = (memberDir: string, coverage: Coverage) => (drawing: string) =>
+const puppetsOf = (memberDir: string, coverage: Coverage) => (drawing: string) =>
   Effect.gen(function* () {
     const id = drawing.slice(coverage.member.length + 1);
     const entry = yield* Effect.fromOption(

@@ -8,7 +8,7 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
 import { memoryFileSystem, memoryLocks, text } from '../host/testing.ts';
 import { ContentStore } from '../content-store.ts';
-import { type BuildOptions, type Stage, buildGraph, fileInput, stageInput } from './graph.ts';
+import { type Stage, buildGraph, fileInput, stageInput } from './graph.ts';
 import { CastReader } from './reader.ts';
 import {
   TRAIN,
@@ -19,6 +19,9 @@ import {
   trainStage,
   trainsetStage,
 } from './stages.ts';
+
+/** What a build is asked with, as `buildGraph` takes it. */
+type BuildOptions = Parameters<typeof buildGraph>[1];
 
 const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
   cache: '/cache',

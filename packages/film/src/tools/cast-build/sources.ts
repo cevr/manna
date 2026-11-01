@@ -41,7 +41,7 @@ export type SourcedStage = keyof typeof STAGE_ENTRIES;
  * library's puppets, fit the film's `rigs/cast.ts` and its closure
  * (`filmCastSources`).
  */
-export const STAGE_LOADS = {
+const STAGE_LOADS = {
   /** `importFilmModule`: the member's `cutout/cut.ts`. */
   parts: ['../film-repo.ts'],
   /** `importFilmModule`: the member's `cutout/puppets.ts` (`specSources`). */
@@ -54,7 +54,7 @@ export const STAGE_LOADS = {
 } satisfies { readonly [K in SourcedStage]: ReadonlyArray<string> };
 
 /** Every stage kind's source files as its inputs. */
-export type StageSources = { readonly [K in SourcedStage]: ReadonlyArray<Input> };
+type StageSources = { readonly [K in SourcedStage]: ReadonlyArray<Input> };
 
 const here = (s: string) => new URL(s, import.meta.url).pathname;
 

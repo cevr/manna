@@ -15,7 +15,7 @@ import { encodePng } from '../png.ts';
 /** How many samples a drawing's shard holds: 400 to train on, 40 held out. */
 export const SAMPLES = { train: 400, held: 40 } as const;
 
-export type Split = keyof typeof SAMPLES;
+type Split = keyof typeof SAMPLES;
 
 /** Each split's seeds start this far past the drawing's own, so no two splits share one. */
 const SPLIT_OFFSET: Readonly<Record<Split, number>> = { train: 0, held: 1_000_000 };
@@ -47,7 +47,7 @@ const header = (name: string, size: number) => {
 };
 
 /** `files` as one ustar archive, in their order. */
-export const tarOf = (files: ReadonlyArray<readonly [name: string, bytes: Uint8Array]>) => {
+const tarOf = (files: ReadonlyArray<readonly [name: string, bytes: Uint8Array]>) => {
   const blocks = files.flatMap(([name, bytes]) => [
     header(name, bytes.length),
     bytes,

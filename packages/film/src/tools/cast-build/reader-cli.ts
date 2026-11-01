@@ -75,22 +75,22 @@ const registryIn = (cache: string) =>
   });
 
 /** The `--reader` flag: a name `import` gave, a checkpoint's sha256, or `current`. */
-export const readerFlag = Flag.String('reader').pipe(
+const readerFlag = Flag.String('reader').pipe(
   Flag.withDescription(
     "a name `reader import` gave, a checkpoint's sha256, or current (the lock's)",
   ),
 );
 /** The `--lock` flag: the committed lock `--reader current` reads. */
-export const lockFlag = Flag.String('lock').pipe(
+const lockFlag = Flag.String('lock').pipe(
   Flag.withDefault('src/library/cutout/reader.lock.json'),
   Flag.withDescription('the reader lock `current` names (from apps/animations)'),
 );
 /** The `--clip` flag: an mp4, mapped onto the reader's canvas. */
-export const clipFlag = Flag.String('clip').pipe(
+const clipFlag = Flag.String('clip').pipe(
   Flag.optional,
   Flag.withDescription('an mp4 to read, mapped onto the canvas'),
 );
-export const jsonFlag = Flag.Boolean('json').pipe(
+const jsonFlag = Flag.Boolean('json').pipe(
   Flag.withDefault(false),
   Flag.withDescription('print JSON'),
 );
@@ -114,7 +114,7 @@ const shaOf = Effect.fn('cast.reader.shaOf')(function* (
 });
 
 /** A reader named on the command line, as its checkpoint's file in the cast cache. */
-export const checkpointOf = Effect.fn('cast.reader.checkpointOf')(function* (
+const checkpointOf = Effect.fn('cast.reader.checkpointOf')(function* (
   reader: string,
   lock: string,
 ) {

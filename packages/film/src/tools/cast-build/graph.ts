@@ -57,7 +57,7 @@ import { sha256Hex } from '../digest.ts';
 export const Spend = Schema.Literals(['okra', 'modal']);
 export type Spend = typeof Spend.Type;
 
-export const StageState = Schema.Literals([
+const StageState = Schema.Literals([
   'cached',
   'ran',
   'stale',
@@ -65,7 +65,7 @@ export const StageState = Schema.Literals([
   'waiting-owner',
   'failed',
 ]);
-export type StageState = typeof StageState.Type;
+type StageState = typeof StageState.Type;
 
 /**
  * A stage's input: a file's bytes, an upstream stage's output, or an optional
@@ -85,7 +85,7 @@ export const stageInput = (id: string): Input => ({ _tag: 'Stage', id });
 export const optionalInput = (id: string): Input => ({ _tag: 'Optional', id });
 
 /** The stage would spend, and the build's `--spend` does not name it. */
-export class WaitingSpend extends Schema.TaggedError<WaitingSpend>()('WaitingSpend', {
+class WaitingSpend extends Schema.TaggedError<WaitingSpend>()('WaitingSpend', {
   spend: Spend,
 }) {}
 
@@ -100,7 +100,7 @@ export class StageFailed extends Schema.TaggedError<StageFailed>()('StageFailed'
 }) {}
 
 /** The stages do not form a graph in order: one names a stage not before it, or two share an id. */
-export class GraphInvalid extends Schema.TaggedError<GraphInvalid>()('GraphInvalid', {
+class GraphInvalid extends Schema.TaggedError<GraphInvalid>()('GraphInvalid', {
   reason: Schema.String,
 }) {}
 
@@ -148,9 +148,9 @@ export interface Stage<R> {
 }
 
 /** The ways a stage's run ends other than with its output. */
-export type StageError = WaitingSpend | WaitingOwner | StageFailed;
+type StageError = WaitingSpend | WaitingOwner | StageFailed;
 
-export interface BuildOptions {
+interface BuildOptions {
   /** The cache folder: `objects/` and `build.json`. */
   readonly cache: string;
   /** Run nothing; report what would run. */
@@ -253,7 +253,7 @@ const checkOrder = <R>(stages: ReadonlyArray<Stage<R>>) => {
 const BUSY_SPACING = '100 millis';
 
 /** How often a build renews the marks of the stages it runs. */
-export const HEARTBEAT_MS = 60 * 1000;
+const HEARTBEAT_MS = 60 * 1000;
 const HEARTBEAT = Schedule.spaced(HEARTBEAT_MS);
 
 /**
@@ -263,7 +263,7 @@ const HEARTBEAT = Schedule.spaced(HEARTBEAT_MS);
  * A live owner renews its mark however long its stage runs, so the lease does
  * not depend on any stage's timeout.
  */
-export const RUNNING_LEASE_MS = 5 * HEARTBEAT_MS;
+const RUNNING_LEASE_MS = 5 * HEARTBEAT_MS;
 
 /** The manifest with `key`'s mark renewed at `now`, when `build` holds it. */
 const renewed = (

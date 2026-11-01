@@ -38,7 +38,7 @@ export const manifestOf = Effect.fn('film.cast.manifest')(function* (memberDir: 
 });
 
 /** The library's `cutout/puppets.ts`, which every member's puppets are built through. */
-export const libraryPuppetsOf = Effect.fn('film.cast.libraryPuppets')(function* (film: FilmName) {
+const libraryPuppetsOf = Effect.fn('film.cast.libraryPuppets')(function* (film: FilmName) {
   const path = yield* Path.Path;
   const dir = (yield* FilmFolder).paths(film).dir;
   return path.join(dir, '..', '..', 'library', 'cutout', 'puppets.ts');

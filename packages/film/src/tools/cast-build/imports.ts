@@ -42,13 +42,13 @@ export const variableImportsOf = (text: string): ReadonlyArray<string> =>
   [...uncommented(text).matchAll(VARIABLE)].map((m) => (m[1] ?? '').trim());
 
 /** A dynamic import the scanner cannot follow: the file it is in, and its argument's text. */
-export interface VariableImport {
+interface VariableImport {
   readonly file: string;
   readonly argument: string;
 }
 
 /** What a closure runs: its files, and the variable imports in them. */
-export interface Closure {
+interface Closure {
   /** Absolute paths, sorted, the entries among them. */
   readonly files: ReadonlyArray<string>;
   readonly variable: ReadonlyArray<VariableImport>;

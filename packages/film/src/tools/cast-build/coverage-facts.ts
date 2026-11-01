@@ -49,7 +49,7 @@ export const viewOfId = (id: string): Option.Option<{ kind: SheetKind; view: str
   );
 
 /** A key's id, `<family>/<key>`, read as its family and key. */
-export const keyOfId = (id: string): Option.Option<{ family: string; key: string }> =>
+const keyOfId = (id: string): Option.Option<{ family: string; key: string }> =>
   Option.map(Option.fromNullishOr(/^([^/]+)\/([^/]+)$/.exec(id)), ([, family, key]) => ({
     family: family ?? '',
     key: key ?? '',

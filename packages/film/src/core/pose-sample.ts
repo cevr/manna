@@ -25,7 +25,7 @@ export interface PoseSpec {
 }
 
 /** A sample's truth: where and how large the figure stands, its paper, its numbers, each bone's world angle, each joint's canvas px, and the joints its puppet lacks. */
-export interface PoseTruth {
+interface PoseTruth {
   readonly root: Pt;
   readonly scale: number;
   readonly paper: Rgb;
@@ -35,13 +35,13 @@ export interface PoseTruth {
   readonly masked: ReadonlyArray<string>;
 }
 
-export interface PoseSample {
+interface PoseSample {
   readonly img: Raster;
   readonly truth: PoseTruth;
 }
 
 /** A seeded uniform draw in [0, 1): mulberry32, so one seed gives one sequence on every host. */
-export const mulberry32 = (seed: number) => {
+const mulberry32 = (seed: number) => {
   let s = seed | 0;
   return () => {
     s = (s + 0x6d2b79f5) | 0;
@@ -52,7 +52,7 @@ export const mulberry32 = (seed: number) => {
 };
 
 /** The reader's joints by name: the bone each lies on, at its pivot or its tip. */
-export const JOINTS = {
+const JOINTS = {
   hip: ['lean', 'pivot'],
   neckBase: ['neck', 'pivot'],
   chin: ['head', 'pivot'],
@@ -95,7 +95,7 @@ export const jointsOf = (p: Puppet, pose: PuppetPose) => {
 };
 
 /** Each bone's world angle, degrees: its number plus its forebears'. */
-export const worldOf = (p: Puppet, numbers: Readonly<Record<string, number>>) => {
+const worldOf = (p: Puppet, numbers: Readonly<Record<string, number>>) => {
   const w: Record<string, number> = {};
   for (const b of p.bones) w[b.name] = (numbers[b.name] ?? 0) + (b.parent ? w[b.parent]! : 0);
   return w;
@@ -155,13 +155,13 @@ const armLimits = (b: Bone, shoulder: Bone, hip: Pt): Pt => {
 };
 
 /** The canvas root of a puppet drawn at `scale` with its sheet's centre at canvas x `cx` and its sheet's bottom at canvas y `bottom`. */
-export const placeOf = (p: Puppet, scale: number, cx: number, bottom: number): Pt => [
+const placeOf = (p: Puppet, scale: number, cx: number, bottom: number): Pt => [
   cx + scale * (p.root[0] - p.width / 2),
   bottom + scale * (p.root[1] - p.height),
 ];
 
 /** The drawn raster over `paper`, then a 1 px blur (3 × 3 binomial), opaque. */
-export const onPaper = (r: Raster, paper: Rgb): Raster => {
+const onPaper = (r: Raster, paper: Rgb): Raster => {
   const { width: W, height: H } = r;
   const flat = new Float32Array(W * H * 3);
   for (let i = 0; i < W * H; i++) {
@@ -205,7 +205,7 @@ const placed = (spec: PoseSpec, rnd: () => number) => {
 };
 
 /** The frame at a pose and paper: the figure over paper and its truth. */
-export const frameOf = (
+const frameOf = (
   spec: PoseSpec,
   numbers: Readonly<Record<string, number>>,
   root: Pt,

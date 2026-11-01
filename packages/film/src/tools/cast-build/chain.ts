@@ -85,7 +85,7 @@ const END = new Map<string, string>([
 ]);
 
 /** Degrees wrapped to [-180, 180). */
-export const wrap = (a: number) => ((((a + 180) % 360) + 360) % 360) - 180;
+const wrap = (a: number) => ((((a + 180) % 360) + 360) % 360) - 180;
 
 /** Each frame's drawing (the member's most likely, the first in class order on a tie) and the runs they make. */
 export const cutOf = (read: ClipRead, member: string) => {
@@ -151,7 +151,7 @@ export const oneEuro = (x: ReadonlyArray<number>, c = CHAIN) => {
 };
 
 /** Each frame's world angles: its run's drawing's, gated, then One Euro over the run. */
-export const worldsOf = (read: ClipRead, runs: ReadonlyArray<Run>) => {
+const worldsOf = (read: ClipRead, runs: ReadonlyArray<Run>) => {
   const out: Array<Record<string, number>> = read.frames.map(() => ({}));
   for (const { from, to, drawing } of runs) {
     const frames = read.frames.slice(from, to);
@@ -182,7 +182,7 @@ export const keysOf = (runs: ReadonlyArray<Run>, every: number = CHAIN.every) =>
  * root and scale by least squares of the puppet's joints at that pose on
  * the read's joints with confidence over `confidence`.
  */
-export const seedOf = (
+const seedOf = (
   p: Puppet,
   world: Readonly<Record<string, number>>,
   joints: Readonly<Record<string, readonly [number, number, number]>>,
@@ -219,7 +219,7 @@ export interface Correction {
   readonly scale: number;
 }
 
-export const correctionOf = (seed: PuppetPose, fit: PuppetPose): Correction => ({
+const correctionOf = (seed: PuppetPose, fit: PuppetPose): Correction => ({
   numbers: Object.fromEntries(
     Object.entries(fit.numbers).map(([b, v]) => [b, wrap(v - (seed.numbers[b] ?? 0))]),
   ),
@@ -254,7 +254,7 @@ export const carried = (
   });
 
 /** `seed` moved by `c`. */
-export const corrected = (seed: PuppetPose, c: Correction): PuppetPose => ({
+const corrected = (seed: PuppetPose, c: Correction): PuppetPose => ({
   numbers: Object.fromEntries(
     Object.entries(seed.numbers).map(([k, v]) => [k, v + (c.numbers[k] ?? 0)]),
   ),
@@ -263,7 +263,7 @@ export const corrected = (seed: PuppetPose, c: Correction): PuppetPose => ({
 });
 
 /** A frame's paper: the mean of its four corners. */
-export const paperOf = (t: Raster): [number, number, number] => {
+const paperOf = (t: Raster): [number, number, number] => {
   const at = [0, t.width - 1, (t.height - 1) * t.width, t.height * t.width - 1];
   const c = (k: number) => at.reduce((s, i) => s + t.rgba[i * 4 + k]!, 0) / 4;
   return [c(0), c(1), c(2)];
@@ -298,7 +298,7 @@ export const iouOf = (mask: Uint8Array, drawn: Raster) => {
 export type Band = readonly [number, number];
 
 /** A scored frame: the drawing it names, its probability and the posed puppet's IoU. */
-export interface ChainFrame {
+interface ChainFrame {
   readonly f: number;
   readonly drawing: string;
   readonly p: number;
@@ -331,7 +331,7 @@ export interface FitJob {
   readonly paper: readonly [number, number, number];
 }
 
-export const FitResult = Schema.Struct({
+const FitResult = Schema.Struct({
   numbers: Angles,
   root: Schema.Tuple([Schema.Finite, Schema.Finite]),
   scale: Schema.Finite,
@@ -339,7 +339,7 @@ export const FitResult = Schema.Struct({
   rasters: Schema.Finite,
   sec: Schema.Finite,
 });
-export interface FitResult extends Schema.Schema.Type<typeof FitResult> {}
+interface FitResult extends Schema.Schema.Type<typeof FitResult> {}
 export const FitResultJson = Schema.fromJsonString(FitResult);
 
 /** The files a fit's output is made by: the fit's own process and the puppet's raster. */
@@ -370,7 +370,7 @@ const canvasAt = Effect.fn('cast.chain.canvas')(function* (file: string) {
 });
 
 /** What a chain reads: the clip's read, its mapped canvas frames, each drawing's puppet, the fit cache and the bands to report. */
-export interface ChainInput<R = never> {
+interface ChainInput<R = never> {
   readonly read: ClipRead;
   readonly canvas: string;
   readonly member: string;

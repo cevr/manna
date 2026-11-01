@@ -15,7 +15,7 @@ import { echoPages, noRenders, noStudio } from '../film-services/testing.ts';
 import { text } from '../host/testing.ts';
 import { labInMemory } from '../lab/testing.ts';
 import { Review } from '../review.ts';
-import { type BuildOptions, buildGraph } from './graph.ts';
+import { buildGraph } from './graph.ts';
 import {
   BUILD_ASKER,
   DrawingSet,
@@ -24,6 +24,9 @@ import {
   drawStage,
   ownerNeeds,
 } from './owner-ask.ts';
+
+/** What a build is asked with, as `buildGraph` takes it. */
+type BuildOptions = Parameters<typeof buildGraph>[1];
 
 const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
   cache: '/cache',

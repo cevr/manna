@@ -20,7 +20,6 @@ import { TestClock } from 'effect/testing';
 import { memoryFileSystem, memoryLocks, text } from '../host/testing.ts';
 import { ContentStore, Processes } from '../content-store.ts';
 import {
-  type BuildOptions,
   type Stage,
   type StageFailed,
   WaitingOwner,
@@ -29,6 +28,9 @@ import {
   optionalInput,
   stageInput,
 } from './graph.ts';
+
+/** What a build is asked with, as `buildGraph` takes it. */
+type BuildOptions = Parameters<typeof buildGraph>[1];
 
 const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
   cache: '/cache',
