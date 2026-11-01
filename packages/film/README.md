@@ -3878,7 +3878,7 @@ properties `getScope`, `getDeclaredVariables`, `scopeManager`,
 reader.
 `lint/plugin.slow.test.ts` runs oxlint over the marked fixtures: every RED
 location must report its rule, with no extra findings. Each of the plugin's
-twenty-eight rules (`lint/plugin.ts`) also has a diagnostic whose corrective
+twenty-nine rules (`lint/plugin.ts`) also has a diagnostic whose corrective
 message is asserted, including the distinct anchor-end and cue-part repairs,
 so a rule that fires but gives the wrong advice fails the fixture suite; the
 test holds that list to the plugin's rules.
@@ -3891,12 +3891,16 @@ tools of `src/tools` (asks, boards, choices, easel, the lab's MCP and gate),
 CLIs), and `test:engine` runs everything else under `src/` and `lint/`
 (core, canvas, player, puppet, rive, style, browser, command). Each part's
 import closure differs, so each of its workers loads less of the module graph.
-A new test file falls to `test:tools` or `test:engine` by its folder; a lab
-tool is named in `test:lab`, ignored by `test:tools`, and left out of
+A new test file falls to a part by its folder (`src/lab` to `test:lab`, the
+rest of `src/tools` to `test:tools`, else `test:engine`); a lab tool is
+named in `test:lab`, ignored by `test:tools`, and left out of
 `test:tools`'s turbo inputs, and `src/lab/fixtures/test-parts.test.ts` holds
-the three lists to one another. Each part's turbo inputs leave out the other
-parts' test files, never their sources (an engine file may import a tool),
-so an edit of one part's test reruns that part alone. The root `test` and
+the three lists to one another and each part to its roots. Each part's turbo
+inputs leave out the other parts' test files, never their sources (an engine
+file may import a tool), so an edit of one part's test reruns that part
+alone; no unit test reads another part's test files, and the checks that
+read every film source are lint (`film/media-in-process`,
+`film/webview-through-chrome`), which reads every file on every gate. The root `test` and
 `gate`, including the CI gate, run this browser-free suite. Each part writes
 its files' times to its own timings file in the package's installed modules
 (the script's `--timings` and `--update-timings`), and the next run starts
