@@ -852,27 +852,33 @@ const pastBy = (excess: number, allowance: number) => Math.max(0, excess) / allo
 const outside = <A extends { readonly verdict: string }>(reads: ReadonlyArray<A>) =>
   reads.filter((r) => r.verdict === 'outside');
 
+/** Whether a read of `reads` was too thin to read. */
+const unverified = <A extends { readonly verdict: string }>(reads: ReadonlyArray<A>) =>
+  reads.some((r) => r.verdict === 'unverified');
+
 /**
  * Each bar a measure misses (as `missedBars` names them) and its weight:
  * 1, plus how far its furthest read lies past the bar in the bar's own
  * allowance (seam 10 ΔE, drift 5 ΔE, chroma 3, grain 0.5 pooled and 0.03
- * of a cell's share fine, speck 0.04, step 5 L*). The allowance is how far the bar lets a read stray from the kept
- * view, so bars of other units weigh alike: a read one allowance past its
- * bar weighs as one more missed bar. A miss no read sizes (every read
- * outside it too thin, paint visible at rest, the view not recomposed)
- * counts as one allowance past, 2: a read near miss ranks ahead of it, a
- * read far one behind it.
+ * of a cell's share fine, speck 0.04, step 5 L*). The allowance is how far
+ * the bar lets a read stray from the kept view, so bars of other units
+ * weigh alike: a read one allowance past its bar weighs as one more missed
+ * bar. A read too thin to size (or a miss no read sizes: paint visible at
+ * rest, the view not recomposed) adds one allowance more, so a read near
+ * miss ranks ahead of an unread one, a read far one behind it, and a bar's
+ * unread read never hides how far its read ones lie.
  */
 export const missesOf = (
   m: HiddenMeasures,
 ): ReadonlyArray<{ readonly bar: string; readonly weight: number }> =>
   Arr.filter(
     [
-      ['paint', m.paintUnder.length > 0 && m.paintUnder.every((p) => p.px > 0), []],
+      ['paint', m.paintUnder.length > 0 && m.paintUnder.every((p) => p.px > 0), [], true],
       [
         'seam',
         Option.exists(m.seam.deltaE, (d) => d <= BARS.seamDeltaE),
         Option.toArray(m.seam.deltaE).map((d) => pastBy(d - BARS.seamDeltaE, BARS.seamDeltaE)),
+        Option.isNone(m.seam.deltaE),
       ],
       [
         'drift',
@@ -887,6 +893,7 @@ export const missesOf = (
             pastBy(c.kept.chroma - c.painted.chroma - BARS.chromaDrop, BARS.chromaDrop),
           ),
         ],
+        m.drift.px === 0 || unverified(m.drift.chroma),
       ],
       [
         'grain',
@@ -906,6 +913,7 @@ export const missesOf = (
               ),
           ),
         ),
+        unverified(m.grain),
       ],
       [
         'speck',
@@ -913,6 +921,7 @@ export const missesOf = (
         outside(m.speck).map((s) =>
           pastBy(s.painted.share - s.kept.share - BARS.speckOver, BARS.speckOver),
         ),
+        unverified(m.speck),
       ],
       [
         'step',
@@ -920,14 +929,16 @@ export const missesOf = (
         outside(m.step).map((s) =>
           pastBy(Math.abs(s.laid - s.answer) - BARS.stepWithin, BARS.stepWithin),
         ),
+        unverified(m.step),
       ],
-      ['visible', m.visibleAtRest === BARS.visibleAtRest, []],
-      ['recompose', m.recomposeByteEqual, []],
+      ['visible', m.visibleAtRest === BARS.visibleAtRest, [], true],
+      ['recompose', m.recomposeByteEqual, [], true],
     ] as const,
     ([, met]) => !met,
-  ).map(([bar, , past]) => ({
+  ).map(([bar, , past, unread]) => ({
     bar,
-    weight: 1 + Arr.match(past, { onEmpty: () => 1, onNonEmpty: (p) => Math.max(...p) }),
+    // a miss with no read outside it was missed for want of a read
+    weight: 1 + Math.max(0, ...past) + Number(unread || past.length === 0),
   }));
 
 /** How an answer ranks, lower first: one that leaves a moving part unpainted after every one that paints them all, then by its misses' weight, then by seam. */

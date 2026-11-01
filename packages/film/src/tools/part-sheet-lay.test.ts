@@ -326,6 +326,29 @@ describe('the part sheet lay', () => {
     expect(rankOrder(near, unread)).toBe(-1);
   });
 
+  test('of two answers with the same unread region, the one whose read drift lies past its bar ranks below', () => {
+    const unread = {
+      ...robeChroma(0, 0),
+      painted: { chroma: 0, px: 0 },
+      kept: { chroma: 0, px: 0 },
+    };
+    const chroma = [{ ...unread, cells: 0, verdict: 'unverified' as const }];
+    const worse = measured({ drift: { deltaE: 5.01, px: 900, chroma } });
+    const better = measured({ drift: { deltaE: 4.99, px: 900, chroma } });
+    expect(missedBars(worse)).toEqual(['drift']);
+    expect(missedBars(better)).toEqual(['drift']);
+    expect(rankOrder(worse, better)).toBe(1);
+  });
+
+  test('of two answers with the same unread line, the one whose read line steps past its bar ranks below', () => {
+    const unread = { ...robeStep(-8, 0), meets: 'robe', pairs: 3, verdict: 'unverified' as const };
+    const worse = measured({ step: [robeStep(5.1, 0), unread] });
+    const better = measured({ step: [{ ...robeStep(4, 0), verdict: 'within' }, unread] });
+    expect(missedBars(worse)).toEqual(['step']);
+    expect(missedBars(better)).toEqual(['step']);
+    expect(rankOrder(worse, better)).toBe(1);
+  });
+
   test('of two answers whose misses are the same size, the one that misses one bar more ranks below', () => {
     // the step 2.5 past its bar of 5 and the grain 0.25 past its bar of 0.5: each half its bar again
     const step = measured({ step: [robeStep(7.5, 0)] });

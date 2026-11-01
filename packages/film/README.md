@@ -2699,9 +2699,10 @@ the weight of its misses, then by seam; the best is kept. A missed bar
 weighs 1, plus how far its furthest read lies past the bar in the bar's
 own allowance (seam 10, drift 5, chroma 3, grain 0.5 pooled and 0.03 fine,
 speck 0.04, step 5),
-so a read one allowance past its bar weighs as one more missed bar; a miss
-no read sizes (its reads too thin) counts as one allowance past, 2, so a
-read near miss ranks ahead of it and a read far one behind it (`missesOf`;
+so a read one allowance past its bar weighs as one more missed bar; a read
+too thin to size adds one allowance more (a miss no read sizes weighs 2),
+so a read near miss ranks ahead of an unread one, a read far one behind
+it, and an unread read never hides how far a read one lies (`missesOf`;
 each answer's line prints `missed=<bar>:<weight>`). The part PNGs, `sheet.png`,
 `sheet-painted.png` (each painted pixel half magenta) and `record.json`
 land in `<member>/cutout/sheets/<view>/`. Each call's input (named by its
