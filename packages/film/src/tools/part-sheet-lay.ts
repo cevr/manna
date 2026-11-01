@@ -7,7 +7,8 @@
 // `paintHidden`, so paint never shows at rest. The measures are read on
 // domains the sheet fixes before any answer is read: the drift over the
 // pixels kept by the parts the hidden areas lie on, the seam and each such
-// part's grain beside its paint. A measure with too few samples to read is
+// part's grain beside its paint, and each painted region's chroma and speck
+// share beside its part's kept cloth. A measure with too few samples to read is
 // a missed bar, not a pass, and every moving part must hide some paint
 // (`film concept parts`, `part-sheet-cli.ts`, keeps the best answer).
 
@@ -41,14 +42,41 @@ const LEAST_SEAM_PAIRS = 20;
 /** The fewest 3 × 3 windows a part's grain is read on, painted and kept each: about ten windows that share no pixel. */
 const LEAST_GRAIN_WINDOWS = 90;
 
-/** The stage's bars: seam ΔE ≤ 10, drift ≤ 5, each read part's paint grain within ±0.5 of its kept grain (robust std), no paint at rest. */
+/** The fewest pixels a painted region's specks are read on, painted and kept each. */
+const LEAST_REGION_PX = 100;
+
+/** A pixel is a speck when its L* lies further than this from the median L* of its 5 × 5 neighbours of its own kind. */
+const SPECK_L = 12;
+
+/** How far from its paint a part's kept pixels count beside it: for the specks (as the grain's reach), and for each painted pixel's chroma. */
+const SPECK_REACH = 24;
+const CHROMA_REACH = 6;
+
+/** The fewest kept pixels within `CHROMA_REACH` that give a painted pixel its cloth. */
+const LEAST_BESIDE_PX = 8;
+
+/** The side of the square cells a region's chroma is read in, and the fewest painted pixels with a cloth beside them a cell is read on. */
+const CHROMA_CELL = 24;
+const LEAST_CELL_PX = 40;
+
+/**
+ * The stage's bars: seam ΔE ≤ 10; drift ≤ 5, and in each read cell of a
+ * painted region the paint's chroma at most 3 below the kept cloth's beside
+ * it; each read part's paint grain within ±0.5 of its kept grain (robust
+ * std); each read region's speck share at most 0.04 above the kept cloth's;
+ * no paint at rest.
+ */
 export const BARS = {
   seamDeltaE: 10,
   driftDeltaE: 5,
+  chromaDrop: 3,
   grainWithin: 0.5,
+  speckOver: 0.04,
   visibleAtRest: 0,
   leastSeamPairs: LEAST_SEAM_PAIRS,
   leastGrainWindows: LEAST_GRAIN_WINDOWS,
+  leastRegionPx: LEAST_REGION_PX,
+  leastCellPx: LEAST_CELL_PX,
 } as const;
 
 /** Whether pixel `i` of `r` is paint, lighter than the ink. */
@@ -61,6 +89,8 @@ const meanOf = (v: ReadonlyArray<number>) => v.reduce((a, b) => a + b, 0) / Math
 const medianOf = (v: ReadonlyArray<number>) => [...v].sort((a, b) => a - b)[v.length >> 1] ?? 0;
 
 const round2 = (v: number) => Math.round(v * 100) / 100;
+
+const round3 = (v: number) => Math.round(v * 1000) / 1000;
 
 /** Each pixel a moving part owns and is opaque on: what a pose may uncover. */
 export const hiddenOf = (sheet: Sheet, moving: ReadonlyArray<string>): Uint8Array => {
@@ -231,14 +261,48 @@ export const PartGrain = Schema.Struct({
   verdict: Schema.Literals(['within', 'outside', 'unverified']),
 });
 
+/** A region's verdict: read (both sides have enough pixels) within its bar or outside it, or unverified. */
+const RegionVerdict = Schema.Literals(['within', 'outside', 'unverified']);
+
+/** A speck read: the share of the pixels that are specks, and the pixels read. */
+const SpeckRead = Schema.Struct({ share: Schema.Finite, px: Schema.Int });
+
+/** One painted region's specks (the paint of `part` under the moving part `under`) against its part's kept cloth within 24 px of it. */
+export const RegionSpeck = Schema.Struct({
+  part: Schema.String,
+  under: Schema.String,
+  painted: SpeckRead,
+  kept: SpeckRead,
+  verdict: RegionVerdict,
+});
+
+/** A chroma read: the CIELAB chroma of the mean a*, b*, and the pixels read. */
+const ChromaRead = Schema.Struct({ chroma: Schema.Finite, px: Schema.Int });
+
+/** One painted region's chroma (the paint of `part` under the moving part `under`) against its part's kept cloth within 6 px of each painted pixel: the read cell whose paint is greyest against its cloth, and how many cells were read (0, unread: chroma and px 0). */
+export const RegionChroma = Schema.Struct({
+  part: Schema.String,
+  under: Schema.String,
+  painted: ChromaRead,
+  kept: ChromaRead,
+  cells: Schema.Int,
+  verdict: RegionVerdict,
+});
+
 /** A part sheet's hidden paint, measured against its view. */
 export const HiddenMeasures = Schema.Struct({
   /** Mean ΔE76 of each painted pixel against the pixels its part keeps beside it (four ways, both paint); null with fewer pairs than the bar reads. */
   seam: Schema.Struct({ deltaE: Schema.OptionFromNullOr(Schema.Finite), pairs: Schema.Int }),
-  /** Mean ΔE76 of the answer laid over the view against the view, over the pixels kept by the parts the hidden areas lie on: fixed by the sheet, whatever the answer paints. */
-  drift: Schema.Struct({ deltaE: Schema.Finite, px: Schema.Int }),
+  /** Mean ΔE76 of the answer laid over the view against the view, over the pixels kept by the parts the hidden areas lie on: fixed by the sheet, whatever the answer paints; and each painted region's chroma against the kept cloth beside it, so paint greyer than its cloth at the cloth's lightness is read. */
+  drift: Schema.Struct({
+    deltaE: Schema.Finite,
+    px: Schema.Int,
+    chroma: Schema.Array(RegionChroma),
+  }),
   /** Each part the hidden areas lie on: its paint's grain against its kept pixels' within 24 px of the paint. */
   grain: Schema.Array(PartGrain),
+  /** Each painted region: its speck share against its part's kept cloth's. */
+  speck: Schema.Array(RegionSpeck),
   /** The painted pixels each moving part hides. */
   paintUnder: Schema.Array(Schema.Struct({ part: Schema.String, px: Schema.Int })),
   paintedPx: Schema.Int,
@@ -285,6 +349,192 @@ const partGrain = (view: Raster, sheet: Sheet, at: Uint8Array, composite: Raster
     kept: rounded(kept),
     verdict,
   };
+};
+
+/** `mask` grown by `r` pixels each way (a square reach), in two passes. */
+const grown = (mask: Uint8Array, w: number, h: number, r: number): Uint8Array => {
+  const pass = (
+    src: Uint8Array,
+    along: number,
+    across: number,
+    at: (a: number, b: number) => number,
+  ) => {
+    const out = new Uint8Array(w * h);
+    for (let b = 0; b < across; b++) {
+      let count = 0;
+      for (let a = 0; a < Math.min(r, along); a++) count += src[at(a, b)] ?? 0;
+      for (let a = 0; a < along; a++) {
+        // a step past either end of the line adds nothing
+        count += Number(a + r < along) * (src[at(a + r, b)] ?? 0);
+        count -= Number(a - r - 1 >= 0) * (src[at(a - r - 1, b)] ?? 0);
+        out[at(a, b)] = Number(count > 0);
+      }
+    }
+    return out;
+  };
+  const rows = pass(mask, w, h, (x, y) => y * w + x);
+  return pass(rows, h, w, (y, x) => y * w + x);
+};
+
+/** The share of `set`'s pixels whose L* lies more than `SPECK_L` from the median L* of their 5 × 5 neighbours in `set`, read on `r`. */
+const speckShare = (r: Raster, set: Uint8Array) => {
+  const { width: w, height: h } = r;
+  const at = Arr.range(0, w * h - 1).filter((i) => set[i] === 1);
+  const l = new Float32Array(w * h);
+  for (const i of at) l[i] = labOf(rgbAt(r, i))[0];
+  const specks = at.filter((i) => {
+    const [x, y] = [i % w, Math.floor(i / w)];
+    const around: number[] = [];
+    for (let b = Math.max(0, y - 2); b <= Math.min(h - 1, y + 2); b++)
+      for (let a = Math.max(0, x - 2); a <= Math.min(w - 1, x + 2); a++)
+        if (set[b * w + a] === 1) around.push(l[b * w + a] ?? 0);
+    return Math.abs((l[i] ?? 0) - medianOf(around)) > SPECK_L;
+  });
+  return { share: specks.length / Math.max(1, at.length), px: at.length };
+};
+
+/** Summed-area tables of a*, b* and count over the pixels `set` marks on `r`, and the sums over a box of them. */
+const summedAb = (r: Raster, set: Uint8Array) => {
+  const { width: w, height: h } = r;
+  const s = w + 1;
+  const [a, b, n] = [
+    new Float64Array(s * (h + 1)),
+    new Float64Array(s * (h + 1)),
+    new Float64Array(s * (h + 1)),
+  ];
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      const on = Number(set[i] === 1);
+      const lab = labOf(rgbAt(r, i));
+      const j = (y + 1) * s + x + 1;
+      a[j] = on * lab[1] + (a[j - 1] ?? 0) + (a[j - s] ?? 0) - (a[j - s - 1] ?? 0);
+      b[j] = on * lab[2] + (b[j - 1] ?? 0) + (b[j - s] ?? 0) - (b[j - s - 1] ?? 0);
+      n[j] = on + (n[j - 1] ?? 0) + (n[j - s] ?? 0) - (n[j - s - 1] ?? 0);
+    }
+  const sum = (t: Float64Array, x0: number, y0: number, x1: number, y1: number) =>
+    (t[y1 * s + x1] ?? 0) - (t[y0 * s + x1] ?? 0) - (t[y1 * s + x0] ?? 0) + (t[y0 * s + x0] ?? 0);
+  return (x0: number, y0: number, x1: number, y1: number) => ({
+    a: sum(a, x0, y0, x1, y1),
+    b: sum(b, x0, y0, x1, y1),
+    n: sum(n, x0, y0, x1, y1),
+  });
+};
+
+/**
+ * A region's chroma, read cell by cell (`CHROMA_CELL` px squares). Each
+ * painted pixel is held to its own cloth: the mean a*, b* of the kept pixels
+ * within `CHROMA_REACH` of it (at least `LEAST_BESIDE_PX`), so a cell where
+ * paint meets two cloths weighs each as its paint does. In each cell with
+ * `LEAST_CELL_PX` such pixels, the chroma of the paint's mean a*, b* against
+ * the chroma of its cloths' mean. The cell whose paint is greyest against
+ * its cloth stands for the region, with how many cells were read; none read
+ * leaves it unread.
+ */
+const chromaCells = (composite: Raster, view: Raster, paint: Uint8Array, kept: Uint8Array) => {
+  const { width: w, height: h } = view;
+  const beside = summedAb(view, kept);
+  const cells = new Map<number, { pa: number; pb: number; ka: number; kb: number; px: number }>();
+  for (let i = 0; i < w * h; i++) {
+    if (paint[i] !== 1) continue;
+    const [x, y] = [i % w, Math.floor(i / w)];
+    const cloth = beside(
+      Math.max(0, x - CHROMA_REACH),
+      Math.max(0, y - CHROMA_REACH),
+      Math.min(w, x + CHROMA_REACH + 1),
+      Math.min(h, y + CHROMA_REACH + 1),
+    );
+    if (cloth.n < LEAST_BESIDE_PX) continue;
+    const key = Math.floor(y / CHROMA_CELL) * w + Math.floor(x / CHROMA_CELL);
+    const cell = cells.get(key) ?? { pa: 0, pb: 0, ka: 0, kb: 0, px: 0 };
+    cells.set(key, cell);
+    const lab = labOf(rgbAt(composite, i));
+    cell.pa += lab[1];
+    cell.pb += lab[2];
+    cell.ka += cloth.a / cloth.n;
+    cell.kb += cloth.b / cloth.n;
+    cell.px += 1;
+  }
+  const read = [...cells.values()]
+    .filter((c) => c.px >= LEAST_CELL_PX)
+    .map((c) => ({
+      painted: { chroma: Math.hypot(c.pa / c.px, c.pb / c.px), px: c.px },
+      kept: { chroma: Math.hypot(c.ka / c.px, c.kb / c.px), px: c.px },
+    }));
+  const drop = (c: (typeof read)[number]) => c.kept.chroma - c.painted.chroma;
+  return { greyest: Arr.head([...read].sort((x, y) => drop(y) - drop(x))), cells: read.length };
+};
+
+/** A region's verdict: unverified when it was not read, else within its bar or outside it. */
+const verdictOf = (read: boolean, within: boolean) =>
+  Bool.match(read, {
+    onTrue: () =>
+      Bool.match(within, { onTrue: () => 'within' as const, onFalse: () => 'outside' as const }),
+    onFalse: () => 'unverified' as const,
+  });
+
+/**
+ * Each painted region (the paint of one part under one moving part), its
+ * specks and its chroma, each against its part's kept cloth beside it. A
+ * speck is a pixel set apart in lightness from its own kind around it, ink
+ * included: a fleck of another part's colour in the paint. The chroma is
+ * read on paint and cloth lighter than the ink.
+ */
+const regionsOf = (view: Raster, sheet: Sheet, at: Uint8Array, composite: Raster) => {
+  const { width: w, height: h } = view;
+  const name = (id: number) => sheet.parts[id - 1]?.name ?? '';
+  const keys = [
+    ...new Set(
+      Arr.range(0, w * h - 1)
+        .filter((i) => (at[i] ?? 0) > 0)
+        .map((i) => `${at[i]}/${sheet.owner[i]}`),
+    ),
+  ].sort();
+  const regions = keys.map((key) => {
+    const [id = 0, under = 0] = key.split('/').map(Number);
+    const mine = Uint8Array.from(at, (k, i) => Number(k === id && sheet.owner[i] === under));
+    const near = grown(mine, w, h, SPECK_REACH);
+    const speckPainted = speckShare(composite, mine);
+    const speckKept = speckShare(
+      view,
+      Uint8Array.from(sheet.owner, (o, i) => Number(o === id && near[i] === 1)),
+    );
+    const chroma = chromaCells(
+      composite,
+      view,
+      Uint8Array.from(mine, (m, i) => Number(m === 1 && lightAt(composite, i))),
+      Uint8Array.from(sheet.owner, (o, i) => Number(o === id && lightAt(view, i))),
+    );
+    const unread = { chroma: 0, px: 0 };
+    const [chromaPainted, chromaKept] = Option.match(chroma.greyest, {
+      onNone: () => [unread, unread] as const,
+      onSome: (c) => [c.painted, c.kept] as const,
+    });
+    const region = { part: name(id), under: name(under) };
+    // each bar is read on the measures as taken; the record keeps them rounded
+    return {
+      speck: {
+        ...region,
+        painted: { share: round3(speckPainted.share), px: speckPainted.px },
+        kept: { share: round3(speckKept.share), px: speckKept.px },
+        verdict: verdictOf(
+          speckPainted.px >= LEAST_REGION_PX && speckKept.px >= LEAST_REGION_PX,
+          speckPainted.share - speckKept.share <= BARS.speckOver,
+        ),
+      },
+      chroma: {
+        ...region,
+        painted: { chroma: round2(chromaPainted.chroma), px: chromaPainted.px },
+        kept: { chroma: round2(chromaKept.chroma), px: chromaKept.px },
+        cells: chroma.cells,
+        verdict: verdictOf(
+          chroma.cells > 0,
+          chromaKept.chroma - chromaPainted.chroma <= BARS.chromaDrop,
+        ),
+      },
+    };
+  });
+  return { speck: regions.map((r) => r.speck), chroma: regions.map((r) => r.chroma) };
 };
 
 /** Each painted pixel's part (k + 1, 0 for none), the seam pairs, and the painted pixels no opaque part in front hides. */
@@ -338,13 +588,15 @@ const measureHidden = (
     .filter((i) => domain.kept[i] === 1)
     .map((i) => deltaE(labOf(rgbAt(laid, i)), labOf(rgbAt(view, i))));
   const ids = sheet.parts.map((_, k) => k + 1);
+  const regions = regionsOf(view, sheet, at, composite);
   return {
     seam: {
       deltaE: Option.liftPredicate(round2(meanOf(seam)), () => seam.length >= LEAST_SEAM_PAIRS),
       pairs: seam.length,
     },
-    drift: { deltaE: round2(meanOf(drift)), px: drift.length },
+    drift: { deltaE: round2(meanOf(drift)), px: drift.length, chroma: regions.chroma },
     grain: domain.ids.map((id) => partGrain(view, sheet, at, composite, id)),
+    speck: regions.speck,
     paintUnder: moving.map((part) => {
       const id = ids.find((k) => sheet.parts[k - 1]?.name === part) ?? 0;
       return { part, px: at.filter((k, i) => k > 0 && sheet.owner[i] === id).length };
@@ -357,21 +609,28 @@ const measureHidden = (
 
 /**
  * The bars a measure misses, by name: paint (a moving part hides none),
- * seam (above its bar, or too few pairs to read), drift (above its bar, or
- * no pixel to read it on), grain (a read part outside its bar, or no part
- * read), paint visible at rest, the view not recomposed.
+ * seam (above its bar, or too few pairs to read), drift (above its bar, no
+ * pixel to read it on, or a read region's chroma outside its bar), grain (a
+ * read part outside its bar, or no part read), speck (a read region's speck
+ * share outside its bar), paint visible at rest, the view not recomposed.
  */
 export const missedBars = (m: HiddenMeasures): ReadonlyArray<string> =>
   Arr.filter(
     [
       ['paint', m.paintUnder.length > 0 && m.paintUnder.every((p) => p.px > 0)],
       ['seam', Option.exists(m.seam.deltaE, (d) => d <= BARS.seamDeltaE)],
-      ['drift', m.drift.px > 0 && m.drift.deltaE <= BARS.driftDeltaE],
+      [
+        'drift',
+        m.drift.px > 0 &&
+          m.drift.deltaE <= BARS.driftDeltaE &&
+          m.drift.chroma.every((c) => c.verdict !== 'outside'),
+      ],
       [
         'grain',
         m.grain.some((g) => g.verdict === 'within') &&
           m.grain.every((g) => g.verdict !== 'outside'),
       ],
+      ['speck', m.speck.every((s) => s.verdict !== 'outside')],
       ['visible', m.visibleAtRest === BARS.visibleAtRest],
       ['recompose', m.recomposeByteEqual],
     ] as const,

@@ -2662,11 +2662,21 @@ by its mean step to the pixels the part keeps beside it), and only through `pain
 at rest (`tools/part-sheet-lay.ts`). Each answer is measured on domains
 the sheet fixes before any answer is read: the drift (the laid answer
 against the view over the pixels kept by the parts the hidden areas lie on,
-≤ 5), the seam (ΔE76 of paint against the pixels its part keeps beside it,
-≤ 10, read on 20 pairs or more) and each such part's grain (`grainOf`,
-`core/grain.ts`: G less its 3×3 mean, its robust std within ±0.5 of the
-part's kept pixels near the paint, read on 90 windows a side or more, else
-that part is `unverified`; the plain std is recorded beside it). A measure
+≤ 5, and each painted region's chroma, the paint of one part under one
+moving part: each painted pixel lighter than the ink is held to the mean
+a*, b* of its part's kept pixels within 6 px of it, and in each 24 px cell
+with 40 such pixels the paint's chroma is at most 3 below its cloth's, so
+paint as light as the cloth but greyer misses it; a region with no such
+cell is `unverified`), the seam (ΔE76 of paint against
+the pixels its part keeps beside it, ≤ 10, read on 20 pairs or more), each
+such part's grain (`grainOf`, `core/grain.ts`: G less its 3×3 mean, its
+robust std within ±0.5 of the part's kept pixels near the paint, read on 90
+windows a side or more, else that part is `unverified`; the plain std is
+recorded beside it) and each painted region's specks (the share of its
+pixels, ink included, more than 12 L* from the median of their 5×5
+neighbours of their own kind, at most 0.04 above the share of its part's
+kept cloth within 24 px: a fleck of a moving part's colour left in the
+paint; read on fewer than 100 pixels a side, it is `unverified`). A measure
 with too few samples misses its bar, at least one part's grain must be
 read, and every moving part must hide some paint. An answer that leaves a
 moving part unpainted ranks after every one that paints them all, then by

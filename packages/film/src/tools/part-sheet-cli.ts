@@ -219,10 +219,14 @@ const PartSheetRecord = Schema.Struct({
   bars: Schema.Struct({
     seamDeltaE: Schema.Finite,
     driftDeltaE: Schema.Finite,
+    chromaDrop: Schema.Finite,
     grainWithin: Schema.Finite,
+    speckOver: Schema.Finite,
     visibleAtRest: Schema.Int,
     leastSeamPairs: Schema.Int,
     leastGrainWindows: Schema.Int,
+    leastRegionPx: Schema.Int,
+    leastCellPx: Schema.Int,
   }),
   missed: Schema.Array(Schema.String),
   /** The misses its cut table accepts by name, each with its numbers. */
@@ -417,7 +421,7 @@ const callLine = (label: string, c: CallLaid) =>
     onNone: () =>
       `parts ${label} answer ${c.n}: ${[c.state, ...Option.toArray(Option.fromUndefinedOr(c.reason))].join(' ')}`,
     onSome: (m) =>
-      `parts ${label} answer ${c.n}: seam=${Option.getOrElse(Option.map(m.seam.deltaE, String), () => 'unread')}/${m.seam.pairs} drift=${m.drift.deltaE} grain=${m.grain.map((g) => `${g.part}:${g.painted.robust}/${g.kept.robust}:${g.verdict}`).join(',')} painted=${m.paintedPx}px visible=${m.visibleAtRest} missed=${(c.missed ?? []).join(',') || 'none'}`,
+      `parts ${label} answer ${c.n}: seam=${Option.getOrElse(Option.map(m.seam.deltaE, String), () => 'unread')}/${m.seam.pairs} drift=${m.drift.deltaE} chroma=${m.drift.chroma.map((r) => `${r.part}<${r.under}:${r.painted.chroma}/${r.kept.chroma}:${r.verdict}`).join(',')} grain=${m.grain.map((g) => `${g.part}:${g.painted.robust}/${g.kept.robust}:${g.verdict}`).join(',')} speck=${m.speck.map((r) => `${r.part}<${r.under}:${r.painted.share}/${r.kept.share}:${r.verdict}`).join(',')} painted=${m.paintedPx}px visible=${m.visibleAtRest} missed=${(c.missed ?? []).join(',') || 'none'}`,
   });
 
 /**
