@@ -119,16 +119,17 @@
               "part": "torso",
               "under": "head",
               "painted": {
-                "share": 0.096,
-                "px": 3618
+                "share": 0.009,
+                "px": 2939
               },
               "kept": {
-                "share": 0.009,
-                "px": 7907
+                "share": 0,
+                "px": 7159
               },
-              "verdict": "outside"
+              "verdict": "within"
             }
           ],
+          "step": [],
           "paintUnder": [
             {
               "part": "head",
@@ -139,7 +140,7 @@
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": ["drift", "grain", "speck"]
+        "missed": ["drift", "grain"]
       },
       {
         "n": 3,
@@ -209,16 +210,17 @@
               "part": "torso",
               "under": "head",
               "painted": {
-                "share": 0.085,
-                "px": 3459
+                "share": 0.004,
+                "px": 2757
               },
               "kept": {
-                "share": 0.009,
-                "px": 7907
+                "share": 0,
+                "px": 7159
               },
-              "verdict": "outside"
+              "verdict": "within"
             }
           ],
+          "step": [],
           "paintUnder": [
             {
               "part": "head",
@@ -229,7 +231,7 @@
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": ["drift", "speck"]
+        "missed": ["drift"]
       }
     ],
     "chosen": 3,
@@ -286,16 +288,17 @@
         "part": "torso",
         "under": "head",
         "painted": {
-          "share": 0.085,
-          "px": 3459
+          "share": 0.004,
+          "px": 2757
         },
         "kept": {
-          "share": 0.009,
-          "px": 7907
+          "share": 0,
+          "px": 7159
         },
-        "verdict": "outside"
+        "verdict": "within"
       }
     ],
+    "step": [],
     "paintUnder": [
       {
         "part": "head",
@@ -312,12 +315,14 @@
     "chromaDrop": 3,
     "grainWithin": 0.5,
     "speckOver": 0.04,
+    "stepWithin": 5,
     "visibleAtRest": 0,
     "leastSeamPairs": 20,
+    "leastStepPairs": 8,
     "leastGrainWindows": 90,
     "leastRegionPx": 100,
     "leastCellPx": 40
   },
-  "missed": ["drift", "speck"],
+  "missed": ["drift"],
   "named": []
 }
