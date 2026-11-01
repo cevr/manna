@@ -12,6 +12,13 @@
       ]
     },
     {
+      "name": "past-recent",
+      "action": "scroll",
+      "target": "screen",
+      "direction": "down",
+      "expect": [{ "hides": "label=Recent, see all" }]
+    },
+    {
       "name": "scroll",
       "action": "scroll",
       "target": "role=link label=31, Tell Out My Soul",
