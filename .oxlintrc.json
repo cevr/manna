@@ -632,13 +632,15 @@
       // (`core/fit-rows.ts`) read points the same way, and so do a puppet's
       // meshes, weights, CPU raster, un-matted rim and a drawn key's join
       // (`core/puppet.ts`, `core/unmatte.ts`, `core/key-join.ts`), the fit of
-      // its pose (`core/pose-fit.ts`) and its draw's vertex buffers
+      // its pose (`core/pose-fit.ts`), its random poses for a reader
+      // (`core/pose-sample.ts`) and its draw's vertex buffers
       // (`canvas/puppet.ts`, `canvas/puppet-gl.ts`).
       "files": [
         "**/packages/film/src/core/puppet.ts",
         "**/packages/film/src/core/unmatte.ts",
         "**/packages/film/src/core/key-join.ts",
         "**/packages/film/src/core/pose-fit.ts",
+        "**/packages/film/src/core/pose-sample.ts",
         "**/packages/film/src/canvas/puppet.ts",
         "**/packages/film/src/canvas/puppet-gl.ts",
         "**/packages/film/src/core/figure.ts",
