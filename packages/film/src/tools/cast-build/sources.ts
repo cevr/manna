@@ -36,7 +36,8 @@ const STAGE_ENTRIES = {
   /** The shard's sampler and the puppet it loads (`puppetFrom`). */
   renders: ['renders.ts', '../../puppet/load.ts'],
   eval: ['reader.ts'],
-  chain: ['chain.ts', 'chain-fit.ts'],
+  /** The chain and its fits, and the clip's decode onto the canvas. */
+  chain: ['chain.ts', 'chain-fit.ts', 'clip-eval.ts'],
 } as const;
 
 type SourcedStage = keyof typeof STAGE_ENTRIES;

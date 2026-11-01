@@ -46,6 +46,7 @@ import {
   ownerNeeds,
 } from './owner-ask.ts';
 import { checkClips, lockStage } from './lock.ts';
+import type { Media } from '../media.ts';
 import { CastReader } from './reader.ts';
 import {
   type MemberStages,
@@ -198,7 +199,7 @@ export const build = <E, R>(
         (m.coverage.clips ?? []).map((c) => ({ member: m.member, clip: c.id })),
       );
       const stages: ReadonlyArray<
-        Stage<StageServices | CastReader | AskStore | DrawingSet | DrawServices>
+        Stage<StageServices | CastReader | AskStore | DrawingSet | DrawServices | Media>
       > = [
         ...built,
         trainsetStage(candidates),

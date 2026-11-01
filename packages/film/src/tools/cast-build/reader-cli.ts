@@ -10,9 +10,11 @@
 //   eval --reader <r> --shard <tar>
 //                            a drawing's held renders read and scored (eval.py)
 //   chain --reader <r> --clip <mp4>
-//                            a member's clip read and chained (`chain.ts`):
-//                            runs, fitted keys, each band's IoU and the
-//                            drawings named; the read and the fits are cached
+//                            a member's clip laid on the canvas at the map
+//                            of the provenance beside it (`clip-eval.ts`),
+//                            read and chained (`chain.ts`): runs, fitted
+//                            keys, each band's IoU and the drawings named;
+//                            the canvases, the read and the fits are cached
 //
 // `--reader` is a name `import` gave, a checkpoint's sha256, or `current`:
 // the reader `--lock` (the committed `reader.lock.json`) names. Reads and
@@ -25,6 +27,7 @@ import { Console, Effect, FileSystem, Option, Path, Schema } from 'effect';
 import { PuppetImagesBun } from '../../puppet/images-bun.ts';
 import { sha256Hex } from '../digest.ts';
 import { castCache, manifestOf } from './built.ts';
+import { provenanceOf } from './clip-eval.ts';
 import { CastReader } from './reader.ts';
 import { chainClip } from './stages.ts';
 
@@ -250,9 +253,11 @@ const chain = Command.make(
   Effect.fn('film.concept.reader.chain')(function* (input) {
     const ckpt = yield* checkpointOf(input.reader, input.lock);
     const { memberDir, coverage, bands } = yield* clipMember(input.clip);
+    const { map } = yield* provenanceOf(input.clip);
     const made = yield* chainClip({
       ckpt,
       clip: input.clip,
+      map,
       memberDir,
       coverage,
       bands,

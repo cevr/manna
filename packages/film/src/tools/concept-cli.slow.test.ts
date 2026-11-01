@@ -28,6 +28,7 @@ import { AskStore } from './ask-store.ts';
 import { concept } from './concept-cli.ts';
 import { ContentStore } from './content-store.ts';
 import { FilmFolder } from './film-repo.ts';
+import { Media } from './media.ts';
 import { Pages } from './pages.ts';
 import { ProductionStore } from './production-store.ts';
 import { RenderCatalogue } from './catalogue.ts';
@@ -55,6 +56,8 @@ const over = () =>
     Layer.mock(Review)({ roots: [] }),
     Layer.mock(ProductionStore)({}),
     Layer.mock(RenderCatalogue)({}),
+    // a clip's eval decodes through the media service; no command run here reaches a clip
+    Layer.mock(Media)({}),
   ).pipe(Layer.provideMerge(files()));
 
 const files = () =>

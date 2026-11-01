@@ -374,41 +374,51 @@ describe('memberStages', () => {
     );
   });
 
-  it.effect('a clip eval reads the train, the training set and the chain, not every cut', () =>
-    Effect.gen(function* () {
-      const dir = yield* memberIn(['front']);
-      const clips = clipStages(
-        {
-          film: 'in-its-order' as never,
-          member: 'fake',
-          memberDir: dir,
-          libraryPuppets: `${dir}/library-puppets.ts`,
-          coverage: {
-            ...COVERAGE,
-            clips: [
-              {
-                id: 'b',
-                file: 'cutout/raise/clip/b.mp4',
-                bands: [],
-                expect: [],
-                given: { first: 'turnaround-front' },
-                prompt: 'p',
-                seed: 7,
-              },
-            ],
+  it.effect(
+    'a clip eval reads the train, the clip made, its provenance, the training set and the chain, not every cut',
+    () =>
+      Effect.gen(function* () {
+        const dir = yield* memberIn(['front']);
+        const clips = clipStages(
+          {
+            film: 'in-its-order' as never,
+            member: 'fake',
+            memberDir: dir,
+            libraryPuppets: `${dir}/library-puppets.ts`,
+            coverage: {
+              ...COVERAGE,
+              clips: [
+                {
+                  id: 'b',
+                  file: 'cutout/raise/clip/b.mp4',
+                  bands: [],
+                  expect: [],
+                  given: { first: 'turnaround-front' },
+                  prompt: 'p',
+                  seed: 7,
+                },
+              ],
+            },
+            facts: allComplete,
           },
-          facts: allComplete,
-        },
-        '/cache',
-        (yield* stageSources).chain,
-      );
-      const inputs = clips.flatMap((c) => c.inputs);
-      expect(inputs).toContainEqual({ _tag: 'Stage', id: 'train' });
-      expect(inputs).toContainEqual({ _tag: 'Stage', id: 'trainset' });
-      expect(inputs.filter((i) => i._tag !== 'File' && i.id.startsWith('cut:'))).toEqual([]);
-      expect(filesOf(clips, 'eval:clip:b@fake')).toEqual(
-        expect.arrayContaining(yield* sourceFiles('chain')),
-      );
-    }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+          '/cache',
+          (yield* stageSources).chain,
+        );
+        const inputs = clips.flatMap((c) => c.inputs);
+        expect(inputs).toContainEqual({ _tag: 'Stage', id: 'train' });
+        expect(inputs).toContainEqual({ _tag: 'Stage', id: 'trainset' });
+        // the mp4 is the clip-make stage's output; its map is the provenance beside it
+        expect(inputs).toContainEqual({ _tag: 'Stage', id: 'clip:b@fake' });
+        expect(inputs).toContainEqual({ _tag: 'File', path: `${dir}/cutout/raise/clip/b.json` });
+        expect(inputs).not.toContainEqual({ _tag: 'File', path: `${dir}/cutout/raise/clip/b.mp4` });
+        expect(inputs.filter((i) => i._tag !== 'File' && i.id.startsWith('cut:'))).toEqual([]);
+        expect(filesOf(clips, 'eval:clip:b@fake')).toEqual(
+          expect.arrayContaining(yield* sourceFiles('chain')),
+        );
+        // the decode and the map are the chain's code too
+        expect(yield* sourceFiles('chain')).toContainEqual(
+          expect.stringMatching(/\/cast-build\/clip-eval\.ts$/),
+        );
+      }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
 });

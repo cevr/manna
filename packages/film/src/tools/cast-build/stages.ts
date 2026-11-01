@@ -50,9 +50,20 @@ import { puppetFrom } from '../../puppet/load.ts';
 import { renderCast } from '../cast-render.ts';
 import { sha256Hex } from '../digest.ts';
 import { FilmFolder, type FilmName, importFilmModule } from '../film-repo.ts';
+import type { Media } from '../media.ts';
 import { parts } from '../part-sheet-cli.ts';
 import { ChainFailed, chainOf } from './chain.ts';
 import { type Band, CHAIN, ClipReadJson } from './chain-steps.ts';
+import {
+  ClipFigureJson,
+  MAPPING,
+  clipFrames,
+  declaredBands,
+  provenanceIn,
+  writeCanvases,
+} from './clip-eval.ts';
+import type { ClipMap } from './clip-map.ts';
+import { ClipLock, clipEntryOf } from './clips.ts';
 import { type Coverage, type EntryFacts, coverageOf } from './coverage.ts';
 import { barsOfRecord, sheetOf } from './coverage-facts.ts';
 import {
@@ -80,7 +91,7 @@ const VERSION = {
   trainset: '2',
   train: '2',
   eval: '1',
-  chain: '1',
+  chain: '2',
 } as const;
 
 /**
@@ -161,6 +172,7 @@ const partsOutput = (dir: string) =>
 
 const SpecJson = Schema.fromJsonString(Schema.Unknown);
 const ConfigJson = Schema.fromJsonString(Schema.Unknown);
+const ClipLockJson = Schema.fromJsonString(ClipLock);
 /** A renders stage's settings: how many samples of each split. */
 const RENDERS_CONFIG = Schema.encodeSync(ConfigJson)(SAMPLES);
 /** The train settings as text, as its key and its run read them. */
@@ -787,14 +799,18 @@ const puppetsOf = (memberDir: string, coverage: Coverage) => (drawing: string) =
   }).pipe(Effect.mapError((e) => ChainFailed.make({ reason: `puppet ${drawing}: ${String(e)}` })));
 
 /**
- * `clip` read by the checkpoint at `ckpt` and chained (`chain.ts`) with
- * the member's puppets. The read and its mapped frames are kept in
- * `<cache>/reads/<key>/`, keyed by the checkpoint's, the clip's and the
- * reader's source files' hashes.
+ * `clip` (an mp4) laid on the canvas at `map` (`clip-eval.ts`), read by the
+ * checkpoint at `ckpt` and chained (`chain.ts`) with the member's puppets;
+ * with the figure numbers of its canvases. The canvases, their figure
+ * numbers and the read are kept in `<cache>/reads/<key>/` (`canvas/`,
+ * `figure.json`, `read.json`), keyed by the checkpoint's and the clip's
+ * hashes, the map, the mapping's version and the reader's source files'
+ * hashes.
  */
 export const chainClip = Effect.fn('cast.chain.clip')(function* (o: {
   readonly ckpt: string;
   readonly clip: string;
+  readonly map: ClipMap;
   readonly memberDir: string;
   readonly coverage: Coverage;
   readonly bands: ReadonlyArray<Band>;
@@ -808,21 +824,31 @@ export const chainClip = Effect.fn('cast.chain.clip')(function* (o: {
     yield* Schema.encodeEffect(ConfigJson)({
       ckpt: yield* hashOf(o.ckpt),
       clip: yield* hashOf(o.clip),
+      map: o.map,
+      mapping: MAPPING,
       sources: yield* Effect.forEach(reader.sources, hashOf),
     }),
   );
   const dir = path.join(o.cache, 'reads', key);
   const readFile = path.join(dir, 'read.json');
+  const figureFile = path.join(dir, 'figure.json');
   if (!(yield* fs.exists(readFile))) {
     const partial = `${dir}.partial`;
     yield* fs.remove(partial, { recursive: true, force: true });
-    const text = yield* reader.read(o.ckpt, { clip: o.clip }, path.join(partial, 'canvas'));
+    const canvas = path.join(partial, 'canvas');
+    const figure = yield* writeCanvases(clipFrames(o.clip), o.map, canvas);
+    yield* fs.writeFileString(
+      path.join(partial, 'figure.json'),
+      yield* Schema.encodeEffect(ClipFigureJson)(figure),
+    );
+    const text = yield* reader.read(o.ckpt, { pngs: canvas });
     yield* fs.writeFileString(path.join(partial, 'read.json'), text);
     yield* fs.remove(dir, { recursive: true, force: true });
     yield* fs.rename(partial, dir);
   }
   const read = yield* Schema.decodeEffect(ClipReadJson)(yield* fs.readFileString(readFile));
-  return yield* chainOf({
+  const figure = yield* Schema.decodeEffect(ClipFigureJson)(yield* fs.readFileString(figureFile));
+  const chained = yield* chainOf({
     read,
     canvas: path.join(dir, 'canvas'),
     member: o.coverage.member,
@@ -830,48 +856,73 @@ export const chainClip = Effect.fn('cast.chain.clip')(function* (o: {
     cache: o.cache,
     bands: o.bands,
   });
+  return { ...chained, figure };
 });
 
 /**
  * Each of the member's clips chained by the trained reader
- * (`eval:clip:<clip>@<member>`), on this machine. It reads the reader, the
- * clip, the training set (whose shards stand for the cuts of the drawings
- * it poses) and the chain's source files, with the
- * chain's settings and the clip's bands as its config.
+ * (`eval:clip:<clip>@<member>`), on this machine; its output is the clip's
+ * reader-lock entry (`clips.ts` `clipEntryOf`), pass or fail. It reads the
+ * reader, the clip its clip-make stage adopted (`clip:<clip>@<member>`), the
+ * provenance beside it (whose map lays it on the canvas), the training set
+ * (whose shards stand for the cuts of the drawings it poses) and the
+ * chain's source files, with the chain's settings and the clip's bands and
+ * expected drawings as its config.
  */
 export const clipStages = (
   m: MemberStages,
   cache: string,
   chainSources: ReadonlyArray<Input>,
-): ReadonlyArray<Stage<StageServices | CastReader | ChildProcessSpawner.ChildProcessSpawner>> =>
+): ReadonlyArray<
+  Stage<StageServices | CastReader | Media | ChildProcessSpawner.ChildProcessSpawner>
+> =>
   (m.coverage.clips ?? []).map((clip) => {
     const id = `eval:clip:${clip.id}@${m.member}`;
-    const file = `${m.memberDir}/${clip.file}`;
+    const made = `clip:${clip.id}@${m.member}`;
+    const provenance = `${m.memberDir}/${clip.file.replace(/\.mp4$/, '')}.json`;
     return {
       id,
       view: clip.id,
       inputs: [
         stageInput('train'),
-        fileInput(file),
+        stageInput(made),
+        fileInput(provenance),
         ...chainSources,
         // the set's shards stand for the cuts of the drawings the reader was trained on
         stageInput('trainset'),
       ],
       version: VERSION.chain,
-      config: Schema.encodeSync(ConfigJson)({ chain: CHAIN, bands: clip.bands }),
+      config: Schema.encodeSync(ConfigJson)({
+        chain: CHAIN,
+        bands: clip.bands,
+        expect: clip.expect,
+      }),
       run: (ctx) =>
         Effect.gen(function* () {
           const ckpt = yield* ctx.outputPath('train');
+          const mp4 = yield* ctx.outputPath(made);
+          const sha256 = sha256Hex(yield* ctx.output(made));
+          const recorded = new TextDecoder().decode(yield* ctx.file(provenance));
           return yield* Effect.gen(function* () {
-            const made = yield* chainClip({
+            const { map } = yield* provenanceIn(recorded);
+            const chained = yield* chainClip({
               ckpt,
-              clip: file,
+              clip: mp4,
+              map,
               memberDir: m.memberDir,
               coverage: m.coverage,
               bands: clip.bands,
               cache,
             });
-            return encoder.encode(yield* Schema.encodeEffect(ConfigJson)(made));
+            const entry = clipEntryOf({
+              member: m.member,
+              clip: clip.id,
+              sha256,
+              bands: declaredBands(m.member, clip),
+              chain: chained,
+              figure: chained.figure,
+            });
+            return encoder.encode(yield* Schema.encodeEffect(ClipLockJson)(entry));
           }).pipe(Effect.mapError((e) => StageFailed.make({ reason: `${id}: ${e.message}` })));
         }),
     };
