@@ -1,65 +1,38 @@
 /**
  * A phone's home screen: the title "Hymns" and a settings button over the
- * hymn list, with the search field pulled down from under the title, as
- * iOS's search controller hides its field.
+ * hymn list. The ways to find a hymn stand in the find bar at the list's
+ * foot (`FindBar.tsx`, drawn by the player layer): `Search`, `All at once`
+ * and the `#`.
  *
- * The list's content is a spacer the title's height, the field, the row of
- * the list's tabs (`TabList`, `TabRow`), then the rows; the list opens
- * scrolled by the field's height, so the field rests under the title, which
- * is a layer over the list on the ground, and the tabs show under the title. On the UI
- * thread the title follows the list's offset: it stays put while the list
- * is between its top and the field's height (a pull brings the field out
- * under it), moves up with the rows past that, and follows a pull past the
- * top down. The title's text takes no touch, so a drag that starts on it
- * scrolls the list.
+ * The list's content is a spacer the title's height, the row of the list's
+ * tabs (`TabList`, `TabRow`), then the rows; the list opens at its top, with
+ * the tabs under the title, which is a layer over the list on the ground. On
+ * the UI thread the title follows the list's offset: it moves up with the
+ * rows, and follows a pull past the top down. The title's text takes no
+ * touch, so a drag that starts on it scrolls the list.
  *
- * Deep in the list, an upward scroll brings the field back over the list's
- * top under the status bar, and a downward one sends it away (`reveal.ts`,
- * `ShownField`): a layer, so the list's content and offset never move for
- * it, with the pinned topic row under it (`PullDown.cover`). The title,
- * coming back down as the list nears its top, covers it.
- *
- * Tapping the field enters search mode: a bar with the focused text field
- * and Cancel, over the results. A passage tapped in `About this hymn`
- * enters it too, with its query and the keyboard down (`searchOpen`).
- * The list stays mounted beneath, untouchable and hidden from assistive
- * technology, so it keeps its place. Cancel, or
+ * A press on the find bar's `Search` enters search mode: the bar grows into
+ * the search box, and the results show over the list. A passage tapped in
+ * `About this hymn` enters it too, with its query and the keyboard down
+ * (`searchOpen`). The list stays mounted beneath, untouchable and hidden
+ * from assistive technology, so it keeps its place. The bar's Cancel, or
  * Android's Back while the home screen is in focus (`searchBack`), clears
  * the query and shows the list as it was.
+ *
+ * The find bar's `All at once` asks for the tiles (`tiles`); the home screen
+ * shows them with the list's place read then (`showTiles`).
  */
 
 import { useAtom, useAtomSet, useAtomSubscribe, useAtomValue } from '@effect/atom-react';
 import { Link, useLinkTo, useNavigation, useSafeAreaInsets } from 'one';
 import { Effect, Fiber, Option } from 'effect';
-import {
-  type ReactNode,
-  useCallback,
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-import {
-  BackHandler,
-  Keyboard,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { type ReactNode, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { BackHandler, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
-  Easing,
   type SharedValue,
-  useAnimatedReaction,
   useAnimatedStyle,
-  useDerivedValue,
   useSharedValue,
-  withTiming,
 } from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
 
 import bundled from 'virtual:hymnal-indexes';
 
@@ -68,31 +41,23 @@ import { aboutQuery, aboutShown, afterPause, readMeaningSoon } from '~/hymns/mea
 import { find, hymnIndex } from '~/hymns/search';
 import { groupOffset, groupStarts, HymnList } from '~/reader/HymnList.native';
 import { shelvesOf } from '~/reader/lists';
-import {
-  hymnsOffset,
-  openAtTopic,
-  type SearchMode,
-  searchOffset,
-  searchOpen,
-  searchQuery,
-} from '~/reader/place';
+import { hymnsOffset, openAtTopic, searchOffset, searchOpen, searchQuery } from '~/reader/place';
 import { settings } from '~/store';
-import { color, useAccent } from '~/color';
+import { color } from '~/color';
 import { plain, useCue } from '~/feel/cue';
 
-import { AllAtOnce, GridMark } from './AllAtOnce';
+import { AllAtOnce } from './AllAtOnce';
 import { searchBack } from './back';
 import { hymnHref, hymnOf } from './Browse';
+import { useCancelSearch } from './FindBar';
+import { showTiles, type Stood, Tiles, tiles } from './finding';
 import { Gear } from './Gear';
-import { searchLabel } from './Results';
-import { hidden, reachable, revealAt, shownHeight } from './reveal';
 import { TabRow, tabRowHeight } from './TabRow';
 import { groupAt, openingOffset, type TabName, tabNamed, tabsOf } from './tabs';
 
 /**
  * A layer out of reach, untouchable and unseen by assistive technology: the
- * list beneath search mode or `All at once` (kept in place), and the shown
- * field while it is off screen. React Native turns `aria-hidden` into
+ * list beneath search mode or `All at once` (kept in place). React Native turns `aria-hidden` into
  * `accessibilityElementsHidden` on iOS and `no-hide-descendants` on Android,
  * and the web's renderer writes it as the attribute.
  */
@@ -102,58 +67,51 @@ const outOfReach = { pointerEvents: 'none', 'aria-hidden': true } as const;
 const titleLine = 41;
 const titleSpace = 8;
 
-/** The field's line and the space around its text and around the field. */
-const fieldLine = 22;
-const fieldPadding = 7;
-const fieldMargin = 8;
-
 export function Home() {
   const insets = useSafeAreaInsets();
   const { fontScale } = useWindowDimensions();
-  const [mode, setMode] = useAtom(searchOpen);
-  const searching = mode !== 'off';
+  const searching = useAtomValue(searchOpen) !== 'off';
   const title = Math.ceil(titleLine * fontScale) + titleSpace;
-  const field = Math.ceil(fieldLine * fontScale) + 2 * fieldPadding + 2 * fieldMargin;
-  const scroll = useSharedValue(field);
-  const cover = useShownHeight(scroll, field, field);
-  const enter = () => setMode('field');
-  // While `All at once` shows: the list's offset and the field's cover when it zoomed out.
-  const [zoom, setZoom] = useState<Option.Option<Zoom>>(Option.none());
+  const scroll = useSharedValue(0);
+  // How far a layer over the list's top covers it: none stands there, so the pinned topic row meets the status bar.
+  const cover = useSharedValue(0);
+  const [shown, setTiles] = useAtom(tiles);
   const cue = useCue();
-  const zoomOut = useCallback(() => {
+  const zoomOut = () => {
     cue(plain('zoom-out'));
-    setZoom(Option.some({ offset: scroll.value, cover: cover.value }));
-  }, [cue, scroll, cover]);
-  const zoomIn = useCallback(() => {
+    setTiles((state) => showTiles(state, { offset: scroll.value, cover: cover.value }));
+  };
+  // The find bar asks for the tiles; the list's place is read here, once, as they show.
+  useAtomSubscribe(
+    tiles,
+    (state) => {
+      if (Tiles.$is('Asked')(state)) zoomOut();
+    },
+    { immediate: true },
+  );
+  const zoomIn = () => {
     cue(plain('zoom-in'));
-    setZoom(Option.none());
-  }, [cue]);
+    setTiles(Tiles.Hidden());
+  };
+  const zoom = Option.liftPredicate(shown, Tiles.$is('Shown')).pipe(
+    Option.map(({ stood }) => stood),
+  );
   return (
     <View style={styles.screen}>
       <View style={[styles.below, { marginTop: insets.top }]}>
         <View style={styles.fill} {...(searching && outOfReach)}>
           <TabList
             title={title}
-            field={field}
             scroll={scroll}
             cover={cover}
-            onEnter={enter}
             zoom={zoom}
             onZoomOut={zoomOut}
             onZoomIn={zoomIn}
           >
-            <ShownField
-              height={field}
-              cover={cover}
-              scroll={scroll}
-              rest={field}
-              title={title}
-              onPress={enter}
-            />
-            <Title height={title} rest={field} scroll={scroll} onZoomOut={zoomOut} />
+            <Title height={title} scroll={scroll} />
           </TabList>
         </View>
-        {mode !== 'off' && <Search cause={mode} onCancel={() => setMode('off')} />}
+        {searching && <Search />}
       </View>
       {/* The status bar's ground: rows and the title pass under it unseen. */}
       <View style={[styles.scrim, { height: insets.top }]} />
@@ -161,15 +119,9 @@ export function Home() {
   );
 }
 
-/** Where the list stood when it zoomed out: its offset, and how far the field covered its top. */
-interface Zoom {
-  readonly offset: number;
-  readonly cover: number;
-}
-
 /**
  * The hymn list of the tab in use (`settings.home.tab`, `tabNamed`), with
- * the tab row under the search field in the list's top. Sections names each
+ * the tab row under the title in the list's top. Sections names each
  * section over its hymns under the Recent shelf (`byTopic`); every other tab
  * names its groups (`grouped`). Each tab mounts its own list, and opens where
  * the reader left it in this run of the app, else where the list was when
@@ -177,31 +129,27 @@ interface Zoom {
  * (`openAtTopic`) mounts the Topics tab's list afresh with that topic's row
  * at the top (`groupOffset`), even when Topics is already the tab in use.
  *
- * A tap on a group's row (`onZoomOut`, as the title's grid button) zooms
- * out to `All at once` over the list, its tiles opened at the group at the
- * list's top when it zoomed out (`zoom`, `groupAt`). A tile mounts the
+ * A tap on a group's row (`onZoomOut`, as the find bar's `All at once`)
+ * zooms out to `All at once` over the list, its tiles opened at the group at
+ * the list's top when it zoomed out (`zoom`, `groupAt`). A tile mounts the
  * tab's list afresh with that group's row at the top (`groupStarts`).
- * While it shows, the list and the layers over it (`children`: the shown
- * field and the title) are out of reach beneath it (`UnderTiles`).
+ * While it shows, the list and the layers over it (`children`: the title)
+ * are out of reach beneath it (`UnderTiles`).
  */
 function TabList({
   title,
-  field,
   scroll,
   cover,
-  onEnter,
   zoom,
   onZoomOut,
   onZoomIn,
   children,
 }: {
   readonly title: number;
-  readonly field: number;
   readonly scroll: SharedValue<number>;
   readonly cover: SharedValue<number>;
-  readonly onEnter: () => void;
   /** Where the list stood when it zoomed out to `All at once`, while that shows. */
-  readonly zoom: Option.Option<Zoom>;
+  readonly zoom: Option.Option<Stood>;
   readonly onZoomOut: () => void;
   readonly onZoomIn: () => void;
   /** The layers drawn over the list, out of reach with it while `All at once` shows. */
@@ -228,34 +176,34 @@ function TabList({
     setChosen(name);
   };
   const choose = (name: TabName) => show(name, openingOffset(kept.current, name, scroll.value));
-  const tabRow = tabRowHeight(fontScale);
+  // The list's head: the title's spacer and the tab row.
+  const head = title + tabRowHeight(fontScale);
   const setTopic = useAtomSet(openAtTopic);
   useAtomSubscribe(
     openAtTopic,
     (topic) => {
       if (Option.isNone(topic)) return;
       setTopic(Option.none());
-      const top = title + field + tabRow;
-      const at = groupOffset(tabNamed(tabs, 'Topics'), hymns, topic.value, top, fontScale);
+      const at = groupOffset(tabNamed(tabs, 'Topics'), hymns, topic.value, head, fontScale);
       show(
         'Topics',
-        Option.getOrElse(at, () => field),
+        Option.getOrElse(at, () => 0),
       );
       setVisit((n) => n + 1);
     },
     { immediate: true },
   );
-  const allAtOnce = (stood: Zoom) => {
+  const allAtOnce = (stood: Stood) => {
     const starts = groupStarts(
       Option.liftPredicate(tab, (t) => t.name !== 'Sections'),
       hymns,
       shelves,
-      title + field + tabRow,
+      head,
       fontScale,
     );
     const pick = (index: number) => {
       onZoomIn();
-      show(tab.name, starts[index] ?? field);
+      show(tab.name, starts[index] ?? 0);
       setVisit((n) => n + 1);
     };
     return (
@@ -269,14 +217,13 @@ function TabList({
   };
   const pullDown = {
     node: (
-      <View style={{ height: title + field + tabRow }}>
+      <View style={{ height: head }}>
         <View style={{ height: title }} />
-        <FieldButton height={field} onPress={onEnter} />
         <TabRow names={tabs.map((t) => t.name)} selected={tab.name} onSelect={choose} />
       </View>
     ),
-    height: title + field + tabRow,
-    rest: field,
+    height: head,
+    rest: 0,
     scroll,
     cover,
   };
@@ -323,25 +270,18 @@ export function UnderTiles({
   );
 }
 
-/** The title, the `All at once` button and the settings button, moved with the list's offset. */
+/** The title and the settings button, moved with the list's offset: up with the rows, and down with a pull past the top. */
 function Title({
   height,
-  rest,
   scroll,
-  onZoomOut,
 }: {
   readonly height: number;
-  readonly rest: number;
   readonly scroll: SharedValue<number>;
-  readonly onZoomOut: () => void;
 }) {
   const settings = useLinkTo({ href: Link.resolveHref('/settings') });
   const moved = useAnimatedStyle(() => {
     'worklet';
-    const y = scroll.value;
-    if (y < 0) return { transform: [{ translateY: -y }] };
-    if (y > rest) return { transform: [{ translateY: rest - y }] };
-    return { transform: [{ translateY: 0 }] };
+    return { transform: [{ translateY: -scroll.value }] };
   });
   return (
     <Animated.View pointerEvents="box-none" style={[styles.title, { height }, moved]}>
@@ -350,15 +290,6 @@ function Title({
           Hymns
         </Text>
       </View>
-      <Pressable
-        role="button"
-        aria-label="All at once"
-        hitSlop={8}
-        onPress={onZoomOut}
-        style={({ pressed }) => [styles.settings, pressed && styles.pressed]}
-      >
-        <GridMark />
-      </Pressable>
       <Pressable
         {...settings}
         role="button"
@@ -372,110 +303,19 @@ function Title({
   );
 }
 
-/** The field's slide in or out over the list's top: quick out of the way, as a toolbar's. */
-const slide = { duration: 200, easing: Easing.out(Easing.cubic) };
-
 /**
- * How many points of the search field show over the list's top, on the UI
- * thread from the list's offset: `revealAt` turns the field on each frame's
- * offset, a turn slides it in or out, and `shownHeight` keeps it at 0 at
- * and above the list's resting place `rest`.
- */
-function useShownHeight(scroll: SharedValue<number>, rest: number, height: number) {
-  const state = useSharedValue(hidden(rest));
-  const progress = useSharedValue(0);
-  useAnimatedReaction(
-    () => scroll.value,
-    (now) => {
-      const next = revealAt(state.value, now, rest);
-      if (next.shown !== state.value.shown) progress.value = withTiming(Number(next.shown), slide);
-      state.value = next;
-    },
-  );
-  return useDerivedValue(() => shownHeight(progress.value, height, scroll.value, rest));
-}
-
-/**
- * The search field shown again over the list's top, under the status bar,
- * once the reader scrolls up deep in the list (`useShownHeight`): a layer
- * on the ground, so the rows pass under it and the list's content and
- * offset never move for it. Its slide runs on the UI thread; React hears
- * only when its box comes out below the title (near the list's top the
- * title covers it) and when it goes, to let touches and VoiceOver reach it
- * only while some of the box shows (`reachable`).
- */
-function ShownField({
-  height,
-  cover,
-  scroll,
-  rest,
-  title,
-  onPress,
-}: {
-  readonly height: number;
-  readonly cover: SharedValue<number>;
-  readonly scroll: SharedValue<number>;
-  readonly rest: number;
-  readonly title: number;
-  readonly onPress: () => void;
-}) {
-  const [shown, setShown] = useState(false);
-  useAnimatedReaction(
-    () => reachable(cover.value, scroll.value, rest, title, fieldMargin),
-    (now, before) => {
-      if (now !== before) scheduleOnRN(setShown, now);
-    },
-  );
-  const place = useAnimatedStyle(() => ({ transform: [{ translateY: cover.value - height }] }));
-  return (
-    <Animated.View {...(!shown && outOfReach)} style={[styles.shown, { height }, place]}>
-      <FieldButton height={height} onPress={onPress} />
-    </Animated.View>
-  );
-}
-
-/** The search field as the list holds it: a button drawn as a field, which enters search mode. */
-function FieldButton({
-  height,
-  onPress,
-}: {
-  readonly height: number;
-  readonly onPress: () => void;
-}) {
-  return (
-    <View style={[styles.fieldFrame, { height }]}>
-      <Pressable
-        role="button"
-        aria-label={searchLabel}
-        onPress={onPress}
-        style={({ pressed }) => [styles.field, pressed && styles.pressed]}
-      >
-        <Text style={styles.placeholder} numberOfLines={1}>
-          {searchLabel}
-        </Text>
-      </Pressable>
-    </View>
-  );
-}
-
-/**
- * Search mode: the field (focused when the reader tapped it) and Cancel over
- * the hymns the query finds, each found by a line other than its title
- * showing that line. Search mode builds the search's index (`hymnIndex`)
- * once it is on screen, while a tapped field's keyboard comes up, and reads
- * the meaning table in a timer task after it (`readMeaningSoon`), so neither the first keystroke nor the first pause
+ * Search mode's results, over the list and above the find bar, which holds
+ * the search box and Cancel: the hymns the query finds, each found by a line
+ * other than its title showing that line. Search mode builds the search's
+ * index (`hymnIndex`) once it is on screen, while the box's keyboard comes
+ * up, and reads the meaning table in a timer task after it
+ * (`readMeaningSoon`), so neither the first keystroke nor the first pause
  * waits on them and no one task holds the thread for both; the app's start
  * never does. After a pause in the typing (`afterPause`), the hymns
  * about the query stand under its strongest matches.
  */
-function Search({
-  cause,
-  onCancel,
-}: {
-  readonly cause: Exclude<SearchMode, 'off'>;
-  readonly onCancel: () => void;
-}) {
-  const [query, setQuery] = useAtom(searchQuery);
+function Search() {
+  const query = useAtomValue(searchQuery);
   const shown = useDeferredValue(query);
   const results = useMemo(() => {
     // An empty query lists nothing here: the list beneath shows instead.
@@ -508,12 +348,7 @@ function Search({
     [asked],
   );
   const about = useMemo(() => aboutShown(asked, shown, near), [near, asked, shown]);
-  const accent = useAccent();
-  const cancel = () => {
-    setQuery('');
-    Keyboard.dismiss();
-    onCancel();
-  };
+  const cancel = useCancelSearch();
   useEffect(() => {
     hymnIndex();
     return readMeaningSoon();
@@ -528,25 +363,6 @@ function Search({
   }, []);
   return (
     <View style={styles.search}>
-      <View style={styles.bar}>
-        <TextInput
-          autoFocus={cause === 'field'}
-          role="searchbox"
-          aria-label={searchLabel}
-          placeholder={searchLabel}
-          placeholderTextColor={color.muted}
-          value={query}
-          onChangeText={setQuery}
-          autoCapitalize="none"
-          autoCorrect={false}
-          returnKeyType="search"
-          clearButtonMode="while-editing"
-          style={[styles.field, styles.input]}
-        />
-        <Pressable role="button" onPress={cancel} hitSlop={8} style={styles.cancel}>
-          <Text style={[styles.cancelWords, { color: accent }]}>Cancel</Text>
-        </Pressable>
-      </View>
       {shown !== '' && (
         // A new query's results open at their top.
         <HymnList
@@ -589,26 +405,5 @@ const styles = StyleSheet.create({
     borderRadius: 22,
   },
   pressed: { opacity: 0.6 },
-  shown: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: color.ground },
-  fieldFrame: { paddingHorizontal: 16, paddingVertical: fieldMargin },
-  field: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: fieldPadding,
-    borderRadius: 10,
-    backgroundColor: color.soft,
-  },
-  placeholder: { fontSize: 17, lineHeight: fieldLine, color: color.muted },
   search: { ...StyleSheet.absoluteFill, backgroundColor: color.ground },
-  bar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: fieldMargin,
-  },
-  input: { fontSize: 17, lineHeight: fieldLine, color: color.ink },
-  cancel: { minHeight: 44, justifyContent: 'center' },
-  cancelWords: { fontSize: 17 },
 });
