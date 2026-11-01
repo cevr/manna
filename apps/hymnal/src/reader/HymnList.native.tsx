@@ -277,6 +277,10 @@ export function HymnList({
   const scroll = pullDown?.scroll ?? own;
   const cover = pullDown?.cover ?? uncovered;
   const rest = pullDown?.rest ?? 0;
+  // LegendList's sync of `scroll` keys its effect on this object: each new one subscribes again and
+  // writes the list's JavaScript scroll into `scroll`, over the UI thread's. One object for each
+  // `scroll`, so it does that only when the list or `scroll` changes, not at each render.
+  const sharedValues = useMemo(() => ({ scrollOffset: scroll }), [scroll]);
   // The list's scroll view, for the rail to scroll from the UI thread.
   const scroller = useAnimatedRef<Animated.ScrollView>();
   // While the rail is held its ticks are the topics felt, so the pin gives no
@@ -403,7 +407,7 @@ export function HymnList({
           snapToOffsets={pullDown && [0, pullDown.rest]}
           snapToEnd={false}
           maintainVisibleContentPosition={anchoring}
-          sharedValues={{ scrollOffset: scroll }}
+          sharedValues={sharedValues}
           contentInsetAdjustmentBehavior="never"
           keyboardShouldPersistTaps="handled"
           {...dismissal}
