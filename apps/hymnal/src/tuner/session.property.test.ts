@@ -14,7 +14,7 @@
  */
 
 import { describe, expect, it } from 'bun:test';
-import { Option } from 'effect';
+import { Match, Option } from 'effect';
 
 import {
   Event,
@@ -24,20 +24,23 @@ import {
   holdsMicrophone,
   labelOf,
   latch,
+  nameOf,
   needleOf,
   opened,
   type Permission,
   Phase,
   type Session,
+  STRING_NAMES,
   stringLabel,
   step,
   TUNED_FRAMES,
   unlatched,
   voiced,
   Work,
+  wordsOf,
 } from './session';
 import { detect } from './pitch';
-import { reading, readingOn, STRINGS } from './tuning';
+import { reading, readingOn, STRINGS, type StringId } from './tuning';
 
 /** A seeded generator of numbers in [0, 1) (mulberry32). */
 const seeded = (seed: number) => {
@@ -455,6 +458,62 @@ describe('the tuner sheet’s display', () => {
     expect(hintOf(Option.none(), Option.some(reading(110)))).toBe('In tune');
     expect(hintOf(Option.none(), Option.some(reading(108)))).toBe('Tighten');
     expect(hintOf(Option.some('A2'), Option.some(readingOn(112, 'A2')))).toBe('Loosen');
+  });
+
+  it('shows and says the reading the phase allows: none while denied or closed, `Not listening` once ended', () => {
+    // A record, so a new phase fails the typecheck until it is named here.
+    const each: Record<Phase['_tag'], 'none' | 'ended' | 'rest' | 'heard'> = {
+      Checking: 'rest',
+      Asking: 'rest',
+      Denied: 'none',
+      Pausing: 'rest',
+      Starting: 'rest',
+      Listening: 'heard',
+      Away: 'rest',
+      Ended: 'ended',
+      Closed: 'none',
+    };
+    const targets = [Option.none<StringId>(), ...STRINGS.map((string) => Option.some(string.id))];
+    const heards = [Option.none(), Option.some(reading(110)), Option.some(readingOn(110, 'E2'))];
+    const misses: Array<string> = [];
+    for (const [phase, kind] of Object.entries(each) as Array<[Phase['_tag'], string]>)
+      for (const target of targets)
+        for (const heard of heards) {
+          const rested = {
+            name: Option.match(target, {
+              onNone: () => 'Listening',
+              onSome: (id) => STRING_NAMES[id],
+            }),
+            words: 'Listening',
+          };
+          const want = Match.value(kind).pipe(
+            Match.when('none', () => Option.none()),
+            Match.when('ended', () =>
+              Option.some({ name: 'Not listening', words: 'Not listening' }),
+            ),
+            Match.when('rest', () => Option.some(rested)),
+            Match.orElse(() =>
+              Option.some(
+                Option.match(heard, {
+                  onNone: () => rested,
+                  onSome: (one) => ({ name: STRING_NAMES[one.string], words: labelOf(heard) }),
+                }),
+              ),
+            ),
+          );
+          // What shows and what is said, side by side: one without the other is a miss too.
+          const absent = () => '(none)';
+          const got = `${Option.getOrElse(nameOf(phase, target, heard), absent)} / ${Option.getOrElse(wordsOf(phase, heard), absent)}`;
+          const wanted = Option.match(want, {
+            onNone: () => `${absent()} / ${absent()}`,
+            onSome: ({ name, words }) => `${name} / ${words}`,
+          });
+          if (got !== wanted)
+            misses.push(
+              `${phase} target=${Option.getOrElse(target, () => 'auto')} heard=${Option.isSome(heard)}: ${got}`,
+            );
+        }
+    expect(misses).toEqual([]);
   });
 
   it('holds the needle to ±50 cents, at centre while nothing is heard', () => {

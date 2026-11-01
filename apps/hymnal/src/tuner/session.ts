@@ -323,6 +323,52 @@ export const hintOf = (target: Option.Option<StringId>, heard: Option.Option<Rea
     },
   });
 
+/** Ended: the screen offers `Tap to listen again`, and the reading shows and says why nothing is heard. */
+export const NOT_LISTENING = 'Not listening';
+
+/**
+ * The one rule for the reading under the gauge in `phase`, which `nameOf` and
+ * `wordsOf` both follow. Denied and Closed have no reading. Ended has the
+ * stop. Only Listening has a heard reading; every other phase is at rest.
+ */
+const byPhase = <R, A>(
+  phase: Phase['_tag'],
+  heard: Option.Option<R>,
+  give: { readonly rest: () => A; readonly heard: (heard: R) => A; readonly ended: A },
+): Option.Option<A> =>
+  Match.value(phase).pipe(
+    Match.whenOr('Denied', 'Closed', () => Option.none<A>()),
+    Match.when('Ended', () => Option.some(give.ended)),
+    Match.when('Listening', () =>
+      Option.some(Option.match(heard, { onNone: give.rest, onSome: give.heard })),
+    ),
+    Match.orElse(() => Option.some(give.rest())),
+  );
+
+/** The reading's big name in `phase`: the string heard; at rest the picked string, or `Listening` in Auto. */
+export const nameOf = (
+  phase: Phase['_tag'],
+  target: Option.Option<StringId>,
+  heard: Option.Option<Pick<Reading, 'string'>>,
+): Option.Option<string> =>
+  byPhase(phase, heard, {
+    rest: () =>
+      Option.match(target, { onNone: () => 'Listening', onSome: (id) => STRING_NAMES[id] }),
+    heard: ({ string }) => STRING_NAMES[string],
+    ended: NOT_LISTENING,
+  });
+
+/** The reading's words for VoiceOver in `phase`: `labelOf` the reading heard, `Listening` at rest. */
+export const wordsOf = (
+  phase: Phase['_tag'],
+  heard: Option.Option<Reading>,
+): Option.Option<string> =>
+  byPhase(phase, heard, {
+    rest: () => labelOf(Option.none()),
+    heard: (one) => labelOf(Option.some(one)),
+    ended: NOT_LISTENING,
+  });
+
 /** `12 cents flat`, `1 cent sharp`. */
 const centsOff = (stringCents: number): string => {
   const cents = Math.round(Math.abs(stringCents));

@@ -23,7 +23,7 @@
 
 import { useAtomSet, useAtomValue } from '@effect/atom-react';
 import type { Cause } from 'effect';
-import { Clock, Data, Duration, Effect, Fiber, Option } from 'effect';
+import { Clock, Data, Duration, Effect, Fiber, Match, Option } from 'effect';
 import * as Atom from 'effect/reactivity/Atom';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -60,22 +60,22 @@ import {
   feedOf,
   hintOf,
   LEFT,
-  labelOf,
   type Latch,
   latch,
   NEEDLE_CENTS,
+  nameOf,
   needleOf,
   opened,
   type Permission,
   type Phase,
   RIGHT,
   type Session,
-  STRING_NAMES,
   step,
   stringLabel,
   unlatched,
   voiced,
   Work,
+  wordsOf,
 } from './session';
 import { type Reading, reading, readingOn, type StringId } from './tuning';
 
@@ -313,38 +313,56 @@ function Tuner({
    * win. Words that differ from the last said go to VoiceOver too (a no-op
    * with it off); the log names the announcement, never its words.
    */
-  const say = useCallback((words: string) => {
+  const hush = useCallback(() => {
     const said = spoken.current;
     if (Option.isSome(said.pending)) fork(Fiber.interrupt(said.pending.value));
     said.pending = Option.none();
-    if (words === said.label) return;
-    const speak = Effect.gen(function* () {
-      const now = yield* Clock.currentTimeMillis;
-      yield* Effect.sleep(Duration.millis(Math.max(0, said.at + LABEL_EVERY - now)));
-      said.label = words;
-      said.at = yield* Clock.currentTimeMillis;
-      setLabel(words);
-      // A screen covered, away or closed shows its words but says none of them.
-      if (!Option.exists(session.current, voiced)) return;
-      AccessibilityInfo.announceForAccessibility(words);
-      log('[tuner] announced');
-    });
-    said.pending = Option.some(Effect.runFork(speak));
   }, []);
 
-  /** Back to rest: nothing heard, the needle at centre. */
-  const rest = useCallback(() => {
-    needle.value = withTiming(0, { duration: 120 });
-    inTune.value = 0;
-    setShown((before) =>
-      Option.match(before.heard, {
-        onNone: () => before,
-        onSome: () => ({ ...before, heard: Option.none() }),
-      }),
-    );
-    setHint(hintOf(aim.current, Option.none()));
-    say('Listening');
-  }, [needle, inTune, say]);
+  const say = useCallback(
+    (words: string) => {
+      hush();
+      const said = spoken.current;
+      if (words === said.label) return;
+      const speak = Effect.gen(function* () {
+        const now = yield* Clock.currentTimeMillis;
+        yield* Effect.sleep(Duration.millis(Math.max(0, said.at + LABEL_EVERY - now)));
+        said.label = words;
+        said.at = yield* Clock.currentTimeMillis;
+        setLabel(words);
+        // A screen covered, away or closed shows its words but says none of them.
+        if (!Option.exists(session.current, voiced)) return;
+        AccessibilityInfo.announceForAccessibility(words);
+        log('[tuner] announced');
+      });
+      said.pending = Option.some(Effect.runFork(speak));
+    },
+    [hush],
+  );
+
+  /** Says the words `phase` gives the reading; a phase that shows no reading says nothing. */
+  const voice = useCallback(
+    (phase: Phase['_tag'], heard: Option.Option<Reading>) =>
+      Option.match(wordsOf(phase, heard), { onNone: hush, onSome: say }),
+    [hush, say],
+  );
+
+  /** Back to rest in `phase`: nothing heard, the needle at centre. */
+  const rest = useCallback(
+    (phase: Phase['_tag']) => {
+      needle.value = withTiming(0, { duration: 120 });
+      inTune.value = 0;
+      setShown((before) =>
+        Option.match(before.heard, {
+          onNone: () => before,
+          onSome: () => ({ ...before, heard: Option.none() }),
+        }),
+      );
+      setHint(hintOf(aim.current, Option.none()));
+      voice(phase, Option.none());
+    },
+    [needle, inTune, voice],
+  );
 
   /** The string the frames are read against: one picked, or none for Auto. Logged when it changes. */
   const aimAt = useCallback((next: Option.Option<StringId>) => {
@@ -371,7 +389,7 @@ function Tuner({
     session.current = Option.some(next.session);
     if (next.session.phase._tag !== before.phase._tag) {
       setPhase(next.session.phase._tag);
-      if (next.session.phase._tag !== 'Listening') rest();
+      if (next.session.phase._tag !== 'Listening') rest(next.session.phase._tag);
     }
     for (const work of next.work) carry(work);
   };
@@ -441,9 +459,10 @@ function Tuner({
         return { heard, tuned: lit };
       });
       setHint(hintOf(target, heard));
-      say(labelOf(heard));
+      // `take` reads frames only while listening.
+      voice('Listening', heard);
     },
-    [needle, inTune, say],
+    [needle, inTune, voice],
   );
 
   /** A frame in: read on a later turn, so a frame that comes while the last is in work is dropped, never queued. */
@@ -507,11 +526,13 @@ function Tuner({
   const plain = useAnimatedStyle(() => ({ opacity: 1 - inTune.value }));
   const held = useAnimatedStyle(() => ({ opacity: inTune.value }));
 
-  const heardName = Option.match(shown.heard, {
-    onNone: () =>
-      Option.match(target, { onNone: () => 'Listening', onSome: (id) => STRING_NAMES[id] }),
-    onSome: ({ string }) => STRING_NAMES[string],
-  });
+  // What the reading shows comes from the phase, as its words do; none while denied.
+  const name = nameOf(phase, target, shown.heard);
+  // Listening, the label is the last words said (at most one change a second); else the phase's own, at once.
+  const readingLabel = Match.value(phase).pipe(
+    Match.when('Listening', () => label),
+    Match.orElse((now) => Option.getOrElse(wordsOf(now, Option.none()), () => label)),
+  );
   // The circle lit: the target, or in Auto the nearest string heard.
   const lit = Option.orElse(target, () => Option.map(shown.heard, (heard) => heard.string));
   const auto = Option.isNone(target);
@@ -596,14 +617,16 @@ function Tuner({
         )}
       </View>
 
-      <View testID="tuner-reading" accessible aria-label={label} style={styles.reading}>
-        <Text style={styles.name} aria-hidden>
-          {heardName}
-        </Text>
-        <Text style={styles.note} aria-hidden>
-          {noteOf(shown.heard)}
-        </Text>
-      </View>
+      {Option.isSome(name) && (
+        <View testID="tuner-reading" accessible aria-label={readingLabel} style={styles.reading}>
+          <Text style={styles.name} aria-hidden>
+            {name.value}
+          </Text>
+          <Text style={styles.note} aria-hidden>
+            {noteOf(shown.heard)}
+          </Text>
+        </View>
+      )}
 
       <Headstock lit={lit} picked={target} tuned={shown.tuned} accent={accent} onPick={pick} />
     </View>
