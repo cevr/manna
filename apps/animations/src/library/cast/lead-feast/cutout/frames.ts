@@ -22,6 +22,10 @@ export const FRAMES = {
   'heads-4': { sheet: 'heads', kept: [774, 314, 1014, 650], pad: [3, 3, 3, 0] },
   // his raised-bottle drawing, kept as its own file on the single sheet (`kept/single-1.png`)
   'single-1': { sheet: 'single', kept: [191, 109, 742, 1382], pad: [3, 3, 3, 12] },
+  // seated on a stool, the bottle raised (`kept/single-9.png`): framed as he stands, the shadow under his sandals
+  'single-9': { sheet: 'single', kept: [191, 200, 766, 1300], pad: [3, 3, 3, 12] },
+  // his wince, the right bust of its drawing (`kept/single-5.png`): a bust, as heads-4
+  'single-5': { sheet: 'single', kept: [772, 293, 1076, 710], pad: [3, 3, 3, 0] },
 } as const satisfies Readonly<
   Record<
     string,

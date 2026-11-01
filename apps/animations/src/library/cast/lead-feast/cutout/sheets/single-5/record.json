@@ -1,0 +1,345 @@
+{
+  "view": "single-5",
+  "kind": "single",
+  "size": [310, 420],
+  "box": [769, 290, 1079, 710],
+  "command": "film concept parts in-its-order lead-feast --view single-single-5",
+  "parts": [
+    {
+      "name": "head",
+      "kept": 55163,
+      "painted": 0
+    },
+    {
+      "name": "torso",
+      "kept": 35963,
+      "painted": 11437
+    }
+  ],
+  "moving": ["head"],
+  "hiddenPx": 55112,
+  "carried": [],
+  "okra": {
+    "route": "subscription (okra image, Codex route; no --model)",
+    "input": "okra/input-1dad9722bcb3.png",
+    "prompt": "okra/prompt.txt",
+    "pad": {
+      "s": 0.2968360714085009,
+      "dx": 0,
+      "dy": -19.294344641552556
+    },
+    "budget": {
+      "calls": 3,
+      "allowance": null,
+      "used": 2
+    },
+    "calls": [
+      {
+        "n": 1,
+        "command": [
+          "okra",
+          "image",
+          "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where his head (his hair, face and ears) was cut away to make a cut-out puppet. Repaint ONLY the magenta area, as what lies behind his head: his neck rising straight up from his collar as a plain column of skin to about where his mouth was, its two sides closed by the same thick dark brown-black outline as the rest of him, its top simply rounded and closed by the same outline (no opening, no rim, no dark band), in exactly the same skin colour, soft shading and fine paper grain as his neck below. Everywhere else in the magenta area becomes the plain cream paper. There is no head now: no hair, no face, no ears, nothing magenta left. Keep every other pixel exactly as it is: the same size, position and framing, and every part that is not magenta unchanged.",
+          "--size",
+          "1024x1536",
+          "--ref",
+          "okra/input-1dad9722bcb3.png",
+          "-o",
+          "okra/answer-1.png"
+        ],
+        "input": "okra/input-1dad9722bcb3.png",
+        "out": "okra/answer-1.png",
+        "state": "laid",
+        "fit": {
+          "s": 0.29711418122559097,
+          "dx": 3.106982469089047,
+          "dy": -16.581519751854444,
+          "score": 24.83979968799239
+        },
+        "measures": {
+          "seam": {
+            "deltaE": 5.13,
+            "pairs": 79
+          },
+          "drift": {
+            "deltaE": 4.88,
+            "px": 35840,
+            "chroma": [
+              {
+                "part": "torso",
+                "under": "head",
+                "painted": {
+                  "chroma": 47.91,
+                  "px": 144
+                },
+                "kept": {
+                  "chroma": 50.59,
+                  "px": 144
+                },
+                "cells": 3,
+                "verdict": "within"
+              }
+            ]
+          },
+          "grain": [
+            {
+              "part": "torso",
+              "painted": {
+                "robust": 1.48,
+                "plain": 10.64,
+                "n": 7418
+              },
+              "kept": {
+                "robust": 0.82,
+                "plain": 11.69,
+                "n": 3649
+              },
+              "fine": {
+                "painted": {
+                  "share": 0.002,
+                  "px": 528
+                },
+                "kept": {
+                  "share": 0.001,
+                  "px": 1728
+                },
+                "cells": 5
+              },
+              "verdict": "outside"
+            }
+          ],
+          "speck": [
+            {
+              "part": "torso",
+              "under": "head",
+              "painted": {
+                "share": 0.002,
+                "px": 7830
+              },
+              "kept": {
+                "share": 0.008,
+                "px": 3963
+              },
+              "verdict": "within"
+            }
+          ],
+          "step": [],
+          "paintUnder": [
+            {
+              "part": "head",
+              "px": 8250
+            }
+          ],
+          "paintedPx": 8250,
+          "visibleAtRest": 0,
+          "recomposeByteEqual": true
+        },
+        "missed": ["grain"]
+      },
+      {
+        "n": 2,
+        "command": [
+          "okra",
+          "image",
+          "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where his head (his hair, face and ears) was cut away to make a cut-out puppet. Repaint ONLY the magenta area, as what lies behind his head: his neck rising straight up from his collar as a plain column of skin to about where his mouth was, its two sides closed by the same thick dark brown-black outline as the rest of him, its top simply rounded and closed by the same outline (no opening, no rim, no dark band), in exactly the same skin colour, soft shading and fine paper grain as his neck below. Everywhere else in the magenta area becomes the plain cream paper. There is no head now: no hair, no face, no ears, nothing magenta left. Keep every other pixel exactly as it is: the same size, position and framing, and every part that is not magenta unchanged.",
+          "--size",
+          "1024x1536",
+          "--ref",
+          "okra/input-1dad9722bcb3.png",
+          "-o",
+          "okra/answer-2.png"
+        ],
+        "input": "okra/input-1dad9722bcb3.png",
+        "out": "okra/answer-2.png",
+        "state": "laid",
+        "fit": {
+          "s": 0.2967896907723433,
+          "dx": 3.1176255824057932,
+          "dy": -16.142290385228762,
+          "score": 26.684842541622817
+        },
+        "measures": {
+          "seam": {
+            "deltaE": 5.52,
+            "pairs": 79
+          },
+          "drift": {
+            "deltaE": 4.41,
+            "px": 35840,
+            "chroma": [
+              {
+                "part": "torso",
+                "under": "head",
+                "painted": {
+                  "chroma": 49.74,
+                  "px": 144
+                },
+                "kept": {
+                  "chroma": 50.68,
+                  "px": 144
+                },
+                "cells": 3,
+                "verdict": "within"
+              }
+            ]
+          },
+          "grain": [
+            {
+              "part": "torso",
+              "painted": {
+                "robust": 1.15,
+                "plain": 10.4,
+                "n": 10520
+              },
+              "kept": {
+                "robust": 0.82,
+                "plain": 11.69,
+                "n": 3649
+              },
+              "fine": {
+                "painted": {
+                  "share": 0,
+                  "px": 576
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 105
+                },
+                "cells": 5
+              },
+              "verdict": "within"
+            }
+          ],
+          "speck": [
+            {
+              "part": "torso",
+              "under": "head",
+              "painted": {
+                "share": 0.001,
+                "px": 10967
+              },
+              "kept": {
+                "share": 0.008,
+                "px": 3964
+              },
+              "verdict": "within"
+            }
+          ],
+          "step": [],
+          "paintUnder": [
+            {
+              "part": "head",
+              "px": 11437
+            }
+          ],
+          "paintedPx": 11437,
+          "visibleAtRest": 0,
+          "recomposeByteEqual": true
+        },
+        "missed": []
+      }
+    ],
+    "chosen": 2,
+    "fit": {
+      "s": 0.2967896907723433,
+      "dx": 3.1176255824057932,
+      "dy": -16.142290385228762,
+      "score": 26.684842541622817
+    }
+  },
+  "measures": {
+    "seam": {
+      "deltaE": 5.52,
+      "pairs": 79
+    },
+    "drift": {
+      "deltaE": 4.41,
+      "px": 35840,
+      "chroma": [
+        {
+          "part": "torso",
+          "under": "head",
+          "painted": {
+            "chroma": 49.74,
+            "px": 144
+          },
+          "kept": {
+            "chroma": 50.68,
+            "px": 144
+          },
+          "cells": 3,
+          "verdict": "within"
+        }
+      ]
+    },
+    "grain": [
+      {
+        "part": "torso",
+        "painted": {
+          "robust": 1.15,
+          "plain": 10.4,
+          "n": 10520
+        },
+        "kept": {
+          "robust": 0.82,
+          "plain": 11.69,
+          "n": 3649
+        },
+        "fine": {
+          "painted": {
+            "share": 0,
+            "px": 576
+          },
+          "kept": {
+            "share": 0,
+            "px": 105
+          },
+          "cells": 5
+        },
+        "verdict": "within"
+      }
+    ],
+    "speck": [
+      {
+        "part": "torso",
+        "under": "head",
+        "painted": {
+          "share": 0.001,
+          "px": 10967
+        },
+        "kept": {
+          "share": 0.008,
+          "px": 3964
+        },
+        "verdict": "within"
+      }
+    ],
+    "step": [],
+    "paintUnder": [
+      {
+        "part": "head",
+        "px": 11437
+      }
+    ],
+    "paintedPx": 11437,
+    "visibleAtRest": 0,
+    "recomposeByteEqual": true
+  },
+  "bars": {
+    "seamDeltaE": 10,
+    "driftDeltaE": 5,
+    "chromaDrop": 3,
+    "grainWithin": 0.5,
+    "grainCellOver": 0.03,
+    "speckOver": 0.04,
+    "stepWithin": 5,
+    "visibleAtRest": 0,
+    "leastSeamPairs": 20,
+    "leastStepPairs": 8,
+    "leastGrainWindows": 90,
+    "leastRegionPx": 100,
+    "leastCellPx": 40
+  },
+  "missed": [],
+  "named": []
+}

@@ -86,6 +86,26 @@ export const SKELETONS = {
       capLeft: 13,
     }),
   ),
+  // seated on his stool, the bottle raised: his lap, stool and sandals stand with the root
+  'single-9': framed(
+    keptAt('single-9'),
+    standing(BODY, {
+      facing: 'front',
+      hip: [301, 660],
+      neck: [308, 385],
+      chin: [308, 365],
+      crown: [300, 5],
+      ...JOINTS['single-9'],
+      wristRight: [77, 406],
+      handRight: [73, 338],
+      wristLeft: [462, 688],
+      handLeft: [442, 718],
+      flapRight: 200,
+      flapLeft: 432,
+      capRight: 13,
+      capLeft: 13,
+    }),
+  ),
   'heads-4': framed(keptAt('heads-4'), {
     bones: [
       { name: 'lean', pivot: [120, 336], tip: [120, 232] },
@@ -93,5 +113,14 @@ export const SKELETONS = {
     ],
     skin: { head: ['head'], torso: ['lean'] },
     root: [120, 336],
+  }),
+  // his wince, a bust as heads-4: a lean and a head
+  'single-5': framed(keptAt('single-5'), {
+    bones: [
+      { name: 'lean', pivot: [152, 417], tip: [152, 286] },
+      { name: 'head', parent: 'lean', pivot: [152, 286], tip: [152, 35] },
+    ],
+    skin: { head: ['head'], torso: ['lean'] },
+    root: [152, 417],
   }),
 } as const satisfies Readonly<Record<FramedView, Skeleton>>;

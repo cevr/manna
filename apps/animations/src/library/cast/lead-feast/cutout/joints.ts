@@ -26,4 +26,12 @@ export const JOINTS = {
     shoulderLeft: [470, 470],
     elbowLeft: [485, 620],
   },
+  // seated: his right arm raised as on single-1, its elbow out at the sleeve's
+  // lower corner; his left arm bent under the mantle, the hand resting on his knee
+  'single-9': {
+    shoulderRight: [180, 455],
+    elbowRight: [55, 545],
+    shoulderLeft: [468, 458],
+    elbowLeft: [505, 630],
+  },
 } as const satisfies Readonly<Record<string, Readonly<Record<string, Pt>>>>;
