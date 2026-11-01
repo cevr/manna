@@ -292,6 +292,17 @@ describe('the part sheet lay', () => {
     expect(rankOrder(near, far)).toBe(-1);
   });
 
+  test('an answer whose step went unread ranks below one whose step misses by a little', () => {
+    // feast-mother back, measured: a line read on 3 pairs against a line read on 9, stepping -7.87 against -0.57
+    const unread = measured({
+      step: [{ ...robeStep(-8.81, -0.13), pairs: 3, verdict: 'unverified' }],
+    });
+    const near = measured({ step: [robeStep(-7.87, -0.57)] });
+    expect(missedBars(unread)).toEqual(['step']);
+    expect(missedBars(near)).toEqual(['step']);
+    expect(rankOrder(near, unread)).toBe(-1);
+  });
+
   test('of two answers whose misses are the same size, the one that misses one bar more ranks below', () => {
     // the step 2.5 past its bar of 5 and the grain 0.25 past its bar of 0.5: each half its bar again
     const step = measured({ step: [robeStep(7.5, 0)] });

@@ -751,8 +751,10 @@ const outside = <A extends { readonly verdict: string }>(reads: ReadonlyArray<A>
  * allowance (seam 10 ΔE, drift 5 ΔE, chroma 3, grain 0.5, speck 0.04, step
  * 5 L*). The allowance is how far the bar lets a read stray from the kept
  * view, so bars of other units weigh alike: a read one allowance past its
- * bar weighs as one more missed bar. A miss with no size (a read too thin,
- * paint visible at rest, the view not recomposed) weighs 1.
+ * bar weighs as one more missed bar. A miss no read sizes (every read
+ * outside it too thin, paint visible at rest, the view not recomposed)
+ * counts as one allowance past, 2: a read near miss ranks ahead of it, a
+ * read far one behind it.
  */
 export const missesOf = (
   m: HiddenMeasures,
@@ -771,7 +773,9 @@ export const missesOf = (
           m.drift.deltaE <= BARS.driftDeltaE &&
           m.drift.chroma.every((c) => c.verdict === 'within'),
         [
-          pastBy(m.drift.deltaE - BARS.driftDeltaE, BARS.driftDeltaE) * Number(m.drift.px > 0),
+          ...[m.drift.deltaE]
+            .filter((d) => m.drift.px > 0 && d > BARS.driftDeltaE)
+            .map((d) => pastBy(d - BARS.driftDeltaE, BARS.driftDeltaE)),
           ...outside(m.drift.chroma).map((c) =>
             pastBy(c.kept.chroma - c.painted.chroma - BARS.chromaDrop, BARS.chromaDrop),
           ),
@@ -803,7 +807,10 @@ export const missesOf = (
       ['recompose', m.recomposeByteEqual, []],
     ] as const,
     ([, met]) => !met,
-  ).map(([bar, , past]) => ({ bar, weight: 1 + Math.max(0, ...past) }));
+  ).map(([bar, , past]) => ({
+    bar,
+    weight: 1 + Arr.match(past, { onEmpty: () => 1, onNonEmpty: (p) => Math.max(...p) }),
+  }));
 
 /** How an answer ranks, lower first: one that leaves a moving part unpainted after every one that paints them all, then by its misses' weight, then by seam. */
 const rankOf = (m: HiddenMeasures): readonly [number, number, number] => {
