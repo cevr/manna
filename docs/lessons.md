@@ -4673,3 +4673,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** The fine grain read leaves out every pixel darker than `OUTLINE_L`, L* 15, as an outline's ink, 0.2 L* under the darkest kept cloth the cast measures (15.2). A member whose cloth is shaded darker than the cutoff would lose that cloth from the read, and its grain would go unread.
 - **Cause:** The cutoff is a style assumption, that no cloth is shaded as dark as ink, measured on the cast as it stands.
 - **Guard:** skill: whether a new member's cloth is darker than the cutoff is known only when his kept sheet is measured. Carried by `.claude/skills/film/SKILL.md`: "Cloth darker than the cutoff drops out of the read, its cells unread: revisit the ink rule, never lower the cutoff to fit him."
+
+### fine-grain-tests-let-mutants-pass
+
+- **Date:** 2026-11-01
+- **Kind:** review
+- **Said:** "GRAIN_CELL 24 -> 4096 leaves all 20 lay tests green"
+- **Source:** cut-held/round-4-review.md T1, T2, T3
+- **Wrong:** Three mutants of the fine grain read left every lay test green: one cell the size of the whole part (`GRAIN_CELL` 4096), an outline cutoff of L* 16 that drops cloth at 15.2 to 15.9, and the kept cloth read with its outline ink in it.
+- **Cause:** The fixtures spread their grain over every cell, their darkest cloth lay at L* 16.6, and no case kept an outline in the cloth beside grainy paint.
+- **Guard:** code: `packages/film/src/tools/part-sheet-lay.test.ts` `fine grain in one cell among smooth cells misses the grain bar, though pooled over the part it is under the bar`, `packages/film/src/tools/part-sheet-lay.test.ts` `fine grain in cloth as dark as the darkest kept cloth misses the grain bar; smooth paint of it meets it`, `packages/film/src/tools/part-sheet-lay.test.ts` `fine grain painted beside a part's own outline in its kept cloth misses the grain bar`
