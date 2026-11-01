@@ -48,8 +48,8 @@ export const COVERAGE: CoverageManifest = {
       id: 'wave/clip-a',
       file: 'cutout/wave/clip/clip-a.mp4',
       bands: [
-        [0, 11],
-        [100, 123],
+        [0, 13],
+        [34, 123],
       ],
       expect: [['turnaround-front'], ['turnaround-front']],
       given: { first: 'turnaround-front' },
@@ -59,9 +59,10 @@ export const COVERAGE: CoverageManifest = {
     {
       id: 'cup/clip-a',
       file: 'cutout/cup/clip/clip-a.mp4',
+      // every frame's figure holds against both the first and the last frame, so each band is the whole clip
       bands: [
-        [0, 11],
-        [100, 123],
+        [0, 123],
+        [0, 123],
       ],
       expect: [['poses-poses-1'], ['poses-poses-1']],
       given: { first: 'poses-poses-1' },

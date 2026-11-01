@@ -1,0 +1,31 @@
+{
+  "endpoint": "minimax/h3-max/image-to-video",
+  "input": {
+    "prompt": "Flat 2D cut-paper cartoon animation on a static paper background. The woman stands still and slowly raises her right hand (on the left side of the picture), open, from her side up to shoulder height, then holds the pose. Only the arm moves; body, feet and head stay in place. Locked camera, no zoom, no pan, same flat colours and thick dark outline throughout.",
+    "prompt_expansion_mode": "disabled",
+    "duration": 5,
+    "resolution": "768P",
+    "seed": 7
+  },
+  "frames": {
+    "first": {
+      "path": "apps/animations/src/films/in-its-order/cast/feast-mother/cutout/wave/clip/clip-a.first.png",
+      "sha256": "d36d5a8a6d2a23d3d56f4d4a05ee35761b32551b3d7e243c8ed9cc9e9bdc4d0a"
+    }
+  },
+  "requestId": "01a1976d-b4a8-7951-b587-f348bf0fb596",
+  "made": "2026-11-01",
+  "usd": 0.1625,
+  "output": {
+    "width": 768,
+    "height": 992,
+    "fps": 24,
+    "frames": 124,
+    "sha256": "af290d4c5ea6ab81185826ccad411f2c5bcfd772255b9f51fc3bb5b3f040a3d1"
+  },
+  "map": {
+    "x0": -5.36,
+    "y0": 1.26,
+    "scale": 1.461
+  }
+}

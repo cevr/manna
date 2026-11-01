@@ -1,0 +1,31 @@
+{
+  "endpoint": "minimax/h3-max/image-to-video",
+  "input": {
+    "prompt": "Flat 2D cut-paper cartoon animation on a static paper background. The sower stands still and slowly reaches his right hand (on the left side of the picture) across his body into the seed bag at his left hip, then holds the pose with the hand in the bag. Only the arm moves; body, feet and head stay in place. Locked camera, no zoom, no pan, same flat colours and thick dark outline throughout.",
+    "prompt_expansion_mode": "disabled",
+    "duration": 5,
+    "resolution": "768P",
+    "seed": 7
+  },
+  "frames": {
+    "first": {
+      "path": "apps/animations/src/library/cast/sower/cutout/dip/clip/clip-a.first.png",
+      "sha256": "1c047b5bbdcfb6f4b16bf77270ac749a5ace1bae399537dc70e958540c96d48f"
+    }
+  },
+  "requestId": "01a1976d-b4a4-7811-b17e-ac388afaf5bf",
+  "made": "2026-11-01",
+  "usd": 0.1625,
+  "output": {
+    "width": 768,
+    "height": 992,
+    "fps": 24,
+    "frames": 124,
+    "sha256": "cb666e3de5850c24662412b001e24b99d8035dd8683f8c068f24e84dddaeb381"
+  },
+  "map": {
+    "x0": -5.07,
+    "y0": 1.22,
+    "scale": 1.4618
+  }
+}

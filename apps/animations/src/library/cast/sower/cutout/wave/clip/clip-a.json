@@ -1,0 +1,31 @@
+{
+  "endpoint": "minimax/h3-max/image-to-video",
+  "input": {
+    "prompt": "Flat 2D cut-paper cartoon animation on a static paper background. The sower stands still and slowly raises his right hand (on the left side of the picture), open, from his side up to shoulder height, then holds the pose. Only the arm moves; body, feet and head stay in place. Locked camera, no zoom, no pan, same flat colours and thick dark outline throughout.",
+    "prompt_expansion_mode": "disabled",
+    "duration": 5,
+    "resolution": "768P",
+    "seed": 7
+  },
+  "frames": {
+    "first": {
+      "path": "apps/animations/src/library/cast/sower/cutout/wave/clip/clip-a.first.png",
+      "sha256": "05b0072479806b34aca8427c22c86eda202f082161ebe0f70df7a747cafaea1e"
+    }
+  },
+  "requestId": "01a1976d-b4a5-79f2-8a69-64c3a96c69b6",
+  "made": "2026-11-01",
+  "usd": 0.1625,
+  "output": {
+    "width": 768,
+    "height": 992,
+    "fps": 24,
+    "frames": 124,
+    "sha256": "ea6e3166ebf3b4991d1f28caf57f1e5c230924f606ba12076b07f140ca360d7e"
+  },
+  "map": {
+    "x0": -6.5,
+    "y0": -0.29,
+    "scale": 1.4634
+  }
+}

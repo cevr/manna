@@ -1,0 +1,31 @@
+{
+  "endpoint": "minimax/h3-max/image-to-video",
+  "input": {
+    "prompt": "Flat 2D cut-paper cartoon animation on a static paper background. The woman holding the baby stands still and slowly lowers the small cup in her left hand (on the right side of the picture) from the baby's mouth down to her side, then holds the pose. Only the arm with the cup moves; body, baby, feet and head stay in place. Locked camera, no zoom, no pan, same flat colours and thick dark outline throughout.",
+    "prompt_expansion_mode": "disabled",
+    "duration": 5,
+    "resolution": "768P",
+    "seed": 7
+  },
+  "frames": {
+    "first": {
+      "path": "apps/animations/src/films/in-its-order/cast/feast-mother/cutout/cup/clip/clip-a.first.png",
+      "sha256": "7d31cd81bf63a7b2f64dac748f0128ed622e745d20cd7770494d62a2a4702e67"
+    }
+  },
+  "requestId": "01a1976d-b4a6-7bb0-b3b0-e45ee0970e95",
+  "made": "2026-11-01",
+  "usd": 0.1625,
+  "output": {
+    "width": 768,
+    "height": 992,
+    "fps": 24,
+    "frames": 124,
+    "sha256": "723754bec972296f150deaab15498c6d5af7c070b755ecb8e5171a39067a713e"
+  },
+  "map": {
+    "x0": -6.56,
+    "y0": 0.68,
+    "scale": 1.4619
+  }
+}

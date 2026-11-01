@@ -49,8 +49,8 @@ export const COVERAGE: CoverageManifest = {
       id: 'sow/clip-a',
       file: 'cutout/sow/clip/clip-a.mp4',
       bands: [
-        [0, 11],
-        [100, 123],
+        [0, 2],
+        [110, 123],
       ],
       expect: [['poses-poses-3'], ['poses-poses-1']],
       given: { first: 'poses-poses-3', last: 'poses-poses-1' },
@@ -61,8 +61,8 @@ export const COVERAGE: CoverageManifest = {
       id: 'dip/clip-a',
       file: 'cutout/dip/clip/clip-a.mp4',
       bands: [
-        [0, 11],
-        [100, 123],
+        [0, 23],
+        [34, 123],
       ],
       expect: [['turnaround-threeQuarterLeft'], ['poses-poses-3']],
       given: { first: 'turnaround-threeQuarterLeft' },
@@ -73,8 +73,8 @@ export const COVERAGE: CoverageManifest = {
       id: 'wave/clip-a',
       file: 'cutout/wave/clip/clip-a.mp4',
       bands: [
-        [0, 11],
-        [100, 123],
+        [0, 19],
+        [38, 123],
       ],
       expect: [
         ['turnaround-front', 'poses-poses-4'],
