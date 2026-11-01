@@ -18,6 +18,7 @@ import {
   Option,
   Stream,
 } from 'effect';
+import type * as Atom from 'effect/reactivity/Atom';
 import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
 import { act, type ReactNode, useEffect, useState } from 'react';
 import { View } from 'react-native';
@@ -28,6 +29,8 @@ import { endSpace } from '~/reader/end';
 import { ListEnd } from '~/reader/ListEnd';
 import { HymnScreen } from '~/reader/HymnScreen';
 import { StackHeader } from '~/test/stack';
+import { perform } from '~/test/props';
+import { settings } from '~/store';
 import { audioUrl } from '~/remote';
 import { theme } from '~/theme';
 import { book } from '~/follow/book';
@@ -309,6 +312,10 @@ const mount = (
     press,
     /** A command from elsewhere in the app: another hymn's page, or the lock screen. */
     send: (command: Command) => act(() => registry.set(player.send, command)),
+    /** An atom's value in the page's registry: a setting as the page reads it. */
+    get: <A,>(atom: Atom.Atom<A>) => registry.get(atom),
+    /** An atom set from outside the page: a setting the reader set elsewhere. */
+    set: <R, W>(atom: Atom.Writable<R, W>, value: W) => act(() => registry.set(atom, value)),
     text: () => host.textContent,
     /** The player's state now. */
     player: () => registry.get(player.state),
@@ -974,6 +981,92 @@ describe('the hymn page with the bottom bar', () => {
       // The bar now plays the page's own hymn, which the page names.
       expect(bar.querySelector('[aria-label="Open player"]')?.textContent).toBe('');
       expect(bar.querySelector('[aria-label="Key"]')).not.toBeNull();
+    }),
+  );
+});
+
+describe('the tempo dial in the full player', () => {
+  /** Hymn 100's and 101's tempos, and Sound, set for a test and put back as it ends. */
+  const keeping = (page: ReturnType<typeof mount>, sound: boolean) => {
+    const was = page.get(settings.sound);
+    page.set(settings.tempo(100), 100);
+    page.set(settings.tempo(101), 100);
+    page.set(settings.sound, sound);
+    return {
+      [Symbol.dispose]: () => {
+        page.set(settings.tempo(100), 100);
+        page.set(settings.sound, was);
+      },
+    };
+  };
+  const dialOf = (page: ReturnType<typeof mount>) =>
+    Option.getOrThrow(page.find('[data-testid="dial-tempo"]'));
+
+  it.live('holds hymn 100’s Tempo dial at 100%, and a step down keeps tempo(100) = 95', () =>
+    Effect.sync(() => {
+      using page = mount();
+      using _kept = keeping(page, false);
+      const dial = dialOf(page);
+      expect({
+        role: dial.getAttribute('role'),
+        label: dial.getAttribute('aria-label'),
+        said: dial.getAttribute('aria-valuetext'),
+      }).toEqual({ role: 'slider', label: 'Tempo', said: '100%' });
+
+      perform(dial, 'decrement');
+      expect(page.get(settings.tempo(100))).toBe(95);
+      expect(dialOf(page).getAttribute('aria-valuetext')).toBe('95%');
+      // Kept for hymn 100 alone.
+      expect(page.get(settings.tempo(101))).toBe(100);
+
+      // A turn past the fast end stays at the end: the dial stops there.
+      page.set(settings.tempo(100), 150);
+      perform(dialOf(page), 'increment');
+      expect(page.get(settings.tempo(100))).toBe(150);
+      expect(dialOf(page).getAttribute('aria-valuetext')).toBe('150%');
+    }),
+  );
+
+  it.live('stands under the position bar, before the reader’s settings', () =>
+    Effect.sync(() => {
+      using page = mount();
+      using _kept = keeping(page, false);
+      const before = (first: Element, second: Element) =>
+        Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING);
+      const size = Option.getOrThrow(page.find('[role="slider"][aria-label="Text size"]'));
+      const chords = Option.getOrThrow(page.find('[aria-label="Chord settings"]'));
+      expect({
+        underPosition: before(page.bar(), dialOf(page)),
+        beforeChords: before(dialOf(page), chords),
+        beforeReading: before(dialOf(page), size),
+      }).toEqual({ underPosition: true, beforeChords: true, beforeReading: true });
+    }),
+  );
+
+  it.live('says the recording sets the pace under it with Sound on, and not with Sound off', () =>
+    Effect.sync(() => {
+      const note = 'With Sound on, the recording sets the pace.';
+      using page = mount();
+      using _kept = keeping(page, true);
+      expect(page.text()).toContain(note);
+      page.set(settings.sound, false);
+      expect(page.text()).not.toContain(note);
+      page.set(settings.sound, true);
+      expect(page.text()).toContain(note);
+    }),
+  );
+
+  it.live('leaves the bar on hymn 100’s page as it was: Key, the opener, Sound, Play', () =>
+    Effect.sync(() => {
+      using page = mount(route(100));
+      using _kept = keeping(page, false);
+      const bar = Option.getOrThrow(page.find('[aria-label="Player"]'));
+      expect(
+        [...bar.querySelectorAll('[role="button"]')].map((button) =>
+          button.getAttribute('aria-label'),
+        ),
+      ).toEqual(['Key', 'Open player', 'Sound', 'Play hymn 100']);
+      expect(page.all('[aria-label="Tempo"]')).toHaveLength(0);
     }),
   );
 });

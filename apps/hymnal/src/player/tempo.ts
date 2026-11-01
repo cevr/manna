@@ -27,6 +27,19 @@ export const Tempo = Schema.Int.check(
 );
 export type Tempo = typeof Tempo.Type;
 
+/** The dial's read-out: `<tempo>%`, as `Text size` reads its share. */
+export const saidOf = (tempo: number): string => `${tempo}%`;
+
+/** Where `tempo` sits among the stops; a value off them sits at 100. */
+export const stopIndexOf = (tempo: number): number => {
+  if (!Schema.is(Tempo)(tempo)) return STOPS.indexOf(DEFAULT_TEMPO);
+  return STOPS.indexOf(tempo);
+};
+
+/** The stop at place `n`, held to the dial's ends: a turn one past an end stays at it. */
+export const stopAt = (n: number): number =>
+  STOPS[Math.min(Math.max(n, 0), STOPS.length - 1)] ?? DEFAULT_TEMPO;
+
 /** Ms of the hymn for each ms of the host's clock at `tempo`; a value off the stops runs at 1. */
 export const rateOf = (tempo: number): number => {
   if (!Schema.is(Tempo)(tempo)) return 1;
