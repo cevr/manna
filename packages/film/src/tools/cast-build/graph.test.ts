@@ -17,8 +17,9 @@ import {
   Schema,
 } from 'effect';
 import { TestClock } from 'effect/testing';
-import { memoryFileSystem, memoryLocks, text } from '../host/testing.ts';
+import { memoryFileSystem, memoryLocks, memoryManifestLock, text } from '../host/testing.ts';
 import { ContentStore, Processes } from '../content-store.ts';
+import { ManifestLock } from '../manifest-lock.ts';
 import {
   type Stage,
   type StageFailed,
@@ -64,6 +65,25 @@ const Marks = Schema.fromJsonString(
 
 const servicesOver = (files: Map<string, Uint8Array>) =>
   ContentStore.layer.pipe(Layer.provideMerge([memoryFileSystem(files), Path.layer, memoryLocks]));
+
+/** `servicesOver`, its manifest locks counting each take in `takes`. */
+const countingTakes = (files: Map<string, Uint8Array>, takes: { n: number }) =>
+  ContentStore.layer.pipe(
+    Layer.provideMerge([
+      memoryFileSystem(files),
+      Path.layer,
+      Layer.sync(ManifestLock, () => {
+        const locks = memoryManifestLock();
+        return ManifestLock.of({
+          take: (file) =>
+            Effect.andThen(
+              Effect.sync(() => takes.n++),
+              locks.take(file),
+            ),
+        });
+      }),
+    ]),
+  );
 
 /**
  * drawing (reads /in/view.png) → parts (its bytes' length, so a same-length
@@ -319,7 +339,7 @@ describe('the cast build graph', () => {
     }).pipe(Effect.provide(servicesOver(files)));
   });
 
-  it.live(
+  it.effect(
     'a stage runs outside the lock: a plan reads meanwhile, and a second build waits on it',
     () => {
       const busy = Deferred.makeUnsafe<boolean>();
@@ -334,6 +354,7 @@ describe('the cast build graph', () => {
         yield* Deferred.await(busy);
         yield* Deferred.succeed(slow.release, true);
         expect(statesOf(yield* Fiber.join(first))).toEqual({ train: 'ran' });
+        yield* TestClock.adjust('5 seconds');
         expect(statesOf(yield* Fiber.join(second))).toEqual({ train: 'cached' });
         expect(slow.runs()).toBe(1);
       }).pipe(Effect.provide(Layer.mergeAll(servicesOver(seeded()), busyLogged(busy))));
@@ -370,11 +391,38 @@ describe('the cast build graph', () => {
       expect(slow.runs()).toBe(1);
       yield* Deferred.succeed(slow.release, true);
       expect(statesOf(yield* Fiber.join(first))).toEqual({ train: 'ran' });
-      yield* TestClock.adjust('1 second');
+      yield* TestClock.adjust('5 seconds');
       expect(statesOf(yield* Fiber.join(waiting))).toEqual({ train: 'cached' });
       expect(slow.runs()).toBe(1);
     }).pipe(Effect.provide(servicesOver(files)));
   });
+
+  it.effect(
+    "a build waiting on another build's run decides again every five seconds once it has waited a while",
+    () => {
+      const takes = { n: 0 };
+      return Effect.gen(function* () {
+        const slow = yield* slowTrain;
+        const first = yield* Effect.forkChild(buildGraph(slow.stages, options()).pipe(onHost('a')));
+        yield* Deferred.await(slow.started);
+        const waiting = yield* Effect.forkChild(
+          buildGraph(slow.stages, options()).pipe(onHost('a')),
+        );
+        yield* TestClock.adjust('1 minute');
+        takes.n = 0;
+        yield* TestClock.adjust('10 minutes');
+        // each decision takes the manifest's lock once, as does each of the first build's
+        // heartbeats: 120 decisions five seconds apart and 10 beats a minute apart
+        expect(takes.n).toBeGreaterThanOrEqual(128);
+        expect(takes.n).toBeLessThanOrEqual(132);
+        yield* Deferred.succeed(slow.release, true);
+        expect(statesOf(yield* Fiber.join(first))).toEqual({ train: 'ran' });
+        yield* TestClock.adjust('5 seconds');
+        expect(statesOf(yield* Fiber.join(waiting))).toEqual({ train: 'cached' });
+        expect(slow.runs()).toBe(1);
+      }).pipe(Effect.provide(countingTakes(seeded(), takes)));
+    },
+  );
 
   it.effect(
     "another host's mark whose heartbeat stopped frees its key five minutes after its last beat",
@@ -428,7 +476,7 @@ describe('the cast build graph', () => {
         expect(slow.runs()).toBe(1);
         yield* Deferred.succeed(slow.release, true);
         expect(statesOf(yield* Fiber.join(first))).toEqual({ train: 'ran' });
-        yield* TestClock.adjust('1 second');
+        yield* TestClock.adjust('5 seconds');
         expect(statesOf(yield* Fiber.join(waiting))).toEqual({ train: 'cached' });
         expect(slow.runs()).toBe(1);
       }).pipe(Effect.provide(servicesOver(files)));

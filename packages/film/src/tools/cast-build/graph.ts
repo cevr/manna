@@ -26,8 +26,9 @@
 // reads the manifest while a 29 min train runs. The decision to run marks the
 // key as running (by build, pid, host, start and heartbeat); the build renews
 // the heartbeat every `HEARTBEAT` while the stage runs. A second build that
-// finds a live mark waits and decides again, so two builds never run one
-// stage. A run that dies lets its mark go; a mark whose process is gone on
+// finds a live mark waits and decides again, sooner at first and then every
+// `BUSY_MOST` (the run it waits on may take an hour), so two builds never run
+// one stage. A run that dies lets its mark go; a mark whose process is gone on
 // this host, or from another host that this build has read unchanged for
 // `RUNNING_LEASE_MS` of its own clock, is cleared and taken over. A build
 // records what it ran only while its mark still holds the key (fencing): one
@@ -288,8 +289,15 @@ const checkOrder = <R>(stages: ReadonlyArray<Stage<R>>) => {
   return Option.none<string>();
 };
 
-/** How long a build waits before it decides again on a key another build runs. */
-const BUSY_SPACING = '100 millis';
+/** How long a build waits before it first decides again on a key another build runs. */
+const BUSY_FIRST = '100 millis';
+
+/**
+ * The longest a build waits between its decisions on a key another build
+ * runs. Each decision takes the manifest's lock, which the running build's
+ * heartbeat and record also take, so a long wait reads it at this pace.
+ */
+const BUSY_MOST = '5 seconds';
 
 /** How often a build renews the marks of the stages it runs. */
 const HEARTBEAT_MS = 60 * 1000;
@@ -346,9 +354,12 @@ type Decision =
   | { readonly _tag: 'run' }
   | { readonly _tag: 'promote'; readonly output: string; readonly run: string };
 
-/** A busy decision's poll: again every `BUSY_SPACING` until it is not busy. */
+/**
+ * A busy decision's poll, until it is not busy: again after `BUSY_FIRST`,
+ * then after twice the last wait, at most `BUSY_MOST`.
+ */
 const BUSY = {
-  schedule: Schedule.spaced(BUSY_SPACING),
+  schedule: Schedule.min([Schedule.exponential(BUSY_FIRST), Schedule.spaced(BUSY_MOST)]),
   until: (decision: Decision) => decision._tag !== 'busy',
 };
 
@@ -816,11 +827,11 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
       }
     }
     if (decision._tag === 'busy') {
-      // another build's run: decide again every BUSY_SPACING until its output or its key is free
+      // another build's run: decide again (BUSY) until its output or its key is free
       yield* Effect.logInfo(
         `cast.build.busy stage=${stage.id} reason="another build runs it; waiting on its output"`,
       );
-      decision = yield* decideOver(spent).pipe(Effect.delay(BUSY_SPACING), Effect.repeat(BUSY));
+      decision = yield* decideOver(spent).pipe(Effect.repeat(BUSY), Effect.delay(BUSY_FIRST));
     }
     const outcome = yield* settle(stage, key, start, decision);
     switch (outcome._tag) {
