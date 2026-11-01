@@ -68,12 +68,12 @@ type Paint = (x: number, y: number) => Rgb;
 type Still = { readonly name: string; readonly polygon: ReadonlyArray<readonly [number, number]> };
 
 /**
- * A torso of `cloth` (flat olive unless given), in a picture `h` px tall
- * (`W` unless given), cut into the `still` parts (one torso unless given),
- * with a cream arm in `arm` in front of it that moves, and okra's answer
- * laid on it: the view with the arm's place painted, the cloth at its edge
- * and `inner` more than `margin` px in from it (2 unless given, where the
- * seam never reads).
+ * A torso of `cloth` (flat olive unless given) on `paper` (flat unless
+ * given), in a picture `h` px tall (`W` unless given), cut into the `still`
+ * parts (one torso unless given), with a cream arm in `arm` in front of it
+ * that moves, and okra's answer laid on it: the view with the arm's place
+ * painted, the cloth or paper at its edge and `inner` more than `margin` px
+ * in from it (2 unless given, where the seam never reads).
  */
 const layOn =
   (
@@ -81,14 +81,21 @@ const layOn =
     {
       h = W,
       cloth = (): Rgb => OLIVE,
+      paper = (): Rgb => PAPER,
       margin = 2,
       still = [{ name: 'torso', polygon: corners(torsoOf(h)) }],
-    }: { h?: number; cloth?: Paint; margin?: number; still?: ReadonlyArray<Still> } = {},
+    }: {
+      h?: number;
+      cloth?: Paint;
+      paper?: Paint;
+      margin?: number;
+      still?: ReadonlyArray<Still>;
+    } = {},
   ) =>
   (inner: Paint) => {
     const body = torsoOf(h);
     const torso = (x: number, y: number) =>
-      Bool.match(inside(body, x, y), { onTrue: () => cloth(x, y), onFalse: () => PAPER });
+      Bool.match(inside(body, x, y), { onTrue: () => cloth(x, y), onFalse: () => paper(x, y) });
     const view = rasterOf(
       (x, y) => Bool.match(inside(arm, x, y), { onTrue: () => CREAM, onFalse: () => torso(x, y) }),
       W,
@@ -109,7 +116,7 @@ const layOn =
       h,
     );
     const figure = Uint8Array.from({ length: W * h }, (_, i) =>
-      Number(inside(body, i % W, Math.floor(i / W))),
+      Number(inside(body, i % W, Math.floor(i / W)) || inside(arm, i % W, Math.floor(i / W))),
     );
     return measuresOf(view, cut, figure, answer);
   };
@@ -284,6 +291,35 @@ const fineFleck = (x: number, y: number): Rgb =>
   Bool.match((x + 5 * y) % 14 === 0, { onTrue: () => FLECK, onFalse: () => OLIVE });
 /** Fine grain painted beside a part's own outline: a test and the golden digests read it. */
 const grainyBeside = layBeside(fineFleck);
+
+/** A fixed scatter of each channel of `c` up to `k` either way, pixel by pixel: grain with no seed to keep. */
+const grained =
+  (c: Rgb, k: number): Paint =>
+  (x, y) => {
+    const at = (ch: number) => {
+      const scatter =
+        (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663) ^ Math.imul(ch + 1, 83492791)) >>>
+        0;
+      return Math.max(0, Math.min(255, (c[ch] ?? 0) + (scatter % (2 * k + 1)) - k));
+    };
+    return [at(0), at(1), at(2)];
+  };
+/** The arm across the torso's left edge, half on the paper. */
+const ACROSS: Box = { x0: 2, y0: 8, x1: 30, y1: 40 };
+/**
+ * For the golden digests only, the three reads the other lays never decide:
+ * a torso whose cloth runs more than the 24 px lattice reach past the paint;
+ * paint of 2 px cream stripes every 4 px, so a speck at its edge is read
+ * against an even count of neighbours, half cream; and the arm across the
+ * torso's edge onto paper grained 16 either way, the paper under it grained
+ * 40, so the paper's spread, not its floor, sets how far the ground reaches.
+ */
+const acrossTheEdge = layOn(ACROSS, { h: 72, paper: grained(PAPER, 16) })((x, y) =>
+  Bool.match(x < torsoOf(72).x0, {
+    onTrue: () => grained(PAPER, 40)(x, y),
+    onFalse: () => Bool.match(x % 4 < 2, { onTrue: () => CREAM, onFalse: () => OLIVE }),
+  }),
+);
 
 describe('the part sheet lay', () => {
   test('paint flecked with the kept sleeve misses the speck bar; smooth paint meets it', () => {
@@ -521,11 +557,14 @@ describe('the part sheet lay', () => {
 
   test('the lays the tests above read are made to the bit as recorded', () => {
     // a digest of each whole lay (fit, measures, the sheet's every byte), so a faster lay is held to the same output
-    expect([smoothArm, fleckedArm, grainyBeside, steppedTunic].map(digestOf)).toEqual([
+    expect(
+      [smoothArm, fleckedArm, grainyBeside, steppedTunic, acrossTheEdge].map(digestOf),
+    ).toEqual([
       '6b9f3fa4127e079a',
       'e165d6fe33336d3e',
       '9f34941d23116793',
       'caba15530cc12b3d',
+      'f05487e14884fdc7',
     ]);
   });
 
