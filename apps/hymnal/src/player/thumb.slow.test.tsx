@@ -29,7 +29,7 @@ import { Shown } from '~/reader/screen';
 import { StackHeader } from '~/test/stack';
 
 import { fakeDevice } from '../test/device';
-import { drag, gestureOf } from '../test/gesture';
+import { drag, gestureOf, touchDown, touchUp } from '../test/gesture';
 import { animations, holdAnimations, landAnimations } from '../test/reanimated';
 import { params, routed } from '../test/one';
 import { actionsOf, perform, propsWith } from '../test/props';
@@ -624,6 +624,34 @@ describe('bar J’s spring and seeker', () => {
       // A swipe that wanders a little sideways on its way up is still the swipe.
       expect(dragged('seek-pan', { x: 150, dx: 6, dy: -60 })).toEqual(Option.some('bar-swipe'));
       expect(page.device.sought).toEqual([]);
+    }),
+  );
+
+  it.live('jumps to the place a tap on the seeker lands on, and opens no sheet', () =>
+    Effect.gen(function* () {
+      using page = mount(route(100));
+      page.press('Play hymn 100');
+      page.device.now = { state: 'playing', positionMs: 20_000, durationMs: 151_000 };
+      yield* page.until((state) => Player.$is('Playing')(state) && state.at === 20);
+      const seek = page.get('[role="slider"][aria-label="Seek"]');
+      act(() =>
+        (
+          propsWith(seek, 'onLayout')['onLayout'] as (event: {
+            readonly nativeEvent: { readonly layout: Record<string, number> };
+          }) => void
+        )({
+          nativeEvent: { layout: { x: 0, y: 0, width: 300, height: 32 } },
+        }),
+      );
+      // A still tap at x 150: the seeker's pan and the bar's swipe begin and fail, and the tap lands.
+      act(() => touchDown('seek-tap', { x: 150, y: 16 }));
+      act(() => touchUp('seek-tap', { x: 150, y: 16 }, 'pans-first'));
+      // The track runs 286 points between the knob's half insets: x 150 is half of 2:31.
+      expect(page.device.sought).toHaveLength(1);
+      expect(Math.abs((page.device.sought[0] ?? 0) - 75_500)).toBeLessThan(1_000);
+      expect(seek.getAttribute('aria-valuetext')).toBe('1:15 of 2:31');
+      expect(routed).toEqual([]);
+      expect(Option.isSome(page.find('[aria-label="Pause hymn 100"]'))).toBe(true);
     }),
   );
 

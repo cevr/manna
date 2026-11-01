@@ -11,7 +11,8 @@
  * a press (`press` to `lift`, or to `drop`) is a drag, and only that
  * pointer ends it. A step the reader asks for at once (a key's, `step`, or a
  * screen reader's, a `move` with no press open) is sent at once, inside a
- * press or not; inside one, the drag goes on from it. iOS's and Android's
+ * press or not; inside one, the drag goes on from it. iOS's bars play a tap
+ * as a press, a move and a lift of their one pointer. iOS's and Android's
  * sliders tell no press: each move is a drag (`change`), let go once it has
  * rested (`useCommitAtRest`).
  */
@@ -98,13 +99,28 @@ export const useScrub = (
     };
   }, [sent]);
   const max = Option.getOrElse(length, () => 0);
+  /** Where the bar rests with no drag: the place it sent, else playback. */
+  const resting = Option.getOrElse(sent, () => Math.min(Math.max(at, 0), max));
   const value = Hand.$match(hand, {
     Moving: ({ to }) => to,
-    Pressed: () => Option.getOrElse(sent, () => Math.min(Math.max(at, 0), max)),
-    Free: () => Option.getOrElse(sent, () => Math.min(Math.max(at, 0), max)),
+    Pressed: () => resting,
+    Free: () => resting,
   });
-  const shown = useRef(value);
-  shown.current = value;
+  // The resting place as the last event left it: a send moves it before the bar draws again.
+  const rest = useRef(resting);
+  rest.current = resting;
+  /**
+   * The place the bar shows as the last event left it. Events that come
+   * before the bar draws again read this: a pan's drop and a tap that lands
+   * in the same batch start the tap's drag from the resting place, not from
+   * the dropped drag's.
+   */
+  const shown = () =>
+    Hand.$match(now.current, {
+      Moving: ({ to }) => to,
+      Pressed: () => rest.current,
+      Free: () => rest.current,
+    });
 
   const become = (next: Hand) => {
     now.current = next;
@@ -113,6 +129,7 @@ export const useScrub = (
   /** Seek to `to`, and hold its place until the player reaches it. */
   const send = (to: number) => {
     onSeek(to);
+    rest.current = to;
     setSent(Option.some(to));
   };
   /** The thumb is at `to`, dragged from where the bar showed as the drag began. */
@@ -122,15 +139,15 @@ export const useScrub = (
         by: holder(now.current),
         from: Hand.$match(now.current, {
           Moving: ({ from }) => from,
-          Pressed: () => shown.current,
-          Free: () => shown.current,
+          Pressed: () => rest.current,
+          Free: () => rest.current,
         }),
         to,
       }),
     );
   /** A step sent at once; a drag under way goes on from it. */
   const step = (to: number) => {
-    if (second(to) === second(shown.current)) return;
+    if (second(to) === second(shown())) return;
     send(to);
     const was = now.current;
     if (Hand.$is('Moving')(was)) become(Hand.Moving({ by: was.by, from: to, to }));
