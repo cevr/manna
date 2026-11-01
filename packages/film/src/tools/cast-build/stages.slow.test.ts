@@ -4,7 +4,7 @@
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, FileSystem, Layer, Path } from 'effect';
+import { Effect, FileSystem, Layer, Path, Sink, Stream } from 'effect';
 import { ChildProcessSpawner } from 'effect/process';
 import { PuppetImagesBun } from '../../puppet/images-bun.ts';
 import { ContentStore } from '../content-store.ts';
@@ -84,6 +84,139 @@ const filesOf = (stages: ReadonlyArray<Stage<unknown>>, id: string) =>
 
 const allComplete = Object.fromEntries(COVERAGE.entries.map((e) => [e.id, complete]));
 
+/** The series lead, whose front's part sheet is kept with its okra answers. */
+const LEAD_FEAST = `${import.meta.dir}/../../../../../apps/animations/src/library/cast/lead-feast`;
+
+/** The front's kept okra answer: what the fake `okra image` below draws. */
+const ANSWER = `${LEAD_FEAST}/cutout/sheets/front/okra/answer-1.png`;
+
+const FRONT: Coverage['entries'][number] = {
+  id: 'turnaround-front',
+  cut: 'puppet',
+  file: 'cast-sheet/views/front.png',
+  for: [],
+};
+const PARTS = 'parts:turnaround-front@lead-feast';
+
+/**
+ * The lead as the film's own cast member, in a scratch films folder: his
+ * sheet and cutout code linked to the library's, his front's part sheet a
+ * copy the parts command may write.
+ */
+const leadFeastIn = Effect.gen(function* () {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const root = yield* fs.makeTempDirectoryScoped();
+  const films = path.join(root, 'films');
+  const member = path.join(films, 'in-its-order', 'cast', 'lead-feast');
+  const sheet = path.join(member, 'cutout', 'sheets', 'front');
+  yield* fs.makeDirectory(path.join(films, 'in-its-order', 'scenes'), { recursive: true });
+  yield* fs.writeFileString(path.join(films, 'in-its-order', 'scenes', 'index.ts'), 'export {};\n');
+  yield* fs.makeDirectory(path.join(member, 'cutout', 'sheets'), { recursive: true });
+  for (const name of ['cast-sheet', 'rig'])
+    yield* fs.symlink(path.join(LEAD_FEAST, name), path.join(member, name));
+  for (const name of yield* fs.readDirectory(path.join(LEAD_FEAST, 'cutout')))
+    if (name !== 'sheets')
+      yield* fs.symlink(path.join(LEAD_FEAST, 'cutout', name), path.join(member, 'cutout', name));
+  yield* fs.copy(path.join(LEAD_FEAST, 'cutout', 'sheets', 'front'), sheet);
+  return { films, member, sheet, cache: path.join(root, 'cache') };
+});
+
+/**
+ * `okra image` answering from the kept answer: each process asked for is
+ * recorded (program and arguments); okra's copies the answer to its `-o`
+ * path and exits 0, any other dies.
+ */
+const okraAnswering = (fs: FileSystem.FileSystem, spawned: Array<ReadonlyArray<string>>) =>
+  ChildProcessSpawner.make((command) => {
+    if (command._tag !== 'StandardCommand') return Effect.die('no piped process in this test');
+    spawned.push([command.command, ...command.args]);
+    if (command.command !== 'okra') return Effect.die(`no ${command.command} in this test`);
+    const out = command.args[command.args.indexOf('-o') + 1] ?? '/nonexistent/loop-probe-x';
+    return fs.copyFile(ANSWER, out).pipe(
+      Effect.orDie,
+      Effect.as(
+        ChildProcessSpawner.makeHandle({
+          pid: ChildProcessSpawner.ProcessId(0),
+          exitCode: Effect.succeed(ChildProcessSpawner.ExitCode(0)),
+          isRunning: Effect.succeed(false),
+          kill: () => Effect.void,
+          stdin: Sink.drain,
+          stdout: Stream.empty,
+          stderr: Stream.empty,
+          all: Stream.empty,
+          getInputFd: () => Sink.drain,
+          getOutputFd: () => Stream.empty,
+          unref: Effect.succeed(Effect.void),
+        }),
+      ),
+    );
+  });
+
+type Scratch = Effect.Success<typeof leadFeastIn>;
+
+/** What the parts stage builds on beside its films folder and processes: no page and no critique. */
+const partsLayer = Layer.mergeAll(
+  ContentStore.layer.pipe(Layer.provide(memoryLocks)),
+  PuppetImagesBun,
+  Layer.succeed(Pages, Pages.of({ open: () => Effect.die('no page in this test') })),
+  Layer.succeed(
+    Critic,
+    Critic.of({
+      critique: () => Effect.die('no critique in this test'),
+      start: () => Effect.die('no critique in this test'),
+      job: () => Effect.die('no critique in this test'),
+      critiqueSheet: () => Effect.die('no critique in this test'),
+    }),
+  ),
+).pipe(Layer.provideMerge(BunServices.layer));
+
+/**
+ * `body` over the lead in a scratch films folder: `run` builds his front's
+ * drawing and parts under a spend setting and answers the parts stage's
+ * state and the okra calls the build counted; `spawned` holds every process
+ * asked for.
+ */
+const partsOver = <E>(
+  body: (over: {
+    readonly at: Scratch;
+    readonly run: (spend: ReadonlySet<'okra'>) => Effect.Effect<{ parts?: string; okra: number }>;
+    readonly spawned: ReadonlyArray<ReadonlyArray<string>>;
+  }) => Effect.Effect<void, E, FileSystem.FileSystem>,
+) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const at = yield* leadFeastIn;
+    const spawned: Array<ReadonlyArray<string>> = [];
+    const services = Layer.merge(
+      FilmFolder.layer(at.films),
+      Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, okraAnswering(fs, spawned)),
+    );
+    const context = yield* Effect.context<Layer.Success<typeof partsLayer>>();
+    const run = (spend: ReadonlySet<'okra'>) =>
+      Effect.gen(function* () {
+        const stages = (yield* memberStages({
+          film: 'in-its-order' as never,
+          member: 'lead-feast',
+          memberDir: at.member,
+          libraryPuppets: `${at.member}/library-puppets.ts`,
+          coverage: { member: 'lead-feast', entries: [FRONT] },
+          facts: { [FRONT.id]: complete },
+        })).filter((s) => [`drawing:${FRONT.id}@lead-feast`, PARTS].includes(s.id));
+        const report = yield* buildGraph(stages, {
+          cache: at.cache,
+          plan: false,
+          touch: [],
+          spend,
+        });
+        return {
+          parts: report.stages.find((s) => s.id === PARTS)?.state,
+          okra: report.okraCalls,
+        };
+      }).pipe(Effect.provide(services), Effect.provide(context), Effect.orDie);
+    yield* body({ at, run, spawned });
+  }).pipe(Effect.scoped, Effect.provide(partsLayer));
+
 describe('memberStages', () => {
   it.effect('a fitted entry’s fit reads its fitted pose and held drawing', () =>
     Effect.gen(function* () {
@@ -130,60 +263,44 @@ describe('memberStages', () => {
     }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
 
-  it.effect(
-    'the parts stage calls no okra without --spend okra, and only its spend gate does',
-    () => {
-      const spawned: Array<string> = [];
-      // every process the parts command could start, `okra image` first among them, is recorded and refused
-      const spawner = ChildProcessSpawner.make((command) => {
-        if (command._tag === 'StandardCommand') spawned.push(command.command);
-        return Effect.die(`no process in this test: ${String(command)}`);
-      });
-      return Effect.gen(function* () {
-        const fs = yield* FileSystem.FileSystem;
-        const dir = yield* memberIn([]);
-        yield* fs.makeDirectory(`${dir}/cast-sheet/views`, { recursive: true });
-        yield* fs.writeFileString(`${dir}/cast-sheet/views/front.png`, 'png');
-        const front = (yield* stagesOf(dir, allComplete)).filter((s) =>
-          ['drawing:turnaround-front@fake', 'parts:turnaround-front@fake'].includes(s.id),
-        );
-        const options = { cache: `${dir}/cache`, plan: false, touch: [] };
-        const held = yield* buildGraph(front, { ...options, spend: new Set() });
-        expect(held.stages.map((s) => [s.id, s.state])).toEqual([
-          ['drawing:turnaround-front@fake', 'ran'],
-          ['parts:turnaround-front@fake', 'waiting-spend'],
-        ]);
-        expect(held.okraCalls).toBe(0);
-        expect(spawned).toEqual([]);
-        // granted, the stage's one way to okra is its spend gate (its member is no film's here, so the call fails)
-        const granted = yield* buildGraph(front, { ...options, spend: new Set(['okra'] as const) });
-        expect(granted.okraCalls).toBe(1);
-        expect(granted.stages.find((s) => s.id === 'parts:turnaround-front@fake')?.state).toBe(
-          'failed',
-        );
-      }).pipe(
-        Effect.scoped,
-        Effect.provide(
-          Layer.mergeAll(
-            ContentStore.layer.pipe(Layer.provide(memoryLocks)),
-            FilmFolder.layer('/nonexistent/loop-probe-x/films'),
-            PuppetImagesBun,
-            Layer.succeed(Pages, Pages.of({ open: () => Effect.die('no page in this test') })),
-            Layer.succeed(
-              Critic,
-              Critic.of({
-                critique: () => Effect.die('no critique in this test'),
-                start: () => Effect.die('no critique in this test'),
-                job: () => Effect.die('no critique in this test'),
-                critiqueSheet: () => Effect.die('no critique in this test'),
-              }),
-            ),
-          ).pipe(Layer.provideMerge(BunServices.layer)),
-        ),
-        Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
-      );
-    },
-  );
+  describe('the parts stage, on the lead with okra answering from his kept answer', () => {
+    it.effect('the sheet holds its answers: it checks, spending nothing', () =>
+      partsOver(({ run, spawned }) =>
+        Effect.gen(function* () {
+          expect(yield* run(new Set())).toEqual({ parts: 'ran', okra: 0 });
+          expect(spawned).toEqual([]);
+        }),
+      ),
+    );
+
+    it.effect('a part lost is laid again from the answers drawn, spending nothing', () =>
+      partsOver(({ at, run, spawned }) =>
+        Effect.gen(function* () {
+          const fs = yield* FileSystem.FileSystem;
+          yield* fs.remove(`${at.sheet}/head.png`);
+          expect(yield* run(new Set())).toEqual({ parts: 'ran', okra: 0 });
+          expect(yield* fs.exists(`${at.sheet}/head.png`)).toBe(true);
+          expect(spawned).toEqual([]);
+        }),
+      ),
+    );
+
+    it.effect('no answer drawn: it waits on --spend okra, and calls okra once given it', () =>
+      partsOver(({ at, run, spawned }) =>
+        Effect.gen(function* () {
+          const fs = yield* FileSystem.FileSystem;
+          for (const file of ['okra/answer-1.png', 'okra/answer-2.png', 'okra/calls.json'])
+            yield* fs.remove(`${at.sheet}/${file}`);
+          expect(yield* run(new Set())).toEqual({ parts: 'waiting-spend', okra: 0 });
+          expect(spawned).toEqual([]);
+          expect(yield* run(new Set(['okra'] as const))).toEqual({ parts: 'ran', okra: 1 });
+          expect(spawned.map((c) => c.slice(0, 2))).toEqual([['okra', 'image']]);
+          expect(spawned[0]).not.toContain('--model');
+          expect(yield* fs.exists(`${at.sheet}/okra/answer-1.png`)).toBe(true);
+        }),
+      ),
+    );
+  });
 
   it.effect('a clip eval reads the train, the training set and the chain, not every cut', () =>
     Effect.gen(function* () {
