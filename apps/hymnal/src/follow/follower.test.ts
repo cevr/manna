@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
+import bundled from 'virtual:hymnal-timing';
 
 import { followerOf, type Host, LEAD, type Report } from './follower';
 import { OFF, WHOLE } from './marks';
-import { type TimedLine, type Timeline, timelineOf } from './timeline';
+import { placeAt, type TimedLine, type Timeline, timelineOf, timingBook } from './timeline';
 
 const line = (start: number, syllables: ReadonlyArray<number>): TimedLine => ({
   start,
@@ -218,4 +219,44 @@ describe('followerOf', () => {
     expect(h.logged.at(-1)).toBe('end');
     expect(h.logged[0]).toBe('line i=0 of=3 at=1000');
   });
+});
+
+describe('followerOf at a tempo, Sound off (unit tempo, A3)', () => {
+  /** One poll of the player, ms of the host's clock. */
+  const POLL = 250;
+  const hymn = Option.getOrThrow(timingBook(bundled).of(100));
+
+  // 0.8 is the spec's case; 1.2 holds the wake: a follower that waits the hymn's ms as the
+  // host's lights each line late above 100 %.
+  it.each([0.8, 1.2])(
+    'lights the line sung at first + %p t over the whole of hymn 100, and never steps back',
+    (rate) => {
+      const h = harness(hymn);
+      const lit = () => {
+        const line = h.follower.marks.line();
+        return { line, syllable: h.follower.marks.markOf(line) };
+      };
+      const expected = (t: number) => placeAt(hymn, hymn.first + rate * t).line;
+      let last = { line: -1, syllable: -1 };
+      /** The lit line at host time `t` is the one the hymn's place puts there, and no earlier one. */
+      const check = (t: number) => {
+        const now = lit();
+        expect({ t, line: now.line }).toEqual({ t, line: expected(t) });
+        if (now.line < 0) return;
+        const back =
+          now.line < last.line || (now.line === last.line && now.syllable < last.syllable);
+        expect({ t, back }).toEqual({ t, back: false });
+        last = now;
+      };
+      const length = (hymn.end - hymn.first) / rate;
+      for (let t = 0; t < length; t += POLL) {
+        h.advance(t);
+        if (t > 0) check(t);
+        h.report({ _tag: 'Here', at: hymn.first + rate * t, state: 'playing', rate });
+        check(t);
+        h.advance(t + POLL / 2);
+        check(t + POLL / 2);
+      }
+    },
+  );
 });

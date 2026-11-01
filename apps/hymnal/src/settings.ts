@@ -18,6 +18,7 @@ import { Move, still } from './hymns/chords';
 import { ChordStyle } from './hymns/simple';
 import { Placement } from '@manna/hymnal/placement';
 import { TAB_NAMES } from './home/tabs';
+import { DEFAULT_TEMPO, Tempo } from './player/tempo';
 import { Numbers } from './reader/lists';
 import { DEFAULT_SIZE, Font, Size, Spacing } from './reader/reading';
 
@@ -96,6 +97,12 @@ export const settingsOn = (store: Layer.Layer<KeyValueStore.KeyValueStore>) => {
      * key and the singers' range for it, so it never reaches another hymn.
      */
     move: Atom.family((number: number) => setting(`move.${number}`, Move, still)),
+    /**
+     * Each hymn's tempo in percent (`src/player/tempo.ts`), by its number:
+     * a congregation's pace fits one hymn. 100 until turned; with Sound off
+     * the follow keeps it.
+     */
+    tempo: Atom.family((number: number) => setting(`tempo.${number}`, Tempo, DEFAULT_TEMPO)),
     /**
      * How a hymn page is set (`src/reader/reading.ts`), chosen in the player
      * sheet's reading section: the same for every hymn. The defaults set

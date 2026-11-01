@@ -10,8 +10,10 @@
  * doing, its button, and a bar to drag to any place in the recording with
  * the time gone and the whole length. The bar shows in every state, still
  * while the length is not known. A recording that cannot play says why and
- * offers Retry. Under the player: over the hymn's own page, a `Chords`
- * switch (the bar's hold, with no long press) and its key and capo dials
+ * offers Retry. Under the player: the held hymn's `Tempo` dial (`TempoDial`),
+ * with a line that the recording sets the pace while Sound is on; then,
+ * over the hymn's own page, a `Chords` switch (the bar's hold, with no long
+ * press) and its key and capo dials
  * with reset (`Dials`); then the reader's settings, the text size dial, the
  * font, the line spacing and the screen kept on.
  * The placement dial belongs to the sheet's named hymn even when no reader is mounted.
@@ -51,6 +53,7 @@ import { Toggle } from './Toggle';
 import { RecordingNotice } from './RecordingNotice';
 import { PlayPage } from './PlayPage';
 import { PlacementDial } from './PlacementDial';
+import { TempoDial } from './TempoDial';
 
 export function FullPlayer() {
   return Option.match(usePlayer(), {
@@ -167,6 +170,7 @@ function Held({
           <Toggle track={track} state={state} send={pressed} />
         </View>
       </View>
+      <TempoDial key={`tempo-${track.number}`} number={track.number} />
       <PageChords track={track} />
       <PlacementDial key={track.number} number={track.number} />
       <Reading />

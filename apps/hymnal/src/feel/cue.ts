@@ -14,10 +14,18 @@
 import { createContext, use } from 'react';
 
 /**
- * A dial a detent belongs to: keys, capo frets, text sizes or chord
- * placement, or one of the find drums' three digits (`player/drums.ts`).
+ * A dial a detent belongs to: keys, capo frets, text sizes, a hymn's tempo
+ * or chord placement, or one of the find drums' three digits (`player/drums.ts`).
  */
-export type DialName = 'key' | 'capo' | 'size' | 'placement' | 'hundreds' | 'tens' | 'ones';
+export type DialName =
+  | 'key'
+  | 'capo'
+  | 'size'
+  | 'tempo'
+  | 'placement'
+  | 'hundreds'
+  | 'tens'
+  | 'ones';
 
 /** The cues that carry nothing but their name. */
 export type PlainCue =

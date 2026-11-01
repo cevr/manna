@@ -76,6 +76,7 @@ const player = playerOn(
   counted(cachedPlayback(playbackLive, book.of, sound, offlineLive)),
   statusEvery,
   settings.move,
+  settings.tempo,
 );
 /** The context's one value: a draw again (the Sound switch) hands every reader the same player, so no page draws again for it. */
 const provided = Option.some(player);
@@ -85,6 +86,7 @@ export function LivePlayer({ children }: { readonly children: ReactNode }) {
   useAtomMount(player.send);
   useAtomMount(player.remote);
   useAtomMount(player.keys);
+  useAtomMount(player.tempos);
   const on = useAtomValue(settings.sound);
   // The setting is the app's; the score clock is outside React, so it is told each change.
   useEffect(() => Effect.runSync(SubscriptionRef.set(sound, on)), [on]);

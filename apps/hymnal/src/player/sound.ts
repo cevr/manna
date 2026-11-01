@@ -5,13 +5,19 @@
  * With sound on, the device plays the recording. A hymn whose timeline runs
  * past the recording's end (stanzas the recording does not play) goes on
  * silently from there to the timeline's end, and the status gives the
- * timeline's length. With sound off, nothing sounds: the clock runs at
- * 1000 ms a second from the first sung line, with no count-in, and gives
- * the status the device would. A switch mid-play hands the place over: off
- * pauses the device and runs the clock from the device's place; on plays
- * the recording from the clock's place.
+ * timeline's length. With sound off, nothing sounds: the clock runs at the
+ * held hymn's tempo (`rate` of the play's options, then each `setRate`;
+ * 1000 ms a second until told) from the first sung line, with no count-in,
+ * and gives the status the device would. A switch mid-play hands the place
+ * over: off pauses the device and runs the clock from the device's place;
+ * on plays the recording from the clock's place. The recording, and the
+ * silent tail past it, run at 1000 ms a second: the tempo reaches the device
+ * in no play's options. `pace` tells the rate the place moves at.
  *
- * Commands and Sound switches update the clock under one lock. The status
+ * Every change of rate, place or playing takes the place at the old run's
+ * rate first, then starts the new run from it (`run`).
+ *
+ * Commands, tempo changes and Sound switches update the clock under one lock. The status
  * observer reads the device outside it and accepts replies only for the
  * current generation, so a former observer cannot delay a new Play. Pending
  * device plays also hold no lock: Pause, Stop and Sound switches go on while
@@ -28,6 +34,7 @@ import {
   Layer,
   Option,
   Stream,
+  Struct,
   SubscriptionRef,
 } from 'effect';
 import * as Semaphore from 'effect/Semaphore';
@@ -55,14 +62,36 @@ const stateOf = (ended: boolean, playing: boolean): Status['state'] => {
   return 'paused';
 };
 
-/** The silent clock's status at `now`, held at the timeline's `end`. */
+/**
+ * The silent clock's status at `now`, held at the timeline's `end`; off 1000 ms a second, with
+ * the rate it runs at (a status that names none moves at 1).
+ */
 const clockStatus = (run: Run, end: number, now: number): Status => {
   const at = Math.min(placeOf(run, now), end);
-  return { state: stateOf(at >= end, run.playing), positionMs: at, durationMs: end };
+  const status: Status = {
+    state: stateOf(at >= end, run.playing),
+    positionMs: at,
+    durationMs: end,
+  };
+  if (run.rate === 1) return status;
+  return { ...status, rate: run.rate };
 };
 
 /** Whether the device moves, or is about to. */
 const moving = (status: Status) => status.state === 'playing' || status.state === 'loading';
+
+/** A tempo's rate as the clock takes it: one that is not a positive number runs at 1. */
+const rateOf = (rate?: number) =>
+  Option.fromNullishOr(rate).pipe(
+    Option.filter((it) => Number.isFinite(it) && it > 0),
+    Option.getOrElse(() => 1),
+  );
+
+/** A play's options as the device takes them: the tempo is the score clock's alone. */
+const forDevice = (options?: PlayOptions) =>
+  Option.getOrUndefined(
+    Option.map(Option.fromNullishOr(options), (it) => Struct.omit(it, ['rate'])),
+  );
 
 /**
  * What a call does once it has set what the clock holds: answer with a
@@ -98,6 +127,8 @@ interface Held {
   options: Option.Option<PlayOptions>;
   selection: Option.Option<RecordingSelection>;
   intent: Intent;
+  /** The held hymn's tempo: ms of the hymn for each ms the silent clock runs with sound off. */
+  rate: number;
 }
 
 /**
@@ -132,7 +163,15 @@ export const scoreClock = (
       intent: 'play',
       options: Option.none(),
       selection: Option.none(),
+      rate: 1,
     };
+    /** The rate the place moves at: the tempo with sound off, the recording's 1 with it on. */
+    const pace = yield* SubscriptionRef.make(1);
+    const paceNow = Effect.map(SubscriptionRef.get(sound), (on) => {
+      if (on) return 1;
+      return held.rate;
+    });
+    const tellPace = Effect.flatMap(paceNow, (rate) => SubscriptionRef.set(pace, rate));
     const end = () => Option.match(held.timeline, { onNone: () => 0, onSome: (t) => t.end });
     const first = () => Option.match(held.timeline, { onNone: () => 0, onSome: (t) => t.first });
     const selected = (status: Status): Status =>
@@ -148,15 +187,32 @@ export const scoreClock = (
       held.over = yield* Deferred.make<number>();
     });
 
-    /** Run the clock from `at`, playing or held. */
+    /** The clock's place and whether it plays, at `now`. */
+    const placed = (clock: Run, now: number) => ({
+      at: Math.min(placeOf(clock, now), end()),
+      playing: clock.playing,
+    });
+
+    /**
+     * Run the clock from `at`, playing or held, at the pace as it stands. A caller takes `at`
+     * from the run before at that run's own rate (`placed`), so no change moves the place.
+     */
     const run = (at: number, playing: boolean) =>
-      Effect.map(Clock.currentTimeMillis, (now) => {
-        const clock = clockAt(at, playing, now);
+      Effect.gen(function* () {
+        const now = yield* Clock.currentTimeMillis;
+        const clock = clockAt(at, playing, now, yield* paceNow);
         held.clock = Option.some(clock);
         held.intent = 'pause';
         if (playing) held.intent = 'play';
         return selected(clockStatus(clock, end(), now));
       });
+
+    /** The silent clock, if it runs, started again from its place as it stands at the pace now. */
+    const rebase = Effect.gen(function* () {
+      if (Option.isNone(held.clock)) return;
+      const { at, playing } = placed(held.clock.value, yield* Clock.currentTimeMillis);
+      yield* run(at, playing);
+    });
 
     /**
      * The device's status as the player reads it: the timeline's length, and
@@ -258,7 +314,7 @@ export const scoreClock = (
         Answer: ({ status }) => Effect.succeed(status),
         Sound: ({ uri, at, turn, over, options }) =>
           Effect.raceFirst(
-            Effect.asSome(Effect.exit(device.play(uri, at, options))),
+            Effect.asSome(Effect.exit(device.play(uri, at, forDevice(options)))),
             Effect.as(Deferred.await(over), Option.none()),
           ).pipe(Effect.flatMap((told) => changing(played(turn, told)))),
       });
@@ -285,6 +341,9 @@ export const scoreClock = (
         );
         held.options = Option.fromNullishOr(options);
         held.intent = options?.intent ?? 'play';
+        // Each play names its hymn's tempo; a play that names none runs at 1000 ms a second.
+        held.rate = rateOf(options?.rate);
+        yield* tellPace;
         held.selection = Option.map(Option.fromNullishOr(options?.recording), (identity) => ({
           number: identity.number,
           requested: identity.offset,
@@ -300,12 +359,6 @@ export const scoreClock = (
         held.sounding = false;
         return yield* answer(run(Math.max(fromMs, 0) || first(), held.intent === 'play'));
       });
-
-    /** The clock's place and whether it plays, at `now`. */
-    const placed = (clock: Run, now: number) => ({
-      at: Math.min(placeOf(clock, now), end()),
-      playing: clock.playing,
-    });
 
     const resumeClock = (clock: Run) =>
       Effect.gen(function* () {
@@ -342,6 +395,7 @@ export const scoreClock = (
     /** On a switch of `sound`: hand the place over; on, the device's play to carry out. */
     const switchTo = (on: boolean) =>
       Effect.gen(function* () {
+        yield* tellPace;
         const uri = Option.getOrElse(held.uri, () => '');
         if (Option.isNone(held.uri)) return Option.none<Step>();
         if (!on && Option.isNone(held.clock)) {
@@ -357,8 +411,10 @@ export const scoreClock = (
           Option.map(clock, (c) => placed(c, now).at),
           recordedAt,
         );
-        if (Option.isNone(at)) return Option.none<Step>();
-        return Option.some(yield* sounded(uri, at.value, true));
+        if (Option.isSome(at)) return Option.some(yield* sounded(uri, at.value, true));
+        // The clock stays (paused, or past the recording's end): it runs on at the new pace.
+        yield* rebase;
+        return Option.none<Step>();
       });
 
     yield* SubscriptionRef.changes(sound).pipe(
@@ -405,6 +461,16 @@ export const scoreClock = (
           }),
         ),
       status: readStatus,
+      // A command: a status read begun before it cannot answer with the old rate's place.
+      setRate: (rate) =>
+        changing(
+          Effect.gen(function* () {
+            held.rate = rateOf(rate);
+            yield* tellPace;
+            yield* rebase;
+          }),
+        ),
+      pace: SubscriptionRef.changes(pace).pipe(Stream.changes),
       selectRecording: (selection) =>
         changing(
           Effect.gen(function* () {
@@ -427,6 +493,8 @@ export const scoreClock = (
           held.sounding = false;
           held.options = Option.none();
           held.selection = Option.none();
+          held.rate = 1;
+          yield* tellPace;
           yield* device.stop;
         }),
       ),

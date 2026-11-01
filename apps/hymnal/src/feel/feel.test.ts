@@ -11,6 +11,7 @@ import { describe, expect, it } from 'bun:test';
 import { Option, Predicate } from 'effect';
 
 import { SIZES } from '~/reader/reading';
+import { STOPS } from '~/player/tempo';
 
 import { fakeDevice } from '../test/device';
 import type { Haptic, SoundName } from './body';
@@ -70,6 +71,9 @@ const table: ReadonlyArray<readonly [Cue, Haptic, Option.Option<SoundName>]> = [
   ...SIZES.map(
     (_, at) => [{ _tag: 'detent', dial: 'size', at }, selection, heardAs('thock')] as const,
   ),
+  ...STOPS.map(
+    (_, at) => [{ _tag: 'detent', dial: 'tempo', at }, selection, heardAs('thock')] as const,
+  ),
   ...PLACES.map((place) => [{ _tag: 'section', place }, impact('light'), unheard] as const),
 ];
 
@@ -98,8 +102,10 @@ const soundCalls = (sound: Option.Option<SoundName>): ReadonlyArray<Call> =>
   Option.toArray(sound).map((name): Call => ['sound', name]);
 
 describe('the table of bodies', () => {
-  it('holds every cue the app tells: each key, fret, size and topic place', () => {
-    expect(table).toHaveLength(plainRows.length + 12 + 12 + SIZES.length + PLACES.length);
+  it('holds every cue the app tells: each key, fret, size, tempo and topic place', () => {
+    expect(table).toHaveLength(
+      plainRows.length + 12 + 12 + SIZES.length + STOPS.length + PLACES.length,
+    );
   });
 
   it('gives each cue its row’s haptic once, and only a dial’s detent its sound, while the switch is on', () => {
@@ -248,7 +254,7 @@ describe('the ticks’ floor', () => {
 });
 
 describe('the sounds’ gap', () => {
-  const dials: ReadonlyArray<DialName> = ['key', 'capo', 'size'];
+  const dials: ReadonlyArray<DialName> = ['key', 'capo', 'size', 'tempo'];
 
   it('starts a sound only once the last one has ended, and always once it has, over generated flings', () => {
     for (let seed = 1; seed <= 200; seed += 1) {

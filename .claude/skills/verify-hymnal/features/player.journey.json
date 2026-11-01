@@ -23,12 +23,16 @@
       "name": "player-full",
       "action": "tap",
       "target": "label=Open player",
-      "expect": [{ "shows": "label=Sheet Grabber" }, { "shows": "label=Position" }]
+      "expect": [
+        { "shows": "label=Sheet Grabber" },
+        { "shows": "label=Position" },
+        { "shows": "id=dial-tempo" }
+      ]
     },
     {
-      "name": "sheet-close",
+      "name": "player-tempo",
       "action": "back",
-      "expect": [{ "shows": "label=Open player" }]
+      "expect": [{ "shows": "label=Open player" }, { "hides": "id=dial-tempo" }]
     },
     {
       "name": "sound-off",
