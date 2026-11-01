@@ -13,7 +13,11 @@
 //   fit:<id>      every puppet entry: `concept render --figure cutout
 //                 --fit-only` of that view, its fit rows; it reads the cut
 //                 it is posed with (its `fitted` entry's, else its own) and
-//                 its drawing.
+//                 its drawing; a fitted entry also reads every file the
+//                 member's `cutout/poses.ts` imports (its pose JSON, held
+//                 drawings).
+//
+// Each stage also reads the source files of its kind (`sources.ts`).
 //   renders:<id>  a puppet entry cut from its own sheet: its synthetic
 //                 training renders, one shard (`renders.ts`); it reads its
 //                 cut. An entry fitted with another view's cut has none.
@@ -121,6 +125,24 @@ const specSources = (memberDir: string, libraryPuppets: string) =>
         .map((n) => path.join(cutout, n)),
       libraryPuppets,
     ];
+  });
+
+/**
+ * The files the member's fitted poses are made from: every file his
+ * `cutout/poses.ts` imports other than a module (the fitted pose JSON, a held
+ * drawing), which the fit render reads through that module.
+ */
+const fittedFiles = (memberDir: string) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const poses = path.join(memberDir, 'cutout', 'poses.ts');
+    const text = yield* fs.readFileString(poses).pipe(Effect.orElseSucceed(() => ''));
+    return [...text.matchAll(/from '(\.[^']+)'/g)]
+      .flatMap((match) => match.slice(1))
+      .filter((spec) => !spec.endsWith('.ts'))
+      .map((spec) => path.join(path.dirname(poses), spec))
+      .toSorted();
   });
 
 /** A command's run, its error read as the stage's failure. */
@@ -257,13 +279,23 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: M
         ),
     });
   }
+  const fitted = yield* fittedFiles(m.memberDir);
   for (const entry of m.coverage.entries) {
     if (entry.cut !== 'puppet') continue;
     const cut = `cut:${at(entry.fitted ?? entry.id)}`;
     stages.push({
       id: `fit:${at(entry.id)}`,
       view: entry.id,
-      inputs: [stageInput(cut), stageInput(`drawing:${at(entry.id)}`), ...sourceInputs('fit')],
+      inputs: [
+        stageInput(cut),
+        stageInput(`drawing:${at(entry.id)}`),
+        ...sourceInputs('fit'),
+        // a fitted pose is its pose JSON and held drawings too, which its cut does not hash
+        ...Option.match(Option.fromUndefinedOr(entry.fitted), {
+          onNone: () => [],
+          onSome: () => fitted.map(fileInput),
+        }),
+      ],
       version: VERSION.fit,
       run: () =>
         Effect.scoped(
