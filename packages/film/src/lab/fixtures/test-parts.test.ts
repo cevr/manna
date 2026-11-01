@@ -33,7 +33,31 @@ const toolsUnhashed = captured(
   .flatMap((names) => names.split(','))
   .toSorted();
 
+/** The flags of `bun test` whose value is the next word. */
+const TAKES_VALUE = new Set(['--preload']);
+
+/** The paths a part's script runs: the words after `bun test` that are no flag and no flag's value. */
+const positional = (script: string) =>
+  words(script)
+    .slice(2)
+    .filter((word, at, all) => !word.startsWith('-') && !TAKES_VALUE.has(all[at - 1] ?? ''));
+
 describe("the film unit tests' parts", () => {
+  test('each part runs its own roots, so no test folder falls out of every part', () => {
+    expect(
+      ['test:lab', 'test:tools', 'test:engine'].map((part) => words(part).slice(0, 2)),
+    ).toEqual([
+      ['bun', 'test'],
+      ['bun', 'test'],
+      ['bun', 'test'],
+    ]);
+    expect(positional('test:lab').toSorted()).toEqual(
+      ['./src/lab', ...labNamed.map((name) => `./src/tools/${name}.test.ts`)].toSorted(),
+    );
+    expect(positional('test:tools')).toEqual(['./src/tools']);
+    expect(positional('test:engine')).toEqual(['src', 'lint']);
+  });
+
   test('the lab tools test:lab names are the ones test:tools ignores and its turbo inputs leave out', () => {
     expect(labNamed.length).toBeGreaterThan(0);
     expect(new Set(labNamed).size).toBe(labNamed.length);
