@@ -4,9 +4,9 @@
 // spend, or waits on the owner, holds every stage below it.
 
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, Layer, Option, Path } from 'effect';
+import { Deferred, Effect, Fiber, Layer, Logger, Option, Path } from 'effect';
 import { memoryFileSystem, memoryLocks, text } from '../host/testing.ts';
-import { ContentStore } from '../content-store.ts';
+import { ContentStore, Processes } from '../content-store.ts';
 import {
   type BuildOptions,
   type Stage,
@@ -282,4 +282,79 @@ describe('the cast build graph', () => {
       expect(runs.size).toBe(0);
     }).pipe(Effect.provide(servicesOver(files)));
   });
+
+  it.live(
+    'a stage runs outside the lock: a plan reads meanwhile, and a second build waits on it',
+    () => {
+      const busy = Deferred.makeUnsafe<boolean>();
+      return Effect.gen(function* () {
+        const slow = yield* slowTrain;
+        const first = yield* Effect.forkChild(buildGraph(slow.stages, options()));
+        yield* Deferred.await(slow.started);
+        const plan = yield* buildGraph(slow.stages, options({ plan: true }));
+        expect(statesOf(plan)).toEqual({ train: 'stale' });
+        const second = yield* Effect.forkChild(buildGraph(slow.stages, options()));
+        // the second build finds the first's mark and waits on it
+        yield* Deferred.await(busy);
+        yield* Deferred.succeed(slow.release, true);
+        expect(statesOf(yield* Fiber.join(first))).toEqual({ train: 'ran' });
+        expect(statesOf(yield* Fiber.join(second))).toEqual({ train: 'cached' });
+        expect(slow.runs()).toBe(1);
+      }).pipe(Effect.provide(Layer.mergeAll(servicesOver(seeded()), busyLogged(busy))));
+    },
+  );
+
+  it.live('a running mark whose process is gone is taken over', () =>
+    Effect.gen(function* () {
+      const slow = yield* slowTrain;
+      const first = yield* Effect.forkChild(buildGraph(slow.stages, options()));
+      yield* Deferred.await(slow.started);
+      // the first build's process reads as gone, so the second runs the stage itself
+      const second = yield* Effect.forkChild(buildGraph(slow.stages, options()));
+      yield* Deferred.await(slow.restarted);
+      expect(slow.runs()).toBe(2);
+      yield* Deferred.succeed(slow.release, true);
+      yield* Fiber.join(first);
+      expect(statesOf(yield* Fiber.join(second))).toEqual({ train: 'ran' });
+    }).pipe(
+      Effect.provideService(Processes, { host: 'h', alive: () => Effect.succeed(false) }),
+      Effect.provide(servicesOver(seeded())),
+    ),
+  );
 });
+
+/**
+ * A train that marks `started` at its first run and `restarted` at its second,
+ * and makes its output once `release` is done.
+ */
+const slowTrain = Effect.gen(function* () {
+  const started = yield* Deferred.make<boolean>();
+  const restarted = yield* Deferred.make<boolean>();
+  const release = yield* Deferred.make<boolean>();
+  let count = 0;
+  const stages: ReadonlyArray<Stage<never>> = [
+    {
+      id: 'train',
+      inputs: [fileInput('/in/view.png')],
+      version: '1',
+      run: () =>
+        Effect.gen(function* () {
+          count++;
+          if (count === 1) yield* Deferred.succeed(started, true);
+          if (count === 2) yield* Deferred.succeed(restarted, true);
+          yield* Deferred.await(release);
+          return text('checkpoint');
+        }),
+    },
+  ];
+  return { stages, started, restarted, release, runs: () => count };
+});
+
+/** The logger that completes `busy` when a build logs that it waits on another build's run. */
+const busyLogged = (busy: Deferred.Deferred<boolean>) =>
+  Logger.layer([
+    Logger.make(({ message }) => {
+      if ([message].flat().join(' ').startsWith('cast.build.busy'))
+        Deferred.doneUnsafe(busy, Effect.succeed(true));
+    }),
+  ]);

@@ -16,14 +16,30 @@
 // takes its state without running. `plan` runs no stage: one whose key is not
 // in the manifest is `stale`, and so is every stage below it, its output
 // unknown, unless it last waited at that key, when it waits again (a plan
-// granted its spend calls it stale); `touch` plans as if those files changed. Each stage is decided and run under the manifest's lock
-// (`ContentStore.transact`), so two builds never decide on one stage at once.
+// granted its spend calls it stale); `touch` plans as if those files changed.
+//
+// A stage is decided under the manifest's lock (`ContentStore.transact`),
+// runs outside it, and is recorded under it again, so a plan or another build
+// reads the manifest while a 29 min train runs. The decision to run marks the
+// key as running (by build and pid); a second build that finds the mark of a
+// live process waits and decides again, so two builds never run one stage. A
+// run that dies lets its mark go; a mark whose process is gone is taken over.
 // An optional input (`optionalInput`) holds its stage only while it is stale in
 // a plan: a stage reading what this build made of a set (the training set) runs
 // over the inputs that did not wait or fail.
 
-import { Array as Arr, Clock, Effect, FileSystem, Option, Path, Schema } from 'effect';
-import { ContentStore, type Manifest } from '../content-store.ts';
+import {
+  Array as Arr,
+  Clock,
+  Effect,
+  Exit,
+  FileSystem,
+  Option,
+  Path,
+  Random,
+  Schema,
+} from 'effect';
+import { ContentStore, type Manifest, Processes } from '../content-store.ts';
 import { sha256Hex } from '../digest.ts';
 
 /** What a stage may spend: okra calls (the subscription route) or a Modal run. */
@@ -158,9 +174,18 @@ const Waited = Schema.Struct({
   reason: Schema.String,
 });
 
+/** A key a build runs now, outside the lock: which build, and its process. */
+const Running = Schema.Struct({
+  build: Schema.String,
+  pid: Schema.Finite,
+  host: Schema.String,
+});
+type Running = typeof Running.Type;
+
 const BuildManifest = Schema.Struct({
   stages: Schema.Record(Schema.String, Built),
   waited: Schema.optionalKey(Schema.Record(Schema.String, Waited)),
+  running: Schema.optionalKey(Schema.Record(Schema.String, Running)),
 });
 type BuildManifest = typeof BuildManifest.Type;
 
@@ -188,6 +213,16 @@ const checkOrder = <R>(stages: ReadonlyArray<Stage<R>>) => {
   return Option.none<string>();
 };
 
+/** How long a build waits before it decides again on a key another build runs. */
+const BUSY_SPACING = '100 millis';
+
+/** The manifest without `key`'s running mark, when `build` holds it. */
+const unmarked = (current: BuildManifest, key: string, build: string): BuildManifest => {
+  if (current.running?.[key]?.build !== build) return current;
+  const { [key]: _done, ...running } = current.running;
+  return { ...current, running };
+};
+
 /** How a stage's decision under the manifest's lock ended. */
 type Outcome =
   | { readonly _tag: 'cached' | 'ran'; readonly output: string }
@@ -196,6 +231,9 @@ type Outcome =
       readonly _tag: 'waiting-spend' | 'waiting-owner' | 'failed';
       readonly reason: Option.Option<string>;
     };
+
+/** What a build decides under the lock: an outcome, a key another build runs now, or the run to make. */
+type Decision = Outcome | { readonly _tag: 'busy' } | { readonly _tag: 'run' };
 
 /** The state a stage takes from the stages above it that hold it: a waiting or failed one before a stale one. */
 const heldBy = (states: ReadonlyArray<StageState>): Option.Option<StageState> =>
@@ -267,6 +305,83 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
       `${LINE[input._tag]}:${input.id}=${Option.getOrElse(outputOf(input.id), () => 'held')}`,
     );
   };
+  const processes = yield* Processes;
+  /** This build's mark on a key it runs. */
+  const self: Running = {
+    build: `${process.pid}-${yield* Random.nextIntBetween(0, 1e9)}`,
+    pid: process.pid,
+    host: processes.host,
+  };
+  /**
+   * Whether the build that marked a key runs it still: one in a process on
+   * this host that runs. A mark from another host is kept, as its pid means
+   * nothing here (the cache is the host's own).
+   */
+  const runs = (mark: Running) => {
+    if (mark.host !== processes.host) return Effect.succeed(true);
+    return processes.alive(mark.pid);
+  };
+  /** Run a stage outside the lock, then record what it made, or what it waited on, under it. */
+  const runOutside = <R>(stage: Stage<R>, key: string, start: number) =>
+    Effect.gen(function* () {
+      const ran = yield* stage.run(ctx).pipe(
+        Effect.map((bytes) => ({ _tag: 'made' as const, bytes })),
+        Effect.catchTags({
+          WaitingSpend: (e) =>
+            Effect.succeed({
+              _tag: 'waited' as const,
+              waited: {
+                id: stage.id,
+                state: 'waiting-spend' as const,
+                spend: e.spend,
+                reason: `needs --spend ${e.spend}`,
+              },
+            }),
+          WaitingOwner: (e) =>
+            Effect.succeed({
+              _tag: 'waited' as const,
+              waited: { id: stage.id, state: 'waiting-owner' as const, reason: e.reason },
+            }),
+          StageFailed: (e) =>
+            Effect.succeed<Outcome>({ _tag: 'failed', reason: Option.some(e.reason) }),
+        }),
+      );
+      if (ran._tag === 'made') {
+        const output = sha256Hex(ran.bytes);
+        yield* store.writeFile(objectFile(output), ran.bytes);
+        const ms = (yield* Clock.currentTimeMillis) - start;
+        return yield* store.transact(manifest, (current) => {
+          const done = unmarked(current, key, self.build);
+          return Effect.succeed([
+            { _tag: 'ran', output } satisfies Outcome,
+            { ...done, stages: { ...done.stages, [key]: { id: stage.id, output, ms } } },
+          ] as const);
+        });
+      }
+      return yield* store.transact(manifest, (current) => {
+        const done = unmarked(current, key, self.build);
+        if (ran._tag !== 'waited') return Effect.succeed([ran, done] as const);
+        return Effect.succeed([
+          { _tag: ran.waited.state, reason: Option.some(ran.waited.reason) } satisfies Outcome,
+          { ...done, waited: { ...done.waited, [key]: ran.waited } },
+        ] as const);
+      });
+    }).pipe(
+      Effect.onExit((exit) => {
+        if (Exit.isSuccess(exit)) return Effect.void;
+        // a run that died or was interrupted lets its key go, so the next build runs it
+        return store
+          .update(manifest, (current) => unmarked(current, key, self.build))
+          .pipe(Effect.ignore);
+      }),
+    );
+  /** A decision's outcome: the run made, when it is this build's to make. */
+  const settle = <R>(stage: Stage<R>, key: string, start: number, decision: Decision) => {
+    if (decision._tag === 'run') return runOutside(stage, key, start);
+    if (decision._tag === 'busy')
+      return Effect.die(`${stage.id} is settled while another build runs it`);
+    return Effect.succeed<Outcome>(decision);
+  };
   yield* fs.makeDirectory(objects, { recursive: true });
   const reports: Array<StageReport> = [];
   for (const stage of stages) {
@@ -308,7 +423,8 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
         ...lines,
       ].join('\n'),
     );
-    const outcome = yield* store.transact(manifest, (current) =>
+    // decide under the lock: cached, a plan's answer, another build's run to wait on, or this build's to run
+    const decide = store.transact(manifest, (current) =>
       Effect.gen(function* () {
         const built = Option.fromUndefinedOr(current.stages[key]);
         if (Option.isSome(built)) {
@@ -317,7 +433,7 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
             .pipe(Effect.orElseSucceed(() => false));
           if (kept)
             return [
-              { _tag: 'cached', output: built.value.output } satisfies Outcome,
+              { _tag: 'cached', output: built.value.output } satisfies Decision,
               current,
             ] as const;
         }
@@ -330,49 +446,31 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
           );
           return [
             Option.match(waits, {
-              onNone: (): Outcome => ({ _tag: 'stale' }),
-              onSome: (w): Outcome => ({ _tag: w.state, reason: Option.some(w.reason) }),
+              onNone: (): Decision => ({ _tag: 'stale' }),
+              onSome: (w): Decision => ({ _tag: w.state, reason: Option.some(w.reason) }),
             }),
             current,
           ] as const;
         }
-        const ran = yield* stage.run(ctx).pipe(
-          Effect.map((bytes) => ({ _tag: 'made' as const, bytes })),
-          Effect.catchTags({
-            WaitingSpend: (e) =>
-              Effect.succeed({
-                _tag: 'waited' as const,
-                waited: {
-                  id: stage.id,
-                  state: 'waiting-spend' as const,
-                  spend: e.spend,
-                  reason: `needs --spend ${e.spend}`,
-                },
-              }),
-            WaitingOwner: (e) =>
-              Effect.succeed({
-                _tag: 'waited' as const,
-                waited: { id: stage.id, state: 'waiting-owner' as const, reason: e.reason },
-              }),
-            StageFailed: (e) =>
-              Effect.succeed<Outcome>({ _tag: 'failed', reason: Option.some(e.reason) }),
-          }),
-        );
-        if (ran._tag === 'waited')
-          return [
-            { _tag: ran.waited.state, reason: Option.some(ran.waited.reason) } satisfies Outcome,
-            { ...current, waited: { ...current.waited, [key]: ran.waited } },
-          ] as const;
-        if (ran._tag !== 'made') return [ran, current] as const;
-        const output = sha256Hex(ran.bytes);
-        yield* store.writeFile(objectFile(output), ran.bytes);
-        const ms = (yield* Clock.currentTimeMillis) - start;
+        const mark = Option.fromUndefinedOr(current.running?.[key]);
+        if (Option.isSome(mark) && (yield* runs(mark.value)))
+          return [{ _tag: 'busy' } satisfies Decision, current] as const;
         return [
-          { _tag: 'ran', output } satisfies Outcome,
-          { ...current, stages: { ...current.stages, [key]: { id: stage.id, output, ms } } },
+          { _tag: 'run' } satisfies Decision,
+          { ...current, running: { ...current.running, [key]: self } },
         ] as const;
       }),
     );
+    let decision = yield* decide;
+    if (decision._tag === 'busy')
+      yield* Effect.logInfo(
+        `cast.build.busy stage=${stage.id} reason="another build runs it; waiting on its output"`,
+      );
+    while (decision._tag === 'busy') {
+      yield* Effect.sleep(BUSY_SPACING);
+      decision = yield* decide;
+    }
+    const outcome = yield* settle(stage, key, start, decision);
     switch (outcome._tag) {
       case 'cached':
       case 'ran':
