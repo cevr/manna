@@ -46,8 +46,9 @@
     },
     {
       "name": "browse-all-at-once",
-      "action": "tap",
-      "target": "role=button label=All at once",
+      "action": "pinch",
+      "at": "200,450",
+      "scale": 0.6,
       "expect": [{ "shows": "label=Sections, all at once" }, { "shows": "label=Done" }]
     },
     {

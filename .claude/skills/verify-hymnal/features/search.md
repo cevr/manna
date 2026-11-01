@@ -48,6 +48,9 @@ home list's `Topics` tab instead (`browse.md`).
 - `search-open`: a result opens the hymn, with a back button `Hymns`.
 - `search-empty`: a query with no match shows the empty message. On a phone a query of known words with no text match shows `Hymns about this` alone instead; a made-up word such as `zzzz` knows no hymn by meaning and shows the empty message.
 - `search-hermes`: each keystroke's search runs under 4 ms at the 95th percentile and under 8 ms at most in Hermes (`hermes-engine-cli` 0.12.0, the research harness over the app's own `src/hymns/search.ts`), and its index is built as search mode opens, never at the app's start.
+- `search-in-hymn`: on a hymn page the find bar (`id=find-bar`) stands over the right end of the page's bar, where the lone `#` stood, and holds `Search` (`id=find-search`) and then the `#` (`id=find-number`) by `x`; the bar's `Key`, `Tuner`, `Sound` and Play stay reachable under it. `Search` grows the bar into the focused box (`id=find-box`) with `Cancel` (`id=find-cancel`), as on the home list, and the results cover the page down to the window's foot: no node of the page (its heading, `Favourite`, the bar's marks) is in the tree while search is open. `Cancel` returns to the same page where it was, with its heading, the back button `Hymns` and `Search` in the bar; no route is pushed or popped.
+- `search-in-hymn-open`: a result of the search on a hymn page opens its hymn, with a folded find bar on the new page; `sim back` returns to the first page with its results, the box and `Cancel`.
+- `search-in-hymn-number`: on a hymn page, the `#` opens the drums (`id=find-drums`) over the bar, and `Open` opens the dialled hymn.
 
 ## How to get to it (user POV)
 
@@ -75,6 +78,9 @@ By hand:
 1. **A line (`search-line`, `search-typo`, `search-matched-line`).** Read the third line of hymn 100's `Stanza 2` from the tree in memory, enter search and type it with one letter of its longest word dropped. → `100, …` among the first five, its row taller than its neighbours (its `height` about 56 against 44): the matched line under the title.
 2. **A title (`search-order`).** Type the first word of hymn 100's title, read from its row's name in memory. → the hymns whose titles hold it, in number order, each a one-line row.
 3. **A topic (`search-topic`).** Fill the first topic of hymn 100 (`topicsOf(100)`). → every hymn the topic lists among the results, after the hymns whose title holds its words.
+4. **Search on a hymn page** (`search-in-hymn`). `sim open hymnal://hymns/8 --expect id=find-bar`, then `sim snapshot`. → `id=find-bar` holds `id=find-search` left of `id=find-number`; its bottom above the page bar's top and its right end near the screen's right edge; `id=key-button`, `Sound` and `Play hymn 8` in the tree. `sim tap id=find-search` → `id=find-box` focused, `id=find-cancel` shown, and no `Play hymn 8`, `Favourite` or page heading in the tree. `sim fill id=find-box 100` → a link `100, …`. `sim tap id=find-cancel` → hymn 8's page again, with its heading, the back button `Hymns` and `id=find-search`.
+5. **A result from a hymn page** (`search-in-hymn-open`). On hymn 8, `sim tap id=find-search`, `sim fill id=find-box 100`, then `sim tap "role=link label=100, …"`. → hymn 100's page, `Play hymn 100`, `id=find-search` and no `id=find-box`. `sim back` → hymn 8's results again: `id=find-box` holding `100`, `id=find-cancel`. `sim tap id=find-cancel`.
+6. **The `#` on a hymn page** (`search-in-hymn-number`). On hymn 8, `sim tap id=find-number` → `id=find-drums`, the drums on 8 (the page's hymn, else 1). `sim tap id=find-open` → the dialled hymn's page, its `Stanza 1`. Turn no drum: `Open` opens the hymn they show.
 
 ## Gotchas
 

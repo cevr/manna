@@ -48,6 +48,7 @@ spacing`, `Keep screen on`).
 - `player-stack`: with two or more hymn pages stacked, the bar and the player sheet act on the page on top: after a sheet over it closes (a chord sheet, the player sheet), after a back to the page below, and on a page pushed twice (hymn 100, then 3, then 100 again), whose `Play hymn 100` plays and docks the bar with `Seek`.
 - `player-fail`: a recording that cannot load offers `Retry hymn <n>`.
 - `player-sound`: the button `Sound`, left of Play in the bar, shows a speaker with waves in the accent while on (the default) and a muted speaker with a slash while off, no text; a press turns it. On the web its `aria-checked` says its state. On iOS its accessibility element is labelled `Sound` and says its state in its value, `checked` (on) or `unchecked` (off). Off, Play sounds nothing and the bar's place runs on the score's clock (follow, [follow.md](follow.md)). The choice is kept after a relaunch.
+- `player-find-place`: on a hymn page the find bar (`Search` and the `#`, `search.md`, `search-in-hymn`) stands over the right end of the bar and moves none of its marks. A tap on `Key` (`id=dial-key`) raises the key popover, and the whole find bar leaves the tree while it shows; closing the popover brings the bar back, folded.
 
 ## How to get to it (user POV)
 
@@ -83,6 +84,7 @@ By hand:
 4. **Tap `Position`, paused (`player-seek-tap`, no sound at all).** With a hymn played once (the length known), in the sheet, `Pause hymn 100`; `sim gesture pan label=Position -120 0 --ms 500`, read `Position`'s value, then `sim tap label=Position`. → `Position` reads within 3 s of half the length, and still does 4 s later (paused, past the bar's 2 s hold); `Sheet Grabber` shown, its `y` unchanged. The sheet's tree holds no `Sound`: `sim back` to close it, read `Sound` off on the bar, then Play there: `Seek` runs on from that place. Pause.
 5. **Tap a still bar.** `sim relaunch`, `sim open hymnal://player?hymn=3` before any Play: `Position` is still. `sim tap label=Position` → its value unchanged, no Play started.
 6. **The stack, three trials.** `sim relaunch`; `sim open` hymns 100, 3, 1 and 100 in turn, then `sim gesture edge-pan` three times. → after each back, `Key` and the bar's Play name the page on top. Play and pause 100 after a relaunch and hymns 100, 3, 100: `Pause hymn 100` and `Seek` show.
+7. **The find bar under the key popover** (`player-find-place`; no Play, no turn). `sim open hymnal://hymns/8 --expect id=find-bar`, then `sim tap id=dial-key`. → the key popover shows, and no `id=find-bar`, `id=find-search` or `id=find-number` is in the tree. Close the popover (`sim tap id=dial-key` again). → `id=find-bar` with `id=find-search` and `id=find-number` again.
 
 ## Gotchas
 

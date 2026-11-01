@@ -116,11 +116,16 @@ The recipe beside each says what to read in its receipts and which steps stay by
 - `sim gesture pan <from> <dx> <dy> [--ms 900]` pans from a target's centre. From `id=dial-key`,
   `dx -52` at 900 ms turns one detent; 300 ms glides past two; 1500 ms stops surest.
 - `sim gesture edge-pan` is the back pan from the screen's left edge; a leftward swipe turns the pager on.
+- `sim gesture pinch <at> <scale>` pinches two fingers about a point (`x,y`) or a target's centre: a scale
+  below 1 closes the fingers (a pinch in), above 1 spreads them, at most 4. agent-device sets the pinch's
+  speed, so there is no `--ms`. On iOS the home list has no testID in the tree: pinch it at a point
+  (`200,450`).
 - `sim hold <target> [--ms 900] [--settle 10]`: the press lands 5 to 9 s after it returns, so `--settle`
   waits; leave 10 s between two holds, or they read as one. `sim relaunch` starts the app afresh.
 - A target is `label=<accessible name>` or `id=<testID>`, matched whole. Where a name matches twice, put
   the role first: `role=link label=100, Great Is Thy Faithfulness`, `role=button label=Search`. Name a
-  target, never a coordinate or a style; the edge pan alone starts at a point.
+  target, never a coordinate or a style; the edge pan, and a pinch where no target covers the place, alone
+  start at a point.
 - Reach a state the way a reader does: a tap, a scroll, a deep link the app answers. Never write the
   app's storage or call its atoms to get there.
 
