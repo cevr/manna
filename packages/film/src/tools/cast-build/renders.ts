@@ -21,7 +21,7 @@ type Split = keyof typeof SAMPLES;
 const SPLIT_OFFSET: Readonly<Record<Split, number>> = { train: 0, held: 1_000_000 };
 
 /** Sample `i` of `split`'s seed for `<member>/<id>`: the first four bytes of the SHA-256 of `<member>/<id>`, plus the split's offset and `i`. */
-export const seedOf = (member: string, id: string, split: Split, i: number): number =>
+const seedOf = (member: string, id: string, split: Split, i: number): number =>
   (Number.parseInt(sha256Hex(`${member}/${id}`).slice(0, 8), 16) + SPLIT_OFFSET[split] + i) >>> 0;
 
 const encoder = new TextEncoder();

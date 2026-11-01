@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { Result } from 'effect';
-import { type PoseSpec, limitsOf, sample, sequence } from './pose-sample.ts';
+import { type PoseSpec, sample } from './pose-sample.ts';
 import { type Puppet, puppetOf } from './puppet.ts';
 
 const [W, H] = [40, 60];
@@ -54,18 +54,18 @@ describe('sample', () => {
   });
 
   test('a sample lies on its own paper, its numbers within the limits, every joint of its bones named', () => {
-    const limits = limitsOf(FIGURE);
     const { img, truth } = sample(SPEC, 11);
     expect([img.width, img.height]).toEqual([64, 64]);
     // the top-left corner is paper (opaque, within the jitter of its colour)
     expect(img.rgba[3]).toBe(255);
     for (const [c, v] of truth.paper.entries())
       expect(Math.abs(img.rgba[c]! - v)).toBeLessThanOrEqual(1);
-    for (const [bone, n] of Object.entries(truth.numbers)) {
-      const [lo, hi] = limits[bone]!;
-      expect(n).toBeGreaterThanOrEqual(lo);
-      expect(n).toBeLessThanOrEqual(hi);
-    }
+    expect(Object.keys(truth.numbers).toSorted()).toEqual([
+      'elbowRight',
+      'head',
+      'lean',
+      'shoulderRight',
+    ]);
     expect(Object.keys(truth.joints).toSorted()).toEqual([
       'chin',
       'crown',
@@ -86,30 +86,32 @@ describe('sample', () => {
   });
 });
 
-describe('limitsOf', () => {
-  test('each range holds the drawn rest and its neighbours, the wrists and head their fixed ranges', () => {
-    const limits = limitsOf(FIGURE);
-    expect(limits['lean']).toEqual([-8, 8]);
-    expect(limits['head']).toEqual([-15, 15]);
+describe('the limits of a sample', () => {
+  test('each range holds the drawn rest and its neighbours, the lean and head their fixed ranges', () => {
+    const drawn: Record<string, Array<number>> = {};
+    for (let seed = 0; seed < 200; seed++)
+      for (const [bone, n] of Object.entries(sample(SPEC, seed).truth.numbers))
+        (drawn[bone] ??= []).push(n);
+    const range = (bone: string) => [Math.min(...drawn[bone]!), Math.max(...drawn[bone]!)];
+    // 200 uniform draws reach within 1 degree of each fixed bound, never past it
+    const [leanLo, leanHi] = range('lean');
+    expect(leanLo).toBeGreaterThanOrEqual(-8);
+    expect(leanLo).toBeLessThan(-7);
+    expect(leanHi).toBeLessThanOrEqual(8);
+    expect(leanHi).toBeGreaterThan(7);
+    const [headLo, headHi] = range('head');
+    expect(headLo).toBeGreaterThanOrEqual(-15);
+    expect(headLo).toBeLessThan(-14);
+    expect(headHi).toBeLessThanOrEqual(15);
+    expect(headHi).toBeGreaterThan(14);
+    // each arm range reaches at least 20 degrees either side of the rest, so
+    // 200 draws over it (at most 340 wide) come within 5 degrees of 20
     for (const bone of ['shoulderRight', 'elbowRight']) {
-      const [lo, hi] = limits[bone]!;
-      expect(lo).toBeLessThanOrEqual(-20);
-      expect(hi).toBeGreaterThanOrEqual(20);
+      const [lo, hi] = range(bone);
+      expect(lo).toBeLessThanOrEqual(-15);
+      expect(hi).toBeGreaterThanOrEqual(15);
       expect(lo).toBeGreaterThanOrEqual(-170);
       expect(hi).toBeLessThanOrEqual(170);
-    }
-  });
-});
-
-describe('sequence', () => {
-  test('one seed gives the same frames; every frame keeps one place, scale and paper', () => {
-    const a = sequence(SPEC, 3, 6);
-    const b = sequence(SPEC, 3, 6);
-    expect(a.map((f) => f.truth)).toEqual(b.map((f) => f.truth));
-    expect(a).toHaveLength(6);
-    for (const f of a) {
-      expect(f.truth.root).toEqual(a[0]!.truth.root);
-      expect(f.truth.paper).toEqual(a[0]!.truth.paper);
     }
   });
 });

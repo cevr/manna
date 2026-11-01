@@ -2,8 +2,7 @@
 // number drawn within its own limits (`limitsOf`, from the puppet's drawn
 // rest), the figure drawn by `rasterOf` at a random scale and place on the
 // reader's canvas, over its paper jittered in tone, then a 1 px blur
-// (`sample`); or a held sequence of eased key poses at one place
-// (`sequence`). Each comes with its truth: the numbers, each bone's world
+// (`sample`). Each comes with its truth: the numbers, each bone's world
 // angle, each joint's canvas px, and the joints its puppet lacks (`masked`).
 // One seed draws one sample (`mulberry32`): the same seed gives the same
 // bytes. Pure.
@@ -118,7 +117,7 @@ const aroundRest = ([lo, hi]: Pt): Pt => [
  * against it over [-150, 10] and [-10, 150]. Each range is made relative to
  * the drawn rest's angle, so a drawing already bent is not bent past it.
  */
-export const limitsOf = (p: Puppet) => {
+const limitsOf = (p: Puppet) => {
   const by = new Map(p.bones.map((b) => [b.name, b]));
   const hip = by.get('lean')?.pivot ?? p.root;
   const out: Record<string, Pt> = {};
@@ -244,39 +243,4 @@ export const sample = (spec: PoseSpec, seed: number): PoseSample => {
   const numbers = keyPose(spec.puppet, limitsOf(spec.puppet), rnd);
   const { scale, root, paper } = placed(spec, rnd);
   return frameOf(spec, numbers, root, scale, paper);
-};
-
-/**
- * A held sequence of `frames` at `seed`, at 24 fps: one scale, place and
- * paper; key poses drawn within the limits, each held 0-15 frames, then
- * eased (smoothstep) to the next over 6-30 frames.
- */
-export const sequence = (
-  spec: PoseSpec,
-  seed: number,
-  frames: number,
-): ReadonlyArray<PoseSample> => {
-  const { puppet: p } = spec;
-  const rnd = mulberry32(seed);
-  const limits = limitsOf(p);
-  const { scale, root, paper } = placed(spec, rnd);
-  const out: Array<Readonly<Record<string, number>>> = [];
-  let a = keyPose(p, limits, rnd);
-  while (out.length < frames) {
-    const hold = Math.floor(16 * rnd());
-    const move = 6 + Math.floor(25 * rnd());
-    const b = keyPose(p, limits, rnd);
-    for (let i = 0; i < hold; i++) out.push(a);
-    for (let i = 1; i <= move; i++) {
-      const t = i / move;
-      const e = t * t * (3 - 2 * t);
-      out.push(
-        Object.fromEntries(
-          p.bones.map((x) => [x.name, +(a[x.name]! + (b[x.name]! - a[x.name]!) * e).toFixed(3)]),
-        ),
-      );
-    }
-    a = b;
-  }
-  return out.slice(0, frames).map((n) => frameOf(spec, n, root, scale, paper));
 };

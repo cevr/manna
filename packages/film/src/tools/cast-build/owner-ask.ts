@@ -17,7 +17,7 @@ import { type Stage, StageFailed, fileInput } from './graph.ts';
 import type { MemberStages } from './stages.ts';
 
 /** The asker the build's asks are made by. */
-export const BUILD_ASKER = 'concept build';
+const BUILD_ASKER = 'concept build';
 
 /**
  * The drawings an ask shows, published where the lab serves them: `publish`

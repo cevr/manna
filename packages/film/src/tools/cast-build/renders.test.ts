@@ -2,7 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import { Result } from 'effect';
 import type { PoseSpec } from '../../core/pose-sample.ts';
 import { puppetOf } from '../../core/puppet.ts';
-import { seedOf, shardOf, trainsetOf } from './renders.ts';
+import { shardOf, trainsetOf } from './renders.ts';
+import { filesIn, seedsIn } from './testing.ts';
 
 const [W, H] = [24, 40];
 const rgba = new Uint8Array(W * H * 4);
@@ -27,30 +28,24 @@ const SPEC: PoseSpec = {
 const COUNTS = { train: 2, held: 1 };
 
 /** The names of a ustar archive's files, in order. */
-const namesIn = (tar: Uint8Array) => {
-  const names: Array<string> = [];
-  for (let at = 0; at + 512 <= tar.length;) {
-    const head = tar.subarray(at, at + 512);
-    if (head.every((b) => b === 0)) break;
-    names.push(new TextDecoder().decode(head.subarray(0, 100)).replace(/\0+$/, ''));
-    const size = Number.parseInt(new TextDecoder().decode(head.subarray(124, 135)), 8);
-    at += 512 + Math.ceil(size / 512) * 512;
-  }
-  return names;
-};
+const namesIn = (tar: Uint8Array) => filesIn(tar).map(([name]) => name);
 
-describe('seedOf', () => {
+describe('the seeds of a shard', () => {
   test('a seed is the drawing’s own: from its member and id, never a list position', () => {
-    expect(seedOf('lead-feast', 'turnaround-front', 'train', 3)).toBe(
-      seedOf('lead-feast', 'turnaround-front', 'train', 3),
-    );
+    const counts = { train: 4, held: 1 };
+    const front = seedsIn(shardOf(SPEC, 'lead-feast', 'turnaround-front', counts));
+    expect(seedsIn(shardOf(SPEC, 'lead-feast', 'turnaround-front', counts))).toEqual(front);
+    // a shorter shard of the same drawing draws the same first seeds
+    const short = seedsIn(shardOf(SPEC, 'lead-feast', 'turnaround-front', { train: 1, held: 1 }));
+    expect(Object.keys(short).toSorted()).toEqual(['held/0', 'train/0']);
+    expect([short['train/0'], short['held/0']]).toEqual([front['train/0'], front['held/0']]);
+    const one = { train: 1, held: 0 };
     const seeds = new Set([
-      seedOf('lead-feast', 'turnaround-front', 'train', 0),
-      seedOf('lead-feast', 'turnaround-front', 'held', 0),
-      seedOf('lead-feast', 'single-single-1', 'train', 0),
-      seedOf('sower', 'turnaround-front', 'train', 0),
+      ...Object.values(front),
+      ...Object.values(seedsIn(shardOf(SPEC, 'lead-feast', 'single-single-1', one))),
+      ...Object.values(seedsIn(shardOf(SPEC, 'sower', 'turnaround-front', one))),
     ]);
-    expect(seeds.size).toBe(4);
+    expect(seeds.size).toBe(7);
   });
 });
 

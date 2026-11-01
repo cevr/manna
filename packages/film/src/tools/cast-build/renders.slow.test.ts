@@ -7,7 +7,8 @@ import { Effect, Option } from 'effect';
 import { puppetFor } from '../../../../../apps/animations/src/library/cast/lead-feast/cutout/puppet.ts';
 import { PUPPETS } from '../../../../../apps/animations/src/library/cast/lead-feast/cutout/puppets.ts';
 import { type PoseSpec, SAMPLE_SIZE, sample } from '../../core/pose-sample.ts';
-import { SAMPLES, seedOf, shardOf } from './renders.ts';
+import { SAMPLES, shardOf } from './renders.ts';
+import { seedsIn } from './testing.ts';
 
 const front = Effect.gen(function* () {
   const puppet = yield* puppetFor('front');
@@ -32,8 +33,14 @@ describe('renders of lead-feast front', () => {
       Effect.gen(function* () {
         const spec = yield* front;
         const [W, H] = SAMPLE_SIZE;
+        // each held sample's seed as the shard draws it; its JSON truth
+        // carries the seed, so the sample is drawn again here to read its pixels
+        const seeds = seedsIn(
+          shardOf(spec, 'lead-feast', 'turnaround-front', { train: 0, held: SAMPLES.held }),
+        );
+        expect(Object.keys(seeds)).toHaveLength(SAMPLES.held);
         for (let i = 0; i < SAMPLES.held; i++) {
-          const drawn = sample(spec, seedOf('lead-feast', 'turnaround-front', 'held', i));
+          const drawn = sample(spec, seeds[`held/${i}`]!);
           expect([drawn.img.width, drawn.img.height]).toEqual([W, H]);
           // he stands 82-100 % of the canvas's height: a tenth to a half of its pixels
           expect(figureShare(drawn)).toBeGreaterThan(0.1);

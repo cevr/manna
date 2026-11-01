@@ -16,14 +16,7 @@ import { text } from '../host/testing.ts';
 import { labInMemory } from '../lab/testing.ts';
 import { Review } from '../review.ts';
 import { buildGraph } from './graph.ts';
-import {
-  BUILD_ASKER,
-  DrawingSet,
-  type OwnerNeed,
-  askStage,
-  drawStage,
-  ownerNeeds,
-} from './owner-ask.ts';
+import { DrawingSet, type OwnerNeed, askStage, drawStage, ownerNeeds } from './owner-ask.ts';
 
 /** What a build is asked with, as `buildGraph` takes it. */
 type BuildOptions = Parameters<typeof buildGraph>[1];
@@ -130,11 +123,13 @@ const labOver = (files: Map<string, Uint8Array>, published: Array<ReadonlyArray<
   );
 };
 
-/** The build's asks about the film that still ask. */
+/** The build's asks about the film that still ask; the lab shows their asker as `concept build`. */
 const openAsks = Effect.map(
   Effect.flatMap(Effect.service(AskStore), (asks) => asks.list),
   (all) =>
-    all.filter((r) => r.by === BUILD_ASKER && r.film === film && askStatus(r.state) === 'asking'),
+    all.filter(
+      (r) => r.by === 'concept build' && r.film === film && askStatus(r.state) === 'asking',
+    ),
 );
 
 /** Each keep choice of `record`: its label, and its keep option's image. */
