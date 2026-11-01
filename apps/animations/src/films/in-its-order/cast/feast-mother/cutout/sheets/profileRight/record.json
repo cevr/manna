@@ -141,11 +141,11 @@
               "under": "armRight",
               "painted": {
                 "share": 0,
-                "px": 3321
+                "px": 3042
               },
               "kept": {
-                "share": 0.006,
-                "px": 6246
+                "share": 0.001,
+                "px": 5658
               },
               "verdict": "within"
             },
@@ -154,12 +154,23 @@
               "under": "armRight",
               "painted": {
                 "share": 0,
-                "px": 5351
+                "px": 4998
               },
               "kept": {
-                "share": 0.008,
-                "px": 8445
+                "share": 0.003,
+                "px": 7695
               },
+              "verdict": "within"
+            }
+          ],
+          "step": [
+            {
+              "part": "robe",
+              "meets": "torso",
+              "under": "armRight",
+              "laid": -0.29,
+              "answer": 0.05,
+              "pairs": 52,
               "verdict": "within"
             }
           ],
@@ -259,11 +270,11 @@
         "under": "armRight",
         "painted": {
           "share": 0,
-          "px": 3321
+          "px": 3042
         },
         "kept": {
-          "share": 0.006,
-          "px": 6246
+          "share": 0.001,
+          "px": 5658
         },
         "verdict": "within"
       },
@@ -272,12 +283,23 @@
         "under": "armRight",
         "painted": {
           "share": 0,
-          "px": 5351
+          "px": 4998
         },
         "kept": {
-          "share": 0.008,
-          "px": 8445
+          "share": 0.003,
+          "px": 7695
         },
+        "verdict": "within"
+      }
+    ],
+    "step": [
+      {
+        "part": "robe",
+        "meets": "torso",
+        "under": "armRight",
+        "laid": -0.29,
+        "answer": 0.05,
+        "pairs": 52,
         "verdict": "within"
       }
     ],
@@ -297,8 +319,10 @@
     "chromaDrop": 3,
     "grainWithin": 0.5,
     "speckOver": 0.04,
+    "stepWithin": 5,
     "visibleAtRest": 0,
     "leastSeamPairs": 20,
+    "leastStepPairs": 8,
     "leastGrainWindows": 90,
     "leastRegionPx": 100,
     "leastCellPx": 40
