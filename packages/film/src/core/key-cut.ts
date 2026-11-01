@@ -82,20 +82,10 @@ const boxOf = (r: Raster, ground: Rgb) =>
   boxWhere(r.width, r.width * r.height, (i) => away(rgbAt(r, i), ground) > 60);
 
 /**
- * `drawn` registered to `view`: a start from the figures' boxes (heights
- * matched, right edges and tops met), then a grid search in three stages over
- * scale and shift, scored on every second pixel of `view` that `still` keeps.
+ * The scored pixels: every second pixel of `view` that `still` keeps, each its
+ * place and its view colour, read once, since the search scores them 2,000 times.
  */
-export const fitKey = (
-  drawn: Raster,
-  view: Raster,
-  still: (x: number, y: number) => boolean,
-): KeyFit => {
-  const ground = groundOfKey(drawn);
-  const [, vy0, vx1, vy1] = boxOf(view, groundOfKey(view));
-  const [, dy0, dx1, dy1] = boxOf(drawn, ground);
-  // The scored pixels, each its place and its view colour, read once: the
-  // search scores them 2,000 times.
+const scoredOf = (view: Raster, still: (x: number, y: number) => boolean) => {
   const xs: number[] = [];
   const ys: number[] = [];
   const seen: number[] = [];
@@ -106,6 +96,33 @@ export const fitKey = (
         ys.push(y);
         seen.push(...rgbAt(view, y * view.width + x));
       }
+  return { xs, ys, seen };
+};
+
+/** The search's start: the figures' boxes, heights matched, right edges and tops met. */
+const startOf = (drawn: Raster, view: Raster, ground: Rgb) => {
+  const [, vy0, vx1, vy1] = boxOf(view, groundOfKey(view));
+  const [, dy0, dx1, dy1] = boxOf(drawn, ground);
+  const s = (dy1 - dy0) / (vy1 - vy0);
+  return { s, dx: dx1 - s * vx1, dy: dy0 - s * vy0 };
+};
+
+/**
+ * `drawn` registered to `view`: a start from the figures' boxes (heights
+ * matched, right edges and tops met), then a grid search in three stages over
+ * scale and shift, scored on every second pixel of `view` that `still` keeps.
+ */
+export const fitKey = (
+  drawn: Raster,
+  view: Raster,
+  still: (x: number, y: number) => boolean,
+): KeyFit => {
+  const ground = groundOfKey(drawn);
+  const start = startOf(drawn, view, ground);
+  // A view or drawing with no figure, or one a single row tall, gives no scale
+  // to start from: the fit fails (error NaN) rather than scoring the paper.
+  if (!(Number.isFinite(start.s) && start.s > 0)) return { ...start, error: NaN, ground };
+  const { xs, ys, seen } = scoredOf(view, still);
   const { width: w, height: h, rgba } = drawn;
   const error = (s: number, dx: number, dy: number) => {
     let e = 0;
@@ -121,8 +138,6 @@ export const fitKey = (
     }
     return e / xs.length / 3;
   };
-  const s0 = (dy1 - dy0) / (vy1 - vy0);
-  const start = { s: s0, dx: dx1 - s0 * vx1, dy: dy0 - s0 * vy0 };
   let best = { ...start, error: error(start.s, start.dx, start.dy) };
   for (const [ds, step] of [
     [0.04, 12],

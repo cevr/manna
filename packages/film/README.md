@@ -3704,8 +3704,8 @@ suite. Each run writes its files' times to a timings file in the package's
 installed modules (the script's `--timings` and `--update-timings`), and the
 next run starts the slowest files first, so a long file does not begin last
 and run alone. A fresh checkout, CI's among them, has no times yet and runs
-the files in their usual order. The suite stays inside its 1.1 s budget
-(`bun run test:budget`). E2E files live separately under `e2e/`, so
+the files in their usual order. Its budget is 1.1 s (`bun run
+test:budget`); on a busy host it runs over it (issue #49). E2E files live separately under `e2e/`, so
 those paths do not discover or execute them. Their source remains linted and typechecked.
 
 Run `bun run test:e2e` from the repository root or this package to exercise
