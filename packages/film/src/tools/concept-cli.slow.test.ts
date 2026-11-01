@@ -29,6 +29,9 @@ import { concept } from './concept-cli.ts';
 import { ContentStore } from './content-store.ts';
 import { FilmFolder } from './film-repo.ts';
 import { Pages } from './pages.ts';
+import { ProductionStore } from './production-store.ts';
+import { RenderCatalogue } from './catalogue.ts';
+import { Review } from './review.ts';
 import { encodePng } from './png.ts';
 import { memoryFileSystem, printingTo, text } from './host/testing.ts';
 
@@ -47,8 +50,11 @@ const over = () =>
   Layer.mergeAll(
     ContentStore.layer,
     FilmFolder.layer('/films'),
-    // `concept build` asks through the asks; no command run here makes one
+    // `concept build` asks through the asks, its drawings published as a review set; no command run here makes one
     Layer.mock(AskStore)({ dir: '/nonexistent/asks', file: (id) => `/nonexistent/asks/${id}` }),
+    Layer.mock(Review)({ roots: [] }),
+    Layer.mock(ProductionStore)({}),
+    Layer.mock(RenderCatalogue)({}),
   ).pipe(Layer.provideMerge(files()));
 
 const files = () =>

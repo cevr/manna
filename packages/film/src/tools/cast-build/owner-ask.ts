@@ -1,14 +1,16 @@
 // What the build asks of the owner. Every entry across the members built
 // that is drawn but not kept goes on one ask (`askStage`), made through the
-// ask store, the asker's open page joined; its key holds each drawing's
+// ask store, the asker's open page joined, each keep choice showing its
+// drawing (published as a review set, `DrawingSet`); the build's earlier ask
+// about the film is closed as superseded. Its key holds each drawing's
 // bytes, so a rerun with the same needs is cached and posts nothing. Every
 // entry not drawn is drawn as sheet tries (`drawStage`), only when the
 // build's `--spend okra` allows it; its key holds the needs, so a rerun
 // draws nothing again. Neither keeps anything: the owner's answer is kept
 // with `concept keep … --ask <id>`.
 
-import { Effect, Option } from 'effect';
-import { AskName, oneQuestion } from '../../core/ask.ts';
+import { Array as Arr, Context, Effect, Option } from 'effect';
+import { AskName, askStatus, oneQuestion } from '../../core/ask.ts';
 import { AskStore } from '../ask-store.ts';
 import type { FilmName } from '../film-repo.ts';
 import { type Stage, StageFailed, fileInput } from './graph.ts';
@@ -16,6 +18,20 @@ import type { MemberStages } from './stages.ts';
 
 /** The asker the build's asks are made by. */
 export const BUILD_ASKER = 'concept build';
+
+/**
+ * The drawings an ask shows, published where the lab serves them: `publish`
+ * answers each need's image `src`, in order.
+ */
+export class DrawingSet extends Context.Service<
+  DrawingSet,
+  {
+    readonly publish: (
+      film: FilmName,
+      needs: ReadonlyArray<OwnerNeed>,
+    ) => Effect.Effect<ReadonlyArray<string>, StageFailed>;
+  }
+>()('@manna/film/tools/cast-build/DrawingSet') {}
 
 /** One entry the owner must draw (`drawn`) or keep (`kept`), with its drawing's path. */
 export interface OwnerNeed {
@@ -48,17 +64,18 @@ export const ownerNeeds = (
     }),
   );
 
-/** One choice per drawing: keep it (recommended), or draw it again. */
-const keepChoice = (need: OwnerNeed, n: number) => ({
+/** One choice per drawing: keep it (recommended), shown at `src` with its path beside it, or draw it again. */
+const keepChoice = (need: OwnerNeed, n: number, src: string) => ({
   kind: 'choose' as const,
   id: AskName.make(`keep-${n + 1}`),
-  label: `${needName(need)}: keep this drawing? (${need.file})`,
+  label: `${needName(need)}: keep this drawing?`,
   options: [
     {
       value: 'keep',
       label: 'Keep it',
       recommended: true,
       why: 'It is drawn; once kept, the build cuts it, fits it and trains on it.',
+      image: { src, caption: need.file },
       outcome: 'keep' as const,
       keeps: { film: need.film, scenes: [] },
     },
@@ -66,31 +83,61 @@ const keepChoice = (need: OwnerNeed, n: number) => ({
   ],
 });
 
+/** `self` failing as the ask stage fails, in its error's words. */
+const asked = <A, E extends { readonly message: string }>(self: Effect.Effect<A, E>) =>
+  Effect.mapError(self, (e) => StageFailed.make({ reason: `ask: ${e.message}` }));
+
 /**
- * The build's one ask, about `film`: every need `kept` lacks, made once through the ask
- * store on the asker's open page; its output is the ask's id. Keyed by each
- * drawing's bytes and the needs' names, so the same needs ask once.
+ * The build's one ask, about `film`: every need `kept` lacks, its drawings
+ * published first (`DrawingSet`) so each keep choice shows its own, made once
+ * through the ask store on the asker's open page; then each earlier build ask
+ * about the film that still asks is closed as superseded, so only this one
+ * is answered. Its output is the ask's id. Keyed by each drawing's bytes and
+ * the needs' names, so the same needs publish and ask once.
  */
-export const askStage = (film: FilmName, needs: ReadonlyArray<OwnerNeed>): Stage<AskStore> => {
+export const askStage = (
+  film: FilmName,
+  needs: ReadonlyArray<OwnerNeed>,
+): Stage<AskStore | DrawingSet> => {
   const keeps = needs.filter((n) => n.lacks === 'kept');
   return {
     id: 'ask',
     inputs: keeps.map((n) => fileInput(n.file)),
-    version: '2',
+    version: '3',
     config: keeps.map(needName).join('\n'),
     run: () => {
       if (keeps.length === 0) return Effect.succeed(encoder.encode('none'));
       return Effect.gen(function* () {
         const asks = yield* AskStore;
-        const made = yield* asks.make({
-          title: `Keep the cast drawings the build waits on (${keeps.length})`,
-          why: `The cast build cuts, fits and trains only on kept drawings. Drawn and not kept: ${keeps.map(needName).join(', ')}.`,
-          by: BUILD_ASKER,
-          film,
-          ask: oneQuestion(keeps.map(keepChoice), 'Kept answers go in with concept keep.'),
+        const srcs = yield* (yield* DrawingSet).publish(film, keeps);
+        if (srcs.length !== keeps.length)
+          return yield* StageFailed.make({
+            reason: `ask: ${keeps.length} drawings published as ${srcs.length}`,
+          });
+        const made = yield* asked(
+          asks.make({
+            title: `Keep the cast drawings the build waits on (${keeps.length})`,
+            why: `The cast build cuts, fits and trains only on kept drawings. Drawn and not kept: ${keeps.map(needName).join(', ')}.`,
+            by: BUILD_ASKER,
+            film,
+            ask: oneQuestion(
+              Arr.zip(keeps, srcs).map(([need, src], n) => keepChoice(need, n, src)),
+              'Kept answers go in with concept keep.',
+            ),
+          }),
+        );
+        const earlier = (yield* asked(asks.list)).filter(
+          (r) =>
+            r.id !== made.id &&
+            r.by === BUILD_ASKER &&
+            r.film === film &&
+            askStatus(r.state) === 'asking',
+        );
+        yield* Effect.forEach(earlier, (r) => asked(asks.close(r.id, `superseded by ${made.id}`)), {
+          discard: true,
         });
         return encoder.encode(made.id);
-      }).pipe(Effect.mapError((e) => StageFailed.make({ reason: `ask: ${e.message}` })));
+      });
     },
   };
 };

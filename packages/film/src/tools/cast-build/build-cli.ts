@@ -34,7 +34,15 @@ import {
   type StageReport,
   buildGraph,
 } from './graph.ts';
-import { type OwnerNeed, askStage, drawStage, needName, ownerNeeds } from './owner-ask.ts';
+import { drawingSetLive } from './drawing-set.ts';
+import {
+  type DrawingSet,
+  type OwnerNeed,
+  askStage,
+  drawStage,
+  needName,
+  ownerNeeds,
+} from './owner-ask.ts';
 import { CastReader } from './reader.ts';
 import {
   type MemberStages,
@@ -179,7 +187,9 @@ export const build = <E, R>(
       const reader = yield* CastReader;
       const cache = yield* castCache;
       const needs = ownerNeeds(members);
-      const stages: ReadonlyArray<Stage<StageServices | CastReader | AskStore | DrawServices>> = [
+      const stages: ReadonlyArray<
+        Stage<StageServices | CastReader | AskStore | DrawingSet | DrawServices>
+      > = [
         ...built,
         trainsetStage(candidates),
         trainStage(candidates, reader.sources),
@@ -214,6 +224,7 @@ export const build = <E, R>(
         PuppetImagesBun,
         CastReader.layer,
         ImageRoute.layer,
+        drawingSetLive,
       ),
     ),
     Command.withDescription(

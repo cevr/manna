@@ -265,7 +265,7 @@ const waitOf = (
   );
 
 /** The lab's own links as a terminal reaches it: `FILM_LAB_URL` on this machine, and `FILM_LAB_PHONE_URL`. */
-const addressFromConfig = Layer.effect(
+export const addressFromConfig = Layer.effect(
   LabAddress,
   Effect.gen(function* () {
     const local = localLink(yield* labUrl);
