@@ -75,6 +75,27 @@
       "expect": [{ "hides": "label=Hundreds" }]
     },
     {
+      "name": "drums-outside",
+      "action": "tap",
+      "target": "label=Find a hymn by number",
+      "expect": [
+        { "shows": "id=find-open" },
+        { "hides": "label=100s" },
+        { "hides": "label=10s" },
+        { "hides": "label=1s" }
+      ]
+    },
+    {
+      "name": "browse-number-outside",
+      "action": "tap",
+      "target": "role=link label=1, Praise to the Lord",
+      "expect": [
+        { "hides": "id=find-open" },
+        { "hides": "label=Stanza 1" },
+        { "shows": "label=Find a hymn by number" }
+      ]
+    },
+    {
       "name": "drums-again",
       "action": "tap",
       "target": "label=Find a hymn by number",
