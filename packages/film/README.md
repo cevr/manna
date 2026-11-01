@@ -2870,6 +2870,56 @@ the view's figure box (`boxStart`), its root, its one scale and the bones
 named searched by halving steps (16° to 0.0625°, no bone past 15°), the
 lower loss kept, into the member's `cutout/poses/<kind>-<view>.json`.
 
+### The cast build: `film concept coverage` and `film concept build`
+
+A cut-out member's coverage manifest (his `cutout/coverage.ts`, data only)
+names each drawing he needs: a `puppet` entry is cut into parts, a `key`
+entry is a drawn key. `film concept coverage <film> (<member> | --cast)
+[--measure] [--json]` (`tools/cast-build/coverage-cli.ts`) prints what each
+entry still lacks (drawn, kept, cut, fit) and exits non-zero while any
+member is incomplete; `--measure` first runs the free stages its answers
+come from.
+
+`film concept build <film> (<member> | --cast) [--plan] [--touch <path> …]
+[--spend okra,modal] [--json]` (`tools/cast-build/build-cli.ts`) builds
+each member's stages from his manifest (`tools/cast-build/stages.ts`):
+
+- per entry: `drawing` (the drawing's bytes; it waits on the owner while
+  the drawing is not drawn or not kept), `parts` (`film concept parts
+  --check`, else `--reuse`, else an okra call), `cut` (the puppet spec its
+  parts are posed by), `fit` (the fit rows of `film concept render --figure
+  cutout --fit-only`) and `renders` (its synthetic training renders, one
+  shard);
+- per film: `trainset` (every complete drawing's shard), `train` (one
+  reader, trained on Modal), `eval` (each drawing's held renders read and
+  scored on this machine) and the owner's `ask` and `draw`
+  (`tools/cast-build/owner-ask.ts`).
+
+A stage spends only when `--spend` names what it spends: `okra` for a part
+sheet's call and a drawing's tries, `modal` for the train. Without it the
+stage waits (`waiting-spend`), as every stage below it does, and a rerun
+asks again. `--plan` runs nothing and reads no lab: it prints each stage's
+state (`cached`, `stale`, `waiting-*`) and key; `--touch` plans as if a
+file changed, and `--plan --spend modal` names the training set a train
+would read.
+
+The cache is `FILM_CAST_CACHE`, else `~/.cache/bible-film/cast`: each
+stage's output kept as `objects/<sha256>`, and the manifest `build.json`
+(a `ContentStore`) maps each stage's key (its id, version, config and the
+hash of each input file or upstream output) to its output's hash and wall
+time. A stage whose key is kept does not run, and a rerun that makes the
+same bytes leaves every stage below it cached. Each stage is decided and
+recorded under the manifest's lock and runs outside it, marked as running
+with a heartbeat, so a plan reads the manifest during a train and two
+builds never run one stage (`tools/cast-build/graph.ts`).
+
+The reader is Python (`reader/model.py`, run in a uv environment under
+`FILM_READER_HOME`). Its train hands Modal the train config's backbone and
+input side, and the checkpoint keeps both, so every read takes the frame
+the reader was trained on. `film concept reader import|read|eval|chain`
+(`tools/cast-build/reader-cli.ts`) reads with a checkpoint by name, by
+hash, or as `current`: the reader the committed reader lock names.
+
 ### The review: `film review`, and keep needs evidence
 
 `film review <film> --set <name> --scene <id> --at <place> --at <place>
