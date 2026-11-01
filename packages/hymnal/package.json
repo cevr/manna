@@ -31,7 +31,8 @@
     "meaning": "bun scripts/meaning/build.ts --out ../../apps/hymnal/assets/meaning/meaning.js",
     "render": "bun scripts/render/render.ts",
     "split": "bun scripts/split.ts",
-    "sync-check": "bun scripts/sync-check.ts"
+    "sync-check": "bun scripts/sync-check.ts",
+    "verse-starts": "bun scripts/verse-starts.ts"
   },
   "dependencies": {
     "cmu-pronouncing-dictionary": "3.0.0",
