@@ -11,6 +11,11 @@
  * rows, and follows a pull past the top down. The title's text takes no
  * touch, so a drag that starts on it scrolls the list.
  *
+ * Deep in the list, an upward scroll pins the tab row over the list's top
+ * under the status bar, and a downward one sends it away (`reveal.ts`,
+ * `PinnedTabs`): a layer, so the list's content and offset never move for
+ * it, with the pinned topic row under it (`PullDown.cover`).
+ *
  * A press on the find bar's `Search` enters search mode: the bar grows into
  * the search box, and the results show over the list. A passage tapped in
  * `About this hymn` enters it too, with its query and the keyboard down
@@ -52,6 +57,7 @@ import { hymnHref, hymnOf } from './Browse';
 import { useCancelSearch } from './FindBar';
 import { showTiles, type Stood, Tiles, tiles } from './finding';
 import { Gear } from './Gear';
+import { PinnedTabs, type TabReveal, useTabReveal } from './PinnedTabs';
 import { TabRow, tabRowHeight } from './TabRow';
 import { groupAt, openingOffset, type TabName, tabNamed, tabsOf } from './tabs';
 
@@ -73,13 +79,13 @@ export function Home() {
   const searching = useAtomValue(searchOpen) !== 'off';
   const title = Math.ceil(titleLine * fontScale) + titleSpace;
   const scroll = useSharedValue(0);
-  // How far a layer over the list's top covers it: none stands there, so the pinned topic row meets the status bar.
-  const cover = useSharedValue(0);
+  // The pinned tab row rests where the list's own row meets the list's top: one title's height down.
+  const reveal = useTabReveal(scroll, title, tabRowHeight(fontScale));
   const [shown, setTiles] = useAtom(tiles);
   const cue = useCue();
   const zoomOut = () => {
     cue(plain('zoom-out'));
-    setTiles((state) => showTiles(state, { offset: scroll.value, cover: cover.value }));
+    setTiles((state) => showTiles(state, { offset: scroll.value, cover: reveal.cover.value }));
   };
   // The find bar asks for the tiles; the list's place is read here, once, as they show.
   useAtomSubscribe(
@@ -103,7 +109,7 @@ export function Home() {
           <TabList
             title={title}
             scroll={scroll}
-            cover={cover}
+            reveal={reveal}
             zoom={zoom}
             onZoomOut={zoomOut}
             onZoomIn={zoomIn}
@@ -133,13 +139,19 @@ export function Home() {
  * zooms out to `All at once` over the list, its tiles opened at the group at
  * the list's top when it zoomed out (`zoom`, `groupAt`). A tile mounts the
  * tab's list afresh with that group's row at the top (`groupStarts`).
- * While it shows, the list and the layers over it (`children`: the title)
- * are out of reach beneath it (`UnderTiles`).
+ * While it shows, the list and the layers over it (the pinned tab row, and
+ * `children`: the title) are out of reach beneath it (`UnderTiles`).
+ *
+ * Deep in the list, an upward scroll pins a copy of the tab row over the
+ * list's top under the status bar, and a downward one sends it away
+ * (`reveal`, `PinnedTabs`); a tap on a pinned tab chooses it as the list's
+ * own row does. A tab chosen or a tile picked moves the list for the app,
+ * which turns the pinned row neither way (`jump`).
  */
 function TabList({
   title,
   scroll,
-  cover,
+  reveal,
   zoom,
   onZoomOut,
   onZoomIn,
@@ -147,7 +159,7 @@ function TabList({
 }: {
   readonly title: number;
   readonly scroll: SharedValue<number>;
-  readonly cover: SharedValue<number>;
+  readonly reveal: TabReveal;
   /** Where the list stood when it zoomed out to `All at once`, while that shows. */
   readonly zoom: Option.Option<Stood>;
   readonly onZoomOut: () => void;
@@ -171,11 +183,14 @@ function TabList({
   const [visit, setVisit] = useState(0);
   const show = (name: TabName, at: number) => {
     kept.current.set(tab.name, scroll.value);
+    reveal.jump(at);
     scroll.value = at;
     setStart(at);
     setChosen(name);
   };
   const choose = (name: TabName) => show(name, openingOffset(kept.current, name, scroll.value));
+  // The list's own row, and the pinned copy of it over the list's top.
+  const tabRow = <TabRow names={tabs.map((t) => t.name)} selected={tab.name} onSelect={choose} />;
   // The list's head: the title's spacer and the tab row.
   const head = title + tabRowHeight(fontScale);
   const setTopic = useAtomSet(openAtTopic);
@@ -219,13 +234,13 @@ function TabList({
     node: (
       <View style={{ height: head }}>
         <View style={{ height: title }} />
-        <TabRow names={tabs.map((t) => t.name)} selected={tab.name} onSelect={choose} />
+        {tabRow}
       </View>
     ),
     height: head,
     rest: 0,
     scroll,
-    cover,
+    cover: reveal.cover,
   };
   return (
     <UnderTiles tiles={Option.map(zoom, allAtOnce)}>
@@ -241,6 +256,7 @@ function TabList({
         {...(tab.name === 'Sections' && { byTopic: true, shelves })}
         {...(tab.name !== 'Sections' && { grouped: tab, empty: 'No hymns here yet.' })}
       />
+      <PinnedTabs reveal={reveal}>{tabRow}</PinnedTabs>
       {children}
     </UnderTiles>
   );
