@@ -59,10 +59,6 @@
   },
   "checkpointSha256": "74ec6577c51b8f8964d2265650702662ed745d5c86fba540b226d3c92ead8a84",
   "train": {
-    "trainedOn": "2026-11-01",
-    "modalApp": "ap-CrXrNlBRXGxPBIG0oJ8vMW",
-    "trainSec": 2513,
-    "finalLoss": 0.00862,
     "stageSec": 4361
   },
   "held": {
@@ -597,10 +593,5 @@
         "drawing": "lead-feast/single-single-1"
       }
     ]
-  },
-  "spend": {
-    "modalMeteredUsd": 0.79,
-    "modalBilledUsd": 0,
-    "buildCountedUsd": 0.92
   }
 }
