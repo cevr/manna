@@ -19,6 +19,9 @@ import type { Film } from '../canvas/film.ts';
 import type { PuppetImages, PuppetUnloadable } from '../puppet/images.ts';
 import { PuppetImagesBrowser } from '../puppet/images-browser.ts';
 import { loadPuppets } from '../puppet/load.ts';
+import type { PaintingImages, PaintingUnloadable } from '../painting/images.ts';
+import { PaintingImagesBrowser } from '../painting/images-browser.ts';
+import { loadPaintings } from '../painting/load.ts';
 import { loadRigs } from '../rive/load.ts';
 import type { RiveRuntime } from '../rive/runtime.ts';
 import { RiveRuntimeBrowser } from '../rive/runtime-browser.ts';
@@ -93,12 +96,13 @@ const declared = (id: string, m: FilmModule, film: Film): Effect.Effect<Film> =>
     film,
   );
 
-/** Why a film's load failed: its narration unreadable, or a rig or puppet it declares not loadable. */
+/** Why a film's load failed: its narration unreadable, or a rig, puppet or painting it declares not loadable. */
 export type FilmUnloadable =
   | NarrationUnreadable
   | RigUnloadable
   | RigNameMissing
-  | PuppetUnloadable;
+  | PuppetUnloadable
+  | PaintingUnloadable;
 
 /**
  * The registry's loads: each film, keyed by its folder under `films/`, its
@@ -110,8 +114,10 @@ export type FilmUnloadable =
  * given once its rigs are loaded (`loadRigs`) through `rive` (the page's Rive
  * runtimes unless given), built once with the page's first film, and its
  * puppets (`loadPuppets`), each part read through `images` (the page's
- * decoder unless given), into the scope the load runs in: each load of a
- * film loads its own rigs and puppets, which
+ * decoder unless given), then its painted plates (`loadPaintings`), each
+ * read through `paintings` (the page's bitmap decoder unless given), into
+ * the scope the load runs in: each load of a film loads its own rigs,
+ * puppets and paintings, which
  * whoever runs it frees by closing that scope (a page's staged film keeps
  * them for the page's life, `stageFilm`). A load runs on its runner's fiber, so stopping the
  * runner stops the load; a load stopped or failed has released what it
@@ -123,14 +129,18 @@ export const narratedFilms = <K extends string>(
   http: Layer.Layer<HttpClient.HttpClient> = FetchHttpClient.layer,
   rive: Layer.Layer<RiveRuntime, never, HttpClient.HttpClient> = RiveRuntimeBrowser,
   images: Layer.Layer<PuppetImages, never, HttpClient.HttpClient> = PuppetImagesBrowser,
+  paintings: Layer.Layer<PaintingImages, never, HttpClient.HttpClient> = PaintingImagesBrowser,
 ): Record<K, Effect.Effect<Film, FilmUnloadable, Scope.Scope>> => {
-  const page = ManagedRuntime.make(Layer.mergeAll(rive, images).pipe(Layer.provideMerge(http)));
+  const page = ManagedRuntime.make(
+    Layer.mergeAll(rive, images, paintings).pipe(Layer.provideMerge(http)),
+  );
   return Rec.map(modules, (load, id) =>
     Effect.flatMap(page.contextEffect, (services) =>
       Effect.all([Effect.promise(load), loadNarrated(id), faces], { concurrency: 3 }).pipe(
         Effect.flatMap(([m, narrated]) => declared(id, m, m.film({ ...narrated, fps: m.fps }))),
         Effect.flatMap(loadRigs),
         Effect.flatMap(loadPuppets),
+        Effect.flatMap(loadPaintings),
         Effect.provideContext(services),
       ),
     ),

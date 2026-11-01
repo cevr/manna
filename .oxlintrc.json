@@ -1186,7 +1186,9 @@
                   // A film's page load (player/narrated.ts) defaults to the page's Rive runtimes, as it defaults to the page's fetch client.
                   "!**/rive/runtime-browser.ts",
                   // A cast page's puppets load through the page's image decoder (player/cast.ts), as its rigs through the Rive runtimes.
-                  "!**/puppet/images-browser.ts"
+                  "!**/puppet/images-browser.ts",
+                  // A film's page load (player/narrated.ts) decodes its painted plates through the page's image decoder, as its puppets.
+                  "!**/painting/images-browser.ts"
                 ],
                 "message": "a page reaches the host through its services: only a page's mount builds the host (`BrowserHost`, browser/host-browser.ts), and the stores are storage-browser.ts's."
               },
