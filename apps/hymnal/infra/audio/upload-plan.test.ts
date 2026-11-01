@@ -60,7 +60,7 @@ describe('the upload plan', () => {
     }),
   );
 
-  it.effect('passes a whole, passed manifest of the set the app plays', () =>
+  it.effect('passes a whole, passed manifest of the first set', () =>
     Effect.sync(() => {
       expect(manifestRefusals(manifestOf())).toEqual([]);
     }),
@@ -71,9 +71,27 @@ describe('the upload plan', () => {
       const short = manifestRefusals(manifestOf(SDAH_HYMNS.filter((n) => n !== 388)));
       expect(short).toEqual(['the manifest has 694 hymns, not 695', 'missing hymns 388']);
       const twice = manifestRefusals(manifestOf([...SDAH_HYMNS.filter((n) => n !== 2), 1]));
-      expect(twice).toEqual(['missing hymns 2', 'hymns outside 1 to 695 or twice: 1']);
+      expect(twice).toEqual(['missing hymns 2', 'hymns outside the set warm-1 or twice: 1']);
+      expect(manifestRefusals({ ...manifestOf(), set: 'warm-3' })).toEqual([
+        'the set is warm-3, the app plays warm-1, warm-2',
+      ]);
+    }),
+  );
+
+  it.effect('holds a later set to exactly its own hymns: warm-2 to hymn 663', () =>
+    Effect.sync(() => {
+      expect(manifestRefusals({ ...manifestOf([663]), set: 'warm-2' })).toEqual([]);
       expect(manifestRefusals({ ...manifestOf(), set: 'warm-2' })).toEqual([
-        'the set is warm-2, the app plays warm-1',
+        'the manifest has 695 hymns, not 1',
+        'hymns outside the set warm-2 or twice: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 and 682 more',
+      ]);
+      expect(manifestRefusals({ ...manifestOf([]), set: 'warm-2' })).toEqual([
+        'the manifest has 0 hymns, not 1',
+        'missing hymns 663',
+      ]);
+      expect(manifestRefusals(manifestOf([663]))).toEqual([
+        'the manifest has 1 hymns, not 695',
+        'missing hymns 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 and 682 more',
       ]);
     }),
   );

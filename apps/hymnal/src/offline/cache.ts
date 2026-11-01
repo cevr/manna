@@ -13,10 +13,14 @@ import {
 } from 'effect';
 import * as Semaphore from 'effect/Semaphore';
 import { soundingOffset } from '~/remote';
-import { RECORDING_SET } from '@manna/hymnal/recordings';
+import { LATEST_SET } from '@manna/hymnal/recordings';
 
-/** A later immutable recording set must not resolve files from an earlier set. */
-export const storageName = `hymnal-recordings-${RECORDING_SET}-v1`;
+/**
+ * A later immutable recording set must not resolve files from an earlier
+ * set: the storage is named for the latest set, so a set added (`warm-2`
+ * moved hymn 663) starts a new storage, and the old one is removed whole.
+ */
+export const storageName = `hymnal-recordings-${LATEST_SET}-v1`;
 export const recordingStorage = (name: string) => /^hymnal-recordings-[a-z0-9-]+-v\d+$/.test(name);
 
 export const Identity = Schema.Struct({

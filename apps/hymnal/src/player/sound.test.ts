@@ -30,6 +30,28 @@ import { hymnOf, scoreClock, soundOn } from './sound';
 const book = timingBook(bundled);
 const timelineOf = (hymn: number): Timeline => Option.getOrThrow(book.of(hymn));
 
+/**
+ * A hymn whose recording plays its first two lines and leaves the last two
+ * unplayed: 8 s of recording, then 12 s of silent stanzas to the timeline's end.
+ */
+const unplayedTail: Timeline = {
+  lines: [
+    [0, 4000],
+    [4000, 8000],
+    [8000, 14_000],
+    [14_000, 20_000],
+  ].map(([start = 0, until = 0], k) => ({
+    start,
+    until,
+    played: k < 2,
+    even: k % 2 === 1,
+    syllables: [start],
+    words: [start],
+  })),
+  first: 0,
+  end: 20_000,
+};
+
 /** One poll of the player (`statusEvery`), ms. */
 const POLL = 250;
 
@@ -178,16 +200,19 @@ describe('the score clock', () => {
     () =>
       Effect.scoped(
         Effect.gen(function* () {
-          const timeline = timelineOf(663);
-          const last = timeline.lines.at(-1);
-          expect(last?.played).toBe(false);
+          const timeline = unplayedTail;
           // The recording ends where its last played line does.
           const length = Math.max(...timeline.lines.filter((l) => l.played).map((l) => l.until));
           expect(timeline.end - length).toBeGreaterThan(10_000);
           const { device } = recording(length);
-          const { api } = yield* clockOver(device, true);
+          const sound = yield* SubscriptionRef.make(true);
+          const api = yield* scoreClock(
+            device,
+            (hymn) => Option.liftPredicate(timeline, () => hymn === 100),
+            sound,
+          );
 
-          const started = yield* api.play(audioUrl(663), 0);
+          const started = yield* api.play(audioUrl(100), 0);
           expect(started.durationMs).toBe(timeline.end);
           // The player reads the status once a poll.
           for (let t = 0; t < length + 5000; t += POLL) {

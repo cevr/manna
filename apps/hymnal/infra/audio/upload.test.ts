@@ -176,6 +176,30 @@ describe('audio upload', () => {
       expect((yield* Ref.get(state.puts)).length).toBe(695);
     }));
 
+  test('a later set uploads its own hymns alone, under its name, beside the first', () =>
+    Effect.gen(function* () {
+      const { files, manifest } = yield* setOf;
+      const later = {
+        ...manifest,
+        set: 'warm-2',
+        hymns: manifest.hymns.filter((h) => h.hymn === 663),
+      };
+      const state = yield* bucket;
+      const first = { size: 3, etag: `"${'e'.repeat(32)}"` };
+      yield* Ref.set(state.objects, new Map([[setKey('warm-1', 663), first]]));
+      const { result, last } = yield* exec(
+        run(DIR),
+        yield* folderOf(files, later),
+        targetOf(state),
+      );
+      expect(failedWith(result)).toBe('none');
+      expect(last).toBe(
+        'audio-upload run set=warm-2 kept 0 uploaded 1 conflict 0 failed 0 verified 1/1',
+      );
+      expect((yield* Ref.get(state.puts)).map((p) => p.key)).toEqual([setKey('warm-2', 663)]);
+      expect((yield* Ref.get(state.objects)).get(setKey('warm-1', 663))).toEqual(first);
+    }));
+
   test('a dry run reads the set and never reaches R2', () =>
     Effect.gen(function* () {
       const { files, manifest } = yield* setOf;
@@ -204,9 +228,9 @@ describe('audio upload', () => {
       expect(last).toBe(
         'audio-upload run set=warm-1 kept 0 uploaded 694 conflict 1 failed 0 verified 694/695',
       );
-      expect(lines.some((line) => line.startsWith('conflict 46 ') && line.includes('warm-2'))).toBe(
-        true,
-      );
+      expect(
+        lines.some((line) => line.startsWith('conflict 46 ') && line.includes('a later set')),
+      ).toBe(true);
       expect(failedWith(result)).toContain('UploadIncomplete');
       expect((yield* Ref.get(state.objects)).get(setKey('warm-1', 46))).toEqual(other);
       expect((yield* Ref.get(state.puts)).some((p) => p.key === setKey('warm-1', 46))).toBe(false);

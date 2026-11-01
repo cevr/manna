@@ -7,16 +7,18 @@
  *
  * Key layout in the bucket:
  * - `audio/<set>/sdah/<n>.mp3`: a rendered set's recording of hymn `n` of
- *   the 1985 SDA Hymnal, the number unpadded. Printed key uses
- *   `RECORDING_SET` (`warm-1`), signed offsets its up1..6/down1..5 sets;
- *   a set is never replaced, only joined by the
- *   next (`packages/hymnal/scripts/render/`, uploaded by `infra/audio/upload.ts`).
+ *   the 1985 SDA Hymnal, the number unpadded. A hymn plays from its set
+ *   (`setOf`: `warm-1` for every hymn but 663, which plays from `warm-2`),
+ *   the printed key from the set itself, signed offsets from its
+ *   up1..6/down1..5 sets; a set is never replaced, only joined by a later
+ *   one that holds the hymns rendered again (`packages/hymnal/scripts/render/`,
+ *   uploaded by `infra/audio/upload.ts` and `infra/audio/stream.ts`).
  * - `audio/sdah/<n>.mp3`: the recordings first copied from the S3 bucket
  *   (`infra/audio/copy.ts`), kept beside the sets.
  * - `data/`: reserved for the compiled hymn data.
  */
 
-import { keySet, recordingKey } from '@manna/hymnal/recordings';
+import { keySet, recordingKey, setOf } from '@manna/hymnal/recordings';
 
 export const HYMNS_HOST = 'hymns.cvr.im';
 
@@ -27,7 +29,7 @@ export const soundingOffset = (offset: number) => ((((offset + 5) % 12) + 12) % 
 
 /** The recording's identity is its hymn number and sounding offset, independent of capo. */
 export const audioKey = (hymn: number, offset = 0) =>
-  `audio/${keySet(soundingOffset(offset))}/${recordingKey(hymn)}`;
+  `audio/${keySet(setOf(hymn), soundingOffset(offset))}/${recordingKey(hymn)}`;
 
 /** The bucket key of a recording copied from the S3 bucket. */
 export const sourcedKey = (hymn: number) => `audio/sdah/${hymn}.mp3`;
