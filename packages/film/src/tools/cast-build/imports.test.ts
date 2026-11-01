@@ -6,6 +6,7 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer, Path } from 'effect';
 import { memoryFileSystem, text } from '../host/testing.ts';
 import {
+  ImportUnresolved,
   UndeclaredImport,
   declaredClosure,
   importClosure,
@@ -47,7 +48,7 @@ describe('import closure', () => {
       Effect.sync(() => {
         expect(
           specifiersOf(
-            "import a from './a';\nimport type { T } from './t';\nexport type { U } from './u';\nexport * from './e';\nimport './s';\nconst l = import('./l');",
+            "// import './commented'\n/** import('./doc') */\nimport a from './a';\nimport type { T } from './t';\nexport type { U } from './u';\nexport * from './e';\nimport './s';\nconst l = import('./l');",
           ),
         ).toEqual(['./a', './e', './s', './l']);
       }),
@@ -65,6 +66,40 @@ describe('import closure', () => {
         '/src/side.ts',
       ]);
     }).pipe(Effect.provide(Layer.mergeAll(memoryFileSystem(tree()), Path.layer))),
+  );
+
+  it.effect('a `.js` name resolves to its `.ts` file, as Bun resolves it', () =>
+    Effect.gen(function* () {
+      const { files } = yield* importClosure(['/j/a.ts']);
+      expect(files).toEqual(['/j/a.ts', '/j/b.ts', '/j/c.tsx']);
+    }).pipe(
+      Effect.provide(
+        Layer.mergeAll(
+          memoryFileSystem(
+            new Map([
+              ['/j/a.ts', text("import { b } from './b.js';\nimport { c } from './c.jsx';")],
+              ['/j/b.ts', text('export const b = 1;')],
+              ['/j/c.tsx', text('export const c = 1;')],
+            ]),
+          ),
+          Path.layer,
+        ),
+      ),
+    ),
+  );
+
+  it.effect('a relative specifier that resolves to no file fails the closure', () =>
+    Effect.gen(function* () {
+      const error = yield* Effect.flip(importClosure(['/u/a.ts']));
+      expect(error).toEqual(ImportUnresolved.make({ file: '/u/a.ts', specifier: './gone.ts' }));
+    }).pipe(
+      Effect.provide(
+        Layer.mergeAll(
+          memoryFileSystem(new Map([['/u/a.ts', text("import { g } from './gone.ts';")]])),
+          Path.layer,
+        ),
+      ),
+    ),
   );
 
   it.effect('records each dynamic import whose specifier is not a string literal', () =>

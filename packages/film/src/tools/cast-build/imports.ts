@@ -1,8 +1,9 @@
 // The local files a module runs: its static imports and re-exports, and
 // literal dynamic imports, followed to files, transitively. A relative
-// specifier resolves to the file it names, or with `.ts`, `.tsx` or
-// `/index.ts`; a bare one (a package) is not followed, so node_modules stays
-// out. Type-only imports and re-exports run nothing and are not followed.
+// specifier resolves as Bun resolves it: the file it names, its `.ts` file for
+// a `.js` name, or with `.ts`, `.tsx`, `.js` or an `index` file; one that names
+// no file fails the closure. A bare one (a package) is not followed, so
+// node_modules stays out. Type-only imports and re-exports run nothing and are not followed.
 // Only script files are read for further imports; a JSON or other file a
 // module imports is in the closure as itself.
 //
@@ -19,15 +20,25 @@ const STATIC =
 /** A dynamic import whose argument is not a single- or double-quoted string. */
 const VARIABLE = /(?<![\w$.])import\(\s*(?!['"])([^)]*)\)/g;
 
+// A comment that opens its line: a line comment, or a block comment to its end.
+const COMMENT = /^[ \t]*(?:\/\/.*$|\/\*[\s\S]*?\*\/)/gm;
+
+/**
+ * `text` with each comment that opens its line taken out, so a comment that
+ * shows an import is not read as one. A comment after code on its line stays:
+ * an import it shows fails the closure loudly, never silently.
+ */
+const uncommented = (text: string) => text.replace(COMMENT, '');
+
 /** The specifiers a module's text imports or re-exports, in order, type-only ones left out. */
 export const specifiersOf = (text: string): ReadonlyArray<string> =>
-  [...text.matchAll(STATIC)].flatMap((m) =>
+  [...uncommented(text).matchAll(STATIC)].flatMap((m) =>
     [m[1], m[2], m[3]].flatMap((s) => Option.toArray(Option.fromUndefinedOr(s))),
   );
 
 /** The arguments of a module's dynamic imports whose specifier is not a string literal, in order. */
 export const variableImportsOf = (text: string): ReadonlyArray<string> =>
-  [...text.matchAll(VARIABLE)].map((m) => (m[1] ?? '').trim());
+  [...uncommented(text).matchAll(VARIABLE)].map((m) => (m[1] ?? '').trim());
 
 /** A dynamic import the scanner cannot follow: the file it is in, and its argument's text. */
 export interface VariableImport {
@@ -52,20 +63,56 @@ export class UndeclaredImport extends Schema.TaggedError<UndeclaredImport>()('Un
   }
 }
 
-const SCRIPT = /\.(?:ts|tsx|js|mjs)$/;
+/** A relative specifier names no file, so the closure cannot be whole. */
+export class ImportUnresolved extends Schema.TaggedError<ImportUnresolved>()('ImportUnresolved', {
+  file: Schema.String,
+  specifier: Schema.String,
+}) {
+  override get message() {
+    return `${this.file} imports '${this.specifier}', which names no file`;
+  }
+}
 
-/** The file a specifier names from `file`'s folder, if it is relative and resolves. */
+const SCRIPT = /\.(?:[cm]?[jt]sx?)$/;
+
+/** The TypeScript names Bun tries for a script name, after the name itself: `./b.js` is `./b.ts`. */
+const TS_NAMES = {
+  '.js': ['.ts', '.tsx'],
+  '.jsx': ['.tsx', '.ts'],
+  '.mjs': ['.mts'],
+  '.cjs': ['.cts'],
+} as const satisfies Readonly<Record<string, ReadonlyArray<string>>>;
+
+const tsNamesOf = (ext: string): ReadonlyArray<string> =>
+  Object.entries(TS_NAMES).find(([js]) => js === ext)?.[1] ?? [];
+
+/** The files a relative specifier may name, in the order Bun tries them. */
+const candidatesOf = (path: Path.Path, base: string) => {
+  const ext = path.extname(base);
+  const stem = base.slice(0, base.length - ext.length);
+  return [
+    base,
+    ...tsNamesOf(ext).map((ts) => `${stem}${ts}`),
+    ...['.ts', '.tsx', '.js'].map((e) => `${base}${e}`),
+    ...['index.ts', 'index.tsx', 'index.js'].map((i) => path.join(base, i)),
+  ];
+};
+
+/**
+ * The file a specifier names from `file`'s folder: none for a package, the
+ * file for a relative one, and `ImportUnresolved` for a relative one that
+ * names no file.
+ */
 const resolve = (file: string, specifier: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     if (!specifier.startsWith('.')) return Option.none<string>();
-    const base = path.resolve(path.dirname(file), specifier);
-    for (const candidate of [base, `${base}.ts`, `${base}.tsx`, path.join(base, 'index.ts')]) {
+    for (const candidate of candidatesOf(path, path.resolve(path.dirname(file), specifier))) {
       const info = yield* fs.stat(candidate).pipe(Effect.option);
       if (Option.exists(info, (i) => i.type === 'File')) return Option.some(candidate);
     }
-    return Option.none<string>();
+    return yield* ImportUnresolved.make({ file, specifier });
   });
 
 /** Every local file the entries run, the entries with them, and the variable imports met on the way. */
