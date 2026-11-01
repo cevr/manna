@@ -4,11 +4,14 @@
  * selected one moved by hand, and the next page's scroll and lines beside it
  * off the screen, as the app's pager keeps them. Each sample's time is set
  * by the line it marks, on a score clock whose first sung line is at
- * `TIMED.first`. No simulator.
+ * `TIMED.first`. And where the check's video goes, or that it records none.
+ * No simulator.
  */
 
 import { describe, expect, it } from 'bun:test';
+import { Option } from 'effect';
 
+import { videoOf } from './follow';
 import { judge, type Node, type Sample, sampleOf, soundOff, TIMING } from './follow/samples';
 
 /** The page the pager shows: the window cut to the pager. */
@@ -198,5 +201,17 @@ describe('the sound check', () => {
     expect(soundOff([{ label: 'Sound', value: 'checked' }])).toBe(false);
     expect(soundOff([{ label: 'Sound off' }])).toBe(false);
     expect(soundOff([])).toBe(false);
+  });
+});
+
+describe('the video', () => {
+  it('goes to <out>/follow-<n>.mp4, and with --no-video nowhere', () => {
+    expect(videoOf('/nonexistent/loop-probe-x', 663, false)).toEqual(
+      Option.some('/nonexistent/loop-probe-x/follow-663.mp4'),
+    );
+    expect(videoOf('/nonexistent/loop-probe-x/', 100, false)).toEqual(
+      Option.some('/nonexistent/loop-probe-x/follow-100.mp4'),
+    );
+    expect(videoOf('/nonexistent/loop-probe-x', 663, true)).toEqual(Option.none());
   });
 });

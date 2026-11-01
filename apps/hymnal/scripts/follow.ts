@@ -1,12 +1,13 @@
 /**
- * `bun scripts/follow.ts --udid <udid> --hymn <n> --out <dir> [--every 500] [--session verify-hymnal]`:
+ * `bun scripts/follow.ts --udid <udid> --hymn <n> --out <dir> [--every 500] [--session verify-hymnal] [--no-video]`:
  * one Play tap on a hymn page, and the sung line followed to the end.
  *
  * Run from `apps/hymnal`, on a booted simulator whose app shows hymn `<n>`'s
  * page with sound off (`sim open hymns/<n>`, then `sim tap label=Sound`
  * until the `Sound` button's value reads `unchecked`): it refuses to press
  * Play with sound on. It presses `Play hymn <n>` once and touches nothing else. It records
- * the screen (`<out>/follow-<n>.mp4`) and reads the accessibility tree
+ * the screen (`<out>/follow-<n>.mp4`; `--no-video` records nothing, for a
+ * run whose rules allow no capture of the screen) and reads the accessibility tree
  * (`agent-device snapshot --json`) about every `--every` ms until the
  * player ends, or until the hymn's timeline has run a minute over. Each
  * snapshot is reduced to the lines' selected states and frames and the
@@ -150,6 +151,10 @@ const recording = <A, E, R>(udid: string, video: string, drive: Effect.Effect<A,
     }),
   );
 
+/** Where the run's video goes: `<out>/follow-<n>.mp4`, or nowhere with `--no-video`. */
+export const videoOf = (out: string, hymn: number, noVideo: boolean): Option.Option<string> =>
+  Option.liftPredicate(`${out.replace(/\/+$/, '')}/follow-${hymn}.mp4`, () => !noVideo);
+
 /** Press Play once, then sample until the player ends or `limit` ms pass. */
 const play = Effect.fn('Follow.play')(function* (
   session: string,
@@ -192,6 +197,10 @@ const follow = Command.make(
       Flag.withDefault('verify-hymnal'),
       Flag.withDescription("agent-device's session, the sim helper's by default"),
     ),
+    noVideo: Flag.Boolean('no-video').pipe(
+      Flag.withDefault(false),
+      Flag.withDescription('record no video of the screen; only the tree is read'),
+    ),
   },
   (flags) =>
     Effect.gen(function* () {
@@ -209,11 +218,11 @@ const follow = Command.make(
       if (!soundOff(before))
         return yield* FollowFailed.make({ reason: 'sound is not off: Play is not pressed' });
       const limit = timeline.end - timeline.first + Duration.toMillis(OVER);
-      const samples = yield* recording(
-        flags.udid,
-        path.join(flags.out, `follow-${flags.hymn}.mp4`),
-        play(flags.session, flags.hymn, flags.every, limit),
-      );
+      const drive = play(flags.session, flags.hymn, flags.every, limit);
+      const samples = yield* Option.match(videoOf(flags.out, flags.hymn, flags.noVideo), {
+        onNone: () => drive,
+        onSome: (video) => recording(flags.udid, video, drive),
+      });
       const verdict = judge(flags.hymn, timeline, samples, 1);
       yield* fs.writeFileString(
         path.join(flags.out, `follow-${flags.hymn}.json`),
@@ -224,6 +233,7 @@ const follow = Command.make(
     }),
 );
 
-Command.run(follow, { version: '1.0.0' }).pipe(Effect.provide(BunServices.layer), (program) =>
-  BunRuntime.runMain(program),
-);
+if (import.meta.main)
+  Command.run(follow, { version: '1.0.0' }).pipe(Effect.provide(BunServices.layer), (program) =>
+    BunRuntime.runMain(program),
+  );
