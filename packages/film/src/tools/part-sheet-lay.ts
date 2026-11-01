@@ -848,21 +848,22 @@ const stepsAcross = (sheet: Sheet, at: Uint8Array, composite: Seen, laid: Seen) 
   const { width: w, height: h } = composite;
   const name = (id: number) => sheet.parts[id - 1]?.name ?? '';
   const lines = new Map<
-    string,
+    number,
     { a: number; b: number; under: number; laid: number; answer: number; pairs: number }
   >();
   for (let i = 0; i < w * h; i++) {
-    const ahead = [
-      [i % w < w - 1, i + 1],
-      [Math.floor(i / w) < h - 1, i + w],
-    ] as const;
-    for (const [inside, j] of ahead) {
-      const [ki, kj] = [at[i] ?? 0, at[j] ?? 0];
-      if (!inside || ki === 0 || kj === 0 || ki === kj) continue;
+    const ki = at[i] ?? 0;
+    if (ki === 0) continue;
+    // the neighbours ahead: right (1) and down (3)
+    for (let d = 1; d < 4; d += 2) {
+      const j = neighbourAt(i, d, w, h);
+      const kj = at[j] ?? 0;
+      if (j < 0 || kj === 0 || ki === kj) continue;
       if (!lightAt(laid, i) || !lightAt(laid, j)) continue;
       const [p, q] = (ki < kj && [i, j]) || [j, i];
       const [a, b, under] = [Math.min(ki, kj), Math.max(ki, kj), sheet.owner[p] ?? 0];
-      const key = `${a}/${b}/${under}`;
+      // part ids are bytes, so the three pack into one number
+      const key = (a * 256 + b) * 256 + under;
       const line = lines.get(key) ?? { a, b, under, laid: 0, answer: 0, pairs: 0 };
       lines.set(key, line);
       line.laid += composite.lightness(p) - composite.lightness(q);
