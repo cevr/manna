@@ -2914,6 +2914,13 @@ file changed, and `--plan --spend modal` prints the key a train would run
 at. The training set it would read is the `trainset` stage's output: one
 `<member>/<drawing>=<shard hash>` line for each trainable drawing.
 
+Before it spends, the train adopts the committed checkpoint: when its
+reader key (the training set, the config and the reader's files) is the
+lock's `reader` and the cache keeps `objects/<checkpointSha256>` with bytes
+that hash to that name, it returns those bytes with no Modal call and no
+promote, and notes the lock's train lines and spend, which the lock keeps.
+So a stage key that moves while the reader key does not costs nothing.
+
 The cache is `FILM_CAST_CACHE`, else `~/.cache/bible-film/cast`: each
 stage's output kept as `objects/<sha256>`, and the manifest `build.json`
 (a `ContentStore`) maps each stage's key (its id, version, config and the

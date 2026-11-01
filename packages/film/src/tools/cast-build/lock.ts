@@ -3,7 +3,8 @@
 // (`lockStage`). It names the reader's key on the volume, the train stage's
 // key, the training set (its hash and each drawing's shard), the train
 // config, the checkpoint's SHA-256, the train's fit summary and spend as the
-// train noted them in `build.json` (absent for a train that noted none),
+// train noted them in `build.json` (absent for a train that noted none; a
+// train that adopted the committed checkpoint notes the lock's own, kept),
 // each trained drawing's held numbers, each untrained drawing's, and the
 // clip's chain numbers. The stage's output is the file's bytes; a cached one
 // holds only while the file on disk has them, so a rerun with nothing
@@ -19,7 +20,15 @@ import {
   optionalInput,
   stageInput,
 } from './graph.ts';
-import { type Candidate, FitNote, TRAIN, trainKeyOf } from './stages.ts';
+import {
+  AdoptedNote,
+  BuildSpend,
+  type Candidate,
+  FitNote,
+  TRAIN,
+  TrainLines,
+  trainKeyOf,
+} from './stages.ts';
 
 /** A spread of the median and the 90th percentile. */
 const Spread = Schema.Struct({ median: Schema.Finite, p90: Schema.Finite });
@@ -71,15 +80,7 @@ const Lock = Schema.Struct({
     inputSide: Schema.Struct({ width: Schema.Finite, height: Schema.Finite }),
   }),
   checkpointSha256: Schema.String,
-  train: Schema.Struct({
-    trainedOn: Schema.optionalKey(Schema.String),
-    modalApp: Schema.optionalKey(Schema.String),
-    steps: Schema.optionalKey(Schema.Finite),
-    secPerStep: Schema.optionalKey(Schema.Finite),
-    trainSec: Schema.optionalKey(Schema.Finite),
-    finalLoss: Schema.optionalKey(Schema.Finite),
-    stageSec: Schema.Finite,
-  }),
+  train: TrainLines,
   held: Schema.Struct({
     drawings: Schema.Finite,
     accuracy: Schema.Finite,
@@ -100,7 +101,7 @@ const Lock = Schema.Struct({
   clip: Schema.optionalKey(
     Schema.Struct({ member: Schema.String, clip: Schema.String, ...ChainNumbers.fields }),
   ),
-  spend: Schema.optionalKey(Schema.Struct({ buildCountedUsd: Schema.Finite })),
+  spend: Schema.optionalKey(BuildSpend),
 });
 const LockJson = Schema.fromJsonString(Lock, { space: 2 });
 
@@ -114,6 +115,12 @@ interface LockClip {
 
 const failed = (what: string) => (e: { readonly message: string }) =>
   StageFailed.make({ reason: `lock ${what}: ${e.message}` });
+
+/** A train that adopted the committed checkpoint: the lock's train lines and spend it noted, kept as they are. */
+const adoptedOf = (train: BuiltRecord) =>
+  Option.flatMap(train.note, (note) =>
+    Option.map(Schema.decodeOption(AdoptedNote)(note), (n) => n.adopted),
+  );
 
 /** The train's lines of the lock: the fit summary it noted, if any, and the stage's wall time. */
 const trainOf = (train: BuiltRecord) =>
@@ -237,6 +244,11 @@ export const lockStage = (o: {
           },
         );
         const hits = held.filter(([, h]) => h.accuracy === 1).length;
+        const adopted = adoptedOf(train);
+        const spend = Option.match(adopted, {
+          onSome: (a) => Option.fromUndefinedOr(a.spend),
+          onNone: () => Option.map(train.usd, (buildCountedUsd) => ({ buildCountedUsd })),
+        });
         const text = yield* Schema.encodeEffect(LockJson)({
           reader: key,
           stageKey: train.key,
@@ -244,7 +256,10 @@ export const lockStage = (o: {
           drawings: Object.fromEntries(drawings),
           config: TRAIN,
           checkpointSha256: train.output,
-          train: yield* trainOf(train).pipe(Effect.mapError(failed('train note'))),
+          train: yield* Option.match(adopted, {
+            onSome: (a) => Effect.succeed(a.train),
+            onNone: () => trainOf(train).pipe(Effect.mapError(failed('train note'))),
+          }),
           held: {
             drawings: drawings.length,
             accuracy: hits / Math.max(1, drawings.length),
@@ -252,10 +267,7 @@ export const lockStage = (o: {
           },
           untrained: Object.fromEntries(untrained),
           ...clip,
-          ...Option.match(train.usd, {
-            onNone: () => ({}),
-            onSome: (buildCountedUsd) => ({ spend: { buildCountedUsd } }),
-          }),
+          ...Option.match(spend, { onNone: () => ({}), onSome: (s) => ({ spend: s }) }),
         }).pipe(Effect.mapError(failed('encode')));
         const bytes = encoder.encode(`${text}\n`);
         const there = yield* fs.readFile(o.file).pipe(Effect.option);

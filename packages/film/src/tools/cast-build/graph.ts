@@ -122,6 +122,8 @@ export interface StageContext {
   readonly outputPath: (id: string) => Effect.Effect<string, StageFailed>;
   /** Whether an upstream stage has an output in this build (an optional input that did not wait or fail). */
   readonly known: (id: string) => boolean;
+  /** The cache's object `hash`, only when it is there and its bytes hash to it: what an earlier build made, kept by its content. */
+  readonly object: (hash: string) => Effect.Effect<Option.Option<Uint8Array>>;
   /** This build's own name, which no other build shares: what a stage writes outside the cache is named by it until `promote`. */
   readonly run: string;
   /** Run `effect`, which spends `kind`, when the build allows it; else the stage waits. */
@@ -462,6 +464,10 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
         onSome: (hash) => Effect.succeed(objectFile(hash)),
       }),
     known: (id) => Option.isSome(outputOf(id)),
+    object: (hash) =>
+      fs
+        .readFile(objectFile(hash))
+        .pipe(Effect.option, Effect.map(Option.filter((bytes) => sha256Hex(bytes) === hash))),
     spend: (kind, effect, usd = 0) => {
       if (!options.spend.has(kind)) return Effect.fail(WaitingSpend.make({ spend: kind }));
       return Effect.sync(() => {

@@ -190,16 +190,17 @@ export const build = <E, R>(
       const reader = yield* CastReader;
       const cache = yield* castCache;
       const needs = ownerNeeds(members);
+      const lockFile = yield* readerLockOf(film);
       const stages: ReadonlyArray<
         Stage<StageServices | CastReader | AskStore | DrawingSet | DrawServices>
       > = [
         ...built,
         trainsetStage(candidates),
-        trainStage(candidates, reader.sources),
+        trainStage(candidates, reader.sources, lockFile),
         ...candidates.map((c) => evalStage(c.renders, sources.eval)),
         ...members.flatMap((m) => clipStages(m, cache, sources.chain)),
         lockStage({
-          file: yield* readerLockOf(film),
+          file: lockFile,
           candidates,
           sources: reader.sources,
           // the lock reports the build's first clip (today the one: lead-feast's raise/clip-b)

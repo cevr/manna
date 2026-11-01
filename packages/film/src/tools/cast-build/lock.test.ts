@@ -56,7 +56,7 @@ const graph: ReadonlyArray<Stage<CastReader | FileSystem.FileSystem>> = [
     run: (ctx) =>
       Effect.map(ctx.output('renders:front@m'), (shard) => text(`m/front=${sha256Hex(shard)}\n`)),
   },
-  trainStage(CANDIDATES, SOURCES),
+  trainStage(CANDIDATES, SOURCES, LOCK),
   ...CANDIDATES.map((c) => evalStage(c.renders, [])),
   {
     id: 'eval:clip:clip-b@m',
@@ -104,13 +104,19 @@ const frontEvalFails = graph.map((stage): Stage<CastReader | FileSystem.FileSyst
 });
 
 /** `evaluate` is eval.py's JSON text, the same for every drawing. */
-const build = (disk: Disk, stdout = STDOUT, evaluate = jsonOf(EVAL), stages = graph) =>
+const build = (
+  disk: Disk,
+  stdout = STDOUT,
+  evaluate = jsonOf(EVAL),
+  stages = graph,
+  spend: ReadonlySet<'modal'> = new Set(['modal'] as const),
+) =>
   buildGraph<CastReader | FileSystem.FileSystem>([...stages, lock], {
     root: '/',
     cache: '/cache',
     plan: false,
     touch: [],
-    spend: new Set(['modal'] as const),
+    spend,
   }).pipe(
     Effect.provide(
       Layer.mergeAll(
@@ -196,6 +202,32 @@ describe('cast build: the reader lock', () => {
       expect(stateOf(report)['train']).toBe('ran');
       expect(Object.keys(lockOf(disk)['train'] as object)).toEqual(['stageSec']);
     }),
+  );
+
+  it.effect(
+    "an adopted train keeps the committed lock's train lines and spend; reader and checkpoint stay",
+    () =>
+      Effect.gen(function* () {
+        const disk = files();
+        yield* build(disk);
+        const first = lockOf(disk);
+        // the committed lock as an earlier train left it; every stage key new (`build.json` dropped, objects kept)
+        disk.set(
+          LOCK,
+          text(jsonOf({ ...first, train: { stageSec: 4361 }, spend: { buildCountedUsd: 3.5 } })),
+        );
+        disk.delete('/cache/build.json');
+        const report = yield* build(disk, STDOUT, jsonOf(EVAL), graph, new Set());
+        expect(stateOf(report)['train']).toBe('ran');
+        expect(stateOf(report)['lock']).toBe('ran');
+        expect(report.modalCalls).toBe(0);
+        const l = lockOf(disk);
+        expect(l['train']).toEqual({ stageSec: 4361 });
+        expect(l['spend']).toEqual({ buildCountedUsd: 3.5 });
+        expect(l['reader']).toBe(first['reader']);
+        expect(l['trainset']).toBe(first['trainset']);
+        expect(l['checkpointSha256']).toBe(first['checkpointSha256']);
+      }),
   );
 
   it.effect("eval.py's null for a side with no samples reads as absent", () =>

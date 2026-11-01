@@ -38,6 +38,8 @@ const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
 });
 
 const SOURCES = ['/reader/model.py', '/reader/uv.lock'];
+/** The committed reader lock the train adopts from. */
+const LOCK = '/library/reader.lock.json';
 const VIEWS = ['front', 'side'];
 /** A parts stage's output as the status stage reads it: the part files and the record, if any. */
 const partsOutput = (parts: { readonly files: ReadonlyArray<string>; readonly record?: string }) =>
@@ -166,7 +168,7 @@ const graph = (o: { readonly sideCut?: boolean } = {}): ReadonlyArray<Stage<Cast
     ];
   }),
   trainsetStage(CANDIDATES),
-  trainStage(CANDIDATES, SOURCES),
+  trainStage(CANDIDATES, SOURCES, LOCK),
   ...CANDIDATES.map((c) => evalStage(c.renders, [])),
 ];
 
@@ -475,11 +477,82 @@ describe('cast build: train and eval', () => {
         new URL('../../../reader/model.py', import.meta.url).pathname,
       );
       // the config is the train key's (`graph.ts` keys every stage by its config)
-      const train = decodeTrainConfig(trainStage(CANDIDATES, SOURCES).config ?? '');
+      const train = decodeTrainConfig(trainStage(CANDIDATES, SOURCES, LOCK).config ?? '');
       expect(train.backbone).toBe('facebook/dinov2-small');
       expect(model).toContain(`BACKBONE = "${train.backbone}"`);
       expect(model).toContain(`IN_W, IN_H = ${train.inputSide.width}, ${train.inputSide.height}`);
     }).pipe(Effect.provide(BunFileSystem.layer)),
+  );
+});
+
+describe('cast build: the train adopts the committed checkpoint', () => {
+  const jsonOf = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
+  /** The fake reader's checkpoint, as `layerTest` makes it. */
+  const CHECKPOINT = sha256Hex(new Uint8Array([1]));
+  /**
+   * A cache trained once with `--spend modal`, then rekeyed (its `build.json`
+   * dropped, its objects kept: every stage key new, as a change of key form
+   * makes it), and a committed lock naming `reader` (the train's reader key
+   * when `undefined`) and the checkpoint.
+   */
+  const rekeyed = (reader?: string) =>
+    Effect.gen(function* () {
+      const disk = files();
+      const asked: Array<string> = [];
+      yield* build(disk, asked, { spend: new Set(['modal'] as const) });
+      const [{ key } = { key: '' }] = asked.filter((a) => a.startsWith('train')).map(trainOf);
+      disk.delete('/cache/build.json');
+      disk.set(
+        LOCK,
+        text(
+          jsonOf({
+            reader: reader ?? key,
+            checkpointSha256: CHECKPOINT,
+            train: { stageSec: 4361 },
+          }),
+        ),
+      );
+      return disk;
+    });
+
+  it.effect(
+    "with no spend, a train whose reader key is the lock's and whose checkpoint is cached adopts it: no train, no promote",
+    () =>
+      Effect.gen(function* () {
+        const disk = yield* rekeyed();
+        const asked: Array<string> = [];
+        const report = yield* build(disk, asked);
+        expect(stateOf(report)['train']).toBe('ran');
+        expect(report.modalCalls).toBe(0);
+        expect(report.spendUsd).toBe(0);
+        expect(asked.filter((a) => a.startsWith('train') || a.startsWith('promote'))).toEqual([]);
+        // its evals read the adopted checkpoint
+        expect(stateOf(report)['eval:front@m']).toBe('ran');
+        // and a plan after it reads the train cached
+        const plan = yield* build(disk, [], { plan: true });
+        expect(stateOf(plan)['train']).toBe('cached');
+      }),
+  );
+
+  it.effect('a cached checkpoint whose bytes do not hash to its name is not adopted', () =>
+    Effect.gen(function* () {
+      const disk = yield* rekeyed();
+      disk.set(`/cache/objects/${CHECKPOINT}`, text('torn'));
+      const asked: Array<string> = [];
+      const report = yield* build(disk, asked);
+      expect(stateOf(report)['train']).toBe('waiting-spend');
+      expect(asked).toEqual([]);
+    }),
+  );
+
+  it.effect('a lock naming another reader key is not adopted', () =>
+    Effect.gen(function* () {
+      const disk = yield* rekeyed('0'.repeat(64));
+      const asked: Array<string> = [];
+      const report = yield* build(disk, asked);
+      expect(stateOf(report)['train']).toBe('waiting-spend');
+      expect(asked).toEqual([]);
+    }),
   );
 });
 

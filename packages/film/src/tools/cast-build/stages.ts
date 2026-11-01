@@ -32,7 +32,17 @@
 // `owner-ask.ts`'s.
 
 import * as Command from 'effect/cli/Command';
-import { DateTime, Effect, FileSystem, Option, Path, Predicate, Schema, type Scope } from 'effect';
+import {
+  DateTime,
+  Effect,
+  FileSystem,
+  Option,
+  Path,
+  Predicate,
+  Schema,
+  type Scope,
+  Struct,
+} from 'effect';
 import type { ChildProcessSpawner } from 'effect/process';
 import type { PuppetSpec } from '../../canvas/puppet.ts';
 import type { PuppetImages } from '../../puppet/images.ts';
@@ -590,6 +600,37 @@ export const FitNote = Schema.fromJsonString(
   }),
 );
 
+/** The train's lines of the reader lock: its fit summary, when it noted one, and the stage's wall time. */
+export const TrainLines = Schema.Struct({
+  trainedOn: Schema.optionalKey(Schema.String),
+  modalApp: Schema.optionalKey(Schema.String),
+  steps: Schema.optionalKey(Schema.Finite),
+  secPerStep: Schema.optionalKey(Schema.Finite),
+  trainSec: Schema.optionalKey(Schema.Finite),
+  finalLoss: Schema.optionalKey(Schema.Finite),
+  stageSec: Schema.Finite,
+});
+
+/** The USD the build counted for the train, as the reader lock keeps it. */
+export const BuildSpend = Schema.Struct({ buildCountedUsd: Schema.Finite });
+
+/** What a train that adopted the committed checkpoint notes: the lock's train lines and spend, which the lock keeps as they are. */
+export const AdoptedNote = Schema.fromJsonString(
+  Schema.Struct({
+    adopted: Schema.Struct({ train: TrainLines, spend: Schema.optionalKey(BuildSpend) }),
+  }),
+);
+
+/** The part of the committed reader lock a train reads to adopt its checkpoint (extra keys ignored). */
+const CommittedLock = Schema.fromJsonString(
+  Schema.Struct({
+    reader: Schema.String,
+    checkpointSha256: Schema.String,
+    train: TrainLines,
+    spend: Schema.optionalKey(BuildSpend),
+  }),
+);
+
 /** The fit summary of a train whose result is `result` (train.py's JSON), run in Modal app `app`, today. */
 const fitNote = (result: string, app: Option.Option<string>) =>
   Effect.gen(function* () {
@@ -613,20 +654,78 @@ const fitNote = (result: string, app: Option.Option<string>) =>
  * `promote` copies it to `/readers/<key>.pt` (the key: the hash of those
  * inputs and the config) only while the build's mark holds the stage's key,
  * so a train fenced by another build's never overwrites the key's checkpoint.
+ *
+ * Before it spends, it adopts the committed checkpoint: when its reader key
+ * is the committed lock's (`lock`) `reader` and the cache keeps the object
+ * the lock names, its bytes hashing to that name, it returns those bytes
+ * and notes the lock's train lines and spend (`AdoptedNote`), with no Modal
+ * call; that checkpoint is already the key's on Modal, so its promote does
+ * nothing. A stage key that moves while the reader's does not (a change in
+ * how the build keys its inputs) so costs nothing.
  */
 export const trainStage = (
   candidates: ReadonlyArray<Candidate>,
   sources: ReadonlyArray<string>,
-): Stage<CastReader> => ({
-  id: 'train',
-  inputs: [
-    // the set names each shard by its hash, so its shards are in its key
-    stageInput('trainset'),
-    ...sources.map(fileInput),
-  ],
-  version: VERSION.train,
-  config: TRAIN_CONFIG,
-  run: (ctx) =>
+  lock: string,
+): Stage<CastReader> => {
+  /** This process's runs that adopted rather than trained: they have nothing to promote. */
+  const adopted = new Set<string>();
+  const trainOn = trainOnModal(candidates, sources);
+  /** The committed checkpoint and the lock's lines, when the lock names this reader key and the cache keeps its bytes. */
+  const adoptable = (ctx: StageContext, key: string) =>
+    Effect.gen(function* () {
+      const text = yield* ctx.file(lock).pipe(Effect.option);
+      const committed = yield* Effect.option(
+        Effect.flatMap(Effect.fromOption(text), (bytes) =>
+          Schema.decodeEffect(CommittedLock)(new TextDecoder().decode(bytes)),
+        ),
+      );
+      if (Option.isNone(committed) || committed.value.reader !== key) return Option.none();
+      const c = committed.value;
+      const bytes = yield* ctx.object(c.checkpointSha256);
+      return Option.map(bytes, (checkpoint) => ({
+        checkpoint,
+        hash: c.checkpointSha256,
+        note: Struct.pick(c, ['train', 'spend']),
+      }));
+    });
+  return {
+    id: 'train',
+    inputs: [
+      // the set names each shard by its hash, so its shards are in its key
+      stageInput('trainset'),
+      ...sources.map(fileInput),
+    ],
+    version: VERSION.train,
+    config: TRAIN_CONFIG,
+    run: (ctx) =>
+      Effect.gen(function* () {
+        const { key } = yield* trainKeyOf(ctx, sources);
+        const found = yield* adoptable(ctx, key);
+        if (Option.isSome(found)) {
+          const a = found.value;
+          yield* ctx.note(
+            yield* Schema.encodeEffect(AdoptedNote)({ adopted: a.note }).pipe(Effect.orDie),
+          );
+          yield* Effect.log(`cast.build.train adopted reader=${key} checkpoint=${a.hash}`);
+          adopted.add(ctx.run);
+          return a.checkpoint;
+        }
+        return yield* trainOn(ctx);
+      }),
+    promote: (ctx) =>
+      Effect.gen(function* () {
+        if (adopted.has(ctx.run)) return;
+        const reader = yield* CastReader;
+        const { key } = yield* trainKeyOf(ctx, sources);
+        yield* reader.promote(key, ctx.run).pipe(Effect.mapError(readerFailed('promote')));
+      }),
+  };
+};
+
+/** The paid train of `candidates` on Modal, when the build allows it. */
+const trainOnModal =
+  (candidates: ReadonlyArray<Candidate>, sources: ReadonlyArray<string>) => (ctx: StageContext) =>
     ctx.spend(
       'modal',
       Effect.gen(function* () {
@@ -651,14 +750,7 @@ export const trainStage = (
         return made.checkpoint;
       }),
       TRAIN_USD,
-    ),
-  promote: (ctx) =>
-    Effect.gen(function* () {
-      const reader = yield* CastReader;
-      const { key } = yield* trainKeyOf(ctx, sources);
-      yield* reader.promote(key, ctx.run).pipe(Effect.mapError(readerFailed('promote')));
-    }),
-});
+    );
 
 /** One drawing's held samples read by the trained reader and scored, by its renders stage's id. */
 export const evalStage = (
