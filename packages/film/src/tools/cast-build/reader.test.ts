@@ -5,13 +5,20 @@
 
 import * as BunFileSystem from '@effect/platform-bun/BunFileSystem';
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, FileSystem, Layer, Path } from 'effect';
+import { Effect, FileSystem, Layer, Option, Path } from 'effect';
 import { memoryFileSystem, memoryLocks, text } from '../host/testing.ts';
 import { ContentStore } from '../content-store.ts';
-import type { EntryFacts } from './coverage.ts';
 import { type BuildOptions, type Stage, buildGraph, fileInput, stageInput } from './graph.ts';
 import { CastReader } from './reader.ts';
-import { type Candidate, TRAIN, evalStage, trainStage, trainsetStage } from './stages.ts';
+import {
+  TRAIN,
+  candidateOf,
+  encodeParts,
+  evalStage,
+  statusStage,
+  trainStage,
+  trainsetStage,
+} from './stages.ts';
 
 const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
   cache: '/cache',
@@ -22,63 +29,89 @@ const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
 });
 
 const SOURCES = ['/reader/model.py', '/reader/uv.lock'];
-const complete: EntryFacts = { drawn: true, kept: true, cut: true, bars: true, fit: true };
-const candidate = (view: string, facts: Partial<EntryFacts> = {}): Candidate => ({
-  drawing: `m/${view}`,
-  renders: `renders:${view}@m`,
-  fit: `fit:${view}@m`,
-  facts: { ...complete, ...facts },
-});
-const CANDIDATES = [candidate('front'), candidate('side')];
+const VIEWS = ['front', 'side'];
+const CANDIDATES = VIEWS.map((v) => candidateOf(v, 'm'));
 
 type Ctx = Parameters<Stage<never>['run']>[0];
 const fitRows = (pass: boolean) =>
   text(`[{"view":"v","rows":[{"name":"silhouette","pass":${pass}}]}]`);
+/** A part sheet's record: `passing` misses no bar; `open` misses `arm` and names none. */
+const RECORD = { passing: '{"missed":[]}', open: '{"missed":["arm"],"named":[]}' } as const;
+const record = (bars: keyof typeof RECORD) => text(RECORD[bars]);
+/** The record file a view's parts stage reads; `none` stands for a sheet with no record yet. */
+const recordFile = (view: string) => `/in/${view}.record.json`;
 
 /**
- * Each candidate's shard (a file's bytes) and fit rows (passing unless
- * `failing` names it), the training set, its train and each drawing's eval.
- * The side's shard reads `cut:side@m` when `sideCut` is on, a stage that
- * spends okra: the side is cut in the build.
+ * Each view's drawing, parts (its record file read off disk, `none` for no
+ * record), cut, fit (passing unless `failing` names it), renders (a shard
+ * file's bytes) and status stages, the training set, its train and each
+ * drawing's eval. When `sideCut` is on, the side's parts stage spends okra
+ * and writes a passing record: the side is cut in the build.
  */
 const graph = (
-  candidates: ReadonlyArray<Candidate> = CANDIDATES,
   o: { readonly failing?: string; readonly sideCut?: boolean } = {},
 ): ReadonlyArray<Stage<CastReader>> => [
-  ...[
-    {
-      id: 'cut:side@m',
-      inputs: [fileInput('/in/side.png')],
-      version: '1',
-      run: (ctx: Ctx) => ctx.spend('okra', ctx.file('/in/side.png')),
-    },
-  ].filter(() => o.sideCut === true),
-  ...candidates.flatMap((c) => [
-    {
-      id: c.renders,
-      inputs: [
-        fileInput(`/in/${c.renders}.tar`),
-        ...[stageInput('cut:side@m')].filter(() => o.sideCut === true && c.drawing === 'm/side'),
-      ],
-      version: '1',
-      run: (ctx: Ctx) => ctx.file(`/in/${c.renders}.tar`),
-    },
-    {
-      id: c.fit,
-      inputs: [],
-      version: '1',
-      run: () => Effect.succeed(fitRows(o.failing !== c.drawing)),
-    },
-  ]),
-  trainsetStage(candidates),
-  trainStage(candidates, SOURCES),
-  ...candidates.map((c) => evalStage(c.renders)),
+  ...VIEWS.flatMap((v): ReadonlyArray<Stage<never>> => {
+    const at = (kind: string) => `${kind}:${v}@m`;
+    const cutInBuild = o.sideCut === true && v === 'side';
+    return [
+      { id: at('drawing'), inputs: [], version: '1', run: () => Effect.succeed(text(v)) },
+      ...[
+        {
+          id: at('parts'),
+          inputs: [stageInput(at('drawing'))],
+          version: '1',
+          run: (ctx: Ctx) => ctx.spend('okra', encodeParts({ files: [], record: RECORD.passing })),
+        },
+      ].filter(() => cutInBuild),
+      ...[
+        {
+          id: at('parts'),
+          inputs: [stageInput(at('drawing')), fileInput(recordFile(v))],
+          version: '1',
+          run: (ctx: Ctx) =>
+            Effect.flatMap(ctx.file(recordFile(v)), (bytes) =>
+              encodeParts(
+                Option.match(
+                  Option.liftPredicate(new TextDecoder().decode(bytes), (t) => t !== 'none'),
+                  { onNone: () => ({ files: [] }), onSome: (r) => ({ files: [], record: r }) },
+                ),
+              ),
+            ),
+        },
+      ].filter(() => !cutInBuild),
+      {
+        id: at('cut'),
+        inputs: [stageInput(at('parts'))],
+        version: '1',
+        run: (ctx: Ctx) => ctx.output(at('parts')),
+      },
+      {
+        id: at('fit'),
+        inputs: [stageInput(at('cut'))],
+        version: '1',
+        run: () => Effect.succeed(fitRows(o.failing !== `m/${v}`)),
+      },
+      {
+        id: at('renders'),
+        inputs: [stageInput(at('cut')), fileInput(`/in/${at('renders')}.tar`)],
+        version: '1',
+        run: (ctx: Ctx) => ctx.file(`/in/${at('renders')}.tar`),
+      },
+      statusStage(v, 'm'),
+    ];
+  }),
+  trainsetStage(CANDIDATES),
+  trainStage(CANDIDATES, SOURCES),
+  ...CANDIDATES.map((c) => evalStage(c.renders)),
 ];
 
 const files = () =>
   new Map<string, Uint8Array>([
     ['/in/renders:front@m.tar', text('front shard')],
     ['/in/renders:side@m.tar', text('side shard')],
+    [recordFile('front'), record('passing')],
+    [recordFile('side'), record('passing')],
     ['/reader/model.py', text('model')],
     ['/reader/uv.lock', text('lock')],
   ]);
@@ -151,51 +184,81 @@ describe('cast build: train and eval', () => {
     Effect.gen(function* () {
       const spend = { spend: new Set(['modal'] as const) };
       const bars: Array<string> = [];
-      yield* build(
-        files(),
-        bars,
-        spend,
-        graph([candidate('front'), candidate('side', { bars: false })]),
-      );
+      const open = files();
+      open.set(recordFile('side'), record('open'));
+      yield* build(open, bars, spend);
       expect(bars.filter((a) => a.startsWith('train'))).toEqual([
         expect.stringMatching(/ shards=1$/),
       ]);
+      const missing: Array<string> = [];
+      const none = files();
+      none.set(recordFile('side'), text('none'));
+      yield* build(none, missing, spend);
+      expect(missing.filter((a) => a.startsWith('train'))).toEqual([
+        expect.stringMatching(/ shards=1$/),
+      ]);
       const fit: Array<string> = [];
-      yield* build(files(), fit, spend, graph(CANDIDATES, { failing: 'm/side' }));
+      yield* build(files(), fit, spend, graph({ failing: 'm/side' }));
       expect(fit.filter((a) => a.startsWith('train'))).toEqual([
         expect.stringMatching(/ shards=1$/),
       ]);
     }),
   );
 
-  it.effect('a drawing cut in this build joins its one train', () =>
+  it.effect("a record's bars that change change the set, the shard and fit bytes the same", () =>
     Effect.gen(function* () {
       const disk = files();
-      disk.set('/in/side.png', text('side drawing'));
-      const asked: Array<string> = [];
-      const report = yield* build(
-        disk,
-        asked,
-        { spend: new Set(['okra', 'modal'] as const) },
-        graph(CANDIDATES, { sideCut: true }),
-      );
-      expect(stateOf(report)['cut:side@m']).toBe('ran');
-      expect(asked.filter((a) => a.startsWith('train'))).toEqual([
-        expect.stringMatching(/ shards=2$/),
-      ]);
-      // without the okra spend the side waits, and the set trains on the front alone
-      const waits: Array<string> = [];
-      const held = yield* build(
-        files(),
-        waits,
-        { spend: new Set(['modal'] as const) },
-        graph(CANDIDATES, { sideCut: true }),
-      );
-      expect(stateOf(held)['renders:side@m']).toBe('waiting-spend');
-      expect(waits.filter((a) => a.startsWith('train'))).toEqual([
-        expect.stringMatching(/ shards=1$/),
-      ]);
+      disk.set(recordFile('side'), record('open'));
+      const trained = (asked: ReadonlyArray<string>) => asked.filter((a) => a.startsWith('train'));
+      const spend = { spend: new Set(['modal'] as const) };
+      const first: Array<string> = [];
+      yield* build(disk, first, spend);
+      expect(trained(first)).toEqual([expect.stringMatching(/ shards=1$/)]);
+      // bars false -> true: the side joins, one more train
+      disk.set(recordFile('side'), record('passing'));
+      const joined: Array<string> = [];
+      yield* build(disk, joined, spend);
+      expect(trained(joined)).toEqual([expect.stringMatching(/ shards=2$/)]);
+      // and back: the side leaves the set again, which is the first build's set, and its train
+      disk.set(recordFile('side'), record('open'));
+      const left: Array<string> = [];
+      const back = yield* build(disk, left, spend);
+      expect(stateOf(back)['trainset']).toBe('cached');
+      expect(stateOf(back)['train']).toBe('cached');
+      expect(trained(left)).toEqual([]);
     }),
+  );
+
+  it.effect(
+    'a drawing with no record and open bars at the start, cut in this build, joins its one train',
+    () =>
+      Effect.gen(function* () {
+        const disk = files();
+        disk.set(recordFile('side'), text('none'));
+        const asked: Array<string> = [];
+        const report = yield* build(
+          disk,
+          asked,
+          { spend: new Set(['okra', 'modal'] as const) },
+          graph({ sideCut: true }),
+        );
+        expect(stateOf(report)['parts:side@m']).toBe('ran');
+        expect(asked.filter((a) => a.startsWith('train'))).toEqual([
+          expect.stringMatching(/ shards=2$/),
+        ]);
+        // without the okra spend the side waits, and the set trains on the front alone
+        const waits: Array<string> = [];
+        const held = yield* build(
+          files(),
+          waits,
+          { spend: new Set(['modal'] as const) },
+          graph({ sideCut: true }),
+        );
+        expect(stateOf(held)['renders:side@m']).toBe('waiting-spend');
+        expect(waits.filter((a) => a.startsWith('train'))).toEqual([
+          expect.stringMatching(/ shards=1$/),
+        ]);
+      }),
   );
 
   it.effect('the train config names the backbone and input model.py reads, in its key', () =>

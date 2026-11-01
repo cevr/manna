@@ -29,6 +29,18 @@ const SheetRecord = Schema.Struct({
   missed: Schema.Array(Schema.String),
   named: Schema.optionalKey(Schema.Array(Schema.Struct({ bar: Schema.String }))),
 });
+const SheetRecordJson = Schema.fromJsonString(SheetRecord);
+
+/** Whether a part sheet's record passes its bars: it misses no bar, or names each one it misses. No record passes none. */
+const barsPass = (record: Option.Option<typeof SheetRecord.Type>) =>
+  Option.exists(record, (r) => r.missed.every((bar) => (r.named ?? []).some((n) => n.bar === bar)));
+
+/** `barsPass` over a record's text; text that is no record passes none. */
+export const barsOfRecord = (text: Option.Option<string>) =>
+  Effect.map(
+    Effect.option(Effect.flatMap(Effect.fromOption(text), Schema.decodeEffect(SheetRecordJson))),
+    barsPass,
+  );
 
 /** A puppet view's id, `<kind>-<view>`, read as its kind and view; a key's `<family>/<key>` reads as neither. */
 export const viewOfId = (id: string): Option.Option<{ kind: SheetKind; view: string }> =>
@@ -107,11 +119,7 @@ export const coverageFacts = Effect.fn('film.cast.coverageFacts')(function* (
       SheetRecord,
       path.join(memberDir, 'cutout', 'sheets', sheetOf(entry), 'record.json'),
     );
-    const named = Option.match(record, {
-      onNone: (): ReadonlyArray<string> => [],
-      onSome: (r) => (r.named ?? []).map((n) => n.bar),
-    });
-    const bars = Option.exists(record, (r) => r.missed.every((bar) => named.includes(bar)));
+    const bars = barsPass(record);
     const result = Option.fromNullishOr(measured[entry.id]);
     const cut = Option.flatMap(result, (r) => r.cut);
     const fit = Option.flatMap(result, (r) => r.fit);
