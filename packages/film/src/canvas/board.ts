@@ -12,6 +12,7 @@ import { Array as Arr, Boolean as Bool, Data, Option, Predicate, Result } from '
 import { type CardWord, cardWords, fullCard, verse } from './card.ts';
 import type { Film, RenderOptions } from './film.ts';
 import type { Hand } from './ink.ts';
+import { paintBurnIn } from './review.ts';
 import { type BoardFile, PANEL_START, type PanelText, shownTry } from '../core/board.ts';
 import { Shot } from '../core/animatic.ts';
 import {
@@ -120,24 +121,6 @@ const paintFramed = (
   ctx.translate(w / 2 + framing.dx * w, h / 2);
   ctx.scale(scale, scale);
   ctx.drawImage(image, -image.width / 2, -image.height / 2);
-  ctx.restore();
-};
-
-/** The review copy's burn-in: small, on a dark plate, in the bottom-left corner. */
-const BURN_IN = { font: '500 24px ui-monospace, Menlo, monospace', inset: 24, pad: 10, h: 38 };
-
-const paintBurnIn = (ctx: CanvasRenderingContext2D, text: string, h: number) => {
-  ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.font = BURN_IN.font;
-  ctx.textBaseline = 'middle';
-  const top = h - BURN_IN.inset - BURN_IN.h;
-  ctx.globalAlpha = 0.62;
-  ctx.fillStyle = '#000000';
-  ctx.fillRect(BURN_IN.inset, top, ctx.measureText(text).width + 2 * BURN_IN.pad, BURN_IN.h);
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText(text, BURN_IN.inset + BURN_IN.pad, top + BURN_IN.h / 2);
   ctx.restore();
 };
 

@@ -1,6 +1,6 @@
 // Every beat of the script paired with its drawing by the beat's id
-// (`scenesOf`). No beat has a drawing yet, so each plays as its storyboard
-// card and the whole film is watchable from day one; `film check` names each
+// (`scenesOf`). Only `title` has a drawing; every other beat plays as its
+// storyboard card, so the whole film stays watchable; `film check` names each
 // (`Storyboard`). The scenes are built to the film's Board (the flow's step
 // 7). Imports nothing that touches the DOM at module load: the narrate script
 // reads this to lay out the audio track.
@@ -8,8 +8,9 @@
 import { type SceneSpec, scenesOf } from '@manna/film/canvas';
 import { fonts } from '../palette.ts';
 import { script } from '../script.ts';
+import { title } from './title.ts';
 
 export const scenes: SceneSpec[] = scenesOf(script, {
-  drawings: {},
+  drawings: { title },
   card: { brief: fonts.display, label: fonts.body },
 });

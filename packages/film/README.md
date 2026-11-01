@@ -739,7 +739,17 @@ board and every kept try from its server (`boardFile`,
 `/films/<film>/board.json`, `/films/<film>/board/<file>`) and decodes them
 before the first frame; one it cannot read fails the render
 (`BoardUnreadable`). A short has its own page: `--board` with `--short` is
-a `FlagsConflict`, as is `--review` without `--board`.
+a `FlagsConflict`, as is `--review` with `--short`.
+
+`--review` without `--board` (variant `review`, of the film, an act or a
+scene) is the scenes' review copy: each frame drawn as the master draws
+it, then the same burn-in plate over it (`scenesReview`,
+`canvas/review.ts`) saying the film time, the beat and the last mark said
+in it, `start` before its first, `card` while a full-screen card shows
+(`0:31.4 · title · start`, `scenesBurnIn`). Its every frame reads the film's
+seconds (`Film.filmTimed`), and its segments are keyed by its picture
+(`pictureParams`), apart from the master's: a master rendered after it
+draws its own. It makes no share copy unless `--share` asks for one.
 
 **The catalogue** (`core/catalogue.ts`, kept by `tools/catalogue.ts`) records
 each render's address, variant, kind (video, stills, contact, look-book),

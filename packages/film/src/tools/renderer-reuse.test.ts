@@ -67,7 +67,7 @@ const keys = new Map([
 
 const video = (
   reuse: Reuse,
-  picture: Picture = Picture.Scenes(),
+  picture: Picture = Picture.Scenes({ review: false }),
   copies: Copies = 'master+share',
   out: Option.Option<string> = Option.none(),
 ) =>
@@ -404,7 +404,7 @@ describe.concurrent("a film render's segments", () => {
       Effect.gen(function* () {
         const { render } = project();
         const both = yield* render(video(keyed()));
-        const shareOnly = yield* render(video(keyed(), Picture.Scenes(), 'share'));
+        const shareOnly = yield* render(video(keyed(), Picture.Scenes({ review: false }), 'share'));
         expect(shareOnly.drawn).toEqual([]);
         expect(shareOnly.master).toEqual([]);
         expect(shareOnly.share).toEqual(both.share);
@@ -418,18 +418,37 @@ describe.concurrent("a film render's segments", () => {
     () =>
       Effect.gen(function* () {
         const { render } = project();
-        const shareOnly = yield* render(video(keyed(), Picture.Scenes(), 'share'));
+        const shareOnly = yield* render(video(keyed(), Picture.Scenes({ review: false }), 'share'));
         expect(shareOnly.drawn).toEqual(frames(0, 40));
         expect(shareOnly.master).toEqual([]);
-        const again = yield* render(video(keyed(), Picture.Scenes(), 'share'));
+        const again = yield* render(video(keyed(), Picture.Scenes({ review: false }), 'share'));
         expect(again.drawn).toEqual([]);
         const both = yield* render(video(keyed()));
         expect(both.drawn).toEqual(frames(0, 40));
         expect(both.master.map((s) => s.at)).toEqual(both.share.map((s) => s.at));
         // Its segments now hold both copies: a render of the master alone draws nothing.
-        const master = yield* render(video(keyed(), Picture.Scenes(), 'master'));
+        const master = yield* render(video(keyed(), Picture.Scenes({ review: false }), 'master'));
         expect(master.drawn).toEqual([]);
         expect(master.master).toEqual(both.master);
+      }).pipe(atDayZero),
+  );
+
+  it.effect(
+    "a scenes review copy's are keyed apart from the master's: a master rendered after one reuses none of them",
+    () =>
+      Effect.gen(function* () {
+        const { render } = project();
+        const reviewed = video(keyed(), Picture.Scenes({ review: true }));
+        const review = yield* render(reviewed);
+        expect(review.drawn).toEqual(frames(0, 40));
+        const master = yield* render(video(keyed()));
+        expect(master.drawn).toEqual(frames(0, 40));
+        expect(master.master.map((s) => s.file)).not.toContainAnyValues(
+          review.master.map((s) => s.file),
+        );
+        // Each keeps its own: drawn again, neither draws a frame.
+        expect((yield* render(reviewed)).drawn).toEqual([]);
+        expect((yield* render(video(keyed()))).drawn).toEqual([]);
       }).pipe(atDayZero),
   );
 
@@ -568,7 +587,7 @@ describe.concurrent("a film render's segments", () => {
               () => written === 'out',
             );
             const job = (beats: ReadonlyMap<string, string>) =>
-              video(keyed(beats), Picture.Scenes(), 'master+share', out);
+              video(keyed(beats), Picture.Scenes({ review: false }), 'master+share', out);
             const on = (job: RenderJob, stage: Stage = { film, info }) =>
               render(job, () => Effect.void, stage).pipe(
                 Effect.provideService(Clock.Clock, onDay(0)),
@@ -732,7 +751,9 @@ describe.concurrent("a film render's segments", () => {
         yield* on(video(keyed()));
         // b changes, and the film is rendered again with its share copy alone.
         const changed = new Map([...keys, ['b', 'key-b2']]);
-        const shareOnly = yield* on(video(keyed(changed), Picture.Scenes(), 'share'));
+        const shareOnly = yield* on(
+          video(keyed(changed), Picture.Scenes({ review: false }), 'share'),
+        );
         expect(shareOnly.drawn).toEqual(frames(10, 20));
         expect(shareOnly.target).toBe(`${film.paths.out}/film/main.share.mp4`);
         yield* catalogued([], [shareOnly.target]);
