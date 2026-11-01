@@ -14,7 +14,7 @@ import { Pages } from '../pages.ts';
 import { memoryLocks } from '../host/testing.ts';
 import type { Coverage, EntryFacts } from './coverage.ts';
 import { type Input, type Stage, buildGraph } from './graph.ts';
-import { sourceFiles } from './sources.ts';
+import { sourceFiles, stageSources } from './sources.ts';
 import { clipStages, memberStages } from './stages.ts';
 
 const COVERAGE: Coverage = {
@@ -104,13 +104,13 @@ describe('memberStages', () => {
       const dir = yield* memberIn(['front', 'threeQuarterLeft']);
       const stages = yield* stagesOf(dir, allComplete);
       expect(filesOf(stages, 'renders:turnaround-front@fake')).toEqual(
-        expect.arrayContaining([...sourceFiles('renders')]),
+        expect.arrayContaining(yield* sourceFiles('renders')),
       );
       expect(filesOf(stages, 'fit:poses-poses-1@fake')).toEqual(
-        expect.arrayContaining([...sourceFiles('fit')]),
+        expect.arrayContaining(yield* sourceFiles('fit')),
       );
       expect(filesOf(stages, 'parts:turnaround-front@fake')).toEqual(
-        expect.arrayContaining([...sourceFiles('parts')]),
+        expect.arrayContaining(yield* sourceFiles('parts')),
       );
     }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
@@ -201,13 +201,14 @@ describe('memberStages', () => {
           facts: allComplete,
         },
         '/cache',
+        (yield* stageSources).chain,
       );
       const inputs = clips.flatMap((c) => c.inputs);
       expect(inputs).toContainEqual({ _tag: 'Stage', id: 'train' });
       expect(inputs).toContainEqual({ _tag: 'Stage', id: 'trainset' });
       expect(inputs.filter((i) => i._tag !== 'File' && i.id.startsWith('cut:'))).toEqual([]);
       expect(filesOf(clips, 'eval:clip:b@fake')).toEqual(
-        expect.arrayContaining([...sourceFiles('chain')]),
+        expect.arrayContaining(yield* sourceFiles('chain')),
       );
     }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );

@@ -54,7 +54,7 @@ import {
 } from './graph.ts';
 import { CastReader, type ReaderError } from './reader.ts';
 import { SAMPLES, shardOf, trainsetOf } from './renders.ts';
-import { sourceInputs } from './sources.ts';
+import { stageSources } from './sources.ts';
 
 /** Bumped when a stage's code makes other bytes from the same inputs. */
 const VERSION = {
@@ -233,6 +233,7 @@ export interface MemberStages {
 export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: MemberStages) {
   const path = yield* Path.Path;
   const sources = yield* specSources(m.memberDir, m.libraryPuppets);
+  const src = yield* stageSources;
   /** An entry named in a stage id: `<entry>@<member>`, so `cut:<entry>` leads it and two members never share one. */
   const at = (id: string) => `${id}@${m.member}`;
   const factsOf = (id: string) => Option.fromNullishOr(m.facts[id]);
@@ -269,7 +270,7 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: M
         stageInput(`drawing:${at(entry.id)}`),
         fileInput(path.join(m.memberDir, 'cutout', 'cut.ts')),
         ...sheetFiles.map((f) => fileInput(path.join(sheet, f))),
-        ...sourceInputs('parts'),
+        ...src.parts,
       ],
       version: VERSION.parts,
       run: (ctx) =>
@@ -296,7 +297,7 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: M
       inputs: [
         stageInput(`parts:${at(entry.id)}`),
         ...sources.map((s): Input => fileInput(s)),
-        ...sourceInputs('cut'),
+        ...src.cut,
       ],
       version: VERSION.cut,
       run: (ctx) =>
@@ -327,7 +328,7 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: M
       inputs: [
         stageInput(cut),
         stageInput(`drawing:${at(entry.id)}`),
-        ...sourceInputs('fit'),
+        ...src.fit,
         // a fitted pose is its pose JSON and held drawings too, which its cut does not hash
         ...Option.match(Option.fromUndefinedOr(entry.fitted), {
           onNone: () => [],
@@ -365,7 +366,7 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: M
     stages.push({
       id: `renders:${at(entry.id)}`,
       view: entry.id,
-      inputs: [stageInput(`cut:${at(entry.id)}`), ...sourceInputs('renders')],
+      inputs: [stageInput(`cut:${at(entry.id)}`), ...src.renders],
       version: VERSION.renders,
       config: RENDERS_CONFIG,
       run: () =>
@@ -566,12 +567,15 @@ export const trainStage = (
 });
 
 /** One drawing's held samples read by the trained reader and scored, by its renders stage's id. */
-export const evalStage = (rendersId: string): Stage<CastReader> => {
+export const evalStage = (
+  rendersId: string,
+  evalSources: ReadonlyArray<Input>,
+): Stage<CastReader> => {
   const id = rendersId.replace(/^renders:/, 'eval:');
   return {
     id,
     view: id.slice('eval:'.length).split('@')[0],
-    inputs: [stageInput('train'), stageInput(rendersId), ...sourceInputs('eval')],
+    inputs: [stageInput('train'), stageInput(rendersId), ...evalSources],
     version: VERSION.eval,
     run: (ctx) =>
       Effect.gen(function* () {
@@ -652,6 +656,7 @@ export const chainClip = Effect.fn('cast.chain.clip')(function* (o: {
 export const clipStages = (
   m: MemberStages,
   cache: string,
+  chainSources: ReadonlyArray<Input>,
 ): ReadonlyArray<Stage<StageServices | CastReader | ChildProcessSpawner.ChildProcessSpawner>> =>
   (m.coverage.clips ?? []).map((clip) => {
     const id = `eval:clip:${clip.id}@${m.member}`;
@@ -662,7 +667,7 @@ export const clipStages = (
       inputs: [
         stageInput('train'),
         fileInput(file),
-        ...sourceInputs('chain'),
+        ...chainSources,
         // the set's shards stand for the cuts of the drawings the reader was trained on
         stageInput('trainset'),
       ],

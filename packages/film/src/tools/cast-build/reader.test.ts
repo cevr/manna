@@ -103,7 +103,7 @@ const graph = (
   }),
   trainsetStage(CANDIDATES),
   trainStage(CANDIDATES, SOURCES),
-  ...CANDIDATES.map((c) => evalStage(c.renders)),
+  ...CANDIDATES.map((c) => evalStage(c.renders, [])),
 ];
 
 const files = () =>
