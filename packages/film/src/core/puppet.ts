@@ -338,7 +338,7 @@ const meshOf = (
   };
 };
 
-/** Why a skeleton cannot skin a sheet: a bone named twice or before its parent, a skin or flap naming what is not there. */
+/** Why a skeleton cannot skin a sheet: a bone named twice or before its parent, a skin or flap naming what is not there, a flap on an arm too long for a vertex's weights. */
 class PuppetRefused extends Schema.TaggedError<PuppetRefused>()('PuppetRefused', {
   reason: Schema.String,
 }) {
@@ -347,7 +347,7 @@ class PuppetRefused extends Schema.TaggedError<PuppetRefused>()('PuppetRefused',
   }
 }
 
-/** Why `skeleton` cannot skin `sheet`, if it cannot: a bone named twice or before its parent, a skin or flap naming a part or bone that is not there, two flaps on one part, a flap resting on a bone its arm's skin does not name. */
+/** Why `skeleton` cannot skin `sheet`, if it cannot: a bone named twice or before its parent, a skin or flap naming a part or bone that is not there, two flaps on one part, a flap resting on a bone its arm's skin does not name, a flap on an arm of more bones than a vertex holds beside the body. */
 const refusal = (sheet: PuppetSheet, skeleton: Skeleton): string | undefined => {
   const seen = new Set<string>();
   for (const b of skeleton.bones) {
@@ -378,8 +378,13 @@ const flapRefusal = (
     if (hasFlap.has(f.part)) return `two flaps name part ${f.part}`;
     hasFlap.add(f.part);
     if (!seen.has(f.bone)) return `${f.part}'s flap names no bone ${f.bone}`;
-    if (!(skeleton.skin[f.part] ?? []).includes(f.body))
+    const skin = skeleton.skin[f.part] ?? [];
+    if (!skin.includes(f.body))
       return `${f.part}'s flap rests on ${f.body}, which its skin does not name`;
+    // a flap vertex holds its arm weights and the body's: past `WEIGHTS` the mesh's cut drops the body's small share near the flap's edge, a step
+    const arm = skin.filter((b) => b !== f.body).length;
+    if (arm > WEIGHTS - 1)
+      return `${f.part}'s flap is on an arm of ${arm} bones, more than the ${WEIGHTS - 1} a vertex holds beside ${f.body}`;
   }
   return undefined;
 };
