@@ -173,7 +173,7 @@ describe('cast reader (Python)', () => {
     }).pipe(Effect.provide(BunServices.layer)),
   );
 
-  // review reader-key r1 M3: the unit tests once wrote and read a host folder; they stay on an in-memory disk
+  // the unit tests run on an in-memory disk: a real folder's read or write would take the gate's time and the host's files
   it.effect(
     'the cast reader unit tests read no real folder: reader.test.ts takes no Bun platform layer and names no file by its URL',
     () =>

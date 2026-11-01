@@ -1063,7 +1063,7 @@ describe("the reader's roles, derived from its imports", () => {
   const editHelper = (disk: Map<string, Uint8Array>) =>
     disk.set('/reader/helper.py', text('VALUE = 2\n'));
 
-  // review r1 M1: a string or a comment once swallowed the import after it
+  // a string or a comment that could open a continuation ends where Python ends it, so the import after it is an edge
   for (const [name, source] of [
     [
       'after a docstring that reads as an open import',
@@ -1099,7 +1099,7 @@ describe("the reader's roles, derived from its imports", () => {
       },
     );
 
-  // review r1 M2: an import in a one-line suite was once no edge, so a training helper's edit kept the old checkpoint
+  // an import in a one-line suite is an edge, so a training helper's edit is a new train key
   for (const [name, source] of [
     ['in a one-line if', 'from model import Reader\nif True: import helper\n'],
     ['in a one-line def', 'from model import Reader\ndef load(): from helper import VALUE\n'],
