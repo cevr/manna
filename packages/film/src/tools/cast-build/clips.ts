@@ -8,7 +8,8 @@
 // call is a line of the fal ledger (`LedgerEntry`).
 //
 // `clipVerdict` judges a clip's numbers against `CLIP_BARS`, `holdsOf` finds
-// its still start and end, `falSpendAllowed` holds the spend to `FAL_LIMITS`,
+// its still start and end, `clipEntryOf` makes a clip's reader-lock entry
+// (`ClipLock`) and its verdict, `falSpendAllowed` holds the spend to `FAL_LIMITS`,
 // and `adoptClip` takes a committed clip only when its provenance is the
 // request and its mp4 is the one the provenance names. Pure.
 
@@ -161,6 +162,111 @@ export const clipVerdict = (n: ClipNumbers): ClipVerdict => {
       );
   }
   return { pass: fails.length === 0, fails };
+};
+
+/** A clip's figure on the canvas, per frame: its height over frame 0's, its feet line less frame 0's (canvas px), and its IoU with the first and last frames (`clip-map.ts`). */
+export interface ClipFigure {
+  readonly heightRatio: ReadonlyArray<number>;
+  readonly feetPx: ReadonlyArray<number>;
+  readonly iouFirst: ReadonlyArray<number>;
+  readonly iouLast: ReadonlyArray<number>;
+}
+
+const Range = Schema.Struct({ min: Schema.Finite, max: Schema.Finite });
+const Run = Schema.Struct({ from: Schema.Finite, to: Schema.Finite, drawing: Schema.String });
+
+/**
+ * A clip's entry in the reader lock: its mp4's hash and frame count, its
+ * declared bands with the drawings each expects (`member/entry`), the
+ * chain's IoU and named drawings over each declared band and the whole clip
+ * (by `<from>-<to>`), its holds, its figure's height ratio and feet range,
+ * the chain's runs, and the verdict.
+ */
+export const ClipLock = Schema.Struct({
+  member: Schema.String,
+  clip: Schema.String,
+  sha256: Schema.String,
+  frames: Schema.Int,
+  bands: Schema.Array(
+    Schema.Struct({
+      from: Schema.Finite,
+      to: Schema.Finite,
+      expect: Schema.Array(Schema.String),
+    }),
+  ),
+  iou: Schema.Record(Schema.String, Schema.Finite),
+  named: Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Finite)),
+  holds: Schema.Struct({ start: Schema.Int, end: Schema.Int }),
+  scale: Schema.Struct({ heightRatio: Range, feetPx: Range }),
+  runs: Schema.Array(Run),
+  pass: Schema.Boolean,
+  fails: Schema.Array(Schema.String),
+});
+export interface ClipLock extends Schema.Schema.Type<typeof ClipLock> {}
+
+/** What a clip's lock entry is made of: the clip, its mp4's hash, its declared bands, the chain's numbers (`chain.ts`) and its figure's. */
+interface ClipEntryInput {
+  readonly member: string;
+  readonly clip: string;
+  readonly sha256: string;
+  readonly bands: ReadonlyArray<{
+    readonly from: number;
+    readonly to: number;
+    readonly expect: ReadonlyArray<string>;
+  }>;
+  readonly chain: {
+    readonly iou: Readonly<Record<string, number>>;
+    readonly named: Readonly<Record<string, Readonly<Record<string, number>>>>;
+    readonly runs: ReadonlyArray<typeof Run.Type>;
+  };
+  readonly figure: ClipFigure;
+}
+
+const rangeOf = (xs: ReadonlyArray<number>) => ({
+  min: xs.reduce((a, b) => Math.min(a, b), Infinity),
+  max: xs.reduce((a, b) => Math.max(a, b), -Infinity),
+});
+
+/**
+ * A clip's lock entry, its verdict `clipVerdict`'s over the declared bands
+ * and the whole clip (`0-(frames-1)`, no expectation), with the figure's
+ * height ratio and feet line as their least and greatest. A band the chain
+ * has no IoU for fails its IoU bar.
+ */
+export const clipEntryOf = (o: ClipEntryInput): ClipLock => {
+  const frames = o.figure.heightRatio.length;
+  const all = { from: 0, to: frames - 1, expect: [] };
+  const labelled = [...o.bands, all].map((b) => ({ ...b, label: `${b.from}-${b.to}` }));
+  const labels = new Set(labelled.map((b) => b.label));
+  const kept = <A>(r: Readonly<Record<string, A>>) =>
+    Object.fromEntries(Object.entries(r).filter(([label]) => labels.has(label)));
+  const heightRatio = rangeOf(o.figure.heightRatio);
+  const feetPx = rangeOf(o.figure.feetPx);
+  const verdict = clipVerdict({
+    heightRatio: [heightRatio.min, heightRatio.max],
+    feetPx: [feetPx.min, feetPx.max],
+    bands: labelled.map((b) => ({
+      from: b.from,
+      to: b.to,
+      iou: o.chain.iou[b.label] ?? Number.NaN,
+      expect: b.expect,
+      named: o.chain.named[b.label] ?? {},
+    })),
+  });
+  return {
+    member: o.member,
+    clip: o.clip,
+    sha256: o.sha256,
+    frames,
+    bands: o.bands.map((b) => ({ from: b.from, to: b.to, expect: [...b.expect] })),
+    iou: kept(o.chain.iou),
+    named: kept(o.chain.named),
+    holds: holdsOf(o.figure.iouFirst, o.figure.iouLast),
+    scale: { heightRatio, feetPx },
+    runs: o.chain.runs,
+    pass: verdict.pass,
+    fails: verdict.fails,
+  };
 };
 
 /** The still start and end: the longest prefix at the hold bar against the first frame, and the longest suffix against the last. */

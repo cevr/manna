@@ -16,6 +16,7 @@ import {
   FAL_LIMITS,
   type LedgerEntry,
   adoptClip,
+  clipEntryOf,
   clipRequestOf,
   clipVerdict,
   falSpendAllowed,
@@ -145,6 +146,94 @@ describe('clip holds', () => {
     expect(holdsOf([], [])).toEqual({ start: 0, end: 0 });
     expect(holdsOf([0.95, 0.95], [0.95, 0.95])).toEqual({ start: 2, end: 2 });
     expect(holdsOf([0.9], [0.9])).toEqual({ start: 0, end: 0 });
+  });
+});
+
+describe("a clip's lock entry", () => {
+  type Entry = Parameters<typeof clipEntryOf>[0];
+  const N = 124;
+  /** Each `[count, value]` run laid end to end. */
+  const runsOf = (...runs: ReadonlyArray<readonly [number, number]>) =>
+    runs.flatMap(([count, value]) => Array.from({ length: count }, () => value));
+  /** Clip B's figure: still 12 frames, then moving, then still its last 83. */
+  const figure: Entry['figure'] = {
+    heightRatio: runsOf([50, 1], [1, 0.991], [39, 1], [1, 1.0015], [33, 1]),
+    feetPx: runsOf([61, 0], [63, 1]),
+    iouFirst: runsOf([12, 0.99], [112, 0.8]),
+    iouLast: runsOf([41, 0.8], [83, 0.99]),
+  };
+  const chain: Entry['chain'] = {
+    iou: { '0-123': 0.9121, '0-40': 0.9098, '41-123': 0.9132 },
+    named: {
+      '0-123': { 'lead-feast/turnaround-front': 39, 'lead-feast/single-single-1': 85 },
+      '0-40': { 'lead-feast/turnaround-front': 39, 'lead-feast/single-single-1': 2 },
+      '41-123': { 'lead-feast/single-single-1': 83 },
+    },
+    runs: [
+      { from: 0, to: 39, drawing: 'lead-feast/turnaround-front' },
+      { from: 39, to: 124, drawing: 'lead-feast/single-single-1' },
+    ],
+  };
+  const bands = [
+    { from: 0, to: 40, expect: ['lead-feast/turnaround-front'] },
+    { from: 41, to: 123, expect: ['lead-feast/single-single-1'] },
+  ];
+  const entry = (c = chain, f = figure) =>
+    clipEntryOf({
+      member: 'lead-feast',
+      clip: 'raise/clip-b',
+      sha256: 'abc',
+      bands,
+      chain: c,
+      figure: f,
+    });
+
+  it("carries the clip's bands, holds and scale range, and passes clip B", () => {
+    expect(entry()).toEqual({
+      member: 'lead-feast',
+      clip: 'raise/clip-b',
+      sha256: 'abc',
+      frames: N,
+      bands,
+      iou: chain.iou,
+      named: chain.named,
+      holds: { start: 12, end: 83 },
+      scale: { heightRatio: { min: 0.991, max: 1.0015 }, feetPx: { min: 0, max: 1 } },
+      runs: chain.runs,
+      pass: true,
+      fails: [],
+    });
+  });
+
+  it('is the verdict over the declared bands and the whole clip, with the scale range as its frames', () => {
+    const front = { 'lead-feast/turnaround-front': 41 };
+    const allFront = {
+      ...chain,
+      named: { ...chain.named, '0-40': front, '41-123': { 'lead-feast/turnaround-front': 83 } },
+    };
+    const named = entry(allFront);
+    expect(named.pass).toBe(false);
+    expect(named.fails).toEqual([expect.stringMatching(/^named 41-123: 0 of 83 frames/)]);
+
+    const whole = entry({ ...chain, iou: { ...chain.iou, '0-123': 0.87 } });
+    expect(whole.fails).toEqual([expect.stringMatching(/^iou 0-123: 0.87 under 0.88/)]);
+
+    const shrunk = entry(chain, {
+      ...figure,
+      heightRatio: figure.heightRatio.with(7, 0.969),
+    });
+    expect(shrunk.scale.heightRatio).toEqual({ min: 0.969, max: 1.0015 });
+    expect(shrunk.fails).toEqual([expect.stringMatching(/^heightRatio: 1 frames/)]);
+    expect(clipVerdict({ heightRatio: [0.969, 1.0015], feetPx: [0, 1], bands: [] }).fails).toEqual(
+      shrunk.fails,
+    );
+  });
+
+  it('fails a band the chain has no IoU for', () => {
+    const { ['41-123']: _gone, ...iou } = chain.iou;
+    const got = entry({ ...chain, iou });
+    expect(got.pass).toBe(false);
+    expect(got.fails).toEqual([expect.stringMatching(/^iou 41-123: /)]);
   });
 });
 
