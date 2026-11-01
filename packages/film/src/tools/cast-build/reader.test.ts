@@ -1040,6 +1040,27 @@ describe("the reader's roles, derived from its imports", () => {
     }),
   );
 
+  it.effect(
+    "an import of one of the folder's own folders fails the scan, naming the file and the folder; a folder no role imports is no matter",
+    () =>
+      Effect.gen(function* () {
+        const folders = new Set(['lib', 'tests']);
+        expect((yield* rolesOf(new Map(FOLDER), folders)).train).toEqual([
+          'modal_app.py',
+          'model.py',
+          'train.py',
+        ]);
+        const failed = yield* Effect.flip(
+          rolesOf(new Map([...FOLDER, ['read.py', 'from lib import decode\n']]), folders),
+        );
+        expect([failed._tag, failed.file, failed.reason]).toEqual([
+          'ReaderScanFailed',
+          'read.py',
+          expect.stringContaining('it imports lib, a folder'),
+        ]);
+      }),
+  );
+
   /**
    * The folder with `over`, scanned, and on a disk with the build's other
    * files: each `.py` at `/reader/<name>`, the roles as paths there.
@@ -1145,7 +1166,7 @@ describe('the live reader', () => {
       );
     });
 
-  /** A reader folder of the live layer's: its entry scripts, its model, a helper in a one-line suite, and its lock. */
+  /** A reader folder of the live layer's: its entry scripts, its model, a helper in a one-line suite, its tests' folder, and its lock. */
   const FOLDER = {
     'eval.py': 'from model import BONES\n',
     'helper.py': '',
@@ -1153,6 +1174,7 @@ describe('the live reader', () => {
     'model.py': 'import torch\n',
     'read.py': 'from model import decode\n',
     'train.py': 'from model import Reader\nif True: import helper\n',
+    'tests/test_model.py': 'import model\n',
     'pyproject.toml': '[project]\n',
     'uv.lock': 'version = 1\n',
   };
@@ -1163,11 +1185,14 @@ describe('the live reader', () => {
   /**
    * The live reader over `spawner`, of the folder on an in-memory disk, in
    * an environment made for it as the layer finds one: `venv-<uv.lock's
-   * hash>/bin/python` under FILM_READER_HOME.
+   * hash>/bin/python` under FILM_READER_HOME; `over` replaces or adds files.
    */
-  const liveOver = (spawner: ChildProcessSpawner.ChildProcessSpawner['Service']) => {
+  const liveOver = (
+    spawner: ChildProcessSpawner.ChildProcessSpawner['Service'],
+    over: Readonly<Record<string, string>> = {},
+  ) => {
     const disk = new Map(
-      Object.entries(FOLDER).map(([name, body]) => [`${DIR}/${name}`, text(body)]),
+      Object.entries({ ...FOLDER, ...over }).map(([name, body]) => [`${DIR}/${name}`, text(body)]),
     );
     disk.set(
       `${HOME}/venv-${sha256Hex(text(FOLDER['uv.lock'])).slice(0, 12)}/bin/python`,
@@ -1223,5 +1248,22 @@ describe('the live reader', () => {
         eval: at(['eval.py', 'model.py', 'pyproject.toml', 'read.py', 'uv.lock']),
       });
     }).pipe(Effect.provide(liveOver(recording([])))),
+  );
+
+  it.effect('a role that imports a package folder of its own fails as the layer is made', () =>
+    Effect.gen(function* () {
+      const failed = yield* Effect.flip(
+        Layer.build(
+          liveOver(recording([]), {
+            'read.py': 'from lib import decode\n',
+            'lib/__init__.py': 'decode = None\n',
+          }),
+        ),
+      );
+      expect([failed._tag, failed.message]).toEqual([
+        'ReaderScanFailed',
+        expect.stringContaining('read.py: it imports lib, a folder'),
+      ]);
+    }).pipe(Effect.scoped),
   );
 });

@@ -452,10 +452,13 @@ export const importsOf = (file: string, text: string) =>
  * their local imports (an import naming a `<name>.py` of `py`, followed
  * transitively), with the environment for a local role, sorted. A file that
  * imports dynamically (`importlib`, `__import__`, `runpy`) fails the scan, as
- * does a missing entry.
+ * does a missing entry, and a file in a role that imports a name of
+ * `folders` (the folder's own folders): a package of the reader's, whose
+ * files the scan does not follow.
  */
 export const rolesOf = (
   py: ReadonlyMap<string, string>,
+  folders: ReadonlySet<string> = new Set(),
 ): Effect.Effect<ReaderSources, ReaderScanFailed> =>
   Effect.gen(function* () {
     for (const [file, text] of py) {
@@ -480,8 +483,14 @@ export const rolesOf = (
           const file = queue.shift() ?? '';
           if (seen.has(file)) continue;
           seen.add(file);
-          for (const name of yield* importsOf(file, py.get(file) ?? ''))
+          for (const name of yield* importsOf(file, py.get(file) ?? '')) {
+            if (folders.has(name))
+              return yield* ReaderScanFailed.make({
+                file,
+                reason: `it imports ${name}, a folder of the reader's: a package the scan does not follow`,
+              });
             if (py.has(`${name}.py`)) queue.push(`${name}.py`);
+          }
         }
         return [...seen, ...ENVIRONMENT.filter(() => LOCAL.has(role))].toSorted();
       });
@@ -492,14 +501,17 @@ export const rolesOf = (
     };
   });
 
-/** The roles of the reader folder `dir`, from its `.py` files (its tests' folder is not read), as absolute paths. */
+/** The roles of the reader folder `dir`, from its `.py` files and the names of its folders (whose files are not read), as absolute paths. */
 const sourcesIn = (dir: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
-    const names = (yield* fs.readDirectory(dir)).filter((n) => n.endsWith('.py')).toSorted();
     const py = new Map<string, string>();
-    for (const name of names) py.set(name, yield* fs.readFileString(`${dir}/${name}`));
-    const roles = yield* rolesOf(py);
+    const folders = new Set<string>();
+    for (const name of (yield* fs.readDirectory(dir)).toSorted()) {
+      if (name.endsWith('.py')) py.set(name, yield* fs.readFileString(`${dir}/${name}`));
+      else if ((yield* fs.stat(`${dir}/${name}`)).type === 'Directory') folders.add(name);
+    }
+    const roles = yield* rolesOf(py, folders);
     const at = (files: ReadonlyArray<string>) => files.map((n) => `${dir}/${n}`);
     return { train: at(roles.train), read: at(roles.read), eval: at(roles.eval) };
   });
