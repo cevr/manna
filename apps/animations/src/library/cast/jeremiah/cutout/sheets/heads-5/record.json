@@ -80,7 +80,23 @@
           },
           "drift": {
             "deltaE": 5.05,
-            "px": 13278
+            "px": 13278,
+            "chroma": [
+              {
+                "part": "torso",
+                "under": "head",
+                "painted": {
+                  "chroma": 31.84,
+                  "px": 42
+                },
+                "kept": {
+                  "chroma": 36.04,
+                  "px": 42
+                },
+                "cells": 4,
+                "verdict": "outside"
+              }
+            ]
           },
           "grain": [
             {
@@ -98,6 +114,21 @@
               "verdict": "outside"
             }
           ],
+          "speck": [
+            {
+              "part": "torso",
+              "under": "head",
+              "painted": {
+                "share": 0.096,
+                "px": 3618
+              },
+              "kept": {
+                "share": 0.009,
+                "px": 7907
+              },
+              "verdict": "outside"
+            }
+          ],
           "paintUnder": [
             {
               "part": "head",
@@ -108,7 +139,7 @@
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": ["drift", "grain"]
+        "missed": ["drift", "grain", "speck"]
       },
       {
         "n": 3,
@@ -139,7 +170,23 @@
           },
           "drift": {
             "deltaE": 3.49,
-            "px": 13278
+            "px": 13278,
+            "chroma": [
+              {
+                "part": "torso",
+                "under": "head",
+                "painted": {
+                  "chroma": 31.39,
+                  "px": 42
+                },
+                "kept": {
+                  "chroma": 36.04,
+                  "px": 42
+                },
+                "cells": 4,
+                "verdict": "outside"
+              }
+            ]
           },
           "grain": [
             {
@@ -157,6 +204,21 @@
               "verdict": "within"
             }
           ],
+          "speck": [
+            {
+              "part": "torso",
+              "under": "head",
+              "painted": {
+                "share": 0.085,
+                "px": 3459
+              },
+              "kept": {
+                "share": 0.009,
+                "px": 7907
+              },
+              "verdict": "outside"
+            }
+          ],
           "paintUnder": [
             {
               "part": "head",
@@ -167,7 +229,7 @@
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": []
+        "missed": ["drift", "speck"]
       }
     ],
     "chosen": 3,
@@ -185,7 +247,23 @@
     },
     "drift": {
       "deltaE": 3.49,
-      "px": 13278
+      "px": 13278,
+      "chroma": [
+        {
+          "part": "torso",
+          "under": "head",
+          "painted": {
+            "chroma": 31.39,
+            "px": 42
+          },
+          "kept": {
+            "chroma": 36.04,
+            "px": 42
+          },
+          "cells": 4,
+          "verdict": "outside"
+        }
+      ]
     },
     "grain": [
       {
@@ -203,6 +281,21 @@
         "verdict": "within"
       }
     ],
+    "speck": [
+      {
+        "part": "torso",
+        "under": "head",
+        "painted": {
+          "share": 0.085,
+          "px": 3459
+        },
+        "kept": {
+          "share": 0.009,
+          "px": 7907
+        },
+        "verdict": "outside"
+      }
+    ],
     "paintUnder": [
       {
         "part": "head",
@@ -216,11 +309,15 @@
   "bars": {
     "seamDeltaE": 10,
     "driftDeltaE": 5,
+    "chromaDrop": 3,
     "grainWithin": 0.5,
+    "speckOver": 0.04,
     "visibleAtRest": 0,
     "leastSeamPairs": 20,
-    "leastGrainWindows": 90
+    "leastGrainWindows": 90,
+    "leastRegionPx": 100,
+    "leastCellPx": 40
   },
-  "missed": [],
+  "missed": ["drift", "speck"],
   "named": []
 }
