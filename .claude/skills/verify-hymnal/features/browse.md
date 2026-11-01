@@ -102,4 +102,5 @@ a hymn page the `#` stands alone at the right of the floating bar.
 - Android's Back does not close `All at once` (iOS is the target).
 - A drum's name is in the accessibility tree only; it draws no caption. A drawn caption would be hidden from the tree, so a snapshot cannot show whether one is drawn: `apps/hymnal/src/player/find.test.tsx` checks that the drums draw only digits. iOS lists a drum as `other`, not adjustable: name it `role=other label=Tens`.
 - A drum's detent is the only touch on the drums that sounds: turn a drum or press `Play` only with the player's `Sound` off, and never on a shared room's speakers.
+- With Reduce Motion on, the Debug build raises a LogBox warning (Reanimated's notice that Reduce Motion is on) as a toast at the screen's foot, over the find bar: a tap on `Search`, `All at once` or the `#` meets the toast and does nothing. `sim tap label=Dismiss` (once the toast is opened, or from its own row) clears it before `browse-findbar-motion`; a Release build has no LogBox.
 - The `#` with no hymn held is on the home list only: on a hymn page it rides the page's own bar, and on `Settings` there is none. Read the home list for step 10.
