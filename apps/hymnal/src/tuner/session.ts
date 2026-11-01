@@ -105,6 +105,14 @@ export interface Step {
   readonly work: ReadonlyArray<Work>;
 }
 
+/**
+ * Whether the screen's words may go to VoiceOver: only while it is open, in
+ * the foreground and not covered by another route, so a stop into `Away` under
+ * a pushed hymn says nothing over that hymn.
+ */
+export const voiced = (session: Session): boolean =>
+  session.active && !session.covered && !Phase.$is('Closed')(session.phase);
+
 /** Whether the ear holds, or is taking, the microphone in `phase`. */
 export const holdsMicrophone = (phase: Phase): boolean =>
   Phase.$is('Starting')(phase) || Phase.$is('Listening')(phase);

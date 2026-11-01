@@ -74,6 +74,7 @@ import {
   step,
   stringLabel,
   unlatched,
+  voiced,
   Work,
 } from './session';
 import { type Reading, reading, readingOn, type StringId } from './tuning';
@@ -323,6 +324,8 @@ function Tuner({
       said.label = words;
       said.at = yield* Clock.currentTimeMillis;
       setLabel(words);
+      // A screen covered, away or closed shows its words but says none of them.
+      if (!Option.exists(session.current, voiced)) return;
       AccessibilityInfo.announceForAccessibility(words);
       log('[tuner] announced');
     });

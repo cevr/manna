@@ -33,6 +33,7 @@ import {
   step,
   TUNED_FRAMES,
   unlatched,
+  voiced,
   Work,
 } from './session';
 import { detect } from './pitch';
@@ -375,6 +376,20 @@ describe('the tuner sheet’s rule', () => {
     const coveredPausing = step(pausing.session, Event.Covered({ covered: true }));
     expect(coveredPausing.session.phase._tag).toBe('Away');
     expect(step(coveredPausing.session, Event.Sounding({ sounding: false })).work).toEqual([]);
+  });
+
+  it('voices its words only while open, in the foreground and uncovered', () => {
+    const starting = step(
+      opened(true, false).session,
+      Event.Read({ permission: 'granted', check: 1 }),
+    );
+    const listening = step(starting.session, Event.Started({ attempt: 1 })).session;
+    expect(voiced(listening)).toBe(true);
+    const covered = step(listening, Event.Covered({ covered: true })).session;
+    expect(voiced(covered)).toBe(false);
+    expect(voiced(step(listening, Event.Active({ active: false })).session)).toBe(false);
+    expect(voiced(step(listening, Event.Closed()).session)).toBe(false);
+    expect(voiced(step(covered, Event.Covered({ covered: false })).session)).toBe(true);
   });
 
   it('holds the microphone only while starting or listening', () => {
