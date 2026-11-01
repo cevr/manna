@@ -34,8 +34,12 @@ export const RECORDING_SETS: ReadonlyArray<RecordingSet> = [
 export const holdsHymn = (set: RecordingSet, hymn: number) =>
   set.hymns === 'every' || set.hymns.includes(hymn);
 
-/** The set named `name`, if the app plays from it. */
-export const recordingSet = (name: string) => RECORDING_SETS.find((set) => set.name === name);
+/** Whether the app plays from a set named `name`. */
+export const isRecordingSet = (name: string) => RECORDING_SETS.some((set) => set.name === name);
+
+/** Whether the set named `name` holds `hymn`: false for a set the app does not play. */
+export const setHolds = (name: string, hymn: number) =>
+  RECORDING_SETS.some((set) => set.name === name && holdsHymn(set, hymn));
 
 /** The set hymn `hymn` plays from: the latest that holds it. */
 export const setOf = (hymn: number) =>

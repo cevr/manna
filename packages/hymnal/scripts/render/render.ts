@@ -40,11 +40,11 @@ import { Config, Effect, FileSystem, Option, Path, Schema } from 'effect';
 import { Command, Flag } from 'effect/cli';
 import {
   creditText,
-  holdsHymn,
+  isRecordingSet,
   keySet,
   RECORDING_SET,
   RECORDING_SETS,
-  recordingSet,
+  setHolds,
 } from '../../src/recordings.js';
 import { chosenOf } from './hymns.js';
 import { fetchInstruments, lockInstruments, readLock } from './instruments.js';
@@ -138,21 +138,20 @@ const render = Command.make('render', {
           step: 'arguments',
           reason: `--transpose ${flags.transpose}: the keys run from -5 to 6`,
         });
-      const recording = recordingSet(flags.set);
-      if (recording === undefined)
+      if (!isRecordingSet(flags.set))
         return yield* RenderFailed.make({
           step: 'arguments',
           reason: `--set ${flags.set}: the sets are ${RECORDING_SETS.map((s) => s.name).join(', ')}`,
         });
       const named = flags.manifestOnly ? [] : yield* chosenOf(flags.hymns, flags.all);
-      const outside = named.filter((hymn) => !holdsHymn(recording, hymn));
+      const outside = named.filter((hymn) => !setHolds(flags.set, hymn));
       if (Option.isSome(flags.hymns) && outside.length > 0)
         return yield* RenderFailed.make({
           step: 'arguments',
-          reason: `--set ${recording.name} does not hold hymns ${outside.join(', ')}`,
+          reason: `--set ${flags.set} does not hold hymns ${outside.join(', ')}`,
         });
-      const chosen = named.filter((hymn) => holdsHymn(recording, hymn));
-      const set = keySet(recording.name, flags.transpose);
+      const chosen = named.filter((hymn) => setHolds(flags.set, hymn));
+      const set = keySet(flags.set, flags.transpose);
       const out = path.resolve(Option.getOrElse(flags.out, () => path.join(cache, 'sets', set)));
       const work = path.resolve(
         Option.getOrElse(flags.work, () => path.join(cache, `work-${set}`)),
