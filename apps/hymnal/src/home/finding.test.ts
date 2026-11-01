@@ -62,7 +62,7 @@ describe('the find bar row', () => {
       }
   });
 
-  test('while the drums are open only the # takes a touch: the rest lies under their backdrop', () => {
+  test('while the drums are open, inReach names the # alone', () => {
     const controls: ReadonlyArray<Control> = ['search', 'grid', 'box', 'cancel', 'hash'];
     expect(controls.filter((c) => inReach(c, true))).toEqual(['hash']);
     expect(controls.filter((c) => inReach(c, false))).toEqual([...controls]);

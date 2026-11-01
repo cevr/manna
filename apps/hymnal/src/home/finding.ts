@@ -7,8 +7,9 @@
  * `#`. Open while search is on (`searchOpen`): the search box, the `#` and
  * `Cancel`. While `All at once` shows its tiles: the `#` alone, since the
  * tiles' `Done` is the way back. While the find drums are open, the `#`
- * alone is reachable: the rest of the row lies under the drums' backdrop,
- * so a tap on it closes the drums and fires nothing.
+ * alone is reachable: `FindBar` lets a touch on any other point of the row
+ * through to the drums' backdrop, so a tap there closes the drums and fires
+ * nothing.
  */
 
 import { Data } from 'effect';

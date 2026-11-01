@@ -10,8 +10,9 @@
  * own disk, `All at once` leaves, and `Cancel` stands at the bar's right.
  * `Cancel` folds it back. With Reduce Motion on the growth is a cross-fade
  * alone. While the keyboard is up the bar rides 8 points over its top.
- * While the drums are open only the `#` takes a touch (`inReach`): the rest
- * lies under the backdrop, which closes the drums.
+ * While the drums are open only the `#` takes a touch (`inReach`): every
+ * other view of the bar, the capsule's own background too, lets a touch
+ * through to the backdrop beneath it, which closes the drums.
  */
 
 import { useAtom, useAtomSet } from '@effect/atom-react';
@@ -56,8 +57,10 @@ import { askTiles, type Control, drawn, inReach, rowOf, tiles } from './finding'
 import { Magnifier } from './Magnifier';
 import { searchLabel } from './Results';
 
-/** A control under the drums' backdrop: untouchable, so a tap falls to the backdrop, and unseen by assistive technology. */
+/** A control while the drums are open: a touch passes through it to the backdrop beneath the bar, and assistive technology does not see it. */
 const outOfReach = { pointerEvents: 'none', 'aria-hidden': true } as const;
+/** The capsule while the drums are open: a touch on its own background passes through to the backdrop; its `#` still takes one. */
+const passThrough = { pointerEvents: 'box-none' } as const;
 
 /** The folded capsule's width: its three buttons side by side. */
 const FOLDED = 3 * HASH;
@@ -196,6 +199,7 @@ export function FindBar({
         {row === 'tiles' && hash(true)}
         {row !== 'tiles' && (
           <Animated.View
+            {...(drumsOpen && passThrough)}
             style={[styles.capsule, row === 'open' && width === 0 && styles.grow, grown]}
           >
             {controls.includes('search') && (
@@ -244,6 +248,7 @@ export function FindBar({
                   autoCorrect={false}
                   returnKeyType="search"
                   clearButtonMode="while-editing"
+                  maxFontSizeMultiplier={MOST_SCALE}
                   style={styles.input}
                 />
               </Animated.View>

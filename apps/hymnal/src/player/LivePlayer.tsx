@@ -13,7 +13,8 @@
  * move to another screen or where the `#` leaves (`findMoved`), and on a tap
  * outside them: while they are open a layer lies over the screens and the
  * bar, under the drums and the `#`, and takes that tap, so it reaches
- * nothing behind.
+ * nothing behind. The find bar lies over it too and lets a tap on any of
+ * its views but the `#` through to it.
  */
 
 import { useAtom, useAtomMount, useAtomSet, useAtomValue } from '@effect/atom-react';
