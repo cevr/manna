@@ -428,19 +428,33 @@ const elongationOf = (count: number, [sx, sy, sxx, syy, sxy]: ReadonlyArray<numb
  */
 const offMedianOf = (r: Raster, set: Uint8Array) => {
   const { width: w, height: h } = r;
-  const at = Arr.range(0, w * h - 1).filter((i) => set[i] === 1 && !onRing(set, i, w, h));
+  const at: number[] = [];
+  for (let i = 0; i < w * h; i++) if (set[i] === 1 && !onRing(set, i, w, h)) at.push(i);
   const l = new Float32Array(w * h);
   for (let i = 0; i < w * h; i++) if (set[i] === 1) l[i] = labOf(rgbAt(r, i))[0];
   const off = new Float32Array(w * h);
+  // one buffer holds each pixel's 5 × 5 neighbours in turn, sorted in place
+  const around = new Float64Array(25);
   for (const i of at) {
     const [x, y] = [i % w, Math.floor(i / w)];
-    const around: number[] = [];
+    let n = 0;
     for (let b = Math.max(0, y - 2); b <= Math.min(h - 1, y + 2); b++)
       for (let a = Math.max(0, x - 2); a <= Math.min(w - 1, x + 2); a++)
-        if (set[b * w + a] === 1) around.push(l[b * w + a] ?? 0);
-    off[i] = Math.abs((l[i] ?? 0) - medianOf(around));
+        if (set[b * w + a] === 1) around[n++] = l[b * w + a] ?? 0;
+    off[i] = Math.abs((l[i] ?? 0) - sortedMedian(around, n));
   }
   return { at, off, l };
+};
+
+/** The median of the first `n` values of `v` as `medianOf` reads it (the upper one of an even count, 0 for none), sorted in place by insertion, with no array made. */
+const sortedMedian = (v: Float64Array, n: number) => {
+  for (let k = 1; k < n; k++) {
+    const x = v[k] ?? 0;
+    let j = k - 1;
+    for (; j >= 0 && (v[j] ?? 0) > x; j--) v[j + 1] = v[j] ?? 0;
+    v[j + 1] = x;
+  }
+  return Number(n > 0) * (v[n >> 1] ?? 0);
 };
 
 /**
