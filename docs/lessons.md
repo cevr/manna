@@ -4742,4 +4742,4 @@ The form of an entry, each field on its own line:
 - **Source:** reader-key/round-1-review.md M3
 - **Wrong:** `reader.test.ts`, a unit test, wrote a reader folder to host temp folders and loaded it through `BunFileSystem.layer`, and read the committed `model.py` by its URL.
 - **Cause:** The live layer's test took the host file system for a folder the in-memory disk serves as well. A scoped `no-restricted-imports` ban was not taken: most film unit tests use a live file system by design, and oxlint gives a file the options of the last block that sets the rule, so the ban would repeat the tools block's list for one file.
-- **Guard:** code: `packages/film/src/tools/cast-build/reader.slow.test.ts` `the cast reader unit tests read no real folder: reader.test.ts takes no Bun platform layer and names no file by its URL`
+- **Guard:** code: `packages/film/src/tools/cast-build/reader.slow.test.ts` `the cast reader unit tests read no real folder: reader.test.ts takes no Bun platform layer and names no file by its URL, through Bun, or through a Node file or OS module`

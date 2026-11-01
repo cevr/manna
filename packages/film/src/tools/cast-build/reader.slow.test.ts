@@ -175,11 +175,13 @@ describe('cast reader (Python)', () => {
 
   // the unit tests run on an in-memory disk: a real folder's read or write would take the gate's time and the host's files
   it.effect(
-    'the cast reader unit tests read no real folder: reader.test.ts takes no Bun platform layer and names no file by its URL',
+    'the cast reader unit tests read no real folder: reader.test.ts takes no Bun platform layer and names no file by its URL, through Bun, or through a Node file or OS module',
     () =>
       Effect.gen(function* () {
         const unit = yield* fileHere('./reader.test.ts');
-        expect(unit).not.toMatch(/@effect\/platform-bun|node:fs|import\.meta/);
+        expect(unit).not.toMatch(
+          /@effect\/platform-bun|node:fs|node:os|import\.meta|\bBun\.(file|write)\b|from ['"](fs|os)['"]/,
+        );
       }).pipe(Effect.provide(BunServices.layer)),
   );
 
