@@ -107,7 +107,8 @@ const asked = <A, E extends { readonly message: string }>(self: Effect.Effect<A,
  * about the film that still asks, and asks only about `members` (the members
  * this build covers), is closed as superseded: a build of one member never
  * closes another's ask. Its output is the ask's id. Keyed by each drawing's bytes and
- * the needs' names, so the same needs publish and ask once.
+ * the needs' names, so the same needs publish and ask once while their ask
+ * is not closed; once it is, the same needs ask again (`holds`).
  */
 export const askStage = (
   film: FilmName,
@@ -155,6 +156,14 @@ export const askStage = (
         return encoder.encode(made.id);
       });
     },
+    // A need that returns (a drawing changed and changed back) asks again when its ask was closed.
+    holds: (output) =>
+      Effect.gen(function* () {
+        const id = new TextDecoder().decode(output);
+        if (id === 'none') return true;
+        const all = yield* asked((yield* AskStore).list);
+        return all.some((r) => r.id === id && askStatus(r.state) !== 'closed');
+      }),
   };
 };
 

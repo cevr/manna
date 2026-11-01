@@ -46,6 +46,7 @@ import {
   Option,
   Path,
   Random,
+  Result,
   Schedule,
   Schema,
 } from 'effect';
@@ -139,6 +140,11 @@ export interface Stage<R> {
    * key, before the output is recorded; when it fails, the stage fails.
    */
   readonly promote?: (ctx: StageContext) => Effect.Effect<void, StageFailed, R>;
+  /**
+   * Whether a cached output still answers its key: one that no longer does
+   * (the ask it names was closed) is run again as if never built.
+   */
+  readonly holds?: (output: Uint8Array) => Effect.Effect<boolean, StageFailed, R>;
 }
 
 /** The ways a stage's run ends other than with its output. */
@@ -562,51 +568,73 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
         ...lines,
       ].join('\n'),
     );
-    // decide under the lock: cached, a plan's answer, another build's run to wait on, or this build's to run
-    const decide = store.transact(manifest, (current) =>
-      Effect.gen(function* () {
-        const built = Option.fromUndefinedOr(current.stages[key]);
-        if (Option.isSome(built)) {
-          const kept = yield* fs
-            .exists(objectFile(built.value.output))
-            .pipe(Effect.orElseSucceed(() => false));
-          if (kept)
+    // decide under the lock: cached, a plan's answer, another build's run to wait on, or this build's to run;
+    // the output `spent` (one that no longer holds) counts as never built
+    const decideOver = (spent: Option.Option<string>) =>
+      store.transact(manifest, (current) =>
+        Effect.gen(function* () {
+          const built = Option.filter(
+            Option.fromUndefinedOr(current.stages[key]),
+            (b) => !Option.contains(spent, b.output),
+          );
+          if (Option.isSome(built)) {
+            const kept = yield* fs
+              .exists(objectFile(built.value.output))
+              .pipe(Effect.orElseSucceed(() => false));
+            if (kept)
+              return [
+                { _tag: 'cached', output: built.value.output } satisfies Decision,
+                current,
+              ] as const;
+          }
+          const waited = Option.fromUndefinedOr(current.waited?.[key]);
+          if (options.plan) {
+            // a stage that last waited at this key waits again, unless this plan grants its spend
+            const waits = Option.filter(
+              waited,
+              (w) => !Option.exists(Option.fromUndefinedOr(w.spend), (s) => options.spend.has(s)),
+            );
             return [
-              { _tag: 'cached', output: built.value.output } satisfies Decision,
+              Option.match(waits, {
+                onNone: (): Decision => ({ _tag: 'stale' }),
+                onSome: (w): Decision => ({ _tag: w.state, reason: Option.some(w.reason) }),
+              }),
               current,
             ] as const;
-        }
-        const waited = Option.fromUndefinedOr(current.waited?.[key]);
-        if (options.plan) {
-          // a stage that last waited at this key waits again, unless this plan grants its spend
-          const waits = Option.filter(
-            waited,
-            (w) => !Option.exists(Option.fromUndefinedOr(w.spend), (s) => options.spend.has(s)),
-          );
+          }
+          const live = yield* liveMarks(current);
+          if (Option.isSome(Option.fromUndefinedOr(live.running?.[key])))
+            return [{ _tag: 'busy' } satisfies Decision, live] as const;
           return [
-            Option.match(waits, {
-              onNone: (): Decision => ({ _tag: 'stale' }),
-              onSome: (w): Decision => ({ _tag: w.state, reason: Option.some(w.reason) }),
-            }),
-            current,
+            { _tag: 'run' } satisfies Decision,
+            { ...live, running: { ...live.running, [key]: yield* selfAt } },
           ] as const;
-        }
-        const live = yield* liveMarks(current);
-        if (Option.isSome(Option.fromUndefinedOr(live.running?.[key])))
-          return [{ _tag: 'busy' } satisfies Decision, live] as const;
-        return [
-          { _tag: 'run' } satisfies Decision,
-          { ...live, running: { ...live.running, [key]: yield* selfAt } },
-        ] as const;
-      }),
-    );
-    let decision = yield* decide;
+        }),
+      );
+    let decision: Decision = yield* decideOver(Option.none());
+    let spent = Option.none<string>();
+    const holds = Option.fromUndefinedOr(stage.holds);
+    if (decision._tag === 'cached' && Option.isSome(holds)) {
+      // a cached output that no longer holds is built again
+      const output = decision.output;
+      const held = yield* fs.readFile(objectFile(output)).pipe(
+        Effect.mapError((e) => StageFailed.make({ reason: `its output: ${e.message}` })),
+        Effect.flatMap(holds.value),
+        Effect.result,
+      );
+      if (Result.isFailure(held))
+        decision = { _tag: 'failed', reason: Option.some(held.failure.reason) };
+      else if (!held.success) {
+        spent = Option.some(output);
+        decision = yield* decideOver(spent);
+      }
+    }
     if (decision._tag === 'busy') {
       // another build's run: decide again every BUSY_SPACING until its output or its key is free
       yield* Effect.logInfo(
         `cast.build.busy stage=${stage.id} reason="another build runs it; waiting on its output"`,
       );
-      decision = yield* decide.pipe(Effect.delay(BUSY_SPACING), Effect.repeat(BUSY));
+      decision = yield* decideOver(spent).pipe(Effect.delay(BUSY_SPACING), Effect.repeat(BUSY));
     }
     const outcome = yield* settle(stage, key, start, decision);
     switch (outcome._tag) {

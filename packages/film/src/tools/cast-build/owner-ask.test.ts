@@ -231,6 +231,33 @@ describe('the build asks the owner once', () => {
   });
 
   it.effect(
+    'a drawing changed and changed back asks again: its closed ask is not its answer',
+    () => {
+      const files = filesOf();
+      const stages = [askStage(film, ['lead-feast'], ownerNeeds([member]))];
+      return Effect.gen(function* () {
+        yield* buildGraph(stages, options());
+        const first = yield* only(yield* openAsks);
+        files.set(SIDE, text('side v2'));
+        yield* buildGraph(stages, options());
+        const second = yield* only(yield* openAsks);
+
+        files.set(SIDE, text('side v1'));
+        expect(statesOf(yield* buildGraph(stages, options()))).toEqual({ ask: 'ran' });
+        const open = yield* openAsks;
+        expect(open).toHaveLength(1);
+        const current = yield* only(open);
+        expect([first.id, second.id]).not.toContain(current.id);
+        const side = keepChoices(current)[0]?.image?.src ?? '/nonexistent/loop-probe-x';
+        expect(yield* shownBytes(current.id, side)).toBe('side v1');
+        // A rerun keeps the ask it made.
+        expect(statesOf(yield* buildGraph(stages, options()))).toEqual({ ask: 'cached' });
+        expect((yield* openAsks).map((r) => r.id)).toEqual([current.id]);
+      }).pipe(Effect.provide(labOver(files, [])));
+    },
+  );
+
+  it.effect(
     'a build closes only its own members’ asks: lead, wife, lead leaves each one open',
     () => {
       const files = filesOf();
