@@ -154,6 +154,13 @@ const seenOf = (r: Raster): Seen => {
 /** Whether pixel `i` of `r` is paint, lighter than the ink. */
 const lightAt = (r: Seen, i: number) => r.lightness(i) > INK_L;
 
+/** `Uint8Array.from(src, f)` in a plain loop: the built-in one runs a map function about ten times slower. */
+const bytesOf = (src: ArrayLike<number>, f: (v: number, i: number) => number): Uint8Array => {
+  const out = new Uint8Array(src.length);
+  for (let i = 0; i < src.length; i++) out[i] = f(src[i] ?? 0, i);
+  return out;
+};
+
 /** The mean of `v`'s values, 0 for none. */
 const meanOf = (v: ReadonlyArray<number>) => v.reduce((a, b) => a + b, 0) / Math.max(1, v.length);
 
@@ -172,7 +179,7 @@ export const hiddenOf = (sheet: Sheet, moving: ReadonlyArray<string>): Uint8Arra
       .filter(([n]) => moving.includes(n))
       .map(([, id]) => id),
   );
-  return Uint8Array.from(sheet.owner, (o, i) =>
+  return bytesOf(sheet.owner, (o, i) =>
     Number(ids.has(o) && sheet.parts[o - 1]?.pixels.rgba[i * 4 + 3] === 255),
   );
 };
@@ -234,13 +241,13 @@ const paintedOf = (sheet: Sheet, hidden: Uint8Array, answer: Seen): Uint8Array =
         queue.push(j);
       }
     }
-  return Uint8Array.from(hidden, (m, i) => Number(m === 1 && reached[i] === 0));
+  return bytesOf(hidden, (m, i) => Number(m === 1 && reached[i] === 0));
 };
 
 /** Each hidden pixel's part behind it (k + 1): the nearest part that does not move, through the hidden pixels four ways, the first found on a tie; 0 elsewhere. */
 const behindOf = (sheet: Sheet, hidden: Uint8Array): Uint8Array => {
   const { width: w, height: h } = sheet;
-  const behind = Uint8Array.from(sheet.owner, (o, i) => o * Number(hidden[i] === 0));
+  const behind = bytesOf(sheet.owner, (o, i) => o * Number(hidden[i] === 0));
   const queue = Arr.range(0, w * h - 1).filter((i) => (behind[i] ?? 0) > 0);
   for (let q = 0; q < queue.length; q++) {
     const i = queue[q] ?? 0;
@@ -252,7 +259,7 @@ const behindOf = (sheet: Sheet, hidden: Uint8Array): Uint8Array => {
       }
     }
   }
-  return Uint8Array.from(behind, (b, i) => b * Number(hidden[i] === 1));
+  return bytesOf(behind, (b, i) => b * Number(hidden[i] === 1));
 };
 
 /** The mean RGB step from each piece of `mine` (four-way) to the pixels part `id` keeps beside it, both paint; a piece beside none has no step. */
@@ -291,7 +298,7 @@ const tonedTo = (
 ): Raster => {
   const rgba = Uint8Array.from(laid.rgba);
   for (const id of Arr.range(1, sheet.parts.length)) {
-    const mine = Uint8Array.from(painted, (m, i) => Number(m === 1 && behind[i] === id));
+    const mine = bytesOf(painted, (m, i) => Number(m === 1 && behind[i] === id));
     const { labels, steps } = stepsOf(view, sheet, laid, mine, id);
     for (let i = 0; i < labels.length; i++) {
       const l = labels[i] ?? -1;
@@ -322,7 +329,7 @@ const layHidden = (
     start,
     (acc, part) =>
       Result.flatMap(acc, (s) => {
-        const where = Uint8Array.from(painted, (m, i) => Number(m === 1 && behind[i] === part.id));
+        const where = bytesOf(painted, (m, i) => Number(m === 1 && behind[i] === part.id));
         return Bool.match(where.includes(1), {
           onTrue: () => paintHidden(s, part.name, answer, where),
           onFalse: () => Result.succeed(s),
@@ -527,7 +534,7 @@ const speckShare = (r: Seen, set: Uint8Array) => {
 const specksOf = (r: Seen, set: Uint8Array) => {
   const { width: w, height: h } = r;
   const { at, off, l } = offMedianOf(r, set);
-  const speck = Uint8Array.from(off, (d) => Number(d > SPECK_L));
+  const speck = bytesOf(off, (d) => Number(d > SPECK_L));
   const { components, labels } = componentsOf(speck, w, h, true);
   // the sums of x, y, x², y², xy and L* over each component's pixels
   const moments = components.map(() => [0, 0, 0, 0, 0, 0]);
@@ -554,12 +561,12 @@ const specksOf = (r: Seen, set: Uint8Array) => {
  */
 const clothOf = (r: Seen, set: Uint8Array) => {
   const { labels, outline } = specksOf(r, set);
-  return Uint8Array.from(set, (s, i) => Number(s === 1 && outline[labels[i] ?? -1] !== true));
+  return bytesOf(set, (s, i) => Number(s === 1 && outline[labels[i] ?? -1] !== true));
 };
 
 /** `set` less its pixels darker than `OUTLINE_L` on `r`: an outline's ink, which no cloth is as dark as. */
 const lessOutline = (r: Seen, set: Uint8Array) =>
-  Uint8Array.from(set, (s, i) => Number(s === 1 && r.lightness(i) >= OUTLINE_L));
+  bytesOf(set, (s, i) => Number(s === 1 && r.lightness(i) >= OUTLINE_L));
 
 /** Summed-area tables of a*, b* and count over the pixels `set` marks on `r`, and the sums over a box of them. */
 const summedAb = (r: Seen, set: Uint8Array) => {
@@ -733,17 +740,17 @@ const partGrain = (view: Seen, sheet: Sheet, at: Uint8Array, composite: Seen, id
   const { width: w, height: h } = view;
   const paint = clothOf(
     composite,
-    Uint8Array.from(at, (k) => Number(k === id)),
+    bytesOf(at, (k) => Number(k === id)),
   );
   const cloth = clothOf(
     view,
-    Uint8Array.from(sheet.owner, (o) => Number(o === id)),
+    bytesOf(sheet.owner, (o) => Number(o === id)),
   );
   // the pooled read's windows lie off each cloth's edge ring, where its outline runs, as the fine read's pixels do
   const inner = (set: Uint8Array) =>
-    Uint8Array.from(set, (s, i) => Number(s === 1 && !onRing(set, i, w, h)));
+    bytesOf(set, (s, i) => Number(s === 1 && !onRing(set, i, w, h)));
   const reached = latticeReach(at, id, w, h);
-  const near = Uint8Array.from(inner(cloth), (c, i) => Number(c === 1 && reached[i] === 1));
+  const near = bytesOf(inner(cloth), (c, i) => Number(c === 1 && reached[i] === 1));
   const painted = grainOf(composite, inner(paint));
   const kept = grainOf(view, near);
   const pooledRead = painted.n >= LEAST_GRAIN_WINDOWS && kept.n >= LEAST_GRAIN_WINDOWS;
@@ -792,18 +799,18 @@ const regionsOf = (view: Seen, sheet: Sheet, at: Uint8Array, composite: Seen) =>
   ].sort();
   const regions = keys.map((key) => {
     const [id = 0, under = 0] = key.split('/').map(Number);
-    const mine = Uint8Array.from(at, (k, i) => Number(k === id && sheet.owner[i] === under));
+    const mine = bytesOf(at, (k, i) => Number(k === id && sheet.owner[i] === under));
     const near = grown(mine, w, h, SPECK_REACH);
     const speckPainted = speckShare(composite, mine);
     const speckKept = speckShare(
       view,
-      Uint8Array.from(sheet.owner, (o, i) => Number(o === id && near[i] === 1)),
+      bytesOf(sheet.owner, (o, i) => Number(o === id && near[i] === 1)),
     );
     const chroma = chromaCells(
       composite,
       view,
-      Uint8Array.from(mine, (m, i) => Number(m === 1 && lightAt(composite, i))),
-      Uint8Array.from(sheet.owner, (o, i) => Number(o === id && lightAt(view, i))),
+      bytesOf(mine, (m, i) => Number(m === 1 && lightAt(composite, i))),
+      bytesOf(sheet.owner, (o, i) => Number(o === id && lightAt(view, i))),
     );
     const unread = { chroma: 0, px: 0 };
     const [chromaPainted, chromaKept] = Option.match(chroma.greyest, {
@@ -915,7 +922,7 @@ const paintOf = (view: Seen, sheet: Sheet) => {
 export const domainOf = (sheet: Sheet, hidden: Uint8Array) => {
   const behind = behindOf(sheet, hidden);
   const ids = [...new Set(behind.filter((b) => b > 0))].sort((a, b) => a - b);
-  const kept = Uint8Array.from(sheet.owner, (o) => Number(ids.includes(o)));
+  const kept = bytesOf(sheet.owner, (o) => Number(ids.includes(o)));
   return { behind, ids, kept };
 };
 
@@ -1120,9 +1127,7 @@ interface LayTarget {
 export const layAnswer = (target: LayTarget, answer: Raster) => {
   const { view, sheet, hidden, domain, pad, portrait } = target;
   // the answer is registered where it should still show the view: every other pixel of the figure no moving part owns
-  const where = Uint8Array.from(sheet.owner, (o, i) =>
-    Number(o > 0 && hidden[i] === 0 && i % 2 === 0),
-  );
+  const where = bytesOf(sheet.owner, (o, i) => Number(o > 0 && hidden[i] === 0 && i % 2 === 0));
   // the answer drawn at another size than the portrait it was asked at
   const k = (portrait.width / answer.width + portrait.height / answer.height) / 2;
   const fit = fitSimilarity(view, answer, where, { s: pad.s * k, dx: pad.dx, dy: pad.dy });
